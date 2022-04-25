@@ -12,6 +12,8 @@ Require Export MCPrelude
         MCSquash
         MCRelations
         MCString
+        ReflectEq
+        bytestring
 .
 
 Tactic Notation "destruct" "?" :=
@@ -186,8 +188,8 @@ Proof.
   destruct q. apply Eqdep_dec.UIP_refl_bool.
 Qed.
 
-Axiom todo : String.string -> forall {A}, A.
+Axiom todo : string -> forall {A}, A.
 Ltac todo s := exact (todo s).
 
 From Coq Require Import Extraction.
-Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".
+Extract Constant todo => "fun s -> failwith (Caml_bytestring.caml_string_of_bytestring s)".

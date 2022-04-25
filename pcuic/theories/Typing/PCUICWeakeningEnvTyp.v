@@ -365,7 +365,7 @@ Proof.
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_specT; intro eq; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl_ext. 3:tea. all:eauto.
   - apply IHonΣ; auto.
@@ -386,7 +386,7 @@ Proof.
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_specT; intro e; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl. 5:tea. all:eauto.
     destruct wfΣ. split => //. now depelim o2.
@@ -524,9 +524,9 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl cdecl ref pdecl
      | [cs] => sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
      | _ => False
     end) *
-    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) c *
-    ((snd ref) < context_assumptions c.(cstr_args)) *
-    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) c (snd ref) pdecl
+    on_projections mdecl (inductive_mind ref.(proj_ind)) (inductive_ind ref.(proj_ind)) idecl (idecl.(ind_indices)) c *
+    (ref.(proj_arg) < context_assumptions c.(cstr_args)) *
+    on_projection mdecl (inductive_mind ref.(proj_ind)) (inductive_ind ref.(proj_ind)) c ref.(proj_arg) pdecl
   | _ => False
   end.
 Proof.
@@ -640,7 +640,7 @@ Defined.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl cdecl pdecl} {wfΣ : wf Σ}
   (Hdecl : declared_projection Σ ref mdecl idecl cdecl pdecl) :
-  on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
+  on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref.(proj_ind)) mdecl *
   (idecl.(ind_ctors) = [cdecl]) *
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in let (x, _) := x in x) in
   (match oib.(ind_cunivs) with
@@ -648,9 +648,9 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl cdecl pdecl} {
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cdecl) cs
     | _ => False
   end) *
-  on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) cdecl *
-  ((snd ref) < context_assumptions cdecl.(cstr_args)) *
-  on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cdecl (snd ref) pdecl.
+  on_projections mdecl (inductive_mind ref.(proj_ind)) (inductive_ind ref.(proj_ind)) idecl (idecl.(ind_indices)) cdecl *
+  (ref.(proj_arg) < context_assumptions cdecl.(cstr_args)) *
+  on_projection mdecl (inductive_mind ref.(proj_ind)) (inductive_ind ref.(proj_ind)) cdecl ref.(proj_arg) pdecl.
 Proof.
   have hctors : idecl.(ind_ctors) = [cdecl].
   { pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).

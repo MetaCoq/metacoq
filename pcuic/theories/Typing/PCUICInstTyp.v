@@ -511,7 +511,7 @@ Proof.
           { eapply well_subst_app_up => //. }
           rewrite /brctxty /= case_branch_context_length //.
     * rewrite /predctx case_predicate_context_length //.
-  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e ty
+  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e
            Δ σ hΔ hσ.
     simpl.
     eapply meta_conv; [econstructor|].
@@ -523,7 +523,6 @@ Proof.
       eapply declared_projection_closed in isdecl; auto.
       move: isdecl.
       rewrite -(closedn_subst_instance _ _ u).
-      rewrite /ty.
       eapply inst_ext_closed.
       intros x Hx.
       rewrite subst_consn_lt /=; len; try lia.

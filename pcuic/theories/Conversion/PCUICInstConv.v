@@ -1013,7 +1013,11 @@ Lemma inst_wf_fixpoint Σ f mfix :
   wf_fixpoint Σ mfix ->
   wf_fixpoint Σ (map (map_def (inst f) (inst (up #|mfix| f))) mfix).
 Proof.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] hmfix ho.
+  apply/andP; split.
+  { rewrite forallb_map; eapply forallb_impl; tea; cbn => x hx hl.
+    destruct (dbody x) => /= //. }
   rewrite map_map_compose.
   destruct (map_option_out (map check_one_fix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
@@ -1025,7 +1029,8 @@ Lemma inst_wf_cofixpoint Σ f mfix :
   wf_cofixpoint Σ mfix ->
   wf_cofixpoint Σ (map (map_def (inst f) (inst (up #|mfix| f))) mfix).
 Proof.
-  rewrite /wf_cofixpoint map_map_compose.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
+  rewrite map_map_compose.
   destruct (map_option_out (map check_one_cofix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
   2:{ intros x y. apply (inst_check_one_cofix f mfix). }
@@ -1676,32 +1681,13 @@ Proof.
   now eapply H.
 Qed.
 
-Lemma All3_map_all {A B C} {A' B' C'} P (l : list A') (l' : list B') (l'' : list C')
-  (f : A' -> A) (g : B' -> B) (h : C' -> C) :
-  All3 (fun x y z => P (f x) (g y) (h z)) l l' l'' ->
-  All3 P (map f l) (map g l') (map h l'').
-Proof.
-  induction 1; simpl; constructor; auto.
-Qed.
-
-Lemma OnOne2All_All3 {A B} P Q (l : list A) (l' : list B) (l'' : list B) :
-  (forall x y z, P x y z -> Q x y z) ->
-  (forall x y, Q x y y) ->
-  OnOne2All P l l' l'' ->
-  All3 Q l l' l''.
-Proof.
-  intros H1 H2.
-  induction 1; simpl; constructor; auto.
-  induction tl in bs, e |- *; destruct bs => //; try constructor; auto.
-Qed.
-
 Lemma on_free_vars_ctx_inst_case_context_nil 
- (P : nat -> bool) 
-(pars : list term) (puinst : Instance.t) 
-(pctx : list context_decl) :
-forallb (on_free_vars P) pars ->
-on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
-on_free_vars_ctx P (inst_case_context pars puinst pctx).
+  (P : nat -> bool) 
+  (pars : list term) (puinst : Instance.t) 
+  (pctx : list context_decl) :
+  forallb (on_free_vars P) pars ->
+  on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
+  on_free_vars_ctx P (inst_case_context pars puinst pctx).
 Proof.
   intros. 
   assert (on_free_vars_ctx P ([] ,,, inst_case_context pars puinst pctx)).
@@ -1981,24 +1967,6 @@ Qed.
 
 Definition on_free_vars_decls P d d' :=
   on_free_vars_decl P d && on_free_vars_decl P d'.
-
-Lemma Alli_rev_inv {A: Type} (P : nat -> A -> Type) (k : nat) (l : list A) :
-  Alli P k (List.rev l) ->
-  Alli (fun k' : nat => P (Nat.pred #|l| - k' + k)) 0 l.
-Proof.
-  intros alli.
-  eapply Alli_rev in alli. rewrite List.rev_involutive in alli.
-  now len in alli.
-Qed.
-(*
-Lemma Alli_rev_inv {A: Type} (P : nat -> A -> Type) (k : nat) (l : list A) :
-  Alli P k (List.rev l) ->
-  Alli (fun k' : nat => P (Nat.pred #|l| - k' + k)) #|l| l.
-Proof.
-  intros alli.
-  eapply Alli_rev in alli. rewrite List.rev_involutive in alli.
-  now len in alli.
-Qed. *)
 
 Lemma on_ctx_free_vars_app P Γ Δ :
   on_ctx_free_vars P (Γ ,,, Δ) =

@@ -133,18 +133,6 @@ Section Lemmata.
 
   Context (Σ : global_env_ext).
 
-  Inductive welltyped Σ Γ t : Prop :=
-  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
-
-  Arguments iswelltyped {Σ Γ t A} h.
-
-  Definition isType_welltyped {Γ T}
-    : isType Σ Γ T -> welltyped Σ Γ T.
-  Proof.
-    intros []. now econstructor.
-  Qed.
-  Hint Resolve isType_welltyped : pcuic.
-
   Lemma ws_cumul_pb_zippx :
     forall {wfΣ : wf Σ} le Γ u v ρ,
       closedn_stack #|Γ| ρ ->
@@ -665,24 +653,26 @@ Section Lemmata.
   Qed.
 
   Lemma red_const :
-    forall {Γ c u cty cb cu},
-      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu rel},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu;
+        cst_relevance := rel |})
       = lookup_env Σ c ->
       red (fst Σ) Γ (tConst c u) (subst_instance u cb).
   Proof.
-    intros Γ c u cty cb cu e.
+    intros Γ c u cty cb cu rel e.
     econstructor. econstructor.
     - symmetry in e. exact e.
     - reflexivity.
   Qed.
 
   Lemma cored_const :
-    forall {Γ c u cty cb cu},
-      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu rel},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu;
+        cst_relevance := rel |})
       = lookup_env Σ c ->
       cored Σ Γ (subst_instance u cb) (tConst c u).
   Proof.
-    intros Γ c u cty cb cu e.
+    intros Γ c u cty cb cu rel e.
     symmetry in e.
     econstructor.
     econstructor.
@@ -950,11 +940,11 @@ Section Lemmata.
   Qed.
 
   Lemma Proj_red_cond :
-    forall Γ i pars narg i' c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      nth_error l (pars + narg) <> None.
+    forall Γ p i' c u l,
+      welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
+      nth_error l (p.(proj_npars) + p.(proj_arg)) <> None.
   Proof.
-    intros Γ i pars narg i' c u l [T h].
+    intros Γ p i' c u l [T h].
     apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?).
     2: now sq.
     now apply nth_error_Some.
@@ -1067,14 +1057,36 @@ Section Lemmata.
   Qed.
 
   Lemma Proj_Construct_ind_eq :
-    forall Γ i i' pars narg c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      i = i'.
+    forall Γ p i' c u l,
+      welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
+      p.(proj_ind) = i'.
   Proof.
-    intros Γ i i' pars narg c u l [T h].
+    intros Γ p i' c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.
-
 End Lemmata.
+
+Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
+    ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
+Proof.
+  intros Ht. destruct HΣ. constructor.
+  eapply inversion_Case in Ht as (mdecl & idecl & decli & indices & data & hty); auto.
+  destruct data.
+  eapply validity in scrut_ty.
+  eapply forall_nth_error_All => i br hnth.
+  eapply All2i_nth_error_r in brs_ty; tea.
+  destruct brs_ty as [cdecl [hnthc [eqctx [wfbctxty [tyb _]]]]].
+  have declc: declared_constructor Σ (ci, i) mdecl idecl cdecl.
+  { split; auto. }
+  have wfbr : wf_branch cdecl br.
+  { eapply Forall2_All2 in wf_brs. eapply All2_nth_error in wf_brs; tea. }
+  have wfΓ : wf_local Σ Γ.
+  { eapply typing_wf_local in pret_ty. now eapply All_local_env_app_inv in pret_ty as []. }
+  epose proof (wf_case_inst_case_context ps indices decli scrut_ty wf_pred pret_ty conv_pctx
+    _ _ _ declc wfbr eqctx) as [wfictx eqictx].
+  eexists.
+  eapply closed_context_conversion; tea.
+  now symmetry.
+Qed.
 
 #[global] Hint Resolve isType_welltyped : pcuic.

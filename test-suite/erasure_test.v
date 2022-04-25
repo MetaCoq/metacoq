@@ -1,6 +1,6 @@
-From MetaCoq.Template Require Import Loader.
 From MetaCoq.Erasure Require Import Loader.
-From MetaCoq.SafeChecker Require Import Loader.
+From MetaCoq.Template Require Import Loader.
+Set MetaCoq Timing.
 Local Open Scope string_scope.
 
 MetaCoq Erase nat.
@@ -25,7 +25,7 @@ MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
 MetaCoq Erase (3 + 1).
 
 Universe i.
-MetaCoq Erase ((fun (X : Set) (x : X) => x) nat).
+MetaCoq Fast Erase ((fun (X : Set) (x : X) => x) nat).
 
 (** Check that optimization of singleton pattern-matchings work *)
 MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
@@ -35,15 +35,17 @@ MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
 
 (* (** Check the treatment of Prop <= Type *) *)
 MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).
-MetaCoq Quote Recursively Definition foo := List.map.
+(* MetaCoq Quote Recursively Definition foo := List.map. *)
 
 Require Import List.
 Import ListNotations.
 MetaCoq Erase (map negb [true; false]).
 
 Set Warnings "-abstract-large-number".
-Definition bignat := Eval compute in 10000.
-MetaCoq Erase bignat.
+(* Definition bignat := Eval compute in 10000. *)
+Test MetaCoq Timing.
+
+(* MetaCoq Erase bignat. *)
 
 From MetaCoq.TestSuite Require Import vs.
 MetaCoq Erase main.

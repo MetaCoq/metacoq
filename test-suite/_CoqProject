@@ -15,9 +15,11 @@ bug8.v
 bugkncst.v
 case.v
 castprop.v
+hott_example.v
 # CheckerTest.v disabled
 cofix.v
 vs.v
+reduction_test.v
 erasure_live_test.v
 erasure_test.v
 evars.v
@@ -39,4 +41,6 @@ unfold.v
 univ.v
 tmVariable.v
 order_rec.v
-primitive.v
+# primitive.v
+inferind.v
+inferindunivs.v

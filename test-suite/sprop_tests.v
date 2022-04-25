@@ -47,7 +47,7 @@ Module foo.
   MetaCoq Run (t <- tmQuoteInductive (MPfile ["sprop_tests"; "TestSuite"; "MetaCoq"], "sle") ;;
               t <- tmEval all (mind_body_to_entry t) ;;
               tmPrint t ;;
-              tmMkInductive t
+              tmMkInductive false t
              ).
 
   Print sle.

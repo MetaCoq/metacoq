@@ -5,22 +5,6 @@ src/META.coq-metacoq-erasure
 # src/classes0.mli
 # src/classes0.ml
 
-# From Coq's stdlib
-src/orderedTypeAlt.mli
-src/orderedTypeAlt.ml
-src/orderedType0.mli
-src/orderedType0.ml
-src/fMapList.mli
-src/fMapList.ml
-src/decidableType.mli
-src/decidableType.ml
-src/fMapInterface.mli
-src/fMapInterface.ml
-src/fMapAVL.mli
-src/fMapAVL.ml
-src/fMapFacts.mli
-src/fMapFacts.ml
-
 # src/string2pos.mli
 # src/string2pos.ml
 # src/canonicalTries.mli
@@ -31,16 +15,19 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/kernames.mli
-src/kernames.ml
+src/envMap.mli
+src/envMap.ml
+
 # src/reflect.mli
 # src/reflect.ml
 # src/typing0.mli
 # src/typing0.ml
 
+# src/wcbvEval.mli
+# src/wcbvEval.ml
 # From PCUIC
-src/pCUICPrimitive.mli
-src/pCUICPrimitive.ml
+# src/pCUICPrimitive.mli
+# src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICCases.mli
@@ -51,14 +38,16 @@ src/pCUICAstUtils.mli
 # src/eqDecInstances.mli
 # src/pCUICReduction.ml
 # src/pCUICReduction.mli
+src/pCUICEquality.mli
+src/pCUICEquality.ml
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
-# src/pCUICWfUniverses.mli
-# src/pCUICWfUniverses.ml
+src/pCUICWfUniverses.mli
+src/pCUICWfUniverses.ml
 # src/pCUICChecker.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
@@ -79,20 +68,26 @@ src/pCUICNormal.ml
 # src/pCUICContextConversion.ml
 # src/pCUICConversion.mli
 # src/pCUICConversion.ml
+# src/pCUICWcbvEval.mli
+# src/pCUICWcbvEval.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICExpandLets.mli
 src/pCUICExpandLets.ml
-src/pCUICExpandLetsCorrectness.mli
-src/pCUICExpandLetsCorrectness.ml
+src/pCUICProgram.mli
+src/pCUICProgram.ml
+src/pCUICTransform.mli
+src/pCUICTransform.ml
 
 # From SafeChecker
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
+src/pCUICEqualityDec.mli
+src/pCUICEqualityDec.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 # src/pCUICSafeConversion.mli
@@ -106,22 +101,45 @@ src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
 src/eAstUtils.mli
+src/eInduction.ml
+src/eInduction.mli
+src/eEtaExpanded.mli
+src/eEtaExpanded.ml
 # src/eInduction.ml
 # src/eInduction.mli
 src/eLiftSubst.ml
 src/eLiftSubst.mli
 src/eCSubst.mli
 src/eCSubst.ml
-src/eTyping.ml
-src/eTyping.mli
+src/eGlobalEnv.ml
+src/eGlobalEnv.mli
+src/eWellformed.mli
+src/eWellformed.ml
+src/eEnvMap.mli
+src/eEnvMap.ml
 src/extract.mli
 src/extract.ml
+src/eWcbvEval.mli
+src/eWcbvEval.ml
+src/eSpineView.mli
+src/eSpineView.ml
+src/eRemoveParams.mli
+src/eRemoveParams.ml
+
 src/erasureFunction.mli
 src/erasureFunction.ml
 src/ePretty.mli
 src/ePretty.ml
 src/eOptimizePropDiscr.mli
 src/eOptimizePropDiscr.ml
+src/eProgram.mli
+src/eProgram.ml
+# src/eEtaExpandedFix.mli
+# src/eEtaExpandedFix.ml
+src/eInlineProjections.mli
+src/eInlineProjections.ml
+src/eTransform.mli
+src/eTransform.ml
 src/erasure.mli
 src/erasure.ml
 

@@ -13,12 +13,12 @@ END
 
 VERNAC COMMAND EXTEND Make_lens_vernac CLASSIFIED AS SIDEFF STATE program
 | [ "Make" "Lens" ident(name) ] ->
-     { Run_extractable.run_vernac (genLensN (Tm_util.string_to_list (Names.Id.to_string name))) }
+     { Run_extractable.run_vernac (genLensN (Caml_bytestring.bytestring_of_caml_string (Names.Id.to_string name))) }
 END
 
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF STATE program
 | [ "LookupPrint" ident(name) ] ->
      { let nstr = Names.Id.to_string name in
-       Run_extractable.run_vernac (lookupPrint (Tm_util.string_to_list nstr)) }
+       Run_extractable.run_vernac (lookupPrint (Caml_bytestring.bytestring_of_caml_string nstr)) }
 END

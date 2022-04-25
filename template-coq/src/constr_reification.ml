@@ -91,7 +91,7 @@ struct
 
   let unit_tt = resolve "metacoq.unit.intro"
 
-  let tAscii = resolve "metacoq.ascii.intro"
+  let tByte = resolve "metacoq.byte.type"
   let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
   let c_cons = resolve "metacoq.list.cons"
@@ -138,6 +138,7 @@ struct
   let tname = ast "name"
   let tIndTy = ast "inductive"
   let tmkInd = ast "mkInd"
+  let tmkProjection = ast "mkProjection"
   let tcase_info = ast "case_info"
   let mk_case_info = ast "mk_case_info"
 
@@ -169,7 +170,7 @@ struct
   let tunivLe0 = ast "constraints.Le0"
   let tunivLt = ast "constraints.Lt"
   let tunivEq = ast "constraints.Eq"
-  let tMktUnivExprSet = ast "univexprset.mkt"
+  let tMktLevelExprSet = ast "levelexprset.mkt"
   let tBuild_Universe = ast "universe.build0"
   let tfrom_kernel_repr = ast "universe.from_kernel_repr"
   (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
@@ -178,8 +179,8 @@ struct
   let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
-  let univexpr_lProp = ast "univexpr.prop"
-  let univexpr_npe = ast "univexpr.npe"
+  let univexpr_lProp = ast "levelexpr.prop"
+  let univexpr_npe = ast "levelexpr.npe"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = ast "variance.t"
@@ -209,6 +210,8 @@ struct
   let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
   let tconstructor_body = ast "constructor_body"
   let tBuild_constructor_body = ast "Build_constructor_body"
+  let tprojection_body = ast "projection_body" 
+  let tBuild_projection_body = ast "Build_projection_body"
   let tone_inductive_body = ast "one_inductive_body"
   let tBuild_one_inductive_body = ast "Build_one_inductive_body"
   let tBuild_mutual_inductive_body = ast "Build_mutual_inductive_body"

@@ -18,7 +18,7 @@ Section lookups.
     end.
 End lookups.
 
-Section print_term.
+Section fresh.
   Context (Σ : global_env_ext).
 
   Fixpoint decompose_lam (t : term) (n : nat) : (list aname) * (list term) * term :=
@@ -34,7 +34,7 @@ Section print_term.
     end.
 
   Definition is_fresh (Γ : list ident) (id : ident) :=
-    List.forallb (fun id' => negb (ident_eq id id')) Γ.
+    List.forallb (fun id' => negb (eqb id id')) Γ.
 
   Fixpoint name_from_term (t : term) :=
     match t with
@@ -47,7 +47,7 @@ Section print_term.
     | tConst c u => "x"
     | tInd (mkInd i k) u =>
       match lookup_ind_decl Σ i k with
-      | Some (_, body) => substring 0 1 (body.(ind_name))
+      | Some (_, body) => String.substring 0 1 (body.(ind_name))
       | None => "X"
       end
     | _ => "U"
@@ -109,201 +109,227 @@ Section print_term.
                             Γ
         end in
     aux Γ (MCList.rev Γ').
+End fresh.
 
-  Section Aux.
-    Context (print_term : list ident -> bool -> bool -> term -> string).
-    Definition print_defs Γ (defs : mfixpoint term) :=
-      let ctx' := fix_context defs in
-      print_list (print_def (print_term Γ true false) (print_term (fresh_names Γ ctx') true false))
-            (nl ^ " with ") defs.
+Module PrintTermTree.
+  Section env.
+    Context (Σ : global_env_ext).
+    Import bytestring.Tree.
+    Infix "^" := append.
 
-    Definition pr_context_decl Γ (c : context_decl) : ident * string :=
-      match c with
-      | {| decl_name := na; decl_type := ty; decl_body := None |} => 
-        let na' := (fresh_name Γ na.(binder_name) (Some ty)) in
-        (na', ("(" ++ na' ++ " : " ++ print_term Γ true false ty ++ ")")%string)
-      | {| decl_name := na; decl_type := ty; decl_body := Some b |} =>
-        let na' := (fresh_name Γ na.(binder_name) (Some ty)) in
-        (na', ("(" ++ na' ++ " : " ++ print_term Γ true false ty ++ " := " ++
-          print_term Γ true false b ++ ")")%string)
-      end.
-    
-    Fixpoint print_context_gen Γ Δ :=
-      match Δ with
-      | [] => (Γ, ""%string)
-      | d :: decls => 
-        let '(Γ, s) := print_context_gen Γ decls in
-        let '(na, s') := pr_context_decl Γ d in
-        match decls with
-        | [] => (na :: Γ, (s ++ s')%string)
-        | _ => (na :: Γ, (s ++ " " ++ s')%string)
-        end
-      end.
+    Section Aux.
+      Context (print_term : list ident -> bool -> bool -> term -> t).
+
+      Definition print_def {A} (f : A -> t) (g : A -> t) (def : def A) :=
+        string_of_name (binder_name (dname def)) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
+                    " : " ^ f (dtype def) ^ " := " ^ nl ^ g (dbody def).
+
+      Definition print_defs Γ (defs : mfixpoint term) :=
+        let ctx' := fix_context defs in
+        print_list (print_def (print_term Γ true false) (print_term (fresh_names Σ Γ ctx') true false))
+              (nl ^ " with ") defs.
+
+      Definition pr_context_decl Γ (c : context_decl) : ident * t :=
+        match c with
+        | {| decl_name := na; decl_type := ty; decl_body := None |} => 
+          let na' := (fresh_name Σ Γ na.(binder_name) (Some ty)) in
+          (na', ("(" ^ na' ^ " : " ^ print_term Γ true false ty ^ ")")%bs)
+        | {| decl_name := na; decl_type := ty; decl_body := Some b |} =>
+          let na' := (fresh_name Σ Γ na.(binder_name) (Some ty)) in
+          (na', ("(" ^ na' ^ " : " ^ print_term Γ true false ty ^ " := " ^
+            print_term Γ true false b ^ ")")%bs)
+        end.
+      
+      Fixpoint print_context_gen Γ Δ :=
+        match Δ with
+        | [] => (Γ, "" : t)
+        | d :: decls => 
+          let '(Γ, s) := print_context_gen Γ decls in
+          let '(na, s') := pr_context_decl Γ d in
+          match decls with
+          | [] => (na :: Γ, s ^ s')
+          | _ => (na :: Γ, s ^ " " ^ s')
+          end
+        end.
+            
+      Fixpoint print_context_names Γ Δ :=
+        match Δ with
+        | [] => (Γ, "" : t)
+        | d :: decls => 
+          let '(Γ, s) := print_context_names Γ decls in
+          let na := (fresh_name Σ Γ d.(decl_name).(binder_name) (Some d.(decl_type))) in
+          match decls with
+          | [] => (na :: Γ, (s ^ na))
+          | _ => (na :: Γ, (s ^ " " ^ na))
+          end
+        end.
+
+    End Aux.
           
-    Fixpoint print_context_names Γ Δ :=
-      match Δ with
-      | [] => (Γ, ""%string)
-      | d :: decls => 
-        let '(Γ, s) := print_context_names Γ decls in
-        let na := (fresh_name Γ d.(decl_name).(binder_name) (Some d.(decl_type))) in
-        match decls with
-        | [] => (na :: Γ, (s ++ na)%string)
-        | _ => (na :: Γ, (s ++ " " ++ na)%string)
+    Context (all : bool).
+
+    Fixpoint print_term (Γ : list ident) (top : bool)(inapp : bool) (t : term) {struct t} : Tree.t :=
+    match t with
+    | tRel n =>
+      match nth_error Γ n with
+      | Some id => id
+      | None => "UnboundRel(" ^ string_of_nat n ^ ")"
+      end
+    | tVar n => "Var(" ^ n ^ ")"
+    | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
+    | tSort s => string_of_sort s
+    | tProd na dom codom =>
+      let na' := fresh_name Σ Γ na.(binder_name) (Some dom) in
+      parens top
+            ("∀ " ^ na' ^ " : " ^
+                      print_term Γ true false dom ^ ", " ^ print_term (na':: Γ) true false codom)
+    | tLambda na dom body =>
+      let na' := fresh_name Σ Γ na.(binder_name) (Some dom) in
+        parens top ("fun " ^ na' ^ " : " ^ print_term Γ true false dom
+                  ^ " => " ^ print_term (na':: Γ) true false body)
+    | tLetIn na def dom body =>
+      let na' := fresh_name Σ Γ na.(binder_name) (Some dom) in
+      parens top ("let" ^ na' ^ " : " ^ print_term Γ true false dom ^
+                        " := " ^ print_term Γ true false def ^ " in " ^ nl ^
+                        print_term (na' :: Γ) true false body)
+    | tApp f l =>
+      parens (top || inapp) (print_term Γ false true f ^ " " ^ print_term Γ false false l)
+    | tConst c u => string_of_kername c ^ print_universe_instance u
+    | tInd (mkInd i k) u =>
+      match lookup_ind_decl Σ i k with
+      | Some (_, oib) => oib.(ind_name) ^ print_universe_instance u
+      | None =>
+        "UnboundInd(" ^ string_of_inductive (mkInd i k) ^ "," ^ string_of_universe_instance u ^ ")"
+      end
+    | tConstruct (mkInd i k as ind) l u =>
+      match lookup_ind_decl Σ i k with
+      | Some (_, oib) =>
+        match nth_error oib.(ind_ctors) l with
+        | Some cdecl => cdecl.(cstr_name) ^ print_universe_instance u
+        | None =>
+          "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
+                              ^ string_of_universe_instance u ^ ")"
         end
-      end.
-
-  End Aux.
-          
-  Context (all : bool).
-
-  Fixpoint print_term (Γ : list ident) (top : bool)(inapp : bool) (t : term) {struct t} :=
-  match t with
-  | tRel n =>
-    match nth_error Γ n with
-    | Some id => id
-    | None => "UnboundRel(" ^ string_of_nat n ^ ")"
-    end
-  | tVar n => "Var(" ^ n ^ ")"
-  | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
-  | tSort s => string_of_sort s
-  | tProd na dom codom =>
-    let na' := fresh_name Γ na.(binder_name) (Some dom) in
-    parens top
-           ("∀ " ^ na' ^ " : " ^
-                     print_term Γ true false dom ^ ", " ^ print_term (na':: Γ) true false codom)
-  | tLambda na dom body =>
-    let na' := fresh_name Γ na.(binder_name) (Some dom) in
-      parens top ("fun " ^ na' ^ " : " ^ print_term Γ true false dom
-                ^ " => " ^ print_term (na':: Γ) true false body)
-  | tLetIn na def dom body =>
-    let na' := fresh_name Γ na.(binder_name) (Some dom) in
-    parens top ("let" ^ na' ^ " : " ^ print_term Γ true false dom ^
-                      " := " ^ print_term Γ true false def ^ " in " ^ nl ^
-                      print_term (na' :: Γ) true false body)
-  | tApp f l =>
-    parens (top || inapp) (print_term Γ false true f ^ " " ^ print_term Γ false false l)
-  | tConst c u => string_of_kername c ^ print_universe_instance u
-  | tInd (mkInd i k) u =>
-    match lookup_ind_decl Σ i k with
-    | Some (_, oib) => oib.(ind_name) ^ print_universe_instance u
-    | None =>
-      "UnboundInd(" ^ string_of_inductive (mkInd i k) ^ "," ^ string_of_universe_instance u ^ ")"
-    end
-  | tConstruct (mkInd i k as ind) l u =>
-    match lookup_ind_decl Σ i k with
-    | Some (_, oib) =>
-      match nth_error oib.(ind_ctors) l with
-      | Some cdecl => cdecl.(cstr_name) ^ print_universe_instance u
       | None =>
         "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                             ^ string_of_universe_instance u ^ ")"
       end
-    | None =>
-      "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
-                          ^ string_of_universe_instance u ^ ")"
-    end
-  | tCase {| ci_ind := mkInd mind i as ind; ci_npar := pars |} p t brs =>
-    match lookup_ind_decl Σ mind i with
-    | Some (_, oib) =>
-      let Γret := p.(pcontext) in
-      let Γret := fresh_names Γ Γret in
-      let ret_binders := firstn #|pcontext p| Γret in
-      let (as_name, indices) := (hd "_" ret_binders, MCList.rev (tail ret_binders)) in
-      let in_args := repeat "_" #|pparams p| ++ indices in
-      let in_str := oib.(ind_name) ^ String.concat "" (map (fun a => " " ^ a) in_args) in
+    | tCase {| ci_ind := mkInd mind i as ind; ci_npar := pars |} p t brs =>
+      match lookup_ind_decl Σ mind i with
+      | Some (_, oib) =>
+        let Γret := p.(pcontext) in
+        let Γret := fresh_names Σ Γ Γret in
+        let ret_binders := firstn #|pcontext p| Γret in
+        let (as_name, indices) := (hd "_" ret_binders, MCList.rev (tail ret_binders)) in
+        let in_args := (repeat "_" #|pparams p| ++ indices)%list in
+        let in_str := oib.(ind_name) ^ concat "" (map (fun a : String.t => " " ^ a) in_args) in
 
-      let brs := map (fun br => 
-          let (Γctx, pctx) := 
-            if all then print_context_gen print_term Γ br.(bcontext) 
-            else print_context_names Γ br.(bcontext)
-          in
-          pctx ^ " ⇒ " ^ print_term Γctx true false br.(bbody)) brs in
-      let brs := combine brs oib.(ind_ctors) in
-                            
-      parens top ("match " ^ print_term Γ true false t ^
-                  " as " ^ as_name ^
-                  " in " ^ in_str ^
-                  " return " ^ print_term Γret true false (preturn p) ^
-                  " with " ^ nl ^
-                  print_list (fun '(b, cdecl) => cdecl.(cstr_name) ^ " " ^ b)
-                  (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
-  | None =>
-    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-            ^ string_of_predicate string_of_term p ^ "," ^ 
-            string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
-    end
-  | tProj (mkInd mind i as ind, pars, k) c =>
-    match lookup_ind_decl Σ mind i with
-    | Some (_, oib) =>
-      match nth_error oib.(ind_projs) k with
-      | Some (na, _) => print_term Γ false false c ^ ".(" ^ na ^ ")"
-      | None =>
-        "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
-                       ^ print_term Γ true false c ^ ")"
+        let brs := map (fun br => 
+            let (Γctx, pctx) := 
+              if all then print_context_gen print_term Γ br.(bcontext) 
+              else print_context_names Γ br.(bcontext)
+            in
+            pctx ^ " ⇒ " ^ print_term Γctx true false br.(bbody)) brs in
+        let brs := combine brs oib.(ind_ctors) in
+                              
+        parens top ("match " ^ print_term Γ true false t ^
+                    " as " ^ as_name ^
+                    " in " ^ in_str ^
+                    " return " ^ print_term Γret true false (preturn p) ^
+                    " with " ^ nl ^
+                    print_list (fun '(b, cdecl) => cdecl.(cstr_name) ^ " " ^ b)
+                    (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
+    | None =>
+      "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
+              ^ string_of_predicate string_of_term p ^ "," ^ 
+              string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
       end
-    | None =>
-      "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
-                     ^ print_term Γ true false c ^ ")"
-    end
+    | tProj p c =>
+      match lookup_projection Σ p with
+      | Some (mdecl, idecl, cdecl, pdecl) =>
+        print_term Γ false false c ^ ".(" ^ pdecl.(proj_name) ^ ")"
+      | None =>
+        "UnboundProj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) ^ "," ^ string_of_nat p.(proj_arg) ^ ","
+                      ^ print_term Γ true false c ^ ")"
+      end
 
 
-  | tFix l n =>
-    parens top ("let fix " ^ print_defs print_term Γ l ^ nl ^
-                          " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
-  | tCoFix l n =>
-    parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
-                              " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
-  | tPrim i => parens top (string_of_prim (print_term Γ true false) i)
-  end.
+    | tFix l n =>
+      parens top ("let fix " ^ print_defs print_term Γ l ^ nl ^
+                            " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
+    | tCoFix l n =>
+      parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
+                                " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
+    (* | tPrim i => parens top (string_of_prim (print_term Γ true false) i) *)
+    end.
+  End env.
 
-End print_term.
+  Import bytestring.Tree.
+  Infix "^" := append.
 
-Notation pr_term Σ Γ top := (print_term Σ true Γ top false).
+  Section env.
+    Context (Σ : global_env_ext).
+    Notation print_context := (print_context_gen Σ (print_term Σ true)).
+    Notation pr_term Γ top := (print_term Σ true Γ top false).
 
-Notation print_context Σ := (print_context_gen Σ (print_term Σ true)).
+    Definition print_one_cstr Γ (mib : mutual_inductive_body) (c : constructor_body) : t :=
+      let '(Γargs, s) := print_context Γ c.(cstr_args) in
+      c.(cstr_name) ^ " : " ^ s ^ "_" ^ print_list (pr_term Γargs true) " " c.(cstr_indices).
+    
+    Definition print_one_ind (short : bool) Γ (mib : mutual_inductive_body) (oib : one_inductive_body) : t :=
+      let '(Γpars, spars) := print_context Γ mib.(ind_params) in
+      let '(Γinds, sinds) := print_context Γpars oib.(ind_indices) in
+      oib.(ind_name) ^ spars ^ " : " ^ sinds ^ " " ^ pr_term Γinds true (tSort oib.(ind_sort)) ^ ":=" ^ nl ^
+      if short then "..."
+      else print_list (print_one_cstr Γpars mib) nl oib.(ind_ctors).
+  End env.
 
-Definition print_one_cstr Σ Γ (mib : mutual_inductive_body) (c : constructor_body) : string :=
-  let '(Γargs, s) := print_context Σ Γ c.(cstr_args) in
-  c.(cstr_name) ++ " : " ++ s ++ "_" ++ print_list (pr_term Σ Γargs true) " " c.(cstr_indices).
+  Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
+    match prefix with 
+    | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
+    | S n => 
+      let univs := Σ.(universes) in
+      match Σ.(declarations) with
+      | [] => acc
+      | (kn, InductiveDecl mib) :: Σ => 
+        let Σ' := ({| universes := univs; declarations := Σ |}, mib.(ind_universes)) in
+        let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
+        print_env_aux short n Σ'.1
+          ("Inductive " ^ 
+          print_list (print_one_ind Σ' short names mib) nl mib.(ind_bodies) ^ "." ^ 
+          nl ^ acc)
+      | (kn, ConstantDecl cb) :: Σ =>
+        let Σ' := ({| universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+        print_env_aux short n Σ'.1
+          ((match cb.(cst_body) with 
+            | Some _ => "Definition "
+            | None => "Axiom "
+          end) ^ string_of_kername kn ^ " : " ^ print_term Σ' true nil true false cb.(cst_type) ^
+          match cb.(cst_body) with
+          | Some b => 
+            if short then ("..." ^ nl)
+            else (" := " ^ nl ^ print_term Σ' true nil true false b ^ "." ^ nl)
+          | None => "."
+          end ^ acc)
+      end
+    end.
+
+  Definition print_env (short : bool) (prefix : nat) Σ := 
+    print_env_aux short prefix Σ (Tree.string "").
+
+  Definition print_program (short : bool) (prefix : nat) (p : program) : t := 
+    print_env short prefix (fst p) ^ nl ^ print_term (empty_ext (fst p)) true nil true false (snd p). 
+
+End PrintTermTree.  
+
+Definition print_term Σ all Γ top inapp t := 
+  Tree.to_string (PrintTermTree.print_term Σ all Γ top inapp t).
+
+Definition print_context Σ Γ Δ : string := 
+  Tree.to_string (PrintTermTree.print_context_gen Σ (PrintTermTree.print_term Σ true) Γ Δ).2.
+
+Definition print_env (short : bool) (prefix : nat) Σ := 
+  Tree.to_string (PrintTermTree.print_env short prefix Σ).
   
-Definition print_one_ind (short : bool) Σ Γ (mib : mutual_inductive_body) (oib : one_inductive_body) : string :=
-  let '(Γpars, spars) := print_context Σ Γ mib.(ind_params) in
-  let '(Γinds, sinds) := print_context Σ Γpars oib.(ind_indices) in
-  oib.(ind_name) ++ spars ++ sinds ++ pr_term Σ Γinds true (tSort oib.(ind_sort)) ++ ":=" ++ nl ++
-  if short then "..."
-  else print_list (print_one_cstr Σ Γpars mib) nl oib.(ind_ctors).
-
-Fixpoint print_env_aux (short : bool) (prefix : nat) univs (Σ : global_declarations) (acc : string) := 
-  match prefix with 
-  | 0 => match Σ with [] => acc | _ => ("..." ++ nl ++ acc)%string end
-  | S n => 
-  match Σ with
-  | [] => acc
-  | (kn, InductiveDecl mib) :: Σ => 
-    let Σ' := ({| universes := univs; declarations := Σ |}, mib.(ind_universes)) in
-    let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-    print_env_aux short n univs Σ
-      ("Inductive " ++ 
-       print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." ++ 
-       nl ++ acc)%string
-  | (kn, ConstantDecl cb) :: Σ =>
-    let Σ' := ({| universes := univs; declarations := Σ |}, cb.(cst_universes)) in
-    print_env_aux short n univs Σ
-      ((match cb.(cst_body) with 
-        | Some _ => "Definition "
-        | None => "Axiom "
-      end) ++ string_of_kername kn ++ " : " ++ pr_term Σ' nil true cb.(cst_type) ++
-      match cb.(cst_body) with
-      | Some b => 
-        if short then ("..." ++ nl)%string
-        else (" := " ++ nl ++ pr_term Σ' nil true b ++ "." ++ nl)
-      | None => "."
-      end ++ acc)%string
-  end
-  end.
-
-Definition print_env (short : bool) (prefix : nat) Σ := print_env_aux short prefix Σ.(universes) Σ.(declarations) EmptyString.
-
 Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
-  print_env short prefix (fst p) ++ nl ++
-  pr_term (empty_ext (fst p)) nil true (snd p). 
+  Tree.to_string (PrintTermTree.print_program short prefix p).

@@ -11,11 +11,11 @@ Definition uint63_from_model (i : uint63_model) : Uint63.int :=
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
     
-Definition trans_prim (t : prim_val) : Ast.term :=
+(* Definition trans_prim (t : prim_val) : Ast.term :=
   match t.π2 with
   | primIntModel i => Ast.tInt (uint63_from_model i)
   | primFloatModel f => Ast.tFloat (float64_from_model f)
-  end.
+  end. *)
 
 Definition trans_predicate (t : PCUICAst.predicate Ast.term) : predicate Ast.term :=
   {| pparams := t.(PCUICAst.pparams); 
@@ -51,7 +51,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | PCUICAst.tPrim i => trans_prim i
+  (* | PCUICAst.tPrim i => trans_prim i *)
   end.
 
 Notation trans_decl := (map_decl trans).
@@ -64,7 +64,12 @@ Definition trans_constructor_body (d : PCUICEnvironment.constructor_body) :=
      cstr_indices := map trans d.(PCUICEnvironment.cstr_indices); 
      cstr_type := trans d.(PCUICEnvironment.cstr_type);
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
-      
+
+Definition trans_projection_body (d : PCUICEnvironment.projection_body) :=
+ {| proj_name := d.(PCUICEnvironment.proj_name); 
+    proj_type := trans d.(PCUICEnvironment.proj_type);
+    proj_relevance := d.(PCUICEnvironment.proj_relevance) |}.
+          
 Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
   {| ind_name := d.(PCUICEnvironment.ind_name);
      ind_relevance := d.(PCUICEnvironment.ind_relevance);
@@ -73,11 +78,12 @@ Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
      ind_sort := d.(PCUICEnvironment.ind_sort);
      ind_kelim := d.(PCUICEnvironment.ind_kelim);
      ind_ctors := List.map trans_constructor_body d.(PCUICEnvironment.ind_ctors);
-     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
+     ind_projs := List.map trans_projection_body d.(PCUICEnvironment.ind_projs) |}.
 
 Definition trans_constant_body bd :=
   {| cst_type := trans bd.(PCUICEnvironment.cst_type); cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
-     cst_universes := bd.(PCUICEnvironment.cst_universes) |}.
+     cst_universes := bd.(PCUICEnvironment.cst_universes);
+     cst_relevance := bd.(PCUICEnvironment.cst_relevance) |}.
 
 
 Definition trans_minductive_body md :=

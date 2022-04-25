@@ -826,7 +826,7 @@ Section Alpha.
         eapply All2_app. apply All2_refl; reflexivity.
         repeat constructor. now apply upto_names_impl_eq_term.
 
-    - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc H ty Δ v e e'; invs e.
+    - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc H Δ v e e'; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.
         eapply ihc; tea.
@@ -908,8 +908,14 @@ Section Alpha.
           4: intuition eauto.
           all: intros ? ? []; reflexivity.
         * revert wffix.
-          unfold wf_fixpoint.
-          enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
+          unfold wf_fixpoint, wf_fixpoint_gen.
+          move/andP => [] hm ho.
+          apply/andP; split.
+          { solve_all. move: b b3.
+            generalize (dbody x) (dbody y).
+            clear=> t t' isL eq.
+            destruct t => //. now depelim eq. }
+          move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. solve_all.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
         + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
@@ -981,7 +987,7 @@ Section Alpha.
         4: intuition eauto.
         all: intros ? ? []; reflexivity.
       * revert wffix.
-        unfold wf_cofixpoint.
+        unfold wf_cofixpoint, wf_cofixpoint_gen.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
         apply upto_names_check_cofix. solve_all.
       + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.

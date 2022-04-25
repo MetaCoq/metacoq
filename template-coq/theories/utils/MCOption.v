@@ -1,4 +1,5 @@
-From Coq Require Import List ssreflect Arith Morphisms.
+From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
+
 From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
@@ -19,14 +20,34 @@ Definition on_Some {A} (P : A -> Prop) : option A -> Prop :=
         | None => False
         end.
 
+Lemma on_SomeP {A} {P : A -> Prop} (opta : option A) : on_Some P opta -> ∑ a, opta = Some a /\ P a.
+Proof.
+  destruct opta as [a|]; [|intros []].
+  intros h; exists a; split; [reflexivity|assumption].
+Qed.
+
+
 Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
   fun x => match x with
         | Some x => P x
         | None => True
         end.
 
+Definition R_opt {A} (R : relation A) : relation (option A) :=
+  fun x y => match x, y with
+    | Some x, Some y => R x y
+    | None, None => True
+    | _, _ => False
+  end.
+
 Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
   match o with Some x => f x | None => b end.
+
+Lemma option_default_ext {A B} (f : A -> B) x1 x2 d :
+  x1 = x2 -> option_default f x1 d = option_default f x2 d.
+Proof.
+  now intros ->.
+Qed.
 
 Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
 Proof.
@@ -138,6 +159,7 @@ Qed.
 Inductive ForOption {A} (P : A -> Prop) : option A -> Prop :=
 | fo_Some : forall t, P t -> ForOption P (Some t)
 | fo_None : ForOption P None.
+Derive Signature for ForOption.
 
 Definition foroptb {A : Type} (p : A -> bool) (o : option A) : bool :=
   option_get true (option_map p o).

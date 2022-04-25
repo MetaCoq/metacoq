@@ -196,7 +196,7 @@ Proof.
    - rewrite 2!rename_mkApps. simpl.
      eapply cumul_fix.
      + eapply rename_unfold_fix. eassumption.
-     + eapply is_constructor_rename. assumption.
+     + rewrite -is_constructor_rename. assumption.
    - rewrite 2!rename_mkApps. simpl.
      eapply cumul_cofix_case.
      eapply rename_unfold_cofix. eassumption.
@@ -732,7 +732,13 @@ Lemma rename_wf_fixpoint Σ f mfix :
   wf_fixpoint Σ mfix ->
   wf_fixpoint Σ (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix).
 Proof.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
+  rewrite forallb_map.
+  move/andP => [] hmfix ho.
+  apply/andP; split. 
+  { eapply forallb_impl; tea. intros. cbn in H0.
+    now eapply isLambda_rename. }
+  move: ho.
   rewrite map_map_compose.
   destruct (map_option_out (map check_one_fix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
@@ -744,7 +750,8 @@ Lemma rename_wf_cofixpoint Σ f mfix :
   wf_cofixpoint Σ mfix ->
   wf_cofixpoint Σ (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix).
 Proof.
-  rewrite /wf_cofixpoint map_map_compose.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
+  rewrite map_map_compose.
   destruct (map_option_out (map check_one_cofix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
   2:{ intros x y. apply (rename_check_one_cofix f mfix). }
@@ -970,7 +977,7 @@ Proof.
           relativize #|bcontext br|; [eapply urenaming_context, Hf|len].
           now rewrite case_branch_context_length. }
     * rewrite /predctx case_predicate_context_length //.
-  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e ty
+  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e
            P Δ f hf.
     simpl. eapply meta_conv.
     + econstructor.

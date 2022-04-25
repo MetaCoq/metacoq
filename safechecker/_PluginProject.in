@@ -6,14 +6,6 @@ src/META.coq-metacoq-safechecker
 # src/classes0.mli
 # src/classes0.ml
 
-# From Coq's stdlib
-src/eqdepFacts.mli
-src/eqdepFacts.ml
-src/orderedTypeAlt.mli
-src/orderedTypeAlt.ml
-src/orderedType0.mli
-src/orderedType0.ml
-
 # From template
 src/ssrbool.ml
 src/ssrbool.mli
@@ -21,10 +13,12 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/envMap.mli
+src/envMap.ml
 
 # From PCUIC
-src/pCUICPrimitive.mli
-src/pCUICPrimitive.ml
+# src/pCUICPrimitive.mli
+# src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
@@ -33,8 +27,8 @@ src/pCUICCases.mli
 src/pCUICCases.ml
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
-src/pCUICInduction.mli
-src/pCUICInduction.ml
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
@@ -75,28 +69,24 @@ src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICPretty.mli
 src/pCUICPretty.ml
+src/pCUICProgram.mli
+src/pCUICProgram.ml
 
 # From SafeChecker
 # src/string2pos.mli
 # src/string2pos.ml
 # src/canonicalTries.mli
 # src/canonicalTries.ml
-src/kernames.mli
-src/kernames.ml
-src/fMapList.mli
-src/fMapList.ml
-src/fMapAVL.mli
-src/fMapAVL.ml
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
-src/pCUICWfEnv.mli
-src/pCUICWfEnv.ml
-src/pCUICSafeReduce.mli
-src/pCUICSafeReduce.ml
 src/pCUICEqualityDec.mli
 src/pCUICEqualityDec.ml
+src/pCUICWfEnv.mli
+src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
+src/pCUICSafeReduce.mli
+src/pCUICSafeReduce.ml
 src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 # src/pCUICWfEnv.mli

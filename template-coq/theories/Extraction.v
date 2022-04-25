@@ -7,14 +7,9 @@
 
 From Coq Require Ascii Extraction ZArith NArith.
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
+From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats
     ExtrOCamlInt63.
 From MetaCoq.Template Require Import MC_ExtrOCamlZPosInt.
-
-Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
-Extract Constant Ascii.compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
  
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".
@@ -27,11 +22,13 @@ Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
-Cd "gen-src".
-
 From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
-     LiftSubst UnivSubst Pretty.
+     LiftSubst UnivSubst Pretty TemplateProgram.
 Import Init.Nat.
+
+Extract Constant Typing.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
+
+Cd "gen-src".
 
 (* Silence the warnings for specifications axioms of int63 *)
 Set Warnings "-extraction-logical-axiom".
@@ -58,5 +55,8 @@ Extraction Library BasicAst.
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.
+
+Recursive Extraction Library TemplateProgram.
+
 
 Cd "..".

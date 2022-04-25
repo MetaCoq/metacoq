@@ -7,7 +7,11 @@
             "label": "make",
             "type": "shell",
             "command": "make",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
         },
         {
             "label": "makevos",
@@ -17,8 +21,7 @@
             },
             "command": "opam exec -- make -f Makefile.pcuic vos",
             "group": {
-                "kind": "build",
-                "isDefault": true
+                "kind": "build"
             },
             "problemMatcher": []
         }

@@ -30,7 +30,7 @@ Inductive ConversionError :=
 | ProdNotConvertibleAnn
     (Γ1 : context) (na : aname) (A1 B1 : term)
     (Γ2 : context) (na' : aname) (A2 B2 : term)
-    
+
 | ContextNotConvertibleAnn
     (Γ : context) (decl : context_decl)
     (Γ' : context) (decl' : context_decl)
@@ -53,7 +53,7 @@ Inductive ConversionError :=
     (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
     (Γ2 : context)
     (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
-    
+
 | CasePredUnequalUniverseInstances
     (Γ1 : context)
     (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
@@ -119,9 +119,11 @@ Inductive type_error :=
 | UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (le : bool)
-  (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
-| NotConvertible (G : universes_graph) (Γ : context) (t u : term)
+| NotCumulSmaller {abstract_structure} (le : bool)
+  (G : abstract_structure) (Γ : context) (t u t' u' : term) (e : ConversionError)
+| NotConvertible {abstract_structure}
+  (G : abstract_structure)
+  (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
@@ -198,34 +200,34 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       nl ^ "are done on distinct inductive types."
   | CasePredParamsUnequalLength Γ ci p c brs Γ' ci' p' c' brs' =>
       "The predicates of the two stuck pattern-matches" ^ nl ^
-      print_term Σ Γ (tCase ci p c brs) ^ 
+      print_term Σ Γ (tCase ci p c brs) ^
       nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       nl ^ "have an unequal number of parameters."
   | CasePredUnequalUniverseInstances Γ ci p c brs Γ' ci' p' c' brs' =>
       "The predicates of the two stuck pattern-matches" ^ nl ^
-      print_term Σ Γ (tCase ci p c brs) ^ 
+      print_term Σ Γ (tCase ci p c brs) ^
       nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       nl ^ "have unequal universe instances."
   | ContextNotConvertibleAnn Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the binder annotations are not equal"
   | ContextNotConvertibleType Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the types are not convertible"
   | ContextNotConvertibleBody Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the bodies are not convertible"
   | ContextNotConvertibleLength => "The contexts have unequal length"
-      
+
   | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two stuck projections" ^ nl ^
       print_term Σ Γ (tProj p c) ^
@@ -296,26 +298,26 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
   | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | NotCumulSmaller le G Γ t u t' u' e => "Types are not " ^
-      (if le then "<= for cumulativity:" ^ nl 
+  | NotCumulSmaller _ le G Γ t u t' u' e => "Types are not " ^
+      (if le then "<= for cumulativity:" ^ nl
        else "convertible:" ^ nl) ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       nl ^ "after reduction:" ^ nl ^
       print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
       nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
-      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
-      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
-  | NotConvertible G Γ t u => "Terms are not convertible:" ^ nl ^
+      (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
+      " and context: " ^ nl ^ print_context Σ [] Γ
+  | NotConvertible _ G Γ t u => "Terms are not convertible:" ^ nl ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
-      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
-      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+      (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
+      " and context: " ^ nl ^ print_context Σ [] Γ
   | NotASort t => "Not a sort: " ^ print_term Σ [] t
   | NotAProduct t t' => "Not a product" ^ print_term Σ [] t ^ nl ^
     "(after reducing to " ^ print_term Σ [] t'
   | NotAnArity t => print_term Σ [] t ^ " is not an arity"
   | NotAnInductive t => "Not an inductive: " ^ print_term Σ [] t
   | IllFormedFix m i => "Ill-formed recursive definition"
-  | UnsatisfiedConstraints c => "Unsatisfied constraints" 
+  | UnsatisfiedConstraints c => "Unsatisfied constraints"
   | Msg s => "Msg: " ^ s
   end.
 
@@ -324,7 +326,6 @@ Inductive typing_result (A : Type) :=
 | TypeError (t : type_error).
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
-
 Inductive typing_result_comp (A : Type) :=
 | Checked_comp (a : A)
 | TypeError_comp (t : type_error) (a : A -> False).
@@ -362,9 +363,15 @@ Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
 | AlreadyDeclared (id : string).
 
+
+Section EnvCheck.
+
+  Context (abstract_structure : Type).
+
+
 Inductive EnvCheck (A : Type) :=
 | CorrectDecl (a : A)
-| EnvError (Σ : global_env_ext) (e : env_error).
+| EnvError (Σ : abstract_structure) (e : env_error).
 Global Arguments EnvError {A} Σ e.
 Global Arguments CorrectDecl {A} a.
 
@@ -378,7 +385,7 @@ Global Instance envcheck_monad : Monad EnvCheck :=
   |}.
 
 Global Instance envcheck_monad_exc
-  : MonadExc (global_env_ext * env_error) EnvCheck :=
+  : MonadExc (abstract_structure * env_error) EnvCheck :=
   { raise A '(g, e) := EnvError g e;
     catch A m f :=
       match m with
@@ -454,3 +461,5 @@ Proof.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
     eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
+
+End EnvCheck.

@@ -64,7 +64,7 @@ struct
   let denote_term (env : Environ.env) (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
     let open Context.Rel.Declaration in
     let rec aux env evm (trm: D.t) : _ * Constr.t =
-      (*    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
+      (* debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_econstr_env env evm trm)) ;  *)
       match D.inspect_term trm with
       | ACoq_tRel x -> evm, Constr.mkRel (D.unquote_int x + 1)
       | ACoq_tVar x -> evm, Constr.mkVar (D.unquote_ident x)
@@ -160,8 +160,8 @@ struct
          let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in
          let evm, t' = aux env evm t in
          evm, Constr.mkProj (p', t')
-      | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
-      | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
+      (* | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x) *)
+      (* | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x) *)
 
     in aux env evm trm
 

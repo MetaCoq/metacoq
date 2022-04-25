@@ -136,7 +136,7 @@ Proof.
     eapply infering_ind_typing in X ; tea.
     eapply infering_ind_typing in tyc' ; tea.
     subst.
-    exists (subst0 (c :: List.rev args'') ty@[u0]).
+    exists (subst0 (c :: List.rev args'') (proj_type pdecl)@[u0]).
     split.
     + eapply closed_red_red_subst0 ; tea.
       3: eapply subslet_untyped_subslet, projection_subslet ; tea.

@@ -1,5 +1,5 @@
 
-TIMED ?=
+all: template-coq pcuic safechecker erasure examples test-suite translations
 
 -include Makefile.conf
 

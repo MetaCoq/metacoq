@@ -59,9 +59,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     Σ ;;; Γ |- tConst c u ⇝ subst_instance u body
 
 (** Proj *)
-| red_proj i pars narg args u arg:
-    nth_error args (pars + narg) = Some arg ->
-    Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args) ⇝ arg
+| red_proj p args u arg:
+    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+    Σ ;;; Γ |- tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args) ⇝ arg
 
 
 | abs_red_l na M M' N : Σ ;;; Γ |- M ⇝ M' -> Σ ;;; Γ |- tLambda na M N ⇝ tLambda na M' N
@@ -155,10 +155,10 @@ Lemma red1_ind_all :
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
 
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
+       (forall (Γ : context) p (args : list term) (u : Instance.t)
          (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+           nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+           P Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg) ->
 
        (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->

@@ -215,7 +215,7 @@ Defined.
 
 
 
-Instance tsl_param : Translation
+#[export] Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE t =>
       match gc_of_uctx (global_ext_uctx (fst ΣE)) with

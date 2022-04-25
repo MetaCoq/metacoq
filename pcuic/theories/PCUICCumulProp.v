@@ -113,19 +113,20 @@ Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' ->
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof.
-  move=> isp isp'.
+  destruct u, u';
+  move=> //_ //_.
   constructor => //. constructor. 
-  red. red. rewrite Hcf'. red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
+  red. red. constructor.
 Qed.
 
 Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -> 
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof.
-  move=> isp isp'.
+  destruct u, u';
+  move=> //_ //_.
   constructor => //. constructor. 
-  do 2 red. rewrite Hcf'.
-  red. intros. now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
+  do 2 red. constructor.
 Qed.
 
 Lemma conv_sort_inv {Σ : global_env_ext} {wfΣ : wf Σ} Γ s s' :
@@ -364,42 +365,42 @@ Proof.
   intros x y; unfold eq_univ_prop; intuition.
 Qed.
 
-Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : Universe.nonEmptyUnivExprSet) :
-  UnivExprSet.For_all P u <->
-  Forall P (UnivExprSet.elements u).
+Lemma LevelExprSet_For_all (P : LevelExpr.t -> Prop) (u : LevelAlgExpr.t) :
+  LevelExprSet.For_all P u <->
+  Forall P (LevelExprSet.elements u).
 Proof.
-  rewrite UnivExprSet_For_all_exprs.
-  pose proof (Universe.exprs_spec u).
-  destruct (Universe.exprs u). rewrite -H. simpl.
+  rewrite NonEmptySetFacts.LevelExprSet_For_all_exprs.
+  pose proof (NonEmptySetFacts.to_nonempty_list_spec u).
+  destruct (NonEmptySetFacts.to_nonempty_list u). rewrite -H. simpl.
   split. constructor; intuition.
   intros H'; inv H'; intuition.
 Qed.
 
 Lemma univ_expr_set_in_elements e s : 
-  UnivExprSet.In e s <-> In e (UnivExprSet.elements s).
+  LevelExprSet.In e s <-> In e (LevelExprSet.elements s).
 Proof.
-  rewrite -UnivExprSet.elements_spec1. generalize (UnivExprSet.elements s).
+  rewrite -LevelExprSet.elements_spec1. generalize (LevelExprSet.elements s).
   now eapply InA_In_eq.
 Qed.
 
-Lemma univ_epxrs_elements_map g s : 
-  forall e, In e (UnivExprSet.elements (Universe.map g s)) <->
-      In e (map g (UnivExprSet.elements s)).
+Lemma univ_epxrs_elements_map g s :
+  forall e, In e (LevelExprSet.elements (NonEmptySetFacts.map g s)) <->
+      In e (map g (LevelExprSet.elements s)).
 Proof.
   intros e.
-  unfold Universe.map.
-  pose proof (Universe.exprs_spec s).
-  destruct (Universe.exprs s) as [e' l] eqn:eq.  
-  rewrite -univ_expr_set_in_elements Universe.add_list_spec.
-  rewrite -H. simpl. rewrite UnivExprSet.singleton_spec.
+  unfold NonEmptySetFacts.map.
+  pose proof (NonEmptySetFacts.to_nonempty_list_spec s).
+  destruct (NonEmptySetFacts.to_nonempty_list s) as [e' l] eqn:eq.  
+  rewrite -univ_expr_set_in_elements NonEmptySetFacts.add_list_spec.
+  rewrite -H. simpl. rewrite LevelExprSet.singleton_spec.
   intuition auto.
 Qed.
   
-Lemma Forall_elements_in P s : Forall P (UnivExprSet.elements s) <-> 
-  (forall x, UnivExprSet.In x s -> P x).
+Lemma Forall_elements_in P s : Forall P (LevelExprSet.elements s) <->
+  (forall x, LevelExprSet.In x s -> P x).
 Proof.
   setoid_rewrite univ_expr_set_in_elements.
-  generalize (UnivExprSet.elements s).
+  generalize (LevelExprSet.elements s).
   intros.
   split; intros.
   induction H; depelim H0; subst => //; auto.
@@ -409,21 +410,21 @@ Proof.
 Qed.
 
 Lemma univ_exprs_map_all P g s : 
-  Forall P (UnivExprSet.elements (Universe.map g s)) <->
-  Forall (fun x => P (g x)) (UnivExprSet.elements s).
+  Forall P (LevelExprSet.elements (NonEmptySetFacts.map g s)) <->
+  Forall (fun x => P (g x)) (LevelExprSet.elements s).
 Proof.
   rewrite !Forall_elements_in.
-  setoid_rewrite Universe.map_spec.
+  setoid_rewrite NonEmptySetFacts.map_spec.
   intuition auto.
   eapply H. now exists x.
   destruct H0 as [e' [ins ->]]. apply H; auto.
 Qed.
 
 Lemma expr_set_forall_map f g s : 
-  UnivExprSet.for_all f (Universe.map g s) <->
-  UnivExprSet.for_all (fun e => f (g e)) s.
+  LevelExprSet.for_all f (NonEmptySetFacts.map g s) <->
+  LevelExprSet.for_all (fun e => f (g e)) s.
 Proof.
-  rewrite /is_true !UnivExprSet.for_all_spec !UnivExprSet_For_all.
+  rewrite /is_true !LevelExprSet.for_all_spec !LevelExprSet_For_all.
   apply univ_exprs_map_all.
 Qed.
 
@@ -434,7 +435,7 @@ Qed.
 
 (* Lemma is_prop_subst_level_expr u1 u2 s : 
   Forall2 (fun x y : Level.t => eq_univ_prop (Universe.make x) (Universe.make y)) u1 u2  ->
-  UnivExpr.is_prop (subst_instance_level_expr u1 s) = UnivExpr.is_prop (subst_instance_level_expr u2 s).
+  LevelExpr.is_prop (subst_instance_level_expr u1 s) = LevelExpr.is_prop (subst_instance_level_expr u2 s).
 Proof.
   intros hu. destruct s; simpl; auto.
   destruct e as [[] ?]; simpl; auto.
@@ -490,7 +491,7 @@ Proof.
   - now transitivity u'nf.
 Qed.
 
-Instance cumul_prop_transitive Σ Γ : wf Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
+Global Instance cumul_prop_transitive Σ Γ : wf Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof. intros. red. intros. now eapply cumul_prop_trans. Qed.
 
 Lemma cumul_prop_cum_l {Σ Γ A T B} {wfΣ : wf_ext Σ} : 
@@ -866,14 +867,6 @@ Proof.
     intuition auto. rewrite /id. reflexivity.
 Qed.
 
-Lemma All_All_All2 {A} (P Q : A -> Prop) l l' : 
-  All P l -> All Q l' -> #|l| = #|l'| -> All2 (fun x y => P x /\ Q y) l l'.
-Proof.
-  induction l in l' |- *; destruct l'; simpl; auto => //.
-  intros ha hb. specialize (IHl l'); depelim ha; depelim hb.
-  constructor; auto.
-Qed.
-
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
@@ -1031,7 +1024,7 @@ Proof.
   solve_all. constructor; auto.
 Qed.
 
-Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
+Global Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
 Proof.
   now intros wf x y; eapply cumul_prop_sym.
 Qed.
@@ -1269,13 +1262,12 @@ Proof.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
     destruct (declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
-    subst ty. 
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
     epose proof (wf_projection_context _ _ isdecl c1).
     epose proof (wf_projection_context _ _ isdecl c2).
-    transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.2)).
-    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context p.1.1 mdecl' idecl' u)) => //.
+    transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.(proj_type))).
+    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context p.(proj_ind) mdecl' idecl' u)) => //.
     * cbn -[projection_context on_free_vars_ctx].
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X3.
     * cbn -[projection_context on_free_vars_ctx].
@@ -1291,7 +1283,7 @@ Proof.
     * constructor => //. symmetry; constructor => //; fvs.
       { now eapply leq_term_eq_term_prop_impl. }
       { now eapply All2_rev. }
-    * eapply (@substitution_cumul_prop Σ Γ (projection_context p.1.1 mdecl' idecl' u') []) => //.
+    * eapply (@substitution_cumul_prop Σ Γ (projection_context p.(proj_ind) mdecl' idecl' u') []) => //.
       { apply (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)). }
       eapply cumul_prop_subst_instance; eauto.
       cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //; fvs.

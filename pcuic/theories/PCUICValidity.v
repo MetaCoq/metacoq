@@ -127,55 +127,6 @@ Section Validity.
     induction Δ as [|[na [b|] ty]]; simpl; auto with pcuic.
   Qed.
   Hint Resolve type_ctx_wf_univ : pcuic.
-  
-  Lemma All2_fold_All2 (P : context_decl -> context_decl -> Type) Γ Δ : 
-    All2_fold (fun _ _ => P) Γ Δ <~>
-    All2 P Γ Δ.
-  Proof.
-    split; induction 1; constructor; auto.
-  Qed.
-
-  Lemma All2_map2_left {A B C D} {P : A -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> A} {l l' l'' l'''} : 
-   All2 R l l''' ->
-   All2 Q l' l'' ->
-   #|l| = #|l'| ->
-   (forall x y z w, R x w -> Q y z -> P (f x y) z) ->
-   All2 P (map2 f l l') l''.
-  Proof.
-    intros hb ha hlen hPQ.
-    induction ha in l, l''', hlen, hb |- *; simpl; try constructor; auto.
-    - destruct l => //. simpl. constructor.
-    - destruct l => //.
-      noconf hlen. depelim hb.
-      specialize (IHha _ _ hb H).
-      simpl. constructor; auto. eapply hPQ; eauto.
-  Qed.
-
-  Lemma All2_map2_left_All3 {A B C} {P : A -> A -> Type} {f : B -> C -> A} {l l' l''} : 
-    All3 (fun x y z => P (f x y) z) l l' l'' ->
-    All2 P (map2 f l l') l''.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma All3_impl {A B C} {P Q : A -> B -> C -> Type} {l l' l''} : 
-    All3 P l l' l'' ->
-    (forall x y z, P x y z -> Q x y z) ->
-    All3 Q l l' l''.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma map2_app {A B C} (f : A -> B -> C) l0 l0' l1 l1' :
-    #|l0| = #|l1| -> #|l0'| = #|l1'| ->
-    map2 f (l0 ++ l0') (l1 ++ l1') = 
-    map2 f l0 l1 ++ map2 f l0' l1'.
-  Proof.
-    induction l0 in l0', l1, l1' |- *; simpl; auto.
-    - destruct l1 => //.
-    - destruct l1 => /= // [=] hl hl'.
-      now rewrite IHl0.
-  Qed.
 
   Notation liat := ltac:(lia) (only parsing).
 
@@ -411,7 +362,6 @@ Section Validity.
     - (* Proj *)
       pose proof isdecl as isdecl'.
       eapply declared_projection_type in isdecl'; eauto.
-      subst ty.
       destruct isdecl' as [s Hs].
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.

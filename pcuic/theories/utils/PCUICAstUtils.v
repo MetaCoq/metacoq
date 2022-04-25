@@ -35,12 +35,12 @@ Fixpoint string_of_term (t : term) :=
   | tCase ci p t brs =>
     "Case(" ^ string_of_case_info ci ^ "," ^ string_of_term t ^ ","
             ^ string_of_predicate string_of_term p ^ "," ^ string_of_list (string_of_branch string_of_term) brs ^ ")"
-  | tProj (ind, i, k) c =>
-    "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+  | tProj p c =>
+    "Proj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) ^ "," ^ string_of_nat p.(proj_arg) ^ ","
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")"
+  (* | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")" *)
   end.
 
 Ltac change_Sk :=
@@ -92,7 +92,7 @@ Lemma lookup_env_cons {kn d Σ kn' d'} : lookup_global ((kn, d) :: Σ) kn' = Som
   (kn = kn' /\ d = d') \/ (kn <> kn' /\ lookup_global Σ kn' = Some d').
 Proof.
   simpl.
-  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  epose proof (ReflectEq.eqb_spec (A:=kername) kn' kn). simpl in H.
   elim: H. intros -> [= <-]; intuition auto.
   intros diff look. intuition auto.
 Qed.
@@ -102,7 +102,7 @@ Lemma lookup_env_cons_fresh {kn d Σ kn'} :
   lookup_global ((kn, d) :: Σ) kn' = lookup_global Σ kn'.
 Proof.
   simpl.
-  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  epose proof (ReflectEq.eqb_spec (A:=kername) kn' kn). simpl in H.
   elim: H. intros -> => //. auto.
 Qed.
 
@@ -113,6 +113,12 @@ Fixpoint decompose_app_rec (t : term) l :=
   end.
 
 Definition decompose_app t := decompose_app_rec t [].
+
+Lemma mkApps_tApp f a l : mkApps (tApp f a) l = mkApps f (a :: l).
+Proof. reflexivity. Qed.
+
+Lemma tApp_mkApps f a : tApp f a = mkApps f [a].
+Proof. reflexivity. Qed.
 
 Definition mkApps_decompose_app_rec t l :
   mkApps t l = mkApps (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
@@ -674,6 +680,16 @@ Ltac solve_discr' :=
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
   end.
+  
+Lemma mkApps_eq_decompose_app {t t' l l'} :
+  mkApps t l = mkApps t' l' ->
+  decompose_app_rec t l = decompose_app_rec t' l'.
+Proof.
+  induction l in t, t', l' |- *; simpl.
+  - intros ->. rewrite !decompose_app_rec_mkApps.
+    now rewrite app_nil_r.
+  - intros H. apply (IHl _ _ _ H).
+Qed.
 
 Lemma mkApps_eq_decompose {f args t} :
   mkApps f args = t ->

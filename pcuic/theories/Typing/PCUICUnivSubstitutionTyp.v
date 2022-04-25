@@ -333,7 +333,10 @@ Proof.
       rewrite <- (fix_context_subst_instance u mfix). 
       now len.
     + red; rewrite <- wffix.
-      unfold wf_fixpoint.
+      unfold wf_fixpoint, wf_fixpoint_gen.
+      f_equal. 
+      { rewrite forallb_map. solve_all. cbn. 
+        destruct (dbody x) => //. }
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
 
@@ -358,7 +361,7 @@ Proof.
         rewrite <- (fix_context_subst_instance u mfix). 
         now len.
       + red; rewrite <- wffix.
-        unfold wf_cofixpoint.
+        unfold wf_cofixpoint, wf_cofixpoint_gen.
         rewrite map_map_compose.
         now rewrite subst_instance_check_one_cofix.
       

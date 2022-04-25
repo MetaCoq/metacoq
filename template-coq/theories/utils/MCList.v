@@ -1,5 +1,5 @@
 From Equations Require Import Equations.
-From Coq Require Import Bool Arith Lia SetoidList.
+From Coq Require Import Bool Arith Lia SetoidList Utf8.
 From MetaCoq Require Import MCPrelude MCRelations.
 
 Set Equations Transparent.
@@ -370,9 +370,9 @@ Fixpoint chop {A} (n : nat) (l : list A) :=
     end
   end.
 
-Lemma nth_map {A} (f : A -> A) n l d :
-  (d = f d) ->
-  nth n (map f l) d = f (nth n l d).
+Lemma nth_map' {A B} (f : A -> B) n l d d' :
+  (d' = f d) ->
+  nth n (map f l) d' = f (nth n l d).
 Proof.
   induction n in l |- *; destruct l; simpl; auto.
 Qed.
@@ -517,10 +517,9 @@ Proof.
   simpl. intros [= Hl]. cbn. f_equal. now rewrite mapi_rec_Sk.
 Qed.
 
-Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
+Lemma skipn_length {A} n (l : list A) : length (skipn n l) = length l - n.
 Proof.
   induction l in n |- *; destruct n; simpl; auto.
-  intros. rewrite IHl; auto with arith.
 Qed.
 
 Lemma combine_map_id {A B} (l : list (A * B)) :
@@ -1112,10 +1111,18 @@ Proof.
   rewrite IHx. now rewrite app_comm_cons.
 Qed.
 
-Lemma firstn_app_left (A : Type) (n : nat) (l1 l2 : list A) k :
+Lemma firstn_app_left_rem (A : Type) (n : nat) (l1 l2 : list A) k :
   k = #|l1| + n ->
   firstn k (l1 ++ l2) = l1 ++ firstn n l2.
 Proof. intros ->; apply firstn_app_2. Qed.
+
+Lemma firstn_app_left {A} n (l l' : list A) : 
+  n = #|l| ->  
+  firstn n (l ++ l') = l.
+Proof.
+  intros ->.
+  rewrite firstn_app firstn_all Nat.sub_diag firstn_0 // app_nil_r //.
+Qed.
 
 Lemma skipn_all_app_eq {A} n (l l' : list A) : n = #|l| -> skipn n (l ++ l') = l'.
 Proof.
@@ -1209,3 +1216,207 @@ Proof.
     cbn [repeat]. cbn. rewrite  IHn.
     now rewrite repeat_app. 
 Qed.
+
+
+From MetaCoq Require Import ReflectEq.
+
+Section SplitPrefix.
+  Context {A : Type} `{ReflectEq A}.
+
+  Equations split_prefix (l1 l2 : list A) : list A * list A * list A :=
+  | nil, l2 => (nil, nil, l2)
+  | l1 , nil => (nil, l1, nil)
+  | a1 :: l1, a2 :: l2 with a1 == a2 => {
+    | true with split_prefix l1 l2 => {
+      | (prefix, l1', l2') => (a1 :: prefix, l1', l2')
+      }
+    | false => (nil, a1 :: l1, a2 :: l2)
+    }.
+
+  Lemma split_prefix_is_prefix l1 l2 :
+    let '(prefix, l1', l2') := split_prefix l1 l2 in
+    (l1 = prefix ++ l1') /\ (l2 = prefix ++ l2').
+  Proof.
+    funelim (split_prefix l1 l2).
+    1,2: simp split_prefix; now split.
+    1,2: rewrite -Heqcall; split; try easy.
+    1,2: rewrite Heq in Hind; destruct Hind.
+    1: now subst.
+    now rewrite (eqb_eq _ _ Heq0); subst.
+  Qed.
+
+  Definition is_prefix (l1 l2 : list A) := exists l', l2 = l1 ++ l'.
+
+  Lemma nil_prefix l : is_prefix nil l.
+  Proof. now exists l. Qed.
+
+  Lemma cons_prefix x l1 l2 : is_prefix l1 l2 -> is_prefix (x :: l1) (x :: l2).
+  Proof. move=> [l ->]; now exists l. Qed.
+
+  Lemma is_prefix_nil l : is_prefix l nil -> l = nil.
+  Proof. move=> [?]; case l=> //. Qed.
+
+  Lemma is_prefix_cons l x xs : is_prefix l (x :: xs) ->
+                           l = nil \/ (exists l', l = x :: l' /\ is_prefix l' xs).
+  Proof.
+    case: l x xs=> [|y ys ??[tl [= -> ->]]]; [now left| right].
+    exists ys; split=> //; now exists tl.
+  Qed.
+
+  Lemma is_prefix_cons_inv x xs y ys :
+    is_prefix (x :: xs) (y :: ys) -> x = y /\ is_prefix xs ys.
+  Proof.
+    move=> [tl [= -> ->]]; split=> //; now exists tl.
+  Qed.
+
+  Local Notation "'Simp'" := ltac:(simp split_prefix) (only parsing) : ssripat_scope.
+
+  Lemma split_prefix_maximal l1 l2 l :
+    is_prefix l l1 -> is_prefix l l2 ->
+    is_prefix l (fst (fst (split_prefix l1 l2))).
+  Proof.
+    funelim (split_prefix l1 l2).
+    - move=> /is_prefix_nil -> _; apply nil_prefix.
+    - move=> _ /is_prefix_nil ->; apply nil_prefix.
+    - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
+      move=> [? [-> ?]] /is_prefix_cons_inv [eqa ?].
+      rewrite eqa eqb_refl in Heq; discriminate.
+    - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
+      move=> [? [-> pr1]] /is_prefix_cons_inv [eqa pr2].
+      rewrite -Heqcall; apply cons_prefix.
+      move: Heqcall (Hind _ pr1 pr2)=> /Simp.
+      rewrite eqa eqb_refl=> /Simp.
+      move: (split_prefix l1 l2)=> -[[??]?] /Simp [= ->] //.
+  Qed.
+
+End SplitPrefix.
+
+Section SplitSuffix.
+  Context {A : Type} `{ReflectEq A}.
+
+  Definition split_suffix (l1 l2 : list A) : list A * list A * list A :=
+    let '(suffix, l1, l2) := split_prefix (rev l1) (rev l2) in
+    (rev l1, rev l2, rev suffix).
+
+  Lemma split_suffix_is_suffix l1 l2 :
+    let '(l1', l2', suffix) := split_suffix l1 l2 in
+    (l1 = l1' ++ suffix) /\ (l2 = l2' ++ suffix).
+  Proof.
+    unfold split_suffix.
+    pose proof (y := split_prefix_is_prefix (rev l1) (rev l2)).
+    revert y.
+    case: (split_prefix _ _)=> [[??] ?] [/(f_equal rev) + /(f_equal rev)].
+    rewrite 2!rev_invol 2!rev_app //.
+  Qed.
+
+  Definition is_suffix (l1 l2 : list A) := exists l', l2 = l' ++ l1.
+
+  Lemma is_suffix_is_prefix_rev l1 l2 :
+    is_suffix l1 l2 -> is_prefix (rev l1) (rev l2).
+  Proof. move=> [l] /(f_equal rev) ->; exists (rev l); apply: rev_app. Qed.
+
+  Lemma is_prefix_rev_is_suffix l1 l2 :
+    is_prefix (rev l1) (rev l2) -> is_suffix l1 l2.
+  Proof.
+    move=> [l] /(f_equal rev); rewrite rev_app 2! rev_invol.
+    move=> ->; by exists (rev l).
+  Qed.
+
+  Lemma split_suffix_maximal l1 l2 l :
+    is_suffix l l1 -> is_suffix l l2 ->
+    is_suffix l (snd (split_suffix l1 l2)).
+  Proof.
+    move=> /is_suffix_is_prefix_rev ll1 /is_suffix_is_prefix_rev ll2.
+    apply: is_prefix_rev_is_suffix.
+    pose proof (z := split_prefix_maximal (rev l1) (rev l2) (rev l) ll1 ll2).
+    move: z; unfold split_suffix.
+    case: (split_prefix _ _)=> [[??]?] /=; rewrite rev_invol //.
+  Qed.
+End SplitSuffix.
+
+Section AllInP.
+  Context {A : Type}.
+
+  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
+  | nil, _ := true ;
+  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
+End AllInP.
+
+Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
+  forallb_InP l (fun x _ => f x) = List.forallb f l.
+Proof.
+  remember (fun x _ => f x) as g.
+  funelim (forallb_InP l g) => //; simpl. f_equal.
+  now rewrite (H0 f).
+Qed.
+
+Section MapInP.
+  Context {A B : Type}.
+
+  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
+  map_InP nil _ := nil;
+  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
+End MapInP.
+
+Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
+  map_InP l (fun (x : A) _ => f x) = List.map f l.
+Proof.
+  remember (fun (x : A) _ => f x) as g.
+  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
+  now rewrite (H f0).
+Qed.
+
+Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
+  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
+Proof.
+  induction l; cbn => //.
+  intros [->|hin]. lia. specialize (IHl hin); lia.
+Qed.
+
+Lemma app_tip_nil {A} (l : list A) (x : A) : (l ++ [x])%list <> [].
+Proof.
+  destruct l; cbn; congruence.
+Qed.
+
+Definition remove_last {A} (args : list A) := 
+  List.firstn (#|args| - 1) args.
+
+Lemma remove_last_app {A} (l : list A) x : 
+  remove_last (l ++ [x]) = l.
+Proof.
+  unfold remove_last. cbn. len.
+  replace (#|l| + 1 -1) with #|l| by lia.
+  rewrite firstn_app Nat.sub_diag /= firstn_all app_nil_r //.
+Qed.
+
+Lemma remove_last_last {A} (l : list A) (a : A) : l <> [] ->
+  l = (remove_last l ++ [last l a])%list.
+Proof.
+  induction l using rev_ind.
+  congruence.
+  intros. rewrite remove_last_app last_last //.
+Qed.
+
+Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} : 
+  p a ->
+  forallb p (repeat a n).
+Proof.
+  intros pa.
+  induction n; cbn; auto.
+  now rewrite pa IHn.
+Qed.
+
+Lemma map_repeat {A B} (f : A -> B) a n : 
+  map f (repeat a n) = repeat (f a) n.
+Proof.
+  induction n; cbn; congruence.
+Qed.
+
+Lemma map2_length : 
+  forall {A B C : Type} (f : A -> B -> C) (l : list A) (l' : list B), #| map2 f l l'| = min #|l| #|l'|.
+Proof.
+  intros. induction l in l' |- *; cbn.
+  - reflexivity.
+  - destruct l'; cbn in *. lia. rewrite IHl. lia.
+Qed.
+

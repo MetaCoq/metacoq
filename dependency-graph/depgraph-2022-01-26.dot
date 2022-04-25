@@ -271,7 +271,7 @@ node[style=filled]
 "erasure/EAll"[label="EAll", color=tan]
 "erasure/EDeps"[label="EDeps", color=tan]
 "erasure/Extract"[label="Extract", color=tan]
-"erasure/ETyping"[label="ETyping", color=tan]
+"erasure/EGlobalEnv"[label="EGlobalEnv", color=tan]
 "erasure/EWndEval"[label="EWndEval", color=tan]
 "erasure/EWcbvEval"[label="EWcbvEval", color=tan]
 "erasure/ECSubst"[label="ECSubst", color=tan]
@@ -305,16 +305,16 @@ node[style=filled]
 "erasure/Prelim" -> "erasure/EInversion"
 "erasure/EInduction" -> "erasure/ELiftSubst"
 "erasure/ErasureFunction" -> "erasure/EOptimizePropDiscr"
-"erasure/ETyping" -> "erasure/EPretty"
+"erasure/EGlobalEnv" -> "erasure/EPretty"
 "pcuic/Syntax/PCUICReflect" -> "erasure/EReflect"
 "erasure/EInduction" -> "erasure/EReflect"
 "erasure/Prelim" -> "erasure/ESubstitution"
-"erasure/EAstUtils" -> "erasure/ETyping"
-"erasure/ECSubst" -> "erasure/ETyping"
-"erasure/EReflect" -> "erasure/ETyping"
+"erasure/EAstUtils" -> "erasure/EGlobalEnv"
+"erasure/ECSubst" -> "erasure/EGlobalEnv"
+"erasure/EReflect" -> "erasure/EGlobalEnv"
 "pcuic/PCUICWcbvEval" -> "erasure/EWcbvEval"
-"erasure/ETyping" -> "erasure/EWcbvEval"
-"erasure/ETyping" -> "erasure/EWndEval"
+"erasure/EGlobalEnv" -> "erasure/EWcbvEval"
+"erasure/EGlobalEnv" -> "erasure/EWndEval"
 "pcuic/PCUICExpandLetsCorrectness" -> "erasure/Erasure"
 "pcuic/TemplateToPCUICWcbvEval" -> "erasure/Erasure"
 "template-coq/Pretty" -> "erasure/Erasure"
@@ -325,7 +325,7 @@ node[style=filled]
 "safechecker/PCUICSafeRetyping" -> "erasure/ErasureFunction"
 "erasure/ErasureCorrectness" -> "erasure/ErasureFunction"
 "pcuic/PCUICElimination" -> "erasure/Extract"
-"erasure/ETyping" -> "erasure/Extract"
+"erasure/EGlobalEnv" -> "erasure/Extract"
 "erasure/Erasure" -> "erasure/Extraction"
 "safechecker/PCUICErrors" -> "erasure/Prelim"
 "erasure/EArities" -> "erasure/Prelim"

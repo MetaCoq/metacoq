@@ -9,7 +9,7 @@ Require Import Equations.Prop.DepElim.
 (* todo: make wf arguments implicit *)
 Section Inversion.
 
-  Context `{checker_flags}.
+  Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
@@ -76,12 +76,12 @@ Section Inversion.
     dependent induction h ; [
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_cumul_pb; econstructor; eauto] ]
+      [ try first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_cumul_pb; econstructor; eauto] ]
     | repeat outsum ;
       repeat outtimes ;
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | reflexivity ] ..
+      [ try first [ eassumption | reflexivity ] ..
       | try etransitivity ; try eassumption; 
         try eauto with pcuic;
         try solve [eapply into_ws_cumul; tea] ]
@@ -151,6 +151,17 @@ Section Inversion.
     intros Γ na A B T h. invtac h.
   Qed.
 
+  Lemma inversion_Prod_size :
+    forall {Γ na A B T},
+      forall H : Σ ;;; Γ |- tProd na A B : T,
+      ∑ s1 s2 (H1 : Σ ;;; Γ |- A : tSort s1) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
+        typing_size H1 < typing_size H × typing_size H2 < typing_size H ×
+        Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
+  Proof.
+    intros Γ na A B T h. unshelve invtac h; eauto.
+    all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); lia.
+  Qed.
+
   Lemma inversion_Lambda :
     forall {Γ na A t T},
       Σ ;;; Γ |- tLambda na A t : T ->
@@ -183,6 +194,18 @@ Section Inversion.
         Σ ;;; Γ ⊢ B{ 0 := v } ≤ T.
   Proof.
     intros Γ u v T h. invtac h.
+  Qed.
+
+  Lemma inversion_App_size : 
+  forall {Γ u v T}
+      (H : Σ ;;; Γ |- tApp u v : T),
+      ∑ na A B s  (H1 : Σ ;;; Γ |- u : tProd na A B) (H2 : Σ ;;; Γ |- v : A) (H3 : Σ ;;; Γ |- tProd na A B : tSort s),
+      typing_size H1 < typing_size H × typing_size H2 < typing_size H × typing_size H3 < typing_size H ×
+        Σ ;;; Γ ⊢ B{ 0 := v } ≤ T.
+  Proof.
+    intros Γ u v T h. unshelve invtac h.
+    4,5,6,10,11,12: eauto.
+    all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); try fold (typing_size h3); lia.
   Qed.
 
   Lemma inversion_Const :
@@ -231,7 +254,7 @@ Section Inversion.
        (wf_pctx : wf_local Σ (Γ ,,, predctx))
        (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
        (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
-       (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
+       (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
        (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                             (List.rev (subst_instance p.(puinst)
                                                       (ind_params mdecl ,,, ind_indices idecl))))
@@ -272,10 +295,9 @@ Section Inversion.
       Σ ;;; Γ |- tProj p c : T ->
       ∑ u mdecl idecl cdecl pdecl args,
         declared_projection Σ p mdecl idecl cdecl pdecl ×
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
+        Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ×
         #|args| = ind_npars mdecl ×
-        let ty := snd pdecl in
-        Σ ;;; Γ ⊢ (subst0 (c :: List.rev args)) (subst_instance u ty) ≤ T.
+        Σ ;;; Γ ⊢ (subst0 (c :: List.rev args)) pdecl.(proj_type)@[u] ≤ T.
   Proof.
     intros Γ p c T h. invtac h.
   Qed.
@@ -314,12 +336,12 @@ Section Inversion.
   Qed.
 
   (** At this stage we don't typecheck primitive values *)
-  Lemma inversion_Prim :
+  (* Lemma inversion_Prim :
     forall {Γ i T},
       Σ ;;; Γ |- tPrim i : T -> False.
   Proof.
     intros Γ i T h. now depind h.
-  Qed.
+  Qed. *)
 
   Lemma inversion_it_mkLambda_or_LetIn :
     forall {Γ Δ t T},

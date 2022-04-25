@@ -55,9 +55,11 @@ Proof.
 Qed.
 
 Lemma nl_wf_fixpoint Σ mfix :
-  wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+  wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ) (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
+  f_equal.
+  { rewrite forallb_map. eapply forallb_ext => x. cbn. destruct (dbody x) => //. }
   replace (map check_one_fix mfix) with (map check_one_fix (map (map_def_anon nl nl) mfix)) => //.
   * destruct map_option_out => //. destruct l => //.
     f_equal. rewrite /check_recursivity_kind.
@@ -80,9 +82,9 @@ Proof.
 Qed.
 
 Lemma nl_wf_cofixpoint Σ mfix :
-  wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+  wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ) (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_cofixpoint.  
+  unfold wf_cofixpoint, wf_cofixpoint_gen.  
   replace (map check_one_cofix mfix) with (map check_one_cofix (map (map_def_anon nl nl) mfix)) => //.
   * destruct map_option_out => //. destruct l => //.
     f_equal. rewrite /check_recursivity_kind.

@@ -83,9 +83,9 @@ Print eo_from_syntax.
 
 Local Notation Nat_module := (MPfile ["Datatypes"; "Init"; "Coq"], "nat").
 
-MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
-   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
-      (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 0 nil :: nil) :: nil)).
+MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Kernames.mkInd Nat_module 0) 1 nil)
+   (Ast.tApp (Ast.tConstruct (Kernames.mkInd Nat_module 0) 1 nil)
+      (Ast.tConstruct (Kernames.mkInd Nat_module 0) 0 nil :: nil) :: nil)).
 
 MetaCoq Quote Recursively Definition plus_syntax := plus.
 
@@ -370,7 +370,7 @@ Inductive T : Type :=
   | toto : Type -> T.
 MetaCoq Quote Recursively Definition TT := T.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
 MetaCoq Unquote Definition t' := (tSort fresh_universe).
 MetaCoq Unquote Definition myProp := (tSort (Universe.lProp)).

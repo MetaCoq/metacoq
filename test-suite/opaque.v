@@ -1,11 +1,11 @@
-From Coq Require Import String List PeanoNat.
+From Coq Require Import List Nat.
 From MetaCoq.Template Require Import All.
 
-Import MCMonadNotation String ListNotations.
+Import MCMonadNotation ListNotations.
 
 Definition foo : nat. exact 0. Qed.
 
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 MetaCoq Quote Recursively Definition foo_syn := foo.
 MetaCoq Quote Recursively Definition comm_syn := PeanoNat.Nat.add_comm.
 
@@ -27,8 +27,8 @@ Proof.
   split;eexists;eexists;cbn; now intuition.
 Qed.
 
-Time MetaCoq Run (t <- tmQuoteRecTransp Nat.le_add_r false ;;
+Time MetaCoq Run (t <- tmQuoteRecTransp PeanoNat.Nat.le_add_r false ;;
                   tmDefinition "add_comm_syn" t). (* quote respecting transparency *)
 
-Time MetaCoq Run (t <- tmQuoteRec Nat.le_add_r ;;
+Time MetaCoq Run (t <- tmQuoteRec PeanoNat.Nat.le_add_r ;;
                   tmDefinition "add_comm_syn'" t). (* quote ignoring transparency settings  *)

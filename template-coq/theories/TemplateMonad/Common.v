@@ -40,7 +40,7 @@ Record TMInstance@{t u r} :=
 ; tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
-; tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
+; tmMkInductive : bool (* infer universes? *) -> mutual_inductive_entry -> TemplateMonad unit
 (* Typeclass registration and querying for an instance *)
 ; tmExistingInstance : global_reference -> TemplateMonad unit
 }.

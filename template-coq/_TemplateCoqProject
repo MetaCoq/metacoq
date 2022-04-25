@@ -25,3 +25,6 @@ src/plugin_core.ml
 
 theories/Loader.v
 theories/All.v
+
+# A checker of well-formedness in MetaCoq and Coq
+theories/TemplateCheckWf.v

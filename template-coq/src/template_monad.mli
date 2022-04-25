@@ -28,7 +28,7 @@ type template_monad =
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t
   | TmAxiomTerm of Constr.t * Constr.t
-  | TmMkInductive of Constr.t
+  | TmMkInductive of Constr.t * Constr.t
   | TmVariable of Constr.t * Constr.t
 
   | TmFreshName of Constr.t

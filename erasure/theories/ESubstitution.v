@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution 
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
-From MetaCoq.Erasure Require Import ETyping Extract Prelim.
+From MetaCoq.Erasure Require Import EGlobalEnv Extract Prelim.
 
 Local Set Keyed Unification.
 
@@ -37,11 +37,6 @@ Proof.
   eauto.
 Qed.
 
-(* todo move *)
-#[global]
-Instance extends_refl : CRelationClasses.Reflexive extends_decls.
-Proof. red. intros x. now split => //; exists []. Qed.
-
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.PCUICEnvironment.mutual_inductive_body) (idecl : PCUICAst.PCUICEnvironment.one_inductive_body),
@@ -65,7 +60,7 @@ Proof.
   destruct H, H1.
   unfold PCUICAst.declared_minductive in *.
 
-  eapply extends_lookup in H1; eauto; tc.
+  eapply PCUICWeakeningEnvConv.extends_lookup in H1; eauto; tc.
   2:{ cbn. eapply extends_decls_extends. reflexivity. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
@@ -85,10 +80,10 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red.
-    destruct isdecl as [[? ?] ?]. red in H. red in H4.
-    rewrite H in H4.
-    eapply extends_lookup in H; eauto; tc. now rewrite H.
+    red. red in H4. rewrite (PCUICAst.declared_inductive_lookup isdecl) in H4.
+    destruct isdecl as [decli declc].
+    eapply PCUICWeakeningEnvConv.weakening_env_declared_inductive in decli; tea; eauto; tc.
+    now rewrite (PCUICAst.declared_inductive_lookup decli).
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.
@@ -157,6 +152,11 @@ Proof.
   rewrite PCUICRenameConv.rename_inst_case_context_wf //.
   f_equal. apply map_ext => x.
   now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
+Qed.
+
+Lemma lift_isLambda n k t : isLambda t = isLambda (lift n k t).
+Proof.
+  destruct t => //.
 Qed.
 
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : term) t' :
@@ -247,8 +247,10 @@ Proof.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eapply X1. eassumption. simpl.
-    intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
+    intros [] []. simpl. intros [[Hs IH] [<- <- IH']].
     repeat split. unfold app_context in *.
+    eapply isLambda_lift => //.
+    eapply ELiftSubst.isLambda_lift => //.
     specialize (IH Γ (types ++ Γ') Γ'').
     subst types. rewrite app_length fix_context_length in IH.
     forward IH.
@@ -256,12 +258,12 @@ Proof.
       eapply All_mfix_wf in a; auto.
       rewrite lift_fix_context in a.
       now rewrite <- !app_assoc. }
-    forward IH by now rewrite app_assoc.
+    forward IH. now rewrite [_ ,,, _]app_assoc.
     rewrite lift_fix_context.
     rewrite lift_context_app - plus_n_O in IH.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
     rewrite (All2_length X3) in IH |- *.
-    apply IH. apply IH'.
+    apply IH. apply e.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
@@ -507,8 +509,10 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as (? & ? & ?).
+      intros. destruct H4 as [? ? ? ?]. 
       repeat split; eauto.
+      cbn. now eapply isLambda_subst.
+      now eapply ELiftSubst.isLambda_subst.
       eapply In_nth_error in H2 as [].
       eapply nth_error_all in X1; eauto.
       destruct X1 as [Hs IH].
@@ -559,15 +563,18 @@ Proof.
   - eapply H; eauto.
 Qed.
 
-
-Lemma is_assumption_context_spec Γ :
-is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Lemma erases_subst0 (Σ : global_env_ext) Γ t s t' s' T :
+  wf Σ -> wf_local Σ Γ ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- t ⇝ℇ t' ->
+  subslet Σ [] s Γ ->
+  All2 (erases Σ []) s s' ->
+  Σ ;;; [] |- (subst s 0 t) ⇝ℇ ELiftSubst.subst s' 0 t'.
 Proof.
- induction Γ; cbn.
- - split; econstructor.
- - split; intros H.
-   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
-   + invs H. cbn. now eapply IHΓ.
+  intros Hwf Hwfl Hty He Hall.
+  change (@nil (BasicAst.context_decl term)) with (subst_context s 0 [] ++ nil).
+  eapply erases_subst with (Γ' := Γ); eauto. 
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
 Qed.
-
 

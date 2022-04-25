@@ -81,15 +81,9 @@ struct
 
   let unquote_char trm =
     let (h,args) = app_full trm [] in
-    if constr_equall h tAscii then
-      match args with
-        a :: b :: c :: d :: e :: f :: g :: h :: [] ->
-        let bits = List.rev [a;b;c;d;e;f;g;h] in
-        let v = List.fold_left (fun a n -> (a lsl 1) lor if unquote_bool n then 1 else 0) 0 bits in
-        char_of_int v
-      | _ -> bad_term_verb trm "unquote_char"
-    else
-      not_supported trm
+    match Constr.kind h with
+    | Constr.Construct ((ind, idx), u) -> Char.chr (idx - 1)
+    | _ -> not_supported_verb trm "unquote_char"
 
   let unquote_string trm =
     let rec go n trm =
@@ -185,9 +179,18 @@ struct
       with Not_found ->
         CErrors.user_err (str ("Level "^s^" is not a declared level."))
 
+  let is_fresh_level evm trm h args =
+    if constr_equall h tLevel then
+      match args with
+      | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
+        let s = (unquote_string s) in
+        s = "__metacoq_fresh_level__"
+      | _ -> bad_term_verb trm "unquote_level" 
+    else false
+
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
-    if constr_equall h lfresh_level then
+    if is_fresh_level evm trm h args then
       if !strict_unquote_universe_mode then
         CErrors.user_err (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
@@ -210,7 +213,7 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
-  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
+  let unquote_univ_expr evm trm (* of type LevelExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
     if constr_equall h c_pair then
       let l, b = unquote_pair trm in
@@ -222,14 +225,7 @@ struct
 
   let unquote_universe evm trm (* of type universe *)  =
     let (h,args) = app_full trm [] in
-    if constr_equall h lfresh_universe then
-      if !strict_unquote_universe_mode then
-        CErrors.user_err (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
-      else
-        let evm, u = Evd.new_sort_variable (Evd.UnivFlexible false) evm in
-        debug (fun () -> str"Fresh universe " ++ Sorts.debug_print u ++ str" was added to the context.");
-        evm, u
-    else if constr_equall h lSProp then
+    if constr_equall h lSProp then
       match args with
          | [] -> evm, Sorts.sprop
          | _ -> bad_term_verb trm "unquote_univ_expr"
@@ -242,26 +238,25 @@ struct
       | [x] ->
          let (h,args) = app_full x [] in
          if constr_equall h tBuild_Universe then
-                     match args with
-                       x :: _ :: [] -> (let (h,args) = app_full x [] in
-                                        if constr_equall h tMktUnivExprSet then
-                                          match args with
-                                          | x :: _ :: [] ->
-                                             (match unquote_list x with
-                                              | [] -> assert false
-                                              | e::q ->
-                                                let evm, u =
-                                                  List.fold_left (fun (evm,u) e ->
-                                                            let evm, u' = unquote_univ_expr evm e
-                                                            in evm, Univ.Universe.sup u u')
-                                                          (unquote_univ_expr evm e) q
-                                                in
-                                                evm, Sorts.sort_of_univ u)
-                                          | _ -> bad_term_verb trm "unquote_universe 0"
-                                        else
-                                          not_supported_verb trm "unquote_universe 0")
-                     | _ -> bad_term_verb trm "unquote_universe 1"
-               else  not_supported_verb trm "unquote_universe 2"
+           (match args with
+           | x :: _ :: [] -> 
+             (let (h,args) = app_full x [] in
+              if constr_equall h tMktLevelExprSet then
+                match args with
+                | x :: _ :: [] ->
+                    (match unquote_list x with
+                    | [] -> assert false
+                    | e::q ->
+                      let evm, u = List.fold_left (fun (evm,u) e ->
+                                  let evm, u' = unquote_univ_expr evm e
+                                  in evm, Univ.Universe.sup u u')
+                                (unquote_univ_expr evm e) q
+                      in evm, Sorts.sort_of_univ u)
+                | _ -> bad_term_verb trm "unquote_universe 0"
+              else
+                not_supported_verb trm "unquote_universe 0")
+           | _ -> bad_term_verb trm "unquote_universe 1")
+         else not_supported_verb trm "unquote_universe 2"
       | _ -> bad_term_verb trm "unquote_universe 3"
     else bad_term_verb trm "unquote_universe 4"
 
@@ -306,13 +301,11 @@ struct
 
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let (h,args) = app_full qp [] in
-    match args with
-    | tyin::tynat::indpars::idx::[] ->
-      let (h',args') = app_full indpars [] in
-      (match args' with
-       | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
-       | _ -> bad_term_verb qp "unquote_proj")
-    | _ -> bad_term_verb qp "unquote_proj"
+    if constr_equall h tmkProjection then
+      match args with
+      | ind :: nm :: num :: [] -> (ind, nm, num)
+      | _ -> bad_term_verb qp "unquote_proj"
+    else not_supported_verb qp "unquote_proj"
 
   let unquote_inductive trm : inductive =
     let (h,args) = app_full trm [] in
@@ -324,8 +317,8 @@ struct
       not_supported_verb trm "unquote_inductive"
 
 
-  let unquote_int=unquote_nat
-  let print_term=Printer.pr_constr_env (Global.env ()) Evd.empty
+  let unquote_int = unquote_nat
+  let print_term = Printer.pr_constr_env (Global.env ()) Evd.empty
 
 
   let unquote_global_reference (trm : Constr.t) (* of type global_reference *) : GlobRef.t =
@@ -373,6 +366,7 @@ struct
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, 
     quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
     quoted_int63, quoted_float64) structure_of_term =
+    (* debug (fun () -> Pp.(str "denote_term" ++ spc () ++ print_term t)) ; *)
     let (h,args) = app_full t [] in
     if constr_equall h tRel then
       match args with
@@ -465,14 +459,14 @@ struct
       match args with
         proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if constr_equall h tInt then
+    (* else if constr_equall h tInt then
       match args with
         t::_ -> ACoq_tInt t
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tFloat then
       match args with
         t::_ -> ACoq_tFloat t
-      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure")) *)
     else
       CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 

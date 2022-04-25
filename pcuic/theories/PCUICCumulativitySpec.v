@@ -170,9 +170,9 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     Σ ;;; Γ ⊢ tConst c u ≤s[pb] body@[u]
 
 (** Proj *)
-| cumul_proj : forall i pars narg args u arg,
-    nth_error args (pars + narg) = Some arg ->
-    Σ ;;; Γ ⊢ tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args) ≤s[pb] arg
+| cumul_proj : forall p args u arg,
+    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+    Σ ;;; Γ ⊢ tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args) ≤s[pb] arg
 
 where " Σ ;;; Γ ⊢ t ≤s[ pb ] u " := (@cumulSpec0 _ Σ Γ pb t u) : type_scope.
 
@@ -281,10 +281,10 @@ Lemma cumulSpec0_ind_all :
         forall u : Instance.t, cst_body decl = Some body -> P pb Γ (tConst c u) (subst_instance u body)) ->
 
         (* Proj *)
-       (forall (pb : conv_pb) (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
+       (forall (pb : conv_pb) (Γ : context)p (args : list term) (u : Instance.t)
          (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P pb Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+           nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+           P pb Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg) ->
 
         (* transitivity *)
        (forall (pb : conv_pb) (Γ : context) (t u v : term),
@@ -372,7 +372,7 @@ Lemma cumulSpec0_ind_all :
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
             P pb Γ (tCoFix mfix idx) (tCoFix mfix' idx)) ->
  
-      (* cumulativiity rules *)
+      (* cumulativity rules *)
       
       (forall (pb : conv_pb) 
             (Γ : context) (i : inductive) (u u' : list Level.t)
@@ -499,10 +499,10 @@ Lemma convSpec0_ind_all :
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
 
         (* Proj *)
-       (forall  (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
+       (forall  (Γ : context) p (args : list term) (u : Instance.t)
          (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P  Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+           nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+           P  Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg) ->
 
         (* transitivity *)
        (forall  (Γ : context) (t u v : term),

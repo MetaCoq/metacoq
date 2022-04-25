@@ -1,32 +1,31 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect RelationClasses OrderedTypeAlt FMapAVL FMapFacts.
-From MetaCoq.Template Require Import config utils uGraph Reflect Kernames String2pos CanonicalTries.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICTyping PCUICGlobalEnv PCUICTyping.
+From MetaCoq.Template Require Import config utils uGraph Reflect BasicAst Kernames String2pos CanonicalTries.
 From Equations Require Import Equations.
 Import String2pos.
 
-(* Implementation of environment lookup using efficient canonical tries by Appel & Leroy *)
+(* Implementation of environment lookup using efficient maps *)
 
 Implicit Types (cf:checker_flags).
 
-Module KernameMap := FMapAVL.Make KernameOT.OT.
-Module KernameMapFact := FMapFacts.WProperties KernameMap.
-
 Module EnvMap.
-  Definition t := KernameMap.t global_decl.
+  (* We keep the definition of EnvMap polymorphic over the data associated to a kername *)
+  Section Poly.
+  Context {A : Type}.
+
+  Definition t := KernameMap.t A.
 
   Definition empty : t := KernameMap.empty _.
 
-  Definition lookup (k : kername) (env : t) : option global_decl :=
+  Definition lookup (k : kername) (env : t) : option A :=
     KernameMap.find k env.
 
-  Definition add (k : kername) (g : global_decl) (env : t) : t :=
+  Definition add (k : kername) (g : A) (env : t) : t :=
     KernameMap.add k g env.
 
-  Definition of_global_env (g : global_env) : t :=
-    KernameMapFact.of_list g.(declarations).
+  Definition remove (k : kername) (env : t) : t :=
+    KernameMap.remove k env.
 
   Lemma gso (e : t) kn kn' g : kn <> kn' ->
     lookup kn (add kn' g e) = lookup kn e.
@@ -34,7 +33,7 @@ Module EnvMap.
     intros ne.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_neq_o //.
-    intros eq. apply KernameOT.compare_eq in eq. congruence.
+    intros eq. apply Kername.compare_eq in eq. congruence.
   Qed.
 
   Lemma gss (e : t) kn kn' g : kn = kn' ->
@@ -43,17 +42,11 @@ Module EnvMap.
     intros eq.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_eq_o //.
-    now apply KernameOT.compare_eq.
+    now apply Kername.compare_eq.
   Qed.
 
   Definition equal (g g' : t) := KernameMap.Equal g g'.
-    
-  Definition repr (g : global_env) (e : t) := 
-    equal e (of_global_env g).
-
-  Lemma repr_global_env (g : global_env) : repr g (of_global_env g).
-  Proof. red. reflexivity. Qed.
-
+  
   Lemma unfold_equal g g' : (forall i, lookup i g = lookup i g') -> equal g g'.
   Proof.
     intros heq.
@@ -91,39 +84,49 @@ Module EnvMap.
       + rewrite !gso //.
   Qed. *)
 
-  Inductive fresh_globals : global_declarations -> Prop :=
+  Definition fresh_global (s : kername) (g : list (kername × A)) :=
+    Forall (fun g0 : kername × A => g0.1 <> s) g.
+
+  Inductive fresh_globals : list (kername × A) -> Prop :=
     | fresh_globals_empty : fresh_globals []
     | fresh_globals_cons kn d g : 
       fresh_globals g -> fresh_global kn g ->
       fresh_globals ((kn, d) :: g). 
   Derive Signature for fresh_globals.
 
+
+
   Lemma fold_left_cons d g acc :
-    fold_left (fun (genv : t) (decl : kername × global_decl) => add decl.1 decl.2 genv) (d :: g) acc = 
-    fold_left (fun (genv : t) (decl : kername × global_decl) => add decl.1 decl.2 genv) g (add d.1 d.2 acc).
+    fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) (d :: g) acc = 
+    fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) g (add d.1 d.2 acc).
   Proof. reflexivity. Qed.
   
-  Lemma of_global_env_cons {cf:checker_flags} d g : fresh_globals (add_global_decl g d).(declarations) ->
-    of_global_env (add_global_decl g d) = add d.1 d.2 (of_global_env g).
+  Definition of_global_env (g : list (kername × A)) : t :=
+    KernameMapFact.of_list g.
+
+  Definition repr (g : list (kername × A)) (e : t) := 
+    equal e (of_global_env g).
+
+  Lemma repr_global_env (g : list (kername × A)) : repr g (of_global_env g).
+  Proof. red. reflexivity. Qed.
+
+  Lemma of_global_env_cons d g : fresh_globals (d :: g) ->
+    of_global_env (d :: g) = add d.1 d.2 (of_global_env g).
   Proof.
     unfold of_global_env. simpl. unfold KernameMapFact.uncurry.
     reflexivity.
   Qed.
   
-  Lemma wf_fresh_globals {cf} Σ : wf Σ -> fresh_globals Σ.(declarations).
-  Proof. destruct Σ as [univs Σ]; cbn.
-    move=> [] onu; cbn. induction 1; constructor; auto.
-  Qed.
-
-  Lemma repr_add {cf} {Σ : global_env} e k g : wf Σ ->
-    fresh_global k Σ.(declarations) ->
-    EnvMap.repr Σ e ->
-    EnvMap.repr (add_global_decl Σ (k, g)) (EnvMap.add k g e).
+  Lemma repr_add {cf} {Σ : list (kername × A)} e k g : 
+    fresh_globals Σ ->
+    fresh_global k Σ ->
+    repr Σ e ->
+    repr ((k, g) :: Σ) (add k g e).
   Proof.
     intros wfΣ fresh repr.
     red. rewrite /add. do 2 red in repr.
     rewrite repr. rewrite of_global_env_cons //.
-    constructor => //. now apply wf_fresh_globals.
+    constructor => //.
   Qed.
 
   Lemma lookup_add k v g : lookup k (add k v g) = Some v.
@@ -132,49 +135,85 @@ Module EnvMap.
   Lemma lookup_add_other k k' v g : k <> k' -> lookup k (add k' v g) = lookup k g.
   Proof. move=> eqk. rewrite gso //. Qed.
 
-  Lemma lookup_env_head d g : lookup_env (add_global_decl g d) d.1 = Some d.2.
+  Lemma remove_add_eq Σ k v e : 
+    fresh_globals Σ ->
+    fresh_global k Σ ->
+    repr Σ e ->
+    equal (remove k (add k v e)) e.
   Proof.
-    now rewrite /add_global_decl /lookup_env /= eq_kername_refl.
+    unfold repr, equal, remove, add.
+    intros frΣ frk eq.
+    intros k'.
+    rewrite KernameMapFact.F.remove_o.
+    destruct KernameMap.E.eq_dec. eapply Kername.compare_eq in e0. subst k'.
+    - rewrite {}eq. induction frk. now cbn.
+      rewrite of_global_env_cons //. depelim frΣ. simpl in H0 |- *.
+      rewrite KernameMapFact.F.add_neq_o //. intros c. eapply Kername.compare_eq in c. contradiction.
+      now apply IHfrk.
+    - rewrite KernameMapFact.F.add_neq_o //.
   Qed.
 
-  Lemma lookup_spec {cf : checker_flags} (g : global_env) (e : t) : wf g ->
-    repr g e ->
-    forall k, lookup k e = lookup_env g k.
+  Lemma remove_add_o k k' v e : 
+    k <> k' ->
+    equal (remove k' (add k v e)) (add k v (remove k' e)).
   Proof.
-    set (Σ := g); destruct g as [univs g].
-    move=> []; cbn => onu.
+    unfold repr, equal, remove, add.
+    intros neq k''.
+    rewrite KernameMapFact.F.remove_o.
+    destruct KernameMap.E.eq_dec. eapply Kername.compare_eq in e0. subst k'.
+    - rewrite KernameMapFact.F.add_neq_o //. intros c. eapply Kername.compare_eq in c. contradiction.
+      rewrite KernameMapFact.F.remove_o.
+      destruct KernameMap.E.eq_dec => //.
+      elimtype False; apply n. now apply Kername.compare_eq.
+    - rewrite !KernameMapFact.F.add_o //.
+      destruct (KernameMap.E.eq_dec k k'') => //.
+      rewrite KernameMapFact.F.remove_neq_o //.
+  Qed.
+
+  Fixpoint lookup_global (Σ : list (kername × A)) (kn : kername) {struct Σ} : option A :=
+    match Σ with
+    | [] => None
+    | d :: tl => if eq_kername kn d.1 then Some d.2 else lookup_global tl kn
+    end.
+
+  Lemma lookup_spec (g : list (kername × A)) (e : t) : 
+    fresh_globals g ->
+    repr g e ->
+    forall k, lookup k e = lookup_global g k.
+  Proof.
     intros wf eq k. red in eq.
     move: eq.
-    induction g in Σ, e, k, wf |- *; auto.
+    induction g in e, k, wf |- *; auto.
     - simpl. intros eq.
       unfold lookup.
       rewrite -KernameMapFact.F.not_find_in_iff.
       intros hin.
       red in eq. rewrite eq in hin.
       now eapply KernameMapFact.F.empty_in_iff in hin.
-    - cbn -[of_global_env].
-      change (eq_kername k a.1) with (eqb k a.1).
+    - cbn -[of_global_env eqb].
       destruct (eqb_spec k a.1).
       * subst. 
-        change Σ with (add_global_decl {| universes := univs; declarations := g |} a).
-        rewrite of_global_env_cons; [now apply wf_fresh_globals|].
+        rewrite of_global_env_cons //.
         intros he. unfold lookup. rewrite he.
         now rewrite [KernameMap.find _ _]lookup_add.
-      * change Σ with (add_global_decl {| universes := univs; declarations := g |} a).
-        rewrite of_global_env_cons. now apply wf_fresh_globals.
+      * rewrite of_global_env_cons //.
         intros he. unfold lookup. rewrite he.
         rewrite [KernameMap.find _ _]lookup_add_other //.
         apply IHg. now depelim wf.
         reflexivity.
   Qed.
-
+  End Poly.
+  Arguments t : clear implicits.
 End EnvMap.
 
-Print Assumptions EnvMap.lookup_spec.
-
 (*
-Module EnvMap.
-  Definition t := PTree.tree global_decl.
+
+Module EnvMap'.
+
+Section Poly.
+Context {A : Type}.
+
+  Definition t := PTree.tree A.
 
   Lemma bool_cons_pos_inj a a' p p' : bool_cons_pos a p = bool_cons_pos a' p' -> a = a' /\ p = p'.
   Proof.
@@ -203,50 +242,53 @@ Module EnvMap.
     | xI p => xO (pos_succ p)
     end.
 
-  Fixpoint pos_of_string_cont (s: string) (p : positive) : positive :=
-    match s with
-    | EmptyString => pos_succ p
-    | String c s => ascii_cons_pos c (pos_of_string_cont s p)
+  Fixpoint listencoding (p : positive) :=
+    match p with
+    | xH => xO (xI xH)
+    | xO p => xO (xO (listencoding p))
+    | xI p => xI (xI (listencoding p))
     end.
-(*   
-  Lemma ascii_cons_pos_plus a p : 
-    ascii_cons_pos a (Pos.succ p) = (Pos.iter xO (ascii_cons_pos a 1) p)%positive.
-  Proof.
+
+  Fixpoint posapp (p : positive) (q : positive) :=
+    match p with 
+    | xH => q
+    | xI p => xI (posapp p q)
+    | xO p => xO (posapp p q)
+    end.
     
-   *)
-  (* Lemma ascii_cons_pos_plus a p p' : 
-    ascii_cons_pos a (p + p')%positive = (ascii_cons_pos a p + p')%positive.
+  Definition pos_cons (hd : positive) (tl : positive) :=
+    posapp (listencoding hd) (posapp (xO (xI xH)) tl).
+
+  Fixpoint pos_of_stringlist (l : list string) :=
+    match l with
+    | [] => xH
+    | x :: l => pos_cons (pos_of_string x) (pos_of_stringlist l)
+    end.
+
+  Lemma pos_app_inj p1 p2 q1 q2 : 
+    posapp (listencoding p1) q1 = posapp (listencoding p2) q2 -> p1 = p2 /\ q1 = q2.
   Proof.
-    induction p using Pos.peano_ind.
-    -  simpl. destruct p'; cbn.
-      rewrite Pos.xI_succ_xO.
-      cbn. *)
+    induction p1 in p2, q1, q2 |- *; destruct p2; cbn; try congruence.
+    all: try now firstorder congruence.
+    - intros H. depelim H. symmetry in H. firstorder congruence.
+    - intros H. depelim H. symmetry in H. firstorder congruence.
+  Qed.
 
-  
-  (* Lemma ascii_cons_pos_shiftl a p n p' : 
-    ascii_cons_pos a (Pos.shiftl p (N.pos n) + p') = ((Pos.iter xO (ascii_cons_pos a p) n) + p')%positive.
+  Lemma pos_cons_inj hd hd' tl tl' : pos_cons hd tl = pos_cons hd' tl' -> hd = hd' /\ tl = tl'.
   Proof.
-    induction n using Pos.peano_ind.
-    - cbn. destruct p'.
-      2:{ rewrite !Pos.add_xO.
+    unfold pos_cons. intros.
+    eapply pos_app_inj in H as [-> H]. cbn in H. depelim H. eauto.
+  Qed.
 
-      all:admit.
-    - cbn. rewrite !Pos.iter_succ.
-      destruct p'.
-      * cbn ,
-      rewrite Pos.add_xO.
-      cbn.
-
- *)
-
-  (* Lemma pos_of_string_cont_spec s p : pos_of_string_cont s p = 
-    (Pos.shiftl (pos_of_string s) (N.of_nat (String.length s)) + p)%positive.
+  Lemma pos_of_stringlist_inj l1 l2 :
+    pos_of_stringlist l1 = pos_of_stringlist l2 -> l1 = l2.
   Proof.
-    induction s.
-    - cbn. now destruct p; cbn.
-    - cbn. rewrite IHs.
-  Admitted. *)
-
+    induction l1 in l2 |- *; destruct l2; cbn; try congruence.
+    - destruct s; cbn. congruence.
+      destruct a; cbn; destruct b; cbn; congruence.
+    - destruct a; cbn. congruence. destruct a; cbn; destruct b; cbn; congruence.
+    - intros [? % pos_of_string_inj] % pos_cons_inj. f_equal; eauto.
+  Qed.
 
   Lemma pos_of_string_cont_inj s s' p : pos_of_string_cont s p = pos_of_string_cont s' p -> s = s'.
   Proof.

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst.
-From MetaCoq.Erasure Require Import EAst EInduction.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction.
+Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
 
@@ -34,7 +35,7 @@ Fixpoint lift n k t : term :=
   | tVar _ => t
   | tConst _ => t
   | tConstruct _ _ => t
-  | tPrim _ => t
+  (* | tPrim _ => t *)
   end.
 
 Notation lift0 n := (lift n 0).
@@ -136,6 +137,8 @@ Proof.
   assert (n - k < length u) by (apply nth_error_Some; congruence). lia. reflexivity.
   lia.
 Qed.
+
+Unset SsrRewrite.
 
 Lemma subst_rel_eq :
   forall (u : list term) n i t p,
@@ -294,6 +297,10 @@ Qed.
 Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
+
+Lemma isBox_lift n k (bod : term) :
+  isBox bod = isBox (lift n k bod).
+Proof. destruct bod; simpl; try congruence. destruct Nat.leb => //. Qed.
 
 #[global]
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
@@ -540,4 +547,82 @@ Lemma isLambda_subst (s : list term) k (bod : term) :
   isLambda bod = true -> isLambda (subst s k bod) = true.
 Proof.
   intros. destruct bod; try discriminate. reflexivity.
+Qed.
+
+
+Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
+Proof.
+  revert k.
+  induction t in n, k' |- * using EInduction.term_forall_list_ind; intros;
+    simpl in *; rewrite -> ?andb_and in *;
+    autorewrite with map;
+    simpl closed in *; solve_all;
+    unfold test_def, test_snd in *;
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
+
+  - elim (Nat.leb_spec k' n0); intros. simpl.
+    elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.
+    simpl. elim (Nat.ltb_spec); auto. intros.
+    apply Nat.ltb_lt in H. lia.
+  - solve_all. rewrite Nat.add_assoc. eauto.
+  - cbn. rewrite Nat.add_assoc. eauto.
+  - cbn. rewrite Nat.add_assoc. eauto.
+Qed.
+
+Set SsrRewrite.
+
+Lemma closedn_subst_eq s k k' t :
+  forallb (closedn k) s -> 
+  closedn (k + k' + #|s|) t =
+  closedn (k + k') (subst s k' t).
+Proof.
+  intros Hs. solve_all. revert Hs.
+  induction t in k' |- * using EInduction.term_forall_list_ind; intros;
+    simpl in *;
+    autorewrite with map => //;
+    simpl closed in *; try change_Sk;
+    unfold test_def in *; simpl in *;
+    solve_all.
+
+  - elim (Nat.leb_spec k' n); intros. simpl.
+    destruct nth_error eqn:Heq.
+    -- rewrite closedn_lift.
+       now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
+       eapply nth_error_Some_length in Heq.
+       eapply Nat.ltb_lt. lia.
+    -- simpl. elim (Nat.ltb_spec); auto. intros.
+       apply nth_error_None in Heq. symmetry. apply Nat.ltb_lt. lia.
+       apply nth_error_None in Heq. intros. symmetry. eapply Nat.ltb_nlt.
+       intros H'. lia.
+    -- simpl.
+      elim: Nat.ltb_spec; symmetry. apply Nat.ltb_lt. lia.
+      apply Nat.ltb_nlt. intro. lia.
+  - eapply All_forallb_eq_forallb; tea; eauto.
+  - specialize (IHt (S k')).
+    rewrite <- Nat.add_succ_comm in IHt.
+    rewrite IHt //. 
+  - specialize (IHt2 (S k')).
+    rewrite <- Nat.add_succ_comm in IHt2.
+    rewrite IHt1 // IHt2 //.
+  - rewrite IHt //.
+    f_equal. eapply All_forallb_eq_forallb; tea. cbn.
+    intros. specialize (H (#|x.1| + k')).
+    rewrite Nat.add_assoc (Nat.add_comm k) in H.
+    now rewrite !Nat.add_assoc.
+  - eapply All_forallb_eq_forallb; tea. cbn.
+    intros. specialize (H (#|m| + k')).
+    now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
+  - eapply All_forallb_eq_forallb; tea. cbn.
+    intros. specialize (H (#|m| + k')).
+    now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
+Qed.
+
+Lemma closedn_subst s k t : 
+  forallb (closedn k) s -> closedn (#|s| + k) t -> 
+  closedn k (subst0 s t).
+Proof.
+  intros.
+  epose proof (closedn_subst_eq s k 0).
+  rewrite Nat.add_0_r in H1.
+  rewrite -H1 //. rewrite Nat.add_comm //.
 Qed.

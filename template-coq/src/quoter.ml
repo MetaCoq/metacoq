@@ -31,9 +31,6 @@ let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
 
-(* TODO: remove? *)
-let opt_hnf_ctor_types = ref false
-
 let hnf_type env ty =
   let rec hnf_type continue ty =
     match Constr.kind ty with
@@ -70,8 +67,8 @@ sig
   val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
-  val mkInt : quoted_int63 -> t
-  val mkFloat : quoted_float64 -> t
+  (* val mkInt : quoted_int63 -> t
+  val mkFloat : quoted_float64 -> t *)
 
   val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
   val mkName : quoted_ident -> quoted_name
@@ -134,7 +131,7 @@ sig
       t list (* indices in the conclusion *) *
       t (* constr type *) * 
       quoted_int (* arity (w/o lets) *)) list *
-    (quoted_ident * t (* projection type *)) list *
+    (quoted_ident * quoted_relevance *  t (* projection type *)) list *
     quoted_relevance -> 
     quoted_one_inductive_body
 
@@ -147,7 +144,7 @@ sig
     -> quoted_variance list option
     -> quoted_mutual_inductive_body
 
-  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_constant_body
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_relevance -> quoted_constant_body
 
   val mk_inductive_decl : quoted_mutual_inductive_body -> quoted_global_decl
 
@@ -183,14 +180,14 @@ struct
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_ugraph ?kept (g : UGraph.t) =
-    Feedback.msg_debug (Pp.str"Quoting ugraph");
+    debug Pp.(fun () -> str"Quoting ugraph");
     let levels, cstrs, eqs = 
       match kept with
       | None ->
         let cstrs, eqs = UGraph.constraints_of_universes g in
         UGraph.domain g, cstrs, eqs
       | Some l -> 
-        Feedback.msg_debug Pp.(str"Quoting graph restricted to: " ++ Univ.Level.Set.pr Univ.Level.pr l);
+        debug Pp.(fun () -> str"Quoting graph restricted to: " ++ Univ.Level.Set.pr Univ.Level.pr l);
         (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
         let dom = UGraph.domain g in
         let kept = Univ.Level.Set.inter dom l in
@@ -208,8 +205,8 @@ struct
             (Univ.Level.Set.add p levels, Univ.Constraints.add (x, Univ.Eq, p) cstrs)) rest acc)
         eqs (levels, cstrs)
     in
-    let levels = Univ.Level.Set.remove Univ.Level.set levels in
-    Feedback.msg_debug (Pp.str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
+    let levels = Univ.Level.Set.add Univ.Level.set levels in
+    debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
     time (Pp.str"Quoting universe context") 
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
@@ -328,10 +325,12 @@ struct
          let t', acc = quote_term acc env c in
          let mib = Environ.lookup_mind (fst (Projection.inductive p)) (snd env) in
          (Q.mkProj p' t', add_inductive (Projection.inductive p) mib acc)
-      | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
-      | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
+      (* | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
+      | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc) *)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
-      | Constr.Array _ -> failwith "Array not supported by TemplateCoq"
+      | Constr.Int _ -> failwith "Primitive ints not supported by TemplateCoq"
+      | Constr.Float _ -> failwith "Primitive floats not supported by TemplateCoq"
+      | Constr.Array _ -> failwith "Primitive arrays not supported by TemplateCoq"
       in
       aux acc env trm
     and quote_recdecl (acc : 'a) env b (ns,ts,ds) =
@@ -379,8 +378,6 @@ struct
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
             List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
-              debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                  bool !opt_hnf_ctor_types)) ;
               let ty = Term.it_mkProd_or_LetIn ty ctx in
               let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
               let ctx, concl = Term.decompose_prod_assum ty in
@@ -395,7 +392,6 @@ struct
                 let envconcl = push_rel_context argctx envcstr in
                 quote_terms quote_term acc envconcl args
               in
-              let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
               let (ty,acc) = quote_term acc envind ty in
               ((Q.quote_ident nm, qargctx, Array.to_list qindices, ty, Q.quote_int ar) :: ls, acc))
               ([],acc) named_ctors
@@ -408,10 +404,11 @@ struct
                                         Context.Rel.instance Constr.mkRel 0 ctxwolet) in
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
-                let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+                let ps, acc = CArray.fold_right3 (fun cst pb rel (ls,acc) ->
                   let (ty, acc) = quote_term acc envpars pb in
                   let na = Q.quote_ident (Names.Label.to_id cst) in
-                  ((na, ty) :: ls, acc)) csts ps ([],acc)
+                  let rel = Q.quote_relevance rel in
+                  ((na, rel, ty) :: ls, acc)) csts ps relevance ([],acc)
                 in ps, acc
             | _ -> [], acc
           in
@@ -461,7 +458,7 @@ struct
           univsty oib.mind_user_lc)
         univs mib.mind_packets
 
-  let quote_term_rec bypass env trm =
+  let quote_term_rec ~bypass ?(with_universes=true) env trm =
     let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
     let universes = ref Univ.Level.Set.empty in
@@ -531,7 +528,8 @@ struct
                   Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
                   raise e)
             in
-            let cst_bdy = Q.mk_constant_body ty tm uctx in
+            let rel = Q.quote_relevance cd.const_relevance in
+            let cst_bdy = Q.mk_constant_body ty tm uctx rel in
             let decl = Q.mk_constant_decl cst_bdy in            
             constants := (Q.quote_kn kn, decl) :: !constants
           end
@@ -548,10 +546,17 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let univs = Univ.Level.Set.union (Vars.universes_of_constr trm) !universes in
-    let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
-    let univs = Univ.Level.Set.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
-    let univs = quote_ugraph ~kept:univs (Environ.universes env) in
+    let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc) !constants (Q.empty_global_declarations ()) in
+    let univs = 
+      if with_universes then 
+        let univs = Univ.Level.Set.union (Vars.universes_of_constr trm) !universes in
+        let univs = Univ.Level.Set.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
+        quote_ugraph ~kept:univs (Environ.universes env)
+      else 
+        (debug Pp.(fun () -> str"Skipping universes: ");
+         time (Pp.str"Quoting empty universe context") 
+           (fun uctx -> Q.quote_univ_contextset uctx) Univ.ContextSet.empty)
+    in
     let env = Q.mk_global_env univs decls in
     Q.mk_program env tm
 
@@ -614,6 +619,7 @@ since  [absrt_info] is a private type *)
   let quote_constant_body bypass env evm cd =
     let ty, body = quote_constant_body_aux bypass env evm cd in
     Q.mk_constant_body ty body (quote_universes_decl cd.const_universes None)
+      (Q.quote_relevance cd.const_relevance)
 
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in

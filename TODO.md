@@ -1,8 +1,11 @@
+# Performance
+
+- change eq_kername to use comparison rather than eq_dec, check we're not using 
+  eq_dec unnecessarily so that erasure/typechecking runs faster inside Coq 
+  (and we avoid useless sumbool to bool conversions in ML/extracted code)
 # Small stuffs
 
 - `assumption_context` should be a boolean function.
-
-- remove duplication of eq_context / eq_context_upto  and eq_decl / eq_decl_upto
 
 - Make `wf Σ` `wf_ext Σ` some typeclasses (as at the begining of PCUICCanonicity)
   et changer les : wf Σ -> en {wfΣ : wf Σ} partout, ce qui éviterait bien des

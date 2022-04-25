@@ -40,6 +40,7 @@ Inductive wf {Σ} : term -> Type :=
 | wf_tConstruct i k u : wf (tConstruct i k u)
 | wf_tCase ci p c brs mdecl idecl :
     declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+    ci.(ci_npar) = mdecl.(ind_npars) ->
     wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
     #|pparams p| = context_assumptions (ind_params mdecl) ->
     All wf (pparams p) -> wf (preturn p) ->
@@ -48,12 +49,14 @@ Inductive wf {Σ} : term -> Type :=
       wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
       wf (bbody br)) idecl.(ind_ctors) brs ->
     wf (tCase ci p c brs)
-| wf_tProj p t : wf t -> wf (tProj p t)
+| wf_tProj p t : 
+  wf t ->
+  wf (tProj p t)
 | wf_tFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix ->
                    wf (tFix mfix k)
-| wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k)
-| wf_tInt i : wf (tInt i)
-| wf_tFloat f : wf (tFloat f).
+| wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k).
+(* | wf_tInt i : wf (tInt i) *)
+(* | wf_tFloat f : wf (tFloat f). *)
 Arguments wf : clear implicits.
 Derive Signature for wf.
 
@@ -61,7 +64,8 @@ Derive Signature for wf.
 
 Definition wf_Inv Σ (t : term) : Type :=
   match t with
-  | tRel _ | tVar _ | tSort _ | tInt _ | tFloat _ => unit
+  | tRel _ | tVar _ | tSort _ => unit
+  (* | tInt _ | tFloat _  *)
   | tEvar n l => All (wf Σ) l
   | tCast t k t' => wf Σ t * wf Σ t'
   | tProd na t b => wf Σ t * wf Σ b
@@ -74,6 +78,7 @@ Definition wf_Inv Σ (t : term) : Type :=
   | tCase ci p c brs => 
     ∑ mdecl idecl, 
     [× declared_inductive Σ ci.(ci_ind) mdecl idecl,
+       ci.(ci_npar) = mdecl.(ind_npars),
        wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl),
        #|pparams p| = context_assumptions (ind_params mdecl),
        All (wf Σ) (pparams p),
@@ -130,20 +135,23 @@ Lemma term_wf_forall_list_ind Σ :
       P (tConstruct i n u)) ->
     (forall (ci : case_info) (p : predicate term) mdecl idecl,
         declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+        ci.(ci_npar) = mdecl.(ind_npars) ->
         #|pparams p| = context_assumptions (ind_params mdecl) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         tCasePredProp P P p -> forall t : term, P t -> forall l : list (branch term),
         All2 (fun cdecl br => 
           wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
           P (bbody br)) idecl.(ind_ctors) l -> P (tCase ci p t l)) ->
-    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
+    (forall (s : projection) (t : term), 
+    
+      P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (forall i, P (tInt i)) ->
-    (forall f, P (tFloat f)) ->
+    (* (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) -> *)
     forall t : term, wf Σ t -> P t.
 Proof.
-  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19.
+  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 (*H18 H19*).
   intros until t. revert t.
   apply (term_forall_list_rect (fun t => wf Σ t -> P t));
     intros; try solve [match goal with

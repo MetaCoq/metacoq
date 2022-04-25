@@ -9,26 +9,18 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(** Preliminary lemmata missing from MetaCoq *)
+(** Preliminary lemmas missing from MetaCoq *)
 Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
-  leq_universe Σ s1 s2 -> is_allowed_elimination Σ s2 allowed -> is_allowed_elimination Σ s1 allowed.
+  leq_universe Σ s1 s2 -> is_allowed_elimination Σ allowed s2 -> is_allowed_elimination Σ allowed s1.
 Proof.
-  intros le elim.
-  unfold is_allowed_elimination in elim |- *.
-  red in le.
-  destruct check_univs ; auto.
-  unfold is_allowed_elimination0 in elim |- *.
-  intros v satisf.
-  specialize (le v satisf).
-  specialize (elim v satisf).
-  destruct allowed ; auto.
-  all: destruct (⟦s1⟧_v)%u.
-  all: destruct (⟦s2⟧_v)%u.
-  all: auto.
-  all: red in le ; auto.
-  rewrite Z.sub_0_r in le.
-  apply Nat2Z.inj_le in le.
-  destruct le ; auto.
+  destruct allowed, s2; cbnr; trivial;
+  destruct s1; cbnr; intros H1 H2; trivial; try now destruct H1.
+  { now left. }
+  destruct H2 as [|H2]; [now left|right].
+  unfold_univ_rel.
+  specialize (H1 v Hv); specialize (H2 v Hv).
+  cbn in H2.
+  lia.
 Qed.
 
 Lemma ctx_inst_length {ty Σ Γ args Δ} :
@@ -62,7 +54,7 @@ Proof.
     constructor; auto.
 Qed.
 
-(** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
+(** Lemmas to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
 
 Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) ->
@@ -246,9 +238,8 @@ Proof.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICDeclarationTyping.onNpars.
         2: eapply on_declared_minductive ; eauto.
-        rewrite (firstn_app_left _ 0).
-        1: by rewrite Nat.add_0_r ; destruct wfpred.
-        by apply app_nil_r.
+        rewrite firstn_app_left //.
+        now destruct wfpred.
       
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.
@@ -299,7 +290,7 @@ Proof.
            1: apply wf_local_closed_context ; tea.
            eapply subject_is_open_term ; tea.
 
-  - intros ? c u mdecl idecl cdecl [] isdecl args ? ? ? Cumc ? ty.
+  - intros ? c u mdecl idecl cdecl pdecl isdecl args ? ? ? Cumc ?.
     apply conv_infer_ind in Cumc as (ui'&args'&[]) ; auto.
     eexists.
     split.
@@ -310,8 +301,8 @@ Proof.
       eapply All2_length.
       eassumption.
 
-    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args')
-        by (apply infering_ind_typing in i0 ; auto).
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) ui') args')
+        by (apply infering_ind_typing in i ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity in X1 as [].
@@ -342,7 +333,6 @@ Proof.
       * cbn -[projection_context].
         apply weaken_ws_cumul_pb ; auto.
         1: apply wf_local_closed_context ; auto.
-        change t with (i,t).2.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
         eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.

@@ -22,6 +22,7 @@ theories/Syntax/PCUICLiftSubst.v
 theories/Syntax/PCUICTactics.v
 theories/Syntax/PCUICUnivSubst.v
 theories/Syntax/PCUICClosed.v
+theories/Syntax/PCUICViews.v
 
 theories/Conversion/PCUICNamelessConv.v
 theories/Conversion/PCUICRenameConv.v
@@ -50,7 +51,6 @@ theories/PCUICGlobalEnv.v
 theories/PCUICInversion.v
 theories/PCUICNormal.v
 theories/PCUICEquality.v
-theories/PCUICEqualityDec.v
 theories/PCUICSubstitution.v
 theories/PCUICContextReduction.v
 theories/PCUICCumulativity.v
@@ -83,16 +83,22 @@ theories/PCUICElimination.v
 theories/PCUICSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
+theories/PCUICProgress.v
 
 theories/PCUICSafeLemmata.v
 
+theories/PCUICEtaExpand.v
+
+theories/PCUICProgram.v
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 theories/TemplateToPCUICWcbvEval.v
+theories/TemplateToPCUICExpanded.v
 theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
+theories/PCUICTransform.v
 
 theories/Bidirectional/BDEnvironmentTyping.v
 theories/Bidirectional/BDTyping.v

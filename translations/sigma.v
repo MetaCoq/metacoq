@@ -40,8 +40,8 @@ MetaCoq Run (t <- tmQuote sigma ;;
             | _ => tmFail "bug"
             end).
 Definition proj1 (t : term) : term
-  := tProj (sigma_ind, 2, 0) t.
+  := tProj (mkProjection sigma_ind 2 0) t.
 Definition proj2 (t : term) : term
-  := tProj (sigma_ind, 2, 1) t.
+  := tProj (mkProjection sigma_ind 2 1) t.
 Definition proj (b : bool) (t : term) : term
-  := tProj (sigma_ind, 2, if b then 0 else 1) t.
+  := tProj (mkProjection sigma_ind 2 (if b then 0 else 1)) t.

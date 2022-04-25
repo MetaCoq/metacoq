@@ -7,6 +7,9 @@ theories/utils/canonicaltries/String2pos.v
 theories/utils/canonicaltries/CanonicalTries.v
 
 # utils
+theories/utils/ByteCompare.v
+theories/utils/ByteCompareSpec.v
+theories/utils/bytestring.v
 theories/utils/MCPrelude.v
 theories/utils/MCReflect.v
 theories/utils/All_Forall.v
@@ -23,16 +26,22 @@ theories/utils/MCSquash.v
 theories/utils/MCString.v
 theories/utils/wGraph.v
 theories/utils/MCUtils.v
+# theories/utils/ByteCompare.v
+# theories/utils/ByteCompareSpec.v
 #theories/utils/MC_ExtrOCamlInt63.v
 theories/utils/MC_ExtrOCamlNatInt.v
 theories/utils/MC_ExtrOCamlZPosInt.v
+theories/utils/ReflectEq.v
 
 # common
 theories/common/uGraph.v
 
+theories/Transform.v
+
 # Basic Ast files
 theories/utils.v
 theories/config.v
+theories/Kernames.v
 theories/Universes.v
 theories/BasicAst.v
 theories/Environment.v
@@ -40,7 +49,7 @@ theories/Ast.v
 theories/AstUtils.v
 theories/Reflect.v
 theories/ReflectAst.v
-theories/Kernames.v
+theories/EnvMap.v
 theories/Induction.v
 theories/EnvironmentTyping.v
 theories/WfAst.v
@@ -54,6 +63,8 @@ theories/TypingWf.v
 theories/Normal.v
 theories/WcbvEval.v
 theories/Checker.v
+theories/EtaExpand.v
+theories/TemplateProgram.v
 
 # The Template monad
 theories/TemplateMonad.v

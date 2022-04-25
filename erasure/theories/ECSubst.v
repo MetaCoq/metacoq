@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import utils.
-From MetaCoq.Erasure Require Import EAst EInduction ELiftSubst.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -60,13 +60,13 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.  
 Qed.
 
-Lemma substl_subst s u : Forall (fun x => closed x) s ->
-substl s u = subst s 0 u.
+Lemma substl_subst s u : forallb (closedn 0) s ->
+  substl s u = subst s 0 u.
 Proof.
   unfold substl.
   induction s in u |- *; cbn; intros H.
   - now rewrite subst_empty.
-  - invs H. rewrite IHs; try eassumption.
+  - move/andP: H => [cla cls]. rewrite IHs; try eassumption.
     rewrite closed_subst; try eassumption.
     change (a :: s) with ([a] ++ s).
     rewrite subst_app_decomp. cbn.
@@ -128,3 +128,74 @@ Proof.
   simpl. now rewrite Nat.add_1_r.
 Qed.
 *)
+
+Lemma closed_csubst t k u : 
+  closed t -> 
+  closedn (S k) u -> 
+  closedn k (ECSubst.csubst t 0 u).
+Proof.
+  intros.
+  rewrite ECSubst.closed_subst //.
+  eapply closedn_subst => /= //.
+  rewrite andb_true_r. eapply closed_upwards; tea. lia.
+Qed.
+
+Lemma closed_substl ts k u : 
+  forallb (closedn 0) ts -> 
+  closedn (#|ts| + k) u -> 
+  closedn k (ECSubst.substl ts u).
+Proof.
+  induction ts in u |- *; cbn => //.
+  move/andP=> [] cla clts.
+  intros clu. eapply IHts => //.
+  eapply closed_csubst => //.
+Qed.
+
+Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
+Proof.
+  induction l using rev_ind; simpl; auto.
+  rewrite mkApps_app /= IHl.
+  now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
+Qed.
+
+Lemma csubst_closed t k x : closedn k x -> csubst t k x = x.
+Proof.
+  induction x in k |- * using EInduction.term_forall_list_ind; simpl; auto.
+  all:try solve [intros; f_equal; solve_all; eauto].
+  intros Hn. eapply Nat.ltb_lt in Hn.
+  - destruct (Nat.compare_spec k n); try lia. reflexivity.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+    destruct x0; cbn in *. f_equal; auto.
+Qed.
+
+Lemma subst_csubst_comm l t k b : 
+  forallb (closedn 0) l -> closed t ->
+  subst l 0 (csubst t (#|l| + k) b) = 
+  csubst t k (subst l 0 b).
+Proof.
+  intros hl cl.
+  rewrite !closed_subst //.
+  rewrite distr_subst. f_equal.
+  symmetry. solve_all.
+  rewrite subst_closed //.
+  eapply closed_upwards; tea. lia. 
+Qed.
+
+Lemma substl_csubst_comm l t k b : 
+  forallb (closedn 0) l -> closed t ->
+  substl l (csubst t (#|l| + k) b) = 
+  csubst t k (substl l b).
+Proof.
+  intros hl cl.
+  rewrite substl_subst //.
+  rewrite substl_subst //. 
+  apply subst_csubst_comm => //.
+Qed.
+
+
+Lemma isLambda_csubst a k t : isLambda t -> isLambda (csubst a k t).
+Proof. destruct t => //. Qed.
+Lemma isBox_csubst a k t : isBox t -> isBox (csubst a k t).
+Proof. destruct t => //. Qed.

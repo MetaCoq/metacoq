@@ -479,7 +479,7 @@ Definition closed_inductive_body mdecl idecl :=
   closedn 0 idecl.(ind_type) &&
   closedn_ctx #|mdecl.(ind_params)| idecl.(ind_indices) &&
   forallb (closed_constructor_body mdecl) idecl.(ind_ctors) &&
-  forallb (fun x => closedn (S (ind_npars mdecl)) x.2) idecl.(ind_projs).
+  forallb (fun x => closedn (S (ind_npars mdecl)) x.(proj_type)) idecl.(ind_projs).
 
 Definition closed_inductive_decl mdecl :=
   closed_ctx (ind_params mdecl) &&

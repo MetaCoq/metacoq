@@ -1,6 +1,6 @@
+From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
-From MetaCoq.PCUIC Require Import PCUICReflect PCUICPrimitive.
 From Equations Require Import Equations.
 
 Local Ltac finish :=
@@ -19,11 +19,10 @@ Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+         | i : string, i' : kername |- _ => fcase (eq_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
-         | i : prim_val _, i' : prim_val _ |- _ => fcase (eq_dec i i')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
@@ -105,21 +104,47 @@ Proof.
 Defined.
 
 #[global]
-Instance ReflectEq_term : Reflect.ReflectEq _ :=
+Instance ReflectEq_term : ReflectEq.ReflectEq _ :=
   @EqDec_ReflectEq _ EqDec_term.
 
 Definition eqb_constant_body (x y : constant_body) :=
   eqb (cst_body x) (cst_body y).
 
-#[global]
-Instance reflect_constant_body : ReflectEq constant_body.
+#[global, program]
+Instance reflect_constant_body : ReflectEq constant_body := 
+  {| eqb := eqb_constant_body |}.
+Next Obligation.
 Proof.
-  refine {| eqb := eqb_constant_body |}.
-  intros [] [].
+  revert x y; intros [] [].
   unfold eqb_constant_body.
   cbn -[eqb].
   finish_reflect.
-Defined.
+Qed.
+
+Definition eqb_constructor_body (x y : constructor_body) :=
+  (x.(cstr_name), x.(cstr_nargs)) == (y.(cstr_name), y.(cstr_nargs)).
+
+#[global, program]
+Instance reflect_constructor_body : ReflectEq constructor_body := 
+  {| eqb := eqb_constructor_body |}.
+Next Obligation.
+Proof.
+  unfold eqb_constructor_body.
+  destruct x, y; cbn.
+  case: eqb_spec; intros H; constructor; congruence.
+Qed.
+Definition eqb_projection_body (x y : projection_body) :=
+  x.(proj_name) == y.(proj_name).
+
+#[global, program]
+Instance reflect_projection_body : ReflectEq projection_body := 
+  {| eqb := eqb_projection_body |}.
+Next Obligation.
+Proof.
+  unfold eqb_projection_body.
+  destruct x, y; cbn.
+  case: eqb_spec; intros H; constructor; congruence.
+Qed.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   let (n, i, k, c, p) := x in
@@ -139,11 +164,12 @@ Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
   let (n', b') := y in
   eqb n n' && eqb b b'.
 
-#[global]
-Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
+#[global, program]
+Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body := 
+  {| eqb := eqb_mutual_inductive_body |}.
+Next Obligation.  
 Proof.
-  refine {| eqb := eqb_mutual_inductive_body |}.
-  intros [] [].
+  revert x y; intros [] [].
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
@@ -154,10 +180,12 @@ Definition eqb_global_decl x y :=
   | _, _ => false
   end.
 
-#[global]
-Instance reflect_global_decl : ReflectEq global_decl.
+#[global, program]
+Instance reflect_global_decl : ReflectEq global_decl :=
+  {| eqb := eqb_global_decl |}.
+Next Obligation.
 Proof.
-  refine {| eqb := eqb_global_decl |}.
+  revert x y.
   unfold eqb_global_decl.
   intros [] []; finish_reflect.
 Defined.

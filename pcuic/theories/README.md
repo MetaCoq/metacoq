@@ -30,7 +30,7 @@
 | [PCUICInduction] | Induction principle on syntax
 | [PCUICSize]      | Size of terms
 | [PCUICDepth]     | Depth of terms
-| [PCUICReflect]   | Decidability of ws_cumul_pb between terms
+| [PCUICReflect]   | Decidability of equality between terms
 | [PCUICContextRelations] | Helper lemmas for relations between contexts
 | [PCUICPosition]  | Notions of position and stack, well-order on positions
 
@@ -208,7 +208,7 @@
 | [PCUICContexts]     | Various properties on contexts
 | [PCUICArities]    | Properties on lists of terms
 | [PCUICSpine]      | Properties on spines (lists of terms) relating to typing, substitutions, and so on
-| [PCUICInductives] | Technical typing and conversion lemmass related to inductive definitions
+| [PCUICInductives] | Technical typing and conversion lemmas related to inductive definitions
 | [PCUICValidity] | Every term `A` such that `Γ ⊢ t : A` is a type
 | [PCUICInductiveInversion] | Typing properties and inversions for inductive types, constructors and projections
 | [PCUICAlpha] | Typing does not depend on names
@@ -235,6 +235,14 @@
 | [BDFromPCUIC]      | Undirected typing implies bidirectional typing
 | [BDUnique]         | Inferred types are unique (up to reductions)
 | [BDStrengthening]  | Bidirectional typing can be strengthened (variables not appearing in a term can be removed from the context while keeping typability)
+
+[BDEnvironmentTyping]: ./Bidirectional/BDEnvironmentTyping.v
+[BDTyping]: ./Bidirectional/BDTyping.v
+[BDToPCUIC]: ./Bidirectional/BDToPCUIC.v
+[BDFromPCUIC]: ./Bidirectional/BDFromPCUIC.v
+[BDUnique]: ./Bidirectional/BDUnique.v
+[BDStrengthening]: ./Bidirectional/BDStrengthening.v
+
 
 
 ## Preliminaries for Safe Checker

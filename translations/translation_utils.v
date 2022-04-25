@@ -18,10 +18,9 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
   match E with
   | nil => None
   | hd :: tl =>
-    if gref_eq_dec gr (fst hd) then Some (snd hd)
+    if gref_eqb gr (fst hd) then Some (snd hd)
     else lookup_tsl_table tl gr
   end.
-
 
 Definition tsl_context := (global_env_ext * tsl_table)%type.
 
@@ -40,7 +39,7 @@ Inductive tsl_result A :=
 Arguments Success {_} _.
 Arguments Error {_} _.
 
-Instance tsl_monad : Monad tsl_result :=
+#[export] Instance tsl_monad : Monad tsl_result :=
   {| ret A a := Success a ;
      bind A B m f :=
        match m with
@@ -49,7 +48,7 @@ Instance tsl_monad : Monad tsl_result :=
        end
   |}.
 
-Instance monad_exc : MonadExc tsl_error tsl_result :=
+#[export] Instance monad_exc : MonadExc tsl_error tsl_result :=
   { raise A e := Error e;
     catch A m f :=
       match m with
@@ -91,9 +90,9 @@ Definition nNamed n := {| binder_name := nNamed n; binder_relevance := Relevant 
 Definition tsl_name f := map_binder_annot (tsl_name0 f).
 
 
-Definition tmDebug {A} : A -> TemplateMonad unit
-  (* := tmPrint. *)
-  := fun _ => ret tt.
+Definition tmDebug {A} : A -> TemplateMonad unit :=
+  fun _ => ret tt.
+  (* fun x => tmPrint x ;; ret tt. *)
 
 
 Definition add_global_decl d (Σ : global_env_ext) : global_env_ext
@@ -166,7 +165,8 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         tmDebug "doneu" ;;
         gr' <- tmLocate1 id' ;;
         let decl := {| cst_universes := univs;
-                       cst_type := A; cst_body := Some t |} in
+                       cst_type := A; cst_body := Some t;
+                       cst_relevance := e.(cst_relevance) |} in
         let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
         let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
@@ -199,7 +199,8 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
       kn <- tmLocateCst id ;;
       gr' <- tmLocate1 id' ;;
       let decl := {| cst_universes := Monomorphic_ctx;
-                     cst_type := tA; cst_body := None |} in
+                     cst_type := tA; cst_body := None;
+                     cst_relevance := Relevant |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
       print_nf (id ^ " has been translated as " ^ id') ;;
@@ -237,7 +238,8 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
       tmLemma id' A' ;;
       gr' <- tmLocate1 id' ;;
       let decl := {| cst_universes := Monomorphic_ctx;
-                     cst_type := A; cst_body := e.(cst_body) |} in
+                     cst_type := A; cst_body := e.(cst_body);
+                     cst_relevance := e.(cst_relevance) |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
       print_nf (id ^ " has been translated as " ^ id') ;;

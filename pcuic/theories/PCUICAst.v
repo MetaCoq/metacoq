@@ -206,9 +206,9 @@ Inductive term :=
 | tCase (indn : case_info) (p : predicate term) (c : term) (brs : list (branch term))
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 (** We use faithful models of primitive type values in PCUIC *)
-| tPrim (prim : prim_val term).
+(* | tPrim (prim : prim_val term). *)
 
 Derive NoConfusion for term.
 
@@ -231,6 +231,9 @@ Definition isLambda t :=
   | tLambda _ _ _ => true
   | _ => false
   end.
+
+Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
+Proof. destruct t => //; eauto. Qed.
 
 (** ** Entries
 
@@ -484,7 +487,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
-  | tPrim _ => c
+  (* | tPrim _ => c *)
   end.
 
 (** Tests that the term is closed over [k] universe variables *)
@@ -556,32 +559,6 @@ Hint Rewrite context_assumptions_mapi_context : len.
 Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
 (** Included in PCUICTyping only *)
 
-Definition lookup_minductive Σ mind :=
-  match lookup_env Σ mind with
-  | Some (InductiveDecl decl) => Some decl
-  | _ => None
-  end.
-
-Definition lookup_inductive Σ ind :=
-  match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl => Some (mdecl, idecl)
-    | None => None
-    end
-  | None => None
-  end.
-
-Definition lookup_constructor Σ ind k :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => 
-    match nth_error idecl.(ind_ctors) k with
-    | Some cdecl => Some (mdecl, idecl, cdecl)
-    | None => None
-    end
-  | _ => None
-  end.
-  
 Global Instance context_reflect`(ReflectEq term) : 
   ReflectEq (list (BasicAst.context_decl term)) := _.
 

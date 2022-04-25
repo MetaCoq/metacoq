@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import utils All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 Local Set Primitive Projections.
 Record prod A B := pair { π1 : A ; π2 : B }.
@@ -24,9 +24,9 @@ MetaCoq Run (t <- tmQuote prod ;;
             | _ => tmFail "bug"
             end).
 Definition proj1 (t : term) : term
-  := tProj (prod_ind, 2, 0) t.
+  := tProj (mkProjection prod_ind 2 0) t.
 Definition proj2 (t : term) : term
-  := tProj (prod_ind, 2, S 0) t.
+  := tProj (mkProjection prod_ind 2 (S 0)) t.
 
 MetaCoq Quote Definition tbool := bool.
 MetaCoq Quote Definition ttrue := true.

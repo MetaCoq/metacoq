@@ -1421,6 +1421,10 @@ Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
   LevelSet.In l1 levels /\ LevelSet.In l2 levels.
 
+Definition is_declared_cstr_levels levels (cstr : UnivConstraint.t) : bool :=
+  let '(l1,_,l2) := cstr in
+  LevelSet.mem l1 levels && LevelSet.mem l2 levels.
+
 Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s =_cset s.
 Proof.
   intros x; rewrite ConstraintSet.union_spec. lsets.
@@ -1494,7 +1498,15 @@ Module AUContext.
     (u, (mapi (fun i _ => Level.Var i) u, cst)).
 
   Definition levels (uctx : t) : LevelSet.t :=
-    LevelSetProp.of_list (fst (snd (repr uctx))).
+    LevelSetProp.of_list (fst (repr uctx)).
+
+  #[local]
+  Existing Instance EqDec_ReflectEq.
+  Definition inter (au av : AUContext.t) : AUContext.t :=
+    let prefix := (split_prefix au.1 av.1).1.1 in
+    let lvls := fold_left_i (fun s i _ => LevelSet.add (Level.Var i) s) prefix LevelSet.empty in
+    let filter := ConstraintSet.filter (is_declared_cstr_levels lvls) in
+    make prefix (ConstraintSet.union (filter au.2) (filter av.2)).
 End AUContext.
 
 Module ContextSet.
@@ -1515,6 +1527,34 @@ Module ContextSet.
     LevelSet.Subset (levels x) (levels y) /\
     ConstraintSet.Subset (constraints x) (constraints y).
 
+  Definition inter (x y : t) : t :=
+    (LevelSet.inter (levels x) (levels y),
+      ConstraintSet.inter (constraints x) (constraints y)).
+
+  Definition inter_spec (x y : t) :
+    subset (inter x y) x /\
+      subset (inter x y) y /\
+      forall z, subset z x -> subset z y -> subset z (inter x y).
+  Proof.
+    split; last split.
+    1,2: split=> ?; [move=> /LevelSet.inter_spec [//]|move=> /ConstraintSet.inter_spec [//]].
+    move=> ? [??] [??]; split=> ??;
+    [apply/LevelSet.inter_spec|apply/ConstraintSet.inter_spec]; split; auto.
+  Qed.
+
+  Definition union (x y : t) : t :=
+    (LevelSet.union (levels x) (levels y), ConstraintSet.union (constraints x) (constraints y)).
+
+  Definition union_spec (x y : t) :
+    subset x (union x y) /\
+      subset y (union x y) /\
+      forall z, subset x z -> subset y z -> subset (union x y) z.
+  Proof.
+    split; last split.
+    1,2: split=> ??; [apply/LevelSet.union_spec|apply/ConstraintSet.union_spec ]; by constructor.
+    move=> ? [??] [??]; split=> ?;
+    [move=>/LevelSet.union_spec|move=>/ConstraintSet.union_spec]=>-[]; auto.
+  Qed.
 End ContextSet.
 
 Notation "(=_cs)" := ContextSet.equal (at level 0).
@@ -1573,7 +1613,40 @@ Section Univ.
   Definition satisfies v : ConstraintSet.t -> Prop :=
     ConstraintSet.For_all (satisfies0 v).
 
+  Lemma satisfies_union v φ1 φ2 :
+    satisfies v (CS.union φ1 φ2)
+    <-> (satisfies v φ1 /\ satisfies v φ2).
+  Proof.
+    unfold satisfies. split.
+    - intros H; split; intros c Hc; apply H; now apply CS.union_spec.
+    - intros [H1 H2] c Hc; apply CS.union_spec in Hc; destruct Hc; auto.
+  Qed.
+
+
   Definition consistent ctrs := exists v, satisfies v ctrs.
+
+  Definition consistent_extension_on cs cstr :=
+    forall v, satisfies v (ContextSet.constraints cs) -> exists v',
+        satisfies v' cstr /\
+          LevelSet.For_all (fun l => val v l = val v' l) (ContextSet.levels cs).
+
+  Lemma consistent_extension_on_empty Σ :
+    consistent_extension_on Σ CS.empty.
+  Proof.
+    move=> v hv; exists v; split; [move=> ? /CS.empty_spec[]| move=> ??//].
+  Qed.
+
+  Lemma consistent_extension_on_union X cstrs
+    (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
+    consistent_extension_on X cstrs ->
+    consistent_extension_on X (CS.union cstrs X.2).
+  Proof.
+    move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
+    exists v'; split=> //.
+    apply/satisfies_union; split=> //.
+    move=> c hc. destruct (wfX c hc).
+    destruct (vsat c hc); constructor; rewrite -!v'eq //.
+  Qed.
 
   Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
     forall v, satisfies v φ -> (Z.of_nat (val v u) <= Z.of_nat (val v u') - n)%Z.

@@ -1210,6 +1210,122 @@ Proof.
 Qed.
 
 
+From MetaCoq Require Import ReflectEq.
+
+Section SplitPrefix.
+  Context {A : Type} `{ReflectEq A}.
+
+  Equations split_prefix (l1 l2 : list A) : list A * list A * list A :=
+  | nil, l2 => (nil, nil, l2)
+  | l1 , nil => (nil, l1, nil)
+  | a1 :: l1, a2 :: l2 with a1 == a2 => {
+    | true with split_prefix l1 l2 => {
+      | (prefix, l1', l2') => (a1 :: prefix, l1', l2')
+      }
+    | false => (nil, a1 :: l1, a2 :: l2)
+    }.
+
+  Lemma split_prefix_is_prefix l1 l2 :
+    let '(prefix, l1', l2') := split_prefix l1 l2 in
+    (l1 = prefix ++ l1') /\ (l2 = prefix ++ l2').
+  Proof.
+    funelim (split_prefix l1 l2).
+    1,2: simp split_prefix; now split.
+    1,2: rewrite -Heqcall; split; try easy.
+    1,2: rewrite Heq in Hind; destruct Hind.
+    1: now subst.
+    now rewrite (eqb_eq _ _ Heq0); subst.
+  Qed.
+
+  Definition is_prefix (l1 l2 : list A) := exists l', l2 = l1 ++ l'.
+
+  Lemma nil_prefix l : is_prefix nil l.
+  Proof. now exists l. Qed.
+
+  Lemma cons_prefix x l1 l2 : is_prefix l1 l2 -> is_prefix (x :: l1) (x :: l2).
+  Proof. move=> [l ->]; now exists l. Qed.
+
+  Lemma is_prefix_nil l : is_prefix l nil -> l = nil.
+  Proof. move=> [?]; case l=> //. Qed.
+
+  Lemma is_prefix_cons l x xs : is_prefix l (x :: xs) ->
+                           l = nil \/ (exists l', l = x :: l' /\ is_prefix l' xs).
+  Proof.
+    case: l x xs=> [|y ys ??[tl [= -> ->]]]; [now left| right].
+    exists ys; split=> //; now exists tl.
+  Qed.
+
+  Lemma is_prefix_cons_inv x xs y ys :
+    is_prefix (x :: xs) (y :: ys) -> x = y /\ is_prefix xs ys.
+  Proof.
+    move=> [tl [= -> ->]]; split=> //; now exists tl.
+  Qed.
+
+  Local Notation "'Simp'" := ltac:(simp split_prefix) : ssripat_scope.
+
+  Lemma split_prefix_maximal l1 l2 l :
+    is_prefix l l1 -> is_prefix l l2 ->
+    is_prefix l (fst (fst (split_prefix l1 l2))).
+  Proof.
+    funelim (split_prefix l1 l2).
+    - move=> /is_prefix_nil -> _; apply nil_prefix.
+    - move=> _ /is_prefix_nil ->; apply nil_prefix.
+    - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
+      move=> [? [-> ?]] /is_prefix_cons_inv [eqa ?].
+      rewrite eqa eqb_refl in Heq; discriminate.
+    - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
+      move=> [? [-> pr1]] /is_prefix_cons_inv [eqa pr2].
+      rewrite -Heqcall; apply cons_prefix.
+      move: Heqcall (Hind _ pr1 pr2)=> /Simp.
+      rewrite eqa eqb_refl=> /Simp.
+      move: (split_prefix l1 l2)=> -[[??]?] /Simp [= ->] //.
+  Qed.
+
+End SplitPrefix.
+
+Section SplitSuffix.
+  Context {A : Type} `{ReflectEq A}.
+
+  Definition split_suffix (l1 l2 : list A) : list A * list A * list A :=
+    let '(suffix, l1, l2) := split_prefix (rev l1) (rev l2) in
+    (rev l1, rev l2, rev suffix).
+
+  Lemma split_suffix_is_suffix l1 l2 :
+    let '(l1', l2', suffix) := split_suffix l1 l2 in
+    (l1 = l1' ++ suffix) /\ (l2 = l2' ++ suffix).
+  Proof.
+    unfold split_suffix.
+    pose proof (y := split_prefix_is_prefix (rev l1) (rev l2)).
+    revert y.
+    case: (split_prefix _ _)=> [[??] ?] [/(f_equal rev) + /(f_equal rev)].
+    rewrite 2!rev_invol 2!rev_app //.
+  Qed.
+
+  Definition is_suffix (l1 l2 : list A) := exists l', l2 = l' ++ l1.
+
+  Lemma is_suffix_is_prefix_rev l1 l2 :
+    is_suffix l1 l2 -> is_prefix (rev l1) (rev l2).
+  Proof. move=> [l] /(f_equal rev) ->; exists (rev l); apply: rev_app. Qed.
+
+  Lemma is_prefix_rev_is_suffix l1 l2 :
+    is_prefix (rev l1) (rev l2) -> is_suffix l1 l2.
+  Proof.
+    move=> [l] /(f_equal rev); rewrite rev_app 2! rev_invol.
+    move=> ->; by exists (rev l).
+  Qed.
+
+  Lemma split_suffix_maximal l1 l2 l :
+    is_suffix l l1 -> is_suffix l l2 ->
+    is_suffix l (snd (split_suffix l1 l2)).
+  Proof.
+    move=> /is_suffix_is_prefix_rev ll1 /is_suffix_is_prefix_rev ll2.
+    apply: is_prefix_rev_is_suffix.
+    pose proof (z := split_prefix_maximal (rev l1) (rev l2) (rev l) ll1 ll2).
+    move: z; unfold split_suffix.
+    case: (split_prefix _ _)=> [[??]?] /=; rewrite rev_invol //.
+  Qed.
+End SplitSuffix.
+
 Section AllInP.
   Context {A : Type}.
 
@@ -1295,5 +1411,4 @@ Proof.
   - reflexivity.
   - destruct l'; cbn in *. lia. rewrite IHl. lia.
 Qed.
-
 

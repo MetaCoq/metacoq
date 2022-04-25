@@ -764,7 +764,7 @@ Qed.
     let it := infer Γ _ t _ in
     (it.π1; _).
   Next Obligation.
-    specialize_Σ wfΣ. destruct wt; sq; pcuic.
+    specialize_Σ wfΣ. destruct wt; sq; pcuic. now eapply typing_wf_local; eauto.
   Qed.
   Next Obligation.
     specialize_Σ wfΣ. pose (hΣ _ wfΣ); sq.
@@ -779,10 +779,10 @@ Qed.
     specialize_Σ wfΣ. destruct wt' as [T' HT'].
     sq.
     split.
-    eapply BDToPCUIC.infering_typing in s; pcuic.
+    eapply BDToPCUIC.infering_typing in s; pcuic. now eapply typing_wf_local; eauto.
     intros T'' HT''.
     apply typing_infering in HT'' as [P [HP HP']].
-    eapply infering_checking;tea. 1-2: pcuic.
+    eapply infering_checking;tea. 1-2: pcuic. now eapply typing_wf_local; eauto.
     fvs.
     econstructor; tea. now eapply ws_cumul_pb_forget in HP'.
   Defined. 

@@ -144,14 +144,6 @@ Definition wf_cofixpoint_gen
 
 Definition wf_cofixpoint (Σ : global_env) := wf_cofixpoint_gen (lookup_env Σ).
 
-Definition wf_universe Σ s :=
-  match s with
-  | Universe.lProp
-  | Universe.lSProp => True
-  | Universe.lType u =>
-    forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ)
-  end.
-
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
@@ -316,23 +308,36 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   (global_env_ext -> context -> term -> term -> Type) :=
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
-Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParSpec PCUICConversionSpec.
+Definition infer_sorting `{checker_flags} Σ Γ T := { s : Universe.t & Σ ;;; Γ |- T : tSort s }.
+
+Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping PCUICConversion PCUICConversionParSpec.
 
   Definition typing := @typing.
-  Definition wf_universe := @wf_universe.
-  Definition inds := inds.
-  Definition destArity := destArity [].
+  Definition infer_sorting := @infer_sorting.
+
 End PCUICTypingDef.
+
+Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
+  PCUICTerm
+  PCUICEnvironment
+  PCUICTermUtils
+  PCUICEnvTyping
+  PCUICConversion
+  PCUICLookup
+.
+Include PCUICGlobalMaps.
 
 Module PCUICDeclarationTyping :=
   EnvironmentTyping.DeclarationTyping
     PCUICTerm
     PCUICEnvironment
+    PCUICTermUtils
     PCUICEnvTyping
+    PCUICConversion
     PCUICConversionParSpec
-    PCUICConversionSpec
     PCUICTypingDef
-    PCUICLookup.
+    PCUICLookup
+    PCUICGlobalMaps.
 Include PCUICDeclarationTyping.
 
 Inductive welltyped {cf} Σ Γ t : Prop :=
@@ -350,6 +355,8 @@ Global Hint Resolve isType_welltyped : pcuic.
 Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
   (isType Σ Γ T × { ctx & { s & (destArity [] T = Some (ctx, s)) } }).
 
+Definition infering_size `{checker_flags} typing_size Σ Γ T (prf: infer_sorting Σ Γ T) : size := typing_size Σ Γ T (tSort prf.π1) prf.π2.
+
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
@@ -365,7 +372,7 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
   (a : tybranches Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
   (all2i_size _ (fun i x y p =>
     Nat.max
-      (wf_local_size _ typing_size _ p.2.1)
+      (wf_local_size _ typing_size (infering_size typing_size) _ p.2.1)
       (Nat.max (typing_size _ _ _ _ p.2.2.1) (typing_size _ _ _ _ p.2.2.2))) a).
 
 Section CtxInstSize.
@@ -384,6 +391,8 @@ Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : s
 Proof.
   revert Σ Γ t T d.
   fix typing_size 5.
+  pose (infering_size := infering_size typing_size).
+  pose (wf_local_size Σ := wf_local_size Σ typing_size infering_size).
   destruct 1.
   10: destruct c0, c1.
   all: repeat match goal with
@@ -399,18 +408,18 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | _ => exact 1
     end.
-  - exact (S (wf_local_size _ typing_size _ a)).
-  - exact (S (wf_local_size _ typing_size _ a)).
-  - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (Nat.max (wf_local_size _ typing_size _ wf_pctx)
+  - exact (S (wf_local_size _ _ a)).
+  - exact (S (wf_local_size _ _ a)).
+  - exact (S (S (wf_local_size _ _ a))).
+  - exact (S (S (wf_local_size _ _ a))).
+  - exact (S (S (wf_local_size _ _ a))).
+  - exact (S (Nat.max (wf_local_size _ _ wf_pctx)
       (Nat.max (ctx_inst_size _ typing_size ind_inst)
         (Nat.max d2 (Nat.max d3 (branches_size typing_size brs_ty)))))).
-  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a)
-    (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
-  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a)
-    (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
+  - exact (S (Nat.max (Nat.max (wf_local_size _ _ a)
+    (all_size _ (fun x p => infering_size Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
+  - exact (S (Nat.max (Nat.max (wf_local_size _ _ a)
+    (all_size _ (fun x p => infering_size Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -445,7 +454,7 @@ Lemma wf_env_non_var_levels (Σ : global_env) `{checker_flags} (hΣ : ∥ wf Σ 
   LS.For_all (negb ∘ Level.is_var) (PCUICLookup.global_levels Σ).
 Proof. now destruct hΣ as [[[_ [? _]] _]]. Qed.
 
-Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
+Definition wf_ext `{checker_flags} := on_global_env_ext cumulSpec0 (lift_typing typing).
 Existing Class wf_ext.
 #[global]
 Hint Mode wf_ext + + : typeclass_intances.
@@ -532,8 +541,8 @@ Proof.
 Qed.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
-  wf_local_size Σ (@typing_size _) _ (wf_local_app_l _ _ _ Hwf) <=
-  wf_local_size Σ (@typing_size _) _ Hwf.
+  wf_local_size Σ (@typing_size _) (infering_size (@typing_size _)) _ (wf_local_app_l _ _ _ Hwf) <=
+  wf_local_size Σ (@typing_size _) (infering_size (@typing_size _)) _ Hwf.
 Proof.
   induction Γ' in Γ, Hwf |- *; try lia. simpl. lia.
   depelim Hwf.
@@ -543,7 +552,7 @@ Qed.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
-  wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
+  wf_local_size Σ (@typing_size _) (infering_size (@typing_size _)) _ (typing_wf_local d) < typing_size d.
 Proof.
   induction d; try destruct c0, c1; simpl;
   change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
@@ -558,17 +567,17 @@ Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
       | Some b =>
         ∑ u (ty : Σ ;;; Γ |- b : d.(decl_type)),
           { ty' : Σ ;;; Γ |- d.(decl_type) : tSort u |
-            wf_local_size Σ (@typing_size _) _ w' <
-            wf_local_size _ (@typing_size _) _ w /\
-            typing_size ty <= wf_local_size _ (@typing_size _) _ w /\
-            typing_size ty' <= wf_local_size _ (@typing_size _) _ w }
+            wf_local_size Σ (@typing_size _) (infering_size (@typing_size _)) _ w' <
+            wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ w /\
+            typing_size ty <= wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ w /\
+            typing_size ty' <= wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ w }
 
       | None =>
         ∑ u,
           { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
-            wf_local_size Σ (@typing_size _) _ w' <
-            wf_local_size _ (@typing_size _) _ w /\
-            typing_size ty <= wf_local_size _ (@typing_size _) _ w }
+            wf_local_size Σ (@typing_size _) (infering_size (@typing_size _)) _ w' <
+            wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ w /\
+            typing_size ty <= wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ w }
       end.
 Proof.
   intros d Γ.
@@ -577,7 +586,7 @@ Proof.
   - intros [=]. subst d Γ0.
     exists w. simpl. destruct l. exists x. exists t0. pose (typing_size_pos t0).
     simpl. split.
-    + lia.
+    + unfold infering_size at 2, projT2, projT1. lia.
     + auto with arith.
   - intros [=]. subst d Γ0.
     exists w. simpl. simpl in l. destruct l as [u h].
@@ -586,6 +595,7 @@ Proof.
     pose (typing_size_pos h).
     pose (typing_size_pos l0).
     intuition eauto.
+    all: unfold infering_size, projT2, projT1.
     all: try lia.
 Qed.
 
@@ -783,7 +793,7 @@ Proof.
     rename o into ongu. rename o0 into o. cbn in o |- *.
     destruct o. { constructor. }
     rename o1 into Xg.
-    set (wfΣ := (ongu, o) : on_global_env (lift_typing typing) {| universes := univs; declarations := Σ |}).
+    set (wfΣ := (ongu, o) : on_global_env cumulSpec0 (lift_typing typing) {| universes := univs; declarations := Σ |}).
     set (Σ':= {| universes := univs; declarations := Σ |}) in *.
     constructor; auto.
     * simple refine (let IH' := IH ((Σ', udecl);
@@ -873,17 +883,17 @@ Proof.
     { specialize (X14 _ _ _  (type_Prop _)).
       simpl in X14. intros Hle. apply X14. lia. }
     assert (Hwf : forall Γ' (Hwf : wf_local Σ Γ'),
-      wf_local_size _ (@typing_size _) _ Hwf < typing_size H ->
+      wf_local_size _ (@typing_size _) (infering_size (@typing_size _)) _ Hwf < typing_size H ->
       PΓ Σ Γ').
     { intros. eapply (XΓ _ _ _ Hwf); auto.
       clear -Pdecl wfΣ X14 H0.
       revert Hwf H0.
       induction Hwf; simpl in *; try destruct t2 as [u Hu]; simpl in *; constructor.
       - simpl in *. apply IHHwf. lia.
-      - red. apply (X14 _ _ _ Hu). lia.
+      - red. apply (X14 _ _ _ Hu). unfold infering_size at 1, projT2, projT1 in H0. lia.
       - simpl in *. apply IHHwf. lia.
       - red. apply (X14 _ _ _ t3). lia.
-      - red. simpl. apply (X14 _ _ _ Hu). lia. }
+      - red. simpl. apply (X14 _ _ _ Hu). unfold infering_size at 1, projT2, projT1 in H0. lia. }
 
     assert (Htywf : forall Γ' t T (Hty : Σ ;;; Γ' |- t : T),
       typing_size Hty <= typing_size H ->
@@ -1000,7 +1010,7 @@ Proof.
                       (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
                     typing_size p.π2) a0) ->
                     Forall_decls_typing P Σ.1 * P Σ Γ t T).
-          intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl. lia.
+          intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl. unfold infer_sorting, infering_size. lia.
           clear Hwf Htywf X14 a pΓ Hdecls.
           clear -a0 X.
           induction a0; constructor.
@@ -1046,7 +1056,7 @@ Proof.
                     (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
                   typing_size p.π2) a0) ->
                   Forall_decls_typing P Σ.1 * P Σ Γ t T).
-        intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl; lia.
+        intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl. unfold infer_sorting, infering_size. lia.
         clear Hwf Htywf X14 a pΓ Hdecls.
         clear -a0 X.
         induction a0; constructor.
@@ -1260,10 +1270,10 @@ Section All_local_env.
   Qed.
 
   Lemma lookup_on_global_env P (Σ : global_env) c decl :
-    on_global_env P Σ ->
+    on_global_env cumulSpec0 P Σ ->
     lookup_env Σ c = Some decl ->
-    { Σ' : global_env & [× extends Σ' Σ, on_global_env P Σ' &
-       on_global_decl P (Σ', universes_decl_of_decl decl) c decl] }.
+    { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
+       on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
   Proof.
     destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
     intros [cu Σp].
@@ -1285,7 +1295,7 @@ Section All_local_env.
       exists (Σ'' ,, (kn, d)) => //.
   Qed.
 
-  Lemma All_local_env_app (P : context -> term -> option term -> Type) l l' :
+  Lemma All_local_env_app (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
     All_local_env P (l ,,, l').
   Proof.
@@ -1294,7 +1304,7 @@ Section All_local_env.
     inv b. econstructor; eauto. inv b; econstructor; eauto.
   Qed.
 
-  Lemma All_local_env_app_inv (P : context -> term -> option term -> Type) l l' :
+  Lemma All_local_env_app_inv (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P (l ,,, l') ->
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l'.
   Proof.
@@ -1386,9 +1396,9 @@ Section All_local_env.
     apply wf_local_app; auto.
   Qed.
 
-  Lemma All_local_env_map (P : context -> term -> option term -> Type) f l :
+  Lemma All_local_env_map (P : context -> term -> typ_or_sort -> Type) f l :
     (forall u, f (tSort u) = tSort u) ->
-    All_local_env (fun Γ t T => P (map (map_decl f) Γ) (f t) (option_map f T)) l
+    All_local_env (fun Γ t T => P (map (map_decl f) Γ) (f t) (typ_or_sort_map f T)) l
     -> All_local_env P (map (map_decl f) l).
   Proof.
     intros Hf. induction 1; econstructor; eauto.
@@ -1424,10 +1434,10 @@ Section All_local_env.
     now eapply wf_local_app_l in wf.
   Qed.
 
-  Definition on_local_decl_glob (P : term -> option term -> Type) d :=
+  Definition on_local_decl_glob (P : term -> typ_or_sort -> Type) d :=
     match d.(decl_body) with
-    | Some b => (P b (Some d.(decl_type)) * P d.(decl_type) None)%type
-    | None => P d.(decl_type) None
+    | Some b => P b (Typ d.(decl_type)) × P d.(decl_type) Sort
+    | None => P d.(decl_type) Sort
     end.
 
   Definition lookup_wf_local_decl {Γ P} (wfΓ : All_local_env P Γ) (n : nat)

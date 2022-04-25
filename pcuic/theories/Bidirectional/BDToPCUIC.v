@@ -116,6 +116,9 @@ Section BDToPCUICTyping.
   Let Psort Γ t u :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : (tSort u).
 
+  Let Ptrue_infer Γ t :=
+    { s : Universe.t & Psort Γ t s }.
+
   Let Pprod Γ t na A B :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : tProd na A B.
 
@@ -134,9 +137,9 @@ Section BDToPCUICTyping.
   (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
-    All_local_env_over_sorting checking infering_sort 
+    All_local_env_over_sorting checking (true_infer infering_sort)
       (fun Σ Γ _ t T _ => Pcheck Γ t T)
-      (fun Σ Γ _ t u _ => Psort Γ t u) 
+      (fun Σ Γ _ t _ => Ptrue_infer Γ t) 
       Σ Γ all ->
     wf_local Σ Γ.
   Proof.
@@ -144,11 +147,11 @@ Section BDToPCUICTyping.
     all: constructor.
     1,3: assumption.
     all: red.
-    - simpl in tu. eexists.
+    - destruct s. eexists.
       auto.
-    - destruct tu. eexists.
+    - destruct s. eexists.
       auto.
-    - destruct tu.
+    - destruct s.
       apply c ; auto.
       eexists. auto.
   Qed.
@@ -156,9 +159,9 @@ Section BDToPCUICTyping.
   Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
     All_local_env_over_sorting
       (fun Σ Δ => checking Σ (Γ,,,Δ))
-      (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
+      (fun Σ Δ => (true_infer infering_sort) Σ (Γ,,,Δ))
       (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
-      (fun Σ Δ _ t u _ => Psort (Γ,,,Δ) t u) 
+      (fun Σ Δ _ t _ => Ptrue_infer (Γ,,,Δ) t) 
       Σ Γ' all ->
     wf_local_rel Σ Γ Γ'.
   Proof.
@@ -166,17 +169,17 @@ Section BDToPCUICTyping.
     all: constructor.
     1,3: assumption.
     all: red.
-    - simpl in tu. eexists.
-      apply s.
+    - destruct s. eexists.
+      apply p.
       by apply wf_local_app.
-    - destruct tu. eexists.
-      apply s.
+    - destruct s. eexists.
+      apply p.
       by apply wf_local_app.
-    - destruct tu.
+    - destruct s.
       apply c.
       1: by apply wf_local_app.
       eexists.
-      apply s.
+      apply p.
       by apply wf_local_app.
   Qed.
 
@@ -324,7 +327,7 @@ Section BDToPCUICTyping.
         eexists.
         eapply type_mkApps_arity.
         1: econstructor ; eauto.
-        erewrite PCUICDeclarationTyping.ind_arity_eq.
+        erewrite PCUICGlobalMaps.ind_arity_eq.
         2: by eapply PCUICInductives.oib ; eauto.
         rewrite !subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
         eapply arity_spine_it_mkProd_or_LetIn ; auto.

@@ -75,13 +75,13 @@ Qed.
 Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :
   lookup_env Σ cst = Some decl ->
   Forall_decls_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) => closedn #|Γ| t && closedn #|Γ| T) Σ ->
-  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
+  on_global_decl cumulSpec0 (fun Σ Γ b t => closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true)
                  (Σ, universes_decl_of_decl decl) cst decl.
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; eauto. red; eauto.
   eapply (on_global_env_impl (empty_ext Σ)); cycle 1. tea.
-  red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
+  red; intros. unfold lift_bityping in *. destruct T; intuition auto with wf.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
@@ -474,7 +474,7 @@ Qed.
 Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
   wf Σ ->
   lookup_env Σ cst = Some decl ->
-  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
+  on_global_decl cumulSpec0 (fun Σ Γ b t => closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true)
                  (Σ, universes_decl_of_decl decl) cst decl.
 Proof.
   intros.

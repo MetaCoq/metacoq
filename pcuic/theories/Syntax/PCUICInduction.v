@@ -435,10 +435,10 @@ Proof.
 Qed.
 
 Definition on_local_decl (P : context -> term -> Type)
-           (Γ : context) (t : term) (T : option term) :=
+           (Γ : context) (t : term) (T : typ_or_sort) :=
   match T with
-  | Some T => (P Γ t * P Γ T)%type
-  | None => P Γ t
+  | Typ T => (P Γ t * P Γ T)%type
+  | Sort => P Γ t
   end.
 
 (* TODO: remove List.rev *)

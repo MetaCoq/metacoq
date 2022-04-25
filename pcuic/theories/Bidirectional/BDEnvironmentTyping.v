@@ -5,9 +5,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.
 From Equations Require Import Equations.
 
 Require Import ssreflect.
-
+(* 
 (** Variation on lift_typing to enable a different predicate for checking a body and infering a sort when there is no body *)
-Definition lift_sorting
+Definition lift_bityping
   (checking : global_env_ext -> context -> term -> term -> Type)
   (sorting : global_env_ext -> context -> term -> Universe.t -> Type) :
   (global_env_ext -> context -> term -> option term -> Type) :=
@@ -84,10 +84,10 @@ Definition lift_sorting
   Defined.
 
 End All_local_env_rel.
-
+*)
 Section All_local_env_size.
 
-  Context (P : context -> term -> option term -> Type) (Psize : forall Γ t T, P Γ t T -> size).
+  Context (P : context -> term -> typ_or_sort -> Type) (Psize : forall Γ t T, P Γ t T -> size).
 
   Fixpoint All_local_env_size Γ (w : All_local_env P Γ) : size :=
     match w with
@@ -126,37 +126,37 @@ Qed.
 Section SortingEnv.
 
   Context (checking : global_env_ext -> context -> term -> term -> Type).
-  Context (sorting : global_env_ext -> context -> term -> Universe.t -> Type).
+  Context (sorting : global_env_ext -> context -> term -> Type).
 
   (** Corresponding All_local_env_over predicate *)
 
   Section TypeLocalOver.
     Context (cproperty : forall (Σ : global_env_ext) (Γ : context),
-                All_local_env (lift_sorting checking sorting Σ) Γ ->
+                All_local_env (lift_bityping checking sorting Σ) Γ ->
                 forall (t T : term), checking Σ Γ t T -> Type).
     Context (sproperty : forall (Σ : global_env_ext) (Γ : context),
-                All_local_env (lift_sorting checking sorting Σ) Γ ->
-                forall (t : term) (s : Universe.t), sorting Σ Γ t s -> Type).
+                All_local_env (lift_bityping checking sorting Σ) Γ ->
+                forall (t : term), sorting Σ Γ t -> Type).
 
     Inductive All_local_env_over_sorting (Σ : global_env_ext) :
-        forall (Γ : context), All_local_env (lift_sorting checking sorting Σ) Γ -> Type :=
+        forall (Γ : context), All_local_env (lift_bityping checking sorting Σ) Γ -> Type :=
     | localenv_over_nil :
         All_local_env_over_sorting Σ [] localenv_nil
 
     | localenv_over_cons_abs Γ na t
-        (all : All_local_env (lift_sorting checking sorting Σ) Γ) :
+        (all : All_local_env (lift_bityping checking sorting Σ) Γ) :
         All_local_env_over_sorting Σ Γ all ->
-        forall (tu : lift_sorting checking sorting Σ Γ t None),
-          sproperty Σ Γ all _ _ (projT2 tu) ->
+        forall (tu : lift_bityping checking sorting Σ Γ t Sort),
+          sproperty Σ Γ all _ tu ->
           All_local_env_over_sorting Σ (Γ ,, vass na t)
                               (localenv_cons_abs all tu)
 
     | localenv_over_cons_def Γ na b t
-        (all : All_local_env (lift_sorting checking sorting Σ) Γ) (tb : checking Σ Γ b t) :
+        (all : All_local_env (lift_bityping checking sorting Σ) Γ) (tb : checking Σ Γ b t) :
         All_local_env_over_sorting Σ Γ all ->
         cproperty Σ Γ all _ _ tb ->
-        forall (tu : lift_sorting checking sorting Σ Γ t None),
-          sproperty Σ Γ all _ _ (projT2 tu) ->
+        forall (tu : lift_bityping checking sorting Σ Γ t Sort),
+          sproperty Σ Γ all _ tu ->
           All_local_env_over_sorting Σ (Γ ,, vdef na b t)
                               (localenv_cons_def all tu tb).
 
@@ -166,18 +166,18 @@ Section SortingEnv.
 
   Section All_local_env_size.
     Context (csize : forall (Σ : global_env_ext) (Γ : context) (t T : term), checking Σ Γ t T -> size).
-    Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term) (u : Universe.t), sorting Σ Γ t u -> size).
+    Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term), sorting Σ Γ t -> size).
     Context (Σ : global_env_ext).
 
-    Definition lift_sorting_size Γ t T (w : lift_sorting checking sorting Σ Γ t T) : size.
+    Definition lift_bityping_size Γ t T (w : lift_bityping checking sorting Σ Γ t T) : size.
     Proof.
       destruct T.
       - exact (csize _ _ _ _ w).
-      - exact (ssize _ _ _ _ w.π2).
+      - exact (ssize _ _ _ w).
     Defined.
 
-    Definition All_local_env_sorting_size := All_local_env_size _ lift_sorting_size.
-    Definition All_local_rel_sorting_size Γ Γ' (wfΓ' : All_local_rel (lift_sorting checking sorting Σ) Γ Γ') := All_local_env_size _ (fun Δ => lift_sorting_size (Γ ,,, Δ)) Γ' wfΓ'.
+    Definition All_local_env_sorting_size := All_local_env_size _ lift_bityping_size.
+    Definition All_local_rel_sorting_size Γ Γ' (wfΓ' : All_local_rel (lift_bityping checking sorting Σ) Γ Γ') := All_local_env_size _ (fun Δ => lift_bityping_size (Γ ,,, Δ)) Γ' wfΓ'.
 
   End All_local_env_size.
 

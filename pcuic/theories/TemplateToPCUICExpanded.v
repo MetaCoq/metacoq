@@ -247,7 +247,7 @@ Qed.
 
 Lemma template_wf_cons_inv {cf} univs (Σ : Ast.Env.global_declarations) d : Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ |} ->
   let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} in
-  Typing.wf Σ' × Typing.on_global_decl (WfAst.wf_decl_pred) (Σ', Ast.universes_decl_of_decl d.2) d.1 d.2
+  Typing.wf Σ' × Typing.on_global_decl Typing.cumul_gen (WfAst.wf_decl_pred) (Σ', Ast.universes_decl_of_decl d.2) d.1 d.2
   × ST.on_udecl univs (Ast.universes_decl_of_decl d.2).
 Proof.
   intros wf; split.

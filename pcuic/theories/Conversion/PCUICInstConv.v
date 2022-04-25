@@ -1943,8 +1943,8 @@ Lemma inst_conv_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d 
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+  conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  conv_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
 Proof.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     eapply inst_conv; simpl; cbn in *; tea.
@@ -1957,8 +1957,8 @@ Lemma inst_cumul_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  cumul_decls Σ Γ Γ' d d' ->
-  cumul_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+  cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  cumul_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
 Proof.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     (eapply inst_conv || eapply inst_cumul); tea.

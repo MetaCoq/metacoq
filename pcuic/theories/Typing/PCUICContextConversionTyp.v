@@ -123,7 +123,7 @@ Qed.
 Lemma wt_cum_ws_cumul_ctx_pb {cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {Γ Δ : context} pb :
   wf_local Σ Γ ->
   wf_local Σ Δ ->
-  cumul_pb_context pb Σ Γ Δ ->
+  cumul_pb_context cumulAlgo_gen pb Σ Γ Δ ->
   Σ ⊢ Γ ≤[pb] Δ. 
 Proof.
   move/wf_local_closed_context => wfΓ.
@@ -132,19 +132,19 @@ Proof.
 Qed.
 
 Lemma All2_conv_over_refl {cf:checker_flags} {Σ : global_env_ext} {Γ Γ' Δ} : 
-  All2_fold (All_over (conv_decls Σ) Γ Γ') Δ Δ.
+  All2_fold (All_over (conv_decls cumulAlgo_gen Σ) Γ Γ') Δ Δ.
 Proof.
   eapply All2_fold_refl. intros ? ?; reflexivity.
 Qed.
 
 Lemma All2_cumul_over_refl {cf:checker_flags} {Σ : global_env_ext} {Γ Γ' Δ} : 
-  All2_fold (All_over (cumul_decls Σ) Γ Γ') Δ Δ.
+  All2_fold (All_over (cumul_decls cumulAlgo_gen Σ) Γ Γ') Δ Δ.
 Proof.
   eapply All2_fold_refl. intros ? ?; reflexivity.
 Qed.
 
 Lemma cumul_context_Algo_Spec {cf:checker_flags} Σ Γ' Γ :
-  Σ ⊢ Γ' ≤ Γ -> PCUICCumulativitySpec.cumul_context Σ Γ' Γ.
+  Σ ⊢ Γ' ≤ Γ -> PCUICCumulativitySpec.cumul_context cumulSpec0 Σ Γ' Γ.
 Proof.
   intros e.
   eapply All2_fold_impl. 1: tea. cbn; intros.
@@ -158,11 +158,11 @@ Defined.
 Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
-       forall Γ', cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T)
+       forall Γ', cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T)
     (fun Σ Γ => 
     All_local_env
       (lift_typing (fun Σ (Γ : context) (t T : term) =>
-        forall Γ' : context, cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ) Γ).
+        forall Γ' : context, cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ) Γ).
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
     try solve [econstructor; eauto].
@@ -306,14 +306,14 @@ Proof.
 Qed. 
 
 Lemma closed_context_cumul_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  Σ ⊢ Γ ≤ Γ' -> cumul_context Σ Γ Γ'.
+  Σ ⊢ Γ ≤ Γ' -> cumul_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   now move/ws_cumul_ctx_pb_forget.
 Qed.
 #[global] Hint Resolve closed_context_cumul_cumul : pcuic.
 
 Lemma closed_context_conv_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  Σ ⊢ Γ = Γ' -> conv_context Σ Γ Γ'.
+  Σ ⊢ Γ = Γ' -> conv_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   now move/ws_cumul_ctx_pb_forget.
 Qed.
@@ -335,7 +335,7 @@ Qed.
 Lemma context_cumulativity {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
   Σ ;;; Γ |- t : T ->
   wf_local Σ Γ' ->
-  cumul_context Σ Γ' Γ ->
+  cumul_context cumulAlgo_gen Σ Γ' Γ ->
   Σ ;;; Γ' |- t : T.
 Proof.
   intros h hΓ' e.
@@ -345,7 +345,7 @@ Qed.
 #[global] Hint Resolve wf_local_closed_context : fvs.
 
 Lemma wf_conv_context_closed {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
-  conv_context Σ Γ Γ' -> 
+  conv_context cumulAlgo_gen Σ Γ Γ' -> 
   wf_local Σ Γ ->
   wf_local Σ Γ' ->
   Σ ⊢ Γ = Γ'.
@@ -355,7 +355,7 @@ Proof.
 Qed.
 
 Lemma wf_cumul_context_closed {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
-  cumul_context Σ Γ Γ' -> 
+  cumul_context cumulAlgo_gen Σ Γ Γ' -> 
   wf_local Σ Γ ->
   wf_local Σ Γ' ->
   Σ ⊢ Γ ≤ Γ'.
@@ -367,11 +367,11 @@ Qed.
 Lemma context_conversion {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
   Σ ;;; Γ |- t : T ->
   wf_local Σ Γ' ->
-  conv_context Σ Γ Γ' ->
+  conv_context cumulAlgo_gen Σ Γ Γ' ->
   Σ ;;; Γ' |- t : T.
 Proof.
   intros h hΓ' e.
-  eapply wf_conv_context_closed in e; eauto with fvs pcuic.
+  eapply wf_conv_context_closed in e; eauto with fvs pcuic. 2: eapply typing_wf_local; eauto.
   symmetry in e.
   now eapply closed_context_cumulativity in e.
 Qed.

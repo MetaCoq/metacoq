@@ -82,7 +82,7 @@ Proof.
     now rewrite andb_true_r in H.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed, lift_typing in *. now simpl.
+    unfold closed_decl. unfold Pclosed, lift_bityping in *. now simpl.
 Qed.
 
 Lemma weaken_env_prop_closed {cf} : 
@@ -102,9 +102,9 @@ Proof.
 Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env P Σ.1 ->
-    on_global_env Q Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env P Σ -> on_global_env Q Σ.
+  (forall Σ Γ t T, on_global_env cumulSpec0 P Σ.1 ->
+    on_global_env cumulSpec0 Q Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env cumulSpec0 P Σ -> on_global_env cumulSpec0 Q Σ.
 Proof.
   intros X X0.
   simpl in *. destruct X0 as [ongu ond]; constructor; auto.
@@ -152,8 +152,8 @@ Qed.
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
   All_local_env 
-    (fun (Γ : context) (b : term) (t : option term) =>
-      closedn #|Γ| b && option_default (closedn #|Γ|) t true) ctx ->
+    (fun (Γ : context) (b : term) (t : typ_or_sort) =>
+      closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true) ctx ->
     closedn_ctx 0 ctx.
 Proof.
   induction 1; auto; rewrite closedn_ctx_cons IHX /=; now move/andP: t0 => [].

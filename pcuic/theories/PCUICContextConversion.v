@@ -1075,7 +1075,7 @@ End ContextConversion.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
   RelationClasses.subrelation Re (eq_universe Σ) ->
-  subrelation (eq_context_upto Σ Re Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto Σ Re Re) (fun Γ Γ' => conv_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
@@ -1088,7 +1088,7 @@ Lemma eq_context_upto_cumul_context {cf:checker_flags} (Σ : global_env_ext) Re 
   RelationClasses.subrelation Re (eq_universe Σ) ->
   RelationClasses.subrelation Rle (leq_universe Σ) ->
   RelationClasses.subrelation Re Rle ->
-  subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context Σ Γ Γ').
+  subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros HRe HRle hR Γ Δ h. induction h.
   - constructor.
@@ -1106,7 +1106,7 @@ Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation e
 Proof. intros x y []. reflexivity. Qed.
 
 Lemma eq_context_upto_empty_conv_context {cf:checker_flags} (Σ : global_env_ext) :
-  subrelation (eq_context_upto empty_global_env eq eq) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto empty_global_env eq eq) (fun Γ Γ' => conv_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros Γ Δ h. induction h.
   - constructor.
@@ -1117,7 +1117,7 @@ Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
   eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) Γ Δ ->
-  conv_context Σ Γ Δ.
+  conv_context cumulAlgo_gen Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_conv_context; tea.
   reflexivity.
@@ -1125,15 +1125,15 @@ Qed.
 
 Lemma eq_context_upto_univ_cumul_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
   eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
-  cumul_context Σ Γ Δ.
+  cumul_context cumulAlgo_gen Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_cumul_context; tea.
   reflexivity. tc. tc.
 Qed.
 
 Lemma conv_context_app_same {cf:checker_flags} Σ Γ Γ' Δ :
-  conv_context Σ Γ Γ' ->
-  conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  conv_context cumulAlgo_gen Σ Γ Γ' ->
+  conv_context cumulAlgo_gen Σ (Γ ,,, Δ) (Γ' ,,, Δ).
 Proof.
   intros HΔ.
   induction Δ; auto.
@@ -1142,8 +1142,8 @@ Proof.
 Qed.
 
 Lemma cumul_context_app_same {cf:checker_flags} Σ Γ Γ' Δ :
-  cumul_context Σ Γ Γ' ->
-  cumul_context Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  cumul_context cumulAlgo_gen Σ Γ Γ' ->
+  cumul_context cumulAlgo_gen Σ (Γ ,,, Δ) (Γ' ,,, Δ).
 Proof.
   intros HΔ.
   induction Δ; auto.
@@ -1159,10 +1159,10 @@ Qed.
     | Some (b, b') => (P Γ b b' * P Γ Γ' t t')%type
     | None => P Γ Γ' t t'
     end. *)
-Definition on_local_decl (P : context -> term -> option term -> Type) (Γ : context) (d : context_decl) :=
+Definition on_local_decl (P : context -> term -> typ_or_sort -> Type) (Γ : context) (d : context_decl) :=
   match decl_body d with
-  | Some b => P Γ b (Some (decl_type d)) * P Γ (decl_type d) None
-  | None => P Γ (decl_type d) None
+  | Some b => P Γ b (Typ (decl_type d)) * P Γ (decl_type d) Sort
+  | None => P Γ (decl_type d) Sort
   end.
 
 Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
@@ -1180,13 +1180,13 @@ Proof.
 Qed.
 
 Lemma context_cumulativity_wf_app {cf:checker_flags} Σ Γ Γ' Δ : 
-  cumul_context Σ Γ' Γ ->
+  cumul_context cumulAlgo_gen Σ Γ' Γ ->
   wf_local Σ Γ' ->
     All_local_env
        (lift_typing
           (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
            forall Γ' : context,
-           cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
+           cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
        (Γ,,, Δ) ->
   wf_local Σ (Γ' ,,, Δ).
 Proof.
@@ -1226,13 +1226,13 @@ Qed.
   eapply on_free_vars_decl_eq; [eassumption|len; lia] : fvs.
 
 Lemma ws_cumul_ctx_pb_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  ws_cumul_ctx_pb Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
+  ws_cumul_ctx_pb Conv Σ Γ Γ' -> conv_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   apply: ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma ws_cumul_ctx_pb_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  ws_cumul_ctx_pb Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
+  ws_cumul_ctx_pb Cumul Σ Γ Γ' -> cumul_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   apply: ws_cumul_ctx_pb_forget.
 Qed.
@@ -1247,7 +1247,7 @@ Lemma into_ws_cumul_ctx_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ex
   {Γ Γ' : context} :
   is_closed_context Γ ->
   is_closed_context Γ' ->
-  cumul_pb_context pb Σ Γ Γ' ->
+  cumul_pb_context cumulAlgo_gen pb Σ Γ Γ' ->
   ws_cumul_ctx_pb pb Σ Γ Γ'.
 Proof.
   move/on_free_vars_ctx_All_fold => onΓ.

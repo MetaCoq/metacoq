@@ -36,7 +36,7 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      All2_fold (conv_decls Σ) Γ Γ' ->
+      All2_fold (conv_decls cumulAlgo_gen Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
@@ -56,7 +56,7 @@ Proof.
 Qed.
 
 Lemma conv_context_wf_local_app {A B A'} {Σ : global_env_ext} {wfΣ : wf Σ} :
-  wf_local Σ (A ,,, B) -> wf_local Σ A' -> conv_context Σ A A' -> wf_local Σ (A' ,,, B).
+  wf_local Σ (A ,,, B) -> wf_local Σ A' -> conv_context cumulAlgo_gen Σ A A' -> wf_local Σ (A' ,,, B).
 Proof.
   intros wfab wfa' cv.
   eapply wf_local_app => //.
@@ -170,7 +170,7 @@ Qed.
 
 Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
   wf Σ -> wf_local Σ Γ -> wf_local Σ Γ' ->
-  conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
+  conv_context cumulAlgo_gen Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
 Proof.
   intros.
   destruct X3 as (? & ? & ?). red.
@@ -187,7 +187,7 @@ Lemma erases_context_conversion :
   env_prop
   (fun (Σ : global_env_ext) (Γ : context) (t T : PCUICAst.term) =>
       forall Γ' : context,
-        conv_context Σ Γ Γ' ->
+        conv_context cumulAlgo_gen Σ Γ Γ' ->
         wf_local Σ Γ' ->
         forall t', erases Σ Γ t t' -> erases Σ Γ' t t')
   (fun Σ Γ => wf_local Σ Γ)

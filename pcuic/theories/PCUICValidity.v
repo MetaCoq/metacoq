@@ -28,7 +28,7 @@ Section Validity.
   Proof.
     red. intros.
     destruct X2 as [u Hu]; exists u; pcuic.
-    unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Some (tSort u))); eauto with pcuic.
+    unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort u))); eauto with pcuic.
     red. simpl. destruct Σ. eapply Hu.
   Qed.
 
@@ -39,7 +39,7 @@ Section Validity.
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof.
     red. intros.
-    unfold lift_typing in *. destruct T. now eapply (isType_weaken_full (Σ, _)).
+    unfold lift_bityping in *. destruct T. now eapply (isType_weaken_full (Σ, _)).
     destruct X2 as [s Hs]; exists s. now eapply (isType_weaken_full (Σ, _)).
   Qed.
   Hint Resolve isType_weaken : pcuic.
@@ -63,7 +63,7 @@ Section Validity.
           (Γ0 : PCUICEnvironment.context) (_ T : term) =>
         isType Σ0 Γ0 T)).
   Proof.
-    red. intros Σ Σ' ϕ wfΣ wfΣ' ext *. unfold lift_typing.
+    red. intros Σ Σ' ϕ wfΣ wfΣ' ext *. unfold lift_bityping.
     destruct T. now eapply isType_extends.
     intros [s Hs]; exists s. now eapply (isType_extends (empty_ext Σ)).
   Qed.
@@ -110,7 +110,7 @@ Section Validity.
     eapply (weaken_ctx (Γ:=[])); eauto.
   Qed.
 
-  Lemma nth_error_All_local_env {P : context -> term -> option term -> Type} {Γ n d} :
+  Lemma nth_error_All_local_env {P : context -> term -> typ_or_sort -> Type} {Γ n d} :
     nth_error Γ n = Some d ->
     All_local_env P Γ ->
     on_local_decl P (skipn (S n) Γ) d.
@@ -205,10 +205,10 @@ Section Validity.
 
   Lemma validity_wf_local {Σ} Γ Δ:
     All_local_env
-      (fun (Γ0 : context) (t : term) (T : option term) =>
+      (fun (Γ0 : context) (t : term) (T : typ_or_sort) =>
       match T with
-      | Some T0 => isType Σ (Γ,,, Γ0) T0 × Σ ;;; (Γ ,,, Γ0) |- t : T0
-      | None => isType Σ (Γ,,, Γ0) t
+      | Typ T0 => isType Σ (Γ,,, Γ0) T0 × Σ ;;; (Γ ,,, Γ0) |- t : T0
+      | Sort => isType Σ (Γ,,, Γ0) t
       end) Δ ->
     ∑ xs, sorts_local_ctx (lift_typing typing) Σ Γ Δ xs.
   Proof.
@@ -226,7 +226,7 @@ Section Validity.
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
       (fun Σ Γ => wf_local Σ Γ × All_local_env 
-        (fun Γ t T => match T with Some T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | None => isType Σ Γ t end) Γ).
+        (fun Γ t T => match T with Typ T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | Sort => isType Σ Γ t end) Γ).
   Proof.
     apply typing_ind_env; intros; rename_all_hyps.
 
@@ -319,7 +319,7 @@ Section Validity.
       unshelve epose proof (ctx_inst_spine_subst _ X5); tea.
       eapply weaken_wf_local; tea.
       now apply (on_minductive_wf_params_indices_inst isdecl _ cu).
-      eapply spine_subst_smash in X2; tea.
+      eapply spine_subst_smash in X7; tea.
       destruct X4.
       destruct (on_declared_inductive isdecl) as [onmind oib].
       rewrite /ptm. exists ps.
@@ -343,15 +343,15 @@ Section Validity.
             eapply PCUICEquality.eq_term_leq_term.
             eapply eq_term_set_binder_name. 2:reflexivity.
             now eapply wf_pre_case_predicate_context_gen. }
-          rewrite subst_instance_app_ctx in X2.
-          eapply spine_subst_smash_app_inv in X2 as [sppars spidx].
+          rewrite subst_instance_app_ctx in X7.
+          eapply spine_subst_smash_app_inv in X7 as [sppars spidx].
           epose proof (isType_case_predicate (puinst p) _ _ wfΓ isdecl cu wfps sppars).
           eauto with fvs. len.
           rewrite (wf_predicate_length_pars H0).
           now rewrite onmind.(onNpars). } 
       eapply wf_arity_spine_typing_spine; auto.
-      rewrite subst_instance_app_ctx in X2.
-      eapply spine_subst_smash_app_inv in X2 as [sppars spidx].
+      rewrite subst_instance_app_ctx in X7.
+      eapply spine_subst_smash_app_inv in X7 as [sppars spidx].
       split; auto.
       apply (isType_case_predicate (puinst p) _ _ wfΓ isdecl cu wfps sppars).
       2:{ rewrite (wf_predicate_length_pars H0).

@@ -1168,7 +1168,7 @@ Proof.
   rewrite /projection_context.
   eapply spine_subst_smash in s.
   intros Hs.
-  have wfΓ : wf_local Σ Γ by pcuic.
+  have wfΓ : wf_local Σ Γ by (eapply typing_wf_local; eauto).
   eapply weaken_wf_subslet in Hs;tea.
   eapply (substitution_subslet (Γ' := [_])) in Hs; tea.
   2:eapply s.
@@ -1547,7 +1547,7 @@ Proof.
       { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
       rewrite (declared_inductive_lookup H0) //.
       destruct (on_declared_inductive H0) as [onmind onind] => //. simpl in *.
-      rewrite e0 /ind_realargs /PCUICTypingDef.destArity.
+      rewrite e0 /ind_realargs.
       rewrite !onind.(ind_arity_eq).
       rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
       rewrite (Nat.leb_refl) //. eapply Nat.leb_nle in eqle. lia.
@@ -1599,12 +1599,12 @@ Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
    {i ind mdecl idecl cdecl ind_indices cs} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
+  on_constructor cumulSpec0 (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
   closed_ctx (subst_instance u (ind_params mdecl)) ->
   wf_local Σ (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ)) ->
   All_local_env
-    (fun (Γ : PCUICEnvironment.context) (t : term) (_ : option term) =>
+    (fun (Γ : PCUICEnvironment.context) (t : term) (_ : typ_or_sort) =>
            positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
       Γ ->
   assumption_context Γ ->
@@ -2282,7 +2282,7 @@ Proof.
 Qed.
 
 Lemma cumul_ctx_relSpec_Algo {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
-  (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
+  (c : cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
@@ -2308,7 +2308,7 @@ Proof.
 Qed.
 
 Lemma into_ws_cumul_ctx_pb_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
-  (c : cumul_ctx_rel Σ Γ Δ Δ') : 
+  (c : cumul_ctx_rel cumulAlgo_gen Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
@@ -2546,7 +2546,7 @@ Proof.
   eapply wf_local_app_inv in wf as [].
   eapply All_local_env_impl_ind; eauto.
   intros.
-  red in X0. destruct T; unfold lift_typing.
+  red in X0. destruct T; unfold lift_bityping.
   - eapply closed_context_cumulativity; tea.
     eapply All_local_env_app; split=> //.
     eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
@@ -3219,7 +3219,7 @@ Proof.
     2:{ rewrite firstn_length_le.
         2:{ rewrite context_assumptions_subst_instance.
             symmetry.
-            eapply PCUICDeclarationTyping.onNpars.
+            eapply onNpars.
             eapply on_declared_inductive ; eauto.
         }
         lia.

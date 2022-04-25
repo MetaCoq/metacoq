@@ -414,7 +414,7 @@ Qed.
 Hint Resolve weakening_env_is_allowed_elimination : extends.
 
 Lemma weakening_All_local_env_impl `{checker_flags}
-      (P Q : context -> term -> option term -> Type) l :
+      (P Q : context -> term -> typ_or_sort -> Type) l :
   All_local_env P l ->
   (forall Γ t T, P Γ t T -> Q Γ t T) ->
   All_local_env Q l.
@@ -643,11 +643,11 @@ Proof.
 Qed.
 
 Definition weaken_env_prop `{checker_flags}
-           (P : global_env_ext -> context -> term -> option term -> Type) :=
+           (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
   forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
 Definition weaken_env_decls_prop `{checker_flags}
-  (P : global_env_ext -> context -> term -> option term -> Type) :=
+  (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
 Lemma extends_decls_wf {cf} Σ Σ' : 

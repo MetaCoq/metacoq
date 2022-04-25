@@ -838,15 +838,6 @@ Coercion fst_ctx : global_env_ext >-> global_env.
 Definition empty_ext (Σ : global_env) : global_env_ext
   := (Σ, Monomorphic_ctx).
 
-(** Decompose an arity into a context and a sort *)
-
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
 
 Lemma destArity_app_aux {Γ Γ' t}
   : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))

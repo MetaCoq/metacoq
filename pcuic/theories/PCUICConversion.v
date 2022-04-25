@@ -2862,7 +2862,7 @@ Section ConvSubst.
   Lemma test_decl_conv_decls_map {Γ Γ' : context} {p f g} {d : context_decl} :
     test_decl p d ->
     (forall x, p x -> convAlgo Σ Γ (f x) (g x)) ->
-    conv_decls Σ Γ Γ' (map_decl f d) (map_decl g d).
+    conv_decls cumulAlgo_gen Σ Γ Γ' (map_decl f d) (map_decl g d).
   Proof.
     intros ht hxy.
     destruct d as [na [b|] ty]; cbn; constructor; try red; eauto.
@@ -3214,15 +3214,15 @@ Proof.
 Qed.
 
 Lemma All2_fold_over_same {cf:checker_flags} Σ Γ Δ Δ' :
-  All2_fold (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
-  All2_fold (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ').
+  All2_fold (fun Γ0 Γ'  => conv_decls cumulAlgo_gen Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
+  All2_fold (conv_decls cumulAlgo_gen Σ) (Γ ,,, Δ) (Γ ,,, Δ').
 Proof.
   induction 1; simpl; try constructor; pcuic.
 Qed.
 
 Lemma All2_fold_over_same_app {cf:checker_flags} Σ Γ Δ Δ' :
-  All2_fold (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ') ->
-  All2_fold (fun Γ0 Γ' => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ'.
+  All2_fold (conv_decls cumulAlgo_gen Σ) (Γ ,,, Δ) (Γ ,,, Δ') ->
+  All2_fold (fun Γ0 Γ' => conv_decls cumulAlgo_gen Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ'.
 Proof.
   move=> H. pose (All2_fold_length H).
   autorewrite with len in e. assert(#|Δ| = #|Δ'|) by lia.

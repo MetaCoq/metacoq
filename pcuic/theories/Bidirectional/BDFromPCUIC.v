@@ -236,7 +236,7 @@ Proof.
         eapply ctx_inst_app_impl ; tea.
         1: intros ; by apply conv_check.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
-        erewrite PCUICDeclarationTyping.onNpars.
+        erewrite PCUICGlobalMaps.onNpars.
         2: eapply on_declared_minductive ; eauto.
         rewrite firstn_app_left //.
         now destruct wfpred.

@@ -1005,6 +1005,12 @@ Module Universe.
 
   #[global] Instance eq_dec_univ : EqDec t := eq_dec.
 
+  Definition on_sort (P: LevelAlgExpr.t -> Prop) (def: Prop) (s : t) :=
+    match s with
+    | lProp | lSProp => def
+    | lType l => P l
+    end.
+
   (** Create a universe representing the given level. *)
   Definition make (l : Level.t) : t :=
     lType (LevelAlgExpr.make (LevelExpr.make l)).

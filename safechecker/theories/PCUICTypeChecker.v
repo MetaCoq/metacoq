@@ -671,16 +671,16 @@ Section Typecheck.
       all: eapply context_cumulativity_welltyped ; pcuics.
     Qed.
 
-    Lemma cumul_decls_irrel_sec Σ Γ Γ' d d' :
-      cumul_decls Σ Γ Γ d d' ->
-      cumul_decls Σ Γ Γ' d d'.
+    Lemma cumul_decls_irrel_sec Pcmp Σ Γ Γ' d d' :
+      cumul_decls Pcmp Σ Γ Γ d d' ->
+      cumul_decls Pcmp Σ Γ Γ' d d'.
     Proof.
       intros cum; depelim cum; intros; constructor; auto.
     Qed.
     
-    Lemma conv_decls_irrel_sec Σ Γ Γ' d d' :
-      conv_decls Σ Γ Γ d d' ->
-      conv_decls Σ Γ Γ' d d'.
+    Lemma conv_decls_irrel_sec Pcmp Σ Γ Γ' d d' :
+      conv_decls Pcmp Σ Γ Γ d d' ->
+      conv_decls Pcmp Σ Γ Γ' d d'.
     Proof.
       intros cum; depelim cum; intros; constructor; auto.
     Qed.
@@ -693,9 +693,9 @@ Section Typecheck.
       now exists t.
     Qed.
 
-    Lemma cumul_ctx_rel_cons {Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Σ Γ Δ Δ') 
-      (p : cumul_decls Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
-      cumul_ctx_rel Σ Γ (Δ ,, d) (Δ' ,, d').
+    Lemma cumul_ctx_rel_cons {Pcmp Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Pcmp Σ Γ Δ Δ') 
+      (p : cumul_decls Pcmp Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
+      cumul_ctx_rel Pcmp Σ Γ (Δ ,, d) (Δ' ,, d').
     Proof.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.

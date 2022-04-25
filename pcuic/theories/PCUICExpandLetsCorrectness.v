@@ -537,7 +537,7 @@ Proof.
 Qed.
 
 Lemma trans_inds ind u mdecl : 
-  map trans (PCUICCases.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
+  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
   inds (inductive_mind ind) u (ind_bodies (trans_minductive_body mdecl)).
 Proof.
   rewrite PCUICCases.inds_spec inds_spec.
@@ -959,7 +959,7 @@ Section wtsub.
       * eapply wf_local_app_inv. eapply wf_local_alpha.
         eapply All2_app; [|reflexivity].
         eapply alpha_eq_subst_instance. symmetry; tea.
-        eapply wf_ind_predicate; tea. pcuic.
+        eapply wf_ind_predicate; tea. pcuic. now eapply typing_wf_local; eauto.
       * eexists; tea.
       * eexists; tea.
       * eapply Forall2_All2 in wf_brs.
@@ -2202,7 +2202,7 @@ Proof.
     destruct g => /= //. rewrite nth_error_mapi.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
-    destruct PCUICAstUtils.destArity as [[ctx ps]|] => /= //.
+    destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.
@@ -3344,7 +3344,7 @@ Lemma weaken_prop {cf} : weaken_env_decls_prop
       typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
 Proof.
   intros Σ Σ' u wf' ext Γ t T.
-  unfold lift_typing. destruct T.
+  unfold lift_bityping. destruct T.
   - intros Ht Hw.
     pose proof (extends_decls_trans ext).
     assert (wfΣ := extends_decls_wf _ _ Hw X).
@@ -4119,7 +4119,6 @@ Lemma trans_ind_realargs m k i :
   ind_realargs i = ind_realargs (trans_one_ind_body m k i).
 Proof.
   unfold ind_realargs.
-  rewrite /PCUICTypingDef.destArity. 
   rewrite (trans_destArity []).
   destruct destArity => //. destruct p. 
   now len.
@@ -4173,8 +4172,8 @@ Qed.
 Lemma cumul_context_Spec_Algo {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
   wf_local Σ Γ ->
   wf_local Σ Γ' ->
-  PCUICCumulativitySpec.cumul_context Σ Γ' Γ ->
-  PCUICCumulativity.cumul_context Σ Γ' Γ.
+  cumul_context cumulSpec0 Σ Γ' Γ ->
+  cumul_context cumulAlgo_gen Σ Γ' Γ.
 Proof.
   intros wfΓ wfΓ'.
   induction 1. constructor.
@@ -4199,12 +4198,12 @@ Qed.
 Lemma context_cumulativity_spec {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
   Σ ;;; Γ |- t : T ->
   wf_local Σ Γ' ->
-  PCUICCumulativitySpec.cumul_context Σ Γ' Γ ->
+  cumul_context cumulSpec0 Σ Γ' Γ ->
   Σ ;;; Γ' |- t : T.
 Proof.
   intros h hΓ' e.
   eapply PCUICContextConversionTyp.context_cumulativity; tea.
-  eapply cumul_context_Spec_Algo; tea. pcuic.
+  eapply cumul_context_Spec_Algo; tea. pcuic. now eapply typing_wf_local; eauto.
 Qed.
 
 Lemma trans_cumulSpec {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
@@ -4251,8 +4250,8 @@ Lemma trans_cumul_ctx_rel {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} 
   wf_trans Σ ->
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ' ->
+  cumul_ctx_rel (cumulSpec0 (cf:=cf' cf)) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr.
   induction 1; cbn; constructor; auto.
@@ -4473,8 +4472,8 @@ Lemma trans_cumul_ctx_rel' {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ 
   #|Γ| = #|Γ'| ->
   assumption_context (Γ ,,, Δ) ->
   assumption_context (Γ' ,,, Δ') ->
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ' ->
+  cumul_ctx_rel (cumulSpec0 (cf:=cf' cf)) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr eqlen ass ass'.
   induction 1; cbn; constructor; auto.
@@ -4531,7 +4530,7 @@ Lemma trans_type_local_ctx {cf} {Σ Γ Δ s} :
 Proof.
   intros wf wf'.
   induction Δ; cbn.
-  unfold PCUICTypingDef.wf_universe, wf_universe.
+  unfold PCUICLookup.wf_universe, wf_universe.
   destruct s => //.
   destruct a as [? [?|] ?] => /= //; intuition auto.
   destruct a0 as [s' Hs]. exists s'. 
@@ -4611,7 +4610,7 @@ Proof.
 Qed.
 
 Lemma wf_ind_indices {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl i idecl} :
-  on_ind_body (lift_typing typing) Σ mind mdecl i idecl ->
+  on_ind_body cumulSpec0 (lift_typing typing) Σ mind mdecl i idecl ->
   wf_local Σ (ind_params mdecl ,,, ind_indices idecl).
 Proof.
   intros [].
@@ -4686,7 +4685,7 @@ Proof.
   * cbn. red. move: ond; rewrite /on_constant_decl.
     destruct c as [type [body|] univs] => /=.
     intros Hty; eapply (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
-    unfold on_type, lift_typing.
+    unfold on_type, lift_bityping.
     intros [s Hty]. exists s. 
     exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
   * generalize ond. intros []; econstructor; eauto.

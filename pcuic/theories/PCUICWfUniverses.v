@@ -552,7 +552,7 @@ Qed.
         wf_universes Σ t && wf_universes Σ T)).
   Proof.
     red. intros.
-    unfold lift_typing in *. destruct T. now eapply (wf_universes_weaken_full (Σ, _)).
+    unfold lift_bityping in *. destruct T. now eapply (wf_universes_weaken_full (Σ, _)).
     destruct X2 as [s Hs]; exists s. now eapply (wf_universes_weaken_full (Σ, _)).
   Qed.
 
@@ -1108,7 +1108,7 @@ Qed.
       rewrite wfu /= wfpars wf_universes_mkApps /= 
         forallb_app wfinds /= H /= !andb_true_r.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
-      destruct X2. destruct onArity as [s Hs].
+      destruct X6. destruct onArity as [s Hs].
       move/andP: Hs => [] /= hty hs.
       rewrite ind_arity_eq in hty.
       rewrite !wf_universes_it_mkProd_or_LetIn in hty.

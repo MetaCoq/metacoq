@@ -9,7 +9,7 @@ Record on_global_decls_dec {cf:checker_flags} (univs : ContextSet.t) (Σ : globa
     kn_fresh :  fresh_global kn Σ ;
     udecl := universes_decl_of_decl d ;
     on_udecl_udecl : on_udecl univs udecl ;
-    on_global_decl_d : on_global_decl (lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn d
+    on_global_decl_d : on_global_decl cumulSpec0 (lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn d
   }.
 
 Definition level_mem : global_env_ext -> Level.t -> bool

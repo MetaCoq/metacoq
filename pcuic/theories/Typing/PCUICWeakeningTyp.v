@@ -32,7 +32,7 @@ Proof.
   rewrite /lift_context.
   apply All_local_env_fold.
   eapply (All_local_env_impl_ind XΓ').
-  intros Δ t [T|] IH; unfold lift_typing; simpl.
+  intros Δ t [T|] IH; unfold lift_bityping; simpl.
   - intros Hf. rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r. rewrite !lift_rename. 
     eapply (Hf xpredT).
@@ -70,7 +70,7 @@ Proof.
   eapply (typing_rename); eauto.
   rewrite rename_context_lift_context.
   split.
-  - eapply weakening_wf_local; eauto with pcuic.
+  - eapply weakening_wf_local; cbn; eauto with pcuic. eapply typing_wf_local; eauto.
   - now apply weakening_renaming.
 Qed.
 
@@ -83,7 +83,7 @@ Proof.
   rewrite !lift_rename.
   eapply (typing_rename); eauto.
   split.
-  - eapply weakening_wf_local; eauto with pcuic.
+  - eapply weakening_wf_local; eauto with pcuic. eapply typing_wf_local; eauto.
   - now apply weakening_renaming.
 Qed.
 

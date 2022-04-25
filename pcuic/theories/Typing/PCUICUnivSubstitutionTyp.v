@@ -144,8 +144,8 @@ Qed.
 Lemma conv_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
+  conv_decls cumulSpec0 Σ Γ Γ' d d' ->
+  conv_decls cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
     (subst_instance u d) (subst_instance u d').
 Proof.
   intros valid Hd; depelim Hd; constructor; tas;
@@ -155,8 +155,8 @@ Qed.
 Lemma cumul_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
-  cumul_decls Σ Γ Γ' d d' ->
-  cumul_decls (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
+  cumul_decls cumulSpec0 Σ Γ Γ' d d' ->
+  cumul_decls cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
     (subst_instance u d) (subst_instance u d').
 Proof.
   intros valid Hd; depelim Hd; constructor; tas;
@@ -165,8 +165,8 @@ Qed.
 
 Lemma conv_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-  conv_context Σ Γ Γ' ->
-  conv_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
+  conv_context cumulSpec0 Σ Γ Γ' ->
+  conv_context cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
 Proof.
   intros valid.
   intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
@@ -175,8 +175,8 @@ Qed.
 
 Lemma subst_instance_ws_cumul_ctx_pb_rel (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-  cumul_context Σ Γ Γ' ->
-  cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
+  cumul_context cumulSpec0 Σ Γ Γ' ->
+  cumul_context cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
 Proof.
   intros valid.
   intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
@@ -444,7 +444,7 @@ Proof.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_ctx in ty;   
-    eauto using typing_wf_local. 
+    cbn; eauto using typing_wf_local. 
     * apply wfΣ.
     * destruct wfΣ. now eapply on_udecl_on_udecl_prop.
 Qed.
@@ -460,7 +460,7 @@ Proof.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_decl in ty;   
-    eauto using typing_wf_local.
+    cbn; eauto using typing_wf_local.
 Qed.
 
 Lemma isType_subst_instance_decl Σ Γ T c decl u :

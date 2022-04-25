@@ -534,19 +534,49 @@ Module PCUICTerm <: Term.
   Definition subst_instance_constr := subst_instance.
 End PCUICTerm.
 
+(* These functors derive the notion of local context and lift substitution, term lifting, 
+  the closed predicate to them. *)                 
+Module PCUICEnvironment := Environment PCUICTerm.
+Export PCUICEnvironment.
+(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+  
+(** Decompose an arity into a context and a sort *)
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+(** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Module PCUICTermUtils <: TermUtils PCUICTerm PCUICEnvironment.
+
+Definition destArity := destArity.
+Definition inds := inds.
+
+End PCUICTermUtils.
+
+
 Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
                  unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
                  unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
                  unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *;
                  unfold PCUICTerm.lift in *; unfold PCUICTerm.subst in *;
                  unfold PCUICTerm.closedn in *; unfold PCUICTerm.noccur_between in *;
-                 unfold PCUICTerm.subst_instance_constr in *.
-                 
-(* These functors derive the notion of local context and lift substitution, term lifting, 
-  the closed predicate to them. *)                 
-Module PCUICEnvironment := Environment PCUICTerm.
-Export PCUICEnvironment.
-(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+                 unfold PCUICTerm.subst_instance_constr in *;
+                 unfold PCUICTermUtils.destArity in *; unfold PCUICTermUtils.inds in *.
+
 
 Lemma context_assumptions_mapi_context f (ctx : context) : 
   context_assumptions (mapi_context f ctx) = context_assumptions ctx.
@@ -556,8 +586,10 @@ Qed.
 #[global]
 Hint Rewrite context_assumptions_mapi_context : len.
 
-Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
+Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment PCUICTermUtils.
 (** Included in PCUICTyping only *)
+
+Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
 
 Global Instance context_reflect`(ReflectEq term) : 
   ReflectEq (list (BasicAst.context_decl term)) := _.

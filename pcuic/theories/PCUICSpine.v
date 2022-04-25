@@ -75,7 +75,7 @@ Proof.
 Qed.
 
 Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  eq_context_upto_names Γ Γ' -> conv_context Σ Γ Γ'.
+  eq_context_upto_names Γ Γ' -> conv_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   intros a.
   eapply eq_context_upto_empty_conv_context.
@@ -1203,7 +1203,7 @@ Qed.*)
   Qed.
 
   Lemma ctx_inst_ass {Γ args na t} (c : ctx_inst Σ Γ args [vass na t]) : 
-    ∑ i, ((args = [i]) * (lift_typing typing Σ Γ i (Some t)) * (ctx_inst_sub c = [i]))%type.
+    ∑ i, ((args = [i]) * (lift_typing typing Σ Γ i (Typ t)) * (ctx_inst_sub c = [i]))%type.
   Proof.
     depelim c; simpl in *. 
     depelim c. exists i; constructor; auto.
@@ -1752,7 +1752,7 @@ Section WfEnv.
         pose proof (PCUICWfUniverses.typing_wf_universe _ IHΔ) as wfts.
         eapply inversion_LetIn in IHΔ as [s' [? [? [? [? e]]]]]; auto.
         splits; eauto.
-        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply t2. apply isType_Sort; now pcuic.
+        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply t2. apply isType_Sort; pcuic. eapply typing_wf_local; eauto.
         eapply ws_cumul_pb_LetIn_l_inv in e; auto.
         eapply ws_cumul_pb_Sort_r_inv in e as [u' [redu' cumu']]. 
         transitivity (tSort u').
@@ -1763,7 +1763,7 @@ Section WfEnv.
         exists (tSort u'), (tSort u'). split; auto.
         3:now constructor.
         transitivity (lift0 1 (x {0 := b})).
-        eapply red_expand_let. pcuic.
+        eapply red_expand_let. pcuic. eapply typing_wf_local; eauto.
         eapply type_closed in t2.
         rewrite -is_open_term_closed //.
         change (tSort u') with (lift0 1 (tSort u')).

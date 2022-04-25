@@ -1152,7 +1152,7 @@ Proof.
   - eapply inversion_Lambda in X4 as (s & B & dom & bod & cum).
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X5_1)).
     specialize (X3 t0 B H). 
-    assert(conv_context Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
     { repeat constructor; pcuic. }
     forward X3 by eapply context_conversion; eauto; pcuic.
     specialize (X3 _ X5_2). eapply cumul_cumul_prop in cum; eauto.
@@ -1162,7 +1162,7 @@ Proof.
   - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2)).
     specialize (X3 _ _ H bod _  (eq_term_upto_univ_napp_leq X7_1)).
-    assert(conv_context Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
     { repeat constructor; pcuic. }
     specialize (X5 u A H).
     forward X5 by eapply context_conversion; eauto; pcuic.

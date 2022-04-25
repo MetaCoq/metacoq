@@ -1377,7 +1377,7 @@ Proof. now rewrite /eta_context; len. Qed.
 
 Lemma eta_expand_global_decl_expanded {cf : checker_flags} g kn d :
   Typing.wf_ext g ->
-  on_global_decl (lift_typing typing) g kn d ->
+  on_global_decl cumul_gen (lift_typing typing) g kn d ->
   expanded_decl g (eta_global_declaration g.(declarations) d).
 Proof.
   intros wf ond.

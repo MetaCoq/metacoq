@@ -183,13 +183,13 @@ Definition cumulSpec `{checker_flags} (Σ : global_env_ext) Γ := cumulSpec0 Σ 
 
 Notation " Σ ;;; Γ |- t <=s u " := (@cumulSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
 Notation " Σ ;;; Γ |- t =s u " := (@convSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
-  
-Module PCUICConversionParSpec <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+ 
+Include PCUICConversion.
+
+Module PCUICConversionParSpec <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
   Definition cumul_gen := @cumulSpec0.
 End PCUICConversionParSpec.
 
-Module PCUICConversionSpec := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParSpec.
-Include PCUICConversionSpec.
 
 Notation " Σ ⊢ Γ ≤s[ pb ] Δ " := (@cumul_pb_context _ pb Σ Γ Δ) (at level 50, Γ, Δ at next level) : type_scope.
 Notation " Σ ⊢ Γ ≤s Δ " := (@cumul_pb_context _ Cumul Σ Γ Δ) (at level 50, Γ, Δ at next level) : type_scope.
@@ -203,25 +203,25 @@ Proof. intro; constructor 3. Qed.
 Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (convSpec Σ Γ) := _.
 
 #[global]
-Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls pb Σ Γ Γ').
+Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls cumulSpec0 pb Σ Γ Γ').
 Proof.
   intros x. destruct x as [na [b|] ty]; constructor; auto. 
   all:constructor; reflexivity.
 Qed.
 
 #[global]
-Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls Σ Γ Γ') := _.
+Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls cumulSpec0 Σ Γ Γ') := _.
 #[global]
-Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls Σ Γ Γ') := _.
+Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls cumulSpec0 Σ Γ Γ') := _.
 
 Section ContextConversion.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  Notation conv_context := (conv_context Σ). 
-  Notation cumul_context := (cumul_context Σ).
+  Notation conv_context := (conv_context cumulSpec0 Σ). 
+  Notation cumul_context := (cumul_context cumulSpec0 Σ).
 
-  Global Instance cumul_pb_ctx_refl pb : Reflexive (cumul_pb_context pb Σ).
+  Global Instance cumul_pb_ctx_refl pb : Reflexive (cumul_pb_context cumulSpec0 pb Σ).
   Proof.
     intro Γ; induction Γ; try econstructor; auto.
     reflexivity.

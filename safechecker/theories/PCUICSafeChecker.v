@@ -547,7 +547,7 @@ Section CheckEnv.
       eapply PCUICValidity.validity in checkty; auto.
     Qed.
 
-  Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
+  Definition cumul_decl Pcmp Σ Γ (d d' : context_decl) : Type := cumul_decls Pcmp Σ Γ Γ d d'.
 
   Program Definition wf_env_conv X_ext (le : conv_pb) (Γ : context) (t u : term) :
     (forall Σ, abstract_env_ext_rel X_ext Σ -> welltyped Σ Γ t) ->
@@ -1447,8 +1447,8 @@ Section CheckEnv.
   Qed.
 
   Lemma cumul_ctx_rel_close' Σ Γ Δ Δ' :
-    PCUICCumulativitySpec.cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
-    PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ'.
+    cumul_context cumulSpec0 Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+    cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ'.
   Proof.
     intros H.
     eapply All2_fold_app_inv in H as [cumΓ cumΔs]; auto.
@@ -1475,7 +1475,7 @@ Section CheckEnv.
     RelationClasses.subrelation Re (eq_universe Σ) ->
     RelationClasses.subrelation Rle (leq_universe Σ) ->
     RelationClasses.subrelation Re Rle ->
-    CRelationClasses.subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => PCUICCumulativitySpec.cumul_context Σ Γ Γ').
+    CRelationClasses.subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context cumulSpec0 Σ Γ Γ').
   Proof.
     intros HRe HRle hR Γ Δ h. induction h.
     - constructor.
@@ -1493,7 +1493,7 @@ Section CheckEnv.
 
   Lemma eq_context_upto_univ_cumul_context {Σ : global_env_ext} Γ Δ :
       eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
-      PCUICCumulativitySpec.cumul_context Σ Γ Δ.
+      cumul_context cumulSpec0 Σ Γ Δ.
   Proof.
     intros h. eapply eq_context_upto_cumul_context; tea.
     reflexivity. tc. tc.
@@ -1501,7 +1501,7 @@ Section CheckEnv.
 
   Lemma leq_context_cumul_context (Σ : global_env_ext) Γ Δ Δ' :
     PCUICEquality.compare_context Cumul Σ Σ Δ Δ' ->
-    PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ'.
+    cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ'.
   Proof.
     intros eqc.
     apply cumul_ctx_rel_close'.
@@ -1606,11 +1606,11 @@ Section CheckEnv.
   Qed.
 
   Definition Build_on_inductive_sq {X_ext ind mdecl}
-    : (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥) ->
+    : (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Alli (on_ind_body cumulSpec0 (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥) ->
       (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (ind_params mdecl) ∥) ->
       context_assumptions (ind_params mdecl) = ind_npars mdecl ->
       (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_variance Σ (ind_universes mdecl) (ind_variance mdecl) ∥) ->
-      forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
+      forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_inductive cumulSpec0 (lift_typing typing) Σ ind mdecl ∥.
   Proof.
     intros H H0 H1 H2 ? wf. specialize_Σ wf. sq. econstructor; try eassumption.
   Qed.
@@ -1621,7 +1621,7 @@ Section CheckEnv.
     (wfΓ : forall Σ, abstract_env_rel X Σ -> ∥ wt_indices (Σ, ind_universes mdecl) mdecl indices cs ∥) :
     EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ forall v : list Variance.t,
                     mdecl.(ind_variance) = Some v ->
-                    cstr_respects_variance Σ mdecl v cs ∥) :=
+                    cstr_respects_variance cumulSpec0 Σ mdecl v cs ∥) :=
     match mdecl.(ind_variance) with
     | None => ret _
     | Some v =>
@@ -1853,7 +1853,7 @@ Section CheckEnv.
     (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)
     (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥)
     : EnvCheck X_env_ext_type (∑ cs : list constructor_univs,
-    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs ∥) :=
+    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs ∥) :=
 
     '(cs; Hcs) <- (check_constructors_univs X_ext (string_of_kername id) mdecl wfar
         wfpars (S n) idecl.(ind_ctors));;
@@ -1916,7 +1916,7 @@ Section CheckEnv.
   Program Definition check_projection X_ext (mind : kername) (mdecl : mutual_inductive_body)
     (i : nat) (idecl : one_inductive_body) (indices : context)
     (cdecl : constructor_body) (cs : constructor_univs)
-    (oncs : forall Σ, abstract_env_ext_rel X_ext Σ ->  ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
+    (oncs : forall Σ, abstract_env_ext_rel X_ext Σ ->  ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
     (k : nat) p (hnth : nth_error idecl.(ind_projs) k = Some p)
     (heq : #|idecl.(ind_projs)| = context_assumptions cdecl.(cstr_args))
     : typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_projection mdecl mind i cdecl k p ∥) :=
@@ -1979,7 +1979,7 @@ End monad_Alli_nth_forall.
   Program Definition check_projections_cs X_ext (mind : kername) (mdecl : mutual_inductive_body)
     (i : nat) (idecl : one_inductive_body) (indices : context)
     (cdecl : constructor_body) (cs : constructor_univs)
-    (oncs : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
+    (oncs : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
     (onec : #|idecl.(ind_ctors)| = 1) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_projections mdecl mind i idecl indices cdecl ∥) :=
     check_indices <- check_eq_true (eqb [] indices) (Msg "Primitive records cannot have indices") ;;
@@ -1999,7 +1999,7 @@ End monad_Alli_nth_forall.
 
   Program Definition check_projections X_ext (mind : kername) (mdecl : mutual_inductive_body)
     (i : nat) (idecl : one_inductive_body) (indices : context) (cs : list constructor_univs) :
-    (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) cs ∥) ->
+    (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) cs ∥) ->
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ check_projections_type mind mdecl i idecl indices ∥) :=
     match ind_projs idecl with
     | [] => fun _ => ret _
@@ -2102,7 +2102,7 @@ End monad_Alli_nth_forall.
     indices (wfΓ : forall Σ, abstract_env_rel X Σ -> ∥ wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, indices) ∥) :
     EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ forall v : list Variance.t,
                     mdecl.(ind_variance) = Some v ->
-                    ind_respects_variance Σ mdecl v indices ∥) :=
+                    ind_respects_variance cumulSpec0 Σ mdecl v indices ∥) :=
     match mdecl.(ind_variance) with
     | None => ret _
     | Some v =>
@@ -2198,7 +2198,7 @@ End monad_Alli_nth_forall.
       (mdeclvar : forall Σ, abstract_env_rel X Σ -> ∥ on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance) ∥)
       (i : nat) (idecl : one_inductive_body)
       (hnth : nth_error mdecl.(ind_bodies) i = Some idecl)
-      : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_ind_body (lift_typing typing) Σ mind mdecl i idecl ∥) :=
+      : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_ind_body cumulSpec0 (lift_typing typing) Σ mind mdecl i idecl ∥) :=
       let id := string_of_kername mind in
       '(ctxinds; p) <-
         wrap_error _ X_ext id ((match destArity [] idecl.(ind_type) as da return da = destArity [] idecl.(ind_type) -> typing_result (∑ ctxs, idecl.(ind_type) = it_mkProd_or_LetIn ctxs.1 (tSort ctxs.2)) with
@@ -2306,7 +2306,7 @@ End monad_Alli_nth_forall.
   Program Definition check_wf_decl X X_ext 
     kn (d : global_decl)
     (pf : check_wf_env_ext_prop X X_ext (universes_decl_of_decl d))
-    : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
+    : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_global_decl cumulSpec0 (lift_typing typing) Σ kn d ∥) :=
     match d with
     | ConstantDecl cst => 
       match cst.(cst_body) with

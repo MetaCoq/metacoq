@@ -441,7 +441,7 @@ Corollary principal_type `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
     (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ ⊢ T' ≤ T'') × Σ ;;; Γ |- t : T'.
 Proof.
   intros ty.
-  assert (wf_local Σ Γ) by pcuic.
+  assert (wf_local Σ Γ) by (pcuic; eapply typing_wf_local; eauto).
   apply typing_infering in ty as (S & infS & _); auto.
   exists S.
   repeat split.

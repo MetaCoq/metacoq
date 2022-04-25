@@ -15,15 +15,6 @@ Coercion ci_ind : case_info >-> inductive.
 
 (** * Functions related to the "compact" case representation *)
 
-(** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
-
 Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdecl).
 
 Lemma inds_length ind u l : #|inds ind u l| = #|l|.

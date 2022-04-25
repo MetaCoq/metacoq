@@ -83,7 +83,7 @@ Section DeclaredInv.
 End DeclaredInv.
 
 Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env P Σ ->
+  on_global_env cumulSpec0 P Σ ->
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -106,7 +106,7 @@ Proof.
 Qed.
 
 Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env_ext P Σ ->
+  on_global_env_ext cumulSpec0 P Σ ->
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -123,14 +123,14 @@ Proof.
 Qed.
 
 Lemma wf_consistent {cf:checker_flags} Σ {P} :
-  on_global_env P Σ -> consistent (global_constraints Σ).
+  on_global_env cumulSpec0 P Σ -> consistent (global_constraints Σ).
 Proof.
   destruct Σ.
   intros [cu ong]. apply cu.
 Qed.
 
 Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
- : on_global_env_ext P Σ -> consistent (global_ext_uctx Σ).2.
+ : on_global_env_ext cumulSpec0 P Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.

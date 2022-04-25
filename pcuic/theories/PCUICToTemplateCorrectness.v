@@ -429,8 +429,8 @@ Proof.
 Qed.
 
 Lemma trans_destr_arity x:
-  AstUtils.destArity [] (trans x) =
-  option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
+  Ast.destArity [] (trans x) =
+  option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAst.destArity [] x).
 Proof.
   remember (@nil SE.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).
@@ -708,7 +708,7 @@ Section wtsub.
       * eapply wf_local_app_inv. eapply wf_local_alpha.
         eapply All2_app; [|reflexivity].
         eapply alpha_eq_subst_instance. symmetry; tea.
-        eapply wf_ind_predicate; tea. pcuic.
+        eapply wf_ind_predicate; tea. pcuic. now eapply typing_wf_local; eauto.
       * eexists; tea.
       * eexists; tea.
       * eapply Forall2_All2 in wf_brs.
@@ -785,7 +785,7 @@ Proof.
 Qed.
 
 Lemma trans_inds ind u mdecl : 
-  map trans (PCUICCases.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
+  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
   inds (inductive_mind ind) u (ind_bodies (trans_minductive_body mdecl)).
 Proof.
   rewrite PCUICCases.inds_spec inds_spec.
@@ -1299,7 +1299,7 @@ Proof.
     { destruct w1 as [sr hs]; exists sr.
       eapply PCUICContextConversionTyp.context_conversion; tea.
       eapply PCUICSafeLemmata.wf_inst_case_context; tea.
-      destruct w2. pcuic.
+      destruct w2. pcuic. now eapply typing_wf_local; eauto.
       rewrite /inst_case_context.
       apply compare_decls_conv.
       eapply All2_app. 2:{ reflexivity. }
@@ -1333,7 +1333,7 @@ Proof.
     eapply IHred.
     destruct w4 as [s' Hs]. exists s'.
     eapply PCUICContextConversionTyp.context_conversion; tea.
-    eapply wf_local_alpha; tea. pcuic.
+    eapply wf_local_alpha; tea. pcuic. now eapply typing_wf_local; eauto.
     now eapply compare_decls_conv.
 
   - eapply red1_mkApp; auto. eapply trans_wf; tea.
@@ -1385,7 +1385,7 @@ Proof.
     destruct g => /= //. rewrite nth_error_map.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
-    destruct PCUICAstUtils.destArity as [[ctx ps]|] => /= //.
+    destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.

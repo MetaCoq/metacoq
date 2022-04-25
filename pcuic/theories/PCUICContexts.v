@@ -26,7 +26,7 @@ Proof. apply: (smash_context_subst []). Qed.
 
 Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' : 
   assumption_context Δ ->
-  All2_fold (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
+  All2_fold (fun Δ Δ' => conv_decls cumulSpec0 Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
   assumption_context Δ'.
 Proof.
   intros Hass Hconv.
@@ -369,10 +369,10 @@ Section WfEnv.
     - apply IHΓ; auto. eapply All_local_env_app. split; auto.
       repeat constructor; auto.
       eapply All_local_env_impl; eauto. simpl; intros.
-      unfold lift_typing in X |- *.
+      unfold lift_bityping in X |- *.
       now rewrite app_context_assoc.
     - apply IHΓ. auto. eapply All_local_env_subst; eauto. simpl; intros.
-      destruct T; unfold lift_typing in X |- *; simpl in *; pcuicfo auto.
+      destruct T; unfold lift_bityping in X |- *; simpl in *; pcuicfo auto.
       rewrite Nat.add_0_r.
       eapply (substitution (Γ':=[vdef na b t]) (s := [b])) in X; eauto.
       rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
@@ -671,7 +671,7 @@ Proof.
     constructor => //.
     eapply (weakening_typing (Γ'' := smash_context [] Δ)) in l0.
     len in l0. simpl in l0. simpl.
-    2:{ eapply wf_local_smash_end; pcuic. }
+    2:{ eapply wf_local_smash_end; pcuic. eapply typing_wf_local; eauto. }
     eapply (substitution (Δ := [])) in l0; tea.
   * rewrite smash_context_acc. simpl.
     rewrite /map_decl /= /map_decl /=. simpl.
@@ -684,11 +684,11 @@ Proof.
       rewrite -(lift_context_lift_context 1 _).
       eapply (subslet_lift _ [_]); eauto.
       constructor.
-      { eapply wf_local_smash_end; pcuic. }
+      { eapply wf_local_smash_end; pcuic. eapply typing_wf_local; eauto. }
       red. exists s.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
-      2:{ eapply wf_local_smash_end; pcuic. }
+      2:{ eapply wf_local_smash_end; pcuic. eapply typing_wf_local; eauto. }
       eapply (substitution (Δ := [])) in Hs; tea.
     - eapply meta_conv.
       econstructor. constructor. apply wf_local_smash_end; auto.
@@ -696,7 +696,7 @@ Proof.
       exists s.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
-      2:{ eapply wf_local_smash_end; pcuic. }
+      2:{ eapply wf_local_smash_end; pcuic. eapply typing_wf_local; eauto. }
       eapply (substitution (Δ := [])) in Hs; tea.
       reflexivity.
       simpl. rewrite (lift_extended_subst _ 1).

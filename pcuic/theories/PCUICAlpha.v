@@ -42,7 +42,7 @@ Section Alpha.
       wf Σ.1 ->
       wf_local Σ Γ ->
       nth_error Γ i = Some (vass na ty) ->
-      lift_typing typing Σ Γ (lift0 (S i) ty) None.
+      lift_typing typing Σ Γ (lift0 (S i) ty) Sort.
   Proof.
     intros Σ Γ i na ty hΣ hΓ e. simpl.
     induction i in Γ, hΓ, e |- *.
@@ -554,7 +554,7 @@ Section Alpha.
   Qed.
 
   Lemma upto_names_conv_context (Σ : global_env_ext) Γ Δ :
-    Γ ≡Γ Δ -> conv_context Σ Γ Δ.
+    Γ ≡Γ Δ -> conv_context cumulAlgo_gen Σ Γ Δ.
   Proof.
     eapply eq_context_upto_empty_conv_context.
   Qed.
@@ -852,7 +852,7 @@ Section Alpha.
         induction X; constructor; simpl; auto.
         destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
         exists s; apply IH; eauto. reflexivity. }
-      assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
+      assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
         eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
         1-2:typeclasses eauto.
@@ -932,7 +932,7 @@ Section Alpha.
       induction X; constructor; simpl; auto.
       destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
       exists s; apply IH; eauto. reflexivity. }
-    assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
+    assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
       eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
       1-2:typeclasses eauto.

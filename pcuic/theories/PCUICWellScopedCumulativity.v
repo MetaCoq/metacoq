@@ -395,7 +395,7 @@ Qed.
 Lemma ws_cumul_decls_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} {d d'} :
   ws_cumul_decls pb Σ Γ d d' -> 
-  cumul_pb_decls pb Σ Γ Γ' d d'.
+  cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d'.
 Proof.
   intros. intuition eauto with fvs.
   destruct X; destruct pb; constructor; pcuic.
@@ -403,7 +403,7 @@ Qed.
 
 Lemma into_ws_cumul_decls {cf : checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ}
   (Γ Γ' : context) d d' :
-  cumul_pb_decls pb Σ Γ Γ' d d' -> 
+  cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d' -> 
   on_free_vars_ctx xpred0 Γ ->
   on_free_vars_ctx xpred0 Γ' ->
   is_open_decl Γ d ->
@@ -418,7 +418,7 @@ Qed.
 Lemma ws_cumul_decls_inv {cf} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} {d d'} :
   ws_cumul_decls pb Σ Γ d d' -> 
-  [× on_free_vars_ctx xpred0 Γ, is_open_decl Γ d, is_open_decl Γ d' & cumul_pb_decls pb Σ Γ Γ' d d'].
+  [× on_free_vars_ctx xpred0 Γ, is_open_decl Γ d, is_open_decl Γ d' & cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d'].
 Proof.
   intros. split; eauto with fvs.
   - destruct X; now destruct eqt.
@@ -514,10 +514,10 @@ Section WtContextConversion.
 
   Lemma wt_cumul_ctx_pb_forget {pb} {Γ Γ' : context} :
     wt_cumul_ctx_pb pb Σ Γ Γ' ->
-    [× wf_local Σ Γ, wf_local Σ Γ' & cumul_pb_context pb Σ Γ Γ'].
+    [× wf_local Σ Γ, wf_local Σ Γ' & cumul_pb_context cumulAlgo_gen pb Σ Γ Γ'].
   Proof.
     move=> wteq.
-    eapply (All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × cumul_pb_decls pb Σ Γ Γ' d d')) in wteq.
+    eapply (All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d')) in wteq.
     2:{ intros ???? []; intuition (cbn; try constructor; auto). }
     eapply All2_fold_All_fold_mix_inv in wteq as [wteq [wfΓ wfΓ']].
     eapply wf_local_All_fold in wfΓ. eapply wf_local_All_fold in wfΓ'.
@@ -526,7 +526,7 @@ Section WtContextConversion.
 
   Lemma into_wt_cumul_ctx_pb {pb} {Γ Γ' : context} {T U : term} :
     wf_local Σ Γ -> wf_local Σ Γ' ->
-    cumul_pb_context pb Σ Γ Γ' ->
+    cumul_pb_context cumulAlgo_gen pb Σ Γ Γ' ->
     wt_cumul_ctx_pb pb Σ Γ Γ'.
   Proof.
     move=> /wf_local_All_fold wfΓ /wf_local_All_fold wfΓ'.
@@ -567,7 +567,7 @@ Section WtContextConversion.
 
   Lemma ws_cumul_ctx_pb_inv {pb} {Γ Γ' : context} :
     ws_cumul_ctx_pb pb Σ Γ Γ' ->
-    [× on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ' & cumul_pb_context pb Σ Γ Γ'].
+    [× on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ' & cumul_pb_context cumulAlgo_gen pb Σ Γ Γ'].
   Proof.
     move=> wteq.
     split; eauto with fvs.
@@ -583,7 +583,7 @@ Section WtContextConversion.
   Qed.
 
   Lemma ws_cumul_ctx_pb_forget {pb Γ Γ'} : 
-    ws_cumul_ctx_pb pb Σ Γ Γ' -> cumul_pb_context pb Σ Γ Γ'.
+    ws_cumul_ctx_pb pb Σ Γ Γ' -> cumul_pb_context cumulAlgo_gen pb Σ Γ Γ'.
   Proof.
     now move/ws_cumul_ctx_pb_inv => [].
   Qed.

@@ -160,10 +160,10 @@ Proof.
   assert (Σ ⊢ Γ ,,, pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p) = Γ ,,, predctx).
   { transitivity (Γ ,,, case_predicate_context' ci mdecl idecl p); revgoals.
     * symmetry. eapply alpha_eq_context_ws_cumul_ctx_pb => //; fvs. now symmetry.
-    * eapply pre_case_predicate_context_gen_eq; tea. pcuic.
+    * eapply pre_case_predicate_context_gen_eq; tea. pcuic. now eapply typing_wf_local; eauto.
       now eapply PCUICWfUniverses.typing_wf_universe in pret_ty. }
   unshelve epose proof (typing_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve. 
-  * pcuic.
+  * pcuic. now eapply typing_wf_local; eauto.
   * now eapply PCUICWfUniverses.typing_wf_universe in pret_ty.
   * rewrite -smash_context_subst_context_let_expand in X2.
     specialize (X2 spargs scrut_ty).
@@ -180,7 +180,7 @@ Qed.
 Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :
   Universe.is_prop ind_sort ->  
   elim_sort_prop_ind cdecls = IntoAny ->
-  on_constructors (lift_typing typing)
+  on_constructors cumulSpec0 (lift_typing typing)
     (Σ, ind_universes mdecl) mdecl 
     (inductive_ind ind) idecl ind_indices
     (ind_ctors idecl) cdecls ->
@@ -189,7 +189,7 @@ Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sor
     (ind_ctors idecl = [cdecl]) * 
     (cdecls = [cdecl_sorts]) * 
     (Forall is_propositional cdecl_sorts) *
-    (on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
+    (on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
         (inductive_ind ind) idecl ind_indices cdecl cdecl_sorts))%type.
 Proof.
   intros uf lein onc.
@@ -445,7 +445,7 @@ Proof.
 Qed.
 
 Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
-  (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
+  (onib : on_ind_body cumulSpec0 (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
   is_propositional (ind_sort idecl) -> 

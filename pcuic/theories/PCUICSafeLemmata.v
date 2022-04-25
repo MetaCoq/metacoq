@@ -349,7 +349,7 @@ Section Lemmata.
   (* todo: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' :
     eq_context_upto_names Γ Γ' ->
-    conv_context Σ Γ Γ'.
+    conv_context cumulAlgo_gen Σ Γ Γ'.
   Proof.
     intros.
     induction X; constructor; auto.
@@ -1029,7 +1029,7 @@ Section Lemmata.
 
   Lemma whne_conv_context f Γ Γ' t :
     whne f Σ Γ t ->
-    conv_context Σ Γ Γ' ->
+    conv_context cumulAlgo_gen Σ Γ Γ' ->
     whne f Σ Γ' t.
   Proof.
     apply whne_All2_fold.
@@ -1039,7 +1039,7 @@ Section Lemmata.
 
   Lemma whnf_conv_context f Γ Γ' t :
     whnf f Σ Γ t ->
-    conv_context Σ Γ Γ' ->
+    conv_context cumulAlgo_gen Σ Γ Γ' ->
     whnf f Σ Γ' t.
   Proof.
     apply whnf_All2_fold.

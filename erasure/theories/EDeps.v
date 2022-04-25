@@ -454,7 +454,7 @@ Qed. *)
 
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
-  on_global_decls (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
+  on_global_decls cumulSpec0 (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
   erases_deps Σ Σ' t ->
   erases_deps (add_global_decl Σ (kn, decl)) ((kn, decl') :: Σ') t.
 Proof.

@@ -291,14 +291,14 @@ Section Principality.
         simpl. eapply type_reduction; eauto. eapply redr. simpl.
         eapply type_reduction in t0. 2:eapply redr. eapply validity; eauto.
       * split.
-        { eapply PCUICWeakeningTyp.weaken_wf_local; tea. pcuic. pcuic. 
+        { eapply PCUICWeakeningTyp.weaken_wf_local; tea. pcuic. pcuic. now eapply typing_wf_local; eauto.
           eapply (wf_projection_context _ (p:=p)); tea. pcuic. }
         eapply (projection_subslet _ _ _ _ _ _ p); eauto.
         simpl. eapply validity; eauto.
       * constructor; auto. now eapply wt_cumul_pb_refl. now apply All2_rev.
       * eapply ws_cumul_pb_refl.
         { eapply wf_local_closed_context. cbn -[projection_context].
-          eapply PCUICWeakeningTyp.weaken_wf_local; pcuic.
+          eapply PCUICWeakeningTyp.weaken_wf_local; pcuic. now eapply typing_wf_local; eauto.
           eapply (wf_projection_context _ (p:=p)); pcuic. }
         eapply declared_projection_closed in d0; eauto.
         cbn in d0. len. rewrite (declared_minductive_ind_npars d) in d0.
@@ -499,7 +499,7 @@ Proof.
   - eapply inversion_Lambda in X4 as (s & B & dom & codom & cum); auto.
     specialize (X1 onu _ _ dom (eq_term_empty_leq_term X5_1)).
     apply eq_term_empty_eq_term in X5_1.
-    assert(conv_context Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
     { repeat constructor; pcuic. }
     specialize (X3 onu t0 B).
     forward X3 by eapply context_conversion; eauto; pcuic.

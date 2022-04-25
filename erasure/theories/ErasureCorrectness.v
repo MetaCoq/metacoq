@@ -103,7 +103,7 @@ Proof.
     invs He.     
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
-      assert (Hc : conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
+      assert (Hc : conv_context cumulAlgo_gen Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
         now eapply wcbeval_red; eauto.
@@ -821,7 +821,7 @@ Proof.
           unfold unfold_cofix. intros hnth; rewrite hnth. intros [=].
           subst fn narg.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
+          eapply erases_subst0. eauto. 2:eauto. pcuic. now eapply typing_wf_local; eauto. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
@@ -935,7 +935,7 @@ Proof.
           unfold unfold_cofix. intros hnth'; rewrite hnth'. intros [=].
           subst fn narg. rewrite hnth' in e2. noconf e2.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
+          eapply erases_subst0. eauto. 2:eauto. pcuic. now eapply typing_wf_local; eauto. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
@@ -1147,7 +1147,7 @@ Import EWellformed.
 Lemma erases_mutual_inductive_body_wf (efl := all_env_flags) {Σ univs Σ' kn mib mib'} :
   erases_mutual_inductive_body mib mib' ->
   let udecl := PCUICLookup.universes_decl_of_decl (InductiveDecl mib) in
-  on_global_decl (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
+  on_global_decl cumulSpec0 (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
        (InductiveDecl mib) ->
   wf_global_decl Σ' (E.InductiveDecl mib').
 Proof.

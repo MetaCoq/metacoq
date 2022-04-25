@@ -77,14 +77,6 @@ Module string_of_term_tree.
 End string_of_term_tree.
 
 Definition string_of_term := Tree.to_string ∘ string_of_term_tree.string_of_term.
-
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
   
 Definition decompose_app (t : term) :=
   match t with

@@ -351,3 +351,5 @@ erasure/src/eEnvMap.ml
 erasure/src/eEnvMap.mli
 erasure/src/eGlobalEnv.mli
 erasure/src/eGlobalEnv.ml
+Makefile.conf
+test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin

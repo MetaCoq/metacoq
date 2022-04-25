@@ -7,7 +7,7 @@ Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-(** Various generic lemmatas missing from the MetaCoq library *)
+(** Various generic lemmas missing from the MetaCoq library *)
 
 Lemma All2i_prod (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
   All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y) × (Q i x y)) n l l'.
@@ -107,7 +107,8 @@ Section BDToPCUICTyping.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
-  (** The predicates we wish to prove, note the extra well-formedness hypothesis depending on the modding of the judgement *)
+  (** The predicates we wish to prove, note the extra well-formedness hypothesis on the context
+  and type whenever they are inputs to the algorithm *)
 
   Let Pinfer Γ t T :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : T.
@@ -130,7 +131,7 @@ Section BDToPCUICTyping.
   Let PΓ_rel Γ Γ' :=
     wf_local Σ Γ -> wf_local_rel Σ Γ Γ'.
 
-  (** Preliminary lemmata to go from a bidirectional judgement to the corresponding undirected one *)
+  (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
     All_local_env_over_sorting checking infering_sort 

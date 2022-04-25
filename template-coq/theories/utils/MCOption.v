@@ -20,6 +20,13 @@ Definition on_Some {A} (P : A -> Prop) : option A -> Prop :=
         | None => False
         end.
 
+Lemma on_SomeP {A} {P : A -> Prop} (opta : option A) : on_Some P opta -> ∑ a, opta = Some a /\ P a.
+Proof.
+  destruct opta as [a|]; [|intros []].
+  intros h; exists a; split; [reflexivity|assumption].
+Qed.
+
+
 Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
   fun x => match x with
         | Some x => P x

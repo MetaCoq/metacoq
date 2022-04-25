@@ -54,12 +54,12 @@ Number
 Relation
 MCPrelude
 MCReflect
+ReflectEq
 MCList
 MCRelations
 MCOption
 MCProd
 MCCompare
-ReflectEq
 Bytestring
 Caml_bytestring
 Monad_utils
@@ -77,8 +77,8 @@ Signature
 All_Forall
 Config0
 Kernames
-Universes0
 BasicAst
+Universes0
 Environment
 EnvironmentTyping
 Ast0

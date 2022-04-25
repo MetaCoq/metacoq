@@ -104,6 +104,8 @@ gen-src/mCPrelude.mli
 gen-src/mCPrelude.ml
 gen-src/mCCompare.ml
 gen-src/mCCompare.mli
+gen-src/reflectEq.mli
+gen-src/reflectEq.ml
 gen-src/mCList.ml
 gen-src/mCList.mli
 gen-src/mCOption.ml
@@ -118,8 +120,6 @@ gen-src/primFloat.mli
 gen-src/primFloat.ml
 #gen-src/decimalString.mli
 #gen-src/decimalString.ml
-gen-src/reflectEq.mli
-gen-src/reflectEq.ml
 gen-src/mCString.ml
 gen-src/mCString.mli
 gen-src/mCUtils.ml

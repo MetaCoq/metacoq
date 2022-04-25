@@ -614,15 +614,6 @@ Proof.
   destruct c as [[[] ?] []]; cbnr; discriminate.
 Qed.
 
-Lemma satisfies_union v φ1 φ2 :
-  satisfies v (CS.union φ1 φ2)
-  <-> (satisfies v φ1 /\ satisfies v φ2).
-Proof.
-  unfold satisfies. split.
-  - intros H; split; intros c Hc; apply H; now apply CS.union_spec.
-  - intros [H1 H2] c Hc; apply CS.union_spec in Hc; destruct Hc; auto.
-Qed.
-
 Lemma equal_subst_instance_cstrs_mono u cstrs :
   CS.For_all is_monomorphic_cstr cstrs ->
   CS.Equal (subst_instance_cstrs u cstrs) cstrs.

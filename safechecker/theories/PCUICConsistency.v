@@ -133,18 +133,17 @@ Proof.
     constructor; auto.
     - apply wfΣ.
     - apply make_fresh_name_fresh.
-    - red.
-      cbn.
-      split.
-      { now intros ? ?%LevelSet.empty_spec. }
-      split.
-      { now intros ? ?%ConstraintSet.empty_spec. }
-      destruct wfΣ as (?&(?&?&[val sat])).
-      exists val.
-      intros l isin.
-      apply sat; auto.
-      apply ConstraintSet.union_spec.
-      apply ConstraintSet.union_spec in isin as [?%ConstraintSet.empty_spec|]; auto.
+    - split; first now intros ? ?%LevelSet.empty_spec.
+      split; first now intros ? ?%ConstraintSet.empty_spec.
+      destruct wfΣ as (?&(?&?&[val sat]&monoval)); split.
+      1: { 
+        exists val.
+        intros l isin.
+        apply sat; auto.
+        apply ConstraintSet.union_spec.
+        apply ConstraintSet.union_spec in isin as [?%ConstraintSet.empty_spec|]; auto.
+      }
+      intros v hv; exists v; split; [intros ? []%CS.empty_spec| now intros ??].
     - hnf.
       constructor.
       + constructor.

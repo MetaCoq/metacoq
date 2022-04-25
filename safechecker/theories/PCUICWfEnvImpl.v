@@ -59,9 +59,10 @@ Proof.
   repeat split; cbn.
   - intros i; rewrite LevelSetFact.empty_iff //.
   - intros i; rewrite ConstraintSetFact.empty_iff //.
-  - red. rewrite /univs_ext_constraints /=. 
+  - red. rewrite /univs_ext_constraints /=.
     rewrite CS_union_empty.
     apply wfΣ.
+  - apply consistent_extension_on_empty.
 Qed.
 
 Record referenced_impl_ext {cf:checker_flags} := {
@@ -153,7 +154,10 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} :
  abstract_env_univ X := X ;
  abstract_env_global_declarations X := declarations X;
  abstract_env_is_consistent uctx := wGraph.is_acyclic (make_graph uctx);
- abstract_env_is_consistent_uctx X uctx := wGraph.is_acyclic (add_uctx uctx (referenced_impl_graph X)) ;
+ abstract_env_is_consistent_uctx X uctx :=
+   let G := referenced_impl_graph X in
+   let G' := add_uctx uctx G in
+   wGraph.is_acyclic G' && wGraph.is_full_subgraph G G' ;
  abstract_env_add_uctx X uctx udecl Hdecl Hglobal := {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl);
  |} ;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X
@@ -164,10 +168,10 @@ Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
   econstructor; eauto. econstructor; eauto.  Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [?]. sq. split; eauto.
   apply on_udecl_mono.
-Qed.   
+Qed.
 Next Obligation.
   pose proof (referenced_impl_wf X). now sq.
-Qed.  
+Qed.
 
 (* We pack up all the information required on the global environment and graph in a
 single record. *)
@@ -390,6 +394,7 @@ Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf
 Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Defined.
 Next Obligation. apply fake_guard_correct. Defined.
 
+
 Program Global Instance canonical_abstract_env_prop {cf:checker_flags} :
   @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.
 Next Obligation. now sq. Qed.
@@ -399,39 +404,77 @@ Next Obligation. now split. Qed.
 Next Obligation. unshelve epose proof (is_consistent_spec udecl _) as Hconsistent; eauto.
   unfold is_consistent in Hconsistent; now rewrite H0 in Hconsistent.
   Qed.
-Next Obligation. 
-  rename H1 into Huctx. unfold referenced_impl_graph.
+Next Obligation.
+  rename H2 into Hudecl. unfold referenced_impl_graph; rewrite andb_and.
   pose proof (referenced_impl_graph_wf X) as HG.
-  set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.  
-  unfold is_graph_of_uctx in HG. unfold gc_of_uctx in *.
-  case_eq (gc_of_constraints (global_uctx X).2).
-  2:{ intro XX. rewrite XX in HG. inversion HG. }
-  intros Σctrs HΣctrs.
-  rewrite HΣctrs in HG. simpl in HG.
-  case_eq (gc_of_constraints (constraints_of_udecl udecl));
-    [|intro XX; rewrite XX in Huctx; discriminate Huctx].
-  intros ctrs Hctrs. rewrite Hctrs in Huctx. simpl in *.
+  set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
+  move: HG=> /on_SomeP [[uctx1 uctx2] [Huctx HG]].
+  pose proof (gcinv := gc_of_uctx_invariants _ _ Huctx H0).
+  pose proof (invG := make_graph_invariants _ gcinv).
+  destruct (gc_of_uctx_union _ _ _ _ Hudecl Huctx) as [gcsExt [uctxExtEq hgcs]].
+  pose proof (HG' := add_uctx_make_graph t uctx1 t0 uctx2).
+  set (uctxExt := (LS.union t uctx1, GCS.union t0 uctx2)) in HG'.
+  have gcExtinv : global_gc_uctx_invariants uctxExt.
+  { rewrite /uctxExt /global_gc_uctx_invariants /=; rewrite <- hgcs.
+    apply: (gc_of_uctx_invariants _ _ uctxExtEq). }
+  pose proof (invG' := make_graph_invariants _ gcExtinv).
+  move: (Huctx); rewrite /gc_of_uctx.
+  case_eq (gc_of_constraints (global_uctx X).2) => //=.
+  intros Σctrs HΣctrs [=]; subst.
+  unfold gc_of_uctx in Hudecl; move: Hudecl.
+  case_eq (gc_of_constraints (constraints_of_udecl udecl)); last by move=> ->.
+  move=> ctrs /= /[dup] Hctrs -> [=]??; subst. simpl in *.
   rewrite - (is_consistent_spec (global_ext_uctx (X, udecl))).
   pose proof (gc_of_constraints_union (constraints_of_udecl udecl) (global_constraints X)).
-  rewrite {}HΣctrs {}Hctrs in H. simpl in H.
-  unfold is_consistent, global_ext_uctx, gc_of_uctx, global_ext_constraints. simpl. 
+  rewrite HΣctrs Hctrs in H. simpl in H.
+  unfold is_consistent, global_ext_uctx, gc_of_uctx, global_ext_constraints. simpl.
   destruct (gc_of_constraints (ConstraintSet.union (constraints_of_udecl udecl)
-  (global_constraints X))).
-  - simpl in H. inversion Huctx; subst; clear Huctx. 
-  clear -H H0 cf HG.   
-  rewrite -HG add_uctx_make_graph. 
-  unfold global_ext_levels, global_levels in *. simpl.
-  assert (make_graph
-  (LevelSet.union (levels_of_udecl udecl)
-     (LevelSet.union (ContextSet.levels X) (LevelSet.singleton Level.lzero)),
-  t1) =_g make_graph
-  (LevelSet.union (levels_of_udecl udecl)
-     (LevelSet.union (ContextSet.levels X) (LevelSet.singleton Level.lzero)),
-     GoodConstraintSet.union t0 Σctrs)).
-  { apply make_graph_proper. now split; eauto. }     
-  now erewrite is_acyclic_proper.
-  - inversion H. 
-  Qed.   
+                                                   (global_constraints X))).
+  2: inversion H.
+  simpl in H.
+  assert (H45 : make_graph (global_ext_levels (X, udecl) , t) =_g make_graph uctxExt).
+  { apply make_graph_proper. now split; eauto. }
+  erewrite is_acyclic_proper; last eassumption.
+  clear H1 H0 H45; split.
+  + move=> [] h consistent_ext ; split; first by rewrite -{1}HG HG'.
+    apply/wGraph.is_full_subgraph_spec.
+    symmetry in HG.
+    refine (@consistent_on_full_subgraph _ (global_uctx X) (uctx_of_udecl udecl)
+                                        (global_levels X, uctx2)
+                                        (levels_of_udecl udecl, t0)
+                                        gph
+                                        _
+                                        _
+                                        gcinv
+                                        Huctx
+                                        (gc_of_constraints_of_uctx (uctx_of_udecl udecl) _ Hctrs)
+                                        HG
+           ).
+    * move: h=> /wGraph.is_acyclic_spec.
+      rewrite -HG' -HG.
+      apply: acyclic_no_loop_add_uctx.
+    * apply: consistent_extension_on_union.
+      pose proof (referenced_impl_wf X); sq.
+      apply: PCUICUnivSubstitutionConv.levels_global_constraint.
+      unfold uctx_of_udecl=> /=.
+      exact consistent_ext.
+  + move=> [acG'] /wGraph.is_full_subgraph_spec H1; split; first by rewrite -HG' HG.
+    rewrite  -HG' HG in invG'.
+    move: acG' => /wGraph.is_acyclic_correct acG'.
+    intros v [gΣ [gcΣeq Σsat]]%gc_of_constraints_spec%on_SomeP.
+    symmetry in HG. rewrite -HG in HG'.
+    move: gcΣeq; rewrite HΣctrs => [=]?; subst.
+    destruct (graph_extend gph _ H1 acG' _ _ gcinv gcExtinv HG HG' v Σsat) as [vext [vextsat extendsv]].
+    simpl in vextsat.
+    exists vext; split.
+    * apply gc_of_constraints_spec.
+      rewrite Hctrs /=.
+      apply GoodConstraintSet.for_all_spec; first by move=> ?? ->.
+      move=> ??; apply GoodConstraintSet.for_all_spec in vextsat; last by move=> ??->.
+      apply: vextsat; apply/GoodConstraintSet.union_spec; by left.
+    * move=> l Hl; apply extendsv.
+      case: HG=> eq1 _ ; rewrite eq1 //=.
+  Qed.
 
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} :
   @abstract_env_prop _ _ _ optimized_abstract_env_ext_struct optimized_abstract_env_struct.

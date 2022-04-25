@@ -114,6 +114,12 @@ Fixpoint decompose_app_rec (t : term) l :=
 
 Definition decompose_app t := decompose_app_rec t [].
 
+Lemma mkApps_tApp f a l : mkApps (tApp f a) l = mkApps f (a :: l).
+Proof. reflexivity. Qed.
+
+Lemma tApp_mkApps f a : tApp f a = mkApps f [a].
+Proof. reflexivity. Qed.
+
 Definition mkApps_decompose_app_rec t l :
   mkApps t l = mkApps (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
 Proof.
@@ -674,6 +680,16 @@ Ltac solve_discr' :=
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
   end.
+  
+Lemma mkApps_eq_decompose_app {t t' l l'} :
+  mkApps t l = mkApps t' l' ->
+  decompose_app_rec t l = decompose_app_rec t' l'.
+Proof.
+  induction l in t, t', l' |- *; simpl.
+  - intros ->. rewrite !decompose_app_rec_mkApps.
+    now rewrite app_nil_r.
+  - intros H. apply (IHl _ _ _ H).
+Qed.
 
 Lemma mkApps_eq_decompose {f args t} :
   mkApps f args = t ->

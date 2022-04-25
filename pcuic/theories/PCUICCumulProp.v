@@ -867,14 +867,6 @@ Proof.
     intuition auto. rewrite /id. reflexivity.
 Qed.
 
-Lemma All_All_All2 {A} (P Q : A -> Prop) l l' : 
-  All P l -> All Q l' -> #|l| = #|l'| -> All2 (fun x y => P x /\ Q y) l l'.
-Proof.
-  induction l in l' |- *; destruct l'; simpl; auto => //.
-  intros ha hb. specialize (IHl l'); depelim ha; depelim hb.
-  constructor; auto.
-Qed.
-
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->

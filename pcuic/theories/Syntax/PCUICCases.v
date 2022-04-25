@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)
@@ -402,11 +403,6 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
 
 Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
 Proof.
@@ -427,3 +423,30 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Hint Rewrite subst_instance_length 
   fix_context_length fix_subst_length cofix_subst_length : len.
 
+Definition is_constructor n ts :=
+  match List.nth_error ts n with
+  | Some a => isConstruct_app a
+  | None => false
+  end.
+  
+Lemma is_constructor_app_ge n l l' : is_constructor n l -> is_constructor n (l ++ l').
+Proof.
+  unfold is_constructor. destruct nth_error eqn:Heq => //.
+  rewrite nth_error_app_lt ?Heq //; eauto using nth_error_Some_length.
+Qed.
+
+Lemma is_constructor_prefix n args args' : 
+  ~~ is_constructor n (args ++ args') ->
+  ~~ is_constructor n args.
+Proof.
+  rewrite /is_constructor.
+  elim: nth_error_spec.
+  - rewrite app_length.
+    move=> i hi harg. elim: nth_error_spec => //.
+    move=> i' hi' hrarg'.
+    rewrite nth_error_app_lt in hi; eauto. congruence.
+  - rewrite app_length. move=> ge _.
+    elim: nth_error_spec; intros; try lia. auto.
+Qed.
+    
+  

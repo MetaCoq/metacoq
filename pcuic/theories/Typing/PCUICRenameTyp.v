@@ -196,7 +196,7 @@ Proof.
    - rewrite 2!rename_mkApps. simpl.
      eapply cumul_fix.
      + eapply rename_unfold_fix. eassumption.
-     + eapply is_constructor_rename. assumption.
+     + rewrite -is_constructor_rename. assumption.
    - rewrite 2!rename_mkApps. simpl.
      eapply cumul_cofix_case.
      eapply rename_unfold_cofix. eassumption.

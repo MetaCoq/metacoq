@@ -669,24 +669,6 @@ Proof.
   intuition congruence.
 Qed.
 
-Lemma length_map_option_out {A} l l' :
-  @map_option_out A l = Some l' -> #|l| = #|l'|.
-Proof.
-  induction l as [|[x|] l] in l' |- *.
-  - destruct l'; [reflexivity|discriminate].
-  - cbn. destruct (map_option_out l); [|discriminate].
-    destruct l'; [discriminate|]. inversion 1; subst; cbn; eauto.
-    noconf H. now specialize (IHl l' eq_refl).
-  - discriminate.
-Qed.
-
-Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
-Proof.
-  intros. induction L in t, H |- *; cbn in *.
-  - inv H. econstructor.
-  - destruct a. destruct ?. all:inv H. eauto.
-Qed.
-
 Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
@@ -814,6 +796,118 @@ Proof.
     1: now destruct u.
     1: now pcuic.
     now eapply cumul_Sort. 
+Qed.
+
+Lemma unique_sorting_equality_prop_l {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_prop s -> Universe.is_prop s'.
+Proof.
+  intros wfΣ HT HU cum isp.
+  eapply PCUICSpine.ws_cumul_pb_le_le in cum.
+  eapply ws_cumul_pb_alt_closed in cum as [v [v' [eqv]]].
+  eapply subject_reduction_closed in HT; tea.
+  eapply subject_reduction_closed in HU; tea.
+  eapply leq_term_prop_sorted_l in c0; tea. all:eauto with pcuic.
+  eapply leq_universe_prop_r; tea; eauto with pcuic.
+Qed.
+
+Lemma unique_sorting_equality_prop_r {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_prop s' -> Universe.is_prop s.
+Proof.
+  intros wfΣ HT HU cum isp.
+  eapply PCUICSpine.ws_cumul_pb_le_le in cum.
+  eapply ws_cumul_pb_alt_closed in cum as [v [v' [eqv]]].
+  eapply subject_reduction_closed in HT; tea.
+  eapply subject_reduction_closed in HU; tea.
+  eapply leq_term_prop_sorted_r in c0; tea. all:eauto with pcuic.
+  eapply leq_universe_prop_r; tea; eauto with pcuic.
+Qed.
+
+Lemma unique_sorting_equality_prop {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_prop s = Universe.is_prop s'.
+Proof.
+  intros wfΣ HT HU cum.
+  apply iff_is_true_eq_bool.
+  split.
+  now eapply unique_sorting_equality_prop_l; tea.
+  now eapply unique_sorting_equality_prop_r; tea.
+Qed.
+
+Lemma unique_sorting_equality_sprop_l {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_sprop s -> Universe.is_sprop s'.
+Proof.
+  intros wfΣ HT HU cum isp.
+  eapply PCUICSpine.ws_cumul_pb_le_le in cum.
+  eapply ws_cumul_pb_alt_closed in cum as [v [v' [eqv]]].
+  eapply subject_reduction_closed in HT; tea.
+  eapply subject_reduction_closed in HU; tea.
+  eapply leq_term_sprop_sorted_l in c0; tea. all:eauto with pcuic.
+  eapply leq_universe_sprop_r; tea; eauto with pcuic.
+Qed.
+
+Lemma unique_sorting_equality_sprop_r {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_sprop s' -> Universe.is_sprop s.
+Proof.
+  intros wfΣ HT HU cum isp.
+  eapply PCUICSpine.ws_cumul_pb_le_le in cum.
+  eapply ws_cumul_pb_alt_closed in cum as [v [v' [eqv]]].
+  eapply subject_reduction_closed in HT; tea.
+  eapply subject_reduction_closed in HU; tea.
+  eapply leq_term_sprop_sorted_r in c0; tea. all:eauto with pcuic.
+  eapply leq_universe_sprop_r; tea; eauto with pcuic.
+Qed.
+
+Lemma unique_sorting_equality_sprop {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  Universe.is_sprop s = Universe.is_sprop s'.
+Proof.
+  intros wfΣ HT HU cum.
+  apply iff_is_true_eq_bool.
+  split.
+  now eapply unique_sorting_equality_sprop_l; tea.
+  now eapply unique_sorting_equality_sprop_r; tea.
+Qed.
+
+Lemma unique_sorting_equality_propositional {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+  wf_ext Σ ->
+  Σ ;;; Γ |- T : tSort s ->
+  Σ ;;; Γ |- U : tSort s' ->
+  Σ ;;; Γ ⊢ T ≤[pb] U ->
+  is_propositional s = is_propositional s'.
+Proof.
+  intros wfΣ HT HU cum.
+  unfold is_propositional.
+  destruct (Universe.is_prop s) eqn:isp => /=. symmetry.
+  - apply orb_true_intro; left.
+    now rewrite (unique_sorting_equality_prop wfΣ HT HU cum) in isp.
+  - destruct (Universe.is_sprop s) eqn:isp' => /=. symmetry.
+    apply orb_true_intro; right.
+    now rewrite (unique_sorting_equality_sprop wfΣ HT HU cum) in isp'.
+    rewrite (unique_sorting_equality_prop wfΣ HT HU cum) in isp.
+    rewrite (unique_sorting_equality_sprop wfΣ HT HU cum) in isp'.
+    rewrite isp isp' //.
 Qed.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :

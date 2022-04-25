@@ -37,11 +37,6 @@ Proof.
   eauto.
 Qed.
 
-(* todo move *)
-#[global]
-Instance extends_refl : CRelationClasses.Reflexive extends_decls.
-Proof. red. intros x. now split => //; exists []. Qed.
-
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.PCUICEnvironment.mutual_inductive_body) (idecl : PCUICAst.PCUICEnvironment.one_inductive_body),
@@ -85,10 +80,10 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red.
-    destruct isdecl as [[? ?] ?]. red in H. red in H4.
-    rewrite H in H4.
-    eapply PCUICWeakeningEnvConv.extends_lookup in H; eauto; tc. now rewrite H.
+    red. red in H4. rewrite (PCUICAst.declared_inductive_lookup isdecl) in H4.
+    destruct isdecl as [decli declc].
+    eapply PCUICWeakeningEnvConv.weakening_env_declared_inductive in decli; tea; eauto; tc.
+    now rewrite (PCUICAst.declared_inductive_lookup decli).
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.
@@ -568,15 +563,18 @@ Proof.
   - eapply H; eauto.
 Qed.
 
-
-Lemma is_assumption_context_spec Γ :
-is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Lemma erases_subst0 (Σ : global_env_ext) Γ t s t' s' T :
+  wf Σ -> wf_local Σ Γ ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- t ⇝ℇ t' ->
+  subslet Σ [] s Γ ->
+  All2 (erases Σ []) s s' ->
+  Σ ;;; [] |- (subst s 0 t) ⇝ℇ ELiftSubst.subst s' 0 t'.
 Proof.
- induction Γ; cbn.
- - split; econstructor.
- - split; intros H.
-   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
-   + invs H. cbn. now eapply IHΓ.
+  intros Hwf Hwfl Hty He Hall.
+  change (@nil (BasicAst.context_decl term)) with (subst_context s 0 [] ++ nil).
+  eapply erases_subst with (Γ' := Γ); eauto. 
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
 Qed.
-
 

@@ -299,6 +299,13 @@ Definition is_box c :=
   | _ => false
   end.
 
+Definition isFixApp t := isFix (head t).
+Definition isConstructApp t := isConstruct (head t).
+
+Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
+Proof. rewrite /isFixApp head_mkApps //. Qed.
+Lemma isConstructApp_mkApps f l : isConstructApp (mkApps f l) = isConstructApp f.
+Proof. rewrite /isConstructApp head_mkApps //. Qed.
 
 Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
 Proof.

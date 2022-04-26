@@ -610,7 +610,7 @@ Section ContextConversion.
   Proof.
     intros r HΓ.
     induction r.
-    - eapply (red1_eq_context_upto_r _ Re R) in r; eauto.
+    - eapply (@red1_eq_context_upto_r Σ Σ Re R) in r; eauto.
       destruct r as [v [? ?]]. exists v. intuition pcuic.
       now symmetry.
     - exists x. split; auto. reflexivity.

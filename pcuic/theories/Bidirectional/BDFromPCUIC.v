@@ -9,7 +9,7 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(** Preliminary lemmata missing from MetaCoq *)
+(** Preliminary lemmas missing from MetaCoq *)
 Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
   leq_universe Σ s1 s2 -> is_allowed_elimination Σ allowed s2 -> is_allowed_elimination Σ allowed s1.
 Proof.
@@ -54,7 +54,7 @@ Proof.
     constructor; auto.
 Qed.
 
-(** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
+(** Lemmas to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
 
 Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) ->
@@ -238,9 +238,8 @@ Proof.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICDeclarationTyping.onNpars.
         2: eapply on_declared_minductive ; eauto.
-        rewrite (firstn_app_left _ 0).
-        1: by rewrite Nat.add_0_r ; destruct wfpred.
-        by apply app_nil_r.
+        rewrite firstn_app_left //.
+        now destruct wfpred.
       
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.

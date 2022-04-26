@@ -2784,7 +2784,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       apply: edge_map_spec1; apply: e.π2.
     Defined.
 
-    
 
     Context (HGl : correct_labelling G1 l)
             `{invariants G2}.

@@ -460,7 +460,7 @@ Proof.
         assert (efix : isEtaExp Σ (mkApps (tFix mfix idx) argsv)) by iheta q.
         rewrite isEtaExp_mkApps_napp /= // in efix.
         move/andP: efix => [efix hargs].
-        apply EWcbvEvalInd.and_assum.
+        apply MCProd.and_assum.
         eapply isEtaExp_cunfold_fix. now simp_eta in efix. exact e.
         intros hfn.
         eapply isEtaExp_mkApps_intro => //.        
@@ -670,11 +670,6 @@ Proof.
       eapply (isEtaExp_mkApps_intro _ _ [a']) => //. iheta q.
       eapply All_tip.1. iheta q0.
   - intros ise. split => //. eapply Qatom; tea.
-Qed.
-
-Lemma All_True {A} l : All (fun x : A => True) l.
-Proof.
-  induction l; intuition auto.
 Qed.
 
 #[export] Instance Qpreserves_True (etfl := all_term_flags) Σ : Qpreserves (fun _ _ => True) Σ.

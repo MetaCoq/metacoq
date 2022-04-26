@@ -1562,6 +1562,11 @@ Notation "(⊂_cs)" := ContextSet.subset (at level 0).
 Infix "=_cs" := ContextSet.equal (at level 30).
 Infix "⊂_cs" := ContextSet.subset (at level 30).
 
+Lemma incl_cs_refl cs : cs ⊂_cs cs.
+Proof.
+  split; [lsets|csets].
+Qed.
+
 Lemma empty_contextset_subset u : ContextSet.empty ⊂_cs u.
 Proof.
   red. split; cbn; [lsets|csets].

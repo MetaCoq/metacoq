@@ -74,6 +74,9 @@ Qed.
 Definition swap {A B : Type} (x : A * B) : B * A :=
   (snd x, fst x).
 
+Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
+  (f, f' f).
+  
 (** n-ary cartesian products in Type, for shorter and more readable intro-patterns *)
 
 Reserved Notation "[ × P1 & P2 ]" (at level 0).

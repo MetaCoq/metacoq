@@ -1803,12 +1803,12 @@ Proof.
       move: cumargs.
       rewrite /pargctxu /argctxu.
       move: iparsubst0.
-      rewrite (firstn_app_left _ 0).
+      rewrite (firstn_app_left).
       now rewrite (wf_predicate_length_pars H0).
       intros iparsubst0.
       clear X6. unshelve epose proof (ctx_inst_spine_subst _ X5).
       eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu').
-      rewrite (spine_subst_inst_subst iparsubst0) /= app_nil_r.
+      rewrite (spine_subst_inst_subst iparsubst0).
       intros cum.
       eapply ws_cumul_ctx_pb_rel_trans; tea.
       apply ws_cumul_ctx_pb_rel_app.
@@ -1869,9 +1869,9 @@ Proof.
     { exact (on_constructor_wf_args declc cu'). }
     eapply ws_cumul_pb_mkApps; tea. 
     { eapply wt_cumul_pb_refl. eapply type_it_mkLambda_or_LetIn; tea. }
-    rewrite (firstn_app_left _ 0) ?Nat.add_0_r // /= ?app_nil_r in iparsubst0.
-    rewrite (firstn_app_left _ 0) ?Nat.add_0_r // /= ?app_nil_r in Hpars.
-    rewrite (skipn_all_app_eq) // in subsidx.
+    rewrite firstn_app_left // /= in iparsubst0.
+    rewrite firstn_app_left // /= in Hpars.
+    rewrite skipn_all_app_eq // in subsidx.
     have brctxass : context_assumptions prebrctx = context_assumptions (cstr_args cdecl).
     { now rewrite /prebrctx !lengths. }
     assert (eqargts : ws_cumul_pb_terms Σ Γ (skipn (ind_npars mdecl) args)
@@ -2172,7 +2172,7 @@ Proof.
       eapply ws_cumul_pb_eq_le. eapply ws_cumul_pb_mkApps; pcuic.
       eapply All2_app => //. now apply: red_terms_ws_cumul_pb_terms. }
     set (pctx := (inst_case_predicate_context (set_pparams p params'))) in *.
-    pose proof (snd (All2_fold_All2 _ _ _) X1). symmetry in X7. move:X7.
+    pose proof (snd (All2_fold_All2 _) X1). symmetry in X7. move:X7.
     change (pcontext p) with (pcontext (set_pparams p params')).
     move/(PCUICAlpha.inst_case_predicate_context_eq wfp') => eqctx.
     have wfpctx : wf_local Σ (Γ,,, inst_case_predicate_context (set_pparams p params')).

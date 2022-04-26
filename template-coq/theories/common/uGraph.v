@@ -298,11 +298,16 @@ Definition gcs_equal x y : Prop :=
 Infix "=_gcs" := gcs_equal (at level 200).
 Notation "(=_gcs)" := gcs_equal (at level 0).
 
-Instance GCS_For_all_Proper f : Proper (GCS.eq ==> iff) (GCS.For_all f).
+Global Instance proper_pair_levels_gcs : Proper ((=_lset) ==> GoodConstraintSet.Equal ==> (=_gcs)) (@pair LevelSet.t GoodConstraintSet.t).
+Proof.
+  intros l l' eq gcs gcs' eq'.
+  split; cbn; auto.
+Qed.
+
+Global Instance GCS_For_all_Proper f : Proper (GCS.eq ==> iff) (GCS.For_all f).
 Proof.
   move=> s s' eq; split; move=> h x hx; apply h; by rewrite eq + rewrite <- eq.
 Qed.
-
 
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
@@ -3004,41 +3009,6 @@ Proof.
   case: (gc_of_constraints _)=> //= ? [=] <- //.
 Qed.
 
-(* Lemma gc_of_constraint_border `{checker_flags} cstr gcs : *)
-(*   gc_of_constraint cstr = Some gcs -> *)
-(*   cstr.1.1 = lzero *)
-(*   \/ exists gc, GCS.In gc gcs /\ let e := edge_of_constraint gc in (e..s = cstr.1.1 /\ e..t = cstr.2). *)
-(* Proof. *)
-(*   move: cstr=> [[[|?|?] [?|]]]; cbn. *)
-(*   1: case: ( _ ?= _)%Z => // ??; by left. *)
-(*   all: move=> [|?|?] //=. *)
-(*   3,8: case: (_ <=? _)%Z=> // [=] <-; right; eexists; split; *)
-(*                           [by apply/GCS.singleton_spec | cbn; intuition ]. *)
-(*   all: move=> [=] <-; try (by left); right; eexists. *)
-(*   1,2,5,6,7: split; [by apply/GCS.singleton_spec | cbn; intuition ]. *)
-(*   all: split; [apply/GCS_pair_spec; left; reflexivity| cbn; intuition]. *)
-(* Qed. *)
-
-
-(* Lemma gc_of_constraint_border `{checker_flags} cstr gcs gc : *)
-(*   gc_of_constraint cstr = Some gcs -> *)
-(*   GCS.In gc gcs -> *)
-(*   let e := edge_of_constraint gc in *)
-(*   (e..s = cstr.1.1 /\ e..t = cstr.2) *)
-(*   \/ *)
-(*     (e..s = cstr.2 /\ e..t = cstr.1.1). *)
-(* Proof. *)
-(*   move: cstr=> [[[|?|?] [?|]]]; cbn. *)
-(*   1:{ case: ( _ ?= _)%Z => //. *)
-(*       1,2: move=> ? [=] <- /GCS.empty_spec []. *)
-(*       move=> [|?|?] // [=] <-/GCS.singleton_spec ->; cbn; intuition. *)
-(*   } *)
-(*   all: move=> [|?|?] //=. *)
-(*   3,8: case: (_ <=? _)%Z=> // [=] <- /GCS.singleton_spec ->; cbn; intuition. *)
-(*   all: move=> [=] <-; first [ move=> /GCS.empty_spec *)
-(*                           | move=> /GCS.singleton_spec -> *)
-(*                           | move=> /GoodConstraintSet_pair_In [] ->]; cbn; intuition. *)
-(* Qed. *)
 
 Definition gctx_union gctx1 gctx2 :=
   (LS.union gctx1.1 gctx2.1, GCS.union gctx1.2 gctx2.2).

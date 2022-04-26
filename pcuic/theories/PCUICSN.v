@@ -47,14 +47,14 @@ End Normalisation.
     α-renaming, as well as the necessary lemmata to show it is well-founded and
     can be used instead of the usual reduction as a measure.
 *)
+
 Section Alpha.
 
   Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf_ext Σ ∥).
 
-  Notation eqt u v :=
-    (∥ eq_term Σ (global_ext_constraints Σ) u v ∥).
+  Notation eqt u v := (∥ upto_names u v ∥).
 
   Definition cored' Γ u v :=
     exists u' v', cored Σ Γ u' v' /\ eqt u u' /\ eqt v v'.
@@ -74,6 +74,17 @@ Section Alpha.
     - intros [h]. induction h.
       + constructor. assumption.
       + eapply cored_trans'. all: eassumption.
+  Qed.
+
+  Local Instance substu_pres_eq : SubstUnivPreserving eq.
+  Proof.
+    red. intros s u u'.
+    unfold R_universe_instance.
+    intros f. eapply Forall2_map_inv in f.
+    assert (u = u') as ->.
+    { induction f; cbn; auto. f_equal; auto.
+      now eapply Universe.make_inj in H. }
+    reflexivity.
   Qed.
 
   Lemma cored'_postpone :
@@ -104,14 +115,14 @@ Section Alpha.
   Corollary cored_upto :
     forall Γ u v v',
       cored Σ Γ u v ->
-      eq_term Σ Σ v v' ->
+      eqt v v' ->
       exists u', cored Σ Γ u' v' /\ eqt u u'.
   Proof.
     intros Γ u v v' h e.
     eapply cored'_postpone.
     exists u, v. intuition eauto.
     - constructor. reflexivity.
-    - constructor. now symmetry.
+    - destruct e; constructor; now symmetry.
   Qed.
 
   Lemma Acc_impl :
@@ -128,17 +139,17 @@ Section Alpha.
   Lemma Acc_cored_cored' :
     forall Γ u,
       Acc (cored Σ Γ) u ->
-      forall u', eq_term Σ Σ u u' -> Acc (cored' Γ) u'.
+      forall u', eqt u u' -> Acc (cored' Γ) u'.
   Proof.
     intros Γ u h. induction h as [u h ih].
     intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
-    assert (ee : eq_term Σ Σ u'' u).
-    { symmetry. etransitivity. all: eassumption. }
+    assert (ee : eqt u'' u).
+    { destruct e. constructor. symmetry; etransitivity; tea. }
     eapply cored_upto in r as hh. 2: exact ee.
     destruct hh as [v'' [r' [e']]].
     eapply ih.
     - eassumption.
-    - symmetry; etransitivity; eassumption.
+    - destruct ee. constructor. symmetry; etransitivity; eassumption.
   Qed.
 
   Lemma normalisation_upto :
@@ -152,7 +163,7 @@ Section Alpha.
     2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
-    - reflexivity.
+    - constructor; reflexivity.
   Qed.
 
   (* TODO Maybe switch to eq_context *)
@@ -172,7 +183,7 @@ Section Alpha.
   Qed.
 
   Lemma cored_eq_term_upto :
-    forall Re Rle Γ u v u',
+    forall Σ' Re Rle Γ u v u',
       RelationClasses.Reflexive Re ->
       SubstUnivPreserving Re ->
       RelationClasses.Reflexive Rle ->
@@ -181,11 +192,11 @@ Section Alpha.
       RelationClasses.Transitive Re ->
       RelationClasses.Transitive Rle ->
       RelationClasses.subrelation Re Rle ->
-      eq_term_upto_univ Σ Re Rle u u' ->
+      eq_term_upto_univ Σ' Re Rle u u' ->
       cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ Re Rle v v' ∥.
+      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ' Re Rle v v' ∥.
   Proof.
-    intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 X6 e h.
+    intros Σ' Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 X6 e h.
     apply cored_alt in h as [h].
     induction h in u', e |- *.
     - eapply red1_eq_term_upto_univ_l in r. 9: eauto. all: auto.
@@ -201,16 +212,16 @@ Section Alpha.
   Qed.
 
   Lemma cored_eq_context_upto :
-    forall Re Γ Δ u v,
+    forall Σ' Re Γ Δ u v,
       RelationClasses.Reflexive Re ->
       RelationClasses.Symmetric Re ->
       RelationClasses.Transitive Re ->
       SubstUnivPreserving Re ->
-      eq_context_upto Σ Re Re Γ Δ ->
+      eq_context_upto Σ' Re Re Γ Δ ->
       cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ Re Re u u' ∥.
+      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ' Re Re u u' ∥.
   Proof.
-    intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
+    intros Σ' Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
     induction h.
     - eapply red1_eq_context_upto_l in r. all: eauto. 2:tc.

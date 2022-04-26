@@ -11,12 +11,6 @@ Local Set Keyed Unification.
 #[global]
 Hint Constructors eval : core.
 
-Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
-  (f, f' f).
-  
-Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
-Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
-
 Section eval_mkApps_rect.
   
   Variables (wfl : WcbvFlags) (Σ : global_declarations) (P : term → term → Type).

@@ -76,8 +76,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
   declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
   Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
-  (* case_side_conditions (fun Σ Γ => wf_local Σ Γ) checking Σ Γ ci p ps
-    mdecl idecl indices predctx -> *) (*issue with wf_local_rel vs wf_local *)
+  (* case_side_conditions *)
   mdecl.(ind_npars) = ci.(ci_npar) ->
   eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   wf_predicate mdecl idecl p ->
@@ -141,7 +140,7 @@ with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : induc
   Σ ;;; Γ |- t ▹{ind} (u,args) 
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| check_Cons t T T':
+| check_Cumul t T T':
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T <= T' ->
   Σ ;;; Γ |- t ◃ T'

@@ -201,11 +201,24 @@ Global Instance optimized_abstract_env_ext_struct {cf:checker_flags} :
      abstract_env_ext_rel X := abstract_env_ext_rel X.(wf_env_ext_referenced);
   |}.
 
-  Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
-  Proof. destruct Σ as [univs Σ]; cbn.
-    move=> [] onu; cbn. induction 1; constructor; auto.
-  Qed.
-  Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+Lemma wf_env_eta {cf : checker_flags} (Σ : wf_env) : {| universes := Σ.(universes); declarations := Σ.(declarations) |} = Σ.
+Proof.
+  destruct Σ => /= //. destruct referenced_impl_env => //.
+Qed.
+
+Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+Proof. destruct Σ as [univs Σ]; cbn.
+  move=> [] onu; cbn. induction 1; constructor; auto.
+Qed.
+
+
+Lemma wf_env_fresh {cf : checker_flags} (Σ : wf_env) : EnvMap.EnvMap.fresh_globals Σ.(declarations).
+Proof.
+  destruct Σ.(referenced_impl_wf).
+  now eapply wf_fresh_globals. 
+Qed.
+
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
   EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
 Proof.
   unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.

@@ -351,7 +351,7 @@ Lemma extends_inductive_isprop_and_pars {efl : EEnvFlags} {Σ Σ' ind} : extends
   inductive_isprop_and_pars Σ ind = inductive_isprop_and_pars Σ' ind.
 Proof.
   intros ext wf; cbn.
-  unfold inductive_isprop_and_pars.
+  unfold inductive_isprop_and_pars. cbn.
   destruct lookup_env as [[]|] eqn:hl => //.
   rewrite (extends_lookup wf ext hl).
   destruct nth_error => //.

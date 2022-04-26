@@ -514,7 +514,7 @@ Section WfEnv.
             rewrite !skipn_0 {1}subst_empty.
             assert(#|l| <= n) by lia.
             pose proof (context_subst_length cs). rewrite subst_context_length in H0.
-            rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
+            rewrite !firstn_app_left //.
             split. now rewrite H0 skipn_all_app.
             rewrite H0 skipn_all_app. repeat constructor.
           * apply subslet_app; rewrite !subst_empty //.
@@ -553,7 +553,7 @@ Section WfEnv.
             rewrite !skipn_S skipn_0.
             assert(#|l| <= n) by lia.
             pose proof (context_subst_length cs). rewrite subst_context_length in H0.
-            rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
+            rewrite !firstn_app_left //.
             split. now rewrite H0 skipn_all_app.
             rewrite H0 skipn_all_app. apply (context_subst_ass _ []). constructor.
           * apply subslet_app => //. now apply subslet_ass_tip.
@@ -806,8 +806,7 @@ Qed.*)
     destruct sp as [wfdom wfcodom cs subs].
     eapply context_subst_app in cs as [csl csr].
     rewrite skipn_all_app_eq in csl => //.
-    rewrite (firstn_app_left _ 0) in csr => //. lia.
-    rewrite firstn_0 in csr => //. rewrite app_nil_r in csr.
+    rewrite firstn_app_left in csr => //.
     eapply subslet_app_inv in subs as [sl sr].
     split; split; auto. rewrite app_context_assoc in wfcodom.
     now eapply All_local_env_app_inv in wfcodom as [? ?].
@@ -833,8 +832,7 @@ Qed.*)
     assert (firstn (context_assumptions Δ')
           (List.rev (δ ++ δ')) = List.rev δ').
     { rewrite List.rev_app_distr.
-      now rewrite (firstn_app_left _ 0); 
-      rewrite /= ?app_nil_r // Nat.add_0_r List.rev_length. }
+      now rewrite firstn_app_left // List.rev_length. }
     assert (skipn (context_assumptions Δ')
       (List.rev (δ ++ δ')) = List.rev δ).
     { rewrite List.rev_app_distr.
@@ -1950,18 +1948,6 @@ Section WfEnv.
     T = T' -> arity_spine Σ Γ T [] T'.
   Proof. intros H ->; constructor;auto. Qed.
 
-  (* Lemma arity_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
-    wf Σ.1 ->
-    arity_spine Σ Γ (tLetIn na b B T) args S ->
-    arity_spine Σ Γ (T {0 := b}) args S.
-  Proof.
-    intros wfΣ Hsp.
-    depelim Hsp.
-    econstructor. auto.
-    now eapply ws_cumul_pb_LetIn_l_inv in c.
-    auto.
-  Qed. *)
-
   Lemma typing_spine_wf_local {Γ T args T'} :
     typing_spine Σ Γ T args T' ->
     wf_local Σ Γ.
@@ -2026,8 +2012,7 @@ Section WfEnv.
           move: (context_subst_length sps).
           len.
           move=> eq'. rewrite eq'.
-          rewrite skipn_all_app (firstn_app_left _ 0) //.
-          rewrite firstn_0 // app_nil_r.
+          rewrite skipn_all_app firstn_app_left //.
           split; auto. apply sps. rewrite -{2}(subst_empty 0 b).
           constructor. constructor.
         * eapply subslet_app => //. eapply sps.
@@ -2061,8 +2046,7 @@ Section WfEnv.
           simpl. rewrite skipn_S skipn_0.
           move: (context_subst_length sps). len.
           move=> eq'. rewrite eq'.
-          rewrite skipn_all_app (firstn_app_left _ 0) //.
-          rewrite firstn_0 // app_nil_r.
+          rewrite skipn_all_app firstn_app_left //.
           split; auto. apply sps.
           eapply (context_subst_ass _ []). constructor.
         * eapply subslet_app => //. eapply sps.
@@ -2374,7 +2358,7 @@ Section WfEnv.
         noconf len.
         len in subsl; len in subsr. simpl in *.
         rewrite -H in subsl subsr. rewrite skipn_all_app_eq ?List.rev_length in subsl subsr => //.
-        rewrite (firstn_app_left _ 0) ?firstn_0 ?app_nil_r ?List.rev_length in subsr => //.
+        rewrite (firstn_app_left) ?firstn_0 ?app_nil_r ?List.rev_length in subsr => //.
         depelim subsl.
         constructor. now rewrite subst_empty in t1.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r.
@@ -2719,7 +2703,7 @@ Section WfEnv.
     now rewrite app_context_assoc.
     eapply context_subst_app_inv; split; auto.
     rewrite skipn_all_app_eq; try lia. auto.
-    rewrite (firstn_app_left _ 0) ?Nat.add_0_r // firstn_0 // app_nil_r //.
+    rewrite (firstn_app_left) ?Nat.add_0_r // firstn_0 // app_nil_r //.
     rewrite -(firstn_skipn #|Δ'| insts).
     eapply subslet_app; auto. 
   Qed.
@@ -3026,12 +3010,12 @@ Section WfEnv.
         intros HΔ'; depelim HΔ'.
         destruct l0 as [s Hs]. simpl.
         rewrite (ctx_inst_sub_subst dom) in t1.
-        rewrite (firstn_app_left _ 0) ?firstn_0 // ?Nat.add_0_r // app_nil_r in dom.
+        rewrite firstn_app_left // in dom.
         specialize (IHa _ dom HΔ HΔ').
         eapply (ctx_inst_app IHa).
         simpl. constructor; [|constructor].
         rewrite (ctx_inst_sub_subst IHa).
-        rewrite (firstn_app_left _ 0) ?firstn_0 // ?Nat.add_0_r // app_nil_r in t1.
+        rewrite firstn_app_left // in t1.
         simpl.
         rewrite context_assumptions_rev in H0.
         assert (context_assumptions Γ' = #|i|) by now rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions a).

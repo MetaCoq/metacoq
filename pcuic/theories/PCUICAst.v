@@ -232,6 +232,9 @@ Definition isLambda t :=
   | _ => false
   end.
 
+Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
+Proof. destruct t => //; eauto. Qed.
+
 (** ** Entries
 
   The kernel accepts these inputs and typechecks them to produce

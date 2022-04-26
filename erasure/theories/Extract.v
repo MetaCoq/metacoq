@@ -19,16 +19,8 @@ Definition isPropositionalArity ar b :=
   end.
 
 Definition isPropositional Σ ind b := 
-  match lookup_env Σ (inductive_mind ind) with
-  | Some (InductiveDecl mdecl) =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
-    | Some idecl =>
-      match destArity [] idecl.(ind_type) with
-      | Some (_, s) => is_propositional s = b
-      | None => False
-      end
-    | None => False
-    end
+  match lookup_inductive Σ ind with
+  | Some (mdecl, idecl) => isPropositionalArity idecl.(ind_type) b
   | _ => False
   end.
 

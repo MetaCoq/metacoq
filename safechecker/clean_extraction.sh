@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-SED=`which gsed || which sed`
-
 echo "Cleaning result of extraction"
 
 if [ ! -d "src" ]
@@ -11,7 +9,7 @@ fi
 
 shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
-files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
+files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | sed -e s/gen-src/src/`
 
 if [[ ! -f "src/metacoq_safechecker_plugin.cmxs" ||
            "src/metacoq_safechecker_plugin.cmxs" -ot "theories/Extraction.vo" ]]

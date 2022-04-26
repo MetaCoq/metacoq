@@ -316,6 +316,13 @@ Proof.
   apply GoodConstraintSetFact.singleton_1 in H. intuition.
 Qed.
 
+Lemma GCS_pair_spec x y z :
+  GCS.In x (GoodConstraintSet_pair y z) <-> x = y \/ x = z.
+Proof.
+  split; first apply: GoodConstraintSet_pair_In.
+  move=> [->|->]; apply/GCS.add_spec; by [right; apply/GCS.singleton_spec| left].
+Qed.
+
 Definition gc_satisfies v : GoodConstraintSet.t -> bool :=
   GoodConstraintSet.for_all (gc_satisfies0 v).
 
@@ -2724,36 +2731,22 @@ Section AddLevelsCstrs.
     now rewrite add_cstrs_union /= add_level_edges_add_cstrs_comm add_level_edges_union.
   Qed.
 
-  Section AddUctxAcyclic.
-    Context (G : wGraph.t) (uctx : VSet.t × GoodConstraintSet.t).
-
-    #[local]
-     Obligation Tactic := idtac.
-
-    #[program]
-    Definition add_uctx_map_edge : forall x y, wGraph.EdgeOf G x y -> wGraph.EdgeOf (add_uctx uctx G) x y :=
-      fun x y '(existT w he) => existT _ w _.
-    Next Obligation.
-      intros. apply/add_cstrs_spec; right; apply/add_level_edges_spec; right=> //.
-    Qed.
-
-    Lemma add_uctx_edge_weight :
-      forall x y e, ((add_uctx_map_edge x y e).π1 >= e.π1)%Z.
-    Proof.
-      move=> ??[??]; rewrite /add_uctx_map_edge /=; lia.
-    Qed.
-
-    Lemma acyclic_no_loop_add_uctx :
-      wGraph.acyclic_no_loop (add_uctx uctx G) -> wGraph.acyclic_no_loop G.
-    Proof.
-      move=> hext v p; etransitivity.
-      - apply: Z.ge_le; apply: wGraph.weight_map_path2; apply: add_uctx_edge_weight.
-      - apply: (hext v (wGraph.map_path add_uctx_map_edge p)).
+  Lemma add_uctx_subgraph uctx G : subgraph G (add_uctx uctx G).
+  Proof.
+    constructor.
+    - apply: VSetProp.union_subset_2.
+    - move=> x hx.
+      apply/add_cstrs_spec; right.
+      apply/add_level_edges_spec; by right.
+    - reflexivity.
   Qed.
 
-  End AddUctxAcyclic.
+  Lemma acyclic_no_loop_add_uctx G uctx :
+    wGraph.acyclic_no_loop (add_uctx uctx G) -> wGraph.acyclic_no_loop G.
+  Proof.
+    apply: wGraph.subgraph_acyclic ; apply: add_uctx_subgraph.
+  Qed.
 
-    
   Definition gc_result_eq (x y : option GoodConstraintSet.t) :=
     match x, y with
     | Some x, Some y => GoodConstraintSet.eq x y
@@ -2982,53 +2975,23 @@ Proof.
 Qed.
 
 
+Instance subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) subgraph.
+Proof.
+  unshelve apply: proper_sym_impl_iff_2.
+  move=> g1 g1' [eqv1 [eqe1 eqs1]]  g2 g2' [eqv2 [eqe2 eqs2]].
+  move=> [*]; constructor.
+  + by rewrite <- eqv1, <- eqv2.
+  + by rewrite <- eqe1, <- eqe2.
+  + by rewrite <- eqs1, <- eqs2.
+Qed.
 
 Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
 Proof.
   unshelve apply: proper_sym_impl_iff_2.
-  move=> g1 g1' /[dup] eq1 [eqv1 [eqe1 eqs1]]  g2 g2' /[dup] eq2 [eqv2 [eqe2 eqs2]].
-  move=> [] ??? lsp_dom; constructor.
-  + by rewrite <- eqv1, <- eqv2.
-  + by rewrite <- eqe1, <- eqe2.
-  + by rewrite <- eqs1, <- eqs2.
-  + move=> ????; rewrite <- eq1, <- eq2.
-    apply lsp_dom; unfold wGraph.V; by [rewrite eqv1| rewrite eqv2].
+  move=> g1 g1' eq1 g2 g2' eq2.
+  move=> [?] lsp_dom; constructor=> *; rewrite -eq1 -eq2 //.
+  apply lsp_dom; rewrite /wGraph.V (proj1 eq1) //.
 Qed.
-
-Definition graph_extend (G1 G2 : universes_graph) :
-  full_subgraph G1 G2 ->
-  acyclic_no_loop G2 -> 
-  forall uctx1 uctx2,
-    global_gc_uctx_invariants uctx1 ->
-    global_gc_uctx_invariants uctx2 ->
-    G1 =_g make_graph uctx1 ->
-    G2 =_g make_graph uctx2 ->
-    forall v, gc_satisfies v uctx1.2 ->
-         ∑ v', gc_satisfies v' uctx2.2 ×
-                            forall x, VSet.In x G1.1.1 -> val v x = val v' x.
-Proof.
-  move=> embed acG2 uctx1 uctx2 guctx1 guctx2 eqG1 eqG2 v /make_graph_spec HGl.
-  move: acG2 => /(acyclic_no_loop_proper _ _ eqG2) acG2.
-  move: embed=> /(full_subgraph_proper _ _ eqG1 _ _ eqG2) embed.
-  pose proof (invG1 := make_graph_invariants uctx1 guctx1).
-  pose proof (invG2 := make_graph_invariants uctx2 guctx2).
-  pose (l := labelling_of_valuation v).
-  pose (Gl := relabel_on (make_graph uctx1) (make_graph uctx2) l).
-  pose (l' := to_label ∘ (lsp Gl (wGraph.s Gl))).
-  pose proof (H := extends_correct_labelling _ _ l HGl embed acG2).
-  exists (valuation_of_labelling l'); split.
-  - apply/make_graph_spec.
-    pose proof (H0 := valuation_labelling_eq uctx2 _ H); simpl in H0.
-    split.
-    + rewrite H0; [by case: invG2| by case: H].
-    + move=> e ein; move: (@edges_vertices _ invG2 _ ein)=> [??].
-      rewrite !H0 //; move: H => [_ h]; apply: h=> //.
-  - move=> x; move: eqG1=> [-> _] xin.
-    rewrite (val_valuation_of_labelling _ uctx2 ltac:(reflexivity))=> //.
-    + by apply: (vertices_sub _ _ embed).
-    + rewrite /l' extends_labelling //.
-Qed.
-
 
 Lemma add_uctx_make_graph2 uctx1 uctx2 :
   add_uctx uctx2 (make_graph uctx1) =_g make_graph (VSet.union uctx2.1 uctx1.1, GCS.union uctx2.2 uctx1.2).
@@ -3041,45 +3004,164 @@ Proof.
   case: (gc_of_constraints _)=> //= ? [=] <- //.
 Qed.
 
-Lemma consistent_on_full_subgraph `{checker_flags}
-      udecl uext uctx uctx' G `{acyclic_no_loop G} :
-  consistent_extension_on udecl (ConstraintSet.union uext.2 udecl.2) ->
-  global_gc_uctx_invariants uctx ->
-  gc_of_uctx udecl = Some uctx ->
-  gc_of_uctx uext = Some uctx' ->
-  G =_g make_graph uctx ->
-  full_subgraph G (add_uctx uctx' G).
+(* Lemma gc_of_constraint_border `{checker_flags} cstr gcs : *)
+(*   gc_of_constraint cstr = Some gcs -> *)
+(*   cstr.1.1 = lzero *)
+(*   \/ exists gc, GCS.In gc gcs /\ let e := edge_of_constraint gc in (e..s = cstr.1.1 /\ e..t = cstr.2). *)
+(* Proof. *)
+(*   move: cstr=> [[[|?|?] [?|]]]; cbn. *)
+(*   1: case: ( _ ?= _)%Z => // ??; by left. *)
+(*   all: move=> [|?|?] //=. *)
+(*   3,8: case: (_ <=? _)%Z=> // [=] <-; right; eexists; split; *)
+(*                           [by apply/GCS.singleton_spec | cbn; intuition ]. *)
+(*   all: move=> [=] <-; try (by left); right; eexists. *)
+(*   1,2,5,6,7: split; [by apply/GCS.singleton_spec | cbn; intuition ]. *)
+(*   all: split; [apply/GCS_pair_spec; left; reflexivity| cbn; intuition]. *)
+(* Qed. *)
+
+
+(* Lemma gc_of_constraint_border `{checker_flags} cstr gcs gc : *)
+(*   gc_of_constraint cstr = Some gcs -> *)
+(*   GCS.In gc gcs -> *)
+(*   let e := edge_of_constraint gc in *)
+(*   (e..s = cstr.1.1 /\ e..t = cstr.2) *)
+(*   \/ *)
+(*     (e..s = cstr.2 /\ e..t = cstr.1.1). *)
+(* Proof. *)
+(*   move: cstr=> [[[|?|?] [?|]]]; cbn. *)
+(*   1:{ case: ( _ ?= _)%Z => //. *)
+(*       1,2: move=> ? [=] <- /GCS.empty_spec []. *)
+(*       move=> [|?|?] // [=] <-/GCS.singleton_spec ->; cbn; intuition. *)
+(*   } *)
+(*   all: move=> [|?|?] //=. *)
+(*   3,8: case: (_ <=? _)%Z=> // [=] <- /GCS.singleton_spec ->; cbn; intuition. *)
+(*   all: move=> [=] <-; first [ move=> /GCS.empty_spec *)
+(*                           | move=> /GCS.singleton_spec -> *)
+(*                           | move=> /GoodConstraintSet_pair_In [] ->]; cbn; intuition. *)
+(* Qed. *)
+
+Definition gctx_union gctx1 gctx2 :=
+  (LS.union gctx1.1 gctx2.1, GCS.union gctx1.2 gctx2.2).
+
+
+(* The other implication between invariants does not hold
+   (take for example uctx = ({}, {lzero < Level "foo"}) *)
+Lemma global_uctx_graph_invariants `{cf : checker_flags} [uctx gph] :
+  is_graph_of_uctx gph uctx -> global_uctx_invariants uctx -> wGraph.invariants gph.
 Proof.
-  move=> cext guctx udecleq uexteq Geq.
-  constructor.
-  - apply: VSetProp.union_subset_2.
-  - move=> x hx.
-    apply/add_cstrs_spec; right.
-    apply/add_level_edges_spec; by right.
-  - reflexivity.
-  - case: (Geq) => VGeq _ x y.
-    rewrite /wGraph.V /= VGeq Geq add_uctx_make_graph2.
-    set uctx'' := (_ , _).
-    pose proof (invG := make_graph_invariants uctx guctx).
-    rewrite Geq in H0.
-    unshelve refine (@labelling_ext_lsp _ _ _ _ _ x y).
-
-    move=> l1 /[dup] hl1 /make_graph_spec'.
-    set v1 := (valuation_of_labelling _).
-    pose proof (h := gc_of_constraints_spec v1 udecl.2); move: h.
-    rewrite (gc_of_uctx_of_constraints _ _ udecleq) /=.
-    move=> h /h /(cext _) [v' [+ v'val]].
-    move=> /gc_of_constraints_spec.
-    epose (g := gc_of_constraints_union uext.2 udecl.2).
-    move: g.
-    rewrite (gc_of_uctx_of_constraints _ _ udecleq)
-            (gc_of_uctx_of_constraints _ _ uexteq) /=.
-    case: (gc_of_constraints _)=> [gcs|] //= gcseq.
-    unfold gc_satisfies; move=> /GCS.for_all_spec.
-    rewrite {gcs}gcseq=> /GCS.for_all_spec /(make_graph_spec uctx'') hv'.
-    exists (labelling_of_valuation v'); split=> //.
-    move=> z hz; rewrite -val_labelling_of_valuation.
-
-    rewrite (gc_of_uctx_levels _ _ udecleq) in v'val.
-    rewrite -v'val // /v1 (val_valuation_of_labelling (make_graph uctx) uctx) //.
+  move=> /on_SomeP [? [Huctx <-]] H0.
+  pose proof (gc_of_uctx_invariants _ _ Huctx H0).
+  apply: make_graph_invariants.
 Qed.
+
+Existing Instance correct_labelling_proper.
+
+Lemma correct_labelling_of_valuation_satisfies_iff `{checker_flags} [uctx G v] :
+  is_graph_of_uctx G uctx ->
+  global_uctx_invariants uctx ->
+  correct_labelling G (labelling_of_valuation v) <-> satisfies v uctx.2.
+Proof.
+  move=> /on_SomeP [gctx [eqSome <-]] inv.
+  rewrite -make_graph_spec gc_of_constraints_spec (gc_of_uctx_of_constraints _ _ eqSome) //.
+Qed.
+
+Lemma is_graph_of_uctx_levels `{cf:checker_flags} G uctx :
+  is_graph_of_uctx G uctx ->
+  forall x, VSet.In x (wGraph.V G) <-> LS.In x uctx.1.
+Proof.
+  move=> /on_SomeP [gctx [eqSome HG]] ?.
+  rewrite /wGraph.V -(proj1 HG) /= -(gc_of_uctx_levels _ _ eqSome) //.
+Qed.
+
+Lemma val_valuation_of_labelling2 `{checker_flags} [uctx G l] :
+  is_graph_of_uctx G uctx ->
+  global_uctx_invariants uctx ->
+  correct_labelling G l ->
+  forall x, VSet.In x uctx.1 ->
+  val (valuation_of_labelling l) x = l x.
+Proof.
+  move=> /on_SomeP [gctx [eqSome HG]] inv hl x hx.
+  apply: val_valuation_of_labelling.
+  1: symmetry; eassumption.
+  2: done.
+  red; rewrite -(gc_of_uctx_levels _ _ eqSome) //.
+Qed.
+
+Lemma correct_valuation_of_labelling_satisfies `{checker_flags} [uctx G l] :
+  is_graph_of_uctx G uctx ->
+  global_uctx_invariants uctx ->
+  correct_labelling G l -> satisfies (valuation_of_labelling l) uctx.2.
+Proof.
+  move=> /on_SomeP [gctx [eqSome <-]] inv.
+  rewrite gc_of_constraints_spec (gc_of_uctx_of_constraints _ _ eqSome) /=.
+  apply: make_graph_spec'; by apply: gc_of_uctx_invariants.
+Qed.
+
+Lemma consistent_ext_on_full_ext0 `{cf: checker_flags} [uctx G uctx' G']
+      `{wGraph.invariants G, wGraph.invariants G', wGraph.acyclic_no_loop G'} :
+  wGraph.subgraph G G' ->
+  global_uctx_invariants uctx ->
+  global_uctx_invariants uctx' ->
+  is_graph_of_uctx G uctx ->
+  is_graph_of_uctx G' uctx' ->
+  consistent_extension_on uctx uctx'.2 <->
+    wGraph.IsFullSubgraph.is_full_extension G G'.
+Proof.
+  move=> sub Huctx Huctx' HG HG'.
+  rewrite IsFullSubgraph.is_full_extension_spec //; split.
+  - move=> hext; split=> //.
+    pose proof (wGraph.subgraph_acyclic _ _ sub _).
+    apply: labelling_ext_lsp.
+    move=> l1 /[dup] hl1 /(correct_valuation_of_labelling_satisfies HG).
+    move=> /hext[v' [+ v'val]].
+    move=> /(correct_labelling_of_valuation_satisfies_iff HG').
+    exists (labelling_of_valuation v'); split=> //.
+    move=> z /[dup] hz /(is_graph_of_uctx_levels _ _ HG) ?.
+    rewrite -(val_valuation_of_labelling2 HG) // v'val //.
+  - move=> fsub v /(correct_labelling_of_valuation_satisfies_iff HG) hl.
+    pose (l := labelling_of_valuation v).
+    pose (Gl := relabel_on G G' l).
+    pose (l' := to_label ∘ (lsp Gl (wGraph.s Gl))).
+    pose proof (hl' := extends_correct_labelling _ _ l hl fsub _).
+    exists (valuation_of_labelling l'); split.
+    + apply: (correct_valuation_of_labelling_satisfies HG')=> //.
+    + move=> ? /[dup] ? /(is_graph_of_uctx_levels _ _ HG) ?.
+      rewrite (val_valuation_of_labelling2 HG') //.
+      * apply/(is_graph_of_uctx_levels _ _ HG').
+        by apply: (vertices_sub _ _ sub).
+      * rewrite /l' extends_labelling //.
+Qed.
+
+Lemma consistent_ext_on_full_ext `{cf: checker_flags} [uctx G uctx' G'] :
+  is_graph_of_uctx G uctx ->
+  is_graph_of_uctx G' uctx' ->
+  global_uctx_invariants uctx ->
+  global_uctx_invariants uctx' ->
+  wGraph.is_acyclic G' ->
+  wGraph.subgraph G G' ->
+  consistent_extension_on uctx uctx'.2 <->
+    wGraph.IsFullSubgraph.is_full_extension G G'.
+Proof.
+  move=> HG HG' /[dup] ? /(global_uctx_graph_invariants HG) ?.
+  move=> /[dup] ? /(global_uctx_graph_invariants HG') ? /wGraph.is_acyclic_spec ??.
+  by apply: consistent_ext_on_full_ext0.
+Qed.
+
+Lemma is_graph_of_uctx_add `{cf : checker_flags} [gph uctx uctx' gctx'] :
+  gc_of_uctx uctx' = Some gctx' ->
+  is_graph_of_uctx gph uctx ->
+  is_graph_of_uctx (add_uctx gctx' gph) (ContextSet.union uctx' uctx).
+Proof.
+  move=> h' /on_SomeP [gctx [h eq]].
+  red.
+  move: (gc_of_uctx_union _ _ _ _ h' h) => [gc'' [-> /= ?]].
+  have eq' : (gcs_equal (LS.union gctx'.1 gctx.1, gc'') (gctx_union gctx' gctx)) by split=> //=.
+  rewrite <- eq, eq'; symmetry; apply: add_uctx_make_graph2.
+Qed.
+
+Lemma is_consistent_spec2 `{cf : checker_flags} [gph gctx] :
+  is_graph_of_uctx gph gctx -> is_consistent gctx <-> wGraph.is_acyclic gph.
+Proof.
+  unfold is_consistent. by move=> /on_SomeP [? [-> <-]].
+Qed.
+

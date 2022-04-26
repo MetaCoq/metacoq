@@ -159,6 +159,9 @@ Module Nbar.
     now rewrite Z.add_0_r.
   Defined.
 
+  Lemma add_0_l n : (Some 0 + n = n)%nbar.
+  Proof. by case: n. Qed.
+
   Lemma sub_diag n : n - n = match n with None => None | Some _ => Some 0 end.
   Proof. destruct n; simpl. now rewrite Z.sub_diag. auto. Defined.
 
@@ -2725,7 +2728,34 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     pose proof (l := lsp0_spec_le G (spath_one G xin e.π2)).
     cbn in l. rewrite Z.add_0_r in l. assumption.
   Qed.
-    
+
+
+  Section FirstVertexIn.
+    Context (G1 G2 : t).
+
+    Equations first_in {s x y} (p : SPath G2 s x y) : V.t :=
+    | spath_refl _ z => z
+    | spath_step s1 s2 x0 y0 z0 d e q with VSet.mem x0 (V G1) => {
+      | true => x0
+      | false => first_in q
+      }.
+
+    Lemma first_in_in {s x y} (p : SPath G2 s x y) :
+      VSet.In y (V G1) -> VSet.In (first_in p) (V G1).
+    Proof.
+      apply_funelim (first_in p); simp first_in.
+      move=> ???????? /VSet.mem_spec //.
+    Qed.
+
+    Lemma first_in_first {s x y} (p : SPath G2 s x y) :
+      VSet.In x (V G1) -> first_in p = x.
+    Proof.
+      apply_funelim (first_in p); simp first_in=> //.
+      move=> ????????? /VSetDecide.F.not_mem_iff //.
+    Qed.
+
+  End FirstVertexIn.
+
   Section RelabelOn.
     Context G1 G2 l (Gl := relabel_on G1 G2 l).
     Context `{invariants G1}.
@@ -2755,26 +2785,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Defined.
 
     
-    Equations first_in {s x y} (p : SPath Gl s x y) : V.t :=
-    | spath_refl _ z => z
-    | spath_step s1 s2 x0 y0 z0 d e q with VSet.mem x0 (V G1) => {
-      | true => x0
-      | false => first_in q
-      }.
-
-    Lemma first_in_in {s x y} (p : SPath Gl s x y) :
-      VSet.In y (V G1) -> VSet.In (first_in p) (V G1).
-    Proof.
-      apply_funelim (first_in p); simp first_in.
-      move=> ???????? /VSet.mem_spec //.
-    Qed.
-
-    Lemma first_in_first {s x y} (p : SPath Gl s x y) :
-      VSet.In x (V G1) -> first_in p = x.
-    Proof.
-      apply_funelim (first_in p); simp first_in=> //.
-      move=> ????????? /VSetDecide.F.not_mem_iff //.
-    Qed.
 
     Context (HGl : correct_labelling G1 l)
             `{invariants G2}.
@@ -2834,8 +2844,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     
     Lemma sweight_relabel_on_G1 {s x y} (p : SPath Gl s x y) :
       VSet.In y (V G1) ->
-      exists n, lsp G2 x (first_in p) = Some n /\
-             sweight p <= n + diff l (first_in p) y.
+      exists n, lsp G2 x (first_in G1 Gl p) = Some n /\
+             sweight p <= n + diff l (first_in G1 Gl p) y.
     Proof.
       move=> yin.
       induction p.
@@ -2856,7 +2866,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
         rewrite lsp_xx /diff=> [=] <-.
         lia.
       - simp first_in.
-        pose proof (lc := lsp_codistance G2 x y (first_in p)).
+        pose proof (lc := lsp_codistance G2 x y (first_in G1 Gl p)).
         destruct e0 as [[s w0] t].
         pose proof (lbw := lsp_edge G2 (w0 ; e0G2)).
         move: (IHp yin) lc=> [w1 []] -> /= wpb + [=] ???; subst.
@@ -2865,7 +2875,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
         case Ex: (VSet.mem s _)=> /=.
         + exists 0; split; first rewrite lsp_xx //.
           move: Ex=> /VSet.mem_spec=> sin.
-          move: (relabel_on_lsp_G2 (sin) (first_in_in p yin) le)=> /=.
+          move: (relabel_on_lsp_G2 (sin) (first_in_in G1 Gl p yin) le)=> /=.
           move: wpb; unfold diff. lia.
         + move: le; case E2: (lsp _ _ _)=> [n /=|]; last move=> [].
           move=> le; exists n; split=> //.
@@ -2908,41 +2918,42 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       rewrite lsp_xx /=; lia.
   Qed.
 
-    Derive Subterm for SPath.
-    Next Obligation.
-      apply: Transitive_Closure.wf_clos_trans.
-      move=> [[s0 [x0 y0/=]] p0].
-      induction p0.
-      - constructor=> -[[s1 [x1 y1/=]] p1] h. inversion h.
-      - constructor=> -[[s1 [x1 y1/=]] p1] h.
-        depelim h.
-        move: IHp0.
-        set sig0 := sigmaI _ _ _.
-        set sig1 := sigmaI _ _ _.
-        have -> // : sig0 = sig1.
-        rewrite {}/sig0 {}/sig1.
-        apply (f_equal (SPath_sig_pack _ s' x z)) in H4.
-        noconf H4.
-        pose (f := fun p : (@sigma VSet.t
-            (fun s' : VSet.t =>
-             @sigma V.t
-               (fun x : V.t =>
-                @sigma V.t
-                  (fun y : V.t =>
-                   @sigma V.t
-                     (fun z : V.t =>
-                      @sigma (DisjointAdd x s0 s')
-                        (fun d : DisjointAdd x s0 s' =>
-                         @sigma (EdgeOf G x y)
-                           (fun e : EdgeOf G x y => SPath G s0 y z))))))) =>
-                     sigmaI (fun x => SPath G (pr1 x) (pr1 (pr2 x)) (pr2 (pr2 x)))
-                            {| pr1 := s0 ;
-                              pr2 := sigmaI (fun _ : V.t => V.t)
-                                            (pr1 (pr2 (pr2 p)))
-                                            (pr1 (pr2 (pr2 (pr2 p)))) |}
-                            (pr2 (pr2 (pr2 (pr2 (pr2 (pr2 p))))))).
-        apply: (f_equal f H4).
-    Qed.
+
+  Derive Subterm for SPath.
+  Next Obligation.
+    apply: Transitive_Closure.wf_clos_trans.
+    move=> [[s0 [x0 y0/=]] p0].
+    induction p0.
+    - constructor=> -[[s1 [x1 y1/=]] p1] h. inversion h.
+    - constructor=> -[[s1 [x1 y1/=]] p1] h.
+      depelim h.
+      move: IHp0.
+      set sig0 := sigmaI _ _ _.
+      set sig1 := sigmaI _ _ _.
+      have -> // : sig0 = sig1.
+      rewrite {}/sig0 {}/sig1.
+      apply (f_equal (SPath_sig_pack _ s' x z)) in H4.
+      noconf H4.
+      pose (f := fun p : (@sigma VSet.t
+                               (fun s' : VSet.t =>
+                                  @sigma V.t
+                                         (fun x : V.t =>
+                                            @sigma V.t
+                                                   (fun y : V.t =>
+                                                      @sigma V.t
+                                                             (fun z : V.t =>
+                                                                @sigma (DisjointAdd x s0 s')
+                                                                       (fun d : DisjointAdd x s0 s' =>
+                                                                          @sigma (EdgeOf G x y)
+                                                                                 (fun e : EdgeOf G x y => SPath G s0 y z))))))) =>
+                   sigmaI (fun x => SPath G (pr1 x) (pr1 (pr2 x)) (pr2 (pr2 x)))
+                          {| pr1 := s0 ;
+                            pr2 := sigmaI (fun _ : V.t => V.t)
+                                          (pr1 (pr2 (pr2 p)))
+                                          (pr1 (pr2 (pr2 (pr2 p)))) |}
+                          (pr2 (pr2 (pr2 (pr2 (pr2 (pr2 p))))))).
+      apply: (f_equal f H4).
+  Qed.
 
     Lemma spathG1_lsp_Gl x y :
       VSet.Subset (V G1) (V G2) ->
@@ -2985,10 +2996,32 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       
   End RelabelOn.
 
-  Record full_subgraph (G1 G2 : t) : Prop := {
+  Record subgraph (G1 G2 : t) : Prop := {
       vertices_sub : VSet.Subset (V G1) (V G2) ;
       edges_sub : EdgeSet.Subset (E G1) (E G2) ;
-      same_src : s G1 = s G2 ;
+      same_src : s G1 = s G2
+    }.
+
+  Definition subgraph_on_edge {G1 G2} :
+    subgraph G1 G2 ->
+    forall x y, EdgeOf G1 x y -> EdgeOf G2 x y.
+  Proof.
+    move=> embed x y [w ine]; exists w.
+    exact (edges_sub _ _ embed _ ine).
+  Defined.
+
+  Lemma subgraph_acyclic G1 G2 :
+    subgraph G1 G2 -> acyclic_no_loop G2 -> acyclic_no_loop G1.
+  Proof.
+    move=> sub acG2 x p.
+    etransitivity.
+    2: apply: acG2; refine (map_path (subgraph_on_edge sub) p).
+    apply: Z.ge_le; apply: weight_map_path2=> ?? [??] /=; lia.
+  Qed.
+
+
+  Record full_subgraph (G1 G2 : t) : Prop := {
+      is_subgraph :> subgraph G1 G2 ;
       lsp_dominate :
       forall v1 v2, VSet.In v1 (V G1) -> VSet.In v2 (V G1) ->
                (lsp G2 v1 v2 <= lsp G1 v1 v2)%nbar
@@ -3020,49 +3053,254 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     @reflect_option Z reflectEq_Z.
 
 
-  Definition full_subgraph_on_edge {G1 G2} :
-    full_subgraph G1 G2 ->
-    forall x y, EdgeOf G1 x y -> EdgeOf G2 x y.
-  Proof.
-    move=> embed x y [w ine]; exists w.
-    exact (edges_sub _ _ embed _ ine).
-  Defined.
+  Module IsFullSubgraph.
+    Section Border.
+      Context (G1 : t) (ext : EdgeSet.t).
+      Definition add_from_orig v s :=
+        if VSet.mem v (V G1) then VSet.add v s else s.
+      Definition fold_fun e s := add_from_orig (e..s) (add_from_orig (e..t) s).
+      
+      Definition border_set : VSet.t :=
+        EdgeSet.fold fold_fun ext VSet.empty.
 
+      Lemma EdgeSet_fold_spec_right2 (s : EdgeSet.t)
+            (i : VSet.t) (f : EdgeSet.elt -> VSet.t -> VSet.t) :
+        transpose VSet.Equal f ->
+        Proper (eq ==> VSet.Equal ==> VSet.Equal) f ->
+        VSet.Equal (EdgeSet.fold f s i) (fold_right f i (EdgeSet.elements s)).
+      Proof.  
+        move=> trf prpf; rewrite EdgeSet.fold_spec.
+        elim: {s}(EdgeSet.elements s)=> // x l /= <-.
+        elim: l i=> //= a l ih i.
+        enough (forall l, Proper (VSet.Equal ==> VSet.Equal) (fold_left (fun a e => f e a) l)).
+        1: by rewrite -ih trf.
+        clear -prpf; elim=> //= ?? ih ?? -> //.
+      Qed.
+
+      Lemma add_from_orig_spec x v s :
+        VSet.In x (add_from_orig v s) <-> (x = v /\ VSet.In x (V G1)) \/ VSet.In x s.
+      Proof.
+        unfold add_from_orig.
+        move E: (VSet.mem _ _)=> [].
+        - move: E=> /VSet.mem_spec ?; rewrite VSet.add_spec; intuition.
+          rewrite H0; left; intuition. 
+        - intuition; subst; exfalso.
+          move: E=> /VSetFact.not_mem_iff; by apply.
+      Qed.
+
+      Lemma fold_fun_spec x e s : 
+        VSet.In x (fold_fun e s) <->
+          ((x = e..s \/ x = e..t) /\ VSet.In x (V G1)) \/ VSet.In x s.
+      Proof.
+        unfold fold_fun.
+        rewrite 2!add_from_orig_spec; split.
+        - move=> [[??]|[[??]|?]]; intuition.
+        - move=> [[[?|?] ?]| ?]; intuition.
+      Qed.
+
+      #[local]
+      Instance: Proper (eq ==> VSet.Equal ==> VSet.Equal) fold_fun.
+      Proof.
+        unfold fold_fun, add_from_orig.
+        move=> ? [[??]?] -> ??; cbn; move: (VSet.mem _ _) (VSet.mem _ _)=> [] [] -> //.
+      Qed.
+
+      Lemma border_set_spec x :
+        VSet.In x border_set <->
+          exists e, EdgeSet.In e ext /\ (x = e..s \/ x = e..t) /\ VSet.In x (V G1).
+      Proof.
+        have <- :
+          (exists e, In e (EdgeSet.elements ext) /\ (x = e..s \/ x = e..t) /\ VSet.In x (V G1))
+          <->
+          (exists e, EdgeSet.In e ext /\ (x = e..s \/ x = e..t) /\ VSet.In x (V G1))
+          by
+          (split; move=> [e [? ?]]; exists e; split=> //;
+             by [apply/EdgeSet.elements_spec1/InA_In_eq|
+                  apply/InA_In_eq/EdgeSet.elements_spec1]).
+        rewrite /border_set EdgeSet_fold_spec_right2.
+        2:{ move=> [[xs ?] xt] [[ys ?] yt] ?; cbn.
+            unfold fold_fun, add_from_orig.
+            move: (VSet.mem xs _) (VSet.mem xt _) (VSet.mem ys _) (VSet.mem yt _)=> [] [] [] []; try sets.
+        }
+        elim: (EdgeSet.elements _)=> [| e es ih] /=.
+        - split.
+          1: move=> /VSet.empty_spec [].
+          move=> [? [[]]].
+        - rewrite fold_fun_spec; split.
+          + move=> [?|]; first (exists e; intuition).
+            move=> /ih [e0 [? ?]]; exists e0; split=>//; by right.
+          + move=> [e0 [[->|?] ?]]; first by left.
+            right. apply/ ih; exists e0; split=> //.
+      Qed.
+    End Border.
+
+    Section LspBoundExtendBorder.
+      Context (G1 G2 : t) `{invariants G1} (ext := EdgeSet.diff (E G2) (E G1)).
+      Let bs := (border_set G1 ext).
+
+      Lemma spath_on_border s x y z
+            (eo : EdgeOf G2 x y) (p : SPath G2 s y z) :
+        VSet.In x (V G1) -> VSet.In z (V G1) ->
+        ~(EdgeSet.In (x, eo.π1, y) (E G1)) ->
+        VSet.In x bs /\ VSet.In (first_in G1 G2 p) bs.
+      Proof.
+        set (e := (_, _, _)).
+        move=> hx hz heo.
+        have he : EdgeSet.In e ext
+          by (apply: EdgeSetFact.diff_3=> //; exact (eo.π2)).
+        split.
+        - apply/border_set_spec. exists e. repeat split=> //; last by left.
+        - move: {hx}x {eo}(eo.π1) hz {heo}@e he; clear -p H.
+          apply_funelim (first_in G1 G2 p)=> [????? e ?|???????? /VSet.mem_spec ???? e ?|].
+          1,2: apply/border_set_spec; exists e; intuition.
+          move=> ?????? e ? ih /VSetFact.not_mem_iff h ? ? ???.
+          apply: ih=> //.
+          apply: EdgeSetFact.diff_3; first exact (e.π2).
+          move=> /edges_vertices [+ _] //.
+      Qed.
+
+
+      Lemma sweight_bound0
+            `{invariants G2}
+            `{acyclic_no_loop G1, acyclic_no_loop G2}
+            (h : forall x y, VSet.In x bs -> VSet.In y bs -> (lsp G2 x y <= lsp G1 x y)%nbar)
+            s x y (p : SPath G2 s x y) :
+        VSet.In y (V G1) ->
+        (Some (sweight p) <= lsp G2 x (first_in G1 G2 p) + lsp G1 (first_in G1 G2 p) y)%nbar.
+      Proof.
+        elim: {s x y}p.
+        - move=> ??? /=; rewrite first_in_first // 2!lsp_xx //=.
+        - move=> ?? x y z ? e q ih hz.
+          simp first_in.
+          case Ee : (EdgeSet.mem (x, e.π1, y) (E G1)).
+          + apply EdgeSet.mem_spec in Ee.
+            destruct (edges_vertices _ _ Ee) as [hx hy].
+            move: (hx)=> /VSet.mem_spec -> /=; simp first_in.
+            pose proof (lsp_codistance G1 x y z).
+            move: (ih hz).
+            rewrite first_in_first // 2!lsp_xx.
+            pose proof (lsp_edge G1 (e.π1 ; Ee)).
+            move: H3 H4.
+            move: (lsp _ _ _) (lsp _ _ _) (lsp _ _ _)=> [?|] [?|] [?|]//=.
+            lia.
+          + apply EdgeSetFact.not_mem_iff in Ee.
+            pose proof (lsp_edge G2 e).
+            case Ex : (VSet.mem _ _); simp first_in.
+            * cbn. rewrite lsp_xx add_0_l.
+              specialize (ih hz).
+              apply VSet.mem_spec in Ex.
+              destruct (spath_on_border _ x y _ e q Ex hz Ee) as [hx' hf].
+              etransitivity; last apply: (lsp_codistance G1 x (first_in G1 G2 q) z).
+              etransitivity.
+              1: rewrite add_finite; apply: plus_le_compat; eassumption.
+              rewrite add_assoc. apply: plus_le_compat; last reflexivity.
+              etransitivity; last apply: h=> //.
+              apply: lsp_codistance.
+            * cbn.
+              etransitivity.
+              2: apply: plus_le_compat; last reflexivity.
+              2: apply: (lsp_codistance _ x y).
+              rewrite add_finite -add_assoc; apply: plus_le_compat=> //.
+              by apply: ih.
+      Qed.
+
+      Lemma lsp_bound_extend_border
+            `{invariants G2}
+            `{acyclic_no_loop G1, acyclic_no_loop G2}
+            (h : forall x y, VSet.In x bs -> VSet.In y bs -> (lsp G2 x y <= lsp G1 x y)%nbar)
+            x y : VSet.In x (V G1) -> VSet.In y (V G1) ->
+                  (lsp G2 x y <= lsp G1 x y)%nbar.
+      Proof.
+        move=> hx hy.
+        case E: (lsp G2 x y) => //.
+        move: E=> /lsp0_spec_eq [p hp].
+        pose proof (hb := sweight_bound0 h _ _ _ p hy).
+        move: hb. rewrite hp first_in_first // lsp_xx add_0_l //.
+      Qed.
+    End LspBoundExtendBorder.
+
+    Definition is_full_extension (G1 G2 : t) : bool :=
+      let ext := EdgeSet.diff (E G2) (E G1) in
+      let bs := border_set G1 ext in
+      VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) bs) bs.
+
+    Lemma lsp_eq_is_full_extension (G1 G2 : t) :
+      full_subgraph G1 G2 -> is_full_extension G1 G2.
+    Proof.
+      move=> hsub. unfold is_full_extension.
+      set bs := (border_set _ _).
+      assert (H : forall x, VSet.In x bs -> VSet.In x (V G1))
+        by move=> ? /border_set_spec [? [_ [//]]].
+      apply/VSet.for_all_spec=> x /H hx.
+      apply/VSet.for_all_spec=> y /H hy.
+      apply/ReflectEq.eqb_spec; apply: le_antisymm.
+      2: by apply: lsp_dominate.
+      unshelve apply: lsp_map_path2.
+      * apply: subgraph_on_edge; exact hsub.
+      * apply: vertices_sub; exact hsub.
+      * move=> ??[??] /=; lia.
+    Qed.
+
+    Lemma is_full_extension_lsp_dominate (G1 G2 : t)
+      `{invariants G1, invariants G2, acyclic_no_loop G2} :
+      subgraph G1 G2 ->
+      is_full_extension G1 G2 ->
+      forall x y, VSet.In x (V G1) -> VSet.In y (V G1) ->
+             (lsp G2 x y <= lsp G1 x y)%nbar.
+    Proof.
+      move=> hsub ext. pose proof (acG1 := subgraph_acyclic _ _ hsub _).
+      apply: lsp_bound_extend_border=> x y hx hy.
+      move: ext=> /VSet.for_all_spec/(_ x hx)/VSet.for_all_spec/(_ y hy).
+      move=> /(@ReflectEq.eqb_spec _ reflectEq_nbar) ->; reflexivity.
+    Qed.
+
+
+    Lemma is_full_extension_spec (G1 G2 : t)
+          `{invariants G1, invariants G2, acyclic_no_loop G2} :
+      subgraph G1 G2 ->
+      is_full_extension G1 G2
+      <-> full_subgraph G1 G2.
+    Proof.
+      move=> sub; split.
+      - move=> ext; constructor=> //; by apply: is_full_extension_lsp_dominate.
+      - apply: lsp_eq_is_full_extension.
+    Qed.
+
+    (* Remove ? *)
     (* Defined for completeness, but clearly not what should be used in practice *)
-  Definition is_full_subgraph (G1 G2 : t) : bool :=
-    VSet.subset (V G1) (V G2) &&
-      EdgeSet.subset (E G1) (E G2) &&
-      (s G1 == s G2) &&
-      VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) (V G1)) (V G1).
+    Definition is_full_subgraph (G1 G2 : t) : bool :=
+      VSet.subset (V G1) (V G2) &&
+        EdgeSet.subset (E G1) (E G2) &&
+        (s G1 == s G2) &&
+        VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) (V G1)) (V G1).
 
-  Lemma is_full_subgraph_spec G1 G2 :
-    is_full_subgraph G1 G2 <-> full_subgraph G1 G2.
-  Proof.
-    unfold is_full_subgraph.
-    split.
-    - move=> /andP [] /andP [] /andP [] /VSet.subset_spec ?.
-      move=> /EdgeSet.subset_spec ?.
-      move=> /(@ReflectEq.eqb_spec _ reflectEq_vertices _ _) ?.
-      move=> /VSet.for_all_spec h.
-      constructor=> // v1 v2 inv1 inv2.
-      move: (h v1 inv1)=> /VSet.for_all_spec /(_ v2  inv2).
-      move=> /(@ReflectEq.eqb_spec _ reflectEq_nbar _ _) ->.
-      apply: le_refl.
-    - move=> sub. repeat try (apply/andP;split).
-      + apply/VSet.subset_spec; by apply: vertices_sub.
-      + apply/EdgeSet.subset_spec; by apply: edges_sub.
-      + apply/eqb_specT; by apply: same_src.
-      + apply/VSet.for_all_spec=> x hx.
-        apply/VSet.for_all_spec=> y hy.
-        apply/eqb_specT. apply: le_antisymm.
-        2: by apply: lsp_dominate.
-        unshelve apply: lsp_map_path2.
-        * by apply: full_subgraph_on_edge.
-        * by apply: vertices_sub.
-        * move=> ??[??] /=; lia.
-  Qed.
-
-
+    Lemma is_full_subgraph_spec G1 G2 :
+      is_full_subgraph G1 G2 <-> full_subgraph G1 G2.
+    Proof.
+      unfold is_full_subgraph.
+      split.
+      - move=> /andP [] /andP [] /andP [] /VSet.subset_spec ?.
+        move=> /EdgeSet.subset_spec ?.
+        move=> /(@ReflectEq.eqb_spec _ reflectEq_vertices _ _) ?.
+        move=> /VSet.for_all_spec h.
+        constructor=> // v1 v2 inv1 inv2.
+        move: (h v1 inv1)=> /VSet.for_all_spec /(_ v2  inv2).
+        move=> /(@ReflectEq.eqb_spec _ reflectEq_nbar _ _) ->.
+        apply: le_refl.
+      - move=> sub. repeat try (apply/andP;split).
+        + apply/VSet.subset_spec; apply: vertices_sub; exact sub.
+        + apply/EdgeSet.subset_spec; apply: edges_sub; exact sub.
+        + apply/eqb_specT; apply: same_src ; exact sub.
+        + apply/VSet.for_all_spec=> x hx.
+          apply/VSet.for_all_spec=> y hy.
+          apply/eqb_specT. apply: le_antisymm.
+          2: by apply: lsp_dominate.
+          unshelve apply: lsp_map_path2.
+          * apply: subgraph_on_edge; exact sub.
+          * apply: vertices_sub; exact sub.
+          * move=> ??[??] /=; lia.
+    Qed.
+  End IsFullSubgraph.
 
   Section ExtendLabelling.
     Context G1 G2 `{invariants G1, invariants G2}.

@@ -1638,9 +1638,11 @@ Section Univ.
 
   Lemma consistent_extension_on_union X cstrs
     (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
-    consistent_extension_on X cstrs ->
+    consistent_extension_on X cstrs <->
     consistent_extension_on X (CS.union cstrs X.2).
   Proof.
+    split.
+    2: move=> h v /h [v' [/satisfies_union [??] eqv']]; exists v'; split=> //.
     move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
     exists v'; split=> //.
     apply/satisfies_union; split=> //.

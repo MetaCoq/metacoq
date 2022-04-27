@@ -346,7 +346,14 @@ Module LevelExpr.
 
 End LevelExpr.
 
-Module LevelExprSet := MSetList.MakeWithLeibniz LevelExpr.
+Module LevelExprSet.
+  Include MSetList.MakeWithLeibniz LevelExpr.
+
+  Definition levels (e : t) := 
+    fold (fun le => LevelSet.add (LevelExpr.get_level le)) e LevelSet.empty.
+
+End LevelExprSet.
+
 Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
 Module LevelExprSetProp := WPropertiesOn LevelExpr LevelExprSet.
 
@@ -365,8 +372,6 @@ Next Obligation.
 Qed.
 
 #[global] Instance levelexprset_eq_dec : Classes.EqDec LevelExprSet.t := Classes.eq_dec.
-
-
 
 Record nonEmptyLevelExprSet
   := { t_set : LevelExprSet.t ;
@@ -1352,6 +1357,75 @@ Module ConstraintType.
 End ConstraintType.
 
 Module UnivConstraint.
+  Definition t : Type := LevelAlgExpr.t * ConstraintType.t * LevelAlgExpr.t.
+
+  Definition eq : t -> t -> Prop := eq.
+  Definition eq_equiv : Equivalence eq := _.
+
+  Definition make l1 ct l2 : t := (l1, ct, l2).
+
+  Inductive lt_ : t -> t -> Prop :=
+  | lt_Level2 l1 t (l2 l2' : LevelAlgExpr.t) : LevelExprSet.lt l2 l2' -> lt_ (l1, t, l2) (l1, t, l2')
+  | lt_Cstr l1 t t' l2 l2' : ConstraintType.lt t t' -> lt_ (l1, t, l2) (l1, t', l2')
+  | lt_Level1 (l1 l1' : LevelAlgExpr.t) t t' l2 l2' : LevelExprSet.lt l1 l1' -> lt_ (l1, t, l2) (l1', t', l2').
+  Definition lt := lt_.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros []; intro X; inversion X; subst;
+        try (eapply LevelExprSet.lt_strorder; eassumption).
+      eapply ConstraintType.lt_strorder; eassumption.
+    - intros ? ? ? X Y; invs X; invs Y; constructor; tea.
+      etransitivity; eassumption.
+      2: etransitivity; eassumption.
+      eapply ConstraintType.lt_strorder; eassumption.
+  Qed.
+
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
+  Qed.
+
+  Definition compare : t -> t -> comparison :=
+    fun '(l1, t, l2) '(l1', t', l2') =>
+      compare_cont (LevelExprSet.compare l1 l1')
+        (compare_cont (ConstraintType.compare t t')
+                    (LevelExprSet.compare l2 l2')).
+
+  Lemma levelalgexpr_eq (x y : LevelAlgExpr.t) : t_set x = t_set y -> x = y.
+  Proof.
+    destruct x, y; cbn. intros ->.
+    now eapply NonEmptySetFacts.eq_univ; cbn.
+  Qed.
+
+  Lemma compare_spec x y
+    : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    destruct x as [[l1 t] l2], y as [[l1' t'] l2']; cbn.
+    destruct (LevelExprSet.compare_spec l1 l1'); cbn; repeat constructor; tas.
+    eapply LevelExprSet.eq_leibniz, levelalgexpr_eq in H. subst l1'.
+    destruct (ConstraintType.compare_spec t t'); cbn; repeat constructor; tas.
+    invs H.
+    destruct (LevelExprSet.compare_spec l2 l2'); cbn; repeat constructor; tas.
+    eapply LevelExprSet.eq_leibniz, levelalgexpr_eq in H. now subst l2'.
+  Qed.
+
+  Lemma eq_dec x y : {eq x y} + {~ eq x y}.
+  Proof.
+    unfold eq. decide equality; apply eq_dec.
+  Defined.
+
+  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+End UnivConstraint.
+Module ConstraintSet := MSetAVL.Make UnivConstraint.
+Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
+Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
+Module CS := ConstraintSet.
+Module ConstraintSetDecide := WDecide (ConstraintSet).
+Ltac csets := ConstraintSetDecide.fsetdec.
+
+Module UnivLevelConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
 
   Definition eq : t -> t -> Prop := eq.
@@ -1406,25 +1480,25 @@ Module UnivConstraint.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
-End UnivConstraint.
+End UnivLevelConstraint.
 
-Module ConstraintSet := MSetAVL.Make UnivConstraint.
-Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
-Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
-Module CS := ConstraintSet.
-Module ConstraintSetDecide := WDecide (ConstraintSet).
-Ltac csets := ConstraintSetDecide.fsetdec.
+Module LevelConstraintSet := MSetAVL.Make UnivLevelConstraint.
+Module LevelConstraintSetFact := WFactsOn UnivLevelConstraint LevelConstraintSet.
+Module LevelConstraintSetProp := WPropertiesOn UnivLevelConstraint LevelConstraintSet.
+Module LCS := LevelConstraintSet.
+Module LevelConstraintSetDecide := WDecide (LevelConstraintSet).
+Ltac lcsets := LevelConstraintSetDecide.fsetdec.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).
 Infix "=_cset" := ConstraintSet.Equal (at level 30).
 
 Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
-  LevelSet.In l1 levels /\ LevelSet.In l2 levels.
+  LevelSet.Subset (LevelExprSet.levels l1) levels /\ LevelSet.Subset (LevelExprSet.levels l2) levels.
 
 Definition is_declared_cstr_levels levels (cstr : UnivConstraint.t) : bool :=
   let '(l1,_,l2) := cstr in
-  LevelSet.mem l1 levels && LevelSet.mem l2 levels.
+  LevelSet.subset (LevelExprSet.levels l1) levels && LevelSet.subset (LevelExprSet.levels l2) levels.
 
 Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s =_cset s.
 Proof.
@@ -1610,9 +1684,9 @@ Section Univ.
   Context {cf: checker_flags}.
 
   Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
-  | satisfies0_Lt (l l' : Level.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
+  | satisfies0_Lt (l l' : LevelAlgExpr.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
                          -> satisfies0 v (l, ConstraintType.Le z, l')
-  | satisfies0_Eq (l l' : Level.t) : val v l = val v l'
+  | satisfies0_Eq (l l' : LevelAlgExpr.t) : val v l = val v l'
                          -> satisfies0 v (l, ConstraintType.Eq, l').
 
   Definition satisfies v : ConstraintSet.t -> Prop :=
@@ -1641,8 +1715,100 @@ Section Univ.
     move=> v hv; exists v; split; [move=> ? /CS.empty_spec[]| move=> ??//].
   Qed.
 
+  Lemma fold_right_ext {A B} (f g : B -> A -> A) acc acc' l l' : 
+    (forall x y, f x y = g x y) -> acc = acc' -> l = l' ->
+    fold_right f acc l = fold_right g acc' l'.
+  Proof.
+    intros hfg -> ->; induction l'; cbn; auto; congruence.
+  Qed.
+
+  Lemma fold_right_map {A B C} (f : B -> A -> A) (g : C -> B) acc l : 
+    fold_right (fun x acc => f (g x) acc) acc l = 
+    fold_right (fun x acc => f x acc) acc (List.map g l).
+  Proof.
+    induction l; cbn; auto. congruence.
+  Qed.
+
+  Lemma subset_levels_exprs {le levels} : 
+    LevelSet.Subset (LevelExprSet.levels le) levels ->
+    forall e, LevelExprSet.In e le -> LevelSet.In e.1 levels.
+  Proof.
+    intros hs e hin.
+    destruct e as [l k].
+    apply (hs l). clear hs.
+    unfold LevelExprSet.levels.
+    revert hin.
+    eapply LevelExprSetProp.fold_rec.
+    - intros s' emp hin. now specialize (emp _ hin).
+    - intros x a s' s'' hin hnin hadd hk. intros hin'.
+      rewrite LevelSet.add_spec.
+      apply hadd in hin'. destruct hin'. subst. now left.
+      firstorder.
+  Qed.
+
+  Definition max_ne_list x l := 
+    fold_right Nat.max x l.
+  
+  Lemma fold_right_assoc {A} (f : A -> A -> A) acc acc' l : 
+    (forall x y z, f x (f y z) = f y (f x z)) ->
+    fold_right f (f acc acc') l = f acc (fold_right f acc' l).
+  Proof.
+    intros hf. induction l in acc |- *; cbn; auto.
+    now rewrite IHl hf.
+  Qed.
+
+  Lemma fold_right_assoc_comm {A} (f : A -> A -> A) acc l : 
+    (forall x y, f x y = f y x) ->
+    (forall x y z, f x (f y z) = f y (f x z)) ->
+    fold_right f acc l = fold_right f acc (List.rev l).
+  Proof.
+    intros hf hf'. induction l in acc |- *; cbn; auto.
+    rewrite fold_right_app /= -IHl fold_right_assoc //.  
+  Qed.
+
+  Lemma max_ne_list_rev {x l} : max_ne_list x l = max_ne_list x (List.rev l).
+  Proof.
+    unfold max_ne_list.
+    rewrite fold_right_assoc_comm //; lia.
+  Qed.
+
+  Lemma val_max (l : LevelAlgExpr.t) (v : valuation) : 
+    val v l = let nel := to_nonempty_list l in 
+      max_ne_list (val v nel.1) (List.map (val v) nel.2).
+  Proof.
+    cbn.
+    rewrite val_fold_right. unfold LevelAlgExpr.exprs.
+    rewrite fold_right_map max_ne_list_rev /max_ne_list map_rev //.
+  Qed.
+
+  Lemma val_eq_level_expr v v' levels : 
+    LevelSet.For_all (fun l : LevelSet.elt => val v l = val v' l) levels -> 
+    forall le : LevelExpr.t, LevelSet.In le.1 levels -> val v le = val v' le.
+  Proof.
+    intros hl [l k] hin; cbn.
+    rewrite hl //.
+  Qed.
+
+  Lemma val_eq_levels_alg v v' levels : 
+    LevelSet.For_all (fun l : LevelSet.elt => val v l = val v' l) levels -> 
+    forall le : LevelAlgExpr.t, 
+    LevelSet.Subset (LevelExprSet.levels le) levels ->
+    val v le = val v' le.
+  Proof.
+    move=> hl le /subset_levels_exprs sub.
+    rewrite !val_max.
+    move: (to_nonempty_list_spec le). destruct to_nonempty_list as [hd tl]. cbn.
+    intros heq. f_equal.
+    - cbn. eapply val_eq_level_expr; tea.
+      eapply sub. 
+      apply LevelExprSetFact.elements_2. rewrite -heq. now left.
+    - eapply map_ext_in => x inx.
+      eapply val_eq_level_expr; tea.
+      apply sub, LevelExprSetFact.elements_2. rewrite -heq. now right.
+  Qed.
+
   Lemma consistent_extension_on_union X cstrs
-    (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
+    (wfX : forall c, CS.In c X.2 -> LS.Subset (LevelExprSet.levels c.1.1) X.1 /\ LS.Subset (LevelExprSet.levels c.2) X.1) :
     consistent_extension_on X cstrs ->
     consistent_extension_on X (CS.union cstrs X.2).
   Proof.
@@ -1650,7 +1816,11 @@ Section Univ.
     exists v'; split=> //.
     apply/satisfies_union; split=> //.
     move=> c hc. destruct (wfX c hc).
-    destruct (vsat c hc); constructor; rewrite -!v'eq //.
+    destruct (vsat c hc); constructor; cbn in *. 
+    2:{ rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
+        rewrite -(val_eq_levels_alg v v' _ v'eq l') //. }
+    rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
+    rewrite -(val_eq_levels_alg v v' _ v'eq l') //.
   Qed.
 
   Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
@@ -2303,26 +2473,29 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
           | Level.Var n => List.nth n u Level.lzero
           end.
 
+#[global] Instance subst_instance_level_expr : UnivSubst LevelExpr.t :=
+fun u e => match e with
+        | (Level.lzero, _)
+        | (Level.Level _, _) => e
+        | (Level.Var n, b) =>
+          match nth_error u n with
+          | Some l => (l,b)
+          | None => (Level.lzero, b)
+          end
+        end.
+
+#[global] Instance subst_instance_univ0 : UnivSubst LevelAlgExpr.t :=
+  fun u => map (subst_instance_level_expr u).
+
+#[global] Instance subst_instance_level_cstr : UnivSubst UnivLevelConstraint.t :=
+  fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
+
 #[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
-  fun u c => (subst_instance_level u c.1.1, c.1.2, subst_instance_level u c.2).
+  fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
 #[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
   fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
                                 ctrs ConstraintSet.empty.
-
-#[global] Instance subst_instance_level_expr : UnivSubst LevelExpr.t :=
-  fun u e => match e with
-          | (Level.lzero, _)
-          | (Level.Level _, _) => e
-          | (Level.Var n, b) =>
-            match nth_error u n with
-            | Some l => (l,b)
-            | None => (Level.lzero, b)
-            end
-          end.
-
-#[global] Instance subst_instance_univ0 : UnivSubst LevelAlgExpr.t :=
-  fun u => map (subst_instance_level_expr u).
 
 #[global] Instance subst_instance_univ : UnivSubst Universe.t :=
   fun u e => match e with
@@ -2471,11 +2644,14 @@ Definition string_of_level (l : Level.t) : string :=
 Definition string_of_level_expr (e : LevelExpr.t) : string :=
   let '(l, n) := e in string_of_level l ^ (if n is 0 then "" else "+" ^ string_of_nat n).
 
+Definition string_of_levelalgexpr (e : LevelAlgExpr.t) : string :=
+  string_of_list string_of_level_expr (LevelExprSet.elements e).
+
 Definition string_of_sort (u : Universe.t) :=
   match u with
   | Universe.lSProp => "SProp"
   | Universe.lProp => "Prop"
-  | Universe.lType l => "Type(" ^ string_of_list string_of_level_expr (LevelExprSet.elements l) ^ ")"
+  | Universe.lType l => "Type(" ^ string_of_levelalgexpr l ^ ")"
   end.
 
 Definition string_of_universe_instance u :=
@@ -2523,7 +2699,14 @@ Definition print_constraint_type d :=
   | ConstraintType.Eq => "="
   end.
 
+Definition print_level_constraint_set t :=
+  print_list (fun '(l1, d, l2) => 
+    string_of_level l1 ^ " " ^
+    print_constraint_type d ^ " " ^ string_of_level l2)
+    " /\ " (LevelConstraintSet.elements t).
+
 Definition print_constraint_set t :=
-  print_list (fun '(l1, d, l2) => string_of_level l1 ^ " " ^
-                         print_constraint_type d ^ " " ^ string_of_level l2)
-             " /\ " (ConstraintSet.elements t).
+  print_list (fun '(l1, d, l2) => 
+    string_of_levelalgexpr l1 ^ " " ^
+    print_constraint_type d ^ " " ^ string_of_levelalgexpr l2)
+    " /\ " (ConstraintSet.elements t).

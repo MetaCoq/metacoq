@@ -2,6 +2,7 @@ From Coq Require Import Program RelationClasses Morphisms.
 From Coq Require Import OrderedTypeAlt OrderedTypeEx MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils Universes.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 Definition clause : Type := nonEmptyLevelExprSet × LevelExpr.t.
 Module Clause.
@@ -140,13 +141,6 @@ Definition new_atoms (cls : clauses) (m : model) (w : LevelSet.t) : option (Leve
 (* Variant model_check :=
   | Satisfiable
   | Unsatisfiable (cls : clauses). *)
-
-Definition satisfiable_atom (m : model) (atom : Level.t * nat) : bool :=
-  let '(l, k) := atom in
-  match LevelMap.find l m with
-  | Some val => k <=? val
-  | None => false
-  end.
   
 Definition level_value (m : model) (level : Level.t) : nat :=
   match LevelMap.find level m with
@@ -175,8 +169,15 @@ Definition min_premise (m : model) (l : nonEmptyLevelExprSet) : Z :=
   LevelExprSet.fold (fun atom min => Z.min (min_atom_value m atom) min) l 
    (min_atom_value m (choose l)).
 
+Definition satisfiable_atom (m : model) (atom : Level.t * nat) : bool :=
+  let '(l, k) := atom in
+  match LevelMap.find l m with
+  | Some val => k <=? val
+  | None => false
+  end.
+  
 Definition satisfiable_premise (m : model) (l : nonEmptyLevelExprSet) :=
-  LevelExprSet.exists_ (satisfiable_atom m) l.
+  LevelExprSet.for_all (satisfiable_atom m) l.
 
 Definition valid_clause (m : model) (cl : clause) :=
   implb (satisfiable_premise m (premise cl)) (satisfiable_atom m (concl cl)).
@@ -184,26 +185,25 @@ Definition valid_clause (m : model) (cl : clause) :=
 Definition is_model (cls : clauses) (m : model) : bool :=
   Clauses.for_all (valid_clause m) cls.
 
-Definition update_map l k v :=
-  match LevelMap.find l v with
-  | Some k' => LevelMap.add l (Nat.max k k') v
-  | None => LevelMap.add l k v
-  end. 
+Inductive update_result := 
+  | VacuouslyTrue
+  | Holds
+  | DoesntHold (wm : LevelSet.t × model).
 
-Definition update_value (wv : LevelSet.t × model) (cl : clause) : option (LevelSet.t × model) :=
+Definition update_value (wv : LevelSet.t × model) (cl : clause) : update_result :=
   let (w, v) := wv in
   let k0 := min_premise v (premise cl) in
   (* cl holds vacuously as the premise doesn't hold *)
-  if (k0 <? 0)%Z then None
+  if (k0 <? 0)%Z then VacuouslyTrue
   else 
     (* The premise does hold *)
     let (l, k) := concl cl in
     (* Does the conclusion also hold ? *)
-    if k + Z.to_nat k0 <=? level_value v l then None
+    if k + Z.to_nat k0 <=? level_value v l then Holds
     else 
       (* The conclusion doesn't hold, we need to set it higher *)
       (* let (w, v) := cur in *)
-      Some (LevelSet.add l w, update_map l (k + Z.to_nat k0) v).
+      DoesntHold (LevelSet.add l w, LevelMap.add l (k + Z.to_nat k0) v).
 
 Definition check_model (cls : clauses) (wv : LevelSet.t × model) : 
     option (LevelSet.t × model) :=
@@ -211,27 +211,168 @@ Definition check_model (cls : clauses) (wv : LevelSet.t × model) :
     (fun cl acc => 
       let cur := match acc with None => wv | Some acc => acc end in
       match update_value cur cl with 
-      | Some acc => Some acc
-      | None => acc
+      | VacuouslyTrue => acc
+      | DoesntHold acc => Some acc
+      | Holds => acc
       end)
     cls None.
 
+Definition strict_subset (s s' : LevelSet.t) :=
+  LevelSet.Subset s s' /\ ~ LevelSet.Equal s s'.
+
+Lemma strict_subset_cardinal s s' : strict_subset s s' -> LevelSet.cardinal s < LevelSet.cardinal s'.
+Proof.
+  intros [].
+  assert (LevelSet.cardinal s <> LevelSet.cardinal s').
+  { intros heq. apply H0. 
+    intros x. split; intros. now apply H.
+    destruct (LevelSet.mem x s) eqn:hin.
+    eapply LevelSet.mem_spec in hin.
+    auto. eapply LevelSetProp.FM.not_mem_iff in hin.
+    exfalso.
+    eapply LevelSetProp.subset_cardinal_lt in hin; tea.
+    lia. }
+  enough (LevelSet.cardinal s <= LevelSet.cardinal s') by lia.
+  now eapply LevelSetProp.subset_cardinal.
+Qed.
+
+From Coq Require Import ssreflect.
+
+Lemma check_model_subset {cls w v} : 
+  forall w' v', check_model cls (w, v) = Some (w', v') -> LevelSet.Subset w w'.
+Proof.
+  intros w' v'.
+  unfold check_model. revert w' v'.
+  eapply ClausesProp.fold_rec => //.
+  intros x a s' s'' hin nin hadd IH.
+  intros w' v'. destruct a.
+  - destruct p as []. specialize (IH _ _ eq_refl).
+    unfold update_value.
+    destruct Z.ltb. intros [= -> ->] => //.
+    destruct x as [prem [l k]]; cbn.
+    destruct Nat.leb.
+    intros [= -> ->] => //.
+    intros [= <- <-]. intros x inx.
+    eapply LevelSet.add_spec. now right.
+  - unfold update_value.
+    destruct Z.ltb. intros => //.
+    destruct x as [prem [l k]]; cbn.
+    destruct Nat.leb => //.
+    intros [= <- <-].
+    intros x inx. eapply LevelSet.add_spec. now right.
+Qed.
+
+Definition clauses_with_concl (cls : clauses) (concl : LevelSet.t) :=
+  Clauses.filter (fun '(prem, concla) => LevelSet.mem (LevelExpr.get_level concla) concl) cls.
+
+Lemma in_clauses_with_concl (cls : clauses) (concl : LevelSet.t) cl :
+  Clauses.In cl (clauses_with_concl cls concl) -> LevelSet.In (LevelExpr.get_level cl.2) concl.
+Proof.
+  unfold clauses_with_concl.
+  move/Clauses.filter_spec => [].
+  destruct cl. intros hin. move/LevelSet.mem_spec.
+  now cbn.
+Qed.
+
+Definition in_clauses_conclusions (cls : clauses) (x : Level.t): Prop :=
+  exists cl, Clauses.In cl cls /\ (LevelExpr.get_level cl.2) = x.
+  
+Lemma check_model_subset_clauses cls w v : 
+  forall w' v', check_model cls (w, v) = Some (w', v') -> 
+    (forall x, LevelSet.In x w' -> LevelSet.In x w \/ in_clauses_conclusions cls x).
+Proof.
+  intros w' v'.
+  unfold check_model. revert w' v'.
+  eapply ClausesProp.fold_rec => //.
+  intros x a s' s'' hin nin hadd IH.
+  intros w' v'. destruct a.
+  - destruct p as []. specialize (IH _ _ eq_refl).
+    unfold update_value.
+    destruct Z.ltb. intros [= -> ->] => //.
+    intros. destruct (IH _ H); intuition auto.
+    red in H0. destruct H0 as [cl [hin' hl]].
+    right. red. exists cl. intuition auto. eapply hadd. cbn. intuition auto.
+    destruct x as [prem [l k]]; cbn.
+    destruct Nat.leb.
+    intros [= -> ->] => //.
+    intros. destruct (IH _ H); intuition auto.
+    red in H0. destruct H0 as [cl [hin' hl]].
+    right. red. exists cl. intuition auto. eapply hadd. cbn. intuition auto.
+    intros [= <- <-]. intros x inx.
+    eapply LevelSet.add_spec in inx. destruct inx.
+    subst. right. red. exists (prem, (l, k)). cbn. split => //.
+    eapply hadd. now left.
+    intros. destruct (IH _ H); intuition auto.
+    red in H0. destruct H0 as [cl [hin' hl]].
+    right. red. exists cl. intuition auto. eapply hadd. cbn. intuition auto.
+  - unfold update_value.
+    destruct Z.ltb. intros => //.
+    destruct x as [prem [l k]]; cbn.
+    destruct Nat.leb => //.
+    intros [= <- <-].
+    intros x inx.
+    eapply LevelSet.add_spec in inx as []. subst.
+    right. red. exists (prem, (l, k)). intuition auto. eapply hadd. cbn. intuition auto.
+    now left.
+Qed.
+
 Inductive result :=
   | Loop
-  | Unsatisfiable (w : LevelSet.t) (m : model)
   | Model (w : LevelSet.t) (m : model).
 
-#[bypass_check(guard)]
-Fixpoint forward (V : LevelSet.t) (cls : clauses) (m : model) (w : LevelSet.t) { struct w } : result :=
-  match check_model cls (w,m) with
-  | None => 
-    if is_model cls m then Model w m
-    else Unsatisfiable w m
-  | Some (w', v') => 
-    if LevelSet.equal w' V then Loop
-    else forward V cls v' w'
-  end.
+Arguments exist {A P}.  
+Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
 
+Equations? loop (V : LevelSet.t) (cls : clauses) (m : model) (w : LevelSet.t) 
+  (prf : LevelSet.Subset w V /\ forall x, in_clauses_conclusions cls x -> LevelSet.In x V) : result
+  by wf (LevelSet.cardinal V) :=
+  loop V cls m w prf with inspect (check_model cls (w,m)) :=
+    | exist None eqm => Model w m
+    | exist (Some (w', v')) eqm with inspect (LevelSet.equal w' V) := {
+      | exist true eq := Loop
+      | exist false neq := loop w' (clauses_with_concl cls w') v' w' (conj (fun x hin => hin) _) }.
+Proof.
+  all:clear loop.
+  { destruct H as [cl []]. eapply in_clauses_with_concl in H. now rewrite H2 in H. }
+  pose proof (check_model_subset _ _ eqm).
+  assert (~ LevelSet.Equal w' V).
+  { intros heq % LevelSet.equal_spec. congruence. }
+  assert (LevelSet.Subset w' V).
+  { intros x hw'. eapply check_model_subset_clauses in eqm; tea.
+    destruct eqm. now eapply H. now apply H0. }
+  eapply strict_subset_cardinal. split => //.
+Qed.
+
+Definition init_model (levels : LevelSet.t) : model :=
+  LevelSet.fold (fun l acc => LevelMap.add l 0 acc) levels (LevelMap.empty _).
+
+Definition init_w (levels : LevelSet.t) : LevelSet.t := LevelSet.empty.
+
+Equations? check (V : LevelSet.t) (cls : clauses)  (prf : forall x, in_clauses_conclusions cls x -> LevelSet.In x V) : result := 
+  check V cls prf := loop V cls (init_model V) LevelSet.empty _.
+Proof. split => //. intros x hin. now eapply LevelSet.empty_spec in hin. Qed.
+  
+Equations? check_clauses (clauses : clauses) : result :=
+  check_clauses clauses := 
+    let levels := Clauses.fold (fun '(cl, concl) acc => 
+      LevelSet.union (LevelExprSet.levels cl)
+        (LevelSet.add concl.1 acc)) clauses LevelSet.empty in
+    check levels clauses _.
+Proof.
+  unfold levels.
+  revert x H.
+  eapply ClausesProp.fold_rec.
+  - intros s' he x [cl []]. now eapply he in H.
+  - intros x ls cl cl' inx ninx hadd IH xl incl.
+    destruct x as [prem [l k]]. cbn in *.
+    destruct incl as [cl'' []].
+    eapply LevelSet.union_spec. right.
+    eapply LevelSet.add_spec.
+    specialize (IH xl).
+    apply hadd in H. destruct H.
+    * subst cl''. cbn in *. now left.
+    * right; apply IH. now exists cl''.
+Qed.
 Definition mk_level x := LevelExpr.make (Level.Level x).
 Definition levela := mk_level "a".
 Definition levelb := mk_level "b".
@@ -261,14 +402,10 @@ Definition ex_clauses :=
 
 Definition ex_loop_clauses :=
   ClausesProp.of_list [clause1; clause2; clause3; clause4; clause5].
-  
-Definition init_model (levels : LevelSet.t) : model :=
-  LevelSet.fold (fun l acc => LevelMap.add l 0 acc) levels (LevelMap.empty _).
 
-Definition init_w (levels : LevelSet.t) : LevelSet.t := LevelSet.empty.
 
-Example test := forward ex_levels ex_clauses (init_model ex_levels) (init_w ex_levels).
-Example test_loop := forward ex_levels ex_loop_clauses (init_model ex_levels) (init_w ex_levels).
+Example test := check_clauses ex_clauses.
+Example test_loop := check_clauses ex_loop_clauses.
 
 Eval compute in test.
 
@@ -280,17 +417,21 @@ Definition print_wset (l : LevelSet.t) :=
   let list := LevelSet.elements l in
   print_list string_of_level " " list.
 
+Definition valuation_of_model (m : model) : model :=
+  let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
+  let valuation := LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _) in
+  valuation.
+  
 Definition print_result (m : result) :=
   match m with
   | Loop => "looping"
   | Model w m => "satisfiable with model: " ^ print_model m ^ nl ^ " W = " ^
-    print_wset w
-  | Unsatisfiable w m => "Unsatisfiable with model: " ^ print_model m ^ " W = " ^ print_wset w
+    print_wset w 
+    ^ nl ^ "valuation: " ^ print_model (valuation_of_model m)
   end.
   
 Eval compute in print_result test.
 Eval compute in print_result test_loop.
-
 
 Definition clauses_of_constraint (cstr : UnivConstraint.t) : clauses :=
   let '(l, d, r) := cstr in
@@ -313,18 +454,114 @@ Definition clauses_of_constraint (cstr : UnivConstraint.t) : clauses :=
     in cls'
   end.
 
-Definition clauses_of_constraints (cstrs : UnivConstraintSet.t) : clauses :=
-  UnivConstraintSet.fold (fun cstr acc => Clauses.union (clauses_of_constraint cstr) acc) cstrs Clauses.empty.
+Definition clauses_of_constraints (cstrs : ConstraintSet.t) : clauses :=
+  ConstraintSet.fold (fun cstr acc => Clauses.union (clauses_of_constraint cstr) acc) cstrs Clauses.empty.
 
 Definition print_premise (l : LevelAlgExpr.t) : string :=
   let (e, exprs) := LevelAlgExpr.exprs l in
   string_of_level_expr e ^
   match exprs with
   | [] => "" 
-  | l => " \/ " ^ print_list string_of_level_expr " \/ " exprs 
+  | l => " ∨ " ^ print_list string_of_level_expr " ∨ " exprs 
   end.
 
 Definition print_clauses (cls : clauses) :=
   let list := Clauses.elements cls in
   print_list (fun '(l, r) => 
-    print_premise l ^ " -> " ^ string_of_level_expr r) nl list.
+    print_premise l ^ " → " ^ string_of_level_expr r) nl list.
+
+Definition add_cstr (x : LevelAlgExpr.t) d (y : LevelAlgExpr.t) cstrs :=
+  ConstraintSet.add (x, d, y) cstrs.
+
+Coercion LevelAlgExpr.make : LevelExpr.t >-> LevelAlgExpr.t.
+Import ConstraintType.
+Definition test_cstrs :=
+  (add_cstr levela Eq (levelexpr_add levelb 1)
+  (add_cstr (LevelAlgExpr.sup levela levelc) Eq (levelexpr_add levelb 1)
+  (add_cstr levelb (ConstraintType.Le 0) levela
+  (add_cstr levelc (ConstraintType.Le 0) levelb
+    ConstraintSet.empty)))).
+
+Definition test_clauses := clauses_of_constraints test_cstrs.
+
+Definition test_levels : LevelSet.t := 
+  LevelSetProp.of_list (List.map (LevelExpr.get_level) [levela; levelb; levelc]).
+
+Eval compute in print_clauses test_clauses.
+
+Definition test' := check_clauses test_clauses.
+Eval compute in print_result test'.
+Import LevelAlgExpr (sup).
+
+Definition test_levels' : LevelSet.t := 
+  LevelSetProp.of_list (List.map (LevelExpr.get_level) 
+    [levela; levelb;
+      levelc; leveld]).
+
+Notation " x + n " := (levelexpr_add x n).
+
+Coercion LevelExpr.make : Level.t >-> LevelExpr.t.
+
+Fixpoint chain (l : list LevelExpr.t) :=
+  match l with
+  | [] => ConstraintSet.empty
+  | hd :: [] => ConstraintSet.empty
+  | hd :: (hd' :: _) as tl => 
+    add_cstr hd (Le 1) hd' (chain tl)
+  end.
+
+Definition levels_to_n n := 
+  unfold n (fun i => (Level.Level (string_of_nat i), 0)).
+
+Definition test_chain := chain (levels_to_n 3).
+
+Eval compute in print_clauses  (clauses_of_constraints test_chain).
+Definition chainres :=  (check_clauses (clauses_of_constraints test_chain)).
+Time Eval compute in print_result (check_clauses (clauses_of_constraints test_chain)).
+
+  Definition test_cstrs' :=
+  (add_cstr (sup levela levelb) Eq (sup (levelc + 1) leveld)
+  (add_cstr (sup levela levelb) Eq (levelc + 1)
+  (add_cstr levelc (Le 0) (sup levela levelb)
+  (* (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc  *)
+  (add_cstr levelc (Le 1) leveld
+  (add_cstr levelc (Le 0) levelb
+    ConstraintSet.empty))))).
+
+Eval compute in print_clauses  (clauses_of_constraints test_cstrs').
+
+Definition test'' := check_clauses (clauses_of_constraints test_cstrs').
+
+(* Eval compute in print_result test''. *) 
+Goal chainres = Loop.
+  unfold chainres.
+  unfold check_clauses.
+  set (levels := Clauses.fold _ _ _).
+  rewrite /check.
+  simp loop.
+  set (f := check_model _ _).
+  hnf in f. cbn in f.
+  unfold f. unfold inspect.
+  simp loop.
+  set (eq := LevelSet.equal _ _).
+  hnf in eq. unfold eq, inspect.
+  simp loop.
+  set (f' := check_model _ _).
+  hnf in f'. cbn in f'. unfold flip in f'. cbn in f'.
+
+set (f := check_model _ _).
+hnf in f. cbn in f.
+unfold f. cbn -[forward]. unfold flip.
+unfold init_w.
+rewrite unfold_forward.
+set (f' := check_model _ _).
+cbn in f'. unfold flip in f'.
+hnf in f'. cbn in f'.
+cbn.
+
+unfold check_model. cbn -[forward]. unfold flip.
+set (f := update_value _ _). cbn in f.
+unfold Nat.leb in f. hnf in f.
+
+Eval compute in print_result (check_clauses ex_levels test_clauses).
+

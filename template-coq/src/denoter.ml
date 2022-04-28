@@ -150,14 +150,12 @@ struct
         evm, Constr.mkCoFix (D.unquote_int i, (lnames, ltypes, la bodies))
 
       | ACoq_tProj (proj,t) ->
-         let (ind, npars, arg) = D.unquote_proj proj in
+         let (ind, _npars, arg) = D.unquote_proj proj in
          let ind' = D.unquote_inductive ind in
-         let proj_npars = D.unquote_int npars in
          let proj_arg = D.unquote_int arg in
-         let l = (match List.nth (Structures.Structure.find_projections ind') proj_arg with
-                  | Some p -> Names.Constant.label p
-                  | None -> failwith "tproj case of denote_term") in
-         let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in
+         let mib = Environ.lookup_mind (fst ind') env in
+         let p' = Declareops.inductive_make_projection ind' mib ~proj_arg in
+         let p' = Names.Projection.make p' false in
          let evm, t' = aux env evm t in
          evm, Constr.mkProj (p', t')
       (* | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x) *)

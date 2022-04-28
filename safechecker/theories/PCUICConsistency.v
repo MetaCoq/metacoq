@@ -118,7 +118,8 @@ Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant 
 Definition global_env_add (Σ : global_env) d :=
   {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
 
-Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} (_Σ :referenced_impl_ext) t :
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
+  (_Σ :referenced_impl_ext) t :
   axiom_free _Σ ->
   (* t : forall (P : Prop), P *)
   _Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
@@ -182,7 +183,7 @@ Proof.
     - cbn.
       auto. }
   pose proof (iswelltyped typ_false) as wt.
-  set (_Σ' := Build_referenced_impl_ext cf Σext (sq wf')). cbn in *. 
+  set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
   unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
   1: cbn; intros; subst; exact wt.
   unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].

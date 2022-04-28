@@ -36,16 +36,19 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Extract Constant PCUICWfEnvImpl.guard_impl => 
-  "(fun _ _ _ _ -> true)".
-
-Extract Constant PCUICTyping.guard_checking => 
-  "(fun _ _ _ _ -> true)".
-
 Cd "src".
 
+#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl := 
+  {
+    guard_impl := PCUICWfEnvImpl.fake_guard_impl
+  }.
+Next Obligation. Admitted. 
+
+Definition infer_and_print_template_program_with_guard {cf} {nor} := 
+  @SafeTemplateChecker.infer_and_print_template_program cf nor fake_abstract_guard_impl.
+
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
-         SafeTemplateChecker.infer_and_print_template_program
+         infer_and_print_template_program_with_guard
          (* The following directives ensure separate extraction does not produce name clashes *)
          Coq.Strings.String utils UnivSubst PCUICPretty.
 

@@ -44,8 +44,12 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
     gc_of_uctx (uctx_of_udecl udecl) = Some uctx ->
     ∥ on_udecl (abstract_env_univ X) udecl ∥ ->
     abstract_env_ext_impl ;
-  (* This part of the structure is here to state the correctness properties *)
+  abstract_pop_decls : abstract_env_impl -> abstract_env_impl ;
+    (* This part of the structure is here to state the correctness properties *)
   abstract_env_rel : abstract_env_impl -> global_env -> Prop;
+
+  abstract_make_wf_env_ext : forall (X:abstract_env_impl) (univs : universes_decl) 
+    (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥), abstract_env_ext_impl ;
 }.
 
 Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl : Type} `{!abstract_env_ext_struct abstract_env_impl}
@@ -125,7 +129,15 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
        consistent_extension_on (global_uctx Σ) (uctx_of_udecl udecl).2)
     <-> abstract_env_is_consistent_uctx X uctx ;
   abstract_env_univ_correct X {Σ} (wfΣ : abstract_env_rel X Σ) :
-    (Σ:ContextSet.t) = abstract_env_univ X
+    (Σ:ContextSet.t) = abstract_env_univ X ;
+  abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ -> 
+            exists d, Σ.(declarations) = d :: decls) :
+    let X' := abstract_pop_decls X in
+    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' -> 
+                      Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) ;
+  abstract_make_wf_env_ext_correct X univs prf : 
+    let X' := abstract_make_wf_env_ext X univs prf in
+    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)                     
   }.
 
 

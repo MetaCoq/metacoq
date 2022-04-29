@@ -164,6 +164,26 @@ Next Obligation.
   destruct l. cbn in *. congruence.    
 Qed.
 
+
+Definition strict_subset (s s' : LevelSet.t) :=
+  LevelSet.Subset s s' /\ ~ LevelSet.Equal s s'.
+
+Lemma strict_subset_cardinal s s' : strict_subset s s' -> LevelSet.cardinal s < LevelSet.cardinal s'.
+Proof.
+  intros [].
+  assert (LevelSet.cardinal s <> LevelSet.cardinal s').
+  { intros heq. apply H0. 
+    intros x. split; intros. now apply H.
+    destruct (LevelSet.mem x s) eqn:hin.
+    eapply LevelSet.mem_spec in hin.
+    auto. eapply LevelSetProp.FM.not_mem_iff in hin.
+    exfalso.
+    eapply LevelSetProp.subset_cardinal_lt in hin; tea.
+    lia. }
+  enough (LevelSet.cardinal s <= LevelSet.cardinal s') by lia.
+  now eapply LevelSetProp.subset_cardinal.
+Qed.
+
 Definition min_atom_value (m : model) (atom : LevelExpr.t) :=
   let '(l, k) := atom in
   (Z.of_nat (level_value m l) - Z.of_nat k)%Z.
@@ -193,12 +213,6 @@ Inductive update_result :=
   | Holds
   | DoesntHold (wm : LevelSet.t × model).
 
-(*
-  x + 2 >= y
-
-
-*)
-
 Definition update_value (wv : LevelSet.t × model) (cl : clause) : update_result :=
   let (w, v) := wv in
   let k0 := min_premise v (premise cl) in
@@ -207,7 +221,11 @@ Definition update_value (wv : LevelSet.t × model) (cl : clause) : update_result
   else 
     (* The premise does hold *)
     let (l, k) := concl cl in
-    (* Does the conclusion also hold ? *)
+    (* Does the conclusion also hold?
+       We optimize a bit here, rather than adding k0 in a second stage, 
+       we do it already while checking the clause. In the paper, a second
+       pass compute this.
+      *)
     if k + Z.to_nat k0 <=? level_value v l then Holds
     else 
       (* The conclusion doesn't hold, we need to set it higher *)
@@ -223,33 +241,12 @@ Definition check_model_aux (cls : clauses) (wm : LevelSet.t × model) : bool × 
       end)
     cls (false, wm).
 
+(* If check_model = None then we have a model of all clauses, 
+  othewise, we return Some (W', m') where W ⊂ W' and the model has
+  been updated for at least one atom l ∈ W'. *)
 Definition check_model (cls : clauses) (wm : LevelSet.t × model) := 
-  let '(b, wm) := check_model_aux cls wm in
-  if b then Some wm else None.
-
-  (* y -> x
-     x -> y + 1
-
-  *)
-
-Definition strict_subset (s s' : LevelSet.t) :=
-  LevelSet.Subset s s' /\ ~ LevelSet.Equal s s'.
-
-Lemma strict_subset_cardinal s s' : strict_subset s s' -> LevelSet.cardinal s < LevelSet.cardinal s'.
-Proof.
-  intros [].
-  assert (LevelSet.cardinal s <> LevelSet.cardinal s').
-  { intros heq. apply H0. 
-    intros x. split; intros. now apply H.
-    destruct (LevelSet.mem x s) eqn:hin.
-    eapply LevelSet.mem_spec in hin.
-    auto. eapply LevelSetProp.FM.not_mem_iff in hin.
-    exfalso.
-    eapply LevelSetProp.subset_cardinal_lt in hin; tea.
-    lia. }
-  enough (LevelSet.cardinal s <= LevelSet.cardinal s') by lia.
-  now eapply LevelSetProp.subset_cardinal.
-Qed.
+  let '(modified, wm) := check_model_aux cls wm in
+  if modified then Some wm else None.
 
 Lemma check_model_aux_subset {cls w v} : 
   forall b w' v', check_model_aux cls (w, v) = (b, (w', v')) -> LevelSet.Subset w w'.
@@ -287,6 +284,16 @@ Definition restrict_clauses (cls : clauses) (W : LevelSet.t) :=
     LevelSet.subset (LevelExprSet.levels prem) W &&
     LevelSet.mem (LevelExpr.get_level concla) W) cls.
 
+Lemma in_restrict_clauses (cls : clauses) (concls : LevelSet.t) cl :
+  Clauses.In cl (restrict_clauses cls concls) <-> 
+  LevelSet.In (LevelExpr.get_level (concl cl)) concls /\ Clauses.In cl cls.
+Proof.
+  unfold restrict_clauses.
+  rewrite Clauses.filter_spec.
+  destruct cl. cbn. firstorder eauto.
+  move/andP: H0 => [] /LevelSet.subset_spec hsub /LevelSet.mem_spec hmem //.
+Admitted.
+  
 Definition clauses_with_concl (cls : clauses) (concl : LevelSet.t) :=
   Clauses.filter (fun '(prem, concla) => LevelSet.mem (LevelExpr.get_level concla) concl) cls.
 
@@ -302,34 +309,35 @@ Qed.
 Definition clauses_conclusions (cls : clauses) : LevelSet.t :=
   Clauses.fold (fun cl acc => LevelSet.add (LevelExpr.get_level (concl cl)) acc) cls LevelSet.empty.
   
+Lemma clauses_conclusions_spec a cls : 
+  LevelSet.In a (clauses_conclusions cls) <-> 
+  exists cl, Clauses.In cl cls /\ LevelExpr.get_level (concl cl) = a.
+Proof.
+  unfold clauses_conclusions.
+  eapply ClausesProp.fold_rec; clear.
+  - move=> s' he /=. rewrite LevelSetFact.empty_iff.
+    firstorder auto.
+  - move=> cl ls cls' cls'' hin hnin hadd ih.
+    rewrite LevelSet.add_spec. firstorder eauto.
+    specialize (H0 x). cbn in H0.
+    apply hadd in H1. firstorder eauto.
+    subst. left. now destruct x.
+Qed.
+
 Lemma clauses_conclusions_clauses_with_concl cls concl : 
   LevelSet.Subset (clauses_conclusions (clauses_with_concl cls concl)) concl.
 Proof.
-  unfold clauses_conclusions, clauses_with_concl. 
-  intros x.
-  eapply ClausesProp.fold_rec; clear.
-  - move=> s' he /LevelSet.empty_spec //.
-  - move=> cl ls cls' cls'' hin hnin hadd ih.
-    move/LevelSet.add_spec. intros [->|].
-    eapply Clauses.filter_spec in hin. 2:tc.
-    destruct hin. destruct cl as [prem [l k]]; cbn in *.
-    now eapply LevelSet.mem_spec in H0.
-    eauto.
+  intros x [cl []] % clauses_conclusions_spec.
+  eapply in_clauses_with_concl in H as [].
+  now rewrite H0 in H.
 Qed.
 
 Lemma clauses_conclusions_restrict_clauses cls W : 
   LevelSet.Subset (clauses_conclusions (restrict_clauses cls W)) W.
 Proof.
-  unfold clauses_conclusions, restrict_clauses.
-  intros x.
-  eapply ClausesProp.fold_rec; clear.
-  - move=> s' he /LevelSet.empty_spec //.
-  - move=> cl ls cls' cls'' hin hnin hadd ih.
-    move/LevelSet.add_spec. intros [->|].
-    eapply Clauses.filter_spec in hin. 2:tc.
-    destruct hin. destruct cl as [prem [l k]]; cbn in *.
-    now move/andP: H0 => [] /LevelSet.subset_spec Hs /LevelSet.mem_spec hi.
-    eauto.
+  intros x [cl []] % clauses_conclusions_spec.
+  eapply in_restrict_clauses in H as [].
+  now rewrite H0 in H.
 Qed.
 
 Definition in_clauses_conclusions (cls : clauses) (x : Level.t): Prop :=
@@ -364,12 +372,15 @@ Definition gain (cl : clause) : Z :=
 Definition max_gain (cls : clauses) := 
   Clauses.fold (fun cl acc => Nat.max (Z.to_nat (gain cl)) acc) cls 0.
 
+(** The termination proof relies on the correctness of check_model: 
+  it does strictly increase a value but not above [max_gain cls].
+*)
+
 Lemma check_model_spec cls w m : 
   forall w' m', check_model cls (w, m) = Some (w', m') -> 
   w ⊂_lset w' /\ w' ⊂_lset (LevelSet.union w (clauses_conclusions cls)) /\
   exists l, LevelSet.In l w' /\ level_value m l < level_value m' l <= max_gain cls.
 Proof. Admitted.
-
 (*  
   eapply (ClausesProp.fold_rel (R := fun x y => forall (w' : LevelSet.t) (m : model), x = Some (w', m) -> LevelSet.Subset w' (LevelSet.union w y))) => //.
   intros x a s' hin IH w' m'.
@@ -436,51 +447,6 @@ Proof.
     rewrite Clauses.filter_spec. intuition auto.
 Qed.
 
-(* Lemma check_model_none {cls w m} : check_model (restrict_clauses cls w) m = None ->
-  Clauses.For_all (fun cl => update_value m cl = None) (restrict_clauses cls m)  *)
-(* check_model cls (w', m) = Some (w'', m') -> strict_subset w w''. *)
-
-(** Some correctness lemma like this will be needed: 
-  If (w', m) is a model for (restrict_clauses cls w) but not for cls, 
-  then the "w''" set must be strictly larger than "w'" as there must be a clause
-  in `cls / restrict_clauses cls w` that triggered a DoesntHold and an update of 
-  its conclusion atom, which by definition cannot be in `w`.
-*)
-(*
-Lemma check_model_extend_strict_subset {cls m w w' w'' m'} : check_model (restrict_clauses cls w) (w', m) = None -> check_model cls (w', m) = Some (w'', m') -> strict_subset w w''.
-Proof.
-  unfold check_model, restrict_clauses.
-  set (f := fun cl acc => _).
-  assert (transpose eq f).
-  { intros x y acc. unfold f.
-    set (acc' := match acc with | Some acc0 => acc0 | None => (w', m) end).
-    destruct (update_value acc' y) eqn:updy.
-    destruct (update_value acc' x) eqn:updx.
-    fold acc'. rewrite updy updx //.
-    fold acc'. rewrite updy updx //.
-    fold acc'. rewrite updx.
-    admit. }
-    
-  rewrite clauses_fold_filter.
-  revert w'' m'.
-  eapply (ClausesProp.fold_rel (R:= fun x y => forall w'' m', x = None -> y = Some (w'', m') -> strict_subset w w'')) => //.
-  intros.
-  destruct x as [prem concla].
-  cbn in *. subst f. cbn in H3.
-  destruct (_ && _) eqn:cond.
-  destruct a. destruct b. destruct (update_value p _) => //.
-  destruct (update_value p _) => //.
-  destruct (update_value (w', m) _) eqn:upd => //.
-  destruct b as [[]|].
-  destruct (update_value (t, m0) _) eqn:upd' => //. noconf H3.
-  eapply H1; trea. noconf H3.
-  eapply H1; trea. noconf H3.
-  
-Admitted.
-
-Lemma check_model_extend_strict_subset' {cls m w w' w'' m'} : check_model (clauses_with_concl cls w) (w', m) = None -> check_model cls (w', m) = Some (w'', m') -> strict_subset w w''.
-Proof. Admitted.
-*)
 Lemma strict_subset_incl (x y z : LevelSet.t) : LevelSet.Subset x y -> strict_subset y z -> strict_subset x z.
 Proof.
   intros hs []. split => //. lsets.
@@ -504,20 +470,6 @@ Proof.
   now transitivity V.
 Qed.
 
-Lemma clauses_conclusions_spec a cls : 
-  LevelSet.In a (clauses_conclusions cls) <-> 
-  exists cl, Clauses.In cl cls /\ LevelExpr.get_level (concl cl) = a.
-Proof.
-  unfold clauses_conclusions.
-  eapply ClausesProp.fold_rec; clear.
-  - move=> s' he /=. rewrite LevelSetFact.empty_iff.
-    firstorder auto.
-  - move=> cl ls cls' cls'' hin hnin hadd ih.
-    rewrite LevelSet.add_spec. firstorder eauto.
-    specialize (H0 x). cbn in H0.
-    apply hadd in H1. firstorder eauto.
-    subst. left. now destruct x.
-Qed.
 
 (* Lemma clauses_conclusions_diff cls cls' :
   clauses_conclusions cls ⊂_lset clauses_conclusions cls' ->
@@ -638,6 +590,9 @@ Proof.
   now rewrite InA_In_eq.
 Qed.
 
+Infix "↓" := clauses_with_concl (at level 70). (* \downarrow *)
+Infix "⇂" := restrict_clauses (at level 70). (* \downharpoonright *)
+
 Section InnerLoop.
   Context (V : LevelSet.t) 
     (loop : forall (V' : LevelSet.t) (cls : clauses) (m : model) (p : clauses_conclusions cls ⊂_lset V'),
@@ -648,65 +603,65 @@ Section InnerLoop.
     let maxgain := max_gain cls in 
     LevelSet.fold (fun w acc => 
         Nat.add acc (bound + maxgain - level_value m w)) W 0.
+  Notation cls_diff cls W := (Clauses.diff (cls ↓ W) (cls ⇂ W)).
 
   #[tactic="idtac"]
   Equations? inner_loop (W : LevelSet.t) (cls : clauses) (m : model) 
     (prf : strict_subset W V /\ ~ LevelSet.Empty W) : result W 
     by wf (measure W cls m) lt :=
     inner_loop W cls m subWV with inspect (measure W cls m) := {
-      | exist 0 eq => Model W m _
-      | exist (S n) neq with loop W (restrict_clauses cls W) m _ _ := 
-        { | Loop => Loop
-          | Model Wr mr hsub with inspect 
-            (check_model (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) 
-            (Wr, m)) :=
-          { | exist None eqm => Model W m _
-            | exist (Some (Wconcl, mconcl)) eqm := 
-              inner_loop W
-                (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) mconcl _
-          }
-        }
-    }.
-    Proof.
-      all:clear loop inner_loop.
-      - eapply LevelSet.subset_spec; reflexivity.
-      - apply clauses_conclusions_restrict_clauses.
-      - now eapply strict_subset_cardinal.
-      - auto. 
-      - unfold measure.
-        destruct subWV as [subWV ne].
-        eapply check_model_spec in eqm as [wrsub [subwr hm]].
-        destruct hm as [l [hinw hl]].
-        rewrite !LevelSet.fold_spec.
-        eapply fold_left_ne_lt. todo "easy".
-        intros.
-        assert (v_minus_w_bound V W mconcl = v_minus_w_bound V W m) as ->. 
-        { (* todo: because we don't touch V - W levels *)
-          todo "vbound".
-        }
-        assert (max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) <=
-          max_gain cls).
-        { todo " as the restricted clauses are a subset of W ". }
-        assert (level_value mconcl x >= level_value m x).
-        { todo " as the improvements to the model are monotonous". }
+    | exist 0 eq => Model W m _
+    | exist (S n) neq with loop W (cls ⇂ W) m _ _ := {
+      | Loop => Loop
+      (* We check if the model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
+      | Model Wr mr hsub with inspect (check_model (Clauses.diff (cls ↓ W) (cls ⇂ W)) (Wr, m)) := { 
+        | exist None eqm => Model W m _
+        | exist (Some (Wconcl, mconcl)) eqm := 
+          (* If it doesn't extend, then we're entitled to recursively compute a 
+              better model starting with mconcl, as we have made the measure decrease:
+              some atom that is necessarily not in W has been updated. *)
+          inner_loop W (Clauses.diff (cls ↓ W) (cls ⇂ W)) mconcl _ } } }.
+    
+  Proof.
+    all:clear loop inner_loop.
+    - eapply LevelSet.subset_spec; reflexivity.
+    - apply clauses_conclusions_restrict_clauses.
+    - now eapply strict_subset_cardinal.
+    - auto. 
+    - unfold measure.
+      destruct subWV as [subWV ne].
+      eapply check_model_spec in eqm as [wrsub [subwr hm]].
+      destruct hm as [l [hinw hl]].
+      rewrite !LevelSet.fold_spec.
+      eapply fold_left_ne_lt. todo "easy".
+      intros.
+      assert (v_minus_w_bound V W mconcl = v_minus_w_bound V W m) as ->. 
+      { (* todo: because we don't touch V - W levels *)
+        todo "vbound".
+      }
+      assert (max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) <=
+        max_gain cls).
+      { todo " as the restricted clauses are a subset of W ". }
+      assert (level_value mconcl x >= level_value m x).
+      { todo " as the improvements to the model are monotonous". }
+      lia.
+      exists l. split.
+      { epose proof (clauses_conclusions_diff_left cls W (restrict_clauses cls W)).
+        eapply LevelSet_In_elements.
+        eapply LevelSet.subset_spec in hsub.
+        lsets. }
+      intros acc.
+      assert (v_minus_w_bound V W mconcl = v_minus_w_bound V W m) as ->.
+      { todo " vbound ". }
+      assert (max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) <=
+        max_gain cls).
+      { todo "same". }
+      assert (level_value mconcl l <=
+        v_minus_w_bound V W m + max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W))).
+      { todo "the new value for l is bounded ". }
         lia.
-        exists l. split.
-        { epose proof (clauses_conclusions_diff_left cls W (restrict_clauses cls W)).
-          eapply LevelSet_In_elements.
-          eapply LevelSet.subset_spec in hsub.
-          lsets. }
-        intros acc.
-        assert (v_minus_w_bound V W mconcl = v_minus_w_bound V W m) as ->.
-        { todo " vbound ". }
-        assert (max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W)) <=
-          max_gain cls).
-        { todo "same". }
-        assert (level_value mconcl l <=
-          v_minus_w_bound V W m + max_gain (Clauses.diff (clauses_with_concl cls W) (restrict_clauses cls W))).
-        { todo "the new value for l is bounded ". }
-          lia.
-      - eapply LevelSet.subset_spec. reflexivity.
-    Qed.
+    - eapply LevelSet.subset_spec. reflexivity.
+  Qed.
 End InnerLoop.
 
 Equations? loop (V : LevelSet.t) (cls : clauses) (m : model) (prf : clauses_conclusions cls ⊂_lset V) : 
@@ -717,17 +672,26 @@ Equations? loop (V : LevelSet.t) (cls : clauses) (m : model) (prf : clauses_conc
     | exist (Some (W, m')) eqm with inspect (LevelSet.equal W V) := {
       | exist true eq := Loop
       (* Loop on cls|W, with |W| < |V| *)
-      | exist false neq with loop W (restrict_clauses cls W) m' _ := {
+      | exist false neq with loop W (cls ⇂ W) m' _ := {
         | Loop := Loop
-        | Model Wr mwr hsub with inner_loop V loop W (clauses_with_concl cls W) mwr _ := 
+        | Model Wr mwr hsub
+          (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W). *)
+          with inner_loop V loop W (cls ↓ W) mwr _ := 
           { | Loop := Loop
-            (** Try to see if we get a model of all clauses *)
-            | Model Wc mwc hsub' with inspect (check_model cls (Wc, mwc)) :=
+            | Model Wc mwc hsub'
+            (* We get a model for (cls ↓ W), we check if it extends to all clauses.
+               By invariant |Wc| cannot be larger than |W|.
+            *)
+            with inspect (check_model cls (Wc, mwc)) :=
             { | exist None eqm' => Model Wc mwc _
               | exist (Some (Wcls, mcls)) eqm' with inspect (LevelSet.equal Wcls V) := {
                 | exist true _ := Loop
                 | exist false neq' := 
-                  result_inclusion (loop (LevelSet.diff V W) (Clauses.diff cls (clauses_with_concl cls W)) mcls _) _ } (* Here Wcls < V *)
+                (* Here Wcls < V, we've found a model for all of the clauses with conclusion
+                  in W, which can now be fixed. We concentrate on the clauses whose
+                  conclusion is different. Clearly |W| < |V|, but |Wcls| is not 
+                  necessarily < |V| *)
+                result_inclusion (loop (LevelSet.diff V W) (Clauses.diff cls (cls ↓ W)) mcls _) _ } 
             }
           }
       }
@@ -771,6 +735,13 @@ Definition add_max l k m :=
     else m
   | None => LevelMap.add l k m
   end.
+
+(* To handle the constraint checking decision problem,
+  we must start with a model where all atoms [l + k]
+  appearing in premises are true. Otherwise the 
+  [l := 0] model is minimal for [l+1-> l+2]. 
+  Starting with [l := 1], we see that the minimal model above it 
+  has [l := ∞] *)
 
 Definition init_model (levels : LevelSet.t) cls : model :=
   Clauses.fold (fun '(cl, concl) acc => 

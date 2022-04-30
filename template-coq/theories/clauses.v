@@ -113,38 +113,41 @@ Module LevelOT := OrderedType_from_Alt MoreLevel.
 Module LevelMap := FMapAVL.Make LevelOT.
 Module LevelMapFact := FMapFacts.WProperties LevelMap.
 
-Definition model := LevelMap.t nat.
+Record model := {
+  model_values :> LevelMap.t nat
+}.
+
+(* Print maps to nat nicely *)
+Fixpoint to_bytes (s : string) : list Byte.byte :=
+  match s with
+  | String.EmptyString => []
+  | String.String b s => b :: to_bytes s
+  end.
+
+Declare Scope levelnat_scope.
+Delimit Scope levelnat_scope with levelnat.
+Module LevelNatMapNotation.
+  Import LevelMap.Raw.
+  Notation levelmap := (tree nat) (only parsing).
+  Definition parse_levelnat_map (l : list Byte.byte) : option levelmap :=
+    None.
+  Definition print_levelnat_map (m : levelmap) :=
+    let list := LevelMap.Raw.elements m in
+    print_list (fun '(l, w) => string_of_level l ^ " -> " ^ string_of_nat w) nl list.
+   
+  Definition print_levelmap (l : levelmap) : list Byte.byte :=
+    to_bytes (print_levelnat_map l).
+   
+  String Notation levelmap parse_levelnat_map print_levelmap
+      : levelnat_scope.
+End LevelNatMapNotation.
+Import LevelNatMapNotation.
+Arguments LevelMap.Bst {elt} this%levelnat {is_bst}.
 
 Definition premise (cl : clause) := fst cl.
 
 Definition concl (cl : clause) := snd cl.
 
-Definition matches_clause (cl : clause) (m : model) :=
-  LevelExprSet.exists_ (fun '(l, k) => LevelMap.find l m == Some k) (premise cl).
-
-Definition update_model (m : model) (w : LevelSet.t) (e : LevelExpr.t) : 
-  option (LevelSet.t * model) :=
-  let (l, k) := e in
-  match LevelMap.find l m with
-  | Some k' => if k' <? k then Some (LevelSet.add l w, LevelMap.add l k m) else None
-  | None => None
-  end.
-
-Definition new_atoms (cls : clauses) (m : model) (w : LevelSet.t) : option (LevelSet.t * model) :=
-  Clauses.fold
-    (fun cl acc => 
-      if matches_clause cl m then 
-        match update_model m w (concl cl) with
-        | Some v' => Some v'
-        | None => acc
-        end
-      else acc)
-    cls None.
-
-(* Variant model_check :=
-  | Satisfiable
-  | Unsatisfiable (cls : clauses). *)
-  
 Definition level_value (m : model) (level : Level.t) : nat :=
   match LevelMap.find level m with
   | Some val => val
@@ -202,9 +205,15 @@ Definition satisfiable_atom (m : model) (atom : Level.t * nat) : bool :=
 Definition satisfiable_premise (m : model) (l : nonEmptyLevelExprSet) :=
   LevelExprSet.for_all (satisfiable_atom m) l.
 
-Definition valid_clause (m : model) (cl : clause) :=
-  implb (satisfiable_premise m (premise cl)) (satisfiable_atom m (concl cl)).
+(* Definition valid_clause (m : model) (cl : clause) := *)
+  (* implb (satisfiable_premise m (premise cl)) (satisfiable_atom m (concl cl)). *)
 
+Definition valid_clause (m : model) (cl : clause) :=
+  let k0 := min_premise m (premise cl) in
+  if (k0 <? 0)%Z then true
+  else let (l, k) := concl cl in 
+    k + Z.to_nat k0 <=? level_value m l.
+  
 Definition is_model (cls : clauses) (m : model) : bool :=
   Clauses.for_all (valid_clause m) cls.
 
@@ -213,9 +222,12 @@ Inductive update_result :=
   | Holds
   | DoesntHold (wm : LevelSet.t × model).
 
-Definition update_value (wv : LevelSet.t × model) (cl : clause) : update_result :=
-  let (w, v) := wv in
-  let k0 := min_premise v (premise cl) in
+Definition update_model m l v :=
+  {| model_values := LevelMap.add l v m.(model_values) |}.
+
+Definition update_value (wm : LevelSet.t × model) (cl : clause) : update_result :=
+  let (w, m) := wm in
+  let k0 := min_premise m (premise cl) in
   (* cl holds vacuously as the premise doesn't hold *)
   if (k0 <? 0)%Z then VacuouslyTrue
   else 
@@ -224,12 +236,12 @@ Definition update_value (wv : LevelSet.t × model) (cl : clause) : update_result
     (* Does the conclusion also hold?
        We optimize a bit here, rather than adding k0 in a second stage, 
        we do it already while checking the clause. In the paper, a second
-       pass compute this.
+       pass computes this.
       *)
-    if k + Z.to_nat k0 <=? level_value v l then Holds
+    if k + Z.to_nat k0 <=? level_value m l then Holds
     else 
       (* The conclusion doesn't hold, we need to set it higher *)
-      DoesntHold (LevelSet.add l w, LevelMap.add l (k + Z.to_nat k0) v).
+      DoesntHold (LevelSet.add l w, update_model m l (k + Z.to_nat k0)).
 
 Definition check_model_aux (cls : clauses) (wm : LevelSet.t × model) : bool × (LevelSet.t × model) :=
   Clauses.fold
@@ -285,15 +297,15 @@ Definition restrict_clauses (cls : clauses) (W : LevelSet.t) :=
     LevelSet.mem (LevelExpr.get_level concla) W) cls.
 
 Lemma in_restrict_clauses (cls : clauses) (concls : LevelSet.t) cl :
-  Clauses.In cl (restrict_clauses cls concls) <-> 
+  Clauses.In cl (restrict_clauses cls concls) -> 
   LevelSet.In (LevelExpr.get_level (concl cl)) concls /\ Clauses.In cl cls.
 Proof.
   unfold restrict_clauses.
   rewrite Clauses.filter_spec.
   destruct cl. cbn. firstorder eauto.
   move/andP: H0 => [] /LevelSet.subset_spec hsub /LevelSet.mem_spec hmem //.
-Admitted.
-  
+Qed.
+
 Definition clauses_with_concl (cls : clauses) (concl : LevelSet.t) :=
   Clauses.filter (fun '(prem, concla) => LevelSet.mem (LevelExpr.get_level concla) concl) cls.
 
@@ -408,6 +420,12 @@ Arguments Model {V}.
 Arguments exist {A P}.  
 Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
 Arguments lexprod {A B}.
+
+Definition option_of_result {V} (r : result V) : option model :=
+  match r with
+  | Loop => None
+  | Model w m sub => Some m
+  end. 
 
 Lemma filter_add {p x s} : Clauses.Equal (Clauses.filter p (Clauses.add x s)) (if p x then Clauses.add x (Clauses.filter p s) else Clauses.filter p s).
 Proof.
@@ -743,25 +761,45 @@ Definition add_max l k m :=
   Starting with [l := 1], we see that the minimal model above it 
   has [l := ∞] *)
 
-Definition init_model (levels : LevelSet.t) cls : model :=
+Definition min_model_map (m : LevelMap.t nat) cls : LevelMap.t nat :=
   Clauses.fold (fun '(cl, concl) acc => 
     LevelExprSet.fold (fun '(l, k) acc => 
-      add_max l k acc) cl acc) cls (LevelMap.empty _).
+      add_max l k acc) cl acc) cls m.
+
+Definition min_model m cls := 
+  {| model_values := min_model_map m cls |}.
+      
+Definition init_model cls := min_model (LevelMap.empty _) cls.
 
 Definition init_w (levels : LevelSet.t) : LevelSet.t := LevelSet.empty.
 
-Equations check (V : LevelSet.t) (cls : clauses) (prf : LevelSet.Subset (clauses_conclusions cls) V) : result V  := 
-  check V cls prf := loop V cls (init_model V cls) prf.
-  
+Definition add_predecessors (V : LevelSet.t) cls :=
+  LevelSet.fold (fun l acc => 
+    Clauses.add (NonEmptySetFacts.singleton (l, 1), (l, 0)) acc) V cls.
+
+Lemma in_add_predecessors (V : LevelSet.t) cls : 
+  forall cl, 
+    Clauses.In cl (add_predecessors V cls) -> 
+    Clauses.In cl cls \/ LevelSet.In (LevelExpr.get_level (concl cl)) V.
+Admitted.
+    
+Equations? infer (V : LevelSet.t) (cls : clauses) (prf : LevelSet.Subset (clauses_conclusions cls) V) : result V  := 
+  infer V cls prf := loop V (add_predecessors V cls) (init_model cls) _.
+Proof.
+  eapply clauses_conclusions_spec in H as [cl []].
+  eapply in_add_predecessors in H as [].
+  eapply prf. rewrite clauses_conclusions_spec. now exists cl.
+  now rewrite H0 in H.
+Qed.
+
 Definition clauses_levels (cls : clauses) : LevelSet.t := 
   Clauses.fold (fun '(cl, concl) acc => 
   LevelSet.union (LevelExprSet.levels cl)
     (LevelSet.add concl.1 acc)) cls LevelSet.empty.
 
-Equations? check_clauses (clauses : clauses) : result (clauses_levels clauses) :=
-  check_clauses clauses := check (clauses_levels clauses) clauses _.
+Lemma in_conclusions_levels {cls} : clauses_conclusions cls ⊂_lset clauses_levels cls.
 Proof.
-  revert a H.
+  intros a.
   unfold clauses_levels. unfold clauses_conclusions.
   eapply (ClausesProp.fold_rel (R := fun x y => forall a, LevelSet.In a x -> LevelSet.In a y)) => //.
   intros x l l' hin hsub x' hix'.
@@ -770,6 +808,9 @@ Proof.
   eapply LevelSet.add_spec. 
   specialize (hsub x'). lsets.
 Qed.
+
+Equations infer_model (clauses : clauses) : result (clauses_levels clauses) :=
+  infer_model clauses := infer (clauses_levels clauses) clauses in_conclusions_levels.
 
 Definition mk_level x := LevelExpr.make (Level.Level x).
 Definition levela := mk_level "a".
@@ -801,10 +842,10 @@ Definition ex_loop_clauses :=
   ClausesProp.of_list [clause1; clause2; clause3; clause4; clause5].
 
 
-Example test := check_clauses ex_clauses.
-Example test_loop := check_clauses ex_loop_clauses.
+Example test := infer_model ex_clauses.
+Example test_loop := infer_model ex_loop_clauses.
 
-Definition print_model (m : model) :=
+Definition print_level_nat_map (m : LevelMap.t nat) :=
   let list := LevelMap.elements m in
   print_list (fun '(l, w) => string_of_level l ^ " -> " ^ string_of_nat w) nl list.
 
@@ -812,17 +853,22 @@ Definition print_wset (l : LevelSet.t) :=
   let list := LevelSet.elements l in
   print_list string_of_level " " list.
 
-Definition valuation_of_model (m : model) : model :=
+Definition valuation_of_model (m : model) : LevelMap.t nat :=
   let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
-  let valuation := LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _) in
-  valuation.
+  LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _).
   
 Definition print_result {V} (m : result V) :=
   match m with
   | Loop => "looping"
-  | Model w m _ => "satisfiable with model: " ^ print_model m ^ nl ^ " W = " ^
+  | Model w m _ => "satisfiable with model: " ^ print_level_nat_map m ^ nl ^ " W = " ^
     print_wset w 
-    ^ nl ^ "valuation: " ^ print_model (valuation_of_model m)
+    ^ nl ^ "valuation: " ^ print_level_nat_map (valuation_of_model m)
+  end.
+  
+Definition valuation_of_result {V} (m : result V) :=
+  match m with
+  | Loop => "looping"
+  | Model w m _ => print_level_nat_map (valuation_of_model m)
   end.
 
 Eval compute in print_result test.
@@ -843,7 +889,7 @@ Ltac hnf_eq_left :=
 (* Goal hasFiniteModel test.
   hnf. hnf_eq_left. exact eq_refl.
   unfold test.
-  unfold check_clauses.
+  unfold infer_model.
   rewrite /check.
   simp loop.
   set (f := check_model _ _).
@@ -900,7 +946,7 @@ Definition print_premise (l : LevelAlgExpr.t) : string :=
   string_of_level_expr e ^
   match exprs with
   | [] => "" 
-  | l => " ∨ " ^ print_list string_of_level_expr " ∨ " exprs 
+  | l => ", " ^ print_list string_of_level_expr ", " exprs 
   end.
 
 Definition print_clauses (cls : clauses) :=
@@ -927,7 +973,7 @@ Definition test_levels : LevelSet.t :=
 
 Eval compute in print_clauses test_clauses.
 
-Definition test' := check_clauses test_clauses.
+Definition test' := infer_model test_clauses.
 Eval compute in print_result test'.
 Import LevelAlgExpr (sup).
 
@@ -945,7 +991,7 @@ Fixpoint chain (l : list LevelExpr.t) :=
   | [] => ConstraintSet.empty
   | hd :: [] => ConstraintSet.empty
   | hd :: (hd' :: _) as tl => 
-    add_cstr hd (Le 3) hd' (chain tl)
+    add_cstr hd (Le 10) hd' (chain tl)
   end.
 
 Definition levels_to_n n := 
@@ -956,17 +1002,17 @@ Definition test_chain := chain (levels_to_n 50).
 Eval compute in print_clauses  (clauses_of_constraints test_chain).
 
 (** These constraints do have a finite model that makes all implications true (not vacuously) *)
-Time Eval vm_compute in print_result (check_clauses (clauses_of_constraints test_chain)).
+Time Eval vm_compute in print_result (infer_model (clauses_of_constraints test_chain)).
 
 (* Eval compute in print_result test''. *) 
-Definition chainres :=  (check_clauses (clauses_of_constraints test_chain)).
+Definition chainres :=  (infer_model (clauses_of_constraints test_chain)).
 
 
 
 (*Goal hasFiniteModel chainres.
   hnf.
   unfold chainres.
-  unfold check_clauses.
+  unfold infer_model.
   rewrite /check.
   simp loop.
   set (f := check_model _ _).
@@ -996,7 +1042,7 @@ Qed. *)
 
 (*Goal chainres = Loop.
   unfold chainres.
-  unfold check_clauses.
+  unfold infer_model.
   set (levels := Clauses.fold _ _ _).
   rewrite /check.
   simp loop.
@@ -1024,21 +1070,165 @@ unfold check_model. cbn -[forward]. unfold flip.
 set (f := update_value _ _). cbn in f.
 unfold Nat.leb in f. hnf in f.
 
-Eval compute in print_result (check_clauses ex_levels test_clauses).
+Eval compute in print_result (infer_model ex_levels test_clauses).
 
 *)
 
-Definition test_cstrs' :=
-  (add_cstr (sup levela levelb) Eq (sup (levelc + 1) leveld)
+Definition test_above0 := 
+  (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc ConstraintSet.empty).
+  
+Eval compute in print_clauses (clauses_of_constraints test_above0).
+Definition testabove0 := infer_model (clauses_of_constraints test_above0).
+
+Eval vm_compute in print_result testabove0.
+
+(** Verify that no clause holds vacuously for the model *)
+
+Definition premise_holds (m : model) (cl : clause) :=
+  satisfiable_premise m (premise cl).
+
+Definition premises_hold (cls : clauses) (m : model) : bool :=
+  Clauses.for_all (premise_holds m) cls.
+
+Definition print_model_premises_hold cls (m : model) :=
+  if premises_hold cls m then "all premises hold"
+  else "some premise doesn't hold".
+
+Definition print_premises_hold {V} (cls : clauses) (r : result V) :=
+  match r with
+  | Loop => "looping"
+  | Model w m _ => print_model_premises_hold cls m
+  end.
+
+Ltac get_result c :=
+  let c' := eval vm_compute in c in 
+  match c' with
+  | Loop => fail "looping"
+  | Model ?w ?m _ => exact m
+  end.
+
+(* Is clause [c] non-vacuous and satisfied by the model? *)
+Definition check_clause (m : model) (cl : clause) : bool :=
+  satisfiable_premise m (premise cl) && satisfiable_atom m (concl cl).
+
+Definition check_clauses (m : model) cls : bool :=
+  Clauses.for_all (check_clause m) cls.
+
+Definition check_cstr (m : model) (c : UnivConstraint.t) :=
+  let cls := clauses_of_constraint c in
+  check_clauses m cls.
+
+Definition check_cstrs (m : model) (c : ConstraintSet.t) :=
+  let cls := clauses_of_constraints c in
+  check_clauses m cls.
+  
+Equations? infer_extension (V : LevelSet.t) (cls : clauses) (m : model) (prf : LevelSet.Subset (clauses_conclusions cls) V) : result V := 
+  | V, cls, m, prf := loop V (add_predecessors V cls) m _.
+Proof.
+  eapply clauses_conclusions_spec in H as [cl []].
+  eapply in_add_predecessors in H as [].
+  eapply prf. rewrite clauses_conclusions_spec. now exists cl.
+  now rewrite H0 in H.
+Qed.
+
+Equations? infer_model_extension (V : LevelSet.t) (cls : clauses) (m : model) : result (LevelSet.union (clauses_levels cls) V) :=
+  infer_model_extension V cls m := 
+    infer_extension (LevelSet.union (clauses_levels cls) V) cls (min_model m cls) _.
+Proof.
+  eapply LevelSet.union_spec. left.
+  now eapply in_conclusions_levels.
+Qed.
+
+Definition model_variables (m : model) : LevelSet.t :=
+  LevelMap.fold (fun l _ acc => LevelSet.add l acc) m LevelSet.empty.
+
+Variant enforce_result :=
+  | Looping
+  | ModelExt (m : model).
+
+Definition testp := Eval vm_compute in {| model_values := (LevelMap.empty _) |}.
+
+Definition enforce_clauses cls (m : model) : option model :=
+  match infer_model_extension (model_variables m) cls m with
+  | Loop => None
+  | Model w m _ => Some m
+  end.
+
+Definition enforce_clause cl (m : model) : option model :=
+  enforce_clauses (Clauses.singleton cl) m.
+
+Definition enforce_cstr (m : model) (c : UnivConstraint.t) :=
+  let cls := clauses_of_constraint c in
+  enforce_clauses cls m.
+
+Definition enforce_cstrs (m : model) (c : ConstraintSet.t) :=
+  let cls := clauses_of_constraints c in
+  enforce_clauses cls m.
+
+Definition initial_cstrs :=
   (add_cstr (sup levela levelb) Eq (levelc + 1)
   (add_cstr levelc (Le 0) (sup levela levelb)
-  (* (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc  *)
-  (add_cstr levelc (Le 1) leveld
   (add_cstr levelc (Le 0) levelb
-    ConstraintSet.empty))))).
+    ConstraintSet.empty))).
 
-Eval compute in print_clauses  (clauses_of_constraints test_cstrs').
+Definition enforced_cstrs :=
+  (* (add_cstr (sup levela levelb) Eq (sup (levelc + 1) leveld) *)
+  (add_cstr (levelb + 10) (Le 0) levele
+  (* (add_cstr levelc (Le 0) levelb *)
+  ConstraintSet.empty).
+  
+Definition initial_cls := clauses_of_constraints initial_cstrs.
+Definition enforced_cls := clauses_of_constraints enforced_cstrs.
+  
+Eval vm_compute in init_model initial_cls.
 
-Definition test'' := check_clauses (clauses_of_constraints test_cstrs').
+Definition abeqcS :=
+  clauses_of_constraints 
+    (add_cstr (sup levela levelb) Eq (levelc + 1) ConstraintSet.empty).
+  
+Eval compute in print_clauses initial_cls.
+Eval compute in print_clauses abeqcS.
 
+Definition test'' := infer_model initial_cls.
+Definition testabeqS := infer_model abeqcS.
 
+Eval vm_compute in print_result test''.
+Eval vm_compute in print_result testabeqS.
+
+Eval vm_compute in print_model_premises_hold initial_cls (init_model initial_cls).
+Definition model_cstrs' := ltac:(get_result test'').
+
+Eval vm_compute in check_cstrs model_cstrs' initial_cstrs.
+(* Here c <= b, in the model b = 0 is minimal, and b's valuation gives 1 *)
+Eval vm_compute in print_result (infer_model initial_cls).
+
+(* Here this is no longer the case! We started with b = 0 but move it to 10 
+  due to the b + 10 -> e clause, without reconsidering the b -> c clause *)
+Eval vm_compute in option_map valuation_of_model
+  (enforce_cstrs model_cstrs' enforced_cstrs).
+
+(* However the whole set of constraints has a finite model with c <= b *)
+
+Definition all_clauses := Clauses.union initial_cls enforced_cls.
+
+Eval vm_compute in valuation_of_result (infer_model all_clauses).
+Eval vm_compute in
+  option_map (is_model all_clauses) (option_of_result (infer_model all_clauses)).
+  
+(* This is a model? *)
+Eval vm_compute in (enforce_cstrs model_cstrs' enforced_cstrs).
+Eval vm_compute in print_clauses initial_cls.
+
+(** This is not a model of the closure of the initial clauses *)
+Eval vm_compute in
+  option_map (is_model initial_cls) 
+    (enforce_cstrs model_cstrs' enforced_cstrs).
+
+(* While it is a model of the new constraints *)    
+Eval vm_compute in
+  option_map (is_model enforced_cls) (enforce_cstrs model_cstrs' enforced_cstrs).
+
+(* All premises hold *)    
+Eval vm_compute in 
+  option_map (print_model_premises_hold enforced_cls) 
+    (enforce_cstrs model_cstrs' enforced_cstrs).

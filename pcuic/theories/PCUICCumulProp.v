@@ -1222,13 +1222,13 @@ Proof.
       eapply is_closed_context_weaken; fvs.
       len in clty; len.
 
-  - eapply inversion_Case in X10 as (mdecl' & idecl' & isdecl' & indices' & data & cum); auto.
+  - eapply inversion_Case in X9 as (mdecl' & idecl' & isdecl' & indices' & data & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
-    clear X9.
+    clear X8.
     destruct (declared_inductive_inj isdecl isdecl'). subst.
     destruct data.
-    specialize (X8 _ _ H5 scrut_ty _ (eq_term_upto_univ_napp_leq X11)).
+    specialize (X7 _ _ H5 scrut_ty _ (eq_term_upto_univ_napp_leq X10)).
     eapply cumul_prop_sym => //.
     destruct e as [eqpars [eqinst [eqpctx eqpret]]].
     rewrite /ptm. 
@@ -1246,13 +1246,13 @@ Proof.
       eapply eq_context_upto_univ_subst_instance; try tc. tas.
       now eapply All2_rev. }
     eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
-    eapply cumul_prop_mkApps_Ind_inv in X8 => //.
-    eapply All2_app_inv_l in X8 as (?&?&?&?&?).
+    eapply cumul_prop_mkApps_Ind_inv in X7 => //.
+    eapply All2_app_inv_l in X7 as (?&?&?&?&?).
     eapply All2_symP => //. typeclasses eauto.
     eapply app_inj in e as [eql ->] => //.
     move: (All2_length eqpars).
     move: (All2_length a0). lia. fvs. now eapply subject_is_open_term in scrut_ty.
-    now apply subject_is_open_term in X7.
+    now apply subject_is_open_term in X6.
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & cdecl' & pdecl' & args' & inv); auto.
     intuition auto.

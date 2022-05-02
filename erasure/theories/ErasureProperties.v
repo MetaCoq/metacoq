@@ -208,8 +208,8 @@ Proof.
     eapply context_conversion with Γ; eauto.
     eassumption.
   - econstructor. eauto. eauto.
-    eapply (All2i_All2_All2 X7 X6).
-    intros ? ? ? [] (? & ? & ? & ? & ? & ?) (? & ?).
+    eapply (All2i_All2_All2 X6 X5).
+    intros ? ? ? (? & ?) (? & ? & (? & ?) & ? & ?) (? & ?).
     split. 2: assumption.
     rewrite <- (PCUICCasesContexts.inst_case_branch_context_eq a).
     eapply e.
@@ -316,8 +316,8 @@ Proof.
   - unfold subst_instance.
     cbn [subst_instance_constr]. econstructor; eauto.
     eapply All2_map_left.
-    eapply (All2i_All2_All2 X7 X10).
-    intros ? ? [] [] (? & ? & ? & ? & ? & ?) (? & ?). split.
+    eapply (All2i_All2_All2 X6 X9).
+    intros ? ? [] [] (? & ? & (? & ?) & (? & ?)) (? & ?). split.
     2: now cbn in *.
     cbn -[app_context] in *. fold (subst_instance u bbody).
     eapply erases_ext_eq. 
@@ -529,17 +529,17 @@ Section wellscoped.
     - rewrite (declared_constructor_lookup isdecl) //.
     - now rewrite (declared_inductive_lookup isdecl).
     - red in H8. eapply Forall2_All2 in H8.
-      eapply All2i_All2_mix_left in X5; tea. clear H8.
+      eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
     - now rewrite (declared_projection_lookup isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
-      solve_all. destruct a as [s []].
+      solve_all. destruct a as [s []], a0.
       unfold test_def. len in b0.
-      rewrite b0. now rewrite i b.
+      rewrite b0. now rewrite i i0.
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
-    - solve_all. destruct a as [s []].
-      unfold test_def. len in b0. now rewrite i b0.
+    - solve_all. destruct a as [s []], b.
+      unfold test_def. len in i0. now rewrite i i0.
   Qed.
 
   Lemma welltyped_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a} : welltyped Σ Γ a -> wellformed Σ a.

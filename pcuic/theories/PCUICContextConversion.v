@@ -1194,12 +1194,9 @@ Proof.
   eapply wf_local_app => //.
   eapply All_local_env_app_inv in X1 as [].
   eapply All_local_env_impl_ind; tea => /=.
-  rewrite /lift_typing => Γ'' t' [t wf IH|wf [s IH]]; try exists s; eauto.
+  intros Γ'' t' T H HT.
+  apply lift_typing_impl with (1 := HT); intros ? IH.
   eapply IH. eapply All2_fold_app => //.
-  eapply All2_fold_refl. intros. eapply cumul_decls_refl.
-  eapply All_local_env_app; split; auto.
-  eapply IH. 
-  eapply All2_fold_app => //.
   eapply All2_fold_refl. intros. eapply cumul_decls_refl.
   eapply All_local_env_app; split; auto.
 Qed.

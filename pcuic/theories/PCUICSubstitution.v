@@ -1790,14 +1790,11 @@ Proof.
       eapply wf_local_app_inv in HΓ0 as [HΓ0 _].
       eapply All_local_env_inst; eauto. }
   unshelve eapply on_wf_global_env_impl ; tea.
-  clear. intros * HΣ HP HQ.
-  apply lift_typing_impl; clear -HΣ HP.
-  - intros. subst Γ.
-    rewrite !subst_inst. eapply X => //.
-    now unshelve eapply subslet_well_subst.
-  - intros Γ T [s Hs]. exists s. intros. subst Γ.
-    rewrite !subst_inst. eapply Hs => //.
-    now unshelve eapply subslet_well_subst.
+  clear. intros * HΣ HP HQ Hty.
+  apply lift_typing_impl with (1 := Hty); clear -HΣ HP.
+  intros. subst Γ.
+  rewrite !subst_inst. eapply X => //.
+  now unshelve eapply subslet_well_subst.
 Qed.
 
 Corollary substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ t T} :

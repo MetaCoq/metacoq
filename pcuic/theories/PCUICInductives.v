@@ -568,9 +568,8 @@ Lemma isType_it_mkProd_or_LetIn_inv {cf:checker_flags} {Σ : global_env_ext} {wf
   isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
   isType Σ (Γ ,,, Δ) T.
 Proof.
-  move=> [u Hu].
-  exists u. unfold PCUICTypingDef.typing in *.
-  now eapply inversion_it_mkProd_or_LetIn in Hu.
+  intros HT; apply infer_typing_sort_impl with id HT; intros Hs.
+  now eapply inversion_it_mkProd_or_LetIn in Hs.
 Qed.
 
 Lemma isType_it_mkProd_or_LetIn_subst {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ args inst T} :
@@ -617,28 +616,29 @@ Proof.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
   * constructor.
   * rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len. fvs.
+    do 2 red in l0. autorewrite with len. fvs.
     constructor. auto. specialize (IHΔ wfΔ).
     red in l0.
     eapply weaken_ctx in l0. 3:eapply wf_local_smash_context; eauto. 2:auto.
     eapply (substitution (Δ := [])) in l0. eapply l0. all:auto.
   * rewrite smash_context_acc. simpl.
     rewrite /map_decl /= /map_decl /=. simpl.
-    destruct l as [s Hs].
+    pose proof (l.π2).
     rewrite lift_closed. fvs.
     rewrite (lift_extended_subst _ 1).
     rewrite -{4}(closed_ctx_lift 1 0 Δ); fvs.
     constructor.
     { eapply (subslet_lift _ [_]); eauto.
       constructor. eapply wf_local_smash_context; auto.
-      exists s.
+      apply infer_typing_sort_impl with id l; intros Hs.
       eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
       eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto. }
     { eapply refine_type.
       econstructor.
       rewrite smash_context_acc /=. constructor.
-      apply wf_local_smash_context; auto. cbn.
-      exists s. eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
+      apply wf_local_smash_context; auto.
+      apply infer_typing_sort_impl with id l; intros Hs.
+      eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
       eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto.
       reflexivity.
       simpl.
@@ -658,7 +658,7 @@ Proof.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
   depelim wfΔ.
   * intros n. rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len; fvs.
+    do 2 red in l0. autorewrite with len; fvs.
     rewrite (reln_lift 1 0).
     rewrite map_map_compose map_subst_lift1.
     autorewrite with len.
@@ -1197,9 +1197,8 @@ Proof.
   eapply PCUICClosedConv.sorts_local_ctx_All_local_env in wfargs.
   2:{ eapply All_local_env_app. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
-      intros. destruct T; simpl in *.
-      - eapply weaken_ctx; auto.
-      - destruct X as [s Hs]. exists s. apply weaken_ctx; auto. }
+      intros. apply lift_typing_impl with (1 := X); intros ? Hs.
+      eapply weaken_ctx; auto. }
   pose proof wfargs as X.
   rewrite -(app_context_nil_l (arities_context _)) in X.
   rewrite -app_context_assoc in X.
@@ -1256,7 +1255,7 @@ Proof.
     constructor. reflexivity.
     rewrite -subst_instance_it_mkProd_or_LetIn.
     pose proof (onArity oib). rewrite -(oib.(ind_arity_eq)).
-    destruct X1 as [s Hs]. exists s.
+    apply infer_typing_sort_impl with id X1. 
     eapply (weaken_ctx (Γ:=[])); auto. }
   intros wf.
   generalize (weakening_wf_local (Γ'':=[_]) wf X1).

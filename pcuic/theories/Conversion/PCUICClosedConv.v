@@ -82,7 +82,7 @@ Proof.
     now rewrite andb_true_r in H.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed, lift_bityping in *. now simpl.
+    now simpl.
 Qed.
 
 Lemma weaken_env_prop_closed {cf} : 
@@ -203,7 +203,7 @@ Proof.
   induction Γ. simpl. intros. subst. unfold app_context in *. rewrite app_nil_r in wfΓ' al.
   induction al; try constructor;
   rewrite closedn_ctx_cons /=; cbn.
-  move/andP: p => [] /= -> _. now rewrite IHal.
+  move/andP: Hs => [] /= -> _. now rewrite IHal.
   now rewrite IHal /= /test_decl /=.
   intros.
   unfold app_context in *. subst Γ'.

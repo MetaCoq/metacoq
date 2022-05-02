@@ -85,7 +85,7 @@ Definition lift_bityping
 
 End All_local_env_rel.
 *)
-Section All_local_env_size.
+(* Section All_local_env_size.
 
   Context (P : context -> term -> typ_or_sort -> Type) (Psize : forall Γ t T, P Γ t T -> size).
 
@@ -181,4 +181,4 @@ Section SortingEnv.
 
   End All_local_env_size.
 
-End SortingEnv.
+End SortingEnv. *)

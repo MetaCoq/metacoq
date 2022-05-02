@@ -291,7 +291,7 @@ Equations? is_erasableb X_type X (Γ : context) (T : PCUICAst.term)
           is_propositional s.π1 } }.
   Proof.
     - intros. specialize_Σ H. destruct wt; sq. 
-      pcuic. now eapply typing_wf_local; eauto.
+      pcuic.
     - intros. specialize_Σ H. destruct T as [T Ht].
       cbn. destruct (Ht Σ H) as [[tT Hp]].
       pose proof (abstract_env_ext_wf X H) as [wf].
@@ -671,7 +671,7 @@ Proof.
     split => //. cbn. rewrite eq. now constructor.
     split => //. cbn. rewrite eq.
     destruct H2.
-    eapply Is_type_lambda in X2; tea. 2:pcuic. 2: now eapply typing_wf_local; eauto. destruct X2.
+    eapply Is_type_lambda in X2; tea. 2:pcuic. destruct X2.
     now constructor.
 Qed.
 

@@ -500,7 +500,7 @@ Section WfAst.
     on_global_env cumul_gen wf_decl_pred Σ.
   Proof.
     apply on_global_env_impl => Σ' Γ t []; simpl; unfold wf_decl_pred;
-    intros; auto. destruct X0 as [s ?]; intuition auto.
+    intros; auto. destruct X0 as [s []]; intuition auto.
   Qed.
 
   (* Hint Resolve on_global_wf_Forall_decls : wf. *)
@@ -876,8 +876,8 @@ Section WfRed.
   Proof.
     induction 1; simpl.
     - trivial.
-    - intros t0 Ht0. apply IHX. constructor. apply p. assumption.
-    - intros t0 Ht0. apply IHX. constructor. apply p. apply p. assumption.
+    - intros t0 Ht0. apply IHX. constructor. apply Hs. assumption.
+    - intros t0 Ht0. apply IHX. constructor. apply Hc. apply Hc. assumption.
   Qed.
 
   Lemma wf_Lambda_or_LetIn {d t} :
@@ -954,7 +954,7 @@ Section TypingWf.
     - split. wf. apply wf_subst_instance. wf.
       destruct (lookup_on_global_env X H) as [Σ' [wfΣ' [ext prf]]]; eauto.
       red in prf. destruct decl; destruct cst_body0; red in prf; simpl in *; wf.
-      destruct prf. wf.
+      destruct prf as [s []]. wf.
 
     - split. wf. apply wf_subst_instance.
       eapply declared_inductive_wf; eauto.
@@ -967,12 +967,12 @@ Section TypingWf.
       eapply declared_constructor_wf; eauto.
       now eapply Forall_decls_on_global_wf.
 
-    - destruct X4 as [wfret wps].
-      destruct X7 as [wfc wfapps].
+    - destruct X3 as [wfret wps].
+      destruct X6 as [wfc wfapps].
       eapply wf_mkApps_inv in wfapps.
       eapply All_app in wfapps as [wfp wfindices].
       assert (All (wf_decl Σ) predctx).
-      { now apply All_app in X5 as [? ?]. }
+      { now apply All_app in X4 as [? ?]. }
       split; [econstructor; simpl; eauto; solve_all|].
       eapply All2i_All2; tea; repeat intuition auto. 
       apply wf_mkApps. subst ptm. wf. apply wf_it_mkLambda_or_LetIn; auto.
@@ -987,16 +987,16 @@ Section TypingWf.
       clear H.
       split.
       + constructor.
-        solve_all. destruct a.
-        intuition.
+        solve_all; destruct a, b.
+        all: intuition.
       + eapply All_nth_error in X0; eauto.
         destruct X0 as [s ?]; intuition. 
 
     - subst types.
       split.
       + constructor.
-        solve_all. destruct a.
-        intuition.
+        solve_all; destruct a, b.
+        all: intuition.
       + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
   Qed.
 
@@ -1012,7 +1012,7 @@ Section TypingWf.
   Proof.
     intros.
     pose proof (env_prop_sigma typing_wf_gen _ wfΣ). red in X.
-    unfold lift_bityping in X. do 2 red in wfΣ.
+    do 2 red in wfΣ.
     eapply on_global_env_impl; eauto; simpl; intros.
     destruct T. red. apply X1. red. destruct X1 as [x [a wfs]]. split; auto.
   Qed.

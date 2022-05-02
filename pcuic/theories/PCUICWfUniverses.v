@@ -551,9 +551,9 @@ Qed.
       (lift_typing (fun Σ Γ (t T : term) =>
         wf_universes Σ t && wf_universes Σ T)).
   Proof.
-    red. intros.
-    unfold lift_bityping in *. destruct T. now eapply (wf_universes_weaken_full (Σ, _)).
-    destruct X2 as [s Hs]; exists s. now eapply (wf_universes_weaken_full (Σ, _)).
+    intros Σ Σ' φ wfΣ wfΣ' Hext Γ t T HT.
+    apply lift_typing_impl with (1 := HT); intros ? Hty.
+    now eapply (wf_universes_weaken_full (Σ, _)).
   Qed.
 
   Lemma wf_universes_inds Σ mind u bodies : 
@@ -1035,12 +1035,12 @@ Qed.
     - split.
       * induction X; constructor; auto.
         destruct tu as [s tu]; exists s; simpl.
-        now simpl in p.
+        now simpl in Hs.
         destruct tu as [s tu]; exists s; simpl.
-        now simpl in p.
+        now simpl in Hs.
       * induction X; simpl; auto.
-        rewrite IHX /= /test_decl /=. now move/andP: p.
-        rewrite IHX /= /test_decl /=. now move/andP: p => [] -> ->.
+        rewrite IHX /= /test_decl /=. now move/andP: Hs.
+        rewrite IHX /= /test_decl /=. now move/andP: Hc => [] -> ->.
 
     - rewrite wf_universes_lift.
       destruct X as [X _].
@@ -1108,7 +1108,7 @@ Qed.
       rewrite wfu /= wfpars wf_universes_mkApps /= 
         forallb_app wfinds /= H /= !andb_true_r.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
-      destruct X6. destruct onArity as [s Hs].
+      destruct X5. destruct onArity as [s Hs].
       move/andP: Hs => [] /= hty hs.
       rewrite ind_arity_eq in hty.
       rewrite !wf_universes_it_mkProd_or_LetIn in hty.
@@ -1194,12 +1194,12 @@ Qed.
       now destruct H as [s [Hs _]%andb_and]. 
     
     - apply/andP; split; auto.
-      solve_all. now rewrite wf_universes_lift in H2.
+      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
 
     - apply/andP; split; auto.
-      solve_all. now rewrite wf_universes_lift in H2.
+      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
   Qed.

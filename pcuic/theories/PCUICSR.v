@@ -175,8 +175,7 @@ Qed.
   end : pcuic.
 
 Ltac unfold_pcuic := 
-  progress (unfold lift_bityping, PCUICTypingDef.typing,
-  PCUICLookup.wf_universe in * ).
+  progress (unfold PCUICTypingDef.typing, PCUICLookup.wf_universe in * ).
 #[global] Hint Extern 10 => unfold_pcuic : pcuic.
 
 #[global] Hint Resolve red_conv red1_red red_cumul : pcuic.
@@ -416,8 +415,9 @@ Lemma isType_weaken {cf} {Σ Γ Δ T} {wfΣ : wf Σ} :
   isType Σ Γ T -> 
   isType Σ (Δ ,,, Γ) T.
 Proof.
-  intros wfΔ [s HT].
-  exists s. eapply weaken_ctx => //.
+  intros wfΔ HT.
+  apply infer_typing_sort_impl with id HT; intros Hs.
+  eapply weaken_ctx => //.
 Qed.
 
 (** The crucial property on constructors of cumulative inductive types for type preservation: 
@@ -1108,7 +1108,7 @@ Coercion closed_red1_red : closed_red1 >-> closed_red.
 Lemma wt_cumul_pb_refl {cf} {Σ} {wfΣ : wf Σ} {Γ t T} : Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ t = t.
 Proof.
   intros. apply ws_cumul_pb_refl.
-  apply wf_local_closed_context; pcuic. now eapply typing_wf_local; eauto.
+  apply wf_local_closed_context; pcuic.
   now apply subject_closed in X; apply closedn_on_free_vars.
 Qed.
 
@@ -1448,7 +1448,7 @@ Lemma wt_closed_red1 {cf} {Σ} {wfΣ : wf Σ} {Γ T U} :
 Proof.
   intros [ty HT] r.
   split => //.
-  eapply wf_local_closed_context; pcuic. now eapply typing_wf_local; eauto.
+  eapply wf_local_closed_context; pcuic.
   now eapply subject_is_open_term in HT.
 Qed.
 
@@ -1546,24 +1546,27 @@ Proof.
     induction 1.
     * depelim p. subst. depelim X. constructor.
       now eapply wf_local_app_inv.
-      exists tu.π1. now eapply t1.
+      apply infer_typing_sort_impl with id tu; intros _.
+      now eapply Hs.
     * depelim X. 
       constructor. now eapply wf_local_app_inv.
       depelim p. destruct s as [[red <-]|[red <-]]; subst.
-      exists tu.π1. now eapply t2.
+      apply infer_typing_sort_impl with id tu; intros _.
+      now eapply Hs.
       exact tu.
       red. depelim p. destruct s as [[red <-]|[red <-]]; subst.
-      specialize (t2 _ red). eapply type_ws_cumul_pb; tea.
-      exists tu.π1. apply t2. eapply (red_ws_cumul_pb (pb:=Cumul)).
+      specialize (Hs _ red). eapply type_ws_cumul_pb; tea.
+      apply infer_typing_sort_impl with id tu; intros _.
+      apply Hs. eapply (red_ws_cumul_pb (pb:=Cumul)).
       now eapply closed_red1_red.
-      now eapply t1.
+      now eapply Hc.
       
     * depelim X; specialize (IHX0 _ X); pose proof (wf_local_closed_context all).
       + constructor; auto. clear X.
         pose proof (wf_local_closed_context all).
         eapply wf_local_app_inv in all as [].
         eapply wf_local_app in IHX0; tea.
-        destruct tu as [s Hs]. exists s.
+        apply infer_typing_sort_impl with id tu; intros Hty.
         eapply closed_context_conversion; tea.
         eapply red_one_decl_ws_cumul_ctx_pb => //.
         eapply OnOne2_local_env_impl; tea.
@@ -1571,7 +1574,7 @@ Proof.
       + constructor; auto. clear X.
         { eapply wf_local_app_inv in all as [].
           eapply wf_local_app in IHX0; tea.
-          destruct tu as [s Hs]. exists s.
+          apply infer_typing_sort_impl with id tu; intros Hty.
           eapply closed_context_conversion; tea.
           eapply red_one_decl_ws_cumul_ctx_pb => //.
           eapply OnOne2_local_env_impl; tea.
@@ -1708,7 +1711,10 @@ Proof.
   - (* iota reduction *)
     clear forall_u forall_u0 X X0.
     destruct X4 as [wfcpc IHcpc].
-    hide X9.
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as IHctxi.
+    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    hide X8.
     pose proof typec as typec''.
     unfold iota_red.
     pose proof typec as typec'.
@@ -1738,16 +1744,15 @@ Proof.
     { eapply validity in IHp; auto. eapply PCUICWfUniverses.isType_wf_universes in IHp; tea.
       now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in IHp. }
     have lenpars := (wf_predicate_length_pars H0).      
-    unfold hidebody in X9.
+    unfold hidebody in X8.
     set (ptm := it_mkLambda_or_LetIn _ _).
     rename c0 into c.
     assert (isType Σ Γ (mkApps ptm (indices ++ [mkApps (tConstruct ci c u) args]))).
-    { eapply validity. econstructor; eauto. all :constructor; eauto. apply (All2i_impl X9). intuition auto. }
-    eapply All2i_nth_error in X9; tea.
+    { eapply validity. econstructor; eauto. all :constructor; eauto. apply (All2i_impl X8). intuition auto. }
+    eapply All2i_nth_error in X8; tea.
     2:{ destruct declc. simpl in e. exact e. }
-    cbn in X9.
-    destruct X9 as [bctxeq [[wfcbc IHcbc] [hb [IHbody [cbty IHcbty]]]]].
-    clear IHcbty IHbody IHcbc.
+    cbn in X8.
+    destruct X8 as (bctxeq & (wfcbc & _) & (hb & _) & cbty & _).
     cbn -[case_branch_type_gen] in hb.
     rewrite case_branch_type_fst in hb.
     set (prebrctx := pre_case_branch_context ci mdecl (pparams p) (puinst p) cdecl).
@@ -1806,7 +1811,7 @@ Proof.
       rewrite (firstn_app_left).
       now rewrite (wf_predicate_length_pars H0).
       intros iparsubst0.
-      clear X6. unshelve epose proof (ctx_inst_spine_subst _ X5).
+      clear X5 IHctxi. unshelve epose proof (ctx_inst_spine_subst _ Hctxi).
       eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu').
       rewrite (spine_subst_inst_subst iparsubst0).
       intros cum.
@@ -2084,10 +2089,14 @@ Proof.
     discriminate.
     
   - (* Case congruence on a parameter *) 
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    clear X5; rename Hctxi into X5.
     destruct X0, X4.
     assert (isType Σ Γ (mkApps (it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p)) (indices ++ [c]))).
     { eapply validity. econstructor; eauto. all: econstructor; eauto.
-      eapply (All2i_impl X9); intuition auto. }
+      eapply (All2i_impl X8); intuition auto. }
     set (ptm := it_mkLambda_or_LetIn _ _) in *.
     cbn -[ptm it_mkLambda_or_LetIn] in *.
     have wfparinds : wf_local Σ
@@ -2119,8 +2128,8 @@ Proof.
     unshelve epose proof (ctx_inst_spine_subst _ ctxi');tea.
     pose proof (spine_codom_wf _ _ _ _ _ X4);tea.
     pose proof (spine_subst_smash X4); tea. all:tea.
-    rewrite subst_instance_app smash_context_app_expand in X8.
-    eapply spine_subst_app_inv in X8 as [sppars' spargs']; tea.
+    rewrite subst_instance_app smash_context_app_expand in X9.
+    eapply spine_subst_app_inv in X9 as [sppars' spargs']; tea.
     2:len. len in sppars'. len in spargs'.
     rewrite List.rev_app_distr in sppars' spargs'.
     rewrite skipn_app - !lenidx !skipn_all /= Nat.sub_diag skipn_0 in sppars' spargs'.
@@ -2172,7 +2181,7 @@ Proof.
       eapply ws_cumul_pb_eq_le. eapply ws_cumul_pb_mkApps; pcuic.
       eapply All2_app => //. now apply: red_terms_ws_cumul_pb_terms. }
     set (pctx := (inst_case_predicate_context (set_pparams p params'))) in *.
-    pose proof (snd (All2_fold_All2 _) X1). symmetry in X8. move:X8.
+    pose proof (snd (All2_fold_All2 _) X1). symmetry in X9. move:X9.
     change (pcontext p) with (pcontext (set_pparams p params')).
     move/(PCUICAlpha.inst_case_predicate_context_eq wfp') => eqctx.
     have wfpctx : wf_local Σ (Γ,,, inst_case_predicate_context (set_pparams p params')).
@@ -2190,20 +2199,20 @@ Proof.
       eapply eq_context_upto_cat. apply eq_context_upto_refl; tc.
       now apply eq_context_gen_upto. }
     epose proof (wf_case_branches_types' (p:=set_pparams p params') ps _ brs isdecl isty' wfp').
-    cbv zeta in X8; forward_keep X8.
+    cbv zeta in X9; forward_keep X9.
     { eapply closed_context_conversion; tea. }
-    do 2 forward X8 by auto.
+    do 2 forward X9 by auto.
     eapply type_ws_cumul_pb; tea.
     { econstructor; tea. all: econstructor; tea. 
       (* The branches contexts also depend on the parameters. *)
-      apply All2i_nth_hyp in X8.
-      eapply All2i_All2i_mix in X9; tea. clear X8.
-      eapply (All2i_impl X9); clear X9.
+      apply All2i_nth_hyp in X9.
+      eapply All2i_All2i_mix in X8; tea. clear X9.
+      eapply (All2i_impl X8); clear X8.
       intros cstr cdecl br. cbv zeta.
       rewrite !case_branch_type_fst.
       do 2 case. move=> hnth [] wfbr wfbctxargs wfbrctx wfcbc' wfcbcty'.
       case => eqbctx. case. case => wfbctx _.
-      move=> [] Hbody [] IHbody [] brty IHbrty.
+      move=> [] [] Hbody IHbody [] brty IHbrty.
       eapply conj_impl. solve_all. move=> cvcbc.
       apply conj_impl; [|move=> wfcb'].
       { now eapply typing_wf_local in wfcbcty'. }
@@ -2314,11 +2323,15 @@ Proof.
 
   - (* Case congruence on the return clause context *)
     clear IHHu. destruct X0, X4 as []. 
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    clear X5; rename Hctxi into X5.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. econstructor; eauto.
       split; eauto.
-      apply (All2i_impl X9). intuition auto. }
+      apply (All2i_impl X8). intuition auto. }
     assert (closed_red1 Σ (Γ,,, case_predicate_context ci mdecl idecl p) 
       (preturn p) preturn').
     { eapply closed_red1_eq_context_upto_names; tea.
@@ -2328,16 +2341,16 @@ Proof.
     * eapply type_Case; eauto. constructor; eauto. constructor; eauto. 
       epose proof (wf_case_branches_types' (p:=set_preturn p preturn') ps _ brs isdecl (validity typec) H0
         (forall_u _ X3) H4 X1).
-      eapply All2i_All2_mix_left in X9. 2:exact (Forall2_All2 _ _ H4). clear H4.
-      eapply (All2i_All2i_mix X4) in X9. clear X4. 
-      eapply (All2i_impl X9); intuition auto; clear X9.
+      eapply All2i_All2_mix_left in X8. 2:exact (Forall2_All2 _ _ H4). clear H4.
+      eapply (All2i_All2i_mix X4) in X8. clear X4. 
+      eapply (All2i_impl X8); intuition auto; clear X8.
       rewrite !case_branch_type_fst in a3 a4 *.
       set (cbty' := case_branch_type _ _ _ _ _ _ _ _) in *.
-      set (cbty := case_branch_type _ _ _ _ _ _ _ _) in b1.
+      set (cbty := case_branch_type _ _ _ _ _ _ _ _) in b0.
       have btyred : Σ ;;; Γ,,, cbty.1 ⊢ cbty.2 ⇝1 cbty'.2.
       { rewrite /cbty /cbty'.
         apply: closed_red1_case_branch_type => //.
-        eapply subject_closed in a7. now apply closedn_on_free_vars.
+        eapply subject_closed in a4. now apply closedn_on_free_vars.
         now eapply wf_local_closed_context.
         now apply closed_red1_it_mkLambda_or_LetIn. }
       destruct a1 as [wfparctx wfparctx' wfcbc wfcbty].
@@ -2359,11 +2372,15 @@ Proof.
       
   - (* Case congruence on discriminee *) 
     destruct X0, X4.
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    clear X5; rename Hctxi into X5.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. econstructor; eauto.
       constructor; eauto.
-      apply (All2i_impl X9). intuition auto. }
+      apply (All2i_impl X8). intuition auto. }
     eapply type_ws_cumul_pb. eapply type_Case; eauto. 1: econstructor; eauto.
     1:econstructor; eauto.
     * solve_all.
@@ -2385,6 +2402,10 @@ Proof.
         
   - (* Case congruence on branches *)
     destruct X0, X4.
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    clear X5; rename Hctxi into X5.
     eapply type_Case; eauto. econstructor; eauto.
     econstructor; eauto.
     * eapply Forall2_All2 in H4.
@@ -2394,13 +2415,13 @@ Proof.
       eapply (OnOne2_All2_All2 X3 wfb); auto.
       intros [] []; simpl. intros.
       destruct X0 as [_ eq]. subst bcontext0. exact H5.
-    * apply Forall2_All2 in H4. eapply All2i_All2_mix_left in X9; tea.
-      eapply (OnOne2_All2i_All2i X3 X9).
+    * apply Forall2_All2 in H4. eapply All2i_All2_mix_left in X8; tea.
+      eapply (OnOne2_All2i_All2i X3 X8).
       intros n [] []; simpl. intros. intuition auto.
       intros n [ctx b] [ctx' b'] cdecl; cbn.
       rewrite !case_branch_type_fst.
       intros [red <-].
-      move=> [] wfbr [] convctx [] [] wfcbc IHcbc [] Hb [] IHb [] Hbty IHbty.
+      move=> [] wfbr [] convctx [] [] wfcbc IHcbc [] [] Hb IHb [] Hbty IHbty.
       intuition auto. clear b0.
       eapply IHb. eapply closed_red1_eq_context_upto_names; tea.
       eapply All2_app.
@@ -2572,15 +2593,14 @@ Proof.
     eapply (type_ws_cumul_pb (pb:=Cumul)); eauto.
     { rewrite firstn_skipn.
       eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1.p1) in projty; eauto.
-      destruct projty as [s' Hs].
-      exists s'.
+      apply infer_typing_sort_impl with id projty; intros Hs.
       rewrite /= /map_decl /= in Hs.
       eapply (weaken_ctx Γ) in Hs; auto.
       rewrite (subst_app_simpl [_]).
       destruct projeq as [decl' [hnthargs hty wf' projeq1 projty']].
-      eapply (substitution0 (T := tSort s')). 
+      eapply (substitution0 (T := tSort _)). 
       eapply (PCUICSubstitution.substitution (Γ' := subst_instance u (smash_context [] (ind_params mdecl)))
-        (Δ := [vass _ _]) (T := tSort s')); eauto.
+        (Δ := [vass _ _]) (T := tSort _)); eauto.
       rewrite firstn_all2 in iparsubst0. lia.
       eapply spine_subst_smash in iparsubst0; auto.
       rewrite subst_instance_smash.
@@ -2833,15 +2853,15 @@ Proof.
         split; try reflexivity. apply ws_cumul_pb_refl => //.
       * eapply IHX2. simpl in H2; now move/andP: H2 => [].
       * cbn. intros ???? []; constructor; eauto; now apply ws_cumul_pb_forget_conv. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    { apply (All_impl X0).
-      now intros x [s' [Hs' _]]; exists s'. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix).
+    { apply (All_impl X0); intros d HT.
+      apply infer_typing_sort_impl with id HT; now intros [Hty _]. }
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix1).
     { apply (OnOne2_All_All X2 X0).
-      * intros x [s [Hs IH]].
-        now exists s.
-      * intros x y [red eq] [s [Hs IH]].
-        now exists s; apply IH. }
+      * intros d HT.
+        apply infer_typing_sort_impl with id HT; now intros [Hty _].
+      * intros d d' [[red _] eq] HT'.
+        apply infer_typing_sort_impl with id HT'; now intros [_ IH]. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ X2 heq_nth_error) as [decl' [eqnth disj]].
@@ -2856,17 +2876,20 @@ Proof.
       + intros x [Hb IH].
         eapply context_conversion; eauto.
         now rewrite -fixl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[[red Hred] eq] [s [Hs IH]]] [Hb IH'].
+      + move=> [na ty b rarg] [na' ty' b' rarg'] [[[red Hred] eq] HT] [Hb IH'].
+        rewrite /= in red, Hred, eq, Hb, IH'.
         noconf eq.
         eapply context_conversion; eauto.
         rewrite -fixl.
         eapply type_Cumul_alt. eapply Hb.
-        exists s. specialize (IH _ red).
+        red. simple apply infer_typing_sort_impl with id HT; move=> /= [Hs IH].
+        specialize (IH _ red).
         eapply (weakening _ _ _ _ (tSort _)); auto.
         apply All_mfix_wf; auto. 
         apply red_cumul, red1_red.
         eapply (weakening_red1 _ []); auto.
         2:eapply red.
+        pose proof (Hs := HT.π2.1).
         eapply subject_closed in Hs. 
         eapply (closedn_on_free_vars (P:=xpredT)) in Hs.
         now eapply on_free_vars_any_xpredT.
@@ -2888,16 +2911,16 @@ Proof.
       destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
       simpl. intros. now rewrite H H0.
       simpl. intros n'; f_equal. apply IHX2. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    { apply (All_impl X0).
-      now intros x [s' [Hs' _]]; exists s'. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix).
+    { apply (All_impl X0); intros d HT.
+      apply infer_typing_sort_impl with id HT; now intros [Hty _]. }
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix1).
     { apply (OnOne2_All_All X2 X0).
-      * intros x [s [Hs IH]].
-        now exists s.
-      * intros x y [red eq] [s [Hs IH]].
-        noconf eq. rewrite -H4.
-        now exists s; apply Hs. }
+      * intros d HT.
+        apply infer_typing_sort_impl with id HT; now intros [Hty _].
+      * intros d d' [[red _] eq] HT'.
+        noconf eq.
+        apply infer_typing_sort_impl with id HT'; intros [Hs IH]. now rewrite -H4. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ X2 heq_nth_error) as [decl' [eqnth disj]].
@@ -2913,7 +2936,7 @@ Proof.
         eapply context_conversion; eauto.
         now rewrite -fixl.
         rewrite convctx. apply conv_ctx_refl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] HT] [Hb IH'].
         noconf eq.
         now rewrite -convctx.        
     * eapply wf_fixpoint_red1_body; eauto.
@@ -2944,15 +2967,15 @@ Proof.
         split; try reflexivity. apply ws_cumul_pb_refl => //.
       * eapply IHX2. simpl in H2; now move/andP: H2 => [].
       * cbn. intros ???? []; constructor; eauto; now apply ws_cumul_pb_forget_conv. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    { apply (All_impl X0).
-      now intros x [s' [Hs' _]]; exists s'. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
-    { apply (OnOne2_All_All X2 X0).
-      * intros x [s [Hs IH]].
-        now exists s.
-      * intros x y [red eq] [s [Hs IH]].
-        now exists s; apply IH. }
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix).
+    { apply (All_impl X0); intros d HT.
+      apply infer_typing_sort_impl with id HT; now intros [Hty _]. }
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix1).
+      { apply (OnOne2_All_All X2 X0).
+      * intros d HT.
+        apply infer_typing_sort_impl with id HT; now intros [Hty _].
+      * intros d d' [[red _] eq] HT'.
+        apply infer_typing_sort_impl with id HT'; now intros [_ IH]. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ X2 heq_nth_error) as [decl' [eqnth disj]].
@@ -2967,17 +2990,20 @@ Proof.
       + intros x [Hb IH].
         eapply context_conversion; eauto.
         now rewrite -fixl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[[red Hred] eq] [s [Hs IH]]] [Hb IH'].
+      + move=> [na ty b rarg] [na' ty' b' rarg'] [[[red Hred] eq] HT] [Hb IH'].
+        rewrite /= in red, Hred, eq, Hb, IH'.
         noconf eq.
         eapply context_conversion; eauto.
         rewrite -fixl.
         eapply type_Cumul_alt. eapply Hb.
-        exists s. specialize (IH _ red).
+        red. simple apply infer_typing_sort_impl with id HT; move=> /= [Hs IH].
+        specialize (IH _ red).
         eapply (weakening _ _ _ _ (tSort _)); auto.
         apply All_mfix_wf; auto. 
         apply red_cumul, red1_red.
         eapply (weakening_red1 _ []); auto.
         2:eapply red.
+        pose proof (Hs := HT.π2.1).
         eapply subject_closed in Hs. 
         eapply (closedn_on_free_vars (P:=xpredT)) in Hs.
         now eapply on_free_vars_any_xpredT.
@@ -2999,16 +3025,16 @@ Proof.
       destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
       simpl. intros. now rewrite H H0.
       simpl. intros n'; f_equal. apply IHX2. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    { apply (All_impl X0).
-      now intros x [s' [Hs' _]]; exists s'. }
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix).
+    { apply (All_impl X0); intros d HT.
+      apply infer_typing_sort_impl with id HT; now intros [Hty _]. }
+    assert (All (on_def_type (lift_typing typing Σ) Γ) mfix1).
     { apply (OnOne2_All_All X2 X0).
-      * intros x [s [Hs IH]].
-        now exists s.
-      * intros x y [red eq] [s [Hs IH]].
-        noconf eq. rewrite -H4.
-        now exists s; apply Hs. }
+      * intros d HT.
+        apply infer_typing_sort_impl with id HT; now intros [Hty _].
+      * intros d d' [[red _] eq] HT'.
+        noconf eq.
+        apply infer_typing_sort_impl with id HT'; intros [Hs IH]. now rewrite -H4. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ X2 heq_nth_error) as [decl' [eqnth disj]].
@@ -3024,7 +3050,7 @@ Proof.
         eapply context_conversion; eauto.
         now rewrite -fixl.
         rewrite convctx. apply conv_ctx_refl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] HT] [Hb IH'].
         noconf eq.
         now rewrite -convctx.        
     * eapply wf_cofixpoint_red1_body; eauto.
@@ -3099,8 +3125,8 @@ Lemma type_reduction {cf} {Σ} {wfΣ : wf Σ} {Γ t A B} :
 Proof.
   intros Ht Hr.
   eapply type_Cumul_alt. eassumption.
-  destruct (validity Ht) as [s HA]. 
-  exists s; eapply subject_reduction; eassumption.
+  apply infer_typing_sort_impl with id (validity Ht); intros HA.
+  eapply subject_reduction; eassumption.
   eapply conv_cumul. now apply PCUICCumulativity.red_conv.
 Defined.
 
@@ -3151,14 +3177,11 @@ Section SRContext.
   Proof.
     induction n in Γ, decl |- *; intros hΓ e; destruct Γ;
       cbn; inversion e; inversion hΓ; subst.
-    all: try (destruct X0 as [s Ht]; exists s;
-              eapply (weakening _ _ [_] _ (tSort s)); tas).
-    - eapply IHn in H0; tas. destruct H0 as [s Ht]. exists s.
-      rewrite simpl_lift0.
-      eapply (weakening _ _ [_] _ (tSort s)); tas; cbnr.
-    - eapply IHn in H0; tas. destruct H0 as [s Ht]. exists s.
-      rewrite simpl_lift0.
-      eapply (weakening _ _ [_] _ (tSort s)); tas; cbnr.
+    1,2: rename X0 into H0.
+    3,4: eapply IHn in H0; tas.
+    3,4: rewrite simpl_lift0.
+    all: eapply infer_typing_sort_impl with id H0; intros Hs.
+    all: eapply (weakening _ _ [_] _ (tSort _)); tas.
   Qed.
 
   Ltac invs H := inversion H; subst.
@@ -3191,26 +3214,26 @@ Section SRContext.
     induction H in Γ', r, X |-  *; depelim r.
     - constructor; auto. cbn in o.
       destruct o as [<- r].
-      destruct t1 as [s Hs]. exists s.
+      apply infer_typing_sort_impl with id t1; intros Hs.
       eapply subject_reduction1 in Hs; eauto.
     - depelim X.
-      constructor; auto. 
-      destruct t1 as [s Hs]. exists s.
+      constructor; auto.
+      apply infer_typing_sort_impl with id t1; intros Hs.
       eapply context_conversion; eauto.
     - depelim X.
-      red in o. destruct t1 as [s Hs].
+      red in o.
       simpl in t2.
       destruct o as [<- [[r ->]|[r <-]]].
-      constructor; auto. exists s; auto.
-      eapply subject_reduction1; eauto.
-      red. eapply type_reduction; tea. pcuic.
       constructor; auto.
-      exists s; eapply subject_reduction; tea.
-      reflexivity.
-      red. eapply subject_reduction1; tea.
-    - depelim X. destruct t1 as [s Hs].
+      apply infer_typing_sort_impl with id t1; intros Hs.
+      eapply subject_reduction1; eauto.
+      eapply type_reduction; tea. pcuic.
+      constructor; auto.
+      eapply subject_reduction1; tea.
+    - depelim X.
       simpl in t2.
-      constructor; auto. exists s; auto.
+      constructor; auto.
+      apply infer_typing_sort_impl with id t1; intros Hs.
       eapply context_conversion; eauto.
       red; eapply context_conversion; eauto.
     - eapply context_conversion; eauto.
@@ -3221,21 +3244,20 @@ Section SRContext.
   Proof.
     induction 1; cbn in *.
     - destruct p as [-> r]. intro e. inversion e; subst; cbn in *.
-      constructor; tas. destruct X0 as [s Ht]. exists s.
+      constructor; tas.
+      apply infer_typing_sort_impl with id X0; intros Hs.
       eapply subject_reduction1; tea.
     - intro e. inversion e; subst; cbn in *.
       destruct p as [-> [[? []]|[? []]]]; constructor; cbn; tas.
-      + destruct X0; eexists; eapply subject_reduction1; tea.
+      + apply infer_typing_sort_impl with id X0; intros Hs; eapply subject_reduction1; tea.
       + eapply type_Cumul_alt; tea.
-        destruct X0. exists x. eapply subject_reduction1; tea.
+        apply infer_typing_sort_impl with id X0; intros Hs.
+        eapply subject_reduction1; tea.
         econstructor 2. eassumption. eapply cumul_refl'.
       + eapply subject_reduction1; tea.
     - intro H; inversion H; subst; constructor; cbn in *; auto.
-      + destruct X1 as [s Ht]. exists s.
-        eapply subject_reduction_ctx; tea.
-      + destruct X1 as [s Ht]. exists s.
-        eapply subject_reduction_ctx; tea.
-      + eapply subject_reduction_ctx; tea.
+      1,2: apply infer_typing_sort_impl with id X1; intros Hs.
+      all: eapply subject_reduction_ctx; tea.
   Qed.
 
   Lemma red_ctx_clos_rt_red1_ctx Σ : Relation_Properties.inclusion (red_ctx Σ)
@@ -3284,7 +3306,7 @@ Section SRContext.
     change (d :: Γ') with (Γ' ,, d).
     destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
     - rewrite subst_context_snoc0. simpl.
-      inversion HH; subst; cbn in *. destruct X0 as [s X0].
+      inversion HH; subst; cbn in *.
       change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
@@ -3292,18 +3314,19 @@ Section SRContext.
         apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption.
       }
       constructor; cbn; auto.
-      1: exists s.
-      1: change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+      1: apply infer_typing_sort_impl with id X0; intros Hs.
+      1: change (tSort _) with (subst [b] #|Γ'| (tSort X0.π1)).
       all: eapply PCUICSubstitution.substitution; tea.
     - rewrite subst_context_snoc0. simpl.
-      inversion HH; subst; cbn in *. destruct X0 as [s X0].
+      inversion HH; subst; cbn in *.
       change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
         rewrite !subst_empty in XX. apply XX. constructor.
         apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption. }
-      constructor; cbn; auto. exists s.
-      change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+      constructor; cbn; auto.
+      apply infer_typing_sort_impl with id X0; intros Hs.
+      change (tSort _) with (subst [b] #|Γ'| (tSort X0.π1)).
       all: eapply PCUICSubstitution.substitution; tea.
   Qed.
 
@@ -3320,8 +3343,9 @@ Section SRContext.
      red1 Σ Γ A B ->
      isType Σ Γ B.
    Proof.
-     intros [s Hs] red.
-     exists s. eapply subject_reduction1; eauto.
+     intros HT red.
+     apply infer_typing_sort_impl with id HT; intros Hs.
+     eapply subject_reduction1; eauto.
    Qed.
 
    Lemma isWfArity_red1 {Σ} {wfΣ : wf Σ} {Γ A B} :
@@ -3379,7 +3403,7 @@ Section SRContext.
    Lemma isType_red {Σ} {wfΣ : wf Σ} {Γ T U} :
     isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
    Proof.
-     intros [s Hs] red; exists s.
+     intros HT red; apply infer_typing_sort_impl with id HT; intros Hs.
      eapply subject_reduction; eauto.
    Qed.
 
@@ -3404,13 +3428,13 @@ Proof.
       + eapply (weakening_red_0 (Γ' := [_]) (N := tSort _)); tea; [reflexivity|..].
         erewrite -> on_free_vars_ctx_on_ctx_free_vars. apply H.
         apply H. apply H.
-  - destruct HH as [HA [Ht HB]].
-    destruct HB as [sB HB].
-    eexists. eapply type_reduction; tas.
+  - destruct HH as (HA & Ht & HB).
+    apply infer_typing_sort_impl with id HB; intros Hs.
+    eapply type_reduction; tas.
     * econstructor; tea.
       apply HA.π2.
     * apply red1_red.
-      apply red_zeta with (b':=tSort sB).
+      apply red_zeta with (b':=tSort _).
 Defined.
 
 (** Keep at the end to not disturb asynchronous proof processing *)

@@ -22,6 +22,7 @@ Module Type Term.
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
   Parameter Inline subst_instance_constr : UnivSubst term.
   
+  Notation lift0 n := (lift n 0).
 End Term.
 
 Module Environment (T : Term).

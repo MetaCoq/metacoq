@@ -242,8 +242,8 @@ Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
 Proof.
   intros X0 Σ' H0.
   induction X0 in H0 |- *; try econstructor; simpl in *; intuition auto.
-  - destruct tu as [u Hu]; exists u; auto.
-  - destruct tu as [u Hu]; exists u; auto.
+  - apply infer_typing_sort_impl with id tu. intro; eauto.
+  - apply infer_typing_sort_impl with id tu. intro; eauto.
 Qed.
 #[global]
 Hint Resolve extends_wf_local : extends.

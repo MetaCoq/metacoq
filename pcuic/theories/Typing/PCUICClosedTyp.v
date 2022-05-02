@@ -81,7 +81,7 @@ Proof.
   intros.
   eapply weaken_lookup_on_global_env; eauto. red; eauto.
   eapply (on_global_env_impl (empty_ext Σ)); cycle 1. tea.
-  red; intros. unfold lift_bityping in *. destruct T; intuition auto with wf.
+  red; intros. destruct T; intuition auto with wf.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
@@ -162,7 +162,7 @@ Proof.
   rewrite -> ?andb_and in *; try solve [intuition auto].
 
   - induction X0; auto; rewrite closedn_ctx_cons /= IHX0 /= //.
-    now move/andP: p => [] /=. 
+    now move/andP: Hs => [] /=. 
 
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H1.
@@ -226,10 +226,10 @@ Proof.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
     red in H8. eapply Forall2_All2 in H8.
-    eapply All2i_All2_mix_left in X6; eauto.
+    eapply All2i_All2_mix_left in X5; eauto.
     eapply declared_minductive_closed_ind in X0; tea. 2:exact isdecl.
     pose proof (closed_ind_closed_cstrs X0 isdecl).
-    eapply All2i_All_mix_left in X6; tea. clear X7.
+    eapply All2i_All_mix_left in X5; tea. clear X6.
     intuition auto. 
     + unfold test_predicate_k. simpl. rtoProp; intuition eauto.
       rewrite (closedn_ctx_alpha X1).
@@ -268,7 +268,7 @@ Proof.
       eapply closed_upwards; eauto. lia.
 
   - clear H.
-    split. solve_all.
+    split. solve_all. destruct b.
     destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
@@ -279,7 +279,8 @@ Proof.
     eapply nth_error_all in X0; eauto. simpl in X0. intuition auto. rtoProp.
     destruct X0 as [s [Hs cl]]. now rewrite andb_true_r in cl.
 
-  - split. solve_all. destruct x; simpl in *.
+  - split. solve_all. destruct b.
+    destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
     destruct a as [s [Hs cl]].

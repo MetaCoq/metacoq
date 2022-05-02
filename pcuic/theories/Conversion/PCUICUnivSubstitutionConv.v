@@ -1617,7 +1617,7 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: destruct tu; eexists; cbn in *; eauto.
+  all: eapply infer_typing_sort_impl with _ tu; cbn in *; eauto.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.

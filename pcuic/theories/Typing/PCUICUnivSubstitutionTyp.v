@@ -222,10 +222,12 @@ Proof.
     induction 1.
     + constructor.
     + simpl. constructor; auto.
-      exists (subst_instance_univ u tu.π1). eapply p; auto.
+      eapply infer_typing_sort_impl; tea.
+      intros Hty. eapply Hs; auto.
     + simpl. constructor; auto.
-      ++ exists (subst_instance_univ u tu.π1). eapply p0; auto.
-      ++ apply p; auto.
+      ++ eapply infer_typing_sort_impl; tea.
+         intros Hty. eapply Hs; auto.
+      ++ apply Hc; auto.
 
   - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
     rewrite map_decl_type. econstructor; aa.
@@ -267,7 +269,7 @@ Proof.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp eqpctx wfp cup
       wfpctx pty Hpty Hcpc kelim
-      Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
+      IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
     change (subst_instance i (preturn p)) with (preturn (subst_instance i p)).
@@ -289,12 +291,12 @@ Proof.
       rewrite -subst_instance_app.
       rewrite -subst_instance_two_context.
       rewrite -[List.rev (subst_instance i _)]map_rev.
-      clear -wfext cu. induction 1; cbn; constructor; simpl; eauto.
+      clear -wfext cu. induction 1; try destruct t0; cbn; constructor; simpl; eauto.
       all:now rewrite -(subst_instance_subst_telescope i [_]).
     + rewrite -{1}(map_id (ind_ctors idecl)).
       eapply All2i_map. eapply All2i_impl; eauto. 
       cbn -[case_branch_type case_branch_context subst_instance].
-      intros k cdecl br [hctx [hbod [hcbctx [ihbod [hbty ihbty]]]]].
+      intros k cdecl br (hctx & hcbctx & (hbod & ihbod) & hbty & ihbty).
       rewrite case_branch_type_fst.
       rewrite - !subst_instance_case_branch_context - !subst_instance_app_ctx.
       rewrite -subst_instance_case_predicate_context subst_instance_case_branch_type.
@@ -320,8 +322,8 @@ Proof.
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl; intuition auto.
-      destruct X1 as [s Hs]. exists (subst_instance_univ u s).
-      now apply Hs.
+      eapply infer_typing_sort_impl with (tu := X1).
+      intros [_ Hs]; now apply Hs.
     + eapply All_map, All_impl; tea.
       intros x [X1 X3]. 
       specialize (X3 u univs wfΣ' H2). 
@@ -348,8 +350,8 @@ Proof.
       + now eapply cofix_guard_subst_instance.
       + rewrite nth_error_map H0. reflexivity.
       + apply All_map, (All_impl X); simpl; intuition auto.
-        destruct X1 as [s Hs]. exists (subst_instance_univ u s).
-        now apply Hs.
+        eapply infer_typing_sort_impl with (tu := X1).
+        intros [_ Hs]; now apply Hs.
       + eapply All_map, All_impl; tea.
         intros x [X1 X3]. 
         specialize (X3 u univs wfΣ' H2). 
@@ -470,9 +472,9 @@ Lemma isType_subst_instance_decl Σ Γ T c decl u :
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   isType Σ (subst_instance u Γ) (subst_instance u T).
 Proof.
-  intros wfΣ look [s Hs] cu.
-  exists (subst_instance u s). 
-  now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
+  intros wfΣ look isty cu.
+  eapply infer_typing_sort_impl with (tu := isty).
+  intros Hs; now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
 Lemma isArity_subst_instance u T :
@@ -490,12 +492,9 @@ Lemma wf_local_subst_instance Σ Γ ext u :
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1. simpl in *.
   induction X1; cbn; constructor; auto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance'' in Hs; eauto; apply X.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance'' in Hs; eauto; apply X.
-  - hnf in t1 |- *.
-    eapply typing_subst_instance'' in t1; eauto; apply X.
+  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  3: rename t1 into Hs.
+  all: eapply typing_subst_instance'' in Hs; eauto; apply X.
 Qed.
 
 Lemma wf_local_subst_instance_decl Σ Γ c decl u :
@@ -507,12 +506,9 @@ Lemma wf_local_subst_instance_decl Σ Γ c decl u :
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   induction X1; cbn; constructor; auto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance_decl in Hs; eauto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance_decl in Hs; eauto.
-  - hnf in t1 |- *.
-    eapply typing_subst_instance_decl in t1; eauto.
+  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  3: rename t1 into Hs.
+  all: eapply typing_subst_instance_decl in Hs; eauto; apply X.
 Qed.
 
   Lemma subst_instance_ind_sort_id Σ mdecl ind idecl :

@@ -708,7 +708,7 @@ Section wtsub.
       * eapply wf_local_app_inv. eapply wf_local_alpha.
         eapply All2_app; [|reflexivity].
         eapply alpha_eq_subst_instance. symmetry; tea.
-        eapply wf_ind_predicate; tea. pcuic. now eapply typing_wf_local; eauto.
+        eapply wf_ind_predicate; tea. pcuic.
       * eexists; tea.
       * eexists; tea.
       * eapply Forall2_All2 in wf_brs.
@@ -1299,7 +1299,7 @@ Proof.
     { destruct w1 as [sr hs]; exists sr.
       eapply PCUICContextConversionTyp.context_conversion; tea.
       eapply PCUICSafeLemmata.wf_inst_case_context; tea.
-      destruct w2. pcuic. now eapply typing_wf_local; eauto.
+      destruct w2. pcuic.
       rewrite /inst_case_context.
       apply compare_decls_conv.
       eapply All2_app. 2:{ reflexivity. }
@@ -1333,7 +1333,7 @@ Proof.
     eapply IHred.
     destruct w4 as [s' Hs]. exists s'.
     eapply PCUICContextConversionTyp.context_conversion; tea.
-    eapply wf_local_alpha; tea. pcuic. now eapply typing_wf_local; eauto.
+    eapply wf_local_alpha; tea. pcuic.
     now eapply compare_decls_conv.
 
   - eapply red1_mkApp; auto. eapply trans_wf; tea.
@@ -1510,7 +1510,7 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct tu. exists x. eapply p.
+    + simpl. destruct tu. exists x. eapply Hs.
   - simpl. constructor; auto. red. destruct tu. exists x. auto.
 Qed.
 
@@ -1639,12 +1639,12 @@ Proof.
   induction H;cbn.
   - constructor.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;eassumption.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;eassumption.
@@ -2260,7 +2260,7 @@ Proof.
     simpl.
     rewrite /ptm trans_it_mkLambda_or_LetIn.
     rewrite /predctx.
-    have hty := validity X7.
+    have hty := validity X6.
     eapply isType_mkApps_Ind_smash in hty as []; tea.
     erewrite <- trans_case_predicate_context; tea.
     2:{ eapply (wf_predicate_length_pars H0). }
@@ -2270,7 +2270,7 @@ Proof.
     + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
-    + move: X6.
+    + move: X5.
       cbn. rewrite -!map_app. rewrite /id.
       rewrite map_map_compose.
       set (mapd := map (fun x : context_decl => _) _).
@@ -2279,6 +2279,7 @@ Proof.
       rewrite -[List.rev (trans_local _)]map_rev.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
+      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
       now move: ctx; induction 1; cbn; constructor; auto; 
         rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev 
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
@@ -2287,15 +2288,15 @@ Proof.
       now rewrite -trans_local_app. 
     + rewrite <- trans_global_ext_constraints.
       eassumption.
-    + now rewrite trans_mkApps map_app in X8.
+    + now rewrite trans_mkApps map_app in X7.
     + rewrite (trans_case_predicate_context Γ); tea.
       eapply All2i_map. eapply All2i_map_right.
       eapply Forall2_All2 in H4.
-      eapply All2i_All2_mix_left in X9; tea.
+      eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
       intros i cdecl br. cbv beta.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _).
-      intros (wf & eqctx & Hbctx & Hb & IHb & Hbty & IHbty) brctxty.
+      intros (wf & eqctx & Hbctx & (Hb & IHb) & Hbty & IHbty) brctxty.
       repeat split.
       * rewrite /brctxty.
         now eapply trans_cstr_branch_context_eq.

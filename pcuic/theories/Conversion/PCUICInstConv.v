@@ -1615,14 +1615,12 @@ Proof.
   intros.
   induction X.
   - now simpl.
-  - simpl. destruct t0 as [s Hs].
-    rewrite inst_context_snoc /=. constructor; auto.
-    red. simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    apply infer_typing_sort_impl with id t0; intros Hs.
     eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
     eapply well_subst_app; auto.
-  - simpl. destruct t0 as [s Hs]. simpl in t1.
-    rewrite inst_context_snoc /=. constructor; auto.
-    * simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    * apply infer_typing_sort_impl with id t0; intros Hs.
       eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
       eapply well_subst_app; auto.
     * simpl. apply t1 => //.

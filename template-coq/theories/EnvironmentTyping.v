@@ -302,6 +302,13 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     induction 1; intros; simpl; econstructor; eauto.
   Qed.
   
+  Lemma All_local_env_skipn P Γ : All_local_env P Γ -> forall n, All_local_env P (skipn n Γ).
+  Proof.
+    induction 1; simpl; intros; destruct n; simpl; try econstructor; eauto.
+  Qed.
+  #[global] 
+  Hint Resolve All_local_env_skipn : wf.
+
   Section All_local_env_rel.
 
     Definition All_local_rel P Γ Γ'
@@ -378,51 +385,116 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | None => P Γ d.(decl_type) Sort
     end.
   
+  Definition on_def_type (P : context -> term -> typ_or_sort -> Type) Γ d :=
+    P Γ d.(dtype) Sort.
   
-  Definition lift_bityping
-    (checking : global_env_ext -> context -> term -> term -> Type)
-    (infer_sorting : global_env_ext -> context -> term -> Type) :
+  Definition on_def_body (P : context -> term -> typ_or_sort -> Type) types Γ d :=
+    P (Γ ,,, types) d.(dbody) (Typ (lift0 #|types| d.(dtype))).
+
+  Definition lift_judgment
+    (check : global_env_ext -> context -> term -> term -> Type)
+    (infer_sort : global_env_ext -> context -> term -> Type) :
     (global_env_ext -> context -> term -> typ_or_sort -> Type) :=
     fun Σ Γ t T =>
     match T with
-    | Typ T => checking Σ Γ t T
-    | Sort => infer_sorting Σ Γ t
+    | Typ T => check Σ Γ t T
+    | Sort => infer_sort Σ Γ t
     end.
   
-  (** Specifically for typing *)
+  Lemma lift_judgment_impl {P Ps Q Qs Σ Σ' Γ Γ' t t' T} :
+    lift_judgment P Ps Σ Γ t T ->
+    (forall T, P Σ Γ t T -> Q Σ' Γ' t' T) ->
+    (Ps Σ Γ t -> Qs Σ' Γ' t') ->
+    lift_judgment Q Qs Σ' Γ' t' T.
+  Proof.
+    intros HT HPQ HPsQs.
+    destruct T; simpl.
+    * apply HPQ, HT.
+    * apply HPsQs, HT.
+  Qed.
 
-  Notation infer_sort typing := (fun Σ Γ T => { s : Universe.t & typing Σ Γ T (tSort s) }).
-  Notation lift_typing := (fun typing => lift_bityping typing (infer_sort typing)).
+  (* Common uses *)
+
+  Definition lift_wf_term wf_term := (lift_judgment (fun Σ Γ t T => wf_term Σ Γ t × wf_term Σ Γ T) wf_term).
+
+  Definition infer_sort (sorting : global_env_ext -> context -> term -> Universe.t -> Type) := (fun Σ Γ T => { s : Universe.t & sorting Σ Γ T s }).
+  Notation typing_sort typing := (fun Σ Γ T s => typing Σ Γ T (tSort s)).
+  
+  Definition lift_typing typing := lift_judgment typing (infer_sort (typing_sort typing)).
+  Definition lift_sorting checking sorting := lift_judgment checking (infer_sort sorting).
+  
+  Notation Prop_conj P Q := (fun Σ Γ t T => P Σ Γ t T × Q Σ Γ t T).
+
+  Definition lift_typing2 P Q := lift_typing (Prop_conj P Q).
+
+  Lemma infer_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} :
+    forall f, forall tu: infer_sort P Σ Γ t,
+    let s := tu.π1 in
+    (P Σ Γ t s -> Q Σ' Γ' t' (f s)) ->
+    infer_sort Q Σ' Γ' t'.
+  Proof.
+    intros ? (? & Hs) s HPQ. eexists. now apply HPQ.
+  Qed.
+
+  Lemma infer_typing_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} :
+    forall f, forall tu: infer_sort (typing_sort P) Σ Γ t,
+    let s := tu.π1 in
+    (P Σ Γ t (tSort s) -> Q Σ' Γ' t' (tSort (f s))) ->
+    infer_sort (typing_sort Q) Σ' Γ' t'.
+  Proof.
+    apply (infer_sort_impl (P := typing_sort P) (Q := typing_sort Q)).
+  Qed.
+
+  Lemma lift_typing_impl {P Q Σ Σ' Γ Γ' t t' T} :
+    lift_typing P Σ Γ t T -> 
+    (forall T, P Σ Γ t T -> Q Σ' Γ' t' T) ->
+    lift_typing Q Σ' Γ' t' T.
+  Proof.
+    intros HT HPQ.
+    apply lift_judgment_impl with (1 := HT); tas.
+    intro Hs; apply infer_typing_sort_impl with id Hs; apply HPQ.
+  Qed.
 
   Section TypeLocalOver.
-    Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
-    Context (property : forall (Σ : global_env_ext) (Γ : context),
-                All_local_env (lift_typing typing Σ) Γ ->
-                forall (t T : term), typing Σ Γ t T -> Type).
+    Context (checking : global_env_ext -> context -> term -> term -> Type).
+    Context (sorting : global_env_ext -> context -> term -> Type).
+    Context (cproperty : forall (Σ : global_env_ext) (Γ : context),
+                All_local_env (lift_judgment checking sorting Σ) Γ ->
+                forall (t T : term), checking Σ Γ t T -> Type).
+    Context (sproperty : forall (Σ : global_env_ext) (Γ : context),
+                All_local_env (lift_judgment checking sorting Σ) Γ ->
+                forall (t : term), sorting Σ Γ t -> Type).
 
-    Inductive All_local_env_over (Σ : global_env_ext) :
-      forall (Γ : context), All_local_env (lift_typing typing Σ) Γ -> Type :=
+    Inductive All_local_env_over_gen (Σ : global_env_ext) :
+        forall (Γ : context), All_local_env (lift_judgment checking sorting Σ) Γ -> Type :=
     | localenv_over_nil :
-        All_local_env_over Σ [] localenv_nil
+        All_local_env_over_gen Σ [] localenv_nil
 
     | localenv_over_cons_abs Γ na t
-        (all : All_local_env (lift_typing typing Σ) Γ) :
-        All_local_env_over Σ Γ all ->
-        forall (tu : lift_typing typing Σ Γ t Sort),
-          property Σ Γ all _ _ (projT2 tu) ->
-          All_local_env_over Σ (Γ ,, vass na t)
-                             (localenv_cons_abs all tu)
+        (all : All_local_env (lift_judgment checking sorting Σ) Γ) :
+        All_local_env_over_gen Σ Γ all ->
+        forall (tu : lift_judgment checking sorting Σ Γ t Sort)
+          (Hs: sproperty Σ Γ all _ tu),
+          All_local_env_over_gen Σ (Γ ,, vass na t)
+                              (localenv_cons_abs all tu)
 
     | localenv_over_cons_def Γ na b t
-        (all : All_local_env (lift_typing typing Σ) Γ) (tb : typing Σ Γ b t) :
-        All_local_env_over Σ Γ all ->
-        property Σ Γ all _ _ tb ->
-        forall (tu : lift_typing typing Σ Γ t Sort),
-          property Σ Γ all _ _ (projT2 tu) ->
-          All_local_env_over Σ (Γ ,, vdef na b t)
-                             (localenv_cons_def all tu tb).
+        (all : All_local_env (lift_judgment checking sorting Σ) Γ) (tb : checking Σ Γ b t) :
+        All_local_env_over_gen Σ Γ all ->
+        forall (Hc: cproperty Σ Γ all _ _ tb),
+        forall (tu : lift_judgment checking sorting Σ Γ t Sort)
+          (Hs: sproperty Σ Γ all _ tu),
+          All_local_env_over_gen Σ (Γ ,, vdef na b t)
+                              (localenv_cons_def all tu tb).
+
   End TypeLocalOver.
-  Derive Signature for All_local_env_over.
+  Derive Signature for All_local_env_over_gen.
+
+  Definition All_local_env_over typing property :=
+    (All_local_env_over_gen typing (infer_sort (typing_sort typing)) property (fun Σ Γ H t tu => property _ _ H _ _ tu.π2)).
+  
+  Definition All_local_env_over_sorting checking sorting cproperty (sproperty : forall Σ Γ _ t s, sorting Σ Γ t s -> Type) :=
+    (All_local_env_over_gen checking (infer_sort sorting) cproperty (fun Σ Γ H t tu => sproperty Σ Γ H t tu.π1 tu.π2)).
 
   Section TypeCtxInst.
     Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -439,6 +511,90 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
         ctx_inst Σ Γ inst (vdef na b t :: Δ).
     Derive Signature NoConfusion for ctx_inst.
   End TypeCtxInst.
+
+  Lemma ctx_inst_impl P Q Σ Γ inst Δ : 
+    ctx_inst P Σ Γ inst Δ ->
+    (forall t T, P Σ Γ t T -> Q Σ Γ t T) ->
+    ctx_inst Q Σ Γ inst Δ.
+  Proof.
+    intros H HPQ. induction H; econstructor; auto.
+  Qed.
+
+  Section All_local_env_size.
+    Context {P : forall (Σ : global_env_ext) (Γ : context), term -> typ_or_sort -> Type}.
+    Context (Psize : forall (Σ : global_env_ext) Γ t T, P Σ Γ t T -> size).
+
+    Fixpoint All_local_env_size_gen base Σ Γ (w : All_local_env (P Σ) Γ) : size :=
+      match w with
+      | localenv_nil => base
+      | localenv_cons_abs Γ' na t w' p => Psize _ _ _ _ p + All_local_env_size_gen base _ _ w'
+      | localenv_cons_def Γ' na b t w' pt pb => Psize _ _ _ _ pt + Psize _ _ _ _ pb + All_local_env_size_gen base _ _ w'
+      end.
+      
+    Lemma All_local_env_size_pos base Σ Γ w : base <= All_local_env_size_gen base Σ Γ w.
+    Proof.
+      induction w.
+      all: simpl ; lia.
+    Qed.
+  End All_local_env_size.
+
+  Notation All_local_rel_size_gen Psize base := (fun Σ Γ Δ (w : All_local_rel _ Γ Δ) =>
+    All_local_env_size_gen (fun Σ Δ => Psize Σ (Γ ,,, Δ)) base Σ Δ w).
+
+  Lemma All_local_env_size_app P Psize base Σ Γ Γ' (wfΓ : All_local_env (P Σ) Γ) (wfΓ' : All_local_rel (P Σ) Γ Γ') :
+    All_local_env_size_gen Psize base _ _ (All_local_rel_app wfΓ wfΓ') + base = All_local_env_size_gen Psize base _ _ wfΓ + All_local_rel_size_gen Psize base _ _ _ wfΓ'.
+  Proof.
+    induction Γ'.
+    - dependent inversion wfΓ'.
+      reflexivity.
+    - revert IHΓ'.
+      dependent inversion wfΓ' ; subst ; intros.
+      + cbn.
+        etransitivity.
+        2: rewrite Nat.add_comm -Nat.add_assoc [X in _ + X]Nat.add_comm -IHΓ' Nat.add_assoc ; reflexivity.
+        reflexivity.
+      + cbn.
+        etransitivity.
+        2: rewrite Nat.add_comm -Nat.add_assoc [X in _ + X]Nat.add_comm -IHΓ' Nat.add_assoc ; reflexivity.
+        reflexivity.
+  Qed.
+
+  Section lift_judgment_size.
+    Context {checking : global_env_ext -> context -> term -> term -> Type}.
+    Context {sorting : global_env_ext -> context -> term -> Type}.
+    Context (csize : forall (Σ : global_env_ext) (Γ : context) (t T : term), checking Σ Γ t T -> size).
+    Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term), sorting Σ Γ t -> size).
+
+    Definition lift_judgment_size Σ Γ t T (w : lift_judgment checking sorting Σ Γ t T) : size :=
+      match T return lift_judgment checking sorting Σ Γ t T -> size with
+      | Typ T => csize _ _ _ _
+      | Sort => ssize _ _ _
+      end w.
+  End lift_judgment_size.
+
+  Implicit Types (Σ : global_env_ext) (Γ : context) (t : term).
+
+  Notation infer_sort_size  typing_size := (fun Σ Γ t   (tu: infer_sort _ Σ Γ t) => let 'existT s d := tu in typing_size Σ Γ t s d).
+  Notation typing_sort_size typing_size := (fun Σ Γ t s (tu: typing_sort _ Σ Γ t s) => typing_size Σ Γ t (tSort s) tu).
+
+  Section Regular.
+    Context {typing : global_env_ext -> context -> term -> term -> Type}.
+    Context (typing_size : forall Σ Γ t T, typing Σ Γ t T -> size).
+    
+    Definition lift_typing_size := lift_judgment_size typing_size (infer_sort_size (typing_sort_size typing_size)).
+    Definition All_local_env_size := All_local_env_size_gen lift_typing_size 0.
+    Definition All_local_rel_size := All_local_rel_size_gen lift_typing_size 0.
+  End Regular.
+
+  Section Bidirectional.
+    Context {checking : global_env_ext -> context -> term -> term -> Type} {sorting : global_env_ext -> context -> term -> Universe.t -> Type}.
+    Context (checking_size : forall Σ Γ t T, checking Σ Γ t T -> size).
+    Context (sorting_size : forall Σ Γ t s, sorting Σ Γ t s -> size).
+
+    Definition lift_sorting_size := lift_judgment_size checking_size (infer_sort_size sorting_size).
+    Definition All_local_env_sorting_size := All_local_env_size_gen lift_sorting_size 1.
+    Definition All_local_rel_sorting_size := All_local_rel_size_gen lift_sorting_size 1.
+  End Bidirectional.
 
 End EnvTyping.
 
@@ -1027,59 +1183,6 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
   Arguments onNpars {_ Pcmp P Σ mind mdecl}.
   Arguments onVariance {_ Pcmp P Σ mind mdecl}.
 
-End GlobalMaps.
-
-Module Type GlobalMapsSig (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvTypingSig T E TU) (C: ConversionSig T E TU ET) (L: LookupSig T E).
-  Include GlobalMaps T E TU ET C L.
-End GlobalMapsSig.
-
-Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU).
-
-  Import T E TU ET.
-  
-  Parameter Inline cumul_gen : forall {cf : checker_flags}, global_env_ext -> context -> conv_pb -> term -> term -> Type.
-
-End ConversionParSig.
-
-Module Type Typing (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU)
-  (CT : ConversionSig T E TU ET) (CS : ConversionParSig T E TU ET).
-
-  Import T E TU ET CT CS.
-
-  Parameter Inline typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
-  Parameter Inline infer_sorting : forall `{checker_flags}, global_env_ext -> context -> term -> Type.
-
-  Notation lift_typing := (lift_bityping typing infer_sorting).
-
-  Notation " Σ ;;; Γ |- t : T " :=
-    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
-
-  Notation wf_local Σ Γ := (All_local_env (lift_typing Σ) Γ).
-
-End Typing.
-
-Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
-  (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
-  (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS) 
-  (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
-
-  Import T E L TU ET CT GM CS Ty.
-
-  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
-    infer_sorting Σ Γ t.
-
-  Lemma All_local_env_skipn P Γ : All_local_env P Γ -> forall n, All_local_env P (skipn n Γ).
-  Proof.
-    induction 1; simpl; intros; destruct n; simpl; try econstructor; eauto.
-  Qed.
-  #[global] 
-  Hint Resolve All_local_env_skipn : wf.
-
-  Lemma Alli_impl_trans : forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),
-  Alli P n l -> (forall (n0 : nat) (x : A), P n0 x -> Q n0 x) -> Alli Q n l.
-  Proof.
-    intros. induction X; simpl; constructor; auto.
-  Defined.
 
   Lemma type_local_ctx_impl (P Q : global_env_ext -> context -> term -> typ_or_sort -> Type) Σ Γ Δ u :
     type_local_ctx P Σ Γ Δ u ->
@@ -1102,11 +1205,102 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     destruct u; auto. intuition eauto.
   Qed.
 
+  Lemma on_global_env_impl `{checker_flags} {Σ : global_env} Pcmp P Q :
+    (forall Σ Γ t T,
+        on_global_env Pcmp P Σ.1 -> 
+        on_global_env Pcmp Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+  Proof.
+    intros X [cu IH]. split; auto.
+    revert cu IH; generalize (universes Σ) as univs, (declarations Σ). clear Σ.
+    induction g; intros; auto. constructor; auto.
+    depelim IH. specialize (IHg cu IH). constructor; auto.
+    pose proof (globenv_decl _ _ _ _ _ _ IH f o).
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl) Γ t T 
+      (cu, IH) (cu, IHg)); clear X.
+    rename X' into X.
+    clear IH IHg. destruct d; simpl.
+    - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
+    - red in o. simpl in *.
+      destruct o0 as [onI onP onNP].
+      constructor; auto.
+      -- eapply Alli_impl; tea. intros.
+        refine {| ind_arity_eq := X1.(ind_arity_eq);
+                  ind_cunivs := X1.(ind_cunivs) |}.
+        --- apply onArity in X1. unfold on_type in *; simpl in *.
+            now eapply X.
+        --- pose proof X1.(onConstructors) as X11. red in X11.
+            eapply All2_impl; eauto.
+            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+            * apply X; eauto.
+            * clear -X0 X on_cargs0. revert on_cargs0.
+              generalize (cstr_args x0).
+              induction c in y |- *; destruct y; simpl; auto;
+                destruct a as [na [b|] ty]; simpl in *; auto;
+            split; intuition eauto.
+            * clear -X0 X on_cindices0.
+              revert on_cindices0.
+              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+              generalize (cstr_indices x0).
+              induction 1; simpl; constructor; auto. 
+        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
+        --- destruct X1. simpl. unfold check_ind_sorts in *.
+            destruct Universe.is_prop; auto.
+            destruct Universe.is_sprop; auto.
+            split.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
+              eapply type_local_ctx_impl; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
+      -- red in onP. red.
+        eapply All_local_env_impl; tea.
+  Qed.
+
+End GlobalMaps.
+
+Module Type GlobalMapsSig (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvTypingSig T E TU) (C: ConversionSig T E TU ET) (L: LookupSig T E).
+  Include GlobalMaps T E TU ET C L.
+End GlobalMapsSig.
+
+Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU).
+
+  Import T E TU ET.
+  
+  Parameter Inline cumul_gen : forall {cf : checker_flags}, global_env_ext -> context -> conv_pb -> term -> term -> Type.
+
+End ConversionParSig.
+
+Module Type Typing (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU)
+  (CT : ConversionSig T E TU ET) (CS : ConversionParSig T E TU ET).
+
+  Import T E TU ET CT CS.
+
+  Parameter Inline typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
+
+  Notation " Σ ;;; Γ |- t : T " :=
+    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
+
+  Notation wf_local Σ Γ := (All_local_env (lift_typing Σ) Γ).
+
+End Typing.
+
+Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
+  (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
+  (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS) 
+  (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
+
+  Import T E L TU ET CT GM CS Ty.
+
+  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
+    infer_sort (typing_sort typing) Σ Γ t.
+
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)
 
   Definition Forall_decls_typing `{checker_flags}
             (P : global_env_ext -> context -> term -> term -> Type)
-    := on_global_env cumul_gen (lift_bityping P (infer_sort P)).
+    := on_global_env cumul_gen (lift_typing P).
 
   (** *** Typing of local environments *)
 
@@ -1121,82 +1315,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
   Proof. now intros Ht ->. Qed.
 
-  Section wf_local.
-    Context `{checker_flags}.
-
-    Definition wf_local_rel Σ Γ Γ'
-      := (All_local_env (lift_bityping (fun Σ0 Γ0 t T => Σ0 ;;; Γ ,,, Γ0 |- t : T) (fun Σ0 Γ0 T => infer_sorting Σ0 (Γ ,,, Γ0) T) Σ) Γ').
-
-    Definition wf_local_rel_nil {Σ Γ} : wf_local_rel Σ Γ []
-      := localenv_nil.
-
-    Definition wf_local_rel_abs {Σ Γ Γ' A na} :
-      wf_local_rel Σ Γ Γ' ->
-      isType Σ (Γ ,,, Γ') A ->
-      wf_local_rel Σ Γ (Γ',, vass na A)
-      := localenv_cons_abs.
-
-    Definition wf_local_rel_def {Σ Γ Γ' t A na} :
-      wf_local_rel Σ Γ Γ' ->
-      isType Σ (Γ ,,, Γ') A ->
-      Σ ;;; Γ ,,, Γ' |- t : A ->
-      wf_local_rel Σ Γ (Γ',, vdef na t A)
-      := localenv_cons_def.
-
-    Lemma wf_local_rel_local :
-      forall Σ Γ,
-        wf_local Σ Γ ->
-        wf_local_rel Σ [] Γ.
-    Proof.
-      intros Σ Γ h. eapply All_local_env_impl.
-      - exact h.
-      - intros Δ t [] h'.
-        all: cbn.
-        + rewrite app_context_nil_l. assumption.
-        + rewrite app_context_nil_l. assumption.
-    Defined.
-
-    Lemma wf_local_local_rel Σ Γ :
-      wf_local_rel Σ [] Γ -> wf_local Σ Γ.
-    Proof.
-      intro X. eapply All_local_env_impl. exact X.
-      intros Γ0 t [] XX; cbn in XX; rewrite app_context_nil_l in XX; assumption.
-    Defined.
-
-  End wf_local.
-
-  Section wf_local_size.
-    Context `{checker_flags} (Σ : global_env_ext).
-    Context (fn : forall (Σ : global_env_ext) (Γ : context) (t T : term), typing Σ Γ t T -> size).
-    Context (fns : forall (Σ : global_env_ext) (Γ : context) (t : term), infer_sorting Σ Γ t -> size).
-
-    Fixpoint wf_local_size Γ (w : wf_local Σ Γ) : size :=
-      match w with
-      | localenv_nil => 0
-
-      | localenv_cons_abs Γ na t wfΓ tty =>
-        (fns _ _ t tty + wf_local_size _ wfΓ)%nat
-
-      | localenv_cons_def Γ na b t wfΓ tty tty' =>
-        (fns _ _ t tty + fn _ _ b t tty' + wf_local_size _ wfΓ)%nat
-      end.
-  End wf_local_size.
-
-  Lemma lift_typing_impl P Ps Q Qs Σ Γ t T :
-    (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
-    (forall Γ T, Ps Σ Γ T -> Qs Σ Γ T) ->
-    lift_bityping P Ps Σ Γ t T -> lift_bityping Q Qs Σ Γ t T.
-  Proof.
-    intros HPQ HPsQs.
-    destruct T; simpl.
-    * apply HPQ.
-    * apply HPsQs.
-  Qed.
+  Definition wf_local_rel `{checker_flags} Σ := All_local_rel (lift_typing typing Σ).
 
   (** Functoriality of global environment typing derivations + folding of the well-formed 
     environment assumption. *)
-  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env cumul_gen lift_typing Σ} P Q :
-    (forall Σ Γ t T, on_global_env cumul_gen lift_typing Σ.1 -> 
+  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env cumul_gen (lift_typing typing) Σ} P Q :
+    (forall Σ Γ t T, on_global_env cumul_gen (lift_typing typing) Σ.1 -> 
         on_global_env cumul_gen P Σ.1 -> 
         on_global_env cumul_gen Q Σ.1 ->
         P Σ Γ t T -> Q Σ Γ t T) ->

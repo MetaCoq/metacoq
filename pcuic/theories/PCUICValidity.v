@@ -27,9 +27,9 @@ Section Validity.
   Lemma isType_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isType Σ Γ T).
   Proof.
     red. intros.
-    destruct X2 as [u Hu]; exists u; pcuic.
-    unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort u))); eauto with pcuic.
-    red. simpl. destruct Σ. eapply Hu.
+    apply infer_typing_sort_impl with id X2; intros Hs.
+    unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort _))); eauto with pcuic.
+    red. simpl. destruct Σ. eapply Hs.
   Qed.
 
   Hint Resolve isType_weaken_full : pcuic.
@@ -39,8 +39,8 @@ Section Validity.
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof.
     red. intros.
-    unfold lift_bityping in *. destruct T. now eapply (isType_weaken_full (Σ, _)).
-    destruct X2 as [s Hs]; exists s. now eapply (isType_weaken_full (Σ, _)).
+    apply lift_typing_impl with (1 := X2); intros ? Hs.
+    now eapply (isType_weaken_full (Σ, _)).
   Qed.
   Hint Resolve isType_weaken : pcuic.
 
@@ -51,8 +51,8 @@ Section Validity.
     forall t0 : term,
     isType (Σ, φ) Γ t0 -> isType (Σ', φ) Γ t0.
   Proof.
-    intros wfΣ wfΣ' ext Γ t [s Hs].
-    exists s.
+    intros wfΣ wfΣ' ext Γ t Hty.
+    apply infer_typing_sort_impl with id Hty; intros Hs.
     eapply (env_prop_typing weakening_env (Σ, φ)); auto.
   Qed.
 
@@ -63,9 +63,9 @@ Section Validity.
           (Γ0 : PCUICEnvironment.context) (_ T : term) =>
         isType Σ0 Γ0 T)).
   Proof.
-    red. intros Σ Σ' ϕ wfΣ wfΣ' ext *. unfold lift_bityping.
-    destruct T. now eapply isType_extends.
-    intros [s Hs]; exists s. now eapply (isType_extends (empty_ext Σ)).
+    red. intros Σ Σ' ϕ wfΣ wfΣ' ext * Hty.
+    apply lift_typing_impl with (1 := Hty); intros ? Hs.
+    now eapply isType_extends with Σ.
   Qed.
 
   Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_universe Σ s.
@@ -81,8 +81,8 @@ Section Validity.
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
     isType Σ (subst_instance u Γ) (subst_instance u T).
   Proof.
-    destruct Σ as [Σ φ]. intros X X0 [s Hs] X1.
-    exists (subst_instance_univ u s).
+    destruct Σ as [Σ φ]. intros X X0 Hty X1.
+    eapply infer_typing_sort_impl with _ Hty; intros Hs.
     eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
   Qed.
   
@@ -105,8 +105,8 @@ Section Validity.
     isType Σ [] T ->
     isType Σ Γ T.
   Proof.
-    intros wfΣ wfΓ [s HT].
-    exists s; auto.
+    intros wfΣ wfΓ HT.
+    apply infer_typing_sort_impl with id HT; intros Hs.
     eapply (weaken_ctx (Γ:=[])); eauto.
   Qed.
 
@@ -259,17 +259,16 @@ Section Validity.
       constructor; auto.
 
     - (* Let *)
-      destruct X5 as [u Hu].
-      exists u.
+      apply infer_typing_sort_impl with id X5; unfold id in *; intros Hs.
       eapply type_Cumul.
-      eapply type_LetIn; eauto. econstructor; pcuic.
+      eapply type_LetIn; eauto.  econstructor; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec; constructor.
 
     - (* Application *)
-      destruct X3 as [u' Hu']. exists u'.
-      move: (typing_wf_universe wf Hu') => wfu'.
-      eapply (substitution0 (n := na) (T := tSort u')); eauto.
-      apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
+      apply infer_typing_sort_impl with id X3; unfold id in *; intros Hs'.
+      move: (typing_wf_universe wf Hs') => wfs.
+      eapply (substitution0 (n := na) (T := tSort _)); eauto.
+      apply inversion_Prod in Hs' as [na' [s1 [s2 Hs]]]; tas. intuition.
       eapply (weakening_ws_cumul_pb (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
       simpl in b0.
       eapply (type_ws_cumul_pb (pb:=Cumul)); eauto. pcuic.
@@ -301,9 +300,7 @@ Section Validity.
     - (* Constructor type *)
       destruct (on_declared_constructor isdecl) as [[oni oib] [cs [declc onc]]].
       unfold type_of_constructor.
-      have ctype := on_ctype onc.
-      destruct ctype as [s' Hs].
-      exists (subst_instance_univ u s').
+      eapply infer_typing_sort_impl with _ (on_ctype onc); intros Hs.
       eapply instantiate_minductive in Hs; eauto.
       2:(destruct isdecl as [[] ?]; eauto).
       simpl in Hs.
@@ -314,12 +311,15 @@ Section Validity.
 
     - (* Case predicate application *)
       assert (cu : consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
-      { eapply (isType_mkApps_Ind_inv wf isdecl) in X8 as [parsubst [argsubst Hind]]; 
-        repeat intuition auto. } 
+      { eapply (isType_mkApps_Ind_inv wf isdecl) in X7 as [parsubst [argsubst Hind]]; 
+        repeat intuition auto. }
+      eassert (ctx_inst Σ Γ _ (List.rev _)).
+      { eapply ctx_inst_impl with (1 := X5); now intros t T [Hty _]. }
+      clear X5; rename X6 into X5.
       unshelve epose proof (ctx_inst_spine_subst _ X5); tea.
       eapply weaken_wf_local; tea.
       now apply (on_minductive_wf_params_indices_inst isdecl _ cu).
-      eapply spine_subst_smash in X7; tea.
+      eapply spine_subst_smash in X6; tea.
       destruct X4.
       destruct (on_declared_inductive isdecl) as [onmind oib].
       rewrite /ptm. exists ps.
@@ -343,15 +343,15 @@ Section Validity.
             eapply PCUICEquality.eq_term_leq_term.
             eapply eq_term_set_binder_name. 2:reflexivity.
             now eapply wf_pre_case_predicate_context_gen. }
-          rewrite subst_instance_app_ctx in X7.
-          eapply spine_subst_smash_app_inv in X7 as [sppars spidx].
+          rewrite subst_instance_app_ctx in X6.
+          eapply spine_subst_smash_app_inv in X6 as [sppars spidx].
           epose proof (isType_case_predicate (puinst p) _ _ wfΓ isdecl cu wfps sppars).
           eauto with fvs. len.
           rewrite (wf_predicate_length_pars H0).
           now rewrite onmind.(onNpars). } 
       eapply wf_arity_spine_typing_spine; auto.
-      rewrite subst_instance_app_ctx in X7.
-      eapply spine_subst_smash_app_inv in X7 as [sppars spidx].
+      rewrite subst_instance_app_ctx in X6.
+      eapply spine_subst_smash_app_inv in X6 as [sppars spidx].
       split; auto.
       apply (isType_case_predicate (puinst p) _ _ wfΓ isdecl cu wfps sppars).
       2:{ rewrite (wf_predicate_length_pars H0).
@@ -362,14 +362,12 @@ Section Validity.
     - (* Proj *)
       pose proof isdecl as isdecl'.
       eapply declared_projection_type in isdecl'; eauto.
-      destruct isdecl' as [s Hs].
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
+      eapply infer_typing_sort_impl with _ isdecl'; intros Hs.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
-      exists (subst_instance_univ u s).
-      unfold PCUICTypingDef.typing in *.
       eapply (weaken_ctx Γ) in Hs; eauto.
       rewrite -heq_length in sppar. rewrite firstn_all in sppar.
       rewrite subst_instance_cons in Hs.
@@ -378,7 +376,7 @@ Section Validity.
       eapply (substitution (Δ := [_]) sppar) in Hs.
       simpl in Hs.
       eapply (substitution (Γ' := [_]) (s := [c]) (Δ := [])) in Hs.
-      simpl in Hs. rewrite (subst_app_simpl [_]) /= //.
+      simpl in Hs. rewrite (subst_app_simpl [_]) /=. eassumption.
       constructor. constructor.
       simpl. rewrite subst_empty.
       rewrite subst_instance_mkApps subst_mkApps /=.

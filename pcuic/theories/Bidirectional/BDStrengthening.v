@@ -542,9 +542,6 @@ Let Psort Γ t u :=
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹□ u.
 
-Let Ptrue_infer Γ t :=
-  { s : Universe.t & Psort Γ t s }.
-
 Let Pprod Γ t na A B :=
   forall P Δ f,
   urenaming P Δ Γ f ->
@@ -569,7 +566,7 @@ Let Pcheck Γ t T :=
   Σ ;;; Δ |- rename f t ◃ rename f T.
 
 Let PΓ :=
-  All_local_env (lift_bityping (fun _ => Pcheck) (fun _ => Ptrue_infer) Σ).
+  All_local_env (lift_sorting (fun _ => Pcheck) (fun _ => Psort) Σ).
 
 Let PΓ_rel Γ Γ' :=
   forall P Δ f,
@@ -621,7 +618,9 @@ Proof.
     induction hΓ.
     + constructor.
     + constructor ; tea.
+      eexists ; eauto.
     + constructor ; tea.
+      eexists ; eauto.
 
   - intros Γ Γ' wfΓ' allΓ'. red. move => P Δ f hf hΓ hΓ'.
     induction allΓ'.
@@ -631,8 +630,8 @@ Proof.
       move: hΓ' => /andP [] ? ?.
       constructor ; eauto.
       1: by eapply IHallΓ' ; eauto.
-      destruct s. eexists.
-      eapply p.
+      eexists.
+      eapply Hs.
       * eapply urenaming_context ; tea.
       * rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
@@ -643,14 +642,14 @@ Proof.
       move: hΓ' => /andP [] ? /andP /= [] ? ?.
       constructor ; eauto.
       * by eapply IHallΓ' ; eauto.
-      * destruct s. eexists.
-        eapply p.
+      * eexists.
+        eapply Hs.
         1: eapply urenaming_context ; tea.
         2: eauto.
         rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
         by rewrite on_free_vars_ctx_on_ctx_free_vars.
-      * eapply c.
+      * eapply Hc.
         1: eapply urenaming_context ; tea.
         all: auto.
         rewrite on_ctx_free_vars_concat.

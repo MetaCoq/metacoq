@@ -741,12 +741,9 @@ Lemma typing_wf_wf {cf}:
 Proof.
   intros Σ.
   eapply on_global_env_impl. clear.
-  intros Σ' Γ t T.
-  red. unfold ST.lift_bityping.
-  intros ong. destruct T.
-  * intros ty. now eapply typing_wf.
-  * intros [s ty]. exists s.
-    now eapply typing_wf in ty.
+  intros Σ' Γ t T ? HT.
+  apply ST.lift_typing_impl with (1 := HT); intros ? Hs.
+  now eapply typing_wf.
 Qed.
 
 Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
@@ -1769,7 +1766,7 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX0.
-    + simpl. destruct tu. exists x. now eapply p.
+    + simpl. destruct tu. exists x. now eapply Hs.
   - simpl. constructor; auto. red. destruct tu. exists x; auto.
     simpl. eauto.
 Qed.
@@ -2198,12 +2195,12 @@ Proof.
     rewrite trans_reln //.
 Qed.
 
-#[local] Hint Unfold lift_bityping : core.
+#[local] Hint Unfold lift_judgment : core.
 
-Lemma trans_wf_universe Σ u : Ast.TemplateLookup.wf_universe Σ u ->
+Lemma trans_wf_universe Σ u : S.wf_universe Σ u ->
   wf_universe (trans_global Σ) u.
 Proof.
-  unfold Ast.TemplateLookup.wf_universe, wf_universe.
+  unfold S.wf_universe, wf_universe.
   now rewrite global_ext_levels_trans.
 Qed.
 
@@ -2244,11 +2241,12 @@ Proof.
     eapply refine_type; cbn.
     * eapply type_App.
       2:{ eapply type_Lambda; eauto. eapply type_Rel. econstructor; eauto.
-        eapply typing_wf_local; eauto. reflexivity. }
+        eapply typing_wf_local; eauto. now eexists. reflexivity. }
       eapply type_Prod. eauto.
       instantiate (1 := s). simpl.
       eapply (weakening _ _ [_] _ (tSort _)); eauto.
       constructor; eauto. eapply typing_wf_local; eauto.
+      now eexists.
       now eapply X2.
     * unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
@@ -2320,8 +2318,8 @@ Proof.
     { eapply All2_length in X1; len in X1. } 
     rewrite (trans_case_predicate_context Σ) //.
     rewrite map_app.
-    specialize (X7 X9).
-    specialize (X5 X9).
+    specialize (X6 X8).
+    specialize (X4 X8).
     set (p' := trans_predicate _ _ _ _ _ _ _).
     eapply (simpl_type_Case (p:=p') (ps:=ps)) => //. 
     + cbn. rewrite map2_map2_bias_left; len.
@@ -2338,25 +2336,25 @@ Proof.
       eapply (trans_ind_predicate_context Σ) in X1.
       eapply (eq_annots_ind_predicate_context ci).
       eapply All2_Forall2 => //. exact X1.
-    + clear X8. 
-      rewrite trans_local_app in X5.
-      rewrite /predctx in X5.
-      rewrite trans_case_predicate_context in X5 => //.
-    + clear X8. cbn [preturn trans_predicate].
-      specialize (X4 X9).
+    + clear X7.
       rewrite trans_local_app in X4.
       rewrite /predctx in X4.
       rewrite trans_case_predicate_context in X4 => //.
+    + clear X7. cbn [preturn trans_predicate].
+      specialize (X3 X8).
+      rewrite trans_local_app in X3.
+      rewrite /predctx in X3.
+      rewrite trans_case_predicate_context in X3 => //.
     + now rewrite global_ext_constraints_trans.
-    + cbn. clear X8.
-      now rewrite trans_mkApps map_app in X7.
+    + cbn. clear X7.
+      now rewrite trans_mkApps map_app in X6.
     + red. eapply All2_Forall2.
       eapply All2_map2_right.
       eapply All2_map.
       eapply All2i_All2; tea.
       cbv beta. intros i cdecl br.
       set (brctxty := Ast.case_branch_type _ _ _ _ _ _ _).
-      move=> [] [] [] [] eqann Hbod IHbod Hty IHty.
+      move=> [] [] eqann [] Hbod IHbod [] Hty IHty.
       unfold wf_branch, wf_branch_gen.
       cbn [bcontext trans_branch].
       have lenctx : #|Ast.bcontext br| = #|Ast.Env.cstr_args cdecl|.
@@ -2369,7 +2367,7 @@ Proof.
       eapply All2i_impl; tea.
       cbv beta. intros i cdecl br.
       set (brctxty := Ast.case_branch_type _ _ _ _ _ _ _).
-      move=> [] [] [] [] eqann Hbod IHbod Hty IHty.
+      move=> [] [] eqann [] Hbod IHbod [] Hty IHty.
       have lenctx : #|Ast.bcontext br| = #|Ast.Env.cstr_args cdecl|.
       { eapply All2_length in eqann; now len in eqann. }
       split.
@@ -2382,7 +2380,7 @@ Proof.
       rewrite [brctxty'.2]eqbty.
       rewrite [brctxty'.1]eqctx. 
       clear eqctx eqbty.
-      specialize (IHbod X9). specialize (IHty X9).
+      specialize (IHbod X8). specialize (IHty X8).
       rewrite trans_local_app in IHbod.
       rewrite trans_local_app in IHty => //.
 
@@ -2413,14 +2411,14 @@ Proof.
        intros x [s [Hs Hts]].
        now exists s.
     -- apply All_map. eapply All_impl; eauto.
-       intuition eauto 3 with wf; cbn.
+       intuition eauto 3 with wf; cbn. hnf in X3.
        rewrite H2. rewrite /trans_local map_length.
        rewrite /trans_local map_app in X3.
        rewrite <- trans_lift. apply X3; auto.
     -- eapply trans_wf_fixpoint => //.
-        solve_all. destruct a as [s [Hs IH]].
+        solve_all; destruct a as [s [Hs IH]], b as [Hs' IH'].
         now eapply TypingWf.typing_wf in Hs.
-        now eapply TypingWf.typing_wf in a0.
+        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
   - eapply refine_type.
@@ -2436,14 +2434,14 @@ Proof.
     -- eapply All_map, (All_impl X0).
        intros x [s [Hs Hts]]. now exists s.
     -- apply All_map. eapply All_impl; eauto.
-       intuition eauto 3 with wf.
+       intuition eauto 3 with wf. hnf in X3.
        rewrite H2. rewrite /trans_local map_length.
        rewrite trans_local_app in X3.
        cbn. rewrite <- trans_lift. now apply X3.
     -- eapply trans_wf_cofixpoint => //.
-       solve_all. destruct a as [s [Hs IH]].
+       solve_all; destruct a as [s [Hs IH]], b as [Hs' IH'].
        now eapply TypingWf.typing_wf in Hs.
-       now eapply TypingWf.typing_wf in a0.
+       now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
   - assert (WfAst.wf Σ B).
@@ -2856,7 +2854,7 @@ Proof.
   destruct a as [na [b|] ty] => //;
   intros [? ?]; cbn. destruct p.
   intuition auto.
-  - eapply (IH _ _ _ Sort) in s0; auto.
+  - eapply (IH _ _ _ Sort) in i; auto.
     rewrite -trans_local_app //.
   - eapply (IH _ _ _ (Typ _)) in t0 => //.
     rewrite -trans_local_app //.

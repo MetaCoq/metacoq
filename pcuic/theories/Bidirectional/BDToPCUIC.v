@@ -76,15 +76,13 @@ Proof.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + destruct X0.
-      eexists.
+    + apply infer_typing_sort_impl with id X0; intros Hs.
       apply weaken_ctx ; eauto.
     + apply weaken_ctx ; auto.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + destruct X0.
-      eexists.
+    + apply infer_typing_sort_impl with id X0; intros Hs.
       apply weaken_ctx ; eauto.
 Qed.      
 
@@ -116,9 +114,6 @@ Section BDToPCUICTyping.
   Let Psort Γ t u :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : (tSort u).
 
-  Let Ptrue_infer Γ t :=
-    { s : Universe.t & Psort Γ t s }.
-
   Let Pprod Γ t na A B :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : tProd na A B.
 
@@ -137,31 +132,26 @@ Section BDToPCUICTyping.
   (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
-    All_local_env_over_sorting checking (true_infer infering_sort)
+    All_local_env_over_sorting checking infering_sort
       (fun Σ Γ _ t T _ => Pcheck Γ t T)
-      (fun Σ Γ _ t _ => Ptrue_infer Γ t) 
+      (fun Σ Γ _ t s _ => Psort Γ t s) 
       Σ Γ all ->
     wf_local Σ Γ.
   Proof.
     intros allo ; induction allo.
     all: constructor.
     1,3: assumption.
-    all: red.
-    - destruct s. eexists.
-      auto.
-    - destruct s. eexists.
-      auto.
-    - destruct s.
-      apply c ; auto.
-      eexists. auto.
+    all: do 2 red.
+    3: apply Hc; auto.
+    all: apply infer_sort_impl with id tu; now intros Ht.
   Qed.
 
   Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
     All_local_env_over_sorting
       (fun Σ Δ => checking Σ (Γ,,,Δ))
-      (fun Σ Δ => (true_infer infering_sort) Σ (Γ,,,Δ))
+      (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
       (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
-      (fun Σ Δ _ t _ => Ptrue_infer (Γ,,,Δ) t) 
+      (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s) 
       Σ Γ' all ->
     wf_local_rel Σ Γ Γ'.
   Proof.
@@ -169,18 +159,9 @@ Section BDToPCUICTyping.
     all: constructor.
     1,3: assumption.
     all: red.
-    - destruct s. eexists.
-      apply p.
-      by apply wf_local_app.
-    - destruct s. eexists.
-      apply p.
-      by apply wf_local_app.
-    - destruct s.
-      apply c.
-      1: by apply wf_local_app.
-      eexists.
-      apply p.
-      by apply wf_local_app.
+    3: apply Hc; [by apply wf_local_app|].
+    all: apply infer_sort_impl with id tu; intros Ht.
+    all: now apply Hs, wf_local_app.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 

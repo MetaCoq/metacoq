@@ -160,10 +160,10 @@ Proof.
   assert (Σ ⊢ Γ ,,, pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p) = Γ ,,, predctx).
   { transitivity (Γ ,,, case_predicate_context' ci mdecl idecl p); revgoals.
     * symmetry. eapply alpha_eq_context_ws_cumul_ctx_pb => //; fvs. now symmetry.
-    * eapply pre_case_predicate_context_gen_eq; tea. pcuic. now eapply typing_wf_local; eauto.
+    * eapply pre_case_predicate_context_gen_eq; tea. pcuic.
       now eapply PCUICWfUniverses.typing_wf_universe in pret_ty. }
   unshelve epose proof (typing_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve. 
-  * pcuic. now eapply typing_wf_local; eauto.
+  * pcuic.
   * now eapply PCUICWfUniverses.typing_wf_universe in pret_ty.
   * rewrite -smash_context_subst_context_let_expand in X2.
     specialize (X2 spargs scrut_ty).
@@ -302,7 +302,8 @@ Lemma isType_ws_cumul_ctx_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
   Σ ⊢ Γ = Δ ->
   isType Σ Δ T.
 Proof.
-  intros [s Hs] wf eq. exists s.
+  intros HT wf eq.
+  apply infer_sort_impl with id HT; intros Hs.
   eapply closed_context_conversion; tea. 
 Qed.
 

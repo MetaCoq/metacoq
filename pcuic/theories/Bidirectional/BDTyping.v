@@ -17,8 +17,6 @@ From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext) (Γ : context).
 
-Definition true_infer {cf: checker_flags} sorting Σ Γ (T: term) := { s : Universe.t & sorting Σ Γ T s }.
-
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t ▹□ u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t ▹Π ( na , A , B ) " (at level 50, Γ, t, na, A, B at next level).
@@ -152,8 +150,8 @@ and " Σ ;;; Γ |- t ▹□ u " := (@infering_sort _ Σ Γ t u) : type_scope
 and " Σ ;;; Γ |- t ▹Π ( na , A , B ) " := (@infering_prod _ Σ Γ t na A B) : type_scope
 and " Σ ;;; Γ |- t ▹{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t u args) : type_scope
 and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope
-and "'wf_local_bd' Σ Γ" := (All_local_env (lift_bityping checking (true_infer infering_sort) Σ) Γ)
-and "'wf_local_bd_rel' Σ Γ Γ'" := (All_local_rel (lift_bityping checking (true_infer infering_sort) Σ) Γ Γ').
+and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort Σ) Γ)
+and "'wf_local_bd_rel' Σ Γ Γ'" := (All_local_rel (lift_sorting checking infering_sort Σ) Γ Γ').
 
 
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
@@ -166,19 +164,16 @@ Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   n ctors brs.
 
 Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
-   (checking_size : forall Σ Γ t T, Σ ;;; Γ |- t ◃ T -> size)
-   (true_infer_size : forall Σ Γ t, { s & Σ ;;; Γ |- t ▹□ s } -> size)
+   (checking_size : forall Σ Γ t T, Σ ;;; Γ |- t ◃ T  -> size)
+   (infering_size : forall Σ Γ t s, Σ ;;; Γ |- t ▹□ s -> size)
   {n ctors}
   (a : tybranches Σ Γ ci mdecl idecl p ptm n ctors brs) : size :=
 
   (all2i_size _ (fun i cdecl br p => 
     (Nat.max 
-      (All_local_rel_sorting_size _ _ checking_size true_infer_size _ _ _ p.2.1)
+      (All_local_rel_sorting_size checking_size infering_size _ _ _ p.2.1)
       (checking_size _ _ _ _ p.2.2)))
   a).
-
-Definition true_infer_size `{checker_flags} (infering_sort_size: forall Σ Γ t u, Σ ;;; Γ |- t ▹□ u -> size) Σ Γ T (d: true_infer infering_sort Σ Γ T): size :=
-  infering_sort_size Σ Γ T d.π1 d.π2.
 
 Fixpoint infering_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T) {struct d} : size
 with infering_sort_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d} : size
@@ -194,7 +189,7 @@ Proof.
           | H : infering_indu _ _ _ _ _ _ |- _ => apply infering_indu_size in H 
           | H : checking _ _ _ _ |- _ => apply checking_size in H
           | H : wf_local_bd _ _ |- _ => apply (All_local_env_sorting_size _ _ (checking_size _) (infering_sort_size _) _ _) in H
-          | H : wf_local_bd_rel _ _ _ |- _ => apply (All_local_rel_sorting_size _ _ (checking_size _) (true_infer_size (infering_sort_size _)) _ _) in H
+          | H : wf_local_bd_rel _ _ _ |- _ => apply (All_local_rel_sorting_size (checking_size _) (infering_sort_size _) _ _) in H
           end ;
     match goal with
     | H : All2i _ _ _ _ |- _ => idtac
@@ -204,7 +199,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (Nat.max a0 (Nat.max i (Nat.max i0 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (true_infer_size (infering_sort_size _)) a2)))))).
+    - exact (S (Nat.max a0 (Nat.max i (Nat.max i0 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a2)))))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
@@ -230,8 +225,8 @@ Arguments lexprod [A B].
 
 Section BidirectionalInduction.
 
-  #[local] Notation wfl_size := (All_local_env_sorting_size _ _ (@checking_size _) (@true_infer_size _ (@infering_sort_size _)) _ _).
-  #[local] Notation wfl_size_rel := (All_local_rel_sorting_size _ _ (@checking_size _) (@true_infer_size _ (@infering_sort_size _)) _ _ _).
+  #[local] Notation wfl_size := (All_local_env_sorting_size (@checking_size _) (@infering_sort_size _) _ _).
+  #[local] Notation wfl_size_rel := (All_local_rel_sorting_size (@checking_size _) (@infering_sort_size _) _ _ _).
 
   Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
@@ -316,15 +311,15 @@ Section BidirectionalInduction.
 
   Lemma bidir_ind_env :
     let Pdecl_check := fun Σ Γ wfΓ t T tyT => Pcheck Γ t T in
-    let Pdecl_sort := fun Σ Γ wfΓ t tyT => { u : Universe.t & Psort Γ t u } in
+    let Pdecl_sort := fun Σ Γ wfΓ t u tyT => Psort Γ t u in
     let Pdecl_check_rel Γ := fun _ Δ _ t T _ => Pcheck (Γ,,,Δ) t T in
-    let Pdecl_sort_rel Γ := fun _ Δ _ t _ => { u & Psort (Γ,,,Δ) t u } in
+    let Pdecl_sort_rel Γ := fun _ Δ _ t u _ => Psort (Γ,,,Δ) t u in
 
     (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), 
-      All_local_env_over_sorting checking (true_infer _) Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ) ->
+      All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ) ->
 
     (forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'), 
-      All_local_env_over_sorting (fun Σ Δ => checking Σ (Γ,,,Δ)) (fun Σ Δ => true_infer infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Σ Γ' wfΓ' -> PΓ_rel Γ Γ') ->
+      All_local_env_over_sorting (fun Σ Δ => checking Σ (Γ,,,Δ)) (fun Σ Δ => infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Σ Γ' wfΓ' -> PΓ_rel Γ Γ') ->
 
     (forall (Γ : context) (n : nat) decl,
       nth_error Γ n = Some decl ->
@@ -501,20 +496,18 @@ Section BidirectionalInduction.
         * apply IHwfΓ.
         intros ; apply IH.
         cbn in H |- *. lia.
-        * simpl. red. exists u.
+        * simpl. red.
           applyIH.
-          simpl.
+          cbn.
           assert (0 < wfl_size wfΓ) by apply All_local_env_size_pos.
-          simpl.
-          unfold true_infer_size at 1, projT2, projT1.
           lia.
       + destruct t0 as [u h].
         constructor.
         * apply IHwfΓ.
           intros ; apply IH.
-          simpl in H |- *. pose proof (infering_sort_size_pos h). lia.
-        * red. applyIH. pose proof (infering_sort_size_pos h). simpl in H |- *. unfold true_infer_size at 1, projT2, projT1. lia.
-        * red. exists u. applyIH. pose proof (checking_size_pos t1). simpl in H |- *. unfold true_infer_size at 1, projT2, projT1. lia.
+          cbn in H |- *. pose proof (infering_sort_size_pos h). lia.
+        * red. applyIH. pose proof (infering_sort_size_pos h). cbn in H |- *. lia.
+        * red. applyIH. pose proof (checking_size_pos t1). cbn in H |- *. lia.
 
     - eapply HΓRel.
       dependent induction wfΓ'.
@@ -524,14 +517,13 @@ Section BidirectionalInduction.
         * apply IHwfΓ'.
           intros ; apply IH.
           cbn in H |- *.
-          fold (wfl_size_rel wfΓ').
+          unfold wfl_size_rel in H.
           lia.
         * cbn. red.
-          exists u.
           applyIH.
           cbn.
-          fold (wfl_size_rel wfΓ').
           assert (0 < wfl_size_rel wfΓ') by apply All_local_env_size_pos.
+          unfold wfl_size_rel in H.
           lia.
       + destruct t0 as [u h].
         constructor.
@@ -540,8 +532,8 @@ Section BidirectionalInduction.
           cbn in H |- *.
           fold (wfl_size_rel wfΓ').
           pose proof (infering_sort_size_pos h). lia.
-        * red. applyIH. pose proof (infering_sort_size_pos h). simpl in H |- *. unfold true_infer_size at 1, projT2, projT1. lia.
-        * red. exists u. applyIH. pose proof (checking_size_pos t1). simpl in H |- *. unfold true_infer_size at 1, projT2, projT1. lia.
+        * red. applyIH. pose proof (infering_sort_size_pos h). cbn in H |- *. lia.
+        * red. applyIH. pose proof (checking_size_pos t1). cbn in H |- *. lia.
 
 
     - destruct c.
@@ -605,7 +597,6 @@ Section BidirectionalInduction.
           all: try assumption.
           all: applyIH.
           cbn.
-          unfold All_local_rel_sorting_size, true_infer, true_infer_size.
           fold predctx ptm (wfl_size_rel a1).
           lia.
         * apply IHa2.

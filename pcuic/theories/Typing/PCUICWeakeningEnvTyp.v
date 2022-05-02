@@ -169,29 +169,31 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - induction X; constructor; eauto 2 with extends.
-    + eexists; eapply p; eauto.
-    + eexists; eapply p0; eauto.
-    + eapply p; eauto.
+    + apply infer_typing_sort_impl with id tu; intro; auto.
+    + apply infer_typing_sort_impl with id tu; intro; auto.
+    + eapply Hc; eauto.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends. all: econstructor; eauto 2 with extends.
-    * revert X6. clear -Σ' wfΣ' extΣ.
-      induction 1; constructor; eauto with extends.
+    * revert X5. clear -Σ' wfΣ' extΣ.
+      induction 1; constructor; try destruct t0; eauto with extends.
     * close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + specialize (forall_Σ' _ wfΣ' extΣ).
       now apply wf_local_app_inv in forall_Σ'.
     + eapply fix_guard_extends; eauto.
-    + eapply (All_impl X0); simpl; intuition eauto with extends.
-      destruct X as [s Hs]; exists s. intuition eauto with extends.
-    + eapply All_impl; eauto; simpl; intuition eauto with extends.
+    + eapply (All_impl X0); intros d X.
+      apply (lift_typing_impl X); now intros ? [].
+    + eapply (All_impl X1); intros d X.
+      apply (lift_typing_impl X); now intros ? [].
   - econstructor; eauto with extends.
     + specialize (forall_Σ' _ wfΣ' extΣ).
       now apply wf_local_app_inv in forall_Σ'.
     + eapply cofix_guard_extends; eauto.
-    + eapply (All_impl X0); simpl; intuition eauto with extends.
-      destruct X as [s Hs]; exists s. intuition eauto with extends.
-    + eapply All_impl; eauto; simpl; intuition eauto with extends.
+    + eapply (All_impl X0); intros d X.
+      apply (lift_typing_impl X); now intros ? [].
+    + eapply (All_impl X1); intros d X.
+      apply (lift_typing_impl X); now intros ? [].
   - econstructor. 1: eauto.
     + eapply forall_Σ'1; eauto.
     + destruct Σ as [Σ φ]. eapply weakening_env_cumulSpec in cumulA; eauto.
@@ -552,26 +554,21 @@ Qed.
 
 Lemma weaken_env_prop_typing `{checker_flags} : weaken_env_prop (lift_typing typing).
 Proof.
-  red. intros * wfΣ' Hext *.
-  destruct T; simpl.
-  - intros Ht.
-    eapply (weakening_env (_, _)). 2:eauto. all:auto.
-  - intros [s Ht]. exists s.
-    eapply (weakening_env (_, _)). 4: eauto. all:auto.
+  red. intros * wfΣ wfΣ' Hext Γ t T HT.
+  apply lift_typing_impl with (1 := HT); intros ? Hty.
+  eapply (weakening_env (_, _)).
+  2: eauto.
+  all: auto.
 Qed.
 
 Lemma weaken_env_decls_prop_typing `{checker_flags} : weaken_env_decls_prop (lift_typing typing).
 Proof.
-  red. intros * wfΣ' Hext *.
-  destruct T; simpl.
-  - intros Ht.
-    eapply (weakening_env (_, _)). 2:eauto. all:auto.
-    * cbn. now eapply extends_decls_wf.
-    * tc.
-  - intros [s Ht]. exists s.
-    eapply (weakening_env (_, _)). 2: eauto. all:auto.
-    * cbn. now eapply extends_decls_wf.
-    * tc.
+  red. intros * wfΣ' Hext Γ t T HT.
+  apply lift_typing_impl with (1 := HT); intros ? Hty.
+  eapply (weakening_env (_, _)).
+  2-4: eauto.
+  * cbn; now eapply extends_decls_wf.
+  * tc.
 Qed.
 
 #[global]

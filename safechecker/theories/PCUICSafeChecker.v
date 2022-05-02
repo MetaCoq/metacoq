@@ -1045,7 +1045,7 @@ Section CheckEnv.
     replace (#|Δ| + S #|Γ|) with (S #|Δ| + #|Γ|). 2:lia. rewrite Nat.add_1_r.
     rewrite -shiftnP_add addnP_shiftnP. eapply on_free_vars_subst.
     eapply isType_wf_local in isty. depelim isty. red in l0. cbn.
-    rewrite andb_true_r. fvs.
+    rewrite andb_true_r. red in l0. fvs.
     eapply isType_is_open_term in isty. cbn. now rewrite shiftnP_add.
   Qed.
 

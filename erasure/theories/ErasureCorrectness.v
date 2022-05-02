@@ -111,7 +111,7 @@ Proof.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. all: cbn; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. all: hnf; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
       }
       assert (Σ;;; [] |- subst1 b0' 0 b1 ⇝ℇ ELiftSubst.subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -122,7 +122,7 @@ Proof.
         eapply subject_reduction_eval; eauto.
         eapply erases_context_conversion. 3:eassumption.
         all: cbn; eauto.
-        econstructor. all: cbn; eauto.
+        econstructor. all: hnf; eauto.
         eapply subject_reduction_eval; eauto.
       }
       pose proof (subject_reduction_eval t1 H).
@@ -821,7 +821,7 @@ Proof.
           unfold unfold_cofix. intros hnth; rewrite hnth. intros [=].
           subst fn narg.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. now eapply typing_wf_local; eauto. all:tea.
+          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
@@ -935,7 +935,7 @@ Proof.
           unfold unfold_cofix. intros hnth'; rewrite hnth'. intros [=].
           subst fn narg. rewrite hnth' in e2. noconf e2.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. now eapply typing_wf_local; eauto. all:tea.
+          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.

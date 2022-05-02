@@ -12,6 +12,68 @@ Require Import ssreflect.
 Set Default Goal Selector "!".
 Implicit Types (cf : checker_flags).
 
+Ltac my_rename_hyp h th :=
+  match th with
+  | (extends ?t _) => fresh "ext" t
+  | (extends ?t.1 _) => fresh "ext" t
+  | (extends _ _) => fresh "ext"
+  | _ => PCUICTyping.my_rename_hyp h th
+  end.
+
+Ltac rename_hyp h ht ::= my_rename_hyp h ht.
+
+Lemma extends_wf_local Σ Γ (wfΓ : wf_local Σ Γ) :
+  All_local_env_over typing
+      (fun Σ0 Γ0 wfΓ (t T : term) ty =>
+         forall Σ' : global_env,
+           wf Σ' ->
+           extends Σ0 Σ' ->
+           (Σ', Σ0.2);;; Γ0 |- t : T
+      ) Σ Γ wfΓ ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> wf_local (Σ', Σ.2) Γ.
+Proof.
+  intros X0 Σ' H0.
+  induction X0 in H0 |- *; try econstructor; simpl in *; intuition auto.
+  - apply infer_typing_sort_impl with id tu. intro; eauto.
+  - apply infer_typing_sort_impl with id tu. intro; eauto.
+Qed.
+#[global]
+Hint Resolve extends_wf_local : extends.
+
+Lemma extends_check_recursivity_kind Σ ind k Σ' : extends Σ Σ' -> wf Σ' ->
+  check_recursivity_kind (lookup_env Σ) ind k -> check_recursivity_kind (lookup_env Σ') ind k.
+Proof.
+  intros ext wfΣ'.
+  rewrite /check_recursivity_kind.
+  destruct lookup_env eqn:Heq => //.
+  eapply extends_lookup in Heq; eauto.
+  now rewrite Heq.
+Qed.
+
+Lemma extends_wf_fixpoint (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
+  wf_fixpoint Σ mfix -> wf_fixpoint Σ' mfix.
+Proof.
+  intros ext wfΣ'.
+  unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] -> /=.
+  destruct map_option_out as [[|ind inds]|]; auto.
+  move/andb_and => [->] /=.
+  now apply extends_check_recursivity_kind.
+Qed.
+
+Lemma extends_wf_cofixpoint (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
+  wf_cofixpoint Σ mfix -> wf_cofixpoint Σ' mfix.
+Proof.
+  intros ext wfΣ'.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
+  destruct map_option_out as [[|ind inds]|]; auto.
+  move/andb_and => [->] /=.
+  now apply extends_check_recursivity_kind.
+Qed.
+#[global]
+Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
+
+
 Lemma subrelations_extends `{CF:checker_flags} Σ Σ' φ :
   extends Σ Σ' ->
   RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) (eq_universe (global_ext_constraints (Σ',φ))).

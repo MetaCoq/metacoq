@@ -37,10 +37,6 @@ Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive *
   let mind := inductive_mind (fst c) in
   subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance u (cstr_type cdecl)).
 
-Definition extends (Σ Σ' : global_env) :=
-  Σ.(universes) ⊂_cs Σ'.(universes) ×
-  { Σ'' & Σ'.(declarations) = Σ'' ++ Σ.(declarations) }.
-
 (** ** Typing relation *)
 
 Include PCUICEnvTyping.
@@ -313,16 +309,6 @@ Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCU
   Definition typing := @typing.
 
 End PCUICTypingDef.
-
-Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
-  PCUICTerm
-  PCUICEnvironment
-  PCUICTermUtils
-  PCUICEnvTyping
-  PCUICConversion
-  PCUICLookup
-.
-Include PCUICGlobalMaps.
 
 Module PCUICDeclarationTyping :=
   EnvironmentTyping.DeclarationTyping
@@ -822,8 +808,8 @@ Proof.
           - destruct Xg. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
-            split. apply ind_sorts0. destruct indices_matter; auto.
-            eapply type_local_ctx_impl. eapply ind_sorts0. intros ??? HT.
+            split. apply ind_sorts. destruct indices_matter; auto.
+            eapply type_local_ctx_impl. eapply ind_sorts. intros ??? HT.
             apply lift_typing_impl with (1 := HT); intros ? Hs.
             apply (IH (_; _; _; Hs)).
            - apply (onIndices Xg). }

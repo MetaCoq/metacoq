@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-  PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICReduction PCUICCumulativity PCUICTyping
-  PCUICGuardCondition PCUICGlobalEnv.
+  PCUICEquality (* PCUICContextSubst *) (* PCUICUnivSubst *) (* PCUICCases *)
+  PCUICReduction PCUICCumulativity (* PCUICTyping *)
+  (* PCUICGuardCondition *) (* PCUICGlobalEnv *).
 From Equations Require Import Equations.
 
 Require Import ssreflect.
@@ -69,7 +69,14 @@ Qed.
 
 Generalizable Variables Σ Γ t T.
 
-Definition weaken_env_prop_full {cf:checker_flags}
+Section Extends.
+  Context {cf : checker_flags}.
+  Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
+  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+
+  Let wf := on_global_env Pcmp P.
+
+Definition weaken_env_prop_full
   (P : global_env_ext -> context -> term -> term -> Type) :=
   forall (Σ : global_env_ext) (Σ' : global_env), 
     wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
@@ -104,7 +111,7 @@ Proof.
   apply global_ext_constraints_app, sub.
 Qed.
 
-Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
+Lemma eq_term_subset Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term Σ φ t t' -> eq_term Σ φ' t t'.
 Proof.
@@ -112,38 +119,28 @@ Proof.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
-Lemma compare_term_subset {cf:checker_flags} le Σ φ φ' t t'
+Lemma compare_term_subset le Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> compare_term le Σ φ t t' -> compare_term le Σ φ' t t'.
 Proof.
   destruct le; [apply eq_term_subset|apply leq_term_subset].
 Qed.
 
-Lemma compare_decl_subset {cf:checker_flags} le Σ φ φ' d d'
+Lemma compare_decl_subset le Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
     -> compare_decl le Σ φ d d' -> compare_decl le Σ φ' d d'.
 Proof.
   intros Hφ []; constructor; eauto using compare_term_subset.
 Qed.
 
-Lemma compare_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
+Lemma compare_context_subset le Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
     -> compare_context le Σ φ Γ Γ' ->  compare_context le Σ φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor; auto; eapply compare_decl_subset; eassumption.
 Qed.
 
-Ltac my_rename_hyp h th :=
-  match th with
-  | (extends ?t _) => fresh "ext" t
-  | (extends ?t.1 _) => fresh "ext" t
-  | (extends _ _) => fresh "ext"
-  | _ => PCUICTyping.my_rename_hyp h th
-  end.
-
-Ltac rename_hyp h ht ::= my_rename_hyp h ht.
-
-Lemma lookup_global_Some_fresh `{checker_flags} Σ c decl :
+Lemma lookup_global_Some_fresh Σ c decl :
   lookup_global Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. 1: congruence.
@@ -154,13 +151,13 @@ Proof.
     now inv H2.
 Qed.
 
-Lemma lookup_env_Some_fresh `{checker_flags} Σ c decl :
+Lemma lookup_env_Some_fresh Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ.(declarations)).
 Proof.
   apply lookup_global_Some_fresh.
 Qed.
 
-Lemma extends_lookup `{checker_flags} Σ Σ' c decl :
+Lemma extends_lookup Σ Σ' c decl :
   wf Σ' ->
   extends Σ Σ' ->
   lookup_env Σ c = Some decl ->
@@ -176,10 +173,9 @@ Proof.
     destruct (eqb_spec c kn); subst; auto.
     apply lookup_global_Some_fresh in IHΣ''; contradiction.
 Qed.
-#[global]
 Hint Resolve extends_lookup : extends.
 
-Lemma weakening_env_declared_constant `{CF:checker_flags}:
+Lemma weakening_env_declared_constant :
   forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
@@ -187,7 +183,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
-#[global] Hint Resolve weakening_env_declared_constant : extends.
+Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
   forall (Σ : global_env) ind decl,
@@ -197,7 +193,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
-#[global] Hint Resolve weakening_env_declared_minductive : extends.
+Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
   forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
@@ -206,7 +202,7 @@ Lemma weakening_env_declared_inductive:
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
-#[global] Hint Resolve weakening_env_declared_inductive : extends.
+Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
@@ -217,7 +213,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-#[global] Hint Resolve weakening_env_declared_constructor : extends.
+Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl cdecl pdecl,
@@ -228,32 +224,14 @@ Proof.
   intros H Σ cst mdecl idecl cdecl pdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-#[global] Hint Resolve weakening_env_declared_projection : extends.
+Hint Resolve weakening_env_declared_projection : extends.
 
-Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
-  All_local_env_over typing
-      (fun Σ0 Γ0 wfΓ (t T : term) ty =>
-         forall Σ' : global_env,
-           wf Σ' ->
-           extends Σ0 Σ' ->
-           (Σ', Σ0.2);;; Γ0 |- t : T
-      ) Σ Γ wfΓ ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> wf_local (Σ', Σ.2) Γ.
-Proof.
-  intros X0 Σ' H0.
-  induction X0 in H0 |- *; try econstructor; simpl in *; intuition auto.
-  - apply infer_typing_sort_impl with id tu. intro; eauto.
-  - apply infer_typing_sort_impl with id tu. intro; eauto.
-Qed.
-#[global]
-Hint Resolve extends_wf_local : extends.
-
-Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} :
+Lemma global_variance_sigma_mon {Σ Σ' gr napp v} :
   wf Σ' -> extends Σ Σ' ->
   global_variance Σ gr napp = Some v ->
   global_variance Σ' gr napp = Some v.
 Proof.
-  intros wf ext.
+  intros wfΣ' ext.
   rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
   destruct gr as [|ind|[ind i]|] => /= //.
   - destruct (lookup_env Σ ind) eqn:look => //.
@@ -263,7 +241,7 @@ Proof.
 Qed.
 
 (** The definition of [R_global_instance] is defined so that it is weakenable. *)
-Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr napp :
+Lemma R_global_instance_weaken_env Σ Σ' Re Re' Rle Rle' gr napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -284,7 +262,7 @@ Proof.
 Qed.
 
 #[global]
-Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
+Instance eq_term_upto_univ_weaken_env Σ Σ' Re Re' Rle Rle' napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -320,7 +298,7 @@ Proof.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
 
-Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
+Lemma weakening_env_red1 Σ Σ' Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
   red1 Σ Γ M N ->
@@ -330,9 +308,7 @@ Proof.
     try solve [econstructor; eauto with extends; solve_all].
 Qed.
 
-Existing Class extends.
-
-#[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq (Σ Σ' : global_env) (ϕ : universes_decl) : 
   extends Σ Σ' ->
   RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
     (eq_universe (global_ext_constraints (Σ', ϕ))).
@@ -342,7 +318,7 @@ Proof.
   apply global_ext_constraints_app, ext.
 Qed.
 
-#[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_le (Σ Σ' : global_env) (ϕ : universes_decl) : 
   extends Σ Σ' ->
   RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ))) 
     (leq_universe (global_ext_constraints (Σ', ϕ))).
@@ -352,7 +328,7 @@ Proof.
   apply global_ext_constraints_app, ext.
 Qed.
 
-#[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq_le (Σ Σ' : global_env) (ϕ : universes_decl) : 
   extends Σ Σ' ->
   RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
     (leq_universe (global_ext_constraints (Σ', ϕ))).
@@ -363,7 +339,7 @@ Proof.
   apply global_ext_constraints_app, ext.
 Qed.
 
-Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
+Lemma weakening_env_conv Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
   convAlgo (Σ, φ) Γ M N ->
@@ -379,7 +355,7 @@ Proof.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto.
 Qed.
 
-Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
+Lemma weakening_env_cumul Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
   cumulAlgo (Σ, φ) Γ M N ->
@@ -395,7 +371,7 @@ Proof.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto.
 Qed.
 
-Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allowed :
+Lemma weakening_env_is_allowed_elimination Σ Σ' φ u allowed :
   wf Σ' -> extends Σ Σ' ->
   is_allowed_elimination (global_ext_constraints (Σ, φ)) allowed u ->
   is_allowed_elimination (global_ext_constraints (Σ', φ)) allowed u.
@@ -409,68 +385,24 @@ Proof.
   eapply satisfies_subset; eauto.
   apply global_ext_constraints_app, ext.
 Qed.
-
-#[global]
 Hint Resolve weakening_env_is_allowed_elimination : extends.
 
-Lemma weakening_All_local_env_impl `{checker_flags}
-      (P Q : context -> term -> typ_or_sort -> Type) l :
-  All_local_env P l ->
-  (forall Γ t T, P Γ t T -> Q Γ t T) ->
-  All_local_env Q l.
-Proof.
-  induction 1; intros; simpl; econstructor; eauto.
-Qed.
-
-#[global]
 Hint Resolve weakening_env_global_ext_levels : extends.
 
-Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H : extends Σ Σ')
+Lemma weakening_env_consistent_instance Σ Σ' φ ctrs u (H : extends Σ Σ')
   : consistent_instance_ext (Σ, φ) ctrs u
     -> consistent_instance_ext (Σ', φ) ctrs u.
 Proof.
     unfold consistent_instance_ext, consistent_instance.
     intros X.
     destruct ctrs; tas.
-    intuition auto.
+    destruct X as (H0 & H1 & H2); repeat split; tas.
     - eapply forallb_Forall in H0; eapply forallb_Forall, Forall_impl; tea.
       intros x ?; now eapply weakening_env_global_ext_levels'.
     - eapply valid_subset; tea;
       now eapply weakening_env_global_ext_constraints.
 Qed.
-#[global]
 Hint Resolve weakening_env_consistent_instance : extends.
-
-Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' ->
-  check_recursivity_kind (lookup_env Σ) ind k -> check_recursivity_kind (lookup_env Σ') ind k.
-Proof.
-  intros ext wfΣ'.
-  rewrite /check_recursivity_kind.
-  destruct lookup_env eqn:Heq => //.
-  eapply extends_lookup in Heq; eauto.
-  now rewrite Heq.
-Qed.
-
-Lemma extends_wf_fixpoint {cf:checker_flags} (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
-  wf_fixpoint Σ mfix -> wf_fixpoint Σ' mfix.
-Proof.
-  intros ext wfΣ'.
-  unfold wf_fixpoint, wf_fixpoint_gen.
-  move/andb_and => [] -> /=.
-  destruct map_option_out as [[|ind inds]|]; auto.
-  move/andb_and => [->] /=.
-  now apply extends_check_recursivity_kind.
-Qed.
-
-Lemma extends_wf_cofixpoint {cf:checker_flags} (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
-  wf_cofixpoint Σ mfix -> wf_cofixpoint Σ' mfix.
-Proof.
-  intros ext wfΣ'.
-  unfold wf_cofixpoint, wf_cofixpoint_gen.
-  destruct map_option_out as [[|ind inds]|]; auto.
-  move/andb_and => [->] /=.
-  now apply extends_check_recursivity_kind.
-Qed.
 
 Lemma global_levels_Set Σ :
   LevelSet.In Level.lzero (global_levels Σ).
@@ -496,11 +428,11 @@ Proof.
   intuition auto. left. now apply sub.
 Qed.
 
-Lemma extends_wf_universe {cf:checker_flags} {Σ : global_env_ext} Σ' u : extends Σ Σ' -> wf Σ' ->
+Lemma extends_wf_universe {Σ : global_env_ext} Σ' u : extends Σ Σ' -> wf Σ' ->
   wf_universe Σ u -> wf_universe (Σ', Σ.2) u.
 Proof.
   destruct Σ as [Σ univ]; cbn.
-  intros [sub [Σ'' eq]] wf.
+  intros [sub [Σ'' eq]] wfΣ'.
   destruct u; simpl; auto.
   intros Hl.
   intros l inl; specialize (Hl l inl).
@@ -512,10 +444,7 @@ Proof.
   - right. eapply global_levels_sub; tea.
 Qed.
 
-#[global]
-Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
-
-(* Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
+(* Lemma wf_extends {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
 Proof.
   intros HΣ' [univs [Σ'' eq]]. simpl in *.
   split => //.
@@ -524,7 +453,7 @@ Proof.
   inv HΣ'. auto.
 Qed. *)
 
-Definition on_udecl_prop `{checker_flags} (Σ : global_env) (udecl : universes_decl)
+Definition on_udecl_prop (Σ : global_env) (udecl : universes_decl)
   := let levels := levels_of_udecl udecl in
      let global_levels := global_levels Σ.(universes) in
      let all_levels := LevelSet.union levels global_levels in
@@ -544,7 +473,7 @@ Proof.
   intros hin; now apply LevelSet.union_spec.
 Qed.
 
-Lemma weaken_lookup_on_global_env' `{checker_flags} Σ c decl :
+Lemma weaken_lookup_on_global_env' Σ c decl :
   wf Σ ->
   lookup_env Σ c = Some decl ->
   on_udecl_prop Σ (universes_decl_of_decl decl).
@@ -619,7 +548,7 @@ Proof.
   destruct c as [[l1 eq] l2]. intuition auto.
 Qed.
 
-Lemma on_udecl_on_udecl_prop {cf:checker_flags} (Σ : global_env) ctx :
+Lemma on_udecl_on_udecl_prop (Σ : global_env) ctx :
   on_udecl Σ.(universes) (Polymorphic_ctx ctx) -> on_udecl_prop Σ (Polymorphic_ctx ctx).
 Proof.
   intros [? [? ?]]. red.
@@ -630,27 +559,15 @@ Proof.
   intuition auto.
 Qed.
 
-Definition extends_decls (Σ Σ' : global_env) := 
-  Σ.(universes) = Σ'.(universes) ×
-  ∑ Σ'', declarations Σ' = Σ'' ++ Σ.(declarations).
-
-Existing Class extends_decls.
-
-#[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
-Proof.
-  intros []. split => //.
-  rewrite e. split; [lsets|csets].
-Qed.
-
-Definition weaken_env_prop `{checker_flags}
+Definition weaken_env_prop
            (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
   forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Definition weaken_env_decls_prop `{checker_flags}
+Definition weaken_env_decls_prop
   (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Lemma extends_decls_wf {cf} Σ Σ' : 
+Lemma extends_decls_wf Σ Σ' : 
   wf Σ' -> extends_decls Σ Σ' -> wf Σ.
 Proof.
   intros [onu ond] [eq [Σ'' eq']].
@@ -662,3 +579,15 @@ Proof.
     intros H; depelim H.
     apply IHΣ''. apply H.
 Qed. 
+
+End Extends.
+
+#[global] Hint Resolve extends_lookup : extends.
+#[global] Hint Resolve weakening_env_declared_constant : extends.
+#[global] Hint Resolve weakening_env_declared_minductive : extends.
+#[global] Hint Resolve weakening_env_declared_inductive : extends.
+#[global] Hint Resolve weakening_env_declared_constructor : extends.
+#[global] Hint Resolve weakening_env_declared_projection : extends.
+#[global] Hint Resolve weakening_env_is_allowed_elimination : extends.
+#[global] Hint Resolve weakening_env_global_ext_levels : extends.
+#[global] Hint Resolve weakening_env_consistent_instance : extends.

@@ -1308,3 +1308,13 @@ Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
 Derive NoConfusion for global_decl.
+
+Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
+  PCUICTerm
+  PCUICEnvironment
+  PCUICTermUtils
+  PCUICEnvTyping
+  PCUICConversion
+  PCUICLookup
+.
+Include PCUICGlobalMaps.

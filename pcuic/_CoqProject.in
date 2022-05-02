@@ -83,6 +83,7 @@ theories/PCUICElimination.v
 theories/PCUICSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
+theories/PCUICFirstorder.v
 theories/PCUICProgress.v
 
 theories/PCUICSafeLemmata.v

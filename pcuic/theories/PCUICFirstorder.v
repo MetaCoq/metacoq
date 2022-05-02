@@ -596,3 +596,4 @@ Proof.
       eapply check_recursivity_kind_inj in Hty; eauto. congruence.
 Qed.
 
+End cf.

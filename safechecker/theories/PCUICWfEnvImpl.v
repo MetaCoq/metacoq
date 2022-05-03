@@ -495,6 +495,8 @@ Next Obligation.
   apply: consistent_ext_on_full_ext=> //.
   apply: add_uctx_subgraph.
 Qed.
+Next Obligation. apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
+Qed. 
 
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_prop _ _ _ optimized_abstract_env_ext_struct optimized_abstract_env_struct.

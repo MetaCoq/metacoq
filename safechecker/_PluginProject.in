@@ -98,6 +98,8 @@ src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
 src/safeTemplateChecker.mli
 src/safeTemplateChecker.ml
+src/extraction.mli
+src/extraction.ml
 
 src/g_metacoq_safechecker.mlg
 src/metacoq_safechecker_plugin.mlpack

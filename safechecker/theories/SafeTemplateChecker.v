@@ -12,11 +12,12 @@ Definition trans_program (p : Ast.Env.program) : program :=
   let Σ' := trans_global_env p.1 in
   (Σ', trans Σ' p.2).
 
-Definition EnvCheck_wf_env_ext {cf:checker_flags} := EnvCheck wf_env_ext. 
+Definition EnvCheck_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} := EnvCheck wf_env_ext. 
 
-Local Instance Monad_EnvCheck_wf_env_ext {cf:checker_flags} : Monad EnvCheck_wf_env_ext := _.
+Local Instance Monad_EnvCheck_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} : Monad EnvCheck_wf_env_ext := _.
 
-Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
+Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl} 
+  (p : Ast.Env.program) φ
   : EnvCheck_wf_env_ext (let p' := trans_program p in ∑ A, { X : wf_env_ext |
     ∥ (p'.1, φ) = X.(wf_env_ext_referenced).(referenced_impl_env_ext) × wf_ext (p'.1, φ) ×  (p'.1, φ) ;;; [] |- p'.2 : A ∥ }) :=
   pp <- typecheck_program (cf := cf) optimized_abstract_env_impl (trans_program p) φ ;;
@@ -25,7 +26,8 @@ Next Obligation.
   sq. destruct H; split; eauto. destruct p0; split; eauto.  eapply infering_typing; tea. eapply w. constructor.
 Qed.
 
-Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
+Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
+  (p : Ast.Env.program) φ
   : string + string :=
   match infer_template_program (cf:=cf) p φ return string + string with
   | CorrectDecl t =>

@@ -7,7 +7,7 @@ open Stdarg
 open Pp
 open PeanoNat.Nat
 open Datatypes
-open PCUICSafeChecker
+open Extraction
 open Tm_util
 open Caml_bytestring
 
@@ -30,7 +30,7 @@ let check env evm poly (c, ustate) =
   in
   let check =
     time (str"Checking")
-      (SafeTemplateChecker.infer_and_print_template_program
+      (Extraction.infer_and_print_template_program_with_guard
         Config0.default_checker_flags
         (* Config0.type_in_type *)
          prog)

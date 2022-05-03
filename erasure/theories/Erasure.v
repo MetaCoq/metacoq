@@ -2,6 +2,7 @@
 From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Template Require Import Transform bytestring config utils.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
 From MetaCoq.Erasure Require Import ETransform.
 
@@ -26,7 +27,7 @@ Obligation Tactic := program_simpl.
 
 Import EWcbvEval.
 
-Program Definition erasure_pipeline (efl := EWellformed.all_env_flags) :
+Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program EProgram.eprogram 
   Ast.term EAst.term
   TemplateProgram.eval_template_program
@@ -88,9 +89,9 @@ Next Obligation.
   now apply wf_eprogram_switch_no_params.
 Qed.
 
-Definition run_erase_program := run erasure_pipeline.
+Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
-Program Definition erasure_pipeline_fast (efl := EWellformed.all_env_flags) := 
+Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) := 
   template_eta_expand ▷
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
@@ -103,9 +104,13 @@ Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
 
-Definition run_erase_program_fast := run erasure_pipeline_fast.
+Definition run_erase_program_fast {guard : abstract_guard_impl} := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
+
+Global Program Instance fake_guard_impl : abstract_guard_impl :=
+{| guard_impl := fake_guard_impl |}.
+Next Obligation. Admitted.  
 
 (** This uses the retyping-based erasure and assumes that the global environment and term 
   are welltyped (for speed). As such this should only be used for testing, or when we know that 

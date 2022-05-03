@@ -3,7 +3,7 @@ From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution 
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import EGlobalEnv Extract Prelim.
 
 Local Set Keyed Unification.
@@ -18,12 +18,12 @@ Lemma Is_type_extends (Σ : global_env_ext) Γ t :
 Proof.
   intros. destruct X2 as [T []]. destruct Σ as [Σ]. cbn in *.
   exists T. split. change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
   change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
 Qed.
 
 Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
@@ -32,8 +32,8 @@ Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
 Proof.
   intros. destruct X2 as (? & ? & ? & ? & ?).
   exists x, x0. repeat split.
-  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
-  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
   eauto.
 Qed.
 
@@ -56,16 +56,15 @@ Proof.
     now rewrite <- app_assoc. }
   edestruct H0; eauto. destruct H3.
 
-  eapply weakening_env_declared_inductive in H; eauto.
+  eapply weakening_env_declared_inductive in H; eauto; tc.
   destruct H, H1.
   unfold PCUICAst.declared_minductive in *.
 
-  eapply PCUICWeakeningEnvConv.extends_lookup in H1; eauto; tc.
-  2:{ cbn. eapply extends_decls_extends. reflexivity. }
+  eapply PCUICWeakeningEnv.extends_lookup in H1; eauto; tc.
+  2:{ cbn. apply extends_refl. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.
-  tc.
 Qed.
 
 Require Import ssrbool.
@@ -82,7 +81,7 @@ Proof.
   - econstructor.
     red. red in H4. rewrite (PCUICAst.declared_inductive_lookup isdecl) in H4.
     destruct isdecl as [decli declc].
-    eapply PCUICWeakeningEnvConv.weakening_env_declared_inductive in decli; tea; eauto; tc.
+    eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.
     now rewrite (PCUICAst.declared_inductive_lookup decli).
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.

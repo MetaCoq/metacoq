@@ -72,7 +72,7 @@ Proof.
 Qed.
 
 
-Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :
+Lemma declared_decl_closed_ind {cf : checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :
   lookup_env Σ cst = Some decl ->
   Forall_decls_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) => closedn #|Γ| t && closedn #|Γ| T) Σ ->
   on_global_decl cumulSpec0 (fun Σ Γ b t => closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true)
@@ -80,7 +80,7 @@ Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {wfΣ : wf Σ}
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; eauto. red; eauto.
-  eapply (on_global_env_impl (empty_ext Σ)); cycle 1. tea.
+  eapply @on_global_env_impl with (Σ := (empty_ext Σ)); cycle 1. tea.
   red; intros. destruct T; intuition auto with wf.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.

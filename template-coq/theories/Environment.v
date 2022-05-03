@@ -344,6 +344,16 @@ Module Environment (T : Term).
     rewrite e. split; [lsets|csets].
   Qed.
 
+  #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
+  Proof. red. intros x. now split => //; exists []. Qed.
+  
+  Lemma extends_refl : CRelationClasses.Reflexive extends.
+  Proof. red. intros x. split; [apply incl_cs_refl | now exists []]. Qed.
+
+  (* easy prefers this to the local hypotheses, which is annoying
+  #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
+  Proof. apply extends_refl. Qed.
+  *) 
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)

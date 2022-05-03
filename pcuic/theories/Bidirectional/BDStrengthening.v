@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
   PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed PCUICRenameDef PCUICInstConv PCUICClosedTyp PCUICWeakeningEnvTyp PCUICRenameTyp PCUICRenameConv PCUICGuardCondition PCUICWeakeningConv.
 
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
 Require Import Coq.Program.Equality.

@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICSigmaCalculus
-     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnv PCUICWeakeningEnvTyp 
      PCUICWeakeningConv PCUICWeakeningTyp PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConfluence
@@ -24,7 +24,7 @@ Arguments Nat.sub : simpl never.
 Section Validity.
   Context `{cf : config.checker_flags}.
 
-  Lemma isType_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isType Σ Γ T).
+  Lemma isType_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => isType Σ Γ T).
   Proof.
     red. intros.
     apply infer_typing_sort_impl with id X2; intros Hs.
@@ -35,7 +35,7 @@ Section Validity.
   Hint Resolve isType_weaken_full : pcuic.
 
   Lemma isType_weaken :
-    weaken_env_prop
+    weaken_env_prop cumulSpec0 (lift_typing typing)
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof.
     red. intros.
@@ -57,7 +57,7 @@ Section Validity.
   Qed.
 
   Lemma weaken_env_prop_isType :
-    weaken_env_prop
+    weaken_env_prop cumulSpec0 (lift_typing typing)
     (lift_typing
         (fun (Σ0 : PCUICEnvironment.global_env_ext)
           (Γ0 : PCUICEnvironment.context) (_ T : term) =>

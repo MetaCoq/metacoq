@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
@@ -52,7 +52,7 @@ Lemma subst_global_uctx_invariants {cf : checker_flags} {Σ : global_env_ext} {w
   global_uctx_invariants ((global_ext_uctx Σ).1,subst_instance_cstrs u cstrs).
 Proof.
   intros [_ Hcs] Hu. split.
-  - apply LevelSet.union_spec. right. apply global_levels_Set.
+  - apply global_ext_levels_InSet.
   - pose proof Σ as [Σ' φ]. pose proof wfΣ as [HΣ' Hφ].
     rewrite /uctx_invariants /= in Hcs |- *.
     intros [[l ct] l'] Hctr.
@@ -1641,7 +1641,7 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
     symmetry in HH. erewrite <- abstract_env_lookup_correct in HH; eauto. 
-    now apply (weaken_lookup_on_global_env' _ _ _ heΣ HH).
+    now apply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) HH).
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
@@ -1675,7 +1675,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 X1)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
     cbn in *; specialize_Σ wfΣ ; sq; econstructor; eassumption.
@@ -1698,7 +1698,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 decl)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 decl)).
   Qed.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
@@ -1740,7 +1740,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 X1)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
     rewrite List.rev_involutive.

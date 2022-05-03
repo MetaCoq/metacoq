@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICGlobalEnv 
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus (* for smash_context lemmas, to move *)
      PCUICSubstitution PCUICClosed PCUICClosedConv PCUICClosedTyp

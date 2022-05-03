@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnvConv 
+     PCUICLiftSubst PCUICTyping PCUICGlobalEnv
      PCUICWeakeningEnvTyp PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed PCUICClosedTyp
      PCUICContextConversion PCUICContextConversionTyp PCUICConversion PCUICInversion PCUICUnivSubst
@@ -312,7 +312,7 @@ Section Principality.
         eapply validity; eauto. simpl in redu'.
         rewrite e0 in redu'.
         unshelve epose proof (projection_cumulative_indices d _ H H0 redu').
-        { eapply (PCUICWeakeningEnvConv.weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 (proj1 d)))). }
+        { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ (wfΣ : wf _) (proj1 (proj1 (proj1 d)))). }
         eapply on_declared_projection in d0; eauto.
         eapply weaken_ws_cumul_pb in X; eauto.
 

@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed 
-     PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnvConv
+     PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnv
      PCUICEquality.
 
 Require Import ssreflect ssrbool.
@@ -86,7 +86,7 @@ Proof.
 Qed.
 
 Lemma weaken_env_prop_closed {cf} : 
-  weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
+  weaken_env_prop cumulSpec0 (lift_typing typing) (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
@@ -99,55 +99,6 @@ Proof.
   rewrite IHX. f_equal.
   rewrite (All2_length X).
   destruct r; cbn; now subst.
-Qed.
-
-Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env cumulSpec0 P Σ.1 ->
-    on_global_env cumulSpec0 Q Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env cumulSpec0 P Σ -> on_global_env cumulSpec0 Q Σ.
-Proof.
-  intros X X0.
-  simpl in *. destruct X0 as [ongu ond]; constructor; auto.
-  destruct Σ as [univs Σ]; cbn in *.
-  induction ond; constructor; auto.
-  destruct d; simpl.
-  - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-  - red in o. simpl in *.
-    destruct o0 as [onI onP onNP].
-    constructor; auto.
-    -- eapply Alli_impl. exact onI. eauto. intros.
-       refine {| ind_arity_eq := X0.(ind_arity_eq);
-                 ind_cunivs := X0.(ind_cunivs) |}.
-       --- apply onArity in X0. unfold on_type in *; simpl in *.
-           now eapply X.
-       --- pose proof X0.(onConstructors) as X11. red in X11.
-          eapply All2_impl; eauto.
-          simpl. intros. destruct X1 as [? ? ? ?]; unshelve econstructor; eauto.
-          * apply X; cbn; eauto. split; eauto. split; eauto.
-          * clear -X0 ond ongu IHond X on_cargs. revert on_cargs.
-            generalize (cstr_args x0).
-            induction c in y |- *; destruct y; simpl; auto;
-              destruct a as [na [b|] ty]; simpl in *; auto;
-          split; intuition eauto.
-          all: apply X; try split; cbn; eauto.
-          * clear -X0 ond ongu IHond X on_cindices.
-            revert on_cindices.
-            generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-            generalize (cstr_indices x0).
-            induction 1; simpl; constructor; auto. apply X; try split; cbn; eauto.
-       --- simpl; intros. pose (onProjections X0 H0). simpl in *; auto.
-       --- destruct X0. simpl. unfold check_ind_sorts in *.
-           destruct Universe.is_prop => //.
-           destruct Universe.is_sprop; auto.
-           split.
-           * apply ind_sorts.
-           * destruct indices_matter; auto.
-             eapply type_local_ctx_impl. eapply ind_sorts.
-             intros. apply X; eauto; split; eauto.
-      --- eapply X0.(onIndices).
-    -- red in onP. red.
-       eapply All_local_env_impl. eauto.
-       intros. now apply X.
 Qed.
 
 Lemma closedn_All_local_env (ctx : list context_decl) :

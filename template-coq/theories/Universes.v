@@ -1633,6 +1633,14 @@ Section Univ.
     - intros [H1 H2] c Hc; apply CS.union_spec in Hc; destruct Hc; auto.
   Qed.
 
+  Lemma satisfies_subset φ φ' val :
+    ConstraintSet.Subset φ φ' ->
+    satisfies val φ' ->
+    satisfies val φ.
+  Proof.
+    intros sub sat ? isin.
+    apply sat, sub; auto.
+  Qed.
 
   Definition consistent ctrs := exists v, satisfies v ctrs.
 
@@ -1707,6 +1715,12 @@ Section Univ.
   Definition leq_levelalg := leq_levelalg_n 0.
   Definition lt_universe := leq_universe_n 1.
   Definition leq_universe := leq_universe_n 0.
+
+  Definition compare_universe (pb : conv_pb) :=
+    match pb with
+    | Conv => eq_universe
+    | Cumul => leq_universe
+    end.
 
   Lemma leq_levelalg_leq_levelalg_n (φ : ConstraintSet.t) u u' :
     leq_levelalg φ u u' <-> leq_levelalg_n 0 φ u u'.
@@ -1946,12 +1960,53 @@ Section Univ.
     intros x y; split; apply eq_leq_universe.
   Defined.
 
+  Global Instance compare_universe_subrel pb Σ : subrelation (eq_universe Σ) (compare_universe pb Σ).
+  Proof.
+    destruct pb; tc.
+  Qed.
+
+  Global Instance compare_universe_refl pb Σ : Reflexive (compare_universe pb Σ).
+  Proof.
+    destruct pb; tc.
+  Qed.
+
+  Global Instance compare_universe_trans pb Σ : Transitive (compare_universe pb Σ).
+  Proof.
+    destruct pb; tc.
+  Qed.
+
+  Global Instance compare_universe_preorder pb Σ : PreOrder (compare_universe pb Σ).
+  Proof.
+    destruct pb; tc.
+  Qed.
+
   Definition eq_universe_leq_universe' φ u u'
     := @eq_universe_leq_universe φ u u'.
   Definition leq_universe_refl' φ u
     := @leq_universe_refl φ u.
 
   Hint Resolve eq_universe_leq_universe' leq_universe_refl' : core.
+
+  Lemma cmp_universe_subset ctrs ctrs' pb t u
+    : ConstraintSet.Subset ctrs ctrs'
+      -> compare_universe pb ctrs t u -> compare_universe pb ctrs' t u.
+  Proof.
+    intros Hctrs.
+    destruct pb, t, u; cbnr; trivial.
+    all: intros H; unfold_univ_rel;
+    apply H.
+    all: eapply satisfies_subset; eauto.
+  Qed.
+
+  Lemma eq_universe_subset ctrs ctrs' t u
+    : ConstraintSet.Subset ctrs ctrs'
+      -> eq_universe ctrs t u -> eq_universe ctrs' t u.
+  Proof. apply cmp_universe_subset with (pb := Conv). Qed.
+
+  Lemma leq_universe_subset ctrs ctrs' t u
+    : ConstraintSet.Subset ctrs ctrs'
+      -> leq_universe ctrs t u -> leq_universe ctrs' t u.
+  Proof. apply cmp_universe_subset with (pb := Cumul). Qed.
 
   (** Elimination restriction *)
 
@@ -2256,35 +2311,6 @@ Section no_prop_leq_type.
   Qed.
 
 End no_prop_leq_type.
-
-Definition compare_universe {cf} (pb : conv_pb) :=
-  match pb with
-  | Conv => eq_universe
-  | Cumul => leq_universe
-  end.
-
-#[global] Instance compare_universe_subrel {cf} pb Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_refl {cf} pb Σ : RelationClasses.Reflexive (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_trans {cf} pb Σ : RelationClasses.Transitive (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_preorder {cf} pb Σ : RelationClasses.PreOrder (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
 
 
 (* This level is a hack used in plugings to generate fresh levels *)

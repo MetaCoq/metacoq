@@ -5,7 +5,7 @@ From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnv
      PCUICSubstitution PCUICGeneration PCUICCasesContexts
      PCUICProgram.
 
@@ -235,7 +235,7 @@ Proof.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
   rewrite !trans_lookup_inductive.
   unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
-  eapply PCUICWeakeningEnvConv.extends_decls_wf; tea. rewrite {}H2.
+  eapply extends_decls_wf; tea. rewrite {}H2.
   destruct H as [H hnth]. red in H.
   generalize (trans_lookup_env (inductive_mind ci)).
   move: H.
@@ -243,7 +243,7 @@ Proof.
   intros [Σ'' [ext' wfΣ'' _ ext'' hl]].
   rewrite hl => /= //. cbn.
   rewrite nth_error_map hnth /=.
-  rewrite (PCUICWeakeningEnvConv.extends_lookup _ _ _ _ wfΣ' (extends_decls_extends _ _ ext) hl) /=.
+  rewrite (extends_lookup _ _ _ _ wfΣ' (extends_decls_extends _ _ ext) hl) /=.
   rewrite nth_error_map hnth /=.
   red in X0.
   f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.

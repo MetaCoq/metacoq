@@ -4,7 +4,7 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-  PCUICReduction PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
+  PCUICReduction PCUICReflect PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp PCUICContextConversionTyp PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
   PCUICConfluence PCUICConversion PCUICUnivSubstitutionTyp PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
@@ -1231,7 +1231,7 @@ Proof.
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl.
     split => //; eexists [(kn, d)]; intuition eauto.
-  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto.
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto; tc.
     eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. 
   - econstructor; eauto.
     red. destruct H. split; eauto.
@@ -1740,7 +1740,7 @@ Qed.
 Import EGlobalEnv.
 Lemma erase_global_decls_fresh X_type kn deps X decls heq : 
   let Σ' := erase_global_decls X_type deps X decls heq in
-  PCUICTyping.fresh_global kn decls ->
+  PCUICAst.fresh_global kn decls ->
   fresh_global kn Σ'.
 Proof.
   cbn.

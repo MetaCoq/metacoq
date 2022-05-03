@@ -34,7 +34,7 @@ Proof.
     rewrite map2_length //. now rewrite -H0.
 Qed.
 
-Import PCUICWeakeningEnvConv.
+Import PCUICWeakeningEnv.
 
 Lemma extends_decls_trans Σ Σ' Σ'' : extends_decls Σ Σ' -> extends_decls Σ' Σ'' -> extends_decls Σ Σ''.
 Proof.
@@ -157,7 +157,7 @@ Proof.
   intros [a]; sq.
   eapply All_fold_impl; tea; cbn; eauto.
   intros ?? []; constructor.
-  now eapply expanded_weakening.
+  eapply expanded_weakening; eauto.
 Qed.
 
 Lemma expanded_bcontext {cf} Σ ind k mdecl idecl cdecl bctx bbody :

@@ -173,11 +173,17 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (univs : ContextSet.t) : LevelSet.t :=
     LevelSet.union (ContextSet.levels univs) (LevelSet.singleton (Level.lzero)).
 
-  Lemma global_levels_Set univs :
+  Lemma global_levels_InSet Σ :
+    LevelSet.In Level.lzero (global_levels Σ).
+  Proof.
+    apply LevelSet.union_spec; right.
+    now apply LevelSet.singleton_spec.
+  Qed.
+  
+  Lemma global_levels_memSet univs :
     LevelSet.mem Level.lzero (global_levels univs) = true.
   Proof.
-    apply LevelSet.mem_spec, LevelSet.union_spec; right.
-    now apply LevelSet.singleton_spec.
+    apply LevelSet.mem_spec, global_levels_InSet.
   Qed.
 
   (** One can compute the constraints associated to a global environment or its
@@ -208,6 +214,13 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t :=
     (global_ext_levels Σ, global_ext_constraints Σ).
 
+
+  Lemma global_ext_levels_InSet Σ :
+    LevelSet.In Level.lzero (global_ext_levels Σ).
+  Proof.
+    apply LevelSet.union_spec; right.
+    now apply global_levels_InSet.
+  Qed.
 
   (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)
@@ -1205,14 +1218,14 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     destruct u; auto. intuition eauto.
   Qed.
 
-  Lemma on_global_env_impl `{checker_flags} {Σ : global_env} Pcmp P Q :
+  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
     (forall Σ Γ t T,
         on_global_env Pcmp P Σ.1 -> 
         on_global_env Pcmp Q Σ.1 ->
         P Σ Γ t T -> Q Σ Γ t T) ->
-    on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof.
-    intros X [cu IH]. split; auto.
+    intros X Σ [cu IH]. split; auto.
     revert cu IH; generalize (universes Σ) as univs, (declarations Σ). clear Σ.
     induction g; intros; auto. constructor; auto.
     depelim IH. specialize (IHg cu IH). constructor; auto.
@@ -1244,7 +1257,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
               induction 1; simpl; constructor; auto. 
-        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
+        --- simpl; intros. pose (onProjections X1 H). simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.

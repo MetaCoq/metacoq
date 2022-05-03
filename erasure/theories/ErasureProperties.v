@@ -6,7 +6,7 @@ From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prel
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICAstUtils PCUICConversion PCUICSigmaCalculus
   PCUICClosed PCUICClosedTyp
-  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICWeakeningEnv PCUICWeakeningEnvTyp
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
   PCUICLiftSubst

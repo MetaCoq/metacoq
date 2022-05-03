@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnvConv.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -335,7 +335,7 @@ Proof.
         1: apply wf_local_closed_context ; auto.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
-        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.
+        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)); eauto.
         apply isdecl.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.

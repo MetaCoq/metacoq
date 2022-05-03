@@ -87,7 +87,7 @@ Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
- - cbn. eapply LevelSet.mem_spec, global_levels_Set.
+ - cbn. apply global_levels_InSet.
  - unfold global_uctx.
    simpl. intros [[l ct] l'] Hctr. simpl in *.
    induction Σ in HΣ, l, ct, l', Hctr |- *.
@@ -110,7 +110,7 @@ Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
- - apply LevelSet.union_spec. right. apply LevelSet.mem_spec, global_levels_Set.
+ - apply global_ext_levels_InSet.
  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
    destruct (wf_global_uctx_invariants _ HΣ) as [_ XX].
    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
@@ -134,7 +134,7 @@ Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.
-  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
+  destruct HΣ as (_ & _ & _ & HH & _). apply HH.
 Qed.
 
 

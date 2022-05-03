@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
@@ -615,6 +615,7 @@ Proof.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
+  assert (wf Σ') by auto.
   now eapply weakening_env_declared_inductive; tc.
 Qed.
 

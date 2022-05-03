@@ -9,7 +9,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICEquality
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICEquality
      PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity 
      PCUICUnivSubst PCUICUnivSubstitutionTyp PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars
@@ -3337,7 +3337,7 @@ Proof.
   rewrite /= eq /trans_global_decls /= map_app //.
 Qed.
 
-Lemma weaken_prop {cf} : weaken_env_decls_prop
+Lemma weaken_prop {cf} : weaken_env_decls_prop cumulSpec0 (lift_typing typing)
   (lift_typing
    (λ (Σ : global_env_ext) (Γ : context) (t T : term),
       wf_trans Σ →

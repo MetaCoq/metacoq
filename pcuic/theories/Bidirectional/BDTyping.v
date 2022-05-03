@@ -6,7 +6,6 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping.
 
 From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.

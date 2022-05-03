@@ -1129,25 +1129,21 @@ Section InnerLoop.
         | exist None eqm => Model W {| model_model := m.(model_model) |} _
         | exist (Some (Wconcl, mconcl)) eqm with loop W (cls ⇂ W) mconcl _ _ := {
           | Loop => Loop
-          | Model Wr mr hsub := extends_model _ _ _ newm
+          | Model Wr mr hsub with inner_loop W cls mconcl mr _ := {
+            | Loop => Loop
+            | Model Wr' mr' hsub' => Model Wr' {| model_model := model_model mr' |} hsub' }
       (* We check if the new model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
       (* We're entitled to recursively compute a better model starting with mconcl, 
         as we have made the measure decrease: 
         some atom in W has been strictly updated in Wconcl. *)
-          where model' : valid_model W init (cls ⇂ W) :=
-          { model' := {| model_model := mr.(model_model) |} }
-          where newm : result W (cls ↓ W) mr.(model_model) :=
-          { newm := inner_loop W cls init model' _ }
           } } }.
   Proof.
-    all:cbn [model_model]; try clear loop inner_loop.
+    all:cbn [model_model]; clear loop inner_loop.
     all:try solve [try apply LevelSet.subset_spec; try reflexivity].
     all:try apply LevelSet.subset_spec in hsub.
     all:auto.
-    all: try destruct subWV as [WV neW clsW].
+    all:try destruct subWV as [WV neW clsW].
     all:try solve [intuition auto].
-    all: todo "".
-  Qed.
     - apply clauses_conclusions_clauses_with_concl.
     - rewrite check_model_is_model.
       eapply is_model_equal. 2:eapply is_model_union.
@@ -1160,37 +1156,6 @@ Section InnerLoop.
         now rewrite in_clauses_with_concl. }
     - apply clauses_conclusions_restrict_clauses.
     - now eapply strict_subset_cardinal.
-    - apply check_model_update in eqm as []. cbn in H0.
-      transitivity mconcl => //. apply mr.
-    - eapply check_model_spec in eqm as [wrsub subwr hm dom out].
-      transitivity mconcl => //. now apply mr.
-    - eapply check_model_spec in eqm as [].
-      pose proof (model_outside mr).
-      transitivity mconcl => //.
-      eapply model_map_outside_weaken; tea.
-      etransitivity; tea.
-      intros x.
-      rewrite LevelSet.union_spec; move => []; try lsets.
-      now move/clauses_conclusions_diff_left.
-    - eapply clauses_conclusions_restrict_clauses.
-    - rewrite check_model_is_model.
-      have okm := model_ok mr.
-      now rewrite check_model_is_model in okm.
-    - transitivity (model_model m). apply m. transitivity mconcl.
-      now apply check_model_update in eqm as []. now apply mr.
-    - eapply check_model_spec in eqm as [wrsub subwr hm hout].
-      transitivity (model_model m). apply m. 
-      transitivity mconcl. 2:apply mr. apply hout.
-    - eapply check_model_spec in eqm as [wrsub subwr hm hout].
-      transitivity (model_model m). apply m.
-      Show Proof. 
-      transitivity mconcl. 2:apply mr.
-      eapply model_map_outside_weaken; tea.
-      etransitivity; tea.
-      intros x.
-      rewrite LevelSet.union_spec; move => []; try lsets.
-      now move/clauses_conclusions_diff_left.
-    - split => //. Show Existentials.
     - unfold measure.
       pose proof (check_model_update eqm) as [nmodel lem].
       eapply check_model_spec in eqm as [wrsub subwr hm hout].
@@ -1233,11 +1198,30 @@ Section InnerLoop.
         { eapply model_le_values. apply mr. }
         lia.
     - apply clauses_conclusions_clauses_with_concl.
-    - apply check_model_is_model. apply check_model_is_model in eqm. 
-      pose proof (ism' := model_ok m). apply check_model_is_model in ism'.
-      have mu := is_model_union ism' eqm. rewrite union_diff_eq in mu.
-      now rewrite union_restrict_with_concl in mu. Show Existentials.
+    - apply check_model_is_model.
+      pose proof (ism' := model_ok mr'). now apply check_model_is_model in ism'.
+    - pose proof (check_model_update eqm) as [].
+      transitivity mconcl => //.
+      transitivity (model_model mr). apply mr. apply mr'.
+    - eapply check_model_spec in eqm as [wrsub subwr hm hout].
+      transitivity mconcl => //.
+      transitivity (model_model mr). apply mr. apply mr'.
+    - eapply check_model_spec in eqm as [wrsub subwr hm hout].
+      transitivity mconcl => //.
+      eapply model_map_outside_weaken; tea.
+      etransitivity; tea.
+      intros x.
+      rewrite LevelSet.union_spec; move => []; try lsets.
+      now move/clauses_conclusions_diff_left.
+      transitivity (model_model mr). apply mr. apply mr'.
+    - eapply clauses_conclusions_clauses_with_concl.
+    - rewrite check_model_is_model.
+      rewrite check_model_is_model in eqm.
+      have okm := (model_ok m). rewrite check_model_is_model in okm.
+      have mu := is_model_union okm eqm. rewrite union_diff_eq in mu.
+      now rewrite union_restrict_with_concl in mu.
   Qed.
+
 End InnerLoop.
 
 Equations? loop (V : LevelSet.t) (cls : clauses) (m : model) (prf : clauses_conclusions cls ⊂_lset V) : 

@@ -817,3 +817,91 @@ Proof.
     now eapply subject_closed in HA.
   - exists t. sq. eapply value_final; eauto.
 Qed.  
+
+From MetaCoq Require Import PCUICFirstorder.
+
+Lemma firstorder_value_irred Σ t t' :
+  firstorder_value Σ [] t ->
+  PCUICReduction.red1 Σ [] t t' -> False.
+Proof.
+  intros H.
+  revert t'. pattern t. revert t H.
+  eapply firstorder_value_inds.
+  intros i n ui u args pandi Hty Hargs IH Hprop t' Hred.
+  eapply red1_mkApps_tConstruct_inv in Hred as (x & -> & Hone).
+  solve_all.
+  clear - IH Hone. induction IH as [ | ? ? []] in x, Hone |- *.
+  - invs Hone.
+  - invs Hone; eauto.
+Qed.
+
+Definition ws_empty f : ws_context f.
+Proof.
+  unshelve econstructor.
+  exact nil.
+  reflexivity.
+Defined.
+
+Lemma irred_equal Σ Γ t t' :
+  Σ ;;; Γ ⊢ t ⇝ t' ->
+  (forall v', PCUICReduction.red1 Σ Γ t v' -> False) ->
+  t = t'.
+Proof.
+  intros Hred Hirred. destruct Hred.
+  clear clrel_ctx clrel_src.
+  induction clrel_rel.
+  - edestruct Hirred; eauto.
+  - reflexivity.
+  - assert (x = y) as <- by eauto. eauto.
+Qed.
+
+Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ -> 
+  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  closed_red Σ [] t v ->
+  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
+  squash (eval Σ t v).
+Proof.
+  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  destruct (@WN Σ t) as (v' & Hv'); eauto.
+  1:{ eexists; eauto. }
+  sq.
+  assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
+  eapply closed_red_confluence in Hred as Hred_. destruct Hred_ as (v'' & H1 & H2).
+  2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
+  destruct v as [v Hv].
+  assert (v = v'') as <- by (eapply irred_equal; eauto).
+  assert (firstorder_value Σ [] v'). { 
+    eapply firstorder_value_spec; eauto.
+    eapply subject_reduction_eval; eauto.
+    eapply eval_to_value. eauto.
+  }
+  enough (v' = v) as -> by eauto.
+  eapply irred_equal. eauto.
+  intros. eapply firstorder_value_irred; eauto.
+Qed.
+
+Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ -> 
+  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  red Σ [] t v ->
+  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
+  squash (eval Σ t v).
+Proof.
+  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  unshelve edestruct @ws_wcbv_standardization.
+  1-5: shelve.
+  1: exists t; shelve.
+  1: exists v; shelve.
+  all: sq; eauto.
+  cbn.
+  econstructor; eauto.
+  eapply subject_is_open_term. eauto.
+  Unshelve.
+  all: rewrite -closed_on_free_vars_none.
+  - now eapply subject_closed in Hty.
+  - eapply @subject_closed with (Γ := []); eauto.
+    eapply subject_reduction; eauto.
+Qed.  

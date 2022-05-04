@@ -477,7 +477,7 @@ Section WfEnv.
         apply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
   Qed.
 
-  Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
+  Lemma app_context_push {A} Γ Δ Δ' (d: A) : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
   Proof using Type.
     reflexivity.
   Qed.

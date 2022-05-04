@@ -2,9 +2,9 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICTyping PCUICCumulativity 
+  PCUICLiftSubst PCUICTyping PCUICCumulativity PCUICRelevance
   PCUICClosed PCUICReduction 
-  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICOnFreeVars
+  PCUICSigmaCalculus PCUICRenameDef PCUICRenameTerm PCUICRenameConv PCUICOnFreeVars
   PCUICClosedConv PCUICClosedTyp.
 
 Require Import ssreflect ssrbool.
@@ -91,6 +91,17 @@ Proof.
     * destruct (decl_body d) => /= //. f_equal.
       rewrite lift_rename rename_compose /lift_renaming.
       apply rename_ext => k. simpl. now repeat nat_compare_specs.
+Qed.
+
+Lemma weakening_relevance Σ Γ Γ' Γ'' :
+  forall t r, is_open_term (Γ ,,, Γ') t ->
+  isTermRel Σ (marks_of_context (Γ ,,, Γ')) t r ->
+  isTermRel Σ (marks_of_context (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ')) (lift #|Γ''| #|Γ'| t) r.
+Proof.
+  intros.
+  rewrite lift_rename.
+  eapply rename_relevance_of_term with (P := xpred0); tea.
+  apply weakening_renaming.
 Qed.
 
 (* Variant lookup_decl_spec Γ Δ i : option context_decl -> Type :=

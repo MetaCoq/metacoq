@@ -511,7 +511,7 @@ Proof.
   unfold cstr_concl in hsp. cbn in hsp. len in hsp. rewrite H in hsp. clear H.
   eapply (declared_constructor_ind_decl declc). clear H.
   eapply typing_spine_length in hsp. len in hsp. unfold cstr_arity.
-  now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars declc).
+  now rewrite (PCUICTyping.declared_minductive_ind_npars declc).
 Qed.
 
 Lemma value_mkApps_inv' Σ f args : 
@@ -769,7 +769,7 @@ Proof.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
   - eapply eval_iota. eapply eval_mkApps_Construct; tea. now econstructor. unfold cstr_arity. rewrite e0.
-    rewrite (PCUICGlobalEnv.declared_minductive_ind_npars d).
+    rewrite (PCUICTyping.declared_minductive_ind_npars d).
     now rewrite -(declared_minductive_ind_npars d) /cstr_arity.
     all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.

@@ -123,7 +123,7 @@ Proof.
       + simpl in *.
         eapply nameless_eqctx_IH; eauto.
       + ih.
-    * revert brs' H3 H0 a.
+    * revert brs' H3 H0 e1.
       induction l ; intros brs' h1 h2 h.
       + destruct brs' ; inversion h. reflexivity.
       + destruct brs' ; inversion h. subst.
@@ -133,21 +133,21 @@ Proof.
         apply forallb_All in Hac.
         f_equal.
         ++ destruct a, b. cbn in *. destruct X1.
-           depelim h. destruct p0. depelim X0. simpl in *.
+           depelim h. destruct e1. depelim X0. simpl in *.
            destruct p0 as [].
            destruct X4.
            f_equal; try ih.
            { eapply nameless_eqctx_IH; eauto; solve_all. }
         ++ eapply IHl ; tas. now depelim X0.
   - f_equal ; try solve [ ih ].
-    revert mfix' H1 H2 H H0 a.
+    revert mfix' H1 H2 H H0 e.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
     + destruct m' ; inversion h. subst.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[[? ?] ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as (? & ? & ? & ?).
         destruct H0 as [Hty Hbod].
         unfold test_def in H4, H. cbn in H4, H.
         destruct_andb.
@@ -158,14 +158,14 @@ Proof.
         -- eassumption.
       * eapply IHm ; assumption.
   - f_equal ; try solve [ ih ].
-    revert mfix' H1 H2 H H0 a.
+    revert mfix' H1 H2 H H0 e.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
     + destruct m' ; inversion h. subst.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[[? ?] ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as (? & ? & ? & ?).
         destruct H0 as [Hty Hbod].
         unfold test_def in H4, H. cbn in H4, H.
         destruct_andb. anonify.
@@ -329,20 +329,20 @@ Proof.
     eapply R_global_instance_nl; eauto.
   - econstructor; eauto.
     + red. destruct e; intuition auto; simpl.
-      * induction a0; constructor; auto.
+      * induction a; constructor; auto.
       * eapply eq_context_nl_IH; tea.
       * apply aux. auto.
-    + induction a; constructor; auto.
-      intuition auto; simpl.
+    + induction e0; constructor; auto.
+      unfold eq_branch in *; intuition auto; simpl.
       * eapply eq_context_nl_IH; tea.
       * destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
-    induction a; constructor; auto.
+    induction e; constructor; auto.
     intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
-    induction a; constructor; auto.
+    induction e; constructor; auto.
     intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.

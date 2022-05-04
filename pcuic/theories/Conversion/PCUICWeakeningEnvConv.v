@@ -118,11 +118,11 @@ Proof using P Pcmp cf.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
 Qed.
 
 Lemma weakening_env_red1 Σ Σ' Γ M N :

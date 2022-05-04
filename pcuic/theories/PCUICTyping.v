@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition PCUICGlobalEnv.
 From MetaCoq.PCUIC Require Export PCUICCumulativitySpec.
 From MetaCoq.PCUIC Require Export PCUICCases.
 
@@ -156,7 +156,7 @@ Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps 
     (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
     (ind_inst : ctx_inst (typing Σ) Γ (p.(pparams) ++ indices)
                          (List.rev (subst_instance p.(puinst)
-                                                   (ind_params mdecl ,,, ind_indices idecl))))
+                                                   (ind_params mdecl ,,, ind_indices idecl : context))))
     (not_cofinite : isCoFinite mdecl.(ind_finite) = false).
 
 Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_info) p ps mdecl idecl ptm  brs :=
@@ -682,7 +682,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         PΓ Σ (Γ ,,, predctx) ->
         is_allowed_elimination Σ idecl.(ind_kelim) ps ->
         ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
-          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
@@ -906,7 +906,7 @@ Proof.
           { intros. eapply (X14 _ _ _ Hty). simpl; lia. }
           clear -X ind_inst.
           revert ind_inst X.
-          generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
+          generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl : context))).
           generalize (pparams p ++ indices).
           intros l c ctxi IH; induction ctxi; constructor; eauto.
           * split; tas. eapply (IH _ _ _ t0); simpl; auto. lia.
@@ -1103,7 +1103,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
       ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
-        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
       isCoFinite mdecl.(ind_finite) = false ->
@@ -1195,61 +1195,25 @@ Section All_local_env.
       apply IHX. simpl in *. lia.
   Qed.
 
-  Lemma lookup_on_global_env P (Σ : global_env) c decl :
-    on_global_env cumulSpec0 P Σ ->
-    lookup_env Σ c = Some decl ->
-    { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
-       on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
-  Proof using Type.
-    destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
-    intros [cu Σp].
-    induction Σp; simpl. congruence.
-    destruct (eqb_specT c kn); subst.
-    - intros [= ->].
-      exists ({| universes := univs; declarations := Σ |}).
-      split.
-      * red; cbn. split; [split;[lsets|csets]|].
-        exists [(kn, decl)] => //.
-      * split => //.
-      * apply o0.
-    - intros hl. destruct (IHΣp hl) as [Σ' []].
-      exists Σ'.
-      split=> //.
-      destruct e as [eu ed]. red; cbn in *.
-      split; [auto|].
-      destruct ed as [Σ'' ->].
-      exists (Σ'' ,, (kn, d)) => //.
-  Qed.
-
   Lemma All_local_env_app (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
     All_local_env P (l ,,, l').
-  Proof using Type.
-    induction l'; simpl; auto. intuition.
-    intuition. destruct a. destruct decl_body.
-    inv b. econstructor; eauto. inv b; econstructor; eauto.
-  Qed.
+  Proof using Type. intros [H H']. apply All_local_rel_app => //. Qed.
 
   Lemma All_local_env_app_inv (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P (l ,,, l') ->
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l'.
-  Proof using Type.
-    apply All_local_app_rel.
-  Qed.
+  Proof using Type. apply All_local_app_rel. Qed.
 
   Definition wf_local_rel_app_inv {Σ Γ1 Γ2 Γ3} :
     wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ->
     wf_local_rel Σ Γ1 Γ2 * wf_local_rel Σ (Γ1 ,,, Γ2) Γ3.
   Proof.
-    intros h. apply All_local_env_app_inv in h as [h1 h2].
+    intros h. apply All_local_app_rel in h as [h1 h2].
     split.
     - exact h1.
-    - eapply All_local_env_impl. 1: exact h2.
-      intros Γ t [T|] h.
-      all: cbn in *.
-      all: change PCUICEnvironment.app_context with app_context in *.
-      all: rewrite <- app_context_assoc.
-      all: auto.
+    - eapply All_local_env_impl with (1 := h2).
+      intros; now rewrite -app_context_assoc.
   Defined.
 
   Lemma All_local_env_lookup {P Γ n} {decl} :
@@ -1268,14 +1232,10 @@ Section All_local_env.
     wf_local_rel Σ Γ1 Γ2 -> wf_local_rel Σ (Γ1 ,,, Γ2) Γ3
     -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3).
   Proof.
-    intros h1 h2. eapply All_local_env_app.
-    split.
+    intros h1 h2. eapply All_local_rel_app.
     - assumption.
-    - eapply All_local_env_impl.
-      + eassumption.
-      + change PCUICEnvironment.app_context with app_context.
-        intros Γ t []; cbn;
-        now rewrite app_context_assoc.
+    - apply All_local_env_impl with (1 := h2).
+      intros; now rewrite app_context_assoc.
   Defined.
 
   Definition wf_local_app {Σ Γ1 Γ2} :
@@ -1419,3 +1379,8 @@ Section All_local_env.
   Qed.
 
 End All_local_env.
+
+Lemma declared_minductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind} :
+  declared_minductive Σ ind mdecl ->
+  ind_npars mdecl = context_assumptions mdecl.(ind_params).
+Proof. apply (declared_minductive_ind_npars_gen (wfΣ := wfΣ)). Qed.

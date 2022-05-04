@@ -7,11 +7,6 @@ Import ConstraintType.
 
 Import MCMonadNotation.
 
-
-Arguments Z.add : simpl nomatch.
-Arguments Nat.leb : simpl nomatch.
-Arguments Nat.eqb : simpl nomatch.
-
 Definition Z_of_bool (b : bool) : Z :=
   match b with
   | true => 1

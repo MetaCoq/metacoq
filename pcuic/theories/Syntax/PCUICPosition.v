@@ -208,50 +208,50 @@ Proof.
     + dependent destruction e. simpl in *.
       destruct (nth_error (pparams p0) n) as [par|] eqn:enth. 2: discriminate.
       destruct e.
-      induction a0 in n, par, enth, ih, vp |- *. 1: rewrite enth. 1: assumption.
+      induction a in n, par, enth, ih, vp |- *. 1: rewrite enth. 1: assumption.
       destruct n.
       * simpl in *. apply some_inj in enth. subst.
         intuition eauto.
-      * simpl in *. eapply IHa0. all: eauto.
+      * simpl in *. eapply IHa. all: eauto.
     + dependent destruction e. simpl in *.
       eapply ih; eauto. apply e.
     + dependent destruction e. simpl in *.
       destruct nth_error eqn:nth; [|congruence].
-      eapply All2_nth_error_Some in a; eauto.
-      destruct a as (?&->&_&eq).
+      eapply All2_nth_error_Some in e1; eauto.
+      destruct e1 as (?&->&_&eq).
       eauto.
     + dependent destruction e. simpl in *.
-      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
-      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
-      1:{ rewrite e. assumption. }
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:E. 2: discriminate.
+      induction e in n, na, ty, bo, ra, E, ih, vp |- *.
+      1:{ rewrite E. assumption. }
       destruct n.
-      * simpl in *. apply some_inj in e. subst.
+      * simpl in *. apply some_inj in E. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
-      * simpl in *. eapply IHa. all: eauto.
+      * simpl in *. eapply IHe. all: eauto.
     + dependent destruction e. simpl in *.
-      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
-      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
-      1:{ rewrite e. assumption. }
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:E. 2: discriminate.
+      induction e in n, na, ty, bo, ra, E, ih, vp |- *.
+      1:{ rewrite E. assumption. }
       destruct n.
-      * simpl in *. apply some_inj in e. subst.
+      * simpl in *. apply some_inj in E. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
-      * simpl in *. eapply IHa. all: eauto.
+      * simpl in *. eapply IHe. all: eauto.
     + dependent destruction e. simpl in *.
-      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
-      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
-      1:{ rewrite e. assumption. }
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:E. 2: discriminate.
+      induction e in n, na, ty, bo, ra, E, ih, vp |- *.
+      1:{ rewrite E. assumption. }
       destruct n.
-      * simpl in *. apply some_inj in e. subst.
+      * simpl in *. apply some_inj in E. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
-      * simpl in *. eapply IHa. all: eauto.
+      * simpl in *. eapply IHe. all: eauto.
     + dependent destruction e. simpl in *.
-      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
-      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
-      1:{ rewrite e. assumption. }
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:E. 2: discriminate.
+      induction e in n, na, ty, bo, ra, E, ih, vp |- *.
+      1:{ rewrite E. assumption. }
       destruct n.
-      * simpl in *. apply some_inj in e. subst.
+      * simpl in *. apply some_inj in E. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
-      * simpl in *. eapply IHa. all: eauto.
+      * simpl in *. eapply IHe. all: eauto.
 Qed.
 
 Lemma eq_term_valid_pos :

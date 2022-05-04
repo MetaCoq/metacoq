@@ -657,7 +657,7 @@ Proof.
         2:{ constructor. intro bot. apply f. inversion bot. subst.
         inversion X3. subst. constructor; auto. }
         constructor. inversion e2. subst.
-        constructor ; auto.
+        constructor; unfold eq_branches, eq_branch in X3 |- *; auto.
 
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih => //.
     constructor. constructor ; assumption.
@@ -686,12 +686,12 @@ Proof.
         }
         cbn - [eqb]. eqspecs.
         2:{ constructor. intro bot. inversion bot. subst.
-          apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
+          apply n. inversion X0. subst. destruct X2 as (? & ? & ? & ?).
           assumption.
         }
         destruct (eqb_annot_reflect (dname a) (dname d)).
         2:{ constructor. intro bot; inversion bot. subst.
-          apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
+          apply n. inversion X0. subst. destruct X2 as (? & ? & ? & ?).
           assumption.
         }
         cbn - [eqb]. destruct (IHm X1 mfix) => //.
@@ -725,12 +725,12 @@ Proof.
         }
         cbn - [eqb]. eqspecs.
         2:{ constructor. intro bot. inversion bot. subst.
-          apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
+          apply n. inversion X0. subst. destruct X2 as (? & ? & ? & ?).
           assumption.
         }
         destruct (eqb_annot_reflect (dname a) (dname d)).
         2:{ constructor. intro bot; inversion bot. subst.
-          apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
+          apply n. inversion X0. subst. destruct X2 as (? & ? & ? & ?).
           assumption.
         }
         cbn - [eqb]. destruct (IHm X1 mfix) => //.
@@ -920,7 +920,7 @@ Proof.
       apply forallb_Forall in H. eapply Forall_impl; eauto.
       move => ? /wf_universe_reflect ?; eauto.
     + eapply onctx_eq_ctx in a0; eauto.
-  - eapply forallb_All in wt; eapply All_mix in X0; try apply wt.
+  - unfold eq_branches, eq_branch. eapply forallb_All in wt; eapply All_mix in X0; try apply wt.
     clear wt. eapply All_All2; eauto; simpl; intuition eauto.
     + eapply onctx_eq_ctx in a0; eauto.
     + eapply b0; eauto. apply andb_and in a as [? a]. exact a.

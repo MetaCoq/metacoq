@@ -272,7 +272,7 @@ Proof.
     destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
-    rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
+    rewrite -> app_context_length in H, H3. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H3; eauto. lia.
     subst types.
     now rewrite app_context_length fix_context_length in H.
@@ -285,7 +285,7 @@ Proof.
     split.
     destruct a as (s & e & Hs & cl).
     now rewrite andb_true_r in cl.
-    rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
+    rewrite -> app_context_length in H3, H4. rewrite -> Nat.add_comm in *.
     subst types. now rewrite fix_context_length in H3.
     eapply nth_error_all in X0; eauto.
     destruct X0 as (s & e & Hs & cl).

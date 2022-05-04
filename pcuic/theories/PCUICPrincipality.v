@@ -703,8 +703,7 @@ Proof.
     eapply (All_impl X0); pcuicfo.
     apply infer_typing_sort_impl with id X2 => //; now intros [].
     eapply (All_impl X1); pcuicfo; now destruct X2.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[eqty _] _] _].
+    eapply All2_nth_error in e as (_ & _ & eqty & _); eauto.
     constructor. eapply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
   
@@ -716,8 +715,7 @@ Proof.
     eapply (All_impl X0); pcuicfo.
     apply infer_typing_sort_impl with id X2 => //; now intros [].
     eapply (All_impl X1); pcuicfo; now destruct X2.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[eqty _] _] _].
+    eapply All2_nth_error in e as (_ & _ & eqty & _); eauto.
     constructor. apply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
 Qed.

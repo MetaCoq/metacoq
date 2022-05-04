@@ -362,7 +362,7 @@ Proof.
   rewrite subst_inst_case_context_wf.  rewrite test_context_k_closed_on_free_vars_ctx.
   eapply alpha_eq_on_free_vars. symmetry; eassumption.
   rewrite (wf_predicate_length_pars wfp).
-  rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
+  rewrite (PCUICTyping.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
   eapply PCUICClosedTyp.closed_cstr_branch_context; tea.
   epose proof (PCUICCasesContexts.inst_case_branch_context_eq (p := subst_predicate s k p) a).
   now rewrite H.

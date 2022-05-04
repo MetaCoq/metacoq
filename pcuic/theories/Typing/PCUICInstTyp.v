@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases
   PCUICTyping PCUICReduction PCUICCumulativity 
   PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakeningConv PCUICWeakeningTyp PCUICInstDef PCUICInstConv
-  PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars PCUICOnFreeVarsConv PCUICClosedTyp PCUICClosedTyp.
+  PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars PCUICRenameTerm PCUICClosedTyp PCUICClosedTyp.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -189,7 +189,7 @@ Proof.
                 eapply inst_is_open_term; eauto.    
             +++ rewrite map_length. rewrite inst_context_on_free_vars ; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context. 
-            apply on_free_vars_ctx_inst_case_context; eauto.
+            apply on_free_vars_ctx_inst_case_context_app; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add. 
@@ -223,7 +223,7 @@ Proof.
               eapply inst_is_open_term; eauto.
           +++ rewrite map_length. tea.  
       + unfold PCUICCases.inst_case_predicate_context. 
-        apply on_free_vars_ctx_inst_case_context; eauto.
+        apply on_free_vars_ctx_inst_case_context_app; eauto.
       + unfold PCUICCases.inst_case_predicate_context.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add.

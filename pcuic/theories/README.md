@@ -167,7 +167,7 @@
 | [PCUICWeakeningEnvConv] | Stability of conversion/cumulativity by global environment extension
 | [PCUICUnivSubstitutionConv] | Stability of conversion/cumulativity by substitution of universe variables
 | [PCUICClosedConv] | Helper lemmas on the closedness predicate
-| [PCUICOnFreeVarsConv] | Helper lemmas for renamings and free variables
+| [PCUICRenameTerm] | Helper lemmas for renamings and free variables
 
 [PCUICRenameConv]: ./Conversion/PCUICRenameConv.v
 [PCUICWeakeningConv]: ./Conversion/PCUICWeakeningConv.v
@@ -175,7 +175,7 @@
 [PCUICWeakeningEnvConv]: ./Conversion/PCUICWeakeningEnvConv.v
 [PCUICUnivSubstitutionConv]: ./Conversion/PCUICUnivSubstitutionConv.v
 [PCUICClosedConv]: ./Conversion/PCUICClosedConv.v
-[PCUICOnFreeVarsConv]: ./Conversion/PCUICOnFreeVarsConv.v
+[PCUICRenameTerm]: ./Conversion/PCUICRenameTerm.v
 
 
 ## Stability of Typing

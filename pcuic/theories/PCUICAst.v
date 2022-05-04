@@ -42,6 +42,27 @@ Derive NoConfusion for predicate.
 Arguments predicate : clear implicits.
 Arguments mk_predicate {_}.
 
+Section test_predicate.
+  Context {term: Type}.
+
+  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
+    (pred : predicate term) :=
+    instp pred.(puinst) && forallb p pred.(pparams) && 
+    test_context p pred.(pcontext) && p pred.(preturn).
+
+  Definition test_predicate_k (instp : Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
+    test_context_k p #|pred.(pparams)| pred.(pcontext) &&
+    p (#|pred.(pcontext)| + k) pred.(preturn).
+
+  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
+    test_context (p #|pred.(puinst)|) pred.(pcontext) &&
+    p k pred.(preturn).
+End test_predicate.
+
 Section map_predicate.
   Context {term term' : Type}.
   Context (uf : Instance.t -> Instance.t).
@@ -100,23 +121,6 @@ Section map_predicate_k.
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
   Proof using Type. reflexivity. Qed.
-  
-  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
-    (pred : predicate term) :=
-    instp pred.(puinst) && forallb p pred.(pparams) && 
-    test_context p pred.(pcontext) && p pred.(preturn).
-
-  Definition test_predicate_k (instp : Instance.t -> bool) 
-    (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
-    test_context_k p #|pred.(pparams)| pred.(pcontext) &&
-    p (#|pred.(pcontext)| + k) pred.(preturn).
-
-  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
-    (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
-    test_context (p #|pred.(puinst)|) pred.(pcontext) &&
-    p k pred.(preturn).
 
 End map_predicate_k.
 

@@ -181,7 +181,7 @@ Section Lemmata.
       eapply ws_cumul_pb_Lambda_r. assumption.
   Qed.
 
-  Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
+  Lemma snoc_app_context {A Γ Δ} {d: A} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
   Proof using Type.
     reflexivity.
   Qed.

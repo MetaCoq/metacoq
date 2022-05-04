@@ -1,8 +1,36 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ProofIrrelevance.
 From MetaCoq.Template Require Import config utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+
+Require Import ssreflect.
+
+
+Lemma lookup_on_global_env {cf : checker_flags} Pcmp P (Σ : global_env) c decl :
+  on_global_env Pcmp P Σ ->
+  lookup_env Σ c = Some decl ->
+  { Σ' : global_env & [× extends Σ' Σ, on_global_env Pcmp P Σ' &
+      on_global_decl Pcmp P (Σ', universes_decl_of_decl decl) c decl] }.
+Proof using Type.
+  destruct Σ as [univs Σ]; unfold on_global_env, lookup_env; cbn.
+  intros [cu Σp].
+  induction Σp; simpl. congruence.
+  destruct (eqb_specT c kn); subst.
+  - intros [= ->].
+    exists ({| universes := univs; declarations := Σ |}).
+    split.
+    * red; cbn. split; [split;[lsets|csets]|].
+      exists [(kn, decl)] => //.
+    * split => //.
+    * apply o0.
+  - intros hl. destruct (IHΣp hl) as [Σ' []].
+    exists Σ'.
+    split=> //.
+    destruct e as [eu ed]. red; cbn in *.
+    split; [auto|].
+    destruct ed as [Σ'' ->].
+    exists (Σ'' ,, (kn, d)) => //.
+Qed.
 
 (** Injectivity of declared_*, inversion lemmas on declared global references and 
     universe consistency of the global environment.
@@ -66,9 +94,9 @@ Proof. now intros []. Qed.
 Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
 
 Section DeclaredInv.
-  Context {cf:checker_flags} {Σ} {wfΣ : wf Σ}.
+  Context {cf:checker_flags} {Σ} {Pcmp P} {wfΣ : on_global_env Pcmp P Σ}.
 
-  Lemma declared_minductive_ind_npars  {mdecl ind} :
+  Lemma declared_minductive_ind_npars_gen  {mdecl ind} :
     declared_minductive Σ ind mdecl ->
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
   Proof using wfΣ.
@@ -82,8 +110,8 @@ Section DeclaredInv.
 
 End DeclaredInv.
 
-Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env cumulSpec0 P Σ ->
+Definition wf_global_uctx_invariants {cf:checker_flags} {Pcmp P} Σ :
+  on_global_env Pcmp P Σ ->
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -105,8 +133,8 @@ Proof.
   right. now apply LevelSet.union_spec.
 Qed.
 
-Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env_ext cumulSpec0 P Σ ->
+Definition wf_ext_global_uctx_invariants {cf:checker_flags} {Pcmp P} Σ :
+  on_global_env_ext Pcmp P Σ ->
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -122,18 +150,18 @@ Proof.
      split; apply LevelSet.union_spec; right; apply XX.
 Qed.
 
-Lemma wf_consistent {cf:checker_flags} Σ {P} :
-  on_global_env cumulSpec0 P Σ -> consistent (global_constraints Σ).
+Lemma wf_consistent {cf:checker_flags} Σ {Pcmp P} :
+  on_global_env Pcmp P Σ -> consistent (global_constraints Σ).
 Proof.
   destruct Σ.
   intros [cu ong]. apply cu.
 Qed.
 
-Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
- : on_global_env_ext cumulSpec0 P Σ -> consistent (global_ext_uctx Σ).2.
+Definition global_ext_uctx_consistent {cf:checker_flags} {Pcmp P} Σ
+ : on_global_env_ext Pcmp P Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
-  unfold wf_ext, on_global_env_ext in HΣ.
+  unfold on_global_env_ext in HΣ.
   destruct HΣ as (_ & _ & _ & HH & _). apply HH.
 Qed.
 

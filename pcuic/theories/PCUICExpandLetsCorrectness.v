@@ -57,7 +57,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_local_app Γ Δ : trans_local (SE.app_context Γ Δ) = trans_local Γ ,,, trans_local Δ.
+Lemma trans_local_app Γ Δ : trans_local (Γ ,,, Δ) = trans_local Γ ,,, trans_local Δ.
 Proof.
   now rewrite /trans_local map_app.
 Qed.
@@ -2312,6 +2312,7 @@ Proof.
     red in X0. do 2 apply All2_map.
     eapply All2_All_mix_left in X3; tea.
     eapply All2_impl; tea; cbv beta.
+    unfold eq_branch in X3 |- *.
     intuition auto.
     rewrite !trans_bcontext.
     eapply eq_context_gen_smash_context.
@@ -2325,8 +2326,8 @@ Proof.
     now eapply trans_eq_context_gen.
     cbn. eapply All2_rev. solve_all. eauto using subrelation_refl.
     cbn. eauto using subrelation_refl.
-  - constructor. solve_all; eauto using subrelation_refl.
-  - constructor; solve_all; eauto using subrelation_refl.
+  - constructor; unfold eq_mfix in X0 |- *; solve_all; eauto using subrelation_refl.
+  - constructor; unfold eq_mfix in X0 |- *; solve_all; eauto using subrelation_refl.
 Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {pb ϕ T U} :
@@ -2524,7 +2525,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix idx :
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
         × TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
-    (SE.app_context Γ (SE.fix_context mfix)) ->
+    (Γ ,,, (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, fix_context (map (map_def trans trans) mfix)).
 Proof.
@@ -2532,10 +2533,10 @@ Proof.
   rewrite -(trans_fix_context (shiftnP #|Γ| xpred0) _ idx) //.
   match goal with
   |- TTwf_local _ ?A =>
-      replace A with (trans_local (SE.app_context Γ (SE.fix_context mfix)))
+      replace A with (trans_local (Γ ,,, (SE.fix_context mfix)))
   end.
   2: {
-    unfold trans_local, SE.app_context.
+    unfold trans_local, app_context.
     now rewrite map_app.
   }
 
@@ -3634,7 +3635,7 @@ Proof.
       generalize (pparams p ++ indices).
       change T.PCUICEnvironment.subst_instance_context with subst_instance_context.
       rewrite -/context.
-      generalize (ind_params mdecl ,,, ind_indices idecl)@[puinst p] as Δ.
+      generalize (ind_params mdecl ,,, ind_indices idecl : context)@[puinst p] as Δ.
       intros c; revert Γ. induction c using ctx_length_rev_ind.
       * intros Γ l wf.
         intros c; depelim c. constructor.

@@ -83,11 +83,11 @@ Section Alpha.
 
   (* TODO MOVE *)
   Lemma nth_error_weak_context :
-    forall Γ Δ i d,
+    forall {A} Γ Δ i (d : A),
       nth_error Δ i = Some d ->
       nth_error (Γ ,,, Δ) i = Some d.
   Proof using Type.
-    intros Γ Δ i d h.
+    intros ? Γ Δ i d h.
     rewrite -> nth_error_app_context_lt.
     - assumption.
     - apply nth_error_Some_length in h. assumption.
@@ -844,13 +844,13 @@ Section Alpha.
     - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
-      destruct hh as [[[ety ebo] era] eqann].
+      destruct hh as (eqann & era & ety & ebo).
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { apply PCUICWeakeningTyp.All_mfix_wf; auto.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
         rewrite /on_def_type -eqann.
         apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
         apply IH; eauto. reflexivity. }
@@ -867,7 +867,7 @@ Section Alpha.
           eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; try constructor; simpl; intros n; auto.
-          destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+          destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
           eapply eq_context_upto_cat.
           + constructor; constructor; auto.
             eapply eq_term_upto_univ_empty_impl; eauto.
@@ -891,19 +891,19 @@ Section Alpha.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
-          destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+          destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
           rewrite /on_def_type -eqann.
           apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
           apply IH; eauto. reflexivity.
-        * solve_all.
+        * unfold eq_mfix in X; solve_all.
           destruct b0 as [Hb IHb].
-          specialize (IHb (Γ ,,, types) _ b2).
+          specialize (IHb (Γ ,,, types) _ b1).
           forward IHb. { apply eq_context_upto_cat; reflexivity. }
           eapply context_conversion; eauto.
           eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
           eapply isType_of_isTypeRel.
           apply infer_typing_sort_impl with id a1 => //; intros [Hs IH].
-          specialize (IH _ _ a0 e').
+          specialize (IH _ _ a3 e').
           rewrite <-H.
           eapply (weakening _ _ _ _ (tSort _)); eauto.
           eapply eq_context_conversion; tea. now symmetry.
@@ -917,12 +917,12 @@ Section Alpha.
           unfold wf_fixpoint, wf_fixpoint_gen.
           move/andP => [] hm ho.
           apply/andP; split.
-          { solve_all. move: b b2.
+          { unfold eq_mfix in X; solve_all. move: b b1.
             generalize (dbody x) (dbody y).
             clear=> t t' isL eq.
             destruct t => //. now depelim eq. }
           move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
-          apply upto_names_check_fix. solve_all.
+          apply upto_names_check_fix. unfold eq_mfix in X. solve_all.
         + eapply All_nth_error in ihmfix; tea.
           eapply isType_of_isTypeRel.
           now apply infer_typing_sort_impl with id ihmfix => //; intros [].
@@ -932,13 +932,13 @@ Section Alpha.
   - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
-    destruct hh as [[[ety ebo] era] eqann].
+    destruct hh as (eqann & era & ety & ebo).
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
     { apply PCUICWeakeningTyp.All_mfix_wf; auto.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
-      destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+      destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
       rewrite /on_def_type -eqann.
       apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
     apply IH; eauto. reflexivity. }
@@ -955,7 +955,7 @@ Section Alpha.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; try constructor; simpl; intros n; auto.
-        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
         eapply eq_context_upto_cat.
         + constructor; constructor; auto.
           eapply eq_term_upto_univ_empty_impl; eauto.
@@ -979,19 +979,19 @@ Section Alpha.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        destruct r as [Hty (eqann & eqrarg & eqty & eqbod)].
         rewrite /on_def_type -eqann.
         apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
       apply IH; eauto. reflexivity.
-      * solve_all.
+      * unfold eq_mfix in X; solve_all.
         destruct b0 as [Hb IHb].
-        specialize (IHb (Γ ,,, types) _ b2).
+        specialize (IHb (Γ ,,, types) _ b1).
         forward IHb. { apply eq_context_upto_cat; reflexivity. }
         eapply context_conversion; eauto.
         eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
         eapply isType_of_isTypeRel.
         apply infer_typing_sort_impl with id a1 => //; intros [Hs IH].
-        specialize (IH _ _ a0 e').
+        specialize (IH _ _ a3 e').
         rewrite <-H.
         eapply (weakening _ _ _ _ (tSort _)); eauto.
         eapply eq_context_conversion; tea. now symmetry.
@@ -1003,7 +1003,7 @@ Section Alpha.
       * revert wffix.
         unfold wf_cofixpoint, wf_cofixpoint_gen.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
-        apply upto_names_check_cofix. solve_all.
+        apply upto_names_check_cofix. unfold eq_mfix in X; solve_all.
       + eapply All_nth_error in ihmfix; tea.
         eapply isType_of_isTypeRel.
         now apply infer_typing_sort_impl with id ihmfix => //; intros [].

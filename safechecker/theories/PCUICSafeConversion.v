@@ -1942,7 +1942,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     destruct hcase.
@@ -1972,7 +1972,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
       Unshelve. all: eauto. 
   Qed.
 
@@ -3066,7 +3066,7 @@ Qed.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     exists mdecl, idecl.
@@ -3089,7 +3089,7 @@ Qed.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred0).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
   Qed.
 
   Definition forallb2_proper A B (R R' : A -> B -> bool) l l':

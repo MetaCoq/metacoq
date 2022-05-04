@@ -879,8 +879,8 @@ Section Trans_Global.
         | ih : forall Rle u, _ |- _ =>
           now eapply ih
         end
-      ].
-      unfold trans_predicate, eq_predicate; cbn.
+      ];
+      unfold trans_predicate, eq_predicate, trans_branch, eq_branches, eq_branch; cbn.
       repeat split; solve_all; try typeclasses eauto with typeclass_instances core.
       * rewrite map2_map2_bias_left; len.
         eapply All2_length in hpctx. len in hpctx.
@@ -1137,7 +1137,7 @@ Section Trans_Global.
      (fun (x : aname) (y : context_decl) =>
       set_binder_name x (map_decl (subst_instance (Ast.puinst p)) y))).
     rewrite -PCUICUnivSubstitutionConv.map2_map_r.
-    rewrite -[fold_context_k _ _]PCUICRenameConv.map2_set_binder_name_fold; len.
+    rewrite -[fold_context_k _ _]PCUICRenameTerm.map2_set_binder_name_fold; len.
     rewrite /trans_local map_map2 map2_trans.
     rewrite -PCUICUnivSubstitutionConv.map2_map_r. f_equal.
     rewrite [map _ _]trans_subst_context map_rev.
@@ -1310,7 +1310,7 @@ Section Trans_Global.
     now rewrite trans_subst_context map_rev trans_local_subst_instance.
   Qed.
 
-  Lemma trans_local_app Γ Δ : trans_local Σ' (Ast.Env.app_context Γ Δ) = trans_local Σ' Γ ,,, trans_local Σ' Δ.
+  Lemma trans_local_app Γ Δ : trans_local Σ' (Γ ,,, Δ) = trans_local Σ' Γ ,,, trans_local Σ' Δ.
   Proof using Σ.
     now rewrite /trans_local map_app.
   Qed.
@@ -1634,7 +1634,7 @@ Section Trans_Global.
       red. rewrite <- !map_dtype. rewrite <- !map_dbody.
       split. destruct b.
       intuition eauto.
-      + unfold Ast.Env.app_context, trans_local in b1.
+      + unfold app_context, trans_local in b1.
         simpl in a. rewrite -> map_app in b1.
         unfold app_context. unfold ST.fix_context in b1.
         rewrite map_rev map_mapi in b1. simpl in b1.
@@ -1668,7 +1668,7 @@ Section Trans_Global.
       apply (OnOne2_All_mix_left Hwf) in X.
       solve_all. destruct b.
       red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-      + unfold Ast.Env.app_context, trans_local in b1.
+      + unfold app_context, trans_local in b1.
         simpl in a. rewrite -> map_app in b1.
         unfold app_context. unfold ST.fix_context in b1.
         rewrite map_rev map_mapi in b1. simpl in b1.
@@ -2591,10 +2591,10 @@ Lemma trans_cumul_ctx_rel {cf} {Σ : Ast.Env.global_env_ext} Γ Δ Δ' :
   let Σ' := trans_global Σ in
   Typing.wf Σ -> wf Σ' ->
   ST.TemplateConversion.cumul_ctx_rel Typing.cumul_gen Σ Γ Δ Δ' ->
-  closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ)) ->
-  closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ')) ->
-  All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ) ->
-  All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ') ->
+  closed_ctx (trans_local Σ' (Γ ,,, Δ)) ->
+  closed_ctx (trans_local Σ' (Γ ,,, Δ')) ->
+  All (WfAst.wf_decl Σ) (Γ ,,, Δ) ->
+  All (WfAst.wf_decl Σ) (Γ ,,, Δ') ->
   cumul_ctx_rel cumulSpec0 Σ' (trans_local Σ' Γ) (trans_local Σ' Δ) (trans_local Σ' Δ').
 Proof.
   intros Σ' wfΣ wfΣ'.
@@ -2702,17 +2702,13 @@ Lemma trans_cstr_respects_variance {cf} Σ mdecl v cdecl :
   All (WfAst.wf Σ) (Ast.Env.cstr_indices cdecl) ->
   (closed_ctx
     (trans_local (trans_global_env Σ)
-     (Ast.Env.app_context
-        (Ast.Env.app_context (ST.ind_arities mdecl)
-           (Ast.Env.smash_context [] (Ast.Env.ind_params mdecl)))
+     (ST.ind_arities mdecl ,,, Ast.Env.smash_context [] (Ast.Env.ind_params mdecl) ,,,
         (Ast.Env.expand_lets_ctx (Ast.Env.ind_params mdecl)
            (Ast.Env.smash_context [] (Ast.Env.cstr_args cdecl)))))) ->
   All (fun x : Ast.term =>
     closedn (Ast.Env.context_assumptions (Ast.Env.cstr_args cdecl) + 
       Ast.Env.context_assumptions (Ast.Env.ind_params mdecl) + #|ST.ind_arities mdecl|)
-    (trans Σ' (Ast.Env.expand_lets
-      (Ast.Env.app_context (Ast.Env.ind_params mdecl)
-         (Ast.Env.cstr_args cdecl)) x)))
+    (trans Σ' (Ast.Env.expand_lets (Ast.Env.ind_params mdecl ,,, Ast.Env.cstr_args cdecl) x)))
       (Ast.Env.cstr_indices cdecl) ->
   ST.cstr_respects_variance Typing.cumul_gen Σ mdecl v cdecl ->
   cstr_respects_variance cumulSpec0 Σ' mdecl' v cdecl'.
@@ -2801,9 +2797,7 @@ Lemma trans_ind_respects_variance {cf} Σ mdecl v idecl :
   wf Σ' ->
   wf_inductive_body Σ idecl ->
   All (WfAst.wf_decl Σ) (Ast.Env.ind_params mdecl) ->
-  closed_ctx (trans_local (trans_global_env Σ)
-     (Ast.Env.app_context (Ast.Env.ind_params mdecl)
-        (Ast.Env.ind_indices idecl))) ->
+  closed_ctx (trans_local (trans_global_env Σ) (Ast.Env.ind_params mdecl ,,, Ast.Env.ind_indices idecl)) ->
   ST.ind_respects_variance Typing.cumul_gen Σ mdecl v (Ast.Env.ind_indices idecl) ->
   ind_respects_variance cumulSpec0 Σ' mdecl' v (ind_indices idecl').
 Proof.
@@ -3088,10 +3082,7 @@ Proof.
               induction (Ast.Env.cstr_args x) in cs |- *; destruct cs; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
               split; intuition eauto;
-              specialize (foo 
-                (Ast.Env.app_context (Ast.Env.app_context 
-                (Ast.Env.arities_context (Ast.Env.ind_bodies m)) (Ast.Env.ind_params m))
-                c));
+              specialize (foo (Ast.Env.arities_context (Ast.Env.ind_bodies m) ,,, (Ast.Env.ind_params m) ,,, c));
               rewrite /trans_local !map_app in foo.
               now eapply (foo ty (SortRel (binder_relevance na))). 
               now apply (foo b (Typ ty)).
@@ -3106,9 +3097,7 @@ Proof.
               rewrite -trans_arities_context.
               induction 1; simpl; constructor; auto;
               have foo := (X (Σg, Ast.Env.ind_universes m) _ _ _ X0);
-              specialize (foo (Ast.Env.app_context (Ast.Env.app_context 
-                (Ast.Env.arities_context (Ast.Env.ind_bodies m)) 
-                (Ast.Env.ind_params m)) (Ast.Env.cstr_args x)));
+              specialize (foo (Ast.Env.arities_context (Ast.Env.ind_bodies m) ,,, Ast.Env.ind_params m ,,, Ast.Env.cstr_args x));
               rewrite /trans_local !map_app in foo.
               now apply (foo i (Typ t)).
               now rewrite (trans_subst_telescope _ [i] 0) in IHon_cindices.
@@ -3208,7 +3197,7 @@ Proof.
             unfold ST.on_projection, on_projection. cbn -[inds Σg].
             rewrite context_assumptions_map.
             rewrite -[trans_local _ _ ++ _]trans_local_app -(trans_smash_context _ []) nth_error_map.
-            rewrite /Ast.Env.app_context. destruct nth_error => // /=.
+            rewrite /app_context. destruct nth_error => // /=.
             rewrite /trans_projection_body /=. 
             move=> [] /= hb -> ->. cbn -[Σg]. split => //.
             rewrite trans_subst trans_inds. cbn -[Σg]. f_equal.

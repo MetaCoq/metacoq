@@ -305,6 +305,11 @@ Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
 Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
+Definition app_context {A} (Γ Γ': list A) := Γ' ++ Γ.
+
+Notation "Γ ,,, Γ'" := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+
+
 Definition ondecl {A} (P : A -> Type) (d : context_decl A) :=
   P d.(decl_type) × option_default P d.(decl_body) unit.
 

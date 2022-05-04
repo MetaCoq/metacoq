@@ -848,7 +848,7 @@ Proof using Type.
   { destruct X as [nf [nf' [r r' e]]]. exists nf, nf'. split; try constructor; auto; fvs. }
   eexists _, _; split; intuition auto. clear clΓ clT.
   induction T using PCUICInduction.term_forall_list_ind; cbn; intros;
-    try solve [constructor; eauto; solve_all].
+    try solve [constructor; try unfold eq_mfix; eauto; solve_all].
   - cbn. constructor. 
     destruct s; split; reflexivity.
   - constructor. eapply PCUICEquality.eq_term_upto_univ_impl in IHT1; eauto.
@@ -864,7 +864,7 @@ Proof using Type.
     apply IHT.
     eapply All2_map.
     eapply All_All2; tea. cbn.
-    intuition auto. rewrite /id. reflexivity.
+    intuition auto. rewrite /eq_branch /id. split => //. reflexivity.
 Qed.
 
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' : 
@@ -1251,7 +1251,7 @@ Proof using Hcf Hcf'.
     eapply All2_symP => //. typeclasses eauto.
     eapply app_inj in e as [eql ->] => //.
     move: (All2_length eqpars).
-    move: (All2_length a0). lia. fvs. now eapply subject_is_open_term in scrut_ty.
+    move: (All2_length a). lia. fvs. now eapply subject_is_open_term in scrut_ty.
     now apply subject_is_open_term in X6.
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & cdecl' & pdecl' & args' & inv); auto.
@@ -1295,26 +1295,24 @@ Proof using Hcf Hcf'.
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[a _] _] _].
+    eapply All2_nth_error in e as (eqann & eqrarg & eqty & eqbod); eauto.
     constructor; [fvs|..].
     { eapply nth_error_all in X0 as (? & e & dty & ?); tea.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
-    now symmetry in a.
+    now symmetry in eqty.
   
   - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[a _] _] _].
+    eapply All2_nth_error in e as (eqann & eqrarg & eqty & eqbod); eauto.
     constructor; [fvs|..].
     { eapply nth_error_all in X0 as (? & ? & dty & ?); tea.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
-    now symmetry in a.
+    now symmetry in eqty.
 Qed.
 
 End no_prop_leq_type.

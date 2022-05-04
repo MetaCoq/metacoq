@@ -227,7 +227,7 @@ Proof.
     apply IHctxi.
 Qed.
 
-Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
+Record spine_subst {cf:checker_flags} Σ Γ inst s (Δ : context) := mkSpineSubst {
   spine_dom_wf : wf_local Σ Γ;
   spine_codom_wf : wf_local Σ (Γ ,,, Δ);
   inst_ctx_subst :> context_subst Δ inst s;
@@ -1620,7 +1620,7 @@ Section WfEnv.
     now rewrite lift_context_app Nat.add_0_r.
   Qed.
 
-  Lemma spine_subst_to_extended_list_k {Δ Γ} :
+  Lemma spine_subst_to_extended_list_k {Δ Γ : context} :
     wf_local Σ (Γ ,,, Δ) ->
     spine_subst Σ (Γ ,,, Δ) (reln [] 0 Δ) (all_rels Δ 0 #|Δ|)
       (lift_context #|Δ| 0 Δ).

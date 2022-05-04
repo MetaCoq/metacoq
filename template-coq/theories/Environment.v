@@ -373,12 +373,6 @@ Module Environment (T : Term).
 
   Definition program : Type := global_env * term.
 
-  (* TODO MOVE AstUtils factorisation *)
-
-  Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-  Notation "Γ ,,, Γ'" :=
-    (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
-
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
   Definition mkLambda_or_LetIn d t :=
@@ -499,26 +493,29 @@ Module Environment (T : Term).
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
   #[global] Hint Rewrite arities_context_length : len.
   
-  Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
+  Lemma app_context_nil_l {T} (Γ: list T) : [] ,,, Γ = Γ.
   Proof.
     unfold app_context. rewrite app_nil_r. reflexivity.
   Qed.
 
-  Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
+  Lemma app_context_assoc {T} (Γ Γ' Γ'': list T) : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
   Proof. unfold app_context; now rewrite app_assoc. Qed.
 
-  Lemma app_context_cons Γ Γ' A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A.
+  Lemma app_context_cons (Γ Γ': context) A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A.
   Proof. exact (app_context_assoc _ _ [A]). Qed.
 
-  Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
+  Lemma app_context_length {T} (Γ Γ': list T) : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
   Proof. unfold app_context. now rewrite app_length. Qed.
-  #[global] Hint Rewrite app_context_length : len.
+  
+  Lemma app_context_length' (Γ Γ': context) : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
+  Proof. apply app_context_length. Qed.
+  #[global] Hint Rewrite app_context_length' : len.
 
-  Lemma nth_error_app_context_ge v Γ Γ' :
+  Lemma nth_error_app_context_ge {T} v (Γ Γ': list T) :
     #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
   Proof. apply nth_error_app_ge. Qed.
 
-  Lemma nth_error_app_context_lt v Γ Γ' :
+  Lemma nth_error_app_context_lt {T} v (Γ Γ': list T) :
     v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
   Proof. apply nth_error_app_lt. Qed.
 

@@ -3,7 +3,7 @@ From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
-     PCUICCases PCUICCumulativity PCUICTyping
+     PCUICCases PCUICRelevance PCUICCumulativity PCUICTyping
      PCUICReduction PCUICWeakeningEnv
      PCUICClosed PCUICPosition PCUICGuardCondition.
 
@@ -188,7 +188,9 @@ Proof.
     * eapply subst_equal_inst_inst => //.
     * solve_all. reflexivity.
     * eapply X => //.
-  - solve_all. reflexivity.
+  - rewrite /eq_branch /id /=. split.
+    * reflexivity.
+    * apply e => //.
 Qed.
 
 #[global]
@@ -879,6 +881,7 @@ Proof.
     repeat split; simpl; eauto; solve_all.
     * eapply precompose_subst_instance.
       eapply R_universe_instance_impl; eauto.
+  - destruct X6; split => //. apply e => //.
 Qed.
 
 Lemma leq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (leq_term Σ).
@@ -1686,6 +1689,20 @@ Proof.
 Qed.
 
 Definition wf_global_ext {cf : checker_flags} Σ ext := wf_ext_wk (Σ, ext).
+
+
+Lemma relevance_of_term_subst_instance Σ Γ u t rel :
+  isTermRel Σ Γ t rel -> isTermRel Σ Γ t@[u] rel.
+Proof.
+  revert Γ.
+  induction t using term_forall_list_ind; intros Γ Hirrel; cbnr; auto.
+  - unfold subst_instance, relevance_of_term, option_default in *.
+    destruct (nth_error m) eqn:E;
+    rewrite nth_error_map E; now cbn.
+  - unfold subst_instance, relevance_of_term, option_default in *.
+    destruct (nth_error m) eqn:E;
+    rewrite nth_error_map E; now cbn.
+Qed.
 
 Require Import Morphisms.
 Require Import ssreflect.

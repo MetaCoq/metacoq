@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICTyping PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef 
-  PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICOnFreeVarsConv PCUICGuardCondition PCUICTyping
+  PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICRenameTerm PCUICGuardCondition PCUICTyping
   PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp PCUICRenameConv.
 
 Require Import ssreflect ssrbool.
@@ -264,7 +264,7 @@ Proof.
             apply urenaming_context; eauto.
          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
             unfold inst_case_predicate_context. 
-            apply on_free_vars_ctx_inst_case_context; eauto.
+            apply on_free_vars_ctx_inst_case_context_app; eauto.
          ++ unfold inst_case_predicate_context.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add. 
@@ -276,7 +276,7 @@ Proof.
             rewrite inst_case_predicate_context_length.   
             rewrite (All2_fold_length Xcontext). eassumption.
          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-            unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
+            unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context_app; eauto.
             +++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
                 cbn; intros. eapply urename_is_open_term; eauto.
             +++ unfold pparams. cbn. rewrite map_length. exact Hcontext.
@@ -299,7 +299,7 @@ Proof.
        apply urenaming_context; eauto.
        + rewrite test_context_k_closed_on_free_vars_ctx in Hx.
          unfold inst_case_predicate_context.
-         apply on_free_vars_ctx_inst_case_context; eauto.
+         apply on_free_vars_ctx_inst_case_context_app; eauto.
       + unfold inst_case_predicate_context.
          unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add. 
@@ -311,7 +311,7 @@ Proof.
         rewrite inst_case_branch_context_length.    
         rewrite (All2_fold_length Hbcontext). eassumption.
       + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-        unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
+        unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context_app; eauto.
        ++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
            cbn; intros. eapply urename_is_open_term; eauto.
        ++ unfold pparams. rewrite test_context_k_closed_on_free_vars_ctx in Hx.

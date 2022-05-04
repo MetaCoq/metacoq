@@ -372,9 +372,9 @@ Section fixed.
             eapply on_free_vars_ctx_inst_case_context; tea => //.
             now rewrite test_context_k_closed_on_free_vars_ctx.
           + eapply red_on_free_vars in r1; tea.
-            { len. rewrite (All2_fold_length a5).
+            { len. rewrite (All2_fold_length a4).
               now setoid_rewrite shiftnP_add in p1. }
-            len. rewrite -shiftnP_add (All2_fold_length a5).
+            len. rewrite -shiftnP_add (All2_fold_length a4).
             eapply on_ctx_free_vars_inst_case_context; auto.
             1:now rewrite test_context_k_closed_on_free_vars_ctx.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
@@ -387,7 +387,7 @@ Section fixed.
       all:eapply into_closed_red; eauto.
     - rename a0 into brsa1.
       rename a2 into brsa2.
-      rename a3 into brseq.
+      rename e0 into brseq.
       clear -wfΣ decli brsa1 brsa2 brseq clΓ wfp wfp' a a1 p0 p5 p4 p9 r3 eqpars.
       induction brseq in brs, brs', brsa1, brsa2, p4, p9 |- *;
         depelim brsa1; depelim brsa2; [constructor|].
@@ -455,7 +455,7 @@ Section fixed.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
-    depelim eq.
+    depelim eq. unfold eq_mfix in e.
     split; [easy|].
     cbn in cll, clr, clx, cly.
     have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
@@ -464,10 +464,10 @@ Section fixed.
     { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
     solve_all.
     move: clmfixctx clmfixctx'.
-    clear -wfΣ a a0 a1 clΓ.
+    clear -wfΣ a a0 e clΓ.
     cut (#|mfix| = #|mfix'|);
-      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
-    revert a a0 a1.
+      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in e].
+    revert a a0 e.
     generalize mfix at 1 2 4 5 6.
     generalize mfix' at 1 2 4 5.
     intros ctx_fix ctx_fix'.
@@ -475,7 +475,7 @@ Section fixed.
     induction all in mfix, mfix', all1, all2, all |- *;
       depelim all1; depelim all2; subst; [constructor|].
     constructor; [|now auto].
-    destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
+    destruct r as ((? & (? & ? & ? & ?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
     - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
       all:eapply into_closed_red; eauto. 
@@ -515,7 +515,7 @@ Section fixed.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
-    depelim eq.
+    depelim eq. unfold eq_mfix in e.
     split; [easy|].
     cbn in cll, clr, clx, cly.
     have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
@@ -524,10 +524,10 @@ Section fixed.
     { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
     solve_all.
     move: clmfixctx clmfixctx'.
-    clear -wfΣ a a0 a1 clΓ.
+    clear -wfΣ a a0 e clΓ.
     cut (#|mfix| = #|mfix'|);
-      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
-    revert a a0 a1.
+      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in e].
+    revert a a0 e.
     generalize mfix at 1 2 4 5 6.
     generalize mfix' at 1 2 4 5.
     intros ctx_fix ctx_fix'.
@@ -535,7 +535,7 @@ Section fixed.
     induction all in mfix, mfix', all1, all2, all |- *;
       depelim all1; depelim all2; subst; [constructor|].
     constructor; [|now auto].
-    destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
+    destruct r as ((? & (? & ? & ? & ?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
     - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
       all:eapply into_closed_red; eauto. 

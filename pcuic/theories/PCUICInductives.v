@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus PCUICInstDef PCUICInstConv PCUICContextSubst
-     PCUICRenameDef PCUICRenameConv PCUICRenameTyp
+     PCUICRenameDef PCUICRenameTerm PCUICRenameConv PCUICRenameTyp
      PCUICSubstitution PCUICOnFreeVars PCUICClosed PCUICClosedConv PCUICClosedTyp 
      PCUICCumulativity PCUICGeneration PCUICReduction PCUICWellScopedCumulativity
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence

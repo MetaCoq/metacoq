@@ -1565,10 +1565,10 @@ Proof.
     destruct e0 as (?&?&?).
     eapply whne_fixapp.
     + unfold unfold_fix.
-      rewrite e1.
+      rewrite e2.
       reflexivity.
     + rewrite <- e.
-      destruct p. rewrite e3. reflexivity.
+      destruct p as (? & ? & ?). rewrite e4. reflexivity.
     + eapply IHwh; eauto.
   - destruct args using MCList.rev_ind; [|rewrite mkApps_app in x; discriminate x].
     now rewrite nth_error_nil in e0.
@@ -1601,8 +1601,8 @@ Proof.
     unfold unfold_fix in *.
     destruct (nth_error mfix' idx) eqn:nth; [|easy].
     eapply All2_nth_error_Some_r in nth; eauto.
-    destruct nth as (?&?&((? & ?)&?)&?).
-    rewrite e e2 in y.
+    destruct nth as (? & ? & ? & ? & ? & ?).
+    rewrite e0 e2 in y.
     eapply All2_nth_error_None; eauto.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.

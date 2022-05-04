@@ -70,7 +70,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_local_app Γ Δ : trans_local (SE.app_context Γ Δ) = trans_local Γ ,,, trans_local Δ.
+Lemma trans_local_app Γ Δ : trans_local (Γ ,,, Δ) = trans_local Γ ,,, trans_local Δ.
 Proof.
   now rewrite /trans_local map_app.
 Qed.
@@ -1421,10 +1421,10 @@ Proof.
       eapply ih ; auto
     end
   ].
-  1,6,7: try solve [ constructor; solve_all ].
+  1,6,7: try solve [ constructor; try unfold eq_mfix in X0; solve_all ].
   all: try solve [ constructor; now eapply trans_R_global_instance ].
   - eapply (TermEquality.eq_term_upto_univ_mkApps _ _ _ _ _ [_] _ [_]); simpl; eauto.
-  - destruct X1 as [Hpars [Huinst [Hctx Hret]]].
+  - destruct X1 as [Hpars [Huinst [Hctx Hret]]]. unfold eq_branches, eq_branch in X3.
     destruct X as [IHpars [IHctx IHret]].
     constructor; cbn; auto. solve_all.
     red in X0.
@@ -1563,7 +1563,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix:
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
         × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
-    (SE.app_context Γ (SE.fix_context mfix)) ->
+    (Γ ,,, (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) mfix)).
 Proof.
@@ -1571,10 +1571,10 @@ Proof.
   rewrite <- trans_fix_context.
   match goal with
   |- TTwf_local _ ?A =>
-      replace A with (trans_local (SE.app_context Γ (SE.fix_context mfix)))
+      replace A with (trans_local (Γ ,,, (SE.fix_context mfix)))
   end.
   2: {
-    unfold trans_local, SE.app_context.
+    unfold trans_local, app_context.
     now rewrite map_app.
   }
 
@@ -1592,11 +1592,11 @@ Qed.
 Lemma trans_mfix_All2 {cf} Σ Γ mfix xfix:
   All
   (fun d : def PCUICAst.term =>
-    (ST.typing Σ (SE.app_context Γ (SE.fix_context xfix))
+    (ST.typing Σ (Γ ,,, (SE.fix_context xfix))
     (dbody d)
     (S.lift0 #|SE.fix_context xfix| (dtype d)))
     × TT.typing (trans_global Σ)
-      (trans_local (SE.app_context Γ (SE.fix_context xfix)))
+      (trans_local (Γ ,,, (SE.fix_context xfix)))
       (trans (dbody d))
       (trans
           (S.lift0 #|SE.fix_context xfix|
@@ -1612,7 +1612,7 @@ Proof.
   - constructor.
   - simpl; constructor.
     + destruct p as [].
-      unfold app_context, SE.app_context in *.
+      unfold app_context in *.
       unfold trans_local in t0.
       rewrite map_app trans_fix_context in t0.
       rewrite trans_dbody trans_lift trans_dtype in t0.

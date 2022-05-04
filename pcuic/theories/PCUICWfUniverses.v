@@ -709,7 +709,7 @@ Qed.
 
   Qed.
 
-  Lemma test_context_app p Γ Δ : 
+  Lemma test_context_app p (Γ Δ : context) : 
     test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
   Proof using Type.
     induction Δ; simpl; auto.

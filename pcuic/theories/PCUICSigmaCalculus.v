@@ -380,7 +380,7 @@ Qed.
 #[global]
 Hint Rewrite mapi_context_compose : map.
 
-Lemma rename_compose f f' : rename f ∘ rename f' =1 rename (f ∘ f').
+Lemma rename_compose_eq1 f f' : rename f ∘ rename f' =1 rename (f ∘ f').
 Proof.
   intros x.
   induction x in f, f' |- * using term_forall_list_ind; simpl; 
@@ -397,6 +397,9 @@ Proof.
   - rewrite /map_branch_shift /=. f_equal; solve_all.
     * len. rewrite b. apply rename_ext, shiftn_compose.
 Qed.
+
+Lemma rename_compose f f' x : rename f (rename f' x) = rename (f ∘ f') x.
+Proof using Type. apply (rename_compose_eq1 f f' x). Qed.
 
 Lemma map_predicate_shift_map_predicate_shift
       {T} {fn : (nat -> T) -> term -> term}

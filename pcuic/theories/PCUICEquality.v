@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
 From MetaCoq.Template Require Import LibHypsNaming config utils Reflect.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICCases
      PCUICLiftSubst PCUICReflect.
 
 Require Import ssreflect ssrbool.
@@ -128,7 +128,9 @@ Notation eq_context_upto_names := (All2 (compare_decls eq eq)).
 Notation eq_context_gen eq_term leq_term :=
   (All2_fold (fun _ _ => compare_decls eq_term leq_term)).
 
-Lemma eq_context_upto_names_gen Γ Γ' : eq_context_upto_names Γ Γ' <~> eq_context_gen eq eq Γ Γ'.
+Notation eq_context_upto_names_gen := (eq_context_gen eq eq).
+
+Lemma eq_context_upto_names_upto_names_gen Γ Γ' : eq_context_upto_names Γ Γ' <~> eq_context_upto_names_gen Γ Γ'.
 Proof.
   split; intros e; depind e; constructor; auto.
 Qed.
@@ -262,10 +264,25 @@ Proof.
 Qed.
 
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
-  All2 eq_term p.(pparams) p'.(pparams) *
-  (R_universe_instance Re p.(puinst) p'.(puinst) *
-  ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
-    eq_term p.(preturn) p'.(preturn))).
+  All2 eq_term p.(pparams) p'.(pparams) ×
+  R_universe_instance Re p.(puinst) p'.(puinst) ×
+  eq_context_upto_names_gen p.(pcontext) p'.(pcontext) ×
+  eq_term p.(preturn) p'.(preturn).
+
+Definition eq_branch (eq_term : term -> term -> Type) br br' :=
+  eq_context_upto_names_gen br.(bcontext) br'.(bcontext) ×
+  eq_term br.(bbody) br'.(bbody).
+
+Definition eq_branches (eq_term : term -> term -> Type) brs brs' :=
+  All2 (eq_branch eq_term) brs brs'.
+
+Definition eq_mfix (eq_term : term -> term -> Type) mfix mfix' :=
+  All2 (fun d d' =>
+    eq_binder_annot d.(dname) d'.(dname) ×
+    d.(rarg) = d'.(rarg) ×
+    eq_term d.(dtype) d'.(dtype) ×
+    eq_term d.(dbody) d'.(dbody)
+  ) mfix mfix'.
 
 (** ** Syntactic ws_cumul_pb up-to universes
   We don't look at printing annotations *)
@@ -332,10 +349,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
 | eq_Case : forall indn p p' c c' brs brs',
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
     Σ ⊢ c <==[ Re , 0 ] c' ->
-    All2 (fun x y =>
-      eq_context_gen eq eq (bcontext x) (bcontext y) *
-      (Σ ⊢ x.(bbody) <==[ Re , 0 ] y.(bbody))
-    ) brs brs' ->
+    eq_branches (eq_term_upto_univ_napp Σ Re Re 0) brs brs' ->
     Σ ⊢ tCase indn p c brs <==[ Rle , napp ] tCase indn p' c' brs'
 
 | eq_Proj : forall p c c',
@@ -343,21 +357,11 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     Σ ⊢ tProj p c <==[ Rle , napp ] tProj p c'
 
 | eq_Fix : forall mfix mfix' idx,
-    All2 (fun x y =>
-      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
-      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
-      (x.(rarg) = y.(rarg)) *
-      eq_binder_annot x.(dname) y.(dname)
-    )%type mfix mfix' ->
+    eq_mfix (eq_term_upto_univ_napp Σ Re Re 0) mfix mfix' ->
     Σ ⊢ tFix mfix idx <==[ Rle , napp ] tFix mfix' idx
 
 | eq_CoFix : forall mfix mfix' idx,
-    All2 (fun x y =>
-      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
-      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
-      (x.(rarg) = y.(rarg)) *
-      eq_binder_annot x.(dname) y.(dname)
-    ) mfix mfix' ->
+    eq_mfix (eq_term_upto_univ_napp Σ Re Re 0) mfix mfix' ->
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
     
 (* | eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i) *)
@@ -500,6 +504,34 @@ Proof.
 Qed.
 
 #[global]
+Polymorphic Instance eq_branch_refl Re :
+  CRelationClasses.Reflexive Re ->
+  CRelationClasses.Reflexive (eq_branch Re).
+Proof.
+  intros hre.
+  intros br. unfold eq_branch; intuition auto; reflexivity.
+Qed.
+
+#[global]
+Polymorphic Instance eq_branches_refl Re :
+  CRelationClasses.Reflexive Re ->
+  CRelationClasses.Reflexive (eq_branches Re).
+Proof.
+  intros hre.
+  intros brs. apply All2_same; reflexivity.
+Qed.
+
+#[global]
+Polymorphic Instance eq_mfix_refl Re :
+  CRelationClasses.Reflexive Re ->
+  CRelationClasses.Reflexive (eq_mfix Re).
+Proof.
+  intros hre.
+  intros mfix. unfold eq_mfix; eapply All2_same.
+  intuition auto; try reflexivity.
+Qed.
+
+#[global]
 Polymorphic Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -511,14 +543,13 @@ Proof.
   all: try constructor. all: eauto.
   all: try solve [eapply All_All2 ; eauto].
   all: try solve [eapply Forall2_same ; eauto].
-  all: try solve [unfold eq_predicate; solve_all; eapply All_All2; eauto].
   - apply R_global_instance_refl; auto.
   - apply R_global_instance_refl; auto.
   - destruct X as [? [? ?]].
     unfold eq_predicate; solve_all.
     eapply All_All2; eauto. reflexivity.
     eapply onctx_eq_ctx in a0; eauto.
-  - eapply All_All2; eauto; simpl; intuition eauto.
+  - eapply All_All2; unfold eq_branch; eauto; simpl; intuition eauto.
     eapply onctx_eq_ctx in a; eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
@@ -579,27 +610,27 @@ Proof.
     + constructor.
     + destruct r as [h1 h2]. eapply h1 in h2 ; auto.
   - solve_all. destruct e as (r & ? & eq & ?).
-    econstructor; rewrite ?e; unfold eq_predicate in *; solve_all; eauto.
+    econstructor; rewrite ?e; unfold eq_predicate, eq_branches, eq_branch in *; solve_all; eauto.
     eapply All2_sym; solve_all.
     unfold R_universe_instance in r |- *.
     eapply Forall2_symP; eauto.
-    eapply onctx_eq_ctx_sym in a1; eauto.
+    eapply onctx_eq_ctx_sym in eq; eauto.
     eapply All2_sym; solve_all.
-    eapply onctx_eq_ctx_sym in a0; eauto.
+    eapply onctx_eq_ctx_sym in a; eauto.
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
+    clear e X.
     induction h.
     + constructor.
-    + destruct r as [[h1 h2] [[[h3 h4] h5] h6]].
-      eapply h1 in h3; auto. constructor; auto.
+    + destruct r as ((h1 & h2) & (han & hrarg & hty & hbod)).
+      eapply h1 in hty; auto. constructor; auto.
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
+    clear e X.
     induction h.
     + constructor.
-    + destruct r as [[h1 h2] [[[h3 h4] h5] h6]]. eapply h1 in h3 ; auto.
-    constructor; auto.
+    + destruct r as ((h1 & h2) & (han & hrarg & hty & hbod)).
+      eapply h1 in hty; auto. constructor; auto.
 Qed.
 
 #[global]
@@ -610,6 +641,35 @@ Polymorphic Instance eq_predicate_sym Re Ru :
 Proof.
   intros hre hru.
   intros p. unfold eq_predicate; intuition auto; try now symmetry.
+Qed.
+
+#[global]
+Polymorphic Instance eq_branch_sym Re :
+  CRelationClasses.Symmetric Re ->
+  CRelationClasses.Symmetric (eq_branch Re).
+Proof.
+  intros hre.
+  intros br. unfold eq_branch; intuition auto; try now symmetry.
+Qed.
+
+#[global]
+Polymorphic Instance eq_branches_sym Re :
+  CRelationClasses.Symmetric Re ->
+  CRelationClasses.Symmetric (eq_branches Re).
+Proof.
+  intros hre.
+  intros brs. unfold eq_branches; intuition auto; try now symmetry.
+Qed.
+
+#[global]
+Polymorphic Instance eq_mfix_sym Re :
+  CRelationClasses.Symmetric Re ->
+  CRelationClasses.Symmetric (eq_mfix Re).
+Proof.
+  intros hre.
+  intros mfix. unfold eq_mfix;
+  intros; apply All2_sym, All2_impl with (1 := X).
+  intuition auto; try now symmetry.
 Qed.
 
 #[global]
@@ -664,6 +724,37 @@ Proof.
 Qed.
 
 #[global]
+Polymorphic Instance eq_branch_trans Re :
+  CRelationClasses.Transitive Re ->
+  CRelationClasses.Transitive (eq_branch Re).
+Proof.
+  intros hre.
+  intros br. unfold eq_branch; intuition auto; try now etransitivity.
+  etransitivity; tea.
+Qed.
+
+#[global]
+Polymorphic Instance eq_branches_trans Re :
+  CRelationClasses.Transitive Re ->
+  CRelationClasses.Transitive (eq_branches Re).
+Proof.
+  intros hre.
+  intros brs. unfold eq_branches; intros.
+  eapply All2_trans; tea. tc.
+Qed.
+
+#[global]
+Polymorphic Instance eq_mfix_trans Re :
+  CRelationClasses.Transitive Re ->
+  CRelationClasses.Transitive (eq_mfix Re).
+Proof.
+  intros hre.
+  intros mfix. unfold eq_mfix; intros.
+  eapply All2_trans; tea.
+  intros d d' d'' [] []; repeat split; now etransitivity.
+Qed.
+
+#[global]
 Polymorphic Instance eq_term_upto_univ_trans Σ Re Rle napp :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
@@ -695,7 +786,7 @@ Proof.
   - dependent destruction e2.
     unfold eq_predicate in *.
     !!solve_all.
-    econstructor; unfold eq_predicate in *; solve_all; eauto.
+    econstructor; unfold eq_predicate, eq_branches, eq_branch in *; solve_all; eauto.
     * clear -he hh1 hh2.
       revert hh1 hh2. generalize (pparams p), p'.(pparams), p'0.(pparams).
       intros l l' l''.
@@ -704,10 +795,10 @@ Proof.
     * etransitivity; eauto.
     * eapply onctx_eq_ctx_trans in hh; eauto.
       intros ???? -> ->; eauto.
-    * clear -H he a a0.
-      induction a in a0, brs'0 |- *.
+    * clear -H he e0 e4.
+      induction e0 in e4, brs'0 |- *.
       + assumption.
-      + depelim a0. destruct p. constructor; auto.
+      + depelim e4. destruct p. constructor; auto.
         destruct r as [[h1 h1'] [h2 h3]].
         split.
         eapply onctx_eq_ctx_trans in h1; eauto.
@@ -716,19 +807,19 @@ Proof.
   - dependent destruction e2.
     econstructor.
     eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h in a0, mfix'0 |- *.
+    clear e X. unfold eq_mfix in *.
+    induction h in e0, mfix'0 |- *.
     + assumption.
-    + dependent destruction a0. constructor ; eauto.
+    + dependent destruction e0. constructor ; eauto.
       intuition eauto.
       transitivity (rarg y); auto.
   - dependent destruction e2.
     econstructor.
     eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h in a0, mfix'0 |- *.
+    clear e X. unfold eq_mfix in *.
+    induction h in e0, mfix'0 |- *.
     + assumption.
-    + dependent destruction a0. constructor ; eauto.
+    + dependent destruction e0. constructor ; eauto.
       intuition eauto.
       transitivity (rarg y); auto.
 Qed.
@@ -935,16 +1026,16 @@ Proof.
     eapply R_global_instance_impl. 5:eauto. all:auto.
   - inversion 1; subst; constructor.
     eapply R_global_instance_impl. 5:eauto. all:eauto.
-  - inversion 1; subst; constructor; unfold eq_predicate in *; eauto; solve_all.
+  - inversion 1; subst; constructor; unfold eq_predicate, eq_branches, eq_branch in *; eauto; solve_all.
     * eapply R_universe_instance_impl'; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
 Qed.
 
 #[global]
@@ -966,16 +1057,16 @@ Proof.
     eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor.
     eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
-  - inversion 1; subst; constructor; unfold eq_predicate in *; solve_all.
+  - inversion 1; subst; constructor; unfold eq_predicate, eq_branches, eq_branch in *; solve_all.
     * eapply R_universe_instance_impl'; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.    
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.    
 Qed.
 
 #[global]
@@ -1021,15 +1112,15 @@ Proof.
   all: dependent destruction e.
   all: try solve [cbn ; constructor ; try lih ; try assumption; solve_all].
   - cbn. destruct e as (? & ? & e & ?).
-    constructor; unfold eq_predicate in *; simpl; !!solve_all.
+    constructor; unfold eq_predicate, eq_branches, eq_branch in *; simpl; !!solve_all.
     * rewrite -?(All2_fold_length e).
       eapply hh0; eauto.
-    * rewrite (All2_fold_length a). now eapply hh4.
-  - cbn. constructor.
-    pose proof (All2_length a).
+    * rewrite (All2_fold_length hh5). now eapply hh4.
+  - cbn. constructor. unfold eq_mfix in *.
+    pose proof (All2_length e).
     solve_all. rewrite H. eauto.
-  - cbn. constructor.
-    pose proof (All2_length a).
+  - cbn. constructor. unfold eq_mfix in *.
+    pose proof (All2_length e).
     solve_all. rewrite H. eauto.
 Qed.
 
@@ -1100,14 +1191,14 @@ Proof.
   - cbn. constructor. solve_all.
   - cbn.
     destruct e as (? & ? & e & ?).
-    constructor ; unfold eq_predicate; simpl; try sih ; solve_all.
-    * rewrite -(All2_fold_length e). eapply e1; eauto.
-    * rewrite (All2_fold_length a). now eapply b0.
-  - cbn. constructor ; try sih ; eauto.
-    pose proof (All2_length a).
+    constructor ; unfold eq_predicate, eq_branches, eq_branch in *; simpl; try sih ; solve_all.
+    * rewrite -(All2_fold_length e). eapply e2; eauto.
+    * rewrite (All2_fold_length a0). now eapply b0.
+  - cbn. constructor ; unfold eq_mfix in *; try sih ; eauto.
+    pose proof (All2_length e).
     solve_all. now rewrite H.
-  - cbn. constructor ; try sih ; eauto.
-    pose proof (All2_length a).
+  - cbn. constructor ; unfold eq_mfix in *; try sih ; eauto.
+    pose proof (All2_length e).
     solve_all. now rewrite H.
 Qed.
 
@@ -1651,17 +1742,6 @@ Proof.
   induction 1; intros; constructor; intuition auto.
   all:try solve [now symmetry].
   all:eauto using R_global_instance_flip.
-  - eapply All2_sym. solve_all.
-    * eapply eq_context_sym; try tc. tas. 
-    * now eapply eq_term_upto_univ_sym.
-  - eapply All2_sym. solve_all.
-    now eapply eq_term_upto_univ_sym.
-    now eapply eq_term_upto_univ_sym.
-    now symmetry.
-  - eapply All2_sym. solve_all.
-    now eapply eq_term_upto_univ_sym.
-    now eapply eq_term_upto_univ_sym.
-    now symmetry.
 Qed.
 
 Lemma eq_univ_make :

@@ -1153,6 +1153,16 @@ End Universe.
 Definition is_propositional u :=
   Universe.is_prop u || Universe.is_sprop u.
 
+Definition relevance_of_sort (s: Universe.t) :=
+  match s with
+  | Universe.lSProp => Irrelevant
+  | _ => Relevant
+  end.
+
+Notation isSortRel s rel := (relevance_of_sort s = rel).
+Definition isSortRelOpt s relopt :=
+  match relopt with None => True | Some rel => isSortRel s rel end.
+
 Notation "⟦ u ⟧_ v" := (Universe.to_cuniv v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
 
 
@@ -2073,6 +2083,29 @@ Tactic Notation "unfold_univ_rel" "eqn" ":"ident(H) :=
 
 Ltac cong := intuition congruence.
 
+Lemma leq_relevance_eq {cf φ} {s s'} :
+  leq_universe φ s s' -> relevance_of_sort s = relevance_of_sort s'.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma leq_relevance_opt {cf φ} {s s' rel} :
+  leq_universe φ s s' -> isSortRelOpt s rel -> isSortRelOpt s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma leq_relevance {cf φ} {s s' rel} :
+  leq_universe φ s s' -> isSortRel s rel -> isSortRel s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma geq_relevance {cf φ} {s s' rel} :
+  leq_universe φ s' s -> isSortRel s rel -> isSortRel s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
 
 Lemma leq_universe_product_mon {cf} ϕ s1 s1' s2 s2' :
   leq_universe ϕ s1 s1' ->
@@ -2366,6 +2399,25 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 
 #[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
+
+
+Theorem relevance_subst_eq {cf} u s : relevance_of_sort (subst_instance_univ u s) = relevance_of_sort s.
+Proof.
+  now destruct s.
+Qed.
+
+Theorem relevance_subst_opt {cf} u s rel :
+  isSortRelOpt s rel -> isSortRelOpt (subst_instance_univ u s) rel.
+Proof.
+  now destruct s.
+Qed.
+
+Theorem relevance_subst {cf} u s rel :
+  isSortRel s rel -> isSortRel (subst_instance_univ u s) rel.
+Proof.
+  now destruct s.
+Qed.
+
 
 (** Tests that the term is closed over [k] universe variables *)
 Section Closedu.

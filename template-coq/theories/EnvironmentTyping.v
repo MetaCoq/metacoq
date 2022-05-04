@@ -273,12 +273,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
     | localenv_cons_abs Γ na t :
         All_local_env Γ ->
-        typing Γ t Sort ->
+        typing Γ t (SortRel na.(binder_relevance)) ->
         All_local_env (Γ ,, vass na t)
 
     | localenv_cons_def Γ na b t :
         All_local_env Γ ->
-        typing Γ t Sort ->
+        typing Γ t (SortRel na.(binder_relevance)) ->
         typing Γ b (Typ t) ->
         All_local_env (Γ ,, vdef na b t).
   Derive Signature NoConfusion for All_local_env.
@@ -331,13 +331,13 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       := localenv_nil.
 
     Definition All_local_rel_abs {P Γ Γ' A na} :
-      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') A Sort
+      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') A (SortRel na.(binder_relevance))
       -> All_local_rel P Γ (Γ',, vass na A)
       := localenv_cons_abs.
 
     Definition All_local_rel_def {P Γ Γ' t A na} :
       All_local_rel P Γ Γ' ->
-      P (Γ ,,, Γ') A Sort ->
+      P (Γ ,,, Γ') A (SortRel na.(binder_relevance)) ->
       P (Γ ,,, Γ') t (Typ A) ->
       All_local_rel P Γ (Γ',, vdef na t A)
       := localenv_cons_def.
@@ -395,29 +395,35 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Definition on_local_decl (P : context -> term -> typ_or_sort -> Type) Γ d :=
     match d.(decl_body) with
     | Some b => P Γ b (Typ d.(decl_type))
-    | None => P Γ d.(decl_type) Sort
+    | None => P Γ d.(decl_type) (SortRel d.(decl_name).(binder_relevance))
     end.
   
+  Lemma All_local_env_inv P (d : context_decl) (Γ : context) (X : All_local_env P (Γ ,, d)) :
+    on_local_decl P Γ d * All_local_env P Γ.
+  Proof.
+    inv X; intuition; red; simpl; eauto.
+  Qed.
+
   Definition on_def_type (P : context -> term -> typ_or_sort -> Type) Γ d :=
-    P Γ d.(dtype) Sort.
+    P Γ d.(dtype) (SortRel d.(dname).(binder_relevance)).
   
   Definition on_def_body (P : context -> term -> typ_or_sort -> Type) types Γ d :=
     P (Γ ,,, types) d.(dbody) (Typ (lift0 #|types| d.(dtype))).
 
   Definition lift_judgment
     (check : global_env_ext -> context -> term -> term -> Type)
-    (infer_sort : global_env_ext -> context -> term -> Type) :
+    (infer_sort : global_env_ext -> context -> term -> option relevance -> Type) :
     (global_env_ext -> context -> term -> typ_or_sort -> Type) :=
     fun Σ Γ t T =>
     match T with
     | Typ T => check Σ Γ t T
-    | Sort => infer_sort Σ Γ t
+    | Sort relopt => infer_sort Σ Γ t relopt
     end.
   
   Lemma lift_judgment_impl {P Ps Q Qs Σ Σ' Γ Γ' t t' T} :
     lift_judgment P Ps Σ Γ t T ->
     (forall T, P Σ Γ t T -> Q Σ' Γ' t' T) ->
-    (Ps Σ Γ t -> Qs Σ' Γ' t') ->
+    (forall relopt, Ps Σ Γ t relopt -> Qs Σ' Γ' t' relopt) ->
     lift_judgment Q Qs Σ' Γ' t' T.
   Proof.
     intros HT HPQ HPsQs.
@@ -428,9 +434,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   (* Common uses *)
 
-  Definition lift_wf_term wf_term := (lift_judgment (fun Σ Γ t T => wf_term Σ Γ t × wf_term Σ Γ T) wf_term).
+  Definition lift_wf_term wf_term := (lift_judgment (fun Σ Γ t T => wf_term Σ Γ t × wf_term Σ Γ T) (fun Σ Γ t relopt => wf_term Σ Γ t)).
 
-  Definition infer_sort (sorting : global_env_ext -> context -> term -> Universe.t -> Type) := (fun Σ Γ T => { s : Universe.t & sorting Σ Γ T s }).
+  Definition infer_sort (sorting : global_env_ext -> context -> term -> Universe.t -> Type) :=
+    (fun Σ Γ T relopt => { s : Universe.t & isSortRelOpt s relopt × sorting Σ Γ T s }).
   Notation typing_sort typing := (fun Σ Γ T s => typing Σ Γ T (tSort s)).
   
   Definition lift_typing typing := lift_judgment typing (infer_sort (typing_sort typing)).
@@ -440,20 +447,22 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Definition lift_typing2 P Q := lift_typing (Prop_conj P Q).
 
-  Lemma infer_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} :
-    forall f, forall tu: infer_sort P Σ Γ t,
+  Lemma infer_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} {relopt} :
+    forall f, (forall s r, isSortRelOpt s r -> isSortRelOpt (f s) r) ->
+    forall tu: infer_sort P Σ Γ t relopt,
     let s := tu.π1 in
     (P Σ Γ t s -> Q Σ' Γ' t' (f s)) ->
-    infer_sort Q Σ' Γ' t'.
+    infer_sort Q Σ' Γ' t' relopt.
   Proof.
-    intros ? (? & Hs) s HPQ. eexists. now apply HPQ.
+    intros ? Hf (? & e & Hs) s HPQ. eexists. now split; [apply Hf | apply HPQ].
   Qed.
 
-  Lemma infer_typing_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} :
-    forall f, forall tu: infer_sort (typing_sort P) Σ Γ t,
+  Lemma infer_typing_sort_impl {P Q} {Σ Σ' : global_env_ext} {Γ Γ' : context} {t t' : term} {relopt} :
+    forall f (Hf : forall s r, isSortRelOpt s r -> isSortRelOpt (f s) r),
+    forall tu: infer_sort (typing_sort P) Σ Γ t relopt,
     let s := tu.π1 in
     (P Σ Γ t (tSort s) -> Q Σ' Γ' t' (tSort (f s))) ->
-    infer_sort (typing_sort Q) Σ' Γ' t'.
+    infer_sort (typing_sort Q) Σ' Γ' t' relopt.
   Proof.
     apply (infer_sort_impl (P := typing_sort P) (Q := typing_sort Q)).
   Qed.
@@ -465,18 +474,18 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Proof.
     intros HT HPQ.
     apply lift_judgment_impl with (1 := HT); tas.
-    intro Hs; apply infer_typing_sort_impl with id Hs; apply HPQ.
+    intros relopt Hs; apply infer_typing_sort_impl with id Hs => //. apply HPQ.
   Qed.
 
   Section TypeLocalOver.
     Context (checking : global_env_ext -> context -> term -> term -> Type).
-    Context (sorting : global_env_ext -> context -> term -> Type).
+    Context (sorting : global_env_ext -> context -> term -> option relevance -> Type).
     Context (cproperty : forall (Σ : global_env_ext) (Γ : context),
                 All_local_env (lift_judgment checking sorting Σ) Γ ->
                 forall (t T : term), checking Σ Γ t T -> Type).
     Context (sproperty : forall (Σ : global_env_ext) (Γ : context),
                 All_local_env (lift_judgment checking sorting Σ) Γ ->
-                forall (t : term), sorting Σ Γ t -> Type).
+                forall (t : term) (relopt : option relevance), sorting Σ Γ t relopt -> Type).
 
     Inductive All_local_env_over_gen (Σ : global_env_ext) :
         forall (Γ : context), All_local_env (lift_judgment checking sorting Σ) Γ -> Type :=
@@ -486,8 +495,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | localenv_over_cons_abs Γ na t
         (all : All_local_env (lift_judgment checking sorting Σ) Γ) :
         All_local_env_over_gen Σ Γ all ->
-        forall (tu : lift_judgment checking sorting Σ Γ t Sort)
-          (Hs: sproperty Σ Γ all _ tu),
+        forall (tu : lift_judgment checking sorting Σ Γ t (SortRel na.(binder_relevance)))
+          (Hs: sproperty Σ Γ all _ _ tu),
           All_local_env_over_gen Σ (Γ ,, vass na t)
                               (localenv_cons_abs all tu)
 
@@ -495,8 +504,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
         (all : All_local_env (lift_judgment checking sorting Σ) Γ) (tb : checking Σ Γ b t) :
         All_local_env_over_gen Σ Γ all ->
         forall (Hc: cproperty Σ Γ all _ _ tb),
-        forall (tu : lift_judgment checking sorting Σ Γ t Sort)
-          (Hs: sproperty Σ Γ all _ tu),
+        forall (tu : lift_judgment checking sorting Σ Γ t (SortRel na.(binder_relevance)))
+          (Hs: sproperty Σ Γ all _ _ tu),
           All_local_env_over_gen Σ (Γ ,, vdef na b t)
                               (localenv_cons_def all tu tb).
 
@@ -504,10 +513,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Derive Signature for All_local_env_over_gen.
 
   Definition All_local_env_over typing property :=
-    (All_local_env_over_gen typing (infer_sort (typing_sort typing)) property (fun Σ Γ H t tu => property _ _ H _ _ tu.π2)).
+    (All_local_env_over_gen typing (infer_sort (typing_sort typing)) property (fun Σ Γ H t relopt tu => property _ _ H _ _ tu.π2.2)).
   
   Definition All_local_env_over_sorting checking sorting cproperty (sproperty : forall Σ Γ _ t s, sorting Σ Γ t s -> Type) :=
-    (All_local_env_over_gen checking (infer_sort sorting) cproperty (fun Σ Γ H t tu => sproperty Σ Γ H t tu.π1 tu.π2)).
+    (All_local_env_over_gen checking (infer_sort sorting) cproperty (fun Σ Γ H t relopt tu => sproperty Σ Γ H t tu.π1 tu.π2.2)).
 
   Section TypeCtxInst.
     Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -574,20 +583,20 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Section lift_judgment_size.
     Context {checking : global_env_ext -> context -> term -> term -> Type}.
-    Context {sorting : global_env_ext -> context -> term -> Type}.
+    Context {sorting : global_env_ext -> context -> term -> option relevance -> Type}.
     Context (csize : forall (Σ : global_env_ext) (Γ : context) (t T : term), checking Σ Γ t T -> size).
-    Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term), sorting Σ Γ t -> size).
+    Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term) (relopt : option relevance), sorting Σ Γ t relopt -> size).
 
     Definition lift_judgment_size Σ Γ t T (w : lift_judgment checking sorting Σ Γ t T) : size :=
       match T return lift_judgment checking sorting Σ Γ t T -> size with
       | Typ T => csize _ _ _ _
-      | Sort => ssize _ _ _
+      | Sort relopt => ssize _ _ _ _
       end w.
   End lift_judgment_size.
 
   Implicit Types (Σ : global_env_ext) (Γ : context) (t : term).
 
-  Notation infer_sort_size  typing_size := (fun Σ Γ t   (tu: infer_sort _ Σ Γ t) => let 'existT s d := tu in typing_size Σ Γ t s d).
+  Notation infer_sort_size  typing_size := (fun Σ Γ t r (tu: infer_sort _ Σ Γ t r) => let '(s; (e, d)) := tu in typing_size Σ Γ t s d).
   Notation typing_sort_size typing_size := (fun Σ Γ t s (tu: typing_sort _ Σ Γ t s) => typing_size Σ Γ t (tSort s) tu).
 
   Section Regular.
@@ -674,6 +683,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Context {cf: checker_flags}.
     Context (Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type).
     Context (P : global_env_ext -> context -> term -> typ_or_sort -> Type).
+
     Definition on_context Σ ctx :=
       All_local_env (P Σ) ctx.
 
@@ -683,23 +693,26 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
       | [] => wf_universe Σ u
-      | {| decl_body := None;   decl_type := t |} :: Δ => type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) t (Typ (tSort u))
-      | {| decl_body := Some b; decl_type := t |} :: Δ => type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) t Sort × P Σ (Γ ,,, Δ) b (Typ t)
+      | {| decl_name := na; decl_body := None; decl_type := t |} :: Δ =>
+        type_local_ctx Σ Γ Δ u × isSortRel u na.(binder_relevance) × P Σ (Γ ,,, Δ) t (Typ (tSort u))
+      | {| decl_name := na; decl_body := Some b; decl_type := t |} :: Δ =>
+        type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) t (SortRel na.(binder_relevance)) × P Σ (Γ ,,, Δ) b (Typ t)
       end.
 
     Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list Universe.t) : Type :=
       match Δ, us with
       | [], [] => unit
-      | {| decl_body := None;   decl_type := t |} :: Δ, u :: us => 
-        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) t (Typ (tSort u))
-      | {| decl_body := Some b; decl_type := t |} :: Δ, us => 
-        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) t Sort × P Σ (Γ ,,, Δ) b (Typ t)
+      | {| decl_name := na; decl_body := None; decl_type := t |} :: Δ, u :: us => 
+        sorts_local_ctx Σ Γ Δ us × isSortRel u na.(binder_relevance) × P Σ (Γ ,,, Δ) t (Typ (tSort u))
+      | {| decl_name := na; decl_body := Some b; decl_type := t |} :: Δ, us => 
+        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) t (SortRel na.(binder_relevance)) × P Σ (Γ ,,, Δ) b (Typ t)
       | _, _ => False
       end.
 
     Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body).
 
-    Definition on_type Σ Γ T := P Σ Γ T Sort.
+    Definition on_type Σ Γ T := P Σ Γ T (Sort None).
+    Definition on_type_rel Σ Γ T rel := P Σ Γ T (SortRel rel).
 
     Open Scope type_scope.
 
@@ -1065,7 +1078,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
                                 (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort)));
 
         (** It must be well-typed in the empty context. *)
-        onArity : on_type Σ [] idecl.(ind_type);
+        onArity : on_type_rel Σ [] idecl.(ind_type) idecl.(ind_relevance);
 
         (** The sorts of the arguments contexts of each constructor *)
         ind_cunivs : list constructor_univs;
@@ -1089,6 +1102,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           idecl.(ind_indices) ind_cunivs idecl.(ind_sort);
+        
+        ind_relevance_compat : isSortRel idecl.(ind_sort) idecl.(ind_relevance);
 
         onIndices : 
           (* The inductive type respect the variance annotation on polymorphic universes, if any. *)
@@ -1189,6 +1204,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
   Arguments onConstructors {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments onProjections {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments ind_sorts {_ Pcmp P Σ mind mdecl i idecl}.
+  Arguments ind_relevance_compat {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments onIndices {_ Pcmp P Σ mind mdecl i idecl}.
 
   Arguments onInductives {_ Pcmp P Σ mind mdecl}.
@@ -1218,25 +1234,17 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     destruct u; auto. intuition eauto.
   Qed.
 
-  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
-    (forall Σ Γ t T,
-        on_global_env Pcmp P Σ.1 -> 
-        on_global_env Pcmp Q Σ.1 ->
-        P Σ Γ t T -> Q Σ Γ t T) ->
-    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+  Lemma on_global_decl_impl {cf : checker_flags} Pcmp P Q Σ kn d :
+    (forall Γ t T,
+      on_global_env Pcmp P Σ.1 ->
+      P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env Pcmp P Σ.1 ->
+    on_global_decl Pcmp P Σ kn d -> on_global_decl Pcmp Q Σ kn d.
   Proof.
-    intros X Σ [cu IH]. split; auto.
-    revert cu IH; generalize (universes Σ) as univs, (declarations Σ). clear Σ.
-    induction g; intros; auto. constructor; auto.
-    depelim IH. specialize (IHg cu IH). constructor; auto.
-    pose proof (globenv_decl _ _ _ _ _ _ IH f o).
-    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl) Γ t T 
-      (cu, IH) (cu, IHg)); clear X.
-    rename X' into X.
-    clear IH IHg. destruct d; simpl.
+    intros X X0.
+    destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
-    - red in o. simpl in *.
-      destruct o0 as [onI onP onNP].
+    - intros [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
         refine {| ind_arity_eq := X1.(ind_arity_eq);
@@ -1264,11 +1272,25 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
             split.
             * apply ind_sorts0.
             * destruct indices_matter; auto.
-              eapply type_local_ctx_impl; eauto.
-              eapply ind_sorts0.
-        --- eapply X1.(onIndices).
+              eapply type_local_ctx_impl. eapply ind_sorts0. eauto.
+        --- apply X1.(ind_relevance_compat).
+        --- apply X1.(onIndices).
       -- red in onP. red.
-        eapply All_local_env_impl; tea.
+         eapply All_local_env_impl; eauto.
+  Qed.
+
+  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
+    (forall Σ Γ t T,
+        on_global_env Pcmp P Σ.1 ->
+        on_global_env Pcmp Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+  Proof.
+    intros X [univs Σ] [cu X0]; split => /= //. cbn in *.
+    induction X0; constructor; auto.
+    eapply on_global_decl_impl; tea.
+    - intros; apply X => //.
+    - split => //.
   Qed.
 
 End GlobalMaps.
@@ -1306,8 +1328,20 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
   Import T E L TU ET CT GM CS Ty.
 
+  Notation isTypeRelOpt Σ Γ t relopt := (lift_typing typing Σ Γ t (Sort relopt)).
+
   Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
-    infer_sort (typing_sort typing) Σ Γ t.
+    isTypeRelOpt Σ Γ t None.
+    (* { s : _ & True × Σ ;;; Γ |- t : tSort s }. *)
+
+  Definition isTypeRel `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) (rel: relevance) :=
+    isTypeRelOpt Σ Γ t (Some rel).
+    (* { s : _ & isSortRel s rel × Σ ;;; Γ |- t : Sort s }. *)
+
+  Definition isType_of_isTypeRel `{checker_flags} {Σ Γ t rel} (u: isTypeRel Σ Γ t rel) : isType Σ Γ t :=
+    match u with
+    | existT s (_, σ) => existT _ s (I, σ)
+    end.
 
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)
 
@@ -1382,6 +1416,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
             * destruct indices_matter; auto.
               eapply type_local_ctx_impl; eauto.
               eapply ind_sorts0.
+        --- apply X1.(ind_relevance_compat).
         --- eapply X1.(onIndices).
       -- red in onP. red.
         eapply All_local_env_impl; tea.

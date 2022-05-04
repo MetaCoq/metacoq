@@ -208,19 +208,21 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-Variant typ_or_sort_ {term} := Typ (T : term) | Sort.
+Variant typ_or_sort_ {term} := Typ (T : term) | Sort (relopt : option relevance).
 Arguments typ_or_sort_ : clear implicits.
+
+Definition SortRel {term} rel : typ_or_sort_ term := Sort (Some rel).
 
 Definition typ_or_sort_map {T T'} (f: T -> T') t :=
   match t with
   | Typ T => Typ (f T)
-  | Sort => Sort
+  | Sort relopt => Sort relopt
   end.
 
 Definition typ_or_sort_default {T A} (f: T -> A) t d :=
   match t with
   | Typ T => f T
-  | Sort => d
+  | Sort _ => d
   end.
 
 Section Contexts.

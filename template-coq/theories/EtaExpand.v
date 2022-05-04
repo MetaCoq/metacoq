@@ -958,8 +958,8 @@ Proof.
         -- eapply Forall_forall. intros x [ | (? & <- & [_ ?] % in_seq) % in_rev % in_map_iff]; subst.
            all: econstructor; rewrite nth_error_app1; [eapply nth_error_repeat; lia | rewrite repeat_length; lia].
     + econstructor. now rewrite nth_error_map, H1.
-  - cbn. econstructor. eapply (H1 (up Γ')); econstructor; eauto.
-  - cbn. econstructor. eauto. eapply (H2 (up Γ')); econstructor; eauto.
+  - cbn. econstructor. eapply (H2 (up Γ')); econstructor; eauto.
+  - cbn. econstructor. eauto. eapply (H3 (up Γ')); econstructor; eauto.
   - specialize (H _ H2).
     assert (Forall(fun t : term => expanded Σ0 (map
     (fun x : option (nat × term) =>
@@ -1148,7 +1148,7 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (? & ? & ?).
+      destruct a as (s & e & Hs1 & Hs2).
       destruct a0 as (? & ?).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
@@ -1170,7 +1170,7 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ? & ?) & ? & ?). cbn.
      specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
      rewrite map_app, map_repeat in e0. len. eapply e0.
      eapply Forall2_app; eauto. unfold types.
@@ -1387,7 +1387,7 @@ Proof.
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
     apply (eta_expand_expanded (Σ := g) [] [] t na wf ond). constructor.
-    destruct ond as [s Hs]. constructor => //.
+    destruct ond as (s & e & Hs). constructor => //.
   - destruct ond as [onI onP onN onV].
     constructor. cbn.
     eapply eta_expand_context => //.
@@ -1401,8 +1401,8 @@ Proof.
     pose proof onc.(on_cargs).
     eapply eta_expand_context_sorts in X0. now len in X0.
     len. len. 
-    pose proof onc.(on_ctype). destruct X0.
-    epose proof (eta_expand_expanded (Σ := g) _ (repeat None #|ind_bodies m|) _ _ wf t).
+    pose proof onc.(on_ctype). destruct X0 as (s & e & Hs).
+    epose proof (eta_expand_expanded (Σ := g) _ (repeat None #|ind_bodies m|) _ _ wf Hs).
     forward H. rewrite -arities_context_length.
     clear. induction (arities_context _); constructor; auto.
     now rewrite map_repeat in H.

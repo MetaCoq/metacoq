@@ -439,6 +439,8 @@ Definition tFixType {A} (P P' : A -> Type) (m : mfixpoint A) :=
 
 Ltac solve_all_one :=
   try lazymatch goal with
+  | H: [× _, _ & _] |- _ => destruct H
+  | H: [× _, _, _ & _] |- _ => destruct H
   | H: tCasePredProp _ _ _ |- _ => destruct H
   end;
   unfold tCaseBrsProp, tFixProp, tCaseBrsType, tFixType in *;

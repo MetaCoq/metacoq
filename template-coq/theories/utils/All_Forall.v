@@ -727,6 +727,12 @@ Proof.
   induction 1; simpl; constructor; auto.
 Qed.
 
+Lemma Alli_refl {A} (P : nat -> A -> Type) n (l : list A) :
+  (forall n x, P n x) -> Alli P n l.
+Proof.
+  intros H. induction l in n |- *; constructor; auto.
+Qed.
+
 Lemma Alli_rev {A} {P : nat -> A -> Type} k l :
   Alli P k l ->
   Alli (fun k' => P (Nat.pred #|l| - k' + k)) 0 (List.rev l).
@@ -3000,6 +3006,14 @@ Proof.
   apply All2i_length in a.
   apply All2i_length in a0.
   congruence.
+Qed.
+
+Lemma All2i_All2 {A B} {P : nat -> A -> B -> Type} {Q : A -> B -> Type} n l l' :
+  All2i P n l l' ->
+  (forall i x y, P i x y -> Q x y) ->
+  All2 Q l l'.
+Proof.
+  induction 1; constructor; eauto.
 Qed.
 
 Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}

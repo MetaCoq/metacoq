@@ -60,6 +60,8 @@ Inductive wf {Σ} : term -> Type :=
 Arguments wf : clear implicits.
 Derive Signature for wf.
 
+Definition wf_def Σ def := wf Σ def.(dtype) × wf Σ def.(dbody).
+
 (** * Inversion lemmas for the well-formedness judgement *)
 
 Definition wf_Inv Σ (t : term) : Type :=
@@ -88,8 +90,8 @@ Definition wf_Inv Σ (t : term) : Type :=
          wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
         wf Σ (bbody br)) idecl.(ind_ctors) brs]
   | tProj p t => wf Σ t
-  | tFix mfix k => All (fun def => wf Σ def.(dtype) * wf Σ def.(dbody)) mfix
-  | tCoFix mfix k => All (fun def => wf Σ def.(dtype) * wf Σ def.(dbody)) mfix
+  | tFix mfix k => All (wf_def Σ) mfix
+  | tCoFix mfix k => All (wf_def Σ) mfix
   end.
 
 Lemma wf_inv {Σ t} (w : wf Σ t) : wf_Inv Σ t.
@@ -182,16 +184,10 @@ Proof.
 Qed.
 
 Definition wf_decl Σ d :=
-  match decl_body d with
-  | Some b => wf Σ b
-  | None => True
-  end * wf Σ (decl_type d).
+  option_default (wf Σ) (decl_body d) True * wf Σ (decl_type d).
 
-Definition wf_decl_pred Σ : context -> term -> typ_or_sort -> Type :=
-  (fun _ t T => wf Σ t * match T with
-                        | Typ T => wf Σ T
-                        | Sort => True
-                        end).
+Definition wf_decl_pred Σ (Γ : context) t T : Type :=
+  wf Σ t × typ_or_sort_default (wf Σ) T True.
 
 Lemma wf_mkApp Σ u a : wf Σ u -> wf Σ a -> wf Σ (mkApp u a).
 Proof.

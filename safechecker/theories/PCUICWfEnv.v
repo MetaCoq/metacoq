@@ -183,3 +183,6 @@ Definition abstract_env_ext_sq_wf {cf:checker_flags} (X : abstract_env_ext_impl)
   destruct (abstract_env_ext_wf _ wfΣ).
   sq. auto.
 Qed.
+
+Notation "Σ '∼' X" := (abstract_env_rel X Σ) (at level 40).
+Notation "Σ '∼_ext' X" := (abstract_env_ext_rel X Σ) (at level 40). 

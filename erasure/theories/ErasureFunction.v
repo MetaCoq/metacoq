@@ -1549,13 +1549,10 @@ Proof.
           intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst. }
 Qed.
 
-Notation "'for' Σ '∼' X , P" := (forall Σ : global_env, abstract_env_rel X Σ -> P) (Σ binder, at level 100).
-Notation "'for' Σ '∼_ext' X , P" := (forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> P) (Σ binder, at level 100). 
-
 Lemma erase_correct (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1) 
   univs wfext t v Σ' t' deps decls prf :
   let Xext :=  abstract_make_wf_env_ext X univs wfext in
-  forall wt : for Σ ∼_ext Xext, welltyped Σ [] t,
+  forall wt : forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t,
   erase X_type.π2.π1 Xext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
   erase_global_decls deps X decls prf = Σ' ->
@@ -2334,23 +2331,11 @@ Proof.
   induction t0 in f |- *; econstructor; eauto; econstructor; eauto.
 Qed.
 
-(* 
-Lemma erase_correct (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1) 
-  univs wfext t v Σ' t' deps decls prf :
-  let Xext :=  abstract_make_wf_env_ext X univs wfext in
-  forall wt : for Σ ∼_ext Xext, welltyped Σ [] t,
-  erase X_type.π2.π1 Xext [] t wt = t' ->
-  KernameSet.subset (term_global_deps t') deps ->
-  erase_global_decls deps X decls prf = Σ' ->
-  (forall Σ : global_env, abstract_env_rel X Σ -> Σ |-p t ▷ v) ->
-  forall Σ : global_env_ext, abstract_env_ext_rel Xext Σ -> 
-  exists v', Σ ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥. *)
-
 Lemma firstorder_erases_deterministic X_type (X : X_type.π1) 
   univs wfext {t t' i u args mind} :
   let Xext :=  abstract_make_wf_env_ext X univs wfext in
-  forall wt : (for Σ ∼_ext Xext, welltyped Σ [] t), 
-  for Σ ∼_ext Xext, 
+  forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t), 
+  forall Σ, Σ ∼_ext Xext ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
   PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
@@ -2413,7 +2398,7 @@ From MetaCoq Require Import PCUICProgress.
 Lemma erase_correct_strong'  (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1) 
 univs wfext {t v Σ' t' deps i u args mind} decls prf :
 let Xext :=  abstract_make_wf_env_ext X univs wfext in
-forall wt : (for Σ ∼_ext Xext, welltyped Σ [] t), 
+forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t), 
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args -> 
@@ -2440,7 +2425,7 @@ Qed.
 Lemma erase_correct_strong  (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1) 
 univs wfext {t v Σ' t' deps i u args mind} decls prf :
 let Xext :=  abstract_make_wf_env_ext X univs wfext in
-forall wt : (for Σ ∼_ext Xext, welltyped Σ [] t), 
+forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t), 
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args -> 

@@ -495,9 +495,9 @@ Proof.
   unfold clauses_conclusions.
 Admitted.
 
-Definition v_minus_w_bound (V W : LevelSet.t) (m : model) := 
+Definition v_minus_w_bound (W : LevelSet.t) (m : model) := 
   LevelMap.fold (fun w v acc => Nat.max v acc) 
-    (LevelMapFact.filter (fun l _ => LevelSet.mem l (LevelSet.diff V W)) m) 0.
+    (LevelMapFact.filter (fun l _ => ~~ LevelSet.mem l W) m) 0.
 
 Definition levelexpr_k : LevelExpr.t -> nat := snd.
 Coercion levelexpr_k : LevelExpr.t >-> nat.
@@ -570,7 +570,10 @@ Lemma check_model_spec cls w m :
   forall w' m', check_model cls (w, m) = Some (w', m') -> 
   [/\ w ⊂_lset w',
       w' ⊂_lset (LevelSet.union w (clauses_conclusions cls)),
-      exists l, LevelSet.In l w' /\ level_value m l < level_value m' l <= max_gain cls,
+      exists cl, 
+        let cll := (levelexpr_level (concl cl)) in
+        [/\ Clauses.In cl cls, ~~ valid_clause m cl,
+         LevelSet.In cll w' & level_value m cll < level_value m' cll <= max_gain cls],
       model_same_domain m m' &
       model_map_outside w' m m'].
 Proof. Admitted.
@@ -590,30 +593,21 @@ Arguments model_above {V m cls}.
 Arguments model_domains {V m cls}.
 Arguments model_outside {V m cls}.
 
-Inductive result (V : LevelSet.t) (cls : clauses) (m : model) :=
+Inductive result (V U : LevelSet.t) (cls : clauses) (m : model) :=
   | Loop
-  | Model (w : LevelSet.t) (m : valid_model V m cls) (prf : LevelSet.subset w V).
-Arguments Loop {V cls m}.
-Arguments Model {V cls m}.
+  | Model (w : LevelSet.t) (m : valid_model V m cls) (prf : U ⊂_lset w /\ w ⊂_lset V).
+Arguments Loop {V U cls m}.
+Arguments Model {V U cls m}.
 Arguments lexprod {A B}.
 
-Definition option_of_result {V m cls} (r : result V m cls) : option model :=
+Definition option_of_result {V U m cls} (r : result V U m cls) : option model :=
   match r with
   | Loop => None
   | Model w m sub => Some m.(model_model)
   end. 
 
-(* Definition lexprod_rel := lexprod lt lt.
-
-#[local] Instance lexprod_rel_wf : WellFounded lexprod_rel.
-Proof.
-  eapply (Acc_intro_generator 1000). unfold lexprod_rel. eapply wf_lexprod, lt_wf. eapply lt_wf.
-Defined.
-
-Opaque lexprod_rel_wf. *)
- 
 #[tactic="idtac"]
-Equations? result_inclusion {V m cls V'} (r : result V cls m) (prf : LevelSet.Subset V V') : result V' cls m :=
+Equations? result_inclusion {V U m cls V'} (r : result V U cls m) (prf : LevelSet.Subset V V') : result V' U cls m :=
   result_inclusion Loop _ := Loop;
   result_inclusion (Model w m' sub) sub' := 
     Model w {| model_model := m'.(model_model) |} _.
@@ -622,10 +616,9 @@ Proof.
   - apply m'.
   - apply m'.
   - apply m'.
-  - intros x hin. apply m'. intros hv. apply LevelSet.subset_spec in sub.
+  - intros x hin. apply m'. intros hv.
     apply sub' in hv. now apply hin.
-  - eapply LevelSet.subset_spec. eapply LevelSet.subset_spec in sub.
-    now transitivity V.
+  - intuition lsets.
 Qed.
 
 
@@ -997,11 +990,11 @@ Proof.
   intros cl cl' eqcl x y ->. unfold is_model. now rewrite eqcl.
 Qed.
 
-Definition extends_model {W cls m m'} : 
+Definition extends_model {W U cls m m'} : 
   m' ⩽ m ->
   model_same_domain m' m ->
   model_map_outside W m' m ->
-  result W cls m -> result W cls m'.
+  result W U cls m -> result W U cls m'.
 Proof.
   intros leq ldom lout []. exact Loop.
   econstructor 2; tea.
@@ -1087,11 +1080,18 @@ Notation cls_diff cls W := (Clauses.diff (cls ↓ W) (cls ⇂ W)) (only parsing)
     - eapply LevelSet.subset_spec. eapply LevelSet.subset_spec in sub.
       now transitivity V.
   Qed.
+  
   *)
 
-Lemma v_minus_w_bound_irrel {V W} m m' : 
+Lemma not_mem l s : ~~ LevelSet.mem l s <-> ~ LevelSet.In l s.
+Proof.
+  split. apply contraNnot. apply LevelSet.mem_spec.
+  eapply contra_notN; tea. now move/LevelSet.mem_spec.
+Qed.
+
+Lemma v_minus_w_bound_irrel {W} m m' : 
   model_map_outside W m m' ->
-  v_minus_w_bound V W m = v_minus_w_bound V W m'.
+  v_minus_w_bound W m = v_minus_w_bound W m'.
 Proof.
   unfold v_minus_w_bound.
   intros out. eapply LevelMapFact.fold_Equal. tc. cbn.
@@ -1102,8 +1102,7 @@ Proof.
   2:{ intros x y eq. eapply MoreLevel.compare_eq in eq. subst y. solve_proper. }
   rewrite -> LevelMapFact.filter_iff.
   2:{ move=> x y /MoreLevel.compare_eq ->. solve_proper. }
-  rewrite LevelSet.mem_spec LevelSet.diff_spec.
-  intuition auto.
+  rewrite [_ = true]not_mem. intuition auto.
   - now apply out.
   - now apply out.
 Qed.
@@ -1292,8 +1291,8 @@ Proof.
     now rewrite hl.
 Qed.
 
-Lemma v_minus_w_bound_spec V W m : 
-  forall x, LevelSet.In x (LevelSet.diff V W) -> level_value m x <= v_minus_w_bound V W m.
+Lemma v_minus_w_bound_spec W m : 
+  forall x, ~ LevelSet.In x W -> level_value m x <= v_minus_w_bound W m.
 Proof.
   intros x him.
   unfold v_minus_w_bound.
@@ -1311,7 +1310,7 @@ Proof.
       assert (LevelMap.MapsTo x n fm).
       eapply LevelMapFact.filter_iff.
       { intros ? ? ?. eapply MoreLevel.compare_eq in H. subst x0; solve_proper. }
-      split => //. now eapply LevelSet.mem_spec.
+      split => //. now rewrite [_ = true]not_mem.
       now rewrite (LevelMap.find_1 H)  in hl. }
   clearbody fm.
   eapply LevelMapFact.fold_rec.
@@ -1389,17 +1388,28 @@ Proof.
   firstorder auto.
 Qed.
 
-Definition bounded_model V W m := 
-  forall x, ~ LevelSet.In x W -> level_value m x <= v_minus_w_bound V W m.
+Definition bounded_model W m := 
+  forall x, ~ LevelSet.In x W -> level_value m x <= v_minus_w_bound W m.
   
+Notation "#| V |" := (LevelSet.cardinal V).
+
+Notation loop_measure V W := (#|V|, #|V| - #|W|).
+
+Definition lexprod_rel := lexprod lt lt.
+
+#[local] Instance lexprod_rel_wf : WellFounded lexprod_rel.
+Proof.
+  eapply (Acc_intro_generator 1000). unfold lexprod_rel. eapply wf_lexprod, lt_wf. eapply lt_wf.
+Defined.
+
 Section InnerLoop.
-  Context (V : LevelSet.t) 
-    (loop : forall (V' : LevelSet.t) (cls : clauses) (m : model),
-    (* (p : bounded_model V LevelSet.empty m), *)
-    LevelSet.cardinal V' < LevelSet.cardinal V -> result V' cls m). 
+  Context (V : LevelSet.t) (U : LevelSet.t)
+    (loop : forall (V' U' : LevelSet.t) (cls : clauses) (m : model)
+    (prf : clauses_conclusions cls ⊂_lset V' /\ U' ⊂_lset V'),
+    lexprod_rel (loop_measure V' U') (loop_measure V U) -> result V' U' cls m). 
   
   Definition measure (W : LevelSet.t) (cls : clauses) (m : model) : nat := 
-    let bound := v_minus_w_bound V W m in
+    let bound := v_minus_w_bound W m in
     let cls := (Clauses.diff (cls ↓ W) (cls ⇂ W)) in
     let maxgain := max_gain cls in 
     LevelSet.fold (fun w acc => 
@@ -1424,17 +1434,17 @@ Section InnerLoop.
 
   Lemma measure_model W cls m :
     (* clauses_levels cls ⊂_lset V -> *)
-    (* bounded_model V W m -> *)
+    (* bounded_model W m -> *)
     let clsdiff := cls_diff cls W in
     measure W cls m = 0 -> is_model clsdiff m.
   Proof using.
-    clear loop. 
+    clear loop V U.  
     unfold measure, is_model.
     set (clsdiff := Clauses.diff _ _).
     intros hm.
-    assert (LevelSet.For_all (fun w => v_minus_w_bound V W m + max_gain clsdiff <= level_value m w) W).
+    assert (LevelSet.For_all (fun w => v_minus_w_bound W m + max_gain clsdiff <= level_value m w) W).
     { move: hm.
-      generalize (v_minus_w_bound V W m) => vbound.
+      generalize (v_minus_w_bound W m) => vbound.
       eapply LevelSetProp.fold_rec.
       intros. intros x hin. firstorder eauto.
       intros x a s' s'' inw nins' hadd ih heq.
@@ -1479,7 +1489,7 @@ Section InnerLoop.
       pose proof (premise_min_subset preml prem).
       rewrite !Z2Nat.inj_sub //; try lia. rewrite !Nat2Z.id.
       forward H2. eapply non_W_atoms_subset. lia. }
-    transitivity (v_minus_w_bound V W m + Z.to_nat (gain (preml, (l, k)))).
+    transitivity (v_minus_w_bound W m + Z.to_nat (gain (preml, (l, k)))).
     2:lia.
     unfold gain. cbn -[max_premise_value premise_min].
     assert (premise_min preml <= max_premise_value m preml).
@@ -1491,9 +1501,9 @@ Section InnerLoop.
       (max_premise_value m preml + k - premise_min preml)) as ->. lia.
     rewrite Z2Nat.inj_sub. lia.
     rewrite !Nat2Z.id.
-    assert (max_premise_value m preml <= v_minus_w_bound V W m).
+    assert (max_premise_value m preml <= v_minus_w_bound W m).
     { rewrite eqmaxpre.
-      eapply clsv.
+      apply v_minus_w_bound_spec.
       intros hin. 
       have [hlevels _] := (@levels_exprs_non_W_atoms W prem (levelexpr_level exmax)).
       rewrite levelexprset_levels_spec in hlevels.
@@ -1545,7 +1555,7 @@ Section InnerLoop.
 
   Lemma bounded_model_mon W m m' :
     model_map_outside W m m' ->
-    bounded_model V W m -> bounded_model V W m'.
+    bounded_model W m -> bounded_model W m'.
   Proof.
     intros hle. unfold bounded_model.
     intros h x hnw.
@@ -1558,8 +1568,8 @@ Section InnerLoop.
   #[tactic="idtac"]
   Equations? inner_loop (W : LevelSet.t) (cls : clauses) (init : model) 
     (m : valid_model W init (cls ⇂ W))
-    (prf : [/\ strict_subset W V, ~ LevelSet.Empty W & bounded_model V W m.(model_model)]) : 
-    result W (cls ↓ W) m.(model_model)
+    (prf : [/\ strict_subset W V, ~ LevelSet.Empty W & U ⊂_lset W]) : 
+    result W U (cls ↓ W) m.(model_model)
     by wf (measure W cls m.(model_model)) lt :=
     inner_loop W cls init m subWV with inspect (measure W cls m.(model_model)) := {
     | exist 0 eq => 
@@ -1567,7 +1577,7 @@ Section InnerLoop.
       Model W {| model_model := m.(model_model) |} _
     | exist (S n) neq with inspect (check_model (Clauses.diff (cls ↓ W) (cls ⇂ W)) (W, m.(model_model))) := { 
         | exist None eqm => Model W {| model_model := m.(model_model) |} _
-        | exist (Some (Wconcl, mconcl)) eqm with loop W (cls ⇂ W) mconcl _ _ := {
+        | exist (Some (Wconcl, mconcl)) eqm with loop W W (cls ⇂ W) mconcl _ _ := {
           | Loop => Loop
           | Model Wr mr hsub with inner_loop W cls mconcl mr _ := {
             | Loop => Loop
@@ -1582,36 +1592,36 @@ Section InnerLoop.
     all:try solve [try apply LevelSet.subset_spec; try reflexivity].
     all:try apply LevelSet.subset_spec in hsub.
     all:auto.
-    all:try destruct subWV as [WV neW clsV clsW].
+    all:try destruct subWV as [WV neW UW].
     all:try solve [intuition auto].
     - apply clauses_conclusions_clauses_with_concl.
     - rewrite check_model_is_model.
       eapply is_model_equal. 2:eapply is_model_union.
       2:{ pose proof (model_ok m). eapply check_model_is_model in H. exact H. }
-      2:{ eapply measure_model. exact clsV. exact eq. }
+      2:{ eapply measure_model. exact eq. }
       rewrite union_diff_eq.
       enough (cls ⇂ W ⊂_clset (cls ↓ W)) by clsets.
       { intros cl.
         move/in_restrict_clauses => [hin hcl].
         now rewrite in_clauses_with_concl. }
-    - red. intros. unfold v_minus_w_bound. todo "true".
-       (* apply clauses_levels_restrict_clauses. *)
-       (* rewrite clauses_levels_specs. apply clauses_conclusions_restrict_clauses. *)
-    - now eapply strict_subset_cardinal.
-    - split => //.  move: clsV.
-      eapply bounded_model_mon.
-      transitivity mconcl. 2:eapply mr.    
-      eapply check_model_spec in eqm as [wrsub subwr hm hout].
-      eapply model_map_outside_weaken; tea.
-      { etransitivity; tea.
-        intros l'.
-        rewrite LevelSet.union_spec; move => []; try lsets.
-        now move/clauses_conclusions_diff_left. }
+    - split => //.
+    - split => //. apply clauses_conclusions_restrict_clauses.
+    - left. now eapply strict_subset_cardinal.
+    (* - split => //.  move: clsV. *)
+      (* eapply bounded_model_mon. *)
+      (* transitivity mconcl. 2:eapply mr.     *)
+      (* eapply check_model_spec in eqm as [wrsub subwr hm hout]. *)
+      (* eapply model_map_outside_weaken; tea. *)
+      (* { etransitivity; tea. *)
+        (* intros l'. *)
+        (* rewrite LevelSet.union_spec; move => []; try lsets. *)
+        (* now move/clauses_conclusions_diff_left. } *)
     - unfold measure.
       pose proof (check_model_update eqm) as [nmodel lem].
-      eapply check_model_spec in eqm as [wrsub subwr hm hout].
-      destruct hm as [l [hinw hl]].
-      assert (v_minus_w_bound V W (model_model mr) = v_minus_w_bound V W (model_model m)) as ->. 
+      eapply check_model_spec in eqm as [wrsub subwr hm hsame hout].
+      destruct hm as [cll [hind nvalid inwconcl hl]].
+      set (l := levelexpr_level (concl cll)) in *.
+      assert (v_minus_w_bound W (model_model mr) = v_minus_w_bound W (model_model m)) as ->. 
       { (* Because we don't touch V - W levels *)
         cbn in lem. pose proof (model_above mr).
         symmetry.
@@ -1640,7 +1650,7 @@ Section InnerLoop.
         intros acc acc' hacc.
         set (clsdiff := Clauses.diff _ _) in *.
         assert (level_value (model_model m) l <= 
-          v_minus_w_bound V W (model_model m) + max_gain clsdiff).
+          v_minus_w_bound W (model_model m) + max_gain clsdiff).
         { destruct hl. lia. }
         assert (level_value (model_model m) l <= level_value (model_model mr) l).
         { eapply model_le_values. transitivity mconcl => //. apply mr. }
@@ -1671,23 +1681,95 @@ Section InnerLoop.
       have okm := (model_ok m). rewrite check_model_is_model in okm.
       have mu := is_model_union okm eqm. rewrite union_diff_eq in mu.
       now rewrite union_restrict_with_concl in mu.
+    - split => //.
   Qed.
 
 End InnerLoop.
 
-Equations? loop (V : LevelSet.t) (cls : clauses) (m : model) 
-  (prf : bounded_model V LevelSet.empty m) : result V cls m
-  by wf (LevelSet.cardinal V) lt :=
-  loop V cls m prf with inspect (check_model cls (LevelSet.empty, m)) :=
-    | exist None eqm => Model LevelSet.empty {| model_model := m |} _
+Lemma is_model_le cls (m m' : model) : m ⩽ m' -> is_model cls m -> is_model cls m'.
+Proof.
+  intros hle.
+  unfold is_model.
+  rewrite /is_true -!ClausesFact.for_all_iff.
+  intros hcl cl hin.
+  specialize (hcl _ hin).
+  cbn in hcl.
+  unfold valid_clause in *.
+  case: Z.ltb_spec => //.
+  intros heq.
+  destruct cl as [prem [l k]]; cbn in *.
+  move: hcl.
+  case: Z.ltb_spec.
+  intros min' _.
+Admitted.
+ 
+(* Lemma is_model_extends {cls cls'} m m' : 
+  is_model cls m ->
+  is_model cls' m' ->
+ *)
+
+Infix "∪" := LevelSet.union (at level 70).
+
+Lemma diff_cardinal_inter V W : #|LevelSet.diff V W| = #|V| - #|LevelSet.inter V W|.
+Proof.
+  pose proof (LevelSetProp.diff_inter_cardinal V W). lia.
+Qed.
+
+Lemma diff_cardinal V W : W ⊂_lset V -> #|LevelSet.diff V W| = #|V| - #|W|.
+Proof.
+  intros hsub.
+  rewrite diff_cardinal_inter LevelSetProp.inter_sym LevelSetProp.inter_subset_equal //.
+Qed.
+
+Lemma is_modelP m cls : reflect (Clauses.For_all (valid_clause m) cls) (is_model cls m).
+Proof.
+  case E: is_model; constructor.
+  - now move: E; rewrite /is_model -ClausesFact.for_all_iff.
+  - intros hf. apply ClausesFact.for_all_iff in hf; tc. unfold is_model in E; congruence.  
+Qed.
+
+Lemma is_model_invalid_clause cl cls m : is_model cls m -> ~~ valid_clause m cl -> ~ Clauses.In cl cls.
+Proof.
+  move/is_modelP => ism /negP valid hin.
+  now specialize (ism _ hin).
+Qed.
+
+Lemma strict_subset_leq_right U V W :
+  strict_subset U V -> V ⊂_lset W -> strict_subset U W.
+Proof.
+  intros [] le. split. lsets. intros eq. rewrite -eq in le.
+  apply H0. lsets.
+Qed.
+
+Lemma strict_subset_diff_incl V W W' :
+  strict_subset W' W ->
+  W ⊂_lset V ->
+  W' ⊂_lset V ->
+  strict_subset (LevelSet.diff V W) (LevelSet.diff V W').
+Proof.
+  intros [] lew lew'.
+  split. lsets.
+  intros eq.
+  apply H0. lsets.
+Qed.
+
+(* To help equations *)
+Opaque lexprod_rel_wf.
+
+#[tactic="idtac"]
+Equations? loop (V : LevelSet.t) (U : LevelSet.t) (cls : clauses) (m : model)
+  (prf : clauses_conclusions cls ⊂_lset V /\ U ⊂_lset V) : result V U cls m
+  by wf (loop_measure V U) lexprod_rel :=
+  loop V U cls m prf with inspect (check_model cls (U, m)) :=
+    | exist None eqm => Model U {| model_model := m |} _
     | exist (Some (W, m')) eqm with inspect (LevelSet.equal W V) := {
       | exist true eq := Loop
       (* Loop on cls|W, with |W| < |V| *)
-      | exist false neq with loop W (cls ⇂ W) m' _ := {
+      | exist false neq with loop W W (cls ⇂ W) m' _ := {
         | Loop := Loop
         | Model Wr mwr hsub
           (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W). *)
-          with inner_loop V loop W cls _ mwr _ := 
+          with inner_loop V U loop W cls _ mwr _ := 
           { | Loop := Loop
             | Model Wc mwc hsub'
             (* We get a model for (cls ↓ W), we check if it extends to all clauses.
@@ -1697,71 +1779,104 @@ Equations? loop (V : LevelSet.t) (cls : clauses) (m : model)
             { | exist None eqm' => Model Wc {| model_model := mwc.(model_model) |} _
               | exist (Some (Wcls, mcls)) eqm' with inspect (LevelSet.equal Wcls V) := {
                 | exist true _ := Loop
-                | exist false neq' with loop Wcls cls (*⇂ Wcls)*) mcls _ := {
+                | exist false neq' with loop V Wcls cls mcls _ := {
                   (* Here Wcls < V, we've found a model for all of the clauses with conclusion
                     in W, which can now be fixed. We concentrate on the clauses whose
                     conclusion is different. Clearly |W| < |V|, but |Wcls| is not 
                     necessarily < |V| *)
                     | Loop := Loop
                     | Model Wvw mcls' hsub'' := Model Wvw {| model_model := model_model mcls' |} _ } } }
-          } } }.
+          }
+      }
+    }.
 Proof.
   all:clear loop.
-  all:intuition auto.
+  all:try solve [intuition auto].
   all:try eapply levelset_neq in neq.
   all:have cls_sub := clauses_conclusions_levels cls.
+  - split. apply clauses_conclusions_restrict_clauses. reflexivity.
+  - eapply check_model_subset_clauses in eqm as []. cbn.
+    left. 
+    eapply strict_subset_cardinal. split => //. destruct prf. lsets.
   - pose proof (check_model_update eqm) as [].
     eapply check_model_spec in eqm as [ww' w'wcl].
-    red in prf.
-    eapply bounded_model_mon in prf.
-    2:{ eapply model_map_outside_weaken; tea. }
-    cbn in H1.
-  
-    now eapply clauses_levels_restrict_clauses in H.
-  - eapply check_model_subset_clauses in eqm as []. cbn. 
-    eapply strict_subset_cardinal. split => //. rewrite LevelSet_union_empty in H0. lsets.
-  - pose proof (check_model_update eqm) as [].
-    eapply check_model_spec in eqm as [ww' w'wcl].
-    rewrite LevelSet_union_empty in w'wcl. 
-    eapply LevelSet.subset_spec in hsub.
     split => //. split => //. lsets. 
     destruct H1 as [l [hl _]]. intros he. lsets.
-  - now eapply clauses_levels_restrict_clauses in H.
+  - destruct prf as [clsV UV]. split => //.
+    eapply check_model_subset_clauses in eqm as []. cbn.
+    eapply check_model_subset_clauses in eqm' as []. cbn.
+    lsets.
+  - right.
+    pose proof (check_model_update eqm') as []. cbn in H0.
+    destruct (check_model_spec _ _ _ _ _ eqm').
+    eapply check_model_subset_clauses in eqm as []. cbn.
+    eapply check_model_subset_clauses in eqm' as []. cbn.
+    destruct prf as [clsV UV]. destruct hsub' as [UWc WcW].
+    assert (Wcls ⊂_lset V). lsets.
+    rewrite -!diff_cardinal //.
+    eapply strict_subset_cardinal.
+    assert (strict_subset Wc Wcls).
+    { split => //.
+      destruct H3 as [cl [clcls nvalid hcll hv]].
+      pose proof (model_ok mwc). apply check_model_is_model in H3.
+      eapply is_model_invalid_clause in H3; tea.
+      assert (~ LevelSet.In (levelexpr_level (concl cl)) W).
+      { intros hin. rewrite in_clauses_with_concl in H3. intuition auto. }
+      move/(_ (levelexpr_level (concl cl))) => [] wcwcls wclswc.
+      now apply H11, WcW, wclswc. }
+    eapply (strict_subset_leq_right _ (LevelSet.diff V Wc)).
+    2:{ lsets. }
+    apply strict_subset_diff_incl => //. clear -H8 H10; lsets.
+  - exact (model_ok mcls').
+  - eapply check_model_update in eqm as [].
+    eapply check_model_update in eqm' as [].
+    transitivity m' => //.  
+    transitivity (model_model mwr). apply mwr.
+    transitivity (model_model mwc). apply mwc.
+    transitivity mcls => //. apply mcls'.
   - eapply check_model_spec in eqm as [].
     eapply check_model_spec in eqm' as [].
-    eapply strict_subset_cardinal. split => //.
-    etransitivity; tea. eapply LevelSet.subset_spec in hsub'. 
-    apply LevelSetProp.union_subset_3. lsets. lsets. 
-    now eapply levelset_neq in neq'.
-  - lsets.
-  - rewrite check_model_is_model.
-    pose proof (model_ok mcls').
-    rewrite check_model_is_model in H.
-    intros rewrite LevelSet.union_spec. 
-    rewrite LevelSet_union_empty in H0. lsets.
-
-    apply clauses_levels_spec in H as [cl [cld incl]].
-    apply Clauses.diff_spec in cld as [].
-    rewrite LevelSet.diff_spec.
-    apply clause_levels_spec in incl.
-    destruct H2 as [l [hin _]]. specialize (H l) => //.
-  - apply clauses_conclusions_clauses_with_concl.
-  - eapply clauses_conclusions_diff in H.
-    rewrite LevelSet.diff_spec. intuition lsets.
-  - eapply check_model_subset_clauses in eqm as []; tea.
-    rewrite LevelSet_union_empty in H0.
-    assert (strict_subset W V).
-    { split => //. lsets. }
-    eapply strict_subset_cardinal.
-    now eapply strict_subset_diff.
-  - now rewrite LevelSet.diff_spec in H.
-  - eapply check_model_subset_clauses in eqm as [].
-    rewrite LevelSet_union_empty in H0.
-    eapply LevelSet.subset_spec. 
-    eapply LevelSet.subset_spec in hsub, hsub'. 
-    lsets.
+    transitivity m' => //.
+    transitivity (model_model mwr) => //. apply mwr.
+    transitivity (model_model mwc) => //. apply mwc.
+    transitivity mcls => //. apply mcls'.
+  - eapply check_model_spec in eqm as [].
+    eapply check_model_spec in eqm' as [].
+    assert (WV : W ⊂_lset V) by lsets.
+    transitivity m' => //.
+    eapply (model_map_outside_weaken (W:=W)) => //.
+    transitivity (model_model mwr) => //. 
+    eapply (model_map_outside_weaken (W:=W)) => //.
+    apply mwr.
+    transitivity (model_model mwc) => //.
+    eapply (model_map_outside_weaken (W:=W)) => //.
+    apply mwc.
+    transitivity mcls => //.
+    eapply (model_map_outside_weaken (W:=Wcls)) => //. { intuition lsets. }
+    apply mcls'.
+  - apply check_model_spec in eqm as [].
+    apply check_model_spec in eqm' as []. split; lsets.
+  - rewrite check_model_is_model. now apply check_model_is_model in eqm'.
+  - apply check_model_update in eqm as []. transitivity m' => //.
+    transitivity (model_model mwr). apply mwr. apply mwc.
+  - apply check_model_spec in eqm as []. transitivity m' => //.
+    transitivity (model_model mwr). apply mwr. apply mwc.
+  - apply check_model_spec in eqm as [].
+    assert (WV : W ⊂_lset V) by lsets.
+    eapply (model_map_outside_weaken (W:=W)) => //.
+    transitivity m' => //.
+    transitivity (model_model mwr). apply mwr. apply mwc.
+  - apply check_model_spec in eqm as [].
+    split. lsets. lsets.
+  - rewrite check_model_is_model. now apply check_model_is_model in eqm.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - split; lsets.
 Defined.
-  
+
+Transparent lexprod_rel_wf.
+
 Definition zero_model levels := 
   LevelSet.fold (fun l acc => LevelMap.add l 0 acc) levels (LevelMap.empty _).
 
@@ -1796,15 +1911,19 @@ Definition add_predecessors (V : LevelSet.t) cls :=
   LevelSet.fold (fun l acc => 
     Clauses.add (NonEmptySetFacts.singleton (l, 1), (l, 0)) acc) V cls.
 
-Lemma in_add_predecessors (V : LevelSet.t) cls : 
+(* Lemma in_add_predecessors (V : LevelSet.t) cls : 
   forall cl, 
     Clauses.In cl (add_predecessors V cls) -> 
     Clauses.In cl cls \/ LevelSet.In (LevelExpr.get_level (concl cl)) V.
-Admitted.
+Admitted. *)
     
-Equations infer (V : LevelSet.t) (cls : clauses) (prf : LevelSet.Subset (clauses_conclusions cls) V) : result V  := 
-  infer V cls prf := loop V cls (init_model cls) prf.
+Definition infer_result V cls := result V LevelSet.empty cls (init_model cls).
 
+Equations? infer (V : LevelSet.t) (cls : clauses) (prf : LevelSet.Subset (clauses_conclusions cls) V) : infer_result V cls := 
+  infer V cls prf := loop V LevelSet.empty cls (init_model cls) (conj prf _).
+Proof.
+  lsets.
+Qed.
   (* Proof.
   eapply clauses_conclusions_spec in H as [cl []].
   eapply in_add_predecessors in H as [].
@@ -1818,13 +1937,13 @@ Proof.
   unfold clauses_levels. unfold clauses_conclusions.
   eapply (ClausesProp.fold_rel (R := fun x y => forall a, LevelSet.In a x -> LevelSet.In a y)) => //.
   intros x l l' hin hsub x' hix'.
-  destruct x as [prem [l'' k]]. cbn in *. 
-  eapply LevelSet.union_spec. right.
-  eapply LevelSet.add_spec. 
+  destruct x as [prem [l'' k]]. cbn in *.
+  rewrite LevelSet.add_spec in hix'. destruct hix'; subst.
+  eapply LevelSet.union_spec. left. rewrite clause_levels_spec. cbn. now right.
   specialize (hsub x'). lsets.
 Qed.
 
-Equations infer_model (clauses : clauses) : result (clauses_levels clauses) :=
+Equations infer_model (clauses : clauses) : result (clauses_levels clauses) LevelSet.empty clauses (init_model clauses) :=
   infer_model clauses := infer (clauses_levels clauses) clauses in_conclusions_levels.
 
 Definition mk_level x := LevelExpr.make (Level.Level x).
@@ -1872,7 +1991,7 @@ Definition valuation_of_model (m : model) : LevelMap.t nat :=
   let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
   LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _).
   
-Definition print_result {V} (m : result V) :=
+Definition print_result {V cls} (m : infer_result V cls) :=
   match m with
   | Loop => "looping"
   | Model w m _ => "satisfiable with model: " ^ print_level_nat_map m.(model_model) ^ nl ^ " W = " ^
@@ -1880,7 +1999,7 @@ Definition print_result {V} (m : result V) :=
     ^ nl ^ "valuation: " ^ print_level_nat_map (valuation_of_model m.(model_model))
   end.
   
-Definition valuation_of_result {V} (m : result V) :=
+Definition valuation_of_result {V cls} (m : infer_result V cls) :=
   match m with
   | Loop => "looping"
   | Model w m _ => print_level_nat_map (valuation_of_model m.(model_model))
@@ -1890,7 +2009,7 @@ Eval compute in print_result test.
 Eval compute in print_result test_loop.
 
 (* Testing the unfolding of the loop function "by hand" *)
-Definition hasFiniteModel {V} (m : result V) :=
+Definition hasFiniteModel {V U cls m} (m : result V U cls m) :=
   match m with
   | Loop => false
   | Model _ _ _ => true
@@ -1998,8 +2117,6 @@ Definition test_levels' : LevelSet.t :=
       levelc; leveld]).
 
 Notation " x + n " := (levelexpr_add x n).
-
-Coercion LevelExpr.make : Level.t >-> LevelExpr.t.
 
 Fixpoint chain (l : list LevelExpr.t) :=
   match l with
@@ -2109,10 +2226,10 @@ Definition print_model_premises_hold cls (m : model) :=
   if premises_hold cls m then "all premises hold"
   else "some premise doesn't hold".
 
-Definition print_premises_hold {V} (r : result V) :=
+Definition print_premises_hold {V U cls m} (r : result V U cls m) :=
   match r with
   | Loop => "looping"
-  | Model w m _ => print_model_premises_hold m.(model_clauses) m.(model_model)
+  | Model w m _ => print_model_premises_hold cls m.(model_model)
   end.
 
 (* Is clause [c] non-vacuous and satisfied by the model? *)
@@ -2130,36 +2247,45 @@ Definition check_cstrs (m : model) (c : ConstraintSet.t) :=
   let cls := clauses_of_constraints c in
   check_clauses m cls.
   
-Equations? infer_extension (V : LevelSet.t) (m : valid_model V) (cls : clauses) 
-  (prf : LevelSet.Subset (clauses_conclusions cls) V) : result V := 
-  | V, m, cls', prf := loop V (Clauses.union m.(model_clauses) cls') m.(model_model) _.
+Equations? infer_extension (V : LevelSet.t) (m : model) (cls cls' : clauses) 
+  (prf : clauses_conclusions cls ⊂_lset V /\ clauses_conclusions cls' ⊂_lset V) : result V LevelSet.empty (Clauses.union cls cls') m :=
+  | V, m, cls, cls', prf := loop V LevelSet.empty (Clauses.union cls cls') m _.
 Proof.
-  eapply clauses_conclusions_spec in H as [cl []].
+  split. 2:lsets.
+  intros x. rewrite clauses_conclusions_spec.
+  intros [cl [hcl hl]].
+  rewrite Clauses.union_spec in hcl. destruct hcl.
+  - apply H, clauses_conclusions_spec. exists cl => //.
+  - apply H0, clauses_conclusions_spec. exists cl => //.
+Qed.
+  (* as [cl []].
   eapply Clauses.union_spec in H as [].
   apply m.(model_clauses_conclusions). 
   rewrite clauses_conclusions_spec. now exists cl.
   eapply prf. rewrite clauses_conclusions_spec.
   now exists cl. 
-Qed.
+Qed. *)
 
-(* We weaken a valid model for V to a model for [W ∪ clauses_levels cls] by 
-   setting a minimal value for the new atoms in [clauses_levels cls \ W]
-   such that the new clauses [cls] do not hold vacuously.
-*)
-Equations? weaken_model {V : LevelSet.t} (m : valid_model V) (cls : clauses) : valid_model (LevelSet.union (clauses_levels cls) V) :=
+(*Equations? weaken_model (m : model) (cls : clauses) : valid_model (LevelSet.union (clauses_levels cls) V m cls) :=
   weaken_model m cls := 
     {| model_clauses := m.(model_clauses); 
-       model_model := min_model m.(model_model) cls |}.
+       model_model :=  |}.
 Proof.
   rewrite LevelSet.union_spec. right. now apply m.
-Qed.
+Qed. *)
 
-Equations? infer_model_extension {V : LevelSet.t} (m : valid_model V) (cls : clauses) : result (LevelSet.union (clauses_levels cls) V) :=
-  infer_model_extension m cls := 
-    infer_extension (LevelSet.union (clauses_levels cls) V) (weaken_model m cls) cls _.
+(* To infer an extension, we weaken a valid model for V to a model for [V ∪ clauses_levels cls] by 
+   setting a minimal value for the new atoms in [clauses_levels cls \ V]
+   such that the new clauses [cls] do not hold vacuously.
+*)
+Equations? infer_model_extension {V init cls} (m : valid_model V init cls) (cls' : clauses) :
+  result (LevelSet.union (clauses_levels cls') V) LevelSet.empty (Clauses.union cls cls') (min_model m.(model_model) cls') :=
+  infer_model_extension m cls' := 
+    infer_extension (LevelSet.union (clauses_levels cls') V) (min_model m.(model_model) cls') cls cls' _.
 Proof.
-  eapply LevelSet.union_spec. left.
-  now eapply in_conclusions_levels.
+  pose proof (model_clauses_conclusions m). 
+  split. lsets. 
+  pose proof (clauses_conclusions_levels cls'). lsets.
 Qed.
 
 Definition model_variables (m : model) : LevelSet.t :=
@@ -2171,20 +2297,20 @@ Variant enforce_result :=
 
 Definition testp := Eval vm_compute in {| model_values := (LevelMap.empty _) |}.
 
-Definition enforce_clauses {V} (m : valid_model V) cls : option model :=
-  match infer_model_extension m cls with
+Definition enforce_clauses {V init cls} (m : valid_model V init cls) cls' : option model :=
+  match infer_model_extension m cls' with
   | Loop => None
   | Model w m _ => Some m.(model_model)
   end.
 
-Definition enforce_clause {V} (m : valid_model V) cl : option model :=
+Definition enforce_clause {V init cls} (m : valid_model V init cls) cl : option model :=
   enforce_clauses m (Clauses.singleton cl).
 
-Definition enforce_cstr {V} (m : valid_model V) (c : UnivConstraint.t) :=
+Definition enforce_cstr {V init cls} (m : valid_model V init cls) (c : UnivConstraint.t) :=
   let cls := clauses_of_constraint c in
   enforce_clauses m cls.
 
-Definition enforce_cstrs {V} (m : valid_model V) (c : ConstraintSet.t) :=
+Definition enforce_cstrs {V init cls} (m : valid_model V init cls) (c : ConstraintSet.t) :=
   let cls := clauses_of_constraints c in
   enforce_clauses m cls.
 

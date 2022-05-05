@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv.
@@ -22,7 +22,7 @@ Section CheckerFlags.
     simpl.
     intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
-    apply LS.union_spec. right; apply global_levels_Set.
+    apply global_ext_levels_InSet.
   Qed.
   
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
@@ -30,7 +30,7 @@ Section CheckerFlags.
     simpl.
     intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
-    apply LS.union_spec. right; apply global_levels_Set.
+    apply global_ext_levels_InSet.
   Qed.
 
   Lemma wf_universe_super {Σ u} : wf_universe Σ u -> wf_universe Σ (Universe.super u).
@@ -100,9 +100,7 @@ Section CheckerFlags.
     destruct s as [| |t]; cbnr.
     intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
     destruct l as [|s|n']; simpl; auto.
-    - unfold global_ext_levels.
-      apply LS.union_spec. right.
-      apply global_levels_Set.
+    - apply global_ext_levels_InSet.
     - specialize (Hl (Level.Level s, n) inl).
       simpl in Hl.
       apply monomorphic_level_in_global_ext in Hl.
@@ -116,10 +114,10 @@ Section CheckerFlags.
           unfold subst_instance; simpl.
           destruct nth_error eqn:hnth; simpl.
           eapply nth_error_forall in Hu; eauto.
-          eapply LS.union_spec; right. eapply global_levels_Set.
+          apply global_ext_levels_InSet.
         * unfold subst_instance. simpl.
           destruct (nth_error u n') eqn:hnth.
-          2:{ simpl. rewrite hnth. eapply LS.union_spec; right; apply global_levels_Set. }
+          2:{ simpl. rewrite hnth. apply global_ext_levels_InSet. }
           eapply nth_error_forall in Hu. 2:eauto. 
           change (nth_error u n') with (nth_error u n') in *.
           rewrite -> hnth. simpl. apply Hu.
@@ -232,16 +230,14 @@ Section CheckerFlags.
       unshelve epose proof (wf_universe_level_mono _ _ _ _ Hs); eauto.
       eapply forallb_Forall in H. apply Forall_map.
       solve_all. destruct x; simpl => //.
-      eapply LS.union_spec. right. eapply global_levels_Set.
+      red. apply global_ext_levels_InSet.
       eapply wf_universe_level_sub; eauto.
     - clear onup.
       red in Hs |- *.
       eapply Forall_map, Forall_impl; eauto.
       intros x wfx.
       red in wfx. destruct x => /= //.
-      red.
-      eapply LS.union_spec; right.
-      eapply global_levels_Set.
+      { red. apply global_ext_levels_InSet. }
       eapply In_Level_global_ext_poly in wfx.
       apply LS.union_spec; now right.
       eapply in_var_global_ext in wfx; simpl in wfx; auto.
@@ -253,7 +249,7 @@ Section CheckerFlags.
       eapply In_unfold_inj in wfx; [|congruence].
       destruct (nth_in_or_default n u (Level.lzero)).
       red in cu. eapply Forall_In in cu; eauto. rewrite e.
-      red. eapply LS.union_spec. right. eapply global_levels_Set.
+      red. apply global_ext_levels_InSet.
   Qed.
 
   Section WfUniverses.
@@ -491,9 +487,8 @@ Qed.
   Proof.
     intros wfΣ wfΣ' ext.
     unfold wf_universe_level.
-    destruct t; simpl; auto;
+    destruct t; simpl; auto using global_ext_levels_InSet;
     intros; apply LS.union_spec.
-    - right. eapply global_levels_Set.
     - eapply LS.union_spec in H as [H|H].
       left; auto.
       right; auto. simpl.
@@ -539,7 +534,7 @@ Qed.
   - red in X. solve_all. 
   Qed.
 
-  Lemma wf_universes_weaken_full : weaken_env_prop_full (fun Σ Γ t T => 
+  Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => 
       wf_universes Σ t && wf_universes Σ T).
   Proof.
     red. intros.
@@ -547,13 +542,13 @@ Qed.
   Qed.
 
   Lemma wf_universes_weaken :
-    weaken_env_prop
+    weaken_env_prop cumulSpec0 (lift_typing typing)
       (lift_typing (fun Σ Γ (t T : term) =>
         wf_universes Σ t && wf_universes Σ T)).
   Proof.
-    red. intros.
-    unfold lift_typing in *. destruct T. now eapply (wf_universes_weaken_full (Σ, _)).
-    destruct X2 as [s Hs]; exists s. now eapply (wf_universes_weaken_full (Σ, _)).
+    intros Σ Σ' φ wfΣ wfΣ' Hext Γ t T HT.
+    apply lift_typing_impl with (1 := HT); intros ? Hty.
+    now eapply (wf_universes_weaken_full (Σ, _)).
   Qed.
 
   Lemma wf_universes_inds Σ mind u bodies : 
@@ -1035,12 +1030,12 @@ Qed.
     - split.
       * induction X; constructor; auto.
         destruct tu as [s tu]; exists s; simpl.
-        now simpl in p.
+        now simpl in Hs.
         destruct tu as [s tu]; exists s; simpl.
-        now simpl in p.
+        now simpl in Hs.
       * induction X; simpl; auto.
-        rewrite IHX /= /test_decl /=. now move/andP: p.
-        rewrite IHX /= /test_decl /=. now move/andP: p => [] -> ->.
+        rewrite IHX /= /test_decl /=. now move/andP: Hs.
+        rewrite IHX /= /test_decl /=. now move/andP: Hc => [] -> ->.
 
     - rewrite wf_universes_lift.
       destruct X as [X _].
@@ -1108,13 +1103,13 @@ Qed.
       rewrite wfu /= wfpars wf_universes_mkApps /= 
         forallb_app wfinds /= H /= !andb_true_r.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
-      destruct X2. destruct onArity as [s Hs].
+      destruct X5. destruct onArity as [s Hs].
       move/andP: Hs => [] /= hty hs.
       rewrite ind_arity_eq in hty.
       rewrite !wf_universes_it_mkProd_or_LetIn in hty.
       move/and3P: hty => [] wfp wfindis wfisort.
       have ond : on_udecl_prop Σ (ind_universes mdecl).
-      { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); auto.
+      { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
         eapply isdecl. }
       eapply wf_ctx_universes_closed in wfp => //.
       eapply wf_ctx_universes_closed in wfindis => //.
@@ -1194,12 +1189,12 @@ Qed.
       now destruct H as [s [Hs _]%andb_and]. 
     
     - apply/andP; split; auto.
-      solve_all. now rewrite wf_universes_lift in H2.
+      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
 
     - apply/andP; split; auto.
-      solve_all. now rewrite wf_universes_lift in H2.
+      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
   Qed.

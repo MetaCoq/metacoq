@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICGlobalEnv 
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus (* for smash_context lemmas, to move *)
      PCUICSubstitution PCUICClosed PCUICClosedConv PCUICClosedTyp
@@ -314,9 +314,8 @@ Section OnConstructor.
     clear Hlen'.
     rewrite [_ ,,, _]app_context_assoc in Hinst.
     now exists inst.
-    destruct oib.(onArity).
-    exists x0.
-    eapply weaken_ctx in t; tea.
+    apply infer_typing_sort_impl with id oib.(onArity); intros Hs.
+    now eapply weaken_ctx in Hs.
   Qed.
 End OnConstructor.
 
@@ -1168,7 +1167,7 @@ Proof.
   rewrite /projection_context.
   eapply spine_subst_smash in s.
   intros Hs.
-  have wfΓ : wf_local Σ Γ by pcuic.
+  have wfΓ : wf_local Σ Γ by (eapply typing_wf_local; eauto).
   eapply weaken_wf_subslet in Hs;tea.
   eapply (substitution_subslet (Γ' := [_])) in Hs; tea.
   2:eapply s.
@@ -1547,7 +1546,7 @@ Proof.
       { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
       rewrite (declared_inductive_lookup H0) //.
       destruct (on_declared_inductive H0) as [onmind onind] => //. simpl in *.
-      rewrite e0 /ind_realargs /PCUICTypingDef.destArity.
+      rewrite e0 /ind_realargs.
       rewrite !onind.(ind_arity_eq).
       rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
       rewrite (Nat.leb_refl) //. eapply Nat.leb_nle in eqle. lia.
@@ -1599,12 +1598,12 @@ Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
    {i ind mdecl idecl cdecl ind_indices cs} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
+  on_constructor cumulSpec0 (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
   closed_ctx (subst_instance u (ind_params mdecl)) ->
   wf_local Σ (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ)) ->
   All_local_env
-    (fun (Γ : PCUICEnvironment.context) (t : term) (_ : option term) =>
+    (fun (Γ : PCUICEnvironment.context) (t : term) (_ : typ_or_sort) =>
            positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
       Γ ->
   assumption_context Γ ->
@@ -2282,7 +2281,7 @@ Proof.
 Qed.
 
 Lemma cumul_ctx_relSpec_Algo {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
-  (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
+  (c : cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
@@ -2308,7 +2307,7 @@ Proof.
 Qed.
 
 Lemma into_ws_cumul_ctx_pb_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
-  (c : cumul_ctx_rel Σ Γ Δ Δ') : 
+  (c : cumul_ctx_rel cumulAlgo_gen Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
@@ -2546,18 +2545,12 @@ Proof.
   eapply wf_local_app_inv in wf as [].
   eapply All_local_env_impl_ind; eauto.
   intros.
-  red in X0. destruct T; unfold lift_typing.
-  - eapply closed_context_cumulativity; tea.
-    eapply All_local_env_app; split=> //.
-    eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
-    eapply wf_local_app in X; tea.
-    eauto with fvs.
-  - destruct X0 as [s Hs]; exists s.
-    eapply closed_context_cumulativity; tea.
-    eapply All_local_env_app; split=> //.
-    eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
-    eapply wf_local_app in X; tea.
-    eauto with fvs.
+  apply lift_typing_impl with (1 := X0); intros ? Hs.
+  eapply closed_context_cumulativity; tea.
+  eapply All_local_env_app; split=> //.
+  eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
+  eapply wf_local_app in X; tea.
+  eauto with fvs.
 Qed.
 
 Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
@@ -3219,7 +3212,7 @@ Proof.
     2:{ rewrite firstn_length_le.
         2:{ rewrite context_assumptions_subst_instance.
             symmetry.
-            eapply PCUICDeclarationTyping.onNpars.
+            eapply onNpars.
             eapply on_declared_inductive ; eauto.
         }
         lia.
@@ -3279,12 +3272,12 @@ Proof.
   intros wfΣ. revert T.
   induction Δ as [|[na [b|] ty] Δ].
   - now simpl.
-  - intros T [s Hs].
+  - intros T Hty.
     rewrite /= /mkProd_or_LetIn /=.
-    eapply IHΔ. exists s.
+    eapply IHΔ.
+    apply infer_sort_impl with id Hty; intros Hs.
     have wf := typing_wf_local Hs.
     depelim wf.
-    unfold PCUICTypingDef.typing.
     destruct l as [s1 Hs1]. red in l0.
     eapply type_Cumul'.
     econstructor; eauto. eapply isType_Sort; eauto.
@@ -3311,29 +3304,15 @@ Proof.
   apply wf_local_app_inv in wf as [].
   eapply wf_local_app => //.
   induction w in nas, ha |- *; depelim ha; cbn. constructor.
-  - constructor; eauto. apply IHw; auto.
-    destruct t0 as [s Hs]. exists s.
-    eapply context_conversion; tea.
-    eapply wf_local_app, IHw; eauto.
-    eapply eq_binder_annots_eq_ctx in ha.
-    eapply eq_context_upto_univ_conv_context.
-    eapply eq_context_upto_cat.
-    reflexivity. symmetry. apply ha.
-  - constructor; eauto. apply IHw; auto.
-    destruct t0 as [s Hs]. exists s.
-    eapply context_conversion; tea.
-    eapply wf_local_app, IHw; eauto.
-    eapply eq_binder_annots_eq_ctx in ha.
-    eapply eq_context_upto_univ_conv_context.
-    eapply eq_context_upto_cat.
-    reflexivity. symmetry. apply ha.
-    red. red in t1.
-    eapply context_conversion; tea.
-    eapply wf_local_app, IHw; eauto.
-    eapply eq_binder_annots_eq_ctx in ha.
-    eapply eq_context_upto_univ_conv_context.
-    eapply eq_context_upto_cat.
-    reflexivity. symmetry. apply ha.
+  all: constructor; eauto; try apply IHw; auto.
+  1,2: apply infer_typing_sort_impl with id t0; intros Hs.
+  all: eapply context_conversion; tea.
+  1,3,5: eapply wf_local_app, IHw; eauto.
+  all: eapply eq_binder_annots_eq_ctx in ha.
+  all: eapply eq_context_upto_univ_conv_context.
+  all: eapply eq_context_upto_cat.
+  1,3,5: reflexivity.
+  all: symmetry; apply ha.
 Qed.
 
 Lemma WfArity_build_case_predicate_type {cf:checker_flags} {Σ Γ ci args mdecl idecl p ps} :
@@ -3476,7 +3455,8 @@ Lemma isType_subst_all_rels {cf} {Σ} {wfΣ : wf Σ} {Γ Δ} {T} :
   isType Σ (Γ ,,, Δ) T ->
   isType Σ (Γ ,,, Δ) (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| T)).
 Proof.
-  intros [s Hs]; exists s.
+  intros Hty.
+  apply infer_typing_sort_impl with id Hty; intros Hs.
   pose proof (typing_wf_local Hs).
   eapply weakening_typing in Hs; tea.
   rewrite -(app_nil_l (lift_context _ _ _)) -/(app_context _ _) app_context_assoc in Hs.
@@ -3557,7 +3537,7 @@ Proof.
   eapply X. 2:pcuic. eauto with fvs.
 
   clear X.
-  destruct isty as [sort Hs]. exists sort.
+  apply infer_typing_sort_impl with id isty; intros Hs.
   eapply (weakening_typing) in Hs; tea.
   eapply (substitution (Δ := [])) in Hs.
   2:{ epose proof (spine_subst_to_extended_list_k a). apply X. }

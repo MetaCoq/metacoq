@@ -372,7 +372,7 @@ Notation red_context Σ := (All2_fold (red_decls Σ)).
 Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->
   wf_local Σ (Γ1 ,,, Γ2) ->
-  conv_context Σ Γ1 Γ1' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).
+  conv_context cumulSpec0 Σ Γ1 Γ1' -> conv_context cumulSpec0 Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).
 Proof.
   intros. induction Γ2.
   - cbn; eauto.

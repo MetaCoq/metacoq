@@ -629,17 +629,43 @@ Definition subst_instance_constr := subst_instance.
 
 End TemplateTerm.
 
-Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
-                 unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
-                 unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
-                 unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *;
-                 unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
-                 unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
-                 unfold TemplateTerm.subst_instance_constr in *.
-                 
 Module Env := Environment TemplateTerm.
 Export Env.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+(** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Module TemplateTermUtils <: TermUtils TemplateTerm Env.
+
+Definition destArity := destArity.
+Definition inds := inds.
+
+End TemplateTermUtils.
+
+Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
+                  unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
+                  unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
+                  unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *;
+                  unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
+                  unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
+                  unfold TemplateTerm.subst_instance_constr in *;
+                  unfold TemplateTermUtils.destArity; unfold TemplateTermUtils.inds.
 
 Module TemplateLookup := EnvironmentTyping.Lookup TemplateTerm Env.
 Include TemplateLookup.
@@ -723,15 +749,6 @@ Record mutual_inductive_entry := {
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
-
-     (** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
 
 Lemma inds_length ind u l : #|inds ind u l| = #|l|.
 Proof.

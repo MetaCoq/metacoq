@@ -414,7 +414,8 @@ Section ParallelReduction.
     | pred1_ctx _ _ ?G => fresh "pred" G
     | nat -> bool => fresh "P"
     | nat -> nat => fresh "f"
-    | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+    | _ => PCUICWeakeningEnv.my_rename_hyp h th
+    | _ => PCUICTyping.my_rename_hyp h th
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -907,7 +908,8 @@ Ltac my_rename_hyp h th :=
   | nat -> bool => fresh "P"
   | nat -> nat => fresh "f"
   | urenaming _ _ _ ?f => fresh "u" f
-  | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+  | _ => PCUICWeakeningEnv.my_rename_hyp h th
+  | _ => PCUICTyping.my_rename_hyp h th
   end.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.

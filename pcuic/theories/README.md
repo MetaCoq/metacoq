@@ -229,14 +229,12 @@
 ## Bidirectional Typing
 | File               | Description                                             |
 |--------------------|---------------------------------------------------------|
-| [BDEnvironmentTyping] | Extension of EnvironmentTyping to handle the separation between checking a term and checking a type
 | [BDTyping]         | Bidirectional typing derivation and its induction principle
 | [BDToPCUIC]        | Bidirectional typing implies undirected typing
 | [BDFromPCUIC]      | Undirected typing implies bidirectional typing
 | [BDUnique]         | Inferred types are unique (up to reductions)
 | [BDStrengthening]  | Bidirectional typing can be strengthened (variables not appearing in a term can be removed from the context while keeping typability)
 
-[BDEnvironmentTyping]: ./Bidirectional/BDEnvironmentTyping.v
 [BDTyping]: ./Bidirectional/BDTyping.v
 [BDToPCUIC]: ./Bidirectional/BDToPCUIC.v
 [BDFromPCUIC]: ./Bidirectional/BDFromPCUIC.v

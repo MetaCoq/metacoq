@@ -149,21 +149,21 @@ Proof.
   rewrite commut_lift_subst_rec. 1: lia. f_equal; lia.
 Qed.
 
-Lemma All_local_env_subst {cf:checker_flags} (P Q : context -> term -> option term -> Type) c n k :
+Lemma All_local_env_subst {cf:checker_flags} (P Q : context -> term -> typ_or_sort -> Type) c n k :
   All_local_env Q c ->
   (forall Γ t T,
       Q Γ t T ->
       P (subst_context n k Γ) (subst n (#|Γ| + k) t)
-        (option_map (subst n (#|Γ| + k)) T)
+        (typ_or_sort_map (subst n (#|Γ| + k)) T)
   ) ->
   All_local_env P (subst_context n k c).
 Proof.
   intros Hq Hf.
   induction Hq in |- *; try econstructor; eauto;
     simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  - simpl. eapply (Hf _ _ None). eauto.
-  - simpl. eapply (Hf _ _ None). eauto.
-  - simpl. eapply (Hf _ _ (Some t)). eauto.
+  - simpl. eapply (Hf _ _ Sort). eauto.
+  - simpl. eapply (Hf _ _ Sort). eauto.
+  - simpl. eapply (Hf _ _ (Typ t)). eauto.
 Qed.
 
 Lemma subst_length {cf:checker_flags} Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
@@ -572,7 +572,7 @@ Proof.
 Qed.
 
 Lemma wf_arities_context' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl} :
-  on_inductive (lift_typing typing) Σ mind mdecl ->
+  on_inductive cumulSpec0 (lift_typing typing) Σ mind mdecl ->
   wf_local Σ (arities_context (ind_bodies mdecl)).
 Proof.
   intros Hdecl.
@@ -607,7 +607,7 @@ Proof.
 Qed.
 
 Lemma on_constructor_closed_arities {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl idecl indices cdecl cs} :
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
+  on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   closedn #|arities_context (ind_bodies mdecl)| cdecl.(cstr_type).
 Proof.
   intros [? ? [s Hs] _ _ _ _].
@@ -617,7 +617,7 @@ Proof.
 Qed.
 
 Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl u idecl indices cdecl cs} :
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
+  on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance u cdecl.(cstr_type))
   in closed cty.
@@ -1790,8 +1790,8 @@ Proof.
       eapply wf_local_app_inv in HΓ0 as [HΓ0 _].
       eapply All_local_env_inst; eauto. }
   unshelve eapply on_wf_global_env_impl ; tea.
-  clear. intros * HΣ HP HQ.
-  apply lift_typing_impl. clear -HΣ HP.
+  clear. intros * HΣ HP HQ Hty.
+  apply lift_typing_impl with (1 := Hty); clear -HΣ HP.
   intros. subst Γ.
   rewrite !subst_inst. eapply X => //.
   now unshelve eapply subslet_well_subst.

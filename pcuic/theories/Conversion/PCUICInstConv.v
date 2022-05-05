@@ -1615,14 +1615,12 @@ Proof.
   intros.
   induction X.
   - now simpl.
-  - simpl. destruct t0 as [s Hs].
-    rewrite inst_context_snoc /=. constructor; auto.
-    red. simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    apply infer_typing_sort_impl with id t0; intros Hs.
     eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
     eapply well_subst_app; auto.
-  - simpl. destruct t0 as [s Hs]. simpl in t1.
-    rewrite inst_context_snoc /=. constructor; auto.
-    * simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    * apply infer_typing_sort_impl with id t0; intros Hs.
       eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
       eapply well_subst_app; auto.
     * simpl. apply t1 => //.
@@ -1943,8 +1941,8 @@ Lemma inst_conv_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d 
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+  conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  conv_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
 Proof.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     eapply inst_conv; simpl; cbn in *; tea.
@@ -1957,8 +1955,8 @@ Lemma inst_cumul_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  cumul_decls Σ Γ Γ' d d' ->
-  cumul_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+  cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  cumul_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
 Proof.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     (eapply inst_conv || eapply inst_cumul); tea.

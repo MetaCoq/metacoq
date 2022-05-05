@@ -4,7 +4,7 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-  PCUICReduction PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
+  PCUICReduction PCUICReflect PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp PCUICContextConversionTyp PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
   PCUICConfluence PCUICConversion PCUICUnivSubstitutionTyp PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
@@ -1231,7 +1231,7 @@ Proof.
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl.
     split => //; eexists [(kn, d)]; intuition eauto.
-  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto.
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto; tc.
     eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. 
   - econstructor; eauto.
     red. destruct H. split; eauto.
@@ -1381,7 +1381,7 @@ Proof.
 Qed.
 
 Lemma erases_mutual {Σ mdecl m} : 
-  on_inductive (lift_typing typing) (Σ, ind_universes m) mdecl m ->
+  on_inductive cumulSpec0 (lift_typing typing) (Σ, ind_universes m) mdecl m ->
   erases_mutual_inductive_body m (erase_mutual_inductive_body m).
 Proof.
   intros oni.
@@ -1591,14 +1591,14 @@ Qed.
 
 Lemma on_global_env_ind (P : forall Σ : global_env, wf Σ -> Type)
   (Pnil : forall univs (onu : on_global_univs univs), P {| universes := univs; declarations := [] |}
-    (onu, globenv_nil _ _))
+    (onu, globenv_nil _ _ _))
   (Pcons : forall (Σ : global_env) kn d (wf : wf Σ) 
     (Hfresh : fresh_global kn Σ.(declarations))
     (udecl := PCUICLookup.universes_decl_of_decl d)
     (onud : on_udecl Σ.(universes) udecl)
-    (pd : on_global_decl (lift_typing typing) ({| universes := Σ.(universes); declarations := Σ.(declarations) |}, udecl) kn d),
+    (pd : on_global_decl cumulSpec0 (lift_typing typing) ({| universes := Σ.(universes); declarations := Σ.(declarations) |}, udecl) kn d),
     P Σ wf -> P (add_global_decl Σ (kn, d)) 
-    (fst wf, globenv_decl _ Σ.(universes) Σ.(declarations) kn d (snd wf) Hfresh onud pd))
+    (fst wf, globenv_decl _ _ Σ.(universes) Σ.(declarations) kn d (snd wf) Hfresh onud pd))
   (Σ : global_env) (wfΣ : wf Σ) : P Σ wfΣ.
 Proof.
   destruct Σ as [univs Σ]. destruct wfΣ; cbn in *.
@@ -1740,7 +1740,7 @@ Qed.
 Import EGlobalEnv.
 Lemma erase_global_decls_fresh X_type kn deps X decls heq : 
   let Σ' := erase_global_decls X_type deps X decls heq in
-  PCUICTyping.fresh_global kn decls ->
+  PCUICAst.fresh_global kn decls ->
   fresh_global kn Σ'.
 Proof.
   cbn.
@@ -2083,7 +2083,8 @@ Proof.
 Qed.
 
 Lemma erase_global_ind_decl_wf_glob {X_type X} {deps decls kn m} heq :
-  (forall Σ : global_env, abstract_env_rel X Σ -> on_inductive (lift_typing typing) (Σ, ind_universes m) kn m) ->  let m' := erase_mutual_inductive_body m in
+  (forall Σ : global_env, abstract_env_rel X Σ -> on_inductive cumulSpec0 (lift_typing typing) (Σ, ind_universes m) kn m) ->
+  let m' := erase_mutual_inductive_body m in
   let Σ' := erase_global_decls X_type deps X decls heq in
   @wf_global_decl all_env_flags Σ' (EAst.InductiveDecl m').
 Proof.
@@ -2452,9 +2453,9 @@ Section EraseGlobalFast.
 Definition decls_prefix decls (Σ' : global_env) := 
   ∑ Σ'', declarations Σ' = Σ'' ++ decls.
 
-Lemma on_global_decls_prefix {cf} P univs decls decls' :
-  on_global_decls P univs (decls ++ decls') ->
-  on_global_decls P univs decls'.
+Lemma on_global_decls_prefix {cf} Pcmp P univs decls decls' :
+  on_global_decls Pcmp P univs (decls ++ decls') ->
+  on_global_decls Pcmp P univs decls'.
 Proof.
   induction decls => //.
   intros ha; depelim ha.
@@ -2479,7 +2480,7 @@ Lemma weaken_prefix {decls Σ kn decl} :
   decls_prefix decls Σ ->
   wf Σ -> 
   lookup_env {| universes := Σ; declarations := decls |} kn = Some decl ->
-  on_global_decl (lift_typing typing) (Σ, universes_decl_of_decl decl) kn decl.
+  on_global_decl cumulSpec0 (lift_typing typing) (Σ, universes_decl_of_decl decl) kn decl.
 Proof.
   intros prefix wfΣ.
   have wfdecls := decls_prefix_wf prefix wfΣ.

@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
@@ -180,7 +180,7 @@ Qed.
 Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :
   Universe.is_prop ind_sort ->  
   elim_sort_prop_ind cdecls = IntoAny ->
-  on_constructors (lift_typing typing)
+  on_constructors cumulSpec0 (lift_typing typing)
     (Σ, ind_universes mdecl) mdecl 
     (inductive_ind ind) idecl ind_indices
     (ind_ctors idecl) cdecls ->
@@ -189,7 +189,7 @@ Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sor
     (ind_ctors idecl = [cdecl]) * 
     (cdecls = [cdecl_sorts]) * 
     (Forall is_propositional cdecl_sorts) *
-    (on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
+    (on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
         (inductive_ind ind) idecl ind_indices cdecl cdecl_sorts))%type.
 Proof.
   intros uf lein onc.
@@ -302,7 +302,8 @@ Lemma isType_ws_cumul_ctx_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
   Σ ⊢ Γ = Δ ->
   isType Σ Δ T.
 Proof.
-  intros [s Hs] wf eq. exists s.
+  intros HT wf eq.
+  apply infer_sort_impl with id HT; intros Hs.
   eapply closed_context_conversion; tea. 
 Qed.
 
@@ -445,7 +446,7 @@ Proof.
 Qed.
 
 Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
-  (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
+  (onib : on_ind_body cumulSpec0 (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
   is_propositional (ind_sort idecl) -> 
@@ -614,6 +615,7 @@ Proof.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
+  assert (wf Σ') by auto.
   now eapply weakening_env_declared_inductive; tc.
 Qed.
 

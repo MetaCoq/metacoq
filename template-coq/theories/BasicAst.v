@@ -208,6 +208,21 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
+Variant typ_or_sort_ {term} := Typ (T : term) | Sort.
+Arguments typ_or_sort_ : clear implicits.
+
+Definition typ_or_sort_map {T T'} (f: T -> T') t :=
+  match t with
+  | Typ T => Typ (f T)
+  | Sort => Sort
+  end.
+
+Definition typ_or_sort_default {T A} (f: T -> A) t d :=
+  match t with
+  | Typ T => f T
+  | Sort => d
+  end.
+
 Section Contexts.
   Context {term : Type}.
   (** *** The context of De Bruijn indices *)

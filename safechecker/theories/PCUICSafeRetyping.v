@@ -7,7 +7,7 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp 
      PCUICReduction
      PCUICWeakeningConv PCUICWeakeningTyp 
      PCUICClosed PCUICClosedTyp

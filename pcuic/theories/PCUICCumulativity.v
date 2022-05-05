@@ -34,24 +34,23 @@ Notation convAlgo Σ Γ := (cumulAlgo_gen Σ Γ Conv).
 #[global]
 Hint Resolve cumul_refl : pcuic.
 
-Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+Include PCUICConversion.
+
+Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
   Definition cumul_gen := @cumulAlgo_gen.
 End PCUICConversionParAlgo.
 
-Module PCUICConversionAlgo := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParAlgo.
-Include PCUICConversionAlgo.
-
 #[global]
-Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls pb Σ Γ Γ').
+Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ').
 Proof.
   intros x. destruct x as [na [b|] ty]; constructor; auto.
   all:constructor; reflexivity.
 Qed.
 
 #[global]
-Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls Σ Γ Γ') := _.
+Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls cumulAlgo_gen Σ Γ Γ') := _.
 #[global]
-Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls Σ Γ Γ') := _.
+Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls cumulAlgo_gen Σ Γ Γ') := _.
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
@@ -300,16 +299,16 @@ Section ContextConversion.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  Notation conv_context Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
-  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
+  Notation conv_context Γ Γ' := (All2_fold (conv_decls cumulAlgo_gen Σ) Γ Γ').
+  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls cumulAlgo_gen Σ) Γ Γ').
 
-  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls Σ)).
+  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls cumulAlgo_gen Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'. 
   Qed.
 
-  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls Σ)).
+  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls cumulAlgo_gen Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty];

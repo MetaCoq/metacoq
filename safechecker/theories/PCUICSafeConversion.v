@@ -2339,11 +2339,11 @@ Qed.
   Qed.
 
   (* TODO MOVE *)
-  Lemma conv_context_decl :
+  Lemma conv_context_decl Pcmp :
     forall Σ Γ Δ d d',
-      conv_context Σ Γ Δ ->
-      conv_decls Σ Γ Δ d d' ->
-      conv_context Σ (Γ ,, d) (Δ ,, d').
+      conv_context Pcmp Σ Γ Δ ->
+      conv_decls Pcmp Σ Γ Δ d d' ->
+      conv_context Pcmp Σ (Γ ,, d) (Δ ,, d').
   Proof.
     intros Γ Δ d d' hx h.
     destruct h.

@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnvConv.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -120,18 +120,18 @@ Proof.
   - intros bdwfΓ.
     induction bdwfΓ.
     all: constructor ; auto.
-    + apply conv_infer_sort in p ; auto.
+    + apply conv_infer_sort in Hs ; auto.
       2: by destruct tu.
-      destruct p as (?&?&?).
+      destruct Hs as (?&?&?).
       eexists.
       eassumption.
-    + apply conv_check in p ; auto.
-      apply conv_infer_sort in p0 ; auto.
+    + apply conv_check in Hc ; auto.
+      apply conv_infer_sort in Hs ; auto.
       2: by destruct tu.
-      destruct p0 as (?&?&?).
+      destruct Hs as (?&?&?).
       1: eexists.
       all: eassumption.
-    + by apply conv_check in p.
+    + by apply conv_check in Hc.
       
   - intros.
     eexists.
@@ -220,7 +220,7 @@ Proof.
     1: fvs.
     now eapply closed_on_free_vars, declared_constructor_closed_type.
     
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? _ Hinst ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Hinst ty_c Cumc ? ? ? ty_br.
 
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
     apply conv_infer_ind in Cumc as (?&?&[]) ; auto.
@@ -234,9 +234,9 @@ Proof.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; tea.
-        1: intros ; by apply conv_check.
+        1: intros ??? [] ; by apply conv_check.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
-        erewrite PCUICDeclarationTyping.onNpars.
+        erewrite PCUICGlobalMaps.onNpars.
         2: eapply on_declared_minductive ; eauto.
         rewrite firstn_app_left //.
         now destruct wfpred.
@@ -266,7 +266,7 @@ Proof.
         fold predctx in brctxty.
         fold ptm in brctxty.
         fold brctxty in Hbr.
-        destruct Hbr as (?&?&?Cumbody&?&?).
+        destruct Hbr as (?&(?&Cumbody)&?&?&?).
         apply conv_check in Cumbody ; auto.
         split ; auto.
         by apply All_local_app_rel.
@@ -335,7 +335,7 @@ Proof.
         1: apply wf_local_closed_context ; auto.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
-        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.
+        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)); eauto.
         apply isdecl.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.

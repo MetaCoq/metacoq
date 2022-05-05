@@ -339,7 +339,7 @@ Qed.
 Lemma isType_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
   isType Σ Γ T -> on_free_vars xpredT T.
 Proof.
-  intros [s Hs].
+  intros (s & e & Hs).
   eapply subject_closed in Hs.
   rewrite closedP_on_free_vars in Hs.
   eapply on_free_vars_impl; tea => //.
@@ -348,7 +348,7 @@ Qed.
 Lemma isType_on_ctx_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
   isType Σ Γ T -> on_ctx_free_vars xpredT Γ.
 Proof.
-  intros [s Hs].
+  intros (s & e & Hs).
   eapply typing_wf_local in Hs.
   eapply closed_wf_local in Hs; tea.
   eapply (closed_ctx_on_free_vars xpredT) in Hs.

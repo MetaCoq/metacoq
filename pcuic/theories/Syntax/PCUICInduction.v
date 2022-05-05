@@ -435,13 +435,6 @@ Proof.
     f_equal; symmetry; apply size_lift.
 Qed.
 
-Definition on_local_decl (P : context -> term -> Type)
-           (Γ : context) (t : term) (T : typ_or_sort) :=
-  match T with
-  | Typ T => (P Γ t * P Γ T)%type
-  | Sort => P Γ t
-  end.
-
 (* TODO: remove List.rev *)
 Lemma list_size_rev {A} size (l : list A)
   : list_size size (List.rev l) = list_size size l.
@@ -451,7 +444,7 @@ Proof.
 Qed.
 
 Definition onctx_rel (P : context -> term -> Type) (Γ Δ : context) :=
-  All_local_env (on_local_decl (fun Δ => P (Γ ,,,  Δ))) Δ.
+  All_local_env (lift_wf_term (ctx_shifted P Γ)) Δ.
 
 Definition CasePredProp (P : context -> term -> Type) Γ (p : predicate term) :=
   All (P Γ) p.(pparams) × onctx_rel P Γ (pcontext p) ×
@@ -482,10 +475,10 @@ Lemma term_forall_ctx_list_ind :
         P Γ (tCase ci p t brs)) ->
     (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
     (forall Γ (m : mfixpoint term) (n : nat),
-        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        All_local_env (lift_wf_term (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
     (forall Γ (m : mfixpoint term) (n : nat),
-        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        All_local_env (lift_wf_term (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
     (* (forall Γ p, P Γ (tPrim p)) -> *)
     forall Γ (t : term), P Γ t.
@@ -522,9 +515,9 @@ Proof.
       + simpl. apply aux => //. red. lia.
       + simpl. split.
         * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //; red; lia.
       + apply IHΔ => //; unfold context_size; lia.
-      + apply aux => //. red. lia. }
+      + simpl. apply aux => //. red. lia. }
   assert (forall m, list_size (fun x : def term => size (dtype x)) m < S (mfixpoint_size size m)).
   { clear. unfold mfixpoint_size, def_size. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_size (fun x : def term => size (dbody x)) m < S (mfixpoint_size size m)).

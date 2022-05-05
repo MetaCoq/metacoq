@@ -1613,7 +1613,8 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: eapply infer_typing_sort_impl with _ tu; cbn in *; eauto.
+  all: eapply infer_typing_sort_impl with _ tu; [apply relevance_subst_opt|].
+  all: cbn in *; eauto.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
@@ -1997,10 +1998,10 @@ Section SubstIdentity.
         rewrite /subst_instance_list. now rewrite map_rev Hpars.
       * rewrite [subst_instance_constr _ _]subst_instance_two.
         noconf Hi. now rewrite [subst_instance _ u]H.
-    - solve_all. destruct a as [s [? ?]]; solve_all.
-    - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
-    - solve_all. destruct a as [s [? ?]]. solve_all.
-    - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
+    - solve_all. now destruct a as (s & ? & ? & ?).
+    - clear X0. now eapply nth_error_all in X as (s & e & Hs & IHs & _).
+    - solve_all. now destruct a as (s & ? & ? & ?).
+    - clear X0. now eapply nth_error_all in X as (s & e & Hs & IHs & _).
   Qed.
 
   Lemma typed_subst_abstract_instance Σ Γ t T :

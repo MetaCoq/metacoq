@@ -1132,14 +1132,14 @@ Proof using Hcf Hcf'.
     split; split; intros H'. 1,2:now eapply is_prop_superE in H'.
     1,2:now eapply is_sprop_superE in H'.
 
-  - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
-    specialize (X1 _ _ H Ha). 
+  - eapply inversion_Prod in X4 as (s1' & s2' & e' & Ha & Hb & Hs); auto.
+    specialize (X1 _ _ H0 Ha). 
     specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
     eapply context_conversion in Hb.
     3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
       constructor. eauto. }
     2:{ constructor; eauto. now exists s1. }
-    specialize (X3 _ _ H Hb _ X5_2).
+    specialize (X3 _ _ H0 Hb _ X5_2).
     eapply cumul_cumul_prop in Hs => //.
     eapply cumul_prop_trans; eauto.
     constructor; fvs. constructor.
@@ -1149,22 +1149,22 @@ Proof using Hcf Hcf'.
     * split; intros Hs'; apply is_sprop_sort_prod in Hs'; eapply is_sprop_prod; eapply cumul_sprop_props; eauto.
       now eapply cumul_prop_sym; eauto.
 
-  - eapply inversion_Lambda in X4 as (s & B & dom & bod & cum).
-    specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X5_1)).
-    specialize (X3 t0 B H). 
-    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
+  - eapply inversion_Lambda in X4 as (s & B & e' & dom & bod & cum).
+    specialize (X1 _ _ H0 dom _ (eq_term_upto_univ_napp_leq X5_1)).
+    specialize (X3 t0 B H0). 
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na0 ty) (Γ ,, vass na t)).
     { repeat constructor; pcuic. }
     forward X3 by eapply context_conversion; eauto; pcuic.
     specialize (X3 _ X5_2). eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_tProd; eauto. now symmetry. now symmetry. auto.
 
-  - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
-    specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2)).
-    specialize (X3 _ _ H bod _  (eq_term_upto_univ_napp_leq X7_1)).
-    assert(conv_context cumulAlgo_gen Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
+  - eapply inversion_LetIn in X6 as (s1' & A & e' & dom & bod & codom & cum); auto.
+    specialize (X1 _ _ H0 dom _ (eq_term_upto_univ_napp_leq X7_2)).
+    specialize (X3 _ _ H0 bod _  (eq_term_upto_univ_napp_leq X7_1)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vdef na0 t ty) (Γ ,, vdef na b b_ty)).
     { repeat constructor; pcuic. }
-    specialize (X5 u A H).
+    specialize (X5 u A H0).
     forward X5 by eapply context_conversion; eauto; pcuic.
     specialize (X5 _ X7_3).
     eapply cumul_cumul_prop in cum; eauto.
@@ -1298,7 +1298,7 @@ Proof using Hcf Hcf'.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[a _] _] _].
     constructor; [fvs|..].
-    { eapply nth_error_all in X0 as [? [dty ?]]; tea.
+    { eapply nth_error_all in X0 as (? & e & dty & ?); tea.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
@@ -1310,7 +1310,7 @@ Proof using Hcf Hcf'.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[a _] _] _].
     constructor; [fvs|..].
-    { eapply nth_error_all in X0 as [? [dty ?]]; tea.
+    { eapply nth_error_all in X0 as (? & ? & dty & ?); tea.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.

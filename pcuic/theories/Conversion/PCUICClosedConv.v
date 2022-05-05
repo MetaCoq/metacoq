@@ -46,9 +46,9 @@ Proof.
     rewrite app_context_length in b0. now rewrite Nat.add_comm.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed in b. simpl.
-    rewrite app_context_length in b. rewrite Nat.add_comm.
-    now rewrite andb_true_r in b.
+    unfold closed_decl. unfold Pclosed in b0. simpl.
+    rewrite app_context_length in b0. rewrite Nat.add_comm.
+    now rewrite andb_true_r in b0.
 Qed.
 
 Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :

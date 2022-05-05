@@ -27,7 +27,7 @@ Section Validity.
   Lemma isType_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => isType Σ Γ T).
   Proof using Type.
     red. intros.
-    apply infer_typing_sort_impl with id X2; intros Hs.
+    apply infer_typing_sort_impl with id X2 => //; intros Hs.
     unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort _))); eauto with pcuic.
     red. simpl. destruct Σ. eapply Hs.
   Qed.
@@ -52,7 +52,7 @@ Section Validity.
     isType (Σ, φ) Γ t0 -> isType (Σ', φ) Γ t0.
   Proof using Type.
     intros wfΣ wfΣ' ext Γ t Hty.
-    apply infer_typing_sort_impl with id Hty; intros Hs.
+    apply infer_typing_sort_impl with id Hty => //; intros Hs.
     eapply (env_prop_typing weakening_env (Σ, φ)); auto.
   Qed.
 
@@ -70,8 +70,8 @@ Section Validity.
 
   Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_universe Σ s.
   Proof using Type.
-    intros wfΣ [u Hu].
-    now eapply inversion_Sort in Hu as [? [? ?]].
+    intros wfΣ (u & _ & Hu).
+    now eapply inversion_Sort in Hu as (? & ? & ?).
   Qed.
 
   Lemma isType_subst_instance_decl {Σ Γ T c decl u} :
@@ -82,7 +82,7 @@ Section Validity.
     isType Σ (subst_instance u Γ) (subst_instance u T).
   Proof using Type.
     destruct Σ as [Σ φ]. intros X X0 Hty X1.
-    eapply infer_typing_sort_impl with _ Hty; intros Hs.
+    eapply infer_typing_sort_impl with _ Hty; [apply relevance_subst_opt|]; intros Hs.
     eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
   Qed.
   
@@ -106,7 +106,7 @@ Section Validity.
     isType Σ Γ T.
   Proof using Type.
     intros wfΣ wfΓ HT.
-    apply infer_typing_sort_impl with id HT; intros Hs.
+    apply infer_typing_sort_impl with id HT => //; intros Hs.
     eapply (weaken_ctx (Γ:=[])); eauto.
   Qed.
 
@@ -208,17 +208,17 @@ Section Validity.
       (fun (Γ0 : context) (t : term) (T : typ_or_sort) =>
       match T with
       | Typ T0 => isType Σ (Γ,,, Γ0) T0 × Σ ;;; (Γ ,,, Γ0) |- t : T0
-      | Sort => isType Σ (Γ,,, Γ0) t
+      | Sort relopt => isTypeRelOpt Σ (Γ,,, Γ0) t relopt
       end) Δ ->
     ∑ xs, sorts_local_ctx (lift_typing typing) Σ Γ Δ xs.
   Proof using Type.
     induction 1.
     - exists []; cbn; auto. exact tt.
     - destruct IHX as [xs Hxs].
-      destruct t0 as [s Hs].
+      destruct t0 as (s & e & Hs).
       exists (s :: xs). cbn. split; auto.
-    - destruct IHX as [xs Hxs]. destruct t0 as [s Hs].
-      exists xs; cbn. split; auto.
+    - destruct IHX as [xs Hxs]. destruct t0 as (s & e & Hs), t1 as [t1a t1b].
+      exists xs; cbn. repeat split; [| eexists; split |]; tea.
   Qed.
 
   Import PCUICOnFreeVars.
@@ -226,7 +226,7 @@ Section Validity.
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
       (fun Σ Γ => wf_local Σ Γ × All_local_env 
-        (fun Γ t T => match T with Typ T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | Sort => isType Σ Γ t end) Γ).
+        (fun Γ t T => match T with Typ T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | Sort relopt => isTypeRelOpt Σ Γ t relopt end) Γ).
   Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps.
 
@@ -237,40 +237,42 @@ Section Validity.
       destruct decl as [na [b|] ty]; cbn -[skipn] in *; destruct hd.
       + eapply isType_lift; eauto.
         now apply nth_error_Some_length in heq_nth_error.
-      + eapply isType_lift; eauto.
+      + destruct p. eapply isType_lift; eauto.
         now apply nth_error_Some_length in heq_nth_error.
         now exists x.
 
     - (* Universe *) 
        exists (Universe.super (Universe.super u)).
+       split; [cbnr|].
        constructor; auto.
        now apply wf_universe_super.
         
     - (* Product *) 
-      eexists.
+      eexists; split; [cbnr|].
       eapply isType_Sort_inv in X1; eapply isType_Sort_inv in X3; auto.
       econstructor; eauto.
       now apply wf_universe_product.
 
     - (* Lambda *)
-      destruct X3 as [bs tybs].
+      destruct X3 as (bs & e & tybs).
       eapply isType_Sort_inv in X1; auto.
       exists (Universe.sort_of_product s1 bs).
+      split; [apply e|].
       constructor; auto.
 
     - (* Let *)
-      apply infer_typing_sort_impl with id X5; unfold id in *; intros Hs.
+      apply infer_typing_sort_impl with id X5 => //; unfold id; intros Hs.
       eapply type_Cumul.
       eapply type_LetIn; eauto.  econstructor; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec; constructor.
 
     - (* Application *)
-      apply infer_typing_sort_impl with id X3; unfold id in *; intros Hs'.
+      apply infer_typing_sort_impl with id X3 => //; unfold id in *; intros Hs'.
       move: (typing_wf_universe wf Hs') => wfs.
       eapply (substitution0 (n := na) (T := tSort _)); eauto.
-      apply inversion_Prod in Hs' as [na' [s1 [s2 Hs]]]; tas. intuition.
-      eapply (weakening_ws_cumul_pb (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
-      simpl in b0.
+      apply inversion_Prod in Hs' as (s1 & s2 & e & H1 & H2 & H3); tas.
+      eapply (weakening_ws_cumul_pb (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in H3; pcuic.
+      simpl in H3.
       eapply (type_ws_cumul_pb (pb:=Cumul)); eauto. pcuic.
       etransitivity; tea.
       eapply into_ws_cumul_pb => //.
@@ -294,13 +296,14 @@ Section Validity.
       destruct (on_declared_inductive isdecl); pcuic.
       destruct isdecl.
       apply onArity in o0.
+      eapply isType_of_isTypeRel in o0.
       eapply isType_weakening; eauto.
       eapply (isType_subst_instance_decl (Γ:=[])); eauto.
 
     - (* Constructor type *)
       destruct (on_declared_constructor isdecl) as [[oni oib] [cs [declc onc]]].
       unfold type_of_constructor.
-      eapply infer_typing_sort_impl with _ (on_ctype onc); intros Hs.
+      eapply infer_typing_sort_impl with _ (on_ctype onc); [apply relevance_subst_opt|]; intros Hs.
       eapply instantiate_minductive in Hs; eauto.
       2:(destruct isdecl as [[] ?]; eauto).
       simpl in Hs.
@@ -322,15 +325,15 @@ Section Validity.
       eapply spine_subst_smash in X6; tea.
       destruct X4.
       destruct (on_declared_inductive isdecl) as [onmind oib].
-      rewrite /ptm. exists ps.
+      rewrite /ptm. exists ps. split; [cbnr|].
       eapply type_mkApps; eauto.
       eapply type_it_mkLambda_or_LetIn; tea.
       have typred : isType Σ Γ (it_mkProd_or_LetIn predctx (tSort ps)).
       { eapply All_local_env_app_inv in a0 as [_ onp].
         eapply validity_wf_local in onp as [xs Hs].
-        eexists _.
+        eexists. split; [cbnr|].
         eapply type_it_mkProd_or_LetIn_sorts; tea.
-        exact X3.π2. }
+        exact X3.π2.2. }
       have wfps : wf_universe Σ ps.
       { pcuic. }
       eapply typing_spine_strengthen; tea.
@@ -365,7 +368,7 @@ Section Validity.
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
-      eapply infer_typing_sort_impl with _ isdecl'; intros Hs.
+      eapply infer_typing_sort_impl with _ isdecl'; [apply relevance_subst_opt|]; intros Hs.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
       eapply (weaken_ctx Γ) in Hs; eauto.
@@ -387,11 +390,11 @@ Section Validity.
       assumption.
       
     - (* Fix *)
-      eapply nth_error_all in X0 as [s Hs]; eauto.
+      eapply nth_error_all in X0 as (s & e & Hs); eauto.
       pcuic.
     
     - (* CoFix *)
-      eapply nth_error_all in X0 as [s Hs]; pcuic.
+      eapply nth_error_all in X0 as (s & e & Hs); pcuic.
 
     - (* Conv *)
       now exists s.
@@ -446,7 +449,7 @@ Lemma type_App' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na
   Σ;;; Γ |- u : A -> Σ;;; Γ |- tApp t u : B {0 := u}.
 Proof.
   intros Ht Hu.
-  have [s Hs] := validity Ht.
+  destruct (validity Ht) as (s & e & Hs).
   eapply type_App; eauto.
 Qed.
 

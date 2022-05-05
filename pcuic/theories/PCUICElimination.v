@@ -231,7 +231,7 @@ Proof.
       now rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in cum.
       unshelve eapply (isType_subst (Δ := [vass _ _]) [hd0]) in i0; pcuic.
       now rewrite subst_it_mkProd_or_LetIn in i0.
-      eapply subslet_ass_tip. eapply (type_ws_cumul_pb (pb:=Conv)); tea. now symmetry.
+      eapply subslet_ass_tip. eapply (type_ws_cumul_pb (pb:=Conv)); apply isType_of_isTypeRel in i; tea. now symmetry.
 Qed.
 
 Inductive All_local_assum (P : context -> term -> Type) : context -> Type :=
@@ -303,7 +303,7 @@ Lemma isType_ws_cumul_ctx_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
   isType Σ Δ T.
 Proof.
   intros HT wf eq.
-  apply infer_sort_impl with id HT; intros Hs.
+  apply infer_sort_impl with id HT => //; intros Hs.
   eapply closed_context_conversion; tea. 
 Qed.
 
@@ -393,7 +393,7 @@ Proof.
         eapply subject_reduction_closed in Ht; eauto.
         intros.
         pose proof (PCUICWfUniverses.typing_wf_universe wfΣ Ht).
-        eapply inversion_Prod in Ht as [s1 [s2 [dom [codom cum']]]]; auto.
+        eapply inversion_Prod in Ht as (s1 & s2 & e & dom & codom & cum'); auto.
         specialize (H Γ0 ltac:(reflexivity) (Γ ,, vass na' dom') args' []).
         eapply (type_Cumul _ _ _ _ (tSort s)) in codom; cycle 1; eauto.
         { econstructor; pcuic. }
@@ -414,6 +414,7 @@ Proof.
         eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna conv cum]; auto. cbn in *.
         eapply isType_tProd in isty as [].
         have tyt : Σ ;;; Γ |- hd0 : ty.
+        apply isType_of_isTypeRel in i.
         { eapply (type_ws_cumul_pb _ (U:=ty)) in tyhd => //. now symmetry. }
         eapply (isType_subst (Δ := [_])) in i0; revgoals.
         { now eapply subslet_ass_tip. }
@@ -427,7 +428,7 @@ Proof.
         intros prs;eapply All_local_assum_app in prs as [prd prs].
         depelim prd.
         eapply (type_ws_cumul_pb (pb:=Conv) _ (U:=ty)) in tyhd.
-        2:{ destruct s0 as [s' [Hs' _]]. exists s'; auto. }
+        2:{ destruct s0 as (s' & Hs' & _). exists s'; split; [cbnr|apply Hs']. }
         2:now symmetry.
         destruct H as [H _].
         forward H. { 
@@ -482,9 +483,9 @@ Proof.
   induction Δ in cs, H |- *; simpl; intros. constructor; intuition auto.
   destruct a as [na [b|] ty]; constructor; intuition auto.
   destruct cs => //; eauto.
-  destruct cs => //; eauto. destruct X.
+  destruct cs => //; eauto. destruct X as (? & ? & ?).
   eapply IHΔ. intros. apply (H Γ' t1 s0). right; eauto. all:auto.
-  destruct cs => //. destruct X.
+  destruct cs => //. destruct X as (? & ? & ?).
   eapply H. left; eauto. eauto.
 Qed.
 
@@ -921,7 +922,7 @@ Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- A : tSort u.
 Proof using Hcf Hcf'.
   intros.
-  destruct X0 as [s Hs].
+  destruct X0 as (s & e & Hs).
   eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
@@ -935,7 +936,7 @@ Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- B : tSort u.
 Proof using Hcf Hcf'.
   intros.
-  destruct X0 as [s Hs].
+  destruct X0 as (s & e & Hs).
   eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.
@@ -949,7 +950,7 @@ Lemma cumul_sprop1 (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- A : tSort u.
 Proof using Hcf Hcf'.
   intros.
-  destruct X0 as [s Hs].
+  destruct X0 as (s & e & Hs).
   eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
@@ -963,7 +964,7 @@ Lemma cumul_sprop2 (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- B : tSort u.
 Proof using Hcf Hcf'.
   intros.
-  destruct X0 as [s Hs].
+  destruct X0 as (s & e & Hs).
   eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.

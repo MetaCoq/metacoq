@@ -195,14 +195,14 @@ Proof.
     rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
     simpl in *.
-    repeat red in IH. destruct IH as [s Hs].
+    repeat red in IH. destruct IH as (s & e & Hs).
     rewrite -> andb_and in Hs. intuition auto.
     eauto using closed_upwards with arith.
 
   - rewrite closedn_subst_instance.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
-    destruct X0 as [s Hs]. rewrite -> andb_and in Hs.
+    destruct X0 as (s & e & Hs). rewrite -> andb_and in Hs.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -215,7 +215,7 @@ Proof.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
-      destruct o as [? ? [s Hs] _]. rewrite -> andb_and in Hs.
+      destruct o as [? ? (s & e' & Hs) _]. rewrite -> andb_and in Hs.
       apply proj1 in Hs.
       rewrite arities_context_length in Hs.
       eauto using closed_upwards with arith.
@@ -277,18 +277,18 @@ Proof.
     subst types.
     now rewrite app_context_length fix_context_length in H.
     eapply nth_error_all in X0; eauto. simpl in X0. intuition auto. rtoProp.
-    destruct X0 as [s [Hs cl]]. now rewrite andb_true_r in cl.
+    destruct X0 as (s & e & Hs & cl). now rewrite andb_true_r in cl.
 
   - split. solve_all. destruct b.
     destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
-    destruct a as [s [Hs cl]].
+    destruct a as (s & e & Hs & cl).
     now rewrite andb_true_r in cl.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     subst types. now rewrite fix_context_length in H3.
     eapply nth_error_all in X0; eauto.
-    destruct X0 as [s [Hs cl]].
+    destruct X0 as (s & e & Hs & cl).
     now rewrite andb_true_r in cl.
 Qed.
 
@@ -380,8 +380,11 @@ Qed.
 
 #[global] Hint Extern 10 => progress unfold PCUICTypingDef.typing in * : fvs.
 
+Lemma isTypeRelOpt_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T rel} : isTypeRelOpt Σ Γ T rel -> closedn #|Γ| T.
+Proof. intros (s & e & Hs); fvs. Qed.
+
 Lemma isType_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T} : isType Σ Γ T -> closedn #|Γ| T.
-Proof. intros [s Hs]; fvs. Qed.
+Proof. apply isTypeRelOpt_closed. Qed.
 
 #[global] Hint Extern 4 (closedn #|?Γ| ?A = true) =>
   match goal with
@@ -465,7 +468,7 @@ Qed.
   end : fvs.
 
 Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
-  wf Σ.1 -> ctx_inst typing Σ Γ i Δ -> All (closedn #|Γ|) i.
+  wf Σ.1 -> ctx_inst (typing Σ) Γ i Δ -> All (closedn #|Γ|) i.
 Proof.
   intros wfΣ; induction 1; auto; constructor; auto; fvs.
 Qed.
@@ -497,8 +500,8 @@ Proof.
   destruct decl as [ty bo un]. simpl in *.
   destruct bo as [t|].
   - now eapply type_closed in decl'.
-  - cbn in decl'. destruct decl' as [s h].
-    now eapply subject_closed in h. Unshelve. all:tea.
+  - cbn in decl'. destruct decl' as (s & e & Hs).
+    now eapply subject_closed in Hs. Unshelve. all:tea.
 Qed.
 
 
@@ -535,7 +538,7 @@ Proof.
   destruct h1 as [Σ' [ext wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
   eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? [? h] ? ? ?].
+  simpl in h. destruct h as [? (? & ? & h) ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto.
   now move: e => [_ /andP []]. 
 Qed.

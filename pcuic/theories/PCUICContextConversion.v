@@ -1161,8 +1161,8 @@ Qed.
     end. *)
 Definition on_local_decl (P : context -> term -> typ_or_sort -> Type) (Γ : context) (d : context_decl) :=
   match decl_body d with
-  | Some b => P Γ b (Typ (decl_type d)) * P Γ (decl_type d) Sort
-  | None => P Γ (decl_type d) Sort
+  | Some b => P Γ b (Typ (decl_type d)) × P Γ (decl_type d) (SortRel d.(decl_name).(binder_relevance))
+  | None => P Γ (decl_type d) (SortRel d.(decl_name).(binder_relevance))
   end.
 
 Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :

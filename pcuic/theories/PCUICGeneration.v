@@ -33,7 +33,7 @@ Section Generation.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as [s Hs].
+    destruct i as (s & e & Hs).
     eapply type_App; eauto.
     eapply type_Cumul; eauto.
   Qed.
@@ -49,11 +49,13 @@ Section Generation.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
       dependent induction hc.
-      econstructor; try eassumption. exact t0.π2.
+      destruct t0 as (s & e & Hs).
+      econstructor; try eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc;
-      econstructor; try eassumption. exact t0.π2.
+      dependent induction hc.
+      destruct t0 as (s & e & Hs).
+      econstructor; try eassumption.
   Qed.
 
 End Generation.

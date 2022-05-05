@@ -42,14 +42,15 @@ Section Alpha.
       wf Σ.1 ->
       wf_local Σ Γ ->
       nth_error Γ i = Some (vass na ty) ->
-      lift_typing typing Σ Γ (lift0 (S i) ty) Sort.
+      lift_typing typing Σ Γ (lift0 (S i) ty) (Sort None).
   Proof using Type.
     intros Σ Γ i na ty hΣ hΓ e. simpl.
     induction i in Γ, hΓ, e |- *.
     - destruct Γ. 1: discriminate.
       simpl in e. apply some_inj in e. subst.
       inversion hΓ. subst.
-      apply infer_typing_sort_impl with id X0; intros Hs.
+      apply isType_of_isTypeRel in X0.
+      apply infer_typing_sort_impl with id X0 => //; intros Hs.
       change (tSort _) with (lift0 1 (tSort X0.π1)).
       eapply weakening with (Γ' := [ vass na ty ]).
       all: assumption.
@@ -57,7 +58,7 @@ Section Alpha.
       simpl in e.
       specialize IHi with (2 := e).
       forward IHi by inversion hΓ; tas.
-      apply infer_typing_sort_impl with id IHi; intros Hs.
+      apply infer_typing_sort_impl with id IHi => //; intros Hs.
       change (tSort _) with (lift0 1 (lift0 (S i) (tSort IHi.π1))).
       rewrite simpl_lift0.
       eapply weakening with (Γ' := [ c ]).
@@ -465,18 +466,18 @@ Section Alpha.
     now eapply eq_context_gen_eq_univ_subst_preserved.
   Qed.
 
-  Lemma ctx_inst_impl {Σ P Q Γ s Δ}:
-    (forall Σ Γ u U, P Σ Γ u U -> Q Σ Γ u U) ->
-    PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ s Δ.
+  Lemma ctx_inst_impl {P Q Γ s Δ}:
+    (forall Γ u U, P Γ u U -> Q Γ u U) ->
+    PCUICTyping.ctx_inst P Γ s Δ -> PCUICTyping.ctx_inst Q Γ s Δ.
   Proof using Type.
     intros HP.
     induction 1; constructor; auto.
   Qed.
 
-  Lemma ctx_inst_eq_context {Σ P Q Γ Γ' s Δ}:
-    (forall Σ Γ Γ' u U, (Γ ≡Γ Γ') -> P Σ Γ u U -> Q Σ Γ' u U) ->
+  Lemma ctx_inst_eq_context {P Q Γ Γ' s Δ}:
+    (forall Γ Γ' u U, (Γ ≡Γ Γ') -> P Γ u U -> Q Γ' u U) ->
     Γ ≡Γ Γ' ->
-    PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ' s Δ.
+    PCUICTyping.ctx_inst P Γ s Δ -> PCUICTyping.ctx_inst Q Γ' s Δ.
   Proof using Type.
     intros HP e.
     induction 1; constructor; eauto.
@@ -491,7 +492,7 @@ Section Alpha.
     eapply All2_fold_All2 in eq.
     induction eq; depelim a; cbn; try solve [constructor; auto];
     depelim r; subst; constructor; auto.
-    1,2: apply infer_typing_sort_impl with id l; intros Hs.
+    1,2: rewrite e; apply infer_typing_sort_impl with id l => //; intros Hs.
     3: rename l0 into Hs.
     all: eapply (closed_context_cumulativity _ (pb:=Conv)); tea; [apply IHeq; pcuic|].
     all: eapply ws_cumul_ctx_pb_rel_app.
@@ -552,7 +553,7 @@ Section Alpha.
     wf_local Σ Δ ->
     isType Σ Δ T.
   Proof using Type.
-    intros Hty eq wfΔ; apply infer_typing_sort_impl with id Hty; intros Hs.
+    intros Hty eq wfΔ; apply infer_typing_sort_impl with id Hty => //; intros Hs.
     now eapply eq_context_conversion.
   Qed.
 
@@ -570,10 +571,10 @@ Section Alpha.
       * intros Δ eq; destruct Δ; depelim eq; constructor.
       * intros Δ eq; depelim eq. depelim c.
         constructor; auto.
-        apply infer_typing_sort_impl with id tu; intros _. eapply Hs; auto.
+        rewrite -e. apply infer_typing_sort_impl with id tu => //; intros _. eapply Hs; auto.
       * intros Δ eq; depelim eq. depelim c.
         constructor; auto.
-        apply infer_typing_sort_impl with id tu; intros _. eapply Hs; auto.
+        rewrite -e. apply infer_typing_sort_impl with id tu => //; intros _. eapply Hs; auto.
         red.
         specialize (Hc _ _ e0 eq).
         specialize (Hs _ _ e1 eq).
@@ -598,42 +599,47 @@ Section Alpha.
       specialize (ih _ eqctx).
       eapply eq_context_conversion; tea.
       eapply type_Sort; assumption.
-    - intros na A B s1 s2 ih hA ihA hB ihB Δ v e eqctx; invs e.
+    - intros na A B s1 s2 e' ih hA ihA hB ihB Δ v e eqctx; invs e.
       econstructor.
+      + rewrite <- H3. apply e'.
       + eapply ihA. assumption. eauto.
       + eapply context_conversion.
         * eapply ihB. assumption. reflexivity.
         * constructor; eauto.
-          simpl. eexists. eapply ihA; tea.
+          eexists. split. rewrite <- H3; apply e'. eapply ihA; tea.
         * constructor.
           -- now eapply eq_context_upto_empty_conv_context.
           -- constructor. assumption. constructor.
              eapply upto_names_impl_eq_term. assumption.
-    - intros na A t s1 B ih hA ihA hB ihB Δ v e e'; invs e.
+    - intros na A t s1 B e2 ih hA ihA hB ihB Δ v e e'; invs e.
       eapply type_Cumul'.
       + econstructor.
+        * rewrite <- H3; apply e2.
         * eapply ihA; tea.
         * eapply eq_context_conversion.
           -- eapply ihB. assumption. reflexivity.
           -- constructor. 1: assumption.
              simpl. constructor; auto.
           -- constructor; eauto. exists s1.
+              split. rewrite <- H3; apply e2.
               now eapply ihA.
       + eapply validity in hB;tea.
         eapply isType_tProd; eauto. split; eauto with pcuic.
+        exists s1; split => //. apply ihA => //. reflexivity.
         eapply validity. eapply ihB; eauto.
         constructor; auto. constructor ; auto. reflexivity.
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         symmetry. constructor; auto.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: reflexivity.
-    - intros na b B t s1 A ih hB ihB hb ihb hA ihA Δ v e e'; invs e.
+    - intros na b B t s1 A e2 ih hB ihB hb ihb hA ihA Δ v e e'; invs e.
       specialize (ihB _ _ X0 e').
       specialize (ihb _ _ X e').
       assert (isType Σ Γ (tLetIn na b B A)).
       { eapply validity. econstructor; eauto. }
       eapply type_Cumul'.
       + econstructor.
+        * rewrite <- H4; apply e2.
         * eapply ihB; trea.
         * econstructor.
           -- eapply ihb; trea.
@@ -646,12 +652,12 @@ Section Alpha.
             ++ assumption.
             ++ constructor; auto.
           -- constructor; auto.
-             ++ exists s1; eapply ihB; eauto.
+             ++ exists s1; split. rewrite <- H4; apply e2. eapply ihB; eauto.
              ++ eapply type_Cumul'; tea.
-                exists s1. eapply ihB; eauto.
+                exists s1. split; [cbnr|]. eapply ihB; eauto.
                 eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
                 now apply upto_names_impl_eq_term.
-      + apply infer_typing_sort_impl with id X2; intros Hs.
+      + apply infer_typing_sort_impl with id X2 => //; intros Hs.
         eapply eq_context_conversion; tea. eauto.
       + eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         symmetry; constructor. assumption.
@@ -667,7 +673,8 @@ Section Alpha.
           all:typeclasses eauto.
         * eapply ihu; trea.
         * eapply ihty. reflexivity. auto.
-      + apply infer_typing_sort_impl with id X1; intros Hs. eapply eq_context_conversion; tea. eauto.
+      + apply infer_typing_sort_impl with id X1 => //; intros Hs.
+        eapply eq_context_conversion; tea. eauto.
       + eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         symmetry.
         eapply upto_names_impl_eq_term.
@@ -686,8 +693,8 @@ Section Alpha.
             wfcpc kelim HIHctxi Hc IHc iscof ptm wfbrs Hbrs Δ v e e'; invs e.
       have eqp := X1.
       eassert (ctx_inst _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (2 := HIHctxi).
-      eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as IHctxi.
-      { eapply ctx_inst_impl with (2 := HIHctxi). intros ? ? ? ? [? r]; exact r. }
+      eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as IHctxi.
+      { eapply ctx_inst_impl with (2 := HIHctxi). intros ? ? ? [? r]; exact r. }
       destruct X1 as [eqpars [eqinst [eqctx eqret]]].
       assert (wf_predicate mdecl idecl p').
       { destruct wfp. split; auto.
@@ -756,7 +763,7 @@ Section Alpha.
         econstructor; tea; eauto. 2,3: constructor; tea ; eauto. 
         * eapply (type_ws_cumul_pb (pb:=Cumul)).
           eapply IHc; eauto.
-          eexists; eapply isType_mkApps_Ind; tea.
+          eexists; split; [cbnr|]; eapply isType_mkApps_Ind; tea.
           unshelve eapply (ctx_inst_spine_subst _ ctxinst').
           eapply weaken_wf_local; tea.
           now eapply (on_minductive_wf_params_indices_inst isdecl).
@@ -782,7 +789,7 @@ Section Alpha.
           2:now eapply Forall2_All2 in wfbrs.
           epose proof (wf_case_branches_types' (p:=p') ps args brs' isdecl) as a.
           forward a.
-          { eexists; eapply isType_mkApps_Ind; tea.
+          { eexists; split; [cbnr|]; eapply isType_mkApps_Ind; tea.
             unshelve eapply (ctx_inst_spine_subst _ ctxinst').
             eapply weaken_wf_local; tea.
             eapply (on_minductive_wf_params_indices_inst isdecl _ cu'). }
@@ -837,14 +844,15 @@ Section Alpha.
     - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
-      destruct hh as [[[ety eqann] ebo] era].
+      destruct hh as [[[ety ebo] era] eqann].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { apply PCUICWeakeningTyp.All_mfix_wf; auto.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
-        apply infer_typing_sort_impl with id Hty; intros [Hs IH].
+        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        rewrite /on_def_type -eqann.
+        apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
         apply IH; eauto. reflexivity. }
       assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
@@ -883,8 +891,9 @@ Section Alpha.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
-          destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
-          apply infer_typing_sort_impl with id Hty; intros [Hs IH].
+          destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+          rewrite /on_def_type -eqann.
+          apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
           apply IH; eauto. reflexivity.
         * solve_all.
           destruct b0 as [Hb IHb].
@@ -892,7 +901,8 @@ Section Alpha.
           forward IHb. { apply eq_context_upto_cat; reflexivity. }
           eapply context_conversion; eauto.
           eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
-          apply infer_typing_sort_impl with id a1; intros [Hs IH].
+          eapply isType_of_isTypeRel.
+          apply infer_typing_sort_impl with id a1 => //; intros [Hs IH].
           specialize (IH _ _ a0 e').
           rewrite <-H.
           eapply (weakening _ _ _ _ (tSort _)); eauto.
@@ -914,22 +924,24 @@ Section Alpha.
           move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. solve_all.
         + eapply All_nth_error in ihmfix; tea.
-          now apply infer_typing_sort_impl with id ihmfix; intros [].
+          eapply isType_of_isTypeRel.
+          now apply infer_typing_sort_impl with id ihmfix => //; intros [].
         + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
           now symmetry.
 
   - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
-    destruct hh as [[[ety eqann] ebo] era].
+    destruct hh as [[[ety ebo] era] eqann].
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
     { apply PCUICWeakeningTyp.All_mfix_wf; auto.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
-      destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
-      apply infer_typing_sort_impl with id Hty; intros [Hs IH].
-      apply IH; eauto. reflexivity. }
+      destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+      rewrite /on_def_type -eqann.
+      apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
+    apply IH; eauto. reflexivity. }
     assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
       eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
@@ -967,16 +979,18 @@ Section Alpha.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
-        apply infer_typing_sort_impl with id Hty; intros [Hs IH].
-        apply IH; eauto. reflexivity.
+        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        rewrite /on_def_type -eqann.
+        apply infer_typing_sort_impl with id Hty => //; intros [Hs IH].
+      apply IH; eauto. reflexivity.
       * solve_all.
         destruct b0 as [Hb IHb].
         specialize (IHb (Γ ,,, types) _ b2).
         forward IHb. { apply eq_context_upto_cat; reflexivity. }
         eapply context_conversion; eauto.
         eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
-        apply infer_typing_sort_impl with id a1; intros [Hs IH].
+        eapply isType_of_isTypeRel.
+        apply infer_typing_sort_impl with id a1 => //; intros [Hs IH].
         specialize (IH _ _ a0 e').
         rewrite <-H.
         eapply (weakening _ _ _ _ (tSort _)); eauto.
@@ -991,14 +1005,15 @@ Section Alpha.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
         apply upto_names_check_cofix. solve_all.
       + eapply All_nth_error in ihmfix; tea.
-        now apply infer_typing_sort_impl with id ihmfix; intros [].
+        eapply isType_of_isTypeRel.
+        now apply infer_typing_sort_impl with id ihmfix => //; intros [].
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
 
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
       eapply (type_ws_cumul_pb (pb:=Cumul)).
       + eapply iht; tea.
-      + exists X; eauto.
+      + exists X; split; [cbnr|]; eauto.
         specialize (wf _ e'). now eapply eq_context_conversion.
       + eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)); tea.
         2:eapply PCUICInversion.into_ws_cumul; tea.
@@ -1105,7 +1120,7 @@ Section Alpha.
     isType Σ Γ v.
   Proof using Type.
     intros Hty eq.
-    apply infer_typing_sort_impl with id Hty; intros Hs.
+    apply infer_typing_sort_impl with id Hty => //; intros Hs.
     eapply typing_alpha; eauto.
   Qed.
 
@@ -1116,7 +1131,7 @@ Section Alpha.
     isType Σ Δ v.
   Proof using Type.
     intros Hty eqctx eqtm.
-    apply infer_typing_sort_impl with id Hty; intros Hs.
+    apply infer_typing_sort_impl with id Hty => //; intros Hs.
     eapply typing_alpha_prop; eauto.
   Qed.
 

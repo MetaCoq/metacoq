@@ -27,7 +27,7 @@ Proof.
 Qed.
 
 Lemma ctx_inst_on_universes Σ Γ ts Ts :
-  ctx_inst (fun Σ' _ t' _ => wf_universes Σ' t') Σ Γ ts Ts ->
+  ctx_inst (fun _ t _ => wf_universes Σ t) Γ ts Ts ->
   Forall (wf_universes Σ) ts.
 Proof.
   induction 1.

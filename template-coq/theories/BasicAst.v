@@ -211,7 +211,7 @@ Qed.
 Variant typ_or_sort_ {term} := Typ (T : term) | Sort (relopt : option relevance).
 Arguments typ_or_sort_ : clear implicits.
 
-Definition SortRel {term} rel : typ_or_sort_ term := Sort (Some rel).
+Notation SortRel rel := (Sort (Some rel)).
 
 Definition typ_or_sort_map {T T'} (f: T -> T') t :=
   match t with

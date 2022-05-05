@@ -40,7 +40,8 @@ Proof.
     + apply wf_local_app; auto.
       apply (All_local_env_fold (fun Δ => lift_typing typing Σ (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
     + apply weakening_renaming.
-  - intros Hty. simple apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Δ Γ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty; intros Hs.
+  - intros Hty.
+    apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Δ Γ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty => //; intros Hs.
     rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r !lift_rename. 
     eapply (Hs xpredT).
@@ -177,7 +178,7 @@ Qed.
 
 Corollary All_mfix_wf {cf:checker_flags} Σ Γ mfix :
   wf Σ.1 -> wf_local Σ Γ ->
-  All (fun d : def term => isType Σ Γ (dtype d)) mfix ->
+  All (on_def_type (lift_typing typing Σ) Γ) mfix ->
   wf_local Σ (Γ ,,, fix_context mfix).
 Proof.
   move=> wfΣ wf a; move: wf.
@@ -192,13 +193,13 @@ Proof.
   + simpl.
     eapply All_local_env_app. split; auto.
     * repeat constructor.
-      apply infer_typing_sort_impl with id p; intros Hs.
+      apply infer_typing_sort_impl with id p => //; intros Hs.
       eapply (weakening Σ Γ Δ _ (tSort _)); auto.
     * specialize (IHa (Δ ,,, [vass (dname x) (lift0 #|Δ| (dtype x))])).
       rewrite app_length in IHa. simpl in IHa.
       forward IHa.
       ** simpl; constructor; auto.
-         apply infer_typing_sort_impl with id p; intros Hs.
+         apply infer_typing_sort_impl with id p => //; intros Hs.
          eapply (weakening Σ Γ Δ _ (tSort _)); auto.
       ** eapply All_local_env_impl; eauto.
         simpl; intros.
@@ -214,7 +215,7 @@ Proof.
   intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
   assert (n = #|firstn n Γ|).
   { rewrite firstn_length_le; auto with arith. }
-  apply infer_typing_sort_impl with id wfty; intros Hs.
+  apply infer_typing_sort_impl with id wfty => //; intros Hs.
   rewrite {3}H.
   eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ) (T := tSort _)); 
     eauto with wf.

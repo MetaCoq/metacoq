@@ -23,8 +23,8 @@ Proof.
   lia.
 Qed.
 
-Lemma ctx_inst_length {ty Σ Γ args Δ} :
-PCUICTyping.ctx_inst ty Σ Γ args Δ -> 
+Lemma ctx_inst_length {ty Γ args Δ} :
+PCUICTyping.ctx_inst ty Γ args Δ -> 
 #|args| = context_assumptions Δ.
 Proof.
 induction 1; simpl; auto.
@@ -34,9 +34,9 @@ rewrite context_assumptions_mapi in IHX. congruence.
 Qed.
 
 
-Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Σ Γ args (Δ ++ Δ')) :
-  (forall Γ' t T, P Σ Γ' t T -> Q Σ Γ' t T) ->
-  PCUICTyping.ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
+Lemma ctx_inst_app_impl {P Q Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Γ args (Δ ++ Δ')) :
+  (forall Γ' t T, P Γ' t T -> Q Γ' t T) ->
+  PCUICTyping.ctx_inst Q Γ (firstn (context_assumptions Δ) args) Δ.
 Proof.
   revert args Δ' c.
   induction Δ using ctx_length_ind; intros.
@@ -120,17 +120,15 @@ Proof.
   - intros bdwfΓ.
     induction bdwfΓ.
     all: constructor ; auto.
-    + apply conv_infer_sort in Hs ; auto.
-      2: by destruct tu.
-      destruct Hs as (?&?&?).
+    + destruct tu as (?&?&?).
+      apply conv_infer_sort in Hs as (? & ? & ?); auto.
       eexists.
-      eassumption.
-    + apply conv_check in Hc ; auto.
-      apply conv_infer_sort in Hs ; auto.
-      2: by destruct tu.
-      destruct Hs as (?&?&?).
-      1: eexists.
-      all: eassumption.
+      split; [eapply geq_relevance|]; tea.
+    + destruct tu as (?&?&?).
+      apply conv_check in Hc ; auto.
+      apply conv_infer_sort in Hs as (? & ? & ?); auto.
+      eexists.
+      split; [eapply geq_relevance|]; tea.
     + by apply conv_check in Hc.
       
   - intros.
@@ -147,38 +145,37 @@ Proof.
     constructor.
     assumption.
 
-  - intros n A B ? ? ? ? CumA ? CumB.
+  - intros n A B ? ? e ? ? CumA ? CumB.
     apply conv_infer_sort in CumA ; auto.
     destruct CumA as (?&?&?).
     apply conv_infer_sort in CumB ; auto.
     destruct CumB as (?&?&?).
     eexists.
     split.
-    + constructor ; eassumption.
+    + constructor; [apply (geq_relevance l)| |]; tea.
     + constructor ; cbn ; auto.
       1: by apply wf_local_closed_context.
       constructor.
       apply leq_universe_product_mon.
       all: assumption.
       
-  - intros n A t ? ? ? ? CumA ? (?&?&?).
+  - intros n A t ? ? e ? ? CumA ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
     destruct CumA as (?&?&?).
     eexists.
     split.
-    + econstructor. all: eassumption.
+    + econstructor; [apply (geq_relevance l)| |]; tea.
     + apply ws_cumul_pb_Prod ; auto.
       eapply isType_ws_cumul_pb_refl.
-      by eexists ; eauto.
+      by eexists ; split; eauto.
 
-  - intros n t A u ? ? ? ? CumA ? Cumt ? (?&?&?).
+  - intros n t A u ? ? e ? ? CumA ? Cumt ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
     destruct CumA as (?&?&?).
     apply conv_check in Cumt ; auto.
     eexists.
     split.
-    + econstructor.
-      all: eassumption.
+    + econstructor; [apply (geq_relevance l)| | |]; tea.
     + apply ws_cumul_pb_LetIn_bo.
       eassumption.
 
@@ -305,12 +302,12 @@ Proof.
         by (apply infering_ind_typing in i ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
-          apply validity in X1 as [].
+          apply validity in X1 as (s & e & Hs).
           eapply invert_type_mkApps_ind ; eauto.
         }
       assert (consistent_instance_ext Σ (ind_universes mdecl) ui').
         { destruct isdecl.
-          apply validity in X2 as [] ; auto.
+          apply validity in X2 as (s & e & Hs).
           eapply invert_type_mkApps_ind ; eauto.
         }
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
@@ -343,14 +340,14 @@ Proof.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as [? []] ; tea.
-      eexists ; tea.
+      eapply nth_error_all in Alltypes as (s & e & Hs & Hs'); tea.
+      eexists; split; cbnr; tea.
     }
     constructor ; eauto.
     + apply (All_impl Alltypes).
-      intros ? [? [? s]].
-      apply conv_infer_sort in s as [? []] ; auto.
-      eexists ; eauto.
+      intros ? (s & e & Hs & Hs').
+      apply conv_infer_sort in Hs' as (s' & e' & Hleq) ; auto.
+      eexists; split; [apply (geq_relevance Hleq)|]; tea.
     + apply (All_impl Allbodies).
       intros ? [? s].
       by apply conv_check in s ; auto.
@@ -360,14 +357,14 @@ Proof.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as [? []] ; tea.
-      eexists ; tea.
+      eapply nth_error_all in Alltypes as (? & ? & ? & ?) ; tea.
+      eexists; split; cbnr; tea.
     }
     constructor ; eauto.
     + apply (All_impl Alltypes).
-      intros ? [? [? s]].
-      apply conv_infer_sort in s as [? []] ; auto.
-      eexists ; eauto.
+      intros ? (s & e & Hs & Hs').
+      apply conv_infer_sort in Hs' as (s' & e' & Hleq) ; auto.
+      eexists; split; [apply (geq_relevance Hleq)|]; tea.
     + apply (All_impl Allbodies).
       intros ? [? s].
       by apply conv_check in s ; auto.
@@ -410,9 +407,17 @@ Qed.
 Lemma isType_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t} :
   isType Σ Γ t -> ∑ u', Σ ;;; Γ |- t ▹□ u'.
 Proof.
-  intros [? ty].
-  eapply typing_infering_sort in ty as [? []]; tea.
+  intros (? & e & ty).
+  eapply typing_infering_sort in ty as (? & ? & ?); tea.
   now eexists.
+Qed.
+
+Lemma isTypeRel_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t r} :
+  isTypeRel Σ Γ t r -> ∑ u', relevance_of_sort u' = r × Σ ;;; Γ |- t ▹□ u'.
+Proof.
+  intros (s & e & ty).
+  eapply typing_infering_sort in ty as (s' & e' & Hleq); tea.
+  exists s'; split; [apply (geq_relevance Hleq)|]; tea.
 Qed.
 
 Lemma typing_infer_prod `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B} :
@@ -453,14 +458,14 @@ Proof.
   induction Γ' as [|[? [] ?]] in wfΓ' |- *.
   all: constructor ; inversion wfΓ' ; subst ; cbn in *.
   1,4: now apply IHΓ'.
-  - now apply isType_infering_sort.
+  - now apply isTypeRel_infering_sort.
   - now apply typing_checking.
-  - now apply isType_infering_sort.  
+  - now apply isTypeRel_infering_sort.  
 Qed.
 
 Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
-  PCUICTyping.ctx_inst typing Σ Γ l Δ ->
-  PCUICTyping.ctx_inst checking Σ Γ l Δ.
+  PCUICTyping.ctx_inst (typing Σ) Γ l Δ ->
+  PCUICTyping.ctx_inst (checking Σ) Γ l Δ.
 Proof.
   intros inl.
   induction inl.

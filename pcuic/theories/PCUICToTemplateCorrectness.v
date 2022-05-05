@@ -690,11 +690,11 @@ Section wtsub.
   Proof.
     destruct t; simpl; intros [T h]; try exact tt.
     - now eapply inversion_Evar in h.
-    - eapply inversion_Prod in h as (?&?&?&?&?); tea.
+    - eapply inversion_Prod in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
-    - eapply inversion_Lambda in h as (?&?&?&?&?); tea.
+    - eapply inversion_Lambda in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
-    - eapply inversion_LetIn in h as (?&?&?&?&?&?); tea.
+    - eapply inversion_LetIn in h as (?&?&?&?&?&?&?); tea.
       repeat split; eexists; eauto.
     - eapply inversion_App in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
@@ -734,11 +734,11 @@ Section wtsub.
       eexists; eauto.
     - eapply inversion_Fix in h as (?&?&?&?&?&?&?); tea.
       eapply All_prod.
-      eapply (All_impl a). intros ? h; exact h.
+      eapply (All_impl a). intros ? h; apply isType_of_isTypeRel in h; exact h.
       eapply (All_impl a0). intros ? h; eexists; tea.
     - eapply inversion_CoFix in h as (?&?&?&?&?&?&?); tea.
       eapply All_prod.
-      eapply (All_impl a). intros ? h; exact h.
+      eapply (All_impl a). intros ? h; apply isType_of_isTypeRel in h; exact h.
       eapply (All_impl a0). intros ? h; eexists; tea.
   Qed.
 End wtsub.
@@ -1510,8 +1510,8 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct tu. exists x. eapply Hs.
-  - simpl. constructor; auto. red. destruct tu. exists x. auto.
+    + simpl. destruct tu as (s & e & Hty). exists s. split; [apply e|]; eapply Hs.
+  - simpl. constructor; auto. red. destruct tu as (s & e & Hty). exists s. split; auto.
 Qed.
 
 Lemma trans_wf_local_env {cf} Σ Γ :
@@ -1527,7 +1527,7 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct t0. exists x. eapply p.
+    + simpl. destruct t0 as (s & e & Hs & p). exists s. split; [apply e|]; eapply p.
   - simpl. constructor; auto. red. destruct t0. exists x. intuition auto.
     red. red in t1. destruct t1. eapply t2.
 Qed.
@@ -1579,11 +1579,12 @@ Proof.
   }
 
   induction X;cbn;constructor;auto;cbn in *.
-  - destruct t0 as (?&?&?).
+  - destruct t0 as (?&e&?&?).
     exists x.
+    split;[apply e|].
     apply t1.
-  - destruct t0 as (?&?&?).
-    eexists;eassumption.
+  - destruct t0 as (?&?&?&?).
+    eexists;split;eassumption.
   - destruct t1.
     assumption.
 Qed.
@@ -1641,13 +1642,13 @@ Proof.
   - constructor.
     + apply IHAll_local_env_over_gen.
     + cbn in *.
-      destruct tu.
-      eexists;split;eassumption.
+      destruct tu as (s & e & Hty).
+      eexists;split;[|split]; eassumption.
   - constructor.
     + apply IHAll_local_env_over_gen.
     + cbn in *.
-      destruct tu.
-      eexists;split;eassumption.
+      destruct tu as (s & e & Hty).
+      eexists;split;[|split];eassumption.
     + cbn in *.
       split;eassumption.
 Qed.
@@ -1870,9 +1871,9 @@ Section Typing_Spine_size.
   Fixpoint typing_spine_size {t T U} (s : typing_spine Σ Γ t T U) : size :=
   match s with
   | type_spine_eq ty => 0
-  | type_spine_nil ty ty' ist cum => typing_size ist.π2
+  | type_spine_nil ty ty' ist cum => typing_size ist.π2.2
   | type_spine_cons hd tl na A B T B' typrod cumul ty s' =>
-    (max (typing_size typrod.π2) (max (typing_size ty) (typing_spine_size s')))%nat
+    (max (typing_size typrod.π2.2) (max (typing_size ty) (typing_spine_size s')))%nat
   end.
 End Typing_Spine_size.
 
@@ -1901,11 +1902,12 @@ Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'}
   (Hs : Σ ;;; Γ ⊢ S ≤ S')
   (ist : isType Σ Γ S') :
   typing_spine_size (typing_spine_weaken_concl sp tyT Hs ist) <= 
-  max (typing_spine_size sp) (typing_size ist.π2).
+  max (typing_spine_size sp) (typing_size ist.π2.2).
 Proof.
   induction sp; simpl; auto. lia.
   rewrite - !Nat.max_assoc. 
-  specialize (IHsp (PCUICArities.isType_apply i t) Hs). lia.
+  specialize (IHsp (PCUICArities.isType_apply i t) Hs).
+  cbn in IHsp. lia.
 Qed.
 
 Ltac sig := unshelve eexists.
@@ -1920,7 +1922,7 @@ Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg
   (sp : typing_spine Σ Γ ty args (tProd na A B))
   (argd : Σ ;;; Γ |- arg : A) : 
   ∑ sp' : typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}), 
-    typing_spine_size sp' <= max (typing_size isty.π2) (max (typing_spine_size sp) (typing_size argd)).
+    typing_spine_size sp' <= max (typing_size isty.π2.2) (max (typing_spine_size sp) (typing_size argd)).
 Proof.
   revert arg argd.
   depind sp.
@@ -1937,7 +1939,7 @@ Proof.
     specialize (IHsp wf isty _ Harg) as [sp' Hsp'].
     sig.
     * econstructor. apply i. auto. auto. exact sp'.
-    * simpl. lia.
+    * cbn in Hsp' |- *. lia.
 Qed.
 
 (** Likewise, in Template-Coq, we can append without re-typing the result *)
@@ -1988,7 +1990,7 @@ Proof.
     exists fty, d'.
     split. lia.
     destruct hd' as [sp' Hsp].
-    destruct (typing_spine_app _ _ _ _ _ _ _ _ wfΣ (s; d1) sp' d3) as [appsp Happ].
+    destruct (typing_spine_app _ _ _ _ _ _ _ _ wfΣ (s; (I, d1)) sp' d3) as [appsp Happ].
     simpl in Happ.
     move: appsp Happ. rewrite equ firstn_skipn.
     intros app happ. exists app. lia.
@@ -2009,10 +2011,10 @@ Proof.
     destruct s0 as [sp Hsp].
     unshelve eexists. eapply typing_spine_weaken_concl; eauto. exact (PCUICValidity.validity d').
     eapply cumulSpec_cumulAlgo_curry in c; eauto; fvs.
-    exact (s; d2). cbn.
+    exact (s; (I, d2)). cbn.
     epose proof (typing_spine_weaken_concl_size wfΣ sp (validity_term wfΣ d')
       (cumulSpec_cumulAlgo_curry Σ wfΣ Γ A B (typing_closed_context d') (type_is_open_term d1) (subject_is_open_term d2) c)
-      (s; d2)). simpl in H0. lia.
+      (s; (I, d2))). simpl in H0. lia.
 Qed.
 
 (** Finally, for each typing spine built above, assuming we can apply the induction hypothesis
@@ -2042,7 +2044,7 @@ Proof.
     split.
     eapply cumul_decorate in c; tea.
     now eapply trans_cumul in c.
-    specialize (IH _ _ i.π2 H). now exists i.π1.
+    specialize (IH _ _ i.π2.2 H). now exists i.π1.
 
   - simpl; intros.
     forward IHsp.
@@ -2052,8 +2054,8 @@ Proof.
     forward IHt by lia.
     eapply cumul_decorate in c; tea.
     apply trans_cumul in c.
-    specialize (IH _ _ i.π2) as IHi.
-    forward IHi by lia.
+    specialize (IH _ _ i.π2.2) as IHi.
+    forward IHi by cbn in H |- *; lia.
     simpl in IHi.
     destruct IHsp as [T' [Hsp eq]].
     destruct eq. subst T'.
@@ -2279,7 +2281,7 @@ Proof.
       rewrite -[List.rev (trans_local _)]map_rev.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
-      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
+      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ => TT.typing _ _ _ _ ) _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
       now move: ctx; induction 1; cbn; constructor; auto; 
         rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev 
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
@@ -2343,7 +2345,7 @@ Proof.
       now eapply TT.All_local_env_app_inv in X as [].
     + fold trans.
       eapply All_map, (All_impl X0).
-      intros x [s ?]; exists s; intuition auto.
+      intros x (s & e & Hs & Hts); exists s; split; [apply e|]. intuition auto.
     + fold trans;subst types.
       now apply trans_mfix_All2.
     + now rewrite trans_wf_cofixpoint.

@@ -867,7 +867,7 @@ Section TypingWf.
 
     - eapply All_local_env_wf_decls.
       induction X; constructor; auto; red;
-      unfold wf_decl_pred, typ_or_sort_default, SortRel;
+      unfold wf_decl_pred, typ_or_sort_default;
       intuition auto.
     - split; wf. apply wf_lift.
       apply (nth_error_all H X).

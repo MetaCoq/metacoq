@@ -68,21 +68,21 @@ Proof using wfΣ.
   - eexists ; split.
     all: eapply closed_red_refl ; fvs.
 
-  - apply H in X2 => //.
-    apply H0 in X3.
-    2:{ constructor ; auto. now eapply infering_sort_isType. }
+  - apply H0 in X2 => //.
+    apply H1 in X3.
+    2:{ constructor ; auto. exists s1; split; [auto|]. now eapply infering_sort_typing. }
     subst.
     eexists ; split.
     all: eapply closed_red_refl ; fvs.
 
   - apply X1 in X4 as [bty' []].
-    2:{ constructor ; auto. now eapply infering_sort_isType. }
-    exists (tProd n t bty') ; split.
+    2:{ constructor ; auto. eexists; split; eauto; now eapply infering_sort_typing. }
+    exists (tProd na t bty') ; split.
     all: now eapply closed_red_prod_codom.
 
   - apply X2 in X6 as [A' []].
-    2:{ constructor ; auto. 2: eapply checking_typing ; tea. all: now eapply infering_sort_isType. }
-    exists (tLetIn n b B A').
+    2:{ constructor ; auto. 2: eapply checking_typing ; tea; now eapply infering_sort_isType. eexists; split; eauto; now apply infering_sort_typing. }
+    exists (tLetIn na b B A').
     assert (Σ ;;; Γ |- b : B)
       by (eapply checking_typing ; tea ; now eapply infering_sort_isType).
     split.
@@ -101,12 +101,12 @@ Proof using wfΣ.
       1: constructor.
       rewrite subst_empty.
       eapply checking_typing ; tea.
-      now eapply isType_tProd, validity, infering_prod_typing.
+      now eapply isType_of_isTypeRel, isType_tProd, validity, infering_prod_typing.
     + constructor.
       1: constructor.
       rewrite subst_empty.
       eapply checking_typing ; tea.
-      now eapply isType_tProd, validity, infering_prod_typing.
+      now eapply isType_of_isTypeRel, isType_tProd, validity, infering_prod_typing.
 
   - replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
     eexists ; split.

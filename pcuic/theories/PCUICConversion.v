@@ -3134,7 +3134,7 @@ Proof.
     * cbn; constructor. 
       + apply IHΔ => //.
       + destruct d as [na [b|] ty]; constructor; cbn in *; auto; try congruence.
-        destruct l as [s Hs].
+        destruct l as (s & e & Hs).
         constructor. 1:eauto with fvs.
         { now eapply subject_closed in Hs; rewrite is_open_term_closed in Hs. }
         { erewrite on_free_vars_subst_instance.
@@ -3144,14 +3144,14 @@ Proof.
     * cbn; constructor. 
       + apply IHΔ => //.
       + destruct d as [na [b'|] ty]; constructor; cbn in *; auto; try congruence; noconf H.
-        { destruct l as [s Hs].
+        { destruct l as (s & e & Hs).
           constructor. 1:eauto with fvs.
           { now eapply subject_closed in l0; rewrite is_open_term_closed in l0. }
           { erewrite on_free_vars_subst_instance.
             eapply subject_closed in l0; rewrite is_open_term_closed in l0.
             now rewrite on_free_vars_subst_instance in l0. }
           apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto. }
-        { destruct l as [s Hs].
+        { destruct l as (s & e & Hs).
           constructor. 1:eauto with fvs.
           { now eapply subject_closed in Hs; rewrite is_open_term_closed in Hs. }
           { erewrite on_free_vars_subst_instance.

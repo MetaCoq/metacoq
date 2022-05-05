@@ -35,8 +35,8 @@ Lemma extends_wf_local `{cf : checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
 Proof.
   intros X0 Σ' H0.
   induction X0 in H0 |- *; try econstructor; simpl in *; intuition auto.
-  - apply infer_typing_sort_impl with id tu. intro; eauto.
-  - apply infer_typing_sort_impl with id tu. intro; eauto.
+  - apply infer_typing_sort_impl with id tu => //. intro; eauto.
+  - apply infer_typing_sort_impl with id tu => //. intro; eauto.
 Qed.
 #[global]
 Hint Resolve extends_wf_local : extends.
@@ -85,8 +85,8 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - induction X; constructor; eauto 2 with extends.
-    + apply infer_typing_sort_impl with id tu; intro; auto.
-    + apply infer_typing_sort_impl with id tu; intro; auto.
+    + apply infer_typing_sort_impl with id tu => //; intro; auto.
+    + apply infer_typing_sort_impl with id tu => //; intro; auto.
     + eapply Hc; eauto.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
@@ -135,7 +135,7 @@ Proof.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
     destruct X. unshelve econstructor; eauto.
-    + unfold on_type in *; intuition eauto.
+    + unfold on_type_rel in *; intuition eauto.
     + unfold on_constructors in *. eapply All2_impl; eauto.
       intros.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
@@ -212,7 +212,7 @@ Proof.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
     destruct X. unshelve econstructor; eauto.
-    + unfold on_type in *; intuition eauto.
+    + unfold on_type_rel in *; intuition eauto.
     + unfold on_constructors in *. eapply All2_impl; eauto.
       intros.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.

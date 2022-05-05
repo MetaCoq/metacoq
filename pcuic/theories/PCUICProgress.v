@@ -79,7 +79,7 @@ Section WfEnv.
     - specialize IHX with (T' := (B {0 := hd})).
       assert (isType Σ Γ (B {0 := hd})) as HH. {
         clear p.
-        eapply inversion_Prod in H' as (? & ? & ? & ? & ?); tea.
+        eapply inversion_Prod in H' as (? & ? & ? & ? & ? & ?); tea.
         eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
         econstructor; cbn; eauto. 
       }
@@ -101,7 +101,9 @@ Proof.
   revert f T.
   induction u; intros f T. simpl. intros.
   { exists T, H, s, HT. intuition pcuic.
-    econstructor. eexists; eauto. eexists; eauto. eapply isType_ws_cumul_pb_refl. eexists; eauto. }
+    econstructor.
+    3: eapply isType_ws_cumul_pb_refl.
+    all: eexists; split; [cbnr|]; eauto. }
   intros Hf Ht. simpl in Hf.
   specialize (IHu (tApp f a) T).
   epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea. 
@@ -112,14 +114,14 @@ Proof.
   
   unshelve econstructor.
   5: eauto. 1: eauto. 
-  3:eapply isType_ws_cumul_pb_refl; eexists; eauto.
-  1: eexists; eauto.
+  3:eapply isType_ws_cumul_pb_refl; eexists; split; [cbnr|]; eauto.
+  1: eexists; split; [cbnr|]; eauto.
   1, 2: rewrite <- H2; lia.
   eapply typing_spine_pred_strengthen; tea.
-  eexists; eauto. clear Hs3.
-  eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
+  eexists; split; [cbnr|]; eauto. clear Hs3.
+  eapply inversion_Prod in HA as (? & ? & ? & ? & ? & ?); tea.
   eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
-  econstructor;  cbn; eauto.
+  econstructor; cbn; eauto.
   Unshelve. eauto. 
 Qed.
 
@@ -212,7 +214,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        wf_local Σ (Γ ,,, predctx) ->
        PΓ Σ (Γ ,,, predctx) ->
        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-       PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
+       PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices) 
          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -288,7 +290,7 @@ Proof.
      eapply typing_closed_context; eauto. eapply type_is_open_term.
      eapply type_App; eauto.
    + cbn. inversion HL. subst. clear HL.
-     eapply inversion_Prod in H' as Hx; eauto. destruct Hx as (? & ? & ? & ? & ?).
+     eapply inversion_Prod in H' as Hx; eauto. destruct Hx as (? & ? & ? & ? & ? & ?).
      econstructor.
      7: unshelve eapply IHL.
      now eauto. now eauto. split. now eauto. unshelve eapply IH. eauto. lia.
@@ -386,7 +388,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       wf_local Σ (Γ ,,, predctx) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-      PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
+      PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices) 
         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -557,7 +559,7 @@ Proof.
   * eapply inversion_Sort in hfn as [? [? cu]]; tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. }
     now eapply typing_spine_sort, app_tip_nil in hcum.
-  * eapply inversion_Prod in hfn as [? [? [? [? cu]]]]; tea.
+  * eapply inversion_Prod in hfn as (? & ? & ? & ? & ? & cu); tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity. econstructor; eauto. }
     now eapply typing_spine_sort, app_tip_nil in hcum.
   * (* Lambda *) left. destruct args.

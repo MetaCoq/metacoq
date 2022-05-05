@@ -1163,6 +1163,8 @@ Notation isSortRel s rel := (relevance_of_sort s = rel).
 Definition isSortRelOpt s relopt :=
   match relopt with None => True | Some rel => isSortRel s rel end.
 
+#[global] Hint Unfold isSortRelOpt : core.
+
 Notation "⟦ u ⟧_ v" := (Universe.to_cuniv v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
 
 

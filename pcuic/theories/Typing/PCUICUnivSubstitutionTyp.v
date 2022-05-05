@@ -222,11 +222,11 @@ Proof using Type.
     induction 1.
     + constructor.
     + simpl. constructor; auto.
-      eapply infer_typing_sort_impl; tea.
-      intros Hty. eapply Hs; auto.
+      eapply infer_typing_sort_impl with _ tu; [apply relevance_subst_opt|]; intros Hty.
+      eapply Hs; auto.
     + simpl. constructor; auto.
-      ++ eapply infer_typing_sort_impl; tea.
-         intros Hty. eapply Hs; auto.
+      ++ eapply infer_typing_sort_impl with _ tu; [apply relevance_subst_opt|]; intros Hty.
+         eapply Hs; auto.
       ++ apply Hc; auto.
 
   - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
@@ -238,16 +238,23 @@ Proof using Type.
     + econstructor.
       * aa.
       * now apply wf_universe_subst_instance.
-  - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' H.
-    rewrite product_subst_instance; aa. econstructor.
+  - intros n t0 b s1 s2 Xe X X0 X1 X2 X3 u univs wfΣ' H.
+    rewrite product_subst_instance; aa.
+    econstructor.
+    + apply relevance_subst; apply Xe.
     + eapply X1; eauto.
     + eapply X3; eauto.
-  - intros n t0 b s1 bty X X0 X1 X2 X3 u univs wfΣ' H.
+  - intros n t0 b s1 bty Xe X X0 X1 X2 X3 u univs wfΣ' H.
     econstructor.
+    + apply relevance_subst; apply Xe.
     + eapply X1; aa.
     + eapply X3; aa.
-  - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' H.
-    econstructor; eauto. eapply X5; aa.
+  - intros n b b_ty b' s1 b'_ty Xe X X0 X1 X2 X3 X4 X5 u univs wfΣ' H.
+    econstructor.
+    + eapply relevance_subst. apply Xe.
+    + eauto.
+    + eauto.
+    + eapply X5; aa.
   - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' H.
     rewrite subst_instance_subst. cbn. econstructor.
     + eapply X1; eauto.
@@ -322,10 +329,10 @@ Proof using Type.
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl; intuition auto.
-      eapply infer_typing_sort_impl with (tu := X1).
+      eapply infer_typing_sort_impl with _ X1; [apply relevance_subst_opt|].
       intros [_ Hs]; now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [X1 X3]. 
+      intros x [X1 X3]. cbn. 
       specialize (X3 u univs wfΣ' H2). 
       rewrite (map_dbody (subst_instance u)) in X3.
       rewrite subst_instance_lift in X3.
@@ -350,10 +357,10 @@ Proof using Type.
       + now eapply cofix_guard_subst_instance.
       + rewrite nth_error_map H0. reflexivity.
       + apply All_map, (All_impl X); simpl; intuition auto.
-        eapply infer_typing_sort_impl with (tu := X1).
+        eapply infer_typing_sort_impl with _ X1; [apply relevance_subst_opt|].
         intros [_ Hs]; now apply Hs.
       + eapply All_map, All_impl; tea.
-        intros x [X1 X3]. 
+        intros x [X1 X3]; cbn. 
         specialize (X3 u univs wfΣ' H2). 
         rewrite (map_dbody (subst_instance u)) in X3.
         rewrite subst_instance_lift in X3.
@@ -473,7 +480,7 @@ Lemma isType_subst_instance_decl Σ Γ T c decl u :
   isType Σ (subst_instance u Γ) (subst_instance u T).
 Proof using Type.
   intros wfΣ look isty cu.
-  eapply infer_typing_sort_impl with (tu := isty).
+  eapply infer_typing_sort_impl with _ isty; [apply relevance_subst_opt|].
   intros Hs; now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
@@ -492,7 +499,7 @@ Lemma wf_local_subst_instance Σ Γ ext u :
 Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1. simpl in *.
   induction X1; cbn; constructor; auto.
-  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  1,2: eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]; intros Hs.
   3: rename t1 into Hs.
   all: eapply typing_subst_instance'' in Hs; eauto; apply X.
 Qed.
@@ -506,7 +513,7 @@ Lemma wf_local_subst_instance_decl Σ Γ c decl u :
 Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   induction X1; cbn; constructor; auto.
-  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  1,2: eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]; intros Hs.
   3: rename t1 into Hs.
   all: eapply typing_subst_instance_decl in Hs; eauto; apply X.
 Qed.
@@ -521,7 +528,7 @@ Qed.
     pose proof (on_declared_inductive decli) as [onmind oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona.
-    red in ona. destruct ona.
+    red in ona. destruct ona as (s & e & t).
     eapply typed_subst_abstract_instance in t.
     2:split; simpl; auto.
     - rewrite !subst_instance_it_mkProd_or_LetIn in t.
@@ -543,7 +550,7 @@ Qed.
     pose proof (on_declared_inductive decli) as [_ oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona |- *.
-    red in ona. destruct ona.
+    red in ona. destruct ona as (s & e & t).
     eapply typed_subst_abstract_instance in t; eauto.
     destruct decli as [declm _].
     eapply declared_inductive_wf_global_ext in declm; auto.
@@ -555,7 +562,8 @@ Qed.
     isType Σ Γ T -> subst_instance u T = T.
   Proof using Type.
     intros wf_ext u isT.
-    destruct isT. eapply typed_subst_abstract_instance in t; auto.
+    destruct isT as (s & e & t).
+    eapply typed_subst_abstract_instance in t; auto.
   Qed.
 
 End SubstIdentity.

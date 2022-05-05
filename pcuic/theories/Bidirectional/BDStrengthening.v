@@ -390,14 +390,14 @@ Section OnFreeVars.
     - easy.
     - easy.
     - intros until bty.
-      move => _ _ _ Hbty ? ? /= /andP [] ? ?.
+      move => _ _ _ _ Hbty ? ? /= /andP [] ? ?.
       apply /andP ; split ; tea.
       apply Hbty ; tea.
       rewrite on_ctx_free_vars_snoc.
       apply /andP ; split ; tea.
 
     - intros until A.
-      move => _ _ _ _ _ Ht ? ? /= /andP [] ? /andP [] ? ?.
+      move => _ _ _ _ _ _ Ht ? ? /= /andP [] ? /andP [] ? ?.
       repeat (apply /andP ; split ; tea).
       apply Ht ; tea.
       rewrite on_ctx_free_vars_snoc.
@@ -580,8 +580,8 @@ Lemma rename_telescope P f Γ Δ tel tys:
   on_ctx_free_vars P Γ ->
   forallb (on_free_vars P) tys ->
   on_free_vars_ctx P (List.rev tel) ->
-  PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ tys tel ->
-  PCUICTyping.ctx_inst checking Σ Δ (map (rename f) tys) (rename_telescope f tel).
+  PCUICTyping.ctx_inst Pcheck Γ tys tel ->
+  PCUICTyping.ctx_inst (checking Σ) Δ (map (rename f) tys) (rename_telescope f tel).
 Proof using Type.
   intros ur hΓ htys htel ins.
   induction ins in Δ, ur, hΓ, htys, htel |- *.
@@ -618,8 +618,10 @@ Proof using wfΣ.
     induction hΓ.
     + constructor.
     + constructor ; tea.
+      destruct tu as (s' & e & H).
       eexists ; eauto.
     + constructor ; tea.
+      destruct tu as (s' & e & H).
       eexists ; eauto.
 
   - intros Γ Γ' wfΓ' allΓ'. red. move => P Δ f hf hΓ hΓ'.
@@ -630,7 +632,9 @@ Proof using wfΣ.
       move: hΓ' => /andP [] ? ?.
       constructor ; eauto.
       1: by eapply IHallΓ' ; eauto.
+      destruct tu as (s' & e & H).
       eexists.
+      split; [apply e|].
       eapply Hs.
       * eapply urenaming_context ; tea.
       * rewrite on_ctx_free_vars_concat.
@@ -642,7 +646,9 @@ Proof using wfΣ.
       move: hΓ' => /andP [] ? /andP /= [] ? ?.
       constructor ; eauto.
       * by eapply IHallΓ' ; eauto.
-      * eexists.
+      * destruct tu as (s' & e & H).
+        eexists.
+        split; [apply e|].
         eapply Hs.
         1: eapply urenaming_context ; tea.
         2: eauto.
@@ -816,14 +822,14 @@ Proof using wfΣ.
     + by rewrite nth_error_map H0 /=.
     + eapply All_mix in X ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? [] ? p.
-      rewrite -map_dtype.
+      move => ? [] /andP [] ? ? [] ? [] e [] ? p.
       eexists.
+      split; [apply e|].
       eapply p ; tea.
     + eapply All_mix in X0 ; tea.
       eapply All_map, All_impl ; tea.
       move => ? [] /andP [] ? ? [] ? p.
-      rewrite -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
+      rewrite /on_def_body -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
       eapply p ; tea.
       * rewrite -(fix_context_length mfix).
         eapply urenaming_context ; tea.
@@ -840,14 +846,14 @@ Proof using wfΣ.
     + by rewrite nth_error_map H0 /=.
     + eapply All_mix in X ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? [] ? p.
-      rewrite -map_dtype.
+      move => ? [] /andP [] ? ? [] ? [] e [] ? p.
       eexists.
+      split; [apply e|].
       eapply p ; tea.
     + eapply All_mix in X0 ; tea.
       eapply All_map, All_impl ; tea.
       move => ? [] /andP [] ? ? [] ? p.
-      rewrite -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
+      rewrite /on_def_body -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
       eapply p ; tea.
       * rewrite -(fix_context_length mfix).
         eapply urenaming_context ; tea.

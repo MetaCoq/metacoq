@@ -161,18 +161,19 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   type_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) (subst_instance_univ u s).
 Proof.
   intros Hctx Hu.
-  induction Δ; simpl in *; intuition auto.
+  induction Δ; intuition auto.
   { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto. }
-  destruct a as [na [b|] ty]; simpl; [destruct X as (Hwfctx & Ht & Hb) | destruct X as (Hwfctx & Ht)]; repeat split.
+  destruct a as [na [b|] ty]; destruct X as (Hwfctx & Ht & Hb); repeat split.
   - now apply IHΔ.
-  - eapply infer_typing_sort_impl with _ Ht; intros Hs.
+  - eapply infer_typing_sort_impl with _ Ht; [apply relevance_subst_opt|]; intros Hs.
     eapply instantiate_minductive in Hs; eauto.
     now rewrite subst_instance_app in Hs.
   - eapply instantiate_minductive in Hb; eauto.
     now rewrite subst_instance_app in Hb.
   - now apply IHΔ.
-  - eapply instantiate_minductive in Ht; eauto.
-    now rewrite subst_instance_app in Ht.
+  - now apply relevance_subst.
+  - eapply instantiate_minductive in Hb; eauto.
+    now rewrite subst_instance_app in Hb.
 Qed.
 
 Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -184,17 +185,20 @@ Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
     (List.map (subst_instance_univ u) s).
 Proof.
   intros Hctx Hu.
-  induction Δ in s |- *; simpl in *; intuition auto.
-  destruct s; simpl; intuition eauto.
-  destruct a as [na [b|] ty]; simpl. intuition eauto.
-  - eapply infer_typing_sort_impl with _ a0; intros Hs.
+  induction Δ in s |- *; intros.
+  simpl in *. now destruct s.
+  destruct a as [na [b|] ty]; [|destruct s; simpl; intuition eauto];
+    destruct X as (Hwfctx & Ht & Hb); repeat split.
+  - now apply IHΔ.
+  -eapply infer_typing_sort_impl with _ Ht; [apply relevance_subst_opt|]; intros Hs.
     eapply instantiate_minductive in Hs; eauto.
     now rewrite subst_instance_app in Hs.
-  - eapply instantiate_minductive in b1; eauto.
-    now rewrite subst_instance_app in b1.
-  - destruct s; simpl; intuition eauto.
-    eapply instantiate_minductive in b; eauto.
-    now rewrite subst_instance_app in b.
+  - eapply instantiate_minductive in Hb; eauto.
+    now rewrite subst_instance_app in Hb.
+  - now apply IHΔ.
+  - now apply relevance_subst.
+  - eapply instantiate_minductive in Hb; eauto.
+    now rewrite subst_instance_app in Hb.
 Qed.
 
 Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
@@ -204,16 +208,17 @@ Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs :
   subslet Σ Γ s Δ ->
   type_local_ctx (lift_typing typing) Σ Γ (subst_context s 0 Δ') ctxs.
 Proof.
-  induction Δ'; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  + simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r;
-    repeat split; tas.  
-    - apply infer_typing_sort_impl with id a0; intros Hs.
-      now eapply substitution in Hs.
-    - now eapply substitution in b1.
-  + rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r.
-      intuition auto.
-      eapply substitution in b; eauto.
+  induction Δ'; auto.
+  intros wfΣ wfΓΔ X X0.
+  destruct a as [na [b|] ty]; destruct X as (Hwfctx & Ht & Hb);
+    rewrite subst_context_snoc /subst_decl /map_decl Nat.add_0_r; repeat split.
+  - now apply IHΔ'.
+  - eapply infer_typing_sort_impl with id Ht => //; intros Hs.
+    eapply substitution in Hs; eauto.
+  - eapply substitution in Hb; eauto.
+  - now apply IHΔ'.
+  - assumption.
+  - eapply substitution in Hb; eauto.
 Qed.
 
 Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
@@ -223,19 +228,21 @@ Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs :
   subslet Σ Γ s Δ ->
   sorts_local_ctx (lift_typing typing) Σ Γ (subst_context s 0 Δ') ctxs.
 Proof.
-  induction Δ' in ctxs |- *; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  + simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r. 
+  induction Δ' in ctxs |- *; auto.
+  intros wfΣ wfΓΔ X X0.
+  destruct a as [na [b|] ty];
+    rewrite subst_context_snoc /subst_decl /map_decl Nat.add_0_r;
+    [|destruct ctxs; simpl; intuition eauto];
+    destruct X as (Hwfctx & Ht & Hb);
     repeat split.
-    - now apply IHΔ'.
-    - apply infer_typing_sort_impl with id a0; intros Hs.
-      now eapply substitution in Hs.
-    - now eapply substitution in b1.
-  + rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r.
-    destruct ctxs; auto.
-    intuition auto.
-    eapply substitution in b; eauto.
-Qed.
+  - now apply IHΔ'.
+  - apply infer_typing_sort_impl with id Ht => //; intros Hs.
+    eapply substitution in Hs; eauto.
+  - eapply substitution in Hb; eauto.
+  - now apply IHΔ'.
+  - assumption.
+  - eapply substitution in Hb; eauto.
+  Qed.
 
 Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 
   wf Σ.1 ->
@@ -243,11 +250,19 @@ Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs :
   type_local_ctx (lift_typing typing) Σ Γ' Δ ctxs ->
   type_local_ctx (lift_typing typing) Σ (Γ ,,, Γ') Δ ctxs.
 Proof.
-  induction Δ; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  1: apply infer_typing_sort_impl with id a0; intros Hs.
-  all: rewrite -app_context_assoc.
-  all: eapply (weaken_ctx Γ); auto.
+  induction Δ; auto.
+  intros wfΣ wfΓΔ X.
+  destruct a as [na [b|] ty]; destruct X as (Hwfctx & Ht & Hb); repeat split.
+  - now apply IHΔ.
+  - apply infer_typing_sort_impl with id Ht => //; intros Hs.
+    rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
+  - rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
+  - now apply IHΔ.
+  - assumption.
+  - rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
 Qed.
 
 Lemma weaken_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 
@@ -256,13 +271,20 @@ Lemma weaken_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs :
   sorts_local_ctx (lift_typing typing) Σ Γ' Δ ctxs ->
   sorts_local_ctx (lift_typing typing) Σ (Γ ,,, Γ') Δ ctxs.
 Proof.
-  induction Δ in ctxs |- *; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  1: apply infer_typing_sort_impl with id a0; intros Hs.
-  all: rewrite -app_context_assoc.
-  3: destruct ctxs; auto.
-  3: destruct X1; split; auto.
-  all: now eapply (weaken_ctx Γ).
+  induction Δ in ctxs |- *; auto.
+  intros wfΣ wfΓΔ X.
+  destruct a as [na [b|] ty]; [|destruct ctxs; simpl; intuition eauto];
+    destruct X as (Hwfctx & Ht & Hb); repeat split.
+  - now apply IHΔ.
+  - apply infer_typing_sort_impl with id Ht => //; intros Hs.
+    rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
+  - rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
+  - now apply IHΔ.
+  - assumption.
+  - rewrite -app_context_assoc.
+    eapply (weaken_ctx Γ); auto.
 Qed.
 
 Lemma reln_app acc Γ Δ k : reln acc k (Γ ++ Δ) = 
@@ -364,7 +386,7 @@ Section WfEnv.
       now rewrite app_context_assoc.
     - apply IHΓ. auto. eapply All_local_env_subst; eauto. simpl; intros.
       destruct T; simpl in *; pcuicfo auto.
-      2: apply infer_typing_sort_impl with id X; intros Hs.
+      2: apply infer_typing_sort_impl with id X => //; intros Hs.
       1: rename X into Hs.
       all: rewrite Nat.add_0_r.
       all: eapply (substitution (Γ':=[vdef na b t]) (s := [b])) in Hs; eauto.
@@ -674,8 +696,8 @@ Proof.
       rewrite -(lift_context_lift_context 1 _).
       eapply (subslet_lift _ [_]); eauto.
       constructor.
-      { pose proof l.π2. eapply wf_local_smash_end; pcuic. }
-      apply infer_typing_sort_impl with id l; intros Hs.
+      { pose proof l.π2.2. eapply wf_local_smash_end; pcuic. }
+      apply infer_typing_sort_impl with id l => //; intros Hs.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
       2:{ eapply wf_local_smash_end; pcuic. }
@@ -683,7 +705,7 @@ Proof.
     - eapply meta_conv.
       econstructor. constructor. apply wf_local_smash_end; auto.
       eapply wf_local_app; eauto.
-      apply infer_typing_sort_impl with id l; intros Hs.
+      apply infer_typing_sort_impl with id l => //; intros Hs.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
       2:{ eapply wf_local_smash_end; pcuic. }

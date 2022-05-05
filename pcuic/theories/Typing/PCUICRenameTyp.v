@@ -619,14 +619,14 @@ Proof.
   induction X.
   - apply a.
   - rewrite rename_context_snoc /=. constructor; auto.
-    apply infer_typing_sort_impl with id t0; intros Hs.
+    apply infer_typing_sort_impl with id t0 => //; intros Hs.
     eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
     split => //.
     eapply urenaming_ext.
     { now rewrite app_length -shiftnP_add. }
     { reflexivity. } now eapply urenaming_context.
   - rewrite rename_context_snoc /=. constructor; auto.
-    * apply infer_typing_sort_impl with id t0; intros Hs.
+    * apply infer_typing_sort_impl with id t0 => //; intros Hs.
       apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
       split => //.
       eapply urenaming_ext.
@@ -806,7 +806,7 @@ Proof.
 
   - intros Σ wfΣ Γ wfΓ HΓ. split; auto.
     induction HΓ; constructor; tas.
-    all: apply infer_typing_sort_impl with id tu; intros Hty.
+    all: apply infer_typing_sort_impl with id tu => //; intros Hty.
     all: eauto.
 
   - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ P Δ f hf.
@@ -820,8 +820,9 @@ Proof.
   - intros Σ wfΣ Γ wfΓ l X H0 P Δ f [hΔ hf].
     simpl. constructor. all: auto.
 
-  - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB P Δ f hf.
+  - intros Σ wfΣ Γ wfΓ na A B s1 s2 e X hA ihA hB ihB P Δ f hf.
     rewrite /=. econstructor.
+    + apply e.
     + eapply ihA; eauto.
     + eapply ihB; eauto.
       simpl.
@@ -829,20 +830,22 @@ Proof.
       eapply renaming_vass. 2: eauto.
       constructor.
       * destruct hf as [hΔ hf]. auto.
-      * simpl. exists s1. eapply ihA; eauto.
-  - intros Σ wfΣ Γ wfΓ na A t s1 B X hA ihA ht iht P Δ f hf.
+      * simpl. exists s1. split; [apply e|]; eapply ihA; eauto.
+  - intros Σ wfΣ Γ wfΓ na A t s1 B e X hA ihA ht iht P Δ f hf.
     simpl.
      (* /andP [_ havB]. *)
     simpl. econstructor.
+    + apply e.
     + eapply ihA; eauto.
     + eapply iht; eauto; simpl.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vass. 2: eauto.
       constructor.
       * destruct hf as [hΔ hf]. auto.
-      * simpl. exists s1. eapply ihA; eauto.
-  - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht P Δ f hf.
+      * simpl. exists s1. split; [apply e|]; eapply ihA; eauto.
+  - intros Σ wfΣ Γ wfΓ na b B t s1 A e X hB ihB hb ihb ht iht P Δ f hf.
     simpl. econstructor.
+    + apply e.
     + eapply ihB; tea.
     + eapply ihb; tea.
     + eapply iht; tea.
@@ -850,7 +853,7 @@ Proof.
       eapply renaming_vdef. 2: eauto.
       constructor.
       * destruct hf. assumption.
-      * simpl. eexists. eapply ihB; tea.
+      * simpl. exists s1. split; [apply e|]; eapply ihB; tea.
       * simpl. eapply ihb; tea.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu P Δ f hf.
     simpl. eapply meta_conv.
@@ -1001,7 +1004,7 @@ Proof.
       * destruct hf; eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. apply infer_typing_sort_impl with id t.
+        intros x t. apply infer_typing_sort_impl with id t => //.
         intros [_ IHs]; now eapply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [Hb IHb].
@@ -1027,7 +1030,7 @@ Proof.
       * destruct hf; eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. apply infer_typing_sort_impl with id t.
+        intros x t. apply infer_typing_sort_impl with id t => //.
         intros [_ IHs]; now eapply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [Hb IHb].

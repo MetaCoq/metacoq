@@ -421,16 +421,16 @@ Definition restrict_clauses (cls : clauses) (W : LevelSet.t) :=
     LevelSet.mem (LevelExpr.get_level concla) W) cls.
 
 Lemma in_restrict_clauses (cls : clauses) (concls : LevelSet.t) cl :
-  Clauses.In cl (restrict_clauses cls concls) -> 
-  LevelSet.In (LevelExpr.get_level (concl cl)) concls /\ 
-  LevelSet.Subset (LevelExprSet.levels (premise cl)) concls /\
-  Clauses.In cl cls.
+  Clauses.In cl (restrict_clauses cls concls) <-> 
+  [/\ LevelSet.In (LevelExpr.get_level (concl cl)) concls,
+    LevelSet.Subset (LevelExprSet.levels (premise cl)) concls &
+    Clauses.In cl cls].
 Proof.
   unfold restrict_clauses.
   rewrite Clauses.filter_spec.
-  destruct cl. cbn. intuition eauto.
-  move/andP: H1 => [] /LevelSet.subset_spec hsub /LevelSet.mem_spec hmem //.
-  move/andP: H1 => [] /LevelSet.subset_spec //.
+  destruct cl. cbn.
+  rewrite andb_true_iff LevelSet.subset_spec LevelSet.mem_spec.
+  firstorder auto.
 Qed.
 
 Definition clauses_with_concl (cls : clauses) (concl : LevelSet.t) :=
@@ -580,28 +580,6 @@ Proof. intros eq heq % LevelSet.equal_spec. congruence. Qed.
 Lemma levelset_union_same U : LevelSet.union U U =_lset U.
 Proof. lsets. Qed.
 
-Lemma fold_left_ne_lt (f g : nat -> LevelSet.elt -> nat) l acc : 
-  l <> [] ->
-  (forall acc acc' x, In x l -> acc <= acc' -> f acc x <= g acc' x) ->
-  (exists x, In x l /\ forall acc acc', acc <= acc' -> f acc x < g acc' x) ->
-  fold_left f l acc < fold_left g l acc.
-Proof.
-  generalize (le_refl acc).
-  generalize acc at 2 4.
-  induction l in acc |- * => //.
-  intros.
-  destruct l; cbn.
-  { destruct H2 as [x []]. cbn in H2. destruct H2; subst => //.
-    now eapply (H3 acc acc0). }
-  cbn in IHl. eapply IHl.
-  - apply H1 => //. now left.
-  - congruence.
-  - intros.
-    destruct H3. subst. eapply H1 => //. now right; left.
-    eapply H1 => //. now right; right.
-  - destruct H2 as [x [hin IH]].
-Admitted.
-
 Lemma fold_left_comm {A B} (f : B -> A -> B) (l : list A) (x : A) (acc : B) : 
   (forall x y z, f (f z x) y = f (f z y) x) ->
   fold_left f l (f acc x) = f (fold_left f l acc) x.
@@ -611,27 +589,27 @@ Proof.
   rewrite -IHl. f_equal. now rewrite H.
 Qed.
 
-Lemma fold_left_le (f g : Z -> LevelSet.elt -> Z) l : 
-  (forall acc acc' x, In x l -> (acc <= acc')%Z -> (f acc x <= g acc' x)%Z) ->
-  forall acc acc', (acc <= acc')%Z ->
-  (fold_left f l acc <= fold_left g l acc')%Z.
+Lemma fold_left_le (f g : nat -> LevelSet.elt -> nat) l : 
+  (forall acc acc' x, In x l -> acc <= acc' -> f acc x <= g acc' x) ->
+  forall acc acc', acc <= acc' ->
+  fold_left f l acc <= fold_left g l acc'.
 Proof.
   intros hfg.
   induction l => //. cbn. intros.
   apply IHl. intros. apply hfg => //. now right. apply hfg => //. now left.
 Qed.
 
-Lemma fold_left_ne_lt_Z (f g : Z -> LevelSet.elt -> Z) l acc : 
-  (forall (x y : LevelSet.elt) (z : Z), f (f z x) y = f (f z y) x) ->
-  (forall (x y : LevelSet.elt) (z : Z), g (g z x) y = g (g z y) x) ->
+Lemma fold_left_ne_lt (f g : nat -> LevelSet.elt -> nat) l acc : 
+  (forall (x y : LevelSet.elt) z, f (f z x) y = f (f z y) x) ->
+  (forall (x y : LevelSet.elt) z, g (g z x) y = g (g z y) x) ->
   l <> [] ->
-  (forall acc acc' x, In x l -> (acc <= acc')%Z -> (f acc x <= g acc' x)%Z) ->
-  (forall acc acc' x, In x l -> (acc < acc')%Z -> (f acc x < g acc' x)%Z) ->
-  (exists x, In x l /\ forall acc acc', (acc <= acc')%Z -> (f acc x < g acc' x)%Z) ->
-  (fold_left f l acc < fold_left g l acc)%Z.
+  (forall acc acc' x, In x l -> (acc <= acc') -> (f acc x <= g acc' x)) ->
+  (forall acc acc' x, In x l -> (acc < acc') -> (f acc x < g acc' x)) ->
+  (exists x, In x l /\ forall acc acc', (acc <= acc') -> (f acc x < g acc' x)) ->
+  fold_left f l acc < fold_left g l acc.
 Proof.
   intros hf hg.
-  generalize (Z.le_refl acc).
+  generalize (Nat.le_refl acc).
   generalize acc at 2 4.
   induction l in acc |- * => //.
   intros.
@@ -670,7 +648,7 @@ Proof.
   intros l. 
   rewrite clauses_conclusions_spec.
   move=> [] cl. rewrite Clauses.diff_spec => [] [] [].
-  move/in_restrict_clauses => [] hin ? ? eq.
+  move/in_restrict_clauses => [] hin ? ? ? eq.
   now rewrite eq in hin.
 Qed.
 
@@ -1002,16 +980,87 @@ Definition max_premise_value (m : model) (l : nonEmptyLevelExprSet) : nat :=
   let (hd, tl) := NonEmptySetFacts.to_nonempty_list l in
   fold_left (fun min atom => Nat.max (levelexpr_value m atom) min) tl (levelexpr_value m hd).
 
-Definition non_W_atoms W (l : nonEmptyLevelExprSet) := 
-  LevelExprSet.filter (fun '(l, k) => ~~ LevelSet.mem l W) l.
+Definition non_W_atoms W (l : LevelExprSet.t) := 
+  LevelExprSet.filter (fun lk => ~~ LevelSet.mem lk.1 W) l.
 
+Lemma non_W_atoms_spec W l : forall x, LevelExprSet.In x (non_W_atoms W l) <-> LevelExprSet.In x l /\ ~ LevelSet.In x.1 W.
+Proof.
+  intros x. now rewrite /non_W_atoms LevelExprSet.filter_spec -not_mem.
+Qed.
+  
 Lemma non_W_atoms_subset W l : non_W_atoms W l ⊂_leset l.
 Proof. intros x. now rewrite /non_W_atoms LevelExprSet.filter_spec. Qed.
+
+Lemma levelexprset_levels_spec_aux l (e : LevelExprSet.t) acc : 
+  LevelSet.In l (LevelExprSet.fold (fun le : LevelExprSet.elt => LevelSet.add (LevelExpr.get_level le)) e acc) <->
+  (exists k, LevelExprSet.In (l, k) e) \/ LevelSet.In l acc.
+Proof.
+  eapply LevelExprSetProp.fold_rec.
+  - intros.
+    intuition auto. destruct H1 as [k hin]. lesets.
+  - intros x a s' s'' hin nin hadd ih.
+    rewrite LevelSet.add_spec.
+    split.
+    * intros [->|].
+      left. exists (levelexpr_k x).
+      apply hadd. cbn. left. now destruct x.
+      apply ih in H.
+      intuition auto.
+      left. destruct H0 as [k Hk]. exists k. apply hadd. now right.
+    * intros [[k ins'']|inacc].
+      eapply hadd in ins''. destruct ins''; subst.
+      + now left.
+      + right. apply ih. now left; exists k.
+      + right. intuition auto.
+Qed.
+
+Lemma levelexprset_levels_spec l (e : LevelExprSet.t) : 
+  LevelSet.In l (LevelExprSet.levels e) <-> exists k, LevelExprSet.In (l, k) e.
+Proof.
+  rewrite levelexprset_levels_spec_aux. intuition auto. lsets.
+Qed.
+
+Lemma levels_exprs_non_W_atoms {W prem} :
+  LevelSet.Equal (LevelExprSet.levels (non_W_atoms W prem)) (LevelSet.diff (LevelExprSet.levels prem) W).
+Proof.
+  intros e. unfold non_W_atoms.
+  rewrite levelexprset_levels_spec LevelSet.diff_spec levelexprset_levels_spec.
+  firstorder eauto.
+  rewrite LevelExprSet.filter_spec in H. now exists x. 
+  rewrite LevelExprSet.filter_spec in H. destruct H.
+  rewrite LevelSetFact.not_mem_iff.
+  destruct LevelSet.mem => //.
+  exists x.
+  rewrite LevelExprSet.filter_spec. split => //.
+  rewrite LevelSetFact.not_mem_iff in H0. now rewrite H0.
+Qed.
+
+Lemma levelexprset_empty_levels x : LevelExprSet.Empty x <-> LevelSet.Empty (LevelExprSet.levels x).
+Proof.
+  split.
+  - intros he.
+    intros l hin.
+    eapply levelexprset_levels_spec in hin as [k hin]. lesets.
+  - intros emp l hin. eapply emp. eapply (levelexprset_levels_spec l.1). exists l.2.
+    now destruct l.
+Qed.
 
 Lemma non_W_atoms_ne W cl cls :
   Clauses.In cl (cls_diff cls W) ->
   LevelExprSet.is_empty (non_W_atoms W (premise cl)) = false.
-Proof. intros x. Admitted. 
+Proof.
+  intros x.
+  apply Clauses.diff_spec in x as [clw clr].
+  eapply in_clauses_with_concl in clw as [clw incls].
+  apply/negbTE.
+  apply/(contra_notN _ clr).
+  intros he. rewrite in_restrict_clauses. split => //.
+  epose proof (@levels_exprs_non_W_atoms W (premise cl)).
+  eapply LevelExprSetFact.is_empty_2 in he.
+  intros x hin. eapply levelexprset_empty_levels in he. rewrite H in he.
+  specialize (he x). rewrite LevelSet.diff_spec in he. intuition auto.
+  rewrite -LevelSet.mem_spec in H1 |- *. destruct LevelSet.mem; intuition auto.
+Qed.
 
 Section MoreNonEmpty.
 
@@ -1221,55 +1270,11 @@ Proof.
     destruct LevelMap.find; lia.
 Qed.
 
-Lemma levelexprset_levels_spec_aux l (e : LevelExprSet.t) acc : 
-  LevelSet.In l (LevelExprSet.fold (fun le : LevelExprSet.elt => LevelSet.add (LevelExpr.get_level le)) e acc) <->
-  (exists k, LevelExprSet.In (l, k) e) \/ LevelSet.In l acc.
-Proof.
-  eapply LevelExprSetProp.fold_rec.
-  - intros.
-    intuition auto. destruct H1 as [k hin]. lesets.
-  - intros x a s' s'' hin nin hadd ih.
-    rewrite LevelSet.add_spec.
-    split.
-    * intros [->|].
-      left. exists (levelexpr_k x).
-      apply hadd. cbn. left. now destruct x.
-      apply ih in H.
-      intuition auto.
-      left. destruct H0 as [k Hk]. exists k. apply hadd. now right.
-    * intros [[k ins'']|inacc].
-      eapply hadd in ins''. destruct ins''; subst.
-      + now left.
-      + right. apply ih. now left; exists k.
-      + right. intuition auto.
-Qed.
-
-Lemma levelexprset_levels_spec l (e : LevelExprSet.t) : 
-  LevelSet.In l (LevelExprSet.levels e) <-> exists k, LevelExprSet.In (l, k) e.
-Proof.
-  rewrite levelexprset_levels_spec_aux. intuition auto. lsets.
-Qed.
-
-Lemma levels_exprs_non_W_atoms {W prem} :
-  LevelSet.Equal (LevelExprSet.levels (non_W_atoms W prem)) (LevelSet.diff (LevelExprSet.levels prem) W).
-Proof.
-  intros e. unfold non_W_atoms.
-  rewrite levelexprset_levels_spec LevelSet.diff_spec levelexprset_levels_spec.
-  firstorder eauto.
-  rewrite LevelExprSet.filter_spec in H. now exists x. 
-  rewrite LevelExprSet.filter_spec in H. destruct H.
-  rewrite LevelSetFact.not_mem_iff.
-  destruct LevelSet.mem => //.
-  exists x.
-  rewrite LevelExprSet.filter_spec. split => //.
-  rewrite LevelSetFact.not_mem_iff in H0. now rewrite H0.
-Qed.
-
 Lemma clauses_levels_restrict_clauses cls W : 
   LevelSet.Subset (clauses_levels (cls ⇂ W)) W.
 Proof.
   intros x [cl []] % clauses_levels_spec.
-  eapply in_restrict_clauses in H as [hconc [hprem incl]].
+  eapply in_restrict_clauses in H as [hconc hprem incl].
   eapply clause_levels_spec in H0 as []. apply hprem, H. now subst x.
 Qed.
 
@@ -1794,11 +1799,16 @@ Section InnerLoop.
     intros hlt.
     rewrite !LevelSet.fold_spec.
     eapply fold_left_ne_lt.
+    - intros; lia.
+    - intros; lia.
     - destruct hlt as [l [hin _]]. intros he. rewrite -LevelSetProp.elements_Empty in he. lsets.
     - intros. rewrite LevelSet_In_elements in H.
       have lexx' := (model_le_values x hle).
       lia.
-    - destruct hlt as [l [hinl hbound hlev]].
+    - intros. rewrite LevelSet_In_elements in H.
+      have lexx' := (model_le_values x hle).
+      lia.
+    - destruct hlt as [l [hinl hbound hlev]]. 
       exists l. rewrite LevelSet_In_elements. split => //.
       intros acc acc' accle. 
       eapply Nat.add_le_lt_mono => //. lia.
@@ -2094,7 +2104,7 @@ Proof.
       move/(_ (levelexpr_level (concl cl))) => [] wcwcls wclswc.
       now apply H4, WcW, wclswc. }
     eapply (strict_subset_leq_right _ (LevelSet.diff V Wc)).
-    2:{ lsets. }
+    2:{ clear -UWc WcW UW WU H3 H4. lsets. }
     apply strict_subset_diff_incl => //. clear -H H3; lsets.
   - eapply mcls'.
   - auto.
@@ -2103,7 +2113,9 @@ Proof.
     eapply check_model_spec in eqm' as [].
     2:{ eapply model_of_subset. 2:exact clsV.
         exact (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))). }
-    eapply model_ext_trans_weaken. 2:tea. lsets.
+    assert (WV : W ⊂_lset V).
+    { clear -UV clsV WU; lsets. }
+    eapply model_ext_trans_weaken => //. 2:tea. auto. 
     transitivity mcls; [|apply mcls'].
     transitivity (model_model mwc). 2:{ eapply model_extension_weaken; [|tea]. lsets. }
     transitivity (model_model mwr). 2:{ eapply model_extension_weaken; [|apply mwc]. lsets. }
@@ -2197,7 +2209,9 @@ Proof.
     move: H.
     rewrite clauses_levels_spec.
     intros [cl [hin inlevs]].
-    move: hin.
+    move: hin. todo "".
+Qed.
+    (*
     eapply ClausesProp.fold_rec.
     * intros. clsets.
     * intros x a s' s'' hin hnin hadd ih ins''.
@@ -2211,7 +2225,7 @@ Proof.
       
   
   
-  Qed.
+  Qed.*)
   (* Proof.
   eapply clauses_conclusions_spec in H as [cl []].
   eapply in_add_predecessors in H as [].

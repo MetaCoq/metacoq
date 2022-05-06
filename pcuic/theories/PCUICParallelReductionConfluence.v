@@ -18,8 +18,6 @@ Add Search Blacklist "_equation_".
 Local Open Scope sigma_scope.
 Local Set Keyed Unification.
 
-Set Default Proof Using "Type*".
-
 Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
   try discriminate.
 
@@ -339,8 +337,6 @@ Hint Constructors pred1 : pcuic.
 Notation predicate_depth := (predicate_depth_gen depth).
 Notation fold_context_term f := (fold_context (fun Γ' => map_decl (f Γ'))).
 
-Unset Default Proof Using.
-
 Section Rho.
   Context {cf : checker_flags}.
   Context (Σ : global_env).
@@ -658,8 +654,6 @@ Section Rho.
     - clear -eqx Hx. abstract (invd; d).
   Defined.
   
-  Set Default Proof Using "Σ".
-
   Notation rho_predicate := (rho_predicate_gen rho).
   Notation rho_br := (map_br_gen rho).
   Notation rho_ctx_over Γ :=
@@ -1909,9 +1903,6 @@ Section Rho.
       clear. generalize #|m|. induction m using rev_ind. simpl. constructor.
       intros. rewrite map_app !fold_fix_context_app. simpl. constructor. simpl. reflexivity. apply IHm; eauto.
   Qed.
-  
-  Collection all := cf Σ wfΣ.
-  Local Set Default Proof Using "all".
   
   Lemma rho_lift0 Γ Δ P t : 
     on_free_vars P t ->

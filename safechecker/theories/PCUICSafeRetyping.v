@@ -394,7 +394,7 @@ Qed.
     sq.
     constructor ; tea.
     inversion X0.
-    eapply infering_sort_isType; eauto.
+    eapply infering_sort_isTypeRelOpt; eauto.
   Defined.
   Next Obligation.
     cbn ; intros. destruct s1, s2.

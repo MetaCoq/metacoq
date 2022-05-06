@@ -467,13 +467,21 @@ Proof.
   assumption.
 Qed.
 
+Theorem infering_sort_isTypeRelOpt `{checker_flags} (Σ : global_env_ext) Γ t u rel (wfΣ : wf Σ) :
+  wf_local Σ Γ -> isSortRelOpt u rel -> Σ ;;; Γ |- t ▹□ u -> isTypeRelOpt Σ Γ t rel.
+Proof.
+  intros wfΓ Hrel Ht.
+  exists u.
+  split; [assumption|].
+  now apply infering_sort_typing.
+Qed.
+
 Theorem infering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
   wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> isType Σ Γ t.
 Proof.
   intros wfΓ Ht.
-  exists u.
-  split; [cbnr|].
-  now apply infering_sort_typing.
+  change (isType _ _ _) with (isTypeRelOpt Σ Γ t None).
+  now eapply infering_sort_isTypeRelOpt.
 Qed.
 
 Theorem einfering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t (wfΣ : wf Σ) :

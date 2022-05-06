@@ -2654,7 +2654,7 @@ Qed.
     intros typ.
     destruct (hΣ _ wfΣ).
     apply PCUICValidity.inversion_mkApps in typ as (?&[typ_prod typ_args]).
-    apply inversion_Prod in typ_prod as (?&?&?&?&?); [|easy].
+    apply inversion_Prod in typ_prod as (?&?&?&?&?&?); [|easy].
     eapply PCUICSpine.typing_spine_strengthen in typ_args; eauto.
     2:{ eapply PCUICArities.isType_Sort. 2:pcuic.
         eapply wf_universe_product; now eapply typing_wf_universe. }

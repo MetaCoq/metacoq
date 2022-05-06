@@ -195,7 +195,7 @@ Lemma isType_mkApps_Ind_smash_inv {cf:checker_flags} {Σ Γ ind u args} (wfΣ : 
   consistent_instance_ext Σ (ind_universes mdecl) u.
 Proof.
   move=> wfΓ isType.
-  destruct isType as [s Hs].
+  destruct isType as (s & e & Hs).
   eapply invert_type_mkApps_ind in Hs as [tyargs cu]; eauto.
   set (decli' := on_declared_inductive declm).
   rename declm into decli.
@@ -239,7 +239,7 @@ Lemma substitution_wf_local_rel `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' s �
         constructor ; cbn.
         + eapply IHΔ ; tea.
         + rewrite Nat.add_0_r. 
-          eapply isType_substitution ; tea.
+          eapply isTypeRel_substitution ; tea.
           now rewrite -app_context_assoc.
         + rewrite Nat.add_0_r.
           eapply substitution ; tea.
@@ -250,7 +250,7 @@ Lemma substitution_wf_local_rel `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' s �
         constructor ; cbn.
         + eapply IHΔ ; tea.
         + rewrite Nat.add_0_r. 
-          eapply isType_substitution ; tea.
+          eapply isTypeRel_substitution ; tea.
           now rewrite -app_context_assoc.
    Qed.
 

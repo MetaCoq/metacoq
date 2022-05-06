@@ -4,7 +4,6 @@ do
     if [ $i != $newi ]
     then
         # echo "Moving " $i "to" $newi;
-        mv $i tmp;
-        mv tmp $newi;
+        mv $i $newi;
     fi
 done

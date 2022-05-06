@@ -14,7 +14,7 @@ if command -v coqc >/dev/null 2>&1
 then
     COQLIB=` coqc -where | tr -d '\r' | tr '\\\\' '/'`
 
-    if [[ "$1" = "local" ]] || [[ "$1" = "--enable-local" ]]
+    if [[ "$1" = "local" ]] || [[ "$1" = "--enable-local" ]] || [[ "$1" = "--enable-quick" ]]
     then
         echo "Building MetaCoq locally"
         PCUIC_DEPS="-I ../template-coq/build -R ../template-coq/theories MetaCoq.Template"

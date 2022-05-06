@@ -44,3 +44,9 @@ mrproper:
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
+
+vos: Makefile.erasure
+	$(MAKE) -f Makefile.erasure vos
+
+quick: Makefile.erasure
+	$(MAKE) -f Makefile.erasure COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

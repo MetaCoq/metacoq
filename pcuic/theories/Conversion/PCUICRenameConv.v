@@ -214,8 +214,6 @@ Proof.
   unfold map_decl. now rewrite mapi_length fix_context_length.
 Qed.
 
-
-
 Section Renaming.
 
 Context `{cf : checker_flags}.
@@ -433,7 +431,7 @@ Lemma urenaming_ext :
 Proof.
   intros P P' Γ Δ f g hP hfg h.
   intros i decl p e.
-  rewrite -hP in p.
+  rewrite <-hP in p.
   specialize (h i decl p e) as [decl' [? [h1 [h2 h3]]]].
   exists decl'. repeat split => //.
   - rewrite <- (hfg i). assumption.
@@ -866,10 +864,7 @@ Qed.
 Lemma rename_wf_branch cdecl f br :
   wf_branch cdecl br ->
   wf_branch cdecl (rename_branch f br).
-Proof.
-  unfold wf_branch, wf_branch_gen. simpl.
-  rewrite /=. now simpl.
-Qed.
+Proof. intros x; exact x. Qed.
 
 Lemma rename_wf_branches cdecl f brs :
   wf_branches cdecl brs ->

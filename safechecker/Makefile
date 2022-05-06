@@ -45,3 +45,9 @@ mrproper:
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
+
+vos: Makefile.safechecker
+	$(MAKE) -f Makefile.safechecker vos
+
+quick: Makefile.safechecker
+	$(MAKE) -f Makefile.safechecker COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

@@ -18,7 +18,7 @@ Open Scope sigma_scope.
 Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
+Set Default Proof Using "Type*".
 
 Section Renaming.
 

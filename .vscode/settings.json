@@ -1,0 +1,17 @@
+{
+    "coqtop.binPath": "_opam/bin",
+    "coqtop.args": [
+		"-I", "template-coq/build",
+		"-R", "template-coq/theories", "MetaCoq.Template",
+		"-R", "examples", "MetaCoq.Examples",
+		"-R", "checker/theories", "MetaCoq.Checker",
+		"-R", "pcuic/theories", "MetaCoq.PCUIC",
+		"-I", "safechecker/src",
+		"-R", "safechecker/theories", "MetaCoq.SafeChecker",
+		"-I", "erasure/src",
+		"-R", "erasure/theories", "MetaCoq.Erasure",
+		"-R", "translations", "MetaCoq.Translations",
+		"-R", "test-suite/plugin-demo/theories", "MetaCoq.ExtractedPluginDemo",
+		"-R", "test-suite", "MetaCoq.TestSuite",
+        "-R", "translations", "MetaCoq.Translations" ]
+}

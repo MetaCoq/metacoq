@@ -249,7 +249,7 @@ Section ContextReduction.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition.
       intuition auto. inv_on_free_vars_xpredT.
-      specialize (b1 a0 onΓ).
+      specialize (b1 H0 onΓ).
       destruct (b1 _ H X0) as [d' [r0 r1]].
       refine (existT _ {| dtype := d' |} _); simpl; eauto.
     - assert (fix_context mfix0 = fix_context mfix1).

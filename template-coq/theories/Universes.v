@@ -258,9 +258,9 @@ Module LevelExpr.
   Global Instance Evaluable : Evaluable t
     := fun v l => (snd l + val v (fst l)).
 
-  Definition succ (l : t) := (fst l, S (snd l)).
+  Definition succ (l : t) : t := (fst l, S (snd l)).
 
-  Definition add (k : nat) (l : t) := (fst l, k + snd l).
+  Definition add (k : nat) (l : t) : t := (fst l, k + snd l).
 
   Definition get_level (e : t) : Level.t := fst e.
 
@@ -354,6 +354,10 @@ Module LevelExprSet.
   Definition levels (e : t) := 
     fold (fun le => LevelSet.add (LevelExpr.get_level le)) e LevelSet.empty.
 
+  Record nonEmptyLevelExprSet
+    := { t_set : LevelExprSet.t ;
+         t_ne  : LevelExprSet.is_empty t_set = false }.
+  
 End LevelExprSet.
 
 Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
@@ -375,9 +379,7 @@ Qed.
 
 #[global] Instance levelexprset_eq_dec : Classes.EqDec LevelExprSet.t := Classes.eq_dec.
 
-Record nonEmptyLevelExprSet
-  := { t_set : LevelExprSet.t ;
-       t_ne  : LevelExprSet.is_empty t_set = false }.
+Import LevelExprSet (nonEmptyLevelExprSet, t_set, t_ne).
 
 Derive NoConfusion for nonEmptyLevelExprSet.
 

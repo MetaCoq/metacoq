@@ -1,5 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-
 From Coq Require Import ssreflect ssrbool.
 From Coq Require Import Program RelationClasses Morphisms.
 From Coq Require Import Orders OrderedTypeAlt OrderedTypeEx MSetList MSetInterface MSetAVL MSetFacts FMapInterface MSetProperties MSetDecide.
@@ -7,6 +6,10 @@ From MetaCoq.Template Require Import utils.
 From MetaCoq.Template Require Universes.
 From Equations Require Import Equations.
 Set Equations Transparent.
+
+(* TODO move *)
+Arguments exist {A P}.  
+Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
 
 Module FMapOrderedType_from_UsualOrderedType (O : UsualOrderedType).
   Import O.
@@ -53,12 +56,81 @@ Module Type FMapOTInterface (E : UsualOrderedType).
   Include FMapInterface.Sfun OT.
 End FMapOTInterface.
 
+Module Type LevelExprItf (Level : LevelOrderedType).
+  Include UsualOrderedType with Definition t := (Level.t * nat)%type.
+  Parameter eq_leibniz : forall (x y : t), eq x y -> x = y.
+End LevelExprItf.
+
+Module Type LevelExprSet_fun (Level : LevelOrderedType) (LevelExpr : LevelExprItf Level).
+  Include SWithLeibniz with Module E := LevelExpr.
+  
+  Record nonEmptyLevelExprSet
+    := { t_set : t ;
+          t_ne  : is_empty t_set = false }.
+    
+End LevelExprSet_fun.
+
+Module Type LoopCheckingItf (Level : LevelOrderedType)
+  (LevelSet : MSetInterface.SetsOn Level)
+  (LevelExpr : LevelExprItf Level)
+  (LevelExprSet : LevelExprSet_fun Level LevelExpr)
+  (LevelMap : FMapOTInterface Level).
+
+  Definition model := LevelMap.t nat.
+  Definition valuation := LevelMap.t nat.
+
+  Definition clause : Type := LevelExprSet.nonEmptyLevelExprSet × LevelExpr.t.
+
+  Parameter clauses : Type.
+  Parameter clauses_of_list : list clause -> clauses.
+  Parameter list_of_clauses : clauses -> list clause.
+
+  Inductive constraint_type := UnivEq | UnivLe.
+  Notation constraint := (LevelExprSet.nonEmptyLevelExprSet * constraint_type * LevelExprSet.nonEmptyLevelExprSet).
+
+  Parameter enforce_constraint : forall (cstr : constraint) (cls : clauses), clauses.
+
+  Parameter valid_model : forall (V : LevelSet.t) (m : model) (cls : clauses), Type.
+
+  Parameter model_model : forall V m cls, valid_model V m cls -> model.
+
+    (* { model_model : model;
+      model_of_V :> model_of V model_model;
+      model_clauses_conclusions : clauses_conclusions cls ⊂_lset V;
+      model_ok :> is_model cls model_model;
+      model_extends : model_extension V m model_model;
+   }. *)
+
+  Infix "⊂_lset" := LevelSet.Subset (at level 70).
+
+  Parameter enforce_clauses : forall {V init cls} (m : valid_model V init cls) (cls' : clauses), option model.
+
+  Inductive result (V U : LevelSet.t) (cls : clauses) (m : model) :=
+  | Loop
+  | Model (w : LevelSet.t) (m : valid_model V m cls) (prf : U ⊂_lset w /\ w ⊂_lset V).
+
+  Parameter init_model : clauses -> model.
+  Parameter clauses_levels : clauses -> LevelSet.t.
+
+  Definition infer_result V cls := result V LevelSet.empty cls (init_model cls).
+
+  Parameter infer : forall (cls : clauses), infer_result (clauses_levels cls) cls.
+
+End LoopCheckingItf.
 
 Module LoopChecking 
   (* Signature of levels: decidable, ordered type *)
   (Level : LevelOrderedType)
   (LevelSet : MSetInterface.SetsOn Level)
-  (LevelMap : FMapOTInterface Level).
+  (LevelExpr : LevelExprItf Level)
+  (LevelExprSet : LevelExprSet_fun Level LevelExpr)
+  (LevelMap : FMapOTInterface Level) <: LoopCheckingItf Level LevelSet LevelExpr LevelExprSet LevelMap.
+
+Definition level (e : LevelExpr.t) : Level.t := fst e.
+Definition levels (e : LevelExprSet.t) := 
+  LevelExprSet.fold (fun le => LevelSet.add (level le)) e LevelSet.empty.
+  
+Import LevelExprSet (nonEmptyLevelExprSet, t_set, t_ne).
 
 Local Existing Instance Level.reflect_eq.
 
@@ -70,6 +142,8 @@ Module LevelMapFact := FMapFacts.WProperties_fun LevelMap.OT LevelMap.
 Ltac lsets := LevelSetDecide.fsetdec.
 Notation "(=_lset)" := LevelSet.Equal (at level 0).
 Infix "=_lset" := LevelSet.Equal (at level 30).
+Infix "⊂_lset" := LevelSet.Subset (at level 70).
+Infix "∪" := LevelSet.union (at level 70).
 
 Definition print_level_nat_map (m : LevelMap.t nat) :=
   let list := LevelMap.elements m in
@@ -78,76 +152,6 @@ Definition print_level_nat_map (m : LevelMap.t nat) :=
 Definition print_lset (l : LevelSet.t) :=
   let list := LevelSet.elements l in
   print_list Level.to_string " " list.
-
-Module LevelExpr.
-  (* npe = no prop expression *)
-  Definition t := (Level.t * nat)%type.
-
-  Definition succ (l : t) := (fst l, S (snd l)).
-
-  Definition add (x : LevelExpr.t) (n : nat) : LevelExpr.t :=
-    let (l, k) := x in (l, k + n).
-  
-  Definition get_level (e : t) : Level.t := fst e.
-
-  Definition make (l : Level.t) : t := (l, 0%nat).
-
-  Definition eq : t -> t -> Prop := eq.
-
-  Definition eq_equiv : Equivalence eq := _.
-
-  Inductive lt_ : t -> t -> Prop :=
-  | ltLevelExpr1 l n n' : (n < n')%nat -> lt_ (l, n) (l, n')
-  | ltLevelExpr2 l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
-
-  Definition lt := lt_.
-
-  Global Instance lt_strorder : StrictOrder lt.
-  Proof.
-    constructor.
-    - intros x X; inversion X. subst. lia. subst.
-      eapply Level.lt_strorder; eassumption.
-    - intros x y z X1 X2; invs X1; invs X2; constructor; tea.
-      etransitivity; tea.
-      etransitivity; tea.
-  Qed.
-
-  Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
-    intros x x' H1 y y' H2; now rewrite H1 H2.
-  Qed.
-
-  Definition compare (x y : t) : comparison :=
-    match x, y with
-    | (l1, b1), (l2, b2) =>
-      match Level.compare l1 l2 with
-      | Eq => Nat.compare b1 b2
-      | x => x
-      end
-    end.
-
-  Definition compare_spec :
-    forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
-  Proof.
-    intros [? ?] [? ?]; cbn; repeat constructor.
-    destruct (Level.compare_spec t0 t1); repeat constructor; tas. subst.
-    destruct (Nat.compare_spec n n0); repeat constructor; tas; subst; congruence.
-  Qed.
-
-  Global Instance reflect_t : ReflectEq t := reflect_prod _ reflect_nat.
-
-  Definition eq_dec : forall (l1 l2 : t), {l1 = l2} + {l1 <> l2} := Classes.eq_dec.
-
-  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
-
-End LevelExpr.
-
-Module LevelExprSet.
-  Include MSetList.MakeWithLeibniz LevelExpr.
-
-  Definition levels (e : t) := 
-    fold (fun le => LevelSet.add (LevelExpr.get_level le)) e LevelSet.empty.
-
-End LevelExprSet.
 
 Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
 Module LevelExprSetProp := WPropertiesOn LevelExpr LevelExprSet.
@@ -167,11 +171,7 @@ Qed.
 
 #[global] Instance levelexprset_eq_dec : Classes.EqDec LevelExprSet.t := Classes.eq_dec.
 
-Record nonEmptyLevelExprSet
-  := { t_set : LevelExprSet.t ;
-      t_ne  : LevelExprSet.is_empty t_set = false }.
-
-Derive NoConfusion for nonEmptyLevelExprSet.
+Derive NoConfusion for LevelExprSet.nonEmptyLevelExprSet.
 
 (* We use uip on the is_empty condition *)
 #[global, program] Instance nonEmptyLevelExprSet_reflect : ReflectEq nonEmptyLevelExprSet :=
@@ -186,11 +186,18 @@ Qed.
 
 (** This coercion allows to see the non-empty set as a regular [LevelExprSet.t] *)
 Coercion t_set : nonEmptyLevelExprSet >-> LevelExprSet.t.
+Module LevelExprSetDecide := WDecide (LevelExprSet).
+Ltac lesets := LevelExprSetDecide.fsetdec.
+Infix "⊂_leset" := LevelExprSet.Subset (at level 70).
 
 Module NonEmptySetFacts.
-  Definition singleton (e : LevelExpr.t) : nonEmptyLevelExprSet
-    := {| t_set := LevelExprSet.singleton e;
-          t_ne := eq_refl |}.
+  #[program] Definition singleton (e : LevelExpr.t) : nonEmptyLevelExprSet
+    := {| t_set := LevelExprSet.singleton e |}.
+  Next Obligation.
+    apply negbTE.
+    eapply (contra_notN (P := LevelExprSet.Empty (LevelExprSet.singleton e))).
+    apply LevelExprSetFact.is_empty_2. intros ne. red in ne. specialize (ne e). lesets.
+  Qed.
 
   Lemma not_Empty_is_empty s :
     ~ LevelExprSet.Empty s -> LevelExprSet.is_empty s = false.
@@ -236,36 +243,36 @@ Module NonEmptySetFacts.
         * apply add_spec; right. apply IHl0. now right.
   Qed.
 
-  Program Definition to_nonempty_list (u : nonEmptyLevelExprSet) : LevelExpr.t * list LevelExpr.t
-    := match LevelExprSet.elements u with
-        | [] => False_rect _ _
-        | e :: l => (e, l)
-        end.
-  Next Obligation.
-    destruct u as [u1 u2]; cbn in *. revert u2.
-    apply eq_true_false_abs.
-    unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
-    LevelExprSet.elements, LevelExprSet.Raw.elements in *.
-    rewrite <- Heq_anonymous; reflexivity.
+  Lemma elements_not_empty {u : nonEmptyLevelExprSet} : LevelExprSet.elements u <> [].
+  Proof.
+    rewrite -LevelExprSetProp.elements_Empty.
+    move/LevelExprSetFact.is_empty_1.
+    destruct u as [u1 u2]; cbn in *. congruence.
   Qed.
 
+  Equations to_nonempty_list (u : nonEmptyLevelExprSet) : LevelExpr.t * list LevelExpr.t := 
+  | u with inspect (LevelExprSet.elements u) := {
+    | exist [] eqel => False_rect _ (elements_not_empty eqel)
+    | exist (e :: l) _ => (e, l) }.
+
   Lemma singleton_to_nonempty_list e : to_nonempty_list (singleton e) = (e, []).
-  Proof. reflexivity. Defined.
+  Proof. 
+    funelim (to_nonempty_list (singleton e)). bang.
+    clear H.
+    pose proof (LevelExprSet.singleton_spec e1 e).
+    rewrite LevelExprSetFact.elements_iff in H.
+    rewrite InA_In_eq in H. rewrite e0 in H.
+    destruct H. forward H. now left. noconf H. f_equal.
+    pose proof (LevelExprSet.cardinal_spec (LevelExprSet.singleton e1)). rewrite e0 in H. cbn in H.
+    rewrite LevelExprSetProp.singleton_cardinal in H.
+    destruct l => //.
+  Qed.
 
   Lemma to_nonempty_list_spec u :
     let '(e, u') := to_nonempty_list u in
     e :: u' = LevelExprSet.elements u.
   Proof.
-    destruct u as [u1 u2].
-    unfold to_nonempty_list; cbn.
-    set (l := LevelExprSet.elements u1). unfold l at 2 3 4.
-    set (e := (eq_refl: l = LevelExprSet.elements u1)); clearbody e.
-    destruct l.
-    - exfalso. revert u2. apply eq_true_false_abs.
-      unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
-      LevelExprSet.elements, LevelExprSet.Raw.elements in *.
-      rewrite <- e; reflexivity.
-    - reflexivity.
+    funelim (to_nonempty_list u). bang. now rewrite e0.
   Qed.
 
   Lemma to_nonempty_list_spec' u :
@@ -327,14 +334,6 @@ Module NonEmptySetFacts.
     rewrite t_ne in HH; discriminate.
   Qed.
 
-  Lemma elements_not_empty (u : nonEmptyLevelExprSet) : LevelExprSet.elements u <> [].
-  Proof.
-    destruct u as [u1 u2]; cbn; intro e.
-    unfold LevelExprSet.is_empty, LevelExprSet.elements,
-    LevelExprSet.Raw.elements in *.
-    rewrite e in u2; discriminate.
-  Qed.
-
 
   Lemma eq_univ (u v : nonEmptyLevelExprSet) :
     u = v :> LevelExprSet.t -> u = v.
@@ -354,8 +353,8 @@ Module NonEmptySetFacts.
   Proof.
     intro H. apply eq_univ.
     destruct u as [u1 u2], v as [v1 v2]; cbn in *; clear u2 v2.
-    destruct u1 as [u1 u2], v1 as [v1 v2]; cbn in *.
-    destruct H. now rewrite (uip_bool _ _ u2 v2).
+    eapply LevelExprSet.eq_leibniz. red.
+    intros x. rewrite -!LevelExprSet.elements_spec1 H //.
   Qed.
 
   Lemma univ_expr_eqb_true_iff (u v : nonEmptyLevelExprSet) :
@@ -477,7 +476,7 @@ Proof.
   destruct (p x) eqn:px; rewrite !Clauses.add_spec !Clauses.filter_spec; intuition auto || congruence.
 Qed.
 
-Instance proper_fold_transpose {A} (f : Clauses.elt -> A -> A) :
+Local Instance proper_fold_transpose {A} (f : Clauses.elt -> A -> A) :
   transpose eq f ->
   Proper (Clauses.Equal ==> eq ==> eq) (Clauses.fold f).
 Proof.
@@ -507,9 +506,9 @@ Proof.
     rewrite Clauses.filter_spec. intuition auto.
 Qed.
 
-
 Definition levelexpr_level : LevelExpr.t -> Level.t := fst.
 Coercion levelexpr_level : LevelExpr.t >-> Level.t.
+Extraction Inline levelexpr_level. 
 
 Definition strict_subset (s s' : LevelSet.t) :=
   LevelSet.Subset s s' /\ ~ LevelSet.Equal s s'.
@@ -537,11 +536,11 @@ Proof.
 Qed.
 
 Definition premise (cl : clause) := fst cl.
-
 Definition concl (cl : clause) := snd cl.
+Extraction Inline premise concl.
 
 Definition clause_levels cl :=
-  LevelSet.union (LevelExprSet.levels (premise cl)) (LevelSet.singleton (levelexpr_level (concl cl))).
+  LevelSet.union (levels (premise cl)) (LevelSet.singleton (levelexpr_level (concl cl))).
 
 Definition clauses_levels (cls : clauses) : LevelSet.t := 
   Clauses.fold (fun cl acc => LevelSet.union (clause_levels cl) acc) cls LevelSet.empty.
@@ -587,20 +586,13 @@ Qed.
 
 Lemma clause_levels_spec l cl :
   LevelSet.In l (clause_levels cl) <-> 
-  LevelSet.In l (LevelExprSet.levels (premise cl)) \/ l = levelexpr_level (concl cl).
+  LevelSet.In l (levels (premise cl)) \/ l = levelexpr_level (concl cl).
 Proof.
   unfold clause_levels.
   now rewrite LevelSet.union_spec LevelSet.singleton_spec. 
 Qed.
 
 Definition model := LevelMap.t nat.
-
-(* Print maps to nat nicely *)
-Fixpoint to_bytes (s : string) : list Byte.byte :=
-  match s with
-  | String.EmptyString => []
-  | String.String b s => b :: to_bytes s
-  end.
 
 Definition level_value (m : model) (level : Level.t) : nat :=
   match LevelMap.find level m with
@@ -611,35 +603,7 @@ Definition level_value (m : model) (level : Level.t) : nat :=
 Definition levelexpr_value (m : model) (atom : LevelExpr.t) :=
   level_value m (levelexpr_level atom).
 
-Lemma non_empty_choose (l : nonEmptyLevelExprSet) : LevelExprSet.choose l = None -> False.
-Proof.
-  intros Heq.
-  eapply LevelExprSet.choose_spec2, LevelExprSetFact.is_empty_1 in Heq.
-  destruct l. cbn in *. congruence.    
-Defined.
-
-Arguments exist {A P}.  
-Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
-
-Equations choose (s : nonEmptyLevelExprSet) : LevelExpr.t :=
-  choose s with inspect (LevelExprSet.choose s) := 
-  | exist (Some l) _ => l
-  | exist None heq => False_rect _ (non_empty_choose s heq).
-
-Lemma choose_spec l : LevelExprSet.In (choose l) l.
-Proof.
-  unfold choose.
-  destruct inspect.
-  destruct x; simp choose. 2:bang.
-  now eapply LevelExprSet.choose_spec1 in e.
-Qed.
-
-Lemma choose_spec_1 (l : nonEmptyLevelExprSet) : LevelExprSet.choose l = Some (choose l).
-Proof.
-  unfold choose.
-  destruct inspect.
-  destruct x; simp choose. bang.
-Qed.
+Extraction Inline levelexpr_value.
 
 Definition min_atom_value (m : model) (atom : LevelExpr.t) :=
   let '(l, k) := atom in
@@ -746,13 +710,13 @@ Qed.
 
 Definition restrict_clauses (cls : clauses) (W : LevelSet.t) :=
   Clauses.filter (fun '(prem, concla) =>
-    LevelSet.subset (LevelExprSet.levels prem) W &&
-    LevelSet.mem (LevelExpr.get_level concla) W) cls.
+    LevelSet.subset (levels prem) W &&
+    LevelSet.mem (level concla) W) cls.
 
 Lemma in_restrict_clauses (cls : clauses) (concls : LevelSet.t) cl :
   Clauses.In cl (restrict_clauses cls concls) <-> 
-  [/\ LevelSet.In (LevelExpr.get_level (concl cl)) concls,
-    LevelSet.Subset (LevelExprSet.levels (premise cl)) concls &
+  [/\ LevelSet.In (level (concl cl)) concls,
+    LevelSet.Subset (levels (premise cl)) concls &
     Clauses.In cl cls].
 Proof.
   unfold restrict_clauses.
@@ -763,11 +727,11 @@ Proof.
 Qed.
 
 Definition clauses_with_concl (cls : clauses) (concl : LevelSet.t) :=
-  Clauses.filter (fun '(prem, concla) => LevelSet.mem (LevelExpr.get_level concla) concl) cls.
+  Clauses.filter (fun '(prem, concla) => LevelSet.mem (level concla) concl) cls.
 
 Lemma in_clauses_with_concl (cls : clauses) (concls : LevelSet.t) cl :
   Clauses.In cl (clauses_with_concl cls concls) <-> 
-  LevelSet.In (LevelExpr.get_level (concl cl)) concls /\ Clauses.In cl cls.
+  LevelSet.In (level (concl cl)) concls /\ Clauses.In cl cls.
 Proof.
   unfold clauses_with_concl.
   rewrite Clauses.filter_spec.
@@ -775,11 +739,11 @@ Proof.
 Qed.
 
 Definition clauses_conclusions (cls : clauses) : LevelSet.t :=
-  Clauses.fold (fun cl acc => LevelSet.add (LevelExpr.get_level (concl cl)) acc) cls LevelSet.empty.
+  Clauses.fold (fun cl acc => LevelSet.add (level (concl cl)) acc) cls LevelSet.empty.
   
 Lemma clauses_conclusions_spec a cls : 
   LevelSet.In a (clauses_conclusions cls) <-> 
-  exists cl, Clauses.In cl cls /\ LevelExpr.get_level (concl cl) = a.
+  exists cl, Clauses.In cl cls /\ level (concl cl) = a.
 Proof.
   unfold clauses_conclusions.
   eapply ClausesProp.fold_rec; clear.
@@ -809,10 +773,7 @@ Proof.
 Qed.
 
 Definition in_clauses_conclusions (cls : clauses) (x : Level.t): Prop :=
-  exists cl, Clauses.In cl cls /\ (LevelExpr.get_level cl.2) = x.
-
-Infix "⊂_lset" := LevelSet.Subset (at level 70).
-Infix "∪" := LevelSet.union (at level 70).
+  exists cl, Clauses.In cl cls /\ (level cl.2) = x.
 
 Definition v_minus_w_bound (W : LevelSet.t) (m : model) := 
   LevelMap.fold (fun w v acc => Nat.max v acc) 
@@ -1239,9 +1200,6 @@ Proof.
     apply max_gain_in in incls''. lia.
 Qed.
 
-Module LevelExprSetDecide := WDecide (LevelExprSet).
-Ltac lesets := LevelExprSetDecide.fsetdec.
-Infix "⊂_leset" := LevelExprSet.Subset (at level 70).
 Notation cls_diff cls W := (Clauses.diff (cls ↓ W) (cls ⇂ W)) (only parsing).
   
 (*
@@ -1301,7 +1259,7 @@ Lemma non_W_atoms_subset W l : non_W_atoms W l ⊂_leset l.
 Proof. intros x. now rewrite /non_W_atoms LevelExprSet.filter_spec. Qed.
 
 Lemma levelexprset_levels_spec_aux l (e : LevelExprSet.t) acc : 
-  LevelSet.In l (LevelExprSet.fold (fun le : LevelExprSet.elt => LevelSet.add (LevelExpr.get_level le)) e acc) <->
+  LevelSet.In l (LevelExprSet.fold (fun le : LevelExprSet.elt => LevelSet.add (level le)) e acc) <->
   (exists k, LevelExprSet.In (l, k) e) \/ LevelSet.In l acc.
 Proof.
   eapply LevelExprSetProp.fold_rec.
@@ -1324,13 +1282,13 @@ Proof.
 Qed.
 
 Lemma levelexprset_levels_spec l (e : LevelExprSet.t) : 
-  LevelSet.In l (LevelExprSet.levels e) <-> exists k, LevelExprSet.In (l, k) e.
+  LevelSet.In l (levels e) <-> exists k, LevelExprSet.In (l, k) e.
 Proof.
   rewrite levelexprset_levels_spec_aux. intuition auto. lsets.
 Qed.
 
 Lemma levels_exprs_non_W_atoms {W prem} :
-  LevelSet.Equal (LevelExprSet.levels (non_W_atoms W prem)) (LevelSet.diff (LevelExprSet.levels prem) W).
+  LevelSet.Equal (levels (non_W_atoms W prem)) (LevelSet.diff (levels prem) W).
 Proof.
   intros e. unfold non_W_atoms.
   rewrite levelexprset_levels_spec LevelSet.diff_spec levelexprset_levels_spec.
@@ -1344,7 +1302,7 @@ Proof.
   rewrite LevelSetFact.not_mem_iff in H0. now rewrite H0.
 Qed.
 
-Lemma levelexprset_empty_levels x : LevelExprSet.Empty x <-> LevelSet.Empty (LevelExprSet.levels x).
+Lemma levelexprset_empty_levels x : LevelExprSet.Empty x <-> LevelSet.Empty (levels x).
 Proof.
   split.
   - intros he.
@@ -1672,7 +1630,7 @@ Qed.
 
 Lemma clauses_conclusions_add cl cls : 
   clauses_conclusions (Clauses.add cl cls) =_lset 
-  (LevelSet.singleton (LevelExpr.get_level (concl cl)) ∪ 
+  (LevelSet.singleton (level (concl cl)) ∪ 
     clauses_conclusions cls).
 Proof.
   intros x.
@@ -1934,8 +1892,7 @@ Proof.
     now destruct hlevels. }
 Qed.
 
-
-Record valid_model (V : LevelSet.t) (m : model) (cls : clauses) :=
+Record valid_model_def (V : LevelSet.t) (m : model) (cls : clauses) :=
   { model_model : model;
     model_of_V :> model_of V model_model;
     model_clauses_conclusions : clauses_conclusions cls ⊂_lset V;
@@ -1947,6 +1904,9 @@ Arguments model_of_V {V m cls}.
 Arguments model_clauses_conclusions {V m cls}.
 Arguments model_ok {V m cls}.
 Arguments model_extends {V m cls}.
+Extraction Inline model_model.
+
+Definition valid_model := valid_model_def.
 
 Inductive result (V U : LevelSet.t) (cls : clauses) (m : model) :=
   | Loop
@@ -2348,7 +2308,7 @@ Equations? loop (V : LevelSet.t) (U : LevelSet.t) (cls : clauses) (m : model)
     | exist (Some (W, m')) eqm with inspect (LevelSet.equal W V) := {
       | exist true eq := Loop
       (* Loop on cls|W, with |W| < |V| *)
-      | exist false neq with loop W W (cls ⇂ W) m' _ := {
+      | exist false neq with loop W U (cls ⇂ W) m' _ := {
         | Loop := Loop
         | Model Wr mwr hsub
           (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
@@ -2379,7 +2339,8 @@ Proof.
   all:try eapply levelset_neq in neq.
   all:have cls_sub := clauses_conclusions_levels cls.
   all:destruct prf as [clsV UV mof].
-  - split. apply clauses_conclusions_restrict_clauses. reflexivity.
+  - split. apply clauses_conclusions_restrict_clauses. 
+    apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext]. auto.
     apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext].
     eapply model_of_ext; tea. 
     eapply model_of_subset; tea. lsets.
@@ -2474,7 +2435,7 @@ Definition add_max l k m :=
   end.
 
 #[local] Instance proper_levelexprset_levels : Proper (LevelExprSet.Equal ==> LevelSet.Equal)
-  LevelExprSet.levels.
+  levels.
 Proof.
   intros s s' eq l.
   rewrite !levelexprset_levels_spec.
@@ -2499,12 +2460,12 @@ Lemma In_fold_add_max k n a :
   LevelMap.In (elt:=nat) k
   (LevelExprSet.fold
       (fun '(l, k0) (acc : LevelMap.t nat) => add_max l k0 acc) n a) <-> 
-  (LevelSet.In k (LevelExprSet.levels n)) \/ LevelMap.In k a.
+  (LevelSet.In k (levels n)) \/ LevelMap.In k a.
 Proof. 
   eapply LevelExprSetProp.fold_rec.
   - intros s' he.
     rewrite (LevelExprSetProp.empty_is_empty_1 he).
-    cbn. rewrite LevelSetFact.empty_iff. intuition auto.
+    cbn. unfold levels. rewrite LevelExprSetProp.fold_empty. rewrite LevelSetFact.empty_iff. intuition auto.
   - intros.
     destruct x as [l k'].
     rewrite In_add_max.
@@ -2681,5 +2642,9 @@ Definition enforce_constraint (cstr : constraint) (cls : clauses) : clauses :=
       LevelExprSet.fold (fun rk acc => Clauses.add (l, rk) acc) r cls
     in cls'
   end.
+
+Definition clauses_of_list := ClausesProp.of_list.
+Definition list_of_clauses := Clauses.elements.  
+Definition valuation := LevelMap.t nat.
 
 End LoopChecking.

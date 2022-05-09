@@ -3,7 +3,7 @@
 From Coq Require Import ssreflect ssrbool.
 From Coq Require Import Program RelationClasses Morphisms.
 From Coq Require Import Orders OrderedTypeAlt OrderedTypeEx MSetList MSetInterface MSetAVL MSetFacts FMapInterface MSetProperties MSetDecide.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils LoopChecking.
 From MetaCoq.Template Require Universes.
 From Equations Require Import Equations.
 Set Equations Transparent.
@@ -25,14 +25,11 @@ Module LevelMap.
 End LevelMap.
 
 Module UnivLoopChecking.
-  Include LoopChecking MoreLevel LevelSet LevelMap.
+  Module LoopCheck := LoopChecking MoreLevel LevelSet LevelExpr LevelExprSet LevelMap.
+  Include LoopCheck.
 End UnivLoopChecking.
 
 Import UnivLoopChecking.
-
-Definition translate_universe (u : LevelAlgExpr.t) : nonEmptyLevelExprSet :=
-  let (hd, tl) := Universes.NonEmptySetFacts.to_nonempty_list u in
-  NonEmptySetFacts.add_list tl (NonEmptySetFacts.singleton hd).
 
 Definition to_constraint (x : UnivConstraint.t) : constraint :=
   let '(l, d, r) := x in
@@ -42,13 +39,10 @@ Definition to_constraint (x : UnivConstraint.t) : constraint :=
     if (k <? 0)%Z then (l, UnivLe, LevelAlgExpr.add (Z.to_nat (- k)) r)
     else (LevelAlgExpr.add (Z.to_nat k) l, UnivLe, r)
   end
-  in 
-  let l := translate_universe l in
-  let r := translate_universe r in
-  (l, d, r).
+  in (l, d, r).
 
 Definition enforce_constraints (cstrs : ConstraintSet.t) : clauses :=
-  ConstraintSet.fold (fun cstr acc => enforce_constraint (to_constraint cstr) acc) cstrs Clauses.empty.
+  ConstraintSet.fold (fun cstr acc => enforce_constraint (to_constraint cstr) acc) cstrs (clauses_of_list []).
   
 Declare Scope levelnat_scope.
 Delimit Scope levelnat_scope with levelnat.
@@ -83,24 +77,44 @@ Definition ex_levels : LevelSet.t :=
 Definition mk_clause (hd : LevelExpr.t) (premise : list LevelExpr.t) (e : LevelExpr.t) : clause := 
   (NonEmptySetFacts.add_list premise (NonEmptySetFacts.singleton hd), e).
 
-
 (* Example from the paper *)  
 Definition clause1 : clause := mk_clause levela [levelb] (LevelExpr.succ levelb).  
-Definition clause2 : clause := mk_clause levelb [] (LevelExpr.add levelc 3).
-Definition clause3 := mk_clause (LevelExpr.add levelc 1) [] leveld.
-Definition clause4 := mk_clause levelb [LevelExpr.add leveld 2] levele.
+Definition clause2 : clause := mk_clause levelb [] (LevelExpr.add 3 levelc).
+Definition clause3 := mk_clause (LevelExpr.add 1 levelc) [] leveld.
+Definition clause4 := mk_clause levelb [LevelExpr.add 2 leveld] levele.
 Definition clause5 := mk_clause levele [] levela.
 
 Definition ex_clauses :=
-  ClausesProp.of_list [clause1; clause2; clause3; clause4].
+  clauses_of_list [clause1; clause2; clause3; clause4].
 
 Definition ex_loop_clauses :=
-  ClausesProp.of_list [clause1; clause2; clause3; clause4; clause5].
+  clauses_of_list [clause1; clause2; clause3; clause4; clause5].
 
 
 Example test := infer ex_clauses.
 Example test_loop := infer ex_loop_clauses.
+Definition valuation_of_model (m : model) : LevelMap.t nat :=
+  let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
+  LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _).
 
+Definition print_level_nat_map (m : LevelMap.t nat) :=
+  let list := LevelMap.elements m in
+  print_list (fun '(l, w) => string_of_level l ^ " -> " ^ string_of_nat w) nl list.
+
+Definition print_lset (l : LevelSet.t) :=
+  let list := LevelSet.elements l in
+  print_list string_of_level " " list.
+
+Arguments model_model {V m cls}.
+
+Definition print_result {V cls} (m : infer_result V cls) :=
+  match m with
+  | Loop => "looping"
+  | Model w m _ => "satisfiable with model: " ^ print_level_nat_map (model_model m) ^ nl ^ " W = " ^
+    print_lset w 
+    ^ nl ^ "valuation: " ^ print_level_nat_map (valuation_of_model (model_model m))
+  end.
+  
 
 Eval compute in print_result test.
 Eval compute in print_result test_loop.
@@ -154,13 +168,13 @@ Definition add_cstr (x : LevelAlgExpr.t) d (y : LevelAlgExpr.t) cstrs :=
 Coercion LevelAlgExpr.make : LevelExpr.t >-> LevelAlgExpr.t.
 Import ConstraintType.
 Definition test_cstrs :=
-  (add_cstr levela Eq (LevelExpr.add levelb 1)
-  (add_cstr (LevelAlgExpr.sup levela levelc) Eq (LevelExpr.add levelb 1)
+  (add_cstr levela Eq (LevelExpr.add 1 levelb)
+  (add_cstr (LevelAlgExpr.sup levela levelc) Eq (LevelExpr.add 1 levelb)
   (add_cstr levelb (ConstraintType.Le 0) levela
   (add_cstr levelc (ConstraintType.Le 0) levelb
     ConstraintSet.empty)))).
 
-Definition test_clauses := clauses_of_constraints test_cstrs.
+Definition test_clauses := enforce_constraints test_cstrs.
 
 Definition test_levels : LevelSet.t := 
   LevelSetProp.of_list (List.map (LevelExpr.get_level) [levela; levelb; levelc]).
@@ -189,23 +203,20 @@ Fixpoint chain (l : list LevelExpr.t) :=
 Definition levels_to_n n := 
   unfold n (fun i => (Level.Level (string_of_nat i), 0)).
 
-Definition test_chain := chain (levels_to_n 50).
+Definition test_chain := chain (levels_to_n 3).
 
-Eval compute in print_clauses  (clauses_of_constraints test_chain).
-
+Eval compute in print_clauses (enforce_constraints test_chain).
+Eval compute in init_model (enforce_constraints test_chain).
 (** These constraints do have a finite model that makes all implications true (not vacuously) *)
-Time Eval vm_compute in print_result (infer (clauses_of_constraints test_chain)).
+Time Eval vm_compute in print_result (infer (enforce_constraints test_chain)).
 
 (* Eval compute in print_result test''. *) 
-Definition chainres :=  (infer (clauses_of_constraints test_chain)).
+Definition chainres :=  (infer (enforce_constraints test_chain)).
 
-
-
-(*Goal hasFiniteModel chainres.
+Goal hasFiniteModel chainres.
   hnf.
   unfold chainres.
   unfold infer.
-  rewrite /check.
   simp loop.
   set (f := check_model _ _).
   compute in f.
@@ -215,10 +226,13 @@ Definition chainres :=  (infer (clauses_of_constraints test_chain)).
   set (eq := LevelSet.equal _ _). simpl in eq.
   hnf in eq. unfold eq, inspect.
   rewrite loop_clause_1_clause_2_equation_2.
-  set (l := loop _ _ _ _ _ _). hnf in l. simpl in l.
+  set (l := loop _ _ _ _ _).
+  assert (l = Loop).
+  subst l.
   simp loop.
   set (f' := check_model _ _).
-  hnf in f'. unfold f', inspect.
+  hnf in f'. cbn in f'. unfold update_model in f'. simpl in f'. unfold f', inspect.
+  cbn.
   simp loop.
   set (f'' := check_model _ _).
   hnf in f''. simpl in f''.

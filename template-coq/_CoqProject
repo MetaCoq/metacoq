@@ -5,6 +5,9 @@
 theories/utils/canonicaltries/String2pos.v
 theories/utils/canonicaltries/CanonicalTries.v
 
+theories/clauses.v
+theories/ExtractClauses.v
+
 # utils
 theories/utils/ByteCompare.v
 theories/utils/ByteCompareSpec.v

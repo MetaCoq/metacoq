@@ -1897,10 +1897,13 @@ Section InnerLoop.
       inspect (check_model (Clauses.diff (cls ↓ W) (cls ⇂ W)) (W, m.(model_model))) := { 
         | exist None eqm => Model W {| model_model := m.(model_model) |} _
         | exist (Some (Wconcl, mconcl)) eqm with loop W W (cls ⇂ W) mconcl _ _ := {
+          (* Here Wconcl = W by invariant *)
           | Loop => Loop
           | Model Wr mr hsub with inner_loop W cls mconcl mr _ := {
+          (* Here Wr = W by invariant *)
             | Loop => Loop
             | Model Wr' mr' hsub' => Model Wr' {| model_model := model_model mr' |} hsub' }
+            (* Here Wr' = W by invariant *)
       (* We check if the new model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
       (* We're entitled to recursively compute a better model starting with mconcl, 
         as we have made the measure decrease: 
@@ -2024,7 +2027,8 @@ Equations? loop (V : LevelSet.t) (U : LevelSet.t) (cls : clauses) (m : model)
       | exist false neq with loop W W (cls ⇂ W) m' _ := {
         | Loop := Loop
         | Model Wr mwr hsub
-          (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W). *)
+          (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
+             By invariant Wr = W *)
           with inner_loop V U loop W cls _ mwr _ := 
           { | Loop := Loop
             | Model Wc mwc hsub'

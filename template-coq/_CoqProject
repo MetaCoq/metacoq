@@ -5,8 +5,10 @@
 theories/utils/canonicaltries/String2pos.v
 theories/utils/canonicaltries/CanonicalTries.v
 
-theories/clauses.v
-theories/ExtractClauses.v
+# Generic loop checking algorithm
+theories/LoopChecking.v
+theories/ExtractLoopChecking.v
+theories/TemplateLoopChecking.v
 
 # utils
 theories/utils/ByteCompare.v

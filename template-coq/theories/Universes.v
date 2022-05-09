@@ -260,6 +260,8 @@ Module LevelExpr.
 
   Definition succ (l : t) := (fst l, S (snd l)).
 
+  Definition add (k : nat) (l : t) := (fst l, k + snd l).
+
   Definition get_level (e : t) : Level.t := fst e.
 
   Definition get_noprop (e : LevelExpr.t) := Some (fst e).
@@ -644,8 +646,9 @@ Module LevelAlgExpr.
   Definition is_level (u : t) : bool :=
     (LevelExprSet.cardinal u =? 1)%nat && is_levels u.
 
-
   Definition succ : t -> t := map LevelExpr.succ.
+
+  Definition add (k : nat) : t -> t := map (LevelExpr.add k).
 
   (** The l.u.b. of 2 non-prop universe sets *)
   Definition sup : t -> t -> t := non_empty_union.

@@ -1,11 +1,411 @@
 From Coq Require Import ssreflect ssrbool.
 From Coq Require Import Program RelationClasses Morphisms.
-From Coq Require Import OrderedTypeAlt OrderedTypeEx MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
-From MetaCoq.Template Require Import utils Universes.
+From Coq Require Import Orders OrderedTypeAlt OrderedTypeEx MSetList MSetInterface MSetAVL MSetFacts FMapInterface MSetProperties MSetDecide.
+From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Universes.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
+Module FMapOrderedType_from_UsualOrderedType (O : UsualOrderedType).
+  Import O.
+  Definition t := O.t.
+  Definition eq : O.t -> O.t -> Prop := O.eq.
+  Definition lt : O.t -> O.t -> Prop := O.lt.
+  Definition eq_refl : forall x : O.t, eq x x := reflexivity.
+  Definition eq_sym : forall x y : O.t, eq x y -> eq y x := fun x y H => symmetry H.
+
+  Lemma eq_trans : forall x y z, O.eq x y -> O.eq y z -> O.eq x z.
+  Proof. intros x y z. unfold O.eq. apply transitivity. Qed.
+  Lemma lt_trans : forall x y z, O.lt x y -> O.lt y z -> O.lt x z.
+  Proof. intros. eapply O.lt_strorder; tea. Qed.
+  
+  Lemma lt_not_eq : forall x y : O.t, lt x y -> ~ eq x y.
+  Proof.
+    intros x y H eq. do 2 red in eq. subst x. now eapply lt_strorder in H.
+  Qed.
+
+  Definition compare : forall x y : O.t, Compare lt eq x y.
+  Proof.
+    intros.
+    case_eq (compare x y); intros.
+    apply EQ. abstract (destruct (compare_spec x y) => //).
+    apply LT. abstract (destruct (compare_spec x y) => //).
+    apply GT. abstract (destruct (compare_spec x y) => //).
+  Defined.
+    
+  Definition eq_dec : forall x y : O.t, {eq x y} + {~ eq x y} := eq_dec.
+End FMapOrderedType_from_UsualOrderedType.
+
+Module Type LevelOrderedType.
+  Include UsualOrderedType.
+
+  Parameter reflect_eq : ReflectEq t.
+  #[local] Existing Instance reflect_eq.
+
+  Parameter to_string : t -> string.
+  
+End LevelOrderedType.
+
+Module Type FMapOTInterface (E : UsualOrderedType).
+  Module OT := FMapOrderedType_from_UsualOrderedType E.
+  Include FMapInterface.Sfun OT.
+End FMapOTInterface.
+
+
+Module LoopChecking 
+  (* Signature of levels: decidable, ordered type *)
+  (Level : LevelOrderedType)
+  (LevelSet : MSetInterface.SetsOn Level)
+  (LevelMap : FMapOTInterface Level).
+
+Local Existing Instance Level.reflect_eq.
+
+Module LevelSetFact := WFactsOn Level LevelSet.
+Module LevelSetProp := WPropertiesOn Level LevelSet.
+Module LevelSetDecide := LevelSetProp.Dec.
+Module LevelMapFact := FMapFacts.WProperties_fun LevelMap.OT LevelMap.
+
+Ltac lsets := LevelSetDecide.fsetdec.
+Notation "(=_lset)" := LevelSet.Equal (at level 0).
+Infix "=_lset" := LevelSet.Equal (at level 30).
+
+Definition print_level_nat_map (m : LevelMap.t nat) :=
+  let list := LevelMap.elements m in
+  print_list (fun '(l, w) => Level.to_string l ^ " -> " ^ string_of_nat w) nl list.
+
+Definition print_lset (l : LevelSet.t) :=
+  let list := LevelSet.elements l in
+  print_list Level.to_string " " list.
+
+Module LevelExpr.
+  (* npe = no prop expression *)
+  Definition t := (Level.t * nat)%type.
+
+  Definition succ (l : t) := (fst l, S (snd l)).
+
+  Definition add (x : LevelExpr.t) (n : nat) : LevelExpr.t :=
+    let (l, k) := x in (l, k + n).
+  
+  Definition get_level (e : t) : Level.t := fst e.
+
+  Definition make (l : Level.t) : t := (l, 0%nat).
+
+  Definition eq : t -> t -> Prop := eq.
+
+  Definition eq_equiv : Equivalence eq := _.
+
+  Inductive lt_ : t -> t -> Prop :=
+  | ltLevelExpr1 l n n' : (n < n')%nat -> lt_ (l, n) (l, n')
+  | ltLevelExpr2 l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
+
+  Definition lt := lt_.
+
+  Global Instance lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros x X; inversion X. subst. lia. subst.
+      eapply Level.lt_strorder; eassumption.
+    - intros x y z X1 X2; invs X1; invs X2; constructor; tea.
+      etransitivity; tea.
+      etransitivity; tea.
+  Qed.
+
+  Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
+    intros x x' H1 y y' H2; now rewrite H1 H2.
+  Qed.
+
+  Definition compare (x y : t) : comparison :=
+    match x, y with
+    | (l1, b1), (l2, b2) =>
+      match Level.compare l1 l2 with
+      | Eq => Nat.compare b1 b2
+      | x => x
+      end
+    end.
+
+  Definition compare_spec :
+    forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    intros [? ?] [? ?]; cbn; repeat constructor.
+    destruct (Level.compare_spec t0 t1); repeat constructor; tas. subst.
+    destruct (Nat.compare_spec n n0); repeat constructor; tas; subst; congruence.
+  Qed.
+
+  Global Instance reflect_t : ReflectEq t := reflect_prod _ reflect_nat.
+
+  Definition eq_dec : forall (l1 l2 : t), {l1 = l2} + {l1 <> l2} := Classes.eq_dec.
+
+  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+
+End LevelExpr.
+
+Module LevelExprSet.
+  Include MSetList.MakeWithLeibniz LevelExpr.
+
+  Definition levels (e : t) := 
+    fold (fun le => LevelSet.add (LevelExpr.get_level le)) e LevelSet.empty.
+
+End LevelExprSet.
+
+Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
+Module LevelExprSetProp := WPropertiesOn LevelExpr LevelExprSet.
+
+(* We have decidable equality w.r.t leibniz equality for sets of levels. *)
+#[global, program] Instance levelexprset_reflect : ReflectEq LevelExprSet.t :=
+  { eqb := LevelExprSet.equal }.
+Next Obligation.
+  destruct (LevelExprSet.equal x y) eqn:e; constructor.
+  eapply LevelExprSet.equal_spec in e.
+  now eapply LevelExprSet.eq_leibniz.
+  intros e'.
+  subst y.
+  pose proof (@LevelExprSetFact.equal_1 x x).
+  forward H. reflexivity. congruence.
+Qed.
+
+#[global] Instance levelexprset_eq_dec : Classes.EqDec LevelExprSet.t := Classes.eq_dec.
+
+Record nonEmptyLevelExprSet
+  := { t_set : LevelExprSet.t ;
+      t_ne  : LevelExprSet.is_empty t_set = false }.
+
+Derive NoConfusion for nonEmptyLevelExprSet.
+
+(* We use uip on the is_empty condition *)
+#[global, program] Instance nonEmptyLevelExprSet_reflect : ReflectEq nonEmptyLevelExprSet :=
+  { eqb x y := eqb x.(t_set) y.(t_set) }.
+Next Obligation.
+  destruct (eqb_spec (t_set x) (t_set y)); constructor.
+  destruct x, y; cbn in *. subst.
+  now rewrite (uip t_ne0 t_ne1).
+  intros e; subst x; apply H.
+  reflexivity.
+Qed.
+
+(** This coercion allows to see the non-empty set as a regular [LevelExprSet.t] *)
+Coercion t_set : nonEmptyLevelExprSet >-> LevelExprSet.t.
+
+Module NonEmptySetFacts.
+  Definition singleton (e : LevelExpr.t) : nonEmptyLevelExprSet
+    := {| t_set := LevelExprSet.singleton e;
+          t_ne := eq_refl |}.
+
+  Lemma not_Empty_is_empty s :
+    ~ LevelExprSet.Empty s -> LevelExprSet.is_empty s = false.
+  Proof.
+    intro H. apply not_true_is_false. intro H'.
+    apply H. now apply LevelExprSetFact.is_empty_2 in H'.
+  Qed.
+
+  Program Definition add (e : LevelExpr.t) (u : nonEmptyLevelExprSet) : nonEmptyLevelExprSet
+    := {| t_set := LevelExprSet.add e u |}.
+  Next Obligation.
+    apply not_Empty_is_empty; intro H.
+    eapply H. eapply LevelExprSet.add_spec.
+    left; reflexivity.
+  Qed.
+
+  Lemma add_spec e u e' :
+    LevelExprSet.In e' (add e u) <-> e' = e \/ LevelExprSet.In e' u.
+  Proof.
+    apply LevelExprSet.add_spec.
+  Qed.
+
+  Definition add_list : list LevelExpr.t -> nonEmptyLevelExprSet -> nonEmptyLevelExprSet
+    := List.fold_left (fun u e => add e u).
+
+  Lemma add_list_spec l u e :
+    LevelExprSet.In e (add_list l u) <-> In e l \/ LevelExprSet.In e u.
+  Proof.
+    unfold add_list. rewrite <- fold_left_rev_right.
+    etransitivity. 2:{ eapply or_iff_compat_r. etransitivity.
+                        2: apply @InA_In_eq with (A:=LevelExpr.t).
+                        eapply InA_rev. }
+    induction (List.rev l); cbn.
+    - split. intuition. intros [H|H]; tas. invs H.
+    - split.
+      + intro H. apply add_spec in H. destruct H as [H|H].
+        * left. now constructor.
+        * apply IHl0 in H. destruct H as [H|H]; [left|now right].
+          now constructor 2.
+      + intros [H|H]. inv H.
+        * apply add_spec; now left.
+        * apply add_spec; right. apply IHl0. now left.
+        * apply add_spec; right. apply IHl0. now right.
+  Qed.
+
+  Program Definition to_nonempty_list (u : nonEmptyLevelExprSet) : LevelExpr.t * list LevelExpr.t
+    := match LevelExprSet.elements u with
+        | [] => False_rect _ _
+        | e :: l => (e, l)
+        end.
+  Next Obligation.
+    destruct u as [u1 u2]; cbn in *. revert u2.
+    apply eq_true_false_abs.
+    unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
+    LevelExprSet.elements, LevelExprSet.Raw.elements in *.
+    rewrite <- Heq_anonymous; reflexivity.
+  Qed.
+
+  Lemma singleton_to_nonempty_list e : to_nonempty_list (singleton e) = (e, []).
+  Proof. reflexivity. Defined.
+
+  Lemma to_nonempty_list_spec u :
+    let '(e, u') := to_nonempty_list u in
+    e :: u' = LevelExprSet.elements u.
+  Proof.
+    destruct u as [u1 u2].
+    unfold to_nonempty_list; cbn.
+    set (l := LevelExprSet.elements u1). unfold l at 2 3 4.
+    set (e := (eq_refl: l = LevelExprSet.elements u1)); clearbody e.
+    destruct l.
+    - exfalso. revert u2. apply eq_true_false_abs.
+      unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
+      LevelExprSet.elements, LevelExprSet.Raw.elements in *.
+      rewrite <- e; reflexivity.
+    - reflexivity.
+  Qed.
+
+  Lemma to_nonempty_list_spec' u :
+    (to_nonempty_list u).1 :: (to_nonempty_list u).2 = LevelExprSet.elements u.
+  Proof.
+    pose proof (to_nonempty_list_spec u).
+    now destruct (to_nonempty_list u).
+  Qed.
+
+  Lemma In_to_nonempty_list (u : nonEmptyLevelExprSet) (e : LevelExpr.t) :
+    LevelExprSet.In e u
+    <-> e = (to_nonempty_list u).1 \/ In e (to_nonempty_list u).2.
+  Proof.
+    etransitivity. symmetry. apply LevelExprSet.elements_spec1.
+    pose proof (to_nonempty_list_spec' u) as H.
+    destruct (to_nonempty_list u) as [e' l]; cbn in *.
+    rewrite <- H; clear. etransitivity. apply InA_cons.
+    eapply or_iff_compat_l. apply InA_In_eq.
+  Qed.
+
+  Lemma In_to_nonempty_list_rev (u : nonEmptyLevelExprSet) (e : LevelExpr.t) :
+    LevelExprSet.In e u
+    <-> e = (to_nonempty_list u).1 \/ In e (List.rev (to_nonempty_list u).2).
+  Proof.
+    etransitivity. eapply In_to_nonempty_list.
+    apply or_iff_compat_l. apply in_rev.
+  Qed.
+
+  Definition map (f : LevelExpr.t -> LevelExpr.t) (u : nonEmptyLevelExprSet) : nonEmptyLevelExprSet :=
+    let '(e, l) := to_nonempty_list u in
+    add_list (List.map f l) (singleton (f e)).
+
+  Lemma map_spec f u e :
+    LevelExprSet.In e (map f u) <-> exists e0, LevelExprSet.In e0 u /\ e = (f e0).
+  Proof.
+    unfold map. symmetry. etransitivity.
+    { eapply iff_ex; intro. eapply and_iff_compat_r. eapply In_to_nonempty_list. }
+    destruct (to_nonempty_list u) as [e' l]; cbn in *.
+    symmetry. etransitivity. eapply add_list_spec.
+    etransitivity. eapply or_iff_compat_l. apply LevelExprSet.singleton_spec.
+    etransitivity. eapply or_iff_compat_r.
+    apply in_map_iff. clear u. split.
+    - intros [[e0 []]|H].
+      + exists e0. split. right; tas. congruence.
+      + exists e'. split; tas. left; reflexivity.
+    - intros [xx [[H|H] ?]].
+      + right. congruence.
+      + left. exists xx. split; tas; congruence.
+  Qed.
+
+  Program Definition non_empty_union (u v : nonEmptyLevelExprSet) : nonEmptyLevelExprSet :=
+    {| t_set := LevelExprSet.union u v |}.
+  Next Obligation.
+    apply not_Empty_is_empty; intro H.
+    assert (HH: LevelExprSet.Empty u). {
+      intros x Hx. apply (H x).
+      eapply LevelExprSet.union_spec. now left. }
+    apply LevelExprSetFact.is_empty_1 in HH.
+    rewrite t_ne in HH; discriminate.
+  Qed.
+
+  Lemma elements_not_empty (u : nonEmptyLevelExprSet) : LevelExprSet.elements u <> [].
+  Proof.
+    destruct u as [u1 u2]; cbn; intro e.
+    unfold LevelExprSet.is_empty, LevelExprSet.elements,
+    LevelExprSet.Raw.elements in *.
+    rewrite e in u2; discriminate.
+  Qed.
+
+
+  Lemma eq_univ (u v : nonEmptyLevelExprSet) :
+    u = v :> LevelExprSet.t -> u = v.
+  Proof.
+    destruct u as [u1 u2], v as [v1 v2]; cbn. intros X; destruct X.
+    now rewrite (uip_bool _ _ u2 v2).
+  Qed.
+
+  Lemma eq_univ' (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.Equal u v -> u = v.
+  Proof.
+    intro H. now apply eq_univ, LevelExprSet.eq_leibniz.
+  Qed.
+
+  Lemma eq_univ'' (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.elements u = LevelExprSet.elements v -> u = v.
+  Proof.
+    intro H. apply eq_univ.
+    destruct u as [u1 u2], v as [v1 v2]; cbn in *; clear u2 v2.
+    destruct u1 as [u1 u2], v1 as [v1 v2]; cbn in *.
+    destruct H. now rewrite (uip_bool _ _ u2 v2).
+  Qed.
+
+  Lemma univ_expr_eqb_true_iff (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.equal u v <-> u = v.
+  Proof.
+    split.
+    - intros.
+      apply eq_univ'. now apply LevelExprSet.equal_spec.
+    - intros ->. now apply LevelExprSet.equal_spec.
+  Qed.
+
+  Lemma univ_expr_eqb_comm (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.equal u v <-> LevelExprSet.equal v u.
+  Proof.
+    transitivity (u = v). 2: transitivity (v = u).
+    - apply univ_expr_eqb_true_iff.
+    - split; apply eq_sym.
+    - split; apply univ_expr_eqb_true_iff.
+  Qed.
+
+
+  Lemma LevelExprSet_for_all_false f u :
+    LevelExprSet.for_all f u = false -> LevelExprSet.exists_ (negb ∘ f) u.
+  Proof.
+    intro H. rewrite LevelExprSetFact.exists_b.
+    rewrite LevelExprSetFact.for_all_b in H.
+    all: try now intros x y [].
+    induction (LevelExprSet.elements u); cbn in *; [discriminate|].
+    apply andb_false_iff in H; apply orb_true_iff; destruct H as [H|H].
+    left; now rewrite H.
+    right; now rewrite IHl.
+  Qed.
+
+  Lemma LevelExprSet_For_all_exprs (P : LevelExpr.t -> Prop) (u : nonEmptyLevelExprSet)
+    : LevelExprSet.For_all P u
+      <-> P (to_nonempty_list u).1 /\ Forall P (to_nonempty_list u).2.
+  Proof.
+    etransitivity.
+    - eapply iff_forall; intro e. eapply imp_iff_compat_r.
+      apply In_to_nonempty_list.
+    - cbn; split.
+      + intro H. split. apply H. now left.
+        apply Forall_forall. intros x H0.  apply H; now right.
+      + intros [H1 H2] e [He|He]. subst e; tas.
+        eapply Forall_forall in H2; tea.
+  Qed.
+
+End NonEmptySetFacts.
+Import NonEmptySetFacts.
+
 Definition clause : Type := nonEmptyLevelExprSet × LevelExpr.t.
+
 Module Clause.
   Definition t := clause.
 
@@ -59,7 +459,7 @@ Module Clause.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End Clause.
 
-Module Clauses := MSetList.MakeWithLeibniz Clause.
+Module Clauses := MSetAVL.Make Clause.
 Module ClausesFact := WFactsOn Clause Clauses.
 Module ClausesProp := WPropertiesOn Clause Clauses.
 Module ClausesDecide := WDecide (Clauses).
@@ -105,59 +505,6 @@ Proof.
     rewrite Clauses.filter_spec. intuition auto.
 Qed.
 
-Module MoreLevel.
-
-  Include Level.
-
-  Lemma compare_sym : forall x y : t, (compare y x) = CompOpp (compare x y).
-  Proof.
-    induction x; destruct y; simpl; auto.
-    apply StringOT.compare_sym.
-    apply PeanoNat.Nat.compare_antisym.
-  Qed.
-  
-  Lemma eq_refl x : eq x x.
-  Proof. red. reflexivity. Qed.
-
-  Lemma eq_sym x y : eq x y -> eq y x.
-  Proof. unfold eq. apply symmetry. Qed.
- 
-  Lemma eq_trans x y z : eq x y -> eq y z -> eq x z.
-  Proof. unfold eq. apply transitivity. Qed.
-
-  Infix "?=" := compare.
-
-  Lemma compare_trans :
-    forall c (x y z : t), (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-    intros c x y z.
-    destruct (compare_spec x y) => <-; subst.
-    destruct (compare_spec y z); auto.
-    destruct (compare_spec y z); auto; try congruence.
-    destruct (compare_spec x z); auto; try congruence.
-    subst. elimtype False. eapply (irreflexivity (A:=t)). etransitivity; [exact H|exact H0].
-    elimtype False. eapply (irreflexivity (A:=t)). etransitivity; [exact H|]. 
-    eapply transitivity; [exact H0|exact H1].
-    destruct (compare_spec y z); auto; try congruence.
-    destruct (compare_spec x z); auto; try congruence.
-    subst. elimtype False. eapply (irreflexivity (A:=t)). etransitivity; [exact H|exact H0].
-    elimtype False. eapply (irreflexivity (A:=t)). etransitivity; [exact H|]. 
-    eapply transitivity; [exact H1|exact H0].
-  Qed.
-
-  Lemma compare_eq {x y} : compare x y = Eq <-> x = y.
-  Proof.
-    destruct (compare_spec x y) => //.
-    intuition auto. congruence. subst.
-    now apply lt_strorder in H.
-    intuition auto. congruence. subst.
-    now apply lt_strorder in H.
-  Qed.
-End MoreLevel.
-
-Module LevelOT := OrderedType_from_Alt MoreLevel.
-Module LevelMap := FMapAVL.Make LevelOT.
-Module LevelMapFact := FMapFacts.WProperties LevelMap.
 
 Definition levelexpr_level : LevelExpr.t -> Level.t := fst.
 Coercion levelexpr_level : LevelExpr.t >-> Level.t.
@@ -252,26 +599,6 @@ Fixpoint to_bytes (s : string) : list Byte.byte :=
   | String.EmptyString => []
   | String.String b s => b :: to_bytes s
   end.
-
-Declare Scope levelnat_scope.
-Delimit Scope levelnat_scope with levelnat.
-Module LevelNatMapNotation.
-  Import LevelMap.Raw.
-  Notation levelmap := (tree nat) (only parsing).
-  Definition parse_levelnat_map (l : list Byte.byte) : option levelmap :=
-    None.
-  Definition print_levelnat_map (m : levelmap) :=
-    let list := LevelMap.Raw.elements m in
-    print_list (fun '(l, w) => string_of_level l ^ " -> " ^ string_of_nat w) nl list.
-   
-  Definition print_levelmap (l : levelmap) : list Byte.byte :=
-    to_bytes (print_levelnat_map l).
-   
-  String Notation levelmap parse_levelnat_map print_levelmap
-      : levelnat_scope.
-End LevelNatMapNotation.
-Import LevelNatMapNotation.
-Arguments LevelMap.Bst {elt} this%levelnat {is_bst}.
 
 Definition level_value (m : model) (level : Level.t) : nat :=
   match LevelMap.find level m with
@@ -754,9 +1081,8 @@ Proof.
     unfold level_value.
     rewrite (LevelMap.find_1 maps).
     intros hle. 
-    split => //. eapply LevelMap.add_1. eapply LevelMap.E.eq_refl.
+    split => //. eapply LevelMap.add_1. eapply LevelMap.OT.eq_refl.
   - exists k'. split => //. apply LevelMap.add_2 => //.
-    intros he. destruct (MoreLevel.compare_spec l l'); congruence.
 Qed.
 
 Lemma check_clause_model_inv {cl modified w m b wm'} : 
@@ -824,8 +1150,8 @@ Proof.
   unfold level_value, update_model.
   cbn -[LevelMap.find LevelMap.add].
   rewrite LevelMapFact.F.add_o.
-  destruct LevelMap.E.eq_dec => //.
-  exfalso. apply n. now apply MoreLevel.compare_eq.
+  destruct LevelMap.OT.eq_dec => //.
+  exfalso. now apply n.
 Qed.
 
 
@@ -949,9 +1275,9 @@ Proof.
   { intros x y. cbn. intros e e' a neq. lia. }
   apply LevelMapFact.F.Equal_mapsto_iff.
   intros k e. rewrite -> LevelMapFact.filter_iff.
-  2:{ intros x y eq. eapply MoreLevel.compare_eq in eq. subst y. solve_proper. }
+  2:{ intros x y eq. red in eq. subst; solve_proper. }
   rewrite -> LevelMapFact.filter_iff.
-  2:{ move=> x y /MoreLevel.compare_eq ->. solve_proper. }
+  2:{ move=> x y ->. solve_proper. }
   rewrite [_ = true]not_mem. intuition auto.
   - now apply out.
   - now apply out.
@@ -1226,14 +1552,12 @@ Proof.
       destruct LevelMap.find eqn:hl => //.
       eapply LevelMap.find_2 in hl.
       subst fm. cbn in hl.
-      eapply LevelMapFact.filter_iff in hl as [].
-      2:{ intros ? ? ?. eapply MoreLevel.compare_eq in H0. subst x0; solve_proper. }
+      eapply LevelMapFact.filter_iff in hl as []. 2:tc.
       rewrite (LevelMap.find_1 H) //.
       destruct (LevelMap.find _ m) eqn:hl' => //.
       eapply LevelMap.find_2 in hl'.
       assert (LevelMap.MapsTo x n fm).
-      eapply LevelMapFact.filter_iff.
-      { intros ? ? ?. eapply MoreLevel.compare_eq in H. subst x0; solve_proper. }
+      eapply LevelMapFact.filter_iff. tc.
       split => //. now rewrite [_ = true]not_mem.
       now rewrite (LevelMap.find_1 H)  in hl. }
   clearbody fm.
@@ -1246,8 +1570,7 @@ Proof.
     red in hadd.
     unfold level_value. cbn.
     rewrite hadd LevelMapFact.F.add_o.
-    destruct LevelMap.E.eq_dec.
-    eapply MoreLevel.compare_eq in e0. subst x. lia.
+    destruct LevelMap.OT.eq_dec. do 2 red in e0. subst x. lia.
     destruct LevelMap.find; lia.
 Qed.
 
@@ -1366,8 +1689,7 @@ Definition update_model_same_domain {m l k} :
 Proof.
   unfold update_model, declared_model_level.
   intros hin x.
-  rewrite LevelMapFact.F.add_in_iff.
-  rewrite MoreLevel.compare_eq. intuition auto. now subst.
+  rewrite LevelMapFact.F.add_in_iff. intuition auto. now subst.
 Qed.
 
 Definition update_model_outside {m w l k} :
@@ -1377,7 +1699,7 @@ Proof.
   intros l'. rewrite LevelSet.add_spec.
   intros hin k'.
   rewrite LevelMapFact.F.add_neq_mapsto_iff //.
-  intros heq. rewrite MoreLevel.compare_eq in heq. subst l'. apply hin. now left.
+  intros heq. red in heq; subst l'. apply hin. now left.
 Qed.
 
 Lemma check_clause_model_modify' {cl cls w m w' m' w'' m'' modified modified'} : 
@@ -1779,10 +2101,10 @@ Section InnerLoop.
     unfold measure, measure_w, sum_W.
     rewrite (v_minus_w_bound_irrel _ _ hout).
     intros hlt.
-    rewrite !LevelSet.fold_spec.
-    eapply fold_left_ne_lt.
-    - intros; lia.
-    - intros; lia.
+    rewrite !LevelSet.fold_spec. unfold flip.
+    eapply fold_left_ne_lt; unfold flip.
+    - unfold flip. intros; lia.
+    - unfold flip; intros; lia.
     - destruct hlt as [l [hin _]]. intros he. rewrite -LevelSetProp.elements_Empty in he. lsets.
     - intros. rewrite LevelSet_In_elements in H.
       have lexx' := (model_le_values x hle).
@@ -2164,11 +2486,11 @@ Proof.
   unfold add_max.
   destruct LevelMap.find eqn:hl.
   case: Nat.ltb_spec. 
-  - rewrite LevelMapFact.F.add_in_iff MoreLevel.compare_eq.
+  - rewrite LevelMapFact.F.add_in_iff /Level.eq.
     firstorder eauto.
   - intros. intuition auto. subst.
     now rewrite LevelMapFact.F.in_find_iff hl.
-  - LevelMapFact.F.map_iff. rewrite MoreLevel.compare_eq. intuition auto.
+  - LevelMapFact.F.map_iff. rewrite /Level.eq. intuition auto.
 Qed.
 
 Lemma In_fold_add_max k n a : 
@@ -2266,6 +2588,162 @@ Proof.
   - now eapply init_model_levels.
 Qed.
 
+Definition valuation_of_model (m : model) : LevelMap.t nat :=
+  let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
+  LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _).
+  
+Definition print_result {V cls} (m : infer_result V cls) :=
+  match m with
+  | Loop => "looping"
+  | Model w m _ => "satisfiable with model: " ^ print_level_nat_map m.(model_model) ^ nl ^ " W = " ^
+    print_lset w 
+    ^ nl ^ "valuation: " ^ print_level_nat_map (valuation_of_model m.(model_model))
+  end.
+  
+Definition valuation_of_result {V cls} (m : infer_result V cls) :=
+  match m with
+  | Loop => "looping"
+  | Model w m _ => print_level_nat_map (valuation_of_model m.(model_model))
+  end.
+
+Definition to_string_expr (e : LevelExpr.t) : string :=
+  let '(l, n) := e in Level.to_string l ^ (if n is 0 then "" else "+" ^ string_of_nat n).
+  
+Definition print_premise (l : nonEmptyLevelExprSet) : string :=
+  let (e, exprs) := NonEmptySetFacts.to_nonempty_list l in
+  to_string_expr e ^
+  match exprs with
+  | [] => "" 
+  | l => ", " ^ print_list to_string_expr ", " exprs 
+  end.
+
+Definition print_clauses (cls : clauses) :=
+  let list := Clauses.elements cls in
+  print_list (fun '(l, r) => 
+    print_premise l ^ " → " ^ to_string_expr r) nl list.
+  
+Equations? infer_model_extension (V : LevelSet.t) (m : model) (cls cls' : clauses) 
+  (prf : clauses_conclusions cls ⊂_lset V /\ clauses_conclusions cls' ⊂_lset V /\ model_of V m) : result V LevelSet.empty (Clauses.union cls cls') m :=
+  | V, m, cls, cls', prf := loop V LevelSet.empty (Clauses.union cls cls') m _.
+Proof.
+  split. 2:lsets.
+  intros x. rewrite clauses_conclusions_spec.
+  intros [cl [hcl hl]].
+  rewrite Clauses.union_spec in hcl. destruct hcl.
+  - apply H, clauses_conclusions_spec. exists cl => //.
+  - apply H0, clauses_conclusions_spec. exists cl => //.
+  - exact H1.
+Qed.
+
+(* To infer an extension, we weaken a valid model for V to a model for [V ∪ clauses_levels cls] by 
+   setting a minimal value for the new atoms in [clauses_levels cls \ V]
+   such that the new clauses [cls] do not hold vacuously.
+*)
+Equations? infer_extension {V init cls} (m : valid_model V init cls) (cls' : clauses) :
+  result (LevelSet.union (clauses_levels cls') V) LevelSet.empty (Clauses.union cls cls') (min_model m.(model_model) cls') :=
+  infer_extension m cls' := 
+    infer_model_extension (LevelSet.union (clauses_levels cls') V) (min_model m.(model_model) cls') cls cls' _.
+Proof.
+  repeat split.
+  - pose proof (model_clauses_conclusions m). lsets. 
+  - pose proof (clauses_conclusions_levels cls'). lsets.
+  - red. intros.
+    unfold min_model. rewrite min_model_map_levels.
+    pose proof (model_of_V m k).
+    apply LevelSet.union_spec in H as []; auto.
+Qed.
+
+Definition enforce_clauses {V init cls} (m : valid_model V init cls) cls' : option model :=
+  match infer_extension m cls' with
+  | Loop => None
+  | Model w m _ => Some m.(model_model)
+  end.
+
+Definition enforce_clause {V init cls} (m : valid_model V init cls) cl : option model :=
+  enforce_clauses m (Clauses.singleton cl).
+
+Inductive constraint_type := UnivEq | UnivLe.
+
+Notation constraint := (nonEmptyLevelExprSet * constraint_type * nonEmptyLevelExprSet).
+
+Definition enforce_constraint (cstr : constraint) (cls : clauses) : clauses :=
+  let '(l, d, r) := cstr in
+  match d with
+  | UnivLe => 
+    LevelExprSet.fold (fun lk acc => Clauses.add (r, lk) acc) l cls
+  | UnivEq => 
+    let cls :=
+      LevelExprSet.fold (fun lk acc => Clauses.add (r, lk) acc) l cls
+    in
+    let cls' :=
+      LevelExprSet.fold (fun rk acc => Clauses.add (l, rk) acc) r cls
+    in cls'
+  end.
+
+End LoopChecking.
+
+Import Universes.
+
+Module MoreLevel.
+  Import Universes.
+  Include Level.
+
+  Definition reflect_eq : ReflectEq t := reflect_level.
+  Definition to_string := string_of_level.
+
+End MoreLevel.
+
+Module LevelMap.
+  Module OT := FMapOrderedType_from_UsualOrderedType Level.
+  Include FMapAVL.Make OT.
+End LevelMap.
+
+Module UnivLoopChecking.
+  Include LoopChecking MoreLevel LevelSet LevelMap.
+End UnivLoopChecking.
+
+Import UnivLoopChecking.
+
+Definition translate_universe (u : LevelAlgExpr.t) : nonEmptyLevelExprSet :=
+  let (hd, tl) := Universes.NonEmptySetFacts.to_nonempty_list u in
+  NonEmptySetFacts.add_list tl (NonEmptySetFacts.singleton hd).
+
+Definition to_constraint (x : UnivConstraint.t) : constraint :=
+  let '(l, d, r) := x in
+  let '(l, d, r) := match d with
+  | ConstraintType.Eq => (l, UnivEq, r)
+  | ConstraintType.Le k => 
+    if (k <? 0)%Z then (l, UnivLe, LevelAlgExpr.add (Z.to_nat (- k)) r)
+    else (LevelAlgExpr.add (Z.to_nat k) l, UnivLe, r)
+  end
+  in 
+  let l := translate_universe l in
+  let r := translate_universe r in
+  (l, d, r).
+
+Definition enforce_constraints (cstrs : ConstraintSet.t) : clauses :=
+  ConstraintSet.fold (fun cstr acc => enforce_constraint (to_constraint cstr) acc) cstrs Clauses.empty.
+  
+Declare Scope levelnat_scope.
+Delimit Scope levelnat_scope with levelnat.
+Module LevelNatMapNotation.
+  Import LevelMap.Raw.
+  Notation levelmap := (tree nat) (only parsing).
+  Definition parse_levelnat_map (l : list Byte.byte) : option levelmap :=
+    None.
+  Definition print_levelnat_map (m : levelmap) :=
+    let list := LevelMap.Raw.elements m in
+    print_list (fun '(l, w) => MoreLevel.to_string l ^ " -> " ^ string_of_nat w) nl list.
+   
+  Definition print_levelmap (l : levelmap) : list Byte.byte :=
+    to_bytes (print_levelnat_map l).
+   
+  String Notation levelmap parse_levelnat_map print_levelmap
+      : levelnat_scope.
+End LevelNatMapNotation.
+Import LevelNatMapNotation.
+Arguments LevelMap.Bst {elt} this%levelnat {is_bst}.
+
 Definition mk_level x := LevelExpr.make (Level.Level x).
 Definition levela := mk_level "a".
 Definition levelb := mk_level "b".
@@ -2279,14 +2757,12 @@ Definition ex_levels : LevelSet.t :=
 Definition mk_clause (hd : LevelExpr.t) (premise : list LevelExpr.t) (e : LevelExpr.t) : clause := 
   (NonEmptySetFacts.add_list premise (NonEmptySetFacts.singleton hd), e).
 
-Definition levelexpr_add (x : LevelExpr.t) (n : nat) : LevelExpr.t :=
-  let (l, k) := x in (l, k + n).
 
 (* Example from the paper *)  
 Definition clause1 : clause := mk_clause levela [levelb] (LevelExpr.succ levelb).  
-Definition clause2 : clause := mk_clause levelb [] (levelexpr_add levelc 3).
-Definition clause3 := mk_clause (levelexpr_add levelc 1) [] leveld.
-Definition clause4 := mk_clause levelb [levelexpr_add leveld 2] levele.
+Definition clause2 : clause := mk_clause levelb [] (LevelExpr.add levelc 3).
+Definition clause3 := mk_clause (LevelExpr.add levelc 1) [] leveld.
+Definition clause4 := mk_clause levelb [LevelExpr.add leveld 2] levele.
 Definition clause5 := mk_clause levele [] levela.
 
 Definition ex_clauses :=
@@ -2299,31 +2775,6 @@ Definition ex_loop_clauses :=
 Example test := infer ex_clauses.
 Example test_loop := infer ex_loop_clauses.
 
-Definition print_level_nat_map (m : LevelMap.t nat) :=
-  let list := LevelMap.elements m in
-  print_list (fun '(l, w) => string_of_level l ^ " -> " ^ string_of_nat w) nl list.
-
-Definition print_wset (l : LevelSet.t) :=
-  let list := LevelSet.elements l in
-  print_list string_of_level " " list.
-
-Definition valuation_of_model (m : model) : LevelMap.t nat :=
-  let max := LevelMap.fold (fun l k acc => Nat.max k acc) m 0 in
-  LevelMap.fold (fun l k acc => LevelMap.add l (max - k) acc) m (LevelMap.empty _).
-  
-Definition print_result {V cls} (m : infer_result V cls) :=
-  match m with
-  | Loop => "looping"
-  | Model w m _ => "satisfiable with model: " ^ print_level_nat_map m.(model_model) ^ nl ^ " W = " ^
-    print_wset w 
-    ^ nl ^ "valuation: " ^ print_level_nat_map (valuation_of_model m.(model_model))
-  end.
-  
-Definition valuation_of_result {V cls} (m : infer_result V cls) :=
-  match m with
-  | Loop => "looping"
-  | Model w m _ => print_level_nat_map (valuation_of_model m.(model_model))
-  end.
 
 Eval compute in print_result test.
 Eval compute in print_result test_loop.
@@ -2371,51 +2822,14 @@ Qed. *)
 Eval lazy in print_result test.
 Eval compute in print_result test_loop.
 
-Definition clauses_of_constraint (cstr : UnivConstraint.t) : clauses :=
-  let '(l, d, r) := cstr in
-  match d with
-  | ConstraintType.Le k => 
-    (* Represent r >= lk + k <-> lk + k <= r *)
-    if (k <? 0)%Z then
-      let n := Z.to_nat (- k) in 
-      let r' := NonEmptySetFacts.map (fun l => levelexpr_add l n) r in
-        LevelExprSet.fold (fun lk acc => Clauses.add (r', lk) acc) l Clauses.empty
-    else
-      LevelExprSet.fold (fun lk acc => 
-        Clauses.add (r, levelexpr_add lk (Z.to_nat k)) acc) l Clauses.empty
-  | ConstraintType.Eq => 
-    let cls :=
-      LevelExprSet.fold (fun lk acc => Clauses.add (r, lk) acc) l Clauses.empty
-    in
-    let cls' :=
-      LevelExprSet.fold (fun rk acc => Clauses.add (l, rk) acc) r cls
-    in cls'
-  end.
-
-Definition clauses_of_constraints (cstrs : ConstraintSet.t) : clauses :=
-  ConstraintSet.fold (fun cstr acc => Clauses.union (clauses_of_constraint cstr) acc) cstrs Clauses.empty.
-
-Definition print_premise (l : LevelAlgExpr.t) : string :=
-  let (e, exprs) := LevelAlgExpr.exprs l in
-  string_of_level_expr e ^
-  match exprs with
-  | [] => "" 
-  | l => ", " ^ print_list string_of_level_expr ", " exprs 
-  end.
-
-Definition print_clauses (cls : clauses) :=
-  let list := Clauses.elements cls in
-  print_list (fun '(l, r) => 
-    print_premise l ^ " → " ^ string_of_level_expr r) nl list.
-
 Definition add_cstr (x : LevelAlgExpr.t) d (y : LevelAlgExpr.t) cstrs :=
   ConstraintSet.add (x, d, y) cstrs.
 
 Coercion LevelAlgExpr.make : LevelExpr.t >-> LevelAlgExpr.t.
 Import ConstraintType.
 Definition test_cstrs :=
-  (add_cstr levela Eq (levelexpr_add levelb 1)
-  (add_cstr (LevelAlgExpr.sup levela levelc) Eq (levelexpr_add levelb 1)
+  (add_cstr levela Eq (LevelExpr.add levelb 1)
+  (add_cstr (LevelAlgExpr.sup levela levelc) Eq (LevelExpr.add levelb 1)
   (add_cstr levelb (ConstraintType.Le 0) levela
   (add_cstr levelc (ConstraintType.Le 0) levelb
     ConstraintSet.empty)))).
@@ -2436,7 +2850,7 @@ Definition test_levels' : LevelSet.t :=
     [levela; levelb;
       levelc; leveld]).
 
-Notation " x + n " := (levelexpr_add x n).
+Notation " x + n " := (LevelExpr.add x n).
 
 Fixpoint chain (l : list LevelExpr.t) :=
   match l with
@@ -2567,18 +2981,6 @@ Definition check_cstrs (m : model) (c : ConstraintSet.t) :=
   let cls := clauses_of_constraints c in
   check_clauses m cls.
   
-Equations? infer_model_extension (V : LevelSet.t) (m : model) (cls cls' : clauses) 
-  (prf : clauses_conclusions cls ⊂_lset V /\ clauses_conclusions cls' ⊂_lset V /\ model_of V m) : result V LevelSet.empty (Clauses.union cls cls') m :=
-  | V, m, cls, cls', prf := loop V LevelSet.empty (Clauses.union cls cls') m _.
-Proof.
-  split. 2:lsets.
-  intros x. rewrite clauses_conclusions_spec.
-  intros [cl [hcl hl]].
-  rewrite Clauses.union_spec in hcl. destruct hcl.
-  - apply H, clauses_conclusions_spec. exists cl => //.
-  - apply H0, clauses_conclusions_spec. exists cl => //.
-  - exact H1.
-Qed.
   (* as [cl []].
   eapply Clauses.union_spec in H as [].
   apply m.(model_clauses_conclusions). 
@@ -2595,39 +2997,12 @@ Proof.
   rewrite LevelSet.union_spec. right. now apply m.
 Qed. *)
 
-(* To infer an extension, we weaken a valid model for V to a model for [V ∪ clauses_levels cls] by 
-   setting a minimal value for the new atoms in [clauses_levels cls \ V]
-   such that the new clauses [cls] do not hold vacuously.
-*)
-Equations? infer_extension {V init cls} (m : valid_model V init cls) (cls' : clauses) :
-  result (LevelSet.union (clauses_levels cls') V) LevelSet.empty (Clauses.union cls cls') (min_model m.(model_model) cls') :=
-  infer_extension m cls' := 
-    infer_model_extension (LevelSet.union (clauses_levels cls') V) (min_model m.(model_model) cls') cls cls' _.
-Proof.
-  repeat split.
-  - pose proof (model_clauses_conclusions m). lsets. 
-  - pose proof (clauses_conclusions_levels cls'). lsets.
-  - red. intros.
-    unfold min_model. rewrite min_model_map_levels.
-    pose proof (model_of_V m k).
-    apply LevelSet.union_spec in H as []; auto.
-Qed.
-
 Definition model_variables (m : model) : LevelSet.t :=
   LevelMap.fold (fun l _ acc => LevelSet.add l acc) m LevelSet.empty.
 
 Variant enforce_result :=
   | Looping
   | ModelExt (m : model).
-
-Definition enforce_clauses {V init cls} (m : valid_model V init cls) cls' : option model :=
-  match infer_extension m cls' with
-  | Loop => None
-  | Model w m _ => Some m.(model_model)
-  end.
-
-Definition enforce_clause {V init cls} (m : valid_model V init cls) cl : option model :=
-  enforce_clauses m (Clauses.singleton cl).
 
 Definition enforce_cstr {V init cls} (m : valid_model V init cls) (c : UnivConstraint.t) :=
   let cls := clauses_of_constraint c in

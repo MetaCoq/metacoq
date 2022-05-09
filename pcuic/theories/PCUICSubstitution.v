@@ -1260,7 +1260,7 @@ Section CtxReduction.
 
   Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
                                  red Σ Γ (tLambda na M N) (tLambda na M' N').
-  Proof.
+  Proof using Type.
     intros. transitivity (tLambda na M N').
     * now eapply (red_ctx_congr (tCtxLambda_r _ _ tCtxHole)).
     * now eapply (red_ctx_congr (tCtxLambda_l _ tCtxHole _)).
@@ -1269,7 +1269,7 @@ Section CtxReduction.
   Lemma red_letin_alt Γ na d0 d1 t0 t1 b0 b1 :
     red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d0 t0) b0 b1 ->
     red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
-  Proof.
+  Proof using Type.
     intros; transitivity (tLetIn na d0 t0 b1).
     * now eapply (red_ctx_congr (tCtxLetIn_r _ _ _ tCtxHole)).
     * transitivity (tLetIn na d0 t1 b1).
@@ -1344,13 +1344,13 @@ Section SubstitutionLemmas.
   Context {cf} {Σ} {wfΣ : wf Σ}.
 
   Lemma isType_closedPT Γ T : isType Σ Γ T -> on_free_vars (closedP #|Γ| xpredT) T.
-  Proof.
+  Proof using wfΣ.
     move/isType_closed/(closedn_on_free_vars (P:=xpred0)).
     now rewrite shiftnPF_closedPT.
   Qed.
 
   Lemma wt_cumul_pb_equalityP {le} {Γ : context} {T  U} : wt_cumul_pb le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
-  Proof.
+  Proof using wfΣ.
     move=> [] dom.
     move: (isType_wf_local dom) => /closed_wf_local clΓ.
     rewrite closed_ctx_on_ctx_free_vars in clΓ; tea.
@@ -1384,7 +1384,7 @@ Section SubstitutionLemmas.
     is_open_term (Γ,,, Γ',,, Γ'') M ->
     red1 Σ (Γ ,,, Γ' ,,, Γ'') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
-  Proof.
+  Proof using wfΣ.
     intros Hs wfΓ H.
     rewrite !subst_inst.
     eapply red1_inst; eauto.
@@ -1396,7 +1396,7 @@ Section SubstitutionLemmas.
     is_open_term (Γ,,, Δ,,, Γ') M ->
     red1 Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
-  Proof.
+  Proof using wfΣ.
     intros Hs wfΓ H.
     rewrite !subst_inst.
     eapply red1_inst; eauto.
@@ -1408,7 +1408,7 @@ Section SubstitutionLemmas.
     is_open_term (Γ,,, Δ,,, Γ') M ->
     red1 Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
-  Proof.
+  Proof using wfΣ.
     intros Hs H.
     rewrite !subst_inst.
     eapply red1_inst; eauto.
@@ -1421,7 +1421,7 @@ Section SubstitutionLemmas.
     on_ctx_free_vars (shiftnP #|Γ,,, Δ,,, Γ'| xpred0) (Γ,,, Δ,,, Γ') ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
-  Proof.
+  Proof using wfΣ.
     intros subsl onM onΓ.
     induction 1; trea.
     - eapply substitution_untyped_let_red; eassumption.
@@ -1435,7 +1435,7 @@ Section SubstitutionLemmas.
     on_ctx_free_vars (shiftnP #|Γ,,, Δ,,, Γ'| xpred0) (Γ,,, Δ,,, Γ') ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
-  Proof.
+  Proof using wfΣ.
     intros Hs Hl onM onctx Hred. induction Hred; trea.
     - eapply substitution_let_red; eauto.
     - etransitivity; [eapply IHHred1|eapply IHHred2]; tea.
@@ -1478,7 +1478,7 @@ Section SubstitutionLemmas.
     test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| ctx ->
     subst_context s k (inst_case_context pars puinst ctx) =
     inst_case_context (map (subst s k) pars) puinst ctx.
-  Proof.
+  Proof using Type.
     intros Hctx.
     rewrite subst_context_inst_context.
     rewrite inst_inst_case_context_wf //. f_equal.
@@ -1487,18 +1487,18 @@ Section SubstitutionLemmas.
 
   Lemma on_ctx_free_vars_snoc p Γ d : 
     on_ctx_free_vars (shiftnP 1 p) (Γ ,, d) = on_ctx_free_vars p Γ && on_free_vars_decl p d.
-  Proof.
+  Proof using Type.
     now rewrite (on_ctx_free_vars_concat _ _ [_]) on_ctx_free_vars_tip /= addnP_shiftnP.
   Qed.
   
   Lemma addnP_shiftnP_k k n p : addnP (k + n) (shiftnP k p) =1 addnP n p.
-  Proof.
+  Proof using Type.
     now rewrite Nat.add_comm -addnP_add addnP_shiftnP.
   Qed.
 
 Lemma subst_context_app' s k Γ Δ :
   subst_context s k (Γ ,,, Δ) = subst_context s k Γ ,,, subst_context s (k + #|Γ|) Δ.
-Proof.
+Proof using Type.
   rewrite subst_context_app. lia_f_equal.
 Qed.
 
@@ -1509,7 +1509,7 @@ Qed.
     All (on_free_vars (addnP (#|Γ'| + #|Δ|) P)) s ->
     untyped_subslet Γ s Δ ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
-  Proof.
+  Proof using wfΣ.
     intros onΓ onb Hall ons Hsubs.
     revert P b onb Γ Δ Γ' onΓ Hall Hsubs ons.
     apply: term_on_free_vars_ind;
@@ -1615,7 +1615,7 @@ Qed.
     is_open_term (Γ ,,, Δ ,,, Γ') M ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
-  Proof.
+  Proof using wfΣ.
     intros Hs onΓ onM Hred. induction Hred; trea.
     - eapply substitution_untyped_let_red; eauto.
     - etransitivity; [eapply IHHred1|eapply IHHred2]; eauto.
@@ -1631,7 +1631,7 @@ Qed.
     on_ctx_free_vars (shiftnP #|Γ ,,, Γ' ,,, Γ''| xpred0) (Γ ,,, Γ' ,,, Γ'') ->
     Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs onN onM onΓ h. induction h.
     - constructor.
       now apply subst_leq_term.
@@ -1649,7 +1649,7 @@ Qed.
     is_open_term (Γ ,, vass na t) u' ->
     Σ ;;; Γ ,, vass na t |- u <= u' ->
     Σ ;;; Γ |- subst10 a u <= subst10 a u'.
-  Proof.
+  Proof using wfΣ.
     move=> onΓ onu onu' Hu.
     pose proof (@substitution_untyped_cumul Γ [vass na t] [] [a] u u').
     forward X.
@@ -1663,7 +1663,7 @@ Qed.
   is_open_term (Γ ,, vdef na t ty) u' ->
   Σ ;;; Γ ,, vdef na t ty |- u <= u' ->
     Σ ;;; Γ |- subst10 t u <= subst10 t u'.
-  Proof.
+  Proof using wfΣ.
     move=> onΓ onu onu' Hu.
     pose proof (@substitution_untyped_cumul Γ [vdef na t ty] [] [t] u u').
     forward X.
@@ -1676,7 +1676,7 @@ Qed.
     (forall x decl, nth_error Γ x = Some decl -> 
       Σ ;;; Δ |- σ x : (decl.(decl_type)).[↑^(S x) ∘s σ]) ->
     well_subst Σ Γ σ Δ.
-  Proof.
+  Proof using Type.
     intros us hty. split; eauto. 
     intros x decl hnth. specialize (hty x decl hnth). now sigma.
   Qed.
@@ -1685,7 +1685,7 @@ Qed.
     subslet Σ Γ s Γ' ->
     wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
     well_subst Σ (Γ ,,, Γ' ,,, Δ) (⇑^#|Δ| (s ⋅n ids)) (Γ ,,, subst_context s 0 Δ).
-  Proof.
+  Proof using wfΣ.
     intros hs hsΔ.
     apply usubst_well_subst.
     * apply (subslet_usubst hs).
@@ -1754,7 +1754,7 @@ Qed.
     wf_local Σ Γ0 ->
     subslet Σ Γ0 s Γ' ->
     wf_local Σ (Γ0,,, subst_context s 0 Δ).
-  Proof.
+  Proof using wfΣ.
     intros HΓ HΓ0 sub.
     rewrite subst_context_inst_context.
     eapply (wf_local_app_inst _ (Γ0 ,,, Γ')); eauto.

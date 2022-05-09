@@ -355,7 +355,7 @@ Section WfEnv.
     wf_local Σ (Δ' ,,, Γ) -> 
     wf_local_rel Σ (Δ' ,,, Γ) Δ ->
     wf_local_rel Σ Δ' (smash_context Δ Γ).
-  Proof.
+  Proof using wfΣ.
     induction Γ in Δ |- *; simpl; auto.
     intros wfΓ wfΔ. depelim wfΓ; simpl.
     - apply IHΓ; auto. eapply All_local_env_app. split; auto.
@@ -376,13 +376,13 @@ Section WfEnv.
   Lemma wf_local_rel_smash_context {Γ Δ} :
     wf_local Σ (Δ ,,, Γ) -> 
     wf_local_rel Σ Δ (smash_context [] Γ).
-  Proof.
+  Proof using wfΣ.
     intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
   Qed.
 
   Lemma wf_local_smash_end Γ Δ : 
     wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
-  Proof.
+  Proof using wfΣ.
     intros wf. 
     apply All_local_env_app. split.
     now apply All_local_env_app_inv in wf.
@@ -390,7 +390,7 @@ Section WfEnv.
   Qed.
 
   Lemma wf_local_rel_empty Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
-  Proof.
+  Proof using Type.
     split.
     - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
       red in X |- *. now rewrite app_context_nil_l in X.
@@ -400,7 +400,7 @@ Section WfEnv.
 
   Lemma wf_local_smash_context {Γ} :
     wf_local Σ Γ -> wf_local Σ (smash_context [] Γ).
-  Proof.
+  Proof using wfΣ.
     intros; apply wf_local_rel_empty. eapply wf_local_rel_smash_context.
       rewrite ?app_context_nil_l; eauto.
   Qed.

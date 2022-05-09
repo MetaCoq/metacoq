@@ -262,7 +262,7 @@ Section ConvCongruences.
     is_closed_context Γ ->
     is_open_term Γ t ->
     Σ ;;; Γ ⊢ t ⇝ u.
-  Proof.
+  Proof using Type.
     now constructor.
   Qed.
 
@@ -271,7 +271,7 @@ Section ConvCongruences.
     is_open_term (Γ ,, vass na M1) M2 ->
     Σ ;;; Γ ⊢ M1 = N1 ->
     Σ ;;; Γ ⊢ (tProd na M1 M2) ≤[pb] (tProd na' N1 M2).
-  Proof.
+  Proof using wfΣ.
     intros.
     eapply ws_cumul_pb_red in X as (dom & dom' & [rdom rdom' eqdom]); tea.
     eapply ws_cumul_pb_red.
@@ -287,7 +287,7 @@ Section ConvCongruences.
     Σ ;;; Γ ⊢ M1 = N1 ->
     Σ ;;; (Γ ,, vass na M1) ⊢ M2 ≤[pb] N2 ->
     Σ ;;; Γ ⊢ (tProd na M1 M2) ≤[pb] (tProd na' N1 N2).
-  Proof.
+  Proof using wfΣ.
     intros * ? ? ?.
     transitivity (tProd na' N1 M2).
     - eapply ws_cumul_pb_Prod_l; eauto with fvs.
@@ -306,7 +306,7 @@ Section ConvCongruences.
   Lemma ws_cumul_pb_Sort_inv {Γ s s'} pb :
     Σ ;;; Γ ⊢ tSort s ≤[pb] tSort s' ->
     compare_universe pb Σ s s'.
-  Proof.
+  Proof using Type.
     intros H; depind H.
     - destruct pb; now inversion c.
     - depelim r. solve_discr.
@@ -316,7 +316,7 @@ Section ConvCongruences.
   Lemma ws_cumul_pb_Sort_Prod_inv {Γ s na dom codom} pb :
     Σ ;;; Γ ⊢ tSort s ≤[pb] tProd na dom codom ->
     False.
-  Proof.
+  Proof using Type.
     intros H. depind H.
     - destruct pb; now inversion c.
     - depelim r. solve_discr.
@@ -327,7 +327,7 @@ Section ConvCongruences.
 
   Lemma ws_cumul_pb_Prod_Sort_inv {Γ s na dom codom} pb :
     Σ ;;; Γ ⊢ tProd na dom codom ≤[pb] tSort s -> False.
-  Proof.
+  Proof using Type.
     intros H; depind H; auto.
     - destruct pb; now inversion c.
     - depelim r.
@@ -340,7 +340,7 @@ Section ConvCongruences.
   Lemma ws_cumul_pb_Sort_l_inv {Γ s T} pb :
     Σ ;;; Γ ⊢ tSort s ≤[pb] T ->
     ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × compare_universe pb Σ s s'.
-  Proof.
+  Proof using Type.
     intros H. depind H.
     - destruct pb; inversion c; eauto using into_closed_red.
     - depelim r. solve_discr.
@@ -352,7 +352,7 @@ Section ConvCongruences.
   Lemma ws_cumul_pb_Sort_r_inv {Γ s T} pb :
     Σ ;;; Γ ⊢ T ≤[pb] tSort s ->
     ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × compare_universe pb Σ s' s.
-  Proof.
+  Proof using Type.
     intros H. depind H.
     - destruct pb; inversion c; eauto using into_closed_red.
     - destruct IHws_cumul_pb as [s' [redv leq]].
@@ -380,7 +380,7 @@ Section ConvCongruences.
   Lemma closed_red_clos {Γ t u} :
     closed_red Σ Γ t u ->
     clos_refl_trans (closed_red1 Σ Γ) t u.
-  Proof.
+  Proof using wfΣ.
     intros [clΓ clt r].
     assert (clu := red_on_free_vars r clt byfvs).
     unshelve eapply (red_ws_red _ (exist Γ clΓ) (exist t byfvs) (exist u _)) in r; cbn; eauto with fvs.
@@ -392,7 +392,7 @@ Section ConvCongruences.
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     on_free_vars (shiftnP (#|Γ| + #|s| + #|Γ'|) xpred0) b ->
     on_free_vars (shiftnP (#|Γ'| + #|Γ|) xpred0) (subst s #|Γ'| b).
-  Proof.
+  Proof using Type.
     intros.
     eapply on_free_vars_impl.
     2:eapply on_free_vars_subst_gen; tea.
@@ -407,7 +407,7 @@ Section ConvCongruences.
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     #|s| = #|Δ| ->
     is_closed_context (Γ,,, subst_context s 0 Γ').
-  Proof.
+  Proof using Type.
     rewrite !on_free_vars_ctx_app.
     move/andP => [] /andP[] -> /= onΔ onΓ' ons Hs.
     apply on_free_vars_ctx_subst_context0.
@@ -422,7 +422,7 @@ Section ConvCongruences.
     #|s| = #|Δ| -> #|s| = #|s'| ->
     is_open_term (Γ,,, Δ,,, Γ') b ->
     is_open_term (Γ,,, subst_context s 0 Γ') (subst s' #|Γ'| b).
-  Proof.
+  Proof using Type.
     len; intros. apply on_free_vars_subst. 1:solve_all; eauto with fvs.
     len in H2. rewrite -H3 H2.
     red. rewrite -H4; lia_f_equal.
@@ -434,7 +434,7 @@ Section ConvCongruences.
     #|s| = #|Δ| ->
     is_open_term (Γ,,, Δ,,, Γ') b ->
     is_open_term (Γ,,, subst_context s 0 Γ') (subst s #|Γ'| b).
-  Proof.
+  Proof using Type.
     intros. now eapply is_open_term_subst_gen; tea.
   Qed.
 
@@ -444,7 +444,7 @@ Section ConvCongruences.
     untyped_subslet Γ s Δ ->
     is_open_term (Γ ,,, Δ ,,, Γ') b ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| b ⇝ subst s' #|Γ'| b.
-  Proof.
+  Proof using wfΣ.
     intros.
     split; eauto with fvs.
     - eapply is_closed_subst_context; tea. 1:solve_all; eauto with fvs.
@@ -464,7 +464,7 @@ Section ConvCongruences.
     untyped_subslet Γ s Δ ->
     is_open_term (Γ ,,, Δ) b ->
     Σ ;;; Γ ⊢ subst0 s b ⇝ subst0 s' b.
-  Proof.
+  Proof using wfΣ.
     intros. eapply (closed_red_red_subst (Γ' := [])); tea.
   Qed.
 
@@ -507,7 +507,7 @@ Section ConvCongruences.
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| M ⇝ subst s #|Γ'| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs H. split.
     - eapply is_closed_subst_context; eauto with fvs pcuic.
     - eapply is_open_term_subst; tea; eauto with fvs pcuic.
@@ -519,12 +519,12 @@ Section ConvCongruences.
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     Σ ;;; Γ ,,, Δ ⊢ M ⇝ N ->
     Σ ;;; Γ ⊢ subst s 0 M ⇝ subst s 0 N.
-  Proof.
+  Proof using wfΣ.
     intros Hs H. now apply (closed_red_untyped_substitution (Γ' := [])).
   Qed.
 
   Lemma untyped_subslet_def_tip {Γ na d ty} : untyped_subslet Γ [d] [vdef na d ty].
-  Proof.
+  Proof using Type.
     rewrite -{1}(subst_empty 0 d). constructor. constructor.
   Qed.
   Hint Resolve untyped_subslet_def_tip : pcuic.
@@ -535,7 +535,7 @@ Section ConvCongruences.
     [× C = tLetIn na d' ty' b', Σ ;;; Γ ⊢ d ⇝ d', Σ ;;; Γ ⊢ ty ⇝ ty' &
       Σ ;;; (Γ ,, vdef na d ty) ⊢ b ⇝ b']) +
     (Σ ;;; Γ ⊢ (subst10 d b) ⇝ C)%type.
-  Proof.
+  Proof using wfΣ.
     generalize_eq x (tLetIn na d ty b).
     move=> e [clΓ clt] red.
     assert (clC : is_open_term Γ C) by eauto with fvs.
@@ -579,7 +579,7 @@ Section ConvCongruences.
     ∑ dom' codom',
       [× T = tProd na dom' codom', Σ ;;; Γ ⊢ dom ⇝ dom' &
          Σ ;;; Γ ,, vass na dom ⊢ codom ⇝ codom'].
-  Proof.
+  Proof using wfΣ.
     generalize_eq x (tProd na dom codom).
     move=> e [clΓ clt] red.
     revert na dom codom e.
@@ -660,7 +660,7 @@ Section ConvCongruences.
     [× Σ ;;; Γ ⊢ T ⇝ (tProd na' dom' codom'),
       (eq_binder_annot na na'), Σ ;;; Γ ⊢ dom = dom' &
       Σ ;;; Γ ,, vass na dom ⊢ codom ≤[pb] codom'].
-  Proof.
+  Proof using wfΣ.
     intros H.
     eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
     destruct (invert_red_prod tv) as (dom' & codom' & [-> reddom redcod]).
@@ -690,7 +690,7 @@ Section ConvCongruences.
       eq_binder_annot na na', 
       Σ ;;; Γ ⊢ dom' = dom & 
       Σ ;;; Γ ,, vass na dom ⊢ codom' ≤[pb] codom].
-  Proof.
+  Proof using wfΣ.
     intros H.
     eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
     destruct (invert_red_prod tv') as (dom' & codom' & [-> reddom redcod]).
@@ -718,7 +718,7 @@ Section ConvCongruences.
   Lemma ws_cumul_pb_Prod_Prod_inv {pb Γ na na' dom dom' codom codom'} :
     Σ ;;; Γ ⊢ tProd na dom codom ≤[pb] tProd na' dom' codom' ->
     [× eq_binder_annot na na', Σ ;;; Γ ⊢ dom = dom' & Σ ;;; Γ ,, vass na' dom' ⊢ codom ≤[pb] codom'].
-  Proof.
+  Proof using wfΣ.
     intros H.
     eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
     destruct (invert_red_prod tv) as (dom0 & codom0 & [-> reddom0 redcod0]).
@@ -843,7 +843,7 @@ Section Inversions.
       isArity T ->
       (exists na A B, ∥ Σ ;;; Γ ⊢ T ⇝ (tProd na A B) ∥) \/
       (exists u, ∥ Σ ;;; Γ ⊢ T ⇝ (tSort u) ∥).
-  Proof.
+  Proof using wfΣ.
     intros Γ T.
     induction T in Γ |- *. all: try contradiction.
     - right. eexists. constructor. pcuic.
@@ -882,7 +882,7 @@ Section Inversions.
       Is_conv_to_Arity Σ Γ T ->
       (exists na A B, ∥ Σ ;;; Γ ⊢ T ⇝ (tProd na A B) ∥) \/
       (exists u, ∥ Σ ;;; Γ ⊢ T ⇝ (tSort u) ∥).
-  Proof.
+  Proof using wfΣ.
     intros Γ T [T' [r a]].
     induction T'.
     all: try contradiction.
@@ -900,7 +900,7 @@ Section Inversions.
 
   Lemma invert_red_sort Γ u v :
     Σ ;;; Γ ⊢ (tSort u) ⇝ v -> v = tSort u.
-  Proof.
+  Proof using wfΣ.
     intros [clΓ clu H]. generalize_eq x (tSort u).
     induction H; simplify *.
     - depind r. solve_discr.
@@ -916,7 +916,7 @@ Section Inversions.
       is_open_term Γ v ->
       eq_term_upto_univ Σ Re Rle u v ->
       Is_conv_to_Arity Σ Γ v.
-  Proof.
+  Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
     induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
@@ -951,7 +951,7 @@ Section Inversions.
     is_open_term Γ v ->
     eq_term_upto_univ Σ Re Rle v u ->
     Is_conv_to_Arity Σ Γ v.
-  Proof.
+  Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
     induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
@@ -983,7 +983,7 @@ Section Inversions.
     forall u v k,
       isArity u ->
       isArity (u { k := v }).
-  Proof.
+  Proof using Type.
     intros u v k h.
     induction u in v, k, h |- *. all: try contradiction.
     - simpl. constructor.
@@ -996,7 +996,7 @@ Section Inversions.
       red1 Σ Γ u v ->
       isArity u ->
       isArity v.
-  Proof.
+  Proof using Type.
     intros Γ u v h a.
     induction u in Γ, v, h, a |- *. all: try contradiction.
     - dependent destruction h.
@@ -1027,7 +1027,7 @@ Section Inversions.
       isArity T ->
       Σ;;; Γ ⊢ C ≤ T ->
       Is_conv_to_Arity Σ Γ C.
-  Proof.
+  Proof using Type.
     intros Γ C T a h.
     induction h.
     - eapply eq_term_upto_univ_conv_arity_r. all: eassumption.
@@ -1045,7 +1045,7 @@ Section Inversions.
       isArity C ->
       Σ;;; Γ ⊢ C ≤ T ->
       Is_conv_to_Arity Σ Γ T.
-  Proof.
+  Proof using Type.
     intros Γ C T a h.
     induction h.
     - eapply eq_term_upto_univ_conv_arity_l. all: eassumption.
@@ -1064,7 +1064,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     red Σ Γ U U' ->
     Σ ;;; Γ ⊢ T ≤[pb] U'.
-  Proof.
+  Proof using wfΣ.
     intros * cumtu red.
     transitivity U; tea. eapply red_ws_cumul_pb.
     constructor; eauto with fvs.
@@ -1074,7 +1074,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     red Σ Γ T T' ->
     Σ ;;; Γ ⊢ T' ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros * cumtu red.
     transitivity T => //. eapply red_ws_cumul_pb_inv.
     constructor; eauto with fvs.
@@ -1083,7 +1083,7 @@ Section Inversions.
   Lemma ws_cumul_pb_LetIn_l_inv {Γ C na d ty b} {pb} :
     Σ ;;; Γ ⊢ tLetIn na d ty b ≤[pb] C ->
     Σ ;;; Γ ⊢ subst10 d b ≤[pb] C.
-  Proof.
+  Proof using wfΣ.
     intros Hlet.
     eapply ws_cumul_pb_red_l_inv; eauto.
     eapply red1_red; constructor.
@@ -1092,7 +1092,7 @@ Section Inversions.
   Lemma ws_cumul_pb_LetIn_r_inv {Γ C na d ty b} {pb} :
     Σ ;;; Γ ⊢ C ≤[pb] tLetIn na d ty b ->
     Σ ;;; Γ ⊢ C ≤[pb] subst10 d b.
-  Proof.
+  Proof using wfΣ.
     intros Hlet.
     eapply ws_cumul_pb_red_r_inv; eauto.
     eapply red1_red; constructor.
@@ -1105,7 +1105,7 @@ Section Inversions.
       ∑ l',
         (l = l' ++ [v]) ×
         u = mkApps t l'.
-  Proof.
+  Proof using Type.
     intros u v t l h e.
     induction l in u, v, t, e, h |- * using list_rect_rev.
     - cbn in e. subst. cbn in h. discriminate.
@@ -1117,7 +1117,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ mkApps (tInd ind u) args ⇝ c ->
     ∑ args' : list term,
     [× c = mkApps (tInd ind u) args', is_closed_context Γ & All2 (closed_red Σ Γ) args args'].
-  Proof.
+  Proof using wfΣ.
     move=> [clΓ].
     rewrite PCUICOnFreeVars.on_free_vars_mkApps => /= hargs r.
     destruct (red_mkApps_tInd (Γ := exist Γ clΓ) hargs r) as [args' [eq red]].
@@ -1133,7 +1133,7 @@ Section Inversions.
     ∑ (u' : term) (l' : list term),
       [× eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe pb Σ) #|l| u u',
         All2 (eq_term Σ Σ) l l' & t = mkApps u' l'].
-  Proof.
+  Proof using wfΣ.
     destruct pb => /= => /eq_term_upto_univ_mkApps_l_inv; firstorder.
   Qed.
 
@@ -1142,7 +1142,7 @@ Section Inversions.
     ∑ (u' : term) (l' : list term),
       [× eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe pb Σ) #|l| u' u, 
         All2 (eq_term Σ Σ) l' l & t = mkApps u' l'].
-  Proof.
+  Proof using wfΣ.
     destruct pb => /= => /eq_term_upto_univ_mkApps_r_inv; firstorder.
   Qed.
 
@@ -1152,7 +1152,7 @@ Section Inversions.
       [× Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l'),
       R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef ind) #|l| ui ui' &
       All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'].
-  Proof.
+  Proof using wfΣ.
     move/ws_cumul_pb_red=> [v [v' [redv redv' leqvv']]].
     eapply invert_red_mkApps_tInd in redv as [l' [? ? ha]]; auto. subst.
     eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
@@ -1173,25 +1173,25 @@ Section Inversions.
   Lemma closed_red_terms_open_left {Γ l l'}: 
     All2 (closed_red Σ Γ) l l' ->
     All (is_open_term Γ) l.
-  Proof. solve_all; eauto with fvs. Qed.
+  Proof using Type. solve_all; eauto with fvs. Qed.
   
   Lemma closed_red_terms_open_right {Γ l l'}: 
     All2 (closed_red Σ Γ) l l' ->
     All (is_open_term Γ) l'.
-  Proof. solve_all; eauto with fvs. Qed.
+  Proof using wfΣ. solve_all; eauto with fvs. Qed.
   Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
 
   Lemma ws_cumul_pb_terms_open_terms_left {Γ s s'} : 
     ws_cumul_pb_terms Σ Γ s s' ->
     forallb (is_open_term Γ) s.
-  Proof.
+  Proof using wfΣ.
     solve_all; eauto with fvs.
   Qed.
 
   Lemma ws_cumul_pb_terms_open_terms_right {Γ s s'} : 
     ws_cumul_pb_terms Σ Γ s s' ->
     forallb (is_open_term Γ) s'.
-  Proof.
+  Proof using wfΣ.
     solve_all; eauto with fvs.
   Qed.
   Hint Resolve ws_cumul_pb_terms_open_terms_left ws_cumul_pb_terms_open_terms_right : fvs.
@@ -1202,7 +1202,7 @@ Section Inversions.
         [× Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l'),
           R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef ind) #|l| ui' ui &
           ws_cumul_pb_terms Σ Γ l' l].
-  Proof.
+  Proof using wfΣ.
     move/ws_cumul_pb_red=> [v [v' [redv redv' leqvv']]].
     eapply invert_red_mkApps_tInd in redv' as [l' [? ? ha]]; auto. subst.
     eapply compare_term_mkApps_r_inv in leqvv' as [u [l'' [e ? ?]]].
@@ -1227,7 +1227,7 @@ Section Inversions.
       [× ind = ind',
          R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef ind) #|l| ui ui',
          is_closed_context Γ & ws_cumul_pb_terms Σ Γ l l'].
-  Proof.
+  Proof using wfΣ.
     move/ws_cumul_pb_red=> [v [v' [redv redv' leqvv']]].
     pose proof (clrel_ctx redv).
     eapply invert_red_mkApps_tInd in redv as [l0 [? ? ha]]; auto. subst.
@@ -1362,7 +1362,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ f ≤[pb] f' ->
     is_open_term Γ u ->
     Σ ;;; Γ ⊢ tApp f u ≤[pb] tApp f' u.
-  Proof.
+  Proof using wfΣ.
     intros h onu.
     induction h.
     - constructor; cbn; eauto with fvs. cbn in c.
@@ -1381,7 +1381,7 @@ Section Inversions.
     is_open_term Γ f ->
     Σ ;;; Γ ⊢ u = v ->
     Σ ;;; Γ ⊢ tApp f u ≤[pb] tApp f v.
-  Proof.
+  Proof using wfΣ.
     intros onf h.
     induction h.
     - constructor; cbn; eauto with fvs. cbn in c.
@@ -1398,7 +1398,7 @@ Section Inversions.
     Σ;;; Γ ⊢ hd ≤[pb] hd' ->
    ws_cumul_pb_terms Σ Γ args args' ->
     Σ;;; Γ ⊢ mkApps hd args ≤[pb] mkApps hd' args'.
-  Proof.
+  Proof using wfΣ.
     intros cum cum_args.
     revert hd hd' cum.
     induction cum_args; intros hd hd' cum; auto.
@@ -1416,7 +1416,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ t ⇝1 u -> 
     forallb (is_open_term Γ) ts ->
     Σ ;;; Γ ⊢ mkApps t ts ⇝1 mkApps u ts.
-  Proof.
+  Proof using Type.
     intros r cl.
     split; eauto with fvs.
     - rewrite on_free_vars_mkApps (clrel_src r) //.
@@ -1427,14 +1427,14 @@ Section Inversions.
 
   Lemma invert_cumul_prod_ind {Γ na dom codom ind u args} :
     Σ ;;; Γ ⊢ tProd na dom codom ≤ mkApps (tInd ind u) args -> False.
-  Proof.
+  Proof using wfΣ.
     intros ht; eapply ws_cumul_pb_Prod_l_inv in ht as (? & ? & ? & []); auto.
     eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
   Qed.
 
   Lemma invert_cumul_ind_prod {Γ na dom codom ind u args} :
     Σ ;;; Γ ⊢ mkApps (tInd ind u) args ≤ tProd na dom codom -> False.
-  Proof.
+  Proof using wfΣ.
     intros ht; eapply ws_cumul_pb_Prod_r_inv in ht as (? & ? & ? & []); auto.
     eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
     Qed.
@@ -1443,7 +1443,7 @@ Section Inversions.
     Σ ;;; Γ ⊢ mkApps (tInd ind u) args ≤ mkApps (tInd ind' u') args' ->
     (eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
       ws_cumul_pb_terms Σ Γ args args').
-  Proof.
+  Proof using wfΣ.
     intros ht; eapply ws_cumul_pb_Ind_l_inv in ht as (? & ? & [? ? ?]); auto.
     eapply invert_red_mkApps_tInd in c as (? & [? ? ?]); auto; solve_discr. noconf H.
     subst x1. intuition auto.
@@ -1453,7 +1453,7 @@ Section Inversions.
 
   Lemma invert_cumul_sort_ind {Γ s ind u args} :
     Σ;;; Γ ⊢ tSort s ≤ mkApps (tInd ind u) args -> False.
-  Proof.
+  Proof using wfΣ.
     intros cum.
     apply PCUICConversion.ws_cumul_pb_Sort_l_inv in cum as (?&?&?).
     apply invert_red_mkApps_tInd in c as (?&[]); auto.
@@ -1462,7 +1462,7 @@ Section Inversions.
 
   Lemma invert_cumul_ind_sort {Γ s ind u args} :
     Σ;;; Γ ⊢ mkApps (tInd ind u) args ≤ tSort s -> False.
-  Proof.
+  Proof using wfΣ.
     intros cum.
     apply PCUICConversion.ws_cumul_pb_Sort_r_inv in cum as (?&?&?).
     apply invert_red_mkApps_tInd in c as (?&[]); auto.
@@ -1509,7 +1509,7 @@ Section ConvRedConv.
     Σ ;;; Γ' ⊢ t' ⇝ t'r ->
     Σ ;;; Γ ⊢ tr = t'r ->
     Σ ;;; Γ ⊢ t = t'.
-  Proof.
+  Proof using wfΣ.
     intros cc r r' ct.
     eapply red_ws_cumul_pb_left; eauto.
     eapply ws_cumul_pb_ws_cumul_ctx in ct.
@@ -1522,7 +1522,7 @@ Section ConvRedConv.
     sq_ws_cumul_pb leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2) ->
       eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\
       sq_ws_cumul_pb leq Σ (Γ,, vass na1 A1) B1 B2.
-  Proof.
+  Proof using wfΣ.
     intros [].
     apply ws_cumul_pb_Prod_Prod_inv in X as []; intuition auto; sq; auto.
     eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)) in w0; tea.
@@ -1535,7 +1535,7 @@ Section ConvRedConv.
     sq_ws_cumul_pb leq Σ Γ T U ->
     Σ ⊢ Γ' ≤[pb] Γ ->
     sq_ws_cumul_pb leq Σ Γ' T U.
-  Proof.
+  Proof using wfΣ.
     intros [] h.
     now eapply ws_cumul_pb_ws_cumul_ctx in X; tea.
   Qed.
@@ -1545,7 +1545,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ t2' ⇝ t2 ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     intros r1 r2 [cc]. sq.
     eapply red_ws_cumul_pb_left; tea.
     eapply red_ws_cumul_pb_right; tea.
@@ -1557,7 +1557,7 @@ Section ConvRedConv.
     Σ ;;; Γ' ⊢ t2' ⇝ t2 ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     intros conv_ctx r1 r2 [cc]; sq.
     eapply red_ws_cumul_pb_left; tea.
     eapply ws_cumul_pb_ws_cumul_ctx in cc; tea. 2:symmetry; tea.
@@ -1570,7 +1570,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ t2 ⇝ t2' ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     intros r1 r2 [cc]; sq.
     transitivity t1.
     - now eapply red_ws_cumul_pb_inv.
@@ -1584,7 +1584,7 @@ Section ConvRedConv.
     Σ ;;; Γ' ⊢ t2 ⇝ t2' ->
     sq_ws_cumul_pb pb Σ Γ t1 t2 ->
     sq_ws_cumul_pb pb Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     move=> conv_ctx r1 /(red_ws_cumul_pb (pb:=pb)) r2 [cc]; sq.
     transitivity t1; [now apply red_ws_cumul_pb_inv|].
     transitivity t2 => //.
@@ -1595,7 +1595,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ ⊢ t2' ⇝ t2 ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 <-> sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     intros r1 r2.
     split; intros cc.
     - eapply conv_cum_red; eauto.
@@ -1607,7 +1607,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ' ⊢ t2' ⇝ t2 ->
     sq_ws_cumul_pb pb Σ Γ t1 t2 <-> sq_ws_cumul_pb pb Σ Γ t1' t2'.
-  Proof.
+  Proof using wfΣ.
     intros conv_ctx r1 r2.
     split; intros cc.
     - eapply conv_cum_red_conv; eauto.
@@ -1633,7 +1633,7 @@ Section ConvRedConv.
   Lemma ws_cumul_pb_Proj_c {pb Γ p u v} :
     Σ ;;; Γ ⊢ u = v ->
     Σ ;;; Γ ⊢ tProj p u ≤[pb] tProj p v.
-  Proof.
+  Proof using wfΣ.
     intros h.
     induction h.
     - eapply ws_cumul_pb_compare; eauto.
@@ -1651,7 +1651,7 @@ Section ConvRedConv.
       Σ ;;; Γ ⊢ t1 ≤[pb] t2 ->
       Σ ;;; Γ ⊢ u1 = u2 ->
       Σ ;;; Γ ⊢ tApp t1 u1 ≤[pb] tApp t2 u2.
-  Proof.
+  Proof using wfΣ.
     intros. etransitivity.
     - eapply ws_cumul_pb_App_l; tea; eauto with fvs.
     - apply ws_cumul_pb_App_r; tea. eauto with fvs.
@@ -1659,7 +1659,7 @@ Section ConvRedConv.
   
   #[global]
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
-  Proof.
+  Proof using Type.
     intros x. apply All2_same. intros. reflexivity.
   Qed.
 
@@ -1728,7 +1728,7 @@ Section ConvRedConv.
     All2 R l l' ->
     (forall x y, R x y -> P x × P y) ->
     rtrans_clos (fun x y => #|x| = #|y| × OnOne2 R x y × All P x × All P y) l l'.
-  Proof.
+  Proof using Type.
     intros h H.
     induction h.
     - constructor.
@@ -1762,7 +1762,7 @@ Section ConvRedConv.
 
   Lemma rtrans_clos_length {A} {l l' : list A} {P} :
     rtrans_clos (fun x y : list A => #|x| = #|y| × P x y) l l' -> #|l| = #|l'|.
-  Proof.
+  Proof using Type.
     induction 1; auto.
     destruct r.
     now transitivity #|y|.
@@ -1776,7 +1776,7 @@ Section ConvRedConv.
 
   Lemma is_open_case_split {Γ p c brs} : is_open_case Γ p c brs =
     [&& is_open_predicate Γ p, is_open_term Γ c & is_open_brs Γ p brs].
-  Proof.
+  Proof using Type.
     rewrite /is_open_case. now repeat bool_congr.
   Qed.
 
@@ -1785,7 +1785,7 @@ Section ConvRedConv.
     #|pars'| = #|p.(pparams)| ->
     is_open_case Γ p c brs ->
     is_open_case Γ (set_pparams p pars') c brs.
-  Proof.
+  Proof using Type.
     move=> onpars' Hlen.
     move/and5P => [] onpars.
     rewrite /is_open_case => ->.
@@ -1797,7 +1797,7 @@ Section ConvRedConv.
     is_open_term (Γ ,,, inst_case_predicate_context p) pret' ->
     is_open_case Γ p c brs ->
     is_open_case Γ (set_preturn p pret') c brs.
-  Proof.
+  Proof using Type.
     move=> onpret' /and5P[] onpars onpret onpctx onc onbrs.
     rewrite /is_open_case onc onbrs !andb_true_r onpctx /= onpars /= andb_true_r.
     rewrite app_length inst_case_predicate_context_length in onpret'.
@@ -1805,15 +1805,15 @@ Section ConvRedConv.
   Qed.
 
   Instance red_brs_refl p Γ : Reflexive (@red_brs Σ p Γ).
-  Proof. intros x. eapply All2_refl; split; reflexivity. Qed.
+  Proof using Type. intros x. eapply All2_refl; split; reflexivity. Qed.
 
   Instance red_terms_refl Γ : Reflexive (All2 (red Σ Γ)).
-  Proof. intros x; eapply All2_refl; reflexivity. Qed.
+  Proof using Type. intros x; eapply All2_refl; reflexivity. Qed.
 
   Instance eqbrs_refl : Reflexive (All2 (fun x y : branch term =>
       eq_context_gen eq eq (bcontext x) (bcontext y) *
       eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (bbody x) (bbody y))).
-  Proof. intros brs; eapply All2_refl; split; reflexivity. Qed.
+  Proof using Type. intros brs; eapply All2_refl; split; reflexivity. Qed.
 
   Lemma ws_cumul_pb_Case_p {Γ ci c brs p p'} :
     is_closed_context Γ ->
@@ -1821,7 +1821,7 @@ Section ConvRedConv.
     is_open_predicate Γ p' ->
     ws_cumul_pb_predicate Σ Γ p p' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c brs.
-  Proof.
+  Proof using wfΣ.
     intros onΓ oncase onp' [cpars cu cctx cret].
     assert (Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci (set_preturn p (preturn p')) c brs).
     { eapply ws_cumul_pb_red in cret as [v [v' [redl redr eq]]].
@@ -1905,7 +1905,7 @@ Section ConvRedConv.
       is_open_brs Γ p brs ->
       Σ ;;; Γ ⊢ u = v ->
       Σ ;;; Γ ⊢ tCase indn p u brs = tCase indn p v brs.
-  Proof.
+  Proof using wfΣ.
     intros Γ ci p brs u v onp onbrs h.
     induction h.
     - constructor; auto with fvs.
@@ -1925,7 +1925,7 @@ Section ConvRedConv.
     forall u v n k,
       eq_context_gen eq eq u v ->
       eq_context_gen eq eq (subst_context n k u) (subst_context n k v).
-  Proof.
+  Proof using Type.
     intros re u v n.
     induction 1.
     - constructor.
@@ -1937,7 +1937,7 @@ Section ConvRedConv.
   Lemma eq_context_gen_inst_case_context {Γ Δ Δ' pars puinst} :
     eq_context_gen eq eq Δ Δ' ->
     eq_context_gen eq eq (Γ ,,, inst_case_context pars puinst Δ) (Γ ,,, inst_case_context pars puinst Δ').
-  Proof.
+  Proof using Type.
     intros.
     apply All2_fold_app; [reflexivity|].
     rewrite /inst_case_context.
@@ -1954,7 +1954,7 @@ Section ConvRedConv.
       eq_context_gen eq eq u.(bcontext) v.(bcontext) × 
       Σ ;;; (Γ ,,, inst_case_branch_context p u) ⊢ u.(bbody) = v.(bbody)) brs brs' ->
     Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p c brs'.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onp onc onbrs onbrs' h.
     apply OnOne2_split in h as [[bctx br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
     simpl in *. subst brs brs'.
@@ -2001,7 +2001,7 @@ Section ConvRedConv.
       eq_context_gen eq eq (bcontext u) (bcontext v) *
       (Σ ;;; Γ,,, inst_case_branch_context p u ⊢ bbody u = bbody v)) y x ->
     is_open_brs Γ p y.
-  Proof.
+  Proof using wfΣ.
     intros op.
     induction 1.
     - cbn. destruct p0 as [e e0].
@@ -2025,7 +2025,7 @@ Section ConvRedConv.
     is_open_brs Γ p brs' ->
     ws_cumul_pb_brs Σ Γ p brs brs' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p c brs'.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onp onc onbrs onbrs' h.
     eapply (All2_many_OnOne2_pres _ (fun br => 
       is_open_term (Γ ,,, inst_case_branch_context p br) br.(bbody))) in h.
@@ -2058,7 +2058,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ c = c' ->
     ws_cumul_pb_brs Σ Γ p brs brs' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c' brs'.
-  Proof.
+  Proof using wfΣ.
     intros onc0. generalize onc0. 
     rewrite !is_open_case_split => /and3P[onp onc onbrs] /and3P[onp' onc' onbrs'].
     move=> cvp cvc.
@@ -2086,7 +2086,7 @@ Section ConvRedConv.
         × eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (dbody x) (dbody y)) × rarg x = rarg y) *
       eq_binder_annot (dname x) (dname y)) mfix mfix' ->
     eq_term Σ Σ (fix_or_cofix b mfix idx) (fix_or_cofix b mfix' idx).
-  Proof.
+  Proof using Type.
     destruct b; constructor; auto.
   Qed.
 
@@ -2099,7 +2099,7 @@ Section ConvRedConv.
   Lemma is_open_fix_or_cofix {b} {Γ : context} {mfix idx} : 
     is_open_term Γ (fix_or_cofix b mfix idx) =
     is_open_mfix Γ mfix.
-  Proof. by case: b. Qed.
+  Proof using Type. by case: b. Qed.
 
   Lemma ws_cumul_pb_fix_one_type {b Γ mfix mfix' idx} :
     is_closed_context Γ ->
@@ -2112,7 +2112,7 @@ Section ConvRedConv.
       eq_binder_annot (dname u) (dname v)
     ) mfix mfix' ->
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onmfix onmfix' h.
     eapply into_ws_cumul_pb => //; rewrite ?is_open_fix_or_cofix //.
     clear onmfix onmfix'.
@@ -2146,7 +2146,7 @@ Section ConvRedConv.
       (eq_binder_annot (dname u) (dname v)))
       mfix mfix' ->
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onm onm' h.
     pose proof onm.
     cbn in onm, onm'.
@@ -2171,7 +2171,7 @@ Section ConvRedConv.
     All2 (on_Trel_eq (red Σ (Γ,,, fix_context mfix)) dbody
       (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix' ->
     red Σ Γ (fix_or_cofix b mfix idx) (fix_or_cofix b mfix' idx).
-  Proof.
+  Proof using Type.
     destruct b; apply red_fix_body || apply red_cofix_body.
   Qed.
   
@@ -2186,7 +2186,7 @@ Section ConvRedConv.
       (eq_binder_annot (dname u) (dname v))
     ) mfix mfix' ->
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onmfix onmfix' h.
     assert (eq_context_upto_names (fix_context mfix) (fix_context mfix')).
     { clear -h.
@@ -2244,7 +2244,7 @@ Section ConvRedConv.
     #|Δ| = #|mfix| ->
     is_open_mfix Γ mfix ->
     is_open_mfix Γ mfix'.
-  Proof.
+  Proof using wfΣ.
     cbn.
     intros a hlen hmfix.
     rewrite (OnOne2_length a).
@@ -2270,7 +2270,7 @@ Section ConvRedConv.
         (eq_binder_annot (dname u) (dname v)))
       mfix mfix' ->
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onm onm' h.
     assert (thm :
       Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx ×
@@ -2332,7 +2332,7 @@ Section ConvRedConv.
       (eq_binder_annot (dname u) (dname v))) 
       mfix mfix' ->
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
-  Proof.
+  Proof using wfΣ.
     intros onΓ h.
     assert (is_open_mfix Γ mfix /\ is_open_mfix Γ mfix') as [opl opr].
     { cbn. rewrite -(All2_length h). solve_all.
@@ -2413,7 +2413,7 @@ Section ConvRedConv.
       (eq_binder_annot (dname u) (dname v))) 
       mfix mfix' ->
     Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
-  Proof. eapply (ws_cumul_pb_fix_or_cofix (b:=true)). Qed.
+  Proof using wfΣ. eapply (ws_cumul_pb_fix_or_cofix (b:=true)). Qed.
 
   Lemma ws_cumul_pb_CoFix {Γ mfix mfix' idx} : 
     is_closed_context Γ ->
@@ -2424,12 +2424,12 @@ Section ConvRedConv.
       (eq_binder_annot (dname u) (dname v))) 
       mfix mfix' ->
     Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
-  Proof. eapply (ws_cumul_pb_fix_or_cofix (b:=false)). Qed.
+  Proof using wfΣ. eapply (ws_cumul_pb_fix_or_cofix (b:=false)). Qed.
   
   Lemma ws_cumul_pb_eq_le_gen {pb Γ T U} :
     Σ ;;; Γ ⊢ T = U ->
     Σ ;;; Γ ⊢ T ≤[pb] U.
-  Proof.
+  Proof using Type.
     destruct pb => //.
     eapply ws_cumul_pb_eq_le.
   Qed.
@@ -2439,7 +2439,7 @@ Section ConvRedConv.
     is_open_term (Γ ,, vass na A) b ->
     Σ ;;; Γ ⊢ A = A' ->
     Σ ;;; Γ ⊢ tLambda na A b ≤[pb] tLambda na' A' b.
-  Proof.
+  Proof using wfΣ.
     intros hna hb h.
     eapply ws_cumul_pb_eq_le_gen.
     eapply into_ws_cumul_pb.
@@ -2454,7 +2454,7 @@ Section ConvRedConv.
   Lemma ws_cumul_pb_Lambda_r {pb Γ na A b b'} : 
     Σ ;;; Γ,, vass na A ⊢ b ≤[pb] b' ->
     Σ ;;; Γ ⊢ tLambda na A b ≤[pb] tLambda na A b'.
-  Proof.
+  Proof using wfΣ.
     intros h.
     generalize (ws_cumul_pb_is_closed_context h).
     rewrite on_free_vars_ctx_snoc /on_free_vars_decl /test_decl => /andP[] onΓ /= onA.
@@ -2471,7 +2471,7 @@ Section ConvRedConv.
   Lemma ws_cumul_pb_LetIn_bo {pb Γ na ty t u u'} :
     Σ ;;; Γ ,, vdef na ty t ⊢ u ≤[pb] u' ->
     Σ ;;; Γ ⊢ tLetIn na ty t u ≤[pb] tLetIn na ty t u'.
-  Proof.
+  Proof using wfΣ.
     intros h.
     generalize (ws_cumul_pb_is_open_term h).
     rewrite on_free_vars_ctx_snoc /= => /and3P[]/andP[] onΓ.
@@ -2492,7 +2492,7 @@ Section ConvRedConv.
   Lemma ws_cumul_pb_it_mkLambda_or_LetIn_codom {Δ Γ u v pb} :
       Σ ;;; (Δ ,,, Γ) ⊢ u ≤[pb] v ->
       Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ u ≤[pb] it_mkLambda_or_LetIn Γ v.
-  Proof.
+  Proof using wfΣ.
     intros h. revert Δ u v h.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
     - assumption.
@@ -2505,7 +2505,7 @@ Section ConvRedConv.
   Lemma ws_cumul_pb_it_mkProd_or_LetIn_codom {Δ Γ B B' pb} :
       Σ ;;; (Δ ,,, Γ) ⊢ B ≤[pb] B' ->
       Σ ;;; Δ ⊢ it_mkProd_or_LetIn Γ B ≤[pb] it_mkProd_or_LetIn Γ B'.
-  Proof.
+  Proof using wfΣ.
     intros h.
     induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
     - assumption.
@@ -2523,7 +2523,7 @@ Section ConvRedConv.
       forallb (is_open_term Γ) l -> 
       Σ ;;; Γ ⊢ u1 = u2 ->
       Σ ;;; Γ ⊢ mkApps u1 l = mkApps u2 l.
-  Proof.
+  Proof using wfΣ.
     intros Γ u1 u2 l.
     induction l in u1, u2 |- *; cbn. 1: trivial.
     move=> /andP[] ona onl.
@@ -2535,7 +2535,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ A1 = A2 ->
     Σ ;;; Γ ,, vass na1 A1 ⊢ t1 ≤[pb] t2 ->
     Σ ;;; Γ ⊢ tLambda na1 A1 t1 ≤[pb] tLambda na2 A2 t2.
-  Proof.
+  Proof using wfΣ.
     intros eqna X.
     etransitivity.
     - eapply ws_cumul_pb_Lambda_r; tea.
@@ -2549,7 +2549,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ A1 = A2 ->
     sq_ws_cumul_pb leq Σ (Γ ,, vass na1 A1) t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ (tLambda na1 A1 t1) (tLambda na2 A2 t2).
-  Proof.
+  Proof using wfΣ.
     intros eqna X []; sq. now apply ws_cumul_pb_Lambda.
   Qed.
 
@@ -2559,7 +2559,7 @@ Section ConvRedConv.
     is_open_term (Γ ,, vdef na t ty) u ->
     Σ ;;; Γ ⊢ t = t' ->
     Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t' ty u.
-  Proof.
+  Proof using wfΣ.
     intros hna onty onu ont.
     eapply into_ws_cumul_pb.
     { clear onu. induction ont.
@@ -2577,7 +2577,7 @@ Section ConvRedConv.
     is_open_term (Γ ,, vdef na t ty) u ->
     Σ ;;; Γ ⊢ ty = ty' ->
     Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t ty' u.
-  Proof.
+  Proof using wfΣ.
     intros hna ont onu onty.
     eapply into_ws_cumul_pb.
     { clear onu. induction onty.
@@ -2595,7 +2595,7 @@ Section ConvRedConv.
     Σ;;; Γ ⊢ A1 = A2 ->
     Σ ;;; Γ ,, vdef na1 t1 A1 ⊢ u1 ≤[pb] u2 ->
     Σ ;;; Γ ⊢ tLetIn na1 t1 A1 u1 ≤[pb] tLetIn na2 t2 A2 u2.
-  Proof.
+  Proof using wfΣ.
     intros hna ont ona onu.
     etransitivity.
     { eapply ws_cumul_pb_LetIn_bo; tea. }
@@ -2610,7 +2610,7 @@ Section ConvRedConv.
     Σ ⊢ Γ ,,, Δ1 = Γ ,,, Δ2 ->
     Σ ;;; Γ ,,, Δ1 ⊢ t1 ≤[pb] t2 ->
     Σ ;;; Γ ⊢ it_mkLambda_or_LetIn Δ1 t1 ≤[pb] it_mkLambda_or_LetIn Δ2 t2.
-  Proof.
+  Proof using wfΣ.
     induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
     - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
@@ -2628,7 +2628,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ (tLambda na A1 b1) ⇝ T ->
     ∑ A2 b2, [× T = tLambda na A2 b2,
         Σ ;;; Γ ⊢ A1 ⇝ A2 & Σ ;;; (Γ ,, vass na A1) ⊢ b1 ⇝ b2].
-  Proof.
+  Proof using wfΣ.
     intros [onΓ onl ont].
     rewrite on_fvs_lambda in onl.
     move: onl => /=/andP [] onA1 onb1.
@@ -2659,7 +2659,7 @@ Section ConvRedConv.
     forall pb Γ na1 na2 A1 A2 b1 b2,
       Σ ;;; Γ ⊢ tLambda na1 A1 b1 ≤[pb] tLambda na2 A2 b2 ->
       [× eq_binder_annot na1 na2, Σ ;;; Γ ⊢ A1 = A2 & Σ ;;; Γ ,, vass na1 A1 ⊢ b1 ≤[pb] b2].
-  Proof.
+  Proof using wfΣ.
     intros *.
     move/ws_cumul_pb_red; intros (v & v' & [redv redv' eq]).
     eapply invert_red_lambda in redv as (A1' & b1' & [-> rA1 rb1]).
@@ -2694,7 +2694,7 @@ Section ConvRedConv.
     forall leq Γ na1 na2 A1 A2 b1 b2,
       sq_ws_cumul_pb leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
       eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\ sq_ws_cumul_pb leq Σ (Γ ,, vass na1 A1) b1 b2.
-  Proof.
+  Proof using wfΣ.
     intros * []. eapply ws_cumul_pb_Lambda_inv in X as [].
     intuition auto. all:sq; auto.
   Qed.
@@ -2720,7 +2720,7 @@ Section ConvSubst.
 
   Lemma subslet_open {Γ s Γ'} : subslet Σ Γ s Γ' ->
     forallb (is_open_term Γ) s.
-  Proof.
+  Proof using wfΣ.
     induction 1; simpl; auto.
     - apply subject_closed in t0.
       rewrite (closedn_on_free_vars t0) //.
@@ -2734,7 +2734,7 @@ Section ConvSubst.
     forallb (is_open_term Γ) s ->
     Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| M ⇝ subst s #|Γ'| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs Hs' H. split.
     - eapply is_closed_subst_context; eauto with fvs pcuic.
       eapply (untyped_subslet_length Hs).
@@ -2747,7 +2747,7 @@ Section ConvSubst.
     subslet Σ Γ s Δ ->
     Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| M ⇝ subst s #|Γ'| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs H. split.
     - eapply is_closed_subst_context; eauto with fvs pcuic.
       eapply (subslet_length Hs).
@@ -2762,7 +2762,7 @@ Section ConvSubst.
     forallb (is_open_term Γ) s ->
     Σ ;;; Γ ,,, Γ' ,,, Γ'' ⊢ M ≤[pb] N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ'' ⊢ subst s #|Γ''| M ≤[pb] subst s #|Γ''| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs Hs'. induction 1.
     - cbn. constructor; eauto with fvs.
       { eapply is_closed_subst_context; tea; eauto with fvs.
@@ -2784,7 +2784,7 @@ Section ConvSubst.
     subslet Σ Γ s Γ' ->
     Σ ;;; Γ ,,, Γ' ,,, Γ'' ⊢ M ≤[pb] N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ'' ⊢ subst s #|Γ''| M ≤[pb] subst s #|Γ''| N.
-  Proof.
+  Proof using wfΣ.
     intros Hs. induction 1.
     - cbn. constructor; eauto with fvs.
       { eapply is_closed_subst_context; tea; eauto with fvs.
@@ -2806,7 +2806,7 @@ Section ConvSubst.
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ,, vass na T ⊢ M ≤[pb] N ->
     Σ ;;; Γ ⊢ M{0 := t} ≤[pb] N{0 := t}.
-  Proof.
+  Proof using wfΣ.
     intros.
     eapply (substitution_ws_cumul_pb (Γ' := [vass na T]) (Γ'' := [])); cbn; tea.
     now eapply subslet_ass_tip.
@@ -2818,7 +2818,7 @@ Section ConvSubst.
     ws_cumul_pb_terms Σ Γ s s' ->
     untyped_subslet Γ s Δ ->
     ∑ s0 s'0, [× All2 (closed_red Σ Γ) s s0, All2 (closed_red Σ Γ) s' s'0 & All2 (eq_term Σ Σ) s0 s'0].
-  Proof.
+  Proof using wfΣ.
     move=> eqsub subs.
     induction eqsub in Δ, subs |- *.
     * depelim subs. exists [], []; split; auto.
@@ -2835,7 +2835,7 @@ Section ConvSubst.
     All2_fold (fun Γ Γ' d d' => P (fold_context_k f Γ) (fold_context_k g Γ') 
     (map_decl (f #|Γ|) d) (map_decl (g #|Γ'|) d')) ctx ctx' ->
     All2_fold P (fold_context_k f ctx) (fold_context_k g ctx').
-  Proof.
+  Proof using Type.
     intros a. rewrite - !mapi_context_fold.
     eapply All2_fold_mapi.
     eapply All2_fold_impl_ind; tea.
@@ -2848,14 +2848,14 @@ Section ConvSubst.
     All_decls_alpha_pb le P d d' ->
     (forall le x y, P le x y -> Q le x y) ->
     All_decls_alpha_pb le Q d d'.
-  Proof.
+  Proof using Type.
     intros [] H; constructor; auto.
   Qed.
 
   Lemma All_decls_alpha_pb_map le P f g d d' : 
     All_decls_alpha_pb le (fun le x y => P le (f x) (g y)) d d' ->
     All_decls_alpha_pb le P (map_decl f d) (map_decl g d').
-  Proof.
+  Proof using Type.
     intros []; constructor; cbn; auto.
   Qed.
 
@@ -2863,7 +2863,7 @@ Section ConvSubst.
     test_decl p d ->
     (forall x, p x -> convAlgo Σ Γ (f x) (g x)) ->
     conv_decls cumulAlgo_gen Σ Γ Γ' (map_decl f d) (map_decl g d).
-  Proof.
+  Proof using Type.
     intros ht hxy.
     destruct d as [na [b|] ty]; cbn; constructor; try red; eauto.
     - move/andP: ht => /= [] pb pty; eauto.
@@ -2875,7 +2875,7 @@ Section ConvSubst.
     All2 (closed_red Σ Γ) s s' ->
     untyped_subslet Γ s Δ ->
     Σ ⊢ Γ ,,, subst_context s 0 Γ' = Γ ,,, subst_context s' 0 Γ'.
-  Proof.
+  Proof using wfΣ.
     intros.
     eapply into_ws_cumul_ctx_pb.
     { eapply is_closed_subst_context; tea; solve_all; eauto with fvs.
@@ -2901,7 +2901,7 @@ Section ConvSubst.
   Lemma subst_context_app0 s Γ Γ' : 
     subst_context s 0 Γ ,,, subst_context s #|Γ| Γ' = 
     subst_context s 0 (Γ ,,, Γ').
-  Proof.
+  Proof using Type.
     now rewrite -(Nat.add_0_r #|Γ|) subst_context_app.
   Qed.
 
@@ -2910,7 +2910,7 @@ Section ConvSubst.
     is_closed_context Γ' ->
     eq_context_upto Σ (eq_universe Σ) (compare_universe pb Σ) Γ Γ' ->
     ws_cumul_ctx_pb pb Σ Γ Γ'.
-  Proof.
+  Proof using wfΣ.
     intros cl cl' eq.
     apply into_ws_cumul_ctx_pb; auto.
     destruct pb; revgoals.
@@ -2925,7 +2925,7 @@ Section ConvSubst.
     is_closed_context (Γ ,,, Δ ,,, Γ') ->
     is_closed_context (Γ ,,, Δ' ,,, Γ') ->
     Σ ⊢ Γ ,,, subst_context s 0 Γ' = Γ ,,, subst_context s' 0 Γ'.
-  Proof.
+  Proof using wfΣ.
     move=> subs subs' eqsub cl cl'.
     destruct (ws_cumul_pb_substs_red eqsub subs) as (s0 & s'0 & [rs' rs'0 eqs]).
     transitivity (Γ ,,, subst_context s0 0 Γ').
@@ -2950,7 +2950,7 @@ Section ConvSubst.
     untyped_subslet Γ s' Δ' ->
     is_open_term (Γ ,,, Δ ,,, Γ') b ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| b = subst s' #|Γ'| b.
-  Proof.
+  Proof using wfΣ.
     move=> eqsub cl cl' subs subs' clb.
     assert(∑ s0 s'0, [× All2 (closed_red Σ Γ) s s0, All2 (closed_red Σ Γ) s' s'0 & All2 (eq_term Σ Σ) s0 s'0])
       as [s0 [s'0 [redl redr eqs]]].
@@ -2986,7 +2986,7 @@ Section ConvSubst.
     is_closed_context (Γ ,,, Γ1) ->
     Σ;;; Γ ,,, Γ0 ,,, Δ ⊢ T ≤[pb] U ->
     Σ;;; Γ ,,, subst_context s 0 Δ ⊢ subst s #|Δ| T ≤[pb] subst s' #|Δ| U.
-  Proof.
+  Proof using wfΣ.
     move=> subss subss' eqsub cl eqty.
     generalize (ws_cumul_pb_is_open_term eqty) => /and3P[] clctx clT clU.
     assert (#|Γ0| = #|Γ1|).
@@ -3009,7 +3009,7 @@ Section ConvSubst.
     ws_cumul_pb pb Σ Γ x y ->
     [× is_closed_context Γ, is_open_term Γ x, is_open_term Γ y &
       Σ ;;; Γ |- x <=[pb] y].
-  Proof.
+  Proof using wfΣ.
     intros ws.
     repeat split; eauto with fvs.
     now eapply ws_cumul_pb_forget in ws.
@@ -3019,7 +3019,7 @@ Section ConvSubst.
     is_closed_context (Γ,,, Γ') ->
     is_closed_context (Γ,,, Γ'') ->
     is_closed_context (Γ,,, Γ'',,, lift_context #|Γ''| 0 Γ').
-  Proof.
+  Proof using Type.
     move=> cl cl'.
     rewrite on_free_vars_ctx_app cl' /=.
     rewrite on_free_vars_ctx_lift_context0 //.
@@ -3031,7 +3031,7 @@ Section ConvSubst.
   Lemma is_open_term_lift Γ Γ' Γ'' t :
     is_open_term (Γ ,,, Γ') t ->
     is_open_term (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| t).
-  Proof.
+  Proof using Type.
     intros op.
     eapply on_free_vars_impl.
     2:erewrite on_free_vars_lift; tea.
@@ -3045,7 +3045,7 @@ Section ConvSubst.
     Σ ;;; Γ ,,, Γ' ⊢ M ≤[pb] N ->
     is_closed_context (Γ ,,, Γ'') ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' ⊢ lift #|Γ''| #|Γ'| M ≤[pb] lift #|Γ''| #|Γ'| N.
-  Proof.
+  Proof using wfΣ.
     move=> /ws_cumul_pb_elim [] iscl onM onN eq onΓ''.
     eapply into_ws_cumul_pb; eauto with fvs.
     destruct pb; revgoals.
@@ -3058,7 +3058,7 @@ Section ConvSubst.
     Σ;;; Γ ,,, Γ' ⊢ M = N ->
     is_closed_context (Γ ,,, Γ'') ->
     Σ;;; Γ ,,, Γ'' ,,, lift_context k 0 Γ' ⊢ lift k #|Γ'| M = lift k #|Γ'| N.
-  Proof.
+  Proof using wfΣ.
     intros -> conv; eapply weakening_ws_cumul_pb; auto.
   Qed.
 
@@ -3066,7 +3066,7 @@ Section ConvSubst.
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ t ≤[pb] u ->
     Σ ;;; Δ ,,, Γ ⊢ t ≤[pb] u.
-  Proof.
+  Proof using wfΣ.
     move=> clΔ a.
     epose proof (weakening_ws_cumul_pb (Γ := []) (Γ'' := Δ)).
     rewrite !app_context_nil_l in X.
@@ -3330,7 +3330,7 @@ Section ConvTerms.
       [× All2 (closed_red Σ Γ) args argsr,
       All2 (closed_red Σ Γ) args' argsr' &
       All2 (eq_term Σ Σ) argsr argsr'].
-  Proof.
+  Proof using wfΣ.
     split.
     - intros conv.
       induction conv.
@@ -3349,7 +3349,7 @@ Section ConvTerms.
     Σ ⊢ Γ = Γ' ->
     ws_cumul_pb_terms Σ Γ ts ts' ->
     ws_cumul_pb_terms Σ Γ' ts ts'.
-  Proof.
+  Proof using wfΣ.
     intros ctx conv.
     induction conv; [constructor|].
     constructor; auto.
@@ -3361,7 +3361,7 @@ Section ConvTerms.
     All2 (closed_red Σ Γ) ts' tsr' ->
     ws_cumul_pb_terms Σ Γ tsr tsr' ->
     ws_cumul_pb_terms Σ Γ ts ts'.
-  Proof.
+  Proof using wfΣ.
     intros all all' conv.
     induction conv in ts, ts', all, all' |- *; depelim all; depelim all'; [constructor|].
     constructor; [|auto].
@@ -3376,7 +3376,7 @@ Section ConvTerms.
     All2 (closed_red Σ Γ) ts' tsr' ->
     ws_cumul_pb_terms Σ Γ ts ts' ->
     ws_cumul_pb_terms Σ Γ tsr tsr'.
-  Proof.
+  Proof using wfΣ.
     intros all all' conv.
     induction conv in tsr, tsr', all, all' |- *; depelim all; depelim all'; [constructor|].
     constructor; [|auto].
@@ -3392,7 +3392,7 @@ Section ConvTerms.
     All2 (closed_red Σ Γ') ts' tsr' ->
     ws_cumul_pb_terms Σ Γ tsr tsr' ->
     ws_cumul_pb_terms Σ Γ ts ts'.
-  Proof.
+  Proof using wfΣ.
     intros convctx all all2 conv.
     transitivity tsr.
     { solve_all. now eapply red_conv. }
@@ -3408,7 +3408,7 @@ Section ConvTerms.
     wf_local Σ Γ' ->
     ws_cumul_pb_terms Σ Γ args args' ->
     ws_cumul_pb_terms Σ (Γ' ,,, Γ) args args'.
-  Proof.
+  Proof using wfΣ.
     intros wf wf' conv.
     solve_all.
     eapply weaken_ws_cumul_pb; eauto with fvs.
@@ -3421,7 +3421,7 @@ Section ConvTerms.
     ws_cumul_pb_terms Σ Γ s s' ->
     ws_cumul_pb_terms Σ (Γ ,,, Γ' ,,, Δ) args args' ->
     ws_cumul_pb_terms Σ (Γ ,,, subst_context s 0 Δ) (map (subst s #|Δ|) args) (map (subst s' #|Δ|) args').
-  Proof.
+  Proof using wfΣ.
     intros wf cl cl' convs conv.
     eapply All2_map.
     eapply (All2_impl conv).
@@ -3442,7 +3442,7 @@ Section CumulSubst.
     untyped_subslet Γ s Δ ->
     untyped_subslet Γ s' Δ' ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| b ≤[pb] subst s' #|Γ'| b.
-  Proof.
+  Proof using wfΣ.
     move=> cl cl' clb eqsub subs subs'.
     eapply ws_cumul_pb_eq_le_gen.
     eapply substitution_ws_cumul_pb_subst_conv; tea; eauto with pcuic.
@@ -3456,7 +3456,7 @@ Section CumulSubst.
     untyped_subslet Γ s' Γ'0 ->
     is_closed_context (Γ ,,, Γ'0) ->
     ws_cumul_ctx_pb_rel pb Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
-  Proof.
+  Proof using wfΣ.
     intros [cl cum] eqs hs hs' cl'.
     split.
     { eapply is_closed_subst_context; tea; eauto with fvs.
@@ -3479,7 +3479,7 @@ Section CumulSubst.
     is_closed_context Γ ->
     ws_cumul_ctx_pb_rel pb Σ Γ' Δ Δ' ->
     ws_cumul_ctx_pb_rel pb Σ (Γ ,,, Γ') Δ Δ'.
-  Proof.
+  Proof using wfΣ.
     intros wf [cl eq].
     split.
     { rewrite on_free_vars_ctx_app wf /=. 
@@ -3502,7 +3502,7 @@ Lemma map_branches_k_map_branches_k
       (l : list (branch term)) :
   map_branches_k f id k (map_branches_k f' id k' l) =
   map (map_branch_k (fun (i : nat) (x : term) => f (i + k) (f' (i + k') x)) id 0) l.
-Proof.
+Proof using Type.
   rewrite map_map.
   eapply map_ext => b.
   rewrite map_branch_k_map_branch_k; auto.
@@ -3511,7 +3511,7 @@ Qed.
 Lemma red_rel_all {Γ i body t} :
   option_map decl_body (nth_error Γ i) = Some (Some body) ->
   red Σ Γ t (lift 1 i (t {i := body})).
-Proof.
+Proof using Type.
   induction t using PCUICInduction.term_forall_list_ind in Γ, i |- *; intro H; cbn;
     eauto using red_prod, red_abs, red_app, red_letin, red_proj_c.
   - case_eq (i <=? n); intro H0.
@@ -3571,7 +3571,7 @@ Lemma closed_red_rel_all {Γ i body t} :
   is_open_term Γ t ->
   option_map decl_body (nth_error Γ i) = Some (Some body) ->
   Σ ;;; Γ ⊢ t ⇝ lift 1 i (t {i := body}).
-Proof.
+Proof using Type.
   intros cl clt h; split; auto.
   now apply red_rel_all.
 Qed.
@@ -3671,7 +3671,7 @@ Lemma on_free_vars_ctx_inst_case_context_xpred0 (Γ : list context_decl) (pars :
   on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
   on_free_vars_ctx xpred0 Γ ->
   on_free_vars_ctx xpred0 (Γ,,, inst_case_context pars puinst pctx).
-Proof.
+Proof using Type.
   intros. rewrite on_free_vars_ctx_app H1 /=.
   eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
   rewrite test_context_k_closed_on_free_vars_ctx //.
@@ -3797,7 +3797,7 @@ Defined.
 Proposition convSpec_convAlgo (Γ : closed_context) (M N : open_term Γ) :
   Σ ;;; Γ |- M =s N  ->
   Σ ;;; Γ ⊢ M = N.
-Proof. 
+Proof using wfΣ. 
   apply cumulSpec_cumulAlgo.
 Qed.
 
@@ -3805,7 +3805,7 @@ Lemma convSpec_convAlgo_curry (Γ : context) (M N : term) :
   is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
   Σ ;;; Γ |- M =s N  ->
   Σ ;;; Γ ⊢ M = N.
-Proof.
+Proof using wfΣ.
   intros clΓ clM clN.
   eapply (convSpec_convAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
 Qed.
@@ -3814,7 +3814,7 @@ Lemma cumulSpec_cumulAlgo_curry (Γ : context) (M N : term) :
   is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
   Σ ;;; Γ |- M <=s N  ->
   Σ ;;; Γ ⊢ M ≤ N.
-Proof.
+Proof using wfΣ.
   intros clΓ clM clN.
   eapply (cumulSpec_cumulAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
 Qed.

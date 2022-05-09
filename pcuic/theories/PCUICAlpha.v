@@ -43,7 +43,7 @@ Section Alpha.
       wf_local Σ Γ ->
       nth_error Γ i = Some (vass na ty) ->
       lift_typing typing Σ Γ (lift0 (S i) ty) Sort.
-  Proof.
+  Proof using Type.
     intros Σ Γ i na ty hΣ hΓ e. simpl.
     induction i in Γ, hΓ, e |- *.
     - destruct Γ. 1: discriminate.
@@ -70,7 +70,7 @@ Section Alpha.
       nth_error m i = Some d ->
       nth_error (fix_context m) (#|m| - S i) =
       Some (vass (dname d) (lift0 i (dtype d))).
-  Proof.
+  Proof using Type.
     intros m i d e.
     rewrite <- fix_context_length.
     unfold fix_context. rewrite List.rev_length.
@@ -85,7 +85,7 @@ Section Alpha.
     forall Γ Δ i d,
       nth_error Δ i = Some d ->
       nth_error (Γ ,,, Δ) i = Some d.
-  Proof.
+  Proof using Type.
     intros Γ Δ i d h.
     rewrite -> nth_error_app_context_lt.
     - assumption.
@@ -99,7 +99,7 @@ Section Alpha.
     eq_term_upto_univ_napp Σ Re Rle #|tl| hd hd' *
     negb (isApp hd') *
     All2 (eq_term_upto_univ Σ Re Re) tl tl'.
-  Proof.
+  Proof using Type.
     intros eq dapp.
     pose proof (decompose_app_notApp _ _ _ dapp).
     apply decompose_app_inv in dapp.
@@ -115,7 +115,7 @@ Section Alpha.
     let (ctx0, x0) := decompose_prod_assum ctx x in
     let (ctx1, x1) := decompose_prod_assum ctx' y in
     ctx0 ≡Γ ctx1 * upto_names' x0 x1.
-  Proof.
+  Proof using Type.
     induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl;
       try split; auto; try constructor; auto.
     - specialize (IHx2 (ctx,, vass na x1) (ctx',,vass na' a') b').
@@ -128,14 +128,14 @@ Section Alpha.
     | Some (ind, u) => t = tInd ind u
     | None => forall ind u, t <> tInd ind u
     end.
-  Proof.
+  Proof using Type.
     destruct t; congruence.
   Qed.
 
   Lemma upto_names_destInd Re Rle t u :
     eq_term_upto_univ empty_global_env Re Rle t u ->
     rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * R_universe_instance Re u u')%type (destInd t) (destInd u).
-  Proof.
+  Proof using Type.
     induction 1; simpl; constructor; try congruence.
     split; auto.
   Qed.
@@ -146,7 +146,7 @@ Section Alpha.
         (upto_names' (dtype x) (dtype y) × upto_names' (dbody x) (dbody y))
         × rarg x = rarg y) mfix mfix' ->
       map check_one_fix mfix = map check_one_fix mfix'.
-  Proof.
+  Proof using Type.
     induction 1; simpl; auto.
     rewrite IHX. f_equal.
     unfold check_one_fix.
@@ -179,7 +179,7 @@ Section Alpha.
      (dtype x ≡α dtype y × dbody x ≡α dbody y)
      × rarg x = rarg y) mfix mfix' ->
    map check_one_cofix mfix = map check_one_cofix mfix'.
-  Proof.
+  Proof using Type.
     induction 1; simpl; auto.
     rewrite IHX. f_equal.
     unfold check_one_cofix. clear X IHX.
@@ -205,7 +205,7 @@ Section Alpha.
   Lemma is_closed_context_app_left Γ Δ :
     is_closed_context (Γ ,,, Δ) ->
     is_closed_context Γ.
-  Proof.
+  Proof using Type.
     rewrite on_free_vars_ctx_app => /andP[] //.
   Qed.
   Hint Resolve is_closed_context_app_left : fvs.
@@ -213,7 +213,7 @@ Section Alpha.
   Lemma is_closed_context_app_right Γ Δ :
     is_closed_context (Γ ,,, Δ) ->
     on_free_vars_ctx (shiftnP #|Γ| xpred0) Δ.
-  Proof.
+  Proof using Type.
     rewrite on_free_vars_ctx_app => /andP[] //.
   Qed.
   Hint Resolve is_closed_context_app_right : fvs.
@@ -222,7 +222,7 @@ Section Alpha.
   Lemma on_free_vars_ctx_All_fold_over P Γ Δ :
     on_free_vars_ctx (shiftnP #|Γ| P) Δ <~>
     All_fold (fun Δ => on_free_vars_decl (shiftnP #|Γ ,,, Δ| P)) Δ.
-  Proof.
+  Proof using Type.
     split.
     - move/alli_Alli/Alli_rev_All_fold.
       intros a; eapply All_fold_impl; tea. cbn.
@@ -239,14 +239,14 @@ Section Alpha.
     All_fold P Γ' ->
     @All2_fold A Q Γ Γ' ->
     All2_fold (fun Γ Γ' d d' => P Γ' d' × Q Γ Γ' d d') Γ Γ'.
-  Proof.
+  Proof using Type.
     induction 1 in Γ |- *; intros H; depelim H; constructor; auto.
   Qed.
 
   Lemma All2_fold_All_right A P Γ Γ' :
     All2_fold (fun _ Γ _ d => P Γ d) Γ Γ' ->
     @All_fold A P Γ'.
-  Proof.
+  Proof using Type.
     induction 1; constructor; auto.
   Qed.
 
@@ -256,7 +256,7 @@ Section Alpha.
     ws_decl Γ d ->
     ws_decl Γ d' ->
     All_decls_alpha_pb le P d d'.
-  Proof.
+  Proof using Type.
     intros HP []; cbn. constructor; eauto.
     move/andP=> [] /= clb clT /andP[] => clb' clT'.
     constructor; auto.
@@ -267,7 +267,7 @@ Section Alpha.
     is_closed_context (Γ ,,, Δ') ->
     Δ ≡Γ Δ' ->
     ws_cumul_ctx_pb_rel le Σ Γ Δ Δ'.
-  Proof.
+  Proof using Type.
     intros cl cl' eq.
     split; eauto with fvs.
     eapply on_free_vars_ctx_All_fold in cl.
@@ -302,7 +302,7 @@ Section Alpha.
     eq_context_upto Σ eq eq
       (map2 set_binder_name (forget_types pctx) Γ)
       (map2 set_binder_name (forget_types pctx') Δ).
-  Proof.
+  Proof using Type.
     intros eqp.
     induction 1 in pctx, pctx', eqp |- *.
     - induction eqp; cbn; constructor.
@@ -316,7 +316,7 @@ Section Alpha.
     forall u v n k,
       eq_context_upto Σ Re Rle u v ->
       eq_context_upto Σ Re Rle (lift_context n k u) (lift_context n k v).
-  Proof.
+  Proof using Type.
     intros re u v n k.
     induction 1.
     - constructor.
@@ -332,7 +332,7 @@ Section Alpha.
                       (subst_instance_cstrs i Σ) ->
     eq_context_upto Σ eq eq u v ->
     eq_context_upto Σ eq eq (subst_instance i u) (subst_instance i v).
-  Proof.
+  Proof using Type.
     intros u v i vc.
     induction 1.
     - constructor.
@@ -355,7 +355,7 @@ Section Alpha.
   Lemma eq_context_gen_upto ctx ctx' :
     eq_context_gen eq eq ctx ctx' ->
     eq_context_upto empty_global_env eq eq ctx ctx'.
-  Proof.
+  Proof using Type.
     intros a; eapply All2_fold_impl; tea.
     intros. destruct X; subst; constructor; auto; try reflexivity.
   Qed.
@@ -365,7 +365,7 @@ Section Alpha.
     eq_context_upto empty_global_env eq eq
       (case_predicate_context ind mdecl idecl p)
       (case_predicate_context ind mdecl idecl p').
-  Proof.
+  Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]].
     rewrite /case_predicate_context /case_predicate_context_gen.
     apply eq_context_upto_map2_set_binder_name => //.
@@ -382,7 +382,7 @@ Section Alpha.
     bctx ≡Γ bctx' ->
     (case_branch_context ind mdecl p (forget_types bctx) cdecl) ≡Γ
     (case_branch_context ind mdecl p' (forget_types bctx') cdecl).
-  Proof.
+  Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
     eapply R_universe_instance_eq in eqinst.
     rewrite /case_branch_context /case_branch_context_gen -eqinst.
@@ -402,7 +402,7 @@ Section Alpha.
     eq_term Σ Σ
       (case_branch_type ind mdecl idecl p br ptm c cdecl).2
       (case_branch_type ind mdecl idecl p' br' ptm' c cdecl).2.
-  Proof.
+  Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
     eapply R_universe_instance_eq in eqinst.
     intros ptm ptm'.
@@ -433,7 +433,7 @@ Section Alpha.
   Lemma eq_binder_annots_eq_context_gen_ctx {Δ : context} {nas} :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
     eq_context_gen eq eq (map2 set_binder_name nas Δ) Δ.
-  Proof.
+  Proof using Type.
   induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
   - depelim hlen. simpl. reflexivity.
   - destruct nas as [|nas na] using rev_case => //;
@@ -453,7 +453,7 @@ Section Alpha.
     wf_predicate mdecl idecl p ->
     eq_context_gen eq eq (ind_predicate_context ind mdecl idecl) (pcontext p) ->
     eq_context_gen eq eq (case_predicate_context ind mdecl idecl p) (inst_case_predicate_context p).
-  Proof.
+  Proof using Type.
     intros wfp eq.
     rewrite /case_predicate_context /case_predicate_context_gen.
     epose proof (wf_pre_case_predicate_context_gen wfp).
@@ -468,7 +468,7 @@ Section Alpha.
   Lemma ctx_inst_impl {Σ P Q Γ s Δ}:
     (forall Σ Γ u U, P Σ Γ u U -> Q Σ Γ u U) ->
     PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ s Δ.
-  Proof.
+  Proof using Type.
     intros HP.
     induction 1; constructor; auto.
   Qed.
@@ -477,7 +477,7 @@ Section Alpha.
     (forall Σ Γ Γ' u U, (Γ ≡Γ Γ') -> P Σ Γ u U -> Q Σ Γ' u U) ->
     Γ ≡Γ Γ' ->
     PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ' s Δ.
-  Proof.
+  Proof using Type.
     intros HP e.
     induction 1; constructor; eauto.
   Qed.
@@ -486,7 +486,7 @@ Section Alpha.
     wf_local Σ (Γ,,, Δ) ->
     eq_context_gen eq eq Δ' Δ ->
     wf_local Σ (Γ ,,, Δ').
-  Proof.
+  Proof using Type.
     intros a eq.
     eapply All2_fold_All2 in eq.
     induction eq; depelim a; cbn; try solve [constructor; auto];
@@ -505,7 +505,7 @@ Section Alpha.
       (it_mkLambda_or_LetIn ctx ret) n cdecl).1 ≡Γ
     (case_branch_type ind mdecl idecl p br
       (it_mkLambda_or_LetIn ctx' ret) n cdecl).1.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma case_branch_type_eq_context_gen_2 {ind mdecl idecl cdecl p n br} {ctx ctx' ret} :
     ctx ≡Γ ctx' ->
@@ -513,7 +513,7 @@ Section Alpha.
       (it_mkLambda_or_LetIn ctx ret) n cdecl).2 ≡'
     (case_branch_type ind mdecl idecl p br
       (it_mkLambda_or_LetIn ctx' ret) n cdecl).2.
-  Proof.
+  Proof using Type.
     intros eq.
     rewrite /case_branch_type /=.
     rewrite /case_branch_context_gen /=. cbn.
@@ -530,7 +530,7 @@ Section Alpha.
     Γ ≡Γ Δ ->
     wf_local Σ Δ ->
     Σ ;;; Δ |- t : T.
-  Proof.
+  Proof using Type.
     intros.
     eapply closed_context_conversion; tea.
     eapply typing_wf_local in X.
@@ -542,7 +542,7 @@ Section Alpha.
 
   Lemma upto_names_conv_context (Σ : global_env_ext) Γ Δ :
     Γ ≡Γ Δ -> conv_context cumulAlgo_gen Σ Γ Δ.
-  Proof.
+  Proof using Type.
     eapply eq_context_upto_empty_conv_context.
   Qed.
 
@@ -551,7 +551,7 @@ Section Alpha.
     Γ ≡Γ Δ ->
     wf_local Σ Δ ->
     isType Σ Δ T.
-  Proof.
+  Proof using Type.
     intros Hty eq wfΔ; apply infer_typing_sort_impl with id Hty; intros Hs.
     now eapply eq_context_conversion.
   Qed.
@@ -1011,7 +1011,7 @@ Section Alpha.
     Σ ;;; Γ |- u : A ->
     u ≡' v ->
     Σ ;;; Γ |- v : A.
-  Proof.
+  Proof using Type.
     intros. eapply (env_prop_typing typing_alpha_prop); eauto. reflexivity.
   Qed.
 
@@ -1020,7 +1020,7 @@ Section Alpha.
   Lemma eq_term_upto_univ_napp_0 n t t' :
     eq_term_upto_univ_napp empty_global_env eq eq n t t' ->
     t ≡α t'.
-  Proof.
+  Proof using Type.
     apply eq_term_upto_univ_empty_impl; typeclasses eauto.
   Qed.
 
@@ -1028,7 +1028,7 @@ Section Alpha.
     RelationClasses.Reflexive Re ->
     t ≡α t' ->
     eq_term_upto_univ_napp Σ Re Re n t t'.
-  Proof.
+  Proof using Type.
     intros.
     eapply eq_term_upto_univ_empty_impl; tea; tc.
     all:intros x y ->; reflexivity.
@@ -1044,7 +1044,7 @@ Section Alpha.
     eq_term_upto_univ_napp Σ Re Rle napp t u ->
     forall t' u', t ≡α t' -> u ≡α u' ->
     eq_term_upto_univ_napp Σ Re Rle napp t' u'.
-  Proof.
+  Proof using Type.
     intros.
     eapply (upto_names_eq_term_refl Σ Re) in X0; tea.
     eapply (upto_names_eq_term_refl Σ Re) in X1; tea.
@@ -1057,13 +1057,13 @@ Section Alpha.
 
   Lemma upto_names_leq_term Σ φ t u t' u'
     : t ≡α t' -> u ≡α u' -> leq_term Σ φ t u -> leq_term Σ φ t' u'.
-  Proof.
+  Proof using Type.
     intros; eapply upto_names_eq_term_upto_univ; try eassumption; tc.
   Qed.
 
   Lemma upto_names_eq_term Σ φ t u t' u'
     : t ≡α t' -> u ≡α u' -> eq_term Σ φ t u -> eq_term Σ φ t' u'.
-  Proof.
+  Proof using Type.
     intros; eapply upto_names_eq_term_upto_univ; tea; tc.
   Qed.
 
@@ -1071,7 +1071,7 @@ Section Alpha.
     destArity Γ u = Some (ctx, s) ->
     u ≡α v ->
     ∑ ctx', destArity Γ v = Some (ctx', s) × ctx ≡Γ ctx'.
-  Proof.
+  Proof using Type.
     induction u in v, Γ, ctx, s |- *; cbn; try discriminate.
     - intros X Y. destruct v; inv Y. inv X.
       eexists. split; reflexivity.
@@ -1095,7 +1095,7 @@ Section Alpha.
 
   Lemma wf_local_alpha {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
     wf_local Σ Γ -> Γ ≡Γ Γ' -> wf_local Σ Γ'.
-  Proof.
+  Proof using Type.
     intros; eapply (env_prop_wf_local typing_alpha_prop); tea.
   Qed.
 
@@ -1103,7 +1103,7 @@ Section Alpha.
     isType Σ Γ u ->
     u ≡α v ->
     isType Σ Γ v.
-  Proof.
+  Proof using Type.
     intros Hty eq.
     apply infer_typing_sort_impl with id Hty; intros Hs.
     eapply typing_alpha; eauto.
@@ -1114,7 +1114,7 @@ Section Alpha.
     Γ ≡Γ Δ ->
     u ≡α v ->
     isType Σ Δ v.
-  Proof.
+  Proof using Type.
     intros Hty eqctx eqtm.
     apply infer_typing_sort_impl with id Hty; intros Hs.
     eapply typing_alpha_prop; eauto.
@@ -1124,7 +1124,7 @@ Section Alpha.
     isWfArity Σ Γ u ->
     u ≡α v ->
     isWfArity Σ Γ v.
-  Proof.
+  Proof using Type.
     intros [isTy [ctx [s X1]]] e.
     eapply destArity_alpha in X1; tea.
     split; [eapply isType_alpha; eauto|].

@@ -71,7 +71,7 @@ Section DeclaredInv.
   Lemma declared_minductive_ind_npars  {mdecl ind} :
     declared_minductive Σ ind mdecl ->
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
-  Proof.
+  Proof using wfΣ.
     intros h.
     unfold declared_minductive in h.
     eapply lookup_on_global_env in h; tea.

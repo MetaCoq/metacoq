@@ -52,7 +52,7 @@ Definition pres_let_bodies (c : context_decl) (c' : context_decl) : Type :=
   end.
 
 Global Instance pres_let_bodies_refl : Reflexive pres_let_bodies.
-Proof. intros [? [|]]; constructor; reflexivity. Qed.
+Proof using Type. intros [? [|]]; constructor; reflexivity. Qed.
 
 (* Global Instance pres_let_bodies_sym : Symmetric pres_let_bodies.
 Proof.
@@ -61,7 +61,7 @@ Proof.
 Qed. *)
 
 Global Instance pres_let_bodies_trans : Transitive pres_let_bodies.
-Proof.
+Proof using Type.
   intros x y z; unfold pres_let_bodies.
   now destruct decl_body => // ->.
 Qed.
@@ -74,7 +74,7 @@ Lemma OnOne2All_All3 {A B} (P Q : A -> B -> B -> Type) l l' l'' :
   (forall x y z, P x y z -> Q x y z) ->
   (forall x y, Q x y y) ->
   All3 Q l l' l''.
-Proof.
+Proof using Type.
   intros H ? ?. induction H; constructor; auto.
   induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
 Qed.
@@ -85,7 +85,7 @@ Hint Constructors unit : core.
 
 Lemma pres_let_bodies_ctx_refl : 
   Reflexive (All2_fold (fun _ _ : context => pres_let_bodies)).
-Proof.
+Proof using Type.
   intros x.
   eapply All2_fold_refl. intros. reflexivity.
 Qed.
@@ -93,7 +93,7 @@ Qed.
 Lemma context_pres_let_bodies_red1 Γ Γ' s t :
   All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
   red1 Σ Γ s t -> red1 Σ Γ' s t.
-Proof.
+Proof using Type.
   intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
   all:pcuic.
   all:try solve [econstructor; eauto; solve_all].
@@ -124,7 +124,7 @@ Qed.
 Lemma context_pres_let_bodies_red Γ Γ' s t :
   All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
   red Σ Γ s t -> red Σ Γ' s t.
-Proof.
+Proof using Type.
   intros pres.
   eapply clos_rt_monotone => x y.
   now apply context_pres_let_bodies_red1.

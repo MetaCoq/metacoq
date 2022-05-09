@@ -73,7 +73,7 @@ Section WfEnv.
     isType Σ Γ T' ->
     Σ ;;; Γ ⊢ T' ≤ T ->
     typing_spine_pred Σ Γ P T' args U.
-  Proof.
+  Proof using wfΣ.
     induction 1 in |- *; intros T' isTy redT.
     - constructor; eauto. transitivity ty; auto.
     - specialize IHX with (T' := (B {0 := hd})).

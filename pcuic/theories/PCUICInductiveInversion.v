@@ -251,7 +251,7 @@ Section OnConstructor.
   Lemma on_constructor_wf_args : 
     wf_local (Σ, ind_universes mdecl)
     (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cstr_args cdecl).
-  Proof.
+  Proof using declc wfΣ.
     pose proof (on_declared_constructor declc) as [[onmind oib] [cunivs [hnth onc]]].
     pose proof (on_cargs onc). simpl in X.
     eapply sorts_local_ctx_wf_local in X => //. clear X.
@@ -271,7 +271,7 @@ Section OnConstructor.
               ((to_extended_list_k (ind_params mdecl) #|cstr_args cdecl|) ++
                 (cstr_indices cdecl)) inst
             (ind_params mdecl ,,, ind_indices idecl). 
-  Proof.
+  Proof using declc wfΣ.
     pose proof (on_declared_constructor declc) as [[onmind oib] [cunivs [hnth onc]]].
     pose proof (onc.(on_cargs)). simpl in X.
     split. split. split.
@@ -326,7 +326,7 @@ Section OnConstructorExt.
   Lemma on_constructor_inst_wf_args u : 
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     wf_local Σ ((ind_params mdecl)@[u] ,,, subst_context (ind_subst mdecl (fst ind) u) #|ind_params mdecl| (cstr_args cdecl)@[u]).
-  Proof.
+  Proof using declc wfΣ.
     intros cu.
     pose proof (on_constructor_wf_args declc).
     eapply wf_local_subst_instance in X; tea.
@@ -357,7 +357,7 @@ Section OnConstructorExt.
             map (subst_instance u) (cstr_indices cdecl)) inst
             (subst_instance u (ind_params mdecl) ,,,
             subst_instance u (ind_indices idecl)). 
-  Proof.
+  Proof using declc wfΣ.
     intros cu.
     destruct (on_constructor_subst declc) as [[wfext wfl] [inst sp]].
     eapply wf_local_subst_instance in wfl; eauto. split=> //.

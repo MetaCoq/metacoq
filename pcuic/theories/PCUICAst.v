@@ -56,19 +56,19 @@ Section map_predicate.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_pcontext (p : predicate term) :
     pcontextf (pcontext p) = pcontext (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_puinst (p : predicate term) :
     uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
 End map_predicate.
 
@@ -87,19 +87,19 @@ Section map_predicate_k.
 
   Lemma map_k_pparams k (p : predicate term) :
     map (f k) (pparams p) = pparams (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_preturn k (p : predicate term) :
     f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
     (pcontext p) = pcontext (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
     (pred : predicate term) :=
@@ -159,11 +159,11 @@ Section map_branch.
 
   Lemma map_bbody (b : branch term) :
     f (bbody b) = bbody (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_bcontext (b : branch term) :
     g (bcontext b) = bcontext (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch.
 
 Definition map_branches {term B} (f : term -> B) h l := List.map (map_branch f h) l.
@@ -178,11 +178,11 @@ Section map_branch_k.
 
   Lemma map_k_bbody k (b : branch term) :
     f (#|b.(bcontext)| + k) (bbody b) = bbody (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_k_bcontext k (b : branch term) :
     g (bcontext b) = bcontext (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch_k.
 
 Notation map_branches_k f h k brs :=

@@ -137,7 +137,7 @@ Section BDToPCUICTyping.
       (fun Σ Γ _ t s _ => Psort Γ t s) 
       Σ Γ all ->
     wf_local Σ Γ.
-  Proof.
+  Proof using Type.
     intros allo ; induction allo.
     all: constructor.
     1,3: assumption.
@@ -154,7 +154,7 @@ Section BDToPCUICTyping.
       (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s) 
       Σ Γ' all ->
     wf_local_rel Σ Γ Γ'.
-  Proof.
+  Proof using Type.
     intros allo ; induction allo.
     all: constructor.
     1,3: assumption.
@@ -166,7 +166,7 @@ Section BDToPCUICTyping.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
     forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
-  Proof.
+  Proof using wfΣ.
     revert wfΔ.
     induction Δ using ctx_length_ind.
     1: intros _ ? d ; inversion_clear d ; constructor.
@@ -212,7 +212,7 @@ Section BDToPCUICTyping.
     
   (** The big theorem, proven by mutual induction using the custom induction principle *)
   Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-  Proof.
+  Proof using wfΣ.
     apply bidir_ind_env.
 
     - intros. eapply bd_wf_local. eassumption.

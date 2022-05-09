@@ -3145,7 +3145,7 @@ Section SRContext.
   Lemma red1_ctx_app (Σ : global_env) Γ Γ' Δ :
     red1_ctx Σ Γ Γ' ->
     red1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
-  Proof.
+  Proof using Type.
     induction Δ. trivial.
     intro H. simpl. constructor. now apply IHΔ.
   Qed.
@@ -3153,7 +3153,7 @@ Section SRContext.
   Lemma red1_red_ctx (Σ : global_env_ext) Γ Γ' :
     red1_ctx Σ Γ Γ' ->
     red_ctx Σ Γ Γ'.
-  Proof.
+  Proof using Type.
     induction 1; cbn in *.
     - constructor; try reflexivity.
       destruct p; subst.
@@ -3174,7 +3174,7 @@ Section SRContext.
     wf_local Σ Γ ->
     nth_error Γ n = Some decl ->
     ∑ s, Σ ;;; Γ |- lift0 (S n) (decl_type decl) : tSort s.
-  Proof.
+  Proof using Type.
     induction n in Γ, decl |- *; intros hΓ e; destruct Γ;
       cbn; inversion e; inversion hΓ; subst.
     1,2: rename X0 into H0.
@@ -3190,7 +3190,7 @@ Section SRContext.
   Lemma subject_reduction_ctx {Σ} {wfΣ : wf Σ} Γ Γ' t T :
     red1_ctx Σ Γ Γ' ->
     Σ ;;; Γ |- t : T -> Σ ;;; Γ' |- t : T.
-  Proof.
+  Proof using Type.
     assert(OnOne2_local_env
       (on_one_decl
          (fun (Δ : context) (t t' : term) => red1 Σ.1 Δ t t')) Γ Γ' ->
@@ -3241,7 +3241,7 @@ Section SRContext.
   
   Lemma wf_local_red1 {Σ} {wfΣ : wf Σ} {Γ Γ'} :
     red1_ctx Σ Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
-  Proof.
+  Proof using Type.
     induction 1; cbn in *.
     - destruct p as [-> r]. intro e. inversion e; subst; cbn in *.
       constructor; tas.
@@ -3262,7 +3262,7 @@ Section SRContext.
 
   Lemma red_ctx_clos_rt_red1_ctx Σ : Relation_Properties.inclusion (red_ctx Σ)
       (clos_refl_trans (red1_ctx Σ)).
-  Proof.
+  Proof using cf.
     intros x y H.
     induction H; try firstorder.
     destruct p.
@@ -3285,14 +3285,14 @@ Section SRContext.
 
   Lemma wf_local_red {Σ} {wfΣ : wf Σ} {Γ Γ'} :
     red_ctx Σ Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
-  Proof.
+  Proof using Type.
     intros h. red in h. apply red_ctx_clos_rt_red1_ctx in h.
     induction h; eauto using wf_local_red1.
   Qed.
  
   Lemma eq_context_upto_names_upto_names Γ Δ :
     eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
-  Proof.
+  Proof using Type.
     induction 1; cbnr; try constructor; eauto.
     depelim r; constructor; subst; auto.
     all:cbnr; eauto.
@@ -3301,7 +3301,7 @@ Section SRContext.
   Lemma wf_local_subst1 {Σ} {wfΣ : wf Σ} Γ na b t Γ' :
       wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->
       wf_local Σ (Γ ,,, subst_context [b] 0 Γ').
-  Proof.
+  Proof using Type.
     induction Γ' as [|d Γ']; [now inversion 1|].
     change (d :: Γ') with (Γ' ,, d).
     destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
@@ -3333,7 +3333,7 @@ Section SRContext.
 
   Lemma red_ctx_app_context_l {Σ Γ Γ' Δ}
     : red_ctx Σ Γ Γ' -> red_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
-  Proof.
+  Proof using Type.
     induction Δ as [|[na [bd|] ty] Δ]; [trivial| |];
       intro H; simpl; constructor; cbn; try constructor; eauto; now apply IHΔ.
   Qed.
@@ -3342,7 +3342,7 @@ Section SRContext.
      isType Σ Γ A ->
      red1 Σ Γ A B ->
      isType Σ Γ B.
-   Proof.
+   Proof using Type.
      intros HT red.
      apply infer_typing_sort_impl with id HT; intros Hs.
      eapply subject_reduction1; eauto.
@@ -3352,7 +3352,7 @@ Section SRContext.
      isWfArity Σ Γ A ->
      red1 Σ Γ A B ->
      isWfArity Σ Γ B.
-   Proof.
+   Proof using Type.
      intros [isty H] re.
      split. eapply isType_red1; eauto.
      clear isty; revert H.
@@ -3394,7 +3394,7 @@ Section SRContext.
      isWfArity Σ Γ A ->
      red Σ Γ A B ->
      isWfArity Σ Γ B.
-   Proof.
+   Proof using Type.
      induction 2 using red_rect'.
      - easy.
      - now eapply isWfArity_red1.
@@ -3402,7 +3402,7 @@ Section SRContext.
 
    Lemma isType_red {Σ} {wfΣ : wf Σ} {Γ T U} :
     isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
-   Proof.
+   Proof using Type.
      intros HT red; apply infer_typing_sort_impl with id HT; intros Hs.
      eapply subject_reduction; eauto.
    Qed.

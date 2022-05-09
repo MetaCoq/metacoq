@@ -1205,7 +1205,7 @@ Section All_local_env.
   Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
     All_local_env P Γ ->
     on_some (on_local_decl P (skipn (S n) Γ)) (nth_error Γ n).
-  Proof.
+  Proof using Type.
     induction 1 in n, isdecl |- *. red; simpl.
     - destruct n; simpl; inv isdecl.
     - destruct n. red; simpl. red. simpl. apply t0.
@@ -1219,7 +1219,7 @@ Section All_local_env.
     lookup_env Σ c = Some decl ->
     { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
        on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
-  Proof.
+  Proof using Type.
     destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
     intros [cu Σp].
     induction Σp; simpl. congruence.
@@ -1243,7 +1243,7 @@ Section All_local_env.
   Lemma All_local_env_app (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
     All_local_env P (l ,,, l').
-  Proof.
+  Proof using Type.
     induction l'; simpl; auto. intuition.
     intuition. destruct a. destruct decl_body.
     inv b. econstructor; eauto. inv b; econstructor; eauto.
@@ -1252,7 +1252,7 @@ Section All_local_env.
   Lemma All_local_env_app_inv (P : context -> term -> typ_or_sort -> Type) l l' :
     All_local_env P (l ,,, l') ->
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l'.
-  Proof.
+  Proof using Type.
     apply All_local_app_rel.
   Qed.
 
@@ -1275,7 +1275,7 @@ Section All_local_env.
     All_local_env P Γ ->
     nth_error Γ n = Some decl ->
     on_local_decl P (skipn (S n) Γ) decl.
-  Proof.
+  Proof using Type.
     induction 1 in n, decl |- *. simpl. destruct n; simpl; congruence.
     destruct n. red. simpl. intros [= <-]. simpl. apply t0.
     simpl in *. eapply IHX.
@@ -1301,7 +1301,7 @@ Section All_local_env.
     wf_local Σ Γ1 ->
     wf_local_rel Σ Γ1 Γ2 ->
     wf_local Σ (Γ1 ,,, Γ2).
-  Proof.
+  Proof using Type.
     intros H1 H2. apply All_local_env_app.
     now split.
   Qed.
@@ -1309,7 +1309,7 @@ Section All_local_env.
   Definition wf_local_app_inv {Σ Γ1 Γ2} :
     wf_local Σ (Γ1 ,,, Γ2) ->
     wf_local Σ Γ1 * wf_local_rel Σ Γ1 Γ2.
-  Proof.
+  Proof using Type.
     apply All_local_env_app_inv.
   Qed.
 
@@ -1317,7 +1317,7 @@ Section All_local_env.
     wf_local Σ Γ1 ->
     (wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2) ->
     wf_local Σ (Γ1 ,,, Γ2).
-  Proof.
+  Proof using Type.
     intros wf IH.
     apply wf_local_app; auto.
   Qed.
@@ -1326,7 +1326,7 @@ Section All_local_env.
     (forall u, f (tSort u) = tSort u) ->
     All_local_env (fun Γ t T => P (map (map_decl f) Γ) (f t) (typ_or_sort_map f T)) l
     -> All_local_env P (map (map_decl f) l).
-  Proof.
+  Proof using Type.
     intros Hf. induction 1; econstructor; eauto.
   Qed.
 
@@ -1349,7 +1349,7 @@ Section All_local_env.
   Lemma wf_local_app_skipn {Σ Γ Γ' n} :
     wf_local Σ (Γ ,,, Γ') ->
     wf_local Σ (Γ ,,, skipn n Γ').
-  Proof.
+  Proof using Type.
     intros wf.
     destruct (le_dec n #|Γ'|).
     unfold app_context.
@@ -1409,7 +1409,7 @@ Section All_local_env.
     forall P Q Γ,
       All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
       All_local_env P Γ × All_local_env Q Γ.
-  Proof.
+  Proof using Type.
     intros P Q Γ h.
     induction h.
     - split ; constructor.
@@ -1423,7 +1423,7 @@ Section All_local_env.
     forall Σ P Q Δ,
       All_local_env (lift_typing (fun Σ Γ => Trel_conj (P Σ Γ) (Q Σ Γ)) Σ) Δ ->
       All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
-  Proof.
+  Proof using Type.
     intros Σ P Q Δ h.
     induction h.
     - split ; constructor.

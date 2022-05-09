@@ -464,7 +464,7 @@ Section BidirectionalInduction.
       Pcheck Γ t T') ->
       
     env_prop_bd.
-  Proof.
+  Proof using Type.
     intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
       HProj HFix HCoFix HiSort HiProd HiInd HCheck ; unfold env_prop_bd.
       pose (@Fix_F typing_sum (precompose lt typing_sum_size) Ptyping_sum) as p.

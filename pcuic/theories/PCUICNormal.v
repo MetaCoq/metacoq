@@ -123,7 +123,7 @@ Section Normal.
     forall Γ t args,
       whne Γ t ->
       whne Γ (mkApps t args).
-  Proof.
+  Proof using Type.
     intros Γ t args h.
     induction args in t, h |- *.
     - assumption.
@@ -134,7 +134,7 @@ Section Normal.
     forall Γ t args,
       whne Γ t ->
       whnf Γ (mkApps t args).
-  Proof.
+  Proof using Type.
     intros. econstructor. now eapply whne_mkApps.
   Qed.
   
@@ -148,7 +148,7 @@ Section Normal.
         unfold_fix mfix idx = Some (narg, body) ×
         nth_error l narg = Some a ×
         whne Γ a.
-  Proof.
+  Proof using Type.
     intros Γ t l Ha h. revert t Ha h.
     induction l using rev_ind; intros.
     - eauto.
@@ -767,7 +767,7 @@ Lemma whne_red1_ind
           red1 Σ Γ c c' ->
           P (tProj p c) (tProj p c')) :
   forall t t', whne flags Σ Γ t -> red1 Σ Γ t t' -> P t t'.
-Proof.
+Proof using Type.
   intros t t' wh r.
   induction wh in t, t', wh, r |- *; cbn in *.
   - depelim r; [congruence|now solve_discr].

@@ -417,7 +417,7 @@ Context `{cf : checker_flags}.
 Lemma gc_satisfies_singleton v c :
   gc_satisfies0 v c <->
   gc_satisfies v (GoodConstraintSet.singleton c).
-Proof.
+Proof using Type.
   split.
   - intros H; unfold gc_satisfies.
     eapply GoodConstraintSet.for_all_spec; auto. proper.
@@ -433,7 +433,7 @@ Qed.
 
 Lemma gc_of_constraint_spec v uc :
   satisfies0 v uc <-> on_Some (gc_satisfies v) (gc_of_constraint uc).
-Proof.
+Proof using Type.
   split.
   - destruct 1; destruct l, l'; try constructor.
     all:unfold gc_of_constraint.
@@ -479,7 +479,7 @@ Definition gc_of_constraints (ctrs : ConstraintSet.t) : option GoodConstraintSet
 
 Lemma gc_of_constraints_spec v ctrs :
   satisfies v ctrs <-> on_Some (gc_satisfies v) (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   unfold gc_satisfies, satisfies, ConstraintSet.For_all, gc_of_constraints.
   set (S := GoodConstraintSet.empty).
   rewrite ConstraintSet.fold_spec.
@@ -531,7 +531,7 @@ Qed.
 
 Lemma gc_consistent_iff ctrs :
   consistent ctrs <-> on_Some gc_consistent (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   split.
   - intros [v H]. apply gc_of_constraints_spec in H.
     destruct (gc_of_constraints ctrs); cbn in *.
@@ -596,7 +596,7 @@ Lemma gc_leq0_levelalg_iff ctrs u u':
   leq0_levelalg_n 0 ctrs u u'
   <-> on_Some_or_None (fun ctrs => gc_leq0_levelalg_n 0 ctrs u u')
                       (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   apply gc_leq0_levelalg_n_iff.
 Qed.
 
@@ -626,7 +626,7 @@ Lemma gc_leq_levelalg_n_iff n ctrs u u' :
   leq_levelalg_n n ctrs u u'
   <-> on_Some_or_None (fun ctrs => gc_leq_levelalg_n n ctrs u u')
                     (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   unfold_univ_rel.
   apply gc_leq0_levelalg_n_iff.
   destruct (gc_of_constraints ctrs); reflexivity.
@@ -636,7 +636,7 @@ Lemma gc_leq_levelalg_iff ctrs u u' :
   leq_levelalg ctrs u u'
   <-> on_Some_or_None (fun ctrs => gc_leq_levelalg ctrs u u')
                     (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   unfold_univ_rel.
   apply gc_leq0_levelalg_iff.
   destruct (gc_of_constraints ctrs); reflexivity.
@@ -646,7 +646,7 @@ Lemma gc_eq_levelalg_iff ctrs u u' :
   eq_levelalg ctrs u u'
   <-> on_Some_or_None (fun ctrs => gc_eq_levelalg ctrs u u')
                     (gc_of_constraints ctrs).
-Proof.
+Proof using Type.
   unfold_univ_rel.
   apply gc_eq0_levelalg_iff.
   destruct (gc_of_constraints ctrs); reflexivity.
@@ -1039,7 +1039,7 @@ Section MakeGraph.
   Lemma valuation_labelling_eq l (Hl : correct_labelling G l)
     : forall x, VSet.In x uctx.1
            -> labelling_of_valuation (valuation_of_labelling l) x = l x.
-  Proof.
+  Proof using Type.
     destruct x as [|s|n]; cbnr.
     - intros _. now apply proj1 in Hl; cbn in Hl.
     - intro Hs. apply Nat2Pos.id.
@@ -1051,7 +1051,7 @@ Section MakeGraph.
 
   Lemma make_graph_spec v :
     gc_satisfies v uctx.2 <-> correct_labelling G (labelling_of_valuation v).
-  Proof.
+  Proof using Type.
     unfold gc_satisfies, correct_labelling. split; intro H.
     - split. reflexivity.
       intros e He. cbn in He.
@@ -1076,7 +1076,7 @@ Section MakeGraph.
   Corollary make_graph_spec' l :
     (* gc_satisfies (valuation_of_labelling l) uctx.2 <-> correct_labelling G l. *)
     correct_labelling G l -> gc_satisfies (valuation_of_labelling l) uctx.2.
-  Proof.
+  Proof using Huctx.
     intro H. apply (make_graph_spec (valuation_of_labelling l)).
     unfold correct_labelling. intuition.
     rewrite !valuation_labelling_eq; tas. 3:now apply H.
@@ -1211,7 +1211,7 @@ Section CheckLeq.
 
   Lemma gc_level_declared_make_graph (l : Level.t) :
     gc_level_declared l -> VSet.In l (wGraph.V G).
-  Proof.
+  Proof using HG.
     intros Hl;subst. now apply HG.
   Qed.
 
@@ -1229,7 +1229,7 @@ Section CheckLeq.
 
   Lemma val_level_of_variable_level v (l : VariableLevel.t)
     : val v (l : Level.t) = val v l.
-  Proof.
+  Proof using Type.
     destruct l; cbn; lia.
   Qed.
 
@@ -1237,14 +1237,14 @@ Section CheckLeq.
 
   Lemma val_labelling_of_valuation v (l : Level.t)
     : val v l = labelling_of_valuation v l.
-  Proof.
+  Proof using Type.
     destruct l; cbnr.
   Qed.
 
   Lemma val_labelling_of_valuation' v (l : Level.t) n :
     val v (LevelAlgExpr.make (l, n))
     = n + labelling_of_valuation v l.
-  Proof.
+  Proof using Type.
     reflexivity. 
   Qed.
 
@@ -1253,7 +1253,7 @@ Section CheckLeq.
     gc_level_declared l ->
     correct_labelling G L ->
     val (valuation_of_labelling L) e = (n + (L l))%nat.
-  Proof.
+  Proof using HG.
     intros Hl [HG1 HG2]. rewrite [wGraph.s _](proj2 (proj2 HG)) in HG1. simpl in HG1.
     destruct l as [|l|l]; rewrite ?HG1; cbnr.
     pose proof (make_graph_E uctx (edge_of_level (VariableLevel.Level l))).p2 as H.
@@ -1269,13 +1269,13 @@ Section CheckLeq.
     gc_level_declared l ->
     correct_labelling G L ->
     val (valuation_of_labelling L) l = (L l).
-  Proof.
+  Proof using HG.
     intros Hl HL.
     exact (val_valuation_of_labelling' L l 0 Hl HL).
   Qed.
 
   Instance correct_labelling_proper : Proper ((=_g) ==> Logic.eq ==> iff) correct_labelling.
-  Proof.
+  Proof using Type.
     intros g g' eq x ? ->.
     unfold correct_labelling.
     rewrite [wGraph.s _](proj2 (proj2 eq)).
@@ -1292,7 +1292,7 @@ Section CheckLeq.
   Lemma leq_levelalg_vertices0 n (l l' : Level.t)
     : leq_vertices G n l l'
       -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
-  Proof.
+  Proof using HG.
     intros H. unfold_univ_rel0.
     apply make_graph_spec in Hv; tas.
     eapply correct_labelling_proper in Hv; tea. 2:reflexivity.
@@ -1305,7 +1305,7 @@ Section CheckLeq.
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l')
       -> leq_vertices G n l l'.
-  Proof.
+  Proof using HG Huctx.
     intros H. unfold_univ_rel0.
     eapply correct_labelling_proper in Hv. 2:symmetry; tea. 2:reflexivity.
     specialize (H _ (make_graph_spec' _ Huctx _ Hv)) as HH.
@@ -1322,7 +1322,7 @@ Section CheckLeq.
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l')
       <-> leq_vertices G n l l'.
-  Proof.
+  Proof using HG Huctx.
     split.
     - intros H. unfold_univ_rel0. apply leq_levelalg_vertices1; tas.
     - apply leq_levelalg_vertices0.
@@ -1334,7 +1334,7 @@ Section CheckLeq.
   Lemma leqb_level_n_spec0 n l l'
     : leqb_level_n n l l'
       -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
-  Proof.
+  Proof using HC HG Huctx.
     intro HH. apply leq_levelalg_vertices0.
     apply leqb_vertices_correct; tas; clear HH.
     rewrite HG; exact _.
@@ -1345,9 +1345,9 @@ Section CheckLeq.
         (Hl : VSet.In l uctx.1) (Hl' : VSet.In l' uctx.1)
     : leqb_level_n n l l'
       <-> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
-  Proof with try exact _.
+  Proof using HC HG Huctx.
     symmetry. etransitivity. apply leq_levelalg_vertices; now apply HG.
-    etransitivity. apply leqb_vertices_correct... 1-2:now rewrite HG; exact _.
+    etransitivity. apply leqb_vertices_correct; try exact _. 1-2:now rewrite HG; exact _.
     now unfold leqb_level_n.
   Qed.
   
@@ -1362,7 +1362,7 @@ Section CheckLeq.
   Lemma leqb_expr_n_spec0 lt e e'
     : leqb_expr_n lt e e'
       -> gc_leq0_levelalg_n lt uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using HC HG Huctx.
     unfold leqb_expr_n.
     destruct e as [l k], e' as [l' k'];
       try solve [try (cbn in *; discriminate);
@@ -1372,14 +1372,14 @@ Section CheckLeq.
   Qed.
 
   Lemma andb_is_true (b b' : bool) : b /\ b' -> b && b'.
-  Proof. destruct b, b'; cbnr; intuition 0. Qed.
+  Proof using Type. destruct b, b'; cbnr; intuition 0. Qed.
 
   Lemma leqb_expr_n_spec n e e'
         (HHl  : gc_expr_declared e)
         (HHl' : gc_expr_declared e')
     : leqb_expr_n ⎩ n ⎭ e e'
       <-> gc_leq0_levelalg_n ⎩ n ⎭ uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using HC HG Huctx.
     split; [apply leqb_expr_n_spec0|].
     unfold leqb_expr_n.
     destruct e as [l k] eqn:eqe, e' as [l' k'] eqn:eqe'; cbn; intro H;
@@ -1406,7 +1406,7 @@ Section CheckLeq.
   Lemma leqb_expr_univ_n_spec0 n e1 u
     : leqb_expr_univ_n n e1 u
       -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make e1) u.
-  Proof.
+  Proof using HC HG Huctx.
     unfold leqb_expr_univ_n; intros H.
     unfold_univ_rel0.
     rewrite val_fold_right.
@@ -1424,7 +1424,7 @@ Section CheckLeq.
 
   Lemma val_le_caract' (u : LevelAlgExpr.t) v k :
     (exists e, LevelExprSet.In e u /\ Z.of_nat k <= Z.of_nat (val v e))%Z <-> (Z.of_nat k <= Z.of_nat (val v u))%Z.
-  Proof.
+  Proof using Type.
     epose proof (val_le_caract u v k).
     intuition auto.
     apply inj_le, H0.
@@ -1437,7 +1437,7 @@ Section CheckLeq.
 
   Lemma val_ge_caract' (u : LevelAlgExpr.t) v k :
     (forall e, LevelExprSet.In e u -> (Z.of_nat (val v e) <= Z.of_nat k)%Z) <-> (Z.of_nat (val v u) <= Z.of_nat k)%Z.
-  Proof.
+  Proof using Type.
     epose proof (val_ge_caract u v k).
     intuition auto.
     apply inj_le, H0.
@@ -1447,16 +1447,16 @@ Section CheckLeq.
   Qed.
 
   Lemma Z_of_nat_bool_to_nat x b : (Z.of_nat x + ⎩ b ⎭)%Z = Z.of_nat (x + if b then 1%nat else 0%nat).
-  Proof. destruct b; simpl; lia. Qed.
+  Proof using Type. destruct b; simpl; lia. Qed.
 
   Lemma Z_of_nat_inj_bool (x : bool) : Z.of_nat (if x then 1%nat else 0%nat) = ⎩ x ⎭.
-  Proof. destruct x; simpl; auto. Qed.
+  Proof using Type. destruct x; simpl; auto. Qed.
 
   Definition neg_forall p u := 
     LevelExprSet.for_all p u = false.
 
   Lemma exists_neg_forall p u : neg_forall p u <-> LevelExprSet.exists_ (fun x => ~~ (p x)) u.
-  Proof.
+  Proof using Type.
     unfold neg_forall.
     split. intros nf.
     now apply LevelExprSet_for_all_false in nf.
@@ -1477,7 +1477,7 @@ Section CheckLeq.
     ~~ le_lt_dec y x.
   
   Lemma is_lt_spec x y : is_lt x y -> (x < y)%nbar.
-  Proof.
+  Proof using Type.
     unfold is_lt. destruct le_lt_dec. simpl. discriminate. simpl.
     auto.
   Qed.
@@ -1491,7 +1491,7 @@ Section CheckLeq.
       gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e) u ->
       exists (e' : LevelExpr.t), LevelExprSet.In e' u
             /\ gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using HC HG Huctx.
     intros Hl Hu H.
     assert (HG1 : invariants G) by (rewrite HG; exact _).
     assert (HG2 : acyclic_no_loop G) by (rewrite HG; exact _).
@@ -1779,7 +1779,7 @@ Section CheckLeq.
         (Hu  : gc_levels_declared u)
     : leqb_expr_univ_n ⎩ lt ⎭ e1 u
       <-> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e1) u.
-  Proof.
+  Proof using HC HG Huctx.
     split; [apply leqb_expr_univ_n_spec0|].
     unfold leqb_expr_univ_n; intro HH.
     case_eq (LevelAlgExpr.exprs u). intros e u' ee.
@@ -1819,11 +1819,11 @@ Section CheckLeq.
   Qed. *)
 
   Lemma fold_right_xpred0 {A} (l : list A) : fold_right (fun _ => xpred0) false l = false.
-  Proof. induction l; simpl; auto. Qed.
+  Proof using Type. induction l; simpl; auto. Qed.
 
   Lemma leqb_levelalg_n_spec0 lt (u1 u2 : LevelAlgExpr.t)
     : leqb_levelalg_n lt u1 u2 -> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 u1 u2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold leqb_levelalg_n. intros H.
     unfold_univ_rel0.
     unfold val, LevelAlgExpr.Evaluable.
@@ -1845,7 +1845,7 @@ Section CheckLeq.
         (Hu2  : gc_levels_declared l2)
     : leqb_levelalg_n lt l1 l2
       <-> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 l1 l2.
-  Proof.
+  Proof using HC HG Huctx.
     split; [apply leqb_levelalg_n_spec0|].
     unfold leqb_levelalg_n; intro HH.
     unfold LevelAlgExpr.exprs.
@@ -1872,7 +1872,7 @@ Section CheckLeq.
         (Hu1  : gc_levels_declared u1)
         (Hu2  : gc_levels_declared u2)
     : check_leqb_levelalg u1 u2 <-> gc_leq_levelalg uctx.2 u1 u2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_leqb_levelalg, gc_leq_levelalg, gc_leq_levelalg_n.
     destruct check_univs; [|split; trivial].
     split; cbn.
@@ -1893,7 +1893,7 @@ Section CheckLeq.
         (Hu1  : gc_levels_declared l1)
         (Hu2  : gc_levels_declared l2)
     : check_eqb_levelalg l1 l2 <-> gc_eq_levelalg uctx.2 l1 l2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_eqb_levelalg, gc_eq_levelalg.
     destruct check_univs; [|split; trivial].
     split; cbn.
@@ -1910,7 +1910,7 @@ Section CheckLeq.
   Qed.
 
   Lemma fold_left_false {A} l : fold_left (B:=A) (fun _ : bool => xpred0) l false = false.
-  Proof.
+  Proof using Type.
     induction l; simpl; eauto.
   Qed.
 
@@ -1936,7 +1936,7 @@ Section CheckLeq.
   Lemma check_gc_constraint_spec gc
     : check_gc_constraint gc
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies0 v gc else True.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_gc_constraint. destruct check_univs; [cbn|trivial].
     destruct gc as [l z l'|k l|k n|l k|n k].
     - intros HH v Hv; apply leqb_level_n_spec0 in HH.
@@ -1961,7 +1961,7 @@ Section CheckLeq.
   Lemma check_gc_constraints_spec ctrs
     : check_gc_constraints ctrs
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs else True.
-  Proof.
+  Proof using HC HG Huctx.
     pose proof check_gc_constraint_spec as XX.
     unfold check_gc_constraint. destruct check_univs; [cbn|trivial].
     intros HH v Hv.
@@ -1988,7 +1988,7 @@ Section CheckLeq.
 
 
   Lemma check_eqb_universe_refl u : check_eqb_universe u u.
-  Proof.
+  Proof using Type.
     unfold check_eqb_universe; toProp; left.
     apply Universe.eqb_refl.
   Qed.
@@ -2009,7 +2009,7 @@ Section CheckLeq.
       (Hu1 : levels_declared_univ u1)
       (Hu2 : levels_declared_univ u2)
     : check_eqb_universe u1 u2 <-> gc_eq_universe uctx.2 u1 u2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_eqb_universe, gc_eq_universe.
     destruct u1, u2; cbnr; split; intuition auto.
     - now destruct prop_sub_type.
@@ -2126,7 +2126,7 @@ Section CheckLeq2.
 
   Lemma level_gc_declared_declared l
     : level_declared l -> gc_level_declared uctx' l.
-  Proof.
+  Proof using HG.
     clear. subst uctx'.
     unfold is_graph_of_uctx, gc_of_uctx in HG.
     destruct (gc_of_constraints uctx.2); [|contradiction HG].
@@ -2136,14 +2136,14 @@ Section CheckLeq2.
 
   Lemma expr_gc_declared_declared e
     : expr_declared e -> gc_expr_declared uctx' e.
-  Proof.
+  Proof using HG level_declared.
     destruct e as [l b]; cbn; trivial.
     intro; now apply (level_gc_declared_declared l) in H.
   Qed.
 
   Lemma levels_gc_declared_declared (u : LevelAlgExpr.t)
     : levels_declared u -> gc_levels_declared uctx' u.
-  Proof.
+  Proof using HG expr_declared.
     unfold levels_declared, gc_levels_declared.
     intros HH e He; specialize (HH e He).
     now apply expr_gc_declared_declared.
@@ -2154,7 +2154,7 @@ Section CheckLeq2.
         (Hu : levels_declared u)
     : leqb_expr_univ_n G ⎩ lt ⎭ e1 u
       <-> leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e1) u.
-  Proof.
+  Proof using HG' Huctx'.
     etransitivity.
     apply (leqb_expr_univ_n_spec G uctx' Huctx' HC' HG'); tas.
     - apply expr_gc_declared_declared; tas.
@@ -2168,7 +2168,7 @@ Section CheckLeq2.
 
   Lemma check_leqb_levelalg_spec' u1 u2
     : check_leqb_levelalg G u1 u2 -> leq_levelalg uctx.2 u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     unfold check_leqb_levelalg; intro H.
     unfold_univ_rel.
     cbn in H; toProp H; destruct H as [e | ].
@@ -2186,7 +2186,7 @@ Section CheckLeq2.
     levels_declared u2 ->
     leq_levelalg uctx.2 u1 u2 ->
     check_leqb_levelalg G u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     intros decl1 decl2.
     apply levels_gc_declared_declared in decl1.
     apply levels_gc_declared_declared in decl2.
@@ -2200,7 +2200,7 @@ Section CheckLeq2.
   
   Lemma check_eqb_levelalg_spec' u1 u2
     : check_eqb_levelalg G u1 u2 -> eq_levelalg uctx.2 u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     unfold check_eqb_levelalg; intro H.
     unfold_univ_rel.
     cbn in H; toProp H; destruct H as [e | ].
@@ -2220,7 +2220,7 @@ Section CheckLeq2.
     levels_declared u2 ->
     eq_levelalg uctx.2 u1 u2 ->
     check_eqb_levelalg G u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     intros decl1 decl2.
     apply levels_gc_declared_declared in decl1.
     apply levels_gc_declared_declared in decl2.
@@ -2252,7 +2252,7 @@ Section CheckLeq2.
     level_declared l' ->
     leq0_level_n z l l' ->
     leqb_level_n G z l l'.
-  Proof.
+  Proof using HG' Huctx'.
     intros decll decll'.
     unfold leq0_level_n.
     intros le; eapply gc_leq0_levelalg_n_iff in le.
@@ -2277,7 +2277,7 @@ Section CheckLeq2.
     gc_levels_declared' uctx.1 cstr ->
     valid_gc_constraint cstr ->
     check_gc_constraint G cstr.
-  Proof.
+  Proof using HG' Huctx'.
     rewrite /check_gc_constraint.
     destruct check_univs eqn:cu => //=.
     destruct cstr; cbn; intros hin;
@@ -2289,7 +2289,7 @@ Section CheckLeq2.
     gcs_levels_declared uctx.1 cstrs ->
     valid_gc_constraints cstrs ->
     check_gc_constraints G cstrs.
-  Proof.
+  Proof using HG' Huctx'.
     rewrite /gcs_levels_declared /valid_gc_constraints /check_gc_constraints
       /check_gc_constraints.
     intros hdecl hval.
@@ -2304,7 +2304,7 @@ Section CheckLeq2.
   Lemma valid_gc_constraints_aux gc :
     valid_gc_constraints_ext gc ->
     valid_gc_constraints gc.
-  Proof.
+  Proof using Type.
     intros Hv v inv.
     unfold gc_satisfies in Hv.
     destruct v; cbn in *; red;
@@ -2325,7 +2325,7 @@ Section CheckLeq2.
     valid_constraints uctx.2 cstrs ->
     gc_of_constraints cstrs = Some gc ->
     valid_gc_constraints gc.
-  Proof.
+  Proof using Type.
     intros cu Hgc vgc. apply valid_gc_constraints_aux.
     intros v Hv.
     pose proof (gc_of_constraints_spec v cstrs).
@@ -2337,7 +2337,7 @@ Section CheckLeq2.
     global_uctx_invariants (levels, cstrs) ->
     gc_of_constraints cstrs = Some gc ->
     gcs_levels_declared levels gc.
-  Proof.
+  Proof using Type.
     intros Hlev hc.
     pose proof (gc_of_uctx_invariants (levels, cstrs) (levels, gc)).
     cbn in H. rewrite hc in H. specialize (H eq_refl). now apply H.
@@ -2345,7 +2345,7 @@ Section CheckLeq2.
 
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints uctx.2 ctrs.
-  Proof.
+  Proof using HG' Huctx'.
     unfold check_constraints, valid_constraints.
     case_eq (gc_of_constraints ctrs); [|try discriminate].
     intros ctrs' Hctrs' HH.
@@ -2367,7 +2367,7 @@ Section CheckLeq2.
     global_uctx_invariants (uctx.1, ctrs) ->
     valid_constraints uctx.2 ctrs -> 
     check_constraints G ctrs.
-  Proof.
+  Proof using HG' Huctx'.
     intros cu gu vc.
     unfold check_constraints.
     case_eq (gc_of_constraints ctrs); [|try discriminate].
@@ -2392,14 +2392,14 @@ Section CheckLeq2.
 
   Lemma levels_univ_gc_declared_declared (u : Universe.t)
     : levels_declared_univ u -> gc_levels_declared_univ uctx' u.
-  Proof.
+  Proof using HG levels_declared.
     destruct u; cbnr.
     apply levels_gc_declared_declared.
   Qed.
 
   Lemma check_leqb_universe_spec' u1 u2
     : check_leqb_universe G u1 u2 -> leq_universe uctx.2 u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     unfold check_leqb_universe, leq_universe, leqb_universe, leq_universe_n.
     move => /orP [H | H].
     - apply eqb_true_iff in H as ->.
@@ -2413,7 +2413,7 @@ Section CheckLeq2.
     levels_declared_univ u2 ->
     leq_universe uctx.2 u1 u2 ->
     check_leqb_universe G u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     move : u1 u2 => [| | u1] [| | u2] //. cbn.
     intros decl1 decl2 Hle.
     unfold check_leqb_universe. toProp; right.
@@ -2422,7 +2422,7 @@ Section CheckLeq2.
   
   Lemma check_eqb_universe_spec' u1 u2
     : check_eqb_universe G u1 u2 -> eq_universe uctx.2 u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     move : u1 u2 => [| | u1] [| | u2] //.
     { move/andP => [H HH] //. }
     move/orP => [H | H].
@@ -2443,7 +2443,7 @@ Section CheckLeq2.
     levels_declared_univ u2 ->
     eq_universe uctx.2 u1 u2 ->
     check_eqb_universe G u1 u2.
-  Proof.
+  Proof using HG' Huctx'.
     move : u1 u2 => [| | u1] [| | u2] //. cbn.
     intros decl1 decl2 Hle.
     apply check_eqb_levelalg_complete in Hle => //.

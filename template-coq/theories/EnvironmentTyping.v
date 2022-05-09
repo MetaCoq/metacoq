@@ -545,7 +545,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       end.
       
     Lemma All_local_env_size_pos base Σ Γ w : base <= All_local_env_size_gen base Σ Γ w.
-    Proof.
+    Proof using Type.
       induction w.
       all: simpl ; lia.
     Qed.

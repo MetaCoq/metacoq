@@ -283,14 +283,14 @@ Module PTree.
    Theorem gmap_filter':
      forall (f: A -> option B) (m: tree' A) (i: positive),
      get i (map_filter' f m) = option_map f (get' i m).
-   Proof.
+   Proof using Type.
      induction m; simpl; intros; rewrite gNode; destruct i; simpl; auto.
    Qed.
    
    Theorem gmap_filter:
      forall (f: A -> option B) (m: tree A) (i: positive),
      get i (map_filter f m) = option_map f (get i m).
-   Proof.
+   Proof using Type.
      intros. destruct m as [ | m]; simpl. auto.
      change (map_filter'_opt f m) with (map_filter' f m).
      apply gmap_filter'.
@@ -299,7 +299,7 @@ Module PTree.
    Lemma unroll_map_filter:
      forall (f: A -> option B) (l: tree A) (o: option A) (r: tree A),
      map_filter f (Node l o r) = Node (map_filter f l) (option_map f o) (map_filter f r).
-   Proof.
+   Proof using Type.
      intros. unfold map_filter. change map_filter'_opt with map_filter'.
      destruct l, o, r; reflexivity.
    Qed.
@@ -359,7 +359,7 @@ Module PTree.
    Lemma unroll_tree_case: forall l o r,
      not_trivially_empty l o r ->
      tree_case (Node l o r) = node l o r.
-   Proof.
+   Proof using Type.
      destruct l, o, r; simpl; intros; auto. contradiction.
    Qed.
    
@@ -370,7 +370,7 @@ Module PTree.
    
    Lemma unroll_tree_case_gen: forall l o r,
      tree_case (Node l o r) = node l o r.
-   Proof.
+   Proof using A B empty node node_empty.
      destruct l, o, r; simpl; auto.
    Qed.
    
@@ -416,7 +416,7 @@ Module PTree.
    Lemma unroll_tree_rec: forall l o r,
      not_trivially_empty l o r ->
      tree_rec (Node l o r) = node l (tree_rec l) o r (tree_rec r).
-   Proof.
+   Proof using Type.
      destruct l, o, r; simpl; intros; auto. contradiction.
    Qed.
    
@@ -424,7 +424,7 @@ Module PTree.
    
    Lemma unroll_tree_rec_gen: forall l o r,
      tree_rec (Node l o r) = node l (tree_rec l) o r (tree_rec r).
-   Proof.
+   Proof using A B empty node node_empty.
      destruct l, o, r; simpl; auto.
    Qed.
    
@@ -591,18 +591,18 @@ Module PTree.
        This is a great way to find mistakes in the definition above. *)
    
    Lemma gcombine'_l: forall m i, get i (combine'_l m) = f (get' i m) None.
-   Proof.
+   Proof using A B C f f_None_None.
      intros. unfold combine'_l. rewrite gmap_filter'. destruct (get' i m); auto.
    Qed.
    
    Lemma gcombine'_r: forall m i, get i (combine'_r m) = f None (get' i m).
-   Proof.
+   Proof using A B C f f_None_None.
      intros. unfold combine'_r. rewrite gmap_filter'. destruct (get' i m); auto.
    Qed.
    
    Lemma gcombine'_direct: forall m1 m2 i,
      get i (combine'_direct m1 m2) = f (get' i m1) (get' i m2).
-   Proof.
+   Proof using A B C f f_None_None.
      induction m1; destruct m2; intros; simpl; rewrite gNode;
      destruct i; simpl; auto using gcombine'_l, gcombine'_r.
    Qed.
@@ -610,7 +610,7 @@ Module PTree.
    (** Second definition of [combine'], using tactics to fill out the 49 cases. *)
    
    Fixpoint combine'_by_tac (m1: tree' A) (m2: tree' B) {struct m1} : tree C.
-   Proof.
+   Proof using A B C f.
      destruct m1 as [ r1 | x1 | x1 r1 | l1 | l1 r1 | l1 x1 | l1 x1 r1 ];
      destruct m2 as [ r2 | x2 | x2 r2 | l2 | l2 r2 | l2 x2 | l2 x2 r2 ];
      (apply Node;
@@ -637,7 +637,7 @@ Module PTree.
    
    Lemma gcombine'_by_tac: forall m1 m2 i,
      get i (combine'_by_tac m1 m2) = f (get' i m1) (get' i m2).
-   Proof.
+   Proof using A B C f f_None_None.
      induction m1; destruct m2; intros; simpl; rewrite gNode;
      destruct i; simpl; auto using gcombine'_l, gcombine'_r.
    Qed.
@@ -646,7 +646,7 @@ Module PTree.
        the one we wrote by hand before. *)
    
    Lemma combine'_by_tac_eq: combine'_by_tac = combine'_direct.
-   Proof.
+   Proof using Type.
      reflexivity.
    Qed.
    
@@ -664,7 +664,7 @@ Module PTree.
    Theorem gcombine:
      forall (m1: tree A) (m2: tree B) (i: positive),
      get i (combine m1 m2) = f (get i m1) (get i m2).
-   Proof.
+   Proof using A B C f f_None_None.
      intros. destruct m1 as [ | m1], m2 as [ | m2]; simpl.
      - auto.
      - apply gcombine'_r.
@@ -698,7 +698,7 @@ Module PTree.
    Theorem gcombine_view:
      forall (m1: tree A) (m2: tree B) (i: positive),
      get i (combine_view m1 m2) = f (get i m1) (get i m2).
-   Proof.
+   Proof using A B C f f_None_None.
      change combine_view with combine_view_gen. unfold combine_view_gen.
      induction m1 using tree_ind; intros.
    - simpl. rewrite gmap_filter. destruct (get i m2); auto.

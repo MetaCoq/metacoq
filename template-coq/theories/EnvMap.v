@@ -29,7 +29,7 @@ Module EnvMap.
 
   Lemma gso (e : t) kn kn' g : kn <> kn' ->
     lookup kn (add kn' g e) = lookup kn e.
-  Proof.
+  Proof using Type.
     intros ne.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_neq_o //.
@@ -38,7 +38,7 @@ Module EnvMap.
 
   Lemma gss (e : t) kn kn' g : kn = kn' ->
     lookup kn (add kn' g e) = Some g.
-  Proof.
+  Proof using Type.
     intros eq.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_eq_o //.
@@ -48,7 +48,7 @@ Module EnvMap.
   Definition equal (g g' : t) := KernameMap.Equal g g'.
   
   Lemma unfold_equal g g' : (forall i, lookup i g = lookup i g') -> equal g g'.
-  Proof.
+  Proof using Type.
     intros heq.
     intros i. apply heq.
   Qed.
@@ -99,7 +99,7 @@ Module EnvMap.
   Lemma fold_left_cons d g acc :
     fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) (d :: g) acc = 
     fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) g (add d.1 d.2 acc).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition of_global_env (g : list (kername × A)) : t :=
     KernameMapFact.of_list g.
@@ -108,11 +108,11 @@ Module EnvMap.
     equal e (of_global_env g).
 
   Lemma repr_global_env (g : list (kername × A)) : repr g (of_global_env g).
-  Proof. red. reflexivity. Qed.
+  Proof using Type. red. reflexivity. Qed.
 
   Lemma of_global_env_cons d g : fresh_globals (d :: g) ->
     of_global_env (d :: g) = add d.1 d.2 (of_global_env g).
-  Proof.
+  Proof using Type.
     unfold of_global_env. simpl. unfold KernameMapFact.uncurry.
     reflexivity.
   Qed.
@@ -122,7 +122,7 @@ Module EnvMap.
     fresh_global k Σ ->
     repr Σ e ->
     repr ((k, g) :: Σ) (add k g e).
-  Proof.
+  Proof using Type.
     intros wfΣ fresh repr.
     red. rewrite /add. do 2 red in repr.
     rewrite repr. rewrite of_global_env_cons //.
@@ -130,17 +130,17 @@ Module EnvMap.
   Qed.
 
   Lemma lookup_add k v g : lookup k (add k v g) = Some v.
-  Proof. rewrite gss //. Qed.
+  Proof using Type. rewrite gss //. Qed.
 
   Lemma lookup_add_other k k' v g : k <> k' -> lookup k (add k' v g) = lookup k g.
-  Proof. move=> eqk. rewrite gso //. Qed.
+  Proof using Type. move=> eqk. rewrite gso //. Qed.
 
   Lemma remove_add_eq Σ k v e : 
     fresh_globals Σ ->
     fresh_global k Σ ->
     repr Σ e ->
     equal (remove k (add k v e)) e.
-  Proof.
+  Proof using Type.
     unfold repr, equal, remove, add.
     intros frΣ frk eq.
     intros k'.
@@ -156,7 +156,7 @@ Module EnvMap.
   Lemma remove_add_o k k' v e : 
     k <> k' ->
     equal (remove k' (add k v e)) (add k v (remove k' e)).
-  Proof.
+  Proof using Type.
     unfold repr, equal, remove, add.
     intros neq k''.
     rewrite KernameMapFact.F.remove_o.
@@ -180,7 +180,7 @@ Module EnvMap.
     fresh_globals g ->
     repr g e ->
     forall k, lookup k e = lookup_global g k.
-  Proof.
+  Proof using Type.
     intros wf eq k. red in eq.
     move: eq.
     induction g in e, k, wf |- *; auto.

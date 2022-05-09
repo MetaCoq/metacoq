@@ -332,7 +332,7 @@ Lemma cumul_prop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros; eapply cumul_prop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -343,7 +343,7 @@ Lemma cumul_prop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_prop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.
@@ -354,7 +354,7 @@ Lemma cumul_sprop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_sprop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -365,7 +365,7 @@ Lemma cumul_sprop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_sprop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.

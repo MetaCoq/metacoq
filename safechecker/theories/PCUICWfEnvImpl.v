@@ -335,7 +335,7 @@ Section WfEnv.
   Context {cf : checker_flags} {guard : abstract_guard_impl}.
 
   Definition referenced_impl_sq_wf (Σ : referenced_impl_ext) : ∥ wf Σ ∥.
-  Proof.
+  Proof using Type.
     destruct (referenced_impl_ext_wf Σ).
     sq. apply X.
   Qed.
@@ -344,7 +344,7 @@ Section WfEnv.
     EnvMap.lookup kn Σ.(wf_env_ext_map).
 
   Lemma lookup_lookup_env Σ kn : lookup Σ kn = lookup_env Σ kn.
-  Proof.
+  Proof using Type.
     rewrite /lookup. destruct Σ as [Σ map repr]. pose (referenced_impl_sq_wf Σ).
     sq. apply EnvMap.lookup_spec; auto. now eapply wf_fresh_globals.
   Qed.
@@ -395,7 +395,7 @@ Section GraphSpec.
 
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
-  Proof.
+  Proof using HG HΣ Hφ.
     pose proof HΣ'.
     intros HH.
     refine (check_constraints_spec G (global_ext_uctx Σ) _ _ HG _ HH).
@@ -418,7 +418,7 @@ Section GraphSpec.
   Lemma is_graph_of_uctx_levels (l : Level.t) :
     LevelSet.mem l (uGraph.wGraph.V G) <->
     LevelSet.mem l (global_ext_levels Σ).
-  Proof.
+  Proof using HG.
     unfold is_graph_of_uctx in HG.
     case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
       rewrite -> XX in *; simpl in *; [|contradiction].

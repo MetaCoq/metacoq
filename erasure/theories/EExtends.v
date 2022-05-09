@@ -10,7 +10,7 @@ Section EEnvFlags.
     forall Σ cst decl,
       declared_constant Σ cst decl ->
       forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
-  Proof.
+  Proof using Type.
     intros Σ cst decl H0 Σ' X2 H2.
     eapply extends_lookup; eauto.
   Qed.
@@ -19,7 +19,7 @@ Section EEnvFlags.
     forall Σ ind decl,
       declared_minductive Σ ind decl ->
       forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
-  Proof.
+  Proof using Type.
     intros Σ cst decl H0 Σ' X2 H2.
     eapply extends_lookup; eauto.
   Qed.
@@ -28,7 +28,7 @@ Section EEnvFlags.
     forall Σ ind mdecl decl,
       declared_inductive Σ mdecl ind decl ->
       forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_inductive Σ' mdecl ind decl.
-  Proof.
+  Proof using Type.
     intros Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split.
     eapply weakening_env_declared_minductive; eauto.
     eauto.
@@ -39,13 +39,13 @@ Section EEnvFlags.
       declared_constructor Σ idecl ind mdecl decl ->
       forall Σ', wf_glob Σ' -> extends Σ Σ' ->
       declared_constructor Σ' idecl ind mdecl decl.
-  Proof.
+  Proof using Type.
     intros Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
     split; eauto. eapply weakening_env_declared_inductive; eauto.
   Qed.
   
   Lemma extends_wf_glob {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
-  Proof.
+  Proof using Type.
     intros [? ->].
     induction x; cbn; auto.
     intros wf; depelim wf. eauto.
@@ -57,7 +57,7 @@ Section EEnvFlags.
   Lemma lookup_env_In d Σ : 
     wf_glob Σ ->
     lookup_env Σ d.1 = Some d.2 <-> In d Σ.
-  Proof.
+  Proof using Type.
     intros wf.
     split.
     - induction Σ; cbn => //.
@@ -76,7 +76,7 @@ Section EEnvFlags.
   Lemma global_subset_In Σ Σ' : 
     wf_glob Σ -> wf_glob Σ' ->
     global_subset Σ Σ' <-> forall d, In d Σ -> In d Σ'.
-  Proof.
+  Proof using Type.
     split.
     - intros g d hin.
       specialize (g d.1 d.2).
@@ -90,7 +90,7 @@ Section EEnvFlags.
   Lemma global_subset_cons d Σ Σ' : 
     global_subset Σ Σ' ->
     global_subset (d :: Σ) (d :: Σ').
-  Proof.
+  Proof using Type.
     intros sub kn d'.
     cbn. case: eqb_spec => [eq|neq] => //.
     eapply sub.
@@ -100,7 +100,7 @@ Section EEnvFlags.
     wf_glob Σ -> wf_glob Σ' ->
     global_subset Σ Σ' ->
     fresh_global kn Σ' -> fresh_global kn Σ.
-  Proof.
+  Proof using Type.
     intros wfΣ wfΣ' sub fr.
     unfold fresh_global in *.
     eapply All_Forall, In_All.
@@ -115,7 +115,7 @@ Section EEnvFlags.
     wf_glob Σ -> wf_glob (d :: Σ') ->
     global_subset Σ Σ' ->
     global_subset Σ (d :: Σ').
-  Proof.
+  Proof using Type.
     intros wf wf' gs.
     assert (wf_glob Σ'). now depelim wf'.
     rewrite (global_subset_In _ _ wf H) in gs.

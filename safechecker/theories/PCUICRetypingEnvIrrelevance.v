@@ -74,7 +74,7 @@ Section infer_irrel.
     (pf : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥)
     (pf' : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥) 
     : same_prod Γ pf pf' -> pf.π2.π2.π1 = pf'.π2.π2.π1.
-  Proof.
+  Proof using Type.
     destruct pf as [na [A [B prf]]].
     destruct pf' as [na' [A' []]].
     cbn. congruence.
@@ -83,7 +83,7 @@ Section infer_irrel.
   Lemma same_reduce_stack {Γ t π} {fl} (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ (PCUICPosition.zip (t, π)))
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ (PCUICPosition.zip (t, π))) :
     reduce_stack fl X_type X Γ t π wi = reduce_stack fl X_type' X' Γ t π wi'.
-  Proof.
+  Proof using hl.
     rewrite !reduce_stack_eq.
     revert X_type' X' wi' hl.
     apply_funelim (reduce_stack_full fl X_type X Γ t π wi).
@@ -279,7 +279,7 @@ Section infer_irrel.
   Lemma same_hnf {Γ t} (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) :
     hnf Γ t wi = hnf Γ t wi'.
-  Proof.
+  Proof using hl.
     unfold hnf. unfold reduce_term.
     f_equal. apply same_reduce_stack.
   Qed.
@@ -302,7 +302,7 @@ Section infer_irrel.
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) : 
     same_prod_comp (reduce_to_prod Γ t wi) (reduce_to_prod Γ t wi').
-  Proof.
+  Proof using hl.
     unfold reduce_to_prod.
     destruct view_prodc; simp reduce_to_prod.
     red. cbn. auto.
@@ -325,7 +325,7 @@ Section infer_irrel.
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) 
     hp hp' : same_prod Γ (infer_as_prod X_type X Γ t wf wi hp) (infer_as_prod X_type' X' Γ t wf' wi' hp').
-  Proof.
+  Proof using hl.
     unfold same_prod.
     unfold infer_as_prod.
     destruct reduce_to_prod as [[na [A [B hr]]]|] eqn:h. 2:bang.
@@ -348,7 +348,7 @@ Section infer_irrel.
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') : 
     same_sort_comp (reduce_to_sort Γ t wi) (reduce_to_sort Γ t' wi').
-  Proof.
+  Proof using hl.
     destruct e.
     unfold reduce_to_sort.
     destruct (view_sortc); simp reduce_to_sort.
@@ -374,7 +374,7 @@ Section infer_irrel.
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> well_sorted Σ Γ t)
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> well_sorted Σ Γ t) 
     hp hp' : hp.π1 = hp'.π1 -> (infer_as_sort X_type X wf wi hp).π1 = (infer_as_sort X_type' X' wf' wi' hp').π1.
-  Proof.
+  Proof using hl.
     unfold infer_as_sort.
     unfold PCUICSafeRetyping.principal_type_type.
     set (obl := fun Σ wfΣ => PCUICSafeRetyping.infer_as_sort_obligation_1 _ _ _ _ _ _ _ Σ wfΣ).
@@ -403,7 +403,7 @@ Section infer_irrel.
 
   Lemma elim_inspect {A} (x : A) (P : { y : A | y = x } -> Type) :
     (forall y (e : y = x), P (exist y e)) -> P (PCUICSafeReduce.inspect x).
-  Proof.
+  Proof using Type.
     intros hp. unfold PCUICSafeReduce.inspect. apply hp.
   Qed.
 
@@ -411,7 +411,7 @@ Section infer_irrel.
   (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
   (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') : 
   same_ind_comp (reduce_to_ind Γ t wi) (reduce_to_ind Γ t' wi').
-  Proof.
+  Proof using hl.
     subst t'.
     simp reduce_to_ind.
     eapply elim_inspect => [[f args] eq].
@@ -436,7 +436,7 @@ Section infer_irrel.
   Lemma same_lookup_ind_decl ind :
     abstract_env_lookup X (inductive_mind ind) = abstract_env_lookup X' (inductive_mind ind) ->
     same_typing_result (fun x y => (x.π1, x.π2.π1) = (y.π1, y.π2.π1)) (lookup_ind_decl X_type X ind) (lookup_ind_decl X_type' X' ind).
-  Proof. 
+  Proof using Type. 
     intros eq.
     funelim (lookup_ind_decl X_type X ind); simp lookup_ind_decl;
     eapply elim_inspect; intros opt e'.

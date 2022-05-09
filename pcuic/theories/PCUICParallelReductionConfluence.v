@@ -16,7 +16,6 @@ Add Search Blacklist "pred1_rect".
 Add Search Blacklist "_equation_".
 
 Local Open Scope sigma_scope.
-
 Local Set Keyed Unification.
 
 Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
@@ -336,6 +335,7 @@ End Pred1_inversion.
 Hint Constructors pred1 : pcuic.
 
 Notation predicate_depth := (predicate_depth_gen depth).
+Notation fold_context_term f := (fold_context (fun Γ' => map_decl (f Γ'))).
 
 Section Rho.
   Context {cf : checker_flags}.
@@ -406,8 +406,6 @@ Section Rho.
         unfold decl_depth_gen at 1 in hin. simpl in *. unfold context_depth. lia.
       Qed.
   End rho_ctx.
-
-  Notation fold_context_term f := (fold_context (fun Γ' => map_decl (f Γ'))).
 
   Lemma rho_ctx_over_wf_eq (rho : context -> term -> term) (Γ : context) : 
     rho_ctx_over_wf Γ (fun Γ x hin => rho Γ x) =
@@ -655,7 +653,7 @@ Section Rho.
     - clear -eqx Hx. abstract (invd; d).
     - clear -eqx Hx. abstract (invd; d).
   Defined.
-
+  
   Notation rho_predicate := (rho_predicate_gen rho).
   Notation rho_br := (map_br_gen rho).
   Notation rho_ctx_over Γ :=
@@ -693,7 +691,7 @@ Section Rho.
   Lemma map_fix_rho_map t Γ mfix ctx H : 
     @map_fix_rho t (fun Γ x Hx => rho Γ x) Γ ctx mfix H = 
     map_fix rho Γ ctx mfix.
-  Proof. 
+  Proof.
     unfold map_fix_rho. now rewrite map_In_spec.
   Qed.
 
@@ -1527,7 +1525,7 @@ Section Rho.
     renaming Γ Δ r ->
     on_free_vars P t ->
     rename r (rho Γ t) = rho Δ (rename r t).
-  Proof.
+  Proof using cf Σ wfΣ.
     revert t Γ Δ r P.
     refine (PCUICDepth.term_ind_depth_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       intros until Γ; intros Δ r P Hr ont; try subst Γ; try rename Γ0 into Γ; repeat inv_on_free_vars.
@@ -1903,9 +1901,9 @@ Section Rho.
       rewrite {2}H.
       eapply shift_renaming; auto.
       clear. generalize #|m|. induction m using rev_ind. simpl. constructor.
-      intros. rewrite map_app !fold_fix_context_app. simpl. constructor. simpl. reflexivity. apply IHm.
+      intros. rewrite map_app !fold_fix_context_app. simpl. constructor. simpl. reflexivity. apply IHm; eauto.
   Qed.
-
+  
   Lemma rho_lift0 Γ Δ P t : 
     on_free_vars P t ->
     lift0 #|Δ| (rho Γ t) = rho (Γ ,,, Δ) (lift0 #|Δ| t).
@@ -2143,11 +2141,14 @@ Section Rho.
   Ltac inv_on_free_vars ::=
     match goal with
     | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-      progress (cbn in H || rewrite on_free_vars_mkApps in H);
+      progress (cbn in H || rewrite -> on_free_vars_mkApps in H);
       (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
         eapply forallb_All in H); intros
-    | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-      move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+    | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>  
+      let H0 := fresh in let H' := fresh in 
+      move/andP: H => [H0 H']; 
+      try rewrite -> shiftnP_xpredT in H0;
+      try rewrite -> shiftnP_xpredT in H'; intros
     end.
 
   Lemma pred1_on_free_vars_mfix_ind Γ Γ' P mfix0 mfix1 : 
@@ -3564,7 +3565,7 @@ Section Rho.
           eapply (All2_impl a1); solve_all. inv_on_free_vars.
           solve_all. unfold on_Trel in *; solve_all.
           solve_all. unfold on_Trel in *; solve_all. inv_on_free_vars.
-          eapply X3; eauto with fvs. now rewrite -> shiftnP_xpredT in b1.
+          eapply X3; eauto with fvs. 
           eapply on_contexts_app => //.
           eapply X0 => //.
         + eapply forallb_All in b. eapply All2_All_mix_left in X4; tea.
@@ -3608,7 +3609,7 @@ Section Rho.
       + rewrite -(rho_cofix_subst xpredT) //.  
         red in X3. eapply (pred_subst_rho_cofix Γ _ _ _ _ idx) => //; solve_all; unfold on_Trel in *; eauto with fvs.
         inv_on_free_vars. solve_all. inv_on_free_vars. solve_all.
-        eapply X0; eauto with fvs. now rewrite -> shiftnP_xpredT in b1.
+        eapply X6; eauto with fvs.
         eapply on_contexts_app => //. solve_all.
       + eapply forallb_All in b;eapply All2_All_mix_left in X4; tea.
         eapply All2_sym, All2_map_left; solve_all.
@@ -4034,7 +4035,7 @@ Section Rho.
       eapply All2_All_mix_left in X3; tea; eapply All2_impl; tea. unfold on_Trel.
       intros; cbn; intuition auto; inv_on_free_vars; eauto with fvs.
       rewrite (fix_context_map_fix xpredT) //; solve_all.
-      eapply X4. now rewrite -> shiftnP_xpredT in b.
+      eapply X2. 
       eapply on_contexts_app => //.
 
     - simp rho; simpl; simp rho.
@@ -4052,7 +4053,7 @@ Section Rho.
       eapply All2_All_mix_left in X3; tea; eapply All2_impl; tea. unfold on_Trel.
       intros; cbn; intuition auto; inv_on_free_vars; eauto with fvs.
       rewrite (fix_context_map_fix xpredT) //; solve_all.
-      eapply X4. now rewrite -> shiftnP_xpredT in b.
+      eapply X2.
       eapply on_contexts_app => //.
 
     - simp rho; simpl; econstructor; eauto with fvs.
@@ -4081,7 +4082,6 @@ Section Rho.
 
 End Rho.
 
-Notation fold_context_term f := (fold_context (fun Γ' => map_decl (f Γ'))).
 Notation rho_ctx Σ := (fold_context_term (rho Σ)).
 
 (* The diamond lemma for parallel reduction follows directly from the triangle lemma. *)
@@ -4093,7 +4093,7 @@ Corollary pred1_diamond {cf : checker_flags} {Σ : global_env} {wfΣ : wf Σ} {�
   pred1 Σ Γ Δ' t v ->
   pred1 Σ Δ (rho_ctx Σ Γ) u (rho Σ (rho_ctx Σ Γ) t) *
   pred1 Σ Δ' (rho_ctx Σ Γ) v (rho Σ (rho_ctx Σ Γ) t).
-Proof.
+Proof using.
   intros.
   split; eapply triangle; auto.
 Qed.

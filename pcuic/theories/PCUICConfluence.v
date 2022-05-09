@@ -1773,11 +1773,15 @@ Ltac inv_on_free_vars_xpredT :=
   | [ H : is_true (_ && _) |- _ ] => 
     move/andP: H => []; intros
   | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    progress (cbn in H || rewrite -> on_free_vars_mkApps in H);
     (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
       eapply forallb_All in H); intros
   | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+    let H0 := fresh in let H' := fresh in 
+    move/andP: H => [H0 H']; 
+    try rewrite -> shiftnP_xpredT in H0;
+    try rewrite -> shiftnP_xpredT in H';
+    intros
   | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
     rewrite -> test_context_k_closed_on_free_vars_ctx in H
   end.
@@ -1953,7 +1957,7 @@ Section RedPred.
     intros onΓ onM r.
     induction r using red1_ind_all; intros; pcuic.
     all:repeat inv_on_free_vars_xpredT.
-    all:try solve [econstructor; pcuic; 
+    all:try solve [econstructor; pcuic;
       (eapply All_All2_refl, All_refl || eapply OnOne2_All2 || idtac); eauto 7 using pred1_refl, pred1_ctx_over_refl with fvs ].
     - eapply OnOne2_prod_inv in X as [].
       eapply OnOne2_apply in o0 => //.
@@ -2072,7 +2076,7 @@ Section PredRed.
     on_free_vars_ctx xpredT Γ ->
     on_free_vars xpredT M ->
     red Σ Γ M N.
-  Proof.
+  Proof using cf Σ wfΣ.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ 
       (fun Γ Γ' M N => on_free_vars_ctx xpredT Γ -> on_free_vars xpredT M -> red Σ Γ M N)  
       (fun Γ Γ' => on_free_vars_ctx xpredT Γ -> All2_fold (on_decls (fun Γ Γ' M N => red Σ Γ M N)) Γ Γ')%type
@@ -2172,7 +2176,7 @@ Section PredRed.
       eapply (All2_impl X3); unfold on_Trel in *; intuition auto; repeat inv_on_free_vars_xpredT; auto.
       eapply b1; eauto with fvs. solve_all.
       eapply red_step. econstructor; eauto. 2:eauto.
-      eapply (is_constructor_pred1 Σ). eapply (All2_impl X4); intuition eauto. auto.
+      eapply (is_constructor_pred1 Σ); eauto. eapply (All2_impl X4); intuition eauto.
 
     - transitivity (tCase ci p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
       destruct p1; unfold on_Trel in *; cbn in *.
@@ -2684,7 +2688,7 @@ Definition rho_ws_pair {cf:checker_flags} (Σ : global_env) {wfΣ : wf Σ} (p : 
   (rho_ctx Σ p; rho Σ (rho_ctx Σ p) p). 
 Next Obligation.
   destruct p as [Γ t]. cbn.
-  pose proof (@triangle _ Σ wfΣ Γ Γ (tRel 0) (tRel 0)).
+  pose proof (@triangle cf Σ wfΣ Γ Γ (tRel 0) (tRel 0)).
   forward X. eauto with fvs.
   forward X. trivial.
   forward X. apply pred1_refl.

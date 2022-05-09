@@ -383,7 +383,7 @@ Section ConvCongruences.
   Proof.
     intros [clΓ clt r].
     assert (clu := red_on_free_vars r clt byfvs).
-    unshelve eapply (red_ws_red _ (exist Γ clΓ) (exist t byfvs) (exist u byfvs)) in r; cbn; eauto with fvs.
+    unshelve eapply (red_ws_red _ (exist Γ clΓ) (exist t byfvs) (exist u _)) in r; cbn; eauto with fvs.
     depind r. all:try solve [econstructor; split; eauto with fvs].
     destruct y as [y hy]; econstructor 3; [eapply IHr1|eapply IHr2]; reflexivity.
   Qed.

@@ -1066,7 +1066,7 @@ Section EqualityDec.
     reflect (eq_universe Σ u u') (check_eqb_universe G u u').
   Proof.
     intros.
-    apply/(equivP idP) ; split.
+    apply (equivP idP); split.
     all: pose proof hΣ' as hΣ' ; sq.
     - intros e.
       eapply check_eqb_universe_spec' in e ; eauto.
@@ -1085,7 +1085,7 @@ Section EqualityDec.
   reflect (leq_universe Σ u u') (check_leqb_universe G u u').
   Proof.
     intros.
-    apply/(equivP idP) ; split.
+    apply (equivP idP) ; split.
     all: pose proof hΣ' as hΣ' ; sq.
     - intros e.
       eapply check_leqb_universe_spec' in e ; eauto.

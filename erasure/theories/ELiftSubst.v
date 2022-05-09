@@ -146,7 +146,7 @@ Lemma subst_rel_eq :
     subst u n (tRel p) = lift0 n t.
 Proof.
   intros; simpl in |- *. subst p.
-  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite -> H1, H.
   reflexivity. intros. lia.
 Qed.
 
@@ -426,7 +426,7 @@ Proof.
     simpl in e0. injection e0 as <-.
     rewrite commut_lift_subst_rec. arith_congr. lia.
   - f_equal; auto; solve_all. f_equal.
-    now rewrite !Nat.add_assoc, H0.
+    now rewrite -> !Nat.add_assoc, H0.
 Qed.
 
 Lemma distr_subst :
@@ -540,7 +540,7 @@ Proof.
 
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
-  - f_equal. now rewrite H, Nat.add_assoc.
+  - f_equal. now rewrite -> H, Nat.add_assoc.
 Qed.
 
 Lemma isLambda_subst (s : list term) k (bod : term) :

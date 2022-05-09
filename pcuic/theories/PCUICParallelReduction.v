@@ -931,7 +931,7 @@ Hint Extern 4 (on_contexts_over _ _ _ ?X) =>
 Ltac inv_on_free_vars ::=
   match goal with
   | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    progress (cbn in H || rewrite -> on_free_vars_mkApps in H);
     (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
       eapply forallb_All in H); intros
   end.

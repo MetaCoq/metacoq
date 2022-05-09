@@ -43,3 +43,9 @@ mrproper:
 
 cleanplugin: Makefile.plugin
 #	make -f Makefile.plugin clean
+
+vos: Makefile.pcuic
+	$(MAKE) -f Makefile.pcuic vos
+
+quick: Makefile.pcuic
+	$(MAKE) -f Makefile.pcuic COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

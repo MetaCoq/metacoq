@@ -2336,76 +2336,94 @@ Section InnerLoop.
     apply cl, clauses_conclusions_spec. now exists x.
   Qed.
 
+  Section innerloop_partition.
+    Context (W : LevelSet.t) (cls : clauses).
+    Context (premconclW conclW : clauses).
+    Context (prf : [/\ strict_subset W V, ~ LevelSet.Empty W, U ⊂_lset W, clauses_conclusions cls ⊂_lset W,
+      Clauses.Equal premconclW (cls ⇂ W) & Clauses.Equal conclW (Clauses.diff (cls ↓ W) (cls ⇂ W))]).
+
+    #[tactic="idtac"]
+    Equations? inner_loop_partition (m : model) (mW : model_of W m) : result W U cls m
+      by wf (measure W cls m) lt :=
+      inner_loop_partition m mW with loop W LevelSet.empty premconclW m _ _ := { 
+        (* premconclW = cls ⇂ W , conclW = (Clauses.diff (cls ↓ W) (cls ⇂ W)) *)
+        | Loop => Loop
+        (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
+          By invariant Wr ⊂ W *)
+        | Model Wr mr hsub with inspect (check_model conclW (Wr, model_model mr)) := { 
+          | exist None eqm => Model W {| model_model := model_model mr |} _
+          | exist (Some (Wconcl, mconcl)) eqm with inner_loop_partition mconcl _ := {
+            (* Here Wconcl ⊂ Wr by invariant *)
+              | Loop => Loop
+              | Model Wr' mr' hsub' => Model Wr' {| model_model := model_model mr' |} hsub' }
+              (* Here Wr' ⊂ W by invariant *)
+        (* We check if the new model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
+        (* We're entitled to recursively compute a better model starting with mconcl, 
+          as we have made the measure decrease: 
+          some atom in W has been strictly updated in Wconcl. *)
+            } }.
+    Proof.
+      all:cbn [model_model]; clear loop inner_loop_partition.
+      all:try solve [try apply LevelSet.subset_spec; try reflexivity].
+      all:try apply LevelSet.subset_spec in hsub.
+      all:auto.
+      all:try destruct prf as [WV neW UW clsW eqprem eqconcl].
+      all:try solve [intuition auto].
+      all:try rewrite eqconcl in eqm.
+      - split => //. rewrite eqprem. apply clauses_conclusions_restrict_clauses. lsets.
+      - left. now eapply strict_subset_cardinal.
+      - eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
+        eapply model_of_ext. 2:tea. apply mr.
+      - eapply (check_model_spec_diff mr) in eqm as [subwwconcl subwconcl hm hext] => //.
+        pose proof (clauses_conclusions_diff_left cls W (cls ⇂ W)).
+        destruct hm as [cll [hind nvalid inwconcl hl]].
+        eapply Nat.lt_le_trans.
+        2:{ eapply measure_le; eapply mr. }
+        eapply measure_lt.
+        { eapply model_map_outside_weaken. eapply hext. lsets. }
+        { apply hext. }
+        eapply invalid_clause_measure in nvalid; tea.
+        exists (levelexpr_level (concl cll)).
+        split => //.
+        eapply clauses_conclusions_diff_left; tea.
+        eapply clauses_conclusions_spec. exists cll; split => //. exact hind.
+      - apply mr'.
+      (* - apply clauses_conclusions_clauses_with_concl. *)
+      - apply mr'.
+      - eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
+        eapply model_ext_trans_weaken. 2:apply mr. lsets.
+        transitivity mconcl. eapply model_extension_weaken. 2:tea. lsets. apply mr'.
+      - apply mr.
+      (* - eapply clauses_conclusions_clauses_with_concl. *)
+      - rewrite check_model_is_model in eqm.
+        2:{ eapply model_of_diff, mr. }
+        have okm := (model_ok mr).
+        have mu := is_model_union okm eqm.
+        rewrite {1}eqprem in mu.
+        rewrite union_diff_eq in mu.
+        rewrite union_restrict_with_concl in mu.
+        now rewrite (clauses_conclusions_eq _ _ clsW).
+      - apply mr.
+      - split; lsets.
+    Qed.
+  End innerloop_partition.
+
+  (* We first partition the clauses among those that mention only W and the ones that can mention other atoms.
+     We then call the loop on these two sets of clauses, which not need to change during the recursive calls.
+    *)
   #[tactic="idtac"]
   Equations? inner_loop (W : LevelSet.t) (cls : clauses) (m : model)
     (prf : [/\ strict_subset W V, ~ LevelSet.Empty W, U ⊂_lset W, clauses_conclusions cls ⊂_lset W & model_of W m]) : 
-    result W U cls m
-    by wf (measure W cls m) lt :=
-    inner_loop W cls m subWV with inspect (Clauses.partition (premise_restricted_to W) cls) :=
-      | exist (premconclW, conclW) eqcls with loop W LevelSet.empty premconclW m _ _ := { 
-       (* premconclW = cls ⇂ W , conclW = (Clauses.diff (cls ↓ W) (cls ⇂ W)) *)
-      | Loop => Loop
-      (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
-         By invariant Wr ⊂ W *)
-      | Model Wr mr hsub with inspect (check_model conclW (Wr, model_model mr)) := { 
-        | exist None eqm => Model W {| model_model := model_model mr |} _
-        | exist (Some (Wconcl, mconcl)) eqm with inner_loop W cls mconcl _ := {
-          (* Here Wconcl ⊂ Wr by invariant *)
-            | Loop => Loop
-            | Model Wr' mr' hsub' => Model Wr' {| model_model := model_model mr' |} hsub' }
-            (* Here Wr' ⊂ W by invariant *)
-      (* We check if the new model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
-      (* We're entitled to recursively compute a better model starting with mconcl, 
-        as we have made the measure decrease: 
-        some atom in W has been strictly updated in Wconcl. *)
-          } }.
+    result W U cls m := 
+    inner_loop W cls m prf with inspect (Clauses.partition (premise_restricted_to W) cls) :=
+      | exist (premconclW, conclW) eqp => inner_loop_partition W cls premconclW conclW _ m _.
   Proof.
-    all:cbn [model_model]; clear loop inner_loop.
-    all:try solve [try apply LevelSet.subset_spec; try reflexivity].
-    all:try apply LevelSet.subset_spec in hsub.
-    all:auto.
-    all:try destruct subWV as [WV neW UW mW].
-    all:try solve [intuition auto].
-    all:eapply (clauses_partition_spec mW) in eqcls as [eqprem eqconcl]; try rewrite {1}(clauses_conclusions_eq _ _ mW) in eqconcl; try rewrite eqconcl in eqm.
-    - split => //. rewrite eqprem. apply clauses_conclusions_restrict_clauses. lsets.
-    - left. now eapply strict_subset_cardinal.
-    - split => //.
-     (* assert (mWr : model_of Wr m). eapply model_of_subset; tea. lsets. *)
-      eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
-      eapply model_of_ext. 2:tea. apply mr.
-    - eapply (check_model_spec_diff mr) in eqm as [subwwconcl subwconcl hm hext] => //.
-      pose proof (clauses_conclusions_diff_left cls W (cls ⇂ W)).
-      destruct hm as [cll [hind nvalid inwconcl hl]].
-      eapply Nat.lt_le_trans.
-      2:{ eapply measure_le; eapply mr. }
-      eapply measure_lt.
-      { eapply model_map_outside_weaken. eapply hext. lsets. }
-      { apply hext. }
-      eapply invalid_clause_measure in nvalid; tea.
-      exists (levelexpr_level (concl cll)).
-      split => //.
-      eapply clauses_conclusions_diff_left; tea.
-      eapply clauses_conclusions_spec. exists cll; split => //. exact hind.
-    - apply mr'.
-    (* - apply clauses_conclusions_clauses_with_concl. *)
-    - apply mr'.
-    - eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
-      eapply model_ext_trans_weaken. 2:apply mr. lsets.
-      transitivity mconcl. eapply model_extension_weaken. 2:tea. lsets. apply mr'.
-    - apply mr.
-    (* - eapply clauses_conclusions_clauses_with_concl. *)
-    - rewrite check_model_is_model in eqm.
-      2:{ eapply model_of_diff, mr. }
-      have okm := (model_ok mr).
-      have mu := is_model_union okm eqm.
-      rewrite {1}eqprem in mu.
-      rewrite union_diff_eq in mu.
-      rewrite union_restrict_with_concl in mu.
-      now rewrite (clauses_conclusions_eq _ _ mW).
-    - apply mr.
-    - split; lsets.
+    - destruct prf as [subWV neW UW clsW mW].
+      eapply (clauses_partition_spec clsW) in eqp as [eqprem eqconcl].
+      split => //. now rewrite -(clauses_conclusions_eq _ _ clsW).
+    - apply prf.
   Qed.
-
+  
 End InnerLoop.
 
 Lemma diff_cardinal_inter V W : #|LevelSet.diff V W| = #|V| - #|LevelSet.inter V W|.

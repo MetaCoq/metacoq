@@ -2516,13 +2516,13 @@ fun u e => match e with
   fun u => map (subst_instance_level_expr u).
 
 #[global] Instance subst_instance_cstr : UnivSubst LevelConstraint.t :=
-  fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
+  fun u c => (subst_instance_level u c.1.1, c.1.2, subst_instance_level u c.2).
 
 #[global] Instance subst_instance_univ_cstr : UnivSubst UnivConstraint.t :=
   fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
 #[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
-  fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance u c))
+  fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
                                 ctrs ConstraintSet.empty.
 
 #[global] Instance subst_instance_univ : UnivSubst Universe.t :=

@@ -157,6 +157,7 @@ Definition mkApps_decompose_app t :
   Section Reverse_Induction.
 
     Variable A : Type.
+    Set Suggest Proof Using.
 
     Lemma rev_list_ind : forall P:list A-> Type,
       P [] ->

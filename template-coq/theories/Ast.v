@@ -85,15 +85,15 @@ Section map_predicate.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_puints (p : predicate term) :
     uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
 End map_predicate.
 
@@ -176,19 +176,19 @@ Section map_predicate_k.
 
   Lemma map_k_pparams k (p : predicate term) :
     map (f k) (pparams p) = pparams (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_preturn k (p : predicate term) :
     f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
     pcontext p = pcontext (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition test_predicate_k (instp : Instance.t -> bool) 
     (p : nat -> term -> bool) k (pred : predicate term) :=
@@ -209,7 +209,7 @@ Section Branch.
   Global Instance branch_eq_dec :
     Classes.EqDec term ->
     Classes.EqDec branch.
-  Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+  Proof using Type. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
   Definition string_of_branch (f : term -> string) (b : branch) :=
   "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
@@ -233,7 +233,7 @@ Section map_branch.
 
     Lemma map_bbody (b : branch term) :
       bbodyf (bbody b) = bbody (map_branch b).
-    Proof. destruct b; auto. Qed.
+    Proof using Type. destruct b; auto. Qed.
 End map_branch.
 
 Lemma map_branch_map_branch

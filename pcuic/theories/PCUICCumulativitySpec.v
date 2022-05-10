@@ -222,7 +222,7 @@ Section ContextConversion.
   Notation cumul_context := (cumul_context cumulSpec0 Σ).
 
   Global Instance cumul_pb_ctx_refl pb : Reflexive (cumul_pb_context cumulSpec0 pb Σ).
-  Proof.
+  Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
     reflexivity.
   Qed.

@@ -22,19 +22,19 @@ Section CtxReduction.
   Lemma red_prod_alt Γ na M M' N N' :
     red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
     red Σ Γ (tProd na M N) (tProd na M' N').
-  Proof.
+  Proof using Type.
     intros. eapply (transitivity (y := tProd na M' N)).
     * now eapply (red_ctx_congr (tCtxProd_l _ tCtxHole _)).
     * now eapply (red_ctx_congr (tCtxProd_r _ _ tCtxHole)).
   Qed.
 
   Lemma red_decls_refl Γ Δ d : red_decls Σ Γ Δ d d.
-  Proof.
+  Proof using Type.
     destruct d as [na [b|] ty]; constructor; auto.
   Qed.
 
   Lemma red_context_refl Γ : red_context Σ Γ Γ.
-  Proof.
+  Proof using Type.
     apply All2_fold_refl => ? ?.
     apply red_decls_refl.
   Qed.
@@ -42,7 +42,7 @@ Section CtxReduction.
   Lemma red_context_app_same {Γ Δ Γ'} : 
     red_context Σ Γ Δ ->
     red_context Σ (Γ ,,, Γ') (Δ ,,, Γ').
-  Proof.
+  Proof using Type.
     intros r.
     eapply All2_fold_app => //.
     apply All2_fold_refl.
@@ -56,7 +56,7 @@ Section CtxReduction.
        #|pars| ctx ->
     forallb (on_free_vars P) pars ->
     on_ctx_free_vars (shiftnP #|ctx| P) (Γ,,, PCUICCases.inst_case_context pars puinst ctx).
-  Proof.
+  Proof using Type.
     move=> onΓ onctx hpars.
     relativize #|ctx|; [erewrite on_ctx_free_vars_extend, onΓ|now len].
     eapply on_free_vars_ctx_inst_case_context; tea; auto.
@@ -77,7 +77,7 @@ Section CtxReduction.
     red1 Σ Γ t u ->
     red_context Σ Δ Γ ->
     red Σ Δ t u.
-  Proof.
+  Proof using wfΣ.
     move=> onΓ onΔ ont r Hctx.
     revert P onΓ ont Δ onΔ Hctx.
     induction r using red1_ind_all; intros P onΓ ont Δ onΔ Hctx;
@@ -187,7 +187,7 @@ Section CtxReduction.
     red Σ Γ t u ->
     red_context Σ Δ Γ ->
     red Σ Δ t u.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onΔ ont.
     induction 1; eauto using red1_red_ctx.
     intros H.
@@ -199,7 +199,7 @@ Section CtxReduction.
     red_context Σ Γ Δ ->
     red_context_rel Σ Γ Γ' Δ' ->
     red_context Σ (Γ ,,, Γ') (Δ ,,, Δ').
-  Proof.
+  Proof using Type.
     intros r r'.
     eapply All2_fold_app => //.
     eapply All2_fold_impl; tea => /= Γ0 Γ'0 d d'.
@@ -209,7 +209,7 @@ Section CtxReduction.
   Lemma red_context_app_same_left {Γ Γ' Δ'} : 
     red_context_rel Σ Γ Γ' Δ' ->
     red_context Σ (Γ ,,, Γ') (Γ ,,, Δ').
-  Proof.
+  Proof using Type.
     intros h.
     eapply All2_fold_app => //.
     apply red_context_refl.
@@ -218,7 +218,7 @@ Section CtxReduction.
   Lemma on_ctx_free_vars_cons P d Γ : 
     on_ctx_free_vars P (d :: Γ) =
     on_ctx_free_vars (addnP 1 P) Γ && (P 0 ==> on_free_vars_decl (addnP 1 P) d).
-  Proof.
+  Proof using Type.
     rewrite (on_ctx_free_vars_app _ _ [_]) on_ctx_free_vars_tip /=.
     bool_congr.
   Qed.
@@ -227,7 +227,7 @@ Section CtxReduction.
     on_ctx_free_vars P Γ ->
     red_context Σ Γ Δ ->
     on_ctx_free_vars P Δ.
-  Proof.
+  Proof using wfΣ.
     intros onΓ.
     induction 1 in P, onΓ |- *; auto.
     rewrite /= on_ctx_free_vars_cons in onΓ.
@@ -247,7 +247,7 @@ Section CtxReduction.
     on_ctx_free_vars P Δ ->
     red_context_rel Σ Γ Δ Δ' ->
     on_ctx_free_vars P Δ'.
-  Proof.
+  Proof using wfΣ.
     intros onΓ onΔ.
     induction 1 in onΓ, P, onΔ |- *; auto.
     rewrite /= on_ctx_free_vars_cons in onΔ.
@@ -275,7 +275,7 @@ Section CtxReduction.
       P k ==> on_free_vars_decl (addnP (S k) P) d) ctx.
 
   Lemma addnP_closedP n P : addnP 1 (closedP (S n) P) =1 closedP n (addnP 1 P).
-  Proof.
+  Proof using Type.
     intros i. rewrite /addnP /closedP /shiftnP /=.
     repeat (PCUICSigmaCalculus.nat_compare_specs => //).
   Qed.
@@ -283,7 +283,7 @@ Section CtxReduction.
   Lemma red_context_trans Γ Δ Δ' : 
     on_ctx_free_vars (closedP #|Γ| xpredT) Γ ->
     red_context Σ Γ Δ -> red_context Σ Δ Δ' -> red_context Σ Γ Δ'.
-  Proof.
+  Proof using wfΣ.
     intros onctx H; induction H in onctx, Δ' |- *; auto.
     intros H'; depelim H'.
     move: onctx; rewrite on_ctx_free_vars_cons => /andP[] /= onΓ ond.
@@ -314,7 +314,7 @@ Section CtxReduction.
     red_context Σ Γ Δ ->
     red_context_rel Σ Δ Γ' Δ' ->
     red_context Σ (Γ ,,, Γ') (Δ ,,, Δ').
-  Proof.
+  Proof using wfΣ.
     intros onf red red'.
     eapply red_context_trans; tea.
     - eapply red_context_app_same. tea.
@@ -324,7 +324,7 @@ Section CtxReduction.
   Lemma red_context_rel_inv {Γ Γ' Δ'} : 
     red_context Σ (Γ ,,, Γ') (Γ ,,, Δ') ->
     red_context_rel Σ Γ Γ' Δ'.
-  Proof.
+  Proof using Type.
     intros r.
     eapply All2_fold_app_inv => //.
     move: (All2_fold_length r). len.
@@ -358,7 +358,7 @@ Section CtxReduction.
     (forall Γ d d', P Γ d d' -> Q Γ Γ d d') ->
     (forall Γ Δ d, Q Γ Δ d d) ->
     All2_fold Q Γ Δ.
-  Proof.
+  Proof using Type.
     intros onc HPQ HQ. 
     induction onc; try constructor; auto.
     - apply All2_fold_refl => //.
@@ -368,7 +368,7 @@ Section CtxReduction.
   Lemma red_ctx_rel_red_context_rel Γ Δ Δ' :
     on_ctx_free_vars (closedP #|Γ,,, Δ| xpredT) (Γ,,, Δ) ->
     red_ctx_rel Σ Γ Δ Δ' <~> red_context_rel Σ Γ Δ Δ'.
-  Proof.
+  Proof using wfΣ.
     intros cl.
     split.
     - rewrite /red_ctx_rel /red_context_rel; induction 1.

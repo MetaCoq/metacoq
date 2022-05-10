@@ -42,7 +42,7 @@ Section Inversion.
     Σ ;;; Γ |- U : tSort s ->
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Γ ⊢ T ≤ U.
-  Proof.
+  Proof using wfΣ.
     intros. eapply into_ws_cumul_pb; tea.
     - eapply typing_wf_local in X; eauto with fvs.
     - eapply PCUICClosedTyp.type_closed in X.
@@ -54,7 +54,7 @@ Section Inversion.
   Lemma typing_closed_ctx Γ t T : 
     Σ ;;; Γ |- t : T ->
     is_closed_context Γ.
-  Proof.
+  Proof using wfΣ.
     move/typing_wf_local; eauto with fvs.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
@@ -62,7 +62,7 @@ Section Inversion.
   Lemma typing_ws_cumul_pb le Γ t T : 
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤[le] T.
-  Proof.
+  Proof using wfΣ.
     intros ht. apply into_ws_cumul_pb; auto. destruct le ; reflexivity.
     eauto with fvs.
     eapply PCUICClosedTyp.type_closed in ht.
@@ -95,7 +95,7 @@ Section Inversion.
     is_closed_context Γ ->
     nth_error Γ n = Some d ->
     is_open_term Γ (lift0 (S n) (decl_type d)).
-  Proof.
+  Proof using Type.
     intros isc hnth.
     rewrite -on_free_vars_ctx_on_ctx_free_vars in isc.
     rewrite <- (addnP0) in isc.
@@ -112,21 +112,21 @@ Section Inversion.
         wf_local Σ Γ ×
         (nth_error Γ n = Some decl) ×
         Σ ;;; Γ ⊢ lift0 (S n) (decl_type decl) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ n T h. invtac h.
   Qed.
 
   Lemma inversion_Var :
     forall {Γ i T},
       Σ ;;; Γ |- tVar i : T -> False.
-  Proof.
+  Proof using Type.
     intros Γ i T h. dependent induction h. assumption.
   Qed.
 
   Lemma inversion_Evar :
     forall {Γ n l T},
       Σ ;;; Γ |- tEvar n l : T -> False.
-  Proof.
+  Proof using Type.
     intros Γ n l T h. dependent induction h. assumption.
   Qed.
 
@@ -136,7 +136,7 @@ Section Inversion.
       wf_local Σ Γ ×
       wf_universe Σ s ×
       Σ ;;; Γ ⊢ tSort (Universe.super s) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ s T h. invtac h.
   Qed.
 
@@ -147,7 +147,7 @@ Section Inversion.
         Σ ;;; Γ |- A : tSort s1 ×
         Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ na A B T h. invtac h.
   Qed.
 
@@ -157,7 +157,7 @@ Section Inversion.
       ∑ s1 s2 (H1 : Σ ;;; Γ |- A : tSort s1) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
         typing_size H1 < typing_size H × typing_size H2 < typing_size H ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ na A B T h. unshelve invtac h; eauto.
     all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); lia.
   Qed.
@@ -169,7 +169,7 @@ Section Inversion.
         Σ ;;; Γ |- A : tSort s ×
         Σ ;;; Γ ,, vass na A |- t : B ×
         Σ ;;; Γ ⊢ tProd na A B ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ na A t T h. invtac h.
   Qed.
 
@@ -181,7 +181,7 @@ Section Inversion.
         Σ ;;; Γ |- b : B ×
         Σ ;;; Γ ,, vdef na b B |- t : A ×
         Σ ;;; Γ ⊢ tLetIn na b B A ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ na b B t T h. invtac h.
   Qed.
 
@@ -192,7 +192,7 @@ Section Inversion.
         Σ ;;; Γ |- u : tProd na A B ×
         Σ ;;; Γ |- v : A ×
         Σ ;;; Γ ⊢ B{ 0 := v } ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ u v T h. invtac h.
   Qed.
 
@@ -202,7 +202,7 @@ Section Inversion.
       ∑ na A B s  (H1 : Σ ;;; Γ |- u : tProd na A B) (H2 : Σ ;;; Γ |- v : A) (H3 : Σ ;;; Γ |- tProd na A B : tSort s),
       typing_size H1 < typing_size H × typing_size H2 < typing_size H × typing_size H3 < typing_size H ×
         Σ ;;; Γ ⊢ B{ 0 := v } ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ u v T h. unshelve invtac h.
     4,5,6,10,11,12: eauto.
     all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); try fold (typing_size h3); lia.
@@ -216,7 +216,7 @@ Section Inversion.
         declared_constant Σ c decl ×
         (consistent_instance_ext Σ decl.(cst_universes) u) ×
         Σ ;;; Γ ⊢ subst_instance u (cst_type decl) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ c u T h. invtac h.
   Qed.
 
@@ -228,7 +228,7 @@ Section Inversion.
         declared_inductive Σ ind mdecl idecl ×
         consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ ;;; Γ ⊢ subst_instance u idecl.(ind_type) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ ind u T h. invtac h.
   Qed.
 
@@ -240,7 +240,7 @@ Section Inversion.
         declared_constructor (fst Σ) (ind, i) mdecl idecl cdecl ×
         consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ;;; Γ ⊢ type_of_constructor mdecl cdecl (ind, i) u ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ ind i u T h. invtac h.
   Qed.
   Import PCUICEquality.
@@ -279,7 +279,7 @@ Section Inversion.
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         case_inversion_data Γ ci p c brs mdecl idecl indices ×
         Σ ;;; Γ ⊢ mkApps ptm (indices ++ [c]) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ ci p c brs T h.
     dependent induction h.
     {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ; 
@@ -298,7 +298,7 @@ Section Inversion.
         Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ×
         #|args| = ind_npars mdecl ×
         Σ ;;; Γ ⊢ (subst0 (c :: List.rev args)) pdecl.(proj_type)@[u] ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ p c T h. invtac h.
   Qed.
 
@@ -314,7 +314,7 @@ Section Inversion.
           Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ ⊢ dtype decl ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ mfix n T h. invtac h.
   Qed.
 
@@ -331,7 +331,7 @@ Section Inversion.
         ) mfix ×
         wf_cofixpoint Σ mfix ×
         Σ ;;; Γ ⊢ decl.(dtype) ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ mfix idx T h. invtac h.
   Qed.
 
@@ -349,7 +349,7 @@ Section Inversion.
       ∑ A,
         Σ ;;; Γ ,,, Δ |- t : A ×
         Σ ;;; Γ ⊢ it_mkProd_or_LetIn Δ A ≤ T.
-  Proof.
+  Proof using wfΣ.
     intros Γ Δ t T h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
     - eexists. split ; eauto. cbn.

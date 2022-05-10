@@ -161,7 +161,7 @@ Section eval_mkApps_rect.
           → P (tApp f11 a) (tApp f' a'))
     → (∀ t : term, atom t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
-Proof.
+Proof using Type.
   intros ?????????????????? H.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).

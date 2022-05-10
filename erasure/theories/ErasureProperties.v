@@ -557,7 +557,7 @@ Section trans_lookups.
 
   (* TODO simplify using lookup_*_declared lemmas *)
   Lemma trans_lookup_constant kn : isSome (lookup_constant Σ kn) -> isSome (EGlobalEnv.lookup_constant Σ' kn).
-  Proof.
+  Proof using g.
     unfold lookup_constant.
     destruct (lookup_env Σ kn) as [[]|] eqn:hl => //.
     eapply g in hl as [? []].
@@ -565,7 +565,7 @@ Section trans_lookups.
   Qed.
 
   Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // _.
     eapply lookup_inductive_declared in hl.
@@ -574,7 +574,7 @@ Section trans_lookups.
   Qed.
 
   Lemma trans_lookup_constructor kn c : isSome (lookup_constructor Σ kn c) -> isSome (EGlobalEnv.lookup_constructor Σ' kn c).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= // _.
     eapply (lookup_constructor_declared (id:=(kn,c))) in hl.
@@ -590,7 +590,7 @@ Section trans_lookups.
   Lemma lookup_projection_lookup_constructor {p mdecl idecl cdecl pdecl} :
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
     lookup_constructor Σ p.(proj_ind) 0 = Some (mdecl, idecl, cdecl).
-  Proof.
+  Proof using Type.
     rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
     now destruct nth_error => //.
   Qed.
@@ -598,7 +598,7 @@ Section trans_lookups.
   Lemma trans_lookup_projection p : 
     isSome (lookup_projection Σ p) -> 
     isSome (EGlobalEnv.lookup_projection Σ' p).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_projection Σ p) as [[[[]]]|] eqn:hl => /= // _.
     pose proof (lookup_projection_lookup_constructor hl) as lc.

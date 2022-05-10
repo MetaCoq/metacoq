@@ -61,7 +61,7 @@ Section Principality.
     wf_local Σ Γ ->
     wf_universe Σ u ->
     isWfArity Σ Γ (tSort u).
-  Proof.
+  Proof using Type.
     move=> wfΓ wfu.
     split. eapply isType_Sort; eauto. exists [], u. intuition auto.
   Qed.
@@ -72,7 +72,7 @@ Section Principality.
   
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
     ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
-  Proof.
+  Proof using wfΣ.
     intros hA.
     induction u in Γ, A, hA |- * using term_forall_list_ind.
     - apply inversion_Rel in hA as iA. 2: auto.
@@ -339,7 +339,7 @@ Section Principality.
   (** A weaker version that is often convenient to use. *)
   Lemma common_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
     ∑ C, Σ ;;; Γ ⊢ C ≤ A × Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C.
-  Proof.
+  Proof using wfΣ.
     intros hA hB.
     destruct (principal_type hA) as [P HP]; eauto.
     exists P; split; eauto.

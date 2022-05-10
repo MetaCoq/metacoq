@@ -303,13 +303,13 @@ Section ContextConversion.
   Notation cumul_context Γ Γ' := (All2_fold (cumul_decls cumulAlgo_gen Σ) Γ Γ').
 
   Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls cumulAlgo_gen Σ)).
-  Proof.
+  Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'. 
   Qed.
 
   Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls cumulAlgo_gen Σ)).
-  Proof.
+  Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty];
      econstructor; eauto; pcuic; try eapply conv_refl'; eapply cumul_refl'.

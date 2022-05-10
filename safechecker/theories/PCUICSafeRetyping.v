@@ -162,7 +162,7 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
 Lemma welltyped_subterm {Σ Γ t} :
   wellinferred Σ Γ t -> on_subterm (wellinferred Σ) (well_sorted Σ) Γ t.
-Proof.
+Proof using Type.
   destruct t; simpl; auto; intros [T HT]; sq.
   now inversion HT ; auto; split; do 2 econstructor.
   now inversion HT ; auto; split; econstructor ; [econstructor|..].
@@ -265,7 +265,7 @@ Qed.
 
   Lemma lookup_ind_decl_complete Σ (wfΣ : abstract_env_ext_rel X Σ) ind e : lookup_ind_decl ind = TypeError e -> 
     ((∑ mdecl idecl, declared_inductive Σ ind mdecl idecl) -> False).
-  Proof.
+  Proof using Type.
     cbn. 
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
@@ -790,7 +790,7 @@ Qed.
   Lemma squash_isType_welltyped :
     forall {Σ : global_env_ext} {Γ : context} {T : term},
     ∥ isType Σ Γ T ∥ -> welltyped Σ Γ T.
-  Proof. intros. destruct H. now eapply isType_welltyped. Qed.
+  Proof using Type. intros. destruct H. now eapply isType_welltyped. Qed.
 
   Opaque type_of_typing.
   Equations? sort_of_type (Γ : context) (t : PCUICAst.term) 
@@ -871,7 +871,7 @@ Qed.
     
   Theorem principal_types {Γ t} (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) : 
     ∑ P, ∥ forall T Σ (wfΣ : abstract_env_ext_rel X Σ), Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
-  Proof.
+  Proof using nor.
     unshelve eexists (infer Γ _ t _); intros. 
     - destruct (wt _ wfΣ).
       pose (hΣ _ wfΣ); sq.

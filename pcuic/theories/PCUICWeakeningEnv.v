@@ -269,7 +269,7 @@ Lemma extends_lookup Σ Σ' c decl :
   extends Σ Σ' ->
   lookup_env Σ c = Some decl ->
   lookup_env Σ' c = Some decl.
-Proof.
+Proof using P Pcmp cf.
   destruct Σ as [univs Σ], Σ' as [univs' Σ']; cbn.
   intros [hu hΣ].
   rewrite /lookup_env; intros [sub [Σ'' eq]]; cbn in *. subst Σ'.
@@ -286,7 +286,7 @@ Lemma weakening_env_declared_constant :
   forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
-Proof.
+Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
@@ -296,7 +296,7 @@ Lemma weakening_env_declared_minductive `{CF:checker_flags}:
   forall (Σ : global_env) ind decl,
     declared_minductive Σ ind decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
-Proof.
+Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
@@ -306,7 +306,7 @@ Lemma weakening_env_declared_inductive:
   forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
     declared_inductive Σ mdecl ind decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_inductive Σ' mdecl ind decl.
-Proof.
+Proof using P Pcmp cf.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
 Hint Resolve weakening_env_declared_inductive : extends.
@@ -316,7 +316,7 @@ Lemma weakening_env_declared_constructor :
     declared_constructor Σ idecl ind mdecl decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
     declared_constructor Σ' idecl ind mdecl decl.
-Proof.
+Proof using P Pcmp cf.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
@@ -327,7 +327,7 @@ Lemma weakening_env_declared_projection :
     declared_projection Σ idecl ind mdecl cdecl pdecl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
     declared_projection Σ' idecl ind mdecl cdecl pdecl.
-Proof.
+Proof using P Pcmp cf.
   intros H Σ cst mdecl idecl cdecl pdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
@@ -350,7 +350,7 @@ Lemma weaken_lookup_on_global_env' Σ c decl :
   wf Σ ->
   lookup_env Σ c = Some decl ->
   on_udecl_prop Σ (universes_decl_of_decl decl).
-Proof.
+Proof using P Pcmp cf.
   intros [onu wfΣ] HH.
   destruct Σ as [univs Σ]; cbn in *.
   induction wfΣ; simpl. 1: discriminate.
@@ -431,7 +431,7 @@ Definition weaken_env_decls_prop
 
 Lemma extends_decls_wf Σ Σ' : 
   wf Σ' -> extends_decls Σ Σ' -> wf Σ.
-Proof.
+Proof using P Pcmp cf.
   intros [onu ond] [eq [Σ'' eq']].
   split => //. 
   - red. rewrite eq. apply onu.

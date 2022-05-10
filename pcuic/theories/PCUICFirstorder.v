@@ -129,7 +129,7 @@ Lemma firstorder_value_inds :
  isPropositional (PCUICEnvironment.fst_ctx Σ) i false ->
  P (mkApps (tConstruct i n ui) args)) ->
 forall t : term, firstorder_value Σ Γ t -> P t.
-Proof.
+Proof using Type.
   intros ? ? ? ?. fix rec 2. intros t [ ]. eapply H; eauto.
   clear - H0 rec.
   induction H0; econstructor; eauto.
@@ -140,7 +140,7 @@ Lemma firstorder_ind_propositional {Σ : global_env_ext} i mind oind :
   declared_inductive Σ i mind oind ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   isPropositional Σ i false.
-Proof.
+Proof using Type.
   intros Hwf d. pose proof d as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
   red. sq.
   unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
@@ -190,14 +190,14 @@ Lemma isType_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T}
   Σ ⊢ Γ = Δ ->
   wf_local Σ Δ ->
   isType Σ Δ T.
-Proof.
+Proof using Type.
   intros [s Hs]. exists s. eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma typing_spine_arity_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ args T' i u pars :
   typing_spine Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd i u) pars)) args T' ->
   arity_spine Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd i u) pars)) args T'.
-Proof.
+Proof using Type.
   intros H. revert args pars T' H.
   induction Δ using PCUICInduction.ctx_length_rev_ind; intros args pars T' H.
   - cbn. depelim H.
@@ -236,14 +236,14 @@ Proof.
 Qed.
     
 Lemma leb_spect : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
-Proof.
+Proof using Type.
   intros x y. destruct (x <=? y) eqn:E;
   econstructor; destruct (Nat.leb_spec x y); lia.
 Qed.
 
 Lemma nth_error_inds {ind u mind n} : n < #|ind_bodies mind| ->
   nth_error (inds ind u mind.(ind_bodies)) n = Some (tInd (mkInd ind (#|mind.(ind_bodies)| - S n)) u).
-Proof.
+Proof using Type.
   unfold inds.
   induction #|ind_bodies mind| in n |- *.
   - intros hm. inv hm.
@@ -256,7 +256,7 @@ Lemma alli_subst_instance (Γ : context) u p :
   forall n, 
     alli (fun (k : nat) '{| decl_type := t |} => p k t) n Γ = 
     alli (fun (k : nat) '{| decl_type := t |} => p k t) n Γ@[u].
-Proof.
+Proof using Type.
   intros hp.
   induction Γ; cbn => //.
   move=> n. destruct a; cbn. f_equal. apply hp. apply IHΓ.
@@ -297,7 +297,7 @@ Lemma firstorder_spine_let {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na a A B arg
   firstorder_spine Σ Γ (B {0 := a}) args T' ->
   isType Σ Γ (tLetIn na a A B) ->
   firstorder_spine Σ Γ (tLetIn na a A B) args T'.
-Proof.
+Proof using Type.
   intros H; depind H.
   - constructor; auto.
     etransitivity; tea. eapply cumulSpec_cumulAlgo_curry; tea; fvs.
@@ -314,7 +314,7 @@ Lemma instantiated_typing_spine_firstorder_spine {Σ : global_env_ext} {wfΣ : w
   arity_spine Σ Γ T args T' ->
   isType Σ Γ T ->
   firstorder_spine Σ Γ T args T'.
-Proof.
+Proof using Type.
   intros hi hsp.
   revert hi; induction hsp; intros hi isty.
   - constructor => //. now eapply isType_ws_cumul_pb_refl.
@@ -334,7 +334,7 @@ Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui a
   PCUICArities.typing_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi) ->
   @firstorder_ind Σ (@firstorder_env Σ) i ->
   firstorder_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi).
-Proof.
+Proof using Type.
   intros Hdecl Hspine Hind. revert Hspine.
   unshelve edestruct @declared_constructor_inv with (Hdecl := Hdecl); eauto. eapply weaken_env_prop_typing.
 
@@ -504,7 +504,7 @@ Qed.
 
 Lemma invert_cumul_it_mkProd_or_LetIn_Sort_Ind {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ s i u args} :
   Σ ;;; Γ ⊢ it_mkProd_or_LetIn Δ (tSort s) ≤ mkApps (tInd i u) args -> False.
-Proof.
+Proof using Type.
   induction Δ using PCUICInduction.ctx_length_rev_ind; cbn.
   - eapply invert_cumul_sort_ind.
   - rewrite it_mkProd_or_LetIn_app; destruct d as [na [b|] ty]; cbn.
@@ -522,7 +522,7 @@ Lemma firstorder_value_spec Σ t i u args mind :
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
-Proof.
+Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
   revert mind i u args Hty. 
   

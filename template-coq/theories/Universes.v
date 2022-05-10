@@ -879,24 +879,24 @@ Section ConcreteUniverses.
     end.
 
   Lemma cuniv_sup_comm u u' : cuniv_sup u u' = cuniv_sup u' u.
-  Proof. destruct u, u'; cbn; try congruence. f_equal; lia. Qed.
+  Proof using Type. destruct u, u'; cbn; try congruence. f_equal; lia. Qed.
 
   Lemma cuniv_sup_not_uproplevel u u' :
     ~ is_uproplevel u -> ∑ n, cuniv_sup u u' = UType n.
-  Proof.
+  Proof using Type.
     destruct u, u'; cbn; intros Hp; try absurd;
     now eexists.
   Qed.
 
   Lemma cuniv_le_uprop_inv u : (u <= UProp)%u -> u = UProp.
-  Proof. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
+  Proof using Type. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
 
   Lemma cuniv_le_usprop_inv u : (u <= USProp)%u -> u = USProp.
-  Proof. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
+  Proof using Type. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
 
   Lemma cuniv_uprop_le_inv u : (UProp <= u)%u ->
     (u = UProp \/ (prop_sub_type /\ exists n, u = UType n)).
-  Proof.
+  Proof using Type.
     destruct u; simpl; intros Hle; [ left; reflexivity | absurd | right ].
     destruct prop_sub_type; [| absurd].
     split; [ trivial | now eexists ].
@@ -904,7 +904,7 @@ Section ConcreteUniverses.
 
   Lemma cuniv_sup_mon u u' v v' : (u <= u')%u -> (UType v <= UType v')%u ->
     (cuniv_sup u (UType v) <= cuniv_sup u' (UType v'))%u.
-  Proof.
+  Proof using Type.
     destruct u, u'; simpl; intros Hle Hle'; try absurd;
     lia.
   Qed.
@@ -913,7 +913,7 @@ Section ConcreteUniverses.
     (u <= u')%u ->
     (v <= v')%u ->
     (cuniv_of_product u v <= cuniv_of_product u' v')%u.
-  Proof.
+  Proof using Type.
     intros Hle1 Hle2.
     destruct v, v'; cbn in Hle2 |- *; auto.
     - destruct u'; cbn; assumption.
@@ -923,37 +923,37 @@ Section ConcreteUniverses.
   Lemma impredicative_cuniv_product {l u} :
     is_uproplevel u ->
     (cuniv_of_product l u <= u)%u.
-  Proof. now destruct u. Qed.
+  Proof using Type. now destruct u. Qed.
 
 
   Global Instance leq_cuniverse_refl : Reflexive leq_cuniverse.
-  Proof.
+  Proof using Type.
     intros []; cbnr; lia.
   Qed.
 
   Global Instance leq_cuniverse_n_trans n : Transitive (leq_cuniverse_n (Z.of_nat n)).
-  Proof.
+  Proof using Type.
     intros [] [] []; cbnr; trivial; try absurd; lia.
   Qed.
 
   Global Instance leq_cuniverse_trans : Transitive leq_cuniverse.
-  Proof. apply (leq_cuniverse_n_trans 0). Qed.
+  Proof using Type. apply (leq_cuniverse_n_trans 0). Qed.
 
   Global Instance lt_cuniverse_trans : Transitive lt_cuniverse.
-  Proof. apply (leq_cuniverse_n_trans 1). Qed.
+  Proof using Type. apply (leq_cuniverse_n_trans 1). Qed.
 
   Global Instance leq_cuniverse_preorder : PreOrder leq_cuniverse :=
     Build_PreOrder _ _ _.
 
   Global Instance lt_cuniverse_str_order : StrictOrder lt_cuniverse.
-  Proof.
+  Proof using Type.
     split.
     - intros []; unfold complement; cbnr; lia.
     - exact _.
   Qed.
 
   Global Instance leq_cuniverse_antisym : Antisymmetric _ eq leq_cuniverse.
-  Proof.
+  Proof using Type.
     intros [] []; cbnr; try absurd.
     intros. f_equal; lia.
   Qed.
@@ -1627,7 +1627,7 @@ Section Univ.
   Lemma satisfies_union v φ1 φ2 :
     satisfies v (CS.union φ1 φ2)
     <-> (satisfies v φ1 /\ satisfies v φ2).
-  Proof.
+  Proof using Type.
     unfold satisfies. split.
     - intros H; split; intros c Hc; apply H; now apply CS.union_spec.
     - intros [H1 H2] c Hc; apply CS.union_spec in Hc; destruct Hc; auto.
@@ -1637,7 +1637,7 @@ Section Univ.
     ConstraintSet.Subset φ φ' ->
     satisfies val φ' ->
     satisfies val φ.
-  Proof.
+  Proof using Type.
     intros sub sat ? isin.
     apply sat, sub; auto.
   Qed.
@@ -1651,7 +1651,7 @@ Section Univ.
 
   Lemma consistent_extension_on_empty Σ :
     consistent_extension_on Σ CS.empty.
-  Proof.
+  Proof using Type.
     move=> v hv; exists v; split; [move=> ? /CS.empty_spec[]| move=> ??//].
   Qed.
 
@@ -1659,7 +1659,7 @@ Section Univ.
     (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
     consistent_extension_on X cstrs <->
     consistent_extension_on X (CS.union cstrs X.2).
-  Proof.
+  Proof using Type.
     split.
     2: move=> h v /h [v' [/satisfies_union [??] eqv']]; exists v'; split=> //.
     move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
@@ -1724,11 +1724,11 @@ Section Univ.
 
   Lemma leq_levelalg_leq_levelalg_n (φ : ConstraintSet.t) u u' :
     leq_levelalg φ u u' <-> leq_levelalg_n 0 φ u u'.
-  Proof. intros. reflexivity. Qed.
+  Proof using Type. intros. reflexivity. Qed.
 
   Lemma leq_universe_leq_universe_n (φ : ConstraintSet.t) u u' :
     leq_universe φ u u' <-> leq_universe_n 0 φ u u'.
-  Proof. intros. reflexivity. Qed.
+  Proof using Type. intros. reflexivity. Qed.
 
   (* ctrs are "enforced" by φ *)
 
@@ -1741,7 +1741,7 @@ Section Univ.
   Lemma valid_subset φ φ' ctrs
     : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
       ->  valid_constraints φ' ctrs.
-  Proof.
+  Proof using Type.
     unfold valid_constraints.
     destruct check_univs; [|trivial].
     intros Hφ H v Hv. apply H.
@@ -1749,7 +1749,7 @@ Section Univ.
   Qed.
 
   Lemma switch_minus (x y z : Z) : (x <= y - z <-> x + z <= y)%Z.
-  Proof. split; lia. Qed.
+  Proof using Type. split; lia. Qed.
 
   (* Lemma llt_lt n m : (n < m)%u -> (n < m)%Z.
   Proof. lled; lia. Qed.
@@ -1782,70 +1782,70 @@ Section Univ.
 
 
   Global Instance eq_levelalg_refl φ : Reflexive (eq_levelalg φ).
-  Proof.
+  Proof using Type.
     intros u; unfold_univ_rel.
   Qed.
 
   Global Instance eq_universe_refl φ : Reflexive (eq_universe φ).
-  Proof.
+  Proof using Type.
     intros []; cbnr.
   Qed.
 
   Global Instance leq_levelalg_n_refl φ : Reflexive (leq_levelalg φ).
-  Proof.
+  Proof using Type.
     intros u; unfold_univ_rel. lia.
   Qed.
 
   Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).
-  Proof.
+  Proof using Type.
     intros []; cbnr.
   Qed.
 
   Global Instance eq_levelalg_sym φ : Symmetric (eq_levelalg φ).
-  Proof.
+  Proof using Type.
     intros u u' H; unfold_univ_rel.
     specialize (H v Hv); lia.
   Qed.
 
   Global Instance eq_universe_sym φ : Symmetric (eq_universe φ).
-  Proof.
+  Proof using Type.
     intros [] []; cbnr; auto.
     now symmetry.
   Qed.
 
   Global Instance eq_levelalg_trans φ : Transitive (eq_levelalg φ).
-  Proof.
+  Proof using Type.
     intros u u' u'' H1 H2; unfold_univ_rel.
     specialize (H1 v Hv); specialize (H2 v Hv); lia.
   Qed.
 
   Global Instance eq_universe_trans φ : Transitive (eq_universe φ).
-  Proof.
+  Proof using Type.
     intros [] [] []; cbnr; trivial; try absurd.
     etransitivity; eauto.
   Qed.
 
   Global Instance leq_levelalg_n_trans n φ : Transitive (leq_levelalg_n (Z.of_nat n) φ).
-  Proof.
+  Proof using Type.
     intros u u' u'' H1 H2; unfold_univ_rel.
     specialize (H1 v Hv); specialize (H2 v Hv); lia.
   Qed.
 
   Global Instance leq_universe_n_trans n φ : Transitive (leq_universe_n (Z.of_nat n) φ).
-  Proof.
+  Proof using Type.
     intros [] [] []; cbnr; trivial; try absurd.
     now etransitivity.
   Qed.
 
   Global Instance leq_universe_trans φ : Transitive (leq_universe φ).
-  Proof. apply (leq_universe_n_trans 0). Qed.
+  Proof using Type. apply (leq_universe_n_trans 0). Qed.
 
   Global Instance lt_universe_trans φ : Transitive (lt_universe φ).
-  Proof. apply (leq_universe_n_trans 1). Qed.
+  Proof using Type. apply (leq_universe_n_trans 1). Qed.
 
   Lemma eq0_leq0_levelalg φ u u' :
     eq0_levelalg φ u u' <-> leq0_levelalg_n 0 φ u u' /\ leq0_levelalg_n 0 φ u' u.
-  Proof.
+  Proof using Type.
     split.
     - intros H. split; unfold eq0_levelalg, leq_levelalg_n in *;
       intros v Hv; specialize (H v Hv); lia.
@@ -1855,7 +1855,7 @@ Section Univ.
 
   Lemma eq_leq_levelalg φ u u' :
     eq_levelalg φ u u' <-> leq_levelalg φ u u' /\ leq_levelalg φ u' u.
-  Proof.
+  Proof using Type.
     split.
     - intros H. split; unfold_univ_rel; specialize (H v Hv); lia.
     - intros [H1 H2]. unfold_univ_rel. specialize (H1 v Hv); specialize (H2 v Hv); lia.
@@ -1863,20 +1863,20 @@ Section Univ.
 
   Lemma eq_leq_universe φ u u' :
     eq_universe φ u u' <-> leq_universe φ u u' /\ leq_universe φ u' u.
-  Proof.
+  Proof using Type.
     destruct u, u'; cbnr; intuition auto.
     all: now apply eq_leq_levelalg.
   Qed.
 
   Lemma leq_levelalg_sup0_l φ u1 u2 : leq_levelalg φ u1 (LevelAlgExpr.sup u1 u2).
-  Proof. unfold_univ_rel. rewrite val_sup; lia. Qed.
+  Proof using Type. unfold_univ_rel. rewrite val_sup; lia. Qed.
 
   Lemma leq_levelalg_sup0_r φ u1 u2 : leq_levelalg φ u2 (LevelAlgExpr.sup u1 u2).
-  Proof. unfold_univ_rel. rewrite val_sup; lia. Qed.
+  Proof using Type. unfold_univ_rel. rewrite val_sup; lia. Qed.
 
   Lemma leq_levelalg_sup0_mon φ u1 u1' u2 u2' : leq_levelalg φ u1 u1' -> leq_levelalg φ u2 u2' ->
     leq_levelalg φ (LevelAlgExpr.sup u1 u2) (LevelAlgExpr.sup u1' u2').
-  Proof.
+  Proof using Type.
     intros H1 H2; unfold_univ_rel.
     specialize (H1 v Hv); specialize (H2 v Hv).
     rewrite !val_sup. lia.
@@ -1885,7 +1885,7 @@ Section Univ.
   Lemma leq_universe_sup_l φ u1 s2 :
     let s1 := Universe.lType u1 in
     leq_universe φ s1 (Universe.sup s1 s2).
-  Proof.
+  Proof using Type.
     destruct s2 as [| | u2]; cbnr.
     apply leq_levelalg_sup0_l.
   Qed.
@@ -1893,14 +1893,14 @@ Section Univ.
   Lemma leq_universe_sup_r φ s1 u2 :
     let s2 := Universe.lType u2 in
     leq_universe φ s2 (Universe.sup s1 s2).
-  Proof.
+  Proof using Type.
     destruct s1 as [| | u1]; cbnr.
     apply leq_levelalg_sup0_r.
   Qed.
 
   Lemma leq_universe_product φ (s1 s2 : Universe.t)
     : leq_universe φ s2 (Universe.sort_of_product s1 s2).
-  Proof.
+  Proof using Type.
     destruct s2 as [| | u2].
     - apply leq_universe_refl.
     - apply leq_universe_refl.
@@ -1910,7 +1910,7 @@ Section Univ.
      impredicativity. *)
 
   Global Instance eq_universe_leq_universe φ : subrelation (eq_universe φ) (leq_universe φ).
-  Proof.
+  Proof using Type.
     intros u u'. apply eq_leq_universe.
   Qed.
 
@@ -1920,7 +1920,7 @@ Section Univ.
     {| PreOrder_Transitive := leq_levelalg_n_trans 0 _ |}.
 
   Global Instance lt_levelalg_str_order {c: check_univs} φ (H: consistent φ) : StrictOrder (lt_levelalg φ).
-  Proof.
+  Proof using Type.
     split.
     - intros u; unfold complement, lt_levelalg, leq_levelalg_n; cbn.
       rewrite c; destruct H as [v Hv]; intros nH; specialize (nH v Hv); lia.
@@ -1929,7 +1929,7 @@ Section Univ.
 
   Global Instance leq_levelalg_antisym φ
     : Antisymmetric _ (eq_levelalg φ) (leq_levelalg φ).
-  Proof. intros t u tu ut. now apply eq_leq_levelalg. Qed.
+  Proof using Type. intros t u tu ut. now apply eq_leq_levelalg. Qed.
 
   Global Instance leq_levelalg_partial_order φ
     : PartialOrder (eq_levelalg φ) (leq_levelalg φ).
@@ -1943,7 +1943,7 @@ Section Univ.
   Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) := Build_PreOrder _ _ _.
 
   Global Instance lt_universe_str_order {c: check_univs} φ (H: consistent φ) : StrictOrder (lt_universe φ).
-  Proof.
+  Proof using Type.
     split.
     - intros []; unfold complement; cbn; [lia|lia|].
       apply @StrictOrder_Irreflexive; apply @lt_levelalg_str_order; assumption.
@@ -1952,7 +1952,7 @@ Section Univ.
 
   Global Instance leq_universe_antisym φ
     : Antisymmetric _ (eq_universe φ) (leq_universe φ).
-  Proof. intros t u tu ut. now apply eq_leq_universe. Qed.
+  Proof using Type. intros t u tu ut. now apply eq_leq_universe. Qed.
 
   Global Instance leq_universe_partial_order φ
     : PartialOrder (eq_universe φ) (leq_universe φ).
@@ -1961,22 +1961,22 @@ Section Univ.
   Defined.
 
   Global Instance compare_universe_subrel pb Σ : subrelation (eq_universe Σ) (compare_universe pb Σ).
-  Proof.
+  Proof using Type.
     destruct pb; tc.
   Qed.
 
   Global Instance compare_universe_refl pb Σ : Reflexive (compare_universe pb Σ).
-  Proof.
+  Proof using Type.
     destruct pb; tc.
   Qed.
 
   Global Instance compare_universe_trans pb Σ : Transitive (compare_universe pb Σ).
-  Proof.
+  Proof using Type.
     destruct pb; tc.
   Qed.
 
   Global Instance compare_universe_preorder pb Σ : PreOrder (compare_universe pb Σ).
-  Proof.
+  Proof using Type.
     destruct pb; tc.
   Qed.
 
@@ -1990,7 +1990,7 @@ Section Univ.
   Lemma cmp_universe_subset ctrs ctrs' pb t u
     : ConstraintSet.Subset ctrs ctrs'
       -> compare_universe pb ctrs t u -> compare_universe pb ctrs' t u.
-  Proof.
+  Proof using Type.
     intros Hctrs.
     destruct pb, t, u; cbnr; trivial.
     all: intros H; unfold_univ_rel;
@@ -2001,12 +2001,12 @@ Section Univ.
   Lemma eq_universe_subset ctrs ctrs' t u
     : ConstraintSet.Subset ctrs ctrs'
       -> eq_universe ctrs t u -> eq_universe ctrs' t u.
-  Proof. apply cmp_universe_subset with (pb := Conv). Qed.
+  Proof using Type. apply cmp_universe_subset with (pb := Conv). Qed.
 
   Lemma leq_universe_subset ctrs ctrs' t u
     : ConstraintSet.Subset ctrs ctrs'
       -> leq_universe ctrs t u -> leq_universe ctrs' t u.
-  Proof. apply cmp_universe_subset with (pb := Cumul). Qed.
+  Proof using Type. apply cmp_universe_subset with (pb := Cumul). Qed.
 
   (** Elimination restriction *)
 
@@ -2039,7 +2039,7 @@ Section Univ.
   Lemma allowed_eliminations_subset_impl φ a a' s
     : allowed_eliminations_subset a a' ->
       is_allowed_elimination φ a s -> is_allowed_elimination φ a' s.
-  Proof.
+  Proof using Type.
     destruct a, a'; cbnr; trivial;
     destruct s; cbnr; trivial;
     intros H1 H2; try absurd; constructor; trivial.
@@ -2097,13 +2097,13 @@ Section UniverseLemmas.
   Context {cf: checker_flags}.
 
   Lemma sup0_idem s : LevelAlgExpr.sup s s = s.
-  Proof.
+  Proof using Type.
     apply eq_univ'; cbn.
     intro; rewrite !LevelExprSet.union_spec. intuition.
   Qed.
 
   Lemma sup_idem s : Universe.sup s s = s.
-  Proof.
+  Proof using Type.
     destruct s; cbn; auto.
     apply f_equal.
     apply sup0_idem.
@@ -2111,20 +2111,20 @@ Section UniverseLemmas.
 
   Lemma sort_of_product_idem s
     : Universe.sort_of_product s s = s.
-  Proof.
+  Proof using Type.
     unfold Universe.sort_of_product; destruct s; try reflexivity.
     apply sup_idem.
   Qed.
 
   Lemma sup0_assoc s1 s2 s3 :
     LevelAlgExpr.sup s1 (LevelAlgExpr.sup s2 s3) = LevelAlgExpr.sup (LevelAlgExpr.sup s1 s2) s3.
-  Proof.
+  Proof using Type.
     apply eq_univ'; cbn. symmetry; apply LevelExprSetProp.union_assoc.
   Qed.
 
   Instance proper_sup0_eq_levelalg φ :
     Proper (eq_levelalg φ ==> eq_levelalg φ ==> eq_levelalg φ) LevelAlgExpr.sup.
-  Proof.
+  Proof using Type.
     intros u1 u1' H1 u2 u2' H2.
     unfold_univ_rel.
     specialize (H1 v Hv); specialize (H2 v Hv).
@@ -2133,7 +2133,7 @@ Section UniverseLemmas.
 
   Instance universe_sup_eq_universe φ :
     Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) Universe.sup.
-  Proof.
+  Proof using Type.
     intros [| | u1] [| |u1'] H1 [| |u2] [| |u2'] H2; cbn in *; try absurd; auto.
     now apply proper_sup0_eq_levelalg.
   Qed.
@@ -2141,7 +2141,7 @@ Section UniverseLemmas.
   Lemma sort_of_product_twice u s :
     Universe.sort_of_product u (Universe.sort_of_product u s)
     = Universe.sort_of_product u s.
-  Proof.
+  Proof using Type.
     destruct u,s; cbnr.
     now rewrite sup0_assoc sup0_idem.
   Qed.
@@ -2153,7 +2153,7 @@ Section no_prop_leq_type.
   Context (ϕ : ConstraintSet.t).
 
   Lemma succ_inj x y : LevelExpr.succ x = LevelExpr.succ y -> x = y.
-  Proof.
+  Proof using Type.
     unfold LevelExpr.succ.
     destruct x as [l n], y as [l' n']. simpl. congruence.
   Qed.
@@ -2161,17 +2161,17 @@ Section no_prop_leq_type.
   Lemma spec_map_succ l x :
     LevelExprSet.In x (LevelAlgExpr.succ l) <->
     exists x', LevelExprSet.In x' l /\ x = LevelExpr.succ x'.
-  Proof.
+  Proof using Type.
     rewrite map_spec. reflexivity.
   Qed.
 
   Lemma val_succ v l : val v (LevelExpr.succ l) = val v l + 1.
-  Proof.
+  Proof using Type.
     destruct l as []; simpl. cbn. lia.
   Qed.
 
   Lemma val_map_succ v l : val v (LevelAlgExpr.succ l) = val v l + 1.
-  Proof.
+  Proof using Type.
     pose proof (spec_map_succ l).
     set (n := LevelAlgExpr.succ l) in *.
     destruct (val_In_max l v) as [max [inmax eqv]]. rewrite <-eqv.
@@ -2188,7 +2188,7 @@ Section no_prop_leq_type.
   Lemma leq_universe_super s s' :
     leq_universe ϕ s s' ->
     leq_universe ϕ (Universe.super s) (Universe.super s').
-  Proof.
+  Proof using Type.
     destruct s as [| | u1], s' as [| | u1']; cbnr; try absurd;
     intros H; unfold_univ_rel;
     rewrite !val_map_succ. lia.
@@ -2209,7 +2209,7 @@ Section no_prop_leq_type.
     | Universe.lType l, Universe.lType l' => True
     | Universe.lType _, _ => False
     end.
-  Proof.
+  Proof using Type.
     destruct s1, s2; cbnr; trivial.
   Qed.
 
@@ -2218,7 +2218,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s2 -> Universe.is_prop s1.
-  Proof.
+  Proof using Type.
     intros Hcf cu.
     destruct s2; cbn; [ | absurd | absurd].
     destruct s1; cbn; [ auto | absurd | absurd].
@@ -2229,7 +2229,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s2 -> Universe.is_sprop s1.
-  Proof.
+  Proof using Type.
     intros Hcf cu.
     destruct s2; cbn; [ absurd | | absurd].
     destruct s1; cbn; [ absurd | auto | absurd].
@@ -2241,7 +2241,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s1 -> Universe.is_prop s2.
-  Proof.
+  Proof using Type.
     intros Hcf ps cu.
     destruct s1; cbn; [ | absurd | absurd].
     rewrite ps.
@@ -2253,7 +2253,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s1 -> Universe.is_sprop s2.
-  Proof.
+  Proof using Type.
     intros Hcf cu.
     destruct s1; cbn; [ absurd | | absurd].
     destruct s2; cbn; [ absurd | auto | absurd].
@@ -2267,14 +2267,14 @@ Section no_prop_leq_type.
   Lemma leq_prop_prop {l l'} :
     Universe.is_prop l -> Universe.is_prop l' ->
     leq_universe ϕ l l'.
-  Proof.
+  Proof using Type.
     destruct l, l'; cbnr; absurd.
   Qed.
 
   Lemma leq_sprop_sprop {l l'} :
     Universe.is_sprop l -> Universe.is_sprop l' ->
     leq_universe ϕ l l'.
-  Proof.
+  Proof using Type.
     destruct l, l'; cbnr; absurd.
   Qed.
 
@@ -2284,7 +2284,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     is_propositional s1 <-> is_propositional s2.
-  Proof.
+  Proof using Type.
     intros Hcf ps cu.
     destruct s1, s2; cbn; try absurd; intros H; split; trivial.
     now rewrite ps in H.
@@ -2294,7 +2294,7 @@ Section no_prop_leq_type.
     check_univs ->
     consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_prop s2 -> False.
-  Proof.
+  Proof using Type.
     intros Hcf cu Hleq Hprop.
     apply leq_universe_prop_r in Hleq; tas.
     now destruct s1.
@@ -2304,7 +2304,7 @@ Section no_prop_leq_type.
     check_univs ->
     consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_sprop s2 -> False.
-  Proof.
+  Proof using Type.
     intros Hcf cu Hleq Hprop.
     apply leq_universe_sprop_r in Hleq; tas.
     now destruct s1.
@@ -2449,7 +2449,7 @@ Section SubstInstanceClosed.
 
   Lemma subst_instance_level_closedu l
     : closedu_level #|u| l -> closedu_level 0 (subst_instance_level u l).
-  Proof.
+  Proof using Hcl.
     destruct l; cbnr.
     unfold closedu_instance in Hcl.
     destruct (nth_in_or_default n u Level.lzero).
@@ -2459,7 +2459,7 @@ Section SubstInstanceClosed.
 
   Lemma subst_instance_level_expr_closedu e :
     closedu_level_expr #|u| e -> closedu_level_expr 0 (subst_instance_level_expr u e).
-  Proof.
+  Proof using Hcl.
     destruct e as [l b]. destruct l;cbnr.
     case_eq (nth_error u n); cbnr. intros [] Hl X; cbnr.
     apply nth_error_In in Hl.
@@ -2469,7 +2469,7 @@ Section SubstInstanceClosed.
 
   Lemma subst_instance_univ_closedu s
     : closedu_universe #|u| s -> closedu_universe 0 (subst_instance_univ u s).
-  Proof.
+  Proof using Hcl.
     intro H.
     destruct s as [| |t]; cbnr.
     destruct t as [l Hl].
@@ -2483,7 +2483,7 @@ Section SubstInstanceClosed.
 
   Lemma subst_instance_closedu t :
     closedu_instance #|u| t -> closedu_instance 0 (subst_instance u t).
-  Proof.
+  Proof using Hcl.
     intro H. etransitivity. eapply forallb_map.
     eapply forallb_impl; tea.
     intros l Hl; cbn. apply subst_instance_level_closedu.

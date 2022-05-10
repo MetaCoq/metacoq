@@ -50,7 +50,7 @@ Let PΓ (Γ : context) := True.
 Let PΓ_rel (Γ Γ' : context) := True.
 
 Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-Proof.
+Proof using wfΣ.
 
   apply bidir_ind_env.
 

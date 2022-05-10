@@ -89,7 +89,7 @@ Section Conversion.
 
   Lemma stateR_Acc :
     forall s, Acc stateR s.
-  Proof.
+  Proof using Type.
     assert (Acc stateR Args) as hArgs.
     { constructor. intros s h.
       dependent induction h.
@@ -145,7 +145,7 @@ Section Conversion.
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
-  Proof.
+  Proof using Type.
     intros Γ [u hu].
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; 
     pose proof (heΣ _ wfΣ) as heΣ.
@@ -163,21 +163,21 @@ Section Conversion.
 
   Lemma eqt_eqterm {Σ} {wfΣ : abstract_env_ext_rel X Σ} {u v} :
     u ≡α v -> eq_term Σ Σ u v.
-  Proof.
+  Proof using Type.
     intros eq.
     eapply upto_names_eq_term_refl; tc.
     exact eq.
   Qed.
 
   Local Instance eqt_refl : RelationClasses.Reflexive eqt.
-  Proof. red. intros x; constructor. reflexivity. Qed.
+  Proof using Type. red. intros x; constructor. reflexivity. Qed.
 
   Lemma eq_term_valid_pos :
     forall {u v p},
       validpos u p ->
       eqt u v ->
       validpos v p.
-  Proof.
+  Proof using X.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros u v p vp e.
     destruct e as [e']. 
@@ -213,12 +213,13 @@ Section Conversion.
   Defined.
 
   Derive Signature for Subterm.lexprod.
+  Derive Signature for dlexmod.
 
   Lemma R_aux_Acc :
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->
       Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
-  Proof.
+  Proof using Type.
     intros Γ t p w q s ht.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     rewrite R_aux_equation_1.
@@ -327,7 +328,7 @@ Section Conversion.
     forall Γ u,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zipc (tm1 u) (stk1 u))) ->
       Acc (R Γ) u.
-  Proof.
+  Proof using Type.
     intros Γ u h.
     eapply Acc_fun with (f := fun x => obpack x).
     apply R_aux_Acc. assumption.
@@ -339,7 +340,7 @@ Section Conversion.
     ((x.π1; x.π2.1), (existT (fun x => pos x × state) (` x.π2.2.π1) x.π2.2.π2)) = 
     ((y.π1; y.π2.1), (existT (fun x => pos x × state) (` y.π2.2.π1) y.π2.2.π2)) ->
     R_aux Γ z x -> R_aux Γ z y.
-  Proof.
+  Proof using Type.
     destruct x as [t [pt [w [pw s]]]], y as [t' [pt' [w' [pw' s']]]].
     destruct z as [tz [ptz [wz [pwz sz]]]].
     cbn. intros [=]. subst. noconf H1. destruct w as [w wt], w' as [w' wt'].
@@ -364,7 +365,7 @@ Section Conversion.
     (x.(st), x.(tm1), x.(stk1), x.(tm2), x.(stk2)) = 
     (y.(st), y.(tm1), y.(stk1), y.(tm2), y.(stk2)) ->
     R Γ z x -> R Γ z y.
-  Proof.
+  Proof using Type.
     destruct x, y; cbn.
     intros [=]; subst.
     unfold R. eapply R_aux_irrelevance; cbn.
@@ -375,7 +376,7 @@ Section Conversion.
     forall Γ p1 p2,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), cored Σ Γ (pzt p1) (pzt p2)) ->
       R Γ p1 p2.
-  Proof.
+  Proof using Type.
     intros Γ p1 p2 h.
     left. intros. eapply cored_cored'. eapply h; eauto.
   Qed.
@@ -385,7 +386,7 @@ Section Conversion.
       eqt t1 t2 ->
       positionR (` p1) (` p2) ->
       R_aux Γ (t1 ; (p1, s1)) (t2 ; (p2, s2)).
-  Proof.
+  Proof using Type.
     intros Γ t1 t2 p1 p2 [? [? ?]] s2 e h.
     unshelve eright.
     - eauto.
@@ -397,7 +398,7 @@ Section Conversion.
       (eqt (pzt p1) (pzt p2)) ->
       positionR (` (pps1 p1)) (` (pps1 p2)) ->
       R Γ p1 p2.
-  Proof.
+  Proof using Type.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e h. simpl in *.
     eapply R_aux_positionR ; simpl.
     - assumption.
@@ -410,7 +411,7 @@ Section Conversion.
       ` p1 = ` p2 ->
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), cored' Σ Γ (` w1) (` w2)) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
-  Proof.
+  Proof using Type.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
     cbn in e2. cbn in h. subst.
     unshelve eright.
@@ -432,7 +433,7 @@ Section Conversion.
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
           cored Σ Γ (` (pwt p1)) (` (pwt p2))) ->
       R Γ p1 p2.
-  Proof.
+  Proof using Type.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 h. simpl in *.
     eapply R_aux_cored2. all: simpl. all: auto.
     destruct s1, s2.
@@ -447,7 +448,7 @@ Section Conversion.
       (eqt (` w1) (` w2)) ->
       positionR (` q1) (` q2) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
-  Proof.
+  Proof using Type.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 e3 h.
     cbn in e2. cbn in e3. subst.
     unshelve eright.
@@ -471,7 +472,7 @@ Section Conversion.
       (eqt (` (pwt p1)) (` (pwt p2))) ->
       positionR (` (pps2 p1)) (` (pps2 p2)) ->
       R Γ p1 p2.
-  Proof.
+  Proof using Type.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 e3 h.
     simpl in *.
     eapply R_aux_positionR2. all: simpl. all: auto.
@@ -485,7 +486,7 @@ Section Conversion.
       ` q1 = ` q2 ->
       stateR s1 s2 ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
-  Proof.
+  Proof using Type.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] [q1 hq1] [q2 hq2] s1 s2
            e1 e2 e3 e4 h.
     cbn in e2. cbn in e3. cbn in e4. subst.
@@ -517,7 +518,7 @@ Section Conversion.
       ` (pps2 p1) = ` (pps2 p2) ->
       stateR (st p1) (st p2) ->
       R Γ p1 p2.
-  Proof.
+  Proof using Type.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 e3 e4 h.
     simpl in *.
     eapply R_aux_stateR. all: simpl. all: auto.
@@ -533,7 +534,7 @@ Section Conversion.
 
   Lemma iff_reflect (P : Prop) (b : bool) : 
     P <-> b -> reflect P b.
-  Proof. 
+  Proof using Type. 
     intro H. apply ssrbool.introP.
     - intuition.
     - destruct b; intuition.
@@ -541,13 +542,13 @@ Section Conversion.
 
   Definition wf_universe_iff  Σ u :
     wf_universeb Σ u <-> wf_universe Σ u.
-  Proof.  
+  Proof using Type.  
     symmetry; apply reflect_iff. eapply wf_universe_reflect.
   Qed. 
 
   Definition wf_universe_instance_iff  Σ u :
     wf_universeb_instance Σ u <-> wf_universe_instance Σ u.
-  Proof.  
+  Proof using Type.  
     symmetry; apply reflect_iff. eapply wf_universe_instanceP.
   Qed. 
 
@@ -577,7 +578,7 @@ Section Conversion.
     isred_full Γ t π ->
     isLambda t ->
     isStackApp π = false.
-  Proof.
+  Proof using Type.
     intros (?&isr) islam.
     destruct t; cbn in *; try easy.
     unfold zipp in isr.
@@ -594,7 +595,7 @@ Section Conversion.
   Lemma eta_pair {A B} (p q : A * B) :
     p = q ->
     (p.1, p.2) = (q.1, q.2).
-  Proof. now destruct p, q. Qed.
+  Proof using Type. now destruct p, q. Qed.
 
   Ltac is_var t :=
     match goal with
@@ -606,7 +607,7 @@ Section Conversion.
 
   Lemma zipp_stack_cat_decompose_stack t π π' :
     zipp t (π ++ (decompose_stack π').2) = zipp t π.
-  Proof.
+  Proof using Type.
     rewrite zipp_stack_cat; auto.
     destruct decompose_stack eqn:decomp.
     now apply decompose_stack_noStackApp in decomp.
@@ -615,7 +616,7 @@ Section Conversion.
   Lemma zipc_decompose_stack_empty t π :
     (decompose_stack π).2 = [] ->
     zipc t π = zipp t π.
-  Proof.
+  Proof using Type.
     destruct decompose_stack eqn:decomp.
     apply decompose_stack_eq in decomp as ->.
     cbn; intros ->.
@@ -642,7 +643,7 @@ Section Conversion.
   
   Lemma zipc_unfold_decompose_stack t π :
     zipc t π = zipc (mkApps t (decompose_stack π).1) (decompose_stack π).2.
-  Proof.
+  Proof using Type.
     rewrite <- zipc_appstack.
     destruct (decompose_stack π) eqn:decomp.
     now apply decompose_stack_eq in decomp as ->.
@@ -998,7 +999,7 @@ Section Conversion.
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ red (fst Σ) (Γ ,,, stack_context π) (zipp (tFix mfix idx) π) (zipp fn ξ) ∥.
-  Proof.
+  Proof using Type.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; try discriminate.
@@ -1049,7 +1050,7 @@ Section Conversion.
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ red (fst Σ) Γ (zippx (tFix mfix idx) π) (zippx fn ξ) ∥.
-  Proof.
+  Proof using Type.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
@@ -1097,7 +1098,7 @@ Section Conversion.
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn ξ) ∥.
-  Proof.
+  Proof using Type.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
@@ -1140,7 +1141,7 @@ Section Conversion.
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), cored (fst Σ) Γ (zipc fn ξ) (zipc (tFix mfix idx) π).
-  Proof.
+  Proof using Type.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros ; noconf eq.
@@ -1182,7 +1183,7 @@ Section Conversion.
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
       snd (decompose_stack π) = snd (decompose_stack ξ).
-  Proof.
+  Proof using Type.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
@@ -1199,7 +1200,7 @@ Section Conversion.
      forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
       All2 (red Σ (Γ,,, stack_context π)) (decompose_stack π).1 args ×
       whnf RedFlags.default Σ (Γ,,, stack_context π) (mkApps (tFix mfix idx) args)∥.
-  Proof.
+  Proof using Type.
     funelim (unfold_one_fix Γ mfix idx π wf).
     all: intros [=].
     - constructor; eexists _; split; [apply All2_same; reflexivity|].
@@ -1324,7 +1325,7 @@ Section Conversion.
   Lemma welltyped_wf_local Σ Γ t :
     welltyped Σ Γ t ->
     ∥ wf_local Σ Γ ∥.
-  Proof.
+  Proof using Type.
     intros []; sq. 
     eapply typing_wf_local in X0; eauto. 
   Qed.
@@ -1341,7 +1342,7 @@ Section Conversion.
       forallb (wf_universeb Σ) (map Universe.make v) ->
       eqb_universe_instance u v ->
       R_universe_instance (eq_universe (global_ext_constraints Σ)) u v.
-  Proof.
+  Proof using Type.
     intros u v Σ wfΣ Hu Hv e.
     unfold eqb_universe_instance in e.
     eapply forallb2_Forall2 in e.
@@ -1369,7 +1370,7 @@ Section Conversion.
     wf_universe Σ u' ->
     compare_universe leq (global_ext_constraints Σ) u u' ->
     abstract_conv_pb_relb leq u u'.
-  Proof.
+  Proof using Type.
     intros all1 all2 conv.
     destruct (heΣ _ wfΣ).
     destruct leq; eapply (abstract_env_compare_universe_correct _ _ _); eauto.
@@ -1378,14 +1379,14 @@ Qed.
   
   Lemma get_level_make l :
     LevelExpr.get_level (LevelExpr.make l) = l.
-  Proof. now destruct l. Qed.
+  Proof using Type. now destruct l. Qed.
   
   Lemma compare_universeb_make_complete Σ (wfΣ : abstract_env_ext_rel X Σ) leq x y :
     wf_universe_level Σ x ->
     wf_universe_level Σ y ->
     compare_universe leq (global_ext_constraints Σ) (Universe.make x) (Universe.make y) ->
     abstract_conv_pb_relb leq (Universe.make x) (Universe.make y).
-  Proof.
+  Proof using Type.
     intros wfx wfy r.
     eapply compare_universeb_complete; eauto.
     - intros ? ->%LevelExprSet.singleton_spec; auto.
@@ -1397,7 +1398,7 @@ Qed.
     wf_universe_instance Σ u' ->
     R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
     eqb_universe_instance u u'.
-  Proof.
+  Proof using Type.
     intros memu memu' r.
     induction u in u', memu, memu', r |- *.
     - now destruct u'.
@@ -1418,7 +1419,7 @@ Qed.
     wf_universe_level Σ u' ->
     R_universe_variance (eq_universe Σ) (compare_universe leq Σ) v u u' ->
     compare_universe_variance (abstract_env_eq X) (abstract_conv_pb_relb leq) v u u'.
-  Proof.
+  Proof using Type.
     intros memu memu' r.
     destruct v; cbn in *; eauto.
     - eapply compare_universeb_make_complete; eauto.
@@ -1431,7 +1432,7 @@ Qed.
     wf_universe_instance Σ u' ->
     R_universe_instance_variance (eq_universe Σ) (compare_universe leq Σ) v u u' ->
     compare_universe_instance_variance (abstract_env_eq X) (abstract_conv_pb_relb leq) v u u'.
-  Proof.
+  Proof using Type.
     intros memu memu' r.
     induction u in v, u', memu, memu', r |- *.
     - now destruct u'.
@@ -1452,7 +1453,7 @@ Qed.
     wf_universe_instance Σ v ->
     R_global_instance Σ (eq_universe Σ) (compare_universe leq Σ) gr napp u v ->
     compare_global_instance Σ (abstract_env_eq X) (abstract_conv_pb_relb leq) gr napp u v.
-  Proof.
+  Proof using Type.
     intros consu consv r.
     unfold compare_global_instance, R_global_instance, R_opt_variance in *.
     destruct global_variance.
@@ -1463,7 +1464,7 @@ Qed.
   Lemma consistent_instance_ext_wf Σ udecl u :
     consistent_instance_ext Σ udecl u ->
     wf_universe_instance Σ u.
-  Proof.
+  Proof using Type.
     intros cons.
     unfold consistent_instance_ext, consistent_instance in *.
     destruct udecl.
@@ -1481,7 +1482,7 @@ Qed.
     exists cst,
       declared_constant Σ c cst
       × consistent_instance_ext Σ (cst_universes cst) u.
-  Proof.
+  Proof using Type.
     intros h.
     zip fold in h. 
     destruct (heΣ _ wfΣ).
@@ -1493,13 +1494,13 @@ Qed.
 
   Lemma red_conv_cum_l {leq Γ u v Σ}{wfΣ : abstract_env_ext_rel X Σ} :
     Σ ;;; Γ ⊢ u ⇝ v -> conv_cum leq Σ Γ u v.
-  Proof.
+  Proof using Type.
     intros r. pose proof (hΣ _ wfΣ). sq. now apply red_ws_cumul_pb. 
   Qed.
 
   Lemma red_conv_cum_r {leq Γ u v Σ}{wfΣ : abstract_env_ext_rel X Σ} :
     Σ ;;; Γ ⊢ u ⇝ v -> conv_cum leq Σ Γ v u.
-  Proof.
+  Proof using Type.
     intros r. pose proof (hΣ _ wfΣ). sq. now apply red_ws_cumul_pb_inv.
   Qed.
 
@@ -1507,7 +1508,7 @@ Qed.
     is_open_term Γ (zipp t π) ->
     Σ ;;; Γ ⊢ t ⇝ u ->
     Σ ;;; Γ ⊢ zipp t π ⇝ zipp u π.
-  Proof.
+  Proof using Type.
     intros cltπ [clΓ clt r].
     eapply into_closed_red; tea.
     now eapply red_zipp.
@@ -1698,7 +1699,7 @@ Qed.
   Lemma welltyped_zipc_tCase_brs_length Σ (wfΣ : abstract_env_ext_rel X Σ) Γ ci motive discr brs π :
     welltyped Σ Γ (zipc (tCase ci motive discr brs) π) ->
     exists mib oib, declared_inductive Σ ci mib oib /\ #|brs| = #|ind_ctors oib|.
-  Proof.
+  Proof using Type.
     pose proof (hΣ _ wfΣ). sq.
     intros wf.
     zip fold in wf.
@@ -1907,7 +1908,7 @@ Qed.
          #|pparams p| br.(bcontext) &
        test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
          #|pparams p'| br'.(bcontext)] ∥.
-  Proof.
+  Proof using Type.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; 
     pose proof (hΣ _ wfΣ) as [hΣ]. specialize_Σ wfΣ.
     destruct hx as [hx].
@@ -2344,7 +2345,7 @@ Qed.
       conv_context Pcmp Σ Γ Δ ->
       conv_decls Pcmp Σ Γ Δ d d' ->
       conv_context Pcmp Σ (Γ ,, d) (Δ ,, d').
-  Proof.
+  Proof using Type.
     intros Γ Δ d d' hx h.
     destruct h.
     all: constructor. all: try assumption.
@@ -2355,7 +2356,7 @@ Qed.
     forall fk na ty ra mfix1 mfix2 idx,
       stack_entry_context (mFix_mfix fk (mfix1, def_hole_body na ty ra, mfix2) idx) =
       fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2).
-  Proof.
+  Proof using Type.
     intros fk na ty ra mfix1 mfix2 idx.
     destruct fk. all: reflexivity.
   Qed.
@@ -2649,7 +2650,7 @@ Qed.
   
   Lemma invert_type_mkApps_tProd Σ (wfΣ : abstract_env_ext_rel X Σ) Γ na A b args T :
     Σ;;; Γ |- mkApps (tProd na A b) args : T -> args = [].
-  Proof.
+  Proof using Type.
     intros typ.
     destruct (hΣ _ wfΣ).
     apply PCUICValidity.inversion_mkApps in typ as (?&[typ_prod typ_args]).
@@ -2665,7 +2666,7 @@ Qed.
 
   Lemma welltyped_zipc_tProd_appstack_nil Σ (wfΣ : abstract_env_ext_rel X Σ) {Γ na A B l ρ} :
     welltyped Σ Γ (zipc (tProd na A B) (appstack l ρ)) -> l = [].
-  Proof.
+  Proof using Type.
     pose proof (hΣ _ wfΣ) as [hΣ].
     intros wh.
     rewrite zipc_appstack in wh.
@@ -2686,7 +2687,7 @@ Qed.
                 _ X (Γ,,, stack_context π) c h) c = true ->
     isred_full Γ (tCase ci p c brs) π ->
     ∥whne RedFlags.default Σ (Γ,,, stack_context π) c∥.
-  Proof.
+  Proof using Type.
     intros eq ir. pose proof (heΣ _ wfΣ) as [[]]. 
     pose proof (hΣ _ wfΣ). 
     destruct ir as (_&[wh]); eauto. 
@@ -2716,7 +2717,7 @@ Qed.
 
   Lemma welltyped_zipp_inv Σ Γ t π : 
     wf Σ ->  welltyped Σ Γ (zipp t π) -> welltyped Σ Γ t.
-  Proof.
+  Proof using Type.
     induction π; cbn; auto.
     unfold zipp.
     destruct decompose_stack.
@@ -2732,7 +2733,7 @@ Qed.
   Defined. 
 
   Lemma welltyped_wf Σ Γ t : wf Σ -> welltyped Σ Γ t -> wf_universes Σ t.
-  Proof. 
+  Proof using Type. 
     intros ? [? Ht]. apply typing_wf_universes in Ht; eauto.
     cbn in Ht. rtoProp; intuition.
   Qed. 
@@ -2758,7 +2759,7 @@ Qed.
      Σ;;; Γ,,, stack_context π ⊢ c = c',
      ws_cumul_pb_brs Σ (Γ,,, stack_context π) p brs brs' &
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1]∥.
-  Proof.
+  Proof using Type.
     intros [] c_is_red%eq_sym c'_is_red%eq_sym wtc wtc' isr1 isr2 cc; eauto. 
     eapply reduced_case_discriminee_whne in c_is_red as wh1; eauto.
     eapply reduced_case_discriminee_whne in c'_is_red as wh2; eauto.
@@ -2783,7 +2784,7 @@ Qed.
                 _ X (Γ,,, stack_context π) c h) c ->
     isred_full Γ (tProj p c) π ->
     ∥whne RedFlags.default Σ (Γ,,, stack_context π) c∥.
-  Proof.
+  Proof using Type.
     intros eq%eq_sym ir.
     destruct ir as (_&[wh]); eauto. 
     pose proof (hΣ _ wfΣ). 
@@ -2825,7 +2826,7 @@ Qed.
     ∥p = p' ×
      Σ;;; Γ,,, stack_context π ⊢ c = c' ×
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
-  Proof.
+  Proof using Type.
     intros [] c_is_red c'_is_red isr1 isr2 cc; eauto.
     eapply reduced_proj_body_whne in c_is_red as wh1; eauto.
     eapply reduced_proj_body_whne in c'_is_red as wh2; eauto.
@@ -2845,7 +2846,7 @@ Qed.
     red Σ Γ' t2 t2' ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using Type.
     intros. destruct (hΣ _ wfΣ) as [wΣ].
     eapply conv_cum_red_conv_inv; eauto.
     all:eapply into_closed_red; tea. 
@@ -2867,7 +2868,7 @@ Qed.
              Σ;;; Γ,,, stack_context π,,, fix_context mfix ⊢ dbody d = dbody d')
           mfix mfix' &
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1]∥.
-  Proof.
+  Proof using Type.
     intros [?] uf1 uf2 cc; eauto. 
     rewrite !zipp_as_mkApps in cc; eauto.
     apply unfold_one_fix_None in uf1. 
@@ -2911,7 +2912,7 @@ Qed.
              Σ;;; Γ,,, stack_context π,,, fix_context mfix ⊢ dbody d = dbody d')
           mfix mfix' ×
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
-  Proof.
+  Proof using Type.
     intros [?] cc; eauto. specialize_Σ wfΣ.
     rewrite !zipp_as_mkApps in cc.
     destruct (hΣ _ wfΣ).
@@ -3040,7 +3041,7 @@ Qed.
          #|pparams p| p.(pcontext) &
        test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
          #|pparams p'| p'.(pcontext)] ∥.
-  Proof.
+  Proof using Type.
     destruct (hΣ _ wfΣ). specialize_Σ wfΣ.
     destruct hx as [hx].
     destruct hp as [hp].
@@ -3095,7 +3096,7 @@ Qed.
     (forall a b, R a b = R' a b) ->
     forallb2 R l l' = 
     forallb2 R' l l'.
-  Proof.
+  Proof using Type.
     intro e. revert l'.
     induction l; destruct l'; eauto. 
     cbn; intros. rewrite <- e.
@@ -3243,7 +3244,7 @@ Qed.
     red Σ Γ t2 t2' ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
     sq_ws_cumul_pb leq Σ Γ t1' t2'.
-  Proof.
+  Proof using Type.
     intros. destruct (hΣ _ wfΣ).
     destruct H. eapply conv_cum_red_inv; tea. 3:split; eauto.
     all:eapply into_closed_red; tea; fvs.
@@ -4324,7 +4325,7 @@ Qed.
   Qed.
 
   Lemma wt_zip_mkapps Σ (wfΣ:abstract_env_ext_rel X Σ) Γ f π : welltyped Σ Γ (zipc f π) -> is_open_term (Γ ,,, stack_context π) (mkApps f (decompose_stack π).1).
-  Proof.
+  Proof using Type.
     pose (heΣ _ wfΣ).
     sq.
     intros. apply welltyped_zipc_zipp in H; auto.
@@ -4826,7 +4827,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ ci p c brs h t,
       Some t = unfold_one_case Γ ci p c brs h ->
       cored Σ Γ t (tCase ci p c brs).
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ ci p c brs h t e.
     revert e.
     funelim (unfold_one_case Γ ci p c brs h).
@@ -4862,7 +4863,7 @@ Qed.
   Lemma unfold_one_case_None Σ (wfΣ : abstract_env_ext_rel X Σ) Γ ci p c brs h :
     None = unfold_one_case Γ ci p c brs h ->
     ∥∑ c', red Σ Γ c c' × whne RedFlags.default Σ Γ c'∥.
-  Proof.
+  Proof using Type.
     funelim (unfold_one_case Γ ci p c brs h); intros [=].
     - clear H.
       simpl_reduce_stack Σ wfΣ.
@@ -4944,7 +4945,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ p c h t,
       Some t = unfold_one_proj Γ p c h ->
       cored Σ Γ t (tProj p c).
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ p c h t e.
     revert e.
     funelim (unfold_one_proj Γ p c h).
@@ -4979,7 +4980,7 @@ Qed.
   Lemma unfold_one_proj_None Σ (wfΣ : abstract_env_ext_rel X Σ) Γ p c h :
     None = unfold_one_proj Γ p c h ->
     ∥∑ c', red Σ Γ c c' × whne RedFlags.default Σ Γ c'∥.
-  Proof.
+  Proof using Type.
     funelim (unfold_one_proj Γ p c h); intros [=].
     - clear H.
       simpl_reduce_stack Σ wfΣ.
@@ -5044,7 +5045,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
       ∥ red (fst Σ) (Γ ,,, stack_context π) (zipp t π) (zipp fn ξ) ∥.
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ t π h fn ξ e.
     revert e.
     funelim (reducible_head Γ t π h).
@@ -5076,7 +5077,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
       ∥ red (fst Σ) Γ (zippx t π) (zippx fn ξ) ∥.
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ t π h fn ξ e.
     revert e.
     funelim (reducible_head Γ t π h).
@@ -5111,7 +5112,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
       cored Σ Γ (zipc fn ξ) (zipc t π).
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ t π h fn ξ e.
     revert e.
     funelim (reducible_head Γ t π h).
@@ -5132,7 +5133,7 @@ Qed.
     forall Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
       snd (decompose_stack π) = snd (decompose_stack ξ).
-  Proof.
+  Proof using Type.
     intros Γ t π h fn ξ e.
     revert e.
     funelim (reducible_head Γ t π h).
@@ -5169,7 +5170,7 @@ Qed.
       whnf_red Σ (Γ,,, stack_context π) t t' ×
       All2 (red Σ (Γ,,, stack_context π)) (decompose_stack π).1 args' ×
       whnf RedFlags.default Σ (Γ,,, stack_context π) (mkApps t' args')∥.
-  Proof.
+  Proof using Type.
     funelim (reducible_head Γ t π h); intros notapp wh [=].
     - apply whnf_mkApps_inv in wh.
       depelim wh; solve_discr.
@@ -5712,7 +5713,7 @@ Qed.
 
   Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
     forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
-  Proof.
+  Proof using Type.
     intros x y H HR.
     pose proof (heΣ := heΣ _ wfΣ).
     pose proof (hΣ := hΣ _ wfΣ). cbn.
@@ -5777,7 +5778,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ leq t1 π1 h1 t2 π2 h2 hx,
       isconv Γ leq t1 π1 h1 t2 π2 h2 hx = ConvSuccess ->
       conv_cum leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2).
-  Proof.
+  Proof using Type.
     unfold isconv.
     intros Σ wfΣ Γ leq t1 π1 h1 t2 π2 h2 hx.
     destruct isconv_full as [].
@@ -5789,7 +5790,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ leq t1 π1 h1 t2 π2 h2 hx e,
       isconv Γ leq t1 π1 h1 t2 π2 h2 hx = ConvError e ->
       ~conv_cum leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2).
-  Proof.
+  Proof using Type.
     unfold isconv.
     intros Σ wfΣ Γ leq t1 π1 h1 t2 π2 h2 hx.
     destruct isconv_full as []; eauto.
@@ -5812,7 +5813,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ leq t1 h1 t2 h2,
       isconv_term Γ leq t1 h1 t2 h2 = ConvSuccess ->
       conv_cum leq Σ Γ t1 t2.
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ leq t1 h1 t2 h2.
     unfold isconv_term. intro h.
     eapply isconv_sound in h; eauto.
@@ -5822,7 +5823,7 @@ Qed.
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ leq t1 h1 t2 h2 e,
       isconv_term Γ leq t1 h1 t2 h2 = ConvError e ->
       ~conv_cum leq Σ Γ t1 t2.
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ leq t1 h1 t2 h2 e.
     unfold isconv_term. intro h.
     eapply isconv_complete in h; eauto. 

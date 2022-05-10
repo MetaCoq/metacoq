@@ -152,7 +152,7 @@ Section EEnvFlags.
   Notation wellformed := (wellformed Σ).
   
   Lemma wellformed_closed {k t} : wellformed k t -> closedn k t.
-  Proof.
+  Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; intros;
       simpl in * ; rewrite -> ?andb_and in *;
       autorewrite with map;
@@ -162,14 +162,14 @@ Section EEnvFlags.
   Qed.
   
   Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
-  Proof.
+  Proof using Type.
     destruct t => /= //.
     destruct (cst_body c) => /= //.
     eapply wellformed_closed.
   Qed.
 
   Lemma wellformed_up {k t} : wellformed k t -> forall k', k <= k' -> wellformed k' t.
-  Proof.
+  Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; intros;
       simpl in * ; rewrite -> ?andb_and in *;
       autorewrite with map;
@@ -180,7 +180,7 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_lift n k k' t : wellformed k t -> wellformed (k + n) (lift n k' t).
-  Proof.
+  Proof using Type.
     revert k.
     induction t in n, k' |- * using EInduction.term_forall_list_ind; intros;
       simpl in *; rewrite -> ?andb_and in *;
@@ -204,7 +204,7 @@ Section EEnvFlags.
     forallb (wellformed k) s -> 
     wellformed (k + k' + #|s|) t ->
     wellformed (k + k') (subst s k' t).
-  Proof.
+  Proof using Type.
     intros Hs. solve_all. revert Hs.
     induction t in H, k' |- * using EInduction.term_forall_list_ind; intros;
       simpl in *; auto;
@@ -246,7 +246,7 @@ Section EEnvFlags.
   Lemma wellformed_subst s k t :
     forallb (wellformed k) s -> wellformed (#|s| + k) t -> 
     wellformed k (subst0 s t).
-  Proof.
+  Proof using Type.
     intros.
     unshelve epose proof (wellformed_subst_eq (k':=0) (t:=t) H); auto.
     rewrite Nat.add_0_r in H1.
@@ -257,7 +257,7 @@ Section EEnvFlags.
     wellformed 0 t -> 
     wellformed (S k) u -> 
     wellformed k (ECSubst.csubst t 0 u).
-  Proof.
+  Proof using Type.
     intros.
     rewrite ECSubst.closed_subst //.
     now eapply wellformed_closed.
@@ -269,7 +269,7 @@ Section EEnvFlags.
     forallb (wellformed 0) ts -> 
     wellformed (#|ts| + k) u -> 
     wellformed k (ECSubst.substl ts u).
-  Proof.
+  Proof using Type.
     induction ts in u |- *; cbn => //.
     move/andP=> [] cla clts.
     intros clu. eapply IHts => //.
@@ -279,7 +279,7 @@ Section EEnvFlags.
   Lemma wellformed_fix_subst mfix {hast : has_tFix}: 
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (fix_subst mfix).
-  Proof.
+  Proof using Type.
     intros hm. unfold fix_subst.
     generalize (le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
@@ -291,7 +291,7 @@ Section EEnvFlags.
   Lemma wellformed_cofix_subst mfix {hasco : has_tCoFix}: 
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (cofix_subst mfix).
-  Proof.
+  Proof using Type.
     intros hm. unfold cofix_subst.
     generalize (le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
@@ -304,7 +304,7 @@ Section EEnvFlags.
     wellformed 0 (EAst.tFix mfix idx) ->
     cunfold_fix mfix idx = Some (n, f) ->
     wellformed 0 f.
-  Proof.
+  Proof using Type.
     move=> cl.
     rewrite /cunfold_fix.
     destruct nth_error eqn:heq => //.
@@ -320,7 +320,7 @@ Section EEnvFlags.
     wellformed 0 (EAst.tCoFix mfix idx) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     wellformed 0 f.
-  Proof.
+  Proof using Type.
     move=> cl.
     rewrite /cunfold_cofix.
     destruct nth_error eqn:heq => //.
@@ -338,7 +338,7 @@ Section EEnvFlags.
     #|skipn pars args| = #|br.1| ->
     wellformed #|br.1| br.2 ->
     wellformed 0 (iota_red pars args br).
-  Proof.
+  Proof using Type.
     intros clargs hnth hskip clbr.
     rewrite /iota_red.
     eapply wellformed_substl => //.
@@ -352,7 +352,7 @@ Section EEnvFlags.
     #|skipn pars args| = #|br.1| ->
     forallb (fun br => wellformed (#|br.1| + 0) br.2) brs ->
     wellformed 0 (iota_red pars args br).
-  Proof.
+  Proof using Type.
     intros clargs hnth hskip clbr.
     eapply wellformed_iota_red; tea => //.
     eapply nth_error_forallb in clbr; tea.
@@ -360,7 +360,7 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_mkApps n f args {hast : has_tApp} : wellformed n (mkApps f args) = wellformed n f && forallb (wellformed n) args.
-  Proof.
+  Proof using Type.
     induction args using rev_ind; cbn; auto => //.
     - now rewrite andb_true_r.
     - now rewrite mkApps_app /= IHargs hast /= forallb_app /= // !andb_assoc andb_true_r.

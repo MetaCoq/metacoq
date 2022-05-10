@@ -402,7 +402,7 @@ Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck 
 
 Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
-Proof.
+Proof using Type.
   induction l1 in a1 |- *; cbn; intros.
   - inv H. econstructor.
   - revert H.
@@ -415,13 +415,13 @@ Qed.
 
 Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = Checked a1 -> Forall2 (fun a b => f a = Checked b) l1 a1.
-Proof.
+Proof using Type.
   intros. now eapply All2_Forall2, monad_map_All2.
 Qed.
 
 Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
   monad_map f l1 = Checked a -> #|l1| = #|a|.
-Proof.
+Proof using Type.
   revert a; induction l1; cbn; intros.
   - invs H. cbn. congruence.
   - revert H.
@@ -434,7 +434,7 @@ Qed.
 
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
   monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2).
-Proof.
+Proof using Type.
   revert a1. induction l1; intros.
   - cbn in *. invs H. eauto.
   - cbn in *.
@@ -449,7 +449,7 @@ Qed.
 Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
   monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\
   monad_map f l2 = Checked a2 /\ (a = a1 ++ a2).
-Proof.
+Proof using Type.
   intros. revert a H. induction l1; intros.
   - cbn in *. eauto.
   - cbn in *.

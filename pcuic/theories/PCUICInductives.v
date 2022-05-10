@@ -232,7 +232,7 @@ Section OnInductives.
     (decli : declared_inductive Σ ind mdecl idecl).
 
   Lemma on_minductive_wf_params_indices : wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, ind_indices idecl).
-  Proof.
+  Proof using decli wfΣ.
     eapply on_declared_inductive in decli as [onmind oib].
     pose proof (oib.(onArity)).
     rewrite oib.(ind_arity_eq) in X.
@@ -244,7 +244,7 @@ Section OnInductives.
 
   Lemma declared_inductive_type :
     ind_type idecl = it_mkProd_or_LetIn (ind_params mdecl ,,, ind_indices idecl) (tSort (ind_sort idecl)).
-  Proof.
+  Proof using decli wfΣ.
     eapply on_declared_inductive in decli as [onmind oib].
     rewrite oib.(ind_arity_eq).
     now rewrite -it_mkProd_or_LetIn_app.
@@ -266,7 +266,7 @@ Section OnInductives.
   Lemma on_minductive_wf_params_indices_inst (u : Instance.t) :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     wf_local Σ (subst_instance u (ind_params mdecl ,,, ind_indices idecl)).
-  Proof.
+  Proof using decli wfΣ.
     intros.
     eapply (wf_local_instantiate _ (proj1 decli)); eauto.
     now eapply on_minductive_wf_params_indices.
@@ -277,7 +277,7 @@ Section OnInductives.
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     isType Σ Γ (it_mkProd_or_LetIn (subst_instance u (ind_params mdecl ,,, idecl.(ind_indices)))
           (tSort (subst_instance_univ u idecl.(ind_sort)))).
-  Proof.
+  Proof using decli wfΣ.
     move=> wfΓ cext.
     destruct (on_declared_inductive decli) as [onmind oib].
     pose proof (oib.(onArity)) as ar.
@@ -294,7 +294,7 @@ Section OnInductives.
     wf_local Σ Γ ->
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     isType Σ Γ (subst_instance u idecl.(ind_type)).
-  Proof.
+  Proof using decli wfΣ.
     move=> wfΓ cext.
     destruct (on_declared_inductive decli) as [onmind oib].
     pose proof (oib.(onArity)) as ar.
@@ -308,7 +308,7 @@ Section OnInductives.
   Local Definition oib := (on_declared_inductive decli).2.
 
   Lemma on_inductive_sort : wf_universe (Σ.1, ind_universes mdecl) (ind_sort idecl).
-  Proof.
+  Proof using decli wfΣ.
     pose proof (oib.(onArity)) as ar.
     rewrite oib.(ind_arity_eq) in ar.
     destruct ar as [s ar].
@@ -321,7 +321,7 @@ Section OnInductives.
   Lemma on_inductive_sort_inst u :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     wf_universe Σ (subst_instance u (ind_sort idecl)).
-  Proof.
+  Proof using decli wfΣ.
     generalize on_inductive_sort => wf.
     destruct Σ. intros cu.
     eapply wf_universe_instantiate; eauto.
@@ -331,7 +331,7 @@ Section OnInductives.
   Lemma nth_errror_arities_context decl :
     nth_error (arities_context (ind_bodies mdecl)) (#|ind_bodies mdecl| - S (inductive_ind ind)) = Some decl ->
     decl.(decl_type) = idecl.(ind_type).
-  Proof.
+  Proof using decli.
     unfold arities_context.
     rewrite nth_error_rev_map.
     destruct decli as [declm decli'].
@@ -345,7 +345,7 @@ Section OnInductives.
     consistent_instance_ext Σ (ind_universes mdecl) puinst ->
     spine_subst Σ Γ args inst (subst_instance puinst (ind_params mdecl ,,, ind_indices idecl)) ->
     Σ ;;; Γ |- mkApps (tInd ind puinst) args : tSort (subst_instance puinst (ind_sort idecl)).
-  Proof.
+  Proof using decli wfΣ.
     intros cu sp.
     eapply type_mkApps; tea.
     econstructor; eauto. apply sp.

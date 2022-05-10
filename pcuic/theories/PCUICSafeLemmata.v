@@ -104,7 +104,7 @@ Section Lemmata.
   Instance All2_eq_refl Σ Re :
     RelationClasses.Reflexive Re ->
     CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
-  Proof.
+  Proof using Type.
     intros h x. apply All2_same. reflexivity.
   Qed.
 
@@ -114,7 +114,7 @@ Section Lemmata.
       (fun x y : branch term =>
         eq_context_upto Σ Re Re (bcontext x) (bcontext y) *
         eq_term_upto_univ Σ Re Re (bbody x) (bbody y))).
-  Proof.
+  Proof using Type.
     intros h x.
     apply All2_same; split; reflexivity.
   Qed.
@@ -138,7 +138,7 @@ Section Lemmata.
       closedn_stack #|Γ| ρ ->
       Σ ;;; (Γ ,,, stack_context ρ) ⊢ u ≤[le] v ->
       Σ ;;; Γ ⊢ zippx u ρ ≤[le] zippx v ρ.
-  Proof.
+  Proof using Type.
     intros wfΣ le Γ u v ρ cl h.
     induction ρ in u, v, cl, h |- *; auto.
     destruct a.
@@ -171,7 +171,7 @@ Section Lemmata.
     forall {wfΣ : wf Σ} Δ Γ u v,
       Σ ;;; (Δ ,,, Γ) ⊢ u = v ->
       Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
-  Proof.
+  Proof using Type.
     intros wfΣ Δ Γ u v h. revert Δ u v h.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
     - assumption.
@@ -182,7 +182,7 @@ Section Lemmata.
   Qed.
 
   Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
@@ -190,7 +190,7 @@ Section Lemmata.
     forall {wfΣ : wf Σ} Δ Γ B B',
       Σ ;;; (Δ ,,, Γ) ⊢ B = B' ->
       Σ ;;; Δ ⊢ it_mkProd_or_LetIn Γ B = it_mkProd_or_LetIn Γ B'.
-  Proof.
+  Proof using Type.
     intros wfΣ Δ Γ B B' h.
     have cl : is_closed_context (Δ ,,, Γ).
     { now apply ws_cumul_pb_is_closed_context in h. }
@@ -229,7 +229,7 @@ Section Lemmata.
     welltyped Σ Γ u ->
     eq_term_upto_univ empty_global_env eq eq u v ->
     welltyped Σ Γ v.
-  Proof.
+  Proof using hΣ.
     intros [A h] e.
     exists A. eapply typing_alpha ; eauto.
   Qed.
@@ -238,7 +238,7 @@ Section Lemmata.
     forall Γ u v,
       red Σ Γ u v ->
       cored Σ Γ v u \/ u = v.
-  Proof.
+  Proof using Type.
     intros Γ u v h.
     induction h using red_rect'.
     - right. reflexivity.
@@ -252,7 +252,7 @@ Section Lemmata.
       cored Σ (Γ ,,, Δ) u v ->
       cored Σ Γ (it_mkLambda_or_LetIn Δ u)
                (it_mkLambda_or_LetIn Δ v).
-  Proof.
+  Proof using Type.
     intros Γ Δ u v h.
     induction h.
     - constructor. apply red1_it_mkLambda_or_LetIn. assumption.
@@ -266,7 +266,7 @@ Section Lemmata.
       welltyped Σ Γ u ->
       cored Σ Γ v u ->
       welltyped Σ Γ v.
-  Proof.
+  Proof using hΣ.
     intros Γ u v h r.
     revert h. induction r ; intros h.
     - destruct h as [A h]. exists A.
@@ -281,7 +281,7 @@ Section Lemmata.
       cored Σ Γ u v ->
       cored Σ Γ v w ->
       cored Σ Γ u w.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2. revert w h2.
     induction h1 ; intros z h2.
     - eapply cored_trans ; eassumption.
@@ -298,7 +298,7 @@ Section Lemmata.
       red Σ Γ u v ->
       red1 Σ Γ v w ->
       cored Σ Γ w u.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     revert w h2. induction h1 using red_rect'; intros w h2.
     - constructor. assumption.
@@ -311,7 +311,7 @@ Section Lemmata.
     forall Γ ind p c c' brs,
       cored Σ Γ c c' ->
       cored Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
-  Proof.
+  Proof using Type.
     intros Γ ind p c c' brs h.
     revert ind p brs. induction h ; intros ind p brs.
     - constructor. constructor. assumption.
@@ -324,7 +324,7 @@ Section Lemmata.
     forall Γ p c c',
       cored Σ Γ c c' ->
       cored Σ Γ (tProj p c) (tProj p c').
-  Proof.
+  Proof using Type.
     intros Γ p c c' h.
     induction h in p |- *.
     - constructor. constructor. assumption.
@@ -338,7 +338,7 @@ Section Lemmata.
   Lemma welltyped_fill_context_hole Γ π pcontext t :
     wf_local Σ (Γ,,, stack_context π,,, fill_context_hole pcontext t) ->
     welltyped Σ (Γ,,, stack_context π,,, context_hole_context pcontext) t.
-  Proof.
+  Proof using Type.
     intros wfl.
     destruct pcontext as ((?&h)&?); simpl in *.
     apply wf_local_app_inv in wfl as (_&wf).
@@ -350,7 +350,7 @@ Section Lemmata.
   Lemma compare_decls_conv Γ Γ' :
     eq_context_upto_names Γ Γ' ->
     conv_context cumulAlgo_gen Σ Γ Γ'.
-  Proof.
+  Proof using Type.
     intros.
     induction X; constructor; auto.
     destruct r; constructor; subst; auto; reflexivity.
@@ -359,14 +359,14 @@ Section Lemmata.
   Lemma compare_decls_eq_context Γ Γ' :
     eq_context_upto_names Γ Γ' <~>
     eq_context_gen eq eq Γ Γ'.
-  Proof.
+  Proof using Type.
     split; induction 1; constructor; auto.
   Qed.
 
   Lemma alpha_eq_inst_case_context Γ Δ pars puinst :
     eq_context_upto_names Γ Δ ->
     eq_context_upto_names (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
-  Proof.
+  Proof using Type.
     intros. rewrite /inst_case_context.
     now eapply alpha_eq_subst_context, alpha_eq_subst_instance.
   Qed.
@@ -375,7 +375,7 @@ Section Lemmata.
     forall Γ t,
       welltyped Σ Γ (zip t) ->
       welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
-  Proof.
+  Proof using hΣ.
     intros Γ [t π] h. simpl.
     destruct h as [T h].
     induction π in Γ, t, T, h |- *.
@@ -495,7 +495,7 @@ Section Lemmata.
     forall Γ u v,
       cored Σ Γ v u ->
       ∥ red Σ Γ u v ∥.
-  Proof.
+  Proof using Type.
     intros Γ u v h.
     induction h.
     - constructor. now constructor.
@@ -507,7 +507,7 @@ Section Lemmata.
     forall Γ t u π,
       cored Σ (Γ ,,, stack_context π) t u ->
       cored Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
+  Proof using Type.
     intros Γ t u π h. induction h.
     - constructor. eapply red1_context. assumption.
     - eapply cored_trans.
@@ -518,7 +518,7 @@ Section Lemmata.
   Lemma decompose_stack_closed n ρ l s :
     closedn_stack n ρ -> decompose_stack ρ = (l, s) ->
     forallb (closedn (n + #|stack_context ρ|)) l.
-  Proof.
+  Proof using Type.
     induction ρ in l, s |- *; cbn.
     - now intros _ [= <- <-].
     - move/andP=> [cla clρ].
@@ -567,7 +567,7 @@ Section Lemmata.
     forall A (R : A -> A -> Prop) B (f : B -> A),
       well_founded R ->
       well_founded (fun x y => R (f x) (f y)).
-  Proof.
+  Proof using Type.
     intros A R B f h x.
     specialize (h (f x)).
     dependent induction h.
@@ -579,7 +579,7 @@ Section Lemmata.
     forall A (R : A -> A -> Prop) B (f : B -> A) x,
       Acc R (f x) ->
       Acc (fun x y => R (f x) (f y)) x.
-  Proof.
+  Proof using Type.
     intros A R B f x h.
     dependent induction h.
     constructor. intros y h.
@@ -591,7 +591,7 @@ Section Lemmata.
     forall Γ Δ t,
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
       welltyped Σ (Γ ,,, Δ) t.
-  Proof.
+  Proof using hΣ.
     intros Γ Δ t h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
     - assumption.
@@ -611,7 +611,7 @@ Section Lemmata.
     forall Γ Δ t,
       welltyped Σ (Γ ,,, Δ) t ->
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
-  Proof.
+  Proof using Type.
     intros Γ Δ t [T h].
     eexists. eapply PCUICGeneration.type_it_mkLambda_or_LetIn.
     eassumption.
@@ -621,7 +621,7 @@ Section Lemmata.
     forall Γ Δ t,
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) <->
       welltyped Σ (Γ ,,, Δ) t.
-  Proof.
+  Proof using hΣ.
     intros. split.
     - apply welltyped_it_mkLambda_or_LetIn.
     - apply it_mkLambda_or_LetIn_welltyped.
@@ -631,7 +631,7 @@ Section Lemmata.
     forall {Γ t π},
       welltyped Σ [] (zipx Γ t π) ->
       welltyped Σ Γ (zipc t π).
-  Proof.
+  Proof using hΣ.
     intros Γ t π h.
     apply welltyped_it_mkLambda_or_LetIn in h.
     rewrite app_context_nil_l in h.
@@ -642,7 +642,7 @@ Section Lemmata.
     : decompose_stack π = (args, ρ)
       -> welltyped Σ Γ (zipc t π)
       -> welltyped Σ (Γ ,,, stack_context π) (zipc t (appstack args [])).
-  Proof.
+  Proof using hΣ.
     intros h h1.
     apply decompose_stack_eq in h. subst.
     rewrite stack_context_appstack.
@@ -658,7 +658,7 @@ Section Lemmata.
         cst_relevance := rel |})
       = lookup_env Σ c ->
       red (fst Σ) Γ (tConst c u) (subst_instance u cb).
-  Proof.
+  Proof using Type.
     intros Γ c u cty cb cu rel e.
     econstructor. econstructor.
     - symmetry in e. exact e.
@@ -671,7 +671,7 @@ Section Lemmata.
         cst_relevance := rel |})
       = lookup_env Σ c ->
       cored Σ Γ (subst_instance u cb) (tConst c u).
-  Proof.
+  Proof using Type.
     intros Γ c u cty cb cu rel e.
     symmetry in e.
     econstructor.
@@ -684,7 +684,7 @@ Section Lemmata.
     forall Γ u v1 v2,
       cored Σ Γ v1 v2 ->
       cored Σ Γ (tApp u v1) (tApp u v2).
-  Proof.
+  Proof using Type.
     intros Γ u v1 v2 h.
     induction h.
     - constructor. constructor. assumption.
@@ -702,7 +702,7 @@ Section Lemmata.
 
   Lemma isAppProd_mkApps :
     forall t l, isAppProd (mkApps t l) = isAppProd t.
-  Proof.
+  Proof using Type.
     intros t l. revert t.
     induction l ; intros t.
     - reflexivity.
@@ -713,7 +713,7 @@ Section Lemmata.
     forall t l,
       isProd (mkApps t l) ->
       l = [].
-  Proof.
+  Proof using Type.
     intros t l h.
     revert t h.
     induction l ; intros t h.
@@ -726,7 +726,7 @@ Section Lemmata.
     forall t l,
       isSort (mkApps t l) ->
       l = [].
-  Proof.
+  Proof using Type.
     intros t l h.
     revert t h.
     induction l ; intros t h.
@@ -740,7 +740,7 @@ Section Lemmata.
       isAppProd t ->
       welltyped Σ Γ t ->
       isProd t.
-  Proof.
+  Proof using hΣ.
     intros Γ t hp hw.
     induction t in Γ, hp, hw |- *.
     all: try discriminate hp.
@@ -767,7 +767,7 @@ Section Lemmata.
     forall Γ na A B l,
       welltyped Σ Γ (mkApps (tProd na A B) l) ->
       l = [].
-  Proof.
+  Proof using hΣ.
     intros Γ na A B l h.
     pose proof (isAppProd_isProd) as hh.
     specialize hh with (2 := h).
@@ -782,7 +782,7 @@ Section Lemmata.
     forall π l ρ,
       decompose_stack π = (l,ρ) ->
       isStackApp ρ = false.
-  Proof.
+  Proof using Type.
     intros π l ρ e.
     destruct ρ; auto.
     destruct s.
@@ -794,7 +794,7 @@ Section Lemmata.
   Lemma stack_context_decompose :
     forall π,
       stack_context (snd (decompose_stack π)) = stack_context π.
-  Proof.
+  Proof using Type.
     intros π.
     case_eq (decompose_stack π). intros l ρ e.
     cbn. pose proof (decompose_stack_eq _ _ _ e). subst.
@@ -813,7 +813,7 @@ Section Lemmata.
      | [] => (decompose_stack π').2
      | _ => π'
      end).
-  Proof.
+  Proof using Type.
     induction π in π' |- *; cbn in *; auto.
     - now destruct decompose_stack.
     - destruct a; auto.
@@ -824,7 +824,7 @@ Section Lemmata.
   Lemma zipp_stack_cat π π' t :
     isStackApp π = false ->
     zipp t (π' ++ π) = zipp t π'.
-  Proof.
+  Proof using Type.
     intros no_stack_app.
     unfold zipp.
     rewrite decompose_stack_stack_cat.
@@ -836,7 +836,7 @@ Section Lemmata.
 
   Lemma zipp_appstack t args π :
     zipp t (appstack args π) = zipp (mkApps t args) π.
-  Proof.
+  Proof using Type.
     unfold zipp.
     rewrite decompose_stack_appstack.
     rewrite mkApps_app.
@@ -846,11 +846,11 @@ Section Lemmata.
   Lemma fst_decompose_stack_nil π :
     isStackApp π = false ->
     (decompose_stack π).1 = [].
-  Proof. now destruct π as [|[] ?]. Qed.
+  Proof using Type. now destruct π as [|[] ?]. Qed.
 
   Lemma zipp_as_mkApps t π :
     zipp t π = mkApps t (decompose_stack π).1.
-  Proof.
+  Proof using Type.
     unfold zipp.
     now destruct decompose_stack.
   Qed.
@@ -858,7 +858,7 @@ Section Lemmata.
   Lemma zipp_noStackApp t π :
     isStackApp π = false ->
     zipp t π = t.
-  Proof.
+  Proof using Type.
     intros.
     now rewrite zipp_as_mkApps fst_decompose_stack_nil.
   Qed.
@@ -868,7 +868,7 @@ Section Lemmata.
       it_mkLambda_or_LetIn Γ u =
       it_mkLambda_or_LetIn Γ v ->
       u = v.
-  Proof.
+  Proof using Type.
     intros Γ u v e.
     revert u v e.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros u v e.
@@ -889,7 +889,7 @@ Section Lemmata.
       cored Σ Γ w v ->
       red Σ Γ u v ->
       cored Σ Γ w u.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     revert u h2. induction h1 ; intros t h2.
     - eapply cored_red_trans ; eassumption.
@@ -903,7 +903,7 @@ Section Lemmata.
       red Σ Γ u v ->
       u <> v ->
       cored Σ Γ v u.
-  Proof.
+  Proof using Type.
     intros Γ u v r n.
     destruct r using red_rect'.
     - exfalso. apply n. reflexivity.
@@ -916,7 +916,7 @@ Section Lemmata.
       welltyped Σ Γ u ->
       ∥ red (fst Σ) Γ u v ∥ ->
       welltyped Σ Γ v.
-  Proof.
+  Proof using hΣ.
     intros Γ u v h [r].
     revert h. induction r using red_rect' ; intros h.
     - assumption.
@@ -930,7 +930,7 @@ Section Lemmata.
       red Σ Γ v w ->
       cored Σ Γ v u ->
       cored Σ Γ w u.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     revert u h2. induction h1 using red_rect' ; intros t h2.
     - assumption.
@@ -943,7 +943,7 @@ Section Lemmata.
     forall Γ p i' c u l,
       welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
       nth_error l (p.(proj_npars) + p.(proj_arg)) <> None.
-  Proof.
+  Proof using hΣ.
     intros Γ p i' c u l [T h].
     apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?).
     2: now sq.
@@ -954,7 +954,7 @@ Section Lemmata.
     forall Γ t u π,
       cored Σ (Γ ,,, stack_context π) t u ->
       cored Σ Γ (zipc t π) (zipc u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     do 2 zip fold. eapply cored_context. assumption.
   Qed.
@@ -963,7 +963,7 @@ Section Lemmata.
     forall Γ t u π,
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zipc t π) (zipc u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     do 2 zip fold. eapply red_context_zip. assumption.
   Qed.
@@ -972,7 +972,7 @@ Section Lemmata.
     forall Γ t π,
       welltyped Σ Γ (zipc t π) ->
       welltyped Σ (Γ ,,, stack_context π) (zipp t π).
-  Proof.
+  Proof using hΣ.
     intros Γ t π h.
     unfold zipp.
     case_eq (decompose_stack π). intros l ρ e.
@@ -988,7 +988,7 @@ Section Lemmata.
     ∥ Σ ;;; Γ ⊢ t ≤[leq] t' ∥ ->
     ∥ws_cumul_pb_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
     ∥Σ ;;; Γ ⊢ zipp t π ≤[leq] zipp t' π'∥.
-  Proof.
+  Proof using hΣ.
     intros conv conv_args.
     rewrite !zipp_as_mkApps.
     sq; eapply ws_cumul_pb_mkApps; auto.
@@ -999,7 +999,7 @@ Section Lemmata.
     whne f Σ Γ t ->
     All2_fold rel Γ Γ' ->
     whne f Σ Γ' t.
-  Proof.
+  Proof using Type.
     intros behaves wh conv.
     induction wh; eauto using whne.
     destruct nth_error eqn:nth; [|easy].
@@ -1020,7 +1020,7 @@ Section Lemmata.
     whnf f Σ Γ t ->
     All2_fold rel Γ Γ' ->
     whnf f Σ Γ' t.
-  Proof.
+  Proof using Type.
     intros behaves wh conv.
     destruct wh; eauto using whnf.
     apply whnf_ne.
@@ -1031,7 +1031,7 @@ Section Lemmata.
     whne f Σ Γ t ->
     conv_context cumulAlgo_gen Σ Γ Γ' ->
     whne f Σ Γ' t.
-  Proof.
+  Proof using Type.
     apply whne_All2_fold.
     intros ? ? ? ? r.
     now depelim r.
@@ -1041,7 +1041,7 @@ Section Lemmata.
     whnf f Σ Γ t ->
     conv_context cumulAlgo_gen Σ Γ Γ' ->
     whnf f Σ Γ' t.
-  Proof.
+  Proof using Type.
     apply whnf_All2_fold.
     intros ? ? ? ? r.
     now depelim r.
@@ -1051,7 +1051,7 @@ Section Lemmata.
     forall {Γ ci ind' pred i u brs args},
       welltyped Σ Γ (tCase ci pred (mkApps (tConstruct ind' i u) args) brs) ->
       ci.(ci_ind) = ind'.
-  Proof.
+  Proof using hΣ.
     intros Γ ci ind' pred i u brs args [A h].
     apply PCUICInductiveInversion.invert_Case_Construct in h; intuition auto using sq.
   Qed.
@@ -1060,7 +1060,7 @@ Section Lemmata.
     forall Γ p i' c u l,
       welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
       p.(proj_ind) = i'.
-  Proof.
+  Proof using hΣ.
     intros Γ p i' c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.

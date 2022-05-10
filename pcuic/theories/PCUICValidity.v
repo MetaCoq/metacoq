@@ -25,7 +25,7 @@ Section Validity.
   Context `{cf : config.checker_flags}.
 
   Lemma isType_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => isType Σ Γ T).
-  Proof.
+  Proof using Type.
     red. intros.
     apply infer_typing_sort_impl with id X2; intros Hs.
     unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort _))); eauto with pcuic.
@@ -37,7 +37,7 @@ Section Validity.
   Lemma isType_weaken :
     weaken_env_prop cumulSpec0 (lift_typing typing)
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
-  Proof.
+  Proof using Type.
     red. intros.
     apply lift_typing_impl with (1 := X2); intros ? Hs.
     now eapply (isType_weaken_full (Σ, _)).
@@ -50,7 +50,7 @@ Section Validity.
     forall Γ : context,
     forall t0 : term,
     isType (Σ, φ) Γ t0 -> isType (Σ', φ) Γ t0.
-  Proof.
+  Proof using Type.
     intros wfΣ wfΣ' ext Γ t Hty.
     apply infer_typing_sort_impl with id Hty; intros Hs.
     eapply (env_prop_typing weakening_env (Σ, φ)); auto.
@@ -62,14 +62,14 @@ Section Validity.
         (fun (Σ0 : PCUICEnvironment.global_env_ext)
           (Γ0 : PCUICEnvironment.context) (_ T : term) =>
         isType Σ0 Γ0 T)).
-  Proof.
+  Proof using Type.
     red. intros Σ Σ' ϕ wfΣ wfΣ' ext * Hty.
     apply lift_typing_impl with (1 := Hty); intros ? Hs.
     now eapply isType_extends with Σ.
   Qed.
 
   Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_universe Σ s.
-  Proof.
+  Proof using Type.
     intros wfΣ [u Hu].
     now eapply inversion_Sort in Hu as [? [? ?]].
   Qed.
@@ -80,7 +80,7 @@ Section Validity.
     isType (Σ.1, universes_decl_of_decl decl) Γ T ->
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
     isType Σ (subst_instance u Γ) (subst_instance u T).
-  Proof.
+  Proof using Type.
     destruct Σ as [Σ φ]. intros X X0 Hty X1.
     eapply infer_typing_sort_impl with _ Hty; intros Hs.
     eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
@@ -92,7 +92,7 @@ Section Validity.
     isWfArity (Σ.1, universes_decl_of_decl decl) Γ T ->
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
     isWfArity Σ (subst_instance u Γ) (subst_instance u T).
-  Proof.
+  Proof using Type.
     destruct Σ as [Σ φ]. intros X X0 [isTy [ctx [s eq]]] X1.
     split. eapply isType_subst_instance_decl; eauto.
     exists (subst_instance u ctx), (subst_instance_univ u s).
@@ -104,7 +104,7 @@ Section Validity.
     wf_local Σ Γ ->
     isType Σ [] T ->
     isType Σ Γ T.
-  Proof.
+  Proof using Type.
     intros wfΣ wfΓ HT.
     apply infer_typing_sort_impl with id HT; intros Hs.
     eapply (weaken_ctx (Γ:=[])); eauto.
@@ -114,7 +114,7 @@ Section Validity.
     nth_error Γ n = Some d ->
     All_local_env P Γ ->
     on_local_decl P (skipn (S n) Γ) d.
-  Proof.
+  Proof using Type.
     intros heq hΓ.
     epose proof (nth_error_Some_length heq).
     eapply (nth_error_All_local_env) in H; tea.
@@ -123,7 +123,7 @@ Section Validity.
 
   Notation type_ctx := (type_local_ctx (lift_typing typing)).
   Lemma type_ctx_wf_univ Σ Γ Δ s : type_ctx Σ Γ Δ s -> wf_universe Σ s.
-  Proof.
+  Proof using Type.
     induction Δ as [|[na [b|] ty]]; simpl; auto with pcuic.
   Qed.
   Hint Resolve type_ctx_wf_univ : pcuic.
@@ -134,7 +134,7 @@ Section Validity.
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
     PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ) 
       (map2 set_binder_name nas Δ) Δ.
-  Proof.
+  Proof using Type.
     induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
     - depelim hlen. simpl. reflexivity.
     - destruct nas as [|nas na] using rev_case => //;
@@ -153,7 +153,7 @@ Section Validity.
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
     PCUICEquality.eq_term Σ Σ T U ->
     PCUICEquality.eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ U) .
-  Proof.
+  Proof using Type.
     intros a; unshelve eapply eq_binder_annots_eq_ctx in a; tea.
     eapply All2_fold_All2 in a.
     induction a in T, U |- *.
@@ -173,7 +173,7 @@ Section Validity.
         (subst_context s k
           (subst_instance i
               (expand_lets_ctx Δ Γ))).
-  Proof.
+  Proof using Type.
     intros. eapply All2_map_right in X.
     depind X.
     * destruct Γ => //. constructor.
@@ -192,7 +192,7 @@ Section Validity.
     All2 (fun (x : binder_annot name) (y : context_decl) => eq_binder_annot x (decl_name y))
       (forget_types (pcontext p)) 
       (pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p)).
-  Proof.
+  Proof using Type.
     move=> [] hlen /Forall2_All2.
     rewrite /pre_case_predicate_context_gen /ind_predicate_context.
     intros a; depelim a.
@@ -211,7 +211,7 @@ Section Validity.
       | Sort => isType Σ (Γ,,, Γ0) t
       end) Δ ->
     ∑ xs, sorts_local_ctx (lift_typing typing) Σ Γ Δ xs.
-  Proof.
+  Proof using Type.
     induction 1.
     - exists []; cbn; auto. exact tt.
     - destruct IHX as [xs Hxs].
@@ -227,7 +227,7 @@ Section Validity.
     env_prop (fun Σ Γ t T => isType Σ Γ T)
       (fun Σ Γ => wf_local Σ Γ × All_local_env 
         (fun Γ t T => match T with Typ T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | Sort => isType Σ Γ t end) Γ).
-  Proof.
+  Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps.
 
     - split => //. induction X; constructor; auto.

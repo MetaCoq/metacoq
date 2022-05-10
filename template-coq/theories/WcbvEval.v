@@ -431,22 +431,22 @@ Section Wcbv.
   Defined.
 
   Lemma value_head_nApp {nargs t} : value_head nargs t -> ~~ isApp t.
-  Proof. destruct 1; auto. Qed.
+  Proof using Type. destruct 1; auto. Qed.
   Hint Resolve value_head_nApp : core.
 
   Lemma isStuckfix_nApp {t args} : isStuckFix t args -> ~~ isApp t.
-  Proof. destruct t; auto. Qed.
+  Proof using Type. destruct t; auto. Qed.
   Hint Resolve isStuckfix_nApp : core.
 
   Lemma atom_nApp {t} : atom t -> ~~ isApp t.
-  Proof. destruct t; auto. Qed.
+  Proof using Type. destruct t; auto. Qed.
   Hint Resolve atom_nApp : core.
 
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
     ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
-  Proof.
+  Proof using Type.
     intros H H'. generalize_eq x (mkApps t l).
     revert t H. induction H' using value_values_ind.
     intros. subst.
@@ -460,7 +460,7 @@ Section Wcbv.
     value (mkApps t l) ->
     ~~ isApp t ->
     All value l.
-  Proof.
+  Proof using Type.
     intros val not_app.
     now apply value_mkApps_inv in val as [(-> & ?)|[]].
   Qed.
@@ -469,7 +469,7 @@ Section Wcbv.
   (*     It means no redex can remain at the head of an evaluated term. *)
 
   Lemma isFixApp_mkApps f args : ~~ isApp f -> isFixApp (mkApps f args) = isFixApp f.
-  Proof.
+  Proof using Type.
     move=> Hf.
     rewrite /isFixApp !decompose_app_mkApps // /=.
     change f with (mkApps f []) at 2.
@@ -477,7 +477,7 @@ Section Wcbv.
   Qed.
 
   Lemma isConstructApp_mkApps f args : ~~ isApp f -> isConstructApp (mkApps f args) = isConstructApp f.
-  Proof.
+  Proof using Type.
     move=> Hf.
     rewrite /isConstructApp !decompose_app_mkApps // /=.
     change f with (mkApps f []) at 2.
@@ -485,22 +485,22 @@ Section Wcbv.
   Qed.
 
   Lemma is_nil {A} (l : list A) : (l = []) + (l <> []).
-  Proof.
+  Proof using Type.
     destruct l; intuition congruence.
   Qed.
 
   Lemma All2_nil {A} {P} {l l' : list A} : All2 P l l' -> l <> [] -> l' <> [].
-  Proof.
+  Proof using Type.
     induction 1; congruence.
   Qed.
   
   Lemma All2_nil_rev {A} {P} {l l' : list A} : All2 P l l' -> l' <> [] -> l <> [].
-  Proof.
+  Proof using Type.
     induction 1; congruence.
   Qed.
   
   Lemma eval_to_value e e' : eval e e' -> value e'.
-  Proof.
+  Proof using Type.
     intros eve. induction eve using eval_evals_ind; simpl; intros; auto using value.
 
     - apply All2_right in X0.
@@ -536,13 +536,13 @@ Section Wcbv.
 
   Lemma value_head_spec n t :
     value_head n t -> (~~ (isLambda t || isArityHead t)).
-  Proof.
+  Proof using Type.
     now destruct 1; simpl.
   Qed.
 
   Lemma value_head_final n t :
     value_head n t -> eval t t.
-  Proof.
+  Proof using Type.
     destruct 1.
     - now constructor.
     - now eapply eval_atom.
@@ -551,7 +551,7 @@ Section Wcbv.
   Qed.
 
   Lemma value_final e : value e -> eval e e.
-  Proof.
+  Proof using Type.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
     - assert (All2 eval args args).
@@ -570,7 +570,7 @@ Section Wcbv.
   Qed.
 
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
-  Proof.
+  Proof using Type.
     intros Ha H; depind H; try solve_discr'; try now easy.
     - eapply atom_mkApps in Ha; intuition subst.
       depelim a.
@@ -591,7 +591,7 @@ Section Wcbv.
     cunfold_fix mfix idx = Some (narg, fn) ->
     eval t (mkApps (tFix mfix idx) args) ->
     args = [] \/ #|args| <= narg.
-  Proof.
+  Proof using Type.
     intros uf ev.
     apply eval_to_value in ev.
     apply value_mkApps_inv in ev as [(-> & ?)|[eqargs vh eva]]; try easy.
@@ -602,7 +602,7 @@ Section Wcbv.
     eval (tLetIn n b ty t) v ->
     ∑ b',
       eval b b' * eval (csubst b' 0 t) v.
-  Proof.
+  Proof using Type.
     intros H; depind H; try solve_discr'; try now easy.
     - depelim a.
       eapply eval_to_stuck_fix_inv in H; [|easy].
@@ -619,7 +619,7 @@ Section Wcbv.
                  | Some body => eval (subst_instance u body) v
                  | None => False
                  end.
-  Proof.
+  Proof using Type.
     intros H; depind H; try solve_discr'; try now easy.
     - exists decl. intuition auto. now rewrite e.
     - depelim a.
@@ -636,7 +636,7 @@ Section Wcbv.
     value_head #|l| f' ->
     All2 eval l l' ->
     eval (mkApps f l) (mkApps f' l').
-  Proof.
+  Proof using Type.
     revert l'. induction l using rev_ind; intros l' appf evf vf' evl.
     depelim evl. intros. eapply evf.
     eapply All2_app_inv_l in evl as [? [? [? ?]]].

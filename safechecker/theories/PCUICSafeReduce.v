@@ -74,7 +74,7 @@ Section Measure.
       wf Σ -> welltyped Σ Γ u ->
       cored Σ Γ v u ->
       welltyped Σ Γ v.
-  Proof.
+  Proof using Type.
     intros Γ u v HΣ h r.
     revert h. induction r ; intros h.
     - destruct h as [A HA]. exists A.
@@ -89,7 +89,7 @@ Section Measure.
       wf Σ -> welltyped Σ Γ u ->
       red (fst Σ) Γ u v ->
       welltyped Σ Γ v.
-  Proof.
+  Proof using Type.
     intros hΣ Γ u v h r. apply red_cored_or_eq in r.
     destruct r as [r|[]]; [|assumption].
     eapply cored_welltyped ; eauto.
@@ -102,7 +102,7 @@ Section Measure.
       t1 = t2 ->
       positionR (` p1) (` p2) ->
       R_aux Γ (t1 ; p1) (t2 ; p2).
-  Proof.
+  Proof using Type.
     intros Γ t1 t2 p1 p2 e h.
     subst. right. assumption.
   Qed.
@@ -115,7 +115,7 @@ Section Measure.
       R Γ u v ->
       R Γ v w ->
       R Γ u w.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     eapply dlexprod_trans.
     - intros ? ? ? ? ?. eapply cored_trans' ; eassumption.
@@ -126,7 +126,7 @@ Section Measure.
 
   Lemma Req_trans :
     forall {Γ}, Transitive (Req Γ).
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     destruct h1.
     - subst. assumption.
@@ -139,13 +139,13 @@ Section Measure.
     forall {Γ u v},
       R Γ u v ->
       Req Γ u v.
-  Proof.
+  Proof using Type.
     intros Γ u v h.
     right. assumption.
   Qed.
 
   Instance Req_refl : forall Γ, Reflexive (Req Γ).
-  Proof.
+  Proof using Type.
     intros Γ.
     left. reflexivity.
   Qed.
@@ -155,7 +155,7 @@ Section Measure.
       R Γ u v ->
       Req Γ v w ->
       R Γ u w.
-  Proof.
+  Proof using Type.
     intros Γ u v w h1 h2.
     destruct h2.
     - subst. assumption.
@@ -214,7 +214,7 @@ Lemma acc_dlexprod_gen P Q A B (leA : P -> A -> A -> Prop)
     forall y,
       Acc (leB x) y ->
       Acc (fun t t' => forall (p:P), Q p -> @dlexprod A B (leA p) leB t t') (x;y).
-Proof.
+Proof using Type.
 intros hw. induction 1 as [x hx ih1].
 intros y. induction 1 as [y hy ih2].
 constructor.
@@ -241,7 +241,7 @@ Lemma dlexprod_Acc_gen P Q A B (leA : P -> A -> A -> Prop)
     forall x y,
       Acc (fun t t' => forall (p:P), Q p -> leA p t t') x ->
       Acc (fun t t' => forall (p:P), Q p -> @dlexprod A B (leA p) leB t t') (x;y).
-Proof.
+Proof using Type.
   intros hB x y hA.
   eapply acc_dlexprod_gen ; try assumption.
   apply hB.
@@ -288,7 +288,7 @@ Corollary R_Acc_aux :
     forall Γ t,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip t)) ->
       Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t') t.
-  Proof.
+  Proof using Type.
     intros Γ t h.
     pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) h) as h'.
     clear h. rename h' into h.
@@ -339,7 +339,7 @@ Corollary R_Acc_aux :
     forall Γ x y,
       Req Σ Γ y x ->
       ∥ red Σ Γ (zip x) (zip y) ∥.
-  Proof.
+  Proof using Type.
     intros Γ [t π] [t' π'] h; simpl.
     dependent destruction h.
     - repeat zip fold. rewrite H.
@@ -1070,7 +1070,7 @@ Corollary R_Acc_aux :
 
   Lemma welltyped_R_pres Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
     forall x y : term × stack, welltyped Σ Γ (zip x) -> R Σ Γ y x -> welltyped Σ Γ (zip y).
-  Proof.
+  Proof using Type.
     intros x y H HR.
     pose proof (heΣ := heΣ _ wfΣ).
     pose proof (hΣ := hΣ _ wfΣ).
@@ -1160,7 +1160,7 @@ Corollary R_Acc_aux :
   Lemma reduce_stack_Req :
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h,
      Req Σ Γ (reduce_stack Γ t π h) (t, π).
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ t π h.
     unfold reduce_stack.
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]];
@@ -1170,7 +1170,7 @@ Corollary R_Acc_aux :
   Theorem reduce_stack_sound :
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h,
       ∥ Σ ;;; Γ ⊢ zip (t, π) ⇝ zip (reduce_stack Γ t π h) ∥.
-  Proof.
+  Proof using Type.
     intros Σ wfΣ Γ t π h.
     assert (req := reduce_stack_Req Σ wfΣ _ _ _ h).
     eapply Req_red in req.
@@ -1182,7 +1182,7 @@ Corollary R_Acc_aux :
     forall Γ t π h,
       snd (decompose_stack (snd (reduce_stack Γ t π h))) =
       snd (decompose_stack π).
-  Proof.
+  Proof using Type.
     intros Γ t π h.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
@@ -1195,7 +1195,7 @@ Corollary R_Acc_aux :
     forall Γ t π h,
       stack_context (snd (reduce_stack Γ t π h)) =
       stack_context π.
-  Proof.
+  Proof using Type.
     intros Γ t π h.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (reduce_stack_decompose Γ t π h) as hd.
@@ -1216,7 +1216,7 @@ Corollary R_Acc_aux :
     forall Γ t π h,
       RedFlags.beta flags ->
       isred (reduce_stack Γ t π h).
-  Proof.
+  Proof using Type.
     intros Γ t π h hr.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
@@ -1229,7 +1229,7 @@ Corollary R_Acc_aux :
   Lemma reduce_stack_noApp :
     forall Γ t π h,
       isApp (fst (reduce_stack Γ t π h)) = false.
-  Proof.
+  Proof using Type.
     intros Γ t π h.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
@@ -1241,7 +1241,7 @@ Corollary R_Acc_aux :
       RedFlags.beta flags ->
       isLambda (fst (reduce_stack Γ t π h)) ->
       isStackApp (snd (reduce_stack Γ t π h)) = false.
-  Proof.
+  Proof using Type.
     intros Γ t π h.
     unfold reduce_stack.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1256,7 +1256,7 @@ Corollary R_Acc_aux :
     forall Γ t (h : forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
       Σ, abstract_env_ext_rel X Σ ->
       ∥ Σ ;;; Γ ⊢ t ⇝ reduce_term Γ t h ∥.
-  Proof.
+  Proof using Type.
     intros Γ t h Σ wfΣ.
     unfold reduce_term.
     refine (reduce_stack_sound _ _ _ _ [] _); eauto.
@@ -1306,7 +1306,7 @@ Corollary R_Acc_aux :
     forall A R P f (pred : forall x : A, P x -> Prop) x hx,
       (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
       pred x (@Fix_F A R P f x hx).
-  Proof.
+  Proof using Type.
     intros A R P f pred x hx h.
     induction hx using Acc_ind'.
     cbn. eapply h. assumption.
@@ -1318,7 +1318,7 @@ Corollary R_Acc_aux :
           (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
           P (t, π) (` (_reduce_stack Γ t π h aux))) ->
       P (t, π) (reduce_stack Γ t π h).
-  Proof.
+  Proof using Type.
     intros Γ t π h P hP.
     unfold reduce_stack.
     case_eq (reduce_stack_full Γ t π h).
@@ -1339,7 +1339,7 @@ Corollary R_Acc_aux :
     isStackApp s = false ->
     nth_error l n = None <->
     decompose_stack_at (appstack l s) n = None.
-  Proof.
+  Proof using Type.
     intros no_app.
     induction l in l, n |- *; cbn in *.
     - rewrite nth_error_nil.
@@ -1356,11 +1356,11 @@ Corollary R_Acc_aux :
 
   Lemma mkApps_tApp hd arg args :
     mkApps (tApp hd arg) args = mkApps hd (arg :: args).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma tApp_mkApps hd args arg :
     tApp (mkApps hd args) arg = mkApps hd (args ++ [arg]).
-  Proof.
+  Proof using Type.
     change (tApp ?hd ?a) with (mkApps hd [a]).
     now rewrite mkApps_app.
   Qed.
@@ -1372,7 +1372,7 @@ Corollary R_Acc_aux :
     check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite = false ->
     Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
-  Proof.
+  Proof using Type.
     intros wf wh ctor fin typ.
     destruct wh.
     - easy.
@@ -1405,7 +1405,7 @@ Corollary R_Acc_aux :
     isCoFix_app t = false ->
     Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
-  Proof.
+  Proof using Type.
     intros wf wh ctor cof typ.
     destruct wh.
     - easy.
@@ -1435,7 +1435,7 @@ Corollary R_Acc_aux :
     whnf flags Σ Γ (mkApps t args) ->
     Σ ;;; Γ |- mkApps (tFix mfix idx) (before ++ mkApps t args :: aftr) : ty ->
     whne flags Σ Γ (mkApps t args).
-  Proof.
+  Proof using Type.
     intros wf uf shape wh typ.
     apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
     apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
@@ -1467,7 +1467,7 @@ Corollary R_Acc_aux :
     whnf flags Σ Γ (mkApps hd args) ->
     Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
     whne flags Σ Γ (mkApps hd args). 
-  Proof.
+  Proof using Type.
     intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.
     eapply whnf_non_ctor_finite_ind_typed; try eassumption.
@@ -1493,7 +1493,7 @@ Corollary R_Acc_aux :
     whnf flags Σ Γ (mkApps hd args) ->
     Σ ;;; Γ |- tProj p (mkApps hd args) : T ->
     whne flags Σ Γ (mkApps hd args).
-  Proof.
+  Proof using Type.
     intros wf shape wh typ.
     assert (typ' := typ).
     apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
@@ -1515,7 +1515,7 @@ Corollary R_Acc_aux :
     forall Γ t π h Σ (wfΣ : abstract_env_ext_rel X Σ),
       let '(u, ρ) := reduce_stack Γ t π h in
        ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥.
-  Proof.
+  Proof using Type.
     intros Γ t π h Σ wfΣ.
     eapply reduce_stack_prop
       with (P := fun x y =>
@@ -1859,7 +1859,7 @@ Corollary R_Acc_aux :
 
   Theorem reduce_term_complete Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t h :
     ∥whnf flags Σ Γ (reduce_term Γ t h)∥.
-  Proof.
+  Proof using Type.
     pose proof (reduce_stack_whnf Γ t [] h _ wfΣ) as H.
     unfold reduce_term.
     unfold reduce_stack in *.
@@ -1900,7 +1900,7 @@ Section ReduceFns.
   Defined.
 
   Theorem hnf_complete {Γ t h} Σ (wfΣ : abstract_env_ext_rel X Σ) : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
-  Proof.
+  Proof using Type.
     apply reduce_term_complete; eauto.
   Qed.
 
@@ -1937,7 +1937,7 @@ Section ReduceFns.
     e p :
     reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
-  Proof.
+  Proof using Type.
     intros _ s r.
     apply p.
     exists s.
@@ -1982,7 +1982,7 @@ Section ReduceFns.
     e p :
     reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
-  Proof.
+  Proof using Type.
     intros _ na a b r.
     apply p.
     exists na, a, b.
@@ -2066,7 +2066,7 @@ Section ReduceFns.
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.
-  Proof.
+  Proof using Type.
     intros _ ind u args' r.
     apply p.
     exists ind, u, args'.
@@ -2090,7 +2090,7 @@ Section ReduceFns.
 
   Lemma assumption_context_arity_ass_context l :
     assumption_context (arity_ass_context l).
-  Proof.
+  Proof using Type.
     unfold arity_ass_context.
     rewrite rev_map_spec.
     induction l using MCList.rev_ind; cbn.
@@ -2103,7 +2103,7 @@ Section ReduceFns.
 
   Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : Universe.t) :
     mkAssumArity l s = it_mkProd_or_LetIn (arity_ass_context l) (tSort s).
-  Proof.
+  Proof using Type.
     unfold arity_ass_context.
     rewrite rev_map_spec.
     induction l; auto.
@@ -2114,7 +2114,7 @@ Section ReduceFns.
 
   Lemma isArity_mkAssumArity l s :
     isArity (mkAssumArity l s).
-  Proof.
+  Proof using Type.
     induction l as [|(na & A) l IH]; cbn; auto.
   Qed.
 
@@ -2132,7 +2132,7 @@ Section ReduceFns.
     is_open_term Γ T ->
     conv_arity Γ T ->
     forall Σ (wfΣ : abstract_env_ext_rel X Σ), Is_conv_to_Arity Σ Γ T.
-  Proof.
+  Proof using Type.
     intros clΓ clT [asses univ r] Σ wfΣ.
     eexists. destruct (r _ wfΣ). split; [sq|]; tea.
     apply isArity_mkAssumArity.
@@ -2142,7 +2142,7 @@ Section ReduceFns.
     isArity u ->
     red Σ Γ u v ->
     isArity v.
-  Proof.
+  Proof using Type.
     intros arity_u r.
     induction r using red_rect_n1; [easy|].
     eapply isArity_red1; eassumption.
@@ -2152,7 +2152,7 @@ Section ReduceFns.
     Is_conv_to_Arity Σ Γ T ->
     Σ ;;; Γ ⊢ T ⇝ T' ->
     Is_conv_to_Arity Σ Γ T'.
-  Proof.
+  Proof using Type.
     unfold Is_conv_to_Arity.
     intros [T'' (redT'' & is_arity)] red.
     sq.

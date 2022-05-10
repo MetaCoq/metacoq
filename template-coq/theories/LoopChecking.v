@@ -2053,6 +2053,21 @@ Section InnerLoop.
     lia.
   Qed.
   
+  Lemma measure_le {W cls m m'} : 
+    model_map_outside W m m' ->
+    m ⩽ m' ->
+    (measure W cls m' <= measure W cls m).
+  Proof.
+    intros hout hle.
+    unfold measure, measure_w, sum_W.
+    rewrite (v_minus_w_bound_irrel _ _ hout).
+    rewrite !LevelSet.fold_spec. unfold flip.
+    eapply fold_left_le; unfold flip. 2:lia.
+    - intros. rewrite LevelSet_In_elements in H.
+      have lexx' := (model_le_values x hle).
+      lia.
+  Qed.
+  
   Lemma measure_lt {W cls m m'} : 
     model_map_outside W m m' ->
     m ⩽ m' ->
@@ -2146,11 +2161,11 @@ Section InnerLoop.
   Qed.
   Hint Resolve model_of_diff : core.
 
-  Lemma check_model_spec_diff {cls w m w' m'} :
+  Lemma check_model_spec_diff {cls w m w' m' w''} :
     model_of w m ->
     let cls := (cls_diff cls w) in
-    check_model cls (w, m) = Some (w', m') ->
-    [/\ w =_lset w',
+    check_model cls (w'', m) = Some (w', m') ->
+    [/\ w'' ⊂_lset w', w' ⊂_lset (w'' ∪ w),
       exists cl : clause,
         let cll := levelexpr_level (concl cl) in
         [/\ Clauses.In cl cls, ~~ valid_clause m cl, LevelSet.In cll w'
@@ -2172,22 +2187,21 @@ Section InnerLoop.
   Qed.
 
   #[tactic="idtac"]
-  Equations? inner_loop (W : LevelSet.t) (cls : clauses) (init : model) 
-    (m : valid_model W init (cls ⇂ W))
-    (prf : [/\ strict_subset W V, ~ LevelSet.Empty W & U ⊂_lset W]) : 
-    result W U (cls ↓ W) m.(model_model)
-    by wf (measure W cls m.(model_model)) lt :=
-    inner_loop W cls init m subWV with 
-      inspect (check_model (Clauses.diff (cls ↓ W) (cls ⇂ W)) (W, m.(model_model))) := { 
-        | exist None eqm => Model W {| model_model := m.(model_model) |} _
-        | exist (Some (Wconcl, mconcl)) eqm with loop W W (cls ⇂ W) mconcl _ _ := {
-          (* Here Wconcl = W by invariant *)
-          | Loop => Loop
-          | Model Wr mr hsub with inner_loop W cls mconcl mr _ := {
-          (* Here Wr = W by invariant *)
+  Equations? inner_loop (W : LevelSet.t) (cls : clauses) (m : model)
+    (prf : [/\ strict_subset W V, ~ LevelSet.Empty W, U ⊂_lset W & model_of W m]) : 
+    result W U (cls ↓ W) m
+    by wf (measure W cls m) lt :=
+    inner_loop W cls m subWV with loop W LevelSet.empty (cls ⇂ W) m _ _ := {
+      | Loop => Loop
+      (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
+         By invariant Wr ⊂ W *)
+      | Model Wr mr hsub with inspect (check_model (Clauses.diff (cls ↓ W) (cls ⇂ W)) (Wr, model_model mr)) := { 
+        | exist None eqm => Model W {| model_model := model_model mr |} _
+        | exist (Some (Wconcl, mconcl)) eqm with inner_loop W cls mconcl _ := {
+          (* Here Wconcl ⊂ Wr by invariant *)
             | Loop => Loop
             | Model Wr' mr' hsub' => Model Wr' {| model_model := model_model mr' |} hsub' }
-            (* Here Wr' = W by invariant *)
+            (* Here Wr' ⊂ W by invariant *)
       (* We check if the new model [mr] for (cls ⇂ W) extends to a model of (cls ↓ W). *)
       (* We're entitled to recursively compute a better model starting with mconcl, 
         as we have made the measure decrease: 
@@ -2198,41 +2212,42 @@ Section InnerLoop.
     all:try solve [try apply LevelSet.subset_spec; try reflexivity].
     all:try apply LevelSet.subset_spec in hsub.
     all:auto.
-    all:try destruct subWV as [WV neW UW].
+    all:try destruct subWV as [WV neW UW mW].
     all:try solve [intuition auto].
-    - split => //. apply clauses_conclusions_restrict_clauses.
-      eapply check_model_spec_diff in eqm as [].
-      eapply model_of_ext; tea. apply m. apply m.
+    - split => //. apply clauses_conclusions_restrict_clauses. lsets.
     - left. now eapply strict_subset_cardinal.
-    - eapply (check_model_spec_diff m) in eqm as [eqw hm hext] => //.
+    - split => //.
+     (* assert (mWr : model_of Wr m). eapply model_of_subset; tea. lsets. *)
+      eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
+      eapply model_of_ext. 2:tea. apply mr.
+    - eapply (check_model_spec_diff mr) in eqm as [subwwconcl subwconcl hm hext] => //.
       pose proof (clauses_conclusions_diff_left cls W (cls ⇂ W)).
       destruct hm as [cll [hind nvalid inwconcl hl]].
+      eapply Nat.lt_le_trans.
+      2:{ eapply measure_le; eapply mr. }
       eapply measure_lt.
-      { transitivity mconcl.
-        eapply model_map_outside_weaken. eapply hext. lsets.
-        apply mr. }
-      { transitivity mconcl => //. apply hext. apply mr. }
+      { eapply model_map_outside_weaken. eapply hext. lsets. }
+      { apply hext. }
       eapply invalid_clause_measure in nvalid; tea.
       exists (levelexpr_level (concl cll)).
       split => //.
       eapply clauses_conclusions_diff_left; tea.
       eapply clauses_conclusions_spec. exists cll; split => //. exact hind.
-      eapply Nat.lt_le_trans; tea.
-      eapply model_le_values. eapply mr.      
     - apply mr'.
     - apply clauses_conclusions_clauses_with_concl.
     - apply mr'.
-    - eapply (check_model_spec_diff m) in eqm as [eqw hm hext] => //.
-      eapply model_ext_trans_weaken. 2:tea. lsets.
-      transitivity (model_model mr). apply mr. apply mr'.
-    - apply m.
+    - eapply (check_model_spec_diff mr) in eqm as [eqw hm hext] => //.
+      eapply model_ext_trans_weaken. 2:apply mr. lsets.
+      transitivity mconcl. eapply model_extension_weaken. 2:tea. lsets. apply mr'.
+    - apply mr.
     - eapply clauses_conclusions_clauses_with_concl.
     - rewrite check_model_is_model in eqm.
-      2:{ eapply model_of_diff, m. }
-      have okm := (model_ok m).
+      2:{ eapply model_of_diff, mr. }
+      have okm := (model_ok mr).
       have mu := is_model_union okm eqm. rewrite union_diff_eq in mu.
       now rewrite union_restrict_with_concl in mu.
-    - split => //.
+    - apply mr.
+    - split; lsets.
   Qed.
 
 End InnerLoop.
@@ -2307,60 +2322,55 @@ Equations? loop (V : LevelSet.t) (U : LevelSet.t) (cls : clauses) (m : model)
     | exist None eqm => Model U {| model_model := m |} _
     | exist (Some (W, m')) eqm with inspect (LevelSet.equal W V) := {
       | exist true eq := Loop
-      (* Loop on cls|W, with |W| < |V| *)
-      | exist false neq with loop W U (cls ⇂ W) m' _ := {
-        | Loop := Loop
-        | Model Wr mwr hsub
-          (* We have a model for (cls ⇂ W), we try to extend it to a model of (csl ↓ W).
-             By invariant Wr = W *)
-          with inner_loop V U loop W cls _ mwr _ := 
-          { | Loop := Loop
-            | Model Wc mwc hsub'
-            (* We get a model for (cls ↓ W), we check if it extends to all clauses.
-               By invariant |Wc| cannot be larger than |W|.
-            *)
+      (* Loop on cls ↓ W, with |W| < |V| *)
+      | exist false neq with inner_loop V U loop W cls m' _ := 
+        { | Loop := Loop
+          | Model Wc mwc hsub'
+          (* We get a model for (cls ↓ W), we check if it extends to all clauses.
+              By invariant |Wc| cannot be larger than |W|. *)
             with inspect (check_model cls (Wc, mwc.(model_model))) :=
-            { | exist None eqm' => Model Wc {| model_model := mwc.(model_model) |} _
-              | exist (Some (Wcls, mcls)) eqm' with inspect (LevelSet.equal Wcls V) := {
-                | exist true _ := Loop
-                | exist false neq' with loop V Wcls cls mcls _ := {
-                  (* Here Wcls < V, we've found a model for all of the clauses with conclusion
-                    in W, which can now be fixed. We concentrate on the clauses whose
-                    conclusion is different. Clearly |W| < |V|, but |Wcls| is not 
-                    necessarily < |V| *)
-                    | Loop := Loop
-                    | Model Wvw mcls' hsub'' := Model Wvw {| model_model := model_model mcls' |} _ } } }
+          { | exist None eqm' => Model Wc {| model_model := mwc.(model_model) |} _
+            | exist (Some (Wcls, mcls)) eqm' with inspect (LevelSet.equal Wcls V) := {
+              | exist true _ := Loop
+              | exist false neq' with loop V Wcls cls mcls _ := {
+                (* Here Wcls < V, we've found a model for all of the clauses with conclusion
+                  in W, which can now be fixed. We concentrate on the clauses whose
+                  conclusion is different. Clearly |W| < |V|, but |Wcls| is not 
+                  necessarily < |V| *)
+                  | Loop := Loop
+                  | Model Wvw mcls' hsub'' := Model Wvw {| model_model := model_model mcls' |} _ } } }
           }
       }
-    }.
+    .
 Proof.
   all:clear loop.
   all:try solve [intuition auto].
   all:try eapply levelset_neq in neq.
   all:have cls_sub := clauses_conclusions_levels cls.
   all:destruct prf as [clsV UV mof].
-  - split. apply clauses_conclusions_restrict_clauses. 
+  (*- split => //. apply clauses_conclusions_restrict_clauses. 
     apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext]. auto.
     apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext].
     eapply model_of_ext; tea. 
     eapply model_of_subset; tea. lsets.
   - apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext] => //.
     left. 
-    eapply strict_subset_cardinal. split => //. lsets.
+    eapply strict_subset_cardinal. split => //. lsets. *)
   - apply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext] => //.
     split => //. split => //. lsets. 
     destruct hcl as [l [hl _]]. intros he. lsets.
+    eapply model_of_ext; tea. eapply model_of_subset; tea. lsets.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     eapply check_model_spec in eqm' as [].
     2:{ eapply model_of_subset. 2:exact clsV.
-        exact (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))). }
+        exact (valid_model_of mwc (model_of_ext mof ext)). }
     split. lsets. lsets.
-    exact (model_of_ext (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))) H2).
+    exact (model_of_ext (valid_model_of mwc (model_of_ext mof ext)) H2).
   - right.
     eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     eapply check_model_spec in eqm' as [].
     2:{ eapply model_of_subset. 2:exact clsV.
-        exact (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))). }
+        exact (valid_model_of mwc (model_of_ext mof ext)). }
     destruct hsub' as [UWc WcW].
     assert (Wcls ⊂_lset V). lsets.
     rewrite -!diff_cardinal //.
@@ -2383,34 +2393,30 @@ Proof.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     eapply check_model_spec in eqm' as [].
     2:{ eapply model_of_subset. 2:exact clsV.
-        exact (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))). }
+        exact (valid_model_of mwc (model_of_ext mof ext)). }
     assert (WV : W ⊂_lset V).
     { clear -UV clsV WU; lsets. }
     eapply model_ext_trans_weaken => //. 2:tea. auto. 
     transitivity mcls; [|apply mcls'].
     transitivity (model_model mwc). 2:{ eapply model_extension_weaken; [|tea]. lsets. }
-    transitivity (model_model mwr). 2:{ eapply model_extension_weaken; [|apply mwc]. lsets. }
-    eapply model_extension_weaken. 2:apply mwr. lsets.
+    eapply model_extension_weaken. 2:apply mwc. auto.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     eapply check_model_spec in eqm' as [].
     2:{ eapply model_of_subset. 2:exact clsV.
-      exact (valid_model_of mwc (valid_model_of mwr (model_of_ext mof ext))). }
+      exact (valid_model_of mwc (model_of_ext mof ext)). }
     split. lsets. lsets.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     refine (valid_model_of mwc _).
-    refine (valid_model_of mwr _).
     refine (model_of_ext mof ext).
   - auto.
   - rewrite check_model_is_model // in eqm'.
     eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     refine (valid_model_of mwc _).
-    refine (valid_model_of mwr _).
     eapply model_of_subset.
     refine (model_of_ext mof ext). auto.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     transitivity m'. eapply model_extension_weaken; [|tea]. lsets.
-    transitivity (model_model mwr). 2:{ eapply model_extension_weaken; [|apply mwc]. lsets. }
-    eapply model_extension_weaken. 2:apply mwr. lsets.
+    eapply model_extension_weaken. 2:apply mwc. lsets.
   - eapply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext].
     split; lsets.
   - exact mof.

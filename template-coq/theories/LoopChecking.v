@@ -2348,14 +2348,6 @@ Proof.
   all:try eapply levelset_neq in neq.
   all:have cls_sub := clauses_conclusions_levels cls.
   all:destruct prf as [clsV UV mof].
-  (*- split => //. apply clauses_conclusions_restrict_clauses. 
-    apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext]. auto.
-    apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext].
-    eapply model_of_ext; tea. 
-    eapply model_of_subset; tea. lsets.
-  - apply (check_model_spec_V mof clsV) in eqm as [UW WU _ ext] => //.
-    left. 
-    eapply strict_subset_cardinal. split => //. lsets. *)
   - apply (check_model_spec_V mof clsV) in eqm as [UW WU hcl ext] => //.
     split => //. split => //. lsets. 
     destruct hcl as [l [hl _]]. intros he. lsets.

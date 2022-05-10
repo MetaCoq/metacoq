@@ -190,20 +190,20 @@ Definition test_levels' : LevelSet.t :=
     [levela; levelb;
       levelc; leveld]).
 
-Notation " x + n " := (LevelExpr.add x n).
+Notation " x + n " := (LevelExpr.add n x).
 
 Fixpoint chain (l : list LevelExpr.t) :=
   match l with
   | [] => ConstraintSet.empty
   | hd :: [] => ConstraintSet.empty
   | hd :: (hd' :: _) as tl => 
-    add_cstr hd (Le 10) hd' (chain tl)
+    add_cstr hd (Le 10) (LevelExpr.add 1 hd') (chain tl)
   end.
 
 Definition levels_to_n n := 
   unfold n (fun i => (Level.Level (string_of_nat i), 0)).
 
-Definition test_chain := chain (levels_to_n 3).
+Definition test_chain := chain (levels_to_n 2).
 
 Eval compute in print_clauses (enforce_constraints test_chain).
 Eval compute in init_model (enforce_constraints test_chain).
@@ -211,9 +211,9 @@ Eval compute in init_model (enforce_constraints test_chain).
 Time Eval vm_compute in print_result (infer (enforce_constraints test_chain)).
 
 (* Eval compute in print_result test''. *) 
-Definition chainres :=  (infer (enforce_constraints test_chain)).
+(* Definition chainres :=  (infer (enforce_constraints test_chain)). *)
 
-Goal hasFiniteModel chainres.
+(*Goal hasFiniteModel chainres.
   hnf.
   unfold chainres.
   unfold infer.
@@ -283,9 +283,10 @@ Eval compute in print_result (infer ex_levels test_clauses).
 Definition test_above0 := 
   (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc ConstraintSet.empty).
   
-Eval compute in print_clauses (clauses_of_constraints test_above0).
-Definition testabove0 := infer (clauses_of_constraints test_above0).
+Eval compute in print_clauses (enforce_constraints test_above0).
+Definition testabove0 := infer (enforce_constraints test_above0).
 
+(** Loop c + 1 <= c *)
 Eval vm_compute in print_result testabove0.
 
 (** Verify that no clause holds vacuously for the model *)
@@ -314,11 +315,11 @@ Definition check_clauses (m : model) cls : bool :=
   Clauses.for_all (check_clause m) cls.
 
 Definition check_cstr (m : model) (c : UnivConstraint.t) :=
-  let cls := clauses_of_constraint c in
+  let cls := enforce_constraint (to_constraint c) (clauses_of_list []) in
   check_clauses m cls.
 
 Definition check_cstrs (m : model) (c : ConstraintSet.t) :=
-  let cls := clauses_of_constraints c in
+  let cls := enforce_constraints c in
   check_clauses m cls.
   
   (* as [cl []].
@@ -345,11 +346,11 @@ Variant enforce_result :=
   | ModelExt (m : model).
 
 Definition enforce_cstr {V init cls} (m : valid_model V init cls) (c : UnivConstraint.t) :=
-  let cls := clauses_of_constraint c in
+  let cls := enforce_constraint (to_constraint c) (clauses_of_list []) in
   enforce_clauses m cls.
 
 Definition enforce_cstrs {V init cls} (m : valid_model V init cls) (c : ConstraintSet.t) :=
-  let cls := clauses_of_constraints c in
+  let cls := enforce_constraints c in
   enforce_clauses m cls.
 
 Definition initial_cstrs :=
@@ -364,13 +365,13 @@ Definition enforced_cstrs :=
   (* (add_cstr levelc (Le 0) levelb *)
   ConstraintSet.empty).
   
-Definition initial_cls := clauses_of_constraints initial_cstrs.
-Definition enforced_cls := clauses_of_constraints enforced_cstrs.
+Definition initial_cls := enforce_constraints initial_cstrs.
+Definition enforced_cls := enforce_constraints enforced_cstrs.
   
 Eval vm_compute in init_model initial_cls.
 
 Definition abeqcS :=
-  clauses_of_constraints 
+  enforce_constraints 
     (add_cstr (sup levela levelb) Eq (levelc + 1) ConstraintSet.empty).
   
 Eval compute in print_clauses initial_cls.
@@ -393,7 +394,9 @@ Ltac get_result c :=
 
 Definition model_cstrs' := ltac:(get_result test'').
 
-Eval vm_compute in check_cstrs model_cstrs'.(model_model) initial_cstrs.
+Notation "x ≡ y" := (eq_refl : x = y) (at level 70).
+
+Eval vm_compute in check_cstrs model_cstrs'.(model_model) initial_cstrs ≡ true.
 (* Here c <= b, in the model b = 0 is minimal, and b's valuation gives 1 *)
 Eval vm_compute in print_result (infer initial_cls).
 
@@ -413,10 +416,8 @@ Eval vm_compute in
   option_map (is_model all_clauses) (option_of_result (infer all_clauses)).
   
 (* This is a model? *)
-Eval vm_compute in (enforce_cstrs model_cstrs' enforced_cstrs).
+Eval vm_compute in isSome (enforce_cstrs model_cstrs' enforced_cstrs) ≡ true.
 Eval vm_compute in print_clauses initial_cls.
-
-Notation "x ≡ y" := (eq_refl : x = y) (at level 70).
 
 (** This is also a model of (the closure of) the initial clauses *)
 Check (option_map (is_model initial_cls) (enforce_cstrs model_cstrs' enforced_cstrs)
@@ -430,3 +431,7 @@ Check (option_map (is_model enforced_cls) (enforce_cstrs model_cstrs' enforced_c
 Eval vm_compute in 
   option_map (print_model_premises_hold enforced_cls) 
     (enforce_cstrs model_cstrs' enforced_cstrs).
+
+Definition foo := 0.
+
+From MetaCoq.Template Require Import Loader.

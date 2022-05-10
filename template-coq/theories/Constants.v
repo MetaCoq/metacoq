@@ -120,7 +120,7 @@ Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
 Register MetaCoq.Template.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
-Register MetaCoq.Template.Universes.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
+Register MetaCoq.Template.Universes.LevelExprSet.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
 Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
 Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.universe.lnpe.
@@ -147,7 +147,7 @@ Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make
 
 Register MetaCoq.Template.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
 Register MetaCoq.Template.Universes.LevelSet.elements as metacoq.ast.LevelSet.elements.
-Register MetaCoq.Template.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
+Register MetaCoq.Template.Universes.LevelConstraint.make as metacoq.ast.make_univ_constraint.
 
 Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.
 (* FIXME wrong! *)

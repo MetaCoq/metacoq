@@ -41,9 +41,22 @@ Definition to_constraint (x : UnivConstraint.t) : constraint :=
   end
   in (l, d, r).
 
-Definition enforce_constraints (cstrs : ConstraintSet.t) : clauses :=
-  ConstraintSet.fold (fun cstr acc => enforce_constraint (to_constraint cstr) acc) cstrs (clauses_of_list []).
+Definition level_constraint_to_constraint (x : LevelConstraint.t) : constraint :=
+  let '(l, d, r) := x in
+  let '(l, d, r) := match d with
+  | ConstraintType.Eq => (LevelAlgExpr.make' l, UnivEq, LevelAlgExpr.make' r)
+  | ConstraintType.Le k => 
+    if (k <? 0)%Z then (LevelAlgExpr.make' l, UnivLe, LevelAlgExpr.make (r, Z.to_nat (-k)))
+    else (LevelAlgExpr.make (l, Z.to_nat k), UnivLe, LevelAlgExpr.make' r)
+  end
+  in (l, d, r).
   
+Definition enforce_constraints (cstrs : UnivConstraintSet.t) : clauses :=
+  UnivConstraintSet.fold (fun cstr acc => enforce_constraint (to_constraint cstr) acc) cstrs (clauses_of_list []).
+
+Definition enforce_level_constraints (cstrs : ConstraintSet.t) : clauses :=
+  ConstraintSet.fold (fun cstr acc => enforce_constraint (level_constraint_to_constraint cstr) acc) cstrs (clauses_of_list []).
+    
 Declare Scope levelnat_scope.
 Delimit Scope levelnat_scope with levelnat.
 Module LevelNatMapNotation.
@@ -163,7 +176,7 @@ Eval lazy in print_result test.
 Eval compute in print_result test_loop.
 
 Definition add_cstr (x : LevelAlgExpr.t) d (y : LevelAlgExpr.t) cstrs :=
-  ConstraintSet.add (x, d, y) cstrs.
+  UnivConstraintSet.add (x, d, y) cstrs.
 
 Coercion LevelAlgExpr.make : LevelExpr.t >-> LevelAlgExpr.t.
 Import ConstraintType.
@@ -172,7 +185,7 @@ Definition test_cstrs :=
   (add_cstr (LevelAlgExpr.sup levela levelc) Eq (LevelExpr.add 1 levelb)
   (add_cstr levelb (ConstraintType.Le 0) levela
   (add_cstr levelc (ConstraintType.Le 0) levelb
-    ConstraintSet.empty)))).
+    UnivConstraintSet.empty)))).
 
 Definition test_clauses := enforce_constraints test_cstrs.
 
@@ -194,8 +207,8 @@ Notation " x + n " := (LevelExpr.add n x).
 
 Fixpoint chain (l : list LevelExpr.t) :=
   match l with
-  | [] => ConstraintSet.empty
-  | hd :: [] => ConstraintSet.empty
+  | [] => UnivConstraintSet.empty
+  | hd :: [] => UnivConstraintSet.empty
   | hd :: (hd' :: _) as tl => 
     add_cstr hd (Le 10) (LevelExpr.add 1 hd') (chain tl)
   end.
@@ -281,7 +294,7 @@ Eval compute in print_result (infer ex_levels test_clauses).
 *)
 
 Definition test_above0 := 
-  (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc ConstraintSet.empty).
+  (add_cstr (levelc + 1) (ConstraintType.Le 0) levelc UnivConstraintSet.empty).
   
 Eval compute in print_clauses (enforce_constraints test_above0).
 Definition testabove0 := infer (enforce_constraints test_above0).
@@ -318,7 +331,7 @@ Definition check_cstr (m : model) (c : UnivConstraint.t) :=
   let cls := enforce_constraint (to_constraint c) (clauses_of_list []) in
   check_clauses m cls.
 
-Definition check_cstrs (m : model) (c : ConstraintSet.t) :=
+Definition check_cstrs (m : model) (c : UnivConstraintSet.t) :=
   let cls := enforce_constraints c in
   check_clauses m cls.
   
@@ -349,7 +362,7 @@ Definition enforce_cstr {V init cls} (m : valid_model V init cls) (c : UnivConst
   let cls := enforce_constraint (to_constraint c) (clauses_of_list []) in
   enforce_clauses m cls.
 
-Definition enforce_cstrs {V init cls} (m : valid_model V init cls) (c : ConstraintSet.t) :=
+Definition enforce_cstrs {V init cls} (m : valid_model V init cls) (c : UnivConstraintSet.t) :=
   let cls := enforce_constraints c in
   enforce_clauses m cls.
 
@@ -357,13 +370,13 @@ Definition initial_cstrs :=
   (add_cstr (sup levela levelb) Eq (levelc + 1)
   (add_cstr levelc (Le 0) (sup levela levelb)
   (add_cstr levelc (Le 0) levelb
-    ConstraintSet.empty))).
+    UnivConstraintSet.empty))).
 
 Definition enforced_cstrs :=
   (* (add_cstr (sup levela levelb) Eq (sup (levelc + 1) leveld) *)
   (add_cstr (levelb + 10) (Le 0) levele
   (* (add_cstr levelc (Le 0) levelb *)
-  ConstraintSet.empty).
+  UnivConstraintSet.empty).
   
 Definition initial_cls := enforce_constraints initial_cstrs.
 Definition enforced_cls := enforce_constraints enforced_cstrs.
@@ -372,7 +385,7 @@ Eval vm_compute in init_model initial_cls.
 
 Definition abeqcS :=
   enforce_constraints 
-    (add_cstr (sup levela levelb) Eq (levelc + 1) ConstraintSet.empty).
+    (add_cstr (sup levela levelb) Eq (levelc + 1) UnivConstraintSet.empty).
   
 Eval compute in print_clauses initial_cls.
 Eval compute in print_clauses abeqcS.
@@ -431,7 +444,3 @@ Check (option_map (is_model enforced_cls) (enforce_cstrs model_cstrs' enforced_c
 Eval vm_compute in 
   option_map (print_model_premises_hold enforced_cls) 
     (enforce_cstrs model_cstrs' enforced_cstrs).
-
-Definition foo := 0.
-
-From MetaCoq.Template Require Import Loader.

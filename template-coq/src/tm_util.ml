@@ -10,8 +10,8 @@ let gen_constant_in_modules s =
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
 (* This allows to load template_plugin and the extractable plugin at the same time 
-  while have option settings apply to both *)
-  let timing_opt =
+while have option settings apply to both *)
+let timing_opt =
   let open Goptions in
   let key = ["MetaCoq"; "Timing"] in
   let tables = get_tables () in
@@ -260,6 +260,39 @@ module RetypeMindEntry =
         Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_entry (names, uctx') }
     in ctx, mind
 end 
+
+let ugraph_contextset ?kept (g : UGraph.t) =
+  debug Pp.(fun () -> str"Turning universe graph into universe context set");
+  let levels, cstrs, eqs = 
+    match kept with
+    | None ->
+      let cstrs, eqs = UGraph.constraints_of_universes g in
+      UGraph.domain g, cstrs, eqs
+    | Some l -> 
+      debug Pp.(fun () -> str"Graph restricted to: " ++ Univ.LSet.pr Univ.Level.pr l);
+      (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
+      let dom = UGraph.domain g in
+      let kept = Univ.LSet.inter dom l in
+      let kept = Univ.LSet.remove Univ.Level.set kept in
+      let cstrs = time Pp.(str"Computing graph restriction") (UGraph.constraints_for ~kept) g in
+      l, cstrs, []
+  in
+  let levels, cstrs = 
+    List.fold_right (fun eqs acc ->
+      match Univ.LSet.elements eqs with
+      | [] -> acc
+      | x :: [] -> acc
+      | x :: rest ->
+        List.fold_right (fun p (levels, cstrs) ->
+          (Univ.LSet.add p levels, Univ.Constraint.add (x, Univ.Eq, p) cstrs)) rest acc)
+      eqs (levels, cstrs)
+  in
+  let levels = Univ.LSet.add Univ.Level.set levels in
+  let levels = Univ.LSet.remove Univ.Level.prop levels in
+  let levels = Univ.LSet.remove Univ.Level.sprop levels in
+  let cstrs = Univ.Constraint.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in
+  debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
+  (levels, cstrs)
 
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
 

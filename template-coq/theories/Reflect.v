@@ -225,7 +225,7 @@ Qed.
 Scheme level_lt_ind_dep := Induction for Level.lt_ Sort Prop.
 Scheme level_expr_lt_ind_dep := Induction for LevelExpr.lt_ Sort Prop.
 Scheme constraint_type_lt_ind_dep := Induction for ConstraintType.lt_ Sort Prop.
-Scheme level_constraint_lt_ind_dep := Induction for UnivLevelConstraint.lt_ Sort Prop.
+Scheme level_constraint_lt_ind_dep := Induction for LevelConstraint.lt_ Sort Prop.
 Scheme constraint_lt_ind_dep := Induction for UnivConstraint.lt_ Sort Prop.
 Derive Signature for UnivConstraint.lt_.
 Derive Signature for le.
@@ -308,7 +308,7 @@ Proof.
     now rewrite (lt_levelalgexpr_irrel l l4).
 Qed.
 
-Lemma levelconstraint_lt_irrel (x y : UnivLevelConstraint.t) (l l' : UnivLevelConstraint.lt_ x y) : l = l'.
+Lemma levelconstraint_lt_irrel (x y : LevelConstraint.t) (l l' : LevelConstraint.lt_ x y) : l = l'.
 Proof.
   revert l'. induction l using level_constraint_lt_ind_dep.
   - intros l'. depelim l'.
@@ -418,9 +418,9 @@ Module ConstraintSetsUIP.
     - depelim o'. f_equal; auto.
       clear -l0 l2. red in l0, l2.
       extensionality y. extensionality inl.
-      apply constraint_lt_irrel.
+      apply levelconstraint_lt_irrel.
       extensionality y. extensionality inl.
-      apply constraint_lt_irrel.
+      apply levelconstraint_lt_irrel.
   Qed.
 
   #[global,program] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t :=

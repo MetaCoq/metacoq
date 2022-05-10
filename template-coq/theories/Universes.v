@@ -293,7 +293,7 @@ Module LevelExpr.
   Inductive lt_ : t -> t -> Prop :=
   | ltLevelExpr1 l n n' : (n < n')%nat -> lt_ (l, n) (l, n')
   | ltLevelExpr2 l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
-
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Global Instance lt_strorder : StrictOrder lt.
@@ -1373,6 +1373,7 @@ Module UnivConstraint.
   | lt_Level2 l1 t (l2 l2' : LevelAlgExpr.t) : LevelExprSet.lt l2 l2' -> lt_ (l1, t, l2) (l1, t, l2')
   | lt_Cstr l1 t t' l2 l2' : ConstraintType.lt t t' -> lt_ (l1, t, l2) (l1, t', l2')
   | lt_Level1 (l1 l1' : LevelAlgExpr.t) t t' l2 l2' : LevelExprSet.lt l1 l1' -> lt_ (l1, t, l2) (l1', t', l2').
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.
@@ -1423,14 +1424,15 @@ Module UnivConstraint.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End UnivConstraint.
-Module ConstraintSet := MSetAVL.Make UnivConstraint.
-Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
-Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
-Module CS := ConstraintSet.
-Module ConstraintSetDecide := WDecide (ConstraintSet).
-Ltac csets := ConstraintSetDecide.fsetdec.
 
-Module UnivLevelConstraint.
+Module UnivConstraintSet := MSetAVL.Make UnivConstraint.
+Module UnivConstraintSetFact := WFactsOn UnivConstraint UnivConstraintSet.
+Module UnivConstraintSetProp := WPropertiesOn UnivConstraint UnivConstraintSet.
+(* Module CS := UnivConstraintSet. *)
+Module UnivConstraintSetDecide := WDecide (UnivConstraintSet).
+Ltac ucsets := UnivConstraintSetDecide.fsetdec.
+
+Module LevelConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
 
   Definition eq : t -> t -> Prop := eq.
@@ -1442,6 +1444,7 @@ Module UnivLevelConstraint.
   | lt_Level2 l1 t l2 l2' : Level.lt l2 l2' -> lt_ (l1, t, l2) (l1, t, l2')
   | lt_Cstr l1 t t' l2 l2' : ConstraintType.lt t t' -> lt_ (l1, t, l2) (l1, t', l2')
   | lt_Level1 l1 l1' t t' l2 l2' : Level.lt l1 l1' -> lt_ (l1, t, l2) (l1', t', l2').
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.
@@ -1485,23 +1488,31 @@ Module UnivLevelConstraint.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
-End UnivLevelConstraint.
+End LevelConstraint.
 
-Module LevelConstraintSet := MSetAVL.Make UnivLevelConstraint.
-Module LevelConstraintSetFact := WFactsOn UnivLevelConstraint LevelConstraintSet.
-Module LevelConstraintSetProp := WPropertiesOn UnivLevelConstraint LevelConstraintSet.
-Module LCS := LevelConstraintSet.
-Module LevelConstraintSetDecide := WDecide (LevelConstraintSet).
-Ltac lcsets := LevelConstraintSetDecide.fsetdec.
+Module ConstraintSet := MSetAVL.Make LevelConstraint.
+Module ConstraintSetFact := WFactsOn LevelConstraint ConstraintSet.
+Module ConstraintSetProp := WPropertiesOn LevelConstraint ConstraintSet.
+Module CS := ConstraintSet.
+Module ConstraintSetDecide := WDecide (ConstraintSet).
+Ltac csets := ConstraintSetDecide.fsetdec.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).
 Infix "=_cset" := ConstraintSet.Equal (at level 30).
 
-Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
+Definition declared_cstr_levels levels (cstr : LevelConstraint.t) :=
+  let '(l1,_,l2) := cstr in
+  LevelSet.In l1 levels /\ LevelSet.In l2 levels.
+
+Definition is_declared_cstr_levels levels (cstr : LevelConstraint.t) : bool :=
+  let '(l1,_,l2) := cstr in
+  LevelSet.mem l1 levels && LevelSet.mem l2 levels.
+  
+Definition declared_univ_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
   LevelSet.Subset (LevelExprSet.levels l1) levels /\ LevelSet.Subset (LevelExprSet.levels l2) levels.
 
-Definition is_declared_cstr_levels levels (cstr : UnivConstraint.t) : bool :=
+Definition is_declared_univ_cstr_levels levels (cstr : UnivConstraint.t) : bool :=
   let '(l1,_,l2) := cstr in
   LevelSet.subset (LevelExprSet.levels l1) levels && LevelSet.subset (LevelExprSet.levels l2) levels.
 
@@ -1688,10 +1699,10 @@ Definition constraints_of_udecl u :=
 Section Univ.
   Context {cf: checker_flags}.
 
-  Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
-  | satisfies0_Lt (l l' : LevelAlgExpr.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
+  Inductive satisfies0 (v : valuation) : LevelConstraint.t -> Prop :=
+  | satisfies0_Lt (l l' : Level.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
                          -> satisfies0 v (l, ConstraintType.Le z, l')
-  | satisfies0_Eq (l l' : LevelAlgExpr.t) : val v l = val v l'
+  | satisfies0_Eq (l l' : Level.t) : val v l = val v l'
                          -> satisfies0 v (l, ConstraintType.Eq, l').
 
   Definition satisfies v : ConstraintSet.t -> Prop :=
@@ -1812,8 +1823,24 @@ Section Univ.
       apply sub, LevelExprSetFact.elements_2. rewrite -heq. now right.
   Qed.
 
+  (* Lemma consistent_extension_on_union X cstrs
+  (wfX : forall c, CS.In c X.2 -> LS.Subset (LevelExprSet.levels c.1.1) X.1 /\ LS.Subset (LevelExprSet.levels c.2) X.1) :
+  consistent_extension_on X cstrs ->
+  consistent_extension_on X (CS.union cstrs X.2).
+Proof.
+  move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
+  exists v'; split=> //.
+  apply/satisfies_union; split=> //.
+  move=> c hc. destruct (wfX c hc).
+  destruct (vsat c hc); constructor; cbn in *. 
+  2:{ rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
+      rewrite -(val_eq_levels_alg v v' _ v'eq l') //. }
+  rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
+  rewrite -(val_eq_levels_alg v v' _ v'eq l') //.
+Qed. *)
+
   Lemma consistent_extension_on_union X cstrs
-    (wfX : forall c, CS.In c X.2 -> LS.Subset (LevelExprSet.levels c.1.1) X.1 /\ LS.Subset (LevelExprSet.levels c.2) X.1) :
+    (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
     consistent_extension_on X cstrs ->
     consistent_extension_on X (CS.union cstrs X.2).
   Proof.
@@ -1821,13 +1848,9 @@ Section Univ.
     exists v'; split=> //.
     apply/satisfies_union; split=> //.
     move=> c hc. destruct (wfX c hc).
-    destruct (vsat c hc); constructor; cbn in *. 
-    2:{ rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
-        rewrite -(val_eq_levels_alg v v' _ v'eq l') //. }
-    rewrite -(val_eq_levels_alg v v' _ v'eq l) //.
-    rewrite -(val_eq_levels_alg v v' _ v'eq l') //.
+    destruct (vsat c hc); constructor; rewrite -!v'eq //.
   Qed.
-
+  
   Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
     forall v, satisfies v φ -> (Z.of_nat (val v u) <= Z.of_nat (val v u') - n)%Z.
 
@@ -2492,14 +2515,14 @@ fun u e => match e with
 #[global] Instance subst_instance_univ0 : UnivSubst LevelAlgExpr.t :=
   fun u => map (subst_instance_level_expr u).
 
-#[global] Instance subst_instance_level_cstr : UnivSubst UnivLevelConstraint.t :=
+#[global] Instance subst_instance_level_cstr : UnivSubst LevelConstraint.t :=
   fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
 #[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
   fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
 #[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
-  fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
+  fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance u c))
                                 ctrs ConstraintSet.empty.
 
 #[global] Instance subst_instance_univ : UnivSubst Universe.t :=
@@ -2704,14 +2727,14 @@ Definition print_constraint_type d :=
   | ConstraintType.Eq => "="
   end.
 
-Definition print_level_constraint_set t :=
+Definition print_constraint_set t :=
   print_list (fun '(l1, d, l2) => 
     string_of_level l1 ^ " " ^
     print_constraint_type d ^ " " ^ string_of_level l2)
-    " /\ " (LevelConstraintSet.elements t).
+    " /\ " (ConstraintSet.elements t).
 
-Definition print_constraint_set t :=
+Definition print_univ_constraint_set t :=
   print_list (fun '(l1, d, l2) => 
     string_of_levelalgexpr l1 ^ " " ^
     print_constraint_type d ^ " " ^ string_of_levelalgexpr l2)
-    " /\ " (ConstraintSet.elements t).
+    " /\ " (UnivConstraintSet.elements t).

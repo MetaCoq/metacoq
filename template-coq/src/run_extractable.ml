@@ -226,7 +226,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
              None -> Obj.magic (tmFail Pp.(str "inductive does not exist"))
            | Some (mi, mib) -> Obj.magic (tmOfMib mi mib))
   | Coq_tmQuoteUniverses ->
-    tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
+    tmMap (fun x -> Obj.magic (quote_univ_contextset x)) tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))

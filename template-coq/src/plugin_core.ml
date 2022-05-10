@@ -161,9 +161,11 @@ let tmQuoteInductive (kn : kername) : (Names.MutInd.t * mutual_inductive_body) o
     with
       Not_found -> success ~st env evm None
 
-let tmQuoteUniverses : UGraph.t tm =
+let tmQuoteUniverses : Univ.ContextSet.t tm =
   fun ~st env evm success _fail ->
-    success ~st env evm (Environ.universes env)
+    let graph = Environ.universes env in
+    let uctx = Tm_util.ugraph_contextset graph in
+    success ~st env evm uctx
 
 (*let universes_entry_of_decl ?withctx d =
   let open Declarations in

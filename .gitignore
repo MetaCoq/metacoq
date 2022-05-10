@@ -352,3 +352,7 @@ erasure/src/eEnvMap.ml
 erasure/src/eEnvMap.mli
 erasure/src/eGlobalEnv.mli
 erasure/src/eGlobalEnv.ml
+template-coq/extraction_clauses/clauses.ml
+template-coq/extraction_clauses/clauses.mli
+template-coq/extraction_clauses/loop_checking.mli
+template-coq/extraction_clauses/loop_checking.ml

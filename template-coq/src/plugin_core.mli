@@ -58,7 +58,7 @@ val tmLocateString : string -> global_reference list tm
 val tmCurrentModPath : Names.ModPath.t tm
 
 val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) option tm
-val tmQuoteUniverses : UGraph.t tm
+val tmQuoteUniverses : Univ.ContextSet.t tm
 val tmQuoteConstant : kername -> bool -> constant_body tm
 
 val tmInductive : bool -> mutual_inductive_entry -> unit tm

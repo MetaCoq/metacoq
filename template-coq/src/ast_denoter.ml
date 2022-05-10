@@ -26,7 +26,7 @@ struct
 
   type quoted_sort_family = Universes0.allowed_eliminations
   type quoted_constraint_type = Universes0.ConstraintType.t
-  type quoted_univ_constraint = Universes0.UnivConstraint.t
+  type quoted_univ_constraint = Universes0.LevelConstraint.t
   type quoted_univ_constraints = Universes0.ConstraintSet.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
@@ -214,7 +214,7 @@ struct
     | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
     | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
     | Universes0.Universe.Coq_lType u ->
-       let u = Universes0.t_set u in
+       let u = Universes0.LevelExprSet.t_set u in
        let ux_list = Universes0.LevelExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
        evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)

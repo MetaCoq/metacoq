@@ -7,7 +7,6 @@ theories/utils/canonicaltries/CanonicalTries.v
 
 # Generic loop checking algorithm
 theories/LoopChecking.v
-theories/ExtractLoopChecking.v
 theories/TemplateLoopChecking.v
 
 # utils

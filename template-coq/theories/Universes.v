@@ -2515,10 +2515,10 @@ fun u e => match e with
 #[global] Instance subst_instance_univ0 : UnivSubst LevelAlgExpr.t :=
   fun u => map (subst_instance_level_expr u).
 
-#[global] Instance subst_instance_level_cstr : UnivSubst LevelConstraint.t :=
+#[global] Instance subst_instance_cstr : UnivSubst LevelConstraint.t :=
   fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
-#[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
+#[global] Instance subst_instance_univ_cstr : UnivSubst UnivConstraint.t :=
   fun u c => (subst_instance u c.1.1, c.1.2, subst_instance u c.2).
 
 #[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=

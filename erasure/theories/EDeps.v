@@ -59,6 +59,8 @@ Proof.
     now constructor.
   - depelim er.
     econstructor; eauto.
+  - depelim er.
+    econstructor; eauto.
     induction X; [easy|].
     depelim H3.
     constructor; [|easy].
@@ -105,6 +107,8 @@ Proof.
     now constructor.
   - depelim er.
     now constructor.
+  - depelim er.
+    econstructor; eauto.
   - depelim er.
     econstructor; eauto.
     induction X; [easy|].
@@ -160,6 +164,8 @@ Proof.
     now constructor.
   - depelim er.
     now constructor.
+  - depelim er.
+    cbn. econstructor; eauto.    
   - depelim er.
     econstructor; [easy|easy|easy|easy|easy|].
     induction X; [easy|].
@@ -253,7 +259,7 @@ Qed.
 
 Notation "Σ ⊢ s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
-Lemma erases_deps_eval {wfl:WcbvFlags} Σ t v Σ' :
+Lemma erases_deps_eval {wfl:WcbvFlags} {hcon : with_constructor_as_block = false} Σ t v Σ' :
   Σ' ⊢ t ▷ v ->
   erases_deps Σ Σ' t ->
   erases_deps Σ Σ' v.
@@ -275,8 +281,9 @@ Proof.
     + intuition auto.
       apply erases_deps_mkApps_inv in H4.
       now apply Forall_rev, Forall_skipn.
-    + eapply nth_error_forall in e0; [|now eauto].
+    + eapply nth_error_forall in e1; [|now eauto].
       assumption.
+  - congruence.
   - depelim er.
     subst brs; cbn in *.
     depelim H3.
@@ -326,7 +333,8 @@ Proof.
     intuition auto.
     apply erases_deps_mkApps_inv in H3 as (? & ?).
     apply IHev2.
-    now eapply nth_error_forall in e1.
+    now eapply nth_error_forall in e2.
+  - congruence.
   - constructor.
   - depelim er.
     now constructor.
@@ -367,7 +375,7 @@ Lemma erases_deps_forall_ind Σ Σ'
       declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
       erases_one_inductive_body idecl idecl' ->
       erases_mutual_inductive_body mdecl mdecl' ->
-      P (Extract.E.tConstruct ind c))
+      P (Extract.E.tConstruct ind c []))
   (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (list name × Extract.E.term)),
         PCUICAst.declared_inductive Σ (fst p) mdecl idecl ->
         EGlobalEnv.declared_inductive Σ' (fst p) mdecl' idecl' ->

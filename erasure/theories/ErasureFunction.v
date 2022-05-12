@@ -393,7 +393,7 @@ Section Erase.
       | tSort u := !%prg
       | tConst kn u := E.tConst kn
       | tInd kn u := !%prg
-      | tConstruct kn k u := E.tConstruct kn k
+      | tConstruct kn k u := E.tConstruct kn k []
       | tProd _ _ _ := !%prg
       | tLambda na b b' := let t' := erase (vass na b :: Γ) b' _ in
         E.tLambda na.(binder_name) t'
@@ -1942,7 +1942,7 @@ Section wffix.
     | tCoFix mfix idx =>
       (idx <? #|mfix|) && List.forallb (wf_fixpoints ∘ dbody) mfix
     | tConst kn => true
-    | tConstruct ind c => true
+    | tConstruct ind c _ => true
     | tVar _ => true
     | tBox => true
     end.

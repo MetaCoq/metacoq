@@ -110,6 +110,7 @@ theories/Bidirectional/BDStrengthening.v
 theories/PCUICWeakeningEnv.v
 theories/PCUICRelevance.v
 theories/PCUICRelevanceTerm.v
+theories/PCUICRelevanceTyp.v
 
 # theories/All.v
 

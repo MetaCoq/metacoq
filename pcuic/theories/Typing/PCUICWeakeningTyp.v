@@ -206,11 +206,11 @@ Proof.
         rewrite app_context_assoc. apply X.
 Qed.
 
-Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
+Lemma isTypeRelOpt_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty relopt} 
   (isdecl : n <= #|Γ|):
   wf Σ -> wf_local Σ Γ ->
-  isType Σ (skipn n Γ) ty ->
-  isType Σ Γ (lift0 n ty).
+  isTypeRelOpt Σ (skipn n Γ) ty relopt ->
+  isTypeRelOpt Σ Γ (lift0 n ty) relopt.
 Proof.
   intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
   assert (n = #|firstn n Γ|).
@@ -219,4 +219,13 @@ Proof.
   rewrite {3}H.
   eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ) (T := tSort _)); 
     eauto with wf.
+Qed.
+
+Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
+  (isdecl : n <= #|Γ|):
+  wf Σ -> wf_local Σ Γ ->
+  isType Σ (skipn n Γ) ty ->
+  isType Σ Γ (lift0 n ty).
+Proof.
+  apply isTypeRelOpt_lift => //.
 Qed.

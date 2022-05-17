@@ -125,11 +125,10 @@ Proof.
   intros HPΣ wfΣ wfΣ' Hext Hdecl.
   destruct decl.
   1:{
-    destruct c. destruct cst_body0.
-    - simpl in *.
-      red in Hdecl |- *. simpl in *.
-      eapply (HPΣ Σ Σ'); eauto.
+    destruct Hdecl; split.
     - eapply (HPΣ Σ Σ'); eauto.
+    - destruct cst_body => //.
+      eapply (HPΣ Σ Σ'); eauto.
   }
   simpl in *.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
@@ -139,7 +138,7 @@ Proof.
     + unfold on_constructors in *. eapply All2_impl; eauto.
       intros.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
-      * unfold on_type in *; eauto.
+      * unfold on_type_rel in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
         revert on_cargs.
         induction (cstr_args x0) in y |- *; destruct y; simpl in *; eauto.
@@ -202,11 +201,10 @@ Proof.
   pose proof (wfΣ := extends_decls_wf _ _ wfΣ' Hext).
   destruct decl.
   1:{
-    destruct c. destruct cst_body0.
-    - simpl in *.
-      red in Hdecl |- *. simpl in *.
-      eapply (HPΣ Σ Σ'); eauto.
+    destruct Hdecl; split.
     - eapply (HPΣ Σ Σ'); eauto.
+    - destruct cst_body => //.
+      eapply (HPΣ Σ Σ'); eauto.
   }
   simpl in *.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
@@ -216,7 +214,7 @@ Proof.
     + unfold on_constructors in *. eapply All2_impl; eauto.
       intros.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
-      * unfold on_type in *; eauto.
+      * unfold on_type_rel in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
         revert on_cargs.
         induction (cstr_args x0) in y |- *; destruct y; simpl in *; eauto.

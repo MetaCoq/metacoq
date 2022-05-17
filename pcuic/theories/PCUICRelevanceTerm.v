@@ -31,8 +31,8 @@ Proof.
     destruct lookup_constant eqn:H => //.
     erewrite extends_lookup_constant; eauto.
   - unfold relevance_of_constructor.
-    destruct lookup_inductive eqn:H => //.
-    erewrite extends_lookup_inductive; eauto.
+    destruct lookup_constructor eqn:H => //.
+    erewrite extends_lookup_constructor; eauto.
   - unfold relevance_of_projection.
     destruct lookup_projection eqn:H => //.
     erewrite extends_lookup_projection; eauto.

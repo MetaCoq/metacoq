@@ -404,6 +404,26 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     inv X; intuition; red; simpl; eauto.
   Qed.
 
+  Definition on_decl (P : context -> term -> typ_or_sort -> Type) Γ d :=
+    P Γ d.(decl_type) (SortRel d.(decl_name).(binder_relevance)) ×
+    option_default (fun body => P Γ body (Typ d.(decl_type))) d.(decl_body) True.
+  
+  Lemma nth_error_All_local_env {P Γ n d} :
+    nth_error Γ n = Some d ->
+    All_local_env P Γ ->
+    on_decl P (skipn (S n) Γ) d.
+  Proof using Type.
+    intro Heq.
+    induction 1 in n, Heq |- *.
+    - destruct n; simpl in Heq; discriminate.
+    - destruct n.
+      + inv Heq. simpl. split => //.
+      + simpl in Heq. simpl. apply IHX => //.
+    - destruct n.
+      + inv Heq. simpl. split => //.
+      + simpl in Heq. simpl. apply IHX => //.
+  Qed.
+
   Definition on_def_type (P : context -> term -> typ_or_sort -> Type) Γ d :=
     P Γ d.(dtype) (SortRel d.(dname).(binder_relevance)).
   
@@ -512,11 +532,36 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   End TypeLocalOver.
   Derive Signature for All_local_env_over_gen.
 
+  Notation Proploc_conj P Q := (fun Γ t T => P Γ t T × Q Γ t T).
+
+  Lemma All_local_env_over_gen_2 checking sorting cproperty sproperty Γ wfΓ :
+    let cproperty_full Γ wfΓ t T check := cproperty Γ t T in
+    let sproperty_full Γ wfΓ t r check := sproperty Γ t r check in
+    All_local_env_over_gen checking sorting cproperty_full sproperty_full Γ wfΓ ->
+    All_local_env (lift_judgment (Proploc_conj checking cproperty) (fun Γ t r => { s : sorting Γ t r & sproperty Γ t r s })) Γ.
+  Proof.
+    intros cfull sfull.
+    induction 1; constructor => //.
+    all: cbn in tu |- *; eauto.
+  Qed.
+
   Definition All_local_env_over typing property Σ :=
     (All_local_env_over_gen (typing Σ) (infer_sort (typing_sort typing) Σ) (property Σ) (fun Γ H t relopt tu => property _ _ H _ _ tu.π2.2)).
   
   Definition All_local_env_over_sorting checking sorting cproperty (sproperty : forall Σ Γ _ t s, sorting Σ Γ t s -> Type) Σ :=
     (All_local_env_over_gen (checking Σ) (infer_sort sorting Σ) (cproperty Σ) (fun Γ H t relopt tu => sproperty _ Γ H t tu.π1 tu.π2.2)).
+
+  Lemma All_local_env_over_2 typing property (Σ : global_env_ext) (Γ : context) (wfΓ : All_local_env (lift_typing typing Σ) Γ) :
+    let property_full Σ Γ wfΓ t T Hty := property Σ Γ t T in
+    All_local_env_over typing property_full Σ Γ wfΓ ->
+    All_local_env (lift_typing2 typing property Σ) Γ.
+  Proof. 
+    intros full; unfold full, All_local_env_over.
+    intro H; eapply All_local_env_over_gen_2 in H.
+    apply All_local_env_impl with (1 := H); intros.
+    apply lift_judgment_impl with (1 := X); intros => //.
+    destruct X0 as ((s & e & Hs) & Hs'); exists s; now repeat split.
+  Qed.
 
   Section TypeCtxInst.
     Context (typing : forall (Γ : context), term -> term -> Type).
@@ -945,7 +990,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)
 
-      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl);
+      (* The ind_relevance part is redundant *)
+      on_ctype : on_type_rel Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) idecl.(ind_relevance);
       on_cargs :
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
                       cdecl.(cstr_args) cunivs;
@@ -1080,7 +1126,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
                                 (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort)));
 
         (** It must be well-typed in the empty context. *)
-        onArity : on_type_rel Σ [] idecl.(ind_type) idecl.(ind_relevance);
+        (** The relevant part is redundant *)
+        onArity : on_type_rel Σ [] idecl.(ind_type) Relevant;
 
         (** The sorts of the arguments contexts of each constructor *)
         ind_cunivs : list constructor_univs;
@@ -1145,10 +1192,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     (** *** Typing of constant declarations *)
 
     Definition on_constant_decl Σ d :=
-      match d.(cst_body) with
-      | Some trm => P Σ [] trm (Typ d.(cst_type))
-      | None => on_type Σ [] d.(cst_type)
-      end.
+      on_type_rel Σ [] d.(cst_type) d.(cst_relevance) ×
+      option_default (fun trm => P Σ [] trm (Typ d.(cst_type))) d.(cst_body) True.
 
     Definition on_global_decl Σ kn decl :=
       match decl with
@@ -1189,6 +1234,23 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition on_global_env_ext (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.(universes) Σ.2.
+
+    Lemma on_global_env_ext_empty_ext g :
+      on_global_env g -> on_global_env_ext (empty_ext g).
+    Proof.
+      intro H; split => //.
+      unfold empty_ext, snd. repeat split.
+      - unfold levels_of_udecl. intros x e. lsets.
+      - unfold constraints_of_udecl. intros x e. csets.
+      - unfold satisfiable_udecl, univs_ext_constraints, constraints_of_udecl, fst_ctx, fst => //.
+        destruct H as ((cstrs & _ & consistent) & decls).
+        destruct consistent; eexists.
+        intros v e. specialize (H v e); tea.
+      - unfold valid_on_mono_udecl, constraints_of_udecl, consistent_extension_on.
+        intros v sat; exists v; split.
+        + intros x e. csets.
+        + intros x e => //.
+    Qed.
 
   End GlobalMaps.
 
@@ -1245,7 +1307,9 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
   Proof.
     intros X X0.
     destruct d; simpl.
-    - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
+    - destruct 1; split.
+      * eapply X => //.
+      * destruct cst_body => //. now eapply X.
     - intros [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
@@ -1386,7 +1450,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
       (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
     clear IHX0. destruct d; simpl.
-    - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+    - destruct o0; split.
+      * eapply X => //.
+      * destruct cst_body => //. now eapply X.
     - red in o. simpl in *.
       destruct o0 as [onI onP onNP].
       constructor; auto.

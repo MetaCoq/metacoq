@@ -10,9 +10,9 @@ Definition relevance_of_constant Σ kn :=
   | None => Relevant
   end.
 
-Definition relevance_of_constructor Σ ind (k : nat) :=
-  match lookup_inductive Σ ind with
-  | Some (_, idecl) => idecl.(ind_relevance)
+Definition relevance_of_constructor Σ ind k :=
+  match lookup_constructor Σ ind k with
+  | Some (_, idecl, _) => idecl.(ind_relevance)
   | None => Relevant
   end.
 

@@ -3578,7 +3578,7 @@ Proof.
       destruct onc. red in on_ctype.
       destruct on_ctype as (s & e & Hs).
       rewrite /type_of_constructor. forward Hs. eauto.
-      exists (s@[u]); split; [apply e|].
+      exists (s@[u]); split => //.
       rewrite (trans_subst (shiftnP #|ind_bodies mdecl| xpred0) (shiftnP 0 xpred0)).
       pose proof (declared_constructor_closed_gen_type isdecl).
       eapply closedn_on_free_vars. len in H0. now rewrite closedn_subst_instance.
@@ -3621,6 +3621,7 @@ Proof.
       now eapply alpha_eq_trans.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
+    + assumption.
     + eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
       eassert (PCUICEnvTyping.ctx_inst (fun _ _ _ => wf_trans Σ -> @typing (cf' _) _ _ _ _) _ _ _) as IHctxi.
       { eapply ctx_inst_impl with (1 := X5). intros ? ? [? r]; exact r. }
@@ -3675,7 +3676,7 @@ Proof.
           now move: wfctx; rewrite on_free_vars_ctx_app /= => /andP[].
           exact X. }
     + red. eapply Forall2_map_right, Forall2_map.
-      eapply Forall2_All2 in H4.
+      eapply Forall2_All2 in H5.
       eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_nth_hyp in X8.
       eapply All2_Forall2. eapply All2i_All2; tea; cbv beta.
@@ -3706,7 +3707,7 @@ Proof.
       rewrite !trans_bcontext.
       now eapply eq_context_gen_binder_annot in cd.
     + eapply All2i_map. eapply All2i_map_right.
-      eapply Forall2_All2 in H4.
+      eapply Forall2_All2 in H5.
       eapply All2i_nth_hyp in X8.
       eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
@@ -4697,11 +4698,11 @@ Proof.
   constructor; auto; try apply IHX.
   { now apply (fresh_global_map (Σ := Σ0)). }
   destruct d; cbn in *.
-  * cbn. red. move: ond; rewrite /on_constant_decl.
-    destruct c as [type [body|] univs] => /=.
-    intros Hty; eapply (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
-    intros (s & e & Hty). exists s. split; [apply e|].
-    exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
+  * destruct ond as (onty & onbo); split.
+    + destruct onty as (s & e & Hty). exists s. split; [apply e|].
+      eapply (pcuic_expand_lets (Σ0, _) [] _ _ X Hty IHX).
+    + destruct c as [type [body|] univs] => //=.
+      exact (pcuic_expand_lets (Σ0, _) [] _ _ X onbo IHX).
   * generalize ond. intros []; econstructor; eauto.
     + cbn.
       eapply (Alli_mapi _ _ _).1, Alli_impl; tea.

@@ -809,6 +809,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+    isSortRel ps ci.(ci_relevance) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
@@ -1189,6 +1190,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
         is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+        isSortRel ps ci.(ci_relevance) ->
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
@@ -1281,8 +1283,9 @@ Proof.
     apply IH'; auto.
   - simpl. simpl in *.
     destruct d.
-    + destruct c; simpl in *.
-      destruct cst_body0; apply lift_typing_impl with (1 := Xg); intros ? Hs.
+    + destruct Xg; split. 2: destruct c, cst_body0 => //.
+      1: rename o1 into Xg. 2: rename o2 into Xg.
+      all: apply lift_typing_impl with (1 := Xg); intros ? Hs.
       all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
       all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
       all: apply IH.
@@ -1503,18 +1506,6 @@ Proof.
 Qed.
 
 (** * Lemmas about All_local_env *)
-
-Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
-  All_local_env P Γ ->
-  on_some (on_local_decl P (skipn (S n) Γ)) (nth_error Γ n).
-Proof.
-  induction 1 in n, isdecl |- *. red; simpl.
-  - destruct n; simpl; inv isdecl.
-  - destruct n. red; simpl. red. simpl. apply t0.
-    simpl. apply IHX. simpl in isdecl. lia.
-  - destruct n. auto.
-    apply IHX. simpl in *. lia.
-Qed.
 
 Arguments on_global_env {cf} Pcmp P !g.
 

@@ -217,7 +217,7 @@ Proof.
     1: fvs.
     now eapply closed_on_free_vars, declared_constructor_closed_type.
     
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Hinst ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? sortrel Hinst ty_c Cumc ? ? ? ty_br.
 
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
     apply conv_infer_ind in Cumc as (?&?&[]) ; auto.
@@ -228,6 +228,7 @@ Proof.
       * by eapply All_local_app_rel.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
+      * eapply geq_relevance; tea.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; tea.

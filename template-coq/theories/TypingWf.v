@@ -793,11 +793,12 @@ Section WfRed.
   Proof using Type.
     intros wΣ h.
     unfold declared_constant in h.
-    destruct (lookup_on_global_env wΣ h) as [Σ' [wΣ' [ext h']]].
-    simpl in h'.
-    destruct decl as [ty [bo|]]. all: cbn in *.
-    - destruct h'. intuition eauto using wf_extends.
-    - destruct h'. intuition eauto using wf_extends.
+    destruct (lookup_on_global_env wΣ h) as [Σ' [wΣ' [ext (hty & hbo)]]].
+    split.
+    - rewrite /on_type_rel /wf_decl_pred in hty. destruct hty. eauto using wf_extends.
+    - destruct cst_body => //.
+      rewrite /option_default /wf_decl_pred in hbo.
+      rewrite /on_option. destruct hbo. eauto using wf_extends.
   Qed.
 
   Lemma wf_it_mkProd_or_LetIn_inv (Σ' : global_env_ext) Γ (wfΓ : wf_local Σ' Γ)
@@ -879,9 +880,9 @@ Section TypingWf.
       induction X1; auto. apply IHX1.
       apply wf_subst. now destruct p0. destruct p. now inv w.
     - split. wf. apply wf_subst_instance. wf.
-      destruct (lookup_on_global_env X H) as [Σ' [wfΣ' [ext prf]]]; eauto.
-      red in prf. destruct decl; destruct cst_body0; red in prf; simpl in *; wf.
-      destruct prf as [s []]. wf.
+      destruct (lookup_on_global_env X H) as [Σ' [wfΣ' [ext (prfty & prfbo)]]]; eauto.
+      rewrite /on_type_rel //= in prfty.
+      destruct prfty as (? & _ & []). wf.
 
     - split. wf. apply wf_subst_instance.
       eapply declared_inductive_wf; eauto.

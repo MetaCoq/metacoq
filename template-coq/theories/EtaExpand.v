@@ -1110,7 +1110,7 @@ Proof.
     rewrite nth_error_app1. now rewrite nth_error_repeat. rewrite repeat_length. lia.
   - cbn. econstructor; eauto.
     * unfold map_branches. solve_all.
-      clear -X1 H8.
+      clear -X1 H9.
       set (Γ'' := map _ Γ'). cbn.
       enough (All (expanded Σ0 Γ'') (map (eta_expand (declarations Σ0) Γ') (pparams p ++ indices))).
       now rewrite map_app in X; eapply All_app in X as [].
@@ -1132,7 +1132,7 @@ Proof.
         unfold inst_case_context. unfold subst_context.
         unfold subst_instance, subst_instance_context, map_context.
         rewrite fold_context_k_length, map_length. unfold aname. lia.
-      } revert H9. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
+      } revert H10. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
       (puinst p) (bcontext y) x)). clear.
       induction #|bcontext y|; intros []; cbn; intros; try congruence; econstructor; eauto.
     - cbn. rewrite nth_error_map, H0. cbn. unfold eta_fixpoint. unfold fst_ctx in *. cbn in *.
@@ -1383,11 +1383,11 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} g kn d :
 Proof.
   intros wf ond.
   destruct d; cbn in *.
-  - unfold on_constant_decl in ond.
+  - destruct ond as (onty & onbo).
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := g) [] [] t na wf ond). constructor.
-    destruct ond as (s & e & Hs). constructor => //.
+    apply (eta_expand_expanded (Σ := g) [] [] t na wf onbo). constructor.
+    destruct onty as (s & e & Hs). constructor => //.
   - destruct ond as [onI onP onN onV].
     constructor. cbn.
     eapply eta_expand_context => //.

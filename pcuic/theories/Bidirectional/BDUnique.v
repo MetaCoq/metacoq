@@ -193,7 +193,7 @@ Proof using wfΣ.
    
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
-    move: (H) => /declared_inductive_inj /(_ H13) [? ?].
+    move: (H) => /declared_inductive_inj /(_ H14) [? ?].
     subst.
     assert (op' : is_open_term Γ (mkApps ptm0 (skipn (ci_npar ci) args0 ++ [c]))).
       by now eapply type_is_open_term, infering_typing.

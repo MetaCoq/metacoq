@@ -487,7 +487,7 @@ Module Environment (T : Term).
 
   Definition arities_context (l : list one_inductive_body) :=
     rev_map (fun ind => vass (mkBindAnn (nNamed ind.(ind_name))
-                            (ind.(ind_relevance))) ind.(ind_type)) l.
+                            Relevant) ind.(ind_type)) l.
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.

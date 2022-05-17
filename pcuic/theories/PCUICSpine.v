@@ -873,8 +873,8 @@ Qed.*)
     now apply subslet_lift.
   Qed.
 
-  Lemma ctx_inst_length {Γ args Δ} :
-    ctx_inst Σ Γ args Δ -> 
+  Lemma ctx_inst_length {P Γ args Δ} :
+    PCUICTyping.ctx_inst P Γ args Δ -> 
     #|args| = context_assumptions Δ.
   Proof using Type.
     induction 1; simpl; auto.

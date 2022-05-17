@@ -2290,10 +2290,11 @@ Proof.
       now rewrite -trans_local_app. 
     + rewrite <- trans_global_ext_constraints.
       eassumption.
+    + assumption.
     + now rewrite trans_mkApps map_app in X7.
     + rewrite (trans_case_predicate_context Γ); tea.
       eapply All2i_map. eapply All2i_map_right.
-      eapply Forall2_All2 in H4.
+      eapply Forall2_All2 in H5.
       eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
       intros i cdecl br. cbv beta.
@@ -2303,10 +2304,10 @@ Proof.
       * rewrite /brctxty.
         now eapply trans_cstr_branch_context_eq.
       * pose proof (trans_case_branch_type ci mdecl idecl cdecl i p br isdecl H1 wf eqctx).
-        rewrite -/brctxty -/ptm in H5. cbn in H5. clearbody brctxty.
+        rewrite -/brctxty -/ptm in H6. cbn in H6. clearbody brctxty.
         subst brctxty. rewrite -trans_local_app. cbn. apply IHb.
       * pose proof (trans_case_branch_type ci mdecl idecl cdecl i p br isdecl H1 wf eqctx).
-        rewrite -/brctxty -/ptm in H5. cbn in H5. clearbody brctxty.
+        rewrite -/brctxty -/ptm in H6. cbn in H6. clearbody brctxty.
         subst brctxty. rewrite -trans_local_app. cbn. apply IHbty.
 
   - rewrite trans_subst trans_subst_instance /= map_rev.

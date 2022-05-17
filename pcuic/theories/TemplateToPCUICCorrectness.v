@@ -2089,6 +2089,7 @@ Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_
   wf_local Σ (Γ,,, predctx) ->
   Σ;;; Γ,,, predctx |- preturn p : tSort ps ->
   is_allowed_elimination Σ (ind_kelim idecl) ps ->
+  isSortRel ps ci.(ci_relevance) ->
   Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices) ->
   isCoFinite (ind_finite mdecl) = false ->
   let ptm := it_mkLambda_or_LetIn predctx (preturn p) in
@@ -2317,7 +2318,7 @@ Proof.
   - cbn; rewrite trans_mkApps; auto with wf trans. 
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ isdecl).
     rewrite trans_lookup_inductive.
-    rewrite (declared_inductive_lookup _ H4).
+    rewrite (declared_inductive_lookup _ H5).
     rewrite trans_it_mkLambda_or_LetIn.
     rewrite -/(trans_local Σ' (Ast.case_predicate_context _ _ _ _)).
     have lenpctx : #|Ast.pcontext p| = S #|Ast.Env.ind_indices idecl|.
@@ -2332,9 +2333,9 @@ Proof.
       eapply eq_binder_annots_eq.
       now eapply trans_ind_predicate_context.
     + cbn. split. cbn.
-      { epose proof (declared_minductive_ind_npars (proj1 H4)).
-        cbn in H4. len. rewrite -H0.
-        now rewrite context_assumptions_map in H5. }
+      { epose proof (declared_minductive_ind_npars (proj1 H5)).
+        cbn in H5. len. rewrite -H0.
+        now rewrite context_assumptions_map in H6. }
       cbn. rewrite map2_map2_bias_left.
       { rewrite PCUICCases.ind_predicate_context_length; len. }
       rewrite map_map2 /= map2_cst.
@@ -3009,11 +3010,9 @@ Proof.
     { split; rewrite trans_env_env_universes //. }
     have wfdecl := on_global_decl_wf (Σ := (Σg, udecl)) X0 o0.
     destruct d eqn:eqd.
-    * destruct c; simpl. destruct cst_body0; simpl in *.
-      red in o |- *. simpl in *.
-      eapply (X (Σg, cst_universes0) [] t (Typ cst_type0)); auto.
-      red in o0 |- *. simpl in *.
-      now apply (X (Σg, cst_universes0) [] cst_type0 (Sort None)).
+    * destruct o0, c; split. 2: destruct cst_body0 => //.
+      + now apply (X (Σg, cst_universes0) [] cst_type0 (SortRel cst_relevance0)).
+      + now apply (X (Σg, cst_universes0) [] t (Typ cst_type0)); auto.
     * destruct o0 as [onI onP onNP].
       simpl.
       change (trans_env_env (trans_global_env Σg), Ast.Env.ind_universes m) with (global_env_ext_map_global_env_ext (trans_global (Σg, Ast.Env.ind_universes m))) in *.
@@ -3026,14 +3025,14 @@ Proof.
           eapply Alli_All; tea; cbv beta.
           move=> n x /Typing.onArity => o.
           eapply isType_of_isTypeRel.
-          apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type x) (SortRel (Ast.Env.ind_relevance x)) X0 o) => //. }
+          apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type x) (SortRel _) X0 o) => //. }
         eapply Alli_All_mix in onI; tea.
         eapply Alli_map. eapply Alli_impl. exact onI. eauto. intros n idecl [oni wf].
         have onarity : on_type_rel (PCUICEnvTyping.lift_typing typing)
           (trans_global (Σg, Ast.Env.ind_universes m)) []
           (ind_type (trans_one_ind_body (trans_global_env Σg) idecl))
-          (ind_relevance (trans_one_ind_body (trans_global_env Σg) idecl)).
-        { apply ST.onArity in oni. unfold on_type in *; simpl in *.
+          Relevant.
+        { apply ST.onArity in oni.
           now apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type idecl) (SortRel _) _ oni). }
         unshelve refine {| ind_cunivs := oni.(ST.ind_cunivs) |}; tea.
         --- cbn -[trans_global_env]. rewrite oni.(ST.ind_arity_eq).
@@ -3045,14 +3044,15 @@ Proof.
             rename b into onc. rename y into cs.
             rename a0 into wfctype. rename a into wfcargs. rename b1 into wfcindices.
             destruct onc.
-            have onty : on_type (PCUICEnvTyping.lift_typing typing)
+            have onty : on_type_rel (PCUICEnvTyping.lift_typing typing)
               (trans_global (Σg, Ast.Env.ind_universes m))
               (arities_context
               (ind_bodies (trans_minductive_body (trans_global_env Σg) m)))
-              (cstr_type (trans_constructor_body (trans_global_env Σg) x)).
+              (cstr_type (trans_constructor_body (trans_global_env Σg) x))
+              (Ast.Env.ind_relevance idecl).
             { unfold cstr_type, Ast.Env.cstr_type in on_ctype |- *; simpl in *. red. 
               move: (X (Σg, Ast.Env.ind_universes m) (Ast.Env.arities_context (Ast.Env.ind_bodies m)) 
-                (Ast.Env.cstr_type x) (Sort None)).
+                (Ast.Env.cstr_type x) (SortRel (Ast.Env.ind_relevance idecl))).
               rewrite trans_arities_context.
               intros H'. apply H' => //. }
             have ceq : cstr_type (trans_constructor_body (trans_global_env Σg) x) =

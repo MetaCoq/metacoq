@@ -275,7 +275,7 @@ Proof using Type.
     + symmetry; apply subst_instance_two.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp eqpctx wfp cup
-      wfpctx pty Hpty Hcpc kelim
+      wfpctx pty Hpty Hcpc kelim sortrel
       IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
@@ -294,6 +294,7 @@ Proof using Type.
     + now rewrite -subst_instance_case_predicate_context -subst_instance_app_ctx.
     + cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
+    + apply relevance_subst => //.
     + move: IHctxi. simpl.
       rewrite -subst_instance_app.
       rewrite -subst_instance_two_context.

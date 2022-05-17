@@ -190,19 +190,14 @@ Proof.
 
   - rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
-    destruct X0 as [Σ' [hext [onu HΣ'] IH]].
-    repeat red in IH. destruct decl, cst_body0. simpl in *.
-    rewrite -> andb_and in IH. intuition auto.
-    eauto using closed_upwards with arith.
-    simpl in *.
-    repeat red in IH. destruct IH as (s & e & Hs).
-    rewrite -> andb_and in Hs. intuition auto.
+    destruct X0 as [Σ' [hext [onu HΣ'] (IHty & IHbo)]].
+    destruct IHty as (_ & _ & (IH & _)%andb_and).
     eauto using closed_upwards with arith.
 
   - rewrite closedn_subst_instance.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
-    destruct X0 as (s & e & Hs). rewrite -> andb_and in Hs.
+    destruct X0 as (_ & _ & (X0 & _)%andb_and).
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -215,17 +210,16 @@ Proof.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
-      destruct o as [? ? (s & e' & Hs) _]. rewrite -> andb_and in Hs.
-      apply proj1 in Hs.
+      destruct o as [? ? (_ & _ & (Hs & _)%andb_and) _].
       rewrite arities_context_length in Hs.
       eauto using closed_upwards with arith.
 
   - destruct H3 as [clret _].
-    destruct H6 as [clc clty].
+    destruct H7 as [clc clty].
     rewrite closedn_mkApps in clty. simpl in clty.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
-    red in H8. eapply Forall2_All2 in H8.
+    red in H9. eapply Forall2_All2 in H9.
     eapply All2i_All2_mix_left in X5; eauto.
     eapply declared_minductive_closed_ind in X0; tea. 2:exact isdecl.
     pose proof (closed_ind_closed_cstrs X0 isdecl).
@@ -240,16 +234,16 @@ Proof.
       rewrite /predctx in clret.
       rewrite case_predicate_context_length_indices // in clret.
       { now rewrite ind_predicate_context_length. }
-    + clear H8. solve_all. unfold test_branch_k. clear H6. solve_all.
+    + clear H9. solve_all. unfold test_branch_k. clear H7. solve_all.
       * rewrite (closedn_ctx_alpha a1).
         eapply closed_cstr_branch_context_gen in X0; tea.
         rewrite (wf_predicate_length_pars H1).
         now rewrite (declared_minductive_ind_npars isdecl).
       * rewrite (All2_length a1).
-        len in H8. 
-        (*unfold case_branch_context_gen in H8. simpl in H8.
-        rewrite case_branch_type_fst in H8. *)
-        rewrite case_branch_context_length_args in H8 => //.
+        len in H9. 
+        (*unfold case_branch_context_gen in H9. simpl in H9.
+        rewrite case_branch_type_fst in H9. *)
+        rewrite case_branch_context_length_args in H9 => //.
         now rewrite cstr_branch_context_length.
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
@@ -277,19 +271,17 @@ Proof.
     subst types.
     now rewrite app_context_length fix_context_length in H.
     eapply nth_error_all in X0; eauto. simpl in X0. intuition auto. rtoProp.
-    destruct X0 as (s & e & Hs & cl). now rewrite andb_true_r in cl.
+    now destruct X0 as (_ & _ & _ & (cl & _)%andb_and).
 
   - split. solve_all. destruct b.
     destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
-    destruct a as (s & e & Hs & cl).
-    now rewrite andb_true_r in cl.
+    now destruct a as (_ & _ & _ & (cl & _)%andb_and).
     rewrite -> app_context_length in H3, H4. rewrite -> Nat.add_comm in *.
     subst types. now rewrite fix_context_length in H3.
     eapply nth_error_all in X0; eauto.
-    destruct X0 as (s & e & Hs & cl).
-    now rewrite andb_true_r in cl.
+    now destruct X0 as (_ & _ & _ & (cl & _)%andb_and).
 Qed.
 
 Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind} : 
@@ -495,13 +487,9 @@ Proof.
   intros h.
   unfold declared_constant in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [ext wfΣ' decl']].
-  red in decl'. red in decl'.
-  destruct decl as [ty bo un]. simpl in *.
-  destruct bo as [t|].
-  - now eapply type_closed in decl'.
-  - cbn in decl'. destruct decl' as (s & e & Hs).
-    now eapply subject_closed in Hs. Unshelve. all:tea.
+  destruct h as [Σ' [ext wfΣ' (declty' & declbo')]].
+  destruct declty' as (? & _ & Hs).
+  now eapply subject_closed in Hs. Unshelve. all:tea.
 Qed.
 
 
@@ -515,11 +503,9 @@ Proof.
   intros Σ cst decl body hΣ h e.
   unfold declared_constant in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [ext wfΣ' decl']].
-  red in decl'. red in decl'.
-  destruct decl as [ty bo un]. simpl in *.
-  rewrite e in decl'.
-  now eapply subject_closed in decl'.
+  destruct h as [Σ' [ext wfΣ' (declty' & declbo')]].
+  rewrite e in declbo'.
+  now eapply subject_closed in declbo'.
   Unshelve. all:tea.
 Qed.
 

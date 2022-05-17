@@ -1038,10 +1038,10 @@ Qed.
       destruct X as [X _].
       pose proof (nth_error_Some_length heq_nth_error).
       eapply nth_error_All_local_env in X; tea.
-      rewrite heq_nth_error /= in X. red in X.
+      destruct X as [Xty Xbod].
       destruct decl as [na [b|] ty]; cbn -[skipn] in *.
       + now to_prop.
-      + now move: X => [s [] _ /andP[Hc _]].
+      + now move: Xty => [s [] _ /andP[Hc _]].
 
     - apply/andP; split; to_wfu; cbn ; eauto with pcuic.
        
@@ -1053,15 +1053,8 @@ Qed.
       { rewrite wf_universeb_instance_forall.
         apply/wf_universe_instanceP.
         eapply consistent_instance_ext_wf; eauto. }
-      pose proof (declared_constant_inv _ _ _ _ wf_universes_weaken wf X H).
-      red in X1; cbn in X1.
-      destruct (cst_body decl).
-      * to_prop.
-        epose proof (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
-        eapply wf_universes_inst. 2:eauto. all:eauto.
-        simpl in H2.
-        now eapply consistent_instance_ext_wf.
-      * move: X1 => [s [] _ /andP[Hc _]].
+      pose proof (declared_constant_inv _ _ _ _ wf_universes_weaken wf X H) as (onty & onbo).
+      * move: onty => [_ [] _ /andP[Hc _]].
         to_prop.
         eapply wf_universes_inst; eauto.
         exact (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
@@ -1093,8 +1086,8 @@ Qed.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
       now eapply consistent_instance_ext_wf.
     
-    - rewrite wf_universes_mkApps in H5.
-      move/andP: H5 => /= [] wfu; rewrite forallb_app.
+    - rewrite wf_universes_mkApps in H4.
+      move/andP: H4 => /= [] wfu; rewrite forallb_app.
       move/andP=> [] wfpars wfinds.
       cbn in wfu.
       rewrite wfu /= wfpars wf_universes_mkApps /= 
@@ -1132,7 +1125,7 @@ Qed.
         rewrite a1.
         now rewrite closedu_inds.
       * rewrite /ptm.
-        rewrite wf_universes_it_mkLambda_or_LetIn H4 andb_true_r.
+        rewrite wf_universes_it_mkLambda_or_LetIn H5 andb_true_r.
         rewrite /predctx.
         destruct X3 as [_ hctx]. move: hctx.
         now rewrite test_context_app => /andP[].

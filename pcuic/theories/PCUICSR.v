@@ -1694,10 +1694,10 @@ Proof.
   - (* Constant unfolding *)
     unshelve epose proof (declared_constant_inj decl decl0 _ _); tea; subst decl.
     destruct decl0 as [ty body' univs]; simpl in *; subst body'.
-    eapply on_declared_constant in H; tas; cbn in H.
+    eapply on_declared_constant in H as (_ & Hbo); tas; cbn in Hbo.
     rewrite <- (app_context_nil_l Γ).
-    apply subject_closed in H as clb; tas.
-    apply type_closed in H as clty; tas.
+    apply subject_closed in Hbo as clb; tas.
+    apply type_closed in Hbo as clty; tas.
     replace (subst_instance u body)
       with (lift0 #|Γ| (subst_instance u body)).
     replace (subst_instance u ty)
@@ -1758,7 +1758,7 @@ Proof.
     set (ibrctx := (case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl)) in *.
     set (brctx := (inst_case_context (pparams p) (puinst p) (bcontext br))).
     assert (wfbr : wf_branch cdecl br).
-    { eapply Forall2_All2, All2_nth_error in H4; tea.
+    { eapply Forall2_All2, All2_nth_error in H5; tea.
       eapply declc. }
     assert(eqctx : eq_context_upto_names ibrctx brctx).
     { rewrite /brctx /ibrctx.
@@ -2339,8 +2339,8 @@ Proof.
     eapply type_ws_cumul_pb; tea.
     * eapply type_Case; eauto. constructor; eauto. constructor; eauto. 
       epose proof (wf_case_branches_types' (p:=set_preturn p preturn') ps _ brs isdecl (validity typec) H0
-        (forall_u _ X3) H4 X1).
-      eapply All2i_All2_mix_left in X8. 2:exact (Forall2_All2 _ _ H4). clear H4.
+        (forall_u _ X3) H5 X1).
+      eapply All2i_All2_mix_left in X8. 2:exact (Forall2_All2 _ _ H5). clear H5.
       eapply (All2i_All2i_mix X4) in X8. clear X4. 
       eapply (All2i_impl X8); intuition auto; clear X8.
       rewrite !case_branch_type_fst in a3 a4 *.
@@ -2407,14 +2407,14 @@ Proof.
     clear X5; rename Hctxi into X5.
     eapply type_Case; eauto. econstructor; eauto.
     econstructor; eauto.
-    * eapply Forall2_All2 in H4.
-      move: (All2_sym _ _ _ H4) => wfb.
+    * eapply Forall2_All2 in H5.
+      move: (All2_sym _ _ _ H5) => wfb.
       red. eapply All2_Forall2.
       apply All2_sym.
       eapply (OnOne2_All2_All2 X3 wfb); auto.
       intros [] []; simpl. intros.
-      destruct X0 as [_ eq]. subst bcontext0. exact H5.
-    * apply Forall2_All2 in H4. eapply All2i_All2_mix_left in X8; tea.
+      destruct X0 as [_ eq]. subst bcontext0. exact H4.
+    * apply Forall2_All2 in H5. eapply All2i_All2_mix_left in X8; tea.
       eapply (OnOne2_All2i_All2i X3 X8).
       intros n [] []; simpl. intros. intuition auto.
       intros n [ctx b] [ctx' b'] cdecl; cbn.

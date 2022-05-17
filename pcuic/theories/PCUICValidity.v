@@ -116,9 +116,8 @@ Section Validity.
     on_local_decl P (skipn (S n) Γ) d.
   Proof using Type.
     intros heq hΓ.
-    epose proof (nth_error_Some_length heq).
-    eapply (nth_error_All_local_env) in H; tea.
-    now rewrite heq in H.
+    eapply (nth_error_All_local_env) in heq; tea.
+    destruct heq, d, decl_body => //.
   Qed.
 
   Notation type_ctx := (type_local_ctx (lift_typing typing)).
@@ -280,17 +279,10 @@ Section Validity.
       do 2 constructor.
       apply leq_universe_product.
 
-    - destruct decl as [ty [b|] univs]; simpl in *.
-      * eapply declared_constant_inv in X; eauto.
-        red in X. simpl in X.
-        eapply isType_weakening; eauto.
-        eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
-        eapply weaken_env_prop_isType.
-      * have ond := on_declared_constant wf H.
-        do 2 red in ond. simpl in ond.
-        simpl in ond.
-        eapply isType_weakening; eauto.
-        eapply (isType_subst_instance_decl (Γ:=[])); eauto.
+    - destruct (on_declared_constant wf H) as (onty & _).
+      eapply isType_of_isTypeRel in onty.
+      eapply isType_weakening; eauto.
+      eapply (isType_subst_instance_decl (Γ:=[])); eauto.
      
      - (* Inductive type *)
       destruct (on_declared_inductive isdecl); pcuic.
@@ -303,6 +295,7 @@ Section Validity.
     - (* Constructor type *)
       destruct (on_declared_constructor isdecl) as [[oni oib] [cs [declc onc]]].
       unfold type_of_constructor.
+      eapply isType_of_isTypeRel.
       eapply infer_typing_sort_impl with _ (on_ctype onc); [apply relevance_subst_opt|]; intros Hs.
       eapply instantiate_minductive in Hs; eauto.
       2:(destruct isdecl as [[] ?]; eauto).

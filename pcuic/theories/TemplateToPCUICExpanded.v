@@ -333,12 +333,11 @@ Proof.
     cbn -[add_global_decl trans_global_env].
     destruct decl as [kn []]; cbn in *; depelim H => //.
     * unfold trans_constant_body; cbn.
-      constructor. cbn. destruct p.
-      red in o.
+      constructor. cbn. destruct p as ((_ & Hbo) & _).
       destruct (Ast.Env.cst_body c); cbn => //. cbn in expanded_body.
       eapply trans_expanded in expanded_body; eauto.
       rewrite -/Σ' in expanded_body. now rewrite -eta_global_env.
-      red in o. now destruct o.
+      now destruct Hbo.
     * rewrite -eta_global_env.
       constructor.
       + cbn. eapply expanded_trans_local in expanded_params => //.

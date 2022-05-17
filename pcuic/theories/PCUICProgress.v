@@ -214,6 +214,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        wf_local Σ (Γ ,,, predctx) ->
        PΓ Σ (Γ ,,, predctx) ->
        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+       isSortRel ps ci.(ci_relevance) ->
        PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices) 
          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
@@ -388,6 +389,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       wf_local Σ (Γ ,,, predctx) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+      isSortRel ps ci.(ci_relevance) ->
       PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices) 
         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
@@ -651,7 +653,7 @@ Proof with eauto with wcbv; try congruence.
     + eauto with wcbv.
     + red in Hax. eapply Hax in E; eauto.
   - intros Σ wfΣ Γ _ ci p c brs indices ps mdecl idecl Hidecl Hforall _ Heq Heq_context predctx Hwfpred Hcon Hreturn IHreturn Hwfl _.
-    intros Helim Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
+    intros Helim Hsortrel Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
     specialize (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv.
     pose proof IH as IHv.
     eapply PCUICCanonicity.value_canonical in IH; eauto.

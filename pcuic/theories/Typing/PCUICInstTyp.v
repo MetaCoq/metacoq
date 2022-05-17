@@ -438,7 +438,7 @@ Proof.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros IHΔ ci_npar eqpctx predctx wfp cup Hpctx Hpret
-      IHpret IHpredctx isallowed.
+      IHpret IHpredctx isallowed sortrel.
     intros IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.

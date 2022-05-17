@@ -362,19 +362,15 @@ Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   map_constant_body (subst_instance u) decl.
 Proof.
   intros.
-  eapply declared_decl_closed in H0; eauto.
+  eapply declared_decl_closed in H0 as (Hty & Hbo); eauto.
   unfold map_constant_body.
-  do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
-  - rewrite -> andb_and in H0. intuition auto.
-    rewrite <- (closedn_subst_instance 0 body u) in H1.
-    rewrite <- (closedn_subst_instance 0 ty u) in H2.
-    f_equal.
-    + apply subst_closedn; eauto using closed_upwards with arith wf.
-    + f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
-  - red in H0. f_equal.
-    intuition. simpl in *.
-    rewrite <- (closedn_subst_instance 0 ty u) in H0.
-    rewrite andb_true_r in H0.
+  simpl in *. f_equal.
+  - hnf in Hty. toProp Hty. destruct Hty as (Hty & _).
+    rewrite <- (closedn_subst_instance 0 _ u) in Hty.
+    apply subst_closedn; eauto using closed_upwards with arith wf.
+  - destruct cst_body => //=. f_equal.
+    hnf in Hbo. toProp Hbo. destruct Hbo as (Hbo & _).
+    rewrite <- (closedn_subst_instance 0 _ u) in Hbo.
     eapply subst_closedn; eauto using closed_upwards with arith wf.
 Qed.
 

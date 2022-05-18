@@ -639,6 +639,8 @@ Proof.
     now len.
     now eapply IHev2.
 
+  - congruence.
+
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
     eapply eval_app_cong; eauto.

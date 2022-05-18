@@ -338,6 +338,7 @@ Proof.
   - constructor.
   - depelim er.
     now constructor.
+  - congruence.
   - depelim er. now constructor.
   - easy.
 Qed.

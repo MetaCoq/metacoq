@@ -653,6 +653,7 @@ Proof.
       move/andP => []. rewrite /isEtaExp_app.
       rewrite /lookup_constructor_pars_args e0 /=.
       move => /andP[] /Nat.leb_le. clear IH. move: l; rewrite /cstr_arity. lia.
+  - congruence.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
@@ -672,9 +673,6 @@ Proof.
       eapply All_tip.1. iheta q0.
       eapply (isEtaExp_mkApps_intro _ _ [a']) => //. iheta q.
       eapply All_tip.1. iheta q0.
-  - intros ise. split => //. eapply Qatom; tea.
-  - intros ise. split => //. eapply Qatom; tea.
-  - intros ise. split => //. eapply Qatom; tea.
   - intros ise. split => //. eapply Qatom; tea.
 Qed.
 

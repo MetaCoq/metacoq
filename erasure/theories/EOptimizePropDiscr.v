@@ -523,7 +523,7 @@ Proof.
   destruct nth_error => //. congruence.
 Qed.
 
-Lemma optimize_correct {efl : EEnvFlags} {fl} {Σ : GlobalContextMap.t} t v :
+Lemma optimize_correct {efl : EEnvFlags} {fl}{wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :
   wf_glob Σ ->
   closed_env Σ ->
   @Ee.eval fl Σ t v ->
@@ -704,6 +704,8 @@ Proof.
     now len.
     now eapply IHev2.
 
+  - congruence.
+
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
     eapply Ee.eval_app_cong; eauto.
@@ -726,6 +728,7 @@ Proof.
         destruct v => /= //. 
   - destruct t => //.
     all:constructor; eauto. cbn in *. destruct l; eauto.
+    Unshelve. all: repeat econstructor.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

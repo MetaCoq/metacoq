@@ -49,7 +49,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Remove all cases / projections on propositional content *)
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := EWellformed.all_env_flags) ▷
   (* Inline projections to cases *)
@@ -99,7 +99,7 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.

@@ -215,6 +215,27 @@ Section eval_mkApps_rect.
                         (tConstruct ind c
                         []) args) a'))
 
+      → (∀ (ind : inductive) 
+                   (c : nat) (mdecl : mutual_inductive_body) 
+                   (idecl : one_inductive_body) 
+                   (cdecl : constructor_body) 
+                   (args args' : 
+                    list term) (a a' : term) 
+                   (e : with_constructor_as_block = true) 
+                   (e0 : lookup_constructor Σ ind c =
+                         Some (mdecl, idecl, cdecl)) 
+                   (l : #|args| < cstr_arity mdecl cdecl) 
+                   (e1 : eval Σ 
+                           (tConstruct ind c args)
+                           (tConstruct ind c args')),
+                   P (tConstruct ind c args)
+                     (tConstruct ind c args') 
+                   → ∀ e2 : eval Σ a a',
+                       P a a' 
+                       → P (tConstruct ind c (args ++ [a]))
+                           (tConstruct ind c
+                              (args' ++ [a'])))
+
       → (∀ (f15 f' a a' : term) (e : eval Σ f15 f'),
       P f15 f' -> IH _ _ e
       → ∀ (i : ~~
@@ -233,7 +254,7 @@ Section eval_mkApps_rect.
     → (∀ t : term, atom t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof using Type.
-  intros ???????????????????? H.
+  intros ????????????????????? H.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).
   set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & eval Σ t t0 }}).

@@ -207,7 +207,7 @@ Qed.
 
 Import EOptimizePropDiscr EWcbvEval.
 
-Program Definition optimize_prop_discr_optimization {fl : WcbvFlags} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+Program Definition optimize_prop_discr_optimization {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram (disable_prop_cases fl)) := 
   {| name := "optimize_prop_discr"; 
     transform p _ := optimize_program p ; 
@@ -216,17 +216,18 @@ Program Definition optimize_prop_discr_optimization {fl : WcbvFlags} {efl : EEnv
     obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v |}.
 
 Next Obligation.
-  move=> fl efl hastrel hastbox [Σ t] [wfp etap].
+  move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
   cbn in *. split.
   - now eapply optimize_program_wf.
   - now eapply optimize_program_expanded.
 Qed.
 Next Obligation.
-  red. move=> fl efl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  red. move=> fl wcon efl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
   eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
   eapply wellformed_closed_env, wfe.
   eapply wellformed_closed, wfe.
+  Unshelve. eauto.
 Qed.
 
 From MetaCoq.Erasure Require Import EInlineProjections.

@@ -1024,7 +1024,7 @@ Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as
 Proof.
   intros etaΣ wfΣ.
   induction 1 as [ | ? ? ? ? ? ? ? ? IHs | | | | | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? ? IHs 
-    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
+    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
   all:try simp isEtaExp; rewrite -!isEtaExp_equation_1 => //.
   6:{  
     move/isEtaExp_tApp'.
@@ -1883,6 +1883,7 @@ Proof.
       forward IHeval2 by tas.
       rewrite -(decompose_app_inv da).
       eapply eval_construct; tea.
+  - congruence.
   - move/isEtaExp_tApp'.
     destruct decompose_app eqn:da.
     rewrite (decompose_app_inv da).

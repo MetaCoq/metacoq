@@ -33,7 +33,6 @@ my-cachedMake (){
         namespace=$3
         logpath=${namespace/.//}
         vopath="$build/lib/coq/$coq_version/user-contrib/$logpath"
-        echo "vopath is $vopath"
         dest=$cprojDir/$realpath
         if [[ -d $vopath ]]
         then echo "Compiling/Fetching and copying vo from $vopath to $realpath"

@@ -431,6 +431,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
     k ~st env evm (quote_ugraph univs)
+  | TmQuoteModule id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmQuoteModule (Libnames.qualid_of_string id)) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k ~st env evm (Lazy.force unit_tt)

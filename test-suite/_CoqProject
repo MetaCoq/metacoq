@@ -40,6 +40,7 @@ safechecker_test.v
 tmExistingInstance.v
 tmFreshName.v
 tmInferInstance.v
+tmQuoteModule.v
 unfold.v
 univ.v
 tmVariable.v

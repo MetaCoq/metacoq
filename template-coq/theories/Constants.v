@@ -254,6 +254,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmQuoteRecTransp as metacoq.templat
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteInductive as metacoq.templatemonad.prop.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteConstant as metacoq.templatemonad.prop.tmQuoteConstant.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteUniverses as metacoq.templatemonad.prop.tmQuoteUniverses.
+Register MetaCoq.Template.TemplateMonad.Core.tmQuoteModule as metacoq.templatemonad.prop.tmQuoteModule.
 
 Register MetaCoq.Template.TemplateMonad.Core.tmUnquote as metacoq.templatemonad.prop.tmUnquote.
 Register MetaCoq.Template.TemplateMonad.Core.tmUnquoteTyped as metacoq.templatemonad.prop.tmUnquoteTyped.
@@ -284,6 +285,7 @@ Register MetaCoq.Template.TemplateMonad.Extractable.tmCurrentModPath as metacoq.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteInductive as metacoq.templatemonad.type.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteUniverses as metacoq.templatemonad.type.tmQuoteUniverses.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteConstant as metacoq.templatemonad.type.tmQuoteConstant.
+Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteModule as metacoq.templatemonad.type.tmQuoteModule.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmInductive as metacoq.templatemonad.type.tmInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmInferInstance as metacoq.templatemonad.type.tmInferInstance.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmExistingInstance as metacoq.templatemonad.type.tmExistingInstance.

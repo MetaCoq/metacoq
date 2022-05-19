@@ -646,6 +646,23 @@ Section Wcbv.
       rewrite -(All2_length evl). lia.
   Qed.
 
+  Lemma eval_mkApps_Construct_block ind c mdecl idecl cdecl f args args' :
+    with_constructor_as_block ->
+    lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+    eval f (tConstruct ind c []) ->
+    #|args| <= cstr_arity mdecl cdecl ->
+    All2 eval args args' ->
+    eval (tConstruct ind c args) (tConstruct ind c args').
+  Proof.
+    intros hblock hdecl evf hargs. revert args'.
+    induction args using rev_ind; intros args' evargs.
+    - depelim evargs. econstructor. now cbn.
+    - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
+      depelim evr. depelim evr.
+      eapply eval_construct_block; tea. 1: revert hargs; len. 
+      eapply IHargs => //. 1: revert hargs; len.
+  Qed.  
+
   Lemma eval_mkApps_CoFix f mfix idx args args' :
     eval f (tCoFix mfix idx) ->
     All2 eval args args' ->

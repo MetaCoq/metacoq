@@ -253,3 +253,25 @@ Next Obligation.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
   cbn. eapply wfe. Unshelve. auto.
 Qed.
+
+From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
+
+Program Definition constructors_as_blocks_transformation (efl := all_env_flags)
+  {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) := 
+  {| name := "transforming to constuctors as blocks"; 
+    transform p _ := EConstructorsAsBlocks.transform_blocks_program p ; 
+    pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
+    post p := wf_eprogram (disable_projections_env_flag efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
+    obseq g g' v v' := True |}.
+
+Next Obligation.
+  move=> efl hastrel hastbox [Σ t] [wfp etap].
+  cbn in *. split.
+  - todo "".
+  - todo "".
+Qed.
+Next Obligation.
+  red. move=> hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  todo "".
+Qed.

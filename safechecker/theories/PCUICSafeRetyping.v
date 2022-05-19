@@ -66,13 +66,13 @@ Qed.
 Inductive wellinferred {cf: checker_flags} Σ Γ t : Prop :=
   | iswellinferred T : Σ ;;; Γ |- t ▹ T -> wellinferred Σ Γ t.
 
-Definition well_sorted {cf:checker_flags} Σ Γ T := 
-  ∥ ∑ u, Σ ;;; Γ |- T ▹□ u ∥.
+Definition well_sorted {cf:checker_flags} Σ Γ T relopt := 
+  ∥ infer_sort infering_sort Σ Γ T relopt ∥.
 
-Lemma well_sorted_wellinferred {cf:checker_flags} {Σ Γ T} :
-  well_sorted Σ Γ T -> wellinferred Σ Γ T.
+Lemma well_sorted_wellinferred {cf:checker_flags} {Σ Γ T relopt} :
+  well_sorted Σ Γ T relopt -> wellinferred Σ Γ T.
 Proof.
-  intros [[s []]].
+  intros [[s [e []]]].
   now econstructor.
 Qed.
 
@@ -153,10 +153,10 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
   Definition on_subterm P Pty Γ t : Type := 
   match t with
-  | tProd na t b => Pty Γ t * Pty (Γ ,, vass na t) b
+  | tProd na t b => Pty Γ t (Some na.(binder_relevance)) * Pty (Γ ,, vass na t) b None
   | tLetIn na d t t' => 
-    Pty Γ t * P Γ d * P (Γ ,, vdef na d t) t'
-  | tLambda na t b => Pty Γ t * P (Γ ,, vass na t) b
+    Pty Γ t (Some na.(binder_relevance)) * P Γ d * P (Γ ,, vdef na d t) t'
+  | tLambda na t b => Pty Γ t (Some na.(binder_relevance)) * P (Γ ,, vass na t) b
   | _ => True
   end.
 
@@ -174,19 +174,19 @@ Qed.
 
   #[local] Definition principal_type Γ t := 
     ∑ T : term, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹ T ∥.
-  #[local] Definition principal_sort Γ T := 
-    ∑ u, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- T ▹□ u ∥.
+  #[local] Definition principal_sort Γ T relopt := 
+    ∑ u, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isSortRelOpt u relopt × Σ ;;; Γ |- T ▹□ u ∥.
   #[local] Definition principal_type_type {Γ t} (wt : principal_type Γ t) : term
     := projT1 wt.
-  #[local] Definition principal_sort_sort {Γ T} (ps : principal_sort Γ T) : Universe.t
+  #[local] Definition principal_sort_sort {Γ T relopt} (ps : principal_sort Γ T relopt) : Universe.t
     := projT1 ps.
   #[local] Coercion principal_type_type : principal_type >-> term.
   #[local] Coercion principal_sort_sort : principal_sort >-> Universe.t.
 
-  Program Definition infer_as_sort {Γ T}
+  Program Definition infer_as_sort {Γ T} relopt
     (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
-    (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), well_sorted Σ Γ T)
-    (tx : principal_type Γ T) : principal_sort Γ T :=
+    (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), well_sorted Σ Γ T relopt)
+    (tx : principal_type Γ T) : principal_sort Γ T relopt :=
     match @reduce_to_sort cf nor _ X Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
@@ -205,8 +205,12 @@ Qed.
     pose proof (s Σ wfΣ) as s'.
     cbn in *.
     sq.
-    econstructor ; tea.
-    now eapply closed_red_red.
+    assert (Hty : Σ;;; Γ |- T ▹□ u).
+    { econstructor ; tea. now eapply closed_red_red. }
+    split => //.
+    inversion wf. destruct X0 as (ss & e & Hs).
+    assert (u = ss) by (destruct (hΣ _ wfΣ); eapply infering_sort_sort; tea).
+    now subst ss.
   Qed.
   Next Obligation.
     clear Heq_anonymous.
@@ -215,7 +219,7 @@ Qed.
     pose proof (s Σ wfΣ) as s'.
         cbn in *.
     sq.
-    destruct wf as [[? i]], (hΣ _ wfΣ) as [wΣ].
+    destruct wf as [[? [_ i]]], (hΣ _ wfΣ) as [wΣ].
     eapply infering_sort_infering in i ; eauto.
     eapply wildcard'. exists x0. intros.
     erewrite(abstract_env_ext_irr _ _ wfΣ); eauto. 
@@ -302,9 +306,9 @@ Qed.
     infer Γ wfΓ (tProd n ty b) wt :=
       let wfΓ' : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ (Γ ,, vass n ty) ∥ := _ in
       let ty1 := infer Γ wfΓ ty (fun a b => (welltyped_subterm (wt a b)).1) in
-      let s1 := infer_as_sort wfΓ (fun a b => (welltyped_subterm (wt a b)).1) ty1 in
+      let s1 := infer_as_sort (Some n.(binder_relevance)) wfΓ (fun a b => (welltyped_subterm (wt a b)).1) ty1 in
       let ty2 := infer (Γ ,, vass n ty) wfΓ' b (fun a b => (welltyped_subterm (wt a b)).2) in
-      let s2 := infer_as_sort wfΓ' (fun a b => (welltyped_subterm (wt a b)).2) ty2 in
+      let s2 := infer_as_sort None wfΓ' (fun a b => (welltyped_subterm (wt a b)).2) ty2 in
       ret (tSort (Universe.sort_of_product s1 s2));
 
     infer Γ wfΓ (tLambda n t b) wt :=
@@ -399,6 +403,7 @@ Qed.
   Next Obligation.
     cbn ; intros. destruct s1, s2.
     cbn. specialize_Σ wfΣ. sq.
+    destruct s, s0.
     now constructor.
   Defined.
 
@@ -406,7 +411,8 @@ Qed.
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq. 
     inversion X0 ; subst.
     constructor ; tea.
-    now eapply infering_sort_isType.
+    eexists; split; tea.
+    now eapply infering_sort_typing.
   Defined.
   Next Obligation.
     case t2 as []. intros; cbn.  specialize_Σ wfΣ.
@@ -420,7 +426,7 @@ Qed.
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq. 
     inversion X0 ; subst.
     constructor ; tea.
-    1: now eapply infering_sort_isType.
+    1: eexists; split; tea; now eapply infering_sort_typing.
     apply checking_typing ; eauto.
     now eapply infering_sort_isType.
   Defined.
@@ -822,7 +828,7 @@ Qed.
       cbn in ns. clear ns.
       specialize (wt _ wfΣ). destruct T as [T HT].
       cbn in *. destruct (HT _ wfΣ) as [[hty hp]].
-      eapply validity in hty. destruct wt as [[s Hs]].
+      eapply validity in hty. destruct wt as [[s [e Hs]]].
       red in hp. specialize (hp _ Hs).
       eapply ws_cumul_pb_Sort_r_inv in hp as [s' [hs' _]].
       eapply (H s' hs').

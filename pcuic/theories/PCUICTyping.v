@@ -337,7 +337,14 @@ Definition isType_welltyped {cf Σ} {Γ T}
 Proof.
   intros []. now econstructor.
 Qed.
-Global Hint Resolve isType_welltyped : pcuic.
+
+Definition isTypeRel_welltyped {cf Σ} {Γ T rel}
+  : isTypeRel Σ Γ T rel -> welltyped Σ Γ T.
+Proof.
+  intros (s & e & Hs). now econstructor.
+Qed.
+
+Global Hint Resolve isType_welltyped isTypeRel_welltyped : pcuic.
 
 Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
   (isType Σ Γ T × { ctx & { s & (destArity [] T = Some (ctx, s)) } }).

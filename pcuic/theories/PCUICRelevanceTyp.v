@@ -28,17 +28,17 @@ Proof.
   now eapply cumul_sort_relevance.
 Qed.
 
-Lemma ind_arity_relevant {cf : checker_flags} (Σ : global_env) mdecl idecl : 
-  wf Σ ->
+Lemma ind_arity_relevant {cf : checker_flags} (Σ : global_env_ext) mdecl idecl : 
   let ind_type := it_mkProd_or_LetIn (ind_params mdecl) (it_mkProd_or_LetIn (ind_indices idecl) (tSort (ind_sort idecl))) in
-  isType (Σ, ind_universes mdecl) [] ind_type ->
-  isTypeRel (Σ, ind_universes mdecl) [] ind_type Relevant.
+  isType Σ [] ind_type ->
+  isTypeRel Σ [] ind_type Relevant.
 Proof.
-  intros wfΣ ind_type (s & e & Hs).
+  assert (wfΣ : wf Σ) by admit.
+  intros ind_type (s & e & Hs).
   eexists; split => //; tea.
   rewrite /ind_type in Hs.
   rewrite -it_mkProd_or_LetIn_app in Hs.
-  assert (wfΓ : wf_local (Σ, ind_universes mdecl) []) by pcuic.
+  assert (wfΓ : wf_local Σ []) by pcuic.
   revert wfΓ Hs. generalize ((ind_indices idecl ++ ind_params mdecl : context)) as l, ([]: context) as Γ.
   induction l using rev_ind.
   * cbn. intros Γ wfΓ Hty; apply inversion_Sort in Hty as (_ & _ & le); tea.
@@ -48,7 +48,7 @@ Proof.
   * rewrite it_mkProd_or_LetIn_app; cbn.
     destruct x, decl_body; cbn.
     - intros Γ wfΓ Hty; pose proof Hty; apply inversion_LetIn in Hty as (? & ? & ? & ? & ? & ? & le); tea.
-      assert (wfΓ' : wf_local (Σ, ind_universes mdecl) (Γ,, vdef decl_name t decl_type)) by auto with pcuic.
+      assert (wfΓ' : wf_local Σ (Γ,, vdef decl_name t decl_type)) by auto with pcuic.
       eapply IHl. apply wfΓ'.
       econstructor; eauto with pcuic. constructor; eauto with pcuic.
       apply ws_cumul_pb_LetIn_l_inv in le.
@@ -62,7 +62,7 @@ Proof.
       change (tSort _) with (lift0 1 (tSort s)).
       eapply (weakening_ws_cumul_pb (Γ' := []) (Γ'' := [vdef _ _ _]) le). fvs.
     - intros Γ wfΓ Hty; pose proof Hty; apply inversion_Prod in Hty as (? & s' & ? & ? & ? & le); tea.
-      assert (wfΓ' : wf_local (Σ, ind_universes mdecl) (Γ,, vass decl_name decl_type)) by auto with pcuic.
+      assert (wfΓ' : wf_local Σ (Γ,, vass decl_name decl_type)) by auto with pcuic.
       eapply IHl. apply wfΓ'.
       econstructor; eauto with pcuic. constructor; eauto with pcuic.
       eapply cumulAlgo_cumulSpec.
@@ -71,7 +71,32 @@ Proof.
       constructor. 1-3: fvs.
       constructor. apply leq_universe_product.
   Unshelve. all: eauto. fvs. unfold app_context, app; fold (snoc Γ (vdef decl_name t decl_type)). fvs.
-Qed.
+Admitted.
+
+Lemma isTypeRel_cstr_type {cf : checker_flags} Σ mdecl idecl cdecl n :
+  nth_error (ind_bodies mdecl) n = Some idecl ->
+  (cstr_type cdecl =
+        it_mkProd_or_LetIn
+          (mdecl.(ind_params) ,,, cdecl.(cstr_args))
+          (mkApps (tRel (#|mdecl.(ind_params) ,,, cdecl.(cstr_args)| + (#|ind_bodies mdecl| - S n)))
+            (to_extended_list_k mdecl.(ind_params) #|cdecl.(cstr_args)| ++
+            cdecl.(cstr_indices)))) ->
+    idecl.(ind_type)
+      = it_mkProd_or_LetIn mdecl.(ind_params)
+          (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort))) ->
+    isSortRel idecl.(ind_sort) idecl.(ind_relevance) ->
+    ctx_inst (typing Σ) (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
+      cdecl.(cstr_indices)
+      (List.rev (lift_context #|cdecl.(cstr_args)| 0 idecl.(ind_indices))) ->
+  isType Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) ->
+  isTypeRel Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) idecl.(ind_relevance).
+Proof.
+  intros H -> e1 <- c (s & _ & Hs); exists s; split => //=.
+  (* epose proof (nth_error_arities_context mdecl (#|ind_bodies mdecl| - S cstr.1.(inductive_ind)) idecl _).
+  Unshelve. 2: { rewrite nth_error_rev. len. apply nth_error_Some_length in di. lia. rewrite List.rev_involutive. replace _ with (inductive_ind cstr.1); tea. len. apply nth_error_Some_length in di. lia. }
+  rewrite e1 in H; clear e1. *)
+  admit.
+Admitted.
 
 Lemma isType_of_constructor {cf : checker_flags} Σ mdecl idecl cdecl cstr u Γ :
   wf Σ.1 -> wf_local Σ Γ -> declared_constructor Σ.1 cstr mdecl idecl cdecl ->
@@ -126,6 +151,19 @@ Lemma isType_of_projection {cf : checker_flags} Σ mdecl idecl cdecl pdecl p c a
   Σ;;; Γ |- c : mkApps (tInd (proj_ind p) u) args -> #|args| = ind_npars mdecl ->
   isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) pdecl.(proj_relevance).
 Proof.
+  admit.
+Admitted.
+
+Lemma apply_predctx {cf : checker_flags} Σ Γ ci p indices c ps mdecl idecl {wfΣ : wf Σ.1} :
+  wf_predicate mdecl idecl p ->
+  All2 (PCUICEquality.compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  ctx_inst (typing Σ) Γ (pparams p ++ indices) (List.rev (ind_params mdecl,,, ind_indices idecl)@[puinst p]) ->
+  Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices) ->
+  let predctx := case_predicate_context ci mdecl idecl p in
+  let ptm := it_mkLambda_or_LetIn predctx (preturn p) in
+  Σ;;; Γ,,, predctx |- preturn p : tSort ps -> Σ ;;; Γ |- mkApps ptm (indices ++ [c]) : tSort ps.
+Proof.
+  admit.
 Admitted.
 
 
@@ -270,7 +308,8 @@ Proof using Type.
       rewrite H.
       eassert (isTypeRel (Σ, φ) _ (type_of_constructor mdecl cdecl (ind, i) u) (idecl.(ind_relevance))) by (apply isType_of_constructor; tea).
       eapply isTypeRel2_relevance; tea. apply wf.
-  - assert (Σ ;;; Γ |- mkApps ptm (indices ++ [c]) : tSort ps) by admit.
+  - assert (Σ ;;; Γ |- mkApps ptm (indices ++ [c]) : tSort ps). 
+    { apply apply_predctx => //. apply ctx_inst_impl with (1 := X5) => ??[] //. }
     split; intro Hr => //.
     + unfold relevance_of_term in Hr; subst rel.
       exists ps; split => //.

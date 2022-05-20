@@ -52,7 +52,7 @@ Proof.
 Qed.
 
 Lemma cumul_Sort_Prod_discr {Σ Γ T s na A B} :
-  wf_ext Σ ->
+  wf Σ.1 ->
   Σ ;;; Γ ⊢ T ≤ tSort s ->
   Σ ;;; Γ ⊢ T ≤ tProd na A B -> False.
 Proof.
@@ -214,7 +214,7 @@ Proof.
   eapply (substitution (Δ := [])) in a0'; eauto.
   2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
   rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
-  eapply a0'. now eapply nth_error_all in a; tea.
+  eapply a0'. now eapply nth_error_all, isType_of_isTypeRel in a; tea.
 Qed.
 
 (** Assumption contexts: constructor arguments/case branches contexts contain only assumptions, no local definitions *)
@@ -237,7 +237,7 @@ Proof.
   destruct nas; cbn; auto; constructor. auto.
 Qed.
 
-Lemma declared_constructor_assumption_context (wfl := default_wcbv_flags) {Σ c mdecl idecl cdecl} {wfΣ : wf_ext Σ} :
+Lemma declared_constructor_assumption_context (wfl := default_wcbv_flags) {Σ c mdecl idecl cdecl} {wfΣ : wf Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->
   assumption_context (cstr_args cdecl).
 Proof.
@@ -247,7 +247,7 @@ Proof.
   now eapply is_assumption_context_spec.
 Qed.
 
-Lemma assumption_context_cstr_branch_context (wfl := default_wcbv_flags) {Σ} {wfΣ : wf_ext Σ} {c mdecl idecl cdecl} :
+Lemma assumption_context_cstr_branch_context (wfl := default_wcbv_flags) {Σ} {wfΣ : wf Σ} {c mdecl idecl cdecl} :
   declared_constructor Σ c mdecl idecl cdecl ->
   assumption_context (cstr_branch_context c.1 mdecl cdecl).
 Proof.
@@ -256,7 +256,7 @@ Proof.
   rewrite /cstr_branch_context. pcuic.
 Qed.
 
-Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c brs p} {wfΣ : wf_ext Σ} :
+Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c brs p} {wfΣ : wf Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->
   wf_branches idecl brs ->
   All2i (fun i cdecl br => 

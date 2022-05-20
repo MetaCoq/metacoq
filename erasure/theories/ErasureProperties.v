@@ -42,12 +42,14 @@ Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
   - econstructor.
   - econstructor; eauto. cbn in *.
-    destruct t0. exists x. eapply context_conversion with (Γ ,,, Γ0); eauto.
+    apply infer_typing_sort_impl with id t0 => Ht //.
+    eapply context_conversion with (Γ ,,, Γ0); eauto.
     * eapply wf_local_app; eauto.
     * eapply conv_context_app_same; eauto.
   - econstructor; eauto.
     + cbn in *.
-      destruct t0. exists x. eapply context_conversion with (Γ ,,, Γ0); eauto.
+      apply infer_typing_sort_impl with id t0 => Ht //.
+      eapply context_conversion with (Γ ,,, Γ0); eauto.
       * eapply wf_local_app; eauto.
       * eapply conv_context_app_same; eauto.
     + cbn in *. eapply context_conversion with (Γ ,,, Γ0); eauto.
@@ -65,7 +67,7 @@ Proof.
 Qed.
 
 
-Lemma type_closed_subst {Σ t T} u : wf_ext Σ ->
+Lemma type_closed_subst {Σ t T} u : wf Σ.1 ->
   Σ ;;; [] |- t : T ->
   subst1 t 0 u = PCUICCSubst.csubst t 0 u.
 Proof.
@@ -199,11 +201,11 @@ Proof.
   - econstructor. eapply h_forall_Γ'0.
     econstructor. eauto. now constructor.
     constructor; auto.
-    exists s1.
+    exists s1; split => //.
     eapply context_conversion. 3:eauto. all:eauto.
   - econstructor. eauto. eapply h_forall_Γ'1.
     econstructor. eauto. now constructor.
-    constructor; auto. exists s1.
+    constructor; auto. exists s1; split => //.
     eapply context_conversion with Γ; eauto.
     eapply context_conversion with Γ; eauto.
     eassumption.
@@ -300,16 +302,17 @@ Proof.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else invs H end.
   all: try now (econstructor; eauto 2 using isErasable_subst_instance).
   - cbn. econstructor.
-    eapply H0 in X2; eauto. apply X2.
-    cbn. econstructor. eauto. cbn. econstructor.
+    eapply H1 in X2; eauto. apply X2.
+    cbn. econstructor. eauto. cbn. eexists; split. apply relevance_subst, H.
     eapply typing_subst_instance in X0; eauto. apply snd in X0.
     cbn in X0. destruct X0. refine (t0 _ _ _ _); eauto.
   - cbn. econstructor.
-    eapply H0 in X3; eauto.
-    eapply H1 in X3; eauto. exact X3.
+    eapply H1 in X3; eauto.
+    eapply H2 in X3; eauto. exact X3.
     cbn. econstructor. eauto. cbn. econstructor.
     eapply typing_subst_instance in X0; eauto. apply snd in X0.
     cbn in X0.
+    split. apply relevance_subst, H.
     eapply X0; eauto.
     cbn. eapply typing_subst_instance in X1; eauto. apply snd in X1.
     cbn in X1. eapply X1; eauto.
@@ -330,7 +333,7 @@ Proof.
       now rewrite inst_case_branch_context_subst_instance.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
     { (* rewrite subst_instance_app. *)
-      assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+      assert(All (on_def_type (lift_typing typing Σ) Γ) mfix).
       eapply (All_impl X0); pcuicfo.
       now destruct X5 as [s [Hs ?]]; exists s.
       eapply All_mfix_wf in X5; auto. subst types.
@@ -339,13 +342,13 @@ Proof.
       induction 1.
       - eauto.
       - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ?). eexists.
-        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
-        eapply t0; eauto.
+        eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]. intros Hs.
+        eapply typing_subst_instance in Hs; eauto. apply snd in Hs. cbn in Hs.
+        eapply Hs; eauto.
       - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ?). eexists.
-        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
-        eapply t0; eauto.
+        eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]. intros Hs.
+        eapply typing_subst_instance in Hs; eauto. apply snd in Hs. cbn in Hs.
+        eapply Hs; eauto.
         cbn in *. eapply typing_subst_instance in t1; eauto.
         apply snd in t1. eapply t1. all:eauto.
     }
@@ -366,22 +369,22 @@ Proof.
 
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
   { (* rewrite subst_instance_app. *)
-    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    assert(All (on_def_type (lift_typing typing Σ) Γ) mfix).
     eapply (All_impl X0); pcuicfo.
-    destruct X5 as [s [Hs ?]]; now exists s.
+    now apply infer_typing_sort_impl with id X5 => // [].
     eapply All_mfix_wf in X5; auto. subst types.
     
     revert X5. clear - wfΣ wfΓ H2 X2 X3.
     induction 1.
     - eauto.
     - cbn. econstructor; eauto. cbn in *.
-      destruct t0 as (? & ?). eexists.
-      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
-      eapply t0; eauto.
+      eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]. intros Hs.
+      eapply typing_subst_instance in Hs; eauto. apply snd in Hs. cbn in Hs.
+      eapply Hs; eauto.
     - cbn. econstructor; eauto. cbn in *.
-      destruct t0 as (? & ?). eexists.
-      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
-      eapply t0; eauto.
+      eapply infer_typing_sort_impl with _ t0; [apply relevance_subst_opt|]. intros Hs.
+      eapply typing_subst_instance in Hs; eauto. apply snd in Hs. cbn in Hs.
+      eapply Hs; eauto.
       cbn in *. eapply typing_subst_instance in t1; eauto.
       apply snd in t1. eapply t1. all:eauto.
   }
@@ -528,17 +531,17 @@ Section wellscoped.
     - now rewrite (declared_inductive_lookup isdecl).
     - rewrite (declared_constructor_lookup isdecl) //.
     - now rewrite (declared_inductive_lookup isdecl).
-    - red in H8. eapply Forall2_All2 in H8.
-      eapply All2i_All2_mix_left in X4; tea. clear H8.
+    - red in H9. eapply Forall2_All2 in H9.
+      eapply All2i_All2_mix_left in X4; tea. clear H9.
       solve_all.
     - now rewrite (declared_projection_lookup isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
-      solve_all. destruct a as [s []], a0.
+      solve_all. destruct a as [s (_ & ? & ?)], a0.
       unfold test_def. len in b0.
       rewrite b0. now rewrite i i0.
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
-    - solve_all. destruct a as [s []], b.
+    - solve_all. destruct a as [s (_ & ? & ?)], b.
       unfold test_def. len in i0. now rewrite i i0.
   Qed.
 

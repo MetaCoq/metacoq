@@ -39,8 +39,8 @@ Notation "Σ ⊢ s ▷ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next 
 
 Import ssrbool.
 
-Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
-  wf_ext Σ ->
+Lemma erases_correct (wfl := default_wcbv_flags) (Σ : global_env_ext) t T t' v Σ' :
+  wf Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->  
   erases_deps Σ Σ' t' ->
@@ -59,7 +59,7 @@ Proof.
       eapply IHeval1 in H4 as (vf' & Hvf' & [He_vf']); eauto.
       eapply IHeval2 in H6 as (vu' & Hvu' & [He_vu']); eauto.
       pose proof (subject_reduction_eval t0 H).
-      eapply inversion_Lambda in X0 as (? & ? & ? & ? & e0).
+      eapply inversion_Lambda in X0 as (? & ? & ? & ? & ? & e0).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply PCUICConversion.ws_cumul_pb_Prod_Prod_inv in e0 as [? e1 e2].
@@ -89,7 +89,7 @@ Proof.
         eapply (is_type_subst Σ [] [vass na _] [] _ [a']) in X1 ; auto.
         cbn in X1.
         eapply Is_type_eval; try assumption.
-        eauto. eapply H1. rewrite <-eqs. eassumption.
+        eapply H1. rewrite <-eqs. eassumption.
         all: eauto. econstructor. econstructor. rewrite PCUICLiftSubst.subst_empty.
         eauto. constructor. econstructor. eauto. eauto.
       * auto.
@@ -99,7 +99,7 @@ Proof.
     + auto.
   - assert (Hty' := Hty).
     assert (Σ |-p tLetIn na b0 t b1 ▷ res) by eauto.
-    eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?); auto.
+    eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ? & ?); auto.
     invs He.     
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
@@ -149,14 +149,14 @@ Proof.
       edestruct IHeval as (? & ? & [?]).
       * cbn in *.
         assert (isdecl'' := isdecl').
-        eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
+        eapply declared_constant_inv in isdecl' as (onty & onbo); [| |now eauto|now apply wfΣ].
         2:eapply weaken_env_prop_typing.
-        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. red in isdecl'.
+        rewrite e in onbo. red in onbo.
         unfold declared_constant in isdecl''.
         now eapply @typing_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * assert (isdecl'' := isdecl').
-        eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
-        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. cbn in *.
+        eapply declared_constant_inv in isdecl' as (onty & onbo); [| |now eauto|now apply wfΣ].
+        rewrite e in onbo. cbn in *.
         2:eapply weaken_env_prop_typing.
         now eapply erases_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * now eauto.
@@ -177,7 +177,7 @@ Proof.
   assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :   mkApps (tInd ind (puinst p)) (pparams p ++ indices)).
   eapply subject_reduction_eval; eauto.
   assert (Hcstr := X0).
-  eapply Construct_Ind_ind_eq in X0; tea. 2:pcuic.
+  eapply Construct_Ind_ind_eq in X0; tea.
   destruct X0 as (((([_ Ru] & cu) & cpu) & ?) & (parsubst & argsubst & parsubst' & argsubst' & [])).
   invs He.
   + depelim Hed.
@@ -656,7 +656,7 @@ Proof.
            
         -- cbn. destruct a2 as [eqb eqrar isl isl' e5].
            eapply (erases_subst Σ [] (fix_context mfix) [] dbody (fix_subst mfix)) in e5; cbn; eauto.
-           ++ eapply subslet_fix_subst. now eapply wf_ext_wf. all: eassumption.
+           ++ eapply subslet_fix_subst. all: eassumption.
            ++ eapply nth_error_all in a1; eauto. cbn in a1.
               eapply a1.
            ++ eapply All2_from_nth_error.
@@ -775,7 +775,7 @@ Proof.
     specialize (IHeval2 _ htunfcof).
     eapply inversion_CoFix in t; destruct_sigma t; auto.
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto. 
-    2:{ now eapply nth_error_all in a; tea. }
+    2:{ now eapply nth_error_all, isType_of_isTypeRel in a; tea. }
     invs He.
     * edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
       depelim Hed.
@@ -821,7 +821,8 @@ Proof.
           unfold unfold_cofix. intros hnth; rewrite hnth. intros [=].
           subst fn narg.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
+          rewrite /on_def_body //= in a'.
+          eapply erases_subst0. 3:eauto. 2:pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
@@ -935,7 +936,8 @@ Proof.
           unfold unfold_cofix. intros hnth'; rewrite hnth'. intros [=].
           subst fn narg. rewrite hnth' in e2. noconf e2.
           eapply All_nth_error in a0 as a'; tea.
-          eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
+          rewrite /on_def_body //= in a'.
+          eapply erases_subst0. 3:eauto. 2:pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
@@ -1128,9 +1130,10 @@ Proof.
   - constructor.
   - cbn. destruct cb' as [[]].
     cbn in *. depelim wf. 
+    destruct o0 as (onty & onbo). 
     rewrite [forallb _ _](IHer wf) andb_true_r.
     red in H. destruct cb as [ty []]; cbn in *.
-    unshelve eapply PCUICClosedTyp.subject_closed in o0. cbn. split; auto.
+    unshelve eapply PCUICClosedTyp.subject_closed in onbo. cbn. split; auto.
     eapply erases_closed in H; tea. elim H.
     cbn. apply IHer. now depelim wf.
   - depelim wf.

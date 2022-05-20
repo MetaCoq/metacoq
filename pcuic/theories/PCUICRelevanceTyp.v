@@ -1,5 +1,6 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICRelevance
+  PCUICClosedTyp PCUICGlobalEnv
   PCUICTyping PCUICInversion PCUICConversion PCUICCumulProp PCUICWeakeningTyp PCUICValidity PCUICWellScopedCumulativity BDUnique.
 
 Require Import ssreflect.
@@ -229,7 +230,8 @@ Proof using Type.
       eapply cumul_Trans. 4: apply cumul_Sort, le. 1,2: fvs.
       apply cumulAlgo_cumulSpec.
       apply invert_red_letin in red as [(? & ? & ? & []) | ?]; try discriminate.
-      epose proof (PCUICSpine.all_rels_subst_lift (Γ := Γ) (Δ := [vdef na b b_ty]) (t := s2) (Δ' := []) _ _ _) => //=.
+      unshelve epose proof (PCUICSpine.all_rels_subst_lift (Γ := Γ) (Δ := [vdef na b b_ty]) (t := s2) (Δ' := []) _ _ _) => //=.
+      all: change (Γ ,,, [_]) with (Γ ,, vdef na b b_ty). pcuic. fvs. fvs.
       simpl in X0. rewrite PCUICLiftSubst.lift0_id in X0. rewrite PCUICLiftSubst.subst_empty in X0.
       change (subst0 _ _) with ((lift 1 1 s2) {0 := lift0 1 b}) in X0.
       rewrite -PCUICLiftSubst.distr_lift_subst10 in X0.
@@ -266,7 +268,7 @@ Proof using Type.
       destruct Σ as (Σ & φ); unfold fst in *.
       instantiate (1 := u).
       eapply (PCUICUnivSubstitutionTyp.typing_subst_instance' _ _ [] _ (tSort H'.π1) u _); tea.
-      epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (ConstantDecl decl) wf _); eauto.
+      unshelve epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (ConstantDecl decl) wf _); eauto.
       now split.
     + unfold relevance_of_term, relevance_of_constant.
       rewrite (declared_constant_lookup H).
@@ -277,7 +279,7 @@ Proof using Type.
       apply (weaken_ctx (Γ := [])); tea.
       destruct Σ as (Σ & φ); unfold fst in *. instantiate (1 := u).
       eapply (PCUICUnivSubstitutionTyp.typing_subst_instance' _ _ [] _ (tSort _) u _); tea.
-      epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (ConstantDecl decl) wf _); eauto.
+      unshelve epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (ConstantDecl decl) wf _); eauto.
       now split.
   - pose proof (onArity (PCUICWeakeningEnvTyp.on_declared_inductive isdecl).2).
     destruct Σ as (Σ & φ); unfold fst in *.
@@ -288,13 +290,13 @@ Proof using Type.
       eapply (weaken_ctx (Γ := [])) in Hty.
       apply Hty.
       all: tea.
-      epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wf _); eauto. now split.
+      unshelve epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wf isdecl.p1); eauto. now split.
     + unfold relevance_of_term.
       destruct Hr as (s1 & <- & Hs1), X1 as (s2 & <- & Hs2).
       eapply PCUICUnivSubstitutionTyp.typing_subst_instance' in Hs2.
       eapply (weaken_ctx (Γ := [])) in Hs2.
       all: tea.
-      2: { epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wf _); eauto. now split. }
+      2: { epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wf isdecl.p1); eauto. now split. }
       erewrite <- relevance_subst_eq.
       eapply cumul_sort_relevance; tea. apply wf.
   - pose proof (declared_constructor_lookup isdecl).
@@ -317,19 +319,13 @@ Proof using Type.
       eapply isTypeRel2_relevance; tea.
       exists ps; split => //.
   - pose proof (declared_projection_lookup isdecl).
-    destruct (PCUICWeakeningEnvTyp.on_declared_projection isdecl) as [[[] e] [[[? []] ?] ?]]; tea.
-    unfold on_projection in o.
-    destruct nth_error eqn:EE in o => //.
-    destruct o.
+    assert (isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) (pdecl.(proj_relevance))) by (eapply isType_of_projection; tea).
     split; intro Hr => //.
     + unfold relevance_of_term, relevance_of_projection in Hr; subst rel.
-      destruct Σ as (Σ & φ); unfold fst, snd in *.
+      now rewrite H.
+    + unfold relevance_of_term, relevance_of_projection.
       rewrite H.
-      eapply isType_of_projection; tea.
-    + unfold relevance_of_term, relevance_of_projection. destruct Σ as (Σ & φ); unfold fst, snd in *.
-      rewrite H.
-      eassert (isTypeRel (Σ, φ) _ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) (pdecl.(proj_relevance))) by (eapply isType_of_projection; tea).
-      eapply isTypeRel2_relevance; tea. apply wf.
+      eapply isTypeRel2_relevance; tea.
   - eapply All_nth_error in X0, X1; tea.
     rewrite /on_def_type /on_def_body /lift_typing2 in X0, X1.
     split; intro Hr => //.
@@ -369,7 +365,7 @@ Proof using Type.
       apply ws_cumul_pb_forget, PCUICCumulativity.cumul_alt in X0 as (A' & B' & [[red1 red2] leq]).
       eapply PCUICSR.subject_reduction in red1, red2; tea.
       eapply typing_leq_term_prop; tea.
-Admitted.
+Qed.
 
 
 Theorem relevance_from_type {cf : checker_flags} (Σ : global_env_ext) Γ t T rel :

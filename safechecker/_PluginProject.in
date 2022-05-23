@@ -72,6 +72,8 @@ src/pCUICPretty.mli
 src/pCUICPretty.ml
 src/pCUICProgram.mli
 src/pCUICProgram.ml
+src/pCUICRelevance.ml
+src/pCUICRelevance.mli
 
 # From SafeChecker
 # src/string2pos.mli

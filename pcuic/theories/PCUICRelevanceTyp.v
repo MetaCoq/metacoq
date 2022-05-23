@@ -29,13 +29,13 @@ Proof.
   now eapply cumul_sort_relevance.
 Qed.
 
-Lemma ind_arity_relevant {cf : checker_flags} (Σ : global_env_ext) mdecl idecl : 
+Lemma ind_arity_relevant {cf : checker_flags} (Σ : global_env_ext) mdecl idecl :
+  wf Σ.1 ->
   let ind_type := it_mkProd_or_LetIn (ind_params mdecl) (it_mkProd_or_LetIn (ind_indices idecl) (tSort (ind_sort idecl))) in
   isType Σ [] ind_type ->
   isTypeRel Σ [] ind_type Relevant.
 Proof.
-  assert (wfΣ : wf Σ) by admit.
-  intros ind_type (s & e & Hs).
+  intros wfΣ ind_type (s & e & Hs).
   eexists; split => //; tea.
   rewrite /ind_type in Hs.
   rewrite -it_mkProd_or_LetIn_app in Hs.
@@ -53,7 +53,9 @@ Proof.
       eapply IHl. apply wfΓ'.
       econstructor; eauto with pcuic. constructor; eauto with pcuic.
       apply ws_cumul_pb_LetIn_l_inv in le.
-      epose proof (PCUICSpine.all_rels_subst_lift (Γ := Γ) (Δ := [vdef decl_name t decl_type]) (t := x0) (Δ' := []) _ _ _) => //=.
+      unshelve epose proof (PCUICSpine.all_rels_subst_lift (Γ := Γ) (Δ := [vdef decl_name t decl_type]) (t := x0) (Δ' := []) _ _ _) => //=.
+      all: change (Γ,,, [vdef decl_name t decl_type]) with (Γ ,, vdef decl_name t decl_type); tea.
+      1,2: fvs.
       simpl in X0. rewrite PCUICLiftSubst.lift0_id in X0. rewrite PCUICLiftSubst.subst_empty in X0.
       change (subst0 _ _) with ((lift 1 1 x0) {0 := lift0 1 t}) in X0.
       rewrite -PCUICLiftSubst.distr_lift_subst10 in X0.
@@ -71,10 +73,10 @@ Proof.
       cbn.
       constructor. 1-3: fvs.
       constructor. apply leq_universe_product.
-  Unshelve. all: eauto. fvs. unfold app_context, app; fold (snoc Γ (vdef decl_name t decl_type)). fvs.
-Admitted.
+Qed.
 
 Lemma isTypeRel_cstr_type {cf : checker_flags} Σ mdecl idecl cdecl n :
+  wf Σ.1 ->
   nth_error (ind_bodies mdecl) n = Some idecl ->
   (cstr_type cdecl =
         it_mkProd_or_LetIn
@@ -92,7 +94,7 @@ Lemma isTypeRel_cstr_type {cf : checker_flags} Σ mdecl idecl cdecl n :
   isType Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) ->
   isTypeRel Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) idecl.(ind_relevance).
 Proof.
-  intros H -> e1 <- c (s & _ & Hs); exists s; split => //=.
+  intros wfΣ H -> e1 <- c (s & _ & Hs); exists s; split => //=.
   (* epose proof (nth_error_arities_context mdecl (#|ind_bodies mdecl| - S cstr.1.(inductive_ind)) idecl _).
   Unshelve. 2: { rewrite nth_error_rev. len. apply nth_error_Some_length in di. lia. rewrite List.rev_involutive. replace _ with (inductive_ind cstr.1); tea. len. apply nth_error_Some_length in di. lia. }
   rewrite e1 in H; clear e1. *)

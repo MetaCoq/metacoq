@@ -1920,6 +1920,7 @@ Section CheckEnv.
     Qed.
     Next Obligation.
       epose proof (get_wt_indices X_ext wfar wfpars _ _ hnth Hcs).
+      pose proof (hΣ _ _ H).
       specialize_Σ H.
       unfold check_constructor_spec in Hcs; simpl in *. sq.
       solve_all.
@@ -2319,6 +2320,7 @@ End monad_Alli_nth_forall.
   
   Next Obligation.
     rename x into cs. destruct Σ as [Σ ext].
+    pose proof (abstract_env_ext_wf _ H).
     pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]].
     destruct pf as [pf pf']; eauto. specialize_Σ H. specialize_Σ wfΣ0. sq.
     eapply All_nth_error in wfars as (isty & e & eqrel); tea.
@@ -2330,7 +2332,7 @@ End monad_Alli_nth_forall.
        ind_sorts := onsorts;
        ind_relevance_compat := eqrel;
        onIndices := _; |}.
-    - rewrite e in isty |- *; apply PCUICRelevanceTyp.ind_arity_relevant => //.
+    - rewrite e in isty |- *; apply PCUICRelevanceTyp.ind_arity_relevant => //. apply H0.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
     Unshelve. eauto.
   Qed. 

@@ -1008,145 +1008,295 @@ Section Typecheck.
     congruence.
   Qed.  
   
-  Definition abstract_lookup_constant kn := 
-    match abstract_env_lookup X kn with
-    | Some (ConstantDecl d) => Some d
-    | _ => None
-    end.
-    
-  Definition abstract_lookup_minductive mind :=
-    match abstract_env_lookup X mind with
-    | Some (InductiveDecl decl) => Some decl
-    | _ => None
-    end.
+  Equations abstract_lookup_constant kn : { decl & forall Σ (wfΣ : abstract_env_ext_rel X Σ), lookup_constant Σ kn = decl } :=
+    abstract_lookup_constant kn with inspect (abstract_env_lookup X kn) := {
+      | @exist (Some (ConstantDecl d)) e => (Some d; _) ;
+      | @exist _ e => (None; _)
+    }.
+  Next Obligation.
+    assert (lookup_env Σ kn = abstract_env_lookup X kn) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_constant H -e //.
+  Qed.
+  Next Obligation.
+    assert (lookup_env Σ kn = abstract_env_lookup X kn) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_constant H -e //.
+  Qed.
+  Next Obligation.
+    assert (lookup_env Σ kn = abstract_env_lookup X kn) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_constant H -e //.
+  Qed.
+
+
+  Equations abstract_lookup_minductive mind : { mdecl & forall Σ (wfΣ : abstract_env_ext_rel X Σ), lookup_minductive Σ mind = mdecl } :=
+    abstract_lookup_minductive mind with inspect (abstract_env_lookup X mind) := {
+      | @exist (Some (InductiveDecl mdecl)) e => (Some mdecl; _) ;
+      | @exist _ e => (None; _)
+    }.
+  Next Obligation.
+    assert (lookup_env Σ mind = abstract_env_lookup X mind) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_minductive H -e //.
+  Qed.
+  Next Obligation.
+    assert (lookup_env Σ mind = abstract_env_lookup X mind) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_minductive H -e //.
+  Qed.
+  Next Obligation.
+    assert (lookup_env Σ mind = abstract_env_lookup X mind) by (eapply abstract_env_lookup_correct; eauto).
+    rewrite /lookup_minductive H -e //.
+  Qed.
   
-  Definition abstract_lookup_inductive ind :=
-    match abstract_lookup_minductive (inductive_mind ind) with
-    | Some mdecl => 
-      match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-      | Some idecl => Some (mdecl, idecl)
-      | None => None
-      end
-    | None => None
-    end.
-  
-  Definition abstract_lookup_constructor ind k :=
-    match abstract_lookup_inductive ind with
-    | Some (mdecl, idecl) => 
-      match nth_error idecl.(ind_ctors) k with
-      | Some cdecl => Some (mdecl, idecl, cdecl)
-      | None => None
-      end
-    | _ => None
-    end.
+  Equations abstract_lookup_inductive ind : { midecl & forall Σ (wfΣ : abstract_env_ext_rel X Σ), lookup_inductive Σ ind = midecl } :=
+    abstract_lookup_inductive ind with abstract_lookup_minductive ind.(inductive_mind) := {
+      | (None; _) => (None; _) ;
+      | (Some mdecl; _) with inspect (nth_error mdecl.(ind_bodies) ind.(inductive_ind)) := {
+        | @exist None ee => (None; _) ;
+        | @exist (Some idecl) ee => (Some (mdecl, idecl); _) ;
+      }
+    }.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_inductive e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_inductive e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_inductive e //.
+  Qed.
 
-  Definition abstract_lookup_projection p :=
-    match abstract_lookup_constructor p.(proj_ind) 0 with
-    | Some (mdecl, idecl, cdecl) => 
-      match nth_error idecl.(ind_projs) p.(proj_arg) with
-      | Some pdecl => Some (mdecl, idecl, cdecl, pdecl)
-      | None => None
-      end
-    | _ => None
-    end.
+  Equations abstract_lookup_constructor ind k : { micdecl & forall Σ (wfΣ : abstract_env_ext_rel X Σ), lookup_constructor Σ ind k = micdecl } :=
+    abstract_lookup_constructor ind k with abstract_lookup_inductive ind := {
+      | (None; _) => (None; _) ;
+      | (Some (mdecl, idecl); _) with inspect (nth_error idecl.(ind_ctors) k) := {
+        | @exist None ee => (None; _) ;
+        | @exist (Some cdecl) ee => (Some (mdecl, idecl, cdecl); _) ;
+      }
+    }.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_constructor e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_constructor e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_constructor e //.
+  Qed.
 
-  Equations relevance_of_term_abstract_env (Γ : mark_context) (t : term) : { rel & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isTermRel Σ Γ t rel ∥ } by struct t :=
+  Equations abstract_lookup_projection proj : { micpdecl & forall Σ (wfΣ : abstract_env_ext_rel X Σ), lookup_projection Σ proj = micpdecl } :=
+    abstract_lookup_projection p with abstract_lookup_constructor p.(proj_ind) 0 := {
+      | (None; _) => (None; _) ;
+      | (Some (mdecl, idecl, cdecl); _) with inspect (nth_error idecl.(ind_projs) p.(proj_arg)) := {
+        | @exist None ee => (None; _) ;
+        | @exist (Some pdecl) ee => (Some (mdecl, idecl, cdecl, pdecl); _) ;
+      }
+    }.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_projection e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_projection e -ee //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ.
+    rewrite /lookup_projection e //.
+  Qed.
 
-  relevance_of_term_abstract_env Γ (tRel n)
+  Equations relevance_of_term_abstract_env (Γ : context) (t : term) (H : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t ) :
+    { rel & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isTermRel Σ (marks_of_context Γ) t rel ∥ } by struct t :=
+
+  relevance_of_term_abstract_env Γ (tRel n) H
     with inspect (nth_error Γ n) := {
-    | exist (Some c) e => (c; _) ;
-    | exist None e => (Relevant; _)
+    | exist (Some c) e => (c.(decl_name).(binder_relevance); _) ;
+    | exist None e => !
     } ;
 
-  relevance_of_term_abstract_env Γ (tLambda na A t) :=
-    relevance_of_term_abstract_env (Γ ,, na.(binder_relevance)) t ;
+  relevance_of_term_abstract_env Γ (tLambda na A t) H :=
+    let '(rel; _) := relevance_of_term_abstract_env (Γ ,, vass na A) t _ in
+    (rel; _) ;
 
-  relevance_of_term_abstract_env Γ (tLetIn na b b_ty b') :=
-    relevance_of_term_abstract_env (Γ ,, na.(binder_relevance)) b' ;
+  relevance_of_term_abstract_env Γ (tLetIn na b b_ty b') H :=
+    let '(rel; _) := relevance_of_term_abstract_env (Γ ,, vdef na b b_ty) b' _ in
+    (rel; _) ;
 
-  relevance_of_term_abstract_env Γ (tApp t u) :=
-    relevance_of_term_abstract_env Γ t ;
+  relevance_of_term_abstract_env Γ (tApp t u) H :=
+    let '(rel; _) := relevance_of_term_abstract_env Γ t _ in
+    (rel; _) ;
 
-  relevance_of_term_abstract_env Γ (tConst cst u)
-    with inspect (abstract_lookup_constant cst) := {
-    | exist (Some d) e => (d.(cst_relevance); _) ;
-    | exist None e => (Relevant; _) ;
+  relevance_of_term_abstract_env Γ (tConst cst u) H
+    with (abstract_lookup_constant cst) := {
+    | (Some d; _) => (d.(cst_relevance); _) ;
+    | (None; _) => ! ;
     } ;
 
-  relevance_of_term_abstract_env Γ (tConstruct ind k u)
-    with inspect (abstract_lookup_constructor ind k) := {
-    | exist (Some (_, idecl, _)) e := (idecl.(ind_relevance); _) ;
-    | exist None _ := (Relevant; _) ;
+  relevance_of_term_abstract_env Γ (tConstruct ind k u) H
+    with abstract_lookup_constructor ind k := {
+    | (Some (_, idecl, _); _) := (idecl.(ind_relevance); _) ;
+    | (None; _) := ! ;
   };
 
-  relevance_of_term_abstract_env Γ (tCase ci p c brs) :=
+  relevance_of_term_abstract_env Γ (tCase ci p c brs) H :=
     (ci.(ci_relevance); _) ;
 
-  relevance_of_term_abstract_env Γ (tProj p c)
-    with inspect (abstract_lookup_projection p) := {
-    | exist (Some (_, _, _, pdecl)) e := (pdecl.(proj_relevance); _) ;
-    | exist None _ := (Relevant; _) ;
+  relevance_of_term_abstract_env Γ (tProj p c) H
+    with (abstract_lookup_projection p) := {
+    | (Some (_, _, _, pdecl); _) := (pdecl.(proj_relevance); _) ;
+    | (None; _) := ! ;
   };
 
-  relevance_of_term_abstract_env Γ (tFix mfix n)
+  relevance_of_term_abstract_env Γ (tFix mfix n) H
     with inspect (nth_error mfix n) := {
-    | exist None _ := (Relevant; _) ;
     | exist (Some decl) e := (decl.(dname).(binder_relevance); _) ;
+    | exist None _ := ! ;
   } ;
 
-  relevance_of_term_abstract_env Γ (tCoFix mfix n)
+  relevance_of_term_abstract_env Γ (tCoFix mfix n) H
     with inspect (nth_error mfix n) := {
-    | exist None _ := (Relevant; _) ;
     | exist (Some decl) e := (decl.(dname).(binder_relevance); _) ;
+    | exist None _ := ! ;
   } ;
 
-  relevance_of_term_abstract_env Γ (tVar _)       := (Relevant; _) ;
-  relevance_of_term_abstract_env Γ (tEvar ev _)   := (Relevant; _) ;
-  relevance_of_term_abstract_env Γ (tSort u)      := (Relevant; _) ;
-  relevance_of_term_abstract_env Γ (tProd na A B) := (Relevant; _) ;
-  relevance_of_term_abstract_env Γ (tInd ind u)   := (Relevant; _).
+  relevance_of_term_abstract_env Γ (tVar _)       H := ! ;
+  relevance_of_term_abstract_env Γ (tEvar ev _)   H := ! ;
+  relevance_of_term_abstract_env Γ (tSort u)      H := (Relevant; _) ;
+  relevance_of_term_abstract_env Γ (tProd na A B) H := (Relevant; _) ;
+  relevance_of_term_abstract_env Γ (tInd ind u)   H := (Relevant; _).
 
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection;
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive;
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e;
-    erewrite <- abstract_env_lookup_correct in e; eauto;
-    now rewrite <- e.
+    sq. constructor => //. rewrite nth_error_map -e //.
   Qed.
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection.
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive.
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
-    now rewrite <- e.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Rel in X0 as (? & _ & ? & _); tea.
+    congruence.
   Qed.
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection.
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive.
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
-    now rewrite <- e.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Var in X0 => //.
   Qed.
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection.
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive.
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
-    now rewrite <- e.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Evar in X0 => //.
   Qed.
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection.
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive.
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
-    now rewrite <- e.
+    sq. constructor => //.
   Qed.
   Next Obligation.
-    unfold relevance_of_term, relevance_of_constant, relevance_of_constructor, relevance_of_projection.
-    unfold lookup_constant, lookup_projection, lookup_constructor, lookup_inductive, lookup_minductive.
-    unfold abstract_lookup_constant, abstract_lookup_projection, abstract_lookup_constructor, abstract_lookup_inductive, abstract_lookup_minductive in e.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
-    now rewrite <- e.
+    sq. constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Lambda in X0 as (_ & B & _ & _ & ? & _) => //.
+    now eexists.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_LetIn in X0 as (_ & B & _ & _ & _ & ? & _) => //.
+    now eexists.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_App in X0 as (? & ? & ? & ? & _) => //.
+    now eexists.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    constructor => //.
+    apply lookup_constant_declared => //.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Const in X0 as (? & _ & H & _); tea.
+    apply declared_constant_lookup in H. congruence.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    econstructor => //.
+    apply lookup_constructor_declared => //; tea.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Construct in X0 as (m & i & c & _ & H & _); tea.
+    apply declared_constructor_lookup in H. rewrite e in H => //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    econstructor => //.
+    apply lookup_projection_declared => //; tea.
+    apply inversion_Proj in X0 as (_ & m' & i' & c' & p' & _ & H & _); tea.
+    apply declared_projection_lookup in H as ee.
+    rewrite e in ee; inversion ee.
+    destruct H as (_ & _ & ?).
+    congruence.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Proj in X0 as (_ & m' & i' & c' & p' & _ & H & _); tea.
+    apply declared_projection_lookup in H. rewrite e in H => //.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_Fix in X0 as (decl & _ & H & _); tea. congruence.
+  Qed.
+  Next Obligation.
+    specialize_Σ wfΣ. sq.
+    constructor => //.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof hΣ.
+    specialize_Σ wfΣ. destruct H. sq.
+    apply inversion_CoFix in X0 as (decl & _ & H & _); tea. congruence.
   Qed.
 
   Definition abstract_env_level_mem_forallb {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : 

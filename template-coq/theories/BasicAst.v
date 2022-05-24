@@ -133,6 +133,10 @@ Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
+Lemma map_dname {A B} (f : A -> B) (g : A -> B) (d : def A) :
+  dname d = dname (map_def f g d).
+Proof. destruct d; reflexivity. Qed.
+
 Definition mfixpoint term := list (def term).
 
 Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=

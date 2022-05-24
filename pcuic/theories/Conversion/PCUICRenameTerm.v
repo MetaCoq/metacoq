@@ -1114,28 +1114,28 @@ Lemma rename_relevance_of_term P f Σ Δ Γ t rel :
   isTermRel Σ (marks_of_context Γ) t rel ->
   isTermRel Σ (marks_of_context Δ) (rename f t) rel.
 Proof.
-  revert f Γ Δ.
-  induction t using term_forall_list_ind; cbnr; intros f Γ Δ Hur (* wfΓ wfΔ *) wft H; auto.
-  - unfold relevance_of_term, option_default in *.
-    rewrite nth_error_map /option_map in H.
+  intros sP Hur wft H.
+  induction t using term_forall_list_ind in f, Γ, Δ, sP, Hur, wft, H |- *; depelim H.
+  all: try solve [ try rewrite H; econstructor => //; eauto ].
+  - constructor.
+    rewrite nth_error_map /option_map in e.
     rewrite nth_error_map /option_map.
-    destruct (nth_error Γ n) eqn:E.
-    2: { unfold shiftnP in *. rewrite orb_false_r in wft. apply Nat.ltb_lt in wft. apply nth_error_None in E; lia. }
+    destruct nth_error eqn:E => //.
     eapply Hur in E as (decl & -> & <- & _) => //.
-    clear -wft. unfold shiftnP in *. toProp. rewrite orb_false_r in wft. now left.
-  - cbn in wft; rtoProp.
+    clear -wft. unfold shiftnP in *. unfold sP. toProp. rewrite //= orb_false_r in wft. now left.
+  - constructor.
+    cbn in wft; rtoProp.
     eapply IHt2 with (Δ := Δ,, vass n (rename _ t1)).
     3: instantiate (1 := Γ,, vass n t1); apply H. 
     * eapply urenaming_impl. 1: intro; rewrite shiftnP_S; eauto. apply urenaming_vass; eauto. 
     * eapply on_free_vars_impl; tea. 1: intro; rewrite -shiftnP_S; eauto.
-  - cbn in wft; rtoProp.
+  - constructor.
+    cbn in wft; rtoProp.
     eapply IHt3 with (Δ := Δ,, vdef n (rename _ t1) (rename _ t2)).
     3: instantiate (1 := Γ,, vdef n t1 t2); apply H. 
     * eapply urenaming_impl. 1: intro; rewrite shiftnP_S; eauto. apply urenaming_vdef; eauto. 
     * eapply on_free_vars_impl; tea. 1: intro; rewrite -shiftnP_S; eauto.
-  - eapply IHt1; tea. now toProp wft.
-  - unfold relevance_of_term, option_default in *.
-    rewrite nth_error_map. unfold option_map; cbn. destruct (nth_error m) eqn:E; tas.
-  - unfold relevance_of_term, option_default in *.
-    rewrite nth_error_map. unfold option_map; cbn. destruct (nth_error m) eqn:E; tas.
+  - constructor. eapply IHt1; tea. apply andb_and in wft; now destruct wft.
+  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
+  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
 Qed.

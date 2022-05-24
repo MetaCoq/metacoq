@@ -1694,14 +1694,11 @@ Definition wf_global_ext {cf : checker_flags} Σ ext := wf_ext_wk (Σ, ext).
 Lemma relevance_of_term_subst_instance Σ Γ u t rel :
   isTermRel Σ Γ t rel -> isTermRel Σ Γ t@[u] rel.
 Proof.
-  revert Γ.
-  induction t using term_forall_list_ind; intros Γ Hirrel; cbnr; auto.
-  - unfold subst_instance, relevance_of_term, option_default in *.
-    destruct (nth_error m) eqn:E;
-    rewrite nth_error_map E; now cbn.
-  - unfold subst_instance, relevance_of_term, option_default in *.
-    destruct (nth_error m) eqn:E;
-    rewrite nth_error_map E; now cbn.
+  intro h.
+  induction t using term_forall_list_ind in Γ, h |- *; depelim h.
+  all: try solve [ try rewrite H; econstructor => //; eauto ].
+  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
+  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
 Qed.
 
 Require Import Morphisms.

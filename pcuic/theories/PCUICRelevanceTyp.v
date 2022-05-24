@@ -4,6 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICRelevance
   PCUICTyping PCUICInversion PCUICConversion PCUICCumulProp PCUICWeakeningTyp PCUICValidity PCUICWellScopedCumulativity BDUnique.
 
 Require Import ssreflect.
+From Equations Require Import Equations.
 
 Definition relevance_from_term_from_type {cf : checker_flags} (Σ : global_env_ext) Γ t T :=
   forall rel, isTermRel Σ (marks_of_context Γ) t rel <~> isTypeRel Σ Γ T rel.
@@ -179,50 +180,52 @@ Proof using Type.
     eapply All_local_env_over_2; tea.
     intros ??? H; apply lift_typing_impl with (1 := H); now intros ? [].
   - split; intro H.
-    + rewrite /relevance_of_term nth_error_map heq_nth_error /option_map /option_default /id in H.
-      rewrite -H.
+    + depelim H. rewrite nth_error_map heq_nth_error in e. inv e.
       destruct (PCUICTyping.nth_error_All_local_env heq_nth_error wfΓ); eauto.
       apply isTypeRelOpt_lift => //.
       pose proof (nth_error_Some_length heq_nth_error); lia.
-    + rewrite /relevance_of_term nth_error_map heq_nth_error /option_map /option_default /id.
+    + constructor. rewrite nth_error_map heq_nth_error /option_map.
       pose proof (PCUICTyping.nth_error_All_local_env heq_nth_error wfΓ).1; eauto.
       apply isTypeRelOpt_lift in X0 => //. 2: { pose proof (nth_error_Some_length heq_nth_error); lia. }
-      eapply isTypeRel2_relevance; tea.
-  - split; unfold relevance_of_term; intro Hr => //.
-    + eexists; split.
-      2: { constructor; tea. eauto with pcuic. }
-      destruct u => //.
-    + destruct Hr as (s & <- & Hty) => //.
-      apply inversion_Sort in Hty as (_ & _ & le) => //.
-      eapply ws_cumul_pb_Sort_inv, leq_relevance in le => //.
-      destruct u => //.
-  - split; unfold relevance_of_term; intro Hr => //.
-    + rewrite -Hr.
+      eapply f_equal, isTypeRel2_relevance; tea.
+  - split; intro Hr => //.
+    + inv Hr.
       eexists; split.
       2: { constructor; tea. eauto with pcuic. }
-      destruct s2, s1 => //.
+      apply relevance_super.
     + destruct Hr as (s & <- & Hty) => //.
       apply inversion_Sort in Hty as (_ & _ & le) => //.
       eapply ws_cumul_pb_Sort_inv, leq_relevance in le => //.
-      destruct s2, s1 => //.
+      rewrite le relevance_super. constructor.
+  - split; intro Hr.
+    + inv Hr.
+      eexists; split.
+      2: { constructor; tea. eauto with pcuic. }
+      apply relevance_super.
+    + destruct Hr as (s & <- & Hty) => //.
+      apply inversion_Sort in Hty as (_ & _ & le) => //.
+      eapply ws_cumul_pb_Sort_inv, leq_relevance in le => //.
+      rewrite le relevance_super. constructor.
   - split; intro Hr => //.
-    + eapply X3 in Hr as (s & e & Hs).
+    + inv Hr.
+      eapply X3 in X0 as (s & e & Hs).
       eexists; split.
       2: { constructor; tea. }
       destruct s, s1 => //.
     + destruct Hr as (s & <- & Hs).
-      edestruct X3 as (_ & IH); eapply IH.
+      constructor. edestruct X3 as (_ & IH); eapply IH.
       apply inversion_Prod in Hs as (s1' & s2 & e1 & _ & Hty & le) => //.
       eexists; split; tea.
       eapply ws_cumul_pb_Sort_inv, leq_relevance in le => //.
       destruct s1', s2 => //.
   - split; intro Hr => //.
-    + eapply X5 in Hr as (s & e & Hs).
+    + inv Hr.
+      eapply X5 in X0 as (s & e & Hs).
       exists s; split => //.
       econstructor; tea.
       eapply type_LetIn; eauto. constructor; eauto with pcuic. do 2 constructor. apply cumul_zeta.
     + destruct Hr as (s & <- & Hs).
-      edestruct X5 as (_ & IH); eapply IH.
+      constructor. edestruct X5 as (_ & IH); eapply IH.
       assert (wf_universe Σ s) by eauto with pcuic.
       apply inversion_LetIn in Hs as (s1' & s2 & e1 & ? & ? & Hty & le) => //.
       eapply ws_cumul_pb_Sort_r_inv in le as (ss & red & le) => //.
@@ -243,7 +246,7 @@ Proof using Type.
       eapply red_conv in c.
       eapply (weakening_ws_cumul_pb (Γ' := []) (Γ'' := [vdef _ _ _]) c). fvs.
   - split; intro Hr => //.
-    + eapply X3 in Hr as (s' & e & Hs).
+    + inv Hr. eapply X3 in X0 as (s' & e & Hs).
       assert (wf_universe Σ s') by auto with pcuic.
       apply inversion_Prod in Hs as (? & ss & ? & ? & ? & le); tea.
       exists s'; split => //.
@@ -252,7 +255,7 @@ Proof using Type.
       change (tSort ss) with ((tSort ss) { 0 := u }).
       eapply PCUICSubstitution.substitution0; tea.
     + destruct Hr as (s' & <- & Hs).
-      edestruct X3 as (_ & IH); eapply IH; clear IH.
+      constructor. edestruct X3 as (_ & IH); eapply IH; clear IH.
       assert (wf_universe Σ s') by eauto with pcuic.
       exists s; split => //.
       apply inversion_Prod in IHB as (s1 & s2 & ? & ? & Hty & le) => //.
@@ -262,8 +265,8 @@ Proof using Type.
       apply ws_cumul_pb_Sort_inv in le; destruct s2, s1, s => //.
   - apply PCUICWeakeningEnvTyp.on_declared_constant in H as H'; tea. unfold on_constant_decl in H'.
     split; intro Hr => //.
-    + unfold relevance_of_term, relevance_of_constant in Hr.
-      rewrite (declared_constant_lookup H) in Hr; rewrite -Hr.
+    + inv Hr.
+      assert (decl = decl0). { unfold declared_constant in H, H0. rewrite H in H0. now do 2 inversion H. } subst decl0.
       destruct H' as (H' & _).
       eapply infer_typing_sort_impl with _ H' => //; [apply relevance_subst_opt|]. intro Hty.
       apply (weaken_ctx (Γ := [])); tea.
@@ -272,8 +275,7 @@ Proof using Type.
       eapply (PCUICUnivSubstitutionTyp.typing_subst_instance' _ _ [] _ (tSort H'.π1) u _); tea.
       unshelve epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (ConstantDecl decl) wf _); eauto.
       now split.
-    + unfold relevance_of_term, relevance_of_constant.
-      rewrite (declared_constant_lookup H).
+    + enough (cst_relevance decl = rel) by (subst rel; constructor => //).
       destruct H' as (H' & _).
       destruct Hr as (s1 & <- & Hs1), H' as (s2 & <- & Hs2).
       erewrite <- relevance_subst_eq.
@@ -286,14 +288,14 @@ Proof using Type.
   - pose proof (onArity (PCUICWeakeningEnvTyp.on_declared_inductive isdecl).2).
     destruct Σ as (Σ & φ); unfold fst in *.
     split; intro Hr => //.
-    + unfold relevance_of_term in Hr; subst rel.
+    + inv Hr.
       eapply infer_typing_sort_impl with _ X1; [apply relevance_subst_opt|]; intros Hty.
       eapply PCUICUnivSubstitutionTyp.typing_subst_instance' in Hty.
       eapply (weaken_ctx (Γ := [])) in Hty.
       apply Hty.
       all: tea.
       unshelve epose proof (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wf isdecl.p1); eauto. now split.
-    + unfold relevance_of_term.
+    + enough (Relevant = rel) by (subst rel; constructor => //).
       destruct Hr as (s1 & <- & Hs1), X1 as (s2 & <- & Hs2).
       eapply PCUICUnivSubstitutionTyp.typing_subst_instance' in Hs2.
       eapply (weaken_ctx (Γ := [])) in Hs2.
@@ -304,45 +306,45 @@ Proof using Type.
   - pose proof (declared_constructor_lookup isdecl).
     destruct (PCUICWeakeningEnvTyp.on_declared_constructor isdecl) as ([[] []] & cu & ? & []); tea.
     split; intro Hr => //.
-    + unfold relevance_of_term, relevance_of_constructor in Hr; subst rel.
+    + inv Hr.
+      assert (idecl = idecl0). { clear -H0 isdecl. destruct H0 as ((H0m & H0i) & H0c), isdecl as ((Hm & Hi) & Hc). unfold declared_minductive in Hm, H0m. rewrite H0m in Hm. do 2 inversion Hm. subst mdecl0. rewrite H0i in Hi. now inversion Hi. } subst idecl0.
       destruct Σ as (Σ & φ); unfold fst, snd in *.
-      rewrite H.
       apply isType_of_constructor; tea.
-    + unfold relevance_of_term, relevance_of_constructor. destruct Σ as (Σ & φ); unfold fst, snd in *.
-      rewrite H.
+    + enough (idecl.(ind_relevance) = rel) by (subst rel; econstructor; apply isdecl).
+      destruct Σ as (Σ & φ); unfold fst, snd in *.
       eassert (isTypeRel (Σ, φ) _ (type_of_constructor mdecl cdecl (ind, i) u) (idecl.(ind_relevance))) by (apply isType_of_constructor; tea).
       eapply isTypeRel2_relevance; tea. apply wf.
   - assert (Σ ;;; Γ |- mkApps ptm (indices ++ [c]) : tSort ps). 
     { apply apply_predctx => //. apply ctx_inst_impl with (1 := X5) => ??[] //. }
     split; intro Hr => //.
-    + unfold relevance_of_term in Hr; subst rel.
+    + inv Hr.
       exists ps; split => //.
-    + unfold relevance_of_term.
+    + enough (rel = ci.(ci_relevance)) by (subst rel; constructor).
       eapply isTypeRel2_relevance; tea.
       exists ps; split => //.
   - pose proof (declared_projection_lookup isdecl).
     assert (isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) (pdecl.(proj_relevance))) by (eapply isType_of_projection; tea).
     split; intro Hr => //.
-    + unfold relevance_of_term, relevance_of_projection in Hr; subst rel.
-      now rewrite H.
-    + unfold relevance_of_term, relevance_of_projection.
-      rewrite H.
+    + inv Hr.
+      assert (pdecl = pdecl0). { clear -H0 isdecl. destruct H0 as (((H0m & H0i) & H0c) & H0p & _), isdecl as (((Hm & Hi) & Hc) & Hp & _). unfold declared_minductive in Hm, H0m. rewrite H0m in Hm. do 2 inversion Hm. subst mdecl0. rewrite H0i in Hi. inversion Hi. subst idecl0. rewrite H0c in Hc. inversion Hc. subst cdecl0. rewrite H0p in Hp. now inversion Hp. } subst pdecl0.
+      assumption.
+    + enough (pdecl.(proj_relevance) = rel) by (subst rel; econstructor; apply isdecl).
       eapply isTypeRel2_relevance; tea.
   - eapply All_nth_error in X0, X1; tea.
     rewrite /on_def_type /on_def_body /lift_typing2 in X0, X1.
     split; intro Hr => //.
-    + rewrite /relevance_of_term heq_nth_error /option_default in Hr; subst rel.
+    + inv Hr. rewrite H0 in heq_nth_error; inversion heq_nth_error; subst def.
       apply lift_typing_impl with (1 := X0); now intros ? [].
-    + rewrite /relevance_of_term heq_nth_error /option_default.
+    + eenough (rel = _) by (erewrite H0; constructor; tea).
       eapply isTypeRel2_relevance; tea.
       apply infer_typing_sort_impl with id X0 => //.
       now intros [].
   - eapply All_nth_error in X0, X1; tea.
     rewrite /on_def_type /on_def_body /lift_typing2 in X0, X1.
     split; intro Hr => //.
-    + rewrite /relevance_of_term heq_nth_error /option_default in Hr; subst rel.
+    + inv Hr. rewrite H0 in heq_nth_error; inversion heq_nth_error; subst def.
       apply lift_typing_impl with (1 := X0); now intros ? [].
-    + rewrite /relevance_of_term heq_nth_error /option_default.
+    + eenough (rel = _) by (erewrite H0; constructor; tea).
       eapply isTypeRel2_relevance; tea.
       apply infer_typing_sort_impl with id X0 => //.
       now intros [].

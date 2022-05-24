@@ -1413,7 +1413,7 @@ Proof.
   intros [HΔ h] HAσ; split.
   - apply closed_subst_Up; assumption.
   - intros [|n] decl e. 
-    * now inversion e.
+    * constructor. now inversion e.
     * cbn -[rshiftk marks_of_context] in *.
       rewrite /subst_compose.
       specialize (h _ _ e).
@@ -1503,7 +1503,7 @@ Proof.
   intros [HΔ h] HAσ; split.
   - apply closed_subst_Up'; assumption.
   - intros [|n] decl e. 
-    * now inversion e.
+    * constructor. now inversion e.
     * cbn -[rshiftk marks_of_context] in *.
       rewrite /subst_compose.
       specialize (h _ _ e).
@@ -1601,8 +1601,8 @@ Proof.
     unfold Upn, subst_consn, subst_compose.
     destruct (nth_error Δ' x) eqn:E.
     * assert (x < #|Δ'|) by (apply nth_error_Some; intros e; rewrite e in E; discriminate).
-      rewrite nth_error_idsn_Some => //. 
-      cbn. rewrite nth_error_map nth_error_app1.
+      rewrite nth_error_idsn_Some => //.
+      constructor. rewrite nth_error_map nth_error_app1.
       { len. }
       rewrite -nth_error_map /inst_context -map_map map_decl_name_fold_context_k map_map nth_error_map.
       erewrite <- nth_error_app1, H => //.
@@ -1775,37 +1775,34 @@ Lemma relevance_of_term_inst Σ Γ Δ t rel σ :
   isTermRel Σ (marks_of_context Δ) t.[σ] rel.
 Proof.
   intros hσ HΓ Ht h.
-  induction t using term_forall_list_ind in Ht, σ, Γ, Δ, hσ, HΓ, h |- *.
-  all: cbn in Ht |- *; auto.
+  induction t using term_forall_list_ind in Ht, σ, Γ, Δ, hσ, HΓ, h |- *; depelim h.
+  all: try solve [ try rewrite H; econstructor => //; eauto ].
   - destruct hσ as (hσ & hrel).
-    rewrite /relevance_of_term /marks_of_context nth_error_map /option_map in h.
-    destruct (nth_error Γ n) eqn:E.
-    2: { unfold shiftnP in *. rewrite orb_false_r in Ht. apply Nat.ltb_lt in Ht. apply nth_error_None in E; lia. }
-    rewrite -h; now apply hrel.
+    rewrite nth_error_map /option_map in e.
+    destruct (nth_error Γ n) eqn:E => //. inv e.
+    now apply hrel.
   - assert (is_open_term Γ t1).
-    { rewrite shiftnP_add in Ht; toProp; apply Ht. }
-    eapply IHt2 with (Δ := Δ ,, vass n t1.[σ]).
+    { simpl in Ht. toProp; apply Ht. }
+    constructor; eapply IHt2 with (Δ := Δ ,, vass n t1.[σ]).
     4: { instantiate (1 := Γ ,, vass n t1). cbn in h; apply h. }
     2: cbn; rewrite alli_app; toProp; tas; cbn; rewrite andb_true_r; len.
-    2: rewrite shiftnP_add in Ht; toProp; apply Ht.
+    2: rewrite //= shiftnP_add in Ht; toProp; apply Ht.
     eapply valid_subst_Up in hσ; tas.
     * eapply valid_subst_ext. 1: apply hσ. now sigma.
     * eapply inst_is_open_term; tea. apply hσ.
-  - rewrite shiftnP_add in Ht; move/andP: Ht => [] H0 /andP[] H1 H2.
-    eapply IHt3 with (Δ := Δ ,, vdef n t1.[σ] t2.[σ]).
+  - cbn in Ht. move/andP: Ht => [] H1 /andP[] H2 H3. rewrite -> shiftnP_add in H3.
+    constructor. eapply IHt3 with (Δ := Δ ,, vdef n t1.[σ] t2.[σ]).
     4: { instantiate (1 := Γ ,, vdef n t1 t2). cbn in h; apply h. }
     2: cbn; rewrite alli_app; toProp; tas; cbn; rewrite andb_true_r; len.
-    3: apply H2.
+    3: apply H3.
     2: {  rewrite /on_free_vars_decl /test_decl /decl_body /decl_type /vdef /option_default. toProp => //. }
     eapply valid_subst_Up' in hσ; tas.
     * eapply valid_subst_ext. 1: apply hσ. now sigma.
     * eapply inst_is_open_term; tea. apply hσ.
     * eapply inst_is_open_term; tea. apply hσ.
-  - toProp; eapply IHt1; tea. apply Ht.
-  - unfold option_default. rewrite nth_error_map. unfold relevance_of_term in h.
-    now destruct (nth_error m).
-  - unfold option_default. rewrite nth_error_map. unfold relevance_of_term in h.
-    now destruct (nth_error m).
+  - constructor. eapply IHt1; tea. simpl in Ht. toProp Ht. apply Ht.
+  - erewrite map_dname. constructor. rewrite nth_error_map e //.
+  - erewrite map_dname. constructor. rewrite nth_error_map e //.
 Qed.
 
 

@@ -2,6 +2,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICRelevance PCUICInduction PCUICCases PCUICSigmaCalculus PCUICLiftSubst PCUICWeakeningEnv.
 
 Require Import ssreflect.
+From Equations Require Import Equations.
 
 
 Lemma mark_inst_case_context params puinst (pctx : context) :
@@ -26,15 +27,7 @@ Lemma extends_irrelevant {cf : checker_flags} {Pcmp P} Σ Σ' Γ t :
   isTermRel Σ' Γ t Irrelevant.
 Proof.
   induction t in Γ |- * using term_forall_list_ind;
-    cbn; intros ext Hirr; auto.
-  - unfold relevance_of_constant.
-    destruct lookup_constant eqn:H => //.
-    erewrite extends_lookup_constant; eauto.
-  - unfold relevance_of_constructor.
-    destruct lookup_constructor eqn:H => //.
-    erewrite extends_lookup_constructor; eauto.
-  - unfold relevance_of_projection.
-    destruct lookup_projection eqn:H => //.
-    erewrite extends_lookup_projection; eauto.
+    intros wfΣ' ext Hirr; depelim Hirr; try econstructor; eauto.
+  all: solve [ rewrite H; econstructor => //; eauto with extends ].
 Qed.
 

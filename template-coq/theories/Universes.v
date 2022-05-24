@@ -2312,6 +2312,11 @@ Section no_prop_leq_type.
     now rewrite ps in H.
   Qed.
 
+  Lemma relevance_super s : relevance_of_sort (Universe.super s) = Relevant.
+  Proof using Type.
+    now destruct s.
+  Qed.
+
   Lemma is_prop_gt s1 s2 :
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_prop s2 -> False.
   Proof using Type.

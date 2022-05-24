@@ -4,43 +4,50 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 
 Require Import ssreflect.
 
-Definition relevance_of_constant Σ kn :=
-  match lookup_constant Σ kn with
-  | Some decl => decl.(cst_relevance)
-  | None => Relevant
-  end.
-
-Definition relevance_of_constructor Σ ind k :=
-  match lookup_constructor Σ ind k with
-  | Some (_, idecl, _) => idecl.(ind_relevance)
-  | None => Relevant
-  end.
-
-Definition relevance_of_projection Σ (p: projection) :=
-  match lookup_projection Σ p with
-  | Some (_, _, _, pdecl) => pdecl.(proj_relevance)
-  | None => Relevant
-  end.
-
 Definition mark_context := list relevance.
 Definition marks_of_context (Γ: context) := List.map (binder_relevance ∘ decl_name) Γ.
 
-Fixpoint relevance_of_term (Σ : global_env) (Γ : mark_context) (t: term) : relevance :=
-  match t with
-  | tRel n =>
-      option_default id (nth_error Γ n) Relevant
-  | tLambda na A t => relevance_of_term Σ (Γ ,, na.(binder_relevance)) t
-  | tLetIn na b B t => relevance_of_term Σ (Γ ,, na.(binder_relevance)) t
-  | tApp u _ => relevance_of_term Σ Γ u
-  | tConst k _ => relevance_of_constant Σ k
-  | tConstruct ind i _ => relevance_of_constructor Σ ind i
-  | tCase ci _ _ _ => ci.(ci_relevance)
-  | tProj p _ => relevance_of_projection Σ p
-  | tFix mfix n | tCoFix mfix n => option_default (binder_relevance ∘ dname) (nth_error mfix n) Relevant
-  | tVar _ | tEvar _ _ | tSort _ | tProd _ _ _ | tInd _ _ => Relevant
-  end.
+Inductive isTermRel (Σ : global_env) (Γ : mark_context) : term -> relevance -> Type :=
+  | rel_Rel n rel :
+      nth_error Γ n = Some rel -> isTermRel Σ Γ (tRel n) rel
 
-Notation isTermRel Σ Γ t rel := (relevance_of_term Σ Γ t = rel).
+  | rel_Lambda na A t rel :
+      isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLambda na A t) rel
+  
+  | rel_LetIn na b B t rel :
+      isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLetIn na b B t) rel
+  
+  | rel_App t u rel :
+      isTermRel Σ Γ t rel -> isTermRel Σ Γ (tApp t u) rel
+  
+  | rel_Const kn u decl :
+      declared_constant Σ kn decl -> isTermRel Σ Γ (tConst kn u) decl.(cst_relevance)
+  
+  | rel_Construct ind i u mdecl idecl cdecl :
+      declared_constructor Σ (ind, i) mdecl idecl cdecl -> isTermRel Σ Γ (tConstruct ind i u) idecl.(ind_relevance)
+  
+  | rel_Case ci p c brs :
+      isTermRel Σ Γ (tCase ci p c brs) ci.(ci_relevance)
+  
+  | rel_Proj p u mdecl idecl cdecl pdecl :
+      declared_projection Σ p mdecl idecl cdecl pdecl -> isTermRel Σ Γ (tProj p u) pdecl.(proj_relevance)
+  
+  | rel_Fix mfix n def :
+      nth_error mfix n = Some def -> isTermRel Σ Γ (tFix mfix n) def.(dname).(binder_relevance)
+  
+  | rel_CoFix mfix n def :
+      nth_error mfix n = Some def -> isTermRel Σ Γ (tCoFix mfix n) def.(dname).(binder_relevance)
+  
+  | rel_Sort s :
+      isTermRel Σ Γ (tSort s) Relevant
+  
+  | rel_Prod na A B :
+      isTermRel Σ Γ (tProd na A B) Relevant
+  
+  | rel_Ind ind u :
+      isTermRel Σ Γ (tInd ind u) Relevant. 
+
+Derive Signature for isTermRel.
 
 Lemma mark_of_context_app Γ Γ' Δ Δ' :
   marks_of_context Γ = marks_of_context Γ' -> marks_of_context Δ = marks_of_context Δ' -> marks_of_context (Γ,,, Δ) = marks_of_context (Γ',,, Δ').

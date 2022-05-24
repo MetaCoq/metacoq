@@ -503,7 +503,7 @@ Section CheckEnv.
     | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Δ =>
       checkΔ <- check_type_local_ctx X_ext Γ Δ s wfΓ ;;
       checkty <- check_type_wf_env X_ext  (Γ ,,, Δ) _ b ty ;;
-      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (marks_of_context (Γ ,,, Δ)) b in
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (Γ ,,, Δ) b _ in
       check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
     end.
@@ -521,6 +521,9 @@ Section CheckEnv.
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
+    Qed.
+    Next Obligation.
+      specialize_Σ wfΣ; sq; now eexists.
     Qed.
     Next Obligation.
       clear Heq_anonymous.
@@ -544,7 +547,7 @@ Section CheckEnv.
     | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Δ => 
       '(Δs; Δinfer) <- infer_sorts_local_ctx X_ext Γ Δ wfΓ ;;
       checkty <- check_type_wf_env X_ext (Γ ,,, Δ) _ b ty ;;
-      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (marks_of_context (Γ ,,, Δ)) b in
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (Γ ,,, Δ) b _ in
       check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret (Δs; _)
     end.
@@ -559,7 +562,10 @@ Section CheckEnv.
       specialize_Σ H. sq. now eapply PCUICContexts.sorts_local_ctx_wf_local in Δinfer.
     Qed.
     Next Obligation.
-      clear Heq_anonymous.
+      specialize_Σ wfΣ; sq; now eexists.
+    Qed.
+    Next Obligation.
+      clear Heq_anonymous Heq_x.
       pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq. splits; auto.
       eapply PCUICRelevanceTyp.relevance_from_type in checkty. 2: apply H0.
       apply checkty in eqtmrel; clear checkty.
@@ -1412,7 +1418,7 @@ Section CheckEnv.
     | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Γ =>
       wfΓ <- check_wf_local X_ext Γ ;;
       wfty <- check_type_wf_env X_ext Γ wfΓ b ty ;;
-      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (marks_of_context Γ) b in
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext Γ b _ in
       check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
     | {| decl_name := na; decl_body := None; decl_type := ty |} :: Γ =>
@@ -1421,6 +1427,9 @@ Section CheckEnv.
       check <- check_eq_true (relevance_of_sort s == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
     end.
+    Next Obligation.
+      specialize_Σ wfΣ; sq; now eexists.
+    Qed.
     Next Obligation.
       clear Heq_anonymous.
       pose proof (abstract_env_ext_wf _ H); specialize_Σ H. 
@@ -2346,9 +2355,10 @@ End monad_Alli_nth_forall.
     | ConstantDecl cst => 
       match cst.(cst_body) with
       | Some term => 
-          let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext [] term in
+          check_wf_judgement kn X_ext term cst.(cst_type) ;;
+          let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext [] term _ in
           check <- wrap_error _ X_ext id (check_eq_true (tmrel == cst.(cst_relevance)) (Msg "Wrong relevance")) ;;
-          check_wf_judgement kn X_ext term cst.(cst_type) ;; ret _
+          ret _
       | None =>
           s <- check_wf_type_rel kn X_ext cst.(cst_type) cst.(cst_relevance);;
           ret _ 
@@ -2363,6 +2373,9 @@ End monad_Alli_nth_forall.
       check_bodies <- monad_Alli_nth_forall mdecl.(ind_bodies) (fun i oib Hoib => check_one_ind_body X X_ext kn mdecl _ check_pars onarities check_var i oib Hoib);; 
       ret (Build_on_inductive_sq  check_bodies check_pars check_npars _)
     end.
+  Next Obligation.
+    specialize_Σ wfΣ; sq; now eexists.
+  Qed.
   Next Obligation.
     clear Heq_anonymous.
     specialize_Σ H0. pose proof (hΣ _ _ H0). sq. unfold on_constant_decl; rewrite <- Heq_anonymous0.

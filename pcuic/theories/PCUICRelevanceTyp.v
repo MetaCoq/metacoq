@@ -197,14 +197,58 @@ Proof.
     now rewrite Nat.add_0_r in H0.
 Qed.
 
-Lemma isType_of_projection {cf : checker_flags} Σ mdecl idecl cdecl pdecl p c args u Γ :
+Lemma isTypeRel_subst_instance_decl {cf : checker_flags} {Σ Γ T r c decl u} :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  isTypeRel (Σ.1, universes_decl_of_decl decl) Γ T r ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  isTypeRel Σ (subst_instance u Γ) (subst_instance u T) r.
+Proof using Type.
+  intros wfΣ look isty cu.
+  eapply infer_typing_sort_impl with _ isty; [apply relevance_subst_opt|].
+  intros Hs.
+  eapply (PCUICUnivSubstitutionTyp.typing_subst_instance_decl _ _ _ (tSort _)) in Hs; tea.
+Qed.
+
+Lemma declared_projection_type_inst {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p cdecl pdecl Γ c u args} :
+  wf Σ.1 ->
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
+  Σ;;; Γ |- c : mkApps (tInd (proj_ind p) u) args ->
+  isTypeRel Σ (PCUICInductives.projection_context p.(proj_ind) mdecl idecl u) 
+    pdecl.(proj_type)@[u] pdecl.(proj_relevance).
+Proof.
+  intros wfΣ declp hc.
+  eapply validity in hc.
+  assert (wfΓ : wf_local Σ Γ) by pcuic.
+  epose proof (PCUICInductives.isType_mkApps_Ind_inv wfΣ declp wfΓ hc) as [pars [argsub [? ? ? ? cu]]].
+  epose proof (PCUICInductives.declared_projection_type wfΣ declp).
+  rewrite -(PCUICInductiveInversion.projection_context_gen_inst declp cu).
+  eapply isTypeRel_subst_instance_decl; tea. eapply declp. apply X.
+  apply cu.
+Qed.
+
+Lemma isTypeRel_weaken {cf:checker_flags} {Σ : global_env_ext} {Γ Δ ty rel} :
+  wf Σ -> wf_local Σ Γ ->
+  isTypeRel Σ Δ ty rel ->
+  isTypeRel Σ (Γ ,,, Δ) ty rel.
+Proof.
+  intros wfΣ wfΓ [s [hrel hty]].
+  exists s; split => //.
+  now eapply weaken_ctx.
+Qed.
+
+Lemma isTypeRel_projection {cf : checker_flags} Σ mdecl idecl cdecl pdecl p c args u Γ :
   wf Σ.1 -> declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   Σ;;; Γ |- c : mkApps (tInd (proj_ind p) u) args -> #|args| = ind_npars mdecl ->
   isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) pdecl.(proj_relevance).
 Proof.
-  admit.
-Admitted.
-
+  intros wfΣ declp declc hargs.
+  epose proof (declared_projection_type_inst wfΣ declp declc).
+  eapply (PCUICSubstitution.isTypeRel_substitution (Δ := [])).
+  2:{ cbn. eapply isTypeRel_weaken; tea. pcuic. }
+  eapply PCUICInductives.projection_subslet; tea.
+  now eapply validity.
+Qed.
 
 Section OnInductives.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -490,10 +534,10 @@ Proof using Type.
       eapply isTypeRel2_relevance; tea.
       exists ps; split => //.
   - pose proof (declared_projection_lookup isdecl).
-    assert (isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) (pdecl.(proj_relevance))) by (eapply isType_of_projection; tea).
+    assert (isTypeRel Σ Γ (subst0 (c :: List.rev args) (proj_type pdecl)@[u]) (pdecl.(proj_relevance))) by (eapply isTypeRel_projection; tea).
     split; intro Hr => //.
     + inv Hr.
-      assert (pdecl = pdecl0). { clear -H0 isdecl. destruct H0 as (((H0m & H0i) & H0c) & H0p & _), isdecl as (((Hm & Hi) & Hc) & Hp & _). unfold declared_minductive in Hm, H0m. rewrite H0m in Hm. do 2 inversion Hm. subst mdecl0. rewrite H0i in Hi. inversion Hi. subst idecl0. rewrite H0c in Hc. inversion Hc. subst cdecl0. rewrite H0p in Hp. now inversion Hp. } subst pdecl0.
+      destruct (declared_projection_inj isdecl H0) as [? [? []]]; subst mdecl0 idecl0 cdecl0 pdecl0.
       assumption.
     + enough (pdecl.(proj_relevance) = rel) by (subst rel; econstructor; apply isdecl).
       eapply isTypeRel2_relevance; tea.

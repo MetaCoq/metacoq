@@ -718,7 +718,7 @@ Proof.
   destruct onps. destruct (ind_indices idecl). cbn.
   eapply typing_spine_refl. eapply isType_Sort; tea.
   now eapply on_inductive_sort.
-  now cbn in *.
+  cbn in on_projs_noidx. congruence. 
   eapply isType_weaken; auto.
   now rewrite (oib.(ind_arity_eq)) in X.
 Qed.
@@ -988,11 +988,12 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
        i0 < i ->
        forall x,
        nth_error (ind_projs idecl) i0 = Some x ->
-      isType (Σ.1, ind_universes mdecl)
+      isTypeRel (Σ.1, ind_universes mdecl)
            (smash_context [] (ind_params mdecl),,
             vass indb
               (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
                  (to_extended_list (smash_context [] (ind_params mdecl))))) x.(proj_type)
+                 x.(proj_relevance)
          × (∑ decl : context_decl,
               [× nth_error (smash_context [] (cstr_args c))
                   (context_assumptions (cstr_args c) - S i0) = Some decl,
@@ -1079,10 +1080,11 @@ Proof.
         reflexivity. autorewrite with len.
         simpl.
         rewrite context_assumptions_smash_context /= //.
+        destruct IH as [isTy [decl [nthdecl _ _ eqpdecl ptyeq]]].
+        eapply PCUICDeclarationTyping.isType_of_isTypeRel in isTy.
         assert(subst_instance (abstract_instance (ind_universes mdecl)) pdecl.(proj_type) = pdecl.(proj_type)) as ->.
         { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
           eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
-        destruct IH as [isTy [decl [nthdecl _ _ eqpdecl ptyeq]]].
         move ptyeq at bottom.
         rewrite nthdecl in Hnth. noconf Hnth. simpl in ptyeq.
         rewrite -eqpdecl. simpl.
@@ -1111,7 +1113,7 @@ Proof.
         ++ constructor. apply smash_context_assumption_context; constructor.
         ++ unfold to_extended_list, to_extended_list_k.  simpl.
           rewrite -reln_lift /= (reln_acc [_]) rev_app_distr /= //.
-        ++ now rewrite (Nat.add_1_r i).
+        ++ now rewrite (Nat.add_1_r i).        
 Qed.
 
 Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
@@ -1141,7 +1143,8 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
     on_projections mdecl (inductive_mind ind) (inductive_ind ind)
       idecl (ind_indices idecl) cs ->
     Alli (fun i pdecl =>
-    isType (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.(proj_type) *
+    isTypeRel (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.(proj_type) 
+      pdecl.(proj_relevance) *
       ∑ decl,
         [× nth_error (smash_context [] (cstr_args cs))
           (context_assumptions (cstr_args cs) - S i) = Some decl,
@@ -1410,6 +1413,7 @@ Proof.
   split.
   unfold projection_type in H0.
   rewrite H0. exists s; split; auto.
+  now rewrite on_proj_relevance.
   rewrite -/indb in Hs.
   rewrite /projection_type' -/indb -/indsubst -/projsubst.
   rewrite Nat.add_1_r in Hs. exact Hs.
@@ -1467,10 +1471,8 @@ Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl i
   wf Σ.1 ->
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   let u := abstract_instance (ind_universes mdecl) in
-  isType (Σ.1, ind_universes mdecl)
-    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.(proj_ind) u)
-          (to_extended_list (smash_context [] (ind_params mdecl)))))::
-        smash_context [] (ind_params mdecl)) pdecl.(proj_type).
+  isTypeRel (Σ.1, ind_universes mdecl)
+    (projection_context_gen p.(proj_ind) mdecl idecl) pdecl.(proj_type) pdecl.(proj_relevance).
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
@@ -1493,11 +1495,8 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
   forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl cdecl pdecl),
   let u := abstract_instance (ind_universes mdecl) in
   (ind_ctors idecl = [cdecl]) *
-  isType (Σ.1, ind_universes mdecl)
-    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |}
-      (mkApps (tInd p.(proj_ind) u)
-          (to_extended_list (smash_context [] (ind_params mdecl)))))::
-      smash_context [] (ind_params mdecl)) pdecl.(proj_type) *
+  isTypeRel (Σ.1, ind_universes mdecl)
+    (projection_context_gen p.(proj_ind) mdecl idecl) pdecl.(proj_type) pdecl.(proj_relevance) *
   ∑ decl,
     [× nth_error (smash_context [] (cstr_args cdecl))
       (context_assumptions (cstr_args cdecl) - S p.(proj_arg)) = Some decl,

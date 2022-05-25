@@ -3006,7 +3006,8 @@ Proof.
   epose proof (declared_projection_type_and_eq wfΣ declp).
   destruct (on_declared_projection declp).
   set (oib := declared_inductive_inv _ _ _ _) in *. simpl in p1, X.
-  destruct X as [[? ?] ?].
+  destruct X as [[? hty] ?].
+  eapply isType_of_isTypeRel in hty.
   destruct p1 as [[[H onps] onidx] onproj].
   simpl in *.
   destruct ind_cunivs as [|? []] eqn:cseq => //.

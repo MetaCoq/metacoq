@@ -361,7 +361,7 @@ Section Validity.
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
-      eapply infer_typing_sort_impl with _ isdecl'; [apply relevance_subst_opt|]; intros Hs.
+      eapply isType_of_isTypeRel, infer_typing_sort_impl with _ isdecl'; [apply relevance_subst_opt|]; intros Hs.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
       eapply (weaken_ctx Γ) in Hs; eauto.

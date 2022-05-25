@@ -2458,6 +2458,7 @@ Proof.
       destruct (ind_cunivs oib) as [|? []] eqn:hcunivs; try rewrite hcunivs // in tyargctx.
       specialize (projsubs onps).
       epose proof (declared_projection_type_and_eq wf isdecl) as [[hctors' hty] [decl'' [Hdecl Hty wfdecl peq peq']]].
+      eapply isType_of_isTypeRel in hty. unfold projection_context_gen in hty.
       red in onp.
       unfold projection_type, projection_type' in *.
       set (indsubst := inds _ _ _) in *.
@@ -2551,6 +2552,7 @@ Proof.
     move: (proj2 declc).
     destruct ind_ctors as [|? []] => //. intros [= ->].
     destruct X2 as [[_ projty] projeq].
+    eapply isType_of_isTypeRel in projty. unfold projection_context_gen in projty.
     destruct typec' as [[[[[_ equ] _] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as [cparsubst0 iparsubst0 idxsubst0 subsidx [s [typectx [Hpars Hargs]]]].
     destruct ind_cunivs as [|? ?] => //; noconf Hnth.
@@ -2817,6 +2819,7 @@ Proof.
       move/validity/isType_open: typec => -> //.
     * have := (declared_projection_type_and_eq wf isdecl).
       move=> [[hctors isTy] Hdecl].
+      eapply isType_of_isTypeRel in isTy.
       move/validity/(isType_mkApps_Ind_proj_inv _ isdecl): typec => [sppars hpars hargs cu].
       move/(isType_subst_instance_decl _ _ _ _ (InductiveDecl mdecl) u _ _) : isTy.
       move/(_ _ isdecl.p1.p1.p1 cu).

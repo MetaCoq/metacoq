@@ -346,8 +346,8 @@ Proof.
   assert (smash_context [] (cstr_args cdecl)@[puinst p] = (cstr_args cdecl)@[puinst p]).
   { rewrite smash_assumption_context //. pcuic. }
   rewrite -H.
-  rewrite -PCUICClosed.smash_context_subst /= subst_context_nil.
-  rewrite -PCUICClosed.smash_context_subst /= subst_context_nil. apply eqctx.
+  rewrite -smash_context_subst /= subst_context_nil.
+  rewrite -smash_context_subst /= subst_context_nil. apply eqctx.
 Qed.
 
 

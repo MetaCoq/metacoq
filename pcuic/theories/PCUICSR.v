@@ -491,16 +491,6 @@ Proof.
   now rewrite Nat.add_comm.
 Qed.
 
-Lemma smash_context_subst_context_let_expand s Γ Δ : 
-  smash_context [] (subst_context_let_expand s Γ Δ) = 
-  subst_context_let_expand s Γ (smash_context [] Δ).
-Proof.
-  rewrite /subst_context_let_expand.
-  rewrite (smash_context_subst []).
-  now rewrite /expand_lets_ctx /expand_lets_k_ctx (smash_context_subst []) 
-    (smash_context_lift []).
-Qed.
-
 Lemma on_constructor_wf_args {cf} {Σ} {wfΣ : wf Σ} {ind c mdecl idecl cdecl u} :
   declared_constructor Σ (ind, c) mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
@@ -1088,11 +1078,6 @@ Definition closed_red1_ind' :=
     ltac:(let T := type of closed_red1_ind in  
     let T' := eval cbn in T in 
       exact (closed_red1_ind : T')).
-(* 
-Ltac revert_until x :=
-  repeat lazymatch goal with
-  | [ H : _ |- _ ] => revert H
-  end. *)
 
 Ltac invert_closed_red H :=
   generalize_eqs H; destruct H using closed_red1_ind'; simplify_dep_elim.

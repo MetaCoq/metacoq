@@ -229,3 +229,13 @@ Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty}
 Proof.
   apply isTypeRelOpt_lift => //.
 Qed.
+
+Lemma isTypeRel_weaken {cf:checker_flags} {Σ : global_env_ext} {Γ Δ ty rel} :
+  wf Σ -> wf_local Σ Γ ->
+  isTypeRel Σ Δ ty rel ->
+  isTypeRel Σ (Γ ,,, Δ) ty rel.
+Proof.
+  intros wfΣ wfΓ [s [hrel hty]].
+  exists s; split => //.
+  now eapply weaken_ctx.
+Qed.

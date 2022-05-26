@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICConversion PCUICContextConversion PCUICContextConversionTyp 
      PCUICValidity PCUICArities PCUICSpine
      PCUICInductives PCUICInductiveInversion PCUICOnFreeVars
-     PCUICWellScopedCumulativity PCUICGuardCondition.
+     PCUICWellScopedCumulativity PCUICGuardCondition PCUICContexts.
 
 From Equations Require Import Equations.
 
@@ -31,6 +31,21 @@ Proof.
   intros; eapply All2_fold_impl; tea.
   intros ???? []; constructor; subst; auto;
   eapply eq_term_upto_univ_empty_impl; tea; tc.
+Qed.
+
+Lemma eq_term_upto_univ_it_mkProd_or_LetIn (Γ Γ' : context) T : 
+  All2 (PCUICEquality.compare_decls eq eq) Γ Γ' ->
+  it_mkProd_or_LetIn Γ T ≡α it_mkProd_or_LetIn Γ' T.
+Proof.
+  induction Γ in Γ' |- * using PCUICInduction.ctx_length_rev_ind.
+  - intros a; depelim a. reflexivity.
+  - intros a.
+    eapply All2_app_inv_l in a as [? [? [? []]]]. subst.
+    depelim a0. depelim a0.
+    rewrite !it_mkProd_or_LetIn_app.
+    depelim c; subst; constructor; cbn; auto; try reflexivity.
+    apply X => //.
+    apply X => //.
 Qed.
 
 Section Alpha.
@@ -1145,6 +1160,72 @@ Section Alpha.
     split; [eapply isType_alpha; eauto|].
     destruct X1 as [ctx' [X1 X1']].
     exists ctx', s; auto.
+  Qed.
+
+  Lemma arity_spine_alpha {Σ : global_env_ext} {wfΣ : wf Σ} Γ args T T' T'' : 
+    isType Σ Γ T'' ->
+    arity_spine Σ Γ T args T'' ->
+    T ≡α T' ->
+    arity_spine Σ Γ T' args T''.
+  Proof using Type.
+    intros isty sp. revert T'. induction sp; intros.
+    - intros. constructor. auto.
+      pose proof (isType_alpha _ _ _ isty X).
+      eapply PCUICContextConversion.ws_cumul_pb_eq_le.
+      destruct isty as [? []].
+      constructor; fvs. red. apply PCUICEquality.upto_names_impl_eq_term. now symmetry.
+    - intros. constructor => //.
+      transitivity ty => //.
+      eapply PCUICContextConversion.ws_cumul_pb_eq_le.
+      constructor; fvs. 
+      eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars; tea. fvs.
+      apply PCUICEquality.upto_names_impl_eq_term. now symmetry.
+    - depelim X.
+      constructor. eapply IHsp => //.
+      eapply PCUICEquality.eq_term_upto_univ_subst; tc; auto.
+    - depelim X.
+      constructor.
+      pose proof (validity t).
+      eapply isType_alpha in X; tea. destruct X as [s [_ Hs]].
+      econstructor; tea. eapply convSpec_cumulSpec. now apply eq_term_upto_univ_cumulSpec, PCUICEquality.upto_names_impl_eq_term.
+      eapply IHsp => //. eapply PCUICEquality.eq_term_upto_univ_subst; tc; auto. reflexivity.
+  Qed.
+
+  Lemma arity_spine_mkProd_alpha {Σ : global_env_ext} {wfΣ : wf Σ} {Γ args} {Δ Δ' : context} {T T'} : 
+    isType Σ Γ T' ->
+    arity_spine Σ Γ (it_mkProd_or_LetIn Δ T) args T' ->
+    All2 (PCUICEquality.compare_decls eq eq) Δ Δ' ->
+    arity_spine Σ Γ (it_mkProd_or_LetIn Δ' T) args T'.
+  Proof.
+    intros isty sp eq.
+    eapply arity_spine_alpha => //. exact sp.
+    now apply eq_term_upto_univ_it_mkProd_or_LetIn.
+  Qed.
+
+  Lemma apply_predctx {Σ : global_env_ext} Γ (ci : case_info) p indices c ps mdecl idecl {wfΣ : wf Σ.1} :
+    declared_inductive Σ ci mdecl idecl ->
+    wf_predicate mdecl idecl p ->
+    All2 (PCUICEquality.compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+    ctx_inst Σ Γ (pparams p ++ indices) (List.rev (ind_params mdecl,,, ind_indices idecl)@[puinst p]) ->
+    Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices) ->
+    let predctx := case_predicate_context ci mdecl idecl p in
+    let ptm := it_mkLambda_or_LetIn predctx (preturn p) in
+    Σ;;; Γ,,, predctx |- preturn p : tSort ps -> Σ ;;; Γ |- mkApps ptm (indices ++ [c]) : tSort ps.
+  Proof.
+    intros decli wfp hpctx ctxi hd predctx ptm hret.
+    pose proof (validity hd) as ist.
+    pose proof (isType_mkApps_Ind_smash decli ist). forward X. apply wfp.
+    destruct X as [sppars [spinds cu]].
+    eapply type_mkApps_arity. subst ptm. eapply PCUICGeneration.type_it_mkLambda_or_LetIn; tea.
+    assert (wfΓ : wf_local Σ Γ) by pcuic.
+    assert (wfu : wf_universe Σ ps). now eapply PCUICWfUniverses.typing_wf_universe in hret.
+    unshelve epose proof (PCUICInductives.arity_spine_case_predicate (ci:=ci) (indices:=indices) wfΓ decli cu wfu sppars _ hd).
+    now rewrite smash_context_subst_context_let_expand in spinds.
+    unshelve eapply (arity_spine_mkProd_alpha _ X).
+    { now eapply PCUICArities.isType_Sort. }
+    unfold predctx. unfold case_predicate_context, case_predicate_context_gen.
+    symmetry; eapply PCUICCasesContexts.eq_binder_annots_eq.
+    now eapply wf_pre_case_predicate_context_gen.
   Qed.
 
 End Alpha.

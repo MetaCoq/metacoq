@@ -841,7 +841,7 @@ Section CheckEnv.
     unfold arities_context.
     induction 1; simpl; auto.
     assert (isty : isTypeRel Σ [] (ind_type x) Relevant)
-    by (destruct p as (a & b & c); rewrite b in a |- *; eapply PCUICRelevanceTyp.ind_arity_relevant => //).
+    by (destruct p as (a & b & c); rewrite b in a |- *; eapply PCUICInductiveInversion.ind_arity_relevant => //).
     rewrite rev_map_cons /=.
     eapply All_local_env_app; split. constructor; pcuic.
     eapply All_local_env_impl; eauto.
@@ -1942,7 +1942,7 @@ Section CheckEnv.
         rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head. lia_f_equal.
       - eapply All_nth_error in wfar; tea.
         destruct wfar as (isty & e & eqrel), wtinds.
-        eapply PCUICRelevanceTyp.isTypeRel_cstr_type; eauto.
+        eapply PCUICInductiveInversion.isTypeRel_cstr_type; eauto.
       - now destruct wtinds.
       - destruct lets_in_constructor_types; eauto.
     Qed. 
@@ -2341,7 +2341,7 @@ End monad_Alli_nth_forall.
        ind_sorts := onsorts;
        ind_relevance_compat := eqrel;
        onIndices := _; |}.
-    - rewrite e in isty |- *; apply PCUICRelevanceTyp.ind_arity_relevant => //. apply H0.
+    - rewrite e in isty |- *; apply PCUICInductiveInversion.ind_arity_relevant => //. apply H0.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
     Unshelve. eauto.
   Qed. 

@@ -41,35 +41,6 @@ Proof.
   eapply All2_app => //. reflexivity.
 Qed.
 
-Section OnInductives.
-  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-  
-  Lemma on_minductive_wf_params_weaken {ind mdecl Γ} {u} :
-    declared_minductive Σ.1 ind mdecl ->
-    consistent_instance_ext Σ (ind_universes mdecl) u ->
-    wf_local Σ Γ ->
-    wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
-  Proof.
-    intros.
-    eapply weaken_wf_local; tea.
-    eapply PCUICArities.on_minductive_wf_params; tea.
-  Qed.
-  
-  Context {mdecl ind idecl}
-    (decli : declared_inductive Σ ind mdecl idecl).
-  
-  Lemma on_minductive_wf_params_indices_inst_weaken {Γ} (u : Instance.t) :
-    consistent_instance_ext Σ (ind_universes mdecl) u ->
-    wf_local Σ Γ ->
-    wf_local Σ (Γ ,,, (ind_params mdecl ,,, ind_indices idecl)@[u]).
-  Proof.
-    intros. eapply weaken_wf_local; tea.
-    eapply PCUICInductives.on_minductive_wf_params_indices_inst; tea.
-  Qed.
-
-
-End OnInductives.
-
 Local Existing Instance extraction_checker_flags.
 (* Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 #[global]

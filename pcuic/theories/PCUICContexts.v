@@ -746,6 +746,16 @@ Proof.
   now rewrite !to_extended_list_k_subst to_extended_list_k_lift_context.
 Qed.
 
+Lemma smash_context_subst_context_let_expand s Γ Δ : 
+  smash_context [] (subst_context_let_expand s Γ Δ) = 
+  subst_context_let_expand s Γ (smash_context [] Δ).
+Proof.
+  rewrite /subst_context_let_expand.
+  rewrite (smash_context_subst []).
+  now rewrite /expand_lets_ctx /expand_lets_k_ctx (smash_context_subst []) 
+    (smash_context_lift []).
+Qed.
+
 Lemma map2_set_binder_name_alpha (nas : list aname) (Δ Δ' : context) :
   All2 (fun x y => eq_binder_annot x (decl_name y)) nas Δ ->
   eq_context_upto_names Δ Δ' ->

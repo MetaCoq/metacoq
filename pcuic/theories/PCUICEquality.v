@@ -1812,3 +1812,21 @@ Proof.
   symmetry; eapply (eq_annots_subst_context _ (List.rev pars) 0). 
   reflexivity.
 Qed.
+
+Lemma eq_annots_expand_lets_ctx (Γ : list aname) (Δ Δ' : context) :
+  eq_annots Γ (expand_lets_ctx Δ Δ') <-> eq_annots Γ Δ'.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  etransitivity. eapply eq_annots_subst_context.
+  eapply eq_annots_lift_context.
+Qed.
+
+Lemma eq_annots_ind_predicate_context ind mdecl idecl (pctx : list aname) :
+  eq_annots pctx (ind_predicate_context ind mdecl idecl) ->
+  eq_annots pctx (idecl_binder idecl :: ind_indices idecl).
+Proof.
+  rewrite /ind_predicate_context.
+  intros eq. depelim eq; cbn in *.
+  constructor => //.
+  now eapply eq_annots_expand_lets_ctx.
+Qed.

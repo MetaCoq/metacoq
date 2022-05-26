@@ -659,6 +659,17 @@ Section WfEnv.
     now apply onParams in H.
   Qed.
 
+  Lemma on_minductive_wf_params_weaken {ind mdecl Γ} {u} :
+    declared_minductive Σ.1 ind mdecl ->
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    wf_local Σ Γ ->
+    wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
+  Proof using wfΣ.
+    intros.
+    eapply weaken_wf_local; tea.
+    eapply on_minductive_wf_params; tea.
+  Qed.
+
   Lemma it_mkProd_or_LetIn_wf_local {Γ Δ T U} : 
     Σ ;;; Γ |- it_mkProd_or_LetIn Δ T : U -> wf_local Σ (Γ ,,, Δ).
   Proof using wfΣ.

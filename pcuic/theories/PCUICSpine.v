@@ -453,6 +453,21 @@ Section WfEnv.
       apply IHsp. now eapply isType_apply in wf => //.
   Qed.
 
+  Lemma spine_subst_alpha {Γ args inst Δ Δ'} : 
+    spine_subst Σ Γ args inst Δ ->
+    All2 (PCUICEquality.compare_decls eq eq) Δ Δ' ->
+    spine_subst Σ Γ args inst Δ'.
+  Proof.
+    intros [wf wf' cs sub] eqd.
+    split => //.
+    eapply wf_local_alpha; tea. eapply All2_app; trea.
+    2:{ eapply subslet_eq_context_alpha; tea. }
+    move: cs. clear -eqd.
+    induction 1 in Δ', eqd |- *; depelim eqd; try constructor; depelim c; subst.
+    - constructor. now apply IHcs.
+    - constructor. eauto.
+  Qed.
+
   Import PCUICConversion.
 
   Lemma arity_typing_spine {Γ Γ' s inst s'} : 

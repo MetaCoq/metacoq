@@ -485,6 +485,19 @@ Proof using Type.
   intros Hs; now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
+Lemma isTypeRel_subst_instance_decl {Σ Γ T r c decl u} :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  isTypeRel (Σ.1, universes_decl_of_decl decl) Γ T r ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  isTypeRel Σ (subst_instance u Γ) (subst_instance u T) r.
+Proof using Type.
+  intros wfΣ look isty cu.
+  eapply infer_typing_sort_impl with _ isty; [apply relevance_subst_opt|].
+  intros Hs.
+  eapply (typing_subst_instance_decl _ _ _ (tSort _)) in Hs; tea.
+Qed.
+
 Lemma isArity_subst_instance u T :
   isArity T ->
   isArity (subst_instance u T).

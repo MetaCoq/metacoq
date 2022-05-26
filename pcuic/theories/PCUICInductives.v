@@ -196,6 +196,22 @@ Proof.
   eapply wf_arities_context; tea.
 Qed.
 
+Lemma nth_error_arities_context mdecl i idecl :
+  nth_error (List.rev mdecl.(ind_bodies)) i = Some idecl ->
+  nth_error (arities_context mdecl.(ind_bodies)) i =
+    Some {| decl_name := {| binder_name := nNamed idecl.(ind_name); binder_relevance := Relevant |};
+            decl_body := None;
+            decl_type := idecl.(ind_type) |}.
+  Proof using Type.
+  generalize mdecl.(ind_bodies) => l.
+  intros hnth.
+  epose proof (nth_error_Some_length hnth). autorewrite with len in H.
+  rewrite nth_error_rev in hnth. now autorewrite with len.
+  rewrite List.rev_involutive in hnth. autorewrite with len in hnth.
+  rewrite /arities_context rev_map_spec nth_error_rev; autorewrite with len; auto.
+  now rewrite List.rev_involutive nth_error_map hnth.
+Qed.
+
 Lemma instantiate_inds {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {u mind mdecl} :
   declared_minductive Σ.1 mind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
@@ -270,6 +286,15 @@ Section OnInductives.
     intros.
     eapply (wf_local_instantiate _ (proj1 decli)); eauto.
     now eapply on_minductive_wf_params_indices.
+  Qed.
+
+  Lemma on_minductive_wf_params_indices_inst_weaken {Γ} (u : Instance.t) :
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    wf_local Σ Γ ->
+    wf_local Σ (Γ ,,, (ind_params mdecl ,,, ind_indices idecl)@[u]).
+  Proof.
+    intros. eapply weaken_wf_local; tea.
+    eapply on_minductive_wf_params_indices_inst; tea.
   Qed.
 
   Lemma on_inductive_inst Γ u :

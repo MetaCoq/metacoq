@@ -73,7 +73,7 @@ Section WfEnv.
     isType Σ Γ T' ->
     Σ ;;; Γ ⊢ T' ≤ T ->
     typing_spine_pred Σ Γ P T' args U.
-  Proof.
+  Proof using wfΣ.
     induction 1 in |- *; intros T' isTy redT.
     - constructor; eauto. transitivity ty; auto.
     - specialize IHX with (T' := (B {0 := hd})).
@@ -105,7 +105,7 @@ Proof.
   intros Hf Ht. simpl in Hf.
   specialize (IHu (tApp f a) T).
   epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea. 
-  edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
+  edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
   exists (tProd na' A' B'). exists Hf'. exists s_. exists HA. 
   split. rewrite <- H2. lia.
   split. rewrite <- Nat.le_max_l, <- H2. lia.
@@ -207,14 +207,12 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
        wf_predicate mdecl idecl p ->
        consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-       wf_local Σ (Γ ,,, predctx) ->
        forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
        P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
+       wf_local Σ (Γ ,,, predctx) ->
        PΓ Σ (Γ ,,, predctx) ->
        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-       ctx_inst Σ Γ (p.(pparams) ++ indices)
-         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
-       PCUICTyping.ctx_inst P Σ Γ (p.(pparams) ++ indices) 
+       PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -225,10 +223,8 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
          (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
          let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
          (PΓ Σ (Γ ,,, brctxty.1) ×
-          (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
-           (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2) ×
-           (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) ×
-           (P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))) 0 idecl.(ind_ctors) brs ->
+         (Prop_conj typing P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2) ×
+         (Prop_conj typing P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))) 0 idecl.(ind_ctors) brs ->
        P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -244,9 +240,8 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       fix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
       PΓ Σ (Γ ,,, types) ->
-      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
-      All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
-          P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+      All (on_def_type (lift_typing2 typing P Σ) Γ) mfix ->
+      All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
       wf_fixpoint Σ.1 mfix ->
       P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
@@ -255,9 +250,8 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       cofix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
       PΓ Σ (Γ ,,, types) ->       
-      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
-      All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
-          P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+      All (on_def_type (lift_typing2 typing P Σ) Γ) mfix ->
+      All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
       wf_cofixpoint Σ.1 mfix ->
       P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
@@ -284,7 +278,7 @@ Proof.
  pose proof (@inversion_mkApps cf) as Happs. specialize Happs with (H := Ht).
  forward Happs; eauto.
  destruct (Happs _ Hprod) as (A' & Hf & s' & HA & sz_f & sz_A & HL).
- destruct @inversion_Prod_size with (H := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
+ destruct @inversion_Prod_size with (H0 := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
  eapply X4. 6:eauto. 4: exact HA. all: eauto.
  - intros. eapply (IH _ _ Hf). lia.
  - Unshelve. 2:exact Hf. intros. eapply (IH _ _ Ht'). lia.
@@ -387,14 +381,12 @@ Lemma typing_ind_env `{cf : checker_flags} :
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-      wf_local Σ (Γ ,,, predctx) ->
       forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
       P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
+      wf_local Σ (Γ ,,, predctx) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-      PCUICTyping.ctx_inst typing Σ Γ (p.(pparams) ++ indices)
-        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
-      PCUICTyping.ctx_inst P Σ Γ (p.(pparams) ++ indices) 
+      PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -405,10 +397,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
         (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
         (PΓ Σ (Γ ,,, brctxty.1) ×
-          (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
-          (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2) ×
-          (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) ×
-          (P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))) 0 idecl.(ind_ctors) brs ->
+          (Prop_conj typing P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2) ×
+          (Prop_conj typing P) Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
       P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
       
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -424,9 +414,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
         fix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         PΓ Σ (Γ ,,, types) ->
-        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
-        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
-            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+        All (on_def_type (lift_typing2 typing P Σ) Γ) mfix ->
+        All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
         wf_fixpoint Σ.1 mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
@@ -435,9 +424,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
         cofix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         PΓ Σ (Γ ,,, types) ->
-        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
-        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
-            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+        All (on_def_type (lift_typing2 typing P Σ) Γ) mfix ->
+        All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
@@ -660,8 +648,8 @@ Proof with eauto with wcbv; try congruence.
     destruct (decl.(cst_body)) as [body | ] eqn:E.
     + eauto with wcbv.
     + red in Hax. eapply Hax in E; eauto.
-  - intros Σ wfΣ Γ _ ci p c brs indices ps mdecl idecl Hidecl Hforall _ Heq Heq_context predctx Hwfpred Hcon Hwfl Hreturn IHreturn _.
-    intros Helim Hinst Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
+  - intros Σ wfΣ Γ _ ci p c brs indices ps mdecl idecl Hidecl Hforall _ Heq Heq_context predctx Hwfpred Hcon Hreturn IHreturn Hwfl _.
+    intros Helim Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
     specialize (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv.
     pose proof IH as IHv.
     eapply PCUICCanonicity.value_canonical in IH; eauto.
@@ -816,4 +804,92 @@ Proof.
     exists v. sq. eapply red1_eval; eauto.
     now eapply subject_closed in HA.
   - exists t. sq. eapply value_final; eauto.
+Qed.  
+
+From MetaCoq Require Import PCUICFirstorder.
+
+Lemma firstorder_value_irred Σ t t' :
+  firstorder_value Σ [] t ->
+  PCUICReduction.red1 Σ [] t t' -> False.
+Proof.
+  intros H.
+  revert t'. pattern t. revert t H.
+  eapply firstorder_value_inds.
+  intros i n ui u args pandi Hty Hargs IH Hprop t' Hred.
+  eapply red1_mkApps_tConstruct_inv in Hred as (x & -> & Hone).
+  solve_all.
+  clear - IH Hone. induction IH as [ | ? ? []] in x, Hone |- *.
+  - invs Hone.
+  - invs Hone; eauto.
+Qed.
+
+Definition ws_empty f : ws_context f.
+Proof.
+  unshelve econstructor.
+  exact nil.
+  reflexivity.
+Defined.
+
+Lemma irred_equal Σ Γ t t' :
+  Σ ;;; Γ ⊢ t ⇝ t' ->
+  (forall v', PCUICReduction.red1 Σ Γ t v' -> False) ->
+  t = t'.
+Proof.
+  intros Hred Hirred. destruct Hred.
+  clear clrel_ctx clrel_src.
+  induction clrel_rel.
+  - edestruct Hirred; eauto.
+  - reflexivity.
+  - assert (x = y) as <- by eauto. eauto.
+Qed.
+
+Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ -> 
+  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  closed_red Σ [] t v ->
+  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
+  squash (eval Σ t v).
+Proof.
+  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  destruct (@WN Σ t) as (v' & Hv'); eauto.
+  1:{ eexists; eauto. }
+  sq.
+  assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
+  eapply closed_red_confluence in Hred as Hred_. destruct Hred_ as (v'' & H1 & H2).
+  2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
+  destruct v as [v Hv].
+  assert (v = v'') as <- by (eapply irred_equal; eauto).
+  assert (firstorder_value Σ [] v'). { 
+    eapply firstorder_value_spec; eauto.
+    eapply subject_reduction_eval; eauto.
+    eapply eval_to_value. eauto.
+  }
+  enough (v' = v) as -> by eauto.
+  eapply irred_equal. eauto.
+  intros. eapply firstorder_value_irred; eauto.
+Qed.
+
+Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ -> 
+  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  red Σ [] t v ->
+  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
+  squash (eval Σ t v).
+Proof.
+  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  unshelve edestruct @ws_wcbv_standardization.
+  1-5: shelve.
+  1: exists t; shelve.
+  1: exists v; shelve.
+  all: sq; eauto.
+  cbn.
+  econstructor; eauto.
+  eapply subject_is_open_term. eauto.
+  Unshelve.
+  all: rewrite -closed_on_free_vars_none.
+  - now eapply subject_closed in Hty.
+  - eapply @subject_closed with (Γ := []); eauto.
+    eapply subject_reduction; eauto.
 Qed.  

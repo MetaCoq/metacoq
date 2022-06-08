@@ -1,5 +1,3 @@
-SED = `which gsed || which sed`
-
 all: theory # plugin
 
 _PluginProject: _PluginProject.in metacoq-config
@@ -12,7 +10,7 @@ _CoqProject: _CoqProject.in metacoq-config
 
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
-	$(SED) -i -e s/coqdeps/coqdeps.plugin/g Makefile.plugin
+	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
 
 Makefile.pcuic: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.pcuic $(DEPS)
@@ -45,3 +43,9 @@ mrproper:
 
 cleanplugin: Makefile.plugin
 #	make -f Makefile.plugin clean
+
+vos: Makefile.pcuic
+	$(MAKE) -f Makefile.pcuic vos
+
+quick: Makefile.pcuic
+	$(MAKE) -f Makefile.pcuic COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

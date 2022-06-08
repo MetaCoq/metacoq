@@ -11,3 +11,9 @@ clean: Makefile.coq
 
 mrproper:
 	rm -f Makefile.coq
+
+vos: Makefile.coq
+	$(MAKE) -f Makefile.coq vos
+
+quick: Makefile.coq
+	$(MAKE) -f Makefile.coq COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

@@ -77,14 +77,6 @@ Module string_of_term_tree.
 End string_of_term_tree.
 
 Definition string_of_term := Tree.to_string ∘ string_of_term_tree.string_of_term.
-
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
   
 Definition decompose_app (t : term) :=
   match t with
@@ -211,12 +203,6 @@ Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
       if kn == id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
-
-Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
-  match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
-  | Monomorphic_ctx => Monomorphic_entry ContextSet.empty
-  end.
 
 (* TODO factorize in Environment *)
 (* was mind_decl_to_entry *)

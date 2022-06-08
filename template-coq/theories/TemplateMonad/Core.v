@@ -50,6 +50,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : TemplateMonad ConstraintSet.t
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
+| tmQuoteModule : qualid -> TemplateMonad (list global_reference)
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
 | tmMkInductive : bool -> mutual_inductive_entry -> TemplateMonad unit

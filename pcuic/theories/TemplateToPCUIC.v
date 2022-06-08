@@ -11,7 +11,7 @@ Proof.
   now intros [->%Z.leb_le ->%Z.ltb_lt].
 Qed.
 
-Definition uint63_to_model (i : Uint63.int) : uint63_model :=
+Definition uint63_to_model (i : Int63.int) : uint63_model :=
   exist (Uint63.to_Z i) (to_Z_bounded_bool i).
 
 Definition float64_to_model (f : PrimFloat.float) : float64_model :=
@@ -29,12 +29,12 @@ Section Map2Bias.
     end.
 
   Lemma map2_bias_left_length l l' : #|map2_bias_left l l'| = #|l|.
-  Proof.
+  Proof using Type.
     induction l in l' |- *; destruct l'; simpl; auto; now rewrite IHl.
   Qed.
 
   Lemma map2_map2_bias_left l l' : #|l| = #|l'| -> map2_bias_left l l' = map2 f l l'.
-  Proof.
+  Proof using Type.
     induction l in l' |- *; destruct l'; simpl; auto.
     - discriminate.
     - intros [= hlen]. rewrite IHl; tas. reflexivity.

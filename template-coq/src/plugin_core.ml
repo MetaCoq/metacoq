@@ -166,6 +166,35 @@ let tmQuoteUniverses : UGraph.t tm =
   fun ~st env evm success _fail ->
     success ~st env evm (Environ.universes env)
 
+let quote_module (qualid : qualid) : global_reference list =
+  let mp = Nametab.locate_module qualid in
+  let mb = Global.lookup_module mp in
+  let rec aux mb =
+    let open Declarations in
+    let me = mb.mod_expr in
+    let get_refs s =
+      let body = Modops.destr_nofunctor s in
+      let get_ref (label, field) =
+        let open Names in 
+        match field with
+        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
+        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+        | SFBmodule mb -> aux mb
+        | SFBmodtype mtb -> []
+      in
+      CList.map_append get_ref body
+    in
+    match me with
+    | Abstract -> []
+    | Algebraic _ -> []
+    | Struct s -> get_refs s
+    | FullStruct -> get_refs mb.Declarations.mod_type
+  in aux mb
+
+let tmQuoteModule (qualid : qualid) : global_reference list tm =
+  fun ~st env evd success _fail ->
+  success ~st env evd (quote_module qualid)
+
 (*let universes_entry_of_decl ?withctx d =
   let open Declarations in
   let open Entries in

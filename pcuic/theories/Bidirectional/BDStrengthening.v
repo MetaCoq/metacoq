@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
   PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed PCUICRenameDef PCUICInstConv PCUICClosedTyp PCUICWeakeningEnvTyp PCUICRenameTyp PCUICRenameConv PCUICGuardCondition PCUICWeakeningConv.
 
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
 Require Import Coq.Program.Equality.
@@ -374,7 +374,7 @@ Section OnFreeVars.
   Let PΓ_rel (Γ Γ' : context) := True.
 
   Theorem bidirectional_on_free_vars : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-  Proof.
+  Proof using wfΣ.
     apply bidir_ind_env.
 
     - constructor.
@@ -489,7 +489,7 @@ Section OnFreeVars.
     on_free_vars P t ->
     Σ ;;; Γ |- t ▹ T ->
     on_free_vars P T.
-  Proof.
+  Proof using wfΣ.
     intros.
     edestruct bidirectional_on_free_vars as (_&_&_&p&_).
     eapply p ; eauto.
@@ -500,7 +500,7 @@ Section OnFreeVars.
     on_free_vars P t ->
     Σ ;;; Γ |- t ▹Π (na,A,B) ->
     on_free_vars P A × on_free_vars (shiftnP 1 P) B.
-  Proof.
+  Proof using wfΣ.
     intros.
     eapply bidirectional_on_free_vars ; eauto.
   Qed.
@@ -582,7 +582,7 @@ Lemma rename_telescope P f Γ Δ tel tys:
   on_free_vars_ctx P (List.rev tel) ->
   PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ tys tel ->
   PCUICTyping.ctx_inst checking Σ Δ (map (rename f) tys) (rename_telescope f tel).
-Proof.
+Proof using Type.
   intros ur hΓ htys htel ins.
   induction ins in Δ, ur, hΓ, htys, htel |- *.
   - constructor.
@@ -611,7 +611,7 @@ Proof.
 Qed.
 
 Theorem bidirectional_renaming : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-Proof.
+Proof using wfΣ.
   apply bidir_ind_env.
 
   - intros Γ wfΓ hΓ. red.
@@ -631,7 +631,7 @@ Proof.
       constructor ; eauto.
       1: by eapply IHallΓ' ; eauto.
       eexists.
-      eapply s.
+      eapply Hs.
       * eapply urenaming_context ; tea.
       * rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
@@ -643,13 +643,13 @@ Proof.
       constructor ; eauto.
       * by eapply IHallΓ' ; eauto.
       * eexists.
-        eapply s.
+        eapply Hs.
         1: eapply urenaming_context ; tea.
         2: eauto.
         rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
         by rewrite on_free_vars_ctx_on_ctx_free_vars.
-      * eapply c.
+      * eapply Hc.
         1: eapply urenaming_context ; tea.
         all: auto.
         rewrite on_ctx_free_vars_concat.

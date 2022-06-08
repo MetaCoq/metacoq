@@ -42,6 +42,7 @@ type template_monad =
   | TmQuoteInd of Constr.t * bool (* strict *)
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
+  | TmQuoteModule of Constr.t
 
   | TmUnquote of Constr.t                   (* only Prop *)
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)

@@ -1,7 +1,7 @@
 From Coq Require Import Arith List.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
-     PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
+     PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnv PCUICWeakeningEnvTyp.
 Set Warnings "-notation-overridden".
 From MetaCoq.Erasure Require Import EAst EAstUtils ECSubst EInduction
   ELiftSubst EGlobalEnv EWcbvEval Extract ESubstitution.
@@ -454,13 +454,13 @@ Qed. *)
 
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
-  on_global_decls (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
+  on_global_decls cumulSpec0 (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
   erases_deps Σ Σ' t ->
   erases_deps (add_global_decl Σ (kn, decl)) ((kn, decl') :: Σ') t.
 Proof.
   intros wfu wfΣ er.
   induction er using erases_deps_forall_ind; try solve [now constructor].
-  apply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H as not_fresh.
+  apply PCUICWeakeningEnv.lookup_env_Some_fresh in H as not_fresh.
   econstructor.
   - unfold PCUICAst.declared_constant in *; cbn.
     inversion wfΣ; subst.
@@ -497,7 +497,7 @@ Proof.
       apply H.
     + now destruct E.cst_body.
   - easy.
-  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto with pcuic.
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto with pcuic; tc.
     { eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. }
     invs wfΣ.
     destruct H0. split. 2: eauto.
@@ -505,20 +505,20 @@ Proof.
     red. cbn. cbn in *.
     destruct (eqb_spec (inductive_mind ind) kn). cbn in *.
     subst. 
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H5. eauto. eapply H. exact H0.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H5. eauto. eapply H. exact H0.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.
     inv wfΣ.
     unfold PCUICEnvironment.lookup_env.
     simpl. destruct (eqb_spec (inductive_mind p.1) kn); auto. subst.
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
     inv wfΣ. cbn. change (eq_kername (inductive_mind p.1) kn) with (ReflectEq.eqb (inductive_mind p.1) kn).    
     destruct (ReflectEq.eqb_spec (inductive_mind p.1) kn); auto. subst.
     destruct H as [H _].
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto. contradiction.
   - econstructor; eauto.
     destruct H as [[[declm decli] declc] [declp hp]].
     repeat split; eauto.
@@ -526,14 +526,14 @@ Proof.
     unfold PCUICEnvironment.lookup_env.
     simpl in *.
     destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn). subst.
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in declm; eauto. contradiction.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in declm; eauto. contradiction.
     apply declm.
     destruct H0 as [[[]]]. destruct a.
     repeat split; eauto.
     inv wfΣ. simpl. unfold declared_minductive. cbn.
     destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn); auto. subst.
     destruct H as [[[]]].
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto. contradiction.
 Qed.
 
 Derive Signature for erases_global_decls.

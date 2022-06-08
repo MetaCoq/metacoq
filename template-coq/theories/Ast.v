@@ -85,15 +85,15 @@ Section map_predicate.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_puints (p : predicate term) :
     uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
 End map_predicate.
 
@@ -176,19 +176,19 @@ Section map_predicate_k.
 
   Lemma map_k_pparams k (p : predicate term) :
     map (f k) (pparams p) = pparams (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_preturn k (p : predicate term) :
     f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
     pcontext p = pcontext (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition test_predicate_k (instp : Instance.t -> bool) 
     (p : nat -> term -> bool) k (pred : predicate term) :=
@@ -209,7 +209,7 @@ Section Branch.
   Global Instance branch_eq_dec :
     Classes.EqDec term ->
     Classes.EqDec branch.
-  Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+  Proof using Type. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
   Definition string_of_branch (f : term -> string) (b : branch) :=
   "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
@@ -233,7 +233,7 @@ Section map_branch.
 
     Lemma map_bbody (b : branch term) :
       bbodyf (bbody b) = bbody (map_branch b).
-    Proof. destruct b; auto. Qed.
+    Proof using Type. destruct b; auto. Qed.
 End map_branch.
 
 Lemma map_branch_map_branch
@@ -629,17 +629,43 @@ Definition subst_instance_constr := subst_instance.
 
 End TemplateTerm.
 
-Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
-                 unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
-                 unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
-                 unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *;
-                 unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
-                 unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
-                 unfold TemplateTerm.subst_instance_constr in *.
-                 
 Module Env := Environment TemplateTerm.
 Export Env.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+(** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Module TemplateTermUtils <: TermUtils TemplateTerm Env.
+
+Definition destArity := destArity.
+Definition inds := inds.
+
+End TemplateTermUtils.
+
+Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
+                  unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
+                  unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
+                  unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *;
+                  unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
+                  unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
+                  unfold TemplateTerm.subst_instance_constr in *;
+                  unfold TemplateTermUtils.destArity; unfold TemplateTermUtils.inds.
 
 Module TemplateLookup := EnvironmentTyping.Lookup TemplateTerm Env.
 Include TemplateLookup.
@@ -723,15 +749,6 @@ Record mutual_inductive_entry := {
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
-
-     (** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
 
 Lemma inds_length ind u l : #|inds ind u l| = #|l|.
 Proof.

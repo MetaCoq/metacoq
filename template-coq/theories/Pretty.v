@@ -299,7 +299,7 @@ Module PrintTermTree.
   Definition universes_decl_of_universes_entry e :=
     match e with
     | Monomorphic_entry ctx => Monomorphic_ctx
-    | Polymorphic_entry uctx => Polymorphic_ctx (fst uctx, snd (snd uctx))
+    | Polymorphic_entry names uctx => Polymorphic_ctx (names, UContext.constraints uctx)
     end.
 
   Definition print_mib Σ with_universes (short : bool) (mib : mutual_inductive_body) : t :=

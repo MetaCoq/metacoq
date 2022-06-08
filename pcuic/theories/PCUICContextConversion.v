@@ -66,7 +66,7 @@ Section ContextReduction.
   Lemma red_ctx_skip i Γ Γ' :
     red1_red_ctxP Γ Γ' ->
     red1_red_ctxP (skipn i Γ) (skipn i Γ').
-  Proof.
+  Proof using Type.
     rewrite /red1_red_ctxP => H n b b'.
     rewrite !nth_error_skipn => H0 H1.
     specialize (H (i + n)).
@@ -77,13 +77,13 @@ Section ContextReduction.
 
   Lemma All2_fold_over_red_refl {Γ Δ} :
     All2_fold (on_decls (fun (Δ _ : context) (t u : term) => red Σ (Γ ,,, Δ) t u)) Δ Δ.
-  Proof. induction Δ as [|[na [b|] ty]]; econstructor; try red; auto. 
+  Proof using Type. induction Δ as [|[na [b|] ty]]; econstructor; try red; auto. 
     constructor; reflexivity. constructor; reflexivity.
   Qed.
 
   Lemma All2_fold_red_refl {Δ} :
     All2_fold (on_decls (fun (Δ _ : context) (t u : term) => red Σ Δ t u)) Δ Δ.
-  Proof. 
+  Proof using Type. 
     induction Δ as [|[na [b|] ty]]; econstructor; try red; auto;
     constructor; reflexivity.
   Qed.
@@ -93,7 +93,7 @@ Section ContextReduction.
   Lemma red1_red_ctxP_app {Γ Γ' Δ} : 
     red1_red_ctxP Γ Γ' ->
     red1_red_ctxP (Γ ,,, Δ) (Γ' ,,, Δ).
-  Proof.
+  Proof using Type.
     induction Δ as [|[na [b|] ty] Δ]; intros; auto.
     - case.
       * move=> bod bod' => /= [=] -> [=] ->. rewrite !skipn_S !skipn_0. exists bod'.
@@ -109,7 +109,7 @@ Section ContextReduction.
 
   Lemma red_ctx_app Γ Γ' Δ : 
     red_ctx Σ Γ Γ' -> red_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
-  Proof.
+  Proof using Type.
     intros h; eapply All2_fold_app => //.
     eapply All2_fold_refl. intros Δ' ?. reflexivity.
   Qed.
@@ -119,7 +119,7 @@ Section ContextReduction.
     red_ctx Σ Γ Γ' ->
     on_free_vars_ctx P Γ ->
     on_free_vars_ctx P Γ'.
-  Proof.
+  Proof using wfΣ.
     move=> /red_ctx_red_context r onΓ.
     pose proof (All2_fold_length r).
     move: r => /red_context_on_ctx_free_vars.
@@ -133,7 +133,7 @@ Section ContextReduction.
     @red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
-  Proof.
+  Proof using wfΣ.
     intros r onT onΓ H. revert onT onΓ Γ' H.
     simpl in *. induction r using red1_ind_all; intros; auto with pcuic; 
     repeat inv_on_free_vars_xpredT.
@@ -249,7 +249,7 @@ Section ContextReduction.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition.
       intuition auto. inv_on_free_vars_xpredT.
-      specialize (b1 a0 onΓ).
+      specialize (b1 H0 onΓ).
       destruct (b1 _ H X0) as [d' [r0 r1]].
       refine (existT _ {| dtype := d' |} _); simpl; eauto.
     - assert (fix_context mfix0 = fix_context mfix1).
@@ -303,7 +303,7 @@ Section ContextReduction.
     @red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
-  Proof.
+  Proof using wfΣ.
     intros r rc rP. destruct T as [T hT]; cbn in *; induction r.
     - eapply red1_red_ctx_aux; eauto with fvs.
     - exists x; split; auto.
@@ -319,7 +319,7 @@ Section ContextReduction.
 
   Lemma red_red_ctx_aux' {Γ : closed_context} {Γ'} :
     @red_ctx Σ Γ Γ' -> red1_red_ctxP Γ Γ'.
-  Proof.
+  Proof using wfΣ.
     destruct Γ as [Γ onΓ].
     intros X. cbn in *.
     induction Γ in Γ', X, onΓ |- *.
@@ -344,7 +344,7 @@ Section ContextReduction.
     red Σ Γ T U ->
     @red_ctx Σ Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
-  Proof.
+  Proof using wfΣ.
     intros. eapply red_red_ctx', red_red_ctx_aux'; eauto.
   Qed.
   
@@ -393,7 +393,7 @@ Section ContextConversion.
   Lemma fill_le {Γ : closed_context} {t u : open_term Γ} {t' u'} :
     leq_term Σ.1 Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
     ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * leq_term Σ Σ t'' u''.
-  Proof.
+  Proof using wfΣ.
     intros tu tt' uu'.
     eapply red_eq_term_upto_univ_l in tu; try exact tt'. all:try tc.
     destruct tu as [u'' [uu'' t'u'']].
@@ -406,7 +406,7 @@ Section ContextConversion.
   Lemma fill_eq {Γ : closed_context} {t u : open_term Γ} {t' u'} :
     eq_term Σ.1 Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
     ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * eq_term Σ.1 Σ t'' u''.
-  Proof.
+  Proof using wfΣ.
     intros tu tt' uu'.
     pose proof tu as tu2.
     eapply red_eq_term_upto_univ_l in tu; try exact tt'; try tc.
@@ -418,20 +418,20 @@ Section ContextConversion.
     Qed.
 
   Lemma red_ctx_ws_cumul_ctx_pb {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
-  Proof.
+  Proof using wfΣ.
     induction 1; constructor; auto.
     depelim p; constructor; eauto with fvs; pcuic.
   Qed.
 
   Lemma red_ctx_closed_left {Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> is_closed_context Γ.
-  Proof.
+  Proof using Type.
     induction 1; simpl; auto.
     rewrite on_free_vars_ctx_snoc IHX /=.
     destruct p; eauto with fvs.
   Qed.
 
   Lemma red_ctx_closed_right {Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> is_closed_context Γ'.
-  Proof.
+  Proof using wfΣ.
     induction 1; simpl; auto.
     rewrite on_free_vars_ctx_snoc IHX /=.
     destruct p; rewrite -(All2_fold_length X); cbn; eauto with fvs.
@@ -445,7 +445,7 @@ Section ContextConversion.
     compare_term pb Σ Σ u u' ->
     red Σ Γ u v -> 
     ∑ v' : term, red Σ Γ u' v' × compare_term pb Σ Σ v v'.
-  Proof.
+  Proof using Type.
     destruct pb; cbn;
     apply red_eq_term_upto_univ_l; tc.
   Qed.
@@ -454,7 +454,7 @@ Section ContextConversion.
     compare_term pb Σ Σ u u' ->
     red Σ Γ u' v -> 
     ∑ v' : term, red Σ Γ u v' × compare_term pb Σ Σ v' v.
-  Proof.
+  Proof using Type.
     destruct pb; cbn;
     apply red_eq_term_upto_univ_r; tc.
   Qed.
@@ -464,7 +464,7 @@ Section ContextConversion.
     compare_term pb Σ Σ u u' ->
     Σ ;;; Γ ⊢ u ⇝ v -> 
     ∑ v' : term, Σ ;;; Γ ⊢ u' ⇝ v' × compare_term pb Σ Σ v v'.
-  Proof.
+  Proof using Type.
     intros isop comp [clΓ clu red].
     destruct (red_compare_term_l comp red) as [nf [r eq]].
     exists nf; repeat (split; eauto with fvs). 
@@ -475,7 +475,7 @@ Section ContextConversion.
     compare_term pb Σ Σ u u' ->
     Σ ;;; Γ ⊢ u' ⇝ v -> 
     ∑ v' : term, Σ ;;; Γ ⊢ u ⇝ v' × compare_term pb Σ Σ v' v.
-  Proof.
+  Proof using Type.
     intros isop comp [clΓ clu red].
     destruct (red_compare_term_r comp red) as [nf [r eq]].
     exists nf; repeat (split; eauto with fvs). 
@@ -485,7 +485,7 @@ Section ContextConversion.
     Σ ⊢ Γ ⇝ Γ' ->
     Σ ;;; Γ ⊢ T ⇝ U ->
     ∑ t, Σ ;;; Γ' ⊢ T ⇝ t × Σ ;;; Γ' ⊢ U ⇝ t.
-  Proof.
+  Proof using wfΣ.
     intros rctx [clΓ clT r].
     assert (is_open_term Γ U) by eauto with fvs.
     eapply (red_red_ctx Σ wfΣ (Γ := exist Γ clΓ) (T := exist T clT)) in r as [t [r r']].
@@ -500,7 +500,7 @@ Section ContextConversion.
     Σ ;;; Γ ⊢ t ≤[pb] u <~> 
     ∑ v v', [× Σ ;;; Γ ⊢ t ⇝ v, Σ ;;; Γ ⊢ u ⇝ v' &
       compare_term pb Σ (global_ext_constraints Σ) v v'].
-  Proof.    
+  Proof using wfΣ.    
     split.
     - move/ws_cumul_pb_alt; intros (v & v' & [clΓ clt clu red red' leq]).
       exists v, v'; repeat split; eauto with fvs.
@@ -512,7 +512,7 @@ Section ContextConversion.
   Lemma closed_red_confluence {Γ} {t u v} :
     Σ ;;; Γ ⊢ t ⇝ u -> Σ ;;; Γ ⊢ t ⇝ v ->
     ∑ v', Σ ;;; Γ ⊢ u ⇝ v' × Σ ;;; Γ ⊢ v ⇝ v'.
-  Proof.
+  Proof using wfΣ.
     intros [clΓ clT r] [clΓ' clT' r'].
     destruct (red_confluence (Γ := exist Γ clΓ) (t := exist t clT) r r') as [v' [redl redr]].
     cbn in *. exists v'; repeat split; eauto with fvs.
@@ -522,7 +522,7 @@ Section ContextConversion.
     Σ ⊢ Γ ⇝ Γ' ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros Hctx H.
     apply ws_cumul_pb_red in H as (v & v' & [redl redr leq]).
     destruct (closed_red_red_ctx Hctx redl) as [lnf [redl0 redr0]].
@@ -539,7 +539,7 @@ Section ContextConversion.
 
   Lemma red_red_ctx_inv {Γ Δ : closed_context} {t : open_term Γ} {u} :
     red Σ Γ t u -> red_ctx Σ Δ Γ -> red Σ Δ t u.
-  Proof.
+  Proof using wfΣ.
     intros r rc.
     eapply red_ctx_red_context in rc.
     eapply PCUICContextReduction.red_red_ctx; tea; eauto with fvs.
@@ -549,7 +549,7 @@ Section ContextConversion.
     Σ ⊢ Δ ⇝ Γ -> 
     Σ ;;; Γ ⊢ t ⇝ u -> 
     Σ ;;; Δ ⊢ t ⇝ u.
-  Proof.
+  Proof using wfΣ.
     intros rc [onΓ ont r].
     move: (red_ctx_closed_left rc) => onΔ.
     eapply closed_red_ctx_red_ctx in rc.
@@ -565,7 +565,7 @@ Section ContextConversion.
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ⊢ Γ' ⇝ Γ ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros H Hctx.
     apply ws_cumul_pb_red in H as (v & v' & [redl redr leq]).
     epose proof (red_red_ctx_inv' Hctx redl).
@@ -583,7 +583,7 @@ Section ContextConversion.
     ∑ v',
     red Σ Δ u v' *
     eq_term_upto_univ Σ Re Re v v'.
-  Proof.
+  Proof using Type.
     intros r HΓ.
     induction r.
     - eapply (red1_eq_context_upto_l _ (Rle:=R)) in r; eauto.
@@ -607,7 +607,7 @@ Section ContextConversion.
     ∑ v',
     red Σ Γ u v' *
     eq_term_upto_univ Σ Re Re v v'.
-  Proof.
+  Proof using Type.
     intros r HΓ.
     induction r.
     - eapply (@red1_eq_context_upto_r Σ Σ Re R) in r; eauto.
@@ -628,7 +628,7 @@ Section ContextConversion.
     Σ ;;; Γ ⊢ u ⇝ v ->
     compare_context pb Σ Γ Δ ->
     ∑ v', Σ ;;; Δ ⊢ u ⇝ v' × eq_term Σ Σ v v'.
-  Proof.
+  Proof using Type.
     intros clΔ [onΓ onu r] c.
     destruct (red_eq_context_upto_l r c) as [nf [red eq]].
     exists nf. split; auto. split; eauto with fvs.
@@ -640,7 +640,7 @@ Section ContextConversion.
     Σ ;;; Δ ⊢ u ⇝ v ->
     compare_context pb Σ Γ Δ ->
     ∑ v', Σ ;;; Γ ⊢ u ⇝ v' × eq_term Σ Σ v v'.
-  Proof.
+  Proof using Type.
     intros clΔ [onΓ onu r] c.
     destruct (red_eq_context_upto_r r c) as [nf [red eq]].
     exists nf. split; auto. split; eauto with fvs.
@@ -653,7 +653,7 @@ Section ContextConversion.
              red Σ Γ u o *
              red Σ Γ v r *
              leq_term Σ.1 Σ l o * leq_term Σ.1 Σ o r.
-  Proof.
+  Proof using wfΣ.
     intros X X0.
     intros.
     eapply cumul_alt in X as [t0 [u0 [[redl redr] eq]]].
@@ -674,7 +674,7 @@ Section ContextConversion.
     eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ ->
     Σ ;;; Γ |- T = U ->
     Σ ;;; Δ |- T = U.
-  Proof.
+  Proof using Type.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
     eapply (red_eq_context_upto_l (R:=eq_universe _) (Re:=eq_universe _)) in redl; tea; tc.
@@ -690,7 +690,7 @@ Section ContextConversion.
     eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Γ Δ ->
     Σ ;;; Δ |- T = U ->
     Σ ;;; Γ |- T = U.
-  Proof.
+  Proof using Type.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
     eapply (red_eq_context_upto_r (Re:=eq_universe _) (R:=leq_universe _)) in redl; tea.
@@ -711,7 +711,7 @@ Section ContextConversion.
     eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Γ Δ ->
     Σ ;;; Γ |- T = U ->
     Σ ;;; Δ |- T = U.
-  Proof.
+  Proof using Type.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
     eapply (red_eq_context_upto_l (Re:=eq_universe _) (R:=leq_universe _)) in redl; tea.
@@ -727,7 +727,7 @@ Section ContextConversion.
     eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Δ Γ ->
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Δ |- T <= U.
-  Proof.
+  Proof using Type.
     intros eqctx cum.
     eapply cumul_alt in cum as [nf [nf' [[redl redr] ?]]].
     eapply (red_eq_context_upto_r (Re:=eq_universe Σ) (R:=leq_universe _)) in redl; tea.
@@ -746,7 +746,7 @@ Section ContextConversion.
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb'] U ->
     Σ ;;; Δ ⊢ T ≤[pb'] U.
-  Proof.
+  Proof using wfΣ.
     intros eqctx cl cum.
     eapply ws_cumul_pb_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_r in redl; tea; eauto with fvs.
@@ -767,7 +767,7 @@ Section ContextConversion.
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb'] U ->
     Σ ;;; Δ ⊢ T ≤[pb'] U.
-  Proof.
+  Proof using wfΣ.
     intros eqctx cl cum.
     eapply ws_cumul_pb_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_l in redl; tea; eauto with fvs.
@@ -807,7 +807,7 @@ Section ContextConversion.
     `{RelationClasses.subrelation _ Re' Rle'} :
     eq_context_upto Σ Re Rle Γ Δ -> 
     eq_context_upto Σ Re' Rle' Γ Δ.
-  Proof.
+  Proof using Type.
      induction 1; constructor; auto.
      eapply compare_decls_impl; eauto.
      intros x y h.
@@ -820,13 +820,13 @@ Section ContextConversion.
   Lemma eq_leq_context_upto Γ Δ : 
     eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ ->
     eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Γ Δ.
-  Proof. apply eq_context_upto_impl. Qed.
+  Proof using Type. apply eq_context_upto_impl. Qed.
 
   Lemma cumul_eq_context_upto {Γ Δ T U} :
     eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ ->
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Δ |- T <= U.
-  Proof.
+  Proof using Type.
     intros eqctx cum. symmetry in eqctx.
     apply eq_leq_context_upto in eqctx.
     eapply cumul_leq_context_upto; eauto.
@@ -837,7 +837,7 @@ Section ContextConversion.
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Δ ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros eqctx cl cum. symmetry in eqctx.
     eapply (ws_cumul_pb_compare_context (pb:=Conv)) in cum; tea.
   Qed.
@@ -846,7 +846,7 @@ Section ContextConversion.
     Σ ;;; Γ |- T = U ->
     @red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T = U.
-  Proof.
+  Proof using wfΣ.
     intros H Hctx.
     eapply conv_alt_red in H. apply conv_alt_red.
     destruct H as [T' [U' [[redv redv'] leqvv']]].
@@ -862,7 +862,7 @@ Section ContextConversion.
     Σ ;;; Γ |- T = U ->
     red_ctx Σ Γ' Γ ->
     Σ ;;; Γ' |- T = U.
-  Proof.
+  Proof using wfΣ.
     intros H Hctx.
     apply conv_alt_red in H as [v [v' [[redl redr] leq]]].
     pose proof (red_red_ctx_inv redl Hctx).
@@ -876,7 +876,7 @@ Section ContextConversion.
     Σ ;;; Γ |- T <= U ->
     @red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T <= U.
-  Proof.
+  Proof using wfΣ.
     intros H Hctx.
     eapply cumul_alt in H. apply cumul_alt.
     destruct H as [T' [U' [[redv redv'] leqvv']]].
@@ -892,7 +892,7 @@ Section ContextConversion.
     Σ ;;; Γ |- T <= U ->
     red_ctx Σ Γ' Γ ->
     Σ ;;; Γ' |- T <= U.
-  Proof.
+  Proof using wfΣ.
     intros H Hctx.
     apply cumul_alt in H as [v [v' [[redl redr] leq]]].
     pose proof (red_red_ctx_inv redl Hctx).
@@ -906,7 +906,7 @@ Section ContextConversion.
     Σ ⊢ Γ' ⇝ Γ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros Hctx H.
     apply ws_cumul_pb_red in H as [v [v' [redl redr leq]]].
     epose proof (red_red_ctx_inv' Hctx redl). 
@@ -919,7 +919,7 @@ Section ContextConversion.
     is_closed_context Γ ->
     is_open_term Γ t ->
     Σ ;;; Γ ⊢ t ⇝ t.
-  Proof.
+  Proof using Type.
     now constructor.
   Qed.
   
@@ -927,13 +927,13 @@ Section ContextConversion.
     is_closed_context Γ ->
     ws_decl Γ d ->
     All_decls (closed_red Σ Γ) d d.
-  Proof.
+  Proof using Type.
     destruct d as [na [b|] ty] => [onΓ /andP[] /=|]; constructor.
     all:split; eauto with fvs.
   Qed.
 
   Lemma closed_red_ctx_refl Γ : is_closed_context Γ -> Σ ⊢ Γ ⇝ Γ.
-  Proof.
+  Proof using Type.
     move/on_free_vars_ctx_All_fold => a.
     apply: All_fold_All2_fold_impl; tea; clear => Γ d H IH; cbn.
     apply red_decl_refl.
@@ -944,7 +944,7 @@ Section ContextConversion.
     ws_cumul_ctx_pb pb Σ Γ Γ' ->
     ∑ Δ Δ', Σ ⊢ Γ ⇝ Δ × Σ ⊢ Γ' ⇝ Δ' ×
       eq_context_upto Σ (eq_universe Σ) (compare_universe pb Σ) Δ Δ'.
-  Proof.
+  Proof using wfΣ.
     intros Hctx.
     induction Hctx.
     - exists [], []; intuition pcuic.
@@ -983,7 +983,7 @@ Section ContextConversion.
     Σ ⊢ Γ' ≤[pb'] Γ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros Hctx H.
     apply ws_cumul_ctx_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
@@ -997,7 +997,7 @@ Section ContextConversion.
 
   #[global]
   Instance conv_context_sym : Symmetric (ws_cumul_ctx_pb Conv Σ).
-  Proof.
+  Proof using wfΣ.
     intros Γ Γ' conv.
     eapply All2_fold_sym; tea.
     clear Γ Γ' conv. intros Γ Γ' d d' H IH []; constructor; auto.
@@ -1010,7 +1010,7 @@ Section ContextConversion.
 
   Lemma ws_cumul_pb_eq_le {Γ t u} : 
     Σ ;;; Γ ⊢ t = u -> Σ ;;; Γ ⊢ t ≤ u.
-  Proof.
+  Proof using Type.
     induction 1.
     - constructor; eauto.
       now eapply eq_term_leq_term.
@@ -1021,7 +1021,7 @@ Section ContextConversion.
 
   Lemma conv_cumul_context {Γ Δ} : 
     Σ ⊢ Γ ≤[Conv] Δ -> Σ ⊢ Γ ≤[Cumul] Δ.
-  Proof.
+  Proof using wfΣ.
     induction 1; constructor; auto.
     eapply conv_context_sym in X.
     depelim p; constructor; auto. 
@@ -1037,7 +1037,7 @@ Section ContextConversion.
     Σ ⊢ Γ ≤[pb'] Γ' ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
-  Proof.
+  Proof using wfΣ.
     intros Hctx H.
     apply ws_cumul_ctx_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
@@ -1053,14 +1053,14 @@ Section ContextConversion.
     Σ ⊢ Γ' ≤[pb'] Γ ->
     ws_cumul_decls pb Σ Γ d d' ->
     ws_cumul_decls pb Σ Γ' d d'.
-  Proof.
+  Proof using wfΣ.
     intros Hctx H.
     destruct H; constructor; auto; eapply ws_cumul_pb_ws_cumul_ctx; tea.
   Qed.
 
   #[global]
   Instance ws_cumul_ctx_pb_trans pb : Transitive (ws_cumul_ctx_pb pb Σ).
-  Proof.
+  Proof using wfΣ.
     eapply All2_fold_trans.
     intros.
     etransitivity; tea.
@@ -1075,7 +1075,7 @@ End ContextConversion.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
   RelationClasses.subrelation Re (eq_universe Σ) ->
-  subrelation (eq_context_upto Σ Re Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto Σ Re Re) (fun Γ Γ' => conv_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
@@ -1088,7 +1088,7 @@ Lemma eq_context_upto_cumul_context {cf:checker_flags} (Σ : global_env_ext) Re 
   RelationClasses.subrelation Re (eq_universe Σ) ->
   RelationClasses.subrelation Rle (leq_universe Σ) ->
   RelationClasses.subrelation Re Rle ->
-  subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context Σ Γ Γ').
+  subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros HRe HRle hR Γ Δ h. induction h.
   - constructor.
@@ -1106,7 +1106,7 @@ Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation e
 Proof. intros x y []. reflexivity. Qed.
 
 Lemma eq_context_upto_empty_conv_context {cf:checker_flags} (Σ : global_env_ext) :
-  subrelation (eq_context_upto empty_global_env eq eq) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto empty_global_env eq eq) (fun Γ Γ' => conv_context cumulAlgo_gen Σ Γ Γ').
 Proof.
   intros Γ Δ h. induction h.
   - constructor.
@@ -1117,7 +1117,7 @@ Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
   eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) Γ Δ ->
-  conv_context Σ Γ Δ.
+  conv_context cumulAlgo_gen Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_conv_context; tea.
   reflexivity.
@@ -1125,15 +1125,15 @@ Qed.
 
 Lemma eq_context_upto_univ_cumul_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
   eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
-  cumul_context Σ Γ Δ.
+  cumul_context cumulAlgo_gen Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_cumul_context; tea.
   reflexivity. tc. tc.
 Qed.
 
 Lemma conv_context_app_same {cf:checker_flags} Σ Γ Γ' Δ :
-  conv_context Σ Γ Γ' ->
-  conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  conv_context cumulAlgo_gen Σ Γ Γ' ->
+  conv_context cumulAlgo_gen Σ (Γ ,,, Δ) (Γ' ,,, Δ).
 Proof.
   intros HΔ.
   induction Δ; auto.
@@ -1142,8 +1142,8 @@ Proof.
 Qed.
 
 Lemma cumul_context_app_same {cf:checker_flags} Σ Γ Γ' Δ :
-  cumul_context Σ Γ Γ' ->
-  cumul_context Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  cumul_context cumulAlgo_gen Σ Γ Γ' ->
+  cumul_context cumulAlgo_gen Σ (Γ ,,, Δ) (Γ' ,,, Δ).
 Proof.
   intros HΔ.
   induction Δ; auto.
@@ -1159,10 +1159,10 @@ Qed.
     | Some (b, b') => (P Γ b b' * P Γ Γ' t t')%type
     | None => P Γ Γ' t t'
     end. *)
-Definition on_local_decl (P : context -> term -> option term -> Type) (Γ : context) (d : context_decl) :=
+Definition on_local_decl (P : context -> term -> typ_or_sort -> Type) (Γ : context) (d : context_decl) :=
   match decl_body d with
-  | Some b => P Γ b (Some (decl_type d)) * P Γ (decl_type d) None
-  | None => P Γ (decl_type d) None
+  | Some b => P Γ b (Typ (decl_type d)) * P Γ (decl_type d) Sort
+  | None => P Γ (decl_type d) Sort
   end.
 
 Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
@@ -1180,13 +1180,13 @@ Proof.
 Qed.
 
 Lemma context_cumulativity_wf_app {cf:checker_flags} Σ Γ Γ' Δ : 
-  cumul_context Σ Γ' Γ ->
+  cumul_context cumulAlgo_gen Σ Γ' Γ ->
   wf_local Σ Γ' ->
     All_local_env
        (lift_typing
           (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
            forall Γ' : context,
-           cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
+           cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
        (Γ,,, Δ) ->
   wf_local Σ (Γ' ,,, Δ).
 Proof.
@@ -1194,12 +1194,9 @@ Proof.
   eapply wf_local_app => //.
   eapply All_local_env_app_inv in X1 as [].
   eapply All_local_env_impl_ind; tea => /=.
-  rewrite /lift_typing => Γ'' t' [t wf IH|wf [s IH]]; try exists s; eauto.
+  intros Γ'' t' T H HT.
+  apply lift_typing_impl with (1 := HT); intros ? IH.
   eapply IH. eapply All2_fold_app => //.
-  eapply All2_fold_refl. intros. eapply cumul_decls_refl.
-  eapply All_local_env_app; split; auto.
-  eapply IH. 
-  eapply All2_fold_app => //.
   eapply All2_fold_refl. intros. eapply cumul_decls_refl.
   eapply All_local_env_app; split; auto.
 Qed.
@@ -1226,13 +1223,13 @@ Qed.
   eapply on_free_vars_decl_eq; [eassumption|len; lia] : fvs.
 
 Lemma ws_cumul_ctx_pb_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  ws_cumul_ctx_pb Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
+  ws_cumul_ctx_pb Conv Σ Γ Γ' -> conv_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   apply: ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma ws_cumul_ctx_pb_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  ws_cumul_ctx_pb Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
+  ws_cumul_ctx_pb Cumul Σ Γ Γ' -> cumul_context cumulAlgo_gen Σ Γ Γ'.
 Proof.
   apply: ws_cumul_ctx_pb_forget.
 Qed.
@@ -1247,7 +1244,7 @@ Lemma into_ws_cumul_ctx_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ex
   {Γ Γ' : context} :
   is_closed_context Γ ->
   is_closed_context Γ' ->
-  cumul_pb_context pb Σ Γ Γ' ->
+  cumul_pb_context cumulAlgo_gen pb Σ Γ Γ' ->
   ws_cumul_ctx_pb pb Σ Γ Γ'.
 Proof.
   move/on_free_vars_ctx_All_fold => onΓ.

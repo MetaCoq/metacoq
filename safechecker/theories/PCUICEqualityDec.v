@@ -1064,9 +1064,9 @@ Section EqualityDec.
     wf_universe Σ u ->
     wf_universe Σ u' ->
     reflect (eq_universe Σ u u') (check_eqb_universe G u u').
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
-    apply/(equivP idP) ; split.
+    apply (equivP idP); split.
     all: pose proof hΣ' as hΣ' ; sq.
     - intros e.
       eapply check_eqb_universe_spec' in e ; eauto.
@@ -1083,9 +1083,9 @@ Section EqualityDec.
   wf_universe Σ u ->
   wf_universe Σ u' ->
   reflect (leq_universe Σ u u') (check_leqb_universe G u u').
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
-    apply/(equivP idP) ; split.
+    apply (equivP idP) ; split.
     all: pose proof hΣ' as hΣ' ; sq.
     - intros e.
       eapply check_leqb_universe_spec' in e ; eauto.
@@ -1110,7 +1110,7 @@ Section EqualityDec.
     wf_universes Σ t ->
     wf_universes Σ u ->
     reflectT (eq_termp_napp pb Σ napp t u) (eqb_termp_napp pb napp t u).
-  Proof.
+  Proof using HG Hφ hΣ.
     apply reflect_eq_term_upto_univ.
     - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
       now apply eq_universeP.
@@ -1128,7 +1128,7 @@ Section EqualityDec.
     wf_universes Σ u ->
     eqb_termp_napp pb napp t u ->
     eq_termp_napp pb Σ napp t u.
-  Proof.
+  Proof using HG Hφ hΣ.
     pose proof hΣ'.
     eapply eqb_term_upto_univ_impl.
     - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?; now apply eq_universeP; eauto.
@@ -1147,7 +1147,7 @@ Section EqualityDec.
     wf_universes Σ t -> wf_universes Σ u ->
     eqb_term t u ->
     eq_term Σ Σ t u.
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
     eapply (eqb_termp_napp_spec Conv) ; tea.
   Qed.
@@ -1156,7 +1156,7 @@ Section EqualityDec.
     wf_universes Σ t -> wf_universes Σ u ->
     leqb_term t u ->
     leq_term Σ Σ t u.
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
     eapply (eqb_termp_napp_spec Cumul) ; tea.
   Qed.
@@ -1165,7 +1165,7 @@ Section EqualityDec.
     wf_universes Σ t ->
     wf_universes Σ u ->
     reflectT (leq_term Σ Σ t u) (leqb_term t u).
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
     now eapply (reflect_eqb_termp_napp Cumul).
   Qed.
@@ -1176,14 +1176,14 @@ Section EqualityDec.
     wf_universes Σ t ->
     wf_universes Σ u ->
     reflectT (eq_term Σ t u) (eqb_term t u).
-  Proof.
+  Proof using HG Hφ hΣ.
     intros.
     now eapply (reflect_eqb_termp_napp Conv).
   Qed.
 
   Lemma eqb_term_refl :
     forall t, wf_universes Σ t -> eqb_term t t.
-  Proof.
+  Proof using HG Hφ hΣ.
     intro t. eapply eqb_term_upto_univ_refl with (Re := eq_universe Σ).
     all: intros; try apply check_eqb_universe_refl.
     - apply eq_universeP; eauto.
@@ -1200,7 +1200,7 @@ Section EqualityDec.
       wf_ctx_universes Σ Δ ->
       eqb_ctx Γ Δ ->
       eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ.
-  Proof.
+  Proof using HG Hφ hΣ.
     intros Γ Δ hΓ hΔ h. eapply reflect_eqb_ctx_gen; eauto.
     - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?; now apply eq_universeP; eauto.
     - intros. apply reflect_iff. eapply reflect_R_global_instance; eauto.

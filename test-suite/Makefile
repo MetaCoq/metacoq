@@ -16,3 +16,9 @@ mrproper:
 
 plugin-demo:
 	$(MAKE) -C plugin-demo
+
+vos: Makefile.coq
+	$(MAKE) -f Makefile.coq vos
+
+quick: Makefile.coq
+	$(MAKE) -f Makefile.coq COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

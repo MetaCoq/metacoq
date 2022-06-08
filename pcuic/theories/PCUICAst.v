@@ -56,19 +56,19 @@ Section map_predicate.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_pcontext (p : predicate term) :
     pcontextf (pcontext p) = pcontext (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_puinst (p : predicate term) :
     uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
 End map_predicate.
 
@@ -87,19 +87,19 @@ Section map_predicate_k.
 
   Lemma map_k_pparams k (p : predicate term) :
     map (f k) (pparams p) = pparams (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_preturn k (p : predicate term) :
     f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
     (pcontext p) = pcontext (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
     (pred : predicate term) :=
@@ -159,11 +159,11 @@ Section map_branch.
 
   Lemma map_bbody (b : branch term) :
     f (bbody b) = bbody (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_bcontext (b : branch term) :
     g (bcontext b) = bcontext (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch.
 
 Definition map_branches {term B} (f : term -> B) h l := List.map (map_branch f h) l.
@@ -178,11 +178,11 @@ Section map_branch_k.
 
   Lemma map_k_bbody k (b : branch term) :
     f (#|b.(bcontext)| + k) (bbody b) = bbody (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_k_bcontext k (b : branch term) :
     g (bcontext b) = bcontext (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch_k.
 
 Notation map_branches_k f h k brs :=
@@ -534,19 +534,49 @@ Module PCUICTerm <: Term.
   Definition subst_instance_constr := subst_instance.
 End PCUICTerm.
 
+(* These functors derive the notion of local context and lift substitution, term lifting, 
+  the closed predicate to them. *)                 
+Module PCUICEnvironment := Environment PCUICTerm.
+Export PCUICEnvironment.
+(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+  
+(** Decompose an arity into a context and a sort *)
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+(** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Module PCUICTermUtils <: TermUtils PCUICTerm PCUICEnvironment.
+
+Definition destArity := destArity.
+Definition inds := inds.
+
+End PCUICTermUtils.
+
+
 Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
                  unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
                  unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
                  unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *;
                  unfold PCUICTerm.lift in *; unfold PCUICTerm.subst in *;
                  unfold PCUICTerm.closedn in *; unfold PCUICTerm.noccur_between in *;
-                 unfold PCUICTerm.subst_instance_constr in *.
-                 
-(* These functors derive the notion of local context and lift substitution, term lifting, 
-  the closed predicate to them. *)                 
-Module PCUICEnvironment := Environment PCUICTerm.
-Export PCUICEnvironment.
-(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+                 unfold PCUICTerm.subst_instance_constr in *;
+                 unfold PCUICTermUtils.destArity in *; unfold PCUICTermUtils.inds in *.
+
 
 Lemma context_assumptions_mapi_context f (ctx : context) : 
   context_assumptions (mapi_context f ctx) = context_assumptions ctx.
@@ -556,8 +586,10 @@ Qed.
 #[global]
 Hint Rewrite context_assumptions_mapi_context : len.
 
-Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
+Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment PCUICTermUtils.
 (** Included in PCUICTyping only *)
+
+Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
 
 Global Instance context_reflect`(ReflectEq term) : 
   ReflectEq (list (BasicAst.context_decl term)) := _.
@@ -1276,3 +1308,13 @@ Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
 Derive NoConfusion for global_decl.
+
+Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
+  PCUICTerm
+  PCUICEnvironment
+  PCUICTermUtils
+  PCUICEnvTyping
+  PCUICConversion
+  PCUICLookup
+.
+Include PCUICGlobalMaps.

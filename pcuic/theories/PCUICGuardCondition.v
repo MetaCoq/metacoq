@@ -26,7 +26,7 @@ Class GuardCheckerCorrect :=
     guard b Σ' Γ mfix ;
 
   guard_context_cumulativity `{checker_flags} b Σ Γ Γ' mfix :
-    All2_fold (cumul_decls Σ) Γ' Γ ->
+    All2_fold (cumul_decls cumulSpec0 Σ) Γ' Γ ->
     guard b Σ Γ mfix ->
     guard b Σ Γ' mfix ;
 

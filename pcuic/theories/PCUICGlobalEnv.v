@@ -71,7 +71,7 @@ Section DeclaredInv.
   Lemma declared_minductive_ind_npars  {mdecl ind} :
     declared_minductive Σ ind mdecl ->
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
-  Proof.
+  Proof using wfΣ.
     intros h.
     unfold declared_minductive in h.
     eapply lookup_on_global_env in h; tea.
@@ -83,11 +83,11 @@ Section DeclaredInv.
 End DeclaredInv.
 
 Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env P Σ ->
+  on_global_env cumulSpec0 P Σ ->
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
- - cbn. eapply LevelSet.mem_spec, global_levels_Set.
+ - cbn. apply global_levels_InSet.
  - unfold global_uctx.
    simpl. intros [[l ct] l'] Hctr. simpl in *.
    induction Σ in HΣ, l, ct, l', Hctr |- *.
@@ -106,11 +106,11 @@ Proof.
 Qed.
 
 Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env_ext P Σ ->
+  on_global_env_ext cumulSpec0 P Σ ->
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
- - apply LevelSet.union_spec. right. apply LevelSet.mem_spec, global_levels_Set.
+ - apply global_ext_levels_InSet.
  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
    destruct (wf_global_uctx_invariants _ HΣ) as [_ XX].
    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
@@ -123,18 +123,18 @@ Proof.
 Qed.
 
 Lemma wf_consistent {cf:checker_flags} Σ {P} :
-  on_global_env P Σ -> consistent (global_constraints Σ).
+  on_global_env cumulSpec0 P Σ -> consistent (global_constraints Σ).
 Proof.
   destruct Σ.
   intros [cu ong]. apply cu.
 Qed.
 
 Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
- : on_global_env_ext P Σ -> consistent (global_ext_uctx Σ).2.
+ : on_global_env_ext cumulSpec0 P Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.
-  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
+  destruct HΣ as (_ & _ & _ & HH & _). apply HH.
 Qed.
 
 

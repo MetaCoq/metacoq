@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICTactics PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICConfluence PCUICWellScopedCumulativity PCUICSR PCUICOnFreeVars PCUICClosedTyp.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -50,7 +50,7 @@ Let PΓ (Γ : context) := True.
 Let PΓ_rel (Γ Γ' : context) := True.
 
 Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-Proof.
+Proof using wfΣ.
 
   apply bidir_ind_env.
 
@@ -441,7 +441,7 @@ Corollary principal_type `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
     (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ ⊢ T' ≤ T'') × Σ ;;; Γ |- t : T'.
 Proof.
   intros ty.
-  assert (wf_local Σ Γ) by pcuic.
+  assert (wf_local Σ Γ) by (pcuic; eapply typing_wf_local; eauto).
   apply typing_infering in ty as (S & infS & _); auto.
   exists S.
   repeat split.

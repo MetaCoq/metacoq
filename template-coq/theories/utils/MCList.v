@@ -207,7 +207,7 @@ Section Reverse_Induction.
       P [] ->
         (forall (a:A) (l:list A), P (List.rev l) -> P (List.rev (a :: l))) ->
         forall l:list A, P (Coq.Lists.List.rev l).
-  Proof.
+  Proof using Type.
     induction l; auto.
   Qed.
 
@@ -215,7 +215,7 @@ Section Reverse_Induction.
     forall P:list A -> Type,
       P [] ->
       (forall (x:A) (l:list A), P l -> P (l ++ [x])) -> forall l:list A, P l.
-  Proof.
+  Proof using Type.
     intros.
     generalize (rev_involutive l).
     intros E; rewrite <- E.
@@ -880,21 +880,21 @@ Section ListSize.
 
   Lemma list_size_app (l l' : list A)
     : list_size (l ++ l') = list_size l + list_size l'.
-  Proof.
+  Proof using Type.
     induction l; simpl. reflexivity.
     rewrite IHl; lia.
   Qed.
 
   Lemma list_size_rev (l : list A)
     : list_size (rev l) = list_size l.
-  Proof.
+  Proof using Type.
     induction l; simpl. reflexivity.
     rewrite rev_cons list_size_app IHl; cbn; lia.
   Qed.
 
   Lemma list_size_length (l : list A)
     : list_size l >= length l.
-  Proof.
+  Proof using Type.
     induction l; simpl; lia.
   Qed.    
 
@@ -907,14 +907,14 @@ Section ListSizeMap.
 
   Lemma list_size_map (f : A -> B) l :
     list_size sizeB (map f l) = list_size (fun x => sizeB (f x)) l.
-  Proof.
+  Proof using Type.
     induction l; simpl; eauto.
   Qed.
 
   Lemma list_size_mapi_rec_eq (l : list A) (f : nat -> A -> B) k :
     (forall i x, sizeB (f i x) = sizeA x) ->
     list_size sizeB (mapi_rec f l k) = list_size sizeA l.
-  Proof.
+  Proof using Type.
     intro H. induction l in k |- *. reflexivity.
     simpl. rewrite IHl. rewrite H. lia.
   Qed.
@@ -922,14 +922,14 @@ Section ListSizeMap.
   Lemma list_size_mapi_eq (l : list A) (f : nat -> A -> B) :
     (forall i x, sizeB (f i x) = sizeA x) ->
     list_size sizeB (mapi f l) = list_size sizeA l.
-  Proof.
+  Proof using Type.
     unfold mapi. intros. now apply list_size_mapi_rec_eq.
   Qed.
 
   Lemma list_size_map_eq (l : list A) (f : A -> B) :
     (forall x, sizeA x = sizeB (f x)) ->
     list_size sizeB (map f l) = list_size sizeA l.
-  Proof.
+  Proof using Type.
     intros.
     induction l; simpl; auto.
   Qed.
@@ -937,7 +937,7 @@ Section ListSizeMap.
   Lemma list_size_mapi_rec_le (l : list A) (f : nat -> A -> B) k :
     (forall i x, sizeB (f i x) <= sizeA x) ->
     list_size sizeB (mapi_rec f l k) <= list_size sizeA l.
-  Proof.
+  Proof using Type.
     intro H. induction l in k |- *. reflexivity.
     simpl. specialize (H k a). specialize (IHl (S k)). lia.
   Qed.
@@ -945,14 +945,14 @@ Section ListSizeMap.
   Lemma list_size_mapi_le (l : list A) (f : nat -> A -> B) :
     (forall i x, sizeB (f i x) <= sizeA x) ->
     list_size sizeB (mapi f l) <= list_size sizeA l.
-  Proof.
+  Proof using Type.
     unfold mapi. intros. now apply list_size_mapi_rec_le.
   Qed.
 
   Lemma list_size_map_le (l : list A) (f : A -> B) :
     (forall x, sizeB (f x) <= sizeA x) ->
     list_size sizeB (map f l) <= list_size sizeA l.
-  Proof.
+  Proof using Type.
     intros.
     induction l; simpl; auto. specialize (H a).
     lia.
@@ -1236,7 +1236,7 @@ Section SplitPrefix.
   Lemma split_prefix_is_prefix l1 l2 :
     let '(prefix, l1', l2') := split_prefix l1 l2 in
     (l1 = prefix ++ l1') /\ (l2 = prefix ++ l2').
-  Proof.
+  Proof using Type.
     funelim (split_prefix l1 l2).
     1,2: simp split_prefix; now split.
     1,2: rewrite -Heqcall; split; try easy.
@@ -1248,24 +1248,24 @@ Section SplitPrefix.
   Definition is_prefix (l1 l2 : list A) := exists l', l2 = l1 ++ l'.
 
   Lemma nil_prefix l : is_prefix nil l.
-  Proof. now exists l. Qed.
+  Proof using Type. now exists l. Qed.
 
   Lemma cons_prefix x l1 l2 : is_prefix l1 l2 -> is_prefix (x :: l1) (x :: l2).
-  Proof. move=> [l ->]; now exists l. Qed.
+  Proof using Type. move=> [l ->]; now exists l. Qed.
 
   Lemma is_prefix_nil l : is_prefix l nil -> l = nil.
-  Proof. move=> [?]; case l=> //. Qed.
+  Proof using Type. move=> [?]; case l=> //. Qed.
 
   Lemma is_prefix_cons l x xs : is_prefix l (x :: xs) ->
                            l = nil \/ (exists l', l = x :: l' /\ is_prefix l' xs).
-  Proof.
+  Proof using Type.
     case: l x xs=> [|y ys ??[tl [= -> ->]]]; [now left| right].
     exists ys; split=> //; now exists tl.
   Qed.
 
   Lemma is_prefix_cons_inv x xs y ys :
     is_prefix (x :: xs) (y :: ys) -> x = y /\ is_prefix xs ys.
-  Proof.
+  Proof using Type.
     move=> [tl [= -> ->]]; split=> //; now exists tl.
   Qed.
 
@@ -1274,7 +1274,7 @@ Section SplitPrefix.
   Lemma split_prefix_maximal l1 l2 l :
     is_prefix l l1 -> is_prefix l l2 ->
     is_prefix l (fst (fst (split_prefix l1 l2))).
-  Proof.
+  Proof using Type.
     funelim (split_prefix l1 l2).
     - move=> /is_prefix_nil -> _; apply nil_prefix.
     - move=> _ /is_prefix_nil ->; apply nil_prefix.
@@ -1301,7 +1301,7 @@ Section SplitSuffix.
   Lemma split_suffix_is_suffix l1 l2 :
     let '(l1', l2', suffix) := split_suffix l1 l2 in
     (l1 = l1' ++ suffix) /\ (l2 = l2' ++ suffix).
-  Proof.
+  Proof using Type.
     unfold split_suffix.
     pose proof (y := split_prefix_is_prefix (rev l1) (rev l2)).
     revert y.
@@ -1313,11 +1313,11 @@ Section SplitSuffix.
 
   Lemma is_suffix_is_prefix_rev l1 l2 :
     is_suffix l1 l2 -> is_prefix (rev l1) (rev l2).
-  Proof. move=> [l] /(f_equal rev) ->; exists (rev l); apply: rev_app. Qed.
+  Proof using Type. move=> [l] /(f_equal rev) ->; exists (rev l); apply: rev_app. Qed.
 
   Lemma is_prefix_rev_is_suffix l1 l2 :
     is_prefix (rev l1) (rev l2) -> is_suffix l1 l2.
-  Proof.
+  Proof using Type.
     move=> [l] /(f_equal rev); rewrite rev_app 2! rev_invol.
     move=> ->; by exists (rev l).
   Qed.
@@ -1325,7 +1325,7 @@ Section SplitSuffix.
   Lemma split_suffix_maximal l1 l2 l :
     is_suffix l l1 -> is_suffix l l2 ->
     is_suffix l (snd (split_suffix l1 l2)).
-  Proof.
+  Proof using Type.
     move=> /is_suffix_is_prefix_rev ll1 /is_suffix_is_prefix_rev ll2.
     apply: is_prefix_rev_is_suffix.
     pose proof (z := split_prefix_maximal (rev l1) (rev l2) (rev l) ll1 ll2).

@@ -22,7 +22,9 @@ Print Ast.term.
 
 
 MetaCoq Quote Definition reifx := (fun x : nat => x).
-Print reifx.
+Definition foo := (fun x : nat => fun x : nat => x).
+MetaCoq Quote Definition reifx' := Eval compute in (fun x : nat => let y := x in fun x : nat => y).
+Print reifx'.
 MetaCoq Unquote Definition x := 
   (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
 

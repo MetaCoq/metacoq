@@ -29,7 +29,6 @@ theories/utils/MCUtils.v
 # theories/utils/ByteCompare.v
 # theories/utils/ByteCompareSpec.v
 #theories/utils/MC_ExtrOCamlInt63.v
-theories/utils/MC_ExtrOCamlNatInt.v
 theories/utils/MC_ExtrOCamlZPosInt.v
 theories/utils/ReflectEq.v
 

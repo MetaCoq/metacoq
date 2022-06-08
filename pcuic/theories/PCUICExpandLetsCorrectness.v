@@ -9,7 +9,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICEquality
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICEquality
      PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity 
      PCUICUnivSubst PCUICUnivSubstitutionTyp PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars
@@ -537,7 +537,7 @@ Proof.
 Qed.
 
 Lemma trans_inds ind u mdecl : 
-  map trans (PCUICCases.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
+  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
   inds (inductive_mind ind) u (ind_bodies (trans_minductive_body mdecl)).
 Proof.
   rewrite PCUICCases.inds_spec inds_spec.
@@ -2202,7 +2202,7 @@ Proof.
     destruct g => /= //. rewrite nth_error_mapi.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
-    destruct PCUICAstUtils.destArity as [[ctx ps]|] => /= //.
+    destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.
@@ -2466,7 +2466,7 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct tu. exists x. eapply p.
+    + simpl. destruct tu. exists x. eapply Hs.
   - simpl. constructor; auto. red. destruct tu. exists x. auto.
 Qed.
 
@@ -3337,14 +3337,14 @@ Proof.
   rewrite /= eq /trans_global_decls /= map_app //.
 Qed.
 
-Lemma weaken_prop {cf} : weaken_env_decls_prop
+Lemma weaken_prop {cf} : weaken_env_decls_prop cumulSpec0 (lift_typing typing)
   (lift_typing
    (λ (Σ : global_env_ext) (Γ : context) (t T : term),
       wf_trans Σ →
       typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
 Proof.
   intros Σ Σ' u wf' ext Γ t T.
-  unfold lift_typing. destruct T.
+  destruct T.
   - intros Ht Hw.
     pose proof (extends_decls_trans ext).
     assert (wfΣ := extends_decls_wf _ _ Hw X).
@@ -3508,12 +3508,12 @@ Proof.
   induction H;cbn.
   - constructor.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;auto;try assumption.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;auto;eassumption.
@@ -3599,7 +3599,7 @@ Proof.
     simpl.
     rewrite /ptm trans_it_mkLambda_or_LetIn.
     rewrite /predctx.
-    have hty := validity X7.
+    have hty := validity X6.
     eapply isType_mkApps_Ind_smash in hty as []; tea.
     erewrite <- (trans_case_predicate_context (Σ := Σ)); tea.
     2:{ eapply (wf_predicate_length_pars H0). }
@@ -3607,7 +3607,7 @@ Proof.
     + now apply trans_declared_inductive.
     + rewrite (trans_case_predicate_context (Σ := Σ) (Γ := Γ)); tea.
       rewrite -trans_local_app. now eapply X3.
-    + rewrite trans_mkApps map_app in X8. now eapply X8.
+    + rewrite trans_mkApps map_app in X7. now eapply X7.
     + now eapply trans_wf_predicate.
     + cbn [pparams pcontext].
       rewrite (trans_case_predicate_context (Σ := Σ) (Γ := Γ)); tea.
@@ -3616,11 +3616,14 @@ Proof.
       now eapply alpha_eq_trans.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
-    + move: X5 X6. cbn.
+    + eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+      eassert (PCUICEnvTyping.ctx_inst (fun Σ _ _ _ => wf_trans Σ -> @typing (cf' _) _ _ _ _) _ _ _ _) as IHctxi.
+      { eapply ctx_inst_impl with (1 := X5). intros ? ? [? r]; exact r. }
+      move: Hctxi IHctxi. cbn.
       have wfctx : wf_local Σ (Γ ,,, (ind_params mdecl,,, ind_indices idecl)@[puinst p]).
       { eapply PCUICWeakeningTyp.weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea. }
       move: wfctx.
-      clear -wfΣ X10.
+      clear -wfΣ X9.
       rewrite -map_app -[trans_local _ ++ _]trans_local_app.
       rewrite -[map _ (trans_local _)]trans_subst_instance_ctx /id.
       rewrite -[List.rev (trans_local _)]map_rev.
@@ -3635,14 +3638,14 @@ Proof.
         rewrite List.rev_app_distr /=. 
         move=> l wfctx.
         intros H. depelim H.
-        { depelim X6.
+        { depelim IHctxi.
           cbn; constructor. now apply t2.
           unshelve epose proof (substitution_wf_local (Γ':=[vass na t]) _ wfctx). shelve.
           { now eapply subslet_ass_tip. }
           rewrite subst_telescope_subst_context in H.
           specialize (X (subst_context [i] 0 Γ) ltac:(now len) _ _ X0 H).
-          rewrite subst_telescope_subst_context in X6.
-          specialize (X X6).
+          rewrite subst_telescope_subst_context in IHctxi.
+          specialize (X IHctxi).
           rewrite -subst_telescope_subst_context in X.
           rewrite [map trans_decl _](trans_subst_telescope (shiftnP #|Δ| xpred0) 
             (shiftnP (S #|Δ|) xpred0)) in X.
@@ -3668,8 +3671,8 @@ Proof.
           exact X. }
     + red. eapply Forall2_map_right, Forall2_map.
       eapply Forall2_All2 in H4.
-      eapply All2i_All2_mix_left in X9; tea.
-      eapply All2i_nth_hyp in X9.
+      eapply All2i_All2_mix_left in X8; tea.
+      eapply All2i_nth_hyp in X8.
       eapply All2_Forall2. eapply All2i_All2; tea; cbv beta.
       intros i cdecl br [hnth [wfbr [cd _]]].
       have declc : declared_constructor Σ (ci, i) mdecl idecl cdecl.
@@ -3699,12 +3702,12 @@ Proof.
       now eapply eq_context_gen_binder_annot in cd.
     + eapply All2i_map. eapply All2i_map_right.
       eapply Forall2_All2 in H4.
-      eapply All2i_nth_hyp in X9.
-      eapply All2i_All2_mix_left in X9; tea.
+      eapply All2i_nth_hyp in X8.
+      eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
       intros i cdecl br. cbv beta.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _).
-      intros (wf & hnth & eqctx & Hbctx & Hb & IHb & Hbty & IHbty).
+      intros (wf & hnth & eqctx & Hbctx & (Hb & IHb) & (Hbty & IHbty)).
       have declc : declared_constructor Σ (ci, i) mdecl idecl cdecl.
       { split; tea. }
       have clargs : on_free_vars_ctx (shiftnP (#|ind_params mdecl| + #|ind_bodies mdecl|) xpred0)
@@ -3718,8 +3721,9 @@ Proof.
       intros brctxty.
       have trbr := !! (trans_case_branch_type (Γ := Γ) declc H1 H0 wf X1 eqctx).
       forward_keep trbr. 
-      { eapply ctx_inst_open_terms in X5.
-        eapply All_app in X5 as [].
+      { eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+        eapply ctx_inst_open_terms in Hctxi.
+        eapply All_app in Hctxi as [].
         now eapply All_forallb, All_impl; tea. }
       forward trbr.
       { eapply subject_is_open_term in pret. move: pret.
@@ -3733,7 +3737,7 @@ Proof.
       set (brctxty' := case_branch_type _ _ _ _ _ _ _ _) in trbr.
       change brctxty with brctxty'. clear brctxty.
       destruct trbr as [eqbrctx' eqbrty'].
-      specialize (IHb X10). specialize (IHbty X10). specialize (Hbctx X10).
+      specialize (IHb X9). specialize (IHbty X9). specialize (Hbctx X9).
       have fvs_cbctx : on_free_vars_ctx (shiftnP #|Γ| xpred0) cbctx.
       { eapply typing_closed_ctx in Hb; eauto.
         now move: Hb; rewrite on_free_vars_ctx_app => /andP[]. }
@@ -3782,7 +3786,7 @@ Proof.
     assert (is_open_term Γ (tFix mfix n)).
     { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. solve_all.
       destruct a as [s Hs]. exists s; intuition eauto.
-      solve_all. }
+      solve_all. now destruct b. }
     eapply TT.type_Fix; auto.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
@@ -3811,7 +3815,7 @@ Proof.
     assert (is_open_term Γ (tCoFix mfix n)).
     { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. solve_all.
       destruct a as [s Hs]. exists s; intuition eauto.
-      solve_all. }
+      solve_all. now destruct b. }
     eapply TT.type_CoFix; auto.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
@@ -4119,7 +4123,6 @@ Lemma trans_ind_realargs m k i :
   ind_realargs i = ind_realargs (trans_one_ind_body m k i).
 Proof.
   unfold ind_realargs.
-  rewrite /PCUICTypingDef.destArity. 
   rewrite (trans_destArity []).
   destruct destArity => //. destruct p. 
   now len.
@@ -4173,8 +4176,8 @@ Qed.
 Lemma cumul_context_Spec_Algo {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
   wf_local Σ Γ ->
   wf_local Σ Γ' ->
-  PCUICCumulativitySpec.cumul_context Σ Γ' Γ ->
-  PCUICCumulativity.cumul_context Σ Γ' Γ.
+  cumul_context cumulSpec0 Σ Γ' Γ ->
+  cumul_context cumulAlgo_gen Σ Γ' Γ.
 Proof.
   intros wfΓ wfΓ'.
   induction 1. constructor.
@@ -4199,7 +4202,7 @@ Qed.
 Lemma context_cumulativity_spec {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
   Σ ;;; Γ |- t : T ->
   wf_local Σ Γ' ->
-  PCUICCumulativitySpec.cumul_context Σ Γ' Γ ->
+  cumul_context cumulSpec0 Σ Γ' Γ ->
   Σ ;;; Γ' |- t : T.
 Proof.
   intros h hΓ' e.
@@ -4251,8 +4254,8 @@ Lemma trans_cumul_ctx_rel {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} 
   wf_trans Σ ->
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ' ->
+  cumul_ctx_rel (cumulSpec0 (cf:=cf' cf)) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr.
   induction 1; cbn; constructor; auto.
@@ -4473,8 +4476,8 @@ Lemma trans_cumul_ctx_rel' {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ 
   #|Γ| = #|Γ'| ->
   assumption_context (Γ ,,, Δ) ->
   assumption_context (Γ' ,,, Δ') ->
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ' ->
+  cumul_ctx_rel (cumulSpec0 (cf:=cf' cf)) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr eqlen ass ass'.
   induction 1; cbn; constructor; auto.
@@ -4531,7 +4534,7 @@ Lemma trans_type_local_ctx {cf} {Σ Γ Δ s} :
 Proof.
   intros wf wf'.
   induction Δ; cbn.
-  unfold PCUICTypingDef.wf_universe, wf_universe.
+  unfold PCUICLookup.wf_universe, wf_universe.
   destruct s => //.
   destruct a as [? [?|] ?] => /= //; intuition auto.
   destruct a0 as [s' Hs]. exists s'. 
@@ -4611,7 +4614,7 @@ Proof.
 Qed.
 
 Lemma wf_ind_indices {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl i idecl} :
-  on_ind_body (lift_typing typing) Σ mind mdecl i idecl ->
+  on_ind_body cumulSpec0 (lift_typing typing) Σ mind mdecl i idecl ->
   wf_local Σ (ind_params mdecl ,,, ind_indices idecl).
 Proof.
   intros [].
@@ -4686,7 +4689,6 @@ Proof.
   * cbn. red. move: ond; rewrite /on_constant_decl.
     destruct c as [type [body|] univs] => /=.
     intros Hty; eapply (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
-    unfold on_type, lift_typing.
     intros [s Hty]. exists s. 
     exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
   * generalize ond. intros []; econstructor; eauto.
@@ -5360,9 +5362,9 @@ Proof.
     { have: (assumption_context (smash_context [] (trans_local (bcontext x)))) by pcuic.
       clear. generalize (smash_context [] (trans_local (bcontext x))).
       induction c; intros; constructor.
-      apply IHc. now depelim H. 
+      apply IHc. now depelim x0. 
       destruct a as [na [b|] ty]; cbn; constructor => //.
-      now depelim H. }
+      now depelim x0. }
     relativize (context_assumptions (bcontext x)).
     destruct expb as [[] ?], IH as [[] ?].
     eapply expanded_let_expansion.

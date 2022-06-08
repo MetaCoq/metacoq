@@ -116,7 +116,6 @@ struct
     | Constr.NATIVEcast -> NativeCast
     | Constr.VMcast -> VmCast
 
-
   let quote_dirpath (dp : DirPath.t) : Kernames.dirpath =
     let l = DirPath.repr dp in
     List.map quote_ident l

@@ -307,7 +307,7 @@ Section Wcbv.
    Derive Signature for value.
 
    Lemma value_app f args : value_head #|args| f -> All value args -> value (mkApps f args).
-   Proof.
+   Proof using Type.
      destruct (args).
      - intros [] hv; now constructor.
      - intros vh av. eapply value_app_nonnil => //.
@@ -327,22 +327,22 @@ Section Wcbv.
    Defined.
  
    Lemma value_head_nApp {nargs t} : value_head nargs t -> ~~ isApp t.
-   Proof. destruct 1; auto. Qed.
+   Proof using Type. destruct 1; auto. Qed.
    Hint Resolve value_head_nApp : core.
  
    Lemma isStuckfix_nApp {t args} : isStuckFix t args -> ~~ isApp t.
-   Proof. destruct t; auto. Qed.
+   Proof using Type. destruct t; auto. Qed.
    Hint Resolve isStuckfix_nApp : core.
  
    Lemma atom_nApp {t} : atom t -> ~~ isApp t.
-   Proof. destruct t; auto. Qed.
+   Proof using Type. destruct t; auto. Qed.
    Hint Resolve atom_nApp : core.
  
    Lemma value_mkApps_inv t l :
      ~~ isApp t ->
      value (mkApps t l) ->
      ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
-   Proof.
+   Proof using Type.
      intros H H'. generalize_eq x (mkApps t l).
      revert t H. induction H' using value_values_ind.
      intros. subst.
@@ -356,7 +356,7 @@ Section Wcbv.
      value (mkApps t l) ->
      ~~ isApp t ->
      All value l.
-   Proof.
+   Proof using Type.
      intros val not_app.
      now apply value_mkApps_inv in val as [(-> & ?)|[]].
    Qed.
@@ -421,7 +421,7 @@ Section Wcbv.
   (*     It means no redex can remain at the head of an evaluated term. *)
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
-  Proof.
+  Proof using Type.
     intros ev. induction ev; simpl; intros; auto using value.
 
     - change (tApp ?h ?a) with (mkApps h [a]).
@@ -461,13 +461,13 @@ Section Wcbv.
 
   Lemma value_head_spec n t :
     value_head n t -> (~~ (isLambda t || isArityHead t)).
-  Proof.
+  Proof using Type.
     now destruct 1; simpl.
   Qed.
 
   Lemma value_head_final n t :
     value_head n t -> eval t t.
-  Proof.
+  Proof using Type.
     destruct 1.
     - now constructor.
     - now eapply eval_atom.
@@ -481,7 +481,7 @@ Section Wcbv.
     #|args| <= cstr_arity mdecl cdecl ->
     All2 eval args args' ->
     eval (mkApps f args) (mkApps (tConstruct ind c u) args').
-  Proof.
+  Proof using Type.
     intros hdecl evf hargs. revert args'.
     induction args using rev_ind; intros args' evargs.
     - depelim evargs. now cbn.
@@ -497,7 +497,7 @@ Section Wcbv.
     eval f (tCoFix mfix idx) ->
     All2 eval args args' ->
     eval (mkApps f args) (mkApps (tCoFix mfix idx) args').
-  Proof.
+  Proof using Type.
     intros evf hargs. revert args' hargs.
     induction args using rev_ind; intros args' evargs.
     - depelim evargs. cbn; auto.
@@ -514,7 +514,7 @@ Section Wcbv.
     eval f (tInd ind u) ->
     All2 eval args args' ->
     eval (mkApps f args) (mkApps (tInd ind u) args').
-  Proof.
+  Proof using Type.
     intros evf hargs. revert args' hargs.
     induction args using rev_ind; intros args' evargs.
     - depelim evargs. cbn; auto.
@@ -532,7 +532,7 @@ Section Wcbv.
     All2 eval args args' ->
     isStuckFix (tFix mfix idx) args ->
     eval (mkApps f args) (mkApps (tFix mfix idx) args').
-  Proof.
+  Proof using Type.
     intros evf hargs. revert args' hargs.
     induction args using rev_ind; intros args' evargs.
     - depelim evargs. cbn; auto.
@@ -547,7 +547,7 @@ Section Wcbv.
   Qed.
   
   Lemma value_head_antimon {n n' f} : n' <= n -> value_head n f -> value_head n' f.
-  Proof.
+  Proof using Type.
     intros hn []; econstructor; tea. lia. lia.
   Qed.
 
@@ -556,7 +556,7 @@ Section Wcbv.
     value_head #|l| f' ->
     All2 eval l l' ->
     eval (mkApps f l) (mkApps f' l').
-  Proof.
+  Proof using Type.
     revert l'. induction l using rev_ind; intros l' evf vf' evl.
     depelim evl. eapply evf.
     eapply All2_app_inv_l in evl as (?&?&?&?&?).
@@ -570,7 +570,7 @@ Section Wcbv.
   Qed.
 
   Lemma value_final e : value e -> eval e e.
-  Proof.
+  Proof using Type.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
     - assert (All2 eval args args).
@@ -582,7 +582,7 @@ Section Wcbv.
     All2 eval args argsv ->
     isStuckFix (tFix mfix idx) argsv ->
     eval (mkApps (tFix mfix idx) args) (mkApps (tFix mfix idx) argsv).
-  Proof.
+  Proof using Type.
     intros. eapply eval_stuck_Fix; eauto. now constructor.
     move: H. unfold isStuckFix. destruct cunfold_fix as [[rarg fn]|] => //.
     now rewrite (All2_length X).
@@ -592,7 +592,7 @@ Section Wcbv.
     value (mkApps (tFix mfix idx) argsv) -> 
     cunfold_fix mfix idx = Some (narg, fn) ->
     (All value argsv * isStuckFix (tFix mfix idx) argsv).
-  Proof.
+  Proof using Type.
     remember (mkApps (tFix mfix idx) argsv) as tfix.
     intros hv; revert Heqtfix.
     induction hv using value_values_ind; intros eq; subst.
@@ -608,7 +608,7 @@ Section Wcbv.
     value (mkApps (tFix mfix idx) argsv) ->
     cunfold_fix mfix idx = Some (narg, fn) ->
     #|argsv| <= narg.
-  Proof.
+  Proof using Type.
     intros val unf.
     eapply stuck_fix_value_inv in val; eauto.
     destruct val.
@@ -617,12 +617,12 @@ Section Wcbv.
   Qed.
 
   Lemma closed_beta na t b u : closed (tLambda na t b) -> closed u -> closed (csubst u 0 b).
-  Proof. simpl; move/andP => [ct cb] cu. now eapply closed_csubst. Qed.
+  Proof using Type. simpl; move/andP => [ct cb] cu. now eapply closed_csubst. Qed.
 
   Lemma closed_def `{checker_flags} c decl u b : wf Σ -> declared_constant Σ c decl -> 
     cst_body decl = Some b ->
     closed (subst_instance u b).
-  Proof.
+  Proof using Type.
     move=> wfΣ Hc Hb.
     rewrite PCUICClosed.closedn_subst_instance.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
@@ -635,7 +635,7 @@ Section Wcbv.
     closed (mkApps (tConstruct ind c u) args) ->
     #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->    nth_error brs c = Some br ->
     closed (iota_red (ci_npar ci) p args br).
-  Proof.
+  Proof using Type.
     unfold iota_red => cbrs cpars cargs hass e.
     solve_all.
     eapply All_nth_error in e; eauto. simpl in e.
@@ -667,7 +667,7 @@ Section Wcbv.
   Lemma closed_arg f args n a :  
     closed (mkApps f args) ->
     nth_error args n = Some a -> closed a.
-  Proof.
+  Proof using Type.
     rewrite closedn_mkApps.
     move/andP => [cf cargs].
     solve_all. eapply All_nth_error in cargs; eauto.
@@ -676,7 +676,7 @@ Section Wcbv.
   Lemma closed_unfold_fix mfix idx narg fn : 
     closed (tFix mfix idx) ->
     unfold_fix mfix idx = Some (narg, fn) -> closed fn.
-  Proof.
+  Proof using Type.
     unfold unfold_fix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold fix_subst. clear -Hf. generalize #|mfix|.
@@ -691,7 +691,7 @@ Section Wcbv.
     closed (tFix mfix idx) ->
     nth_error mfix idx = Some d ->
     subst0 (fix_subst mfix) (dbody d) = substl (fix_subst mfix) (dbody d).
-  Proof.  
+  Proof using Type.  
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
     { clear idx.
@@ -716,7 +716,7 @@ Section Wcbv.
     closed (tCoFix mfix idx) ->
     nth_error mfix idx = Some d ->
     subst0 (cofix_subst mfix) (dbody d) = substl (cofix_subst mfix) (dbody d).
-  Proof.  
+  Proof using Type.  
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (cofix_subst mfix).
     { clear idx.
@@ -740,7 +740,7 @@ Section Wcbv.
   Lemma closed_unfold_fix_cunfold_eq mfix idx : 
     closed (tFix mfix idx) ->
     unfold_fix mfix idx = cunfold_fix mfix idx.
-  Proof.
+  Proof using Type.
     unfold unfold_fix, cunfold_fix.
     destruct (nth_error mfix idx) eqn:Heq => //.
     intros cl; f_equal; f_equal.
@@ -750,7 +750,7 @@ Section Wcbv.
   Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
     closed (tCoFix mfix idx) ->
     unfold_cofix mfix idx = cunfold_cofix mfix idx.
-  Proof.  
+  Proof using Type.  
     unfold unfold_cofix, cunfold_cofix.
     destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
@@ -775,7 +775,7 @@ Section Wcbv.
   Lemma closed_unfold_cofix mfix idx narg fn : 
     closed (tCoFix mfix idx) ->
     unfold_cofix mfix idx = Some (narg, fn) -> closed fn.
-  Proof.
+  Proof using Type.
     unfold unfold_cofix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold cofix_subst. clear -Hf. generalize #|mfix|.
@@ -788,7 +788,7 @@ Section Wcbv.
 
   (** Evaluation preserves closedness: *)
   Lemma eval_closed `{checker_flags} {wfΣ : wf Σ} : forall t u, closed t -> eval t u -> closed u.
-  Proof.
+  Proof using Type.
     move=> t u Hc ev. move: Hc.
     induction ev; simpl in *; auto;
       (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
@@ -833,7 +833,7 @@ Section Wcbv.
     forall u,
       nApp u = 0 ->
       isApp u = false.
-  Proof.
+  Proof using Type.
     intros u e.
     destruct u. all: simpl. all: try reflexivity.
     discriminate.
@@ -841,18 +841,18 @@ Section Wcbv.
 
   Lemma eval_tRel n t :
     eval (tRel n) t -> False.
-  Proof. now intros e; depelim e. Qed.
+  Proof using Type. now intros e; depelim e. Qed.
 
   Lemma eval_tVar i t : eval (tVar i) t -> False.
-  Proof. now intros e; depelim e. Qed.
+  Proof using Type. now intros e; depelim e. Qed.
 
   Lemma eval_tEvar n l t : eval (tEvar n l) t -> False.
-  Proof. now intros e; depelim e. Qed.
+  Proof using Type. now intros e; depelim e. Qed.
 
   Lemma eval_mkApps_tCoFix mfix idx args v :
     eval (mkApps (tCoFix mfix idx) args)  v ->
     exists args', v = mkApps (tCoFix mfix idx) args'.
-  Proof.
+  Proof using Type.
     revert v.
     induction args using List.rev_ind; intros v ev.
     + exists [].
@@ -872,24 +872,24 @@ Section Wcbv.
   Scheme Induction for le Sort Prop.
   
   Lemma le_irrel n m (p q : n <= m) : p = q.
-  Proof.
+  Proof using Type.
     revert q.
     now induction p using le_ind_dep; intros q; depelim q.
   Qed.
 
   Instance branch_UIP : UIP (branch term).
-  Proof.
+  Proof using Type.
     eapply EqDec.eqdec_uip; tc.
   Qed.
 
   Instance option_UIP {A} (u : EqDec A) : UIP (option A).
-  Proof.
+  Proof using Type.
     eapply EqDec.eqdec_uip; tc.
     eqdec_proof.
   Qed.
 
   Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor Σ ind mdecl idecl cdecl) : d = d'.
-  Proof.
+  Proof using Type.
     destruct d, d'.
     destruct d, d0.
 
@@ -901,7 +901,7 @@ Section Wcbv.
 
   Lemma declared_projection_unique {ind mdecl idecl cdecl pdecl}
      (d d' : declared_projection Σ ind mdecl idecl cdecl pdecl) : d = d'.
-  Proof.
+  Proof using Type.
     destruct d, d'.
     rewrite (declared_constructor_unique d d0).
     destruct a, a0.
@@ -914,7 +914,7 @@ Section Wcbv.
   Lemma eval_unique_sig {t v v'} :
     forall (ev1 : eval t v) (ev2 : eval t v'),
       {| pr1 := v; pr2 := ev1 |} = {| pr1 := v'; pr2 := ev2 |}.
-  Proof.
+  Proof using Type.
     Local Ltac go :=
       solve [
           repeat
@@ -1059,7 +1059,7 @@ Section Wcbv.
     eval t v ->
     eval t v' ->
     v = v'.
-  Proof.
+  Proof using Type.
     intros ev ev'.
     pose proof (eval_unique_sig ev ev').
     now noconf H.
@@ -1068,7 +1068,7 @@ Section Wcbv.
   Lemma eval_unique {t v} :
     forall (ev1 : eval t v) (ev2 : eval t v),
       ev1 = ev2.
-  Proof.
+  Proof using Type.
     intros ev ev'.
     pose proof (eval_unique_sig ev ev').
     now noconf H.
@@ -1080,7 +1080,7 @@ Section Wcbv.
     eval (tLetIn n b ty t) v ->
     ∑ b',
       eval b b' * eval (csubst b' 0 t) v.
-  Proof. now intros H; depelim H. Qed.
+  Proof using Type. now intros H; depelim H. Qed.
 
   Lemma eval_Const {c u v} :
     eval (tConst c u) v ->
@@ -1089,7 +1089,7 @@ Section Wcbv.
                  | Some body => eval (subst_instance u body) v
                  | None => False
                  end.
-  Proof.
+  Proof using Type.
     intros H; depelim H.
     - exists decl.
       split; [easy|].

@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
@@ -52,7 +52,7 @@ Lemma subst_global_uctx_invariants {cf : checker_flags} {Σ : global_env_ext} {w
   global_uctx_invariants ((global_ext_uctx Σ).1,subst_instance_cstrs u cstrs).
 Proof.
   intros [_ Hcs] Hu. split.
-  - apply LevelSet.union_spec. right. apply global_levels_Set.
+  - apply global_ext_levels_InSet.
   - pose proof Σ as [Σ' φ]. pose proof wfΣ as [HΣ' Hφ].
     rewrite /uctx_invariants /= in Hcs |- *.
     intros [[l ct] l'] Hctr.
@@ -468,7 +468,7 @@ Section Typecheck.
     Qed. *)
 
     Lemma sq_wfl_nil Σ : ∥ wf_local Σ [] ∥.
-    Proof.
+    Proof using Type.
      repeat constructor.
     Qed.
 
@@ -524,7 +524,7 @@ Section Typecheck.
  
     Lemma sq_wf_local_app {Γ Δ} : forall Σ (wfΣ : abstract_env_ext_rel X Σ),
       ∥ wf_local Σ Γ ∥ -> ∥ wf_local_rel Σ Γ Δ ∥ -> ∥ wf_local Σ (Γ ,,, Δ) ∥.
-    Proof.
+    Proof using Type.
       intros. sq. now apply wf_local_app.
     Qed.
 
@@ -657,7 +657,7 @@ Section Typecheck.
       Σ' ⊢ Γ' ≤[le] Γ ->
       wf_local Σ' Γ' ->
       welltyped Σ' Γ' t.
-    Proof.
+    Proof using Type.
       intros [s Hs] cum wfΓ'; exists s; eapply closed_context_cumulativity; eauto.
     Qed.
 
@@ -666,44 +666,44 @@ Section Typecheck.
       Σ' ⊢ Γ' ≤[le] Γ ->
       wf_local Σ' Γ' ->
       wt_decl Σ' Γ' d.
-    Proof.
+    Proof using Type.
       destruct d as [na [b|] ty]; simpl; intuition pcuics.
       all: eapply context_cumulativity_welltyped ; pcuics.
     Qed.
 
-    Lemma cumul_decls_irrel_sec Σ Γ Γ' d d' :
-      cumul_decls Σ Γ Γ d d' ->
-      cumul_decls Σ Γ Γ' d d'.
-    Proof.
+    Lemma cumul_decls_irrel_sec Pcmp Σ Γ Γ' d d' :
+      cumul_decls Pcmp Σ Γ Γ d d' ->
+      cumul_decls Pcmp Σ Γ Γ' d d'.
+    Proof using Type.
       intros cum; depelim cum; intros; constructor; auto.
     Qed.
     
-    Lemma conv_decls_irrel_sec Σ Γ Γ' d d' :
-      conv_decls Σ Γ Γ d d' ->
-      conv_decls Σ Γ Γ' d d'.
-    Proof.
+    Lemma conv_decls_irrel_sec Pcmp Σ Γ Γ' d d' :
+      conv_decls Pcmp Σ Γ Γ d d' ->
+      conv_decls Pcmp Σ Γ Γ' d d'.
+    Proof using Type.
       intros cum; depelim cum; intros; constructor; auto.
     Qed.
 
     Lemma inv_wf_local Σ Γ d :
       wf_local Σ (Γ ,, d) ->
       wf_local Σ Γ * wt_decl Σ Γ d.
-    Proof.
+    Proof using Type.
       intros wfd; depelim wfd; split; simpl; pcuic.
       now exists t.
     Qed.
 
-    Lemma cumul_ctx_rel_cons {Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Σ Γ Δ Δ') 
-      (p : cumul_decls Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
-      cumul_ctx_rel Σ Γ (Δ ,, d) (Δ' ,, d').
-    Proof.
+    Lemma cumul_ctx_rel_cons {Pcmp Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Pcmp Σ Γ Δ Δ') 
+      (p : cumul_decls Pcmp Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
+      cumul_ctx_rel Pcmp Σ Γ (Δ ,, d) (Δ' ,, d').
+    Proof using Type.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.
     
     Lemma ws_cumul_ctx_pb_rel_cons {le Σ Γ Δ Δ' d d'} (c : ws_cumul_ctx_pb_rel le Σ Γ Δ Δ') 
       (p : ws_cumul_decls le Σ (Γ,,, Δ) d d') : 
       ws_cumul_ctx_pb_rel le Σ Γ (Δ ,, d) (Δ' ,, d').
-    Proof.
+    Proof using Type.
       destruct c. split; auto.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.
@@ -808,14 +808,14 @@ Section Typecheck.
 
     Lemma assumption_context_subst_telescope s k Γ : 
       assumption_context Γ -> assumption_context (subst_telescope s k Γ).
-    Proof.
+    Proof using Type.
       rewrite /subst_telescope /mapi. intros ass; generalize 0.
       induction ass; cbn; constructor; auto.
     Qed.
     
     Lemma assumption_context_rev Γ : 
       assumption_context Γ -> assumption_context (List.rev Γ).
-    Proof.
+    Proof using Type.
       intros ass; induction ass; cbn; try constructor; auto.
       eapply assumption_context_app_inv => //. repeat constructor.
     Qed.
@@ -967,7 +967,7 @@ Section Typecheck.
   
   Definition abstract_env_level_mem_forallb {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : 
     forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
-  Proof. 
+  Proof using Type. 
     induction u; eauto; cbn.
     erewrite <- abstract_env_level_mem_correct; eauto. intuition. 
   Qed.  
@@ -1001,10 +1001,11 @@ Section Typecheck.
       intros x; simpl. erewrite <- abstract_env_level_mem_correct; eauto.
     }
     repeat split; eauto. 
-    sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
-    now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
-    eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
-    solve_all.
+    - now rewrite mapi_length in e1.
+    - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
+      now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
+      eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
+      solve_all.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
@@ -1033,7 +1034,7 @@ Section Typecheck.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    intuition auto.
+    now rewrite mapi_length in e1.
   Qed.
   
   Equations check_is_allowed_elimination
@@ -1108,7 +1109,7 @@ Section Typecheck.
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_branch cdecl br ×
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm n cdecl in
       wf_local Σ (Γ,,, brctxty.1) × Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps ∥.
-    Proof.
+    Proof using hpctx hty isdecl wfp wfpret wfΓ.
       intros. pose proof (heΣ _ wfΣ) as [heΣ].
       have wfbr : wf_branch cdecl br.
       { sq.  specialize_Σ wfΣ. do 2 red.
@@ -1204,7 +1205,7 @@ Section Typecheck.
     #|pparams p| = ind_npars mdecl ->
     eq_context_gen eq eq (pcontext p) (ind_predicate_context ci mdecl idecl) ->
     wf_predicate mdecl idecl p.
-  Proof.
+  Proof using Type.
     intros eqp e.
     do 2 red. split => //.
     eapply eq_context_gen_binder_annot in e.
@@ -1218,7 +1219,7 @@ Section Typecheck.
   Lemma eq_context_gen_wf_branch ci mdecl cdecl br :
     eq_context_gen eq eq (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
     wf_branch cdecl br.
-  Proof.
+  Proof using Type.
     intros e.
     do 2 red. 
     eapply eq_context_gen_binder_annot in e.
@@ -1305,13 +1306,13 @@ Section Typecheck.
 
 
   Lemma chop_firstn_skipn {A} n (l : list A) : chop n l = (firstn n l, skipn n l).
-  Proof.
+  Proof using Type.
     induction n in l |- *; destruct l; simpl; auto.
     now rewrite IHn skipn_S.
   Qed.
 
   Lemma ctx_inst_wt Σ Γ s Δ : ctx_inst Σ Γ s Δ -> All (welltyped Σ Γ) s.
-  Proof.
+  Proof using Type.
     induction 1; try constructor; auto.
     now exists t.
   Qed.
@@ -1640,7 +1641,7 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
     symmetry in HH. erewrite <- abstract_env_lookup_correct in HH; eauto. 
-    now apply (weaken_lookup_on_global_env' _ _ _ heΣ HH).
+    now apply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) HH).
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
@@ -1674,7 +1675,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 X1)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
     cbn in *; specialize_Σ wfΣ ; sq; econstructor; eassumption.
@@ -1697,7 +1698,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 decl)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 decl)).
   Qed.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
@@ -1739,7 +1740,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
-    eapply (weaken_lookup_on_global_env' _ _ _ heΣ (proj1 X1)).
+    eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
     rewrite List.rev_involutive.
@@ -2273,7 +2274,7 @@ Section Typecheck.
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
     
-    eapply infer_Proj with (pdecl := pdecl).
+    eapply infer_Proj with (pdecl0 := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply Nat.eqb_eq.
@@ -2378,6 +2379,34 @@ Section Typecheck.
     exact H1. 
     Unshelve. eauto. 
   Qed.
+
+  Definition abstract_check_recursivity_kind Finite a Σ (wfΣ: abstract_env_ext_rel X Σ): 
+    check_recursivity_kind (abstract_env_lookup X) a Finite
+    = check_recursivity_kind (lookup_env Σ) a Finite.
+  Proof using Type.
+    unfold  check_recursivity_kind. 
+    erewrite <- abstract_env_lookup_correct; eauto.
+  Qed.
+
+  Definition abstract_wf_fixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
+     wf_fixpoint_gen (abstract_env_lookup X) mfix =
+     wf_fixpoint Σ mfix.
+  Proof using Type.
+    unfold wf_fixpoint, wf_fixpoint_gen.
+    destruct (map_option_out (map check_one_fix mfix)); simpl; eauto.
+    induction l; eauto.
+    erewrite abstract_check_recursivity_kind; eauto. 
+  Qed. 
+
+  Definition abstract_wf_cofixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
+     wf_cofixpoint_gen (abstract_env_lookup X) mfix =
+     wf_cofixpoint Σ mfix.
+  Proof using Type.
+    unfold wf_cofixpoint, wf_cofixpoint_gen.
+    destruct (map_option_out (map check_one_cofix mfix)); simpl; eauto.
+    induction l; eauto.
+    erewrite abstract_check_recursivity_kind; eauto. 
+  Qed. 
 
   Definition abstract_check_recursivity_kind Finite a Σ (wfΣ: abstract_env_ext_rel X Σ): 
     check_recursivity_kind (abstract_env_lookup X) a Finite

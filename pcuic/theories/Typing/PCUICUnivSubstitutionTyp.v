@@ -3,7 +3,7 @@ From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICOnFreeVars
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
-     PCUICCases PCUICCumulativity PCUICTyping PCUICReduction PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICCases PCUICCumulativity PCUICTyping PCUICReduction PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICClosed PCUICPosition PCUICGuardCondition PCUICUnivSubstitutionConv.
 
 Require Import Equations.Prop.DepElim.
@@ -26,7 +26,7 @@ Lemma compare_universe_subst_instance pb {Σ : global_env_ext} univs u :
     (fun x y : Universe.t =>
     compare_universe pb (global_ext_constraints (Σ.1, univs)) (subst_instance_univ u x)
       (subst_instance_univ u y)).
-Proof.
+Proof using Type.
   intros v.
   destruct pb; cbn.
   - now apply eq_universe_subst_instance.
@@ -137,17 +137,17 @@ valid_constraints (global_ext_constraints (Σ.1, univs))
                   (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A =s B ->
   (Σ.1,univs) ;;; subst_instance u Γ |- subst_instance u A =s subst_instance u B.
-Proof.
+Proof using Type.
   apply cumulSpec_subst_instance.
 Qed.
 
 Lemma conv_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
+  conv_decls cumulSpec0 Σ Γ Γ' d d' ->
+  conv_decls cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
     (subst_instance u d) (subst_instance u d').
-Proof.
+Proof using Type.
   intros valid Hd; depelim Hd; constructor; tas;
     eapply convSpec_subst_instance; tea.
 Qed.
@@ -155,19 +155,19 @@ Qed.
 Lemma cumul_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
-  cumul_decls Σ Γ Γ' d d' ->
-  cumul_decls (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
+  cumul_decls cumulSpec0 Σ Γ Γ' d d' ->
+  cumul_decls cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ')
     (subst_instance u d) (subst_instance u d').
-Proof.
+Proof using Type.
   intros valid Hd; depelim Hd; constructor; tas;
     (eapply convSpec_subst_instance || eapply cumulSpec_subst_instance); tea.
 Qed.
 
 Lemma conv_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-  conv_context Σ Γ Γ' ->
-  conv_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
-Proof.
+  conv_context cumulSpec0 Σ Γ Γ' ->
+  conv_context cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
+Proof using Type.
   intros valid.
   intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
   now eapply conv_decls_subst_instance.
@@ -175,9 +175,9 @@ Qed.
 
 Lemma subst_instance_ws_cumul_ctx_pb_rel (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-  cumul_context Σ Γ Γ' ->
-  cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
-Proof.
+  cumul_context cumulSpec0 Σ Γ Γ' ->
+  cumul_context cumulSpec0 (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
+Proof using Type.
   intros valid.
   intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
   now eapply cumul_decls_subst_instance.
@@ -216,16 +216,18 @@ Lemma typing_subst_instance :
           wf_ext_wk Σ ->
           consistent_instance_ext (Σ.1, univs) Σ.2 u ->
           wf_local(Σ.1,univs) (subst_instance u Γ)).
-Proof.
+Proof using Type.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; cbn  -[Universe.make] in *.
   - rewrite /subst_instance /=.
     induction 1.
     + constructor.
     + simpl. constructor; auto.
-      exists (subst_instance_univ u tu.π1). eapply p; auto.
+      eapply infer_typing_sort_impl; tea.
+      intros Hty. eapply Hs; auto.
     + simpl. constructor; auto.
-      ++ exists (subst_instance_univ u tu.π1). eapply p0; auto.
-      ++ apply p; auto.
+      ++ eapply infer_typing_sort_impl; tea.
+         intros Hty. eapply Hs; auto.
+      ++ apply Hc; auto.
 
   - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
     rewrite map_decl_type. econstructor; aa.
@@ -267,7 +269,7 @@ Proof.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp eqpctx wfp cup
       wfpctx pty Hpty Hcpc kelim
-      Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
+      IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
     change (subst_instance i (preturn p)) with (preturn (subst_instance i p)).
@@ -289,12 +291,12 @@ Proof.
       rewrite -subst_instance_app.
       rewrite -subst_instance_two_context.
       rewrite -[List.rev (subst_instance i _)]map_rev.
-      clear -wfext cu. induction 1; cbn; constructor; simpl; eauto.
+      clear -wfext cu. induction 1; try destruct t0; cbn; constructor; simpl; eauto.
       all:now rewrite -(subst_instance_subst_telescope i [_]).
     + rewrite -{1}(map_id (ind_ctors idecl)).
       eapply All2i_map. eapply All2i_impl; eauto. 
       cbn -[case_branch_type case_branch_context subst_instance].
-      intros k cdecl br [hctx [hbod [hcbctx [ihbod [hbty ihbty]]]]].
+      intros k cdecl br (hctx & hcbctx & (hbod & ihbod) & hbty & ihbty).
       rewrite case_branch_type_fst.
       rewrite - !subst_instance_case_branch_context - !subst_instance_app_ctx.
       rewrite -subst_instance_case_predicate_context subst_instance_case_branch_type.
@@ -320,8 +322,8 @@ Proof.
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl; intuition auto.
-      destruct X1 as [s Hs]. exists (subst_instance_univ u s).
-      now apply Hs.
+      eapply infer_typing_sort_impl with (tu := X1).
+      intros [_ Hs]; now apply Hs.
     + eapply All_map, All_impl; tea.
       intros x [X1 X3]. 
       specialize (X3 u univs wfΣ' H2). 
@@ -348,8 +350,8 @@ Proof.
       + now eapply cofix_guard_subst_instance.
       + rewrite nth_error_map H0. reflexivity.
       + apply All_map, (All_impl X); simpl; intuition auto.
-        destruct X1 as [s Hs]. exists (subst_instance_univ u s).
-        now apply Hs.
+        eapply infer_typing_sort_impl with (tu := X1).
+        intros [_ Hs]; now apply Hs.
       + eapply All_map, All_impl; tea.
         intros x [X1 X3]. 
         specialize (X3 u univs wfΣ' H2). 
@@ -378,7 +380,7 @@ Lemma typing_subst_instance' Σ φ Γ t T u univs :
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, φ) ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
-Proof.
+Proof using Type.
   intros X X0 X1.
   eapply (typing_subst_instance (Σ, univs)); tas. apply X.
 Qed.
@@ -388,7 +390,7 @@ Lemma typing_subst_instance_wf_local Σ φ Γ u univs :
   wf_local (Σ, univs) Γ ->
   consistent_instance_ext (Σ, φ) univs u ->
   wf_local (Σ, φ) (subst_instance u Γ).
-Proof.
+Proof using Type.
   intros X X0 X1.
   eapply (env_prop_wf_local typing_subst_instance (Σ, univs)); tas. 1: apply X.
 Qed.
@@ -399,7 +401,7 @@ Lemma typing_subst_instance'' Σ φ Γ t T u univs :
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, φ) ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
-Proof.
+Proof using Type.
   intros X X0 X1.
   eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
 Qed.
@@ -411,7 +413,7 @@ Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
   consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
   Σ ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
-Proof.
+Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1.
   eapply typing_subst_instance''; tea.
   split; tas.
@@ -424,7 +426,7 @@ Lemma typing_subst_instance_decl Σ Γ t T c decl u :
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   Σ ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
-Proof.
+Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   eapply typing_subst_instance''; tea.
   split; tas.
@@ -439,12 +441,12 @@ Lemma wf_local_instantiate_poly {Σ ctx Γ u} :
   consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
   wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
   wf_local Σ (subst_instance u Γ).
-Proof.
+Proof using Type.
   intros wfΣ Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_ctx in ty;   
-    eauto using typing_wf_local. 
+    cbn; eauto using typing_wf_local. 
     * apply wfΣ.
     * destruct wfΣ. now eapply on_udecl_on_udecl_prop.
 Qed.
@@ -455,12 +457,12 @@ Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} :
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   wf_local (Σ.1, universes_decl_of_decl decl) Γ -> 
   wf_local Σ (subst_instance u Γ).
-Proof.
+Proof using Type.
   intros wfΣ Hdecl Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_decl in ty;   
-    eauto using typing_wf_local.
+    cbn; eauto using typing_wf_local.
 Qed.
 
 Lemma isType_subst_instance_decl Σ Γ T c decl u :
@@ -469,16 +471,16 @@ Lemma isType_subst_instance_decl Σ Γ T c decl u :
   isType (Σ.1, universes_decl_of_decl decl) Γ T ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   isType Σ (subst_instance u Γ) (subst_instance u T).
-Proof.
-  intros wfΣ look [s Hs] cu.
-  exists (subst_instance u s). 
-  now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
+Proof using Type.
+  intros wfΣ look isty cu.
+  eapply infer_typing_sort_impl with (tu := isty).
+  intros Hs; now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
 Lemma isArity_subst_instance u T :
   isArity T ->
   isArity (subst_instance u T).
-Proof.
+Proof using Type.
   induction T; cbn; intros; tauto.
 Qed.
 
@@ -487,15 +489,12 @@ Lemma wf_local_subst_instance Σ Γ ext u :
   consistent_instance_ext Σ ext u ->
   wf_local (Σ.1, ext) Γ ->
   wf_local Σ (subst_instance u Γ).
-Proof.
+Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1. simpl in *.
   induction X1; cbn; constructor; auto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance'' in Hs; eauto; apply X.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance'' in Hs; eauto; apply X.
-  - hnf in t1 |- *.
-    eapply typing_subst_instance'' in t1; eauto; apply X.
+  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  3: rename t1 into Hs.
+  all: eapply typing_subst_instance'' in Hs; eauto; apply X.
 Qed.
 
 Lemma wf_local_subst_instance_decl Σ Γ c decl u :
@@ -504,15 +503,12 @@ Lemma wf_local_subst_instance_decl Σ Γ c decl u :
   wf_local (Σ.1, universes_decl_of_decl decl) Γ ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   wf_local Σ (subst_instance u Γ).
-Proof.
+Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   induction X1; cbn; constructor; auto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance_decl in Hs; eauto.
-  - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance_decl in Hs; eauto.
-  - hnf in t1 |- *.
-    eapply typing_subst_instance_decl in t1; eauto.
+  1,2: eapply infer_typing_sort_impl with (tu := t0); intros Hs.
+  3: rename t1 into Hs.
+  all: eapply typing_subst_instance_decl in Hs; eauto; apply X.
 Qed.
 
   Lemma subst_instance_ind_sort_id Σ mdecl ind idecl :
@@ -520,7 +516,7 @@ Qed.
     declared_inductive Σ ind mdecl idecl ->
     let u := abstract_instance (ind_universes mdecl) in
     subst_instance_univ u (ind_sort idecl) = ind_sort idecl.
-  Proof.
+  Proof using Type.
     intros wfΣ decli u.
     pose proof (on_declared_inductive decli) as [onmind oib].
     pose proof (onArity oib) as ona.
@@ -542,7 +538,7 @@ Qed.
     declared_inductive Σ ind mdecl idecl ->
     let u := abstract_instance (ind_universes mdecl) in
     subst_instance u (ind_type idecl) = ind_type idecl.
-  Proof.
+  Proof using Type.
     intros wfΣ decli u.
     pose proof (on_declared_inductive decli) as [_ oib].
     pose proof (onArity oib) as ona.
@@ -557,7 +553,7 @@ Qed.
     wf_ext_wk Σ ->
     let u := abstract_instance Σ.2 in
     isType Σ Γ T -> subst_instance u T = T.
-  Proof.
+  Proof using Type.
     intros wf_ext u isT.
     destruct isT. eapply typed_subst_abstract_instance in t; auto.
   Qed.

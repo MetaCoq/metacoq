@@ -113,6 +113,8 @@ struct
       Constr.DEFAULTcast
     else if constr_equall trm kNative then
       Constr.VMcast
+    else if constr_equall trm kRevertCast then
+      Constr.REVERTcast
     else
       not_supported_verb trm "unquote_cast_kind"
 
@@ -178,6 +180,15 @@ struct
         evm, Univ.Level.make univ
       with Not_found ->
         CErrors.user_err (str ("Level "^s^" is not a declared level."))
+
+  let is_fresh_level evm trm h args =
+    if constr_equall h tLevel then
+      match args with
+      | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
+        let s = (unquote_string s) in
+        s = "__metacoq_fresh_level__"
+      | _ -> bad_term_verb trm "unquote_level" 
+    else false
 
   let is_fresh_level evm trm h args =
     if constr_equall h tLevel then

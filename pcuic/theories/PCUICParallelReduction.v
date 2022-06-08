@@ -414,7 +414,8 @@ Section ParallelReduction.
     | pred1_ctx _ _ ?G => fresh "pred" G
     | nat -> bool => fresh "P"
     | nat -> nat => fresh "f"
-    | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+    | _ => PCUICWeakeningEnv.my_rename_hyp h th
+    | _ => PCUICTyping.my_rename_hyp h th
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -907,7 +908,8 @@ Ltac my_rename_hyp h th :=
   | nat -> bool => fresh "P"
   | nat -> nat => fresh "f"
   | urenaming _ _ _ ?f => fresh "u" f
-  | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+  | _ => PCUICWeakeningEnv.my_rename_hyp h th
+  | _ => PCUICTyping.my_rename_hyp h th
   end.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -929,7 +931,7 @@ Hint Extern 4 (on_contexts_over _ _ _ ?X) =>
 Ltac inv_on_free_vars ::=
   match goal with
   | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    progress (cbn in H || rewrite -> on_free_vars_mkApps in H);
     (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
       eapply forallb_All in H); intros
   end.

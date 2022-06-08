@@ -36,17 +36,17 @@ Section Flip.
   Context {A : Type} (R : crelation A).
 
   Lemma flip_Reflexive : Reflexive R -> Reflexive (flip R).
-  Proof.
+  Proof using Type.
     intros HR x. unfold flip. apply reflexivity.
   Qed.
 
   Lemma flip_Symmetric : Symmetric R -> Symmetric (flip R).
-  Proof.
+  Proof using Type.
     intros HR x y. unfold flip. apply symmetry.
   Qed.
 
   Lemma flip_Transitive : Transitive R -> Transitive (flip R).
-  Proof.
+  Proof using Type.
     intros HR x y z xy yz.
     unfold flip in *. eapply HR; eassumption.
   Qed.

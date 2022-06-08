@@ -55,20 +55,20 @@ Section map_predicate_shift.
 
   Lemma map_shift_pparams (p : predicate term) :
     map (fn f) (pparams p) = pparams (map_predicate_shift p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_shift_preturn (p : predicate term) :
     fn (shift #|p.(pcontext)| f) (preturn p) = preturn (map_predicate_shift p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_shift_pcontext (p : predicate term) :
     (pcontext p) =
     pcontext (map_predicate_shift p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_shift_puinst (p : predicate term) :
     finst (puinst p) = puinst (map_predicate_shift p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
 End map_predicate_shift.
 
@@ -84,11 +84,11 @@ Section map_branch_shift.
 
   Lemma map_shift_bbody (b : branch term) :
     fn (shift #|b.(bcontext)| f) (bbody b) = bbody (map_branch_shift b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_shift_bcontext (b : branch term) :
     (bcontext b) = bcontext (map_branch_shift b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch_shift.
 
 Notation map_branches_shift ren f :=

@@ -197,7 +197,7 @@ Next Obligation.
   now eapply ModPathComp.compare_eq in Heq_anonymous.
 Qed.
 Next Obligation.
-  rewrite ModPathOT.eq_refl in n. congruence.
+  rewrite ModPathOT.eq_refl in H. congruence.
 Qed.
 
 #[global] Instance modpath_EqDec : Classes.EqDec modpath := { eq_dec := modpath_eq_dec }.

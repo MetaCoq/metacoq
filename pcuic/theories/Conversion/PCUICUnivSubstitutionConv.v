@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
      PCUICCases PCUICCumulativity PCUICTyping
-     PCUICReduction PCUICWeakeningEnvConv
+     PCUICReduction PCUICWeakeningEnv
      PCUICClosed PCUICPosition PCUICGuardCondition.
 
 Require Import Equations.Prop.DepElim.
@@ -685,18 +685,16 @@ Proof.
   repeat split.
   2: now rewrite subst_instance_instance_length.
   + rewrite forallb_map. apply forallb_forall.
-    intros l Hl. unfold global_ext_levels in *; simpl in *.
+    intros l Hl. (* unfold global_ext_levels in *; simpl in *. *)
     eapply forallb_forall in H; tea. clear -H H2 Hl.
     apply LevelSet_mem_union in H. destruct H as [H|H].
     2: { destruct l; simpl; try (apply LevelSet_mem_union; right; assumption).
          apply consistent_instance_declared in H2.
          apply (forallb_nth' n Level.lzero) in H2.
          destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
-         apply LevelSet_mem_union; right.
-         eapply LS.mem_spec.
-         apply global_levels_Set. }
+         apply LS.mem_spec, global_ext_levels_InSet. }
     *  destruct l; simpl.
-       -- apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
+       -- apply LS.mem_spec, global_ext_levels_InSet.
        -- apply LS.mem_spec in H.
           destruct φ as [|[φ1 φ2]]; simpl in *.
           { now apply LevelSetFact.empty_iff in H. }
@@ -704,7 +702,7 @@ Proof.
        -- apply consistent_instance_declared in H2.
           apply (forallb_nth' n Level.lzero) in H2.
           destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
-          apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
+          apply LS.mem_spec, global_ext_levels_InSet.
   + unfold consistent_instance_ext, consistent_instance in H2.
     unfold valid_constraints in *; destruct check_univs; [|trivial].
     destruct φ as [|[φ1 φ2]]; simpl in *.
@@ -943,8 +941,7 @@ Lemma LevelIn_subst_instance {cf : checker_flags} Σ l u univs :
   LS.In (subst_instance_level u l) (global_ext_levels (Σ.1, univs)).
 Proof.
   intros H H'. destruct l; simpl.
-  - apply LS.union_spec; right; simpl.
-    apply global_levels_Set.
+  - apply global_ext_levels_InSet.
   - apply LS.union_spec in H; destruct H as [H|H]; simpl in *.
     + now apply monomorphic_level_notin_levels_of_udecl in H.
     + apply LS.union_spec; now right.
@@ -952,8 +949,7 @@ Proof.
     apply (forallb_nth' n Level.lzero) in H'.
     destruct H' as [[? [eq ?]]|eq]; rewrite eq.
     + now apply LS.mem_spec.
-    + apply LS.union_spec; right; simpl.
-      apply global_levels_Set.
+    + apply global_ext_levels_InSet.
 Qed.
 
 
@@ -1617,7 +1613,7 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: destruct tu; eexists; cbn in *; eauto.
+  all: eapply infer_typing_sort_impl with _ tu; cbn in *; eauto.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
@@ -1654,9 +1650,7 @@ Proof.
   destruct s as [| | t]; cbnr.
   intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
   destruct l as [|s|n']; simpl; auto.
-  - unfold global_ext_levels.
-    apply LS.union_spec. right.
-    apply global_levels_Set.
+  - apply global_ext_levels_InSet.
   - specialize (Hl (Level.Level s, n) inl).
     simpl in Hl. apply monomorphic_level_in_global_ext in Hl.
     eapply LS.union_spec. now right.
@@ -1670,7 +1664,7 @@ Proof.
       * destruct Hu as [declu [us vc]].
         unfold subst_instance. simpl.
         destruct (nth_error u n') eqn:hnth.
-        2:{ simpl. eapply LS.union_spec; right; apply global_levels_Set. }
+        2: simpl; apply global_ext_levels_InSet.
         eapply forallb_Forall in declu.
         eapply nth_error_forall in declu; eauto.
         simpl in declu. now eapply LS.mem_spec in declu.
@@ -1702,7 +1696,7 @@ Section SubstIdentity.
   Lemma subst_instance_id_mdecl Σ u mdecl :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     subst_instance u (abstract_instance (ind_universes mdecl)) = u.
-  Proof.
+  Proof using Type.
     intros cu.
     red in cu. red in cu.
     destruct (ind_universes mdecl) eqn:eqi.
@@ -1718,7 +1712,7 @@ Section SubstIdentity.
     wf Σ ->
     declared_minductive Σ mind mdecl ->
     wf_ext_wk (Σ, ind_universes mdecl).
-  Proof.
+  Proof using Type.
     intros wfΣ decli.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
     red. simpl. split; auto.
@@ -1728,7 +1722,7 @@ Section SubstIdentity.
     wf Σ ->
     declared_minductive Σ mind mdecl ->
     wf_global_ext Σ (ind_universes mdecl).
-  Proof.
+  Proof using Type.
     intros wfΣ decli.
     split; auto.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
@@ -1742,7 +1736,7 @@ Section SubstIdentity.
      (fold_right LevelSet.add LevelSet.empty
         (unfold n Level.Var)) (global_levels Σ)) ->
     subst_instance_level (unfold n Level.Var) l = l.
-  Proof.
+  Proof using Type.
     intros wfΣ lin.
     eapply LevelSet.union_spec in lin.
     destruct lin.
@@ -1760,7 +1754,7 @@ Section SubstIdentity.
     wf Σ ->
     wf_global_ext Σ udecl ->
     consistent_instance_ext (Σ, udecl) udecl (abstract_instance udecl).
-  Proof.
+  Proof using Type.
     intros wfΣ wf_glob_ext.
     red. red.
     destruct udecl as [|[univs cst]] eqn:indu.
@@ -1816,7 +1810,7 @@ Section SubstIdentity.
 
   Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
     ∑ ctx, Σ.2 = Polymorphic_ctx ctx.
-  Proof.
+  Proof using cf.
     intros onu lin.
     destruct (Σ.2); intuition eauto.
     simpl in lin, onu. lsets.
@@ -1826,7 +1820,7 @@ Section SubstIdentity.
     wf_ext_wk Σ ->
     consistent_instance_ext Σ decl u ->
     subst_instance (abstract_instance Σ.2) u = u.
-  Proof.
+  Proof using Type.
     intros [wfΣ onu] cu.
     destruct decl.
     - simpl in cu. destruct u; simpl in *; try discriminate; auto.
@@ -1851,7 +1845,7 @@ Section SubstIdentity.
     wf_ext_wk Σ ->
     LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ) ->
     subst_instance (abstract_instance Σ.2) l = l.
-  Proof.
+  Proof using Type.
     intros [wfΣ onu] cu.
     destruct l; auto.
     destruct t; auto.
@@ -1871,7 +1865,7 @@ Section SubstIdentity.
     wf_ext_wk Σ ->
     wf_universe Σ u ->
     subst_instance_univ (abstract_instance Σ.2) u = u.
-  Proof.
+  Proof using Type.
     intros wf cu.
     destruct u; simpl; auto. f_equal.
     apply eq_univ'.
@@ -1894,7 +1888,7 @@ Section SubstIdentity.
     consistent_instance_ext Σ decl u ->
     subst_instance (abstract_instance Σ.2) (inds ind u bodies) = 
       (inds ind u bodies).
-  Proof.
+  Proof using Type.
     intros wf cu.
     unfold inds. generalize #|bodies|.
     induction n; simpl; auto. rewrite IHn; f_equal.
@@ -1902,15 +1896,15 @@ Section SubstIdentity.
   Qed.
 
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
-  Proof.
+  Proof using Type.
     simpl.
     intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
-    apply LS.union_spec. right; apply global_levels_Set.
+    apply global_ext_levels_InSet.
   Qed.
 
   Lemma wf_universe_super {Σ u} : wf_universe Σ u -> wf_universe Σ (Universe.super u).
-  Proof.
+  Proof using Type.
     destruct u; cbn.
     1-2:intros _ l hin%LevelExprSet.singleton_spec; subst l; apply wf_universe_type1;
      now apply LevelExprSet.singleton_spec.
@@ -1924,7 +1918,7 @@ Section SubstIdentity.
     #|l| = #|l0| ->
     l ++ l' = l0 ++ l0' -> 
     l = l0 /\ l' = l0'.
-  Proof.
+  Proof using Type.
     induction l in l', l0, l0' |- *; destruct l0; simpl in * => //; auto.
     intros [= eq] [= -> eql].
     now destruct (IHl _ _ _ eq eql).
@@ -1939,7 +1933,7 @@ Section SubstIdentity.
         wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
         subst_instance u Γ = Γ).
-  Proof.
+  Proof using Type.
     eapply typing_ind_env; intros; simpl in *; auto; try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
     1:{ induction X; simpl; auto; unfold snoc.
       * f_equal; auto.
@@ -2014,7 +2008,7 @@ Section SubstIdentity.
     Σ ;;; Γ |- t : T ->
     let u := abstract_instance Σ.2 in
     subst_instance u t = t.
-  Proof.
+  Proof using Type.
     intros [wfΣ onu] H. eapply (env_prop_typing subst_abstract_instance_id) in H as [H H']; eauto.
     split; auto.
   Qed.
@@ -2024,7 +2018,7 @@ Section SubstIdentity.
     wf_local Σ Γ ->
     let u := abstract_instance Σ.2 in
     subst_instance u Γ = Γ.
-  Proof.
+  Proof using Type.
     intros. eapply (env_prop_wf_local subst_abstract_instance_id) in X0; eauto.
   Qed.
 

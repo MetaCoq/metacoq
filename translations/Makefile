@@ -20,3 +20,9 @@ force Makefile _CoqProject.in metacoq-config: ;
 	+$(MAKE) -f Makefile.coq $@
 
 .PHONY: all clean mrproper force
+
+vos: Makefile.coq
+	$(MAKE) -f Makefile.coq vos
+
+quick: Makefile.coq
+	$(MAKE) -f Makefile.coq COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

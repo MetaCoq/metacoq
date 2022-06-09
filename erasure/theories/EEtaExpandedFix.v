@@ -452,14 +452,16 @@ Section isEtaExp.
     intros Hk H.
     assert (Hcl : closed a) by now eapply isEtaExp_closed in H. revert H.
     remember (Γ ++ [n] ++ Δ)%list as Γ_.
-    funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
+    move Hcl at top.
+    funelim (isEtaExp Γ_ b); simp_eta; simpl; intros; try simp_eta; eauto; try fold csubst;
       try toAll; repeat solve_all; subst.
     - intros. simp isEtaExp ; cbn. destruct (Nat.compare_spec #|Γ0| i) => //; simp_eta.
       + eapply expanded_weakening with (Γ := []). eauto.
       + rewrite nth_error_app2. lia.
-        rewrite !nth_error_app2 in H0. lia. cbn. lia.
+        rewrite !nth_error_app2 in H0. lia. cbn.
         erewrite option_default_ext; eauto.
-        f_equal. destruct i; cbn; lia.
+        destruct i; cbn. unfold minus. lia.
+        rewrite Nat.sub_succ_l. lia. now cbn.
       + now rewrite !nth_error_app1 in H0 |- *; try lia.
     - eapply H with (Γ := 0 :: Γ0); cbn; eauto.
     - move/andP: H2 => [] etab etab'. simp_eta.
@@ -492,8 +494,8 @@ Section isEtaExp.
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
         rtoProp. split. 2: solve_all.
         rewrite !nth_error_app2 in H1 |- *; cbn; try lia.
-        len. erewrite option_default_ext; eauto. f_equal.
-        destruct n; cbn; lia.
+        len. erewrite option_default_ext; eauto.
+        destruct n; cbn; try lia. rewrite Nat.sub_succ_l //. lia.
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
         rtoProp. split. 2: solve_all. len. now rewrite !nth_error_app1 in H1 |- *; try lia.
     - rewrite csubst_mkApps /=.

@@ -173,7 +173,7 @@ let quote_module (qualid : qualid) : global_reference list =
     let open Declarations in
     let me = mb.mod_expr in
     let get_refs s =
-      let body = Modops.destr_nofunctor s in
+      let body = Modops.destr_nofunctor mp s in
       let get_ref (label, field) =
         let open Names in 
         match field with

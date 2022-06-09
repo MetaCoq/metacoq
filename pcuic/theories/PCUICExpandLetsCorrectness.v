@@ -5362,9 +5362,9 @@ Proof.
     { have: (assumption_context (smash_context [] (trans_local (bcontext x)))) by pcuic.
       clear. generalize (smash_context [] (trans_local (bcontext x))).
       induction c; intros; constructor.
-      apply IHc. now depelim x0. 
+      apply IHc. now depelim H. 
       destruct a as [na [b|] ty]; cbn; constructor => //.
-      now depelim x0. }
+      now depelim H. }
     relativize (context_assumptions (bcontext x)).
     destruct expb as [[] ?], IH as [[] ?].
     eapply expanded_let_expansion.

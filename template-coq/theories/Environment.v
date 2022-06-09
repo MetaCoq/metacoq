@@ -302,7 +302,7 @@ Module Environment (T : Term).
   Record global_env := 
     { universes : ContextSet.t;
       declarations : global_declarations }.
-
+    
   Coercion universes : global_env >-> ContextSet.t.
 
   Definition empty_global_env := 
@@ -354,23 +354,6 @@ Module Environment (T : Term).
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
   Proof. apply extends_refl. Qed.
   *) 
-
-  Record global_env := 
-    { universes : ContextSet.t;
-      declarations : global_declarations }.
-
-  Coercion universes : global_env >-> ContextSet.t.
-
-  Definition empty_global_env := 
-    {| universes := ContextSet.empty;
-       declarations := [] |}.
-
-  Definition add_global_decl Σ decl := 
-    {| universes := Σ.(universes);
-       declarations := decl :: Σ.(declarations) |}.
-      
-  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
-  Proof. now destruct Σ. Qed.
   
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)

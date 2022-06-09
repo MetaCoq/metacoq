@@ -616,16 +616,16 @@ Section CheckEnv.
     | _, _ => fun _ _ => raise (Msg "While checking syntactic cumulativity of contexts: declarations do not match")
     end wfd wfd'. 
     Next Obligation.
-      specialize_Σ H3. now pose proof H1 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed. 
     Next Obligation.
-      specialize_Σ H3. now pose proof H2 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H3. now pose proof H1 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H3. now pose proof H2 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed. 
     Next Obligation.
       specialize_Σ wfΣ. sq. 
@@ -653,16 +653,16 @@ Section CheckEnv.
     | _, _ => fun _ _ => raise (Msg "While checking ws_cumul_pb of contexts: contexts do not have the same length")
     end wfΓ wfΔ.
     Next Obligation.
-      specialize_Σ H1. now pose proof H as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H0 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H0 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed.
     Next Obligation.
       specialize_Σ wfΣ. sq.
@@ -684,16 +684,16 @@ Section CheckEnv.
     end wfl wfl'.
     Next Obligation. apply All2_nil. Qed.   
     Next Obligation.
-      specialize_Σ H1. now pose proof H as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H0 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i as [? ?]%andb_and. 
     Qed.
     Next Obligation.
-      specialize_Σ H1. now pose proof H0 as [? ?]%andb_and. 
+      specialize_Σ H. now pose proof i0 as [? ?]%andb_and. 
     Qed.
     Next Obligation.
       specialize_Σ wfΣ. sq. constructor; auto.
@@ -2015,9 +2015,9 @@ End monad_Alli_nth_forall.
     rename Heq_anonymous into eqp.
     sq. red. rewrite -eqp. congruence.
   Qed.
-  Next Obligation.  specialize_Σ H0. sq. rewrite Heq_x. eauto. Qed. 
+  Next Obligation.  specialize_Σ H. sq. rewrite Heq_x. eauto. Qed. 
   Next Obligation.
-    specialize_Σ H0. sq. red. intros. rewrite -Heq_x //.
+    specialize_Σ H. sq. red. intros. rewrite -Heq_x //.
   Qed.
 
   Definition checkb_constructors_smaller X_ext (cs : list constructor_univs) (ind_sort : Universe.t) :=
@@ -2072,13 +2072,13 @@ End monad_Alli_nth_forall.
     Next Obligation.
       unfold check_ind_sorts. simpl.
       pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
-      rewrite -Heq_anonymous. specialize_Σ H0.  sq. split => //.
+      rewrite -Heq_anonymous. specialize_Σ H.  sq. split => //.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. simpl.
       pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
-      specialize_Σ H0. sq. split.
+      specialize_Σ H. sq. split.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
       rewrite -Heq_anonymous; auto.
     Qed.
@@ -2326,11 +2326,11 @@ End monad_Alli_nth_forall.
       ret (Build_on_inductive_sq  check_bodies check_pars check_npars _)
     end.
   Next Obligation.
-    specialize_Σ H0. sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
+    specialize_Σ H. sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
     eassumption.
   Qed.
   Next Obligation.
-    specialize_Σ H0. sq. unfold on_constant_decl. rewrite <- Heq_anonymous; tea.
+    specialize_Σ H. sq. unfold on_constant_decl. rewrite <- Heq_anonymous; tea.
   Qed.
   Next Obligation.
       edestruct pf as [? ?]; specialize_Σ H. now pose proof (abstract_env_ext_wf _ H0).
@@ -2382,27 +2382,27 @@ End monad_Alli_nth_forall.
   Next Obligation.  
     intros. have decll :
           ConstraintSet.For_all (declared_cstr_levels (ContextSet.levels univs)) (ContextSet.constraints univs).
-    { clear -H1. apply ConstraintSet.for_all_spec in H1.
+    { clear -i1. apply ConstraintSet.for_all_spec in i1.
       2: now intros x y [].
-      intros [[l ct] l'] Hl. specialize (H1 _ Hl). simpl in H1.
-      apply andb_true_iff in H1. destruct H1 as [H H1].
+      intros [[l ct] l'] Hl. specialize (i1 _ Hl). simpl in i1.
+      apply andb_true_iff in i1. destruct i1 as [H H1].
       apply LevelSet.mem_spec in H. apply LevelSet.mem_spec in H1.
       now split. }
       intros. split; eauto.
       { intros l Hl. specialize (decll l Hl). red. destruct l, p. now rewrite levels_global_levels_declared. }
       split; eauto.  unfold declared_cstr_levels. cbn.   
       repeat split => //.
-    + clear - H H0. apply LevelSet.for_all_spec in H0.
+    + clear - i i0. apply LevelSet.for_all_spec in i0.
       2: now intros x y [].
       intros l Hl. rewrite levels_global_levels_declared in Hl; eauto. 
-    + cbn in H2. rename H2 into Huctx.  
+    + cbn in e. rename e into Huctx.  
       eapply (abstract_env_is_consistent_correct uctx univs); eauto.
       case_eq (gc_of_constraints univs.2);
       [|intro XX; rewrite XX in Huctx; noconf Huctx].
       intros Σctrs HΣctrs.
       unfold global_ext_constraints. simpl in *.
       rewrite HΣctrs in Huctx. sq. split.
-      * clear -H. destruct univs. cbn in *. now apply LevelSet.mem_spec in H.     
+      * clear -i. destruct univs. cbn in *. now apply LevelSet.mem_spec in i.     
       * red. apply decll.
   Qed. 
   Next Obligation. 
@@ -2432,15 +2432,15 @@ End monad_Alli_nth_forall.
       ret (exist (abstract_env_add_decl X d.1 d.2 _) _)
     end.
   Next Obligation.
-    cbn in *. destruct H0.   pose proof (abstract_env_exists x) as [[? ?]].
-    specialize_Σ a. specialize_Σ H0. cbn in *. sq.
+    cbn in *. destruct H.  pose proof (abstract_env_exists x) as [[? ?]].
+    specialize_Σ a. specialize_Σ H. cbn in *. sq.
     split.
     - erewrite <- abstract_env_global_declarations_correct; eauto.
       now rewrite wf_.
-    - pose proof (abstract_env_ext_wf _ H0). sq. destruct H3.
+    - pose proof (abstract_env_ext_wf _ H). sq. destruct H2.
       cbn in *. rewrite wf_ in o0. erewrite <- abstract_env_univ_correct ; eauto.
       now rewrite wf_ in a.  
-    - rewrite wf_ in H. erewrite <- abstract_env_univ_correct ; eauto. 
+    - rewrite wf_ in y. erewrite <- abstract_env_univ_correct ; eauto. 
       erewrite <- abstract_env_global_declarations_correct; eauto.
       now rewrite wf_.
   Qed.
@@ -2448,7 +2448,7 @@ End monad_Alli_nth_forall.
   Next Obligation.
     pose proof (abstract_env_exists X) as [[? ?]].  
     epose (abstract_env_add_decl_correct X _ k g _ a).
-    erewrite (abstract_env_irr _ H0 a0).
+    erewrite (abstract_env_irr _ H a0).
     pose proof (wf_ _ a) as eq.
     unfold add_global_decl. now rewrite eq.  
   Qed. 

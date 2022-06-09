@@ -354,3 +354,4 @@ erasure/src/eGlobalEnv.mli
 erasure/src/eGlobalEnv.ml
 Makefile.conf
 test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
+pcuic/src/META.coq-metacoq-pcuic

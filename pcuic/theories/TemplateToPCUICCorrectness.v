@@ -2216,25 +2216,6 @@ Ltac simpl_let :=
   end.
 Local Hint Extern 4 => simpl_let : trans.
 
-Lemma trans_wf_universe Σ u : ST.wf_universe Σ u ->
-  wf_universe (trans_global Σ) u.
-Proof.
-  unfold ST.wf_universe, wf_universe.
-  now rewrite global_ext_levels_trans.
-Qed.
-
-Local Hint Resolve trans_wf_universe : trans.
-Local Hint Transparent Ast.Env.global_env_ext : trans.
-Local Hint Transparent Universe.t : trans.
-Local Hint Variables Transparent : trans.
-Ltac trans := try typeclasses eauto with trans.
-(* bug in Coq, typeclasses eauto tries exact with a quantified hypothesis starting with a let-in *)
-Ltac simpl_let := 
-  match goal with
-  | [ H : let _ := _ in _ |- _ ] => progress (cbv zeta in H)
-  end.
-Local Hint Extern 4 => simpl_let : trans.
-
 Theorem template_to_pcuic {cf} :
   ST.env_prop (fun Σ Γ t T =>
     let Σ' := trans_global Σ in

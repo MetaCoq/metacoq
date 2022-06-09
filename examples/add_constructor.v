@@ -125,6 +125,6 @@ MetaCoq Run (add_constructor <%@Nat.Odd_alt%> "foo''"
                     <%(fun (even' odd':nat -> Prop) => odd' 0)%>).
 Definition test4 := foo''.
 Module A.
-MetaCoq Run (add_constructor <%@even%> "foo'"
+MetaCoq Run (add_constructor <%@Nat.Even_alt%> "foo'"
                     <%(fun (even' odd':nat -> Prop) => even' 0)%>).
 End A.

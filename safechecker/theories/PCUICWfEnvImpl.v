@@ -489,7 +489,7 @@ Next Obligation.
   rewrite - (is_consistent_spec (global_ext_uctx (X, udecl))) (is_consistent_spec2 HG').
   assert (reorder : forall a b c : Prop, (a -> b <-> c) -> a /\ b <-> a /\ c) by intuition; apply reorder.
   move=> ?; rewrite consistent_extension_on_union.
-  2:{ pose proof (referenced_impl_wf X); sq.
+  1:{ pose proof (referenced_impl_wf X); sq.
       apply: PCUICUnivSubstitutionConv.levels_global_constraint. }
   change (CS.union _ _) with (global_ext_uctx (X, udecl)).2.
   apply: consistent_ext_on_full_ext=> //.

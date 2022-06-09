@@ -65,7 +65,6 @@ Proof.
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.
-  tc.
 Qed.
 
 Require Import ssrbool.

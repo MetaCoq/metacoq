@@ -1504,7 +1504,7 @@ Module AUContext.
     (u, (mapi (fun i _ => Level.Var i) u, cst)).
 
   Definition levels (uctx : t) : LevelSet.t :=
-    LevelSetProp.of_list (fst (repr uctx)).
+    LevelSetProp.of_list (fst (snd (repr uctx))).
 
   #[local]
   Existing Instance EqDec_ReflectEq.
@@ -1609,7 +1609,7 @@ Definition levels_of_udecl u :=
 Definition constraints_of_udecl u :=
   match u with
   | Monomorphic_ctx => ConstraintSet.empty
-  | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
+  | Polymorphic_ctx ctx => snd (snd (AUContext.repr ctx))
   end.
 
 Section Univ.
@@ -2522,14 +2522,14 @@ Derive NoConfusion for universes_entry.
 
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (fst ctx) (Universes.AUContext.repr ctx)
+  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
   | Monomorphic_ctx => Monomorphic_entry ContextSet.empty
   end.
 
 Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx => Instance.empty
-  | Polymorphic_ctx c => fst (AUContext.repr c)
+  | Polymorphic_ctx c => fst (snd (AUContext.repr c))
   end.
 (* todo: duplicate of polymorphic_instance *)
 Definition abstract_instance decl :=

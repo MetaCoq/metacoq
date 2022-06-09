@@ -358,7 +358,7 @@ Section WfEnv.
     { destruct X as [s X]. exists T, s. intuition pcuic. eapply typing_spine_refl. eexists; eauto. }
     intros HT Hf. simpl in Hf.
     destruct u. simpl in Hf, IHu.
-    - edestruct @inversion_App_size with (H0 := Hf) as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+    - edestruct @inversion_App_size with (H := Hf) as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
       eexists _, _; intuition eauto.
       econstructor; eauto with pcuic.
       eapply isType_ws_cumul_pb_refl; eexists; eauto.
@@ -369,7 +369,7 @@ Section WfEnv.
       econstructor; cbn; eauto.
     - specialize (IHu (tApp f a) T).
       epose proof (IHu _ Hf) as [T' [s' [H' [H''' H'']]]].
-      edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+      edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
       exists (tProd na' A' B'). exists s. intuition; eauto.
       econstructor; eauto with wf.
       1,2: eexists; eauto. 1:eapply isType_ws_cumul_pb_refl; eexists; eauto.

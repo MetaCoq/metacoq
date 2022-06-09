@@ -1001,7 +1001,6 @@ Section Typecheck.
       intros x; simpl. erewrite <- abstract_env_level_mem_correct; eauto.
     }
     repeat split; eauto. 
-    - now rewrite mapi_length in e1.
     - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
       now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
       eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
@@ -1033,8 +1032,7 @@ Section Typecheck.
     now rewrite <- e2 in H. 
   Qed.
   Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    now rewrite mapi_length in e1.
+    now destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
   Qed.
   
   Equations check_is_allowed_elimination
@@ -2274,7 +2272,7 @@ Section Typecheck.
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
     
-    eapply infer_Proj with (pdecl0 := pdecl).
+    eapply infer_Proj with (pdecl := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply Nat.eqb_eq.
@@ -2402,34 +2400,6 @@ Section Typecheck.
      wf_cofixpoint_gen (abstract_env_lookup X) mfix =
      wf_cofixpoint Σ mfix.
   Proof using Type.
-    unfold wf_cofixpoint, wf_cofixpoint_gen.
-    destruct (map_option_out (map check_one_cofix mfix)); simpl; eauto.
-    induction l; eauto.
-    erewrite abstract_check_recursivity_kind; eauto. 
-  Qed. 
-
-  Definition abstract_check_recursivity_kind Finite a Σ (wfΣ: abstract_env_ext_rel X Σ): 
-    check_recursivity_kind (abstract_env_lookup X) a Finite
-    = check_recursivity_kind (lookup_env Σ) a Finite.
-  Proof.
-    unfold  check_recursivity_kind. 
-    erewrite <- abstract_env_lookup_correct; eauto.
-  Qed.
-
-  Definition abstract_wf_fixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
-     wf_fixpoint_gen (abstract_env_lookup X) mfix =
-     wf_fixpoint Σ mfix.
-  Proof.
-    unfold wf_fixpoint, wf_fixpoint_gen.
-    destruct (map_option_out (map check_one_fix mfix)); simpl; eauto.
-    induction l; eauto.
-    erewrite abstract_check_recursivity_kind; eauto. 
-  Qed. 
-
-  Definition abstract_wf_cofixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
-     wf_cofixpoint_gen (abstract_env_lookup X) mfix =
-     wf_cofixpoint Σ mfix.
-  Proof.
     unfold wf_cofixpoint, wf_cofixpoint_gen.
     destruct (map_option_out (map check_one_cofix mfix)); simpl; eauto.
     induction l; eauto.

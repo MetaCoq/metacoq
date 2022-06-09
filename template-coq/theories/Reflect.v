@@ -1,16 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
+From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Template Require Import utils BasicAst Universes Kernames.
 Require Import ssreflect.
 From Equations Require Import Equations.
 
-#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
-  { eqb := Numbers.Cyclic.Int63.Int63.eqb }.
+#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Uint63.int :=
+  { eqb := Numbers.Cyclic.Int63.Uint63.eqb }.
 Next Obligation.
-  destruct (Int63.eqb x y) eqn:eq; constructor.
-  now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
-  now apply (Numbers.Cyclic.Int63.Int63.eqb_false_spec x y) in eq.
+  destruct (Uint63.eqb x y) eqn:eq; constructor.
+  now apply (Numbers.Cyclic.Int63.Uint63.eqb_spec x y) in eq.
+  now apply (Numbers.Cyclic.Int63.Uint63.eqb_false_spec x y) in eq.
 Qed.
 
 Derive NoConfusion EqDec for SpecFloat.spec_float.

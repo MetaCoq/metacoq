@@ -24,7 +24,7 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 (* Unset Universe Minimization ToSet. *)
 
 (* From Coq Require Import Decimal. *)
-
+From Coq Require Import Decimal.
 Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.

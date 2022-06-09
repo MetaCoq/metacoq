@@ -3117,7 +3117,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
              by [apply/EdgeSet.elements_spec1/InA_In_eq|
                   apply/InA_In_eq/EdgeSet.elements_spec1]).
         rewrite /border_set EdgeSet_fold_spec_right2.
-        2:{ move=> [[xs ?] xt] [[ys ?] yt] ?; cbn.
+        1:{ move=> [[xs ?] xt] [[ys ?] yt] ?; cbn.
             unfold fold_fun, add_from_orig.
             move: (VSet.mem xs _) (VSet.mem xt _) (VSet.mem ys _) (VSet.mem yt _)=> [] [] [] []; try sets.
         }

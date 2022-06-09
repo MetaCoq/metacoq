@@ -549,12 +549,12 @@ Proof using Type.
     + eapply inversion_Construct in Hty as Hty'; eauto.
       destruct Hty' as (? & ? & ? & ? & ? & ? & ?).
       assert (ind = i) as ->. {
-         eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (args0 := []); eauto.
+         eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (args := []); eauto.
       }
       eapply firstorder_value_C with (args := []); eauto.
       eapply firstorder_ind_propositional; eauto. sq. eauto.      
       now eapply (declared_constructor_inductive (ind := (i, _))).
-    + exfalso. eapply invert_fix_ind with (args0 := []) in Hty as [].
+    + exfalso. eapply invert_fix_ind with (args := []) in Hty as [].
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
     + exfalso. eapply (typing_cofix_coind (args := [])) in Hty. red in Hty.
       red in Hfo. unfold firstorder_ind in Hfo.

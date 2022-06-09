@@ -78,9 +78,6 @@ Hint Resolve wf_ext_wf : core. *)
 Ltac specialize_Σ wfΣ :=
   repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end. 
 
-Ltac specialize_Σ wfΣ :=
-  repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end. 
-
 Section fix_sigma.
 
   Context {cf : checker_flags} {nor : normalizing_flags}.
@@ -723,39 +720,9 @@ Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_
   let bodies := map erase_one_inductive_body bds in
   {| E.ind_npars := mib.(ind_npars);
      E.ind_bodies := bodies; |}.
- 
-Program Definition remove_kn (kn : kername) (Σ : wf_env) decls (prf : exists d, Σ.(referenced_impl_env).(declarations) = (kn, d) :: decls) : wf_env :=
- {| wf_env_referenced := {| referenced_impl_env := {| universes := Σ.(referenced_impl_env).(universes); declarations := decls |} |};
-    wf_env_map := EnvMap.EnvMap.remove kn Σ.(wf_env_map); 
-    |}.
 
 Import EnvMap.
-Next Obligation.
-  destruct Σ.(referenced_impl_wf). sq.
-  destruct X as [onu ond]; split => //. rewrite H in ond.
-  now depelim ond.
-Qed.
-Next Obligation.
-  pose proof Σ.(wf_env_map_repr). red in H0.
-  rewrite H in H0.
-  set (Σ0 := EnvMap.of_global_env decls).
-  epose proof (EnvMap.remove_add_eq decls kn prf Σ0).
-  forward_keep H1.
-  { pose proof (Σf := wf_env_fresh Σ). rewrite H in Σf. now depelim Σf. }
-  forward_keep H1.
-  { pose proof (Σf := wf_env_fresh Σ). rewrite H in Σf. now depelim Σf. }
-  forward_keep H1.
-  { red. unfold EnvMap.equal. reflexivity. }
-  unfold EnvMap.repr.
-  rewrite H0 /=. unfold KernameMapFact.uncurry; cbn.
-  unfold EnvMap.add in H1. rewrite H1. reflexivity.
-Qed.
   
-Program Definition make_wf_env_ext (Σ : wf_env) (univs : universes_decl) (prf : ∥ wf_ext (Σ, univs) ∥) : wf_env_ext :=
-  {| wf_env_ext_referenced := {| referenced_impl_env_ext := (Σ, univs);|} ;
-     wf_env_ext_map := Σ.(wf_env_map);
-     wf_env_ext_map_repr := Σ.(wf_env_map_repr) |}.
-
 Require Import Morphisms.
 From MetaCoq.Template Require Import uGraph.
 

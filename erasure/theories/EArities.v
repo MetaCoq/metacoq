@@ -23,9 +23,7 @@ Local Existing Instance extraction_checker_flags.
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 (* todo move *)
-#[global]
-Instance extends_refl : CRelationClasses.Reflexive PCUICWeakeningEnvConv.extends_decls.
-Proof. red. intros x. now split => //; exists []. Qed.
+#[global] Existing Instance extends_refl.
 
 Lemma isErasable_Proof Σ Γ t :
   Is_proof Σ Γ t -> isErasable Σ Γ t.

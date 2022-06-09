@@ -254,10 +254,11 @@ Section WeakEtaExp.
   Lemma etaExp_csubst a k b : 
     isEtaExp a -> isEtaExp b -> isEtaExp (ECSubst.csubst a k b).
   Proof using Type.
+    intros etaa. move b at bottom.    
     funelim (isEtaExp b); cbn -[isEtaExp]; try simp_eta; eauto;
       try toAll; repeat solve_all.
-    - intros. simp isEtaExp ; cbn. destruct Nat.compare => //. simp_eta in H.
-    - move/andP: H2 => [] etab etab'.
+    - intros. simp isEtaExp ; cbn. destruct Nat.compare => //. simp_eta in etaa.
+    - move/andP: H1 => [] etab etab'.
       apply/andP. split; eauto.
     - rtoProp. intuition eauto.
       solve_all.
@@ -265,13 +266,13 @@ Section WeakEtaExp.
       apply/andP; split.
       now eapply isLambda_csubst.
       eapply a0 => //.
-    - move/andP: H1 => [] etaexp h.
+    - move/andP: H0 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
       rewrite map_length. rtoProp; solve_all. solve_all.
     - rewrite csubst_mkApps /=.
-      move/andP: H2 => [] eu ev.
-      specialize (H _ k H1 eu).
+      move/andP: H1 => [] eu ev.
+      specialize (H _ k etaa eu).
       eapply isEtaExp_mkApps_intro => //. solve_all.
   Qed.
   

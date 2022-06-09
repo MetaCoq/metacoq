@@ -83,6 +83,7 @@ theories/PCUICElimination.v
 theories/PCUICSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
+theories/PCUICFirstorder.v
 theories/PCUICProgress.v
 
 theories/PCUICSafeLemmata.v
@@ -100,12 +101,13 @@ theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
 theories/PCUICTransform.v
 
-theories/Bidirectional/BDEnvironmentTyping.v
 theories/Bidirectional/BDTyping.v
 theories/Bidirectional/BDToPCUIC.v
 theories/Bidirectional/BDFromPCUIC.v
 theories/Bidirectional/BDUnique.v
 theories/Bidirectional/BDStrengthening.v
+
+theories/PCUICWeakeningEnv.v
 
 # theories/All.v
 

@@ -22,12 +22,15 @@ Module Type Term.
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
   Parameter Inline subst_instance_constr : UnivSubst term.
   
+  Notation lift0 n := (lift n 0).
 End Term.
 
 Module Environment (T : Term).
 
   Import T.
   #[global] Existing Instance subst_instance_constr.
+
+  Definition typ_or_sort := typ_or_sort_ term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -299,7 +302,7 @@ Module Environment (T : Term).
   Record global_env := 
     { universes : ContextSet.t;
       declarations : global_declarations }.
-
+    
   Coercion universes : global_env >-> ContextSet.t.
 
   Definition empty_global_env := 
@@ -312,6 +315,45 @@ Module Environment (T : Term).
       
   Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
   Proof. now destruct Σ. Qed.
+  
+
+  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
+    match Σ with
+    | nil => None
+    | d :: tl =>
+      if kn == d.1 then Some d.2
+      else lookup_global tl kn
+    end.
+
+  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
+
+  Definition extends (Σ Σ' : global_env) :=
+    Σ.(universes) ⊂_cs Σ'.(universes) ×
+    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+  
+  Definition extends_decls (Σ Σ' : global_env) :=
+    Σ.(universes) = Σ'.(universes) ×
+    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+  
+  Existing Class extends.
+  Existing Class extends_decls.
+
+  #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
+  Proof.
+    intros []. split => //.
+    rewrite e. split; [lsets|csets].
+  Qed.
+
+  #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
+  Proof. red. intros x. now split => //; exists []. Qed.
+  
+  Lemma extends_refl : CRelationClasses.Reflexive extends.
+  Proof. red. intros x. split; [apply incl_cs_refl | now exists []]. Qed.
+
+  (* easy prefers this to the local hypotheses, which is annoying
+  #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
+  Proof. apply extends_refl. Qed.
+  *) 
   
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
@@ -519,16 +561,6 @@ Module Environment (T : Term).
   Lemma projs_length ind npars k : #|projs ind npars k| = k.
   Proof. induction k; simpl; auto. Qed.
 
-  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
-    match Σ with
-    | nil => None
-    | d :: tl =>
-      if kn == d.1 then Some d.2
-      else lookup_global tl kn
-    end.
-
-  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
-
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context_k f Γ) = context_assumptions Γ.
   Proof.
     rewrite fold_context_k_alt.
@@ -690,3 +722,11 @@ End Environment.
 Module Type EnvironmentSig (T : Term).
  Include Environment T.
 End EnvironmentSig.
+
+Module Type TermUtils (T: Term) (E: EnvironmentSig T).
+  Import T E.
+
+  Parameter Inline destArity : context -> term -> option (context × Universe.t).
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+
+End TermUtils.

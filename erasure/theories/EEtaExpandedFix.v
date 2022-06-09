@@ -445,7 +445,6 @@ Section isEtaExp.
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
   Qed.
-  
   Lemma etaExp_csubst' a k b n Γ Δ : 
     #|Γ| = k ->
     isEtaExp [] a -> isEtaExp (Γ ++ [n] ++ Δ) b -> isEtaExp (Γ ++ Δ) (ECSubst.csubst a k b).
@@ -524,7 +523,7 @@ Section isEtaExp.
     funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
       try toAll; try solve_all; subst.
     - intros. simp isEtaExp ; cbn. destruct (Nat.compare_spec #|Γ0| i) => //; simp_eta.
-      + rewrite nth_error_app2 in H0; try lia; cbn in H0; try easy. subst. rewrite Nat.sub_diag in H0. cbn in H0. easy.
+      + rewrite nth_error_app2 in H0; try lia; cbn in H0; try easy. subst. rewrite minus_diag in H0. cbn in H0. easy.
       + rewrite !nth_error_app2 in H0 |- *; cbn; try lia.
         erewrite option_default_ext; eauto. f_equal.
         destruct i; cbn; lia.
@@ -577,7 +576,7 @@ Section isEtaExp.
         rtoProp. repeat split; eauto.
         * unfold isEtaExp_fixapp. rewrite Hnth. len.
           subst. rewrite nth_error_app2 in H1; try lia.
-          rewrite Nat.sub_diag in H1. cbn in H1. eapply Nat.ltb_lt.
+          rewrite minus_diag in H1. cbn in H1. eapply Nat.ltb_lt.
           eapply Nat.leb_le in H1. lia.        
         * cbn in Hcl. solve_all. rtoProp; intuition auto.
           now eapply expanded_weakening.

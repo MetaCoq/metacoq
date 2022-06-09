@@ -131,14 +131,14 @@ Section alli.
   Lemma alli_app n : 
     alli p n (l ++ l') =
     alli p n l && alli p (#|l| + n) l'.
-  Proof.
+  Proof using Type.
     induction l in n |- *; simpl; auto.
     now rewrite IHl0 Nat.add_succ_r andb_assoc.
   Qed.
 
   Lemma alli_shift n :
     alli p n l = alli (fun i => p (n + i)) 0 l.
-  Proof.
+  Proof using Type.
     induction l in n, p |- *; simpl; auto.
     rewrite IHl0 (IHl0 _ 1) Nat.add_0_r.
     f_equal. apply alli_ext => x.
@@ -146,7 +146,7 @@ Section alli.
   Qed.
 
   Lemma alli_map {B} (f : B -> A) n bs : alli p n (map f bs) = alli (fun i => p i ∘ f) n bs.
-  Proof.
+  Proof using Type.
     induction bs in n |- *; simpl; auto.
     now rewrite IHbs.
   Qed.
@@ -3113,7 +3113,7 @@ Section All_fold.
     All_fold P Γ -> 
     (forall Γ x, P Γ x -> Q Γ x) ->
     All_fold Q Γ.
-  Proof.
+  Proof using Type.
     induction 1; simpl; intros => //; constructor; eauto.
   Qed.
 
@@ -3121,7 +3121,7 @@ Section All_fold.
     All_fold (fun Γ => P (Γ ++ Δ)) Γ -> 
     All_fold P Δ -> 
     All_fold P (Γ ++ Δ).
-  Proof.
+  Proof using Type.
     induction 1; simpl; intros => //.
     constructor; auto.
   Qed.
@@ -3132,7 +3132,7 @@ Section Alli_All_fold.
   Lemma Alli_All_fold {P : nat -> A -> Type} {n Γ} : 
     Alli P n Γ <~>
     All_fold (fun Γ d => P (n + #|Γ|) d) (List.rev Γ).
-  Proof.
+  Proof using Type.
     split.
     - induction 1; simpl.
       + constructor.
@@ -3152,7 +3152,7 @@ Section Alli_All_fold.
   Lemma Alli_rev_All_fold (P : nat -> A -> Type) n Γ : 
     Alli P n (List.rev Γ) ->
     All_fold (fun Γ d => P (n + #|Γ|) d) Γ.
-  Proof.
+  Proof using Type.
     move/Alli_All_fold.
     now rewrite List.rev_involutive.
   Qed.
@@ -3160,7 +3160,7 @@ Section Alli_All_fold.
   Lemma All_fold_Alli_rev (P : nat -> A -> Type) n Γ : 
     All_fold (fun Γ d => P (n + #|Γ|) d) Γ ->
     Alli P n (List.rev Γ).
-  Proof.
+  Proof using Type.
     rewrite -{1}(List.rev_involutive Γ).
     now move/Alli_All_fold.
   Qed.
@@ -3172,13 +3172,13 @@ Section All2_fold.
   Lemma All2_fold_All2 (Q : A -> A -> Type) {Γ Δ : list A} : 
     All2_fold (fun _ _ => Q) Γ Δ <~>
     All2 Q Γ Δ.
-  Proof.
+  Proof using Type.
     split; induction 1; simpl; constructor; auto.
   Qed.
  
   Lemma All2_fold_refl: (forall Δ x, P Δ Δ x x) ->
     forall Δ : list A, All2_fold P Δ Δ.
-  Proof.
+  Proof using Type.
     intros HP.
     induction Δ; constructor; auto.
   Qed.
@@ -3190,7 +3190,7 @@ Section All2_fold.
         All2_fold P Γ Γ'' ->
         P Γ Γ' x y -> P Γ' Γ'' y z -> P Γ Γ'' x z) ->
     CRelationClasses.Transitive (All2_fold P).
-  Proof.
+  Proof using Type.
     intros HP x y z H. induction H in z |- *; auto;
     intros H'; depelim H';
       try constructor; eauto; hnf in H0; noconf H0; eauto.
@@ -3202,7 +3202,7 @@ Section All2_fold.
         All2_fold P Γ' Γ ->
         P Γ Γ' x y -> P Γ' Γ y x) ->
     CRelationClasses.Symmetric (All2_fold P).
-  Proof.
+  Proof using Type.
     intros HP x y H.
     induction H; constructor; auto.
   Qed.
@@ -3211,7 +3211,7 @@ Section All2_fold.
     #|Δ| = #|Δ'| ->
     All2_fold P (Δ ++ Γ) (Δ' ++ Γ') ->
     All2_fold P Γ Γ' * All2_fold (fun Δ Δ' => P (Δ ++ Γ) (Δ' ++ Γ')) Δ Δ'.
-  Proof.
+  Proof using Type.
     intros H.
     induction Δ in H, Δ', Γ, Γ' |- *;
     destruct Δ'; try discriminate.
@@ -3226,7 +3226,7 @@ Section All2_fold.
     #|Γ| = #|Γ'| ->
     All2_fold P (Δ ++ Γ) (Δ' ++ Γ') ->
     All2_fold P Γ Γ' * All2_fold (fun Δ Δ' => P (Δ ++ Γ) (Δ' ++ Γ')) Δ Δ'.
-  Proof.
+  Proof using Type.
     intros H.
     induction Δ in H, Δ', Γ, Γ' |- *;
     destruct Δ'; try discriminate.
@@ -3247,7 +3247,7 @@ Section All2_fold.
       P Γ Δ d d' ->
       P' Γ Δ d d') ->
     All2_fold P' Γ Δ.
-  Proof.
+  Proof using Type.
     intros cr Hcr.
     induction cr; constructor; intuition eauto.
   Qed.
@@ -3256,7 +3256,7 @@ Section All2_fold.
     All2_fold P Γ Δ ->
     (forall Γ Δ T U, #|Γ| = #|Δ| -> P Γ Δ T U -> Q Γ Δ T U) ->
     All2_fold Q Γ Δ.
-  Proof.
+  Proof using Type.
     intros H HP. pose proof (All2_fold_length H).
     induction H; constructor; simpl; eauto.
   Qed.
@@ -3264,7 +3264,7 @@ Section All2_fold.
   Lemma All2_fold_forallb2 (Pb : A -> A -> bool) Γ Δ : 
     All2_fold (fun _ _ => Pb) Γ Δ ->
     forallb2 Pb Γ Δ.
-  Proof.
+  Proof using Type.
     induction 1; simpl; auto; now rewrite p IHX.
   Qed.
 
@@ -3275,7 +3275,7 @@ Section All2_fold.
             let Γs' := skipn (S n) Γ' in
             All2_fold P Γs Γs' *
             P Γs Γs' d d')%type }.
-  Proof.
+  Proof using Type.
     induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
     - depelim Hrel.
       simpl. eexists; intuition eauto.
@@ -3292,7 +3292,7 @@ Section All2_fold.
           let Γs' := skipn (S n) Γ' in
           All2_fold P Γs Γs' *
           P Γs Γs' d d')%type }.
-  Proof.
+  Proof using Type.
     induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
     - depelim Hrel.
       simpl. eexists; intuition eauto.
@@ -3306,14 +3306,14 @@ Section All2_fold.
     All2_fold P Γ Δ ->
     All2_fold Q Γ Δ ->
     All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ.
-  Proof.
+  Proof using Type.
     induction 1; intros h; depelim h; constructor; auto.
   Qed.
 
   Lemma All2_fold_prod_inv {Q} {Γ Δ} :
     All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ ->
     All2_fold P Γ Δ × All2_fold Q Γ Δ.
-  Proof.
+  Proof using Type.
     induction 1; split; constructor; intuition auto.
   Qed.
 

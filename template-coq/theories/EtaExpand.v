@@ -1110,19 +1110,19 @@ Proof.
     rewrite nth_error_app1. now rewrite nth_error_repeat. rewrite repeat_length. lia.
   - cbn. econstructor; eauto.
     * unfold map_branches. solve_all.
-      clear -X2 H8.
+      clear -X1 H8.
       set (Γ'' := map _ Γ'). cbn.
       enough (All (expanded Σ0 Γ'') (map (eta_expand (declarations Σ0) Γ') (pparams p ++ indices))).
       now rewrite map_app in X; eapply All_app in X as [].
       eapply All_map.
-      induction X2.
+      induction X1.
       + constructor.
       + constructor; auto. eapply t0. solve_all.
       + auto.
       
     * solve_all.
-      specialize (b1 (repeat None #|bcontext y| ++ Γ'))%list.
-      rewrite map_app, map_repeat in b1. eapply b1.
+      specialize (b (repeat None #|bcontext y| ++ Γ'))%list.
+      rewrite map_app, map_repeat in b. eapply b.
       eapply Forall2_app; solve_all.
       
       assert (#| (case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
@@ -1149,9 +1149,10 @@ Proof.
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
       destruct a as (? & ? & ?).
+      destruct a0 as (? & ?).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply b. 2: reflexivity. 2: now len.
+      5: eapply e0. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map, map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1361,7 +1362,7 @@ Proof.
   cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ?].
   specialize (IHctx' cunivs hs). constructor; auto.
   constructor. len. rewrite repeat_app.
-  destruct p. destruct s as [s Hs].
+  destruct p as [[s Hs] ?].
   epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ t).
   forward H.
   clear. rewrite -app_context_length.
@@ -1377,7 +1378,7 @@ Proof. now rewrite /eta_context; len. Qed.
 
 Lemma eta_expand_global_decl_expanded {cf : checker_flags} g kn d :
   Typing.wf_ext g ->
-  on_global_decl (lift_typing typing) g kn d ->
+  on_global_decl cumul_gen (lift_typing typing) g kn d ->
   expanded_decl g (eta_global_declaration g.(declarations) d).
 Proof.
   intros wf ond.

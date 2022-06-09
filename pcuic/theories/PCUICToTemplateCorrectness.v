@@ -429,8 +429,8 @@ Proof.
 Qed.
 
 Lemma trans_destr_arity x:
-  AstUtils.destArity [] (trans x) =
-  option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
+  Ast.destArity [] (trans x) =
+  option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAst.destArity [] x).
 Proof.
   remember (@nil SE.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).
@@ -785,7 +785,7 @@ Proof.
 Qed.
 
 Lemma trans_inds ind u mdecl : 
-  map trans (PCUICCases.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
+  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
   inds (inductive_mind ind) u (ind_bodies (trans_minductive_body mdecl)).
 Proof.
   rewrite PCUICCases.inds_spec inds_spec.
@@ -1385,7 +1385,7 @@ Proof.
     destruct g => /= //. rewrite nth_error_map.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
-    destruct PCUICAstUtils.destArity as [[ctx ps]|] => /= //.
+    destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.
@@ -1510,7 +1510,7 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct tu. exists x. eapply p.
+    + simpl. destruct tu. exists x. eapply Hs.
   - simpl. constructor; auto. red. destruct tu. exists x. auto.
 Qed.
 
@@ -1639,12 +1639,12 @@ Proof.
   induction H;cbn.
   - constructor.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;eassumption.
   - constructor.
-    + apply IHAll_local_env_over.
+    + apply IHAll_local_env_over_gen.
     + cbn in *.
       destruct tu.
       eexists;split;eassumption.
@@ -2260,7 +2260,7 @@ Proof.
     simpl.
     rewrite /ptm trans_it_mkLambda_or_LetIn.
     rewrite /predctx.
-    have hty := validity X7.
+    have hty := validity X6.
     eapply isType_mkApps_Ind_smash in hty as []; tea.
     erewrite <- trans_case_predicate_context; tea.
     2:{ eapply (wf_predicate_length_pars H0). }
@@ -2270,7 +2270,7 @@ Proof.
     + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
-    + move: X6.
+    + move: X5.
       cbn. rewrite -!map_app. rewrite /id.
       rewrite map_map_compose.
       set (mapd := map (fun x : context_decl => _) _).
@@ -2279,6 +2279,7 @@ Proof.
       rewrite -[List.rev (trans_local _)]map_rev.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
+      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
       now move: ctx; induction 1; cbn; constructor; auto; 
         rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev 
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
@@ -2287,15 +2288,15 @@ Proof.
       now rewrite -trans_local_app. 
     + rewrite <- trans_global_ext_constraints.
       eassumption.
-    + now rewrite trans_mkApps map_app in X8.
+    + now rewrite trans_mkApps map_app in X7.
     + rewrite (trans_case_predicate_context Γ); tea.
       eapply All2i_map. eapply All2i_map_right.
       eapply Forall2_All2 in H4.
-      eapply All2i_All2_mix_left in X9; tea.
+      eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
       intros i cdecl br. cbv beta.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _).
-      intros (wf & eqctx & Hbctx & Hb & IHb & Hbty & IHbty) brctxty.
+      intros (wf & eqctx & Hbctx & (Hb & IHb) & Hbty & IHbty) brctxty.
       repeat split.
       * rewrite /brctxty.
         now eapply trans_cstr_branch_context_eq.

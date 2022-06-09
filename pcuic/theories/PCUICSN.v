@@ -62,7 +62,7 @@ Section Alpha.
   Lemma cored_alt :
     forall Γ u v,
       cored Σ Γ u v <~> ∥ Relation.trans_clos (red1 Σ Γ) v u ∥.
-  Proof.
+  Proof using Type.
     intros Γ u v.
     split.
     - intro h. induction h.
@@ -77,7 +77,7 @@ Section Alpha.
   Qed.
 
   Local Instance substu_pres_eq : SubstUnivPreserving eq.
-  Proof.
+  Proof using Type.
     red. intros s u u'.
     unfold R_universe_instance.
     intros f. eapply Forall2_map_inv in f.
@@ -91,7 +91,7 @@ Section Alpha.
     forall Γ u v,
       cored' Γ u v ->
       exists u', cored Σ Γ u' v /\ eqt u u'.
-  Proof.
+  Proof using Type.
     intros Γ u v [u' [v' [r [[hu] [hv]]]]].
     apply cored_alt in r.
     destruct r as [r].
@@ -117,7 +117,7 @@ Section Alpha.
       cored Σ Γ u v ->
       eqt v v' ->
       exists u', cored Σ Γ u' v' /\ eqt u u'.
-  Proof.
+  Proof using Type.
     intros Γ u v v' h e.
     eapply cored'_postpone.
     exists u, v. intuition eauto.
@@ -129,7 +129,7 @@ Section Alpha.
     forall A (R R' : A -> A -> Prop),
       (forall x y, R x y -> R' x y) ->
       forall x, Acc R' x -> Acc R x.
-  Proof.
+  Proof using Type.
     intros A R R' h x hx.
     induction hx as [x h1 h2].
     constructor. intros y hy.
@@ -140,7 +140,7 @@ Section Alpha.
     forall Γ u,
       Acc (cored Σ Γ) u ->
       forall u', eqt u u' -> Acc (cored' Γ) u'.
-  Proof.
+  Proof using Type.
     intros Γ u h. induction h as [u h ih].
     intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
     assert (ee : eqt u'' u).
@@ -156,7 +156,7 @@ Section Alpha.
     forall Γ u,
       welltyped Σ Γ u ->
       Acc (cored' Γ) u.
-  Proof.
+  Proof using hΣ.
     destruct hΣ.
     intros Γ u h.
     apply normalisation in h.
@@ -172,7 +172,7 @@ Section Alpha.
       eq_context_upto_names Γ Δ ->
       cored Σ Γ u v ->
       cored Σ Δ u v.
-  Proof.
+  Proof using Type.
     intros Γ Δ u v e h.
     apply cored_alt in h as [h].
     induction h in Δ, e |- *.
@@ -195,7 +195,7 @@ Section Alpha.
       eq_term_upto_univ Σ' Re Rle u u' ->
       cored Σ Γ v u ->
       exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ' Re Rle v v' ∥.
-  Proof.
+  Proof using Type.
     intros Σ' Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 X6 e h.
     apply cored_alt in h as [h].
     induction h in u', e |- *.
@@ -220,7 +220,7 @@ Section Alpha.
       eq_context_upto Σ' Re Re Γ Δ ->
       cored Σ Γ u v ->
       exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ' Re Re u u' ∥.
-  Proof.
+  Proof using Type.
     intros Σ' Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
     induction h.
@@ -282,7 +282,7 @@ Section Alpha.
     forall Γ u v,
       cored Σ Γ u v ->
       cored' Γ u v.
-  Proof.
+  Proof using Type.
     intros Γ u v h.
     exists u, v. intuition eauto.
     - constructor. reflexivity.

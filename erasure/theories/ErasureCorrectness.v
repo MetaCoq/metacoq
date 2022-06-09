@@ -103,7 +103,7 @@ Proof.
     invs He.     
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
-      assert (Hc : conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
+      assert (Hc : conv_context cumulAlgo_gen Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
         now eapply wcbeval_red; eauto.
@@ -111,7 +111,7 @@ Proof.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. all: cbn; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. all: hnf; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
       }
       assert (Σ;;; [] |- subst1 b0' 0 b1 ⇝ℇ ELiftSubst.subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -122,7 +122,7 @@ Proof.
         eapply subject_reduction_eval; eauto.
         eapply erases_context_conversion. 3:eassumption.
         all: cbn; eauto.
-        econstructor. all: cbn; eauto.
+        econstructor. all: hnf; eauto.
         eapply subject_reduction_eval; eauto.
       }
       pose proof (subject_reduction_eval t1 H).
@@ -1147,7 +1147,7 @@ Import EWellformed.
 Lemma erases_mutual_inductive_body_wf (efl := all_env_flags) {Σ univs Σ' kn mib mib'} :
   erases_mutual_inductive_body mib mib' ->
   let udecl := PCUICLookup.universes_decl_of_decl (InductiveDecl mib) in
-  on_global_decl (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
+  on_global_decl cumulSpec0 (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
        (InductiveDecl mib) ->
   wf_global_decl Σ' (E.InductiveDecl mib').
 Proof.

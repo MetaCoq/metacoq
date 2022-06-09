@@ -1,5 +1,3 @@
-SED = `which gsed || which sed`
-
 all: coq template-coq plugin
 
 coq: Makefile.coq
@@ -49,12 +47,12 @@ Makefile.coq: _CoqProject
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin
 # Avoid conflicting dependency file creation for the template plugin
-	$(SED) -i -e s/coqdeps/coqdeps.plugin/g Makefile.plugin
+	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
 
 Makefile.template: _TemplateCoqProject
 	coq_makefile -f _TemplateCoqProject -o Makefile.template
 # Avoid conflicting dependency file creation for the template plugin
-	$(SED) -i -e s/coqdeps/coqdeps.template/g Makefile.template
+	sed -e s/coqdeps/coqdeps.template/g Makefile.template > Makefile.template.tmp && mv -f Makefile.template.tmp Makefile.template
 
 .merlin: Makefile.plugin
 	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@

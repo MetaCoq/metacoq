@@ -48,8 +48,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
   : TM mutual_inductive_body
 | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
   : TM constant_body
-
 | tmQuoteUniverses : TM ConstraintSet.t
+| tmQuoteModule : qualid -> TM (list global_reference)
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

@@ -7,7 +7,7 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp 
      PCUICReduction
      PCUICWeakeningConv PCUICWeakeningTyp 
      PCUICClosed PCUICClosedTyp
@@ -162,7 +162,7 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
 Lemma welltyped_subterm {Σ Γ t} :
   wellinferred Σ Γ t -> on_subterm (wellinferred Σ) (well_sorted Σ) Γ t.
-Proof.
+Proof using Type.
   destruct t; simpl; auto; intros [T HT]; sq.
   now inversion HT ; auto; split; do 2 econstructor.
   now inversion HT ; auto; split; econstructor ; [econstructor|..].
@@ -265,7 +265,7 @@ Qed.
 
   Lemma lookup_ind_decl_complete Σ (wfΣ : abstract_env_ext_rel X Σ) ind e : lookup_ind_decl ind = TypeError e -> 
     ((∑ mdecl idecl, declared_inductive Σ ind mdecl idecl) -> False).
-  Proof.
+  Proof using Type.
     cbn. 
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
@@ -754,12 +754,7 @@ Qed.
     specialize (wt _ wfΣ). destruct wt. inversion X0. 
     congruence.
   Qed.
-
-  (* Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0.
-  Qed. *)
-
+  
   Definition type_of Γ wfΓ t wt : term := (infer Γ wfΓ t wt).
   
   Definition principal_typing Σ Γ t P := 
@@ -791,7 +786,49 @@ Qed.
     fvs.
     econstructor; tea. now eapply ws_cumul_pb_forget in HP'.
   Defined. 
-    
+
+  Lemma squash_isType_welltyped :
+    forall {Σ : global_env_ext} {Γ : context} {T : term},
+    ∥ isType Σ Γ T ∥ -> welltyped Σ Γ T.
+  Proof using Type. intros. destruct H. now eapply isType_welltyped. Qed.
+
+  Opaque type_of_typing.
+  Equations? sort_of_type (Γ : context) (t : PCUICAst.term) 
+    (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥) :
+    (∑ u : Universe.t, forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> 
+      ∥ Σ ;;; Γ |- t : tSort u ∥) :=
+    sort_of_type Γ t wt with (@type_of_typing Γ t _) :=
+      { | T with inspect (reduce_to_sort (X:=X) Γ T.π1 _) := 
+        { | exist (Checked_comp (u; Hu)) hr => (u; _)
+          | exist (TypeError_comp _ _) ns => False_rect _ _ } }.
+  Proof.
+    - eapply squash_isType_welltyped, wt; eauto.
+    - cbn.  
+      specialize (wt _ wfΣ) as [wt].
+      destruct T as [T HT].
+      destruct (HT _ wfΣ) as [[Ht _]].
+      pose proof (abstract_env_ext_wf _ wfΣ) as [wf]. 
+      eapply validity in Ht.
+      now eapply isType_welltyped.
+    - clear hr. 
+      pose proof (abstract_env_ext_wf _ H) as [wf]. 
+      specialize (Hu _ H) as [Hred]. cbn in Hred.
+      destruct T as [T HT].
+      destruct (HT _ H) as [[Ht _]]. cbn in Hred.
+      sq. eapply type_reduction_closed; tea.
+    - epose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      epose proof (abstract_env_ext_wf X wfΣ) as [hwfΣ].
+      symmetry in ns. pose proof (reduce_to_sort_complete _ wfΣ _ _ ns).
+      cbn in ns. clear ns.
+      specialize (wt _ wfΣ). destruct T as [T HT].
+      cbn in *. destruct (HT _ wfΣ) as [[hty hp]].
+      eapply validity in hty. destruct wt as [[s Hs]].
+      red in hp. specialize (hp _ Hs).
+      eapply ws_cumul_pb_Sort_r_inv in hp as [s' [hs' _]].
+      eapply (H s' hs').
+  Defined.
+  Transparent type_of_typing.
+
   Open Scope type_scope.
   
   Definition map_typing_result {A B} (f : A -> B) (e : typing_result A) : typing_result B :=
@@ -834,7 +871,7 @@ Qed.
     
   Theorem principal_types {Γ t} (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) : 
     ∑ P, ∥ forall T Σ (wfΣ : abstract_env_ext_rel X Σ), Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
-  Proof.
+  Proof using nor.
     unshelve eexists (infer Γ _ t _); intros. 
     - destruct (wt _ wfΣ).
       pose (hΣ _ wfΣ); sq.

@@ -17,6 +17,12 @@ From MetaCoq.TestSuite Require hott_example.
 
 From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion. 
 
+#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl := 
+  {
+    guard_impl := PCUICWfEnvImpl.fake_guard_impl
+  }.
+Next Obligation. todo "this axiom is inconsitent, onlu used to make infer compute". Qed.
+
 Definition typecheck_template (cf := default_checker_flags)
   {nor : normalizing_flags} (p : Ast.Env.program)
    := 
@@ -26,10 +32,7 @@ Definition typecheck_template (cf := default_checker_flags)
     with CorrectDecl X => 
       X.π1
       (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
-    | EnvError Σ (AlreadyDeclared id) =>
-      todo ("Already declared: " ^ id)
-    | EnvError Σ (IllFormedDecl id e) =>
-      todo ("Type error: " ^ string_of_type_error (empty_ext p'.1) e ^ ", while checking " ^ id)
+    | _ => todo "should not happen"
   end.
 
 Definition aa := Set.

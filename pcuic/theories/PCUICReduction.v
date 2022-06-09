@@ -594,7 +594,7 @@ Section ReductionCongruence.
       red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
 
   Lemma red_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u.
-  Proof.
+  Proof using Type.
     intros Hred.
     apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred).
   Qed.
@@ -615,7 +615,7 @@ Section ReductionCongruence.
 
   Lemma contextual_closure_red Γ t u : 
     contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
-  Proof.
+  Proof using Type.
     induction 1; trea.
     apply clos_rt_rt1n in r. induction r; trea.
     apply clos_rt_rt1n_iff in r0.
@@ -641,7 +641,7 @@ Section ReductionCongruence.
     Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
-  Proof.
+  Proof using Type.
     split.
     - apply red_contextual_closure.
     - apply contextual_closure_red.
@@ -650,7 +650,7 @@ Section ReductionCongruence.
   Lemma red_ctx_congr {Γ} {M M'} ctx :
     red Σ (hole_context ctx Γ) M M' ->
     red Σ Γ (fill_context M ctx) (fill_context M' ctx).
-  Proof.
+  Proof using Type.
     intros.
     apply red_contextual_closure_equiv.
     now apply (ctxclos_ctx _ _ ctx).
@@ -694,7 +694,7 @@ Section ReductionCongruence.
     Lemma redl_preserve {T A P} (l l' : list (T × A)) : 
       (forall (x y : list (T × A)), P x y -> map snd x = map snd y) ->
       @redl _ _ P l l' -> map snd l = map snd l'.
-    Proof.
+    Proof using Type.
       intros HP. induction 1; auto.
       rewrite IHX. now apply HP.
     Qed.
@@ -707,7 +707,7 @@ Section ReductionCongruence.
       forall Γ A (l l' : list (term × A)),
         red_one_term Γ l l' ->
         redl_term Γ l l'.
-    Proof.
+    Proof using Type.
       intros Γ A l l' h.
       induction h.
       - destruct p as [p1 p2].
@@ -734,7 +734,7 @@ Section ReductionCongruence.
     Lemma redl_context_impl {A} Γ (l l' : list (context × A)) :
       redl_context Γ l l' ->
       forall d, redl_context Γ (cons_decl d l) (cons_decl d l').
-    Proof.
+    Proof using Type.
       induction 1; intros.
       - constructor.
       - econstructor. 
@@ -748,7 +748,7 @@ Section ReductionCongruence.
 
     Lemma redl_context_trans {A} Γ (l l' l'' : list (context × A)) :
       redl_context Γ l l' -> redl_context Γ l' l'' -> redl_context Γ l l''.
-    Proof.
+    Proof using Type.
       intros Hl Hl'.
       induction Hl' in l, Hl |- *; intros; tas.
       econstructor.
@@ -760,7 +760,7 @@ Section ReductionCongruence.
       forall Γ A (l l' : list (context × A)),
         red_one_context_decl Γ l l' ->
         redl_context Γ l l'.
-    Proof.
+    Proof using Type.
       intros Γ A l l' h.
       induction h.
       - destruct p as [p1 p2].
@@ -802,7 +802,7 @@ Section ReductionCongruence.
 
     Lemma red_one_decl_red_ctx_rel Γ :
       inclusion (red_one_ctx_rel Σ Γ) (red_ctx_rel Σ Γ).
-    Proof.
+    Proof using Type.
       intros x y h.
       induction h.
       - destruct p. subst. red.
@@ -833,7 +833,7 @@ Section ReductionCongruence.
       forall p Γ (l l' : list (term × context)),
         red_one_branch p Γ l l' ->
         redl_branch p Γ l l'.
-    Proof.
+    Proof using Type.
       intros p Γ l l' h.
       induction h.
       - destruct p0 as [p1 p2].
@@ -857,7 +857,7 @@ Section ReductionCongruence.
       forall A (R : A -> A -> Type) l l',
         OnOne2 R l l' ->
         OnOne2 (on_Trel_eq R (fun x => x) (fun x => tt)) l l'.
-    Proof.
+    Proof using Type.
       intros A R l l' h.
       eapply OnOne2_impl ; eauto.
     Qed.
@@ -866,7 +866,7 @@ Section ReductionCongruence.
       forall Γ A B (f : A -> term) (g : A -> B) l l',
         OnOne2 (on_Trel_eq (red Σ Γ) f g) l l' ->
         redl_term Γ (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
-    Proof.
+    Proof using Type.
       intros Γ A B f g l l' h.
       eapply OnOne2_red_redl.
       eapply OnOne2_map. eapply OnOne2_impl ; eauto.
@@ -875,7 +875,7 @@ Section ReductionCongruence.
     Lemma OnOne2_context_redl Γ {A B} (f : A -> context) (g : A -> B) l l' :
       OnOne2 (on_Trel_eq (red_ctx_rel Σ Γ) f g) l l' ->
       redl_context Γ (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
-    Proof.
+    Proof using Type.
       intros h. eapply red_one_context_redl.
       eapply OnOne2_map.
       eapply OnOne2_impl; eauto.
@@ -888,7 +888,7 @@ Section ReductionCongruence.
         on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext br br') l l' ->
         redl_branch p Γ (map (fun x => (bbody x, bcontext x)) l) 
           (map (fun x => (bbody x, bcontext x)) l').
-    Proof.
+    Proof using Type.
       intros p Γ l l' h.
       eapply OnOne2All_red_redl.
       eapply OnOne2_map. eapply OnOne2_impl ; eauto.
@@ -898,7 +898,7 @@ Section ReductionCongruence.
       forall A (P : A -> A -> Type) Q l l',
         OnOne2 (Trel_conj P Q) l l' ->
         OnOne2 P l l' × OnOne2 Q l l'.
-    Proof.
+    Proof using Type.
       intros A P Q l l' h.
       induction h.
       - destruct p.
@@ -912,7 +912,7 @@ Section ReductionCongruence.
         (forall x, Q x x) ->
         OnOne2 (Trel_conj P Q) l l' ->
         OnOne2 P l l' × All2 Q l l'.
-    Proof.
+    Proof using Type.
       intros A P Q l l' hQ h.
       induction h.
       - destruct p. split.
@@ -932,7 +932,7 @@ Section ReductionCongruence.
       forall A (l l' : list A),
         All2 eq l l' ->
         l = l'.
-    Proof.
+    Proof using Type.
       intros A l l' h.
       induction h ; eauto. subst. reflexivity.
     Qed.
@@ -942,7 +942,7 @@ Section ReductionCongruence.
         map fst l = map fst l' ->
         map snd l = map snd l' ->
         l = l'.
-    Proof.
+    Proof using Type.
       intros A B l l' e1 e2.
       induction l in l', e1, e2 |- *.
       - destruct l' ; try discriminate. reflexivity.
@@ -961,7 +961,7 @@ Section ReductionCongruence.
       forall l l',
         map decomp_branch l = map decomp_branch l' ->
         l = l'.
-    Proof.
+    Proof using Type.
       intros l l' h.
       induction l in l', h |- *.
       - destruct l' ; try discriminate. reflexivity.
@@ -975,7 +975,7 @@ Section ReductionCongruence.
       forall l l',
         map decomp_branch' l = map decomp_branch' l' ->
         l = l'.
-    Proof.
+    Proof using Type.
       intros l l' h.
       induction l in l', h |- *.
       - destruct l' ; try discriminate. reflexivity.
@@ -987,7 +987,7 @@ Section ReductionCongruence.
 
     Lemma map_recomp_decomp :
       forall l, l = map decomp_branch (map recomp_branch l).
-    Proof.
+    Proof using Type.
       induction l.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
@@ -995,7 +995,7 @@ Section ReductionCongruence.
     
     Lemma map_recomp_decomp' :
       forall l, l = map decomp_branch' (map recomp_branch' l).
-    Proof.
+    Proof using Type.
       induction l.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
@@ -1003,7 +1003,7 @@ Section ReductionCongruence.
 
     Lemma map_decomp_recomp :
       forall l, l = map recomp_branch (map decomp_branch l).
-    Proof.
+    Proof using Type.
       induction l.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
@@ -1011,7 +1011,7 @@ Section ReductionCongruence.
     
     Lemma map_decomp_recomp' :
       forall l, l = map recomp_branch' (map decomp_branch' l).
-    Proof.
+    Proof using Type.
       induction l.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
@@ -1022,7 +1022,7 @@ Section ReductionCongruence.
         (forall x y, f x = f y -> x = y) ->
         map f l = map f l' ->
         l = l'.
-    Proof.
+    Proof using Type.
       intros A B f l l' h e.
       induction l in l', e |- *.
       - destruct l' ; try discriminate. reflexivity.
@@ -1035,7 +1035,7 @@ Section ReductionCongruence.
     Lemma red_abs na M M' N N' :
       red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N'
       -> red Σ Γ (tLambda na M N) (tLambda na M' N').
-    Proof.
+    Proof using Type.
       intros. transitivity (tLambda na M' N).
       - now apply (red_ctx_congr (tCtxLambda_l _ tCtxHole _)).
       - now eapply (red_ctx_congr (tCtxLambda_r _ _ tCtxHole)).
@@ -1044,7 +1044,7 @@ Section ReductionCongruence.
     Lemma red_app_r u v1 v2 :
         red Σ Γ v1 v2 ->
         red Σ Γ (tApp u v1) (tApp u v2).
-    Proof.
+    Proof using Type.
       intro h. rst_induction h; eauto with pcuic.
     Qed.
 
@@ -1052,7 +1052,7 @@ Section ReductionCongruence.
       red Σ Γ M0 M1 ->
       red Σ Γ N0 N1 ->
       red Σ Γ (tApp M0 N0) (tApp M1 N1).
-    Proof.
+    Proof using Type.
       intros; transitivity (tApp M1 N0).
       - now apply (red_ctx_congr (tCtxApp_l tCtxHole _)).
       - now eapply (red_ctx_congr (tCtxApp_r _ tCtxHole)).
@@ -1065,10 +1065,10 @@ Section ReductionCongruence.
       end.
 
     Lemma mkApps_context_hole l Γ' : hole_context (mkApps_context (List.rev l)) Γ' = Γ'.
-    Proof. generalize (List.rev l) as l'; induction l'; simpl; auto. Qed.
+    Proof using Type. generalize (List.rev l) as l'; induction l'; simpl; auto. Qed.
 
     Lemma fill_mkApps_context M l : fill_context M (mkApps_context (List.rev l)) = mkApps M l.
-    Proof.
+    Proof using Type.
       rewrite -{2}(rev_involutive l).
       generalize (List.rev l) as l'; induction l'; simpl; auto.
       rewrite mkApps_app. now rewrite <- IHl'.
@@ -1078,7 +1078,7 @@ Section ReductionCongruence.
       forall t u l,
         red1 Σ Γ t u ->
         red1 Σ Γ (mkApps t l) (mkApps u l).
-    Proof.
+    Proof using Type.
       intros t u l h.
       revert t u h.
       induction l ; intros t u h.
@@ -1088,7 +1088,7 @@ Section ReductionCongruence.
 
     Lemma red1_mkApps_r M1 M2 N2 :
       OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
-    Proof.
+    Proof using Type.
       intros. induction X in M1 |- *.
       - simpl. eapply red1_mkApps_f. constructor; auto.
       - apply (IHX (tApp M1 hd)).
@@ -1098,7 +1098,7 @@ Section ReductionCongruence.
       forall t u l,
         red Σ Γ t u ->
         red Σ Γ (mkApps t l) (mkApps u l).
-    Proof.
+    Proof using Type.
       intros t u π h. rst_induction h; eauto with pcuic.
       eapply red1_mkApps_f. assumption.
     Qed.
@@ -1107,7 +1107,7 @@ Section ReductionCongruence.
       red Σ Γ M0 M1 ->
       All2 (red Σ Γ) N0 N1 ->
       red Σ Γ (mkApps M0 N0) (mkApps M1 N1).
-    Proof.
+    Proof using Type.
       intros.
       induction X0 in M0, M1, X |- *. 1: auto.
       simpl. eapply IHX0. now eapply red_app.
@@ -1116,7 +1116,7 @@ Section ReductionCongruence.
     Lemma red_letin na d0 d1 t0 t1 b0 b1 :
       red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d1 t1) b0 b1 ->
       red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
-    Proof.
+    Proof using Type.
       intros; transitivity (tLetIn na d1 t0 b0).
       - now apply (red_ctx_congr (tCtxLetIn_l _ tCtxHole _ _)).
       - transitivity (tLetIn na d1 t1 b0).
@@ -1128,7 +1128,7 @@ Section ReductionCongruence.
       forall ci p c brs pars',
         OnOne2 (red Σ Γ) p.(pparams) pars' ->
         red Σ Γ (tCase ci p c brs) (tCase ci (set_pparams p pars') c brs).
-    Proof.
+    Proof using Type.
       intros ci p c l l' h.
       apply OnOne2_on_Trel_eq_unit in h.
       apply OnOne2_on_Trel_eq_red_redl in h.
@@ -1165,7 +1165,7 @@ Section ReductionCongruence.
       forall ci p c brs pars',
         All2 (red Σ Γ) p.(pparams) pars' ->
         red Σ Γ (tCase ci p c brs) (tCase ci (set_pparams p pars') c brs).
-    Proof.
+    Proof using Type.
       intros ci p c brs pars' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1221,7 +1221,7 @@ Section ReductionCongruence.
         red Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) pret' ->
         red Σ Γ (tCase ci p c brs) 
           (tCase ci (set_preturn p pret') c brs).
-    Proof.
+    Proof using Type.
       intros ci p c brs p' h.
       unshelve epose proof 
         (red_ctx_congr (tCtxCase_pred ci p.(pparams) p.(puinst) p.(pcontext) tCtxHole c brs) h).
@@ -1233,14 +1233,14 @@ Section ReductionCongruence.
       forall ci p c brs c',
         red Σ Γ c c' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c' brs).
-    Proof.
+    Proof using Type.
       intros ci p c brs c' h.
       rst_induction h; eauto with pcuic.
     Qed.
     
     Lemma map_bcontext_redl {pred} {l l' : list (term * context)} :  
       @redl _ _ (red1_one_branch pred Γ) l l' -> map snd l = map snd l'.
-    Proof.
+    Proof using Type.
       induction 1; auto. rewrite IHX.
       clear -p .
       induction p; simpl. 
@@ -1282,7 +1282,7 @@ Section ReductionCongruence.
           on_Trel_eq (red Σ (Γ ,,, brctx)) bbody bcontext br br')
           brs brs' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
-    Proof.
+    Proof using Type.
       intros ci p c brs brs' h.
       apply OnOne2All_on_Trel_eq_red_redl in h.
       dependent induction h.
@@ -1297,7 +1297,7 @@ Section ReductionCongruence.
 
     Lemma All3_length {A B C} {R : A -> B -> C -> Type} l l' l'' :
       All3 R l l' l'' -> #|l| = #|l'| /\ #|l'| = #|l''|.
-    Proof. induction 1; simpl; intuition auto.
+    Proof using Type. induction 1; simpl; intuition auto.
            - f_equal. assumption.
            - f_equal. assumption.  
     Qed.
@@ -1306,7 +1306,7 @@ Section ReductionCongruence.
       forall B A (R : B -> A -> A -> Type) lΔ l l',
         All3 R lΔ l l' ->
         rtrans_clos (OnOne2All R lΔ) l l'.
-    Proof.
+    Proof using Type.
       intros B A R lΔ l l' h.
       induction h.
       - constructor.
@@ -1354,7 +1354,7 @@ Section ReductionCongruence.
       (forall x y, R x y -> rtrans_clos S x y) ->
       forall x y, rtrans_clos R x y ->
       rtrans_clos S x y.
-    Proof.
+    Proof using Type.
       intros HR x y h.
       eapply clos_rt_rtn1_iff in h.
       induction h; eauto.
@@ -1368,7 +1368,7 @@ Section ReductionCongruence.
     Lemma red_one_brs_red_brs p brs brs' :
       red_brs p Γ brs brs' ->
       rtrans_clos (red_one_brs p Γ) brs brs'.
-    Proof.
+    Proof using Type.
       rewrite /red_brs.
       intros h.
       eapply All2_many_OnOne2 in h.
@@ -1394,7 +1394,7 @@ Section ReductionCongruence.
       forall ci p c brs brs',
         red_brs p Γ brs brs' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
-    Proof.
+    Proof using Type.
       intros ci p c brs brs' h.
       eapply red_one_brs_red_brs in h.
       induction h; trea.
@@ -1409,7 +1409,7 @@ Section ReductionCongruence.
                      nth_error l' x = Some a' ->
                      OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)
                               (firstn x l ++ [a'] ++ skipn (S x) l).
-    Proof.
+    Proof using Type.
       induction 1.
       - simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
       - intros.
@@ -1428,7 +1428,7 @@ Section ReductionCongruence.
       red Σ Γ (tCase ci p c brs) 
         (tCase ci {| pparams := pars'; puinst := p.(puinst);
                      pcontext := p.(pcontext); preturn := pret' |} c' brs').
-    Proof.
+    Proof using Type.
       intros h1 h2 h3 h4.
       eapply red_trans; [eapply red_case_brs|]; eauto.
       eapply red_trans; [eapply red_case_c|]; eauto.
@@ -1441,7 +1441,7 @@ Section ReductionCongruence.
         red1 Σ (Γ ,,, Δ) u v ->
         red1 Σ Γ (it_mkLambda_or_LetIn Δ u)
              (it_mkLambda_or_LetIn Δ v).
-    Proof.
+    Proof using Type.
       intros Δ u v h.
       revert u v h.
       induction Δ as [| [na [b|] A] Δ ih ] ; intros u v h.
@@ -1455,7 +1455,7 @@ Section ReductionCongruence.
         red1 Σ (Γ ,,, Δ) u v ->
         red1 Σ Γ (it_mkProd_or_LetIn Δ u)
              (it_mkProd_or_LetIn Δ v).
-    Proof.
+    Proof using Type.
       intros Δ u v h.
       revert u v h.
       induction Δ as [| [na [b|] A] Δ ih ] ; intros u v h.
@@ -1469,7 +1469,7 @@ Section ReductionCongruence.
         red Σ (Γ ,,, Δ) u v ->
         red Σ Γ (it_mkLambda_or_LetIn Δ u)
             (it_mkLambda_or_LetIn Δ v).
-    Proof.
+    Proof using Type.
       intros Δ u v h.
       rst_induction h; eauto with pcuic.
       eapply red1_it_mkLambda_or_LetIn. assumption.
@@ -1480,7 +1480,7 @@ Section ReductionCongruence.
         red Σ (Γ ,,, Δ) u v ->
         red Σ Γ (it_mkProd_or_LetIn Δ u)
             (it_mkProd_or_LetIn Δ v).
-    Proof.
+    Proof using Type.
       intros Δ u v h.
       rst_induction h; eauto with pcuic.
       eapply red1_it_mkProd_or_LetIn. assumption.
@@ -1490,7 +1490,7 @@ Section ReductionCongruence.
       forall p c c',
         red Σ Γ c c' ->
         red Σ Γ (tProj p c) (tProj p c').
-    Proof.
+    Proof using Type.
       intros p c c' h.
       rst_induction h; eauto with pcuic.
     Qed.
@@ -1499,7 +1499,7 @@ Section ReductionCongruence.
       forall mfix idx mfix',
         OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
         red Σ Γ (tFix mfix idx) (tFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
@@ -1533,7 +1533,7 @@ Section ReductionCongruence.
       forall mfix idx mfix',
         All2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
         red Σ Γ (tFix mfix idx) (tFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1549,7 +1549,7 @@ Section ReductionCongruence.
           (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix mfix' ->
         red Σ Γ (tFix mfix idx) (tFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
@@ -1610,7 +1610,7 @@ Section ReductionCongruence.
           (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix mfix' ->
         red Σ Γ (tFix mfix idx) (tFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1651,7 +1651,7 @@ Section ReductionCongruence.
                 (dname d0, rarg d0) = (dname d1, rarg d1))
         ) mfix mfix' ->
       red Σ Γ (tFix mfix idx) (tFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix mfix' idx h.
       assert (∑ mfixi,
         All2 (
@@ -1683,7 +1683,7 @@ Section ReductionCongruence.
       forall mfix idx mfix',
         OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
         red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
@@ -1718,7 +1718,7 @@ Section ReductionCongruence.
       forall mfix idx mfix',
         All2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
         red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1734,7 +1734,7 @@ Section ReductionCongruence.
           (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix mfix' ->
         red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
@@ -1795,7 +1795,7 @@ Section ReductionCongruence.
           (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix mfix' ->
         red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1836,7 +1836,7 @@ Section ReductionCongruence.
                 (dname d0, rarg d0) = (dname d1, rarg d1))
         ) mfix mfix' ->
       red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-    Proof.
+    Proof using Type.
       intros mfix mfix' idx h.
       assert (∑ mfixi,
         All2 (
@@ -1868,7 +1868,7 @@ Section ReductionCongruence.
       forall na A B A',
         red Σ Γ A A' ->
         red Σ Γ (tProd na A B) (tProd na A' B).
-    Proof.
+    Proof using Type.
       intros na A B A' h.
       rst_induction h; eauto with pcuic.
     Qed.
@@ -1877,7 +1877,7 @@ Section ReductionCongruence.
       forall na A B B',
         red Σ (Γ ,, vass na A) B B' ->
         red Σ Γ (tProd na A B) (tProd na A B').
-    Proof.
+    Proof using Type.
       intros na A B B' h.
       rst_induction h; eauto with pcuic.
     Qed.
@@ -1887,7 +1887,7 @@ Section ReductionCongruence.
         red Σ Γ A A' ->
         red Σ (Γ ,, vass na A) B B' ->
         red Σ Γ (tProd na A B) (tProd na A' B').
-    Proof.
+    Proof using Type.
       intros na A B A' B' h1 h2.
       eapply red_trans.
       - eapply red_prod_r. eassumption.
@@ -1898,7 +1898,7 @@ Section ReductionCongruence.
       forall ev l l',
         OnOne2 (red Σ Γ) l l' ->
         red Σ Γ (tEvar ev l) (tEvar ev l').
-    Proof.
+    Proof using Type.
       intros ev l l' h.
       apply OnOne2_on_Trel_eq_unit in h.
       apply OnOne2_on_Trel_eq_red_redl in h.
@@ -1934,7 +1934,7 @@ Section ReductionCongruence.
       forall ev l l',
         All2 (red Σ Γ) l l' ->
         red Σ Γ (tEvar ev l) (tEvar ev l').
-    Proof.
+    Proof using Type.
       intros ev l l' h.
       apply All2_many_OnOne2 in h.
       induction h.
@@ -1945,7 +1945,7 @@ Section ReductionCongruence.
     Qed.
 
     Lemma red_atom t : atom t -> red Σ Γ t t.
-    Proof.
+    Proof using Type.
       intros. reflexivity.
     Qed.
 
@@ -2022,7 +2022,7 @@ Section Stacks.
     OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ,,, stack_context π,,, Γ')))
                      (fill_context_hole pcontext u)
                      (fill_context_hole pcontext v).
-  Proof.
+  Proof using Type.
     intros r.
     destruct pcontext as ((?&[])&pre); cbn -[app_context] in *.
     all: rewrite - !app_context_assoc.
@@ -2038,7 +2038,7 @@ Section Stacks.
     forall Γ t u π,
       red1 Σ (Γ ,,, stack_context π) t u ->
       red1 Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     unfold zip.
     simpl. revert t u h.
@@ -2079,7 +2079,7 @@ Section Stacks.
     forall Γ t u π,
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     rst_induction h; eauto using red1_context.
   Qed.
@@ -2088,7 +2088,7 @@ Section Stacks.
     forall Γ t u π,
       red1 Σ Γ t u ->
       red1 Σ Γ (zipp t π) (zipp u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     unfold zipp.
     case_eq (decompose_stack π). intros l ρ e.
@@ -2100,7 +2100,7 @@ Section Stacks.
     forall Γ t u π,
       red Σ Γ t u ->
       red Σ Γ (zipp t π) (zipp u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     rst_induction h; eauto with pcuic.
     eapply red1_zipp. assumption.
@@ -2110,7 +2110,7 @@ Section Stacks.
     forall Γ t u π,
       red1 Σ (Γ ,,, stack_context π) t u ->
       red1 Σ Γ (zippx t π) (zippx u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     unfold zippx.
     case_eq (decompose_stack π). intros l ρ e.
@@ -2125,7 +2125,7 @@ Section Stacks.
     forall Γ t u π,
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zippx t π) (zippx u π).
-  Proof.
+  Proof using Type.
     intros Γ t u π h.
     rst_induction h; eauto with pcuic.
     eapply red1_zippx. assumption.

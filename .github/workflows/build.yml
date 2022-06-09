@@ -11,9 +11,8 @@ jobs:
         coq_version: 
           - 'dev'
         ocaml_version:
-          - '4.07-flambda'
           - '4.12-flambda'
-        target: [ local, opam ]
+        target: [ local, opam, quick ]
       fail-fast: true
 
     steps:

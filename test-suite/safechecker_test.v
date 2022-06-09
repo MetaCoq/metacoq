@@ -24,12 +24,10 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 (* Unset Universe Minimization ToSet. *)
 
 (* From Coq Require Import Decimal. *)
-
-(* Takes 2 minutes because of the highly inefficient implementations of maps and sets of 
-  universe levels (lists without duplicates, so checking equality all the time). *)
-(* Definition bignat : nat := Nat.of_num_uint 10000%uint. *)
-(* MetaCoq SafeCheck bignat.
-MetaCoq CoqCheck bignat. *)
+From Coq Require Import Decimal.
+Definition bignat : nat := Nat.of_num_uint 10000%uint.
+MetaCoq SafeCheck bignat.
+MetaCoq CoqCheck bignat.
 
 From MetaCoq.TestSuite Require Import hott_example.
 

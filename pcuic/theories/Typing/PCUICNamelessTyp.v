@@ -35,10 +35,11 @@ Proof.
   induction h.
   - constructor.
   - simpl. unfold map_decl_anon. cbn. constructor. 1: assumption.
-    eexists. exact p.
+    apply infer_typing_sort_impl with id tu; intros Hty.
+    exact Hs.
   - simpl. unfold map_decl_anon. cbn. constructor.
     + assumption.
-    + eexists. exact p0.
+    + apply infer_typing_sort_impl with id tu; intros Hty. exact Hs.
     + assumption.
 Qed.
 

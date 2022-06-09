@@ -29,12 +29,12 @@ Section Map2Bias.
     end.
 
   Lemma map2_bias_left_length l l' : #|map2_bias_left l l'| = #|l|.
-  Proof.
+  Proof using Type.
     induction l in l' |- *; destruct l'; simpl; auto; now rewrite IHl.
   Qed.
 
   Lemma map2_map2_bias_left l l' : #|l| = #|l'| -> map2_bias_left l l' = map2 f l l'.
-  Proof.
+  Proof using Type.
     induction l in l' |- *; destruct l'; simpl; auto.
     - discriminate.
     - intros [= hlen]. rewrite IHl; tas. reflexivity.

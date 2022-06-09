@@ -33,7 +33,7 @@ Extract Constant Pos.max => "Stdlib.max".
 Extract Constant Pos.compare =>
     "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 Extract Constant Pos.compare_cont =>
-    "fun c x y -> if x=y then c else if x<y then Lt else Gt".
+    "fun c x y -> if x=y then Eq else if x<y then Lt else Gt".
 
 
 Extract Constant N.add => "(+)".

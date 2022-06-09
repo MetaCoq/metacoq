@@ -6,7 +6,7 @@ From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prel
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICAstUtils PCUICConversion PCUICSigmaCalculus
   PCUICClosed PCUICClosedTyp
-  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICWeakeningEnv PCUICWeakeningEnvTyp
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
   PCUICLiftSubst
@@ -36,7 +36,7 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      All2_fold (conv_decls Σ) Γ Γ' ->
+      All2_fold (conv_decls cumulAlgo_gen Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
@@ -56,7 +56,7 @@ Proof.
 Qed.
 
 Lemma conv_context_wf_local_app {A B A'} {Σ : global_env_ext} {wfΣ : wf Σ} :
-  wf_local Σ (A ,,, B) -> wf_local Σ A' -> conv_context Σ A A' -> wf_local Σ (A' ,,, B).
+  wf_local Σ (A ,,, B) -> wf_local Σ A' -> conv_context cumulAlgo_gen Σ A A' -> wf_local Σ (A' ,,, B).
 Proof.
   intros wfab wfa' cv.
   eapply wf_local_app => //.
@@ -170,7 +170,7 @@ Qed.
 
 Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
   wf Σ -> wf_local Σ Γ -> wf_local Σ Γ' ->
-  conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
+  conv_context cumulAlgo_gen Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
 Proof.
   intros.
   destruct X3 as (? & ? & ?). red.
@@ -187,7 +187,7 @@ Lemma erases_context_conversion :
   env_prop
   (fun (Σ : global_env_ext) (Γ : context) (t T : PCUICAst.term) =>
       forall Γ' : context,
-        conv_context Σ Γ Γ' ->
+        conv_context cumulAlgo_gen Σ Γ Γ' ->
         wf_local Σ Γ' ->
         forall t', erases Σ Γ t t' -> erases Σ Γ' t t')
   (fun Σ Γ => wf_local Σ Γ)
@@ -208,8 +208,8 @@ Proof.
     eapply context_conversion with Γ; eauto.
     eassumption.
   - econstructor. eauto. eauto.
-    eapply (All2i_All2_All2 X7 X6).
-    intros ? ? ? [] (? & ? & ? & ? & ? & ?) (? & ?).
+    eapply (All2i_All2_All2 X6 X5).
+    intros ? ? ? (? & ?) (? & ? & (? & ?) & ? & ?) (? & ?).
     split. 2: assumption.
     rewrite <- (PCUICCasesContexts.inst_case_branch_context_eq a).
     eapply e.
@@ -316,8 +316,8 @@ Proof.
   - unfold subst_instance.
     cbn [subst_instance_constr]. econstructor; eauto.
     eapply All2_map_left.
-    eapply (All2i_All2_All2 X7 X10).
-    intros ? ? [] [] (? & ? & ? & ? & ? & ?) (? & ?). split.
+    eapply (All2i_All2_All2 X6 X9).
+    intros ? ? [] [] (? & ? & (? & ?) & (? & ?)) (? & ?). split.
     2: now cbn in *.
     cbn -[app_context] in *. fold (subst_instance u bbody).
     eapply erases_ext_eq. 
@@ -529,17 +529,17 @@ Section wellscoped.
     - rewrite (declared_constructor_lookup isdecl) //.
     - now rewrite (declared_inductive_lookup isdecl).
     - red in H8. eapply Forall2_All2 in H8.
-      eapply All2i_All2_mix_left in X5; tea. clear H8.
+      eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
     - now rewrite (declared_projection_lookup isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
-      solve_all. destruct a as [s []].
+      solve_all. destruct a as [s []], a0.
       unfold test_def. len in b0.
-      rewrite b0. now rewrite i b.
+      rewrite b0. now rewrite i i0.
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
-    - solve_all. destruct a as [s []].
-      unfold test_def. len in b0. now rewrite i b0.
+    - solve_all. destruct a as [s []], b.
+      unfold test_def. len in i0. now rewrite i i0.
   Qed.
 
   Lemma welltyped_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a} : welltyped Σ Γ a -> wellformed Σ a.
@@ -557,7 +557,7 @@ Section trans_lookups.
 
   (* TODO simplify using lookup_*_declared lemmas *)
   Lemma trans_lookup_constant kn : isSome (lookup_constant Σ kn) -> isSome (EGlobalEnv.lookup_constant Σ' kn).
-  Proof.
+  Proof using g.
     unfold lookup_constant.
     destruct (lookup_env Σ kn) as [[]|] eqn:hl => //.
     eapply g in hl as [? []].
@@ -565,7 +565,7 @@ Section trans_lookups.
   Qed.
 
   Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // _.
     eapply lookup_inductive_declared in hl.
@@ -574,7 +574,7 @@ Section trans_lookups.
   Qed.
 
   Lemma trans_lookup_constructor kn c : isSome (lookup_constructor Σ kn c) -> isSome (EGlobalEnv.lookup_constructor Σ' kn c).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= // _.
     eapply (lookup_constructor_declared (id:=(kn,c))) in hl.
@@ -590,7 +590,7 @@ Section trans_lookups.
   Lemma lookup_projection_lookup_constructor {p mdecl idecl cdecl pdecl} :
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
     lookup_constructor Σ p.(proj_ind) 0 = Some (mdecl, idecl, cdecl).
-  Proof.
+  Proof using Type.
     rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
     now destruct nth_error => //.
   Qed.
@@ -598,7 +598,7 @@ Section trans_lookups.
   Lemma trans_lookup_projection p : 
     isSome (lookup_projection Σ p) -> 
     isSome (EGlobalEnv.lookup_projection Σ' p).
-  Proof.
+  Proof using g.
     destruct g.
     destruct (lookup_projection Σ p) as [[[[]]]|] eqn:hl => /= // _.
     pose proof (lookup_projection_lookup_constructor hl) as lc.

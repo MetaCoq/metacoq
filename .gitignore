@@ -23,6 +23,7 @@ html/*.html
 .lia.cache
 .hidden
 _opam/
+.vscode/settings.json
 
 erasure/src/*.ml
 erasure/src/*.mli
@@ -353,3 +354,4 @@ erasure/src/eGlobalEnv.mli
 erasure/src/eGlobalEnv.ml
 Makefile.conf
 test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
+pcuic/src/META.coq-metacoq-pcuic

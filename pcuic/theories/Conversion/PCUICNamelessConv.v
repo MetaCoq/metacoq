@@ -1401,24 +1401,24 @@ Qed.
 Notation nldecl := (map_decl_anon nl).
 
 Lemma nl_conv_decls {cf} {Σ Γ Γ'} {d d'} :
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+  conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  conv_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
   intros Hd; depelim Hd; constructor; tas;
     eapply nl_conv; tea.
 Qed.
 
 Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} :
-   cumul_decls Σ Γ Γ' d d' ->
-   cumul_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+   cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+   cumul_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
   intros Hd; depelim Hd; constructor; tas;
     (eapply nl_conv || eapply nl_cumul); tea.
 Qed.
 
 Lemma nl_conv_ctx {cf} {Σ Γ Δ} :
-  conv_context Σ Γ Δ ->
-  conv_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+  conv_context cumulAlgo_gen Σ Γ Δ ->
+  conv_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
   intros.
   induction X; simpl; constructor; eauto; simpl; now eapply nl_conv_decls in p.
@@ -1426,8 +1426,8 @@ Qed.
 #[global] Hint Resolve nl_conv_ctx : nl.
 
 Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
-  cumul_context Σ Γ Δ ->
-  cumul_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+  cumul_context cumulAlgo_gen Σ Γ Δ ->
+  cumul_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
   intros.
   induction X; simpl; constructor; eauto; simpl; now 

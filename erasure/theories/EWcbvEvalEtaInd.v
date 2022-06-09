@@ -131,22 +131,14 @@ Class Qconst Σ (Q : nat -> term -> Type) := qconst :
 #[export] Hint Mode Qconst - ! : typeclass_instances.
 
 Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
-  { qpres_qpres : Qpres Q;
-    qpres_qcons : Qconst Σ Q;
-    qpres_qapp : Qapp Q;
-    qpres_qcase : Qcase Q;
-    qpres_qproj : Qproj Q;
-    qpres_qsubst : Qsubst Q;
-    qpres_qfix : Qfix Q;
-    qpres_qcofix : Qcofix Q }.
-#[global] Existing Instance qpres_qpres.
-#[global] Existing Instance qpres_qcons.
-#[global] Existing Instance qpres_qapp.
-#[global] Existing Instance qpres_qcase.
-#[global] Existing Instance qpres_qproj.
-#[global] Existing Instance qpres_qsubst.
-#[global] Existing Instance qpres_qfix.
-#[global] Existing Instance qpres_qcofix.
+  { qpres_qpres :> Qpres Q;
+    qpres_qcons :> Qconst Σ Q;
+    qpres_qapp :> Qapp Q;
+    qpres_qcase :> Qcase Q;
+    qpres_qproj :> Qproj Q;
+    qpres_qsubst :> Qsubst Q;
+    qpres_qfix :> Qfix Q;
+    qpres_qcofix :> Qcofix Q }.
 
 Lemma eval_preserve_mkApps_ind :
 ∀ (wfl : WcbvFlags) {efl : EEnvFlags} (Σ : global_declarations) 

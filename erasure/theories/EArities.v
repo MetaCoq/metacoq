@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICReduction
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICGeneration PCUICSubstitution PCUICElimination
-  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICWeakeningEnv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity
   PCUICContextConversion PCUICConversion PCUICCanonicity
   PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence 
@@ -23,9 +23,7 @@ Local Existing Instance extraction_checker_flags.
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 (* todo move *)
-#[global]
-Instance extends_refl : CRelationClasses.Reflexive PCUICWeakeningEnvConv.extends_decls.
-Proof. red. intros x. now split => //; exists []. Qed.
+#[global] Existing Instance extends_refl.
 
 Lemma isErasable_Proof Σ Γ t :
   Is_proof Σ Γ t -> isErasable Σ Γ t.
@@ -337,7 +335,7 @@ Lemma cumul_prop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros; eapply cumul_prop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -348,7 +346,7 @@ Lemma cumul_prop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_prop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.
@@ -359,7 +357,7 @@ Lemma cumul_sprop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_sprop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -370,7 +368,7 @@ Lemma cumul_sprop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof.
+Proof using Hcf Hcf' wfΣ.
   intros. eapply cumul_sprop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.

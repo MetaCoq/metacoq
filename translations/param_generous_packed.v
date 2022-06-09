@@ -224,7 +224,7 @@ Definition Funext_fullFunext : Funext -> forall A B f g, IsEquiv (@apD10 A B f g
 Admitted.
 
 Goal Funext -> El Funextᵗ.
-  simpl. intro H. pose proof (Funext_fullFunext H); clear H.
+  simpl. intro H. assert (H0 := Funext_fullFunext H); clear H.
   rename H0 into H.
   unshelve econstructor.
   - intros A B f g X. apply H. exact X.1.

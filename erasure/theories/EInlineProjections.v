@@ -95,13 +95,13 @@ Section optimize.
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
-  Proof.
+  Proof using Type.
     induction l using rev_ind; simpl; auto.
     now rewrite mkApps_app /= IHl map_app /= mkApps_app /=.
   Qed.
 
   Lemma map_optimize_repeat_box n : map optimize (repeat tBox n) = repeat tBox n.
-  Proof. by rewrite map_repeat. Qed.
+  Proof using Type. by rewrite map_repeat. Qed.
 
   (* move to globalenv *)
 
@@ -109,7 +109,7 @@ Section optimize.
   Lemma wf_optimize t k : 
     wf_glob Σ ->
     wellformed Σ k t -> wellformed Σ k (optimize t).
-  Proof.
+  Proof using Type.
     intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
@@ -134,7 +134,7 @@ Section optimize.
     wf_glob Σ ->
     wellformed Σ (k + n) b ->
     optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
-  Proof.
+  Proof using Type.
     intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros wft; try easy; 
@@ -165,7 +165,7 @@ Section optimize.
     forallb (wellformed Σ 0) s ->
     wellformed Σ #|s| t ->
     optimize (substl s t) = substl (map optimize s) (optimize t).
-  Proof.
+  Proof using Type.
     intros wfΣ. induction s in t |- *; simpl; auto.
     move/andP => [] cla cls wft.
     rewrite IHs //. eapply wellformed_csubst => //.
@@ -177,7 +177,7 @@ Section optimize.
     forallb (wellformed Σ 0) args ->
     wellformed Σ #|skipn pars args| br.2 ->
     optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
-  Proof.
+  Proof using Type.
     intros wfΣ wfa wfbr.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
@@ -187,7 +187,7 @@ Section optimize.
   Qed.
   
   Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.fix_subst.
     rewrite map_length.
     generalize #|mfix|.
@@ -196,7 +196,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.cofix_subst.
     rewrite map_length.
     generalize #|mfix|.
@@ -209,7 +209,7 @@ Section optimize.
     wellformed Σ 0 (tFix mfix idx) ->
     cunfold_fix mfix idx = Some (n, f) ->
     cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
+  Proof using Type.
     intros wfΣ hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
@@ -227,7 +227,7 @@ Section optimize.
     wellformed Σ 0 (tCoFix mfix idx) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
+  Proof using Type.
     intros wfΣ hfix.
     unfold cunfold_cofix.
     rewrite nth_error_map.

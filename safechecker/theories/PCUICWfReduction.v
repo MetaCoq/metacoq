@@ -121,7 +121,7 @@ Section fix_sigma.
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
     red1 Σ (Γ ,,, term_subterm_context ts) s s' ->
     exists t', ∥ red1 Σ Γ t t' × ∑ ts' : term_subterm s' t', term_subterm_context ts' = term_subterm_context ts ∥.
-  Proof.
+  Proof using Type.
     induction ts in Γ, s' |- *.
     - induction r; simpl.
     all:intros red; eexists; split;
@@ -145,7 +145,7 @@ Section fix_sigma.
   Lemma term_subterm_redp {Γ s s' t} {ts : term_subterm s t} :
     redp Σ (Γ ,,, term_subterm_context ts) s s' ->
     exists t', ∥ redp Σ Γ t t' × ∑ ts' : term_subterm s' t', term_subterm_context ts' = term_subterm_context ts ∥.
-  Proof.
+  Proof using Type.
     intros r.
     generalize_eqs r. intros ->. revert t ts.
     induction r.

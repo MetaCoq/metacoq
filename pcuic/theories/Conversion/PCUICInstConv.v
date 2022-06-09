@@ -1324,7 +1324,7 @@ Lemma usubst_ext {Δ σ σ' Γ} :
   usubst Γ σ Δ ->
   σ =1 σ' ->
   usubst Γ σ' Δ.
-Proof.
+Proof using Type.
   intros Hσ eq n decl hnth. 
   specialize (Hσ n decl hnth) as hb.
   intros b hd. specialize (hb b hd).
@@ -1347,7 +1347,7 @@ Lemma well_subst_ext Σ Δ σ σ' Γ :
   Σ ;;; Δ ⊢ σ : Γ ->
   σ =1 σ' ->
   Σ ;;; Δ ⊢ σ' : Γ.
-Proof.
+Proof using Type.
   intros Hσ eq. destruct Hσ as [typed_σ Hσ]. split. 
   - intros n decl hnth. rewrite -(eq n).
     eapply meta_conv. 2:now rewrite -eq. eapply typed_σ; eauto. 
@@ -1383,7 +1383,7 @@ Lemma closed_subst_Up {Γ Δ σ na A} :
   closed_subst Γ σ Δ -> 
   is_open_term Δ A.[σ] -> 
   closed_subst (Γ ,, vass na A) (⇑ σ) (Δ ,, vass na A.[σ]).
-Proof.
+Proof using Type.
   intros [HΔ h] HAσ; repeat split. 
   - rewrite on_free_vars_ctx_snoc. solve_all.
   - intros [|n] decl e. 
@@ -1400,7 +1400,7 @@ Lemma well_subst_Up {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na A} :
   wf_local Σ (Δ ,, vass na A.[σ]) ->
   Σ ;;; Δ ⊢ σ : Γ ->
   Σ ;;; Δ ,, vass na A.[σ] ⊢ ⇑ σ : Γ ,, vass na A.
-Proof.
+Proof using Type.
   intros hΔ h. split.
   - intros [|n] decl e.
     + simpl in *. inversion e. subst. clear e. simpl.
@@ -1423,7 +1423,7 @@ Qed.
 Lemma usubst_Up' {Γ Δ σ na t A} :
   usubst Γ σ Δ ->
   usubst (Γ ,, vdef na t A) (⇑ σ) (Δ ,, vdef na t.[σ] A.[σ]).
-Proof.
+Proof using Type.
   intros h [|n] decl e. 
     * simpl in *. inversion e. subst. clear e. simpl. 
       intros b [= ->].
@@ -1453,7 +1453,7 @@ Lemma closed_subst_Up' {Γ Δ σ na t A} :
   is_open_term Δ A.[σ] -> 
   is_open_term Δ t.[σ] -> 
   closed_subst (Γ ,, vdef na t A) (⇑ σ) (Δ ,, vdef na t.[σ] A.[σ]).
-Proof.
+Proof using Type.
   intros [HΔ h] HAσ Htσ; repeat split. 
   - rewrite on_free_vars_ctx_snoc; solve_all.
     unfold is_open_decl, test_decl; solve_all.    
@@ -1471,7 +1471,7 @@ Lemma well_subst_Up' {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na t A} :
   wf_local Σ (Δ ,, vdef na t.[σ] A.[σ]) ->
   Σ ;;; Δ ⊢ σ : Γ ->
   Σ ;;; Δ ,, vdef na t.[σ] A.[σ] ⊢ ⇑ σ : Γ ,, vdef na t A.
-Proof.
+Proof using Type.
   intros wf h. split.
   - intros [|n] decl e.
     * simpl in *. inversion e. subst. clear e. simpl.
@@ -1548,7 +1548,7 @@ Lemma well_subst_app {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ Δ'} :
   wf_local Σ (Δ ,,, inst_context σ Δ') ->
   Σ ;;; Δ ⊢ σ : Γ ->
   Σ ;;; Δ ,,, inst_context σ Δ' ⊢ ⇑^#|Δ'| σ : Γ ,,, Δ'.
-Proof.
+Proof using Type.
   induction Δ' as [|[na [b|] ty] Δ']; simpl => hwf hsub.
   - eapply well_subst_ext; eauto.
     now rewrite Upn_0.
@@ -1574,7 +1574,7 @@ Qed.
 Lemma usubst_app_up {Γ Δ σ Δ'} :
   usubst Γ σ Δ ->
   usubst (Γ ,,, Δ') (up #|Δ'| σ) (Δ ,,, inst_context σ Δ').
-Proof.
+Proof using Type.
   intros hs hΔ'.
   eapply usubst_ext; [eapply usubst_app; eauto|].
   now sigma.
@@ -1584,7 +1584,7 @@ Lemma closed_subst_app_up {Γ Δ σ Δ'} :
   closed_subst Γ σ Δ ->
   on_free_vars_ctx (shiftnP #|Δ| xpred0) (inst_context σ Δ') -> 
   closed_subst (Γ ,,, Δ') (up #|Δ'| σ) (Δ ,,, inst_context σ Δ').
-Proof.
+Proof using Type.
   intros hs hΔ'.
   eapply closed_subst_ext; [eapply closed_subst_app; eauto|].
   now sigma.
@@ -1594,7 +1594,7 @@ Lemma well_subst_app_up {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ Δ'} :
   wf_local Σ (Δ ,,, inst_context σ Δ') ->
   Σ ;;; Δ ⊢ σ : Γ ->
   Σ ;;; Δ ,,, inst_context σ Δ' ⊢ up #|Δ'| σ : Γ ,,, Δ'.
-Proof.
+Proof using Type.
   intros wf Hσ.
   eapply well_subst_ext.
   2:now rewrite up_Upn.
@@ -1611,18 +1611,16 @@ Lemma wf_local_app_inst (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
   Σ ;;; Δ' ⊢ σ : Γ ->
   wf_local Σ Δ' ->
   wf_local Σ (Δ' ,,, inst_context σ Δ).
-Proof.
+Proof using Type.
   intros.
   induction X.
   - now simpl.
-  - simpl. destruct t0 as [s Hs].
-    rewrite inst_context_snoc /=. constructor; auto.
-    red. simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    apply infer_typing_sort_impl with id t0; intros Hs.
     eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
     eapply well_subst_app; auto.
-  - simpl. destruct t0 as [s Hs]. simpl in t1.
-    rewrite inst_context_snoc /=. constructor; auto.
-    * simpl. exists s.
+  - rewrite inst_context_snoc /=. constructor; auto.
+    * apply infer_typing_sort_impl with id t0; intros Hs.
       eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
       eapply well_subst_app; auto.
     * simpl. apply t1 => //.
@@ -1632,7 +1630,7 @@ Qed.
 Lemma usubst_up_vass {Γ Δ σ na A} :
   usubst Γ σ Δ ->
   usubst (Γ ,, vass na A) (up 1 σ) (Δ ,, vass na A.[σ]).
-Proof.
+Proof using Type.
   intros H HA.
   eapply usubst_ext; [eapply usubst_Up; tea|].
   now rewrite up_Upn; sigma.
@@ -1642,7 +1640,7 @@ Lemma closed_subst_up_vass {Γ Δ σ na A} :
   closed_subst Γ σ Δ ->
   is_open_term Δ A.[σ] -> 
   closed_subst (Γ ,, vass na A) (up 1 σ) (Δ ,, vass na A.[σ]).
-Proof.
+Proof using Type.
   intros H HA.
   eapply closed_subst_ext; [eapply closed_subst_Up; tea|].
   now rewrite up_Upn; sigma.
@@ -1651,7 +1649,7 @@ Qed.
 Lemma usubst_up_vdef {Γ Δ σ na t A} :
   usubst Γ σ Δ ->
   usubst (Γ ,, vdef na t A) (up 1 σ) (Δ ,, vdef na t.[σ] A.[σ]).
-Proof.
+Proof using Type.
   intros H. eapply usubst_ext; [eapply usubst_Up'; tea|].
   now rewrite up_Upn; sigma.
 Qed.
@@ -1661,7 +1659,7 @@ Lemma closed_subst_up_vdef {Γ Δ σ na t A} :
   is_open_term Δ A.[σ] -> 
   is_open_term Δ t.[σ] -> 
   closed_subst (Γ ,, vdef na t A) (up 1 σ) (Δ ,, vdef na t.[σ] A.[σ]).
-Proof.
+Proof using Type.
   intros H Ha Ht.
   eapply closed_subst_ext; [eapply closed_subst_Up'; tea|].
   now rewrite up_Upn; sigma.
@@ -1672,7 +1670,7 @@ Lemma inst_is_open_term Γ Δ σ u :
    is_closed_context Γ -> 
    is_open_term Γ u -> 
    is_open_term Δ u.[σ].
-Proof.
+Proof using Type.
   intros H ? ?.
   eapply on_free_vars_inst ; tea.
   intros i.
@@ -1850,7 +1848,7 @@ Lemma eq_term_upto_univ_inst Σ :
     Reflexive Re -> Reflexive Rle ->
     eq_term_upto_univ_napp Σ Re Rle napp u v ->
     eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
-Proof.
+Proof using Type.
   intros Re Rle napp u v σ hRe hRle h.
   induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
   all: dependent destruction h.
@@ -1894,7 +1892,7 @@ Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
   Σ ;;; Γ |- A = B ->
   Σ ;;; Δ |- A.[σ] = B.[σ].
-Proof.
+Proof using Type.
   intros hσ onA onB onΓ h.
   induction h.
   - eapply cumul_refl.
@@ -1916,7 +1914,7 @@ Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Δ |- A.[σ] <= B.[σ].
-Proof.
+Proof using Type.
   intros hσ onA onB onΓ h.
   induction h.
   - eapply cumul_refl.
@@ -1943,9 +1941,9 @@ Lemma inst_conv_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d 
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
-Proof.
+  conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  conv_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+Proof using Type.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     eapply inst_conv; simpl; cbn in *; tea.
   all:now repeat inv_on_free_vars_decl.
@@ -1957,9 +1955,9 @@ Lemma inst_cumul_decls {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} d
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
-  cumul_decls Σ Γ Γ' d d' ->
-  cumul_decls Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
-Proof.
+  cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  cumul_decls cumulAlgo_gen Σ Δ Δ' (inst_decl σ d) (inst_decl σ d').
+Proof using Type.
   intros usubst usubst' ond ond' onΓ Hd; depelim Hd; constructor; tas;
     (eapply inst_conv || eapply inst_cumul); tea.
   all:now repeat inv_on_free_vars_decl.
@@ -1971,7 +1969,7 @@ Definition on_free_vars_decls P d d' :=
 Lemma on_ctx_free_vars_app P Γ Δ :
   on_ctx_free_vars P (Γ ,,, Δ) =
   on_ctx_free_vars P Δ && on_ctx_free_vars (addnP #|Δ| P) Γ.
-Proof.
+Proof using Type.
   rewrite /on_ctx_free_vars.
   rewrite alli_app Nat.add_0_r. f_equal.
   rewrite alli_shift.
@@ -1989,7 +1987,7 @@ Lemma on_free_vars_ctx_prod {P Γ Δ} :
   on_free_vars_ctx P Γ ->
   on_free_vars_ctx P Δ ->
   on_free_vars_ctxs P Γ Δ.
-Proof.
+Proof using Type.
   move=> hlen.
   move/alli_Alli/Alli_rev_All_fold => onΓ.
   move/alli_Alli/Alli_rev_All_fold => onΔ.
@@ -2002,7 +2000,7 @@ Qed.
 Lemma on_free_vars_ctx_prod_inv {P Γ Δ} :
   on_free_vars_ctxs P Γ Δ ->
   on_free_vars_ctx P Γ /\ on_free_vars_ctx P Δ.
-Proof.
+Proof using Type.
   induction 1 => //.
   rewrite !on_free_vars_ctx_snoc.
   move/andP: p => [] ->. rewrite -(All2_fold_length X).
@@ -2012,20 +2010,20 @@ Qed.
 Lemma All_fold_on_free_vars_ctx {P Γ} :
   All_fold (fun Γ d => on_free_vars_decl (shiftnP #|Γ| P) d) Γ ->
   on_free_vars_ctx P Γ.
-Proof.
+Proof using Type.
   induction 1 => //.
   rewrite on_free_vars_ctx_snoc IHX //.
 Qed.
 
 Lemma on_ctx_free_vars_xpredT Γ :
   on_ctx_free_vars xpredT Γ = on_free_vars_ctx xpredT Γ.
-Proof.
+Proof using Type.
   rewrite -{1}(shiftnP_xpredT #|Γ|).
   now rewrite on_free_vars_ctx_on_ctx_free_vars.
 Qed.
 
 Lemma addnP_xpredT n : addnP n xpredT =1 xpredT.
-Proof.
+Proof using Type.
   now rewrite /addnP.
 Qed.
 
@@ -2036,7 +2034,7 @@ Lemma inst_subst_telescope f s Γ :
   inst_telescope f (subst_telescope s 0 Γ) =
   subst_telescope (map (inst f) s) 0
     (inst_telescope (⇑^#|s| f) Γ).
-Proof.
+Proof using Type.
   rewrite /inst_telescope /subst_telescope.
   rewrite !mapi_compose. apply mapi_ext => k' d.
   rewrite !compose_map_decl; apply map_decl_ext => t'.
@@ -2045,25 +2043,25 @@ Proof.
 Qed.
 
 Instance inst_telescope_ext : Proper (`=1` ==> `=1`) inst_telescope.
-Proof.
+Proof using Type.
   intros f g Hfg Γ.
   rewrite /inst_telescope. apply mapi_ext => n x.
   now rewrite Hfg.
 Qed.
 
 Lemma inst_telescope_upn0 f Γ : inst_telescope (⇑^0 f) Γ = inst_telescope f Γ.
-Proof. now sigma. Qed.
+Proof using Type. now sigma. Qed.
 
 Lemma inst_telescope_cons f d Γ :
   inst_telescope f (d :: Γ) = inst_decl f d :: inst_telescope (⇑^1 f) Γ.
-Proof.
+Proof using Type.
   rewrite /inst_telescope mapi_cons /inst_decl.
   f_equal; sigma => //.
   apply mapi_ext => i x. now rewrite -up_Upn up_up Nat.add_1_r.
 Qed.
 
 Lemma inst_context_telescope r Γ : List.rev (inst_context r Γ) = inst_telescope r (List.rev Γ).
-Proof.
+Proof using Type.
   rewrite !inst_context_alt /inst_telescope.
   rewrite mapi_rev.
   f_equal. apply mapi_ext => k' d.

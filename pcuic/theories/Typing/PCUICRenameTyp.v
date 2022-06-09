@@ -18,7 +18,7 @@ Open Scope sigma_scope.
 Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
+Set Default Proof Using "Type*".
 
 Section Renaming.
 
@@ -618,17 +618,15 @@ Proof.
   intros. destruct X0.
   induction X.
   - apply a.
-  - simpl. destruct t0 as [s Hs].
-    rewrite rename_context_snoc /=. constructor; auto.
-    red. simpl. exists s.
+  - rewrite rename_context_snoc /=. constructor; auto.
+    apply infer_typing_sort_impl with id t0; intros Hs.
     eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
     split => //.
     eapply urenaming_ext.
     { now rewrite app_length -shiftnP_add. }
     { reflexivity. } now eapply urenaming_context.
-  - destruct t0 as [s Hs]. red in t1.
-    rewrite rename_context_snoc /=. constructor; auto.
-    * red. exists s.
+  - rewrite rename_context_snoc /=. constructor; auto.
+    * apply infer_typing_sort_impl with id t0; intros Hs.
       apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
       split => //.
       eapply urenaming_ext.
@@ -807,7 +805,9 @@ Proof.
   apply typing_ind_env.
 
   - intros Σ wfΣ Γ wfΓ HΓ. split; auto.
-    induction HΓ; constructor; firstorder eauto.
+    induction HΓ; constructor; tas.
+    all: apply infer_typing_sort_impl with id tu; intros Hty.
+    all: eauto.
 
   - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ P Δ f hf.
     simpl in *.
@@ -884,7 +884,7 @@ Proof.
       eapply declared_constructor_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros [_ IHΔ] ci_npar eqpctx predctx wfp cup wfpctx Hpret IHpret [_ IHpredctx] isallowed.
-    intros Hcxti IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
+    intros IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
     simpl.
     rewrite rename_mkApps.
     rewrite map_app. simpl.
@@ -923,7 +923,7 @@ Proof.
         clear -P Δ f Hf.
         induction 1.
         { constructor; auto. }
-        { simpl. rewrite rename_telescope_cons.
+        { destruct t0; simpl. rewrite rename_telescope_cons.
           constructor; cbn; eauto.
           now rewrite rename_subst_telescope /= in IHIHctxi. }
         { simpl. rewrite rename_telescope_cons.
@@ -935,7 +935,7 @@ Proof.
         eapply All2i_nth_hyp in Hbrs.
         eapply All2i_map_right, (All2i_impl Hbrs) => i cdecl br.
         set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
-        move=> [Hnth [wfbr [eqbctx [[wfbctx IHbctx] [Hbod [IHbod [Hbty IHbty]]]]]]].
+        intros (Hnth & wfbr & eqbctx & (wfbctx & IHbctx) & (Hbod & IHbod) & Hbty & IHbty).
         rewrite -(rename_closed_constructor_body mdecl cdecl f).
         { eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))); eauto.
           split; eauto. }
@@ -1001,8 +1001,8 @@ Proof.
       * destruct hf; eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x [s [Hs IHs]].
-        exists s. now eapply IHs.
+        intros x t. apply infer_typing_sort_impl with id t.
+        intros [_ IHs]; now eapply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [Hb IHb].
         destruct x as [na ty bo rarg]. simpl in *.
@@ -1027,8 +1027,8 @@ Proof.
       * destruct hf; eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x [s [Hs IHs]].
-        exists s. now eapply IHs.
+        intros x t. apply infer_typing_sort_impl with id t.
+        intros [_ IHs]; now eapply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [Hb IHb].
         destruct x as [na ty bo rarg]. simpl in *.

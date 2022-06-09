@@ -1448,7 +1448,7 @@ Section Stacks.
   Lemma fill_context_hole_inj c t t' :
     fill_context_hole c t = fill_context_hole c t' ->
     t = t'.
-  Proof.
+  Proof using Type.
     intros eq.
     destruct c as ((?&[])&?); cbn in *.
     all: apply app_inj_length_l in eq as (_&eq); noconf eq; auto.
@@ -1456,7 +1456,7 @@ Section Stacks.
 
   Lemma zipc_inj :
     forall u v π, zipc u π = zipc v π -> u = v.
-  Proof.
+  Proof using Type.
     intros u v π e. revert u v e.
     induction π ; intros u v e; auto.
     cbn in e.
@@ -1486,7 +1486,7 @@ Section Stacks.
     forall l π,
       isStackApp (appstack l π) = false ->
       l = [].
-  Proof.
+  Proof using Type.
     intros l π h. destruct l ; try discriminate. reflexivity.
   Qed.
 
@@ -1507,7 +1507,7 @@ Section Stacks.
 
   Lemma context_position_atpos :
     forall Γ t, atpos (it_mkLambda_or_LetIn Γ t) (context_position Γ) = t.
-  Proof.
+  Proof using Type.
     intros Γ t. revert t. induction Γ as [| d Γ ih ] ; intro t.
     - reflexivity.
     - destruct d as [na [b|] A].
@@ -1517,7 +1517,7 @@ Section Stacks.
 
   Lemma context_position_valid :
     forall Γ t, validpos (it_mkLambda_or_LetIn Γ t) (context_position Γ).
-  Proof.
+  Proof using Type.
     intros Γ t. revert t. induction Γ as [| [na [b|] A] Γ ih ] ; intro t.
     - reflexivity.
     - simpl. eapply poscat_valid.
@@ -1532,7 +1532,7 @@ Section Stacks.
     forall Γ p q,
       positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
       positionR p q.
-  Proof.
+  Proof using Type.
     intros Γ p q h.
     revert p q h.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
@@ -1550,7 +1550,7 @@ Section Stacks.
 
   Lemma xposition_atpos :
     forall Γ t π, atpos (zipx Γ t π) (xposition Γ π) = t.
-  Proof.
+  Proof using Type.
     intros Γ t π. unfold xposition.
     rewrite poscat_atpos.
     rewrite context_position_atpos.
@@ -1559,7 +1559,7 @@ Section Stacks.
 
   Lemma xposition_valid :
     forall Γ t π, validpos (zipx Γ t π) (xposition Γ π).
-  Proof.
+  Proof using Type.
     intros Γ t π. unfold xposition.
     eapply poscat_valid.
     - apply context_position_valid.
@@ -1571,7 +1571,7 @@ Section Stacks.
     forall Γ ρ1 ρ2,
       positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
       positionR (stack_position ρ1) (stack_position ρ2).
-  Proof.
+  Proof using Type.
     intros Γ ρ1 ρ2 h.
     eapply positionR_context_position_inv.
     eassumption.
@@ -1584,7 +1584,7 @@ Section Stacks.
     forall Γ π1 π2,
       positionR (stack_position π1) (stack_position π2) ->
       positionR (xposition Γ π1) (xposition Γ π2).
-  Proof.
+  Proof using Type.
     intros Γ π1 π2 h.
     unfold xposition.
     eapply positionR_poscat. assumption.
@@ -1597,7 +1597,7 @@ Section Stacks.
   Lemma stack_cat_appstack :
     forall args ρ,
       appstack args [] ++ ρ = appstack args ρ.
-  Proof.
+  Proof using Type.
     intros args ρ.
     revert ρ. induction args ; intros ρ.
     - reflexivity.
@@ -1608,7 +1608,7 @@ Section Stacks.
     forall π args ρ,
       decompose_stack π = (args, ρ) ->
       decompose_stack ρ = ([], ρ).
-  Proof.
+  Proof using Type.
     intros π args ρ e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite decompose_stack_appstack in e.
@@ -1624,7 +1624,7 @@ Section Stacks.
   Lemma zipc_stack_cat :
     forall t π ρ,
       zipc t (π ++ ρ) = zipc (zipc t π) ρ.
-  Proof.
+  Proof using Type.
     intros t π ρ. revert t ρ.
     induction π ; intros u ρ; auto.
     simpl.
@@ -1635,14 +1635,14 @@ Section Stacks.
     forall π ρ,
       stack_position (ρ ++ π) =
       stack_position π ++ stack_position ρ.
-  Proof.
+  Proof using Type.
     intros π ρ. apply rev_map_app.
   Qed.
 
   Lemma stack_context_stack_cat :
     forall π ρ,
       stack_context (ρ ++ π) = stack_context π ,,, stack_context ρ.
-  Proof.
+  Proof using Type.
     intros π ρ.
     unfold stack_context.
     rewrite !flat_map_concat_map.

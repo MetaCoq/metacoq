@@ -369,7 +369,8 @@ Proof.
   apply typing_ind_env.
 
   - intros Σ wfΣ Γ wfΓ. auto.
-    induction 1; constructor; firstorder auto.
+    induction 1; constructor; tas.
+    all: apply infer_typing_sort_impl with id tu; auto.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.
     eapply hσ. assumption.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ σ hΔ hσ. simpl.
@@ -435,7 +436,7 @@ Proof.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros IHΔ ci_npar eqpctx predctx wfp cup Hpctx Hpret
       IHpret IHpredctx isallowed.
-    intros Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
+    intros IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite /ptm. rewrite inst_it_mkLambda_or_LetIn.
@@ -474,7 +475,7 @@ Proof.
         clear -Δ f HΔ Hf.
         induction 1.
         { constructor; auto. }
-        { simpl. rewrite inst_telescope_cons.
+        { destruct t0; simpl. rewrite inst_telescope_cons.
           constructor; cbn; eauto.
           now rewrite inst_subst_telescope /= in IHIHctxi. }
         { simpl. rewrite inst_telescope_cons.
@@ -486,7 +487,7 @@ Proof.
         eapply All2i_nth_hyp in Hbrs.
         eapply All2i_map_right, (All2i_impl Hbrs) => i cdecl br.
         set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
-        move=> [Hnth [wfbr [Hconv [Hbrctx [Hbr [IHbr [Hbty IHbty]]]]]]].
+        intros (Hnth & wfbr & Hconv & Hbrctx & (Hbr & IHbr) & Hbty & IHbty).
         split => //.
         rewrite -(inst_closed_constructor_body mdecl cdecl f).
         { eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))); eauto.
@@ -526,26 +527,26 @@ Proof.
       eapply inst_ext_closed.
       intros x Hx.
       rewrite subst_consn_lt /=; len; try lia.
-      rewrite Upn_comp; try now repeat len. 1:cbn; len.
-      rewrite subst_consn_lt /=; len; try lia.
+      rewrite Upn_comp; cbn; try now repeat len.
+      rewrite subst_consn_lt /=; cbn; len; try lia.
       now rewrite map_rev.
   - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfix ihmfix wffix Δ σ hΔ hσ.
     simpl. eapply meta_conv; [econstructor;eauto|].
     * now eapply fix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      destruct a as [s [Hs IH]].
-      exists s; eapply IH; eauto.
-    * solve_all.
+      apply infer_typing_sort_impl with id a; intros [_ IH].
+      now apply IH.
+    * solve_all. destruct b as [? b0].
       len. rewrite /types in b0. len in b0.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
       eapply All_local_env_app_inv in htypes as [].
       eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a2.
+      + eapply wf_local_app_inst; eauto. eapply a1.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a2.
+        eapply wf_local_app_inst; eauto. apply a1.
       + rewrite lift0_inst. now sigma.
     * now apply inst_wf_fixpoint.
     * reflexivity.
@@ -555,18 +556,18 @@ Proof.
     * now eapply cofix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      destruct a as [s [Hs IH]].
-      exists s; eapply IH; eauto.
-    * solve_all.
+      apply infer_typing_sort_impl with id a; intros [_ IH].
+      now apply IH.
+    * solve_all. destruct b as [? b0].
       len. rewrite /types in b0. len in b0.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
       eapply All_local_env_app_inv in htypes as [].
       eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a2.
+      + eapply wf_local_app_inst; eauto. eapply a1.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a2.
+        eapply wf_local_app_inst; eauto. apply a1.
       + rewrite lift0_inst. now sigma.
     * now apply inst_wf_cofixpoint.
     * reflexivity.

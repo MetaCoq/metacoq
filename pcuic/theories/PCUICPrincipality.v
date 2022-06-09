@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnvConv 
+     PCUICLiftSubst PCUICTyping PCUICGlobalEnv
      PCUICWeakeningEnvTyp PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed PCUICClosedTyp
      PCUICContextConversion PCUICContextConversionTyp PCUICConversion PCUICInversion PCUICUnivSubst
@@ -61,7 +61,7 @@ Section Principality.
     wf_local Σ Γ ->
     wf_universe Σ u ->
     isWfArity Σ Γ (tSort u).
-  Proof.
+  Proof using Type.
     move=> wfΓ wfu.
     split. eapply isType_Sort; eauto. exists [], u. intuition auto.
   Qed.
@@ -72,7 +72,7 @@ Section Principality.
   
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
     ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
-  Proof.
+  Proof using wfΣ.
     intros hA.
     induction u in Γ, A, hA |- * using term_forall_list_ind.
     - apply inversion_Rel in hA as iA. 2: auto.
@@ -291,7 +291,7 @@ Section Principality.
         simpl. eapply type_reduction; eauto. eapply redr. simpl.
         eapply type_reduction in t0. 2:eapply redr. eapply validity; eauto.
       * split.
-        { eapply PCUICWeakeningTyp.weaken_wf_local; tea. pcuic. pcuic. 
+        { eapply PCUICWeakeningTyp.weaken_wf_local; tea. pcuic. pcuic.
           eapply (wf_projection_context _ (p:=p)); tea. pcuic. }
         eapply (projection_subslet _ _ _ _ _ _ p); eauto.
         simpl. eapply validity; eauto.
@@ -312,7 +312,7 @@ Section Principality.
         eapply validity; eauto. simpl in redu'.
         rewrite e0 in redu'.
         unshelve epose proof (projection_cumulative_indices d _ H H0 redu').
-        { eapply (PCUICWeakeningEnvConv.weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 (proj1 d)))). }
+        { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ (wfΣ : wf _) (proj1 (proj1 (proj1 d)))). }
         eapply on_declared_projection in d0; eauto.
         eapply weaken_ws_cumul_pb in X; eauto.
 
@@ -339,7 +339,7 @@ Section Principality.
   (** A weaker version that is often convenient to use. *)
   Lemma common_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
     ∑ C, Σ ;;; Γ ⊢ C ≤ A × Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C.
-  Proof.
+  Proof using wfΣ.
     intros hA hB.
     destruct (principal_type hA) as [P HP]; eauto.
     exists P; split; eauto.
@@ -499,7 +499,7 @@ Proof.
   - eapply inversion_Lambda in X4 as (s & B & dom & codom & cum); auto.
     specialize (X1 onu _ _ dom (eq_term_empty_leq_term X5_1)).
     apply eq_term_empty_eq_term in X5_1.
-    assert(conv_context Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
     { repeat constructor; pcuic. }
     specialize (X3 onu t0 B).
     forward X3 by eapply context_conversion; eauto; pcuic.
@@ -616,14 +616,15 @@ Proof.
       eapply PCUICEquality.subst_eq_term.
       eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
       
-  - assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
+  - eassert (ctx_inst _ _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (1 := X5).
+    assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. all:split; eauto.
       solve_all. }
-    eapply inversion_Case in X10 as (mdecl' & idecl' & decli' & indices' & data & cum); auto.
+    eapply inversion_Case in X9 as (mdecl' & idecl' & decli' & indices' & data & cum); auto.
     destruct (declared_inductive_inj isdecl decli'). subst mdecl' idecl'.
     destruct data.
-    unshelve epose proof (X8 _ _ _ scrut_ty (eq_term_empty_leq_term X11)); tea.
-    pose proof (eq_term_empty_eq_term X11).
+    unshelve epose proof (X7 _ _ _ scrut_ty (eq_term_empty_leq_term X10)); tea.
+    pose proof (eq_term_empty_eq_term X10).
     destruct e as [eqpars [eqinst [eqpctx eqpret]]].
     eapply eq_term_empty_eq_term in eqpret.
     eapply type_ws_cumul_pb.
@@ -642,7 +643,7 @@ Proof.
       rewrite /pre_case_predicate_context_gen.
       eapply eq_context_upto_inst_case_context => //.
       eapply All2_app. 2:constructor; pcuic.
-      specialize (X3 _ _ scrut_ty (eq_term_empty_leq_term X11)).
+      specialize (X3 _ _ scrut_ty (eq_term_empty_leq_term X10)).
       unshelve epose proof (principal_type_ind scrut_ty X3) as [_ indconv]; tea.
       split; auto.
       eapply All2_app_inv in indconv as [convpars convinds] => //.
@@ -697,8 +698,8 @@ Proof.
     eapply PCUICValidity.validity; eauto.
     econstructor. 3:eapply H0. all:eauto.
     eapply (All_impl X0); pcuicfo.
-    destruct X2 as [s [Hs ?]]; now exists s.
-    eapply (All_impl X1); pcuicfo.
+    apply infer_typing_sort_impl with id X2; now intros [].
+    eapply (All_impl X1); pcuicfo; now destruct X2.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. eapply eq_term_empty_leq_term in eqty.
@@ -710,8 +711,8 @@ Proof.
     eapply PCUICValidity.validity; eauto.
     eapply type_CoFix. 3:eapply H0. all:eauto.
     eapply (All_impl X0); pcuicfo.
-    destruct X2 as [s [? ?]]; now exists s.
-    eapply (All_impl X1); pcuicfo.
+    apply infer_typing_sort_impl with id X2; now intros [].
+    eapply (All_impl X1); pcuicfo; now destruct X2.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.

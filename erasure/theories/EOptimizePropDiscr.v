@@ -66,30 +66,30 @@ Section optimize.
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
-  Proof.
+  Proof using Type.
     induction l using rev_ind; simpl; auto.
     now rewrite mkApps_app /= IHl map_app /= mkApps_app /=.
   Qed.
 
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
-  Proof.
+  Proof using Type.
     now induction n; simpl; auto; rewrite IHn.
   Qed.
   
   Lemma map_optimize_repeat_box n : map optimize (repeat tBox n) = repeat tBox n.
-  Proof. by rewrite map_repeat. Qed.
+  Proof using Type. by rewrite map_repeat. Qed.
 
   Import ECSubst.
 
   Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
-  Proof.
+  Proof using Type.
     induction l using rev_ind; simpl; auto.
     rewrite mkApps_app /= IHl.
     now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
   Qed.
 
   Lemma csubst_closed t k x : closedn k x -> csubst t k x = x.
-  Proof.
+  Proof using Type.
     induction x in k |- * using EInduction.term_forall_list_ind; simpl; auto.
     all:try solve [intros; f_equal; solve_all; eauto].
     intros Hn. eapply Nat.ltb_lt in Hn.
@@ -101,7 +101,7 @@ Section optimize.
   Qed.
 
   Lemma closed_optimize t k : closedn k t -> closedn k (optimize t).
-  Proof.
+  Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -128,7 +128,7 @@ Section optimize.
     forallb (closedn 0) l -> closed t ->
     subst l 0 (csubst t (#|l| + k) b) = 
     csubst t k (subst l 0 b).
-  Proof.
+  Proof using Type.
     intros hl cl.
     rewrite !closed_subst //.
     rewrite distr_subst. f_equal.
@@ -140,7 +140,7 @@ Section optimize.
   Lemma substl_subst s t : 
     forallb (closedn 0) s ->
     substl s t = subst s 0 t.
-  Proof.
+  Proof using Type.
     induction s in t |- *; cbn; auto.
     intros _. now rewrite subst_empty.
     move/andP=> []cla cls.
@@ -153,7 +153,7 @@ Section optimize.
     forallb (closedn 0) l -> closed t ->
     substl l (csubst t (#|l| + k) b) = 
     csubst t k (substl l b).
-  Proof.
+  Proof using Type.
     intros hl cl.
     rewrite substl_subst //.
     rewrite substl_subst //.
@@ -163,7 +163,7 @@ Section optimize.
   Lemma optimize_csubst a k b : 
     closed a ->
     optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
-  Proof.
+  Proof using Type.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros cl; try easy; 
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -196,7 +196,7 @@ Section optimize.
   Lemma optimize_substl s t : 
     forallb (closedn 0) s ->
     optimize (substl s t) = substl (map optimize s) (optimize t).
-  Proof.
+  Proof using Type.
     induction s in t |- *; simpl; auto.
     move/andP => [] cla cls.
     rewrite IHs //. f_equal.
@@ -206,7 +206,7 @@ Section optimize.
   Lemma optimize_iota_red pars args br :
     forallb (closedn 0) args ->
     optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
-  Proof.
+  Proof using Type.
     intros cl.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
@@ -215,7 +215,7 @@ Section optimize.
   Qed.
   
   Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.fix_subst.
     rewrite map_length.
     generalize #|mfix|.
@@ -224,7 +224,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.cofix_subst.
     rewrite map_length.
     generalize #|mfix|.
@@ -236,7 +236,7 @@ Section optimize.
     forallb (closedn 0) (EGlobalEnv.fix_subst mfix) ->
     cunfold_fix mfix idx = Some (n, f) ->
     cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
+  Proof using Type.
     intros hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
@@ -250,7 +250,7 @@ Section optimize.
     forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
+  Proof using Type.
     intros hcofix.
     unfold cunfold_cofix.
     rewrite nth_error_map.
@@ -262,7 +262,7 @@ Section optimize.
 
   Lemma optimize_nth {n l d} : 
     optimize (nth n l d) = nth n (map optimize l) (optimize d).
-  Proof.
+  Proof using Type.
     induction l in n |- *; destruct n; simpl; auto.
   Qed.
 

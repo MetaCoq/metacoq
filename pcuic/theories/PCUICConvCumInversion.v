@@ -209,7 +209,7 @@ Section fixed.
 
   Lemma isIndConstructApp_mkApps hd args :
     isIndConstructApp (mkApps hd args) = isIndConstructApp hd.
-  Proof.
+  Proof using Type.
     unfold isIndConstructApp.
     destruct (mkApps_elim hd args).
     rewrite !decompose_app_mkApps; by easy.
@@ -219,7 +219,7 @@ Section fixed.
     eq_term_upto_univ_napp Σ Re Rle napp t t' ->
     isIndConstructApp t = false ->
     eq_term_upto_univ Σ Re Rle t t'.
-  Proof.
+  Proof using Type.
     intros eq not_ind.
     generalize 0.
     intros k.
@@ -233,7 +233,7 @@ Section fixed.
   Lemma whnf_red_isIndConstructApp Γ t t' :
     whnf_red Σ Γ t t' ->
     isIndConstructApp t' = isIndConstructApp t.
-  Proof.
+  Proof using Type.
     intros r.
     induction r; auto.
     rewrite (isIndConstructApp_mkApps _ [arg']) (isIndConstructApp_mkApps _ [arg]).
@@ -245,7 +245,7 @@ Section fixed.
     isApp v' = false ->
     eq_termp leq Σ (mkApps v args) (mkApps v' args') ->
     eq_termp_napp leq Σ #|args| v v' × All2 (fun x y => eq_term Σ Σ x y) args args'.
-  Proof.
+  Proof using Type.
     intros noapp1 noapp2 eq.
     apply eq_term_upto_univ_mkApps_inv in eq as (?&?) => //.
   Qed.
@@ -264,7 +264,7 @@ Section fixed.
     whnf RedFlags.default Σ Γ (mkApps hd args) ->
     whnf RedFlags.default Σ Γ (mkApps hd' args') ->
     ∥conv_cum_napp leq Γ #|args| hd hd' × ws_cumul_pb_terms Σ Γ args args'∥.
-  Proof.
+  Proof using wfΣ.
     intros conv notapp notapp' wh wh'.
     eapply conv_cum_alt in conv as [(?&?&[r1 r2 e])]; auto.
     sq. 
@@ -317,7 +317,7 @@ Section fixed.
       ws_cumul_pb_predicate Σ Γ p p',
       Σ;;; Γ ⊢ discr = discr' &
       ws_cumul_pb_brs Σ Γ p brs brs']∥.
-  Proof.
+  Proof using wfΣ.
     intros conv decli decli' wfp wfp' whl whr.
     depelim whl; solve_discr.
     depelim w; solve_discr; try discriminate.
@@ -437,7 +437,7 @@ Section fixed.
          Σ;;; Γ ⊢ dtype d = dtype d' &
          Σ;;; Γ,,, fix_context mfix ⊢ dbody d = dbody d'])
           mfix mfix'∥.
-  Proof.
+  Proof using wfΣ.
     intros conv.
     apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])]; auto.
     sq.
@@ -500,7 +500,7 @@ Section fixed.
         Σ;;; Γ ⊢ dtype d = dtype d' &
         Σ;;; Γ,,, fix_context mfix ⊢ dbody d = dbody d'])
           mfix mfix'∥.
-  Proof.
+  Proof using wfΣ.
     intros conv.
     apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])]; auto. sq.
     assert (forall defs i, whnf RedFlags.default Σ Γ (tCoFix defs i)).
@@ -556,7 +556,7 @@ Section fixed.
     whnf RedFlags.default Σ Γ (tProj p c) ->
     whnf RedFlags.default Σ Γ (tProj p' c') ->
     ∥ p = p' × Σ;;; Γ ⊢ c = c' ∥.
-  Proof.
+  Proof using wfΣ.
     intros conv whl whr.
     apply conv_cum_alt in conv as [(?&?&[r1 r2 ?])]; auto. sq.
     have clΓ := clrel_ctx r1.

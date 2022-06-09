@@ -105,7 +105,7 @@ Section isEtaExp.
       | view_construct ind i => isEtaExp_app Σ ind i #|v| && forallb isEtaExp v
       | view_other t discr => isEtaExp f && forallb isEtaExp v
     end.
-  Proof.
+  Proof using Type.
     rewrite isEtaExp_equation_1.
     intros napp hv.
     destruct (TermSpineView.view_mkApps (TermSpineView.view (mkApps f v)) napp hv) as [hna [hv' ->]].
@@ -117,7 +117,7 @@ Section isEtaExp.
       | view_construct ind i => isEtaExp_app Σ ind i #|v| && forallb isEtaExp v
       | view_other t discr => isEtaExp f && forallb isEtaExp v
     end.
-  Proof.
+  Proof using Type.
     intros napp.
     destruct v using rev_case; simp_eta.
     - destruct construct_viewc; rewrite andb_true_r //.
@@ -126,7 +126,7 @@ Section isEtaExp.
 
   Lemma isEtaExp_Constructor ind i v :
     isEtaExp (mkApps (EAst.tConstruct ind i) v) = isEtaExp_app Σ ind i #|v| && forallb isEtaExp v.
-  Proof.
+  Proof using Type.
     rewrite isEtaExp_mkApps_napp //.
   Qed.
 
@@ -137,7 +137,7 @@ Section isEtaExp.
     | view_construct kn c => isEtaExp_app Σ kn c #|args| && forallb isEtaExp args
     | view_other u discr => isEtaExp hd && forallb isEtaExp args
     end.
-  Proof.
+  Proof using Type.
     destruct decompose_app eqn:da.
     rewrite (decompose_app_inv da).
     pose proof (decompose_app_notApp _ _ _ da).
@@ -154,7 +154,7 @@ Section isEtaExp.
 
   Lemma isEtaExp_mkApps_intro_notConstruct t l : ~~ isConstruct (head t) ->
      isEtaExp t -> All isEtaExp l -> isEtaExp (mkApps t l).
-  Proof.
+  Proof using Type.
     revert t; induction l using rev_ind; auto.
     intros t isc et a; eapply All_app in a as [].
     depelim a0. clear a0.
@@ -185,7 +185,7 @@ Section isEtaExp.
     | view_other _ discr => 
       [&& isEtaExp hd, forallb isEtaExp args, isEtaExp f & isEtaExp u]
     end.
-  Proof.
+  Proof using Type.
     move/(isEtaExp_mkApps f [u]).
     cbn -[decompose_app]. destruct decompose_app eqn:da.
     destruct construct_viewc eqn:cv => //.
@@ -214,7 +214,7 @@ Section WeakEtaExp.
   Notation isEtaExp := (isEtaExp Σ).
 
   Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app Σ ind c i -> isEtaExp_app Σ ind c i'.
-  Proof.
+  Proof using Type.
     intros le.
     unfold isEtaExp_app.
     destruct lookup_constructor_pars_args as [[pars args]|]=> //.
@@ -223,7 +223,7 @@ Section WeakEtaExp.
   Qed.
 
   Lemma isEtaExp_mkApps_intro t l : isEtaExp t -> All isEtaExp l -> isEtaExp (mkApps t l).
-  Proof.
+  Proof using Type.
     revert t; induction l using rev_ind; auto.
     intros t et a; eapply All_app in a as [].
     depelim a0. clear a0.
@@ -253,8 +253,8 @@ Section WeakEtaExp.
 
   Lemma etaExp_csubst a k b : 
     isEtaExp a -> isEtaExp b -> isEtaExp (ECSubst.csubst a k b).
-  Proof.
-    intros etaa. move b at bottom.
+  Proof using Type.
+    intros etaa. move b at bottom.    
     funelim (isEtaExp b); cbn -[isEtaExp]; try simp_eta; eauto;
       try toAll; repeat solve_all.
     - intros. simp isEtaExp ; cbn. destruct Nat.compare => //. simp_eta in etaa.
@@ -279,7 +279,7 @@ Section WeakEtaExp.
   Lemma isEtaExp_substl s t : 
     forallb isEtaExp s -> isEtaExp t ->
     isEtaExp (substl s t).
-  Proof.
+  Proof using Type.
     induction s in t |- *; simpl; auto. rtoProp; intuition eauto using etaExp_csubst.
   Qed.
 
@@ -287,7 +287,7 @@ Section WeakEtaExp.
     forallb isEtaExp args ->
     isEtaExp br.2 ->
     isEtaExp (EGlobalEnv.iota_red pars args br).
-  Proof.
+  Proof using Type.
     intros etaargs etabr.
     unfold EGlobalEnv.iota_red.
     rewrite isEtaExp_substl // forallb_rev forallb_skipn //.
@@ -296,7 +296,7 @@ Section WeakEtaExp.
   Lemma isEtaExp_fix_subst mfix : 
     forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     forallb isEtaExp (EGlobalEnv.fix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.fix_subst. generalize #|mfix|.
     solve_all. solve_all. revert n.
     induction n; intros; simp_eta; constructor; auto.
@@ -306,7 +306,7 @@ Section WeakEtaExp.
   Lemma isEtaExp_cofix_subst mfix : 
     forallb (isEtaExp ∘ dbody) mfix ->
     forallb isEtaExp (EGlobalEnv.cofix_subst mfix).
-  Proof.
+  Proof using Type.
     unfold EGlobalEnv.cofix_subst. generalize #|mfix|.
     solve_all. solve_all. revert n.
     induction n; intros; simp_eta; constructor; auto.
@@ -317,7 +317,7 @@ Section WeakEtaExp.
     forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp f.
-  Proof.
+  Proof using Type.
     intros heta.
     unfold EGlobalEnv.cunfold_fix.
     destruct nth_error eqn:heq => //.
@@ -332,7 +332,7 @@ Section WeakEtaExp.
     forallb (isEtaExp ∘ dbody) mfix ->
     EGlobalEnv.cunfold_cofix mfix idx = Some (n, f) ->
     isEtaExp f.
-  Proof.
+  Proof using Type.
     intros heta.
     unfold EGlobalEnv.cunfold_cofix.
     destruct nth_error eqn:heq => //.

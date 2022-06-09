@@ -226,6 +226,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
            | Some (mi, mib) -> Obj.magic (tmOfMib mi mib))
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
+  | Coq_tmQuoteModule id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModule (to_qualid id))
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))

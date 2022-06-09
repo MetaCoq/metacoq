@@ -2,6 +2,8 @@
 From MetaCoq.Template Require Import utils Checker All.
 Import MCMonadNotation.
 
+Set Universe Checking.
+
 (* Should be in AstUtils probably *)
 Fixpoint subst_app (t : term) (us : list term) : term :=
   match t, us with

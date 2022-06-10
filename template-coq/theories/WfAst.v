@@ -184,10 +184,7 @@ Proof.
 Qed.
 
 Definition wf_decl Σ d :=
-  option_default (wf Σ) (decl_body d) True * wf Σ (decl_type d).
-
-Definition wf_decl_pred Σ (Γ : context) t T : Type :=
-  wf Σ t × typ_or_sort_default (wf Σ) T True.
+  option_default (wf Σ) (decl_body d) unit * wf Σ (decl_type d).
 
 Lemma wf_mkApp Σ u a : wf Σ u -> wf Σ a -> wf Σ (mkApp u a).
 Proof.

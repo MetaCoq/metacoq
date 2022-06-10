@@ -1148,11 +1148,10 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (s & e & Hs1 & Hs2).
-      destruct a0 as (? & ?).
+      destruct a as (((Hbo1 & Hbo2) & et) & s & e & Hs1 & Hs2).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply e0. 2: reflexivity. 2: now len.
+      5: eapply Hbo2. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map, map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1170,9 +1169,9 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ? & ?) & ? & ?). cbn.
-     specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
-     rewrite map_app, map_repeat in e0. len. eapply e0.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply X. intros ? (((Hbo1 & Hbo2) & et) & s & e & Hs1 & Hs2). cbn.
+     specialize (Hbo2 (repeat None #|mfix| ++ Γ'))%list.
+     rewrite map_app, map_repeat in Hbo2. len. eapply Hbo2.
      eapply Forall2_app; eauto. unfold types.
      assert (#|Typing.fix_context mfix| = #|mfix|). { unfold Typing.fix_context. now len. }
      revert H4. generalize (Typing.fix_context mfix). clear.
@@ -1345,8 +1344,8 @@ Proof.
   cbn. constructor.
   cbn. constructor.
   len. rewrite app_nil_r.
-  red in t0, t1.
-  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t1).
+  destruct t0 as ((t0 & _) & t1).
+  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t0).
   clear. induction Γ; cbn; constructor; auto.
   now rewrite map_repeat.
 Qed.
@@ -1383,10 +1382,10 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} g kn d :
 Proof.
   intros wf ond.
   destruct d; cbn in *.
-  - destruct ond as (onty & onbo).
+  - destruct ond as (onbo & onty).
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := g) [] [] t na wf onbo). constructor.
+    apply (eta_expand_expanded (Σ := g) [] [] t na wf onbo.1). constructor.
     destruct onty as (s & e & Hs). constructor => //.
   - destruct ond as [onI onP onN onV].
     constructor. cbn.
@@ -1401,7 +1400,7 @@ Proof.
     pose proof onc.(on_cargs).
     eapply eta_expand_context_sorts in X0. now len in X0.
     len. len. 
-    pose proof onc.(on_ctype). destruct X0 as (s & e & Hs).
+    pose proof onc.(on_ctype). destruct X0 as (_ & s & e & Hs).
     epose proof (eta_expand_expanded (Σ := g) _ (repeat None #|ind_bodies m|) _ _ wf Hs).
     forward H. rewrite -arities_context_length.
     clear. induction (arities_context _); constructor; auto.

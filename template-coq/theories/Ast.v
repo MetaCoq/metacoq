@@ -651,10 +651,38 @@ Definition inds ind u (l : list one_inductive_body) :=
       end
   in aux (List.length l).
 
+Module TemplateLookup := EnvironmentTyping.Lookup TemplateTerm Env.
+Include TemplateLookup.
+
+
+Inductive isTermRel (Σ : global_env) (Γ : mark_context) : term -> relevance -> Type :=
+| rel_Rel n rel : nth_error Γ n = Some rel -> isTermRel Σ Γ (tRel n) rel
+| rel_Lambda na A t rel : isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLambda na A t) rel
+| rel_LetIn na b B t rel : isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLetIn na b B t) rel
+| rel_App t u rel : isTermRel Σ Γ t rel -> isTermRel Σ Γ (tApp t u) rel
+| rel_Const kn u decl : declared_constant Σ kn decl -> isTermRel Σ Γ (tConst kn u) decl.(cst_relevance)
+| rel_Construct ind i u mdecl idecl cdecl :
+    declared_constructor Σ (ind, i) mdecl idecl cdecl -> isTermRel Σ Γ (tConstruct ind i u) idecl.(ind_relevance)
+| rel_Case ci p c brs : isTermRel Σ Γ (tCase ci p c brs) ci.(ci_relevance)
+| rel_Proj p u mdecl idecl cdecl pdecl :
+    declared_projection Σ p mdecl idecl cdecl pdecl -> isTermRel Σ Γ (tProj p u) pdecl.(proj_relevance)
+| rel_Fix mfix n def :
+    nth_error mfix n = Some def -> isTermRel Σ Γ (tFix mfix n) def.(dname).(binder_relevance)
+| rel_CoFix mfix n def :
+    nth_error mfix n = Some def -> isTermRel Σ Γ (tCoFix mfix n) def.(dname).(binder_relevance)
+| rel_Sort s : isTermRel Σ Γ (tSort s) Relevant
+| rel_Prod na A B : isTermRel Σ Γ (tProd na A B) Relevant
+| rel_Ind ind u : isTermRel Σ Γ (tInd ind u) Relevant. 
+
+Derive Signature for isTermRel.
+Definition isTermRelOpt Σ Γ t relopt := option_default (isTermRel Σ Γ t) relopt unit.
+
+
 Module TemplateTermUtils <: TermUtils TemplateTerm Env.
 
 Definition destArity := destArity.
 Definition inds := inds.
+Definition isTermRelOpt := isTermRelOpt.
 
 End TemplateTermUtils.
 
@@ -665,10 +693,8 @@ Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
                   unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
                   unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
                   unfold TemplateTerm.subst_instance_constr in *;
-                  unfold TemplateTermUtils.destArity; unfold TemplateTermUtils.inds.
-
-Module TemplateLookup := EnvironmentTyping.Lookup TemplateTerm Env.
-Include TemplateLookup.
+                  unfold TemplateTermUtils.destArity; unfold TemplateTermUtils.inds;
+                  unfold TemplateTermUtils.isTermRelOpt.
 
 Definition tDummy := tVar "".
 

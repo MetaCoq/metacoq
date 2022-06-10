@@ -30,7 +30,7 @@ Module Environment (T : Term).
   Import T.
   #[global] Existing Instance subst_instance_constr.
 
-  Definition typ_or_sort := typ_or_sort_ term.
+  Definition judgment := judgment_ term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -48,6 +48,8 @@ Module Environment (T : Term).
   (** Local (de Bruijn) context *)
 
   Definition context := list context_decl.
+  Definition mark_context := list relevance.
+  Definition marks_of_context : context -> mark_context := fun l => List.map (fun d => d.(decl_name).(binder_relevance)) l.
 
   (** Last declaration first *)
 
@@ -725,5 +727,6 @@ Module Type TermUtils (T: Term) (E: EnvironmentSig T).
 
   Parameter Inline destArity : context -> term -> option (context × Universe.t).
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  Parameter Inline isTermRelOpt : global_env -> mark_context -> term -> option relevance -> Type.
 
 End TermUtils.

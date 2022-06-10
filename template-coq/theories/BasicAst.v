@@ -212,21 +212,21 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-Variant typ_or_sort_ {term} := Typ (T : term) | Sort (relopt : option relevance).
-Arguments typ_or_sort_ : clear implicits.
+Variant judgment_ {term} :=
+  | Typ (t T : term)
+  | TripleOpt (t : option term) (T : term) (relopt : option relevance).
+Arguments judgment_ : clear implicits.
 
-Notation SortRel rel := (Sort (Some rel)).
+Notation Triple t T := (TripleOpt (Some t) T None).
+Notation TripleRel t T rel := (TripleOpt (Some t) T (Some rel)).
+Notation TripleRelOpt t T rel := (TripleOpt t T (Some rel)).
+Notation Sort T := (TripleOpt None T None).
+Notation SortRel T rel := (TripleOpt None T (Some rel)).
 
-Definition typ_or_sort_map {T T'} (f: T -> T') t :=
+Definition judgment_map {T T'} (f: T -> T') t :=
   match t with
-  | Typ T => Typ (f T)
-  | Sort relopt => Sort relopt
-  end.
-
-Definition typ_or_sort_default {T A} (f: T -> A) t d :=
-  match t with
-  | Typ T => f T
-  | Sort _ => d
+  | Typ t T => Typ (f t) (f T)
+  | TripleOpt t T relopt => TripleOpt (option_map f t) (f T) relopt
   end.
 
 Section Contexts.

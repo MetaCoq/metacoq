@@ -34,3 +34,5 @@ Global Open Scope metacoq_scope.
 Arguments Z.add : simpl nomatch.
 Arguments Nat.leb : simpl nomatch.
 Arguments Nat.eqb : simpl nomatch.
+
+#[global] Hint Constructors unit : core.

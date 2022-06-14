@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad
+From MetaCoq.Template Require Import bytestring BasicAst uGraph TemplateMonad
      TemplateMonad.Extractable.
 
 (* Base types *)
 
-Register Coq.Strings.String.string as metacoq.string.type.
-Register Coq.Strings.String.EmptyString as metacoq.string.nil.
-Register Coq.Strings.String.String as metacoq.string.cons.
+Register bytestring.String.t as metacoq.string.type.
+Register bytestring.String.EmptyString as metacoq.string.nil.
+Register bytestring.String.String as metacoq.string.cons.
 
-Register Coq.Strings.Ascii.ascii as metacoq.ascii.type.
-Register Coq.Strings.Ascii.Ascii as metacoq.ascii.intro.
+Register Coq.Init.Byte.byte as metacoq.byte.type.
 
 Register Coq.Init.Datatypes.nat as metacoq.nat.type.
 Register Coq.Init.Datatypes.O as metacoq.nat.zero.
@@ -62,15 +61,22 @@ Register MetaCoq.Template.BasicAst.aname as metacoq.ast.aname.
 
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
-Register MetaCoq.Template.BasicAst.ident as metacoq.ast.ident.
-Register MetaCoq.Template.BasicAst.kername as metacoq.ast.kername.
-Register MetaCoq.Template.BasicAst.modpath as metacoq.ast.modpath.
-Register MetaCoq.Template.BasicAst.MPfile as metacoq.ast.MPfile.
-Register MetaCoq.Template.BasicAst.MPbound as metacoq.ast.MPbound.
-Register MetaCoq.Template.BasicAst.MPdot as metacoq.ast.MPdot.
+Register MetaCoq.Template.Kernames.ident as metacoq.ast.ident.
+Register MetaCoq.Template.Kernames.kername as metacoq.ast.kername.
+Register MetaCoq.Template.Kernames.modpath as metacoq.ast.modpath.
+Register MetaCoq.Template.Kernames.MPfile as metacoq.ast.MPfile.
+Register MetaCoq.Template.Kernames.MPbound as metacoq.ast.MPbound.
+Register MetaCoq.Template.Kernames.MPdot as metacoq.ast.MPdot.
+Register MetaCoq.Template.Kernames.inductive as metacoq.ast.inductive.
+Register MetaCoq.Template.Kernames.mkInd as metacoq.ast.mkInd.
+Register MetaCoq.Template.Kernames.mkProjection as metacoq.ast.mkProjection.
+Register MetaCoq.Template.Kernames.global_reference as metacoq.ast.global_reference.
+Register MetaCoq.Template.Kernames.VarRef as metacoq.ast.VarRef.
+Register MetaCoq.Template.Kernames.ConstRef as metacoq.ast.ConstRef.
+Register MetaCoq.Template.Kernames.IndRef as metacoq.ast.IndRef.
+Register MetaCoq.Template.Kernames.ConstructRef as metacoq.ast.ConstructRef.
+
 Register MetaCoq.Template.BasicAst.name as metacoq.ast.name.
-Register MetaCoq.Template.BasicAst.inductive as metacoq.ast.inductive.
-Register MetaCoq.Template.BasicAst.mkInd as metacoq.ast.mkInd.
 Register MetaCoq.Template.BasicAst.def as metacoq.ast.def.
 Register MetaCoq.Template.BasicAst.mkdef as metacoq.ast.mkdef.
 Register MetaCoq.Template.BasicAst.cast_kind as metacoq.ast.cast_kind.
@@ -83,11 +89,6 @@ Register MetaCoq.Template.BasicAst.recursivity_kind as metacoq.ast.recursivity_k
 Register MetaCoq.Template.BasicAst.Finite as metacoq.ast.Finite.
 Register MetaCoq.Template.BasicAst.CoFinite as metacoq.ast.CoFinite.
 Register MetaCoq.Template.BasicAst.BiFinite as metacoq.ast.BiFinite.
-Register MetaCoq.Template.BasicAst.global_reference as metacoq.ast.global_reference.
-Register MetaCoq.Template.BasicAst.VarRef as metacoq.ast.VarRef.
-Register MetaCoq.Template.BasicAst.ConstRef as metacoq.ast.ConstRef.
-Register MetaCoq.Template.BasicAst.IndRef as metacoq.ast.IndRef.
-Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
 Register MetaCoq.Template.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
 
 (* Universes *)
@@ -115,10 +116,10 @@ Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop
 Register MetaCoq.Template.Universes.Level.lzero as metacoq.ast.level.lzero.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
 (* FIXME*)
-Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.univexpr.npe.
+Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
-Register MetaCoq.Template.Universes.UnivExprSet.Mkt as metacoq.ast.univexprset.mkt.
-Register MetaCoq.Template.Universes.Universe.Build_nonEmptyUnivExprSet as metacoq.ast.universe.build0.
+Register MetaCoq.Template.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
+Register MetaCoq.Template.Universes.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
 Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
 Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.universe.lnpe.
@@ -136,6 +137,7 @@ Register MetaCoq.Template.Universes.Polymorphic_ctx as metacoq.ast.Polymorphic_c
 Register MetaCoq.Template.Universes.ConstraintSet.t_ as metacoq.ast.ConstraintSet.t_.
 Register MetaCoq.Template.Universes.ConstraintSet.empty as metacoq.ast.ConstraintSet.empty.
 Register MetaCoq.Template.Universes.ConstraintSet.add as metacoq.ast.ConstraintSet.add.
+Register MetaCoq.Template.Universes.ConstraintSet.elements as metacoq.ast.ConstraintSet.elements.
 
 Register MetaCoq.Template.Universes.UContext.t as metacoq.ast.UContext.t.
 Register MetaCoq.Template.Universes.UContext.make as metacoq.ast.UContext.make.
@@ -143,6 +145,7 @@ Register MetaCoq.Template.Universes.AUContext.t as metacoq.ast.AUContext.t.
 Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make.
 
 Register MetaCoq.Template.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
+Register MetaCoq.Template.Universes.LevelSet.elements as metacoq.ast.LevelSet.elements.
 Register MetaCoq.Template.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
 
 Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.
@@ -173,8 +176,8 @@ Register MetaCoq.Template.Ast.tCase as metacoq.ast.tCase.
 Register MetaCoq.Template.Ast.tProj as metacoq.ast.tProj.
 Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
-Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
-Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat.
+(* Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
+Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat. *)
 
 (* Local and global declarations *)
 Register MetaCoq.Template.Ast.parameter_entry as metacoq.ast.parameter_entry.
@@ -201,6 +204,8 @@ Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
 
 Register MetaCoq.Template.Ast.Env.constructor_body as metacoq.ast.constructor_body.
 Register MetaCoq.Template.Ast.Env.Build_constructor_body as metacoq.ast.Build_constructor_body.
+Register MetaCoq.Template.Ast.Env.Build_projection_body as metacoq.ast.Build_projection_body.
+Register MetaCoq.Template.Ast.Env.projection_body as metacoq.ast.projection_body.
 Register MetaCoq.Template.Ast.Env.one_inductive_body as metacoq.ast.one_inductive_body.
 Register MetaCoq.Template.Ast.Env.Build_one_inductive_body as metacoq.ast.Build_one_inductive_body.
 Register MetaCoq.Template.Ast.Env.mutual_inductive_body as metacoq.ast.mutual_inductive_body.
@@ -211,6 +216,7 @@ Register MetaCoq.Template.Ast.Env.Build_constant_body as metacoq.ast.Build_const
 Register MetaCoq.Template.Ast.Env.global_decl as metacoq.ast.global_decl.
 Register MetaCoq.Template.Ast.Env.ConstantDecl as metacoq.ast.ConstantDecl.
 Register MetaCoq.Template.Ast.Env.InductiveDecl as metacoq.ast.InductiveDecl.
+Register MetaCoq.Template.Ast.Env.Build_global_env as metacoq.ast.Build_global_env.
 Register MetaCoq.Template.Ast.Env.global_env as metacoq.ast.global_env.
 Register MetaCoq.Template.Ast.Env.global_env_ext as metacoq.ast.global_env_ext.
 Register MetaCoq.Template.Ast.Env.program as metacoq.ast.program.
@@ -247,6 +253,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmQuoteRecTransp as metacoq.templat
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteInductive as metacoq.templatemonad.prop.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteConstant as metacoq.templatemonad.prop.tmQuoteConstant.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteUniverses as metacoq.templatemonad.prop.tmQuoteUniverses.
+Register MetaCoq.Template.TemplateMonad.Core.tmQuoteModule as metacoq.templatemonad.prop.tmQuoteModule.
 
 Register MetaCoq.Template.TemplateMonad.Core.tmUnquote as metacoq.templatemonad.prop.tmUnquote.
 Register MetaCoq.Template.TemplateMonad.Core.tmUnquoteTyped as metacoq.templatemonad.prop.tmUnquoteTyped.
@@ -277,6 +284,7 @@ Register MetaCoq.Template.TemplateMonad.Extractable.tmCurrentModPath as metacoq.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteInductive as metacoq.templatemonad.type.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteUniverses as metacoq.templatemonad.type.tmQuoteUniverses.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteConstant as metacoq.templatemonad.type.tmQuoteConstant.
+Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteModule as metacoq.templatemonad.type.tmQuoteModule.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmInductive as metacoq.templatemonad.type.tmInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmInferInstance as metacoq.templatemonad.type.tmInferInstance.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmExistingInstance as metacoq.templatemonad.type.tmExistingInstance.

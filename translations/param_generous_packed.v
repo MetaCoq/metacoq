@@ -6,7 +6,7 @@ Import MCMonadNotation.
 
 Reserved Notation "'tsl_ty_param'".
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 MetaCoq Quote Definition tSigma := @sigT.
 MetaCoq Quote Definition tPair := @existT.
@@ -20,11 +20,11 @@ MetaCoq Run (t <- tmQuote (@sigT) ;;
             | _ => tmFail "bug"
             end).
 Definition proj1 (t : term) : term
-  := tProj (sigma_ind, 2, 0) t.
+  := tProj (mkProjection sigma_ind 2 0) t.
 Definition proj2 (t : term) : term
-  := tProj (sigma_ind, 2, S 0) t.
+  := tProj (mkProjection sigma_ind 2 (S 0)) t.
 Definition proj (b : bool) (t : term) : term
-  := tProj (sigma_ind, 2, if b then 0 else S 0) t.
+  := tProj (mkProjection sigma_ind 2 (if b then 0 else S 0)) t.
 
 
 Fixpoint refresh_universes (t : term) {struct t} :=

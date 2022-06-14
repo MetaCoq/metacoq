@@ -6,8 +6,6 @@ open Tm_util
 open Ast_quoter
 open Ast_denoter
 
-(* todo : replace string_to_list and converse by (un)quote_string *)
-
 let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reduction_strategy =
   match s with
    | Common0.Coq_cbv -> Plugin_core.rs_cbv
@@ -17,11 +15,11 @@ let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reductio
    | Common0.Coq_lazy -> Plugin_core.rs_lazy
    | Common0.Coq_unfold x -> failwith "not yet implemented: to_reduction_strategy"
 
-let to_qualid (c : char list) : Libnames.qualid =
-  Libnames.qualid_of_string (list_to_string c)
+let to_qualid c : Libnames.qualid =
+  Libnames.qualid_of_string (unquote_string c)
 
-let of_qualid (q : Libnames.qualid) : char list =
-  string_to_list (Libnames.string_of_qualid q)
+let of_qualid (q : Libnames.qualid) =
+  quote_string (Libnames.string_of_qualid q)
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_decl env = function
@@ -80,23 +78,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     let indsort = Q.quote_sort (inductive_sort oib) in      
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-          Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                      bool !Quoter.opt_hnf_ctor_types)) ;
-          let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
-          let ctx, concl = ty in
-          let ty = Term.it_mkProd_or_LetIn concl ctx in
-          let argctx, parsctx = 
-            CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
-          in
-          let envcstr = push_rel_context parsctx envind in
-          let qargctx = quote_rel_context envcstr argctx in
-          let qindices = 
-            let hd, args = Constr.decompose_appvect concl in
-            let pars, args = CArray.chop mib.mind_nparams args in
-            let envconcl = push_rel_context argctx envcstr in
-            List.map (quote_term envconcl) args
-          in
-          let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))
         ([],acc) named_ctors
@@ -148,10 +129,11 @@ let get_constant_body b =
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
 let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.Env.constant_body =
   let open Declarations in
-  let {const_body = body; const_type = typ; const_universes = univs} = cd in
+  let {const_body = body; const_type = typ; const_universes = univs; const_relevance = rel} = cd in
   Ast0.Env.({cst_type = quote_term env typ;
          cst_body = Option.map (quote_term env) (get_constant_body body);
-         cst_universes = quote_universes_decl univs None})
+         cst_universes = quote_universes_decl univs None;
+         cst_relevance = quote_relevance rel})
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
@@ -209,8 +191,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmReturn x -> tmReturn x
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))
   | Coq_tmPrint t -> Obj.magic (tmPrint (to_constr t))
-  | Coq_tmMsg msg -> Obj.magic (tmMsg (list_to_string msg))
-  | Coq_tmFail err -> tmFailString (list_to_string err)
+  | Coq_tmMsg msg -> Obj.magic (tmMsg (unquote_string msg))
+  | Coq_tmFail err -> tmFailString (unquote_string err)
   | Coq_tmEval (r,t) ->
     tmBind (tmEval (to_reduction_strategy r) (to_constr t))
            (fun x -> Obj.magic (tmOfConstr x))
@@ -235,7 +217,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x))
           (tmLocate (to_qualid id))
   | Coq_tmCurrentModPath ->
-    tmMap (fun mp -> Obj.magic (string_to_list (Names.ModPath.to_string mp)))
+    tmMap (fun mp -> Obj.magic (quote_string (Names.ModPath.to_string mp)))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
     tmBind (tmQuoteInductive (unquote_kn kn))
@@ -244,11 +226,13 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
            | Some (mi, mib) -> Obj.magic (tmOfMib mi mib))
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
+  | Coq_tmQuoteModule id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModule (to_qualid id))
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))
-  | Coq_tmInductive i ->
-    tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
+  | Coq_tmInductive (inferu, i) ->
+    tmMap (fun _ -> Obj.magic ()) (tmInductive (unquote_bool inferu) (to_mie i))
   | Coq_tmExistingInstance k ->
     Obj.magic (tmExistingInstance (unquote_global_reference k))
   | Coq_tmInferInstance t ->

@@ -1,13 +1,13 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars PCUICWeakeningTyp PCUICUnivSubstitutionTyp PCUICClosedTyp PCUICUnivSubstitutionConv.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
+From MetaCoq.PCUIC Require Import BDTyping.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-(** Various generic lemmatas missing from the MetaCoq library *)
+(** Various generic lemmas missing from the MetaCoq library *)
 
 Lemma All2i_prod (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
   All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y) × (Q i x y)) n l l'.
@@ -76,15 +76,13 @@ Proof.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + destruct X0.
-      eexists.
+    + apply infer_typing_sort_impl with id X0; intros Hs.
       apply weaken_ctx ; eauto.
     + apply weaken_ctx ; auto.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + destruct X0.
-      eexists.
+    + apply infer_typing_sort_impl with id X0; intros Hs.
       apply weaken_ctx ; eauto.
 Qed.      
 
@@ -107,7 +105,8 @@ Section BDToPCUICTyping.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
-  (** The predicates we wish to prove, note the extra well-formedness hypothesis depending on the modding of the judgement *)
+  (** The predicates we wish to prove, note the extra well-formedness hypothesis on the context
+  and type whenever they are inputs to the algorithm *)
 
   Let Pinfer Γ t T :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : T.
@@ -130,26 +129,21 @@ Section BDToPCUICTyping.
   Let PΓ_rel Γ Γ' :=
     wf_local Σ Γ -> wf_local_rel Σ Γ Γ'.
 
-  (** Preliminary lemmata to go from a bidirectional judgement to the corresponding undirected one *)
+  (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
-    All_local_env_over_sorting checking infering_sort 
+    All_local_env_over_sorting checking infering_sort
       (fun Σ Γ _ t T _ => Pcheck Γ t T)
-      (fun Σ Γ _ t u _ => Psort Γ t u) 
+      (fun Σ Γ _ t s _ => Psort Γ t s) 
       Σ Γ all ->
     wf_local Σ Γ.
-  Proof.
+  Proof using Type.
     intros allo ; induction allo.
     all: constructor.
     1,3: assumption.
-    all: red.
-    - simpl in tu. eexists.
-      auto.
-    - destruct tu. eexists.
-      auto.
-    - destruct tu.
-      apply c ; auto.
-      eexists. auto.
+    all: do 2 red.
+    3: apply Hc; auto.
+    all: apply infer_sort_impl with id tu; now intros Ht.
   Qed.
 
   Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
@@ -157,31 +151,22 @@ Section BDToPCUICTyping.
       (fun Σ Δ => checking Σ (Γ,,,Δ))
       (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
       (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
-      (fun Σ Δ _ t u _ => Psort (Γ,,,Δ) t u) 
+      (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s) 
       Σ Γ' all ->
     wf_local_rel Σ Γ Γ'.
-  Proof.
+  Proof using Type.
     intros allo ; induction allo.
     all: constructor.
     1,3: assumption.
     all: red.
-    - simpl in tu. eexists.
-      apply s.
-      by apply wf_local_app.
-    - destruct tu. eexists.
-      apply s.
-      by apply wf_local_app.
-    - destruct tu.
-      apply c.
-      1: by apply wf_local_app.
-      eexists.
-      apply s.
-      by apply wf_local_app.
+    3: apply Hc; [by apply wf_local_app|].
+    all: apply infer_sort_impl with id tu; intros Ht.
+    all: now apply Hs, wf_local_app.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
     forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
-  Proof.
+  Proof using wfΣ.
     revert wfΔ.
     induction Δ using ctx_length_ind.
     1: intros _ ? d ; inversion_clear d ; constructor.
@@ -227,7 +212,7 @@ Section BDToPCUICTyping.
     
   (** The big theorem, proven by mutual induction using the custom induction principle *)
   Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-  Proof.
+  Proof using wfΣ.
     apply bidir_ind_env.
 
     - intros. eapply bd_wf_local. eassumption.
@@ -287,7 +272,7 @@ Section BDToPCUICTyping.
       assert (cum : Σ;;; Γ ⊢ mkApps (tInd ci u) args ≤
         mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)).
       {
-        eapply equality_mkApps_eq.
+        eapply ws_cumul_pb_mkApps_eq.
         1-3: fvs.
         - now constructor.
         - eapply type_is_open_term in X0 ; eauto.
@@ -303,9 +288,9 @@ Section BDToPCUICTyping.
               by rewrite -is_open_term_closed.
             }
             solve_all.
-            eapply into_equality ; tea.
+            eapply into_ws_cumul_pb ; tea.
             fvs.
-          + now apply equality_terms_refl ; fvs.
+          + now apply ws_cumul_pb_terms_refl ; fvs.
       }
 
       assert (ctx_inst Σ Γ (pparams p ++ skipn (ci_npar ci) args)
@@ -323,7 +308,7 @@ Section BDToPCUICTyping.
         eexists.
         eapply type_mkApps_arity.
         1: econstructor ; eauto.
-        erewrite PCUICDeclarationTyping.ind_arity_eq.
+        erewrite PCUICGlobalMaps.ind_arity_eq.
         2: by eapply PCUICInductives.oib ; eauto.
         rewrite !subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
         eapply arity_spine_it_mkProd_or_LetIn ; auto.
@@ -440,7 +425,7 @@ Section BDToPCUICTyping.
     - red ; intros.
       destruct X3.
       econstructor ; eauto.
-      eapply (cumulAlgo_cumulSpec _ (le := true)), into_equality ; tea.
+      eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_ws_cumul_pb ; tea.
       + fvs. 
       + now eapply type_is_open_term.
       + now eapply subject_is_open_term. 

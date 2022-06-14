@@ -61,7 +61,7 @@ Coercion declared_constructor_inductive : declared_constructor >-> declared_indu
 
 Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
   declared_projection Σ ind mdecl idecl cdecl pdecl ->
-  declared_constructor Σ (ind.1.1, 0) mdecl idecl cdecl.
+  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
 Proof. now intros []. Qed.
 Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
 
@@ -71,11 +71,11 @@ Section DeclaredInv.
   Lemma declared_minductive_ind_npars  {mdecl ind} :
     declared_minductive Σ ind mdecl ->
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
-  Proof.
+  Proof using wfΣ.
     intros h.
     unfold declared_minductive in h.
-    eapply lookup_on_global_env in h. 2: eauto.
-    destruct h as [Σ' [wfΣ' decl']].
+    eapply lookup_on_global_env in h; tea.
+    destruct h as [Σ' [ext wfΣ' decl']].
     red in decl'. destruct decl' as [h ? ? ?].
     now rewrite onNpars.
   Qed.
@@ -83,95 +83,58 @@ Section DeclaredInv.
 End DeclaredInv.
 
 Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env P Σ ->
+  on_global_env cumulSpec0 P Σ ->
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
- - cbn. eapply LevelSet.mem_spec, global_levels_Set.
+ - cbn. apply global_levels_InSet.
  - unfold global_uctx.
    simpl. intros [[l ct] l'] Hctr. simpl in *.
    induction Σ in HΣ, l, ct, l', Hctr |- *.
-   + apply ConstraintSetFact.empty_iff in Hctr; contradiction.
-   + simpl in *. apply ConstraintSet.union_spec in Hctr.
-     destruct Hctr as [Hctr|Hctr].
-     * split.
-       -- inversion HΣ; subst.
-          destruct H2 as [HH1 [HH HH3]].
-          subst udecl. destruct d as [decl|decl]; simpl in *.
-          ++ destruct decl; simpl in *.
-             destruct cst_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
-             | apply ConstraintSetFact.empty_iff in Hctr ; contradiction
-             ].
-          ++ destruct decl. simpl in *.
-             destruct ind_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
-             | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-             ].
-       -- inversion HΣ. subst.
-          destruct H2 as [HH1 [HH HH3]].
-          subst udecl. destruct d as [decl|decl].
-          all: simpl in *.
-          ++ destruct decl. simpl in *.
-             destruct cst_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
-             | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-             ].
-          ++ destruct decl. simpl in *.
-             destruct ind_universes0; [
-               eapply (HH (l, ct, l') Hctr)
-             | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-             ].
-     * inversion HΣ. subst.
-       split.
-       all: apply LevelSet.union_spec.
-       all: right.
-       all: unshelve eapply (IHΣ _ _ _ _ Hctr).
-       all: try eassumption.
+   destruct HΣ. cbn in *.
+   destruct o as [decls cu].
+   now specialize (decls _ Hctr).
+Qed.
+
+Lemma LevelSet_in_union_global Σ l ls : 
+  LevelSet.In l (LevelSet.union ls (universes Σ).1) ->
+  LevelSet.In l (LevelSet.union ls (global_levels (universes Σ))).
+Proof.
+  intros H % LevelSet.union_spec.
+  apply LevelSet.union_spec. intuition auto.
+  right. now apply LevelSet.union_spec.
 Qed.
 
 Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
-  on_global_env_ext P Σ ->
+  on_global_env_ext cumulSpec0 P Σ ->
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
- - apply LevelSet.union_spec. right. apply LevelSet.mem_spec, global_levels_Set.
+ - apply global_ext_levels_InSet.
  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
    destruct (wf_global_uctx_invariants _ HΣ) as [_ XX].
    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
    simpl. intros [[l ct] l'] Hctr. simpl in *. apply ConstraintSet.union_spec in Hctr.
    destruct Hctr as [Hctr|Hctr].
-   + destruct Hφ as [_ [HH _]]. apply (HH _ Hctr).
+   + destruct Hφ as [_ [HH _]]. specialize (HH _ Hctr). cbn in HH.
+     intuition auto using LevelSet_in_union_global.
    + specialize (XX _ Hctr).
      split; apply LevelSet.union_spec; right; apply XX.
 Qed.
 
 Lemma wf_consistent {cf:checker_flags} Σ {P} :
-  on_global_env P Σ -> consistent (global_constraints Σ).
+  on_global_env cumulSpec0 P Σ -> consistent (global_constraints Σ).
 Proof.
   destruct Σ.
-  - exists {| valuation_mono := fun _ => 1%positive;  valuation_poly := fun _ => 0 |}.
-    intros x Hx; now apply ConstraintSetFact.empty_iff in Hx.
-  - inversion 1; subst. subst udecl. clear -H2.
-    destruct H2 as [_ [_ [_ [v Hv]]]].
-    exists v. intros ct Hc. apply Hv. simpl in *.
-    apply ConstraintSet.union_spec in Hc. destruct Hc.
-    apply ConstraintSet.union_spec; simpl.
-    + left. destruct d.
-      destruct c, cst_universes0. assumption.
-      apply ConstraintSetFact.empty_iff in H; contradiction.
-      destruct m, ind_universes0. assumption.
-      apply ConstraintSetFact.empty_iff in H; contradiction.
-    + apply ConstraintSet.union_spec; simpl.
-      now right.
+  intros [cu ong]. apply cu.
 Qed.
 
 Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
- : on_global_env_ext P Σ -> consistent (global_ext_uctx Σ).2.
+ : on_global_env_ext cumulSpec0 P Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.
-  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
+  destruct HΣ as (_ & _ & _ & HH & _). apply HH.
 Qed.
 
 

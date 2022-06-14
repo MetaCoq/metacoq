@@ -166,6 +166,35 @@ let tmQuoteUniverses : UGraph.t tm =
   fun ~st env evm success _fail ->
     success ~st env evm (Environ.universes env)
 
+let quote_module (qualid : qualid) : global_reference list =
+  let mp = Nametab.locate_module qualid in
+  let mb = Global.lookup_module mp in
+  let rec aux mb =
+    let open Declarations in
+    let me = mb.mod_expr in
+    let get_refs s =
+      let body = Modops.destr_nofunctor s in
+      let get_ref (label, field) =
+        let open Names in 
+        match field with
+        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
+        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+        | SFBmodule mb -> aux mb
+        | SFBmodtype mtb -> []
+      in
+      CList.map_append get_ref body
+    in
+    match me with
+    | Abstract -> []
+    | Algebraic _ -> []
+    | Struct s -> get_refs s
+    | FullStruct -> get_refs mb.Declarations.mod_type
+  in aux mb
+
+let tmQuoteModule (qualid : qualid) : global_reference list tm =
+  fun ~st env evd success _fail ->
+  success ~st env evd (quote_module qualid)
+
 (*let universes_entry_of_decl ?withctx d =
   let open Declarations in
   let open Entries in
@@ -218,9 +247,17 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body 
     with
       Not_found -> fail ~st Pp.(str "constant not found " ++ Names.KerName.print kn)
 
-let tmInductive (mi : mutual_inductive_entry) : unit tm =
+let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
-    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) []) ;
+    let mie = 
+      if infer_univs then
+        let evm = Evd.from_env env in
+        let ctx, mie = Tm_util.RetypeMindEntry.infer_mentry_univs env evm mie in
+        DeclareUctx.declare_universe_context ~poly:false ctx; mie
+      else mie
+    in
+    let names = (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) in
+    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mie names []) ;
     success ~st (Global.env ()) evd ()
 
 let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =

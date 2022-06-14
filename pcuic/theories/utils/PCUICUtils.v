@@ -40,6 +40,7 @@ Inductive dlexmod {A} {B : A -> Type}
     forall x x' y y' (e : eA x x'),
       leB x' (coe _ _ e y) y' ->
       dlexmod leA eA coe leB (x;y) (x';y').
+Derive Signature for dlexmod.
 
 Notation "x ⊩ R1 ⨶ R2" :=
   (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
@@ -98,8 +99,6 @@ Proof.
     + left. assumption.
     + right. eapply hB ; eassumption.
 Qed.
-
-Derive Signature for dlexmod.
 
 Lemma acc_dlexmod A B
       (leA : A -> A -> Prop) (eA : A -> A -> Prop)
@@ -191,39 +190,3 @@ Qed.
 Instance WF_precompose {T M} (R : M -> M -> Prop) (m : T -> M) :
   WellFounded R -> WellFounded (precompose R m)
   := wf_precompose R m.
-
-
-Lemma OnOne2_All2_All2 {A : Type} {l1 l2 l3 : list A} {R1 R2 R3  : A -> A -> Type} :
-  OnOne2 R1 l1 l2 ->
-  All2 R2 l1 l3 ->
-  (forall x y, R2 x y -> R3 x y) ->
-  (forall x y z : A, R1 x y -> R2 x z -> R3 y z) ->
-  All2 R3 l2 l3.
-Proof.
-  intros o. induction o in l3 |- *.
-  intros H; depelim H.
-  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
-  eapply All2_impl; eauto.
-  intros H; depelim H.
-  intros Hf. specialize (IHo _ H Hf).
-  constructor; auto.
-Qed.
-
-Lemma OnOne2_All_All {A : Type} {l1 l2 : list A} {R1  : A -> A -> Type} {R2 R3 : A -> Type} :
-  OnOne2 R1 l1 l2 ->
-  All R2 l1 ->
-  (forall x, R2 x -> R3 x) ->
-  (forall x y : A, R1 x y -> R2 x -> R3 y) ->
-  All R3 l2.
-Proof.
-  intros o. induction o.
-  intros H; depelim H.
-  intros Hf Hf'. specialize (Hf' _ _ p r). constructor; auto.
-  eapply All_impl; eauto.
-  intros H; depelim H.
-  intros Hf. specialize (IHo H Hf).
-  constructor; auto.
-Qed.
-
-
-

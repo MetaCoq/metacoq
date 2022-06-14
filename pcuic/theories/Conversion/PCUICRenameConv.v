@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases P
   PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition
-  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp
+  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp PCUICViews
   PCUICTyping.
 
 Require Import ssreflect ssrbool.
@@ -20,6 +20,34 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+Lemma isConstruct_app_rename r t :
+  isConstruct_app t = isConstruct_app (rename r t).
+Proof.
+  unfold isConstruct_app. unfold decompose_app. generalize (@nil term) at 1.
+  change (@nil term) with (map (rename r) []). generalize (@nil term).
+  induction t; simpl; auto.
+  intros l l0. specialize (IHt1 (t2 :: l) (t2 :: l0)).
+  now rewrite IHt1.
+Qed.
+
+Lemma is_constructor_rename x l r : is_constructor x l = is_constructor x (map (rename r) l).
+Proof.
+  rewrite /is_constructor nth_error_map.
+  elim: nth_error_spec => //.
+  move=> n hnth xl /=.
+  now apply isConstruct_app_rename.
+Qed.
+
+Lemma isFixLambda_app_rename r t : ~~ isFixLambda_app t -> ~~ isFixLambda_app (rename r t).
+Proof.
+  induction t; simpl; auto.
+  destruct t1; simpl in *; auto.
+Qed.
+
+Lemma construct_cofix_rename r t : discr_construct_cofix t -> discr_construct_cofix (rename r t).
+Proof.
+  destruct t; simpl; try congruence.
+Qed.
 
 Lemma rename_mkApps :
   forall f t l,
@@ -28,6 +56,20 @@ Proof.
   intros f t l.
   autorewrite with sigma. f_equal.
 Qed.
+
+Lemma decompose_app_rec_rename r t l :
+  forall hd args, 
+  decompose_app_rec t l = (hd, args) ->
+  decompose_app_rec (rename r t) (map (rename r) l) = (rename r hd, map (rename r) args).
+Proof.
+  induction t in l |- *; simpl; try intros hd args [= <- <-]; auto.
+  intros hd args e. now apply (IHt1 _ _ _ e).
+Qed.
+
+Lemma decompose_app_rename {r t hd args} :
+  decompose_app t = (hd, args) ->
+  decompose_app (rename r t) = (rename r hd, map (rename r) args).
+Proof. apply decompose_app_rec_rename. Qed.
 
 Lemma rename_subst_instance :
   forall u t f,
@@ -172,8 +214,6 @@ Proof.
   unfold map_decl. now rewrite mapi_length fix_context_length.
 Qed.
 
-
-
 Section Renaming.
 
 Context `{cf : checker_flags}.
@@ -182,7 +222,7 @@ Lemma eq_term_upto_univ_rename Σ :
   forall Re Rle napp u v f,
     eq_term_upto_univ_napp Σ Re Rle napp u v ->
     eq_term_upto_univ_napp Σ Re Rle napp (rename f u) (rename f v).
-Proof.
+Proof using Type.
   intros Re Rle napp u v f h.
   induction u in v, napp, Rle, f, h |- * using term_forall_list_ind.
   all: dependent destruction h.
@@ -227,7 +267,7 @@ Lemma urenaming_impl :
     (forall i, P' i -> P i) ->
     urenaming P Δ Γ f ->
     urenaming P' Δ Γ f.
-Proof.
+Proof using Type.
   intros P P' Γ Δ f hP h.
   intros i decl p e.
   specialize (h i decl (hP _ p) e) as [decl' [h1 [h2 h3]]].
@@ -235,7 +275,7 @@ Proof.
 Qed.
 
 Lemma inst_closed σ k t : closedn k t -> t.[⇑^k σ] = t.
-Proof.
+Proof using Type.
   intros Hs.
   induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
     simpl in *;
@@ -267,7 +307,7 @@ Lemma rename_closedn :
   forall f n t,
     closedn n t ->
     rename (shiftn n f) t = t.
-Proof.
+Proof using Type.
   intros f n t e.
   autorewrite with sigma.
   erewrite <- inst_closed with (σ := ren f) by eassumption.
@@ -284,7 +324,7 @@ Lemma rename_closed :
   forall f t,
     closed t ->
     rename f t = t.
-Proof.
+Proof using Type.
   intros f t h.
   replace (rename f t) with (rename (shiftn 0 f) t).
   - apply rename_closedn. assumption.
@@ -292,7 +332,7 @@ Proof.
 Qed.
 
 Lemma rename_closed_decl k f d : closed_decl k d -> map_decl (rename (shiftn k f)) d = d.
-Proof.
+Proof using Type.
   rewrite /map_decl.
   destruct d as [? [] ?] => /=.
   - move/andP=> [] clt clty.
@@ -303,7 +343,7 @@ Qed.
 Lemma rename_closedn_ctx f n Γ :
   closedn_ctx n Γ ->
   rename_context (shiftn n f) Γ = Γ.
-Proof.
+Proof using Type.
   rewrite test_context_k_eq /rename_context.
   apply alli_fold_context_k.
   intros. rewrite shiftn_add.
@@ -313,14 +353,14 @@ Qed.
 
 Lemma rename_closedn_terms f n ts :
   forallb (closedn n) ts -> map (rename (shiftn n f)) ts = ts.
-Proof.
+Proof using Type.
   solve_all. now apply rename_closedn.
 Qed.
 
 Lemma rename_closed_extended_subst f Γ :
   closed_ctx Γ ->
   map (rename (shiftn (context_assumptions Γ) f)) (extended_subst Γ 0) = extended_subst Γ 0.
-Proof.
+Proof using Type.
   intros cl. apply rename_closedn_terms.
   now apply (closedn_extended_subst_gen Γ 0 0).
 Qed.
@@ -331,7 +371,7 @@ Lemma urenaming_vass :
   forall P Γ Δ na A f,
     urenaming P Γ Δ f ->
     urenaming (shiftnP 1 P) (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
-Proof.
+Proof using Type.
   intros P Γ Δ na A f h. unfold urenaming in *.
   intros [|i] decl hP e.
   - simpl in e. inversion e. subst. clear e.
@@ -359,7 +399,7 @@ Lemma urenaming_vdef :
   forall P Γ Δ na b B f,
     urenaming P Γ Δ f ->
     urenaming (shiftnP 1 P) (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
-Proof.
+Proof using Type.
   intros P Γ Δ na b B f h. unfold urenaming in *.
   intros [|i] decl hP e.
   - simpl in e. inversion e. subst. clear e.
@@ -388,10 +428,10 @@ Lemma urenaming_ext :
     f =1 g ->
     urenaming P Δ Γ f ->
     urenaming P' Δ Γ g.
-Proof.
+Proof using Type.
   intros P P' Γ Δ f g hP hfg h.
   intros i decl p e.
-  rewrite -hP in p.
+  rewrite <-hP in p.
   specialize (h i decl p e) as [decl' [? [h1 [h2 h3]]]].
   exists decl'. repeat split => //.
   - rewrite <- (hfg i). assumption.
@@ -407,7 +447,7 @@ Qed.
 Lemma renaming_extP P P' Σ Γ Δ f :
   P =1 P' ->
   renaming P Σ Γ Δ f -> renaming P' Σ Γ Δ f.
-Proof.
+Proof using Type.
   intros hP; rewrite /renaming.
   intros []; split; eauto.
   eapply urenaming_ext; eauto. reflexivity.
@@ -417,7 +457,7 @@ Lemma urenaming_context :
   forall P Γ Δ Ξ f,
     urenaming P Δ Γ f ->
     urenaming (shiftnP #|Ξ| P) (Δ ,,, rename_context f Ξ) (Γ ,,, Ξ) (shiftn #|Ξ| f).
-Proof.
+Proof using Type.
   intros P Γ Δ Ξ f h.
   induction Ξ as [| [na [bo|] ty] Ξ ih] in Γ, Δ, f, h |- *.
   - simpl. eapply urenaming_ext. 3: eassumption.
@@ -444,7 +484,7 @@ Lemma isLambda_rename :
   forall t f,
     isLambda t ->
     isLambda (rename f t).
-Proof.
+Proof using Type.
   intros t f h.
   destruct t.
   all: try discriminate.
@@ -457,7 +497,7 @@ Lemma rename_unfold_fix :
     unfold_fix mfix idx = Some (narg, fn) ->
     unfold_fix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
     = Some (narg, rename f fn).
-Proof.
+Proof using Type.
   intros mfix idx narg fn f h.
   unfold unfold_fix in *. rewrite nth_error_map.
   case_eq (nth_error mfix idx).
@@ -477,63 +517,12 @@ Proof.
 Qed.
 
 (* TODO MOVE *)
-Lemma decompose_app_rename :
-  forall f t u l,
-    decompose_app t = (u, l) ->
-    decompose_app (rename f t) = (rename f u, map (rename f) l).
-Proof.
-  assert (aux : forall f t u l acc,
-    decompose_app_rec t acc = (u, l) ->
-    decompose_app_rec (rename f t) (map (rename f) acc) =
-    (rename f u, map (rename f) l)
-  ).
-  { intros f t u l acc h.
-    induction t in acc, h |- *.
-    all: try solve [ simpl in * ; inversion h ; reflexivity ].
-    simpl. simpl in h. specialize IHt1 with (1 := h). assumption.
-  }
-  intros f t u l.
-  unfold decompose_app.
-  eapply aux.
-Qed.
-
-(* TODO MOVE *)
-Lemma isConstruct_app_rename :
-  forall t f,
-    isConstruct_app t ->
-    isConstruct_app (rename f t).
-Proof.
-  intros t f h.
-  unfold isConstruct_app in *.
-  case_eq (decompose_app t). intros u l e.
-  apply decompose_app_rename with (f := f) in e as e'.
-  rewrite e'. rewrite e in h. simpl in h.
-  simpl.
-  destruct u. all: try discriminate.
-  simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma is_constructor_rename :
-  forall n l f,
-    is_constructor n l ->
-    is_constructor n (map (rename f) l).
-Proof.
-  intros n l f h.
-  unfold is_constructor in *.
-  rewrite nth_error_map.
-  destruct nth_error.
-  - simpl. apply isConstruct_app_rename. assumption.
-  - simpl. discriminate.
-Qed.
-
-(* TODO MOVE *)
 Lemma rename_unfold_cofix :
   forall mfix idx narg fn f,
     unfold_cofix mfix idx = Some (narg, fn) ->
     unfold_cofix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
     = Some (narg, rename f fn).
-Proof.
+Proof using Type.
   intros mfix idx narg fn f h.
   unfold unfold_cofix in *. rewrite nth_error_map.
   case_eq (nth_error mfix idx).
@@ -555,11 +544,12 @@ Definition rename_constructor_body mdecl f c :=
   map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
    (fun k => rename (shiftn k f)) c.
 
+(* TODO move *)   
 Lemma map2_set_binder_name_fold bctx f Γ :
   #|bctx| = #|Γ| ->
   map2 set_binder_name bctx (fold_context_k f Γ) =
   fold_context_k f (map2 set_binder_name bctx Γ).
-Proof.
+Proof using Type.
   intros hl.
   rewrite !fold_context_k_alt mapi_map2 -{1}(map_id bctx).
   rewrite -mapi_cst_map map2_mapi.
@@ -573,7 +563,7 @@ Lemma rename_subst :
   forall f s n t,
     rename (shiftn n f) (subst s n t) =
     subst (map (rename f) s) n (rename (shiftn n (shiftn #|s| f)) t).
-Proof.
+Proof using Type.
   intros f s n t.
   autorewrite with sigma.
   eapply inst_ext. intro i. unfold Upn.
@@ -614,7 +604,7 @@ Qed.
 Lemma rename_context_subst f s Γ :
   rename_context f (subst_context s 0 Γ) =
   subst_context (map (rename f) s) 0 (rename_context (shiftn #|s| f) Γ).
-Proof.
+Proof using Type.
   rewrite !rename_context_alt !subst_context_alt.
   rewrite !mapi_mapi. apply mapi_ext => i x.
   rewrite /subst_decl !compose_map_decl.
@@ -628,7 +618,7 @@ Qed.
 Lemma rename_shiftnk :
   forall f n k t,
     rename (shiftn (n + k) f) (lift n k t) = lift n k (rename (shiftn k f) t).
-Proof.
+Proof using Type.
   intros f n k t.
   rewrite !lift_rename.
   autorewrite with sigma.
@@ -641,7 +631,7 @@ Qed.
 Lemma rename_context_lift f n k Γ :
   rename_context (shiftn (n + k) f) (lift_context n k Γ) =
   lift_context n k (rename_context (shiftn k f) Γ).
-Proof.
+Proof using Type.
   rewrite !rename_context_alt !lift_context_alt.
   rewrite !mapi_mapi. apply mapi_ext => i x.
   rewrite /lift_decl !compose_map_decl.
@@ -654,7 +644,7 @@ Proof.
 Qed.
 
 Lemma rename_inds f ind pu bodies : map (rename f) (inds ind pu bodies) = inds ind pu bodies.
-Proof.
+Proof using Type.
   unfold inds.
   induction #|bodies|; simpl; auto. f_equal.
   apply IHn.
@@ -679,7 +669,7 @@ Context `{cf : checker_flags}.
 Lemma rename_context_subst_instance f u Γ :
   rename_context f (subst_instance u Γ) =
   subst_instance u (rename_context f Γ).
-Proof. unfold rename_context.
+Proof using Type. unfold rename_context.
   rewrite fold_context_k_map // [subst_instance _ _]map_fold_context_k.
   now setoid_rewrite rename_subst_instance.
 Qed.
@@ -687,7 +677,7 @@ Qed.
 Lemma rename_context_subst_k f s k Γ :
   rename_context (shiftn k f) (subst_context s k Γ) =
   subst_context (map (rename f) s) k (rename_context (shiftn (k + #|s|) f) Γ).
-Proof.
+Proof using Type.
   rewrite /rename_context /subst_context.
   rewrite !fold_context_k_compose.
   apply fold_context_k_ext => i t.
@@ -698,7 +688,7 @@ Qed.
 Lemma rename_cstr_args mdecl f cdecl :
   cstr_args (rename_constructor_body mdecl f cdecl) =
   rename_context (shiftn (#|mdecl.(ind_params)| + #|ind_bodies mdecl|) f) (cstr_args cdecl).
-Proof.
+Proof using Type.
   simpl. unfold rename_context.
   apply fold_context_k_ext => i t.
   now rewrite shiftn_add Nat.add_assoc.
@@ -708,7 +698,7 @@ Lemma rename_reln f ctx n acc :
   forallb (closedn (n + #|ctx|)) acc ->
   map (rename (shiftn (n + #|ctx|) f)) (reln acc n ctx) =
   reln acc n ctx.
-Proof.
+Proof using Type.
   induction ctx in n, acc |- *; simpl; auto.
   - intros clacc. solve_all. now rewrite rename_closedn.
   - intros clacc.
@@ -723,14 +713,14 @@ Qed.
 
 Lemma rename_to_extended_list f ctx :
   map (rename (shiftn #|ctx| f)) (to_extended_list ctx) = to_extended_list ctx.
-Proof.
+Proof using Type.
   unfold to_extended_list, to_extended_list_k.
   now apply (rename_reln _ _ 0).
 Qed.
 
 Lemma to_extended_list_rename f ctx :
   to_extended_list (rename_context f ctx) = to_extended_list ctx.
-Proof.
+Proof using Type.
   unfold to_extended_list, to_extended_list_k.
   now rewrite (reln_fold _ _ 0).
 Qed.
@@ -739,7 +729,7 @@ Lemma rename_context_set_binder_name f ctx ctx' :
   #|ctx| = #|ctx'| ->
   rename_context f (map2 set_binder_name ctx ctx') =
   map2 set_binder_name ctx (rename_context f ctx').
-Proof.
+Proof using Type.
   induction ctx in ctx' |- *; destruct ctx'; simpl; auto.
   rewrite !rename_context_snoc /= /snoc.
   intros [=]. f_equal; auto.
@@ -752,7 +742,7 @@ Lemma rename_inst_case_context f pars puinst ctx :
   rename_context f (inst_case_context pars puinst ctx) =
   inst_case_context (map (rename f) pars) puinst
     (rename_context (shiftn #|pars| f) ctx).
-Proof.
+Proof using Type.
   rewrite /inst_case_context.
   now rewrite rename_context_subst map_rev rename_context_subst_instance; len.
 Qed.
@@ -761,7 +751,7 @@ Lemma rename_inst_case_context_wf f pars puinst ctx :
   test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| ctx ->
   rename_context f (inst_case_context pars puinst ctx) =
     inst_case_context (map (rename f) pars) puinst ctx.
-Proof.
+Proof using Type.
   rewrite test_context_k_closed_on_free_vars_ctx => H.
   rewrite rename_inst_case_context. f_equal.
   now rewrite rename_closedn_ctx // closedn_ctx_on_free_vars.
@@ -771,7 +761,7 @@ Lemma rename_cstr_branch_context f ind mdecl cdecl :
   closed_ctx (ind_params mdecl) ->
   rename_context (shiftn (context_assumptions (ind_params mdecl)) f) (cstr_branch_context ind mdecl cdecl) =
   cstr_branch_context ind mdecl (rename_constructor_body mdecl f cdecl).
-Proof.
+Proof using Type.
   intros clctx.
   rewrite /cstr_branch_context.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
@@ -791,7 +781,7 @@ Lemma rename_case_branch_context_gen ind mdecl f p bctx cdecl :
   rename_context f (case_branch_context ind mdecl p bctx cdecl) =
   case_branch_context ind mdecl (rename_predicate f p) bctx
     (rename_constructor_body mdecl f cdecl).
-Proof.
+Proof using Type.
   intros clpars. unfold case_branch_context, case_branch_context_gen, pre_case_branch_context_gen.
   cbn -[fold_context_k].
   intros hlen hlen'.
@@ -802,20 +792,20 @@ Qed.
 
 Lemma forget_types_mapi_context (f : nat -> term -> term) (ctx : context) :
   forget_types (mapi_context f ctx) = forget_types ctx.
-Proof.
+Proof using Type.
   now rewrite /forget_types map_mapi_context /= mapi_cst_map.
 Qed.
 
 Lemma forget_types_map_context (f : term -> term) (ctx : context) :
   forget_types (map_context f ctx) = forget_types ctx.
-Proof.
+Proof using Type.
   now rewrite /forget_types map_map_compose.
 Qed.
 
 Lemma rename_closed_constructor_body mdecl cdecl f :
   closed_constructor_body mdecl cdecl ->
   rename_constructor_body mdecl f cdecl = cdecl.
-Proof.
+Proof using Type.
   rewrite /closed_constructor_body /rename_constructor_body /map_constructor_body.
   move/andP=> [] /andP [] clctx clind clty.
   destruct cdecl; cbn -[fold_context_k] in *; f_equal.
@@ -831,14 +821,14 @@ Qed.
 Lemma rename_mkLambda_or_LetIn f d t :
   rename f (mkLambda_or_LetIn d t) =
   mkLambda_or_LetIn (rename_decl f d) (rename (shiftn 1 f) t).
-Proof.
+Proof using Type.
   destruct d as [na [] ty]; rewrite /= /mkLambda_or_LetIn /=; f_equal.
 Qed.
 
 Lemma rename_it_mkLambda_or_LetIn f ctx t :
   rename f (it_mkLambda_or_LetIn ctx t) =
   it_mkLambda_or_LetIn (rename_context f ctx) (rename (shiftn #|ctx| f) t).
-Proof.
+Proof using Type.
   move: t.
   induction ctx; simpl => t.
   - now rewrite shiftn0.
@@ -849,14 +839,14 @@ Qed.
 Lemma rename_mkProd_or_LetIn f d t :
   rename f (mkProd_or_LetIn d t) =
   mkProd_or_LetIn (rename_decl f d) (rename (shiftn 1 f) t).
-Proof.
+Proof using Type.
   destruct d as [na [] ty]; rewrite /= /mkProd_or_LetIn /=; f_equal.
 Qed.
 
 Lemma rename_it_mkProd_or_LetIn f ctx t :
   rename f (it_mkProd_or_LetIn ctx t) =
   it_mkProd_or_LetIn (rename_context f ctx) (rename (shiftn #|ctx| f) t).
-Proof.
+Proof using Type.
   move: t.
   induction ctx; simpl => t.
   - now rewrite shiftn0.
@@ -867,33 +857,30 @@ Qed.
 Lemma rename_wf_predicate mdecl idecl f p :
   wf_predicate mdecl idecl p ->
   wf_predicate mdecl idecl (rename_predicate f p).
-Proof.
+Proof using Type.
   intros []. split => //. now len.
 Qed.
 
 Lemma rename_wf_branch cdecl f br :
   wf_branch cdecl br ->
   wf_branch cdecl (rename_branch f br).
-Proof.
-  unfold wf_branch, wf_branch_gen. simpl.
-  rewrite /=. now simpl.
-Qed.
+Proof using Type. intros x; exact x. Qed.
 
 Lemma rename_wf_branches cdecl f brs :
   wf_branches cdecl brs ->
   wf_branches cdecl (map (rename_branch f) brs).
-Proof.
+Proof using Type.
   unfold wf_branches, wf_branches_gen.
   intros h. solve_all.
 Qed.
 
 Lemma rename_compose f f' x : rename f (rename f' x) = rename (f ∘ f') x.
-Proof. now rewrite (rename_compose _ _ _). Qed.
+Proof using Type. now rewrite (rename_compose _ _ _). Qed.
 
 Lemma rename_predicate_set_pparams f p params :
   rename_predicate f (set_pparams p params) =
   set_pparams (rename_predicate f p) (map (rename f) params).
-Proof. reflexivity. Qed.
+Proof using Type. reflexivity. Qed.
 
 (* Lemma rename_predicate_set_pcontext f p pcontext' :
   #|pcontext'| = #|p.(pcontext)| ->
@@ -905,11 +892,11 @@ Proof. rewrite /rename_predicate /= /set_pcontext. simpl. intros ->. reflexivity
 Lemma rename_predicate_set_preturn f p pret :
   rename_predicate f (set_preturn p pret) =
   set_preturn (rename_predicate f p) (rename (shiftn #|pcontext p| f) pret).
-Proof. reflexivity. Qed.
+Proof using Type. reflexivity. Qed.
 
 Lemma rename_extended_subst f Γ :
   map (rename (shiftn (context_assumptions Γ) f)) (extended_subst Γ 0) = extended_subst (rename_context f Γ) 0.
-Proof.
+Proof using Type.
   induction Γ as [|[na [b|] ty] Γ]; auto; rewrite rename_context_snoc /=; len.
   - rewrite rename_subst0.
     rewrite IHΓ. len. f_equal. f_equal.
@@ -928,7 +915,7 @@ Lemma rename_iota_red :
   closedn_ctx #|pparams p| br.(bcontext) ->
   rename f (iota_red pars p args br) =
   iota_red pars (rename_predicate f p) (map (rename f) args) (rename_branch f br).
-Proof.
+Proof using Type.
   intros f p pars args br hlen hlen'.
   unfold iota_red.
   rewrite rename_subst0 map_rev map_skipn. f_equal.
@@ -990,7 +977,7 @@ Proof using cf.
   - rewrite 2!rename_mkApps. simpl.
     econstructor.
     + eapply rename_unfold_fix. eassumption.
-    + eapply is_constructor_rename. assumption.
+    + rewrite -is_constructor_rename. assumption.
   - rewrite 2!rename_mkApps. simpl.
     eapply red_cofix_case.
     eapply rename_unfold_cofix. eassumption.
@@ -1071,7 +1058,7 @@ Lemma red_on_free_vars {P : nat -> bool} {Σ:global_env_ext} {Γ u v} {wfΣ : wf
   on_free_vars P u ->
   red Σ Γ u v ->
   on_free_vars P v.
-Proof.
+Proof using Type.
   intros onΓ on r.
   induction r; auto.
   now eapply red1_on_free_vars.
@@ -1085,7 +1072,7 @@ Lemma red_rename :
     on_free_vars P u ->
     red Σ Γ u v ->
     red Σ Δ (rename f u) (rename f v).
-Proof.
+Proof using Type.
   intros.
   induction X1.
   - constructor. now eapply red1_rename.
@@ -1104,7 +1091,7 @@ Lemma conv_renameP :
     on_ctx_free_vars P Γ ->
     Σ ;;; Γ |- A = B ->
     Σ ;;; Δ |- rename f A = rename f B.
-Proof.
+Proof using Type.
   intros P Σ Γ Δ f A B hΣ hf hA hB hΓ h.
   induction h.
   - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
@@ -1127,7 +1114,7 @@ Lemma cumul_renameP :
     on_ctx_free_vars P Γ ->
     Σ ;;; Γ |- A <= B ->
     Σ ;;; Δ |- rename f A <= rename f B.
-Proof.
+Proof using Type.
   intros P Σ Γ Δ f A B hΣ hf hA hB hΓ h.
   induction h.
   - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.

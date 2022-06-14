@@ -737,7 +737,7 @@ Proof.
   - f_equal.
     f_equal; solve_all.
     unfold predicate_size. simpl. f_equal; auto.
-    f_equal; auto. clear H0. induction a; simpl; auto.
+    f_equal; auto. clear H0 H1. induction a; simpl; auto.
     unfold branch_size.
     clear -X1.
     induction X1; simpl; auto.
@@ -805,8 +805,8 @@ Proof.
      }
     assert (predicate_size tsize (map_predicate id (subst [tRel 0] k) (subst [tRel 0] (#|pcontext t| + k)) t) <=
       predicate_size tsize t).
-    { apply plus_le_compat; simpl; auto. 2:apply X. destruct X.
-      induction a; simpl; auto. apply le_n_S, plus_le_compat; simpl; auto. }
+    { apply Nat.add_le_mono; simpl; auto. 2:apply X. destruct X.
+      induction a; simpl; auto. apply le_n_S, Nat.add_le_mono; simpl; auto. }
   lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
@@ -859,36 +859,36 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
       | None => None
       } ;
     | tInd ind []
-      with kername_eq_dec ind.(inductive_mind) q_and := {
-      | left e2 with args := {
+      with eqb ind.(inductive_mind) q_and := {
+      | true with args := {
         | [ A ; B ] =>
           af <- reify Σ Γ A ;;
           bf <- reify Σ Γ B ;;
           ret (And af bf) ;
         | _ => None
         } ;
-      | right _
-        with kername_eq_dec ind.(inductive_mind) q_or := {
-        | left e2 with args := {
+      | false
+        with eqb ind.(inductive_mind) q_or := {
+        | true with args := {
           | [ A ; B ] =>
             af <- reify Σ Γ A ;;
             bf <- reify Σ Γ B ;;
             ret (Or af bf) ;
           | _ => None
           } ;
-        | right _
-          with kername_eq_dec ind.(inductive_mind) q_False := {
-          | left e2 with args := {
+        | false
+          with eqb ind.(inductive_mind) q_False := {
+          | true with args := {
             | [] => ret Fa ;
             | _ => None
             } ;
-      | right _
-          with kername_eq_dec ind.(inductive_mind) q_True := {
-          | left e2 with args := {
+      | false
+          with eqb ind.(inductive_mind) q_True := {
+          | true with args := {
             | [] => ret Tr ;
             | _ => None
             } ;
-              | right _ => None
+              | false => None
        }
         }
       }} ;
@@ -1024,13 +1024,13 @@ Section Plugin.
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
 
   Definition inhabit_formula gamma Mphi Gamma :
-    match reify (empty_ext []) gamma Mphi with
+    match reify (empty_ext empty_global_env) gamma Mphi with
       Some phi => 
       match tauto_proc (size phi) {| hyps := []; concl := phi |} with 
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
       | _ => NotSolvable "not a valid formula" end 
     | None => NotSolvable "not a formaula" end.
-    destruct (reify (empty_ext []) gamma Mphi); try exact (notSolvable _).
+    destruct (reify (empty_ext _) gamma Mphi); try exact (notSolvable _).
     destruct (tauto_proc (size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
     exact (tauto_sound (size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
   Defined.

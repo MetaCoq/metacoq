@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-SED=`which gsed || which sed`
-
-echo "sed is " $SED
-
 ###############################################################
 #
 # Usage:
@@ -40,23 +36,23 @@ do
     coqdep -f _CoqProject -dumpgraph ../dependency-graph/$folder.dot > /dev/null
     cd ../dependency-graph
     # remove the first and last lines
-    $SED -i '1d' $folder.dot
-    $SED -i '$d' $folder.dot
+    sed '1d' $folder.dot > $folder.dottmp && mv -f $folder.dottmp $folder.dot
+    sed '$d' $folder.dot > $folder.dottmp && mv -f $folder.dottmp $folder.dot
     # change a bit the names of the nodes
     for otherfolder in "${!folders[@]}"
     do
-	$SED -i "s@../$otherfolder/theories@$otherfolder@g" $folder.dot
+	sed "s@../$otherfolder/theories@$otherfolder@g" $folder.dot > $folder.dottmp && mv -f $folder.dottmp $folder.dot
     done
-    $SED -i "s/theories/$folder/g" $folder.dot
+    sed "s/theories/$folder/g" $folder.dot > $folder.dottmp && mv -f $folder.dottmp $folder.dot
     # change the color of the nodes
-    $SED -i "s/]/, color=${folders[$folder]}]/g" $folder.dot
+    sed "s/]/, color=${folders[$folder]}]/g" $folder.dot > $folder.dottmp && mv -f $folder.dottmp $folder.dot
     # concatenate
     cat $folder.dot >> $dot_file
     rm -f $folder.dot
 done
 
 # remove duplicate lines
-awk '!a[$0]++' $dot_file > $dot_file.tmp && mv $dot_file.tmp $dot_file
+awk '!a[$0]++' $dot_file > $dot_file.tmp && mv -f $dot_file.tmp $dot_file
 
 # last line
 echo "}" >> $dot_file

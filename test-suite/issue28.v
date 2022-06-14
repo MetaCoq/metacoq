@@ -1,6 +1,6 @@
-Require Import MetaCoq.Template.All MetaCoq.Template.Pretty.
-Require Export String List.
-Open Scope string.
+Require Import MetaCoq.Template.All MetaCoq.Template.utils.bytestring MetaCoq.Template.Pretty.
+Require Export List.
+Open Scope bs_scope.
 Import ListNotations.
 Import MCMonadNotation.
 

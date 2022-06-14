@@ -54,7 +54,7 @@ Section Normal.
     end ->
     whnf Γ (mkApps (tFix mfix idx) v)
   | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
-  | whnf_prim p : whnf Γ (tPrim p)
+  (* | whnf_prim p : whnf Γ (tPrim p) *)
 
   with whne (Γ : context) : term -> Type :=
   | whne_rel i :
@@ -123,7 +123,7 @@ Section Normal.
     forall Γ t args,
       whne Γ t ->
       whne Γ (mkApps t args).
-  Proof.
+  Proof using Type.
     intros Γ t args h.
     induction args in t, h |- *.
     - assumption.
@@ -134,7 +134,7 @@ Section Normal.
     forall Γ t args,
       whne Γ t ->
       whnf Γ (mkApps t args).
-  Proof.
+  Proof using Type.
     intros. econstructor. now eapply whne_mkApps.
   Qed.
   
@@ -148,7 +148,7 @@ Section Normal.
         unfold_fix mfix idx = Some (narg, body) ×
         nth_error l narg = Some a ×
         whne Γ a.
-  Proof.
+  Proof using Type.
     intros Γ t l Ha h. revert t Ha h.
     induction l using rev_ind; intros.
     - eauto.
@@ -256,8 +256,8 @@ Proof.
     lia.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
-  - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq].
-    cbn in *; subst; auto.
+  (* - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq]. *)
+    (* cbn in *; subst; auto. *)
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -390,11 +390,11 @@ Proof with eauto using sq with pcuic; try congruence.
                  constructor.
                  assumption.
         -- left. constructor. eapply whnf_fixapp. rewrite E1. eauto.
-      * destruct v as [ | ? v]...
+      (* * destruct v as [ | ? v]...
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence. *)
     + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv. 
   - destruct (IHt Γ) as [_ []].
     + left. destruct s as [w]. constructor. now eapply whne_mkApps.
@@ -758,16 +758,16 @@ Lemma whne_red1_ind
           RedFlags.iota flags = false ->
           unfold_cofix mfix idx = Some (narg, fn) ->
           P (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args)))
-      (Hproj_noiota : forall i pars narg args u arg,
+      (Hproj_noiota : forall p args u arg,
           RedFlags.iota flags = false ->
-          nth_error args (pars + narg) = Some arg ->
-          P (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg)
+          nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+          P (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg)
       (Hproj_discr_noiota : forall p c c',
           RedFlags.iota flags = false ->
           red1 Σ Γ c c' ->
           P (tProj p c) (tProj p c')) :
   forall t t', whne flags Σ Γ t -> red1 Σ Γ t t' -> P t t'.
-Proof.
+Proof using Type.
   intros t t' wh r.
   induction wh in t, t', wh, r |- *; cbn in *.
   - depelim r; [congruence|now solve_discr].
@@ -940,7 +940,7 @@ Proof.
       destruct s as [->|(?&?)]; [easy|].
       now inv e.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
-  - depelim r. solve_discr.
+  (* - depelim r. solve_discr. *)
 Qed.
 
 Lemma whnf_pres Σ Γ t t' :
@@ -1013,8 +1013,8 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ Γ (dtype d) (dtype d') ×
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
-    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
-| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
+    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
+(* | whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i). *)
 
 Derive Signature for whnf_red.
 
@@ -1516,7 +1516,7 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-  - depelim r; solve_discr.
+  (* - depelim r; solve_discr. *)
 Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
@@ -1607,7 +1607,7 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.
-  - depelim eq; auto.
+  (* - depelim eq; auto. *)
 Qed.
 
 Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :

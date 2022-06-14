@@ -22,12 +22,15 @@ Module Type Term.
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
   Parameter Inline subst_instance_constr : UnivSubst term.
   
+  Notation lift0 n := (lift n 0).
 End Term.
 
 Module Environment (T : Term).
 
   Import T.
   #[global] Existing Instance subst_instance_constr.
+
+  Definition typ_or_sort := typ_or_sort_ term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -214,6 +217,14 @@ Module Environment (T : Term).
     cstr_arity : nat; (* arity, w/o lets, w/o parameters *)
   }.
 
+  Record projection_body := {
+    proj_name : ident;
+    (* The arguments and indices are typeable under the context of 
+      arities of the mutual inductive + parameters *)
+    proj_relevance : relevance;
+    proj_type : term; (* Type under context of params and inductive object *)
+  }.
+
   Definition map_constructor_body npars arities f c :=
     {| cstr_name := c.(cstr_name);
        cstr_args := fold_context_k (fun x => f (x + npars + arities)) c.(cstr_args);
@@ -223,6 +234,13 @@ Module Environment (T : Term).
        cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 
+  (* Here npars should be the [context_assumptions] of the parameters context. *)
+  Definition map_projection_body npars f c :=
+    {| proj_name := c.(proj_name); 
+       proj_relevance := c.(proj_relevance);
+       proj_type := f (S npars) c.(proj_type)
+    |}.
+
   (** See [one_inductive_body] from [declarations.ml]. *)
   Record one_inductive_body := {
     ind_name : ident;
@@ -231,8 +249,7 @@ Module Environment (T : Term).
     ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
     ind_ctors : list constructor_body;
-    ind_projs : list (ident * term); (* names and types of projections, if any.
-                                      Type under context of params and inductive object *)
+    ind_projs : list projection_body; (* names and types of projections, if any. *)                                     
     ind_relevance : relevance (* relevance of the inductive definition *) }.
 
   Definition map_one_inductive_body npars arities f m :=
@@ -242,7 +259,7 @@ Module Environment (T : Term).
       Build_one_inductive_body
          ind_name (fold_context_k (fun x => f (npars + x)) ind_indices) ind_sort
                   (f 0 ind_type) ind_kelim (map (map_constructor_body npars arities f) ind_ctors)
-                  (map (on_snd (f (S npars))) ind_projs) ind_relevance
+                  (map (map_projection_body npars f) ind_projs) ind_relevance
     end.
 
   (** See [mutual_inductive_body] from [declarations.ml]. *)
@@ -256,14 +273,16 @@ Module Environment (T : Term).
 
   (** See [constant_body] from [declarations.ml] *)
   Record constant_body := {
-      cst_type : term;
-      cst_body : option term;
-      cst_universes : universes_decl }.
+    cst_type : term;
+    cst_body : option term;
+    cst_universes : universes_decl;
+    cst_relevance : relevance }.
 
   Definition map_constant_body f decl :=
     {| cst_type := f decl.(cst_type);
        cst_body := option_map f decl.(cst_body);
-       cst_universes := decl.(cst_universes) |}.
+       cst_universes := decl.(cst_universes);
+       cst_relevance := decl.(cst_relevance) |}.
 
   Lemma map_cst_type f decl :
     f (cst_type decl) = cst_type (map_constant_body f decl).
@@ -278,7 +297,63 @@ Module Environment (T : Term).
   | InductiveDecl : mutual_inductive_body -> global_decl.
   Derive NoConfusion for global_decl.
 
-  Definition global_env := list (kername * global_decl).
+  Definition global_declarations := list (kername * global_decl).
+
+  Record global_env := 
+    { universes : ContextSet.t;
+      declarations : global_declarations }.
+
+  Coercion universes : global_env >-> ContextSet.t.
+
+  Definition empty_global_env := 
+    {| universes := ContextSet.empty;
+       declarations := [] |}.
+
+  Definition add_global_decl Σ decl := 
+    {| universes := Σ.(universes);
+       declarations := decl :: Σ.(declarations) |}.
+      
+  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
+  Proof. now destruct Σ. Qed.
+  
+
+  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
+    match Σ with
+    | nil => None
+    | d :: tl =>
+      if kn == d.1 then Some d.2
+      else lookup_global tl kn
+    end.
+
+  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
+
+  Definition extends (Σ Σ' : global_env) :=
+    Σ.(universes) ⊂_cs Σ'.(universes) ×
+    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+  
+  Definition extends_decls (Σ Σ' : global_env) :=
+    Σ.(universes) = Σ'.(universes) ×
+    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+  
+  Existing Class extends.
+  Existing Class extends_decls.
+
+  #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
+  Proof.
+    intros []. split => //.
+    rewrite e. split; [lsets|csets].
+  Qed.
+
+  #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
+  Proof. red. intros x. now split => //; exists []. Qed.
+  
+  Lemma extends_refl : CRelationClasses.Reflexive extends.
+  Proof. red. intros x. split; [apply incl_cs_refl | now exists []]. Qed.
+
+  (* easy prefers this to the local hypotheses, which is annoying
+  #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
+  Proof. apply extends_refl. Qed.
+  *) 
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
@@ -290,7 +365,7 @@ Module Environment (T : Term).
   Coercion fst_ctx : global_env_ext >-> global_env.
 
   Definition empty_ext (Σ : global_env) : global_env_ext
-    := (Σ, Monomorphic_ctx ContextSet.empty).
+    := (Σ, Monomorphic_ctx).
 
   (** *** Programs
 
@@ -352,7 +427,7 @@ Module Environment (T : Term).
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
   Proof.
-    generalize (le_refl p).
+    generalize (Nat.le_refl p).
     generalize p at 1 3 5.
     induction Γ in p, l |- *. simpl. auto.
     intros. destruct a. destruct decl_body. simpl.
@@ -474,25 +549,17 @@ Module Environment (T : Term).
 
   Lemma ind_projs_map f npars_ass arities oib :
     ind_projs (map_one_inductive_body npars_ass arities f oib) =
-    map (on_snd (f (S npars_ass))) (ind_projs oib).
+    map (map_projection_body npars_ass f) (ind_projs oib).
   Proof. destruct oib; simpl. reflexivity. Qed.
 
   Fixpoint projs ind npars k :=
     match k with
     | 0 => []
-    | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
+    | S k' => (tProj (mkProjection ind npars k') (tRel 0)) :: projs ind npars k'
     end.
 
   Lemma projs_length ind npars k : #|projs ind npars k| = k.
   Proof. induction k; simpl; auto. Qed.
-
-  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
-    match Σ with
-    | nil => None
-    | d :: tl =>
-      if eq_kername kn d.1 then Some d.2
-      else lookup_env tl kn
-    end.
 
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context_k f Γ) = context_assumptions Γ.
   Proof.
@@ -655,3 +722,11 @@ End Environment.
 Module Type EnvironmentSig (T : Term).
  Include Environment T.
 End EnvironmentSig.
+
+Module Type TermUtils (T: Term) (E: EnvironmentSig T).
+  Import T E.
+
+  Parameter Inline destArity : context -> term -> option (context × Universe.t).
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+
+End TermUtils.

@@ -1,111 +1,84 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Lia MSetList OrderedTypeAlt OrderedTypeEx Ascii String.
-From MetaCoq.Template Require Import MCUtils BasicAst AstUtils.
+From Coq Require Import Lia MSetList OrderedTypeAlt OrderedTypeEx FMapAVL FMapFacts MSetAVL MSetFacts MSetProperties.
+From MetaCoq.Template Require Import utils.
 From Coq Require Import ssreflect.
+From Equations Require Import Equations.
 
+Local Open Scope string_scope2.
 Definition compare_ident := string_compare.
 
-Module IdentComp <: OrderedTypeAlt.
-  Definition t := string.
+(** ** Reification of names ** *)
 
-  Definition eq := @eq string.
-  Definition eq_univ : RelationClasses.Equivalence eq := _.
+(** [Comment taken from Coq's code]
+    - Id.t is the type of identifiers, that is morally a subset of strings which
+      only contains Unicode characters of the Letter kind (and a few more).
+      => [ident]
+    - Name.t is an ad-hoc variant of Id.t option allowing to handle optionally
+      named objects.
+      => [name]
+    - DirPath.t represents generic paths as sequences of identifiers.
+      => [dirpath]
+    - Label.t is an equivalent of Id.t made distinct for semantical purposes.
+      => [ident]
+    - ModPath.t are module paths.
+      => [modpath]
+    - KerName.t are absolute names of objects in Coq.
+      => [kername]
 
-  Definition compare := string_compare.
+    And also :
+    - Constant.t => [kername]
+    - variable => [ident]
+    - MutInd.t => [kername]
+    - inductive => [inductive]
+    - constructor => [inductive * nat]
+    - Projection.t => [projection]
+    - GlobRef.t => global_reference
 
-  Infix "?=" := compare (at level 70, no associativity).
+    Finally, we define the models of primitive types (uint63 and floats64).
+*)
 
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto;
-    destruct (ascii_compare a0 a) eqn:eq.
-    apply ascii_Compare_eq in eq; subst a0.
-    destruct (ascii_compare a a) eqn:eq'.
-    apply ascii_Compare_eq in eq'. apply IHx.
-    pose proof (proj2 (ascii_Compare_eq a a) eq_refl). congruence.
-    pose proof (proj2 (ascii_Compare_eq a a) eq_refl). congruence.
-    apply ascii_compare_Lt in eq. now rewrite eq.
-    apply ascii_compare_Lt in eq. now rewrite eq.
-  Qed.
+Definition ident   := string. (* e.g. nat *)
+Definition qualid  := string. (* e.g. Datatypes.nat *)
 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-    intros c x y z. unfold compare.
-    destruct (string_compare x y) eqn:eq => <-; auto.
-    apply string_compare_eq in eq; subst; auto.
-    now apply transitive_string_lt.
-    rewrite <-string_compare_lt.
-    apply string_compare_lt in eq. intros.
-    apply string_compare_lt. eapply transitive_string_lt. eapply H. apply eq.
-  Qed.
+(** Type of directory paths. Essentially a list of module identifiers. The
+    order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
+Definition dirpath := list ident.
 
-End IdentComp.
+Module IdentOT := StringOT.
 
-Module IdentOT := OrderedType_from_Alt IdentComp.
+Module DirPathOT := ListOrderedType IdentOT.
 
-Module DirPathComp <: OrderedTypeAlt.
-  Definition t := dirpath.
+#[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
-  Definition eq := @eq dirpath.
-  Definition eq_univ : RelationClasses.Equivalence eq := _.
+Definition string_of_dirpath (dp : dirpath) : string := 
+  String.concat "." (List.rev dp).
 
-  Fixpoint compare dp dp' :=
-    match dp, dp' with
-    | hd :: tl, hd' :: tl' => 
-      match IdentComp.compare hd hd' with
-      | Eq => compare tl tl'
-      | x => x
-      end
-    | [], [] => Eq
-    | [], _ => Lt
-    | _, [] => Gt
-    end.
+(** The module part of the kernel name.
+    - MPfile is for toplevel libraries, i.e. .vo files
+    - MPbound are parameters of functors
+    - MPdot is for submodules
+*)
+Inductive modpath :=
+| MPfile  (dp : dirpath)
+| MPbound (dp : dirpath) (id : ident) (i : nat)
+| MPdot   (mp : modpath) (id : ident).
+Derive NoConfusion for modpath.
 
-  Infix "?=" := compare (at level 70, no associativity).
+Fixpoint string_of_modpath (mp : modpath) : string :=
+  match mp with
+  | MPfile dp => string_of_dirpath dp
+  | MPbound dp id n => string_of_dirpath dp ^ "." ^ id ^ "." ^ string_of_nat n
+  | MPdot mp id => string_of_modpath mp ^ "." ^ id
+  end.
 
-  Lemma compare_eq : forall x y, (x ?= y) = Eq -> x = y.
-  Proof.
-    induction x; destruct y; simpl; auto; try congruence.
-    destruct (IdentComp.compare a s) eqn:eq; try congruence.
-    eapply string_compare_eq in eq; subst.
-    intros; f_equal; eauto.
-  Qed.
+(** The absolute names of objects seen by kernel *)
+Definition kername := modpath × ident.
 
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto.
-    unfold compare_ident.
-    rewrite IdentComp.compare_sym.
-    destruct (IdentComp.compare a s); simpl; auto.
-  Qed.
- 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-    intros c x y z. revert c.
-    induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
-    pose proof (IdentComp.compare_trans c a s s0).
-    destruct (IdentComp.compare a s) eqn:eqc;
-    destruct (IdentComp.compare s s0) eqn:eqc'; simpl; try congruence;
-    try rewrite (IdentComp.compare_trans _ _ _ _ eqc eqc'); auto.
-    now eapply IHx.
-    intros Hc <-. apply string_compare_eq in eqc. subst.
-    now rewrite eqc'.
-    intros Hc <-. apply string_compare_eq in eqc. subst.
-    now rewrite eqc'.
-    intros Hc <-. apply string_compare_eq in eqc'. subst.
-    now rewrite eqc.
-    intros Hc <-. apply string_compare_eq in eqc'. subst.
-    now rewrite eqc.
-  Qed.
+Definition string_of_kername (kn : kername) :=
+  string_of_modpath kn.1 ^ "." ^ kn.2.
 
-End DirPathComp.
-
-Module DirPathOT := OrderedType_from_Alt DirPathComp.
-
-(* Eval compute in DirPathComp.compare ["foo"; "bar"] ["baz"].
+(* Eval compute in DirPathOT.compare ["foo"; "bar"] ["baz"].
  *)
 
 Module ModPathComp.
@@ -115,21 +88,16 @@ Module ModPathComp.
   Definition eq_univ : RelationClasses.Equivalence eq := _.
 
   Definition mpbound_compare dp id k dp' id' k' :=
-    if DirPathComp.compare dp dp' is Eq then
-      if IdentComp.compare id id' is Eq then
-        Nat.compare k k'
-      else IdentComp.compare id id'
-    else DirPathComp.compare dp dp'.
+    compare_cont (DirPathOT.compare dp dp')
+      (compare_cont (IdentOT.compare id id') (Nat.compare k k')).
 
   Fixpoint compare mp mp' :=
     match mp, mp' with
-    | MPfile dp, MPfile dp' => DirPathComp.compare dp dp'
+    | MPfile dp, MPfile dp' => DirPathOT.compare dp dp'
     | MPbound dp id k, MPbound dp' id' k' => 
       mpbound_compare dp id k dp' id' k'
     | MPdot mp id, MPdot mp' id' => 
-      if compare mp mp' is Eq then
-        IdentComp.compare id id'
-      else compare mp mp'
+      compare_cont (compare mp mp') (IdentOT.compare id id')
     | MPfile _, _ => Gt
     | _, MPfile _ => Lt
     | MPbound _ _ _, _ => Gt
@@ -146,33 +114,33 @@ Module ModPathComp.
   Lemma compare_eq x y : x ?= y = Eq -> x = y.
   Proof.
     induction x in y |- *; destruct y; simpl; auto; try congruence.
-    intros c. eapply DirPathComp.compare_eq in c; now subst.
+    intros c. eapply DirPathOT.compare_eq in c; now subst.
     unfold mpbound_compare.
-    destruct (DirPathComp.compare dp dp0) eqn:eq => //.
-    destruct (IdentComp.compare id id0) eqn:eq' => //.
+    destruct (DirPathOT.compare dp dp0) eqn:eq => //.
+    destruct (IdentOT.compare id id0) eqn:eq' => //.
     destruct (Nat.compare i i0) eqn:eq'' => //.
-    apply DirPathComp.compare_eq in eq.
+    apply DirPathOT.compare_eq in eq.
     apply string_compare_eq in eq'.
     apply PeanoNat.Nat.compare_eq in eq''. congruence.
     destruct (x ?= y) eqn:eq; try congruence.
     specialize (IHx _ eq). subst.
     now intros c; apply string_compare_eq in c; subst.
+    all:simpl; discriminate.
   Qed.
-
 
   Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
   Proof.
     induction x; destruct y; simpl; auto.
-    apply DirPathComp.compare_sym.
+    apply DirPathOT.compare_sym.
     unfold mpbound_compare.
-    rewrite DirPathComp.compare_sym.
-    rewrite IdentComp.compare_sym.
-    destruct (DirPathComp.compare dp dp0); auto.
-    simpl. destruct (IdentComp.compare id id0); simpl; auto.
+    rewrite DirPathOT.compare_sym.
+    rewrite IdentOT.compare_sym.
+    destruct (DirPathOT.compare dp dp0); auto.
+    simpl. destruct (IdentOT.compare id id0); simpl; auto.
     apply nat_compare_sym.
     rewrite IHx.
     destruct (x ?= y); simpl; auto.
-    apply IdentComp.compare_sym.
+    apply IdentOT.compare_sym.
   Qed.
  
   Lemma nat_compare_trans :
@@ -189,63 +157,50 @@ Module ModPathComp.
   Proof.
     intros c x y z. revert c.
     induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
-    apply DirPathComp.compare_trans.
+    apply DirPathOT.compare_trans.
     unfold mpbound_compare.
-    pose proof (fun c => DirPathComp.compare_trans c dp dp0 dp1).
-    destruct (DirPathComp.compare dp dp0) eqn:eq.
-    eapply DirPathComp.compare_eq in eq. subst.
-    destruct (DirPathComp.compare dp0 dp1) eqn:eq; try congruence.
-    eapply DirPathComp.compare_eq in eq. subst.
-    destruct (IdentComp.compare id id0) eqn:eq'.
-    apply string_compare_eq in eq'. subst.
-    destruct (IdentComp.compare id0 id1) eqn:eq'; auto.
-    apply string_compare_eq in eq'. subst.
-    apply nat_compare_trans. auto.
-    intros <-.
-    destruct (IdentComp.compare id0 id1) eqn:eq''; try congruence.
-    apply string_compare_eq in eq''. subst.
-    now rewrite eq'.
-    now rewrite (IdentComp.compare_trans _ _ _ _ eq' eq'').
-    intros <-.
-    destruct (IdentComp.compare id0 id1) eqn:eq''; try congruence.
-    apply string_compare_eq in eq''; subst.
-    now rewrite eq'.
-    now rewrite (IdentComp.compare_trans _ _ _ _ eq' eq'').
-    intros <-.
-    destruct (DirPathComp.compare dp0 dp1) eqn:eq'; [apply DirPathComp.compare_eq in eq'|..]; subst.
-    now rewrite eq.
-    intros _.
-    now rewrite (DirPathComp.compare_trans _ _ _ _ eq eq').
-    congruence.
-    intros <-.
-    destruct (DirPathComp.compare dp0 dp1) eqn:eq'; [apply DirPathComp.compare_eq in eq'|..]; subst.
-    now rewrite eq. congruence.
-    now rewrite (DirPathComp.compare_trans _ _ _ _ eq eq').
+    eapply compare_cont_trans; eauto using DirPathOT.compare_trans, DirPathOT.compare_eq.
+    intros c'.
+    eapply compare_cont_trans; eauto using StringOT.compare_trans, StringOT.compare_eq, nat_compare_trans.
+    intros x y. apply StringOT.compare_eq.
     destruct (x ?= y) eqn:eq.
     apply compare_eq in eq. subst.
-    destruct (IdentComp.compare id id0) eqn:eq.
-    apply string_compare_eq in eq; subst. all:intros <-; auto.
+    destruct (IdentOT.compare id id0) eqn:eq.
+    apply string_compare_eq in eq; red in eq; subst. all:intros <-; auto.
     destruct (y ?= z) eqn:eq'; auto.
     apply compare_eq in eq'; subst.
     intros eq'.
-    eapply IdentComp.compare_trans; eauto.
-    destruct (y ?= z) eqn:eq'; auto.
-    apply compare_eq in eq'; subst.
-    intros eq'.
-    eapply IdentComp.compare_trans; eauto.
-    destruct (y ?= z) eqn:eq'; auto.
+    eapply IdentOT.compare_trans; eauto. cbn in *.
+    destruct (y ?= z) eqn:eq'; auto. cbn.
+    now apply IdentOT.compare_trans.
+    destruct (y ?= z) eqn:eq'; auto; cbn; try congruence.
     apply compare_eq in eq'; subst.
     intros eq'. now rewrite eq.
-    now rewrite (IHx _ _ _ eq eq'). congruence.
-    destruct (y ?= z) eqn:eq'; auto.
+    rewrite (IHx _ _ _ eq eq') //.
+    destruct (y ?= z) eqn:eq'; cbn; auto; try congruence.
     apply compare_eq in eq'; subst.
-    intros eq'. now rewrite eq. congruence.
+    intros eq'. now rewrite eq. 
     now rewrite (IHx _ _ _ eq eq').
   Qed.
 
 End ModPathComp.
 
 Module ModPathOT := OrderedType_from_Alt ModPathComp.
+
+Program Definition modpath_eq_dec (x y : modpath) : { x = y } + { x <> y } := 
+  match ModPathComp.compare x y with
+  | Eq => left _
+  | _ => right _
+  end.
+Next Obligation.
+  symmetry in Heq_anonymous.
+  now eapply ModPathComp.compare_eq in Heq_anonymous.
+Qed.
+Next Obligation.
+  rewrite ModPathOT.eq_refl in H. congruence.
+Qed.
+
+#[global] Instance modpath_EqDec : Classes.EqDec modpath := { eq_dec := modpath_eq_dec }.
 
 Module KernameComp.
   Definition t := kername.
@@ -257,9 +212,7 @@ Module KernameComp.
   Definition compare kn kn' := 
     match kn, kn' with
     | (mp, id), (mp', id') => 
-      if ModPathComp.compare mp mp' is Eq then
-        IdentComp.compare id id'
-      else ModPathComp.compare mp mp'
+      compare_cont (ModPathComp.compare mp mp') (IdentOT.compare id id')
     end.
 
   Infix "?=" := compare (at level 70, no associativity).
@@ -268,34 +221,21 @@ Module KernameComp.
   Proof.
     induction x; destruct y; simpl; auto.
     unfold compare_ident.
-    rewrite ModPathComp.compare_sym IdentComp.compare_sym.
-    destruct ModPathComp.compare, IdentComp.compare; auto.
+    rewrite ModPathComp.compare_sym IdentOT.compare_sym.
+    destruct ModPathComp.compare, IdentOT.compare; auto.
   Qed.
    
   Lemma compare_trans :
     forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
   Proof.
     intros c [] [] [] => /=.
-    destruct ModPathComp.compare eqn:eq.
-    apply ModPathComp.compare_eq in eq. subst; auto.
-    destruct IdentComp.compare eqn:eq'; auto.
-    apply string_compare_eq in eq'; subst.
-    all:intros <-; auto.
-    destruct ModPathComp.compare; auto.
-    eapply IdentComp.compare_trans; eauto.
-    destruct ModPathComp.compare; auto.
-    eapply IdentComp.compare_trans; eauto.
-    destruct (ModPathComp.compare m0 m1) eqn:eq'; auto; try congruence.
-    apply ModPathComp.compare_eq in eq'; subst. now rewrite eq.
-    now rewrite (ModPathComp.compare_trans _ _ _ _ eq eq').
-    destruct (ModPathComp.compare m0 m1) eqn:eq'; auto; try congruence.
-    apply ModPathComp.compare_eq in eq'; subst. now rewrite eq.
-    now rewrite (ModPathComp.compare_trans _ _ _ _ eq eq').
+    eapply compare_cont_trans; eauto using ModPathComp.compare_trans, ModPathComp.compare_eq, 
+      StringOT.compare_trans.
   Qed.
-
+    
 End KernameComp.
 
-Module KernameOT.
+Module Kername.
  Include KernameComp.
  Module OT := OrderedType_from_Alt KernameComp.
 
@@ -318,26 +258,60 @@ Module KernameOT.
     induction x; destruct y.
     simpl. 
     destruct (ModPathComp.compare a m) eqn:eq.
-    destruct (IdentComp.compare b i) eqn:eq'.
+    destruct (IdentOT.compare b i) eqn:eq'.
     all:constructor. red. eapply ModPathComp.compare_eq in eq. eapply string_compare_eq in eq'. congruence.
     all:hnf; simpl; rewrite ?eq ?eq' //.
-    rewrite ModPathComp.compare_sym eq /= IdentComp.compare_sym eq' //.
+    rewrite ModPathComp.compare_sym eq /= IdentOT.compare_sym eq' //.
     now rewrite ModPathComp.compare_sym eq /=.
   Defined.
 
-  Definition eq_dec : forall x y, {eq x y} + {~ eq x y}.
+  Lemma compare_eq x y : compare x y = Eq <-> x = y.
   Proof.
-    intros k k'. apply kername_eq_dec.
+    split.
+    - destruct (compare_spec x y); try congruence.
+    - intros <-. destruct (compare_spec x x); auto.
+      now apply irreflexivity in H.
+      now apply irreflexivity in H.
+  Qed.
+
+  Definition eqb kn kn' := 
+    match compare kn kn' with
+    | Eq => true
+    | _ => false
+    end.
+
+  #[global, program] Instance reflect_kername : ReflectEq kername := {
+    eqb := eqb
+  }.
+  Next Obligation.
+    unfold eqb. destruct compare eqn:e; constructor.
+    - now apply compare_eq in e.
+    -intros e'; subst. now rewrite OT.eq_refl in e.
+    -intros e'; subst. now rewrite OT.eq_refl in e.
   Defined.
+  
+  Definition eq_dec : forall (x y : t), { x = y } + { x <> y } := Classes.eq_dec.
 
-End KernameOT.
+End Kername.
 
-(* Local Open Scope string_scope. *)
+Module KernameMap := FMapAVL.Make Kername.OT.
+Module KernameMapFact := FMapFacts.WProperties KernameMap.
+
+Notation eq_kername := (eqb (A:=kername)) (only parsing).
+
+Lemma eq_kername_refl kn : eq_kername kn kn.
+Proof.
+  eapply ReflectEq.eqb_refl.
+Qed.
+
+Definition eq_constant := eq_kername.
+
+(* Local Open Scope string_scope.*)
 (* Eval compute in KernameOT.compare (MPfile ["fdejrkjl"], "A") (MPfile ["lfrk;k"], "B"). *)
   
-Module KernameSet := MSetList.Make KernameOT.
-Module KernameSetFact := MSetFacts.WFactsOn KernameOT KernameSet.
-Module KernameSetProp := MSetProperties.WPropertiesOn KernameOT KernameSet.
+Module KernameSet := MSetAVL.Make Kername.
+Module KernameSetFact := MSetFacts.WFactsOn Kername KernameSet.
+Module KernameSetProp := MSetProperties.WPropertiesOn Kername KernameSet.
 
 Lemma knset_in_fold_left {A} kn f (l : list A) acc : 
   KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->
@@ -354,3 +328,100 @@ Proof.
       destruct ina as [<-|ina'];
       intuition auto. right. now exists a'.
 Qed.
+
+(** Designation of a (particular) inductive type. *)
+Record inductive : Set := mkInd { inductive_mind : kername ;
+                                  inductive_ind : nat }.
+Arguments mkInd _%bs _%nat.
+
+Derive NoConfusion for inductive.
+
+Definition string_of_inductive (i : inductive) :=
+  string_of_kername (inductive_mind i) ^ "," ^ string_of_nat (inductive_ind i).
+
+Definition eq_inductive_def i i' :=
+  let 'mkInd i n := i in
+  let 'mkInd i' n' := i' in
+  eqb (i, n) (i', n').
+
+#[global, program] Instance reflect_eq_inductive : ReflectEq inductive := {
+  eqb := eq_inductive_def
+}.
+Next Obligation.
+  destruct x as [m n], y as [m' n']; cbn -[eqb].
+  case: eqb_spec ; nodec.
+  cbn. constructor. noconf p; reflexivity.
+Qed.
+
+Notation eq_inductive := (eqb (A:=inductive)).
+
+Lemma eq_inductive_refl i : eq_inductive i i.
+Proof.
+  apply ReflectEq.eqb_refl.
+Qed.
+
+Record projection := mkProjection
+  { proj_ind : inductive;
+    proj_npars : nat; (* Number of (non-let) parameters *)
+    proj_arg : nat (* Argument to project *) }.
+
+Definition eq_projection (p p' : projection) := 
+  (p.(proj_ind), p.(proj_npars), p.(proj_arg)) == (p'.(proj_ind), p'.(proj_npars), p'.(proj_arg)).
+
+#[global, program] Instance reflect_eq_projection : ReflectEq projection := {
+  eqb := eq_projection
+}.
+Next Obligation.
+  unfold eq_projection.
+  case: eqb_spec ; nodec. destruct x, y; cbn.
+  now constructor.
+Qed.
+
+Lemma eq_projection_refl i : eq_projection i i.
+Proof.
+  apply ReflectEq.eqb_refl.
+Qed.
+
+(** Kernel declaration references [global_reference] *)
+Inductive global_reference :=
+| VarRef : ident -> global_reference
+| ConstRef : kername -> global_reference
+| IndRef : inductive -> global_reference
+| ConstructRef : inductive -> nat -> global_reference.
+
+Derive NoConfusion for global_reference.
+
+Definition string_of_gref gr : string :=
+  match gr with
+  | VarRef v => v
+  | ConstRef s => string_of_kername s
+  | IndRef (mkInd s n) =>
+    "Inductive " ^ string_of_kername s ^ " " ^ (string_of_nat n)
+  | ConstructRef (mkInd s n) k =>
+    "Constructor " ^ string_of_kername s ^ " " ^ (string_of_nat n) ^ " " ^ (string_of_nat k)
+  end.
+
+Definition gref_eqb (x y : global_reference) : bool :=
+  match x, y with
+  | VarRef i, VarRef i' => eqb i i'
+  | ConstRef c, ConstRef c' => eqb c c'
+  | IndRef i, IndRef i' => eqb i i'
+  | ConstructRef i k, ConstructRef i' k' => eqb i i' && eqb k k'
+  | _, _ => false
+  end.
+
+#[global, program] Instance grep_reflect_eq : ReflectEq global_reference := 
+  {| eqb := gref_eqb |}.
+Next Obligation.
+  destruct x, y; cbn; try constructor; try congruence.
+  - destruct (eqb_spec i i0); constructor; subst; auto; congruence.
+  - destruct (eqb_spec k k0); constructor; subst; auto; congruence.
+  - destruct (eqb_spec i i0); constructor; subst; auto; congruence.
+  - destruct (eqb_spec i i0); subst; cbn; auto; try constructor; try congruence.
+    destruct (eqb_spec n n0); constructor; subst; congruence.
+Defined.
+
+Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'} := Classes.eq_dec gr gr'.
+
+#[global] Hint Resolve Kername.eq_dec : eq_dec.
+

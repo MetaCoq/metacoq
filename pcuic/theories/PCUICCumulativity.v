@@ -10,55 +10,47 @@ Set Default Goal Selector "!".
 
 (** * Definition of cumulativity and conversion relations *)
 
-Reserved Notation " Σ ;;; Γ |- t <=[ Rle ] u" (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  |-  t  <=[ Rle ] u").
+Reserved Notation " Σ ;;; Γ |- t <=[ pb ] u" (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  |-  t  <=[ pb ] u").
 
 Definition leq_term_ext `{checker_flags} (Σ : global_env_ext) Rle t u := eq_term_upto_univ Σ (eq_universe Σ) Rle t u.
 
-Notation " Σ ⊢ t <===[ Rle , napp ] u" := (eq_term_upto_univ_napp Σ (eq_universe Σ) Rle napp t u) (at level 50, t, u at next level).
+Notation " Σ ⊢ t <===[ pb ] u" := (compare_term pb Σ Σ t u) (at level 50, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumulAlgo0 `{checker_flags} (Σ : global_env_ext) Rle (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : Σ ⊢ t <===[ Rle , 0] u -> Σ ;;; Γ |- t <=[Rle] u
-| cumul_red_l t u v : Σ ;;; Γ |- t ⇝ v -> Σ ;;; Γ |- v <=[Rle] u -> Σ ;;; Γ |- t <=[Rle] u
-| cumul_red_r t u v : Σ ;;; Γ |- t <=[Rle] v -> Σ ;;; Γ |- u ⇝ v -> Σ ;;; Γ |- t <=[Rle] u
-where " Σ ;;; Γ |- t <=[ Rle ] u " := (cumulAlgo0 Σ Rle Γ t u) : type_scope.
+Inductive cumulAlgo_gen `{checker_flags} (Σ : global_env_ext) (Γ : context) (pb : conv_pb) : term -> term -> Type :=
+| cumul_refl t u : Σ ⊢ t <===[ pb ] u -> Σ ;;; Γ |- t <=[pb] u
+| cumul_red_l t u v : Σ ;;; Γ |- t ⇝ v -> Σ ;;; Γ |- v <=[pb] u -> Σ ;;; Γ |- t <=[pb] u
+| cumul_red_r t u v : Σ ;;; Γ |- t <=[pb] v -> Σ ;;; Γ |- u ⇝ v -> Σ ;;; Γ |- t <=[pb] u
+where " Σ ;;; Γ |- t <=[ pb ] u " := (cumulAlgo_gen Σ Γ pb t u) : type_scope.
 
-Definition cumulAlgo `{checker_flags} Σ Γ t u := Σ ;;; Γ |- t <=[ leq_universe Σ ] u.
+Notation " Σ ;;; Γ |- t = u " := (cumulAlgo_gen Σ Γ Conv t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t <= u " := (cumulAlgo_gen Σ Γ Cumul t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Definition convAlgo `{checker_flags} Σ Γ t u := Σ ;;; Γ |- t <=[ eq_universe Σ ] u.
-
-Notation " Σ ;;; Γ |- t <= u " := (cumulAlgo Σ Γ t u) (at level 50, Γ, t, u at next level).
-Notation " Σ ;;; Γ |- t = u " := (convAlgo Σ Γ t u) (at level 50, Γ, t, u at next level).
+Notation cumulAlgo Σ Γ := (cumulAlgo_gen Σ Γ Cumul).
+Notation convAlgo Σ Γ := (cumulAlgo_gen Σ Γ Conv).
 
 #[global]
 Hint Resolve cumul_refl : pcuic.
 
-Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
-  Definition conv := @convAlgo.
-  Definition cumul := @cumulAlgo.
+Include PCUICConversion.
+
+Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
+  Definition cumul_gen := @cumulAlgo_gen.
 End PCUICConversionParAlgo.
 
-Module PCUICConversionAlgo := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParAlgo.
-Include PCUICConversionAlgo.
-
-Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
-Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
-
 #[global]
-Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls Σ Γ Γ').
+Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ').
 Proof.
   intros x. destruct x as [na [b|] ty]; constructor; auto.
-  all:constructor; apply eq_term_refl.
+  all:constructor; reflexivity.
 Qed.
 
 #[global]
-Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls Σ Γ Γ').
-Proof.
-  intros x. destruct x as [na [b|] ty]; constructor; auto.
-  all:constructor; apply eq_term_refl || apply leq_term_refl.
-Qed.
+Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls cumulAlgo_gen Σ Γ Γ') := _.
+#[global]
+Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls cumulAlgo_gen Σ Γ Γ') := _.
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
@@ -77,14 +69,14 @@ Proof.
     induction redv.
     * induction redv'.
     ** constructor; auto.
-    ** econstructor 3; eauto. eapply IHredv'; eauto. 
-    * econstructor 2; eauto. eapply IHredv; eauto.
+    ** econstructor 3; eauto.
+    * econstructor 2; eauto.
 Qed.
 
 #[global]
-Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumulAlgo Σ Γ).
+Instance cumul_refl' {cf:checker_flags} Σ Γ pb : Reflexive (cumulAlgo_gen Σ Γ pb).
 Proof.
-  intro; constructor. unfold leq_term_ext. reflexivity.
+  intro; constructor; reflexivity.
 Qed.
 
 #[global]
@@ -118,7 +110,7 @@ Lemma red_cumul_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
 Proof.
   intros. apply clos_rt_rt1n in X.
   induction X. 1: auto.
-  econstructor 2; eauto. eapply IHX; eauto.
+  econstructor 2; eauto.
 Qed.
 
 Lemma red_cumul_cumul_inv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
@@ -224,7 +216,7 @@ Proof.
 Qed.
 
 #[global]
-Hint Resolve leq_term_refl cumul_refl' : core.
+Hint Resolve cumul_refl' : core.
 
 Lemma red_conv_conv `{cf : checker_flags} Σ Γ t u v :
   red (fst Σ) Γ t u -> Σ ;;; Γ |- u = v -> Σ ;;; Γ |- t = v.
@@ -247,7 +239,7 @@ Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
   Symmetric (convAlgo Σ Γ).
 Proof.
   intros t u X. induction X.
-  - eapply eq_term_sym in e; now constructor.
+  - symmetry in c; now constructor.
   - eapply red_conv_conv_inv.
     + eapply red1_red in r. eauto.
     + eauto.
@@ -272,30 +264,16 @@ Proof.
     eapply red_conv_conv_inv; eauto. now constructor.
 Qed.
 
-Definition conv_pb_rel {cf:checker_flags} (pb : conv_pb) Σ :=
-  match pb with
-  | Conv => eq_universe Σ
-  | Cumul => leq_universe Σ
-  end.
+Definition eq_termp_napp {cf:checker_flags} (pb: conv_pb) (Σ : global_env_ext) napp :=
+  compare_term_napp pb Σ Σ napp.
 
-Definition conv_pb_dir (pb : conv_pb) :=
-  match pb with
-  | Conv => false
-  | Cumul => true
-  end.
+Notation eq_termp pb Σ := (compare_term pb Σ Σ).
 
-Coercion conv_pb_dir : conv_pb >-> bool.
-
-Definition eq_termp_napp {cf:checker_flags} (leq : conv_pb) (Σ : global_env_ext) napp :=
-  compare_term_napp leq Σ Σ napp.
-
-Notation eq_termp leq Σ := (compare_term (conv_pb_dir leq) Σ Σ).
-
-Lemma eq_term_eq_termp {cf:checker_flags} leq (Σ : global_env_ext) x y :
+Lemma eq_term_eq_termp {cf:checker_flags} pb (Σ : global_env_ext) x y :
   eq_term Σ Σ x y ->
-  eq_termp leq Σ x y.
+  eq_termp pb Σ x y.
 Proof.
-  destruct leq; [easy|].
+  destruct pb; [easy|].
   cbn.
   apply eq_term_upto_univ_leq; auto.
   typeclasses eauto.
@@ -310,7 +288,7 @@ Proof.
   induction h.
   - eapply cumul_refl. constructor.
     + apply leq_term_leq_term_napp. assumption.
-    + apply eq_term_refl.
+    + reflexivity.
   - eapply cumul_red_l ; try eassumption.
     econstructor. assumption.
   - eapply cumul_red_r ; try eassumption.
@@ -321,17 +299,17 @@ Section ContextConversion.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  Notation conv_context Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
-  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
+  Notation conv_context Γ Γ' := (All2_fold (conv_decls cumulAlgo_gen Σ) Γ Γ').
+  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls cumulAlgo_gen Σ) Γ Γ').
 
-  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls Σ)).
-  Proof.
+  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls cumulAlgo_gen Σ)).
+  Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'. 
   Qed.
 
-  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls Σ)).
-  Proof.
+  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls cumulAlgo_gen Σ)).
+  Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
     destruct a as [na [b|] ty];
      econstructor; eauto; pcuic; try eapply conv_refl'; eapply cumul_refl'.

@@ -23,7 +23,7 @@ Proof.
    |- ?T => quote_term T (fun x => pose (qgoal:=x))
   end.
   match goal with
-    H:= context [Ast.tProj (BasicAst.mkInd _ 0, 1, 0) _] |- _ => idtac
+    H:= context [Ast.tProj {| proj_ind := Kernames.mkInd _ 0; proj_npars := 1; proj_arg := 0 |} _] |- _ => idtac
   end.
   reflexivity.
 Qed.
@@ -45,7 +45,7 @@ Definition qprod' := mkInd (MPfile ["proj"; "TestSuite"; "MetaCoq"], "prod'") 0.
 Definition qnat := mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0.
 Definition qbool := mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "bool") 0.
 
-MetaCoq Unquote Definition x := (tProj (qprod', 2, 1)
+MetaCoq Unquote Definition x := (tProj (mkProjection qprod' 2 1)
    (tApp (tConstruct qprod' 0 nil)
       [tInd qbool nil;
       tInd qnat nil;

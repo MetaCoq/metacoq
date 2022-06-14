@@ -1,6 +1,6 @@
 TIMED ?=
 
-all: template-coq pcuic safechecker erasure examples
+all: template-coq pcuic safechecker erasure examples test-suite translations
 
 .PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
 
@@ -35,6 +35,20 @@ clean:
 	$(MAKE) -C examples clean
 	$(MAKE) -C test-suite clean
 	$(MAKE) -C translations clean
+
+vos:
+	$(MAKE) -C template-coq
+	$(MAKE) -C pcuic vos
+	$(MAKE) -C safechecker vos
+	$(MAKE) -C erasure vos
+	$(MAKE) -C translations vos
+
+quick:
+	$(MAKE) -C template-coq
+	$(MAKE) -C pcuic quick 
+	$(MAKE) -C safechecker quick
+	$(MAKE) -C erasure quick
+	$(MAKE) -C translations quick
 
 mrproper:
 	$(MAKE) -C template-coq mrproper
@@ -83,6 +97,10 @@ ci-local-noclean:
 
 ci-local: ci-local-noclean
 	$(MAKE) clean
+
+ci-quick:
+	./configure.sh --enable-quick
+	time $(MAKE) quick TIMED=pretty-timed
 
 ci-opam:
 # Use -v so that regular output is produced

@@ -57,7 +57,7 @@ Fixpoint nameless (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
-  | tPrim _ => true
+  (* | tPrim _ => true *)
   end.
 
 Notation nameless_ctx := (forallb (nameless_decl nameless)).
@@ -105,15 +105,16 @@ Fixpoint nl (t : term) : term :=
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
-  | tPrim p => tPrim p
+  (* | tPrim p => tPrim p *)
   end.
 
 Definition nlctx (Γ : context) : context :=
   map (map_decl_anon nl) Γ.
 
 Definition nl_constant_body c :=
-  Build_constant_body
-    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes).
+  Build_constant_body  
+    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes)
+    c.(cst_relevance).
 
 Definition nl_constructor_body c :=
   {| cstr_name := c.(cstr_name) ;   
@@ -122,6 +123,11 @@ Definition nl_constructor_body c :=
      cstr_type := nl c.(cstr_type);
      cstr_arity := c.(cstr_arity) |}.
 
+Definition nl_projection_body p :=
+  {| proj_name := p.(proj_name) ;   
+     proj_type := nl p.(proj_type);
+     proj_relevance := p.(proj_relevance) |}.
+    
 Definition nl_one_inductive_body o :=
   Build_one_inductive_body
     o.(ind_name)
@@ -130,7 +136,7 @@ Definition nl_one_inductive_body o :=
     (nl o.(ind_type))
     o.(ind_kelim)
     (map nl_constructor_body o.(ind_ctors))
-    (map (fun '(x,y) => (x, nl y)) o.(ind_projs))
+    (map nl_projection_body o.(ind_projs))
     o.(ind_relevance).
 
 Definition nl_mutual_inductive_body m :=
@@ -147,9 +153,13 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
   | InductiveDecl mib => InductiveDecl (nl_mutual_inductive_body mib)
   end.
 
-Definition nl_global_env (Σ : global_env) : global_env :=
+Definition nl_global_declarations (Σ : global_declarations) : global_declarations :=
   (map (on_snd nl_global_decl) Σ).
 
+Definition nl_global_env (Σ : global_env) : global_env :=
+  {| universes := Σ.(universes); 
+     declarations := nl_global_declarations Σ.(declarations) |}.
+  
 Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
   (nl_global_env Σ, φ).

@@ -3,115 +3,35 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC PCUICSN BDToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
+     TemplateToPCUIC PCUICSN BDToPCUIC PCUICProgram.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl.
 
 Import MCMonadNotation.
 
-Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
-  : EnvCheck (
-    let Σ' := trans_global_decls p.1 in
-    ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
-  let Σ' := trans_global_decls p.1 in
-  p <- typecheck_program (Σ', trans Σ' p.2) φ ;;
-  ret (p.π1 ; _).
-Next Obligation.
-  sq. destruct X. eapply infering_typing; tea. eapply w. constructor.
+Definition trans_program (p : Ast.Env.program) : program := 
+  let Σ' := trans_global_env p.1 in
+  (Σ', trans Σ' p.2).
+
+Definition EnvCheck_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} := EnvCheck wf_env_ext. 
+
+Local Instance Monad_EnvCheck_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} : Monad EnvCheck_wf_env_ext := _.
+
+Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl} 
+  (p : Ast.Env.program) φ
+  : EnvCheck_wf_env_ext (let p' := trans_program p in ∑ A, { X : wf_env_ext |
+    ∥ (p'.1, φ) = X.(wf_env_ext_referenced).(referenced_impl_env_ext) × wf_ext (p'.1, φ) ×  (p'.1, φ) ;;; [] |- p'.2 : A ∥ }) :=
+  pp <- typecheck_program (cf := cf) optimized_abstract_env_impl (trans_program p) φ ;;
+  ret (pp.π1 ; (exist (proj1_sig pp.π2) _)).
+Next Obligation. 
+  sq. destruct H; split; eauto. destruct p0; split; eauto.  eapply infering_typing; tea. eapply w. constructor.
 Qed.
 
-(** In Coq until 8.11 at least, programs can be ill-formed w.r.t. universes as they don't include
-    all declarations of universes and constraints coming from section variable declarations.
-    We hence write a program that computes the dangling universes in an Ast.Env.program and registers
-    them appropriately. *)
-
-Definition update_cst_universes univs cb :=
-  {| Ast.Env.cst_type := cb.(Ast.Env.cst_type);
-     Ast.Env.cst_body := cb.(Ast.Env.cst_body);
-     Ast.Env.cst_universes := match cb.(Ast.Env.cst_universes) with
-                      | Monomorphic_ctx _ => Monomorphic_ctx univs
-                      | x => x
-                      end |}.
-
-Definition global_universes_def := 
-  {| Ast.Env.cst_body := Some (Ast.tSort (Universes.Universe.of_levels (inl Universes.PropLevel.lProp)));
-     Ast.Env.cst_type := Ast.tSort (Universes.Universe.super (Universes.Universe.of_levels (inl Universes.PropLevel.lProp)));
-     Ast.Env.cst_universes := Monomorphic_ctx ContextSet.empty |}.
-  
-Definition update_mib_universes univs mib :=
-  {| Ast.Env.ind_finite := mib.(Ast.Env.ind_finite);
-     Ast.Env.ind_npars := mib.(Ast.Env.ind_npars);
-     Ast.Env.ind_params := mib.(Ast.Env.ind_params);
-     Ast.Env.ind_bodies := mib.(Ast.Env.ind_bodies);
-     Ast.Env.ind_universes := match mib.(Ast.Env.ind_universes) with
-                          | Monomorphic_ctx _ => Monomorphic_ctx univs
-                          | x => x
-                          end;
-     Ast.Env.ind_variance := mib.(Ast.Env.ind_variance) |}.
-
-Definition update_universes (univs : ContextSet.t) (cb : Ast.Env.global_decl)  :=
-  match cb with
-  | Ast.Env.ConstantDecl cb => Ast.Env.ConstantDecl (update_cst_universes univs cb)
-  | Ast.Env.InductiveDecl mib => Ast.Env.InductiveDecl (update_mib_universes univs mib)
-  end.
-
-Definition is_unbound_level declared (l : Level.t) :=
-  match l with
-  | Level.Level _ => negb (LevelSet.mem l declared)
-  | _ => false
-  end.
-
-(** We compute the dangling universes in the constraints only for now. *)
-Definition dangling_universes declared cstrs :=
-  ConstraintSet.fold (fun '(l, d, r) acc =>
-                        let acc :=
-                            if is_unbound_level declared l then
-                              LevelSet.add l acc
-                            else acc
-                        in
-                        if is_unbound_level declared r then
-                          LevelSet.add r acc
-                        else acc) cstrs LevelSet.empty.
-
-Section FoldMap.
-  Context {A B C} (f : A -> B -> C * B).
-
-  Fixpoint fold_map_left (l : list A) (acc : B) : list C * B :=
-    match l with
-    | [] => ([], acc)
-    | hd :: tl =>
-      let (hd', acc) := f hd acc in
-      let (tl', acc') := fold_map_left tl acc in
-      (hd' :: tl', acc')
-    end.
-
-
-  Fixpoint fold_map_right (l : list A) (acc : B) : list C * B :=
-    match l with
-    | [] => ([], acc)
-    | hd :: tl =>
-      let (tl', acc) := fold_map_right tl acc in
-      let (hd', acc') := f hd acc in
-      (hd' :: tl', acc')
-    end.
-
-End FoldMap.
-
-Definition kername_of_string (s : string) : kername :=
-  (MPfile [], s).
-
-Definition fix_global_env_universes (Σ : Ast.Env.global_env) φ : Ast.Env.global_env :=
-  Σ ++ [(kername_of_string "__global_universes_constant", Ast.Env.ConstantDecl (update_cst_universes φ global_universes_def))].
-
-Definition fix_program_universes (p : Ast.Env.program) φ : Ast.Env.program :=
-  let '(Σ, t) := p in
-  (fix_global_env_universes Σ φ, t).
-
-Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags}
-  (p : Ast.Env.program) φ : string + string :=
-  let p := fix_program_universes p φ in
-  match infer_template_program (cf:=cf) p (Monomorphic_ctx ContextSet.empty) return string + string with
+Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
+  (p : Ast.Env.program) φ
+  : string + string :=
+  match infer_template_program (cf:=cf) p φ return string + string with
   | CorrectDecl t =>
-    let Σ' := trans_global_decls p.1 in
+    let Σ' := trans_global_env p.1 in
     inl ("Environment is well-formed and " ^ string_of_term (trans Σ' p.2) ^
          " has type: " ^ string_of_term t.π1)
   | EnvError Σ (AlreadyDeclared id) =>

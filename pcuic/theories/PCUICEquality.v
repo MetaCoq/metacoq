@@ -25,7 +25,7 @@ Definition R_universe_instance R :=
 (** Cumulative inductive types:
 
   To simplify the development, we allow the variance list to not exactly 
-  match the instances, so as to keep syntactic equality an equivalence relation
+  match the instances, so as to keep syntactic ws_cumul_pb an equivalence relation
   even on ill-formed terms. It corresponds to the right notion on well-formed terms.
 *)
 
@@ -67,7 +67,7 @@ Definition global_variance Σ gr napp :=
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype, 
-          which implies that no universe equality needs to be checked here. *)
+          which implies that no universe ws_cumul_pb needs to be checked here. *)
         Some []
       else None
     | _ => None
@@ -267,10 +267,10 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     eq_term p.(preturn) p'.(preturn))).
 
-(** ** Syntactic equality up-to universes
+(** ** Syntactic ws_cumul_pb up-to universes
   We don't look at printing annotations *)
 
-(** Equality is indexed by a natural number that counts the number of applications
+(** ws_cumul_pb is indexed by a natural number that counts the number of applications
   that surround the current term, used to implement cumulativity of inductive types
   correctly (only fully applied constructors and inductives benefit from it). *)  
 
@@ -360,20 +360,48 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     ) mfix mfix' ->
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
     
-| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
+(* | eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i) *)
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
+(* ** Syntactic conparison up-to universes *)
+
+Definition compare_term_napp `{checker_flags} (pb : conv_pb) Σ φ napp (t u : term) :=
+  eq_term_upto_univ_napp Σ (eq_universe φ) (compare_universe pb φ) napp t u.
+  
+Definition compare_term `{checker_flags} (pb : conv_pb) Σ φ (t u : term) :=
+  eq_term_upto_univ Σ (eq_universe φ) (compare_universe pb φ) t u.
+
 (* ** Syntactic conversion up-to universes *)
 
-Definition eq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (eq_universe φ).
+Notation eq_term := (compare_term Conv).
 
 (* ** Syntactic cumulativity up-to universes *)
 
-Definition leq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (leq_universe φ).
+Notation leq_term := (compare_term Cumul).
+
+Definition compare_opt_term `{checker_flags} (pb : conv_pb) Σ φ (t u : option term) :=
+  match t, u with
+  | Some t, Some u => compare_term pb Σ φ t u
+  | None, None => True
+  | _, _ => False
+  end.
+
+Definition compare_decl `{checker_flags} pb Σ φ (d d' : context_decl) :=
+  compare_decls (compare_term Conv Σ φ) (compare_term pb Σ φ) d d'.
+
+Notation eq_decl := (compare_decl Conv).
+Notation leq_decl := (compare_decl Cumul).
+
+Definition compare_context `{checker_flags} pb Σ φ (Γ Δ : context) :=
+  eq_context_gen (compare_term Conv Σ φ) (compare_term pb Σ φ) Γ Δ.
+  
+Notation eq_context := (compare_context Conv).
+Notation leq_context := (compare_context Cumul).
+
+Notation eq_context_upto Σ Re Rle := 
+  (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle)).
 
 Lemma R_global_instance_refl Σ Re Rle gr napp u : 
   RelationClasses.Reflexive Re ->
@@ -497,16 +525,8 @@ Proof.
 Qed.
 
 #[global]
-Polymorphic Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
-Proof.
-  apply eq_term_upto_univ_refl. all: exact _.
-Qed.
-
-#[global]
-Polymorphic Instance leq_term_refl `{checker_flags} Σ φ : Reflexive (leq_term Σ φ).
-Proof.
-  apply eq_term_upto_univ_refl; exact _.
-Qed.
+Instance compare_term_refl {cf} pb {Σ : global_env} φ : Reflexive (compare_term pb Σ φ).
+Proof. eapply eq_term_upto_univ_refl; tc. Qed.
 
 Derive Signature for eq_term_upto_univ_napp.
 
@@ -593,9 +613,9 @@ Proof.
 Qed.
 
 #[global]
-Instance eq_term_sym `{checker_flags} Σ φ : Symmetric (eq_term Σ φ).
+Instance compare_term_sym {cf} Σ φ : Symmetric (compare_term Conv Σ φ).
 Proof.
-  eapply eq_term_upto_univ_sym. all: exact _.
+  now intros t u; unfold compare_term; cbn; symmetry.
 Qed.
 
 #[global]
@@ -714,16 +734,8 @@ Proof.
 Qed.
 
 #[global]
-Polymorphic Instance eq_term_trans {cf:checker_flags} Σ φ : Transitive (eq_term Σ φ).
-Proof.
-  eapply eq_term_upto_univ_trans. all: exact _.
-Qed.
-
-#[global]
-Polymorphic Instance leq_term_trans {cf:checker_flags} Σ φ : Transitive (leq_term Σ φ).
-Proof.
-  eapply eq_term_upto_univ_trans ; exact _.
-Qed.
+Instance compare_term_trans {cf} pb Σ φ : Transitive (compare_term pb Σ φ).
+Proof. apply eq_term_upto_univ_trans; tc. Qed.
 
 #[global]
 Polymorphic Instance eq_term_upto_univ_equiv Σ Re (hRe : RelationClasses.Equivalence Re)
@@ -745,15 +757,12 @@ Proof.
 Qed.
 
 #[global]
-Polymorphic Instance eq_term_equiv {cf:checker_flags} Σ φ : Equivalence (eq_term Σ φ) :=
-  {| Equivalence_Reflexive := eq_term_refl _ _;
-     Equivalence_Symmetric := eq_term_sym _ _;
-     Equivalence_Transitive := eq_term_trans _ _ |}.
+Polymorphic Instance eq_term_equiv {cf:checker_flags} Σ φ : Equivalence (eq_term Σ φ).
+Proof. split; tc. Qed.
 
 #[global]
-Polymorphic Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ) :=
-  {| PreOrder_Reflexive := leq_term_refl _ _;
-     PreOrder_Transitive := leq_term_trans _ _ |}.
+Polymorphic Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ).
+Proof. split; tc. Qed. 
 
 #[global]
 Instance R_universe_instance_equiv R (hR : RelationClasses.Equivalence R)
@@ -870,9 +879,9 @@ Proof.
   destruct t0; simpl; auto.
 Qed.
 
-Lemma global_variance_empty gr napp : global_variance [] gr napp = None.
+Lemma global_variance_empty gr napp env : env.(declarations) = [] -> global_variance env gr napp = None.
 Proof.
-  destruct gr; auto.
+  destruct env; cbn => ->. destruct gr; auto.
 Qed.
 
 (** Pure syntactic equality, without cumulative inductive types subtyping *)
@@ -882,11 +891,11 @@ Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance [] Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
+  subrelation (R_global_instance empty_global_env Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
   rewrite /R_global_instance /R_opt_variance. simpl.
-  rewrite global_variance_empty.
+  rewrite global_variance_empty //.
   destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
   simpl.
@@ -943,7 +952,7 @@ Instance eq_term_upto_univ_empty_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (eq_term_upto_univ_napp [] Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
+  subrelation (eq_term_upto_univ_napp empty_global_env Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
 Proof.
   intros he hle hele t t'.
   induction t in napp, napp', t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
@@ -1024,6 +1033,29 @@ Proof.
     solve_all. rewrite H. eauto.
 Qed.
 
+Lemma lift_compare_term `{checker_flags} pb Σ ϕ n k t t' :
+  compare_term pb Σ ϕ t t' -> compare_term pb Σ ϕ (lift n k t) (lift n k t').
+Proof.
+  now apply eq_term_upto_univ_lift.
+Qed.
+
+Lemma lift_compare_decls `{checker_flags} pb Σ ϕ n k d d' :
+  compare_decl pb Σ ϕ d d' -> compare_decl pb Σ ϕ (lift_decl n k d) (lift_decl n k d').
+Proof.
+  intros []; constructor; cbn; intuition auto using lift_compare_term.
+Qed.
+
+Lemma lift_compare_context `{checker_flags} pb Σ φ l l' n k :
+  compare_context pb Σ φ l l' ->
+  compare_context pb Σ φ (lift_context n k l) (lift_context n k l').
+Proof.
+  unfold compare_context.
+  induction 1; rewrite -> ?lift_context_snoc0. constructor.
+  constructor; auto. 
+  eapply lift_compare_decls in p.
+  now rewrite (All2_fold_length X).
+Qed.
+
 Lemma lift_eq_term {cf:checker_flags} Σ φ n k T U :
   eq_term Σ φ T U -> eq_term Σ φ (lift n k T) (lift n k U).
 Proof.
@@ -1035,7 +1067,6 @@ Lemma lift_leq_term {cf:checker_flags} Σ φ n k T U :
 Proof.
   apply eq_term_upto_univ_lift.
 Qed.
-
 
 Local Ltac sih :=
   lazymatch goal with
@@ -1218,7 +1249,8 @@ Proof.
   subst. constructor ; auto.
 Qed.
 
-Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
+Lemma valid_constraints_empty {cf} i : 
+  valid_constraints (empty_ext empty_global_env) (subst_instance_cstrs i (empty_ext empty_global_env)).
 Proof.
   red. destruct check_univs => //.
 Qed.
@@ -1232,14 +1264,14 @@ Proof.
   all: intros ? ? []; eauto.
 Qed.
 
-(** ** Syntactic equality up to printing anotations ** *)
+(** ** Syntactic ws_cumul_pb up to printing anotations ** *)
 
-Definition upto_names := eq_term_upto_univ [] eq eq.
+Definition upto_names := eq_term_upto_univ empty_global_env eq eq.
 
 Infix "≡" := upto_names (at level 70).
 
-Infix "≡'" := (eq_term_upto_univ [] eq eq) (at level 70).
-Notation upto_names' := (eq_term_upto_univ [] eq eq).
+Infix "≡'" := (eq_term_upto_univ empty_global_env eq eq) (at level 70).
+Notation upto_names' := (eq_term_upto_univ empty_global_env eq eq).
 
 #[global]
 Instance upto_names_ref : Reflexive upto_names.
@@ -1299,10 +1331,7 @@ Proof.
   all: reflexivity.
 Qed.
 
-(** ** Equality on contexts ** *)
-
-Notation eq_context_upto Σ Re Rle := 
-  (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle)).
+(** ** ws_cumul_pb on contexts ** *)
 
 Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
 | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
@@ -1503,52 +1532,6 @@ Proof.
     assumption.
 Qed.
 
-Definition leq_rel {cf} (le : bool) :=
-  if le then leq_universe else eq_universe.
-
-Definition compare_term_napp `{checker_flags} (le : bool) Σ φ napp (t u : term) :=
-  eq_term_upto_univ_napp Σ (eq_universe φ) (leq_rel le φ) napp t u.
-  
-Definition compare_term `{checker_flags} (le : bool) Σ φ (t u : term) :=
-  eq_term_upto_univ Σ (eq_universe φ) (leq_rel le φ) t u.
-
-Lemma lift_compare_term `{checker_flags} le Σ ϕ n k t t' :
-  compare_term le Σ ϕ t t' -> compare_term le Σ ϕ (lift n k t) (lift n k t').
-Proof.
-  destruct le; intros. now apply lift_leq_term. now apply lift_eq_term.
-Qed.
-
-(* todo: unify *)
-Definition eq_opt_term `{checker_flags} (le : bool) Σ φ (t u : option term) :=
-  match t, u with
-  | Some t, Some u => compare_term le Σ φ t u
-  | None, None => True
-  | _, _ => False
-  end.
-
-Definition eq_decl `{checker_flags} le Σ φ (d d' : context_decl) :=
-  compare_decls (eq_term Σ φ) (if le then leq_term Σ φ else eq_term Σ φ) d d'.
-
-Definition eq_context `{checker_flags} le Σ φ (Γ Δ : context) :=
-  eq_context_gen (eq_term Σ φ) (if le then leq_term Σ φ else eq_term Σ φ) Γ Δ.
-
-Lemma lift_compare_decls `{checker_flags} le Σ ϕ n k d d' :
-  eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (lift_decl n k d) (lift_decl n k d').
-Proof.
-  intros []; destruct le; constructor; cbn; intuition auto using lift_compare_term, lift_eq_term, lift_leq_term.
-Qed.
-
-Lemma lift_eq_context `{checker_flags} le Σ φ l l' n k :
-  eq_context le Σ φ l l' ->
-  eq_context le Σ φ (lift_context n k l) (lift_context n k l').
-Proof.
-  unfold eq_context.
-  induction 1; rewrite -> ?lift_context_snoc0. constructor.
-  constructor; auto. 
-  eapply lift_compare_decls in p.
-  now rewrite (All2_fold_length X).
-Qed.
-
 Lemma eq_term_upto_univ_mkApps_inv Σ Re Rle u l u' l' :
   isApp u = false ->
   isApp u' = false ->
@@ -1691,7 +1674,7 @@ Proof.
   clear. intros [] [] H; now inversion H.
 Qed.
 
-(** Equality of binder annotations *)
+(** ws_cumul_pb of binder annotations *)
 Notation eq_annots Γ Δ :=
   (Forall2 (fun na decl => eq_binder_annot na (decl_name decl)) Γ Δ).
 

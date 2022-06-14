@@ -50,8 +50,7 @@ To compile the library, you need:
   for the `master` branch).
 - `OCaml` (tested with `4.06.1`, `4.07.1`, and `4.10.0`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)
-- [`Equations 1.2.3`](http://mattam82.github.io/Coq-Equations/)
-  (not necessary for the `template-coq` plugin).
+- [`Equations 1.3`](http://mattam82.github.io/Coq-Equations/)
 
 The recommended way to build a development environment for MetaCoq is
 to have a dedicated `opam` switch (see below).
@@ -61,10 +60,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.13 origin/coq-8.13
+    # git checkout -b coq-8.14 origin/coq-8.14
     # git status
 
-This checks that you are indeed on the `coq-8.13` branch.
+This checks that you are indeed on the `coq-8.14` branch.
 
 ### Setting up an `opam` switch
 
@@ -73,10 +72,10 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.13 4.07.1
+    # opam switch create coq.8.14 4.07.1
     # eval $(opam env)
 
-This creates the `coq.8.13` switch which initially contains only the
+This creates the `coq.8.14` switch which initially contains only the
 basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
@@ -92,7 +91,7 @@ developing using (in the root directory of the sources):
 
     # opam switch create . 4.07.1
 
-Or use `opam switch link foo` to link an existing `opam** switch `foo** with
+Or use `opam switch link foo` to link an existing opam switch `foo` with
 the sources directory.
 
 
@@ -115,3 +114,13 @@ Then use:
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
 
 - `make uninstall` to undo the last line.
+
+For faster development one can use:
+
+- `make vos` to compile `vos` files (bypassing proofs)
+  for `pcuic`, `safechecker` and `erasure`. The template-coq library is still using the regular `vo` target to be able
+  to construct the template-coq plugin. The `safechecker` and
+  `erasure` ML plugins *cannot* be built using this mode.
+
+- `make quick` is a synonymous for `make vos` with the addition of a global `Unset Universe Checking` option, i.e. 
+universes are not checked anywhere.

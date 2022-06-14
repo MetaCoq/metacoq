@@ -46,8 +46,7 @@ Local Ltac ih :=
 
 Lemma banon_spec na : banon na -> na = {| binder_name := nAnon; binder_relevance := na.(binder_relevance) |}.
 Proof.
-  unfold banon, anon; destruct na; simpl; try congruence.
-  destruct binder_name; auto. congruence.
+  destruct na, binder_name; cbnr; discriminate.
 Qed.
 
 Lemma banon_eq_binder_annot na na' : banon na -> banon na' -> eq_binder_annot na na' -> na = na'.
@@ -75,7 +74,7 @@ Qed.
 
 Lemma eq_context_gen_upto ctx ctx' :
   eq_context_gen eq eq ctx ctx' ->
-  eq_context_upto [] eq eq ctx ctx'.
+  eq_context_upto empty_global_env eq eq ctx ctx'.
 Proof.
   intros a; eapply All2_fold_impl; tea.
   intros. destruct X; subst; constructor; auto; try reflexivity.
@@ -85,7 +84,7 @@ Lemma nameless_eq_term_spec :
   forall u v napp,
     nameless u ->
     nameless v ->
-    eq_term_upto_univ_napp [] eq eq napp u v ->
+    eq_term_upto_univ_napp empty_global_env eq eq napp u v ->
     u = v.
 Proof.
   intros u v napp hu hv e.
@@ -233,10 +232,11 @@ Lemma nl_lookup_env :
     lookup_env (nl_global_env Σ) c
     = option_map nl_global_decl (lookup_env Σ c).
 Proof.
-  intros Σ c.
+  intros [univs Σ] c.
+  rewrite /lookup_env /=.
   induction Σ. 1: reflexivity.
   simpl.
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_spec; intros e; subst.
   - reflexivity.
   - assumption.
 Qed.
@@ -383,20 +383,20 @@ Lemma nl_compare_term {cf:checker_flags} le Σ:
     compare_term le (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
   destruct le; intros.
-  - apply nl_leq_term. assumption.
   - apply nl_eq_term. assumption.
+  - apply nl_leq_term. assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
   forall u v,
-    eq_term_upto_univ [] eq eq u v ->
+    eq_term_upto_univ empty_global_env eq eq u v ->
     nl u = nl v.
 Proof.
   intros u v h.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - now eapply (nl_eq_term_upto_univ []).
+  - instantiate (1:=0). now eapply (nl_eq_term_upto_univ empty_global_env).
 Qed.
 
 Local Ltac ih3 :=
@@ -620,27 +620,17 @@ Proof.
 Qed.
 
 Lemma global_ext_levels_nlg :
-  forall Σ,
-    global_ext_levels (nlg Σ) = global_ext_levels Σ.
+  forall Σ, global_ext_levels (nlg Σ) = global_ext_levels Σ.
 Proof.
-  intros [g ?].
+  intros [[univs g] ?].
   cbn. unfold global_ext_levels. f_equal.
-  simpl. clear - g.
-  induction g. 1: reflexivity.
-  simpl. f_equal. 2: assumption.
-  destruct a. simpl. destruct g0. all: reflexivity.
 Qed.
 
 Lemma global_ext_constraints_nlg :
   forall Σ,
     global_ext_constraints (nlg Σ) = global_ext_constraints Σ.
-Proof.
-  intros [g ?].
-  cbn. unfold global_ext_constraints.
-  f_equal. simpl. clear - g.
-  induction g. 1: reflexivity.
-  simpl. f_equal. 2: assumption.
-  destruct a as [kn []]; reflexivity.
+Proof. 
+  intros [[univs g] ?]. reflexivity.
 Qed.
 
 Lemma lookup_env_nlg :
@@ -648,8 +638,8 @@ Lemma lookup_env_nlg :
     lookup_env Σ.1 c = Some decl ->
     lookup_env (nlg Σ) c = Some (nl_global_decl decl).
 Proof.
-  intros [g ?] c decl h.
-  cbn. rewrite nl_lookup_env.
+  intros [[univs g] ?] c decl h.
+  rewrite nl_lookup_env. cbn in *.
   rewrite h. reflexivity.
 Qed.
 
@@ -793,8 +783,8 @@ Qed.
 
 Lemma nl_eq_decl {cf:checker_flags} :
   forall le Σ φ d d',
-    eq_decl le Σ φ d d' ->
-    eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
+    compare_decl le Σ φ d d' ->
+    compare_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
   intros le Σ φ d d' []; constructor; destruct le; 
   intuition auto using nl_eq_term, nl_leq_term.
@@ -802,8 +792,8 @@ Qed.
 
 Lemma nl_eq_decl' {cf:checker_flags} :
   forall le Σ φ d d',
-    eq_decl le Σ φ d d' ->
-    eq_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
+    compare_decl le Σ φ d d' ->
+    compare_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
   intros le Σ φ d d' []; constructor; destruct le;
   intuition auto using nl_eq_term, nl_leq_term.
@@ -811,8 +801,8 @@ Qed.
 
 Lemma nl_eq_context {cf:checker_flags} :
   forall le Σ φ Γ Γ',
-    eq_context le Σ φ Γ Γ' ->
-    eq_context le (nl_global_env Σ) φ (nlctx Γ) (nlctx Γ').
+    compare_context le Σ φ Γ Γ' ->
+    compare_context le (nl_global_env Σ) φ (nlctx Γ) (nlctx Γ').
 Proof.
   intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.
@@ -1411,24 +1401,24 @@ Qed.
 Notation nldecl := (map_decl_anon nl).
 
 Lemma nl_conv_decls {cf} {Σ Γ Γ'} {d d'} :
-  conv_decls Σ Γ Γ' d d' ->
-  conv_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+  conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+  conv_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
   intros Hd; depelim Hd; constructor; tas;
     eapply nl_conv; tea.
 Qed.
 
 Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} :
-   cumul_decls Σ Γ Γ' d d' ->
-   cumul_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+   cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
+   cumul_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
   intros Hd; depelim Hd; constructor; tas;
     (eapply nl_conv || eapply nl_cumul); tea.
 Qed.
 
 Lemma nl_conv_ctx {cf} {Σ Γ Δ} :
-  conv_context Σ Γ Δ ->
-  conv_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+  conv_context cumulAlgo_gen Σ Γ Δ ->
+  conv_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
   intros.
   induction X; simpl; constructor; eauto; simpl; now eapply nl_conv_decls in p.
@@ -1436,8 +1426,8 @@ Qed.
 #[global] Hint Resolve nl_conv_ctx : nl.
 
 Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
-  cumul_context Σ Γ Δ ->
-  cumul_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+  cumul_context cumulAlgo_gen Σ Γ Δ ->
+  cumul_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
   intros.
   induction X; simpl; constructor; eauto; simpl; now 
@@ -1445,17 +1435,9 @@ Proof.
 Qed.
 #[global] Hint Resolve nl_cumul_ctx : nl.
 
-Lemma nl_monomorphic_levels_decl g : monomorphic_levels_decl (nl_global_decl g) = monomorphic_levels_decl g.
-Proof.
-  destruct g; simpl.
-  - destruct c; cbn. reflexivity.
-  - destruct m; reflexivity.
-Qed.
-
 Lemma nl_global_levels Σ : global_levels (nl_global_env Σ) = global_levels Σ.
 Proof.
   induction Σ; simpl; auto.
-  destruct a; simpl. now rewrite IHΣ nl_monomorphic_levels_decl.
 Qed.
 
 Lemma nl_global_ext_levels Σ :
@@ -1463,7 +1445,7 @@ Lemma nl_global_ext_levels Σ :
 Proof.
   destruct Σ as [Σ univ].
   unfold global_ext_levels; simpl.
-  intros x. now rewrite !LevelSet.union_spec nl_global_levels.
+  intros x; reflexivity.
 Qed.
 
 
@@ -1477,8 +1459,8 @@ Proof.
 Qed.
 
 Lemma nl_is_allowed_elimination {cf:checker_flags} (Σ : global_env_ext) ps kelim :
-  is_allowed_elimination Σ ps kelim ->
-  is_allowed_elimination (nlg Σ) ps kelim.
+  is_allowed_elimination Σ kelim ps ->
+  is_allowed_elimination (nlg Σ) kelim ps.
 Proof.
   now rewrite global_ext_constraints_nlg.
 Qed.

@@ -30,9 +30,9 @@ Local Ltac term_dec_tac term_dec :=
          | x : list aname, y : list aname |- _ =>
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+         | i : string, i' : kername |- _ => fcase (eq_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | n : aname, n' : aname |- _ => fcase (eq_dec n n')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
@@ -152,10 +152,10 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (Int63.eqs i i0) ; nodec.
+  (* - destruct (Int63.eqs i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
-    subst. left. reflexivity.
+    subst. left. reflexivity. *)
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=
@@ -163,7 +163,7 @@ Defined.
 
 #[global] Instance eqb_ctx : ReflectEq context := _.
 
-Definition eqb_constant_body (x y : constant_body) :=
+(* Definition eqb_constant_body (x y : constant_body) :=
   let (tyx, bodyx, univx) := x in
   let (tyy, bodyy, univy) := y in
   eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
@@ -230,4 +230,4 @@ Proof.
   refine {| eqb := eqb_global_decl |}.
   unfold eqb_global_decl.
   intros [] []; finish_reflect.
-Defined.
+Defined. *)

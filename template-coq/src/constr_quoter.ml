@@ -104,23 +104,21 @@ struct
   (* Quote OCaml int to Coq nat *)
   let quote_int =
     (* the cache is global but only accessible through quote_int *)
-    let cache = Hashtbl.create 10 in
+    let cache = Hashtbl.create 1023 in
     let rec recurse i =
       try Hashtbl.find cache i
-      with
-	Not_found ->
-	  if i = 0 then
-	    let result = Lazy.force tO in
-	    let _ = Hashtbl.add cache i result in
-	    result
-	  else
-	    let result = constr_mkApp (tS, [| recurse (i - 1) |]) in
-	    let _ = Hashtbl.add cache i result in
-	    result
+      with Not_found ->
+        if i = 0 then
+          let result = Lazy.force tO in
+          let _ = Hashtbl.add cache i result in
+          result
+        else
+          let result = constr_mkApp (tS, [| recurse (i - 1) |]) in
+          let _ = Hashtbl.add cache i result in
+          result
     in
-    fun i ->
-    if i >= 0 then recurse i else
-      CErrors.anomaly (str "Negative int can't be unquoted to nat.")
+    fun i -> if i >= 0 then recurse i else
+      CErrors.anomaly (str "Negative int can't be quoted to nat.")
 
   let quote_bool b =
     if b then Lazy.force ttrue else Lazy.force tfalse
@@ -128,10 +126,17 @@ struct
   let quote_int63 i = constr_mkApp (tInt, [| Constr.mkInt i |])
 
   let quote_float64 f = constr_mkApp (tFloat, [| Constr.mkFloat f |])
+  let quote_inductive (kn, i) =
+    constr_mkApp (tmkInd, [| kn; i |])
 
+  let byte_ind =
+    lazy (let ty = Lazy.force tByte in
+      match Constr.kind ty with
+      | Constr.Ind (ind, u) -> ind
+      | _ -> failwith "byte_ind : tByte is not bound to an inductive type")
+  
   let quote_char i =
-    constr_mkApp (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))
-					 (List.rev [128;64;32;16;8;4;2;1])))
+    Constr.mkConstruct (Lazy.force byte_ind, (i+1))
 
   let chars = lazy (Array.init 255 quote_char)
 
@@ -256,7 +261,9 @@ struct
        then constraints_ cs'
        else if (* fail on unisatisfiable ones -- well-typed term is expected *)
          Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
-       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+      else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+        Univ.Level.is_prop l then failwith "Unisatisfiable constraint (Prop = l)"
+      else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
@@ -302,8 +309,7 @@ struct
     let const' = quote_univ_constraints (UContext.constraints (AbstractContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
-  let mkMonomorphic_ctx t =
-    constr_mkApp (cMonomorphic_ctx, [|t|])
+  let mkMonomorphic_ctx () = Lazy.force cMonomorphic_ctx
 
   let mkPolymorphic_ctx t =
     constr_mkApp (cPolymorphic_ctx, [|t|])
@@ -350,12 +356,10 @@ struct
       constr_mkApp (tBuild_constructor_body, [| a ; b ; to_coq_listl tTerm c ; d ; e |])) ls in
     to_coq_listl tconstructor_body ctors
 
-  let mk_proj_list d =
-    to_coq_list (prodl tident tTerm)
-                (List.map (fun (a, b) -> pairl tident tTerm a b) d)
-
-  let quote_inductive (kn, i) =
-    constr_mkApp (tmkInd, [| kn; i |])
+  let mk_proj_list ps =
+    let projs = List.map (fun (a,b,c) -> 
+      constr_mkApp (tBuild_projection_body, [| a ; b ; c |])) ps in
+    to_coq_listl tprojection_body projs
 
   let quote_dirpath dp =
     let l = DirPath.repr dp in
@@ -372,10 +376,8 @@ struct
     pairl tmodpath tident (quote_modpath (KerName.modpath kn))
       (quote_ident (Label.to_id (KerName.label kn)))
 
-
-  (* useful? *)
   let quote_proj ind pars args =
-    pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
+    constr_mkApp (tmkProjection, [| ind; pars; args |])
 
   let mk_one_inductive_body (na, indices, sort, ty, sf, ctors, projs, relevance) =
     let ctors = mk_ctor_list ctors in
@@ -392,9 +394,9 @@ struct
     let var = to_coq_option (constr_mkAppl (tlist, [| tVariance |])) (to_coq_listl tVariance) var in
     constr_mkApp (tBuild_mutual_inductive_body, [|finite; npars; params; inds; uctx; var|])
 
-  let mk_constant_body ty tm uctx =
+  let mk_constant_body ty tm uctx rel =
     let tm = quote_optionl tTerm tm in
-    constr_mkApp (tBuild_constant_body, [|ty; tm; uctx|])
+    constr_mkApp (tBuild_constant_body, [|ty; tm; uctx; rel|])
 
   let mk_inductive_decl mind =
     constr_mkApp (tInductiveDecl, [|mind|])
@@ -411,6 +413,9 @@ struct
   let add_global_decl kn d l =
     let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
+
+  let mk_global_env univs decls =
+    constr_mkApp (tBuild_global_env, [| univs; decls |])
 
   let mk_program f s = pairl tglobal_env tTerm f s
 

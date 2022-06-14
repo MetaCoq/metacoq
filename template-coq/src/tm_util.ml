@@ -1,5 +1,5 @@
 open Pp
-
+  
 let contrib_name = "template-coq"
 
 let gen_constant_in_modules s =
@@ -9,35 +9,54 @@ let gen_constant_in_modules s =
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
+(* This allows to load template_plugin and the extractable plugin at the same time 
+  while have option settings apply to both *)
+  let timing_opt =
+  let open Goptions in
+  let key = ["MetaCoq"; "Timing"] in
+  let tables = get_tables () in
+  try 
+    let _ = OptionMap.find key tables in
+    fun () -> 
+      let tables = get_tables () in
+      let opt = OptionMap.find key tables in
+      match opt.opt_value with
+      | BoolValue b -> b
+      | _ -> assert false
+  with Not_found ->
+    declare_bool_option_and_ref ~depr:false ~key ~value:false
 
-let opt_debug = ref false
+let time prefix f x =
+  if timing_opt () then 
+    let start = Unix.gettimeofday () in
+    let res = f x in
+    let stop = Unix.gettimeofday () in
+    let () = Feedback.msg_info Pp.(prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
+    res
+  else f x
+  
+let debug_opt =
+  let open Goptions in
+  let key = ["MetaCoq"; "Debug"] in
+  let tables = get_tables () in
+  try 
+    let _ = OptionMap.find key tables in
+    fun () -> 
+      let tables = get_tables () in
+      let opt = OptionMap.find key tables in
+      match opt.opt_value with
+      | BoolValue b -> b
+      | _ -> assert false
+  with Not_found ->
+  declare_bool_option_and_ref ~depr:false ~key ~value:false
 
 let debug (m : unit ->Pp.t) =
-  if !opt_debug then
+  if debug_opt () then
     Feedback.(msg_debug (m ()))
   else
     ()
-
-
 type ('a,'b) sum =
   Left of 'a | Right of 'b
-
-(* todo(gmm): these are helper functions *)
-let string_to_list (s : string) : char list =
-  let rec aux acc i =
-    if i < 0 then acc
-    else aux (s.[i] :: acc) (i - 1)
-  in aux [] (String.length s - 1)
-
-let list_to_string (l : char list) : string =
-  let buf = Bytes.create (List.length l) in
-  let rec aux i = function
-    | [] -> ()
-    | c :: cs ->
-      Bytes.set buf i c; aux (succ i) cs
-  in
-  aux 0 l;
-  Bytes.to_string buf
 
 let rec filter_map f l =
   match l with
@@ -145,6 +164,105 @@ module CaseCompat =
     case_branches_contexts_gen mib ci u pars brs
 end
 
+module RetypeMindEntry =
+  struct
+
+  open Entries
+  open Names
+  open Univ
+
+  let retype env evm c = 
+    Typing.type_of env evm (EConstr.of_constr c)
+
+  let retype_decl env evm decl =
+    match decl with
+    | Context.Rel.Declaration.LocalAssum (na, ty) ->
+      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      evm, Context.Rel.Declaration.LocalAssum (na, ty)
+    | Context.Rel.Declaration.LocalDef (na, b, ty) ->
+      let evm, b = Typing.solve_evars env evm (EConstr.of_constr b) in
+      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      let evm = Typing.check env evm b ty in
+      evm, Context.Rel.Declaration.LocalDef (na, b, ty)
+    
+  let retype_context env evm ctx = 
+    let env, evm, ctx = Context.Rel.fold_outside (fun decl (env, evm, ctx) ->
+      let evm, d = retype_decl env evm decl in
+      (EConstr.push_rel d env, evm, d :: ctx)) 
+      ctx ~init:(env, evm, [])
+    in evm, ctx
+
+  let infer_mentry_univs env evm mind =
+    let pars = mind.mind_entry_params in
+    let evm, pars' = retype_context env evm pars in
+    let envpars = Environ.push_rel_context pars env in
+    let evm, arities =
+      List.fold_left 
+        (fun (evm, ctx) oib -> 
+          let ty = oib.mind_entry_arity in
+          let evm, s = retype envpars evm ty in
+          let ty = Term.it_mkProd_or_LetIn ty pars in
+          (evm, Context.Rel.Declaration.LocalAssum (Context.annotR (Name oib.mind_entry_typename), ty) :: ctx))
+        (evm, []) mind.mind_entry_inds
+    in
+    let env = Environ.push_rel_context arities env in
+    let env = Environ.push_rel_context pars env in
+    let evm =
+      List.fold_left 
+        (fun evm oib ->
+          let evm, cstrsu = 
+            List.fold_left (fun (evm, sort) cstr ->
+              let evm, cstrty = retype env evm cstr in
+              let _, cstrsort = Reduction.dest_arity env (EConstr.to_constr evm cstrty) in
+              (evm, Univ.sup sort (Sorts.univ_of_sort cstrsort)))
+            (evm, Univ.type0m_univ) oib.mind_entry_lc
+          in 
+          let _, indsort = Reduction.dest_arity env oib.mind_entry_arity in
+          let cstrsort = Sorts.sort_of_univ cstrsu in
+          (* Hacky, but we don't have a good way to enfore max() <= max() constraints yet *)
+          let evm = try Evd.set_leq_sort env evm cstrsort indsort with e -> evm in
+          evm)
+        evm mind.mind_entry_inds
+    in
+    evm, mind
+
+  let nf_mentry_univs evm mind =
+    let pars = List.map EConstr.Unsafe.to_rel_decl (Evarutil.nf_rel_context_evar evm (List.map EConstr.of_rel_decl mind.mind_entry_params)) in
+    let nf_evar c = EConstr.Unsafe.to_constr (Evarutil.nf_evar evm (EConstr.of_constr c)) in
+    let inds =
+      List.map
+          (fun oib -> 
+            let arity = nf_evar oib.mind_entry_arity in
+            let cstrs = List.map nf_evar oib.mind_entry_lc in
+            { oib with mind_entry_arity = arity; mind_entry_lc = cstrs })
+         mind.mind_entry_inds
+      in
+      { mind with mind_entry_params = pars; mind_entry_inds = inds }
+
+  let infer_mentry_univs env evm mind = 
+    let evm = 
+      match mind.mind_entry_universes with
+      | Entries.Monomorphic_ind_entry -> evm
+      | Entries.Template_ind_entry uctx -> evm
+      | Entries.Polymorphic_ind_entry uctx ->
+        let uctx' = ContextSet.of_context uctx in
+        Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
+    in
+    let evm, mind = infer_mentry_univs env evm mind in
+    let evm = Evd.minimize_universes evm in
+    let mind = nf_mentry_univs evm mind in
+    let ctx, mind = 
+      match mind.mind_entry_universes with
+      | Entries.Monomorphic_ind_entry ->
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_ind_entry }
+      | Entries.Template_ind_entry ctx ->
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Template_ind_entry ctx }
+      | Entries.Polymorphic_ind_entry uctx ->
+        let uctx' = Evd.to_universe_context evm in
+        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_ind_entry uctx' }
+    in ctx, mind
+end 
+
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
 
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
@@ -183,6 +301,6 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-  | ACoq_tInt of 'int63
-  | ACoq_tFloat of 'float64
+  (* | ACoq_tInt of 'int63 *)
+  (* | ACoq_tFloat of 'float64 *)
 

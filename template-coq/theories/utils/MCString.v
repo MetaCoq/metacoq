@@ -1,11 +1,12 @@
-From Coq Require Import String Decimal DecimalString ZArith.
-From MetaCoq.Template Require Import MCCompare.
+From Coq Require Import ssreflect ssrbool Decimal DecimalString ZArith.
+From MetaCoq.Template Require Import MCCompare bytestring ReflectEq.
 
-Local Open Scope string_scope.
+Local Open Scope bs.
+Notation string := String.t.
 
 (** When defining [Show] instance for your own datatypes, you sometimes need to
     start a new line for better printing. [nl] is a shorthand for it. *)
-Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
+Definition nl : string := String.String "010"%byte String.EmptyString.
 
 Definition string_of_list_aux {A} (f : A -> string) (sep : string) (l : list A) : string :=
   let fix aux l :=
@@ -25,8 +26,23 @@ Definition print_list {A} (f : A -> string) (sep : string) (l : list A) : string
 Definition parens (top : bool) (s : string) :=
   if top then s else "(" ++ s ++ ")".
 
+Fixpoint string_of_uint n := 
+  match n with
+  | Nil => ""
+  | D0 n => "0" ++ string_of_uint n
+  | D1 n => "1" ++ string_of_uint n
+  | D2 n => "2" ++ string_of_uint n
+  | D3 n => "3" ++ string_of_uint n
+  | D4 n => "4" ++ string_of_uint n
+  | D5 n => "5" ++ string_of_uint n
+  | D6 n => "6" ++ string_of_uint n
+  | D7 n => "7" ++ string_of_uint n
+  | D8 n => "8" ++ string_of_uint n
+  | D9 n => "9" ++ string_of_uint n
+  end.
+
 Definition string_of_nat n : string :=
-  DecimalString.NilEmpty.string_of_uint (Nat.to_uint n).
+  string_of_uint (Nat.to_uint n).
 
 #[global]
 Hint Resolve String.string_dec : eq_dec.
@@ -40,15 +56,3 @@ Definition string_of_Z (z : Z) : string :=
   | Zpos p => string_of_positive p
   | Zneg p => "-" ++ string_of_positive p
   end.
-
-Definition eq_string s s' :=
-  match string_compare s s' with
-  | Eq => true
-  | _ => false
-  end.
-
-Lemma eq_string_refl x : is_true (eq_string x x).
-Proof.
-  unfold eq_string.
-  now rewrite (proj2 (string_compare_eq x x) eq_refl).
-Qed.

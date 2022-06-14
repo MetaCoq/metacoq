@@ -1,75 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Morphisms Setoid.
+From Coq Require Import ssreflect Morphisms Orders Setoid.
 From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Export Kernames.
 From Coq Require Floats.SpecFloat.
 From Equations Require Import Equations.
-
-(** ** Reification of names ** *)
-
-(** [Comment taken from Coq's code]
-    - Id.t is the type of identifiers, that is morally a subset of strings which
-      only contains Unicode characters of the Letter kind (and a few more).
-      => [ident]
-    - Name.t is an ad-hoc variant of Id.t option allowing to handle optionally
-      named objects.
-      => [name]
-    - DirPath.t represents generic paths as sequences of identifiers.
-      => [dirpath]
-    - Label.t is an equivalent of Id.t made distinct for semantical purposes.
-      => [ident]
-    - ModPath.t are module paths.
-      => [modpath]
-    - KerName.t are absolute names of objects in Coq.
-      => [kername]
-
-    And also :
-    - Constant.t => [kername]
-    - variable => [ident]
-    - MutInd.t => [kername]
-    - inductive => [inductive]
-    - constructor => [inductive * nat]
-    - Projection.t => [projection]
-    - GlobRef.t => global_reference
-
-    Finally, we define the models of primitive types (uint63 and floats64).
-*)
-
-Definition ident   := string. (* e.g. nat *)
-Definition qualid  := string. (* e.g. Datatypes.nat *)
-
-(** Type of directory paths. Essentially a list of module identifiers. The
-    order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
-Definition dirpath := list ident.
-
-#[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
-
-Definition string_of_dirpath : dirpath -> string
-  := String.concat "." ∘ rev.
-
-(** The module part of the kernel name.
-    - MPfile is for toplevel libraries, i.e. .vo files
-    - MPbound are parameters of functors
-    - MPdot is for submodules
-*)
-Inductive modpath :=
-| MPfile  (dp : dirpath)
-| MPbound (dp : dirpath) (id : ident) (i : nat)
-| MPdot   (mp : modpath) (id : ident).
-Derive NoConfusion EqDec for modpath.
-
-Fixpoint string_of_modpath (mp : modpath) : string :=
-  match mp with
-  | MPfile dp => string_of_dirpath dp
-  | MPbound dp id _ => string_of_dirpath dp ^ "." ^ id
-  | MPdot mp id => string_of_modpath mp ^ "." ^ id
-  end.
-
-(** The absolute names of objects seen by kernel *)
-Definition kername := modpath × ident.
-#[global] Instance kername_eqdec : Classes.EqDec kername := _.
-
-Definition string_of_kername (kn : kername) :=
-  string_of_modpath kn.1 ^ "." ^ kn.2.
 
 (** Identifiers that are allowed to be anonymous (i.e. "_" in concrete syntax). *)
 Inductive name : Set :=
@@ -119,95 +53,6 @@ Definition string_of_relevance (r : relevance) :=
   | Relevant => "Relevant"
   | Irrelevant => "Irrelevant"
   end.
-
-(** Designation of a (particular) inductive type. *)
-Record inductive : Set := mkInd { inductive_mind : kername ;
-                                  inductive_ind : nat }.
-Arguments mkInd _%string _%nat.
-
-Derive NoConfusion EqDec for inductive.
-
-Definition string_of_inductive (i : inductive) :=
-  string_of_kername (inductive_mind i) ^ "," ^ string_of_nat (inductive_ind i).
-
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
-
-(** Kernel declaration references [global_reference] *)
-Inductive global_reference :=
-| VarRef : ident -> global_reference
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.
-
-Derive NoConfusion EqDec for global_reference.
-
-
-Definition string_of_gref gr : string :=
-  match gr with
-  | VarRef v => v
-  | ConstRef s => string_of_kername s
-  | IndRef (mkInd s n) =>
-    "Inductive " ^ string_of_kername s ^ " " ^ (string_of_nat n)
-  | ConstructRef (mkInd s n) k =>
-    "Constructor " ^ string_of_kername s ^ " " ^ (string_of_nat n) ^ " " ^ (string_of_nat k)
-  end.
-
-Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0} := Classes.eq_dec k k0.
-#[global] Hint Resolve kername_eq_dec : eq_dec.
-
-Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'} := Classes.eq_dec gr gr'.
-
-Definition ident_eq (x y : ident) :=
-  match string_compare x y with
-  | Eq => true
-  | _ => false
-  end.
-
-Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
-Proof.
-  unfold ident_eq. destruct (string_compare_eq x y).
-  destruct string_compare; constructor; auto.
-  intro Heq; specialize (H0 Heq). discriminate.
-  intro Heq; specialize (H0 Heq). discriminate.
-Qed.
-
-(* todo : better ? *)
-Definition eq_kername (k k0 : kername) : bool :=
-  match kername_eq_dec k k0 with
-  | left _ => true
-  | right _ => false
-  end.
-
-Lemma eq_kername_refl kn : eq_kername kn kn.
-Proof.
-  unfold eq_kername. destruct (kername_eq_dec kn kn); cbnr.
-  contradiction.
-Qed.
-
-Definition eq_inductive i i' :=
-  let 'mkInd i n := i in
-  let 'mkInd i' n' := i' in
-  eq_kername i i' && Nat.eqb n n'.
-
-Definition eq_constant := eq_kername.
-
-Definition eq_projection p p' :=
-  let '(ind, pars, arg) := p in
-  let '(ind', pars', arg') := p' in
-  eq_inductive ind ind' && Nat.eqb pars pars' && Nat.eqb arg arg'.
-
-Lemma eq_inductive_refl i : eq_inductive i i.
-Proof.
-  destruct i as [mind k].
-  unfold eq_inductive. now rewrite eq_kername_refl PeanoNat.Nat.eqb_refl.
-Qed.
-
-Lemma eq_projection_refl i : eq_projection i i.
-Proof.
-  destruct i as [[mind k] p].
-  unfold eq_projection.
-  now rewrite eq_inductive_refl !PeanoNat.Nat.eqb_refl.
-Qed.
 
 (** The kind of a cast *)
 Inductive cast_kind : Set :=
@@ -362,6 +207,21 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
+Variant typ_or_sort_ {term} := Typ (T : term) | Sort.
+Arguments typ_or_sort_ : clear implicits.
+
+Definition typ_or_sort_map {T T'} (f: T -> T') t :=
+  match t with
+  | Typ T => Typ (f T)
+  | Sort => Sort
+  end.
+
+Definition typ_or_sort_default {T A} (f: T -> A) t d :=
+  match t with
+  | Typ T => f T
+  | Sort => d
+  end.
+
 Section Contexts.
   Context {term : Type}.
   (** *** The context of De Bruijn indices *)
@@ -507,7 +367,7 @@ Section Contexts.
 
   Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> 
     test_decl f x -> test_decl g x.
-  Proof.
+  Proof using Type.
     intros Hf; rewrite /test_decl.
     move/andb_and=> [Hd Hb].
     apply/andb_and; split; eauto.
@@ -520,7 +380,7 @@ Section Contexts.
   Lemma ondeclP {P : term -> Type} {p : term -> bool} {d : context_decl term} :
     (forall x, reflectT (P x) (p x)) ->
     reflectT (ondecl P d) (test_decl p d).
-  Proof.
+  Proof using Type.
     intros hr.
     rewrite /ondecl /test_decl; destruct d as [decl_name decl_body decl_type]; cbn.
     destruct (hr decl_type) => //;
@@ -529,7 +389,7 @@ Section Contexts.
 
   Lemma onctxP {p : term -> bool} {ctx : context term} :
     reflectT (onctx p ctx) (test_context p ctx).
-  Proof.
+  Proof using Type.
     eapply equiv_reflectT.
     - induction 1; simpl; auto. rewrite IHX /= //.
       now move/(ondeclP reflectT_pred): p0.
@@ -540,23 +400,23 @@ Section Contexts.
   Qed.
 
   Lemma map_decl_type (f : term -> term') decl : f (decl_type decl) = decl_type (map_decl f decl).
-  Proof. destruct decl; reflexivity. Qed.
+  Proof using Type. destruct decl; reflexivity. Qed.
 
   Lemma map_decl_body (f : term -> term') decl : option_map f (decl_body decl) = decl_body (map_decl f decl).
-  Proof. destruct decl; reflexivity. Qed.
+  Proof using Type. destruct decl; reflexivity. Qed.
 
   Lemma map_decl_id : @map_decl term term id =1 id.
-  Proof. intros d; now destruct d as [? [] ?]. Qed.
+  Proof using Type. intros d; now destruct d as [? [] ?]. Qed.
 
   Lemma option_map_decl_body_map_decl (f : term -> term') x :
     option_map decl_body (option_map (map_decl f) x) =
     option_map (option_map f) (option_map decl_body x).
-  Proof. destruct x; reflexivity. Qed.
+  Proof using Type. destruct x; reflexivity. Qed.
 
   Lemma option_map_decl_type_map_decl (f : term -> term') x :
     option_map decl_type (option_map (map_decl f) x) =
     option_map f (option_map decl_type x).
-  Proof. destruct x; reflexivity. Qed.
+  Proof using Type. destruct x; reflexivity. Qed.
 
   Definition fold_context_k (f : nat -> term -> term') Γ :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
@@ -566,14 +426,14 @@ Section Contexts.
   Lemma fold_context_k_alt f Γ :
     fold_context_k f Γ =
     mapi (fun k' d => map_decl (f (Nat.pred (length Γ) - k')) d) Γ.
-  Proof.
+  Proof using Type.
     unfold fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
 
   Lemma mapi_context_fold f Γ :
     mapi_context f Γ = fold_context_k f Γ.
-  Proof.
+  Proof using Type.
     setoid_replace f with (fun k => f (k - 0)) using relation 
       (pointwise_relation nat (pointwise_relation term (@Logic.eq term')))%signature at 1.
     rewrite fold_context_k_alt. unfold mapi.
@@ -586,16 +446,16 @@ Section Contexts.
   Qed.
     
   Lemma fold_context_k_tip f d : fold_context_k f [d] = [map_decl (f 0) d].
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma fold_context_k_length f Γ : length (fold_context_k f Γ) = length Γ.
-  Proof.
+  Proof using Type.
     unfold fold_context_k. now rewrite !List.rev_length mapi_length List.rev_length.
   Qed.
 
   Lemma fold_context_k_snoc0 f Γ d :
     fold_context_k f (d :: Γ) = fold_context_k f Γ ,, map_decl (f (length Γ)) d.
-  Proof.
+  Proof using Type.
     unfold fold_context_k.
     rewrite !rev_mapi !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
     unfold snoc. f_equal. now rewrite Nat.sub_0_r List.rev_length.
@@ -606,7 +466,7 @@ Section Contexts.
   Lemma fold_context_k_app f Γ Δ :
     fold_context_k f (Δ ++ Γ)
     = fold_context_k (fun k => f (length Γ + k)) Δ ++ fold_context_k f Γ.
-  Proof.
+  Proof using Type.
     unfold fold_context_k.
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
@@ -622,7 +482,7 @@ Section Contexts.
   Lemma mapi_context_In_spec (f : nat -> term -> term) (ctx : context term) :
     mapi_context_In ctx (fun n (x : context_decl term) (_ : In x ctx) => map_decl (f n) x) = 
     mapi_context f ctx.
-  Proof.
+  Proof using Type.
     remember (fun n (x : context_decl term) (_ : In x ctx) => map_decl (f n) x) as g.
     funelim (mapi_context_In ctx g) => //=; rewrite (H f0) ; trivial.
   Qed.
@@ -640,7 +500,7 @@ Section Contexts.
       cons (f xs' x ) xs'.
   
   Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
-  Proof.
+  Proof using Type.
     now apply_funelim (fold_context f Γ); intros; simpl; auto; f_equal.
   Qed.
   
@@ -648,14 +508,14 @@ Section Contexts.
   Lemma fold_context_In_spec (f : context term -> context_decl term -> context_decl term) (ctx : context term) :
     fold_context_In ctx (fun n (x : context_decl term) (_ : In x ctx) => f n x) = 
     fold_context f ctx.
-  Proof.
+  Proof using Type.
     remember (fun n (x : context_decl term) (_ : In x ctx) => f n x) as g.
     funelim (fold_context_In ctx g) => //=; rewrite (H f0); trivial.
   Qed.
 
   #[global]
   Instance fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
-  Proof.
+  Proof using Type.
     intros f f' Hff' x.
     funelim (fold_context f x); simpl; auto. simp fold_context.
     now rewrite (H f' Hff').
@@ -675,7 +535,7 @@ Section Contexts.
   Notation context term := (list (context_decl term)).
 
   Lemma fold_context_k_id (x : context term) : fold_context_k (fun i x => x) x = x.
-  Proof.
+  Proof using Type.
     rewrite fold_context_k_alt.
     rewrite /mapi. generalize 0.
     induction x; simpl; auto.
@@ -687,7 +547,7 @@ Section Contexts.
   Lemma fold_context_k_compose (f : nat -> term' -> term) (g : nat -> term'' -> term') Γ : 
     fold_context_k f (fold_context_k g Γ) = 
     fold_context_k (fun i => f i ∘ g i) Γ.
-  Proof.
+  Proof using Type.
     rewrite !fold_context_k_alt mapi_mapi.
     apply mapi_ext => i d.
     rewrite compose_map_decl. apply map_decl_ext => t.
@@ -697,7 +557,7 @@ Section Contexts.
   Lemma fold_context_k_ext (f g : nat -> term' -> term) Γ :
     f =2 g ->
     fold_context_k f Γ = fold_context_k g Γ.
-  Proof.
+  Proof using Type.
     intros hfg.
     induction Γ; simpl; auto; rewrite !fold_context_k_snoc0.
     simpl. rewrite IHΓ. f_equal. apply map_decl_ext.
@@ -706,19 +566,19 @@ Section Contexts.
 
   #[global] Instance fold_context_k_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) 
     (@fold_context_k term' term).
-  Proof.
+  Proof using Type.
     intros f g Hfg x y <-. now apply fold_context_k_ext.
   Qed.
 
   Lemma alli_fold_context_k_prop (f : nat -> context_decl term -> bool) (g : nat -> term' -> term) ctx : 
     alli f 0 (fold_context_k g ctx) =
     alli (fun i x => f i (map_decl (g (Nat.pred #|ctx| - i)) x)) 0 ctx.
-  Proof.
+  Proof using Type.
     now rewrite fold_context_k_alt /mapi alli_mapi.
   Qed.
 
   Lemma test_decl_map_decl f g x : (@test_decl term) f (map_decl g x) = @test_decl term (f ∘ g) x.
-  Proof.
+  Proof using Type.
     rewrite /test_decl /map_decl /=.
     f_equal. rewrite /option_default.
     destruct (decl_body x) => //.
@@ -726,7 +586,7 @@ Section Contexts.
 
   Lemma map_fold_context_k (f : term' -> term) (g : nat -> term'' -> term') ctx : 
     map (map_decl f) (fold_context_k g ctx) = fold_context_k (fun i => f ∘ g i) ctx.
-  Proof.
+  Proof using Type.
     rewrite !fold_context_k_alt map_mapi. 
     apply mapi_ext => i d. now rewrite compose_map_decl.
   Qed.
@@ -734,32 +594,32 @@ Section Contexts.
   Lemma map_context_mapi_context (f : term' -> term) (g : nat -> term'' -> term') (ctx : list (BasicAst.context_decl term'')) :
     map_context f (mapi_context g ctx) = 
     mapi_context (fun i => f ∘ g i) ctx.
-  Proof.
+  Proof using Type.
     rewrite !mapi_context_fold. now unfold map_context; rewrite map_fold_context_k.
   Qed.
   
   Lemma mapi_context_map (f : nat -> term' -> term) (g : context_decl term'' -> context_decl term') ctx :
     mapi_context f (map g ctx) = mapi (fun i => map_decl (f (Nat.pred #|ctx| - i)) ∘ g) ctx.
-  Proof.
+  Proof using Type.
     rewrite mapi_context_fold fold_context_k_alt mapi_map. now len.
   Qed.
    
   Lemma map_context_map (f : term' -> term) (g : context_decl term'' -> context_decl term') ctx :
     map_context f (map g ctx) = map (map_decl f ∘ g) ctx.
-  Proof.
+  Proof using Type.
     induction ctx; simpl; f_equal; auto.
   Qed.
 
   Lemma map_map_context (f : context_decl term' -> term) (g : term'' -> term') ctx :
     map f (map_context g ctx) = map (f ∘ map_decl g) ctx.
-  Proof.
+  Proof using Type.
     now rewrite /map_context map_map_compose.
   Qed.
 
   Lemma fold_context_k_map (f : nat -> term' -> term) (g : term'' -> term') Γ : 
     fold_context_k f (map_context g Γ) = 
     fold_context_k (fun k => f k ∘ g) Γ.
-  Proof.
+  Proof using Type.
     rewrite !fold_context_k_alt mapi_map.
     apply mapi_ext => n d //. len.
     now rewrite compose_map_decl.
@@ -768,7 +628,7 @@ Section Contexts.
   Lemma fold_context_k_map_comm (f : nat -> term -> term) (g : term -> term) Γ : 
     (forall i x, f i (g x) = g (f i x)) ->
     fold_context_k f (map_context g Γ) = map_context g (fold_context_k f Γ).
-  Proof.
+  Proof using Type.
     intros Hfg.
     rewrite !fold_context_k_alt mapi_map.
     rewrite /map_context map_mapi.
@@ -782,37 +642,37 @@ Section Contexts.
   Lemma mapi_context_map_context (f : nat -> term' -> term) (g : term'' -> term') ctx :
     mapi_context f (map_context g ctx) = 
     mapi_context (fun i => f i ∘ g) ctx.
-  Proof.
+  Proof using Type.
     now rewrite !mapi_context_fold fold_context_k_map.
   Qed.
 
   Lemma map_mapi_context (f : context_decl term' -> term) (g : nat -> term'' -> term') ctx :
     map f (mapi_context g ctx) = mapi (fun i => f ∘ map_decl (g (Nat.pred #|ctx| - i))) ctx.
-  Proof.
+  Proof using Type.
     now rewrite mapi_context_fold fold_context_k_alt map_mapi.
   Qed.
 
   Lemma map_context_id (ctx : context term) : map_context id ctx = ctx.
-  Proof.
+  Proof using Type.
     unfold map_context.
     now rewrite map_decl_id map_id.
   Qed.
     
   Lemma forget_types_length (ctx : list (context_decl term)) :
     #|forget_types ctx| = #|ctx|.
-  Proof.
+  Proof using Type.
     now rewrite /forget_types map_length.
   Qed.
 
   Lemma map_decl_name_fold_context_k (f : nat -> term' -> term) ctx : 
     map decl_name (fold_context_k f ctx) = map decl_name ctx.
-  Proof.
+  Proof using Type.
     now rewrite fold_context_k_alt map_mapi /= mapi_cst_map.
   Qed.
 
   Lemma forget_types_fold_context_k (f : nat -> term' -> term) ctx : 
     forget_types (fold_context_k f ctx) = forget_types ctx.
-  Proof.
+  Proof using Type.
     now rewrite /forget_types map_decl_name_fold_context_k.
   Qed.
 
@@ -825,7 +685,7 @@ Section Contexts.
       ondecl Q d ->
       P' Γ Δ d d') ->
     All2_fold P' Γ Δ.
-  Proof.
+  Proof using Type.
     intros onc cr Hcr.
     induction cr; depelim onc; constructor; intuition eauto.
   Qed.
@@ -834,7 +694,7 @@ Section Contexts.
     All2_fold (fun Γ Δ d d' =>
       P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ 
     <~> All2_fold P (mapi_context f Γ) (mapi_context g Δ).
-  Proof.
+  Proof using Type.
     split.
     - induction 1; simpl; constructor; intuition auto;
       now rewrite <-(All2_fold_length X).
@@ -848,7 +708,7 @@ Section Contexts.
     All2_fold (fun Γ Δ d d' =>
       P (map_context f Γ) (map_context g Δ) (map_decl f d) (map_decl g d')) Γ Δ <~>
     All2_fold P (map_context f Γ) (map_context g Δ).
-  Proof.
+  Proof using Type.
     split.
     - induction 1; simpl; constructor; intuition auto;
       now rewrite <-(All2_fold_length X).
@@ -859,7 +719,7 @@ Section Contexts.
   Lemma All2_fold_cst_map {P : context_decl term -> context_decl term -> Type} {Γ Δ : context term} {f g} : 
     All2_fold (fun _ _ d d' => P (f d) (g d')) Γ Δ <~>
     All2_fold (fun _ _ => P) (map f Γ) (map g Δ).
-  Proof.
+  Proof using Type.
     split.
     - induction 1; simpl; constructor; intuition auto;
       now rewrite <-(All2_fold_length X).

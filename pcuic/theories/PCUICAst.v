@@ -22,7 +22,7 @@ Ltac pcuicfo_gen tac :=
 Tactic Notation "pcuicfo" := pcuicfo_gen auto.
 Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
 
-(* This allows not relying on lemma names getting a length equality out of some type. *)
+(* This allows not relying on lemma names getting a length ws_cumul_pb out of some type. *)
 Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
 
 (** Note the use of a global reference to avoid capture. *)
@@ -56,19 +56,19 @@ Section map_predicate.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_pcontext (p : predicate term) :
     pcontextf (pcontext p) = pcontext (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_puinst (p : predicate term) :
     uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
 End map_predicate.
 
@@ -87,19 +87,19 @@ Section map_predicate_k.
 
   Lemma map_k_pparams k (p : predicate term) :
     map (f k) (pparams p) = pparams (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_preturn k (p : predicate term) :
     f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
     (pcontext p) = pcontext (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
     (pred : predicate term) :=
@@ -159,11 +159,11 @@ Section map_branch.
 
   Lemma map_bbody (b : branch term) :
     f (bbody b) = bbody (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_bcontext (b : branch term) :
     g (bcontext b) = bcontext (map_branch b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch.
 
 Definition map_branches {term B} (f : term -> B) h l := List.map (map_branch f h) l.
@@ -178,11 +178,11 @@ Section map_branch_k.
 
   Lemma map_k_bbody k (b : branch term) :
     f (#|b.(bcontext)| + k) (bbody b) = bbody (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   
   Lemma map_k_bcontext k (b : branch term) :
     g (bcontext b) = bcontext (map_branch_k k b).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 End map_branch_k.
 
 Notation map_branches_k f h k brs :=
@@ -206,9 +206,9 @@ Inductive term :=
 | tCase (indn : case_info) (p : predicate term) (c : term) (brs : list (branch term))
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 (** We use faithful models of primitive type values in PCUIC *)
-| tPrim (prim : prim_val term).
+(* | tPrim (prim : prim_val term). *)
 
 Derive NoConfusion for term.
 
@@ -231,6 +231,9 @@ Definition isLambda t :=
   | tLambda _ _ _ => true
   | _ => false
   end.
+
+Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
+Proof. destruct t => //; eauto. Qed.
 
 (** ** Entries
 
@@ -484,7 +487,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
-  | tPrim _ => c
+  (* | tPrim _ => c *)
   end.
 
 (** Tests that the term is closed over [k] universe variables *)
@@ -531,19 +534,49 @@ Module PCUICTerm <: Term.
   Definition subst_instance_constr := subst_instance.
 End PCUICTerm.
 
+(* These functors derive the notion of local context and lift substitution, term lifting, 
+  the closed predicate to them. *)                 
+Module PCUICEnvironment := Environment PCUICTerm.
+Export PCUICEnvironment.
+(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+  
+(** Decompose an arity into a context and a sort *)
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+(** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Module PCUICTermUtils <: TermUtils PCUICTerm PCUICEnvironment.
+
+Definition destArity := destArity.
+Definition inds := inds.
+
+End PCUICTermUtils.
+
+
 Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
                  unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
                  unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
                  unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *;
                  unfold PCUICTerm.lift in *; unfold PCUICTerm.subst in *;
                  unfold PCUICTerm.closedn in *; unfold PCUICTerm.noccur_between in *;
-                 unfold PCUICTerm.subst_instance_constr in *.
-                 
-(* These functors derive the notion of local context and lift substitution, term lifting, 
-  the closed predicate to them. *)                 
-Module PCUICEnvironment := Environment PCUICTerm.
-Export PCUICEnvironment.
-(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+                 unfold PCUICTerm.subst_instance_constr in *;
+                 unfold PCUICTermUtils.destArity in *; unfold PCUICTermUtils.inds in *.
+
 
 Lemma context_assumptions_mapi_context f (ctx : context) : 
   context_assumptions (mapi_context f ctx) = context_assumptions ctx.
@@ -553,35 +586,11 @@ Qed.
 #[global]
 Hint Rewrite context_assumptions_mapi_context : len.
 
-Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
+Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment PCUICTermUtils.
 (** Included in PCUICTyping only *)
 
-Definition lookup_minductive Σ mind :=
-  match lookup_env Σ mind with
-  | Some (InductiveDecl decl) => Some decl
-  | _ => None
-  end.
+Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
 
-Definition lookup_inductive Σ ind :=
-  match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl => Some (mdecl, idecl)
-    | None => None
-    end
-  | None => None
-  end.
-
-Definition lookup_constructor Σ ind k :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => 
-    match nth_error idecl.(ind_ctors) k with
-    | Some cdecl => Some (mdecl, idecl, cdecl)
-    | None => None
-    end
-  | _ => None
-  end.
-  
 Global Instance context_reflect`(ReflectEq term) : 
   ReflectEq (list (BasicAst.context_decl term)) := _.
 
@@ -611,7 +620,7 @@ Definition eqb_predicate_gen (eqb_univ_instance : Instance.t -> Instance.t -> bo
   forallb2 eqdecl p.(pcontext) p'.(pcontext) &&
   eqterm p.(preturn) p'.(preturn).
 
-(** Syntactic equality *)
+(** Syntactic ws_cumul_pb *)
 
 Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term) :=
   eqb_predicate_gen eqb (eqb_context_decl eqterm) eqterm p p'.
@@ -1299,3 +1308,13 @@ Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
 Derive NoConfusion for global_decl.
+
+Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
+  PCUICTerm
+  PCUICEnvironment
+  PCUICTermUtils
+  PCUICEnvTyping
+  PCUICConversion
+  PCUICLookup
+.
+Include PCUICGlobalMaps.

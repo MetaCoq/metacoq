@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-SED=`which gsed || which sed`
-
 shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
 echo "Cleaning result of extraction"
 
-files=`cat ../template-coq/_PluginProject ../checker/_PluginProject.in | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
+files=`cat ../template-coq/_PluginProject ../checker/_PluginProject.in | grep "^[^#].*mli\?$" | sed -e s/gen-src/src/`
 
 cd src
 # Move extracted modules to build the certicoq compiler plugin
@@ -14,8 +12,12 @@ cd src
 for i in *.ml*
 do
   newi=`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
-  echo "Moving " $i "to" $newi;
-  mv $i $newi;
+  if [ $i != $newi ]
+  then
+      echo "Moving " $i "to" $newi;
+      mv $i tmp;
+      mv tmp $newi;
+  fi
 done
 cd ..
 

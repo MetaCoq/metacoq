@@ -83,9 +83,9 @@ Print eo_from_syntax.
 
 Local Notation Nat_module := (MPfile ["Datatypes"; "Init"; "Coq"], "nat").
 
-MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
-   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
-      (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 0 nil :: nil) :: nil)).
+MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Kernames.mkInd Nat_module 0) 1 nil)
+   (Ast.tApp (Ast.tConstruct (Kernames.mkInd Nat_module 0) 1 nil)
+      (Ast.tConstruct (Kernames.mkInd Nat_module 0) 0 nil :: nil) :: nil)).
 
 MetaCoq Quote Recursively Definition plus_syntax := plus.
 
@@ -168,7 +168,7 @@ Definition mut_list_i : mutual_inductive_entry :=
 
 
 MetaCoq Unquote Inductive mut_list_i.
-
+(* Print demoList. *)
 (** Records *)
 
 Definition one_pt_i : one_inductive_entry :=
@@ -187,7 +187,7 @@ Definition mut_pt_i : mutual_inductive_entry :=
   mind_entry_params := [{| decl_name := bnamed "A"; decl_body := None;
                          decl_type := (tSort Universe.type0) |}];
   mind_entry_inds := [one_pt_i];
-  mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
+  mind_entry_universes := Monomorphic_entry ContextSet.empty;
   mind_entry_template := false;
   mind_entry_variance := None;
   mind_entry_private := None;
@@ -370,7 +370,7 @@ Inductive T : Type :=
   | toto : Type -> T.
 MetaCoq Quote Recursively Definition TT := T.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
 MetaCoq Unquote Definition t' := (tSort fresh_universe).
 MetaCoq Unquote Definition myProp := (tSort (Universe.lProp)).

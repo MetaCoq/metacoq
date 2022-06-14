@@ -1,20 +1,25 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
-From MetaCoq.PCUIC Require Import PCUICAstUtils.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+
 From MetaCoq.Erasure Require Import Erasure.
+
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils config.
 Import MCMonadNotation.
-
+Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
-#[local] Existing Instance extraction_checker_flags.
+#[local] Existing Instance config.extraction_checker_flags.
 
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
+Definition test_fast (p : Ast.Env.program) : string :=
+  erase_fast_and_print_template_program p.
+  
 MetaCoq Quote Recursively Definition zero := 0.
 
 Definition zerocst := Eval lazy in test zero.
@@ -28,7 +33,7 @@ Definition exintrotest := Eval lazy in test exintro.
 Definition idnat := ((fun (X : Set) (x : X) => x) nat).
 
 MetaCoq Quote Recursively Definition idnatc := idnat.
-Definition test_idnat := Eval lazy in test idnatc.
+Time Definition test_idnat := Eval lazy in test idnatc.
 
 (** Check that optimization of singleton pattern-matchings work *)
 Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
@@ -39,6 +44,11 @@ Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
 Definition erase {A} (a : A) : TemplateMonad unit :=
   aq <- tmQuoteRec a ;;  
   s <- tmEval lazy (erase_and_print_template_program aq) ;;
+  tmMsg s.
+
+Definition erase_fast {A} (a : A) : TemplateMonad unit :=
+  aq <- tmQuoteRec a ;;  
+  s <- tmEval lazy (erase_fast_and_print_template_program aq) ;;
   tmMsg s.
 
 MetaCoq Run (erase 0).
@@ -56,7 +66,11 @@ Definition v01 : Vector.t nat 2 :=
 Definition v23 : Vector.t nat 2 :=
   (Vector.cons nat 2 1 (Vector.cons nat 3 0 (Vector.nil nat))).
 Definition vplus0123 := (vplus v01 v23).
-MetaCoq Run (tmEval hnf vplus0123 >>= erase).
+
+Set MetaCoq Timing.
+
+Time MetaCoq Run (tmEval hnf vplus0123 >>= erase).
+Time MetaCoq Run (tmEval hnf vplus0123 >>= erase_fast).
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=
@@ -305,10 +319,9 @@ End HetList.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Arith.Peano_dec.
-Require Import Arith.
+Require Import Arith Init.Wf.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
-  Next Obligation.  apply lt_wf. Defined.
 Print Assumptions provedCopy.
 MetaCoq Quote Recursively Definition pCopy := provedCopy. (* program *)
 
@@ -320,9 +333,9 @@ MetaCoq Quote Recursively Definition cbv_provedCopyx :=
 Definition ans_provedCopyx :=
   Eval lazy in (test cbv_provedCopyx).
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
-(* We don't run those every time as they are really expensive *)
-Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
-Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
+Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
+(* We don't run this one every time as it is really expensive *)
+(*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.

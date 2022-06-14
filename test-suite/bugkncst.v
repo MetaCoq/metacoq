@@ -13,13 +13,9 @@ Function Plus1 (n: nat) {measure id n} : nat :=
 Defined.
 
 Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Require Import MetaCoq.Template.Loader.
 Require Import MetaCoq.Template.All.
-
-Unset Template Cast Propositions.
 
 From MetaCoq.Template Require Import Pretty.
 (* Use template-coq to make a [program] from function defined above *)
@@ -43,7 +39,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
         | tLambda _ ty t => pocc_term n t || pocc_term n ty
         | tLetIn _ dfn ty t => pocc_term n dfn || pocc_term n t || pocc_term n ty
         | tApp fn args => pocc_term n fn || fold_left orb (map (pocc_term n) args) false
-        | tConst nm _ => if kername_eq_dec str nm then true else false
+        | tConst nm _ => if eqb str nm then true else false
         | tCase _ ty mch brs =>
           existsb (pocc_term n) (pparams ty) || pocc_term n (preturn ty) || 
           pocc_term n mch ||
@@ -57,9 +53,9 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
   (** does [tConst str] occur anywhere in a program? **)
 
 Definition bound_global_decl (d : kername * global_decl) : bool :=
-  if kername_eq_dec str (fst d) then true else false.
+  if eq_kername str (fst d) then true else false.
 
-Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).
+Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).(declarations).
 
 Definition pocc_global_decl (d : kername * global_decl) : bool :=
 match snd d with
@@ -68,11 +64,11 @@ match snd d with
 | InductiveDecl _ => false
 end.
 
-Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).
+Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).(declarations).
 
 End occ_term_Sec.
 
-Require Import List String. Import ListNotations. Open Scope string_scope.
+Require Import List. Import ListNotations. Open Scope bs_scope.
 (* MetaCoq Test Unquote (tConst (MPfile ["Nat"; "PeanoNat"; "Arith"; "Coq"], "pred") []) . *)
 
 Eval vm_compute in (eq_refl : pocc_program (MPfile ["Nat"; "PeanoNat"; "Arith"; "Coq"], "pred") p_Plus1 = false).

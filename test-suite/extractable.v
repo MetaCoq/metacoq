@@ -5,7 +5,8 @@ From MetaCoq.Template Require Import
 From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
+Import MCMonadNotation.
 
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
    (only parsing).
@@ -23,7 +24,7 @@ MetaCoq Run
             (fun t => tmPrint t)).
 
 MetaCoq Run
-    (tmBind (tmDefinition "two" None <% 1 + 1 %>)
+    (tmBind (tmDefinition "two"%bs None <% 1 + 1 %>)
             (fun kn => tmPrint (Ast.tConst kn nil))).
 
 MetaCoq Run
@@ -48,18 +49,10 @@ MetaCoq Run
     (tmBind (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat"))
             (fun mi => tmMsg (string_of_nat (length mi.(ind_bodies))))).
 
-Definition empty_constraints : ConstraintSet.t_.
-  econstructor.
-  Unshelve.
-  2:{ exact nil. }
-  constructor.
-Defined.
-
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 
-
 MetaCoq Run
-    (tmInductive {| mind_entry_record := None
+    (tmInductive true {| mind_entry_record := None
                   ; mind_entry_finite := Finite
                   ; mind_entry_params := nil
                   ; mind_entry_inds :=
@@ -69,7 +62,7 @@ MetaCoq Run
                        ; mind_entry_lc := tProd nAnon <% bool %> (tRel 1) ::
                                           tProd nAnon <% string %> (tRel 1) :: nil
                        |} :: nil
-                  ; mind_entry_universes := Monomorphic_entry (LevelSet.empty, empty_constraints)
+                  ; mind_entry_universes := Monomorphic_entry ContextSet.empty
                   ; mind_entry_template := false
                   ; mind_entry_variance := None
                   ; mind_entry_private := None |}).

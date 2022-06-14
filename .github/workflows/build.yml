@@ -12,8 +12,8 @@ jobs:
           - '8.15'
         ocaml_version:
           - '4.07-flambda'
-          - '4.12-flambda'
-        target: [ local, opam ]
+          - '4.14-flambda'
+        target: [ local, opam, quick ]
       fail-fast: true
 
     steps:

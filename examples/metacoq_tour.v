@@ -1,10 +1,9 @@
-From Coq Require Import String.
 From MetaCoq.Template Require config utils All.
 From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICReduction PCUICCumulativity PCUICTyping PCUICSafeLemmata.
 
 Import MCMonadNotation.
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 
 (** MetaCoq is: 
 
@@ -23,7 +22,9 @@ Print Ast.term.
 
 
 MetaCoq Quote Definition reifx := (fun x : nat => x).
-Print reifx.
+Definition foo := (fun x : nat => fun x : nat => x).
+MetaCoq Quote Definition reifx' := Eval compute in (fun x : nat => let y := x in fun x : nat => y).
+Print reifx'.
 MetaCoq Unquote Definition x := 
   (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
 
@@ -57,7 +58,7 @@ Check PCUICSR.subject_reduction.
 
 (** Verified conversion and type-checking *)
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 
@@ -76,15 +77,15 @@ From MetaCoq.Examples Require Import metacoq_tour_prelude.
 Check check_inh.
 
 (** We construct a proof of typing entirely within Coq, calling the typechecker to produce the derivation *)
-Lemma identity_typing (u := Universe.make univ): 
+(* Lemma identity_typing (u := Universe.make univ): 
   inh gctx_wf_env [] (tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
 Proof.
   (* We construct a term *)
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
   (* Show that the empty context is well-formed  *)
-  assert (wfΓ : ∥ wf_local gctx_wf_env [] ∥) by do 2 constructor.
- fill_inh impl.
-Qed.
+  assert (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
+  fill_inh impl.
+Qed. *)
 
 (** The extracted typechecker also runs in OCaml *)
 (* FIXME: checker unusable in OCaml due to representation of universes *)
@@ -114,7 +115,7 @@ MetaCoq Erase singleton_elim.
 
 (** Conclusion: Status of MetaCoq 
 
-  - 1.0 expected by Christmas with correctness and completeness of the typechecker.
+  - Correctness and complete typechecker for (a large fragment of) Coq.
 
   - All metatheory proofs are finished. Compared to Coq's implementation:
   

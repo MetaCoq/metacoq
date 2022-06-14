@@ -35,10 +35,11 @@ Proof.
   induction h.
   - constructor.
   - simpl. unfold map_decl_anon. cbn. constructor. 1: assumption.
-    eexists. exact p.
+    apply infer_typing_sort_impl with id tu; intros Hty.
+    exact Hs.
   - simpl. unfold map_decl_anon. cbn. constructor.
     + assumption.
-    + eexists. exact p0.
+    + apply infer_typing_sort_impl with id tu; intros Hty. exact Hs.
     + assumption.
 Qed.
 
@@ -55,9 +56,11 @@ Proof.
 Qed.
 
 Lemma nl_wf_fixpoint Σ mfix :
-  wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+  wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ) (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
+  f_equal.
+  { rewrite forallb_map. eapply forallb_ext => x. cbn. destruct (dbody x) => //. }
   replace (map check_one_fix mfix) with (map check_one_fix (map (map_def_anon nl nl) mfix)) => //.
   * destruct map_option_out => //. destruct l => //.
     f_equal. rewrite /check_recursivity_kind.
@@ -80,9 +83,9 @@ Proof.
 Qed.
 
 Lemma nl_wf_cofixpoint Σ mfix :
-  wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+  wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ) (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_cofixpoint.  
+  unfold wf_cofixpoint, wf_cofixpoint_gen.  
   replace (map check_one_cofix mfix) with (map check_one_cofix (map (map_def_anon nl nl) mfix)) => //.
   * destruct map_option_out => //. destruct l => //.
     f_equal. rewrite /check_recursivity_kind.
@@ -115,9 +118,9 @@ Lemma nl_cumulSpec {cf:checker_flags} :
   Σ ;;; Γ |- A <=s B ->
   nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
 Proof.
-  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (le:=true)). 
-  eapply into_equality.
-  - eapply nl_cumul. eapply (equality_forget (le:=true)). 
+  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (pb:=Cumul)). 
+  eapply into_ws_cumul_pb.
+  - eapply nl_cumul. eapply (ws_cumul_pb_forget (pb:=Cumul)). 
   unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
   - eapply closed_ctx_on_free_vars. apply closed_nlctx. 
     rewrite is_closed_ctx_closed; eauto.

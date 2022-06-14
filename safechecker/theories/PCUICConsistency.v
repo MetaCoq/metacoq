@@ -6,7 +6,6 @@
    provided term to build an inhabitant and then canonicity to show
    that this is a contradiction. *)
 
-From Coq Require Import Ascii String.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
@@ -23,15 +22,15 @@ From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICSN.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+From MetaCoq.Template Require Import config utils EnvMap.
+From MetaCoq.SafeChecker Require Import PCUICWfEnv PCUICSafeReduce PCUICWfEnvImpl.
 
 Local Opaque hnf.
 
 Fixpoint string_repeat c (n : nat) : string :=
   match n with
   | 0 => ""
-  | S n => String c (string_repeat c n)
+  | S n => String.String c (string_repeat c n)
   end.
 
 Lemma string_repeat_length c n :
@@ -40,7 +39,7 @@ Proof.
   induction n; cbn; auto with arith.
 Qed.
 
-Definition max_name_length (Σ : global_env) : nat :=
+Definition max_name_length (Σ : global_declarations) : nat :=
   fold_right max 0 (map (fun '(kn, _) => String.length (string_of_kername kn)) Σ).
 
 Lemma max_name_length_ge Σ :
@@ -55,12 +54,12 @@ Proof.
 Qed.
 
 Definition make_fresh_name (Σ : global_env) : kername :=
-  (MPfile [], string_repeat "a"%char (S (max_name_length Σ))).
+  (MPfile [], string_repeat "a"%byte (S (max_name_length Σ.(declarations)))).
 
 Lemma make_fresh_name_fresh Σ :
-  fresh_global (make_fresh_name Σ) Σ.
+  fresh_global (make_fresh_name Σ) Σ.(declarations).
 Proof.
-  pose proof (max_name_length_ge Σ) as all.
+  pose proof (max_name_length_ge Σ.(declarations)) as all.
   eapply Forall_impl; eauto.
   cbn.
   intros (kn&decl) le.
@@ -89,7 +88,7 @@ Definition False_mib : mutual_inductive_body :=
      ind_npars := 0;
      ind_params := [];
      ind_bodies := [False_oib];
-     ind_universes := Monomorphic_ctx ContextSet.empty;
+     ind_universes := Monomorphic_ctx;
      ind_variance := None |}.
 
 Definition axiom_free Σ :=
@@ -116,32 +115,36 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
-  wf_ext Σ ->
-  axiom_free Σ ->
+Definition global_env_add (Σ : global_env) d :=
+  {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
+
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
+  (_Σ :referenced_impl_ext) t :
+  axiom_free _Σ ->
   (* t : forall (P : Prop), P *)
-  Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
+  _Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
   False.
 Proof.
-  intros wfΣ axfree cons.
-  set (Σext := ((make_fresh_name Σ, InductiveDecl False_mib) :: Σ.1, Σ.2)).
+  intros axfree cons.
+  set (Σ := referenced_impl_env_ext _Σ); set (wfΣ := referenced_impl_ext_wf _Σ).
+  set (Σext := (global_env_add Σ.1 (make_fresh_name Σ, InductiveDecl False_mib), Σ.2)).
+  destruct wfΣ as [wfΣ].
   assert (wf': wf_ext Σext).
-  { constructor; [constructor|].
-    - destruct wfΣ; auto.
+  { constructor; [constructor|]; auto; try apply wfΣ.
+    constructor; auto.
+    - apply wfΣ.
     - apply make_fresh_name_fresh.
-    - red.
-      cbn.
-      split.
-      { now intros ? ?%LevelSet.empty_spec. }
-      split.
-      { now intros ? ?%ConstraintSet.empty_spec. }
-      split; auto.
-      destruct wfΣ as (?&(?&?&?&[val sat])).
-      exists val.
-      intros l isin.
-      apply sat; auto.
-      apply ConstraintSet.union_spec.
-      apply ConstraintSet.union_spec in isin as [?%ConstraintSet.empty_spec|]; auto.
+    - split; first now intros ? ?%LevelSet.empty_spec.
+      split; first now intros ? ?%ConstraintSet.empty_spec.
+      destruct wfΣ as (?&(?&?&[val sat]&monoval)); split.
+      1: { 
+        exists val.
+        intros l isin.
+        apply sat; auto.
+        apply ConstraintSet.union_spec.
+        apply ConstraintSet.union_spec in isin as [?%ConstraintSet.empty_spec|]; auto.
+      }
+      intros v hv; exists v; split; [intros ? []%CS.empty_spec| now intros ??].
     - hnf.
       constructor.
       + constructor.
@@ -157,12 +160,14 @@ Proof.
       + constructor.
       + reflexivity.
       + reflexivity.
-    - destruct wfΣ; auto. }
+  }
   eapply (env_prop_typing weakening_env) in cons; auto.
-  3: exists [(make_fresh_name Σ, InductiveDecl False_mib)]; reflexivity.
+  2:instantiate (1:=Σext.1).
+  3:{ split; auto; cbn. split; [lsets|csets].
+      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
   2: now destruct wf'.
-  
-  set (Σ' := _ ++ _) in cons.
+
+  set (Σ' := Σext.1) in cons.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
   { apply validity in cons as typ_prod; auto.
@@ -177,10 +182,12 @@ Proof.
       auto.
     - cbn.
       auto. }
-(*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
-  pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  pose proof (hnf_sound (sq wf') (h := wt)) as [r].
-  pose proof (hnf_complete (sq wf') (h := wt)) as [w].
+  pose proof (iswelltyped typ_false) as wt.
+  set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
+  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
+  1: cbn; intros; subst; exact wt.
+  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
+  1 : cbn; intros; subst; exact wt.
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

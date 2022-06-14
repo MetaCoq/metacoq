@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)
@@ -13,15 +14,6 @@ Set Default Goal Selector "!".
 Coercion ci_ind : case_info >-> inductive.
 
 (** * Functions related to the "compact" case representation *)
-
-(** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
 
 Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdecl).
 
@@ -112,6 +104,14 @@ Lemma cstr_branch_context_length ind mdecl cdecl :
 Proof. rewrite /cstr_branch_context. now len. Qed.
 #[global]
 Hint Rewrite cstr_branch_context_length : len.
+
+Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
+  context_assumptions (cstr_branch_context ci mdecl cdecl) =
+  context_assumptions (cstr_args cdecl).
+Proof.
+  rewrite /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
+  now do 2 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context.
+Qed.
 
 Definition pre_case_branch_context_gen ind mdecl cdecl params puinst : context :=
   inst_case_context params puinst (cstr_branch_context ind mdecl cdecl).
@@ -209,10 +209,10 @@ Definition wf_predicateb mdecl idecl (p : predicate term) : bool :=
   && forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name))
     (forget_types p.(pcontext)) (decl :: idecl.(ind_indices)).
 
-Lemma wf_predicateP mdecl idecl p : reflect (wf_predicate mdecl idecl p) (wf_predicateb mdecl idecl p).
+Lemma wf_predicateP mdecl idecl p : reflectProp (wf_predicate mdecl idecl p) (wf_predicateb mdecl idecl p).
 Proof.
   rewrite /wf_predicate /wf_predicate_gen /wf_predicateb.
-  case: Reflect.eqb_spec => eqpars /= //.
+  case: ReflectEq.eqb_spec => eqpars /= //.
   * case: (forallb2P _ _ (forget_types (pcontext p)) (idecl_binder idecl :: ind_indices idecl)
       (fun na decl => eqb_annot_reflect na decl.(decl_name))); constructor => //.
     intros [_ Hi]; contradiction.
@@ -394,11 +394,6 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
 
 Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
 Proof.
@@ -419,3 +414,30 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Hint Rewrite subst_instance_length 
   fix_context_length fix_subst_length cofix_subst_length : len.
 
+Definition is_constructor n ts :=
+  match List.nth_error ts n with
+  | Some a => isConstruct_app a
+  | None => false
+  end.
+  
+Lemma is_constructor_app_ge n l l' : is_constructor n l -> is_constructor n (l ++ l').
+Proof.
+  unfold is_constructor. destruct nth_error eqn:Heq => //.
+  rewrite nth_error_app_lt ?Heq //; eauto using nth_error_Some_length.
+Qed.
+
+Lemma is_constructor_prefix n args args' : 
+  ~~ is_constructor n (args ++ args') ->
+  ~~ is_constructor n args.
+Proof.
+  rewrite /is_constructor.
+  elim: nth_error_spec.
+  - rewrite app_length.
+    move=> i hi harg. elim: nth_error_spec => //.
+    move=> i' hi' hrarg'.
+    rewrite nth_error_app_lt in hi; eauto. congruence.
+  - rewrite app_length. move=> ge _.
+    elim: nth_error_spec; intros; try lia. auto.
+Qed.
+    
+  

@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnvConv.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -9,26 +9,18 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(** Preliminary lemmata missing from MetaCoq *)
+(** Preliminary lemmas missing from MetaCoq *)
 Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
-  leq_universe Σ s1 s2 -> is_allowed_elimination Σ s2 allowed -> is_allowed_elimination Σ s1 allowed.
+  leq_universe Σ s1 s2 -> is_allowed_elimination Σ allowed s2 -> is_allowed_elimination Σ allowed s1.
 Proof.
-  intros le elim.
-  unfold is_allowed_elimination in elim |- *.
-  red in le.
-  destruct check_univs ; auto.
-  unfold is_allowed_elimination0 in elim |- *.
-  intros v satisf.
-  specialize (le v satisf).
-  specialize (elim v satisf).
-  destruct allowed ; auto.
-  all: destruct (⟦s1⟧_v)%u.
-  all: destruct (⟦s2⟧_v)%u.
-  all: auto.
-  all: red in le ; auto.
-  rewrite Z.sub_0_r in le.
-  apply Nat2Z.inj_le in le.
-  destruct le ; auto.
+  destruct allowed, s2; cbnr; trivial;
+  destruct s1; cbnr; intros H1 H2; trivial; try now destruct H1.
+  { now left. }
+  destruct H2 as [|H2]; [now left|right].
+  unfold_univ_rel.
+  specialize (H1 v Hv); specialize (H2 v Hv).
+  cbn in H2.
+  lia.
 Qed.
 
 Lemma ctx_inst_length {ty Σ Γ args Δ} :
@@ -62,7 +54,7 @@ Proof.
     constructor; auto.
 Qed.
 
-(** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
+(** Lemmas to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
 
 Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) ->
@@ -70,7 +62,7 @@ Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
 Proof.
   intros (?&?&?).
   econstructor ; tea.
-  now apply equality_forget_cumul.
+  now apply ws_cumul_pb_forget_cumul.
 Qed.
 
 Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
@@ -79,7 +71,7 @@ Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
   {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
 Proof.
   intros tyt (T'&?&Cumt).
-  apply equality_Sort_r_inv in Cumt as (?&?&?) ; auto.
+  apply ws_cumul_pb_Sort_r_inv in Cumt as (?&?&?) ; auto.
   eexists.
   split ; tea.
   econstructor ; tea.
@@ -93,7 +85,7 @@ Lemma conv_infer_prod `{checker_flags} Σ (wfΣ : wf Σ) Γ t na A B :
     eq_binder_annot na na', Σ ;;; Γ ⊢ A' = A & Σ ;;; Γ ,, vass na A ⊢ B' ≤ B].
 Proof.
   intros tyt (T'&?&Cumt).
-  apply equality_Prod_r_inv in Cumt as (?&?&?&[]) ; auto.
+  apply ws_cumul_pb_Prod_r_inv in Cumt as (?&?&?&[]) ; auto.
   do 3 eexists. split ; tea.
   econstructor ; tea.
   now apply closed_red_red.
@@ -104,10 +96,10 @@ Lemma conv_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ mkApps (tInd ind ui) args)) ->
   ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
       R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
-      & equality_terms Σ Γ args' args].
+      & ws_cumul_pb_terms Σ Γ args' args].
 Proof.
   intros tyt (T'&?&Cumt).
-  apply equality_Ind_r_inv in Cumt as (?&?&[]) ; auto.
+  apply ws_cumul_pb_Ind_r_inv in Cumt as (?&?&[]) ; auto.
   do 2 eexists. split ; tea.
   econstructor ; tea.
   now apply closed_red_red.
@@ -128,30 +120,30 @@ Proof.
   - intros bdwfΓ.
     induction bdwfΓ.
     all: constructor ; auto.
-    + apply conv_infer_sort in p ; auto.
+    + apply conv_infer_sort in Hs ; auto.
       2: by destruct tu.
-      destruct p as (?&?&?).
+      destruct Hs as (?&?&?).
       eexists.
       eassumption.
-    + apply conv_check in p ; auto.
-      apply conv_infer_sort in p0 ; auto.
+    + apply conv_check in Hc ; auto.
+      apply conv_infer_sort in Hs ; auto.
       2: by destruct tu.
-      destruct p0 as (?&?&?).
+      destruct Hs as (?&?&?).
       1: eexists.
       all: eassumption.
-    + by apply conv_check in p.
+    + by apply conv_check in Hc.
       
   - intros.
     eexists.
     split.
-    2: by eapply typing_equality ; tea ; constructor.
+    2: by eapply typing_ws_cumul_pb ; tea ; constructor.
     constructor.
     eassumption.
     
   - intros.
     eexists.
     split.
-    2: by eapply typing_equality ; tea ; constructor.
+    2: by eapply typing_ws_cumul_pb ; tea ; constructor.
     constructor.
     assumption.
 
@@ -175,8 +167,8 @@ Proof.
     eexists.
     split.
     + econstructor. all: eassumption.
-    + apply equality_Prod ; auto.
-      eapply isType_equality_refl.
+    + apply ws_cumul_pb_Prod ; auto.
+      eapply isType_ws_cumul_pb_refl.
       by eexists ; eauto.
 
   - intros n t A u ? ? ? ? CumA ? Cumt ? (?&?&?).
@@ -187,7 +179,7 @@ Proof.
     split.
     + econstructor.
       all: eassumption.
-    + apply equality_LetIn_bo.
+    + apply ws_cumul_pb_LetIn_bo.
       eassumption.
 
   - intros t na A B u ? ? ? ? ? Cumt ? (?&?&?).
@@ -197,16 +189,16 @@ Proof.
     split.
     + econstructor ; eauto.
       econstructor ; eauto.
-      apply equality_forget_cumul.
+      apply ws_cumul_pb_forget_cumul.
       etransitivity ; tea.
-      now apply equality_eq_le.
-    + now eapply substitution_equality_vass.
+      now apply ws_cumul_pb_eq_le.
+    + now eapply substitution_ws_cumul_pb_vass.
   
   - intros.
     eexists.
     split.
     1: econstructor ; tea.
-    apply equality_refl.
+    apply ws_cumul_pb_refl.
     1: fvs.
     rewrite on_free_vars_subst_instance.
     now eapply closed_on_free_vars, declared_constant_closed_type.
@@ -215,7 +207,7 @@ Proof.
     eexists.
     split.
     1: econstructor ; tea.
-    apply equality_refl.
+    apply ws_cumul_pb_refl.
     1: fvs.
     rewrite on_free_vars_subst_instance.
     now eapply closed_on_free_vars, declared_inductive_closed_type.
@@ -224,11 +216,11 @@ Proof.
     eexists.
     split.
     1: econstructor ; tea.
-    apply equality_refl.
+    apply ws_cumul_pb_refl.
     1: fvs.
     now eapply closed_on_free_vars, declared_constructor_closed_type.
     
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? _ Hinst ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Hinst ty_c Cumc ? ? ? ty_br.
 
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
     apply conv_infer_ind in Cumc as (?&?&[]) ; auto.
@@ -242,13 +234,12 @@ Proof.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; tea.
-        1: intros ; by apply conv_check.
+        1: intros ??? [] ; by apply conv_check.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
-        erewrite PCUICDeclarationTyping.onNpars.
+        erewrite PCUICGlobalMaps.onNpars.
         2: eapply on_declared_minductive ; eauto.
-        rewrite (firstn_app_left _ 0).
-        1: by rewrite Nat.add_0_r ; destruct wfpred.
-        by apply app_nil_r.
+        rewrite firstn_app_left //.
+        now destruct wfpred.
       
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.
@@ -258,7 +249,7 @@ Proof.
       * move: (a) => /All2_length alen.
         rewrite -(firstn_skipn (ci_npar ci) x1) in a.
         eapply All2_app_inv in a as [].
-        1: now eapply All2_impl ; tea ; intros ; eapply equality_forget_conv.
+        1: now eapply All2_impl ; tea ; intros ; eapply ws_cumul_pb_forget_conv.
         rewrite -epar ; destruct wfpred as [->].
         apply ctx_inst_length in Hinst; tea.
         move: alen.
@@ -275,18 +266,18 @@ Proof.
         fold predctx in brctxty.
         fold ptm in brctxty.
         fold brctxty in Hbr.
-        destruct Hbr as (?&?&?Cumbody&?&?).
+        destruct Hbr as (?&(?&Cumbody)&?&?&?).
         apply conv_check in Cumbody ; auto.
         split ; auto.
         by apply All_local_app_rel.
 
-    + apply equality_mkApps ; auto.
-      * apply equality_it_mkLambda_or_LetIn.
-        -- apply context_equality_refl.
+    + apply ws_cumul_pb_mkApps ; auto.
+      * apply ws_cumul_pb_it_mkLambda_or_LetIn.
+        -- apply ws_cumul_ctx_pb_refl.
            unfold predctx.
            eapply wf_local_closed_context, wf_case_predicate_context ; eauto.
            eapply validity ; eassumption.
-        -- apply equality_refl.
+        -- apply ws_cumul_pb_refl.
            1: eapply wf_local_closed_context, wf_case_predicate_context ; eauto.
            1: eapply validity ; eassumption.
            eapply subject_is_open_term ; tea.
@@ -295,11 +286,11 @@ Proof.
            2: by apply skipn_all_app_eq ; rewrite <- epar ; destruct wfpred as [->].
            by apply All2_skipn.
         -- constructor ; auto.
-           eapply equality_refl.
+           eapply ws_cumul_pb_refl.
            1: apply wf_local_closed_context ; tea.
            eapply subject_is_open_term ; tea.
 
-  - intros ? c u mdecl idecl cdecl [] isdecl args ? ? ? Cumc ? ty.
+  - intros ? c u mdecl idecl cdecl pdecl isdecl args ? ? ? Cumc ?.
     apply conv_infer_ind in Cumc as (ui'&args'&[]) ; auto.
     eexists.
     split.
@@ -310,8 +301,8 @@ Proof.
       eapply All2_length.
       eassumption.
 
-    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args')
-        by (apply infering_ind_typing in i0 ; auto).
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) ui') args')
+        by (apply infering_ind_typing in i ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity in X1 as [].
@@ -325,7 +316,7 @@ Proof.
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
       change 0 with #|[] : context| at 2 3.
-      eapply PCUICConversion.substitution_equality_subst_conv.
+      eapply PCUICConversion.substitution_ws_cumul_pb_subst_conv.
       * eapply subslet_untyped_subslet, projection_subslet.
         4: eapply validity.
         all: eassumption.
@@ -334,25 +325,24 @@ Proof.
         all: eassumption.
       * constructor.
         2: by apply All2_rev.
-        eapply equality_refl ;
+        eapply ws_cumul_pb_refl ;
           [apply wf_local_closed_context |eapply subject_is_open_term] ; tea.
       * apply wf_local_closed_context.
         apply PCUICWeakeningTyp.weaken_wf_local ; auto.
         eapply wf_projection_context ; eauto.
       * cbn -[projection_context].
-        apply weaken_equality ; auto.
+        apply weaken_ws_cumul_pb ; auto.
         1: apply wf_local_closed_context ; auto.
-        change t with (i,t).2.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
-        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.
+        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)); eauto.
         apply isdecl.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.
     2:{
-      apply isType_equality_refl.
+      apply isType_ws_cumul_pb_refl.
       eapply nth_error_all in Alltypes as [? []] ; tea.
       eexists ; tea.
     }
@@ -369,7 +359,7 @@ Proof.
     eexists.
     split.
     2:{
-      apply isType_equality_refl.
+      apply isType_ws_cumul_pb_refl.
       eapply nth_error_all in Alltypes as [? []] ; tea.
       eexists ; tea.
     }
@@ -406,7 +396,7 @@ Lemma typing_checking `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ 
 Proof.
   move => /typing_infering [T' [? ?]].
   econstructor ; tea.
-  now apply equality_forget_cumul.
+  now apply ws_cumul_pb_forget_cumul.
 Qed.
 
 Lemma typing_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :
@@ -439,7 +429,7 @@ Lemma typing_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
   Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
   ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
       R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
-      & equality_terms Σ Γ args' args].
+      & ws_cumul_pb_terms Σ Γ args' args].
 Proof.
   intros.
   apply conv_infer_ind ; tea.

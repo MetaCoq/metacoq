@@ -1,15 +1,17 @@
 open Names
 open Datatypes
+open Kernames
 open BasicAst
 open Ast0
 open Ast0.Env
 open Tm_util
+open Caml_bytestring
 
 module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
-  type quoted_ident = char list
-  type quoted_int = int
+  type quoted_ident = Bytestring.String.t
+  type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
   type quoted_bool = bool
@@ -18,7 +20,7 @@ struct
   type quoted_relevance = BasicAst.relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
-  type quoted_kernel_name = BasicAst.kername
+  type quoted_kernel_name = Kernames.kername
   type quoted_inductive = inductive
   type quoted_proj = projection
   type quoted_global_reference = global_reference
@@ -49,17 +51,18 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
+  type quoted_global_declarations = global_declarations
   type quoted_global_env = global_env
   type quoted_program = program
 
-  let quote_ident id =
-    string_to_list (Id.to_string id)
+  let quote_string = bytestring_of_caml_string
+  let quote_ident id = quote_string (Id.to_string id)
 
   let quote_relevance = function
     | Sorts.Relevant -> BasicAst.Relevant
     | Sorts.Irrelevant -> BasicAst.Irrelevant
 
-  let quote_name = function
+  let quote_name : Names.Name.t -> BasicAst.name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
 
@@ -67,8 +70,7 @@ struct
     let {Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
     { BasicAst.binder_name = quote_name n; BasicAst.binder_relevance = quote_relevance relevance }
 
-  let quote_int i = i
-
+  let quote_int = Caml_nat.nat_of_caml_int
   let quote_bool x = x
 
   let quote_int63 x = x
@@ -82,25 +84,24 @@ struct
     else if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
-         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
+         | None -> Universes0.Level.Level (quote_string (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
     if Univ.Level.is_prop l then Coq_inl Universes0.PropLevel.Coq_lProp
     else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
     else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
-      Coq_inr (quote_nonprop_level l)
-    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lzero
-     * else let l' = match Univ.Level.var_index l with
-     *         | Some x -> Universes0.Level.Var (quote_int x)
-     *         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
-     *      in Coq_inr l' *)
-
+      try Coq_inr (quote_nonprop_level l)
+      with e -> assert false
+    
   let quote_universe s : Universes0.Universe.t =
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
-    | _ -> let univs =
-          List.map (fun (l,i) -> (quote_nonprop_level l, i > 0)) (Univ.Universe.repr s) in
-    Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
+    | _ -> 
+      let univs = List.map (fun (l,i) -> 
+          match quote_level l with
+          | Coq_inl lprop -> assert false
+          | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
+      Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -118,23 +119,23 @@ struct
     | Constr.VMcast -> VmCast
 
 
-  let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
+  let quote_dirpath (dp : DirPath.t) : Kernames.dirpath =
     let l = DirPath.repr dp in
     List.map quote_ident l
 
-  let rec quote_modpath (mp : ModPath.t) : BasicAst.modpath =
+  let rec quote_modpath (mp : ModPath.t) : Kernames.modpath =
     match mp with
     | MPfile dp -> MPfile (quote_dirpath dp)
     | MPbound mbid -> let (i, id, dp) = MBId.repr mbid in
       MPbound (quote_dirpath dp, quote_ident id, quote_int i)
     | MPdot (mp, id) -> MPdot (quote_modpath mp, quote_ident (Label.to_id id))
 
-  let quote_kn (kn : KerName.t) : BasicAst.kername =
+  let quote_kn (kn : KerName.t) : Kernames.kername =
     (quote_modpath (KerName.modpath kn),
      quote_ident (Label.to_id (KerName.label kn)))
 
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
-  let quote_proj ind p a = ((ind,p),a)
+  let quote_proj ind p a = { proj_ind = ind; proj_npars = p; proj_arg = a }
 
   let quote_constraint_type = function
     | Univ.Lt -> Universes0.ConstraintType.Le 1
@@ -154,12 +155,14 @@ struct
     | _ -> false
 
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
-    ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
+    try ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
+    with e -> assert false
 
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
     let arr = Univ.Instance.to_array i in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    CArray.map_to_list quote_nonprop_level arr
+    try CArray.map_to_list quote_nonprop_level arr
+    with e -> assert false
 
    (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
   let rec constraints_ (cs : Univ.univ_constraint list) : quoted_univ_constraint list =
@@ -170,9 +173,11 @@ struct
          (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
           (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
        then constraints_ cs'
-       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
          Univ.Level.is_prop l' then failwith "Unsatisfiable constraint (l <= Prop)"
-       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
+          Univ.Level.is_prop l then failwith "Unsatisfiable constraint (Prop = l')"
+        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
@@ -239,8 +244,8 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
-  let mkInt i = Coq_tInt i
-  let mkFloat f = Coq_tFloat f
+  (* let mkInt i = Coq_tInt i
+  let mkFloat f = Coq_tFloat f *)
 
   let rec seq f t =
     if f < t then
@@ -263,7 +268,7 @@ struct
       { dname = Array.get ns i ;
         dtype = Array.get ts i ;
         dbody = Array.get ds i ;
-        rarg = 0 } :: xs
+        rarg = Datatypes.O } :: xs
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in
@@ -281,30 +286,33 @@ struct
   let mkProj p c = Coq_tProj (p,c)
 
 
-  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
+  let mkMonomorphic_ctx () = Universes0.Monomorphic_ctx
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
-  let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
-    let ctr = List.map (fun (name, args, indices, ty, arity) -> 
+  let mk_one_inductive_body (id, indices, sort, ty, kel, ctrs, projs, relevance) =
+    let ctrs = List.map (fun (name, args, indices, ty, arity) -> 
       { cstr_name = name; 
         cstr_args = args;
         cstr_indices = indices;
         cstr_type = ty;
-        cstr_arity = arity }) ctr in
+        cstr_arity = arity }) ctrs in
+    let projs = List.map (fun (proj_name, proj_relevance, proj_type) -> 
+        { proj_name; proj_relevance; proj_type }) projs in
     { ind_name = id; ind_type = ty;
       ind_indices = indices;
       ind_sort = sort;
       ind_kelim = kel; 
-      ind_ctors = ctr;
-      ind_projs = proj; ind_relevance = relevance }
+      ind_ctors = ctrs;
+      ind_projs = projs; 
+      ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =
     {ind_finite = finite;
      ind_npars = npars; ind_params = params; ind_bodies = inds;
      ind_universes = uctx; ind_variance = variance}
 
-  let mk_constant_body ty tm uctx =
-    {cst_type = ty; cst_body = tm; cst_universes = uctx}
+  let mk_constant_body ty tm uctx rel =
+    {cst_type = ty; cst_body = tm; cst_universes = uctx; cst_relevance = rel}
 
   let mk_inductive_decl bdy = InductiveDecl bdy
 
@@ -314,6 +322,7 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
+  let mk_global_env universes declarations = { universes; declarations }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function

@@ -651,21 +651,21 @@
 <ellipse fill="#d2b48c" stroke="#d2b48c" cx="167" cy="-594" rx="48.9926" ry="18"/>
 <text text-anchor="middle" x="167" y="-590.3" font-family="Times,serif" font-size="14.00" fill="#000000">ELiftSubst</text>
 </g>
-<!-- erasure/ETyping -->
+<!-- erasure/EGlobalEnv -->
 <g id="node32" class="node">
-<title>erasure/ETyping</title>
+<title>erasure/EGlobalEnv</title>
 <ellipse fill="#d2b48c" stroke="#d2b48c" cx="111" cy="-522" rx="41.6928" ry="18"/>
-<text text-anchor="middle" x="111" y="-518.3" font-family="Times,serif" font-size="14.00" fill="#000000">ETyping</text>
+<text text-anchor="middle" x="111" y="-518.3" font-family="Times,serif" font-size="14.00" fill="#000000">EGlobalEnv</text>
 </g>
-<!-- erasure/ELiftSubst&#45;&gt;erasure/ETyping -->
+<!-- erasure/ELiftSubst&#45;&gt;erasure/EGlobalEnv -->
 <g id="edge14" class="edge">
-<title>erasure/ELiftSubst&#45;&gt;erasure/ETyping</title>
+<title>erasure/ELiftSubst&#45;&gt;erasure/EGlobalEnv</title>
 <path fill="none" stroke="#000000" d="M153.444,-576.5708C146.6342,-567.8153 138.2547,-557.0418 130.7452,-547.3867"/>
 <polygon fill="#000000" stroke="#000000" points="133.3334,-545.0134 124.4312,-539.2687 127.8079,-549.311 133.3334,-545.0134"/>
 </g>
-<!-- erasure/ETyping&#45;&gt;erasure/EWcbvEval -->
+<!-- erasure/EGlobalEnv&#45;&gt;erasure/EWcbvEval -->
 <g id="edge156" class="edge">
-<title>erasure/ETyping&#45;&gt;erasure/EWcbvEval</title>
+<title>erasure/EGlobalEnv&#45;&gt;erasure/EWcbvEval</title>
 <path fill="none" stroke="#000000" d="M139.9748,-508.9613C164.9753,-497.7111 201.3861,-481.3263 229.4831,-468.6826"/>
 <polygon fill="#000000" stroke="#000000" points="230.9816,-471.8464 238.6645,-464.551 228.109,-465.463 230.9816,-471.8464"/>
 </g>
@@ -675,9 +675,9 @@
 <ellipse fill="#d2b48c" stroke="#d2b48c" cx="221" cy="-234" rx="37.0935" ry="18"/>
 <text text-anchor="middle" x="221" y="-230.3" font-family="Times,serif" font-size="14.00" fill="#000000">EPretty</text>
 </g>
-<!-- erasure/ETyping&#45;&gt;erasure/EPretty -->
+<!-- erasure/EGlobalEnv&#45;&gt;erasure/EPretty -->
 <g id="edge36" class="edge">
-<title>erasure/ETyping&#45;&gt;erasure/EPretty</title>
+<title>erasure/EGlobalEnv&#45;&gt;erasure/EPretty</title>
 <path fill="none" stroke="#000000" d="M86.8723,-507.1997C73.913,-497.7663 59.163,-484.2663 52,-468 45.5518,-453.3569 46.4645,-447.0119 52,-432 80.2319,-355.4369 152.7113,-288.3771 192.9769,-255.5028"/>
 <polygon fill="#000000" stroke="#000000" points="195.2132,-258.1958 200.8153,-249.2031 190.828,-252.7395 195.2132,-258.1958"/>
 </g>
@@ -687,9 +687,9 @@
 <ellipse fill="#d2b48c" stroke="#d2b48c" cx="111" cy="-450" rx="50.0912" ry="18"/>
 <text text-anchor="middle" x="111" y="-446.3" font-family="Times,serif" font-size="14.00" fill="#000000">EWndEval</text>
 </g>
-<!-- erasure/ETyping&#45;&gt;erasure/EWndEval -->
+<!-- erasure/EGlobalEnv&#45;&gt;erasure/EWndEval -->
 <g id="edge110" class="edge">
-<title>erasure/ETyping&#45;&gt;erasure/EWndEval</title>
+<title>erasure/EGlobalEnv&#45;&gt;erasure/EWndEval</title>
 <path fill="none" stroke="#000000" d="M111,-503.8314C111,-496.131 111,-486.9743 111,-478.4166"/>
 <polygon fill="#000000" stroke="#000000" points="114.5001,-478.4132 111,-468.4133 107.5001,-478.4133 114.5001,-478.4132"/>
 </g>
@@ -1719,9 +1719,9 @@
 <path fill="none" stroke="#000000" d="M299.9906,-1583.8314C299.5628,-1576.131 299.0541,-1566.9743 298.5787,-1558.4166"/>
 <polygon fill="#000000" stroke="#000000" points="302.0724,-1558.2037 298.023,-1548.4133 295.0831,-1558.592 302.0724,-1558.2037"/>
 </g>
-<!-- erasure/EAstUtils&#45;&gt;erasure/ETyping -->
+<!-- erasure/EAstUtils&#45;&gt;erasure/EGlobalEnv -->
 <g id="edge123" class="edge">
-<title>erasure/EAstUtils&#45;&gt;erasure/ETyping</title>
+<title>erasure/EAstUtils&#45;&gt;erasure/EGlobalEnv</title>
 <path fill="none" stroke="#000000" d="M68.556,-576.5708C75.3658,-567.8153 83.7453,-557.0418 91.2548,-547.3867"/>
 <polygon fill="#000000" stroke="#000000" points="94.1921,-549.311 97.5688,-539.2687 88.6666,-545.0134 94.1921,-549.311"/>
 </g>

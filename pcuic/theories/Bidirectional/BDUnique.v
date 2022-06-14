@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICTactics PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICConfluence PCUICWellScopedCumulativity PCUICSR PCUICOnFreeVars PCUICClosedTyp.
-From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
+From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -50,7 +50,7 @@ Let PΓ (Γ : context) := True.
 Let PΓ_rel (Γ Γ' : context) := True.
 
 Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
-Proof.
+Proof using wfΣ.
 
   apply bidir_ind_env.
 
@@ -136,7 +136,7 @@ Proof.
     eapply infering_ind_typing in X ; tea.
     eapply infering_ind_typing in tyc' ; tea.
     subst.
-    exists (subst0 (c :: List.rev args'') ty@[u0]).
+    exists (subst0 (c :: List.rev args'') (proj_type pdecl)@[u0]).
     split.
     + eapply closed_red_red_subst0 ; tea.
       3: eapply subslet_untyped_subslet, projection_subslet ; tea.
@@ -293,7 +293,7 @@ Proof.
   eapply bidirectional_unique in ty as [? []]; tea.
   etransitivity.
   2: symmetry.
-  all: now eapply red_equality.
+  all: now eapply red_ws_cumul_pb.
 Qed.
 
 Theorem infering_checking `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t T T'} :
@@ -303,10 +303,10 @@ Proof.
   depelim ty'.
   eapply infering_unique' in ty ; tea.
   etransitivity ; last first.
-  - apply into_equality ; tea.
+  - apply into_ws_cumul_pb ; tea.
     1: fvs.
     now eapply type_is_open_term, infering_typing.
-  - now eapply equality_eq_le.
+  - now eapply ws_cumul_pb_eq_le.
 Qed.
 
 Theorem infering_sort_sort `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t u u'} :
@@ -355,16 +355,16 @@ Proof.
   {
     etransitivity.
     2: symmetry.
-    all: now eapply red_equality.
+    all: now eapply red_ws_cumul_pb.
   }
   split ; auto.
   etransitivity.
-  1: now eapply red_equality.
+  1: now eapply red_ws_cumul_pb.
   symmetry.
-  eapply equality_equality_ctx.
-  2: now eapply red_equality.
+  eapply ws_cumul_pb_ws_cumul_ctx.
+  2: now eapply red_ws_cumul_pb.
   constructor.
-  1: eapply context_equality_refl ; fvs.
+  1: eapply ws_cumul_ctx_pb_refl ; fvs.
   now constructor.
 Qed.
 
@@ -404,7 +404,7 @@ Theorem infering_ind_ind' `{checker_flags} {Σ} (wfΣ : wf Σ)
   {Γ} (wfΓ : wf_local Σ Γ) {t ind ind' u u' args args'} :
   Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t ▹{ind'} (u',args') ->
     [× ind = ind', u = u' &
-      equality_terms Σ Γ args args'].
+      ws_cumul_pb_terms Σ Γ args args'].
 Proof.
   intros ty ty'.
   eapply bidirectional_unique in ty as [args'' []] ; tea.
@@ -412,7 +412,7 @@ Proof.
   split ; auto.
   etransitivity.
   2: symmetry.
-  all: now eapply red_terms_equality_terms.
+  all: now eapply red_terms_ws_cumul_pb_terms.
 Qed.
 
 Theorem infering_ind_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
@@ -441,7 +441,7 @@ Corollary principal_type `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
     (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ ⊢ T' ≤ T'') × Σ ;;; Γ |- t : T'.
 Proof.
   intros ty.
-  assert (wf_local Σ Γ) by pcuic.
+  assert (wf_local Σ Γ) by (pcuic; eapply typing_wf_local; eauto).
   apply typing_infering in ty as (S & infS & _); auto.
   exists S.
   repeat split.
@@ -449,7 +449,7 @@ Proof.
   intros T' ty.
   eapply typing_infering in ty as (S' & infS' & cum'); auto.
   etransitivity ; eauto.
-  now eapply equality_eq_le, infering_unique'.
+  now eapply ws_cumul_pb_eq_le, infering_unique'.
 Qed.
 
 

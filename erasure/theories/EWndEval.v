@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping.
+From MetaCoq.Erasure Require Import EAst ELiftSubst EGlobalEnv.
 
 (** * 1-step non-deterministic weak reduction **)
 

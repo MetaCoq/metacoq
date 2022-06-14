@@ -230,8 +230,8 @@ Section ParallelReduction.
     | tVar _
     | tSort _
     | tInd _ _
-    | tConstruct _ _ _ 
-    | tPrim _ => true
+    | tConstruct _ _ _  => true
+    (* | tPrim _ => true *)
     | _ => false
     end.
 
@@ -335,11 +335,11 @@ Section ParallelReduction.
     pred1 Γ Γ' (tConst c u) (tConst c u)
 
   (** Proj *)
-  | pred_proj i pars narg u args0 args1 arg1 :
+  | pred_proj p u args0 args1 arg1 :
     pred1_ctx Γ Γ' ->
     All2 (pred1 Γ Γ') args0 args1 ->
-    nth_error args1 (pars + narg) = Some arg1 ->
-    pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1
+    nth_error args1 (p.(proj_npars) + p.(proj_arg)) = Some arg1 ->
+    pred1 Γ Γ' (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args0)) arg1
 
   (** Congruences *)
   | pred_abs na M M' N N' : 
@@ -414,7 +414,8 @@ Section ParallelReduction.
     | pred1_ctx _ _ ?G => fresh "pred" G
     | nat -> bool => fresh "P"
     | nat -> nat => fresh "f"
-    | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+    | _ => PCUICWeakeningEnv.my_rename_hyp h th
+    | _ => PCUICTyping.my_rename_hyp h th
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -538,14 +539,14 @@ Section ParallelReduction.
           pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tConst c u) (tConst c u)) ->
-      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (u : Instance.t)
+      (forall (Γ Γ' : context) p (u : Instance.t)
               (args0 args1 : list term) (arg1 : term),
           pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (pred1 Γ Γ') args0 args1 ->
           All2 (P Γ Γ') args0 args1 ->
-          nth_error args1 (pars + narg) = Some arg1 ->
-          P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1) ->
+          nth_error args1 (p.(proj_npars) + p.(proj_arg)) = Some arg1 ->
+          P Γ Γ' (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args0)) arg1) ->
       (forall (Γ Γ' : context) (na : aname) (M M' N N' : term),
           pred1 Γ Γ' M M' ->
           P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->
@@ -907,7 +908,8 @@ Ltac my_rename_hyp h th :=
   | nat -> bool => fresh "P"
   | nat -> nat => fresh "f"
   | urenaming _ _ _ ?f => fresh "u" f
-  | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
+  | _ => PCUICWeakeningEnv.my_rename_hyp h th
+  | _ => PCUICTyping.my_rename_hyp h th
   end.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -929,7 +931,7 @@ Hint Extern 4 (on_contexts_over _ _ _ ?X) =>
 Ltac inv_on_free_vars ::=
   match goal with
   | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    progress (cbn in H || rewrite -> on_free_vars_mkApps in H);
     (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
       eapply forallb_All in H); intros
   end.
@@ -1229,7 +1231,7 @@ Qed.
       rewrite 2!rename_mkApps. simpl. inv_on_free_vars.
       econstructor; tas.
       3:eapply rename_unfold_fix; tea.
-      3:eapply is_constructor_rename; tea.
+      3:rewrite -is_constructor_rename; tea.
       + rewrite !rename_fix_context.
         eapply forall_P; tea.
         eapply on_free_vars_fix_context; solve_all.

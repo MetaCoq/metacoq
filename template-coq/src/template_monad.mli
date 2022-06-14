@@ -28,7 +28,7 @@ type template_monad =
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t
   | TmAxiomTerm of Constr.t * Constr.t
-  | TmMkInductive of Constr.t
+  | TmMkInductive of Constr.t * Constr.t
   | TmVariable of Constr.t * Constr.t
 
   | TmFreshName of Constr.t
@@ -42,6 +42,7 @@ type template_monad =
   | TmQuoteInd of Constr.t * bool (* strict *)
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
+  | TmQuoteModule of Constr.t
 
   | TmUnquote of Constr.t                   (* only Prop *)
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)

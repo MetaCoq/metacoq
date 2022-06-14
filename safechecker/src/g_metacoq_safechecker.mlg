@@ -2,76 +2,50 @@
 DECLARE PLUGIN "metacoq_safechecker_plugin"
 
 {
-
+open Attributes
 open Stdarg
 open Pp
 open PeanoNat.Nat
 open Datatypes
-open PCUICSafeChecker
+open Extraction
+open Tm_util
+open Caml_bytestring
 
-let bytes_of_list l =
-  let bytes = Bytes.create (List.length l) in
-  let rec fill acc = function
-    | [] -> bytes
-    | c :: cs ->
-      Bytes.set bytes acc c;
-      fill (1 + acc) cs
-  in fill 0 l
-
-let pr_char_list l =
+let pr_string l =
   (* We allow utf8 encoding *)
-  str (Bytes.to_string (bytes_of_list l))
+  str (caml_string_of_bytestring l)
 
-let time prefix f x =
-  let start = Unix.gettimeofday () in
-  let res = f x in
-  let stop = Unix.gettimeofday () in
-  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
-  res
-
-let check env evm (c, ustate) =
-  Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
-  let uctx = UState.context_set ustate in
-  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let ugraph = Environ.universes env in
-  let levels = UGraph.domain ugraph in
-  let cstrs, eqs = UGraph.constraints_of_universes ugraph in
-  let levels, cstrs = 
-    List.fold_right (fun eqs acc ->
-      match Univ.Level.Set.elements eqs with
-      | [] -> acc
-      | x :: [] -> acc
-      | x :: rest ->
-        List.fold_right (fun p (levels, cstrs) ->
-          (Univ.Level.Set.add p levels, Univ.Constraints.add (x, Univ.Eq, p) cstrs)) rest acc)
-      eqs (levels, cstrs)
+let check env evm poly (c, ustate) =
+  debug (fun () -> str"Quoting");
+  let uctx = Evd.universe_context_set evm in
+  let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
+  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass:true ~with_universes:true env) (EConstr.to_constr evm c) in
+  let uctx =
+    if poly then
+      let uctx = Evd.to_universe_context evm in
+      let inst, auctx = Univ.abstract_universes uctx in
+      Ast_quoter.mkPolymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
+    else Ast_quoter.mkMonomorphic_ctx ()
   in
-  let levels = Univ.Level.Set.remove Univ.Level.set levels in
-  let uctx = Univ.ContextSet.union uctx (levels, cstrs) in
-  let () = 
-    Feedback.msg_debug (str"Universes to reify: " ++ Printer.pr_universe_ctx_set evm uctx)
-  in
-  let uctx = time (str"Quoting universe context") 
-    (fun uctx -> (Ast_quoter.quote_univ_contextset uctx)) uctx in
   let check =
     time (str"Checking")
-      (SafeTemplateChecker.infer_and_print_template_program
-        (*Config0.default_checker_flags*)
-        Config0.type_in_type term)
+      (Extraction.infer_and_print_template_program_with_guard
+        Config0.default_checker_flags
+        (* Config0.type_in_type *)
+         prog)
       uctx
   in
   match check with
-  | Coq_inl s -> Feedback.msg_info (pr_char_list s)
-  | Coq_inr s -> CErrors.user_err (pr_char_list s)
+  | Coq_inl s -> Feedback.msg_info (pr_string s)
+  | Coq_inr s -> CErrors.user_err (pr_string s)
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "SafeCheck" constr(c) ] -> {
+| #[ poly = polymorphic ] [ "MetaCoq" "SafeCheck" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let c = Constrintern.interp_constr env evm c in
-    check env evm c
+    check env evm poly c
   }
 END
 
@@ -99,7 +73,7 @@ let retypecheck_term_dependencies env gr =
   let process_object k _ty =
     let open Printer in
     match k with
-    | Variable id -> Feedback.msg_debug (str "Ignoring variable " ++ Names.Id.print id)
+    | Variable id -> debug (fun () -> str "Ignoring variable " ++ Names.Id.print id)
     | Axiom (ax, _) ->
       begin match ax with
         | Constant c -> typecheck_constant c

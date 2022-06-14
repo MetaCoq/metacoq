@@ -256,24 +256,22 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
   eq_term_upto_univ_napp Σ Re Re 0 t1 t1' ->
   eq_cast_kind c c' ->
   eq_term_upto_univ_napp Σ Re Re 0 t2 t2' ->
-  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2')
+  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2').
 
-| eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
-| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
+(* | eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
+| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f). *)
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
-(* ** Syntactic conversion up-to universes *)
+(* ** Syntactic conversion/cumulativity up-to universes *)
 
-Definition eq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (eq_universe φ).
+Definition compare_term `{checker_flags} (pb : conv_pb) Σ φ :=
+  eq_term_upto_univ Σ (eq_universe φ) (compare_universe pb φ).
 
-(* ** Syntactic cumulativity up-to universes *)
+Notation eq_term := (compare_term Conv).
+Notation leq_term := (compare_term Cumul).
 
-Definition leq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (leq_universe φ).
-
-  Lemma R_global_instance_refl Σ Re Rle gr napp u : 
+Lemma R_global_instance_refl Σ Re Rle gr napp u : 
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   R_global_instance Σ Re Rle gr napp u u.

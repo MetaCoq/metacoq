@@ -4,15 +4,12 @@ From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosedTyp
      PCUICReduction PCUICWcbvEval PCUICSR PCUICInversion PCUICGeneration
-     PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICCanonicity.
+     PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICConversion
+     PCUICWeakeningEnvTyp PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
-
 Local Existing Instance extraction_checker_flags.
-
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
@@ -54,6 +51,19 @@ Proof.
   eapply (projT2 ct).
 Qed.
 
+Lemma cumul_Sort_Prod_discr {Σ Γ T s na A B} :
+  wf_ext Σ ->
+  Σ ;;; Γ ⊢ T ≤ tSort s ->
+  Σ ;;; Γ ⊢ T ≤ tProd na A B -> False.
+Proof.
+  intros wfΣ hs hs'.
+  eapply ws_cumul_pb_Sort_r_inv in hs as [s' []].
+  eapply ws_cumul_pb_Prod_r_inv in hs' as [dom' [codom' [T' []]]].
+  destruct (closed_red_confluence c c1) as [nf []].
+  eapply invert_red_sort in c2; subst.
+  eapply invert_red_prod in c3 as [? [? []]]. discriminate.
+Qed.
+
 (** ** on mkApps *)
 
 Lemma emkApps_snoc a l b :
@@ -90,24 +100,6 @@ Proof.
   unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
 Qed.
 
-Lemma value_app_inv L :
-  Ee.value (EAst.mkApps EAst.tBox L) ->
-  L = nil.
-Proof.
-  intros. depelim X.
-  - destruct L using rev_ind.
-    reflexivity.
-    rewrite emkApps_snoc in i. inv i.
-  - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
-    rewrite Ee.value_head_spec in i.
-    move/andb_and: i => [H H'].
-    eapply Ee.atom_mkApps in H' as [H1 _].
-    destruct n, L; discriminate.
-  - unfold Ee.isStuckFix in i. destruct f; try now inversion i.
-    assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox L)) by congruence.
-    rewrite !EAstUtils.decompose_app_mkApps in H; eauto. inv H.
-Qed.
-
 (** ** Prelim on fixpoints *)
 
 Lemma fix_subst_nth mfix n :
@@ -124,9 +116,9 @@ Qed.
 
 Lemma efix_subst_nth mfix n :
   n < #|mfix| ->
-  nth_error (ETyping.fix_subst mfix) n = Some (EAst.tFix mfix (#|mfix| - n - 1)).
+  nth_error (EGlobalEnv.fix_subst mfix) n = Some (EAst.tFix mfix (#|mfix| - n - 1)).
 Proof.
-  unfold ETyping.fix_subst. generalize (#|mfix|).
+  unfold EGlobalEnv.fix_subst. generalize (#|mfix|).
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
@@ -170,9 +162,9 @@ Qed.
 
 Lemma ecofix_subst_nth mfix n :
   n < #|mfix| ->
-  nth_error (ETyping.cofix_subst mfix) n = Some (EAst.tCoFix mfix (#|mfix| - n - 1)).
+  nth_error (EGlobalEnv.cofix_subst mfix) n = Some (EAst.tCoFix mfix (#|mfix| - n - 1)).
 Proof.
-  unfold ETyping.cofix_subst. generalize (#|mfix|).
+  unfold EGlobalEnv.cofix_subst. generalize (#|mfix|).
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
@@ -202,6 +194,163 @@ Proof.
       now rewrite Nat.sub_diag.
 Qed.
 
+Lemma unfold_cofix_type Σ mfix idx args narg fn ty :
+  wf Σ.1 ->
+  Σ ;;; [] |- mkApps (tCoFix mfix idx) args : ty ->
+  unfold_cofix mfix idx = Some (narg, fn) ->
+  Σ ;;; [] |- mkApps fn args : ty.
+Proof.
+  intros wfΣ ht.
+  pose proof (typing_wf_local ht).
+  eapply PCUICValidity.inversion_mkApps in ht as (? & ? & ?); eauto.
+  eapply inversion_CoFix in t; auto.
+  destruct_sigma t.
+  rewrite /unfold_cofix e => [=] harg hfn.
+  subst fn.
+  eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
+  eapply PCUICSpine.type_mkApps; eauto.
+  pose proof a0 as a0'.
+  eapply nth_error_all in a0'; eauto. simpl in a0'.
+  eapply (substitution (Δ := [])) in a0'; eauto.
+  2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
+  rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
+  eapply a0'. now eapply nth_error_all in a; tea.
+Qed.
+
+(** Assumption contexts: constructor arguments/case branches contexts contain only assumptions, no local definitions *)
+
+Lemma is_assumption_context_spec Γ :
+  is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Proof.
+ induction Γ; cbn.
+ - split; econstructor.
+ - split; intros H.
+   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
+   + invs H. cbn. now eapply IHΓ.
+Qed.
+
+Lemma assumption_context_map2_binders nas Γ :
+  assumption_context Γ ->
+  assumption_context (map2 set_binder_name nas Γ).
+Proof.
+  induction 1 in nas |- *; cbn. destruct nas; cbn; auto; constructor.
+  destruct nas; cbn; auto; constructor. auto.
+Qed.
+
+Lemma declared_constructor_assumption_context (wfl := default_wcbv_flags) {Σ c mdecl idecl cdecl} {wfΣ : wf_ext Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  assumption_context (cstr_args cdecl).
+Proof.
+  intros.
+  destruct (on_declared_constructor H) as [? [cu [_ onc]]].
+  destruct onc. 
+  now eapply is_assumption_context_spec.
+Qed.
+
+Lemma assumption_context_cstr_branch_context (wfl := default_wcbv_flags) {Σ} {wfΣ : wf_ext Σ} {c mdecl idecl cdecl} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  assumption_context (cstr_branch_context c.1 mdecl cdecl).
+Proof.
+  intros decl.
+  eapply declared_constructor_assumption_context in decl.
+  rewrite /cstr_branch_context. pcuic.
+Qed.
+
+Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c brs p} {wfΣ : wf_ext Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  wf_branches idecl brs ->
+  All2i (fun i cdecl br => 
+   All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
+      (cstr_branch_context c.1 mdecl cdecl)) 0 idecl.(ind_ctors) brs ->
+  All (fun br => 
+    expand_lets (inst_case_branch_context p br) (bbody br) = bbody br) brs.
+Proof.
+  intros decl wfbrs.
+  red in wfbrs.
+  eapply Forall2_All2 in wfbrs.
+  intros ai.
+  eapply All2i_nth_hyp in ai.
+  eapply All2i_All2_mix_left in ai; tea. clear wfbrs.
+  solve_all.
+  red in a. red in a.
+  erewrite <- PCUICCasesContexts.inst_case_branch_context_eq; tea.
+  rewrite PCUICSigmaCalculus.expand_lets_assumption_context //.
+  eapply assumption_context_map2_binders.
+  rewrite /pre_case_branch_context_gen /inst_case_context.
+  eapply PCUICInductiveInversion.assumption_context_subst_context.
+  eapply PCUICInductiveInversion.assumption_context_subst_instance.
+  destruct c. cbn.
+  eapply (assumption_context_cstr_branch_context (c:=(i0, i))). split. apply decl. tea.
+Qed.
+
+Lemma assumption_context_compare_decls Γ Δ : 
+  PCUICEquality.eq_context_upto_names Γ Δ ->
+  assumption_context Γ ->
+  assumption_context Δ.
+Proof.
+  induction 1; auto.
+  intros H; depelim H. 
+  depelim r; econstructor; auto.
+Qed. 
+
+Lemma smash_assumption_context Γ Δ : assumption_context Γ ->
+  smash_context Δ Γ = Γ ,,, Δ.
+Proof.
+  intros ass; induction ass in Δ |- *; cbn; auto.
+  - now rewrite app_context_nil_l.
+  - rewrite PCUICSigmaCalculus.smash_context_acc /app_context.
+    rewrite IHass /=.
+    rewrite -(app_tip_assoc Δ _ Γ). f_equal.
+    rewrite -/(expand_lets_k_ctx Γ 0 _).
+    rewrite [expand_lets_k_ctx _ _ _]PCUICSigmaCalculus.expand_lets_ctx_assumption_context //.
+Qed.
+
+Import PCUICGlobalEnv PCUICSpine.
+Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} 
+  {Γ pars parsubst parsubst' s' inst' ind n mdecl idecl cdecl u p br napp} : 
+  declared_constructor Σ (ind, n) mdecl idecl cdecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
+  PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u (puinst p) ->
+  spine_subst Σ Γ pars parsubst (ind_params mdecl)@[u] ->
+  spine_subst Σ Γ (pparams p) parsubst' (ind_params mdecl)@[puinst p] ->
+  assumption_context cdecl.(cstr_args) ->
+  ws_cumul_pb_terms Σ Γ pars (pparams p) ->
+  wf_predicate mdecl idecl p ->
+  wf_branch cdecl br ->
+  PCUICSpine.spine_subst Σ Γ s' inst' 
+    (subst_context parsubst 0 (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) #|ind_params mdecl| (cstr_args cdecl)@[u])) ->
+  subslet Σ Γ (List.rev s') (case_branch_context ind mdecl p (forget_types (bcontext br)) cdecl).
+Proof.
+  intros declc cu cu' hr sppars sppars' assargs eqp wfp wfbr spargs.
+  rewrite /case_branch_context /case_branch_context_gen.
+  eapply PCUICSpine.subslet_eq_context_alpha.
+  symmetry. eapply PCUICCasesContexts.eq_binder_annots_eq.
+  eapply PCUICInductiveInversion.wf_pre_case_branch_context_gen; tea.
+  rewrite /pre_case_branch_context_gen /inst_case_context.
+  rewrite /cstr_branch_context.
+  rewrite PCUICInductiveInversion.subst_instance_expand_lets_ctx PCUICUnivSubstitutionConv.subst_instance_subst_context.
+  rewrite PCUICInductives.instantiate_inds //. exact declc.
+  epose proof (PCUICInductiveInversion.constructor_cumulative_indices declc cu cu' hr _ _ _ _ _ sppars sppars' eqp) as [eqctx _].
+  cbn in eqctx.
+  epose proof (spine_subst_smash spargs).
+  eapply spine_subst_cumul in X. eapply X.
+  pcuic. pcuic. apply X. 
+  { eapply substitution_wf_local. eapply (spine_subst_smash sppars').
+    eapply PCUICInductives.wf_local_expand_lets.
+    rewrite -app_context_assoc.
+    eapply PCUICWeakeningTyp.weaken_wf_local => //. eapply sppars.
+    eapply (PCUICSR.on_constructor_wf_args declc) => //. }
+  rewrite /=.
+  rewrite -(spine_subst_inst_subst sppars').
+  assert (smash_context [] (cstr_args cdecl)@[puinst p] = (cstr_args cdecl)@[puinst p]).
+  { rewrite smash_assumption_context //. pcuic. }
+  rewrite -H.
+  rewrite -PCUICClosed.smash_context_subst /= subst_context_nil.
+  rewrite -PCUICClosed.smash_context_subst /= subst_context_nil. apply eqctx.
+Qed.
+
+
 (** ** Prelim on typing *)
 
 Inductive red_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
@@ -223,12 +372,12 @@ Notation red_context Σ := (All2_fold (red_decls Σ)).
 Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->
   wf_local Σ (Γ1 ,,, Γ2) ->
-  conv_context Σ Γ1 Γ1' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).
+  conv_context cumulSpec0 Σ Γ1 Γ1' -> conv_context cumulSpec0 Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).
 Proof.
   intros. induction Γ2.
   - cbn; eauto.
   - destruct a. destruct decl_body.
-    + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0; reflexivity. reflexivity. reflexivity.
-    + cbn. econstructor. inv X0. eauto. now econstructor.
+    + cbn. econstructor. inv X0. apply IHΓ2. eauto.
+      depelim X0; econstructor; reflexivity.
+    + cbn. econstructor. inv X0. apply IHΓ2. eauto. now econstructor.
 Qed.

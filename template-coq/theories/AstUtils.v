@@ -14,7 +14,28 @@ Definition string_of_prim_int (i:Int63.int) : string :=
 Definition string_of_float (f : PrimFloat.float) :=
   "<float>".
 
-Fixpoint string_of_term (t : term) :=
+Module string_of_term_tree.
+  Import bytestring.Tree.
+  Infix "^" := append.
+
+  Definition string_of_predicate {term} (f : term -> t) (p : predicate term) :=
+    "(" ^ "(" ^ concat "," (map f (pparams p)) ^ ")" 
+    ^ "," ^ string_of_universe_instance (puinst p)
+    ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
+    ^ "," ^ f (preturn p) ^ ")".
+  
+  Definition string_of_branch (f : term -> t) (b : branch term) :=
+    "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
+    ^ f (bbody b) ^ ")".
+    
+  Definition string_of_def {A} (f : A -> t) (def : def A) :=
+    "(" ^ string_of_name (binder_name (dname def))
+      ^ "," ^ string_of_relevance (binder_relevance (dname def))
+      ^ "," ^ f (dtype def)
+      ^ "," ^ f (dbody def)
+      ^ "," ^ string_of_nat (rarg def) ^ ")".
+
+  Fixpoint string_of_term (t : term) : Tree.t :=
   match t with
   | tRel n => "Rel(" ^ string_of_nat n ^ ")"
   | tVar n => "Var(" ^ n ^ ")"
@@ -45,22 +66,17 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_predicate string_of_term p ^ ","
             ^ string_of_term t ^ ","
             ^ string_of_list (string_of_branch string_of_term) brs ^ ")"
-  | tProj (ind, i, k) c =>
-    "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+  | tProj p c =>
+    "Proj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) ^ "," ^ string_of_nat p.(proj_arg) ^ ","
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
-  | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
   end.
-  
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
+End string_of_term_tree.
+
+Definition string_of_term := Tree.to_string ∘ string_of_term_tree.string_of_term.
   
 Definition decompose_app (t : term) :=
   match t with
@@ -74,7 +90,7 @@ Proof.
   intros Hf. rewrite /decompose_app.
   destruct l. simpl. destruct f; try discriminate; auto.
   remember (mkApps f (t :: l)) eqn:Heq. simpl in Heq.
-  destruct f; simpl in *; subst; auto. discriminate.
+  destruct f; simpl in *; subst; auto.
 Qed.
 
 Lemma atom_decompose_app t : ~~ isApp t -> decompose_app t = (t, []).
@@ -180,19 +196,13 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : kername) (decls : global_env)
+Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
  := match decls with
     | nil => None
     | (kn, InductiveDecl d) :: tl =>
-      if eq_kername kn id then Some d else lookup_mind_decl id tl
+      if kn == id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
-
-Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
-  match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
-  | Monomorphic_ctx ctx => Monomorphic_entry ctx
-  end.
 
 (* TODO factorize in Environment *)
 (* was mind_decl_to_entry *)
@@ -247,8 +257,8 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
-  | tInt _ | tFloat _ => t
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
+  (* | tInt _ | tFloat _ => t *)
   end.
   
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

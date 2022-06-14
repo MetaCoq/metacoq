@@ -42,7 +42,7 @@ Proof.
   rewrite !/shiftnP /shiftn.
   destruct (Nat.ltb_spec k i) => /=.
   all: nat_compare_specs => //=.
-  by rewrite minus_plus.
+  by rewrite Nat.add_comm Nat.add_sub.
 Qed.
 
 Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->
@@ -86,8 +86,8 @@ Fixpoint on_free_vars (p : nat -> bool) (t : term) : bool :=
   | tProj _ c => on_free_vars p c
   | tFix mfix idx | tCoFix mfix idx =>
     List.forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|mfix| p))) mfix
-  | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
-  | tPrim _ => true
+  | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => true
+  (* | tPrim _ => true *)
   end.
 
 Lemma on_free_vars_ext (p q : nat -> bool) t : 
@@ -1379,7 +1379,7 @@ Lemma term_on_free_vars_ind :
     (forall p (m : mfixpoint term) (i : nat), 
       tFixProp (on_free_vars p) (on_free_vars (shiftnP #|fix_context m| p)) m ->
       tFixProp (P p) (P (shiftnP #|fix_context m| p)) m -> P p (tCoFix m i)) ->
-    (forall p pr, P p (tPrim pr)) ->
+    (* (forall p pr, P p (tPrim pr)) -> *)
     forall p (t : term), on_free_vars p t -> P p t.
 Proof.
   intros until t. revert p t.

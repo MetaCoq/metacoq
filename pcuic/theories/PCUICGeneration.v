@@ -26,7 +26,7 @@ Section Generation.
     Σ ;;; Γ |- t : t_ty ->
     typing_spine Σ Γ t_ty u T ->
     Σ ;;; Γ |- mkApps t u : T.
-  Proof.
+  Proof using Type.
     intros Ht Hsp.
     revert t Ht. induction Hsp; simpl; auto.
     intros t Ht. eapply type_Cumul; eauto. eapply i.π2.
@@ -42,7 +42,7 @@ Section Generation.
     forall Σ Γ Δ t A,
       Σ ;;; Γ ,,, Δ |- t : A ->
       Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
-  Proof.
+  Proof using Type.
     intros Σ Γ Δ t A h.
     induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
     - assumption.

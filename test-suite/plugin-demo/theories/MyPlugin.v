@@ -1,11 +1,12 @@
 Require Import Coq.Lists.List.
 From MetaCoq.Template Require Import
-     Ast
+     bytestring Ast
      Loader
      TemplateMonad.Extractable.
 Import TemplateMonad.Extractable.
 From MetaCoq Require Import Template.BasicAst Template.AstUtils Ast.
 
+Open Scope bs_scope.
 
 Notation TemplateMonad := TM.
 Fixpoint mconcat (ls : list (TemplateMonad unit)) : TM unit :=
@@ -29,8 +30,8 @@ Fixpoint print_all_kns (t : Ast.term) : TM unit :=
   | tConst c _ => tmMsg (string_of_kername c)
   | tInd i _ => tmMsg (string_of_kername i.(inductive_mind))
   | tConstruct i _ _ => tmMsg (string_of_kername i.(inductive_mind))
-  | tProj (i,_,_) b =>
-    tmBind (tmMsg (string_of_kername i.(inductive_mind))) (fun _ => print_all_kns b)
+  | tProj p b =>
+    tmBind (tmMsg (string_of_kername p.(proj_ind).(inductive_mind))) (fun _ => print_all_kns b)
   | _ => tmReturn tt
   end.
 
@@ -45,7 +46,7 @@ Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
 (*   | ConstructRef ind _ => ind.(inductive_mind) *)
 (*   end. *)
 
-Definition tmResolve (nm : String.string) : TM (option kername) :=
+Definition tmResolve (nm : String.t) : TM (option kername) :=
   tmBind (tmLocate nm)
          (fun gr =>
             match gr with
@@ -67,7 +68,7 @@ Set Universe Polymorphism.
 Record Info  :=
 { type : ident
 ; ctor : ident
-; fields : list (ident * term)
+; fields : list projection_body
 }.
 
 Fixpoint countTo (n : nat) : list nat :=
@@ -76,9 +77,7 @@ Fixpoint countTo (n : nat) : list nat :=
   | S m => countTo m ++ (m :: nil)
   end.
 
-Require Import String.
-Open Scope string_scope.
-Definition prepend (ls : string) (i : ident) : ident :=
+Definition prepend (ls : String.t) (i : ident) : ident :=
   ls ++ i.
 
 Definition cBuild_Lens := <% Build_Lens %>.
@@ -88,24 +87,24 @@ Require Import Coq.Bool.Bool.
 
 
 (* check to see if Var 0 is referenced in any of the terms *)
-Definition mentions (v : nat) (ls : list (ident * term)) : bool :=
+Definition mentions (v : nat) (ls : list projection_body) : bool :=
   false.
 
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 Definition nNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
 
-Definition mkLens (At : term) (fields : list (ident * term)) (i : nat)
+Definition mkLens (At : term) (fields : list projection_body) (i : nat)
 : option (ident * term) :=
   match At with
   | tInd ind args =>
     let ctor := tConstruct ind 0 args in
     match nth_error fields i with
     | None => None
-    | Some (name, Bt) =>
+    | Some {| proj_name := name; proj_type := Bt |} =>
       if mentions 1 (skipn (S i) fields)
       then None
       else
-        let p (x : nat) : projection := (ind, 0, x) in
+        let p (x : nat) : projection := {| proj_ind := ind; proj_npars := 0; proj_arg := x |} in
         let get_body := tProj (p i) (tRel 0) in
         let f x :=
             let this := tProj (p x) (tRel 0) in
@@ -155,14 +154,14 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   | None  => None
   end.
 
-Definition genLensN (baseName : String.string) : TM unit :=
+Definition genLensN (baseName : String.t) : TM unit :=
   tmBind (tmLocate baseName) (fun gr =>
     match gr with
     | (IndRef kn) :: _ =>
       let name := kn.(inductive_mind) in
       let ty := Ast.tInd
-        {| BasicAst.inductive_mind := name
-         ; BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil in
+        {| Kernames.inductive_mind := name
+         ; Kernames.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil in
       tmBind (tmQuoteInductive name) (fun ind =>
           match getFields ind with
           | Some info =>
@@ -182,7 +181,7 @@ Definition genLensN (baseName : String.string) : TM unit :=
     end).
 
 
-Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
+Definition tmQuoteConstantR (nm : String.t) (bypass : bool) : TM _ :=
   tmBind (tmLocate nm)
          (fun gr =>
             match gr with
@@ -192,7 +191,7 @@ Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
             | _ => tmReturn None
             end).
 
-Definition lookupPrint (baseName : String.string) : TM unit :=
+Definition lookupPrint (baseName : String.t) : TM unit :=
   tmBind (tmQuoteConstantR baseName true)
          (fun b =>
             match b with

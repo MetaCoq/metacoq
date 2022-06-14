@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
 
 Local Existing Instance default_checker_flags.
@@ -23,32 +23,27 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ([], Monomorphic_ctx (LevelSet.singleton univ, ConstraintSet.empty)).
+  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
 
-Program Definition check_wf_env_ext (Σ : global_env) id (ext : universes_decl) : 
-    EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
-    '(G; pf) <- check_wf_env Σ ;;
-    '(G'; pf') <- check_wf_env_ext Σ id _ G _ ext ;;
-    ret (exist {| wf_env_ext_env := (Σ, ext) ;
-           wf_env_ext_wf := _ ;
-           wf_env_ext_graph := G' ;
-           wf_env_ext_graph_wf := _ |} eq_refl).
-
 Definition kername_of_string (s : string) : kername :=
   (MPfile [], s).
 
-Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext :=
-  '(exist Σ' pf) <- check_wf_env_ext Σ.1 (kername_of_string "toplevel") Σ.2 ;;
+Global Program Instance fake_guard_impl : abstract_guard_impl :=
+{| guard_impl := fake_guard_impl |}.
+Next Obligation. Admitted.  
+
+Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
+  '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
   ret Σ'.
 
 Definition gctx_wf_env : wf_env_ext.
 Proof.
   let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
   match wf_proof with
-  | CorrectDecl ?x => exact x
+  | CorrectDecl _ ?x => exact x
   | _ => fail "Couldn't prove the global environment is well-formed"
   end.
 Defined.
@@ -57,32 +52,70 @@ Defined.
 
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 
-Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, ∥ typing Σ Γ t T ∥.
+Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ typing Σ0 Γ t T ∥.
 
-Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
-  prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
+Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+  prf <- check_type_wf_env_fast optimized_abstract_env_impl Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 
 Ltac fill_inh t := 
   lazymatch goal with
-  [ wfΓ : ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
+  [ wfΓ : forall _ _, ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
     let t := uconstr:(check_inh Σ Γ wfΓ t (T:=T)) in
-    let proof := eval lazy in t in
+    let proof := eval cbn in t in
     match proof with
     | Checked ?d => exact_no_check d
     | TypeError ?e => 
         let str := eval cbn in (string_of_type_error Σ e) in
         fail "Failed to inhabit " T " : " str
-    | _ => fail "Anomaly: unexpected return value: " proof
+    | _ => set (blocked := proof)
+    (* fail "Anomaly: unexpected return value: " proof *)
     end
   | [ |- inh _ ?Γ _ ] => fail "Missing local wellformedness assumption for" Γ
   end.
 
-Lemma identity_typing (u := Universe.make univ): inh gctx_wf_env [] (tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
+(* Lemma identity_typing (u := Universe.make univ): inh gctx_wf_env [] (tImpl (tSort u) (tSort u)).
+Proof.
+  set (impl := tLambda (bNamed "s") (tSort u) (tRel 0)).
+  assert (wfΓ : forall Σ0 : global_env_ext,
+  abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
+
+  Time fill_inh impl.
+
+Time Qed. *)
+
+
+Lemma identity_typing (u := Universe.make univ): 
+typing_result
+     (∑ t : term,
+        forall Σ0 : global_env_ext,
+        Σ0 =
+        ({|
+           universes :=
+             (LS.union (LevelSet.singleton Level.lzero)
+                (LevelSet.singleton univ), ConstraintSet.empty);
+           declarations := []
+         |}, Monomorphic_ctx) ->
+        ∥ Σ0;;; [] |- t
+          : tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0)) ∥).
+(* inh gctx_wf_env [] (tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))). *)
 Proof.
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
-  assert (wfΓ : ∥ wf_local gctx_wf_env [] ∥) by do 2 constructor.
-  Time fill_inh impl.
-Time Qed.
+  assert (wfΓ : forall Σ0 : global_env_ext,
+  abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
+  pose (T := tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
+  pose (Σ := gctx_wf_env).
+  let t := uconstr:(check_inh Σ [] wfΓ impl (T:=T)) in
+  let proof := eval cbn in t in
+  match proof with
+  | Checked ?d => exact_no_check d
+  | TypeError ?e => 
+      let str := eval cbn in (string_of_type_error Σ e) in
+      fail "Failed to inhabit " T " : " str
+  | _ => set (blocked := proof)
+  (* fail "Anomaly: unexpected return value: " proof *)
+  end.
+  exact blocked. 
+Defined. 
 
-Print identity_typing. (* Still a huge wf_env proof unfolded *)
+(* Print Opaque Dependencies identity_typing. *)

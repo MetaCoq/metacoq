@@ -39,24 +39,7 @@ Section Normal.
   Context (flags : RedFlags.t).
   Context (Σ : global_env).
 
-  (* Relative to reduction flags *)
-  Inductive whnf (Γ : context) : term -> Type :=
-  | whnf_ne t : whne Γ t -> whnf Γ t
-  | whnf_sort s : whnf Γ (tSort s)
-  | whnf_prod na A B : whnf Γ (tProd na A B)
-  | whnf_lam na A B : whnf Γ (tLambda na A B)
-  | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
-  | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
-  | whnf_fixapp mfix idx v :
-    match unfold_fix mfix idx with
-    | Some (rarg, body) => nth_error v rarg = None
-    | None => True
-    end ->
-    whnf Γ (mkApps (tFix mfix idx) v)
-  | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
-  (* | whnf_prim p : whnf Γ (tPrim p) *)
-
-  with whne (Γ : context) : term -> Type :=
+  Inductive whne (Γ : context) : term -> Type :=
   | whne_rel i :
       option_map decl_body (nth_error Γ i) = Some None ->
       whne Γ (tRel i)
@@ -118,6 +101,24 @@ Section Normal.
   | whne_proj_noiota p c :
       RedFlags.iota flags = false ->
       whne Γ (tProj p c).
+
+
+  (* Relative to reduction flags *)
+  Inductive whnf (Γ : context) : term -> Type :=
+  | whnf_ne t : whne Γ t -> whnf Γ t
+  | whnf_sort s : whnf Γ (tSort s)
+  | whnf_prod na A B : whnf Γ (tProd na A B)
+  | whnf_lam na A B : whnf Γ (tLambda na A B)
+  | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
+  | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
+  | whnf_fixapp mfix idx v :
+    match unfold_fix mfix idx with
+    | Some (rarg, body) => nth_error v rarg = None
+    | None => True
+    end ->
+    whnf Γ (mkApps (tFix mfix idx) v)
+  | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
+  (* | whnf_prim p : whnf Γ (tPrim p) *).
 
   Lemma whne_mkApps :
     forall Γ t args,

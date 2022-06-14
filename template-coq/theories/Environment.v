@@ -292,9 +292,33 @@ Module Environment (T : Term).
     option_map f (cst_body decl) = cst_body (map_constant_body f decl).
   Proof. destruct decl; reflexivity. Qed.
 
+  (** See [generic_module_body] from [declarations.ml]. We do not include the modpath
+    in the body since it is already included in [global_declarations]. *)
+  Definition structure_body structure_field := list (kername × structure_field).
+  Definition module_body impl modtype := impl × modtype.
+  Definition module_type_body structure_field := structure_body structure_field.
+  (** implementation -> module type -> algebraic (colon-annotated) module type (TODO) *)
+  Inductive structure_field :=
+  | sfconst : constant_body -> structure_field
+  | sfmind : mutual_inductive_body -> structure_field
+  | sfmod : module_body module_implementation (module_type_body structure_field) -> structure_field
+  | sfmodtype : module_type_body structure_field-> structure_field
+  with module_implementation :=
+  | mi_abstract : module_implementation (** Declare Module M: T. *)
+  | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
+  | mi_struct : structure_body structure_field -> module_implementation (** Module M:T. ... End M.*)
+  | mi_fullstruct : module_implementation. (** Module M. ... End M.*)
+  (** Is a [module_body] without implementation. TODO: algebraic type of the modtype*)
+
+  Definition module_decl := module_body module_implementation (module_type_body structure_field).
+  Definition module_type_decl := module_type_body structure_field.
+
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
-  | InductiveDecl : mutual_inductive_body -> global_decl.
+  | InductiveDecl : mutual_inductive_body -> global_decl
+  | ModuleDecl : module_body module_implementation (module_type_body structure_field)-> global_decl
+  | ModuleTypeDecl : module_type_body structure_field -> global_decl.
+  (* TODO: can have module declaration *)
   Derive NoConfusion for global_decl.
 
   Definition global_declarations := list (kername * global_decl).

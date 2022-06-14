@@ -28,7 +28,13 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     declared_constructor Σ (proj.(proj_ind), 0) mdecl idecl cdecl /\
     List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
     mdecl.(ind_npars) = proj.(proj_npars).
+  
+  Definition declared_module Σ kn moddecl :=
+    lookup_env Σ kn = Some (ModuleDecl moddecl).
     
+  Definition declared_modtype Σ kn mtdecl :=
+    lookup_env Σ kn = Some (ModuleTypeDecl mtdecl).
+
   Definition lookup_constant Σ kn := 
     match lookup_env Σ kn with
     | Some (ConstantDecl d) => Some d
@@ -71,6 +77,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     | _ => None
     end.
   
+  Definition lookup_module Σ kn := 
+    match lookup_env Σ kn with
+    | Some (ModuleDecl d) => Some d
+    | _ => None
+    end.
+  
+  Definition lookup_modtype Σ kn := 
+    match lookup_env Σ kn with
+    | Some (ModuleTypeDecl d) => Some d
+    | _ => None
+    end.
+
   Lemma declared_constant_lookup {Σ kn cdecl} :
     declared_constant Σ kn cdecl ->
     lookup_constant Σ kn = Some cdecl.
@@ -160,10 +178,44 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     apply (lookup_constructor_declared (id:=(proj_ind p, 0)) hl).
   Qed.
 
+  (** TODO: lookup_{module, modtype}_declared, declared_{module, modtype}_lookup *)
+  Lemma declared_module_lookup {Σ mp mdecl} :
+    declared_module Σ mp mdecl ->
+    lookup_module Σ mp = Some mdecl.
+  Proof.
+    unfold declared_module, lookup_module. now intros ->.
+  Qed.
+
+  Lemma lookup_module_declared {Σ kn mdecl} :
+    lookup_module Σ kn = Some mdecl -> 
+    declared_module Σ kn mdecl.
+  Proof.
+    unfold declared_module, lookup_module.
+    destruct lookup_env as [[]|] => //. congruence.
+  Qed.
+
+  Lemma declared_modtype_lookup {Σ mp mtdecl} :
+    declared_modtype Σ mp mtdecl ->
+    lookup_modtype Σ mp = Some mtdecl.
+  Proof.
+    unfold declared_modtype, lookup_modtype. now intros ->.
+  Qed.
+
+  Lemma lookup_modtype_declared {Σ kn mtdecl} :
+    lookup_modtype Σ kn = Some mtdecl -> 
+    declared_modtype Σ kn mtdecl.
+  Proof.
+    unfold declared_modtype, lookup_modtype.
+    destruct lookup_env as [[]|] => //. congruence.
+  Qed.
+
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl cb => F cb.(cst_universes)
   | InductiveDecl mb => F mb.(ind_universes)
+  (** FIXME: Recursively check the universes of fields? *)
+  | ModuleDecl _ => F Monomorphic_ctx
+  | ModuleTypeDecl _ => F Monomorphic_ctx
   end.
   
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
@@ -1133,10 +1185,55 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | None => on_type Σ [] d.(cst_type)
       end.
 
+      About P.
+      About fold_left.
+      About on_inductive.
+      Check Type.
+      About All.
+
+      Definition a := nat × nat.
+      Definition b : a := (1, 2).
+    
+
+    Definition on_structure_body Σ (sb: structure_body structure_field)
+      (on_structure_field: global_env_ext -> kername × structure_field -> Type) :=
+      All (on_structure_field Σ) sb.
+
+    Check on_structure_body.
+
+    Fixpoint on_module_decl (Σ: global_env_ext) (d: module_decl) on_structure_body :=
+      let impl := d.1 in
+      let modtype := d.2 in
+      match impl return Type with
+      (** Interactive definitions are stored in modtype if not type-annotated.
+        Otherwise, the interactive definition is in impl, type annotation in modtype. *)
+      (** Declare Module M: T, so check T *)
+      | mi_abstract => on_structure_body Σ modtype on_structure_field
+      (** Module M := N, so check N *)
+      | mi_algebraic kn => match (lookup_module Σ kn) with
+        | Some m => on_module_decl Σ m on_structure_body
+        | _ => Empty_set
+      end
+      (** FIXME: Module M:T ... End M, so check impl, and whether impl: T *)
+      | mi_struct fields => (on_structure_body Σ fields on_structure_field) × (on_structure_body Σ modtype on_structure_field)
+      (** Module M ... End M, so check impl *)
+      | mi_fullstruct => on_structure_body Σ modtype on_structure_field
+      end
+    
+    with on_structure_field Σ kn_decl := match kn_decl.2 with 
+      | sfconst d => on_constant_decl Σ d
+      | sfmind inds => on_inductive Σ kn_decl.1 inds
+      | sfmod mb => on_module_decl Σ mb on_structure_body
+      | sfmodtype mtd => on_structure_body Σ mtd on_structure_field
+    end.
+
+
     Definition on_global_decl Σ kn decl :=
       match decl with
       | ConstantDecl d => on_constant_decl Σ d
       | InductiveDecl inds => on_inductive Σ kn inds
+      | ModuleDecl mb => on_module_decl Σ mb on_structure_body
+      | ModuleTypeDecl mtd => on_modtype_decl Σ mtd
       end.
 
     (** *** Typing of global environment
@@ -1149,6 +1246,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
       Forall (fun g => g.1 <> s) g.
 
+    Definition fresh_global := 1.
     Inductive on_global_decls (univs : ContextSet.t) : global_declarations -> Type :=
     | globenv_nil : on_global_decls univs []
     | globenv_decl Σ kn d :
@@ -1388,3 +1486,4 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Qed.
 
 End DeclarationTyping.
+

@@ -9,9 +9,9 @@ jobs:
     strategy:
       matrix:
         coq_version: 
-          - 'dev'
+          - '8.16'
         ocaml_version:
-          - '4.12-flambda'
+          - '4.14-flambda'
         target: [ local, opam, quick ]
       fail-fast: true
 
@@ -34,6 +34,8 @@ jobs:
             endGroup
           script: |
             startGroup "Build project"
+              opam pin -n coq-equations http://github.com/mattam82/Coq-Equations.git#8.16
+              opam install --confirm-level=unsafe-yes coq-equations.8.16.dev
               opam exec -- ./configure.sh --enable-${{matrix.target}}
               opam exec -- make -j 2 ci-${{matrix.target}}
             endGroup

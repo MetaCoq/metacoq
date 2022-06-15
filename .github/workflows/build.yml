@@ -32,10 +32,14 @@ jobs:
               sudo chown -R coq:coq .  # <--
               opam exec -- ocamlfind list
             endGroup
-          script: |
-            startGroup "Build project"
+          before_install: |
+            startGroup "Print opam config"
+              opam config list; opam repo list; opam list
               opam pin -n coq-equations http://github.com/mattam82/Coq-Equations.git#8.16
               opam install --confirm-level=unsafe-yes coq-equations.8.16.dev
+            endGroup
+          script: |
+            startGroup "Build project"
               opam exec -- ./configure.sh --enable-${{matrix.target}}
               opam exec -- make -j 2 ci-${{matrix.target}}
             endGroup

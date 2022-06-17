@@ -310,14 +310,15 @@ Module Environment (T : Term).
   | mi_fullstruct : module_implementation. (** Module M. ... End M.*)
   (** Is a [module_body] without implementation. TODO: algebraic type of the modtype*)
 
-  Definition module_decl := module_body module_implementation (module_type_body structure_field).
+  Definition structure_decl := structure_body structure_field.
   Definition module_type_decl := module_type_body structure_field.
+  Definition module_decl := module_body module_implementation module_type_decl.
 
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
   | InductiveDecl : mutual_inductive_body -> global_decl
-  | ModuleDecl : module_body module_implementation (module_type_body structure_field)-> global_decl
-  | ModuleTypeDecl : module_type_body structure_field -> global_decl.
+  | ModuleDecl : module_decl -> global_decl
+  | ModuleTypeDecl : module_type_decl -> global_decl.
   (* TODO: can have module declaration *)
   Derive NoConfusion for global_decl.
 

@@ -72,12 +72,12 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.14 4.07.1
+    # opam switch create coq.8.16 --packages=ocaml-variants.4.13.1+options,ocaml-option-flambda
     # eval $(opam env)
 
-This creates the `coq.8.14` switch which initially contains only the
-basic `OCaml` `4.07.1` compiler, and puts you in the right environment
-(check with `ocamlc -v`).
+This creates the `coq.8.16` switch which initially contains only the
+basic `OCaml` `4.13.1` compiler with the `flambda` option enabled,
+and puts you in the right environment (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 

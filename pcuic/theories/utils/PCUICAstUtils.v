@@ -205,7 +205,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
   | O => t
   | S n => match t with
           | tProd _ _ B => remove_arity n B
-          | _ => t (* todo *)
+          | _ => t (* TODO *)
           end
   end.
 
@@ -282,7 +282,7 @@ Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * 
     end
   end.
 
-(* todo move *)
+(* TODO move *)
 Lemma it_mkLambda_or_LetIn_app l l' t :
   it_mkLambda_or_LetIn (l ++ l') t = it_mkLambda_or_LetIn l' (it_mkLambda_or_LetIn l t).
 Proof. induction l in l', t |- *; simpl; auto. Qed.
@@ -402,7 +402,7 @@ Ltac merge_All :=
 #[global]
 Hint Rewrite @map_def_id @map_id : map.
 
-(* todo move *)
+(* TODO move *)
 Ltac close_All :=
   match goal with
   | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl

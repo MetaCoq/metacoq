@@ -108,20 +108,32 @@ Definition run_erase_program_fast {guard : abstract_guard_impl} := run erasure_p
 
 Local Open Scope string_scope.
 
+Axiom fake_guard_impl_properties : 
+forall (fix_cofix: PCUICTyping.FixCoFix)
+       (Σ: PCUICAst.PCUICEnvironment.global_env_ext)
+       (Γ: PCUICAst.PCUICEnvironment.context)
+       (mfix: BasicAst.mfixpoint PCUICAst.term),
+PCUICTyping.guard fix_cofix Σ Γ mfix <-> fake_guard_impl fix_cofix Σ Γ mfix.
+
+
 Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
-Next Obligation. Admitted.  
+Next Obligation. apply fake_guard_impl_properties. Qed.
 
 (** This uses the retyping-based erasure and assumes that the global environment and term 
   are welltyped (for speed). As such this should only be used for testing, or when we know that 
   the environment is wellformed and the term well-typed (e.g. when it comes directly from a 
   Coq definition). *)
+
+
+Axiom assume_that_we_only_erase_on_welltyped_programs :
+  forall (p : Ast.Env.program), squash (TemplateProgram.wt_template_program p).
 Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program p (sq (todo "assuming quoted environment and term are well-typed")) in
+  let p' := run_erase_program p (assume_that_we_only_erase_on_welltyped_programs p) in
   time "Pretty printing" EPretty.print_program p'.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program_fast p (sq (todo "wf_env and welltyped term")) in
+  let p' := run_erase_program_fast p (assume_that_we_only_erase_on_welltyped_programs p) in
   time "pretty-printing" EPretty.print_program p'.

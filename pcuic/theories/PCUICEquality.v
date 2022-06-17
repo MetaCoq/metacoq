@@ -1291,7 +1291,7 @@ Proof.
   eapply eq_term_upto_univ_trans; exact _.
 Qed.
 
-(* todo: rename *)
+(* TODO: rename *)
 (* Definition nleq_term t t' := *)
 (*   eqb_term_upto_univ eqb eqb t t'. *)
 

@@ -1767,7 +1767,7 @@ Proof.
   move=> [= <-]. now rewrite (IHHa _ E').
 Qed.
 
-(* todo: move *)
+(* TODO: move *)
 Lemma All_mapi {A B} P f l k :
   Alli (fun i x => P (f i x)) k l -> All P (@mapi_rec A B f l k).
 Proof.

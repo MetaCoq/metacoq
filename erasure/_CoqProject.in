@@ -32,4 +32,5 @@ theories/EProgram.v
 theories/ERemoveParams.v
 theories/EInlineProjections.v
 theories/ETransform.v
+theories/EConstructorsAsBlocks.v
 theories/Erasure.v

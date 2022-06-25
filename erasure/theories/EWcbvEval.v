@@ -33,7 +33,7 @@ Definition atom Σ t :=
   | tCoFix _ _
   | tLambda _ _
   | tFix _ _ => true
-  | tConstruct ind c => isSome (lookup_constructor Σ ind c)
+  | tConstruct ind c [] => isSome (lookup_constructor Σ ind c)
   | _ => false
   end.
 
@@ -54,17 +54,17 @@ Proof.
 Qed.
 
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
-Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool }.
+Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool ; with_constructor_as_block : bool }.
 
 Definition disable_prop_cases fl : WcbvFlags :=
-  {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
+  {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) ; with_constructor_as_block := fl.(@with_constructor_as_block) |}.
 
 Definition switch_unguarded_fix fl : WcbvFlags := 
-  EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
+  EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false fl.(@with_constructor_as_block).
 
-Definition default_wcbv_flags := {| with_prop_case := true ; with_guarded_fix := true |}.
-Definition opt_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := true |}.
-Definition target_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := false |}.
+Definition default_wcbv_flags := {| with_prop_case := true ; with_guarded_fix := true ; with_constructor_as_block := false |}.
+Definition opt_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := true ; with_constructor_as_block := false|}.
+Definition target_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := false |}.
 
 Section Wcbv.
   Context {wfl : WcbvFlags}.
@@ -93,7 +93,19 @@ Section Wcbv.
 
   (** Case *)
   | eval_iota ind pars cdecl discr c args brs br res :
-      eval discr (mkApps (tConstruct ind c) args) ->
+      with_constructor_as_block = false ->
+      eval discr (mkApps (tConstruct ind c []) args) ->
+      constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl) ->
+      nth_error brs c = Some br ->
+      #|args| = pars + cdecl.(cstr_nargs) ->
+      #|skipn pars args| = #|br.1| ->
+      eval (iota_red pars args br) res ->
+      eval (tCase (ind, pars) discr brs) res
+
+  (** Case *)
+  | eval_iota_block ind pars cdecl discr c args brs br res :
+      with_constructor_as_block = true ->
+      eval discr (tConstruct ind c args) ->
       constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl) ->
       nth_error brs c = Some br ->
       #|args| = pars + cdecl.(cstr_nargs) ->
@@ -159,7 +171,18 @@ Section Wcbv.
 
   (** Proj *)
   | eval_proj p cdecl discr args a res :
-      eval discr (mkApps (tConstruct p.(proj_ind) 0) args) ->
+      with_constructor_as_block = false ->
+      eval discr (mkApps (tConstruct p.(proj_ind) 0 []) args) ->
+      constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) ->
+      #|args| = p.(proj_npars) + cdecl.(cstr_nargs) ->
+      nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
+      eval a res ->
+      eval (tProj p discr) res
+  
+  (** Proj *)
+  | eval_proj_block p cdecl discr args a res :
+      with_constructor_as_block = true ->
+      eval discr (tConstruct p.(proj_ind) 0 args) ->
       constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) ->
       #|args| = p.(proj_npars) + cdecl.(cstr_nargs) ->
       nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
@@ -175,12 +198,21 @@ Section Wcbv.
 
   (** Constructor congruence: we do not allow over-applications *)
   | eval_construct ind c mdecl idecl cdecl f args a a' : 
+    with_constructor_as_block = false ->
     lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-    eval f (mkApps (tConstruct ind c) args) -> 
+    eval f (mkApps (tConstruct ind c []) args) -> 
     #|args| < cstr_arity mdecl cdecl ->
     eval a a' ->
-    eval (tApp f a) (tApp (mkApps (tConstruct ind c) args) a')
+    eval (tApp f a) (tApp (mkApps (tConstruct ind c []) args) a')
 
+  (** Constructor congruence: we do not allow over-applications *)
+  | eval_construct_block ind c mdecl idecl cdecl args args' a a' : 
+    with_constructor_as_block = true ->
+    lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+    #|args| < cstr_arity mdecl cdecl ->
+    eval (tConstruct ind c args) (tConstruct ind c args') ->
+    eval a a' ->
+    eval (tConstruct ind c (args ++ [a])) (tConstruct ind c (args' ++ [a']))
 
   (** Atoms (non redex-producing heads) applied to values are values *)
   | eval_app_cong f f' a a' :
@@ -214,9 +246,10 @@ Section Wcbv.
 
    Variant value_head (nargs : nat) : term -> Type :=
    | value_head_cstr ind c mdecl idecl cdecl :
+     with_constructor_as_block = false ->
      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
      nargs <= cstr_arity mdecl cdecl ->
-     value_head nargs (tConstruct ind c)
+     value_head nargs (tConstruct ind c [])
    | value_head_cofix mfix idx : value_head nargs (tCoFix mfix idx)
    | value_head_fix mfix idx rarg fn : 
      cunfold_fix mfix idx = Some (rarg, fn) ->
@@ -228,6 +261,11 @@ Section Wcbv.
  
    Inductive value : term -> Type :=
    | value_atom t : atom Σ t -> value t
+   | value_constructor ind c mdecl idecl cdecl args : 
+      with_constructor_as_block = true ->  
+      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+      #|args| <= cstr_arity mdecl cdecl -> 
+      All value args -> value (tConstruct ind c args)
    | value_app_nonnil f args : value_head #|args| f -> args <> [] -> All value args -> value (mkApps f args).
    Derive Signature for value.
 
@@ -251,13 +289,18 @@ Section Wcbv.
 
   Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom Σ t -> P t) ->
+       (forall (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body) 
+         (args : list term) (e : with_constructor_as_block = true) (e0 : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) 
+          (l : #|args| <= cstr_arity mdecl cdecl) (a : All value args) , All P args ->
+       P (tConstruct ind c args)) ->
       (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
-    intros P ??.
+    intros P X X0 X1.
     fix value_values_ind 2. destruct 1.
     - apply X; auto.
-    - eapply X0; auto; tea.
+    - eapply X0; auto; tea. clear -a value_values_ind. induction a; econstructor; auto.
+    - eapply X1; auto; tea.
       clear v n. revert args a. fix aux 2. destruct 1. constructor; auto.
       constructor. now eapply value_values_ind. now apply aux.
   Defined.
@@ -277,12 +320,19 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) /\ atom Σ t) + ([× l <> [], value_head #|l| t & All value l]).
+    ((l = []) /\ atom Σ t) 
+    + (l = [] × ∑ ind c mdecl idecl cdecl args, [ × with_constructor_as_block , lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl),    t = tConstruct ind c args, #|args| <= cstr_arity mdecl cdecl & All value args])
+    + ([× l <> [], value_head #|l| t & All value l]).
   Proof.
     intros H H'. generalize_eq x (mkApps t l).
     revert x H' t H. apply: value_values_ind.
     - intros. subst.
       now eapply atom_mkApps in H.
+    - intros * wcon lup len H IH t ht hcon.
+      destruct l using rev_ind.
+      + cbn in hcon. invs hcon. left. right. 
+        repeat eexists; eauto.
+      + rewrite mkApps_app in hcon. invs hcon.
     - intros * vh nargs hargs ih t isapp appeq. 
       move: (value_head_nApp vh) => Ht.
       right. apply mkApps_eq_inj in appeq => //. intuition subst; auto => //.
@@ -294,8 +344,18 @@ Section Wcbv.
     All value l.
   Proof.
     intros val not_app.
-    now apply value_mkApps_inv in val as [(-> & ?)|[]].
+    now apply value_mkApps_inv in val as [[(-> & ?) | [-> ] ] |[]].
   Qed.
+  
+  Lemma eval_Construct_inv ind c args e  :
+     eval (tConstruct ind c args) e ->
+     ∑ args', e = tConstruct ind c args' × All2 eval args args'.
+  Proof.
+    intros H. depind H.
+    - edestruct IHeval1 as (args'' & [= ->] & H2); eauto.
+      repeat eexists; eauto. eapply All2_app; eauto.
+    - invs i. destruct args; invs H0. exists []. repeat econstructor.
+  Qed.    
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
@@ -304,7 +364,10 @@ Section Wcbv.
     - change (tApp ?h ?a) with (mkApps h [a]).
       rewrite -mkApps_app.
       apply value_mkApps_inv in IHev1; [|easy].      
-      destruct IHev1 as [(-> & _)|[]].
+      destruct IHev1 as [[(-> & _) | [-> ] ] |[]].
+      + apply value_app; auto. len.
+        cbn in *. econstructor; tea.
+        destruct with_guarded_fix => //. cbn; auto.
       + apply value_app; auto. len.
         cbn in *. econstructor; tea.
         destruct with_guarded_fix => //. cbn; auto.
@@ -314,12 +377,20 @@ Section Wcbv.
         len; lia. apply All_app_inv; auto.
           
     - apply value_mkApps_inv in IHev1; [|easy].      
-      destruct IHev1 as [(-> & _)|[]].
+      destruct IHev1 as [[(-> & _)|[-> ]] | []].
+      + cbn. eapply (value_app _ [a']); cbn; auto. econstructor; tea.
       + cbn. eapply (value_app _ [a']); cbn; auto. econstructor; tea.
       + rewrite -[tApp _ _](mkApps_app _ _ [a']).
         eapply value_app. cbn; auto. econstructor; tea. cbn; len.
         eapply All_app_inv; auto.
-
+    
+    - invs IHev1.
+      + invs H. destruct args'; invs H1. econstructor 2; eauto. len; lia. now econstructor.
+      + rewrite e0 in H3; invs H3.
+        eapply eval_Construct_inv in ev1 as (? & [= <-] & Hall).
+        econstructor 2; eauto. len. eapply All2_length in Hall. lia. 
+        eapply All_app_inv; eauto.
+      + destruct H1. destruct args0 using rev_ind. eauto. rewrite mkApps_app in H. invs H.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHev1 => //.
       destruct IHev1 as [?|[]]; intuition subst.
@@ -332,6 +403,13 @@ Section Wcbv.
         now cbn in i. now cbn in i.
         + constructor.
         + econstructor; auto.
+      * destruct b0 as (ind & c & mdecl & idecl & cdecl & args & [H1 H2 H3 H4]).
+        rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
+        rewrite a0 in i |- *. simpl in *.
+        apply (value_app f0 [a']). 
+        destruct f0; simpl in * |- *; try congruence.
+        + rewrite !negb_or /= in i; rtoProp; intuition auto.
+        + destruct with_guarded_fix. now cbn in i. now cbn in i.
       * rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         eapply value_app; eauto with pcuic. 2:eapply All_app_inv; auto.
         len.
@@ -484,6 +562,7 @@ Section Wcbv.
     - destruct L using rev_ind.
       reflexivity.
       rewrite mkApps_app in i. inv i.
+    - EAstUtils.solve_discr.
     - EAstUtils.solve_discr. depelim v.
   Qed.
 
@@ -528,6 +607,8 @@ Section Wcbv.
       unfold atom in isatom. destruct argsv using rev_case => //.
       split; auto. simpl. simpl in isatom. rewrite H //.
       rewrite mkApps_app /= // in isatom.
+    - intros. destruct argsv using rev_case => //.
+      rewrite mkApps_app in Heqtfix => //.
     - intros * vf hargs vargs ihargs eq. solve_discr => //. depelim vf. rewrite e.
       intros [= <- <-]. destruct with_guarded_fix => //. split => //.
       unfold isStuckFix. rewrite e. now apply Nat.leb_le.
@@ -546,13 +627,14 @@ Section Wcbv.
   Qed.
 
   Lemma eval_mkApps_Construct ind c mdecl idecl cdecl f args args' :
+    with_constructor_as_block = false ->
     lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-    eval f (tConstruct ind c) ->
+    eval f (tConstruct ind c []) ->
     #|args| <= cstr_arity mdecl cdecl ->
     All2 eval args args' ->
-    eval (mkApps f args) (mkApps (tConstruct ind c) args').
+    eval (mkApps f args) (mkApps (tConstruct ind c []) args').
   Proof.
-    intros hdecl evf hargs. revert args'.
+    intros hblock hdecl evf hargs. revert args'.
     induction args using rev_ind; intros args' evargs.
     - depelim evargs. now cbn.
     - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
@@ -563,6 +645,23 @@ Section Wcbv.
       eapply IHargs => //. lia.
       rewrite -(All2_length evl). lia.
   Qed.
+
+  Lemma eval_mkApps_Construct_block ind c mdecl idecl cdecl f args args' :
+    with_constructor_as_block ->
+    lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+    eval f (tConstruct ind c []) ->
+    #|args| <= cstr_arity mdecl cdecl ->
+    All2 eval args args' ->
+    eval (tConstruct ind c args) (tConstruct ind c args').
+  Proof.
+    intros hblock hdecl evf hargs. revert args'.
+    induction args using rev_ind; intros args' evargs.
+    - depelim evargs. econstructor. now cbn.
+    - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
+      depelim evr. depelim evr.
+      eapply eval_construct_block; tea. 1: revert hargs; len. 
+      eapply IHargs => //. 1: revert hargs; len.
+  Qed.  
 
   Lemma eval_mkApps_CoFix f mfix idx args args' :
     eval f (tCoFix mfix idx) ->
@@ -621,6 +720,13 @@ Section Wcbv.
     move: e; eapply value_values_ind; simpl; intros; eauto with value.
     - now constructor.
     - assert (All2 eval args args).
+    { clear -X; induction X; constructor; auto. }
+      induction args using rev_ind. repeat econstructor.
+      eapply All_app in a as [? HH]; eauto; invs HH.
+      eapply All_app in X as [? HH]; eauto; invs HH.
+      eapply All2_app_inv in X0 as [? HH]; eauto; invs HH.
+      econstructor; eauto. revert l. len. eapply IHargs; eauto. revert l. len.      
+    - assert (All2 eval args args).
       { clear -X0; induction X0; constructor; auto. }
       eapply eval_mkApps_cong => //. now eapply value_head_final. 
   Qed.
@@ -656,9 +762,18 @@ Section Wcbv.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
         noconf eq1. noconf eq2.
         noconf IHev1.
-        pose proof e0. rewrite e4 in H. noconf H.
-        pose proof e as e'. rewrite e3 in e'. noconf e'.
-        rewrite -> (uip e e3), (uip e0 e4), (uip e1 e5), (uip e2 e6).
+        pose proof e0. rewrite e5 in H. noconf H.
+        pose proof e as e'. rewrite e4 in e'. noconf e'.
+        assert (br0 = br) as -> by congruence.
+        rewrite -> (uip e e4), (uip e0 e5), (uip e1 e6), (uip e2 e7), (uip e3 e8).
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        reflexivity.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1); noconf IHev1.
+        pose proof e0. rewrite e5 in H. noconf H.
+        pose proof e as e'. rewrite e4 in e'. noconf e'.
+        assert (br0 = br) as -> by congruence.
+        rewrite -> (uip e e4), (uip e0 e5), (uip e1 e6), (uip e2 e7), (uip e3 e8).
         specialize (IHev2 _ ev'2); noconf IHev2.
         reflexivity.
     - depelim ev'; try go.
@@ -760,27 +875,48 @@ Section Wcbv.
       specialize (IHev1 _ ev'1).
       pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
       noconf H. noconf IHev1.
-      pose proof e as e'. rewrite e2 in e'; noconf e'.
-      rewrite -> (uip e e2), (uip e0 e3).
-      pose proof e4 as e4'. rewrite e1 in e4'; noconf e4'.
-      rewrite (uip e1 e4).
+      assert (a0 = a) as -> by congruence.
+      pose proof e0 as e'. rewrite e4 in e'; noconf e'.
+      rewrite -> (uip e e3), (uip e0 e4).
+      pose proof e5 as e4'. rewrite e1 in e4'; noconf e4'.
+      rewrite -> (uip e1 e5), (uip e2 e6).
+      now specialize (IHev2 _ ev'2); noconf IHev2.
+    - depelim ev'; try go.
+      specialize (IHev1 _ ev'1); noconf IHev1.
+      assert (a0 = a) as -> by congruence.
+      pose proof e0 as e'. rewrite e4 in e'; noconf e'.
+      rewrite -> (uip e e3), (uip e0 e4).
+      pose proof e5 as e4'. rewrite e1 in e4'; noconf e4'.
+      rewrite -> (uip e1 e5), (uip e2 e6).
       now specialize (IHev2 _ ev'2); noconf IHev2.
     - depelim ev'; try go.
       specialize (IHev _ ev'). noconf IHev.
       rewrite (uip e e0).
       now rewrite (uip i i0).
-    - depelim ev'; try go.
+    - depelim ev'; try now go.
       + move: (IHev1 _ ev'1).
         eapply DepElim.simplification_sigma1 => heq IHev1'.
         apply mkApps_eq_inj in heq as H'; auto.
         destruct H' as (H' & <-). noconf H'.
         noconf IHev1'.
-        pose proof e as e'. rewrite e0 in e'; noconf e'.
+        pose proof e0 as e'. rewrite e2 in e'; noconf e'.
         specialize (IHev2 _ ev'2). noconf IHev2.
-        now rewrite -> (uip e e0), (PCUICWcbvEval.le_irrel _ _ l l0).
+        now rewrite -> (uip e e1), (uip e0 e2), (PCUICWcbvEval.le_irrel _ _ l l0).
       + specialize (IHev1 _ ev'1). noconf IHev1.
         exfalso. rewrite isConstructApp_mkApps in i.
         cbn in i. rewrite !negb_or in i. rtoProp; intuition auto.
+    - depelim ev'; try go.
+      + eapply app_inj_tail in e3 as e4. destruct e4 as [-> ->].
+        rewrite (uip e3 eq_refl) in H. cbn in H. subst.
+        move: (IHev1 _ ev'1).
+        eapply DepElim.simplification_sigma1 => heq IHev1'.
+        noconf heq.
+        noconf IHev1'.
+        specialize (IHev2 _ ev'2). noconf IHev2.
+        pose proof e2 as E.
+        rewrite e0 in E. noconf E.
+        now rewrite -> (uip e e1), (uip e0 e2), (PCUICWcbvEval.le_irrel _ _ l l0).
+      + exfalso. invs i. destruct args; invs H0.
     - depelim ev'; try go.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rtoProp; intuition auto.
@@ -799,7 +935,8 @@ Section Wcbv.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (i0 = i) as -> by now apply uip.
     - depelim ev'; try go.
-      now assert (i0 = i) as -> by now apply uip.
+      2: now assert (i0 = i) as -> by now apply uip.
+      exfalso. invs i. destruct args; cbn in H0; invs H0.
   Qed.
 
   Lemma eval_unique {t v} :
@@ -1077,7 +1214,12 @@ Proof.
     move: IHev1; rewrite closedn_mkApps => /andP[] _ clargs.
     apply IHev2. rewrite /iota_red.
     eapply closed_substl. now rewrite forallb_rev forallb_skipn.
-    len. rewrite e2. eapply nth_error_forallb in Hc'; tea.
+    len. rewrite e3. eapply nth_error_forallb in Hc'; tea.
+    now rewrite Nat.add_0_r in Hc'.
+  - specialize (IHev1 Hc).
+    apply IHev2. rewrite /iota_red.
+    eapply closed_substl. now rewrite forallb_rev forallb_skipn.
+    len. rewrite e3. eapply nth_error_forallb in Hc'; tea.
     now rewrite Nat.add_0_r in Hc'.
   - subst brs. cbn in Hc'. rewrite andb_true_r in Hc'.
     eapply IHev2. eapply closed_substl.
@@ -1113,9 +1255,15 @@ Proof.
     rewrite closedn_mkApps /= => clargs.
     eapply IHev2; eauto.
     eapply nth_error_forallb in clargs; tea.
+  - have := (IHev1 Hc). intros clargs.
+    eapply IHev2; eauto.
+    eapply nth_error_forallb in clargs; tea.
   - have := (IHev1 Hc).
     rewrite closedn_mkApps /= => clargs.
     rewrite clargs IHev2 //.
+  - rtoProp; intuition auto. forward IHev1; solve_all;
+    eapply All_app in Hc; solve_all.
+    eapply All_app_inv; solve_all. invs b. econstructor. eauto. econstructor.
   - rtoProp; intuition auto.
 Qed.
 
@@ -1150,6 +1298,9 @@ Proof.
   - eapply IHev2; eauto.
     eapply wellformed_iota_red_brs; tea => //.
     rewrite wellformed_mkApps // in H2. move/andP: H2 => [] //.
+  - eapply IHev2; eauto.
+    eapply wellformed_iota_red_brs; tea => //.
+    now destruct args; inv H3. 
   - subst brs. eapply IHev2. sim in H0.
     eapply wellformed_substl => //.
     eapply All_forallb, All_repeat => //.
@@ -1177,6 +1328,10 @@ Proof.
     eapply IHev2; eauto.
     move/andP: clargs => [/andP[] hasc wfc wfargs].
     eapply nth_error_forallb in wfargs; tea.
+  - eapply IHev2.
+    eapply nth_error_forallb in e2; eauto.
+    now destruct args; inv H0.
+  - destruct args; invs Hc''.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 
@@ -1237,6 +1392,9 @@ Proof.
   - unshelve eexists; eauto. eapply eval_fix_value; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
   - unshelve eexists. eapply eval_construct; eauto.
     eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. cbn. lia.
+  - unshelve eexists. eapply eval_construct_block; eauto.
+   { clear - l He1. eapply eval_Construct_inv in He1 as (? & ? & ?). eapply All2_length in a. invs e. lia. } 
+     eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2; lia.
   - unshelve eexists. eapply eval_app_cong; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
 Qed.
 
@@ -1360,11 +1518,13 @@ Proof.
 Qed.
 
 Lemma eval_mkApps_Construct_inv {fl : WcbvFlags} Σ kn c args e : 
-  eval Σ (mkApps (tConstruct kn c) args) e -> 
-  ∑ args', [× isSome (lookup_constructor Σ kn c), (e = mkApps (tConstruct kn c) args') & All2 (eval Σ) args args'].
+  with_constructor_as_block = false -> 
+  eval Σ (mkApps (tConstruct kn c []) args) e -> 
+  ∑ args', [× isSome (lookup_constructor Σ kn c), (e = mkApps (tConstruct kn c []) args') & All2 (eval Σ) args args'].
 Proof.
+  intros hblock.
   revert e; induction args using rev_ind; intros e.
-  - intros ev. depelim ev. exists []=> //.
+  - intros ev. depelim ev. congruence. exists []=> //.
   - intros ev. rewrite mkApps_app /= in ev.
     depelim ev; try solve_discr.
     destruct (IHargs _ ev1) as [? []]. solve_discr.
@@ -1377,6 +1537,25 @@ Proof.
       cbn in i. split => //. eapply All2_app; eauto.
     * now cbn in i.
 Qed.
+
+Lemma eval_mkApps_Construct_block_inv {fl : WcbvFlags} Σ kn c args oargs e : 
+  with_constructor_as_block -> 
+  eval Σ (mkApps (tConstruct kn c args) oargs) e -> 
+  ∑ args', oargs = [] × (e = tConstruct kn c args') × All2 (eval Σ) args args'.
+Proof.
+  intros hblock.
+  revert e; induction oargs using rev_ind; intros e.
+  - intros ev. depelim ev. 
+    + eexists. split. reflexivity. split. reflexivity.
+      eapply eval_Construct_inv in ev1 as (? & [= <-] & ?).
+      eapply All2_app; eauto.
+    + invs i. destruct args; invs H0. exists []. repeat econstructor.
+  - intros ev. rewrite mkApps_app /= in ev.
+    depelim ev; try solve_discr.
+    all: try specialize (IHoargs _ ev1) as (? & ? & E & ?); try congruence; try solve_discr; try noconf E.
+    * subst. cbn in i. destruct with_guarded_fix; cbn in *; eauto.
+    * invs i.
+Qed. 
 
 Lemma eval_mkApps_inv_size {wfl : WcbvFlags} {Σ f args v} :
   forall ev : eval Σ (mkApps f args) v,
@@ -1466,31 +1645,33 @@ Proof.
 Qed.
 
 Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} :
-  forall ev : eval Σ (mkApps (tConstruct ind c) args) v,
-  ∑ args' (evf : eval Σ (tConstruct ind c) (tConstruct ind c)),
+  with_constructor_as_block = false ->
+  forall ev : eval Σ (mkApps (tConstruct ind c []) args) v,
+  ∑ args' (evf : eval Σ (tConstruct ind c []) (tConstruct ind c [])),
     [× eval_depth evf <= eval_depth ev,
       All2 (fun a a' => ∑ eva : eval Σ a a', eval_depth eva < eval_depth ev) args args' &
-      v = mkApps (tConstruct ind c) args'].
+      v = mkApps (tConstruct ind c []) args'].
 Proof.
-  intros ev.
+  intros hblock ev.
   destruct (eval_mkApps_inv_size ev) as [f'' [args' [? []]]].
   exists args'.
-  destruct (eval_mkApps_Construct_inv _ _ _ _ _ ev) as [? []]. subst v.
+  destruct (eval_mkApps_Construct_inv _ _ _ _ _ hblock ev) as [? []]. subst v.
   exists (eval_atom _ (tConstruct ind c) i).
   cbn. split => //. destruct ev; cbn => //; auto with arith.
   clear l.
-  eapply (eval_mkApps_Construct_inv _ _ _ []) in x as [? []]. subst f''. depelim a1.
+  eapply (eval_mkApps_Construct_inv _ _ _ _) with (args0 := []) in x as [? []]; auto. subst f''. depelim a1.
   f_equal.
   eapply eval_deterministic_all; tea.
-  eapply All2_impl; tea; cbn; eauto. now intros x y [].
+  eapply All2_impl; tea; cbn; eauto. now intros x y []. 
 Qed.
 
-Lemma eval_construct_size {fl : WcbvFlags} [Σ kn c args e] : 
-  forall (ev : eval Σ (mkApps (tConstruct kn c) args) e),
-  ∑ args', (e = mkApps (tConstruct kn c) args') ×
+Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] : 
+  with_constructor_as_block = false ->
+  forall (ev : eval Σ (mkApps (tConstruct kn c []) args) e),
+  ∑ args', (e = mkApps (tConstruct kn c []) args') ×
   All2 (fun x y => ∑ ev' : eval Σ x y, eval_depth ev' < eval_depth ev) args args'.
 Proof.
-  intros ev; destruct (eval_mkApps_Construct_size ev) as [args'[evf [_ hargs hv]]].
+  intros hblock ev; destruct (eval_mkApps_Construct_size hblock ev) as [args'[evf [_ hargs hv]]].
   exists args'; intuition auto.
 Qed.
 
@@ -1506,4 +1687,3 @@ Proof.
   specialize (IHx e _ H' H). simpl.
   rewrite mkApps_app. simpl. econstructor; eauto.
 Qed.
-

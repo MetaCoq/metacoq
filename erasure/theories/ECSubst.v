@@ -36,6 +36,7 @@ Fixpoint csubst t k u :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (csubst t k')) mfix in
     tCoFix mfix' idx
+  | tConstruct ind n args => tConstruct ind n (map (csubst t k) args)
   | x => x
   end.
 
@@ -57,7 +58,7 @@ Proof.
       destruct (nth_error_spec [t] (n - k) ).
       simpl in l0; lia.
       now rewrite Nat.sub_1_r.
-    + now destruct (Nat.leb_spec k n); try lia.  
+    + now destruct (Nat.leb_spec k n); try lia.
 Qed.
 
 Lemma substl_subst s u : forallb (closedn 0) s ->

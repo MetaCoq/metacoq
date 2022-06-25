@@ -76,6 +76,8 @@ Section wf.
   Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx := 
     let k' := List.length mfix + k in      
     (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
+
+  Definition is_nil {A} (l : list A) := match l with [] => true | _ => false end.
   
   Fixpoint wellformed k (t : term) : bool :=
     match t with
@@ -96,7 +98,7 @@ Section wf.
       | Some d => has_axioms || isSome d.(cst_body)
       | _ => false 
       end
-    | tConstruct ind c => has_tConstruct && isSome (lookup_constructor Σ ind c)
+    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && is_nil block_args
     | tVar _ => has_tVar
     end.
 
@@ -158,7 +160,8 @@ Section EEnvFlags.
       autorewrite with map;
       simpl wellformed in *; intuition auto;
       unfold wf_fix, test_def, test_snd in *;
-        try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
+    destruct args; firstorder.
   Qed.
   
   Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
@@ -193,6 +196,7 @@ Section EEnvFlags.
       elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. lia.
       simpl; rewrite H0 /=. elim (Nat.ltb_spec); auto. intros.
       apply Nat.ltb_lt in H1. lia.
+    - solve_all. destruct args; firstorder.
     - solve_all. rewrite Nat.add_assoc. eauto.
     - len. move/andP: H1 => [] -> ha. cbn. solve_all.
       rewrite Nat.add_assoc; eauto.
@@ -231,6 +235,7 @@ Section EEnvFlags.
     - specialize (IHt2 (S k')).
       rewrite <- Nat.add_succ_comm in IHt2.
       eapply IHt2; auto.
+    - now destruct args; inv H0.
     - specialize (a (#|x.1| + k')) => //.
       rewrite Nat.add_assoc (Nat.add_comm k) in a.
       rewrite !Nat.add_assoc. eapply a => //.

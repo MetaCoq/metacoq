@@ -614,25 +614,6 @@ Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 Definition is_graph_of_global_env_ext `{checker_flags} Σ G :=
   is_graph_of_uctx G (global_ext_uctx Σ).
 
-Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
-    is_graph_of_global_env_ext Σ G ->
-    Σ ;;; Γ |- t = u <~> check_conv (fst Σ) G Γ t u = Checked ().
-Proof.
-  intros. todo "Checker.conv_spec".
-Defined.
-
-Lemma cumul_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
-    is_graph_of_global_env_ext Σ G ->
-    Σ ;;; Γ |- t <= u <~> check_conv_leq (fst Σ) G Γ t u = Checked ().
-Proof.
-  intros. todo "Checker.cumul_spec".
-Defined.
-
-Lemma reduce_cumul :
-  forall `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
-Proof. intros. todo "Checker.reduce_cumul". Defined.
-
-
 Section Typecheck.
   Context {F : Fuel}.
   Context (Σ : global_env).

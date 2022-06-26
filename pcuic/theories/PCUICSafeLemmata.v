@@ -346,7 +346,7 @@ Section Lemmata.
     destruct h; depelim wf; simpl in *.
     all: destruct l; econstructor; eauto.
   Qed.
-  (* todo: rename alpha_eq *)
+  (* TODO: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' :
     eq_context_upto_names Γ Γ' ->
     conv_context cumulAlgo_gen Σ Γ Γ'.

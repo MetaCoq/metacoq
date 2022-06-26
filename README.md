@@ -54,8 +54,13 @@ Template-Coq with additional features. Each extension is in dedicated folder.
 
 Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
 takes `Coq` terms and constructs a representation of their syntax tree as
-a `Coq` inductive data type. The representation is based on the kernel's
+an inductive data type. The representation is based on the kernel's
 term representation.
+
+After importing `MetaCoq.Template.Loader` there are commands `MetaCoq Test Quote t.`, 
+`MetaCoq Quote Definition name := (t).` and `MetaCoq Quote Recursively Definition name := (t).` as 
+well as a tactic `quote_term t k`,
+where in all cases `t` is a term and `k` a continuation tactic.
 
 In addition to this representation of terms, Template Coq includes:
 
@@ -66,9 +71,9 @@ In addition to this representation of terms, Template Coq includes:
 
 - A monad for manipulating global declarations, calling the type
   checker, and inserting them in the global environment, in
-  the style of MTac.
+  the style of MTac. Monadic programs `p : TemplateMonad A` can be run using `MetaCoq Run p`.
 
-- A formalisation of the expected typing rules reflecting the ones of Coq
+- A formalisation of the typing rules reflecting the ones of Coq, not covering eta-expansion and template polymorphism.
 
 ### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.11/pcuic)
 
@@ -92,7 +97,14 @@ calculus has proofs of standard metatheoretical results:
   that singleton elimination (from Prop to Type) is only allowed
   on singleton inductives in Prop.
 
-### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.13/safechecker)
+- Canonicity: The weak head normal form of erms of inductive type is a constructor application.
+
+- Consistency under the assumption of strong normalization
+  
+- Weak call-by-value standardization: Normal forms of terms of first-order inductive type
+can be found via weak call-by-value evaluation.
+
+### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker)
 
 Implementation of a fuel-free and verified reduction machine, conversion
 checker and type checker for PCUIC. This relies on a postulate of
@@ -108,12 +120,11 @@ type-checker, one can use:
 
     MetaCoq CoqCheck <term>
 
-
-### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.13/erasure)
+### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure)
 
 An erasure procedure to untyped lambda-calculus accomplishing the
-same as the Extraction plugin of Coq. The extracted safe erasure is
-available in Coq through a new vernacular command:
+same as the type and proof erasure phase of the Extraction plugin of Coq.
+The extracted safe erasure is available in Coq through a new vernacular command:
 
     MetaCoq Erase <term>
 
@@ -137,8 +148,6 @@ Examples of translations built on top of this:
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.13/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.13/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the verified checker and erasure.
-
-
 
 ## Papers
 

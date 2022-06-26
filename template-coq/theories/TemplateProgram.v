@@ -31,6 +31,24 @@ Definition template_expand_obseq (p p' : template_program) (v v' : Ast.term) :=
   
 Local Obligation Tactic := idtac.
 
+Axiom eta_expansion_preserves_wf_ext_and_typing :
+  forall (cf : checker_flags)
+    (Σ : global_env)
+    (t : term)
+    (wfext : wf_ext (empty_ext (Σ, t).1))
+    (ht : ∑ T : term, empty_ext (Σ, t).1;;; [] |- (Σ, t).2 : T),
+  ∥ wt_template_program (eta_expand_program (Σ, t)) ∥.
+
+Axiom eta_expansion_preserves_evaluation :
+  forall (cf : checker_flags)
+    (Σ : global_env)
+    (t v : term)
+    (w : wf_ext (empty_ext (Σ, t).1))
+    (s : ∑ T : term, empty_ext (Σ, t).1;;; [] |- (Σ, t).2 : T)
+    (ev : ∥ eval Σ t v ∥),
+    ∥ eval (eta_expand_global_env Σ) (eta_expand (declarations Σ) [] t)
+    (eta_expand (declarations Σ) [] v) ∥.
+
 Program Definition template_eta_expand {cf : checker_flags} : self_transform template_program Ast.term eval_template_program eval_template_program :=
  {| name := "eta-expansion of template program";
     pre p := ∥ wt_template_program p ∥;
@@ -39,7 +57,7 @@ Program Definition template_eta_expand {cf : checker_flags} : self_transform tem
     obseq := template_expand_obseq |}.
 Next Obligation.
   intros cf [Σ t] [[wfext ht]].
-  cbn. split. split. todo "eta-expansion preserves wf ext and typing".
+  cbn. split. eapply eta_expansion_preserves_wf_ext_and_typing; eauto.
   red.
   destruct ht as [T ht].
   split; cbn. eapply EtaExpand.eta_expand_global_env_expanded. apply wfext.
@@ -53,7 +71,7 @@ Next Obligation.
   red. intros cf [Σ t] v [[]].
   unfold eval_template_program.
   cbn. intros ev.
-  exists (EtaExpand.eta_expand (Ast.Env.declarations Σ) [] v). split. split.
-  todo "eta-expansion preserves evaluation".
+  exists (EtaExpand.eta_expand (Ast.Env.declarations Σ) [] v). split.
+  eapply eta_expansion_preserves_evaluation; eauto.
   red. reflexivity.
 Qed.

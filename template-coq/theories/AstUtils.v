@@ -192,7 +192,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
   | O => t
   | S n => match t with
           | tProd _ _ B => remove_arity n B
-          | _ => t (* todo *)
+          | _ => t (* TODO *)
           end
   end.
 

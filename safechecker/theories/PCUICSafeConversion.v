@@ -5850,13 +5850,13 @@ match
              (LevelSet.add Level.lzero LevelSet.empty, ConstraintSet.empty);
            declarations := []
          |}, Monomorphic_ctx);
-      referenced_impl_ext_wf := todo "foo"
+      referenced_impl_ext_wf := TODO "foo"
     |} [] Cumul (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
-    (todo "") (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
-    (todo "")
+    (TODO "") (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
+    (TODO "")
 with
 | ConvSuccess => "success"
-| ConvError _ => todo "foo"
+| ConvError _ => TODO "foo"
 end = "success".
 Proof.
   lazy. reflexivity.

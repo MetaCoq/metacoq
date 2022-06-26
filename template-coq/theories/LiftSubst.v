@@ -461,7 +461,7 @@ Qed.
 Lemma noccur_between_subst k n t : noccur_between k n t -> 
   closedn (n + k) t -> closedn k t.
 Proof.
-Admitted. *)
+Qed.  *)                        (* TODO *)
 
 Lemma strip_casts_lift n k t : 
   strip_casts (lift n k t) = lift n k (strip_casts t).

@@ -698,7 +698,8 @@ Proof.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //. 
   - destruct t => //.
-    all:constructor; eauto.
+    all:constructor; eauto. cbn [atom optimize] in i |- *.
+    rewrite -lookup_constructor_optimize //.
 Qed.
 
 (* 

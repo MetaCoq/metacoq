@@ -13,7 +13,7 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-(*todo move*)
+(* TODO move*)
 
 Lemma consistent_instance_wf_universe `{checker_flags} Σ uctx u :
   consistent_instance_ext Σ uctx u ->

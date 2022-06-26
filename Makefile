@@ -95,7 +95,7 @@ ci-local-noclean:
 	./configure.sh local
 	$(MAKE) all test-suite TIMED=pretty-timed
 
-ci-local: ci-local-noclean
+ci-local: ci-local-noclean 
 	$(MAKE) clean
 
 ci-quick:
@@ -106,3 +106,6 @@ ci-opam:
 # Use -v so that regular output is produced
 	opam install -v -y .
 	opam remove -y coq-metacoq coq-metacoq-template
+
+checktodos:
+	sh checktodos.sh

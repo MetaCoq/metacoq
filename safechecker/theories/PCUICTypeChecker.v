@@ -1771,7 +1771,7 @@ Section Typecheck.
   Qed.
     
   Next Obligation.
-    (*todo: factor*)
+    (*TODO: factor*)
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     apply eqb_eq in i. subst I.
     eapply eqb_eq in i0.

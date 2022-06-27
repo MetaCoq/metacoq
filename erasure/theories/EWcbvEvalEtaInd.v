@@ -313,7 +313,7 @@ Lemma eval_preserve_mkApps_ind :
     All2 P args args' ->
     P' (mkApps (tConstruct ind i) args) (mkApps (tConstruct ind i) args')) → 
 
-  (∀ t : term, atom t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
+  (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
 Proof.
   intros * Qpres P P'Q etaΣ wfΣ hasapp.

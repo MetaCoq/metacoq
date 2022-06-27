@@ -27,7 +27,7 @@ extended with a box construct for erased terms.
 | [EWcbvEvalEtaInd]     | Induction principle on weak call-by-value evaluation preserving eta-expansion
 | [EWcbvEvalInd]        | Induction principle on weak call-by-value evaluation
 | [EWellformed]         | Well-formedness predicate on erased terms
-| [Erasure]             | The erasure relation
+| [Extract]             | The erasure relation
 | [ESubstitution]       | Substitution and weakening lemmas for the erasure relation
 | [ErasureCorrectness]  | The erasure relation correctness proof 
 | [ErasureProperties]   | Properties of the erasure relation
@@ -36,7 +36,7 @@ extended with a box construct for erased terms.
 | [EOptimizePropDiscr]  | Transformation removing cases on propositional content 
 | [ERemoveParams]       | Remove constructor parameters
 | [ETransform]          | Definitions of transformations from PCUIC to λ-box
-| [Extract]             | The complete erasure pipeline
+| [Erasure]             | The complete erasure pipeline
 | [Extraction]          | Extraction directives for the plugin
 | [Loader]              | Loads the erasure plugin
 

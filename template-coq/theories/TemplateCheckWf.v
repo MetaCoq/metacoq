@@ -13,8 +13,6 @@ Axiom assume_welltypedness_of_input : forall p, ∥ wt_template_program p ∥.
 Definition eta_expand p := 
   run_eta_program p (assume_welltypedness_of_input p).
 
-Compute (Transform.pre template_eta_expand _).
-
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
   | ConstantDecl cb =>

@@ -18,7 +18,6 @@ theories/EWcbvEvalInd.v
 theories/EWcbvEvalEtaInd.v
 theories/Extract.v
 theories/EDeps.v
-theories/EAll.v
 theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v

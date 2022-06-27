@@ -25,8 +25,7 @@ jobs:
       - name: Check for todos
         with:
           continue-on-error: true
-        ./checktodos.sh
-
+        run: ./checktodos.sh
 
       - name: Docker-Coq-Action
         uses: coq-community/docker-coq-action@v1

@@ -168,7 +168,7 @@ Examples of translations built on top of this:
   add a constructor to any inductive type is in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/examples/add_constructor.v)
 
 - An example *extracted* Coq plugin built on the extractable Template Monad, which can be used to
-  derive lenses associated to a record type is in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/etest-suite/plugin-demo). The plugin runs in OCaml.
+  derive lenses associated to a record type is in [test-suite/plugin-demo](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/plugin-demo). The plugin runs in OCaml and is a template for writing extracted plugins.
 
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/safechecker_test.v) show example

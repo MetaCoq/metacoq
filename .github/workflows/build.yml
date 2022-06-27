@@ -23,8 +23,7 @@ jobs:
           fetch-depth: 1
 
       - name: Check for todos
-        with:
-          continue-on-error: true
+        continue-on-error: true
         run: ./checktodos.sh
 
       - name: Docker-Coq-Action

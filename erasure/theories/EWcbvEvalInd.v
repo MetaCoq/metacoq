@@ -159,7 +159,7 @@ Section eval_mkApps_rect.
           → eval Σ a a'
           → P a a'
           → P (tApp f11 a) (tApp f' a'))
-    → (∀ t : term, atom t → P t t)
+    → (∀ t : term, atom Σ t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof using Type.
   intros ?????????????????? H.

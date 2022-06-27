@@ -27,13 +27,13 @@ Local Ltac inv H := inversion H; subst.
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
-Definition atom t :=
+Definition atom Σ t :=
   match t with
   | tBox
-  | tConstruct _ _
   | tCoFix _ _
   | tLambda _ _
   | tFix _ _ => true
+  | tConstruct ind c => isSome (lookup_constructor Σ ind c)
   | _ => false
   end.
 
@@ -47,7 +47,7 @@ Definition isStuckFix t (args : list term) :=
   | _ => false
   end.
 
-Lemma atom_mkApps f l : atom (mkApps f l) -> (l = []) /\ atom f.
+Lemma atom_mkApps Σ f l : atom Σ (mkApps f l) -> (l = []) /\ atom Σ f.
 Proof.
   revert f; induction l using rev_ind. simpl. intuition auto.
   simpl. intros. now rewrite mkApps_app in H.
@@ -197,7 +197,7 @@ Section Wcbv.
 
 
   (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
-  | eval_atom t : atom t -> eval t t.
+  | eval_atom t : atom Σ t -> eval t t.
 
   Hint Constructors eval : core.
   Derive Signature for eval.
@@ -227,7 +227,7 @@ Section Wcbv.
    Derive Signature NoConfusion for value_head.
  
    Inductive value : term -> Type :=
-   | value_atom t : atom t -> value t
+   | value_atom t : atom Σ t -> value t
    | value_app_nonnil f args : value_head #|args| f -> args <> [] -> All value args -> value (mkApps f args).
    Derive Signature for value.
 
@@ -245,12 +245,12 @@ Section Wcbv.
   Lemma value_app f args : value_head #|args| f -> All value args -> value (mkApps f args).
   Proof.
     destruct args.
-    - intros [] hv; now constructor.
+    - intros [] hv; constructor; try easy. cbn [atom mkApps]. now rewrite e.
     - intros vh av. eapply value_app_nonnil => //.
   Qed.
 
   Lemma value_values_ind : forall P : term -> Type,
-      (forall t, atom t -> P t) ->
+      (forall t, atom Σ t -> P t) ->
       (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
@@ -270,14 +270,14 @@ Section Wcbv.
   Proof. destruct t; auto. Qed.
   Hint Resolve isStuckfix_nApp : core.
 
-  Lemma atom_nApp {t} : atom t -> ~~ isApp t.
+  Lemma atom_nApp {t} : atom Σ t -> ~~ isApp t.
   Proof. destruct t; auto. Qed.
   Hint Resolve atom_nApp : core.
 
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) /\ atom t) + ([× l <> [], value_head #|l| t & All value l]).
+    ((l = []) /\ atom Σ t) + ([× l <> [], value_head #|l| t & All value l]).
   Proof.
     intros H H'. generalize_eq x (mkApps t l).
     revert x H' t H. apply: value_values_ind.
@@ -353,7 +353,7 @@ Section Wcbv.
     value_head n t -> eval t t.
   Proof.
     destruct 1.
-    - now constructor.
+    - constructor; try easy. now cbn [atom]; rewrite e.
     - now eapply eval_atom.
     - now eapply eval_atom. 
   Qed.
@@ -362,9 +362,9 @@ Section Wcbv.
   (*     It means no redex can remain at the head of an evaluated term. *)
 
   Lemma value_head_spec' n t :
-    value_head n t -> (~~ (isLambda t || isBox t)) && atom t.
+    value_head n t -> (~~ (isLambda t || isBox t)) && atom Σ t.
   Proof.
-    induction 1; cbn => //.
+    induction 1; auto. cbn [atom]; rewrite e //.
   Qed.
 
 
@@ -953,7 +953,9 @@ Section WcbvEnv.
     induction ev; try solve [econstructor; 
       eauto using (extends_lookup_constructor wf ex), (extends_constructor_isprop_pars_decl wf ex), (extends_is_propositional wf ex)].
     econstructor; eauto.
-    red in isdecl |- *. eauto using extends_lookup.
+    red in isdecl |- *. eauto using extends_lookup. constructor.
+    destruct t => //. cbn [atom] in i. destruct lookup_constructor eqn:hl => //.
+    eapply (extends_lookup_constructor wf ex) in hl. now cbn [atom].
   Qed.
 
 End WcbvEnv.
@@ -1359,7 +1361,7 @@ Qed.
 
 Lemma eval_mkApps_Construct_inv {fl : WcbvFlags} Σ kn c args e : 
   eval Σ (mkApps (tConstruct kn c) args) e -> 
-  ∑ args', (e = mkApps (tConstruct kn c) args') × All2 (eval Σ) args args'.
+  ∑ args', [× isSome (lookup_constructor Σ kn c), (e = mkApps (tConstruct kn c) args') & All2 (eval Σ) args args'].
 Proof.
   revert e; induction args using rev_ind; intros e.
   - intros ev. depelim ev. exists []=> //.
@@ -1472,18 +1474,18 @@ Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} :
 Proof.
   intros ev.
   destruct (eval_mkApps_inv_size ev) as [f'' [args' [? []]]].
-  exists args'. 
-  exists (eval_atom _ (tConstruct ind c) eq_refl).
+  exists args'.
+  destruct (eval_mkApps_Construct_inv _ _ _ _ _ ev) as [? []]. subst v.
+  exists (eval_atom _ (tConstruct ind c) i).
   cbn. split => //. destruct ev; cbn => //; auto with arith.
   clear l.
-  destruct (eval_mkApps_Construct_inv _ _ _ _ _ ev) as [? []]. subst v.
   eapply (eval_mkApps_Construct_inv _ _ _ []) in x as [? []]. subst f''. depelim a1.
   f_equal.
   eapply eval_deterministic_all; tea.
   eapply All2_impl; tea; cbn; eauto. now intros x y [].
 Qed.
 
-Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] : 
+Lemma eval_construct_size {fl : WcbvFlags} [Σ kn c args e] : 
   forall (ev : eval Σ (mkApps (tConstruct kn c) args) e),
   ∑ args', (e = mkApps (tConstruct kn c) args') ×
   All2 (fun x y => ∑ ev' : eval Σ x y, eval_depth ev' < eval_depth ev) args args'.

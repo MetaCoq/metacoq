@@ -7,6 +7,9 @@ Utils
 WGraph
 UGraph0
 EnvMap
+MCProd
+Transform
+EtaExpand
 
 WcbvEval
 Classes0

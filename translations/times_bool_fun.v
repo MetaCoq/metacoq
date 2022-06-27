@@ -219,7 +219,7 @@ Fixpoint refresh_universes (t : term) {struct t} :=
   | _ => t
   end.
 
-Local Instance tsl_fun : Translation
+Global Instance tsl_fun : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE t => t' <- tsl_rec fuel (fst ΣE) (snd ΣE) [] t ;;
                            ret (refresh_universes t');

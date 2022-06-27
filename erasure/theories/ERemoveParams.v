@@ -965,7 +965,7 @@ Proof.
     rewrite (lookup_constructor_lookup_inductive_pars H).
     eapply eval_mkApps_Construct; tea.
     + rewrite lookup_constructor_strip H //.
-    + now constructor.
+    + constructor. cbn [atom]. rewrite lookup_constructor_strip H //.
     + rewrite /cstr_arity /=.
       move: H0; rewrite /cstr_arity /=.
       rewrite skipn_length map_length => ->. lia.
@@ -974,7 +974,10 @@ Proof.
       intros x y []; auto.
     
   - destruct t => //.
-    all:constructor; eauto.
+    all:constructor; eauto. simp strip.
+    cbn [atom strip] in H |- *.
+    rewrite lookup_constructor_strip.
+    destruct lookup_constructor eqn:hl => //. destruct p as [[] ?] => //.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

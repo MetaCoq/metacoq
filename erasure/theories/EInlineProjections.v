@@ -656,6 +656,8 @@ Proof.
         destruct v => /= //. 
   - destruct t => //.
     all:constructor; eauto.
+    cbn [atom optimize] in i |- *.
+    rewrite -lookup_constructor_optimize //.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

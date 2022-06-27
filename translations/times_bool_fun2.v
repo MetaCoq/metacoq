@@ -4,6 +4,7 @@ Unset Universe Checking.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
 Import MCMonadNotation.
 
+Set Warnings "-notation-overridden".
 Unset MetaCoq Strict Unquote Universe Mode.
 
 MetaCoq Run (TC <- ImplementExisting emptyTC "paths" ;;

@@ -35,11 +35,13 @@ Class ETermFlags :=
   ; has_tCoFix : bool
   }.
 
+Set Warning "-future-coercion-class-field".
 Class EEnvFlags := {
   has_axioms : bool;
   has_cstr_params : bool;
   term_switches :> ETermFlags }.
-  
+Set Warning "+future-coercion-class-field".
+
 Definition all_term_flags := 
   {| has_tBox := true
     ; has_tRel := true
@@ -281,7 +283,7 @@ Section EEnvFlags.
     forallb (wellformed 0) (fix_subst mfix).
   Proof using Type.
     intros hm. unfold fix_subst.
-    generalize (le_refl #|mfix|).
+    generalize (Nat.le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
     induction n => //.
     intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm /= andb_true_r.
@@ -293,7 +295,7 @@ Section EEnvFlags.
     forallb (wellformed 0) (cofix_subst mfix).
   Proof using Type.
     intros hm. unfold cofix_subst.
-    generalize (le_refl #|mfix|).
+    generalize (Nat.le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
     induction n => //.
     intros hn. cbn. rewrite hasco /=. rewrite /wf_fix_gen hm /= andb_true_r.

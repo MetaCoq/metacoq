@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
+Set Warnings "-notation-overridden".
 
 Unset MetaCoq Strict Unquote Universe Mode.
 
@@ -37,7 +38,7 @@ Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
 
 Local Instance tit : config.checker_flags := config.type_in_type.
-Existing Instance Checker.default_fuel.
+Local Existing Instance Checker.default_fuel.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=

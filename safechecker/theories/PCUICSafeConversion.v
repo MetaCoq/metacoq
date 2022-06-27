@@ -5710,7 +5710,9 @@ Qed.
 
     _isconv Fallback Γ t1 π1 h1 t2 π2 h2 aux :=
       λ { | leq | hx | r1 | r2 | hd := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 hd hx aux }.
-
+  
+  Derive Signature for dlexmod.
+  
   Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
     forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
   Proof using Type.

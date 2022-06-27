@@ -130,6 +130,7 @@ Class Qconst Σ (Q : nat -> term -> Type) := qconst :
     end.
 #[export] Hint Mode Qconst - ! : typeclass_instances.
 
+Set Warning "-future-coercion-class-field".
 Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
   { qpres_qpres :> Qpres Q;
     qpres_qcons :> Qconst Σ Q;
@@ -139,6 +140,7 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
     qpres_qsubst :> Qsubst Q;
     qpres_qfix :> Qfix Q;
     qpres_qcofix :> Qcofix Q }.
+Set Warning "+future-coercion-class-field".
 
 Lemma eval_preserve_mkApps_ind :
 ∀ (wfl : WcbvFlags) {efl : EEnvFlags} (Σ : global_declarations) 

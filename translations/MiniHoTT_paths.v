@@ -96,6 +96,11 @@ Ltac transitivity x := etransitivity x.
 
 Notation idmap := (fun x => x).
 
+Declare Scope equiv_scope.
+Declare Scope path_scope.
+Declare Scope fibration_scope.
+Declare Scope trunc_scope.
+
 Delimit Scope equiv_scope with equiv.
 Delimit Scope function_scope with function.
 Delimit Scope path_scope with path.

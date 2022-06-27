@@ -1,13 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
-From MetaCoq.Template Require Import Transform bytestring config utils.
+From MetaCoq.Template Require Import Transform bytestring config utils EtaExpand.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
 From MetaCoq.Erasure Require Import ETransform.
 
 Import PCUICProgram.
-Import TemplateProgram (template_eta_expand).
 Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform).
 
 Import bytestring.
@@ -32,8 +31,6 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   Ast.term EAst.term
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false |}) := 
-  (* Eta expansion of constructors and fixpoints *)
-  template_eta_expand ▷
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
   template_to_pcuic_transform ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
@@ -92,7 +89,6 @@ Qed.
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) := 
-  template_eta_expand ▷
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
@@ -126,14 +122,41 @@ Next Obligation. apply fake_guard_impl_properties. Qed.
   Coq definition). *)
 
 
-Axiom assume_that_we_only_erase_on_welltyped_programs :
+Axiom assume_that_we_only_erase_on_welltyped_programs : forall {cf : checker_flags},
   forall (p : Ast.Env.program), squash (TemplateProgram.wt_template_program p).
-Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
+
+Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program p (assume_that_we_only_erase_on_welltyped_programs p) in
+  let p' := run_erase_program (eta_expand_program p) _ in
   time "Pretty printing" EPretty.print_program p'.
+Next Obligation.
+  assert (ht : ∥ TemplateProgram.wt_template_program p ∥) by eapply assume_that_we_only_erase_on_welltyped_programs.
+  split; auto.  
+  apply assume_that_we_only_erase_on_welltyped_programs.
+  red.
+  destruct ht as [[wfext [T ht]]].
+  split; cbn. eapply EtaExpand.eta_expand_global_env_expanded. eapply wfext.
+  eapply EtaExpand.expanded_env_irrel.
+  epose proof (EtaExpand.eta_expand_expanded (Σ := Ast.Env.empty_ext p.1) [] [] p.2 T).
+  forward H. apply wfext. specialize (H ht).
+  forward H by constructor. cbn in H.
+  destruct p as [ [] ]; cbn in *. exact H.
+Qed.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program_fast p (assume_that_we_only_erase_on_welltyped_programs p) in
+  let p' := run_erase_program_fast (eta_expand_program p) _ in
   time "pretty-printing" EPretty.print_program p'.
+Next Obligation.
+  assert (ht : ∥ TemplateProgram.wt_template_program p ∥) by eapply assume_that_we_only_erase_on_welltyped_programs.
+  split; auto.  
+  apply assume_that_we_only_erase_on_welltyped_programs.
+  red.
+  destruct ht as [[wfext [T ht]]].
+  split; cbn. eapply EtaExpand.eta_expand_global_env_expanded. eapply wfext.
+  eapply EtaExpand.expanded_env_irrel.
+  epose proof (EtaExpand.eta_expand_expanded (Σ := Ast.Env.empty_ext p.1) [] [] p.2 T).
+  forward H. apply wfext. specialize (H ht).
+  forward H by constructor. cbn in H.
+  destruct p as [ [] ]; cbn in *. exact H.
+Qed.

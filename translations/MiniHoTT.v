@@ -1,4 +1,4 @@
-
+Set Warnings "-notation-overridden".
 
 Local Set Primitive Projections.
 Record sigT {A} (P : A -> Type) : Type := existT
@@ -93,6 +93,11 @@ Ltac transitivity x := etransitivity x.
 
 Notation idmap := (fun x => x).
 
+Declare Scope equiv_scope.
+Declare Scope path_scope.
+Declare Scope fibration_scope.
+Declare Scope trunc_scope.
+
 Delimit Scope equiv_scope with equiv.
 Delimit Scope function_scope with function.
 Delimit Scope path_scope with path.
@@ -134,7 +139,7 @@ Notation "g 'o' f" := (compose g%function f%function) (at level 40, left associa
 Definition composeD {A B C} (g : forall b, C b) (f : A -> B) := fun x : A => g (f x).
 Global Arguments composeD {A B C}%type_scope (g f)%function_scope x.
 #[global]
-Hint Unfold composeD.
+Hint Unfold composeD : core.
 Notation "g 'oD' f" := (composeD g f) (at level 40, left associativity) : function_scope.
 
 Notation "x = y :> A" := (paths A x y) : type_scope.
@@ -1312,6 +1317,7 @@ Hint Resolve
   inv_pp inv_V
  : path_hints.
 
+#[global]
 Hint Rewrite
 @concat_p1
 @concat_1p

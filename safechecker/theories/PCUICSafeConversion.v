@@ -213,8 +213,7 @@ Section Conversion.
   Defined.
 
   Derive Signature for Subterm.lexprod.
-  Derive Signature for dlexmod.
-
+  
   Lemma R_aux_Acc :
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->

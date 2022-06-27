@@ -35,12 +35,12 @@ Class ETermFlags :=
   ; has_tCoFix : bool
   }.
 
-Set Warning "-future-coercion-class-field".
+Set Warnings "-future-coercion-class-field".
 Class EEnvFlags := {
   has_axioms : bool;
   has_cstr_params : bool;
   term_switches :> ETermFlags }.
-Set Warning "+future-coercion-class-field".
+Set Warnings "+future-coercion-class-field".
 
 Definition all_term_flags := 
   {| has_tBox := true

@@ -29,7 +29,7 @@ Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
 
-Set Warning "-notation-overriden".
+Set Warnings "-notation-overriden".
 From MetaCoq.TestSuite Require Import hott_example.
 
 MetaCoq SafeCheck @issect'.

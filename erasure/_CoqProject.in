@@ -10,7 +10,6 @@ theories/EPretty.v
 theories/ECSubst.v
 theories/EWcbvEval.v
 # theories/EWtAst.v
-theories/EWndEval.v
 theories/EGlobalEnv.v
 theories/EWellformed.v
 theories/EEnvMap.v

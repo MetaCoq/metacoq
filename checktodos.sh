@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [[ $(git grep -c todo | grep theories) = template-coq/theories/utils/MCUtils.v:3 ]]
 then
@@ -14,7 +14,7 @@ then
     fi
 else
     echo "Found todos:"
-    git grep -c todo | grep theories
+    git grep -c todo | grep theories | grep -v "template-coq/theories/utils/MCUtils.v:3"
     exit 1
 fi
 endef

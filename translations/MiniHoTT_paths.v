@@ -1,4 +1,4 @@
-
+Set Warnings "-notation-overridden".
 
 Local Set Primitive Projections.
 Record sigT {A} (P : A -> Type) : Type := existT
@@ -33,17 +33,16 @@ Defined.
 
 (* *********************************************** *)
 
-
 Arguments sigT {A}%type P%type.
 Arguments existT {A}%type P%type _ _.
 Arguments projT1 {A P} _ / .
 Arguments projT2 {A P} _ / .
+
 Notation "'exists' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p)) ..))
   (at level 200, x binder, right associativity,
    format "'[' 'exists'  '/  ' x  ..  y ,  '/  ' p ']'")
   : type_scope.
 Notation "{ x : A  & P }" := (sigT (fun x:A => P)) : type_scope.
-
 
 Definition relation (A : Type) := A -> A -> Type.
 
@@ -96,6 +95,11 @@ Tactic Notation "etransitivity" := etransitivity _.
 Ltac transitivity x := etransitivity x.
 
 Notation idmap := (fun x => x).
+
+Declare Scope equiv_scope.
+Declare Scope path_scope.
+Declare Scope fibration_scope.
+Declare Scope trunc_scope.
 
 Delimit Scope equiv_scope with equiv.
 Delimit Scope function_scope with function.

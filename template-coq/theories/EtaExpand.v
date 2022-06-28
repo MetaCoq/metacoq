@@ -781,9 +781,9 @@ Proof.
       2:{ replace (S n0 - #|l|) with 0 by lia. cbn. econstructor. }
       rewrite EE in H4.
       rewrite seq_app, rev_map_spec, map_app, rev_app_distr in H4.
-      eapply Forall_app in H4 as []. rewrite Min.min_l. 2: len; lia.
+      eapply Forall_app in H4 as []. rewrite Nat.min_l. 2: len; lia.
       rewrite <- EE in H0.
-    revert H0. len. rewrite !firstn_length, Min.min_l. 2:len;lia.
+    revert H0. len. rewrite !firstn_length, Nat.min_l. 2:len;lia.
     rewrite rev_map_spec. intros.
     rewrite Forall_forall in H0 |- *. intros.
     specialize (H0 _ H1). rewrite <- in_rev in H1.
@@ -949,7 +949,7 @@ Proof.
       destruct n0.
       * cbn. econstructor. now rewrite nth_error_map, H1. 
       * rewrite seq_S,rev_map_spec, map_app, rev_app_distr. subst.
-         rewrite <- context_assumptions_lift, !Min.min_l; try lia.
+         rewrite <- context_assumptions_lift, !Nat.min_l; try lia.
         econstructor.
         -- rewrite nth_error_app2. 2: rewrite repeat_length; lia.
            rewrite repeat_length. replace (S n0 + n - S n0) with n by lia.
@@ -1128,7 +1128,7 @@ Proof.
       assert (#| (case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
       (puinst p) (bcontext y) x)| = #|bcontext y|). { clear - a0.
         unfold case_branch_context_gen. rewrite map2_length.
-        rewrite Min.min_l; try lia. eapply All2_length in a0.
+        rewrite Nat.min_l; try lia. eapply All2_length in a0.
         unfold inst_case_context. unfold subst_context.
         unfold subst_instance, subst_instance_context, map_context.
         rewrite fold_context_k_length, map_length. unfold aname. lia.

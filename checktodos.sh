@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [[ $(git grep -c todo | grep theories) = template-coq/theories/utils/MCUtils.v:3 ]]
 then

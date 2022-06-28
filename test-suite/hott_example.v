@@ -1,4 +1,4 @@
-Set Warning "-future-coercion-class-field".
+Set Warnings "-future-coercion-class-field".
 Set Universe Polymorphism.
 
 (* Basic notations *)

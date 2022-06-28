@@ -1854,7 +1854,7 @@ Proof.
       rewrite (remove_last_last l0 a hl).
       rewrite -[tApp _ _](mkApps_app _ _ [a']).
       eapply eval_mkApps_Construct; tea.  
-      { constructor. cbn [atom]; rewrite H //. }
+      { constructor. cbn [atom]; rewrite e0 //. }
       { len. rewrite (All2_length hargs). lia. }
       eapply All2_app.
       eapply forallb_remove_last, forallb_All in etal.

@@ -178,11 +178,11 @@ Section strip.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     
     - destruct Nat.compare => //.
-    - f_equal. rtoProp. solve_all. destruct block_args; inv H2. eauto.
+    - f_equal. rtoProp. solve_all. destruct block_args; inv H0. eauto.
     - f_equal. solve_all.  move/andP: b => [] _ he. solve_all.
-    - specialize (H a k H1 H2).
-      rewrite !csubst_mkApps in H2 *.
-      rewrite isEtaExp_mkApps_napp // in H3.
+    - specialize (H a etaa cla k).
+      rewrite !csubst_mkApps in H1 *.
+      rewrite isEtaExp_mkApps_napp // in H1.
       destruct construct_viewc.
       * cbn. rewrite strip_mkApps //.
       * move/andP: H1 => [] et ev.
@@ -210,8 +210,8 @@ Section strip.
             rewrite (lookup_inductive_pars_constructor_pars_args eqpars).
             rewrite -mkApps_app /= !skipn_map. f_equal.
             rewrite skipn_app map_app. f_equal.
-            assert (pars - #|l| = 0). rtoProp. rename H4 into ise. eapply Nat.leb_le in ise; lia.
-            rewrite H4 skipn_0.
+            assert (pars - #|l| = 0). rtoProp. rename H2 into ise. eapply Nat.leb_le in ise; lia.
+            rewrite H2 skipn_0.
             rewrite !map_map_compose.
             clear -etaa cla ev H0. solve_all. }
           { rewrite -mkApps_app.
@@ -227,7 +227,7 @@ Section strip.
           rewrite /isEtaExp_app in H2.
           destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => // /=.
           rewrite (lookup_inductive_pars_constructor_pars_args eqpars).
-          assert (pars = 0). rtoProp. eapply Nat.leb_le in H4. lia.
+          assert (pars = 0). rtoProp. eapply Nat.leb_le in H2. lia.
           subst pars. rewrite skipn_0.
           simp strip; rewrite -strip_equation_1.
           { f_equal. rewrite !map_map_compose. clear -etaa cla ev H0. solve_all. } }
@@ -246,15 +246,9 @@ Section strip.
       now destruct block_args; inv etav.
       rewrite map_skipn. f_equal.
       rewrite !map_map_compose. 
-      (*rewrite isEtaExp_Constructor // in H0.
-      move/andP: H0 => [] etaapp' ev.
-      clear -etaa cla ev H. solve_all. 
+      rewrite isEtaExp_Constructor // in H0. rtoProp. solve_all.
     - pose proof (etaExp_csubst _ _ k _ etaa H0). 
-      rewrite !csubst_mkApps /= in H1 *.*)
-      rewrite isEtaExp_Constructor // in H2. rtoProp.
-      solve_all.
-    - pose proof (etaExp_csubst _ _ k _ H1 H2). 
-      rewrite !csubst_mkApps /= in H3 *.
+      rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
       rewrite strip_mkApps //.

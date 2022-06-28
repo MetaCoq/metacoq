@@ -283,7 +283,7 @@ Section Wcbv.
   Lemma value_app f args : value_head #|args| f -> All value args -> value (mkApps f args).
   Proof.
     destruct args.
-    - intros [] hv; constructor; try easy. cbn [atom mkApps]. now rewrite e.
+    - intros [] hv; constructor; try easy. cbn [atom mkApps]. now rewrite e0.
     - intros vh av. eapply value_app_nonnil => //.
   Qed.
 
@@ -431,7 +431,7 @@ Section Wcbv.
     value_head n t -> eval t t.
   Proof.
     destruct 1.
-    - constructor; try easy. now cbn [atom]; rewrite e.
+    - constructor; try easy. now cbn [atom]; rewrite e0.
     - now eapply eval_atom.
     - now eapply eval_atom. 
   Qed.
@@ -442,7 +442,7 @@ Section Wcbv.
   Lemma value_head_spec' n t :
     value_head n t -> (~~ (isLambda t || isBox t)) && atom Σ t.
   Proof.
-    induction 1; auto. cbn [atom]; rewrite e //.
+    induction 1; auto. cbn [atom]; rewrite e0 //.
   Qed.
 
 
@@ -656,7 +656,7 @@ Section Wcbv.
   Proof.
     intros hblock hdecl evf hargs. revert args'.
     induction args using rev_ind; intros args' evargs.
-    - depelim evargs. econstructor. now cbn.
+    - depelim evargs. econstructor. now cbn [atom]; rewrite hdecl.
     - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
       depelim evr. depelim evr.
       eapply eval_construct_block; tea. 1: revert hargs; len. 
@@ -722,6 +722,7 @@ Section Wcbv.
     - assert (All2 eval args args).
     { clear -X; induction X; constructor; auto. }
       induction args using rev_ind. repeat econstructor.
+      cbn [atom]; now rewrite e0.
       eapply All_app in a as [? HH]; eauto; invs HH.
       eapply All_app in X as [? HH]; eauto; invs HH.
       eapply All2_app_inv in X0 as [? HH]; eauto; invs HH.
@@ -1091,7 +1092,7 @@ Section WcbvEnv.
       eauto using (extends_lookup_constructor wf ex), (extends_constructor_isprop_pars_decl wf ex), (extends_is_propositional wf ex)].
     econstructor; eauto.
     red in isdecl |- *. eauto using extends_lookup. constructor.
-    destruct t => //. cbn [atom] in i. destruct lookup_constructor eqn:hl => //.
+    destruct t => //. cbn [atom] in i. destruct l => //. destruct lookup_constructor eqn:hl => //.
     eapply (extends_lookup_constructor wf ex) in hl. now cbn [atom].
   Qed.
 
@@ -1656,10 +1657,10 @@ Proof.
   destruct (eval_mkApps_inv_size ev) as [f'' [args' [? []]]].
   exists args'.
   destruct (eval_mkApps_Construct_inv _ _ _ _ _ hblock ev) as [? []]. subst v.
-  exists (eval_atom _ (tConstruct ind c) i).
+  exists (eval_atom _ (tConstruct ind c []) i).
   cbn. split => //. destruct ev; cbn => //; auto with arith.
   clear l.
-  eapply (eval_mkApps_Construct_inv _ _ _ _) with (args0 := []) in x as [? []]; auto. subst f''. depelim a1.
+  eapply (eval_mkApps_Construct_inv _ _ _ [] _ hblock) in x as [? []]; auto. subst f''. depelim a1.
   f_equal.
   eapply eval_deterministic_all; tea.
   eapply All2_impl; tea; cbn; eauto. now intros x y []. 

@@ -265,6 +265,7 @@ Section transform_blocks.
     isEtaExp Σ b ->
     transform_blocks (ECSubst.csubst a k b) = ECSubst.csubst (transform_blocks a) k (transform_blocks b).
   Proof using Type.
+    intros cla etaa. move b at bottom.
     funelim (transform_blocks b); cbn; simp transform_blocks isEtaExp; rewrite -?isEtaExp_equation_1 -?transform_blocks_equation_1; toAll; simpl;
     intros; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -272,7 +273,7 @@ Section transform_blocks.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     
     - destruct Nat.compare => //.
-    - f_equal. solve_all.  move/andP: b => [] _ he. solve_all.
+    - f_equal. solve_all. move/andP: b => [] _ he. solve_all.
     - rewrite csubst_mkApps.
       rtoProp. solve_all.
       assert (
@@ -283,20 +284,20 @@ Section transform_blocks.
       csubst (transform_blocks a) k x)); eauto.
       rewrite Heq.
       rewrite csubst_mkApps.
-      rewrite isEtaExp_mkApps_napp in H3 => //. rewrite Heq in H3.
-      rtoProp. rename H3 into etau. rename H4 into etav.
+      rewrite isEtaExp_mkApps_napp in H1 => //. rewrite Heq in H1.
+      rtoProp. rename H1 into etau. rename H2 into etav.
       rewrite - H //.
       rewrite transform_blocks_mkApps_eta_fn.
       now eapply etaExp_csubst.
       f_equal.
       rewrite !map_map_compose. solve_all.
-    - pose proof (etaExp_csubst _ _ k _ H1 H2). 
-      rewrite !csubst_mkApps /= in H3 *.
+    - assert (H1 := etaExp_csubst _ _ k _ etaa H0).
+      rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
       rewrite transform_blocks_mkApps //.
-      rewrite isEtaExp_Constructor // in H3.
-      move: H3 => /andP[] /andP[]. rewrite map_length. move=> etaapp etav bargs.
+      rewrite isEtaExp_Constructor // in H1.
+      move: H1 => /andP[] /andP[]. rewrite map_length. move=> etaapp etav bargs.
       destruct block_args; invs bargs.
       cbn -[lookup_constructor_pars_args].
       unfold isEtaExp_app in etaapp.
@@ -307,18 +308,18 @@ Section transform_blocks.
       rewrite csubst_mkApps. cbn.
       eapply chop_eq in heqc as ->.
       cbn.
-      rewrite isEtaExp_Constructor in H2.
-      move: H2 => /andP[] /andP[] He1 He2 He3.
+      rewrite isEtaExp_Constructor in H0.
+      move: H0 => /andP[] /andP[] He1 He2 He3.
       cbn. f_equal. f_equal.
       all: rewrite !map_map_compose; solve_all; eapply All_app in He2.
       all: repeat solve_all.
-    - pose proof (etaExp_csubst _ _ k _ H1 H2). 
-      rewrite !csubst_mkApps /= in H3 *.
+    - assert (H1 := etaExp_csubst _ _ k _ etaa H0).
+      rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
       rewrite transform_blocks_mkApps //.
-      rewrite isEtaExp_Constructor // in H3.
-      move/andP : H3 => [] /andP[]. rewrite map_length. move=> etaapp etav bargs.
+      rewrite isEtaExp_Constructor // in H1.
+      move/andP : H1 => [] /andP[]. rewrite map_length. move=> etaapp etav bargs.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
@@ -814,8 +815,8 @@ Proof.
     eapply transform_blocks_tApp; eauto. cbn; rtoProp; eauto.
     destruct decompose_app as [ f args] eqn:heq.
     destruct construct_viewc eqn:heqv.
-    + destruct lookup_constructor_pars_args as [[] args'|] eqn:hl => // /=.
-      destruct n0; eauto.
+    + destruct lookup_constructor_pars_args as [[npars args']|] eqn:hl => // /=.
+      destruct npars; eauto.
       destruct chop eqn:eqch.
       intros [Hl [ha ht]]. pose proof ev as Hev. rewrite ha in Hev.
       destruct with_constructor_as_block eqn:E.
@@ -870,9 +871,11 @@ Proof.
     eapply All2_length in X0 as Hlen.
     cbn.
     rewrite !skipn_all Hlen skipn_all firstn_all. cbn.
-    eapply eval_mkApps_Construct_block; eauto.
+    eapply eval_mkApps_Construct_block; tea. eauto.
     now rewrite lookup_constructor_transform_blocks.
+    constructor. cbn [atom]. now rewrite lookup_constructor_transform_blocks H.
     len. unfold cstr_arity. lia.
     solve_all. destruct H6; eauto.
-  - intros. econstructor. destruct t; cbn in H |- *; try congruence.
+  - intros. econstructor. destruct t; try solve [cbn in H |- *; try congruence].
+    cbn -[lookup_constructor] in H |- *. destruct l => //. now rewrite lookup_constructor_transform_blocks H.
 Qed.

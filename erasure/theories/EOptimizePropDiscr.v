@@ -561,20 +561,7 @@ Proof.
     eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
     now rewrite Nat.add_0_r in clbrs.
   
-  - move/andP => [] cld clbrs.
-    have := (eval_closed _ clΣ _ _ cld ev1). intros cl.
-    rewrite optimize_iota_red in IHev2.
-    eapply eval_closed in ev1 => //.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e0).
-    eapply eval_iota_block. eauto. eauto.
-    now rewrite -is_propositional_cstr_optimize.
-    rewrite nth_error_map e1 //. now len. cbn.
-    rewrite -e3. rewrite !skipn_length map_length //.
-    eapply IHev2.
-    eapply closed_iota_red => //; tea.
-    eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
-    now rewrite Nat.add_0_r in clbrs.
+  - congruence.
   
   - move/andP => [] cld clbrs.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
@@ -682,16 +669,7 @@ Proof.
     eapply IHev2.
     eapply nth_error_forallb in e2; tea.
 
-  - move=> cld.
-    eapply eval_closed in ev1; tea.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e0).
-    specialize (IHev1 cld).
-    eapply Ee.eval_proj_block; tea.
-    now rewrite -is_propositional_cstr_optimize.
-    now len. rewrite nth_error_map e2 //.
-    eapply IHev2.
-    eapply nth_error_forallb in e2; tea.
+  - congruence.
 
   - rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
     now rewrite e.
@@ -728,9 +706,7 @@ Proof.
         destruct v => /= //. 
   - destruct t => //.
     all:constructor; eauto. cbn [atom optimize] in i |- *.
-    rewrite -lookup_constructor_optimize //.
-    all:constructor; eauto. cbn in *. destruct l; eauto.
-    Unshelve. all: repeat econstructor.
+    rewrite -lookup_constructor_optimize //. destruct l => //.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

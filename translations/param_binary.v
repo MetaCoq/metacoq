@@ -199,6 +199,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
       
 Defined.
 
+#[global]
 Instance param : Translation :=
   {| tsl_id := tsl_ident ;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
@@ -217,6 +218,7 @@ MetaCoq Run (
   tmUnquote tm' >>= tmDebug
 ).
 
+Set Warnings "-unexpected-implicit-declaration".
 MetaCoq Run (
   typ <- tmQuote (forall A B, B -> (A -> B -> B) -> B) ;;
   typ' <- tmEval all (tsl_rec1 [] typ) ;;

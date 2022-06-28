@@ -735,7 +735,7 @@ Proof.
   1,2: now rewrite closed_subst; eauto; econstructor; eauto.
   - now rewrite e0 /cstr_arity -e1 -e2.
   - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
-    unfold is_constructor. now rewrite nth_error_app2 // minus_diag.    
+    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.    
   - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
     inversion e; subst.
     econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.

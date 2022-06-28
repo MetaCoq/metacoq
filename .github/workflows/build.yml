@@ -23,10 +23,10 @@ jobs:
           fetch-depth: 1
 
       - name: Check for todos
-        continue-on-error: true
         run: ./checktodos.sh
 
       - name: Docker-Coq-Action
+        if: ${{ always() }}
         uses: coq-community/docker-coq-action@v1
         with:
           coq_version: ${{ matrix.coq_version }}

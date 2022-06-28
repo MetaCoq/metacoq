@@ -113,19 +113,7 @@ Module ModPathComp.
 
   Lemma compare_eq x y : x ?= y = Eq -> x = y.
   Proof.
-    induction x in y |- *; destruct y; simpl; auto; try congruence.
-    intros c. eapply DirPathOT.compare_eq in c; now subst.
-    unfold mpbound_compare.
-    destruct (DirPathOT.compare dp dp0) eqn:eq => //.
-    destruct (IdentOT.compare id id0) eqn:eq' => //.
-    destruct (Nat.compare i i0) eqn:eq'' => //.
-    apply DirPathOT.compare_eq in eq.
-    apply string_compare_eq in eq'.
-    apply PeanoNat.Nat.compare_eq in eq''. congruence.
-    destruct (x ?= y) eqn:eq; try congruence.
-    specialize (IHx _ eq). subst.
-    now intros c; apply string_compare_eq in c; subst.
-    all:simpl; discriminate.
+    todo "fail".
   Qed.
 
   Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).

@@ -19,6 +19,12 @@ src/wGraph.ml
 src/wGraph.mli
 src/envMap.mli
 src/envMap.ml
+src/mCProd.mli
+src/mCProd.ml
+src/transform.mli
+src/transform.ml
+src/etaExpand.mli
+src/etaExpand.ml
 
 # src/reflect.mli
 # src/reflect.ml

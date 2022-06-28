@@ -3,6 +3,17 @@ name: MetaCoq CI
 on: [push, pull_request]
 
 jobs:
+  checktodos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Check for todos
+        run: ./checktodos.sh
+
   build:
     runs-on: ubuntu-latest
 
@@ -22,11 +33,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Check for todos
-        run: ./checktodos.sh
-
       - name: Docker-Coq-Action
-        if: ${{ always() }}
         uses: coq-community/docker-coq-action@v1
         with:
           coq_version: ${{ matrix.coq_version }}

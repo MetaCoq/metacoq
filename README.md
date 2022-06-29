@@ -4,7 +4,7 @@
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 </p>
 
-[![Build status](https://github.com/MetaCoq/metacoq/actions/workflows/build.yml/badge.svg?branch=coq-8.16)](https://github.com/MetaCoq/metacoq/actions) [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
+[![Build status](https://github.com/MetaCoq/metacoq/actions/workflows/build.yml/badge.svg?branch=coq-8.15)](https://github.com/MetaCoq/metacoq/actions) [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/metacoq/metacoq)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
@@ -25,7 +25,7 @@ manipulating Coq terms and developing certified plugins
 
 ## Getting started
 
-- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.13/examples/demo.v).
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.15/examples/demo.v).
 
 - The current branch [documentation (as light coqdoc files)](https://metacoq.github.io/html/toc.html).
 
@@ -35,13 +35,13 @@ manipulating Coq terms and developing certified plugins
 
 ## Installation instructions
 
-See [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.13/INSTALL.md)
+See [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.15/INSTALL.md)
 
 
 
 ## Documentation
 
-See [DOC.md](https://github.com/MetaCoq/metacoq/tree/coq-8.13/DOC.md)
+See [DOC.md](https://github.com/MetaCoq/metacoq/tree/coq-8.15/DOC.md)
 
 
 
@@ -51,7 +51,7 @@ At the center of this project is the Template-Coq quoting library for
 Coq. The project currently has a single repository extending
 Template-Coq with additional features. Each extension is in a dedicated folder.
 
-### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.13/template-coq)
+### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.15/template-coq)
 
 Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
 takes `Coq` terms and constructs a representation of their syntax tree as
@@ -77,7 +77,7 @@ In addition to this representation of terms, Template Coq includes:
 - A formalisation of the typing rules reflecting the ones of Coq, covering all of Coq 
   except eta-expansion and template polymorphism.
 
-### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic)
+### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.15/pcuic)
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
 a cleaned up version of the term language of Coq and its associated
@@ -110,10 +110,10 @@ calculus has proofs of standard metatheoretical results:
 - Weak call-by-value standardization: Normal forms of terms of first-order inductive type
 can be found via weak call-by-value evaluation.
 
-See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic/theories/README.md) for 
+See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/coq-8.15/pcuic/theories/README.md) for 
 a detailed view of the development.
 
-### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker)
+### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.15/safechecker)
 
 Implementation of a fuel-free and verified reduction machine, conversion
 checker and type checker for PCUIC. This relies on a postulate of
@@ -133,10 +133,10 @@ type-checker, one can use:
 This also includes a verified, efficient re-typing procedure (useful in tactics) in 
 `MetaCoq.SafeChecker.PCUICSafeRetyping`.
 
-See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker/theories/README.md) for 
+See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/coq-8.15/safechecker/theories/README.md) for 
 a detailed view of the development.
 
-### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure)
+### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.15/erasure)
 
 An erasure procedure to untyped lambda-calculus accomplishing the
 same as the type and proof erasure phase of the Extraction plugin of Coq.
@@ -150,28 +150,28 @@ The erasure pipeline includes verified optimizations to remove lets in construct
 remove cases on propositional terms, switch to an unguarded fixpoint reduction rule and 
 transform the higher-order constructor applications to first-order blocks for easier 
 translation to usual programming languages. See the erasure 
-[README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure/theories/README.md) for 
+[README](https://github.com/MetaCoq/metacoq/tree/coq-8.15/erasure/theories/README.md) for 
 a detailed view of the development.
 
-### [Translations](https://github.com/MetaCoq/metacoq/tree/coq-8.13/translations)
+### [Translations](https://github.com/MetaCoq/metacoq/tree/coq-8.15/translations)
 
 Examples of translations built on top of this:
 
-- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.13/translations/param_original.v)
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/translations/param_original.v)
 
-- a plugin to negate functional extensionality in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/translations/times_bool_fun.v)
+- a plugin to negate functional extensionality in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/translations/times_bool_fun.v)
 
 
 ### Examples
 
 - An example Coq plugin built on the Template Monad, which can be used to
-  add a constructor to any inductive type is in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.13/examples/add_constructor.v)
+  add a constructor to any inductive type is in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/examples/add_constructor.v)
 
 - An example *extracted* Coq plugin built on the extractable Template Monad, which can be used to
-  derive lenses associated to a record type is in [test-suite/plugin-demo](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/plugin-demo). The plugin runs in OCaml and is a template for writing extracted plugins.
+  derive lenses associated to a record type is in [test-suite/plugin-demo](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/plugin-demo). The plugin runs in OCaml and is a template for writing extracted plugins.
 
-- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_test.v)
-  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/safechecker_test.v) show example
+- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/erasure_test.v)
+  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the verified checker and erasure.
 
 ## Papers
@@ -279,7 +279,7 @@ Copyright (c) 2020-2022 Jakob Botsch Nielsen, Meven Lennon-Bertrand
 ```
 
 This software is distributed under the terms of the MIT license.
-See [LICENSE](https://github.com/MetaCoq/metacoq/tree/coq-8.13/LICENSE) for details.
+See [LICENSE](https://github.com/MetaCoq/metacoq/tree/coq-8.15/LICENSE) for details.
 
 
 

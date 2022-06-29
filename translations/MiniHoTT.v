@@ -266,6 +266,7 @@ Arguments center A {_}.
 
 Class Funext := { isequiv_apD10 : forall (A : Type) (P : A -> Type) f g, IsEquiv (@apD10 A P f g) }.
 
+#[global]
 Existing Instance isequiv_apD10.
 
 Definition path_forall `{Funext} {A : Type} {P : A -> Type} (f g : forall x : A, P x) : f == g -> f = g
@@ -1312,6 +1313,7 @@ Hint Resolve
   inv_pp inv_V
  : path_hints.
 
+#[global]
 Hint Rewrite
 @concat_p1
 @concat_1p
@@ -3038,6 +3040,7 @@ Definition equiv_path_sigma `(P : A -> Type) (u v : sigT P)
   := BuildEquiv _ _ (path_sigma_uncurried P u v) _.
 
 (* A contravariant version of [isequiv_path_sigma'] *)
+#[global]
 Instance isequiv_path_sigma_contra `{P : A -> Type} {u v : sigT P}
   : IsEquiv (path_sigma_uncurried_contra P u v) | 0.
   unshelve eapply (isequiv_adjointify (path_sigma_uncurried_contra P u v)).

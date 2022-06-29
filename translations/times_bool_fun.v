@@ -37,6 +37,7 @@ Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
 
 Local Instance tit : config.checker_flags := config.type_in_type.
+#[global]
 Existing Instance Checker.default_fuel.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
@@ -216,6 +217,7 @@ Fixpoint refresh_universes (t : term) {struct t} :=
   | _ => t
   end.
 
+#[global]
 Instance tsl_fun : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE t => t' <- tsl_rec fuel (fst ΣE) (snd ΣE) [] t ;;

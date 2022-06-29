@@ -199,6 +199,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
       
 Defined.
 
+#[global]
 Instance param : Translation :=
   {| tsl_id := tsl_ident ;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;

@@ -1314,25 +1314,25 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     destruct u; auto. intuition eauto.
   Qed.
 
-  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
-    (forall Σ Γ t T,
-        on_global_env Pcmp P Σ.1 -> 
-        on_global_env Pcmp Q Σ.1 ->
-        P Σ Γ t T -> Q Σ Γ t T) ->
-    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+  Lemma on_constant_decl_impl {cf : checker_flags} Pcmp P Q Σ d :
+    (forall Γ t T,
+      on_global_env Pcmp P Σ.1 ->
+      P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env Pcmp P Σ.1 ->
+    on_constant_decl P Σ d -> on_constant_decl Q Σ d.
   Proof.
-    intros X Σ [cu IH]. split; auto.
-    revert cu IH; generalize (universes Σ) as univs, (declarations Σ). clear Σ.
-    induction g; intros; auto. constructor; auto.
-    depelim IH. specialize (IHg cu IH). constructor; auto.
-    pose proof (globenv_decl _ _ _ _ _ _ IH f o).
-    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl) Γ t T 
-      (cu, IH) (cu, IHg)); clear X.
-    rename X' into X.
-    clear IH IHg. destruct d; simpl.
-    - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
-    - red in o. simpl in *.
-      destruct o0 as [onI onP onNP].
+    intros X X0 X1. destruct d; destruct cst_body0; unfold on_constant_decl in *; unfold on_type; now simpl.
+  Qed.
+
+  Lemma on_inductive_decl_impl {cf : checker_flags} Pcmp P Q Σ kn mdecl :
+    (forall Γ t T,
+      on_global_env Pcmp P Σ.1 ->
+      P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env Pcmp P Σ.1 ->
+    on_inductive Pcmp P Σ kn mdecl -> on_inductive Pcmp Q Σ kn mdecl.
+  Proof.
+    intros X X0.
+    - intros [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
         refine {| ind_arity_eq := X1.(ind_arity_eq);
@@ -1360,13 +1360,55 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
             split.
             * apply ind_sorts0.
             * destruct indices_matter; auto.
-              eapply type_local_ctx_impl; eauto.
-              eapply ind_sorts0.
-        --- eapply X1.(onIndices).
+              eapply type_local_ctx_impl. eapply ind_sorts0. eauto.
+        --- apply X1.(onIndices).
       -- red in onP. red.
-        eapply All_local_env_impl; tea.
+         eapply All_local_env_impl; eauto.
+         Qed.
+
+  Lemma on_global_decl_impl {cf : checker_flags} Pcmp P Q Σ kn d :
+    (forall Γ t T,
+      on_global_env Pcmp P Σ.1 ->
+      P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env Pcmp P Σ.1 ->
+    on_global_decl Pcmp P Σ kn d -> on_global_decl Pcmp Q Σ kn d.
+  Proof.
+  intros H HP.
+  cut ((forall (m : module_decl), on_module_decl Pcmp P Σ m -> on_module_decl Pcmp Q Σ m)
+    × (forall (p : kername × structure_field), on_structure_field Pcmp P Σ p -> on_structure_field Pcmp Q Σ p)
+    × (forall (s : structure_body structure_field), on_structure_body Pcmp P Σ s -> on_structure_body Pcmp Q Σ s)).
+  intro md_sf_sb.
+  destruct d; simpl.
+  - now apply (on_constant_decl_impl Pcmp).
+  - now apply (on_inductive_decl_impl Pcmp).
+  - apply md_sf_sb.
+  - apply md_sf_sb.
+  - eapply (on_moddecl_structfield_structbody_mutrect).
+    -- intros kn0 c0 HP1. apply (on_sfconst Pcmp Q Σ kn0 c0). now apply (on_constant_decl_impl Pcmp P).
+    -- intros mind mind_body P1. apply (on_sfmind Pcmp Q Σ mind mind_body). now apply (on_inductive_decl_impl Pcmp P).
+    -- intros. now apply on_sfmod.
+    -- intros. now apply on_sfmodtype.
+    -- intros. now apply on_mi_abstract_decl.
+    -- intros. now apply on_mi_algebraic_decl.
+    -- intros. now apply on_mi_struct_decl.
+    -- intros. now apply on_mi_fullstruct_decl.
+    -- apply on_sb_nil.
+    -- intros. now apply on_sb_cons.
   Qed.
 
+  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
+    (forall Σ Γ t T,
+        on_global_env Pcmp P Σ.1 ->
+        on_global_env Pcmp Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
+  Proof.
+    intros X [univs Σ] [cu X0]; split => /= //. cbn in *.
+    induction X0; constructor; auto.
+    eapply on_global_decl_impl; tea.
+    - intros; apply X => //.
+    - split => //.
+  Qed.
 End GlobalMaps.
 
 Module Type GlobalMapsSig (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvTypingSig T E TU) (C: ConversionSig T E TU ET) (L: LookupSig T E).
@@ -1481,6 +1523,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
         --- eapply X1.(onIndices).
       -- red in onP. red.
         eapply All_local_env_impl; tea.
+    -
   Qed.
 
 End DeclarationTyping.

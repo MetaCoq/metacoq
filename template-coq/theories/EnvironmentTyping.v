@@ -1187,22 +1187,22 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | None => on_type Σ [] d.(cst_type)
       end.
 
-    Definition on_structure_body Σ (sb: structure_body structure_field)
-      (on_structure_field: global_env_ext -> kername × structure_field -> Type) :=
-      All (on_structure_field Σ) sb.
-
-      (** Interactive definitions are stored in modtype if not type-annotated.
-        Otherwise, the interactive definition is in impl, type annotation in modtype. *)
+    (** Interactive definitions are stored in modtype if not type-annotated.
+      Otherwise, the interactive definition is in impl, type annotation in modtype. *)
     Inductive on_structure_field Σ: (kername × structure_field) -> Type :=
       | on_sfconst kn c : on_constant_decl Σ c -> on_structure_field Σ (kn, sfconst c)
-      | sfmind kn inds : on_inductive Σ kn inds -> on_structure_field Σ (kn, sfmind inds)
-      | sfmod kn mb : on_module_decl Σ mb -> on_structure_field Σ (kn, sfmod mb)
-      | sfmodtype kn mtd : on_structure_body Σ mtd on_structure_field -> on_structure_field Σ (kn, sfmodtype mtd)
+      | on_sfmind kn inds : on_inductive Σ kn inds -> on_structure_field Σ (kn, sfmind inds)
+      | on_sfmod kn mb : on_module_decl Σ mb -> on_structure_field Σ (kn, sfmod mb)
+      | on_sfmodtype kn mtd : on_structure_body Σ mtd -> on_structure_field Σ (kn, sfmodtype mtd)
+
+    with on_structure_body Σ : structure_body structure_field -> Type :=
+      | on_sb_nil : on_structure_body Σ []
+      | on_sb_cons hd tl : on_structure_field Σ hd -> on_structure_body Σ tl -> on_structure_body Σ (hd :: tl)
 
     with on_module_decl Σ : module_decl -> Type :=
     (** Declare Module M: T, so check T *)
     | on_mi_abstract_decl modtype:
-      on_structure_body Σ modtype on_structure_field -> on_module_decl Σ (mi_abstract, modtype)
+      on_structure_body Σ modtype -> on_module_decl Σ (mi_abstract, modtype)
 
     (** Module M := N, so check N *)
     | on_mi_algebraic_decl (kn: kername) moddecl:
@@ -1210,21 +1210,29 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     (** Module M:T ... End M, so check impl, check T, and and whether impl: T *)
     | on_mi_struct_decl (body: structure_decl) (modtype: module_type_decl):
-      (on_structure_body Σ body on_structure_field)
-      -> (on_structure_body Σ modtype on_structure_field)
+      (on_structure_body Σ body )
+      -> (on_structure_body Σ modtype)
       -> on_module_decl Σ ((mi_struct body), modtype)
 
     (** Module M ... End M, so check impl *)
     | on_mi_fullstruct_decl body:
-      on_structure_body Σ body on_structure_field
+      on_structure_body Σ body 
       -> on_module_decl Σ (mi_fullstruct, body).
+
+    Scheme onStructField_rect := Induction for on_structure_field Sort Type
+    with onModuleDecl_rect := Induction for on_module_decl Sort Type
+    with onStructBody_rect := Induction for on_structure_body Sort Type.
+
+    (** Generate mutual induction principle for module declarations. *)
+    Combined Scheme on_moddecl_structfield_structbody_mutrect from
+    onModuleDecl_rect,onStructField_rect,onStructBody_rect.
 
     Definition on_global_decl Σ kn decl :=
       match decl with
       | ConstantDecl d => on_constant_decl Σ d
       | InductiveDecl inds => on_inductive Σ kn inds
       | ModuleDecl mb => on_module_decl Σ mb 
-      | ModuleTypeDecl mtd => on_structure_body Σ mtd on_structure_field
+      | ModuleTypeDecl mtd => on_structure_body Σ mtd
       end.
 
     (** *** Typing of global environment

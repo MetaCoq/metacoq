@@ -202,10 +202,10 @@ Lemma gen_transform_env_extends' {Σ Σ' : global_context} :
 Proof.
   intros ext.
   move=> wfΣ.
-  assert (extends Σ Σ); auto. now exists [].
-  assert (wf_glob Σ).
+  assert (Hext : extends Σ Σ); auto. now exists [].
+  assert (Hwfg : wf_glob Σ).
   { eapply extends_wf_glob. exact ext. tea. }
-  revert H H0.
+  revert Hext Hwfg.
   generalize Σ at 1 3 5 6. intros Σ''.
   induction Σ'' => //. cbn.
   intros hin wfg. depelim wfg.

@@ -8,6 +8,7 @@
 -R . MetaCoq.Examples
 
 demo.v
+constructor_tac.v
 add_constructor.v
 tauto.v
 typing_correctness.v

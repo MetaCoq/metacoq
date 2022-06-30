@@ -452,8 +452,19 @@ Definition term_flags :=
 
 Definition env_flags := 
   {| has_axioms := false;
-    has_cstr_params := false;
-    term_switches := term_flags |}.
+     has_cstr_params := false;
+     term_switches := term_flags ;
+     cstr_as_blocks := false
+  |}.
+
+
+Definition env_flags_blocks := 
+  {| has_axioms := false;
+     has_cstr_params := false;
+     term_switches := term_flags ;
+     cstr_as_blocks := true
+  |}.
+  
 
 Local Existing Instance env_flags.
 
@@ -670,6 +681,84 @@ Proof.
   rewrite lookup_env_transform_blocks.
   destruct lookup_env as [ [] | ]; cbn; congruence.
 Qed.
+
+Lemma transform_wellformed Σ n t :
+  wf_glob Σ -> 
+  @wellformed env_flags Σ n t ->
+  isEtaExp Σ t ->
+  @wellformed env_flags_blocks (transform_blocks_env Σ) n (transform_blocks Σ t).
+Proof.
+  revert n. funelim (transform_blocks Σ t); simp_eta; cbn-[transform_blocks lookup_constructor_pars_args isEtaExp]; intros m Hwf Hw; rtoProp; try split; eauto.
+  all: rewrite ?map_InP_spec; toAll; eauto; try now solve_all.
+  - rewrite lookup_env_transform_blocks. destruct (lookup_env Σ n) as [[] | ]; try congruence.
+    cbn. destruct (cst_body c); eauto.
+  - rewrite lookup_env_transform_blocks. destruct (lookup_env Σ) as [[] | ]; try congruence; cbn.
+    1,3: cbn in *; congruence. repeat destruct nth_error; cbn; cbn in *; eauto.
+  - destruct H1. unfold isEtaExp_app in H1. unfold lookup_constructor_pars_args in *.
+    rewrite lookup_constructor_transform_blocks.
+    destruct (lookup_constructor Σ) as [[[]] | ]; try congruence; cbn - [transform_blocks].
+    2: eauto. split; auto.
+  - rtoProp. solve_all. solve_all.
+    rewrite lookup_env_transform_blocks. destruct lookup_env as [ [] | ]; eauto.
+  - destruct H4. solve_all.
+  - unfold wf_fix in *. rtoProp. solve_all. len. solve_all. len. destruct x.
+    cbn -[transform_blocks isEtaExp] in *. rtoProp. eauto.
+  - rewrite !wellformed_mkApps in Hw |- * => //. rtoProp. intros.
+    eapply isEtaExp_mkApps in H3. rewrite decompose_app_mkApps in H3; eauto.
+    destruct construct_viewc; eauto. cbn in d. eauto.
+    rtoProp. eauto. repeat solve_all.
+  - Opaque isEtaExp. destruct chop eqn:Ec. rewrite !wellformed_mkApps in Hw |- * => //. rtoProp. 
+      cbn -[lookup_constructor transform_blocks ] in *. intros. rtoProp.
+      rewrite isEtaExp_Constructor in H2.
+      rtoProp. unfold isEtaExp_app in *. unfold lookup_constructor_pars_args in H2.
+      repeat split; eauto;
+        rewrite ?lookup_constructor_transform_blocks; eauto.
+      * destruct lookup_constructor as [ [[]] | ] eqn:E; cbn -[transform_blocks] in *; eauto.
+        invs Heq. rewrite chop_firstn_skipn in Ec. invs Ec.
+        rewrite firstn_length. len. eapply Nat.leb_le in H2. eapply Nat.leb_le.
+        destruct lookup_env as [ [] | ] eqn:E'; try congruence.
+        eapply lookup_env_wellformed in E'; eauto.
+        cbn in E'. red in E'. unfold wf_minductive in E'.
+        rewrite andb_true_iff in E'.
+        cbn in E'. destruct E'.
+        eapply Nat.eqb_eq in H6.
+        destruct nth_error; invs E.
+        destruct nth_error; invs H9.
+        rewrite H6. lia.
+      * rewrite chop_firstn_skipn in Ec. invs Ec.
+        solve_all. eapply All_firstn. solve_all.
+      * rewrite chop_firstn_skipn in Ec. invs Ec.
+        solve_all. eapply All_skipn. solve_all.
+  - rewrite lookup_env_transform_blocks.
+    rewrite wellformed_mkApps in Hw; eauto. rtoProp. cbn in *. rtoProp.
+    cbn in *. destruct lookup_env as [[] | ]; cbn in *; eauto; try congruence.
+  - rewrite isEtaExp_Constructor in H0. rtoProp. unfold lookup_constructor_pars_args in *.
+    rewrite lookup_constructor_transform_blocks. destruct lookup_constructor as [ [[]] | ]; cbn in Heq; try congruence.
+    cbn. split; eauto.   rewrite wellformed_mkApps in Hw; eauto. rtoProp. solve_all. 
+Qed.
+
+Lemma transform_wf_global Σ :
+  @wf_glob env_flags Σ ->
+  @wf_glob env_flags_blocks (transform_blocks_env Σ).
+Proof.
+  induction 1.
+  - econstructor.
+  - cbn. econstructor.
+Admitted.
+
+(* 
+Lemma isEtaExp_transform Σ t :
+  isEtaExp_env Σ -> wf_glob Σ ->
+  isEtaExp Σ t -> isEtaExp (transform_blocks_env Σ) (transform_blocks Σ t).
+Proof.
+  intros Henv Hwf.
+  funelim (transform_blocks Σ t); simp_eta; repeat rewrite ?map_InP_spec; toAll; intros; rtoProp; try split; try now repeat solve_all.
+  - admit.
+  - solve_all. rtoProp. repeat solve_all. destruct (dbody x); simp transform_blocks; cbn in H; eauto.
+  - admit.
+  - admit.
+  - eapply isEtaExp_mkApps in H0. rewrite decompose_app_mkApps in H0. eauto.
+    cbn in H0. rtoProp. unfold isEtaExp_app. *)
 
 Lemma transform_blocks_eval (fl := EWcbvEval.target_wcbv_flags) :
   forall Σ, isEtaExp_env Σ -> wf_glob Σ ->

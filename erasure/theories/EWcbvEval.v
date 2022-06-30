@@ -1275,10 +1275,11 @@ Ltac forward_keep H :=
     assert (H' : X) ; [|specialize (H H')]
   end.
 
-Definition mk_env_flags has_ax has_pars tfl :=  
+Definition mk_env_flags has_ax has_pars tfl has_blocks :=  
   {| has_axioms := has_ax;
      has_cstr_params := has_pars;
-     term_switches := tfl |}.
+     term_switches := tfl ;
+     cstr_as_blocks := has_blocks |}.
   
 Global Hint Rewrite andb_true_r andb_false_r : simplifications.
 Global Hint Rewrite orb_false_r orb_true_r : simplifications.
@@ -1289,10 +1290,11 @@ Ltac sim := repeat (cbn ; autorewrite with simplifications).
 
 Lemma eval_wellformed {efl : EEnvFlags} {wfl : WcbvFlags} Σ : 
   forall (has_app : has_tApp), (* necessary due to mkApps *)
+  efl.(cstr_as_blocks) = false ->
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.
-  move=> has_app clΣ t u Hc ev. move: Hc.
+  move=> has_app blcks clΣ t u Hc ev. move: Hc.
   induction ev; simpl in *; auto;
     (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
   all:intros; intuition auto; rtoProp; intuition auto; rtoProp; eauto using wellformed_csubst.
@@ -1301,7 +1303,9 @@ Proof.
     rewrite wellformed_mkApps // in H2. move/andP: H2 => [] //.
   - eapply IHev2; eauto.
     eapply wellformed_iota_red_brs; tea => //.
-    now destruct args; inv H3. 
+    destruct cstr_as_blocks; solve_all.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.   
+    destruct args; cbn in H3; eauto; econstructor.
   - subst brs. eapply IHev2. sim in H0.
     eapply wellformed_substl => //.
     eapply All_forallb, All_repeat => //.
@@ -1331,8 +1335,11 @@ Proof.
     eapply nth_error_forallb in wfargs; tea.
   - eapply IHev2.
     eapply nth_error_forallb in e2; eauto.
-    now destruct args; inv H0.
-  - destruct args; invs Hc''.
+    destruct cstr_as_blocks; eauto.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.   
+    destruct args; cbn in H0; eauto.
+  - destruct cstr_as_blocks; try congruence.
+    now destruct args; invs Hc''.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 

@@ -39,7 +39,9 @@ Set Warnings "-future-coercion-class-field".
 Class EEnvFlags := {
   has_axioms : bool;
   has_cstr_params : bool;
-  term_switches :> ETermFlags }.
+  term_switches :> ETermFlags ;
+  cstr_as_blocks : bool ;
+  }.
 Set Warnings "+future-coercion-class-field".
 
 Definition all_term_flags := 
@@ -61,7 +63,14 @@ Definition all_term_flags :=
 Definition all_env_flags := 
   {| has_axioms := true;
      term_switches := all_term_flags;
-     has_cstr_params := true |}.
+     has_cstr_params := true ;
+     cstr_as_blocks := false |}.
+    
+Definition all_env_flags_blocks := 
+  {| has_axioms := true;
+     term_switches := all_term_flags;
+     has_cstr_params := true ;
+     cstr_as_blocks := true |}.
     
 Section wf.
   
@@ -100,7 +109,7 @@ Section wf.
       | Some d => has_axioms || isSome d.(cst_body)
       | _ => false 
       end
-    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && is_nil block_args
+    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with Some (p, a) => p + a <=? #|block_args| | _ => true end && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
     end.
 
@@ -163,7 +172,8 @@ Section EEnvFlags.
       simpl wellformed in *; intuition auto;
       unfold wf_fix, test_def, test_snd in *;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
-    destruct args; firstorder.
+    destruct cstr_as_blocks. 2: destruct args; eauto; solve_all.
+    rtoProp. solve_all.
   Qed.
   
   Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
@@ -181,7 +191,9 @@ Section EEnvFlags.
       simpl wellformed in *; intuition auto;
       unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
-    eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
+    - eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
+    - destruct cstr_as_blocks; eauto. solve_all. 
+      destruct lookup_constructor_pars_args as [ [] |]; rtoProp; repeat solve_all. 
   Qed.
 
   Lemma wellformed_lift n k k' t : wellformed k t -> wellformed (k + n) (lift n k' t).
@@ -198,7 +210,8 @@ Section EEnvFlags.
       elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. lia.
       simpl; rewrite H0 /=. elim (Nat.ltb_spec); auto. intros.
       apply Nat.ltb_lt in H1. lia.
-    - solve_all. destruct args; firstorder.
+    - destruct cstr_as_blocks; eauto. destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+      destruct args; firstorder.
     - solve_all. rewrite Nat.add_assoc. eauto.
     - len. move/andP: H1 => [] -> ha. cbn. solve_all.
       rewrite Nat.add_assoc; eauto.
@@ -237,7 +250,8 @@ Section EEnvFlags.
     - specialize (IHt2 (S k')).
       rewrite <- Nat.add_succ_comm in IHt2.
       eapply IHt2; auto.
-    - now destruct args; inv H0.
+    - destruct cstr_as_blocks; eauto.
+      destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all. now destruct args; inv H0.
     - specialize (a (#|x.1| + k')) => //.
       rewrite Nat.add_assoc (Nat.add_comm k) in a.
       rewrite !Nat.add_assoc. eapply a => //.
@@ -442,6 +456,8 @@ Proof.
   induction t using EInduction.term_forall_list_ind; cbn => //; intros; rtoProp; intuition auto; solve_all.
   all:try destruct lookup_env eqn:hl => //; try rewrite (extends_lookup wf ex hl).
   all:try destruct g => //.
+  - destruct cstr_as_blocks; eauto; solve_all.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
 Qed.

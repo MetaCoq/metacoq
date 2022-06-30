@@ -23,8 +23,15 @@ Ltac introdep := let H := fresh in intros H; depelim H.
 Hint Constructors eval : core.
 
 (** Allow everything in terms *)
-Local Existing Instance all_env_flags.
 
+Definition switch_no_params (efl : EEnvFlags) :=
+  {| has_axioms := has_axioms; 
+     has_cstr_params := false;
+     term_switches := term_switches ;
+     cstr_as_blocks := false
+     |}.
+Definition flags_after_projs := (switch_no_params all_env_flags).
+Local Existing Instance flags_after_projs. 
 Arguments lookup_projection : simpl never.
 Arguments GlobalContextMap.lookup_projection : simpl never.
 
@@ -90,7 +97,7 @@ Section optimize.
     | tBox => t
     | tVar _ => t
     | tConst _ => t
-    | tConstruct _ _ _ => t
+    | tConstruct ind n args => tConstruct ind n (map optimize args)
     (* | tPrim _ => t *)
     end.
 
@@ -116,6 +123,7 @@ Section optimize.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
+    - rtoProp. split; eauto. destruct args; eauto.
     - move/andP: H => [] /andP[] -> clt cll /=.
       rewrite IHt //=. solve_all.
     - rewrite GlobalContextMap.lookup_projection_spec.
@@ -285,7 +293,8 @@ Lemma wellformed_optimize_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
 Proof.
   induction t using EInduction.term_forall_list_ind; cbn -[lookup_constant lookup_inductive
     GlobalContextMap.lookup_projection]; intros => //.
-  all:unfold wf_fix_gen in *; rtoProp; intuition auto.  
+  all:unfold wf_fix_gen in *; rtoProp; intuition auto.
+  5:{ destruct cstr_as_blocks; rtoProp. f_equal; eauto; solve_all. destruct args; cbn in *; eauto. }
   all:f_equal; eauto; solve_all.
   - rewrite !GlobalContextMap.lookup_projection_spec.
     rewrite -(extends_lookup_projection H0 H1 H3).
@@ -365,7 +374,7 @@ Proof.
     rewrite hl'. f_equal.
     eapply wellformed_optimize_decl_extends; eauto. auto.
     
-  - cbn. now eapply lookup_env_optimize_env_None in hl. 
+  - cbn. now eapply lookup_env_optimize_env_None in hl.
 Qed.
 
 Lemma is_propositional_optimize {efl : EEnvFlags} {Σ : GlobalContextMap.t} ind : 
@@ -473,7 +482,8 @@ Proof.
     * intros hnth. now apply IHs. 
 Qed.
 
-Lemma optimize_correct (efl := all_env_flags) {fl} {wcon : with_constructor_as_block = false} { Σ : GlobalContextMap.t} t v :
+
+Lemma optimize_correct {fl} {wcon : with_constructor_as_block = false} { Σ : GlobalContextMap.t} t v :
   wf_glob Σ ->
   @eval fl Σ t v ->
   wellformed Σ 0 t ->
@@ -487,7 +497,7 @@ Proof.
     eapply eval_wellformed in ev2; tea => //.
     eapply eval_wellformed in ev1; tea => //.
     econstructor; eauto.
-    rewrite -(optimize_csubst _ 1) //.
+    rewrite -(optimize_csubst _ 1) //. 
     apply IHev3. eapply wellformed_csubst => //.
 
   - move/andP => [] clb0 clb1.
@@ -665,6 +675,7 @@ Proof.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.
     rewrite -lookup_constructor_optimize //.
+    destruct l; cbn in *; eauto.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
@@ -793,7 +804,8 @@ Definition disable_projections_term_flags (et : ETermFlags) :=
 Definition disable_projections_env_flag (efl : EEnvFlags) := 
   {| has_axioms := true;
      term_switches := disable_projections_term_flags term_switches;
-     has_cstr_params := true |}.
+     has_cstr_params := true ;
+     cstr_as_blocks := efl.(cstr_as_blocks) |}.
 
 Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
@@ -805,6 +817,10 @@ Proof.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
   - simpl. destruct lookup_constant => //.
     move/andP => [] hasc _ => //. now rewrite hasc.
+  - cbn -[lookup_constructor_pars_args]. intros. rtoProp. repeat split; eauto.
+    destruct cstr_as_blocks; rtoProp; eauto.
+    destruct lookup_constructor_pars_args as [ [] | ]; eauto. split; len.  solve_all. split; eauto. 
+    solve_all. now destruct args; invs H0.
   - cbn. move/andP => [] /andP[] hast hl wft.
     rewrite GlobalContextMap.lookup_projection_spec.
     destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl'; auto => //.
@@ -832,8 +848,9 @@ Proof.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //.
   - rewrite lookup_env_optimize //.
-    destruct lookup_env eqn:hl => // /=.
-    destruct g eqn:hg => /= //. 
+    destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
+    destruct g eqn:hg => /= //; intros; rtoProp; eauto.
+    repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; eauto. solve_all.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.

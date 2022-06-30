@@ -1060,8 +1060,15 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct (cst_body c) => //.
   - rewrite lookup_env_strip //.
-    destruct lookup_env eqn:hl => // /=.
-    destruct g eqn:hg => /= //. 
+    destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
+    destruct g eqn:hg => /= //; intros; rtoProp; eauto.
+    destruct cstr_as_blocks; repeat split; eauto.
+    destruct nth_error => /= //.
+    destruct nth_error => /= //.
+    destruct nth_error => /= //.
+    destruct nth_error => /= //. rtoProp. split. solve_all.
+    eapply Nat.leb_le in H0. eapply Nat.leb_le. lia.
+    solve_all.
     destruct nth_error => /= //.
     destruct nth_error => /= //.
   - rewrite lookup_env_strip //.
@@ -1091,7 +1098,9 @@ Qed.
 Definition switch_no_params (efl : EEnvFlags) :=
   {| has_axioms := has_axioms; 
      has_cstr_params := false;
-     term_switches := term_switches |}.
+     term_switches := term_switches ;
+     cstr_as_blocks := false
+     |}.
 
 Lemma strip_decl_wf (efl := all_env_flags) {Σ : GlobalContextMap.t} :
   wf_glob Σ -> 

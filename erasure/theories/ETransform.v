@@ -232,7 +232,7 @@ Qed.
 
 From MetaCoq.Erasure Require Import EInlineProjections.
 
-Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := all_env_flags)
+Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
   {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) := 
   {| name := "primitive projection inlining"; 
@@ -256,22 +256,25 @@ Qed.
 
 From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
 
-Program Definition constructors_as_blocks_transformation (efl := all_env_flags)
+Program Definition constructors_as_blocks_transformation (efl := env_flags)
   {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) := 
   {| name := "transforming to constuctors as blocks"; 
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ; 
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
-    post p := wf_eprogram (disable_projections_env_flag efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
+    post p := wf_eprogram env_flags_blocks p ;
     obseq g g' v v' := True |}.
 
 Next Obligation.
-  move=> efl hastrel hastbox [Σ t] [wfp etap].
+  move=> efl hastrel hastbox [Σ t] [] [wftp wft] /andP [etap etat]. 
   cbn in *. split.
-  - todo "".
-  - todo "".
+  - eapply transform_wf_global; eauto.
+  - subst efl. eapply transform_wellformed; eauto.
 Qed.
 Next Obligation.
-  red. move=> hastrel hastbox [Σ t] /= v [wfe wft] [ev].
-  todo "".
+  red. move=> hastrel hastbox [Σ t] /= v [[wfe1 wfe2] wft] [ev].
+  eexists. split; [ | eauto].
+  unfold EEtaExpanded.expanded_eprogram_env_cstrs in *.
+  revert wft. move => /andP // [e1 e2]. cbn in *.
+  econstructor. eapply transform_blocks_eval; cbn; eauto.
 Qed.

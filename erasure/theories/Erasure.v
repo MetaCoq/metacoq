@@ -48,7 +48,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Remove all cases / projections on propositional content *)
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Inline projections to cases *)
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
@@ -58,32 +58,9 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
 
 Import EGlobalEnv EWellformed.
 
-Lemma wf_global_switch_no_params (efl : EWellformed.EEnvFlags) Σ :
-  wf_glob (efl := ERemoveParams.switch_no_params efl) Σ ->
-  wf_glob (efl := efl) Σ.
-Proof.
-  induction 1; constructor; auto.
-  destruct d; cbn in *. auto.
-  move/andP: H0 => [] hasp. unfold wf_minductive.
-  cbn in hasp. rewrite hasp. rewrite orb_true_r //.
-Qed.
-
-Lemma wf_eprogram_switch_no_params (p : EProgram.eprogram) : 
-  EProgram.wf_eprogram (ERemoveParams.switch_no_params all_env_flags) p ->
-  EProgram.wf_eprogram all_env_flags p.
-Proof.
-  destruct p as [Σ p].
-  intros []; split; cbn in * => //.
-  now eapply wf_global_switch_no_params.
-Qed.
-
 Next Obligation.
   destruct H. split => //. sq.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
-Qed.
-Next Obligation.
-  split => //.
-  now apply wf_eprogram_switch_no_params.
 Qed.
 
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.

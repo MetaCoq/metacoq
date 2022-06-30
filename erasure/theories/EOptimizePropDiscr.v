@@ -367,7 +367,7 @@ Proof.
     GlobalContextMap.inductive_isprop_and_pars]; intros => //.
   all:unfold wf_fix_gen in *; rtoProp; intuition auto.  
   all:try now f_equal; eauto; solve_all.
-  - destruct args; inv H2. reflexivity.
+  - destruct cstr_as_blocks; rtoProp; eauto. f_equal. solve_all. destruct args; inv H2. reflexivity.
   - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
     assert (map (on_snd (optimize Σ)) l = map (on_snd (optimize Σ')) l) as -> by solve_all.
     rewrite (extends_inductive_isprop_and_pars H0 H1 H2).
@@ -836,7 +836,8 @@ Proof.
   intros wfΣ hbox hrel.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
-  - cbn. intros. rtoProp; intuition eauto. now destruct args; inv H0.
+  - cbn -[lookup_constructor]. intros. destruct cstr_as_blocks; rtoProp; repeat split; eauto. 2:solve_all.
+    2: now destruct args; inv H0. len. eauto.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     destruct l as [|[br n'] [|l']] eqn:eql; simpl.
@@ -874,9 +875,9 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct (cst_body c) => //.
   - rewrite lookup_env_optimize //.
-    destruct lookup_env eqn:hl => // /=.
-    destruct g eqn:hg => /= //.
-    all: try now (intros; rtoProp; congruence).
+    destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
+    destruct g eqn:hg => /= //; intros; rtoProp; eauto.
+    repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; len; eauto. 1: solve_all.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.

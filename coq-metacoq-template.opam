@@ -29,7 +29,7 @@ depends: [
   "stdlib-shims"
   "ocaml" {>= "4.07.1"}
   "coq" { > "8.16~" & < "8.17~" }
-  "coq-equations" { = "1.0+8.16" }
+  "coq-equations" { = "1.3+8.16" }
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

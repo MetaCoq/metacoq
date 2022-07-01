@@ -50,8 +50,11 @@ See [DOC.md](https://github.com/MetaCoq/metacoq/tree/coq-8.16/DOC.md)
 At the center of this project is the Template-Coq quoting library for
 Coq. The project currently has a single repository extending
 Template-Coq with additional features. Each extension is in a dedicated folder.
+The [dependency graph](https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/depgraph-2022-07-01.png)
+might be useful to navigate the project.
+Statistics: ~150kLoC of Coq, ~30kLoC of OCaml.
 
-### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.16/template-coq)
+### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.16/template-coq/theories)
 
 Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
 takes `Coq` terms and constructs a representation of their syntax tree as
@@ -77,7 +80,7 @@ In addition to this representation of terms, Template Coq includes:
 - A formalisation of the typing rules reflecting the ones of Coq, covering all of Coq 
   except eta-expansion and template polymorphism.
 
-### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic)
+### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic/theories)
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
 a cleaned up version of the term language of Coq and its associated
@@ -113,7 +116,7 @@ can be found via weak call-by-value evaluation.
 See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic/theories/README.md) for 
 a detailed view of the development.
 
-### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker)
+### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker/theories)
 
 Implementation of a fuel-free and verified reduction machine, conversion
 checker and type checker for PCUIC. This relies on a postulate of
@@ -136,7 +139,7 @@ This also includes a verified, efficient re-typing procedure (useful in tactics)
 See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker/theories/README.md) for 
 a detailed view of the development.
 
-### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure)
+### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure/theories)
 
 An erasure procedure to untyped lambda-calculus accomplishing the
 same as the type and proof erasure phase of the Extraction plugin of Coq.

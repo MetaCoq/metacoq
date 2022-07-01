@@ -59,6 +59,15 @@ Proof.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     subst. left. reflexivity.
+  - revert l. induction X ; intro l0.
+    + destruct l0.
+      * left. reflexivity.
+      * right. discriminate.
+    + destruct l0.
+      * right. discriminate.
+      * destruct (IHX l0) ; nodec.
+        destruct (p t) ; nodec.
+        inversion e. subst; left; reflexivity.
   - destruct (IHx t) ; nodec.
     subst. revert l0. clear IHx.
     induction X ; intro l0.

@@ -40,17 +40,17 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Simulation of the guarded fixpoint rules with a single unguarded one: 
     the only "stuck" fixpoints remaining are unapplied. 
     This translation is a noop on terms and environments.  *)
-  guarded_to_unguarded_fix eq_refl ▷
+  guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   (* Remove all constructor parameters *)
-  remove_params_optimization ▷ 
+  remove_params_optimization (wcon := eq_refl) ▷ 
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Remove all cases / projections on propositional content *)
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Inline projections to cases *)
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (hastrel := eq_refl) (hastbox := eq_refl).
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
    parameters in inductive declarations. The constructor applications are also expanded, and
    the evaluation relation does not need to consider guarded fixpoints or case analyses on propositional
@@ -58,32 +58,9 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
 
 Import EGlobalEnv EWellformed.
 
-Lemma wf_global_switch_no_params (efl : EWellformed.EEnvFlags) Σ :
-  wf_glob (efl := ERemoveParams.switch_no_params efl) Σ ->
-  wf_glob (efl := efl) Σ.
-Proof.
-  induction 1; constructor; auto.
-  destruct d; cbn in *. auto.
-  move/andP: H0 => [] hasp. unfold wf_minductive.
-  cbn in hasp. rewrite hasp. rewrite orb_true_r //.
-Qed.
-
-Lemma wf_eprogram_switch_no_params (p : EProgram.eprogram) : 
-  EProgram.wf_eprogram (ERemoveParams.switch_no_params all_env_flags) p ->
-  EProgram.wf_eprogram all_env_flags p.
-Proof.
-  destruct p as [Σ p].
-  intros []; split; cbn in * => //.
-  now eapply wf_global_switch_no_params.
-Qed.
-
 Next Obligation.
   destruct H. split => //. sq.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
-Qed.
-Next Obligation.
-  split => //.
-  now apply wf_eprogram_switch_no_params.
 Qed.
 
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
@@ -92,10 +69,10 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
-  guarded_to_unguarded_fix eq_refl ▷
-  remove_params_fast_optimization _ ▷ 
+  guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
+  remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.

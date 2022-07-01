@@ -6,6 +6,7 @@
 	],
 	  "settings": {
         "coqtop.args": [
+		"-I", "template-coq",
     	//	"-bt", get backtraces from Coq on errors
 		"-I", "template-coq/build",
 		"-R", "template-coq/theories", "MetaCoq.Template",

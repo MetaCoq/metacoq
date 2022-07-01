@@ -1,4 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
+Set Warnings "-notation-overridden".
+
 From MetaCoq.Template Require Import utils All.
 Unset Universe Checking.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.

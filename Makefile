@@ -19,8 +19,8 @@ uninstall: all
 	$(MAKE) -C translations uninstall
 
 html: all
-	"coqdoc" --multi-index -toc -utf8 -interpolate -l -html \
-	 	--with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
+	"coqdoc" --multi-index -toc -utf8 -interpolate -html \
+    --with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \

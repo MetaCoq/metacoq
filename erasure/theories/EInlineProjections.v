@@ -805,7 +805,7 @@ Definition disable_projections_env_flag (efl : EEnvFlags) :=
   {| has_axioms := true;
      term_switches := disable_projections_term_flags term_switches;
      has_cstr_params := true ;
-     cstr_as_blocks := efl.(cstr_as_blocks) |}.
+     cstr_as_blocks := efl.(@cstr_as_blocks) |}.
 
 Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->

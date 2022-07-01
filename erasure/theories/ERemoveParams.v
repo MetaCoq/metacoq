@@ -185,18 +185,18 @@ Section strip.
       rewrite isEtaExp_mkApps_napp // in H1.
       destruct construct_viewc.
       * cbn. rewrite strip_mkApps //.
-      * move/andP: H3 => [] et ev.
+      * move/andP: H1 => [] et ev.
         rewrite -H //.
         assert (map (csubst a k) v <> []).
         { destruct v; cbn; congruence. }
-        pose proof (etaExp_csubst Σ _ k _ H2 et).
+        pose proof (etaExp_csubst Σ _ k _ etaa et).
         destruct (isApp (csubst a k t)) eqn:eqa.
         { destruct (decompose_app (csubst a k t)) eqn:eqk.
-          rewrite (decompose_app_inv eqk) in H4 *.
+          rewrite (decompose_app_inv eqk) in H2 *.
           pose proof (decompose_app_notApp _ _ _ eqk).
           assert (l <> []).
-          { intros ->. rewrite (decompose_app_inv eqk) in eqa. now rewrite eqa in H5. }
-          rewrite isEtaExp_mkApps_napp // in H4.
+          { intros ->. rewrite (decompose_app_inv eqk) in eqa. now rewrite eqa in H3. }
+          rewrite isEtaExp_mkApps_napp // in H2.
           assert ((l ++ map (csubst a k) v)%list <> []).
           { destruct l; cbn; congruence. }
 
@@ -204,7 +204,7 @@ Section strip.
           { rewrite -mkApps_app /=.
             rewrite strip_mkApps //. rewrite strip_mkApps //.
             cbn -[lookup_inductive_pars].
-            move/andP: H4 => [] ise hl.
+            move/andP: H2 => [] ise hl.
             unfold isEtaExp_app in ise.
             destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
             rewrite (lookup_inductive_pars_constructor_pars_args eqpars).
@@ -212,32 +212,30 @@ Section strip.
             rewrite skipn_app map_app. f_equal.
             assert (pars - #|l| = 0). rtoProp. rename H2 into ise. eapply Nat.leb_le in ise; lia.
             rewrite H2 skipn_0.
-            rewrite !map_map_compose.
-            clear -H1 H2 ev H0. solve_all. }
+            rewrite !map_map_compose. solve_all. }
           { rewrite -mkApps_app.
             rewrite strip_mkApps //. rewrite hc.
             rewrite strip_mkApps // hc -mkApps_app map_app //.
             f_equal. f_equal.
-            rewrite !map_map_compose.
-            clear -H1 H2 ev H0. solve_all. } }
+            rewrite !map_map_compose. solve_all. } }
         { rewrite strip_mkApps ?eqa //.
           destruct (construct_viewc (csubst a k t)) eqn:eqc.
-          2:{ f_equal. rewrite !map_map_compose. clear -H1 H2 ev H0. solve_all. }
-          simp isEtaExp in H4.
-          rewrite /isEtaExp_app in H4.
+          2:{ f_equal. rewrite !map_map_compose. solve_all. }
+          simp isEtaExp in H2.
+          rewrite /isEtaExp_app in H2.
           destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => // /=.
           rewrite (lookup_inductive_pars_constructor_pars_args eqpars).
           assert (pars = 0). rtoProp. eapply Nat.leb_le in H2. lia.
           subst pars. rewrite skipn_0.
           simp strip; rewrite -strip_equation_1.
-          { f_equal. rewrite !map_map_compose. clear -H1 H2 ev H0. solve_all. } }
-    - pose proof (etaExp_csubst _ _ k _ H1 H2). 
-      rewrite !csubst_mkApps /= in H3 *.
+          { f_equal. rewrite !map_map_compose. solve_all. } }
+    - pose proof (etaExp_csubst _ _ k _ etaa H0).
+      rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
       rewrite strip_mkApps //.
-      rewrite isEtaExp_Constructor // in H3.
-      move/andP: H3. rewrite map_length. move=> [] etaapp etav.
+      rewrite isEtaExp_Constructor // in H1.
+      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
@@ -252,9 +250,9 @@ Section strip.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
       rewrite strip_mkApps //.
-      rewrite isEtaExp_Constructor // in H3.
+      rewrite isEtaExp_Constructor // in H1.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
-      move/andP: H3. rewrite map_length. move=> [] etaapp etav.
+      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.

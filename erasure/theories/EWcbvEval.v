@@ -1290,7 +1290,7 @@ Ltac sim := repeat (cbn ; autorewrite with simplifications).
 
 Lemma eval_wellformed {efl : EEnvFlags} {wfl : WcbvFlags} Σ : 
   forall (has_app : has_tApp), (* necessary due to mkApps *)
-  efl.(cstr_as_blocks) = false ->
+  efl.(@cstr_as_blocks) = false ->
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.

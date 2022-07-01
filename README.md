@@ -54,7 +54,7 @@ The [dependency graph](https://raw.githubusercontent.com/MetaCoq/metacoq.github.
 might be useful to navigate the project.
 Statistics: ~150kLoC of Coq, ~30kLoC of OCaml.
 
-### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.16/template-coq/theories)
+### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.15/template-coq/theories)
 
 Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
 takes `Coq` terms and constructs a representation of their syntax tree as
@@ -80,7 +80,7 @@ In addition to this representation of terms, Template Coq includes:
 - A formalisation of the typing rules reflecting the ones of Coq, covering all of Coq 
   except eta-expansion and template polymorphism.
 
-### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic/theories)
+### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.15/pcuic/theories)
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
 a cleaned up version of the term language of Coq and its associated
@@ -116,7 +116,7 @@ can be found via weak call-by-value evaluation.
 See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/coq-8.15/pcuic/theories/README.md) for 
 a detailed view of the development.
 
-### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker/theories)
+### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.15/safechecker/theories)
 
 Implementation of a fuel-free and verified reduction machine, conversion
 checker and type checker for PCUIC. This relies on a postulate of
@@ -139,7 +139,7 @@ This also includes a verified, efficient re-typing procedure (useful in tactics)
 See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/coq-8.15/safechecker/theories/README.md) for 
 a detailed view of the development.
 
-### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure/theories)
+### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.15/erasure/theories)
 
 An erasure procedure to untyped lambda-calculus accomplishing the
 same as the type and proof erasure phase of the Extraction plugin of Coq.
@@ -173,17 +173,17 @@ Examples of translations built on top of this:
 - An example *extracted* Coq plugin built on the extractable Template Monad, which can be used to
   derive lenses associated to a record type is in [test-suite/plugin-demo](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/plugin-demo). The plugin runs in OCaml and is a template for writing extracted plugins.
 
-- An example ``constructor`` tactic written using the Template Monad is in [examples/constructor_tac.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/examples/constructor_tac.v),
-  and a more elaborate verified tautology checker is in [examples/tauto.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/examples/tauto.v).
+- An example ``constructor`` tactic written using the Template Monad is in [examples/constructor_tac.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/examples/constructor_tac.v),
+  and a more elaborate verified tautology checker is in [examples/tauto.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/examples/tauto.v).
 
-- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_test.v)
-  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/safechecker_test.v) show example
+- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/erasure_test.v)
+  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the extracted verified checker and erasure.
   
-- The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/self_erasure.v) file checks that erasure
+- The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/self_erasure.v) file checks that erasure
   works on the verified typechecking and erasure programs themselves.
 
-- The test-suite file [test-suite/erasure_live_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_live_test.v)
+- The test-suite file [test-suite/erasure_live_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.15/test-suite/erasure_live_test.v)
   shows uses of the verified erasure running *inside* Coq.
 
 ## Papers

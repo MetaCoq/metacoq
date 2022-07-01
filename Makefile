@@ -43,13 +43,14 @@ uninstall: all
 	$(MAKE) -C translations uninstall
 
 html: all
-	"coqdoc" -toc -utf8 -interpolate -l -html \
+	"coqdoc" --multi-index -toc -utf8 -interpolate -l -html \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
 		-R translations MetaCoq.Translations \
-		-d html */theories/*.v translations/*.v
+		-R examples MetaCoq.Examples \
+		-d html */theories/*.v */theories/*/*.v translations/*.v examples/*.v
 
 clean:
 	$(MAKE) -C template-coq clean

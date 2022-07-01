@@ -33,7 +33,7 @@ Inductive term : Set :=
 | tLetIn     : name -> term (* the term *) -> term -> term
 | tApp       : term -> term -> term
 | tConst     : kername -> term
-| tConstruct : inductive -> nat -> term
+| tConstruct : inductive -> nat -> list term -> term
 | tCase      : (inductive * nat) (* # of parameters *) ->
                term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term

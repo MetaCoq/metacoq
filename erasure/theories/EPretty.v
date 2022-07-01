@@ -111,11 +111,11 @@ Module PrintTermTree.
     | tApp f l =>
       parens (top || inapp) (print_term Γ false true f ^ " " ^ print_term Γ false false l)
     | tConst c => string_of_kername c
-    | tConstruct (mkInd i k as ind) l =>
+    | tConstruct (mkInd i k as ind) l args =>
       match lookup_ind_decl Σ i k with
       | Some oib =>
         match nth_error oib.(ind_ctors) l with
-        | Some cstr => cstr.(cstr_name)
+        | Some cstr => cstr.(cstr_name) ^ maybe_string_of_list string_of_term args
         | None =>
           "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
         end

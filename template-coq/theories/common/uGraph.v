@@ -2940,7 +2940,7 @@ Proof.
 Qed.
 
 
-Instance subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) subgraph.
+#[global] Instance subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) subgraph.
 Proof.
   unshelve apply: proper_sym_impl_iff_2.
   move=> g1 g1' [eqv1 [eqe1 eqs1]]  g2 g2' [eqv2 [eqe2 eqs2]].
@@ -2950,7 +2950,7 @@ Proof.
   + by rewrite <- eqs1, <- eqs2.
 Qed.
 
-Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
+#[global] Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
 Proof.
   unshelve apply: proper_sym_impl_iff_2.
   move=> g1 g1' eq1 g2 g2' eq2.
@@ -2984,7 +2984,7 @@ Proof.
   apply: make_graph_invariants.
 Qed.
 
-Existing Instance correct_labelling_proper.
+#[export] Existing Instance correct_labelling_proper.
 
 Lemma correct_labelling_of_valuation_satisfies_iff `{checker_flags} [uctx G v] :
   is_graph_of_uctx G uctx ->

@@ -7,10 +7,8 @@ Open Scope bs_scope.
 
 #[local] Existing Instance config.default_checker_flags.
 
-Definition run_eta_program := Transform.run template_eta_expand.
-
 Definition eta_expand p := 
-  run_eta_program p (todo "assume well-typedness").
+  EtaExpand.eta_expand_program p.
 
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with

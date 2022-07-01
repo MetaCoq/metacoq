@@ -283,7 +283,7 @@ Definition isCoFix t :=
 
 Definition isConstruct t :=
   match t with
-  | tConstruct _ _ => true
+  | tConstruct _ _ _ => true
   | _ => false
   end.
 
@@ -328,6 +328,8 @@ Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
   "(" ^ string_of_name (dname def) ^ "," ^ f (dbody def) ^ ","
       ^ string_of_nat (rarg def) ^ ")".
 
+Definition maybe_string_of_list {A} f (l : list A) := match l with [] => "" | _ => string_of_list f l end.
+
 Fixpoint string_of_term (t : term) : string :=
   match t with
   | tBox => "∎"
@@ -338,7 +340,7 @@ Fixpoint string_of_term (t : term) : string :=
   | tLetIn na b t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b ^ "," ^ string_of_term t ^ ")"
   | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_term l ^ ")"
   | tConst c => "Const(" ^ string_of_kername c ^ ")"
-  | tConstruct i n => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ")"
+  | tConstruct i n args => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ maybe_string_of_list string_of_term args ^ ")"
   | tCase (ind, i) t brs =>
     "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
             ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
@@ -354,8 +356,10 @@ Fixpoint string_of_term (t : term) : string :=
 
 Fixpoint term_global_deps (t : EAst.term) :=
   match t with
-  | EAst.tConst kn
-  | EAst.tConstruct {| inductive_mind := kn |} _ => KernameSet.singleton kn
+  | EAst.tConst kn => KernameSet.singleton kn
+  | EAst.tConstruct {| inductive_mind := kn |} _ args =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps x) acc) args
+          (KernameSet.singleton kn)
   | EAst.tLambda _ x => term_global_deps x
   | EAst.tApp x y
   | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)

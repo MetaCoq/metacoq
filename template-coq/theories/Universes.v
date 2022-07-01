@@ -2532,7 +2532,7 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx => Instance.empty
   | Polymorphic_ctx c => fst (snd (AUContext.repr c))
   end.
-(* todo: duplicate of polymorphic_instance *)
+(* TODO: duplicate of polymorphic_instance *)
 Definition abstract_instance decl :=
   match decl with
   | Monomorphic_ctx => Instance.empty

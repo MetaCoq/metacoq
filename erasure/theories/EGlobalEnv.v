@@ -247,7 +247,7 @@ Definition is_constructor_app_or_box t :=
   | a =>
     let (f, a) := decompose_app a in
     match f with
-    | tConstruct _ _ => true
+    | tConstruct _ _ _ => true
     | _ => false
     end
   end.

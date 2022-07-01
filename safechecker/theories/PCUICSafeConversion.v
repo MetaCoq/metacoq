@@ -213,8 +213,7 @@ Section Conversion.
   Defined.
 
   Derive Signature for Subterm.lexprod.
-  Derive Signature for dlexmod.
-
+  
   Lemma R_aux_Acc :
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->
@@ -5710,7 +5709,9 @@ Qed.
 
     _isconv Fallback Γ t1 π1 h1 t2 π2 h2 aux :=
       λ { | leq | hx | r1 | r2 | hd := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 hd hx aux }.
-
+  
+  Derive Signature for dlexmod.
+  
   Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
     forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
   Proof using Type.
@@ -5850,13 +5851,13 @@ match
              (LevelSet.add Level.lzero LevelSet.empty, ConstraintSet.empty);
            declarations := []
          |}, Monomorphic_ctx);
-      referenced_impl_ext_wf := todo "foo"
+      referenced_impl_ext_wf := TODO "foo"
     |} [] Cumul (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
-    (todo "") (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
-    (todo "")
+    (TODO "") (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
+    (TODO "")
 with
 | ConvSuccess => "success"
-| ConvError _ => todo "foo"
+| ConvError _ => TODO "foo"
 end = "success".
 Proof.
   lazy. reflexivity.

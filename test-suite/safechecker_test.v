@@ -31,6 +31,7 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 (* MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat. *)
 
+Set Warnings "-notation-overriden".
 From MetaCoq.TestSuite Require Import hott_example.
 
 MetaCoq SafeCheck @issect'.

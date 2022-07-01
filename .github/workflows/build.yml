@@ -50,8 +50,6 @@ jobs:
           before_install: |
             startGroup "Print opam config"
               opam config list; opam repo list; opam list
-              opam pin -n coq-equations http://github.com/mattam82/Coq-Equations.git#8.16
-              opam install --confirm-level=unsafe-yes coq-equations.8.16.dev
             endGroup
           script: |
             startGroup "Build project"

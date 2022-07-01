@@ -43,17 +43,17 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Simulation of the guarded fixpoint rules with a single unguarded one: 
     the only "stuck" fixpoints remaining are unapplied. 
     This translation is a noop on terms and environments.  *)
-  guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
+  guarded_to_unguarded_fix eq_refl ▷
   (* Remove all constructor parameters *)
-  remove_params_optimization (wcon := eq_refl) ▷ 
+  remove_params_optimization ▷ 
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Remove all cases / projections on propositional content *)
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := EWellformed.all_env_flags) ▷
   (* Inline projections to cases *)
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (hastrel := eq_refl) (hastbox := eq_refl).
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
    parameters in inductive declarations. The constructor applications are also expanded, and
    the evaluation relation does not need to consider guarded fixpoints or case analyses on propositional
@@ -96,10 +96,10 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
-  guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
-  remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
+  guarded_to_unguarded_fix eq_refl ▷
+  remove_params_fast_optimization _ ▷ 
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.

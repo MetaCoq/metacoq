@@ -90,7 +90,7 @@ Section optimize.
     | tBox => t
     | tVar _ => t
     | tConst _ => t
-    | tConstruct _ _ _ => t
+    | tConstruct _ _ => t
     (* | tPrim _ => t *)
     end.
 
@@ -142,7 +142,6 @@ Section optimize.
     unfold wf_fix, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n0)%nat; auto.
-    - f_equal. rtoProp. now destruct args; inv H0.
     - move/andP: wft => [] /andP[] hi hb hl. rewrite IHb. f_equal. unfold on_snd; solve_all.
       repeat toAll. f_equal. solve_all. unfold on_snd; cbn. f_equal.
       rewrite a0 //. now rewrite -Nat.add_assoc.
@@ -407,7 +406,7 @@ Proof.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
-Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) ; with_constructor_as_block := false |}.
+Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
 Proof.
@@ -473,7 +472,7 @@ Proof.
     * intros hnth. now apply IHs. 
 Qed.
 
-Lemma optimize_correct (efl := all_env_flags) {fl} {wcon : with_constructor_as_block = false} { Σ : GlobalContextMap.t} t v :
+Lemma optimize_correct (efl := all_env_flags) {fl} {Σ : GlobalContextMap.t} t v :
   wf_glob Σ ->
   @eval fl Σ t v ->
   wellformed Σ 0 t ->
@@ -502,13 +501,11 @@ Proof.
     eapply nth_error_forallb in wfbrs; tea.
     rewrite Nat.add_0_r in wfbrs.
     forward IHev2. eapply wellformed_iota_red; tea => //.
-    rewrite optimize_iota_red in IHev2 => //. now rewrite e3.
+    rewrite optimize_iota_red in IHev2 => //. now rewrite e2.
     econstructor; eauto.
     rewrite -is_propositional_cstr_optimize //. tea.
-    rewrite nth_error_map e1 //. len. len.
-
-  - congruence.
-
+    rewrite nth_error_map e0 //. len. len.
+  
   - move/andP => [] /andP[] hl wfd wfbrs.
     forward IHev2. eapply wellformed_substl; tea => //.
     rewrite forallb_repeat //. len.
@@ -590,7 +587,7 @@ Proof.
     move/wf_mkApps: ev1 => [] wfc wfargs.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
     pose proof (lookup_projection_lookup_constructor hl').
-    rewrite (constructor_isprop_pars_decl_constructor H) in e0. noconf e0.
+    rewrite (constructor_isprop_pars_decl_constructor H) in e. noconf e.
     forward IHev1 by auto.
     forward IHev2. eapply nth_error_forallb in wfargs; tea.
     rewrite optimize_mkApps /= in IHev1.
@@ -607,13 +604,11 @@ Proof.
     rewrite nth_error_rev. len. rewrite skipn_length. lia. 
     rewrite List.rev_involutive. len. rewrite skipn_length.
     rewrite nth_error_skipn nth_error_map.
-    rewrite e1 -H1.
+    rewrite e0 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.
     rewrite H3.
-    eapply (f_equal (option_map (optimize Σ))) in e2.
-    cbn in e2. rewrite -e2. f_equal. f_equal. lia.
-
-  - congruence.
+    eapply (f_equal (option_map (optimize Σ))) in e1.
+    cbn in e1. rewrite -e1. f_equal. f_equal. lia.
 
   - move=> /andP[] iss cld.
     rewrite GlobalContextMap.lookup_projection_spec.
@@ -634,12 +629,10 @@ Proof.
   - move/andP=> [] clf cla.
     rewrite optimize_mkApps.
     eapply eval_construct; tea.
-    rewrite -lookup_constructor_optimize //. exact e0.
+    rewrite -lookup_constructor_optimize //. exact e.
     rewrite optimize_mkApps in IHev1. now eapply IHev1.
     now len.
     now eapply IHev2.
-
-  - congruence.
 
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).

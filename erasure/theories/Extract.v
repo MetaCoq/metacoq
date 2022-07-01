@@ -55,7 +55,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
         isPropositional Σ kn false ->
-        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k []
+        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
         (brs' : list (list name × E.term)) :
@@ -113,7 +113,7 @@ Lemma erases_forall_list_ind
           P Γ (tConst kn u) (E.tConst kn))
       (Hconstruct : forall Γ kn k n,
           isPropositional Σ kn false ->
-          P Γ (tConstruct kn k n) (E.tConstruct kn k []))
+          P Γ (tConstruct kn k n) (E.tConstruct kn k))
       (Hcase : forall Γ ci p c brs c' brs',
           PCUICElimination.Informative Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
@@ -266,7 +266,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     EGlobalEnv.declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
-    erases_deps Σ Σ' (E.tConstruct ind c [])
+    erases_deps Σ Σ' (E.tConstruct ind c)
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
     declared_inductive Σ (fst p) mdecl idecl ->
     EGlobalEnv.declared_inductive Σ' (fst p) mdecl' idecl' ->

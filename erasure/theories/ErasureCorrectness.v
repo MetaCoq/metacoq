@@ -325,7 +325,7 @@ Proof.
       
       invs H2.
       -- exists x2. split; eauto.
-         constructor. econstructor. eauto. eauto. 2:eauto.
+         constructor. econstructor. eauto. 2:eauto.
          4:{ unfold EGlobalEnv.iota_red.
           rewrite ECSubst.substl_subst //.
           rewrite forallb_rev forallb_skipn //.
@@ -1021,7 +1021,7 @@ Proof.
         eapply erases_deps_eval in Hed1; tea.
         eapply erases_deps_mkApps_inv in Hed1 as [].
         depelim H8.
-        constructor. eapply Ee.eval_construct; tea. eauto.
+        constructor. eapply Ee.eval_construct; tea.
         eapply (EGlobalEnv.declared_constructor_lookup H9).
         rewrite -(Forall2_length H7).
         rewrite /EAst.cstr_arity.

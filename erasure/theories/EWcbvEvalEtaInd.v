@@ -14,14 +14,14 @@ Hint Constructors eval : core.
 
 Definition atomic_term (t : term) :=
   match t with
-  | tBox | tConstruct _ _ _ | tConst _ | tRel _ | tVar _ => true
+  | tBox | tConstruct _ _ | tConst _ | tRel _ | tVar _ => true
   | _ => false
   end.
 
 Definition has_atom {etfl : ETermFlags} (t : term) :=
   match t with
   | tBox => has_tBox
-  | tConstruct _ _ _ => has_tConstruct
+  | tConstruct _ _ => has_tConstruct
   | tConst _ => has_tConst
   | tRel _ => has_tRel
   | tVar _ => has_tVar
@@ -141,7 +141,7 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
     qpres_qcofix :> Qcofix Q }.
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : WcbvFlags), with_constructor_as_block = false -> forall  {efl : EEnvFlags} (Σ : global_declarations) 
+∀ (wfl : WcbvFlags) {efl : EEnvFlags} (Σ : global_declarations) 
   (P' : term → term → Type)
   (Q : nat -> term -> Type)
   {Qpres : Qpreserves Q Σ}
@@ -175,8 +175,8 @@ Lemma eval_preserve_mkApps_ind :
                                                 (list name × term)) 
            (br : list name × term) (res : term),
            forallb (λ x : list name × term, isEtaExp Σ x.2) brs ->
-           eval Σ discr (mkApps (tConstruct ind c []) args)
-           → P discr (mkApps (tConstruct ind c []) args)
+           eval Σ discr (mkApps (tConstruct ind c) args)
+           → P discr (mkApps (tConstruct ind c) args)
            → constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl)
                → nth_error brs c = Some br
                → #|args| = pars + cdecl.(cstr_nargs) 
@@ -280,8 +280,8 @@ Lemma eval_preserve_mkApps_ind :
                     → (∀ p cdecl (discr : term) (args : list term) a (res : term),
                          has_tProj ->
                          eval Σ discr
-                           (mkApps (tConstruct p.(proj_ind) 0 []) args)
-                         → P discr (mkApps (tConstruct p.(proj_ind) 0 []) args)
+                           (mkApps (tConstruct p.(proj_ind) 0) args)
+                         → P discr (mkApps (tConstruct p.(proj_ind) 0) args)
                          → constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) 
                          → #|args| = p.(proj_npars) + cdecl.(cstr_nargs)
                          -> nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a
@@ -308,15 +308,15 @@ Lemma eval_preserve_mkApps_ind :
     #|args| = cstr_arity mdecl cdecl ->
     All2 (eval Σ) args args' ->
     isEtaExp_app Σ ind i #|args| ->
-    Q 0 (mkApps (tConstruct ind i []) args) ->
-    Q 0 (mkApps (tConstruct ind i []) args') ->
+    Q 0 (mkApps (tConstruct ind i) args) ->
+    Q 0 (mkApps (tConstruct ind i) args') ->
     All2 P args args' ->
-    P' (mkApps (tConstruct ind i []) args) (mkApps (tConstruct ind i []) args')) → 
+    P' (mkApps (tConstruct ind i) args) (mkApps (tConstruct ind i) args')) → 
 
   (∀ t : term, atom t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
 Proof.
-  intros wfl hcon. intros * Qpres P P'Q etaΣ wfΣ hasapp.
+  intros * Qpres P P'Q etaΣ wfΣ hasapp.
   assert (qfixs: Qfixs Q) by tc.
   assert (qcofixs: Qcofixs Q) by tc.
   intros.
@@ -362,22 +362,22 @@ Proof.
       eapply H; tea; (apply and_assum; [ih|hp' P'Q])
     end.
   destruct ev.
-  1-18:eapply qpres in qt as qt'; depelim qt' => //.  
+  1-15:eapply qpres in qt as qt'; depelim qt' => //.  
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat.
       split. eapply X; tea; (apply and_assum; [ih|hp' P'Q]).
       iheta q.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (ql : Q 0 (tLambda na b)).
       { eapply P'Q; tea. ih. }
@@ -404,26 +404,25 @@ Proof.
   - simp_eta. move=> /andP[etad etabrs].
     assert (isEtaExp Σ (iota_red pars args br)).
     { eapply isEtaExp_iota_red.
-      assert (isEtaExp Σ (mkApps (tConstruct ind c []) args)) by iheta q.
-      rewrite isEtaExp_mkApps_napp /= // in H. rewrite andb_true_r in H.
+      assert (isEtaExp Σ (mkApps (tConstruct ind c) args)) by iheta q.
+      rewrite isEtaExp_mkApps_napp /= // in H.
       now move/andP: H => [].
-      now clear IH; eapply nth_error_forallb in e1; tea. }
+      now clear IH; eapply nth_error_forallb in e0; tea. }
     assert (Q 0 (iota_red pars args br)).
     { unfold iota_red.
       eapply nth_error_all in a; tea. cbn in a.
-      rewrite -e3 in a.
+      rewrite -e2 in a.
       rewrite -(List.rev_length (skipn pars args)) in a.
       rewrite Nat.add_0_r in a.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
       2:{ eapply All_rev, All_skipn. 
-        assert (Q 0 (mkApps (tConstruct ind c []) args)).
+        assert (Q 0 (mkApps (tConstruct ind c) args)).
         eapply P'Q; tea; ih.
         eapply qapp in X13; tea. eapply X13. }
       exact a. }
     split. eapply X2; tea. 1,3:(apply and_assum; [ih|hp' P'Q]).
     eapply nth_error_all in a; tea; cbn. now rewrite Nat.add_0_r in a.
     iheta X13.
-  - congruence.
   - simp_eta; move=> /andP[etad etabrs].
     assert (isEtaExp Σ (substl (repeat tBox #|n|) f)).
     { eapply isEtaExp_substl => //. rewrite forallb_repeat //.
@@ -439,9 +438,9 @@ Proof.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:{ clear ev1'; ih. }
       eapply qapp in ev1' as [hfix qargs] => //.
@@ -473,9 +472,9 @@ Proof.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat.
       assert (isEtaExp Σ (tApp (mkApps (tFix mfix idx) argsv) av)).
       { rewrite -[tApp _ _](mkApps_app _ _ [av]).
@@ -489,9 +488,9 @@ Proof.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (qav : Q 0 av).
       { eapply P'Q; tea; ih. }
@@ -572,14 +571,13 @@ Proof.
       { eapply nth_error_all in qargs; tea. }
       clear ev1'; ih. }
     assert (isEtaExp Σ a).
-    { assert (isEtaExp Σ (mkApps (tConstruct p.(proj_ind) 0 []) args)) by iheta q.
+    { assert (isEtaExp Σ (mkApps (tConstruct p.(proj_ind) 0) args)) by iheta q.
       move: H; simp_eta.
       rewrite isEtaExp_mkApps_napp // /=.
-      move=> /andP[] /andP[] etaapp etaargs.
-      eapply nth_error_forallb in etaargs; tea. eauto. }
+      move=> /andP[] etaapp etaargs.
+      eapply nth_error_forallb in etaargs; tea. }
     split. eapply X10; tea; (apply and_assum; [ih|hp' P'Q]).
     iheta X13.
-  - congruence.
   - simp_eta => etadiscr.
     split. unshelve eapply X11; tea; try (intros; apply and_assum; [ih|hp' P'Q]).
     now idtac.
@@ -587,11 +585,11 @@ Proof.
     rename args into cargs.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       assert (eval_depth ev1 = eval_depth ev1) by reflexivity.
       set (ev1' := ev1). change ev1 with ev1' in H at 1. clearbody ev1'. move: H.
       subst f.
-      pose proof (eval_construct_size hcon ev1') as [ex []].
+      pose proof (eval_construct_size ev1') as [ex []].
       cbn in IH. intros eq.
       assert (All2 (λ x y : term, ∑ ev' : eval Σ x y, eval_depth ev' < S (Nat.max (eval_depth ev1) (eval_depth ev2)))
         (remove_last args ++ [a]) (ex ++ [a'])).
@@ -615,12 +613,12 @@ Proof.
         eapply All2_All_mix_left in X15. 2:exact X14.
         eapply All2_All_right; tea; cbn.
         intros ? ? [? [? [? []]]]. split. eapply P'Q; tea. apply p. apply p. }
-      eapply mkApps_eq_inj in e1 as [] => //. subst ex. noconf H.
+      eapply mkApps_eq_inj in e0 as [] => //. subst ex. noconf H.
       split. 
       unshelve eapply Xcappexp; tea.
       + rewrite ht -remove_last_last //.
         move: etaind; rewrite /isEtaExp_app.
-        rewrite (lookup_constructor_pars_args_cstr_arity _ _ _ _ _ _ e0).
+        rewrite (lookup_constructor_pars_args_cstr_arity _ _ _ _ _ _ e).
         move/Nat.leb_le. move: l. rewrite /cstr_arity.
         eapply All2_length in X13. move: X13.
         rewrite ht /= -remove_last_last //. len.
@@ -641,28 +639,26 @@ Proof.
       + rewrite isEtaExp_Constructor.
         apply/andP. split. rewrite -(All2_length X16).
         rewrite ht -remove_last_last //.
-        rtoProp. split. eauto.
-        eapply All_forallb. eapply All_impl; tea. cbn; intuition auto. auto.
+        eapply All_forallb. eapply All_impl; tea. cbn; intuition auto.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       rewrite -[tApp _ a'](mkApps_app _ _ [a']).
-      assert (P' f (mkApps (tConstruct ind c []) cargs) × isEtaExp Σ (mkApps (tConstruct ind c []) cargs)).
+      assert (P' f (mkApps (tConstruct ind c) cargs) × isEtaExp Σ (mkApps (tConstruct ind c) cargs)).
       { unshelve eapply IH; tea. cbn. lia. }
       elimtype False.
       destruct X13 as [p'f etac].
       move: etac. rewrite isEtaExp_Constructor.
       move/andP => []. rewrite /isEtaExp_app.
-      rewrite /lookup_constructor_pars_args e0 /=.
-      move => /andP[] /Nat.leb_le. clear IH. move: l; rewrite /cstr_arity. lia.
-  - congruence.
+      rewrite /lookup_constructor_pars_args e /=.
+      move/Nat.leb_le. clear IH. move: l; rewrite /cstr_arity. lia.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
-    * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
+    * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       assert (eval_depth ev1 = eval_depth ev1) by reflexivity.
       set (ev1' := ev1). change ev1 with ev1' in H at 1. clearbody ev1'. move: H.
       subst f. exfalso.
       eapply eval_mkApps_Construct_inv in ev1' as [? [hf' hargs']]. subst f'.
-      clear IH; move: i; rewrite !negb_or isConstructApp_mkApps /= !andb_false_r //.  auto.
+      clear IH; move: i; rewrite !negb_or isConstructApp_mkApps /= !andb_false_r //.      
     * move=> /and4P [] etat0 etaargs etaa etat. 
       split. eapply (X12 _ _ _ _ ev1); tea. 
       1,3:(apply and_assum; [ih|hp' P'Q]).
@@ -692,19 +688,18 @@ Ltac destruct_nary_times :=
   | [ H : [× _, _, _, _ & _] |- _ ] => destruct H 
   end.
 
-Lemma eval_etaexp {fl : WcbvFlags} (efl := all_env_flags) {Σ a a'} :
-  with_constructor_as_block = false ->
+Lemma eval_etaexp {fl : WcbvFlags} (efl := all_env_flags) {Σ a a'} : 
   isEtaExp_env Σ ->
   wf_glob Σ ->
   eval Σ a a' -> isEtaExp Σ a -> isEtaExp Σ a'.
 Proof.
-  intros hcon etaΣ wfΣ ev eta.
+  intros etaΣ wfΣ ev eta.
   generalize I. intros q. revert a a' q eta ev.
-  eapply (eval_preserve_mkApps_ind (efl:=all_env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun _ _ => True) (Qpres := Qpreserves_True Σ)) => //.
+  eapply (eval_preserve_mkApps_ind (efl:=all_env_flags) fl Σ (fun _ x => isEtaExp Σ x) (fun _ _ => True) (Qpres := Qpreserves_True Σ)) => //.
   all:intros; repeat destruct_nary_times.
   all:intuition auto.
   - rewrite isEtaExp_Constructor => //.
-    rewrite -(All2_length X0) H1. cbn. rtoProp; intuition eauto.
+    rewrite -(All2_length X0) H1.
     cbn; eapply All_forallb. eapply All2_All_right; tea.
     cbn. intros x y []; auto.
 Qed.

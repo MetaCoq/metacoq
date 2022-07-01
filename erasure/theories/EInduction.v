@@ -25,8 +25,7 @@ Lemma term_forall_list_ind :
         P t -> forall t0 : term, P t0 -> P (tLetIn n t t0)) ->
     (forall t u : term, P t -> P u -> P (tApp t u)) ->
     (forall s, P (tConst s)) ->
-    (forall (i : inductive) (n : nat) (args : list term), 
-      All P args -> P (tConstruct i n args)) ->
+    (forall (i : inductive) (n : nat), P (tConstruct i n)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall l : list (list name * term),
         All (fun x => P x.2) l -> P (tCase p t l)) ->
@@ -46,11 +45,6 @@ Proof.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
   apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-
   revert l.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
@@ -99,7 +93,6 @@ Fixpoint size t : nat :=
   | tProj p c => S (size c)
   | tFix mfix idx => S (list_size (fun x => size (dbody x)) mfix)
   | tCoFix mfix idx => S (list_size (fun x => size (dbody x)) mfix)
-  | tConstruct _ _ ignore_args => S (list_size size ignore_args)
   | _ => 1
   end.
 
@@ -175,7 +168,7 @@ Qed.
 Lemma size_mkApps_l {f l} (Hf : ~~ isApp f) (Hl : l <> []) : list_size size l < size (mkApps f l).
 Proof.
   rewrite size_mkApps.
-  destruct f => /= //; try lia.
+  destruct f => /= //; lia.
 Qed.
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
@@ -209,7 +202,7 @@ Section MkApps_rec.
     (papp : forall t u,
       ~~ isApp t -> u <> nil -> P t -> All P u -> P (mkApps t u))
     (pconst : forall s, P (tConst s))
-    (pconstruct : forall (i : inductive) (n : nat) args, All P args -> P (tConstruct i n args))
+    (pconstruct : forall (i : inductive) (n : nat), P (tConstruct i n))
     (pcase : forall (p : inductive * nat) (t : term),
         P t -> forall l : list (list name * term),
         All (fun x => P x.2) l -> P (tCase p t l))
@@ -236,7 +229,7 @@ Section MkApps_rec.
         let pl := All_rec P id l (fun x H => rec x) in
         rew _ in papp t l napp nonnil pt pl }
     | tConst k => pconst k
-    | tConstruct i n  args => pconstruct i n _ (All_rec P id args (fun x H => rec x))
+    | tConstruct i n => pconstruct i n
     | tCase ina c brs => pcase ina c (rec c) brs (All_rec P (fun x => x.2) brs (fun x H => rec x))
     | tProj p c => pproj p c (rec c)
     | tFix mfix idx => pfix mfix idx (All_rec P dbody mfix (fun x H => rec x))
@@ -267,7 +260,7 @@ Section MkApps_rec.
     (plet : forall (n : name) (t : term), forall t0 : term, P (tLetIn n t t0))
     (papp : forall t u, ~~ isApp t -> u <> nil -> P (mkApps t u))
     (pconst : forall s, P (tConst s))
-    (pconstruct : forall (i : inductive) (n : nat) args, P (tConstruct i n args))
+    (pconstruct : forall (i : inductive) (n : nat), P (tConstruct i n))
     (pcase : forall (p : inductive * nat) (t : term) (l : list (list name * term)), P (tCase p t l))
     (pproj : forall (s : projection) (t : term), P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), P (tFix m n))
@@ -288,7 +281,7 @@ Section MkApps_rec.
         let nonnil := decompose_app_app _ _ _ _ da in
         rew [P] (eq_sym (decompose_app_inv da)) in papp t l napp nonnil }
     | tConst k => pconst k
-    | tConstruct i n args => pconstruct i n args
+    | tConstruct i n => pconstruct i n
     | tCase ina c brs => pcase ina c brs
     | tProj p c => pproj p c
     | tFix mfix idx => pfix mfix idx

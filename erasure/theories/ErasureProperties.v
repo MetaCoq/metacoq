@@ -635,7 +635,7 @@ Proof.
     simpl; try solve [solve_all].
   - now apply Nat.ltb_lt.
   - eapply trans_lookup_constant in wfa; tea.
-  - eapply trans_lookup_constructor in wfa; tea. now rewrite wfa.
+  - eapply trans_lookup_constructor in wfa; tea.
   - move/andP: wfa => [] /andP[] lookup wfc wfbrs.
     apply/andP. split. apply/andP. split; eauto.
     eapply trans_lookup_inductive; tea.
@@ -677,8 +677,7 @@ Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ▷
 Proof.
   intros He.
   depind He. 
-  - clear -e1. now rewrite nth_error_nil in e1.
-  - clear -e1. now rewrite nth_error_nil in e1.
+  - clear -e0. now rewrite nth_error_nil in e0.
   - discriminate.
   - eapply IHHe2.
   - cbn in i. discriminate.
@@ -694,7 +693,6 @@ Proof.
   - depelim He1. clear -H. symmetry in H. elimtype False.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
-  - depelim He1. 
   - exists n, f. intuition auto.
   - depelim He1. clear -H. symmetry in H. elimtype False.
     destruct args using rev_case. discriminate.
@@ -711,8 +709,6 @@ Proof.
   depind He. 
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     econstructor; eauto. now eapply Ee.value_final, Ee.eval_to_value.
-  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    eapply Ee.eval_iota_block; eauto. now eapply Ee.value_final, Ee.eval_to_value.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     eapply Ee.eval_iota_sing; tea. now constructor.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
@@ -731,8 +727,6 @@ Proof.
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
-    now econstructor; eauto.
-  - pose proof (eval_trans' Hc He1); subst discr.
     eapply Ee.eval_iota_sing; tea.
   - pose proof (eval_trans' Hc He1); subst discr.
     eapply Ee.eval_cofix_case; tea.
@@ -745,15 +739,13 @@ Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} :
   Σ ⊢ E.tProj p c' ▷ e.
 Proof.
   intros He Hc.
-  depind He.
+  depind He. 
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
-    now econstructor; tea. 
-  - pose proof (eval_trans' Hc He1); subst discr.
-    now econstructor; tea. 
+    eapply Ee.eval_proj; tea.
   - pose proof (eval_trans' Hc He); subst discr.
-    now econstructor; tea. 
+    eapply Ee.eval_proj_prop; tea.
   - cbn in i. discriminate.
 Qed.
 

@@ -17,7 +17,7 @@ Inductive t : term -> Set :=
 | tLetIn n b b' : t (EAst.tLetIn n b b')
 | tApp (f : term) (l : list term) (napp : ~~ isApp f) (nnil : l <> nil) : t (mkApps f l)
 | tConst kn : t (tConst kn)
-| tConstruct i n args : t (tConstruct i n args)
+| tConstruct i n : t (tConstruct i n)
 | tCase ci p brs : t (tCase ci p brs)
 | tProj p c : t (tProj p c)
 | tFix mfix idx : t (tFix mfix idx)

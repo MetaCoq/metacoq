@@ -170,9 +170,18 @@ Examples of translations built on top of this:
 - An example *extracted* Coq plugin built on the extractable Template Monad, which can be used to
   derive lenses associated to a record type is in [test-suite/plugin-demo](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/plugin-demo). The plugin runs in OCaml and is a template for writing extracted plugins.
 
+- An example ``constructor`` tactic written using the Template Monad is in [examples/constructor_tac.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/examples/constructor_tac.v),
+  and a more elaborate verified tautology checker is in [examples/tauto.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/examples/tauto.v).
+
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/safechecker_test.v) show example
-  uses (and current limitations of) the verified checker and erasure.
+  uses (and current limitations of) the extracted verified checker and erasure.
+  
+- The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/self_erasure.v) file checks that erasure
+  works on the verified typechecking and erasure programs themselves.
+
+- The test-suite file [test-suite/erasure_live_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/erasure_live_test.v)
+  shows uses of the verified erasure running *inside* Coq.
 
 ## Papers
 

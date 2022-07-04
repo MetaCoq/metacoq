@@ -21,8 +21,8 @@ then
         SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
         TRANSLATIONS_DEPS=""
-        EXAMPLES_DEPS="-R ../erasure/theories MetaCoq.Erasure"
-        TEST_SUITE_DEPS="-R ../erasure/theories MetaCoq.Erasure"
+        EXAMPLES_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
+        TEST_SUITE_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
         PLUGIN_DEMO_DEPS="-I ../../template-coq/build -R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else

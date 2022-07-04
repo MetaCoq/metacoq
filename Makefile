@@ -130,7 +130,7 @@ ci-quick:
 
 ci-opam:
 # Use -v so that regular output is produced
-	opam install -v -y .
+	opam install --with-test -v -y .
 	opam remove -y coq-metacoq coq-metacoq-template
 
 checktodos:

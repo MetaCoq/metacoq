@@ -48,6 +48,10 @@ jobs:
               sudo chown -R coq:coq .  # <--
               opam exec -- ocamlfind list
             endGroup
+          before_install: |
+            startGroup "Print opam config"
+              opam config list; opam repo list; opam list
+            endGroup
           script: |
             startGroup "Build project"
               opam exec -- ./configure.sh --enable-${{matrix.target}}

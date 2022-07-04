@@ -26,7 +26,7 @@ depends: [
   "coq-metacoq-translations" {= version}
 ]
 build: [
-  ["sh" "./configure.sh" ] {with-test}
+  ["bash" "./configure.sh" ] {with-test}
   [make "-C" "examples" ] {with-test}
   [make "-C" "test-suite" ] {with-test}
 ]

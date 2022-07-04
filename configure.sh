@@ -23,7 +23,7 @@ then
         TRANSLATIONS_DEPS=""
         EXAMPLES_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
         TEST_SUITE_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
-        PLUGIN_DEMO_DEPS="-I ../../template-coq/build -R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
+        PLUGIN_DEMO_DEPS="-I ../../template-coq/"
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else
         echo "Building MetaCoq globally (default)"
@@ -54,7 +54,7 @@ then
     echo ${PCUIC_DEPS} ${TRANSLATIONS_DEPS} >> translations/metacoq-config
     echo ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${EXAMPLES_DEPS} >> examples/metacoq-config
     echo ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${TEST_SUITE_DEPS} >> test-suite/metacoq-config
-    echo ${PLUGIN_DEMO_DEPS} >> test-suite/plugin-demo/metacoq-config
+    echo ${PCUIC_DEPS} ${PLUGIN_DEMO_DEPS} >> test-suite/plugin-demo/metacoq-config
 
 else
     echo "Error: coqc not found in path"

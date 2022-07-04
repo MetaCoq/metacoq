@@ -10,6 +10,14 @@ Makefile.coq: _CoqProject
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin
 
+_CoqProject: _CoqProject.in metacoq-config
+	cat metacoq-config > _CoqProject
+	cat _CoqProject.in >> _CoqProject
+	
+_PluginProject: _PluginProject.in metacoq-config
+	cat metacoq-config > _PluginProject
+	cat _PluginProject.in >> _PluginProject
+
 plugin: Makefile.plugin coq
 	$(MAKE) -f Makefile.plugin
 

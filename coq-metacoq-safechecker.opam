@@ -19,7 +19,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 ]
 license: "MIT"
 build: [
-  ["sh" "./configure.sh"]
+  ["bash" "./configure.sh"]
   [make "-j" "%{jobs}%" "-C" "safechecker"]
 ]
 install: [

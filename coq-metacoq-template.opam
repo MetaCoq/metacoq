@@ -19,7 +19,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 ]
 license: "MIT"
 build: [
-  ["sh" "./configure.sh"]
+  ["bash" "./configure.sh"]
   [make "-j" "%{jobs}%" "template-coq"]
 ]
 install: [
@@ -27,6 +27,7 @@ install: [
 ]
 depends: [
   "ocaml" {>= "4.07.1"}
+  "stdlib-shims"
   "coq" { >= "8.14" & < "8.15~" }
   "coq-equations" { >= "1.3" }
 ]

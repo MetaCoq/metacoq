@@ -1,6 +1,3 @@
--R ../../template-coq/theories MetaCoq.Template
--I ../../template-coq/build
-
 -I src
 -I gen-src
 -R theories MetaCoq.ExtractedPluginDemo

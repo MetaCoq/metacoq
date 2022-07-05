@@ -1,4 +1,4 @@
-Require Import Template.Extraction.
+From MetaCoq Require Import Template.Extraction.
 Require Import Lens MyPlugin.
 
 Cd "gen-src".

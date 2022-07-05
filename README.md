@@ -5,7 +5,7 @@
 </p>
 
 [![Build status](https://github.com/MetaCoq/metacoq/actions/workflows/build.yml/badge.svg?branch=coq-8.16)](https://github.com/MetaCoq/metacoq/actions) [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
-[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/metacoq/metacoq)
+[![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio%20Code&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://open.vscode.dev/metacoq/metacoq)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
@@ -250,14 +250,17 @@ alt="Yannick Forster" width="150px"/>
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/meven-lennon-bertrand.jpeg"
 alt="Meven Lennon-Bertrand" width="150px"/><br/>
 <img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/kenji-maillard.jpg"
+alt="Kenji Maillard" width="150px"/>
+<img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/gregory-malecha.jpg"
 alt="Gregory Malecha" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/jakob-botsch-nielsen.png"
-alt="Jakob Botsch Nielsen" width="150px"/>
+alt="Jakob Botsch Nielsen" width="150px"/><br/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/matthieu-sozeau.png"
-alt="Matthieu Sozeau" width="150px"/><br/>
+alt="Matthieu Sozeau" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/nicolas-tabareau.jpg"
 alt="Nicolas Tabareau" width="150px"/>
@@ -274,6 +277,7 @@ MetaCoq is developed by (left to right)
 <a href="https://github.com/CohenCyril">Cyril Cohen</a>,
 <a href="https://github.com/yforster">Yannick Forster</a>,
 <a href="https://www.meven.ac">Meven Lennon-Bertrand</a>,
+<a href="https://github.com/kyoDralliam">Kenji Maillard</a>,
 <a href="https://github.com/gmalecha">Gregory Malecha</a>,
 <a href="https://github.com/jakobbotsch">Jakob Botsch Nielsen</a>,
 <a href="https://github.com/mattam82">Matthieu Sozeau</a>,
@@ -288,6 +292,7 @@ Copyright (c) 2015-2022 Abhishek Anand, Matthieu Sozeau
 Copyright (c) 2017-2022 Simon Boulier, Nicolas Tabareau, Cyril Cohen
 Copyright (c) 2018-2022 Danil Annenkov, Yannick Forster, Théo Winterhalter
 Copyright (c) 2020-2022 Jakob Botsch Nielsen, Meven Lennon-Bertrand
+Copyright (c) 2022      Kenji Maillard
 ```
 
 This software is distributed under the terms of the MIT license.

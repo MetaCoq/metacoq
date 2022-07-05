@@ -606,7 +606,7 @@ Lemma rename_predicate_preturn f p :
   preturn (rename_predicate f p).
 Proof. reflexivity. Qed.
 
-Lemma wf_local_app_renaming P Σ Γ Δ :
+(* Lemma wf_local_app_renaming P Σ {wfΣ : wf Σ.1} Γ Δ :
   All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
     forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
     renaming (shiftnP #|Γ ,,, Γ'| P) Σ Δ (Γ ,,, Γ') f -> Σ ;;; Δ |- rename f t : rename f T) Σ)
@@ -619,14 +619,29 @@ Proof.
   induction X.
   - apply a.
   - rewrite rename_context_snoc /=. constructor; auto.
-    apply infer_typing_sort_impl with id t0 => //; intros Hs.
+    eapply on_sortrel_impl with _ t0 => // Hs.
     eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
     split => //.
     eapply urenaming_ext.
     { now rewrite app_length -shiftnP_add. }
     { reflexivity. } now eapply urenaming_context.
   - rewrite rename_context_snoc /=. constructor; auto.
-    * apply infer_typing_sort_impl with id t0 => //; intros Hs.
+    destruct t0 as ((Hb & mk) & s & e & Ht).
+    eassert (renaming (shiftnP #|Γ,,, Γ0| P) Σ (Δ' ,,, rename_context f Γ0) (Γ,,, Γ0) _). {
+      split => //.
+      eapply urenaming_ext.
+      { now rewrite app_length -shiftnP_add. }
+      { reflexivity. } now eapply urenaming_context.
+    }
+    specialize (Hb P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f) X0).
+    specialize (Ht P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f) X0).
+    repeat split; tea.
+    2: eexists; repeat split; tea.
+    eapply rename_relevance_of_term; tea.
+    2: eapply closedn_on_free_vars, subject_closed; tea.
+    1: eapply urenaming_ext.
+    eapply on_triplefull_impl with _ t0 => //.
+    1: intros t1; eapply rename_relevance_of_term.
       apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
       split => //.
       eapply urenaming_ext.
@@ -636,7 +651,7 @@ Proof.
       eapply urenaming_ext.
       { now rewrite app_length -shiftnP_add. }
       { reflexivity. } now eapply urenaming_context.
-Qed.
+Qed. *)
 
 Lemma rename_decompose_prod_assum f Γ t :
     decompose_prod_assum (rename_context f Γ) (rename (shiftn #|Γ| f) t)
@@ -806,8 +821,8 @@ Proof.
 
   - intros Σ wfΣ Γ wfΓ HΓ. split; auto.
     induction HΓ; constructor; tas.
-    all: apply infer_typing_sort_impl with id tu => //; intros Hty.
-    all: eauto.
+    + eapply on_sortrel_impl_id with tu => //.
+    + eapply on_triplefull_impl_id with tu => //.
 
   - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ P Δ f hf.
     simpl in *.
@@ -830,31 +845,33 @@ Proof.
       eapply renaming_vass. 2: eauto.
       constructor.
       * destruct hf as [hΔ hf]. auto.
-      * simpl. exists s1. split; [apply e|]; eapply ihA; eauto.
-  - intros Σ wfΣ Γ wfΓ na A t s1 B e X hA ihA ht iht P Δ f hf.
+      * split; cbn; auto. exists s1. split; [apply e|]; eapply ihA; eauto.
+  - intros Σ wfΣ Γ wfΓ na A t B X hA ht iht P Δ f hf.
     simpl.
-     (* /andP [_ havB]. *)
-    simpl. econstructor.
-    + apply e.
-    + eapply ihA; eauto.
+    apply type_Lambda'.
+    + eapply on_sortrel_impl with _ hA => //.
+      now intros [].
     + eapply iht; eauto; simpl.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vass. 2: eauto.
       constructor.
       * destruct hf as [hΔ hf]. auto.
-      * simpl. exists s1. split; [apply e|]; eapply ihA; eauto.
-  - intros Σ wfΣ Γ wfΓ na b B t s1 A e X hB ihB hb ihb ht iht P Δ f hf.
-    simpl. econstructor.
-    + apply e.
+      * destruct hA as (_ & s1 & e & _ & Hs1). split; cbn; auto. exists s1. split; [apply e|]; eapply Hs1; eauto.
+  - intros Σ wfΣ Γ wfΓ na b B t A X hB ht iht P Δ f hf.
+    simpl.
+    apply type_LetIn'.
+    + eapply on_triplefull_impl with _ hB => //.
+      1: intros; eapply rename_relevance_of_term => //; tea.
     + eapply ihB; tea.
     + eapply ihb; tea.
     + eapply iht; tea.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vdef. 2: eauto.
-      constructor.
-      * destruct hf. assumption.
-      * simpl. exists s1. split; [apply e|]; eapply ihB; tea.
-      * simpl. eapply ihb; tea.
+      constructor; [apply hf|].
+      repeat split.
+      * eapply ihb; tea.
+      * eapply rename_relevance_of_term; tea.
+      * exists s1. split; [apply e|]; eapply ihB; tea.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu P Δ f hf.
     simpl. eapply meta_conv.
     + eapply type_App.

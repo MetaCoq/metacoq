@@ -675,14 +675,13 @@ Inductive isTermRel (Σ : global_env) (Γ : mark_context) : term -> relevance ->
 | rel_Ind ind u : isTermRel Σ Γ (tInd ind u) Relevant. 
 
 Derive Signature for isTermRel.
-Definition isTermRelOpt Σ Γ t relopt := option_default (isTermRel Σ Γ t) relopt unit.
 
 
 Module TemplateTermUtils <: TermUtils TemplateTerm Env.
 
 Definition destArity := destArity.
 Definition inds := inds.
-Definition isTermRelOpt := isTermRelOpt.
+Definition isTermRel := isTermRel.
 
 End TemplateTermUtils.
 
@@ -694,7 +693,7 @@ Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
                   unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
                   unfold TemplateTerm.subst_instance_constr in *;
                   unfold TemplateTermUtils.destArity; unfold TemplateTermUtils.inds;
-                  unfold TemplateTermUtils.isTermRelOpt.
+                  unfold TemplateTermUtils.isTermRel.
 
 Definition tDummy := tVar "".
 

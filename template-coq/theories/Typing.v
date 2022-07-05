@@ -952,8 +952,8 @@ Proof.
   - exact (S (Nat.max d1 (Nat.max d2
     (Nat.max (ctx_inst_size _ typing_size c1)
       (all2i_size _ (fun _ x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a0))))).
-  - exact (S (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => lift_typing_size typing_size Σ _ _ p) a0))).
-  - exact (S (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => lift_typing_size typing_size Σ _ _ p) a0))).
+  - exact (S (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => (lift_typing_size typing_size Σ _ _ p.1 + lift_typing_size typing_size Σ _ _ p.2)%nat) a0))).
+  - exact (S (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => (lift_typing_size typing_size Σ _ _ p.1 + lift_typing_size typing_size Σ _ _ p.2)%nat) a0))).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -1278,7 +1278,7 @@ Proof.
     apply IH'; auto.
   - simpl. simpl in *.
     destruct d.
-    + apply lift_typing_impl with (1 := Xg) => ?? Hs.
+    + apply lift_typing_impl with (1 := Xg) => // ?? Hs.
       specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
       forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
       apply IH.
@@ -1291,16 +1291,16 @@ Proof.
         refine {| ind_arity_eq := Xg.(ind_arity_eq);
                   ind_cunivs := Xg.(ind_cunivs) |}.
         -- apply onArity in Xg.
-           apply lift_typing_impl with (1 := Xg) => ?? Hs.
+           apply lift_typing_impl with (1 := Xg) => // ?? Hs.
            apply (IH (_; _; _; Hs)).
         -- pose proof Xg.(onConstructors) as Xg'.
            eapply All2_impl; eauto. intros.
            destruct X13 as [cass tyeq onctyp oncargs oncind].
            unshelve econstructor; eauto.
-           { apply lift_typing_impl with (1 := onctyp) => ?? Hs.
+           { apply lift_typing_impl with (1 := onctyp) => // ?? Hs.
              apply (IH (_; _; _; Hs)). }
-           { apply sorts_local_ctx_impl with (1 := oncargs) => Γ' j Hj.
-             apply lift_typing_impl with (1 := Hj) => ?? Hs.
+           { apply sorts_local_ctx_impl with (1 := oncargs) => // Γ' j Hj.
+             apply lift_typing_impl with (1 := Hj) => // ?? Hs.
              apply (IH (_; _; _; Hs)). }
            { clear -IH oncind.
              revert oncind.
@@ -1312,14 +1312,14 @@ Proof.
         -- destruct Xg. simpl. unfold check_ind_sorts in *.
            destruct (ind_sort x) => //=.
            split. apply ind_sorts0. destruct indices_matter; auto.
-           eapply type_local_ctx_impl. eapply ind_sorts0. intros ?? HT.
-           apply lift_typing_impl with (1 := HT) => ?? Hs.
+           eapply type_local_ctx_impl. eapply ind_sorts0. auto. intros ?? HT.
+           apply lift_typing_impl with (1 := HT) => // ?? Hs.
            apply (IH (_; _; _; Hs)).
         -- apply Xg.(ind_relevance_compat).
         -- apply (onIndices Xg).
       * red in onP |- *.
         apply All_local_env_impl with (1 := onP); intros ?? HT.
-        apply lift_typing_impl with (1 := HT) => ?? Hs.
+        apply lift_typing_impl with (1 := HT) => // ?? Hs.
         apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
         constructor 1. simpl. subst Σ' Σg; cbn; lia.
 
@@ -1442,7 +1442,7 @@ Proof.
        assert (forall Γ' : context,
                wf_local Σ Γ' ->
                forall (t T : term) (Hty : Σ;;; Γ' |- t : T),
-               typing_size Hty < S (all_size _ (fun x p => lift_typing_size (@typing_size _) Σ _ _ p) a0) ->
+               typing_size Hty < S (all_size _ (fun x p => (lift_typing_size (@typing_size _) Σ _ _ p.1 + lift_typing_size (@typing_size _) Σ _ _ p.2)%nat) a0) ->
                on_global_env cumul_gen (lift_typing P) Σ.1 * P Σ Γ' t T).
        { intros. eapply (X14 _ _ _ Hty); eauto. simpl in *. lia. }
        clear X14 X13.
@@ -1450,9 +1450,11 @@ Proof.
        remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
        induction a0; econstructor; eauto.
-       ++ destruct p as ((Hbo & Hborel) & s & e & Hs).
+       ++ destruct p as (((Hbo & mk) & _s & _e & _Hs) & tt & s & e & Hs).
           repeat split; auto.
           eapply (X _ (typing_wf_local Hbo) _ _ Hbo). simpl. lia.
+          exists _s; repeat split; auto.
+          apply (X _ (typing_wf_local _Hs) _ _ _Hs). simpl. lia.
           exists s; repeat split; auto.
           apply (X _ (typing_wf_local Hs) _ _ Hs). simpl. lia.
        ++ eapply IHa0. intros.
@@ -1463,7 +1465,7 @@ Proof.
        assert (forall Γ' : context,
                wf_local Σ Γ' ->
                forall (t T : term) (Hty : Σ;;; Γ' |- t : T),
-               typing_size Hty < S (all_size _ (fun x p => lift_typing_size (@typing_size _) Σ _ _ p) a0) ->
+               typing_size Hty < S (all_size _ (fun x p => (lift_typing_size (@typing_size _) Σ _ _ p.1 + lift_typing_size (@typing_size _) Σ _ _ p.2)%nat) a0) ->
                on_global_env cumul_gen (lift_typing P) Σ.1 * P Σ Γ' t T).
        { intros. eapply (X14 _ _ _ Hty); eauto. simpl in *. lia. }
        clear X14 X13.
@@ -1471,9 +1473,11 @@ Proof.
        remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
        induction a0; econstructor; eauto.
-       ++ destruct p as ((Hbo & Hborel) & s & e & Hs).
+       ++ destruct p as (((Hbo & mk) & _s & _e & _Hs) & tt & s & e & Hs).
           repeat split; auto.
           eapply (X _ (typing_wf_local Hbo) _ _ Hbo). simpl. lia.
+          exists _s; repeat split; auto.
+          apply (X _ (typing_wf_local _Hs) _ _ _Hs). simpl. lia.
           exists s; repeat split; auto.
           apply (X _ (typing_wf_local Hs) _ _ Hs). simpl. lia.
        ++ eapply IHa0. intros.

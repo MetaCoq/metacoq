@@ -29,11 +29,11 @@ Section Generation.
   Proof using Type.
     intros Ht Hsp.
     revert t Ht. induction Hsp; simpl; auto.
-    intros t Ht. eapply type_Cumul; eauto. eapply i.π2.
+    intros t Ht. eapply type_Cumul; eauto. eapply i.2.π2.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as (s & e & Hs).
+    destruct i as (Hb & s & e & Hs).
     eapply type_App; eauto.
     eapply type_Cumul; eauto.
   Qed.
@@ -49,12 +49,12 @@ Section Generation.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
       dependent induction hc.
-      destruct t0 as (s & e & Hs).
+      destruct t0 as ((Hb & mk) & s & e & Hs).
       econstructor; try eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
       dependent induction hc.
-      destruct t0 as (s & e & Hs).
+      destruct t0 as (Hb & s & e & Hs).
       econstructor; try eassumption.
   Qed.
 

@@ -260,7 +260,7 @@ Qed.
 Section ExtendsWf.
   Context {cf : checker_flags}.
   Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
-  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+  Context {P: global_env_ext -> context -> judgment -> Type}.
 
   Let wf := on_global_env Pcmp P.
 
@@ -477,12 +477,12 @@ Definition weaken_env_prop_full
     forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
 Definition weaken_env_prop
-           (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+           (P : global_env_ext -> context -> judgment -> Type) :=
+  forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ T, P (Σ, φ) Γ T -> P (Σ', φ) Γ T.
 
 Definition weaken_env_decls_prop
-  (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+  (P : global_env_ext -> context -> judgment -> Type) :=
+  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ T, P (Σ, φ) Γ T -> P (Σ', φ) Γ T.
 
 Lemma extends_decls_wf Σ Σ' : 
   wf Σ' -> extends_decls Σ Σ' -> wf Σ.
@@ -503,6 +503,7 @@ Arguments weaken_env_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
 Arguments weaken_env_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
 Arguments weaken_env_prop {cf} (Pcmp P)%function_scope _%function_scope.
 
+#[global] Hint Resolve extends_decls_extends : extends.
 #[global] Hint Resolve extends_lookup : extends.
 #[global] Hint Resolve weakening_env_declared_constant : extends.
 #[global] Hint Resolve weakening_env_declared_minductive : extends.

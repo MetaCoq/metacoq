@@ -20,14 +20,27 @@ Lemma mark_inst_case_branch_context p br :
   marks_of_context (inst_case_branch_context p br) = marks_of_context br.(bcontext).
 Proof. apply mark_inst_case_context. Qed.
 
-Lemma extends_irrelevant {cf : checker_flags} {Pcmp P} Σ Σ' Γ t :
+Lemma mark_fix_context f g mfix :
+  marks_of_context (fix_context (map (map_def f g) mfix)) = marks_of_context (fix_context mfix).
+Proof.
+  rewrite /fix_context /marks_of_context !mapi_map !map_rev !map_mapi //.
+Qed.
+
+Lemma marks_of_context_univ_subst Γ u : marks_of_context Γ@[u] = marks_of_context Γ.
+Proof.
+  rewrite /marks_of_context /subst_instance /subst_instance_context /map_context map_map //=.
+Qed.
+
+Lemma extends_isTermRelOpt {cf : checker_flags} {Pcmp P} Σ Σ' Γ t relopt :
   on_global_env Pcmp P Σ' ->
   extends Σ Σ' ->
-  isTermRel Σ Γ t Irrelevant ->
-  isTermRel Σ' Γ t Irrelevant.
+  PCUICEnvTyping.isTermRelOpt Σ Γ t relopt ->
+  PCUICEnvTyping.isTermRelOpt Σ' Γ t relopt.
 Proof.
+  destruct relopt => //=.
   induction t in Γ |- * using term_forall_list_ind;
-    intros wfΣ' ext Hirr; depelim Hirr; try econstructor; eauto.
-  all: solve [ rewrite H; econstructor => //; eauto with extends ].
+    intros wfΣ' ext Hirr; depelim Hirr; try econstructor; eauto with extends.
 Qed.
+
+#[global] Hint Resolve extends_isTermRelOpt : extends.
 

@@ -108,6 +108,27 @@ Ltac nth_leb_simpl :=
   | _ => lia || congruence || solve [repeat (f_equal; try lia)]
   end.
 
+Lemma lift_inj : forall M M' i j, lift i j M = lift i j M' -> M = M'.
+Proof.
+  intros M.
+  induction M using term_forall_list_ind; destruct M' => //; simpl; intros i j e; inversion e; clear e; f_equal; eauto.
+  - move: H0.
+    case: (Nat.leb_spec j n); intro; case: (Nat.leb_spec j n0); lia.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H1. solve_all.
+  - destruct p, p0; simpl in *. f_equal; auto.
+    + apply All2_eq. apply All2_eq_eq, All2_map_inv in H1. solve_all.
+    + destruct X as (_ & _ & ?); eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H6. solve_all.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+    unfold id in H6. rewrite H6 in H7. eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H0. apply All2_length in H0 as Hlen. solve_all.
+    rewrite Hlen in b.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H0. apply All2_length in H0 as Hlen. solve_all.
+    rewrite Hlen in b.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+Qed.
+
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.

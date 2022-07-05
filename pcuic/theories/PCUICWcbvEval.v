@@ -625,8 +625,8 @@ Section Wcbv.
   Proof using Type.
     move=> wfΣ Hc Hb.
     rewrite PCUICClosed.closedn_subst_instance.
-    apply declared_decl_closed in Hc as (Hty & Hbo) => //.
-    rewrite Hb in Hbo. now move/andP: Hbo.
+    apply declared_decl_closed in Hc as (Hbo & Hty) => //.
+    now rewrite Hb in Hbo.
   Qed.
 
   Lemma closed_iota ci ind p c u args brs br : 

@@ -3,7 +3,7 @@ From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
-     PCUICCases PCUICRelevance PCUICCumulativity PCUICTyping
+     PCUICCases PCUICRelevance PCUICRelevanceTerm PCUICCumulativity PCUICTyping
      PCUICReduction PCUICWeakeningEnv
      PCUICClosed PCUICPosition PCUICGuardCondition.
 
@@ -851,6 +851,24 @@ Proof.
     * now rewrite !subst_instance_make'_make in H.
 Qed.
 
+Lemma isTermRel_subst_instance Σ Γ u t rel :
+  isTermRel Σ Γ t rel -> isTermRel Σ Γ t@[u] rel.
+Proof.
+  intro h.
+  induction t using term_forall_list_ind in Γ, h |- *; depelim h.
+  all: try solve [ try rewrite H; econstructor => //; eauto ].
+  - cbn. erewrite map_dname. econstructor. rewrite nth_error_map e => //.
+  - cbn. erewrite map_dname. econstructor. rewrite nth_error_map e => //.
+Qed.
+
+Lemma isTermRelOpt_subst_instance Σ Γ u t relopt :
+  isTermRelOpt Σ (marks_of_context Γ) t relopt -> isTermRelOpt Σ (marks_of_context Γ@[u]) t@[u] relopt.
+Proof.
+  rewrite marks_of_context_univ_subst.
+  destruct relopt => //.
+  apply isTermRel_subst_instance.
+Qed.
+
 Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
   := fst (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
@@ -1616,8 +1634,8 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: eapply infer_typing_sort_impl with _ tu; [apply relevance_subst_opt|].
-  all: cbn in *; eauto.
+  - eapply on_sortrel_impl with _ tu => //?; [apply relevance_subst_opt|]; eauto.
+  - eapply on_triplefull_impl with _ tu => //?; [apply relevance_subst_opt|apply isTermRelOpt_subst_instance|..]; eauto.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
@@ -1690,16 +1708,6 @@ Qed.
 
 Definition wf_global_ext {cf : checker_flags} Σ ext := wf_ext_wk (Σ, ext).
 
-
-Lemma relevance_of_term_subst_instance Σ Γ u t rel :
-  isTermRel Σ Γ t rel -> isTermRel Σ Γ t@[u] rel.
-Proof.
-  intro h.
-  induction t using term_forall_list_ind in Γ, h |- *; depelim h.
-  all: try solve [ try rewrite H; econstructor => //; eauto ].
-  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
-  - erewrite map_dname. econstructor. rewrite nth_error_map e => //.
-Qed.
 
 Require Import Morphisms.
 Require Import ssreflect.
@@ -1970,6 +1978,23 @@ Section SubstIdentity.
     - rewrite product_subst_instance. f_equal;
       intuition eauto; now noconf b0; noconf b1.
 
+    - destruct X as (_ & s & _ & _ & Hs).
+      intuition auto.
+    
+    - destruct X as (_ & s & _ & _ & Hs).
+      f_equal;
+      intuition auto.
+    
+    - destruct X as (((_ & IHb) & _) & _).
+      intuition auto.
+    
+    - destruct X as (_ & s & _ & _ & IHs).
+      intuition auto.
+
+    - destruct X as (((_ & IHb) & _) & s & _ & _ & IHs).
+      f_equal;
+      intuition auto.
+
     - intuition auto. noconf a; noconf b; noconf b0.
       rewrite subst_instance_subst /= /subst1.
       repeat (f_equal; simpl; auto).
@@ -2012,10 +2037,12 @@ Section SubstIdentity.
         rewrite /subst_instance_list. now rewrite map_rev Hpars.
       * rewrite [subst_instance_constr _ _]subst_instance_two.
         noconf Hi. now rewrite [subst_instance _ u]H.
-    - solve_all. now destruct a as (s & ? & ? & ?).
-    - clear X0. now eapply nth_error_all in X as (s & e & Hs & IHs & _).
-    - solve_all. now destruct a as (s & ? & ? & ?).
-    - clear X0. now eapply nth_error_all in X as (s & e & Hs & IHs & _).
+    - solve_all.
+      all: destruct X as ((((_ & Hb) & _) & _) & _ & ? & _ & _ & Hs); intuition auto.
+    - eapply nth_error_all in X as ((((_ & Hb) & _) & _) & _ & ? & _ & _ & Hs); tea; intuition auto.
+    - solve_all.
+      all: destruct X as ((((_ & Hb) & _) & _) & _ & ? & _ & _ & Hs); intuition auto.
+    - eapply nth_error_all in X as ((((_ & Hb) & _) & _) & _ & ? & _ & _ & Hs); tea; intuition auto.
   Qed.
 
   Lemma typed_subst_abstract_instance Σ Γ t T :

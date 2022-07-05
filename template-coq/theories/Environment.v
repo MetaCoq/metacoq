@@ -727,6 +727,6 @@ Module Type TermUtils (T: Term) (E: EnvironmentSig T).
 
   Parameter Inline destArity : context -> term -> option (context × Universe.t).
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  Parameter Inline isTermRelOpt : global_env -> mark_context -> term -> option relevance -> Type.
+  Parameter Inline isTermRel : global_env -> mark_context -> term -> relevance -> Type.
 
 End TermUtils.

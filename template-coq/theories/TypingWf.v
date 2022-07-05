@@ -43,7 +43,7 @@ Lemma on_global_decl_impl `{checker_flags} Σ P Q kn d :
   (forall Σ Γ j, on_global_env cumul_gen P Σ.1 -> P Σ Γ j -> Q Σ Γ j) ->
   on_global_env cumul_gen P Σ.1 ->
   on_global_decl cumul_gen P Σ kn d -> on_global_decl cumul_gen Q Σ kn d.
-Proof. intros. eapply on_global_decl_impl; tea. apply (X Σ). Qed.
+Proof. intros. eapply on_global_decl_impl; tea. apply (X Σ). all: auto. Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ j, on_global_env cumul_gen P Σ.1 -> P Σ Γ j -> Q Σ Γ j) ->
@@ -217,7 +217,7 @@ Lemma sorts_local_ctx_All_wf_decl {cf:checker_flags} {Σ} {mdecl} {u: list Unive
 Proof.
   induction args as [|[na [b|] ty] args] in u |- * ;
   constructor.
-  - constructor; now destruct X as (?&(?&?)&(?&?)).
+  - constructor; now destruct X as (?&?&?).
   - eapply IHargs; now apply X.
   - destruct u => //; constructor; cbnr; now destruct X as (?&?&?&?).
   - destruct u => //; eapply IHargs; now apply X.
@@ -923,21 +923,19 @@ Section TypingWf.
       split.
       + constructor.
         apply All_impl with (1 := X0) => d H.
-        destruct H as (((_ & (? & _)) & _) & _ & _ & _ & ? & _).
-        split => //. now eapply wf_lift_wf.
+        destruct H as ((((_ & ? & _) & _) & _) & (_ & _ & _ & _ & (? & _))).
+        split => //.
       + eapply All_nth_error in X0; eauto.
-        destruct X0 as (((_ & (? & _)) & _) & _ & _ & _ & ? & _).
-        now eapply wf_lift_wf.
+        destruct X0 as ((((_ & ? & _) & _) & _) & (_ & _ & _ & _ & (? & _))) => //.
 
     - subst types.
       split.
       + constructor.
         apply All_impl with (1 := X0) => d Hs.
-        destruct Hs as (((_ & (? & _)) & _) & _ & _ & _ & ? & _).
-        split => //. now eapply wf_lift_wf.
+        destruct Hs as ((((_ & ? & _) & _) & _) & (_ & _ & _ & _ & (? & _))).
+        split => //.
       + eapply All_nth_error in X0; eauto.
-        destruct X0 as (((_ & (? & _)) & _) & _ & _ & _ & ? & _).
-        now eapply wf_lift_wf.
+        destruct X0 as ((((_ & ? & _) & _) & _) & (_ & _ & _ & _ & (? & _))) => //.
   Qed.
 
   Lemma typing_all_wf_decl Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) :

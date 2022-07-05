@@ -1148,7 +1148,7 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (((Hbo1 & Hbo2) & et) & s & e & Hs1 & Hs2).
+      destruct a as ((((Hbo1 & Hbo2) & mk) & _) & tt & s & e & Hs1 & Hs2).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
       5: eapply Hbo2. 2: reflexivity. 2: now len.
@@ -1169,7 +1169,7 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply X. intros ? (((Hbo1 & Hbo2) & et) & s & e & Hs1 & Hs2). cbn.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply X. intros ? ((((Hbo1 & Hbo2) & mk) & _) & tt & s & e & Hs1 & Hs2). cbn.
      specialize (Hbo2 (repeat None #|mfix| ++ Γ'))%list.
      rewrite map_app, map_repeat in Hbo2. len. eapply Hbo2.
      eapply Forall2_app; eauto. unfold types.
@@ -1358,11 +1358,10 @@ Proof.
   eapply All_fold_fold_context_k_defs. cbn. len. 
   induction ctx' in hs, cunivs |- *; cbn; auto.
   constructor; eauto.
-  cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ?].
+  cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ((Hb&mk)& u&e&Ht)].
   specialize (IHctx' cunivs hs). constructor; auto.
   constructor. len. rewrite repeat_app.
-  destruct p as [[s Hs] ?].
-  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ t).
+  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ Hb).
   forward H.
   clear. rewrite -app_context_length.
   induction (_ ,,, _); cbn; constructor; auto.

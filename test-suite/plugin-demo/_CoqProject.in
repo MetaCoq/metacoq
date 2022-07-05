@@ -1,5 +1,3 @@
--R ../../template-coq/theories MetaCoq.Template
--I ../../template-coq/build
 -R theories MetaCoq.ExtractedPluginDemo
 
 theories/Lens.v

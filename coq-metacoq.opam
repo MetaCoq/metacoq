@@ -2,14 +2,18 @@ opam-version: "2.0"
 version: "8.14.dev"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
-dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.11"
+dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.16"
 bug-reports: "https://github.com/MetaCoq/metacoq/issues"
 authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
+          "Danil Annenkov <danil.v.annenkov@gmail.com>"
           "Simon Boulier <simon.boulier@inria.fr>"
           "Cyril Cohen <cyril.cohen@inria.fr>"
           "Yannick Forster <forster@ps.uni-saarland.de>"
           "Fabian Kunze <fkunze@fakusb.de>"
+          "Meven Lennon-Bertrand <Meven.Bertrand@univ-nantes.fr>"
+          "Kenji Maillard <kenji.maillard@inria.fr>"
           "Gregory Malecha <gmalecha@gmail.com>"
+          "Jakob Botsch Nielsen <Jakob.botsch.nielsen@gmail.com>"
           "Matthieu Sozeau <matthieu.sozeau@inria.fr>"
           "Nicolas Tabareau <nicolas.tabareau@inria.fr>"
           "Théo Winterhalter <theo.winterhalter@inria.fr>"
@@ -23,7 +27,7 @@ depends: [
   "coq-metacoq-translations" {= version}
 ]
 build: [
-  ["sh" "./configure.sh" ] {with-test}
+  ["bash" "./configure.sh" ] {with-test}
   [make "-C" "examples" ] {with-test}
   [make "-C" "test-suite" ] {with-test}
 ]

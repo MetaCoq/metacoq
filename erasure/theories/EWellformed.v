@@ -109,7 +109,11 @@ Section wf.
       | Some d => has_axioms || isSome d.(cst_body)
       | _ => false 
       end
-    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with Some (p, a) => p + a <=? #|block_args| | _ => true end && forallb (wellformed k) block_args else is_nil block_args
+    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && 
+      if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with 
+        | Some (p, a) => (p + a) == #|block_args| 
+        | _ => true end 
+        && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
     end.
 

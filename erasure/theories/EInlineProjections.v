@@ -512,23 +512,23 @@ Proof.
     eapply nth_error_forallb in wfbrs; tea.
     rewrite Nat.add_0_r in wfbrs.
     forward IHev2. eapply wellformed_iota_red; tea => //.
-    rewrite optimize_iota_red in IHev2 => //. now rewrite e3.
+    rewrite optimize_iota_red in IHev2 => //. now rewrite e4.
     econstructor; eauto.
     rewrite -is_propositional_cstr_optimize //. tea.
-    rewrite nth_error_map e1 //. len. len.
+    rewrite nth_error_map e2 //. len. len.
 
   - congruence.
 
   - move/andP => [] /andP[] hl wfd wfbrs.
     forward IHev2. eapply wellformed_substl; tea => //.
     rewrite forallb_repeat //. len.
-    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    rewrite e1 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
     rewrite optimize_substl in IHev2 => //.
     rewrite forallb_repeat //. len.
-    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    rewrite e1 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
     eapply eval_iota_sing => //; eauto.
     rewrite -is_propositional_optimize //.
-    rewrite e0 //. simpl.
+    rewrite e1 //. simpl.
     rewrite map_repeat in IHev2 => //.
 
   - move/andP => [] clf cla. rewrite optimize_mkApps in IHev1.
@@ -600,7 +600,7 @@ Proof.
     move/wf_mkApps: ev1 => [] wfc wfargs.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
     pose proof (lookup_projection_lookup_constructor hl').
-    rewrite (constructor_isprop_pars_decl_constructor H) in e0. noconf e0.
+    rewrite (constructor_isprop_pars_decl_constructor H) in e1. noconf e1.
     forward IHev1 by auto.
     forward IHev2. eapply nth_error_forallb in wfargs; tea.
     rewrite optimize_mkApps /= in IHev1.
@@ -617,11 +617,11 @@ Proof.
     rewrite nth_error_rev. len. rewrite skipn_length. lia. 
     rewrite List.rev_involutive. len. rewrite skipn_length.
     rewrite nth_error_skipn nth_error_map.
-    rewrite e1 -H1.
+    rewrite e2 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.
     rewrite H3.
-    eapply (f_equal (option_map (optimize Σ))) in e2.
-    cbn in e2. rewrite -e2. f_equal. f_equal. lia.
+    eapply (f_equal (option_map (optimize Σ))) in e3.
+    cbn in e3. rewrite -e3. f_equal. f_equal. lia.
 
   - congruence.
 
@@ -630,7 +630,7 @@ Proof.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
     pose proof (lookup_projection_lookup_constructor hl').
     simpl in H. 
-    move: e. rewrite /inductive_isprop_and_pars.
+    move: e0. rewrite /inductive_isprop_and_pars.
     rewrite (lookup_constructor_lookup_inductive H) /=.
     intros [= eq <-].
     eapply eval_iota_sing => //; eauto.

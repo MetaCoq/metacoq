@@ -967,7 +967,7 @@ Proof.
     rewrite (lookup_constructor_lookup_inductive_pars H).
     eapply eval_mkApps_Construct; tea.
     + rewrite lookup_constructor_strip H //.
-    + constructor. cbn [atom]. rewrite lookup_constructor_strip H //.
+    + constructor. cbn [atom]. rewrite wcon lookup_constructor_strip H //.
     + rewrite /cstr_arity /=.
       move: H0; rewrite /cstr_arity /=.
       rewrite skipn_length map_length => ->. lia.
@@ -1050,10 +1050,11 @@ Proof.
 Qed.
 
 Lemma strip_wellformed_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
+  cstr_as_blocks = false ->
   wf_glob Σ ->
   forall n, wellformed Σ n t -> wellformed (strip_env Σ) n t.
 Proof.
-  intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
+  intros hcstrs wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
   all:try solve [intros; unfold wf_fix in *; rtoProp; intuition eauto; solve_all].
   - rewrite lookup_env_strip //.
     destruct lookup_env eqn:hl => // /=.
@@ -1062,13 +1063,7 @@ Proof.
   - rewrite lookup_env_strip //.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
-    destruct cstr_as_blocks; repeat split; eauto.
-    destruct nth_error => /= //.
-    destruct nth_error => /= //.
-    destruct nth_error => /= //.
-    destruct nth_error => /= //. rtoProp. split. solve_all.
-    eapply Nat.leb_le in H0. eapply Nat.leb_le. lia.
-    solve_all.
+    destruct cstr_as_blocks => //; repeat split; eauto.
     destruct nth_error => /= //.
     destruct nth_error => /= //.
   - rewrite lookup_env_strip //.
@@ -1087,10 +1082,11 @@ Proof.
 Qed.
 
 Lemma strip_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
+  cstr_as_blocks = false ->
   wf_glob Σ ->
   wf_global_decl Σ d -> wf_global_decl (strip_env Σ) d.
 Proof.
-  intros wf; destruct d => /= //.
+  intros hcstrs wf; destruct d => /= //.
   destruct (cst_body c) => /= //.
   now eapply strip_wellformed_irrel.
 Qed.

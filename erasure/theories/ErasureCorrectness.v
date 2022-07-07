@@ -1102,7 +1102,7 @@ Proof.
       * eexists. split. 2: now constructor; econstructor.
         econstructor; eauto.
     + invs He.
-      * eexists. split. 2:{ constructor; econstructor. cbn [EWcbvEval.atom].
+      * eexists. split. 2:{ constructor. eapply EWcbvEval.eval_atom. cbn [EWcbvEval.atom].
         depelim Hed. eapply EGlobalEnv.declared_constructor_lookup in H0. now rewrite H0. }
         econstructor; eauto.
       * eexists. split. 2: now constructor; econstructor.

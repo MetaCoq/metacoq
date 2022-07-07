@@ -281,7 +281,7 @@ Proof.
     + intuition auto.
       apply erases_deps_mkApps_inv in H4.
       now apply Forall_rev, Forall_skipn.
-    + eapply nth_error_forall in e1; [|now eauto].
+    + eapply nth_error_forall in e2; [|now eauto].
       assumption.
   - congruence.
   - depelim er.
@@ -333,7 +333,7 @@ Proof.
     intuition auto.
     apply erases_deps_mkApps_inv in H3 as (? & ?).
     apply IHev2.
-    now eapply nth_error_forall in e2.
+    now eapply nth_error_forall in e3.
   - congruence.
   - constructor.
   - depelim er.

@@ -219,22 +219,14 @@ Section eval_mkApps_rect.
                    (c : nat) (mdecl : mutual_inductive_body) 
                    (idecl : one_inductive_body) 
                    (cdecl : constructor_body) 
-                   (args args' : 
-                    list term) (a a' : term) 
+                   (args args' : list term)
                    (e : with_constructor_as_block = true) 
                    (e0 : lookup_constructor Σ ind c =
                          Some (mdecl, idecl, cdecl)) 
-                   (l : #|args| < cstr_arity mdecl cdecl) 
-                   (e1 : eval Σ 
-                           (tConstruct ind c args)
-                           (tConstruct ind c args')),
-                   P (tConstruct ind c args)
-                     (tConstruct ind c args') 
-                   → ∀ e2 : eval Σ a a',
-                       P a a' 
-                       → P (tConstruct ind c (args ++ [a]))
-                           (tConstruct ind c
-                              (args' ++ [a'])))
+                   (l : #|args| = cstr_arity mdecl cdecl) 
+                   (e1 : All2 (eval Σ) args args'),
+                   All2 P args args'
+            → P (tConstruct ind c args) (tConstruct ind c args'))
 
       → (∀ (f15 f' a a' : term) (e : eval Σ f15 f'),
       P f15 f' -> IH _ _ e
@@ -282,6 +274,10 @@ Proof using Type.
   | [ H : _ |- _ ] =>
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
+  eapply X15; tea; auto.
+  clear -a IH'. induction a; constructor.
+  eapply (IH' _ _ r). cbn. lia. apply IHa.
+  intros. eapply (IH' _ _ H). cbn. lia.
 Qed.
 
 End eval_mkApps_rect. 

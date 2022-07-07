@@ -877,8 +877,6 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       positive_cstr mdecl i (vass na ty :: ctx) t ->
       positive_cstr mdecl i ctx (tProd na ty t).
     
-    About closedn.
-
     Definition lift_level n l :=
       match l with 
       | Level.lzero | Level.Level _ => l

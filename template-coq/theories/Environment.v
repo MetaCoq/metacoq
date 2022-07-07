@@ -295,13 +295,14 @@ Module Environment (T : Term).
   (** See [generic_module_body] from [declarations.ml]. We do not include the modpath
     in the body since it is already included in [global_declarations]. *)
   Definition structure_body structure_field := list (kername × structure_field).
-  Definition module_body impl modtype := impl × modtype.
   Definition module_type_body structure_field := structure_body structure_field.
   (** implementation -> module type -> algebraic (colon-annotated) module type (TODO) *)
   Inductive structure_field :=
   | sfconst : constant_body -> structure_field
   | sfmind : mutual_inductive_body -> structure_field
-  | sfmod : module_body module_implementation (module_type_body structure_field) -> structure_field
+  (** TODO: Consider currying impl and modtype. *)
+  (* | sfmod : module_implementation -> module_type_body structure_field -> structure_field *)
+  | sfmod : module_implementation × (module_type_body structure_field) -> structure_field
   | sfmodtype : module_type_body structure_field-> structure_field
   with module_implementation :=
   | mi_abstract : module_implementation (** Declare Module M: T. *)
@@ -312,7 +313,7 @@ Module Environment (T : Term).
 
   Definition structure_decl := structure_body structure_field.
   Definition module_type_decl := module_type_body structure_field.
-  Definition module_decl := module_body module_implementation module_type_decl.
+  Definition module_decl := module_implementation × module_type_decl.
 
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl

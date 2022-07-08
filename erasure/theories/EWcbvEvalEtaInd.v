@@ -57,7 +57,7 @@ Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCoFix 
 Class Qproj {etfl : ETermFlags} (Q : nat -> term -> Type) := qproj : has_tProj -> forall n p discr, Q n (tProj p discr) <~> Q n discr.
 #[export] Hint Mode Qproj - ! : typeclass_instances.
 
-Class Qfix {etfl : ETermFlags} (Q : nat -> term -> Type) := qfix : has_tFix -> forall n mfix idx, idx < #|mfix| -> Q n (tFix mfix idx) <~> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
+Class Qfix {etfl : ETermFlags} (Q : nat -> term -> Type) := qfix : has_tFix -> forall n mfix idx, idx < #|mfix| -> Q n (tFix mfix idx) -> forall idx', idx' < #|mfix| -> Q n (tFix mfix idx').
 #[export] Hint Mode Qfix - ! : typeclass_instances.
 Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFix -> forall n mfix idx, idx < #|mfix| -> Q n (tCoFix mfix idx) <~>  All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
 #[export] Hint Mode Qcofix - ! : typeclass_instances.
@@ -72,13 +72,14 @@ Class Qcofixs (Q : nat -> term -> Type) := qcofixs : forall mfix idx, Q 0 (tCoFi
   Q 0 fn.
 #[export] Hint Mode Qcofixs ! : typeclass_instances.
       
-Lemma Qfix_subst {etfl : ETermFlags} mfix Q : has_tFix -> Qfix Q -> All (λ d : def term, Q (#|mfix| + 0) (dbody d)) mfix -> All (Q 0) (fix_subst mfix).
+Lemma Qfix_subst {etfl : ETermFlags} mfix Q : has_tFix -> Qfix Q -> Qpres Q -> forall idx, idx < #|mfix| -> Q 0 (tFix mfix idx) -> All (Q 0) (fix_subst mfix).
 Proof.
-  intros hasfix qfix; unfold fix_subst.
+  intros hasfix qfix qpre; unfold fix_subst.
   generalize (Nat.le_refl #|mfix|).
   generalize #|mfix| at 1 4.
   induction n. intros. constructor; auto.
-  intros. constructor. eapply qfix => //. eapply IHn. lia. exact X. 
+  intros. constructor. eapply qfix => //. 2:tea. tea. 
+  eapply IHn. lia. 2:tea. assumption.
 Qed.
 
 Lemma Qcofix_subst {etfl : ETermFlags} mfix Q : has_tCoFix -> Qcofix Q -> All (λ d : def term, Q (#|mfix| + 0) (dbody d)) mfix -> All (Q 0) (cofix_subst mfix).
@@ -97,13 +98,13 @@ Proof.
   assert (hasfix : has_tFix).
   { eapply qpres in hfix. now depelim hfix. }
   rewrite /cunfold_fix.
-  eapply qpres in hfix. depelim hfix => //.
   destruct nth_error eqn:hnth => //.
-  eapply nth_error_all in hnth; tea. cbn in hnth.
-  rewrite Nat.add_0_r in hnth.
+  pose proof (nth_error_Some_length hnth).
+  epose proof (Qfix_subst _ _ hasfix qfix qpres idx H hfix).
   intros [= <-]. subst fn.
   eapply Hs. rewrite fix_subst_length //.
-  now apply Qfix_subst.
+  eapply qpres in hfix. depelim hfix. depelim i0. eapply nth_error_all in a; tea. now rewrite Nat.add_0_r in a.
+  assumption.
 Qed.
 
 #[export] Instance Qsubst_Qcofixs {etfl : ETermFlags} Q : Qpres Q -> Qcofix Q -> Qsubst Q -> Qcofixs Q.
@@ -678,12 +679,57 @@ Proof.
   - intros ise. split => //. eapply Qatom; tea.
 Qed.
 
-#[export] Instance Qpreserves_True (etfl := all_term_flags) Σ : Qpreserves (fun _ _ => True) Σ.
+Definition term_flags :=
+  {|
+    has_tBox := true;
+    has_tRel := true;
+    has_tVar := false;
+    has_tEvar := false;
+    has_tLambda := true;
+    has_tLetIn := true;
+    has_tApp := true;
+    has_tConst := true;
+    has_tConstruct := true;
+    has_tCase := true;
+    has_tProj := false;
+    has_tFix := true;
+    has_tCoFix := false
+  |}.
+  
+Definition env_flags := 
+    {| has_axioms := false;
+       has_cstr_params := false;
+       term_switches := term_flags ;
+       cstr_as_blocks := false
+    |}.
+  
+From MetaCoq.Erasure Require Import ELiftSubst.
+Lemma Qpreserves_wellformed (efl := env_flags) Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.
 Proof.
-  split; intros; red; intros; try split; intuition auto.
-  { destruct t; try solve [constructor; auto; auto using All_True]. }
-  { destruct cst_body => //. }
-  all:apply All_True.
+  intros clΣ.
+  split.
+  - red. move=> n t.
+    destruct t; cbn; intuition auto; try solve [constructor; auto].
+    eapply on_letin; rtoProp; intuition auto.
+    eapply on_app; rtoProp; intuition auto.
+    eapply on_case; rtoProp; intuition auto. ELiftSubst.solve_all.
+    eapply on_fix. eauto. move/andP: H => [] isl /andP[] _ wf. ELiftSubst.solve_all.
+  - red. intros kn decl.
+    move/(lookup_env_wellformed clΣ).
+    unfold wf_global_decl. destruct cst_body => //.
+  - red. move=> hasapp n t args. rewrite wellformed_mkApps //. 
+    split; intros; rtoProp; intuition auto; solve_all.
+  - red. cbn => //.
+    (* move=> hascase n ci discr brs. simpl.
+    destruct lookup_inductive eqn:hl => /= //.
+    split; intros; rtoProp; intuition auto; solve_all. *)
+  - red. now move=> hasproj n p discr.
+  - red. move=> t args clt cll.
+    eapply wellformed_substl. solve_all. now rewrite Nat.add_0_r.
+  - red. move=> n mfix idx. cbn. unfold EWellformed.wf_fix.
+    intros; rtoProp; intuition auto; solve_all. now apply Nat.ltb_lt.
+  - red. move=> n mfix idx. cbn.
+    split; intros; rtoProp; intuition auto; solve_all.
 Qed.
 
 Ltac destruct_nary_times :=
@@ -694,17 +740,20 @@ Ltac destruct_nary_times :=
   | [ H : [× _, _, _, _ & _] |- _ ] => destruct H 
   end.
 
-Lemma eval_etaexp {fl : WcbvFlags} (efl := all_env_flags) {Σ a a'} :
+Lemma eval_etaexp {fl : WcbvFlags} (efl := env_flags) {Σ a a'} :
   with_constructor_as_block = false ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
+  wellformed Σ 0 a ->
   eval Σ a a' -> isEtaExp Σ a -> isEtaExp Σ a'.
 Proof.
-  intros hcon etaΣ wfΣ ev eta.
-  generalize I. intros q. revert a a' q eta ev.
-  eapply (eval_preserve_mkApps_ind (efl:=all_env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun _ _ => True) (Qpres := Qpreserves_True Σ)) => //.
+  intros hcon etaΣ wfΣ wf ev eta.
+  revert a a' wf eta ev.
+  eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t) 
+    (Qpres := Qpreserves_wellformed Σ wfΣ)) => //.
   all:intros; repeat destruct_nary_times.
   all:intuition auto.
+  - eapply eval_wellformed; tea => //.
   - rewrite isEtaExp_Constructor => //.
     rewrite -(All2_length X0) H1. cbn. rtoProp; intuition eauto.
     cbn; eapply All_forallb. eapply All2_All_right; tea.

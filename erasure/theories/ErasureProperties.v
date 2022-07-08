@@ -660,7 +660,7 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
-    eapply b1; tea. now rewrite app_length fix_context_length.
+    eapply b1; tea. eapply b. now rewrite app_length fix_context_length.
   - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
@@ -677,8 +677,8 @@ Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ▷
 Proof.
   intros He.
   depind He. 
-  - clear -e1. now rewrite nth_error_nil in e1.
-  - clear -e1. now rewrite nth_error_nil in e1.
+  - clear -e2. now rewrite nth_error_nil in e2.
+  - clear -e2. now rewrite nth_error_nil in e2.
   - discriminate.
   - eapply IHHe2.
   - cbn in i. discriminate.
@@ -695,7 +695,7 @@ Proof.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
   - depelim He1. 
-  - exists n, f. intuition auto.
+  - exists n, f4. intuition auto.
   - depelim He1. clear -H. symmetry in H. elimtype False.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.

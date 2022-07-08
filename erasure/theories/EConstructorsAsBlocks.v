@@ -468,62 +468,37 @@ Definition env_flags_blocks :=
 
 Local Existing Instance env_flags.
 
-Lemma Qpreserves_wellformed Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.
-Proof.
-  intros clΣ.
-  split.
-  - red. move=> n t.
-    destruct t; cbn; intuition auto; try solve [constructor; auto].
-    eapply on_letin; rtoProp; intuition auto.
-    eapply on_app; rtoProp; intuition auto.
-    eapply on_case; rtoProp; intuition auto. solve_all.
-    eapply on_fix. solve_all. move/andP: H => [] _ ha. solve_all.
-  - red. intros kn decl.
-    move/(lookup_env_wellformed clΣ).
-    unfold wf_global_decl. destruct cst_body => //.
-  - red. move=> hasapp n t args. rewrite wellformed_mkApps //. 
-    split; intros; rtoProp; intuition auto; solve_all.
-  - red. cbn => //.
-    (* move=> hascase n ci discr brs. simpl.
-    destruct lookup_inductive eqn:hl => /= //.
-    split; intros; rtoProp; intuition auto; solve_all. *)
-  - red. move=> hasproj n p discr. now cbn in hasproj.
-  - red. move=> t args clt cll.
-    eapply wellformed_substl. solve_all. now rewrite Nat.add_0_r.
-  - red. move=> n mfix idx. cbn. unfold wf_fix.
-    split; intros; rtoProp; intuition auto; solve_all. now apply Nat.ltb_lt.
-  - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
-Qed.
-
 Definition block_wcbv_flags := 
   {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := true |}.
 
 Local Hint Resolve wellformed_closed : core.
 
-Lemma wellformed_lookup_inductive_pars Σ kn mdecl :
+Lemma wellformed_lookup_inductive_pars {efl : EEnvFlags} Σ kn mdecl :
+  has_cstr_params = false ->
   wf_glob Σ ->
   lookup_minductive Σ kn = Some mdecl -> mdecl.(ind_npars) = 0.
 Proof.
+  intros hasp.
   induction 1; cbn => //.
   case: eqb_spec => [|].
   - intros ->. destruct d => //. intros [= <-]. 
     cbn in H0. unfold wf_minductive in H0.
-    rtoProp. cbn in H0. now eapply eqb_eq in H0.
+    rtoProp. cbn in H0. rewrite hasp in H0; now eapply eqb_eq in H0.
   - intros _. eapply IHwf_glob.
 Qed.
 
-Lemma wellformed_lookup_constructor_pars {Σ kn c mdecl idecl cdecl} :
+Lemma wellformed_lookup_constructor_pars {efl : EEnvFlags} {Σ kn c mdecl idecl cdecl} :
+  has_cstr_params = false ->
   wf_glob Σ ->
   lookup_constructor Σ kn c = Some (mdecl, idecl, cdecl) -> mdecl.(ind_npars) = 0.
 Proof.
-  intros wf. cbn -[lookup_minductive].
+  intros hasp wf. cbn -[lookup_minductive].
   destruct lookup_minductive eqn:hl => //.
   do 2 destruct nth_error => //.
   eapply wellformed_lookup_inductive_pars in hl => //. congruence.
 Qed.
 
-Lemma lookup_constructor_pars_args_spec {Σ ind n mdecl idecl cdecl} :
+Lemma lookup_constructor_pars_args_spec {efl : EEnvFlags} {Σ ind n mdecl idecl cdecl} :
   wf_glob Σ ->
   lookup_constructor Σ ind n = Some (mdecl, idecl, cdecl) ->
   lookup_constructor_pars_args Σ ind n = Some (mdecl.(ind_npars), cdecl.(cstr_nargs)).
@@ -533,23 +508,25 @@ Proof.
   intros [= -> -> <-]. cbn. f_equal.
 Qed.
 
-Lemma wellformed_lookup_constructor_pars_args {Σ ind n block_args} :
+Lemma wellformed_lookup_constructor_pars_args {efl : EEnvFlags} {Σ ind n block_args} :
   wf_glob Σ ->
+  has_cstr_params = false ->
   wellformed Σ 0 (EAst.tConstruct ind n block_args) ->
   ∑ args, lookup_constructor_pars_args Σ ind n = Some (0, args).
 Proof.
-  intros wfΣ wf. cbn -[lookup_constructor] in wf.
+  intros wfΣ hasp wf. cbn -[lookup_constructor] in wf.
   destruct lookup_constructor as [[[mdecl idecl] cdecl]|] eqn:hl => //.
   exists cdecl.(cstr_nargs).
-  pose proof (wellformed_lookup_constructor_pars wfΣ hl).
+  pose proof (wellformed_lookup_constructor_pars hasp wfΣ hl).
   eapply lookup_constructor_pars_args_spec in hl => //. congruence.
+  destruct has_tConstruct => //.
 Qed.
 
-Lemma constructor_isprop_pars_decl_params {Σ ind c b pars cdecl} :
-  wf_glob Σ ->
+Lemma constructor_isprop_pars_decl_params {efl : EEnvFlags} {Σ ind c b pars cdecl} :
+  has_cstr_params = false -> wf_glob Σ ->
   constructor_isprop_pars_decl Σ ind c = Some (b, pars, cdecl) -> pars = 0.
 Proof.
-  intros hwf.
+  intros hasp hwf.
   rewrite /constructor_isprop_pars_decl /lookup_constructor /lookup_inductive.
   destruct lookup_minductive as [mdecl|] eqn:hl => /= //.
   do 2 destruct nth_error => //.
@@ -601,7 +578,7 @@ Proof.
   + eapply EEtaExpandedFix.decompose_app_tApp_split in da as [Ha Ht].
     cbn in wf.
     move: wf => /andP[]. rewrite Ha wellformed_mkApps // => /andP[] wfc wfl wft.
-    destruct (wellformed_lookup_constructor_pars_args wfΣ wfc).
+    destruct (wellformed_lookup_constructor_pars_args wfΣ eq_refl wfc).
     rewrite e. cbn.
     destruct chop eqn:eqch => //. 
     intros. apply H1. intuition auto.
@@ -674,13 +651,16 @@ Proof.
 Qed.
 
 Lemma lookup_constructor_transform_blocks Σ ind c :
-lookup_constructor (transform_blocks_env Σ) ind c =
-lookup_constructor Σ ind c.
+  lookup_constructor (transform_blocks_env Σ) ind c =
+  lookup_constructor Σ ind c.
 Proof.
   unfold lookup_constructor, lookup_inductive, lookup_minductive in *.
   rewrite lookup_env_transform_blocks.
   destruct lookup_env as [ [] | ]; cbn; congruence.
 Qed.
+
+Lemma isLambda_transform_blocks Σ c : isLambda c -> isLambda (transform_blocks Σ c).
+Proof. destruct c => //. Qed.
 
 Lemma transform_wellformed' Σ n t :
   wf_glob Σ -> 
@@ -692,9 +672,12 @@ Proof.
   all: rewrite ?map_InP_spec; toAll; eauto; try now solve_all.
   - destruct H1. unfold isEtaExp_app in H1. unfold lookup_constructor_pars_args in *.
     destruct (lookup_constructor Σ) as [[[]] | ]; try congruence; cbn - [transform_blocks].
-    2: eauto. split; auto.
+    2: eauto. split; auto. cbn in H1. eapply Nat.leb_le in H1.
+    apply/eqb_spec. lia.
   - destruct H4. solve_all.
-  - unfold wf_fix in *. rtoProp. solve_all. len. solve_all. len. destruct x.
+  - unfold wf_fix in *. rtoProp. solve_all. now eapply isLambda_transform_blocks.
+  - unfold wf_fix in *. rtoProp. solve_all.
+    len. solve_all. len. destruct x.
     cbn -[transform_blocks isEtaExp] in *. rtoProp. eauto.
   - rewrite !wellformed_mkApps in Hw |- * => //. rtoProp. intros.
     eapply isEtaExp_mkApps in H3. rewrite decompose_app_mkApps in H3; eauto.
@@ -708,16 +691,18 @@ Proof.
         rewrite ?lookup_constructor_transform_blocks; eauto.
       * destruct lookup_constructor as [ [[]] | ] eqn:E; cbn -[transform_blocks] in *; eauto.
         invs Heq. rewrite chop_firstn_skipn in Ec. invs Ec.
-        rewrite firstn_length. len. eapply Nat.leb_le in H2. eapply Nat.leb_le.
-        destruct lookup_env as [ [] | ] eqn:E'; try congruence.
-        eapply lookup_env_wellformed in E'; eauto.
-        cbn in E'. red in E'. unfold wf_minductive in E'.
-        rewrite andb_true_iff in E'.
-        cbn in E'. destruct E'.
-        eapply Nat.eqb_eq in H6.
-        destruct nth_error; invs E.
-        destruct nth_error; invs H9.
-        rewrite H6. lia.
+        rewrite firstn_length. len. eapply Nat.leb_le in H2.
+        apply/eqb_spec.
+        assert (ind_npars m0 = 0).
+        { destruct lookup_env as [ [] | ] eqn:E'; try congruence.
+          eapply lookup_env_wellformed in E'; eauto.
+          cbn in E'. red in E'. unfold wf_minductive in E'.
+          rewrite andb_true_iff in E'.
+          cbn in E'. destruct E'.
+          eapply Nat.eqb_eq in H6.
+          destruct nth_error; invs E.
+          now destruct nth_error; invs H9. }
+        lia.
       * rewrite chop_firstn_skipn in Ec. invs Ec.
         solve_all. eapply All_firstn. solve_all.
       * rewrite chop_firstn_skipn in Ec. invs Ec.
@@ -994,11 +979,18 @@ Proof.
     eapply All2_length in X0 as Hlen.
     cbn.
     rewrite !skipn_all Hlen skipn_all firstn_all. cbn.
-    eapply eval_mkApps_Construct_block; tea. eauto.
+    eapply eval_construct_block; tea. eauto.
     now rewrite lookup_constructor_transform_blocks.
-    constructor. cbn [atom]. now rewrite lookup_constructor_transform_blocks H.
-    len. unfold cstr_arity. lia.
-    solve_all. destruct H6; eauto.
-  - intros. econstructor. destruct t; try solve [cbn in H, H0 |- *; try congruence].
-    cbn -[lookup_constructor] in H |- *. destruct l => //. now rewrite lookup_constructor_transform_blocks H.
+    unfold cstr_arity. cbn. rewrite H4; len.
+    solve_all. clear -X0. eapply All2_All2_Set. solve_all.
+    apply H.
+  - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
+    cbn -[lookup_constructor] in H |- *. destruct l => //.
+    destruct lookup_constructor eqn:hl => //.
+    destruct p as [[mdecl idecl] cdecl].
+    eapply eval_construct_block => //.
+    now rewrite lookup_constructor_transform_blocks hl.
+    simp_eta in H1. cbn in H1. unfold isEtaExp_app in H1.
+    rewrite (lookup_constructor_pars_args_spec wfΣ hl) andb_true_r in H1.
+    apply Nat.leb_le in H1; cbn; unfold cstr_arity. lia.
 Qed.

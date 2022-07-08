@@ -551,11 +551,11 @@ Proof.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e0).
+    rewrite (constructor_isprop_pars_decl_inductive e1).
     eapply eval_iota; eauto.
     now rewrite -is_propositional_cstr_optimize.
-    rewrite nth_error_map e1 //. now len. cbn.
-    rewrite -e3. rewrite !skipn_length map_length //.
+    rewrite nth_error_map e2 //. now len. cbn.
+    rewrite -e4. rewrite !skipn_length map_length //.
     eapply IHev2.
     eapply closed_iota_red => //; tea.
     eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
@@ -565,7 +565,7 @@ Proof.
   
   - move/andP => [] cld clbrs.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite e e0 /=.
+    rewrite e0 e1 /=.
     subst brs. cbn in clbrs. rewrite Nat.add_0_r andb_true_r in clbrs.
     rewrite optimize_substl in IHev2. 
     eapply All_forallb, All_repeat => //.
@@ -660,19 +660,19 @@ Proof.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => clargs.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e0).
+    rewrite (constructor_isprop_pars_decl_inductive e1).
     rewrite optimize_mkApps in IHev1.
     specialize (IHev1 cld).
     eapply Ee.eval_proj; tea.
     now rewrite -is_propositional_cstr_optimize.
-    now len. rewrite nth_error_map e2 //.
+    now len. rewrite nth_error_map e3 //.
     eapply IHev2.
-    eapply nth_error_forallb in e2; tea.
+    eapply nth_error_forallb in e3; tea.
 
   - congruence.
 
   - rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    now rewrite e.
+    now rewrite e0.
 
   - move/andP=> [] clf cla.
     rewrite optimize_mkApps.
@@ -856,7 +856,7 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.

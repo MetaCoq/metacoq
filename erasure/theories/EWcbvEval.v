@@ -1613,11 +1613,10 @@ Ltac sim := repeat (cbn ; autorewrite with simplifications).
 
 Lemma eval_wellformed {efl : EEnvFlags} {wfl : WcbvFlags} Σ : 
   forall (has_app : has_tApp), (* necessary due to mkApps *)
-  efl.(@cstr_as_blocks) = false ->
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.
-  move=> has_app blcks clΣ t u Hc ev. move: Hc.
+  move=> has_app clΣ t u Hc ev. move: Hc.
   induction ev; simpl in *; auto;
     (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
   all:intros; intuition auto; rtoProp; intuition auto; rtoProp; eauto using wellformed_csubst.
@@ -1662,7 +1661,13 @@ Proof.
     destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.   
     destruct args; cbn in H0; eauto.
   - destruct cstr_as_blocks; try congruence.
-    destruct args; invs Hc''. now depelim a.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+    now rewrite (All2_length a) in H.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    depelim a => //.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 

@@ -473,29 +473,32 @@ Definition block_wcbv_flags :=
 
 Local Hint Resolve wellformed_closed : core.
 
-Lemma wellformed_lookup_inductive_pars Σ kn mdecl :
+Lemma wellformed_lookup_inductive_pars {efl : EEnvFlags} Σ kn mdecl :
+  has_cstr_params = false ->
   wf_glob Σ ->
   lookup_minductive Σ kn = Some mdecl -> mdecl.(ind_npars) = 0.
 Proof.
+  intros hasp.
   induction 1; cbn => //.
   case: eqb_spec => [|].
   - intros ->. destruct d => //. intros [= <-]. 
     cbn in H0. unfold wf_minductive in H0.
-    rtoProp. cbn in H0. now eapply eqb_eq in H0.
+    rtoProp. cbn in H0. rewrite hasp in H0; now eapply eqb_eq in H0.
   - intros _. eapply IHwf_glob.
 Qed.
 
-Lemma wellformed_lookup_constructor_pars {Σ kn c mdecl idecl cdecl} :
+Lemma wellformed_lookup_constructor_pars {efl : EEnvFlags} {Σ kn c mdecl idecl cdecl} :
+  has_cstr_params = false ->
   wf_glob Σ ->
   lookup_constructor Σ kn c = Some (mdecl, idecl, cdecl) -> mdecl.(ind_npars) = 0.
 Proof.
-  intros wf. cbn -[lookup_minductive].
+  intros hasp wf. cbn -[lookup_minductive].
   destruct lookup_minductive eqn:hl => //.
   do 2 destruct nth_error => //.
   eapply wellformed_lookup_inductive_pars in hl => //. congruence.
 Qed.
 
-Lemma lookup_constructor_pars_args_spec {Σ ind n mdecl idecl cdecl} :
+Lemma lookup_constructor_pars_args_spec {efl : EEnvFlags} {Σ ind n mdecl idecl cdecl} :
   wf_glob Σ ->
   lookup_constructor Σ ind n = Some (mdecl, idecl, cdecl) ->
   lookup_constructor_pars_args Σ ind n = Some (mdecl.(ind_npars), cdecl.(cstr_nargs)).
@@ -505,23 +508,25 @@ Proof.
   intros [= -> -> <-]. cbn. f_equal.
 Qed.
 
-Lemma wellformed_lookup_constructor_pars_args {Σ ind n block_args} :
+Lemma wellformed_lookup_constructor_pars_args {efl : EEnvFlags} {Σ ind n block_args} :
   wf_glob Σ ->
+  has_cstr_params = false ->
   wellformed Σ 0 (EAst.tConstruct ind n block_args) ->
   ∑ args, lookup_constructor_pars_args Σ ind n = Some (0, args).
 Proof.
-  intros wfΣ wf. cbn -[lookup_constructor] in wf.
+  intros wfΣ hasp wf. cbn -[lookup_constructor] in wf.
   destruct lookup_constructor as [[[mdecl idecl] cdecl]|] eqn:hl => //.
   exists cdecl.(cstr_nargs).
-  pose proof (wellformed_lookup_constructor_pars wfΣ hl).
+  pose proof (wellformed_lookup_constructor_pars hasp wfΣ hl).
   eapply lookup_constructor_pars_args_spec in hl => //. congruence.
+  destruct has_tConstruct => //.
 Qed.
 
-Lemma constructor_isprop_pars_decl_params {Σ ind c b pars cdecl} :
-  wf_glob Σ ->
+Lemma constructor_isprop_pars_decl_params {efl : EEnvFlags} {Σ ind c b pars cdecl} :
+  has_cstr_params = false -> wf_glob Σ ->
   constructor_isprop_pars_decl Σ ind c = Some (b, pars, cdecl) -> pars = 0.
 Proof.
-  intros hwf.
+  intros hasp hwf.
   rewrite /constructor_isprop_pars_decl /lookup_constructor /lookup_inductive.
   destruct lookup_minductive as [mdecl|] eqn:hl => /= //.
   do 2 destruct nth_error => //.
@@ -573,7 +578,7 @@ Proof.
   + eapply EEtaExpandedFix.decompose_app_tApp_split in da as [Ha Ht].
     cbn in wf.
     move: wf => /andP[]. rewrite Ha wellformed_mkApps // => /andP[] wfc wfl wft.
-    destruct (wellformed_lookup_constructor_pars_args wfΣ wfc).
+    destruct (wellformed_lookup_constructor_pars_args wfΣ eq_refl wfc).
     rewrite e. cbn.
     destruct chop eqn:eqch => //. 
     intros. apply H1. intuition auto.

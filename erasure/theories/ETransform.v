@@ -165,13 +165,12 @@ Qed.
 
 Next Obligation.
   red. move=> ? wcon [Σ t] /= v [[wfe wft] etap] [ev].
-  eapply ERemoveParams.strip_eval in ev; eauto.
+  unshelve eapply ERemoveParams.strip_eval in ev; eauto.
   eexists; split => /= //. now sq. cbn in *.
-  now eapply wellformed_closed_env.
   now move/andP: etap.
+  now eapply wellformed_closed_env.
   now eapply wellformed_closed.
   now move/andP: etap.
-  Unshelve. auto.
 Qed.
 
 Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {wcon : EWcbvEval.with_constructor_as_block = false}
@@ -195,14 +194,13 @@ Qed.
 Next Obligation.
   red. move=> ? wcon [Σ t] /= v [[wfe wft] etap] [ev].
   rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
-  eapply ERemoveParams.strip_eval in ev; eauto.
+  unshelve eapply ERemoveParams.strip_eval in ev; eauto.
   eexists; split => /= //.
   now sq. cbn in *.
-  now eapply wellformed_closed_env.
   now move/andP: etap.
+  now eapply wellformed_closed_env.
   now eapply wellformed_closed.
   now move/andP: etap.
-  Unshelve. auto.
 Qed.
 
 Import EOptimizePropDiscr EWcbvEval.
@@ -263,7 +261,7 @@ Program Definition constructors_as_blocks_transformation (efl := env_flags)
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ; 
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram env_flags_blocks p ;
-    obseq g g' v v' := True |}.
+    obseq g g' v v' := v' = EConstructorsAsBlocks.transform_blocks g.1 v |}.
 
 Next Obligation.
   move=> efl hastrel hastbox [Σ t] [] [wftp wft] /andP [etap etat]. 
@@ -275,6 +273,8 @@ Next Obligation.
   red. move=> hastrel hastbox [Σ t] /= v [[wfe1 wfe2] wft] [ev].
   eexists. split; [ | eauto].
   unfold EEtaExpanded.expanded_eprogram_env_cstrs in *.
-  revert wft. move => /andP // [e1 e2]. cbn in *.
-  econstructor. eapply transform_blocks_eval; cbn; eauto.
+  revert wft. move => /andP // [e1 e2]. 
+  econstructor. 
+  cbn -[transform_blocks].
+  eapply transform_blocks_eval; cbn; eauto.
 Qed.

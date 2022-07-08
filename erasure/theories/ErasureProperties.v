@@ -660,7 +660,7 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
-    eapply b1; tea. now rewrite app_length fix_context_length.
+    eapply b1; tea. eapply b. now rewrite app_length fix_context_length.
   - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.

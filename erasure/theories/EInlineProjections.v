@@ -112,7 +112,11 @@ Section optimize.
 
   (* move to globalenv *)
 
-
+  Lemma isLambda_optimize t : isLambda t -> isLambda (optimize t).
+  Proof. destruct t => //. Qed.
+  Lemma isBox_optimize t : isBox t -> isBox (optimize t).
+  Proof. destruct t => //. Qed.
+  
   Lemma wf_optimize t k : 
     wf_glob Σ ->
     wellformed Σ k t -> wellformed Σ k (optimize t).
@@ -135,6 +139,7 @@ Section optimize.
       rewrite IHt //=; len. apply Nat.ltb_lt.
       lia.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+      now eapply isLambda_optimize. solve_all.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
   Qed.
  
@@ -161,7 +166,7 @@ Section optimize.
       have arglen := wellformed_projection_args wfΣ hl.
       case: Nat.compare_spec. lia. lia.
       auto.
-    - f_equal. move/andP: wft => [hidx hb].
+    - f_equal. move/andP: wft => [hlam /andP[] hidx hb].
       solve_all. unfold map_def. f_equal.
       eapply a0. now rewrite -Nat.add_assoc.
     - f_equal. move/andP: wft => [hidx hb].
@@ -222,7 +227,7 @@ Section optimize.
     intros wfΣ hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
-    cbn in hfix. move/andP: hfix => [] hidx hfix. 
+    cbn in hfix. move/andP: hfix => [] hlam /andP[] hidx hfix. 
     destruct nth_error eqn:hnth => //.
     intros [= <- <-] => /=. f_equal.
     rewrite optimize_substl //. eapply wellformed_fix_subst => //.
@@ -680,11 +685,6 @@ Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
 
-Lemma isLambda_optimize Σ t : isLambda t -> isLambda (optimize Σ t).
-Proof. destruct t => //. Qed.
-Lemma isBox_optimize Σ t : isBox t -> isBox (optimize Σ t).
-Proof. destruct t => //. Qed.
-
 Lemma optimize_expanded {Σ : GlobalContextMap.t} t : expanded Σ t -> expanded Σ (optimize Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -829,7 +829,7 @@ Proof.
     rewrite hrel IHt //= andb_true_r.
     have hargs' := wellformed_projection_args wfΣ hl'.
     apply Nat.ltb_lt. len.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.

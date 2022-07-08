@@ -1661,7 +1661,13 @@ Proof.
     destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.   
     destruct args; cbn in H0; eauto.
   - destruct cstr_as_blocks; try congruence.
-    destruct args; invs Hc''. now depelim a.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+    now rewrite (All2_length a) in H.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    depelim a => //.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 

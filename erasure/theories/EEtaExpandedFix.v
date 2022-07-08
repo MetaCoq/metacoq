@@ -1391,7 +1391,7 @@ Proof.
     destruct s.
     * destruct p; solve_discr. noconf H3.
       right. len.
-      move: e; unfold isEtaExp_fixapp.
+      move: e1; unfold isEtaExp_fixapp.
       unfold EGlobalEnv.cunfold_fix. destruct nth_error eqn:hnth => //.
       intros [=]. rewrite H3. rewrite -(All2_length a0). eapply Nat.ltb_lt; lia.
     * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
@@ -1403,7 +1403,7 @@ Proof.
     destruct s.
     * destruct p; solve_discr. noconf H2.
       left. split. 
-      unfold isStuckFix'; rewrite e. len. eapply Nat.leb_le. lia.
+      unfold isStuckFix'; rewrite e1. len. eapply Nat.leb_le. lia.
       now rewrite -[tApp _ _](mkApps_app _ _ [av]).
     * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
   + eapply mkApps_eq in H1 as [? []] => //; subst.
@@ -1570,7 +1570,7 @@ Proof.
   - pose proof (eval_trans' H H0_0). subst a'. econstructor; tea.
   - pose proof (eval_trans' H H0_0). subst av. eapply eval_fix; tea.
   - pose proof (eval_trans' H H0_0). subst av. eapply eval_fix_value; tea.
-  - eapply value_final in X. pose proof (eval_trans' X H0_). subst f.
+  - eapply value_final in X. pose proof (eval_trans' X H0_). subst f7.
     pose proof (eval_trans' H H0_0). subst av.
     eapply eval_fix'; tea.
   - eapply eval_construct; tea.
@@ -1853,7 +1853,7 @@ Proof.
       rewrite (remove_last_last l0 a hl).
       rewrite -[tApp _ _](mkApps_app _ _ [a']).
       eapply eval_mkApps_Construct; tea.  
-      { constructor. cbn [atom]; rewrite e0 //. }
+      { constructor. cbn [atom]; rewrite e e0 //. }
       { len. rewrite (All2_length hargs). lia. }
       eapply All2_app.
       eapply forallb_remove_last, forallb_All in etal.

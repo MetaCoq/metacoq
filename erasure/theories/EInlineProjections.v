@@ -112,7 +112,11 @@ Section optimize.
 
   (* move to globalenv *)
 
-
+  Lemma isLambda_optimize t : isLambda t -> isLambda (optimize t).
+  Proof. destruct t => //. Qed.
+  Lemma isBox_optimize t : isBox t -> isBox (optimize t).
+  Proof. destruct t => //. Qed.
+  
   Lemma wf_optimize t k : 
     wf_glob Σ ->
     wellformed Σ k t -> wellformed Σ k (optimize t).
@@ -135,6 +139,7 @@ Section optimize.
       rewrite IHt //=; len. apply Nat.ltb_lt.
       lia.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+      now eapply isLambda_optimize. solve_all.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
   Qed.
  
@@ -161,7 +166,7 @@ Section optimize.
       have arglen := wellformed_projection_args wfΣ hl.
       case: Nat.compare_spec. lia. lia.
       auto.
-    - f_equal. move/andP: wft => [hidx hb].
+    - f_equal. move/andP: wft => [hlam /andP[] hidx hb].
       solve_all. unfold map_def. f_equal.
       eapply a0. now rewrite -Nat.add_assoc.
     - f_equal. move/andP: wft => [hidx hb].
@@ -222,7 +227,7 @@ Section optimize.
     intros wfΣ hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
-    cbn in hfix. move/andP: hfix => [] hidx hfix. 
+    cbn in hfix. move/andP: hfix => [] hlam /andP[] hidx hfix. 
     destruct nth_error eqn:hnth => //.
     intros [= <- <-] => /=. f_equal.
     rewrite optimize_substl //. eapply wellformed_fix_subst => //.
@@ -512,23 +517,23 @@ Proof.
     eapply nth_error_forallb in wfbrs; tea.
     rewrite Nat.add_0_r in wfbrs.
     forward IHev2. eapply wellformed_iota_red; tea => //.
-    rewrite optimize_iota_red in IHev2 => //. now rewrite e3.
+    rewrite optimize_iota_red in IHev2 => //. now rewrite e4.
     econstructor; eauto.
     rewrite -is_propositional_cstr_optimize //. tea.
-    rewrite nth_error_map e1 //. len. len.
+    rewrite nth_error_map e2 //. len. len.
 
   - congruence.
 
   - move/andP => [] /andP[] hl wfd wfbrs.
     forward IHev2. eapply wellformed_substl; tea => //.
     rewrite forallb_repeat //. len.
-    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    rewrite e1 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
     rewrite optimize_substl in IHev2 => //.
     rewrite forallb_repeat //. len.
-    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    rewrite e1 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
     eapply eval_iota_sing => //; eauto.
     rewrite -is_propositional_optimize //.
-    rewrite e0 //. simpl.
+    rewrite e1 //. simpl.
     rewrite map_repeat in IHev2 => //.
 
   - move/andP => [] clf cla. rewrite optimize_mkApps in IHev1.
@@ -600,7 +605,7 @@ Proof.
     move/wf_mkApps: ev1 => [] wfc wfargs.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
     pose proof (lookup_projection_lookup_constructor hl').
-    rewrite (constructor_isprop_pars_decl_constructor H) in e0. noconf e0.
+    rewrite (constructor_isprop_pars_decl_constructor H) in e1. noconf e1.
     forward IHev1 by auto.
     forward IHev2. eapply nth_error_forallb in wfargs; tea.
     rewrite optimize_mkApps /= in IHev1.
@@ -617,11 +622,11 @@ Proof.
     rewrite nth_error_rev. len. rewrite skipn_length. lia. 
     rewrite List.rev_involutive. len. rewrite skipn_length.
     rewrite nth_error_skipn nth_error_map.
-    rewrite e1 -H1.
+    rewrite e2 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.
     rewrite H3.
-    eapply (f_equal (option_map (optimize Σ))) in e2.
-    cbn in e2. rewrite -e2. f_equal. f_equal. lia.
+    eapply (f_equal (option_map (optimize Σ))) in e3.
+    cbn in e3. rewrite -e3. f_equal. f_equal. lia.
 
   - congruence.
 
@@ -630,7 +635,7 @@ Proof.
     destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
     pose proof (lookup_projection_lookup_constructor hl').
     simpl in H. 
-    move: e. rewrite /inductive_isprop_and_pars.
+    move: e0. rewrite /inductive_isprop_and_pars.
     rewrite (lookup_constructor_lookup_inductive H) /=.
     intros [= eq <-].
     eapply eval_iota_sing => //; eauto.
@@ -679,11 +684,6 @@ Proof.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
-
-Lemma isLambda_optimize Σ t : isLambda t -> isLambda (optimize Σ t).
-Proof. destruct t => //. Qed.
-Lemma isBox_optimize Σ t : isBox t -> isBox (optimize Σ t).
-Proof. destruct t => //. Qed.
 
 Lemma optimize_expanded {Σ : GlobalContextMap.t} t : expanded Σ t -> expanded Σ (optimize Σ t).
 Proof.
@@ -829,7 +829,7 @@ Proof.
     rewrite hrel IHt //= andb_true_r.
     have hargs' := wellformed_projection_args wfΣ hl'.
     apply Nat.ltb_lt. len.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.

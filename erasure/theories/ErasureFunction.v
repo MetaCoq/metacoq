@@ -1938,7 +1938,7 @@ Section wffix.
       wf_fixpoints c && brs'
     | tProj p c => wf_fixpoints c
     | tFix mfix idx => 
-      (idx <? #|mfix|) && List.forallb (fun d => (isLambda d.(dbody) || isBox d.(dbody)) && wf_fixpoints d.(dbody)) mfix
+      (idx <? #|mfix|) && List.forallb (fun d => isLambda d.(dbody) && wf_fixpoints d.(dbody)) mfix
     | tCoFix mfix idx =>
       (idx <? #|mfix|) && List.forallb (wf_fixpoints ∘ dbody) mfix
     | tConst kn => true

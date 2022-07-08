@@ -101,7 +101,7 @@ Section wf.
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
     | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
-    | tFix mfix idx => has_tFix && wf_fix_gen wellformed k mfix idx
+    | tFix mfix idx => has_tFix && List.forallb (isLambda ∘ dbody) mfix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox
     | tConst kn => has_tConst && 
@@ -260,9 +260,10 @@ Section EEnvFlags.
       rewrite Nat.add_assoc (Nat.add_comm k) in a.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
+    - destruct (dbody x) => //.
     - intros. now len.
     - specialize (a (#|m| + k')).
-      len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
+      len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b0 |- *.
     - intros. now len.
     - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
@@ -302,14 +303,16 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_fix_subst mfix {hast : has_tFix}: 
+    forallb (isLambda ∘ dbody) mfix ->
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (fix_subst mfix).
   Proof using Type.
-    intros hm. unfold fix_subst.
+    intros hm hm'. unfold fix_subst.
     generalize (Nat.le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
     induction n => //.
-    intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm /= andb_true_r.
+    intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm' /= andb_true_r.
+    rewrite hm. cbn.
     apply/andP; split. apply Nat.ltb_lt. lia. apply IHn. lia.
   Qed.
 
@@ -333,7 +336,7 @@ Section EEnvFlags.
     move=> cl.
     rewrite /cunfold_fix.
     destruct nth_error eqn:heq => //.
-    cbn in cl. move/andP: cl => [hastf /andP[] hidx cl].
+    cbn in cl. move/andP: cl => [/andP[] hastf isfix /andP[] hidx cl].
     have := (nth_error_forallb heq cl) => cld. 
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_fix_subst.

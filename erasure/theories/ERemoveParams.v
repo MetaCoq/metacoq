@@ -791,7 +791,7 @@ Proof.
     rewrite vc. rewrite -mkApps_app !map_app //. 
 Qed.
 
-#[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
+ #[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
   Qpreserves (fun n x => closedn n x) Σ.
 Proof.
   intros clΣ.
@@ -816,22 +816,22 @@ Proof.
   - red. move=> t args clt cll.
     eapply closed_substl. solve_all. now rewrite Nat.add_0_r.
   - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> n mfix idx. cbn.
     split; intros; rtoProp; intuition auto; solve_all.
 Qed.
 
 Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :
-  closed_env Σ ->
   isEtaExp_env Σ ->
+  closed_env Σ ->
   wf_glob Σ ->
-  eval Σ t v ->
-  closed t ->
+  closedn 0 t ->
   isEtaExp Σ t ->
+  eval Σ t v ->
   eval (strip_env Σ) (strip Σ t) (strip Σ v).
 Proof.
-  intros clΣ etaΣ wfΣ ev clt etat.
-  revert t v clt etat ev.
+  intros etaΣ clΣ wfΣ.
+  revert t v.
   unshelve eapply (eval_preserve_mkApps_ind wfl wcon Σ (fun x y => eval (strip_env Σ) (strip Σ x) (strip Σ y))
     (fun n x => closedn n x) (Qpres := Qpreserves_closedn Σ clΣ)) => //.
   { intros. eapply eval_closed; tea. }
@@ -1030,6 +1030,7 @@ Proof.
     destruct EAst.ind_ctors => //.
     destruct nth_error => //.
   - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
+    now rewrite -strip_isLambda. toAll; solve_all.
   - unfold wf_fix in *. rewrite map_length; rtoProp; intuition auto. toAll; solve_all.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     toAll; solve_all.

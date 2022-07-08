@@ -1639,7 +1639,7 @@ Proof.
     rewrite wellformed_mkApps // clargs andb_true_r.
     eapply wellformed_cunfold_fix; tea => //.
   - eapply IHev3 => //. rtoProp; intuition auto.
-    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 //.
+    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 H2 //.
   - eapply IHev2. rewrite wellformed_mkApps //.
     rewrite wellformed_mkApps // in H2. 
     move/andP: H2 => [Hfix Hargs].

@@ -468,34 +468,6 @@ Definition env_flags_blocks :=
 
 Local Existing Instance env_flags.
 
-Lemma Qpreserves_wellformed Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.
-Proof.
-  intros clΣ.
-  split.
-  - red. move=> n t.
-    destruct t; cbn; intuition auto; try solve [constructor; auto].
-    eapply on_letin; rtoProp; intuition auto.
-    eapply on_app; rtoProp; intuition auto.
-    eapply on_case; rtoProp; intuition auto. solve_all.
-    eapply on_fix. solve_all. move/andP: H => [] _ ha. solve_all.
-  - red. intros kn decl.
-    move/(lookup_env_wellformed clΣ).
-    unfold wf_global_decl. destruct cst_body => //.
-  - red. move=> hasapp n t args. rewrite wellformed_mkApps //. 
-    split; intros; rtoProp; intuition auto; solve_all.
-  - red. cbn => //.
-    (* move=> hascase n ci discr brs. simpl.
-    destruct lookup_inductive eqn:hl => /= //.
-    split; intros; rtoProp; intuition auto; solve_all. *)
-  - red. move=> hasproj n p discr. now cbn in hasproj.
-  - red. move=> t args clt cll.
-    eapply wellformed_substl. solve_all. now rewrite Nat.add_0_r.
-  - red. move=> n mfix idx. cbn. unfold wf_fix.
-    split; intros; rtoProp; intuition auto; solve_all. now apply Nat.ltb_lt.
-  - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
-Qed.
-
 Definition block_wcbv_flags := 
   {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := true |}.
 
@@ -674,13 +646,16 @@ Proof.
 Qed.
 
 Lemma lookup_constructor_transform_blocks Σ ind c :
-lookup_constructor (transform_blocks_env Σ) ind c =
-lookup_constructor Σ ind c.
+  lookup_constructor (transform_blocks_env Σ) ind c =
+  lookup_constructor Σ ind c.
 Proof.
   unfold lookup_constructor, lookup_inductive, lookup_minductive in *.
   rewrite lookup_env_transform_blocks.
   destruct lookup_env as [ [] | ]; cbn; congruence.
 Qed.
+
+Lemma isLambda_transform_blocks Σ c : isLambda c -> isLambda (transform_blocks Σ c).
+Proof. destruct c => //. Qed.
 
 Lemma transform_wellformed' Σ n t :
   wf_glob Σ -> 
@@ -695,7 +670,9 @@ Proof.
     2: eauto. split; auto. cbn in H1. eapply Nat.leb_le in H1.
     apply/eqb_spec. lia.
   - destruct H4. solve_all.
-  - unfold wf_fix in *. rtoProp. solve_all. len. solve_all. len. destruct x.
+  - unfold wf_fix in *. rtoProp. solve_all. now eapply isLambda_transform_blocks.
+  - unfold wf_fix in *. rtoProp. solve_all.
+    len. solve_all. len. destruct x.
     cbn -[transform_blocks isEtaExp] in *. rtoProp. eauto.
   - rewrite !wellformed_mkApps in Hw |- * => //. rtoProp. intros.
     eapply isEtaExp_mkApps in H3. rewrite decompose_app_mkApps in H3; eauto.

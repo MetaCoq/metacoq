@@ -856,7 +856,7 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.

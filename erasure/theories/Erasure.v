@@ -30,7 +30,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
  Transform.t TemplateProgram.template_program EProgram.eprogram 
   Ast.term EAst.term
   TemplateProgram.eval_template_program
-  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false |}) := 
+  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) := 
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
   template_to_pcuic_transform ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
@@ -50,7 +50,9 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Inline projections to cases *)
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  (* First-order constructor representation *)
+  constructors_as_blocks_transformation (hastrel := eq_refl) (hastbox := eq_refl).
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
    parameters in inductive declarations. The constructor applications are also expanded, and
    the evaluation relation does not need to consider guarded fixpoints or case analyses on propositional

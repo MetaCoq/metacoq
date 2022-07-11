@@ -145,6 +145,8 @@ src/eProgram.ml
 # src/eEtaExpandedFix.ml
 src/eInlineProjections.mli
 src/eInlineProjections.ml
+src/eConstructorsAsBlocks.mli
+src/eConstructorsAsBlocks.ml
 src/eTransform.mli
 src/eTransform.ml
 src/erasure.mli

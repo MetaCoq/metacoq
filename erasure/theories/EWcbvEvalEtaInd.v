@@ -50,16 +50,16 @@ Class Qpres {etfl : ETermFlags} (Q : nat -> term -> Type) := qpres : forall n t,
 Class Qapp {etfl : ETermFlags} (Q : nat -> term -> Type) := qapp : has_tApp -> forall n f args, Q n (mkApps f args) <~> Q n f × All (Q n) args.
 #[export] Hint Mode Qapp - ! : typeclass_instances.
 
-Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCoFix -> has_tCase -> forall n ci discr brs, Q n (tCase ci discr brs) <~> 
-  Q n discr × All (fun br => Q (#|br.1| + n) br.2) brs.
+Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCase -> 
+  forall n ci discr brs, Q n (tCase ci discr brs) -> forall discr', Q n discr' -> Q n (tCase ci discr' brs).
 #[export] Hint Mode Qcase - ! : typeclass_instances.
 
-Class Qproj {etfl : ETermFlags} (Q : nat -> term -> Type) := qproj : has_tProj -> forall n p discr, Q n (tProj p discr) <~> Q n discr.
+Class Qproj {etfl : ETermFlags} (Q : nat -> term -> Type) := qproj : has_tProj -> forall n p discr, Q n (tProj p discr) -> forall discr', Q n discr' -> Q n (tProj p discr').
 #[export] Hint Mode Qproj - ! : typeclass_instances.
 
 Class Qfix {etfl : ETermFlags} (Q : nat -> term -> Type) := qfix : has_tFix -> forall n mfix idx, idx < #|mfix| -> Q n (tFix mfix idx) -> forall idx', idx' < #|mfix| -> Q n (tFix mfix idx').
 #[export] Hint Mode Qfix - ! : typeclass_instances.
-Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFix -> forall n mfix idx, idx < #|mfix| -> Q n (tCoFix mfix idx) <~>  All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
+Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFix -> forall n mfix idx, idx < #|mfix| -> Q n (tCoFix mfix idx) -> forall idx', idx' < #|mfix| -> Q n (tCoFix mfix idx').
 #[export] Hint Mode Qcofix - ! : typeclass_instances.
 Class Qsubst (Q : nat -> term -> Type) := qsubst : forall t l, Q (#|l|) t -> All (Q 0) l -> Q 0 (substl l t).
 #[export] Hint Mode Qsubst ! : typeclass_instances.
@@ -82,13 +82,14 @@ Proof.
   eapply IHn. lia. 2:tea. assumption.
 Qed.
 
-Lemma Qcofix_subst {etfl : ETermFlags} mfix Q : has_tCoFix -> Qcofix Q -> All (λ d : def term, Q (#|mfix| + 0) (dbody d)) mfix -> All (Q 0) (cofix_subst mfix).
+Lemma Qcofix_subst {etfl : ETermFlags} mfix Q : has_tCoFix -> Qcofix Q -> Qpres Q -> forall idx, idx < #|mfix| -> Q 0 (tCoFix mfix idx) -> All (Q 0) (cofix_subst mfix).
 Proof.
-  intros hasfix qfix; unfold cofix_subst.
+  intros hascofix qcofix qpre; unfold cofix_subst.
   generalize (Nat.le_refl #|mfix|).
   generalize #|mfix| at 1 4.
   induction n. intros. constructor; auto.
-  intros. constructor. eapply qfix => //. eapply IHn. lia. exact X. 
+  intros. constructor. eapply qcofix => //. 2:tea. tea. 
+  eapply IHn. lia. 2:tea. assumption.
 Qed.
 
 #[export] Instance Qsubst_Qfixs {etfl : ETermFlags} Q : Qpres Q -> Qfix Q -> Qsubst Q -> Qfixs Q.
@@ -109,18 +110,18 @@ Qed.
 
 #[export] Instance Qsubst_Qcofixs {etfl : ETermFlags} Q : Qpres Q -> Qcofix Q -> Qsubst Q -> Qcofixs Q.
 Proof.
-  move=> qpres qfix; rewrite /Qsubst /Qcofixs.
+  move=> qpres qfix; rewrite /Qsubst /Qfixs.
   intros Hs mfix idx hfix args fn.
-  assert (hastcofix : has_tCoFix).
+  assert (hasfix : has_tCoFix).
   { eapply qpres in hfix. now depelim hfix. }
   rewrite /cunfold_cofix.
-  eapply qpres in hfix. depelim hfix => //.
   destruct nth_error eqn:hnth => //.
-  eapply nth_error_all in hnth; tea. cbn in hnth.
-  rewrite Nat.add_0_r in hnth.
+  pose proof (nth_error_Some_length hnth).
+  epose proof (Qcofix_subst _ _ hasfix qfix qpres idx H hfix).
   intros [= <-]. subst fn.
   eapply Hs. rewrite cofix_subst_length //.
-  now apply Qcofix_subst.
+  eapply qpres in hfix. depelim hfix. depelim i0. eapply nth_error_all in a; tea. now rewrite Nat.add_0_r in a.
+  assumption.
 Qed.
 
 Class Qconst Σ (Q : nat -> term -> Type) := qconst :
@@ -517,11 +518,9 @@ Proof.
       iheta qa.
   - simp_eta. move=> /andP[etad etabrs].
     assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
-    { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
+    { eapply qcase; tea => //.
+      pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply qapp in ev1' as [hfix qargs] => //.
-      unshelve eapply (qcase _ _ _ _ _ _).2 => //.
-      { now eapply qpres in hfix; depelim hfix. } auto.
-      split => //.
       eapply qapp => //. split => //.
       eapply (qcofixs mfix idx) in hfix; tea. 
       clear ev1'; ih. }
@@ -543,7 +542,7 @@ Proof.
     assert (qa : Q 0 (tProj p (mkApps fn args))).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply qapp in ev1' as [hfix ?] => //.
-      eapply qproj => //. eapply qapp => //. split => //.
+      eapply qproj; tea => //. eapply qapp => //. split => //.
       eapply (qcofixs mfix idx) in hfix; tea.
       clear ev1'; ih. }
     assert (etafn : isEtaExp Σ fn && forallb (isEtaExp Σ) args).
@@ -704,32 +703,40 @@ Definition env_flags :=
     |}.
   
 From MetaCoq.Erasure Require Import ELiftSubst.
-Lemma Qpreserves_wellformed (efl := env_flags) Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.
+Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ :
+  cstr_as_blocks = false ->
+  wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.
 Proof.
-  intros clΣ.
+  intros cstbl clΣ.
   split.
   - red. move=> n t.
-    destruct t; cbn; intuition auto; try solve [constructor; auto].
+    destruct t; cbn [wellformed]; rtoProp; intuition auto; try solve [constructor; auto].
+    all:cbn; rtoProp; intuition auto.
+    constructor; cbn => //.
+    eapply on_evar; auto. solve_all.
+    eapply on_lambda; auto.
     eapply on_letin; rtoProp; intuition auto.
     eapply on_app; rtoProp; intuition auto.
+    constructor; cbn; auto. rewrite cstbl in H0.
+    destruct l => //. constructor => //.
     eapply on_case; rtoProp; intuition auto. ELiftSubst.solve_all.
-    eapply on_fix. eauto. move/andP: H => [] isl /andP[] _ wf. ELiftSubst.solve_all.
+    eapply on_proj; auto.
+    eapply on_fix; eauto. move/andP: H0 => [] _ wf. solve_all.
+    eapply on_cofix; eauto. move/andP: H0 => [] _ wf. solve_all.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.
   - red. move=> hasapp n t args. rewrite wellformed_mkApps //. 
     split; intros; rtoProp; intuition auto; solve_all.
-  - red. cbn => //.
-    (* move=> hascase n ci discr brs. simpl.
-    destruct lookup_inductive eqn:hl => /= //.
-    split; intros; rtoProp; intuition auto; solve_all. *)
-  - red. now move=> hasproj n p discr.
+  - red. intros. simpl in H0. simpl. rtoProp; intuition auto.
+  - red. move=> hasproj n p discr. simpl; rtoProp; intuition auto.
+    rtoProp; intuition auto.
   - red. move=> t args clt cll.
     eapply wellformed_substl. solve_all. now rewrite Nat.add_0_r.
   - red. move=> n mfix idx. cbn. unfold EWellformed.wf_fix.
     intros; rtoProp; intuition auto; solve_all. now apply Nat.ltb_lt.
-  - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
+  - red. move=> n mfix idx. cbn. unfold EWellformed.wf_fix.
+    intros; rtoProp; intuition auto; solve_all. now apply Nat.ltb_lt.
 Qed.
 
 Ltac destruct_nary_times :=
@@ -750,7 +757,7 @@ Proof.
   intros hcon etaΣ wfΣ wf ev eta.
   revert a a' wf eta ev.
   eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t) 
-    (Qpres := Qpreserves_wellformed Σ wfΣ)) => //.
+    (Qpres := Qpreserves_wellformed env_flags Σ eq_refl wfΣ)) => //.
   all:intros; repeat destruct_nary_times.
   all:intuition auto.
   - eapply eval_wellformed; tea => //.

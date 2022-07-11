@@ -802,9 +802,9 @@ Definition disable_projections_term_flags (et : ETermFlags) :=
   |}.
 
 Definition disable_projections_env_flag (efl : EEnvFlags) := 
-  {| has_axioms := true;
+  {| has_axioms := efl.(@has_axioms);
      term_switches := disable_projections_term_flags term_switches;
-     has_cstr_params := true ;
+     has_cstr_params := efl.(@has_cstr_params) ;
      cstr_as_blocks := efl.(@cstr_as_blocks) |}.
 
 Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
@@ -815,8 +815,6 @@ Proof.
   intros hbox hrel wfΣ.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
-  - simpl. destruct lookup_constant => //.
-    move/andP => [] hasc _ => //. now rewrite hasc.
   - cbn -[lookup_constructor_pars_args]. intros. rtoProp. repeat split; eauto.
     destruct cstr_as_blocks; rtoProp; eauto.
     destruct lookup_constructor_pars_args as [ [] | ]; eauto. split; len.  solve_all. split; eauto. 
@@ -847,6 +845,9 @@ Proof.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //.
+    repeat (rtoProp; intuition auto).
+    destruct has_axioms => //. cbn in *.
+    destruct (cst_body c) => //.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
@@ -879,9 +880,7 @@ Proof.
   move: hd.
   destruct d => /= //.
   destruct (cst_body c) => /= //.
-  intros hwf. eapply optimize_wellformed => //. auto.
-  destruct efl => //. destruct m => //. cbn. unfold wf_minductive.
-  cbn. move/andP => [] hp //.
+  intros hwf. eapply optimize_wellformed => //.
 Qed.
 
 Lemma fresh_global_optimize_env {Σ : GlobalContextMap.t} kn : 

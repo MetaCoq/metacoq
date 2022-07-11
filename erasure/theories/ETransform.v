@@ -7,7 +7,7 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICTransform.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract EOptimizePropDiscr ERemoveParams EProgram.
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
     EAst Transform ERemoveParams.

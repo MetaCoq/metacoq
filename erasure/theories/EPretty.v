@@ -115,7 +115,11 @@ Module PrintTermTree.
       match lookup_ind_decl Σ i k with
       | Some oib =>
         match nth_error oib.(ind_ctors) l with
-        | Some cstr => cstr.(cstr_name) ^ maybe_string_of_list string_of_term args
+        | Some cstr => 
+          match args with
+          | [] => cstr.(cstr_name)
+          | args => parens (top || inapp) (cstr.(cstr_name) ^ "[" ^ print_list (print_term Γ false false) " " args ^ "]")
+          end
         | None =>
           "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
         end

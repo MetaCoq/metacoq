@@ -149,10 +149,10 @@ Section fix_sigma.
     intros r.
     generalize_eqs r. intros ->. revert t ts.
     induction r.
-    - intros t ts ->.
+    - intros t ts e. rewrite e in r.
       destruct (term_subterm_red1 r) as [t' [[red1 [ts' Hts']]]].
       exists t'; split; auto. split; auto. now constructor. exists ts'; auto.
-    - intros t ts ->. specialize (IHr1 t ts eq_refl) as [t' [[yt' [ts' Hts]]]].
+    - intros t ts e. rewrite e in r1, r2. specialize (IHr1 t ts e) as [t' [[yt' [ts' Hts]]]].
       specialize (IHr2 t' ts').
       forward IHr2. now rewrite Hts.
       destruct IHr2 as [t'' [[zt' [ts'' Hts'']]]].

@@ -1302,9 +1302,9 @@ Corollary R_Acc_aux :
     - easy.
     - apply inversion_Sort in typ as (?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Prod in typ as (?&?&?&?&?); auto.
+    - apply inversion_Prod in typ as (?&?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.
@@ -1335,9 +1335,9 @@ Corollary R_Acc_aux :
     - easy.
     - apply inversion_Sort in typ as (?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Prod in typ as (?&?&?&?&?); auto.
+    - apply inversion_Prod in typ as (?&?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.
@@ -1363,7 +1363,7 @@ Corollary R_Acc_aux :
     intros wf uf shape wh typ.
     apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
     apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
-    eapply All_nth_error in a; eauto.
+    eapply All_nth_error, isType_of_isTypeRel in a; eauto.
     eapply wf_fixpoint_spine in i; eauto.
     2: { eapply PCUICSpine.typing_spine_strengthen; eauto. }
     unfold unfold_fix in uf.
@@ -1492,7 +1492,7 @@ Corollary R_Acc_aux :
           apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
-          apply inversion_App in h as (?&?&?&?&?); auto.
+          apply inversion_App in h as (?&?&?&?&?&?); auto.
           apply inversion_Sort in t0 as (?&?&?); auto.
           eapply PCUICConversion.ws_cumul_pb_Sort_Prod_inv; eauto.
       + unfold zipp.
@@ -1506,8 +1506,8 @@ Corollary R_Acc_aux :
           specialize (h _ wfΣ). apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
-          apply inversion_App in h as (?&?&?&?&?); auto.
-          apply inversion_Prod in t0 as (?&?&?&?&?); auto.
+          apply inversion_App in h as (?&?&?&?&?&?); auto.
+          apply inversion_Prod in t0 as (?&?&?&?&?&?); auto.
           eapply PCUICConversion.ws_cumul_pb_Sort_Prod_inv; eauto.
       (* + pose proof hΣ.
         sq.

@@ -295,7 +295,7 @@ Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf 
 Proof.
   intros HT.
   eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.
-  eexists; econstructor; eauto.
+  eexists; split => //; econstructor; eauto.
 Qed.
 
 Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :   
@@ -303,8 +303,8 @@ Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom
   isType Σ Γ (tProd na dom codom).
 Proof.
   intros HT.
-  eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto.
-  eexists; econstructor; eauto.
+  eapply inversion_Prod in HT as (? & ? & ? & ? & ? & ?); auto.
+  eexists; split => //; econstructor; eauto.
 Qed.
 
 Definition optimize_constant_decl Σ cb := 

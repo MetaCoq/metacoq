@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses
-     PCUICGlobalEnv
+     PCUICGlobalEnv PCUICRelevance
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
@@ -293,6 +293,11 @@ Section CheckEnv.
   Definition check_wf_type (kn : kername) X_ext t :
     EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ isType Σ [] t ∥) :=
     wrap_error _ X_ext (string_of_kername kn) (check_isType X_ext_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
+  
+  Definition check_wf_type_rel (kn : kername) X_ext t rel :
+    EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ isTypeRel Σ [] t rel ∥) :=
+    wrap_error _ X_ext (string_of_kername kn) (check_isTypeRel X_ext_impl X_ext [] (fun _ _ => sq_wfl_nil _) t rel).
+
 
   Definition check_wf_judgement kn X_ext t ty :
   EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; [] |- t : ty ∥)
@@ -470,17 +475,17 @@ Section CheckEnv.
     unfold isType. unfold PCUICTypingDef.typing. intros Γ Δ s A h. revert Γ s A h.
     induction Δ using rev_ind; intros.
     - simpl in h. eapply inversion_Sort in h as (?&?&?).
-      eexists; constructor; eauto. apply wfΣ.
+      eexists; split => //. constructor; eauto. apply wfΣ.
     - destruct x as [na [b|] ty]; simpl in *;
       rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in h *.
-      * eapply inversion_LetIn in h as [s' [? [? [? [? ?]]]]]; auto.
-        specialize (IHΔ _ _ _ t1) as [s'' vdefty].
-        exists s''.
+      * eapply inversion_LetIn in h as [s' (? & ? & ? & ? & ? & ?)]; auto.
+        specialize (IHΔ _ _ _ t1) as (s'' & ? & vdefty).
+        exists s''. split => //.
         eapply type_Cumul_alt. econstructor; eauto. pcuic.
         eapply red_cumul. repeat constructor.
-      * eapply inversion_Prod in h as [? [? [? [? ]]]]; auto.
-        specialize (IHΔ _ _ _ t0) as [s'' Hs''].
-        eexists (Universe.sort_of_product x s'').
+      * eapply inversion_Prod in h as (? & ? & ? & ? & ? & ?); auto.
+        specialize (IHΔ _ _ _ t0) as (s'' & e'' & Hs'').
+        eexists (Universe.sort_of_product x s''); split => //.
         eapply type_Cumul'; eauto. econstructor; pcuic. pcuic.
         reflexivity.
   Qed.
@@ -490,13 +495,16 @@ Section CheckEnv.
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) :=
     match Δ with
     | [] => match abstract_env_ext_wf_universeb X_ext s with true => ret _ | false => raise (Msg "Ill-formed universe") end
-    | {| decl_body := None; decl_type := ty |} :: Δ =>
+    | {| decl_name := na; decl_body := None; decl_type := ty |} :: Δ =>
       checkΔ <- check_type_local_ctx X_ext Γ Δ s wfΓ ;;
       checkty <- check_type_wf_env X_ext (Γ ,,, Δ) _ ty (tSort s) ;;
+      check <- check_eq_true (relevance_of_sort s == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
-    | {| decl_body := Some b; decl_type := ty |} :: Δ =>
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Δ =>
       checkΔ <- check_type_local_ctx X_ext Γ Δ s wfΓ ;;
       checkty <- check_type_wf_env X_ext  (Γ ,,, Δ) _ b ty ;;
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (Γ ,,, Δ) b _ in
+      check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
     end.
     Next Obligation.
@@ -508,28 +516,39 @@ Section CheckEnv.
     Qed.
     Next Obligation.
       specialize_Σ H.
-      sq. split; auto.
+      sq. splits; auto.
+      apply eqb_eq, check.
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
     Qed.
     Next Obligation.
+      specialize_Σ wfΣ; sq; now eexists.
+    Qed.
+    Next Obligation.
+      clear Heq_anonymous.
       pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq.
       split; auto. split; auto.
-      eapply PCUICValidity.validity in checkty; auto.
+      eapply PCUICRelevanceTyp.relevance_from_type in checkty. 2: apply H0.
+      apply checkty in eqtmrel; clear checkty.
+      apply eqb_eq in check; rewrite -check; clear check.
+      apply eqtmrel.
     Qed.
    
   Program Fixpoint infer_sorts_local_ctx X_ext Γ Δ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
     typing_result (∑ s, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ sorts_local_ctx (lift_typing typing) Σ Γ Δ s ∥) :=
     match Δ with
     | [] => ret ([]; fun _ _ => sq _)
-    | {| decl_body := None; decl_type := ty |} :: Δ => 
+    | {| decl_name := na; decl_body := None; decl_type := ty |} :: Δ => 
       '(Δs; Δinfer) <- infer_sorts_local_ctx X_ext Γ Δ wfΓ ;;
       '(tys; tyinfer) <- infer_type_wf_env X_ext (Γ ,,, Δ) _ ty ;;
+      check <- check_eq_true (relevance_of_sort tys == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret ((tys :: Δs); _)
-    | {| decl_body := Some b; decl_type := ty |} :: Δ => 
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Δ => 
       '(Δs; Δinfer) <- infer_sorts_local_ctx X_ext Γ Δ wfΓ ;;
       checkty <- check_type_wf_env X_ext (Γ ,,, Δ) _ b ty ;;
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext (Γ ,,, Δ) b _ in
+      check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret (Δs; _)
     end.
     Next Obligation. exact tt. Qed. 
@@ -537,14 +556,21 @@ Section CheckEnv.
       specialize_Σ H. sq. now eapply PCUICContexts.sorts_local_ctx_wf_local in Δinfer.
     Qed.
     Next Obligation.
-      specialize_Σ H. sq. split; auto.
+      specialize_Σ H. sq. splits; auto. apply eqb_eq, check.
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now eapply PCUICContexts.sorts_local_ctx_wf_local in Δinfer.
     Qed.
     Next Obligation.
-      pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq. split; auto. split; auto.
-      eapply PCUICValidity.validity in checkty; auto.
+      specialize_Σ wfΣ; sq; now eexists.
+    Qed.
+    Next Obligation.
+      clear Heq_anonymous Heq_x.
+      pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq. splits; auto.
+      eapply PCUICRelevanceTyp.relevance_from_type in checkty. 2: apply H0.
+      apply checkty in eqtmrel; clear checkty.
+      apply eqb_eq in check; rewrite -check; clear check.
+      apply eqtmrel.
     Qed.
 
   Definition cumul_decl Pcmp Σ Γ (d d' : context_decl) : Type := cumul_decls Pcmp Σ Γ Γ d d'.
@@ -799,8 +825,13 @@ Section CheckEnv.
 
   Arguments eqb : simpl never.
 
+  Definition wf_ind_type (Σ : global_env_ext) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) :=
+    isType Σ [] idecl.(ind_type) ×
+    idecl.(ind_type) = it_mkProd_or_LetIn mdecl.(ind_params) (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort))) ×
+    isSortRel idecl.(ind_sort) idecl.(ind_relevance).
+
   Definition wf_ind_types (Σ : global_env_ext) (mdecl : mutual_inductive_body) :=
-    All (fun ind => isType Σ [] ind.(ind_type)) mdecl.(ind_bodies).
+    All (wf_ind_type Σ mdecl) mdecl.(ind_bodies).
 
   Lemma wf_ind_types_wf_arities (Σ : global_env_ext) (wfX : wf Σ) mdecl :
     wf_ind_types Σ mdecl ->
@@ -809,13 +840,15 @@ Section CheckEnv.
     rewrite /wf_ind_types.
     unfold arities_context.
     induction 1; simpl; auto.
+    assert (isty : isTypeRel Σ [] (ind_type x) Relevant)
+    by (destruct p as (a & b & c); rewrite b in a |- *; eapply PCUICInductiveInversion.ind_arity_relevant => //).
     rewrite rev_map_cons /=.
     eapply All_local_env_app; split. constructor; pcuic.
     eapply All_local_env_impl; eauto.
     move=> Γ t [] /=.
     * move=> ty ht. eapply weaken_ctx; eauto.
       constructor; pcuic.
-    * move=> [s Hs]; exists s.
+    * intros relopt H; apply infer_sort_impl with id H => Hty //.
       eapply weaken_ctx; eauto.
       constructor; pcuic.
   Qed.
@@ -874,7 +907,7 @@ Section CheckEnv.
       eapply eqb_eq in eqbindices.
       eapply eqb_eq in eqbpars.
       sq; red; cbn. intuition auto.
-      eexists; eauto.
+      eexists; split => //; tea.
       symmetry in Heq_anonymous. eapply PCUICSubstitution.decompose_prod_assum_it_mkProd_or_LetIn in Heq_anonymous.
       simpl in Heq_anonymous. subst concl0.
       rewrite it_mkProd_or_LetIn_app.
@@ -916,8 +949,7 @@ Section CheckEnv.
     isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
     isType Σ (Γ ,,, Δ) T.
   Proof using Type.
-    move=> wfX [u Hu].
-    exists u. unfold PCUICTypingDef.typing in *.
+    intros wfΣ H; apply infer_typing_sort_impl with id H => Hu //.
     now eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hu.
   Qed.
 
@@ -926,7 +958,7 @@ Section CheckEnv.
     ∑ fty s, (Σ ;;; Γ |- f : fty) *
       typing_spine Σ Γ fty args (tSort s).
   Proof using Type.
-    intros [s Hs].
+    intros (s & e & Hs).
     eapply inversion_mkApps in Hs as [fty [Hf Hargs]]; auto.
     now exists fty, s.
   Qed.
@@ -934,7 +966,7 @@ Section CheckEnv.
   Lemma nth_error_arities_context mdecl i idecl :
     nth_error (List.rev mdecl.(ind_bodies)) i = Some idecl ->
     nth_error (arities_context mdecl.(ind_bodies)) i =
-      Some {| decl_name := {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |};
+      Some {| decl_name := {| binder_name := nNamed idecl.(ind_name); binder_relevance := Relevant |};
               decl_body := None;
               decl_type := idecl.(ind_type) |}.
   Proof using Type.
@@ -995,8 +1027,8 @@ Section CheckEnv.
       eapply type_ws_cumul_pb; pcuic. eapply ws_cumul_pb_eq_le. now symmetry.
       rewrite subst_telescope_subst_context. cbn in *.
       have tyhd : Σ ;;; Γ |- hd0 : ty'.
-      { eapply type_ws_cumul_pb; tea. eapply isType_tProd in isty as [].
-        pcuic. eapply ws_cumul_pb_eq_le. now symmetry. }
+      { eapply type_ws_cumul_pb; tea. eapply isType_tProd in isty as []. eapply isType_of_isTypeRel, i.
+        eapply ws_cumul_pb_eq_le. now symmetry. }
       eapply X. now len.
       pcuic.
       eapply substitution_wf_local; eauto. eapply subslet_ass_tip; tea.
@@ -1081,7 +1113,7 @@ Section CheckEnv.
     This is a quite common operation in tactics. Making this work up-to unfolding of
     let-ins is the tricky part.
   *)
-  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} {wfX : wf Σ} {Γ Δ Δ' Δ'' s args s'} :
+  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} {wfX : wf Σ} {Γ Δ Δ' Δ'' : context} {s args s'} :
     wf_local Σ (Γ ,,, Δ ,,, Δ'') ->
     typing_spine Σ (Γ ,,, Δ ,,, Δ') (it_mkProd_or_LetIn (lift_context #|Δ ,,, Δ'| 0 (Δ ,,, Δ'')) (tSort s))
       (to_extended_list_k Δ #|Δ'| ++ args) (tSort s') ->
@@ -1097,7 +1129,7 @@ Section CheckEnv.
       assert (wf_universe Σ s).
       { eapply typing_spine_isType_dom in sp.
         eapply isType_it_mkProd_or_LetIn_inv in sp; auto.
-        destruct sp as [? Hs]. now eapply inversion_Sort in Hs as [? []]. }
+        destruct sp as (? & _ & Hs). now eapply inversion_Sort in Hs as [? []]. }
       destruct d as [na [b|] ty]. simpl in sp; unfold mkProd_or_LetIn in sp; simpl in *.
       - len in sp.
         rewrite lift_context_app /= it_mkProd_or_LetIn_app lift_context_app it_mkProd_or_LetIn_app /=
@@ -1193,7 +1225,7 @@ Section CheckEnv.
     welltyped Σ Γ (tProd na ty ty') ->
     welltyped Σ Γ ty * welltyped Σ (Γ ,, vass na ty) ty'.
   Proof using Type.
-    intros [s [s1 [s2 [hty [hty' hcum]]]]%inversion_Prod]; auto.
+    intros (s & (s1 & s2 & e1 & hty & hty' & hcum)%inversion_Prod); auto.
     split; eexists; eauto.
   Qed.
 
@@ -1203,15 +1235,15 @@ Section CheckEnv.
     welltyped Σ Γ b *
     welltyped Σ (Γ ,, vdef na b ty) t.
   Proof using Type.
-    intros [s [s1 [s2 [hty [hdef [hty' hcum]]]]]%inversion_LetIn]; auto.
-    split; [split|]; eexists; eauto.
+    intros (s & (s1 & s2 & e1 & hty & hdef & hty' & hcum)%inversion_LetIn); auto.
+    splits; eexists; eauto.
   Qed.
 
   Lemma welltyped_letin_red {Σ : global_env_ext} {Γ na b ty t} {wfX : wf Σ} :
     welltyped Σ Γ (tLetIn na b ty t) ->
     welltyped Σ Γ (subst0 [b] t).
   Proof using Type.
-    intros [s [s1 [s2 [hty [hdef [hty' hcum]]]]]%inversion_LetIn]; auto.
+    intros (s & (s1 & s2 & e1 & hty & hdef & hty' & hcum)%inversion_LetIn); auto.
     exists (subst0 [b] s2).
     now eapply substitution_let in hty'.
   Qed.
@@ -1383,23 +1415,32 @@ Section CheckEnv.
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :=
     match Γ with
     | [] => ret (fun _ _ => sq localenv_nil)
-    | {| decl_body := Some b; decl_type := ty |} :: Γ =>
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |} :: Γ =>
       wfΓ <- check_wf_local X_ext Γ ;;
       wfty <- check_type_wf_env X_ext Γ wfΓ b ty ;;
+      let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext Γ b _ in
+      check <- check_eq_true (tmrel == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
-    | {| decl_body := None; decl_type := ty |} :: Γ =>
+    | {| decl_name := na; decl_body := None; decl_type := ty |} :: Γ =>
       wfΓ <- check_wf_local X_ext Γ ;;
-      wfty <- infer_type_wf_env X_ext Γ wfΓ ty ;;
+      '(s; wfty) <- infer_type_wf_env X_ext Γ wfΓ ty ;;
+      check <- check_eq_true (relevance_of_sort s == na.(binder_relevance)) (Msg "Wrong relevance") ;;
       ret _
     end.
     Next Obligation.
+      specialize_Σ wfΣ; sq; now eexists.
+    Qed.
+    Next Obligation.
+      clear Heq_anonymous.
       pose proof (abstract_env_ext_wf _ H); specialize_Σ H. 
       sq. constructor; eauto.
-      eapply validity in wfty. apply wfty.
+      apply eqb_eq in check; subst tmrel.
+      eapply PCUICRelevanceTyp.relevance_from_type; tea. apply H0.
     Qed.
     Next Obligation.
       pose proof (abstract_env_ext_wf _ H); specialize_Σ H. 
-      sq. constructor; auto. now exists wfty.
+      apply eqb_eq in check; subst.
+      sq. constructor; auto. now exists x.
     Qed.
 
   Definition wt_indices Σ mdecl indices cs :=
@@ -1416,7 +1457,7 @@ Section CheckEnv.
   Qed.
 
   (* Now in PCUIC *)
-  Lemma type_smash {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ t T} :
+  Lemma type_smash {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ : context} {t T} :
     Σ ;;; Γ ,,, Δ |- t : T ->
     Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ t : expand_lets Δ T.
   Proof using Type.
@@ -1529,20 +1570,21 @@ Section CheckEnv.
   Lemma get_wt_indices {mdecl cstrs cs} X_ext 
     (wfar : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥)
     (wfpars : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (ind_params mdecl) ∥)
-    (n : nat) (idecl : one_inductive_body) (indices : context)
-    (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)
-    (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥) :
+    (n : nat) (idecl : one_inductive_body)
+    (hnth : nth_error mdecl.(ind_bodies) n = Some idecl) :
     (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All2
       (fun (cstr :constructor_body) (cs0 : constructor_univs) =>
       check_constructor_spec Σ (S n) mdecl cstr cs0) cstrs cs ∥) ->
-    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All (fun cs => wt_indices Σ mdecl indices cs) cstrs ∥.
+    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All (fun cs => wt_indices Σ mdecl idecl.(ind_indices) cs) cstrs ∥.
   Proof using Type.
     intros. pose proof (abstract_env_ext_wf _ H0) as wf; specialize_Σ H0. sq.   
     solve_all. simpl.
     destruct X as [[[isTy eq] sorts] eq']. simpl in *.
-    assert(wf_local Σ (ind_params mdecl,,, indices)).
-    { eapply nth_error_all in wfar; eauto. simpl in wfar.
-      destruct heq as [s Hs]. rewrite Hs in wfar.
+    pose proof (wfars := wfar).
+    eapply nth_error_all in wfar as (wfar & eqind); eauto.
+    rewrite -it_mkProd_or_LetIn_app in eqind.
+    assert(wf_local Σ (ind_params mdecl,,, idecl.(ind_indices))).
+    { rewrite eqind in wfar.
       eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
       now rewrite app_context_nil_l in wfar. }
     red. rewrite eq in isTy.
@@ -1560,7 +1602,6 @@ Section CheckEnv.
     noconf H1; simpl in *.
     eapply PCUICSpine.typing_spine_strengthen in Hsp; eauto.
     clear cum.
-    destruct heq as [inds eqind].
     move: Hsp. rewrite eqind.
     rewrite lift_it_mkProd_or_LetIn /= => Hs.
     rewrite closed_ctx_lift in Hs. eapply closed_wf_local; eauto.
@@ -1577,7 +1618,6 @@ Section CheckEnv.
     len.
     rewrite nth_error_rev in hnth. len.
     rewrite List.rev_involutive in hnth. len in hnth.
-    eapply nth_error_all in wfar; tea. cbn in wfar.
     rewrite lift_closed; [now eapply isType_closed in wfar|].
     now eapply isType_weaken.
   Qed.
@@ -1692,7 +1732,7 @@ Section CheckEnv.
   Proof using Type.
     intros wfΣ. unfold wf_ctx_universes.
     induction 1 => //. cbn. rewrite IHX andb_true_r.
-    destruct t0 as [s Hs]. move/typing_wf_universes: Hs => /andP[] //.
+    destruct t0 as (s & e & Hs). move/typing_wf_universes: Hs => /andP[] //.
     cbn. move/typing_wf_universes: t1 => /=; rewrite /wf_decl_universes /on_decl_universes /= => -> /= //.
   Qed.
 
@@ -1849,11 +1889,10 @@ Section CheckEnv.
     (wfar : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥)
     (wfpars : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (ind_params mdecl) ∥)
     (mdeclvar : forall Σ0, abstract_env_rel X Σ0 -> ∥ on_variance Σ0 mdecl.(ind_universes) mdecl.(ind_variance) ∥)
-    (n : nat) (idecl : one_inductive_body) (indices : context)
+    (n : nat) (idecl : one_inductive_body)
     (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)
-    (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥)
     : EnvCheck X_env_ext_type (∑ cs : list constructor_univs,
-    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs ∥) :=
+    forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_constructors cumulSpec0 (lift_typing typing) Σ mdecl n idecl idecl.(ind_indices) (ind_ctors idecl) cs ∥) :=
 
     '(cs; Hcs) <- (check_constructors_univs X_ext (string_of_kername id) mdecl wfar
         wfpars (S n) idecl.(ind_ctors));;
@@ -1865,8 +1904,8 @@ Section CheckEnv.
         idecl.(ind_ctors) (wt_cstrs (cs:=cs) X_ext Hcs)) ;;
     var <- (monad_All_All 
               (fun cs px => @monad_lift_ext X X_ext (EnvCheck X_env_ext_type) _ _ _ 
-                                            (check_cstr_variance X mdecl id indices mdeclvar cs _ _)) 
-              idecl.(ind_ctors) (get_wt_indices X_ext wfar wfpars n idecl indices hnth heq Hcs)) ;;
+                                            (check_cstr_variance X mdecl id idecl.(ind_indices) mdeclvar cs _ _)) 
+              idecl.(ind_ctors) (get_wt_indices X_ext wfar wfpars n idecl hnth Hcs)) ;;
     lets <- 
        monad_All (P := fun x => if @lets_in_constructor_types _
       then true else is_assumption_context (cstr_args x))
@@ -1889,7 +1928,8 @@ Section CheckEnv.
       destruct lets_in_constructor_types; congruence.
     Qed.
     Next Obligation.
-      epose proof (get_wt_indices X_ext wfar wfpars _ _ _ hnth heq Hcs).
+      epose proof (get_wt_indices X_ext wfar wfpars _ _ hnth Hcs).
+      pose proof (hΣ _ _ H).
       specialize_Σ H.
       unfold check_constructor_spec in Hcs; simpl in *. sq.
       solve_all.
@@ -1900,6 +1940,9 @@ Section CheckEnv.
       - rewrite eq.
         rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
         rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head. lia_f_equal.
+      - eapply All_nth_error in wfar; tea.
+        destruct wfar as (isty & e & eqrel), wtinds.
+        eapply PCUICInductiveInversion.isTypeRel_cstr_type; eauto.
       - now destruct wtinds.
       - destruct lets_in_constructor_types; eauto.
     Qed. 
@@ -2090,8 +2133,8 @@ End monad_Alli_nth_forall.
     induction Δ in s |- *; destruct s; simpl; auto.
     destruct a as [na [b|] ty].
     - intros []. eauto.
-    - intros []; eauto. constructor; eauto.
-      now eapply typing_wf_universe in t0.
+    - intros (Hs & e & Ht); eauto. constructor; eauto.
+      now eapply typing_wf_universe in Ht.
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify.
@@ -2178,17 +2221,53 @@ End monad_Alli_nth_forall.
     rewrite -eqvaru in e; discriminate.
   Qed.
 
+  Program Definition check_ind_type X_ext (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
+    : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_type Σ mdecl idecl ∥) :=
+      
+    '(ctxinds; p) <-
+      wrap_error _ X_ext idecl.(ind_name) ((match destArity [] idecl.(ind_type) as da return da = destArity [] idecl.(ind_type) -> typing_result (∑ ctxs, idecl.(ind_type) = it_mkProd_or_LetIn ctxs.1 (tSort ctxs.2)) with
+      | Some (ctx, s) => fun eq => ret ((ctx, s); _)
+      | None => fun _ => raise (NotAnArity idecl.(ind_type))
+      end eq_refl)) ;; 
+    let '(indices, params) := split_at (#|ctxinds.1| - #|mdecl.(ind_params)|) ctxinds.1 in
+    eqsort <- wrap_error _ X_ext idecl.(ind_name)
+      (check_eq_true (eqb ctxinds.2 idecl.(ind_sort))
+      (Msg "Inductive body sort does not match the sort of the inductive type"));;
+    check <- wrap_error _ X_ext idecl.(ind_name) (check_eq_true (relevance_of_sort (ind_sort idecl) == (ind_relevance idecl)) (Msg "Wrong relevance")) ;;
+    eqpars <- wrap_error _ X_ext idecl.(ind_name)
+      (check_eq_true (eqb params mdecl.(ind_params))
+      (Msg "Inductive arity parameters do not match the parameters of the mutual declaration"));;
+    eqindices <- wrap_error _ X_ext idecl.(ind_name)
+      (check_eq_true (eqb indices idecl.(ind_indices))
+      (Msg "Inductive arity indices do not match the indices of the mutual declaration"));;
+    isty <- wrap_error _ X_ext idecl.(ind_name)
+      (infer_type_wf_env X_ext [] (fun _ _ => sq_wfl_nil _) idecl.(ind_type)) ;;
+    ret _.
+
+  Next Obligation.
+    symmetry in eq.
+    apply destArity_spec_Some in eq. now simpl in eq.
+  Qed.
+  Next Obligation.
+    specialize_Σ H.
+    sq. splits.
+    solve_all.
+    - now exists isty.
+    - destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
+      rewrite split_at_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
+      rewrite -it_mkProd_or_LetIn_app {1}H0. apply eqb_eq in eqindices, eqsort.
+      rewrite -eqindices -eqsort. now rewrite /app_context firstn_skipn.
+    - apply eqb_eq, check.
+  Qed.
+
   Program Definition check_ind_types X_ext (mdecl : mutual_inductive_body)
       : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥) :=
-    indtys <- monad_All (fun ind => wrap_error _ X_ext ind.(ind_name)
-      (infer_type_wf_env X_ext [] (fun _ _ => sq_wfl_nil _) ind.(ind_type))) mdecl.(ind_bodies) ;;
+    indtys <- monad_All (check_ind_type X_ext mdecl) mdecl.(ind_bodies) ;;
     ret _.
-    Next Obligation.
-      eapply All_sigma in indtys as [indus Hinds].
-      eapply All2_sq in Hinds; eauto. sq.
-      red.
-      solve_all. now exists y.
-    Qed.
+  Next Obligation.
+    eapply All_sq, All_impl with (1 := indtys) => idecl Hi.
+    now apply Hi.
+  Qed.
 
   Program Definition check_one_ind_body X X_ext 
       (mind : kername) (mdecl : mutual_inductive_body)
@@ -2200,41 +2279,14 @@ End monad_Alli_nth_forall.
       (hnth : nth_error mdecl.(ind_bodies) i = Some idecl)
       : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_ind_body cumulSpec0 (lift_typing typing) Σ mind mdecl i idecl ∥) :=
       let id := string_of_kername mind in
-      '(ctxinds; p) <-
-        wrap_error _ X_ext id ((match destArity [] idecl.(ind_type) as da return da = destArity [] idecl.(ind_type) -> typing_result (∑ ctxs, idecl.(ind_type) = it_mkProd_or_LetIn ctxs.1 (tSort ctxs.2)) with
-        | Some (ctx, s) => fun eq => ret ((ctx, s); _)
-        | None => fun _ => raise (NotAnArity idecl.(ind_type))
-        end eq_refl)) ;; 
-      let '(indices, params) := split_at (#|ctxinds.1| - #|mdecl.(ind_params)|) ctxinds.1 in
-      eqsort <- wrap_error _ X_ext id
-        (check_eq_true (eqb ctxinds.2 idecl.(ind_sort))
-        (Msg "Inductive body sort does not match the sort of the inductive type"));;
-      eqpars <- wrap_error _ X_ext id
-        (check_eq_true (eqb params mdecl.(ind_params))
-        (Msg "Inductive arity parameters do not match the parameters of the mutual declaration"));;
-      eqindices <- wrap_error _ X_ext id
-        (check_eq_true (eqb indices idecl.(ind_indices))
-        (Msg "Inductive arity indices do not match the indices of the mutual declaration"));;
-      '(cs; oncstrs) <- (check_constructors X X_ext mind mdecl pf wfars wfpars mdeclvar i idecl idecl.(ind_indices) hnth _) ;; 
+      '(cs; oncstrs) <- (check_constructors X X_ext mind mdecl pf wfars wfpars mdeclvar i idecl hnth) ;;
       onprojs <- wrap_error _ X_ext ("Checking projections of " ^ id)
        (check_projections X_ext mind mdecl i idecl idecl.(ind_indices) cs oncstrs) ;;
       onsorts <- wrap_error _ X_ext ("Checking universes of " ^ id)
         (do_check_ind_sorts X_ext mdecl.(ind_params) wfpars idecl.(ind_kelim)
-           idecl.(ind_indices) cs _ ctxinds.2 _) ;;
-      onindices <- check_indices X mdecl mind _ mdeclvar idecl.(ind_indices) _ ;; 
-      ret _. 
-  Next Obligation.
-    symmetry in eq.
-    apply destArity_spec_Some in eq. now simpl in eq.
-  Qed.
-
-  Next Obligation.
-    sq. exists t0.
-    destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
-    rewrite split_at_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
-    rewrite {1}H. apply eqb_eq in eqindices.
-    rewrite -eqindices. now rewrite /app_context firstn_skipn.
-  Qed.
+           idecl.(ind_indices) cs _ idecl.(ind_sort) _) ;;
+      onindices <- check_indices X mdecl mind _ mdeclvar idecl.(ind_indices) _ ;;
+      ret _.
  
   Next Obligation.
     intros ? ?. pose proof (abstract_env_ext_wf _ H). 
@@ -2253,8 +2305,8 @@ End monad_Alli_nth_forall.
   destruct pf as [pf ?]; eauto. specialize_Σ H. specialize_Σ wfΣ0.
   pose proof (abstract_env_ext_wf _ pf). sq.
   eapply nth_error_all in wfars; eauto; simpl in wfars.
-  destruct wfars as [s Hs].
-  clear X0; rewrite p in Hs.
+  destruct wfars as ((s & _ & Hs) & e & _).
+  clear X0; rewrite e -it_mkProd_or_LetIn_app in Hs.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
   eapply inversion_Sort in Hs as [_ [? _]]; eauto. 
   Qed.
@@ -2269,36 +2321,27 @@ End monad_Alli_nth_forall.
     sq.  
     clear onprojs onsorts X0.
     red in wfars. eapply nth_error_all in wfars; eauto; simpl in wfars.
-    destruct wfars as [s Hs].
-    apply eqb_eq in eqpars; apply eqb_eq in eqindices; subst.
-    rewrite split_at_firstn_skipn in Heq_anonymous.
-    noconf Heq_anonymous.
-    rewrite {1}H0 {1}H1 /app_context firstn_skipn.
-    rewrite X1 in Hs.
+    destruct wfars as ((s & _ & Hs) & e & _).
+    rewrite e -it_mkProd_or_LetIn_app in Hs.
     eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
     eapply typing_wf_local in Hs. now rewrite app_context_nil_l in Hs.
   Qed.
   
   Next Obligation.
-    rename X0 into oncstrs. rename x into cs. destruct Σ as [Σ ext].
-    pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
-    destruct pf as [pf pf']; eauto. specialize_Σ H. specialize_Σ wfΣ0. 
-    destruct (eqb_spec params (ind_params mdecl)); [|discriminate].
-    subst params. sq.
-    refine    
-    {| ind_arity_eq := _; onArity := _;
-           ind_cunivs := cs;
-           onConstructors := oncstrs;
-           onProjections := onprojs;
-           onIndices := _ |}.
-    - cbn in eqsort; apply eqb_eq in eqindices; apply eqb_eq in eqsort; subst.
-      rewrite split_at_firstn_skipn in Heq_anonymous. cbn in *.
-      noconf Heq_anonymous.
-      now rewrite {1}H0 {1}H1 /app_context -it_mkProd_or_LetIn_app firstn_skipn.
-    - red. red.
-      eapply nth_error_all in wfars; eauto; simpl in wfars.
-      destruct wfars as [s Hs]. now exists s.
-    - now apply eqb_eq in eqsort; subst.
+    rename x into cs. destruct Σ as [Σ ext].
+    pose proof (abstract_env_ext_wf _ H).
+    pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]].
+    destruct pf as [pf pf']; eauto. specialize_Σ H. specialize_Σ wfΣ0. sq.
+    eapply All_nth_error in wfars as (isty & e & eqrel); tea.
+    refine
+    {| ind_arity_eq := e; onArity := _; 
+       ind_cunivs := cs;
+       onConstructors := oncstrs;
+       onProjections := onprojs;
+       ind_sorts := onsorts;
+       ind_relevance_compat := eqrel;
+       onIndices := _; |}.
+    - rewrite e in isty |- *; apply PCUICInductiveInversion.ind_arity_relevant => //. apply H0.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
     Unshelve. eauto.
   Qed. 
@@ -2307,15 +2350,20 @@ End monad_Alli_nth_forall.
     kn (d : global_decl)
     (pf : check_wf_env_ext_prop X X_ext (universes_decl_of_decl d))
     : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_global_decl cumulSpec0 (lift_typing typing) Σ kn d ∥) :=
+    let id := string_of_kername kn in
     match d with
     | ConstantDecl cst => 
       match cst.(cst_body) with
       | Some term => 
-          check_wf_judgement kn X_ext term cst.(cst_type) ;; ret _
-      | None => check_wf_type kn X_ext cst.(cst_type) ;; ret _ 
+          check_wf_judgement kn X_ext term cst.(cst_type) ;;
+          let '(tmrel; eqtmrel) := relevance_of_term_abstract_env X_ext_impl X_ext [] term _ in
+          check <- wrap_error _ X_ext id (check_eq_true (tmrel == cst.(cst_relevance)) (Msg "Wrong relevance")) ;;
+          ret _
+      | None =>
+          s <- check_wf_type_rel kn X_ext cst.(cst_type) cst.(cst_relevance);;
+          ret _ 
       end
     | InductiveDecl mdecl =>
-      let id := string_of_kername kn in
       check_var <- @check_variance X kn (ind_universes mdecl) (ind_variance mdecl) _ ;;
       check_pars <- wrap_error _ X_ext id (check_context_wf_env X_ext (ind_params mdecl)) ;;
       check_npars <- wrap_error _ X_ext id
@@ -2326,11 +2374,17 @@ End monad_Alli_nth_forall.
       ret (Build_on_inductive_sq  check_bodies check_pars check_npars _)
     end.
   Next Obligation.
-    specialize_Σ H0. sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
-    eassumption.
+    specialize_Σ wfΣ; sq; now eexists.
   Qed.
   Next Obligation.
-    specialize_Σ H0. sq. unfold on_constant_decl. rewrite <- Heq_anonymous; tea.
+    clear Heq_anonymous.
+    specialize_Σ H0. pose proof (hΣ _ _ H0). sq. unfold on_constant_decl; rewrite <- Heq_anonymous0.
+    split => //.
+    apply eqb_eq in check; subst tmrel.
+    eapply PCUICRelevanceTyp.relevance_from_type; tea.
+  Qed.
+  Next Obligation.
+    specialize_Σ H. sq. unfold on_constant_decl. rewrite <- Heq_anonymous; split => //.
   Qed.
   Next Obligation.
       edestruct pf as [? ?]; specialize_Σ H. now pose proof (abstract_env_ext_wf _ H0).

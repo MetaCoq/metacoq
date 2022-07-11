@@ -958,8 +958,8 @@ Proof.
         -- eapply Forall_forall. intros x [ | (? & <- & [_ ?] % in_seq) % in_rev % in_map_iff]; subst.
            all: econstructor; rewrite nth_error_app1; [eapply nth_error_repeat; lia | rewrite repeat_length; lia].
     + econstructor. now rewrite nth_error_map, H1.
-  - cbn. econstructor. eapply (H1 (up Γ')); econstructor; eauto.
-  - cbn. econstructor. eauto. eapply (H2 (up Γ')); econstructor; eauto.
+  - cbn. econstructor. eapply (H2 (up Γ')); econstructor; eauto.
+  - cbn. econstructor. eauto. eapply (H3 (up Γ')); econstructor; eauto.
   - specialize (H _ H2).
     assert (Forall(fun t : term => expanded Σ0 (map
     (fun x : option (nat × term) =>
@@ -1110,7 +1110,7 @@ Proof.
     rewrite nth_error_app1. now rewrite nth_error_repeat. rewrite repeat_length. lia.
   - cbn. econstructor; eauto.
     * unfold map_branches. solve_all.
-      clear -X1 H8.
+      clear -X1 H9.
       set (Γ'' := map _ Γ'). cbn.
       enough (All (expanded Σ0 Γ'') (map (eta_expand (declarations Σ0) Γ') (pparams p ++ indices))).
       now rewrite map_app in X; eapply All_app in X as [].
@@ -1132,7 +1132,7 @@ Proof.
         unfold inst_case_context. unfold subst_context.
         unfold subst_instance, subst_instance_context, map_context.
         rewrite fold_context_k_length, map_length. unfold aname. lia.
-      } revert H9. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
+      } revert H10. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p) 
       (puinst p) (bcontext y) x)). clear.
       induction #|bcontext y|; intros []; cbn; intros; try congruence; econstructor; eauto.
     - cbn. rewrite nth_error_map, H0. cbn. unfold eta_fixpoint. unfold fst_ctx in *. cbn in *.
@@ -1148,11 +1148,10 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (? & ? & ?).
-      destruct a0 as (? & ?).
+      destruct a as ((((Hbo1 & Hbo2) & mk) & _) & tt & s & e & Hs1 & Hs2).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply e0. 2: reflexivity. 2: now len.
+      5: eapply Hbo2. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map, map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1170,9 +1169,9 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn.
-     specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
-     rewrite map_app, map_repeat in e0. len. eapply e0.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply X. intros ? ((((Hbo1 & Hbo2) & mk) & _) & tt & s & e & Hs1 & Hs2). cbn.
+     specialize (Hbo2 (repeat None #|mfix| ++ Γ'))%list.
+     rewrite map_app, map_repeat in Hbo2. len. eapply Hbo2.
      eapply Forall2_app; eauto. unfold types.
      assert (#|Typing.fix_context mfix| = #|mfix|). { unfold Typing.fix_context. now len. }
      revert H4. generalize (Typing.fix_context mfix). clear.
@@ -1345,8 +1344,8 @@ Proof.
   cbn. constructor.
   cbn. constructor.
   len. rewrite app_nil_r.
-  red in t0, t1.
-  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t1).
+  destruct t0 as ((t0 & _) & t1).
+  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t0).
   clear. induction Γ; cbn; constructor; auto.
   now rewrite map_repeat.
 Qed.
@@ -1359,11 +1358,10 @@ Proof.
   eapply All_fold_fold_context_k_defs. cbn. len. 
   induction ctx' in hs, cunivs |- *; cbn; auto.
   constructor; eauto.
-  cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ?].
+  cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ((Hb&mk)& u&e&Ht)].
   specialize (IHctx' cunivs hs). constructor; auto.
   constructor. len. rewrite repeat_app.
-  destruct p as [[s Hs] ?].
-  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ t).
+  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ Hb).
   forward H.
   clear. rewrite -app_context_length.
   induction (_ ,,, _); cbn; constructor; auto.
@@ -1383,11 +1381,11 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} g kn d :
 Proof.
   intros wf ond.
   destruct d; cbn in *.
-  - unfold on_constant_decl in ond.
+  - destruct ond as (onbo & onty).
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := g) [] [] t na wf ond). constructor.
-    destruct ond as [s Hs]. constructor => //.
+    apply (eta_expand_expanded (Σ := g) [] [] t na wf onbo.1). constructor.
+    destruct onty as (s & e & Hs). constructor => //.
   - destruct ond as [onI onP onN onV].
     constructor. cbn.
     eapply eta_expand_context => //.
@@ -1401,8 +1399,8 @@ Proof.
     pose proof onc.(on_cargs).
     eapply eta_expand_context_sorts in X0. now len in X0.
     len. len. 
-    pose proof onc.(on_ctype). destruct X0.
-    epose proof (eta_expand_expanded (Σ := g) _ (repeat None #|ind_bodies m|) _ _ wf t).
+    pose proof onc.(on_ctype). destruct X0 as (_ & s & e & Hs).
+    epose proof (eta_expand_expanded (Σ := g) _ (repeat None #|ind_bodies m|) _ _ wf Hs).
     forward H. rewrite -arities_context_length.
     clear. induction (arities_context _); constructor; auto.
     now rewrite map_repeat in H.

@@ -7,11 +7,6 @@ Import ConstraintType.
 
 Import MCMonadNotation.
 
-
-Arguments Z.add : simpl nomatch.
-Arguments Nat.leb : simpl nomatch.
-Arguments Nat.eqb : simpl nomatch.
-
 Definition Z_of_bool (b : bool) : Z :=
   match b with
   | true => 1
@@ -1997,7 +1992,7 @@ Section CheckLeq.
     leq_universe_n_ (fun n φ u u' => if check_univs then gc_leq0_levelalg_n n φ u u' else True) 0.
   
   Definition gc_eq_universe :=
-    eq_universe_ (fun φ u u' => if check_univs then gc_eq0_levelalg φ u u' else True).
+    eq_universe_ False (fun φ u u' => if check_univs then gc_eq0_levelalg φ u u' else True).
   
   Let levels_declared_univ (u : Universe.t) :=
     match u with

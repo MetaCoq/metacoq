@@ -181,7 +181,7 @@ Section Lemmata.
       eapply ws_cumul_pb_Lambda_r. assumption.
   Qed.
 
-  Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
+  Lemma snoc_app_context {A Γ Δ} {d: A} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
   Proof using Type.
     reflexivity.
   Qed.
@@ -344,7 +344,7 @@ Section Lemmata.
     apply wf_local_app_inv in wfl as (_&wf).
     apply wf_local_rel_app_inv in wf as (wf&_).
     destruct h; depelim wf; simpl in *.
-    all: destruct l; econstructor; eauto.
+    all: destruct l as (s & e & Hs); econstructor; eauto.
   Qed.
   (* TODO: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' :
@@ -384,38 +384,38 @@ Section Lemmata.
     all: apply IHπ in h as (?&typ).
     all: try apply inversion_App in typ as (?&?&?&?&?&?); auto.
     all: try apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
-    all: try apply inversion_Prod in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_Lambda in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_LetIn in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_Prod in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_Lambda in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_LetIn in typ as (?&?&?&?&?&?&?); auto.
     all: try solve [econstructor; eauto].
     - apply inversion_Fix in typ as (?&?&?&?&?&?&?); eauto.
       destruct mfix as ((?&[])&?); simpl in *.
       + eapply All_app in a as (_&a).
         depelim a.
+        apply isType_of_isTypeRel in o.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
         depelim a0.
-        rewrite fix_context_fix_context_alt in t0.
-        rewrite map_app in t0.
-        simpl in t0.
+        rewrite fix_context_fix_context_alt in o.
+        rewrite map_app in o.
         rewrite app_context_assoc.
         econstructor; eauto.
     - apply inversion_CoFix in typ as (?&?&?&?&?&?&?); eauto.
       destruct mfix as ((?&[])&?); simpl in *.
       + eapply All_app in a as (_&a).
         depelim a.
+        apply isType_of_isTypeRel in o.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
         depelim a0.
-        rewrite fix_context_fix_context_alt in t0.
-        rewrite map_app in t0.
-        simpl in t0.
+        rewrite fix_context_fix_context_alt in o.
+        rewrite map_app in o.
         rewrite app_context_assoc.
         econstructor; eauto.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
       destruct p.
-      + apply validity in scrut_ty as (?&typ).
+      + apply validity in scrut_ty as (?&?&typ).
         clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
         clear -spine.
@@ -598,12 +598,12 @@ Section Lemmata.
     - simpl. apply ih in h. cbn in h.
       destruct h as [T h].
       apply inversion_LetIn in h as hh ; auto.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
+      destruct hh as (s1 & A' & ? & ? & ? & ? & ?).
       exists A'. assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [T h].
       apply inversion_Lambda in h as hh ; auto.
-      pose proof hh as [s1 [B [? [? ?]]]].
+      pose proof hh as (s1 & B & ? & ? & ? & ?).
       exists B. assumption.
   Qed.
 
@@ -759,7 +759,7 @@ Section Lemmata.
       destruct hw as [T hw'].
       apply inversion_App in hw' as ihw' ; auto.
       destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
-      apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]] ; auto.
+      apply inversion_Prod in hP as (s1 & s2 & ? & ? & ? & bot) ; auto.
       apply ws_cumul_pb_Sort_Prod_inv in bot ; auto.
   Qed.
 

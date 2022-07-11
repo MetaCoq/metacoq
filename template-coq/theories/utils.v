@@ -30,3 +30,9 @@ Notation "A * B" := (prod A B) : type_scope2.
 Global Open Scope type_scope2.
 
 Global Open Scope metacoq_scope.
+
+Arguments Z.add : simpl nomatch.
+Arguments Nat.leb : simpl nomatch.
+Arguments Nat.eqb : simpl nomatch.
+
+#[global] Hint Constructors unit : core.

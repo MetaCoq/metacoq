@@ -25,7 +25,8 @@ Lemma isType_Sort {cf:checker_flags} {Σ Γ s} :
   isType Σ Γ (tSort s).
 Proof.
   intros wfs wfΓ.
-  eexists; econstructor; eauto.
+  eexists; split; cbnr.
+  econstructor; eauto.
 Qed.
 #[global] Hint Resolve isType_Sort : pcuic.
 
@@ -77,7 +78,7 @@ Proof.
   (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
   { apply forall_nth_error_Alli. intros.
     eapply Alli_nth_error in oind; eauto. simpl in oind.
-    destruct oind. destruct onArity as [s Hs].
+    apply onArity in oind as (s & e & Hs).
     eapply type_Cumul; eauto.
     econstructor; eauto. split; eauto with pcuic.
     eapply consistent_instance_ext_abstract_instance; eauto.
@@ -205,17 +206,19 @@ Section WfEnv.
   Qed.
 
   Lemma isType_tProd {Γ} {na A B} : 
-    isType Σ Γ (tProd na A B) <~> (isType Σ Γ A × isType Σ (Γ,, vass na A) B).
+    isType Σ Γ (tProd na A B) <~> (isTypeRel Σ Γ A na.(binder_relevance) × isType Σ (Γ,, vass na A) B).
   Proof.
     split; intro HH.
-    - destruct HH as [s H].
-      apply inversion_Prod in H; tas. destruct H as [s1 [s2 [HA [HB Hs]]]].
+    - destruct HH as (s & e & H).
+      apply inversion_Prod in H; tas. destruct H as (s1 & s2 & e' & HA & HB & Hs).
       split.
-      * eexists; tea.
-      * eexists; tea.
+      * eexists; split; tea.
+      * eexists; split; [|eassumption]; auto.
     - destruct HH as [HA HB].
-      destruct HA as [sA HA], HB as [sB HB].
-      eexists. econstructor; eassumption.
+      destruct HA as (sA & e & HA), HB as (sB & e' & HB).
+      exists (Universe.sort_of_product sA sB).
+      split; cbnr.
+      econstructor; eassumption.
   Defined.
 
   Lemma isType_subst {Γ Δ A} s :
@@ -224,7 +227,7 @@ Section WfEnv.
     isType Σ Γ (subst0 s A).
   Proof using wfΣ.
     intros sub HT.
-    apply infer_typing_sort_impl with id HT; intros Hs.
+    apply infer_typing_sort_impl with id HT => //; intros Hs.
     have wf := typing_wf_local Hs.
     now eapply (substitution (Δ := []) (T := tSort _)).
   Qed.
@@ -235,7 +238,7 @@ Section WfEnv.
     isType Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
   Proof using wfΣ.
     intros sub HT.
-    apply infer_typing_sort_impl with id HT; intros Hs.
+    apply infer_typing_sort_impl with id HT => //; intros Hs.
     now eapply (substitution (T:=tSort _)).
   Qed.
 
@@ -256,13 +259,14 @@ Section WfEnv.
   Lemma isType_tLetIn_red {Γ} (HΓ : wf_local Σ Γ) {na t A B}
     : isType Σ Γ (tLetIn na t A B) -> isType Σ Γ (B {0:=t}).
   Proof using wfΣ.
-    intro HH.
-    apply infer_typing_sort_impl with id HH; intros H.
-    assert (Hs := typing_wf_universe _ H).
-    apply inversion_LetIn in H; tas. destruct H as (s1 & A' & HA & Ht & HB & H).
+    intro HH. 
+    apply infer_typing_sort_impl with id HH => //; intros Hs.
+    assert (wf := typing_wf_universe _ Hs).
+    apply inversion_LetIn in Hs; tas.
+    destruct Hs as (s1 & A' & e' & HA & Ht & HB & H).
     eapply (type_ws_cumul_pb (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
-    * econstructor; eauto with pcuic. econstructor; eauto.
-    * eapply ws_cumul_pb_Sort_r_inv in H as [s' [H H']].
+    * now apply isType_Sort.
+    * eapply ws_cumul_pb_Sort_r_inv in H as (s' & H & H').
       transitivity (tSort s'); eauto.
       eapply red_ws_cumul_pb.
       apply invert_red_letin in H as [H|H] => //.
@@ -274,13 +278,14 @@ Section WfEnv.
   Lemma isType_tLetIn_dom {Γ} (HΓ : wf_local Σ Γ) {na t A B}
     : isType Σ Γ (tLetIn na t A B) -> Σ ;;; Γ |- t : A.
   Proof using wfΣ.
-    intros (s & H).
-    apply inversion_LetIn in H; tas. now destruct H as (s1 & A' & HA & Ht & HB & H).
+    intros (? & _ & H).
+    apply inversion_LetIn in H; tas.
+    now destruct H as (s1 & A' & e' & HA & Ht & HB & H).
   Qed.
 
   Lemma wf_local_ass {Γ na A} : 
     wf_local Σ Γ ->
-    isType Σ Γ A ->
+    isTypeRel Σ Γ A na.(binder_relevance) ->
     wf_local Σ (Γ ,, vass na A).
   Proof using Type.
     constructor; eauto with pcuic.
@@ -288,7 +293,7 @@ Section WfEnv.
 
   Lemma wf_local_def {Γ na d ty} : 
     wf_local Σ Γ ->
-    isType Σ Γ ty ->
+    isTypeRel Σ Γ ty na.(binder_relevance) ->
     Σ ;;; Γ |- d : ty ->
     wf_local Σ (Γ ,, vdef na d ty).
   Proof using Type.
@@ -383,7 +388,8 @@ Section WfEnv.
     induction 1; auto.
   Qed.
 
-  Lemma type_mkProd_or_LetIn {Γ} d {u t s} : 
+  Lemma type_mkProd_or_LetIn {Γ} d {u t s} :
+    isSortRel u d.(decl_name).(binder_relevance) ->
     Σ ;;; Γ |- decl_type d : tSort u ->
     Σ ;;; Γ ,, d |- t : tSort s ->
     match decl_body d return Type with 
@@ -391,10 +397,11 @@ Section WfEnv.
     | None => Σ ;;; Γ |- mkProd_or_LetIn d t : tSort (Universe.sort_of_product u s)
     end.
   Proof using wfΣ.
-    destruct d as [na [b|] dty] => [Hd Ht|Hd Ht]; rewrite /mkProd_or_LetIn /=.
+    destruct d as [na [b|] dty] => [e Hd Ht|e Hd Ht]; rewrite /mkProd_or_LetIn /=.
     - have wf := typing_wf_local Ht.
       depelim wf. clear l.
-      eapply type_Cumul. econstructor; eauto.
+      eapply type_Cumul.
+      econstructor; eauto.
       econstructor; eauto. now eapply typing_wf_universe in Ht; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec. constructor.
     - have wf := typing_wf_local Ht.
@@ -422,7 +429,8 @@ Section WfEnv.
       destruct a as [na [b|] ty]; intuition auto.
       { apply typing_wf_local in Ht as XX. inversion XX; subst.
         eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); auto.
-        + simpl. exact X0.π2.
+        + exact X0.π2.1.
+        + exact X0.π2.2.
         + eapply type_Cumul; eauto.
           econstructor; eauto with pcuic.
           eapply cumul_Sort. eapply leq_universe_product. }
@@ -458,17 +466,18 @@ Section WfEnv.
     induction Γ'; simpl; auto; move=> Γ us s t equ Ht.
     - destruct us => //.
     - destruct a as [na [b|] ty]; intuition auto.
-      * destruct a0 as [s' Hs].
+      * destruct a0 as (s' & e & Hs).
         eapply IHΓ'; eauto.
         eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); auto.
+        apply e.
         simpl. exact Hs.
-      * destruct us => //. destruct equ.
+      * destruct us => //. destruct equ as (s0 & e & p).
         simpl.   
         eapply IHΓ'; eauto.
         apply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
   Qed.
 
-  Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
+  Lemma app_context_push {A} Γ Δ Δ' (d: A) : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
   Proof using Type.
     reflexivity.
   Qed.
@@ -586,7 +595,7 @@ Section WfEnv.
     isType Σ Γ (subst0 s T).
   Proof using wfΣ.
     intros sub HT.
-    apply infer_typing_sort_impl with id HT; intros Hs.
+    apply infer_typing_sort_impl with id HT => //; intros Hs.
     destruct HT as (s' & t); cbn in Hs |- *; clear t.
     revert Γ s sub Hs.
     generalize (le_n #|Δ|).
@@ -606,7 +615,7 @@ Section WfEnv.
       
       intros Hs.
       assert (wfs' := typing_wf_universe wfΣ Hs).
-      eapply inversion_LetIn in Hs as (? & ? & ? & ? & ? & ?); auto.
+      eapply inversion_LetIn in Hs as (? & ? & ? & ? & ? & ? & ?); auto.
       eapply substitution_let in t1; auto.
       eapply ws_cumul_pb_LetIn_l_inv in w; auto.
       pose proof (subslet_app_inv sub) as [subl subr].
@@ -622,7 +631,7 @@ Section WfEnv.
       
       intros Hs.
       assert (wfs' := typing_wf_universe wfΣ Hs).
-      eapply inversion_Prod in Hs as (? & ? & ? & ? & ?); auto.
+      eapply inversion_Prod in Hs as (? & ? & ? & ? & ? & ?); auto.
       pose proof (subslet_app_inv sub) as [subl subr].
       depelim subl; depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
       epose proof (substitution0 t0 t2).
@@ -650,6 +659,17 @@ Section WfEnv.
     now apply onParams in H.
   Qed.
 
+  Lemma on_minductive_wf_params_weaken {ind mdecl Γ} {u} :
+    declared_minductive Σ.1 ind mdecl ->
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    wf_local Σ Γ ->
+    wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
+  Proof using wfΣ.
+    intros.
+    eapply weaken_wf_local; tea.
+    eapply on_minductive_wf_params; tea.
+  Qed.
+
   Lemma it_mkProd_or_LetIn_wf_local {Γ Δ T U} : 
     Σ ;;; Γ |- it_mkProd_or_LetIn Δ T : U -> wf_local Σ (Γ ,,, Δ).
   Proof using wfΣ.
@@ -658,14 +678,14 @@ Section WfEnv.
     + simpl. intros. now eapply typing_wf_local in X.
     + rewrite it_mkProd_or_LetIn_app.
       destruct x as [na [b|] ty]; cbn; move=> H.
-      * apply inversion_LetIn in H as (s1 & A & H0 & H1 & H2 & H3); auto.
+      * apply inversion_LetIn in H as (s1 & A & e & H0 & H1 & H2 & H3); auto.
         eapply All_local_env_app; split; pcuic.
         eapply All_local_env_app. split. repeat constructor. now exists s1.
         auto. apply IHΔ in H2.
         eapply All_local_env_app_inv in H2. intuition auto.
         eapply All_local_env_impl; eauto. simpl. intros.
         now rewrite app_context_assoc.
-      * apply inversion_Prod in H as (s1 & A & H0 & H1 & H2); auto.
+      * apply inversion_Prod in H as (s1 & A & e & H0 & H1 & H2); auto.
         eapply All_local_env_app; split; pcuic. 
         eapply All_local_env_app. split. repeat constructor. now exists s1.
         apply IHΔ in H1.
@@ -677,7 +697,7 @@ Section WfEnv.
   Lemma isType_it_mkProd_or_LetIn_wf_local {Γ Δ T} : 
     isType Σ Γ (it_mkProd_or_LetIn Δ T) -> wf_local Σ (Γ ,,, Δ).
   Proof using wfΣ.
-    move=> [s Hs].
+    intros (? & _ & Hs).
     now eapply it_mkProd_or_LetIn_wf_local in Hs.
   Qed.
 
@@ -687,7 +707,7 @@ Section WfEnv.
     isType Σ Γ T.
   Proof using wfΣ.
     intros wfΓ HT.
-    apply infer_typing_sort_impl with id HT; intros hs.
+    apply infer_typing_sort_impl with id HT => //; intros hs.
     unshelve epose proof (subject_closed hs); eauto.
     eapply (weakening _ _ Γ) in hs => //.
     rewrite lift_closed in hs => //.

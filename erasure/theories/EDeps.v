@@ -583,8 +583,8 @@ Proof.
   repeat eapply conj; try eassumption. cbn in *. now rewrite H8, H9.
 Qed.
 
-Lemma erases_deps_single Σ Σ' Γ t T et :
-  wf_ext Σ ->
+Lemma erases_deps_single (Σ : global_env_ext) Σ' Γ t T et :
+  wf Σ ->
   Σ;;; Γ |- t : T ->
   Σ;;; Γ |- t ⇝ℇ et ->
   globals_erased_with_deps Σ Σ' ->
@@ -640,6 +640,7 @@ Proof.
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
+    unfold on_def_body in *.
     revert a0 X H Σer.
     generalize mfix at 1 2 4 6.
     intros mfix_gen.
@@ -654,6 +655,7 @@ Proof.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
+    unfold on_def_body in *.
     revert a0 X H Σer.
     generalize mfix at 1 2 4 6.
     intros mfix_gen.
@@ -705,7 +707,7 @@ Proof.
         depelim wf. depelim o0. cbn in *.
         eapply (erases_extends ({| universes := univs; declarations := Σ |}, cst_universes cst')); eauto.
         cbn. 4:{ split; eauto; cbn; try reflexivity. eexists [_]; cbn; reflexivity. }
-        constructor; auto. cbn. red in o2. rewrite E in o2. exact o2.
+        constructor; auto. cbn. red in o2. rewrite E in o2. exact o2.2.
         split; auto. 
       * intros.
         eapply (erases_deps_cons {| universes := univs; declarations := Σ |} _ kn (PCUICEnvironment.ConstantDecl cst')); auto.
@@ -743,7 +745,7 @@ Proof.
         destruct ?; [|easy].
         eapply (erases_extends (Σu, cst_universes cst')).
         4:{ split; cbn; auto. eexists [_]; cbn; reflexivity. }
-        all: cbn; eauto.
+        all: cbn; eauto. apply decl_ext.
       * intros.
         apply H0 in H1.
         eapply (erases_deps_cons Σu); eauto. apply wfΣu. apply wf.
@@ -783,8 +785,8 @@ Proof.
       apply neqb in n. destruct eqb; cbn in n; try congruence.
 Qed.       
 
-Lemma erases_global_erases_deps Σ Γ t T et Σ' :
-  wf_ext Σ ->
+Lemma erases_global_erases_deps (Σ : global_env_ext) Γ t T et Σ' :
+  wf Σ ->
   Σ;;; Γ |- t : T ->
   Σ;;; Γ |- t ⇝ℇ et ->
   erases_global Σ Σ' ->

@@ -255,7 +255,7 @@ Proof.
 Defined.*)
 
 Definition onctx_rel (P : context -> term -> Type) (Γ Δ : context) :=
-  All_local_env (PCUICInduction.on_local_decl (fun Δ => P (Γ ,,,  Δ))) Δ.
+  All_local_env (fun Δ => lift_wf_term (P (Γ ,,, Δ))) Δ.
 
 Definition CasePredProp (P : context -> term -> Type) Γ (p : predicate term) :=
   All (P Γ) p.(pparams) × onctx_rel P Γ (inst_case_context p.(pparams) p.(puinst) p.(pcontext)) ×
@@ -330,10 +330,10 @@ Lemma term_forall_ctx_list_ind :
         P Γ (tCase ci p t brs)) ->
     (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
     (forall Γ (m : mfixpoint term) (n : nat),
-        All_local_env (PCUICInduction.on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        All_local_env (fun Δ => lift_wf_term (ctx_shifted P Γ Δ)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
     (forall Γ (m : mfixpoint term) (n : nat),
-        All_local_env (PCUICInduction.on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        All_local_env (fun Δ => lift_wf_term (ctx_shifted P Γ Δ)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
     (* (forall Γ p, P Γ (tPrim p)) -> *)
     forall Γ (t : term), P Γ t.
@@ -368,12 +368,12 @@ Proof.
     - case: a => [na [b|] ty] /=;
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
       + eapply IHΔ => //. unfold context_depth. lia.
-      + simpl. apply aux => //. red.  lia.
       + simpl. split.
-        * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //; red. lia.
+        * apply aux => //; red; lia.
       + apply IHΔ => //; unfold context_depth; lia.
-      + apply aux => //. red. lia. }
+      + simpl. split; auto.
+        apply aux => //; red. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dbody x)) m < S (mfixpoint_depth_gen depth m)).

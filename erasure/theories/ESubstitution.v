@@ -61,7 +61,6 @@ Proof.
   unfold PCUICAst.declared_minductive in *.
 
   eapply PCUICWeakeningEnv.extends_lookup in H1; eauto; tc.
-  2:{ cbn. apply extends_refl. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.
@@ -148,7 +147,7 @@ Proof.
   intros hctx.
   rewrite /inst_case_branch_context /= /id.
   rewrite -rename_context_lift_context.
-  rewrite PCUICRenameConv.rename_inst_case_context_wf //.
+  rewrite PCUICRenameTerm.rename_inst_case_context_wf //.
   f_equal. apply map_ext => x.
   now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
 Qed.
@@ -166,7 +165,7 @@ Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : ter
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- (lift #|Γ''| #|Γ'| t) ⇝ℇ (ELiftSubst.lift #|Γ''| #|Γ'| t').
 Proof.
   intros HΣ HΓ'' * H He.
-  generalize_eqs H. intros eqw. rewrite <- eqw in *.
+  remember (Γ ,,, Γ') as Γ0 eqn:eqw.
   revert Γ Γ' Γ'' HΓ'' eqw t' He.
   revert Σ HΣ Γ0 t T H .
   apply (typing_ind_env (fun Σ Γ0 t T =>  forall Γ Γ' Γ'',
@@ -185,27 +184,27 @@ Proof.
   - destruct ?; econstructor.
   - econstructor.
     unfold app_context, snoc in *.
-    pose proof (H0 Γ (vass n t :: Γ') Γ'').
-    rewrite lift_context_snoc0 - plus_n_O in H1.
-    eapply H1; eauto. cbn. econstructor.
-    eauto. cbn. exists s1. eapply (weakening_typing (T := tSort s1)); eauto.
+    pose proof (H1 Γ (vass na t :: Γ') Γ'').
+    rewrite lift_context_snoc0 - plus_n_O in H2.
+    eapply H2; eauto. cbn. econstructor.
+    eauto. cbn. exists s1. split => //. eapply (weakening_typing (T := tSort s1)); eauto.
     now apply All_local_env_app_inv in X2.
   - econstructor.
-    + eapply H0; eauto.
-    + pose proof (H1 Γ (vdef n b b_ty :: Γ') Γ'').
-      rewrite lift_context_snoc0 -plus_n_O in H2.
-      eapply H2; eauto. cbn. econstructor.
+    + eapply H1; eauto.
+    + pose proof (H2 Γ (vdef na b b_ty :: Γ') Γ'').
+      rewrite lift_context_snoc0 -plus_n_O in H3.
+      eapply H3; eauto. cbn. econstructor.
       eauto. hnf. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in X0; eauto.
       now apply All_local_env_app_inv in X3.
       now apply All_local_env_app_inv in X3.
   - econstructor.
     + eauto.
-    + eapply H4; eauto.
-    + red in H6. 
-      eapply Forall2_All2 in H6.
+    + eapply H5; eauto.
+    + red in H7. 
+      eapply Forall2_All2 in H7.
       eapply All2i_All2_mix_left in X6; tea.
-      clear H6.
+      clear H7.
       eapply All2i_nth_hyp in X6.
       eapply All2_map.
       eapply All2i_All2_All2; tea; cbv beta.
@@ -221,8 +220,8 @@ Proof.
       rewrite -app_context_assoc -{1}(Nat.add_0_r #|Γ'|) -(lift_context_app _ 0).
       assert (#|inst_case_branch_context p br| = #|bcontext br|).
       { rewrite /inst_case_branch_context. now len. }
-      rewrite /map_branch_k /= -H6 -app_length.
-      rewrite -e2 map_length -H6 -app_length.
+      rewrite /map_branch_k /= -H7 -app_length.
+      rewrite -e2 map_length -H7 -app_length.
       rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
       eapply e.
       eapply weakening_wf_local => //.
@@ -362,7 +361,7 @@ Proof.
   rewrite subst_inst_case_context_wf.  rewrite test_context_k_closed_on_free_vars_ctx.
   eapply alpha_eq_on_free_vars. symmetry; eassumption.
   rewrite (wf_predicate_length_pars wfp).
-  rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
+  rewrite (PCUICTyping.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
   eapply PCUICClosedTyp.closed_cstr_branch_context; tea.
   epose proof (PCUICCasesContexts.inst_case_branch_context_eq (p := subst_predicate s k p) a).
   now rewrite H.
@@ -378,7 +377,7 @@ Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   Σ ;;; (Γ ,,, subst_context s 0 Δ) |- (subst s #|Δ| t) ⇝ℇ ELiftSubst.subst s' #|Δ| t'.
 Proof.
   intros HΣ HΔ Hs Ht He.
-  generalize_eqs Ht. intros eqw.
+  remember (Γ ,,, Γ' ,,, Δ) as Γ0 eqn:eqw in Ht.
   revert Γ Γ' Δ t' s Hs HΔ He eqw.
   revert Σ HΣ Γ0 t T Ht.
   eapply (typing_ind_env (fun Σ Γ0 t T =>
@@ -408,24 +407,24 @@ Proof.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H0. econstructor. eapply is_type_subst; eauto.
-  - inv H1. econstructor.
+  - inv H2. econstructor.
     eapply is_type_subst; eauto.
-  - inv H1.
-    + cbn. econstructor.
-      specialize (H0 Γ Γ' (vass n t :: Δ) t'0 s).
-      (* unfold app_context, snoc in *. *)
-      rewrite subst_context_snoc0 in H0.
-      eapply H0; eauto.
-      cbn. econstructor. eauto.
-      cbn. exists s1. eapply (substitution (T := tSort s1)); eauto.
-    + econstructor.
-      eapply is_type_subst; eauto.
   - inv H2.
     + cbn. econstructor.
-      eauto.
-      specialize (H1 Γ Γ' (vdef n b b_ty :: Δ) t2' s).
+      specialize (H1 Γ Γ' (vass na t :: Δ) t'0 s).
+      (* unfold app_context, snoc in *. *)
       rewrite subst_context_snoc0 in H1.
       eapply H1; eauto.
+      cbn. econstructor. eauto.
+      cbn. exists s1. split => //. eapply (substitution (T := tSort s1)); eauto.
+    + econstructor.
+      eapply is_type_subst; eauto.
+  - inv H3.
+    + cbn. econstructor.
+      eauto.
+      specialize (H2 Γ Γ' (vdef na b b_ty :: Δ) t2' s).
+      rewrite subst_context_snoc0 in H2.
+      eapply H2; eauto.
       cbn. econstructor. eauto.
       hnf.
       eapply substitution in X0; eauto.
@@ -448,15 +447,15 @@ Proof.
     + cbn. econstructor; auto.
     + econstructor.
       eapply is_type_subst; eauto.
-  - depelim H7.
+  - depelim H8.
     + cbn. econstructor.
       * eauto.
-      * eapply H4; eauto.
+      * eapply H5; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H11, x, y. cbn in e0. subst. split; eauto.
-        eapply In_nth_error in H9 as [].
-        move: H6. rewrite /wf_branches. 
+        intros. destruct H12, x, y. cbn in e0. subst. split; eauto.
+        eapply In_nth_error in H10 as [].
+        move: H7. rewrite /wf_branches. 
         move/Forall2_All2 => hbrs.
         eapply All2_nth_error_Some_r in hbrs; tea.
         set (br := {| bcontext := _ |}).
@@ -473,10 +472,10 @@ Proof.
         move/(substitution_wf_local X8) => hwf.
         specialize (e0 _ _ _ t _ hwf X8).
         len in e0. cbn in e0.
-        have := PCUICCasesContexts.inst_case_branch_context_eq (p:=p) eqctx => H6.
-        rewrite /inst_case_branch_context /= in H6.
+        have := PCUICCasesContexts.inst_case_branch_context_eq (p:=p) eqctx => H7.
+        rewrite /inst_case_branch_context /= in H7.
         forward e0.
-        { move: e. cbn. rewrite /inst_case_branch_context /= -H6.
+        { move: e. cbn. rewrite /inst_case_branch_context /= -H7.
           now rewrite app_context_assoc. }
         forward e0.
         { now rewrite app_context_assoc. }

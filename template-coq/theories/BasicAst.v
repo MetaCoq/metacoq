@@ -133,6 +133,10 @@ Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
+Lemma map_dname {A B} (f : A -> B) (g : A -> B) (d : def A) :
+  dname d = dname (map_def f g d).
+Proof. destruct d; reflexivity. Qed.
+
 Definition mfixpoint term := list (def term).
 
 Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=
@@ -208,19 +212,21 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-Variant typ_or_sort_ {term} := Typ (T : term) | Sort.
-Arguments typ_or_sort_ : clear implicits.
+Variant judgment_ {term} :=
+  | Typ (t T : term)
+  | TripleOpt (t : option term) (T : term) (relopt : option relevance).
+Arguments judgment_ : clear implicits.
 
-Definition typ_or_sort_map {T T'} (f: T -> T') t :=
-  match t with
-  | Typ T => Typ (f T)
-  | Sort => Sort
-  end.
+Notation Triple t T := (TripleOpt (Some t) T None).
+Notation TripleRel t T rel := (TripleOpt (Some t) T (Some rel)).
+Notation TripleRelOpt t T rel := (TripleOpt t T (Some rel)).
+Notation Sort T := (TripleOpt None T None).
+Notation SortRel T rel := (TripleOpt None T (Some rel)).
 
-Definition typ_or_sort_default {T A} (f: T -> A) t d :=
+Definition judgment_map {T T'} (f: T -> T') t :=
   match t with
-  | Typ T => f T
-  | Sort => d
+  | Typ t T => Typ (f t) (f T)
+  | TripleOpt t T relopt => TripleOpt (option_map f t) (f T) relopt
   end.
 
 Section Contexts.
@@ -302,6 +308,11 @@ Qed.
 Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
 Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+
+Definition app_context {A} (Γ Γ': list A) := Γ' ++ Γ.
+
+Notation "Γ ,,, Γ'" := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+
 
 Definition ondecl {A} (P : A -> Type) (d : context_decl A) :=
   P d.(decl_type) × option_default P d.(decl_body) unit.

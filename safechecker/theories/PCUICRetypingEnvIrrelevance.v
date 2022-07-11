@@ -60,7 +60,7 @@ Qed.
 
 Section infer_irrel.
   Context {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}.
+    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1} {relopt : option relevance}.
   Context (hl : Hlookup X_type X X_type' X').
   
   Definition same_prod (Γ : context) {T}
@@ -371,14 +371,14 @@ Section infer_irrel.
   Lemma infer_as_sort_irrel {Γ t} 
     (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
     (wf' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ wf_local Σ Γ ∥)
-    (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> well_sorted Σ Γ t)
-    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> well_sorted Σ Γ t) 
-    hp hp' : hp.π1 = hp'.π1 -> (infer_as_sort X_type X wf wi hp).π1 = (infer_as_sort X_type' X' wf' wi' hp').π1.
+    (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> well_sorted Σ Γ t relopt)
+    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> well_sorted Σ Γ t relopt)
+    hp hp' : hp.π1 = hp'.π1 -> (infer_as_sort X_type X relopt wf wi hp).π1 = (infer_as_sort X_type' X' relopt wf' wi' hp').π1.
   Proof using hl.
     unfold infer_as_sort.
     unfold PCUICSafeRetyping.principal_type_type.
-    set (obl := fun Σ wfΣ => PCUICSafeRetyping.infer_as_sort_obligation_1 _ _ _ _ _ _ _ Σ wfΣ).
-    set (obl' := fun Σ wfΣ => PCUICSafeRetyping.infer_as_sort_obligation_1 _ _ _ _ _ _ _ Σ wfΣ).
+    set (obl := fun Σ wfΣ => PCUICSafeRetyping.infer_as_sort_obligation_1 _ _ _ _ relopt _ _ _ Σ wfΣ).
+    set (obl' := fun Σ wfΣ => PCUICSafeRetyping.infer_as_sort_obligation_1 _ _ _ _ relopt _ _ _ Σ wfΣ).
     clearbody obl obl'.
     destruct reduce_to_sort as [[s hr]|] eqn:h. 2:bang.
     destruct (reduce_to_sort _ hp'.π1 _) as [[s' hr']|] eqn:h'. 2:bang.
@@ -471,11 +471,12 @@ Proof.
   - now cbn.
   - simpl.
     cbn. f_equal. f_equal; unfold PCUICSafeRetyping.principal_sort_sort.
+    set (relopt := Some n.(binder_relevance)).
     set (obl := fun a b => _).
     set (obl' := fun a b => _).
     set (obl'' := fun a b => _).
     set (obl''' := fun a b => _).
-    cbn. eapply infer_as_sort_irrel => //. now eapply H.
+    cbn. eapply (infer_as_sort_irrel (relopt := relopt)) => //. now eapply H.
     eapply infer_as_sort_irrel => //. now eapply H0.
   - cbn. f_equal.
     unfold PCUICSafeRetyping.principal_type_type. apply H; eauto.

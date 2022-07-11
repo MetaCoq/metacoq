@@ -309,6 +309,7 @@ Qed.
         now rewrite -(expand_lets_subst_comm _ _ _).
         eapply isType_apply in i; tea.
         eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
+        eapply isType_of_isTypeRel.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -338,6 +339,7 @@ Qed.
         now len.
         eapply isType_apply in i; tea.
         eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
+        eapply isType_of_isTypeRel.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -389,6 +391,7 @@ Qed.
         2:{ eapply ws_cumul_pb_eq_le. symmetry. now eapply red_ws_cumul_pb. }
         eapply ws_cumul_pb_Prod; eauto.
       + eapply ws_cumul_pb_Prod_Prod_inv in w as [eqna dom codom].
+        apply isType_of_isTypeRel in l.
         assert (Σ ;;; Γ |- hd : ty).
         { eapply type_ws_cumul_pb; pcuic. eapply ws_cumul_pb_eq_le. now symmetry. }
         eapply (substitution0_ws_cumul_pb (t:=hd)) in codom; eauto.
@@ -481,7 +484,7 @@ Qed.
     - eapply typing_spine_nth_error in sp; eauto; cycle 1.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (s & e & Hs).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * destruct (decompose_app (decl_type c)) as [hd tl] eqn:da.
@@ -494,7 +497,7 @@ Qed.
     - eapply typing_spine_nth_error_None_prod in sp; eauto.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (s & e & Hs).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
   Qed.
@@ -542,7 +545,7 @@ Qed.
       * len in sp.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (s & e & Hs).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * len; simpl. eapply nth_error_None in hargs => //.
@@ -615,7 +618,7 @@ Section WeakNormalization.
     eapply inversion_mkApps in tyarg as [A [Hcof sp]]; auto.
     eapply inversion_CoFix in Hcof as (? & ? & ? & ? & ? & ? & ?); auto.
     eapply nth_error_all in a; eauto.
-    simpl in a.
+    pose proof (isType_of_isTypeRel a).
     eapply typing_spine_strengthen in sp; eauto.
     eapply wf_cofixpoint_spine in sp as (Γ' & concl & da & ?); eauto.
     eapply decompose_prod_assum_it_mkProd_or_LetIn in da.
@@ -685,8 +688,9 @@ Section WeakNormalization.
     intros no_arg typ.
     eapply inversion_mkApps in typ as (?&?&?); eauto.
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
+    eapply nth_error_all in a; eauto.
+    pose proof (isType_of_isTypeRel a).
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-    eapply nth_error_all in a; eauto. simpl in a.
     unfold unfold_fix in no_arg.
     rewrite e in no_arg.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
@@ -694,7 +698,6 @@ Section WeakNormalization.
     eapply ws_cumul_pb_Prod_l_inv in cum as (? & ? & ? & []).
     eapply invert_red_mkApps_tInd in c as [? [eq _]]; auto.
     solve_discr.
-    now eapply nth_error_all in a; tea.
   Qed.
 
   Fixpoint axiom_free_value Σ args t :=
@@ -747,8 +750,9 @@ Section WeakNormalization.
     - eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - eapply inversion_mkApps in typed as (? & ? & ?); eauto.
       eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
+      eapply nth_error_all in a; eauto.
+      pose proof (isType_of_isTypeRel a).
       eapply typing_spine_strengthen in t0; eauto.
-      eapply nth_error_all in a; eauto. simpl in a.
       rewrite /unfold_fix in e. rewrite e1 in e. noconf e.
       eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
       rewrite e0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
@@ -760,7 +764,6 @@ Section WeakNormalization.
       rewrite nth_error_map e0 in axfree.
       cbn in axfree.
       eauto.
-      now eapply nth_error_all in a; tea.
     - eapply inversion_Case in typed as (? & ? & ? & ? & [] & ?); tas; eauto.
     - eapply inversion_Proj in typed as (? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
   Qed.
@@ -784,9 +787,9 @@ Section WeakNormalization.
     - elimtype False. eauto using wh_neutral_empty.
     - eapply inversion_Sort in typed as (? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Prod in typed as (? & ? & ? & ? & e); auto.
+    - eapply inversion_Prod in typed as (? & ? & ? & ? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Lambda in typed as (? & ? & ? & ? & e); auto.
+    - eapply inversion_Lambda in typed as (? & ? & ? & ? & ? & e); auto.
       now eapply invert_cumul_prod_ind in e.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
@@ -824,7 +827,8 @@ Section WeakNormalization.
     intros typed unf.
     eapply inversion_mkApps in typed as (? & ? & ?); eauto.
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
-    eapply nth_error_all in a; eauto. simpl in a.
+    eapply nth_error_all in a; eauto.
+    pose proof (isType_of_isTypeRel a).
     eapply typing_spine_strengthen in t0; eauto.
     rewrite /unfold_fix in unf. rewrite e in unf.
     noconf unf.
@@ -887,17 +891,17 @@ Section WeakNormalization.
       pose proof (subject_closed t1); auto.
       eapply eval_closed in H; eauto.
       eapply subject_reduction in IHHe1. 2-3:eauto.
-      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & e); eauto.
+      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & ? & e); eauto.
       eapply (substitution0 (Γ := [])) in t3; eauto.
       eapply IHHe3.
       rewrite (closed_subst a' 0 b); auto.
       rewrite /subst1 in t3. eapply t3.
       eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
-      eapply subject_reduction in IHHe2; eauto. now eexists.
+      eapply subject_reduction in IHHe2; eauto. now eexists; split.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ? & ?); auto.
       redt (tLetIn na b0' t b1); eauto.
       eapply red_letin; eauto.
       redt (b1 {0 := b0'}); auto.

@@ -260,7 +260,7 @@ Qed.
 Section ExtendsWf.
   Context {cf : checker_flags}.
   Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
-  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+  Context {P: global_env_ext -> context -> judgment -> Type}.
 
   Let wf := on_global_env Pcmp P.
 
@@ -281,6 +281,61 @@ Proof using P Pcmp cf.
     apply lookup_global_Some_fresh in IHΣ''; contradiction.
 Qed.
 Hint Resolve extends_lookup : extends.
+
+Lemma extends_lookup_constant Σ Σ' kn decl :
+  wf Σ' -> extends Σ Σ' ->
+  lookup_constant Σ kn = Some decl ->
+  lookup_constant Σ' kn = Some decl.
+Proof.
+  intros wfΣ' ext look. unfold lookup_constant in *.
+  destruct lookup_env eqn:H => //.
+  erewrite extends_lookup; tea.
+Qed.
+Hint Resolve extends_lookup_constant : extends.
+
+Lemma extends_lookup_minductive Σ Σ' mind mdecl :
+  wf Σ' -> extends Σ Σ' ->
+  lookup_minductive Σ mind = Some mdecl ->
+  lookup_minductive Σ' mind = Some mdecl.
+Proof.
+  intros wfΣ' ext look. unfold lookup_minductive in *.
+  destruct lookup_env eqn:H => //.
+  erewrite extends_lookup; tea.
+Qed.
+Hint Resolve extends_lookup_minductive : extends.
+
+Lemma extends_lookup_inductive Σ Σ' ind midecl :
+  wf Σ' -> extends Σ Σ' ->
+  lookup_inductive Σ ind = Some midecl ->
+  lookup_inductive Σ' ind = Some midecl.
+Proof.
+  intros wfΣ' ext look. unfold lookup_inductive in *.
+  destruct lookup_minductive eqn:H => //.
+  erewrite extends_lookup_minductive; tea.
+Qed.
+Hint Resolve extends_lookup_inductive : extends.
+
+Lemma extends_lookup_constructor Σ Σ' ind k micdecl :
+  wf Σ' -> extends Σ Σ' ->
+  lookup_constructor Σ ind k = Some micdecl ->
+  lookup_constructor Σ' ind k = Some micdecl.
+Proof.
+  intros wfΣ' ext look. unfold lookup_constructor in *.
+  destruct lookup_inductive eqn:H => //.
+  erewrite extends_lookup_inductive; tea.
+Qed.
+Hint Resolve extends_lookup_constructor : extends.
+
+Lemma extends_lookup_projection Σ Σ' p micpdecl :
+  wf Σ' -> extends Σ Σ' ->
+  lookup_projection Σ p = Some micpdecl ->
+  lookup_projection Σ' p = Some micpdecl.
+Proof.
+  intros wfΣ' ext look. unfold lookup_projection in *.
+  destruct lookup_constructor eqn:H => //.
+  erewrite extends_lookup_constructor; tea.
+Qed.
+Hint Resolve extends_lookup_projection : extends.
 
 Lemma weakening_env_declared_constant :
   forall (Σ : global_env) cst (decl : constant_body),
@@ -422,12 +477,12 @@ Definition weaken_env_prop_full
     forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
 Definition weaken_env_prop
-           (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+           (P : global_env_ext -> context -> judgment -> Type) :=
+  forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ T, P (Σ, φ) Γ T -> P (Σ', φ) Γ T.
 
 Definition weaken_env_decls_prop
-  (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+  (P : global_env_ext -> context -> judgment -> Type) :=
+  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ T, P (Σ, φ) Γ T -> P (Σ', φ) Γ T.
 
 Lemma extends_decls_wf Σ Σ' : 
   wf Σ' -> extends_decls Σ Σ' -> wf Σ.
@@ -448,6 +503,7 @@ Arguments weaken_env_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
 Arguments weaken_env_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
 Arguments weaken_env_prop {cf} (Pcmp P)%function_scope _%function_scope.
 
+#[global] Hint Resolve extends_decls_extends : extends.
 #[global] Hint Resolve extends_lookup : extends.
 #[global] Hint Resolve weakening_env_declared_constant : extends.
 #[global] Hint Resolve weakening_env_declared_minductive : extends.

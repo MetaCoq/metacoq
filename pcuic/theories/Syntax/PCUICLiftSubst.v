@@ -108,6 +108,27 @@ Ltac nth_leb_simpl :=
   | _ => lia || congruence || solve [repeat (f_equal; try lia)]
   end.
 
+Lemma lift_inj : forall M M' i j, lift i j M = lift i j M' -> M = M'.
+Proof.
+  intros M.
+  induction M using term_forall_list_ind; destruct M' => //; simpl; intros i j e; inversion e; clear e; f_equal; eauto.
+  - move: H0.
+    case: (Nat.leb_spec j n); intro; case: (Nat.leb_spec j n0); lia.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H1. solve_all.
+  - destruct p, p0; simpl in *. f_equal; auto.
+    + apply All2_eq. apply All2_eq_eq, All2_map_inv in H1. solve_all.
+    + destruct X as (_ & _ & ?); eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H6. solve_all.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+    unfold id in H6. rewrite H6 in H7. eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H0. apply All2_length in H0 as Hlen. solve_all.
+    rewrite Hlen in b.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+  - apply All2_eq. apply All2_eq_eq, All2_map_inv in H0. apply All2_length in H0 as Hlen. solve_all.
+    rewrite Hlen in b.
+    destruct x, y; simpl in *; inversion b; clear b; f_equal; eauto.
+Qed.
+
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
@@ -853,6 +874,31 @@ Lemma nth_error_app_context (Γ Δ : context) (n : nat) :
   nth_error_app_spec Δ Γ n (nth_error (Γ ,,, Δ) n).
 Proof.
   apply nth_error_appP.
+Qed.
+
+Lemma smash_context_subst Δ s n Γ : smash_context (subst_context s (n + #|Γ|) Δ) (subst_context s n Γ) =
+  subst_context s n (smash_context Δ Γ).
+Proof.
+  revert Δ. induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+  - now rewrite Nat.add_0_r.
+  - rewrite -IHΓ.
+    rewrite subst_context_snoc /=. f_equal.
+    rewrite !subst_context_alt !mapi_compose.
+    apply mapi_ext=> n' x.
+    destruct x as [na' [b'|] ty']; simpl.
+    * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
+      + rewrite Nat.add_0_r distr_subst_rec. simpl. lia_f_equal.
+      + rewrite Nat.add_0_r distr_subst_rec; simpl. lia_f_equal.
+    * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
+      rewrite Nat.add_0_r distr_subst_rec /=. lia_f_equal.
+  - rewrite -IHΓ.
+    rewrite subst_context_snoc /= // /subst_decl /map_decl /=.
+    f_equal.
+    rewrite subst_context_app. simpl.
+    rewrite /app_context. f_equal.
+    + lia_f_equal.
+    + rewrite /subst_context // /fold_context_k /= /map_decl /=.
+      lia_f_equal.
 Qed.
 
 

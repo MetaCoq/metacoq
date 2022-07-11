@@ -191,7 +191,9 @@ Lemma isType_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T}
   wf_local Σ Δ ->
   isType Σ Δ T.
 Proof using Type.
-  intros [s Hs]. exists s. eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
+  intros HT wf eq.
+  apply infer_sort_impl with id HT => //; intros Hs.
+  eapply closed_context_conversion; tea. 
 Qed.
 
 Lemma typing_spine_arity_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ args T' i u pars :
@@ -217,7 +219,7 @@ Proof using Type.
          now eapply isType_open.
       -- eapply cumul_Prod_inv in w as []. econstructor.
          ++ eapply type_ws_cumul_pb. 3: eapply PCUICContextConversion.ws_cumul_pb_eq_le; symmetry. all:eauto.
-            eapply isType_tProd in i0. eapply i0. 
+            eapply isType_tProd in i0. eapply isType_of_isTypeRel, i0. 
          ++ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. autorewrite with subst.
             cbn. eapply X. len. lia.
             eapply typing_spine_strengthen. eauto.
@@ -232,7 +234,7 @@ Proof using Type.
             eapply isType_subst. eapply PCUICSubstitution.subslet_ass_tip. eauto.
             eapply isType_tProd in i0 as [_ tprod].
             eapply isType_context_conversion; tea. constructor. eapply ws_cumul_ctx_pb_refl. now eapply typing_wf_local, PCUICClosedTyp.wf_local_closed_context in t.
-            constructor; tea. constructor. pcuic. eapply validity in t. now eauto.
+            constructor; tea. constructor. pcuic. eapply isType_tProd in i1 as [tdom _] => //.
 Qed.
     
 Lemma leb_spect : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
@@ -330,7 +332,7 @@ Proof using Type.
     now eapply isType_tLetIn_red in isty; pcuic.
   - depelim hi. solve_discr.
     specialize (i1 hd). specialize (IHhsp i1).
-    destruct (validity t) as [s Hs]. eapply inversion_mkApps in Hs as [? [hi _]].
+    destruct (validity t) as (s & e & Hs). eapply inversion_mkApps in Hs as [? [hi _]].
     eapply inversion_Ind in hi as [mdecl [idecl [decli [? ?]]]].
     econstructor; tea. 2:{ eapply IHhsp. eapply isType_apply in isty; tea. }
     now eapply isType_ws_cumul_pb_refl. eauto.
@@ -636,9 +638,9 @@ Proof using Type.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
-    + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & Hcumul); eauto.
+    + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
-    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul); eauto.
+    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_prod_ind in Hcumul.
     + exfalso. eapply inversion_Ind in Hty as (? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICInductives.declared_inductive_type in d.

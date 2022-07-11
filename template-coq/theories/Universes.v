@@ -1153,6 +1153,18 @@ End Universe.
 Definition is_propositional u :=
   Universe.is_prop u || Universe.is_sprop u.
 
+Definition relevance_of_sort (s: Universe.t) :=
+  match s with
+  | Universe.lSProp => Irrelevant
+  | _ => Relevant
+  end.
+
+Notation isSortRel s rel := (relevance_of_sort s = rel).
+Definition isSortRelOpt s relopt :=
+  match relopt with None => True | Some rel => isSortRel s rel end.
+
+#[global] Hint Unfold isSortRelOpt : core.
+
 Notation "⟦ u ⟧_ v" := (Universe.to_cuniv v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
 
 
@@ -1701,15 +1713,17 @@ Section Univ.
   Definition eq_levelalg φ (u u' : LevelAlgExpr.t) :=
     if check_univs then eq0_levelalg φ u u' else True.
 
-  Definition eq_universe_ {CS} eq_levelalg (φ: CS) s s' :=
+  Definition eq_universe_ {CS} prop_conv_type eq_levelalg (φ: CS) s s' :=
     match s, s' with
     | Universe.lProp,   Universe.lProp
     | Universe.lSProp,  Universe.lSProp => True
     | Universe.lType u, Universe.lType u' => eq_levelalg φ u u'
+    | Universe.lType _, Universe.lProp
+    | Universe.lProp,   Universe.lType _ => prop_conv_type
     | _, _ => False
     end.
 
-  Definition eq_universe := eq_universe_ eq_levelalg.
+  Definition eq_universe := eq_universe_ False eq_levelalg.
 
   Definition lt_levelalg := leq_levelalg_n 1.
   Definition leq_levelalg := leq_levelalg_n 0.
@@ -2073,6 +2087,29 @@ Tactic Notation "unfold_univ_rel" "eqn" ":"ident(H) :=
 
 Ltac cong := intuition congruence.
 
+Lemma leq_relevance_eq {cf φ} {s s'} :
+  leq_universe φ s s' -> relevance_of_sort s = relevance_of_sort s'.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma leq_relevance_opt {cf φ} {s s' rel} :
+  leq_universe φ s s' -> isSortRelOpt s rel -> isSortRelOpt s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma leq_relevance {cf φ} {s s' rel} :
+  leq_universe φ s s' -> isSortRel s rel -> isSortRel s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
+
+Lemma geq_relevance {cf φ} {s s' rel} :
+  leq_universe φ s' s -> isSortRel s rel -> isSortRel s' rel.
+Proof.
+  now destruct s, s'.
+Qed.
 
 Lemma leq_universe_product_mon {cf} ϕ s1 s1' s2 s2' :
   leq_universe ϕ s1 s1' ->
@@ -2196,8 +2233,6 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_universe_props s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     match s1, s2 with
     | Universe.lProp, Universe.lProp => True
@@ -2214,47 +2249,36 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_universe_prop_r s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s2 -> Universe.is_prop s1.
   Proof using Type.
-    intros Hcf cu.
     destruct s2; cbn; [ | absurd | absurd].
     destruct s1; cbn; [ auto | absurd | absurd].
   Qed.
 
   Lemma leq_universe_sprop_r s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s2 -> Universe.is_sprop s1.
   Proof using Type.
-    intros Hcf cu.
     destruct s2; cbn; [ absurd | | absurd].
     destruct s1; cbn; [ absurd | auto | absurd].
   Qed.
 
   Lemma leq_universe_prop_no_prop_sub_type s1 s2 :
-    check_univs ->
     prop_sub_type = false ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s1 -> Universe.is_prop s2.
   Proof using Type.
-    intros Hcf ps cu.
+    intros ps.
     destruct s1; cbn; [ | absurd | absurd].
     rewrite ps.
     destruct s2; cbn; [ auto | absurd | absurd].
   Qed.
 
   Lemma leq_universe_sprop_l s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s1 -> Universe.is_sprop s2.
   Proof using Type.
-    intros Hcf cu.
     destruct s1; cbn; [ absurd | | absurd].
     destruct s2; cbn; [ absurd | auto | absurd].
   Qed.
@@ -2279,35 +2303,56 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_prop_is_prop_sprop {s1 s2} :
-    check_univs ->
     prop_sub_type = false ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     is_propositional s1 <-> is_propositional s2.
   Proof using Type.
-    intros Hcf ps cu.
+    intros ps.
     destruct s1, s2; cbn; try absurd; intros H; split; trivial.
     now rewrite ps in H.
   Qed.
 
+  Lemma relevance_super s : relevance_of_sort (Universe.super s) = Relevant.
+  Proof using Type.
+    now destruct s.
+  Qed.
+
   Lemma is_prop_gt s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_prop s2 -> False.
   Proof using Type.
-    intros Hcf cu Hleq Hprop.
+    intros Hleq Hprop.
     apply leq_universe_prop_r in Hleq; tas.
     now destruct s1.
   Qed.
 
   Lemma is_sprop_gt s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_sprop s2 -> False.
   Proof using Type.
-    intros Hcf cu Hleq Hprop.
+    intros Hleq Hprop.
     apply leq_universe_sprop_r in Hleq; tas.
     now destruct s1.
+  Qed.
+
+  Lemma is_prop_superE s : Universe.is_prop (Universe.super s) -> False.
+  Proof using Type.
+    destruct s => //.
+  Qed.
+
+  Lemma is_sprop_superE s : Universe.is_sprop (Universe.super s) -> False.
+  Proof using Type.
+    destruct s => //.
+  Qed.
+    
+  Lemma is_prop_prod {s s'} : Universe.is_prop s' -> Universe.is_prop (Universe.sort_of_product s s').
+  Proof using Type.
+    intros isp.
+    unfold Universe.sort_of_product. rewrite isp. auto.
+  Qed.
+
+  Lemma is_sprop_prod {s s'} : Universe.is_sprop s' -> Universe.is_sprop (Universe.sort_of_product s s').
+  Proof using Type.
+    intros isp.
+    unfold Universe.sort_of_product. rewrite isp orb_true_r. auto.
   Qed.
 
 End no_prop_leq_type.
@@ -2366,6 +2411,25 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 
 #[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
+
+
+Theorem relevance_subst_eq {cf} u s : relevance_of_sort (subst_instance_univ u s) = relevance_of_sort s.
+Proof.
+  now destruct s.
+Qed.
+
+Theorem relevance_subst_opt {cf} u s rel :
+  isSortRelOpt s rel -> isSortRelOpt (subst_instance_univ u s) rel.
+Proof.
+  now destruct s.
+Qed.
+
+Theorem relevance_subst {cf} u s rel :
+  isSortRel s rel -> isSortRel (subst_instance_univ u s) rel.
+Proof.
+  now destruct s.
+Qed.
+
 
 (** Tests that the term is closed over [k] universe variables *)
 Section Closedu.

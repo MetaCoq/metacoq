@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases
   PCUICTyping PCUICReduction PCUICCumulativity 
   PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakeningConv PCUICWeakeningTyp PCUICInstDef PCUICInstConv
-  PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars PCUICOnFreeVarsConv PCUICClosedTyp PCUICClosedTyp.
+  PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars PCUICRenameTerm PCUICClosedTyp PCUICClosedTyp.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -189,7 +189,7 @@ Proof.
                 eapply inst_is_open_term; eauto.    
             +++ rewrite map_length. rewrite inst_context_on_free_vars ; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context. 
-            apply on_free_vars_ctx_inst_case_context; eauto.
+            apply on_free_vars_ctx_inst_case_context_app; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add. 
@@ -223,7 +223,7 @@ Proof.
               eapply inst_is_open_term; eauto.
           +++ rewrite map_length. tea.  
       + unfold PCUICCases.inst_case_predicate_context. 
-        apply on_free_vars_ctx_inst_case_context; eauto.
+        apply on_free_vars_ctx_inst_case_context_app; eauto.
       + unfold PCUICCases.inst_case_predicate_context.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add.
@@ -370,43 +370,46 @@ Proof.
 
   - intros Σ wfΣ Γ wfΓ. auto.
     induction 1; constructor; tas.
-    all: apply infer_typing_sort_impl with id tu; auto.
+    all: apply infer_typing_sort_impl with id tu => //; auto.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.
     eapply hσ. assumption.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ σ hΔ hσ. simpl.
     econstructor. all: assumption.
-  - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ na A B s1 s2 e X hA ihA hB ihB Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
     econstructor.
+    + apply e.
     + eapply ihA ; auto.
     + eapply ihB.
       * econstructor ; auto.
-        eexists. eapply ihA ; auto.
+        eexists. split; [apply e|]. eapply ihA ; auto.
       * eapply well_subst_Up. 2: assumption.
         econstructor ; auto.
-        eexists. eapply ihA. all: auto.
-  - intros Σ wfΣ Γ wfΓ na A t s1 bty X hA ihA ht iht Δ σ hΔ hσ.
+        eexists. split; [apply e|]. eapply ihA. all: auto.
+  - intros Σ wfΣ Γ wfΓ na A t s1 bty e X hA ihA ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
+    + apply e.
     + eapply ihA ; auto.
     + eapply iht.
       * econstructor ; auto.
-        eexists. eapply ihA ; auto.
+        eexists. split; [apply e|]. eapply ihA ; auto.
       * eapply well_subst_Up. 2: assumption.
         constructor. 1: assumption.
-        eexists. eapply ihA. all: auto.
-  - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht Δ σ hΔ hσ.
+        eexists. split; [apply e|]. eapply ihA. all: auto.
+  - intros Σ wfΣ Γ wfΓ na b B t s1 A e X hB ihB hb ihb ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
+    + apply e.
     + eapply ihB. all: auto.
     + eapply ihb. all: auto.
     + eapply iht.
       * econstructor. all: auto.
-        -- eexists. eapply ihB. all: auto.
+        -- eexists. split; [apply e|]. eapply ihB. all: auto.
         -- simpl. eapply ihb. all: auto.
       * eapply well_subst_Up'; try assumption.
         constructor; auto.
-        ** exists s1. apply ihB; auto.
+        ** exists s1. split; [apply e|]. apply ihB; auto.
         ** apply ihb; auto.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
@@ -435,7 +438,7 @@ Proof.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros IHΔ ci_npar eqpctx predctx wfp cup Hpctx Hpret
-      IHpret IHpredctx isallowed.
+      IHpret IHpredctx isallowed sortrel.
     intros IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
@@ -535,9 +538,9 @@ Proof.
     * now eapply fix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
+      apply infer_typing_sort_impl with id a => //; intros [_ IH].
       now apply IH.
-    * solve_all. destruct b as [? b0].
+    * solve_all. cbn. destruct b as [? b0].
       len. rewrite /types in b0. len in b0.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
@@ -556,9 +559,9 @@ Proof.
     * now eapply cofix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
+      apply infer_typing_sort_impl with id a => //; intros [_ IH].
       now apply IH.
-    * solve_all. destruct b as [? b0].
+    * solve_all. cbn. destruct b as [? b0].
       len. rewrite /types in b0. len in b0.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.

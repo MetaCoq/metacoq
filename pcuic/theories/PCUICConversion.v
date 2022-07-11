@@ -172,7 +172,7 @@ Section CumulSpecIsCumulAlgo.
         + intuition.
         + try_with_nil. intuition.
       * try_with_nil.
-      * unfold tCaseBrsProp in X0. eapply All2_All_mix_left in X0. 2: tea.
+      * unfold eq_branches, eq_branch in e0. unfold tCaseBrsProp in X0. eapply All2_All_mix_left in X0. 2: tea.
         eapply All2_impl. 1: eassumption. cbn. intuition.
         try_with_nil.
     - apply cumul_mkApps; eauto. eapply cumul_Fix. unfold tFixProp in *.
@@ -1990,7 +1990,7 @@ Section ConvRedConv.
         eapply OnOne2_app. constructor; auto. cbn. split; auto.
         eapply red1_eq_context_upto_names; tea.
         rewrite /inst_case_branch_context /=.
-        now eapply eq_context_upto_names_gen, eq_context_gen_inst_case_context. }
+        now eapply eq_context_upto_names_upto_names_gen, eq_context_gen_inst_case_context. }
       rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
 
@@ -2012,7 +2012,7 @@ Section ConvRedConv.
         now rewrite shiftnP_add. }
       rewrite !test_context_k_closed_on_free_vars_ctx in cl *.
       eapply eq_context_upto_names_on_free_vars; tea.
-      eapply eq_context_upto_names_gen.
+      eapply eq_context_upto_names_upto_names_gen.
       now symmetry.
     - now move: op => /= /andP[] => ->.
   Qed.
@@ -2037,7 +2037,7 @@ Section ConvRedConv.
           now eapply eq_context_gen_inst_case_context. }
         eapply ws_cumul_pb_is_closed_context in cv.
         eapply eq_context_upto_names_on_free_vars; tea.
-        eapply eq_context_upto_names_gen.
+        eapply eq_context_upto_names_upto_names_gen.
         now eapply eq_context_gen_inst_case_context. }
     induction h.
     - apply ws_cumul_pb_compare; tas.
@@ -2081,10 +2081,7 @@ Section ConvRedConv.
     (if b then tFix else tCoFix) mfix idx.
 
    Lemma eq_term_fix_or_cofix b mfix idx mfix' :
-     All2 (fun x y : def term =>
-       ((eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (dtype x) (dtype y)
-        × eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (dbody x) (dbody y)) × rarg x = rarg y) *
-      eq_binder_annot (dname x) (dname y)) mfix mfix' ->
+    eq_mfix (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ)) mfix mfix' ->
     eq_term Σ Σ (fix_or_cofix b mfix idx) (fix_or_cofix b mfix' idx).
   Proof using Type.
     destruct b; constructor; auto.
@@ -3134,7 +3131,7 @@ Proof.
     * cbn; constructor. 
       + apply IHΔ => //.
       + destruct d as [na [b|] ty]; constructor; cbn in *; auto; try congruence.
-        destruct l as [s Hs].
+        destruct l as (s & e & Hs).
         constructor. 1:eauto with fvs.
         { now eapply subject_closed in Hs; rewrite is_open_term_closed in Hs. }
         { erewrite on_free_vars_subst_instance.
@@ -3144,14 +3141,14 @@ Proof.
     * cbn; constructor. 
       + apply IHΔ => //.
       + destruct d as [na [b'|] ty]; constructor; cbn in *; auto; try congruence; noconf H.
-        { destruct l as [s Hs].
+        { destruct l as (s & e & Hs).
           constructor. 1:eauto with fvs.
           { now eapply subject_closed in l0; rewrite is_open_term_closed in l0. }
           { erewrite on_free_vars_subst_instance.
             eapply subject_closed in l0; rewrite is_open_term_closed in l0.
             now rewrite on_free_vars_subst_instance in l0. }
           apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto. }
-        { destruct l as [s Hs].
+        { destruct l as (s & e & Hs).
           constructor. 1:eauto with fvs.
           { now eapply subject_closed in Hs; rewrite is_open_term_closed in Hs. }
           { erewrite on_free_vars_subst_instance.
@@ -3736,7 +3733,7 @@ Proof.
         eapply Heqxy.2; eauto. 
       + eapply Hpret; eauto. 
         ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-           unfold inst_case_predicate_context. apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto. 
+           unfold inst_case_predicate_context. apply PCUICRenameTerm.on_free_vars_ctx_inst_case_context_app ; eauto. 
         ++ rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn.
           rewrite <- app_length in Hreturn. eassumption.   
         ++ rewrite shiftnP_add in Hreturn'. rewrite <- (All2_fold_length Hpcon) in Hreturn'.
@@ -3747,7 +3744,7 @@ Proof.
       apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
       split; try apply Heqxy.1. clear Hbrsbrs'. rewrite test_context_k_closed_on_free_vars_ctx in Hx. toProp Hx. 
       rewrite test_context_k_closed_on_free_vars_ctx in Hy. toProp Hy. eapply Heqxy.2; eauto. 
-      + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; intuition.
+      + apply PCUICRenameTerm.on_free_vars_ctx_inst_case_context_app ; eauto; intuition.
       + rewrite shiftnP_add in Hx. erewrite <- inst_case_branch_context_length in Hx.
         rewrite <- app_length in Hx. intuition.    
       + rewrite shiftnP_add in Hy. rewrite <- (All2_fold_length Heqxy.1.1) in Hy. erewrite <- inst_case_branch_context_length in Hy.

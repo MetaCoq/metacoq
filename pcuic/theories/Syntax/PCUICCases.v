@@ -166,6 +166,24 @@ Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
   (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
 Proof. reflexivity. Qed.
 
+Definition on_predicate P Pu Pctx Γ p :=
+  [× All (P Γ) p.(pparams), Pu p.(puinst), Pctx p.(pcontext) & P (Γ ,,, inst_case_predicate_context p) p.(preturn)].
+
+Definition on_predicate2 P Pu Pctx Γ (p p': predicate term) :=
+  [× All2 (P Γ) p.(pparams) p'.(pparams), Pu p.(puinst) p'.(puinst), Pctx p.(pcontext) p'.(pcontext) & P (Γ ,,, inst_case_predicate_context p) p.(preturn) p'.(preturn)].
+
+Definition on_branch P Pctx Γ p (br: branch term) :=
+  Pctx br.(bcontext) × P (Γ ,,, inst_case_branch_context p br) br.(bbody).
+
+Definition on_branch2 P Pctx Γ p (br br': branch term) :=
+  Pctx br.(bcontext) br'.(bcontext) × P (Γ ,,, inst_case_branch_context p br) br.(bbody) br'.(bbody).
+
+Definition on_branches P Pctx Γ p brs :=
+  All (on_branch P Pctx Γ p) brs.
+
+Definition on_branches2 P Pctx Γ p brs brs' :=
+  All2 (on_branch2 P Pctx Γ p) brs brs'.
+
 (* Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
   mapi (case_branch_type_gen ind mdecl idecl params puinst ptm) idecl.(ind_ctors).
 

@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst 
+  PCUICLiftSubst PCUICUnivSubst PCUICRelevance
   PCUICTyping PCUICEquality PCUICOnFreeVars
   PCUICSigmaCalculus PCUICRenameDef.
 
@@ -59,6 +59,11 @@ Definition closed_subst (Γ : context) σ (Δ : context) :=
   is_closed_context Δ × 
   (forall x decl, nth_error Γ x = Some decl -> is_open_term Δ (σ x)) × 
   usubst Γ σ Δ.
+
+(* Substitution accounting relevance marks for reduction / cumulativity *)
+Definition valid_subst Σ Γ σ Δ :=
+  closed_subst Γ σ Δ ×
+  (forall x decl, nth_error Γ x = Some decl -> isTermRel Σ (marks_of_context Δ) (σ x) decl.(decl_name).(binder_relevance)).
 
 (* Well-typedness of a substitution *)
 

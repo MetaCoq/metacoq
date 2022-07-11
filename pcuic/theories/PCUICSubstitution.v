@@ -161,8 +161,8 @@ Proof.
   intros Hq Hf.
   induction Hq in |- *; try econstructor; eauto;
     simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  - simpl. eapply (Hf _ _ Sort). eauto.
-  - simpl. eapply (Hf _ _ Sort). eauto.
+  - simpl. eapply (Hf _ _ (SortRel _)). eauto.
+  - simpl. eapply (Hf _ _ (SortRel _)). eauto.
   - simpl. eapply (Hf _ _ (Typ t)). eauto.
 Qed.
 
@@ -347,7 +347,7 @@ Proof.
   induction 1; auto; unfold subst_context, snoc; rewrite fold_context_k_snoc0;
     auto; unfold snoc;
     f_equal; auto; unfold map_decl; simpl.
-  - destruct t0 as [s Hs]. unfold vass. simpl. f_equal.
+  - destruct t0 as (s & e & Hs). unfold vass. simpl. f_equal.
     eapply typed_subst; eauto. lia.
   - unfold vdef.
     f_equal.
@@ -362,19 +362,15 @@ Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   map_constant_body (subst_instance u) decl.
 Proof.
   intros.
-  eapply declared_decl_closed in H0; eauto.
+  eapply declared_decl_closed in H0 as (Hty & Hbo); eauto.
   unfold map_constant_body.
-  do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
-  - rewrite -> andb_and in H0. intuition auto.
-    rewrite <- (closedn_subst_instance 0 body u) in H1.
-    rewrite <- (closedn_subst_instance 0 ty u) in H2.
-    f_equal.
-    + apply subst_closedn; eauto using closed_upwards with arith wf.
-    + f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
-  - red in H0. f_equal.
-    intuition. simpl in *.
-    rewrite <- (closedn_subst_instance 0 ty u) in H0.
-    rewrite andb_true_r in H0.
+  simpl in *. f_equal.
+  - hnf in Hty. toProp Hty. destruct Hty as (Hty & _).
+    rewrite <- (closedn_subst_instance 0 _ u) in Hty.
+    apply subst_closedn; eauto using closed_upwards with arith wf.
+  - destruct cst_body => //=. f_equal.
+    hnf in Hbo. toProp Hbo. destruct Hbo as (Hbo & _).
+    rewrite <- (closedn_subst_instance 0 _ u) in Hbo.
     eapply subst_closedn; eauto using closed_upwards with arith wf.
 Qed.
 
@@ -584,18 +580,17 @@ Proof.
   rewrite rev_map_app.
   simpl. apply Alli_app in Ha as [Hl Hx].
   inv Hx. clear X0.
-  apply onArity in X as [s Hs].
   specialize (IHl Hl).
   econstructor; eauto.
   fold (arities_context l) in *.
+  apply infer_typing_sort_impl with id (onArity X) => //; intros Hs.
   unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
   1: now rewrite app_context_nil_l.
-  simpl in X.
   eapply (env_prop_typing typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
   simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
-  rewrite -> Hs, app_context_nil_l in X. simpl. exists s.
-  apply X.
+  rewrite -> Hs, app_context_nil_l in X0.
+  apply X0.
 Qed.
 
 Lemma wf_arities_context {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl} :
@@ -610,7 +605,7 @@ Lemma on_constructor_closed_arities {cf:checker_flags} {Σ : global_env} {wfΣ :
   on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   closedn #|arities_context (ind_bodies mdecl)| cdecl.(cstr_type).
 Proof.
-  intros [? ? [s Hs] _ _ _ _].
+  intros [? ? (s & e & Hs) _ _ _ _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [id cty car].
   apply subject_closed in Hs; eauto.
@@ -622,7 +617,7 @@ Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} 
                     (subst_instance u cdecl.(cstr_type))
   in closed cty.
 Proof.
-  intros [? ? [s Hs] _ _ _ _].
+  intros [? ? (s & e & Hs) _ _ _ _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [id cty car].
   apply subject_closed in Hs; eauto.
@@ -1343,10 +1338,16 @@ Qed.
 Section SubstitutionLemmas.
   Context {cf} {Σ} {wfΣ : wf Σ}.
 
+  Lemma isTypeRelOpt_closedPT Γ T relopt : isTypeRelOpt Σ Γ T relopt -> on_free_vars (closedP #|Γ| xpredT) T.
+  Proof using wfΣ.
+    move/isTypeRelOpt_closed/(closedn_on_free_vars (P:=xpred0)).
+    now rewrite shiftnPF_closedPT.
+  Qed.
+
+
   Lemma isType_closedPT Γ T : isType Σ Γ T -> on_free_vars (closedP #|Γ| xpredT) T.
   Proof using wfΣ.
-    move/isType_closed/(closedn_on_free_vars (P:=xpred0)).
-    now rewrite shiftnPF_closedPT.
+    apply isTypeRelOpt_closedPT.
   Qed.
 
   Lemma wt_cumul_pb_equalityP {le} {Γ : context} {T  U} : wt_cumul_pb le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
@@ -1813,8 +1814,17 @@ Corollary isType_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ T} :
   isType Σ (Γ ,,, Γ' ,,, Δ) T ->
   isType Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T).
 Proof.
-  intros Hs [s' Ht].
-  eapply substitution in Ht; tea. now eexists.
+  intros Hs (s' & e & Hs').
+  eapply substitution in Hs'; tea. now eexists.
+Qed.
+
+Corollary isTypeRel_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s rel Δ T} :
+  subslet Σ Γ s Γ' ->
+  isTypeRel Σ (Γ ,,, Γ' ,,, Δ) T rel ->
+  isTypeRel Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T) rel.
+Proof.
+  intros Hs (s' & e & Hs').
+  eapply substitution in Hs'; tea. now eexists.
 Qed.
 
 Corollary substitution_wf_local {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :

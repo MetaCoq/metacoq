@@ -41,35 +41,6 @@ Proof.
   eapply All2_app => //. reflexivity.
 Qed.
 
-Section OnInductives.
-  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-  
-  Lemma on_minductive_wf_params_weaken {ind mdecl Γ} {u} :
-    declared_minductive Σ.1 ind mdecl ->
-    consistent_instance_ext Σ (ind_universes mdecl) u ->
-    wf_local Σ Γ ->
-    wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
-  Proof.
-    intros.
-    eapply weaken_wf_local; tea.
-    eapply PCUICArities.on_minductive_wf_params; tea.
-  Qed.
-  
-  Context {mdecl ind idecl}
-    (decli : declared_inductive Σ ind mdecl idecl).
-  
-  Lemma on_minductive_wf_params_indices_inst_weaken {Γ} (u : Instance.t) :
-    consistent_instance_ext Σ (ind_universes mdecl) u ->
-    wf_local Σ Γ ->
-    wf_local Σ (Γ ,,, (ind_params mdecl ,,, ind_indices idecl)@[u]).
-  Proof.
-    intros. eapply weaken_wf_local; tea.
-    eapply PCUICInductives.on_minductive_wf_params_indices_inst; tea.
-  Qed.
-
-
-End OnInductives.
-
 Local Existing Instance extraction_checker_flags.
 (* Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 #[global]
@@ -149,9 +120,9 @@ Section fix_sigma.
   - intros. destruct H' as [].
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.  
     rewrite <- (abstract_env_ext_irr _ H2) in wf; eauto.  
-    eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
+    eapply inversion_Prod in X0 as (? & ? & ? & ? & ? & ?) ; auto.
     eapply cored_red in H0 as [].
-    econstructor. econstructor. econstructor. eauto.
+    econstructor. econstructor. tea. econstructor. eauto.
     2:reflexivity. econstructor; pcuic. 
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.  
     eapply subject_reduction; eauto.
@@ -191,7 +162,7 @@ Section fix_sigma.
       pose proof (abstract_env_ext_wf _ wfΣ') as [wf].
       sq.  
       eapply subject_reduction_closed in HT; tea.
-      eapply inversion_Prod in HT as [? [? [? []]]].
+      eapply inversion_Prod in HT as (? & ? & ? & ? & ? & ?).
       now eapply typing_wf_local in t1. pcuic. pcuic.
     - clear rprod is_arity rsort a0.
       intros Σ' wfΣ'; specialize (H Σ' wfΣ').
@@ -200,7 +171,7 @@ Section fix_sigma.
       pose proof (abstract_env_ext_wf _ wfΣ') as [wf].
       sq.
       eapply subject_reduction_closed in HT; tea.
-      eapply inversion_Prod in HT as [? [? [? []]]].
+      eapply inversion_Prod in HT as (? & ? & ? & ? & ? & ?).
       now eexists. all:pcuic.
     - cbn. clear rsort is_arity rprod.
       intros Σ' wfΣ'; specialize (H Σ' wfΣ').
@@ -336,7 +307,7 @@ Proof.
       { apply nisa. intros. rewrite (abstract_env_ext_irr _ H wfΣ). 
         eapply invert_cumul_arity_r; tea. }
       { destruct s as [Hs].
-        unshelve epose proof (H := unique_sorting_equality_propositional _ _ wf Hs Hu' p) => //. reflexivity. reflexivity. congruence. }
+        unshelve epose proof (H := unique_sorting_equality_propositional _ wf Hs Hu' p) => //. reflexivity. congruence. }
   Qed.
 
 Equations? is_erasable {X_type X} (Γ : context) (t : PCUICAst.term) 
@@ -478,12 +449,12 @@ Section Erase.
     - now eapply inversion_Evar in Ht.
     - discriminate.
     - discriminate.
-    - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
     - simpl in *.
-      eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+      eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_App in Ht as (? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
@@ -671,7 +642,7 @@ Proof.
     split => //. cbn. rewrite eq. now constructor.
     split => //. cbn. rewrite eq.
     destruct H2.
-    eapply Is_type_lambda in X2; tea. 2:pcuic. destruct X2.
+    eapply Is_type_lambda in X2; tea. 2: apply wf. 2:pcuic. destruct X2.
     now constructor.
 Qed.
 
@@ -1024,9 +995,9 @@ Proof.
     | [ H : KernameSet.In _ (KernameSet.union _ _) |- _ ] =>
       apply KernameSet.union_spec in hin as [?|?]
     end.
-  - apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_Lambda in wt as (? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
@@ -1103,8 +1074,8 @@ Proof.
     end.
   - now apply inversion_Evar in wt.
   - constructor.
-    now apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+    now apply inversion_Lambda in wt as (? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
     constructor; eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
     now constructor; eauto.
@@ -1224,9 +1195,9 @@ Proof.
     destruct (cst_body cb) eqn:cbe;
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
-    eapply on_declared_constant in H; auto.
+    eapply on_declared_constant in H as (onty & onbo); auto.
     2:{ inv wfΣ. now inv X. }
-    red in H. rewrite cbe in H. simpl in H.
+    rewrite cbe in onbo. simpl in onbo.
     eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl.
@@ -1356,7 +1327,7 @@ Lemma erase_constant_body_correct X_type X cb
 Proof.
   red. destruct cb as [name [bod|] univs]; simpl; eauto. intros.
   set (ecbo := erase_constant_body_obligation_1 X_type X _ _ _ _). clearbody ecbo.
-  cbn in *. specialize_Σ H. sq.  
+  cbn in *. specialize_Σ H. sq. destruct onc as (_ & onbo); simpl in onbo.
   eapply (erases_weakeninv_env (Σ := Σ) (Σ' := (Σ', univs))); simpl; eauto.
   now eapply erases_erase.
 Qed.
@@ -1576,7 +1547,7 @@ Proof.
   epose proof (abstract_env_exists X) as [[Σ wfΣX]].
   now rewrite (abstract_make_wf_env_ext_correct X univs wfext Σ _ wfΣX wfΣex).
   epose proof (abstract_env_exists X) as [[Σ wfΣX]].
-  eapply erases_correct; tea.
+  eapply erases_correct; tea. apply wfΣ.
   rewrite (abstract_make_wf_env_ext_correct X univs wfext _ _ wfΣX wfΣex); eauto.
 Qed.
 
@@ -1886,7 +1857,7 @@ Proof.
   eapply expanded_erases. apply wf.
   eapply erases_erase; eauto. assumption.
   pose proof (wt _ wfΣ). destruct H as [T ht].
-  eapply erases_global_erases_deps; tea.
+  eapply erases_global_erases_deps; tea. apply wf.
   eapply erases_erase; eauto.
 Qed.
 

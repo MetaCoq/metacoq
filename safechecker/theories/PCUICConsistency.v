@@ -148,8 +148,9 @@ Proof.
     - hnf.
       constructor.
       + constructor.
-        * econstructor; cbn; auto.
+        * econstructor; cbnr; auto.
           -- exists (Universe.super Prop_univ).
+             split; [cbnr|].
              constructor; auto.
              constructor.
           -- instantiate (1 := []).
@@ -171,7 +172,7 @@ Proof.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
   { apply validity in cons as typ_prod; auto.
-    destruct typ_prod.
+    destruct typ_prod as (s & e & Hs).
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
     - hnf.

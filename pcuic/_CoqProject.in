@@ -31,7 +31,7 @@ theories/Conversion/PCUICWeakeningEnvConv.v
 theories/Conversion/PCUICUnivSubstitutionConv.v
 theories/Conversion/PCUICWeakeningConv.v
 theories/Conversion/PCUICClosedConv.v
-theories/Conversion/PCUICOnFreeVarsConv.v
+theories/Conversion/PCUICRenameTerm.v
 
 theories/Typing/PCUICNamelessTyp.v
 theories/Typing/PCUICRenameTyp.v
@@ -108,6 +108,9 @@ theories/Bidirectional/BDUnique.v
 theories/Bidirectional/BDStrengthening.v
 
 theories/PCUICWeakeningEnv.v
+theories/PCUICRelevance.v
+theories/PCUICRelevanceTerm.v
+theories/PCUICRelevanceTyp.v
 
 # theories/All.v
 

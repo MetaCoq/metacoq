@@ -168,15 +168,16 @@ Proof.
     try solve [econstructor; eauto].
 
   - induction X; constructor; auto.
-    all: now apply infer_typing_sort_impl with id tu.
+    all: now apply infer_typing_sort_impl with id tu => //.
 
   - pose proof heq_nth_error.
     eapply (All2_fold_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
     unshelve eapply nth_error_All_local_env in X; tea. 2:eapply nth_error_Some_length in heq_nth_error; lia.
     rewrite heq_nth_error /= in X.
     destruct decl as [na [b|] ty] => /=.
-    + red in X. cbn in X. destruct X as [Hb Hty].
-      destruct Hty as [s Hty]. specialize (Hty _ Hrel).
+    + red in X. cbn in X.
+      destruct X as [Hb (s & e & Hty)].
+      specialize (Hty _ Hrel).
       forward Hty by now eapply All_local_env_skipn.
       eapply type_Cumul with _ s.
       * econstructor. auto. eauto.
@@ -199,7 +200,7 @@ Proof.
         eapply (weakening_cumulSpec0 (Γ := Δ) (Γ'' := Δ') (M := exist t H) (N := exist ty Hty)); cbn. lia.
         unshelve eapply (@cumulAlgo_cumulSpec _ _ Cumul). apply into_ws_cumul_pb; eauto.
         intuition. 
-    + cbn in X. destruct X as [s ondecl].
+    + cbn in X. destruct X as (s & e & ondecl).
       specialize (ondecl _ Hrel).
       depelim Hconv.
       forward ondecl by now eapply All_local_env_skipn.
@@ -231,7 +232,7 @@ Proof.
         intuition. 
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
-    constructor; auto. red. eexists; eapply forall_Γ'; auto.
+    constructor; auto. eexists; split; [|eapply forall_Γ']; auto.
   - econstructor; pcuic.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
@@ -262,7 +263,7 @@ Proof.
       + apply wf_local_closed_context; eauto.
     * eapply (All_impl X0).
       intros d Ht.
-      apply infer_typing_sort_impl with id Ht; now intros [_ IH].
+      apply infer_typing_sort_impl with id Ht => //; now intros [_ IH].
     * eapply (All_impl X1).
       intros d [Hs IH].
       eapply IH.
@@ -270,7 +271,7 @@ Proof.
       eapply (All_mfix_wf); auto.
       apply (All_impl X0); simpl.
       intros d' Ht.
-      apply infer_typing_sort_impl with id Ht; now intros [_ IH'].
+      apply infer_typing_sort_impl with id Ht => //; now intros [_ IH'].
   - econstructor.
     all:pcuic.
     * eapply cofix_guard_context_cumulativity; eauto.
@@ -279,7 +280,7 @@ Proof.
       + apply wf_local_closed_context; eauto.
     * eapply (All_impl X0).
       intros d Ht.
-      apply infer_typing_sort_impl with id Ht; now intros [_ IH].
+      apply infer_typing_sort_impl with id Ht => //; now intros [_ IH].
     * eapply (All_impl X1).
       intros d [Hs IH].
       eapply IH.
@@ -287,7 +288,7 @@ Proof.
       eapply (All_mfix_wf); auto.
       apply (All_impl X0); simpl.
       intros d' Ht.
-      apply infer_typing_sort_impl with id Ht; now intros [_ IH'].
+      apply infer_typing_sort_impl with id Ht => //; now intros [_ IH'].
     
   - econstructor; eauto. pose proof (wf_local_closed_context wfΓ).
     pose proof (type_closed (forall_Γ' _ X5 X6)). eapply (@closedn_on_free_vars xpred0) in H0. 

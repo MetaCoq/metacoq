@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms. 
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed 
+     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed PCUICRelevanceTerm
      PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnv
      PCUICEquality.
 
@@ -19,7 +19,8 @@ Proof.
   induction Δ; simpl; auto.
   destruct a as [na [b|] ty];
   intros wfΓ wfctx; constructor; intuition auto.
-   exists s; auto.
+  split; cbn; auto.
+  exists s; auto.
 Qed.
 
 Lemma sorts_local_ctx_All_local_env {cf} P Σ Γ Δ s : 
@@ -31,7 +32,7 @@ Proof.
   destruct a as [na [b|] ty];
   intros wfΓ wfctx; constructor; intuition eauto.
   destruct s => //. destruct wfctx; eauto.
-  destruct s => //. destruct wfctx. exists t; auto.
+  destruct s => //. destruct wfctx. split; cbn; auto. exists t; auto.
 Qed.
 
 Lemma type_local_ctx_Pclosed Σ Γ Δ s :
@@ -42,13 +43,13 @@ Proof.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed in b0. simpl.
+    unfold closed_decl. destruct b as ((b0&_)&_). unfold Pclosed in b0. simpl.
     rewrite app_context_length in b0. now rewrite Nat.add_comm.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed in b. simpl.
-    rewrite app_context_length in b. rewrite Nat.add_comm.
-    now rewrite andb_true_r in b.
+    unfold closed_decl. unfold Pclosed in b0. simpl.
+    rewrite app_context_length in b0. rewrite Nat.add_comm.
+    now rewrite andb_true_r in b0.
 Qed.
 
 Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :
@@ -59,9 +60,9 @@ Proof.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. unfold Pclosed in b0. simpl.
+    unfold closed_decl. destruct b as ((b0&_)&_). unfold Pclosed in b0. simpl.
     rewrite app_context_length in b0. now rewrite Nat.add_comm.
-  - destruct s as [|u us]; auto. destruct X as [X b].
+  - destruct s as [|u us]; auto. destruct X as [X (_&b)].
     apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
     unfold closed_decl. unfold Pclosed in b. simpl.
@@ -78,17 +79,23 @@ Proof.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
     unfold closed_decl. unfold Pclosed in l. simpl. red in l.
-    destruct l as [s H].
+    destruct l as (_ & [s H]).
     now rewrite andb_true_r in H.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
+    destruct l as ((?&_)&_).
     now simpl.
 Qed.
 
 Lemma weaken_env_prop_closed {cf} : 
   weaken_env_prop cumulSpec0 (lift_typing typing) (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T)).
-Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
+Proof.
+  intros Σ **.
+  destruct T => //.
+  apply on_triple_impl_id with X2 => // _T.
+  eauto with extends.
+Qed.
 
 
 Lemma closedn_ctx_alpha {k ctx ctx'} : 
@@ -103,11 +110,10 @@ Qed.
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
   All_local_env 
-    (fun (Γ : context) (b : term) (t : typ_or_sort) =>
-      closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true) ctx ->
+    (fun (Γ : context) => lift_wf_term (closedn #|Γ|)) ctx ->
     closedn_ctx 0 ctx.
 Proof.
-  induction 1; auto; rewrite closedn_ctx_cons IHX /=; now move/andP: t0 => [].
+  induction 1; auto; rewrite closedn_ctx_cons IHX /=; apply andb_and; move: t0 => [] //=.
 Qed.
 
 Lemma declared_minductive_closed_inds {cf} {Σ ind mdecl u} {wfΣ : wf Σ} :

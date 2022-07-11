@@ -42,6 +42,27 @@ Derive NoConfusion for predicate.
 Arguments predicate : clear implicits.
 Arguments mk_predicate {_}.
 
+Section test_predicate.
+  Context {term: Type}.
+
+  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
+    (pred : predicate term) :=
+    instp pred.(puinst) && forallb p pred.(pparams) && 
+    test_context p pred.(pcontext) && p pred.(preturn).
+
+  Definition test_predicate_k (instp : Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
+    test_context_k p #|pred.(pparams)| pred.(pcontext) &&
+    p (#|pred.(pcontext)| + k) pred.(preturn).
+
+  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
+    test_context (p #|pred.(puinst)|) pred.(pcontext) &&
+    p k pred.(preturn).
+End test_predicate.
+
 Section map_predicate.
   Context {term term' : Type}.
   Context (uf : Instance.t -> Instance.t).
@@ -100,23 +121,6 @@ Section map_predicate_k.
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
   Proof using Type. reflexivity. Qed.
-  
-  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
-    (pred : predicate term) :=
-    instp pred.(puinst) && forallb p pred.(pparams) && 
-    test_context p pred.(pcontext) && p pred.(preturn).
-
-  Definition test_predicate_k (instp : Instance.t -> bool) 
-    (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
-    test_context_k p #|pred.(pparams)| pred.(pcontext) &&
-    p (#|pred.(pcontext)| + k) pred.(preturn).
-
-  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
-    (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
-    test_context (p #|pred.(puinst)|) pred.(pcontext) &&
-    p k pred.(preturn).
 
 End map_predicate_k.
 
@@ -540,6 +544,8 @@ Module PCUICEnvironment := Environment PCUICTerm.
 Export PCUICEnvironment.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
 
+Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
+Include PCUICLookup.
   
 (** Decompose an arity into a context and a sort *)
 
@@ -560,10 +566,57 @@ Definition inds ind u (l : list one_inductive_body) :=
       end
   in aux (List.length l).
 
+Definition mark_context := list relevance.
+Definition marks_of_context (Γ: context) := List.map (binder_relevance ∘ decl_name) Γ.
+
+Inductive isTermRel (Σ : global_env) (Γ : mark_context) : term -> relevance -> Type :=
+  | rel_Rel n rel :
+      nth_error Γ n = Some rel -> isTermRel Σ Γ (tRel n) rel
+
+  | rel_Lambda na A t rel :
+      isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLambda na A t) rel
+  
+  | rel_LetIn na b B t rel :
+      isTermRel Σ (Γ ,, na.(binder_relevance)) t rel -> isTermRel Σ Γ (tLetIn na b B t) rel
+  
+  | rel_App t u rel :
+      isTermRel Σ Γ t rel -> isTermRel Σ Γ (tApp t u) rel
+  
+  | rel_Const kn u decl :
+      declared_constant Σ kn decl -> isTermRel Σ Γ (tConst kn u) decl.(cst_relevance)
+  
+  | rel_Construct ind i u mdecl idecl cdecl :
+      declared_constructor Σ (ind, i) mdecl idecl cdecl -> isTermRel Σ Γ (tConstruct ind i u) idecl.(ind_relevance)
+  
+  | rel_Case ci p c brs :
+      isTermRel Σ Γ (tCase ci p c brs) ci.(ci_relevance)
+  
+  | rel_Proj p u mdecl idecl cdecl pdecl :
+      declared_projection Σ p mdecl idecl cdecl pdecl -> isTermRel Σ Γ (tProj p u) pdecl.(proj_relevance)
+  
+  | rel_Fix mfix n def :
+      nth_error mfix n = Some def -> isTermRel Σ Γ (tFix mfix n) def.(dname).(binder_relevance)
+  
+  | rel_CoFix mfix n def :
+      nth_error mfix n = Some def -> isTermRel Σ Γ (tCoFix mfix n) def.(dname).(binder_relevance)
+  
+  | rel_Sort s :
+      isTermRel Σ Γ (tSort s) Relevant
+  
+  | rel_Prod na A B :
+      isTermRel Σ Γ (tProd na A B) Relevant
+  
+  | rel_Ind ind u :
+      isTermRel Σ Γ (tInd ind u) Relevant. 
+
+Derive Signature for isTermRel.
+
+
 Module PCUICTermUtils <: TermUtils PCUICTerm PCUICEnvironment.
 
 Definition destArity := destArity.
 Definition inds := inds.
+Definition isTermRel := isTermRel.
 
 End PCUICTermUtils.
 
@@ -1303,9 +1356,6 @@ Proof.
       + move/(ondeclP (HP _)): Hd. now len.
       + constructor.
 Qed.
-
-Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
-Include PCUICLookup.
 
 Derive NoConfusion for global_decl.
 

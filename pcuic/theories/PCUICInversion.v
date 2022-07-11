@@ -144,6 +144,7 @@ Section Inversion.
     forall {Γ na A B T},
       Σ ;;; Γ |- tProd na A B : T ->
       ∑ s1 s2,
+        isSortRel s1 na.(binder_relevance) ×
         Σ ;;; Γ |- A : tSort s1 ×
         Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
@@ -166,6 +167,7 @@ Section Inversion.
     forall {Γ na A t T},
       Σ ;;; Γ |- tLambda na A t : T ->
       ∑ s B,
+        isSortRel s na.(binder_relevance) ×
         Σ ;;; Γ |- A : tSort s ×
         Σ ;;; Γ ,, vass na A |- t : B ×
         Σ ;;; Γ ⊢ tProd na A B ≤ T.
@@ -176,8 +178,9 @@ Section Inversion.
   Lemma inversion_LetIn :
     forall {Γ na b B t T},
       Σ ;;; Γ |- tLetIn na b B t : T ->
-      ∑ s1 A,
-        Σ ;;; Γ |- B : tSort s1 ×
+      ∑ s A,
+        isSortRel s na.(binder_relevance) ×
+        Σ ;;; Γ |- B : tSort s ×
         Σ ;;; Γ |- b : B ×
         Σ ;;; Γ ,, vdef na b B |- t : A ×
         Σ ;;; Γ ⊢ tLetIn na b B A ≤ T.
@@ -255,7 +258,8 @@ Section Inversion.
        (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
        (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
        (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
-       (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+       (sortrel : isSortRel ps ci.(ci_relevance))
+       (ind_inst : ctx_inst (typing Σ) Γ (p.(pparams) ++ indices)
                             (List.rev (subst_instance p.(puinst)
                                                       (ind_params mdecl ,,, ind_indices idecl))))
        (scrut_ty : Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices))
@@ -309,9 +313,8 @@ Section Inversion.
         let types := fix_context mfix in
         fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) types Γ) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ ⊢ dtype decl ≤ T.
   Proof using wfΣ.
@@ -325,10 +328,8 @@ Section Inversion.
         cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
-        ) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) types Γ) mfix ×
         wf_cofixpoint Σ mfix ×
         Σ ;;; Γ ⊢ decl.(dtype) ≤ T.
   Proof using wfΣ.
@@ -362,16 +363,16 @@ Section Inversion.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_LetIn in h as hh.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
-      exists A'. split ; eauto.
+      destruct hh as (s1 & A' & ? & ? & ? & ? & ?).
+      exists A'. split; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
       assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_Lambda in h as hh.
-      pose proof hh as [s1 [B' [? [? ?]]]].
-      exists B'. split ; eauto.
+      pose proof hh as (s1 & B' & ? & ? & ? & ?).
+      exists B'. split; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
       assumption.

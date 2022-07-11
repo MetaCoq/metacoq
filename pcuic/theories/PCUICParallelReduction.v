@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICTactics PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
-     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
+     PCUICRenameDef PCUICRenameTerm PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
      
 Require Import ssreflect ssrbool.
@@ -775,7 +775,7 @@ Section ParallelReduction.
     constructor.
     eapply t0.
     apply on_contexts_app => //.
-    destruct t1.
+    destruct t1 as [p p0].
     constructor; [eapply p|eapply p0];
     apply on_contexts_app => //.
   Qed.
@@ -793,7 +793,7 @@ Section ParallelReduction.
     constructor.
     eapply t0.
     apply on_contexts_app => //.
-    destruct t1.
+    destruct t1 as [p p0].
     constructor; [eapply p|eapply p0];
     apply on_contexts_app => //.
   Qed.

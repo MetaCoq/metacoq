@@ -1941,7 +1941,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     destruct hcase.
@@ -1971,7 +1971,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
       Unshelve. all: eauto. 
   Qed.
 
@@ -2653,7 +2653,7 @@ Qed.
     intros typ.
     destruct (hΣ _ wfΣ).
     apply PCUICValidity.inversion_mkApps in typ as (?&[typ_prod typ_args]).
-    apply inversion_Prod in typ_prod as (?&?&?&?&?); [|easy].
+    apply inversion_Prod in typ_prod as (?&?&?&?&?&?); [|easy].
     eapply PCUICSpine.typing_spine_strengthen in typ_args; eauto.
     2:{ eapply PCUICArities.isType_Sort. 2:pcuic.
         eapply wf_universe_product; now eapply typing_wf_universe. }
@@ -3065,7 +3065,7 @@ Qed.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     exists mdecl, idecl.
@@ -3088,7 +3088,7 @@ Qed.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred0).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICTyping.declared_minductive_ind_npars decli).
   Qed.
 
   Definition forallb2_proper A B (R R' : A -> B -> bool) l l':

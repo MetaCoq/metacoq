@@ -49,7 +49,7 @@ Qed.
 Section ExtendsWf.
   Context {cf : checker_flags}.
   Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
-  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+  Context {P: global_env_ext -> context -> judgment -> Type}.
 
   Let wf := on_global_env Pcmp P.
 
@@ -118,11 +118,11 @@ Proof using P Pcmp cf.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (? & ? & ? & ?). repeat split; eauto.
 Qed.
 
 Lemma weakening_env_red1 Σ Σ' Γ M N :

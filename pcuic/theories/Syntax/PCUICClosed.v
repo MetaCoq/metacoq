@@ -42,7 +42,7 @@ Proof.
   rewrite /=. rewrite Nat.add_comm. bool_congr.
 Qed.
 
-Lemma test_context_k_app p n Γ Γ' :
+Lemma test_context_k_app p n (Γ Γ' : context) :
   test_context_k p n (Γ ,,, Γ') =
   test_context_k p n Γ && test_context_k p (n + #|Γ|) Γ'.
 Proof.
@@ -638,32 +638,6 @@ Qed.
 
 #[global]
 Hint Rewrite to_extended_list_k_length : len.
-
-Lemma smash_context_subst Δ s n Γ : smash_context (subst_context s (n + #|Γ|) Δ) (subst_context s n Γ) =
-  subst_context s n (smash_context Δ Γ).
-Proof.
-  revert Δ. induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
-  - now rewrite Nat.add_0_r.
-  - rewrite -IHΓ.
-    rewrite subst_context_snoc /=. f_equal.
-    rewrite !subst_context_alt !mapi_compose.
-    apply mapi_ext=> n' x.
-    destruct x as [na' [b'|] ty']; simpl.
-    * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
-      + rewrite Nat.add_0_r distr_subst_rec. simpl. lia_f_equal.
-      + rewrite Nat.add_0_r distr_subst_rec; simpl. lia_f_equal.
-    * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
-      rewrite Nat.add_0_r distr_subst_rec /=. lia_f_equal.
-  - rewrite -IHΓ.
-    rewrite subst_context_snoc /= // /subst_decl /map_decl /=.
-    f_equal.
-    rewrite subst_context_app. simpl.
-    rewrite /app_context. f_equal.
-    + lia_f_equal.
-    + rewrite /subst_context // /fold_context_k /= /map_decl /=.
-      lia_f_equal.
-Qed.
-
 
 Lemma smash_context_app_def Γ na b ty :
   smash_context [] (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) =

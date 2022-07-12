@@ -215,6 +215,10 @@ Definition eta_global_declarations (Σ : GlobalEnvMap.t) (decls : global_declara
 Definition eta_expand_global_env (Σ : GlobalEnvMap.t) : global_env :=
   {| universes := Σ.(universes); declarations := eta_global_declarations Σ Σ.(declarations) |}.
 
+Definition eta_expand_program (p : template_program_env) : Ast.Env.program :=
+  let Σ' := eta_expand_global_env p.1 in 
+  (Σ', eta_expand p.1 [] p.2).
+  
 (*
 Inductive tree := T : list tree -> tree.
 Fixpoint tmap (f : tree -> tree) (t : tree) := match t with T l => T (map (tmap f) l) end.
@@ -411,17 +415,6 @@ Definition expanded_global_env (g : Ast.Env.global_env) :=
 
 Definition expanded_program (p : Ast.Env.program) :=
   expanded_global_env p.1 /\ expanded p.1 [] p.2.
-
-#[program] 
-Definition eta_expand_program {cf : checker_flags} (p : Ast.Env.program) 
-  (pre : ∥ wt_template_program p ∥) : Ast.Env.program :=
-  let Σg := GlobalEnvMap.make p.1 _ in
-  let Σ' := eta_expand_global_env Σg in 
-  (Σ', eta_expand Σg [] p.2).
-Next Obligation.
-  destruct pre as [[wfe _]].
-  eapply wf_fresh_globals, wfe.
-Qed.
 
 Definition isFix_app t :=
   match fst (decompose_app t) with

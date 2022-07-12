@@ -67,7 +67,7 @@ Definition check_wf (g : Ast.Env.program) : TemplateMonad unit :=
 Axiom assume_wt_template_program : forall p : Ast.Env.program, ∥ wt_template_program p ∥.
 
 Definition check_wf_eta (p : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def (eta_expand p (assume_wt_template_program p)).1.(declarations) ;; 
+  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;; 
   tmMsg "Wellformed eta-expanded global environment" ;; ret tt.
 
 (* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use: 

@@ -7,7 +7,7 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICTransform.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract EOptimizePropDiscr ERemoveParams EProgram.
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
     EAst Transform ERemoveParams.
@@ -254,23 +254,23 @@ Qed.
 
 From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
 
-Program Definition constructors_as_blocks_transformation (efl := env_flags)
-  {hastrel : has_tRel} {hastbox : has_tBox} :
+Program Definition constructors_as_blocks_transformation (efl : EEnvFlags)
+  {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) := 
   {| name := "transforming to constuctors as blocks"; 
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ; 
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
-    post p := wf_eprogram env_flags_blocks p ;
+    post p := wf_eprogram (switch_cstr_as_blocks efl) p ;
     obseq g g' v v' := v' = EConstructorsAsBlocks.transform_blocks g.1 v |}.
 
 Next Obligation.
-  move=> efl hastrel hastbox [Σ t] [] [wftp wft] /andP [etap etat]. 
+  move=> efl hasapp haspars hascstrs [Σ t] [] [wftp wft] /andP [etap etat]. 
   cbn in *. split.
   - eapply transform_wf_global; eauto.
-  - subst efl. eapply transform_wellformed; eauto.
+  - eapply transform_wellformed; eauto.
 Qed.
 Next Obligation.
-  red. move=> hastrel hastbox [Σ t] /= v [[wfe1 wfe2] wft] [ev].
+  red. move=> efl hasapp haspars hascstrs [Σ t] /= v [[wfe1 wfe2] wft] [ev].
   eexists. split; [ | eauto].
   unfold EEtaExpanded.expanded_eprogram_env_cstrs in *.
   revert wft. move => /andP // [e1 e2]. 

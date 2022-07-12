@@ -4,7 +4,7 @@ From Equations Require Import Equations.
 From MetaCoq.Template Require Import Transform bytestring config utils BasicAst.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 (* From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl. *)
-From MetaCoq.Erasure Require EAstUtils EPretty EWellformed EEnvMap EWcbvEval.
+From MetaCoq.Erasure Require EAstUtils EWellformed EEnvMap EWcbvEval.
 
 Import bytestring.
 Local Open Scope bs.

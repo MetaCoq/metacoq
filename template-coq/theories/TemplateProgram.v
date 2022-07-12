@@ -5,11 +5,7 @@ From MetaCoq.Template Require Import
         Ast           (* The term AST *)
         Typing        (* Typing judgment *)
         config        (* Typing configuration *)
-        Transform
-        WcbvEval
-        EtaExpand.
-
-Import Transform.
+        WcbvEval.
 
 Definition template_program := Ast.Env.program.
 

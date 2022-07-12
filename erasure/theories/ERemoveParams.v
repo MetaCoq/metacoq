@@ -812,15 +812,15 @@ Proof.
   - red. move=> hasapp n t args. rewrite closedn_mkApps. 
     split; intros; rtoProp; intuition auto; solve_all.
   - red. move=> hascase n ci discr brs. simpl.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> hasproj n p discr. simpl.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> t args clt cll.
     eapply closed_substl. solve_all. now rewrite Nat.add_0_r.
   - red. move=> n mfix idx. cbn.
     intros; rtoProp; intuition auto; solve_all.
   - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
 Qed.
 
 Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :

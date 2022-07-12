@@ -101,6 +101,17 @@ Module GlobalContextMap.
     rewrite lookup_constructor_spec //.
   Qed.
 
+  Definition lookup_constructor_pars_args Σ (ind : inductive) (c : nat) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
+    ret (ind_npars mdecl, cstr_nargs cdecl).
+  
+  Lemma lookup_constructor_pars_args_spec Σ kn : 
+    lookup_constructor_pars_args Σ kn = EGlobalEnv.lookup_constructor_pars_args Σ kn.
+  Proof.
+    rewrite /lookup_constructor_pars_args /EGlobalEnv.lookup_constructor_pars_args.
+    rewrite lookup_constructor_spec //.
+  Qed.
+
   Program Definition make (g : global_declarations) (Hg : EnvMap.fresh_globals g): t :=
     {| global_decls := g;
        map := EnvMap.of_global_env g |}.

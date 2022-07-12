@@ -183,7 +183,7 @@ Module EnvMap.
   Proof using Type.
     intros wf eq k. red in eq.
     move: eq.
-    induction g in e, k, wf |- *; auto.
+    induction g in e, k, wf |- *.
     - simpl. intros eq.
       unfold lookup.
       rewrite -KernameMapFact.F.not_find_in_iff.

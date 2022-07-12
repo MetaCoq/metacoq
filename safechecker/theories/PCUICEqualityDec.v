@@ -906,7 +906,7 @@ Proof.
   - apply forallb_All in wt; eapply All_mix in wt; try exact X; eapply All_All2 ; try exact wt;
     intros ? [? ?]; eauto.
   - revert s wt; move => ? /wf_universe_reflect ?; eauto.
-  - apply forallb_All in wt. apply All2_Forall2. induction u; eauto; cbn.
+  - apply forallb_All in wt. apply All2_Forall2. induction u; cbn.
     + eapply All2_nil.
     + cbn in wt. inversion wt; subst.  eapply All2_cons; eauto.
     clear -a H0 hRe; revert a H0; move => ? /wf_universe_reflect ?; eauto.

@@ -73,7 +73,7 @@ Qed.
 
 Lemma inst_mkApps f l σ : (mkApps f l).[σ] = mkApps f.[σ] (map (inst σ) l).
 Proof.
-  induction l in f |- *; simpl; auto. rewrite IHl.
+  induction l in f |- *; simpl; [auto|]. rewrite IHl.
   now autorewrite with sigma.
 Qed.
 #[global]

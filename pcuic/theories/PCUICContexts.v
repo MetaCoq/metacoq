@@ -743,7 +743,7 @@ Lemma eq_names_subst_context nas Γ s k :
   eq_names nas (subst_context s k Γ).
 Proof.
   induction 1.
-  * cbn; auto. constructor.
+  * cbn. constructor.
   * rewrite subst_context_snoc. constructor; auto.
 Qed.
 

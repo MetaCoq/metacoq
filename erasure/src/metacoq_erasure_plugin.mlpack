@@ -58,6 +58,7 @@ ERemoveParams
 ErasureFunction
 EOptimizePropDiscr
 EInlineProjections
+EConstructorsAsBlocks
 EProgram
 ETransform
 Erasure

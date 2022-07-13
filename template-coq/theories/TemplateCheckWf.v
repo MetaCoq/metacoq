@@ -1,5 +1,5 @@
 From Coq Require Import List.
-From MetaCoq.Template Require Import config Transform TemplateProgram Pretty All Loader.
+From MetaCoq.Template Require Import config Transform TemplateProgram Pretty EtaExpand All Loader.
 Import ListNotations.
 Import MCMonadNotation.
 Import bytestring.
@@ -64,8 +64,10 @@ Definition check_wf (g : Ast.Env.program) : TemplateMonad unit :=
   monad_map check_def g.1.(declarations) ;; 
   tmMsg "Wellformed global environment" ;; ret tt.
   
-Definition check_wf_eta (g : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def (eta_expand g).1.(declarations) ;; 
+Axiom assume_wt_template_program : forall p : Ast.Env.program, ∥ wt_template_program p ∥.
+
+Definition check_wf_eta (p : Ast.Env.program) : TemplateMonad unit :=
+  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;; 
   tmMsg "Wellformed eta-expanded global environment" ;; ret tt.
 
 (* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use: 

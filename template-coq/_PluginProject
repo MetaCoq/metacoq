@@ -198,9 +198,14 @@ gen-src/kernames.mli
 gen-src/kernames.ml
 gen-src/universes0.ml
 gen-src/universes0.mli
-
+gen-src/transform.mli
+gen-src/transform.ml
 gen-src/termEquality.mli
 gen-src/termEquality.ml
+gen-src/envMap.mli
+gen-src/envMap.ml
+gen-src/templateEnvMap.mli
+gen-src/templateEnvMap.ml
 gen-src/typing0.mli
 gen-src/typing0.ml
 gen-src/templateProgram.mli

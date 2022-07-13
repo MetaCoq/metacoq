@@ -1132,7 +1132,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       | None => false        
       end.
 
-    Lemma is_nonpos_spec n : is_nonpos n <~> ∑ z, n = Some z /\ z <= 0.
+    Lemma is_nonpos_spec n : is_nonpos n <-> exists z, n = Some z /\ z <= 0.
     Proof using Type.
       unfold is_nonpos.
       split.
@@ -1388,7 +1388,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Qed.
 
     Lemma le_Some_lsp {n x y} : (Some n <= lsp x y)%nbar -> 
-      ∑ k, lsp x y = Some k /\ n <= k.
+      exists k, lsp x y = Some k /\ n <= k.
     Proof using Type.
       destruct lsp eqn:xy.
       simpl. intros. eexists; split; eauto.
@@ -1577,9 +1577,10 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       now simpl.
     Qed.
 
-    Lemma is_acyclic_correct : reflect acyclic_no_loop is_acyclic. 
+    Lemma is_acyclic_correct : reflectProp acyclic_no_loop is_acyclic. 
     Proof using HI.
-      eapply reflect_logically_equiv. eapply acyclic_caract2.
+      eapply reflect_reflectProp, reflect_logically_equiv.
+      eapply acyclic_caract2.
       apply VSet_Forall_reflect; intro x.
       destruct (lsp x x). destruct z. constructor; reflexivity.
       all: constructor; discriminate.
@@ -1720,7 +1721,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
           * rewrite weight_SPath_sub; lia.
     Qed.
 
-    Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n /\ weight p <= n.
+    Lemma lsp_pathOf {x y} (p : PathOf G x y) : exists n, lsp G x y = Some n /\ weight p <= n.
     Proof using HG HI.
       pose proof (lsp0_spec_le G (simplify2' G p)) as ineq.
       unfold lsp in *.
@@ -1969,7 +1970,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
             * rewrite weight_SPath_sub; lia.
       Qed.
 
-      Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n.
+      Lemma lsp_pathOf {x y} (p : PathOf G x y) : exists n, lsp G x y = Some n.
       Proof using HI.
         pose proof (lsp0_spec_le G (simplify2' G p)) as ineq.
         unfold lsp in *.
@@ -2618,8 +2619,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Definition reroot_spath_aux G s x z (p : SPath G s x z) y :
     VSet.In y (snodes G p) ->
     forall s' (q : SPath G s' z x),
-      Disjoint s s' -> { c : SPath G (VSet.union s s') y y |
-                        sweight c = sweight p + sweight q }.
+      Disjoint s s' -> exists c : SPath G (VSet.union s s') y y,
+                        sweight c = sweight p + sweight q .
   Proof.
     elim: p=> {x z}[s0 x|s0 s1 x y' z disj01 e p ih] /=.
     - move=> /VSetFact.empty_iff [].
@@ -2639,7 +2640,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
 
   Lemma reroot_spath G s x (p : SPath G s x x) y :
     VSet.In y (snodes G p) ->
-    { c : SPath G s y y | sweight c = sweight p } .
+    exists c : SPath G s y y, sweight c = sweight p.
   Proof.
     move=> yinp.
     pose (rx := spath_refl G VSet.empty x).
@@ -2650,8 +2651,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     + apply: (SPath_sub _ _ c).
       move=> ? /VSet.union_spec [//|/VSet.empty_spec[]].
     + rewrite weight_SPath_sub wc /rx /=; lia.
-  Defined.
-
+  Qed.
 
   Section MapSPath.
     Context {G1 G2} (on_edge : forall x y, EdgeOf G1 x y -> EdgeOf G2 x y).

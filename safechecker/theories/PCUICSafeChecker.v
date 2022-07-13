@@ -387,7 +387,7 @@ Section CheckEnv.
         + clear -Hl HΣ ct. destruct HΣ as [_ HΣ].
           specialize (HΣ (l, ct, l') Hl).
           split; apply LevelSet.union_spec; right; apply HΣ.
-  Defined.
+  Qed.
 
   Definition check_wf_env_ext_prop X X_ext ext :=
       (forall Σ : global_env, abstract_env_rel X Σ -> abstract_env_ext_rel X_ext (Σ, ext))
@@ -1868,10 +1868,12 @@ Section CheckEnv.
                                             (check_cstr_variance X mdecl id indices mdeclvar cs _ _)) 
               idecl.(ind_ctors) (get_wt_indices X_ext wfar wfpars n idecl indices hnth heq Hcs)) ;;
     lets <- 
-       monad_All (P := fun x => if @lets_in_constructor_types _
-      then true else is_assumption_context (cstr_args x))
+       monad_All (P := fun x => if @lets_in_constructor_types _ as _ return Prop then true else is_assumption_context (cstr_args x))
      (fun cs => if @lets_in_constructor_types _
-      then ret _ else (if is_assumption_context (cstr_args cs) then ret _ else EnvError X_env_ext_type X_ext (IllFormedDecl "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true]."
+      then ret _ else
+       (if is_assumption_context (cstr_args cs) then ret _ 
+       else EnvError X_env_ext_type X_ext 
+       (IllFormedDecl "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true]."
         (Msg "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true].")  ))
     ) idecl.(ind_ctors) ;; 
     ret (cs; _).
@@ -1902,7 +1904,7 @@ Section CheckEnv.
         rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head. lia_f_equal.
       - now destruct wtinds.
       - destruct lets_in_constructor_types; eauto.
-    Qed. 
+    Qed.
 
   Definition check_projections_type (mind : kername)
     (mdecl : mutual_inductive_body) (i : nat) (idecl : one_inductive_body)

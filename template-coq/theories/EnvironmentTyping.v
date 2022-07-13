@@ -178,7 +178,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     apply (lookup_constructor_declared (id:=(proj_ind p, 0)) hl).
   Qed.
 
-  (** TODO: lookup_{module, modtype}_declared, declared_{module, modtype}_lookup *)
   Lemma declared_module_lookup {Σ mp mdecl} :
     declared_module Σ mp mdecl ->
     lookup_module Σ mp = Some mdecl.

@@ -342,6 +342,8 @@ Module PrintTermTree.
             else (" := " ^ nl ^ print_term Σ' with_universes nil true b ^ "." ^ nl)
           | None => "."
           end ^ acc)
+      (** FIXME: print module and module type declarations *)
+      | _ => ""
       end
     end.
 

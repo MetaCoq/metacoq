@@ -34,6 +34,7 @@ Module GlobalEnvMap.
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl
+    | ModuleDecl _ | ModuleTypeDecl _ => None
     end.
 
   Lemma lookup_minductive_spec Σ kn : lookup_minductive Σ kn = Ast.lookup_minductive Σ kn.

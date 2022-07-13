@@ -21,6 +21,8 @@ Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
     | None => ret tt
     end
   | InductiveDecl idecl => ret tt
+  (** FIXME: define unquoting for modules *)
+  | _ => tmMsg ("Succeeded")
   end.
 
 Definition is_nil {A} (l : list A) :=
@@ -51,10 +53,31 @@ Fixpoint wfterm (t : term) : bool :=
 
 From Coq Require Import ssrbool.
 
+Print List.fold_left.
+
+Fixpoint wf_module_decl_aux impl wf_modtype :=
+  match impl with
+  | mi_abstract => wf_modtype
+  | mi_algebraic _ => wf_modtype
+  | mi_struct sb => List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) sb true
+  | mi_fullstruct => wf_modtype
+  end
+with wf_structure_field sf :=
+match sf with
+| sfconst cb => wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true
+| sfmind _ => true
+| sfmod (impl, modtype) =>
+    wf_module_decl_aux impl (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
+| sfmodtype mt => List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) mt true
+end.
+
 Definition wf_global_decl d := 
   match d with
   | ConstantDecl cb => wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true
   | InductiveDecl idecl => true
+  | ModuleDecl (impl, modtype) =>
+      wf_module_decl_aux impl (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
+  | ModuleTypeDecl modtype => (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
   end.
 Definition wf_global_declarations : global_declarations -> bool := forallb (wf_global_decl ∘ snd).
 Definition wf_global_env (g : global_env) := wf_global_declarations g.(declarations).

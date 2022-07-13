@@ -203,10 +203,32 @@ Definition eta_minductive_decl Σ mdecl :=
      ind_universes := mdecl.(ind_universes);
      ind_variance := mdecl.(ind_variance); |}.
 
+Fixpoint eta_module_decl Σ impl eta_modtype {struct impl}:=
+ match impl with
+ | mi_struct struct_body => 
+    let new_impl := mi_struct (map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) struct_body) in
+      (new_impl, eta_modtype)
+ | _ => (impl, eta_modtype)
+ end
+ with eta_structure_field Σ sf {struct sf}:= match sf with
+ | sfconst c => sfconst (eta_global_decl Σ c)
+ | sfmind m => sfmind (eta_minductive_decl Σ m)
+ | sfmod (impl, modtype) =>
+  let new_modtype := (map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype) in
+    sfmod (eta_module_decl Σ impl new_modtype)
+ | sfmodtype modtype => sfmodtype ((map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype))
+ end.
+  
+ Definition eta_module_type_decl Σ (modtype: list (kername × structure_field)) :=
+  map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype.
+
 Definition eta_global_declaration (Σ : GlobalEnvMap.t) decl : global_decl :=
   match decl with
   | ConstantDecl cb => ConstantDecl (eta_global_decl Σ cb)
   | InductiveDecl idecl => InductiveDecl (eta_minductive_decl Σ idecl)
+  | ModuleDecl (impl, modtype) => let new_modtype := eta_module_type_decl Σ modtype in
+      ModuleDecl (eta_module_decl Σ impl new_modtype)
+  | ModuleTypeDecl modtype => ModuleTypeDecl (eta_module_type_decl Σ modtype)
   end.
 
 Definition eta_global_declarations (Σ : GlobalEnvMap.t) (decls : global_declarations) :=
@@ -398,10 +420,49 @@ Record expanded_minductive_decl Σ mdecl :=
   { expanded_params : expanded_context Σ [] mdecl.(ind_params);
     expanded_ind_bodies : Forall (expanded_inductive_decl Σ mdecl) mdecl.(ind_bodies) }.
 
+Inductive expanded_structure_field Σ: (kername × structure_field) -> Prop :=
+  | expanded_sfconst kn c : expanded_constant_decl Σ c -> expanded_structure_field Σ (kn, sfconst c)
+  | expanded_sfmind kn inds : expanded_minductive_decl Σ inds -> expanded_structure_field Σ (kn, sfmind inds)
+  | expanded_sfmod kn mb : expanded_module_decl Σ mb -> expanded_structure_field Σ (kn, sfmod mb)
+  | expanded_sfmodtype kn mtd : expanded_structure_body Σ mtd -> expanded_structure_field Σ (kn, sfmodtype mtd)
+
+with expanded_structure_body Σ : structure_body structure_field -> Prop :=
+  | expanded_sb_nil : expanded_structure_body Σ []
+  | expanded_sb_cons hd tl : expanded_structure_field Σ hd -> expanded_structure_body Σ tl -> expanded_structure_body Σ (hd :: tl)
+
+with expanded_module_decl Σ : module_decl -> Prop :=
+(** Declare Module M: T, so expand T *)
+| expanded_mi_abstract_decl modtype:
+  expanded_structure_body Σ modtype -> expanded_module_decl Σ (mi_abstract, modtype)
+
+(** Module M := N, if N is declared in Σ it must be expanded. *)
+(** induction-recursion *)
+| expanded_mi_algebraic_decl (kn: kername) (moddecl: module_decl):
+  expanded_module_decl Σ ((mi_algebraic kn), moddecl.2)
+
+(** Module M:T ... End M, so expand impl and T *)
+| expanded_mi_struct_decl (body: structure_decl) (modtype: module_type_decl):
+  (expanded_structure_body Σ body )
+  -> (expanded_structure_body Σ modtype)
+  -> expanded_module_decl Σ ((mi_struct body), modtype)
+
+(** Module M ... End M, so expand impl *)
+| expanded_mi_fullstruct_decl body:
+  expanded_structure_body Σ body 
+  -> expanded_module_decl Σ (mi_fullstruct, body).
+
+Scheme expanded_sf_ind := Induction for expanded_structure_field Sort Prop
+with expanded_sb_ind := Induction for expanded_structure_body Sort Prop
+with expanded_mod_ind := Induction for expanded_module_decl Sort Prop.
+
+Combined Scheme expanded_moddecl_structfield_structbody_mutind from expanded_mod_ind,expanded_sf_ind,expanded_sb_ind.
+
 Definition expanded_decl Σ d :=
   match d with
   | Ast.Env.ConstantDecl cb => expanded_constant_decl Σ cb
   | Ast.Env.InductiveDecl idecl => expanded_minductive_decl Σ idecl
+  | Ast.Env.ModuleDecl m => expanded_module_decl Σ m
+  | Ast.Env.ModuleTypeDecl mt => expanded_structure_body Σ mt
   end.
     
 Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
@@ -1260,6 +1321,11 @@ Proof.
   move: hl.
   induction (declarations Σ); cbn => //.
   destruct a as [kn' []] => /=.
+  (** TODO: refactor repeated code *)
+  case: eqb_spec. intros ->. intros [= <- <-] => //.
+  intros neq. auto.
+  case: eqb_spec. intros ->. intros [= <- <-] => //.
+  intros neq. auto.
   case: eqb_spec. intros ->. intros [= <- <-] => //.
   intros neq. auto.
   case: eqb_spec. intros ->. intros [= <- <-] => //.
@@ -1340,18 +1406,35 @@ Lemma expanded_decl_env_irrel (Σ Σ' : global_env) t :
   expanded_decl Σ' t.
 Proof.
   intros hrepr.
+  cut ((forall (m : module_decl), expanded_module_decl Σ m -> expanded_module_decl Σ' m) /\
+    (forall (p : kername × structure_field), expanded_structure_field Σ p -> expanded_structure_field Σ' p) /\
+    (forall (s : structure_body structure_field), expanded_structure_body Σ s -> expanded_structure_body Σ' s)).
+  intros [Hmd [Hsf Hsb]].
   unfold expanded_decl.
-  destruct t => //.
+  destruct t => //; auto.
   intros []. constructor.
-  destruct (cst_body c) => //. cbn in *.
-  now eapply expanded_env_irrel.
-  intros []. split.
-  eapply expanded_context_env_irrel; tea.
-  solve_all.
-  destruct H. constructor.
-  solve_all. destruct H; split.
-  eapply expanded_context_env_irrel; tea.
-  eapply expanded_env_irrel; tea.
+
+  - destruct (cst_body c) => //. cbn in *.
+    now eapply expanded_env_irrel.
+
+  - intros []. split.
+    eapply expanded_context_env_irrel; tea.
+    solve_all.
+    destruct H. constructor.
+    solve_all. destruct H; split.
+    eapply expanded_context_env_irrel; tea.
+    eapply expanded_env_irrel; tea.
+
+  - eapply expanded_moddecl_structfield_structbody_mutind; intros; try now constructor.
+    -- repeat constructor. destruct e. destruct (cst_body c) => //. cbn in *. now eapply expanded_env_irrel.
+    -- constructor. revert e.
+      intros []. split.
+      eapply expanded_context_env_irrel; tea.
+      solve_all.
+      destruct H. constructor.
+      solve_all. destruct H; split.
+      eapply expanded_context_env_irrel; tea.
+      eapply expanded_env_irrel; tea.
 Qed.
 
 Coercion wf_ext_wf : wf_ext >-> wf.
@@ -1472,7 +1555,10 @@ Proof.
     clear. induction (arities_context _); constructor; auto.
     specialize (H _ hrepr).
     now rewrite map_repeat in H.
-Qed.
+    (** FIXME: prove for module and module type *)
+  - admit.
+  - admit.
+Admitted.
 
 Lemma eta_context_assumptions Σ n Γ : context_assumptions Γ = context_assumptions (eta_context Σ n Γ).
 Proof.

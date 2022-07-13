@@ -41,58 +41,12 @@ Lemma on_global_decl_impl `{checker_flags} Σ P Q kn d :
   (forall Σ Γ t T, on_global_env cumul_gen P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env cumul_gen P Σ.1 ->
   on_global_decl cumul_gen P Σ kn d -> on_global_decl cumul_gen Q Σ kn d.
-Proof.
-  unfold on_global_env.
-  intros X X0 o.
-  destruct d; simpl.
-  - destruct c; simpl. destruct cst_body0; simpl in *.
-    red in o |- *. simpl in *. now eapply X.
-    red in o |- *. simpl in *. now eapply X.
-  - simpl in *.
-    destruct o as [onI onP onNP].
-    constructor; auto.
-    -- eapply Alli_impl. exact onI. eauto. intros.
-
-       refine {| ind_arity_eq := X1.(ind_arity_eq);
-                 ind_cunivs := X1.(ind_cunivs) |}.
-       --- apply onArity in X1. unfold on_type in *; simpl in *.
-           now eapply X.
-       --- pose proof X1.(onConstructors) as X11. red in X11.
-           eapply All2_impl; eauto.
-           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
-           * apply X; eauto.
-           * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cstr_args x0), y.
-              induction c; destruct y0; simpl; auto;
-              destruct a as [na [b|] ty]; simpl in *; auto;
-           split; intuition eauto.
-           * clear -X0 X on_cindices.
-             revert on_cindices.
-             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-             generalize (cstr_indices x0).
-             induction 1; simpl; constructor; auto.
-       --- simpl; intros. apply (onProjections X1 H0).
-       --- destruct X1. simpl. unfold check_ind_sorts in *.
-           destruct Universe.is_prop; auto.
-           destruct Universe.is_sprop; auto.
-           split. apply ind_sorts. destruct indices_matter; auto.
-           eapply type_local_ctx_impl. eapply ind_sorts. auto.
-       --- apply (onIndices X1).
-    -- red in onP. red.
-       eapply All_local_env_impl. eauto.
-       intros. now apply X.
-Qed.
+Proof. intros; now eapply (on_global_decl_impl cumul_gen P). Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env cumul_gen P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env cumul_gen P Σ -> on_global_env cumul_gen Q Σ.
-Proof.
-  destruct Σ as [univs Σ]; cbn.
-  intros X [cu X0]; split => /= //. cbn in *.
-  induction X0; constructor; auto.
-  clear IHX0.
-  eapply on_global_decl_impl; tea. split => //.
-Qed.
+Proof. intros; now eapply (on_global_env_impl cumul_gen P). Qed.
 
 Lemma All_local_env_wf_decl_inv Σ (a : context_decl) (Γ : list context_decl)
          (X : All_local_env (wf_decl_pred Σ) (a :: Γ)) :

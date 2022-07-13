@@ -5,7 +5,7 @@ Import MCMonadNotation.
 
 (** * Coq type-checker for kernel terms
 
-  Implemets [typecheck_program] which returns an error and
+  Implements [typecheck_program] which returns an error and
   on success should guarantee that the term has the given type.
   Currently uses fuel to implement reduction and is unverified.
 
@@ -873,7 +873,6 @@ Section Checker.
         List.fold_left (fun acc body =>
                           acc ;; check_wf_type body.(ind_name) Σ G body.(ind_type))
                        inds.(ind_bodies) (ret ()).
-    Print module_decl.
 
     (** The [ List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) assoc_list_sf (ret ()) ]
       cannot be defined as another fixpoint, otherwise Coq "cannot guess the decreasing argument",

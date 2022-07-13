@@ -309,7 +309,7 @@ Module Environment (T : Term).
   | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
   | mi_struct : structure_body structure_field -> module_implementation (** Module M:T. ... End M.*)
   | mi_fullstruct : module_implementation. (** Module M. ... End M.*)
-  (** Is a [module_body] without implementation. TODO: algebraic type of the modtype*)
+  (** Is a [module_body] without implementation. *)
 
   Definition structure_decl := structure_body structure_field.
   Definition module_type_decl := module_type_body structure_field.
@@ -320,7 +320,6 @@ Module Environment (T : Term).
   | InductiveDecl : mutual_inductive_body -> global_decl
   | ModuleDecl : module_decl -> global_decl
   | ModuleTypeDecl : module_type_decl -> global_decl.
-  (* TODO: can have module declaration *)
   Derive NoConfusion for global_decl.
 
   Definition global_declarations := list (kername * global_decl).

@@ -92,7 +92,7 @@ Lemma trans_lookup_minductive {cf} {Σ : global_env_map} mind : wf Σ ->
 Proof.
   intros wf.
   unfold TransLookup.lookup_minductive.
-  rewrite (EnvMap .lookup_spec Σ.(declarations)) //.
+  rewrite (EnvMap.lookup_spec Σ.(declarations)) //.
   now eapply wf_fresh_globals. apply Σ.
 Qed.
 

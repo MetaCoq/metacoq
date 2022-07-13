@@ -49,6 +49,7 @@ theories/AstUtils.v
 theories/Reflect.v
 theories/ReflectAst.v
 theories/EnvMap.v
+theories/TemplateEnvMap.v
 theories/Induction.v
 theories/EnvironmentTyping.v
 theories/WfAst.v

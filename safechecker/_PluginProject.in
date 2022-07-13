@@ -15,8 +15,6 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/envMap.mli
-src/envMap.ml
 src/mCProd.mli
 src/mCProd.ml
 

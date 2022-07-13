@@ -91,6 +91,7 @@ Pretty
 Common0
 Extractable
 Logic0
+EnvMap
 
 Tm_util
 Reification
@@ -102,6 +103,7 @@ Plugin_core
 Run_extractable
 
 Transform
+TemplateEnvMap
 TermEquality
 Typing0
 EtaExpand

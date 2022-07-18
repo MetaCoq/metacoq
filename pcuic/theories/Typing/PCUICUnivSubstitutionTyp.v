@@ -301,7 +301,7 @@ Proof using Type.
       rewrite case_branch_type_fst.
       rewrite - !subst_instance_case_branch_context - !subst_instance_app_ctx.
       rewrite -subst_instance_case_predicate_context subst_instance_case_branch_type.
-      repeat split; auto.
+      repeat split; [auto..| |].
       * specialize (ihbod i univs wfext cu).
         cbn. eapply ihbod.
       * specialize (ihbty i univs wfext cu).

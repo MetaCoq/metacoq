@@ -949,7 +949,7 @@ Qed.
 Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) =
   reln (map trans l) p (trans_local Γ).
 Proof.
-  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
+  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; [auto..|].
   now rewrite IHΓ.
 Qed.
 

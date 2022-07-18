@@ -554,7 +554,7 @@ Lemma trans_it_mkProd_or_LetIn ctx t :
   it_mkProd_or_LetIn (map trans_decl ctx) (trans t).
 Proof.
   induction ctx in t |- *; simpl; auto.
-  destruct a as [na [body|] ty]; simpl; auto.
+  destruct a as [na [body|] ty]; simpl.
   now rewrite IHctx.
   now rewrite IHctx.
 Qed.
@@ -564,7 +564,7 @@ Lemma trans_it_mkLambda_or_LetIn ctx t :
   it_mkLambda_or_LetIn (map trans_decl ctx) (trans t).
 Proof.
   induction ctx in t |- *; simpl; auto.
-  destruct a as [na [body|] ty]; simpl; auto.
+  destruct a as [na [body|] ty]; simpl.
   now rewrite IHctx.
   now rewrite IHctx.
 Qed.
@@ -630,7 +630,7 @@ Proof. simpl. reflexivity. Qed.
 Lemma trans_reln l p Γ : map trans (Ast.Env.reln l p Γ) =
   reln (map trans l) p (trans_local Γ).
 Proof.
-  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
+  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; [auto..|].
   now rewrite IHΓ.
 Qed.
 

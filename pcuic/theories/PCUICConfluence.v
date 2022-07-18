@@ -3036,7 +3036,7 @@ Section RedConfluence.
     move=> [[Γ hΓ] [t ht]] [[Δ hΔ] [u hu]] [redt redctx].
     eapply clos_rt_rt1n_iff in redt. cbn in *.
     induction redt in ht, hu |- *.
-    induction redctx in hΓ, hΔ, ht, hu |- *; try solve [constructor; eauto].
+    induction redctx in hΓ, hΔ, ht, hu |- *.
     - econstructor 2; simpl; apply reflexivity.
     - pose proof hΔ. rewrite on_free_vars_ctx_snoc in H.
       move/andP: H => [] hΔ' Hd'.

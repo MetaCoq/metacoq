@@ -672,7 +672,7 @@ Qed.
   Lemma wf_abstract_instance Σ decl :
     wf_universe_instance (Σ, decl) (abstract_instance decl).
   Proof using Type.
-    destruct decl as [|[u cst]]=> /= //.
+    destruct decl as [|[u cst]]=> /=.
     red. constructor.
     rewrite /UContext.instance /AUContext.repr /=.
     rewrite mapi_unfold.

@@ -398,7 +398,7 @@ Lemma projs_inst_skipn {ind pars arg t} n :
 Proof.
   induction arg in n |- *; simpl; auto.
   - now rewrite skipn_nil.
-  - destruct n as [|n']; [rewrite skipn_0|rewrite skipn_S] => //.
+  - destruct n as [|n']; [rewrite skipn_0|rewrite skipn_S]; [done|].
     rewrite IHarg /= //.
 Qed.
 

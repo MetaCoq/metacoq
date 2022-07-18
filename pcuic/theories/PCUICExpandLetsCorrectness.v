@@ -1190,7 +1190,7 @@ Require Import PCUICSpine.
 Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) =
   reln (map trans l) p (trans_local Γ).
 Proof.
-  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
+  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; [auto..|].
   now rewrite IHΓ.
 Qed.
 
@@ -1889,9 +1889,9 @@ Proof.
     try solve [econstructor; eauto].
 
   - simpl. tofvs.
-    rewrite (trans_subst_ctx Γ) /=; pcuic. eapply red1_red; constructor.
+    rewrite (trans_subst_ctx Γ) /=; [pcuic..|]. eapply red1_red; constructor.
 
-  - destruct wt. tofvs. rewrite (trans_subst_ctx Γ); pcuic. repeat constructor.
+  - destruct wt. tofvs. rewrite (trans_subst_ctx Γ); [pcuic..|]. repeat constructor.
 
   - destruct nth_error eqn:Heq => //. simpl in H. noconf H.
     simpl. destruct c; noconf H => //.

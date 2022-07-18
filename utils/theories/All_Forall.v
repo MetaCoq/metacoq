@@ -1174,7 +1174,7 @@ Proof.
   destruct n; simpl.
   - intros [= ->]. exists hd'; rewrite Nat.add_0_r; intuition auto.
   - exists t. intuition auto.
-  - destruct n; simpl; rewrite ?Nat.add_succ_r /=; auto.
+  - destruct n; simpl; rewrite ?Nat.add_succ_r /=.
     intros [= ->]. exists t; intuition auto.
     apply IHX.
 Qed.
@@ -3489,7 +3489,7 @@ Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f 
 Proof.
   intros hb ha hlen hPQ.
   induction ha in l, l''', hlen, hb |- *; simpl; try constructor; auto.
-  - destruct l => //. simpl. constructor.
+  - destruct l; simpl; constructor.
   - destruct l => //.
     noconf hlen. depelim hb.
     specialize (IHha _ _ hb H).

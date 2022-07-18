@@ -150,7 +150,7 @@ Qed.
 
 Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
 Proof.
-  induction l in f, l' |- *; destruct l'; simpl; rewrite ?app_nil_r; auto.
+  induction l in f, l' |- *; destruct l'; simpl; rewrite ?app_nil_r; [auto..|].
   rewrite IHl //.
 Qed.
 

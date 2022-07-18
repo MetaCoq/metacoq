@@ -116,7 +116,7 @@ Qed.
 Lemma csubst_mkApps a k f l : 
   csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
 Proof.
-  induction l in f |- *; cbn; auto.
+  induction l in f |- *; cbn; [auto|].
   rewrite IHl.
   now cbn.
 Qed.

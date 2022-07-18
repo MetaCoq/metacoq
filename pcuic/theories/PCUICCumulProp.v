@@ -875,7 +875,7 @@ Lemma R_eq_univ_prop_consistent_instances Σ univs u u' :
 Proof using Type.
   intros wfΣ cu cu'.
   destruct univs; simpl in *.
-  - destruct u, u' => /= //. red.
+  - destruct u, u' => /=; [|done..]. red.
     simpl. constructor.
   - intuition.
     eapply Forall2_map.

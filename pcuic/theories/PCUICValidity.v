@@ -176,7 +176,7 @@ Section Validity.
   Proof using Type.
     intros. eapply All2_map_right in X.
     depind X.
-    * destruct Γ => //. constructor.
+    * destruct Γ; [|done]. constructor.
     * destruct Γ => //.
       rewrite /expand_lets_ctx /expand_lets_k_ctx /=
         !lift_context_snoc; simpl.

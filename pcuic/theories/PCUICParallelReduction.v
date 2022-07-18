@@ -2131,7 +2131,7 @@ Section ParallelSubstitution.
       assert (All2_fold (on_decls (on_decls_over (pred1 Σ) Δ Δ')) (inst_context σ (fix_context mfix0))
                              (inst_context τ (fix_context mfix1))).
       { exact (X2 P Q _ _ _ _ onfix0 onfixi0 Hrel). }
-      econstructor; eauto with pcuic.
+      econstructor. 1: auto with pcuic. 4: eauto with pcuic.
       instantiate (1 := (map (map_def (inst τ) (inst (⇑^#|mfix1| τ))) mfix1)).
       now rewrite !inst_fix_context.
       rewrite !inst_fix_context; auto.
@@ -2300,7 +2300,7 @@ Section ParallelSubstitution.
     - simpl. rewrite inst_closed0.
       rewrite PCUICClosed.closedn_subst_instance; auto.
       eapply (PCUICClosedTyp.declared_constant_closed_body). all: eauto.
-      econstructor; eauto with pcuic.
+      econstructor. 1,3: eauto with pcuic. auto with pcuic.
 
     - eapply pred1_refl_gen. now apply pred1_subst_pred1_ctx in Hrel.
 
@@ -2336,7 +2336,7 @@ Section ParallelSubstitution.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all. }
       specialize (X2 Hrel).
-      econstructor. eauto with pcuic. 2-3:eauto with pcuic. unfold on_Trel; simpl. solve_all.
+      econstructor. auto with pcuic. 2-3:eauto with pcuic. unfold on_Trel; simpl. solve_all.
       + rewrite /PCUICCases.inst_case_predicate_context.
         rewrite - !inst_inst_case_context_wf //.
         now rewrite -(All2_length X1) /= -H0.

@@ -53,8 +53,6 @@ Fixpoint wfterm (t : term) : bool :=
 
 From Coq Require Import ssrbool.
 
-Print List.fold_left.
-
 Fixpoint wf_module_decl_aux impl wf_modtype :=
   match impl with
   | mi_abstract => wf_modtype

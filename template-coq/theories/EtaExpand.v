@@ -222,6 +222,8 @@ Fixpoint eta_module_decl Σ impl eta_modtype {struct impl}:=
  Definition eta_module_type_decl Σ (modtype: list (kername × structure_field)) :=
   map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype.
 
+ Definition eta_structure_body Σ (sb: list (kername × structure_field)) := eta_module_type_decl Σ sb.
+
 Definition eta_global_declaration (Σ : GlobalEnvMap.t) decl : global_decl :=
   match decl with
   | ConstantDecl cb => ConstantDecl (eta_global_decl Σ cb)
@@ -1522,6 +1524,48 @@ Lemma eta_context_length g n ctx : #|eta_context g n ctx| = #|ctx|.
 Proof. now rewrite /eta_context; len. Qed.
 #[export] Hint Rewrite @eta_context_length : len.
 
+Lemma eta_expand_constant_decl_expanded {cf : checker_flags} (Σ : global_env_ext) (Σg : global_env_ext_map) c :
+  repr_decls Σg Σ ->
+  Typing.wf_ext Σ ->
+  on_constant_decl (lift_typing typing) Σ c ->
+  expanded_constant_decl Σ (eta_global_decl Σg c).
+Proof.
+  intros hrepr wf ond.
+  destruct c as [na body ty rel]; cbn in *.
+  destruct body. constructor => //; cbn.
+  apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond). constructor.
+  apply hrepr.
+  destruct ond as [s Hs]. constructor => //.
+Qed.
+
+Lemma eta_expand_inductive_expanded {cf : checker_flags} (Σ : global_env_ext) (Σg : global_env_ext_map) kn m :
+  repr_decls Σg Σ ->
+  Typing.wf_ext Σ ->
+  on_inductive cumul_gen (lift_typing typing) Σ kn m ->
+  expanded_minductive_decl Σ (eta_minductive_decl Σg m).
+Proof.
+  intros hrepr wf ond.
+  destruct ond as [onI onP onN onV].
+  constructor. cbn.
+  eapply eta_expand_context => //.
+  solve_all. cbn. eapply All_map, Alli_All; tea => n idecl oni.
+  constructor.
+  cbn. solve_all.
+  pose proof oni.(onConstructors).
+  red in X.
+  eapply All2_All_left; tea; cbn => cdecl cunivs onc.
+  constructor. cbn. len.
+  pose proof onc.(on_cargs).
+  eapply eta_expand_context_sorts in X0. now len in X0. exact hrepr.
+  len. len. 
+  pose proof onc.(on_ctype). destruct X0.
+  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None #|ind_bodies m|) _ _ wf t0).
+  forward H. rewrite -arities_context_length.
+  clear. induction (arities_context _); constructor; auto.
+  specialize (H _ hrepr).
+  now rewrite map_repeat in H.
+Qed.
+
 Lemma eta_expand_global_decl_expanded {cf : checker_flags} (Σ : global_env_ext) (Σg : global_env_ext_map) kn d :
   repr_decls Σg Σ ->
   Typing.wf_ext Σ ->
@@ -1529,36 +1573,24 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} (Σ : global_env_ext)
   expanded_decl Σ (eta_global_declaration Σg d).
 Proof.
   intros hrepr wf ond.
+  assert (H_md_sf_sd: (forall (m : module_decl) (e : on_module_decl cumul_gen (lift_typing typing) Σ m), expanded_module_decl Σ (eta_module_decl Σg m.1 (eta_module_type_decl Σg m.2))) ×
+    (forall (p : kername × structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ p), expanded_structure_field Σ (p.1, (eta_structure_field Σg p.2))) ×
+    (forall (s : structure_body structure_field) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
+  {
+    unshelve eapply (on_moddecl_structfield_structbody_mutrect cumul_gen (lift_typing typing) Σ); try now constructor; simpl.
+    - intros. constructor. now apply eta_expand_constant_decl_expanded.
+    - intros. constructor. now eapply eta_expand_inductive_expanded.
+    - intros kn' [impl modtype]. constructor. apply H.
+    - intros kn' [impl modtype] H. red in H. simpl.
+      apply (expanded_mi_algebraic_decl Σ kn' (impl, (eta_module_type_decl Σg modtype))).
+    - intros hd tl Hosf Hesf Hosb Hesb. simpl. constructor; now destruct hd as [kn0 sf].
+  }
   destruct d; cbn in *.
-  - unfold on_constant_decl in ond.
-    destruct c as [na body ty rel]; cbn in *.
-    destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond). constructor.
-    apply hrepr.
-    destruct ond as [s Hs]. constructor => //.
-  - destruct ond as [onI onP onN onV].
-    constructor. cbn.
-    eapply eta_expand_context => //.
-    solve_all. cbn. eapply All_map, Alli_All; tea => n idecl oni.
-    constructor.
-    cbn. solve_all.
-    pose proof oni.(onConstructors).
-    red in X.
-    eapply All2_All_left; tea; cbn => cdecl cunivs onc.
-    constructor. cbn. len.
-    pose proof onc.(on_cargs).
-    eapply eta_expand_context_sorts in X0. now len in X0. exact hrepr.
-    len. len. 
-    pose proof onc.(on_ctype). destruct X0.
-    epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None #|ind_bodies m|) _ _ wf t0).
-    forward H. rewrite -arities_context_length.
-    clear. induction (arities_context _); constructor; auto.
-    specialize (H _ hrepr).
-    now rewrite map_repeat in H.
-    (** FIXME: prove for module and module type *)
-  - admit.
-  - admit.
-Admitted.
+  - now apply eta_expand_constant_decl_expanded.
+  - now simple eapply eta_expand_inductive_expanded.
+  - destruct m as [impl modtype]. simpl. apply H_md_sf_sd in ond. apply ond.
+  - now apply H_md_sf_sd.
+Qed.
 
 Lemma eta_context_assumptions Σ n Γ : context_assumptions Γ = context_assumptions (eta_context Σ n Γ).
 Proof.

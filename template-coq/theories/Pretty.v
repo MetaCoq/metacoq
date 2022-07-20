@@ -318,6 +318,41 @@ Module PrintTermTree.
     let names := fresh_names Σ' [] (mie_arities_context mie) in
       ("Inductive " ^ 
       print_list (print_one_ind_entry Σ' with_universes short names mie) nl mie.(mind_entry_inds) ^ "." ^ nl).
+  
+  Definition print_const_decl kn cb with_universes (short: bool) Σ' :=
+  (match cb.(cst_body) with | Some _ => "Definition " | None => "Axiom " end) ^
+  string_of_kername kn ^ " : " ^ print_term Σ' with_universes nil true cb.(cst_type) ^
+  match cb.(cst_body) with
+  | Some b => if short then ("..." ^ nl) else (" := " ^ nl ^ print_term Σ' with_universes nil true b ^ "." ^ nl)
+  | None => "."
+  end.
+    
+  Print "×".
+
+
+  Definition print_assoc_list {A B: Type} (f: A -> B -> t) (sep: t) (l : list (prod A B)) : t :=
+    let fix aux l := match l return t with
+    | nil => ""
+    | cons (kn, a) nil => f kn a
+    | cons (kn, a) l => (f kn a) ^ sep ^ aux l
+    end in aux l.
+
+  Fixpoint print_module_decl kn impl modtype_str with_universes (short: bool) (Σ: global_env) {struct impl}:=
+    let kn_string := string_of_kername kn in match impl with
+    | mi_abstract => "Module " ^ kn_string ^ "."
+    | mi_algebraic kn' => "Module " ^ kn_string ^ " := " ^ (string_of_kername kn') ^ "."
+    | mi_struct sb =>
+      let sb_str := if short then string "..." else print_assoc_list (print_structure_field with_universes short Σ) nl sb in
+      "Module " ^ kn_string ^ ". " ^ sb_str ^ " End " ^ kn_string ^ "."
+    | mi_fullstruct => "Module " ^ kn_string ^ ". " ^ modtype_str ^ " End " ^ kn_string ^ "."
+    end ^ if short then string "" else "Module Type: " ^ nl ^ modtype_str
+  with print_structure_field with_universes (short: bool) (Σ: global_env) kn sf {struct sf}: t :=
+    match sf with
+    | sfconst cb => let Σ' := (Σ, cb.(cst_universes)) in print_const_decl kn cb with_universes short Σ'
+    | sfmind mib => print_mib Σ with_universes short mib
+    | sfmod (impl, modtype) => print_module_decl kn impl (print_assoc_list (print_structure_field with_universes short Σ) nl modtype) with_universes short Σ
+    | sfmodtype mt => print_assoc_list (print_structure_field with_universes short Σ) nl mt
+    end.
     
   Fixpoint print_env_aux with_universes (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 
@@ -331,19 +366,14 @@ Module PrintTermTree.
         print_env_aux with_universes short n Σ (print_mib Σ with_universes short mib ^ acc)
       | (kn, ConstantDecl cb) :: Σ =>
         let Σ' := ({| Env.universes := univs; declarations := Σ |}, cb.(cst_universes)) in
-        print_env_aux with_universes short n Σ'.1
-          ((match cb.(cst_body) with 
-            | Some _ => "Definition "
-            | None => "Axiom "
-          end) ^ string_of_kername kn ^ " : " ^ print_term Σ' with_universes nil true cb.(cst_type) ^
-          match cb.(cst_body) with
-          | Some b => 
-            if short then ("..." ^ nl)
-            else (" := " ^ nl ^ print_term Σ' with_universes nil true b ^ "." ^ nl)
-          | None => "."
-          end ^ acc)
-      (** FIXME: print module and module type declarations *)
-      | _ => ""
+        print_env_aux with_universes short n Σ'.1 (print_const_decl kn cb with_universes short Σ' ^ acc)
+      | (kn, ModuleDecl (impl, modtype)) :: Σ =>
+        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        let modtype_str := print_assoc_list (print_structure_field with_universes short Σ) nl modtype in
+        print_env_aux with_universes short n Σ (print_module_decl kn impl modtype_str with_universes short Σ ^ acc)
+      | (kn, ModuleTypeDecl mt) :: Σ => 
+        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        print_assoc_list (print_structure_field with_universes short Σ) nl mt
       end
     end.
 

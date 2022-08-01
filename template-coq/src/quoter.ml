@@ -153,7 +153,13 @@ sig
   val empty_global_declarations : unit -> quoted_global_declarations
   val add_global_decl : quoted_kernel_name -> quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
   
-  val mk_global_env : quoted_univ_contextset -> quoted_global_declarations -> quoted_global_env
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  val quote_retroknowledge : pre_quoted_retroknowledge -> quoted_retroknowledge
+
+  val mk_global_env : quoted_univ_contextset -> quoted_global_declarations -> quoted_retroknowledge -> quoted_global_env
   val mk_program : quoted_global_env -> t -> quoted_program
 end
 
@@ -560,7 +566,15 @@ struct
          time (Pp.str"Quoting empty universe context") 
            (fun uctx -> Q.quote_univ_contextset uctx) Univ.ContextSet.empty)
     in
-    let env = Q.mk_global_env univs decls in
+    let retro =
+      let retro = env.Environ.retroknowledge in
+      let quote_retro = Option.map (fun c -> Q.quote_kn (Names.Constant.canonical c)) in
+      let pre = 
+        { Q.retro_int63 = quote_retro retro.Retroknowledge.retro_int63 ;
+          Q.retro_float64 = quote_retro retro.Retroknowledge.retro_float64 }
+      in Q.quote_retroknowledge pre
+    in
+    let env = Q.mk_global_env univs decls retro in
     Q.mk_program env tm
 
   let quote_rel_context env ctx =

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment LiftSubst Universes.
+From MetaCoq Require Import utils Ast AstUtils Primitive Environment LiftSubst Universes.
 
 (** * Pretty printing *)
 
@@ -248,8 +248,8 @@ Module PrintTermTree.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
-  (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
-  | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
 
   Definition pr_context_decl Γ (c : context_decl) : ident * t :=
@@ -324,13 +324,14 @@ Module PrintTermTree.
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
     | S n => 
       let univs := Σ.(Env.universes) in
+      let retro := Σ.(Env.retroknowledge) in
       match Σ.(declarations) with
       | [] => acc
       | (kn, InductiveDecl mib) :: Σ => 
-        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        let Σ := {| Env.universes := univs; declarations := Σ; retroknowledge := retro |} in
         print_env_aux with_universes short n Σ (print_mib Σ with_universes short mib ^ acc)
       | (kn, ConstantDecl cb) :: Σ =>
-        let Σ' := ({| Env.universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+        let Σ' := ({| Env.universes := univs; declarations := Σ; retroknowledge := retro |}, cb.(cst_universes)) in
         print_env_aux with_universes short n Σ'.1
           ((match cb.(cst_body) with 
             | Some _ => "Definition "

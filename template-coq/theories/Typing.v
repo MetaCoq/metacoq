@@ -1540,16 +1540,17 @@ Lemma lookup_on_global_env `{checker_flags} {Pcmp P} {Σ : global_env} {c decl} 
   { Σ' : global_env_ext & on_global_env Pcmp P Σ' × extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
 Proof.
   unfold on_global_env.
-  destruct Σ as [univs Σ]; cbn. intros [cu ond].
+  destruct Σ as [univs Σ retro]; cbn. intros [cu ond].
   induction ond; cbn in * => //.
   case: eqb_specT => [-> [= <-]| ne].
-  - exists ({| universes := univs; declarations := Σ |}, udecl).
+  - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl).
     split; try constructor; tas.
-    cbn. now split => //; exists [(kn, d)].
+    cbn. split => //=. now exists [(kn, d)]. apply Retroknowledge.extends_refl.
   - intros hl.
-    destruct (IHond hl) as [[Σ' udecl'] [ong [[equ ext] ond']]].
-    exists (Σ', udecl'). cbn in equ |- *. subst univs. repeat split; cbn; auto; try apply ong.
-    cbn in ext. destruct ext as [Σ'' ->]. cbn.
+    destruct (IHond hl) as [[Σ' udecl'] [ong [[equ ext extretro] ond']]].
+    exists (Σ', udecl'). cbn in equ |- *. subst univs. split; cbn; auto; try apply ong.
+    split; cbn; auto. split; cbn; auto.
+    cbn in ext. destruct ext as [Σ'' ->]. cbn in *.
     now exists ((kn, d) :: Σ'').
 Qed.
 

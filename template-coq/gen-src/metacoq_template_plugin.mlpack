@@ -82,6 +82,7 @@ Universes0
 Environment
 EnvironmentTyping
 Ast0
+Primitive
 AstUtils
 LiftSubst
 UnivSubst0

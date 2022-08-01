@@ -52,6 +52,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = global_declarations
+  type quoted_retroknowledge = Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -321,7 +322,14 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
-  let mk_global_env universes declarations = { universes; declarations }
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  let quote_retroknowledge r = 
+    { Retroknowledge.retro_int63 = r.retro_int63; Retroknowledge.retro_float64 = r.retro_float64 }
+
+  let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function

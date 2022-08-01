@@ -1149,15 +1149,15 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
       Forall (fun g => g.1 <> s) g.
 
-    Inductive on_global_decls (univs : ContextSet.t) : global_declarations -> Type :=
-    | globenv_nil : on_global_decls univs []
+    Inductive on_global_decls (univs : ContextSet.t) (retro : Retroknowledge.t): global_declarations -> Type :=
+    | globenv_nil : on_global_decls univs retro []
     | globenv_decl Σ kn d :
-        on_global_decls univs Σ ->
+        on_global_decls univs retro Σ ->
         fresh_global kn Σ ->
         let udecl := universes_decl_of_decl d in
         on_udecl univs udecl ->
-        on_global_decl ({| universes := univs; declarations := Σ |}, udecl) kn d ->
-        on_global_decls univs (Σ ,, (kn, d)).
+        on_global_decl (mk_global_env univs Σ retro, udecl) kn d ->
+        on_global_decls univs retro (Σ ,, (kn, d)).
     Derive Signature for on_global_decls.
 
     Definition on_global_univs (c : ContextSet.t) := 
@@ -1168,7 +1168,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       consistent cstrs.
 
     Definition on_global_env (g : global_env) : Type :=
-      on_global_univs g.(universes) × on_global_decls g.(universes) g.(declarations).
+      on_global_univs g.(universes) × on_global_decls g.(universes) g.(retroknowledge) g.(declarations).
 
     Definition on_global_env_ext (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.(universes) Σ.2.
@@ -1226,10 +1226,10 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof.
     intros X Σ [cu IH]. split; auto.
-    revert cu IH; generalize (universes Σ) as univs, (declarations Σ). clear Σ.
+    revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
     induction g; intros; auto. constructor; auto.
     depelim IH. specialize (IHg cu IH). constructor; auto.
-    pose proof (globenv_decl _ _ _ _ _ _ IH f o).
+    pose proof (globenv_decl _ _ _ _ _ _ _ IH f o).
     assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl) Γ t T 
       (cu, IH) (cu, IHg)); clear X.
     rename X' into X.
@@ -1342,7 +1342,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     unfold on_global_env in *.
     intros X [hu X0]. split; auto.
     simpl in *. destruct wfΣ as [cu wfΣ]. revert cu wfΣ.
-    revert X0. generalize (universes Σ) as univs, (declarations Σ). clear hu Σ.
+    revert X0. generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear hu Σ.
     induction 1; constructor; auto.
     { depelim wfΣ. eauto. }
     depelim wfΣ. specialize (IHX0 cu wfΣ).

@@ -19,7 +19,7 @@ Import PCUICEnvTyping.
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
 
-(* Notation prim_ind P p := (P (tPrim p)). *)
+Notation prim_ind P p := (P (tPrim p)).
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
@@ -43,7 +43,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (* (forall p, prim_ind P p) -> *)
+    (forall p, prim_ind P p) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -261,11 +261,11 @@ Lemma term_forall_mkApps_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (* (forall i, prim_ind P i) -> *)
+    (forall i, prim_ind P i) ->
     forall t : term, P t.
 Proof.
   intros until t.
-  (* rename X14 into Pprim. *)
+  rename X14 into Pprim.
   assert (Acc (MR lt size) t) by eapply measure_wf, Wf_nat.lt_wf.
   induction H. rename X14 into auxt. clear H. rename x into t.
   move auxt at top.
@@ -487,10 +487,10 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (m : mfixpoint term) (n : nat),
         All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
-    (* (forall Γ p, P Γ (tPrim p)) -> *)
+    (forall Γ p, P Γ (tPrim p)) ->
     forall Γ (t : term), P Γ t.
 Proof.
-  intros ???????????????? Γ t.
+  intros ????????????????? Γ t.
   revert Γ t. set(foo:=CoreTactics.the_end_of_the_section). intros.
   Subterm.rec_wf_rel aux t (MR lt size); unfold MR in *; simpl. clear H1.
   assert (auxl : forall Γ {A} (l : list A) (f : A -> term),
@@ -594,7 +594,7 @@ Lemma term_ind_size_app :
         tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat),
         tFixProp (P) P m -> P (tCoFix m n)) ->
-    (* (forall p, P (tPrim p)) -> *)
+    (forall p, P (tPrim p)) ->
     forall (t : term), P t.
 Proof.
   intros.

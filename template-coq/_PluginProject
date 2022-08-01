@@ -19,6 +19,8 @@ gen-src/ast0.ml
 gen-src/ast0.mli
 gen-src/ast_denoter.ml
 gen-src/ast_quoter.ml
+gen-src/primitive.mli
+gen-src/primitive.ml
 gen-src/astUtils.ml
 gen-src/astUtils.mli
 gen-src/basicAst.ml
@@ -100,6 +102,8 @@ gen-src/logic2.mli
 gen-src/logic2.ml
 gen-src/relation.mli
 gen-src/relation.ml
+gen-src/mCProd.mli
+gen-src/mCProd.ml
 gen-src/mCPrelude.mli
 gen-src/mCPrelude.ml
 gen-src/mCCompare.ml

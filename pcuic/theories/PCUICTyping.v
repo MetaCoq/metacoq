@@ -137,8 +137,13 @@ Definition wf_cofixpoint_gen
   | _ => false
   end.
 
-
 Definition wf_cofixpoint (Σ : global_env) := wf_cofixpoint_gen (lookup_env Σ).
+
+Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
+  match p with
+  | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
+  | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
+  end.
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
@@ -261,6 +266,11 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype)) mfix ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
+
+| type_Prim p prim_ty cdecl : 
+   primitive_constant (prim_tag p) = Some prim_ty ->
+   declared_constant Σ prim_ty cdecl ->
+   Σ ;;; Γ |- tPrim p : tConst prim_ty []
 
 | type_Cumul : forall t A B s,
     Σ ;;; Γ |- t : A ->

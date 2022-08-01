@@ -117,6 +117,13 @@ Module PrintTermTree.
     Import bytestring.Tree.
     Infix "^" := append.
 
+    Definition print_prim {term} (soft : term -> Tree.t) (p : prim_val) : Tree.t :=
+      match p.π2 return Tree.t with
+      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
+      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      (* | primArrayModel a => "(array:" ^ ")" *)
+      end.
+
     Section Aux.
       Context (print_term : list ident -> bool -> bool -> term -> t).
 
@@ -260,7 +267,7 @@ Module PrintTermTree.
     | tCoFix l n =>
       parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                                 " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
-    (* | tPrim i => parens top (string_of_prim (print_term Γ true false) i) *)
+    | tPrim i => parens top (print_prim (print_term Γ true false) i)
     end.
   End env.
 

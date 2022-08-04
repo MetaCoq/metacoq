@@ -1,4 +1,4 @@
-From MetaCoq.Template Require Import config All.
+(*From MetaCoq.Template Require Import config All.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
@@ -62,7 +62,7 @@ Proof.
    (* idtac z ; fail "Couldn't prove the global environment is well-formed" *)
   end.
 Defined.
-
+*)
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
@@ -88,7 +88,8 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
+  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := []
+    ; retroknowledge := Retroknowledge.empty |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
@@ -158,7 +159,8 @@ Lemma identity_typing (u := Universe.make univ):
            universes :=
              (LS.union (LevelSet.singleton Level.lzero)
                 (LevelSet.singleton univ), ConstraintSet.empty);
-           declarations := []
+           declarations := [];
+           retroknowledge := Retroknowledge.empty
          |}, Monomorphic_ctx) ->
         ∥ Σ0;;; [] |- t
           : tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0)) ∥).

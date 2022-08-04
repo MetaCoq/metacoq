@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
-From MetaCoq.Template Require Import config utils AstUtils EnvMap.
+From MetaCoq.Template Require Import config utils AstUtils Primitive EnvMap.
 From MetaCoq.Template Require TemplateProgram.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICProgram.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.
 
 Lemma to_Z_bounded_bool (i : Int63.int) : 
   ((0 <=? Uint63.to_Z i) && (Uint63.to_Z i <? wB))%Z.
@@ -100,8 +100,8 @@ Section Trans.
   | Ast.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  (* | Ast.tInt n => tPrim (primInt; primIntModel (uint63_to_model n)) *)
-  (* | Ast.tFloat n => tPrim (primFloat; primFloatModel (float64_to_model n)) *)
+  | Ast.tInt n => tPrim (primInt; primIntModel n)
+  | Ast.tFloat n => tPrim (primFloat; primFloatModel n)
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=
@@ -166,14 +166,14 @@ Definition trans_global_decls env (d : Ast.Env.global_declarations) : global_env
     let decl' := on_snd (trans_global_decl Σ') decl in
     add_global_decl Σ' decl') env d.
 
-Definition empty_trans_env univs := 
-  let init_global_env := {| universes := univs; declarations := [] |} in
+Definition empty_trans_env univs retro := 
+  let init_global_env := {| universes := univs; declarations := []; retroknowledge := retro |} in
     {| trans_env_env := init_global_env; 
        trans_env_map := EnvMap.empty;
        trans_env_repr := fun y => eq_refl |}.
 
 Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
-  let init := empty_trans_env d.(Ast.Env.universes) in
+  let init := empty_trans_env d.(Ast.Env.universes) d.(Ast.Env.retroknowledge) in
   trans_global_decls init d.(Ast.Env.declarations).
 
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=

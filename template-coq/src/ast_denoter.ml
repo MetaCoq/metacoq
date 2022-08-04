@@ -51,7 +51,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = (kername * global_decl) list
-  type quoted_retroknowledge = Retroknowledge.t
+  type quoted_retroknowledge = Environment.Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 

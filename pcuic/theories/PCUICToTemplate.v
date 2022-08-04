@@ -106,7 +106,8 @@ Definition trans_global_decls (d : PCUICEnvironment.global_declarations) : globa
 
 Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
   {| universes := d.(PCUICEnvironment.universes); 
-     declarations := trans_global_decls d.(PCUICEnvironment.declarations) |}.
+     declarations := trans_global_decls d.(PCUICEnvironment.declarations);
+     retroknowledge := d.(PCUICEnvironment.retroknowledge) |}.
   
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_env (fst Σ), snd Σ).

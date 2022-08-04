@@ -295,18 +295,17 @@ Module PrintTermTree.
     match prefix with 
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
     | S n => 
-      let univs := Σ.(universes) in
       match Σ.(declarations) with
       | [] => acc
-      | (kn, InductiveDecl mib) :: Σ => 
-        let Σ' := ({| universes := univs; declarations := Σ |}, mib.(ind_universes)) in
+      | (kn, InductiveDecl mib) :: decls => 
+        let Σ' := (set_declarations Σ decls, mib.(ind_universes)) in
         let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
         print_env_aux short n Σ'.1
           ("Inductive " ^ 
           print_list (print_one_ind Σ' short names mib) nl mib.(ind_bodies) ^ "." ^ 
           nl ^ acc)
-      | (kn, ConstantDecl cb) :: Σ =>
-        let Σ' := ({| universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+      | (kn, ConstantDecl cb) :: decls =>
+        let Σ' := (set_declarations Σ decls, cb.(cst_universes)) in
         print_env_aux short n Σ'.1
           ((match cb.(cst_body) with 
             | Some _ => "Definition "

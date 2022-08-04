@@ -411,7 +411,7 @@ Definition expanded_decl Σ d :=
   | Ast.Env.InductiveDecl idecl => expanded_minductive_decl Σ idecl
   end.
     
-Inductive expanded_global_declarations (univs : ContextSet.t) (retro : Retroknowledge.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
+Inductive expanded_global_declarations (univs : ContextSet.t) (retro : Environment.Retroknowledge.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
 | expanded_global_nil : expanded_global_declarations univs retro []
 | expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ -> 
   expanded_decl {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; Ast.Env.retroknowledge := retro |} decl.2 ->
@@ -1555,7 +1555,7 @@ Proof.
   unfold Typing.wf, Typing.on_global_env. intros [onu ond].
   cbn in *.
   destruct Σ as []. cbn in *.
-  assert (extends_decls env env). red; split => //. now exists []. apply Retroknowledge.extends_refl.
+  assert (extends_decls env env). red; split => //. now exists [].
   revert X.
   move: map repr wf.
   generalize env at 1 2 4 6 7.
@@ -1575,9 +1575,8 @@ Proof.
     move=> kn' d' /= hl.
     rewrite GlobalEnvMap.lookup_env_spec /=.
     cbn. unfold snoc.
-    eapply (lookup_global_extends {| universes := univs'; declarations := Σ |}
-      {| universes := univs'; declarations := (Σ'' ++ (kn, d) :: Σ)%list |}); eauto.
-    split => //. cbn. now exists (Σ'' ++ [(kn, d)])%list; rewrite -app_assoc. eauto. }
+    eapply (lookup_global_extends Σ' (set_declarations Σ' (Σ'' ++ (kn, d) :: Σ)%list)); eauto.
+    split => //. cbn. now exists (Σ'' ++ [(kn, d)])%list; rewrite -app_assoc. }
   forward H. split. cbn. split => //. now cbn.
   specialize (H o0).
   eapply expanded_decl_env_irrel in H; tea.

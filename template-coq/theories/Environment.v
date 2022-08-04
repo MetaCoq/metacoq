@@ -25,6 +25,26 @@ Module Type Term.
   Notation lift0 n := (lift n 0).
 End Term.
 
+Module Retroknowledge.
+
+  Record t := mk_retroknowledge { 
+    retro_int63 : option kername;
+    retro_float64 : option kername;
+  }.
+
+  Definition empty := {| retro_int63 := None; retro_float64 := None |}.
+
+  Definition extends (x y : t) :=
+    option_extends x.(retro_int63) y.(retro_int63) /\
+    option_extends x.(retro_float64) y.(retro_float64).
+
+  Lemma extends_refl x : extends x x.
+  Proof.
+    split; apply option_extends_refl.
+  Qed.
+
+End Retroknowledge.
+
 Module Environment (T : Term).
 
   Import T.
@@ -299,33 +319,6 @@ Module Environment (T : Term).
 
   Definition global_declarations := list (kername * global_decl).
 
-  Module Retroknowledge.
-
-    Record t := mk_retroknowledge { 
-      retro_int63 : option kername;
-      retro_float64 : option kername;
-    }.
-
-    Definition empty := {| retro_int63 := None; retro_float64 := None |}.
-
-    Inductive option_extends {A} : relation (option A) :=
-    | option_ext_fill t : option_extends None (Some t)
-    | option_ext_keep t : option_extends (Some t) (Some t)
-    | option_ext_non : option_extends None None.
-
-    Lemma option_extends_refl {A} (o : option A) : option_extends o o.
-    Proof. destruct o; constructor. Qed.
-
-    Definition extends (x y : t) :=
-      option_extends x.(retro_int63) y.(retro_int63) /\
-      option_extends x.(retro_float64) y.(retro_float64).
-
-    Lemma extends_refl x : extends x x.
-    Proof.
-      split; apply option_extends_refl.
-    Qed.
-  End Retroknowledge.
-
   Record global_env := mk_global_env
     { universes : ContextSet.t;
       declarations : global_declarations;
@@ -347,6 +340,10 @@ Module Environment (T : Term).
     retroknowledge := Σ.(retroknowledge) |}.
   Proof. now destruct Σ. Qed.
   
+  Definition set_declarations Σ decls := 
+    {| universes := Σ.(universes);
+       declarations := decls;
+       retroknowledge := Σ.(retroknowledge) |}.
 
   Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
     match Σ with
@@ -366,7 +363,7 @@ Module Environment (T : Term).
   Definition extends_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) = Σ'.(universes),
        ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
-       Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
+       Σ.(retroknowledge) = Σ'.(retroknowledge)].
   
   Existing Class extends.
   Existing Class extends_decls.
@@ -374,11 +371,11 @@ Module Environment (T : Term).
   #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
   Proof.
     intros []. split => //.
-    rewrite e. split; [lsets|csets].
+    rewrite e. split; [lsets|csets]. rewrite e0. apply Retroknowledge.extends_refl.
   Qed.
 
   #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
-  Proof. red. intros x. split => //; try exists [] => //. apply Retroknowledge.extends_refl. Qed.
+  Proof. red. intros x. split => //; try exists [] => //. Qed.
   
   Lemma extends_refl : CRelationClasses.Reflexive extends.
   Proof. red. intros x. split; [apply incl_cs_refl | now exists [] | apply Retroknowledge.extends_refl]. Qed.

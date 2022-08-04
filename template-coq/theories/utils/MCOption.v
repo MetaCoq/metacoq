@@ -187,3 +187,19 @@ Lemma foroptb_impl {A} (f g : A -> bool) x : (forall x, f x -> g x) -> foroptb f
 Proof.
   move=> Hf; destruct x; simpl => //; apply Hf.
 Qed.
+
+(* Extension *)
+
+Inductive option_extends {A} : relation (option A) :=
+| option_ext_fill t : option_extends None (Some t)
+| option_ext_keep t : option_extends (Some t) (Some t)
+| option_ext_non : option_extends None None.
+Derive Signature for option_extends.
+
+#[export] Instance option_extends_refl {A} : RelationClasses.Reflexive (@option_extends A).
+Proof. intros []; constructor. Qed.
+
+#[export] Instance option_extends_trans {A} : RelationClasses.Transitive (@option_extends A).
+Proof.
+  intros x y z [] H; inv H; constructor.
+Qed.

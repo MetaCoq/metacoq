@@ -1545,7 +1545,7 @@ Proof.
   case: eqb_specT => [-> [= <-]| ne].
   - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl).
     split; try constructor; tas.
-    cbn. split => //=. now exists [(kn, d)]. apply Retroknowledge.extends_refl.
+    cbn. split => //=. now exists [(kn, d)].
   - intros hl.
     destruct (IHond hl) as [[Σ' udecl'] [ong [[equ ext extretro] ond']]].
     exists (Σ', udecl'). cbn in equ |- *. subst univs. split; cbn; auto; try apply ong.

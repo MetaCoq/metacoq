@@ -116,7 +116,6 @@ Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
 Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
 Register MetaCoq.Template.Universes.Level.lzero as metacoq.ast.level.lzero.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
-(* FIXME*)
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
 Register MetaCoq.Template.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
@@ -177,8 +176,8 @@ Register MetaCoq.Template.Ast.tCase as metacoq.ast.tCase.
 Register MetaCoq.Template.Ast.tProj as metacoq.ast.tProj.
 Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
-(* Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
-Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat. *)
+Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
+Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat.
 
 (* Local and global declarations *)
 Register MetaCoq.Template.Ast.parameter_entry as metacoq.ast.parameter_entry.
@@ -198,7 +197,6 @@ Register MetaCoq.Template.Ast.Build_one_inductive_entry as metacoq.ast.Build_one
 Register MetaCoq.Template.Ast.mutual_inductive_entry as metacoq.ast.mutual_inductive_entry.
 Register MetaCoq.Template.Ast.Build_mutual_inductive_entry as metacoq.ast.Build_mutual_inductive_entry.
 
-(* FIXME, now polymorphic *)
 Register MetaCoq.Template.BasicAst.context_decl as metacoq.ast.context_decl.
 Register MetaCoq.Template.BasicAst.mkdecl as metacoq.ast.mkdecl.
 Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
@@ -217,7 +215,7 @@ Register MetaCoq.Template.Ast.Env.Build_constant_body as metacoq.ast.Build_const
 Register MetaCoq.Template.Ast.Env.global_decl as metacoq.ast.global_decl.
 Register MetaCoq.Template.Ast.Env.ConstantDecl as metacoq.ast.ConstantDecl.
 Register MetaCoq.Template.Ast.Env.InductiveDecl as metacoq.ast.InductiveDecl.
-Register MetaCoq.Template.Ast.Env.Retroknowledge.mk_retroknowledge as metacoq.ast.mk_retroknowledge.
+Register MetaCoq.Template.Environment.Retroknowledge.mk_retroknowledge as metacoq.ast.mk_retroknowledge.
 Register MetaCoq.Template.Ast.Env.mk_global_env as metacoq.ast.Build_global_env.
 Register MetaCoq.Template.Ast.Env.global_env as metacoq.ast.global_env.
 Register MetaCoq.Template.Ast.Env.global_env_ext as metacoq.ast.global_env_ext.

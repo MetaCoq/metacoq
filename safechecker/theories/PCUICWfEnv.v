@@ -4,12 +4,13 @@ From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICReduction
      PCUICReflect PCUICSafeLemmata PCUICTyping PCUICGlobalEnv PCUICWfUniverses.
 
-Record on_global_decls_dec {cf:checker_flags} (univs : ContextSet.t) (Σ : global_declarations) (kn : kername) (d : global_decl) :=
+Record on_global_decls_dec {cf:checker_flags} (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
   {
     kn_fresh :  fresh_global kn Σ ;
     udecl := universes_decl_of_decl d ;
     on_udecl_udecl : on_udecl univs udecl ;
-    on_global_decl_d : on_global_decl cumulSpec0 (lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn d
+    on_global_decl_d : on_global_decl cumulSpec0 (lift_typing typing) 
+      ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl) kn d
   }.
 
 Definition level_mem : global_env_ext -> Level.t -> bool
@@ -17,6 +18,7 @@ Definition level_mem : global_env_ext -> Level.t -> bool
 
 Class abstract_env_ext_struct {cf:checker_flags} (abstract_env_impl : Type) := {
   abstract_env_lookup : abstract_env_impl -> kername -> option global_decl;
+  abstract_env_ext_retroknowledge : abstract_env_impl -> Retroknowledge.t;
   abstract_env_conv_pb_relb : abstract_env_impl -> conv_pb -> Universe.t -> Universe.t -> bool;
   abstract_env_compare_global_instance : abstract_env_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
   abstract_env_level_mem : abstract_env_impl -> Level.t -> bool;
@@ -32,11 +34,12 @@ Class abstract_env_ext_struct {cf:checker_flags} (abstract_env_impl : Type) := {
 Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type)
   := {
   abstract_env_empty : abstract_env_impl;
-  abstract_env_init (cs:ContextSet.t) : on_global_univs cs -> abstract_env_impl;
+  abstract_env_init (cs:ContextSet.t) (retro : Retroknowledge.t) : on_global_univs cs -> abstract_env_impl;
   abstract_env_univ : abstract_env_impl -> ContextSet.t;
   abstract_env_global_declarations : abstract_env_impl -> global_declarations;
+  abstract_env_retroknowledge : abstract_env_impl -> Retroknowledge.t;
   abstract_env_add_decl X (kn:kername) (d:global_decl) :
-   ∥ on_global_decls_dec (abstract_env_univ X) (abstract_env_global_declarations X) kn d ∥ -> abstract_env_impl;
+   ∥ on_global_decls_dec (abstract_env_univ X) (abstract_env_retroknowledge X) (abstract_env_global_declarations X) kn d ∥ -> abstract_env_impl;
   abstract_env_empty_ext : abstract_env_impl -> abstract_env_ext_impl;
   abstract_env_is_consistent : VSet.t * GoodConstraintSet.t -> bool ;
   abstract_env_is_consistent_uctx : abstract_env_impl -> VSet.t * GoodConstraintSet.t -> bool ;
@@ -75,7 +78,9 @@ Class abstract_env_ext_prop {cf:checker_flags} (abstract_env_impl : Type) `{!abs
       abstract_env_ext_rel X Σ -> abstract_env_ext_rel X Σ' ->  Σ = Σ';
    abstract_env_lookup_correct X {Σ} c : abstract_env_ext_rel X Σ ->
       lookup_env Σ c = abstract_env_lookup X c ;
-    abstract_env_compare_universe_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) conv_pb u u' :
+   abstract_env_ext_retroknowledge_correct X {Σ : global_env_ext} (wfΣ : abstract_env_ext_rel X Σ) :
+      Σ.(retroknowledge) = abstract_env_ext_retroknowledge X ;
+  abstract_env_compare_universe_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) conv_pb u u' :
         wf_universe Σ u -> wf_universe Σ u' ->
         compare_universe conv_pb Σ u u' <->
         abstract_env_conv_pb_relb X conv_pb u u';
@@ -109,8 +114,9 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     abstract_env_global_declarations_correct X {Σ} :
     abstract_env_rel X Σ ->
       declarations Σ = abstract_env_global_declarations X ;
-    abstract_env_init_correct univs cuniv :
-    abstract_env_rel (abstract_env_init univs cuniv) {| universes := univs; declarations := [] |} ;
+    abstract_env_init_correct univs retro cuniv :
+    abstract_env_rel (abstract_env_init univs retro cuniv) 
+    {| universes := univs; declarations := []; retroknowledge := retro |} ;
   abstract_env_add_decl_correct X Σ kn d H : abstract_env_rel X Σ ->
     abstract_env_rel (abstract_env_add_decl X kn d H) (add_global_decl Σ (kn,d));
   abstract_env_add_uctx_rel X {Σ} uctx udecl H H' :
@@ -130,11 +136,14 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     <-> abstract_env_is_consistent_uctx X uctx ;
   abstract_env_univ_correct X {Σ} (wfΣ : abstract_env_rel X Σ) :
     (Σ:ContextSet.t) = abstract_env_univ X ;
+  abstract_env_retroknowledge_correct X {Σ : global_env} (wfΣ : abstract_env_rel X Σ) :
+    Σ.(retroknowledge) = abstract_env_retroknowledge X ;
   abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ -> 
             exists d, Σ.(declarations) = d :: decls) :
     let X' := abstract_pop_decls X in
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' -> 
-                      Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) ;
+                      Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\ 
+                      Σ.(retroknowledge) = Σ'.(retroknowledge);
   abstract_make_wf_env_ext_correct X univs prf : 
     let X' := abstract_make_wf_env_ext X univs prf in
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)                     

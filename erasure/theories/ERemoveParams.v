@@ -57,7 +57,8 @@ Section strip.
     | tBox => EAst.tBox
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
-    | tConstruct ind i block_args => EAst.tConstruct ind i block_args }.
+    | tConstruct ind i block_args => EAst.tConstruct ind i block_args
+    | tPrim p => EAst.tPrim p }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -727,6 +728,14 @@ Proof.
   all:rewrite isConstructApp_mkApps isConstructApp_mkApps //.
 Qed.
 
+Lemma strip_isPrimApp Σ f : 
+  isPrimApp f = isPrimApp (strip Σ f).
+Proof.
+  funelim (strip Σ f); cbn -[strip] => //.
+  all:rewrite map_InP_spec.
+  all:rewrite !isPrimApp_mkApps //.
+Qed.
+
 Lemma lookup_inductive_pars_is_prop_and_pars {Σ ind b pars} :
   inductive_isprop_and_pars Σ ind = Some (b, pars) ->
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
@@ -958,7 +967,7 @@ Proof.
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
     move: H1. eapply contraNN.
-    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox //.
+    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
     rewrite -strip_isFix //.
   
   - rewrite !strip_mkApps // /=.

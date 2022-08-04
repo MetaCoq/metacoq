@@ -116,7 +116,7 @@ Qed.
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
 Definition global_env_add (Σ : global_env) d :=
-  {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
+  {| universes := Σ.(universes); declarations := d :: Σ.(declarations); retroknowledge := Σ.(retroknowledge) |}.
 
 Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
   (_Σ :referenced_impl_ext) t :
@@ -164,7 +164,8 @@ Proof.
   eapply (env_prop_typing weakening_env) in cons; auto.
   2:instantiate (1:=Σext.1).
   3:{ split; auto; cbn. split; [lsets|csets].
-      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
+      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity.
+      apply Retroknowledge.extends_refl. }
   2: now destruct wf'.
 
   set (Σ' := Σext.1) in cons.

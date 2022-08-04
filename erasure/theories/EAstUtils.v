@@ -287,6 +287,13 @@ Definition isConstruct t :=
   | _ => false
   end.
 
+Definition isPrim t :=
+  match t with
+  | tPrim _ => true
+  | _ => false
+  end.
+
+  
 Definition isBox t :=
   match t with
   | tBox => true
@@ -301,11 +308,14 @@ Definition is_box c :=
 
 Definition isFixApp t := isFix (head t).
 Definition isConstructApp t := isConstruct (head t).
+Definition isPrimApp t := isPrim (head t).
 
 Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
 Proof. rewrite /isFixApp head_mkApps //. Qed.
 Lemma isConstructApp_mkApps f l : isConstructApp (mkApps f l) = isConstructApp f.
 Proof. rewrite /isConstructApp head_mkApps //. Qed.
+Lemma isPrimApp_mkApps f l : isPrimApp (mkApps f l) = isPrimApp f.
+Proof. rewrite /isPrimApp head_mkApps //. Qed.
 
 Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
 Proof.
@@ -322,6 +332,8 @@ Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisFix_mkApps f args : ~~ isFix f -> ~~ isFix (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisBox_mkApps f args : ~~ isBox f -> ~~ isBox (mkApps f args).
+Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
+Lemma nisPrim_mkApps f args : ~~ isPrim f -> ~~ isPrim (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
@@ -349,7 +361,7 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  (* | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")" *)
+  | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")"
   end.
 
 (** Compute all the global environment dependencies of the term *)

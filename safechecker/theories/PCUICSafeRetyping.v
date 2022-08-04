@@ -283,7 +283,23 @@ Qed.
         wt : wellinferred _ _ _ |- _ =>
         try clear infer ; destruct wt as [T HT]
     end.
+  
+  Definition primitive_constant (tag : Primitive.prim_tag) : option kername :=
+    let retro := abstract_env_ext_retroknowledge X in
+    match tag with
+    | Primitive.primInt => Retroknowledge.retro_int63 retro
+    | Primitive.primFloat => Retroknowledge.retro_float64 retro
+    end.
 
+  Lemma primitive_constant_spec tag :
+    forall Σ (wfΣ : abstract_env_ext_rel X Σ),
+    primitive_constant tag = PCUICTyping.primitive_constant Σ tag.
+  Proof.
+    intros.
+    unfold primitive_constant, PCUICTyping.primitive_constant.
+    destruct tag => //;
+    now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
+  Qed.
 
   Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term) 
     (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wellinferred Σ Γ t) :
@@ -291,7 +307,7 @@ Qed.
     by struct t :=
    infer Γ wfΓ (tRel n) wt with 
     inspect (option_map (lift0 (S n) ∘ decl_type) (nth_error Γ n)) := 
-    { | exist None _ => !;
+    { | exist None _ => !
       | exist (Some t) _ => ret t };
     
     infer Γ wfΓ (tVar n) wt := !;
@@ -321,17 +337,17 @@ Qed.
       ret (subst10 a pi.π2.π2.π1);
 
     infer Γ wfΓ (tConst cst u) wt with inspect (abstract_env_lookup X cst) :=
-      { | exist (Some (ConstantDecl d)) _ := ret (subst_instance u d.(cst_type));
+      { | exist (Some (ConstantDecl d)) _ := ret (subst_instance u d.(cst_type))
         |  _ := ! };
 
     infer Γ wfΓ (tInd ind u) wt with inspect (lookup_ind_decl ind) :=
-      { | exist (Checked decl) _ := ret (subst_instance u decl.π2.π1.(ind_type));
+      { | exist (Checked decl) _ := ret (subst_instance u decl.π2.π1.(ind_type))
         | exist (TypeError e) _ := ! };
     
     infer Γ wfΓ (tConstruct ind k u) wt with inspect (lookup_ind_decl ind) :=
       { | exist (Checked decl) _ with inspect (nth_error decl.π2.π1.(ind_ctors) k) := 
-        { | exist (Some cdecl) _ => ret (type_of_constructor decl.π1 cdecl (ind, k) u);
-          | exist None _ => ! };
+        { | exist (Some cdecl) _ => ret (type_of_constructor decl.π1 cdecl (ind, k) u)
+          | exist None _ => ! }
       | exist (TypeError e) _ => ! };
 
     infer Γ wfΓ (tCase ci p c brs) wt
@@ -346,20 +362,22 @@ Qed.
         { | exist (Some pdecl) _ with inspect (reduce_to_ind Γ (infer Γ wfΓ c _) _) :=
           { | exist (Checked_comp indargs) _ => 
               let ty := pdecl.(proj_type) in
-              ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));
-            | exist (TypeError_comp _ _) _ => ! };
-         | exist None _ => ! };
+              ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty))
+            | exist (TypeError_comp _ _) _ => ! }
+         | exist None _ => ! }
         | exist (TypeError e) _ => ! };
 
     infer Γ wfΓ (tFix mfix n) wt with inspect (nth_error mfix n) :=
-      { | exist (Some f) _ => ret f.(dtype);
+      { | exist (Some f) _ => ret f.(dtype)
         | exist None _ => ! };
 
     infer Γ wfΓ (tCoFix mfix n) wt with inspect (nth_error mfix n) :=
-      { | exist (Some f) _ => ret f.(dtype);
-        | exist None _ => ! }.
+      { | exist (Some f) _ => ret f.(dtype)
+        | exist None _ => ! };
 
-    (* infer Γ wfΓ (tPrim p) wt := !. *)
+    infer Γ wfΓ (tPrim p) wt with inspect (primitive_constant p.π1) :=
+      { | exist (Some prim_ty) eqp => ret (tConst prim_ty [])
+        | exist None _ => ! }.
 
   Next Obligation.
     cbn; intros; sq.
@@ -753,6 +771,25 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize (wt _ wfΣ). destruct wt. inversion X0. 
     congruence.
+  Qed.
+  
+  Next Obligation.
+    cbn.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    intros. specialize (wt _ wfΣ). destruct wt.
+    inversion X0; subst. 
+    cbn in eqp. rewrite (primitive_constant_spec _ Σ) // in eqp.
+    rewrite /= -eqp in H0. noconf H0. split.
+    intros; erewrite (abstract_env_ext_irr _ wfΣ0 wfΣ); eauto.
+  Qed.
+
+  Next Obligation.
+    cbn in *.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    intros. specialize (wt _ wfΣ). destruct wt.
+    inversion X0; subst. 
+    rewrite (primitive_constant_spec _ Σ) // in e.
+    rewrite /= -e in H0. noconf H0.
   Qed.
   
   Definition type_of Γ wfΓ t wt : term := (infer Γ wfΓ t wt).

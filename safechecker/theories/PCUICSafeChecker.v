@@ -2364,8 +2364,9 @@ End monad_Alli_nth_forall.
     lsets. 
   Qed.
 
-  Program Definition check_univs (univs : ContextSet.t)
-    : EnvCheck X_env_ext_type ({ X : X_env_type | (forall Σ, abstract_env_rel X Σ -> Σ = {| universes := univs; declarations := [] |}) 
+  Program Definition check_univs (univs : ContextSet.t) (retro : Retroknowledge.t)
+    : EnvCheck X_env_ext_type ({ X : X_env_type | 
+      (forall Σ, abstract_env_rel X Σ -> Σ = {| universes := univs; declarations := []; retroknowledge := retro |}) 
                       /\ ∥ on_global_univs univs ∥ }) :=
     let id := "toplevel" in
     let levels := ContextSet.levels univs in
@@ -2380,7 +2381,7 @@ End monad_Alli_nth_forall.
     | None => fun _ => raise (abstract_env_ext_empty, IllFormedDecl id (Msg "constraints trivially not satisfiable"))
     | Some uctx => fun _ => check_eq_true_lazy (@abstract_env_is_consistent _ X_env_type X_env_ext_type _ uctx)
         (fun _ => (abstract_env_ext_empty, IllFormedDecl id (Msg "constraints not satisfiable"))) ;;
-    ret (let Hunivs := _ in exist (abstract_env_init univs Hunivs) _) end eq_refl .
+    ret (let Hunivs := _ in exist (abstract_env_init univs retro Hunivs) _) end eq_refl .
   Next Obligation.  
     intros. have decll :
           ConstraintSet.For_all (declared_cstr_levels (ContextSet.levels univs)) (ContextSet.constraints univs).
@@ -2408,25 +2409,25 @@ End monad_Alli_nth_forall.
       * red. apply decll.
   Qed. 
   Next Obligation. 
-      cbv beta. intros univs id levels X H H0 Hconsistent ? ? Hunivs. clearbody Hunivs.
+      cbv beta. intros univs retro id levels X H H0 Hconsistent ? ? Hunivs. clearbody Hunivs.
     split.
-    - intros. eapply (abstract_env_irr _ _ (abstract_env_init_correct _ _)); eauto.
+    - intros. eapply (abstract_env_irr _ _ (abstract_env_init_correct _ _ _)); eauto.
     - now sq.
     Unshelve. eauto. 
   Qed.
 
   Obligation Tactic := Tactics.program_simpl.
 
-  Program Fixpoint check_wf_decls (univs : ContextSet.t) 
+  Program Fixpoint check_wf_decls (univs : ContextSet.t) (retro : Retroknowledge.t)
     (decls : global_declarations) : EnvCheck X_env_ext_type ({ X : X_env_type | 
-    (forall Σ, abstract_env_rel X Σ -> Σ = {| universes := univs; declarations := decls |})})
+    (forall Σ, abstract_env_rel X Σ -> Σ = {| universes := univs; declarations := decls; retroknowledge := retro |})})
     := 
     match decls with
     [] => 
-      X <- check_univs univs  ;; 
+      X <- check_univs univs retro ;; 
       ret (exist (proj1_sig X) _)
     | d :: decls => 
-      '(exist X wf_) <- check_wf_decls univs decls ;; 
+      '(exist X wf_) <- check_wf_decls univs retro decls ;; 
       isfresh <- check_fresh d.1 decls ;;
       let udecl := universes_decl_of_decl d.2 in
       X' <- make_abstract_env_ext X d.1 udecl ;;
@@ -2444,6 +2445,7 @@ End monad_Alli_nth_forall.
       now rewrite wf_ in a.  
     - rewrite wf_ in H. erewrite <- abstract_env_univ_correct ; eauto. 
       erewrite <- abstract_env_global_declarations_correct; eauto.
+      erewrite <- (abstract_env_retroknowledge_correct); eauto.
       now rewrite wf_.
   Qed.
 
@@ -2457,7 +2459,7 @@ End monad_Alli_nth_forall.
   
   Program Definition check_wf_env (Σ : global_env) : 
     EnvCheck X_env_ext_type ({ X : X_env_type | abstract_env_rel X Σ}) := 
-    X <- check_wf_decls Σ.(universes) Σ.(declarations) ;;
+    X <- check_wf_decls Σ.(universes) Σ.(retroknowledge) Σ.(declarations) ;;
     ret (exist (proj1_sig X) _).
 
   Next Obligation. 

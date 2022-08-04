@@ -74,6 +74,7 @@ Section isEtaExp.
     | tBox => true
     | tVar _ => true
     | tConst _ => true
+    | tPrim _ => true
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof.
     all:try lia.
@@ -467,6 +468,7 @@ Inductive expanded : term -> Prop :=
     #|args| >= cstr_arity mind cdecl -> 
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx []) args)
+| expanded_tPrim p : expanded (tPrim p)
 | expanded_tBox : expanded tBox.
 
 End expanded.
@@ -505,18 +507,19 @@ forall (Σ : global_declarations) (P : term -> Prop),
    (args : list term),
  declared_constructor Σ (ind, idx) mind idecl cdecl ->
  #|args| >= cstr_arity mind cdecl -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx []) args)) ->
+(forall p, P (tPrim p)) ->
 (P tBox) ->
 forall t : term, expanded Σ t -> P t.
 Proof. 
-  intros. revert t H12.
+  intros. revert t H13.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
-  - eapply H1; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H4; eauto. clear H13. induction H14; econstructor; cbn in *; eauto.
-  - eapply H6; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H8; eauto. induction H12; econstructor; cbn in *; intuition eauto.
-  - eapply H9; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H10; eauto. clear - H14 f. induction H14; econstructor; cbn in *; eauto.
+  - eapply H1; eauto. induction H13; econstructor; cbn in *; eauto.
+  - eapply H4; eauto. clear H14. induction H15; econstructor; cbn in *; eauto.
+  - eapply H6; eauto. induction H13; econstructor; cbn in *; eauto.
+  - eapply H8; eauto. induction H13; econstructor; cbn in *; intuition eauto.
+  - eapply H9; eauto. induction H13; econstructor; cbn in *; eauto.
+  - eapply H10; eauto. clear - H15 f. induction H15; econstructor; cbn in *; eauto.
 Qed.
 
 Local Hint Constructors expanded : core.

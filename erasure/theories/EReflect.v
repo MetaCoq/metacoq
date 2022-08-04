@@ -110,6 +110,8 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
+  - destruct (eq_dec p p0); nodec.
+    left; subst. reflexivity.
 Defined.
 
 #[global]

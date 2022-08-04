@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Universes.
+From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
@@ -38,8 +39,8 @@ Inductive term : Set :=
                term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
-(* | tPrim      : prim_val term -> term. *)
+| tCoFix     : mfixpoint term -> nat -> term
+| tPrim      : prim_val term -> term.
 
 Derive NoConfusion for term.
 

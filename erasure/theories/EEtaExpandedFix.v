@@ -59,6 +59,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     #|args| >= ind_npars mind + cdecl.(cstr_nargs) -> 
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
+| expanded_tPrim p : expanded Γ (tPrim p)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.
@@ -136,10 +137,11 @@ Lemma expanded_ind :
         → Forall (expanded Σ Γ) args
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx []) args))
+    → (∀ Γ p, P Γ (tPrim p))
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
-  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HBox.
+  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HPrim HBox.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   - eapply HRel_app; eauto. clear - f H0. induction H0; econstructor; eauto.
@@ -289,6 +291,7 @@ Section isEtaExp.
     | tBox => true
     | tVar _ => true
     | tConst _ => true
+    | tPrim _ => true
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof using Σ.
     all:try lia.

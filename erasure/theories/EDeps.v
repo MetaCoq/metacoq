@@ -400,7 +400,8 @@ Lemma erases_deps_forall_ind Σ Σ'
   (Hcofix : forall (defs : list (Extract.E.def Extract.E.term)) (i : nat),
          Forall (fun d : Extract.E.def Extract.E.term => erases_deps Σ Σ' (Extract.E.dbody d)) defs ->
          Forall (fun d => P (E.dbody d)) defs ->
-         P (Extract.E.tCoFix defs i)) :
+         P (Extract.E.tCoFix defs i))
+  (Hprim : forall p, P (Extract.E.tPrim p)):
   forall t, erases_deps Σ Σ' t -> P t.
 Proof.
   fix f 2.
@@ -463,7 +464,7 @@ Qed. *)
 
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
-  on_global_decls cumulSpec0 (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
+  on_global_decls cumulSpec0 (lift_typing typing) Σ.(universes) Σ.(retroknowledge) ((kn, decl) :: Σ.(declarations)) ->
   erases_deps Σ Σ' t ->
   erases_deps (add_global_decl Σ (kn, decl)) ((kn, decl') :: Σ') t.
 Proof.
@@ -681,7 +682,7 @@ Lemma erases_global_all_deps Σ Σ' :
   globals_erased_with_deps Σ Σ'.
 Proof.
   intros wf erg.
-  set (Σg := Σ). destruct Σ as [univs Σ]; cbn in *.
+  set (Σg := Σ). destruct Σ as [univs Σ retro]; cbn in *.
   induction Σ as [|(kn, decl) Σ IH] in Σ', Σg, wf, erg |- *; cbn in *.
   - depelim erg.
     split; [intros ? ? decl; discriminate decl|].
@@ -719,7 +720,7 @@ Proof.
         now split; cbn; eauto.
         depelim wf. depelim o0. do 2 red in o2. now rewrite E in o2.
         apply IH; eauto. depelim wf. now depelim o0.
-    + set (Σu := {| universes := univs; declarations := Σ |}).
+    + set (Σu := {| universes := univs; declarations := Σ; retroknowledge := retro |}).
       assert (wfΣu : PCUICTyping.wf Σu).
       { depelim wf. now depelim o0. }
       assert (exists decl' Σ'', Σ' = (kn, decl') :: Σ'' /\ erases_global Σu Σ'')

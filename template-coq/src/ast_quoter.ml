@@ -244,8 +244,8 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
-  (* let mkInt i = Coq_tInt i
-  let mkFloat f = Coq_tFloat f *)
+  let mkInt i = Coq_tInt i
+  let mkFloat f = Coq_tFloat f
 
   let rec seq f t =
     if f < t then

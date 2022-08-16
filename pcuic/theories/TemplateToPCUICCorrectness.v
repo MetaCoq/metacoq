@@ -219,25 +219,13 @@ Proof.
   intros [] []; split; [lsets|csets].
 Qed.
 
-From Coq Require Import RelationClasses.
-
-#[export] Instance option_extends_trans {A} : RelationClasses.Transitive (@option_extends A).
-Proof.
-  intros x y z [] H; depelim H; constructor.
-Qed.
-
-#[export] Instance retro_knowledge_extends_trans : RelationClasses.Transitive Retroknowledge.extends.
-Proof.
-  intros x y z [] []; split; cbn; now etransitivity.
-Qed.
-
 Lemma extends_trans {Σ Σ' Σ'' : global_env} : extends Σ Σ' -> extends Σ' Σ'' -> extends Σ Σ''.
 Proof.
   intros [u [s eq]] [u' [s' eq']]; subst.
   split.
   - eapply cs_subset_trans; tea.
   - eexists (s' ++ s); cbn. rewrite eq' eq. now rewrite app_assoc.
-  - now etransitivity.
+  - now etransitivity; tea.
 Qed.
 
 Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t : 

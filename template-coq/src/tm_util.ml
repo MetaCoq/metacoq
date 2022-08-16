@@ -299,6 +299,6 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-  (* | ACoq_tInt of 'int63 *)
-  (* | ACoq_tFloat of 'float64 *)
+  | ACoq_tInt of 'int63
+  | ACoq_tFloat of 'float64
 

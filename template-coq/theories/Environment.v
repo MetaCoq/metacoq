@@ -37,10 +37,16 @@ Module Retroknowledge.
   Definition extends (x y : t) :=
     option_extends x.(retro_int63) y.(retro_int63) /\
     option_extends x.(retro_float64) y.(retro_float64).
+  Existing Class extends.
 
-  Lemma extends_refl x : extends x x.
+  #[global] Instance extends_refl x : extends x x.
   Proof.
     split; apply option_extends_refl.
+  Qed.
+
+  #[global] Instance extends_trans : RelationClasses.Transitive Retroknowledge.extends.
+  Proof.
+    intros x y z [] []; split; cbn; now etransitivity; tea.
   Qed.
 
 End Retroknowledge.

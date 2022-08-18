@@ -106,11 +106,6 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
-
 Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
@@ -199,6 +194,7 @@ Derive NoConfusion for one_inductive_body.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
+  ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
 Derive NoConfusion for mutual_inductive_body.

@@ -139,8 +139,8 @@ struct
   let quote_proj ind p a = { proj_ind = ind; proj_npars = p; proj_arg = a }
 
   let quote_constraint_type = function
-    | Univ.Lt -> Universes0.ConstraintType.Le 1
-    | Univ.Le -> Universes0.ConstraintType.Le 0
+    | Univ.Lt -> Universes0.ConstraintType.Le BinNums.(Zpos Coq_xH)
+    | Univ.Le -> Universes0.ConstraintType.Le BinNums.Z0
     | Univ.Eq -> Universes0.ConstraintType.Eq
 
   let is_Lt = function
@@ -272,7 +272,7 @@ struct
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in
-    Coq_tFix (block, a)
+    Coq_tCoFix (block, a)
 
   let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in

@@ -51,7 +51,7 @@ Next Obligation.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
-Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+Program Definition erasure_pipeline_gen {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program EProgram.eprogram 
   Ast.term EAst.term
   TemplateProgram.eval_template_program
@@ -73,16 +73,16 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Remove all constructor parameters *)
   remove_params_optimization (wcon := eq_refl) ▷ 
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   (* Remove all cases / projections on propositional content *)
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
   (* Inline projections to cases *)
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl :=  efl) ▷
+  rebuild_wf_env_transform (efl :=  efl) true ▷
   (* First-order constructor representation *)
   constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
 
@@ -99,6 +99,20 @@ Next Obligation.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
 
+(* This includes an additional transformation from cofixpoints to fixpoints, thunking coinductive values *)
+
+Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+ Transform.t TemplateProgram.template_program EProgram.eprogram 
+  Ast.term EAst.term
+  TemplateProgram.eval_template_program
+  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) := 
+  erasure_pipeline_gen ▷
+  let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (fl := EConstructorsAsBlocks.block_wcbv_flags) (efl := EConstructorsAsBlocks.switch_cstr_as_blocks efl) false ▷
+  (* Represent coinductive values as thunked inductive values *)
+  coinductive_to_inductive_transformation (EConstructorsAsBlocks.switch_cstr_as_blocks efl) (has_box := eq_refl) (has_trel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
+
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) := 
@@ -109,12 +123,12 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   erase_transform ▷ 
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
-  rebuild_wf_env_transform (efl :=  efl) ▷
+  rebuild_wf_env_transform (efl :=  efl) true ▷
   constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 

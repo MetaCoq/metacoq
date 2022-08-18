@@ -291,6 +291,13 @@ Module PrintTermTree.
       else print_list (print_one_cstr Γpars mib) nl oib.(ind_ctors).
   End env.
 
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
+
   Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
@@ -301,8 +308,8 @@ Module PrintTermTree.
         let Σ' := (set_declarations Σ decls, mib.(ind_universes)) in
         let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
         print_env_aux short n Σ'.1
-          ("Inductive " ^ 
-          print_list (print_one_ind Σ' short names mib) nl mib.(ind_bodies) ^ "." ^ 
+          (print_recursivity_kind mib.(ind_finite) ^ " " ^
+          print_list (print_one_ind Σ' short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^ 
           nl ^ acc)
       | (kn, ConstantDecl cb) :: decls =>
         let Σ' := (set_declarations Σ decls, cb.(cst_universes)) in

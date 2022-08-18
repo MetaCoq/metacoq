@@ -360,7 +360,7 @@ Definition strip_constant_decl Σ cb :=
   {| cst_body := option_map (strip Σ) cb.(cst_body) |}.
   
 Definition strip_inductive_decl idecl := 
-  {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+  {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
 Definition strip_decl Σ d :=
   match d with
@@ -598,7 +598,7 @@ Module Fast.
     {| cst_body := option_map (strip' Σ) cb.(cst_body) |}.
     
   Definition strip_inductive_decl idecl := 
-    {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+    {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
   Definition strip_decl Σ d :=
     match d with

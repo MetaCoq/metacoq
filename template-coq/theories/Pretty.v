@@ -302,11 +302,18 @@ Module PrintTermTree.
     | Polymorphic_entry names uctx => Polymorphic_ctx (names, UContext.constraints uctx)
     end.
 
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
+
   Definition print_mib Σ with_universes (short : bool) (mib : mutual_inductive_body) : t :=
     let Σ' := (Σ, mib.(ind_universes)) in
     let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-      ("Inductive " ^ 
-      print_list (print_one_ind Σ' with_universes short names mib) nl mib.(ind_bodies) ^ "." ^ nl).
+      (print_recursivity_kind mib.(ind_finite) ^ " " ^ 
+      print_list (print_one_ind Σ' with_universes short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^ nl).
 
   Definition mie_arities_context mie := 
     rev_map (fun ind => vass (mkBindAnn (nNamed ind.(mind_entry_typename)) Relevant) 
@@ -316,8 +323,8 @@ Module PrintTermTree.
   Definition print_mie Σ with_universes (short : bool) (mie : mutual_inductive_entry) : t :=
     let Σ' := (Σ, universes_decl_of_universes_entry mie.(mind_entry_universes)) in
     let names := fresh_names Σ' [] (mie_arities_context mie) in
-      ("Inductive " ^ 
-      print_list (print_one_ind_entry Σ' with_universes short names mie) nl mie.(mind_entry_inds) ^ "." ^ nl).
+      (print_recursivity_kind mie.(mind_entry_finite) ^ " " ^
+      print_list (print_one_ind_entry Σ' with_universes short names mie) (nl ^ "with ") mie.(mind_entry_inds) ^ "." ^ nl).
     
   Fixpoint print_env_aux with_universes (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 

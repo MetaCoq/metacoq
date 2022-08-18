@@ -57,6 +57,7 @@ ErasureFunction
 EOptimizePropDiscr
 EInlineProjections
 EConstructorsAsBlocks
+ECoInductiveToInductive
 EProgram
 ETransform
 Erasure

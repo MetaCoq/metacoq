@@ -2,7 +2,6 @@
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPretty PCUICAlphaWcbvEval.
 
-
 Section env.
     Context (Σ : global_env_ext).
           
@@ -52,3 +51,13 @@ End env.
 
 Definition unshadow_env_ext (Σ : global_env_ext) :=
   ({| universes := Σ.(universes) ; declarations := map (on_snd (fun d => match d with ConstantDecl b => ConstantDecl (map_constant_body (unshadow Σ []) b) | x => x end)) Σ.(declarations) |}, snd Σ).
+
+
+Implicit Types cf : checker_flags.
+Notation "`≡α`" := upto_names.
+Infix "≡α" := upto_names (at level 60).
+Notation "`≡Γ`" := (eq_context_upto empty_global_env eq eq).
+Infix "≡Γ" := (eq_context_upto empty_global_env eq eq) (at level 20, no associativity).
+  
+Lemma unshadow_correct Σ Γ t :
+  t ≡α unshadow Γ t.

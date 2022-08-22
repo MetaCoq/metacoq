@@ -65,6 +65,7 @@ theories/PCUICConvCumInversion.v
 theories/PCUICRedTypeIrrelevance.v
 theories/PCUICGeneration.v
 theories/PCUICAlpha.v
+theories/PCUICAlphaWcbvEval.v
 theories/PCUICContexts.v
 theories/PCUICArities.v
 theories/PCUICWfUniverses.v

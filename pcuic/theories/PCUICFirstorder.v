@@ -719,7 +719,7 @@ Proof using Type.
       apply eqb_eq in Hfo, Hty. congruence.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
+(* From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 
 Lemma firstorder_value_alpha Σ t t' :
   upto_names t t' ->
@@ -730,7 +730,7 @@ Proof.
   induction t' using PCUICInduction.term_forall_mkApps_ind; invs Ha; eauto.
   all: try now solve_discr. 
   - rewrite H5 H6. f_equal.
-    2:{ induction H0 in v |- *.
+    2:{ induction H0 in v, H5 |- *.
     cbn in H5. invs H5. congruence.
   - eapply (f_equal decompose_app) in H5. rewrite decompose_app_mkApps in H5. firstorder.
     cbn in H5. invs H5. congruence.
@@ -738,5 +738,5 @@ Proof.
     cbn in H2. invs H2. cbn in H4. eapply R_universe_instance_eq in H4. subst. eauto.
 Qed.
     
-
+ *)
 End cf.

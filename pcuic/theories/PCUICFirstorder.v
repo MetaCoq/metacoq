@@ -719,24 +719,18 @@ Proof using Type.
       apply eqb_eq in Hfo, Hty. congruence.
 Qed.
 
-(* From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 
 Lemma firstorder_value_alpha Σ t t' :
-  upto_names t t' ->
+  t ≡α t' ->
   firstorder_value Σ [] t ->
   t = t'.
 Proof.
   intros Ha H. induction H in t', Ha |- using firstorder_value_inds.
-  induction t' using PCUICInduction.term_forall_mkApps_ind; invs Ha; eauto.
-  all: try now solve_discr. 
-  - rewrite H5 H6. f_equal.
-    2:{ induction H0 in v, H5 |- *.
-    cbn in H5. invs H5. congruence.
-  - eapply (f_equal decompose_app) in H5. rewrite decompose_app_mkApps in H5. firstorder.
-    cbn in H5. invs H5. congruence.
-  - eapply (f_equal decompose_app) in H2. rewrite decompose_app_mkApps in H2 => //.
-    cbn in H2. invs H2. cbn in H4. eapply R_universe_instance_eq in H4. subst. eauto.
+  eapply eq_term_upto_univ_napp_mkApps_l_inv in Ha as (? & ? & [] & ->).
+  invs e. repeat f_equal.
+  - now eapply eq_univ_make.
+  - revert x0 a. clear - H0. induction H0; intros; invs a; f_equal; eauto.
 Qed.
-    
- *)
+
 End cf.

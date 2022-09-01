@@ -263,16 +263,16 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, b)
 
-  let mkCoFix (a,(ns,ts,ds)) =
+  let mkCoFix ((a, b),(ns,ts,ds)) =
     let mk_fun xs i =
       { dname = Array.get ns i ;
         dtype = Array.get ts i ;
         dbody = Array.get ds i ;
-        rarg = Datatypes.O } :: xs
+        rarg = Array.get a i } :: xs
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in
-    Coq_tCoFix (block, a)
+    Coq_tCoFix (block, b)
 
   let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in

@@ -714,7 +714,8 @@ Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
   let bodies := map erase_one_inductive_body bds in
-  {| E.ind_npars := mib.(ind_npars);
+  {| E.ind_finite := mib.(ind_finite);
+     E.ind_npars := mib.(ind_npars);
      E.ind_bodies := bodies; |}.
 
 Lemma is_arity_irrel {X_type : abstract_env_ext_impl} {X : X_type.π1}

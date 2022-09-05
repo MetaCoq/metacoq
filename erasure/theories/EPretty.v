@@ -201,10 +201,18 @@ Module PrintTermTree.
     | _ => nl ^ "projections: " ^ print_list (fun x => x.(proj_name)) ", " body.(ind_projs) 
     end
     in
-    "Inductive " ^ body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
+    body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
+
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
 
   Definition print_inductive_body decl :=
-    print_list (print_one_inductive_body decl.(ind_npars)) nl decl.(ind_bodies).
+    print_recursivity_kind decl.(ind_finite) ^ " " ^
+    print_list (print_one_inductive_body decl.(ind_npars)) (nl ^ " with ") decl.(ind_bodies).
 
   Definition print_decl Σ '(kn, d) := 
     match d with

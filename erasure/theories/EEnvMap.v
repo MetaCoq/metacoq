@@ -1,6 +1,6 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils Kernames EnvMap.
+From MetaCoq.Template Require Import utils Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EGlobalEnv EAstUtils.
 Import MCMonadNotation.
 
@@ -76,6 +76,16 @@ Module GlobalContextMap.
   Lemma lookup_inductive_pars_spec Σ kn : lookup_inductive_pars Σ kn = EGlobalEnv.lookup_inductive_pars Σ kn.
   Proof.
     rewrite /lookup_inductive_pars /EGlobalEnv.lookup_inductive_pars.
+    now rewrite lookup_minductive_spec.
+  Qed.
+
+  Definition lookup_inductive_kind Σ kn : option recursivity_kind := 
+    mdecl <- lookup_minductive Σ kn ;;
+    ret mdecl.(ind_finite).
+
+  Lemma lookup_inductive_kind_spec Σ kn : lookup_inductive_kind Σ kn = EGlobalEnv.lookup_inductive_kind Σ kn.
+  Proof.
+    rewrite /lookup_inductive_kind /EGlobalEnv.lookup_inductive_kind.
     now rewrite lookup_minductive_spec.
   Qed.
 

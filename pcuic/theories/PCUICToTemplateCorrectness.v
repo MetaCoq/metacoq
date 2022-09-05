@@ -2347,7 +2347,11 @@ Proof.
     + fold trans;subst types.
       now apply trans_mfix_All2.
     + now rewrite trans_wf_cofixpoint.
-  - todo "type_Prim in template".
+  - cbn. destruct p as [? []]; cbn; econstructor; eauto.
+    1,3: eapply trans_declared_constant; tea.
+    all:move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants;
+    intros [s []]; exists s; split => //;
+    destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
   - eapply TT.type_Conv.
     + eassumption.
     + eassumption.

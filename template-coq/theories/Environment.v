@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrfun Morphisms Setoid.
+From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Template Require Import utils BasicAst Primitive.
 From MetaCoq.Template Require Import Universes.
 
@@ -390,6 +390,17 @@ Module Environment (T : Term).
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
   Proof. apply extends_refl. Qed.
   *) 
+
+  Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
+    match p with
+    | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
+    | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
+    end.
+  
+  Definition primitive_invariants (cdecl : constant_body) :=
+    ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
+             cdecl.(cst_universes) = Monomorphic_ctx].
+    
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)

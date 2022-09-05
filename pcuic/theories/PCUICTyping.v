@@ -139,16 +139,6 @@ Definition wf_cofixpoint_gen
 
 Definition wf_cofixpoint (Σ : global_env) := wf_cofixpoint_gen (lookup_env Σ).
 
-Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
-  match p with
-  | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
-  | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
-  end.
-
-Definition primitive_invariants (cdecl : constant_body) :=
-  ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
-       cdecl.(cst_universes) = Monomorphic_ctx].
-
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).

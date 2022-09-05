@@ -2206,6 +2206,13 @@ Proof.
   now rewrite global_ext_levels_trans.
 Qed.
 
+Lemma trans_env_retroknowledge Σ : retroknowledge (trans_global_env Σ) = S.Env.retroknowledge Σ.
+Proof.
+  destruct Σ as [univs decls retro].
+  rewrite /trans_global_env /=.
+  induction decls; cbn; auto.
+Qed.
+
 Local Hint Resolve trans_wf_universe : trans.
 Local Hint Transparent Ast.Env.global_env_ext : trans.
 Local Hint Transparent Universe.t : trans.
@@ -2446,6 +2453,18 @@ Proof.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
+  - cbn. econstructor; cbn; eauto. 
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros [s []]; exists s; split => //;
+      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+  - cbn. econstructor; cbn; eauto. 
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros [s []]; exists s; split => //;
+      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
   - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }
     eapply type_Cumul; eauto.

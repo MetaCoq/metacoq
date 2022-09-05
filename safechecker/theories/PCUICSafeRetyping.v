@@ -293,10 +293,10 @@ Qed.
 
   Lemma primitive_constant_spec tag :
     forall Σ (wfΣ : abstract_env_ext_rel X Σ),
-    primitive_constant tag = PCUICTyping.primitive_constant Σ tag.
+    primitive_constant tag = PCUICEnvironment.primitive_constant Σ tag.
   Proof.
     intros.
-    unfold primitive_constant, PCUICTyping.primitive_constant.
+    unfold primitive_constant, PCUICEnvironment.primitive_constant.
     destruct tag => //;
     now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
   Qed.

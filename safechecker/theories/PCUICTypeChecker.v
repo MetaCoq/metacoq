@@ -1331,7 +1331,7 @@ Section Typecheck.
 
   infer Γ HΓ (tEvar ev _) := raise (UnboundEvar ev) ;
 
-  infer Γ HΓ (tSort u) with inspect (abstract_env_wf_universeb _ X u) := {
+  infer Γ HΓ (tSort u) with inspect (@abstract_env_ext_wf_universeb _ _ _ X u) := {
     | exist true _ := ret (tSort (Universe.super u);_) ;
     | exist false _ := raise (Msg ("Sort contains an undeclared level " ^ string_of_sort u))
   } ;
@@ -1475,15 +1475,15 @@ Section Typecheck.
   Next Obligation.
     specialize_Σ wfΣ; sq.
     symmetry in e. 
-    erewrite <- abstract_env_wf_universeb_correct in e; eauto.  
+    erewrite <- abstract_env_ext_wf_universeb_correct in e; eauto.  
     eapply (elimT wf_universe_reflect) in e.
-    sq; econstructor; tas. exact X_type.π2.π2.
+    sq; econstructor; tas.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq.
-    inversion X1 ; subst. erewrite <- abstract_env_wf_universeb_correct in e0; eauto. 
-    move: H0 e0 => /wf_universe_reflect -> //.  exact X_type.π2.π2.
+    inversion X1 ; subst. erewrite <- abstract_env_ext_wf_universeb_correct in e0; eauto. 
+    move: H0 e0 => /wf_universe_reflect -> //.  
   Qed.
   (* tProd *)
   Next Obligation.

@@ -96,7 +96,7 @@ Definition on_global_univ_init_env : on_global_univs init_env.
   - red. unshelve eexists. 
     + econstructor; eauto. intros; exact 1%positive.
     + red. intros ? ?. cbn in *. inversion H.
-Defined.          
+Qed.          
 
 Definition check_conv_pb_relb_correct {cf:checker_flags} (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥) G
   (HG : is_graph_of_uctx G (global_ext_uctx Σ)) conv_pb u u' :
@@ -116,7 +116,7 @@ Proof.
   - apply (check_leqb_universe_spec' G (global_ext_levels Σ, global_ext_constraints Σ)); eauto. 
       + eapply wf_ext_global_uctx_invariants; eauto.
       + eapply wf_ext_consistent; eauto. 
-Defined. 
+Qed. 
 
 Global Instance canonical_abstract_env_ext_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_ext_struct referenced_impl_ext :=
@@ -327,9 +327,9 @@ Next Obligation.
   sq. destruct H.  
   apply EnvMap.repr_add; eauto; try eapply wf_fresh_globals; eauto. 
   apply wf_env_map_repr.
-Defined. 
-Next Obligation. apply wf_env_map_repr. Defined.
-Next Obligation. apply wf_env_map_repr. Defined.
+Qed. 
+Next Obligation. apply wf_env_map_repr. Qed.
+Next Obligation. apply wf_env_map_repr. Qed.
 
 Section WfEnv.
   Context {cf : checker_flags} {guard : abstract_guard_impl}.
@@ -391,7 +391,7 @@ Section GraphSpec.
   Local Definition HΣ' : ∥ wf_ext Σ ∥.
   Proof.
     destruct HΣ, Hφ; now constructor.
-  Defined.
+  Qed.
 
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
@@ -413,7 +413,7 @@ Section GraphSpec.
     now eapply global_ext_uctx_consistent.
     pose proof (wf_ext_global_uctx_invariants Σ H0) as [H1 H2].
     split; eauto.
-  Defined.
+  Qed.
 
   Lemma is_graph_of_uctx_levels (l : Level.t) :
     LevelSet.mem l (uGraph.wGraph.V G) <->
@@ -435,9 +435,9 @@ End GraphSpec.
 Program Global Instance canonical_abstract_env_ext_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_ext_prop _ _ canonical_abstract_env_ext_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
-Next Obligation. wf_env. Defined.
+Next Obligation. wf_env. Qed.
 Next Obligation. apply check_conv_pb_relb_correct; eauto; wf_env.   
-   apply (graph_of_wf_ext X).π2. Defined.
+   apply (graph_of_wf_ext X).π2. Qed.
 Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
   move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
   apply iff_reflect;  apply check_conv_pb_relb_correct with (conv_pb := Conv); eauto; wf_env. 
@@ -447,7 +447,7 @@ Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
   all: rewrite wf_universeb_instance_forall.
   revert H; move => / wf_universe_instanceP ?; eauto. 
   revert H0; move => / wf_universe_instanceP ?; eauto. 
-Defined. 
+Qed. 
 Next Obligation. split; intros. 
   - eapply check_constraints_complete; eauto.
     apply referenced_impl_sq_wf. apply Σudecl_ref.
@@ -456,21 +456,21 @@ Next Obligation. split; intros.
   - eapply check_constraints_spec; eauto.    
   apply referenced_impl_sq_wf. apply Σudecl_ref.
   apply (graph_of_wf_ext X).π2.
-  Defined. 
-Next Obligation. apply guard_correct. Defined.
+  Qed. 
+Next Obligation. apply guard_correct. Qed.
 
 Program Global Instance optimized_abstract_env_ext_prop {cf:checker_flags} {guard : abstract_guard_impl} :
 @abstract_env_ext_prop _ _ optimized_abstract_env_ext_struct :=
    {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
-Next Obligation. wf_env. Defined.
+Next Obligation. wf_env. Qed.
 Next Obligation. pose (referenced_impl_ext_wf X). sq. 
   erewrite EnvMap.lookup_spec; try reflexivity. 
   1: apply wf_fresh_globals; eauto.
   1: apply wf_env_ext_map_repr. Qed.
-Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Defined.
-Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Defined.
-Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Defined.
-Next Obligation. eapply guard_correct. Defined.
+Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Qed.
+Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Qed.
+Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Qed.
+Next Obligation. eapply guard_correct. Qed.
 
 Program Global Instance canonical_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.

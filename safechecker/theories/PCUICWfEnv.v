@@ -58,16 +58,6 @@ Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl : Type} `{!abst
 Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl : Type} `{!abstract_env_ext_struct abstract_env_impl}
   (X:abstract_env_impl) := abstract_env_conv_pb_relb X Cumul.
 
-Definition abstract_env_wf_universeb {cf:checker_flags} (abstract_env_impl : Type) `{!abstract_env_ext_struct abstract_env_impl}
-  : abstract_env_impl -> Universe.t -> bool
-  := fun X s => match s with
-  | Universe.lType l =>
-    LevelExprSet.for_all
-        (fun l0 : LevelExprSet.elt =>
-        abstract_env_level_mem X (LevelExpr.get_level l0)) l
-  | _ => true
-  end.
-
 Class abstract_env_ext_prop {cf:checker_flags} (abstract_env_impl : Type) `{!abstract_env_ext_struct abstract_env_impl} : Prop := {
     abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
     abstract_env_ext_wf X {Σ} : abstract_env_ext_rel X Σ -> ∥ wf_ext Σ ∥ ;
@@ -139,18 +129,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     let X' := abstract_make_wf_env_ext X univs prf in
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)                     
   }.
-
-
-Definition abstract_env_wf_universeb_correct (abstract_env_impl : Type)
-  `{abstract_env_ext_prop abstract_env_impl}
-   X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : wf_universeb Σ u = abstract_env_wf_universeb _ X u.
-Proof.
-  destruct u as [| |t]; auto.
-  destruct t. cbn. repeat rewrite for_all_elements.
-  induction (LevelExprSet.elements t_set); cbn; auto.
-  rewrite <- IHl. erewrite <- abstract_env_level_mem_correct; eauto.
-  reflexivity.
-Defined.
 
 Definition abstract_env_ext_impl {cf:checker_flags} := ∑ X Y, @abstract_env_ext_prop _ X Y.
 

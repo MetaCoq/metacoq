@@ -11,6 +11,7 @@ PeanoNat
 Specif
 Basics
 BinPosDef
+BinNums
 BinPos
 BinNat
 BinInt
@@ -42,7 +43,6 @@ MSetDecide
 MSetList
 MSetAVL
 MSetProperties
-BinNums
 EqDec
 CRelationClasses
 Compare_dec
@@ -77,12 +77,12 @@ Signature
 All_Forall
 Config0
 Kernames
+Primitive
 BasicAst
 Universes0
 Environment
 EnvironmentTyping
 Ast0
-Primitive
 AstUtils
 LiftSubst
 UnivSubst0

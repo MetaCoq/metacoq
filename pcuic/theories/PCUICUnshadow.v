@@ -4,13 +4,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPretty PCUICAlphaW
 
 Section env.
     Context (Σ : global_env_ext).
-          
-    Fixpoint unshadow (Γ : list ident) (t : term) {struct t} : term :=
-     let unshadow_context := fold_right (fun x '(names, l) => let na' := (fresh_name Σ (names ++ Γ) x.(decl_name).(binder_name) (Some x.(decl_type))) in
-                                          (na' :: names, {| decl_name := map_binder_annot (fun _ => nNamed na') x.(decl_name) ; 
-                                                            decl_body := option_map (unshadow (na' :: names ++ Γ)) x.(decl_body) ; 
-                                                            decl_type := unshadow (names ++ Γ) x.(decl_type) |} :: l)) ([], []) in
-      let unshadow_defs := fun ctx => let NAMES := fold_right (fun x names => let na' := (fresh_name Σ (names ++ Γ) x.(dname).(binder_name) (Some x.(dtype))) in
+
+    Definition unshadow_defs (unshadow : list ident -> term -> term) Γ ctx := let NAMES := fold_right (fun x names => let na' := (fresh_name Σ (names ++ Γ) x.(dname).(binder_name) (Some x.(dtype))) in
                                                     (na' :: names)) [] ctx in
                                 fold_right (fun x '(names, l) => let na' := (fresh_name Σ (names ++ Γ) x.(dname).(binder_name) (Some x.(dtype))) in
                                            (na' :: names,
@@ -18,8 +13,14 @@ Section env.
                                                dbody := unshadow (NAMES ++ Γ) x.(dbody) ; 
                                                dtype := unshadow (NAMES ++ Γ) x.(dtype) ;
                                                rarg := x.(rarg) |} :: l)) 
-                                              ([], []) ctx in
-    match t with
+                                              ([], []) ctx.
+          
+    Fixpoint unshadow (Γ : list ident) (t : term) {struct t} : term :=
+     let unshadow_context := fold_right (fun x '(names, l) => let na' := (fresh_name Σ (names ++ Γ) x.(decl_name).(binder_name) (Some x.(decl_type))) in
+                                          (na' :: names, {| decl_name := map_binder_annot (fun _ => nNamed na') x.(decl_name) ; 
+                                                            decl_body := option_map (unshadow (na' :: names ++ Γ)) x.(decl_body) ; 
+                                                            decl_type := unshadow (names ++ Γ) x.(decl_type) |} :: l)) ([], []) in
+      match t with
     | tEvar ev args => tEvar ev (map (unshadow Γ) args)
     | tProd na dom codom =>
       let na' := fresh_name Σ Γ na.(binder_name) (Some dom) in
@@ -41,9 +42,9 @@ Section env.
     | tProj p c =>
        tProj p (unshadow Γ c)
     | tFix mfix n => 
-       tFix (snd (unshadow_defs mfix)) n
+       tFix (snd (unshadow_defs unshadow Γ mfix)) n
     | tCoFix mfix n => 
-       tCoFix (snd (unshadow_defs mfix)) n
+       tCoFix (snd (unshadow_defs unshadow Γ mfix)) n
     | t => t
     end.
 
@@ -51,13 +52,3 @@ End env.
 
 Definition unshadow_env_ext (Σ : global_env_ext) :=
   ({| universes := Σ.(universes) ; declarations := map (on_snd (fun d => match d with ConstantDecl b => ConstantDecl (map_constant_body (unshadow Σ []) b) | x => x end)) Σ.(declarations) |}, snd Σ).
-
-
-Implicit Types cf : checker_flags.
-Notation "`≡α`" := upto_names.
-Infix "≡α" := upto_names (at level 60).
-Notation "`≡Γ`" := (eq_context_upto empty_global_env eq eq).
-Infix "≡Γ" := (eq_context_upto empty_global_env eq eq) (at level 20, no associativity).
-  
-Lemma unshadow_correct Σ Γ t :
-  t ≡α unshadow Γ t.

@@ -3,7 +3,7 @@
 From Equations.Type Require Import Relation.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Environment 
+From MetaCoq.Template Require Import config utils Ast AstUtils Environment Primitive
     LiftSubst UnivSubst EnvironmentTyping Reflect ReflectAst TermEquality WfAst.
 
 Import MCMonadNotation.
@@ -840,6 +840,20 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
+| type_Int p prim_ty cdecl : 
+    wf_local Σ Γ ->  
+    primitive_constant Σ primInt = Some prim_ty ->
+    declared_constant Σ prim_ty cdecl ->
+    primitive_invariants cdecl ->
+    Σ ;;; Γ |- tInt p : tConst prim_ty []
+
+| type_Float p prim_ty cdecl : 
+    wf_local Σ Γ ->  
+    primitive_constant Σ primFloat = Some prim_ty ->
+    declared_constant Σ prim_ty cdecl ->
+    primitive_invariants cdecl ->
+    Σ ;;; Γ |- tFloat p : tConst prim_ty []
+ 
 | type_Conv t A B s :
     Σ ;;; Γ |- t : A ->
     Σ ;;; Γ |- B : tSort s ->
@@ -952,6 +966,8 @@ Proof.
       (all2i_size _ (fun _ x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a0))))).
   - exact (S (Nat.max (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => infer_sort_size (typing_sort_size typing_size) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => infer_sort_size (typing_sort_size typing_size) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
+  - exact (S (All_local_env_size typing_size _ _ a)).
+  - exact (S (All_local_env_size typing_size _ _ a)).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -1224,6 +1240,20 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) p prim_ty cdecl,
+        PΓ Σ Γ wfΓ ->
+        primitive_constant Σ primInt = Some prim_ty ->
+        declared_constant Σ prim_ty cdecl ->
+        primitive_invariants cdecl ->
+        P Σ Γ (tInt p) (tConst prim_ty [])) ->
+    
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) p prim_ty cdecl,
+        PΓ Σ Γ wfΓ ->
+        primitive_constant Σ primFloat = Some prim_ty ->
+        declared_constant Σ prim_ty cdecl ->
+        primitive_invariants cdecl ->
+        P Σ Γ (tFloat p) (tConst prim_ty [])) ->
+
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- t : A ->
@@ -1237,7 +1267,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
   intros XΓ.
-  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ wfΓ t T H.
+  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 Xint Xfloat X12 Σ wfΣ Γ wfΓ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : global_env_ext & { wfΣ : wf Σ & { Γ & { t & { T & Σ ;;; Γ |- t : T }}}}})) as p0.
@@ -1540,16 +1570,17 @@ Lemma lookup_on_global_env `{checker_flags} {Pcmp P} {Σ : global_env} {c decl} 
   { Σ' : global_env_ext & on_global_env Pcmp P Σ' × extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
 Proof.
   unfold on_global_env.
-  destruct Σ as [univs Σ]; cbn. intros [cu ond].
+  destruct Σ as [univs Σ retro]; cbn. intros [cu ond].
   induction ond; cbn in * => //.
   case: eqb_specT => [-> [= <-]| ne].
-  - exists ({| universes := univs; declarations := Σ |}, udecl).
+  - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl).
     split; try constructor; tas.
-    cbn. now split => //; exists [(kn, d)].
+    cbn. split => //=. now exists [(kn, d)].
   - intros hl.
-    destruct (IHond hl) as [[Σ' udecl'] [ong [[equ ext] ond']]].
-    exists (Σ', udecl'). cbn in equ |- *. subst univs. repeat split; cbn; auto; try apply ong.
-    cbn in ext. destruct ext as [Σ'' ->]. cbn.
+    destruct (IHond hl) as [[Σ' udecl'] [ong [[equ ext extretro] ond']]].
+    exists (Σ', udecl'). cbn in equ |- *. subst univs. split; cbn; auto; try apply ong.
+    split; cbn; auto. split; cbn; auto.
+    cbn in ext. destruct ext as [Σ'' ->]. cbn in *.
     now exists ((kn, d) :: Σ'').
 Qed.
 

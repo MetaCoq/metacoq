@@ -14,8 +14,6 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/mCProd.mli
-src/mCProd.ml
 src/etaExpand.mli
 src/etaExpand.ml
 
@@ -27,8 +25,8 @@ src/etaExpand.ml
 # src/wcbvEval.mli
 # src/wcbvEval.ml
 # From PCUIC
-# src/pCUICPrimitive.mli
-# src/pCUICPrimitive.ml
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICCases.mli

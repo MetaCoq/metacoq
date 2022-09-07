@@ -333,7 +333,11 @@ Section Principality.
       rewrite nthe' in nthe; noconf nthe.
       repeat split; eauto.
       eapply type_CoFix; eauto.
-    (* - now apply inversion_Prim in hA. *)
+    - apply inversion_Prim in hA as [prim_ty [cdecl []]] => //; pcuic.
+      exists (tConst prim_ty []).
+      intros B hB.
+      apply inversion_Prim in hB as [prim_ty' [cdecl' []]] => //; pcuic.
+      econstructor; tea.
   Qed.
 
   (** A weaker version that is often convenient to use. *)
@@ -471,9 +475,7 @@ Proof.
     [ H : leq_term _ _ _ _ |- _ ] => depelim H
     end.
   all:try solve [econstructor; eauto].
-  13:{ eapply type_Cumul'.
-       eapply X1; eauto. now exists s.
-       auto. }
+
   - eapply inversion_Sort in X0 as [wf [wfs cum]]; auto.
     eapply type_Cumul' with (tSort (Universe.super s)).
     constructor; auto. eapply PCUICArities.isType_Sort; pcuic.
@@ -717,8 +719,14 @@ Proof.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
-Qed.
 
+  - depelim X2.
+    econstructor; tea.
+
+  - eapply type_Cumul'.
+    eapply X1; eauto. now exists s.
+    auto.
+Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 
   wf_ext Σ ->

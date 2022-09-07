@@ -3838,6 +3838,11 @@ Proof.
       eapply (subject_is_open_term (Σ := Σ)); tea.
       len in IHdb. eauto.
     + rewrite trans_wf_cofixpoint //.
+  - cbn. econstructor.
+    3:eapply trans_declared_constant. all:eauto.
+    destruct X0 as [s []]; exists s; split => //.
+    * cbn. rewrite H1 => //.
+    * cbn. now rewrite H2.
   - eapply (type_ws_cumul_pb (pb:=Cumul)).
     + eauto.
     + now exists s.
@@ -4674,13 +4679,13 @@ Proof. auto. Qed.
 Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
 Proof.
   rewrite /PCUICEnvironment.fst_ctx.
-  destruct Σ as [[gunivs Σ] udecl]; cbn. intros [onu wfΣ]; cbn in *.
+  destruct Σ as [[gunivs Σ retro] udecl]; cbn. intros [onu wfΣ]; cbn in *.
   induction wfΣ as [|Σ0 kn d X IHX f udecl' onu' ond]. constructor; auto. constructor.
   have onud : on_udecl gunivs (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
-  { apply (trans_on_udecl (Σ:= {| universes := gunivs; declarations := Σ0 |})) in onu'. destruct d => //. }
+  { apply (trans_on_udecl (Σ:= {| universes := gunivs; declarations := Σ0; retroknowledge := retro |})) in onu'. destruct d => //. }
   cbn; constructor; eauto.
   rename Σ0 into Σd.
-  set (Σ0 := {| universes := gunivs; declarations := Σd |}).
+  set (Σ0 := {| universes := gunivs; declarations := Σd; retroknowledge := retro |}).
   rename X into Xd.
   set (X := (onu, Xd) : wf Σ0).
   constructor; auto; try apply IHX.
@@ -5148,6 +5153,13 @@ Proof.
   now rewrite (isConstructApp_mkApps f1 [f2]).
 Qed.
 
+Lemma isPrimApp_trans f : isPrimApp f = isPrimApp (trans f).
+Proof.
+  induction f => //. cbn.
+  rewrite (isPrimApp_mkApps (trans f1) [trans f2]).
+  now rewrite (isPrimApp_mkApps f1 [f2]).
+Qed.
+
 Lemma trans_wcbveval {cf} {Σ} {wfΣ : wf Σ} t u : 
   closed t ->
   eval Σ t u -> eval (trans_global_env Σ) (trans t) (trans u).
@@ -5324,8 +5336,7 @@ Proof.
   
   - move=> /= /andP[] clf cla.
     eapply eval_app_cong; eauto.
-    rewrite -isFixApp_trans.
-    rewrite -isConstructApp_trans.
+    rewrite -isFixApp_trans -isConstructApp_trans -isPrimApp_trans.
     clear -i. induction f' => /= //.
     
   - move=> clt. eapply eval_atom.
@@ -5410,7 +5421,9 @@ Proof.
   now repeat constructor.
 Qed.
 
-Lemma wf_cons_inv {cf} univs (Σ : global_declarations) d : wf {| universes := univs; declarations := d :: Σ |} -> wf {| universes := univs; declarations := Σ |}.
+Lemma wf_cons_inv {cf} univs retro (Σ : global_declarations) d :
+  wf {| universes := univs; declarations := d :: Σ; retroknowledge := retro |} -> 
+  wf {| universes := univs; declarations := Σ; retroknowledge := retro |}.
 Proof.
   intros []. split => //. now depelim o0.
 Qed.

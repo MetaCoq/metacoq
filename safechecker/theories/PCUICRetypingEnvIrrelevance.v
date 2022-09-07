@@ -33,10 +33,11 @@ Definition Hlookup {cf} (X_type : abstract_env_ext_impl) (X : X_type.π1) (X_typ
   (X' : X_type'.π1) := 
   forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
   forall Σ' : global_env_ext, abstract_env_ext_rel X' Σ' ->
-  forall kn decl decl',
+  (forall kn decl decl',
     lookup_env Σ kn = Some decl ->
     lookup_env Σ' kn = Some decl' ->
-    abstract_env_lookup X kn = abstract_env_lookup X' kn.
+    abstract_env_lookup X kn = abstract_env_lookup X' kn) /\
+  (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
 
 Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_ext_impl} {X : X_type.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
 Proof.
@@ -148,7 +149,8 @@ Section infer_irrel.
         eapply (welltyped_mkApps_inv (Σ := Σ') _ _ _ H2) in wi' as [].
         destruct H0, H3.
         eapply inversion_Const in X0 as [decl [_ [Hdecl _]]]; eauto.
-        eapply inversion_Const in X1 as [decl' [_ [Hdecl' _]]]; eauto. }
+        eapply inversion_Const in X1 as [decl' [_ [Hdecl' _]]]; eauto.
+        now eapply hl. }
       destruct PCUICSafeReduce.inspect => //.
       destruct PCUICSafeReduce.inspect => //.
       destruct x as [[]|] => //; simp _reduce_stack. 2-3:bang.
@@ -608,6 +610,18 @@ Proof.
     clear -e0 eq'. congruence.
   - cbn -[infer]. unfold infer; rewrite Heq /= //.
   - cbn -[infer]. unfold infer; rewrite Heq /= //.
+  - cbn -[infer]. simp infer.
+    eapply elim_inspect => y eq.
+    assert (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
+    { epose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      epose proof (abstract_env_ext_wf X wfΣ) as [hwfΣ].
+      epose proof (abstract_env_ext_exists X') as [[Σ' wfΣ']].
+      epose proof (abstract_env_ext_wf X' wfΣ') as [hwfΣ'].
+      apply (hl _ wfΣ _ wfΣ'). }
+    assert (primitive_constant X_type X p.π1 = primitive_constant X_type' X' p.π1).
+    { unfold primitive_constant. now rewrite H. }
+    clear Heq. rewrite H0 in eqp. rewrite -eq in eqp.
+    destruct y;  simp infer; cbn; congruence.
 Qed.
 
 Lemma sort_of_type_irrel

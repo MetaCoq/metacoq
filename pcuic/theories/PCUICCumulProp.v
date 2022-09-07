@@ -1097,7 +1097,7 @@ Proof using Hcf Hcf'.
   [ H : leq_term_napp _ _ _ _ |- _ ] => depelim H
   end; assert (wf_ext Σ) by (split; assumption).
 
-  14:{ assert (wf_ext Σ) by (split; assumption). specialize (X1 _ _ H X5 _ X6).
+  15:{ assert (wf_ext Σ) by (split; assumption). specialize (X1 _ _ H X5 _ X6).
        eapply cumul_prop_cum_l; tea.
        eapply cumulSpec_cumulAlgo_curry in X4; tea; fvs. }
 
@@ -1315,6 +1315,10 @@ Proof using Hcf Hcf'.
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.
+
+  - depelim X2.
+    eapply inversion_Prim in X1 as [prim_ty' [cdecl' []]]; tea.
+    rewrite H in e. noconf e. eapply cumul_cumul_prop; eauto. pcuic.
 Qed.
 
 End no_prop_leq_type.

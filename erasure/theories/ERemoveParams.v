@@ -57,7 +57,8 @@ Section strip.
     | tBox => EAst.tBox
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
-    | tConstruct ind i block_args => EAst.tConstruct ind i block_args }.
+    | tConstruct ind i block_args => EAst.tConstruct ind i block_args
+    | tPrim p => EAst.tPrim p }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -359,7 +360,7 @@ Definition strip_constant_decl Σ cb :=
   {| cst_body := option_map (strip Σ) cb.(cst_body) |}.
   
 Definition strip_inductive_decl idecl := 
-  {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+  {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
 Definition strip_decl Σ d :=
   match d with
@@ -597,7 +598,7 @@ Module Fast.
     {| cst_body := option_map (strip' Σ) cb.(cst_body) |}.
     
   Definition strip_inductive_decl idecl := 
-    {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+    {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
   Definition strip_decl Σ d :=
     match d with
@@ -725,6 +726,14 @@ Proof.
   funelim (strip Σ f); cbn -[strip] => //.
   all:rewrite map_InP_spec.
   all:rewrite isConstructApp_mkApps isConstructApp_mkApps //.
+Qed.
+
+Lemma strip_isPrimApp Σ f : 
+  isPrimApp f = isPrimApp (strip Σ f).
+Proof.
+  funelim (strip Σ f); cbn -[strip] => //.
+  all:rewrite map_InP_spec.
+  all:rewrite !isPrimApp_mkApps //.
 Qed.
 
 Lemma lookup_inductive_pars_is_prop_and_pars {Σ ind b pars} :
@@ -958,7 +967,7 @@ Proof.
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
     move: H1. eapply contraNN.
-    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox //.
+    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
     rewrite -strip_isFix //.
   
   - rewrite !strip_mkApps // /=.

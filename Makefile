@@ -1,5 +1,5 @@
 
-all: template-coq pcuic safechecker erasure examples test-suite translations
+all: printconf template-coq pcuic safechecker erasure examples test-suite translations
 
 -include Makefile.conf
 
@@ -11,8 +11,6 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   endif
   export OCAMLPATH
 endif
-
-all: printconf template-coq pcuic safechecker erasure examples
 
 .PHONY: printconf all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
 

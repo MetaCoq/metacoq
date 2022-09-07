@@ -20,7 +20,7 @@ then
         PCUIC_DEPS="-R ../template-coq/theories MetaCoq.Template"
         SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
-        TRANSLATIONS_DEPS=""
+        TRANSLATIONS_DEPS="-I ../template-coq"
         EXAMPLES_DEPS="-R ../erasure/theories MetaCoq.Erasure"
         TEST_SUITE_DEPS="-R ../erasure/theories MetaCoq.Erasure"
         PLUGIN_DEMO_DEPS="-R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"

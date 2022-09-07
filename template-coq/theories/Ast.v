@@ -415,10 +415,9 @@ Inductive term : Type :=
         (discr:term) (branches : list (branch term))
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat).
-(* Not supported yet *)
-(* | tInt (i : Int63.int) *)
-(* | tFloat (f : PrimFloat.float). *)
+| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tInt (i : Int63.int)
+| tFloat (f : PrimFloat.float).
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 
     The fresh evar will depend on the whole context at this point in the term, despite the empty instance.
@@ -557,8 +556,8 @@ Fixpoint noccur_between k n (t : term) : bool :=
 #[global] Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
-  | tRel _ | tVar _  => c
-  (* | tInt _ | tFloat _ => c *)
+  | tRel _ | tVar _ => c
+  | tInt _ | tFloat _ => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')

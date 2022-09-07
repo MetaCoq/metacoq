@@ -27,6 +27,7 @@ Local Ltac term_dec_tac term_dec :=
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
+         | x : recursivity_kind, y : recursivity_kind |- _ => fcase (eq_dec x y)
          end.
 
 Ltac nodec :=
@@ -110,6 +111,8 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
+  - destruct (eq_dec p p0); nodec.
+    left; subst. reflexivity.
 Defined.
 
 #[global]
@@ -169,9 +172,9 @@ Proof.
 Defined.
 
 Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
-  let (n, b) := x in
-  let (n', b') := y in
-  eqb n n' && eqb b b'.
+  let (f, n, b) := x in
+  let (f', n', b') := y in
+  eqb f f' && eqb n n' && eqb b b'.
 
 #[global, program]
 Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body := 

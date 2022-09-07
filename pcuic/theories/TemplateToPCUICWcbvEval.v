@@ -432,7 +432,7 @@ Qed.
 
 Lemma eval_mkApps_cong Σ f args : 
   value Σ f -> All (value Σ) args ->
-  ~~ (isLambda f || isFixApp f || isArityHead f || isConstructApp f) ->
+  ~~ (isLambda f || isFixApp f || isArityHead f || isConstructApp f || isPrimApp f) ->
   eval Σ (mkApps f args) (mkApps f args).
 Proof.
   intros vf a. move: a.
@@ -447,8 +447,10 @@ Proof.
     destruct args using rev_case; cbn in hf' => //.
     rewrite !mkApps_app /= orb_false_r in hf'.
     rewrite -[tApp _ _](mkApps_app _ _ [x0]) in hf'.
-    rewrite isFixApp_mkApps isConstructApp_mkApps in hf'.
-    move/orP: hf' => [] ->; now rewrite !orb_true_r.
+    rewrite isFixApp_mkApps isConstructApp_mkApps isPrimApp_mkApps in hf'.
+    move/orP: hf' => [].
+    * move/orP => [] ->; now rewrite !orb_true_r.
+    * move=> ->; now rewrite orb_true_r.
 Qed.
 
 Lemma isLambda_mkApps {f args} : args <> [] -> ~~ isLambda (mkApps f args).
@@ -458,6 +460,12 @@ Proof.
 Qed.
 
 Lemma isArityHead_mkApps {f args} : args <> [] -> ~~ isArityHead (mkApps f args).
+Proof.
+  destruct args using rev_case; cbn; try congruence.
+  rewrite mkApps_app /= //.
+Qed.
+
+Lemma isPrim_mkApps {f args} : args <> [] -> ~~ isPrim (mkApps f args).
 Proof.
   destruct args using rev_case; cbn; try congruence.
   rewrite mkApps_app /= //.
@@ -778,9 +786,11 @@ Proof.
     eapply isLambda_mkApps. destruct args => //.
     eapply isArityHead_mkApps. destruct args => //.
     rewrite isConstructApp_mkApps //.
+    rewrite isPrimApp_mkApps //.
     eapply isLambda_mkApps. destruct args => //.
     eapply isArityHead_mkApps. destruct args => //.
     rewrite isConstructApp_mkApps //.
+    rewrite isPrimApp_mkApps //.
       
   - eapply eval_atom.
     destruct t => //.

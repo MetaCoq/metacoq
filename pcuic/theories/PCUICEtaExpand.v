@@ -1,3 +1,5 @@
+From Coq Require Import ssreflect.
+From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram TemplateToPCUIC.
 
 Definition isConstruct t :=
@@ -46,7 +48,8 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
     declared_constructor Σ (ind, c) mind idecl cdecl ->
     #|args| >= (ind_npars mind + context_assumptions (cstr_args cdecl)) ->
     Forall (expanded Γ) args ->
-    expanded Γ (mkApps (tConstruct ind c u) args).
+    expanded Γ (mkApps (tConstruct ind c u) args)
+| expanded_tPrim p : expanded Γ (tPrim p).
 
 End expanded.
 Derive Signature for expanded.
@@ -119,9 +122,10 @@ Lemma expanded_ind :
   declared_constructor Σ (ind, c) mind idecl cdecl ->
   #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
   Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tConstruct ind c u) args)) ->
+  (forall Γ p, P Γ (tPrim p)) ->
   forall (Γ : list nat) (t : term), expanded Σ Γ t -> P Γ t.
 Proof.
-  intros Σ P HRel HVar HEvar HSort HProd HLamdba HLetIn HApp HConst HInd HCase HProj HFix HCoFix HConstruct.
+  intros Σ P HRel HVar HEvar HSort HProd HLamdba HLetIn HApp HConst HInd HCase HProj HFix HCoFix HConstruct HPrim.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   - eapply HRel; eauto. clear - f H0. induction H0; econstructor; eauto.
@@ -146,6 +150,8 @@ Proof.
     clear - H1 f. induction H1; econstructor; eauto.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICLiftSubst PCUICSigmaCalculus.
+
 Record expanded_constant_decl Σ (cb : constant_body) : Prop :=
   { expanded_body : on_Some_or_None (expanded Σ []) cb.(cst_body); }.
     (* expanded_type : expanded Σ [] cb.(Ast.Env.cst_type) }. *)
@@ -169,23 +175,18 @@ Definition expanded_decl Σ d :=
   | InductiveDecl idecl => expanded_minductive_decl Σ idecl
   end.
         
-Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : global_declarations), Prop :=
-| expanded_global_nil : expanded_global_declarations univs []
-| expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
-  expanded_decl {| universes := univs; declarations := Σ |} decl.2 ->
-  expanded_global_declarations univs (decl :: Σ).
+Inductive expanded_global_declarations (univs : ContextSet.t) retro : forall (Σ : global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations univs retro []
+| expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ -> 
+  expanded_decl {| universes := univs; declarations := Σ; retroknowledge := retro |} decl.2 ->
+  expanded_global_declarations univs retro (decl :: Σ).
 
 Definition expanded_global_env (g : global_env) :=
-  expanded_global_declarations g.(universes) g.(declarations).
+  expanded_global_declarations g.(universes) g.(retroknowledge) g.(declarations).
 
 Definition expanded_pcuic_program (p : pcuic_program) :=
   expanded_global_env p.1 /\ expanded p.1 [] p.2.
 
-
-From Coq Require Import ssreflect.
-From Equations Require Import Equations.
-
-From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICLiftSubst PCUICSigmaCalculus.
 
 Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
 Proof. split; intros. repeat constructor; auto. now depelim X. Qed.

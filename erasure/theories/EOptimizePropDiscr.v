@@ -62,7 +62,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map optimize args)
-    (* | tPrim _ => t *)
+    | tPrim _ => t
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
@@ -693,15 +693,16 @@ Proof.
     * destruct with_guarded_fix.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
         rtoProp; intuition auto.
         destruct v => /= //. 
         destruct v => /= //.
+        destruct v => /= //.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //. 
   - destruct t => //.

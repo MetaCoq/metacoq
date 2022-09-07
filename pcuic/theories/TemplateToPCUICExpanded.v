@@ -35,11 +35,12 @@ Proof.
 Qed.
 
 Import PCUICWeakeningEnv.
-
+(* TODO move *)
 Lemma extends_decls_trans Σ Σ' Σ'' : extends_decls Σ Σ' -> extends_decls Σ' Σ'' -> extends_decls Σ Σ''.
 Proof.
-  intros [? [ext ?]] [? [ext' ?]]. subst. split. now transitivity Σ'.
-  rewrite e0 in e2. exists (ext' ++ ext). now rewrite -app_assoc.
+  intros [e [ext e'] er] [e0 [ext' e0'] er']. subst. split. now transitivity Σ'.
+  exists (ext' ++ ext). now rewrite -app_assoc.
+  congruence.
 Qed.
 
 Lemma declared_minductive_expanded Σ c mdecl :
@@ -240,13 +241,17 @@ Proof with eauto using expanded.
 Qed.
 
 
-Lemma wf_cons_inv {cf} univs (Σ : global_declarations) d : wf {| universes := univs; declarations := d :: Σ |} -> wf {| universes := univs; declarations := Σ |}.
+Lemma wf_cons_inv {cf} Σ' (Σ : global_declarations) d : 
+  wf (set_declarations Σ' (d :: Σ)) -> wf (set_declarations Σ' Σ).
 Proof.
   intros []. split => //. now depelim o0.
 Qed.
 
-Lemma template_wf_cons_inv {cf} univs (Σ : Ast.Env.global_declarations) d : Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ |} ->
-  let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} in
+Lemma template_wf_cons_inv {cf} univs retro (Σ : Ast.Env.global_declarations) d : 
+  Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ; 
+    Ast.Env.retroknowledge := retro |} ->
+  let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; 
+    Ast.Env.retroknowledge := retro |} in
   Typing.wf Σ' × Typing.on_global_decl Typing.cumul_gen (WfAst.wf_decl_pred) (Σ', Ast.universes_decl_of_decl d.2) d.1 d.2
   × ST.on_udecl univs (Ast.universes_decl_of_decl d.2).
 Proof.
@@ -259,19 +264,13 @@ Proof.
   cbn. split => //.
 Qed.
 
-Lemma trans_global_env_cons univs (Σ : Ast.Env.global_declarations) decl : 
-  trans_global_env {| S.Env.universes := univs; S.Env.declarations := decl :: Σ |} = 
-  let Σ' := trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ |} in 
+Lemma trans_global_env_cons univs retro (Σ : Ast.Env.global_declarations) decl : 
+  trans_global_env {| S.Env.universes := univs; S.Env.declarations := decl :: Σ; S.Env.retroknowledge := retro |} = 
+  let Σ' := trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |} in 
   add_global_decl Σ' (decl.1, trans_global_decl Σ' decl.2). 
 Proof. reflexivity. Qed.
 
 Arguments trans_global_env : simpl never.
-
-Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
-Proof. now destruct Σ. Qed.
-
-Lemma eta_template_global_env Σ : Σ = {| S.Env.universes := Σ.(S.Env.universes); S.Env.declarations := Σ.(S.Env.declarations) |}.
-Proof. now destruct Σ. Qed.
 
 Lemma All_fold_map (P : context -> context_decl -> Type) (f : Ast.Env.context_decl -> context_decl) ctx :
   All_fold P (map f ctx) <~> All_fold (fun Γ d => P (map f Γ) (f d)) ctx.

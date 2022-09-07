@@ -152,6 +152,16 @@ Proof.   induction 1; cbn; try congruence.
   cbn. now rewrite EAstUtils.head_tApp.
 Qed.
 
+Lemma is_PrimApp_erases Σ Γ t t' :
+  Σ;;; Γ |- t ⇝ℇ t' ->
+  negb (isPrimApp t) -> negb (EAstUtils.isPrimApp t').
+Proof.   induction 1; cbn; try congruence.
+- unfold isPrimApp in *. clear IHerases2.
+  cbn. rewrite head_tapp. 
+  unfold EAstUtils.isPrimApp in *.
+  cbn. now rewrite EAstUtils.head_tApp.
+Qed.
+
 Lemma erases_isLambda {Σ Γ t u} :
   Σ ;;; Γ |- t ⇝ℇ u -> isLambda t -> EAst.isLambda u || EAstUtils.isBox u.
 Proof.
@@ -494,6 +504,7 @@ Section wellscoped.
   Fixpoint wellformed (t : term) : bool :=
   match t with
   | tRel i => true
+  | tPrim p => true
   | tEvar ev args => List.forallb (wellformed) args
   | tLambda _ N M => wellformed N && wellformed M
   | tApp u v => wellformed u && wellformed v

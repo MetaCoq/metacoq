@@ -14,7 +14,7 @@ Hint Constructors eval : core.
 
 Definition atomic_term (t : term) :=
   match t with
-  | tBox | tConst _ | tRel _ | tVar _ => true
+  | tBox | tConst _ | tRel _ | tVar _ | tPrim _ => true
   | _ => false
   end.
 
@@ -24,6 +24,7 @@ Definition has_atom {etfl : ETermFlags} (t : term) :=
   | tConst _ => has_tConst
   | tRel _ => has_tRel
   | tVar _ => has_tVar
+  | tPrim _ => has_tPrim
   | _ => false
   end.
 
@@ -293,7 +294,8 @@ Lemma eval_preserve_mkApps_ind :
      forall (ev : eval Σ f11 f'), 
      P f11 f' ->  
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u) →
-     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f') → 
+     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
+      || isConstructApp f' || isPrimApp f') → 
      eval Σ a a' → P a a' → 
      P' (tApp f11 a) (tApp f' a')) → 
   (∀ ind i mdecl idecl cdecl args args',

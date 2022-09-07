@@ -372,6 +372,10 @@ Proof.
       intros ? [? s].
       by apply conv_check in s ; auto.
   
+  - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
+    eexists. split; [econstructor; tea|]. 
+    eapply ws_cumul_pb_refl; fvs.
+
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
     eexists.
     split.

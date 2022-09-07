@@ -1,14 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Universes BasicAst Reflect
+From MetaCoq.Template Require Import utils Universes BasicAst Primitive Reflect
      Environment EnvironmentTyping.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.
-
-Variant prim_tag := 
-  | primInt
-  | primFloat.
-  (* | primArray. *)
-Derive NoConfusion EqDec for prim_tag.
+From Coq Require Import Int63 SpecFloat.
 
 (** We don't enforce the type of the array here*)
 Record array_model (term : Type) :=
@@ -22,8 +17,11 @@ Instance array_model_eqdec {term} (e : EqDec term) : EqDec (array_model term).
 Proof. eqdec_proof. Qed.
 
 Inductive prim_model (term : Type) : prim_tag -> Type :=
-| primIntModel (i : uint63_model) : prim_model term primInt
-| primFloatModel (f : float64_model) : prim_model term primFloat.
+| primIntModel (i : Int63.int) : prim_model term primInt
+| primFloatModel (f : PrimFloat.float) : prim_model term primFloat.
+
+(* | primIntModel (i : Int63.t) : prim_model term primInt *)
+(* | primFloatModel (f : float64_model) : prim_model term primFloat. *)
 (* | primArrayModel (a : array_model term) : prim_model term primArray. *)
 Arguments primIntModel {term}.
 Arguments primFloatModel {term}.
@@ -33,8 +31,8 @@ Derive Signature NoConfusion for prim_model.
 
 Definition prim_model_of (term : Type) (p : prim_tag) : Type := 
   match p with
-  | primInt => uint63_model
-  | primFloat => float64_model
+  | primInt => Int63.int
+  | primFloat => PrimFloat.float
   (* | primArray => array_model term *)
   end.
 
@@ -62,11 +60,11 @@ Local Obligation Tactic := idtac.
 #[program]
 #[global]
 Instance reflect_eq_uint63 : ReflectEq uint63_model := 
-  { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
+  { eqb x y := Z.eqb (proj1_sig x) (proj1_sig y) }.
 Next Obligation.
   cbn -[eqb].
   intros x y.
-  elim: eqb_spec. constructor.
+  elim: Z.eqb_spec. constructor.
   now apply exist_irrel_eq.
   intros neq; constructor => H'; apply neq; now subst x.
 Qed.
@@ -74,7 +72,7 @@ Qed.
 #[global]
 Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _.
   
-#[program]
+(* #[program]
 #[global]
 Instance reflect_eq_float64 : ReflectEq float64_model := 
   { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
@@ -84,7 +82,7 @@ Next Obligation.
   elim: eqb_spec. constructor.
   now apply exist_irrel_eq.
   intros neq; constructor => H'; apply neq; now subst x.
-Qed.
+Qed. *)
 
 (** Propositional UIP is needed below *)
 Set Equations With UIP.
@@ -107,7 +105,7 @@ Definition string_of_float64_model (f : float64_model) :=
 
 Definition string_of_prim {term} (soft : term -> string) (p : prim_val term) : string :=
   match p.π2 return string with
-  | primIntModel f => "(int: " ^ string_of_Z (proj1_sig f) ^ ")"
-  | primFloatModel f => "(float: " ^ string_of_float64_model f ^ ")"
+  | primIntModel f => "(int: " ^ string_of_prim_int f ^ ")"
+  | primFloatModel f => "(float: " ^ string_of_float f ^ ")"
   (* | primArrayModel a => "(array:" ^ ")" *)
   end.

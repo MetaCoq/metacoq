@@ -57,7 +57,7 @@ Fixpoint nameless (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
-  (* | tPrim _ => true *)
+  | tPrim _ => true
   end.
 
 Notation nameless_ctx := (forallb (nameless_decl nameless)).
@@ -105,7 +105,7 @@ Fixpoint nl (t : term) : term :=
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
-  (* | tPrim p => tPrim p *)
+  | tPrim p => tPrim p
   end.
 
 Definition nlctx (Γ : context) : context :=
@@ -158,7 +158,8 @@ Definition nl_global_declarations (Σ : global_declarations) : global_declaratio
 
 Definition nl_global_env (Σ : global_env) : global_env :=
   {| universes := Σ.(universes); 
-     declarations := nl_global_declarations Σ.(declarations) |}.
+     declarations := nl_global_declarations Σ.(declarations);
+     retroknowledge := Σ.(retroknowledge) |}.
   
 Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in

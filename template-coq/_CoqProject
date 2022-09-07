@@ -32,6 +32,8 @@ theories/utils/MCUtils.v
 theories/utils/MC_ExtrOCamlZPosInt.v
 theories/utils/ReflectEq.v
 
+theories/Primitive.v
+
 # common
 theories/common/uGraph.v
 

@@ -158,8 +158,8 @@ struct
          let p' = Names.Projection.make p' false in
          let evm, t' = aux env evm t in
          evm, Constr.mkProj (p', t')
-      (* | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x) *)
-      (* | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x) *)
+      | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
+      | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
 
     in aux env evm trm
 

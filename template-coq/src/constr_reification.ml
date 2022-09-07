@@ -48,6 +48,7 @@ struct
   type quoted_global_decl = Constr.t (* of type Ast.global_decl *)
   type quoted_global_declarations = Constr.t (* of type Ast.global_declarations *)
   type quoted_global_env = Constr.t (* of type Ast.global_env *)
+  type quoted_retroknowledge = Constr.t (* of type Retroknowledge.t *)
   type quoted_program = Constr.t (* of type Ast.program *)
 
   let resolve (tm : string) : Constr.t Lazy.t =
@@ -219,6 +220,7 @@ struct
   let tglobal_decl = ast "global_decl"
   let tConstantDecl = ast "ConstantDecl"
   let tInductiveDecl = ast "InductiveDecl"
+  let tmk_retroknowledge = ast "mk_retroknowledge"
   let tBuild_global_env = ast "Build_global_env"
   let tglobal_env = ast "global_env"
 

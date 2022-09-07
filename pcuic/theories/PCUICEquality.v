@@ -360,7 +360,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     ) mfix mfix' ->
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
     
-(* | eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i) *)
+| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).

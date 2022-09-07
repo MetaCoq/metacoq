@@ -33,7 +33,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
-    (* (forall p, P (tPrim p)) -> *)
+    (forall p, P (tPrim p)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -215,7 +215,8 @@ Section MkApps_rec.
         All (fun x => P x.2) l -> P (tCase p t l))
     (pproj : forall (s : projection) (t : term), P t -> P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n))
-    (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)).
+    (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n))
+    (pprim : forall p, P (tPrim p)).
 
   Definition inspect {A} (x : A) : { y : A | x = y } := exist _ x eq_refl.
 
@@ -240,7 +241,8 @@ Section MkApps_rec.
     | tCase ina c brs => pcase ina c (rec c) brs (All_rec P (fun x => x.2) brs (fun x H => rec x))
     | tProj p c => pproj p c (rec c)
     | tFix mfix idx => pfix mfix idx (All_rec P dbody mfix (fun x H => rec x))
-    | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x)).
+    | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x))
+    | tPrim p => pprim p.
   Proof.
     all:unfold MR; cbn; auto with arith. 4:lia.
     - clear -napp nonnil da rec.
@@ -271,7 +273,8 @@ Section MkApps_rec.
     (pcase : forall (p : inductive * nat) (t : term) (l : list (list name * term)), P (tCase p t l))
     (pproj : forall (s : projection) (t : term), P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), P (tFix m n))
-    (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n)).
+    (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n))
+    (pprim : forall p, P (tPrim p)).
 
   Import EqNotations.
   
@@ -292,7 +295,8 @@ Section MkApps_rec.
     | tCase ina c brs => pcase ina c brs
     | tProj p c => pproj p c
     | tFix mfix idx => pfix mfix idx
-    | tCoFix mfix idx => pcofix mfix idx.
+    | tCoFix mfix idx => pcofix mfix idx
+    | tPrim p => pprim p.
 
   End MkApps_case.
 

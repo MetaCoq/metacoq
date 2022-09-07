@@ -799,7 +799,7 @@ Section Typecheck.
       | None => raise (IllFormedFix mfix n)
       end
 
-    (* | tInt _ | tFloat _ => raise (NotSupported "primitive types") *)
+    | tInt _ | tFloat _ => raise (NotSupported "primitive types")
     end.
 
   Definition check (Γ : context) (t : term) (ty : term) : typing_result unit :=
@@ -892,27 +892,27 @@ Section Checker.
                   (fun ctr => wGraph.EdgeSet.add (edge_of_constraint ctr)) ctrs G.1.2,
         G.2).
 
-  Fixpoint check_wf_declarations (univs : ContextSet.t) (G : universes_graph) (g : global_declarations)
+  Fixpoint check_wf_declarations (univs : ContextSet.t) (retro : Retroknowledge.t) (G : universes_graph) (g : global_declarations)
     : EnvCheck () :=
     match g with
     | [] => ret tt
     | g :: env =>
-      check_wf_declarations univs G env ;;
-      check_wf_decl {| universes := univs; declarations := env |} G g.1 g.2 ;;
+      check_wf_declarations univs retro G env ;;
+      check_wf_decl {| universes := univs; declarations := env; retroknowledge := retro |} G g.1 g.2 ;;
       check_fresh g.1 env ;;
       ret tt
     end.
 
   Definition typecheck_program (p : program) : EnvCheck term :=
     let Σ := fst p in
-    let (univs, decls) := (Σ.(universes), Σ.(declarations)) in
+    let '(univs, decls, retro) := (Σ.(universes), Σ.(declarations), Σ.(retroknowledge)) in
     match gc_of_constraints (snd univs) with
     | None => EnvError (IllFormedDecl "toplevel"
         (UnsatisfiableConstraints univs.2))
     | Some ctrs =>
       let G := add_gc_constraints ctrs init_graph in
       if wGraph.is_acyclic G then
-        check_wf_declarations univs G decls ;;
+        check_wf_declarations univs retro G decls ;;
         infer_term Σ G (snd p)
       else EnvError (IllFormedDecl "toplevel" 
         (UnsatisfiableConstraints univs.2))

@@ -7,7 +7,8 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICTransform.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract
+   EOptimizePropDiscr ERemoveParams EProgram.
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
     EAst Transform ERemoveParams.
@@ -133,18 +134,18 @@ Qed.
 Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
   (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
 
-Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} : 
+Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp : bool) : 
   Transform.t eprogram eprogram_env EAst.term EAst.term (eval_eprogram fl) (eval_eprogram_env fl) :=
   {| name := "rebuilding environment lookup table";
-     pre p := wf_eprogram efl p /\ EEtaExpanded.expanded_eprogram_cstrs p;
+     pre p := wf_eprogram efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_cstrs p);
      transform p pre := rebuild_wf_env p (proj1 pre);
-     post p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
+     post p := wf_eprogram_env efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_env_cstrs p);
      obseq g g' v v' := v = v' |}.
 Next Obligation.
-  cbn. intros fl efl input [wf exp]. cbn; split => //.
+  cbn. intros fl efl [] input [wf exp]; cbn; split => //.
 Qed.
 Next Obligation.
-  cbn. intros fl efl input v [] ev p'; exists v. split => //.
+  cbn. intros fl efl [] input v [] ev p'; exists v; split => //.
 Qed.
 
 Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}

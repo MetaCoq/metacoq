@@ -139,6 +139,7 @@ Section Eta.
                        ++ string_of_kername ind.(inductive_mind))
         end
     | tCast t1 k t2 => tCast (eta_expand Γ t1) k (eta_expand Γ t2)
+    | tInt _ | tFloat _ => t
     end.
 
 End Eta.
@@ -213,7 +214,8 @@ Definition eta_global_declarations (Σ : GlobalEnvMap.t) (decls : global_declara
   map (on_snd (eta_global_declaration Σ)) decls.
 
 Definition eta_expand_global_env (Σ : GlobalEnvMap.t) : global_env :=
-  {| universes := Σ.(universes); declarations := eta_global_declarations Σ Σ.(declarations) |}.
+  {| universes := Σ.(universes); declarations := eta_global_declarations Σ Σ.(declarations);
+     retroknowledge := Σ.(retroknowledge) |}.
 
 Definition eta_expand_program (p : template_program_env) : Ast.Env.program :=
   let Σ' := eta_expand_global_env p.1 in 
@@ -290,7 +292,9 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     declared_constructor Σ (ind, c) mind idecl cdecl ->
     #|args| >= (ind_npars mind + context_assumptions (cstr_args cdecl)) ->
     Forall (expanded Γ) args ->
-    expanded Γ (tApp (tConstruct ind c u) args).
+    expanded Γ (tApp (tConstruct ind c u) args)
+| expanded_tInt i : expanded Γ (tInt i)
+| expanded_tFloat f : expanded Γ (tFloat f).
 
 End expanded.
 
@@ -352,9 +356,12 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
  Forall (expanded Σ Γ) args ->
  Forall (P Γ) args ->
- P Γ(tApp (tConstruct ind c u) args)) -> forall Γ, forall t : term, expanded Σ Γ t -> P Γ t.
+ P Γ(tApp (tConstruct ind c u) args)) -> 
+(forall Γ i, P Γ (tInt i)) ->
+(forall Γ f, P Γ (tFloat f)) ->
+ forall Γ, forall t : term, expanded Σ Γ t -> P Γ t.
 Proof.
-  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app.
+  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   all: match goal with [H : Forall _ _ |- _] => let all := fresh "all" in rename H into all end.
@@ -404,14 +411,14 @@ Definition expanded_decl Σ d :=
   | Ast.Env.InductiveDecl idecl => expanded_minductive_decl Σ idecl
   end.
     
-Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
-| expanded_global_nil : expanded_global_declarations univs []
-| expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
-  expanded_decl {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} decl.2 ->
-  expanded_global_declarations univs (decl :: Σ).
+Inductive expanded_global_declarations (univs : ContextSet.t) (retro : Environment.Retroknowledge.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations univs retro []
+| expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ -> 
+  expanded_decl {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; Ast.Env.retroknowledge := retro |} decl.2 ->
+  expanded_global_declarations univs retro (decl :: Σ).
 
 Definition expanded_global_env (g : Ast.Env.global_env) :=
-  expanded_global_declarations g.(Ast.Env.universes) g.(Ast.Env.declarations).
+  expanded_global_declarations g.(Ast.Env.universes) g.(Ast.Env.retroknowledge) g.(Ast.Env.declarations).
 
 Definition expanded_program (p : Ast.Env.program) :=
   expanded_global_env p.1 /\ expanded p.1 [] p.2.
@@ -1480,7 +1487,10 @@ Proof.
 Qed.
 
 Lemma same_cstr_info_eta (Σ : global_env) (Σg: GlobalEnvMap.t) :
-  same_cstr_info Σ {| universes := Σ.(universes) ; declarations := List.map (on_snd (eta_global_declaration Σg)) Σ.(declarations) |}.
+  same_cstr_info Σ 
+    {| universes := Σ.(universes) ; 
+       declarations := List.map (on_snd (eta_global_declaration Σg)) Σ.(declarations);
+       retroknowledge := Σ.(retroknowledge) |}.
 Proof.
   destruct Σ as [univs Σ]; cbn.
   induction Σ; intros ind idx mdecl idecl cdecl.
@@ -1525,9 +1535,9 @@ Lemma lookup_global_extends Σ Σ' kn d :
   EnvMap.fresh_globals Σ'.(declarations) ->
   lookup_env Σ' kn = Some d.
 Proof.
-  destruct Σ as [univs Σ]. 
-  destruct Σ' as [univs' Σ'].
-  cbn. move=> hl [] /=; intros <- [Σ'' ->].
+  destruct Σ as [univs Σ retro]. 
+  destruct Σ' as [univs' Σ' retro'].
+  cbn. move=> hl [] /=; intros <- [Σ'' ->] extretro.
   induction Σ''; cbn; auto.
   case: eqb_spec.
   - intros ->. intros fr.
@@ -1548,12 +1558,14 @@ Proof.
   assert (extends_decls env env). red; split => //. now exists [].
   revert X.
   move: map repr wf.
-  generalize env at 1 2 4 6.
-  destruct env as [univs' decls]. cbn in *.
+  generalize env at 1 2 4 6 7.
+  destruct env as [univs' decls retro']. cbn in *.
   induction ond; cbn; constructor; auto.
-  apply: IHond. cbn. destruct X as [equ [Σ' ext]]. red. split. auto. 
-  rewrite ext. cbn. unfold snoc. exists (Σ' ++ [(kn, d)])%list. now rewrite -app_assoc.
-  set (Σ' := {| universes := univs'; declarations := Σ |}) in *.
+  apply: IHond.
+  { cbn. destruct X as [equ [Σ' ext]]. red. split. auto. 
+    rewrite ext. cbn. unfold snoc. exists (Σ' ++ [(kn, d)])%list. now rewrite -app_assoc.
+    apply e. }
+  set (Σ' := {| universes := univs'; declarations := Σ; retroknowledge := retro' |}) in *.
   set (Σg := {| GlobalEnvMap.env := _ |}). Unshelve.
   destruct X as [equ [Σ'' ext]]. cbn in *. destruct env as [univs0 env]. cbn in *. subst univs0.
   subst env.
@@ -1563,8 +1575,7 @@ Proof.
     move=> kn' d' /= hl.
     rewrite GlobalEnvMap.lookup_env_spec /=.
     cbn. unfold snoc.
-    eapply (lookup_global_extends {| universes := univs'; declarations := Σ |}
-      {| universes := univs'; declarations := (Σ'' ++ (kn, d) :: Σ)%list |}); eauto.
+    eapply (lookup_global_extends Σ' (set_declarations Σ' (Σ'' ++ (kn, d) :: Σ)%list)); eauto.
     split => //. cbn. now exists (Σ'' ++ [(kn, d)])%list; rewrite -app_assoc. }
   forward H. split. cbn. split => //. now cbn.
   specialize (H o0).

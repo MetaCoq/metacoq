@@ -6,7 +6,6 @@ Utils
 
 WGraph
 UGraph0
-MCProd
 EtaExpand
 
 WcbvEval
@@ -14,6 +13,7 @@ Classes0
 Logic1
 Relation
 Relation_Properties
+PCUICPrimitive
 PCUICAst
 PCUICCases
 PCUICAstUtils

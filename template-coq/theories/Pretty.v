@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment LiftSubst Universes.
+From MetaCoq Require Import utils Ast AstUtils Primitive Environment LiftSubst Universes.
 
 (** * Pretty printing *)
 
@@ -248,8 +248,8 @@ Module PrintTermTree.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
-  (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
-  | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
 
   Definition pr_context_decl Γ (c : context_decl) : ident * t :=
@@ -302,11 +302,18 @@ Module PrintTermTree.
     | Polymorphic_entry uctx => Polymorphic_ctx (fst uctx, snd (snd uctx))
     end.
 
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
+
   Definition print_mib Σ with_universes (short : bool) (mib : mutual_inductive_body) : t :=
     let Σ' := (Σ, mib.(ind_universes)) in
     let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-      ("Inductive " ^ 
-      print_list (print_one_ind Σ' with_universes short names mib) nl mib.(ind_bodies) ^ "." ^ nl).
+      (print_recursivity_kind mib.(ind_finite) ^ " " ^ 
+      print_list (print_one_ind Σ' with_universes short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^ nl).
 
   Definition mie_arities_context mie := 
     rev_map (fun ind => vass (mkBindAnn (nNamed ind.(mind_entry_typename)) Relevant) 
@@ -316,21 +323,22 @@ Module PrintTermTree.
   Definition print_mie Σ with_universes (short : bool) (mie : mutual_inductive_entry) : t :=
     let Σ' := (Σ, universes_decl_of_universes_entry mie.(mind_entry_universes)) in
     let names := fresh_names Σ' [] (mie_arities_context mie) in
-      ("Inductive " ^ 
-      print_list (print_one_ind_entry Σ' with_universes short names mie) nl mie.(mind_entry_inds) ^ "." ^ nl).
+      (print_recursivity_kind mie.(mind_entry_finite) ^ " " ^
+      print_list (print_one_ind_entry Σ' with_universes short names mie) (nl ^ "with ") mie.(mind_entry_inds) ^ "." ^ nl).
     
   Fixpoint print_env_aux with_universes (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
     | S n => 
       let univs := Σ.(Env.universes) in
+      let retro := Σ.(Env.retroknowledge) in
       match Σ.(declarations) with
       | [] => acc
       | (kn, InductiveDecl mib) :: Σ => 
-        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        let Σ := {| Env.universes := univs; declarations := Σ; retroknowledge := retro |} in
         print_env_aux with_universes short n Σ (print_mib Σ with_universes short mib ^ acc)
       | (kn, ConstantDecl cb) :: Σ =>
-        let Σ' := ({| Env.universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+        let Σ' := ({| Env.universes := univs; declarations := Σ; retroknowledge := retro |}, cb.(cst_universes)) in
         print_env_aux with_universes short n Σ'.1
           ((match cb.(cst_body) with 
             | Some _ => "Definition "

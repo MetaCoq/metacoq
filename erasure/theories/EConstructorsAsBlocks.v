@@ -60,7 +60,8 @@ Section transform_blocks.
     | tBox => EAst.tBox
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
-    | tConstruct ind i block_args => EAst.tConstruct ind i [] }.
+    | tConstruct ind i block_args => EAst.tConstruct ind i [] 
+    | tPrim p => EAst.tPrim p }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -615,6 +616,28 @@ Proof.
     eapply IHt1. cbn in Hwf'. rtoProp. intuition.
 Qed.
 
+Lemma transform_blocks_isPrimApp {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
+  has_cstr_params = false ->
+  wf_glob Σ -> wellformed Σ 0 t ->
+  isPrimApp (transform_blocks Σ t) = isPrimApp t.
+Proof.
+  intros haspars Hwf Hwf'.
+  induction t; try now cbn; eauto.
+  eapply transform_blocks_tApp; eauto.
+  destruct decompose_app.
+  destruct construct_viewc.
+  - rewrite GlobalContextMap.lookup_constructor_pars_args_spec.
+    destruct lookup_constructor_pars_args as [ [[]] | ]; eauto.
+    cbn. destruct chop. intros (? & ? & ?). subst.
+    rewrite -[tApp _ _](mkApps_app _ _ [t2]).
+    rewrite !isPrimApp_mkApps. cbn. reflexivity.
+  - change (tApp t1 t2) with (mkApps t1 [t2]).
+    change (tApp (transform_blocks Σ t1) (transform_blocks Σ t2)) with
+    (mkApps (transform_blocks Σ t1) [transform_blocks Σ t2]).
+    rewrite !isPrimApp_mkApps.
+    eapply IHt1. cbn in Hwf'. rtoProp. intuition.
+Qed.
+
 Lemma lookup_env_transform_blocks {Σ : GlobalContextMap.t} kn : 
   lookup_env (transform_blocks_env Σ) kn = 
   option_map (transform_blocks_decl Σ) (lookup_env Σ kn).
@@ -869,6 +892,17 @@ Qed.
 
 Transparent transform_blocks.
 
+Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
+Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
+Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
+Lemma tApp_mkApps f a : tApp f a = mkApps f [a].
+Proof. reflexivity. Qed.
+
 Lemma transform_blocks_eval {efl : EEnvFlags} (fl := EWcbvEval.target_wcbv_flags) :
   cstr_as_blocks = false ->
   has_cstr_params = false ->
@@ -1057,7 +1091,7 @@ Proof.
     + rewrite nth_error_map /=. rewrite H6 in H2; rewrite -H2 in H4; rewrite H4; eauto. 
   - intros; repeat match goal with [H : MCProd.and5 _ _ _ _ _ |- _] => destruct H end.
     eapply transform_blocks_tApp; eauto. cbn; rtoProp; eauto.
-    destruct decompose_app as [ f args] eqn:heq.
+    destruct decompose_app as [f args] eqn:heq.
     destruct construct_viewc eqn:heqv.
     + rewrite GlobalContextMap.lookup_constructor_pars_args_spec;
         destruct lookup_constructor_pars_args as [[npars args']|] eqn:hl => // /=.
@@ -1076,20 +1110,23 @@ Proof.
       * rewrite GlobalContextMap.lookup_constructor_pars_args_spec;
           destruct lookup_constructor_pars_args as [ [[]] | ] eqn:hpa; eauto.
         cbn [plus]. destruct chop eqn:heqch.
-        intros [hl [ht ha]]. rewrite ht in H1. rewrite isConstructApp_mkApps orb_true_r in H1 => //.
+        intros [hl [ht ha]]. rewrite ht in H1. rewrite isConstructApp_mkApps isPrimApp_mkApps orb_true_r in H1 => //.
       * eapply eval_app_cong; eauto.
         revert H1. 
         destruct f'; try now cbn; tauto.
-        intros H. cbn in H.
+        intros H. cbn in H. 
         rewrite transform_blocks_isConstructApp; eauto.
-        destruct (isConstructApp (tApp f'1 f'2)).
-        -- cbn in H. congruence.
-        -- eapply transform_blocks_tApp; eauto. clear.
+        rewrite transform_blocks_isPrimApp; eauto.
+        rewrite negb_or in H. move/andP: H => [] ncstr nprim.
+        destruct (isConstructApp (tApp f'1 f'2)) eqn:heq'.
+        -- cbn in ncstr. congruence.
+        -- eapply transform_blocks_tApp; eauto. clear -nprim.
            destruct decompose_app.
            destruct construct_viewc; try now cbn; eauto.
            rewrite GlobalContextMap.lookup_constructor_pars_args_spec;
            destruct lookup_constructor_pars_args as [[[]] | ]; eauto.
-           cbn. destruct chop. cbn. intros. 
+           cbn. destruct chop. cbn. intros.
+           rewrite !orb_false_r. 
            destruct l1 using rev_case; cbn; eauto.
            rewrite mkApps_app; cbn; eauto.
   - intros; repeat match goal with [H : MCProd.and5 _ _ _ _ _ |- _] => destruct H end.

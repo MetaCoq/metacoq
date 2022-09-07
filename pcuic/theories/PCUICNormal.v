@@ -40,23 +40,7 @@ Section Normal.
   Context (Σ : global_env).
 
   (* Relative to reduction flags *)
-  Inductive whnf (Γ : context) : term -> Type :=
-  | whnf_ne t : whne Γ t -> whnf Γ t
-  | whnf_sort s : whnf Γ (tSort s)
-  | whnf_prod na A B : whnf Γ (tProd na A B)
-  | whnf_lam na A B : whnf Γ (tLambda na A B)
-  | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
-  | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
-  | whnf_fixapp mfix idx v :
-    match unfold_fix mfix idx with
-    | Some (rarg, body) => nth_error v rarg = None
-    | None => True
-    end ->
-    whnf Γ (mkApps (tFix mfix idx) v)
-  | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
-  (* | whnf_prim p : whnf Γ (tPrim p) *)
-
-  with whne (Γ : context) : term -> Type :=
+  Inductive whne (Γ : context) : term -> Type :=
   | whne_rel i :
       option_map decl_body (nth_error Γ i) = Some None ->
       whne Γ (tRel i)
@@ -118,6 +102,23 @@ Section Normal.
   | whne_proj_noiota p c :
       RedFlags.iota flags = false ->
       whne Γ (tProj p c).
+
+  (* Relative to reduction flags *)
+  Inductive whnf (Γ : context) : term -> Type :=
+  | whnf_ne t : whne Γ t -> whnf Γ t
+  | whnf_sort s : whnf Γ (tSort s)
+  | whnf_prod na A B : whnf Γ (tProd na A B)
+  | whnf_lam na A B : whnf Γ (tLambda na A B)
+  | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
+  | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
+  | whnf_fixapp mfix idx v :
+    match unfold_fix mfix idx with
+    | Some (rarg, body) => nth_error v rarg = None
+    | None => True
+    end ->
+    whnf Γ (mkApps (tFix mfix idx) v)
+  | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
+  | whnf_prim p : whnf Γ (tPrim p).
 
   Lemma whne_mkApps :
     forall Γ t args,
@@ -256,8 +257,8 @@ Proof.
     lia.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
-  (* - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq]. *)
-    (* cbn in *; subst; auto. *)
+  - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq].
+    cbn in *; subst; auto.
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -390,11 +391,11 @@ Proof with eauto using sq with pcuic; try congruence.
                  constructor.
                  assumption.
         -- left. constructor. eapply whnf_fixapp. rewrite E1. eauto.
-      (* * destruct v as [ | ? v]...
+      * destruct v as [ | ? v]...
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence. *)
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence. 
     + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv. 
   - destruct (IHt Γ) as [_ []].
     + left. destruct s as [w]. constructor. now eapply whne_mkApps.
@@ -940,7 +941,7 @@ Proof.
       destruct s as [->|(?&?)]; [easy|].
       now inv e.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
-  (* - depelim r. solve_discr. *)
+  - depelim r. solve_discr.
 Qed.
 
 Lemma whnf_pres Σ Γ t t' :
@@ -1013,8 +1014,8 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ Γ (dtype d) (dtype d') ×
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
-    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-(* | whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i). *)
+    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
+| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
 
 Derive Signature for whnf_red.
 
@@ -1516,7 +1517,7 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-  (* - depelim r; solve_discr. *)
+  - depelim r; solve_discr.
 Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
@@ -1607,7 +1608,7 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.
-  (* - depelim eq; auto. *)
+  - depelim eq; auto.
 Qed.
 
 Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :

@@ -33,6 +33,7 @@ Class ETermFlags :=
   ; has_tProj : bool
   ; has_tFix : bool
   ; has_tCoFix : bool
+  ; has_tPrim : bool
   }.
 
 Set Warnings "-future-coercion-class-field".
@@ -58,6 +59,7 @@ Definition all_term_flags :=
     ; has_tProj := true
     ; has_tFix := true
     ; has_tCoFix := true
+    ; has_tPrim := true
   |}.
 
 Definition all_env_flags := 
@@ -115,6 +117,7 @@ Section wf.
         | _ => true end 
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
+    | tPrim _ => has_tPrim
     end.
 
 End wf.

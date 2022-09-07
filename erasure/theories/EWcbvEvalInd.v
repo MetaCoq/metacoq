@@ -237,7 +237,7 @@ Section eval_mkApps_rect.
                  then isFixApp f'
                  else isFix f') || 
                 isBox f' || 
-                isConstructApp f')) 
+                isConstructApp f' || isPrimApp f')) 
           (e0 : eval Σ a a'),
           P a a'
           → P (tApp f15 a) 
@@ -274,10 +274,10 @@ Proof using Type.
   | [ H : _ |- _ ] =>
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
-  eapply X15; tea; auto.
-  clear -a IH'. induction a; constructor.
-  eapply (IH' _ _ r). cbn. lia. apply IHa.
-  intros. eapply (IH' _ _ H). cbn. lia.
+  - eapply X15; tea; auto.
+    clear -a IH'. induction a; constructor.
+    eapply (IH' _ _ r). cbn. lia. apply IHa.
+    intros. eapply (IH' _ _ H). cbn. lia.
 Qed.
 
 End eval_mkApps_rect. 

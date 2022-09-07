@@ -56,7 +56,7 @@ Proof using wfΣ.
 
   all: intros ; red ; auto.
   1-9,11-13: intros ? T' ty_T' ; inversion_clear ty_T'.
-  14-16: intros.
+  14-17: intros.
 
   - rewrite H in H0.
     inversion H0. subst. clear H0.
@@ -224,6 +224,12 @@ Proof using wfΣ.
         now apply r.
       * fvs.
       * now eapply type_is_open_term, infering_typing.
+
+  - inversion X1; subst.
+    rewrite H in H2; noconf H2.
+    have eq := (declared_constant_inj _ _ H0 H3); subst cdecl0.
+    exists (tConst prim_ty []).
+    split; eapply closed_red_refl; fvs.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.

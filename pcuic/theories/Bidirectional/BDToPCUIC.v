@@ -413,6 +413,9 @@ Section BDToPCUICTyping.
         apply weakening.
         all: auto.
 
+    - red; intros.
+      now econstructor.
+
     - red ; intros.
       now eapply type_reduction.
 

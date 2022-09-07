@@ -366,7 +366,9 @@ Proof using Type.
         unfold wf_cofixpoint, wf_cofixpoint_gen.
         rewrite map_map_compose.
         now rewrite subst_instance_check_one_cofix.
-      
+
+  - econstructor; eauto.
+
   - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' H.
     econstructor.
     + eapply X2; aa.

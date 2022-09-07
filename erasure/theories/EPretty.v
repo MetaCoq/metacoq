@@ -84,6 +84,12 @@ Module PrintTermTree.
       let ctx' := List.map (fun d => {| decl_name := dname d; decl_body := None |}) defs in
       print_list (print_def (print_term (ctx' ++ Γ)%list true false)) (nl ^ " with ") defs.
 
+    Definition print_prim {term} (soft : term -> Tree.t) (p : @prim_val EAst.term) : Tree.t :=
+      match p.π2 return Tree.t with
+      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
+      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      (* | primArrayModel a => "(array:" ^ ")" *)
+      end.
 
     Fixpoint print_term (Γ : context) (top : bool) (inapp : bool) (t : term) {struct t} : Tree.t :=
     match t with
@@ -163,8 +169,7 @@ Module PrintTermTree.
     | tCoFix l n =>
       parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                                 " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
-    (* | tPrim p =>  *)
-      (* parens top (string_of_prim (print_term Γ false false) p) *)
+    | tPrim p => parens top (print_prim (print_term Γ false false) p)
     end.
   End print_term.
 
@@ -196,10 +201,18 @@ Module PrintTermTree.
     | _ => nl ^ "projections: " ^ print_list (fun x => x.(proj_name)) ", " body.(ind_projs) 
     end
     in
-    "Inductive " ^ body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
+    body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
+
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
 
   Definition print_inductive_body decl :=
-    print_list (print_one_inductive_body decl.(ind_npars)) nl decl.(ind_bodies).
+    print_recursivity_kind decl.(ind_finite) ^ " " ^
+    print_list (print_one_inductive_body decl.(ind_npars)) (nl ^ " with ") decl.(ind_bodies).
 
   Definition print_decl Σ '(kn, d) := 
     match d with

@@ -46,7 +46,8 @@ Definition atom t :=
   | tCoFix _ _
   | tLambda _ _ _
   | tSort _
-  | tProd _ _ _ => true
+  | tProd _ _ _ 
+  | tPrim _ => true
   | _ => false
   end.
 
@@ -111,6 +112,14 @@ Definition isAxiom Σ x :=
   | _ => false
   end.
 
+Definition isPrim t :=
+  match t with
+  | tPrim _ => true
+  | _ => false
+  end.
+
+Definition isPrimApp t := isPrim (head t).
+
 Definition substl defs body : term :=
   fold_left (fun bod term => csubst term 0 bod)
     defs body.
@@ -155,6 +164,9 @@ Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisArityHead_mkApps f args : ~~ isArityHead f -> ~~ isArityHead (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 
+Lemma nisPrim_mkApps f args : ~~ isPrim f -> ~~ isPrim (mkApps f args).
+Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
+
 (* Lemma isLambda_mkApps f args : ~~ isApp f ->
   isLambda f = isLambda (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed. *)
@@ -174,6 +186,9 @@ Lemma isConstructApp_mkApps f args : isConstructApp (mkApps f args) = isConstruc
 Proof.
   now rewrite /isConstructApp head_mkApps.
 Qed.
+
+Lemma isPrimApp_mkApps f args : isPrimApp (mkApps f args) = isPrimApp f.
+Proof. now rewrite /isPrimApp head_mkApps. Qed.
 
 Section Wcbv.
   Context (Σ : global_env).
@@ -262,7 +277,7 @@ Section Wcbv.
   (** Non redex-producing heads applied to values are values *)
   | eval_app_cong f f' a a' :
       eval f f' ->
-      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
+      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f' || isPrimApp f') ->
       eval a a' ->
       eval (tApp f a) (tApp f' a')
 
@@ -443,12 +458,12 @@ Section Wcbv.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHev1 => //.
       destruct IHev1 as [?|[]]; intuition subst.
-      * rewrite a0.
-        simpl. rewrite a0 in i. simpl in *.
+      * rewrite a0 /=.
+        rewrite a0 in i. simpl in *.
         apply (value_app f0 [a']). 
         destruct f0; simpl in * |- *; try congruence.
-        constructor.
-        econstructor; auto. auto.
+        all:try solve [repeat constructor; auto].
+        auto.
       * rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         eapply value_app; auto. len.
         rewrite isFixApp_mkApps // isConstructApp_mkApps // in i.
@@ -506,7 +521,8 @@ Section Wcbv.
       rewrite !mkApps_app /=.
       eapply eval_app_cong; tea. 
       eapply IHargs => //.
-      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or. rtoProp; intuition auto.
+      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
+      rtoProp; intuition auto.
       apply nisLambda_mkApps => //. apply nisArityHead_mkApps => //.
   Qed.
 
@@ -523,7 +539,8 @@ Section Wcbv.
       rewrite !mkApps_app /=.
       eapply eval_app_cong; tea. 
       eapply IHargs => //.
-      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or. rtoProp; intuition auto.
+      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
+      rtoProp; intuition auto.
       apply nisLambda_mkApps => //. apply nisArityHead_mkApps => //.
   Qed.
 

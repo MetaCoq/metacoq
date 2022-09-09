@@ -28,7 +28,7 @@ jobs:
     - id: stepCheck
       name: Checking presence of CI target coq
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"default\" --argstr job \"coq\" \\\n   --dry-run)\n\
+        \ bundle \"default\" --argstr job \"coq\" \\\n   --dry-run 2>&1 > /dev/null)\n\
         echo $nb_dry_run\necho ::set-output name=status::$(echo $nb_dry_run | grep\
         \ \"built:\" | sed \"s/.*/built/\")\n"
     - if: steps.stepCheck.outputs.status == 'built'

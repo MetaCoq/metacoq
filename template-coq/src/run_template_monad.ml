@@ -316,7 +316,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
     let dflt_pf = {pf_subclass = false ; pf_canonical = false} in
     let decl_projs i oie =
       let ind = (ind_kn, i) in
-      let univs = Entries.Monomorphic_entry Univ.ContextSet.empty in
+      let univs = (Entries.Monomorphic_entry, Names.Id.Map.empty) in
       let inhabitant_id = List.hd oie.mind_entry_consnames in
       let fields, _ = Term.decompose_prod_assum (List.hd oie.mind_entry_lc) in
       let fieldimpls = List.map (fun _ -> []) fields in

@@ -363,6 +363,13 @@ Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
 | AlreadyDeclared (id : string).
 
+Definition string_of_env_error Σ (e : env_error) :=
+  match e with
+  | IllFormedDecl decl_name typ_error =>
+      "Type error on " ^ decl_name ^ " " ^ string_of_type_error Σ typ_error
+  | AlreadyDeclared decl_name =>
+      "Name is already declared in environment " ^ decl_name
+  end.
 
 Section EnvCheck.
 

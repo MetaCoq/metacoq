@@ -152,7 +152,7 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (Int63.eqs i i0) ; nodec.
+  - destruct (eq_dec i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
     subst. left. reflexivity.

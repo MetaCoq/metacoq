@@ -62,15 +62,15 @@ let rec iter_pos f n x =
 
 type location =
 | Coq_loc_Exact
-| Coq_loc_Inexact of int
+| Coq_loc_Inexact of comparison
 
-(** val location_rect : 'a1 -> (int -> 'a1) -> location -> 'a1 **)
+(** val location_rect : 'a1 -> (comparison -> 'a1) -> location -> 'a1 **)
 
 let location_rect f f0 = function
 | Coq_loc_Exact -> f
 | Coq_loc_Inexact c -> f0 c
 
-(** val location_rec : 'a1 -> (int -> 'a1) -> location -> 'a1 **)
+(** val location_rec : 'a1 -> (comparison -> 'a1) -> location -> 'a1 **)
 
 let location_rec f f0 = function
 | Coq_loc_Exact -> f
@@ -116,8 +116,8 @@ let shr_1 mrs =
 let loc_of_shr_record mrs =
   let { shr_m = _; shr_r = shr_r0; shr_s = shr_s0 } = mrs in
   if shr_r0
-  then if shr_s0 then Coq_loc_Inexact 1 else Coq_loc_Inexact 0
-  else if shr_s0 then Coq_loc_Inexact (-1) else Coq_loc_Exact
+  then if shr_s0 then Coq_loc_Inexact Gt else Coq_loc_Inexact Eq
+  else if shr_s0 then Coq_loc_Inexact Lt else Coq_loc_Exact
 
 (** val shr_record_of_loc : coq_Z -> location -> shr_record **)
 
@@ -125,9 +125,9 @@ let shr_record_of_loc m = function
 | Coq_loc_Exact -> { shr_m = m; shr_r = false; shr_s = false }
 | Coq_loc_Inexact c ->
   (match c with
-   | 0 -> { shr_m = m; shr_r = true; shr_s = false }
-   | (-1) -> { shr_m = m; shr_r = false; shr_s = true }
-   | 1 -> { shr_m = m; shr_r = true; shr_s = true })
+   | Eq -> { shr_m = m; shr_r = true; shr_s = false }
+   | Lt -> { shr_m = m; shr_r = false; shr_s = true }
+   | Gt -> { shr_m = m; shr_r = true; shr_s = true })
 
 (** val shr : shr_record -> coq_Z -> coq_Z -> shr_record * coq_Z **)
 
@@ -148,9 +148,9 @@ let round_nearest_even mx = function
 | Coq_loc_Exact -> mx
 | Coq_loc_Inexact c ->
   (match c with
-   | 0 -> if Z.even mx then mx else Z.add mx (Zpos Coq_xH)
-   | (-1) -> mx
-   | 1 -> Z.add mx (Zpos Coq_xH))
+   | Eq -> if Z.even mx then mx else Z.add mx (Zpos Coq_xH)
+   | Lt -> mx
+   | Gt -> Z.add mx (Zpos Coq_xH))
 
 (** val binary_round_aux :
     coq_Z -> coq_Z -> bool -> coq_Z -> coq_Z -> location -> spec_float **)
@@ -211,41 +211,41 @@ let coq_SFabs = function
 | S754_nan -> S754_nan
 | S754_finite (_, mx, ex) -> S754_finite (false, mx, ex)
 
-(** val coq_SFcompare : spec_float -> spec_float -> int option **)
+(** val coq_SFcompare : spec_float -> spec_float -> comparison option **)
 
 let coq_SFcompare f1 f2 =
   match f1 with
   | S754_zero _ ->
     (match f2 with
-     | S754_zero _ -> Some 0
-     | S754_infinity s -> Some (if s then 1 else (-1))
+     | S754_zero _ -> Some Eq
+     | S754_infinity s -> Some (if s then Gt else Lt)
      | S754_nan -> None
-     | S754_finite (s, _, _) -> Some (if s then 1 else (-1)))
+     | S754_finite (s, _, _) -> Some (if s then Gt else Lt))
   | S754_infinity s ->
     (match f2 with
      | S754_infinity s0 ->
-       Some (if s then if s0 then 0 else (-1) else if s0 then 1 else 0)
+       Some (if s then if s0 then Eq else Lt else if s0 then Gt else Eq)
      | S754_nan -> None
-     | _ -> Some (if s then (-1) else 1))
+     | _ -> Some (if s then Lt else Gt))
   | S754_nan -> None
   | S754_finite (s1, m1, e1) ->
     (match f2 with
-     | S754_zero _ -> Some (if s1 then (-1) else 1)
-     | S754_infinity s -> Some (if s then 1 else (-1))
+     | S754_zero _ -> Some (if s1 then Lt else Gt)
+     | S754_infinity s -> Some (if s then Gt else Lt)
      | S754_nan -> None
      | S754_finite (s2, m2, e2) ->
        Some
          (if s1
           then if s2
                then (match Z.compare e1 e2 with
-                     | 0 -> coq_CompOpp (Pos.compare_cont 0 m1 m2)
-                     | (-1) -> 1
-                     | 1 -> (-1))
-               else (-1)
+                     | Eq -> coq_CompOpp (Pos.compare_cont Eq m1 m2)
+                     | Lt -> Gt
+                     | Gt -> Lt)
+               else Lt
           else if s2
-               then 1
+               then Gt
                else (match Z.compare e1 e2 with
-                     | 0 -> Pos.compare_cont 0 m1 m2
+                     | Eq -> Pos.compare_cont Eq m1 m2
                      | x -> x)))
 
 (** val coq_SFeqb : spec_float -> spec_float -> bool **)
@@ -253,7 +253,7 @@ let coq_SFcompare f1 f2 =
 let coq_SFeqb f1 f2 =
   match coq_SFcompare f1 f2 with
   | Some c -> (match c with
-               | 0 -> true
+               | Eq -> true
                | _ -> false)
   | None -> false
 
@@ -262,7 +262,7 @@ let coq_SFeqb f1 f2 =
 let coq_SFltb f1 f2 =
   match coq_SFcompare f1 f2 with
   | Some c -> (match c with
-               | (-1) -> true
+               | Lt -> true
                | _ -> false)
   | None -> false
 
@@ -271,14 +271,14 @@ let coq_SFltb f1 f2 =
 let coq_SFleb f1 f2 =
   match coq_SFcompare f1 f2 with
   | Some c -> (match c with
-               | 1 -> false
+               | Gt -> false
                | _ -> true)
   | None -> false
 
 (** val coq_SFclassify : coq_Z -> spec_float -> Float64.float_class **)
 
 let coq_SFclassify prec = function
-| S754_zero s -> if s then PZero else NZero
+| S754_zero s -> if s then NZero else PZero
 | S754_infinity s -> if s then NInf else PInf
 | S754_nan -> NaN
 | S754_finite (s, m, _) ->
@@ -387,7 +387,7 @@ let new_location_odd nb_steps k =
          (match Z.compare
                   (Z.add (Z.mul (Zpos (Coq_xO Coq_xH)) k) (Zpos Coq_xH))
                   nb_steps with
-          | 0 -> (-1)
+          | Eq -> Lt
           | x -> x)
 
 (** val new_location : coq_Z -> coq_Z -> location **)
@@ -458,7 +458,7 @@ let coq_SFsqrt_core_binary prec emax m e =
   let l =
     if coq_Zeq_bool r Z0
     then Coq_loc_Exact
-    else Coq_loc_Inexact (if Z.leb r q then (-1) else 1)
+    else Coq_loc_Inexact (if Z.leb r q then Lt else Gt)
   in
   ((q, e'), l)
 

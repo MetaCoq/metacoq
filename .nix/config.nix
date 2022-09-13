@@ -41,8 +41,8 @@
 
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
-    coqPackages.coq.override.version = "8.14";
-    coqPackages.equations.override.version = "1.3+8.14";
+    coqPackages.coq.override.version = "8.16";
+    coqPackages.equations.override.version = "1.3+8.16";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either

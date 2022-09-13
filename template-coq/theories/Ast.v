@@ -416,7 +416,7 @@ Inductive term : Type :=
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
-| tInt (i : Int63.int)
+| tInt (i : PrimInt63.int)
 | tFloat (f : PrimFloat.float).
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 

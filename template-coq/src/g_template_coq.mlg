@@ -100,10 +100,6 @@ VERNAC COMMAND EXTEND TemplateCoq_Quote_Recursively_Definition CLASSIFIED AS SID
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteRecDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.quote_ident name; Constr.mkRel 0; 
           to_constr_evars evm def|]) in
-        (* There are unsolved vars for [def] in the evar_map, the quoting somehow
-           doesn't properly solve the, however this does cause problems in the
-           future as they become stale, and check_evars will complain *)
-        let env, evm = fresh_env () in
         run_template_program env evm ~poly pgm }
 END
 
@@ -154,8 +150,9 @@ TACTIC EXTEND TemplateCoq_quote_term
       { (* quote the given term, pass the result to t *)
         Proofview.Goal.enter begin fun gl ->
           let env = Proofview.Goal.env gl in
-          let c = to_constr_evars (Proofview.Goal.sigma gl) c in
-          let c = Constr_quoter.quote_term env c in
+          let sigma = Proofview.Goal.sigma gl in
+          let c = to_constr_evars sigma c in
+          let c = Constr_quoter.quote_term env sigma c in
           ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
   end }
 END

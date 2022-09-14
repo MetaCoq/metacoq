@@ -440,17 +440,17 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
 
   | TmQuote trm ->
     (* user should do the reduction (using tmEval) if they want *)
-    let qt = quote_term env trm
+    let qt = quote_term env evm trm
     in k ~st env evm qt
   | TmQuoteRecTransp  (bypass, trm) ->
     let bypass = unquote_bool (reduce_all env evm bypass) in
-    let qt = quote_term_rec ~bypass ~with_universes:true env trm in
+    let qt = quote_term_rec ~bypass ~with_universes:true env evm trm in
     k ~st env evm qt
   | TmQuoteInd (name, strict) ->
     let kn = unquote_kn (reduce_all env evm name) in
     let kn = MutInd.make1 kn in
     let mib = Environ.lookup_mind kn env in
-    let t = quote_mind_decl env kn mib in
+    let t = quote_mind_decl env evm kn mib in
     let _, args = Constr.destApp t in
     (match args with
     | [|decl|] -> k ~st env evm decl
@@ -528,7 +528,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let evm,trm = denote_term env evm (reduce_all env evm trm) in
     Plugin_core.run ~st (Plugin_core.tmEval red trm) env evm
-      (fun ~st env evm trm -> k ~st env evm (quote_term env trm))
+      (fun ~st env evm trm -> k ~st env evm (quote_term env evm trm))
   | TmMkInductive (b, mind) ->
     let infer_univs = unquote_bool (reduce_all env evm b) in
     let evm = declare_inductive env evm infer_univs mind in
@@ -592,7 +592,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       (fun ~st env evm -> function
            None -> k ~st env evm (constr_mkAppl (cNone, [| tTerm|]))
          | Some trm ->
-           let qtrm = quote_term env trm in
+           let qtrm = quote_term env evm trm in
            k ~st env evm (constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term env evm (reduce_all env evm trm) in

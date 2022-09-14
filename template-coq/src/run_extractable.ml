@@ -22,20 +22,20 @@ let of_qualid (q : Libnames.qualid) =
   quote_string (Libnames.string_of_qualid q)
 
 (* todo(gmm): this definition adapted from quoter.ml *)
-let quote_rel_decl env = function
+let quote_rel_decl env sigma = function
   | Context.Rel.Declaration.LocalAssum (na, t) ->
-    let t' = quote_term env t in
+    let t' = quote_term env sigma t in
     quote_context_decl (quote_aname na) None t'
   | Context.Rel.Declaration.LocalDef (na, b, t) ->
-    let b' = quote_term env b in
-    let t' = quote_term env t in
+    let b' = quote_term env sigma b in
+    let t' = quote_term env sigma t in
     quote_context_decl (quote_aname na) (Some b') t'
 
 (* todo(gmm): this definition adapted from quoter.ml *)
-let quote_rel_context env ctx =
+let quote_rel_context env sigma ctx =
   let decls, env =
     List.fold_right (fun decl (ds, env) ->
-        let x = quote_rel_decl env decl in
+        let x = quote_rel_decl env sigma decl in
         (x :: ds, Environ.push_rel decl env))
       ctx ([],env) in
   quote_context decls
@@ -43,7 +43,7 @@ let quote_rel_context env ctx =
 (* todo(gmm): this definition adapted from quoter.ml (the body of quote_minductive_type) *)
 let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) 
   : Ast0.Env.mutual_inductive_body =
-  match quote_mind_decl env t mib with
+  match quote_mind_decl env (Evd.from_env env) t mib with
   | Ast0.Env.InductiveDecl mib -> mib
   | Ast0.Env.ConstantDecl _ -> assert false
 
@@ -130,8 +130,8 @@ let get_constant_body b =
 let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.Env.constant_body =
   let open Declarations in
   let {const_body = body; const_type = typ; const_universes = univs; const_relevance = rel} = cd in
-  Ast0.Env.({cst_type = quote_term env typ;
-         cst_body = Option.map (quote_term env) (get_constant_body body);
+  Ast0.Env.({cst_type = quote_term env (Evd.from_env env) typ;
+         cst_body = Option.map (quote_term env (Evd.from_env env)) (get_constant_body body);
          cst_universes = quote_universes_decl univs None;
          cst_relevance = quote_relevance rel})
 
@@ -155,7 +155,7 @@ let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev env evm t)
 
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
-  Plugin_core.with_env_evm (fun env _ -> tmReturn (quote_term env t))
+  Plugin_core.with_env_evm (fun env evm -> tmReturn (quote_term env evm t))
 
 let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.Env.mutual_inductive_body tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env ti t))

@@ -27,7 +27,7 @@ let pr_char_list l =
 
 let check ~bypass ~fast env evm c =
   debug (fun () -> str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass env) (EConstr.to_constr evm c) in
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass env evm) (EConstr.to_constr evm c) in
   let erase = time (str"Erasure")
       (if fast then Erasure.erase_fast_and_print_template_program
        else Erasure.erase_and_print_template_program)
@@ -54,5 +54,5 @@ VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
     check ~bypass:false ~fast:true env evm c
-  }  
+  }
 END

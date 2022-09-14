@@ -219,19 +219,19 @@ struct
   let quote_inductive' (ind, i) : Q.quoted_inductive =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)
 
-  let quote_rel_decl quote_term acc env = function
+  let quote_rel_decl quote_term acc env sigma = function
       | Context.Rel.Declaration.LocalAssum (na, t) ->
-        let t', acc = quote_term acc env t in
+        let t', acc = quote_term acc env sigma t in
         (Q.quote_context_decl (Q.quote_aname na) None t', acc)
       | Context.Rel.Declaration.LocalDef (na, b, t) ->
-        let b', acc = quote_term acc env b in
-        let t', acc = quote_term acc env t in
+        let b', acc = quote_term acc env sigma b in
+        let t', acc = quote_term acc env sigma t in
         (Q.quote_context_decl (Q.quote_aname na) (Some b') t', acc)
   
-  let quote_rel_context quote_term acc env ctx =
+  let quote_rel_context quote_term acc env sigma ctx =
       let decls, env, acc =
         List.fold_right (fun decl (ds, env, acc) ->
-            let x, acc = quote_rel_decl quote_term acc env decl in
+            let x, acc = quote_rel_decl quote_term acc env sigma decl in
             (x :: ds, push_rel decl env, acc))
           ctx ([],env,acc) in
       Q.quote_context decls, acc
@@ -242,49 +242,50 @@ struct
   let quote_name_annots nas =
     Array.map quote_binder nas
 
-  let quote_terms quote_term acc env ts =
+  let quote_terms quote_term acc env sigma ts =
     let acc, ts = 
-      CArray.fold_left_map (fun acc t -> let (x, acc) = quote_term acc env t in acc, x) acc ts
+      CArray.fold_left_map (fun acc t -> let (x, acc) = quote_term acc env sigma t in acc, x) acc ts
     in ts, acc
 
   let quote_term_remember
       (add_constant : KerName.t -> 'a -> 'a)
       (add_inductive : Names.inductive -> Declarations.mutual_inductive_body -> 'a -> 'a) =
-    let rec quote_term (acc : 'a) env trm =
+    let rec quote_term (acc : 'a) env sigma trm =
       let aux acc env trm =
       match Constr.kind trm with
       | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
       | Constr.Evar (n,args) ->
-	      let (args',acc) = quote_terms quote_term acc env (Array.of_list args) in
+        let args = Evd.expand_existential0 sigma (n, args) in
+	      let (args',acc) = quote_terms quote_term acc env sigma (Array.of_list args) in
          (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
       | Constr.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
       | Constr.Cast (c,k,t) ->
-              let (c',acc) = quote_term acc env c in
-              let (t',acc) = quote_term acc env t in
+              let (c',acc) = quote_term acc env sigma c in
+              let (t',acc) = quote_term acc env sigma t in
         let k' = Q.quote_cast_kind k in
         (Q.mkCast c' k' t', acc)
 
       | Constr.Prod (n,t,b) ->
-              let (t',acc) = quote_term acc env t in
+              let (t',acc) = quote_term acc env sigma t in
         let env = push_rel (toDecl (n, None, t)) env in
-        let (b',acc) = quote_term acc env b in
+        let (b',acc) = quote_term acc env sigma b in
         (Q.mkProd (Q.quote_aname n) t' b', acc)
 
       | Constr.Lambda (n,t,b) ->
-	      let (t',acc) = quote_term acc env t in
-              let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
+	      let (t',acc) = quote_term acc env sigma t in
+              let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) sigma b in
         (Q.mkLambda (Q.quote_aname n) t' b', acc)
 
       | Constr.LetIn (n,e,t,b) ->
-	      let (e',acc) = quote_term acc env e in
-	      let (t',acc) = quote_term acc env t in
-	      let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
+	      let (e',acc) = quote_term acc env sigma e in
+	      let (t',acc) = quote_term acc env sigma t in
+	      let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) sigma b in
       	(Q.mkLetIn (Q.quote_aname n) e' t' b', acc)
 
       | Constr.App (f,xs) ->
-        let (f',acc) = quote_term acc env f in
-        let (xs',acc) = quote_terms quote_term acc env xs in
+        let (f',acc) = quote_term acc env sigma f in
+        let (xs',acc) = quote_terms quote_term acc env sigma xs in
         (Q.mkApp f' xs', acc)
 
       | Constr.Const (c,pu) ->
@@ -306,29 +307,29 @@ struct
                                       Q.quote_int (snd ci.Constr.ci_ind)) in
         let npar = Q.quote_int ci.Constr.ci_npar in
         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
-        let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env par in acc, qt) acc pars in 
+        let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env sigma par in acc, qt) acc pars in 
         let qu = Q.quote_univ_instance u in
         let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 
         let qpctx = quote_name_annots predctx in
-        let (qpred,acc) = quote_term acc (push_rel_context pctx env) pred in
-        let (qdiscr,acc) = quote_term acc env discr in
+        let (qpred,acc) = quote_term acc (push_rel_context pctx env) sigma pred in
+        let (qdiscr,acc) = quote_term acc env sigma discr in
         let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in  
         let (branches,acc) =
           CArray.fold_left2 (fun (bodies,acc) (brnas, brctx, bbody) narg ->
-            let (qbody,acc) = quote_term acc (push_rel_context brctx env) bbody in
+            let (qbody,acc) = quote_term acc (push_rel_context brctx env) sigma bbody in
             let qctx = quote_name_annots brnas in
               ((qctx, qbody) :: bodies, acc))
           ([],acc) cbrs ci.Constr.ci_cstr_nargs in
         (Q.mkCase (ind, npar, q_relevance) (qu, q_pars, qpctx, qpred) qdiscr (List.rev branches), acc)
 
-      | Constr.Fix fp -> quote_fixpoint acc env fp
-      | Constr.CoFix fp -> quote_cofixpoint acc env fp
+      | Constr.Fix fp -> quote_fixpoint acc env sigma fp
+      | Constr.CoFix fp -> quote_cofixpoint acc env sigma fp
       | Constr.Proj (p,c) ->
          let ind = quote_inductive' (Projection.inductive p) in
          let pars = Q.quote_int (Projection.npars p) in
          let arg  = Q.quote_int (Projection.arg p)   in
          let p' = Q.quote_proj ind pars arg in
-         let t', acc = quote_term acc env c in
+         let t', acc = quote_term acc env sigma c in
          let mib = Environ.lookup_mind (fst (Projection.inductive p)) (snd env) in
          (Q.mkProj p' t', add_inductive (Projection.inductive p) mib acc)
       | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
@@ -337,23 +338,23 @@ struct
       | Constr.Array _ -> failwith "Primitive arrays not supported by TemplateCoq"
       in
       aux acc env trm
-    and quote_recdecl (acc : 'a) env b (ns,ts,ds) =
+    and quote_recdecl (acc : 'a) env sigma b (ns,ts,ds) =
       let ctxt =
         CArray.map2_i (fun i na t -> (Context.Rel.Declaration.LocalAssum (na, Vars.lift i t))) ns ts in
       let envfix = push_rel_context (CArray.rev_to_list ctxt) env in
       let ns' = Array.map quote_binder ns in
       let b' = Q.quote_int b in
-      let ts', acc = quote_terms quote_term acc env ts in
-      let ds', acc = quote_terms quote_term acc envfix ds in
+      let ts', acc = quote_terms quote_term acc env sigma ts in
+      let ds', acc = quote_terms quote_term acc envfix sigma ds in
       ((b',(ns',ts',ds')), acc)
-    and quote_fixpoint acc env ((a,b),decl) =
+    and quote_fixpoint acc env sigma ((a,b),decl) =
       let a' = Array.map Q.quote_int a in
-      let (b',decl'),acc = quote_recdecl acc env b decl in
+      let (b',decl'),acc = quote_recdecl acc env sigma b decl in
       (Q.mkFix ((a',b'),decl'), acc)
-    and quote_cofixpoint acc env (a,decl) =
-      let (a',decl'),acc = quote_recdecl acc env a decl in
+    and quote_cofixpoint acc env sigma (a,decl) =
+      let (a',decl'),acc = quote_recdecl acc env sigma a decl in
       (Q.mkCoFix (a',decl'), acc)
-    and quote_minductive_type (acc : 'a) env (t : MutInd.t) mib =
+    and quote_minductive_type (acc : 'a) env sigma (t : MutInd.t) mib =
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
       let inst = Univ.UContext.instance uctx in
       let indtys =
@@ -377,8 +378,8 @@ struct
             let ctx = oib.mind_arity_ctxt in
             CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx
           in
-          let indices, acc = quote_rel_context quote_term acc (push_rel_context pars env) indices in 
-          let indty, acc = quote_term acc env indty in
+          let indices, acc = quote_rel_context quote_term acc (push_rel_context pars env) sigma indices in 
+          let indty, acc = quote_term acc env sigma indty in
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
             List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
@@ -389,14 +390,14 @@ struct
                 CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
               in
               let envcstr = push_rel_context parsctx envind in
-              let qargctx, acc = quote_rel_context quote_term acc envcstr argctx in
+              let qargctx, acc = quote_rel_context quote_term acc envcstr sigma argctx in
               let qindices, acc = 
                 let hd, args = Constr.decompose_appvect concl in
                 let pars, args = CArray.chop mib.mind_nparams args in
                 let envconcl = push_rel_context argctx envcstr in
-                quote_terms quote_term acc envconcl args
+                quote_terms quote_term acc envconcl sigma args
               in
-              let (ty,acc) = quote_term acc envind ty in
+              let (ty,acc) = quote_term acc envind sigma ty in
               ((Q.quote_ident nm, qargctx, Array.to_list qindices, ty, Q.quote_int ar) :: ls, acc))
               ([],acc) named_ctors
           in
@@ -409,7 +410,7 @@ struct
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
                 let ps, acc = CArray.fold_right3 (fun cst pb rel (ls,acc) ->
-                  let (ty, acc) = quote_term acc envpars pb in
+                  let (ty, acc) = quote_term acc envpars sigma pb in
                   let na = Q.quote_ident (Names.Label.to_id cst) in
                   let rel = Q.quote_relevance rel in
                   ((na, rel, ty) :: ls, acc)) csts ps relevance ([],acc)
@@ -422,7 +423,7 @@ struct
         ([],acc) (Array.to_list mib.mind_packets)
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
-      let paramsctx, acc = quote_rel_context quote_term acc env mib.Declarations.mind_params_ctxt in
+      let paramsctx, acc = quote_rel_context quote_term acc env sigma mib.Declarations.mind_params_ctxt in
       let uctx = quote_universes_decl mib.Declarations.mind_universes mib.Declarations.mind_template in
       let var = Option.map (CArray.map_to_list Q.quote_variance) mib.Declarations.mind_variance in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
@@ -434,13 +435,13 @@ struct
         (fun acc env t mib -> 
         quote_minductive_type acc (false, env) t mib))
 
-  let quote_term env trm =
+  let quote_term env sigma trm =
     let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ _ () -> ()) in
-    fst (fn () env trm)
+    fst (fn () env sigma trm)
 
-  let quote_mind_decl env trm mib =
+  let quote_mind_decl env sigma trm mib =
     let (_,fn) = quote_term_remember (fun _ () -> ()) (fun _ _ () -> ()) in
-    let (_, indd, _) = fn () env trm mib in indd
+    let (_, indd, _) = fn () env sigma trm mib in indd
 
   type defType =
     Ind of Names.inductive * mutual_inductive_body
@@ -462,7 +463,7 @@ struct
           univsty oib.mind_user_lc)
         univs mib.mind_packets
 
-  let quote_term_rec ~bypass ?(with_universes=true) env trm =
+  let quote_term_rec ~bypass ?(with_universes=true) env sigma trm =
     let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
     let universes = ref Univ.Level.Set.empty in
@@ -478,7 +479,7 @@ struct
             let univs = universes_of_mib mib in
             let () = universes := Univ.Level.Set.union univs !universes in
             let (kn,d,acc) =
-              try quote_type acc env mi mib
+              try quote_type acc env sigma mi mib
               with e ->
                 Feedback.msg_debug (str"Exception raised while checking " ++ MutInd.print mi);
                 raise e
@@ -516,7 +517,7 @@ struct
               | Some tm -> 
                 let univs = Vars.universes_of_constr tm in
                 let () = universes := Univ.Level.Set.union univs !universes in
-                try let (tm, acc) = quote_term acc (Global.env ()) tm in
+                try let (tm, acc) = quote_term acc (Global.env ()) (Evd.from_env @@ Global.env ()) tm in
                   (Some tm, acc)
                 with e ->
                   Feedback.msg_debug (str"Exception raised while checking body of " ++ KerName.print kn);
@@ -527,7 +528,7 @@ struct
               let ty = cd.const_type in
               let univs = Vars.universes_of_constr ty in
               let () = universes := Univ.Level.Set.union univs !universes in
-              (try quote_term acc (Global.env ()) ty
+              (try quote_term acc (Global.env ()) (Evd.from_env @@ Global.env ()) ty
                 with e ->
                   Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
                   raise e)
@@ -549,7 +550,7 @@ struct
       b := y ;
       (x,y)
     in
-    let (tm, _) = quote_rem () env trm in
+    let (tm, _) = quote_rem () env sigma trm in
     let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc) !constants (Q.empty_global_declarations ()) in
     let univs = 
       if with_universes then 
@@ -572,18 +573,18 @@ struct
     let env = Q.mk_global_env univs decls retro in
     Q.mk_program env tm
 
-  let quote_rel_context env ctx =
-    fst (quote_rel_context (fun acc env t -> (quote_term (snd env) t, acc)) () ((), env) ctx)
+  let quote_rel_context env sigma ctx =
+    fst (quote_rel_context (fun acc env sigma t -> (quote_term (snd env) sigma t, acc)) () ((), env) sigma ctx)
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
     let iname = Q.quote_ident mi.mind_entry_typename  in
-    let arity = quote_term envA mi.mind_entry_arity in
+    let arity = quote_term envA (Evd.from_env envA) mi.mind_entry_arity in
     let consnames = List.map Q.quote_ident (mi.mind_entry_consnames) in
-    let constypes = List.map (quote_term envC) (mi.mind_entry_lc) in
+    let constypes = List.map (quote_term envC (Evd.from_env envC)) (mi.mind_entry_lc) in
     (iname, arity, consnames, constypes)
 
   let quote_mind_params env (params: Constr.rel_context) =
-    let qparams = quote_rel_context env params in
+    let qparams = quote_rel_context env (Evd.from_env env) params in
     (Environ.push_rel_context params env, qparams)
 
   let mind_params_as_types ((env,t):Environ.env*Constr.t) (params:Constr.rel_context) :
@@ -615,14 +616,14 @@ since  [absrt_info] is a private type *)
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance) *)
 
   let quote_constant_body_aux bypass env evm (cd : constant_body) =
-    let ty = quote_term env cd.const_type in
+    let ty = quote_term env evm cd.const_type in
     let body =
       match cd.const_body with
       | Undef _ -> None
-      | Def cs -> Some (quote_term env cs)
+      | Def cs -> Some (quote_term env evm cs)
       | OpaqueDef cs ->
         if bypass
-        then Some (quote_term env (fst (Global.force_proof Library.indirect_accessor cs)))
+        then Some (quote_term env evm (fst (Global.force_proof Library.indirect_accessor cs)))
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
     in

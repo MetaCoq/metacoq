@@ -149,7 +149,7 @@ struct
   
   let unquote_evar env evm n l = 
     let id = Evar.unsafe_of_int (unquote_int n) in
-    evm, mkEvar (id, l)
+    evm, mkEvar (id, SList.of_full_list l)
 
   let unquote_bool (q : quoted_bool) : bool = q
   

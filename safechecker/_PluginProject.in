@@ -8,20 +8,14 @@
 # From template
 src/ssrbool.ml
 src/ssrbool.mli
-src/ssreflect.ml
-src/ssreflect.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/envMap.mli
-src/envMap.ml
-src/mCProd.mli
-src/mCProd.ml
 
 # From PCUIC
-# src/pCUICPrimitive.mli
-# src/pCUICPrimitive.ml
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml

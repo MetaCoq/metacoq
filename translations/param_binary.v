@@ -144,7 +144,7 @@ Fixpoint tsl_rec1_app (app : list term) (E : tsl_table) (t : term) : term :=
   | tFix _ _ | tCoFix _ _ => todo "tsl"
   | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
-  (* | tInt _ | tFloat _ => todo "impossible" *)
+  | tInt _ | tFloat _ => todo "tsl"
   end
   in apply app t1
   end.

@@ -10,18 +10,10 @@
 # src/canonicalTries.ml
 src/ssrbool.ml
 src/ssrbool.mli
-src/ssreflect.ml
-src/ssreflect.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/envMap.mli
-src/envMap.ml
-src/mCProd.mli
-src/mCProd.ml
-src/transform.mli
-src/transform.ml
 src/etaExpand.mli
 src/etaExpand.ml
 
@@ -33,8 +25,8 @@ src/etaExpand.ml
 # src/wcbvEval.mli
 # src/wcbvEval.ml
 # From PCUIC
-# src/pCUICPrimitive.mli
-# src/pCUICPrimitive.ml
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICCases.mli
@@ -145,6 +137,8 @@ src/eProgram.ml
 # src/eEtaExpandedFix.ml
 src/eInlineProjections.mli
 src/eInlineProjections.ml
+src/eConstructorsAsBlocks.mli
+src/eConstructorsAsBlocks.ml
 src/eTransform.mli
 src/eTransform.ml
 src/erasure.mli

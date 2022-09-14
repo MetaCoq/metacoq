@@ -300,12 +300,34 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
     if infer_univs then
       let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
       debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set (Level.pr) ctx));
-      DeclareUctx.declare_universe_context ~poly:false ctx; 
+      DeclareUctx.declare_universe_context ~poly:false ctx;
       Evd.merge_context_set Evd.UnivRigid evm ctx, mind
     else evm, mind
   in
   let names = (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) in
-  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind names []);
+  let primitive_expected =
+    match mind.mind_entry_record with
+    | Some (Some _) -> true
+    | _ -> false
+  in
+  let ind_kn = DeclareInd.declare_mutual_inductive_with_eliminations ~primitive_expected mind names [] in
+  if primitive_expected
+  then begin
+    let open Record.Internal in
+    let dflt_pf = {pf_subclass = false ; pf_canonical = false} in
+    let decl_projs i oie =
+      let ind = (ind_kn, i) in
+      let univs = (Entries.Monomorphic_entry, Names.Id.Map.empty) in
+      let inhabitant_id = List.hd oie.mind_entry_consnames in
+      let fields, _ = Term.decompose_prod_assum (List.hd oie.mind_entry_lc) in
+      let fieldimpls = List.map (fun _ -> []) fields in
+      let pfs = List.map (fun _ -> dflt_pf) fields in
+      let projections = Record.Internal.declare_projections ind univs ~kind:Decls.Definition inhabitant_id pfs fieldimpls fields in
+      let struc = Structures.Structure.make (Global.env()) ind projections in
+      Record.Internal.declare_structure_entry struc
+    in
+    List.iteri decl_projs mind.mind_entry_inds
+  end;
   evm
 
 let not_in_tactic s =

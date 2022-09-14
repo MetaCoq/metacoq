@@ -179,8 +179,8 @@ Hint Extern 10 => constructor : wf.
 #[global]
 Hint Resolve All_skipn : wf.
 
-Lemma on_global_decls_extends_not_fresh {cf} {univs} k (Σ : global_declarations) k' (Σ' : global_declarations) P : 
-  on_global_decls cumul_gen P univs ((k :: Σ) ++ [k'] ++ Σ') -> k.1 = k'.1 -> False.
+Lemma on_global_decls_extends_not_fresh {cf} {univs retro} k (Σ : global_declarations) k' (Σ' : global_declarations) P : 
+  on_global_decls cumul_gen P univs retro ((k :: Σ) ++ [k'] ++ Σ') -> k.1 = k'.1 -> False.
 Proof.
   intros H eq.
   depelim H.

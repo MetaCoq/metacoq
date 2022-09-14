@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
-From MetaCoq.Template Require Import utils MC_ExtrOCamlZPosInt.
+From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOCamlInt63 ExtrOCamlFloats.
+From MetaCoq.Template Require Import utils. 
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
 

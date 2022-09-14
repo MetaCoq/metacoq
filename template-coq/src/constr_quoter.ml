@@ -414,8 +414,17 @@ struct
     let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
 
-  let mk_global_env univs decls =
-    constr_mkApp (tBuild_global_env, [| univs; decls |])
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  let quote_retroknowledge r = 
+    let rint63 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_int63 in
+    let rfloat64 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_float64 in
+    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64 |])
+
+  let mk_global_env univs decls retro =
+    constr_mkApp (tBuild_global_env, [| univs; decls; retro |])
 
   let mk_program f s = pairl tglobal_env tTerm f s
 

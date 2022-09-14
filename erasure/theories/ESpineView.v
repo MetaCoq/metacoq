@@ -21,7 +21,8 @@ Inductive t : term -> Set :=
 | tCase ci p brs : t (tCase ci p brs)
 | tProj p c : t (tProj p c)
 | tFix mfix idx : t (tFix mfix idx)
-| tCoFix mfix idx : t (tCoFix mfix idx).
+| tCoFix mfix idx : t (tCoFix mfix idx)
+| tPrim p : t (tPrim p).
 Derive Signature for t.
 
 Definition view : forall x : term, t x :=
@@ -36,7 +37,8 @@ Definition view : forall x : term, t x :=
     (fun p t l => tCase p t l)
     (fun p t => tProj p t)
     (fun mfix n => tFix mfix n)
-    (fun mfix n => tCoFix mfix n).
+    (fun mfix n => tCoFix mfix n)
+    (fun p => tPrim p).
 
 Lemma view_mkApps {f v} (vi : t (mkApps f v)) : ~~ isApp f -> v <> [] -> 
   exists hf vn, vi = tApp f v hf vn.

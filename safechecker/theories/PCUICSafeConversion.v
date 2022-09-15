@@ -60,9 +60,9 @@ Section Conversion.
 
   Context {cf : checker_flags} {nor : normalizing_flags}.
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) : 
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.

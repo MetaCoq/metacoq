@@ -257,9 +257,9 @@ Lemma substitution_wf_local_rel `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' s �
 Section Typecheck.
   Context {cf : checker_flags} {nor : normalizing_flags}.
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) : 
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
@@ -1010,7 +1010,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
       pose proof (heΣ _ wfΣ) as [heΣ].
     destruct wfg as [wfg].
-    suff: (@abstract_env_check_constraints cf _ X_type.π2.π1 X (subst_instance_cstrs u cstrs)).
+    suff: (@abstract_env_check_constraints cf _ _ X_type.π2.π2.π1 X (subst_instance_cstrs u cstrs)).
     - rewrite <- e3. congruence.
     - intros. erewrite <- abstract_env_check_constraints_correct; eauto.
       now clear -H.
@@ -1349,7 +1349,7 @@ Section Typecheck.
 
   infer Γ HΓ (tEvar ev _) := raise (UnboundEvar ev) ;
 
-  infer Γ HΓ (tSort u) with inspect (@abstract_env_ext_wf_universeb _ _ _ X u) := {
+  infer Γ HΓ (tSort u) with inspect (@abstract_env_ext_wf_universeb _ _ _ _ X u) := {
     | exist true _ := ret (tSort (Universe.super u);_) ;
     | exist false _ := raise (Msg ("Sort contains an undeclared level " ^ string_of_sort u))
   } ;

@@ -29,8 +29,8 @@ From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICWfEnv P
 
 Implicit Types (cf : checker_flags).
 
-Definition Hlookup {cf} (X_type : abstract_env_ext_impl) (X : X_type.π1) (X_type' : abstract_env_ext_impl)
-  (X' : X_type'.π1) := 
+Definition Hlookup {cf} (X_type : abstract_env_impl) (X : X_type.π2.π1) (X_type' : abstract_env_impl)
+  (X' : X_type'.π2.π1) := 
   forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
   forall Σ' : global_env_ext, abstract_env_ext_rel X' Σ' ->
   (forall kn decl decl',
@@ -39,14 +39,14 @@ Definition Hlookup {cf} (X_type : abstract_env_ext_impl) (X : X_type.π1) (X_typ
     abstract_env_lookup X kn = abstract_env_lookup X' kn) /\
   (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
 
-Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_ext_impl} {X : X_type.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
+Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_impl} {X : X_type.π2.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
 Proof.
   unfold reduce_stack. destruct reduce_stack_full => //.
 Qed.
 
 Definition same_principal_type {cf}
-  {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+  {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   {Γ : context} {t} (p : PCUICSafeRetyping.principal_type X_type X Γ t) (p' : PCUICSafeRetyping.principal_type X_type' X' Γ t) :=
   p.π1 = p'.π1.
 
@@ -60,8 +60,8 @@ Proof.
 Qed.
 
 Section infer_irrel.
-  Context {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}.
+  Context {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+    {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}.
   Context (hl : Hlookup X_type X X_type' X').
   
   Definition same_prod (Γ : context) {T}
@@ -337,8 +337,8 @@ Section infer_irrel.
   Qed.
 
   Definition same_sort_comp {cf} {nor : normalizing_flags} 
-    {X_type : abstract_env_ext_impl} {X : X_type.π1}
-    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+    {X_type : abstract_env_impl} {X : X_type.π2.π1}
+    {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
     {Γ : context} {t t'}
     (pf : typing_result_comp
       (∑ u, forall Σ0 : global_env_ext, abstract_env_ext_rel X Σ0 -> ∥ Σ0 ;;; Γ ⊢ t ⇝ tSort u ∥))
@@ -457,8 +457,8 @@ Section infer_irrel.
 
 End infer_irrel.
 
-Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   (hl : Hlookup X_type X X_type' X')
   {Γ t}
   (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
@@ -625,8 +625,8 @@ Proof.
 Qed.
 
 Lemma sort_of_type_irrel
-  {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+  {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   (hl : Hlookup X_type X X_type' X')
   {Γ : context} {t} 
   (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥)

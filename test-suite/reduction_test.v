@@ -73,7 +73,7 @@ Program Definition eval_compute (cf := default_checker_flags)
   let p' := trans_program p in 
   let Σ' := TemplateToPCUIC.trans_global_env p.1 in
   let redtm := reduce_term RedFlags.default 
-    optimized_abstract_env_ext_impl (proj1_sig A.π2)
+    optimized_abstract_env_impl (proj1_sig A.π2)
     [] p'.2 _ in 
   inl (PCUICToTemplate.trans redtm)
 | EnvError Σ (AlreadyDeclared id) =>
@@ -91,7 +91,7 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
 (p : Ast.Env.program) φ  : Ast.term
 := let p' := trans_program p in 
   let tm := reduce_term RedFlags.default 
-     canonical_abstract_env_ext_impl 
+     canonical_abstract_env_impl 
     {| referenced_impl_env_ext := (p'.1 , φ);
        referenced_impl_ext_wf := (todo "wf") |}
     [] p'.2 (todo "welltyped") in

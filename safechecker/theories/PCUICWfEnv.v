@@ -16,23 +16,17 @@ Record on_global_decls_dec {cf:checker_flags} (univs : ContextSet.t) retro (Σ :
 Definition level_mem : global_env_ext -> Level.t -> bool
   := fun X l => LevelSet.mem l (global_ext_levels X).
 
-Class abstract_env_ext_struct {cf:checker_flags} (abstract_env_impl : Type) := {
-  abstract_env_lookup : abstract_env_impl -> kername -> option global_decl;
-  abstract_env_ext_retroknowledge : abstract_env_impl -> Retroknowledge.t;
-  abstract_env_conv_pb_relb : abstract_env_impl -> conv_pb -> Universe.t -> Universe.t -> bool;
-  abstract_env_compare_global_instance : abstract_env_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
-  abstract_env_level_mem : abstract_env_impl -> Level.t -> bool;
-  abstract_env_ext_wf_universeb : abstract_env_impl -> Universe.t -> bool;
-  abstract_env_check_constraints : abstract_env_impl -> ConstraintSet.t -> bool;
-  abstract_env_guard : abstract_env_impl -> FixCoFix -> context -> mfixpoint term -> bool;
+Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type) := {
+  abstract_env_lookup : abstract_env_ext_impl -> kername -> option global_decl;
+  abstract_env_ext_retroknowledge : abstract_env_ext_impl -> Retroknowledge.t;
+  abstract_env_conv_pb_relb : abstract_env_ext_impl -> conv_pb -> Universe.t -> Universe.t -> bool;
+  abstract_env_compare_global_instance : abstract_env_ext_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
+  abstract_env_level_mem : abstract_env_ext_impl -> Level.t -> bool;
+  abstract_env_ext_wf_universeb : abstract_env_ext_impl -> Universe.t -> bool;
+  abstract_env_check_constraints : abstract_env_ext_impl -> ConstraintSet.t -> bool;
+  abstract_env_guard : abstract_env_ext_impl -> FixCoFix -> context -> mfixpoint term -> bool;
   abstract_env_fixguard X := abstract_env_guard X Fix;
   abstract_env_cofixguard X := abstract_env_guard X CoFix;
-  (* This part of the structure is here to state the correctness properties *)
-  abstract_env_ext_rel : abstract_env_impl -> global_env_ext -> Prop;
-}.
-
-Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type)
-  := {
   abstract_env_empty : abstract_env_impl;
   abstract_env_init (cs:ContextSet.t) (retro : Retroknowledge.t) : on_global_univs cs -> abstract_env_impl;
   abstract_env_univ : abstract_env_impl -> ContextSet.t;
@@ -48,20 +42,24 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
     ∥ on_udecl (abstract_env_univ X) udecl ∥ ->
     abstract_env_ext_impl ;
   abstract_pop_decls : abstract_env_impl -> abstract_env_impl ;
-    (* This part of the structure is here to state the correctness properties *)
+
+  (* This part of the structure is here to state the correctness properties *)
+
   abstract_env_rel : abstract_env_impl -> global_env -> Prop;
+  abstract_env_ext_rel : abstract_env_ext_impl -> global_env_ext -> Prop;
 
   abstract_make_wf_env_ext : forall (X:abstract_env_impl) (univs : universes_decl) 
     (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥), abstract_env_ext_impl ;
 }.
 
-Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl : Type} `{!abstract_env_ext_struct abstract_env_impl}
-  (X:abstract_env_impl) := abstract_env_conv_pb_relb X Conv.
+Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+  (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Conv.
 
-Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl : Type} `{!abstract_env_ext_struct abstract_env_impl}
-  (X:abstract_env_impl) := abstract_env_conv_pb_relb X Cumul.
+Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+  (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Cumul.
 
-Class abstract_env_ext_prop {cf:checker_flags} (abstract_env_impl : Type) `{!abstract_env_ext_struct abstract_env_impl} : Prop := {
+Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type) 
+  `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop := {
     abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
     abstract_env_ext_wf X {Σ} : abstract_env_ext_rel X Σ -> ∥ wf_ext Σ ∥ ;
     abstract_env_ext_irr X {Σ Σ'} :
@@ -88,12 +86,6 @@ Class abstract_env_ext_prop {cf:checker_flags} (abstract_env_impl : Type) `{!abs
       valid_constraints Σ ctrs <-> abstract_env_check_constraints X ctrs;
     abstract_env_guard_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) fix_cofix Γ mfix :
       guard fix_cofix Σ Γ mfix <-> abstract_env_guard X fix_cofix Γ mfix;
-     }.
-
-Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type)
-  `{!abstract_env_ext_struct abstract_env_ext_impl}
-  `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop :=
-  {
   abstract_env_exists X : ∥ ∑ Σ , abstract_env_rel X Σ ∥;
   abstract_env_wf X {Σ} : abstract_env_rel X Σ -> ∥ wf Σ ∥;
   abstract_env_irr X {Σ Σ'} :
@@ -139,33 +131,23 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)                     
   }.
 
-Definition abstract_env_ext_impl {cf:checker_flags} := ∑ X Y, @abstract_env_ext_prop _ X Y.
+Definition abstract_env_impl {cf:checker_flags} := ∑ X Y Z, @abstract_env_prop _ X Y Z.
 
-Global Instance abstract_env_ext_impl_abstract_env_struct {cf:checker_flags} (Σ : abstract_env_ext_impl) : abstract_env_ext_struct Σ.π1.
-  exact (Σ.π2.π1).
-Defined.
-
-Global Instance abstract_env_ext_impl_abstract_env_prop {cf:checker_flags} (Σ : abstract_env_ext_impl) : abstract_env_ext_prop Σ.π1.
-  exact (Σ.π2.π2).
-Defined.
-
-Definition abstract_env_impl {cf:checker_flags} := ∑ X (Y:abstract_env_ext_impl) Z, @abstract_env_prop _ X Y.π1 _ Z.
-
-Global Instance abstract_env_impl_abstract_env_struct {cf:checker_flags} (Σ : abstract_env_impl) : abstract_env_struct Σ.π1 Σ.π2.π1.π1.
+Global Instance abstract_env_impl_abstract_env_struct {cf:checker_flags} (Σ : abstract_env_impl) : abstract_env_struct Σ.π1 Σ.π2.π1.
   exact (Σ.π2.π2.π1).
 Defined.
 
-Global Instance abstract_env_impl_abstract_env_prop {cf:checker_flags} (Σ : abstract_env_impl) : abstract_env_prop Σ.π1 Σ.π2.π1.π1.
+Global Instance abstract_env_impl_abstract_env_prop {cf:checker_flags} (Σ : abstract_env_impl) : abstract_env_prop Σ.π1 Σ.π2.π1.
   exact (Σ.π2.π2.π2).
 Defined.
 
-Definition abstract_env_cored {cf:checker_flags} (_X : abstract_env_ext_impl) (X : _X.π1) {Σ Σ' Γ u v} : abstract_env_ext_rel X Σ -> abstract_env_ext_rel X Σ'
+Definition abstract_env_cored {cf:checker_flags} (_X : abstract_env_impl) (X : _X.π2.π1) {Σ Σ' Γ u v} : abstract_env_ext_rel X Σ -> abstract_env_ext_rel X Σ'
 -> cored Σ Γ u v -> cored Σ' Γ u v.
 Proof.
   intros HΣ HΣ' Hred. erewrite (abstract_env_ext_irr _ HΣ'); eauto.
 Defined.
 
-Definition abstract_env_ext_sq_wf {cf:checker_flags} (X : abstract_env_ext_impl) (x : X.π1)
+Definition abstract_env_ext_sq_wf {cf:checker_flags} (X : abstract_env_impl) (x : X.π2.π1)
   Σ (wfΣ : abstract_env_ext_rel x Σ) : ∥ wf Σ∥.
   destruct (abstract_env_ext_wf _ wfΣ).
   sq. auto.

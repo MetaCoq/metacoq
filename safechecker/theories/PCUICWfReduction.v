@@ -234,9 +234,9 @@ End fix_sigma.
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=

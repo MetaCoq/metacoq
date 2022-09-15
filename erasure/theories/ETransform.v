@@ -52,8 +52,8 @@ Proof.
   intros [etaenv etat]. split;
   unfold erase_program, erase_pcuic_program; cbn.
   eapply ErasureFunction.expanded_erase_global_fast, etaenv; reflexivity.
-  refine (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl) (X := (build_wf_env_from_env p.1.1
-  (map_squash (PCUICTyping.wf_ext_wf p.1) (map_squash fst wtp)))) _ _ p.2 _ _ eq_refl etat).
+  apply: (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
+  reflexivity. exact etat.
 Qed.
 
 Lemma expanded_eprogram_env_expanded_eprogram_cstrs p :
@@ -83,7 +83,7 @@ Next Obligation.
   - unfold erase_program, erase_pcuic_program in e. simpl. cbn in e. injection e. intros <- <-.
     split. 
     eapply ErasureFunction.erase_global_fast_wf_glob.
-    refine (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl) _ _ _ ).
+    apply: (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl)).
   - rewrite -e. cbn.
     now eapply expanded_erase_program.
 Qed.

@@ -78,6 +78,7 @@ Lemma wf_fresh_globals {cf : checker_flags} (Σ : global_env) : wf Σ -> EnvMap.
 Proof.
   destruct Σ as [univs Σ]; cbn.
   move=> [] onu; cbn. induction 1; constructor; auto.
+  destruct o; auto. 
 Qed.
 
 Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
@@ -190,7 +191,7 @@ Proof.
     * destruct wfΣ as [onu ond]. depelim ond.
       split => //.
     * eapply TypingWf.typing_wf_sigma in wfΣ.
-      destruct wfΣ as [onu ond]. now depelim ond.
+      destruct wfΣ as [onu ond]. depelim ond. now destruct o.
     * split => //.
       now exists [(a.1, trans_global_decl (trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ;
         S.Env.retroknowledge := retro |}) a.2)].
@@ -3018,12 +3019,12 @@ Proof.
   { now rewrite trans_env_env_universes. }
   cbn -[trans_global_env] in *.
   rewrite trans_env_env_universes /= /trans_global_env /=.
-  induction ond; simpl; constructor; auto.
-  - red in f |- *. clear -f.
-    induction f; cbn; constructor; auto. 
+  induction ond; simpl; constructor; auto. destruct o. constructor; auto. 
+  - red in kn_fresh |- *. clear -kn_fresh.
+    induction kn_fresh; cbn; constructor; auto. 
   - simpl. subst udecl.
-    clear -o.
-    now erewrite trans_global_decl_universes in o.
+    clear -on_udecl_udecl.
+    now erewrite trans_global_decl_universes in on_udecl_udecl.
   - simpl.
     set (Σg := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; Ast.Env.retroknowledge := retro |}).
     set (X0 := (onu, ond) : Typing.wf Σg).
@@ -3035,14 +3036,14 @@ Proof.
       now rewrite trans_env_env_retroknowledge. }
     assert (wfΣg : PCUICTyping.wf (trans_global_env Σg)).
     { split; rewrite trans_env_env_universes //. }
-    have wfdecl := on_global_decl_wf (Σ := (Σg, udecl)) X0 o0.
+    have wfdecl := on_global_decl_wf (Σ := (Σg, udecl)) X0 on_global_decl_d.
     destruct d eqn:eqd.
     * destruct c; simpl. destruct cst_body0; simpl in *.
-      red in o |- *. simpl in *.
+      red in on_udecl_udecl |- *. simpl in *.
       eapply (X (Σg, cst_universes0) [] t (Typ cst_type0)); auto.
-      red in o0 |- *. simpl in *.
+      red in on_global_decl_d |- *. simpl in *.
       now apply (X (Σg, cst_universes0) [] cst_type0 Sort).
-    * destruct o0 as [onI onP onNP].
+    * destruct on_global_decl_d as [onI onP onNP].
       simpl.
       change (trans_env_env (trans_global_env Σg), Ast.Env.ind_universes m) with (global_env_ext_map_global_env_ext (trans_global (Σg, Ast.Env.ind_universes m))) in *.
       change (trans_global_decls (empty_trans_env univs retro) Σ) with (global_env_ext_map_global_env_map (trans_global (Σg, Ast.Env.ind_universes m))).

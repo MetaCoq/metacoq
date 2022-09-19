@@ -1136,10 +1136,10 @@ Proof.
   induction er; intros wf.
   - constructor.
   - cbn. destruct cb' as [[]].
-    cbn in *. depelim wf. 
+    cbn in *. depelim wf. destruct o. 
     rewrite [forallb _ _](IHer wf) andb_true_r.
     red in H. destruct cb as [ty []]; cbn in *.
-    unshelve eapply PCUICClosedTyp.subject_closed in o0. cbn. split; auto.
+    unshelve eapply PCUICClosedTyp.subject_closed in on_global_decl_d. cbn. split; auto.
     eapply erases_closed in H; tea. elim H.
     cbn. apply IHer. now depelim wf.
   - depelim wf.
@@ -1194,11 +1194,11 @@ Proof.
   move: wf. red in er; cbn in er.
   induction er; intros wf.
   - constructor.
-  - cbn. depelim wf.
+  - cbn. depelim wf. destruct o. 
     constructor; eauto.
     2:eapply erases_global_decls_fresh; tea.
     cbn. red in H.
-    do 2 red in o0.
+    do 2 red in on_global_decl_d.
     destruct (cst_body cb).
     destruct (E.cst_body cb') => //. cbn.
     set (Σ'' := ({| universes := _ |}, _)) in *.
@@ -1209,7 +1209,7 @@ Proof.
     specialize (H0 H Σ'). eapply H0.
     eapply erases_global_all_deps; tea. split => //.
     destruct (E.cst_body cb') => //. 
-  - depelim wf.
+  - depelim wf. destruct o. 
     constructor; eauto.
     now eapply erases_mutual_inductive_body_wf.
     now eapply erases_global_decls_fresh; tea.

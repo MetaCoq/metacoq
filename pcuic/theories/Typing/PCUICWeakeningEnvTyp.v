@@ -298,10 +298,10 @@ Proof.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
   case: eqb_specT; intro eq; subst.
-  - intros [= ->]. subst.
+  - intros [= ->]. subst. destruct o. 
     clear Hext; eapply weakening_on_global_decl_ext. 3:tea. all:eauto.
-  - apply IHonΣ; auto.
-    destruct wfΣ. split => //. now depelim o2.
+  - destruct o. apply IHonΣ; auto.
+    destruct wfΣ. split => //. now depelim o0.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
@@ -318,12 +318,12 @@ Proof.
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  case: eqb_specT; intro e; subst.
-  - intros [= ->]. subst.
+  destruct o. case: eqb_specT; intro e; subst. 
+  - intros [= ->]. subst.  
     clear Hext; eapply weakening_on_global_decl. 5:tea. all:eauto.
-    destruct wfΣ. split => //. now depelim o2.
+    destruct wfΣ. split => //. now depelim o0.
   - apply IHonΣ; auto.
-    destruct wfΣ. split => //. now depelim o2.
+    destruct wfΣ. split => //. now depelim o0.
 Qed.
 
 Lemma weaken_lookup_on_global_env `{checker_flags} P Σ c decl :

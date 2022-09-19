@@ -1568,7 +1568,7 @@ Proof.
   set (Σ' := {| universes := univs'; declarations := Σ; retroknowledge := retro' |}) in *.
   set (Σg := {| GlobalEnvMap.env := _ |}). Unshelve.
   destruct X as [equ [Σ'' ext]]. cbn in *. destruct env as [univs0 env]. cbn in *. subst univs0.
-  subst env.
+  subst env. destruct o as [? udecl ? o0].
   pose proof (eta_expand_global_decl_expanded (Σ', udecl) (Σg, univs) kn d).
   cbn in H.
   forward H. {

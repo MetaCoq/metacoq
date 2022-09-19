@@ -62,7 +62,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map optimize args)
-    (* | tPrim _ => t *)
+    | tPrim _ => t
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
@@ -693,15 +693,16 @@ Proof.
     * destruct with_guarded_fix.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
         rtoProp; intuition auto.
         destruct v => /= //. 
         destruct v => /= //.
+        destruct v => /= //.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //. 
   - destruct t => //.
@@ -856,7 +857,7 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.

@@ -1,3 +1,68 @@
+(*From MetaCoq.Template Require Import config All.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst TemplateToPCUIC.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
+From Equations Require Import Equations.
+
+
+
+
+Polymorphic Inductive list@{u} (A : Type@{u}) : Type@{u} :=
+(* | nil : list A *)
+(* | cons : A -> list A -> list A *)
+.
+
+Polymorphic Inductive rtree@{u} : Type@{u} :=
+| node : list rtree -> rtree.
+
+Universe u.
+
+Polymorphic Inductive empty@{u} : Type@{u} :=.
+
+Polymorphic Inductive unit@{u} : Type@{u} := tt.
+
+MetaCoq Quote Recursively Definition empty_sig_full_template := (fun (A : Type@{u}) (x : A) => x).
+Definition empty_sig_full := trans_template_program empty_sig_full_template.
+
+MetaCoq Quote Recursively Definition empty_full_template := empty@{u}.
+Definition empty_full := trans_template_program empty_full_template.
+
+MetaCoq Quote Recursively Definition unit_full_template := tt@{u}.
+Definition unit_full := trans_template_program unit_full_template.
+
+MetaCoq Quote Recursively Definition list_full_template := list@{u}.
+Definition list_full := trans_template_program list_full_template.
+
+MetaCoq Quote Recursively Definition rtree_full_template := rtree@{u}.
+Definition rtree_full := trans_template_program rtree_full_template.
+
+Definition extract_gctx : PCUICProgram.pcuic_program -> global_env_ext :=
+  fun p => (p.1.1.(PCUICProgram.trans_env_env), p.1.2).
+
+Definition gctx := Eval cbv in extract_gctx empty_full. (* Change here *)
+
+Global Program Instance fake_guard_impl : abstract_guard_impl :=
+{| guard_impl := fake_guard_impl |}.
+Next Obligation. Admitted.
+
+Local Existing Instance PCUICSN.default_normalizing.
+Import MCMonadNotation.
+
+Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
+  '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
+  ret Σ'.
+
+Local Existing Instance default_checker_flags.
+
+Definition gctx_wf_env : wf_env_ext.
+Proof.
+  let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
+  match wf_proof with
+  | CorrectDecl _ ?x => exact x
+  | ?z => set (error := z)
+   (* idtac z ; fail "Couldn't prove the global environment is well-formed" *)
+  end.
+Defined.
+*)
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
@@ -23,7 +88,8 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
+  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := []
+    ; retroknowledge := Retroknowledge.empty |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
@@ -86,7 +152,6 @@ Time Qed. *)
 
 
 Lemma identity_typing (u := Universe.make univ): 
-typing_result
      (∑ t : term,
         forall Σ0 : global_env_ext,
         Σ0 =
@@ -94,7 +159,8 @@ typing_result
            universes :=
              (LS.union (LevelSet.singleton Level.lzero)
                 (LevelSet.singleton univ), ConstraintSet.empty);
-           declarations := []
+           declarations := [];
+           retroknowledge := Retroknowledge.empty
          |}, Monomorphic_ctx) ->
         ∥ Σ0;;; [] |- t
           : tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0)) ∥).
@@ -106,7 +172,7 @@ Proof.
   pose (T := tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
   pose (Σ := gctx_wf_env).
   let t := uconstr:(check_inh Σ [] wfΓ impl (T:=T)) in
-  let proof := eval cbn in t in
+  let proof := eval hnf in t in
   match proof with
   | Checked ?d => exact_no_check d
   | TypeError ?e => 
@@ -115,7 +181,6 @@ Proof.
   | _ => set (blocked := proof)
   (* fail "Anomaly: unexpected return value: " proof *)
   end.
-  exact blocked. 
 Defined. 
 
 (* Print Opaque Dependencies identity_typing. *)

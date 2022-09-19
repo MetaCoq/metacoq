@@ -57,7 +57,8 @@ Section strip.
     | tBox => EAst.tBox
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
-    | tConstruct ind i block_args => EAst.tConstruct ind i block_args }.
+    | tConstruct ind i block_args => EAst.tConstruct ind i block_args
+    | tPrim p => EAst.tPrim p }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -361,7 +362,7 @@ Definition strip_constant_decl Σ cb :=
   {| cst_body := option_map (strip Σ) cb.(cst_body) |}.
   
 Definition strip_inductive_decl idecl := 
-  {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+  {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
 Definition strip_decl Σ d :=
   match d with
@@ -599,7 +600,7 @@ Module Fast.
     {| cst_body := option_map (strip' Σ) cb.(cst_body) |}.
     
   Definition strip_inductive_decl idecl := 
-    {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+    {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
   Definition strip_decl Σ d :=
     match d with
@@ -729,6 +730,14 @@ Proof.
   all:rewrite isConstructApp_mkApps isConstructApp_mkApps //.
 Qed.
 
+Lemma strip_isPrimApp Σ f : 
+  isPrimApp f = isPrimApp (strip Σ f).
+Proof.
+  funelim (strip Σ f); cbn -[strip] => //.
+  all:rewrite map_InP_spec.
+  all:rewrite !isPrimApp_mkApps //.
+Qed.
+
 Lemma lookup_inductive_pars_is_prop_and_pars {Σ ind b pars} :
   inductive_isprop_and_pars Σ ind = Some (b, pars) ->
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
@@ -793,7 +802,7 @@ Proof.
     rewrite vc. rewrite -mkApps_app !map_app //. 
 Qed.
 
-#[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
+ #[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
   Qpreserves (fun n x => closedn n x) Σ.
 Proof.
   intros clΣ.
@@ -812,28 +821,28 @@ Proof.
   - red. move=> hasapp n t args. rewrite closedn_mkApps. 
     split; intros; rtoProp; intuition auto; solve_all.
   - red. move=> hascase n ci discr brs. simpl.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> hasproj n p discr. simpl.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> t args clt cll.
     eapply closed_substl. solve_all. now rewrite Nat.add_0_r.
   - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
   - red. move=> n mfix idx. cbn.
-    split; intros; rtoProp; intuition auto; solve_all.
+    intros; rtoProp; intuition auto; solve_all.
 Qed.
 
 Lemma strip_eval (efl := all_env_flags) {wfl:WcbvFlags} {wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :
-  closed_env Σ ->
   isEtaExp_env Σ ->
+  closed_env Σ ->
   wf_glob Σ ->
-  eval Σ t v ->
-  closed t ->
+  closedn 0 t ->
   isEtaExp Σ t ->
+  eval Σ t v ->
   eval (strip_env Σ) (strip Σ t) (strip Σ v).
 Proof.
-  intros clΣ etaΣ wfΣ ev clt etat.
-  revert t v clt etat ev.
+  intros etaΣ clΣ wfΣ.
+  revert t v.
   unshelve eapply (eval_preserve_mkApps_ind wfl wcon Σ (fun x y => eval (strip_env Σ) (strip Σ x) (strip Σ y))
     (fun n x => closedn n x) (Qpres := Qpreserves_closedn Σ clΣ)) => //.
   { intros. eapply eval_closed; tea. }
@@ -960,7 +969,7 @@ Proof.
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
     move: H1. eapply contraNN.
-    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox //.
+    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
     rewrite -strip_isFix //.
   
   - rewrite !strip_mkApps // /=.
@@ -1032,6 +1041,7 @@ Proof.
     destruct EAst.ind_ctors => //.
     destruct nth_error => //.
   - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
+    now rewrite -strip_isLambda. toAll; solve_all.
   - unfold wf_fix in *. rewrite map_length; rtoProp; intuition auto. toAll; solve_all.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     toAll; solve_all.

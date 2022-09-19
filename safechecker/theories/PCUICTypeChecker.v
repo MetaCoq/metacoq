@@ -1225,6 +1225,24 @@ Section Typecheck.
     now do 3 eapply (proj1 (eq_annots_fold _ _ _)) in e.
   Qed.
 
+  Definition primitive_constant (tag : Primitive.prim_tag) : option kername :=
+    let retro := abstract_env_ext_retroknowledge X in
+    match tag with
+    | Primitive.primInt => Retroknowledge.retro_int63 retro
+    | Primitive.primFloat => Retroknowledge.retro_float64 retro
+    end.
+
+  Lemma primitive_constant_spec tag :
+    forall Σ (wfΣ : abstract_env_ext_rel X Σ),
+    primitive_constant tag = PCUICEnvironment.primitive_constant Σ tag.
+  Proof.
+    intros.
+    unfold primitive_constant, PCUICEnvironment.primitive_constant.
+    destruct tag => //;
+    now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
+  Qed.
+
+
   Section check_mfix.
   Context (infer : forall (Γ : context) (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ),  ∥ Σ ;;; Γ |- t ▹ A ∥ }))
      (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥).
@@ -1331,7 +1349,7 @@ Section Typecheck.
 
   infer Γ HΓ (tEvar ev _) := raise (UnboundEvar ev) ;
 
-  infer Γ HΓ (tSort u) with inspect (abstract_env_wf_universeb _ X u) := {
+  infer Γ HΓ (tSort u) with inspect (@abstract_env_ext_wf_universeb _ _ _ X u) := {
     | exist true _ := ret (tSort (Universe.super u);_) ;
     | exist false _ := raise (Msg ("Sort contains an undeclared level " ^ string_of_sort u))
   } ;
@@ -1457,9 +1475,20 @@ Section Typecheck.
       guarded <- check_eq_true (abstract_env_cofixguard X Γ mfix) (Msg "Unguarded cofixpoint") ;;
       wfcofix <- check_eq_true (wf_cofixpoint_gen (abstract_env_lookup X) mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
       ret (dtype decl; _)
-    }.
+    };
 
-  (* infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported"). *)
+  infer Γ HΓ (tPrim p) with inspect (primitive_constant p.π1) :=
+    { | exist None _ := raise (Msg "primitive type is not registered in the environment");
+      | exist (Some prim_ty) eqp with inspect (abstract_env_lookup X prim_ty) := {
+        | exist (Some (ConstantDecl d)) HH =>
+            let ty := d.(cst_type) in
+            check_eq_true (eqb d.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
+            check_eq_true (eqb d.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
+            check_eq_true (isSort d.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
+            ret (tConst prim_ty []; _)
+        | _ => raise (UndeclaredConstant prim_ty)
+        }
+    }.
 
   (* tRel *)
   Next Obligation. intros; sq; now econstructor. Qed.
@@ -1475,15 +1504,15 @@ Section Typecheck.
   Next Obligation.
     specialize_Σ wfΣ; sq.
     symmetry in e. 
-    erewrite <- abstract_env_wf_universeb_correct in e; eauto.  
+    erewrite <- abstract_env_ext_wf_universeb_correct in e; eauto.  
     eapply (elimT wf_universe_reflect) in e.
-    sq; econstructor; tas. exact X_type.π2.π2.
+    sq; econstructor; tas.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq.
-    inversion X1 ; subst. erewrite <- abstract_env_wf_universeb_correct in e0; eauto. 
-    move: H0 e0 => /wf_universe_reflect -> //.  exact X_type.π2.π2.
+    inversion X1 ; subst. erewrite <- abstract_env_ext_wf_universeb_correct in e0; eauto. 
+    move: H0 e0 => /wf_universe_reflect -> //.  
   Qed.
   (* tProd *)
   Next Obligation.
@@ -2509,19 +2538,82 @@ Section Typecheck.
     inversion X1 ; subst.
     congruence.
   Qed.
-
-(* 
-  Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result_comp (∥ isWfArity Σ Γ A ∥) :=
-    match destArity [] A with
-    | None => raise (Msg (print_term Σ Γ A ^ " is not an arity"))
-    | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
-                      ret _
-    end.
   Next Obligation.
-    destruct XX. constructor. exists ctx, s.
-    split; auto.
-  Defined. *)
+    eapply eqb_eq in i. eapply eqb_eq in i0.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    split. econstructor. rewrite eqp.
+    now rewrite -primitive_constant_spec. red. 
+    now rewrite -HH. 
+    destruct (cst_type d) eqn:hty => //.
+    exists u. split => //.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    eapply eqb_eq in i. eapply eqb_eq in i0.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite e1 in eqp. noconf eqp.
+    symmetry in HH. rewrite /declared_constant in d0.
+    rewrite d0 in HH; noconf HH.
+    destruct p1 as [s' []]. rewrite H in absurd. now apply absurd.
+  Qed. 
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    eapply eqb_eq in i.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite e1 in eqp. noconf eqp.
+    symmetry in HH. rewrite /declared_constant in d0.
+    rewrite d0 in HH; noconf HH.
+    destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
+  Qed.
+
+
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite e1 in eqp. noconf eqp.
+    symmetry in HH. rewrite /declared_constant in d0.
+    rewrite d0 in HH; noconf HH.
+    destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
+  Qed.
+
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
+    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite e1 in eqp. noconf eqp.
+    symmetry in e0. rewrite /declared_constant in d.
+    rewrite d in e0; noconf e0.
+  Qed.
+
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
+    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite e1 in eqp. noconf eqp.
+    symmetry in e0. rewrite /declared_constant in d.
+    rewrite e0 in d; noconf d.
+  Qed.
+  
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq. 
+    depelim X1.
+    rewrite (primitive_constant_spec _ _ wfΣ) in e0. 
+    unfold prim_val_tag in e1. congruence.
+  Qed.
 
   Definition check_isType := infer_isType infer.
 

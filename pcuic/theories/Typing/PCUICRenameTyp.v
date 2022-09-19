@@ -1044,6 +1044,9 @@ Proof.
       * now eapply rename_wf_cofixpoint.
     + reflexivity.
 
+  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv P Δ f hf.
+    cbn. econstructor; tea. apply hf.
+
   - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht htB ihB cum P Δ f hf.
     eapply type_Cumul.
     + eapply iht; tea.

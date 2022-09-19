@@ -1,6 +1,6 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils Kernames EnvMap.
+From MetaCoq.Template Require Import utils Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EGlobalEnv EAstUtils.
 Import MCMonadNotation.
 
@@ -79,6 +79,16 @@ Module GlobalContextMap.
     now rewrite lookup_minductive_spec.
   Qed.
 
+  Definition lookup_inductive_kind Σ kn : option recursivity_kind := 
+    mdecl <- lookup_minductive Σ kn ;;
+    ret mdecl.(ind_finite).
+
+  Lemma lookup_inductive_kind_spec Σ kn : lookup_inductive_kind Σ kn = EGlobalEnv.lookup_inductive_kind Σ kn.
+  Proof.
+    rewrite /lookup_inductive_kind /EGlobalEnv.lookup_inductive_kind.
+    now rewrite lookup_minductive_spec.
+  Qed.
+
   Definition inductive_isprop_and_pars Σ (ind : inductive) :=
     '(mdecl, idecl) <- lookup_inductive Σ ind ;;
     ret (ind_propositional idecl, ind_npars mdecl).
@@ -98,6 +108,17 @@ Module GlobalContextMap.
     constructor_isprop_pars_decl Σ kn = EGlobalEnv.constructor_isprop_pars_decl Σ kn.
   Proof.
     rewrite /constructor_isprop_pars_decl /EGlobalEnv.constructor_isprop_pars_decl.
+    rewrite lookup_constructor_spec //.
+  Qed.
+
+  Definition lookup_constructor_pars_args Σ (ind : inductive) (c : nat) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
+    ret (ind_npars mdecl, cstr_nargs cdecl).
+  
+  Lemma lookup_constructor_pars_args_spec Σ kn : 
+    lookup_constructor_pars_args Σ kn = EGlobalEnv.lookup_constructor_pars_args Σ kn.
+  Proof.
+    rewrite /lookup_constructor_pars_args /EGlobalEnv.lookup_constructor_pars_args.
     rewrite lookup_constructor_spec //.
   Qed.
 

@@ -274,13 +274,13 @@ Lemma plookup_env_lookup_env {Σ : global_env_ext} kn b :
       b = firstorder_mutind (firstorder_env' (declarations Σ')) mind
     end.
 Proof using.
-  destruct Σ as [[univs Σ] ext].
+  destruct Σ as [[univs Σ retro] ext].
   induction Σ; cbn => //.
   destruct a as [kn' d] => //. cbn.
   case: eqb_specT.
   * intros ->.
     destruct d => //; cbn; rewrite eqb_refl => [=] <-;
-    exists {| universes := univs; declarations := Σ |}.
+    exists {| universes := univs; declarations := Σ; retroknowledge := retro |}.
     eexists; split => //. cbn. split => //.
     red. split => //. eexists (_ :: []); cbn; trea.
     eexists; split => //. cbn; split => //.
@@ -385,8 +385,8 @@ Lemma plookup_env_extends {Σ Σ' : global_env} kn b :
   plookup_env (firstorder_env' (declarations Σ')) kn = Some b ->
   plookup_env (firstorder_env' (declarations Σ)) kn = Some b.
 Proof.
-  intros [equ [Σ'' eq]]. rewrite eq.
-  clear equ. intros []. clear o. 
+  intros [equ [Σ'' eq] eqr]. rewrite eq.
+  clear equ eqr. intros []. clear o. 
   rewrite eq in o0. clear eq. move: o0.
   generalize (declarations Σ'). clear Σ'.
   induction Σ''.
@@ -667,6 +667,8 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind Hlookup in Hty.
       apply eqb_eq in Hfo, Hty. congruence.
+    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
+      now eapply invert_cumul_axiom_ind in cum; tea.
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.
     + apply inversion_mkApps in Hty as Hcon; auto.

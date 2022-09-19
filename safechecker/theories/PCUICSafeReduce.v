@@ -1314,6 +1314,8 @@ Corollary R_Acc_aux :
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
+    - eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? [? []]]); tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Definition isCoFix_app t :=
@@ -1345,7 +1347,8 @@ Corollary R_Acc_aux :
     - exfalso; eapply invert_fix_ind; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
-    (* - now eapply inversion_Prim in typ. *)
+    - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
@@ -1509,13 +1512,21 @@ Corollary R_Acc_aux :
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
           eapply PCUICConversion.ws_cumul_pb_Sort_Prod_inv; eauto.
-      (* + pose proof hΣ.
-        sq.
-        exfalso.
-        destruct (hΣ _ wfΣ) as [hΣ].
-        specialize (h _ wfΣ).
-        eapply welltyped_context in h as [s Hs]; tas.
-        now eapply inversion_Prim in Hs. *)
+        + unfold zipp.
+          case_eq (decompose_stack π). intros l ρ e.
+          apply decompose_stack_eq in e. subst.
+          destruct l.
+          * simpl. eauto with pcuic.
+          * exfalso.
+            destruct (hΣ _ wfΣ) as [hΣ].
+            cbn in h. zip fold in h.
+            specialize (h _ wfΣ).
+            apply welltyped_context in h; auto.
+            simpl in h. rewrite stack_context_appstack in h.
+            destruct h as [T h].
+            apply inversion_App in h as (?&?&?&?&?); auto.
+            apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto.
+            eapply PCUICCanonicity.invert_cumul_axiom_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.

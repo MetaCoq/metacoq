@@ -98,7 +98,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind n args => tConstruct ind n (map optimize args)
-    (* | tPrim _ => t *)
+    | tPrim _ => t
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
@@ -112,7 +112,11 @@ Section optimize.
 
   (* move to globalenv *)
 
-
+  Lemma isLambda_optimize t : isLambda t -> isLambda (optimize t).
+  Proof. destruct t => //. Qed.
+  Lemma isBox_optimize t : isBox t -> isBox (optimize t).
+  Proof. destruct t => //. Qed.
+  
   Lemma wf_optimize t k : 
     wf_glob Σ ->
     wellformed Σ k t -> wellformed Σ k (optimize t).
@@ -135,6 +139,7 @@ Section optimize.
       rewrite IHt //=; len. apply Nat.ltb_lt.
       lia.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+      now eapply isLambda_optimize. solve_all.
     - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
   Qed.
  
@@ -161,7 +166,7 @@ Section optimize.
       have arglen := wellformed_projection_args wfΣ hl.
       case: Nat.compare_spec. lia. lia.
       auto.
-    - f_equal. move/andP: wft => [hidx hb].
+    - f_equal. move/andP: wft => [hlam /andP[] hidx hb].
       solve_all. unfold map_def. f_equal.
       eapply a0. now rewrite -Nat.add_assoc.
     - f_equal. move/andP: wft => [hidx hb].
@@ -222,7 +227,7 @@ Section optimize.
     intros wfΣ hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
-    cbn in hfix. move/andP: hfix => [] hidx hfix. 
+    cbn in hfix. move/andP: hfix => [] hlam /andP[] hidx hfix. 
     destruct nth_error eqn:hnth => //.
     intros [= <- <-] => /=. f_equal.
     rewrite optimize_substl //. eapply wellformed_fix_subst => //.
@@ -660,15 +665,16 @@ Proof.
     * destruct with_guarded_fix.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
         rtoProp; intuition auto.
         destruct v => /= //. 
         destruct v => /= //.
+        destruct v => /= //.
       + move: i. 
         rewrite !negb_or.
-        rewrite optimize_mkApps !isConstructApp_mkApps.
+        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //. 
   - destruct t => //.
@@ -679,11 +685,6 @@ Proof.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
-
-Lemma isLambda_optimize Σ t : isLambda t -> isLambda (optimize Σ t).
-Proof. destruct t => //. Qed.
-Lemma isBox_optimize Σ t : isBox t -> isBox (optimize Σ t).
-Proof. destruct t => //. Qed.
 
 Lemma optimize_expanded {Σ : GlobalContextMap.t} t : expanded Σ t -> expanded Σ (optimize Σ t).
 Proof.
@@ -799,13 +800,14 @@ Definition disable_projections_term_flags (et : ETermFlags) :=
     ; has_tProj := false
     ; has_tFix := has_tFix
     ; has_tCoFix := has_tCoFix
+    ; has_tPrim := has_tPrim
   |}.
 
 Definition disable_projections_env_flag (efl : EEnvFlags) := 
-  {| has_axioms := true;
+  {| has_axioms := efl.(@has_axioms);
      term_switches := disable_projections_term_flags term_switches;
-     has_cstr_params := true ;
-     cstr_as_blocks := efl.(cstr_as_blocks) |}.
+     has_cstr_params := efl.(@has_cstr_params) ;
+     cstr_as_blocks := efl.(@cstr_as_blocks) |}.
 
 Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
@@ -815,8 +817,6 @@ Proof.
   intros hbox hrel wfΣ.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
-  - simpl. destruct lookup_constant => //.
-    move/andP => [] hasc _ => //. now rewrite hasc.
   - cbn -[lookup_constructor_pars_args]. intros. rtoProp. repeat split; eauto.
     destruct cstr_as_blocks; rtoProp; eauto.
     destruct lookup_constructor_pars_args as [ [] | ]; eauto. split; len.  solve_all. split; eauto. 
@@ -829,7 +829,7 @@ Proof.
     rewrite hrel IHt //= andb_true_r.
     have hargs' := wellformed_projection_args wfΣ hl'.
     apply Nat.ltb_lt. len.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.
@@ -847,6 +847,9 @@ Proof.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //.
+    repeat (rtoProp; intuition auto).
+    destruct has_axioms => //. cbn in *.
+    destruct (cst_body c) => //.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
@@ -879,9 +882,7 @@ Proof.
   move: hd.
   destruct d => /= //.
   destruct (cst_body c) => /= //.
-  intros hwf. eapply optimize_wellformed => //. auto.
-  destruct efl => //. destruct m => //. cbn. unfold wf_minductive.
-  cbn. move/andP => [] hp //.
+  intros hwf. eapply optimize_wellformed => //.
 Qed.
 
 Lemma fresh_global_optimize_env {Σ : GlobalContextMap.t} kn : 

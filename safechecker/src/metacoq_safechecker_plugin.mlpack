@@ -2,7 +2,6 @@ Utils
 Ssrbool
 WGraph
 UGraph0
-EnvMap
 Reflect
 MCProd
 
@@ -10,6 +9,7 @@ Classes0
 Logic1
 Relation
 Relation_Properties
+PCUICPrimitive
 PCUICAst
 PCUICCases
 PCUICAstUtils

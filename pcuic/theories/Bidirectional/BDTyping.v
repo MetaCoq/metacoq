@@ -120,6 +120,12 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   wf_cofixpoint Σ mfix ->
   Σ ;;; Γ |- tCoFix mfix n ▹ dtype decl
 
+| infer_Prim p prim_ty cdecl :
+   primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+   declared_constant Σ prim_ty cdecl ->
+   primitive_invariants cdecl ->
+   Σ ;;; Γ |- tPrim p ▹ tConst prim_ty []
+
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
 | infer_sort_Sort t T u:
   Σ ;;; Γ |- t ▹ T ->
@@ -438,6 +444,12 @@ Section BidirectionalInduction.
       wf_cofixpoint Σ mfix ->
       Pinfer Γ (tCoFix mfix n) (dtype decl)) ->
 
+    (forall (Γ : context) p prim_ty cdecl,
+      primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+      declared_constant Σ prim_ty cdecl ->
+      primitive_invariants cdecl ->
+      Pinfer Γ (tPrim p) (tConst prim_ty [])) ->
+
     (forall (Γ : context) (t T : term) (u : Universe.t),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
@@ -466,7 +478,7 @@ Section BidirectionalInduction.
     env_prop_bd.
   Proof using Type.
     intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
-      HProj HFix HCoFix HiSort HiProd HiInd HCheck ; unfold env_prop_bd.
+      HProj HFix HCoFix HPrim HiSort HiProd HiInd HCheck ; unfold env_prop_bd.
       pose (@Fix_F typing_sum (precompose lt typing_sum_size) Ptyping_sum) as p.
     forward p.
     2:{
@@ -667,6 +679,8 @@ Section BidirectionalInduction.
           apply IH.
           cbn. lia.
 
+    - unshelve eapply HPrim; eauto.
+    
     - destruct i.
       unshelve (eapply HiSort ; try eassumption) ; try eassumption.
       all:applyIH.

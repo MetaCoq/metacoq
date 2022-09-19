@@ -37,7 +37,8 @@ Definition atom `{wfl : WcbvFlags} Σ t :=
   | tBox
   | tCoFix _ _
   | tLambda _ _
-  | tFix _ _ => true
+  | tFix _ _
+  | tPrim _ => true
   | tConstruct ind c [] => negb with_constructor_as_block && isSome (lookup_constructor Σ ind c)
   | _ => false
   end.
@@ -254,7 +255,8 @@ Section Wcbv.
   (** Atoms (non redex-producing heads) applied to values are values *)
   | eval_app_cong f f' a a' :
       eval f f' ->
-      ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f')  ->
+      ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f'
+        || isPrimApp f')  ->
       eval a a' ->
       eval (tApp f a) (tApp f' a')
 
@@ -579,7 +581,8 @@ Section eval_rect.
                                                  else isFix f') || 
                                                  isBox f'
                                                  || 
-                                                 isConstructApp f')) 
+                                                 isConstructApp f'
+                                                 || isPrimApp f')) 
                                            (e0 : eval Σ a a'),
                                            P a a' e0
                                            → P (tApp f16 a) 
@@ -589,7 +592,7 @@ Section eval_rect.
                                     → (∀ (t : term) (i : atom Σ t),
                                          P t t (eval_atom Σ t i))
                                       → ∀ (t t0 : term) (e : eval Σ t t0),
-                                          P t t0 e.
+                                         P t t0 e.
   Proof using Type.
     intros ????????????????????? H.
     revert t t0 H.
@@ -736,8 +739,9 @@ Section Wcbv.
         + rewrite !negb_or /= in i; rtoProp; intuition auto.
         + rewrite !negb_or /= in i; rtoProp; intuition auto.
         + destruct with_guarded_fix.
-        now cbn in i. now cbn in i.
+          now cbn in i. now cbn in i.
         + constructor.
+        + cbn in i. destruct with_guarded_fix; cbn in i; rtoProp; intuition auto.
         + econstructor; auto.
       * destruct b0 as (ind & c & mdecl & idecl & cdecl & args & [H1 H2 H3 H4]).
         rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
@@ -1006,7 +1010,8 @@ Section Wcbv.
       rewrite !mkApps_app /=.
       eapply eval_app_cong; tea. 
       eapply IHargs => //.
-      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or. rtoProp; intuition auto.
+      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
+      rtoProp; intuition auto.
       apply nisLambda_mkApps => //.
       destruct with_guarded_fix => //; eapply nisFix_mkApps => //.
       apply nisBox_mkApps => //.
@@ -1247,15 +1252,15 @@ Section Wcbv.
         cbn in i. rtoProp; intuition auto.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite guarded in i. rtoProp; intuition auto.
-        rewrite isFixApp_mkApps in H2 => //.
+        rewrite isFixApp_mkApps in H3 => //.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite guarded in i. rtoProp; intuition auto.
-        rewrite isFixApp_mkApps in H2 => //.
+        rewrite isFixApp_mkApps in H3 => //.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite unguarded in i. now cbn in i.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rtoProp; intuition auto.
-        now rewrite isConstructApp_mkApps in H0.
+        now rewrite isConstructApp_mkApps in H1.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (i0 = i) as -> by now apply uip.
@@ -1613,11 +1618,10 @@ Ltac sim := repeat (cbn ; autorewrite with simplifications).
 
 Lemma eval_wellformed {efl : EEnvFlags} {wfl : WcbvFlags} Σ : 
   forall (has_app : has_tApp), (* necessary due to mkApps *)
-  efl.(cstr_as_blocks) = false ->
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.
-  move=> has_app blcks clΣ t u Hc ev. move: Hc.
+  move=> has_app clΣ t u Hc ev. move: Hc.
   induction ev; simpl in *; auto;
     (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
   all:intros; intuition auto; rtoProp; intuition auto; rtoProp; eauto using wellformed_csubst.
@@ -1639,7 +1643,7 @@ Proof.
     rewrite wellformed_mkApps // clargs andb_true_r.
     eapply wellformed_cunfold_fix; tea => //.
   - eapply IHev3 => //. rtoProp; intuition auto.
-    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 //.
+    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 H2 //.
   - eapply IHev2. rewrite wellformed_mkApps //.
     rewrite wellformed_mkApps // in H2. 
     move/andP: H2 => [Hfix Hargs].
@@ -1662,7 +1666,13 @@ Proof.
     destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.   
     destruct args; cbn in H0; eauto.
   - destruct cstr_as_blocks; try congruence.
-    destruct args; invs Hc''. now depelim a.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+    now rewrite (All2_length a) in H.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    eapply All2_over_impl in iha; tea.
+    intuition auto.
+    depelim a => //.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 

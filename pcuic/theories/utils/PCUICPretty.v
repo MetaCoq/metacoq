@@ -117,6 +117,13 @@ Module PrintTermTree.
     Import bytestring.Tree.
     Infix "^" := append.
 
+    Definition print_prim {term} (soft : term -> Tree.t) (p : prim_val) : Tree.t :=
+      match p.π2 return Tree.t with
+      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
+      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      (* | primArrayModel a => "(array:" ^ ")" *)
+      end.
+
     Section Aux.
       Context (print_term : list ident -> bool -> bool -> term -> t).
 
@@ -260,7 +267,7 @@ Module PrintTermTree.
     | tCoFix l n =>
       parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                                 " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
-    (* | tPrim i => parens top (string_of_prim (print_term Γ true false) i) *)
+    | tPrim i => parens top (print_prim (print_term Γ true false) i)
     end.
   End env.
 
@@ -284,22 +291,28 @@ Module PrintTermTree.
       else print_list (print_one_cstr Γpars mib) nl oib.(ind_ctors).
   End env.
 
+  Definition print_recursivity_kind k :=
+    match k with
+    | Finite => "Inductive"
+    | CoFinite => "CoInductive"
+    | BiFinite => "Variant"
+    end.
+
   Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
     | S n => 
-      let univs := Σ.(universes) in
       match Σ.(declarations) with
       | [] => acc
-      | (kn, InductiveDecl mib) :: Σ => 
-        let Σ' := ({| universes := univs; declarations := Σ |}, mib.(ind_universes)) in
+      | (kn, InductiveDecl mib) :: decls => 
+        let Σ' := (set_declarations Σ decls, mib.(ind_universes)) in
         let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
         print_env_aux short n Σ'.1
-          ("Inductive " ^ 
-          print_list (print_one_ind Σ' short names mib) nl mib.(ind_bodies) ^ "." ^ 
+          (print_recursivity_kind mib.(ind_finite) ^ " " ^
+          print_list (print_one_ind Σ' short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^ 
           nl ^ acc)
-      | (kn, ConstantDecl cb) :: Σ =>
-        let Σ' := ({| universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+      | (kn, ConstantDecl cb) :: decls =>
+        let Σ' := (set_declarations Σ decls, cb.(cst_universes)) in
         print_env_aux short n Σ'.1
           ((match cb.(cst_body) with 
             | Some _ => "Definition "

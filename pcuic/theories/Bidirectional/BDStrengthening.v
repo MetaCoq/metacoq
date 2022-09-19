@@ -467,6 +467,7 @@ Section OnFreeVars.
       by move: Hmfix => /andP [].
     
     - easy.
+    - easy.
 
     - intros ? ? ? ? ? ? _ HT Hred.
       intros ? HΓ Ht.
@@ -857,6 +858,9 @@ Proof using wfΣ.
         by rewrite shiftnP0.
     + by apply rename_wf_cofixpoint. 
   
+  - intros. red. intros P Δ f hf ht.
+    cbn. econstructor; tea.
+    
   - intros. red. intros P Δ f hf ht.
     econstructor ; eauto.
     rewrite -/(rename f (tSort u)).

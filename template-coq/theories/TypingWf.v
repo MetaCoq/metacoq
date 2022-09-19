@@ -88,8 +88,8 @@ Lemma on_global_env_impl `{checker_flags} Σ P Q :
   on_global_env cumul_gen P Σ -> on_global_env cumul_gen Q Σ.
 Proof.
   destruct Σ as [univs Σ]; cbn.
-  intros X [cu X0]; split => /= //. cbn in *.
-  induction X0; constructor; auto.
+  intros X [cu X0]; split => /= //. cbn in *. 
+  induction X0; try destruct o; constructor; auto; constructor; eauto.
   clear IHX0.
   eapply on_global_decl_impl; tea. split => //.
 Qed.
@@ -183,7 +183,7 @@ Lemma on_global_decls_extends_not_fresh {cf} {univs retro} k (Σ : global_declar
   on_global_decls cumul_gen P univs retro ((k :: Σ) ++ [k'] ++ Σ') -> k.1 = k'.1 -> False.
 Proof.
   intros H eq.
-  depelim H.
+  depelim H. destruct o as [f ? ? ?]. 
   eapply Forall_app in f as [_ f].
   depelim f. cbn in *. subst. contradiction.
 Qed.

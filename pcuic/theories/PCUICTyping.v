@@ -776,10 +776,12 @@ Proof.
     unfold Σg in o |- *; cbn in o.
     rename o into ongu. rename o0 into o. cbn in o |- *.
     destruct o. { constructor. }
-    rename o1 into Xg.
+    rename o0 into Xg.
     set (wfΣ := (ongu, o) : on_global_env cumulSpec0 (lift_typing typing) {| universes := univs; declarations := Σ |}).
     set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-    constructor; auto.
+    destruct Xg. 
+    rename on_global_decl_d into Xg. 
+    constructor; auto; try constructor; auto.
     * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort Universe.lProp); _; _))).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
@@ -1252,7 +1254,7 @@ Section All_local_env.
         exists [(kn, decl)] => //.
         apply Retroknowledge.extends_refl.
       * split => //.
-      * apply o0.
+      * destruct o; assumption.
     - intros hl. destruct (IHΣp hl) as [Σ' []].
       exists Σ'.
       split=> //.

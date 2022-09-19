@@ -4,17 +4,11 @@ From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICReduction
      PCUICReflect PCUICSafeLemmata PCUICTyping PCUICGlobalEnv PCUICWfUniverses.
 
-Record on_global_decls_dec {cf:checker_flags} (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
-  {
-    kn_fresh :  fresh_global kn Σ ;
-    udecl := universes_decl_of_decl d ;
-    on_udecl_udecl : on_udecl univs udecl ;
-    on_global_decl_d : on_global_decl cumulSpec0 (lift_typing typing) 
-      ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl) kn d
-  }.
-
 Definition level_mem : global_env_ext -> Level.t -> bool
   := fun X l => LevelSet.mem l (global_ext_levels X).
+
+Definition on_global_decls_dec {cf:checker_flags} :=
+  on_global_decls_data cumulSpec0 (lift_typing typing) (cf:=cf).
 
 Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type) := {
   abstract_env_lookup : abstract_env_ext_impl -> kername -> option global_decl;

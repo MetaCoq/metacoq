@@ -258,7 +258,7 @@ Proof.
   intros wf; split.
   destruct wf. split => //. now depelim o0.
   eapply typing_wf_wf in wf. depelim wf.
-  cbn in o0. depelim o0. cbn. split => //.
+  cbn in o0. depelim o0. cbn. destruct o1. split => //.
   eapply TypingWf.on_global_decl_impl; tea. cbn.
   intros. destruct T => //. red. red in X0. destruct X0. intuition auto.
   cbn. split => //.

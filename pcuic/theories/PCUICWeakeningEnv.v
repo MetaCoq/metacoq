@@ -277,7 +277,7 @@ Proof using P Pcmp cf.
   - simpl. auto.
   - intros hl. depelim hΣ. specialize (IHΣ'' c decl hΣ hl).
     simpl in *.
-    destruct (eqb_spec c kn); subst; auto.
+    destruct (eqb_spec c kn); subst; auto. destruct o. 
     apply lookup_global_Some_fresh in IHΣ''; contradiction.
 Qed.
 Hint Resolve extends_lookup : extends.
@@ -354,6 +354,7 @@ Proof using P Pcmp cf.
   intros [onu wfΣ] HH.
   destruct Σ as [univs Σ]; cbn in *.
   induction wfΣ; simpl. 1: discriminate.
+  destruct o as [? udecl o ?].
   cbn in HH. subst udecl.
   destruct (eqb_spec c kn); subst.
   - apply some_inj in HH; destruct HH. subst.

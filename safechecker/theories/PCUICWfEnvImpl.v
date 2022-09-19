@@ -179,7 +179,7 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
 Next Obligation. sq. constructor; cbn; eauto. apply on_global_univ_init_env. econstructor. Qed.
 Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
-  econstructor; eauto. econstructor; eauto.  Qed.
+  econstructor; eauto. econstructor; eauto. econstructor; eauto. Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [?]. sq. split; eauto.
   apply on_udecl_mono.
 Qed.
@@ -210,7 +210,7 @@ Qed.
 
 Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
 Proof. destruct Σ as [univs Σ]; cbn.
-  move=> [] onu; cbn. induction 1; constructor; auto.
+  move=> [] onu; cbn. induction 1; constructor; auto. now destruct o.
 Qed.
 
 

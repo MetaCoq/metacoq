@@ -1296,9 +1296,11 @@ Proof.
   destruct wfΣ; split => //.
   rename o into ongu. rename o0 into o.
   destruct o. { constructor. }
-  rename o1 into Xg. set (wfΣ := (ongu, o) : on_global_env cumul_gen (lift_typing typing) {| universes := univs; declarations := Σ |}).
+  rename o0 into Xg. set (wfΣ := (ongu, o) : on_global_env cumul_gen (lift_typing typing) {| universes := univs; declarations := Σ |}).
   set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-  constructor; auto.
+  destruct Xg. rename udecl0 into udecl. 
+  rename on_global_decl_d0 into Xg. 
+  constructor; auto; try constructor; auto.
   - unshelve eset (IH' := IH ((Σ', udecl); wfΣ; []; tSort Universe.lProp; _; _)).
     shelve. simpl. apply type_Prop.
     forward IH'. constructor 1; cbn. lia.
@@ -1572,6 +1574,7 @@ Proof.
   unfold on_global_env.
   destruct Σ as [univs Σ retro]; cbn. intros [cu ond].
   induction ond; cbn in * => //.
+  destruct o. rename udecl0 into udecl.  
   case: eqb_specT => [-> [= <-]| ne].
   - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl).
     split; try constructor; tas.

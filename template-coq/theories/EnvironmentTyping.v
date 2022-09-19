@@ -1149,15 +1149,21 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
       Forall (fun g => g.1 <> s) g.
 
+    Record on_global_decls_data {cf:checker_flags} (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
+        {
+          kn_fresh :  fresh_global kn Σ ;
+          udecl := universes_decl_of_decl d ;
+          on_udecl_udecl : on_udecl univs udecl ;
+          on_global_decl_d : on_global_decl (mk_global_env univs Σ retro, udecl) kn d
+        }.
+
     Inductive on_global_decls (univs : ContextSet.t) (retro : Retroknowledge.t): global_declarations -> Type :=
     | globenv_nil : on_global_decls univs retro []
     | globenv_decl Σ kn d :
         on_global_decls univs retro Σ ->
-        fresh_global kn Σ ->
-        let udecl := universes_decl_of_decl d in
-        on_udecl univs udecl ->
-        on_global_decl (mk_global_env univs Σ retro, udecl) kn d ->
+        on_global_decls_data univs retro Σ kn d ->
         on_global_decls univs retro (Σ ,, (kn, d)).
+
     Derive Signature for on_global_decls.
 
     Definition on_global_univs (c : ContextSet.t) := 
@@ -1229,14 +1235,14 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
     induction g; intros; auto. constructor; auto.
     depelim IH. specialize (IHg cu IH). constructor; auto.
-    pose proof (globenv_decl _ _ _ _ _ _ _ IH f o).
-    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl) Γ t T 
+    pose proof (globenv_decl _ _ _ _ _ _ _ IH o).
+    destruct o. constructor; auto.  
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl0) Γ t T 
       (cu, IH) (cu, IHg)); clear X.
     rename X' into X.
     clear IH IHg. destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
-    - red in o. simpl in *.
-      destruct o0 as [onI onP onNP].
+    - destruct on_global_decl_d0 as [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
         refine {| ind_arity_eq := X1.(ind_arity_eq);
@@ -1343,16 +1349,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     intros X [hu X0]. split; auto.
     simpl in *. destruct wfΣ as [cu wfΣ]. revert cu wfΣ.
     revert X0. generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear hu Σ.
-    induction 1; constructor; auto.
+    induction 1; constructor; try destruct o; try constructor; auto.
     { depelim wfΣ. eauto. }
-    depelim wfΣ. specialize (IHX0 cu wfΣ).
+    depelim wfΣ. specialize (IHX0 cu wfΣ). destruct o. 
     assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T 
       (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
     clear IHX0. destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-    - red in o. simpl in *.
-      destruct o0 as [onI onP onNP].
+    - simpl in *. destruct on_global_decl_d0 as [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
         refine {| ind_arity_eq := X1.(ind_arity_eq);

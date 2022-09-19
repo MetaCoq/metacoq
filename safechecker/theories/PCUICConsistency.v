@@ -131,7 +131,7 @@ Proof.
   destruct wfΣ as [wfΣ].
   assert (wf': wf_ext Σext).
   { constructor; [constructor|]; auto; try apply wfΣ.
-    constructor; auto.
+    constructor; try constructor; auto.
     - apply wfΣ.
     - apply make_fresh_name_fresh.
     - split; first now intros ? ?%LevelSet.empty_spec.

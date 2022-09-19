@@ -4680,7 +4680,7 @@ Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
 Proof.
   rewrite /PCUICEnvironment.fst_ctx.
   destruct Σ as [[gunivs Σ retro] udecl]; cbn. intros [onu wfΣ]; cbn in *.
-  induction wfΣ as [|Σ0 kn d X IHX f udecl' onu' ond]. constructor; auto. constructor.
+  induction wfΣ as [|Σ0 kn d X IHX [f udecl' onu' ond]]. constructor; auto. constructor.
   have onud : on_udecl gunivs (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
   { apply (trans_on_udecl (Σ:= {| universes := gunivs; declarations := Σ0; retroknowledge := retro |})) in onu'. destruct d => //. }
   cbn; constructor; eauto.
@@ -4688,7 +4688,7 @@ Proof.
   set (Σ0 := {| universes := gunivs; declarations := Σd; retroknowledge := retro |}).
   rename X into Xd.
   set (X := (onu, Xd) : wf Σ0).
-  constructor; auto; try apply IHX.
+  constructor; try constructor; auto; try apply IHX.
   { now apply (fresh_global_map (Σ := Σ0)). }
   destruct d; cbn in *.
   * cbn. red. move: ond; rewrite /on_constant_decl.

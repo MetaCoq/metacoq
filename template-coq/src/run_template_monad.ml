@@ -319,7 +319,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
   if primitive_expected
   then begin
     let open Record.Internal in
-    let dflt_pf = {pf_subclass = false ; pf_canonical = false; pf_reversible = false} in
+    let dflt_pf = { pf_coercion = false; pf_instance = false; pf_priority = None; pf_locality = OptDefault; pf_canonical = false; pf_reversible = false} in
     let decl_projs i oie =
       let ind = (ind_kn, i) in
       let univs = (Entries.Monomorphic_entry, Names.Id.Map.empty) in

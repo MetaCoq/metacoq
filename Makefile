@@ -1,5 +1,5 @@
 
-all: template-coq pcuic safechecker erasure examples test-suite translations
+all: printconf template-coq pcuic safechecker erasure examples test-suite translations
 
 -include Makefile.conf
 
@@ -11,8 +11,6 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   endif
   export OCAMLPATH
 endif
-
-all: printconf template-coq pcuic safechecker erasure examples
 
 .PHONY: printconf all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
 
@@ -43,13 +41,15 @@ uninstall: all
 	$(MAKE) -C translations uninstall
 
 html: all
-	"coqdoc" -toc -utf8 -interpolate -l -html \
+	"coqdoc" --multi-index -toc -utf8 -html \
+    --with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
 		-R translations MetaCoq.Translations \
-		-d html */theories/*.v translations/*.v
+		-R examples MetaCoq.Examples \
+		-d html */theories/*.v */theories/*/*.v translations/*.v examples/*.v
 
 clean:
 	$(MAKE) -C template-coq clean
@@ -119,7 +119,7 @@ ci-local-noclean:
 	./configure.sh local
 	$(MAKE) all test-suite TIMED=pretty-timed
 
-ci-local: ci-local-noclean
+ci-local: ci-local-noclean 
 	$(MAKE) clean
 
 ci-quick:
@@ -128,5 +128,8 @@ ci-quick:
 
 ci-opam:
 # Use -v so that regular output is produced
-	opam install -v -y .
+	opam install --with-test -v -y .
 	opam remove -y coq-metacoq coq-metacoq-template
+
+checktodos:
+	sh checktodos.sh

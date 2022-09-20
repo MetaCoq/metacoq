@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Universes.
+From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
@@ -33,13 +34,13 @@ Inductive term : Set :=
 | tLetIn     : name -> term (* the term *) -> term -> term
 | tApp       : term -> term -> term
 | tConst     : kername -> term
-| tConstruct : inductive -> nat -> term
+| tConstruct : inductive -> nat -> list term -> term
 | tCase      : (inductive * nat) (* # of parameters *) ->
                term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
-(* | tPrim      : prim_val term -> term. *)
+| tCoFix     : mfixpoint term -> nat -> term
+| tPrim      : prim_val term -> term.
 
 Derive NoConfusion for term.
 
@@ -104,11 +105,6 @@ Inductive constant_entry :=
   [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
   [x1:X1;...;xn:Xn].
 *)
-
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
 
 Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
@@ -198,6 +194,7 @@ Derive NoConfusion for one_inductive_body.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
+  ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
 Derive NoConfusion for mutual_inductive_body.

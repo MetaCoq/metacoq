@@ -66,14 +66,13 @@ Section firstorder.
     
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
+    (mind.(ind_finite) == Finite) &&
     forallb (firstorder_oneind mind) mind.(ind_bodies)
     (* else repeat false (length mind.(ind_bodies)). *).
   
   Definition firstorder_ind (i : inductive) :=
     match lookup_env Σ.1 (inductive_mind i) with
-    | Some (InductiveDecl mind) =>
-        check_recursivity_kind (lookup_env Σ) (inductive_mind i) Finite &&
-        firstorder_mutind mind
+    | Some (InductiveDecl mind) => firstorder_mutind mind
     | _ => false
     end.
   
@@ -145,11 +144,12 @@ Proof using Type.
   red. sq.
   unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
   solve_all.
-  unfold firstorder_mutind in H0.
-  rewrite d2. eapply forallb_nth_error in H0; tea.
+  unfold firstorder_mutind in H.
+  rewrite d2. move/andP: H => [ind H0].
+  eapply forallb_nth_error in H0; tea.
   erewrite d2 in H0. cbn in H0.
   unfold firstorder_oneind in H0. solve_all.
-  destruct (ind_sort oind) eqn:E2; inv H1.
+  destruct (ind_sort oind) eqn:E2; inv H0.
   eapply PCUICInductives.declared_inductive_type in d.
   rewrite d. rewrite E2.
   now rewrite destArity_it_mkProd_or_LetIn.
@@ -262,36 +262,43 @@ Proof using Type.
   move=> n. destruct a; cbn. f_equal. apply hp. apply IHΓ.
 Qed.
 
-Lemma plookup_env_lookup_env Σ kn b : 
+Arguments firstorder_mutind : clear implicits.
+
+Lemma plookup_env_lookup_env {Σ : global_env_ext} kn b : 
   plookup_env (firstorder_env Σ) kn = Some b ->
-  ∑ decl, lookup_env Σ kn = Some decl ×
+  ∑ Σ' decl, lookup_env Σ kn = Some decl ×
+    extends_decls Σ' Σ ×
     match decl with 
     | ConstantDecl _ => b = false
     | InductiveDecl mind =>
-      b = check_recursivity_kind (lookup_env Σ) kn Finite &&
-          firstorder_mutind (Σb := firstorder_env Σ) mind
+      b = firstorder_mutind (firstorder_env' (declarations Σ')) mind
     end.
 Proof using.
-  destruct Σ as [[univs Σ] ext].
+  destruct Σ as [[univs Σ retro] ext].
   induction Σ; cbn => //.
   destruct a as [kn' d] => //. cbn.
   case: eqb_specT.
-  * intros ->. eexists; split => //.
-    destruct d => //. cbn in H. rewrite eqb_refl in H. congruence. admit.
-  (* intros neq h. specialize (IHΣ h) as [decl [Hdecl ?]].
-      eexists; split => //. exact Hdecl.
-      destruct decl => //. cbn.
-      rewrite /lookup_env /=. rewrite y. f_equal.
-      unfold check_recursivity_kind. case: eqb_spec => //.
-      unfold firstorder_mutind. unfold firstorder_oneind.
-      eapply forallb_ext. intros x. f_equal.
-      eapply forallb_ext. intros cstr. unfold firstorder_con.
-      eapply alli_ext => i' [] => /= _ _ ty.
-      unfold firstorder_type.
-      admit.
-  - cbn.
-*)
-Admitted.
+  * intros ->.
+    destruct d => //; cbn; rewrite eqb_refl => [=] <-;
+    exists {| universes := univs; declarations := Σ; retroknowledge := retro |}.
+    eexists; split => //. cbn. split => //.
+    red. split => //. eexists (_ :: []); cbn; trea.
+    eexists; split => //. cbn; split => //.
+    red. split => //. eexists (_ :: []); cbn; trea.
+  * intros neq h.
+    destruct d => //. cbn in h.
+    move: h. case: eqb_specT=> // _ h'.
+    unfold firstorder_env in IHΣ. cbn in IHΣ.
+    specialize (IHΣ h') as [Σ' [decl [Hdecl [ext' ?]]]].
+    exists Σ', decl; split => //. split => //.
+    destruct ext' as [equ [Σ'' eq]]. split => //.
+    eexists (_ :: Σ''). cbn in *. rewrite eq. trea.
+    move: h. cbn. apply neqb in neq. rewrite (negbTE neq).
+    intros h'; specialize (IHΣ h') as [Σ' [decl [Hdecl [ext' ?]]]].
+    exists Σ', decl; split => //. split => //.
+    destruct ext' as [equ [Σ'' eq]]. split => //.
+    eexists (_ :: Σ''). cbn in *. rewrite eq. trea.
+Qed.
 
 Lemma firstorder_spine_let {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na a A B args T'} :
   firstorder_spine Σ Γ (B {0 := a}) args T' ->
@@ -329,6 +336,101 @@ Proof using Type.
     now eapply isType_ws_cumul_pb_refl. eauto.
 Qed.
 
+Arguments firstorder_type : clear implicits.
+
+(* Lemma firstorder_env'_app x y :
+  firstorder_env' (x ++ y) = firstorder_env' x ++ firstorder_env' y.
+Proof.
+  induction x in y |- *; cbn => //.
+  destruct a => //. destruct g => //. cbn. f_equal; eauto.
+  cbn; f_equal; eauto.
+  f_equal. f_equal. eauto. *)
+
+Import PCUICGlobalMaps.
+
+Lemma fresh_global_app decls decls' kn :
+  fresh_global kn (decls ++ decls') ->
+  fresh_global kn decls /\ fresh_global kn decls'.
+Proof.
+  induction decls => /= //.
+  - intros f; split => //.
+  - intros f; depelim f.
+    specialize (IHdecls f) as [].
+    split; eauto. constructor => //.
+Qed.
+
+Lemma plookup_env_Some_not_fresh g kn b :
+  plookup_env (firstorder_env' g) kn = Some b ->
+  ~ PCUICGlobalMaps.fresh_global kn g.
+Proof.
+  induction g; cbn => //.
+  destruct a => //. destruct g0 => //.
+  - cbn.
+    case: eqb_spec.
+    + move=> -> [=].
+      intros neq hf. depelim hf. now cbn in H.
+    + move=> neq hl hf.
+      apply IHg => //. now depelim hf.
+  - cbn.
+    case: eqb_spec.
+    + move=> -> [=].
+      intros neq hf. depelim hf. now cbn in H.
+    + move=> neq hl hf.
+      apply IHg => //. now depelim hf.
+Qed.
+
+Lemma plookup_env_extends {Σ Σ' : global_env} kn b :
+  extends_decls Σ' Σ ->
+  wf Σ ->
+  plookup_env (firstorder_env' (declarations Σ')) kn = Some b ->
+  plookup_env (firstorder_env' (declarations Σ)) kn = Some b.
+Proof.
+  intros [equ [Σ'' eq] eqr]. rewrite eq.
+  clear equ eqr. intros []. clear o. 
+  rewrite eq in o0. clear eq. move: o0.
+  generalize (declarations Σ'). clear Σ'.
+  induction Σ''.
+  - cbn => //.
+  - cbn. destruct a => //. intros gs ong.
+    depelim ong. specialize (IHΣ'' _ ong).
+    destruct g => //.
+    * intros hl. specialize (IHΣ'' hl).
+      eapply plookup_env_Some_not_fresh in hl.
+      cbn. case: eqb_spec.
+      + intros <-. apply fresh_global_app in f as [].
+        contradiction.
+      + now intros neq.
+    * intros hl. specialize (IHΣ'' hl).
+      eapply plookup_env_Some_not_fresh in hl.
+      cbn. case: eqb_spec.
+      + intros <-. apply fresh_global_app in f as [].
+        contradiction.
+      + now intros neq.
+Qed.
+
+Lemma firstorder_mutind_ext {Σ Σ' : global_env_ext} m : 
+  extends_decls Σ' Σ ->
+  wf Σ ->
+  firstorder_mutind (firstorder_env' (declarations Σ')) m ->
+  firstorder_mutind (firstorder_env Σ) m.
+Proof.
+  intros [equ [Σ'' eq]] wf.
+  unfold firstorder_env. rewrite eq.
+  unfold firstorder_mutind.
+  move/andP => [] -> /=. apply forallb_impl => x _.
+  unfold firstorder_oneind.
+  move/andP => [] h -> /=; rewrite andb_true_r.
+  eapply forallb_impl; tea => c _.
+  unfold firstorder_con.
+  eapply alli_impl => i [] _ _ ty.
+  unfold firstorder_type.
+  destruct decompose_app => // /=.
+  destruct t => //. destruct ind => //.
+  destruct plookup_env eqn:hl => //. destruct b => //.
+  eapply (plookup_env_extends (Σ:=Σ)) in hl. 2:split; eauto.
+  rewrite eq in hl. rewrite hl //. apply wf.
+Qed.
+
 Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui args u pandi oind} :
   declared_constructor Σ (i, n) mind oind cbody ->
   PCUICArities.typing_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi) ->
@@ -350,25 +452,27 @@ Proof using Type.
   { clear Hspine. destruct Hdecl as [[d1 d3] d2]. pose proof d3 as Hdecl.
     unfold firstorder_ind in Hind. 
     rewrite d1 in Hind. solve_all. clear a.
+    move/andP: Hind => [indf H0].
     eapply forallb_nth_error in H0 as H'.
     erewrite d3 in H'.
     unfold firstorder_oneind in H'. cbn in H'.
     rtoProp.
-    eapply nth_error_forallb in H1. 2: eauto.
-    unfold firstorder_con in H1.
-    revert H1. cbn.
+    eapply nth_error_forallb in H. 2: eauto.
+    unfold firstorder_con in H.
+    revert H. cbn.
     unfold cstr_concl. 
     rewrite PCUICUnivSubst.subst_instance_mkApps subst_mkApps.
     rewrite subst_instance_length app_length.
     unfold cstr_concl_head. rewrite PCUICInductives.subst_inds_concl_head. now eapply nth_error_Some_length in Hdecl.
     rewrite -app_length.
-    generalize (cstr_args cbody ++ ind_params mind)%list. clear -d1 H H0 Hdecl.
+    generalize (cstr_args cbody ++ ind_params mind)%list.
+    clear -wfΣ d1 indf H1 H0 Hdecl.
     (* generalize conclusion to mkApps tInd args *)
     intros c. 
     change (list context_decl) with context in c.
     move: (map (subst (inds _ _ _) _) _).
     intros args.
-    rewrite (alli_subst_instance _ ui (fun k t => firstorder_type #|ind_bodies mind| k t)).
+    rewrite (alli_subst_instance _ ui (fun k t => firstorder_type _ #|ind_bodies mind| k t)).
     { intros k t.
       rewrite /firstorder_type. 
       rewrite -PCUICUnivSubstitutionConv.subst_instance_decompose_app /=.
@@ -424,7 +528,7 @@ Proof using Type.
           rewrite Nat.add_0_r in fot. eapply Nat.ltb_lt in fot.
           cbn. rewrite nth_error_inds. lia. cbn.
           econstructor.
-          { rewrite /firstorder_ind d1 H H0 //. }
+          { rewrite /firstorder_ind d1 /= /firstorder_mutind indf H0 //. }
           intros x.
           rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn subst_mkApps /=. len.
           rewrite -subst_app_context' // PCUICSigmaCalculus.subst_context_decompo.
@@ -458,8 +562,9 @@ Proof using Type.
           constructor. {
              unfold firstorder_ind. destruct ind. cbn in *.
              destruct plookup_env eqn:hp => //.
-             eapply plookup_env_lookup_env in hp as [decl [eq ]].
-             rewrite eq. destruct decl; subst b => //. }
+             eapply plookup_env_lookup_env in hp as [Σ' [decl [eq [ext he]]]].
+             rewrite eq. destruct decl; subst b => //.
+             eapply (firstorder_mutind_ext (Σ' := (empty_ext Σ'))); tea. }
           intros x. rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn subst_mkApps /=; len.
           rewrite -subst_app_context' // PCUICSigmaCalculus.subst_context_decompo.
           eapply X. now len. len.
@@ -560,7 +665,10 @@ Proof using Type.
       red in Hfo. unfold firstorder_ind in Hfo.
       rewrite Hlookup in Hfo.
       eapply andb_true_iff in Hfo as [Hfo _].
-      eapply check_recursivity_kind_inj in Hty; eauto. congruence.
+      rewrite /check_recursivity_kind Hlookup in Hty.
+      apply eqb_eq in Hfo, Hty. congruence.
+    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
+      now eapply invert_cumul_axiom_ind in cum; tea.
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.
     + apply inversion_mkApps in Hty as Hcon; auto.
@@ -593,7 +701,8 @@ Proof using Type.
       red in Hfo. unfold firstorder_ind in Hfo.
       rewrite Hlookup in Hfo.
       eapply andb_true_iff in Hfo as [Hfo _].
-      eapply check_recursivity_kind_inj in Hty; eauto. congruence.
+      rewrite /check_recursivity_kind Hlookup in Hty.
+      apply eqb_eq in Hfo, Hty. congruence.
 Qed.
 
 End cf.

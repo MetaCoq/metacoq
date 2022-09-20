@@ -1,6 +1,3 @@
-(* todo(gmm): This file should really be replaced by a real
- * monad library.
- *)
 Require Import Arith List.
 From MetaCoq.Template Require Import All_Forall MCSquash.
 From Equations Require Import Equations.

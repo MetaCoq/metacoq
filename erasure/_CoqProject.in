@@ -10,15 +10,14 @@ theories/EPretty.v
 theories/ECSubst.v
 theories/EWcbvEval.v
 # theories/EWtAst.v
-theories/EWndEval.v
 theories/EGlobalEnv.v
+theories/EGenericMapEnv.v
 theories/EWellformed.v
 theories/EEnvMap.v
 theories/EWcbvEvalInd.v
 theories/EWcbvEvalEtaInd.v
 theories/Extract.v
 theories/EDeps.v
-theories/EAll.v
 theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
@@ -34,4 +33,6 @@ theories/EProgram.v
 theories/ERemoveParams.v
 theories/EInlineProjections.v
 theories/ETransform.v
+theories/EConstructorsAsBlocks.v
+theories/EWcbvEvalCstrsAsBlocksInd.v
 theories/Erasure.v

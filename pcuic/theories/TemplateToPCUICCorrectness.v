@@ -92,7 +92,7 @@ Lemma trans_lookup_minductive {cf} {Σ : global_env_map} mind : wf Σ ->
 Proof.
   intros wf.
   unfold TransLookup.lookup_minductive.
-  rewrite (EnvMap .lookup_spec Σ.(declarations)) //.
+  rewrite (EnvMap.lookup_spec Σ.(declarations)) //.
   now eapply wf_fresh_globals. apply Σ.
 Qed.
 
@@ -151,7 +151,7 @@ Lemma extends_trans_global_decls_acc (Σ' : global_env_map) (Σ : Ast.Env.global
   extends Σ' (trans_global_decls Σ' Σ).
 Proof.
   induction Σ.
-  * split; cbn. apply incl_cs_refl. now exists [].
+  * split; cbn. apply incl_cs_refl. now exists []. apply Retroknowledge.extends_refl.
   * rewrite /=.
     destruct IHΣ as [univs [Σ'' eq]]. cbn in *.
     split; cbn; auto.
@@ -177,14 +177,14 @@ Lemma trans_lookup_env {cf} {Σ : Ast.Env.global_env} cst {wfΣ : Typing.wf Σ} 
         lookup_env (trans_global_env Σ) cst = Some (trans_global_decl (trans_global_env Σ') d)]
   end. 
 Proof.
-  destruct Σ as [univs Σ].
+  destruct Σ as [univs Σ retro].
   induction Σ.
   - cbn; auto.
   - unfold Ast.Env.lookup_env. cbn -[trans_global_env].
     destruct eq_kername eqn:eqk.
     change (eq_kername cst a.1) with (eqb cst a.1) in eqk.
     apply eqb_eq in eqk; subst.
-    eexists {| S.Env.universes := univs; S.Env.declarations := Σ |}.
+    eexists {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |}.
     split.
     * split => //. now exists [a].
     * destruct wfΣ as [onu ond]. depelim ond.
@@ -192,7 +192,8 @@ Proof.
     * eapply TypingWf.typing_wf_sigma in wfΣ.
       destruct wfΣ as [onu ond]. now depelim ond.
     * split => //.
-      now exists [(a.1, trans_global_decl (trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ |}) a.2)].
+      now exists [(a.1, trans_global_decl (trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ;
+        S.Env.retroknowledge := retro |}) a.2)].
     * cbn. now rewrite eq_kername_refl.
     * destruct wfΣ as [onu ond]. depelim ond.
       specialize (IHΣ (onu, ond)).
@@ -224,6 +225,7 @@ Proof.
   split.
   - eapply cs_subset_trans; tea.
   - eexists (s' ++ s); cbn. rewrite eq' eq. now rewrite app_assoc.
+  - now etransitivity; tea.
 Qed.
 
 Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t : 
@@ -2204,6 +2206,13 @@ Proof.
   now rewrite global_ext_levels_trans.
 Qed.
 
+Lemma trans_env_retroknowledge Σ : retroknowledge (trans_global_env Σ) = S.Env.retroknowledge Σ.
+Proof.
+  destruct Σ as [univs decls retro].
+  rewrite /trans_global_env /=.
+  induction decls; cbn; auto.
+Qed.
+
 Local Hint Resolve trans_wf_universe : trans.
 Local Hint Transparent Ast.Env.global_env_ext : trans.
 Local Hint Transparent Universe.t : trans.
@@ -2444,6 +2453,18 @@ Proof.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
+  - cbn. econstructor; cbn; eauto. 
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros [s []]; exists s; split => //;
+      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+  - cbn. econstructor; cbn; eauto. 
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros [s []]; exists s; split => //;
+      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
   - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }
     eapply type_Cumul; eauto.
@@ -2954,9 +2975,18 @@ Proof.
   induction Σ => /= //.
 Qed. 
 
+Lemma trans_env_env_retroknowledge {Σ : Ast.Env.global_env} : 
+  retroknowledge (trans_env_env (trans_global_env Σ)) = Ast.Env.retroknowledge Σ.
+Proof.
+  destruct Σ as [univs Σ] .
+  unfold trans_global_env; cbn -[trans_global_decls].
+  induction Σ => /= //.
+Qed. 
+
 Lemma env_eq (g g' : global_env) : 
   g.(universes) = g'.(universes) ->
   g.(declarations) = g'.(declarations) ->
+  g.(retroknowledge) = g'.(retroknowledge) ->
   g = g'.
 Proof.
   destruct g, g'; cbn. congruence.
@@ -2983,7 +3013,7 @@ Lemma trans_on_global_env `{checker_flags} Σ :
 Proof.
   intros X X0.
   simpl in *.
-  destruct Σ as [univs Σ].
+  destruct Σ as [univs Σ retro].
   destruct X0 as [onu ond]. split => //.
   { now rewrite trans_env_env_universes. }
   cbn -[trans_global_env] in *.
@@ -2995,13 +3025,14 @@ Proof.
     clear -o.
     now erewrite trans_global_decl_universes in o.
   - simpl.
-    set (Σg := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |}).
+    set (Σg := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; Ast.Env.retroknowledge := retro |}).
     set (X0 := (onu, ond) : Typing.wf Σg).
     assert (trans_env_env (trans_global_env Σg) =
        {| universes := univs;
-          declarations := declarations (trans_global_decls (empty_trans_env univs) Σ) |}) as <-.
-    { apply env_eq. 
-      now rewrite trans_env_env_universes. reflexivity. }    
+          declarations := declarations (trans_global_decls (empty_trans_env univs retro) Σ) |}) as <-.
+    { apply env_eq.
+      now rewrite trans_env_env_universes. reflexivity.
+      now rewrite trans_env_env_retroknowledge. }
     assert (wfΣg : PCUICTyping.wf (trans_global_env Σg)).
     { split; rewrite trans_env_env_universes //. }
     have wfdecl := on_global_decl_wf (Σ := (Σg, udecl)) X0 o0.
@@ -3014,7 +3045,7 @@ Proof.
     * destruct o0 as [onI onP onNP].
       simpl.
       change (trans_env_env (trans_global_env Σg), Ast.Env.ind_universes m) with (global_env_ext_map_global_env_ext (trans_global (Σg, Ast.Env.ind_universes m))) in *.
-      change (trans_global_decls (empty_trans_env univs) Σ) with (global_env_ext_map_global_env_map (trans_global (Σg, Ast.Env.ind_universes m))).
+      change (trans_global_decls (empty_trans_env univs retro) Σ) with (global_env_ext_map_global_env_map (trans_global (Σg, Ast.Env.ind_universes m))).
       constructor; auto.
       -- have wfpars := on_global_inductive_wf_params wfdecl.
         eapply on_global_inductive_wf_bodies in wfdecl.
@@ -3223,7 +3254,7 @@ Proof.
           move=> [univs' [i [i' []]]] vu cu cu' hl.
           exists univs', i, i'; split => //.
           all:change (trans_env_env (trans_global_env Σg), univs') with (global_env_ext_map_global_env_ext (trans_global (Σg, univs')));
-            now eapply trans_consistent_instance_ext_gen.
+            now eapply trans_consistent_instance_ext_gen.          
 Qed.
 
 Lemma template_to_pcuic_env {cf} Σ : Template.Typing.wf Σ -> wf (trans_global_env Σ).

@@ -33,13 +33,18 @@ Class ETermFlags :=
   ; has_tProj : bool
   ; has_tFix : bool
   ; has_tCoFix : bool
+  ; has_tPrim : bool
   }.
 
+Set Warnings "-future-coercion-class-field".
 Class EEnvFlags := {
   has_axioms : bool;
   has_cstr_params : bool;
-  term_switches :> ETermFlags }.
-  
+  term_switches :> ETermFlags ;
+  cstr_as_blocks : bool ;
+  }.
+Set Warnings "+future-coercion-class-field".
+
 Definition all_term_flags := 
   {| has_tBox := true
     ; has_tRel := true
@@ -54,12 +59,20 @@ Definition all_term_flags :=
     ; has_tProj := true
     ; has_tFix := true
     ; has_tCoFix := true
+    ; has_tPrim := true
   |}.
 
 Definition all_env_flags := 
   {| has_axioms := true;
      term_switches := all_term_flags;
-     has_cstr_params := true |}.
+     has_cstr_params := true ;
+     cstr_as_blocks := false |}.
+    
+Definition all_env_flags_blocks := 
+  {| has_axioms := true;
+     term_switches := all_term_flags;
+     has_cstr_params := true ;
+     cstr_as_blocks := true |}.
     
 Section wf.
   
@@ -76,6 +89,8 @@ Section wf.
   Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx := 
     let k' := List.length mfix + k in      
     (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
+
+  Definition is_nil {A} (l : list A) := match l with [] => true | _ => false end.
   
   Fixpoint wellformed k (t : term) : bool :=
     match t with
@@ -88,7 +103,7 @@ Section wf.
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
     | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
-    | tFix mfix idx => has_tFix && wf_fix_gen wellformed k mfix idx
+    | tFix mfix idx => has_tFix && List.forallb (isLambda ∘ dbody) mfix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox
     | tConst kn => has_tConst && 
@@ -96,8 +111,13 @@ Section wf.
       | Some d => has_axioms || isSome d.(cst_body)
       | _ => false 
       end
-    | tConstruct ind c => has_tConstruct && isSome (lookup_constructor Σ ind c)
+    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && 
+      if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with 
+        | Some (p, a) => (p + a) == #|block_args| 
+        | _ => true end 
+        && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
+    | tPrim _ => has_tPrim
     end.
 
 End wf.
@@ -158,7 +178,9 @@ Section EEnvFlags.
       autorewrite with map;
       simpl wellformed in *; intuition auto;
       unfold wf_fix, test_def, test_snd in *;
-        try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
+    destruct cstr_as_blocks. 2: destruct args; eauto; solve_all.
+    rtoProp. solve_all.
   Qed.
   
   Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
@@ -176,7 +198,9 @@ Section EEnvFlags.
       simpl wellformed in *; intuition auto;
       unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
-    eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
+    - eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
+    - destruct cstr_as_blocks; eauto. solve_all. 
+      destruct lookup_constructor_pars_args as [ [] |]; rtoProp; repeat solve_all. 
   Qed.
 
   Lemma wellformed_lift n k k' t : wellformed k t -> wellformed (k + n) (lift n k' t).
@@ -193,6 +217,8 @@ Section EEnvFlags.
       elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. lia.
       simpl; rewrite H0 /=. elim (Nat.ltb_spec); auto. intros.
       apply Nat.ltb_lt in H1. lia.
+    - destruct cstr_as_blocks; eauto. destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+      destruct args; firstorder.
     - solve_all. rewrite Nat.add_assoc. eauto.
     - len. move/andP: H1 => [] -> ha. cbn. solve_all.
       rewrite Nat.add_assoc; eauto.
@@ -231,13 +257,16 @@ Section EEnvFlags.
     - specialize (IHt2 (S k')).
       rewrite <- Nat.add_succ_comm in IHt2.
       eapply IHt2; auto.
+    - destruct cstr_as_blocks; eauto.
+      destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all. now destruct args; inv H0.
     - specialize (a (#|x.1| + k')) => //.
       rewrite Nat.add_assoc (Nat.add_comm k) in a.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
+    - destruct (dbody x) => //.
     - intros. now len.
     - specialize (a (#|m| + k')).
-      len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
+      len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b0 |- *.
     - intros. now len.
     - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
@@ -277,14 +306,16 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_fix_subst mfix {hast : has_tFix}: 
+    forallb (isLambda ∘ dbody) mfix ->
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (fix_subst mfix).
   Proof using Type.
-    intros hm. unfold fix_subst.
-    generalize (le_refl #|mfix|).
+    intros hm hm'. unfold fix_subst.
+    generalize (Nat.le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
     induction n => //.
-    intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm /= andb_true_r.
+    intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm' /= andb_true_r.
+    rewrite hm. cbn.
     apply/andP; split. apply Nat.ltb_lt. lia. apply IHn. lia.
   Qed.
 
@@ -293,7 +324,7 @@ Section EEnvFlags.
     forallb (wellformed 0) (cofix_subst mfix).
   Proof using Type.
     intros hm. unfold cofix_subst.
-    generalize (le_refl #|mfix|).
+    generalize (Nat.le_refl #|mfix|).
     move: {1 3}#|mfix| => n.
     induction n => //.
     intros hn. cbn. rewrite hasco /=. rewrite /wf_fix_gen hm /= andb_true_r.
@@ -308,7 +339,7 @@ Section EEnvFlags.
     move=> cl.
     rewrite /cunfold_fix.
     destruct nth_error eqn:heq => //.
-    cbn in cl. move/andP: cl => [hastf /andP[] hidx cl].
+    cbn in cl. move/andP: cl => [/andP[] hastf isfix /andP[] hidx cl].
     have := (nth_error_forallb heq cl) => cld. 
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_fix_subst.
@@ -435,6 +466,8 @@ Proof.
   induction t using EInduction.term_forall_list_ind; cbn => //; intros; rtoProp; intuition auto; solve_all.
   all:try destruct lookup_env eqn:hl => //; try rewrite (extends_lookup wf ex hl).
   all:try destruct g => //.
+  - destruct cstr_as_blocks; eauto; solve_all.
+    destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
 Qed.

@@ -960,6 +960,72 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
         lia.
     Qed.
 
+  (* lsp = longest simple path *)
+  (* l is the list of authorized intermediate nodes *)
+  (* lsp0 (a::l) x y = max (lsp0 l x y) (lsp0 l x a + lsp0 l a y) *)
+
+  Fixpoint lsp00_fast fuel (s : VSet.t) (x z : V.t) : Nbar.t :=
+    let base := if V.eq_dec x z then Some 0 else None in
+    match fuel with
+    | 0%nat => base
+    | Datatypes.S fuel =>
+      match VSet.mem x s with
+      | true =>
+        let s := VSet.remove x s in
+        EdgeSet.fold
+          (fun '(src, w, tgt) acc => 
+            if V.eq_dec src x then
+              Nbar.max acc (Some w + lsp00_fast fuel s tgt z)
+            else acc)%nbar
+           (E G) base
+      | false => base end
+    end.
+
+  Lemma fold_left_map {A B C} (f : A -> B -> A) (g : C -> B) l acc : fold_left f (map g l) acc = 
+    fold_left (fun acc x => f acc (g x)) l acc.
+  Proof.
+    induction l in acc |- *; cbn; auto.
+  Qed. 
+
+  Lemma fold_left_filter {A B} (f : A -> B -> A) (g : B -> bool) l acc : fold_left f (filter g l) acc = 
+    fold_left (fun acc x => if g x then f acc x else acc) l acc.
+  Proof.
+    induction l in acc |- *; cbn; auto.
+    destruct (g a) => //=.
+  Qed. 
+
+  #[global] Instance fold_left_proper {A B} : Proper (`=2` ==> `=2`) (@fold_left A B).
+  Proof.
+    intros f g hfg x acc.
+    induction x in acc |- * => //.
+    cbn. rewrite (hfg acc a). apply IHx.
+  Qed.
+
+  Lemma fold_left_equiv {A B C} (f : A -> B -> A) (g : A -> C -> A) (h : C -> B) l l' acc : 
+    (forall acc x, f acc (h x) = g acc x) ->
+    l = map h l' ->
+    fold_left f l acc = fold_left g l' acc.
+  Proof.
+    intros hfg ->.
+    induction l' in acc |- *; cbn; auto.
+    rewrite fold_left_map. rewrite hfg.
+    apply fold_left_proper. exact hfg.
+  Qed. 
+
+  Lemma lsp00_optim fuel s x z : lsp00_fast fuel s x z = lsp00 fuel s x z.
+  Proof.
+    induction fuel in s, x, z |- *; auto. simpl.
+    destruct VSet.mem => //.
+    rewrite EdgeSet.fold_spec.
+    rewrite fold_left_map.
+    unfold succs. rewrite fold_left_map.
+    rewrite fold_left_filter.
+    eapply fold_left_proper => acc [[src w] tgt]; cbn.
+    destruct is_left => //. f_equal. now rewrite IHfuel.
+  Qed.
+
+  Definition lsp_fast := lsp00_fast (VSet.cardinal (V G)) (V G).
+
     (* Equations lsp0 (s : VSet.t) (x z : V.t) : Nbar.t by wf (VSet.cardinal s) *)
     (*   := *)
     (*   lsp0 s x z := *)
@@ -978,6 +1044,10 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
 
     Definition lsp := lsp0 (V G).
 
+    Lemma lsp_optim x y : lsp_fast x y = lsp x y.
+    Proof.
+      now rewrite /lsp /lsp_fast /lsp0 lsp00_optim.
+    Qed.
 
     Lemma lsp0_VSet_Equal {s s' x y} :
       VSet.Equal s s' -> lsp0 s x y = lsp0 s' x y.
@@ -1132,7 +1202,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       | None => false        
       end.
 
-    Lemma is_nonpos_spec n : is_nonpos n <~> ∑ z, n = Some z /\ z <= 0.
+    Lemma is_nonpos_spec n : is_nonpos n <-> exists z, n = Some z /\ z <= 0.
     Proof using Type.
       unfold is_nonpos.
       split.
@@ -1388,7 +1458,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Qed.
 
     Lemma le_Some_lsp {n x y} : (Some n <= lsp x y)%nbar -> 
-      ∑ k, lsp x y = Some k /\ n <= k.
+      exists k, lsp x y = Some k /\ n <= k.
     Proof using Type.
       destruct lsp eqn:xy.
       simpl. intros. eexists; split; eauto.
@@ -1577,9 +1647,10 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       now simpl.
     Qed.
 
-    Lemma is_acyclic_correct : reflect acyclic_no_loop is_acyclic. 
+    Lemma is_acyclic_correct : reflectProp acyclic_no_loop is_acyclic. 
     Proof using HI.
-      eapply reflect_logically_equiv. eapply acyclic_caract2.
+      eapply reflect_reflectProp, reflect_logically_equiv.
+      eapply acyclic_caract2.
       apply VSet_Forall_reflect; intro x.
       destruct (lsp x x). destruct z. constructor; reflexivity.
       all: constructor; discriminate.
@@ -1720,7 +1791,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
           * rewrite weight_SPath_sub; lia.
     Qed.
 
-    Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n /\ weight p <= n.
+    Lemma lsp_pathOf {x y} (p : PathOf G x y) : exists n, lsp G x y = Some n /\ weight p <= n.
     Proof using HG HI.
       pose proof (lsp0_spec_le G (simplify2' G p)) as ineq.
       unfold lsp in *.
@@ -1969,7 +2040,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
             * rewrite weight_SPath_sub; lia.
       Qed.
 
-      Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n.
+      Lemma lsp_pathOf {x y} (p : PathOf G x y) : exists n, lsp G x y = Some n.
       Proof using HI.
         pose proof (lsp0_spec_le G (simplify2' G p)) as ineq.
         unfold lsp in *.
@@ -2431,13 +2502,14 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Defined.
     
     Definition leqb_vertices z x y : bool :=
-      if VSet.mem y (V G) then if is_left (Nbar.le_dec (Some z) (lsp G x y)) then true else false
-      else (Z.leb z 0 && (V.eq_dec x y || Nbar.le_dec (Some z) (lsp G x (s G))))%bool.
+      if VSet.mem y (V G) then if is_left (Nbar.le_dec (Some z) (lsp_fast G x y)) then true else false
+      else (Z.leb z 0 && (V.eq_dec x y || Nbar.le_dec (Some z) (lsp_fast G x (s G))))%bool.
 
     Lemma leqb_vertices_correct n x y
       : leq_vertices G n x y <-> leqb_vertices n x y.
     Proof using HG HI.
-      etransitivity. apply leq_vertices_caract. unfold leqb_vertices.
+      etransitivity. apply leq_vertices_caract. 
+      rewrite /leqb_vertices !lsp_optim.
       destruct (VSet.mem y (V G)).
       - destruct (le_dec (Some n) (lsp G x y)); cbn; intuition.
         discriminate.
@@ -2618,8 +2690,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Definition reroot_spath_aux G s x z (p : SPath G s x z) y :
     VSet.In y (snodes G p) ->
     forall s' (q : SPath G s' z x),
-      Disjoint s s' -> { c : SPath G (VSet.union s s') y y |
-                        sweight c = sweight p + sweight q }.
+      Disjoint s s' -> exists c : SPath G (VSet.union s s') y y,
+                        sweight c = sweight p + sweight q .
   Proof.
     elim: p=> {x z}[s0 x|s0 s1 x y' z disj01 e p ih] /=.
     - move=> /VSetFact.empty_iff [].
@@ -2639,7 +2711,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
 
   Lemma reroot_spath G s x (p : SPath G s x x) y :
     VSet.In y (snodes G p) ->
-    { c : SPath G s y y | sweight c = sweight p } .
+    exists c : SPath G s y y, sweight c = sweight p.
   Proof.
     move=> yinp.
     pose (rx := spath_refl G VSet.empty x).
@@ -2650,8 +2722,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     + apply: (SPath_sub _ _ c).
       move=> ? /VSet.union_spec [//|/VSet.empty_spec[]].
     + rewrite weight_SPath_sub wc /rx /=; lia.
-  Defined.
-
+  Qed.
 
   Section MapSPath.
     Context {G1 G2} (on_edge : forall x y, EdgeOf G1 x y -> EdgeOf G2 x y).

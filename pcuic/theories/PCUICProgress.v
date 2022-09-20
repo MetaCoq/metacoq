@@ -255,6 +255,13 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       wf_cofixpoint Σ.1 mfix ->
       P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+    PΓ Σ Γ ->
+    primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
+    declared_constant Σ.1 prim_ty cdecl ->
+    primitive_invariants cdecl ->
+    P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
       PΓ Σ Γ ->
       Σ ;;; Γ |- t : A ->
@@ -429,6 +436,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+        PΓ Σ Γ ->
+        primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
+        declared_constant Σ.1 prim_ty cdecl ->
+        primitive_invariants cdecl ->
+        P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ ->
         Σ ;;; Γ |- t : A ->
@@ -441,7 +455,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
        env_prop P PΓ.
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
-  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
+  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 Σ wfΣ Γ t T H.
   apply typing_ind_env_app_size; eauto.
 Qed.
 
@@ -540,6 +554,17 @@ Proof.
   now eapply ws_cumul_pb_Sort_Prod_inv in w.
 Qed.
 
+Lemma typing_spine_axiom {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ cst u cdecl args T :
+  declared_constant Σ cst cdecl -> 
+  cdecl.(cst_body) = None ->
+  typing_spine Σ Γ (tConst cst u) args T -> args = [].
+Proof.
+  intros hdecl hb.
+  induction args => //.
+  intros sp. depelim sp.
+  now eapply invert_cumul_axiom_prod in w.
+Qed.
+
 Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T : 
   negb (isApp fn) ->
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T -> 
@@ -594,6 +619,11 @@ Proof.
   * (* cofix *)
     right. eapply value_app; eauto with pcuic.
     now constructor.
+  * (* primitive *)
+    cbn.
+    eapply inversion_Prim in hfn as [prim_ty [cdecl [hwf hp hdecl [s []]]]]; tea.
+    eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. now exists s. }
+    now eapply typing_spine_axiom, app_tip_nil in hcum.
 Qed.
 
 Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T : 
@@ -735,7 +765,7 @@ Proof.
   1,2: now rewrite closed_subst; eauto; econstructor; eauto.
   - now rewrite e0 /cstr_arity -e1 -e2.
   - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
-    unfold is_constructor. now rewrite nth_error_app2 // minus_diag.    
+    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.    
   - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
     inversion e; subst.
     econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
@@ -876,7 +906,7 @@ Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_
   @firstorder_ind Σ (firstorder_env Σ) i ->
   red Σ [] t v ->
   (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
-  squash (eval Σ t v).
+  ∥ eval Σ t v ∥.
 Proof.
   intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
   unshelve edestruct @ws_wcbv_standardization.

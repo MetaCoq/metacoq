@@ -30,8 +30,8 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (* (forall i, P (tInt i)) ->
-    (forall f, P (tFloat f)) ->     *)
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -73,8 +73,8 @@ Lemma term_forall_list_rect :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tCoFix m n)) ->
-    (* (forall i, P (tInt i)) ->
-    (forall f, P (tFloat f)) ->     *)
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.

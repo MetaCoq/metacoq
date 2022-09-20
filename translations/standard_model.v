@@ -89,7 +89,6 @@ with tsl_ctx (ΣE : tsl_context) (Γ : context) {struct Γ} : tsl_result term :=
        end.
 
 
-
 #[global]
 Instance param : Translation :=
   {| tsl_id := tsl_ident ;

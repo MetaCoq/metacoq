@@ -393,6 +393,14 @@ Section Validity.
     - (* CoFix *)
       eapply nth_error_all in X0 as [s Hs]; pcuic.
 
+    - (* Primitive *) 
+      destruct X0 as [s [hty hbod huniv]].
+      exists s@[[]].
+      change (tSort s@[[]]) with (tSort s)@[[]].
+      rewrite -hty.
+      refine (type_Const _ _ _ [] _ wfΓ H0 _).
+      rewrite huniv //.
+
     - (* Conv *)
       now exists s.
   Qed.

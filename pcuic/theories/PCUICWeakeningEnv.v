@@ -436,6 +436,7 @@ Proof using P Pcmp cf.
   split => //. 
   - red. rewrite eq. apply onu.
   - rewrite eq. rewrite eq' in ond.
+    rewrite -e in ond.
     revert ond; clear.
     induction Σ''; cbn; auto.
     intros H; depelim H.

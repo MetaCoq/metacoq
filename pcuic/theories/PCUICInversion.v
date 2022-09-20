@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSu
      PCUICOnFreeVars PCUICClosedTyp PCUICWellScopedCumulativity.
 
 Require Import Equations.Prop.DepElim.
-(* todo: make wf arguments implicit *)
+(* TODO: make wf arguments implicit *)
 Section Inversion.
 
   Context {cf : checker_flags}.
@@ -335,13 +335,23 @@ Section Inversion.
     intros Γ mfix idx T h. invtac h.
   Qed.
 
-  (** At this stage we don't typecheck primitive values *)
-  (* Lemma inversion_Prim :
-    forall {Γ i T},
-      Σ ;;; Γ |- tPrim i : T -> False.
+  Lemma inversion_Prim :
+    forall {Γ p T},
+    Σ ;;; Γ |- tPrim p : T -> 
+    ∑ prim_ty cdecl, 
+      [× wf_local Σ Γ,
+        primitive_constant Σ (prim_val_tag p) = Some prim_ty,
+        declared_constant Σ prim_ty cdecl,
+        primitive_invariants cdecl & 
+        Σ ;;; Γ ⊢ tConst prim_ty [] ≤ T].
   Proof.
-    intros Γ i T h. now depind h.
-  Qed. *)
+    intros Γ p T h. depind h.
+    - exists prim_ty, cdecl; split => //.
+      eapply ws_cumul_pb_refl; fvs.
+    - destruct IHh1 as [prim_ty [cdecl []]].
+      exists prim_ty, cdecl. split => //.
+      transitivity A; tea. eapply cumulSpec_cumulAlgo_curry; tea; fvs. 
+  Qed.
 
   Lemma inversion_it_mkLambda_or_LetIn :
     forall {Γ Δ t T},

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrfun Morphisms Setoid.
-From MetaCoq.Template Require Import utils BasicAst.
+From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
+From MetaCoq.Template Require Import utils BasicAst Primitive.
 From MetaCoq.Template Require Import Universes.
 
 Module Type Term.
@@ -24,6 +24,32 @@ Module Type Term.
   
   Notation lift0 n := (lift n 0).
 End Term.
+
+Module Retroknowledge.
+
+  Record t := mk_retroknowledge { 
+    retro_int63 : option kername;
+    retro_float64 : option kername;
+  }.
+
+  Definition empty := {| retro_int63 := None; retro_float64 := None |}.
+
+  Definition extends (x y : t) :=
+    option_extends x.(retro_int63) y.(retro_int63) /\
+    option_extends x.(retro_float64) y.(retro_float64).
+  Existing Class extends.
+
+  #[global] Instance extends_refl x : extends x x.
+  Proof.
+    split; apply option_extends_refl.
+  Qed.
+
+  #[global] Instance extends_trans : RelationClasses.Transitive Retroknowledge.extends.
+  Proof.
+    intros x y z [] []; split; cbn; now etransitivity; tea.
+  Qed.
+
+End Retroknowledge.
 
 Module Environment (T : Term).
 
@@ -299,23 +325,31 @@ Module Environment (T : Term).
 
   Definition global_declarations := list (kername * global_decl).
 
-  Record global_env := 
+  Record global_env := mk_global_env
     { universes : ContextSet.t;
-      declarations : global_declarations }.
-    
+      declarations : global_declarations;
+      retroknowledge : Retroknowledge.t }.
+
   Coercion universes : global_env >-> ContextSet.t.
 
   Definition empty_global_env := 
     {| universes := ContextSet.empty;
-       declarations := [] |}.
+       declarations := [];
+       retroknowledge := Retroknowledge.empty |}.
 
   Definition add_global_decl Σ decl := 
     {| universes := Σ.(universes);
-       declarations := decl :: Σ.(declarations) |}.
+       declarations := decl :: Σ.(declarations);
+       retroknowledge := Σ.(retroknowledge) |}.
       
-  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
+  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations);
+    retroknowledge := Σ.(retroknowledge) |}.
   Proof. now destruct Σ. Qed.
   
+  Definition set_declarations Σ decls := 
+    {| universes := Σ.(universes);
+       declarations := decls;
+       retroknowledge := Σ.(retroknowledge) |}.
 
   Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
     match Σ with
@@ -328,12 +362,14 @@ Module Environment (T : Term).
   Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
 
   Definition extends (Σ Σ' : global_env) :=
-    Σ.(universes) ⊂_cs Σ'.(universes) ×
-    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+    [× Σ.(universes) ⊂_cs Σ'.(universes),
+      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) & 
+      Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
   
   Definition extends_decls (Σ Σ' : global_env) :=
-    Σ.(universes) = Σ'.(universes) ×
-    ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations).
+    [× Σ.(universes) = Σ'.(universes),
+       ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
+       Σ.(retroknowledge) = Σ'.(retroknowledge)].
   
   Existing Class extends.
   Existing Class extends_decls.
@@ -341,20 +377,31 @@ Module Environment (T : Term).
   #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
   Proof.
     intros []. split => //.
-    rewrite e. split; [lsets|csets].
+    rewrite e. split; [lsets|csets]. rewrite e0. apply Retroknowledge.extends_refl.
   Qed.
 
   #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
-  Proof. red. intros x. now split => //; exists []. Qed.
+  Proof. red. intros x. split => //; try exists [] => //. Qed.
   
   Lemma extends_refl : CRelationClasses.Reflexive extends.
-  Proof. red. intros x. split; [apply incl_cs_refl | now exists []]. Qed.
+  Proof. red. intros x. split; [apply incl_cs_refl | now exists [] | apply Retroknowledge.extends_refl]. Qed.
 
   (* easy prefers this to the local hypotheses, which is annoying
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
   Proof. apply extends_refl. Qed.
   *) 
+
+  Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
+    match p with
+    | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
+    | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
+    end.
   
+  Definition primitive_invariants (cdecl : constant_body) :=
+    ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
+             cdecl.(cst_universes) = Monomorphic_ctx].
+    
+
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
 

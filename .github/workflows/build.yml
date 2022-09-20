@@ -1,17 +1,32 @@
 name: MetaCoq CI
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
+  checktodos:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Check for todos
+        run: ./checktodos.sh
+
   build:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
         coq_version: 
-          - 'dev'
+          - '8.16'
         ocaml_version:
-          - '4.12-flambda'
+          - '4.14-flambda'
         target: [ local, opam, quick ]
       fail-fast: true
 
@@ -31,6 +46,10 @@ jobs:
             startGroup "Workaround permission issue"
               sudo chown -R coq:coq .  # <--
               opam exec -- ocamlfind list
+            endGroup
+          before_install: |
+            startGroup "Print opam config"
+              opam config list; opam repo list; opam list
             endGroup
           script: |
             startGroup "Build project"

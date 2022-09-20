@@ -994,6 +994,8 @@ Section Alpha.
         now apply infer_typing_sort_impl with id ihmfix; intros [].
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
+    - intros p prim_ty cdecl IH prim decl pinv Δ v e e'.
+      depelim e. econstructor; tea. now apply IH.
 
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
       eapply (type_ws_cumul_pb (pb:=Cumul)).

@@ -118,30 +118,6 @@ Module Level.
       all: intro; now constructor.
   Qed.
 
-  (* Bonus *)
-  Definition eqb (l1 l2 : Level.t) : bool
-    := match compare l1 l2 with Eq => true | _ => false end.
-
-  Global Instance eqb_refl : Reflexive eqb.
-  Proof.
-    intros []; unfold eqb; cbnr.
-    - rewrite (ssreflect.iffRL (string_compare_eq _ _)). all: auto. reflexivity.
-    - rewrite Nat.compare_refl. reflexivity.
-  Qed.
-
-  Lemma eqb_spec l l' : reflect (eq l l') (eqb l l').
-  Proof.
-    destruct l, l'; cbn; try constructor; try reflexivity; try discriminate.
-    - apply iff_reflect. unfold eqb; cbn.
-      destruct (CompareSpec_string t0 t1); split; intro HH;
-        try reflexivity; try discriminate; try congruence.
-      all: inversion HH; subst; now apply irreflexivity in H.
-    - apply iff_reflect. unfold eqb; cbn.
-      destruct (Nat.compare_spec n n0); split; intro HH;
-        try reflexivity; try discriminate; try congruence.
-      all: inversion HH; subst; now apply Nat.lt_irrefl in H.
-  Qed.
-
   Definition eq_level l1 l2 :=
     match l1, l2 with
     | Level.lzero, Level.lzero => true
@@ -149,7 +125,7 @@ Module Level.
     | Level.Var n1, Level.Var n2 => ReflectEq.eqb n1 n2
     | _, _ => false
     end.
-
+    
   #[global, program] Instance reflect_level : ReflectEq Level.t := {
     eqb := eq_level
   }.
@@ -163,6 +139,19 @@ Module Level.
     - destruct (ReflectEq.eqb_spec n n0) ; nodec.
       constructor. subst. reflexivity.
   Defined.
+  
+  Global Instance eqb_refl : @Reflexive Level.t eqb.
+  Proof.
+    intros x. apply ReflectEq.eqb_refl.
+  Qed.
+
+  Definition eqb := eq_level.
+
+  Lemma eqb_spec l l' : reflect (eq l l') (eqb l l').
+  Proof.
+    apply reflectProp_reflect.
+    now generalize (eqb_spec l l').
+  Qed.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
@@ -2531,7 +2520,7 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx => Instance.empty
   | Polymorphic_ctx c => fst (snd (AUContext.repr c))
   end.
-(* todo: duplicate of polymorphic_instance *)
+(* TODO: duplicate of polymorphic_instance *)
 Definition abstract_instance decl :=
   match decl with
   | Monomorphic_ctx => Instance.empty

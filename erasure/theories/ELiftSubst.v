@@ -34,8 +34,8 @@ Fixpoint lift n k t : term :=
   | tBox => t
   | tVar _ => t
   | tConst _ => t
-  | tConstruct _ _ => t
-  (* | tPrim _ => t *)
+  | tConstruct ind i args => tConstruct ind i (map (lift n k) args)
+  | tPrim _ => t
   end.
 
 Notation lift0 n := (lift n 0).
@@ -69,6 +69,7 @@ Fixpoint subst s k u :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (subst s k')) mfix in
     tCoFix mfix' idx
+  | tConstruct ind i args => tConstruct ind i (map (subst s k) args)
   | x => x
   end.
 
@@ -95,6 +96,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k')) mfix
+  | tConstruct ind i args => forallb (closedn k) args
   | _ => true
   end.
 
@@ -106,7 +108,7 @@ Require Import PeanoNat.
 Import Nat.
 
 Lemma lift_rel_ge :
-  forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n).
+  forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n). 
 Proof.
   intros; simpl in |- *.
   now elim (leb_spec p n).
@@ -450,8 +452,8 @@ Proof.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
   - cbn. f_equal; auto.
     rtoProp; solve_all.
-    rtoProp; solve_all.
-    destruct x; f_equal; cbn in *. now apply a0.
+    rtoProp; solve_all.    
+    destruct x; f_equal; cbn in *. eauto.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
@@ -604,6 +606,7 @@ Proof.
   - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2.
     rewrite IHt1 // IHt2 //.
+  - eapply All_forallb_eq_forallb; eauto.
   - rewrite IHt //.
     f_equal. eapply All_forallb_eq_forallb; tea. cbn.
     intros. specialize (H (#|x.1| + k')).

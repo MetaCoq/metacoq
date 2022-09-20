@@ -74,6 +74,20 @@ Qed.
 #[global]
 Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 
+Lemma extends_primitive_constant Σ Σ' p t : 
+  extends Σ Σ' ->
+  primitive_constant Σ p = Some t ->
+  primitive_constant Σ' p = Some t.
+Proof.
+  intros [_ _ ext].
+  unfold primitive_constant.
+  case: ext.
+  destruct p; case => //.
+  - move=> _. case => //.
+  - move=> _; case => //.
+  - case => //.
+Qed.
+Local Hint Resolve extends_primitive_constant : extends.
 
 Lemma weakening_env `{checker_flags} :
   env_prop (fun Σ Γ t T =>
@@ -277,9 +291,9 @@ Proof.
   intros HP wfΣ' Hext HΣ.
   assert (wfΣ := extends_decls_wf _ _ wfΣ' Hext).
   destruct HΣ as [onu onΣ].
-  destruct Σ as [univs Σ]; cbn in *.
+  destruct Σ as [univs Σ retro]; cbn in *.
   induction onΣ; simpl. 1: congruence.
-  assert (HH: extends_decls {| universes := univs; declarations := Σ |} Σ'). {
+  assert (HH: extends_decls {| universes := univs; declarations := Σ; retroknowledge := retro |} Σ'). {
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
@@ -298,9 +312,9 @@ Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
 Proof.
   intros HP wfΣ wfΣ' Hext HΣ.
   destruct HΣ as [onu onΣ].
-  destruct Σ as [univs Σ]; cbn in *.
+  destruct Σ as [univs Σ retro]; cbn in *.
   induction onΣ; simpl. 1: congruence.
-  assert (HH: extends {| universes := univs; declarations := Σ |} Σ'). {
+  assert (HH: extends {| universes := univs; declarations := Σ; retroknowledge := retro |} Σ'). {
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
@@ -322,6 +336,7 @@ Proof.
   split => //. 
   - split; [lsets|csets].
   - exists []; simpl; destruct Σ; eauto.
+  - apply Retroknowledge.extends_refl.
 Qed.
 
 Lemma weaken_decls_lookup_on_global_env `{checker_flags} P Σ c decl :

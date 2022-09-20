@@ -49,11 +49,12 @@ Lemma Informative_extends:
 Proof.
   repeat intros ?.
   assert (extends_decls Σ Σ'0).
-  { destruct X0, X2. subst. cbn. split => //.
-    rewrite e -e0 //.
-    destruct s as [Σ'' eq]. destruct s0 as [Σ''' ->].
-    rewrite eq. cbn. exists (Σ''' ++ Σ''). cbn.
-    now rewrite <- app_assoc. }
+  { destruct X0 as [eu [Σ'' eq] er], X2 as [eu' [Σ''' eq'] er'].
+    subst. cbn in *. split => //.
+    * rewrite eu -eu' //.
+    * exists (Σ''' ++ Σ''). cbn. rewrite <- app_assoc.
+      congruence.
+    * congruence. }
   edestruct H0; eauto. destruct H3.
 
   eapply weakening_env_declared_inductive in H; eauto; tc.
@@ -559,6 +560,9 @@ Proof.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
+  - cbn. depelim H1.
+    * cbn; constructor.
+    * constructor. eapply is_type_subst in X3; tea.
   - eapply H; eauto.
 Qed.
 

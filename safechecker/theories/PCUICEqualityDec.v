@@ -13,7 +13,7 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-(*todo move*)
+(* TODO move*)
 
 Lemma consistent_instance_wf_universe `{checker_flags} Σ uctx u :
   consistent_instance_ext Σ uctx u ->
@@ -157,7 +157,7 @@ Fixpoint eqb_term_upto_univ_napp
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-(*  | tPrim p, tPrim p' => eqb p p' *)
+  | tPrim p, tPrim p' => eqb p p'
 
   | _, _ => false
   end.
@@ -740,7 +740,7 @@ Proof.
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
-(*  - cbn - [eqb]. eqspecs. do 2 constructor. *)
+ - cbn - [eqb]. eqspecs. do 2 constructor.
 Qed.
 
  Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool)

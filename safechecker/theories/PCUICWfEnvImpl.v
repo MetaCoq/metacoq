@@ -87,7 +87,8 @@ Record referenced_impl {cf:checker_flags} := {
       referenced_impl_graph_wf := projT2 (graph_of_wf referenced_impl_wf)
   }.
 
-Definition init_env : global_env := {| universes := (LS.singleton Level.lzero , CS.empty); declarations := [] |}.
+Definition init_env : global_env :=
+   {| universes := (LS.singleton Level.lzero , CS.empty); declarations := []; retroknowledge := Retroknowledge.empty |}.
 
 Definition on_global_univ_init_env : on_global_univs init_env.
   repeat split. 
@@ -96,7 +97,7 @@ Definition on_global_univ_init_env : on_global_univs init_env.
   - red. unshelve eexists. 
     + econstructor; eauto. intros; exact 1%positive.
     + red. intros ? ?. cbn in *. inversion H.
-Defined.          
+Qed.          
 
 Definition check_conv_pb_relb_correct {cf:checker_flags} (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥) G
   (HG : is_graph_of_uctx G (global_ext_uctx Σ)) conv_pb u u' :
@@ -116,11 +117,12 @@ Proof.
   - apply (check_leqb_universe_spec' G (global_ext_levels Σ, global_ext_constraints Σ)); eauto. 
       + eapply wf_ext_global_uctx_invariants; eauto.
       + eapply wf_ext_consistent; eauto. 
-Defined. 
+Qed. 
 
 Global Instance canonical_abstract_env_ext_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_ext_struct referenced_impl_ext :=
   {| abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
+     abstract_env_ext_retroknowledge := fun Σ => (referenced_impl_env_ext Σ).(retroknowledge) ;
      abstract_env_conv_pb_relb := fun Σ conv_pb => conv_pb_relb (referenced_impl_ext_graph Σ) conv_pb ;
      abstract_env_compare_global_instance := fun Σ =>
       compare_global_instance (referenced_impl_env_ext Σ)
@@ -137,7 +139,7 @@ Global Instance canonical_abstract_env_ext_struct {cf:checker_flags} {guard : ab
     match Σ.(declarations) with 
      [] => Σ
      | (d::decls) =>
-       {| referenced_impl_env := {| universes := Σ.(universes); declarations := decls |} |}
+       {| referenced_impl_env := {| universes := Σ.(universes); declarations := decls; retroknowledge := Σ.(retroknowledge) |} |}
     end.
    Next Obligation.
     destruct Σ.(referenced_impl_wf). sq.
@@ -154,10 +156,10 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
   abstract_env_struct referenced_impl referenced_impl_ext :=
  {|
  abstract_env_empty := {|
- referenced_impl_env := {| universes := init_env ; declarations := [] |};
+ referenced_impl_env := {| universes := init_env ; declarations := []; retroknowledge := Retroknowledge.empty |};
  |} ;
- abstract_env_init := fun cs H =>  {|
- referenced_impl_env := {| universes := cs ; declarations := [] |};
+ abstract_env_init := fun cs retro H =>  {|
+ referenced_impl_env := {| universes := cs ; declarations := []; retroknowledge := retro |};
  |} ;
  abstract_env_add_decl := fun X kn d H => 
   {| referenced_impl_env := add_global_decl X.(referenced_impl_env) (kn,d);
@@ -166,6 +168,7 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
  |} ;
  abstract_env_univ X := X ;
  abstract_env_global_declarations X := declarations X;
+ abstract_env_retroknowledge X := X.(retroknowledge) ;
  abstract_env_is_consistent uctx := wGraph.is_acyclic (make_graph uctx);
  abstract_env_is_consistent_uctx X uctx :=
    let G := referenced_impl_graph X in
@@ -206,6 +209,7 @@ Record wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} := {
 Global Instance optimized_abstract_env_ext_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_ext_struct wf_env_ext :=
   {| abstract_env_lookup := fun Σ k => EnvMap.lookup k (wf_env_ext_map Σ);
+     abstract_env_ext_retroknowledge := fun X => X.(wf_env_ext_referenced).(retroknowledge);
      abstract_env_conv_pb_relb X := abstract_env_conv_pb_relb X.(wf_env_ext_referenced);
      abstract_env_compare_global_instance X := abstract_env_compare_global_instance X.(wf_env_ext_referenced);
      abstract_env_level_mem X := abstract_env_level_mem X.(wf_env_ext_referenced);
@@ -215,7 +219,8 @@ Global Instance optimized_abstract_env_ext_struct {cf:checker_flags} {guard : ab
      abstract_env_ext_rel X := abstract_env_ext_rel X.(wf_env_ext_referenced);
   |}.
 
-Lemma wf_env_eta {cf : checker_flags} (Σ : wf_env) : {| universes := Σ.(universes); declarations := Σ.(declarations) |} = Σ.
+Lemma wf_env_eta {cf : checker_flags} (Σ : wf_env) :
+ {| universes := Σ.(universes); declarations := Σ.(declarations); retroknowledge := Σ.(retroknowledge) |} = Σ.
 Proof.
   destruct Σ => /= //. destruct referenced_impl_env => //.
 Qed.
@@ -245,10 +250,10 @@ Program Definition wf_env_empty {cf:checker_flags} {guard : abstract_guard_impl}
   wf_env_map := EnvMap.empty;
   |}.
 
-Program Definition wf_env_init {cf:checker_flags} {guard : abstract_guard_impl} cs : 
+Program Definition wf_env_init {cf:checker_flags} {guard : abstract_guard_impl} cs retro : 
   on_global_univs cs -> wf_env := fun H =>
   {|   
-  wf_env_referenced := abstract_env_init cs H;
+  wf_env_referenced := abstract_env_init cs retro H;
   wf_env_map := EnvMap.empty;
   |}.
 
@@ -257,7 +262,8 @@ Lemma reference_pop_decls_correct {cf:checker_flags} (X:referenced_impl) decls
   exists d, Σ.(declarations) = d :: decls) :
   let X' := referenced_pop X in
   forall Σ Σ', Σ = X -> Σ' = X' -> 
-          Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes).
+          Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\
+          Σ.(retroknowledge) = Σ'.(retroknowledge).
 Proof.
   cbn; intros; subst. specialize (prf _ eq_refl).
   unfold referenced_pop. cbn. set (referenced_pop_obligation_1 cf X).
@@ -327,9 +333,9 @@ Next Obligation.
   sq. destruct H.  
   apply EnvMap.repr_add; eauto; try eapply wf_fresh_globals; eauto. 
   apply wf_env_map_repr.
-Defined. 
-Next Obligation. apply wf_env_map_repr. Defined.
-Next Obligation. apply wf_env_map_repr. Defined.
+Qed. 
+Next Obligation. apply wf_env_map_repr. Qed.
+Next Obligation. apply wf_env_map_repr. Qed.
 
 Section WfEnv.
   Context {cf : checker_flags} {guard : abstract_guard_impl}.
@@ -391,7 +397,7 @@ Section GraphSpec.
   Local Definition HΣ' : ∥ wf_ext Σ ∥.
   Proof.
     destruct HΣ, Hφ; now constructor.
-  Defined.
+  Qed.
 
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
@@ -413,7 +419,7 @@ Section GraphSpec.
     now eapply global_ext_uctx_consistent.
     pose proof (wf_ext_global_uctx_invariants Σ H0) as [H1 H2].
     split; eauto.
-  Defined.
+  Qed.
 
   Lemma is_graph_of_uctx_levels (l : Level.t) :
     LevelSet.mem l (uGraph.wGraph.V G) <->
@@ -435,9 +441,9 @@ End GraphSpec.
 Program Global Instance canonical_abstract_env_ext_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_ext_prop _ _ canonical_abstract_env_ext_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
-Next Obligation. wf_env. Defined.
+Next Obligation. wf_env. Qed.
 Next Obligation. apply check_conv_pb_relb_correct; eauto; wf_env.   
-   apply (graph_of_wf_ext X).π2. Defined.
+   apply (graph_of_wf_ext X).π2. Qed.
 Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
   move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
   apply iff_reflect;  apply check_conv_pb_relb_correct with (conv_pb := Conv); eauto; wf_env. 
@@ -447,7 +453,7 @@ Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
   all: rewrite wf_universeb_instance_forall.
   revert H; move => / wf_universe_instanceP ?; eauto. 
   revert H0; move => / wf_universe_instanceP ?; eauto. 
-Defined. 
+Qed. 
 Next Obligation. split; intros. 
   - eapply check_constraints_complete; eauto.
     apply referenced_impl_sq_wf. apply Σudecl_ref.
@@ -456,21 +462,21 @@ Next Obligation. split; intros.
   - eapply check_constraints_spec; eauto.    
   apply referenced_impl_sq_wf. apply Σudecl_ref.
   apply (graph_of_wf_ext X).π2.
-  Defined. 
-Next Obligation. apply guard_correct. Defined.
+  Qed. 
+Next Obligation. apply guard_correct. Qed.
 
 Program Global Instance optimized_abstract_env_ext_prop {cf:checker_flags} {guard : abstract_guard_impl} :
 @abstract_env_ext_prop _ _ optimized_abstract_env_ext_struct :=
    {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
-Next Obligation. wf_env. Defined.
+Next Obligation. wf_env. Qed.
 Next Obligation. pose (referenced_impl_ext_wf X). sq. 
   erewrite EnvMap.lookup_spec; try reflexivity. 
   1: apply wf_fresh_globals; eauto.
   1: apply wf_env_ext_map_repr. Qed.
-Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Defined.
-Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Defined.
-Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Defined.
-Next Obligation. eapply guard_correct. Defined.
+Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Qed.
+Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Qed.
+Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Qed.
+Next Obligation. eapply guard_correct. Qed.
 
 Program Global Instance canonical_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.
@@ -495,7 +501,8 @@ Next Obligation.
   apply: consistent_ext_on_full_ext=> //.
   apply: add_uctx_subgraph.
 Qed.
-Next Obligation. apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
+Next Obligation. 
+  apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
 Qed. 
 
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :

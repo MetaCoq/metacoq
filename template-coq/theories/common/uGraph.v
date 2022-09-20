@@ -2034,46 +2034,6 @@ Section CheckLeq.
 
 End CheckLeq.
 
-
-Section CheckLeq'.
-  Context {cf:checker_flags}.
-
-  Context (G : universes_graph)
-          uctx (Huctx: global_gc_uctx_invariants uctx) (HC : gc_consistent uctx.2)
-          (HG : G = make_graph uctx).
- 
-  (*Lemma check_gc_constraint_complete gcs
-    : gc_consistent gcs -> check_gc_constraints G gcs.
-  Proof.
-    unfold check_gc_constraints. cbn.
-    intros [v Hv].
-    unfold gc_satisfies in Hv.
-    apply GoodConstraintSetFact.for_all_iff in Hv; eauto. 2:typeclasses eauto.
-    apply GoodConstraintSetFact.for_all_iff; eauto. typeclasses eauto.
-    intros gc hc. specialize (Hv gc hc). cbn in Hv.
-    unfold gc_satisfies0 in Hv.
-    destruct gc as [l z l'|k l|k n|l k|n k].
-    - cbn. apply (leqb_level_n_spec G uctx Huctx HC HG). admit. admit.
-      intros v' Hv'. cbn.
-      specialize (HH v Hv). cbn in *. toProp.
-      pose proof (val_level_of_variable_level v l).
-      pose proof (val_level_of_variable_level v l').
-      destruct l, l'; cbn in *; lled; lia.
-    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
-      specialize (HH v Hv). cbn -[Z.of_nat] in HH. unfold gc_satisfies0. toProp.
-      cbn in *. lled; lia.
-    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
-      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lled; lia.
-    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
-      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lled; lia.
-    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
-      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lled; lia.
-  Qed. *)
-End CheckLeq'.
-
 (* This section: specif in term of raw uctx *)
 Section CheckLeq2.
   Context {cf:checker_flags}.
@@ -3024,7 +2984,7 @@ Proof.
   apply: make_graph_invariants.
 Qed.
 
-#[global] Existing Instance correct_labelling_proper.
+#[export] Existing Instance correct_labelling_proper.
 
 Lemma correct_labelling_of_valuation_satisfies_iff `{checker_flags} [uctx G v] :
   is_graph_of_uctx G uctx ->

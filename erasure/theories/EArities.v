@@ -22,7 +22,7 @@ Local Existing Instance extraction_checker_flags.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(* todo move *)
+(* TODO move *)
 #[global] Existing Instance extends_refl.
 
 Lemma isErasable_Proof Σ Γ t :

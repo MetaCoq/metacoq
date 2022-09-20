@@ -40,8 +40,8 @@
 
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
-    coqPackages.coq.override.version = "dev";
-    coqPackages.equations.override.version = "dev";
+    coqPackages.coq.override.version = "master";
+    coqPackages.equations.override.version = "master";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either

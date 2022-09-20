@@ -212,8 +212,6 @@ gen-src/envMap.mli
 gen-src/envMap.ml
 gen-src/templateEnvMap.mli
 gen-src/templateEnvMap.ml
-gen-src/etaExpand.mli
-gen-src/etaExpand.ml
 gen-src/typing0.mli
 gen-src/typing0.ml
 gen-src/templateProgram.mli

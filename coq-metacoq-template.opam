@@ -28,8 +28,8 @@ install: [
 ]
 depends: [
   "stdlib-shims"
-  "coq" { >= "8.16" & < "8.17~" }
-  "coq-equations" { >= "1.3" }
+  "coq" { = "dev" }
+  "coq-equations" { = "dev" }
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

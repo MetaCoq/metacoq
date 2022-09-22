@@ -19,7 +19,7 @@ let check env evm poly (c, ustate) =
   debug (fun () -> str"Quoting");
   let uctx = Evd.universe_context_set evm in
   let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
-  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass:true ~with_universes:true env) (EConstr.to_constr evm c) in
+  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass:true ~with_universes:true env evm) (EConstr.to_constr evm c) in
   let uctx =
     if poly then
       let uctx = Evd.to_universe_context evm in

@@ -25,7 +25,7 @@ Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
   let wfext := optim_make_wf_env_ext (guard:=guard) wfe p.1.2 _ in
-  let t := ErasureFunction.erase (nor:=PCUICSN.extraction_normalizing) optimized_abstract_env_ext_impl wfext nil p.2
+  let t := ErasureFunction.erase (nor:=PCUICSN.extraction_normalizing) optimized_abstract_env_impl wfext nil p.2
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
   let Σ' := ErasureFunction.erase_global_fast optimized_abstract_env_impl
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
@@ -39,7 +39,7 @@ Qed.
 Obligation Tactic := idtac.
 
 Import Extract.
-  
+
 Definition erase_program {guard : abstract_guard_impl} (p : pcuic_program) 
   (wtp : ∥ wt_pcuic_program (cf:=config.extraction_checker_flags) p ∥) : eprogram_env :=
   erase_pcuic_program (guard := guard) p (map_squash fst wtp) (map_squash snd wtp).
@@ -52,8 +52,8 @@ Proof.
   intros [etaenv etat]. split;
   unfold erase_program, erase_pcuic_program; cbn.
   eapply ErasureFunction.expanded_erase_global_fast, etaenv; reflexivity.
-  eapply (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
-  reflexivity. eapply etat.
+  apply: (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
+  reflexivity. exact etat.
 Qed.
 
 Lemma expanded_eprogram_env_expanded_eprogram_cstrs p :
@@ -83,7 +83,7 @@ Next Obligation.
   - unfold erase_program, erase_pcuic_program in e. simpl. cbn in e. injection e. intros <- <-.
     split. 
     eapply ErasureFunction.erase_global_fast_wf_glob.
-    eapply (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl)).
+    apply: (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl)).
   - rewrite -e. cbn.
     now eapply expanded_erase_program.
 Qed.

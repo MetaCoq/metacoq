@@ -14,6 +14,10 @@ type ('a, 'r) coq_Reflexive = 'a -> 'r
 
 val reflexivity : ('a1, 'a2) coq_Reflexive -> 'a1 -> 'a2
 
+type ('a, 'r) complement = __
+
+type ('a, 'r) coq_Irreflexive = ('a, ('a, 'r) complement) coq_Reflexive
+
 type ('a, 'r) coq_Symmetric = 'a -> 'a -> 'r -> 'r
 
 val symmetry : ('a1, 'a2) coq_Symmetric -> 'a1 -> 'a1 -> 'a2 -> 'a2
@@ -33,9 +37,10 @@ val coq_PreOrder_Reflexive :
 val coq_PreOrder_Transitive :
   ('a1, 'a2) coq_PreOrder -> ('a1, 'a2) coq_Transitive
 
-type ('a, 'r) coq_StrictOrder =
-  ('a, 'r) coq_Transitive
-  (* singleton inductive, whose constructor was Build_StrictOrder *)
+type ('a, 'r) coq_StrictOrder = { coq_StrictOrder_Irreflexive : ('a, 'r)
+                                                                coq_Irreflexive;
+                                  coq_StrictOrder_Transitive : ('a, 'r)
+                                                               coq_Transitive }
 
 val coq_StrictOrder_Transitive :
   ('a1, 'a2) coq_StrictOrder -> ('a1, 'a2) coq_Transitive
@@ -104,19 +109,18 @@ val iff_equivalence : (__, __) coq_Equivalence
 
 val arrow_Reflexive_obligation_1 : ('a1, 'a1) arrow
 
-val arrow_Reflexive : ('a1, 'a1) arrow
+val arrow_Reflexive : (__, __) arrow
 
 val arrow_Transitive_obligation_1 :
   ('a1, 'a2) arrow -> ('a2, 'a3) arrow -> ('a1, 'a3) arrow
 
-val arrow_Transitive :
-  ('a1, 'a2) arrow -> ('a2, 'a3) arrow -> ('a1, 'a3) arrow
+val arrow_Transitive : (__, __) arrow -> (__, __) arrow -> (__, __) arrow
 
-val iffT_Reflexive : ('a1, 'a1) iffT
+val iffT_Reflexive : (__, __) iffT
 
-val iffT_Symmetric : ('a1, 'a2) iffT -> ('a2, 'a1) iffT
+val iffT_Symmetric : (__, __) iffT -> (__, __) iffT
 
-val iffT_Transitive : ('a1, 'a2) iffT -> ('a2, 'a3) iffT -> ('a1, 'a3) iffT
+val iffT_Transitive : (__, __) iffT -> (__, __) iffT -> (__, __) iffT
 
 type ('a, 'x0, 'x) relation_equivalence = 'a -> 'a -> ('x0, 'x) iffT
 

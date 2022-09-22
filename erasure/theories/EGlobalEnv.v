@@ -73,6 +73,10 @@ Section Lookups.
     mdecl <- lookup_minductive kn ;;
     ret mdecl.(ind_npars).
   
+  Definition lookup_inductive_kind kn : option recursivity_kind := 
+    mdecl <- lookup_minductive kn ;;
+    ret mdecl.(ind_finite).
+    
   Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
@@ -247,7 +251,7 @@ Definition is_constructor_app_or_box t :=
   | a =>
     let (f, a) := decompose_app a in
     match f with
-    | tConstruct _ _ => true
+    | tConstruct _ _ _ => true
     | _ => false
     end
   end.

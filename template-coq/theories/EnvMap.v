@@ -293,7 +293,7 @@ Context {A : Type}.
   Lemma pos_of_string_cont_inj s s' p : pos_of_string_cont s p = pos_of_string_cont s' p -> s = s'.
   Proof.
     induction s; destruct s' => /= //.
-  Admitted.
+  Qed.                          (* TODO *)
   
   Fixpoint pos_of_dirpath_cont (d : dirpath) (cont : positive) : positive := 
     match d with
@@ -324,7 +324,7 @@ Context {A : Type}.
     induction a; destruct m => /= //.
 
     cbn.
-  Admitted.
+  Qed.                          (* TODO *)
 
   Definition empty : t := PTree.empty _.
 

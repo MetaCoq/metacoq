@@ -52,6 +52,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = global_declarations
+  type quoted_retroknowledge = Environment.Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -135,8 +136,8 @@ struct
   let quote_proj ind p a = { proj_ind = ind; proj_npars = p; proj_arg = a }
 
   let quote_constraint_type = function
-    | Univ.Lt -> Universes0.ConstraintType.Le 1
-    | Univ.Le -> Universes0.ConstraintType.Le 0
+    | Univ.Lt -> Universes0.ConstraintType.Le BinNums.(Zpos Coq_xH)
+    | Univ.Le -> Universes0.ConstraintType.Le BinNums.Z0
     | Univ.Eq -> Universes0.ConstraintType.Eq
 
   let is_Lt = function
@@ -232,8 +233,8 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
-  (* let mkInt i = Coq_tInt i
-  let mkFloat f = Coq_tFloat f *)
+  let mkInt i = Coq_tInt i
+  let mkFloat f = Coq_tFloat f
 
   let rec seq f t =
     if f < t then
@@ -260,7 +261,7 @@ struct
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in
-    Coq_tFix (block, a)
+    Coq_tCoFix (block, a)
 
   let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
@@ -310,7 +311,15 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
-  let mk_global_env universes declarations = { universes; declarations }
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  let quote_retroknowledge r = 
+    { Environment.Retroknowledge.retro_int63 = r.retro_int63; 
+      Environment.Retroknowledge.retro_float64 = r.retro_float64 }
+
+  let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function

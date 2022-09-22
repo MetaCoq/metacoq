@@ -1,4 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
+Set Warnings "-notation-overridden".
+
 From MetaCoq.Template Require Import utils All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
@@ -12,6 +14,7 @@ Arguments π1 {_ _} _.
 Arguments π2 {_ _} _.
 Arguments pair {_ _} _ _.
 
+Declare Scope prod_scope.
 Notation "( x ; y )" := (pair x y) : prod_scope.
 Notation " A × B " := (prod A B) : type_scope.
 Open Scope prod_scope.
@@ -37,8 +40,7 @@ Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
 
 Local Instance tit : config.checker_flags := config.type_in_type.
-#[global]
-Existing Instance Checker.default_fuel.
+Local Existing Instance Checker.default_fuel.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
@@ -217,8 +219,7 @@ Fixpoint refresh_universes (t : term) {struct t} :=
   | _ => t
   end.
 
-#[global]
-Instance tsl_fun : Translation
+Global Instance tsl_fun : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE t => t' <- tsl_rec fuel (fst ΣE) (snd ΣE) [] t ;;
                            ret (refresh_universes t');

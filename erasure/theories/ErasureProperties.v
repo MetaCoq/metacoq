@@ -152,6 +152,16 @@ Proof.   induction 1; cbn; try congruence.
   cbn. now rewrite EAstUtils.head_tApp.
 Qed.
 
+Lemma is_PrimApp_erases Σ Γ t t' :
+  Σ;;; Γ |- t ⇝ℇ t' ->
+  negb (isPrimApp t) -> negb (EAstUtils.isPrimApp t').
+Proof.   induction 1; cbn; try congruence.
+- unfold isPrimApp in *. clear IHerases2.
+  cbn. rewrite head_tapp. 
+  unfold EAstUtils.isPrimApp in *.
+  cbn. now rewrite EAstUtils.head_tApp.
+Qed.
+
 Lemma erases_isLambda {Σ Γ t u} :
   Σ ;;; Γ |- t ⇝ℇ u -> isLambda t -> EAst.isLambda u || EAstUtils.isBox u.
 Proof.
@@ -494,6 +504,7 @@ Section wellscoped.
   Fixpoint wellformed (t : term) : bool :=
   match t with
   | tRel i => true
+  | tPrim p => true
   | tEvar ev args => List.forallb (wellformed) args
   | tLambda _ N M => wellformed N && wellformed M
   | tApp u v => wellformed u && wellformed v
@@ -635,7 +646,7 @@ Proof.
     simpl; try solve [solve_all].
   - now apply Nat.ltb_lt.
   - eapply trans_lookup_constant in wfa; tea.
-  - eapply trans_lookup_constructor in wfa; tea.
+  - eapply trans_lookup_constructor in wfa; tea. now rewrite wfa.
   - move/andP: wfa => [] /andP[] lookup wfc wfbrs.
     apply/andP. split. apply/andP. split; eauto.
     eapply trans_lookup_inductive; tea.
@@ -660,7 +671,7 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
-    eapply b1; tea. now rewrite app_length fix_context_length.
+    eapply b1; tea. eapply b. now rewrite app_length fix_context_length.
   - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
@@ -677,7 +688,8 @@ Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ▷
 Proof.
   intros He.
   depind He. 
-  - clear -e0. now rewrite nth_error_nil in e0.
+  - clear -e2. now rewrite nth_error_nil in e2.
+  - clear -e2. now rewrite nth_error_nil in e2.
   - discriminate.
   - eapply IHHe2.
   - cbn in i. discriminate.
@@ -693,7 +705,8 @@ Proof.
   - depelim He1. clear -H. symmetry in H. elimtype False.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
-  - exists n, f. intuition auto.
+  - depelim He1. 
+  - exists n, f4. intuition auto.
   - depelim He1. clear -H. symmetry in H. elimtype False.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
@@ -709,6 +722,8 @@ Proof.
   depind He. 
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     econstructor; eauto. now eapply Ee.value_final, Ee.eval_to_value.
+  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
+    eapply Ee.eval_iota_block; eauto. now eapply Ee.value_final, Ee.eval_to_value.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     eapply Ee.eval_iota_sing; tea. now constructor.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
@@ -727,6 +742,8 @@ Proof.
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
+    now econstructor; eauto.
+  - pose proof (eval_trans' Hc He1); subst discr.
     eapply Ee.eval_iota_sing; tea.
   - pose proof (eval_trans' Hc He1); subst discr.
     eapply Ee.eval_cofix_case; tea.
@@ -739,13 +756,15 @@ Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} :
   Σ ⊢ E.tProj p c' ▷ e.
 Proof.
   intros He Hc.
-  depind He. 
+  depind He.
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
-    eapply Ee.eval_proj; tea.
+    now econstructor; tea. 
+  - pose proof (eval_trans' Hc He1); subst discr.
+    now econstructor; tea. 
   - pose proof (eval_trans' Hc He); subst discr.
-    eapply Ee.eval_proj_prop; tea.
+    now econstructor; tea. 
   - cbn in i. discriminate.
 Qed.
 

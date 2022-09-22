@@ -1,7 +1,3 @@
--Q ../template-coq/theories MetaCoq.Template
--Q ../pcuic/theories MetaCoq.PCUIC
--Q ../safechecker/theories MetaCoq.SafeChecker
--Q ../erasure/theories MetaCoq.Erasure
 -R . MetaCoq.TestSuite
 
 # list obtained with `ls -1 *.v`

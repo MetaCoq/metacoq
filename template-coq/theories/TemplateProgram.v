@@ -2,16 +2,16 @@
 
 From MetaCoq.Template Require Import
         utils
+        Transform
         Ast           (* The term AST *)
         Typing        (* Typing judgment *)
         config        (* Typing configuration *)
-        Transform
         WcbvEval
-        EtaExpand.
-
-Import Transform.
+        TemplateEnvMap.
 
 Definition template_program := Ast.Env.program.
+
+Definition template_program_env := (TemplateEnvMap.GlobalEnvMap.t * Ast.term).
 
 (** Well-typedness of template programs *)
 
@@ -24,36 +24,32 @@ Definition wt_template_program {cf : checker_flags} (p : template_program) :=
 Definition eval_template_program (p : Ast.Env.program) (v : Ast.term) :=
   ∥ WcbvEval.eval p.1 p.2 v ∥.
 
-(* Eta-expansion *)
+(** Well-typedness of template programs with efficient environments *)
 
-Definition template_expand_obseq (p p' : template_program) (v v' : Ast.term) :=
-  v' = EtaExpand.eta_expand p.1.(Ast.Env.declarations) [] v.
-  
-Local Obligation Tactic := idtac.
+Definition wt_template_program_env {cf : checker_flags} (p : template_program_env) :=
+  let Σ := Ast.Env.empty_ext p.1 in
+  wf_ext Σ × ∑ T, Σ ;;; [] |- p.2 : T.
 
-Program Definition template_eta_expand {cf : checker_flags} : self_transform template_program Ast.term eval_template_program eval_template_program :=
- {| name := "eta-expansion of template program";
-    pre p := ∥ wt_template_program p ∥;
-    transform p _ := EtaExpand.eta_expand_program p;
-    post p := ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p;
-    obseq := template_expand_obseq |}.
+(** Evaluation relation on template programs *)
+
+Definition eval_template_program_env (p : template_program_env) (v : Ast.term) :=
+  ∥ WcbvEval.eval p.1 p.2 v ∥.
+
+Import Transform.
+
+Lemma wt_template_program_fresh {cf : checker_flags} p : ∥ wt_template_program p ∥ -> EnvMap.EnvMap.fresh_globals (declarations p.1).
+Proof. intros [[wfΣ _]]. eapply TemplateEnvMap.wf_fresh_globals, wfΣ. Qed.
+
+Definition make_template_program_env {cf : checker_flags} (p : template_program) (wtp : ∥ wt_template_program p ∥) : template_program_env :=
+  (GlobalEnvMap.make p.1 (wt_template_program_fresh p wtp), p.2).
+
+Program Definition build_template_program_env {cf : checker_flags} :
+  Transform.t template_program template_program_env Ast.term Ast.term eval_template_program eval_template_program_env :=
+  {| name := "rebuilding environment lookup table";
+     pre p := ∥ wt_template_program p ∥ ;
+     transform p pre := make_template_program_env p pre;
+     post p := ∥ wt_template_program_env p ∥;
+     obseq g g' v v' := v = v' |}.
 Next Obligation.
-  intros cf [Σ t] [[wfext ht]].
-  cbn. split. split. todo "eta-expansion preserves wf ext and typing".
-  red.
-  destruct ht as [T ht].
-  split; cbn. eapply EtaExpand.eta_expand_global_env_expanded. apply wfext.
-  eapply EtaExpand.expanded_env_irrel.
-  epose proof (EtaExpand.eta_expand_expanded (Σ := Ast.Env.empty_ext Σ) [] [] t T).
-  forward H. apply wfext. specialize (H ht).
-  forward H by constructor. cbn in H.
-  destruct Σ; cbn in *. exact H.
-Qed.
-Next Obligation.
-  red. intros cf [Σ t] v [[]].
-  unfold eval_template_program.
-  cbn. intros ev.
-  exists (EtaExpand.eta_expand (Ast.Env.declarations Σ) [] v). split. split.
-  todo "eta-expansion preserves evaluation".
-  red. reflexivity.
+  cbn. exists v. cbn; split; auto.
 Qed.

@@ -1116,44 +1116,6 @@ Corollary R_Acc_aux :
 
   End reducewf.
 
-  (* Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π))) :
-           { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
-    reduce_stack_full Γ t π h :=
-      Fix_F (R := fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t')
-            (fun x => (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip x))
-               -> { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
-            (fun t' f => _) (x := (t, π)) _ _.
-  Next Obligation.
-    eapply _reduce_stack.
-    - assumption.
-    - intros t' π' h'.
-      eapply f.
-      + assumption.
-      + intros. specialize (h' _ wfΣ). simple inversion h'.
-        * cbn in H1. cbn in H2.
-          inversion H1. subst. inversion H2. subst. clear H1 H2.
-          intros.
-          destruct (hΣ _ wfΣ) as [wΣ].
-          eapply cored_welltyped.
-          ++ eassumption.
-          ++ eapply H;  eauto.
-          ++ eauto.
-        * cbn in H1. cbn in H2.
-          inversion H1. subst. inversion H2. subst. clear H1 H2.
-          intros. cbn. rewrite H3. eauto.
-  Defined.
-  Next Obligation.
-    revert h. generalize (t, π).
-    refine (Acc_intro_generator
-              (R:=fun x y => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ x y)
-              (P:=fun x => forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip x))
-              (fun x y Px Hy => _) 1000 _); intros.
-    - simpl in *. eapply welltyped_R_pres; eauto.
-    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-      destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
-  Defined. *)
-
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
@@ -1262,44 +1224,6 @@ Corollary R_Acc_aux :
     refine (reduce_stack_sound _ _ _ _ [] _); eauto.
   Qed.
 
-  (* (* Potentially hard? Ok with SN? *) *)
-  (* Lemma Ind_canonicity : *)
-  (*   forall Γ ind uni args t, *)
-  (*     Σ ;;; Γ |- t : mkApps (tInd ind uni) args -> *)
-  (*     RedFlags.iota flags -> *)
-  (*     let '(u,l) := decompose_app t in *)
-  (*     (isLambda u -> l = []) -> *)
-  (*     whnf flags Σ Γ u -> *)
-  (*     discr_construct u -> *)
-  (*     whne flags Σ Γ u. *)
-  (* Proof. *)
-  (*   intros Γ ind uni args t ht hiota. *)
-  (*   case_eq (decompose_app t). *)
-  (*   intros u l e hl h d. *)
-  (*   induction h. *)
-  (*   - assumption. *)
-  (*   - apply decompose_app_inv in e. subst. *)
-  (*     (* Inversion on ht *) *)
-  (*     admit. *)
-  (*   - apply decompose_app_inv in e. subst. *)
-  (*     (* Inversion on ht *) *)
-  (*     admit. *)
-  (*   - cbn in hl. specialize (hl eq_refl). subst. *)
-  (*     apply decompose_app_inv in e. subst. cbn in ht. *)
-  (*     (* Inversion on ht *) *)
-  (*     admit. *)
-  (*   - apply decompose_app_eq_mkApps in e. subst. *)
-  (*     cbn in d. simp discr_construct in d. easy. *)
-  (*   - apply decompose_app_inv in e. subst. *)
-  (*     (* Inversion on ht *) *)
-  (*     admit. *)
-  (*   - apply decompose_app_inv in e. subst. *)
-  (*     (* Not very clear now. *)
-  (*        Perhaps we ought to show whnf of the mkApps entirely. *)
-  (*        And have a special whne case for Fix that don't reduce? *)
-  (*      *) *)
-  (* Abort. *)
-
   Scheme Acc_ind' := Induction for Acc Sort Prop.
 
   Lemma Fix_F_prop :
@@ -1390,6 +1314,8 @@ Corollary R_Acc_aux :
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
+    - eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? [? []]]); tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Definition isCoFix_app t :=
@@ -1421,7 +1347,8 @@ Corollary R_Acc_aux :
     - exfalso; eapply invert_fix_ind; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
-    (* - now eapply inversion_Prim in typ. *)
+    - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
@@ -1585,13 +1512,21 @@ Corollary R_Acc_aux :
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
           eapply PCUICConversion.ws_cumul_pb_Sort_Prod_inv; eauto.
-      (* + pose proof hΣ.
-        sq.
-        exfalso.
-        destruct (hΣ _ wfΣ) as [hΣ].
-        specialize (h _ wfΣ).
-        eapply welltyped_context in h as [s Hs]; tas.
-        now eapply inversion_Prim in Hs. *)
+        + unfold zipp.
+          case_eq (decompose_stack π). intros l ρ e.
+          apply decompose_stack_eq in e. subst.
+          destruct l.
+          * simpl. eauto with pcuic.
+          * exfalso.
+            destruct (hΣ _ wfΣ) as [hΣ].
+            cbn in h. zip fold in h.
+            specialize (h _ wfΣ).
+            apply welltyped_context in h; auto.
+            simpl in h. rewrite stack_context_appstack in h.
+            destruct h as [T h].
+            apply inversion_App in h as (?&?&?&?&?); auto.
+            apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto.
+            eapply PCUICCanonicity.invert_cumul_axiom_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -2165,57 +2100,5 @@ Section ReduceFns.
 
   Local Instance wellfounded Σ wfΣ : WellFounded (@hnf_subterm_rel _ Σ) :=
     @wf_hnf_subterm _ _ (heΣ _ X Σ wfΣ).
-
-    (** not used anymore **)
-    (*
-  Equations? (noeqns) reduce_to_arity (Γ : context) (T : term)
-    (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ T)
-    : (conv_arity Γ T) + {forall Σ (wfΣ : abstract_env_ext_rel X Σ), ~ Is_conv_to_Arity Σ Γ T}
-    by wf ((Γ ; T ; wt) : (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t)) hnf_subterm_rel  :=
-    reduce_to_arity Γ T wt with inspect (hnf Γ T wt) :=
-      | exist Thnf eqhnf with view_prod_sortc Thnf := {
-        | view_prod_sort_prod na A B with reduce_to_arity (Γ,, vass na A) B _ := {
-          | inleft car => inleft {| conv_ar_context := (na, A) :: conv_ar_context car;
-                                    conv_ar_univ := conv_ar_univ car |};
-          | inright nocar => inright _
-          };
-        | view_prod_sort_sort u => inleft {| conv_ar_context := [];
-                                             conv_ar_univ := u |};
-        | view_prod_sort_other Thnf notprod notsort => inright _
-        }.
-  Proof.
-    all: pose proof (@hnf_sound Γ T wt) as [r].
-    all: rewrite <- ?eqhnf in r.
-    all: destruct HΣ as [wf].
-    - destruct wt as (?&typ).
-      eapply subject_reduction_closed in r; eauto.
-      apply inversion_Prod in r as (?&?&?&?&?); auto.
-      econstructor; eauto.
-    - constructor.
-      eexists _; split. 1:eapply r.
-      unshelve eexists _; [constructor; constructor|]; auto.
-    - destruct car as [c_ar c_univ [c_red]]; cbn.
-      constructor.
-      etransitivity; eauto.
-      eapply closed_red_prod_codom; eauto.
-    - eapply Is_conv_to_Arity_red in H as (?&[r']&isar); eauto.
-      apply invert_red_prod in r' as (?&?&[-> ? ?]); auto.
-      contradiction nocar.
-      eexists; eauto using sq.
-    - constructor; auto.
-    - pose proof (@hnf_complete Γ T wt) as [w].
-      destruct HΣ.
-      apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
-      + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
-        apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
-        eapply whnf_red_inv in r1; eauto.
-        depelim r1.
-        rewrite H in notprod; auto.
-      + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
-        apply invert_red_sort in r2 as ->.
-        eapply whnf_red_inv in r1; eauto.
-        depelim r1.
-        rewrite H in notsort; cbn in *; auto.
-  Qed. *)
 
 End ReduceFns.

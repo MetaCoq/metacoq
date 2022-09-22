@@ -283,10 +283,17 @@ Definition isCoFix t :=
 
 Definition isConstruct t :=
   match t with
-  | tConstruct _ _ => true
+  | tConstruct _ _ _ => true
   | _ => false
   end.
 
+Definition isPrim t :=
+  match t with
+  | tPrim _ => true
+  | _ => false
+  end.
+
+  
 Definition isBox t :=
   match t with
   | tBox => true
@@ -301,11 +308,14 @@ Definition is_box c :=
 
 Definition isFixApp t := isFix (head t).
 Definition isConstructApp t := isConstruct (head t).
+Definition isPrimApp t := isPrim (head t).
 
 Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
 Proof. rewrite /isFixApp head_mkApps //. Qed.
 Lemma isConstructApp_mkApps f l : isConstructApp (mkApps f l) = isConstructApp f.
 Proof. rewrite /isConstructApp head_mkApps //. Qed.
+Lemma isPrimApp_mkApps f l : isPrimApp (mkApps f l) = isPrimApp f.
+Proof. rewrite /isPrimApp head_mkApps //. Qed.
 
 Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
 Proof.
@@ -323,10 +333,14 @@ Lemma nisFix_mkApps f args : ~~ isFix f -> ~~ isFix (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisBox_mkApps f args : ~~ isBox f -> ~~ isBox (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
+Lemma nisPrim_mkApps f args : ~~ isPrim f -> ~~ isPrim (mkApps f args).
+Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
   "(" ^ string_of_name (dname def) ^ "," ^ f (dbody def) ^ ","
       ^ string_of_nat (rarg def) ^ ")".
+
+Definition maybe_string_of_list {A} f (l : list A) := match l with [] => "" | _ => string_of_list f l end.
 
 Fixpoint string_of_term (t : term) : string :=
   match t with
@@ -338,7 +352,7 @@ Fixpoint string_of_term (t : term) : string :=
   | tLetIn na b t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b ^ "," ^ string_of_term t ^ ")"
   | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_term l ^ ")"
   | tConst c => "Const(" ^ string_of_kername c ^ ")"
-  | tConstruct i n => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ")"
+  | tConstruct i n args => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ maybe_string_of_list string_of_term args ^ ")"
   | tCase (ind, i) t brs =>
     "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
             ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
@@ -347,15 +361,17 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  (* | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")" *)
+  | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")"
   end.
 
 (** Compute all the global environment dependencies of the term *)
 
 Fixpoint term_global_deps (t : EAst.term) :=
   match t with
-  | EAst.tConst kn
-  | EAst.tConstruct {| inductive_mind := kn |} _ => KernameSet.singleton kn
+  | EAst.tConst kn => KernameSet.singleton kn
+  | EAst.tConstruct {| inductive_mind := kn |} _ args =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps x) acc) args
+          (KernameSet.singleton kn)
   | EAst.tLambda _ x => term_global_deps x
   | EAst.tApp x y
   | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)

@@ -11,6 +11,7 @@ PeanoNat
 Specif
 Basics
 BinPosDef
+BinNums
 BinPos
 BinNat
 BinInt
@@ -42,7 +43,6 @@ MSetDecide
 MSetList
 MSetAVL
 MSetProperties
-BinNums
 EqDec
 CRelationClasses
 Compare_dec
@@ -77,6 +77,7 @@ Signature
 All_Forall
 Config0
 Kernames
+Primitive
 BasicAst
 Universes0
 Environment
@@ -91,6 +92,7 @@ Pretty
 Common0
 Extractable
 Logic0
+EnvMap
 
 Tm_util
 Reification
@@ -102,8 +104,8 @@ Plugin_core
 Run_extractable
 
 Transform
+TemplateEnvMap
 TermEquality
 Typing0
-EtaExpand
 TemplateProgram
 

@@ -1,18 +1,11 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Ast Environment monad_utils.
+From MetaCoq.Template Require Import utils BasicAst Primitive Ast Environment monad_utils.
 Require Import ssreflect ssrbool.
 Require Import ZArith.
 
 (** Raw term printing *)
-
-Definition string_of_prim_int (i:Uint63.int) : string :=
-  (* Better? DecimalString.NilZero.string_of_uint (BinNat.N.to_uint (BinInt.Z.to_N (Uint63.to_Z i))). ? *)
-  string_of_Z (Numbers.Cyclic.Int63.Uint63.to_Z i).
-
-Definition string_of_float (f : PrimFloat.float) :=
-  "<float>".
 
 Module string_of_term_tree.
   Import bytestring.Tree.
@@ -71,8 +64,8 @@ Module string_of_term_tree.
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
-  | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
 End string_of_term_tree.
 
@@ -192,7 +185,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
   | O => t
   | S n => match t with
           | tProd _ _ B => remove_arity n B
-          | _ => t (* todo *)
+          | _ => t (* TODO *)
           end
   end.
 
@@ -258,7 +251,7 @@ Fixpoint strip_casts t :=
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
-  (* | tInt _ | tFloat _ => t *)
+  | tInt _ | tFloat _ => t
   end.
   
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

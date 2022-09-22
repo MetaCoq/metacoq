@@ -325,7 +325,7 @@ Proof.
       
       invs H2.
       -- exists x2. split; eauto.
-         constructor. econstructor. eauto. 2:eauto.
+         constructor. econstructor. eauto. eauto. 2:eauto.
          4:{ unfold EGlobalEnv.iota_red.
           rewrite ECSubst.substl_subst //.
           rewrite forallb_rev forallb_skipn //.
@@ -1021,7 +1021,7 @@ Proof.
         eapply erases_deps_eval in Hed1; tea.
         eapply erases_deps_mkApps_inv in Hed1 as [].
         depelim H8.
-        constructor. eapply Ee.eval_construct; tea.
+        constructor. eapply Ee.eval_construct; tea. eauto.
         eapply (EGlobalEnv.declared_constructor_lookup H9).
         rewrite -(Forall2_length H7).
         rewrite /EAst.cstr_arity.
@@ -1073,13 +1073,17 @@ Proof.
           ++ cbn. invs H1. cbn in *.
             eapply ssrbool.negbTE, is_FixApp_erases.
             econstructor; eauto.
-            rewrite orb_false_r !negb_or in i. now move/andP: i => [].
+            rewrite orb_false_r !negb_or in i.
+            now move/andP: i => [] /andP [].
           ++ cbn in *.
             invs H1. invs i.
         -- eauto.
         -- rewrite !negb_or in i.
            rtoProp; intuition auto.
-           eapply is_ConstructApp_erases in H8; tea.
+           eapply is_ConstructApp_erases in H9; tea.
+           now move/negbTE: H9.
+        -- rewrite !negb_or in i. rtoProp; intuition auto.
+           eapply is_PrimApp_erases in H8; tea.
            now move/negbTE: H8.
     + exists EAst.tBox. split. 2: now constructor; econstructor.
       econstructor.
@@ -1102,7 +1106,8 @@ Proof.
       * eexists. split. 2: now constructor; econstructor.
         econstructor; eauto.
     + invs He.
-      * eexists. split. 2: now constructor; econstructor.
+      * eexists. split. 2:{ constructor. eapply EWcbvEval.eval_atom. cbn [EWcbvEval.atom].
+        depelim Hed. eapply EGlobalEnv.declared_constructor_lookup in H0. now rewrite H0. }
         econstructor; eauto.
       * eexists. split. 2: now constructor; econstructor.
         eauto.
@@ -1114,7 +1119,11 @@ Proof.
       * eexists. split; eauto. now constructor; econstructor.
       * eexists. split. 2: now constructor; econstructor.
         econstructor; eauto.
-        Unshelve. all: repeat econstructor.      
+        Unshelve. all: repeat econstructor.
+    + invs He.
+      * eexists. split; eauto. now constructor; econstructor.
+      * eexists. split. 2: now constructor; econstructor.
+        econstructor; eauto.
 Qed.
 
 (* Print Assumptions erases_correct. *)
@@ -1137,17 +1146,19 @@ Proof.
     cbn. apply IHer, wf.
 Qed.
 
-Lemma erases_global_decls_fresh univs {Σ : global_declarations} kn Σ' : fresh_global kn Σ -> erases_global_decls univs Σ Σ' -> EGlobalEnv.fresh_global kn Σ'.
+Lemma erases_global_decls_fresh univs retro {Σ : global_declarations} kn Σ' : fresh_global kn Σ -> 
+  erases_global_decls univs retro Σ Σ' -> EGlobalEnv.fresh_global kn Σ'.
 Proof.
   induction 2; constructor; eauto; now depelim H.
 Qed.
 
 Import EWellformed.
 
-Lemma erases_mutual_inductive_body_wf (efl := all_env_flags) {Σ univs Σ' kn mib mib'} :
+Lemma erases_mutual_inductive_body_wf (efl := all_env_flags) {Σ univs retro Σ' kn mib mib'} :
   erases_mutual_inductive_body mib mib' ->
   let udecl := PCUICLookup.universes_decl_of_decl (InductiveDecl mib) in
-  on_global_decl cumulSpec0 (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
+  on_global_decl cumulSpec0 (PCUICEnvTyping.lift_typing typing) 
+    ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl) kn
        (InductiveDecl mib) ->
   wf_global_decl Σ' (E.InductiveDecl mib').
 Proof.

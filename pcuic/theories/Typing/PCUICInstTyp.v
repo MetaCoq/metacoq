@@ -572,6 +572,9 @@ Proof.
     * now apply inst_wf_cofixpoint.
     * reflexivity.
 
+  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv Δ σ hΔ hσ.
+    cbn. econstructor; tea.
+    
   - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht hB ihB hcum Δ σ hΔ hσ.
     eapply type_Cumul.
     + eapply iht. all: auto.

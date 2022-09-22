@@ -51,6 +51,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = (kername * global_decl) list
+  type quoted_retroknowledge = Environment.Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -122,8 +123,8 @@ struct
     | Coq_tProj (a,b) -> ACoq_tProj (a,b)
     | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
-    (* | Coq_tInt i -> ACoq_tInt i *)
-    (* | Coq_tFloat f -> ACoq_tFloat f *)
+    | Coq_tInt i -> ACoq_tInt i
+    | Coq_tFloat f -> ACoq_tFloat f
 
   let unquote_string = Caml_bytestring.caml_string_of_bytestring
 

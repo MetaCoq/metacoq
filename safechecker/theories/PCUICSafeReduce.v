@@ -190,9 +190,9 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
 (*  Local Definition gΣ := abstract_env_ext_rel Σ. *)
 
@@ -1820,7 +1820,7 @@ End Reduce.
 Section ReduceFns.
 
   Context {cf : checker_flags} {no : normalizing_flags}
-          {X_type : abstract_env_ext_impl} {X : X_type.π1}.
+          {X_type : abstract_env_impl} {X : X_type.π2.π1}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.

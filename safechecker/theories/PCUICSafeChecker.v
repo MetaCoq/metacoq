@@ -271,9 +271,7 @@ Section CheckEnv.
 
   Context (X_impl : abstract_env_impl).
 
-  Definition X_ext_impl : abstract_env_ext_impl := X_impl.π2.π1.
-
-  Definition X_env_ext_type := X_ext_impl.π1.
+  Definition X_env_ext_type := X_impl.π2.π1.
 
   Definition X_env_type := X_impl.π1.
 
@@ -292,14 +290,14 @@ Section CheckEnv.
 
   Definition check_wf_type (kn : kername) X_ext t :
     EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ isType Σ [] t ∥) :=
-    wrap_error _ X_ext (string_of_kername kn) (check_isType X_ext_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
+    wrap_error _ X_ext (string_of_kername kn) (check_isType X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
 
   Definition check_wf_judgement kn X_ext t ty :
   EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; [] |- t : ty ∥)
-    :=  wrap_error _ X_ext (string_of_kername kn) (check X_ext_impl X_ext [] (fun _ _ => sq_wfl_nil _) t ty).
+    :=  wrap_error _ X_ext (string_of_kername kn) (check X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t ty).
 
   Definition infer_term X_ext t :=
-    wrap_error _ X_ext "toplevel term" (infer X_ext_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
+    wrap_error _ X_ext "toplevel term" (infer X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
 
   Definition abstract_env_ext_empty := @abstract_env_empty_ext _ X_env_type X_env_ext_type _ abstract_env_empty.
 
@@ -432,7 +430,7 @@ Section CheckEnv.
   Equations infer_typing X_ext Γ
       (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
       typing_result (∑ T, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥) :=
-    infer_typing X_ext Γ wfΓ t := typing_error_forget (infer X_ext_impl X_ext Γ wfΓ t) ;;  ret _.
+    infer_typing X_ext Γ wfΓ t := typing_error_forget (infer X_impl X_ext Γ wfΓ t) ;;  ret _.
   Next Obligation.
     exists y. intros. 
     pose proof (hΣ _ _ H). specialize_Σ H. sq. cbn in *. now apply infering_typing.
@@ -440,16 +438,16 @@ Section CheckEnv.
 
   Definition check_type_wf_env X_ext Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥)
       t T : typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥) :=
-    check X_ext_impl X_ext Γ wfΓ t T.
+    check X_impl X_ext Γ wfΓ t T.
 
   Definition infer_wf_env X_ext Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
     typing_result (∑ T, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t ▹ T ∥) :=
-    infer X_ext_impl X_ext Γ wfΓ t.
+    infer X_impl X_ext Γ wfΓ t.
 
   Equations infer_type_wf_env X_ext Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
     typing_result (∑ u, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : tSort u∥) :=
     infer_type_wf_env X_ext Γ wfΓ t :=
-      '(y ; H) <- typing_error_forget (infer_type X_ext_impl X_ext (infer X_ext_impl X_ext) Γ wfΓ t) ;;
+      '(y ; H) <- typing_error_forget (infer_type X_impl X_ext (infer X_impl X_ext) Γ wfΓ t) ;;
       ret (y ; _).
   Next Obligation.
     intros. pose proof (abstract_env_ext_wf _ H0). specialize_Σ H0. 
@@ -458,7 +456,7 @@ Section CheckEnv.
   
   Definition check_context_wf_env X_ext (Γ : context) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :=
-    check_context X_ext_impl X_ext (infer X_ext_impl X_ext) Γ.
+    check_context X_impl X_ext (infer X_impl X_ext) Γ.
 
   (* Notation " ' pat <- m ;; f " := (bind m (fun pat => f)) (pat pattern, right associativity, at level 100, m at next level). *)
 
@@ -553,16 +551,16 @@ Section CheckEnv.
     (forall Σ, abstract_env_ext_rel X_ext Σ -> welltyped Σ Γ t) ->
     (forall Σ, abstract_env_ext_rel X_ext Σ -> welltyped Σ Γ u) ->
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ ->  ∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
-    convert X_ext_impl X_ext le Γ t u.
+    convert X_impl X_ext le Γ t u.
 
   Program Definition wf_env_check_cumul_decl X_ext le Γ d d' :=
-    check_ws_cumul_pb_decl X_ext_impl X_ext le Γ d d'.
+    check_ws_cumul_pb_decl X_impl X_ext le Γ d d'.
 
   Program Fixpoint wf_env_check_ws_cumul_ctx (le : conv_pb) X_ext Γ Δ Δ' 
     (wfΔ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (Γ ,,, Δ) ∥)
     (wfΔ' : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (Γ ,,, Δ') ∥) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
-    check_ws_cumul_ctx X_ext_impl X_ext le Γ Δ Δ' wfΔ wfΔ'.
+    check_ws_cumul_ctx X_impl X_ext le Γ Δ Δ' wfΔ wfΔ'.
 
   Notation eqb_term_conv X conv_pb := (eqb_term_upto_univ (abstract_env_eq X) (abstract_env_conv_pb_relb X conv_pb) (abstract_env_compare_global_instance X)).
      

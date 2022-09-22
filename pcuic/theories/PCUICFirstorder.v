@@ -393,11 +393,12 @@ Proof.
   - cbn => //.
   - cbn. destruct a => //. intros gs ong.
     depelim ong. specialize (IHΣ'' _ ong).
+    destruct o as [f ? ? ?]. 
     destruct g => //.
     * intros hl. specialize (IHΣ'' hl).
       eapply plookup_env_Some_not_fresh in hl.
       cbn. case: eqb_spec.
-      + intros <-. apply fresh_global_app in f as [].
+      + intros <-.  apply fresh_global_app in f as [].
         contradiction.
       + now intros neq.
     * intros hl. specialize (IHΣ'' hl).

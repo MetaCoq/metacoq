@@ -123,7 +123,7 @@ Section Wcbv.
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) res :
     decl.(cst_body) = Some body ->
-    eval Γ body res ->
+    eval [] body res ->
     eval Γ (tConst c) res
 
   (** Constructor congruence: we do not allow over-applications *)
@@ -732,6 +732,12 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
   | _ => u
   end.
 
+Fixpoint annotate_env Γ (Σ : global_declarations) :=
+  match Σ with
+  | (na, ConstantDecl (Build_constant_body (Some b))) :: Σ => (na, ConstantDecl (Build_constant_body (Some (annotate Γ b)))) :: annotate_env (string_of_kername na :: Γ) Σ
+  | d :: Σ => d :: annotate_env Γ Σ
+  | nil => nil
+  end.
 
 Definition extraction_term_flags := 
   {| has_tBox := true
@@ -1108,29 +1114,6 @@ Proof.
     + eapply IHargs; eauto. lia.
     + eauto.
 Qed.
-(* 
-Local Hint Constructors eval : core.
-
-Lemma eval_global_weaken Σ E t v E' : 
-  eval Σ E t v -> ∑ v', eval Σ (E ++ E') t v' × (forall res, ⊩ v ~ res -> ⊩ v' ~ res).
-Proof.
-  intros H.
-  induction H.
-  - exists v. split. econstructor. admit. eauto.
-  - edestruct IHeval1 as (? & ? & hres).
-    edestruct IHeval2 as (? & ? & ?).
-    specialize (hres tBox). forward hres. econstructor. invs hres.
-    eauto.
-  - edestruct IHeval1 as (? & ? & hres1). 
-    edestruct IHeval2 as (? & ? & hres2).
-
-    eexists. split.
-    
-  
-  eexists. split. econstructor.
-    eexists. split; eauto. econstructor.
-    
-    Admitted.     *)
 
 Lemma implication (Σ Σ' : global_context) E s t u :
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
@@ -1256,15 +1239,14 @@ Proof.
             destruct (eqb_spec y.1 x.1); try congruence.
       }     
       edestruct IHHeval as (v & Hv1 & Hv2). 3: eauto. econstructor. cbn. eauto.
-      eapply eval_global_weaken in Hv2 as (v' & H1' & H2'); eauto. cbn in H1'.
-      eexists. split. eapply H2'. econstructor. eauto. eauto. eauto.
+      eexists. split. eauto. econstructor; eauto.
   - invs Hrep. invs H0.
   - invs Hrep.
     + invs H0. eexists. split. 2:{ econstructor. eauto. }
       econstructor. induction a in vs, H3 |- *.
       * invs H3. econstructor.
       * invs H3. econstructor. eapply eval_represents_value; eauto. eauto.
-    + assert (∑ vs, All2 (fun v t => ⊩ v ~ t) vs args' × All2 (fun v u => eval Σ E u v) vs args0) as (vs & Hvs & Hvs').
+    + assert (∑ vs, All2 (fun v t => ⊩ v ~ t) vs args' × All2 (fun v u => eval Σ' E u v) vs args0) as (vs & Hvs & Hvs').
       * cbn in Hsunny. rtoProp. induction a in iha, H3, args0, Hsunny |- *.
         -- invs H3. exists []. split; econstructor.
         -- invs H3. invs iha.
@@ -1272,12 +1254,15 @@ Proof.
            cbn in Hsunny; now rtoProp.
            edestruct X. 3: eauto. eauto. eauto. cbn in Hsunny; now rtoProp.
            eexists (_ :: _). destruct p. split. econstructor; eauto.
-           econstructor; eauto. 
+           econstructor; eauto.
       * eexists. split. econstructor. eapply All2_All2_Set; eauto.
         eapply eval_construct_All2; eauto.
-        2:{ solve_all. clear - Hvs'. induction Hvs'; econstructor; eauto. }
+        
+        3:{ solve_all. clear - Hvs'. induction Hvs'; econstructor; eauto. }
+        todo "lookyp".
+        
         eapply All2_length in Hvs'; eapply All2_length in Hvs.
-        clear iha. eapply All2_Set_All2, All2_length in a. lia.
+        clear iha. eapply All2_Set_All2, All2_length in a. todo "lookyp".
   - invs Hrep.
     + invs H0.
     + cbn in Hsunny. rtoProp.
@@ -1298,4 +1283,4 @@ Proof.
       eapply All2_Set_All2 in H, H0. eapply All2_All2_Set. solve_all.
       clear - H H0. revert H. todo "fix".
       Unshelve. all: todo "evar".
-Qed.
+Admitted.

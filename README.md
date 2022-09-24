@@ -202,7 +202,7 @@ Examples of translations built on top of this:
   Part 3 describes in detail the verified reduction, conversion and type checker.
 
 - ["Coq Coq Codet! Towards a Verified Toolchain for Coq in
-  MetaCoq"](http://www.irif.fr/~sozeau/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
+  MetaCoq"](https://sozeau.gitlabpages.inria.fr/www/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau and
   Théo Winterhalter. Abstract and
   [presentation](http://www.ps.uni-saarland.de/~forster/downloads/slides-coqws19.pdf)

@@ -1083,7 +1083,7 @@ Proof.
     2: eapply Forall_impl. 2: eauto.
     2: { cbn. intros [] ?. cbn in *.  exact H0. }
     cbn in *. destruct decl; cbn in *.
-    subst. todo "sunny constant".
+    subst. eauto.
   - solve_all. rename X into IHeval1, X0 into IHeval2. eapply All_app in Hsunny as [H1 H2].
     forward IHeval1; solve_all; eauto. invs IHeval1.
     econstructor. eapply All_app_inv; eauto.
@@ -1091,13 +1091,6 @@ Proof.
     eapply IHeval2; solve_all.
   - cbn. econstructor. econstructor.
 Qed.
-
-(* TODO
-- red_iota
-- fix
-- sunny constants
-- freshness in represents_subst
-*)
 
 Lemma eval_construct_All2 Σ E ind c args vs mdecl idecl cdecl :
   lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
@@ -1259,10 +1252,10 @@ Proof.
         eapply eval_construct_All2; eauto.
         
         3:{ solve_all. clear - Hvs'. induction Hvs'; econstructor; eauto. }
-        todo "lookyp".
+        todo "lookup".
         
         eapply All2_length in Hvs'; eapply All2_length in Hvs.
-        clear iha. eapply All2_Set_All2, All2_length in a. todo "lookyp".
+        clear iha. eapply All2_Set_All2, All2_length in a. todo "lookup".
   - invs Hrep.
     + invs H0.
     + cbn in Hsunny. rtoProp.

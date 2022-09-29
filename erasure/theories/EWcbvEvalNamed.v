@@ -106,10 +106,12 @@ Section Wcbv.
     #|args| = #|br.1| ->
     Forall2 (fun x y => x = nNamed y) br.1 nms ->
     eval (add_multiple (List.rev nms) args Γ) br.2 res ->
+    NoDup nms ->
     eval Γ (tCase (ind, 0) discr brs) res
 
   (** Fix unfolding, without guard *)
   | eval_fix_unfold f mfix idx a av fn res Γ' Γ'' na na' b :
+    NoDup (map fst mfix) ->
     eval Γ f (vRecClos mfix idx Γ') ->
     eval Γ a av ->
     eval (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') fn (vClos na' b Γ'') ->
@@ -117,6 +119,7 @@ Section Wcbv.
     eval Γ (tApp f a) res
 
   | eval_fix mfix idx nms : 
+    NoDup nms ->
     Forall2 (fun d n => nNamed n = d.(dname)) mfix nms ->
     eval Γ (tFix mfix idx) (vRecClos (map2 (fun n d => (n, d.(dbody))) nms mfix) idx Γ)
 
@@ -162,6 +165,7 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
   (All2_Set (fun b b' => {nms & (All2_Set (fun n n' => n = nNamed n') b.1 nms × ((nms ++ Γ) ;;; E ⊩ (b.2) ~ (b'.2)) × NoDup nms)}) brs brs') ->
   Γ ;;; E  ⊩ tCase ind discr brs ~ tCase ind discr' brs'
 | represents_tFix Γ E mfix mfix' idx nms  :
+  NoDup nms ->
   All2_Set (fun d n => d.(dname) = nNamed n) mfix nms ->
   All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
   Γ ;;; E ⊩ tFix mfix idx ~ tFix mfix' idx
@@ -231,7 +235,7 @@ Program Definition represents_ind :=
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
-             (idx : nat) (nms : list ident) (a : All2_Set
+             (idx : nat) (nms : list ident) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms) 
              (a0 : All2_Set
@@ -239,7 +243,7 @@ Program Definition represents_ind :=
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms a a0)) 
+           (represents_tFix Γ E mfix mfix' idx nms Hnodup a a0)) 
      (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
        ∀ (na : ident) 
          (E : environment) 
@@ -283,8 +287,8 @@ Program Definition represents_ind :=
          f6 Γ E ind i args args' a _
      | represents_tCase Γ E ind discr discr' brs brs' r0 Heq a =>
          f7 Γ E ind discr discr' brs brs' r0 (F Γ E discr discr' r0) Heq a _
-     | represents_tFix Γ E mfix mfix' idx nms a a0 =>
-         f8 Γ E mfix mfix' idx nms a a0 _
+     | represents_tFix Γ E mfix mfix' idx nms Hnodup a a0 =>
+         f8 Γ E mfix mfix' idx nms Hnodup a a0 _
      end
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
      P0 v t r :=
@@ -375,7 +379,7 @@ Program Definition represents_value_ind :=
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
-             (idx : nat) (nms : list ident) (a : All2_Set
+             (idx : nat) (nms : list ident) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms) 
              (a0 : All2_Set
@@ -383,7 +387,7 @@ Program Definition represents_value_ind :=
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms a a0)) 
+           (represents_tFix Γ E mfix mfix' idx nms Hnodup a a0)) 
      (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
        ∀ (na : ident) 
          (E : environment) 
@@ -431,8 +435,8 @@ Program Definition represents_value_ind :=
          f6 Γ E ind i args args' a _
      | represents_tCase Γ E ind discr discr' brs brs' r0 Heq a =>
          f7 Γ E ind discr discr' brs brs' r0 (F Γ E discr discr' r0) Heq a _
-     | represents_tFix Γ E mfix mfix' idx nms a a0 =>
-         f8 Γ E mfix mfix' idx nms a a0 _
+     | represents_tFix Γ E mfix mfix' idx nms Hnodup a a0 =>
+         f8 Γ E mfix mfix' idx nms Hnodup a a0 _
      end
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
      P0 v t r :=
@@ -523,7 +527,7 @@ Definition rep_ind :=
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
-             (idx : nat) (nms : list ident) (a : All2_Set
+             (idx : nat) (nms : list ident) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms) 
              (a0 : All2_Set
@@ -531,7 +535,7 @@ Definition rep_ind :=
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms a a0)) 
+           (represents_tFix Γ E mfix mfix' idx nms Hnodup a a0)) 
      (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
        ∀ (na : ident) 
          (E : environment) 
@@ -763,6 +767,26 @@ Definition extraction_env_flags :=
 
 Local Existing Instance extraction_env_flags.
 
+Lemma NoDup_gen_many_fresh Γ l :
+  NoDup (gen_many_fresh Γ l) /\ forall x, In x (gen_many_fresh Γ l) -> ~ In x Γ.
+Proof.
+  induction l as [ | []] in Γ |- *; cbn.
+  - split. econstructor. firstorder.
+  - econstructor; eauto. econstructor.
+    + intros H % IHl. eapply H. now left.
+    + eapply IHl.
+    + intros x [<- | ?]. 1: eapply gen_fresh_fresh. eapply IHl in H. firstorder.
+  - destruct in_dec; cbn.
+    + split. econstructor.
+      * intros H % IHl. eapply H. now left.
+      * eapply IHl.
+      * intros x [<- | ?]. 1: eapply gen_fresh_fresh. eapply IHl in H. firstorder.
+    + split. econstructor.
+      * intros H % IHl. eapply H. now left.
+      * eapply IHl.
+      * intros x [<- | ?]. 1: eauto. eapply IHl in H. firstorder.
+Qed.
+
 Lemma nclosed_represents Σ Γ E s :
   wellformed Σ #|Γ| s -> Γ ;;; E ⊩ annotate Γ s ~ s.
 Proof.
@@ -780,8 +804,9 @@ Proof.
     + eapply All2_All2_Set. solve_all. now eapply All2_refl.
     + split.
       * eapply p. rewrite app_length gen_many_fresh_length. eapply p.
-      * todo "nodup".      
+      * eapply NoDup_gen_many_fresh.
   - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
+    1:{ eapply NoDup_gen_many_fresh. }
     2:{ unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H.
         generalize (map_length dname m).
         generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H, nms, Hnms |- *.        
@@ -1290,9 +1315,8 @@ Proof.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.
     + solve_all. eexists. split. 2: econstructor; solve_all.
-      instantiate (1 := nms).
-      econstructor. 2:{ eapply All2_Set_All2 in H. solve_all. }
-      eapply All2_Set_All2 in H, H0. eapply All2_All2_Set. solve_all.
-      clear - H H0. revert H. todo "fix".
+      econstructor. 2:{ eapply All2_Set_All2 in H0. solve_all. }
+      eapply All2_Set_All2 in H0, H1. eapply All2_All2_Set. solve_all.
+      clear - H H0 H1. revert H. todo "fix".
       Unshelve. all: todo "evar".
 Admitted.

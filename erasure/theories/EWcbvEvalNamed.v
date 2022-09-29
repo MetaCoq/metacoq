@@ -98,15 +98,15 @@ Section Wcbv.
     eval Γ (tLetIn (nNamed na) b0 b1) res
 
   (** Case *)
-  | eval_iota_block ind pars cdecl discr c args brs br res nms :
+  | eval_iota_block ind cdecl discr c args brs br res nms :
     eval Γ discr (vConstruct ind c args) ->
-    constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl) ->
+    constructor_isprop_pars_decl Σ ind c = Some (false, 0, cdecl) ->
     nth_error brs c = Some br ->
-    #|args| = pars + cdecl.(cstr_nargs) ->
-            #|skipn pars args| = #|br.1| ->
-                                         Forall2 (fun x y => x = nNamed y) br.1 nms ->
-                                         eval (add_multiple (List.rev nms) (skipn pars args) Γ) br.2 res ->
-                                         eval Γ (tCase (ind, pars) discr brs) res
+    #|args| = cdecl.(cstr_nargs) ->
+    #|args| = #|br.1| ->
+    Forall2 (fun x y => x = nNamed y) br.1 nms ->
+    eval (add_multiple (List.rev nms) args Γ) br.2 res ->
+    eval Γ (tCase (ind, 0) discr brs) res
 
   (** Fix unfolding, without guard *)
   | eval_fix_unfold f mfix idx a av fn res Γ' Γ'' na na' b :
@@ -1067,7 +1067,7 @@ Proof.
   - eapply IHeval2. econstructor; cbn; eauto. eauto.
   - solve_all. inv X0.
     eapply IHeval2. eapply wf_add_multiple; eauto.
-    2: eapply All_skipn; eauto. len. eapply All2_length in f. lia.
+    len. eapply All2_length in f. lia.
     eapply All_nth_error in H1. 2: eauto. rtoProp.
     solve_all.
     rewrite map_fst_add_multiple. len.
@@ -1109,6 +1109,7 @@ Proof.
 Qed.
 
 Lemma implication (Σ Σ' : global_context) E s t u :
+  wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
     ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
@@ -1119,7 +1120,7 @@ Lemma implication (Σ Σ' : global_context) E s t u :
   [] ;;; E ⊩ u ~ s ->
   ∑ v, ⊩ v ~ t × eval Σ' E u v.
 Proof.
-  intros HΣ HΣind HE Hsunny Heval Hrep.
+  intros HwfΣ HΣ HΣind HE Hsunny Heval Hrep.
   induction Heval in u, E, Hrep, Hsunny, HE; cbn in *; rtoProp; eauto; try congruence.
   - invs Hrep.
     + invs H0.
@@ -1148,7 +1149,21 @@ Proof.
       { eapply eval_wf in Hv2; eauto. }
       { unfold fresh in H. destruct in_dec; cbn in *; congruence. }
       eexists; split; eauto. econstructor; eauto.
-  - invs Hrep.
+  - assert (pars = 0) as ->. { 
+      unfold constructor_isprop_pars_decl in *.
+      destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence. 
+      invs e1. 
+      destruct lookup_env eqn:EEE; try congruence.
+      eapply lookup_env_wellformed in EEE; eauto.
+      destruct g; cbn in *; try congruence.
+      red in EEE. unfold wf_minductive in EEE.
+      rtoProp. eapply andb_true_iff in EEE as [Hpars _].
+      cbn in Hpars. eapply Nat.eqb_eq in Hpars.
+      destruct nth_error eqn:EEE; cbn in *; try congruence.
+      destruct (nth_error (EAst.ind_ctors o) c) eqn:EEEE; cbn in *; try congruence.
+      now invs EE.
+  }       
+   invs Hrep.
     + invs H0.
     + cbn in Hsunny. rtoProp.
       edestruct IHHeval1 as (v & Hv1 & Hv2). 3,1,2: eauto.
@@ -1167,7 +1182,7 @@ Proof.
            cbn in H. unfold fresh in H. destruct in_dec; cbn in *; congruence. }
            { subst. unfold dupfree in H2. destruct dupfree_dec_ident; cbn in *; congruence. }
            2: eapply All2_rev. len.
-           2:{ eapply All2_skipn. eauto. }
+           2:{ rewrite skipn_O. eauto. }
            eapply All2_Set_All2, All2_nth_error in H6; eauto.
            eapply All2_Set_All2, All2_length in H3; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
@@ -1181,7 +1196,7 @@ Proof.
            eapply All2_Set_All2, All2_length in H3; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
            rewrite !skipn_length in e4 |- *. lia.
-        -- eapply All_skipn; eauto.
+        -- eauto.
       * rewrite map_fst_add_multiple. 
         -- len.
            eapply All2_Set_All2, All2_nth_error in H6; eauto.

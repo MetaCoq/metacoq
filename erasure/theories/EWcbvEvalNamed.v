@@ -159,7 +159,7 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
 | represents_tCase Γ E ind discr discr' brs brs' :
   Γ ;;; E ⊩ discr ~ discr' ->
   All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs' ->
-  (All2_Set (fun b b' => {nms & (All2_Set (fun n n' => n = nNamed n') b.1 nms × ((nms ++ Γ) ;;; E ⊩ (b.2) ~ (b'.2)))}) brs brs') ->
+  (All2_Set (fun b b' => {nms & (All2_Set (fun n n' => n = nNamed n') b.1 nms × ((nms ++ Γ) ;;; E ⊩ (b.2) ~ (b'.2)) × NoDup nms)}) brs brs') ->
   Γ ;;; E  ⊩ tCase ind discr brs ~ tCase ind discr' brs'
 | represents_tFix Γ E mfix mfix' idx nms  :
   All2_Set (fun d n => d.(dname) = nNamed n) mfix nms ->
@@ -226,8 +226,8 @@ Program Definition represents_ind :=
              (r : Γ;;; E ⊩ discr ~ discr'),
          P Γ E discr discr' r
          -> forall Heq : All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs',
-         ∀ (a : All2_Set (λ b b' : list name × term, ∑ nms : list ident, All2_Set (λ (n : name) (n' : ident), n = nNamed n') b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2) brs brs'),
-         forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (snd (projT2 H))),
+         ∀ (a : All2_Set (λ b b' : list name × term, ∑ nms : list ident, All2_Set (λ (n : name) (n' : ident), n = nNamed n') b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs'),
+         forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
@@ -370,8 +370,8 @@ Program Definition represents_value_ind :=
                    (λ b b' : list name × term,
                        ∑ nms : list ident,
                          All2_Set (λ (n : name) (n' : ident), n = nNamed n')
-                           b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2) brs brs',
-            forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (snd (projT2 H))),
+                           b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs',
+            forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
@@ -518,8 +518,8 @@ Definition rep_ind :=
                    (λ b b' : list name × term,
                        ∑ nms : list ident,
                          All2_Set (λ (n : name) (n' : ident), n = nNamed n')
-                           b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2) brs brs',
-          forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (snd (projT2 H))),
+                           b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs',
+          forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
              (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
      (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
@@ -778,7 +778,9 @@ Proof.
     clear - Γ H0. induction H0; econstructor; eauto.
     rename x into br. exists (gen_many_fresh Γ br.1). cbn. split.
     + eapply All2_All2_Set. solve_all. now eapply All2_refl.
-    + eapply p. rewrite app_length gen_many_fresh_length. eapply p.
+    + split.
+      * eapply p. rewrite app_length gen_many_fresh_length. eapply p.
+      * todo "nodup".      
   - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
     2:{ unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H.
         generalize (map_length dname m).
@@ -887,8 +889,9 @@ Proof.
       rewrite app_length in IH1.
       assert (#|y.1| = #|x.1|) as -> by now invs Heq.
       eapply All2_Set_All2 in H1 as HH. eapply All2_length in HH as ->.
-      rewrite app_assoc.
-      eapply IH1. eauto. cbn. now rewrite <- app_assoc. eauto.
+      rewrite app_assoc. split.
+      * eapply IH1. eauto. cbn. now rewrite <- app_assoc. eauto.
+      * eapply H2.
   - econstructor; eauto. todo "fix".
 Qed.
 
@@ -1168,7 +1171,7 @@ Proof.
     + cbn in Hsunny. rtoProp.
       edestruct IHHeval1 as (v & Hv1 & Hv2). 3,1,2: eauto.
       eapply All2_Set_All2 in H7. eapply All2_nth_error_Some_right in e2 as He2. 2: eauto.
-      destruct He2 as (br' & Hnth & nms & Hbrs & Hbr). invs Hv1. 
+      destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1. 
       edestruct IHHeval2 as (v2 & Hv1_ & Hv2_).
       3: { eapply forallb_nth_error in H. setoid_rewrite Hnth in H. cbn in H. rtoProp.
            assert (nms = flat_map (λ x : name, match x with
@@ -1176,7 +1179,8 @@ Proof.
                | nNamed na => [na]
                end) br'.1) as Heqnms. { clear - Hbrs. induction Hbrs; cbn; now subst. }
            unfold iota_red. eapply represents_substl. 5: eauto.
-           { rewrite Heqnms flat_map_concat_map. intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
+           { rewrite Heqnms flat_map_concat_map.
+            intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
            destruct Hd; subst; eauto.
            eapply forallb_forall in H; eauto.
            cbn in H. unfold fresh in H. destruct in_dec; cbn in *; congruence. }

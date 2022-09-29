@@ -154,9 +154,9 @@ Qed.
 Hint Resolve eq_term_upto_univ_napp_closedn eq_term_upto_univ_napp_closedn' eval_closed : core.
 
 Lemma is_value_impl_eq_term f' x n :
-  ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
+  ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f' || isPrimApp f') ->
   eq_term_upto_univ_napp empty_global_env R1 R2 n f' x ->
-  ~~ (isLambda x || isFixApp x || isArityHead x || isConstructApp x).
+  ~~ (isLambda x || isFixApp x || isArityHead x || isConstructApp x || isPrimApp x).
 Proof.
   intros H1 H2.
   induction f' in n, x, H1, H2 |- * using PCUICInduction.term_ind_size_app; cbn in *; try congruence.
@@ -176,6 +176,10 @@ Proof.
   - invs e; cbn; eauto. rewrite <- H2 in H0. cbn in *. tauto.
   - destruct (decompose_app f'1); try reflexivity.
     invs e; cbn; eauto.
+    all: epose proof (mkApps_app _ l [f'2]) as Eqn; cbn in Eqn; rewrite <- Eqn.
+    all: epose proof (mkApps_app _ x0 [u']) as Eqn'; cbn in Eqn'; rewrite <- Eqn'.
+    all: rewrite !isPrimApp_mkApps; cbn; eauto.
+    todo "prim, matthieu".    
 Qed.
 
 End fixR.

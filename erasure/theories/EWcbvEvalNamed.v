@@ -757,6 +757,7 @@ Definition extraction_term_flags :=
   ; has_tProj := false
   ; has_tFix := true
   ; has_tCoFix := false
+  ; has_tPrim := false
   |}.
 
 Definition extraction_env_flags := 
@@ -807,11 +808,11 @@ Proof.
       * eapply NoDup_gen_many_fresh.
   - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
     1:{ eapply NoDup_gen_many_fresh. }
-    2:{ unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H.
+    2:{ rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
         generalize (map_length dname m).
-        generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H, nms, Hnms |- *.        
+        generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H1, nms, Hnms |- *.        
         + econstructor.
-        + destruct nms; invs Hnms. invs H0.
+        + destruct nms; invs Hnms. invs H1.
           destruct n0; cbn in *; econstructor.
           * eapply H3. cbn. rewrite app_length gen_many_fresh_length H2. eapply H3.
           * specialize IHm with (nms := nAnon :: nms). cbn in IHm.

@@ -51,4 +51,4 @@ Section env.
 End env.
 
 Definition unshadow_env_ext (Σ : global_env_ext) :=
-  ({| universes := Σ.(universes) ; declarations := map (on_snd (fun d => match d with ConstantDecl b => ConstantDecl (map_constant_body (unshadow Σ []) b) | x => x end)) Σ.(declarations) |}, snd Σ).
+  ({| retroknowledge := Σ.(retroknowledge) ; universes := Σ.(universes) ; declarations := map (on_snd (fun d => match d with ConstantDecl b => ConstantDecl (map_constant_body (unshadow Σ []) b) | x => x end)) Σ.(declarations) |}, snd Σ).

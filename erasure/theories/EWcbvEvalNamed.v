@@ -66,11 +66,13 @@ Definition cunfold_fix (mfix : list (ident * term)) (idx : nat) Γ :=
   | None => None
   end. *)
 
+Unset Elimination Schemes.
+
 Section Wcbv.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
 
-  Inductive eval (Γ : environment) : term -> value -> Type :=
+  Inductive eval (Γ : environment) : term -> value -> Set :=
   (** Reductions *)
   | eval_var na v :
     lookup Γ na = Some v ->
@@ -130,16 +132,100 @@ Section Wcbv.
     eval Γ (tConst c) res
 
   (** Constructor congruence: we do not allow over-applications *)
-  | eval_construct_block ind c mdecl idecl cdecl args args' a a' : 
+  | eval_construct_block ind c mdecl idecl cdecl args args' : 
     lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-    #|args| < cstr_arity mdecl cdecl ->
-            eval Γ (tConstruct ind c args) (vConstruct ind c args') ->
-            eval Γ a a' ->
-            eval Γ (tConstruct ind c (args ++ [a])) (vConstruct ind c (args' ++ [a']))
+    #|args| <= cstr_arity mdecl cdecl ->
+    All2_Set (eval Γ) args args' ->
+    eval Γ (tConstruct ind c args) (vConstruct ind c args')
   
   | eval_construct_block_empty ind c mdecl idecl cdecl :
      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
      eval Γ (tConstruct ind c []) (vConstruct ind c []).
+
+  Program Definition eval_ind := 
+    λ (P : ∀ (Γ : environment) (t : term) (v : value), eval Γ t v → Type) (f : ∀ (Γ : environment) (na : string) (v : value) (e : lookup Γ na = Some v),
+          P Γ (tVar na) v (eval_var Γ na v e)) (f0 : ∀ (Γ : environment) (a t : term) 
+                                                       (t' : value) (e : eval Γ a vBox),
+          P Γ a vBox e
+          → ∀ e0 : eval Γ t t',
+            P Γ t t' e0
+            → P Γ (tApp a t) vBox
+                (eval_box Γ a t t' e e0)) 
+      (f1 : ∀ (Γ : environment) (f1 : term) (na : ident) (b a : term) (a' res : value) (Γ' : list (ident × value)) (e : eval Γ f1 (vClos na b Γ')),
+          P Γ f1 (vClos na b Γ') e
+          → ∀ e0 : eval Γ a a', P Γ a a' e0 → ∀ e1 : eval (add na a' Γ') b res, P (add na a' Γ') b res e1 → P Γ (tApp f1 a) res (eval_beta Γ f1 na b a a' res Γ' e e0 e1)) 
+      (f2 : ∀ (Γ : environment) (na : ident) (b : term), P Γ (tLambda (nNamed na) b) (vClos na b Γ) (eval_lambda Γ na b)) (f3 : ∀ (Γ : environment) 
+                                                                                                                                  (na : ident) (b0 : term) 
+                                                                                                                                  (b0' : value) (b1 : term) 
+                                                                                                                                  (res : value) (e : eval Γ b0 b0'),
+          P Γ b0 b0' e
+          → ∀ e0 : eval (add na b0' Γ) b1 res,
+            P (add na b0' Γ) b1 res e0
+            → P Γ (tLetIn (nNamed na) b0 b1) res
+                (eval_zeta Γ na b0 b0' b1 res e e0)) 
+      (f4 : ∀ (Γ : environment) (ind : inductive) (cdecl : constructor_body) (discr : term) (c : nat) (args : list value) (brs : list (list name × term)) 
+              (br : list name × term) (res : value) (nms : list ident) (e : eval Γ discr (vConstruct ind c args)),
+          P Γ discr (vConstruct ind c args) e
+          → ∀ (e0 : constructor_isprop_pars_decl Σ ind c = Some (false, 0, cdecl)) (e1 : nth_error brs c = Some br) (e2 : #|args| = cstr_nargs cdecl) 
+              (e3 : #|args| = #|br.1|) (f4 : Forall2 (λ (x : name) (y : ident), x = nNamed y) br.1 nms) (e4 : eval (add_multiple (List.rev nms) args Γ) br.2 res),
+            P (add_multiple (List.rev nms) args Γ) br.2 res e4
+            → ∀ n : NoDup nms, P Γ (tCase (ind, 0) discr brs) res (eval_iota_block Γ ind cdecl discr c args brs br res nms e e0 e1 e2 e3 f4 e4 n)) 
+      (f5 : ∀ (Γ : environment) (f5 : term) (mfix : list (ident × term)) (idx : nat) (a : term) (av : value) (fn : term) (res : value) (Γ' Γ'' : list (ident × value)) 
+              (na na' : ident) (b : term) (n : NoDup (map fst mfix)) (e : eval Γ f5 (vRecClos mfix idx Γ')),
+          P Γ f5 (vRecClos mfix idx Γ') e
+          → ∀ e0 : eval Γ a av,
+            P Γ a av e0
+            → ∀ e1 : eval (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') fn (vClos na' b Γ''),
+              P (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') fn (vClos na' b Γ'') e1
+              → ∀ e2 : eval (add na av Γ'') b res,
+                P (add na av Γ'') b res e2 → P Γ (tApp f5 a) res (eval_fix_unfold Γ f5 mfix idx a av fn res Γ' Γ'' na na' b n e e0 e1 e2)) 
+      (f6 : ∀ (Γ : environment) (mfix : list (def term)) (idx : nat) (nms : list ident) (n : NoDup nms) (f6 : Forall2 (λ (d : def term) (n0 : ident), nNamed n0 = dname d) mfix
+                                                                                                              nms),
+          P Γ (tFix mfix idx) (vRecClos (map2 (λ (n0 : ident) (d : def term), (n0, dbody d)) nms mfix) idx Γ) (eval_fix Γ mfix idx nms n f6)) (f7 : 
+        ∀ (Γ : environment) 
+          (c : kername) 
+          (decl : constant_body) 
+          (body : term) 
+          (isdecl : 
+            declared_constant Σ c decl) 
+          (res : value) 
+          (e : 
+            cst_body decl = 
+              Some body) 
+          (e0 : 
+            eval [] body res),
+          P [] body res e0
+          → 
+            P Γ 
+              (tConst c) res
+              (eval_delta Γ c decl body
+                 isdecl res e e0)) 
+      (f8 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body) 
+              (args : list term) (args' : list value) (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) (l : #|args| ≤ cstr_arity mdecl cdecl) 
+              (a : All2_Set (eval Γ) args args') (IHa : All2_over a (P Γ)), P Γ (tConstruct ind c args) (vConstruct ind c args') (eval_construct_block Γ ind c mdecl idecl cdecl args args' e l a)) 
+      (f9 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body) 
+              (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)),
+          P Γ (tConstruct ind c []) (vConstruct ind c []) (eval_construct_block_empty Γ ind c mdecl idecl cdecl e)),
+      fix F (Γ : environment) (t : term) (v : value) (e : eval Γ t v) {struct e} : P Γ t v e :=
+      match e as e0 in (eval _ t0 v0) return (P Γ t0 v0 e0) with
+      | @eval_var _ na v0 e0 => f Γ na v0 e0
+      | @eval_box _ a t0 t' e0 e1 => f0 Γ a t0 t' e0 (F Γ a vBox e0) e1 (F Γ t0 t' e1)
+      | @eval_beta _ f10 na b a a' res Γ' e0 e1 e2 => f1 Γ f10 na b a a' res Γ' e0 (F Γ f10 (vClos na b Γ') e0) e1 (F Γ a a' e1) e2 (F (add na a' Γ') b res e2)
+      | @eval_lambda _ na b => f2 Γ na b
+      | @eval_zeta _ na b0 b0' b1 res e0 e1 => f3 Γ na b0 b0' b1 res e0 (F Γ b0 b0' e0) e1 (F (add na b0' Γ) b1 res e1)
+      | @eval_iota_block _ ind cdecl discr c args brs br res nms e0 e1 e2 e3 e4 f10 e5 n =>
+          f4 Γ ind cdecl discr c args brs br res nms e0 (F Γ discr (vConstruct ind c args) e0) e1 e2 e3 e4 f10 e5 (F (add_multiple (List.rev nms) args Γ) br.2 res e5) n
+      | @eval_fix_unfold _ f10 mfix idx a av fn res Γ' Γ'' na na' b n e0 e1 e2 e3 =>
+          f5 Γ f10 mfix idx a av fn res Γ' Γ'' na na' b n e0 (F Γ f10 (vRecClos mfix idx Γ') e0) e1 (F Γ a av e1) e2
+            (F (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') fn (vClos na' b Γ'') e2) e3 (F (add na av Γ'') b res e3)
+      | @eval_fix _ mfix idx nms n f10 => f6 Γ mfix idx nms n f10
+      | @eval_delta _ c decl body isdecl res e0 e1 => f7 Γ c decl body isdecl res e0 e1 (F [] body res e1)
+      | @eval_construct_block _ ind c mdecl idecl cdecl args args' e0 l a => f8 Γ ind c mdecl idecl cdecl args args' e0 l a _
+      | @eval_construct_block_empty _ ind c mdecl idecl cdecl e0 => f9 Γ ind c mdecl idecl cdecl e0
+      end.
+  Next Obligation.
+    clear - a F. induction a; econstructor. eapply F. eapply IHa.
+  Defined.
 
 End Wcbv.
 
@@ -147,8 +233,6 @@ Definition ident_of_name (na : name) : ident :=
   match na with nAnon => "" | nNamed na => na end.
 
 Reserved Notation "Γ ;;; E ⊩ s ~ t" (at level 50, E, s, t at next level).
-
-Unset Elimination Schemes.
 
 Inductive represents : list ident -> environment -> term -> term -> Set :=
 | represents_tBox Γ E : Γ ;;; E ⊩ tBox ~ tBox
@@ -1088,36 +1172,36 @@ Lemma eval_wf Σ E s v :
   eval Σ E s v -> 
   wf v.
 Proof.
-  intros HΣ HE Hsunny.
-  induction 1; eauto; cbn in *; rtoProp; eauto using Forall.
-  - do 2 forward IHeval1; eauto. inv IHeval1.
-    eapply IHeval3; eauto. econstructor; cbn; eauto.
+  intros HΣ HE Hsunny. 
+  intros Heval.
+  revert HE Hsunny. pattern E, s, v, Heval.
+  revert E s v Heval.
+  eapply eval_ind; intros; eauto; cbn in *; rtoProp; eauto using Forall.
+  - do 2 forward X; eauto. inv X.
+    eapply X1; eauto. econstructor; cbn; eauto.
   - econstructor; eauto. unfold fresh in H. destruct in_dec; cbn in *; congruence.
-  - eapply IHeval2. econstructor; cbn; eauto. eauto.
-  - solve_all. inv X0.
-    eapply IHeval2. eapply wf_add_multiple; eauto.
-    len. eapply All2_length in f. lia.
-    eapply All_nth_error in H1. 2: eauto. rtoProp.
+  - eapply X0. econstructor; cbn; eauto. eauto.
+  - solve_all. inv X.
+    eapply X0. eapply wf_add_multiple; eauto.
+    len. eapply All2_length in f4. lia.
+    eapply All_nth_error in H. 2: eauto. rtoProp.
     solve_all.
     rewrite map_fst_add_multiple. len.
-    eapply All2_length in f; lia.
+    eapply All2_length in f4; lia.
     enough (nms = flat_map (λ x : name, match x with
                  | nAnon => []
                  | nNamed na => [na]
                  end) br.1) as -> by eauto.
-    clear - f. induction f; cbn; f_equal; destruct r, x; cbn; congruence. 
+    clear - f4. induction f4; cbn; f_equal; destruct r, x; cbn; congruence. 
   - todo "fix".
   - todo "fix".
-  - eapply IHeval; eauto. eapply declared_constant_Forall in isdecl.
+  - eapply X; eauto. eapply declared_constant_Forall in isdecl.
     2: eapply Forall_impl. 2: eauto.
-    2: { cbn. intros [] ?. cbn in *.  exact H0. }
+    2: { cbn. intros [] ?. cbn in *.  exact H. }
     cbn in *. destruct decl; cbn in *.
     subst. eauto.
-  - solve_all. rename X into IHeval1, X0 into IHeval2. eapply All_app in Hsunny as [H1 H2].
-    forward IHeval1; solve_all; eauto. invs IHeval1.
-    econstructor. eapply All_app_inv; eauto.
-    repeat econstructor. invs H2.
-    eapply IHeval2; solve_all.
+  - solve_all. econstructor.
+    todo "induction".
   - cbn. econstructor. econstructor.
 Qed.
 
@@ -1132,10 +1216,11 @@ Proof.
   - eapply All2_app_inv_l in Hvs as (vs' & r2 & -> & H1 & H2).
     invs H2. invs X. revert Hlen; len; intros Hlen. econstructor.
     + eauto.
-    + lia.
-    + eapply IHargs; eauto. lia.
-    + eauto.
+    + rewrite app_length; cbn. lia.
+    + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
+
+From MetaCoq Require Import EWcbvEvalCstrsAsBlocksInd.
 
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
@@ -1147,41 +1232,54 @@ Lemma implication (Σ Σ' : global_context) E s t u :
   sunny (map fst E) u -> 
   EWcbvEval.eval Σ s t ->
   [] ;;; E ⊩ u ~ s ->
+  wellformed Σ 0 s ->
   ∑ v, ⊩ v ~ t × eval Σ' E u v.
 Proof.
-  intros HwfΣ HΣ HΣind HE Hsunny Heval Hrep.
-  induction Heval in u, E, Hrep, Hsunny, HE; cbn in *; rtoProp; eauto; try congruence.
+  intros HwfΣ HΣ HΣind HE Hsunny Heval Hrep Hwell.
+  revert u E Hrep Hsunny HE.
+  pattern s, t.
+  revert Heval.
+  eapply eval_preserve_mkApps_ind with (Σ := Σ); cbn in *; rtoProp.
+  1: reflexivity.
+  1: eapply Qpreserves_wellformed with (efl := extraction_env_flags).
+  1: eauto.
+  1:{ intros. cbn in *. eapply eval_wellformed; cbn; eauto. }
+  1: eauto.
+  1: eauto.
+  all: try congruence.
+  all: intros; rtoProp.
+  all: repeat match reverse goal with  [H : MCProd.and3 _ _ _ |- _] => destruct H end.
   - invs Hrep.
-    + invs H0.
-    + cbn in Hsunny. rtoProp. edestruct IHHeval1 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto. 
-      edestruct IHHeval2 as (? & ? & ?); eauto.
+    + invs H2.
+    + cbn in Hsunny. rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto. 
+      edestruct s1 as (? & ? & ?); eauto.
       invs Hv1. eexists; split; eauto. econstructor; eauto.      
   - invs Hrep.
-    + invs H0.
+    + invs H3.
     + cbn in Hsunny. rtoProp.
-      edestruct IHHeval1 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
+      edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
       invs Hv1.
-      edestruct IHHeval2 as (v2 & Hv1_ & Hv2_). 3: eauto. eauto. eauto.
+      edestruct s1 as (v2 & Hv1_ & Hv2_). 3: eauto. eauto. eauto.
       eapply eval_wf in Hv2 as Hwf; eauto. invs Hwf; eauto. 
-      edestruct IHHeval3 as (v3 & Hv1__ & Hv2__).
-      3: eapply represents_subst; eauto.
-      { econstructor. eapply eval_wf in Hv2_; eauto. eauto. }
+      edestruct s2 as (v3 & Hv1__ & Hv2__).
+      1: eapply represents_subst; eauto.
+      2:{ econstructor. eapply eval_wf in Hv2_; eauto. eauto. }
       { eauto. }
       eexists; split; eauto. econstructor; eauto.
   - invs Hrep.
-    + invs H0.
+    + invs H3.
     + cbn in Hsunny. rtoProp. 
-      edestruct IHHeval1 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
-      edestruct IHHeval2 as (v2 & Hv1_ & Hv2_).
-      3: eapply represents_subst; eauto.
-      { econstructor. cbn in *. eapply eval_wf in Hv2; eauto. eauto. }
-      { eapply eval_wf in Hv2; eauto. }
-      { unfold fresh in H. destruct in_dec; cbn in *; congruence. }
+      edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
+      edestruct s1 as (v2 & Hv1_ & Hv2_).
+      1: eapply represents_subst; eauto.
+      3:{ econstructor. cbn in *. eapply eval_wf in Hv2; eauto. eauto. }
+      2:{ eapply eval_wf in Hv2; eauto. }
+      1:{ unfold fresh in *. destruct in_dec; cbn in *; congruence. }
       eexists; split; eauto. econstructor; eauto.
   - assert (pars = 0) as ->. { 
       unfold constructor_isprop_pars_decl in *.
       destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence. 
-      invs e1. 
+      invs H0.
       destruct lookup_env eqn:EEE; try congruence.
       eapply lookup_env_wellformed in EEE; eauto.
       destruct g; cbn in *; try congruence.
@@ -1193,72 +1291,71 @@ Proof.
       now invs EE.
   }       
    invs Hrep.
-    + invs H0.
+    + invs H7.
     + cbn in Hsunny. rtoProp.
-      edestruct IHHeval1 as (v & Hv1 & Hv2). 3,1,2: eauto.
-      eapply All2_Set_All2 in H7. eapply All2_nth_error_Some_right in e2 as He2. 2: eauto.
+      edestruct s0 as (v & Hv1 & Hv2). 3,1,2: eauto.
+      eapply All2_Set_All2 in H14. eapply All2_nth_error_Some_right in H14 as He2. 2: eauto.
       destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1. 
-      edestruct IHHeval2 as (v2 & Hv1_ & Hv2_).
-      3: { eapply forallb_nth_error in H. setoid_rewrite Hnth in H. cbn in H. rtoProp.
+      edestruct s1 as (v2 & Hv1_ & Hv2_).
+      1: { eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            assert (nms = flat_map (λ x : name, match x with
                | nAnon => []
                | nNamed na => [na]
                end) br'.1) as Heqnms. { clear - Hbrs. induction Hbrs; cbn; now subst. }
            unfold iota_red. eapply represents_substl. 5: eauto.
            { rewrite Heqnms flat_map_concat_map.
-            intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
-           destruct Hd; subst; eauto.
-           eapply forallb_forall in H; eauto.
-           cbn in H. unfold fresh in H. destruct in_dec; cbn in *; congruence. }
-           { subst. unfold dupfree in H2. destruct dupfree_dec_ident; cbn in *; congruence. }
-           2: eapply All2_rev. len.
-           2:{ rewrite skipn_O. eauto. }
-           eapply All2_Set_All2, All2_nth_error in H6; eauto.
-           eapply All2_Set_All2, All2_length in H3; eauto.
-           eapply All2_Set_All2, All2_length in Hbrs; eauto.
-           rewrite !skipn_length in e4 |- *. lia.
+             intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
+            destruct Hd; subst; eauto.
+            eapply forallb_forall in H6; eauto.
+            cbn in H6. unfold fresh in H6. destruct in_dec; cbn in *; congruence. }
+            { subst. unfold dupfree in H9. destruct dupfree_dec_ident; cbn in *; congruence. }
+            2: eapply All2_rev. len.
+            2:{ rewrite skipn_O. eauto. }
+            eapply All2_Set_All2, All2_nth_error in H13; eauto.
+            eapply All2_Set_All2, All2_length in H10; eauto.
+            eapply All2_Set_All2, All2_length in Hbrs; eauto.
+            rewrite -> !skipn_length in *. lia.
       }
       3: eexists; split; [ eauto | econstructor; eauto].
-      * rewrite rev_involutive.
-        eapply eval_wf in Hv2; eauto.
-        invs Hv2. eapply wf_add_multiple. eauto.
-        -- len. eapply All2_Set_All2, All2_nth_error in H6; eauto.
-           eapply All2_Set_All2, All2_length in H3; eauto.
-           eapply All2_Set_All2, All2_length in Hbrs; eauto.
-           rewrite !skipn_length in e4 |- *. lia.
-        -- eauto.
       * rewrite map_fst_add_multiple. 
         -- len.
-           eapply All2_Set_All2, All2_nth_error in H6; eauto.
-           eapply All2_Set_All2, All2_length in H3; eauto.
+           eapply All2_Set_All2, All2_nth_error in H13; eauto.
+           eapply All2_Set_All2, All2_length in H10; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
-           rewrite !skipn_length in e4 |- *. lia.
-        -- eapply forallb_nth_error in H. setoid_rewrite Hnth in H. cbn in H. rtoProp.
+           rewrite -> !skipn_length in *. lia.
+        -- eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            enough (nms = flat_map (λ x : name, match x with
            | nAnon => []
            | nNamed na => [na]
            end) br'.1) as -> by eauto.
            clear - Hbrs. induction Hbrs; cbn; now subst.
-      * admit.
-      * admit.
-      * eapply All2_Set_All2, All2_length in H3.
-        eapply All2_Set_All2, All2_nth_error in H6; eauto.
+      * rewrite rev_involutive.
+        eapply eval_wf in Hv2; eauto.
+        invs Hv2. eapply wf_add_multiple. eauto.
+        -- len. eapply All2_Set_All2, All2_nth_error in H13; eauto.
+           eapply All2_Set_All2, All2_length in H10; eauto.
+           eapply All2_Set_All2, All2_length in Hbrs; eauto.
+           rewrite -> !skipn_length in *. lia.
+        -- eauto.
+      * todo "extends".
+      * todo "extends".
+      * eapply All2_Set_All2, All2_length in H10.
+        eapply All2_Set_All2, All2_nth_error in H13; eauto.
         eapply All2_Set_All2, All2_length in Hbrs; eauto.
-        rewrite !skipn_length in e4 |- *. lia.
+        rewrite -> !skipn_length in *. lia.
       * solve_all. 
       * now rewrite rev_involutive in Hv2_.
   - todo "fix".
   - invs Hrep. 
-    + invs H0.
+    + invs H3.
     + cbn in *. rtoProp.
-      edestruct IHHeval1 as (v1 & Hv1 & Hv2); eauto.
+      edestruct s0 as (v1 & Hv1 & Hv2); eauto.
       invs Hv1; destruct args using rev_ind; cbn in *; try congruence.
       all: match goal with [H : _ = mkApps _ _ |- _ ] => now rewrite mkApps_app in H end.
-  - invs Hrep. invs H0.
   - invs Hrep.
-    + invs H0.
+    + invs H3.
     + assert (∑ decl' body', declared_constant Σ' c decl' × sunny [] body' × cst_body decl' = Some body' × [];;; [] ⊩ body' ~ body) as (decl' & Hdecl & body' & Hsunny' & e' & H').
-      { clear - HΣ HΣind isdecl e. unfold declared_constant in isdecl. solve_all.
+      { rename H into isdecl. rename H0 into e. clear - HΣ HΣind isdecl e. unfold declared_constant in isdecl. solve_all.
         induction HΣind.
         - cbn in isdecl. congruence.
         - cbn in isdecl. destruct (c == x.1) eqn:E.
@@ -1275,49 +1372,48 @@ Proof.
             destruct (eqb_spec c y.1); try congruence.
             subst. destruct r as ([Eq ?] & ?).
             destruct (eqb_spec y.1 x.1); try congruence.
-      }     
-      edestruct IHHeval as (v & Hv1 & Hv2). 3: eauto. econstructor. cbn. eauto.
+      }
+      edestruct s0 as (v & Hv1 & Hv2). 1: eauto. eauto. econstructor.
       eexists. split. eauto. econstructor; eauto.
-  - invs Hrep. invs H0.
   - invs Hrep.
-    + invs H0. eexists. split. 2:{ econstructor. eauto. }
-      econstructor. induction a in vs, H3 |- *.
-      * invs H3. econstructor.
-      * invs H3. econstructor. eapply eval_represents_value; eauto. eauto.
-    + assert (∑ vs, All2 (fun v t => ⊩ v ~ t) vs args' × All2 (fun v u => eval Σ' E u v) vs args0) as (vs & Hvs & Hvs').
-      * cbn in Hsunny. rtoProp. induction a in iha, H3, args0, Hsunny |- *.
-        -- invs H3. exists []. split; econstructor.
-        -- invs H3. invs iha.
-           edestruct IHa as (vs & Hv1 & Hv2). 2: eauto. 2: eauto.
-           cbn in Hsunny; now rtoProp.
-           edestruct X. 3: eauto. eauto. eauto. cbn in Hsunny; now rtoProp.
-           eexists (_ :: _). destruct p. split. econstructor; eauto.
-           econstructor; eauto.
-      * eexists. split. econstructor. eapply All2_All2_Set; eauto.
-        eapply eval_construct_All2; eauto.
-        
-        3:{ solve_all. clear - Hvs'. induction Hvs'; econstructor; eauto. }
-        todo "lookup".
-        
-        eapply All2_length in Hvs'; eapply All2_length in Hvs.
-        clear iha. eapply All2_Set_All2, All2_length in a. todo "lookup".
-  - invs Hrep.
-    + invs H0.
+    + invs H2.
     + cbn in Hsunny. rtoProp.
-      eapply eval_to_value in Heval1 as Hval. invs Hval.
-      * destruct f'; cbn in *; try congruence.           
-        edestruct IHHeval1 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto. invs Hv1.
+      eapply eval_to_value in ev as Hval. invs Hval.
+      * destruct f'; cbn in *; try congruence.
       * invs H4; cbn in *; eauto.
       * invs H1; cbn in *; eauto; try congruence.
-        rtoProp. edestruct IHHeval1 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto.
+        rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto.
         invs Hv1; destruct args using rev_ind; cbn in *; try congruence.
         all: match goal with [H : _ = mkApps _ _ |- _ ] => now rewrite mkApps_app in H end.
+  - invs Hrep.
+    + invs H2. eexists. split. econstructor.  instantiate (1 := vs).
+      * eapply All2_All2_Set. eapply All2_Set_All2 in H5.
+        eapply All2_All2_mix in X. 2: eapply X0.
+        solve_all. eapply All2_trans'. 2: eauto. 2: exact X.
+        intros. destruct X1, p, a. eapply eval_represents_value; eauto.
+      * econstructor. eauto.
+    + cbn in Hsunny.
+      solve_all.
+      eapply All2_Set_All2 in H5.
+      eapply All2_All_mix_left in H5. 2: eauto.
+       eapply All2_All2_mix in X. 2: eapply X0.
+       cbn in X. eapply All2_trans' in X. 3: eapply H5.
+       2:{ intros. destruct X1, p, p0, a.
+           eapply s0 in r; eauto. exact r. }
+       assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. {
+         clear - X. induction X. eexists; econstructor. destruct IHX as [vs Hvs].
+         destruct r as [v Hv]. exists (v :: vs). econstructor; eauto.
+       }
+       eexists. split. econstructor.
+       { instantiate (1 := vs). clear - Hvs; induction Hvs; econstructor; eauto. eapply r. }
+       econstructor. todo "lookup". todo "lookup".
+       clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
   - invs Hrep; cbn in *; try congruence; rtoProp.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.
     + solve_all. eexists. split. 2: econstructor; solve_all.
-      econstructor. 2:{ eapply All2_Set_All2 in H0. solve_all. }
-      eapply All2_Set_All2 in H0, H1. eapply All2_All2_Set. solve_all.
-      clear - H H0 H1. revert H. todo "fix".
+      econstructor. 2:{ eapply All2_Set_All2 in H2. solve_all. }
+      eapply All2_Set_All2 in H2, H3. eapply All2_All2_Set. solve_all.
+      todo "fix".
       Unshelve. all: todo "evar".
-Admitted.
+Qed.

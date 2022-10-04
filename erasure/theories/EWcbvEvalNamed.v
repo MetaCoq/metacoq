@@ -723,14 +723,30 @@ Proof.
   all: firstorder congruence.
 Qed.
 
+Require Import DecimalNat.
+
 Lemma string_of_nat_empty n : 
   string_of_nat n <> "".
 Proof.
 Admitted.
 
+Lemma string_of_uint_inj n1 n2 : 
+  string_of_uint n1 = string_of_uint n2 → n1 = n2.
+Proof.
+  revert n2.
+  induction n1; intros []; cbn; intros Heq; f_equal; try congruence.
+  all: inversion Heq; eauto.
+Qed.
+
+Require Import DecimalNat.
+
 Lemma string_of_nat_inj n1 n2 : 
   string_of_nat n1 = string_of_nat n2 -> n1 = n2.
-Admitted.
+Proof.
+  intros H % string_of_uint_inj.
+  eapply (f_equal (Nat.of_uint)) in H.
+  now rewrite !DecimalNat.Unsigned.of_to in H.
+Qed.
 
 Lemma gen_fresh_fresh na Γ :
   ~ In (gen_fresh na Γ) Γ.
@@ -1213,7 +1229,10 @@ Proof.
     cbn in *. destruct decl; cbn in *.
     subst. eauto.
   - solve_all. econstructor.
-    todo "induction".
+    clear - a IHa Hsunny HE.
+    induction a; econstructor; cbn in *; eauto.
+    + eapply IHa; eauto. now invs Hsunny.
+    + eapply IHa0. eapply IHa. now invs Hsunny.
   - cbn. econstructor. econstructor.
 Qed.
 
@@ -1234,12 +1253,43 @@ Qed.
 
 From MetaCoq Require Import EWcbvEvalCstrsAsBlocksInd.
 
+Lemma lookup_in_env Σ Σ' ind i :
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
+    ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
+  | decl => d'.2 = decl
+  end) Σ Σ' -> 
+  lookup_constructor Σ ind i = lookup_constructor Σ' ind i.
+Proof.
+  induction 1; cbn.
+  - reflexivity.
+  - destruct r as [-> ].
+    destruct (eqb_spec (inductive_mind ind) y.1).
+    + destruct x.2.
+      * destruct c, cst_body.
+        -- now destruct y0 as (? & -> & ?).
+        -- now rewrite y0.
+      * now rewrite y0.
+    + eapply IHX.
+Qed.  
+
+Lemma constructor_isprop_pars_decl_in_env Σ Σ' ind c :
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
+    ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
+  | decl => d'.2 = decl
+  end) Σ Σ' -> 
+  constructor_isprop_pars_decl Σ ind c = constructor_isprop_pars_decl Σ' ind c.
+Proof.
+  intros H.
+  unfold constructor_isprop_pars_decl. erewrite lookup_in_env; eauto.
+Qed.  
+
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
     ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
-  | _ => True end) Σ Σ' -> 
+  | decl => d'.2 = decl
+  end) Σ Σ' -> 
   All (fun x => wf (snd x)) E ->
   sunny (map fst E) u -> 
   EWcbvEval.eval Σ s t ->
@@ -1349,8 +1399,8 @@ Proof.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
            rewrite -> !skipn_length in *. lia.
         -- eauto.
-      * todo "extends".
-      * todo "extends".
+      * erewrite <- constructor_isprop_pars_decl_in_env. eauto. solve_all.
+      * eapply All2_Set_All2, All2_length in H10. lia.
       * eapply All2_Set_All2, All2_length in H10.
         eapply All2_Set_All2, All2_nth_error in H13; eauto.
         eapply All2_Set_All2, All2_length in Hbrs; eauto.
@@ -1418,8 +1468,9 @@ Proof.
        }
        eexists. split. econstructor.
        { instantiate (1 := vs). clear - Hvs; induction Hvs; econstructor; eauto. eapply r. }
-       econstructor. todo "lookup". todo "lookup".
-       clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
+       econstructor. erewrite <- lookup_in_env. 2: solve_all.
+       eapply H. eapply All2_length in H5. lia.
+        clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
   - invs Hrep; cbn in *; try congruence; rtoProp.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.

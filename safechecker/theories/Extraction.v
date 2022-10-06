@@ -8,13 +8,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
-*)
-        
-(* Ignore [Decimal.int] before the extraction issue is solved:
-    https://github.com/coq/coq/issues/7017. *)
-Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+*)      
 
 (** Here we could extract uint63_from/to_model to the identity *)
 

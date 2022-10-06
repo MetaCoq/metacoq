@@ -1149,7 +1149,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
       Forall (fun g => g.1 <> s) g.
 
-    Record on_global_decls_data {cf:checker_flags} (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
+    Record on_global_decls_data (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
         {
           kn_fresh :  fresh_global kn Σ ;
           udecl := universes_decl_of_decl d ;

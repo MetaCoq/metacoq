@@ -77,6 +77,8 @@ Signature
 All_Forall
 Config0
 Kernames
+DecimalString
+HexadecimalString
 Primitive
 BasicAst
 Universes0

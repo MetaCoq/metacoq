@@ -87,9 +87,21 @@ Qed. *)
 (** Propositional UIP is needed below *)
 Set Equations With UIP.
 
+Equations eqb_prim_model {term} {t : prim_tag} (x y : prim_model term t) : bool :=
+  | primIntModel x, primIntModel y := ReflectEq.eqb x y
+  | primFloatModel x, primFloatModel y := ReflectEq.eqb x y.
+
+#[global, program]
+Instance prim_model_reflecteq {term} {p : prim_tag} : ReflectEq (prim_model term p) := 
+  {| ReflectEq.eqb := eqb_prim_model |}.
+Next Obligation. 
+  intros. depelim x; depelim y; simp eqb_prim_model.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
+Qed.
+
 #[global]
-Instance prim_model_eqdec {term} (*e : EqDec term*) : forall p : prim_tag, EqDec (prim_model term p).
-Proof. eqdec_proof. Qed.
+Instance prim_model_eqdec {term} (*e : EqDec term*) : forall p : prim_tag, EqDec (prim_model term p) := _.
 
 #[global]
 Instance prim_tag_model_eqdec term : EqDec (prim_val term).

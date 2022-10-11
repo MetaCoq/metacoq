@@ -71,37 +71,43 @@ Qed.
 
 #[global]
 Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _.
-  
-(* #[program]
-#[global]
-Instance reflect_eq_float64 : ReflectEq float64_model := 
-  { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
-Next Obligation.
-  cbn -[eqb].
-  intros x y.
-  elim: eqb_spec. constructor.
-  now apply exist_irrel_eq.
-  intros neq; constructor => H'; apply neq; now subst x.
-Qed. *)
 
-(** Propositional UIP is needed below *)
-Set Equations With UIP.
+Equations eqb_prim_model {term} {t : prim_tag} (x y : prim_model term t) : bool :=
+  | primIntModel x, primIntModel y := ReflectEq.eqb x y
+  | primFloatModel x, primFloatModel y := ReflectEq.eqb x y.
+
+#[global, program]
+Instance prim_model_reflecteq {term} {p : prim_tag} : ReflectEq (prim_model term p) := 
+  {| ReflectEq.eqb := eqb_prim_model |}.
+Next Obligation. 
+  intros. depelim x; depelim y; simp eqb_prim_model.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
+Qed.
 
 #[global]
-Instance prim_model_eqdec {term} (*e : EqDec term*) : forall p : prim_tag, EqDec (prim_model term p).
-Proof. eqdec_proof. Qed.
+Instance prim_model_eqdec {term} : forall p : prim_tag, EqDec (prim_model term p) := _.
+ 
+Equations eqb_prim_val {term} (x y : prim_val term) : bool :=
+  | (primInt; i), (primInt; i') := ReflectEq.eqb i i'
+  | (primFloat; f), (primFloat; f') := ReflectEq.eqb f f'
+  | x, y := false.
+
+#[global, program]
+Instance prim_val_reflect_eq {term} : ReflectEq (prim_val term) := 
+  {| ReflectEq.eqb := eqb_prim_val |}.
+Next Obligation. 
+  intros. funelim (eqb_prim_val x y); simp eqb_prim_val.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H. cbn in n. auto.
+  constructor. intros H; noconf H; auto.
+  constructor. intros H; noconf H; auto.
+  case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
+Qed.
 
 #[global]
-Instance prim_tag_model_eqdec term : EqDec (prim_val term).
-Proof. eqdec_proof. Defined.
-
-#[global]
-Instance prim_val_reflect_eq term : ReflectEq (prim_val term) := EqDec_ReflectEq _.
+Instance prim_tag_model_eqdec term : EqDec (prim_val term) := _.
 
 (** Printing *)
-
-Definition string_of_float64_model (f : float64_model) := 
-  "<>".
 
 Definition string_of_prim {term} (soft : term -> string) (p : prim_val term) : string :=
   match p.π2 return string with

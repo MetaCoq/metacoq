@@ -749,6 +749,3 @@ Definition prec := 53%Z.
 Definition emax := 1024%Z.
 (** We consider valid binary encordings of floats as our model *)
 Definition float64_model := sig (SpecFloat.valid_binary prec emax).
-
-Definition string_of_float64_model (i : float64_model) := 
-  "<float>".

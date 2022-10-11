@@ -362,3 +362,6 @@ test-suite/metacoq-config
 test-suite/plugin-demo/_CoqProject
 test-suite/plugin-demo/_PluginProject
 test-suite/plugin-demo/metacoq-config
+erasure/META
+safechecker/META
+template-coq/META

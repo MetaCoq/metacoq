@@ -562,6 +562,8 @@ End Spines.
 
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
+Require Import Equations.Type.Relation_Properties.
+
 Section WeakNormalization.
   Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
@@ -772,8 +774,6 @@ Section WeakNormalization.
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
   
-  Require Import Equations.Type.Relation_Properties.
-
   (* TODO move *)
   Lemma invert_red_axiom {Γ cst u cdecl T} :
     declared_constant Σ cst cdecl -> 

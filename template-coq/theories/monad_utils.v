@@ -87,6 +87,14 @@ Section MonadOperations.
                   ret (x' :: l')
        end.
 
+  Definition monad_option_map (l : option A)
+    : T (option B)
+    := match l with
+       | None => ret None
+       | Some x => x' <- f x ;;
+                   ret (Some x')
+       end.
+
   Context (g : A -> B -> T A).
   Fixpoint monad_fold_left (l : list B) (x : A) : T A
     := match l with
@@ -241,4 +249,3 @@ Section MonadAllAll.
     sq. constructor; assumption.
   Defined.
 End MonadAllAll.
-

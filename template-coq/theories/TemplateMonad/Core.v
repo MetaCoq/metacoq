@@ -133,3 +133,6 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmMkInductive:=@tmMkInductive
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
+
+Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
+  := @tmFix TypeInstance A B f.

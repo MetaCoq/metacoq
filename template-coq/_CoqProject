@@ -75,6 +75,10 @@ theories/TemplateMonad/Core.v
 theories/TemplateMonad/Extractable.v
 theories/monad_utils.v
 
+# Extra Template monad
+theories/MonadAst.v
+theories/MonadBasicAst.v
+
 # Bindings of Coq terms to the "metacoq.*" names
 theories/Constants.v
 

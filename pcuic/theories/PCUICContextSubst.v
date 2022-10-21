@@ -179,8 +179,8 @@ Qed.
 
 #[global] Hint Constructors context_subst : core.
 
-Lemma context_subst_app {ctx ctx' args s} : 
-  context_subst (ctx ++ ctx') args s -> 
+Lemma context_subst_app {ctx ctx' args s} :
+  context_subst (ctx ++ ctx') args s ->
   context_subst (subst_context (skipn #|ctx| s) 0 ctx) (skipn (context_assumptions ctx') args) (firstn #|ctx| s) *
   context_subst ctx' (firstn (context_assumptions ctx') args) (skipn #|ctx| s).
 Proof.
@@ -196,7 +196,7 @@ Proof.
       pose proof (context_subst_length2 IHctx).
       pose proof (context_subst_length2 IHctx').
       pose proof (context_subst_length2 Hc).
-      rewrite context_assumptions_app in H1. 
+      rewrite context_assumptions_app in H1.
       rewrite firstn_app. rewrite (firstn_0 [a0]).
       { rewrite firstn_length_le in H0; lia. }
       rewrite app_nil_r. split; auto.
@@ -242,7 +242,7 @@ Proof.
         pose proof (context_subst_length2 Hc').
         rewrite !context_assumptions_app ?app_length ?List.rev_length /= Nat.add_0_r in H.
         pose proof (context_subst_length2 Hc). lia.
-        
+
       + specialize (IHtele (vass na ty :: ctx) (args ++ [a]) (a :: s) args' s').
         forward IHtele. { econstructor. auto. }
         rewrite -app_assoc. rewrite -app_comm_cons /=.

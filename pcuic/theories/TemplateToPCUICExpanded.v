@@ -3,14 +3,14 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
-     PCUICLiftSubst PCUICEquality PCUICReduction 
+     PCUICLiftSubst PCUICEquality PCUICReduction
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
      PCUICCasesContexts TemplateToPCUICCorrectness PCUICEtaExpand
      PCUICProgram.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
-(eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
+(eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) ||
 (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).
 
 Local Hint Constructors expanded : expanded.
@@ -22,7 +22,7 @@ Lemma expanded_context_map2_bias_left Σ n bctx ctx :
      (map2_bias_left set_binder_name dummy_decl bctx ctx).
 Proof.
   unfold expanded_context.
-  intros hl. 
+  intros hl.
   rewrite map2_map2_bias_left //.
   intros [a]. sq.
   induction a in bctx, hl |- *; try econstructor; auto.
@@ -53,14 +53,14 @@ Proof.
   intros exp; induction exp; cbn => //.
   destruct decl as [kn d]; cbn.
   destruct (eqb_spec c kn). intros [= ->].
-  subst c. eexists. split ; [|exact H]. sq. red. split => //. cbn. 
+  subst c. eexists. split ; [|exact H]. sq. red. split => //. cbn.
   eexists. cbn. instantiate (1:= [_]); reflexivity.
   intros hl; destruct (IHexp hl). exists x. intuition auto.
-  sq. eapply extends_decls_trans; tea. 
+  sq. eapply extends_decls_trans; tea.
   split => //. now exists [(kn, d)].
 Qed.
 
-Lemma declared_constructor_expanded {Σ c mdecl idecl cdecl} : 
+Lemma declared_constructor_expanded {Σ c mdecl idecl cdecl} :
   expanded_global_env Σ ->
   declared_constructor Σ c mdecl idecl cdecl ->
   exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl /\ expanded_constructor_decl Σ' mdecl cdecl.
@@ -68,23 +68,23 @@ Proof.
   intros exp [[decli hnth] hnth'].
   eapply declared_minductive_expanded in decli.
   destruct decli as [Σ' [ext exp']]. exists Σ'; split => //. split => //.
-  destruct exp' as [hp hb]. solve_all. 
+  destruct exp' as [hp hb]. solve_all.
   eapply nth_error_all in hb; tea.
   destruct hb as [hb]. solve_all.
   eapply nth_error_all in hb; tea.
   auto.
 Qed.
 
-Lemma expanded_extended_subst {Σ Γ Δ} : 
-  expanded_context Σ Γ Δ -> 
+Lemma expanded_extended_subst {Σ Γ Δ} :
+  expanded_context Σ Γ Δ ->
   forall n,
   Forall (expanded Σ (repeat 0 (n + context_assumptions Δ) ++ Γ)) (extended_subst Δ n).
 Proof.
   intros [a]; induction a. cbn. constructor.
-  cbn. destruct d as [na [b|] ty]; cbn in *. constructor; auto. 
+  cbn. destruct d as [na [b|] ty]; cbn in *. constructor; auto.
   { cbn. eapply (expanded_subst _ _ 0 _ []) => //. cbn. rewrite -/(repeat _ _).
     specialize (IHa n). solve_all.
-    len. rewrite repeat_app Nat.add_comm. 
+    len. rewrite repeat_app Nat.add_comm.
     eapply expanded_lift. 1-2:now len; rewrite !repeat_length.
     now depelim p. }
   constructor; auto.
@@ -138,7 +138,7 @@ Qed.
 
 Implicit Types (cf : checker_flags).
 
-Lemma expanded_weakening {cf} {Σ Σ' Γ t} : 
+Lemma expanded_weakening {cf} {Σ Σ' Γ t} :
   wf Σ' -> extends_decls Σ Σ' -> expanded Σ Γ t -> expanded Σ' Γ t.
 Proof.
   intros wfΣ ext.
@@ -151,7 +151,7 @@ Proof.
     eapply weakening_env_declared_constructor; tea. now eapply extends_decls_extends.
 Qed.
 
-Lemma expanded_context_weakening {cf} {Σ Σ' Γ t} : 
+Lemma expanded_context_weakening {cf} {Σ Σ' Γ t} :
   wf Σ' -> extends_decls Σ Σ' -> expanded_context Σ Γ t -> expanded_context Σ' Γ t.
 Proof.
   intros wfΣ ext.
@@ -175,7 +175,7 @@ Proof.
   unfold cstr_branch_context.
   epose proof (expanded_let_expansion hp (t:=(subst_context
   (inds (inductive_mind ind) (abstract_instance (ind_universes mdecl))
-     (ind_bodies mdecl)) #|ind_params mdecl| 
+     (ind_bodies mdecl)) #|ind_params mdecl|
   (cstr_args cdecl)))).
   rewrite !app_nil_r in H. forward H.
   epose proof (expanded_context_subst (Γ := []) (Δ' := repeat 0 #|ind_bodies mdecl|)).
@@ -197,7 +197,7 @@ Proof with eauto using expanded.
   - wf_inv wf ?. eapply expanded_tRel with (args := []). eauto. lia. econstructor.
   - wf_inv wf [[[]]]. eapply expanded_tRel. eauto. len. solve_all.
   - wf_inv wf [[[]]]. econstructor. solve_all.
-  - wf_inv wf []. cbn. eapply expanded_mkApps with (args := [_]); cbn... econstructor. 
+  - wf_inv wf []. cbn. eapply expanded_mkApps with (args := [_]); cbn... econstructor.
     eapply expanded_tRel with (args := []). reflexivity. lia. econstructor.
   - try now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[[]]].
@@ -241,16 +241,16 @@ Proof with eauto using expanded.
 Qed.
 
 
-Lemma wf_cons_inv {cf} Σ' (Σ : global_declarations) d : 
+Lemma wf_cons_inv {cf} Σ' (Σ : global_declarations) d :
   wf (set_declarations Σ' (d :: Σ)) -> wf (set_declarations Σ' Σ).
 Proof.
   intros []. split => //. now depelim o0.
 Qed.
 
-Lemma template_wf_cons_inv {cf} univs retro (Σ : Ast.Env.global_declarations) d : 
-  Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ; 
+Lemma template_wf_cons_inv {cf} univs retro (Σ : Ast.Env.global_declarations) d :
+  Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ;
     Ast.Env.retroknowledge := retro |} ->
-  let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ; 
+  let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ;
     Ast.Env.retroknowledge := retro |} in
   Typing.wf Σ' × Typing.on_global_decl Typing.cumul_gen (WfAst.wf_decl_pred) (Σ', Ast.universes_decl_of_decl d.2) d.1 d.2
   × ST.on_udecl univs (Ast.universes_decl_of_decl d.2).
@@ -264,10 +264,10 @@ Proof.
   cbn. split => //.
 Qed.
 
-Lemma trans_global_env_cons univs retro (Σ : Ast.Env.global_declarations) decl : 
-  trans_global_env {| S.Env.universes := univs; S.Env.declarations := decl :: Σ; S.Env.retroknowledge := retro |} = 
-  let Σ' := trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |} in 
-  add_global_decl Σ' (decl.1, trans_global_decl Σ' decl.2). 
+Lemma trans_global_env_cons univs retro (Σ : Ast.Env.global_declarations) decl :
+  trans_global_env {| S.Env.universes := univs; S.Env.declarations := decl :: Σ; S.Env.retroknowledge := retro |} =
+  let Σ' := trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |} in
+  add_global_decl Σ' (decl.1, trans_global_decl Σ' decl.2).
 Proof. reflexivity. Qed.
 
 Arguments trans_global_env : simpl never.
@@ -281,7 +281,7 @@ Proof.
 Qed.
 
 Lemma All_fold_All_mix_left (P : S.Env.context -> S.Env.context_decl -> Type) (Q : S.Env.context_decl -> Type) ctx :
-  All_fold P ctx -> 
+  All_fold P ctx ->
   All Q ctx ->
   All_fold (fun Γ d => Q d × P Γ d) ctx.
 Proof.
@@ -289,10 +289,10 @@ Proof.
   depelim X0. constructor; auto.
 Qed.
 
-Lemma expanded_trans_local {cf} {Σ} {wfΣ : Typing.wf Σ} Γ ctx : 
+Lemma expanded_trans_local {cf} {Σ} {wfΣ : Typing.wf Σ} Γ ctx :
   expanded_global_env (trans_global_env Σ) ->
   All (WfAst.wf_decl Σ) ctx ->
-  EtaExpand.expanded_context Σ Γ ctx -> 
+  EtaExpand.expanded_context Σ Γ ctx ->
   expanded_context (trans_global_env Σ) Γ (trans_local (trans_global_env Σ) ctx).
 Proof.
   rewrite /expanded_context.
@@ -300,13 +300,13 @@ Proof.
   unfold trans_local.
   eapply All_fold_map.
   eapply All_fold_All_mix_left in a; tea.
-  eapply All_fold_impl; tea; cbv beta; intros ??; cbn; unfold WfAst.wf_decl; 
+  eapply All_fold_impl; tea; cbv beta; intros ??; cbn; unfold WfAst.wf_decl;
     intros [wf Hd]; revert Hd wf; intros []; intros [];  constructor; len.
   eapply trans_expanded in H; auto.
 Qed.
 
 Lemma wf_context_sorts {cf} {Σ ctx ctx' cunivs} {wfΣ : Typing.wf_ext Σ} :
-  Typing.sorts_local_ctx WfAst.wf_decl_pred Σ ctx ctx' cunivs -> 
+  Typing.sorts_local_ctx WfAst.wf_decl_pred Σ ctx ctx' cunivs ->
   All (WfAst.wf_decl Σ) ctx'.
 Proof.
   induction ctx' in cunivs |- *; cbn; auto.
@@ -315,12 +315,12 @@ Proof.
   destruct cunivs => //.
   intros [? []]. constructor; eauto. constructor; cbn; eauto.
 Qed.
-  
+
 Lemma expanded_trans_global_env {cf} Σ {wfΣ : Typing.wf_ext Σ} :
   EtaExpand.expanded_global_env Σ ->
   expanded_global_env (trans_global_env Σ).
-Proof. 
-  destruct Σ as [[univs Σ] udecl]. 
+Proof.
+  destruct Σ as [[univs Σ] udecl].
   cbn -[trans_global_env]. unfold EtaExpand.expanded_global_env; cbn -[trans_global_env].
   intros etaenv; induction etaenv.
   - constructor; auto.

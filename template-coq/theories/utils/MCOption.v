@@ -143,7 +143,7 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
+Lemma option_map_Some {A B} (f : A -> B) (o : option A) x :
   option_map f o = Some x ->
   ∑ y, (o = Some y) /\ (x = f y).
 Proof.
@@ -151,7 +151,7 @@ Proof.
   move=> [] <-. exists a; auto.
 Qed.
 
-Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} : 
+Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} :
   (forall x, reflectT (P x) (p x)) ->
   forall x, reflectT (option_default P x unit) (option_default p x true).
 Proof.

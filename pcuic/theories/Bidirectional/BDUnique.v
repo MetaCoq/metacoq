@@ -30,7 +30,7 @@ Let Psort Γ t u :=
 Let Pprod Γ t (na : aname) A B :=
   wf_local Σ Γ ->
   forall na' A' B', Σ ;;; Γ |- t ▹Π (na',A',B') ->
-  ∑ A'' B'', 
+  ∑ A'' B'',
   [× na = na', Σ ;;; Γ ⊢ A ⇝ A'', Σ ;;; Γ ⊢ A' ⇝ A'',
       Σ ;;; Γ,, vass na A ⊢ B ⇝ B'' & Σ ;;; Γ,, vass na A' ⊢ B' ⇝ B''].
 
@@ -121,14 +121,14 @@ Proof using wfΣ.
     1,3: fvs.
     all: rewrite on_free_vars_subst_instance.
     all: now eapply closed_on_free_vars, declared_inductive_closed_type.
-  
+
   - replace cdecl0 with cdecl by (eapply declared_constructor_inj ; eassumption).
     replace mdecl0 with mdecl by (eapply declared_constructor_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
     1,3: fvs.
     all: now eapply closed_on_free_vars, declared_constructor_closed_type.
-  
+
   - eapply declared_projection_inj in H as (?&?&?&?); tea.
     subst.
     move: (X2) => tyc'.
@@ -176,7 +176,7 @@ Proof using wfΣ.
         cbn in H. len.
         rewrite closedn_on_free_vars //.
         eapply closed_upwards; tea. cbn. lia.
- 
+
   - rewrite H3 in H0 ; injection H0 as ->.
     eapply nth_error_all in X as (?&[]); tea.
     eexists ; split.
@@ -190,7 +190,7 @@ Proof using wfΣ.
     all: eapply closed_red_refl.
     1,3:fvs.
     all: now eapply subject_is_open_term, infering_sort_typing.
-   
+
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
     move: (H) => /declared_inductive_inj /(_ H13) [? ?].
@@ -262,7 +262,7 @@ Proof using wfΣ.
     constructor.
     1: eapply closed_red_ctx_refl ; fvs.
     now constructor.
-  
+
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.
     eapply into_closed_red in X1 ; fvs.
@@ -324,7 +324,7 @@ Qed.
 
 Theorem infering_sort_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
   {Γ} {wfΓ : wf_local Σ Γ} {t u T} :
-  Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t ▹ T -> 
+  Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ ⊢ T ⇝ tSort u.
 Proof.
   intros ty ty'.
@@ -341,7 +341,7 @@ Qed.
 Theorem infering_prod_prod `{checker_flags} {Σ} (wfΣ : wf Σ)
   {Γ} (wfΓ : wf_local Σ Γ) {t na na' A A' B B'} :
   Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t ▹Π (na',A',B') ->
-  ∑ A'' B'', 
+  ∑ A'' B'',
   [× na = na', Σ ;;; Γ ⊢ A ⇝ A'', Σ ;;; Γ ⊢ A' ⇝ A'',
       Σ ;;; Γ,, vass na A ⊢ B ⇝ B'' & Σ ;;; Γ,, vass na A' ⊢ B' ⇝ B''].
 Proof.

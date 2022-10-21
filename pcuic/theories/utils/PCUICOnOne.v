@@ -23,7 +23,7 @@ Proof.
     + constructor. eassumption.
     + clear - IHh. rename IHh into h.
       induction h.
-      * constructor. 
+      * constructor.
       * econstructor.
         -- econstructor 2. eassumption.
         -- assumption.
@@ -47,17 +47,17 @@ Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term 
       pcontext := pctx';
       preturn := p.(preturn) |}.
 
-Definition set_pcontext_two {p x} x' : 
-  set_pcontext (set_pcontext p x') x = set_pcontext p x := 
+Definition set_pcontext_two {p x} x' :
+  set_pcontext (set_pcontext p x') x = set_pcontext p x :=
   eq_refl.
-      
+
 Definition set_preturn (p : predicate term) (pret' : term) : predicate term :=
   {| pparams := p.(pparams);
       puinst := p.(puinst);
       pcontext := p.(pcontext);
       preturn := pret' |}.
 
-Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
+Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret :=
   eq_refl.
 
 Definition set_pparams (p : predicate term) (pars' : list term) : predicate term :=
@@ -66,7 +66,7 @@ Definition set_pparams (p : predicate term) (pars' : list term) : predicate term
      pcontext := p.(pcontext);
      preturn := p.(preturn) |}.
 
-Definition set_pparams_two {p pars} pars' : set_pparams (set_pparams p pars') pars = set_pparams p pars := 
+Definition set_pparams_two {p pars} pars' : set_pparams (set_pparams p pars') pars = set_pparams p pars :=
   eq_refl.
 
 Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
@@ -74,7 +74,7 @@ Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
      decl_body := option_map g (decl_body d);
      decl_type := g (decl_type d) |}.
 
-(** We do not allow alpha-conversion and P applies to only one of the 
+(** We do not allow alpha-conversion and P applies to only one of the
   fields in the context declaration. Used to define one-step context reduction. *)
 Definition on_one_decl (P : context -> term -> term -> Type)
   Γ (d : context_decl) (d' : context_decl) : Type :=
@@ -84,13 +84,13 @@ Definition on_one_decl (P : context -> term -> term -> Type)
       na = na' × P Γ ty ty'
   | {| decl_name := na; decl_body := Some b; decl_type := ty |},
     {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} =>
-      na = na' × 
+      na = na' ×
       ((P Γ ty ty' × b = b') +
         (P Γ b b' × ty = ty'))
   | _, _ => False
   end.
 
-Lemma on_one_decl_impl (P Q : context -> term -> term -> Type) : 
+Lemma on_one_decl_impl (P Q : context -> term -> term -> Type) :
   (forall Γ, inclusion (P Γ) (Q Γ)) ->
   forall Γ, inclusion (on_one_decl P Γ) (on_one_decl Q Γ).
 Proof.
@@ -98,7 +98,7 @@ Proof.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl; firstorder auto.
 Qed.
 
-Lemma on_one_decl_map_na (P : context -> term -> term -> Type) f g : 
+Lemma on_one_decl_map_na (P : context -> term -> term -> Type) f g :
   forall Γ,
     inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl_na f g) Γ)) g) Γ)
     (on_Trel (on_one_decl P (map (map_decl_na f g) Γ)) (map_decl_na f g)).
@@ -108,7 +108,7 @@ Proof.
     auto.
 Qed.
 
-Lemma on_one_decl_map (P : context -> term -> term -> Type) f : 
+Lemma on_one_decl_map (P : context -> term -> term -> Type) f :
   forall Γ,
     inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl f) Γ)) f) Γ)
     (on_Trel (on_one_decl P (map (map_decl f) Γ)) (map_decl f)).
@@ -118,7 +118,7 @@ Proof.
     auto.
 Qed.
 
-Lemma on_one_decl_mapi_context (P : context -> term -> term -> Type) f : 
+Lemma on_one_decl_mapi_context (P : context -> term -> term -> Type) f :
   forall Γ,
     inclusion (on_one_decl (fun Γ => on_Trel (P (mapi_context f Γ)) (f #|Γ|)) Γ)
     (on_Trel (on_one_decl P (mapi_context f Γ)) (map_decl (f #|Γ|))).
@@ -128,8 +128,8 @@ Proof.
     auto.
 Qed.
 
-Lemma on_one_decl_test_impl (P Q : context -> term -> term -> Type) (p : term -> bool) : 
-  forall Γ d d', 
+Lemma on_one_decl_test_impl (P Q : context -> term -> term -> Type) (p : term -> bool) :
+  forall Γ d d',
     on_one_decl P Γ d d' ->
     test_decl p d ->
     (forall x y, p x -> P Γ x y -> Q Γ x y) ->
@@ -154,7 +154,7 @@ Section OnOne_local_2.
 End OnOne_local_2.
 
 #[global]
-Instance OnOne2_local_env_length {P ctx ctx'} : 
+Instance OnOne2_local_env_length {P ctx ctx'} :
   HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
 Proof.
   induction 1; simpl; lia.
@@ -169,7 +169,7 @@ Proof.
   induction H'; try solve [econstructor; firstorder].
 Qed.
 
-Lemma OnOne2_local_env_ondecl_impl P Q : 
+Lemma OnOne2_local_env_ondecl_impl P Q :
   (forall Γ, inclusion (P Γ) (Q Γ)) ->
   inclusion (OnOne2_local_env (on_one_decl P)) (OnOne2_local_env (on_one_decl P)).
 Proof.
@@ -209,10 +209,10 @@ Proof.
   eapply test_decl_impl; tea; eauto.
 Qed.
 
-Lemma OnOne2_local_env_test_context_k {P ctx ctx'} {k} {p q : nat -> term -> bool} : 
+Lemma OnOne2_local_env_test_context_k {P ctx ctx'} {k} {p q : nat -> term -> bool} :
   (forall n t, q n t -> p n t) ->
   OnOne2_local_env P ctx ctx' ->
-  (forall Γ d d', 
+  (forall Γ d d',
     P Γ d d' ->
     test_context_k q k Γ ->
     test_decl (q (#|Γ| + k)) d ->
@@ -250,9 +250,9 @@ Proof.
     subst; simpl; intuition eauto.
 Qed.
 
-Lemma OnOne2_local_env_impl_test {P Q ctx ctx'} {k} {p : nat -> term -> bool} : 
+Lemma OnOne2_local_env_impl_test {P Q ctx ctx'} {k} {p : nat -> term -> bool} :
   OnOne2_local_env P ctx ctx' ->
-  (forall Γ d d', 
+  (forall Γ d d',
     P Γ d d' ->
     test_context_k p k Γ ->
     test_decl (p (#|Γ| + k)) d ->

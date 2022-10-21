@@ -52,7 +52,7 @@ Proof.
     reflexivity.
   - rewrite subst_instance_mkApps. cbn.
     rewrite iota_red_subst_instance.
-    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)). 
+    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)).
     eapply cumul_iota; eauto with pcuic.
     * rewrite nth_error_map H //.
     * simpl. now len.
@@ -62,7 +62,7 @@ Proof.
       * inversion H.
         rewrite nth_error_map E. cbn.
         destruct d. cbn in *. cbn in *; try congruence.
-        f_equal. f_equal. 
+        f_equal. f_equal.
         now rewrite subst_instance_subst fix_subst_instance_subst.
       * inversion H.
     + unfold is_constructor in *.
@@ -92,35 +92,35 @@ Proof.
     eapply cumul_proj. now rewrite nth_error_map H.
   - eapply cumul_Trans; intuition.
     * rewrite on_free_vars_ctx_subst_instance; eauto.
-    * rewrite on_free_vars_subst_instance. unfold is_open_term. 
+    * rewrite on_free_vars_subst_instance. unfold is_open_term.
       replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
-  - eapply cumul_Evar. eapply All2_map. 
+  - eapply cumul_Evar. eapply All2_map.
     eapply All2_impl. 1: tea. cbn; intros. eapply X0.2; eauto.
-  - eapply cumul_Case; try solve [intuition; eauto]. 
-    * destruct X as [X [Xuni [Xcont [_ Xret]]]]. repeat split; eauto; cbn. 
+  - eapply cumul_Case; try solve [intuition; eauto].
+    * destruct X as [X [Xuni [Xcont [_ Xret]]]]. repeat split; eauto; cbn.
       + apply All2_map. eapply All2_impl. 1: tea. cbn; intros. eapply X3.2; eauto.
       + apply precompose_subst_instance. eapply R_universe_instance_impl; eauto.
         now apply eq_universe_subst_instance.
       + rewrite subst_instance_app inst_case_predicate_context_subst_instance in Xret.
-        eapply Xret; eauto.           
+        eapply Xret; eauto.
     * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
       repeat split; eauto; intuition.
-      rewrite subst_instance_app inst_case_branch_context_subst_instance in X1; eauto. 
-  - eapply cumul_Fix. apply All2_map. eapply All2_impl. 1: tea. 
-    cbn; intros; intuition. 
-    rewrite subst_instance_app fix_context_subst_instance in X0; eauto. 
-  - eapply cumul_CoFix. apply All2_map. eapply All2_impl. 1: tea. 
-    cbn; intros; intuition. 
-    rewrite subst_instance_app fix_context_subst_instance in X0; eauto. 
+      rewrite subst_instance_app inst_case_branch_context_subst_instance in X1; eauto.
+  - eapply cumul_Fix. apply All2_map. eapply All2_impl. 1: tea.
+    cbn; intros; intuition.
+    rewrite subst_instance_app fix_context_subst_instance in X0; eauto.
+  - eapply cumul_CoFix. apply All2_map. eapply All2_impl. 1: tea.
+    cbn; intros; intuition.
+    rewrite subst_instance_app fix_context_subst_instance in X0; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
-    * apply precompose_subst_instance_global.  
+    * apply precompose_subst_instance_global.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
     * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
-    * apply precompose_subst_instance_global. cbn. 
+    * apply precompose_subst_instance_global. cbn.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
@@ -129,8 +129,8 @@ Proof.
   - eapply cumul_Sort. now apply compare_universe_subst_instance.
   - eapply cumul_Const. apply precompose_subst_instance.
     eapply R_universe_instance_impl; eauto.
-    now apply compare_universe_subst_instance. 
-Defined. 
+    now apply compare_universe_subst_instance.
+Defined.
 
 Lemma convSpec_subst_instance (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))
@@ -185,7 +185,7 @@ Qed.
 
 Hint Resolve subst_instance_cstrs_two
      satisfies_equal_sets satisfies_subsets : univ_subst.
-Hint Resolve monomorphic_global_constraint monomorphic_global_constraint_ext : univ_subst. 
+Hint Resolve monomorphic_global_constraint monomorphic_global_constraint_ext : univ_subst.
 Hint Unfold CS.For_all : univ_subst.
 Hint Resolve consistent_ext_trans : univ_subst.
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
@@ -278,9 +278,9 @@ Proof using Type.
     rewrite subst_instance_case_predicate_context.
     eapply type_Case with (p:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
-    3,4: constructor; eauto with pcuic.                                              
+    3,4: constructor; eauto with pcuic.
     + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
-      eapply Hpty; eauto. 
+      eapply Hpty; eauto.
     + eapply IHc in cu => //.
       now rewrite subst_instance_mkApps map_app in cu.
     + simpl. eapply consistent_ext_trans; tea.
@@ -294,7 +294,7 @@ Proof using Type.
       clear -wfext cu. induction 1; try destruct t0; cbn; constructor; simpl; eauto.
       all:now rewrite -(subst_instance_subst_telescope i [_]).
     + rewrite -{1}(map_id (ind_ctors idecl)).
-      eapply All2i_map. eapply All2i_impl; eauto. 
+      eapply All2i_map. eapply All2i_impl; eauto.
       cbn -[case_branch_type case_branch_context subst_instance].
       intros k cdecl br (hctx & hcbctx & (hbod & ihbod) & hbty & ihbty).
       rewrite case_branch_type_fst.
@@ -325,19 +325,19 @@ Proof using Type.
       eapply infer_typing_sort_impl with (tu := X1).
       intros [_ Hs]; now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [X1 X3]. 
-      specialize (X3 u univs wfΣ' H2). 
+      intros x [X1 X3].
+      specialize (X3 u univs wfΣ' H2).
       rewrite (map_dbody (subst_instance u)) in X3.
       rewrite subst_instance_lift in X3.
       rewrite fix_context_length ?map_length in X0, X1, X3.
       rewrite (map_dtype _ (subst_instance u) x) in X3.
       rewrite subst_instance_app in X3.
-      rewrite <- (fix_context_subst_instance u mfix). 
+      rewrite <- (fix_context_subst_instance u mfix).
       now len.
     + red; rewrite <- wffix.
       unfold wf_fixpoint, wf_fixpoint_gen.
-      f_equal. 
-      { rewrite forallb_map. solve_all. cbn. 
+      f_equal.
+      { rewrite forallb_map. solve_all. cbn.
         destruct (dbody x) => //. }
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
@@ -353,14 +353,14 @@ Proof using Type.
         eapply infer_typing_sort_impl with (tu := X1).
         intros [_ Hs]; now apply Hs.
       + eapply All_map, All_impl; tea.
-        intros x [X1 X3]. 
-        specialize (X3 u univs wfΣ' H2). 
+        intros x [X1 X3].
+        specialize (X3 u univs wfΣ' H2).
         rewrite (map_dbody (subst_instance u)) in X3.
         rewrite subst_instance_lift in X3.
         rewrite fix_context_length ?map_length in X0, X1, X3.
         rewrite (map_dtype _ (subst_instance u) x) in X3.
         rewrite subst_instance_app in X3.
-        rewrite <- (fix_context_subst_instance u mfix). 
+        rewrite <- (fix_context_subst_instance u mfix).
         now len.
       + red; rewrite <- wffix.
         unfold wf_cofixpoint, wf_cofixpoint_gen.
@@ -438,32 +438,32 @@ Qed.
 
 
 
-Lemma wf_local_instantiate_poly {Σ ctx Γ u} : 
+Lemma wf_local_instantiate_poly {Σ ctx Γ u} :
   wf_ext (Σ.1, Polymorphic_ctx ctx) ->
   consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
-  wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
+  wf_local (Σ.1, Polymorphic_ctx ctx) Γ ->
   wf_local Σ (subst_instance u Γ).
 Proof using Type.
   intros wfΣ Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
-  - eapply typing_subst_instance_ctx in ty;   
-    cbn; eauto using typing_wf_local. 
+  - eapply typing_subst_instance_ctx in ty;
+    cbn; eauto using typing_wf_local.
     * apply wfΣ.
     * destruct wfΣ. now eapply on_udecl_on_udecl_prop.
 Qed.
 
-Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} : 
+Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-  wf_local (Σ.1, universes_decl_of_decl decl) Γ -> 
+  wf_local (Σ.1, universes_decl_of_decl decl) Γ ->
   wf_local Σ (subst_instance u Γ).
 Proof using Type.
   intros wfΣ Hdecl Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
   - now simpl.
-  - eapply typing_subst_instance_decl in ty;   
+  - eapply typing_subst_instance_decl in ty;
     cbn; eauto using typing_wf_local.
 Qed.
 

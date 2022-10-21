@@ -11,7 +11,7 @@ Set Equations Transparent.
 Fixpoint isFixLambda_app (t : term) : bool :=
   match t with
   | tApp (tFix _ _) _ => true
-  | tApp (tLambda _ _ _) _ => true 
+  | tApp (tLambda _ _ _) _ => true
   | tApp f _ => isFixLambda_app f
   | _ => false
   end.
@@ -37,14 +37,14 @@ Proof.
   apply (fix_lambda_app_fix mfix idx [] u).
 Defined.
 
-Lemma eq_pair_transport {A B} (x y : A) (t : B y) (eq : y = x) : 
-  (x; eq_rect _ (fun x => B x) t _ eq) = (y; t) :> ∑ x, B x. 
+Lemma eq_pair_transport {A B} (x y : A) (t : B y) (eq : y = x) :
+  (x; eq_rect _ (fun x => B x) t _ eq) = (y; t) :> ∑ x, B x.
 Proof.
-  now destruct eq. 
+  now destruct eq.
 Qed.
 
-Lemma view_lambda_fix_app_fix_app_sigma mfix idx l a : 
-  ((mkApps (tFix mfix idx) l); view_lambda_fix_app (mkApps (tFix mfix idx) l) a) =   
+Lemma view_lambda_fix_app_fix_app_sigma mfix idx l a :
+  ((mkApps (tFix mfix idx) l); view_lambda_fix_app (mkApps (tFix mfix idx) l) a) =
   ((mkApps (tFix mfix idx) l); fix_lambda_app_fix mfix idx l a) :> ∑ t, fix_lambda_app_view t a.
 Proof.
   induction l using rev_ind; simpl; auto.
@@ -54,8 +54,8 @@ Proof.
   now rewrite eq_pair_transport.
 Qed.
 
-Lemma view_lambda_fix_app_lambda_app_sigma na ty b l a : 
-  ((mkApps (tLambda na ty b) l); view_lambda_fix_app (mkApps (tLambda na ty b) l) a) =   
+Lemma view_lambda_fix_app_lambda_app_sigma na ty b l a :
+  ((mkApps (tLambda na ty b) l); view_lambda_fix_app (mkApps (tLambda na ty b) l) a) =
   ((mkApps (tLambda na ty b) l); fix_lambda_app_lambda na ty b l a) :> ∑ t, fix_lambda_app_view t a.
 Proof.
   induction l using rev_ind; simpl; auto.
@@ -67,16 +67,16 @@ Qed.
 
 Set Equations With UIP.
 
-Lemma view_lambda_fix_app_fix_app mfix idx l a : 
-  view_lambda_fix_app (mkApps (tFix mfix idx) l) a =   
+Lemma view_lambda_fix_app_fix_app mfix idx l a :
+  view_lambda_fix_app (mkApps (tFix mfix idx) l) a =
   fix_lambda_app_fix mfix idx l a.
 Proof.
   pose proof (view_lambda_fix_app_fix_app_sigma mfix idx l a).
   now noconf H.
 Qed.
 
-Lemma view_lambda_fix_app_lambda_app na ty b l a : 
-  view_lambda_fix_app (mkApps (tLambda na ty b) l) a =   
+Lemma view_lambda_fix_app_lambda_app na ty b l a :
+  view_lambda_fix_app (mkApps (tLambda na ty b) l) a =
   fix_lambda_app_lambda na ty b l a.
 Proof.
   pose proof (view_lambda_fix_app_lambda_app_sigma na ty b l a).
@@ -136,9 +136,9 @@ Equations view_construct0_cofix (t : term) : construct0_cofix_view t :=
   | t => construct0_cofix_other t _ }.
 
 Lemma isFixLambda_app_mkApps t l : isFixLambda_app t -> isFixLambda_app (mkApps t l).
-Proof. 
+Proof.
   induction l using rev_ind; simpl; auto.
-  rewrite mkApps_app. 
+  rewrite mkApps_app.
   intros isf. specialize (IHl isf).
   simpl. rewrite IHl. destruct (mkApps t l); auto.
 Qed.
@@ -161,12 +161,12 @@ Proof.
 Qed.
 
 Lemma isFixLambda_app_mkApps' t l x : isFixLambda t -> isFixLambda_app (tApp (mkApps t l) x).
-Proof. 
+Proof.
   induction l using rev_ind; simpl; auto.
   destruct t; auto. simpl => //.
   intros isl. specialize (IHl isl).
   simpl in IHl.
-  now rewrite mkApps_app /=. 
+  now rewrite mkApps_app /=.
 Qed.
 
 Lemma bool_pirr (b b' : bool) (p q : b = b') : p = q.

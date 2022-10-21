@@ -2,8 +2,8 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICTyping PCUICCumulativity 
-  PCUICClosed PCUICReduction 
+  PCUICLiftSubst PCUICTyping PCUICCumulativity
+  PCUICClosed PCUICReduction
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICOnFreeVars
   PCUICClosedConv PCUICClosedTyp.
 
@@ -68,7 +68,7 @@ Proof. rewrite !lift_context_alt.
 Qed.
 
 Lemma weakening_renaming P Γ Γ' Γ'' :
-  urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
+  urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ')
     (lift_renaming #|Γ''| #|Γ'|).
 Proof.
   intros i d hpi hnth.
@@ -81,7 +81,7 @@ Proof.
     * apply rename_ext => k. rewrite /rshiftk /lift_renaming.
       repeat nat_compare_specs.
     * destruct (decl_body d) => /= //.
-      f_equal. apply rename_ext => k. 
+      f_equal. apply rename_ext => k.
       rewrite /rshiftk; now nat_compare_specs.
   - rewrite weaken_nth_error_lt; try lia.
     rewrite hnth /=. eexists. split; [eauto|].
@@ -325,7 +325,7 @@ Lemma weakening_conv `{cf:checker_flags} :
     wf Σ.1 ->
     on_free_vars xpredT M ->
     on_free_vars xpredT N ->
-    on_ctx_free_vars xpredT (Γ ,,, Γ') ->  
+    on_ctx_free_vars xpredT (Γ ,,, Γ') ->
     Σ ;;; Γ ,,, Γ' |- M = N ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
@@ -336,7 +336,7 @@ Proof.
   now eapply weakening_renaming.
 Qed.
 
-Lemma isType_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
+Lemma isType_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} :
   isType Σ Γ T -> on_free_vars xpredT T.
 Proof.
   intros [s Hs].
@@ -345,7 +345,7 @@ Proof.
   eapply on_free_vars_impl; tea => //.
 Qed.
 
-Lemma isType_on_ctx_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
+Lemma isType_on_ctx_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} :
   isType Σ Γ T -> on_ctx_free_vars xpredT Γ.
 Proof.
   intros [s Hs].

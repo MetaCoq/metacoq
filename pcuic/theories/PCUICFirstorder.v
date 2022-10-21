@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils Kernames MCRelations.
 
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-  PCUICReduction   
+  PCUICReduction
   PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp
   PCUICContextConversionTyp
@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICConfluence PCUICConversion
   PCUICUnivSubstitutionTyp
   PCUICCumulativity PCUICSR PCUICSafeLemmata
-  PCUICValidity PCUICPrincipality PCUICElimination 
+  PCUICValidity PCUICPrincipality PCUICElimination
   PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICCanonicity.
 
 From MetaCoq Require Import PCUICArities PCUICSpine.
@@ -21,73 +21,73 @@ Section firstorder.
 
   Context {Σ : global_env_ext}.
   Context {Σb : list (kername × bool)}.
-  
+
   Fixpoint plookup_env {A} (Σ : list (kername × A)) (kn : kername) {struct Σ} : option A :=
   match Σ with
   | [] => None
   | d :: tl => if eq_kername kn d.1 then Some d.2 else plookup_env tl kn
-  end. 
-  (* 
+  end.
+  (*
   Definition zo_type (t : term) :=
     match (PCUICAstUtils.decompose_app t).1 with
     | tProd _ _ _ => false
     | tSort _ => false
-    | tInd (mkInd nm i) _ => match (plookup_env Σb nm) with 
+    | tInd (mkInd nm i) _ => match (plookup_env Σb nm) with
                              | Some l => nth i l false | None => false
                              end
     | _ => true
     end. *)
-  
+
   Definition firstorder_type (n k : nat) (t : term) :=
     match (PCUICAstUtils.decompose_app t).1 with
-    | tInd (mkInd nm i) u => match (plookup_env Σb nm) with 
+    | tInd (mkInd nm i) u => match (plookup_env Σb nm) with
                              | Some b => b | None => false
                              end
     | tRel i => (k <=? i) && (i <? n + k)
     | _ => false
     end.
-  (* 
+  (*
   Definition firstorder_type (t : term) :=
     match (PCUICAstUtils.decompose_app t).1 with
-    | tInd (mkInd nm i) _ => match (plookup_env Σb nm) with 
+    | tInd (mkInd nm i) _ => match (plookup_env Σb nm) with
                              | Some l => nth i l false | None => false
                              end
     | _ => false
     end. *)
-  
+
   Definition firstorder_con mind (c : constructor_body) :=
     let inds := #|mind.(ind_bodies)| in
-    alli (fun k '({| decl_body := b ; decl_type := t ; decl_name := n|}) => 
+    alli (fun k '({| decl_body := b ; decl_type := t ; decl_name := n|}) =>
       firstorder_type inds k t) 0
       (List.rev (c.(cstr_args) ++ mind.(ind_params)))%list.
-  
+
   Definition firstorder_oneind mind (ind : one_inductive_body) :=
     forallb (firstorder_con mind) ind.(ind_ctors) && negb (Universe.is_level (ind_sort ind)).
-    
+
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
     (mind.(ind_finite) == Finite) &&
     forallb (firstorder_oneind mind) mind.(ind_bodies)
     (* else repeat false (length mind.(ind_bodies)). *).
-  
+
   Definition firstorder_ind (i : inductive) :=
     match lookup_env Σ.1 (inductive_mind i) with
     | Some (InductiveDecl mind) => firstorder_mutind mind
     | _ => false
     end.
-  
+
 End firstorder.
-  
+
 Fixpoint firstorder_env' (Σ : global_declarations) :=
   match Σ with
   | nil => []
-  | (nm, ConstantDecl _) :: Σ' => 
-    let Σb := firstorder_env' Σ' in 
+  | (nm, ConstantDecl _) :: Σ' =>
+    let Σb := firstorder_env' Σ' in
     ((nm, false) :: Σb)
-  | (nm, InductiveDecl mind) :: Σ' => 
-    let Σb := firstorder_env' Σ' in 
+  | (nm, InductiveDecl mind) :: Σ' =>
+    let Σb := firstorder_env' Σ' in
     ((nm, @firstorder_mutind Σb mind) :: Σb)
-  end.                       
+  end.
 
 Definition firstorder_env (Σ : global_env_ext) :=
   firstorder_env' Σ.1.(declarations).
@@ -96,10 +96,10 @@ Section cf.
 
 Context {cf : config.checker_flags}.
 
-Definition isPropositional Σ ind b := 
+Definition isPropositional Σ ind b :=
   match lookup_env Σ (inductive_mind ind) with
   | Some (InductiveDecl mdecl) =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
     | Some idecl =>
       match destArity [] idecl.(ind_type) with
       | Some (_, s) => is_propositional s = b
@@ -111,8 +111,8 @@ Definition isPropositional Σ ind b :=
   end.
 
 Inductive firstorder_value Σ Γ : term -> Prop :=
-| firstorder_value_C i n ui u args pandi : 
-   Σ ;;; Γ |- mkApps (tConstruct i n ui) args : 
+| firstorder_value_C i n ui u args pandi :
+   Σ ;;; Γ |- mkApps (tConstruct i n ui) args :
    mkApps (tInd i u) pandi ->
    Forall (firstorder_value Σ Γ) args ->
    isPropositional Σ i false ->
@@ -174,10 +174,10 @@ Inductive firstorder_spine Σ (Γ : context) : term -> list term -> term -> Type
 
 Inductive instantiated {Σ} (Γ : context) : term -> Type :=
 | instantiated_mkApps i u args : instantiated Γ (mkApps (tInd i u) args)
-| instantiated_LetIn na d b ty : 
+| instantiated_LetIn na d b ty :
   instantiated Γ (ty {0 := d}) ->
   instantiated Γ (tLetIn na d b ty)
-| instantiated_tProd na B i u args : 
+| instantiated_tProd na B i u args :
   @firstorder_ind Σ (@firstorder_env Σ) i ->
     (forall x,
        (* Σ ;;; Γ |- x : mkApps (tInd i u) args ->  *)
@@ -217,24 +217,24 @@ Proof using Type.
          now eapply isType_open.
       -- eapply cumul_Prod_inv in w as []. econstructor.
          ++ eapply type_ws_cumul_pb. 3: eapply PCUICContextConversion.ws_cumul_pb_eq_le; symmetry. all:eauto.
-            eapply isType_tProd in i0. eapply i0. 
+            eapply isType_tProd in i0. eapply i0.
          ++ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. autorewrite with subst.
             cbn. eapply X. len. lia.
             eapply typing_spine_strengthen. eauto.
             2:{ replace (it_mkProd_or_LetIn (subst_context [hd] 0 Γ0)
             (mkApps (tInd i u) (map (subst [hd] (#|Γ0| + 0)) pars))) with ((PCUICAst.subst10 hd (it_mkProd_or_LetIn Γ0 (mkApps (tInd i u) pars)))).
-            2:{ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. now autorewrite with subst. }   
+            2:{ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. now autorewrite with subst. }
             eapply substitution0_ws_cumul_pb. eauto. eauto.
             }
             replace (it_mkProd_or_LetIn (subst_context [hd] 0 Γ0)
             (mkApps (tInd i u) (map (subst [hd] (#|Γ0| + 0)) pars))) with ((PCUICAst.subst10 hd (it_mkProd_or_LetIn Γ0 (mkApps (tInd i u) pars)))).
-            2:{ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. now autorewrite with subst. }   
+            2:{ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. now autorewrite with subst. }
             eapply isType_subst. eapply PCUICSubstitution.subslet_ass_tip. eauto.
             eapply isType_tProd in i0 as [_ tprod].
             eapply isType_context_conversion; tea. constructor. eapply ws_cumul_ctx_pb_refl. now eapply typing_wf_local, PCUICClosedTyp.wf_local_closed_context in t.
             constructor; tea. constructor. pcuic. eapply validity in t. now eauto.
 Qed.
-    
+
 Lemma leb_spect : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
 Proof using Type.
   intros x y. destruct (x <=? y) eqn:E;
@@ -251,10 +251,10 @@ Proof using Type.
     eapply IHn0. lia.
 Qed.
 
-Lemma alli_subst_instance (Γ : context) u p : 
+Lemma alli_subst_instance (Γ : context) u p :
   (forall k t, p k t = p k t@[u]) ->
-  forall n, 
-    alli (fun (k : nat) '{| decl_type := t |} => p k t) n Γ = 
+  forall n,
+    alli (fun (k : nat) '{| decl_type := t |} => p k t) n Γ =
     alli (fun (k : nat) '{| decl_type := t |} => p k t) n Γ@[u].
 Proof using Type.
   intros hp.
@@ -264,11 +264,11 @@ Qed.
 
 Arguments firstorder_mutind : clear implicits.
 
-Lemma plookup_env_lookup_env {Σ : global_env_ext} kn b : 
+Lemma plookup_env_lookup_env {Σ : global_env_ext} kn b :
   plookup_env (firstorder_env Σ) kn = Some b ->
   ∑ Σ' decl, lookup_env Σ kn = Some decl ×
     extends_decls Σ' Σ ×
-    match decl with 
+    match decl with
     | ConstantDecl _ => b = false
     | InductiveDecl mind =>
       b = firstorder_mutind (firstorder_env' (declarations Σ')) mind
@@ -316,7 +316,7 @@ Proof using Type.
     all:tea.
 Qed.
 
-Lemma instantiated_typing_spine_firstorder_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ T args T' : 
+Lemma instantiated_typing_spine_firstorder_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ T args T' :
   instantiated (Σ := Σ) Γ T ->
   arity_spine Σ Γ T args T' ->
   isType Σ Γ T ->
@@ -386,14 +386,14 @@ Lemma plookup_env_extends {Σ Σ' : global_env} kn b :
   plookup_env (firstorder_env' (declarations Σ)) kn = Some b.
 Proof.
   intros [equ [Σ'' eq] eqr]. rewrite eq.
-  clear equ eqr. intros []. clear o. 
+  clear equ eqr. intros []. clear o.
   rewrite eq in o0. clear eq. move: o0.
   generalize (declarations Σ'). clear Σ'.
   induction Σ''.
   - cbn => //.
   - cbn. destruct a => //. intros gs ong.
     depelim ong. specialize (IHΣ'' _ ong).
-    destruct o as [f ? ? ?]. 
+    destruct o as [f ? ? ?].
     destruct g => //.
     * intros hl. specialize (IHΣ'' hl).
       eapply plookup_env_Some_not_fresh in hl.
@@ -409,7 +409,7 @@ Proof.
       + now intros neq.
 Qed.
 
-Lemma firstorder_mutind_ext {Σ Σ' : global_env_ext} m : 
+Lemma firstorder_mutind_ext {Σ Σ' : global_env_ext} m :
   extends_decls Σ' Σ ->
   wf Σ ->
   firstorder_mutind (firstorder_env' (declarations Σ')) m ->
@@ -444,14 +444,14 @@ Proof using Type.
   (* revert Hspine. *) unfold type_of_constructor.
   erewrite cstr_eq. 2: eapply p.
   rewrite <- it_mkProd_or_LetIn_app.
-  rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn. 
+  rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
   rewrite PCUICSpine.subst0_it_mkProd_or_LetIn. intros Hspine.
 
   match goal with
    | [ |- firstorder_spine _ _ ?T _ _ ] =>
   assert (@instantiated Σ [] T) as Hi end.
   { clear Hspine. destruct Hdecl as [[d1 d3] d2]. pose proof d3 as Hdecl.
-    unfold firstorder_ind in Hind. 
+    unfold firstorder_ind in Hind.
     rewrite d1 in Hind. solve_all. clear a.
     move/andP: Hind => [indf H0].
     eapply forallb_nth_error in H0 as H'.
@@ -461,7 +461,7 @@ Proof using Type.
     eapply nth_error_forallb in H. 2: eauto.
     unfold firstorder_con in H.
     revert H. cbn.
-    unfold cstr_concl. 
+    unfold cstr_concl.
     rewrite PCUICUnivSubst.subst_instance_mkApps subst_mkApps.
     rewrite subst_instance_length app_length.
     unfold cstr_concl_head. rewrite PCUICInductives.subst_inds_concl_head. now eapply nth_error_Some_length in Hdecl.
@@ -469,13 +469,13 @@ Proof using Type.
     generalize (cstr_args cbody ++ ind_params mind)%list.
     clear -wfΣ d1 indf H1 H0 Hdecl.
     (* generalize conclusion to mkApps tInd args *)
-    intros c. 
+    intros c.
     change (list context_decl) with context in c.
     move: (map (subst (inds _ _ _) _) _).
     intros args.
     rewrite (alli_subst_instance _ ui (fun k t => firstorder_type _ #|ind_bodies mind| k t)).
     { intros k t.
-      rewrite /firstorder_type. 
+      rewrite /firstorder_type.
       rewrite -PCUICUnivSubstitutionConv.subst_instance_decompose_app /=.
       destruct (decompose_app) => //=. destruct t0 => //. }
     replace (List.rev c)@[ui] with (List.rev c@[ui]).
@@ -486,7 +486,7 @@ Proof using Type.
       autorewrite with substu subst.
       rewrite subst_context_nil. cbn -[subst0].
       econstructor.
-    - rewrite rev_app_distr /=. destruct d as [na [b|] t]. 
+    - rewrite rev_app_distr /=. destruct d as [na [b|] t].
       + move=> /andP[] fot foΓ.
         rewrite subst_context_app /=.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
@@ -498,7 +498,7 @@ Proof using Type.
         revert foΓ. move: (lift0 #|ind_bodies mind| _).
         generalize 0.
         induction (List.rev Γ) => //.
-        cbn -[subst_telescope]. intros n t. 
+        cbn -[subst_telescope]. intros n t.
         destruct a; cbn -[subst_telescope].
         move/andP => [] fo fol.
         rewrite PCUICContextSubst.subst_telescope_cons /=.
@@ -538,7 +538,7 @@ Proof using Type.
           revert foΓ. generalize (lift0 #|ind_bodies mind| x).
           generalize 0.
           induction (List.rev Γ) => //.
-          cbn -[subst_telescope]. intros n t. 
+          cbn -[subst_telescope]. intros n t.
           destruct a; cbn -[subst_telescope].
           move/andP => [] fo fol.
           rewrite PCUICContextSubst.subst_telescope_cons /=.
@@ -573,7 +573,7 @@ Proof using Type.
           revert foΓ. generalize (lift0 #|ind_bodies mind| x).
           generalize 0.
           induction (List.rev Γ) => //.
-          cbn -[subst_telescope]. intros n t. 
+          cbn -[subst_telescope]. intros n t.
           destruct a; cbn -[subst_telescope].
           move/andP => [] fo fol.
           rewrite PCUICContextSubst.subst_telescope_cons /=.
@@ -601,7 +601,7 @@ Proof using Type.
   autorewrite with substu subst.
   rewrite subst_instance_length app_length.
   rewrite PCUICInductives.subst_inds_concl_head. { cbn. destruct Hdecl as [[d1 d2] d3]. eapply nth_error_Some. rewrite d2. congruence. }
-  match goal with [ |- context[mkApps _ ?args]] => generalize args end. 
+  match goal with [ |- context[mkApps _ ?args]] => generalize args end.
   intros args' Hi Spine.
   eapply instantiated_typing_spine_firstorder_spine; tea.
   now eapply typing_spine_arity_spine in Spine.
@@ -614,7 +614,7 @@ Proof using Type.
   induction Δ using PCUICInduction.ctx_length_rev_ind; cbn.
   - eapply invert_cumul_sort_ind.
   - rewrite it_mkProd_or_LetIn_app; destruct d as [na [b|] ty]; cbn.
-    * intros hl. 
+    * intros hl.
       eapply ws_cumul_pb_LetIn_l_inv in hl.
       rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn in hl.
       eapply H, hl. now len.
@@ -623,16 +623,16 @@ Qed.
 
 Lemma firstorder_value_spec Σ t i u args mind :
   wf_ext Σ -> wf_local Σ [] ->
-   Σ ;;; [] |- t : mkApps (tInd i u) args -> 
-  PCUICWcbvEval.value Σ t -> 
+   Σ ;;; [] |- t : mkApps (tInd i u) args ->
+  PCUICWcbvEval.value Σ t ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
 Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
-  revert mind i u args Hty. 
-  
-  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind; 
+  revert mind i u args Hty.
+
+  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
    intros mind i u args Hty Hlookup Hfo.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
@@ -650,7 +650,7 @@ Proof using Type.
         eapply ws_cumul_pb_LetIn_l_inv in w.
         rewrite /subst1 PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn PCUICLiftSubst.subst_it_mkProd_or_LetIn in w.
         now eapply invert_cumul_it_mkProd_or_LetIn_Sort_Ind in w.
-      * rewrite it_mkProd_or_LetIn_app in w. cbn in w. 
+      * rewrite it_mkProd_or_LetIn_app in w. cbn in w.
         now eapply invert_cumul_prod_ind in w.
     + eapply inversion_Construct in Hty as Hty'; eauto.
       destruct Hty' as (? & ? & ? & ? & ? & ? & ?).
@@ -658,7 +658,7 @@ Proof using Type.
          eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (args := []); eauto.
       }
       eapply firstorder_value_C with (args := []); eauto.
-      eapply firstorder_ind_propositional; eauto. sq. eauto.      
+      eapply firstorder_ind_propositional; eauto. sq. eauto.
       now eapply (declared_constructor_inductive (ind := (i, _))).
     + exfalso. eapply invert_fix_ind with (args := []) in Hty as [].
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
@@ -680,10 +680,10 @@ Proof using Type.
       destruct Hty' as (([[[]]] & ?)  & ? & ? & ? & ? & _). subst.
       econstructor; eauto.
       2:{ eapply firstorder_ind_propositional; sq; eauto. eapply declared_constructor_inductive in d. eauto. }
-      eapply PCUICSpine.typing_spine_strengthen in spine. 3: eauto. 
+      eapply PCUICSpine.typing_spine_strengthen in spine. 3: eauto.
       2: eapply PCUICInductiveInversion.declared_constructor_valid_ty; eauto.
 
-      eapply firstorder_args in spine; eauto.         
+      eapply firstorder_args in spine; eauto.
       clear c0 c1 e0 w Hty H0 Hargs.
       induction spine.
       * econstructor.

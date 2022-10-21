@@ -6,10 +6,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICGlobalEnv PCUICNamelessDef
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICContextConversionTyp PCUICValidity
-     PCUICArities PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICGeneration 
+     PCUICArities PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICGeneration
      PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICParallelReductionConfluence PCUICWellScopedCumulativity
-     PCUICOnFreeVars  PCUICSpine PCUICInductives 
+     PCUICOnFreeVars  PCUICSpine PCUICInductives
      PCUICWeakeningConv PCUICWeakeningTyp PCUICContexts PCUICInductiveInversion.
 
 Require Import ssreflect ssrbool.
@@ -1066,7 +1066,7 @@ Section Lemmata.
   Qed.
 End Lemmata.
 
-Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
+Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T ->
     ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
 Proof.
   intros Ht. destruct HΣ. constructor.

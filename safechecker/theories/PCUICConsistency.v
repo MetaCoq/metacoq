@@ -137,7 +137,7 @@ Proof.
     - split; first now intros ? ?%LevelSet.empty_spec.
       split; first now intros ? ?%ConstraintSet.empty_spec.
       destruct wfΣ as (?&(?&?&[val sat]&monoval)); split.
-      1: { 
+      1: {
         exists val.
         intros l isin.
         apply sat; auto.

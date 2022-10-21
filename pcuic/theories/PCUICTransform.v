@@ -1,6 +1,6 @@
 (** * Definition of programs in template-coq, well-typed terms and provided transformations **)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import utils config Transform.        
+From MetaCoq.Template Require Import utils config Transform.
 From MetaCoq.Template Require TemplateProgram.
 Import TemplateProgram (template_program, wt_template_program, eval_template_program).
 
@@ -8,16 +8,16 @@ From MetaCoq.PCUIC Require Import PCUICAstUtils PCUICAst TemplateToPCUIC
     PCUICGlobalEnv PCUICTyping PCUICEtaExpand
     PCUICProgram.
 From MetaCoq.PCUIC Require TemplateToPCUICWcbvEval
-  TemplateToPCUICCorrectness 
+  TemplateToPCUICCorrectness
   TemplateToPCUICExpanded.
-    
+
 Import Transform.
 
 (** * Translation from Template to PCUIC, directly preserves evaluation *)
 
 Definition eval_pcuic_program (p : pcuic_program) (v : term) :=
   ∥ PCUICWcbvEval.eval p.1.(trans_env_env) p.2 v ∥.
-      
+
 Definition template_to_pcuic_obseq (p : template_program) (p' : pcuic_program) (v : Ast.term) (v' : term) :=
   let Σ := Ast.Env.empty_ext p.1 in v' = trans (trans_global Σ) v.
 
@@ -34,8 +34,8 @@ Qed.
 
 Local Obligation Tactic := idtac.
 
-Program Definition template_to_pcuic_transform {cf : checker_flags} : 
-  Transform.t template_program pcuic_program Ast.term term 
+Program Definition template_to_pcuic_transform {cf : checker_flags} :
+  Transform.t template_program pcuic_program Ast.term term
   eval_template_program eval_pcuic_program :=
  {| name := "template to pcuic";
     pre p := ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p ;
@@ -60,15 +60,15 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICExpandLets PCUICExpandLetsCorrectness.
 
-(** Expansion of let bindings in constructor types / case branches. 
-    Direcly preserves evaluation as well: the new value is simply the 
+(** Expansion of let bindings in constructor types / case branches.
+    Direcly preserves evaluation as well: the new value is simply the
     expansion of the old one, which is the identiy on normal forms.
 *)
 
 Definition let_expansion_obseq (p : pcuic_program) (p' : pcuic_program) (v : term) (v' : term) :=
   v' = PCUICExpandLets.trans v.
 
-Program Definition pcuic_expand_lets_transform {cf : checker_flags} : 
+Program Definition pcuic_expand_lets_transform {cf : checker_flags} :
   self_transform pcuic_program term eval_pcuic_program eval_pcuic_program :=
  {| name := "let expansion in branches/constructors";
     pre p := ∥ wt_pcuic_program p ∥ /\ PCUICEtaExpand.expanded_pcuic_program p ;

@@ -12,15 +12,15 @@ Local Set Keyed Unification.
 Hint Constructors eval : core.
 
 Section eval_mkApps_rect.
-  
+
   Variables (wfl : WcbvFlags) (Σ : global_declarations) (P : term → term → Type).
 
-  Let IH x y (ev : eval Σ x y) := 
+  Let IH x y (ev : eval Σ x y) :=
     forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u.
 
   Lemma eval_mkApps_rect :
     (∀ a t t' : term,
-	    forall ev : eval Σ a tBox, P a tBox → 
+	    forall ev : eval Σ a tBox, P a tBox →
                             IH _ _ ev ->
                             eval Σ t t' → P t t' → P (tApp a t) tBox)
     → (∀ (f0 : term) (na : BasicAst.name) (b a a' res : term),
@@ -37,38 +37,38 @@ Section eval_mkApps_rect.
           → eval Σ (ECSubst.csubst b0' 0 b1) res
           → P (ECSubst.csubst b0' 0 b1) res →
           P (tLetIn na b0 b1) res)
-          → (∀ (ind : inductive) (pars : nat) (cdecl : constructor_body) 
-          (discr : term) (c : nat) (args : list term) 
-          (brs : list (list name × term)) (br : list name × term) 
-          (res : term) (e : with_constructor_as_block = false) 
+          → (∀ (ind : inductive) (pars : nat) (cdecl : constructor_body)
+          (discr : term) (c : nat) (args : list term)
+          (brs : list (list name × term)) (br : list name × term)
+          (res : term) (e : with_constructor_as_block = false)
           (e0 : eval Σ discr (mkApps (tConstruct ind c []) args)),
-          P discr (mkApps (tConstruct ind c []) args) 
+          P discr (mkApps (tConstruct ind c []) args)
           → ∀ (e1 : constructor_isprop_pars_decl Σ ind c =
-                    Some (false, pars, cdecl)) (e2 : 
-                                                nth_error brs c = 
-                                                Some br) 
-              (e3 : #|args| = pars + cstr_nargs cdecl) 
-              (e4 : #|skipn pars args| = #|br.1|) 
+                    Some (false, pars, cdecl)) (e2 :
+                                                nth_error brs c =
+                                                Some br)
+              (e3 : #|args| = pars + cstr_nargs cdecl)
+              (e4 : #|skipn pars args| = #|br.1|)
               (e5 : eval Σ (iota_red pars args br) res),
               P (iota_red pars args br) res
               → P (tCase (ind, pars) discr brs) res)
-       → (∀ (ind : inductive) (pars : nat) (cdecl : constructor_body) 
-            (discr : term) (c : nat) (args : list term) 
-            (brs : list (list name × term)) (br : list name × term) 
-            (res : term) (e : with_constructor_as_block = true) 
+       → (∀ (ind : inductive) (pars : nat) (cdecl : constructor_body)
+            (discr : term) (c : nat) (args : list term)
+            (brs : list (list name × term)) (br : list name × term)
+            (res : term) (e : with_constructor_as_block = true)
             (e0 : eval Σ discr (tConstruct ind c args)),
-            P discr (tConstruct ind c args) 
+            P discr (tConstruct ind c args)
             → ∀ (e1 : constructor_isprop_pars_decl Σ ind c =
-                      Some (false, pars, cdecl)) 
-                (e2 : nth_error brs c = Some br) 
-                (e3 : #|args| = pars + cstr_nargs cdecl) 
-                (e4 : #|skipn pars args| = #|br.1|) 
+                      Some (false, pars, cdecl))
+                (e2 : nth_error brs c = Some br)
+                (e3 : #|args| = pars + cstr_nargs cdecl)
+                (e4 : #|skipn pars args| = #|br.1|)
                 (e5 : eval Σ (iota_red pars args br) res),
-                P (iota_red pars args br) res 
+                P (iota_red pars args br) res
                 → P (tCase (ind, pars) discr brs) res)
-          
-    → (∀ (ind : Kernames.inductive) (pars : nat) (discr : term) 
-         (brs : list (list BasicAst.name × term)) 
+
+    → (∀ (ind : Kernames.inductive) (pars : nat) (discr : term)
+         (brs : list (list BasicAst.name × term))
          (n : list BasicAst.name) (f3 res : term),
           with_prop_case
           → eval Σ discr tBox
@@ -78,9 +78,9 @@ Section eval_mkApps_rect.
           → eval Σ (ECSubst.substl (repeat tBox #|n|) f3) res
           → P (ECSubst.substl (repeat tBox #|n|) f3) res
           → P (tCase (ind, pars) discr brs) res)
-          
-    → (∀ (f4 : term) (mfix : mfixpoint term) 
-         (idx : nat) (argsv : list term) 
+
+    → (∀ (f4 : term) (mfix : mfixpoint term)
+         (idx : nat) (argsv : list term)
          (a av fn res : term),
         forall guarded : with_guarded_fix,
         forall ev : eval Σ f4 (mkApps (tFix mfix idx) argsv),
@@ -92,21 +92,21 @@ Section eval_mkApps_rect.
           → eval Σ (tApp (mkApps fn argsv) av) res
           → P (tApp (mkApps fn argsv) av) res
           → P (tApp f4 a) res)
-    → (∀ (f5 : term) (mfix : mfixpoint term) 
-         (idx : nat) (argsv : list term) 
+    → (∀ (f5 : term) (mfix : mfixpoint term)
+         (idx : nat) (argsv : list term)
          (a av : term) (narg : nat) (fn : term),
         forall guarded : with_guarded_fix,
         forall ev : eval Σ f5 (mkApps (tFix mfix idx) argsv),
-          P f5 (mkApps (tFix mfix idx) argsv) 
+          P f5 (mkApps (tFix mfix idx) argsv)
           → IH _ _ ev
           → eval Σ a av
           → P a av
           → cunfold_fix mfix idx = Some (narg, fn)
           → #|argsv| < narg
           → P (tApp f5 a) (tApp (mkApps (tFix mfix idx) argsv) av))
-    → (∀ (f6 : term) (mfix : mfixpoint term) 
-         (idx : nat) (a av fn res : term) (narg : nat) 
-         (unguarded : with_guarded_fix = false) 
+    → (∀ (f6 : term) (mfix : mfixpoint term)
+         (idx : nat) (a av fn res : term) (narg : nat)
+         (unguarded : with_guarded_fix = false)
          (ev : eval Σ f6 (tFix mfix idx)),
           P f6 (tFix mfix idx)
           → IH _ _ ev
@@ -115,9 +115,9 @@ Section eval_mkApps_rect.
           → eval Σ (tApp fn av) res
           → P (tApp fn av) res
           → P (tApp f6 a) res)
-    → (∀ (ip : Kernames.inductive × nat) (mfix : mfixpoint term) 
-         (idx : nat) (args : list term) 
-         (narg : nat) discr (fn : term) (brs : list (list BasicAst.name × term)) 
+    → (∀ (ip : Kernames.inductive × nat) (mfix : mfixpoint term)
+         (idx : nat) (args : list term)
+         (narg : nat) discr (fn : term) (brs : list (list BasicAst.name × term))
          (res : term),
           cunfold_cofix mfix idx = Some (narg, fn)
           -> eval Σ discr (mkApps (tCoFix mfix idx) args)
@@ -125,8 +125,8 @@ Section eval_mkApps_rect.
           → eval Σ (tCase ip (mkApps fn args) brs) res
           → P (tCase ip (mkApps fn args) brs) res
           → P (tCase ip discr brs) res)
-    → (∀ (p : Kernames.projection) (mfix : mfixpoint term) 
-         (idx : nat) (args : list term) 
+    → (∀ (p : Kernames.projection) (mfix : mfixpoint term)
+         (idx : nat) (args : list term)
          (narg : nat) discr (fn res : term),
           cunfold_cofix mfix idx = Some (narg, fn)
           -> eval Σ discr (mkApps (tCoFix mfix idx) args)
@@ -141,45 +141,45 @@ Section eval_mkApps_rect.
           → eval Σ body res
           → P body res → P (tConst c) res)
 
-    → (∀ (p : projection) (cdecl : constructor_body) 
-                             (discr : term) (args : list term) 
+    → (∀ (p : projection) (cdecl : constructor_body)
+                             (discr : term) (args : list term)
                              (a res : term) (e : with_constructor_as_block =
-                                                 false) 
+                                                 false)
                              (e0 : eval Σ discr
                                      (mkApps
-                                        (tConstruct 
+                                        (tConstruct
                                            (proj_ind p) 0 []) args)),
                              P discr
                                (mkApps
                                   (tConstruct (proj_ind p) 0 [])
-                                  args) 
+                                  args)
                              → ∀ (e1 : constructor_isprop_pars_decl Σ
                                          (proj_ind p) 0 =
-                                       Some (false, proj_npars p, cdecl)) 
+                                       Some (false, proj_npars p, cdecl))
                                  (e2 : #|args| =
-                                       proj_npars p + cstr_nargs cdecl) 
+                                       proj_npars p + cstr_nargs cdecl)
                                  (e3 : nth_error args
-                                         (proj_npars p + proj_arg p) = 
+                                         (proj_npars p + proj_arg p) =
                                        Some a) (e4 : eval Σ a res),
-                                 P a res 
+                                 P a res
                                  → P (tProj p discr) res)
-                          → (∀ (p : projection) (cdecl : constructor_body) 
-                               (discr : term) (args : list term) 
-                               (a res : term) (e : 
+                          → (∀ (p : projection) (cdecl : constructor_body)
+                               (discr : term) (args : list term)
+                               (a res : term) (e :
                                                with_constructor_as_block =
-                                               true) 
+                                               true)
                                (e0 : eval Σ discr
                                        (tConstruct (proj_ind p) 0 args)),
                                P discr (tConstruct (proj_ind p) 0 args)
                                → ∀ (e1 : constructor_isprop_pars_decl Σ
                                            (proj_ind p) 0 =
-                                         Some (false, proj_npars p, cdecl)) 
+                                         Some (false, proj_npars p, cdecl))
                                    (e2 : #|args| =
-                                         proj_npars p + cstr_nargs cdecl) 
+                                         proj_npars p + cstr_nargs cdecl)
                                    (e3 : nth_error args
                                            (proj_npars p + proj_arg p) =
                                          Some a) (e4 : eval Σ a res),
-                                   P a res 
+                                   P a res
                                    → P (tProj p discr) res)
 
     → (∀ p (discr : term),
@@ -189,15 +189,15 @@ Section eval_mkApps_rect.
           → inductive_isprop_and_pars Σ p.(proj_ind) = Some (true, p.(proj_npars))
           → P (tProj p discr) tBox)
 
-          → (∀ (ind : inductive) 
-          (c : nat) (mdecl : mutual_inductive_body) 
-          (idecl : one_inductive_body) 
-          (cdecl : constructor_body) 
-          (f14 : term) (args : list term) 
-          (a a' : term) 
-          (e : with_constructor_as_block = false) 
+          → (∀ (ind : inductive)
+          (c : nat) (mdecl : mutual_inductive_body)
+          (idecl : one_inductive_body)
+          (cdecl : constructor_body)
+          (f14 : term) (args : list term)
+          (a a' : term)
+          (e : with_constructor_as_block = false)
           (e0 : lookup_constructor Σ ind c =
-                Some (mdecl, idecl, cdecl)) 
+                Some (mdecl, idecl, cdecl))
           (e1 : eval Σ f14
                   (mkApps
                      (tConstruct ind c [])
@@ -205,8 +205,8 @@ Section eval_mkApps_rect.
                 IH _ _ e1 ->
           P f14
             (mkApps (tConstruct ind c [])
-               args) 
-          → ∀ (l : #|args| < cstr_arity mdecl cdecl) 
+               args)
+          → ∀ (l : #|args| < cstr_arity mdecl cdecl)
               (e2 : eval Σ a a'),
               P a a'
               → P (tApp f14 a)
@@ -215,15 +215,15 @@ Section eval_mkApps_rect.
                         (tConstruct ind c
                         []) args) a'))
 
-      → (∀ (ind : inductive) 
-                   (c : nat) (mdecl : mutual_inductive_body) 
-                   (idecl : one_inductive_body) 
-                   (cdecl : constructor_body) 
+      → (∀ (ind : inductive)
+                   (c : nat) (mdecl : mutual_inductive_body)
+                   (idecl : one_inductive_body)
+                   (cdecl : constructor_body)
                    (args args' : list term)
-                   (e : with_constructor_as_block = true) 
+                   (e : with_constructor_as_block = true)
                    (e0 : lookup_constructor Σ ind c =
-                         Some (mdecl, idecl, cdecl)) 
-                   (l : #|args| = cstr_arity mdecl cdecl) 
+                         Some (mdecl, idecl, cdecl))
+                   (l : #|args| = cstr_arity mdecl cdecl)
                    (e1 : All2 (eval Σ) args args'),
                    All2 P args args'
             → P (tConstruct ind c args) (tConstruct ind c args'))
@@ -232,15 +232,15 @@ Section eval_mkApps_rect.
       P f15 f' -> IH _ _ e
       → ∀ (i : ~~
                (isLambda f'
-                || 
+                ||
                 (if with_guarded_fix
                  then isFixApp f'
-                 else isFix f') || 
-                isBox f' || 
-                isConstructApp f' || isPrimApp f')) 
+                 else isFix f') ||
+                isBox f' ||
+                isConstructApp f' || isPrimApp f'))
           (e0 : eval Σ a a'),
           P a a'
-          → P (tApp f15 a) 
+          → P (tApp f15 a)
               (tApp f' a')
               )
     → (∀ t : term, atom Σ t → P t t)
@@ -261,7 +261,7 @@ Proof using Type.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
   clear t t0 H.
-  intros (t & t0 & ev). 
+  intros (t & t0 & ev).
   intros IH'.
   set (IH'' t t0 H := IH' (t; t0; H)). clearbody IH''; clear IH'; rename IH'' into IH'.
   cbn in IH'. unfold MR in IH'; cbn in IH'. cbn.
@@ -280,4 +280,4 @@ Proof using Type.
     intros. eapply (IH' _ _ H). cbn. lia.
 Qed.
 
-End eval_mkApps_rect. 
+End eval_mkApps_rect.

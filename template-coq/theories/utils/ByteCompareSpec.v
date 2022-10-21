@@ -36,7 +36,7 @@ Lemma compare_equiv x y : compare x y = N.compare (Byte.to_N x) (Byte.to_N y).
 Proof.
   reflexivity.
 Qed.
-(* 
+(*
 Proof.
   destruct x; abstract (destruct y; exact eq_refl).
 Qed. *)
@@ -93,7 +93,7 @@ Proof.
   (* destruct x; cbn; abstract (destruct y; cbn; exact eq_refl). *)
 Qed.
 
-Global Program Instance byte_reflect_eq : ReflectEq byte := 
+Global Program Instance byte_reflect_eq : ReflectEq byte :=
   {| ReflectEq.eqb := eqb |}.
 Next Obligation.
   rewrite eqb_compare.

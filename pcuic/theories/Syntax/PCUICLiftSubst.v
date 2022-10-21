@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect Morphisms. 
+Require Import ssreflect Morphisms.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Import Nat.
@@ -10,7 +10,7 @@ Import Nat.
 
 Derive Signature for Peano.le.
 
-(** Assumptions contexts do not contain let-ins. *)  
+(** Assumptions contexts do not contain let-ins. *)
 
 Inductive assumption_context : context -> Prop :=
 | assumption_context_nil : assumption_context []
@@ -310,7 +310,7 @@ Proof.
   elim t using term_forall_list_ind; intros; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
       ?map_predicate_map_predicate, ?map_branch_map_branch;
-    simpl closed in *; 
+    simpl closed in *;
     unfold test_predicate_k, test_def, test_branch_k in *;
     try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
@@ -412,7 +412,7 @@ Proof.
   rewrite -> permute_lift. f_equal; lia. lia.
 Qed.
 
-Definition fix_context_gen k mfix := 
+Definition fix_context_gen k mfix :=
   List.rev (mapi_rec (fun (i : nat) (d : def term) => vass (dname d) (lift0 i (dtype d))) mfix k).
 
 Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
@@ -492,13 +492,13 @@ Qed.
 
 Lemma simpl_subst' :
   forall N M n p k, k = List.length N -> p <= n -> subst N p (lift0 (k + n) M) = lift0 n M.
-Proof. 
+Proof.
   intros. subst k. rewrite simpl_subst_rec; auto.
-  + now rewrite Nat.add_0_r. 
+  + now rewrite Nat.add_0_r.
   + lia.
 Qed.
 
-Lemma subst_subst_lift (s s' : list term) n t : n = #|s| + #|s'| -> 
+Lemma subst_subst_lift (s s' : list term) n t : n = #|s| + #|s'| ->
   subst0 s (subst0 s' (lift0 n t)) = t.
 Proof.
   intros ->. rewrite Nat.add_comm simpl_subst' //; try lia.
@@ -509,7 +509,7 @@ Lemma map_subst_lift_id s l : map (subst0 s ∘ lift0 #|s|) l = l.
 Proof.
   induction l; simpl; auto.
   rewrite -{1}(Nat.add_0_r #|s|) simpl_subst'; auto.
-  now rewrite lift0_id IHl.  
+  now rewrite lift0_id IHl.
 Qed.
 
 Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
@@ -523,7 +523,7 @@ Proof.
   apply map_ext => x. now apply simpl_subst'.
 Qed.
 
-Lemma map_subst_subst_lift_lift (s s' : list term) k k' l : k + k' = #|s| + #|s'| -> 
+Lemma map_subst_subst_lift_lift (s s' : list term) k k' l : k + k' = #|s| + #|s'| ->
   map (fun t => subst0 s (subst0 s' (lift k k' (lift0 k' t)))) l = l.
 Proof.
   intros H. eapply All_map_id. eapply All_refl => x.
@@ -606,7 +606,7 @@ Proof.
   rewrite distr_lift_subst_rec; f_equal. f_equal. lia.
 Qed.
 
-Lemma skipn_subst_context n s k Γ : skipn n (subst_context s k Γ) = 
+Lemma skipn_subst_context n s k Γ : skipn n (subst_context s k Γ) =
   subst_context s k (skipn n Γ).
 Proof.
   rewrite !subst_context_alt.
@@ -614,7 +614,7 @@ Proof.
   apply mapi_rec_ext. intros.
   f_equal. rewrite List.skipn_length. lia.
 Qed.
-  
+
 Lemma lift_extended_subst (Γ : context) k :
   extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
 Proof.
@@ -660,14 +660,14 @@ Proof.
     erewrite (commut_lift_subst_rec); lia_f_equal.
 Qed.
 
-Lemma extended_subst_app Γ Γ' : 
-  extended_subst (Γ ++ Γ') 0 = 
+Lemma extended_subst_app Γ Γ' :
+  extended_subst (Γ ++ Γ') 0 =
   extended_subst (subst_context (extended_subst Γ' 0) 0
-   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++ 
+   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++
    extended_subst Γ' (context_assumptions Γ).
 Proof.
   induction Γ as [|[na [b|] ty] Γ] in |- *; simpl; auto.
-  - autorewrite with len. 
+  - autorewrite with len.
     rewrite IHΓ. simpl.  rewrite app_comm_cons.
     f_equal.
     erewrite subst_app_simpl'.
@@ -821,8 +821,8 @@ Qed.
 (** Standard substitution lemma for a context with no lets. *)
 
 Inductive nth_error_app_spec {A} (l l' : list A) (n : nat) : option A -> Type :=
-| nth_error_app_spec_left x : 
-  nth_error l n = Some x -> 
+| nth_error_app_spec_left x :
+  nth_error l n = Some x ->
   n < #|l| ->
   nth_error_app_spec l l' n (Some x)
 | nth_error_app_spec_right x :
@@ -849,7 +849,7 @@ Proof.
       len. intros. constructor. lia.
 Qed.
 
-Lemma nth_error_app_context (Γ Δ : context) (n : nat) : 
+Lemma nth_error_app_context (Γ Δ : context) (n : nat) :
   nth_error_app_spec Δ Γ n (nth_error (Γ ,,, Δ) n).
 Proof.
   apply nth_error_appP.

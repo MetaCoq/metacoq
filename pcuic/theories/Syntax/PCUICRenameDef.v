@@ -24,17 +24,17 @@ Context `{cf : checker_flags}.
 
 (* Notion of valid renaming without typing information. *)
 
-(** We might want to relax this to allow "renamings" that change e.g. 
-  the universes or names, but should generalize the renaming operation at 
+(** We might want to relax this to allow "renamings" that change e.g.
+  the universes or names, but should generalize the renaming operation at
   the same time *)
 (** Remark: renaming allows instantiating an assumption with a well-typed body *)
 
 Definition urenaming (P : nat -> bool) Γ Δ f :=
-  forall i decl, P i -> 
+  forall i decl, P i ->
     nth_error Δ i = Some decl ->
     ∑ decl', (nth_error Γ (f i) = Some decl') ×
     (eq_binder_annot decl.(decl_name) decl'.(decl_name) ×
-    ((rename (f ∘ rshiftk (S i)) decl.(decl_type) = 
+    ((rename (f ∘ rshiftk (S i)) decl.(decl_type) =
      rename (rshiftk (S (f i))) decl'.(decl_type)) ×
       on_Some_or_None (fun body => Some (rename (f ∘ rshiftk (S i)) body) =
          option_map (rename (rshiftk (S (f i)))) decl'.(decl_body)) decl.(decl_body))).

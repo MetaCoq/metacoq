@@ -165,7 +165,7 @@ Proof.
   - depelim er.
     now constructor.
   - depelim er.
-    cbn. econstructor; eauto.    
+    cbn. econstructor; eauto.
   - depelim er.
     econstructor; [easy|easy|easy|easy|easy|].
     induction X; [easy|].
@@ -473,7 +473,7 @@ Proof.
   apply PCUICWeakeningEnv.lookup_env_Some_fresh in H as not_fresh.
   econstructor.
   - unfold PCUICAst.declared_constant in *; cbn.
-    inversion wfΣ; subst. destruct X0. 
+    inversion wfΣ; subst. destruct X0.
     destruct (eqb_spec kn0 kn) as [<-|]; [congruence|].
     eassumption.
   - unfold EGlobalEnv.declared_constant in *. cbn -[ReflectEq.eqb].
@@ -514,7 +514,7 @@ Proof.
     destruct d. split; eauto.
     red. cbn. cbn in *. destruct X0.
     destruct (eqb_spec (inductive_mind ind) kn). cbn in *.
-    subst. 
+    subst.
     eapply PCUICWeakeningEnv.lookup_env_Some_fresh in kn_fresh. eauto. eapply H. exact H0.
   - econstructor; eauto.
     destruct H as [H H'].
@@ -525,7 +525,7 @@ Proof.
     eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
-    inv wfΣ. destruct X0. cbn. change (eq_kername (inductive_mind p.1) kn) with (ReflectEq.eqb (inductive_mind p.1) kn).    
+    inv wfΣ. destruct X0. cbn. change (eq_kername (inductive_mind p.1) kn) with (ReflectEq.eqb (inductive_mind p.1) kn).
     destruct (ReflectEq.eqb_spec (inductive_mind p.1) kn); auto. subst.
     destruct H as [H _].
     eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto. contradiction.
@@ -637,7 +637,7 @@ Proof.
     eapply Forall2_All2 in Hprojs. eapply All2_nth_error_Some in Hprojs as [proj' [hnthp ?]]; eauto.
     econstructor; eauto. repeat split; eauto.
     repeat split; eauto. cbn. apply H0. now rewrite <- H3, hp.
- 
+
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
@@ -671,7 +671,7 @@ Qed.
 Lemma Forall2_nth_error_left {A B} {P} {l : list A} {l' : list B} : Forall2 P l l' ->
   forall n x, nth_error l n = Some x ->
   exists x', nth_error l' n = Some x' /\ P x x'.
-Proof.  
+Proof.
   induction 1; destruct n; simpl; auto; try discriminate.
   intros x' [= ->]. eexists; eauto.
 Qed.
@@ -707,7 +707,7 @@ Proof.
         eapply (erases_extends ({| universes := univs; declarations := Σ |}, cst_universes cst')); eauto.
         cbn. 4:{ split; eauto; cbn; try reflexivity. eexists [_]; cbn; reflexivity. }
         constructor; auto. cbn. red in on_global_decl_d. rewrite E in on_global_decl_d. exact on_global_decl_d.
-        split; auto. 
+        split; auto.
       * intros.
         eapply (erases_deps_cons {| universes := univs; declarations := Σ |} _ kn (PCUICEnvironment.ConstantDecl cst')); auto.
         unfold erases_constant_body in *.
@@ -769,7 +769,7 @@ Proof.
       simpl in decli. rewrite eq_kername_refl in decli. intuition discriminate.
     * inv wf. inv X. destruct X1.
       specialize (IH _ (H0, X0) erg).
-      destruct decli as [decli ?]. 
+      destruct decli as [decli ?].
       simpl in decli |- *.
       unfold PCUICAst.declared_minductive, PCUICEnvironment.lookup_env in decli.
       simpl in decli.
@@ -782,7 +782,7 @@ Proof.
       destruct decli'; red; split; eauto.
       red in d |- *. simpl.
       apply neqb in n. destruct eqb; cbn in n; try congruence.
-Qed.       
+Qed.
 
 Lemma erases_global_erases_deps Σ Γ t T et Σ' :
   wf_ext Σ ->

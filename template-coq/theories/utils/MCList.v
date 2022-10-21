@@ -62,9 +62,9 @@ Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
   | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
   | _, _ => []
   end.
-  
+
 Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
-  (forall x y, f x y = g x y) ->  
+  (forall x y, f x y = g x y) ->
   map2 f l l' = map2 g l l'.
 Proof.
   intros H.
@@ -581,7 +581,7 @@ Proof.
   - simpl. eauto.
 Qed.
 
-Lemma rev_map_spec {A B} (f : A -> B) (l : list A) : 
+Lemma rev_map_spec {A B} (f : A -> B) (l : list A) :
   rev_map f l = List.rev (map f l).
 Proof.
   unfold rev_map.
@@ -602,7 +602,7 @@ Proof.
   induction n in s, x, xs |- *.
   - unfold skipn. now intros ->.
   - destruct s; simpl. intros H; discriminate. apply IHn.
-Qed. 
+Qed.
 
 Lemma skipn_all {A} (l : list A) : skipn #|l| l = [].
 Proof.
@@ -617,8 +617,8 @@ Proof.
   rewrite !skipn_S. apply IHl. lia.
 Qed.
 
-Lemma skipn_mapi_rec {A B} n (f : nat -> A -> B) k (l : list A) : 
-  skipn n (mapi_rec f l k) = 
+Lemma skipn_mapi_rec {A B} n (f : nat -> A -> B) k (l : list A) :
+  skipn n (mapi_rec f l k) =
   mapi_rec f (skipn n l) (n + k).
 Proof.
   induction n in f, l, k |- *.
@@ -629,7 +629,7 @@ Proof.
       now rewrite Nat.add_succ_r.
 Qed.
 
-Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) : 
+Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) :
   #|skipn n (map f l)| = #|skipn n l|.
 Proof.
   now rewrite !List.skipn_length; len.
@@ -670,9 +670,9 @@ Proof.
 Qed.
 
 Fixpoint split_at_aux {A} (n : nat) (acc : list A) (l : list A) : list A * list A :=
-  match n with 
+  match n with
   | 0 => (List.rev acc, l)
-  | S n' => 
+  | S n' =>
     match l with
     | [] => (List.rev acc, [])
     | hd :: l' => split_at_aux n' (hd :: acc) l'
@@ -688,7 +688,7 @@ Proof.
   now rewrite app_nil_r.
   now rewrite app_nil_r.
   now rewrite app_nil_r.
-  rewrite IHn. simpl. 
+  rewrite IHn. simpl.
   now rewrite -app_assoc /=.
 Qed.
 
@@ -896,7 +896,7 @@ Section ListSize.
     : list_size l >= length l.
   Proof using Type.
     induction l; simpl; lia.
-  Qed.    
+  Qed.
 
 
 End ListSize.
@@ -1040,7 +1040,7 @@ Proof.
     * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
 Qed.
 
-Lemma In_unfold_inj {A} (f : nat -> A) n i : 
+Lemma In_unfold_inj {A} (f : nat -> A) n i :
   (forall i j, f i = f j -> i = j) ->
   In (f i) (unfold n f) -> i < n.
 Proof.
@@ -1054,7 +1054,7 @@ Proof.
     * destruct H.
 Qed.
 
-Lemma forallb_unfold {A} (f : A -> bool) (g : nat -> A) n : 
+Lemma forallb_unfold {A} (f : A -> bool) (g : nat -> A) n :
   (forall x, x < n -> f (g x)) ->
   forallb f (unfold n g).
 Proof.
@@ -1116,8 +1116,8 @@ Lemma firstn_app_left_rem (A : Type) (n : nat) (l1 l2 : list A) k :
   firstn k (l1 ++ l2) = l1 ++ firstn n l2.
 Proof. intros ->; apply firstn_app_2. Qed.
 
-Lemma firstn_app_left {A} n (l l' : list A) : 
-  n = #|l| ->  
+Lemma firstn_app_left {A} n (l l' : list A) :
+  n = #|l| ->
   firstn n (l ++ l') = l.
 Proof.
   intros ->.
@@ -1148,7 +1148,7 @@ Fixpoint map2i_rec {A B C} (f : nat -> A -> B -> C) i (l : list A) (l' : list B)
   end.
 Definition map2i {A B C} (f : nat -> A -> B -> C) := map2i_rec f 0.
 
-Lemma mapi_map2 {A B C D} (f : nat -> A -> B) (g : C -> D -> A) l l' : 
+Lemma mapi_map2 {A B C D} (f : nat -> A -> B) (g : C -> D -> A) l l' :
   mapi f (map2 g l l') = map2i (fun i x y => f i (g x y)) l l'.
 Proof.
   unfold mapi, map2i. generalize 0.
@@ -1156,7 +1156,7 @@ Proof.
   apply IHl.
 Qed.
 
-Lemma map2_mapi {A A' B B' C} (f : nat -> A -> B) (f' : nat-> A' -> B') (g : B -> B' -> C) l l' : 
+Lemma map2_mapi {A A' B B' C} (f : nat -> A -> B) (f' : nat-> A' -> B') (g : B -> B' -> C) l l' :
   map2 g (mapi f l) (mapi f' l') = map2i (fun i x y => g (f i x) (f' i y)) l l'.
 Proof.
   unfold mapi, map2i. generalize 0.
@@ -1207,14 +1207,14 @@ Proof.
   funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
-Lemma rev_repeat {A : Type} (n : nat) (a : A) : 
+Lemma rev_repeat {A : Type} (n : nat) (a : A) :
   List.rev (repeat a n) = repeat a n.
 Proof.
   induction n.
   - reflexivity.
   - replace (S n) with (n + 1) at 2 by lia.
     cbn [repeat]. cbn. rewrite  IHn.
-    now rewrite repeat_app. 
+    now rewrite repeat_app.
 Qed.
 
 
@@ -1366,7 +1366,7 @@ Proof.
   now rewrite (H f0).
 Qed.
 
-Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
+Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) :
   In x l -> size (proj x) < S (list_size (size ∘ proj) l).
 Proof.
   induction l; cbn => //.
@@ -1378,10 +1378,10 @@ Proof.
   destruct l; cbn; congruence.
 Qed.
 
-Definition remove_last {A} (args : list A) := 
+Definition remove_last {A} (args : list A) :=
   List.firstn (#|args| - 1) args.
 
-Lemma remove_last_app {A} (l : list A) x : 
+Lemma remove_last_app {A} (l : list A) x :
   remove_last (l ++ [x]) = l.
 Proof.
   unfold remove_last. cbn. len.
@@ -1397,7 +1397,7 @@ Proof.
   intros. rewrite remove_last_app last_last //.
 Qed.
 
-Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} : 
+Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} :
   p a ->
   forallb p (repeat a n).
 Proof.
@@ -1406,13 +1406,13 @@ Proof.
   now rewrite pa IHn.
 Qed.
 
-Lemma map_repeat {A B} (f : A -> B) a n : 
+Lemma map_repeat {A B} (f : A -> B) a n :
   map f (repeat a n) = repeat (f a) n.
 Proof.
   induction n; cbn; congruence.
 Qed.
 
-Lemma map2_length : 
+Lemma map2_length :
   forall {A B C : Type} (f : A -> B -> C) (l : list A) (l' : list B), #| map2 f l l'| = min #|l| #|l'|.
 Proof.
   intros. induction l in l' |- *; cbn.

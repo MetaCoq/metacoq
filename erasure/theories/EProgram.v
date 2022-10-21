@@ -25,21 +25,21 @@ Global Arguments EWcbvEval.eval {wfl} _ _ _.
 
 Definition wf_eprogram (efl : EEnvFlags) (p : eprogram) :=
   @wf_glob efl p.1 /\ @wellformed efl p.1 0 p.2.
-  
+
 Definition wf_eprogram_env (efl : EEnvFlags) (p : eprogram_env) :=
   @wf_glob efl p.1.(global_decls) /\ @wellformed efl p.1.(global_decls) 0 p.2.
 
-Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
+Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) :=
   ∥ EWcbvEval.eval (wfl:=wfl) p.1 p.2 t ∥.
 
-Definition closed_eprogram (p : eprogram) := 
+Definition closed_eprogram (p : eprogram) :=
   closed_env p.1 && ELiftSubst.closedn 0 p.2.
 
-Definition closed_eprogram_env (p : eprogram_env) := 
+Definition closed_eprogram_env (p : eprogram_env) :=
   let Σ := p.1.(global_decls) in
   closed_env Σ && ELiftSubst.closedn 0 p.2.
 
-Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
+Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) :=
   ∥ EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t ∥.
 
 Import EWellformed.
@@ -49,4 +49,4 @@ Proof.
   induction Σ. constructor; auto.
   intros wf; depelim wf. constructor; auto.
 Qed.
-  
+

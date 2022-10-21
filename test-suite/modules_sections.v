@@ -39,13 +39,13 @@ Section S.
                     tmMkDefinition "bb" bc ;;
                     tmPrint "lol").
   Check bb.
-  
+
   Variable x : nat.
   MetaCoq Run (bc <- tmQuote x ;;
                     tmPrint bc ;;
                     tmMkDefinition "bx" bc ;;
                     tmPrint "lol").
-  
+
   Check bx.
 
 End S.

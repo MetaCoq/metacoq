@@ -28,27 +28,27 @@ Definition update_mutual_inductive_entry_inds (mie : mutual_inductive_entry) ind
     mind_entry_variance := mie.(mind_entry_variance);
     mind_entry_private := mie.(mind_entry_private) |}.
 
-Definition add_cstr_univs (mie : mutual_inductive_entry) := 
+Definition add_cstr_univs (mie : mutual_inductive_entry) :=
   let inds := mie.(mind_entry_inds) in
   let add_cstr oie :=
     let cstrs := oie.(mind_entry_lc) in
-    let cstr' := 
+    let cstr' :=
       it_mkProd_or_LetIn mie.(mind_entry_params)
         (tProd (bnamed "newty"%bs) qv
           (tProd (bnamed "new") (mkApps rid [qu; tRel 0])
             (mkApps (tRel (2 + List.length (mie.(mind_entry_params))))
               (to_extended_list mie.(mind_entry_params)))))
-    in 
+    in
     let prime_cstrs := List.map (fun s => s ++ "'") oie.(mind_entry_consnames) in
     {| mind_entry_typename := (oie.(mind_entry_typename) ++ "'");
-       mind_entry_arity := (*oie.(mind_entry_arity)*) qw; 
+       mind_entry_arity := (*oie.(mind_entry_arity)*) qw;
        mind_entry_lc := cstr' :: cstrs;
        mind_entry_consnames := "newcons" :: prime_cstrs |}
   in
   let inds' := List.map add_cstr inds in
   update_mutual_inductive_entry_inds mie inds'.
 
-Inductive foo : Set := 
+Inductive foo : Set :=
  | bar : foo.
 
 Definition fooref := (MPfile ["inferindunivs"; "TestSuite"; "MetaCoq"], "foo").

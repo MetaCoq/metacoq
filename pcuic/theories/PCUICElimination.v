@@ -3,11 +3,11 @@ From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
-     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
+     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine
      PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
-     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
+     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata
      PCUICContextConversion PCUICContextConversionTyp
      PCUICCumulProp PCUICWellScopedCumulativity PCUICArities.
 From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICOnFreeVars PCUICEquality.
@@ -18,7 +18,7 @@ Require Import ssreflect.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × 
+Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u ×
   (Universe.is_prop u || Universe.is_sprop u).
 
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
@@ -58,17 +58,17 @@ Lemma typing_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wf�
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   wf_universe Σ ps ->
-  spine_subst Σ Γ params (List.rev params) 
+  spine_subst Σ Γ params (List.rev params)
     (smash_context [] (subst_instance u (ind_params mdecl))) ->
-  spine_subst Σ Γ indices (List.rev indices) 
+  spine_subst Σ Γ indices (List.rev indices)
     (subst_context_let_expand (List.rev params)
         (subst_instance u (ind_params mdecl))
         (smash_context [] (subst_instance u (ind_indices idecl)))) ->
   Σ ;;; Γ |- c : mkApps (tInd ci u) (params ++ indices) ->
   typing_spine Σ Γ
     (it_mkProd_or_LetIn
-      (pre_case_predicate_context_gen ci mdecl idecl params u) 
-      (tSort ps)) 
+      (pre_case_predicate_context_gen ci mdecl idecl params u)
+      (tSort ps))
     (indices ++ [c]) (tSort ps).
 Proof.
   intros.
@@ -84,10 +84,10 @@ Lemma pre_case_predicate_context_gen_eq {cf: checker_flags} {Σ : global_env_ext
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_universe Σ ps ->
-  spine_subst Σ Γ (pparams p) (List.rev (pparams p)) 
+  spine_subst Σ Γ (pparams p) (List.rev (pparams p))
     (smash_context [] (ind_params mdecl)@[puinst p]) ->
-  Σ ⊢ Γ ,,, pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p) = 
-      Γ ,,, case_predicate_context' ci mdecl idecl p. 
+  Σ ⊢ Γ ,,, pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p) =
+      Γ ,,, case_predicate_context' ci mdecl idecl p.
 Proof.
   intros wf decli cu wfps sp.
   eapply alpha_eq_context_ws_cumul_ctx_pb.
@@ -96,7 +96,7 @@ Proof.
     rewrite /case_predicate_context' /=. cbn.
     rewrite subst_context_snoc; len.
     constructor. constructor; cbn. reflexivity.
-    rewrite subst_instance_mkApps subst_mkApps. f_equal. cbn. 
+    rewrite subst_instance_mkApps subst_mkApps. f_equal. cbn.
     now rewrite [subst_instance_instance _ _](subst_instance_id_mdecl _ _ _ cu).
     rewrite [to_extended_list _]to_extended_list_k_app; len; rewrite !map_app.
     f_equal.
@@ -117,7 +117,7 @@ Proof.
     eapply isType_wf_local in X. fvs.
 Qed.
 
-Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext} 
+Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext}
   {Γ T ci p c brs mdecl idecl} :
   check_univs ->
   wf_ext Σ ->
@@ -151,7 +151,7 @@ Proof.
   forward X1. apply (wf_predicate_length_pars wf_pred).
   simpl in X1. destruct X1 as [sppars [spargs cu']].
   assert (eqctx' : All2 (PCUICEquality.compare_decls eq eq)
-  (Γ,,, case_predicate_context' ci mdecl idecl p) 
+  (Γ,,, case_predicate_context' ci mdecl idecl p)
   (Γ,,, predctx)).
   { eapply All2_app. 2:eapply All2_refl; reflexivity.
     eapply case_predicate_context_alpha => //; tea.
@@ -162,7 +162,7 @@ Proof.
     * symmetry. eapply alpha_eq_context_ws_cumul_ctx_pb => //; fvs. now symmetry.
     * eapply pre_case_predicate_context_gen_eq; tea. pcuic.
       now eapply PCUICWfUniverses.typing_wf_universe in pret_ty. }
-  unshelve epose proof (typing_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve. 
+  unshelve epose proof (typing_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve.
   * pcuic.
   * now eapply PCUICWfUniverses.typing_wf_universe in pret_ty.
   * rewrite -smash_context_subst_context_let_expand in X2.
@@ -178,18 +178,18 @@ Proof.
 Qed.
 
 Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :
-  Universe.is_prop ind_sort ->  
+  Universe.is_prop ind_sort ->
   elim_sort_prop_ind cdecls = IntoAny ->
   on_constructors cumulSpec0 (lift_typing typing)
-    (Σ, ind_universes mdecl) mdecl 
+    (Σ, ind_universes mdecl) mdecl
     (inductive_ind ind) idecl ind_indices
     (ind_ctors idecl) cdecls ->
-  (#|ind_ctors idecl| = 0) + 
-  (∑ cdecl cdecl_sorts, 
-    (ind_ctors idecl = [cdecl]) * 
-    (cdecls = [cdecl_sorts]) * 
+  (#|ind_ctors idecl| = 0) +
+  (∑ cdecl cdecl_sorts,
+    (ind_ctors idecl = [cdecl]) *
+    (cdecls = [cdecl_sorts]) *
     (Forall is_propositional cdecl_sorts) *
-    (on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
+    (on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl
         (inductive_ind ind) idecl ind_indices cdecl cdecl_sorts))%type.
 Proof.
   intros uf lein onc.
@@ -204,9 +204,9 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma typing_spine_it_mkProd_or_LetIn_full_inv {cf:checker_flags} Σ Γ Δ s args s' : 
+Lemma typing_spine_it_mkProd_or_LetIn_full_inv {cf:checker_flags} Σ Γ Δ s args s' :
   wf Σ.1 ->
-  typing_spine Σ Γ (it_mkProd_or_LetIn Δ (tSort s)) args (tSort s') -> 
+  typing_spine Σ Γ (it_mkProd_or_LetIn Δ (tSort s)) args (tSort s') ->
   leq_universe (global_ext_constraints Σ) s s'.
 Proof.
   intros wfΣ.
@@ -304,7 +304,7 @@ Lemma isType_ws_cumul_ctx_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
 Proof.
   intros HT wf eq.
   apply infer_sort_impl with id HT; intros Hs.
-  eapply closed_context_conversion; tea. 
+  eapply closed_context_conversion; tea.
 Qed.
 
 Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
@@ -315,12 +315,12 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
   ((All_local_assum (fun Γ' t =>
       (∑ s, (Σ ;;; Γ ,,, Γ' |- t : tSort s) * is_propositional s)%type) Δ ->
     ∥ All (Is_proof Σ Γ) args ∥) *
-    (forall mdecl idecl 
+    (forall mdecl idecl
     (Hdecl : declared_inductive Σ.1 ind mdecl idecl),
       consistent_instance_ext Σ (ind_universes mdecl) u ->
-      ((is_propositional s -> s = subst_instance_univ u idecl.(ind_sort)) /\ 
+      ((is_propositional s -> s = subst_instance_univ u idecl.(ind_sort)) /\
        (prop_sub_type = false ->
-        is_propositional (subst_instance_univ u idecl.(ind_sort)) -> 
+        is_propositional (subst_instance_univ u idecl.(ind_sort)) ->
         s = subst_instance_univ u idecl.(ind_sort)))))%type.
 Proof.
   intros checku wfΣ Ht.
@@ -357,7 +357,7 @@ Proof.
       now destruct (ind_sort idecl).
       now destruct (ind_sort idecl).
       now eapply declared_inductive_valid_type.
-      
+
     * now eapply invert_cumul_ind_prod in e.
 
   - destruct d as [na [b|] ty].
@@ -430,7 +430,7 @@ Proof.
         2:{ destruct s0 as [s' [Hs' _]]. exists s'; auto. }
         2:now symmetry.
         destruct H as [H _].
-        forward H. { 
+        forward H. {
           clear -wfΣ prs tyt.
           eapply All_local_assum_subst; eauto.
           simpl. intros.
@@ -447,9 +447,9 @@ Qed.
 
 Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
   (onib : on_ind_body cumulSpec0 (lift_typing typing) (Σ.1, ind_universes mdecl)
-    (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
+    (inductive_mind ind) mdecl (inductive_ind ind) idecl) :
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
-  is_propositional (ind_sort idecl) -> 
+  is_propositional (ind_sort idecl) ->
   check_ind_sorts (lift_typing typing) (Σ.1, ind_universes mdecl)
     (PCUICEnvironment.ind_params mdecl) (PCUICEnvironment.ind_kelim idecl)
     (ind_indices idecl) (ind_cunivs onib) (ind_sort idecl) ->
@@ -471,9 +471,9 @@ Proof.
     unfold is_propositional in isp.
     now rewrite isp' issp in isp.
 Qed.
- 
-Lemma sorts_local_ctx_All_local_assum_impl {cf:checker_flags} Σ 
-  (P : context -> context -> term -> Type) {Γ Δ cs} : 
+
+Lemma sorts_local_ctx_All_local_assum_impl {cf:checker_flags} Σ
+  (P : context -> context -> term -> Type) {Γ Δ cs} :
   (forall Γ' t s, In s cs -> Σ ;;; Γ ,,, Γ' |- t : tSort s  -> P Γ Γ' t) ->
   sorts_local_ctx (lift_typing typing) Σ Γ Δ cs ->
   All_local_assum (P Γ) Δ.
@@ -488,8 +488,8 @@ Proof.
   eapply H. left; eauto. eauto.
 Qed.
 
-Lemma In_map {A B} (f : A -> B) (l : list A) x : 
-  In x (map f l) -> 
+Lemma In_map {A B} (f : A -> B) (l : list A) x :
+  In x (map f l) ->
   exists y, In y l /\ x = f y.
 Proof.
   induction l; simpl; auto.
@@ -499,7 +499,7 @@ Proof.
 Qed.
 
 (* We prove that if the (partial) constructor application's type lands in Prop
-   then the inductive type is in Prop and hence the constructor's sort is 
+   then the inductive type is in Prop and hence the constructor's sort is
    Prop. Finally, all its arguments are in Prop because we additionally know
    that elimination to any type is allowed. *)
 
@@ -544,8 +544,8 @@ Proof.
     eapply typing_spine_proofs in sp; eauto.
     destruct sp.
     specialize (a _ _ declc cu) as [a a'].
-    specialize (a hp). 
-    
+    specialize (a hp).
+
     pose proof (onc.(on_cargs)).
     pose proof (onib.(ind_sorts)).
     assert (Universe.is_prop (ind_sort idecl) || Universe.is_sprop (ind_sort idecl)).
@@ -553,7 +553,7 @@ Proof.
     apply check_ind_sorts_is_propositional in X1 as [nctors X1]; eauto.
     assert(#|ind_cunivs onib| = #|ind_ctors idecl|).
     clear X. clear -onib. pose proof (onib.(onConstructors)).
-    eapply All2_length in X. now rewrite X. 
+    eapply All2_length in X. now rewrite X.
     rewrite H0 in nctors; split; auto.
 
     eapply nth_error_all in X1; eauto. simpl in X1.
@@ -562,8 +562,8 @@ Proof.
     rewrite subst_instance_app in X0.
     eapply weaken_sorts_local_ctx in X0; eauto.
     eapply (subst_sorts_local_ctx _ _) in X0; eauto.
-    3:{ eapply subslet_app. 
-      2:{ eapply weaken_subslet; auto. eapply PCUICArities.subslet_inds; eauto. } 
+    3:{ eapply subslet_app.
+      2:{ eapply weaken_subslet; auto. eapply PCUICArities.subslet_inds; eauto. }
       eapply sub. }
     2:{ eapply PCUICWeakeningTyp.weaken_wf_local; auto.
         edestruct (PCUICInductiveInversion.on_constructor_inst declc); eauto.
@@ -575,8 +575,8 @@ Proof.
     rewrite subst_app_context in X0.
     rewrite -(PCUICContextSubst.context_subst_length sub) in X0.
     autorewrite with len in X0.
-    eapply (sorts_local_ctx_All_local_assum_impl Σ 
-      (fun Γ Γ' t => 
+    eapply (sorts_local_ctx_All_local_assum_impl Σ
+      (fun Γ Γ' t =>
       ∑ s0 : Universe.t, Σ;;; Γ ,,, Γ' |- t : tSort s0 × is_propositional s0)).
     2:eauto.
     intros. exists s0. intuition auto.
@@ -584,7 +584,7 @@ Proof.
     rewrite is_propositional_subst_instance.
     eapply All_In in X1; eauto.
     sq. apply X1.
-    
+
   * intros _ sp.
     rewrite List.skipn_all2. lia.
     split; [|repeat constructor].
@@ -602,7 +602,7 @@ Proof.
     subst tycs. rewrite -(is_propositional_subst_instance u) //.
   * now eapply declared_constructor_valid_ty.
 Qed.
-    
+
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
   check_univs ->
   wf_ext Σ ->
@@ -619,7 +619,7 @@ Proof.
   now eapply weakening_env_declared_inductive; tc.
 Qed.
 
-Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl : 
+Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl :
   check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ci mind idecl ->
@@ -681,7 +681,7 @@ Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u -> 
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u ->
   leq_universe (global_ext_constraints Σ) u' u.
 Proof using Hcf Hcf'.
   intros wfΣ leq hv hv' isp.
@@ -695,7 +695,7 @@ Lemma leq_term_prop_sorted_r {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u' -> 
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u' ->
   leq_universe (global_ext_constraints Σ) u u'.
 Proof using Hcf Hcf'.
   intros wfΣ leq hv hv' isp.
@@ -708,7 +708,7 @@ Lemma leq_term_sprop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> Universe.is_sprop u -> 
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_sprop u ->
   leq_universe (global_ext_constraints Σ) u' u.
 Proof using Hcf Hcf'.
   intros wfΣ leq hv hv' isp.
@@ -722,7 +722,7 @@ Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> is_propositional u -> 
+  Σ;;; Γ |- v' : tSort u' -> is_propositional u ->
   leq_universe (global_ext_constraints Σ) u' u.
 Proof using Hcf Hcf'.
   intros wfΣ leq hv hv' isp.
@@ -735,7 +735,7 @@ Lemma leq_term_sprop_sorted_r {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> Universe.is_sprop u' -> 
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_sprop u' ->
   leq_universe (global_ext_constraints Σ) u u'.
 Proof using Hcf Hcf'.
   intros wfΣ leq hv hv' isp.
@@ -747,7 +747,7 @@ Qed.
 Lemma cumul_prop_inv (Σ : global_env_ext) Γ A B u u' :
   wf_ext Σ ->
   Universe.is_prop u ->
-  (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) + 
+  (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) +
    ((Σ ;;; Γ |- B : tSort u) * (Σ ;;; Γ |- A : tSort u')))%type ->
   Σ ;;; Γ |- A <= B ->
   ((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u))%type.
@@ -774,7 +774,7 @@ Qed.
 Lemma cumul_sprop_inv (Σ : global_env_ext) Γ A B u u' :
   wf_ext Σ ->
   Universe.is_sprop u ->
-  (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) + 
+  (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) +
    ((Σ ;;; Γ |- B : tSort u) * (Σ ;;; Γ |- A : tSort u')))%type ->
   Σ ;;; Γ |- A <= B ->
   ((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u))%type.
@@ -797,10 +797,10 @@ Proof using Hcf Hcf'.
     eapply PCUICArities.isType_Sort.
     1: now destruct u.
     1: now pcuic.
-    now eapply cumul_Sort. 
+    now eapply cumul_Sort.
 Qed.
 
-Lemma unique_sorting_equality_prop_l {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_prop_l {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -816,7 +816,7 @@ Proof using Hcf Hcf'.
   eapply leq_universe_prop_r; tea; eauto with pcuic.
 Qed.
 
-Lemma unique_sorting_equality_prop_r {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_prop_r {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -832,7 +832,7 @@ Proof using Hcf Hcf'.
   eapply leq_universe_prop_r; tea; eauto with pcuic.
 Qed.
 
-Lemma unique_sorting_equality_prop {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_prop {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -846,7 +846,7 @@ Proof using Hcf Hcf'.
   now eapply unique_sorting_equality_prop_r; tea.
 Qed.
 
-Lemma unique_sorting_equality_sprop_l {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_sprop_l {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -862,7 +862,7 @@ Proof using Hcf Hcf'.
   eapply leq_universe_sprop_r; tea; eauto with pcuic.
 Qed.
 
-Lemma unique_sorting_equality_sprop_r {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_sprop_r {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -878,7 +878,7 @@ Proof using Hcf Hcf'.
   eapply leq_universe_sprop_r; tea; eauto with pcuic.
 Qed.
 
-Lemma unique_sorting_equality_sprop {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_sprop {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->
@@ -892,7 +892,7 @@ Proof using Hcf Hcf'.
   now eapply unique_sorting_equality_sprop_r; tea.
 Qed.
 
-Lemma unique_sorting_equality_propositional {pb} {Σ : global_env_ext} {Γ T U s s'} : 
+Lemma unique_sorting_equality_propositional {pb} {Σ : global_env_ext} {Γ T U s s'} :
   wf_ext Σ ->
   Σ ;;; Γ |- T : tSort s ->
   Σ ;;; Γ |- U : tSort s' ->

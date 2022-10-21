@@ -261,8 +261,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
-| type_Prim p prim_ty cdecl : 
-   wf_local Σ Γ ->  
+| type_Prim p prim_ty cdecl :
+   wf_local Σ Γ ->
    primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
    declared_constant Σ prim_ty cdecl ->
    primitive_invariants cdecl ->
@@ -725,7 +725,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
        wf_cofixpoint Σ mfix ->
        P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
-  
+
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
       PΓ Σ Γ ->
       primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
@@ -779,8 +779,8 @@ Proof.
     rename o0 into Xg.
     set (wfΣ := (ongu, o) : on_global_env cumulSpec0 (lift_typing typing) {| universes := univs; declarations := Σ |}).
     set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-    destruct Xg. 
-    rename on_global_decl_d into Xg. 
+    destruct Xg.
+    rename on_global_decl_d into Xg.
     constructor; auto; try constructor; auto.
     * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort Universe.lProp); _; _))).
       shelve. simpl. apply type_Prop.
@@ -802,7 +802,7 @@ Proof.
           eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp. intros n x Xg.
           refine {| ind_arity_eq := Xg.(ind_arity_eq);
                     ind_cunivs := Xg.(ind_cunivs) |}.
-          - apply onArity in Xg. 
+          - apply onArity in Xg.
             apply lift_typing_impl with (1 := Xg); intros ? Hs.
             apply (IH (_; _; _; Hs)).
           - pose proof Xg.(onConstructors) as Xg'.
@@ -1179,7 +1179,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
         wf_cofixpoint Σ mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
-    
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
         PΓ Σ Γ ->
         primitive_constant Σ (prim_val_tag p) = Some prim_ty ->

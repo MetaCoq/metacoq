@@ -1085,11 +1085,11 @@ Corollary R_Acc_aux :
 
   Section reducewf.
     Context (Γ : context).
-    
+
     Notation sigmaarg :=
       (sigma (fun t => sigma (fun π => forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ (zipc t π)))).
 
-    Local Instance wf_proof : WellFounded (fun x y : sigmaarg => 
+    Local Instance wf_proof : WellFounded (fun x y : sigmaarg =>
         forall Σ, abstract_env_ext_rel X Σ -> R Σ Γ (pr1 x, pr1 (pr2 x)) (pr1 y, pr1 (pr2 y))).
     Proof.
       intros [t [π wt]].
@@ -1104,7 +1104,7 @@ Corollary R_Acc_aux :
         destruct (hΣ _ wfΣ) as [hΣ]. pose proof (R_Acc Γ (t0.(pr1), t0.(pr2).(pr1)) H).
         clear -H0. destruct t0 as [t [π wt]].
         cbn in *. revert wt.
-        depind H0. intros wt. constructor. intros. eapply H0. 
+        depind H0. intros wt. constructor. intros. eapply H0.
         * cbn in H1. exact H1.
         * reflexivity.
   Defined.
@@ -1235,7 +1235,7 @@ Corollary R_Acc_aux :
     induction hx using Acc_ind'.
     cbn. eapply h. assumption.
   Qed.
-  
+
   Lemma reduce_stack_prop :
     forall Γ t π h (P : term × stack -> term × stack -> Prop),
       (forall t π h aux,
@@ -1393,7 +1393,7 @@ Corollary R_Acc_aux :
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
     Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
-    whne flags Σ Γ (mkApps hd args). 
+    whne flags Σ Γ (mkApps hd args).
   Proof using Type.
     intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.
@@ -1454,7 +1454,7 @@ Corollary R_Acc_aux :
     apply_funelim (_reduce_stack Γ t π h aux); clear -wfΣ.
     all: simpl.
     all: intros *.
-    all: repeat match goal with 
+    all: repeat match goal with
       [ |- (forall (t' : term) (π' : stack)
          (hR : forall Σ,
                abstract_env_ext_rel X Σ -> R Σ _ _ _), { _ : _ | _ }) -> _ ] => intros reduce
@@ -1880,7 +1880,7 @@ Section ReduceFns.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ X _ wfΣ). sq.
     eapply into_closed_red in r ; fvs.
-    Unshelve. eauto. 
+    Unshelve. eauto.
   Qed.
 
   Equations? reduce_to_prod (Γ : context) (t : term)
@@ -2009,7 +2009,7 @@ Section ReduceFns.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red ; fvs.
-    Unshelve. eauto. 
+    Unshelve. eauto.
   Qed.
 
   (* Definition of assumption-only arities (without lets) *)

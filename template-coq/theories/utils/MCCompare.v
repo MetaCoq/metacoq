@@ -26,11 +26,11 @@ Definition comparison_trans p q :=
   match p, q with
   | Datatypes.Eq, c => Some c
   | c, Datatypes.Eq => Some c
-  | Datatypes.Lt, Datatypes.Gt => None 
+  | Datatypes.Lt, Datatypes.Gt => None
   | Datatypes.Gt, Datatypes.Lt => None
   | c, _ => Some c
   end.
-  
+
 Lemma compare_cont_trans {A} (cmp : A -> A -> comparison) :
   (forall c x y z, cmp x y = c -> cmp y z = c -> cmp x z = c) ->
   (forall x y, cmp x y = Datatypes.Eq -> x = y) ->
@@ -58,15 +58,15 @@ Qed.
 
 (** Facts about booleans, characters and strings *)
 
-Module BoolOT <: UsualOrderedType. 
+Module BoolOT <: UsualOrderedType.
   Definition t := bool.
 
   Definition compare (x y : bool) : comparison :=
     if x then if y then Eq else Gt else if y then Lt else Eq.
-  
+
   Definition lt (x y : bool) :=
     if x then False else y = true.
-  
+
   Definition compare_spec (x y : bool) : CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
   Proof.
     destruct x, y.
@@ -83,7 +83,7 @@ Module BoolOT <: UsualOrderedType.
   Proof.
     decide equality.
   Defined.
-  
+
   Definition lt_strorder : StrictOrder lt.
   Proof.
     constructor.
@@ -100,7 +100,7 @@ Module BoolOT <: UsualOrderedType.
   (* Bonus *)
   Definition eqb (l1 l2 : t) : bool
     := match compare l1 l2 with Eq => true | _ => false end.
-  
+
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
 End BoolOT.
@@ -109,7 +109,7 @@ Notation bool_compare := BoolOT.compare.
 
 Local Ltac trd := cbn in *; try reflexivity; try discriminate.
 
-Module ListOrderedType (A : UsualOrderedType) <: UsualOrderedType. 
+Module ListOrderedType (A : UsualOrderedType) <: UsualOrderedType.
   Definition t := list A.t.
   Import List. Import ListNotations.
 
@@ -123,7 +123,7 @@ Module ListOrderedType (A : UsualOrderedType) <: UsualOrderedType.
 
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
-  
+
   Inductive lt_ : t -> t -> Prop :=
   | lt_nil_cons hd tl : lt_ [] (hd :: tl)
   | lt_cons_cons_hd hd tl hd' tl' : A.lt hd hd' -> lt_ (hd :: tl) (hd' :: tl')
@@ -209,14 +209,14 @@ Module ListOrderedType (A : UsualOrderedType) <: UsualOrderedType.
     eapply transitivity in H. 2:eassumption.
     apply compare_lt_lt in H. rewrite compare_sym H //.
   Qed.
-  
+
   (* Bonus *)
   Definition eqb (l1 l2 : t) : bool
     := match compare l1 l2 with Eq => true | _ => false end.
-  
+
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
-  Program Definition eqb_dec (x y : t) : { x = y } + { x <> y } := 
+  Program Definition eqb_dec (x y : t) : { x = y } + { x <> y } :=
     match eqb x y with
     | true => left _
     | false => right _

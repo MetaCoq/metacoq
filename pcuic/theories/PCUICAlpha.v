@@ -2,9 +2,9 @@
 From Coq Require Import ssreflect ssrbool CRelationClasses CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
-     PCUICLiftSubst PCUICTyping PCUICWeakeningConv PCUICWeakeningTyp 
+     PCUICLiftSubst PCUICTyping PCUICWeakeningConv PCUICWeakeningTyp
      PCUICCumulativity PCUICEquality PCUICClosedTyp
-     PCUICConversion PCUICContextConversion PCUICContextConversionTyp 
+     PCUICConversion PCUICContextConversion PCUICContextConversionTyp
      PCUICValidity PCUICArities PCUICSpine
      PCUICInductives PCUICInductiveInversion PCUICOnFreeVars
      PCUICWellScopedCumulativity PCUICGuardCondition.
@@ -704,7 +704,7 @@ Section Alpha.
       eapply R_universe_instance_eq in eqinst.
       assert (isType Σ Δ (mkApps ptm (args ++ [c]))).
       { eapply isType_eq_context_conversion. eapply validity. econstructor; eauto.
-        constructor; eauto. constructor; eauto.  
+        constructor; eauto. constructor; eauto.
         solve_all. eapply a0; eauto; reflexivity. all:auto. }
       eapply type_Cumul'; tea.
       + have cu' : consistent_instance_ext Σ (ind_universes mdecl) (puinst p').
@@ -753,7 +753,7 @@ Section Alpha.
           intros ??? [[] ?]; try constructor; simpl; auto; now transitivity na'. }
         destruct (wf_local_app_inv X4) as [wfΔ _].
         assert (clΔ := (wf_local_closed_context wfΔ)).
-        econstructor; tea; eauto. 2,3: constructor; tea ; eauto. 
+        econstructor; tea; eauto. 2,3: constructor; tea ; eauto.
         * eapply (type_ws_cumul_pb (pb:=Cumul)).
           eapply IHc; eauto.
           eexists; eapply isType_mkApps_Ind; tea.

@@ -51,7 +51,7 @@ Module DirPathOT := ListOrderedType IdentOT.
 
 #[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
-Definition string_of_dirpath (dp : dirpath) : string := 
+Definition string_of_dirpath (dp : dirpath) : string :=
   String.concat "." (List.rev dp).
 
 (** The module part of the kernel name.
@@ -94,9 +94,9 @@ Module ModPathComp.
   Fixpoint compare mp mp' :=
     match mp, mp' with
     | MPfile dp, MPfile dp' => DirPathOT.compare dp dp'
-    | MPbound dp id k, MPbound dp' id' k' => 
+    | MPbound dp id k, MPbound dp' id' k' =>
       mpbound_compare dp id k dp' id' k'
-    | MPdot mp id, MPdot mp' id' => 
+    | MPdot mp id, MPdot mp' id' =>
       compare_cont (compare mp mp') (IdentOT.compare id id')
     | MPfile _, _ => Gt
     | _, MPfile _ => Lt
@@ -142,7 +142,7 @@ Module ModPathComp.
     destruct (x ?= y); simpl; auto.
     apply IdentOT.compare_sym.
   Qed.
- 
+
   Lemma nat_compare_trans :
     forall c x y z, Nat.compare x y = c -> Nat.compare y z = c -> Nat.compare x z = c.
   Proof.
@@ -151,7 +151,7 @@ Module ModPathComp.
     destruct (PeanoNat.Nat.compare_spec y z); subst; try congruence;
     destruct (PeanoNat.Nat.compare_spec x z); subst; try congruence; lia.
   Qed.
- 
+
   Lemma compare_trans :
     forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
   Proof.
@@ -179,7 +179,7 @@ Module ModPathComp.
     rewrite (IHx _ _ _ eq eq') //.
     destruct (y ?= z) eqn:eq'; cbn; auto; try congruence.
     apply compare_eq in eq'; subst.
-    intros eq'. now rewrite eq. 
+    intros eq'. now rewrite eq.
     now rewrite (IHx _ _ _ eq eq').
   Qed.
 
@@ -187,7 +187,7 @@ End ModPathComp.
 
 Module ModPathOT := OrderedType_from_Alt ModPathComp.
 
-Program Definition modpath_eq_dec (x y : modpath) : { x = y } + { x <> y } := 
+Program Definition modpath_eq_dec (x y : modpath) : { x = y } + { x <> y } :=
   match ModPathComp.compare x y with
   | Eq => left _
   | _ => right _
@@ -209,9 +209,9 @@ Module KernameComp.
   Lemma eq_equiv : RelationClasses.Equivalence eq.
   Proof. apply _. Qed.
 
-  Definition compare kn kn' := 
+  Definition compare kn kn' :=
     match kn, kn' with
-    | (mp, id), (mp', id') => 
+    | (mp, id), (mp', id') =>
       compare_cont (ModPathComp.compare mp mp') (IdentOT.compare id id')
     end.
 
@@ -224,15 +224,15 @@ Module KernameComp.
     rewrite ModPathComp.compare_sym IdentOT.compare_sym.
     destruct ModPathComp.compare, IdentOT.compare; auto.
   Qed.
-   
+
   Lemma compare_trans :
     forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
   Proof.
     intros c [] [] [] => /=.
-    eapply compare_cont_trans; eauto using ModPathComp.compare_trans, ModPathComp.compare_eq, 
+    eapply compare_cont_trans; eauto using ModPathComp.compare_trans, ModPathComp.compare_eq,
       StringOT.compare_trans.
   Qed.
-    
+
 End KernameComp.
 
 Module Kername.
@@ -256,7 +256,7 @@ Module Kername.
   Definition compare_spec : forall x y, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
   Proof.
     induction x; destruct y.
-    simpl. 
+    simpl.
     destruct (ModPathComp.compare a m) eqn:eq.
     destruct (IdentOT.compare b i) eqn:eq'.
     all:constructor. red. eapply ModPathComp.compare_eq in eq. eapply string_compare_eq in eq'. congruence.
@@ -274,7 +274,7 @@ Module Kername.
       now apply irreflexivity in H.
   Qed.
 
-  Definition eqb kn kn' := 
+  Definition eqb kn kn' :=
     match compare kn kn' with
     | Eq => true
     | _ => false
@@ -289,7 +289,7 @@ Module Kername.
     -intros e'; subst. now rewrite OT.eq_refl in e.
     -intros e'; subst. now rewrite OT.eq_refl in e.
   Defined.
-  
+
   Definition eq_dec : forall (x y : t), { x = y } + { x <> y } := Classes.eq_dec.
 
 End Kername.
@@ -308,12 +308,12 @@ Definition eq_constant := eq_kername.
 
 (* Local Open Scope string_scope.*)
 (* Eval compute in KernameOT.compare (MPfile ["fdejrkjl"], "A") (MPfile ["lfrk;k"], "B"). *)
-  
+
 Module KernameSet := MSetAVL.Make Kername.
 Module KernameSetFact := MSetFacts.WFactsOn Kername KernameSet.
 Module KernameSetProp := MSetProperties.WPropertiesOn Kername KernameSet.
 
-Lemma knset_in_fold_left {A} kn f (l : list A) acc : 
+Lemma knset_in_fold_left {A} kn f (l : list A) acc :
   KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->
   (KernameSet.In kn acc \/ exists a, In a l /\ KernameSet.In kn (f a)).
 Proof.
@@ -365,7 +365,7 @@ Record projection := mkProjection
     proj_npars : nat; (* Number of (non-let) parameters *)
     proj_arg : nat (* Argument to project *) }.
 
-Definition eq_projection (p p' : projection) := 
+Definition eq_projection (p p' : projection) :=
   (p.(proj_ind), p.(proj_npars), p.(proj_arg)) == (p'.(proj_ind), p'.(proj_npars), p'.(proj_arg)).
 
 #[global, program] Instance reflect_eq_projection : ReflectEq projection := {
@@ -410,7 +410,7 @@ Definition gref_eqb (x y : global_reference) : bool :=
   | _, _ => false
   end.
 
-#[global, program] Instance grep_reflect_eq : ReflectEq global_reference := 
+#[global, program] Instance grep_reflect_eq : ReflectEq global_reference :=
   {| eqb := gref_eqb |}.
 Next Obligation.
   destruct x, y; cbn; try constructor; try congruence.

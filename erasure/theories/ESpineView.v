@@ -27,8 +27,8 @@ Derive Signature for t.
 
 Definition view : forall x : term, t x :=
   MkAppsInd.case (P:=fun x => t x)
-    tBox tRel tVar 
-    (fun n l => tEvar n l) 
+    tBox tRel tVar
+    (fun n l => tEvar n l)
     (fun n t => tLambda n t)
     (fun n b t => tLetIn n b t)
     (fun f l napp nnil => tApp f l napp nnil)
@@ -40,7 +40,7 @@ Definition view : forall x : term, t x :=
     (fun mfix n => tCoFix mfix n)
     (fun p => tPrim p).
 
-Lemma view_mkApps {f v} (vi : t (mkApps f v)) : ~~ isApp f -> v <> [] -> 
+Lemma view_mkApps {f v} (vi : t (mkApps f v)) : ~~ isApp f -> v <> [] ->
   exists hf vn, vi = tApp f v hf vn.
 Proof.
   intros ha hv.
@@ -50,5 +50,5 @@ Proof.
   epose proof (DepElim.pr2_uip (A:=EAst.term) He). subst vi0.
   do 2 eexists; reflexivity.
 Qed.
-  
+
 End TermSpineView.

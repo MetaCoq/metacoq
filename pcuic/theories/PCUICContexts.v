@@ -19,12 +19,12 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 #[global]
 Hint Rewrite Nat.add_0_r : len.
 
-Lemma smash_context_subst_empty s n Γ : 
+Lemma smash_context_subst_empty s n Γ :
   smash_context [] (subst_context s n Γ) =
   subst_context s n (smash_context [] Γ).
 Proof. apply: (smash_context_subst []). Qed.
 
-Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' : 
+Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' :
   assumption_context Δ ->
   All2_fold (fun Δ Δ' => conv_decls cumulSpec0 Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
   assumption_context Δ'.
@@ -34,7 +34,7 @@ Proof.
   depelim Hconv. depelim c; constructor; auto.
 Qed.
 
-Lemma smash_context_assumption_context {Γ Δ} : 
+Lemma smash_context_assumption_context {Γ Δ} :
   assumption_context Γ ->
   assumption_context (smash_context Γ Δ).
 Proof.
@@ -55,7 +55,7 @@ Hint Resolve smash_context_assumption_context : pcuic.
 #[global]
 Hint Constructors assumption_context : pcuic.
 
-Lemma smash_assumption_context Γ : 
+Lemma smash_assumption_context Γ :
   assumption_context Γ ->
   smash_context [] Γ = Γ.
 Proof.
@@ -68,7 +68,7 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma smash_context_idempotent Γ : 
+Lemma smash_context_idempotent Γ :
   smash_context [] (smash_context [] Γ) = smash_context [] Γ.
 Proof.
   rewrite smash_assumption_context //; pcuic.
@@ -102,8 +102,8 @@ Proof.
   + intros l; cbn. now rewrite IHbb.
 Qed.
 
-Lemma context_subst_lift Γ p s n : 
-  context_subst Γ p s -> 
+Lemma context_subst_lift Γ p s n :
+  context_subst Γ p s ->
   context_subst (lift_context n 0 Γ) (map (lift0 n) p) (map (lift0 n) s).
 Proof.
   induction 1 in |- *; try constructor.
@@ -120,7 +120,7 @@ Derive Signature for subslet.
 Lemma closedn_ctx_snoc k Γ d : closedn_ctx k (Γ ,, d) = closedn_ctx k Γ && closed_decl (#|Γ| + k) d.
 Proof. reflexivity. Qed.
 
-Lemma type_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s : 
+Lemma type_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s :
   wf_local Σ Γ ->
   type_local_ctx (lift_typing typing) Σ Γ Δ s ->
   wf_local Σ (Γ ,,, Δ).
@@ -130,7 +130,7 @@ Proof.
   intros wfΓ wfctx; constructor; intuition auto. exists s; auto.
 Qed.
 
-Lemma sorts_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s : 
+Lemma sorts_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s :
   wf_local Σ Γ ->
   sorts_local_ctx (lift_typing typing) Σ Γ Δ s ->
   wf_local Σ (Γ ,,, Δ).
@@ -153,7 +153,7 @@ Proof.
   red in isdecl. eapply typing_subst_instance_decl in isdecl; eauto.
 Qed.
 
-Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
+Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   wf Σ.1 ->
   declared_minductive Σ.1 ind mdecl ->
   type_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
@@ -175,12 +175,12 @@ Proof.
     now rewrite subst_instance_app in Ht.
 Qed.
 
-Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
+Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   wf Σ.1 ->
   declared_minductive Σ.1 ind mdecl ->
   sorts_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  sorts_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) 
+  sorts_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ)
     (List.map (subst_instance_univ u) s).
 Proof.
   intros Hctx Hu.
@@ -197,7 +197,7 @@ Proof.
     now rewrite subst_instance_app in b.
 Qed.
 
-Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
+Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Δ) ->
   type_local_ctx (lift_typing typing) Σ (Γ ,,, Δ) Δ' ctxs ->
@@ -207,7 +207,7 @@ Proof.
   induction Δ'; simpl; auto.
   destruct a as [na [b|] ty]; simpl; intuition auto.
   + simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r;
-    repeat split; tas.  
+    repeat split; tas.
     - apply infer_typing_sort_impl with id a0; intros Hs.
       now eapply substitution in Hs.
     - now eapply substitution in b1.
@@ -216,7 +216,7 @@ Proof.
       eapply substitution in b; eauto.
 Qed.
 
-Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
+Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Δ) ->
   sorts_local_ctx (lift_typing typing) Σ (Γ ,,, Δ) Δ' ctxs ->
@@ -225,7 +225,7 @@ Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs :
 Proof.
   induction Δ' in ctxs |- *; simpl; auto.
   destruct a as [na [b|] ty]; simpl; intuition auto.
-  + simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r. 
+  + simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r.
     repeat split.
     - now apply IHΔ'.
     - apply infer_typing_sort_impl with id a0; intros Hs.
@@ -237,7 +237,7 @@ Proof.
     eapply substitution in b; eauto.
 Qed.
 
-Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 
+Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs :
   wf Σ.1 ->
   wf_local Σ Γ ->
   type_local_ctx (lift_typing typing) Σ Γ' Δ ctxs ->
@@ -250,7 +250,7 @@ Proof.
   all: eapply (weaken_ctx Γ); auto.
 Qed.
 
-Lemma weaken_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 
+Lemma weaken_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs :
   wf Σ.1 ->
   wf_local Σ Γ ->
   sorts_local_ctx (lift_typing typing) Σ Γ' Δ ctxs ->
@@ -265,7 +265,7 @@ Proof.
   all: now eapply (weaken_ctx Γ).
 Qed.
 
-Lemma reln_app acc Γ Δ k : reln acc k (Γ ++ Δ) = 
+Lemma reln_app acc Γ Δ k : reln acc k (Γ ++ Δ) =
   reln (reln acc k Γ) (#|Γ| + k) Δ.
 Proof.
   induction Γ in acc, Δ, k |- *; simpl; auto.
@@ -277,17 +277,17 @@ Lemma reln_acc acc k Γ : reln acc k Γ = reln [] k Γ ++ acc.
 Proof.
   induction Γ in acc, k |- *; simpl; auto.
   destruct a as [na [b|] ty]. rewrite IHΓ. f_equal.
-  rewrite IHΓ. rewrite [reln [_] _ _]IHΓ. 
+  rewrite IHΓ. rewrite [reln [_] _ _]IHΓ.
   now rewrite -app_assoc.
 Qed.
 
-Lemma to_extended_list_k_app Γ Δ k : to_extended_list_k (Γ ++ Δ) k = 
+Lemma to_extended_list_k_app Γ Δ k : to_extended_list_k (Γ ++ Δ) k =
   to_extended_list_k Δ (#|Γ| + k) ++ to_extended_list_k Γ k.
 Proof.
   unfold to_extended_list_k. now rewrite reln_app reln_acc.
 Qed.
 
-Lemma to_extended_list_k_fold_context_k f Γ k : 
+Lemma to_extended_list_k_fold_context_k f Γ k :
   to_extended_list_k (fold_context_k f Γ) k = to_extended_list_k Γ k.
 Proof.
   rewrite /to_extended_list_k.
@@ -296,11 +296,11 @@ Proof.
   simpl; auto.
   intros.
   rewrite fold_context_k_snoc0. simpl.
-  destruct a as [? [?|] ?] => /=; now rewrite IHΓ.  
+  destruct a as [? [?|] ?] => /=; now rewrite IHΓ.
 Qed.
 
-Lemma to_extended_list_k_lift_context c k n k' : 
-  to_extended_list_k (lift_context n k c) k' = to_extended_list_k c k'. 
+Lemma to_extended_list_k_lift_context c k n k' :
+  to_extended_list_k (lift_context n k c) k' = to_extended_list_k c k'.
 Proof. now rewrite to_extended_list_k_fold_context_k. Qed.
 
 Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
@@ -319,7 +319,7 @@ Hint Rewrite to_extended_list_length : len.
 
 Lemma map_subst_app_to_extended_list_k s s' ctx k  :
   k = #|s| ->
-  map (subst0 (s ++ s')) (to_extended_list_k ctx k) = 
+  map (subst0 (s ++ s')) (to_extended_list_k ctx k) =
   map (subst0 s') (to_extended_list_k ctx 0).
 Proof.
   intros ->.
@@ -330,9 +330,9 @@ Proof.
   f_equal. rewrite -{1}(Nat.add_0_r #|s|) simpl_subst' ?lift0_id //.
   now rewrite map_length.
 Qed.
-  
+
 Lemma subst_context_smash_context s k Γ Δ :
-  subst_context s k (smash_context Γ Δ) = 
+  subst_context s k (smash_context Γ Δ) =
   smash_context (subst_context s (#|Δ| + k) Γ) (subst_context s k Δ).
 Proof.
   induction Δ as [|[? [] ?] ?] in Γ |- *; simpl; auto;
@@ -352,7 +352,7 @@ Section WfEnv.
   Context {cf} {Σ} {wfΣ : wf Σ}.
 
   Lemma wf_local_rel_smash_context_gen {Γ Δ Δ'} :
-    wf_local Σ (Δ' ,,, Γ) -> 
+    wf_local Σ (Δ' ,,, Γ) ->
     wf_local_rel Σ (Δ' ,,, Γ) Δ ->
     wf_local_rel Σ Δ' (smash_context Δ Γ).
   Proof using wfΣ.
@@ -374,16 +374,16 @@ Section WfEnv.
   Qed.
 
   Lemma wf_local_rel_smash_context {Γ Δ} :
-    wf_local Σ (Δ ,,, Γ) -> 
+    wf_local Σ (Δ ,,, Γ) ->
     wf_local_rel Σ Δ (smash_context [] Γ).
   Proof using wfΣ.
     intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
   Qed.
 
-  Lemma wf_local_smash_end Γ Δ : 
+  Lemma wf_local_smash_end Γ Δ :
     wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
   Proof using wfΣ.
-    intros wf. 
+    intros wf.
     apply All_local_env_app. split.
     now apply All_local_env_app_inv in wf.
     eapply wf_local_rel_smash_context; auto.
@@ -409,7 +409,7 @@ End WfEnv.
 
 Local Open Scope sigma_scope.
 
-Lemma context_subst_extended_subst Γ args s : 
+Lemma context_subst_extended_subst Γ args s :
   context_subst Γ args s ->
   s = map (inst (List.rev args ⋅n ids)) (extended_subst Γ 0).
 Proof.
@@ -467,7 +467,7 @@ Proof.
 Qed.
 
 Lemma extended_subst_to_extended_list_k Γ k :
-  (map (subst (extended_subst Γ 0) k) (to_extended_list_k Γ k)) = 
+  (map (subst (extended_subst Γ 0) k) (to_extended_list_k Γ k)) =
   to_extended_list_k (smash_context [] Γ) k.
 Proof.
   unfold to_extended_list_k.
@@ -476,12 +476,12 @@ Proof.
   - rewrite smash_context_acc //.
     rewrite reln_app. autorewrite with len. simpl.
     rewrite -IHΓ //. rewrite Nat.add_1_r.
-    rewrite (reln_lift 1). 
+    rewrite (reln_lift 1).
     clear.
     rewrite (map_subst_app_decomp [_]).
     rewrite -map_map_compose. f_equal.
     simpl.
-    generalize (lift0 #|extended_subst Γ 0| 
+    generalize (lift0 #|extended_subst Γ 0|
       (subst0 (extended_subst Γ 0) (lift (context_assumptions Γ) #|Γ| t))).
     intros t0.
     change 1 with #|[t0]|.
@@ -498,7 +498,7 @@ Proof.
   - rewrite smash_context_acc //.
     simpl.
     rewrite reln_acc map_app.
-    rewrite (reln_acc [_] _ (smash_context [] Γ)). 
+    rewrite (reln_acc [_] _ (smash_context [] Γ)).
     simpl. rewrite Nat.leb_refl Nat.sub_diag /=. f_equal.
     rewrite -IHΓ //.
     2:{ do 2 f_equal; lia. }
@@ -519,12 +519,12 @@ Qed.
 
 Lemma assumption_context_fold f Γ :
   assumption_context Γ -> assumption_context (fold_context_k f Γ).
-Proof. 
+Proof.
   induction 1; simpl. constructor. rewrite fold_context_k_snoc0.
   now constructor.
 Qed.
 
-Lemma smash_context_app_expand Γ Δ Δ' : 
+Lemma smash_context_app_expand Γ Δ Δ' :
   smash_context Γ (Δ ,,, Δ') =
   smash_context [] Δ ,,, expand_lets_ctx Δ (smash_context Γ Δ').
 Proof.
@@ -532,8 +532,8 @@ Proof.
   rewrite /expand_lets_k_ctx /app_context. f_equal.
 Qed.
 
-Lemma expand_lets_smash_context Γ Δ Δ' : 
-  expand_lets_ctx Γ (smash_context Δ Δ') = 
+Lemma expand_lets_smash_context Γ Δ Δ' :
+  expand_lets_ctx Γ (smash_context Δ Δ') =
   smash_context (expand_lets_k_ctx Γ #|Δ'| Δ) (expand_lets_ctx Γ Δ').
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
@@ -546,16 +546,16 @@ Proof. reflexivity. Qed.
 Lemma expand_lets_ctx_nil Γ : expand_lets_ctx Γ [] = [].
 Proof. reflexivity. Qed.
 #[global]
-Hint Rewrite expand_lets_k_ctx_nil expand_lets_ctx_nil : pcuic.  
+Hint Rewrite expand_lets_k_ctx_nil expand_lets_ctx_nil : pcuic.
 
-Definition subst_let_expand args Δ T := 
+Definition subst_let_expand args Δ T :=
   (subst0 args (expand_lets Δ T)).
 
-Definition subst_context_let_expand args Δ Γ := 
+Definition subst_context_let_expand args Δ Γ :=
   (subst_context args 0 (expand_lets_ctx Δ Γ)).
-  
+
 Definition subst_let_expand_tProd args Δ na T s :
-  subst_let_expand args Δ (tProd na T (tSort s)) = 
+  subst_let_expand args Δ (tProd na T (tSort s)) =
   tProd na (subst_let_expand args Δ T) (tSort s).
 Proof.
   reflexivity.
@@ -573,9 +573,9 @@ Definition subst_let_expand_tInd s Δ ind u :
   subst_let_expand s Δ (tInd ind u) = tInd ind u.
 Proof. reflexivity. Qed.
 
-Lemma subst_let_expand_it_mkProd_or_LetIn s Γ Δ u : 
+Lemma subst_let_expand_it_mkProd_or_LetIn s Γ Δ u :
   subst_let_expand s Γ (it_mkProd_or_LetIn Δ (tSort u)) =
-  it_mkProd_or_LetIn (subst_context_let_expand s Γ Δ) (tSort u). 
+  it_mkProd_or_LetIn (subst_context_let_expand s Γ Δ) (tSort u).
 Proof.
   rewrite /subst_let_expand /expand_lets.
   rewrite expand_lets_it_mkProd_or_LetIn /= subst_it_mkProd_or_LetIn /=.
@@ -629,12 +629,12 @@ Qed.
 
 Lemma untyped_subslet_extended_subst Γ Δ :
   untyped_subslet (Γ ,,, smash_context [] Δ)
-    (extended_subst Δ 0) 
+    (extended_subst Δ 0)
     (lift_context (context_assumptions Δ) 0 Δ).
 Proof.
   induction Δ as [|[na [d|] ?] ?]; simpl; try constructor.
   * rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    len. 
+    len.
     constructor => //.
   * rewrite smash_context_acc. simpl.
     rewrite /map_decl /= /map_decl /=. simpl.
@@ -644,12 +644,12 @@ Proof.
     rewrite -(lift_context_lift_context 1 _).
     eapply (untyped_subslet_lift _ [_]); eauto.
 Qed.
-    
+
 
 Lemma subslet_extended_subst {cf} {Σ} {wfΣ : wf Σ} Γ Δ :
   wf_local Σ (Γ ,,, Δ) ->
   subslet Σ (Γ ,,, smash_context [] Δ)
-    (extended_subst Δ 0) 
+    (extended_subst Δ 0)
     (lift_context (context_assumptions Δ) 0 Δ).
 Proof.
   move=> wfΔ.
@@ -658,7 +658,7 @@ Proof.
   * depelim wfΔ. repeat red in l, l0.
     specialize (IHΔ wfΔ).
     rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    len. 
+    len.
     constructor => //.
     eapply (weakening_typing (Γ'' := smash_context [] Δ)) in l0.
     len in l0. simpl in l0. simpl.
@@ -694,9 +694,9 @@ Proof.
       now rewrite simpl_lift; try lia.
 Qed.
 
-Lemma typing_expand_lets {cf} {Σ} {wfΣ : wf Σ} Γ Δ t T : 
-  Σ ;;; Γ ,,, Δ |- t : T -> 
-  Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ t : expand_lets Δ T. 
+Lemma typing_expand_lets {cf} {Σ} {wfΣ : wf Σ} Γ Δ t T :
+  Σ ;;; Γ ,,, Δ |- t : T ->
+  Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ t : expand_lets Δ T.
 Proof.
   intros Ht.
   rewrite /expand_lets /expand_lets_k.
@@ -708,7 +708,7 @@ Proof.
   now eapply subslet_extended_subst.
 Qed.
 
-Lemma subst_context_let_expand_length s Γ Δ : 
+Lemma subst_context_let_expand_length s Γ Δ :
   #|subst_context_let_expand s Γ Δ| = #|Δ|.
 Proof.
   now rewrite /subst_context_let_expand; len.
@@ -716,8 +716,8 @@ Qed.
 #[global]
 Hint Rewrite subst_context_let_expand_length : len.
 
-Lemma to_extended_list_subst_context_let_expand s Γ Δ : 
-  to_extended_list (subst_context_let_expand s Γ Δ) = 
+Lemma to_extended_list_subst_context_let_expand s Γ Δ :
+  to_extended_list (subst_context_let_expand s Γ Δ) =
   to_extended_list Δ.
 Proof.
   rewrite /subst_context_let_expand /to_extended_list /expand_lets_ctx /expand_lets_k_ctx.
@@ -738,7 +738,7 @@ Qed.
 
 Notation eq_names := (All2 (fun x y => x = (decl_name y))).
 
-Lemma eq_names_subst_context nas Γ s k : 
+Lemma eq_names_subst_context nas Γ s k :
   eq_names nas Γ ->
   eq_names nas (subst_context s k Γ).
 Proof.
@@ -747,7 +747,7 @@ Proof.
   * rewrite subst_context_snoc. constructor; auto.
 Qed.
 
-Lemma eq_names_subst_instance nas Γ u : 
+Lemma eq_names_subst_instance nas Γ u :
   eq_names nas Γ ->
   eq_names nas (subst_instance u Γ).
 Proof.

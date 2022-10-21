@@ -15,9 +15,9 @@ From MetaCoq.TestSuite Require hott_example.
 
 (* MetaCoq Quote Recursively Definition qequiv_adjointify := @isequiv_adjointify. *)
 
-From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion. 
+From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion.
 
-#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl := 
+#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl :=
   {
     guard_impl := PCUICWfEnvImpl.fake_guard_impl
   }.
@@ -25,11 +25,11 @@ Next Obligation. todo "this axiom is inconsitent, onlu used to make infer comput
 
 Definition typecheck_template (cf := default_checker_flags)
   {nor : normalizing_flags} (p : Ast.Env.program)
-   := 
-  let p' := trans_program p in 
-    match 
+   :=
+  let p' := trans_program p in
+    match
       infer_template_program (cf:=cf) p Monomorphic_ctx
-    with CorrectDecl X => 
+    with CorrectDecl X =>
       X.π1
       (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
     | _ => todo "should not happen"
@@ -41,9 +41,9 @@ Inductive Empty (A:Set) : Set := .
 
 Definition dummy (n : nat) : nat := match n with 0 => 1 | S n => n end.
 
-Set Primitive Projections. 
+Set Primitive Projections.
 
-MetaCoq Quote Recursively Definition foo := 
+MetaCoq Quote Recursively Definition foo :=
   @hott_example.isequiv_adjointify.
 (* plus. *)
 (* (fun n m => n + m). *)
@@ -58,23 +58,23 @@ MetaCoq Quote Recursively Definition foo :=
 
 Definition default_normal : @normalizing_flags default_checker_flags.
 now econstructor.
-Defined. 
+Defined.
 
 Time Definition bar := Eval lazy in @typecheck_template default_normal foo.
 
 Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition unbar := (PCUICToTemplate.trans bar).
 
-Program Definition eval_compute (cf := default_checker_flags) 
+Program Definition eval_compute (cf := default_checker_flags)
 (nor : normalizing_flags)
-(p : Ast.Env.program) φ  : Ast.term + string 
+(p : Ast.Env.program) φ  : Ast.term + string
 := match infer_template_program (cf:=cf) p φ return Ast.term + string with
 | CorrectDecl A =>
-  let p' := trans_program p in 
+  let p' := trans_program p in
   let Σ' := TemplateToPCUIC.trans_global_env p.1 in
-  let redtm := reduce_term RedFlags.default 
+  let redtm := reduce_term RedFlags.default
     optimized_abstract_env_impl (proj1_sig A.π2)
-    [] p'.2 _ in 
+    [] p'.2 _ in
   inl (PCUICToTemplate.trans redtm)
 | EnvError Σ (AlreadyDeclared id) =>
   inr ("Already declared: " ^ id)
@@ -84,14 +84,14 @@ end.
 Next Obligation.
   sq. destruct H0 as [? [? H0]]. pose (typing_wf_local H0).
   econstructor. rewrite <- e. eauto.
-Qed.  
+Qed.
 
-Program Definition eval_compute_cheat (cf := default_checker_flags) 
+Program Definition eval_compute_cheat (cf := default_checker_flags)
 (nor : normalizing_flags)
 (p : Ast.Env.program) φ  : Ast.term
-:= let p' := trans_program p in 
-  let tm := reduce_term RedFlags.default 
-     canonical_abstract_env_impl 
+:= let p' := trans_program p in
+  let tm := reduce_term RedFlags.default
+     canonical_abstract_env_impl
     {| referenced_impl_env_ext := (p'.1 , φ);
        referenced_impl_ext_wf := (todo "wf") |}
     [] p'.2 (todo "welltyped") in

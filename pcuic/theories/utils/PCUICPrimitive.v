@@ -29,7 +29,7 @@ Arguments primFloatModel {term}.
 
 Derive Signature NoConfusion for prim_model.
 
-Definition prim_model_of (term : Type) (p : prim_tag) : Type := 
+Definition prim_model_of (term : Type) (p : prim_tag) : Type :=
   match p with
   | primInt => PrimInt63.int
   | primFloat => PrimFloat.float
@@ -59,7 +59,7 @@ Instance reflect_eq_Z : ReflectEq Z := EqDec_ReflectEq _.
 Local Obligation Tactic := idtac.
 #[program]
 #[global]
-Instance reflect_eq_uint63 : ReflectEq uint63_model := 
+Instance reflect_eq_uint63 : ReflectEq uint63_model :=
   { eqb x y := Z.eqb (proj1_sig x) (proj1_sig y) }.
 Next Obligation.
   cbn -[eqb].
@@ -77,9 +77,9 @@ Equations eqb_prim_model {term} {t : prim_tag} (x y : prim_model term t) : bool 
   | primFloatModel x, primFloatModel y := ReflectEq.eqb x y.
 
 #[global, program]
-Instance prim_model_reflecteq {term} {p : prim_tag} : ReflectEq (prim_model term p) := 
+Instance prim_model_reflecteq {term} {p : prim_tag} : ReflectEq (prim_model term p) :=
   {| ReflectEq.eqb := eqb_prim_model |}.
-Next Obligation. 
+Next Obligation.
   intros. depelim x; depelim y; simp eqb_prim_model.
   case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
   case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
@@ -87,16 +87,16 @@ Qed.
 
 #[global]
 Instance prim_model_eqdec {term} : forall p : prim_tag, EqDec (prim_model term p) := _.
- 
+
 Equations eqb_prim_val {term} (x y : prim_val term) : bool :=
   | (primInt; i), (primInt; i') := ReflectEq.eqb i i'
   | (primFloat; f), (primFloat; f') := ReflectEq.eqb f f'
   | x, y := false.
 
 #[global, program]
-Instance prim_val_reflect_eq {term} : ReflectEq (prim_val term) := 
+Instance prim_val_reflect_eq {term} : ReflectEq (prim_val term) :=
   {| ReflectEq.eqb := eqb_prim_val |}.
-Next Obligation. 
+Next Obligation.
   intros. funelim (eqb_prim_val x y); simp eqb_prim_val.
   case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H. cbn in n. auto.
   constructor. intros H; noconf H; auto.

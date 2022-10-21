@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOCamlInt63 ExtrOCamlFloats.
-From MetaCoq.Template Require Import utils. 
+From MetaCoq.Template Require Import utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
 
@@ -8,7 +8,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
-*)      
+*)
 
 (** Here we could extract uint63_from/to_model to the identity *)
 
@@ -39,13 +39,13 @@ Axiom fake_abstract_guard_impl_properties:
     PCUICTyping.guard fix_cofix Σ Γ mfix <->
       PCUICWfEnvImpl.fake_guard_impl fix_cofix Σ Γ mfix.
 
-#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl := 
+#[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl :=
   {
     guard_impl := PCUICWfEnvImpl.fake_guard_impl
   }.
 Next Obligation. eapply fake_abstract_guard_impl_properties. Qed.
 
-Definition infer_and_print_template_program_with_guard {cf} {nor} := 
+Definition infer_and_print_template_program_with_guard {cf} {nor} :=
   @SafeTemplateChecker.infer_and_print_template_program cf nor fake_abstract_guard_impl.
 
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program

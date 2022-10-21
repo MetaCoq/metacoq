@@ -2,7 +2,7 @@
 (* From Coq Require Import Uint63 FloatOps FloatAxioms. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping PCUICProgram.
 
-(** This translation expands lets in constructor arguments, so that 
+(** This translation expands lets in constructor arguments, so that
   iota reduction reduces to a simple substitution operation with no
   let expansion involved.
 *)
@@ -10,10 +10,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping 
 Definition trans_branch p (br : branch term) :=
   if is_assumption_context br.(bcontext) then br
   else
-    {| bcontext := smash_context [] br.(bcontext); 
-       bbody := 
-        expand_lets 
-          (subst_context (List.rev p.(pparams)) 0 br.(bcontext)@[p.(puinst)]) 
+    {| bcontext := smash_context [] br.(bcontext);
+       bbody :=
+        expand_lets
+          (subst_context (List.rev p.(pparams)) 0 br.(bcontext)@[p.(puinst)])
           br.(bbody) |}.
 
 Fixpoint trans (t : term) : term :=
@@ -58,17 +58,17 @@ Definition trans_constructor_body i (mdecl : mutual_inductive_body) (d : PCUICEn
   let args' := trans_local d.(cstr_args) in
   let args := smash_context [] args' in
   let indices := map (expand_lets args') (map trans d.(cstr_indices)) in
-  {| cstr_name := d.(PCUICEnvironment.cstr_name);     
+  {| cstr_name := d.(PCUICEnvironment.cstr_name);
      cstr_args := args;
      cstr_indices := indices;
-     cstr_type := 
+     cstr_type :=
       it_mkProd_or_LetIn (trans_local mdecl.(ind_params))
         (it_mkProd_or_LetIn args
           (trans_cstr_concl mdecl i args indices));
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
 
 Definition trans_projection_body (d : PCUICEnvironment.projection_body) :=
- {| proj_name := d.(PCUICEnvironment.proj_name); 
+ {| proj_name := d.(PCUICEnvironment.proj_name);
     proj_type := trans d.(PCUICEnvironment.proj_type);
     proj_relevance := d.(PCUICEnvironment.proj_relevance) |}.
 
@@ -92,7 +92,7 @@ Definition trans_minductive_body md :=
   |}.
 
 Definition trans_constant_body bd :=
-  {| cst_type := trans bd.(PCUICEnvironment.cst_type); 
+  {| cst_type := trans bd.(PCUICEnvironment.cst_type);
      cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
      cst_universes := bd.(PCUICEnvironment.cst_universes);
      cst_relevance := bd.(PCUICEnvironment.cst_relevance) |}.
@@ -110,11 +110,10 @@ Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
   {| universes := d.(PCUICEnvironment.universes);
      declarations := trans_global_decls d.(PCUICEnvironment.declarations);
      retroknowledge := d.(PCUICEnvironment.retroknowledge) |}.
-  
+
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_env (fst Σ), snd Σ).
 
 Definition expand_lets_program (p : pcuic_program) : pcuic_program :=
-  let Σ' := PCUICExpandLets.trans_global p.1 in 
+  let Σ' := PCUICExpandLets.trans_global p.1 in
   ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
-  

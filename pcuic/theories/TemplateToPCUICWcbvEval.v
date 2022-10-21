@@ -23,7 +23,7 @@ From MetaCoq.Template Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
-  (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
+  (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) ||
   (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).
 
 Lemma eval_mkApps_inv Σ f args v :
@@ -59,7 +59,7 @@ Proof.
 Qed.
 
 Lemma list_length_rev_ind {A} (P : list A -> Type) (p0 : P [])
-  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (Γ ++ [d])) 
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (Γ ++ [d]))
   Γ : P Γ.
 Proof.
   generalize (le_n #|Γ|).
@@ -68,7 +68,7 @@ Proof.
   destruct Γ using rev_case; [|simpl; intros; elimtype False; try lia].
   cbn. intros; exact p0. len in H.
   intros.
-  destruct Γ using rev_case; simpl in *. 
+  destruct Γ using rev_case; simpl in *.
   apply p0. apply pS. intros. apply IHn. len in H.
 Qed.
 
@@ -113,7 +113,7 @@ Proof.
     now specialize (IHargs _ _ _ X evv).
 Qed.
 
-Lemma csubst_mkApps a k f l : 
+Lemma csubst_mkApps a k f l :
   csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
 Proof.
   induction l in f |- *; cbn; auto.
@@ -121,9 +121,9 @@ Proof.
   now cbn.
 Qed.
 
-Ltac dest_lookup := 
+Ltac dest_lookup :=
   destruct TransLookup.lookup_inductive as [[mdecl idecl]|].
-  
+
 Lemma trans_csubst {cf} Σ a k b :
   Typing.wf Σ ->
   let Σ' := trans_global_env Σ in
@@ -133,7 +133,7 @@ Lemma trans_csubst {cf} Σ a k b :
 Proof.
   intros wfΣ Σ' wfΣ' wfa.
   revert wfa k.
-  induction b using Template.Induction.term_forall_list_ind; simpl; intros; try congruence; 
+  induction b using Template.Induction.term_forall_list_ind; simpl; intros; try congruence;
     try solve [repeat (f_equal; eauto)].
 
   - cbn. destruct (k ?= n); auto.
@@ -145,7 +145,7 @@ Proof.
     dest_lookup; cbn; f_equal; auto.
     unfold trans_predicate, map_predicate_k; cbn.
     f_equal; auto. solve_list.
-    + rewrite map2_bias_left_length. 
+    + rewrite map2_bias_left_length.
       now rewrite e.
     + rewrite map_map2 !PCUICUnivSubstitutionConv.map2_map_r.
       clear -wfa X0. cbn.
@@ -203,9 +203,9 @@ Proof.
     eapply value_final. now eapply eval_to_value in IHargs.
     rewrite -(All2_length a). lia.
 Qed.
- 
-Lemma eval_value_cong Σ f x y res : 
-  value Σ f -> 
+
+Lemma eval_value_cong Σ f x y res :
+  value Σ f ->
   eval Σ x y ->
   eval Σ (tApp f y) res ->
   eval Σ (tApp f x) res.
@@ -225,8 +225,8 @@ Proof.
   - now cbn in i.
 Qed.
 
-Lemma eval_mkApps_value_cong Σ f x y res : 
-  value Σ f -> 
+Lemma eval_mkApps_value_cong Σ f x y res :
+  value Σ f ->
   All2 (eval Σ) x y ->
   eval Σ (mkApps f y) res ->
   eval Σ (mkApps f x) res.
@@ -252,7 +252,7 @@ Lemma eval_mkApps_fix {Σ : global_env} {f mfix idx argsv args' argsv' fn res na
   All2 (eval Σ) args' argsv' ->
   cunfold_fix mfix idx = Some (narg, fn) ->
   narg < #|argsv| + #|args'| ->
-  eval Σ (mkApps (mkApps fn argsv) argsv') res -> 
+  eval Σ (mkApps (mkApps fn argsv) argsv') res ->
   eval Σ (mkApps f args') res.
 Proof.
   revert argsv argsv' res. induction args' using rev_ind; cbn; intros argsv argsv' res.
@@ -291,7 +291,7 @@ Qed.
 Lemma wf_csubst Σ t k u : WfAst.wf Σ t -> WfAst.wf Σ u -> WfAst.wf Σ (WcbvEval.csubst t k u).
 Proof.
   intros wfts wfu.
-  induction wfu in k using WfAst.term_wf_forall_list_ind; simpl; intros; 
+  induction wfu in k using WfAst.term_wf_forall_list_ind; simpl; intros;
   try solve[econstructor; cbn in *; eauto; solve_all].
 
   - destruct Nat.compare => //; constructor.
@@ -332,7 +332,7 @@ Proof.
 Qed.
 
 Lemma trans_fix_subst Σ mfix :
-  fix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) = 
+  fix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) =
   map (trans (trans_global_env Σ)) (Typing.fix_subst mfix).
 Proof.
   unfold Typing.fix_subst, fix_subst.
@@ -341,7 +341,7 @@ Proof.
 Qed.
 
 Lemma trans_cofix_subst Σ mfix :
-  cofix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) = 
+  cofix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) =
   map (trans (trans_global_env Σ)) (Typing.cofix_subst mfix).
 Proof.
   unfold Typing.cofix_subst, cofix_subst.
@@ -350,7 +350,7 @@ Proof.
 Qed.
 
 Lemma wf_cunfold_fix {cf} {Σ mfix idx narg fn} :
-  Typing.wf Σ -> 
+  Typing.wf Σ ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_fix mfix idx = Some (narg, fn) ->
   WfAst.wf Σ fn.
@@ -360,12 +360,12 @@ Proof.
   destruct nth_error eqn:hnth => //.
   intros [= <- <-].
   eapply wf_substl. now eapply wf_fix_subst.
-  eapply nth_error_all in a; tea. cbn in a. 
+  eapply nth_error_all in a; tea. cbn in a.
   now destruct a.
 Qed.
 
 Lemma wf_cunfold_cofix {cf} {Σ mfix idx narg fn} :
-  Typing.wf Σ -> 
+  Typing.wf Σ ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_cofix mfix idx = Some (narg, fn) ->
   WfAst.wf Σ fn.
@@ -375,12 +375,12 @@ Proof.
   destruct nth_error eqn:hnth => //.
   intros [= <- <-].
   eapply wf_substl. now eapply wf_cofix_subst.
-  eapply nth_error_all in a; tea. cbn in a. 
+  eapply nth_error_all in a; tea. cbn in a.
   now destruct a.
 Qed.
 
 Lemma trans_cunfold_fix {cf} {Σ mfix idx narg fn} :
-  Typing.wf Σ -> 
+  Typing.wf Σ ->
   wf (trans_global_env Σ) ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_fix mfix idx = Some (narg, fn) ->
@@ -400,7 +400,7 @@ Proof.
 Qed.
 
 Lemma trans_cunfold_cofix {cf} {Σ mfix idx narg fn} :
-  Typing.wf Σ -> 
+  Typing.wf Σ ->
   wf (trans_global_env Σ) ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_cofix mfix idx = Some (narg, fn) ->
@@ -430,7 +430,7 @@ Proof.
   now rewrite Sfst_decompose_app_rec.
 Qed.
 
-Lemma eval_mkApps_cong Σ f args : 
+Lemma eval_mkApps_cong Σ f args :
   value Σ f -> All (value Σ) args ->
   ~~ (isLambda f || isFixApp f || isArityHead f || isConstructApp f || isPrimApp f) ->
   eval Σ (mkApps f args) (mkApps f args).
@@ -492,7 +492,7 @@ Proof.
     eapply wf_csubst; eauto.
     specialize (IHev1 f'). now wf_inv IHev1 [].
   - wf_inv wf [[hb0 ht] hb1]. eapply IHev2.
-    eapply wf_csubst; eauto. 
+    eapply wf_csubst; eauto.
   - wf_inv wf a. eapply IHev.
     eapply WfAst.wf_subst_instance.
     eapply declared_constant_wf in H.
@@ -502,10 +502,10 @@ Proof.
   - eapply IHev2.
     wf_inv wf [mdecl' [idecl' []]].
     destruct (declared_inductive_inj d (proj1 H0)). subst mdecl' idecl'.
-    rewrite /Typing.iota_red. 
+    rewrite /Typing.iota_red.
     eapply All2_nth_error in a1; tea.
     2:{ apply H0. }
-    eapply WfAst.wf_subst. 
+    eapply WfAst.wf_subst.
     * eapply All_rev, All_skipn.
       specialize (IHev1 w0).
       now wf_inv IHev1 [].
@@ -531,7 +531,7 @@ Proof.
     eapply All_app_inv => //.
     eapply All2_All_mix_left in X0; tea.
     eapply All2_All_right; tea; cbv beta; intuition auto.
-    
+
   - wf_inv wf [Hf Hargs].
     specialize (IHev Hf).
     wf_inv IHev [Hfix hargs].
@@ -559,7 +559,7 @@ Proof.
   - wf_inv wf [hf ha].
     apply WfAst.wf_mkApps => //. constructor.
     solve_all.
-  
+
   - wf_inv wf [[[hf ?]] ha].
     eapply WfAst.wf_mkApps; eauto.
     eapply All2_All_mix_left in X0; tea.
@@ -570,7 +570,7 @@ Qed.
 
 Lemma value_mkApps_tFix Σ mfix idx args rarg fn :
   cunfold_fix mfix idx = Some (rarg, fn) ->
-  #|args| <= rarg -> 
+  #|args| <= rarg ->
   All (value Σ) args ->
   value Σ (mkApps (tFix mfix idx) args).
 Proof.
@@ -590,12 +590,12 @@ Proof.
   intros Σ' wfΣ' wf ev.
   move: wf.
   induction ev using eval_evals_ind; intros wf; cbn -[Σ'].
-   
+
   - wf_inv wf [[[napp argl] wff] wfa].
     dependent elimination wfa as [All_cons (l:=l) wfx wfl].
     cbn [trans].
     rewrite trans_mkApps in IHev3.
-    cbn -[Σ']. 
+    cbn -[Σ'].
     specialize (IHev1 wff). specialize (IHev2 wfx).
     cbn -[Σ'] in IHev1.
     pose proof (eval_wf wfx ev2).
@@ -606,14 +606,14 @@ Proof.
     rewrite trans_csubst // in evf'.
     pose proof (eval_beta _ _ _ _ _ _ _ _ IHev1 IHev2 evf').
     eapply eval_mkApps; tea.
-      
+
   - wf_inv wf [[hb0 ht] hb1].
     forward IHev1 by auto.
     pose proof (eval_wf hb0 ev1).
     forward IHev2. { eapply wf_csubst; eauto. }
     rewrite trans_csubst in IHev2; tea.
     econstructor; tea.
-  
+
   - econstructor.
     eapply forall_decls_declared_constant; tea.
     rewrite /trans_constant_body H0 /=. reflexivity.
@@ -650,8 +650,8 @@ Proof.
       rewrite PCUICCases.map2_set_binder_name_context_assumptions. len.
       len. now rewrite context_assumptions_map. }
     forward IHev2.
-    { rewrite /Typing.iota_red. 
-      eapply WfAst.wf_subst. 
+    { rewrite /Typing.iota_red.
+      eapply WfAst.wf_subst.
       * eapply All_rev, All_skipn.
         eapply eval_wf in ev1; tea.
         now wf_inv ev1 [].
@@ -669,7 +669,7 @@ Proof.
   - wf_inv wf hdiscr.
     cbn in *; eapply eval_proj; tea.
     * eapply forall_decls_declared_projection in H; tea.
-    * rewrite trans_mkApps in IHev1. 
+    * rewrite trans_mkApps in IHev1.
       now eapply IHev1.
     * cbn. len. rewrite H0 /WcbvEval.cstr_arity. f_equal.
       now rewrite context_assumptions_map.
@@ -683,7 +683,7 @@ Proof.
     eapply WfAst.wf_mkApps_napp in wf as []; tea.
     specialize (IHev1 w).
     rewrite trans_mkApps /= in IHev1.
-    eapply eval_wf in ev1; tea.    
+    eapply eval_wf in ev1; tea.
     eapply WfAst.wf_mkApps_napp in ev1 as [] => //.
     wf_inv w0 H.
     have wffn : WfAst.wf Σ fn.
@@ -724,7 +724,7 @@ Proof.
     eapply All_map, All2_All_right; tea; cbv beta.
     { intuition auto. eapply eval_to_value; tea. }
     now wf_inv w0 x.
-  
+
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ decli) as decli';  tea.
     rewrite trans_lookup_inductive.
@@ -732,9 +732,9 @@ Proof.
     assert (w1 : WfAst.wf Σ (Ast.mkApps (Ast.tCoFix mfix idx) args))
       by (eapply eval_wf; eauto).
     eapply WfAst.wf_mkApps_napp in w1 as []; [|easy].
-    wf_inv w1 x. 
+    wf_inv w1 x.
     eapply eval_cofix_case.
-    eapply trans_cunfold_cofix; tea. 
+    eapply trans_cunfold_cofix; tea.
     rewrite trans_mkApps in IHev1.  eapply IHev1. eauto.
     rewrite /= trans_lookup_inductive (declared_inductive_lookup _ decli') trans_mkApps in IHev2.
     apply IHev2.
@@ -791,7 +791,7 @@ Proof.
     eapply isArityHead_mkApps. destruct args => //.
     rewrite isConstructApp_mkApps //.
     rewrite isPrimApp_mkApps //.
-      
+
   - eapply eval_atom.
     destruct t => //.
 Qed.

@@ -771,12 +771,12 @@ Section WeakNormalization.
     Σ ;;; [] |- t : ty ->
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
-  
+
   Require Import Equations.Type.Relation_Properties.
 
   (* TODO move *)
   Lemma invert_red_axiom {Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
     T = tConst cst u.
@@ -792,7 +792,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤[pb] T ->
     ∑ u', Σ ;;; Γ ⊢ T ⇝ tConst cst u' × PCUICEquality.R_universe_instance (eq_universe Σ) u u'.
@@ -805,7 +805,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤ mkApps (tInd ind u') args -> False.
   Proof using wfΣ.
@@ -814,7 +814,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma invert_cumul_axiom_prod {Γ cst cdecl u na dom codom} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤ tProd na dom codom -> False.
   Proof using wfΣ.
@@ -844,7 +844,7 @@ Section WeakNormalization.
     - now rewrite head_mkApps /head /=.
     - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
       eapply invert_cumul_axiom_ind in w; eauto.
-      apply hp. 
+      apply hp.
   Qed.
 
   Lemma whnf_ind_finite t ind u indargs :
@@ -1077,7 +1077,7 @@ Section WeakNormalization.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
       rewrite mkApps_app /=. now eapply red_app.
-    
+
     - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).

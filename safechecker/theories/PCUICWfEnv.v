@@ -42,7 +42,7 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
   abstract_env_rel : abstract_env_impl -> global_env -> Prop;
   abstract_env_ext_rel : abstract_env_ext_impl -> global_env_ext -> Prop;
 
-  abstract_make_wf_env_ext : forall (X:abstract_env_impl) (univs : universes_decl) 
+  abstract_make_wf_env_ext : forall (X:abstract_env_impl) (univs : universes_decl)
     (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥), abstract_env_ext_impl ;
 }.
 
@@ -52,7 +52,7 @@ Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl abstract_env_ex
 Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
   (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Cumul.
 
-Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type) 
+Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type)
   `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop := {
     abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
     abstract_env_ext_wf X {Σ} : abstract_env_ext_rel X Σ -> ∥ wf_ext Σ ∥ ;
@@ -91,13 +91,13 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     abstract_env_rel X Σ ->
       declarations Σ = abstract_env_global_declarations X ;
     abstract_env_init_correct univs retro cuniv :
-    abstract_env_rel (abstract_env_init univs retro cuniv) 
+    abstract_env_rel (abstract_env_init univs retro cuniv)
     {| universes := univs; declarations := []; retroknowledge := retro |} ;
   abstract_env_add_decl_correct X Σ kn d H : abstract_env_rel X Σ ->
     abstract_env_rel (abstract_env_add_decl X kn d H) (add_global_decl Σ (kn,d));
   abstract_env_add_uctx_rel X {Σ} uctx udecl H H' :
     (abstract_env_rel X Σ.1 /\ Σ.2 = udecl) <->
-    abstract_env_ext_rel (abstract_env_add_uctx X uctx udecl H H') Σ; 
+    abstract_env_ext_rel (abstract_env_add_uctx X uctx udecl H H') Σ;
   abstract_env_is_consistent_correct uctx udecl :
     global_uctx_invariants udecl ->
     gc_of_uctx udecl = Some uctx ->
@@ -114,15 +114,15 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     (Σ:ContextSet.t) = abstract_env_univ X ;
   abstract_env_retroknowledge_correct X {Σ : global_env} (wfΣ : abstract_env_rel X Σ) :
     Σ.(retroknowledge) = abstract_env_retroknowledge X ;
-  abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ -> 
+  abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ ->
             exists d, Σ.(declarations) = d :: decls) :
     let X' := abstract_pop_decls X in
-    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' -> 
-                      Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\ 
+    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' ->
+                      Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\
                       Σ.(retroknowledge) = Σ'.(retroknowledge);
-  abstract_make_wf_env_ext_correct X univs prf : 
+  abstract_make_wf_env_ext_correct X univs prf :
     let X' := abstract_make_wf_env_ext X univs prf in
-    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)                     
+    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs)
   }.
 
 Definition abstract_env_impl {cf:checker_flags} := ∑ X Y Z, @abstract_env_prop _ X Y Z.
@@ -148,4 +148,4 @@ Definition abstract_env_ext_sq_wf {cf:checker_flags} (X : abstract_env_impl) (x 
 Qed.
 
 Notation "Σ '∼' X" := (abstract_env_rel X Σ) (at level 40).
-Notation "Σ '∼_ext' X" := (abstract_env_ext_rel X Σ) (at level 40). 
+Notation "Σ '∼_ext' X" := (abstract_env_ext_rel X Σ) (at level 40).

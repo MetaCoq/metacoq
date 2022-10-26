@@ -1172,8 +1172,8 @@ Proof.
   destruct H0 as [Hprojs _].
   depelim Hprojs. rewrite H1 => //.
   rewrite H2.
-  pose proof (onProjections p).
-  forward X. { congruence. }
+  pose proof (onProjections p) as X.
+  rewrite H1 in X.
   destruct (ind_ctors hd) as [|ctor []] eqn:hctors => //.
   depelim H. rewrite H1.
   depelim H0. cbn. destruct X.

@@ -1907,10 +1907,10 @@ Section CheckEnv.
   Definition check_projections_type (mind : kername)
     (mdecl : mutual_inductive_body) (i : nat) (idecl : one_inductive_body)
     (indices : context) :=
-    ind_projs idecl <> [] ->
-    match idecl.(ind_ctors) return Type with
-    | [cs] => on_projections mdecl mind i idecl indices cs
-    | _ => False
+    match ind_projs idecl, idecl.(ind_ctors) return Type with
+    | [], _ => True
+    | _, [cs] => on_projections mdecl mind i idecl indices cs
+    | _, _ => False
     end.
 
   Program Definition check_projection X_ext (mind : kername) (mdecl : mutual_inductive_body)
@@ -2013,11 +2013,12 @@ End monad_Alli_nth_forall.
     end.
   Next Obligation.
     rename Heq_anonymous into eqp.
-    sq. red. rewrite -eqp. congruence.
+    sq. red. rewrite -eqp. exact I.
   Qed.
   Next Obligation.  specialize_Σ H. sq. rewrite Heq_x. eauto. Qed.
   Next Obligation.
     specialize_Σ H. sq. red. intros. rewrite -Heq_x //.
+    destruct ind_projs => //.
   Qed.
 
   Definition checkb_constructors_smaller X_ext (cs : list constructor_univs) (ind_sort : Universe.t) :=
@@ -2100,9 +2101,9 @@ End monad_Alli_nth_forall.
     (wfX : forall Σ, abstract_env_rel X Σ -> ∥ wf_ext (Σ, ind_universes mdecl) ∥)
     (mdeclvar : forall Σ, abstract_env_rel X Σ -> ∥ on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance) ∥)
     indices (wfΓ : forall Σ, abstract_env_rel X Σ -> ∥ wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, indices) ∥) :
-    EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ forall v : list Variance.t,
-                    mdecl.(ind_variance) = Some v ->
-                    ind_respects_variance cumulSpec0 Σ mdecl v indices ∥) :=
+    EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ match mdecl.(ind_variance) with
+                    None => True | Some v =>
+                    ind_respects_variance cumulSpec0 Σ mdecl v indices end ∥) :=
     match mdecl.(ind_variance) with
     | None => ret _
     | Some v =>
@@ -2119,7 +2120,7 @@ End monad_Alli_nth_forall.
       end
     end.
   Next Obligation.
-    sq. discriminate.
+    sq. exact I.
   Qed.
   Next Obligation.
     pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]].
@@ -2160,7 +2161,7 @@ End monad_Alli_nth_forall.
     specialize_Σ H1.
     rename Heq_anonymous0 into eqvar.
     rename Heq_anonymous into eqvaru.
-    sq. intros ? [= <-]. red. simpl.
+    sq. red. simpl.
     rewrite -eqvaru.
     unfold variance_universes in eqvaru.
     unfold check_variance in mdeclvar.
@@ -2300,6 +2301,7 @@ End monad_Alli_nth_forall.
       destruct wfars as [s Hs]. now exists s.
     - now apply eqb_eq in eqsort; subst.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
+      destruct (ind_variance mdecl) => //.
     Unshelve. eauto.
   Qed.
 

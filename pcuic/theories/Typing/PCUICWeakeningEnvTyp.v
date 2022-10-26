@@ -188,8 +188,8 @@ Proof.
         induction ind_indices; simpl in *; auto.
         -- eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
         -- destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-    + intros v onv.
-      move: (onIndices v onv). unfold ind_respects_variance.
+    + destruct ind_variance => //.
+      move: onIndices. unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
       intros idx; eapply (All2_fold_impl idx); simpl.
       intros par par' t t' d.
@@ -265,8 +265,8 @@ Proof.
         induction ind_indices; simpl in *; auto.
         -- eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto. tc.
         -- destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-    + intros v onv.
-      move: (onIndices v onv). unfold ind_respects_variance.
+    + destruct ind_variance => //.
+      move: onIndices. unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
       intros idx; eapply (All2_fold_impl idx); simpl.
       intros par par' t t' d.
@@ -466,9 +466,9 @@ Proof.
   intros.
   destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in let (x, _) := x in x)) in *.
   destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl.
-  forward onProjections.
-  { eapply nth_error_Some_length in Hcdecl.
-    destruct (ind_projs idecl); simpl in *; try lia. congruence. }
+  move: onProjections. generalize (nth_error_Some_length Hcdecl).
+  case: (ind_projs idecl) => //= .
+  { lia. }
   destruct (ind_ctors idecl) as [|? []]; try contradiction.
   destruct ind_cunivs as [|? []]; try contradiction; depelim onConstructors.
   2:{ depelim onConstructors. }
@@ -592,5 +592,3 @@ Proof.
     destruct Hdecl. cbn in *. destruct d; cbn in *.
     now rewrite hctors in X.
 Qed.
-
-

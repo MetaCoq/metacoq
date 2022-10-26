@@ -3219,7 +3219,6 @@ Proof.
                  +++ cbn. destruct (decl_body a); cbn; eauto.
         --- simpl; intros. have onp := oni.(ST.onProjections).
             destruct (Ast.Env.ind_projs idecl) => //.
-            forward onp. congruence.
             destruct (Ast.Env.ind_ctors idecl) as [|? []] eqn:hctors => //.
             cbn -[Σg]. destruct onp; split; auto.
             cbn -[Σg]. now len. now len. len. rewrite on_projs_all.
@@ -3237,7 +3236,8 @@ Proof.
         --- have inds := oni.(ST.ind_sorts).
             eapply trans_check_ind_sorts in inds; tea.
         --- have inds := oni.(ST.onIndices).
-            intros v hv. specialize (inds v hv).
+            simpl.
+            destruct Ast.Env.ind_variance => //.
             eapply trans_ind_respects_variance; tea.
             move: onarity; cbn -[Σg]. rewrite oni.(ST.ind_arity_eq).
             rewrite !trans_it_mkProd_or_LetIn.

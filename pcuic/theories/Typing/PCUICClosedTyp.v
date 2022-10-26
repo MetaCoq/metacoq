@@ -138,7 +138,7 @@ Proof.
   - eapply All_forallb.
     pose proof (onProjections oib).
     destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.
-    specialize (X eq). clear eq.
+    destruct (ind_projs x) in X, eq; try congruence. clear eq.
     destruct (ind_ctors x) as [|cdecl []] eqn:hcdecl; try contradiction.
     apply on_projs in X.
     assert (Alli (fun i pdecl => declared_projection Σ

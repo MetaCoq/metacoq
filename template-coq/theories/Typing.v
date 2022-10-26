@@ -1338,7 +1338,7 @@ Proof.
              generalize (cstr_indices x0). induction 1; constructor; auto.
              do 2 red in t0 |- *.
              apply (IH (_; (_; (_; t0)))). }
-        -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
+        -- pose proof (onProjections Xg); auto.
         -- destruct Xg. simpl. unfold check_ind_sorts in *.
            destruct Universe.is_prop; auto.
            destruct Universe.is_sprop; auto.

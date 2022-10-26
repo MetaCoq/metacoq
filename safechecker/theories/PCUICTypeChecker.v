@@ -1235,7 +1235,7 @@ Section Typecheck.
   Lemma primitive_constant_spec tag :
     forall Σ (wfΣ : abstract_env_ext_rel X Σ),
     primitive_constant tag = PCUICEnvironment.primitive_constant Σ tag.
-  Proof.
+  Proof using Type.
     intros.
     unfold primitive_constant, PCUICEnvironment.primitive_constant.
     destruct tag => //;
@@ -2299,6 +2299,10 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     pose proof (on_declared_inductive decl) as [onmib oni].
     eapply onProjections in oni.
+    move: oni (eq_sym HH).
+    destruct (ind_projs idecl) eqn:eq in |- * .
+    { rewrite nth_error_nil => //. }
+    intros.
     destruct ind_ctors as [|? []] eqn:hctors => //.
 
     eapply infer_Proj with (pdecl := pdecl).
@@ -2318,16 +2322,14 @@ Section Typecheck.
       autorewrite with len in Hl, Hr.
       destruct (on_declared_inductive decl) eqn:ond.
       rewrite -o.(onNpars) -Hl.
-      forward (o0.(onProjections)).
-      intros H'; rewrite H' nth_error_nil // in HH.
+      pose proof (o0.(onProjections)) as onps.
+      rewrite eq in onps.
       destruct ind_ctors as [|cs []]; auto.
-      intros onps.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
       rewrite List.skipn_length in e.
       rewrite List.firstn_length. lia.
-    - destruct ind_projs => //. rewrite nth_error_nil in HH; congruence.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

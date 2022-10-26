@@ -71,7 +71,7 @@ Proof.
              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
              generalize (cstr_indices x0).
              induction 1; simpl; constructor; auto.
-       --- simpl; intros. apply (onProjections X1 H0).
+       --- simpl; intros. apply (onProjections X1).
        --- destruct X1. simpl. unfold check_ind_sorts in *.
            destruct Universe.is_prop; auto.
            destruct Universe.is_sprop; auto.
@@ -673,7 +673,6 @@ Section WfLookup.
       now apply All_app in wf as [].
     - rename onProjections into on_projs.
       destruct (ind_projs hd) eqn:eqprojs. constructor.
-      forward on_projs by discriminate.
       destruct (ind_ctors hd) as [|? [|]] eqn:Heq; try contradiction.
       destruct on_projs. rewrite eqprojs in on_projs.
       solve_all. eapply Alli_All; tea.

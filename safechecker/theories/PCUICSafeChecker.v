@@ -1617,9 +1617,8 @@ Section CheckEnv.
     (mdeclvar : forall Σ, abstract_env_rel X Σ -> ∥ on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance) ∥) cs
     (wfX : forall Σ, abstract_env_rel X Σ -> ∥ wf_ext (Σ, ind_universes mdecl) ∥)
     (wfΓ : forall Σ, abstract_env_rel X Σ -> ∥ wt_indices (Σ, ind_universes mdecl) mdecl indices cs ∥) :
-    EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ forall v : list Variance.t,
-                    mdecl.(ind_variance) = Some v ->
-                    cstr_respects_variance cumulSpec0 Σ mdecl v cs ∥) :=
+    EnvCheck X_env_ext_type (forall Σ, abstract_env_rel X Σ -> ∥ match mdecl.(ind_variance) with None => True | Some v =>
+                    cstr_respects_variance cumulSpec0 Σ mdecl v cs end ∥) :=
     match mdecl.(ind_variance) with
     | None => ret _
     | Some v =>
@@ -1700,9 +1699,6 @@ Section CheckEnv.
     now rewrite /wf_ctx_universes /app_context forallb_app andb_comm.
   Qed.
 
-  Next Obligation.
-      sq. by [].
-    Qed.
     Next Obligation.
       pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]].
       specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
@@ -1783,7 +1779,6 @@ Section CheckEnv.
       pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]].
       destruct Xprop as [Xprop ?]; eauto.
       specialize (Xprop Σ0 wfΣ0). specialize_Σ Xprop. sq.
-      intros v0 [= <-].
       red. rewrite -Heq_anonymous.
       split; auto. erewrite (abstract_env_irr _ _ wfΣ0); eauto.
       now apply leq_context_cumul_context.
@@ -1901,6 +1896,7 @@ Section CheckEnv.
         rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
         rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head. lia_f_equal.
       - now destruct wtinds.
+      - destruct ind_variance => //.
       - destruct lets_in_constructor_types; eauto.
     Qed.
 

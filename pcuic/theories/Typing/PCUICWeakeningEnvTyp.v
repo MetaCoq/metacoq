@@ -165,8 +165,8 @@ Proof.
         generalize (cstr_indices x0).
         induction 1; constructor; eauto.
       * simpl.
-        intros v indv. specialize (on_ctype_variance v indv).
         simpl in *. move: on_ctype_variance.
+        destruct ind_variance => //.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
         ** eapply (All2_fold_impl args); intros.
@@ -242,8 +242,8 @@ Proof.
         generalize (cstr_indices x0).
         induction 1; constructor; eauto.
       * simpl.
-        intros v indv. specialize (on_ctype_variance v indv).
         simpl in *. move: on_ctype_variance.
+        destruct ind_variance => //.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
         ** eapply (All2_fold_impl args); intros.

@@ -944,8 +944,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
       on_ctype_variance : (* The constructor type respect the variance annotation
         on polymorphic universes, if any. *)
-        forall v, ind_variance mdecl = Some v ->
-        cstr_respects_variance Σ mdecl v cdecl;
+        match ind_variance mdecl with None => True | Some v =>
+        cstr_respects_variance Σ mdecl v cdecl end;
 
       on_lets_in_type : if lets_in_constructor_types
                         then True else is_true (is_assumption_context (cstr_args cdecl))

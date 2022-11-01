@@ -4832,9 +4832,8 @@ Proof.
           apply/and3P; split => //.
           rewrite on_free_vars_ctx_smash //.
           len. rewrite on_free_vars_expand_lets_k //. }
-        { intros v indv.
-          move: (on_ctype_variance v indv). clear -indv parsfvs onVariance onc X onu ond onud IHX onParams oncargs oncindices.
-          rewrite indv in onVariance.
+        { move: (on_ctype_variance). clear -parsfvs onVariance onc X onu ond onud IHX onParams oncargs oncindices.
+          cbn. destruct ind_variance => //.
           eapply variance_universes_insts in onVariance as [univs' [u [u' [eqv hunivs cu cu' equlen eqvlen equ' cli equ]]]].
           rewrite /cstr_respects_variance.
           rewrite eqv.

@@ -3181,9 +3181,8 @@ Proof.
                 constructor 4. len. eapply trans_closedn => //.
                 now apply IHp. }
               { cbn. now apply IHon_ctype_positive. }
-            + intros v indv.
-              specialize (on_ctype_variance _ indv).
-              cbn -[Σg].
+            + cbn -[Σg].
+              destruct Ast.Env.ind_variance => //.
               eapply trans_cstr_respects_variance => //.
               { do 2 red in onty. destruct onty as [s hs].
                 rewrite ceq in hs. eapply PCUICClosedTyp.subject_closed in hs.

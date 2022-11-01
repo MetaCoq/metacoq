@@ -2612,7 +2612,7 @@ Proof.
     destruct ind_variance eqn:indv => //.
     move=> [=] eq. subst l0.
     pose proof (onc.(on_ctype_variance)) as respv.
-    specialize (respv _ indv).
+    rewrite indv in respv.
     simpl in respv.
     unfold cstr_respects_variance in respv.
     destruct variance_universes as [[[v i] i']|] eqn:vu => //.
@@ -3043,7 +3043,7 @@ Proof.
     constructor. eapply eq_term_leq_term.
       eapply eq_term_upto_univ_subst_instance; eauto. all:tc. }
   simpl in Ru.
-  epose proof (on_ctype_variance o _ eqv).
+  pose proof (on_ctype_variance o) as X. rewrite eqv in X.
   red in X.
   destruct variance_universes as [[[udecl inst] inst']|] eqn:vu => //.
   destruct X as [onctx _]. simpl in onctx.

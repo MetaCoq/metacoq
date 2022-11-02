@@ -1393,3 +1393,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Qed.
 
 End DeclarationTyping.
+
+Module Type DeclarationTypingSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
+       (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
+       (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS)
+       (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
+  Include DeclarationTyping T E TU ET CT CS Ty L GM.
+End DeclarationTypingSig.

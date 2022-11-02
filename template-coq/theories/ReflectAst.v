@@ -188,7 +188,7 @@ Proof.
   intros [] [].
   unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
 Defined.
-  
+
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   x.(ind_name) ==? y.(ind_name) &&
   x.(ind_indices) ==? y.(ind_indices) &&

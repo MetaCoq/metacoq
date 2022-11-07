@@ -27,6 +27,12 @@ Proof.
 Qed.
 
 
+Definition on_some_or_none {A} (P : A -> Type) : option A -> Type :=
+  fun x => match x with
+        | Some x => P x
+        | None => True
+        end.
+
 Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
   fun x => match x with
         | Some x => P x

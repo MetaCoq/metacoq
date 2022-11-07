@@ -16,16 +16,16 @@ Import MCMonadNotation.
 
 Definition isSort T :=
   match T with
-  | tSort u => True
-  | _ => False
+  | tSort u => true
+  | _ => false
   end.
 
 Fixpoint isArity T :=
   match T with
-  | tSort u => True
+  | tSort u => true
   | tProd _ _ codom => isArity codom
   | tLetIn _ _ _ codom => isArity codom
-  | _ => False
+  | _ => false
   end.
 
 Definition type_of_constructor mdecl cdecl (c : inductive * nat) (u : list Level.t) :=

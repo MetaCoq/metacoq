@@ -845,18 +845,11 @@ Section WfRed.
     eauto using wf_extends.
   Qed.
 
-  (* TODO MOVE *)
-  Definition on_option {A} (P : A -> Type) (o : option A) :=
-    match o with
-    | Some x => P x
-    | None => unit
-    end.
-
   Lemma declared_constant_wf cst decl :
     on_global_env cumul_gen wf_decl_pred Σ ->
     declared_constant Σ cst decl ->
     WfAst.wf Σ decl.(cst_type) *
-    on_option (WfAst.wf Σ) decl.(cst_body).
+    on_some_or_none (WfAst.wf Σ) decl.(cst_body).
   Proof using Type.
     intros wΣ h.
     unfold declared_constant in h.

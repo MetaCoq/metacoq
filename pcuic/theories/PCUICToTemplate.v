@@ -117,3 +117,25 @@ Definition trans_one_inductive_entry (oie : PCUICAst.one_inductive_entry) : one_
        mind_entry_arity := trans oie.(PCUICAst.mind_entry_arity);
        mind_entry_consnames := oie.(PCUICAst.mind_entry_consnames);
        mind_entry_lc := List.map trans oie.(PCUICAst.mind_entry_lc); |}.
+
+(*
+(* It would be nice to have this, but it seems to not be possible *)
+Definition trans_mutual_inductive_entry (mie : PCUICAst.mutual_inductive_entry) : mutual_inductive_entry.
+  refine {| mind_entry_record := mie.(PCUICAst.mind_entry_record);
+           mind_entry_finite := mie.(PCUICAst.mind_entry_finite);
+           mind_entry_private := mie.(PCUICAst.mind_entry_private);
+           mind_entry_universes := universes_entry_of_decl mie.(PCUICAst.mind_entry_universes);
+           mind_entry_inds := List.map trans_one_inductive_entry mie.(PCUICAst.mind_entry_inds);
+           mind_entry_params := trans_local
+                                  (* TODO Should this be extracted? *)
+                                  (List.map (fun '(id, le)
+                                             => let dname := {| binder_name := nNamed id ; binder_relevance := _ (* ??? *) |} in
+                                                match le with
+                                                | LocalDef x => {| decl_name := dname ; decl_type := _ (* ??? *) ; decl_body := Some x |}
+                                                | LocalAssum x => {| decl_name := dname ; decl_type := x ; decl_body := None |}
+                                                end)
+                                            mie.(PCUICAst.mind_entry_params));
+           mind_entry_variance := _ (* ??? *);
+           mind_entry_template := false |}.
+Abort.
+*)

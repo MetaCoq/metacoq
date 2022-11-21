@@ -21,7 +21,10 @@ From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICE
   {
     guard_impl := PCUICWfEnvImpl.fake_guard_impl
   }.
-Next Obligation. todo "this axiom is inconsitent, onlu used to make infer compute". Qed.
+Next Obligation. todo "this axiom is inconsitent, only used to make infer compute". Qed.
+#[local,program] Instance assume_normalisation {nor} : @PCUICSN.Normalisation default_checker_flags nor.
+Next Obligation. todo "we should write a Template Monad program to prove normalisation for the particular program being inferred, rather than axiomatizing it". Qed.
+#[local] Existing Instance PCUICSN.normalisation.
 
 Definition typecheck_template (cf := default_checker_flags)
   {nor : normalizing_flags} (p : Ast.Env.program)

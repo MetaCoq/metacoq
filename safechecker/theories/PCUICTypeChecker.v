@@ -261,6 +261,8 @@ Section Typecheck.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
@@ -295,6 +297,7 @@ Section Typecheck.
   forall u u',
     conv_pb_relb_gen pb equ eqlu u u' =
     conv_pb_relb_gen pb equ' eqlu' u u'.
+  Proof using Type.
    now destruct pb.
   Qed.
 

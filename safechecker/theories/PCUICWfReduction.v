@@ -116,7 +116,7 @@ Qed.
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
+  Context {Σ : global_env_ext} {normalisation:NormalisationIn Σ} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
     red1 Σ (Γ ,,, term_subterm_context ts) s s' ->
@@ -174,7 +174,7 @@ Section fix_sigma.
   Definition wf_hnf_subterm_rel : WellFounded hnf_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ _ Γ s H) as [s _ IH].
+    induction (normalisation_in Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?) [(t' & r & ts & eqctx)].
@@ -238,6 +238,8 @@ Section fix_sigma.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=
     fun '(Γ2; t2; H) '(Γ1; t1; H2) => forall Σ (wfΣ : abstract_env_ext_rel X Σ),
@@ -247,7 +249,7 @@ Section fix_sigma.
   Proof.
     intros (Γ & s & H). pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose (wf_extΣ := abstract_env_ext_wf _ wfΣ). sq.
-    induction (normalisation Σ wf_extΣ Γ s (H _ wfΣ)) as [s _ IH].
+    induction (normalisation_in Σ wf_extΣ wfΣ Γ s (H _ wfΣ)) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?). intro R. specialize (R _ wfΣ).

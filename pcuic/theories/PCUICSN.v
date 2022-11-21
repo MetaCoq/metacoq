@@ -28,19 +28,15 @@ Proof.
   now constructor.
 Qed.
 
-Section Normalisation.
-
-  Context {cf : checker_flags} {no : normalizing_flags}.
-  Context (Σ : global_env_ext).
-
-  Axiom normalisation :
-    wf_ext Σ ->
+Class NormalisationIn {cf : checker_flags} {no : normalizing_flags} (Σ : global_env_ext) :=
+  normalisation_in :
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
-
-End Normalisation.
-
+Class Normalisation {cf : checker_flags} {no : normalizing_flags} :=
+  normalisation : forall Σ, wf_ext Σ -> NormalisationIn Σ.
+#[export] Hint Mode NormalisationIn - - + : typeclass_instances.
+#[export] Typeclasses Opaque Normalisation.
 
 (** Since we are working with name annotations, reduction is sensitive to names.
     In this section we provide cored' which corresponds to reduction up to
@@ -51,8 +47,7 @@ End Normalisation.
 Section Alpha.
 
   Context {cf : checker_flags} {no : normalizing_flags}.
-  Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf_ext Σ ∥).
+  Context (Σ : global_env_ext) {normalisation : NormalisationIn Σ}.
 
   Notation eqt u v := (∥ upto_names u v ∥).
 
@@ -156,11 +151,9 @@ Section Alpha.
     forall Γ u,
       welltyped Σ Γ u ->
       Acc (cored' Γ) u.
-  Proof using hΣ.
-    destruct hΣ.
+  Proof using normalisation.
     intros Γ u h.
     apply normalisation in h.
-    2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
     - constructor; reflexivity.

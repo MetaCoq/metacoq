@@ -20,14 +20,14 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
      wf_env_map_repr := Σ.(trans_env_repr);
  |}.
 
-Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_program)
+Program Definition erase_pcuic_program {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (p : pcuic_program)
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
   let wfext := @abstract_make_wf_env_ext _ optimized_abstract_env_impl wfe p.1.2 _ in
-  let t := ErasureFunction.erase (nor:=PCUICSN.extraction_normalizing) optimized_abstract_env_impl wfext nil p.2
+  let t := ErasureFunction.erase (nor:=PCUICSN.extraction_normalizing) (normalisation_in:=let _ := @PCUICSN.normalisation in _) optimized_abstract_env_impl wfext nil p.2
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
-  let Σ' := ErasureFunction.erase_global_fast optimized_abstract_env_impl
+  let Σ' := ErasureFunction.erase_global_fast (nor:=PCUICSN.extraction_normalizing) (normalisation:=normalisation) optimized_abstract_env_impl
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
     (EEnvMap.GlobalContextMap.make Σ' _, t).
 
@@ -40,11 +40,11 @@ Obligation Tactic := idtac.
 
 Import Extract.
 
-Definition erase_program {guard : abstract_guard_impl} (p : pcuic_program)
+Definition erase_program {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (p : pcuic_program)
   (wtp : ∥ wt_pcuic_program (cf:=config.extraction_checker_flags) p ∥) : eprogram_env :=
   erase_pcuic_program (guard := guard) p (map_squash fst wtp) (map_squash snd wtp).
 
-Lemma expanded_erase_program {guard : abstract_guard_impl}
+Lemma expanded_erase_program {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation}
   (cf := config.extraction_checker_flags) p (wtp : ∥ wt_pcuic_program p ∥) :
   PCUICEtaExpand.expanded_pcuic_program p ->
   EEtaExpandedFix.expanded_eprogram_env (erase_program (guard:=guard) p wtp).
@@ -67,7 +67,7 @@ Proof.
   - eapply EEtaExpanded.isEtaExpFix_isEtaExp. now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
 
-Program Definition erase_transform {guard : abstract_guard_impl}  : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term
+Program Definition erase_transform {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
  {| name := "erasure";
     pre p :=
@@ -77,7 +77,7 @@ Program Definition erase_transform {guard : abstract_guard_impl}  : Transform.t 
     obseq g g' v v' := let Σ := g.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
 Next Obligation.
   cbn -[erase_program].
-  intros ? p [wtp etap].
+  intros ? ? p [wtp etap].
   destruct erase_program eqn:e.
   split; cbn.
   - unfold erase_program, erase_pcuic_program in e. simpl. cbn in e. injection e. intros <- <-.
@@ -89,7 +89,7 @@ Next Obligation.
 Qed.
 
 Next Obligation.
-  red. move=> guard [Σ t] v [[wf [T HT]]]. unfold eval_pcuic_program, eval_eprogram.
+  red. move=> guard normalisation [Σ t] v [[wf [T HT]]]. unfold eval_pcuic_program, eval_eprogram.
   intros [ev].
   destruct erase_program eqn:e.
   unfold erase_program, erase_pcuic_program in e. simpl in e. injection e; intros <- <-.

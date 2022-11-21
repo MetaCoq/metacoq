@@ -23,6 +23,7 @@ Import Transform.
 Obligation Tactic := program_simpl.
 
 #[local] Existing Instance extraction_checker_flags.
+#[local] Existing Instance PCUICSN.extraction_normalizing.
 
 Import EWcbvEval.
 
@@ -51,7 +52,7 @@ Next Obligation.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
-Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+Program Definition erasure_pipeline {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program EProgram.eprogram
   Ast.term EAst.term
   TemplateProgram.eval_template_program
@@ -99,9 +100,9 @@ Next Obligation.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
-Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
+Definition run_erase_program {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} := run erasure_pipeline.
 
-Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :=
+Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (efl := EWellformed.all_env_flags) :=
   build_template_program_env ▷
   eta_expand ▷
   template_to_pcuic_transform ▷
@@ -120,7 +121,7 @@ Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
-Definition run_erase_program_fast {guard : abstract_guard_impl} := run erasure_pipeline_fast.
+Definition run_erase_program_fast {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
 
@@ -135,6 +136,10 @@ PCUICTyping.guard fix_cofix Σ Γ mfix <-> fake_guard_impl fix_cofix Σ Γ mfix.
 Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
 Next Obligation. apply fake_guard_impl_properties. Qed.
+
+(** Ideally we'd have a MetaCoq template program that generates a proof of Strong Normalisation for the particular program we're erasing.  For now we just axiomatize SN. *)
+Axiom fake_normalisation : PCUICSN.Normalisation.
+Global Existing Instance fake_normalisation.
 
 (** This uses the retyping-based erasure and assumes that the global environment and term
   are welltyped (for speed). As such this should only be used for testing, or when we know that

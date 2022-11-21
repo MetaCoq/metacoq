@@ -119,7 +119,12 @@ Definition global_env_add (Σ : global_env) d :=
   {| universes := Σ.(universes); declarations := d :: Σ.(declarations); retroknowledge := Σ.(retroknowledge) |}.
 
 Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
-  (_Σ :referenced_impl_ext) t :
+  (_Σ :referenced_impl_ext)
+  {normalisation_in
+    :let Σ := _Σ : global_env_ext in
+     let Σ' := global_env_add Σ.1 (make_fresh_name Σ, InductiveDecl False_mib) : global_env in
+     let Σext := (Σ', Σ.2) : global_env × universes_decl in NormalisationIn Σext}
+  t :
   axiom_free _Σ ->
   (* t : forall (P : Prop), P *)
   _Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
@@ -181,9 +186,9 @@ Proof.
   pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
   unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
-  1: cbn; intros; subst; exact wt.
+  all: try solve [ cbn; intros; subst; assumption ].
   unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
-  1 : cbn; intros; subst; exact wt.
+  all: try solve [ cbn; intros; subst; assumption ].
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

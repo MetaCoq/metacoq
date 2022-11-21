@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool. 
+From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool.
 From MetaCoq.Template Require Import utils LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICSize PCUICInduction.
 From Coq Require Import List.
@@ -12,7 +12,7 @@ Import PCUICEnvTyping.
 Definition def_depth_gen (depth : term -> nat) (x : def term)
   := max (depth (dtype x)) (depth (dbody x)).
 
-Definition list_depth_gen {A} (depth : A -> nat) := 
+Definition list_depth_gen {A} (depth : A -> nat) :=
   fix list_depth (l : list A) : nat :=
     match l with
     | [] => 0
@@ -27,13 +27,13 @@ Definition decl_depth_gen (depth : term -> nat) (x : context_decl) :=
 
 Definition context_depth_gen (depth : term -> nat) (l : context) :=
   list_depth_gen (decl_depth_gen depth) l.
- 
-Definition branch_depth_gen (depth : term -> nat) p (br : branch term) := 
+
+Definition branch_depth_gen (depth : term -> nat) p (br : branch term) :=
   let pard := list_depth_gen depth p.(pparams) in
   let bctxd := context_depth_gen depth br.(bcontext) in
   max (pard + bctxd) (depth br.(bbody)).
 
-Definition predicate_depth_gen (depth : term -> nat) (p : PCUICAst.predicate term) := 
+Definition predicate_depth_gen (depth : term -> nat) (p : PCUICAst.predicate term) :=
   let pard := list_depth_gen depth p.(pparams) in
   let pctxd := context_depth_gen depth p.(pcontext) in
     max (pard + pctxd) (depth p.(preturn)).
@@ -86,9 +86,9 @@ Proof.
   move/IHmfix. lia.
 Qed.
 
-Lemma nth_error_depth {A} (f : A -> nat) {l : list A} {n x} : 
+Lemma nth_error_depth {A} (f : A -> nat) {l : list A} {n x} :
   nth_error l n = Some x ->
-  f x <= list_depth_gen f l. 
+  f x <= list_depth_gen f l.
 Proof.
   induction l in n |- *; destruct n; simpl => //; auto.
   - intros [= <-]. lia.
@@ -136,7 +136,7 @@ Proof.
     f_equal; apply aux.
 Qed.
 
-Lemma All_depth {s l} k : 
+Lemma All_depth {s l} k :
   All (fun x => forall k, depth (subst s k x) <= depth x + list_depth s) l ->
   list_depth (map (subst s k) l) <= list_depth l + list_depth s.
 Proof.
@@ -160,7 +160,7 @@ Proof.
     rewrite /predicate_depth_gen /=.
     eapply (All_depth k) in a.
     assert ((list_depth (map (subst s k) (pparams p)) +
-        context_depth (pcontext p)) <= 
+        context_depth (pcontext p)) <=
       (list_depth (pparams p) + context_depth (pcontext p) + list_depth s)) by lia.
     specialize (IHt k).
     assert (list_depth_gen (branch_depth_gen depth (map_predicate_k id (subst s) k p)) (map_branches_k (subst s) id k l) <=
@@ -169,7 +169,7 @@ Proof.
       destruct p0. specialize (l0 (#|bcontext x| + k)).
       rewrite {1 3}/branch_depth_gen /= /id. rewrite /id in IHX0. lia. }
     specialize (l0 (#|pcontext p| + k)).
-    assert ((list_depth (map (subst s k) (pparams p)) + context_depth (pcontext p)) <= 
+    assert ((list_depth (map (subst s k) (pparams p)) + context_depth (pcontext p)) <=
       (list_depth (pparams p) + context_depth (pcontext p) + list_depth s)) by lia.
     lia.
   - specialize (IHt k). lia.
@@ -217,7 +217,7 @@ Proof.
     f_equal; apply aux.
 Qed.
 
-Lemma depth_subst_decl s k d : 
+Lemma depth_subst_decl s k d :
   decl_depth_gen depth (subst_decl s k d) <= decl_depth_gen depth d + list_depth s.
 Proof.
   destruct d as [na [b|] ty]; rewrite /decl_depth_gen /=.
@@ -226,7 +226,7 @@ Proof.
   pose proof (depth_subst s k ty). lia.
 Qed.
 
-Lemma depth_subst_context s k ctx : 
+Lemma depth_subst_context s k ctx :
   context_depth (subst_context s k ctx) <= context_depth ctx + list_depth s.
 Proof.
   induction ctx; simpl; try lia.
@@ -296,8 +296,8 @@ Proof.
   simpl. specialize (H k a). specialize (IHl (S k)). lia.
 Qed.
 
-Lemma context_depth_inst_case_context pars puinst pctx : 
-  context_depth (inst_case_context pars puinst pctx) <= 
+Lemma context_depth_inst_case_context pars puinst pctx :
+  context_depth (inst_case_context pars puinst pctx) <=
   context_depth pctx + list_depth pars.
 Proof.
   rewrite /inst_case_context.
@@ -316,14 +316,14 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
     (forall Γ (n : aname) (t : term),
         P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
-    (forall Γ (t u : term), 
+    (forall Γ (t u : term),
       (forall t', depth t' < depth (tApp t u) -> P Γ t') ->
       P Γ t -> P Γ u -> P Γ (tApp t u)) ->
     (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
     (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
     (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
     (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term)),
-        CasePredProp P Γ p -> 
+        CasePredProp P Γ p ->
         P Γ t ->
         CaseBrsProp p P Γ brs ->
         P Γ (tCase ci p t brs)) ->
@@ -397,7 +397,7 @@ Proof.
         ++ eapply aux; auto. simpl. unfold predicate_depth_gen. lia.
     * eapply aux => //. simpl; lia.
     * red. simpl in aux.
-      have auxbr := fun Γ t (H : depth t <= list_depth_gen (branch_depth_gen depth p) brs) => 
+      have auxbr := fun Γ t (H : depth t <= list_depth_gen (branch_depth_gen depth p) brs) =>
         aux Γ t ltac:(lia).
       move: auxbr.
       clear -auxΓ.
@@ -437,14 +437,14 @@ Lemma term_ind_depth_app :
     (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
     (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
-    (forall (t u : term), 
+    (forall (t u : term),
       (forall t', depth t' < depth (tApp t u) -> P t') ->
       P t -> P u -> P (tApp t u)) ->
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term)),
-        CasePredProp_depth P p -> 
+        CasePredProp_depth P p ->
         P t ->
         CaseBrsProp_depth p P brs ->
         P (tCase ci p t brs)) ->
@@ -517,7 +517,7 @@ Proof.
         ++ eapply aux; auto. simpl. unfold predicate_depth_gen. lia.
     * eapply aux => //. simpl; lia.
     * red. simpl in aux.
-      have auxbr := fun t (H : depth t <= list_depth_gen (branch_depth_gen depth p) brs) => 
+      have auxbr := fun t (H : depth t <= list_depth_gen (branch_depth_gen depth p) brs) =>
         aux t ltac:(lia).
       move: auxbr.
       clear -auxΓ.

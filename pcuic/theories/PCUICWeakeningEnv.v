@@ -66,9 +66,9 @@ Proof.
   apply global_ext_constraints_app, sub.
 Qed.
 
-#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ, ϕ)))
     (compare_universe pb (global_ext_constraints (Σ', ϕ))).
 Proof.
   intros ext u u'.
@@ -76,9 +76,9 @@ Proof.
   apply weakening_env_global_ext_constraints, ext.
 Qed.
 
-#[global] Instance subrel_extends_eq_pb {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq_pb {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (compare_universe pb (global_ext_constraints (Σ', ϕ))).
 Proof.
   change eq_universe with (compare_universe Conv).
@@ -88,21 +88,21 @@ Proof.
   - transitivity (compare_universe Conv (global_ext_constraints (Σ', ϕ))); tc.
 Qed.
 
-#[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (eq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change eq_universe with (compare_universe Conv). tc. Qed.
 
-#[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ)))
     (leq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
 
-#[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (leq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
 
@@ -118,13 +118,13 @@ Proof. typeclasses eauto. Qed.
 
 Lemma subrelations_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ,φ))) 
+  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ,φ)))
     (compare_universe pb (global_ext_constraints (Σ',φ))).
 Proof. destruct pb; typeclasses eauto. Qed.
 
 Lemma subrelations_eq_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ)))
     (compare_universe pb (global_ext_constraints (Σ',φ))).
 Proof. destruct pb; typeclasses eauto. Qed.
 
@@ -173,8 +173,8 @@ Lemma global_levels_sub {univs univs'} : univs ⊂_cs univs' ->
   LevelSet.Subset (global_levels univs) (global_levels univs').
 Proof.
   unfold global_levels => sub.
-  intros x hin % LevelSet.union_spec. 
-  apply LevelSet.union_spec. 
+  intros x hin % LevelSet.union_spec.
+  apply LevelSet.union_spec.
   intuition auto. left. now apply sub.
 Qed.
 
@@ -210,14 +210,14 @@ Definition on_udecl_prop (Σ : global_env) (udecl : universes_decl)
        | _ => True
        end. *)
 
-Lemma in_global_levels l u : 
+Lemma in_global_levels l u :
   LevelSet.In l (ContextSet.levels u) ->
   LevelSet.In l (global_levels u).
 Proof.
   intros hin; now apply LevelSet.union_spec.
 Qed.
 
-Lemma declared_cstr_levels_sub l l' c : 
+Lemma declared_cstr_levels_sub l l' c :
   LevelSet.Subset l l' ->
   declared_cstr_levels l c -> declared_cstr_levels l' c.
 Proof.
@@ -277,7 +277,7 @@ Proof using P Pcmp cf.
   - simpl. auto.
   - intros hl. depelim hΣ. specialize (IHΣ'' c decl hΣ hl).
     simpl in *.
-    destruct (eqb_spec c kn); subst; auto. destruct o. 
+    destruct (eqb_spec c kn); subst; auto. destruct o.
     apply lookup_global_Some_fresh in IHΣ''; contradiction.
 Qed.
 Hint Resolve extends_lookup : extends.
@@ -395,7 +395,7 @@ Proof using P Pcmp cf.
       destruct H'; [now left|right]; auto.
     * apply LevelSet.union_spec in H''. apply LevelSet.union_spec.
       destruct H''; [now left|right]; auto.
-      
+
     (*+ destruct d'; trivial. repeat split.
       * destruct H2; auto.
       * intros l Hl. apply H2 in Hl.
@@ -418,7 +418,7 @@ Qed.
 
 Definition weaken_env_prop_full
   (P : global_env_ext -> context -> term -> term -> Type) :=
-  forall (Σ : global_env_ext) (Σ' : global_env), 
+  forall (Σ : global_env_ext) (Σ' : global_env),
     wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
     forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
@@ -430,11 +430,11 @@ Definition weaken_env_decls_prop
   (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Lemma extends_decls_wf Σ Σ' : 
+Lemma extends_decls_wf Σ Σ' :
   wf Σ' -> extends_decls Σ Σ' -> wf Σ.
 Proof using P Pcmp cf.
   intros [onu ond] [eq [Σ'' eq']].
-  split => //. 
+  split => //.
   - red. rewrite eq. apply onu.
   - rewrite eq. rewrite eq' in ond.
     rewrite -e in ond.
@@ -442,7 +442,7 @@ Proof using P Pcmp cf.
     induction Σ''; cbn; auto.
     intros H; depelim H.
     apply IHΣ''. apply H.
-Qed. 
+Qed.
 
 End ExtendsWf.
 

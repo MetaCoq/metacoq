@@ -1,7 +1,7 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextConversion PCUICContextReduction
-  PCUICCumulativity PCUICConversion PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
+  PCUICCumulativity PCUICConversion PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping
   PCUICGlobalEnv PCUICConfluence PCUICSubstitution PCUICClosed PCUICClosedTyp
   PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity PCUICOnFreeVars PCUICSR.
@@ -27,7 +27,7 @@ Proof.
   apply eq_term_upto_univ_leq; cbn; auto.
 Qed.
 
-Lemma alt_into_ws_cumul_pb_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} : 
+Lemma alt_into_ws_cumul_pb_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} :
   All2 (convAlgo Σ Γ) l l' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) l ->
@@ -36,7 +36,7 @@ Lemma alt_into_ws_cumul_pb_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} :
 Proof.
   solve_all. eapply into_ws_cumul_pb; tea.
 Qed.
-    
+
 (** Might be better suited with [red_context] hyps ensuring closedness directly *)
 Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
   is_closed_context (Γ ,,, Γ0) ->
@@ -63,7 +63,7 @@ Proof.
   now symmetry.
 Qed.
 
-Lemma into_red_terms {Σ Γ ts ts'} : 
+Lemma into_red_terms {Σ Γ ts ts'} :
   All2 (red Σ Γ) ts ts' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) ts ->
@@ -72,8 +72,8 @@ Proof.
   induction 1; [constructor|].
   move=> /= clΓ /andP[clx cll]. constructor; eauto using into_closed_red.
 Qed.
-      
-Lemma alpha_eq_context_gen Γ Δ : 
+
+Lemma alpha_eq_context_gen Γ Δ :
   eq_context_upto_names Γ Δ ->
   eq_context_gen eq eq Γ Δ.
 Proof.
@@ -126,7 +126,7 @@ Proof.
   { eapply PCUICContexts.smash_context_assumption_context => //. constructor. }
   have lenpars' : #|pars| = context_assumptions (smash_context [] (ind_params mdecl)).
   { rewrite context_assumptions_smash_context /= //. }
-  eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'':=[]) 
+  eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'':=[])
     (Γ' := smash_context [] mdecl.(ind_params))
     (Γ'0 := smash_context [] mdecl.(ind_params))) => //.
   * eapply (PCUICSpine.ws_cumul_ctx_pb_rel_trans (Δ' := ctx'@[puinst])).
@@ -199,7 +199,7 @@ Section fixed.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (wfΣ : ∥ wf Σ ∥).
-  
+
   Definition isIndConstructApp (t : term) : bool :=
     match (decompose_app t).1 with
     | tInd _ _
@@ -229,7 +229,7 @@ Section fixed.
     - discriminate not_ind.
     - discriminate not_ind.
   Qed.
-  
+
   Lemma whnf_red_isIndConstructApp Γ t t' :
     whnf_red Σ Γ t t' ->
     isIndConstructApp t' = isIndConstructApp t.
@@ -239,7 +239,7 @@ Section fixed.
     rewrite (isIndConstructApp_mkApps _ [arg']) (isIndConstructApp_mkApps _ [arg]).
     apply IHr.
   Qed.
-  
+
   Lemma eq_termp_mkApps_inv leq v args v' args' :
     isApp v = false ->
     isApp v' = false ->
@@ -249,7 +249,7 @@ Section fixed.
     intros noapp1 noapp2 eq.
     apply eq_term_upto_univ_mkApps_inv in eq as (?&?) => //.
   Qed.
-  
+
   Definition conv_cum_napp leq Γ napp t t' :=
     match t with
     | tInd _ _
@@ -267,7 +267,7 @@ Section fixed.
   Proof using wfΣ.
     intros conv notapp notapp' wh wh'.
     eapply conv_cum_alt in conv as [(?&?&[r1 r2 e])]; auto.
-    sq. 
+    sq.
     pose proof (whnf_red_inv _ _ _ _ wh r1) as w1.
     apply whnf_red_mkApps_l_inv in w1 as (?&?&->&?&?); auto.
     pose proof (whnf_red_inv _ _ _ _ wh' r2) as w2.
@@ -347,7 +347,7 @@ Section fixed.
     have clred' : red_terms Σ Γ (pparams p') motivepars0.
     { eapply into_red_terms; tea. }
     have eqpars : ws_cumul_pb_terms Σ Γ (pparams p) (pparams p').
-    { etransitivity => //. 
+    { etransitivity => //.
       { eapply red_terms_ws_cumul_pb_terms; tea. }
       transitivity motivepars0.
       { eapply eq_terms_ws_cumul_pb_terms; fvs.
@@ -359,16 +359,16 @@ Section fixed.
       { apply (wf_predicate_length_pars wfp). }
       { apply (wf_predicate_length_pars wfp'). } }
     repeat split; eauto.
-    - transitivity motiveret0. 
+    - transitivity motiveret0.
       { eapply ws_cumul_pb_alt_closed. exists motiveret, motiveret0.
-        split; auto. 
+        split; auto.
         * split; auto.
-          + rewrite on_free_vars_ctx_app. apply /andP. split; auto. 
+          + rewrite on_free_vars_ctx_app. apply /andP. split; auto.
             eapply on_free_vars_ctx_inst_case_context; tea => //.
             rewrite test_context_k_closed_on_free_vars_ctx //.
           + len. now setoid_rewrite shiftnP_add in p6.
         * eapply closed_red_refl.
-          + rewrite on_free_vars_ctx_app. apply /andP. split; auto. 
+          + rewrite on_free_vars_ctx_app. apply /andP. split; auto.
             eapply on_free_vars_ctx_inst_case_context; tea => //.
             now rewrite test_context_k_closed_on_free_vars_ctx.
           + eapply red_on_free_vars in r1; tea.
@@ -394,7 +394,7 @@ Section fixed.
       destruct p0, p1, r.
       cbn in p4, p9. move/andP: p4 => [fv p4].
       move/andP: p9 => [fv' p9].
-      constructor. 
+      constructor.
       2: { apply IHbrseq; auto. }
       have eqctx : Σ ⊢ Γ ,,, inst_case_branch_context p x0 = Γ ,,, inst_case_branch_context p' x1.
       { rewrite /inst_case_branch_context.
@@ -427,11 +427,11 @@ Section fixed.
       1:now eapply ws_cumul_ctx_pb_closed_right in eqctx.
       move/andP: fv => []. len. now rewrite shiftnP_add.
   Qed.
-  
+
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tFix mfix idx) (tFix mfix' idx') ->
     ∥idx = idx' ×
-     All2 (fun d d' => 
+     All2 (fun d d' =>
       [× rarg d = rarg d',
          eq_binder_annot d.(dname) d'.(dname),
          Σ;;; Γ ⊢ dtype d = dtype d' &
@@ -478,7 +478,7 @@ Section fixed.
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
     - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
-      all:eapply into_closed_red; eauto. 
+      all:eapply into_closed_red; eauto.
       { now move/andP: i1. }
       { now move/andP: i2. }
     - eapply ws_cumul_pb_alt_closed.
@@ -494,7 +494,7 @@ Section fixed.
   Lemma conv_cum_tCoFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx') ->
     ∥idx = idx' ×
-    All2 (fun d d' => 
+    All2 (fun d d' =>
       [× rarg d = rarg d',
         eq_binder_annot d.(dname) d'.(dname),
         Σ;;; Γ ⊢ dtype d = dtype d' &
@@ -538,7 +538,7 @@ Section fixed.
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
     - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
-      all:eapply into_closed_red; eauto. 
+      all:eapply into_closed_red; eauto.
       { now move/andP: i1. }
       { now move/andP: i2. }
     - eapply ws_cumul_pb_alt_closed.
@@ -569,8 +569,8 @@ Section fixed.
     depelim c0.
     split; [easy|].
     apply ws_cumul_pb_alt_closed; eauto.
-    exists c'0, c'1; split; eauto. 
+    exists c'0, c'1; split; eauto.
     all:eapply into_closed_red; eauto.
   Qed.
-  
+
 End fixed.

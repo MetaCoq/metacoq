@@ -5,8 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakeningEnvTyp PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed PCUICClosedTyp
      PCUICContextConversion PCUICContextConversionTyp PCUICConversion PCUICInversion PCUICUnivSubst
-     PCUICArities PCUICValidity PCUICInductives PCUICInductiveInversion 
-     PCUICSR PCUICCumulProp PCUICWfUniverses 
+     PCUICArities PCUICValidity PCUICInductives PCUICInductiveInversion
+     PCUICSR PCUICCumulProp PCUICWfUniverses
      PCUICOnFreeVars PCUICWellScopedCumulativity.
 
 Require Import ssreflect ssrbool.
@@ -69,7 +69,7 @@ Section Principality.
 
   Ltac int inv := intros B hB; eapply inv in hB; auto; split; [|econstructor; eauto].
   Hint Resolve wf_ext_wf : core.
-  
+
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
     ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
   Proof using wfΣ.
@@ -191,7 +191,7 @@ Section Principality.
       eexists; int inversion_Const.
       destruct hB as [decl' [wf [declc' [cu cum]]]].
       now rewrite -(declared_constant_inj _ _ d declc') in cum.
-      
+
     - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]] => //; auto.
       repeat outtimes.
       exists (subst_instance u (ind_type idecl)).
@@ -236,7 +236,7 @@ Section Principality.
       etransitivity; [|tea].
       eapply ws_cumul_pb_mkApps; auto. rewrite /ptm /predctx.
       * eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret_ty.
-        eapply ws_cumul_pb_eq_le, wt_cumul_pb_refl. eapply pret_ty. 
+        eapply ws_cumul_pb_eq_le, wt_cumul_pb_refl. eapply pret_ty.
       * eapply All2_app. 2:constructor; auto.
         assert (ws_cumul_pb_terms Σ Γ (pparams p ++ indices) (pparams p ++ indices')).
         { transitivity x9'; tea. transitivity x0' => //. now symmetry. }
@@ -355,11 +355,11 @@ End Principality.
 Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ: wf_ext Σ} :
   Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
   Σ ;;; Γ |- c : mkApps (tInd ind u') args' ->
-  (∑ ui', 
+  (∑ ui',
     PCUICEquality.R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ))
-     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args| ui' u * 
+     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args| ui' u *
     PCUICEquality.R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ))
-     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args'| ui' u') * 
+     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args'| ui' u') *
   ws_cumul_pb_terms Σ Γ args args'.
 Proof.
   intros h h'.
@@ -380,7 +380,7 @@ Proof.
   transitivity l''. symmetry. auto using red_terms_ws_cumul_pb_terms.
   now symmetry.
 Qed.
- 
+
 Lemma eq_term_leq_term {cf:checker_flags} {Σ : global_env_ext} {x y} :
   eq_term Σ Σ x y ->
   leq_term Σ Σ x y.
@@ -424,9 +424,9 @@ Notation eq_term_napp Σ n x y :=
 
 Notation leq_term_napp Σ n x y :=
     (eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n x y).
-    
+
 Lemma eq_term_upto_univ_napp_leq {cf:checker_flags} {Σ : global_env_ext} {n x y} :
-  eq_term_napp Σ n x y -> 
+  eq_term_napp Σ n x y ->
   leq_term_napp Σ n x y.
 Proof.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
@@ -454,19 +454,19 @@ Proof.
   intros. now eapply eq_term_empty_eq_term.
 Qed.
 
-Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 
+Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf Σ.1 ->
   on_udecl Σ.1 Σ.2 ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t' : T' ->
-  leq_term empty_global_env Σ t' t -> 
-  (* No cumulativity of inductive types, as they can relate 
+  leq_term empty_global_env Σ t' t ->
+  (* No cumulativity of inductive types, as they can relate
     inductives in different sorts. *)
   Σ ;;; Γ |- t' : T.
 Proof.
   intros wfΣ onu Ht.
   revert Σ wfΣ Γ t T Ht onu t' T'.
-  eapply (typing_ind_env 
+  eapply (typing_ind_env
   (fun Σ Γ t T =>
     forall (onu : on_udecl Σ.1 Σ.2),
     forall t' T' : term, Σ ;;; Γ |- t' : T' -> leq_term empty_global_env Σ t' t -> Σ;;; Γ |- t' : T)
@@ -482,7 +482,7 @@ Proof.
     apply cumul_Sort. now apply leq_universe_super.
 
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
-    specialize (X1 onu _ _ Ha). 
+    specialize (X1 onu _ _ Ha).
     specialize (X1 (eq_term_empty_leq_term X5_1)).
     apply eq_term_empty_eq_term in X5_1.
     eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
@@ -515,7 +515,7 @@ Proof.
       constructor; auto; fvs.
       eapply ws_cumul_pb_refl. now eapply typing_closed_ctx in codom.
       eapply type_closed, closedn_on_free_vars in X2.
-      now len in X2; len. 
+      now len in X2; len.
 
   - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
     specialize (X1 onu _ _ dom (eq_term_empty_leq_term X7_2)).
@@ -524,7 +524,7 @@ Proof.
     apply eq_term_empty_eq_term in X7_2.
     assert(Σ ⊢ Γ ,, vdef na t ty = Γ ,, vdef n b b_ty).
     { constructor. eapply ws_cumul_ctx_pb_refl. fvs. constructor => //.
-      constructor; fvs. constructor; fvs. }   
+      constructor; fvs. constructor; fvs. }
     specialize (X5 onu u A).
     forward X5 by eapply closed_context_conversion; eauto; pcuic.
     specialize (X5 X7_3).
@@ -541,7 +541,7 @@ Proof.
       constructor; auto; fvs.
       constructor; fvs.
       apply ws_cumul_pb_refl; fvs.
-    
+
   - eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
     unfold leq_term in X1.
     eapply eq_term_upto_univ_empty_impl in X7_1.
@@ -617,7 +617,7 @@ Proof.
         now rewrite on_free_vars_subst_instance. }
       eapply PCUICEquality.subst_eq_term.
       eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
-      
+
   - eassert (ctx_inst _ _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (1 := X5).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. all:split; eauto.
@@ -681,7 +681,7 @@ Proof.
       + split.
         eapply PCUICWeakeningTyp.weaken_wf_local; tea.
         eapply wf_projection_context; tea.
-        eapply validity in X3. 
+        eapply validity in X3.
         now eapply (isType_mkApps_Ind_inv _ a) in X3 as [? [? []]].
         eapply PCUICInductives.projection_subslet; eauto.
         eapply validity in X3; auto.
@@ -706,7 +706,7 @@ Proof.
     destruct a as [[[eqty _] _] _].
     constructor. eapply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
-  
+
   - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply type_Cumul_alt.
     econstructor; eauto.
@@ -728,7 +728,7 @@ Proof.
     auto.
 Qed.
 
-Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 
+Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf_ext Σ ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t' : T' ->

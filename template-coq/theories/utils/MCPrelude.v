@@ -72,7 +72,7 @@ Ltac tc := try typeclasses eauto.
 
 Create HintDb terms.
 
-(** This tactic helps rewrite with all the length lemmas available 
+(** This tactic helps rewrite with all the length lemmas available
   in the library *)
 Ltac len := autorewrite with len; cbn.
 Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
@@ -116,9 +116,9 @@ Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
 Ltac inv H := inversion_clear H.
 
-(** Turns a subterm of the goal into an evar + equality subgoal 
+(** Turns a subterm of the goal into an evar + equality subgoal
   for easier lemma application. *)
-Tactic Notation "relativize" open_constr(c) := 
-  let ty := type of c in  
+Tactic Notation "relativize" open_constr(c) :=
+  let ty := type of c in
   let x := fresh in
   evar (x : ty); replace c with x; subst x.

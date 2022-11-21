@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity 
+  PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity
   PCUICClosed
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICRenameTyp PCUICOnFreeVars
   PCUICClosedConv PCUICClosedTyp PCUICWeakeningConv.
@@ -22,7 +22,7 @@ Generalizable Variables Σ Γ t T.
 
 Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} :
   wf_local Σ (Γ ,,, Γ') ->
-  wf_local Σ (Γ ,,, Γ'') ->  
+  wf_local Σ (Γ ,,, Γ'') ->
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
   intros wfΓ' wfΓ''.
@@ -34,7 +34,7 @@ Proof.
   eapply (All_local_env_impl_ind XΓ').
   intros Δ t [T|] IH; simpl.
   - intros Hf. rewrite -/(lift_context #|Γ''| 0 Δ).
-    rewrite Nat.add_0_r. rewrite !lift_rename. 
+    rewrite Nat.add_0_r. rewrite !lift_rename.
     eapply (Hf xpredT).
     split.
     + apply wf_local_app; auto.
@@ -42,7 +42,7 @@ Proof.
     + apply weakening_renaming.
   - intros Hty. simple apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Δ Γ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty; intros Hs.
     rewrite -/(lift_context #|Γ''| 0 Δ).
-    rewrite Nat.add_0_r !lift_rename. 
+    rewrite Nat.add_0_r !lift_rename.
     eapply (Hs xpredT).
     split.
     + apply wf_local_app; auto.
@@ -62,8 +62,8 @@ Qed.
 Lemma weakening_rename_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} {t T} :
   wf_local Σ (Γ ,,, Γ'') ->
   Σ ;;; Γ ,,, Γ' |- t : T ->
-  Σ ;;; Γ ,,, Γ'' ,,, rename_context (lift_renaming #|Γ''| 0) Γ' |- 
-    rename (lift_renaming #|Γ''| #|Γ'|) t : 
+  Σ ;;; Γ ,,, Γ'' ,,, rename_context (lift_renaming #|Γ''| 0) Γ' |-
+    rename (lift_renaming #|Γ''| #|Γ'|) t :
     rename (lift_renaming #|Γ''| #|Γ'|) T.
 Proof.
   intros wfext Ht.
@@ -136,7 +136,7 @@ Lemma weakening_length {cf:checker_flags} Σ Γ Γ' t T n :
 Proof. intros wfΣ ->; now apply weakening. Qed.
 
 Lemma weaken_ctx {cf:checker_flags} {Σ Γ t T} Δ :
-  wf Σ.1 -> 
+  wf Σ.1 ->
   wf_local Σ Δ ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Δ ,,, Γ |- t : T.
@@ -160,9 +160,9 @@ Proof.
   intros ; subst n; now apply weakening.
 Qed.
 
-(** Convenience lemma when going through instantiation for renaming. 
+(** Convenience lemma when going through instantiation for renaming.
     Δ is arbitrary here, it does not have to be the weakening of some other context. *)
-Lemma shift_typing {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t T n Δ} : 
+Lemma shift_typing {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t T n Δ} :
   Σ ;;; Γ |- t : T ->
   wf_local Σ (Γ ,,, Δ) ->
   n = #|Δ| ->
@@ -205,7 +205,7 @@ Proof.
         rewrite app_context_assoc. apply X.
 Qed.
 
-Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
+Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty}
   (isdecl : n <= #|Γ|):
   wf Σ -> wf_local Σ Γ ->
   isType Σ (skipn n Γ) ty ->
@@ -216,6 +216,6 @@ Proof.
   { rewrite firstn_length_le; auto with arith. }
   apply infer_typing_sort_impl with id wfty; intros Hs.
   rewrite {3}H.
-  eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ) (T := tSort _)); 
+  eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ) (T := tSort _));
     eauto with wf.
 Qed.

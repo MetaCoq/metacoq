@@ -70,7 +70,7 @@ Polymorphic Cumulative Record packType := {pk : Type}.
 MetaCoq Run (α <- tmQuoteInductive (cp "test") ;; tmPrint α).
 MetaCoq Run (tmQuoteInductive (cp "packType") >>= tmEval all >>= tmPrint).
 
-  
+
 Polymorphic Cumulative Record Category@{i j} :=
 { Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
 Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
@@ -185,7 +185,7 @@ Definition test2 := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
 
-Unset Printing Universes. 
+Unset Printing Universes.
 
 MetaCoq Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
@@ -213,7 +213,7 @@ Section test.
   Set Printing Universes.
   Print t.
 
-  
+
 End test.
 
 Compute t.

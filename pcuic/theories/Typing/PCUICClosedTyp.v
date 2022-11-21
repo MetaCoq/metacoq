@@ -1,15 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms. 
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed 
+     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed
      PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnvConv PCUICClosedConv
      PCUICWeakeningEnvTyp.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
-Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl cdecl p pdecl} : 
+Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl cdecl p pdecl} :
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
@@ -27,8 +27,8 @@ Proof.
   destruct onp as [_ onp].
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.
-  destruct onp as [onna onp]. rewrite {}onp. 
-  pose proof (onConstructors oib) as onc. 
+  destruct onp as [onna onp]. rewrite {}onp.
+  pose proof (onConstructors oib) as onc.
   red in onc. rewrite Heq in onc. inv onc. clear X1.
   eapply on_cargs in X.
   simpl.
@@ -49,7 +49,7 @@ Proof.
   red in onpars.
   eapply All_local_env_Pclosed in onpars.
   eapply (Alli_impl (Q:=fun i d => closed_decl (#|ind_params mdecl| + i + #|arities_context (ind_bodies mdecl)|) d)) in args.
-  2:{ intros n x. rewrite app_context_length. 
+  2:{ intros n x. rewrite app_context_length.
       intros H; eapply closed_decl_upwards; eauto. lia. }
   eapply (Alli_shiftn (P:=fun i d => closed_decl (i + #|arities_context (ind_bodies mdecl)|) d)) in args.
   rewrite Nat.add_0_r in args.
@@ -85,7 +85,7 @@ Proof.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
-Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl mind} : 
+Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl mind} :
   Forall_decls_typing
   (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
    closedn #|Γ| t && closedn #|Γ| T) Σ ->
@@ -94,15 +94,15 @@ Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ 
 Proof.
   intros HΣ decl.
   pose proof (declared_decl_closed_ind decl) as decl'.
-  specialize (decl' HΣ). 
+  specialize (decl' HΣ).
   red in decl'.
   unfold closed_inductive_decl.
   apply andb_and. split. apply onParams in decl'.
   now apply closedn_All_local_env in decl'; auto.
   apply onInductives in decl'.
   eapply All_forallb.
-  
-  assert (Alli (fun i =>  declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl) 
+
+  assert (Alli (fun i =>  declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl)
     0 (ind_bodies mdecl)).
   { eapply forall_nth_error_Alli. intros.
     split; auto. }
@@ -122,7 +122,7 @@ Proof.
       now move/andP: X.
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
-    intros cdecl cs X0; 
+    intros cdecl cs X0;
     move/andP: (on_ctype X0) => [].
     simpl. unfold closed_constructor_body.
     intros Hty _.
@@ -141,7 +141,7 @@ Proof.
     specialize (X eq). clear eq.
     destruct (ind_ctors x) as [|cdecl []] eqn:hcdecl; try contradiction.
     apply on_projs in X.
-    assert (Alli (fun i pdecl => declared_projection Σ 
+    assert (Alli (fun i pdecl => declared_projection Σ
       (mkProjection {| inductive_mind := mind; inductive_ind := n |} mdecl.(ind_npars) i) mdecl x cdecl pdecl)
       0 (ind_projs x)).
     { eapply forall_nth_error_Alli.
@@ -162,7 +162,7 @@ Proof.
   rewrite -> ?andb_and in *; try solve [intuition auto].
 
   - induction X0; auto; rewrite closedn_ctx_cons /= IHX0 /= //.
-    now move/andP: Hs => [] /=. 
+    now move/andP: Hs => [] /=.
 
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H1.
@@ -177,7 +177,7 @@ Proof.
     now move/andP: ca => [_ cty].
     now rewrite /test_decl /= in ca.
     simpl.
-    rewrite -Nat.add_1_r. 
+    rewrite -Nat.add_1_r.
     rewrite -(simpl_lift _ (S n) 0 1 0); try lia.
     apply closedn_lift. apply IHΓ; auto.
     rewrite closedn_ctx_cons in H0.
@@ -230,7 +230,7 @@ Proof.
     eapply declared_minductive_closed_ind in X0; tea. 2:exact isdecl.
     pose proof (closed_ind_closed_cstrs X0 isdecl).
     eapply All2i_All_mix_left in X5; tea. clear X6.
-    intuition auto. 
+    intuition auto.
     + unfold test_predicate_k. simpl. rtoProp; intuition eauto.
       rewrite (closedn_ctx_alpha X1).
       eapply closed_ind_predicate_context in X0; tea.
@@ -246,7 +246,7 @@ Proof.
         rewrite (wf_predicate_length_pars H1).
         now rewrite (declared_minductive_ind_npars isdecl).
       * rewrite (All2_length a1).
-        len in H8. 
+        len in H8.
         (*unfold case_branch_context_gen in H8. simpl in H8.
         rewrite case_branch_type_fst in H8. *)
         rewrite case_branch_context_length_args in H8 => //.
@@ -292,7 +292,7 @@ Proof.
     now rewrite andb_true_r in cl.
 Qed.
 
-Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind} : 
+Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind} :
   declared_minductive Σ mind mdecl ->
   closed_inductive_decl mdecl.
 Proof.
@@ -300,7 +300,7 @@ Proof.
   now apply (env_prop_sigma typecheck_closed).
 Qed.
 
-Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} : 
+Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} :
   declared_inductive Σ mind mdecl idecl ->
   closed_inductive_body mdecl idecl.
 Proof.
@@ -311,7 +311,7 @@ Proof.
   now simpl in cli.
 Qed.
 
-Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl p cdecl pdecl} : 
+Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl p cdecl pdecl} :
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.(proj_type).
 Proof.
@@ -319,7 +319,7 @@ Proof.
   eapply (env_prop_sigma typecheck_closed); eauto.
 Qed.
 
-Lemma declared_inductive_closed_pars_indices {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} : 
+Lemma declared_inductive_closed_pars_indices {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} :
   declared_inductive Σ mind mdecl idecl ->
   closed_ctx (ind_params mdecl ,,, ind_indices idecl).
 Proof.
@@ -332,7 +332,7 @@ Proof.
   now rewrite closedn_ctx_app clpars indpars.
 Qed.
 
-Lemma declared_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl idecl c cdecl} : 
+Lemma declared_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl idecl c cdecl} :
   declared_constructor Σ c mdecl idecl cdecl ->
   closed_constructor_body mdecl cdecl.
 Proof.
@@ -354,14 +354,14 @@ Qed.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Lemma subject_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} : 
+Lemma subject_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} :
   Σ ;;; Γ |- t : T ->
   closedn #|Γ| t.
 Proof.
   now move/(env_prop_typing typecheck_closed) => /andP [ct _].
 Qed.
 
-Lemma type_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} : 
+Lemma type_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} :
   Σ ;;; Γ |- t : T ->
   closedn #|Γ| T.
 Proof.
@@ -406,7 +406,7 @@ Qed.
 Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
 #[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
 
-Lemma subject_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} : 
+Lemma subject_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} :
   Σ ;;; Γ |- t : T ->
   is_open_term Γ t.
 Proof.
@@ -414,7 +414,7 @@ Proof.
   now rewrite is_open_term_closed.
 Qed.
 
-Lemma type_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} : 
+Lemma type_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} :
   Σ ;;; Γ |- t : T ->
   is_open_term Γ T.
 Proof.
@@ -464,7 +464,7 @@ Qed.
   | [ H : _ ;;; Γ |- _ : _ |- _ ] => exact (typing_closed_context H)
   end : fvs.
 
-Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
+Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ :
   wf Σ.1 -> ctx_inst typing Σ Γ i Δ -> All (closedn #|Γ|) i.
 Proof.
   intros wfΣ; induction 1; auto; constructor; auto; fvs.
@@ -537,7 +537,7 @@ Proof.
   eapply Alli_nth_error in h. 2: eassumption.
   simpl in h. destruct h as [? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto.
-  now move: e => [_ /andP []]. 
+  now move: e => [_ /andP []].
 Qed.
 
 
@@ -654,7 +654,7 @@ Proof.
   now move/andP: h => [/andP [hargs hindices]] hty.
 Qed.
 
-Lemma closed_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} : 
+Lemma closed_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} :
   declared_constructor Σ (ind, i) mdecl idecl cdecl ->
   closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context ind mdecl cdecl).
 Proof.
@@ -664,7 +664,7 @@ Proof.
   eapply declared_constructor_closed; tea.
 Qed.
 
-Lemma closed_cstr_branch_context_npars {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} : 
+Lemma closed_cstr_branch_context_npars {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} :
   declared_constructor Σ (ind, i) mdecl idecl cdecl ->
   closedn_ctx (ind_npars mdecl) (cstr_branch_context ind mdecl cdecl).
 Proof.
@@ -673,7 +673,7 @@ Proof.
   now apply (closed_cstr_branch_context declc).
 Qed.
 
-Lemma declared_projection_closed_type {cf:checker_flags} 
+Lemma declared_projection_closed_type {cf:checker_flags}
   {Σ mdecl idecl p cdecl pdecl} {wfΣ : wf Σ} :
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.(proj_type).
@@ -685,7 +685,7 @@ Qed.
 
 #[global] Hint Unfold inst_case_branch_context : len.
 
-(** This shows preservation by reduction of closed/noccur_between predicates 
+(** This shows preservation by reduction of closed/noccur_between predicates
   necessary to prove exchange and strengthening lemmas. *)
 Lemma red1_on_free_vars {cf:checker_flags} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
   red1 Σ Γ u v ->
@@ -726,7 +726,7 @@ Proof.
     len.
     rewrite skipn_length; try lia; rewrite H0.
     replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
-    with (context_assumptions (bcontext br)) by lia. 
+    with (context_assumptions (bcontext br)) by lia.
     rewrite /expand_lets /expand_lets_k /=.
     eapply forallb_nth_error in hbrs.
     erewrite H in hbrs; simpl in hbrs.
@@ -735,14 +735,14 @@ Proof.
     * relativize (context_assumptions _).
       + unshelve eapply foron_free_vars_extended_subst. eauto.
         eapply on_free_vars_ctx_inst_case_context; tea => //.
-      + unfold inst_case_branch_context. now len. 
+      + unfold inst_case_branch_context. now len.
     * rewrite extended_subst_length.
       rewrite shiftnP_add.
       eapply on_free_vars_lift_impl in hbody. unfold inst_case_branch_context. len.
       now rewrite Nat.add_comm.
   - rewrite !on_free_vars_mkApps in hav |- *.
     rtoProp.
-    eapply on_free_vars_unfold_fix in H; eauto. 
+    eapply on_free_vars_unfold_fix in H; eauto.
   - move: h4; rewrite !on_free_vars_mkApps.
     move=> /andP [] hcofix ->.
     eapply on_free_vars_unfold_cofix in hcofix; eauto.
@@ -814,7 +814,7 @@ Qed.
 
 
 Lemma term_closedn_list_ind :
-  forall (P : nat -> term -> Type), 
+  forall (P : nat -> term -> Type),
     (forall k (n : nat), n < k -> P k (tRel n)) ->
     (forall k (i : ident), P k (tVar i)) ->
     (forall k (n : nat) (l : list term), All (P k) l -> P k (tEvar n l)) ->
@@ -828,7 +828,7 @@ Lemma term_closedn_list_ind :
     (forall k (i : inductive) (u : list Level.t), P k (tInd i u)) ->
     (forall k (i : inductive) (n : nat) (u : list Level.t), P k (tConstruct i n u)) ->
     (forall k (ci : case_info) (p : predicate term),
-        tCasePredProp_k P k p -> 
+        tCasePredProp_k P k p ->
         forall t0 : term, P k t0 -> forall l : list (branch term),
         tCaseBrsProp_k P p k l -> P k (tCase ci p t0 l)) ->
     (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
@@ -843,13 +843,13 @@ Proof.
   intros k t.
   destruct t; intros clt;  match goal with
                  H : _ |- _ => apply H
-              end; auto; simpl in clt; 
-            try move/andP: clt => [cl1 cl2]; 
+              end; auto; simpl in clt;
+            try move/andP: clt => [cl1 cl2];
             try move/andP: cl1 => [cl1 cl1'];
             try solve[apply auxt; auto];
               simpl in *.
-              
-  - now apply Nat.ltb_lt in clt. 
+
+  - now apply Nat.ltb_lt in clt.
   - revert l clt.
     fix auxl' 1.
     destruct l; constructor; [|apply auxl'].
@@ -878,7 +878,7 @@ Proof.
       rewrite Nat.sub_0_r //. split; auto. exact tt.
       eapply Alli_shift, Alli_impl; eauto. simpl.
       intros n x. now replace (Nat.pred #|l| - n + #|pparams p|) with (#|l| - S n + #|pparams p|) by lia.
-    * apply auxt => //. 
+    * apply auxt => //.
   - unfold tCaseBrsProp_k.
     revert brs cl2. clear cl1 cl1'.
     rewrite /test_branch_k.
@@ -907,7 +907,7 @@ Proof.
     revert clt.
     generalize (#|mfix|).
     revert mfix.
-    fix auxm 1. 
+    fix auxm 1.
     destruct mfix; intros; constructor.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.
@@ -918,7 +918,7 @@ Proof.
     revert clt.
     generalize (#|mfix|).
     revert mfix.
-    fix auxm 1. 
+    fix auxm 1.
     destruct mfix; intros; constructor.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.
@@ -926,7 +926,7 @@ Proof.
 Defined.
 
 Lemma term_noccur_between_list_ind :
-  forall (P : nat -> nat -> term -> Type), 
+  forall (P : nat -> nat -> term -> Type),
     (forall k n (i : nat), i < k \/ k + n <= i -> P k n (tRel i)) ->
     (forall k n (i : ident), P k n (tVar i)) ->
     (forall k n (id : nat) (l : list term), All (P k n) l -> P k n (tEvar id l)) ->
@@ -940,7 +940,7 @@ Lemma term_noccur_between_list_ind :
     (forall k n (i : inductive) (u : list Level.t), P k n (tInd i u)) ->
     (forall k n (i : inductive) (c : nat) (u : list Level.t), P k n (tConstruct i c u)) ->
     (forall k n (ci : case_info) (p : predicate term),
-        tCasePredProp_k (fun k' => P k' n) k p -> forall t0 : term, P k n t0 -> 
+        tCasePredProp_k (fun k' => P k' n) k p -> forall t0 : term, P k n t0 ->
         forall l : list (branch term),
         tCaseBrsProp_k (fun k' => P k' n) p k l -> P k n (tCase ci p t0 l)) ->
     (forall k n (s : projection) (t : term), P k n t -> P k n (tProj s t)) ->
@@ -955,22 +955,22 @@ Proof.
   intros k n t.
   destruct t; intros clt;  match goal with
                  H : _ |- _ => apply H
-              end; auto; simpl in clt; 
-            try move/andP: clt => [cl1 cl2]; 
+              end; auto; simpl in clt;
+            try move/andP: clt => [cl1 cl2];
             try move/andP: cl1 => [cl1 cl1'];
             try solve[apply auxt; auto];
               simpl in *.
 
-  - move/orP: clt => [cl|cl]. 
+  - move/orP: clt => [cl|cl].
     now apply Nat.ltb_lt in cl; eauto.
-    now apply Nat.leb_le in cl; eauto. 
-   
+    now apply Nat.leb_le in cl; eauto.
+
   - revert l clt.
     fix auxl' 1.
     destruct l; constructor; [|apply auxl'].
     apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
     now move/andP: clt => [clt cll].
-  
+
   - move/andP: cl1 => /= []/andP[] clpars clctx clret.
     split.
     * revert clpars. generalize (pparams p).
@@ -1013,7 +1013,7 @@ Proof.
     revert clt.
     generalize (#|mfix|).
     revert mfix.
-    fix auxm 1. 
+    fix auxm 1.
     destruct mfix; intros; constructor.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.
@@ -1024,7 +1024,7 @@ Proof.
     revert clt.
     generalize (#|mfix|).
     revert mfix.
-    fix auxm 1. 
+    fix auxm 1.
     destruct mfix; intros; constructor.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.

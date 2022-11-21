@@ -105,7 +105,7 @@ Proof. rewrite /cstr_branch_context. now len. Qed.
 #[global]
 Hint Rewrite cstr_branch_context_length : len.
 
-Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
+Lemma cstr_branch_context_assumptions ci mdecl cdecl :
   context_assumptions (cstr_branch_context ci mdecl cdecl) =
   context_assumptions (cstr_args cdecl).
 Proof.
@@ -411,7 +411,7 @@ Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
 #[global]
-Hint Rewrite subst_instance_length 
+Hint Rewrite subst_instance_length
   fix_context_length fix_subst_length cofix_subst_length : len.
 
 Definition is_constructor n ts :=
@@ -419,14 +419,14 @@ Definition is_constructor n ts :=
   | Some a => isConstruct_app a
   | None => false
   end.
-  
+
 Lemma is_constructor_app_ge n l l' : is_constructor n l -> is_constructor n (l ++ l').
 Proof.
   unfold is_constructor. destruct nth_error eqn:Heq => //.
   rewrite nth_error_app_lt ?Heq //; eauto using nth_error_Some_length.
 Qed.
 
-Lemma is_constructor_prefix n args args' : 
+Lemma is_constructor_prefix n args args' :
   ~~ is_constructor n (args ++ args') ->
   ~~ is_constructor n args.
 Proof.
@@ -439,5 +439,4 @@ Proof.
   - rewrite app_length. move=> ge _.
     elim: nth_error_spec; intros; try lia. auto.
 Qed.
-    
-  
+

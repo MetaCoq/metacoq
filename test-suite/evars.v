@@ -25,7 +25,7 @@ Local Open Scope string_scope.
 
 Goal list nat.
   (* Back and forth *)
-  let x := open_constr:(nil) in quote_term x (fun qt => 
+  let x := open_constr:(nil) in quote_term x (fun qt =>
     ltac:(denote_term qt (fun unqt => set (e := eq_refl : unqt = x :> list bool)))).
     (* Creation of evars by denotation of 'hole' *)
   let x := eval cbv in (tApp lnil [hole]) in

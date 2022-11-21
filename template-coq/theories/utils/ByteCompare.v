@@ -522,8 +522,8 @@ Definition to_N (x : byte) :=
   end.
 End ByteN.
 
-Definition eqb (x y : byte) := 
+Definition eqb (x y : byte) :=
   N.eqb (ByteN.to_N x) (ByteN.to_N y).
 
-Definition compare (x y : byte) := 
+Definition compare (x y : byte) :=
   N.compare (ByteN.to_N x) (ByteN.to_N y).

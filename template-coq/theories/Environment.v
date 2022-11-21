@@ -21,13 +21,13 @@ Module Type Term.
   Parameter Inline closedn : nat -> term -> bool.
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
   Parameter Inline subst_instance_constr : UnivSubst term.
-  
+
   Notation lift0 n := (lift n 0).
 End Term.
 
 Module Retroknowledge.
 
-  Record t := mk_retroknowledge { 
+  Record t := mk_retroknowledge {
     retro_int63 : option kername;
     retro_float64 : option kername;
   }.
@@ -60,7 +60,7 @@ Module Environment (T : Term).
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
-  
+
   (** Local (de Bruijn) variable binding *)
 
   Definition vass x A : context_decl :=
@@ -81,7 +81,7 @@ Module Environment (T : Term).
 
   Definition lift_context n k (Γ : context) : context :=
     fold_context_k (fun k' => lift n (k' + k)) Γ.
-  
+
   Lemma lift_context_alt n k Γ :
     lift_context n k Γ =
     mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
@@ -95,16 +95,16 @@ Module Environment (T : Term).
 
   Definition subst_context s k (Γ : context) : context :=
     fold_context_k (fun k' => subst s (k' + k)) Γ.
-  
+
   Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
-  
+
   Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
   Proof. now rewrite /subst_context; len. Qed.
   #[global] Hint Rewrite subst_context_length : len.
 
   Lemma subst_context_nil s n : subst_context s n [] = [].
   Proof. reflexivity. Qed.
-  
+
   Lemma subst_context_alt s k Γ :
     subst_context s k Γ =
     mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
@@ -112,18 +112,18 @@ Module Environment (T : Term).
     unfold subst_context, fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
-  
+
   Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
   Proof.
     now rewrite /subst_context fold_context_k_snoc0.
   Qed.
-  
+
   Definition subst_telescope s k (Γ : context) : context :=
     mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
-  
+
   Global Instance subst_instance_decl : UnivSubst context_decl
     := map_decl ∘ subst_instance.
-  
+
   Global Instance subst_instance_context : UnivSubst context
     := map_context ∘ subst_instance.
 
@@ -136,7 +136,7 @@ Module Environment (T : Term).
     {| decl_name := na;
        decl_body := decl_body x;
        decl_type := decl_type x |}.
-    
+
   Fixpoint context_assumptions (Γ : context) :=
     match Γ with
     | [] => 0
@@ -150,7 +150,7 @@ Module Environment (T : Term).
   Fixpoint is_assumption_context (Γ : context) :=
     match Γ with
     | [] => true
-    | d :: Γ => 
+    | d :: Γ =>
       match d.(decl_body) with
       | Some _ => false
       | None => is_assumption_context Γ
@@ -165,7 +165,7 @@ Module Environment (T : Term).
     | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d]) Γ'
     | [] => Γ
     end.
-    
+
   Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
   Proof.
     induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
@@ -173,7 +173,7 @@ Module Environment (T : Term).
     - rewrite IHtl app_length. simpl. lia.
   Qed.
   #[global] Hint Rewrite smash_context_length : len.
-  
+
   (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
     and substituting all references to Γ in Δ by the expansions of let bindings. *)
 
@@ -182,8 +182,8 @@ Module Environment (T : Term).
   Proof.
     revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
   Qed.
-  
-  Fixpoint extended_subst (Γ : context) (n : nat) 
+
+  Fixpoint extended_subst (Γ : context) (n : nat)
   (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
   match Γ with
   | nil => nil
@@ -208,13 +208,13 @@ Module Environment (T : Term).
     now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
   Qed.
   #[global] Hint Rewrite extended_subst_length : len.
-  
-  Definition expand_lets_k Γ k t := 
+
+  Definition expand_lets_k Γ k t :=
     (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
 
   Definition expand_lets Γ t := expand_lets_k Γ 0 t.
 
-  Definition expand_lets_k_ctx Γ k Δ := 
+  Definition expand_lets_k_ctx Γ k Δ :=
     (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
 
   Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
@@ -229,23 +229,23 @@ Module Environment (T : Term).
 
   Definition fix_context (m : mfixpoint term) : context :=
     List.rev (mapi (fun i d => vass d.(dname) (lift i 0 d.(dtype))) m).
-  
+
   (** *** Environments *)
 
   Record constructor_body := {
     cstr_name : ident;
-    (* The arguments and indices are typeable under the context of 
+    (* The arguments and indices are typeable under the context of
       arities of the mutual inductive + parameters *)
     cstr_args : context;
     cstr_indices : list term;
-    cstr_type : term; 
+    cstr_type : term;
     (* Closed type: on well-formed constructors: forall params, cstr_args, I params cstr_indices *)
     cstr_arity : nat; (* arity, w/o lets, w/o parameters *)
   }.
 
   Record projection_body := {
     proj_name : ident;
-    (* The arguments and indices are typeable under the context of 
+    (* The arguments and indices are typeable under the context of
       arities of the mutual inductive + parameters *)
     proj_relevance : relevance;
     proj_type : term; (* Type under context of params and inductive object *)
@@ -255,14 +255,14 @@ Module Environment (T : Term).
     {| cstr_name := c.(cstr_name);
        cstr_args := fold_context_k (fun x => f (x + npars + arities)) c.(cstr_args);
        cstr_indices := map (f (npars + arities + #|c.(cstr_args)|)) c.(cstr_indices);
-        (* Note only after positivity checking we can ensure that the indices do not mention the 
+        (* Note only after positivity checking we can ensure that the indices do not mention the
            inductive type.. beware of lets! *)
        cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 
   (* Here npars should be the [context_assumptions] of the parameters context. *)
   Definition map_projection_body npars f c :=
-    {| proj_name := c.(proj_name); 
+    {| proj_name := c.(proj_name);
        proj_relevance := c.(proj_relevance);
        proj_type := f (S npars) c.(proj_type)
     |}.
@@ -275,12 +275,12 @@ Module Environment (T : Term).
     ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
     ind_ctors : list constructor_body;
-    ind_projs : list projection_body; (* names and types of projections, if any. *)                                     
+    ind_projs : list projection_body; (* names and types of projections, if any. *)
     ind_relevance : relevance (* relevance of the inductive definition *) }.
 
   Definition map_one_inductive_body npars arities f m :=
     match m with
-    | Build_one_inductive_body ind_name ind_indices ind_sort 
+    | Build_one_inductive_body ind_name ind_indices ind_sort
         ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
       Build_one_inductive_body
          ind_name (fold_context_k (fun x => f (npars + x)) ind_indices) ind_sort
@@ -332,21 +332,21 @@ Module Environment (T : Term).
 
   Coercion universes : global_env >-> ContextSet.t.
 
-  Definition empty_global_env := 
+  Definition empty_global_env :=
     {| universes := ContextSet.empty;
        declarations := [];
        retroknowledge := Retroknowledge.empty |}.
 
-  Definition add_global_decl Σ decl := 
+  Definition add_global_decl Σ decl :=
     {| universes := Σ.(universes);
        declarations := decl :: Σ.(declarations);
        retroknowledge := Σ.(retroknowledge) |}.
-      
+
   Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations);
     retroknowledge := Σ.(retroknowledge) |}.
   Proof. now destruct Σ. Qed.
-  
-  Definition set_declarations Σ decls := 
+
+  Definition set_declarations Σ decls :=
     {| universes := Σ.(universes);
        declarations := decls;
        retroknowledge := Σ.(retroknowledge) |}.
@@ -363,14 +363,14 @@ Module Environment (T : Term).
 
   Definition extends (Σ Σ' : global_env) :=
     [× Σ.(universes) ⊂_cs Σ'.(universes),
-      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) & 
+      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
       Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
-  
+
   Definition extends_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) = Σ'.(universes),
        ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
        Σ.(retroknowledge) = Σ'.(retroknowledge)].
-  
+
   Existing Class extends.
   Existing Class extends_decls.
 
@@ -382,25 +382,25 @@ Module Environment (T : Term).
 
   #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
   Proof. red. intros x. split => //; try exists [] => //. Qed.
-  
+
   Lemma extends_refl : CRelationClasses.Reflexive extends.
   Proof. red. intros x. split; [apply incl_cs_refl | now exists [] | apply Retroknowledge.extends_refl]. Qed.
 
   (* easy prefers this to the local hypotheses, which is annoying
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
   Proof. apply extends_refl. Qed.
-  *) 
+  *)
 
   Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
     match p with
     | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
     | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
     end.
-  
+
   Definition primitive_invariants (cdecl : constant_body) :=
     ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
              cdecl.(cst_universes) = Monomorphic_ctx].
-    
+
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
@@ -451,7 +451,7 @@ Module Environment (T : Term).
   Lemma it_mkProd_or_LetIn_app l l' t :
     it_mkProd_or_LetIn (l ++ l') t = it_mkProd_or_LetIn l' (it_mkProd_or_LetIn l t).
   Proof. induction l in l', t |- *; simpl; auto. Qed.
-  
+
   Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
     match Γ0 with
     | [] => l
@@ -463,7 +463,7 @@ Module Environment (T : Term).
   Definition to_extended_list Γ := to_extended_list_k Γ 0.
 
   Lemma reln_fold f ctx n acc :
-    reln acc n (fold_context_k f ctx) = 
+    reln acc n (fold_context_k f ctx) =
     reln acc n ctx.
   Proof.
     induction ctx as [|[na [b|] ty] ctx] in n, acc |- *; simpl; auto;
@@ -545,7 +545,7 @@ Module Environment (T : Term).
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
   #[global] Hint Rewrite arities_context_length : len.
-  
+
   Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
   Proof.
     unfold app_context. rewrite app_nil_r. reflexivity.
@@ -668,43 +668,43 @@ Module Environment (T : Term).
     induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
     lia.
   Qed.
-  
+
   Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
   Proof.
     induction Γ as [|[? [?|] ?] ?]; simpl; auto.
   Qed.
-  
-  Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 
+
+  Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) =
     context_assumptions Γ + context_assumptions Δ.
   Proof.
     induction Γ as [|[? [] ?] ?]; simpl; auto.
   Qed.
-  
-  Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
+
+  Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) =
     context_assumptions Γ.
   Proof.
     rewrite /mapi; generalize 0.
     induction Γ; simpl; intros; eauto.
     destruct a as [? [b|] ?]; simpl; auto.
   Qed.
-  
+
   #[global] Hint Rewrite context_assumptions_map context_assumptions_mapi context_assumptions_app : len.
 
-  Lemma context_assumptions_subst_instance u Γ : 
-    context_assumptions (subst_instance u Γ) = 
-    context_assumptions Γ. 
+  Lemma context_assumptions_subst_instance u Γ :
+    context_assumptions (subst_instance u Γ) =
+    context_assumptions Γ.
   Proof. apply context_assumptions_map. Qed.
 
-  Lemma context_assumptions_subst_context s k Γ : 
-    context_assumptions (subst_context s k Γ) = 
-    context_assumptions Γ. 
+  Lemma context_assumptions_subst_context s k Γ :
+    context_assumptions (subst_context s k Γ) =
+    context_assumptions Γ.
   Proof. apply context_assumptions_fold. Qed.
 
-  Lemma context_assumptions_lift_context n k Γ : 
-    context_assumptions (lift_context n k Γ) = 
-    context_assumptions Γ. 
+  Lemma context_assumptions_lift_context n k Γ :
+    context_assumptions (lift_context n k Γ) =
+    context_assumptions Γ.
   Proof. apply context_assumptions_fold. Qed.
-  
+
   #[global] Hint Rewrite context_assumptions_subst_instance
      context_assumptions_subst_context context_assumptions_lift_context : len.
 
@@ -726,15 +726,15 @@ Module Environment (T : Term).
     eq_binder_annot na na' ->
     P t t' ->
     All_decls_alpha P (vass na t) (vass na' t')
-  
+
   | on_vdef_alpha na na' b t b' t' :
     eq_binder_annot na na' ->
     P b b' ->
     P t t' ->
     All_decls_alpha P (vdef na b t) (vdef na' b' t').
   Derive Signature NoConfusion for All_decls_alpha.
-  
-  Lemma All_decls_impl (P Q : term -> term -> Type) d d' : 
+
+  Lemma All_decls_impl (P Q : term -> term -> Type) d d' :
     All_decls P d d' ->
     (forall t t', P t t' -> Q t t') ->
     All_decls Q d d'.
@@ -742,7 +742,7 @@ Module Environment (T : Term).
     intros ond H; destruct ond; constructor; auto.
   Qed.
 
-  Lemma All_decls_alpha_impl (P Q : term -> term -> Type) d d' : 
+  Lemma All_decls_alpha_impl (P Q : term -> term -> Type) d d' :
     All_decls_alpha P d d' ->
     (forall t t', P t t' -> Q t t') ->
     All_decls_alpha Q d d'.
@@ -750,14 +750,14 @@ Module Environment (T : Term).
     intros ond H; destruct ond; constructor; auto.
   Qed.
 
-  Lemma All_decls_to_alpha (P : term -> term -> Type) d d' : 
+  Lemma All_decls_to_alpha (P : term -> term -> Type) d d' :
     All_decls P d d' ->
     All_decls_alpha P d d'.
   Proof.
     intros []; constructor; auto; reflexivity.
   Qed.
 
-  Definition All2_fold_over (P : context -> context -> context_decl -> context_decl -> Type) Γ Γ' := 
+  Definition All2_fold_over (P : context -> context -> context_decl -> context_decl -> Type) Γ Γ' :=
     All2_fold (All_over P Γ Γ').
 
   Notation on_decls P := (fun Γ Γ' => All_decls (P Γ Γ')).

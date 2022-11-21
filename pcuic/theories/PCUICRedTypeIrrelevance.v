@@ -1,12 +1,12 @@
-From Coq Require Import ssreflect. 
+From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst 
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst
   PCUICReduction PCUICContextReduction.
 
 From Coq Require Import CRelationClasses.
 
-(** Types and names of variables are irrelevant during reduction. 
+(** Types and names of variables are irrelevant during reduction.
     More precisely, we only need to preserve bodies of let declarations
     in contexts for reductions to be preserved.
 *)
@@ -26,7 +26,7 @@ Lemma All2_fold_nth_ass {P n Γ Γ' d} :
           P Γs Γs' d d')%type }.
 Proof.
   induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
-  - depelim Hrel. intro ass. 
+  - depelim Hrel. intro ass.
     simpl. eexists; intuition eauto.
     now depelim ass.
   - intros ass. depelim Hrel.
@@ -46,7 +46,7 @@ Section ContextChangeTypesReduction.
   Context (Σ : global_env).
 
 Definition pres_let_bodies (c : context_decl) (c' : context_decl) : Type :=
-  match c.(decl_body) with 
+  match c.(decl_body) with
   | None => unit
   | Some b => decl_body c' = Some b
   end.
@@ -83,7 +83,7 @@ Local Hint Extern 4 (pres_let_bodies _ _) => exact tt || exact eq_refl : core.
 Local Hint Extern 4 (All2_fold (fun _ _ => _) (_ ,, _) (_ ,, _)) => constructor : core.
 Hint Constructors unit : core.
 
-Lemma pres_let_bodies_ctx_refl : 
+Lemma pres_let_bodies_ctx_refl :
   Reflexive (All2_fold (fun _ _ : context => pres_let_bodies)).
 Proof using Type.
   intros x.
@@ -91,7 +91,7 @@ Proof using Type.
 Qed.
 
 Lemma context_pres_let_bodies_red1 Γ Γ' s t :
-  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' ->
   red1 Σ Γ s t -> red1 Σ Γ' s t.
 Proof using Type.
   intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
@@ -120,9 +120,9 @@ Proof using Type.
     eapply All2_fold_app; eauto.
     eapply pres_let_bodies_ctx_refl.
 Qed.
-    
+
 Lemma context_pres_let_bodies_red Γ Γ' s t :
-  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' ->
   red Σ Γ s t -> red Σ Γ' s t.
 Proof using Type.
   intros pres.

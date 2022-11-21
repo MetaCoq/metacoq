@@ -12,15 +12,15 @@ Module string_of_term_tree.
   Infix "^" := append.
 
   Definition string_of_predicate {term} (f : term -> t) (p : predicate term) :=
-    "(" ^ "(" ^ concat "," (map f (pparams p)) ^ ")" 
+    "(" ^ "(" ^ concat "," (map f (pparams p)) ^ ")"
     ^ "," ^ string_of_universe_instance (puinst p)
     ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
     ^ "," ^ f (preturn p) ^ ")".
-  
+
   Definition string_of_branch (f : term -> t) (b : branch term) :=
     "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
     ^ f (bbody b) ^ ")".
-    
+
   Definition string_of_def {A} (f : A -> t) (def : def A) :=
     "(" ^ string_of_name (binder_name (dname def))
       ^ "," ^ string_of_relevance (binder_relevance (dname def))
@@ -70,7 +70,7 @@ Module string_of_term_tree.
 End string_of_term_tree.
 
 Definition string_of_term := Tree.to_string ∘ string_of_term_tree.string_of_term.
-  
+
 Definition decompose_app (t : term) :=
   match t with
   | tApp f l => (f, l)
@@ -241,7 +241,7 @@ Fixpoint strip_casts t :=
   | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
   | tCase ind p c brs =>
     let p' := map_predicate id strip_casts strip_casts p in
-    let brs' := List.map (map_branch strip_casts) brs in    
+    let brs' := List.map (map_branch strip_casts) brs in
     tCase ind p' (strip_casts c) brs'
   | tProj p c => tProj p (strip_casts c)
   | tFix mfix idx =>
@@ -253,7 +253,7 @@ Fixpoint strip_casts t :=
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
   | tInt _ | tFloat _ => t
   end.
-  
+
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   match t with
   | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
@@ -332,7 +332,7 @@ Definition lookup_minductive Σ mind :=
 
 Definition lookup_inductive Σ ind :=
   match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
+  | Some mdecl =>
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
     | Some idecl => Some (mdecl, idecl)
     | None => None
@@ -346,7 +346,7 @@ Definition destInd (t : term) :=
   | _ => None
   end.
 
-Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
+Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname :=
   map decl_name c.
 
 Import MCMonadNotation.
@@ -356,19 +356,19 @@ Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (
   '(pctx, preturn) <- decompose_lam_n_assum [] (S #|oib.(ind_indices)|) p ;;
   '(puinst, pparams, pctx) <-
     match pctx with
-    | {| decl_name := na; decl_type := tind; decl_body := Datatypes.None |} :: indices => 
+    | {| decl_name := na; decl_type := tind; decl_body := Datatypes.None |} :: indices =>
       let (hd, args) := decompose_app tind in
       match destInd hd with
       | Datatypes.Some (ind, u) => ret (u, firstn mib.(ind_npars) args, forget_types indices)
       | Datatypes.None => raise tt
       end
-    | _ => raise tt 
+    | _ => raise tt
     end ;;
-  let p' := 
+  let p' :=
     {| puinst := puinst; pparams := pparams; pcontext := pctx; preturn := preturn |}
   in
   brs' <-
-    monad_map2 (E:=unit) (ME:=option_monad_exc) (fun cdecl br => 
+    monad_map2 (E:=unit) (ME:=option_monad_exc) (fun cdecl br =>
       '(bctx, bbody) <- decompose_lam_n_assum [] #|cdecl.(cstr_args)| br.2 ;;
       ret {| bcontext := forget_types bctx; bbody := bbody |})
       tt oib.(ind_ctors) brs ;;
@@ -385,22 +385,22 @@ Definition default_relevance (u : Universe.t) : relevance :=
 
 (** Convenience functions for building constructors and inductive declarations *)
 
-(** The [indrel] argument represents the de Bruijn associated to the inductive in the mutual block. 
-    index 0 represents the LAST inductive in the block. 
+(** The [indrel] argument represents the de Bruijn associated to the inductive in the mutual block.
+    index 0 represents the LAST inductive in the block.
     The [params] is the context of parameters of the whole inductive block.
     The [args] context represents the argument types of the constructor (the last argument
-    of the constructor is the first item in this list, as contexts are represented as snoc lists). *)  
+    of the constructor is the first item in this list, as contexts are represented as snoc lists). *)
 Definition make_constructor_body (id : ident) (indrel : nat)
   (params : context) (args : context) (index_terms : list term)
   : constructor_body :=
   {| cstr_name := id;
      cstr_args := args;
      cstr_indices := index_terms;
-     cstr_type := it_mkProd_or_LetIn (params ,,, args) 
+     cstr_type := it_mkProd_or_LetIn (params ,,, args)
       (mkApps (tRel (#|args| + #|params| + indrel))
         (to_extended_list_k params #|args| ++ index_terms));
      cstr_arity := context_assumptions args |}.
- 
+
 (** Makes a simple inductive body with no projections, and "standard" universe and elimination rules
   derived from the universe (i.e. does not handle inductives with singleton elimination, or impredicate set
   eliminations). *)

@@ -35,7 +35,7 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   (* | tCoFix : mfixpoint term -> nat -> term *)
   | _ => t
   end.
-    
+
 
 Fixpoint tsl_rec2 (fuel : nat) (Σ : global_env) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
@@ -146,7 +146,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
       let Σ := fst (fst ΣE) in
       match gc_of_uctx (global_ext_uctx (fst ΣE)) with
       | None => raise (TypingError (UnsatisfiableConstraints (snd (global_ext_uctx (fst ΣE)))))
-      | Some ctrs => 
+      | Some ctrs =>
         let G := make_graph ctrs in
         let E := snd ΣE in
         let tsl_ty' := tsl_ty_param fuel Σ G E [] in
@@ -157,7 +157,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
                  bodies <- _ ;;
                  ret (_, [{| ind_npars := mind.(ind_npars);
                              ind_bodies := bodies ;
-                 ind_universes := match mind.(ind_universes) with 
+                 ind_universes := match mind.(ind_universes) with
                   | Monomorphic_ctx => Monomorphic_ctx
                   | Polymorphic_ctx ctx => Polymorphic_ctx ctx
                  end;
@@ -193,7 +193,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
               let c1 := tsl_rec1 0 (tConstruct (mkInd kn i) k []) in
               match reduce_opt RedFlags.default (fst (fst ΣE)) [] (* for debugging but we could use try_reduce *)
                                fuel (mkApp t2 c1) with
-              | Some t' => ret 
+              | Some t' => ret
                 {| cstr_name := tsl_ident c.(cstr_name);
                    cstr_type := t';
                    cstr_args := c.(cstr_args); (* Not used by denotation yet *)
@@ -208,7 +208,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
       refine (IndRef (mkInd kn i), pair ind.(ind_type) a2 (tInd (mkInd kn i) []) (tInd (mkInd kn' i) [])).
     + (* ctors *)
       refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
-      exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []). 
+      exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []).
   - exact mind.(ind_finite).
   - (* FIXME don't know what to do *) refine (mind.(ind_params)).
 Defined.
@@ -497,7 +497,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (*     evenᵗ (S N.1; Sᵗ N) (even_S N.1 P.1). *) *)
 
 
-  
+
 (* (* Class TranslationInductive := *) *)
 (* (*   { tsl_ind : mutual_inductive_entry -> global_context * tsl_table }. *) *)
 

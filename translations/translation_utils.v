@@ -88,7 +88,7 @@ Definition tsl_name0 tsl_ident n :=
 
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 Definition nNamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
-  
+
 Definition tsl_name f := map_binder_annot (tsl_name0 f).
 
 
@@ -142,7 +142,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       tmMsg (string_of_kername kn ^ " has been translated.") ;;
       ret (Σ', E')
     end
-    
+
   | ConstRef kn =>
     e <- tmQuoteConstant kn true ;;
     match e.(cst_body) with
@@ -186,7 +186,7 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
   tA  <- tmQuote A ;;
   match tsl_ty with
   | None => tmFail "No implementation of tsl_ty provided for this translation."
-  | Some tsl_ty => 
+  | Some tsl_ty =>
   tA' <- tmEval lazy (tsl_ty ΣE tA) ;;
   tmDebug tA' ;;
   match tA' with
@@ -218,7 +218,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
   mp <- tmCurrentModPath tt ;;
   match tsl_ty with
   | None => tmFail "No implementation of tsl_ty provided for this translation."
-  | Some tsl_ty => 
+  | Some tsl_ty =>
   match gr with
   | VarRef _ => tmFail "Section variable not supported for the moment"
   | ConstRef kn =>
@@ -252,7 +252,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
     match List.nth_error (ind_bodies d) n with
       | None => fail_nf ("The declaration of "
                           ^ id ^ " has not enough bodies. This is a bug.")
-      | Some {| ind_type := A |} => 
+      | Some {| ind_type := A |} =>
       tA' <- tmEval lazy (tsl_ty ΣE A) ;;
       match tA' with
       | Error e =>
@@ -276,7 +276,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
     match List.nth_error (ind_bodies d) n with
     | None => fail_nf ("The declaration of "
                         ^ id ^ " has not enough bodies. This is a bug.")
-    | Some {| ind_ctors := ctors |} => 
+    | Some {| ind_ctors := ctors |} =>
       tmDebug "plop2" ;;
       match List.nth_error ctors k with
       | None => fail_nf ("The body of "
@@ -307,7 +307,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
   end
   end.
 
-Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) := 
+Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
   p <- tmQuoteRec t ;;
   tmPrint "~~~~~~~~~~~~~~~~~~" ;;
   monad_fold_right (fun ΣE '(kn, decl) =>
@@ -316,11 +316,11 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
     | ConstantDecl decl =>
       match lookup_tsl_table (snd ΣE) (ConstRef kn) with
       | Some _ => print_nf (string_of_kername kn ^ " was already translated") ;; ret ΣE
-      | None => 
+      | None =>
         match decl with
         | {| cst_body := None |} =>
           fail_nf (string_of_kername kn ^ " is an axiom. Use Implement Existing.")
-                    
+
         | {| cst_type := A; cst_body := Some t; cst_universes := univs |} =>
           tmDebug "go";;
           t' <- tmEval lazy (tsl_tm ΣE t) ;;
@@ -349,16 +349,16 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
         end
       end
 
-    | InductiveDecl d => 
+    | InductiveDecl d =>
       match lookup_tsl_table (snd ΣE) (IndRef (mkInd kn 0)) with
       | Some _ => print_nf (string_of_kername kn ^ " was already translated") ;; ret ΣE
-      | None => 
+      | None =>
         tmDebug "go'";;
         mp <- tmCurrentModPath tt ;;
         d' <- tmEval lazy (tsl_ind ΣE mp kn d) ;;
         tmDebug "done'";;
          match d' with
-         | Error e => 
+         | Error e =>
            print_nf e ;;
            fail_nf ("Translation error during the translation of the inductive "
                       ^ string_of_kername kn)

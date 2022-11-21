@@ -25,7 +25,7 @@ Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
 
 Definition map_pair {A B C D} (f : A -> B) (g : C -> D) (p : A × C) : B × D :=
   (f p.1, g p.2).
-  
+
 Lemma on_snd_on_snd {A B C D} (f : C -> D) (g : B -> C) (d : A * B) :
   on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
 Proof.
@@ -51,8 +51,8 @@ Qed.
 Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
   (fst (fst p), f (snd (fst p)), snd p).
 
-(** It would be tempting to import ssrbool here, however 
-  https://github.com/coq/coq/issues/13486 prevents this. *)  
+(** It would be tempting to import ssrbool here, however
+  https://github.com/coq/coq/issues/13486 prevents this. *)
 Lemma andb_and b b' : b && b' <-> b /\ b'.
 Proof. apply andb_true_iff. Qed.
 
@@ -76,7 +76,7 @@ Definition swap {A B : Type} (x : A * B) : B * A :=
 
 Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
   (f, f' f).
-  
+
 (** n-ary cartesian products in Type, for shorter and more readable intro-patterns *)
 
 Reserved Notation "[ × P1 & P2 ]" (at level 0).
@@ -123,4 +123,4 @@ Notation "[ × P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 & P10 ]" := (and10 P1 
   CRelationClasses.Reflexive P -> CRelationClasses.Reflexive Q -> CRelationClasses.Reflexive (fun x y => prod (P x y) (Q x y)).
 Proof.
   econstructor; reflexivity.
-Defined.  
+Defined.

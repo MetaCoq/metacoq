@@ -154,7 +154,7 @@ Definition contr_retract_α : contr_retractα.
   - intros [g p] x. refine (_ # (g x).2).
     exact (ap10 p x).
   - intro f; lazy. exact 1. (* uses eta! *)
-Defined. 
+Defined.
 
 (* MetaCoq Run (TC <- TranslateRec eqTC3 contr_retractα ;; *)
 (*                      TC <- ImplementExisting TC "contr_retract_α" ;; *)

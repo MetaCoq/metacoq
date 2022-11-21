@@ -10,7 +10,7 @@ Definition uint63_from_model (i : uint63_model) : Uint63.int :=
 
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
-    
+
 Definition trans_prim (t : prim_val) : Ast.term :=
   match t.π2 with
   | primIntModel i => Ast.tInt i
@@ -18,7 +18,7 @@ Definition trans_prim (t : prim_val) : Ast.term :=
   end.
 
 Definition trans_predicate (t : PCUICAst.predicate Ast.term) : predicate Ast.term :=
-  {| pparams := t.(PCUICAst.pparams); 
+  {| pparams := t.(PCUICAst.pparams);
      puinst := t.(PCUICAst.puinst);
      pcontext := forget_types t.(PCUICAst.pcontext);
      preturn := t.(PCUICAst.preturn) |}.
@@ -26,7 +26,7 @@ Definition trans_predicate (t : PCUICAst.predicate Ast.term) : predicate Ast.ter
 Definition trans_branch (t : PCUICAst.branch Ast.term) : branch Ast.term :=
   {| bcontext := forget_types t.(PCUICAst.bcontext);
      bbody := t.(PCUICAst.bbody) |}.
-    
+
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
   | PCUICAst.tRel n => tRel n
@@ -59,17 +59,17 @@ Notation trans_decl := (map_decl trans).
 Definition trans_local Γ := List.map trans_decl Γ.
 
 Definition trans_constructor_body (d : PCUICEnvironment.constructor_body) :=
-  {| cstr_name := d.(PCUICEnvironment.cstr_name); 
+  {| cstr_name := d.(PCUICEnvironment.cstr_name);
      cstr_args := trans_local d.(PCUICEnvironment.cstr_args);
-     cstr_indices := map trans d.(PCUICEnvironment.cstr_indices); 
+     cstr_indices := map trans d.(PCUICEnvironment.cstr_indices);
      cstr_type := trans d.(PCUICEnvironment.cstr_type);
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
 
 Definition trans_projection_body (d : PCUICEnvironment.projection_body) :=
- {| proj_name := d.(PCUICEnvironment.proj_name); 
+ {| proj_name := d.(PCUICEnvironment.proj_name);
     proj_type := trans d.(PCUICEnvironment.proj_type);
     proj_relevance := d.(PCUICEnvironment.proj_relevance) |}.
-          
+
 Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
   {| ind_name := d.(PCUICEnvironment.ind_name);
      ind_relevance := d.(PCUICEnvironment.ind_relevance);
@@ -105,9 +105,9 @@ Definition trans_global_decls (d : PCUICEnvironment.global_declarations) : globa
   List.map (on_snd trans_global_decl) d.
 
 Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
-  {| universes := d.(PCUICEnvironment.universes); 
+  {| universes := d.(PCUICEnvironment.universes);
      declarations := trans_global_decls d.(PCUICEnvironment.declarations);
      retroknowledge := d.(PCUICEnvironment.retroknowledge) |}.
-  
+
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_env (fst Σ), snd Σ).

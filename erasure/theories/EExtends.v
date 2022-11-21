@@ -43,7 +43,7 @@ Section EEnvFlags.
     intros Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
     split; eauto. eapply weakening_env_declared_inductive; eauto.
   Qed.
-  
+
   Lemma extends_wf_glob {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
   Proof using Type.
     intros [? ->].
@@ -51,10 +51,10 @@ Section EEnvFlags.
     intros wf; depelim wf. eauto.
   Qed.
 
-  Definition global_subset (Σ Σ' : global_declarations) := 
+  Definition global_subset (Σ Σ' : global_declarations) :=
     forall kn d, lookup_env Σ kn = Some d -> lookup_env Σ' kn = Some d.
 
-  Lemma lookup_env_In d Σ : 
+  Lemma lookup_env_In d Σ :
     wf_glob Σ ->
     lookup_env Σ d.1 = Some d.2 <-> In d Σ.
   Proof using Type.
@@ -73,7 +73,7 @@ Section EEnvFlags.
       exact IHwf.
   Qed.
 
-  Lemma global_subset_In Σ Σ' : 
+  Lemma global_subset_In Σ Σ' :
     wf_glob Σ -> wf_glob Σ' ->
     global_subset Σ Σ' <-> forall d, In d Σ -> In d Σ'.
   Proof using Type.
@@ -87,7 +87,7 @@ Section EEnvFlags.
       eapply (lookup_env_In (kn, d)) => //. eauto.
   Qed.
 
-  Lemma global_subset_cons d Σ Σ' : 
+  Lemma global_subset_cons d Σ Σ' :
     global_subset Σ Σ' ->
     global_subset (d :: Σ) (d :: Σ').
   Proof using Type.
@@ -96,7 +96,7 @@ Section EEnvFlags.
     eapply sub.
   Qed.
 
-  Lemma fresh_global_subset Σ Σ' kn : 
+  Lemma fresh_global_subset Σ Σ' kn :
     wf_glob Σ -> wf_glob Σ' ->
     global_subset Σ Σ' ->
     fresh_global kn Σ' -> fresh_global kn Σ.
@@ -111,7 +111,7 @@ Section EEnvFlags.
     destruct fr. cbn in H. congruence.
   Qed.
 
-  Lemma global_subset_cons_right d Σ Σ' : 
+  Lemma global_subset_cons_right d Σ Σ' :
     wf_glob Σ -> wf_glob (d :: Σ') ->
     global_subset Σ Σ' ->
     global_subset Σ (d :: Σ').

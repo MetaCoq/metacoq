@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus PCUICInstDef PCUICInstConv PCUICContextSubst
      PCUICRenameDef PCUICRenameConv PCUICRenameTyp
-     PCUICSubstitution PCUICOnFreeVars PCUICClosed PCUICClosedConv PCUICClosedTyp 
+     PCUICSubstitution PCUICOnFreeVars PCUICClosed PCUICClosedConv PCUICClosedTyp
      PCUICCumulativity PCUICGeneration PCUICReduction PCUICWellScopedCumulativity
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence
      PCUICContextConversion PCUICUnivSubstitutionConv
@@ -1035,7 +1035,7 @@ Proof.
       (smash_context [] (cstr_args c))) eqn:eqargs.
     apply (f_equal (@length _)) in eqargs.
     autorewrite with len in eqargs.
-    rewrite skipn_length in eqargs. 
+    rewrite skipn_length in eqargs.
     autorewrite with len in eqargs. simpl in eqargs. lia.
     rewrite subst_context_snoc lift_context_snoc subst_context_snoc.
     simpl.
@@ -1255,7 +1255,7 @@ Proof.
     constructor. reflexivity.
     rewrite -subst_instance_it_mkProd_or_LetIn.
     pose proof (onArity oib). rewrite -(oib.(ind_arity_eq)).
-    apply infer_typing_sort_impl with id X1. 
+    apply infer_typing_sort_impl with id X1.
     eapply (weaken_ctx (Γ:=[])); auto. }
   intros wf.
   generalize (weakening_wf_local (Γ'':=[_]) wf X1).
@@ -1991,7 +1991,7 @@ Proof.
     epose proof (@closed_red_red_subst _ _ _ Δ [vdef na b ty]
        (skipn (context_assumptions Γ - n) (smash_context [] Γ)) _ _ _).
     rewrite subst_empty lift0_id lift0_context.
-    rewrite !skipn_length in X; autorewrite with len. 
+    rewrite !skipn_length in X; autorewrite with len.
     autorewrite with len in X. simpl in X.
     assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
     rewrite H1 in X. rewrite skipn_subst_context.

@@ -5,12 +5,12 @@
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network,
  * see repository root for details.
  *)
- 
+
 Require Coq.Strings.String ssrbool.
 Require Import ssreflect.
 Require Import Coq.NArith.NArith.
 Require Import Coq.micromega.Lia.
-From Equations Require Import Equations. 
+From Equations Require Import Equations.
 Set Primitive Projections.
 Set Default Proof Using "Type".
 From MetaCoq.Template Require Import MCCompare ReflectEq.
@@ -58,33 +58,33 @@ Module String.
     | EmptyString => y
     | String x xs => String x (append xs y)
     end.
-  
+
   Notation "x ++ y" := (append x y) : bs_scope.
-  
+
   Fixpoint to_string (b : t) : String.string :=
     match b with
     | EmptyString => Strings.String.EmptyString
     | String x xs => Strings.String.String (Ascii.ascii_of_byte x) (to_string xs)
     end.
-  
+
   Fixpoint of_string (b : String.string) : t :=
     match b with
     | Strings.String.EmptyString => EmptyString
     | Strings.String.String x xs => String (Ascii.byte_of_ascii x) (of_string xs)
     end%bs.
-  
+
   Fixpoint rev (acc s : t) : t :=
     match s with
     | EmptyString => acc
     | String s ss => rev (String s acc) ss
     end.
-    
+
   (** *** Substrings *)
 
   (** [substring n m s] returns the substring of [s] that starts
       at position [n] and of length [m];
       if this does not make sense it returns [""] *)
-  
+
   Fixpoint substring (n m : nat) (s : t) : t :=
     match n, m, s with
     | O, O, _ => EmptyString
@@ -93,7 +93,7 @@ Module String.
     | S n', _, EmptyString => s
     | S n', _, String c s' => substring n' m s'
     end.
-  
+
   Fixpoint prefix (s1 s2 : t) {struct s1} : bool :=
     match s1 with
     | EmptyString => true
@@ -105,7 +105,7 @@ Module String.
         else false
       end
     end%bs.
-  
+
   Fixpoint index (n : nat) (s1 s2 : t) {struct s2} : option nat :=
     match s2 with
     | EmptyString =>
@@ -131,13 +131,13 @@ Module String.
                   end
         end
     end%bs.
-  
+
   Fixpoint length (l : t) : nat :=
     match l with
     | EmptyString => 0
     | String _ l => S (length l)
     end.
-  
+
   Local Fixpoint contains (start: nat) (keys: list t) (fullname: t) :bool :=
     match keys with
     | List.cons kh ktl =>
@@ -147,7 +147,7 @@ Module String.
       end
     | List.nil => true
     end.
-  
+
   Fixpoint eqb (a b : t) : bool :=
     match a , b with
     | EmptyString , EmptyString => true
@@ -155,7 +155,7 @@ Module String.
       if ByteCompare.eqb x y then eqb xs ys else false
     | _ , _ => false
     end.
-    
+
   Fixpoint compare (xs ys : t) : comparison :=
     match xs , ys with
     | EmptyString , EmptyString => Eq
@@ -192,7 +192,7 @@ Bind Scope bs_scope with bs.
 String Notation String.t String.parse String.print : bs_scope.
 
 Notation "x ++ y" := (String.append x y) : bs_scope.
-  
+
 Import String.
 
 (** comparison *)
@@ -271,7 +271,7 @@ Module StringOT <: UsualOrderedType.
       + constructor; auto.
       + red in H. rewrite H. constructor; auto.
   Qed.
-  
+
   Theorem eq_refl : forall x : t, eq x x.
   Proof.
     reflexivity.
@@ -333,7 +333,7 @@ Module StringOT <: UsualOrderedType.
     - apply lt_not_eq in H; contradiction.
     - apply lt_not_eq in H. symmetry in H0. contradiction.
   Qed.
-  
+
   Lemma compare_refl x : compare x x = Eq.
   Proof.
     now apply compare_eq.
@@ -353,12 +353,12 @@ Module StringOT <: UsualOrderedType.
         eapply lt_not_eq in H. elim H; reflexivity.
       * reflexivity.
   Qed.
-  
+
   #[local] Instance lt_transitive : Transitive lt.
   Proof.
     red. eapply lt_trans.
   Qed.
-  
+
   Lemma compare_sym (x y : string) : compare x y = CompOpp (compare y x).
   Proof.
     destruct (compare_spec x y).
@@ -369,7 +369,7 @@ Module StringOT <: UsualOrderedType.
       red in H.
       now apply compare_lt.
   Qed.
-  
+
   Lemma compare_trans (x y z : string) c : compare x y = c -> compare y z = c -> compare x z = c.
   Proof.
     destruct (compare_spec x y); subst; intros <-;
@@ -378,7 +378,7 @@ Module StringOT <: UsualOrderedType.
     eapply transitivity in H. 2:eassumption.
     now apply compare_lt in H.
   Qed.
-  
+
   Definition lt_irreflexive : Irreflexive lt.
   Proof.
     intro x. red; unfold lt.
@@ -396,7 +396,7 @@ Module StringOT <: UsualOrderedType.
   Proof.
     unfold eq. intros x y e z t e'. subst; reflexivity.
   Qed.
- 
+
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
 End StringOT.
@@ -405,11 +405,11 @@ Notation string_compare := StringOT.compare.
 Notation string_compare_eq := StringOT.compare_eq.
 Notation CompareSpec_string := StringOT.compare_spec.
 
-(** To perform efficient pretty printing, one needs to use a tree structure 
+(** To perform efficient pretty printing, one needs to use a tree structure
   to avoid quadratic overhead of appending strings. *)
 Module Tree.
   Local Open Scope bs_scope.
-  Inductive t := 
+  Inductive t :=
   | string : String.t -> t
   | append : t -> t -> t.
 
@@ -422,21 +422,21 @@ Module Tree.
     | string s => cons s acc
     | append s s' => to_rev_list_aux s' (to_rev_list_aux s acc)
     end.
-  
-  Fixpoint to_string_acc acc l := 
+
+  Fixpoint to_string_acc acc l :=
     match l with
     | nil => acc
     | cons s xs => to_string_acc (String.append s acc) xs
     end.
 
-  Definition to_string t := 
+  Definition to_string t :=
     let l := to_rev_list_aux t nil in
     to_string_acc "" l.
-  
+
   (* Definition test := "a" ++ "b" ++ "v" ++ "c".
   Eval compute in to_string test. *)
 
-  (* Fixpoint to_string_acc t acc := 
+  (* Fixpoint to_string_acc t acc :=
     match t with
     | string s => String.append s acc
     | append s s' => to_string_acc s (to_string_acc s' acc)
@@ -458,7 +458,7 @@ Module Tree.
 
   Definition print_list {A} (f : A -> t) (sep : t) (l : list A) : t :=
     string_of_list_aux f sep l.
-    
+
   Fixpoint concat (sep : t) (s : list t) : t :=
     match s with
     | nil => EmptyString
@@ -468,7 +468,7 @@ Module Tree.
 
   Definition parens (top : bool) (s : t) :=
     if top then s else "(" ++ s ++ ")".
-    
+
 End Tree.
 
 (* Tests *)

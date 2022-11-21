@@ -10,7 +10,7 @@ Section Branch.
   Context {term : nat -> Type}.
   (* Parameterized by term types as they are not yet defined. *)
   Record branch := mk_branch {
-    bcontext : list (context_decl term); 
+    bcontext : list (context_decl term);
     (* Context of binders of the branch, including lets. *)
     bbody : term; (* The branch body *) }.
   Derive NoConfusion for branch.
@@ -22,7 +22,7 @@ Arguments branch : clear implicits.
 Record predicate {term} := mk_predicate {
   pparams : list term; (* The parameters *)
   puinst : Instance.t; (* The universe instance *)
-  pcontext : list (context_decl term); (* The predicate context, 
+  pcontext : list (context_decl term); (* The predicate context,
     initially built from params and puinst *)
   preturn : term; (* The return type *) }.
   Derive NoConfusion for predicate.
@@ -38,7 +38,7 @@ Inductive context_decl (term : nat -> Type) : nat -> Type :=
 | vass {n} (na : aname) (ty : term n) : context_decl term n
 | vdef {n} (na : aname) (ty : term n) (body : term n) : context_decl term n.
 
-Definition context_gen (term : nat -> Type) := 
+Definition context_gen (term : nat -> Type) :=
   context (context_decl term).
 
 Definition shift n (f : nat -> Type) :=
@@ -47,7 +47,7 @@ Definition shift n (f : nat -> Type) :=
 Variant FixCoFix :=
   | Fix | CoFix.
 
-(* Terms are well-scoped in a global environment *)  
+(* Terms are well-scoped in a global environment *)
 
 Variant global_reference :=
   | ConstRef (kn : kername)
@@ -66,7 +66,7 @@ Fixpoint lookup_env {term} (Σ : global_env term) (kn : kername) : option (term 
 
 Definition declared_constant {term} (Σ : global_env term) (id : kername) : Type :=
   ∑ decl, lookup_env Σ id = Some decl.
-(* 
+(*
 Definition declared_minductive Σ mind decl :=
   lookup_env Σ mind = Some (InductiveDecl decl).
 
@@ -91,9 +91,9 @@ Inductive term {k : nat} : Type :=
   (declared_constant Σ kn)
 (* | tInd ind : inductive) (ui : Instance.t) *)
 | tConstruct (ind : inductive) (n : nat) (ui : Instance.t)
-| tCase {plen} (indn : case_info) (pparams : list term) (puinst : Instance.t) 
+| tCase {plen} (indn : case_info) (pparams : list term) (puinst : Instance.t)
   (pcontext : context_gen (shift k (@term Σ)) plen)
-  (c : term) 
+  (c : term)
   (brs : list (∑ brlen (ctx : context_gen (@term Σ) brlen), @term Σ (brlen + k)))
 | tProj (p : projection) (c : term)
 | tFix (e : FixCoFix) {n} (mfix : Vector.t (def term) n) (idx : Fin.t n)
@@ -101,7 +101,7 @@ Inductive term {k : nat} : Type :=
 | tPrim (prim : prim_val term).
 
 with branch {n : nat} := Type :=
-| vass (na : aname) (t : term k)  
+| vass (na : aname) (t : term k)
 
-with global_env : Type := 
+with global_env : Type :=
 .

@@ -53,7 +53,7 @@ Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls cu
 Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls cumulAlgo_gen Σ Γ Γ') := _.
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
+  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' *
   leq_term_ext Σ (leq_universe Σ) v v')%type } }.
 Proof.
   split.
@@ -154,7 +154,7 @@ Proof.
   intros H%clos_rt_rt1n_iff.
   induction H.
   - reflexivity.
-  - econstructor 2; eauto. 
+  - econstructor 2; eauto.
 Qed.
 
 #[global]
@@ -168,7 +168,7 @@ Proof.
 Qed.
 
 Lemma eq_term_eq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
-  eq_term Σ ϕ t t' -> 
+  eq_term Σ ϕ t t' ->
   eq_term_upto_univ_napp Σ (eq_universe ϕ) (eq_universe ϕ) napp t t'.
 Proof.
   intros. eapply eq_term_upto_univ_impl. 5:eauto.
@@ -176,7 +176,7 @@ Proof.
 Qed.
 
 Lemma leq_term_leq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
-  leq_term Σ ϕ t t' -> 
+  leq_term Σ ϕ t t' ->
   eq_term_upto_univ_napp Σ (eq_universe ϕ) (leq_universe ϕ) napp t t'.
 Proof.
   intros. eapply eq_term_upto_univ_impl. 5:eauto.
@@ -249,7 +249,7 @@ Proof.
 Qed.
 
 Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
-  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × 
+  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') ×
     eq_term Σ (global_ext_constraints Σ) v v').
 Proof.
   split.
@@ -305,7 +305,7 @@ Section ContextConversion.
   Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls cumulAlgo_gen Σ)).
   Proof using Type.
     intro Γ; induction Γ; try econstructor; auto.
-    destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'. 
+    destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'.
   Qed.
 
   Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls cumulAlgo_gen Σ)).

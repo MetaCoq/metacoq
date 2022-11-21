@@ -70,7 +70,7 @@ Proof.
 Qed.
 
 #[global, program] Instance ReflectEq_EqDec {A} (R : ReflectEq A) : EqDec A := {
-  eq_dec := fun x y => 
+  eq_dec := fun x y =>
     match eqb x y with
     | true => left _
     | false => right _
@@ -91,7 +91,7 @@ Definition eq_dec_to_bool {A} `{EqDec A} x y :=
 
 (* Not an instance to avoid loops and making boolean definitions depend on sumbool ones *)
 #[global, program]
-Definition EqDec_ReflectEq A {E : EqDec A} : ReflectEq A := 
+Definition EqDec_ReflectEq A {E : EqDec A} : ReflectEq A :=
   {| eqb := eq_dec_to_bool |}.
 Next Obligation.
 Proof.

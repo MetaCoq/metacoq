@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool. 
+From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool.
 From MetaCoq.Template Require Import utils LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICSize.
 From Coq Require Import List.
@@ -9,7 +9,7 @@ From Equations.Prop Require Import Subterm.
 Set Asymmetric Patterns.
 Import PCUICEnvTyping.
 
-(** Derive the well-founded subterm relation for terms. Not so useful 
+(** Derive the well-founded subterm relation for terms. Not so useful
   yet as it doesn't go throught lists.
   *)
 (* Derive Subterm for term. *)
@@ -61,7 +61,7 @@ Proof.
     split.
     + generalize (pcontext p).
       fix auxc 1.
-      destruct l; constructor; [|apply auxc]. 
+      destruct l; constructor; [|apply auxc].
       destruct c. split. apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
@@ -72,7 +72,7 @@ Proof.
     split.
     + generalize (bcontext b).
       fix auxc 1.
-      destruct l; constructor; [|apply auxc]. 
+      destruct l; constructor; [|apply auxc].
       destruct c. split. apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
@@ -92,7 +92,7 @@ Lemma size_decompose_app_rec t L :
 Proof.
   induction t in L |- *; cbn; try lia.
   rewrite <- IHt1. cbn. lia.
-Qed.    
+Qed.
 
 Lemma size_decompose_app t :
   size t = size (decompose_app t).1 + list_size size (decompose_app t).2.
@@ -226,7 +226,7 @@ Definition mkApps_decompose_app t :
 
 From Equations Require Import Equations.
 
-Lemma liftP_ctx_ind (P : term -> Type) (ctx : context) : 
+Lemma liftP_ctx_ind (P : term -> Type) (ctx : context) :
   (forall y, size y < context_size size ctx -> P y) ->
   All (ondecl P) ctx.
 Proof.
@@ -267,20 +267,20 @@ Proof.
   assert (Acc (MR lt size) t) by eapply measure_wf, Wf_nat.lt_wf.
   induction H. rename X14 into auxt. clear H. rename x into t.
   move auxt at top.
-  
+
   destruct t; try now repeat (match goal with
                  H : _ |- _ => apply H; try (hnf; cbn; lia)
               end).
 
   - eapply X1. revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
-    hnf in *; cbn in *. lia. 
+    hnf in *; cbn in *. lia.
 
   - rewrite -> mkApps_decompose_app.
     destruct decompose_app eqn:E. cbn.
     eapply X6.
     + eapply decompose_app_notApp in E. eauto.
-    + eapply auxt. cbn. hnf. pose proof (decompose_app_size_tApp1 t1 t2). 
+    + eapply auxt. cbn. hnf. pose proof (decompose_app_size_tApp1 t1 t2).
       rewrite E in H. hnf in *; cbn in *. lia.
     + intros ->.
       rewrite /decompose_app /= in E.
@@ -289,7 +289,7 @@ Proof.
     + induction l using rev_rec in E, auxt, t1, t2, t |- *.
       * constructor.
       * eapply All_app_inv.
-        2:{ 
+        2:{
         econstructor. eapply auxt. hnf; cbn.
         pose proof (decompose_app_size_tApp2 t1 t2). rewrite E in H. cbn in H. clear E.
         eapply Forall_All, All_app in H as [H H1]. inv H1. lia. econstructor. }
@@ -297,14 +297,14 @@ Proof.
         -- destruct t1; try now inv Et1.
            pose proof E as E'.
            eapply IHl.
-           2:{ 
+           2:{
            eapply decompose_app_inv in E. rewrite mkApps_app in E.
            cbn in E. noconf E. rewrite -> H.
            rewrite -> decompose_app_mkApps. reflexivity.
            eapply decompose_app_notApp in E'.
            now rewrite E'. }
            eapply decompose_app_inv in E. rewrite mkApps_app in E.
-           cbn in E. noconf E. 
+           cbn in E. noconf E.
            intros. eapply auxt.
            red. red in H0. cbn in *. lia.
         -- destruct l.
@@ -327,25 +327,25 @@ Proof.
       destruct l; constructor. split; [|apply auxt; hnf; cbn; lia].
       + apply liftP_ctx_ind; intros. apply auxt; red; simpl; lia.
       + apply auxt'. intros. apply auxt.
-      hnf in *; cbn in *. lia. 
+      hnf in *; cbn in *. lia.
   - eapply X12; [apply auxt; hnf; cbn; lia.. | ]. rename mfix into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. split.
     apply auxt. hnf; cbn. unfold def_size. lia.
-    apply auxt. hnf; cbn. unfold def_size. lia.   
+    apply auxt. hnf; cbn. unfold def_size. lia.
     apply auxt'. intros. apply auxt.
-    hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia. 
+    hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia.
 
   - eapply X13; [apply auxt; hnf; cbn; lia.. | ]. rename mfix into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. split.
     apply auxt. hnf; cbn. unfold def_size. lia.
-    apply auxt. hnf; cbn. unfold def_size. lia.   
+    apply auxt. hnf; cbn. unfold def_size. lia.
     apply auxt'. intros. apply auxt.
-    hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia. 
+    hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia.
 Defined.
 
-Lemma liftP_ctx (P : term -> Type) : 
+Lemma liftP_ctx (P : term -> Type) :
   (forall t, P t) ->
   (forall ctx, All (ondecl P) ctx).
 Proof.
@@ -357,7 +357,7 @@ Proof.
 Qed.
 
 Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
-  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ| -> P Γ') -> P (d :: Γ)) 
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ| -> P Γ') -> P (d :: Γ))
   Γ : P Γ.
 Proof.
   generalize (le_n #|Γ|).
@@ -371,7 +371,7 @@ Proof.
 Qed.
 
 Lemma ctx_length_rev_ind (P : context -> Type) (p0 : P [])
-  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (Γ ++ [d])) 
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (Γ ++ [d]))
   Γ : P Γ.
 Proof.
   generalize (le_n #|Γ|).
@@ -456,7 +456,7 @@ Definition CasePredProp (P : context -> term -> Type) Γ (p : predicate term) :=
   P (Γ ,,, inst_case_context p.(pparams) p.(puinst) p.(pcontext)) p.(preturn).
 
 Definition CaseBrsProp p P Γ (brs : list (branch term)) :=
-  All (fun x : branch term => onctx_rel P Γ (bcontext x) * P (Γ ,,, inst_case_context p.(pparams) p.(puinst) 
+  All (fun x : branch term => onctx_rel P Γ (bcontext x) * P (Γ ,,, inst_case_context p.(pparams) p.(puinst)
     x.(bcontext)) (bbody x)) brs.
 
 Lemma term_forall_ctx_list_ind :
@@ -474,7 +474,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
     (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
     (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term)),
-        CasePredProp P Γ p -> 
+        CasePredProp P Γ p ->
         P Γ t ->
         CaseBrsProp p P Γ brs ->
         P Γ (tCase ci p t brs)) ->
@@ -546,7 +546,7 @@ Proof.
         ++ eapply aux; auto. simpl. unfold predicate_size. lia.
     * eapply aux => //. simpl; lia.
     * red. simpl in aux.
-      have auxbr := fun Γ t (H : size t <= list_size (branch_size size) brs) => 
+      have auxbr := fun Γ t (H : size t <= list_size (branch_size size) brs) =>
         aux Γ t ltac:(lia).
       move: auxbr.
       clear -auxΓ.
@@ -555,7 +555,7 @@ Proof.
       + split. eapply auxΓ. simpl. unfold branch_size. lia.
         eapply auxbr. unfold branch_size. lia.
       + eapply IHbrs. intros. apply auxΓ. simpl in *. lia.
-        intros. apply auxbr. simpl. lia.        
+        intros. apply auxbr. simpl. lia.
   - eapply X12; try (apply aux; red; simpl; lia).
     apply auxΓ => //. simpl. specialize (H mfix). lia.
     red. apply All_pair. split; apply auxl; simpl; auto.
@@ -566,8 +566,8 @@ Proof.
 Defined.
 
 (** This induction principle gives a general induction hypothesis for applications,
-    allowing to apply the induction to their head or any smaller term. *)  
-Lemma term_ind_size_app : 
+    allowing to apply the induction to their head or any smaller term. *)
+Lemma term_ind_size_app :
   forall (P : term -> Type),
     (forall (n : nat), P (tRel n)) ->
     (forall (i : ident), P (tVar i)) ->
@@ -626,7 +626,7 @@ Proof.
       try (apply aux; cbn; lia). exact tt.
       apply IHl; intros. apply aux; simpl; lia.
     + apply aux; simpl. unfold predicate_size. lia.
-    + red. 
+    + red.
       revert aux; simpl.
       clear.
       induction hh1; simpl; constructor; auto.
@@ -638,7 +638,7 @@ Proof.
       apply IHl; intros. apply aux; simpl; lia.
       apply aux. lia.
       apply IHhh1. intros. apply aux. lia.
-    
+
   * eapply X12; try (apply aux; red; simpl; lia).
     red. apply All_pair. split; apply auxl; simpl; auto.
 

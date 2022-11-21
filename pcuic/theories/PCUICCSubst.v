@@ -28,7 +28,7 @@ Fixpoint csubst t k u :=
   | tLetIn na b ty b' => tLetIn na (csubst t k b) (csubst t k ty) (csubst t (S k) b')
   | tCase ind p c brs =>
     let brs' := List.map (fun br => map_branch_k (csubst t) id k br) brs in
-    tCase ind (map_predicate_k id (csubst t) k p) 
+    tCase ind (map_predicate_k id (csubst t) k p)
       (csubst t k c) brs'
   | tProj p c => tProj p (csubst t k c)
   | tFix mfix idx =>
@@ -42,11 +42,11 @@ Fixpoint csubst t k u :=
   | x => x
   end.
 
-(** It is equivalent to general substitution when substituting a closed term *)  
+(** It is equivalent to general substitution when substituting a closed term *)
 Lemma closed_subst t k u : closed t ->
     csubst t k u = subst [t] k u.
 Proof.
-  revert k; induction u using term_forall_list_ind; intros k Hs; 
+  revert k; induction u using term_forall_list_ind; intros k Hs;
     simpl; try f_equal; eauto with pcuic; solve_all.
   - destruct (PeanoNat.Nat.compare_spec k n).
     + subst k.
@@ -59,7 +59,7 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.
 Qed.
 
-(** It respects closedness of the substitutend as well. *)  
+(** It respects closedness of the substitutend as well. *)
 Lemma closed_csubst t k u : closed t -> closedn (S k) u -> closedn k (csubst t 0 u).
 Proof.
   intros.

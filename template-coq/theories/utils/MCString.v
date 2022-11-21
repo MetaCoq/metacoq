@@ -28,7 +28,7 @@ Definition parens (top : bool) (s : string) :=
 
 Local Infix "::" := String.String.
 
-Fixpoint string_of_uint n := 
+Fixpoint string_of_uint n :=
   match n with
   | Nil => ""
   | D0 n => "0" :: string_of_uint n
@@ -49,10 +49,10 @@ Definition string_of_nat n : string :=
 #[global]
 Hint Resolve String.string_dec : eq_dec.
 
-Definition string_of_positive p := 
+Definition string_of_positive p :=
   string_of_uint (Pos.to_uint p).
 
-Definition string_of_Z (z : Z) : string := 
+Definition string_of_Z (z : Z) : string :=
   match z with
   | Z0 => "0"
   | Zpos p => string_of_positive p

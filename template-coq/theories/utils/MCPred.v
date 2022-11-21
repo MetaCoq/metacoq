@@ -4,7 +4,7 @@ From Equations Require Import Equations.
 
 Definition predA {A} (p q : pred A) : pred A := (fun i => p i ==> q i).
 
-(* 
+(*
 Definition orP (p q : nat -> bool) (n : nat) : bool :=
   p n || q n.
 

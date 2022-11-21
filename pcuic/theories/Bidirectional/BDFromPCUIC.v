@@ -24,7 +24,7 @@ Proof.
 Qed.
 
 Lemma ctx_inst_length {ty Σ Γ args Δ} :
-PCUICTyping.ctx_inst ty Σ Γ args Δ -> 
+PCUICTyping.ctx_inst ty Σ Γ args Δ ->
 #|args| = context_assumptions Δ.
 Proof.
 induction 1; simpl; auto.
@@ -132,14 +132,14 @@ Proof.
       1: eexists.
       all: eassumption.
     + by apply conv_check in Hc.
-      
+
   - intros.
     eexists.
     split.
     2: by eapply typing_ws_cumul_pb ; tea ; constructor.
     constructor.
     eassumption.
-    
+
   - intros.
     eexists.
     split.
@@ -160,7 +160,7 @@ Proof.
       constructor.
       apply leq_universe_product_mon.
       all: assumption.
-      
+
   - intros n A t ? ? ? ? CumA ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
     destruct CumA as (?&?&?).
@@ -193,7 +193,7 @@ Proof.
       etransitivity ; tea.
       now apply ws_cumul_pb_eq_le.
     + now eapply substitution_ws_cumul_pb_vass.
-  
+
   - intros.
     eexists.
     split.
@@ -202,7 +202,7 @@ Proof.
     1: fvs.
     rewrite on_free_vars_subst_instance.
     now eapply closed_on_free_vars, declared_constant_closed_type.
-    
+
   - intros.
     eexists.
     split.
@@ -211,7 +211,7 @@ Proof.
     1: fvs.
     rewrite on_free_vars_subst_instance.
     now eapply closed_on_free_vars, declared_inductive_closed_type.
-    
+
   - intros.
     eexists.
     split.
@@ -219,7 +219,7 @@ Proof.
     apply ws_cumul_pb_refl.
     1: fvs.
     now eapply closed_on_free_vars, declared_constructor_closed_type.
-    
+
   - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Hinst ty_c Cumc ? ? ? ty_br.
 
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
@@ -240,7 +240,7 @@ Proof.
         2: eapply on_declared_minductive ; eauto.
         rewrite firstn_app_left //.
         now destruct wfpred.
-      
+
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.
         symmetry.
@@ -257,7 +257,7 @@ Proof.
           context_assumptions_app -(declared_minductive_ind_npars isdecl) => alen.
         rewrite firstn_length_le.
         all: lia.
-        
+
       * eapply All2i_impl.
         1: eassumption.
         intros j cdecl br (?&Hbr).
@@ -354,7 +354,7 @@ Proof.
     + apply (All_impl Allbodies).
       intros ? [? s].
       by apply conv_check in s ; auto.
-  
+
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.
@@ -371,9 +371,9 @@ Proof.
     + apply (All_impl Allbodies).
       intros ? [? s].
       by apply conv_check in s ; auto.
-  
+
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
-    eexists. split; [econstructor; tea|]. 
+    eexists. split; [econstructor; tea|].
     eapply ws_cumul_pb_refl; fvs.
 
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
@@ -459,7 +459,7 @@ Proof.
   1,4: now apply IHΓ'.
   - now apply isType_infering_sort.
   - now apply typing_checking.
-  - now apply isType_infering_sort.  
+  - now apply isType_infering_sort.
 Qed.
 
 Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :

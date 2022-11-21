@@ -3,7 +3,7 @@ From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst PCUICTyping PCUICGlobalEnv 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICClosedTyp PCUICGeneration PCUICConversion (* Needs transitivity of cumulativity *)
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
@@ -23,17 +23,17 @@ Set Default Proof Using "Type*".
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-(** Translation from PCUIC back to template-coq terms. 
+(** Translation from PCUIC back to template-coq terms.
 
   This translation is not direct due to two peculiarities of template-coq's syntax:
-  - applications are n-ary and not all terms are well-formed, so we have to 
+  - applications are n-ary and not all terms are well-formed, so we have to
     use an induction on the size of derivations to transform the binary applications
     into n-ary ones.
-  - The representation of cases in template-coq is "compact" in the sense that 
-    the predicate and branches contexts do not appear in the syntax of terms but can 
-    be canonically rebuilt on-demand, as long as the environment has a declaration for the 
-    inductive type. In contrast, PCUIC has these contexts explicitely present in terms, 
-    so that the theory of reduction (confluence) and conversion do not need to rely on any 
+  - The representation of cases in template-coq is "compact" in the sense that
+    the predicate and branches contexts do not appear in the syntax of terms but can
+    be canonically rebuilt on-demand, as long as the environment has a declaration for the
+    inductive type. In contrast, PCUIC has these contexts explicitely present in terms,
+    so that the theory of reduction (confluence) and conversion do not need to rely on any
     such well-formedness arguments about the global environment, considerably simplifying the theory:
     For example one couldn't do recursive calls on such "rebuilt" contexts using simple structural
     recursion, the new contexts having no structural relation to the terms at hand.
@@ -44,7 +44,7 @@ From Equations Require Import Equations.
     that every one-step reduction in a PCUIC cumulativity derivation goes from a well-typed term
     to a well-typed term. We can hence prove that Template-Coq's `red1` reductions follow from the
     untyped PCUIC reduction when restricted to well-typed terms (which have many more invariants).
-    We actually just need the term to be reduced to be well-typed to show that the interpretation 
+    We actually just need the term to be reduced to be well-typed to show that the interpretation
     preserves one-step reduction in [trans_red1}].
 *)
 
@@ -75,7 +75,7 @@ Proof.
   now rewrite /trans_local map_app.
 Qed.
 
-Lemma forget_types_map_context {term term'} (f : term' -> term) ctx : 
+Lemma forget_types_map_context {term term'} (f : term' -> term) ctx :
   forget_types (map_context f ctx) = forget_types ctx.
 Proof.
   now rewrite /forget_types map_map_context.
@@ -99,7 +99,7 @@ Proof.
     autorewrite with map. solve_all.
     rewrite /trans_branch /T.map_branch; cbn; f_equal.
     autorewrite with map; solve_all.
-    rewrite b. now rewrite forget_types_length map_context_length. 
+    rewrite b. now rewrite forget_types_length map_context_length.
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
   - destruct p as [? []]; eauto.
@@ -203,7 +203,7 @@ Lemma trans_mkApps t args:
   mkApps (trans t) (map trans args).
 Proof.
   induction args in t |- *.
-  - reflexivity. 
+  - reflexivity.
   - cbn [map].
     rewrite <- AstUtils.mkApps_mkApp.
     cbn.
@@ -214,7 +214,7 @@ Qed.
 Lemma trans_decl_type decl:
   trans (decl_type decl) =
   decl_type (trans_decl decl).
-Proof. 
+Proof.
   destruct decl.
   reflexivity.
 Qed.
@@ -261,7 +261,7 @@ Proof.
       destruct x.
       unfold map_def.
       cbn in *.
-      now rewrite e e0.  
+      now rewrite e e0.
     + apply IHX.
   - f_equal.
     rewrite map_length.
@@ -273,7 +273,7 @@ Proof.
       destruct x.
       unfold map_def.
       cbn in *.
-      now rewrite e e0.  
+      now rewrite e e0.
     + apply IHX.
   - destruct p as [? []]; eauto.
 Qed.
@@ -292,7 +292,7 @@ Lemma trans_subst_instance u t:
   subst_instance u (trans t).
 Proof.
   induction t using PCUICInduction.term_forall_list_ind;cbn;auto;try congruence.
-  - do 2 rewrite map_map. 
+  - do 2 rewrite map_map.
     f_equal.
     apply All_map_eq.
     apply X.
@@ -302,7 +302,7 @@ Proof.
     cbn.
     reflexivity.
   - red in X, X0.
-    f_equal; solve_all.    
+    f_equal; solve_all.
     + rewrite /trans_predicate /= /id /T.map_predicate /=.
       f_equal; solve_all.
     + rewrite /trans_branch; solve_all.
@@ -331,7 +331,7 @@ Qed.
 Lemma trans_subst_instance_ctx Γ u :
   trans_local Γ@[u] = (trans_local Γ)@[u].
 Proof.
-  rewrite /subst_instance /= /trans_local /SE.subst_instance_context /T.Env.subst_instance_context 
+  rewrite /subst_instance /= /trans_local /SE.subst_instance_context /T.Env.subst_instance_context
     /map_context.
   rewrite !map_map_compose. apply map_ext.
   move => [na [b|] ty]; cbn;
@@ -355,8 +355,8 @@ Qed.
 
 Lemma trans_type_of_constructor mdecl cdecl ind i u:
   trans (ST.type_of_constructor mdecl cdecl (ind, i) u) =
-  TT.type_of_constructor 
-    (trans_minductive_body mdecl) 
+  TT.type_of_constructor
+    (trans_minductive_body mdecl)
     (trans_constructor_body cdecl)
     (ind,i)
     u.
@@ -401,7 +401,7 @@ Qed.
 
 Lemma trans_declared_projection Σ p mdecl idecl cdecl pdecl :
   S.declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
-  T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl) 
+  T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl)
     (trans_constructor_body cdecl) (trans_projection_body pdecl).
 Proof.
   intros []. split; [|split].
@@ -523,7 +523,7 @@ Proof.
   destruct t0 => //.
   apply decompose_app_rec_inv in da. simpl in da. subst t.
   rewrite trans_mkApps /=.
-  rewrite AstUtils.decompose_app_mkApps //. 
+  rewrite AstUtils.decompose_app_mkApps //.
 Qed.
 
 Lemma refine_red1_r Σ Γ t u u' : u = u' -> TT.red1 Σ Γ t u -> TT.red1 Σ Γ t u'.
@@ -562,7 +562,7 @@ Proof.
   - apply IHmfix.
 Qed.
 
-Lemma trans_subst_context s k Γ : 
+Lemma trans_subst_context s k Γ :
   trans_local (SE.subst_context s k Γ) = T.Env.subst_context (map trans s) k (trans_local Γ).
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
@@ -574,7 +574,7 @@ Proof.
     now rewrite !trans_subst map_length.
 Qed.
 
-Lemma trans_lift_context n k Γ : 
+Lemma trans_lift_context n k Γ :
   trans_local (SE.lift_context n k Γ) = T.Env.lift_context n k (trans_local Γ).
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
@@ -622,7 +622,7 @@ Proof.
   now rewrite /SE.expand_lets /SE.expand_lets_k trans_expand_lets_k.
 Qed.
 
-Lemma alpha_eq_trans {Γ Δ} : 
+Lemma alpha_eq_trans {Γ Δ} :
   eq_context_upto_names Γ Δ ->
   All2 (TermEquality.compare_decls eq eq) (trans_local Γ) (trans_local Δ).
 Proof.
@@ -642,7 +642,7 @@ Coercion isType_wt : isType >-> wt.
 Section wtsub.
   Context {cf} {Σ : PCUICEnvironment.global_env_ext} {wfΣ : PCUICTyping.wf Σ}.
   Import PCUICAst.
-  Definition wt_subterm Γ (t : term) : Type := 
+  Definition wt_subterm Γ (t : term) : Type :=
     let wt := wt Σ in
     match t with
     | tLambda na A B => wt Γ A × wt (Γ ,, vass na A) B
@@ -651,7 +651,7 @@ Section wtsub.
     | tApp f a => wt Γ f × wt Γ a
     | tCase ci p c brs =>
       All (wt Γ) p.(pparams) ×
-      ∑ mdecl idecl, 
+      ∑ mdecl idecl,
       [× declared_inductive Σ ci mdecl idecl,
          ci.(ci_npar) = mdecl.(ind_npars),
          consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p),
@@ -662,16 +662,16 @@ Section wtsub.
           (PCUICEnvironment.smash_context [] (PCUICEnvironment.ind_params mdecl)@[PCUICAst.puinst p]),
           wt (Γ ,,, PCUICCases.case_predicate_context ci mdecl idecl p) p.(preturn),
           wt Γ c &
-          All2i (fun i cdecl br => 
+          All2i (fun i cdecl br =>
             [× wf_branch cdecl br,
                All2 (PCUICEquality.compare_decls eq eq) (bcontext br) (PCUICCases.cstr_branch_context ci mdecl cdecl),
                wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) br.(bcontext)@[p.(puinst)],
-               All2 (PCUICEquality.compare_decls eq eq) 
+               All2 (PCUICEquality.compare_decls eq eq)
                 (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl)
                 (Γ ,,, inst_case_branch_context p br) &
               wt (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl) br.(bbody)]) 0 idecl.(ind_ctors) brs]
     | tProj p c => wt Γ c
-    | tFix mfix idx | tCoFix mfix idx => 
+    | tFix mfix idx | tCoFix mfix idx =>
       All (fun d => wt Γ d.(dtype) × wt (Γ ,,, fix_context mfix) d.(dbody)) mfix
     | tEvar _ l => False
     | _ => unit
@@ -752,7 +752,7 @@ Ltac outtimes :=
 Lemma red1_cumul {cf} (Σ : global_env_ext) pb Γ T U : TT.red1 Σ Γ T U -> TT.cumul_gen Σ Γ pb T U.
 Proof.
   intros r.
-  econstructor 2; tea. constructor. 
+  econstructor 2; tea. constructor.
   destruct pb.
   - apply TermEquality.eq_term_refl.
   - apply TermEquality.leq_term_refl.
@@ -767,25 +767,25 @@ Proof.
   - eapply TermEquality.leq_term_refl.
 Qed.
 
-Definition TTconv {cf} (Σ : global_env_ext) Γ : relation term := 
+Definition TTconv {cf} (Σ : global_env_ext) Γ : relation term :=
   clos_refl_sym_trans (relation_disjunction (TT.red1 Σ Γ) (TermEquality.eq_term Σ (T.global_ext_constraints Σ))).
 
 Lemma red1_conv {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TTconv Σ Γ T U.
 Proof.
   intros r.
-  now repeat constructor. 
+  now repeat constructor.
 Qed.
 
-Lemma trans_expand_lets_ctx Γ Δ : 
+Lemma trans_expand_lets_ctx Γ Δ :
   trans_local (SE.expand_lets_ctx Γ Δ) = expand_lets_ctx (trans_local Γ) (trans_local Δ).
 Proof.
   rewrite /SE.expand_lets_ctx /SE.expand_lets_k_ctx /expand_lets_ctx /expand_lets_k_ctx.
   now rewrite !trans_subst_context trans_extended_subst trans_lift_context
-    context_assumptions_map map_length. 
+    context_assumptions_map map_length.
 Qed.
 
-Lemma trans_inds ind u mdecl : 
-  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) = 
+Lemma trans_inds ind u mdecl :
+  map trans (PCUICAst.inds (inductive_mind ind) u (SE.ind_bodies mdecl)) =
   inds (inductive_mind ind) u (ind_bodies (trans_minductive_body mdecl)).
 Proof.
   rewrite PCUICCases.inds_spec inds_spec.
@@ -794,7 +794,7 @@ Proof.
 Qed.
 
 Lemma trans_cstr_branch_context ci mdecl cdecl :
-  trans_local (PCUICCases.cstr_branch_context ci mdecl cdecl) = 
+  trans_local (PCUICCases.cstr_branch_context ci mdecl cdecl) =
   cstr_branch_context ci (trans_minductive_body mdecl) (trans_constructor_body cdecl).
 Proof.
   rewrite /PCUICCases.cstr_branch_context /cstr_branch_context.
@@ -803,7 +803,7 @@ Proof.
 Qed.
 
 Lemma trans_cstr_branch_context_inst ci mdecl cdecl i :
-  trans_local (PCUICCases.cstr_branch_context ci mdecl cdecl)@[i] = 
+  trans_local (PCUICCases.cstr_branch_context ci mdecl cdecl)@[i] =
   (cstr_branch_context ci (trans_minductive_body mdecl) (trans_constructor_body cdecl))@[i].
 Proof.
   now rewrite trans_subst_instance_ctx trans_cstr_branch_context.
@@ -823,7 +823,7 @@ Qed.
 
 Notation eq_names := (All2 (fun x y => x = (decl_name y))).
 
-Lemma eq_names_subst_context nas Γ s k : 
+Lemma eq_names_subst_context nas Γ s k :
   eq_names nas Γ ->
   eq_names nas (subst_context s k Γ).
 Proof.
@@ -832,7 +832,7 @@ Proof.
   * rewrite subst_context_snoc. constructor; auto.
 Qed.
 
-Lemma eq_names_subst_instance nas Γ u : 
+Lemma eq_names_subst_instance nas Γ u :
   eq_names nas Γ ->
   eq_names nas (subst_instance u Γ).
 Proof.
@@ -898,11 +898,11 @@ Proof.
   rewrite context_assumptions_map2_set_binder_name. len.
   rewrite !lengths.
   eapply (Forall2_length Hforall).
-  now do 3 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context ?context_assumptions_subst_instance 
+  now do 3 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context ?context_assumptions_subst_instance
     /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
 Qed.
 
-Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
+Lemma cstr_branch_context_assumptions ci mdecl cdecl :
   SE.context_assumptions (PCUICCases.cstr_branch_context ci mdecl cdecl) =
   SE.context_assumptions (SE.cstr_args cdecl).
 Proof.
@@ -913,7 +913,7 @@ Qed.
 
 #[global]
 Instance compare_decls_refl : Reflexive (TermEquality.compare_decls eq eq).
-Proof. 
+Proof.
   intros [na [b|] ty]; constructor; auto.
 Qed.
 
@@ -937,7 +937,7 @@ Proof.
   intros d d' d'' [] H; depelim H; subst; constructor; auto; now etransitivity.
 Qed.
 
-Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) = 
+Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) =
   reln (map trans l) p (trans_local Γ).
 Proof.
   induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
@@ -950,7 +950,7 @@ Proof.
 Qed.
 
 Lemma trans_ind_predicate_context  ci mdecl idecl :
-  trans_local (PCUICCases.ind_predicate_context ci mdecl idecl) = 
+  trans_local (PCUICCases.ind_predicate_context ci mdecl idecl) =
   (Ast.ind_predicate_context ci (trans_minductive_body mdecl)
       (trans_one_ind_body idecl)).
 Proof.
@@ -967,7 +967,7 @@ Qed.
 
 Lemma trans_ind_predicate_context_eq p ci mdecl idecl :
   eq_context_upto_names (PCUICAst.pcontext p)
-    (PCUICCases.ind_predicate_context ci mdecl idecl) -> 
+    (PCUICCases.ind_predicate_context ci mdecl idecl) ->
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
        eq_binder_annot x (decl_name y))
@@ -982,7 +982,7 @@ Proof.
 Qed.
 
 Lemma trans_cstr_branch_context_eq ci mdecl cdecl br :
-  eq_context_upto_names (PCUICAst.bcontext br) 
+  eq_context_upto_names (PCUICAst.bcontext br)
     (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
@@ -1009,7 +1009,7 @@ Proof.
     destruct X as [? []]. red in X0. econstructor; cbn; eauto; tea.
     eapply trans_declared_inductive in d; tea. now cbn. cbn.
     eapply trans_ind_predicate_context_eq => //. now symmetry.
-    rewrite map_length. cbn. rewrite context_assumptions_map //. 
+    rewrite map_length. cbn. rewrite context_assumptions_map //.
     destruct w. now rewrite -(declared_minductive_ind_npars (proj1 d)).
     cbn. solve_all. eapply All2_map, All2_map_right. solve_all.
     eapply All2i_All2; tea. cbv beta.
@@ -1024,7 +1024,7 @@ Qed.
 
 #[global] Hint Resolve trans_wf : wf.
 
-Lemma red1_alpha_eq Σ Γ Δ T U : 
+Lemma red1_alpha_eq Σ Γ Δ T U :
   TT.red1 Σ Γ T U ->
   All2 (TermEquality.compare_decls eq eq) Γ Δ ->
   TT.red1 Σ Δ T U.
@@ -1096,7 +1096,7 @@ Proof.
   cbn. intros x y H. destruct y; apply H.
 Qed.
 
-Lemma trans_local_set_binder nas Γ : 
+Lemma trans_local_set_binder nas Γ :
   trans_local (map2 PCUICEnvironment.set_binder_name nas Γ) =
   map2 set_binder_name nas (trans_local Γ).
 Proof.
@@ -1143,15 +1143,15 @@ Proof.
 Qed.
 
 Lemma trans_case_predicate_context {cf} {Σ : PCUICEnvironment.global_env_ext}
-  {wfΣ : PCUICTyping.wf Σ} Γ ci mdecl idecl p : 
+  {wfΣ : PCUICTyping.wf Σ} Γ ci mdecl idecl p :
   S.declared_inductive Σ ci mdecl idecl ->
-  S.consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p) → 
+  S.consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p) →
   let parctx := (PCUICEnvironment.ind_params mdecl)@[PCUICAst.puinst p] in
   PCUICSpine.spine_subst Σ Γ (PCUICAst.pparams p)
       (List.rev (PCUICAst.pparams p))
       (PCUICEnvironment.smash_context [] parctx) ->
   wf_predicate mdecl idecl p ->
-  let p' := trans_predicate (PCUICAst.map_predicate id trans trans trans_local p) in  
+  let p' := trans_predicate (PCUICAst.map_predicate id trans trans trans_local p) in
   (case_predicate_context ci (trans_minductive_body mdecl) (trans_one_ind_body idecl) p') =
   (trans_local (PCUICCases.case_predicate_context ci mdecl idecl p)).
 Proof.
@@ -1164,14 +1164,14 @@ Proof.
   rewrite /pre_case_predicate_context_gen /inst_case_context.
   rewrite /PCUICCases.pre_case_predicate_context_gen /PCUICCases.inst_case_context.
   rewrite [map _ _]trans_subst_context map_rev. f_equal.
-  rewrite trans_subst_instance_ctx. 
+  rewrite trans_subst_instance_ctx.
   now rewrite trans_ind_predicate_context.
 Qed.
 
-Lemma OnOne2All2i_OnOne2All {A B : Type} (l1 l2 : list A) (l3 : list B) 
+Lemma OnOne2All2i_OnOne2All {A B : Type} (l1 l2 : list A) (l3 : list B)
   (R1 : A → A → Type) (R2 : nat → B → A → Type) (n : nat) (R3 : B -> A -> A -> Type) :
-  OnOne2 R1 l1 l2 → 
-  All2i R2 n l3 l1 → 
+  OnOne2 R1 l1 l2 →
+  All2i R2 n l3 l1 →
   (forall (n0 : nat) (x y : A) (z : B), R1 x y → R2 n0 z x → R3 z x y) → OnOne2All R3 l3 l1 l2.
 Proof.
   induction 1 in n, l3 |- *; intros H; depelim H.
@@ -1192,7 +1192,7 @@ Proof.
   eapply map_ext. intros []; reflexivity.
 Qed.
 
-Lemma trans_bcontext br :  
+Lemma trans_bcontext br :
   (bcontext (trans_branch (PCUICAst.map_branch trans (map_context trans) br))) = forget_types (PCUICAst.bcontext br).
 Proof.
   cbn. now rewrite map_context_trans map_map_compose.
@@ -1202,7 +1202,7 @@ Lemma OnOne2All_map2_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : B 
   OnOne2All (fun i x y => P (g (f x) i) (f x) (f y)) i l l' -> OnOne2All P (map2 g (map f l) i) (map f l) (map f l').
 Proof.
   induction 1; simpl; constructor; try congruence. len.
-  now rewrite map2_length !map_length. 
+  now rewrite map2_length !map_length.
 Qed.
 
 Lemma trans_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) {wfΣ : PCUICTyping.wf Σ} Γ T U :
@@ -1211,15 +1211,15 @@ Lemma trans_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) {wfΣ : PCUICTyping
   TT.red1 (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   induction 1 using red1_ind_all; simpl in *; intros wt;
-    match goal with 
+    match goal with
     | |- context [tCase _ _ _ _] => idtac
     | _ => eapply wt_inv in wt; tea; cbn in wt; repeat outtimes
     end;
     try solve [econstructor; eauto].
-  
-  - simpl. 
+
+  - simpl.
     rewrite trans_subst; auto. constructor.
-    
+
   - rewrite trans_subst; eauto. repeat constructor.
   - rewrite trans_lift; eauto. repeat constructor.
     rewrite nth_error_map.
@@ -1263,12 +1263,12 @@ Proof.
     pose proof (nth_error_Some_length hnth).
     destruct args. simpl. elimtype False; cbn in H1. lia.
     cbn -[mkApps].
-    eapply TT.red_fix. 
+    eapply TT.red_fix.
     apply trans_unfold_fix; eauto.
     eapply (trans_is_constructor (t0 :: args)).
     now rewrite /is_constructor hnth.
     discriminate.
-    
+
   - rewrite trans_mkApps.
     rewrite !trans_mkApps; eauto with wf.
     apply trans_unfold_cofix in H; eauto with wf.
@@ -1277,14 +1277,14 @@ Proof.
   - rewrite !trans_mkApps.
     apply trans_unfold_cofix in H; eauto with wf.
     eapply TT.red_cofix_proj; eauto.
-    
+
   - rewrite trans_subst_instance. econstructor.
     apply (trans_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body0.
 
   - rewrite trans_mkApps; eauto with wf.
     simpl. constructor; now rewrite nth_error_map H.
-  
+
   - destruct wt as []; constructor; auto.
   - destruct wt as []; constructor; auto.
   - destruct wt as []; constructor; auto.
@@ -1303,7 +1303,7 @@ Proof.
       rewrite /inst_case_context.
       apply compare_decls_conv.
       eapply All2_app. 2:{ reflexivity. }
-      eapply compare_decls_eq_context. 
+      eapply compare_decls_eq_context.
       apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) w).
       cbn. apply compare_decls_eq_context. now symmetry. }
     rewrite [trans_local _]map_app.
@@ -1317,7 +1317,7 @@ Proof.
 
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
     econstructor; eauto.
-  
+
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
     econstructor; eauto.
     eapply trans_declared_inductive; tea.
@@ -1341,8 +1341,8 @@ Proof.
     * eapply trans_wf; tea.
     * repeat constructor. eapply trans_wf; tea.
     * constructor; auto.
-  
-  - constructor. 
+
+  - constructor.
     eapply OnOne2_All_mix_left in X; tea.
     apply OnOne2_map. solve_all.
     red; intuition auto. destruct x, y; simpl in *. noconf b0.
@@ -1356,8 +1356,8 @@ Proof.
     now rewrite /trans_local map_app in X.
     destruct x, y; simpl in *. noconf b0.
     reflexivity.
-    
-  - constructor. 
+
+  - constructor.
     eapply OnOne2_All_mix_left in X; tea.
     apply OnOne2_map. solve_all.
     red; intuition auto. destruct x, y; simpl in *. noconf b0.
@@ -1394,7 +1394,7 @@ Proof.
     destruct nth_error => /= //.
     rewrite nth_error_map.
     destruct nth_error => /= //.
-Qed. 
+Qed.
 
 Lemma trans_eq_context_gen_eq_binder_annot Γ Δ :
   eq_context_gen eq eq Γ Δ ->
@@ -1447,7 +1447,7 @@ From MetaCoq.PCUIC Require Import PCUICCumulativity.
 
 Section wtcumul.
   Import PCUICAst PCUICTyping PCUICEquality.
-  Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U := 
+  Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U :=
   { wt_red1_red1 : PCUICReduction.red1 Σ Γ T U;
     wt_red1_dom : isType Σ Γ T;
     wt_red1_codom : isType Σ Γ U }.
@@ -1459,14 +1459,14 @@ Section wtcumul.
   | wt_cumul_red_l t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ |-- v <= u -> Σ ;;; Γ |-- t <= u
   | wt_cumul_red_r t u v : Σ ;;; Γ |-- t <= v -> wt_red1 Σ Γ u v -> Σ ;;; Γ |-- t <= u
   where " Σ ;;; Γ |-- t <= u " := (wt_cumul Σ Γ t u) : type_scope.
-    
+
   Lemma cumul_decorate {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ T U :
     isType Σ Γ T -> isType Σ Γ U ->
     cumulAlgo Σ Γ T U ->
     wt_cumul Σ Γ T U.
   Proof.
     intros ht hu.
-    induction 1. 
+    induction 1.
     - constructor. auto.
     - pose proof (isType_red1 ht r).
       econstructor 2.
@@ -1482,7 +1482,7 @@ Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : P
   wt_cumul Σ Γ T U ->
   TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul (trans T) (trans U).
 Proof.
-  induction 1. 
+  induction 1.
   - constructor; auto.
     eapply trans_leq_term in c.
     now rewrite -trans_global_ext_constraints.
@@ -1603,8 +1603,8 @@ Lemma trans_mfix_All2 {cf} Σ Γ mfix xfix:
   All
     (fun d : def term =>
     TT.typing (trans_global Σ)
-    (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) xfix)) 
-    (dbody d) (T.lift0 #|TT.fix_context (map (map_def trans trans) xfix)| (dtype d))) 
+    (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) xfix))
+    (dbody d) (T.lift0 #|TT.fix_context (map (map_def trans trans) xfix)| (dtype d)))
     (map (map_def trans trans) mfix).
 Proof.
   induction 1.
@@ -1685,11 +1685,11 @@ Lemma trans_destInd t : ST.destInd t = TT.destInd (trans t).
 Proof.
   destruct t => //. simpl.
   now destruct (mkApp_ex (trans t1) (trans t2)) as [f [u ->]].
-  now destruct prim as [? []]. 
+  now destruct prim as [? []].
 Qed.
 
-Lemma trans_decompose_app t : 
-  let '(hd, args) := decompose_app t in 
+Lemma trans_decompose_app t :
+  let '(hd, args) := decompose_app t in
   AstUtils.decompose_app (trans t) = (trans hd, map trans args).
 Proof.
   destruct (decompose_app t) eqn:da.
@@ -1740,7 +1740,7 @@ Proof.
 Qed.
 
 Lemma map_option_out_check_one_fix mfix :
-  map (fun x => TT.check_one_fix (map_def trans trans x)) mfix = 
+  map (fun x => TT.check_one_fix (map_def trans trans x)) mfix =
   map ST.check_one_fix mfix.
 Proof.
   eapply map_ext => x. apply trans_check_one_fix.
@@ -1759,7 +1759,7 @@ Proof.
 Qed.
 
 Lemma map_option_out_check_one_cofix mfix :
-  map (fun x => TT.check_one_cofix (map_def trans trans x)) mfix = 
+  map (fun x => TT.check_one_cofix (map_def trans trans x)) mfix =
   map ST.check_one_cofix mfix.
 Proof.
   eapply map_ext => x. apply trans_check_one_cofix.
@@ -1774,7 +1774,7 @@ Proof.
 Qed.
 
 Lemma trans_wf_fixpoint Σ mfix :
-  TT.wf_fixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_fixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) =
   ST.wf_fixpoint Σ mfix.
 Proof.
   unfold ST.wf_fixpoint, ST.wf_fixpoint_gen, TT.wf_fixpoint.
@@ -1788,7 +1788,7 @@ Proof.
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :
-  TT.wf_cofixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_cofixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) =
   ST.wf_cofixpoint Σ mfix.
 Proof.
   unfold ST.wf_cofixpoint, ST.wf_cofixpoint_gen, TT.wf_cofixpoint.
@@ -1823,8 +1823,8 @@ Axiom cofix_guard_trans :
   ST.cofix_guard Σ Γ mfix ->
   TT.cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
 
-(* This version of typing spine allows to not require [isType] assumptions at the end of the 
-  application chain, which is crucial to be able to build a spine that both encompasses PCUIC's 
+(* This version of typing spine allows to not require [isType] assumptions at the end of the
+  application chain, which is crucial to be able to build a spine that both encompasses PCUIC's
   applications and mimicks the typing rule of Template. Otherwise we would only model:
 
   |- tProd na A B : s
@@ -1838,12 +1838,12 @@ Axiom cofix_guard_trans :
   following from confluence.
 
   In the end a typing derivation for an application that can mix application and cumulativity steps at any
-  point: 
+  point:
 
   tApp (tApp f u) v : T' can be translated to
 
   typing_spine fty [u; v] T'
-*)  
+*)
 
 Import PCUICAst PCUICLiftSubst PCUICTyping.
 Inductive typing_spine {cf} (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
@@ -1894,17 +1894,17 @@ Proof.
 Defined.
 
 (* The size includes the new [isType] hypothesis  *)
-Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'} 
-  (wf : wf Σ.1) 
+Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'}
+  (wf : wf Σ.1)
   (sp  :typing_spine Σ Γ T args S)
   (tyT : isType Σ Γ T)
   (Hs : Σ ;;; Γ ⊢ S ≤ S')
   (ist : isType Σ Γ S') :
-  typing_spine_size (typing_spine_weaken_concl sp tyT Hs ist) <= 
+  typing_spine_size (typing_spine_weaken_concl sp tyT Hs ist) <=
   max (typing_spine_size sp) (typing_size ist.π2).
 Proof.
   induction sp; simpl; auto. lia.
-  rewrite - !Nat.max_assoc. 
+  rewrite - !Nat.max_assoc.
   specialize (IHsp (PCUICArities.isType_apply i t) Hs). lia.
 Qed.
 
@@ -1915,11 +1915,11 @@ Ltac sig := unshelve eexists.
   The invariant is witnessed by the spine size being lower than the arguments.
 *)
 Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg
-  (wf : wf Σ.1) 
+  (wf : wf Σ.1)
   (isty : isType Σ Γ (tProd na A B))
   (sp : typing_spine Σ Γ ty args (tProd na A B))
-  (argd : Σ ;;; Γ |- arg : A) : 
-  ∑ sp' : typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}), 
+  (argd : Σ ;;; Γ |- arg : A) :
+  ∑ sp' : typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}),
     typing_spine_size sp' <= max (typing_size isty.π2) (max (typing_spine_size sp) (typing_size argd)).
 Proof.
   revert arg argd.
@@ -1930,7 +1930,7 @@ Proof.
       constructor.
     * simpl. lia.
   - intros arg Harg. simpl.
-    sig. 
+    sig.
     * econstructor; eauto. constructor.
     * simpl. lia.
   - intros arg Harg. simpl.
@@ -1960,17 +1960,17 @@ Proof.
     eapply IHtyping_spine. now rewrite eq. exact eq. apply Harg. apply X.
 Defined.
 
-(** This is the central lemma for this translation: 
-  any PCUIC typing of an application `t` can be decomposed as 
-  a typing of the head of `t` followed by a typing spine for 
+(** This is the central lemma for this translation:
+  any PCUIC typing of an application `t` can be decomposed as
+  a typing of the head of `t` followed by a typing spine for
   its arguments `l`. *)
 
 Lemma type_app {cf} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) :
   wf Σ.1 ->
-  if isApp t then 
-    let (f, l) := decompose_app t in 
-    ∑ fty (d' : Σ ;;; Γ |- f : fty), 
-      ((typing_size d' <= typing_size d) * 
+  if isApp t then
+    let (f, l) := decompose_app t in
+    ∑ fty (d' : Σ ;;; Γ |- f : fty),
+      ((typing_size d' <= typing_size d) *
       ∑ (sp : typing_spine Σ Γ fty l T),
         (typing_spine_size sp <= typing_size d))%type
   else True.
@@ -2019,16 +2019,16 @@ Qed.
   of the translation to any of the typing derivations in the spine, then we can produce a typing
   spine in the n-ary application template-coq spec.
 
-  We have two cases to consider at the "end" of the spine: either we have the same translation of the 
+  We have two cases to consider at the "end" of the spine: either we have the same translation of the
   PCUIC conclusion type, or there is exactly one cumulativity step to get to this type. *)
-Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T} 
-  (sp : PCUICToTemplateCorrectness.typing_spine Σ Γ fty l T) n 
-  (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'), 
-      typing_size Ht' <= n -> 
+Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T}
+  (sp : PCUICToTemplateCorrectness.typing_spine Σ Γ fty l T) n
+  (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'),
+      typing_size Ht' <= n ->
       TT.typing (trans_global Σ) (trans_local Γ) (trans t') (trans T')) :
   isType Σ Γ fty ->
   typing_spine_size sp <= n ->
-  ∑ T', TT.typing_spine (trans_global Σ) (trans_local Γ) (trans fty) (map trans l) T' * 
+  ∑ T', TT.typing_spine (trans_global Σ) (trans_local Γ) (trans fty) (map trans l) T' *
     ((T' = trans T) +
       (TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul T' (trans T) *
        ∑ s, TT.typing (trans_global Σ) (trans_local Γ) (trans T) (T.tSort s)))%type.
@@ -2073,7 +2073,7 @@ Lemma it_mkLambda_or_LetIn_app l l' t :
   T.Env.it_mkLambda_or_LetIn (l ++ l') t = T.Env.it_mkLambda_or_LetIn l' (T.Env.it_mkLambda_or_LetIn l t).
 Proof. induction l in l', t |- *; simpl; auto. Qed.
 
-Lemma trans_it_mkLambda_or_LetIn Γ T : 
+Lemma trans_it_mkLambda_or_LetIn Γ T :
   trans (it_mkLambda_or_LetIn Γ T) = T.Env.it_mkLambda_or_LetIn (trans_local Γ) (trans T).
 Proof.
   induction Γ using rev_ind.
@@ -2083,8 +2083,8 @@ Proof.
     destruct x as [na [b|] ty] => /=; cbn; now f_equal.
 Qed.
 
-Lemma All2i_All2_mapi {A B C D} P (f : nat -> A -> B) (g : nat -> C -> D) l l' : 
-  All2i (fun i x y => P (f i x) (g i y)) 0 l l' ->  
+Lemma All2i_All2_mapi {A B C D} P (f : nat -> A -> B) (g : nat -> C -> D) l l' :
+  All2i (fun i x y => P (f i x) (g i y)) 0 l l' ->
   All2 P (mapi f l) (mapi g l').
 Proof.
   rewrite /mapi. generalize 0.
@@ -2098,7 +2098,7 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma eq_names_subst_context_pcuic nas Γ s k : 
+Lemma eq_names_subst_context_pcuic nas Γ s k :
   eq_names nas Γ ->
   eq_names nas (subst_context s k Γ).
 Proof.
@@ -2107,7 +2107,7 @@ Proof.
   * rewrite subst_context_snoc. constructor; auto.
 Qed.
 
-Lemma eq_names_subst_instance_pcuic nas (Γ : context) u : 
+Lemma eq_names_subst_instance_pcuic nas (Γ : context) u :
   eq_names nas Γ ->
   eq_names nas (subst_instance u Γ).
 Proof.
@@ -2140,12 +2140,12 @@ Proof.
   - rewrite [Ast.case_branch_context_gen _ _ _ _ _ _]trans_inst_case_branch_context => //.
     f_equal.
     rewrite /case_branch_context.
-    symmetry. 
+    symmetry.
     erewrite <- PCUICCasesContexts.inst_case_branch_context_eq => //.
   - rewrite trans_mkApps !lengths.
     rewrite trans_lift /ptm trans_it_mkLambda_or_LetIn. f_equal.
     rewrite !map_app (map_map_compose _ _ _ _ trans). f_equal.
-    setoid_rewrite trans_subst. 
+    setoid_rewrite trans_subst.
     rewrite -(map_map_compose _ _ _ trans) map_rev. f_equal.
     rewrite (map_map_compose _ _ _ _ trans).
     setoid_rewrite trans_expand_lets_k.
@@ -2175,10 +2175,10 @@ Lemma subst_telescope_subst_context s k Γ :
 Proof.
   rewrite /Env.subst_telescope Env.subst_context_alt.
   rewrite rev_mapi. apply mapi_rec_ext.
-  intros n [na [b|] ty] le le'; rewrite /= /Env.subst_decl /map_decl /=; 
-  rewrite List.rev_length Nat.add_0_r in le'; 
+  intros n [na [b|] ty] le le'; rewrite /= /Env.subst_decl /map_decl /=;
+  rewrite List.rev_length Nat.add_0_r in le';
   f_equal. f_equal. f_equal. lia. f_equal; lia.
-  f_equal; lia. 
+  f_equal; lia.
 Qed.
 
 Theorem pcuic_to_template {cf} (Σ : SE.global_env_ext) Γ t T :
@@ -2188,12 +2188,12 @@ Theorem pcuic_to_template {cf} (Σ : SE.global_env_ext) Γ t T :
 Proof.
   intros X X0.
   revert Σ X Γ t T X0.
-  (** We use an induction principle allowing to apply induction to any subderivation of 
+  (** We use an induction principle allowing to apply induction to any subderivation of
     functions in applications. *)
   apply (typing_ind_env_app_size (fun Σ Γ t T =>
     TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type
-    (fun Σ Γ => 
+    (fun Σ Γ =>
     TT.All_local_env (TT.lift_typing TT.typing (trans_global Σ)) (trans_local Γ))
   );intros.
   - now eapply trans_wf_local_env, All_over_All.
@@ -2220,7 +2220,7 @@ Proof.
       apply decompose_app_notApp in da.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
-      eassumption. 
+      eassumption.
       eapply TT_typing_spine_app. simpl in X1. eapply X0.
       apply IH. apply TT.cumul_refl'.
       apply X4.
@@ -2231,7 +2231,7 @@ Proof.
       apply decompose_app_notApp in da.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
-      eassumption. 
+      eassumption.
       eapply TT_typing_spine_app. simpl in X0. eapply X0.
       apply IH. apply hcum.
       apply X4.
@@ -2252,10 +2252,10 @@ Proof.
     + now apply trans_consistent_instance_ext.
   - rewrite trans_type_of_constructor.
     eapply TT.type_Construct; auto.
-    + destruct isdecl. 
+    + destruct isdecl.
       constructor.
-      * now apply trans_declared_inductive. 
-      * now apply map_nth_error. 
+      * now apply trans_declared_inductive.
+      * now apply map_nth_error.
   - rewrite trans_mkApps map_app.
     simpl.
     rewrite /ptm trans_it_mkLambda_or_LetIn.
@@ -2280,12 +2280,12 @@ Proof.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
       intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
-      now move: ctx; induction 1; cbn; constructor; auto; 
-        rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev 
+      now move: ctx; induction 1; cbn; constructor; auto;
+        rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
     + cbn [Ast.pparams Ast.pcontext trans_predicate].
       rewrite (trans_case_predicate_context Γ); tea.
-      now rewrite -trans_local_app. 
+      now rewrite -trans_local_app.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
     + now rewrite trans_mkApps map_app in X7.
@@ -2313,11 +2313,11 @@ Proof.
     + now apply trans_declared_projection.
     + rewrite trans_mkApps in X2.
       assumption.
-    + rewrite map_length H. now destruct mdecl.  
+    + rewrite map_length H. now destruct mdecl.
   - rewrite trans_dtype. simpl.
     eapply TT.type_Fix; auto.
     + now rewrite fix_guard_trans.
-    + erewrite map_nth_error. 
+    + erewrite map_nth_error.
       2: apply H0.
       destruct decl.
       unfold map_def.
@@ -2330,11 +2330,11 @@ Proof.
     + fold trans.
       subst types.
       eapply trans_mfix_All2; eassumption.
-    + now rewrite trans_wf_fixpoint. 
+    + now rewrite trans_wf_fixpoint.
   - rewrite trans_dtype. simpl.
     eapply TT.type_CoFix; auto.
     + now eapply cofix_guard_trans.
-    + erewrite map_nth_error. 
+    + erewrite map_nth_error.
       2: eassumption.
       destruct decl.
       unfold map_def.

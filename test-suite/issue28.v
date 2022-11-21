@@ -25,13 +25,13 @@ tFix
   [mkdef term (nNamed "f") (tProd (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tInd (mkInd q_unit 0) []))
      (tLambda (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tRel 0])
         (tCase {|ci_ind := mkInd q_test 0; ci_npar := 1; ci_relevance := Relevant |}
-          {| pparams := [tInd (mkInd q_unit 0) []]; puinst := []; 
+          {| pparams := [tInd (mkInd q_unit 0) []]; puinst := [];
              pcontext := [nNamed "X"];
              preturn := (tInd (mkInd q_unit 0) []) |}
            (tRel 0)
            [{| bcontext := [nNamed "x0"]; bbody := (tApp (tRel 2) [tRel 0]) |}]))
      0] 0.
-     
+
 (* MetaCoq Run (tmEval cbv (print_term (empty_ext []) [] true T) >>= tmPrint).   *)
 Fail MetaCoq Run (tmUnquote T >>= tmPrint).
 

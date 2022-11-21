@@ -7,9 +7,9 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
-     PCUICWeakeningEnv PCUICWeakeningEnvTyp 
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICReduction
-     PCUICWeakeningConv PCUICWeakeningTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp
      PCUICClosed PCUICClosedTyp
      PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion PCUICReduction
@@ -41,7 +41,7 @@ Add Search Blacklist "obligation".
 
 Require Import ssreflect.
 
-Lemma into_ws_cumul_pb_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} : 
+Lemma into_ws_cumul_pb_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} :
   All2 (convAlgo Σ Γ) l l' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) l ->
@@ -53,8 +53,8 @@ Proof.
 Qed.
 
 Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl → 
-  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
+  declared_inductive Σ ind mdecl idecl →
+  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT)
     (ind_predicate_context ind mdecl idecl).
 Proof.
   intros decli.
@@ -66,7 +66,7 @@ Qed.
 Inductive wellinferred {cf: checker_flags} Σ Γ t : Prop :=
   | iswellinferred T : Σ ;;; Γ |- t ▹ T -> wellinferred Σ Γ t.
 
-Definition well_sorted {cf:checker_flags} Σ Γ T := 
+Definition well_sorted {cf:checker_flags} Σ Γ T :=
   ∥ ∑ u, Σ ;;; Γ |- T ▹□ u ∥.
 
 Lemma well_sorted_wellinferred {cf:checker_flags} {Σ Γ T} :
@@ -78,7 +78,7 @@ Qed.
 
 Coercion well_sorted_wellinferred : well_sorted >-> wellinferred.
 
-Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ inst Δ s} :
   wf_local Σ (Γ ,,, Δ) ->
   spine_subst Σ Γ inst s (smash_context [] Δ) ->
@@ -101,7 +101,7 @@ Lemma inductive_cumulative_indices_smash {cf : checker_flags} {Σ : global_env_e
   PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
   forall Γ pars pars',
   spine_subst Σ Γ pars (List.rev pars) (smash_context [] (subst_instance u (ind_params mdecl))) ->
-  spine_subst Σ Γ pars' (List.rev pars') (smash_context [] (subst_instance u' (ind_params mdecl))) ->  
+  spine_subst Σ Γ pars' (List.rev pars') (smash_context [] (subst_instance u' (ind_params mdecl))) ->
   ws_cumul_pb_terms Σ Γ pars pars' ->
   let indctx := idecl.(ind_indices)@[u] in
   let indctx' := idecl.(ind_indices)@[u'] in
@@ -142,19 +142,19 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
   Context (X : X_type.π2.π1).
 
-  Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) : 
+  Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
   Local Definition hΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
-    ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ. 
+    ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ.
 
   Ltac specialize_Σ wfΣ :=
-    repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end. 
+    repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end.
 
-  Definition on_subterm P Pty Γ t : Type := 
+  Definition on_subterm P Pty Γ t : Type :=
   match t with
   | tProd na t b => Pty Γ t * Pty (Γ ,, vass na t) b
-  | tLetIn na d t t' => 
+  | tLetIn na d t t' =>
     Pty Γ t * P Γ d * P (Γ ,, vdef na d t) t'
   | tLambda na t b => Pty Γ t * P (Γ ,, vass na t) b
   | _ => True
@@ -172,9 +172,9 @@ Qed.
 
   #[local] Notation ret t := (t; _).
 
-  #[local] Definition principal_type Γ t := 
+  #[local] Definition principal_type Γ t :=
     ∑ T : term, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹ T ∥.
-  #[local] Definition principal_sort Γ T := 
+  #[local] Definition principal_sort Γ T :=
     ∑ u, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- T ▹□ u ∥.
   #[local] Definition principal_type_type {Γ t} (wt : principal_type Γ t) : term
     := projT1 wt.
@@ -194,7 +194,7 @@ Qed.
   Next Obligation.
     destruct tx ; cbn in *.
     destruct (wf _ wfΣ) as [[]], (hΣ _ wfΣ) as [wΣ].
-    specialize_Σ wfΣ. 
+    specialize_Σ wfΣ.
     sq.
     eapply infering_typing, validity in s as []; eauto.
     now eexists.
@@ -218,14 +218,14 @@ Qed.
     destruct wf as [[? i]], (hΣ _ wfΣ) as [wΣ].
     eapply infering_sort_infering in i ; eauto.
     eapply wildcard'. exists x0. intros.
-    erewrite(abstract_env_ext_irr _ _ wfΣ); eauto. 
-    Unshelve. all: eauto.      
+    erewrite(abstract_env_ext_irr _ _ wfΣ); eauto.
+    Unshelve. all: eauto.
   Qed.
 
   Program Definition infer_as_prod Γ T
     (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
     (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ T)
-    (isprod : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) : 
+    (isprod : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) :
     ∑ na' A' B', forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
     match @reduce_to_prod cf nor _ X Γ T wf with
     | Checked_comp p => p
@@ -239,15 +239,15 @@ Qed.
       destruct isprod as (?&?&?&?).
       apply wildcard'.
       do 3 eexists.
-      intros. sq. 
-      erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.  
+      intros. sq.
+      erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
       eapply into_closed_red ; tea.
       1: fvs.
       destruct wf.
       now eapply subject_is_open_term.
-      Unshelve. eauto. 
+      Unshelve. eauto.
     Qed.
-    
+
   Equations lookup_ind_decl ind : typing_result
         (∑ decl body, forall Σ (wfΣ : abstract_env_ext_rel X Σ), declared_inductive (fst Σ) ind decl body) :=
   lookup_ind_decl ind with inspect (abstract_env_lookup X ind.(inductive_mind)) :=
@@ -263,27 +263,27 @@ Qed.
     - now symmetry.
   Defined.
 
-  Lemma lookup_ind_decl_complete Σ (wfΣ : abstract_env_ext_rel X Σ) ind e : lookup_ind_decl ind = TypeError e -> 
+  Lemma lookup_ind_decl_complete Σ (wfΣ : abstract_env_ext_rel X Σ) ind e : lookup_ind_decl ind = TypeError e ->
     ((∑ mdecl idecl, declared_inductive Σ ind mdecl idecl) -> False).
   Proof using Type.
-    cbn. 
+    cbn.
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
       red in declm; erewrite <- abstract_env_lookup_correct, declm in e0; eauto;
-      congruence. 
+      congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
     red in declm. erewrite <- abstract_env_lookup_correct, declm in look; eauto.
     noconf look.
     congruence.
   Qed.
-  
+
   Obligation Tactic := intros ;
     try match goal with
       | infer : context [wellinferred _ _ _ -> principal_type _ _ ],
         wt : wellinferred _ _ _ |- _ =>
         try clear infer ; destruct wt as [T HT]
     end.
-  
+
   Definition primitive_constant (tag : Primitive.prim_tag) : option kername :=
     let retro := abstract_env_ext_retroknowledge X in
     match tag with
@@ -301,15 +301,15 @@ Qed.
     now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
   Qed.
 
-  Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term) 
+  Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term)
     (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wellinferred Σ Γ t) :
     principal_type Γ t
     by struct t :=
-   infer Γ wfΓ (tRel n) wt with 
-    inspect (option_map (lift0 (S n) ∘ decl_type) (nth_error Γ n)) := 
+   infer Γ wfΓ (tRel n) wt with
+    inspect (option_map (lift0 (S n) ∘ decl_type) (nth_error Γ n)) :=
     { | exist None _ => !
       | exist (Some t) _ => ret t };
-    
+
     infer Γ wfΓ (tVar n) wt := !;
     infer Γ wfΓ (tEvar ev args) wt := !;
 
@@ -343,9 +343,9 @@ Qed.
     infer Γ wfΓ (tInd ind u) wt with inspect (lookup_ind_decl ind) :=
       { | exist (Checked decl) _ := ret (subst_instance u decl.π2.π1.(ind_type))
         | exist (TypeError e) _ := ! };
-    
+
     infer Γ wfΓ (tConstruct ind k u) wt with inspect (lookup_ind_decl ind) :=
-      { | exist (Checked decl) _ with inspect (nth_error decl.π2.π1.(ind_ctors) k) := 
+      { | exist (Checked decl) _ with inspect (nth_error decl.π2.π1.(ind_ctors) k) :=
         { | exist (Some cdecl) _ => ret (type_of_constructor decl.π1 cdecl (ind, k) u)
           | exist None _ => ! }
       | exist (TypeError e) _ => ! };
@@ -360,7 +360,7 @@ Qed.
     infer Γ wfΓ (tProj p c) wt with inspect (@lookup_ind_decl p.(proj_ind)) :=
       { | exist (Checked d) _ with inspect (nth_error d.π2.π1.(ind_projs) p.(proj_arg)) :=
         { | exist (Some pdecl) _ with inspect (reduce_to_ind Γ (infer Γ wfΓ c _) _) :=
-          { | exist (Checked_comp indargs) _ => 
+          { | exist (Checked_comp indargs) _ =>
               let ty := pdecl.(proj_type) in
               ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty))
             | exist (TypeError_comp _ _) _ => ! }
@@ -407,8 +407,8 @@ Qed.
   Defined.
 
   Next Obligation.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. 
-    inversion wt. 
+    pose (hΣ _ wfΣ). specialize_Σ wfΣ.
+    inversion wt.
     sq.
     constructor ; tea.
     inversion X0.
@@ -421,21 +421,21 @@ Qed.
   Defined.
 
   Next Obligation.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq. 
+    pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     constructor ; tea.
     now eapply infering_sort_isType.
   Defined.
   Next Obligation.
     case t2 as []. intros; cbn.  specialize_Σ wfΣ.
-    inversion wt.  
+    inversion wt.
     sq.
     inversion X0 ; subst.
     now econstructor.
   Defined.
 
   Next Obligation.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq. 
+    pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     constructor ; tea.
     1: now eapply infering_sort_isType.
@@ -444,27 +444,27 @@ Qed.
   Defined.
   Next Obligation.
    cbn; intros; case b'_ty as []. cbn.
-   specialize_Σ wfΣ. inversion wt. sq. 
+   specialize_Σ wfΣ. inversion wt. sq.
    inversion X0 ; subst.
    now econstructor.
   Defined.
 
   Next Obligation.
-  specialize_Σ wfΣ. inversion wt. sq. 
+  specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     inversion X1.
     now econstructor.
   Defined.
   Next Obligation.
-    case ty as []. 
-    cbn. specialize_Σ wfΣ. inversion wt. 
+    case ty as [].
+    cbn. specialize_Σ wfΣ. inversion wt.
     apply wat_welltyped ; tea.
     pose (hΣ _ wfΣ). sq.
     eapply validity, infering_typing ; eauto.
   Defined.
   Next Obligation.
     case ty as [].
-    cbn. specialize_Σ wfΣ. inversion wt. 
+    cbn. specialize_Σ wfΣ. inversion wt.
     pose (hΣ _ wfΣ). sq.
     inversion X0 ; subst.
     eapply infering_prod_infering in X1 as (?&?&[]); eauto.
@@ -472,7 +472,7 @@ Qed.
     now apply closed_red_red.
   Defined.
   Next Obligation.
-    cbn; intros. case pi as (?&?&[]). 
+    cbn; intros. case pi as (?&?&[]).
     case ty as []. cbn in *. specialize_Σ wfΣ.
     pose (hΣ _ wfΣ). inversion wt. sq.
     inversion X0 ; subst.
@@ -500,29 +500,29 @@ Qed.
   Next Obligation.
     cbn in *; intros. pose (hΣ _ wfΣ). specialize_Σ wfΣ.
     inversion wt. sq.
-    inversion X0; subst. 
-    erewrite <- abstract_env_lookup_correct in e; eauto.  
-    rewrite isdecl in e. inversion e. subst.   
+    inversion X0; subst.
+    erewrite <- abstract_env_lookup_correct in e; eauto.
+    rewrite isdecl in e. inversion e. subst.
     now constructor.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt. 
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto. 
+    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt. 
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto. 
+    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
     cbn in *; intros. pose (hΣ _ wfΣ). specialize_Σ wfΣ.
     inversion wt. sq.
-    inversion X0; subst. 
+    inversion X0; subst.
     clear e.
     destruct decl as (?&?&isdecl').
     cbn.
@@ -532,15 +532,15 @@ Qed.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt. 
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    eapply lookup_ind_decl_complete. 1: eauto. 
+    eapply lookup_ind_decl_complete. 1: eauto.
     1: now symmetry.
     now do 2 eexists.
   Defined.
 
   Next Obligation.
-    cbn; intros. specialize_Σ wfΣ. inversion wt. sq. 
+    cbn; intros. specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     clear e.
     destruct decl as (?&?&isdecl').
@@ -553,7 +553,7 @@ Qed.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt. 
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     clear e.
     destruct decl as (?&?&isdecl').
@@ -564,25 +564,25 @@ Qed.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt. 
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     destruct isdecl.
-    eapply lookup_ind_decl_complete. 1:eauto. 
+    eapply lookup_ind_decl_complete. 1:eauto.
     1: now symmetry.
     now do 2 eexists.
   Defined.
-  Next Obligation. exact X_type. Defined. 
+  Next Obligation. exact X_type. Defined.
   Next Obligation. exact X. Defined.
-  Next Obligation.    
-    specialize_Σ wfΣ. inversion wt. 
+  Next Obligation.
+    specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     inversion X1.
     now econstructor.
   Defined.
-  Next Obligation. 
+  Next Obligation.
     cbn in *. pose proof wt. specialize_Σ wfΣ.
     destruct infer.
-    pose (hΣ _ wfΣ). cbn. specialize_Σ wfΣ. sq. 
+    pose (hΣ _ wfΣ). cbn. specialize_Σ wfΣ. sq.
     eapply infering_typing, validity in s as [] ; eauto.
     now eexists.
   Defined.
@@ -592,9 +592,9 @@ Qed.
     cbn in *. intros.
     set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
     infer_obligations_obligation_26 Γ ci p c brs wt Σ0
-      wfΣ0) in indargs. cbn in *. 
+      wfΣ0) in indargs. cbn in *.
     set (infer _ wfΓ c H) in *. unfold H in *. clear H.
-    pose proof p0.π2 as p02. 
+    pose proof p0.π2 as p02.
     destruct indargs as (?&?&?&?).
     cbn in *. pose proof wt; pose proof wfΓ
     ; pose proof s as s'.
@@ -636,9 +636,9 @@ Qed.
   cbn in *. intros.
   set (H := λ (Σ : global_env_ext) (wfΣ : abstract_env_ext_rel X Σ),
   infer_obligations_obligation_26 Γ ci p c brs wt Σ wfΣ) in a0.
-  cbn in *. 
+  cbn in *.
   set (infer _ wfΓ c H) in *.
-  unfold H in *. clear H e. 
+  unfold H in *. clear H e.
    destruct p0 as [? i].
     cbn in *.
     pose proof wt; pose proof wfΓ.
@@ -649,18 +649,18 @@ Qed.
     inversion X0 ; subst.
     eapply infering_ind_infering in i as [? []] ; eauto.
     do 3 eexists. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. eauto. 
+    Unshelve. eauto.
   Defined.
-  Next Obligation. exact X_type. Defined. 
+  Next Obligation. exact X_type. Defined.
   Next Obligation. exact X. Defined.
-  Next Obligation.  
+  Next Obligation.
   specialize_Σ wfΣ. destruct wt.
-    inversion X0. inversion X1. 
-    now econstructor. 
+    inversion X0. inversion X1.
+    now econstructor.
   Defined.
   Next Obligation.
-    destruct infer. 
-    pose proof s as s'; pose proof wfΓ as wfΓ'. 
+    destruct infer.
+    pose proof s as s'; pose proof wfΓ as wfΓ'.
     specialize_Σ wfΣ.
     pose (hΣ _ wfΣ); sq.
     cbn.
@@ -670,9 +670,9 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-  infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0) in indargs. cbn in *. 
+  infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0) in indargs. cbn in *.
   set (infer _ wfΓ c H) in *. unfold H in *. clear H.
-  pose proof p0.π2 as p02. 
+  pose proof p0.π2 as p02.
   destruct indargs as (?&?&?&?).
     destruct d as (?&?&isdecl).
     clear e.
@@ -701,13 +701,13 @@ Qed.
       now eapply All2_length.
   Defined.
   Next Obligation.
-    cbn in *. 
-    set (H := (λ (Σ0 : global_env_ext) 
+    cbn in *.
+    set (H := (λ (Σ0 : global_env_ext)
     (wfΣ0 : abstract_env_ext_rel X Σ0),
     infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0)) in a0.
-      cbn in *. 
+      cbn in *.
       set (infer _ wfΓ c H) in *.
-      unfold H in *. clear H e1. 
+      unfold H in *. clear H e1.
     destruct p0.
     cbn -[lookup_ind_decl] in *.
     pose proof wt; pose proof wfΓ.
@@ -718,14 +718,14 @@ Qed.
     eapply infering_ind_infering in s as [? []] ; eauto.
     apply a0.
     do 3 eexists.
-    intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. 
+    intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. all: eauto.
   Defined.
   Next Obligation.
     destruct d as (?&?&isdecl).
     clear e.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     destruct H1 as [[] []].
     cbn -[lookup_ind_decl nth_error] in *.
     eapply declared_inductive_inj in isdecl as [] ; tea.
@@ -735,7 +735,7 @@ Qed.
   Next Obligation.
     cbn -[lookup_ind_decl] in *.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     eapply lookup_ind_decl_complete ; eauto.
     do 2 eexists.
     exact H1.
@@ -744,40 +744,40 @@ Qed.
   Next Obligation.
     sq.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     subst.
     intros; erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    now constructor.  
+    now constructor.
     Unshelve. eauto.
   Qed.
   Next Obligation.
     cbn in e.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     congruence.
   Qed.
 
   Next Obligation.
     sq.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     subst.
     intros; erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    now constructor.  
-    Unshelve. eauto. 
+    now constructor.
+    Unshelve. eauto.
   Qed.
   Next Obligation.
     cbn in e.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0. 
+    specialize (wt _ wfΣ). destruct wt. inversion X0.
     congruence.
   Qed.
-  
+
   Next Obligation.
     cbn.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros. specialize (wt _ wfΣ). destruct wt.
-    inversion X0; subst. 
+    inversion X0; subst.
     cbn in eqp. rewrite (primitive_constant_spec _ Σ) // in eqp.
     rewrite /= -eqp in H0. noconf H0. split.
     intros; erewrite (abstract_env_ext_irr _ wfΣ0 wfΣ); eauto.
@@ -787,14 +787,14 @@ Qed.
     cbn in *.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros. specialize (wt _ wfΣ). destruct wt.
-    inversion X0; subst. 
+    inversion X0; subst.
     rewrite (primitive_constant_spec _ Σ) // in e.
     rewrite /= -e in H0. noconf H0.
   Qed.
-  
+
   Definition type_of Γ wfΓ t wt : term := (infer Γ wfΓ t wt).
-  
-  Definition principal_typing Σ Γ t P := 
+
+  Definition principal_typing Σ Γ t P :=
     forall T, Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ P ≤ T.
 
   Program Definition type_of_typing Γ t (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) : ∑ T, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ (Σ ;;; Γ |- t : T) × principal_typing Σ Γ t T ∥ :=
@@ -811,7 +811,7 @@ Qed.
   Qed.
   Next Obligation.
     cbn in *. subst it. intros. pose proof wt as wt'.
-    destruct (hΣ _ wfΣ) as [wΣ]. 
+    destruct (hΣ _ wfΣ) as [wΣ].
     destruct infer as []; cbn.
     specialize_Σ wfΣ. destruct wt' as [T' HT'].
     sq.
@@ -822,7 +822,7 @@ Qed.
     eapply infering_checking;tea. 1-2: pcuic.
     fvs.
     econstructor; tea. now eapply ws_cumul_pb_forget in HP'.
-  Defined. 
+  Defined.
 
   Lemma squash_isType_welltyped :
     forall {Σ : global_env_ext} {Γ : context} {T : term},
@@ -830,25 +830,25 @@ Qed.
   Proof using Type. intros. destruct H. now eapply isType_welltyped. Qed.
 
   Opaque type_of_typing.
-  Equations? sort_of_type (Γ : context) (t : PCUICAst.term) 
+  Equations? sort_of_type (Γ : context) (t : PCUICAst.term)
     (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥) :
-    (∑ u : Universe.t, forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> 
+    (∑ u : Universe.t, forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
       ∥ Σ ;;; Γ |- t : tSort u ∥) :=
     sort_of_type Γ t wt with (@type_of_typing Γ t _) :=
-      { | T with inspect (reduce_to_sort (X:=X) Γ T.π1 _) := 
+      { | T with inspect (reduce_to_sort (X:=X) Γ T.π1 _) :=
         { | exist (Checked_comp (u; Hu)) hr => (u; _)
           | exist (TypeError_comp _ _) ns => False_rect _ _ } }.
   Proof.
     - eapply squash_isType_welltyped, wt; eauto.
-    - cbn.  
+    - cbn.
       specialize (wt _ wfΣ) as [wt].
       destruct T as [T HT].
       destruct (HT _ wfΣ) as [[Ht _]].
-      pose proof (abstract_env_ext_wf _ wfΣ) as [wf]. 
+      pose proof (abstract_env_ext_wf _ wfΣ) as [wf].
       eapply validity in Ht.
       now eapply isType_welltyped.
-    - clear hr. 
-      pose proof (abstract_env_ext_wf _ H) as [wf]. 
+    - clear hr.
+      pose proof (abstract_env_ext_wf _ H) as [wf].
       specialize (Hu _ H) as [Hred]. cbn in Hred.
       destruct T as [T HT].
       destruct (HT _ H) as [[Ht _]]. cbn in Hred.
@@ -867,7 +867,7 @@ Qed.
   Transparent type_of_typing.
 
   Open Scope type_scope.
-  
+
   Definition map_typing_result {A B} (f : A -> B) (e : typing_result A) : typing_result B :=
     match e with
     | Checked a => Checked (f a)
@@ -880,11 +880,11 @@ Qed.
   forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ type_of Γ _ t _ ≤ T ∥ :=
     type_of_subtype wt := _.
   Proof.
-    - erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.  
+    - erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
       specialize_Σ wfΣ.  case wt as [wt'].
       apply sq.
       now exact (typing_wf_local wt').
-    - erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.  
+    - erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
       specialize_Σ wfΣ.  case wt as [wt'].
       case (hΣ _ wfΣ) as [hΣ'].
       apply typing_infering in wt'.
@@ -898,18 +898,18 @@ Qed.
       eapply infering_checking ; eauto.
       + now eapply typing_wf_local.
       + now eapply type_is_open_term.
-      + now eapply typing_checking.   
-      Unshelve. all: eauto. 
+      + now eapply typing_checking.
+      Unshelve. all: eauto.
   Defined.
 
-  (* Note the careful use of squashing here: the principal type is accessible 
+  (* Note the careful use of squashing here: the principal type is accessible
     computationally but the proof it is principal is squashed (in Prop).
     The [PCUICPrincipality.principal_type] proof gives an unsquashed version of the same theorem. *)
-    
-  Theorem principal_types {Γ t} (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) : 
+
+  Theorem principal_types {Γ t} (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :
     ∑ P, ∥ forall T Σ (wfΣ : abstract_env_ext_rel X Σ), Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
   Proof using nor.
-    unshelve eexists (infer Γ _ t _); intros. 
+    unshelve eexists (infer Γ _ t _); intros.
     - destruct (wt _ wfΣ).
       pose (hΣ _ wfΣ); sq.
       now eapply typing_wf_local.
@@ -918,7 +918,7 @@ Qed.
       eapply typing_infering in wt' as [? []].
       econstructor.
       eassumption.
-    - cbn. 
+    - cbn.
       set (H := (λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
       match hΣ Σ0 wfΣ0 with
       | sq H =>
@@ -941,15 +941,15 @@ Qed.
             @sq (All_local_env (lift_typing (@typing cf) Σ) Γ)
               (@typing_wf_local cf Σ Γ t A x)
         end
-    end)). 
-    cbn. 
+    end)).
+    cbn.
     set (infer Γ H' t H). clearbody p.
-    clear H H'. destruct p as [T i]; eauto. 
+    clear H H'. destruct p as [T i]; eauto.
     cbn.       destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
     intros T' ? ?.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    clear Σ0 wfΣ0. intros. split. 
+    clear Σ0 wfΣ0. intros. split.
       + apply infering_typing ; eauto.
         now eapply typing_wf_local.
       + eapply infering_checking ; eauto.

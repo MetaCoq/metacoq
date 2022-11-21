@@ -125,7 +125,7 @@ Module Level.
     | Level.Var n1, Level.Var n2 => ReflectEq.eqb n1 n2
     | _, _ => false
     end.
-    
+
   #[global, program] Instance reflect_level : ReflectEq Level.t := {
     eqb := eq_level
   }.
@@ -139,7 +139,7 @@ Module Level.
     - destruct (ReflectEq.eqb_spec n n0) ; nodec.
       constructor. subst. reflexivity.
   Defined.
-  
+
   Global Instance eqb_refl : @Reflexive Level.t eqb.
   Proof.
     intros x. apply ReflectEq.eqb_refl.

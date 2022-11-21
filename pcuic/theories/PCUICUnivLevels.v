@@ -1,10 +1,10 @@
 
-Definition fresh_levels global_levels levels := 
+Definition fresh_levels global_levels levels :=
     LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels.
-  
-  Definition declared_constraints_levels levels cstrs := 
+
+  Definition declared_constraints_levels levels cstrs :=
     ConstraintSet.For_all (declared_cstr_levels levels) cstrs.
-  
+
   Definition declared_constraints_levels_union levels cstrs cstrs' :
     declared_constraints_levels levels cstrs ->
     declared_constraints_levels levels cstrs' ->
@@ -16,7 +16,7 @@ Definition fresh_levels global_levels levels :=
     eapply ConstraintSetProp.FM.union_1 in inx as [].
     now eapply decl. now eapply decl'.
   Qed.
-    
+
   Definition declared_constraints_levels_union_left levels levels' cstrs :
     declared_constraints_levels levels cstrs ->
     declared_constraints_levels (LevelSet.union levels levels') cstrs.
@@ -29,7 +29,7 @@ Definition fresh_levels global_levels levels :=
     destruct hx.
     now eapply LevelSetFact.union_2.
   Qed.
-    
+
   Definition declared_constraints_levels_union_right levels levels' cstrs :
     declared_constraints_levels levels' cstrs ->
     declared_constraints_levels (LevelSet.union levels levels') cstrs.
@@ -37,11 +37,11 @@ Definition fresh_levels global_levels levels :=
     rewrite /declared_constraints_levels.
     intros hx x inx.
     specialize (hx x inx).
-    destruct x as [[l d] r]. 
+    destruct x as [[l d] r].
     destruct hx; split. now eapply LevelSetFact.union_3.
     now eapply LevelSetFact.union_3.
   Qed.
-  
+
   Definition declared_constraints_levels_subset levels levels' cstrs :
     declared_constraints_levels levels cstrs ->
     LevelSet.Subset levels levels' ->
@@ -56,30 +56,30 @@ Definition fresh_levels global_levels levels :=
     now eapply sub.
     now eapply sub.
   Qed.
-  
+
   Lemma on_udecl_spec `{checker_flags} Σ (udecl : universes_decl) :
     on_udecl Σ udecl =
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
-    fresh_levels global_levels levels 
+    fresh_levels global_levels levels
     /\ declared_constraints_levels all_levels (constraints_of_udecl udecl)
     /\ satisfiable_udecl Σ udecl.
   Proof. unfold on_udecl. reflexivity. Qed.
-  
+
   Lemma on_udecl_prop_spec `{checker_flags} Σ (udecl : universes_decl) :
-    on_udecl_prop Σ udecl = 
+    on_udecl_prop Σ udecl =
       let levels := levels_of_udecl udecl in
       let global_levels := global_levels Σ in
       let all_levels := LevelSet.union levels global_levels in
       declared_constraints_levels all_levels (constraints_of_udecl udecl).
   Proof. reflexivity. Qed.
-  
+
   Notation levels_of_list := LevelSetProp.of_list.
-  
-  Lemma levels_of_list_app l l' : 
-    levels_of_list (l ++ l') = 
-    LevelSet.union (levels_of_list l) 
+
+  Lemma levels_of_list_app l l' :
+    levels_of_list (l ++ l') =
+    LevelSet.union (levels_of_list l)
       (levels_of_list l').
   Proof.
     rewrite /LevelSetProp.of_list fold_right_app.
@@ -89,47 +89,47 @@ Definition fresh_levels global_levels levels :=
     apply LevelSet.eq_leibniz. red.
     rewrite IHl. rewrite LevelSetProp.union_add //.
   Qed.
-  
-  Definition aulevels inst cstrs : 
-    AUContext.levels (inst, cstrs) = 
+
+  Definition aulevels inst cstrs :
+    AUContext.levels (inst, cstrs) =
     LevelSetProp.of_list (unfold #|inst| Level.Var).
   Proof.
     cbn.
     now rewrite mapi_unfold.
   Qed.
-  
+
   #[global] Instance unfold_proper {A} : Proper (eq ==> `=1` ==> eq) (@unfold A).
   Proof.
     intros x y -> f g eqfg.
     induction y; cbn; auto. f_equal; auto. f_equal. apply eqfg.
   Qed.
-  
+
   (* sLemma unfold_add {A} n k (f : nat -> A) : skipn k (unfold (k + n) f) = unfold k (fun x => f (x + n)). *)
-  
+
   Lemma unfold_add {A} n k (f : nat -> A) : unfold (n + k) f = unfold k f ++ unfold n (fun x => f (x + k)).
   Proof.
     induction n in k |- *.
     cbn. now rewrite app_nil_r.
     cbn. rewrite IHn. now rewrite app_assoc.
   Qed.
-  
-  
-  Definition unfold_levels_app n k : 
-    LevelSetProp.of_list (unfold (n + k) Level.Var) = 
+
+
+  Definition unfold_levels_app n k :
+    LevelSetProp.of_list (unfold (n + k) Level.Var) =
     LevelSet.union (LevelSetProp.of_list (unfold k Level.Var))
       (LevelSetProp.of_list (unfold n (fun i => Level.Var (k + i)))).
   Proof.
     rewrite unfold_add levels_of_list_app //.
     now setoid_rewrite Nat.add_comm at 1.
   Qed.
-  
-  Lemma levels_of_list_spec l ls : 
+
+  Lemma levels_of_list_spec l ls :
     LevelSet.In l (levels_of_list ls) <-> In l ls.
   Proof.
     now rewrite LevelSetProp.of_list_1 InA_In_eq.
   Qed.
-  
-  Lemma In_unfold k l n : 
+
+  Lemma In_unfold k l n :
     In l (unfold n (λ i : nat, Level.Var (k + i))) <-> ∃ k' : nat, l = Level.Var k' ∧ k <= k' < k + n.
   Proof.
     induction n; cbn => //. firstorder. lia.
@@ -143,14 +143,14 @@ Definition fresh_levels global_levels levels :=
     right => //. cbn; auto.
     left. eapply IHn. exists k'; intuition lia.
   Qed.
-  
-  Lemma In_levels_of_list k l n : 
+
+  Lemma In_levels_of_list k l n :
     LevelSet.In l (levels_of_list (unfold n (fun i => Level.Var (k + i)))) <->
-    exists k', l = Level.Var k' /\ k <= k' < k + n. 
+    exists k', l = Level.Var k' /\ k <= k' < k + n.
   Proof.
     rewrite LevelSetProp.of_list_1 InA_In_eq. now apply In_unfold.
   Qed.
-  
+
   Lemma In_lift_level k l n : LevelSet.In l (levels_of_list (unfold n (λ i : nat, Level.Var i))) <->
     LevelSet.In (lift_level k l) (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))).
   Proof.
@@ -161,8 +161,8 @@ Definition fresh_levels global_levels levels :=
       eapply (In_levels_of_list 0).
       destruct l; noconf eq. exists n0; cbn; intuition lia.
   Qed.
-  
-  Lemma not_var_lift l k s : 
+
+  Lemma not_var_lift l k s :
     LS.For_all (λ x : LS.elt, ~~ Level.is_var x) s ->
     LevelSet.In l s ->
     LevelSet.In (lift_level k l) s.
@@ -171,8 +171,8 @@ Definition fresh_levels global_levels levels :=
     specialize (H _ H0). cbn in H.
     destruct l; cbn => //.
   Qed.
-  
-  Lemma declared_constraints_levels_lift s n k cstrs : 
+
+  Lemma declared_constraints_levels_lift s n k cstrs :
     LS.For_all (λ x : LS.elt, (negb ∘ Level.is_var) x) s ->
     declared_constraints_levels
       (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var i))) s) cstrs ->
@@ -196,14 +196,14 @@ Definition fresh_levels global_levels levels :=
       + left. now apply In_lift_level.
       + right. apply not_var_lift => //.
   Qed.
-  
+
   Definition levels_of_cstr (c : ConstraintSet.elt) :=
     let '(l, d, r) := c in
     LevelSet.add l (LevelSet.add r LevelSet.empty).
-  
-  Definition levels_of_cstrs cstrs := 
+
+  Definition levels_of_cstrs cstrs :=
     ConstraintSet.fold (fun c acc => LevelSet.union (levels_of_cstr c) acc) cstrs.
-  
+
   Lemma levels_of_cstrs_acc l cstrs acc :
     LevelSet.In l acc \/ LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <->
     LevelSet.In l (levels_of_cstrs cstrs acc).
@@ -215,7 +215,7 @@ Definition fresh_levels global_levels levels :=
     split.
     intros []. apply IHl0. left. now eapply LevelSetFact.union_3.
     apply IHl0 in H as []. apply IHl0. left.
-    eapply LevelSet.union_spec. left. 
+    eapply LevelSet.union_spec. left.
     eapply LevelSet.union_spec in H. destruct H => //. inversion H.
     apply IHl0. right => //.
     intros. apply IHl0 in H as [].
@@ -224,9 +224,9 @@ Definition fresh_levels global_levels levels :=
     now left. right.
     eapply IHl0. now right.
   Qed.
-  
-  Lemma levels_of_cstrs_spec l cstrs : 
-    LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <-> 
+
+  Lemma levels_of_cstrs_spec l cstrs :
+    LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <->
     exists d r, ConstraintSet.In (l, d, r) cstrs \/ ConstraintSet.In (r, d, l) cstrs.
   Proof.
     rewrite -levels_of_cstrs_acc.
@@ -248,7 +248,7 @@ Definition fresh_levels global_levels levels :=
         exists d', r'. red in na.
         destruct h. destruct (na (l, d', r')).
         firstorder. firstorder.
-    
+
     - intros [d [r [indr|indr]]].
       rewrite /levels_of_cstrs. right.
       move: indr; eapply ConstraintSetProp.fold_rec.
@@ -266,8 +266,8 @@ Definition fresh_levels global_levels levels :=
       eapply add in ihih' as []; subst. left.
       eapply LevelSet.add_spec. right. eapply LevelSet.add_spec; now left. firstorder.
   Qed.
-  
-  Lemma declared_constraints_levels_in levels cstrs : 
+
+  Lemma declared_constraints_levels_in levels cstrs :
     LevelSet.Subset (levels_of_cstrs cstrs LevelSet.empty) levels ->
     declared_constraints_levels levels cstrs.
   Proof.
@@ -276,8 +276,8 @@ Definition fresh_levels global_levels levels :=
     split. apply (sub l). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
     apply (sub r). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
   Qed.
-  
-  Lemma In_variance_cstrs l d r v i i' : 
+
+  Lemma In_variance_cstrs l d r v i i' :
     ConstraintSet.In (l, d, r) (variance_cstrs v i i') ->
       (In l i \/ In l i') /\ (In r i \/ In r i').
   Proof.
@@ -289,13 +289,13 @@ Definition fresh_levels global_levels levels :=
     eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
     eapply IHv in H; firstorder.
   Qed.
-  
+
   Lemma In_lift l n k : In l (map (lift_level k) (unfold n Level.Var)) <->
     In l (unfold n (fun i => Level.Var (k + i))).
   Proof.
     induction n; cbn; auto. firstorder.
     firstorder.
-    move: H1; rewrite map_app. 
+    move: H1; rewrite map_app.
     intros [] % in_app_or.
     apply/in_or_app. firstorder.
     apply/in_or_app. firstorder.
@@ -303,4 +303,3 @@ Definition fresh_levels global_levels levels :=
     rewrite map_app. apply/in_or_app. firstorder.
     rewrite map_app. apply/in_or_app. firstorder.
   Qed.
-  

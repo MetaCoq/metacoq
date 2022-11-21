@@ -134,5 +134,16 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
 
+(** This is a kludge, it would be nice to do better *)
+Class HasFix := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
+(* idk why this is needed... *)
+#[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
 Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
-  := @tmFix TypeInstance A B f.
+  := f
+       (fun a
+        => tmFix <- tmInferInstance None HasFix;;
+           match tmFix with
+           | my_Some tmFix => tmFix _ _ f a
+           | my_None => tmFail "Internal Error: No tmFix instance"
+           end).
+#[global] Hint Extern 0 HasFix => refine @tmFix : typeclass_instances.

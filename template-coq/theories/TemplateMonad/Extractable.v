@@ -108,6 +108,3 @@ Definition tmDefinitionRed (opaque : bool) (i : ident) (rd : reductionStrategy)
 Definition tmInferInstanceRed (rd : reductionStrategy) (type : Ast.term)
   : TM (option Ast.term) :=
   tmBind (tmEval rd type) (fun type => tmInferInstance type).
-
-Definition tmFix {A B} (f : (A -> TM B) -> (A -> TM B)) : A -> TM B
-  := @tmFix TypeInstance A B f.

@@ -52,10 +52,3 @@ Monomorphic Variant import_status : Set :=
 Monomorphic Variant locality :=
 | Discharge
 | Global (_ : import_status).
-
-(** XXX FIXME THIS IS A HACK *)
-Local Unset Guard Checking.
-Definition tmFix (TM : TMInstance) {A B} (f : (A -> TemplateMonad TM B) -> (A -> TemplateMonad TM B)) : A -> TemplateMonad TM B
-  := (fix tmFix (dummy : unit) {struct dummy} : A -> @TemplateMonad TM B
-      := f (fun a => tmFix tt a)) tt.
-Local Set Guard Checking.

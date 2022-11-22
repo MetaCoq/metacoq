@@ -2545,9 +2545,10 @@ Proof.
     eassert (projsubsl := subslet_projs (args := map (lift0 #|ind_params mdecl|) args) isdecl).
     set(oib := declared_inductive_inv _ wf wf _) in *.
     pose proof (onProjections oib) as onProjs. clearbody oib.
-    forward onProjs. destruct isdecl as [? [hnth ?]].
+    destruct (isdecl) as [_ [hnth _]].
+    destruct (ind_projs idecl).
     eapply nth_error_Some_length in hnth. simpl in hnth.
-    intros Hp. apply (f_equal (@length _)) in Hp. rewrite Hp /= in hnth. lia.
+    lia.
     simpl in *.
     move: (proj2 declc).
     destruct ind_ctors as [|? []] => //. intros [= ->].
@@ -2763,6 +2764,7 @@ Proof.
       eapply wt_closed_red1.
       { eapply nth_error_Some_length in H3.
         have: parg - S n < #|ind_projs idecl| by lia.
+        clear hnth.
         move/nth_error_Some' => [pdecl' hnth].
        eexists. econstructor; tea. split; [eapply isdecl|]. cbn. split => //. tea. len. }
       constructor.

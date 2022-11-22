@@ -1076,11 +1076,11 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
         (** Projections, if any, are well-typed *)
         onProjections :
-          idecl.(ind_projs) <> [] ->
-          match idecl.(ind_ctors) return Type with
-          | [ o ] =>
-            on_projections mdecl mind i idecl idecl.(ind_indices) o
-          | _ => False
+          match idecl.(ind_projs), idecl.(ind_ctors) return Type with
+          | [], _ => True
+          | _, [ o ] =>
+              on_projections mdecl mind i idecl idecl.(ind_indices) o
+          | _, _ => False
           end;
 
         (** The universes and elimination sorts must be correct w.r.t.
@@ -1092,8 +1092,10 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
         onIndices :
           (* The inductive type respect the variance annotation on polymorphic universes, if any. *)
-          forall v, ind_variance mdecl = Some v ->
-          ind_respects_variance Σ mdecl v idecl.(ind_indices)
+          match ind_variance mdecl with
+          | Some v => ind_respects_variance Σ mdecl v idecl.(ind_indices)
+          | None => True
+          end
       }.
 
     Definition on_variance Σ univs (variances : option (list Variance.t)) :=
@@ -1263,7 +1265,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
               induction 1; simpl; constructor; auto.
-        --- simpl; intros. pose (onProjections X1 H). simpl in *; auto.
+        --- simpl; intros. pose (onProjections X1) as X2. simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
@@ -1378,7 +1380,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
               induction 1; simpl; constructor; auto.
-        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
+        --- simpl; intros. pose (onProjections X1). simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.

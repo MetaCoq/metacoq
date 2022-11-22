@@ -2390,7 +2390,7 @@ Proof.
     destruct ind_variance eqn:indv => //.
     move=> [=] eq. subst l0.
     pose proof (oib.(onIndices)) as respv.
-    specialize (respv _ indv).
+    rewrite indv in respv.
     simpl in respv.
     unfold ind_respects_variance in respv.
     destruct variance_universes as [[[v i] i']|] eqn:vu => //.

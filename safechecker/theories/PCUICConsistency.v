@@ -155,7 +155,6 @@ Proof.
           -- instantiate (1 := []).
              constructor.
           -- now cbn.
-          -- intros; congruence.
         * constructor.
       + constructor.
       + reflexivity.

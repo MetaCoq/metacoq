@@ -4947,9 +4947,8 @@ Proof.
       }
     { have parsfvs: on_free_vars_ctx xpred0 (ind_params m).
       { red in onParams. now eapply wf_local_closed_context in onParams. }
-      intros indps.
-      cbn in indps. forward onProjections.
-      intros eq. rewrite eq /= in indps. congruence.
+      simpl ind_projs in *.
+      destruct (ind_projs idecl) eqn:indps => //=.
       cbn. destruct (ind_ctors idecl) as [|c []] eqn:hctors => /= //.
       depelim onConstructors. depelim onConstructors.
       have wfargs : wf_local (Σ0, ind_universes m) (arities_context (ind_bodies m),,, ind_params m,,, cstr_args c).
@@ -5015,9 +5014,9 @@ Proof.
       rewrite /PCUICLookup.global_ext_constraints.
       destruct indices_matter => //.
       now eapply (trans_type_local_ctx (Σ := (Σ0, ind_universes m))). }
-    { intros v indv. specialize (onIndices v indv).
+    { simpl ind_variance in *.
       move: onIndices. rewrite /ind_respects_variance.
-      rewrite indv in onVariance.
+      destruct (ind_variance m) => //.
       eapply variance_universes_insts in onVariance as [univs' [u [u' [eqv hunivs cu cu' equlen eqvlen equ' cli equ]]]].
       cbn [variance_universes ind_universes trans_minductive_body].
       rewrite eqv.

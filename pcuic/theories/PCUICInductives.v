@@ -1113,17 +1113,6 @@ Proof.
         ++ now rewrite (Nat.add_1_r i).
 Qed.
 
-Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
-  wf_local Σ Γ ->
-  nth_error Γ n = Some d ->
-  isType Σ (skipn (S n) Γ) d.(decl_type).
-Proof.
-  intros Hwf hnth.
-  epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
-  rewrite hnth /= in X. unfold on_local_decl in X.
-  destruct decl_body => //. destruct X => //.
-Qed.
-
 Lemma map_expand_lets_to_extended_list_k Γ :
   map (expand_lets Γ) (to_extended_list Γ) = to_extended_list (smash_context [] Γ).
 Proof.
@@ -2597,4 +2586,16 @@ Proof.
   rewrite /ctx /to_extended_list to_extended_list_k_subst.
   now rewrite PCUICLiftSubst.map_subst_instance_to_extended_list_k. len.
   len.
+Qed.
+
+Lemma inductive_ind_ind_bodies_length `{cf:checker_flags}
+  Σ ind mib oib
+  (wfΣ : wf Σ)
+  (inddecl: declared_inductive Σ ind mib oib) :
+  inductive_ind ind < #|ind_bodies mib|.
+Proof.
+  move: (declared_inductive_lookup inddecl).
+  rewrite /lookup_inductive (PCUICLookup.declared_minductive_lookup (PCUICGlobalEnv.declared_inductive_minductive inddecl)).
+  remember (nth_error _ _) as o eqn:eo; symmetry in eo.
+  move: o eo=> [io|] // /nth_error_Some_length //.
 Qed.

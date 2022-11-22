@@ -847,3 +847,10 @@ Proof.
 Qed.
 
 
+Lemma closed_ctx_app Γ Δ :
+  closed_ctx (Γ ,,, Δ) ->
+  closedn_ctx #|Γ| Δ.
+Proof.
+  rewrite PCUICClosed.test_context_k_app=> /andP [//].
+Qed.
+

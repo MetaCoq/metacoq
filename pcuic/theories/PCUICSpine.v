@@ -1176,12 +1176,6 @@ Qed.*)
     now rewrite (H c1) app_assoc.
   Qed.
 
-  Lemma context_assumptions_rev Γ : context_assumptions (List.rev Γ) = context_assumptions Γ.
-  Proof using Type.
-    induction Γ; simpl; auto. rewrite context_assumptions_app IHΓ /=.
-    destruct (decl_body a); simpl; lia.
-  Qed.
-
   Lemma ctx_inst_def {Γ args na b t} (c : ctx_inst Σ Γ args [vdef na b t]) :
     ((args = []) * (ctx_inst_sub c = [b]))%type.
   Proof using Type.
@@ -2240,11 +2234,6 @@ Section WfEnv.
     rewrite /subst_consn; intros [|i] => /= //.
   Qed.
 
-  Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
-  Proof using Type.
-    rewrite subst_reli_lift_id; try lia.
-    now rewrite lift0_id.
-  Qed.
 
   Lemma subst_context_lift_id Γ k : subst_context [tRel 0] k (lift_context 1 (S k) Γ) = Γ.
   Proof using Type.
@@ -2643,30 +2632,6 @@ Section WfEnv.
     - f_equal. apply IHΓ => //.
       f_equal; len. rewrite commut_lift_subst_rec //; try lia.
       lia_f_equal.
-  Qed.
-
-  Lemma context_subst_subst_extended_subst inst s Δ :
-    context_subst Δ inst s ->
-    s = map (subst0 (List.rev inst)) (extended_subst Δ 0).
-  Proof using Type.
-    intros sp.
-    induction sp.
-    - simpl; auto.
-    - rewrite List.rev_app_distr /= lift0_id. f_equal.
-      rewrite lift_extended_subst.
-      rewrite map_map_compose. rewrite IHsp. apply map_ext.
-      intros. rewrite (subst_app_decomp [_]). f_equal.
-      simpl. rewrite simpl_subst ?lift0_id //.
-    - simpl. len.
-      f_equal; auto.
-      rewrite IHsp.
-      rewrite distr_subst. f_equal.
-      simpl; len.
-      pose proof (context_subst_length2 sp).
-      rewrite -H. rewrite -(List.rev_length args).
-      rewrite -(Nat.add_0_r #|List.rev args|).
-      rewrite simpl_subst_rec; try lia.
-      now rewrite lift0_id.
   Qed.
 
   Lemma spine_subst_extended_subst {Γ inst s Δ} :
@@ -3243,3 +3208,81 @@ Section WfEnv.
   Qed.
 
 End WfEnv.
+
+Lemma spine_subst_vass `{cf: checker_flags} Σ Γ s t σ Δ na A :
+  wf Σ.1 ->
+  spine_subst Σ Γ s σ Δ ->
+  isType Σ (Γ ,,, Δ) A ->
+  Σ ;;; Γ |- t : subst0 σ A ->
+  spine_subst Σ Γ (s ++ [t]) (t :: σ) (Δ ,, vass na A).
+Proof. 
+  move=> wfΣ sss Atyp ttyp; move: (sss)=> [????].
+  change (?x ,, ?y) with (x ,,, [ y ]).
+  apply: spine_subst_app=> //=.
+  + apply: PCUICContextSubst.context_subst_length2; eassumption.
+  + apply: localenv_cons_abs=> //.
+  + rewrite /skipn /subst_context /fold_context_k /= /map_decl /=.
+    constructor=> //=.
+    * apply: localenv_cons_abs=> //.
+      apply: isType_subst; eassumption.
+    * apply: (PCUICContextSubst.context_subst_ass [] [] [] na _ t); constructor.
+    * econstructor; first constructor.
+      by rewrite PCUICLiftSubst.subst_empty.
+Qed.  
+
+Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
+  wf_local Σ Γ ->
+  nth_error Γ n = Some d ->
+  isType Σ (skipn (S n) Γ) d.(decl_type).
+Proof.
+  intros Hwf hnth.
+  epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
+  rewrite hnth /= in X. unfold on_local_decl in X.
+  destruct decl_body => //. destruct X => //.
+Qed.
+
+
+Lemma spine_subst_vass' `{cf:checker_flags} Σ Γ s t σ Δ na A :
+  wf Σ.1 ->
+  spine_subst Σ Γ s σ Δ ->
+  wf_local Σ (Γ ,,, Δ ,, vass na A) ->
+  (spine_subst Σ Γ s σ Δ ->
+    isType Σ Γ (subst0 σ A) ->
+    Σ ;;; Γ |- t : subst0 σ A) ->
+  spine_subst Σ Γ (s ++ [t]) (t :: σ) (Δ ,, vass na A).
+Proof. 
+  move=> wfΣ sss Atyp /(_ sss) ttyp; apply: spine_subst_vass=> //.
+  2: apply: ttyp; apply: isType_subst; first (apply: inst_subslet; eassumption).
+  all: exact (wf_local_nth_isType (n := 0) Atyp eq_refl).
+Qed.  
+
+Lemma mk_ctx_subst_spec' `{cf : checker_flags} {Σ Γ Δ args} (c : ctx_inst Σ Γ args (List.rev Δ)) :
+  mk_ctx_subst Δ args = ctx_inst_sub c.
+Proof.
+  apply: context_subst_fun.
+  - apply: mk_ctx_subst_spec; by rewrite (ctx_inst_length c) context_assumptions_rev.
+  - move: (ctx_inst_sub_spec c)=> /make_context_subst_spec.
+    rewrite {1}rev_involutive //.
+Qed.
+
+Section ClosedSpineSubst.
+  Context `{cf: checker_flags}.
+  
+  Lemma closed_subslet {Σ} {wfΣ : wf Σ.1} {Γ s Δ} : subslet Σ Γ s Δ -> forallb (closedn #|Γ|) s.
+  Proof using cf.
+    move=> z; depind z=> //=; rewrite IHz andb_true_r;
+    apply: PCUICClosedTyp.subject_closed; eassumption.
+  Qed.
+
+
+  Lemma closed_spine_subst {Σ} {wfΣ : wf Σ.1} {Γ inst s Δ} :
+    spine_subst Σ Γ inst s Δ -> forallb (closedn #|Γ|) s.
+  Proof using cf. move=> /inst_subslet; apply: closed_subslet.  Qed.
+
+  Lemma closed_spine_subst_inst {Σ} {wfΣ : wf Σ.1} {Γ inst s Δ} :
+    spine_subst Σ Γ inst s Δ -> forallb (closedn #|Γ|) inst.
+  Proof using cf. 
+    move=> /spine_subst_smash /closed_spine_subst; by rewrite forallb_rev.
+  Qed.  
+End ClosedSpineSubst. 
+

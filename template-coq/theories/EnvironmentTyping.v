@@ -254,6 +254,16 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       (fun u => forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ))
       True s.
 
+  Lemma declared_ind_declared_constructors `{cf : checker_flags} {Σ ind mib oib} :
+    declared_inductive Σ ind mib oib ->
+    Alli (fun i => declared_constructor Σ (ind, i) mib oib) 0 (ind_ctors oib).
+  Proof using.
+    move=> inddecl.
+    apply: forall_nth_error_Alli=> /= i x eq.
+    apply: lookup_constructor_declared=> /=.
+    rewrite /lookup_constructor (declared_inductive_lookup inddecl) eq //.
+  Qed.
+
 End Lookup.
 
 Module Type LookupSig (T : Term) (E : EnvironmentSig T).

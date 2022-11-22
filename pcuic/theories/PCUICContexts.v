@@ -766,3 +766,18 @@ Proof.
   destruct nas; cbn; auto; depelim hl.
   f_equal; auto. destruct r; subst; cbn; auto.
 Qed.
+
+Lemma sorts_local_ctx_app P Σ Γ Δ1 Δ2 us1 us2 :
+  sorts_local_ctx P Σ Γ Δ1 us1 ->
+  sorts_local_ctx P Σ (Γ ,,, Δ1) Δ2 us2 ->
+  sorts_local_ctx P Σ Γ (Δ1 ,,, Δ2) (us2 ++ us1).
+Proof.
+  elim: Δ2 us2 Δ1 us1=> [|+ Δ2 ih].
+  1: move=> [|u us2] //=.
+  move=> [? [bdy|] ty] us2 Δ1 us1 /=.
+  - rewrite app_context_assoc=> ? [? [??]] ; split=> //.
+    by apply: ih.
+  - case: us2=> [|u us2] // ? [??] /=.
+    rewrite app_context_assoc; split=> //.
+    by apply: ih.
+Qed.

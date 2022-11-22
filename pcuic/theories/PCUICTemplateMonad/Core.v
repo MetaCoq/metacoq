@@ -6,14 +6,12 @@ From MetaCoq.PCUIC Require Import PCUICAst TemplateMonadToPCUIC TemplateToPCUIC 
 Local Set Universe Polymorphism.
 Import MCMonadNotation.
 
-Local Notation monad_trans := (@monad_trans TypeInstance _).
-
 Definition tmQuote {A:Type} (a : A) : TemplateMonad PCUICAst.term := (qa <- tmQuote a;; monad_trans qa).
 Definition tmQuoteRecTransp {A:Type} (a : A) (bypass_opacity : bool) : TemplateMonad PCUICProgram.pcuic_program :=
   (p <- tmQuoteRecTransp a bypass_opacity;; ret (trans_template_program p)).
-Definition tmQuoteInductive (kn : kername) : TemplateMonad mutual_inductive_body := tmQuoteInductive (TM:=TypeInstance) kn.
+Definition tmQuoteInductive (kn : kername) : TemplateMonad mutual_inductive_body := tmQuoteInductive kn.
 Definition tmQuoteConstant (kn : kername) (bypass_opacity : bool) : TemplateMonad constant_body :=
-  cb <- tmQuoteConstant kn bypass_opacity;; monad_trans_constant_body (TM:=TypeInstance) cb.
+  cb <- tmQuoteConstant kn bypass_opacity;; monad_trans_constant_body cb.
 (*
 Definition tmMkInductive (b : bool) (mie : mutual_inductive_entry) : TemplateMonad unit
   := tmMkInductive b (PCUICToTemplate.trans_mutual_inductive_entry mie).

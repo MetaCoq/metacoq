@@ -2,6 +2,7 @@
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Template Require Import config utils AstUtils MonadAst MonadBasicAst Primitive EnvMap.
 From MetaCoq.Template Require TemplateProgram.
+From MetaCoq.Template Require TemplateMonad.Core.
 From MetaCoq.Template Require Import TemplateMonad.Common monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram TemplateToPCUIC.
 
@@ -128,17 +129,19 @@ Section with_tc.
          | Ast.tFloat n => ret (tPrim (primFloat; primFloatModel n))
          end.
   End with_helper.
-
-  Definition monad_trans : (Ast.term -> TemplateMonad term)
-    := tmFix TM (fun monad_trans => monad_trans' (TransLookup_lookup_inductive' monad_trans)).
-
-  Definition monad_trans_decl := monad_trans_decl' monad_trans.
-  Definition monad_trans_local := monad_trans_local' monad_trans.
-  Definition monad_trans_constructor_body := monad_trans_constructor_body' monad_trans.
-  Definition monad_trans_projection_body := monad_trans_projection_body' monad_trans.
-  Definition monad_trans_one_ind_body := monad_trans_one_ind_body' monad_trans.
-  Definition monad_trans_constant_body := monad_trans_constant_body' monad_trans.
-  Definition monad_trans_minductive_body := monad_trans_minductive_body' monad_trans.
-  Definition monad_trans_global_decl := monad_trans_global_decl' monad_trans.
-  Definition tmQuoteInductive := tmQuoteInductive' monad_trans.
 End with_tc.
+
+Import TemplateMonad.Core.
+
+Definition monad_trans : Ast.term -> TemplateMonad term
+  := tmFix (fun monad_trans => @monad_trans' TypeInstance TemplateMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans)).
+
+Definition monad_trans_decl := @monad_trans_decl' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_local := @monad_trans_local' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_constructor_body := @monad_trans_constructor_body' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_projection_body := @monad_trans_projection_body' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_one_ind_body := @monad_trans_one_ind_body' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_constant_body := @monad_trans_constant_body' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_minductive_body := @monad_trans_minductive_body' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_global_decl := @monad_trans_global_decl' TypeInstance TemplateMonad_Monad monad_trans.
+Definition tmQuoteInductive := @tmQuoteInductive' TypeInstance TemplateMonad_Monad monad_trans.

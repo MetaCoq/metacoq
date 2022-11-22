@@ -106,7 +106,6 @@ theories/PCUICTransform.v
 # The Template monad
 theories/Loader.v
 theories/PCUICTemplateMonad.v
-theories/PCUICTemplateMonad/Common.v
 theories/PCUICTemplateMonad/Core.v
 
 theories/Bidirectional/BDTyping.v

@@ -94,7 +94,20 @@ Module EnvMap.
       fresh_globals ((kn, d) :: g).
   Derive Signature for fresh_globals.
 
+  Lemma fresh_global_iff_not_In kn Σ
+    : fresh_global kn Σ <-> ~ In kn (map fst Σ).
+  Proof using Type.
+    rewrite /fresh_global; split; [ induction 1 | induction Σ; constructor ]; cbn in *.
+    all: tauto.
+  Qed.
 
+  Lemma fresh_globals_iff_NoDup : forall Σ, fresh_globals Σ <-> NoDup (List.map fst Σ).
+  Proof using Type.
+    elim; [ | case ]; split; cbn; inversion 1; subst; constructor.
+    all: repeat match goal with H : iff _ _ |- _ => destruct H end.
+    all: repeat match goal with H : ?T |- _ => match type of T with Prop => revert H end end.
+    all: rewrite -?fresh_global_iff_not_In; auto.
+  Qed.
 
   Lemma fold_left_cons d g acc :
     fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) (d :: g) acc =

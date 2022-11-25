@@ -149,10 +149,10 @@ Proof.
 Qed.
 
 Lemma extends_trans_global_decls_acc (Σ' : global_env_map) (Σ : Ast.Env.global_declarations) :
-  extends Σ' (trans_global_decls Σ' Σ).
+  extends_decls Σ' (trans_global_decls Σ' Σ).
 Proof.
   induction Σ.
-  * split; cbn. apply incl_cs_refl. now exists []. apply Retroknowledge.extends_refl.
+  * split; cbn; now try exists [].
   * rewrite /=.
     destruct IHΣ as [univs [Σ'' eq]]. cbn in *.
     split; cbn; auto.
@@ -212,21 +212,6 @@ Proof.
       cbn. rewrite -eq'. reflexivity.
       cbn. rewrite eqk /=. apply e.
       cbn. now rewrite eqk.
-Qed.
-
-Lemma cs_subset_trans cs cs' cs'' :
-  cs ⊂_cs cs' -> cs' ⊂_cs cs'' -> cs ⊂_cs cs''.
-Proof.
-  intros [] []; split; [lsets|csets].
-Qed.
-
-Lemma extends_trans {Σ Σ' Σ'' : global_env} : extends Σ Σ' -> extends Σ' Σ'' -> extends Σ Σ''.
-Proof.
-  intros [u [s eq]] [u' [s' eq']]; subst.
-  split.
-  - eapply cs_subset_trans; tea.
-  - eexists (s' ++ s); cbn. rewrite eq' eq. now rewrite app_assoc.
-  - now etransitivity; tea.
 Qed.
 
 Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t :

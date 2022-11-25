@@ -1569,7 +1569,7 @@ Arguments on_global_env {cf} Pcmp P !g.
 Lemma lookup_on_global_env `{checker_flags} {Pcmp P} {Σ : global_env} {c decl} :
   on_global_env Pcmp P Σ ->
   lookup_env Σ c = Some decl ->
-  { Σ' : global_env_ext & on_global_env Pcmp P Σ' × extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
+  { Σ' : global_env_ext & on_global_env Pcmp P Σ' × strictly_extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
 Proof.
   unfold on_global_env.
   destruct Σ as [univs Σ retro]; cbn. intros [cu ond].

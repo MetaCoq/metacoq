@@ -1240,7 +1240,7 @@ Section All_local_env.
   Lemma lookup_on_global_env P (Σ : global_env) c decl :
     on_global_env cumulSpec0 P Σ ->
     lookup_env Σ c = Some decl ->
-    { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
+    { Σ' : global_env & [× extends_strictly_on_decls Σ' Σ, on_global_env cumulSpec0 P Σ' &
        on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
   Proof using Type.
     destruct Σ as [univs Σ retro]; rewrite /on_global_env /lookup_env; cbn.

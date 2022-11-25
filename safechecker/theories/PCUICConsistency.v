@@ -18,6 +18,7 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
@@ -165,11 +166,12 @@ Proof.
       + reflexivity.
       + reflexivity.
   }
+  assert (strictly_extends_decls Σ Σext.1).
+  { split; auto.
+    exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
   eapply (env_prop_typing weakening_env) in cons; auto.
   2:instantiate (1:=Σext.1).
-  3:{ split; auto; cbn. split; [lsets|csets].
-      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity.
-      apply Retroknowledge.extends_refl. }
+  3:tc.
   2: now destruct wf'.
 
   set (Σ' := Σext.1) in cons.
@@ -181,7 +183,7 @@ Proof.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
     - hnf. cbn.
       unfold declared_minductive, declared_minductive_gen.
-      cbn. now rewrite eq_kername_refl. 
+      cbn. now rewrite eq_kername_refl.
     - now cbn. }
   pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.

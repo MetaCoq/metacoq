@@ -1,3 +1,4 @@
+
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
@@ -14,29 +15,29 @@ Local Existing Instance config.extraction_checker_flags.
 
 Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall (Σ' : global_env), wf Σ' -> extends_decls Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
+  forall (Σ' : global_env), wf Σ -> wf Σ' -> PCUICEnvironment.extends Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
 Proof.
-  intros. destruct X2 as [T []]. destruct Σ as [Σ]. cbn in *.
+  intros X0 Σ' X1 X2 ext [T []]. destruct Σ as [Σ]. cbn in *.
   exists T. split. change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; eauto.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
   change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; eauto.
 Qed.
 
 Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall Σ', wf Σ' -> extends_decls Σ Σ' -> Is_proof Σ Γ t -> Is_proof (Σ',Σ.2) Γ t.
+  forall Σ', wf Σ -> wf Σ' -> PCUICEnvironment.extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof (Σ',Σ.2) Γ t.
 Proof.
-  intros. destruct X2 as (? & ? & ? & ? & ?).
-  exists x, x0. repeat split.
-  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
-  eapply weakening_env; [ | eauto | | ]; unfold wf, Forall_decls_typing; eauto using extends_decls_wf; eauto; tc.
-  eauto.
+  intros X0 Σ' X1 X2 ext (x & x0 & ? & ? & ?).
+  exists x, x0. repeat split; eauto.
+  eapply weakening_env; eauto.
+  eapply weakening_env; eauto.
 Qed.
 
+(* TODO: Figure out whether this lemma (and [Informative]) should use [strictly_extends_decls] or [extends]. -Jason Gross *)
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.PCUICEnvironment.mutual_inductive_body) (idecl : PCUICAst.PCUICEnvironment.one_inductive_body),
@@ -44,17 +45,14 @@ Lemma Informative_extends:
     PCUICAst.declared_inductive (fst Σ) ind mdecl idecl ->
     forall (Σ' : global_env),
       wf Σ' ->
-      extends_decls Σ Σ' ->
+      strictly_extends_decls Σ Σ' ->
       Informative Σ ind -> Informative (Σ', Σ.2) ind.
 Proof.
   repeat intros ?.
-  assert (extends_decls Σ Σ'0).
-  { destruct X0 as [eu [Σ'' eq] er], X2 as [eu' [Σ''' eq'] er'].
-    subst. cbn in *. split => //.
-    * rewrite eu -eu' //.
-    * exists (Σ''' ++ Σ''). cbn. rewrite <- app_assoc.
-      congruence.
-    * congruence. }
+  assert (strictly_extends_decls Σ Σ'0).
+  { etransitivity; [ eassumption | ].
+    repeat match goal with H : strictly_extends_decls _ _ |- _ => destruct H end.
+    split; eauto. }
   edestruct H0; eauto. destruct H3.
 
   eapply weakening_env_declared_inductive in H; eauto; tc.
@@ -70,9 +68,10 @@ Qed.
 
 Require Import ssrbool.
 
+(* TODO: Figure out whether this lemma (and [erases]) should use [strictly_extends_decls] or [extends]. -Jason Gross *)
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
+              forall Σ', wf Σ' -> strictly_extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
            (fun Σ Γ => wf_local Σ Γ).
 Proof.
   apply typing_ind_env; intros; rename_all_hyps; auto.
@@ -80,7 +79,7 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red. red in H4. unfold PCUICAst.lookup_inductive in H4. 
+    red. red in H4. unfold PCUICAst.lookup_inductive in H4.
     rewrite (PCUICAst.declared_inductive_lookup isdecl.p1) in H4.
     destruct isdecl as [decli declc].
     eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.
@@ -581,4 +580,3 @@ Proof.
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
 Qed.
-

@@ -763,26 +763,6 @@ Proof.
     destruct x => //.
 Qed.
 
-  Lemma extends_lookup_env {cf Σ Σ' kn d} : wf Σ' -> extends_decls Σ Σ' ->
-    lookup_env Σ kn = Some d -> lookup_env Σ' kn = Some d.
-  Proof.
-    destruct Σ as [univs Σ].
-    destruct Σ' as [univs' Σ'].
-    intros wf [Σ'' []]. cbn in *. subst univs'.
-    induction x in Σ, Σ', e, wf |- *. cbn in e. now subst Σ'.
-    intros hl.
-    rewrite e; cbn.
-    case: eqb_spec.
-    intros ->.
-    eapply lookup_global_Some_fresh in hl.
-    rewrite e in wf. destruct wf as [_ ond]; depelim ond. destruct o as [f ? ? ? ].
-    cbn in *. eapply Forall_app in f as []. contradiction.
-    intros _.
-    eapply IHx; trea.
-    rewrite e in wf. destruct wf as [onu ond]; depelim ond.
-    split => //.
-  Qed.
-
 Lemma is_erasableb_irrel_global_env {X_type X} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ} {X_type' X'} {normalisation_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalisationIn Σ} {Γ t wt wt'} :
   (forall Σ Σ' : global_env_ext, abstract_env_ext_rel X Σ ->
       abstract_env_ext_rel X' Σ' -> ∥ extends_decls Σ' Σ ∥ /\ (Σ.2 = Σ'.2)) ->
@@ -791,12 +771,12 @@ Proof.
   intro ext.
   (* ext eqext. *)
   assert (hl : Hlookup X_type X X_type' X').
-  { red. intros. specialize (ext _ _ H H0) as [[?] ?].
-    split. intros.
+  { red. intros Σ H Σ' H0. specialize (ext _ _ H H0) as [[X0] H1].
+    split. intros kn decl decl' H2 H3.
     rewrite -(abstract_env_lookup_correct' _ _ H).
     rewrite -(abstract_env_lookup_correct' _ _ H0).
-    rewrite H2 H3. pose proof (abstract_env_ext_wf _ H) as [?].
-    eapply extends_lookup_env in H3; try apply e; eauto. clear -H2 H3. congruence.
+    rewrite H2 H3. pose proof (abstract_env_ext_wf _ H) as [X1].
+    eapply lookup_env_extends_NoDup in H3; try eapply NoDup_on_global_decls; try eapply X1; eauto; tc. cbv [PCUICEnvironment.fst_ctx] in *. congruence.
     destruct X0. intros tag.
     rewrite (abstract_primitive_constant_correct _ _ _ H).
     rewrite (abstract_primitive_constant_correct _ _ _ H0).
@@ -1250,14 +1230,14 @@ Proof.
     ELiftSubst.solve_all. Unshelve.
 Qed.
 
+(* TODO: Figure out if this (and [erases]) should use [strictly_extends_decls] or [extends] -Jason Gross *)
 Lemma erases_weakeninv_env {Σ Σ' : global_env_ext} {Γ t t' T} :
-  wf Σ' -> extends_decls Σ Σ' ->
+  wf Σ -> wf Σ' -> strictly_extends_decls Σ Σ' ->
   Σ ;;; Γ |- t : T ->
   erases Σ Γ t t' -> erases (Σ'.1, Σ.2) Γ t t'.
 Proof.
-  intros wfΣ' ext Hty.
+  intros wfΣ wfΣ' ext Hty.
   eapply (env_prop_typing ESubstitution.erases_extends); tea.
-  eapply extends_decls_wf; tea.
 Qed.
 
 Lemma erases_deps_weaken kn d (Σ : global_env) (Σ' : EAst.global_declarations) t :
@@ -1266,6 +1246,8 @@ Lemma erases_deps_weaken kn d (Σ : global_env) (Σ' : EAst.global_declarations)
   erases_deps (add_global_decl Σ (kn, d)) Σ' t.
 Proof.
   intros wfΣ er.
+  assert (wfΣ' : wf Σ)
+    by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
   induction er using erases_deps_forall_ind; try solve [now constructor].
   - assert (kn <> kn0).
     { inv wfΣ. inv X. intros <-.
@@ -1278,14 +1260,13 @@ Proof.
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
     eapply on_declared_constant in H; auto.
-    2:{ inv wfΣ. now inv X. }
     red in H. rewrite cbe in H. simpl in H.
     eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl.
     split => //; eexists [(kn, d)]; intuition eauto.
   - econstructor; eauto. eapply weakening_env_declared_constructor; eauto; tc.
-    eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity.
+    eapply extends_decls_extends, strictly_extends_decls_extends_decls. econstructor; try reflexivity. eexists [(_, _)]; reflexivity.
   - econstructor; eauto.
     red. destruct H. split; eauto.
     red in H. red.
@@ -1335,6 +1316,8 @@ Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' :
   global_erased_with_deps (add_global_decl Σ (kn', d)) ((kn', d') :: Σ') kn.
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
+  assert (wfΣ : PCUICTyping.wf Σ)
+    by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
   red. inv wf. inv X. left.
   exists cst. split.
   red in declc |- *. unfold declared_constant_gen, lookup_env in *.
@@ -1353,7 +1336,6 @@ Proof.
   split => //. exists [(kn', d)]; intuition eauto.
   eapply on_declared_constant in declc; auto.
   red in declc. rewrite bod in declc. eapply declc.
-  split => //.
   noconf H0.
   eapply erases_deps_cons; eauto.
   constructor; auto.
@@ -1372,7 +1354,9 @@ Lemma global_erases_with_deps_weaken kn kn' d Σ Σ' :
   global_erased_with_deps (add_global_decl Σ (kn', d)) Σ' kn.
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
-  red. inv wf. inv X. left.
+  assert (wfΣ : PCUICTyping.wf Σ)
+    by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
+  red. inversion wf. inversion X. subst. left.
   exists cst. split.
   red in declc |- *.
   unfold declared_constant_gen, lookup_env in *.
@@ -1384,15 +1368,13 @@ Proof.
   red in ebody. unfold erases_constant_body.
   destruct (cst_body cst) eqn:bod; destruct (E.cst_body cst') eqn:bod' => //.
   intuition auto.
-  eapply (erases_weakeninv_env (Σ  := (Σ, cst_universes cst)) (Σ' := (add_global_decl Σ (kn', d), cst_universes cst))). 4:eauto.
+  eapply (erases_weakeninv_env (Σ  := (Σ, cst_universes cst)) (Σ' := (add_global_decl Σ (kn', d), cst_universes cst))). 5:eauto.
   split; auto. constructor; eauto.
   split; auto; exists [(kn', d)]; intuition eauto.
   eapply on_declared_constant in declc; auto.
-  red in declc. rewrite bod in declc. eapply declc. split => //.
+  red in declc. rewrite bod in declc. eapply declc.
   noconf H0.
-  apply erases_deps_weaken.
-  { split; auto. cbn. constructor; auto. }
-  auto.
+  apply erases_deps_weaken; auto.
 
   right. destruct H as [mib [mib' [Hm [? ?]]]].
   exists mib, mib'; intuition auto.
@@ -1401,10 +1383,11 @@ Proof.
   now epose proof (lookup_env_ext wf Hm).
 Qed.
 
+(* TODO: Figure out if this (and [erases]) should use [strictly_extends_decls] or [extends] -Jason Gross *)
 Lemma erase_constant_body_correct X_type X {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ} cb
   (onc : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ on_constant_decl (lift_typing typing) Σ cb ∥) :
   forall Σ Σ', abstract_env_ext_rel X Σ ->
-  wf Σ' -> extends_decls Σ Σ' ->
+  wf Σ -> wf Σ' -> strictly_extends_decls Σ Σ' ->
   erases_constant_body (Σ', Σ.2) cb (fst (erase_constant_body X_type X cb onc)).
 Proof.
   red. destruct cb as [name [bod|] univs]; simpl; eauto. intros.
@@ -1491,8 +1474,10 @@ Proof.
         eexists; intuition eauto.
         rewrite indeps. cbn.
         rewrite eq_kername_refl. reflexivity.
+        cut (strictly_extends_decls Σpop Σ) => [?|].
         eapply (erase_constant_body_correct _ _ _ _ (Σpop , _)); eauto.
         rewrite <- (abstract_make_wf_env_ext_correct Xpop (cst_universes c) _ Σpop Σmake wfpop wfmake); eauto.
+        { now eapply strictly_extends_decls_wf. }
         red. simpl. unshelve epose (abstract_pop_decls_correct X decls _ Σ Σpop wfΣ wfpop).
         { intros. now eexists. }
         split => //. intuition eauto.
@@ -2585,9 +2570,8 @@ Proof using Type.
   intros prefix wfΣ.
   have wfdecls := decls_prefix_wf prefix wfΣ.
   epose proof (weakening_env_lookup_on_global_env (lift_typing typing) _ Σ kn decl
-    weaken_env_prop_typing wfdecls wfΣ).
-  forward X. red; split => //. cbn. apply incl_cs_refl. cbn.
-  apply Retroknowledge.extends_refl.
+    weaken_env_prop_typing wfΣ wfdecls).
+  forward X. apply extends_strictly_on_decls_extends, strictly_extends_decls_extends_strictly_on_decls. red; split => //.
   now apply (X wfdecls).
 Qed.
 
@@ -2715,23 +2699,20 @@ Qed.
 
 Lemma isErasable_irrel_global_env {Σ Σ' : global_env_ext} {Γ t} :
   wf Σ ->
-  extends_decls Σ' Σ ->
+  wf Σ' ->
+  extends Σ' Σ ->
   Σ.2 = Σ'.2 ->
   isErasable Σ' Γ t -> isErasable Σ Γ t.
 Proof using Type.
   unfold isErasable.
-  intros wfΣ ext eqext [T [ht isar]].
+  intros wfΣ wfΣ' ext eqext [T [ht isar]].
   destruct Σ as [Σ decl], Σ' as [Σ' decl']. cbn in eqext; subst decl'.
   exists T; split.
   eapply (env_prop_typing weakening_env (Σ', decl)) => //=.
-  eapply extends_decls_wf; tea.
-  now eapply extends_decls_extends.
   destruct isar as [|s]; [left|right] => //.
   destruct s as [u [Hu isp]].
   exists u; split => //.
   eapply (env_prop_typing weakening_env (Σ', decl)) => //=.
-  eapply extends_decls_wf; tea.
-  now eapply extends_decls_extends.
 Qed.
 
 Definition reduce_stack_eq {cf} {fl} {no:normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
@@ -2832,7 +2813,7 @@ Proof using Type.
       epose proof (abstract_make_wf_env_ext_correct X (cst_universes c) _ _ _ wfΣ H2).
       epose proof (abstract_make_wf_env_ext_correct (abstract_pop_decls X') (cst_universes c) _ _ _ wfpop H3).
       subst. split => //.
-      sq; red. cbn.
+      sq. apply strictly_extends_decls_extends_decls. red. cbn.
       rewrite eq. rewrite <- H0, <- H1. split. symmetry. apply equ; eauto.
       eexists (Σ'' ++ [(kn, ConstantDecl c)]). subst. now rewrite -app_assoc. subst.
       symmetry. now apply equ.

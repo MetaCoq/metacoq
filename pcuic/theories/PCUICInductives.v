@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus PCUICInstDef PCUICInstConv PCUICContextSubst
      PCUICRenameDef PCUICRenameConv PCUICRenameTyp
@@ -301,7 +301,7 @@ Section OnInductives.
     destruct ar as [s ar].
     eapply isType_weaken => //.
     eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u wfΣ) in ar.
-    all:pcuic. 
+    all:pcuic.
   Qed.
 
   Local Definition oi := (on_declared_inductive decli).1.

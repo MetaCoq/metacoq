@@ -1210,6 +1210,10 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       : fresh_global kn Σ <-> lookup_global Σ kn = None.
     Proof using Type. rewrite fresh_global_iff_not_In lookup_global_None //. Qed.
 
+    Lemma fresh_global_iff_lookup_globals_nil kn Σ
+      : fresh_global kn Σ <-> lookup_globals Σ kn = [].
+    Proof using Type. rewrite fresh_global_iff_not_In lookup_globals_nil //. Qed.
+
     Lemma NoDup_on_global_decls univs retro decls
       : on_global_decls univs retro decls -> NoDup (List.map fst decls).
     Proof using Type.

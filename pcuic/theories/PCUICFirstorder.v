@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils Kernames MCRelations.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICReduction
-  PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
+  PCUICReflect PCUICWeakeningEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp
   PCUICContextConversionTyp
   PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
@@ -267,7 +267,7 @@ Arguments firstorder_mutind : clear implicits.
 Lemma plookup_env_lookup_env {Σ : global_env_ext} kn b :
   plookup_env (firstorder_env Σ) kn = Some b ->
   ∑ Σ' decl, lookup_env Σ kn = Some decl ×
-    extends_decls Σ' Σ ×
+    strictly_extends_decls Σ' Σ ×
     match decl with
     | ConstantDecl _ => b = false
     | InductiveDecl mind =>
@@ -351,7 +351,7 @@ Import PCUICGlobalMaps.
 Lemma fresh_global_app decls decls' kn :
   fresh_global kn (decls ++ decls') ->
   fresh_global kn decls /\ fresh_global kn decls'.
-Proof.
+Proof using Type.
   induction decls => /= //.
   - intros f; split => //.
   - intros f; depelim f.
@@ -362,7 +362,7 @@ Qed.
 Lemma plookup_env_Some_not_fresh g kn b :
   plookup_env (firstorder_env' g) kn = Some b ->
   ~ PCUICGlobalMaps.fresh_global kn g.
-Proof.
+Proof using Type.
   induction g; cbn => //.
   destruct a => //. destruct g0 => //.
   - cbn.
@@ -380,11 +380,11 @@ Proof.
 Qed.
 
 Lemma plookup_env_extends {Σ Σ' : global_env} kn b :
-  extends_decls Σ' Σ ->
+  strictly_extends_decls Σ' Σ ->
   wf Σ ->
   plookup_env (firstorder_env' (declarations Σ')) kn = Some b ->
   plookup_env (firstorder_env' (declarations Σ)) kn = Some b.
-Proof.
+Proof using Type.
   intros [equ [Σ'' eq] eqr]. rewrite eq.
   clear equ eqr. intros []. clear o.
   rewrite eq in o0. clear eq. move: o0.
@@ -410,11 +410,11 @@ Proof.
 Qed.
 
 Lemma firstorder_mutind_ext {Σ Σ' : global_env_ext} m :
-  extends_decls Σ' Σ ->
+  strictly_extends_decls Σ' Σ ->
   wf Σ ->
   firstorder_mutind (firstorder_env' (declarations Σ')) m ->
   firstorder_mutind (firstorder_env Σ) m.
-Proof.
+Proof using Type.
   intros [equ [Σ'' eq]] wf.
   unfold firstorder_env. rewrite eq.
   unfold firstorder_mutind.
@@ -439,7 +439,7 @@ Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui a
   firstorder_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi).
 Proof using Type.
   intros Hdecl Hspine Hind. revert Hspine.
-  unshelve edestruct @declared_constructor_inv with (Hdecl := Hdecl); eauto. eapply weaken_env_prop_typing.
+  unshelve edestruct @declared_constructor_inv with (Hdecl := Hdecl); eauto. exact weaken_env_prop_typing.
 
   (* revert Hspine. *) unfold type_of_constructor.
   erewrite cstr_eq. 2: eapply p.

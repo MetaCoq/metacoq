@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed
      PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnvConv PCUICClosedConv
-     PCUICWeakeningEnvTyp.
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -79,7 +79,7 @@ Lemma declared_decl_closed_ind {cf : checker_flags} {Σ : global_env} {wfΣ : wf
                  (Σ, universes_decl_of_decl decl) cst decl.
 Proof.
   intros.
-  eapply weaken_lookup_on_global_env; eauto. red; eauto.
+  eapply weaken_lookup_on_global_env; eauto. do 2 red; eauto.
   eapply @on_global_env_impl with (Σ := (empty_ext Σ)); cycle 1. tea.
   red; intros. destruct T; intuition auto with wf.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
@@ -200,7 +200,7 @@ Proof.
     eauto using closed_upwards with arith.
 
   - rewrite closedn_subst_instance.
-    eapply declared_inductive_inv in X0; eauto.
+    eapply declared_inductive_inv in X0; eauto with extends.
     apply onArity in X0. repeat red in X0.
     destruct X0 as [s Hs]. rewrite -> andb_and in Hs.
     intuition eauto using closed_upwards with arith.
@@ -211,7 +211,7 @@ Proof.
       simpl. now rewrite IHn.
     + rewrite inds_length.
       rewrite closedn_subst_instance.
-      eapply declared_inductive_inv in X0; eauto.
+      eapply declared_inductive_inv in X0; eauto with extends.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.

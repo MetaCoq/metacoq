@@ -35,18 +35,11 @@ Proof.
 Qed.
 
 Import PCUICWeakeningEnv.
-(* TODO move *)
-Lemma extends_decls_trans Σ Σ' Σ'' : extends_decls Σ Σ' -> extends_decls Σ' Σ'' -> extends_decls Σ Σ''.
-Proof.
-  intros [e [ext e'] er] [e0 [ext' e0'] er']. subst. split. now transitivity Σ'.
-  exists (ext' ++ ext). now rewrite -app_assoc.
-  congruence.
-Qed.
 
 Lemma declared_minductive_expanded Σ c mdecl :
   expanded_global_env Σ ->
   declared_minductive Σ c mdecl ->
-  exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl.
+  exists Σ', ∥ strictly_extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl.
 Proof.
   unfold expanded_global_env, declared_minductive, lookup_env.
   destruct Σ as [univs Σ]; cbn. unfold declared_minductive_gen.
@@ -56,14 +49,14 @@ Proof.
   subst c. eexists. split ; [|exact H]. sq. red. split => //. cbn.
   eexists. cbn. instantiate (1:= [_]); reflexivity.
   intros hl; destruct (IHexp hl). exists x. intuition auto.
-  sq. eapply extends_decls_trans; tea.
+  sq. etransitivity; tea.
   split => //. now exists [(kn, d)].
 Qed.
 
 Lemma declared_constructor_expanded {Σ c mdecl idecl cdecl} :
   expanded_global_env Σ ->
   declared_constructor Σ c mdecl idecl cdecl ->
-  exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl /\ expanded_constructor_decl Σ' mdecl cdecl.
+  exists Σ', ∥ strictly_extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl /\ expanded_constructor_decl Σ' mdecl cdecl.
 Proof.
   intros exp [[decli hnth] hnth'].
   eapply declared_minductive_expanded in decli.
@@ -139,7 +132,7 @@ Qed.
 Implicit Types (cf : checker_flags).
 
 Lemma expanded_weakening {cf} {Σ Σ' Γ t} :
-  wf Σ' -> extends_decls Σ Σ' -> expanded Σ Γ t -> expanded Σ' Γ t.
+  wf Σ' -> extends Σ Σ' -> expanded Σ Γ t -> expanded Σ' Γ t.
 Proof.
   intros wfΣ ext.
   eapply expanded_ind; intros.
@@ -148,11 +141,11 @@ Proof.
     intros ? ? []; constructor; auto. now rewrite <- repeat_app.
   - eapply expanded_tFix; tea; eauto. solve_all.
   - eapply expanded_tConstruct_app; tea.
-    eapply weakening_env_declared_constructor; tea. now eapply extends_decls_extends.
+    eapply weakening_env_declared_constructor; tea.
 Qed.
 
 Lemma expanded_context_weakening {cf} {Σ Σ' Γ t} :
-  wf Σ' -> extends_decls Σ Σ' -> expanded_context Σ Γ t -> expanded_context Σ' Γ t.
+  wf Σ' -> extends Σ Σ' -> expanded_context Σ Γ t -> expanded_context Σ' Γ t.
 Proof.
   intros wfΣ ext.
   intros [a]; sq.
@@ -181,7 +174,7 @@ Proof.
   epose proof (expanded_context_subst (Γ := []) (Δ' := repeat 0 #|ind_bodies mdecl|)).
   rewrite !app_nil_r in H0. eapply H0; rewrite ?repeat_length //. len. apply expanded_inds.
   rewrite -repeat_app. exact hargs.
-  destruct ext. eapply expanded_context_weakening; tea.
+  destruct ext. eapply expanded_context_weakening; tea; tc.
 Qed.
 
 Lemma trans_expanded {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} Γ T  :

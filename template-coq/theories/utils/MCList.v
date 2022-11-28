@@ -1420,3 +1420,37 @@ Proof.
   - destruct l'; cbn in *. lia. rewrite IHl. lia.
 Qed.
 
+Lemma map2_map_l {A B C D} (f : A -> B) (g : B -> C -> D) (l : list A) (l' : list C) :
+  map2 g (List.map f l) l' =
+  map2 (fun x y => g (f x) y) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto.
+  * cbn. now f_equal.
+Qed.
+
+Lemma map2_diag {A B} (f : A -> A -> B) (l : list A) :
+  map2 f l l = map (fun x => f x x) l.
+Proof.
+  elim: l=> [//|? ? /= -> //].
+Qed.
+
+
+Lemma map2_snd {A B} (l : list A) (l' : list B) :
+  map2 (fun x y => x) l l' = firstn #|l'| l.
+Proof.
+  elim: l l'=> [|x xs ih] [|y ys] //=; congruence.
+Qed.
+
+Lemma length_nil {A} (l : list A) : #|l| = 0 -> l = [].
+Proof. destruct l => //. Qed.
+
+Inductive snoc_view {A : Type} : list A -> Type :=
+| snoc_view_nil : snoc_view nil
+| snoc_view_snoc l x : snoc_view (l ++ [x]).
+
+Lemma snocP {A} (l : list A) : snoc_view l.
+Proof.
+  elim: l=> [|a l]; first constructor.
+  case=> [|l' z];
+  [exact: (snoc_view_snoc nil) | exact: (snoc_view_snoc (a :: l'))].
+Qed.

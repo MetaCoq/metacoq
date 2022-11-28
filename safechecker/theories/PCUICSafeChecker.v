@@ -2523,7 +2523,7 @@ End monad_Alli_nth_forall.
 
   Instance Monad_EnvCheck_X_env_ext_type {cf:checker_flags} : Monad EnvCheck_X_env_ext_type := _.
 
- Program Definition typecheck_program (p : program) φ
+  Program Definition typecheck_program (p : program) φ
     : EnvCheck_X_env_ext_type (∑ A, { X: X_env_ext_type | ∥ abstract_env_ext_rel X (p.1, φ) ×
                                                           wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥}) :=
     '(exist xx pf) <- check_wf_ext (p.1, φ) ;;

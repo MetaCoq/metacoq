@@ -1234,32 +1234,6 @@ Proof.
     apply context_assumptions_length_bound. now rewrite app_context_assoc.
 Qed.
 
-Lemma expand_lets_k_app (Γ Γ' : context) t k : expand_lets_k (Γ ++ Γ') k t =
-  expand_lets_k Γ' (k + context_assumptions Γ) (expand_lets_k Γ k t).
-Proof.
-  revert Γ k t.
-  induction Γ' as [|[na [b|] ty] Γ'] using ctx_length_rev_ind; intros Γ k t.
-  - simpl. now rewrite /expand_lets_k /= subst_empty lift0_id app_nil_r.
-  - simpl; rewrite app_assoc !expand_lets_k_vdef /=; len; simpl.
-    rewrite subst_context_app. specialize (H (subst_context [b] 0 Γ') ltac:(now len)).
-    specialize (H (subst_context [b] #|Γ'| Γ)). rewrite Nat.add_0_r /app_context H; len.
-    f_equal.
-    rewrite /expand_lets_k; len.
-    rewrite -Nat.add_assoc.
-    rewrite distr_subst_rec; len.
-    epose proof (subst_extended_subst_k [b] Γ #|Γ'| 0).
-    rewrite Nat.add_0_r Nat.add_comm in H0. rewrite -H0. f_equal.
-    rewrite commut_lift_subst_rec. lia. lia_f_equal.
-  - simpl. rewrite app_assoc !expand_lets_k_vass /=; len; simpl.
-    now rewrite (H Γ' ltac:(reflexivity)).
-Qed.
-
-Lemma expand_lets_app Γ Γ' t : expand_lets (Γ ++ Γ') t =
-  expand_lets_k Γ' (context_assumptions Γ) (expand_lets Γ t).
-Proof.
-  now rewrite /expand_lets expand_lets_k_app.
-Qed.
-
 Lemma closedn_expand Γ Δ x :
   closed_ctx Γ ->
   closedn (context_assumptions Δ + #|Γ|) (expand_lets Δ x) =
@@ -2888,9 +2862,6 @@ Proof.
   }
 Qed.
 
-Lemma length_nil {A} (l : list A) : #|l| = 0 -> l = [].
-Proof. destruct l => //. Qed.
-
 Lemma assumption_context_expand_lets_ctx Γ Δ :
   assumption_context Δ ->
   assumption_context (expand_lets_ctx Γ Δ).
@@ -4502,3 +4473,32 @@ Proof.
   eapply wf_case_branch_type; tea.
   split; eauto.
 Qed.
+
+From MetaCoq.PCUIC Require Import PCUICContextSubst.
+
+Lemma conv_betas_typed `{cf:checker_flags} (Σ : global_env_ext) (wfΣ: wf Σ) Γ Δ l t :
+  isType Σ (Γ ,,, Δ) t ->
+  ctx_inst Σ Γ l (List.rev Δ) ->
+  Σ ;;; Γ |- mkApps (it_mkLambda_or_LetIn Δ t) l =s subst0 (mk_ctx_subst Δ l) t.
+Proof.
+  move=> [ps tWty] instl.
+  pose proof (wfΓ := typing_wf_local tWty).
+  pose proof (ss := ctx_inst_spine_subst wfΓ instl).
+  pose proof (eqsubst := mk_ctx_subst_spec' instl).
+  rewrite eqsubst.
+  apply: cumulAlgo_cumulSpec.
+  apply: PCUICWellScopedCumulativity.wt_cumul_pb_ws_cumul_pb.
+  constructor.
+  + have?: Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ (tSort ps)
+    by apply: PCUICGeneration.type_it_mkLambda_or_LetIn; eassumption.
+    exists ps; apply: PCUICSpine.type_mkApps; first eassumption.
+    apply: typing_spine_it_mkProd_or_LetIn_close=> //=; first eassumption.
+    apply: isType_it_mkProd_or_LetIn.
+    exact: validity tWty.
+  + apply:isType_subst; last (exists ps; eassumption).
+    exact: inst_subslet ss.
+  + apply: PCUICCumulativity.red_conv.
+    rewrite -eqsubst. apply: red_betas_typed; last eassumption.
+    rewrite (ctx_inst_length instl) context_assumptions_rev //.
+Qed.
+

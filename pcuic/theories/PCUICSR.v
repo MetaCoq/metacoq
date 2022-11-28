@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICUtils PCUICOnOne
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnvConv
      PCUICWeakeningEnvTyp PCUICWeakeningConv PCUICWeakeningTyp
-     PCUICSubstitution PCUICCasesContexts PCUICClosed PCUICClosedTyp PCUICClosedConv
+     PCUICSubstitution PCUICContextSubst PCUICCasesContexts PCUICClosed PCUICClosedTyp PCUICClosedConv
      PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICContextConversionTyp

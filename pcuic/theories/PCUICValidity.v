@@ -413,6 +413,20 @@ Proof.
   intros. eapply validity_env; try eassumption.
 Defined.
 
+Lemma wf_local_validity `{cf : checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ :
+  wf_local Σ (Γ ,,, Δ) ->
+  ∑ us, sorts_local_ctx (lift_typing typing) Σ Γ Δ us.
+Proof.
+  move=> wfΓΔ.
+  apply: validity_wf_local.
+  enough (h : wf_local_rel Σ Γ Δ).
+  apply: All_local_env_impl; first exact h.
+  1: move=> ?? [?|] //= ?; split=> //; apply: validity; eassumption.
+  by apply: (wf_local_app_inv _).2.
+Qed.
+
+
+
 (* To deprecate *)
 Notation validity_term wf Ht := (validity (wfΣ:=wf) Ht).
 

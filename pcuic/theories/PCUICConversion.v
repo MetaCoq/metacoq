@@ -3830,3 +3830,143 @@ Proof.
 Qed.
 #[global] Hint Immediate cumulSpec_typed_cumulAlgo : pcuic.
 
+
+From MetaCoq.PCUIC Require Import PCUICContextSubst.
+
+Lemma expand_lets_k_app (Γ Γ' : context) t k : expand_lets_k (Γ ++ Γ') k t =
+  expand_lets_k Γ' (k + context_assumptions Γ) (expand_lets_k Γ k t).
+Proof.
+  revert Γ k t.
+  induction Γ' as [|[na [b|] ty] Γ'] using ctx_length_rev_ind; intros Γ k t.
+  - simpl. now rewrite /expand_lets_k /= subst_empty lift0_id app_nil_r.
+  - simpl; rewrite app_assoc !expand_lets_k_vdef /=; len; simpl.
+    rewrite subst_context_app. specialize (H (subst_context [b] 0 Γ') ltac:(now len)).
+    specialize (H (subst_context [b] #|Γ'| Γ)). rewrite Nat.add_0_r /app_context H; len.
+    f_equal.
+    rewrite /expand_lets_k; len.
+    rewrite -Nat.add_assoc.
+    rewrite distr_subst_rec; len.
+    epose proof (subst_extended_subst_k [b] Γ #|Γ'| 0).
+    rewrite Nat.add_0_r Nat.add_comm in H0. rewrite -H0. f_equal.
+    rewrite commut_lift_subst_rec. 1:lia. lia_f_equal.
+  - simpl. rewrite app_assoc !expand_lets_k_vass /=; len; simpl.
+    now rewrite (H Γ' ltac:(reflexivity)).
+Qed.
+
+Lemma expand_lets_app Γ Γ' t : expand_lets (Γ ++ Γ') t =
+  expand_lets_k Γ' (context_assumptions Γ) (expand_lets Γ t).
+Proof.
+  now rewrite /expand_lets expand_lets_k_app.
+Qed.
+
+Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
+Proof using Type.
+  rewrite subst_reli_lift_id; try lia.
+  now rewrite lift0_id.
+Qed.
+
+
+(****************************)
+(* Iterated beta reduction  *)
+(****************************)
+
+Section IteratedBetaReduction.
+  Context `{cf : checker_flags}.
+
+  Lemma red_betas0 (Σ:global_env_ext) (wfΣ:wf Σ) Γ (Δ : context) l t t' :
+    #|l| = context_assumptions Δ ->
+    closedn #|Γ,,, Δ| t ->
+    closed_ctx (Γ ,,, Δ) ->
+    PCUICReduction.red Σ.1 (Γ ,,, Δ) t t' ->
+    PCUICReduction.red Σ.1 Γ (mkApps (it_mkLambda_or_LetIn Δ t) l) (subst0 (List.rev l) (expand_lets Δ t')).
+  Proof using cf.
+    elim: Δ t t' l=> [|[na[a|]ty] ls ih] /= t t' l.
+    - move=> /length_nil -> * /=.
+      rewrite PCUICLiftSubst.subst_empty PCUICSigmaCalculus.expand_lets_nil //.
+    - move=> /ih ih0 clt clctx red. rewrite -/([_] ++ _).
+      move: (clctx); rewrite Nat.add_0_r => /andP [clctx0 cld].
+      rewrite expand_lets_app /= -/(expand_lets ls).
+      refine (ih0 _ _ _ _ _)=> //.
+      1: apply: PCUICClosed.closedn_mkLambda_or_LetIn=> //.
+      rewrite /mkLambda_or_LetIn /= /expand_lets /expand_lets_k /=.
+      rewrite PCUICLiftSubst.subst_empty PCUICLiftSubst.lift0_p.
+      apply: PCUICReduction.red_step; first exact: PCUICReduction.red_zeta.
+      rewrite PCUICLiftSubst.lift0_id.
+      refine (substitution_untyped_red (Σ:=Σ) (Γ := Γ,,, ls) (Δ := [_]) (Γ':=nil) (M := t) (N:=t') _ _ _ red).
+      + apply: untyped_subslet_def_tip=> //.
+      + rewrite -PCUICClosedTyp.is_open_term_closed //.
+      + rewrite on_free_vars_ctx_on_ctx_free_vars -PCUICClosedTyp.is_closed_ctx_closed //.
+    - move: l=> /snocP [//|/=l x].
+      rewrite app_length /= Nat.add_comm PCUICAstUtils.mkApps_app /= => [=] eq.
+      move: (eq)=> /ih ih0 clt clctx red.
+      move: (clctx); rewrite Nat.add_0_r => /andP [clctx0 cld].
+      etransitivity.
+      1:{
+        apply: PCUICReduction.red_app; last reflexivity.
+        apply: ih0.
+        + apply: PCUICClosed.closedn_mkLambda_or_LetIn=> //.
+        + assumption.
+        + apply: red_abs_alt; first reflexivity; eassumption.
+      }
+      apply: PCUICReduction.red_step=> /=; first apply: PCUICReduction.red_beta.
+      set t0 := (t in PCUICReduction.red _ _ t _).
+      set t1 := (t in PCUICReduction.red _ _ _ t).
+      have -> // : t0 = t1.
+      rewrite {}/t0 {}/t1.
+      rewrite /subst1 -PCUICLiftSubst.subst_app_simpl -(rev_app_distr _ [x]).
+      f_equal; rewrite -/([_]++ls) expand_lets_app /= /expand_lets.
+      rewrite {-1}/expand_lets_k /=subst_rel0_lift_id //.
+  Qed.
+
+  Lemma red_betas (Σ:global_env_ext) (wfΣ:wf Σ) Γ (Δ : context) l t :
+    #|l| = context_assumptions Δ ->
+    closedn #|Γ,,, Δ| t ->
+    closed_ctx (Γ ,,, Δ) ->
+    PCUICReduction.red Σ.1 Γ (mkApps (it_mkLambda_or_LetIn Δ t) l) (subst0 (mk_ctx_subst Δ l) t).
+  Proof using cf.
+    move=> eql.
+    move: (mk_ctx_subst_spec (eq_sym eql))=> /(context_subst_subst_expand_lets _ _ _ t 0) ->.
+    move=> *; apply: red_betas0=> //.
+  Qed.
+
+  Lemma red_betas_typed (Σ:global_env_ext) (wfΣ:wf Σ) Γ (Δ : context) l t T :
+    #|l| = context_assumptions Δ ->
+    Σ ;;; Γ ,,, Δ |- t : T ->
+    PCUICReduction.red Σ.1 Γ (mkApps (it_mkLambda_or_LetIn Δ t) l) (subst0 (mk_ctx_subst Δ l) t).
+  Proof using cf.
+    move=> eql ty; apply: red_betas=> //.
+    1: apply: PCUICClosedTyp.subject_closed; eassumption.
+    apply: PCUICClosedTyp.closed_wf_local; apply: typing_wf_local; eassumption.
+  Qed.
+
+  Lemma conv_betas (Σ : global_env_ext) (wfΣ: wf Σ) Γ Δ l t :
+    closedn #|Γ ,,, Δ| t ->
+    closed_ctx (Γ ,,, Δ) ->
+    forallb (closedn #|Γ|) l ->
+    context_assumptions Δ = #|l|  ->
+    Σ ;;; Γ |- mkApps (it_mkLambda_or_LetIn Δ t) l =s subst0 (mk_ctx_subst Δ l) t.
+  Proof using cf.
+    move=> tws /[dup] ?.
+    rewrite PCUICClosed.closedn_ctx_app=> /andP[??] lcl eqlen.
+    apply: cumulAlgo_cumulSpec.
+    apply PCUICContextConversion.ws_cumul_pb_red.
+    set (u:= mkApps _ _).
+    set (w := subst0 _ _).
+    exists w, w; split; last reflexivity.
+    + constructor.
+      * by rewrite  -PCUICClosedTyp.is_closed_ctx_closed.
+      * rewrite /u -PCUICClosedTyp.is_open_term_closed PCUICClosed.closedn_mkApps lcl andb_true_r.
+        apply: PCUICClosed.closedn_it_mkLambda_or_LetIn => //.
+        by rewrite Nat.add_comm -app_length.
+      * apply: red_betas=> //.
+    + constructor.
+      * by rewrite  -PCUICClosedTyp.is_closed_ctx_closed.
+      * rewrite -PCUICClosedTyp.is_open_term_closed.
+        move: (eqlen)=> /mk_ctx_subst_spec /closedn_ctx_subst_forall h.
+        apply: PCUICClosed.closedn_subst0; first by apply: h.
+        rewrite mk_ctx_subst_length //.
+        by rewrite Nat.add_comm -app_length.
+      * reflexivity.
+  Qed.
+
+End IteratedBetaReduction.

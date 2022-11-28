@@ -680,6 +680,13 @@ Module Environment (T : Term).
     induction Γ as [|[? [] ?] ?]; simpl; auto.
   Qed.
 
+  Lemma context_assumptions_rev Γ : context_assumptions (List.rev Γ) = context_assumptions Γ.
+  Proof using Type.
+    induction Γ; simpl; auto. rewrite context_assumptions_app IHΓ /=.
+    destruct (decl_body a); simpl; lia.
+  Qed.
+
+
   Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) =
     context_assumptions Γ.
   Proof.

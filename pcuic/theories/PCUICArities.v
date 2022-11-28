@@ -468,6 +468,15 @@ Section WfEnv.
         apply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
   Qed.
 
+  Lemma isType_it_mkProd_or_LetIn {Γ Γ' us t} :
+    sorts_local_ctx (lift_typing typing) Σ Γ Γ' us ->
+    isType Σ (Γ ,,, Γ') t ->
+    isType Σ Γ (it_mkProd_or_LetIn Γ' t).
+  Proof using cf Σ wfΣ.
+    move=> equs [s ttyp]; exists (sort_of_products us s).
+    apply: type_it_mkProd_or_LetIn_sorts=> //.
+  Qed.
+
   Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
   Proof using Type.
     reflexivity.

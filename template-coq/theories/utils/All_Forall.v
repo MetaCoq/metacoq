@@ -2351,7 +2351,7 @@ Proof.
   eauto.
 Qed.
 
-Require Import MCSquash.
+From MetaCoq.Template Require Import MCSquash.
 
 Lemma All2_swap :
   forall A B R l l',
@@ -3485,4 +3485,29 @@ Proof.
   - destruct l1 => //.
   - destruct l1 => /= // [=] hl hl'.
     now rewrite IHl0.
+Qed.
+
+Lemma All1_map2_right_inv {A B C} R (g : A -> B -> C) l l' : #|l| = #|l'| ->  All2 R l (map2 g l l') ->  All2 (fun x y => R x (g x y)) l l'.
+Proof.
+  elim: l l'=> [|x xs ih] [|y ys] //= [=] eq z; try depelim z ; try constructor=> //.
+  by apply: ih.
+Qed.
+
+Lemma All1_map2_right {A B C} R (g : A -> B -> C) l l' : All2 (fun x y => R x (g x y)) l l' -> All2 R l (map2 g l l').
+Proof.
+  elim: l l'=> [|x xs ih] [|y ys] //= z; try constructor ; try depelim z=>//.
+  by apply: ih.
+Qed.
+
+Lemma All1i_map2_right {A B C} k R (g : A -> B -> C) l l' : All2i (fun i x y => R i x (g x y)) k l l' -> All2i R k l (map2 g l l').
+Proof.
+  elim: l l' k=> [|x xs ih] [|y ys] //= k z; try constructor ; try depelim z=>//.
+  by apply: ih.
+Qed.
+
+Lemma All1i_Alli_mix_left {A B k Q R} {l : list A} {l' : list B}
+  : Alli Q k l -> All2i R k l l' -> All2i (fun i x y => Q i x * R i x y)%type k l l'.
+Proof.
+  move=> + h; elim: h=> [n|n x y xs ys r rs ih] q; depelim q; constructor=> //.
+  by apply: ih.
 Qed.

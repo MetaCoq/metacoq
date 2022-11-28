@@ -855,5 +855,8 @@ Proof.
   apply nth_error_appP.
 Qed.
 
+Lemma expand_lets_k_nil k t : expand_lets_k [] k t = t.
+Proof. by rewrite /expand_lets_k /= subst_empty lift0_id. Qed.
+
 
 

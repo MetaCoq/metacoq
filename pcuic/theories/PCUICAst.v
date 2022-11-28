@@ -234,76 +234,6 @@ Definition isLambda t :=
 Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
 Proof. destruct t => //; eauto. Qed.
 
-(** ** Entries
-
-  The kernel accepts these inputs and typechecks them to produce
-  declarations. Reflects [kernel/entries.mli].
-*)
-
-(** *** Constant and axiom entries *)
-
-Record parameter_entry := {
-  parameter_entry_type      : term;
-  parameter_entry_universes : universes_decl }.
-
-Record definition_entry := {
-  definition_entry_type      : term;
-  definition_entry_body      : term;
-  definition_entry_universes : universes_decl;
-  definition_entry_opaque    : bool }.
-
-Inductive constant_entry :=
-| ParameterEntry  (p : parameter_entry)
-| DefinitionEntry (def : definition_entry).
-
-Derive NoConfusion for parameter_entry definition_entry constant_entry.
-
-(** *** Inductive entries *)
-
-(** This is the representation of mutual inductives.
-    nearly copied from [kernel/entries.mli]
-
-  Assume the following definition in concrete syntax:
-
-[[
-  Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
-  ...
-  with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1  ... | cpnp : Tpnp.
-]]
-
-  then, in [i]th block, [mind_entry_params] is [xn:Xn;...;x1:X1];
-  [mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
-  [mind_entry_lc] is [Ti1;...;Tini], defined in context
-  [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
-  [x1:X1;...;xn:Xn].
-*)
-
-Inductive local_entry :=
-| LocalDef : term -> local_entry (* local let binding *)
-| LocalAssum : term -> local_entry.
-
-Record one_inductive_entry := {
-  mind_entry_typename : ident;
-  mind_entry_arity : term;
-  mind_entry_template : bool; (* template polymorphism *)
-  mind_entry_consnames : list ident;
-  mind_entry_lc : list term (* constructor list *) }.
-
-Record mutual_inductive_entry := {
-  mind_entry_record    : option (option ident);
-  (* Is this mutual inductive defined as a record?
-     If so, is it primitive, using binder name [ident]
-     for the record in primitive projections ? *)
-  mind_entry_finite    : recursivity_kind;
-  mind_entry_params    : list (ident * local_entry);
-  mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universes_decl;
-  mind_entry_private   : option bool
-  (* Private flag for sealing an inductive definition in an enclosing
-     module. Not handled by Template Coq yet. *) }.
-
-Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.
-
 (** Basic operations on the AST: lifting, substitution and tests for variable occurrences. *)
 
 Fixpoint lift n k t : term :=
@@ -1317,3 +1247,73 @@ Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
   PCUICLookup
 .
 Include PCUICGlobalMaps.
+
+(** ** Entries
+
+  The kernel accepts these inputs and typechecks them to produce
+  declarations. Reflects [kernel/entries.mli].
+*)
+
+(** *** Constant and axiom entries *)
+
+Record parameter_entry := {
+  parameter_entry_type      : term;
+  parameter_entry_universes : universes_decl }.
+
+Record definition_entry := {
+  definition_entry_type      : term;
+  definition_entry_body      : term;
+  definition_entry_universes : universes_decl;
+  definition_entry_opaque    : bool }.
+
+Inductive constant_entry :=
+| ParameterEntry  (p : parameter_entry)
+| DefinitionEntry (def : definition_entry).
+
+Derive NoConfusion for parameter_entry definition_entry constant_entry.
+
+(** *** Inductive entries *)
+
+(** This is the representation of mutual inductives.
+    nearly copied from [kernel/entries.mli]
+
+  Assume the following definition in concrete syntax:
+
+[[
+  Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
+  ...
+  with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1  ... | cpnp : Tpnp.
+]]
+
+  then, in [i]th block, [mind_entry_params] is [xn:Xn;...;x1:X1];
+  [mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
+  [mind_entry_lc] is [Ti1;...;Tini], defined in context
+  [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
+  [x1:X1;...;xn:Xn].
+*)
+
+Inductive local_entry :=
+| LocalDef : term -> local_entry (* local let binding *)
+| LocalAssum : term -> local_entry.
+
+Record one_inductive_entry := {
+  mind_entry_typename : ident;
+  mind_entry_arity : term;
+  mind_entry_template : bool; (* template polymorphism *)
+  mind_entry_consnames : list ident;
+  mind_entry_lc : list term (* constructor list *) }.
+
+Record mutual_inductive_entry := {
+  mind_entry_record    : option (option ident);
+  (* Is this mutual inductive defined as a record?
+     If so, is it primitive, using binder name [ident]
+     for the record in primitive projections ? *)
+  mind_entry_finite    : recursivity_kind;
+  mind_entry_params    : list (ident * local_entry);
+  mind_entry_inds      : list one_inductive_entry;
+  mind_entry_universes : universes_decl;
+  mind_entry_private   : option bool
+  (* Private flag for sealing an inductive definition in an enclosing
+     module. Not handled by Template Coq yet. *) }.
+
+Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.

@@ -335,11 +335,9 @@ Section CheckEnv.
     : EnvCheck X_env_ext_type (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
                          forall Σ : global_env, abstract_env_rel X Σ -> ∥ on_udecl Σ udecl ∥) :=
     let levels := levels_of_udecl udecl in
-    let global_levels := global_levels (abstract_env_univ X) in
-    let all_levels := LevelSet.union levels global_levels in
     check_eq_true_lazy (LevelSet.for_all (fun l => Level.is_var l) levels)
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels))));;
-    check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
+    check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => abstract_env_level_mem (abstract_env_empty_ext X) levels l1 && abstract_env_level_mem (abstract_env_empty_ext X) levels l2) (constraints_of_udecl udecl))
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
                                     " |= " ^ print_constraint_set (constraints_of_udecl udecl)))));;
     match gc_of_uctx (uctx_of_udecl udecl) as X' return (X' = _ -> EnvCheck X_env_ext_type _) with
@@ -350,38 +348,43 @@ Section CheckEnv.
                     (abstract_env_empty_ext X, IllFormedDecl id (Msg "constraints not satisfiable"));;
       ret (uctx'; _)
     end eq_refl.
-  Next Obligation.
+  Next Obligation. 
     simpl. intros id X udecl H H0 uctx' Huctx H2.
     rewrite <- Huctx.
     split; auto.
+    intros Σ wfΣ.
     assert (HH: ConstraintSet.For_all
-                  (declared_cstr_levels (LS.union (levels_of_udecl udecl) (global_levels (abstract_env_univ X))))
+                  (declared_cstr_levels (LS.union (levels_of_udecl udecl) (global_levels Σ)))
                   (constraints_of_udecl udecl)).
     {
-      clear -H0. apply ConstraintSet.for_all_spec in H0.
+      clear -H0 wfΣ. apply ConstraintSet.for_all_spec in H0.
       2: now intros x y [].
       intros [[l ct] l'] Hl. specialize (H0 _ Hl). simpl in H0.
       apply andb_true_iff in H0. destruct H0 as [H H0].
-      apply LevelSet.mem_spec in H. apply LevelSet.mem_spec in H0.
-      now split. }
-    intros Σ H1; split; last (split; last split).
-    - clear -H H1. apply LevelSet.for_all_spec in H.
+      rewrite <- abstract_env_level_mem_correct with (Σ := (Σ, Monomorphic_ctx)) in H.
+      apply LevelSet.mem_spec in H.
+      rewrite <- abstract_env_level_mem_correct with (Σ := (Σ, Monomorphic_ctx)) in H0.
+      apply LevelSet.mem_spec in H0.
+      now split. rewrite <- abstract_env_empty_ext_rel. split; eauto. 
+      rewrite <- abstract_env_empty_ext_rel. split; eauto. 
+       }
+    split; last (split; last split).
+    - clear -H wfΣ. apply LevelSet.for_all_spec in H.
       2: now intros x y [].
       intros l Hl Hlglob.
-      move: (wf_env_non_var_levels Σ (heΣ _ _ H1) l Hlglob).
+      move: (wf_env_non_var_levels Σ (heΣ _ _ wfΣ) l Hlglob).
       now rewrite (H l Hl).
-    - erewrite <- abstract_env_univ_correct in HH; eauto.
-    - pose (HΣ := abstract_env_wf _ H1); sq.
+    - eauto.
+    - pose (HΣ := abstract_env_wf _ wfΣ); sq.
       apply wf_global_uctx_invariants in HΣ.
       enough (satisfiable_udecl Σ udecl /\ valid_on_mono_udecl (global_uctx Σ) udecl).
-      1: case: H3; split=> //; apply: consistent_extension_on_global=> //.
+      1: case: H1; split=> //; apply: consistent_extension_on_global=> //.
 
       eapply abstract_env_is_consistent_uctx_correct; eauto=> //.
       split.
       * apply LevelSet.union_spec; right ; apply HΣ.
       * intros [[l ct] l'] [Hl|Hl]%CS.union_spec.
-        + erewrite <- abstract_env_univ_correct in HH; eauto.
-          apply (HH _ Hl).
+        + apply (HH _ Hl).
         + clear -Hl HΣ ct. destruct HΣ as [_ HΣ].
           specialize (HΣ (l, ct, l') Hl).
           split; apply LevelSet.union_spec; right; apply HΣ.
@@ -411,8 +414,7 @@ Section CheckEnv.
     simpl; cbn; intros. exact (proj1 uctx.π2).
   Qed.
   Next Obligation.
-    simpl; cbn; intros. pose proof (abstract_env_exists X) as [[? ?]].
-    erewrite <- abstract_env_univ_correct; eauto. eapply (proj2 uctx.π2); eauto.
+    simpl; cbn; intros. eapply (proj2 uctx.π2); eauto. 
   Qed.
   Next Obligation.
     simpl; cbn; intros. split; intros ? ?.
@@ -2290,7 +2292,7 @@ End monad_Alli_nth_forall.
     {| ind_arity_eq := _; onArity := _;
            ind_cunivs := cs;
            onConstructors := oncstrs;
-           onProjections := onprojs;
+           onProjections := _;
            onIndices := _ |}.
     - cbn in eqsort; apply eqb_eq in eqindices; apply eqb_eq in eqsort; subst.
       rewrite split_at_firstn_skipn in Heq_anonymous. cbn in *.
@@ -2299,9 +2301,13 @@ End monad_Alli_nth_forall.
     - red. red.
       eapply nth_error_all in wfars; eauto; simpl in wfars.
       destruct wfars as [s Hs]. now exists s.
+    - intro. unfold check_projections_type in onprojs. 
+      destruct (ind_projs idecl). destruct (H0 eq_refl).
+      exact onprojs. 
     - now apply eqb_eq in eqsort; subst.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
       destruct (ind_variance mdecl) => //.
+      intros. inversion H0. now destruct H2.
     Unshelve. eauto.
   Qed.
 
@@ -2435,18 +2441,13 @@ End monad_Alli_nth_forall.
       ret (exist (abstract_env_add_decl X d.1 d.2 _) _)
     end.
   Next Obligation.
-    cbn in *. destruct H.  pose proof (abstract_env_exists x) as [[? ?]].
-    specialize_Σ a. specialize_Σ H. cbn in *. sq.
-    split.
-    - erewrite <- abstract_env_global_declarations_correct; eauto.
-      now rewrite wf_.
-    - pose proof (abstract_env_ext_wf _ H). sq. destruct H2.
-      cbn in *. rewrite wf_ in o0. erewrite <- abstract_env_univ_correct ; eauto.
-      now rewrite wf_ in a.
-    - rewrite wf_ in y. erewrite <- abstract_env_univ_correct ; eauto.
-      erewrite <- abstract_env_global_declarations_correct; eauto.
-      erewrite <- (abstract_env_retroknowledge_correct); eauto.
-      now rewrite wf_.
+    cbn in *. destruct H0.  
+    specialize_Σ a. specialize_Σ H. rewrite wf_.  cbn in *. 
+    specialize_Σ H0. sq.
+    split; eauto. 
+    - pose proof (abstract_env_ext_wf _ H0). sq. destruct H3.
+      cbn in *. now rewrite wf_ in o0.
+    - sq; now rewrite wf_ in y.
   Qed.
 
   Next Obligation.

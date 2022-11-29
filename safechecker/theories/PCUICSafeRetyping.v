@@ -284,23 +284,6 @@ Qed.
         try clear infer ; destruct wt as [T HT]
     end.
 
-  Definition primitive_constant (tag : Primitive.prim_tag) : option kername :=
-    let retro := abstract_env_ext_retroknowledge X in
-    match tag with
-    | Primitive.primInt => Retroknowledge.retro_int63 retro
-    | Primitive.primFloat => Retroknowledge.retro_float64 retro
-    end.
-
-  Lemma primitive_constant_spec tag :
-    forall Σ (wfΣ : abstract_env_ext_rel X Σ),
-    primitive_constant tag = PCUICEnvironment.primitive_constant Σ tag.
-  Proof.
-    intros.
-    unfold primitive_constant, PCUICEnvironment.primitive_constant.
-    destruct tag => //;
-    now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
-  Qed.
-
   Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term)
     (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wellinferred Σ Γ t) :
     principal_type Γ t
@@ -375,7 +358,7 @@ Qed.
       { | exist (Some f) _ => ret f.(dtype)
         | exist None _ => ! };
 
-    infer Γ wfΓ (tPrim p) wt with inspect (primitive_constant p.π1) :=
+    infer Γ wfΓ (tPrim p) wt with inspect (abstract_primitive_constant X p.π1) :=
       { | exist (Some prim_ty) eqp => ret (tConst prim_ty [])
         | exist None _ => ! }.
 
@@ -778,7 +761,7 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros. specialize (wt _ wfΣ). destruct wt.
     inversion X0; subst.
-    cbn in eqp. rewrite (primitive_constant_spec _ Σ) // in eqp.
+    cbn in eqp. rewrite (abstract_primitive_constant_correct _ _ Σ) // in eqp.
     rewrite /= -eqp in H0. noconf H0. split.
     intros; erewrite (abstract_env_ext_irr _ wfΣ0 wfΣ); eauto.
   Qed.
@@ -788,7 +771,7 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros. specialize (wt _ wfΣ). destruct wt.
     inversion X0; subst.
-    rewrite (primitive_constant_spec _ Σ) // in e.
+    rewrite (abstract_primitive_constant_correct _ _ Σ) // in e.
     rewrite /= -e in H0. noconf H0.
   Qed.
 

@@ -19,10 +19,10 @@ Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
 
 Definition cumul_Ind_univ {cf} (Σ : global_env_ext) pb i napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (IndRef i) napp).
+  R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef i) napp.
 
 Definition cumul_Construct_univ {cf} (Σ : global_env_ext) pb  i k napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (ConstructRef i k) napp).
+  R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (ConstructRef i k) napp.
 
 (** * Definition of cumulativity and conversion relations *)
 

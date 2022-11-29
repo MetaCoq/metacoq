@@ -140,12 +140,11 @@ Program Definition make_wf_env_ext {cf:checker_flags} {guard : abstract_guard_im
 Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_struct referenced_impl referenced_impl_ext :=
   {| abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
-     abstract_env_ext_retroknowledge := fun Σ => (referenced_impl_env_ext Σ).(retroknowledge) ;
      abstract_env_conv_pb_relb := fun Σ conv_pb => conv_pb_relb (referenced_impl_ext_graph Σ) conv_pb ;
      abstract_env_compare_global_instance := fun Σ =>
       compare_global_instance (referenced_impl_env_ext Σ)
                               (check_eqb_universe (referenced_impl_ext_graph Σ));
-     abstract_env_level_mem := fun Σ => level_mem (referenced_impl_env_ext Σ);
+     abstract_env_level_mem := fun Σ levels l => LevelSet.mem l (LevelSet.union levels (global_ext_levels (referenced_impl_env_ext Σ)));
      abstract_env_ext_wf_universeb := fun Σ u => wf_universeb Σ u;
      abstract_env_check_constraints := fun Σ => check_constraints (referenced_impl_ext_graph Σ);
 
@@ -162,9 +161,6 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
    |};
  abstract_env_empty_ext X := {| referenced_impl_env_ext := (X , Monomorphic_ctx);
  |} ;
- abstract_env_univ X := X ;
- abstract_env_global_declarations X := declarations X;
- abstract_env_retroknowledge X := X.(retroknowledge) ;
  abstract_env_is_consistent uctx := wGraph.is_acyclic (make_graph uctx);
  abstract_env_is_consistent_uctx X uctx :=
    let G := referenced_impl_graph X in
@@ -172,20 +168,25 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
    wGraph.is_acyclic G' && wGraph.IsFullSubgraph.is_full_extension G G' ;
  abstract_env_add_uctx X uctx udecl Hdecl Hglobal := {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl);
  |} ;
+ abstract_primitive_constant := fun X tag => primitive_constant X tag;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X ;
  abstract_pop_decls := referenced_pop ;
  abstract_make_wf_env_ext := make_wf_env_ext ;
  |}.
 Next Obligation. sq. constructor; cbn; eauto. apply on_global_univ_init_env. econstructor. Qed.
 Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
-Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
-  econstructor; eauto. econstructor; eauto. econstructor; eauto. Qed.
+Next Obligation.
+ pose proof (referenced_impl_wf X). destruct (H _ eq_refl).
+ sq. destruct H0.  econstructor; eauto. econstructor; eauto.
+  Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [?]. sq. split; eauto.
   apply on_udecl_mono.
 Qed.
 Next Obligation.
-  pose proof (referenced_impl_wf X). now sq.
+  pose proof (referenced_impl_wf X). destruct (Hglobal _ eq_refl); sq.
+  now econstructor.
 Qed.
+
 
 (* We pack up all the information required on the global environment and graph in a
 single record. *)
@@ -294,7 +295,6 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
   abstract_env_struct wf_env wf_env_ext :=
  {|
  abstract_env_lookup := fun Σ k => EnvMap.lookup k (wf_env_ext_map Σ);
- abstract_env_ext_retroknowledge := fun X => X.(wf_env_ext_referenced).(retroknowledge);
  abstract_env_conv_pb_relb X := abstract_env_conv_pb_relb X.(wf_env_ext_referenced);
  abstract_env_compare_global_instance X := abstract_env_compare_global_instance X.(wf_env_ext_referenced);
  abstract_env_level_mem X := abstract_env_level_mem X.(wf_env_ext_referenced);
@@ -311,20 +311,21 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
  abstract_env_empty_ext X :=
   {| wf_env_ext_referenced := @abstract_env_empty_ext _ _ referenced_impl_ext _ X.(wf_env_referenced) ;
      wf_env_ext_map := X.(wf_env_map) |};
- abstract_env_global_declarations X := abstract_env_global_declarations X.(wf_env_referenced);
  abstract_env_is_consistent univ := abstract_env_is_consistent univ;
  abstract_env_is_consistent_uctx X uctx := abstract_env_is_consistent_uctx X.(wf_env_referenced) uctx;
  abstract_env_add_uctx X uctx udecl Huctx Hdecl :=
  {| wf_env_ext_referenced := @abstract_env_add_uctx _ _ referenced_impl_ext _ X.(wf_env_referenced) uctx udecl Huctx Hdecl ;
     wf_env_ext_map := X.(wf_env_map) |};
+ abstract_primitive_constant X := abstract_primitive_constant X.(wf_env_ext_referenced);
  abstract_env_rel X := abstract_env_rel X.(wf_env_referenced) ;
  abstract_pop_decls := optim_pop ;
  abstract_make_wf_env_ext := optim_make_wf_env_ext ;
  |}.
 Next Obligation.
   pose proof (X.(wf_env_referenced).(referenced_impl_wf)) as [?].
-  sq. destruct H.
+  sq. destruct (H _ eq_refl).
   apply EnvMap.repr_add; eauto; try eapply wf_fresh_globals; eauto.
+  destruct X1; eauto. 
   apply wf_env_map_repr.
 Qed.
 Next Obligation. apply wf_env_map_repr. Qed.

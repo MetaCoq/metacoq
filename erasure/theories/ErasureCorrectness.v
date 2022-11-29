@@ -1174,9 +1174,10 @@ Proof.
   rewrite H2.
   pose proof (onProjections p) as X.
   rewrite H1 in X.
-  destruct (ind_ctors hd) as [|ctor []] eqn:hctors => //.
+  destruct (ind_ctors hd) as [|ctor []] eqn:hctors ; edestruct X => //.
+  clear X. 
   depelim H. rewrite H1.
-  depelim H0. cbn. destruct X.
+  depelim H0. cbn.
   destruct H. rewrite -H.
   rewrite H3 in on_projs_all. cbn in on_projs_all.
   eapply Forall2_length in Hprojs. rewrite Hprojs in on_projs_all.

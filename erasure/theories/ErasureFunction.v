@@ -794,10 +794,11 @@ Proof.
     rewrite -(abstract_env_lookup_correct _ _ H0).
     rewrite H2 H3. pose proof (abstract_env_ext_wf _ H) as [?].
     eapply extends_lookup_env in H3; try apply e; eauto. clear -H2 H3. congruence.
-    destruct X0.
-    rewrite -(abstract_env_ext_retroknowledge_correct _ H).
-    rewrite -(abstract_env_ext_retroknowledge_correct _ H0).
-    congruence. }
+    destruct X0. intros tag.
+    rewrite (abstract_primitive_constant_correct _ _ _ H).
+    rewrite (abstract_primitive_constant_correct _ _ _ H0).
+    unfold primitive_constant.
+    rewrite e0. congruence. }
   simp is_erasableb.
   set (obl := is_erasableb_obligation_2 _ _ _ _). clearbody obl.
   set(ty := (type_of_typing X_type' _ _ _ wt')) in *.

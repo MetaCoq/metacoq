@@ -966,7 +966,7 @@ Section Typecheck.
   Qed.
 
   Definition abstract_env_level_mem_forallb {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
-    forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
+    forallb (level_mem Σ) u = forallb (abstract_env_level_mem X LevelSet.empty) u.
   Proof using Type.
     induction u; eauto; cbn.
     erewrite <- abstract_env_level_mem_correct; eauto. intuition.
@@ -984,7 +984,7 @@ Section Typecheck.
     with inspect (AUContext.repr (inst, cstrs)) := {
     | exist inst' _ with (Nat.eq_dec #|u| #|inst'.1|) := {
       | right e1 := raise (Msg "instance does not have the right length") ;
-      | left e1 with inspect (forallb (abstract_env_level_mem X) u) := {
+      | left e1 with inspect (forallb (abstract_env_level_mem X LevelSet.empty) u) := {
         | exist false e2 := raise (Msg "undeclared level in instance") ;
         | exist true e2 with inspect (abstract_env_check_constraints X (subst_instance_cstrs u cstrs)) := {
           | exist false e3 := raise (Msg "ctrs not satisfiable") ;
@@ -998,7 +998,7 @@ Section Typecheck.
     assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
     { symmetry in e2.
       eapply forallb_All in e2. eapply All_forallb'; tea.
-      intros x; simpl. erewrite <- abstract_env_level_mem_correct; eauto.
+      intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
     }
     repeat split; eauto.
     - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
@@ -1020,7 +1020,7 @@ Section Typecheck.
       assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
       { symmetry in e2.
         eapply forallb_All in e2. eapply All_forallb'; tea.
-        intros x; simpl. erewrite <- abstract_env_level_mem_correct; eauto.
+        intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
       }
       solve_all.
   Qed.
@@ -1224,24 +1224,6 @@ Section Typecheck.
     rewrite /cstr_branch_context in e.
     now do 3 eapply (proj1 (eq_annots_fold _ _ _)) in e.
   Qed.
-
-  Definition primitive_constant (tag : Primitive.prim_tag) : option kername :=
-    let retro := abstract_env_ext_retroknowledge X in
-    match tag with
-    | Primitive.primInt => Retroknowledge.retro_int63 retro
-    | Primitive.primFloat => Retroknowledge.retro_float64 retro
-    end.
-
-  Lemma primitive_constant_spec tag :
-    forall Σ (wfΣ : abstract_env_ext_rel X Σ),
-    primitive_constant tag = PCUICEnvironment.primitive_constant Σ tag.
-  Proof using Type.
-    intros.
-    unfold primitive_constant, PCUICEnvironment.primitive_constant.
-    destruct tag => //;
-    now rewrite <- (abstract_env_ext_retroknowledge_correct (Σ := Σ) X).
-  Qed.
-
 
   Section check_mfix.
   Context (infer : forall (Γ : context) (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ),  ∥ Σ ;;; Γ |- t ▹ A ∥ }))
@@ -1477,7 +1459,7 @@ Section Typecheck.
       ret (dtype decl; _)
     };
 
-  infer Γ HΓ (tPrim p) with inspect (primitive_constant p.π1) :=
+  infer Γ HΓ (tPrim p) with inspect (abstract_primitive_constant X p.π1) :=
     { | exist None _ := raise (Msg "primitive type is not registered in the environment");
       | exist (Some prim_ty) eqp with inspect (abstract_env_lookup X prim_ty) := {
         | exist (Some (ConstantDecl d)) HH =>
@@ -2298,13 +2280,12 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
     pose proof (on_declared_inductive decl) as [onmib oni].
+    destruct (ind_projs idecl) eqn:eq in |- * .
+    { rewrite eq in HH. rewrite nth_error_nil in HH => //. }
     eapply onProjections in oni.
     move: oni (eq_sym HH).
-    destruct (ind_projs idecl) eqn:eq in |- * .
-    { rewrite nth_error_nil => //. }
     intros.
     destruct ind_ctors as [|? []] eqn:hctors => //.
-
     eapply infer_Proj with (pdecl := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
@@ -2323,13 +2304,15 @@ Section Typecheck.
       destruct (on_declared_inductive decl) eqn:ond.
       rewrite -o.(onNpars) -Hl.
       pose proof (o0.(onProjections)) as onps.
-      rewrite eq in onps.
+      assert (H : p0 :: l <> []) by discriminate. 
+      rewrite eq in onps. specialize (onps H).
       destruct ind_ctors as [|cs []]; auto.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
       rewrite List.skipn_length in e.
       rewrite List.firstn_length. lia.
+    - rewrite eq; discriminate.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2540,11 +2523,12 @@ Section Typecheck.
     inversion X1 ; subst.
     congruence.
   Qed.
+
   Next Obligation.
     eapply eqb_eq in i. eapply eqb_eq in i0.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
     split. econstructor. rewrite eqp.
-    now rewrite -primitive_constant_spec. red.
+    erewrite abstract_primitive_constant_correct; try reflexivity. eassumption.  red.
     now rewrite -HH.
     destruct (cst_type d) eqn:hty => //.
     exists u. split => //.
@@ -2555,7 +2539,7 @@ Section Typecheck.
     depelim X1.
     eapply eqb_eq in i. eapply eqb_eq in i0.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
-    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
     rewrite d0 in HH; noconf HH.
@@ -2567,7 +2551,7 @@ Section Typecheck.
     depelim X1.
     eapply eqb_eq in i.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
-    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
     rewrite d0 in HH; noconf HH.
@@ -2580,7 +2564,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
-    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
     rewrite d0 in HH; noconf HH.
@@ -2592,7 +2576,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
-    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in e0. rewrite /declared_constant in d.
     rewrite d in e0; noconf e0.
@@ -2603,7 +2587,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
-    rewrite (primitive_constant_spec _ _ wfΣ) in eqp.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in e0. rewrite /declared_constant in d.
     rewrite e0 in d; noconf d.
@@ -2613,7 +2597,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
-    rewrite (primitive_constant_spec _ _ wfΣ) in e0.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in e0.
     unfold prim_val_tag in e1. congruence.
   Qed.
 

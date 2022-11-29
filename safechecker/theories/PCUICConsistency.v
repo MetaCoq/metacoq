@@ -155,6 +155,7 @@ Proof.
           -- instantiate (1 := []).
              constructor.
           -- now cbn.
+          -- intros ? H. inversion H.
         * constructor.
       + constructor.
       + reflexivity.

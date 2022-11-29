@@ -401,7 +401,7 @@ Section CheckEnv.
     | Monomorphic_ctx => ret (exist (abstract_env_empty_ext X) _)
     | Polymorphic_ctx _ =>
       uctx <- check_udecl (string_of_kername id) X ext ;;
-      let X' := abstract_env_add_uctx X uctx.π1 ext _ _ in
+      let X' := abstract_env_add_udecl X ext _ in
       ret (exist X' _)
     end.
   Next Obligation.
@@ -411,17 +411,14 @@ Section CheckEnv.
     - now apply abstract_env_empty_ext_rel in H.
   Qed.
   Next Obligation.
-    simpl; cbn; intros. exact (proj1 uctx.π2).
-  Qed.
-  Next Obligation.
     simpl; cbn; intros. eapply (proj2 uctx.π2); eauto. 
   Qed.
   Next Obligation.
     simpl; cbn; intros. split; intros ? ?.
     { rewrite Heq_ext.
       destruct uctx as [uctx' [gcof onu]]. cbn.
-      eapply abstract_env_add_uctx_rel; cbn; eauto. }
-    { eapply abstract_env_add_uctx_rel with (udecl := ext) in H; cbn; try now eauto. }
+      eapply abstract_env_add_udecl_rel; cbn; eauto. }
+    { eapply abstract_env_add_udecl_rel with (udecl := ext) in H; cbn; try now eauto. }
   Qed.
 
   End UniverseChecks.

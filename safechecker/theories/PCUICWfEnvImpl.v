@@ -166,7 +166,7 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
    let G := referenced_impl_graph X in
    let G' := add_uctx uctx G in
    wGraph.is_acyclic G' && wGraph.IsFullSubgraph.is_full_extension G G' ;
- abstract_env_add_uctx X uctx udecl Hdecl Hglobal := {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl);
+ abstract_env_add_udecl X udecl Hglobal := {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl);
  |} ;
  abstract_primitive_constant := fun X tag => primitive_constant X tag;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X ;
@@ -185,7 +185,6 @@ Next Obligation.
   pose proof (referenced_impl_wf X). destruct (Hglobal _ eq_refl); sq.
   now econstructor.
 Qed.
-
 
 (* We pack up all the information required on the global environment and graph in a
 single record. *)
@@ -306,8 +305,8 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
      wf_env_ext_map := X.(wf_env_map) |};
  abstract_env_is_consistent univ := abstract_env_is_consistent univ;
  abstract_env_is_consistent_uctx X uctx := abstract_env_is_consistent_uctx X.(wf_env_referenced) uctx;
- abstract_env_add_uctx X uctx udecl Huctx Hdecl :=
- {| wf_env_ext_referenced := @abstract_env_add_uctx _ _ referenced_impl_ext _ X.(wf_env_referenced) uctx udecl Huctx Hdecl ;
+ abstract_env_add_udecl X udecl Hdecl :=
+ {| wf_env_ext_referenced := @abstract_env_add_udecl _ _ referenced_impl_ext _ X.(wf_env_referenced) udecl Hdecl ;
     wf_env_ext_map := X.(wf_env_map) |};
  abstract_primitive_constant X := abstract_primitive_constant X.(wf_env_ext_referenced);
  abstract_env_rel X := abstract_env_rel X.(wf_env_referenced) ;

@@ -24,8 +24,7 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
    (forall Σ, abstract_env_rel X Σ -> ∥ on_global_decls Σ kn d ∥) 
    -> abstract_env_impl;
   abstract_env_empty_ext : abstract_env_impl -> abstract_env_ext_impl;
-  abstract_env_add_uctx X uctx udecl :
-    gc_of_uctx (uctx_of_udecl udecl) = Some uctx ->
+  abstract_env_add_udecl X udecl :
     (forall Σ, abstract_env_rel X Σ -> ∥ on_udecl Σ.(universes) udecl ∥) ->
     abstract_env_ext_impl ;
   abstract_pop_decls : abstract_env_impl -> abstract_env_impl ;
@@ -95,9 +94,9 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     {| universes := univs; declarations := []; retroknowledge := retro |} ;
   abstract_env_add_decl_correct X Σ kn d H : abstract_env_rel X Σ ->
     abstract_env_rel (abstract_env_add_decl X kn d H) (add_global_decl Σ (kn,d));
-  abstract_env_add_uctx_rel X {Σ} uctx udecl H H' :
+  abstract_env_add_udecl_rel X {Σ} udecl H :
     (abstract_env_rel X Σ.1 /\ Σ.2 = udecl) <->
-    abstract_env_ext_rel (abstract_env_add_uctx X uctx udecl H H') Σ;
+    abstract_env_ext_rel (abstract_env_add_udecl X udecl H) Σ;
   abstract_env_is_consistent_correct uctx udecl :
     global_uctx_invariants udecl ->
     gc_of_uctx udecl = Some uctx ->

@@ -12,7 +12,7 @@ From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extrac
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
     EAst Transform ERemoveParams.
-Import EEnvMap EGlobalEnv EWellformed.
+Import EEnvMap EGlobalEnv EWellformed ErasureFunction.
 
 Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ PCUICTyping.wf Σ ∥) : wf_env :=
   {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
@@ -24,7 +24,7 @@ Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
-  let wfext := optim_make_wf_env_ext (guard:=guard) wfe p.1.2 _ in
+  let wfext := @abstract_make_wf_env_ext optimized_abstract_env_impl wfe p.1.2 _ in
   let t := ErasureFunction.erase (nor:=PCUICSN.extraction_normalizing) optimized_abstract_env_impl wfext nil p.2
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
   let Σ' := ErasureFunction.erase_global_fast optimized_abstract_env_impl

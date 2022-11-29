@@ -2301,13 +2301,11 @@ End monad_Alli_nth_forall.
     - red. red.
       eapply nth_error_all in wfars; eauto; simpl in wfars.
       destruct wfars as [s Hs]. now exists s.
-    - intro. unfold check_projections_type in onprojs. 
-      destruct (ind_projs idecl). destruct (H0 eq_refl).
-      exact onprojs. 
+    - unfold check_projections_type in onprojs. 
+      destruct (ind_projs idecl) => //. 
     - now apply eqb_eq in eqsort; subst.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
       destruct (ind_variance mdecl) => //.
-      intros. inversion H0. now destruct H2.
     Unshelve. eauto.
   Qed.
 

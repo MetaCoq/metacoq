@@ -2284,7 +2284,7 @@ Section Typecheck.
     { rewrite eq in HH. rewrite nth_error_nil in HH => //. }
     eapply onProjections in oni.
     move: oni (eq_sym HH).
-    intros.
+    intros. rewrite eq in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
     eapply infer_Proj with (pdecl := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
@@ -2305,14 +2305,13 @@ Section Typecheck.
       rewrite -o.(onNpars) -Hl.
       pose proof (o0.(onProjections)) as onps.
       assert (H : p0 :: l <> []) by discriminate. 
-      rewrite eq in onps. specialize (onps H).
+      rewrite eq in onps.
       destruct ind_ctors as [|cs []]; auto.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
       rewrite List.skipn_length in e.
       rewrite List.firstn_length. lia.
-    - rewrite eq; discriminate.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

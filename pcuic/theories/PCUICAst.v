@@ -1309,7 +1309,7 @@ Record mutual_inductive_entry := {
      If so, is it primitive, using binder name [ident]
      for the record in primitive projections ? *)
   mind_entry_finite    : recursivity_kind;
-  mind_entry_params    : list (ident * local_entry);
+  mind_entry_params    : context;
   mind_entry_inds      : list one_inductive_entry;
   mind_entry_universes : universes_decl;
   mind_entry_private   : option bool

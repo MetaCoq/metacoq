@@ -233,9 +233,7 @@ Proof.
     destruct typ as [[names types] _].
     apply (List.firstn decl.(ind_npars)) in names.
     apply (List.firstn decl.(ind_npars)) in types.
-    refine (List.combine _ _).
-    exact (List.map string_of_aname names).
-    exact (List.map LocalAssum types).
+    refine (map (fun '(x, ty) => vass x ty) (combine names types)).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
     refine {| mind_entry_typename := ind_name0;

@@ -570,12 +570,9 @@ Section CheckEnv.
      (wft : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universes Σ t)
      (wfu : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universes Σ u) :
       typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ compare_term pb Σ Σ t u ∥) :=
-     (* check_t <- check_eq_true (on_universes (abstract_env_ext_wf_universeb X_ext) closedu t) (Msg "Terms are not wf") ;;
-     check_u <- check_eq_true (on_universes (abstract_env_ext_wf_universeb X_ext) closedu u) (Msg "Terms are not wf") ;; *)
      check <- check_eq_true (eqb_term_conv X_ext pb t u) (Msg "Terms are not equal") ;;
     ret _.
     Next Obligation.
-      (* destruct X as [X M HM [wfΣ] G wfG]; simpl in *. sq. *)
       simpl in *; sq.
       eapply eqb_term_upto_univ_impl in check; sq; eauto.
       - intros u0 u'. repeat erewrite <- abstract_env_ext_wf_universeb_correct; eauto.
@@ -587,11 +584,8 @@ Section CheckEnv.
       - intros. apply abstract_env_compare_global_instance_correct; eauto.
         + move => ? ? /wf_universe_reflect ? => /wf_universe_reflect ?.
           apply X;eauto.
-          (* erewrite <- abstract_env_ext_wf_universeb_correct; eauto. *)
         + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
-          (* erewrite forallb_ext; eauto. intros ?; apply abstract_env_ext_wf_universeb_correct; eauto.     *)
         + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
-          (* erewrite forallb_ext; eauto. intros ?; apply abstract_env_ext_wf_universeb_correct; eauto.     *)
       Unshelve. all: eauto.
     Qed.
 

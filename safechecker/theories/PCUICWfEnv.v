@@ -7,8 +7,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICRedu
 Definition level_mem : global_env_ext -> Level.t -> bool
   := fun X l => LevelSet.mem l (global_ext_levels X).
 
-Definition on_global_decls_dec {cf:checker_flags} :=
-  on_global_decls_data cumulSpec0 (lift_typing typing) (cf:=cf).
+Definition on_global_decls {cf:checker_flags} Σ :=
+  on_global_decls_data cumulSpec0 (lift_typing typing) (cf:=cf) Σ.(universes) Σ.(retroknowledge) Σ.(declarations).
 
 Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type) := {
   (* This part of the structure is here to state the correctness properties *)
@@ -18,23 +18,24 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
 
   (* Operations on the environment *)
 
-  abstract_env_lookup : abstract_env_ext_impl -> kername -> option global_decl;
   abstract_env_empty : abstract_env_impl;
   abstract_env_init (cs:ContextSet.t) (retro : Retroknowledge.t) : on_global_univs cs -> abstract_env_impl;
   abstract_env_add_decl X (kn:kername) (d:global_decl) :
-   (forall Σ : global_env, abstract_env_rel X Σ -> ∥ on_global_decls_dec Σ.(universes) Σ.(retroknowledge) Σ.(declarations) kn d ∥) 
+   (forall Σ, abstract_env_rel X Σ -> ∥ on_global_decls Σ kn d ∥) 
    -> abstract_env_impl;
   abstract_env_empty_ext : abstract_env_impl -> abstract_env_ext_impl;
   abstract_env_add_uctx X uctx udecl :
     gc_of_uctx (uctx_of_udecl udecl) = Some uctx ->
-    (forall Σ : global_env, abstract_env_rel X Σ -> ∥ on_udecl Σ.(universes) udecl ∥) ->
+    (forall Σ, abstract_env_rel X Σ -> ∥ on_udecl Σ.(universes) udecl ∥) ->
     abstract_env_ext_impl ;
   abstract_pop_decls : abstract_env_impl -> abstract_env_impl ;
-  abstract_make_wf_env_ext : forall (X:abstract_env_impl) (univs : universes_decl)
-    (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥), abstract_env_ext_impl ;
+
+  (* Queries on the environment *)
+
+  abstract_env_lookup : abstract_env_ext_impl -> kername -> option global_decl;
   abstract_primitive_constant : abstract_env_ext_impl -> Primitive.prim_tag -> option kername;
 
-    (* Primitive decision procedures *)
+  (* Primitive decision procedures *)
 
   abstract_env_conv_pb_relb : abstract_env_ext_impl -> conv_pb -> Universe.t -> Universe.t -> bool;
   abstract_env_compare_global_instance : abstract_env_ext_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
@@ -115,9 +116,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' ->
                       Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\
                       Σ.(retroknowledge) = Σ'.(retroknowledge);
-  abstract_make_wf_env_ext_correct X univs prf :
-    let X' := abstract_make_wf_env_ext X univs prf in
-    forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs);
   abstract_primitive_constant_correct X tag Σ :
     abstract_env_ext_rel X Σ -> abstract_primitive_constant X tag = PCUICEnvironment.primitive_constant Σ tag
   }.

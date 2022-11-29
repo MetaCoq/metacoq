@@ -171,7 +171,6 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
  abstract_primitive_constant := fun X tag => primitive_constant X tag;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X ;
  abstract_pop_decls := referenced_pop ;
- abstract_make_wf_env_ext := make_wf_env_ext ;
  |}.
 Next Obligation. sq. constructor; cbn; eauto. apply on_global_univ_init_env. econstructor. Qed.
 Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
@@ -285,12 +284,6 @@ Next Obligation.
   specialize (H0 y). cbn in H0. rewrite H0. reflexivity.
 Qed.
 
-Program Definition optim_make_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} (Σ : wf_env) (univs : universes_decl)
-  (prf : forall Σ0 : global_env, abstract_env_rel Σ.(wf_env_referenced) Σ0 -> ∥ wf_ext (Σ0, univs) ∥) : wf_env_ext :=
-  {| wf_env_ext_referenced := {| referenced_impl_env_ext := (Σ, univs);|} ;
-     wf_env_ext_map := Σ.(wf_env_map);
-     wf_env_ext_map_repr := Σ.(wf_env_map_repr) |}.
-
 Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_struct wf_env wf_env_ext :=
  {|
@@ -319,7 +312,6 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
  abstract_primitive_constant X := abstract_primitive_constant X.(wf_env_ext_referenced);
  abstract_env_rel X := abstract_env_rel X.(wf_env_referenced) ;
  abstract_pop_decls := optim_pop ;
- abstract_make_wf_env_ext := optim_make_wf_env_ext ;
  |}.
 Next Obligation.
   pose proof (X.(wf_env_referenced).(referenced_impl_wf)) as [?].

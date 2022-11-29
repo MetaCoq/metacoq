@@ -299,7 +299,7 @@ Section CheckEnv.
   Definition infer_term X_ext t :=
     wrap_error _ X_ext "toplevel term" (infer X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
 
-  Definition abstract_env_ext_empty := @abstract_env_empty_ext _ X_env_type X_env_ext_type _ abstract_env_empty.
+  Definition abstract_env_ext_empty := @abstract_env_empty_ext _ X_impl abstract_env_empty.
 
   Program Fixpoint check_fresh id env :
     EnvCheck X_env_ext_type (∥ fresh_global id env ∥) :=

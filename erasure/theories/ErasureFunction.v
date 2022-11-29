@@ -878,22 +878,6 @@ Proof.
   split; cbn; auto.
 Qed.
 
-Program Definition abstract_make_wf_env_ext {X_type : abstract_env_impl} (X : X_type.π1) 
-  univs (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥) : X_type.π2.π1
-  := abstract_env_add_udecl X univs _.
-Next Obligation.
-  specialize_Σ H. sq. now destruct prf.
-Defined.   
-
-Definition abstract_make_wf_env_ext_correct {X_type : abstract_env_impl} (X : X_type.π1)  univs prf :
-let X' := abstract_make_wf_env_ext X univs prf in
-forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs).
-Proof. 
-  unfold abstract_make_wf_env_ext. intros.
-  rewrite <- abstract_env_add_udecl_rel in H0. destruct Σ' , H0; cbn in *. 
-  now rewrite (abstract_env_irr X H H0).
-Defined. 
-
 Program Fixpoint erase_global_decls {X_type : abstract_env_impl} (deps : KernameSet.t) (X : X_type.π1) (decls : global_declarations)
   (prop : forall Σ : global_env, abstract_env_rel X Σ -> Σ.(declarations) = decls) : E.global_declarations :=
   match decls with

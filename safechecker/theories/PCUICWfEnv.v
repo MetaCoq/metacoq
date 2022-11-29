@@ -18,12 +18,10 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
 
   (* Operations on the environment *)
 
-  abstract_env_empty : abstract_env_impl;
   abstract_env_init (cs:ContextSet.t) (retro : Retroknowledge.t) : on_global_univs cs -> abstract_env_impl;
   abstract_env_add_decl X (kn:kername) (d:global_decl) :
    (forall Σ, abstract_env_rel X Σ -> ∥ on_global_decls Σ kn d ∥) 
    -> abstract_env_impl;
-  abstract_env_empty_ext : abstract_env_impl -> abstract_env_ext_impl;
   abstract_env_add_udecl X udecl :
     (forall Σ, abstract_env_rel X Σ -> ∥ on_udecl Σ.(universes) udecl ∥) ->
     abstract_env_ext_impl ;
@@ -86,9 +84,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
   abstract_env_wf X {Σ} : abstract_env_rel X Σ -> ∥ wf Σ ∥;
   abstract_env_irr X {Σ Σ'} :
     abstract_env_rel X Σ -> abstract_env_rel X Σ' ->  Σ = Σ';
-  abstract_env_empty_ext_rel X {Σ} :
-    (abstract_env_rel X Σ.1 /\ Σ.2 = Monomorphic_ctx)  <->
-    abstract_env_ext_rel (abstract_env_empty_ext X) Σ ;
   abstract_env_init_correct univs retro cuniv :
     abstract_env_rel (abstract_env_init univs retro cuniv)
     {| universes := univs; declarations := []; retroknowledge := retro |} ;
@@ -143,3 +138,68 @@ Qed.
 
 Notation "Σ '∼' X" := (abstract_env_rel X Σ) (at level 40).
 Notation "Σ '∼_ext' X" := (abstract_env_ext_rel X Σ) (at level 40).
+
+
+Program Definition abstract_make_wf_env_ext {cf:checker_flags} {X_type : abstract_env_impl} (X : X_type.π1) 
+  univs (prf : forall Σ : global_env, abstract_env_rel X Σ -> ∥ wf_ext (Σ, univs) ∥) : X_type.π2.π1
+  := abstract_env_add_udecl X univs _.
+Next Obligation.
+  specialize (prf _ H). sq. now destruct prf.
+Defined.   
+
+Definition abstract_make_wf_env_ext_correct {cf:checker_flags} {X_type : abstract_env_impl} (X : X_type.π1)  univs prf :
+let X' := abstract_make_wf_env_ext X univs prf in
+forall Σ Σ', abstract_env_rel X Σ -> abstract_env_ext_rel X' Σ' -> Σ' = (Σ, univs).
+Proof. 
+  unfold abstract_make_wf_env_ext. intros.
+  rewrite <- abstract_env_add_udecl_rel in H0. destruct Σ' , H0; cbn in *. 
+  now rewrite (abstract_env_irr X H H0).
+Defined.
+
+Require Import MSetFacts.
+
+Require Import Morphisms.
+
+Global Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.
+Proof.
+  intros c c' eq. rewrite /consistent.
+  now setoid_rewrite eq.
+Qed.
+
+Lemma on_udecl_mono {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} : on_udecl Σ Monomorphic_ctx.
+Proof.
+  repeat split; cbn.
+  - intros i; rewrite LevelSetFact.empty_iff //.
+  - intros i; rewrite ConstraintSetFact.empty_iff //.
+  - red. rewrite /univs_ext_constraints /=.
+    rewrite CS_union_empty.
+    apply wfΣ.
+  - apply consistent_extension_on_empty.
+Qed.
+
+Program Definition abstract_env_empty_ext {cf:checker_flags} {X_type : abstract_env_impl} 
+  (X : X_type.π1) : X_type.π2.π1 
+  := abstract_env_add_udecl X Monomorphic_ctx _.
+Next Obligation.
+  pose proof (abstract_env_wf _ H). 
+  sq. now apply on_udecl_mono.
+Defined. 
+
+Definition abstract_env_empty_ext_rel {cf:checker_flags} {X_type : abstract_env_impl} 
+   (X : X_type.π1) {Σ} :
+  (abstract_env_rel X Σ.1 /\ Σ.2 = Monomorphic_ctx)  <->
+  abstract_env_ext_rel (abstract_env_empty_ext X) Σ.
+Proof.
+  unfold abstract_env_empty_ext. now rewrite <- abstract_env_add_udecl_rel.
+Defined.  
+
+Program Definition abstract_env_empty {cf:checker_flags} {X_type : abstract_env_impl} : X_type.π1
+  := abstract_env_init (LS.singleton Level.lzero , CS.empty) Retroknowledge.empty _.
+Next Obligation.
+  repeat split.
+  - intros x Hx; cbn in *. inversion Hx.
+  - intros x Hx; cbn in *. destruct x; eauto. now inversion Hx.
+  - red. unshelve eexists.
+    + econstructor; eauto. intros; exact 1%positive.
+    + red. intros ? ?. cbn in *. inversion H.
+Defined. 

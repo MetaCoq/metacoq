@@ -40,11 +40,15 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
   abstract_env_ext_wf_universeb : abstract_env_ext_impl -> Universe.t -> bool;
   abstract_env_check_constraints : abstract_env_ext_impl -> ConstraintSet.t -> bool;
   abstract_env_guard : abstract_env_ext_impl -> FixCoFix -> context -> mfixpoint term -> bool;
-  abstract_env_fixguard X := abstract_env_guard X Fix;
-  abstract_env_cofixguard X := abstract_env_guard X CoFix;
   abstract_env_is_consistent : abstract_env_impl -> VSet.t * GoodConstraintSet.t -> bool ;
 
 }.
+
+Definition abstract_env_fixguard  {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+(X:abstract_env_ext_impl) := abstract_env_guard X Fix.
+
+Definition abstract_env_cofixguard  {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+(X:abstract_env_ext_impl) := abstract_env_guard X CoFix.
 
 Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
   (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Conv.

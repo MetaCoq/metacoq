@@ -125,8 +125,7 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
  abstract_env_add_decl := fun X kn d H =>
   {| referenced_impl_env := add_global_decl X.(referenced_impl_env) (kn,d);
    |};
- abstract_env_is_consistent uctx := wGraph.is_acyclic (make_graph uctx);
- abstract_env_is_consistent_uctx X uctx :=
+ abstract_env_is_consistent X uctx :=
    let G := referenced_impl_graph X in
    let G' := add_uctx uctx G in
    wGraph.is_acyclic G' && wGraph.IsFullSubgraph.is_full_extension G G' ;
@@ -253,8 +252,7 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
  abstract_env_add_decl X kn d H :=
   {| wf_env_referenced := @abstract_env_add_decl _ _ referenced_impl_ext _ X.(wf_env_referenced) kn d H ;
      wf_env_map := EnvMap.add kn d X.(wf_env_map) |};
- abstract_env_is_consistent univ := abstract_env_is_consistent univ;
- abstract_env_is_consistent_uctx X uctx := abstract_env_is_consistent_uctx X.(wf_env_referenced) uctx;
+ abstract_env_is_consistent X uctx := abstract_env_is_consistent X.(wf_env_referenced) uctx;
  abstract_env_add_udecl X udecl Hdecl :=
  {| wf_env_ext_referenced := @abstract_env_add_udecl _ _ referenced_impl_ext _ X.(wf_env_referenced) udecl Hdecl ;
     wf_env_ext_map := X.(wf_env_map) |};
@@ -400,20 +398,20 @@ Next Obligation. apply guard_correct. Qed.
 Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
-Next Obligation. unshelve epose proof (is_consistent_spec udecl _) as Hconsistent; eauto.
-  unfold is_consistent in Hconsistent; now rewrite H0 in Hconsistent.
-  Qed.
 Next Obligation.
-  rename H2 into Hudecl. unfold referenced_impl_graph; rewrite andb_and.
+  rename H2 into Hudecl. unfold referenced_impl_graph; rewrite andb_and.  
   pose proof (referenced_impl_graph_wf X) as HG.
   set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
   pose proof (HG' := is_graph_of_uctx_add Hudecl HG).
-  rewrite - (is_consistent_spec (global_ext_uctx (X, udecl))) (is_consistent_spec2 HG').
+  pose (global_ext_uctx := (LevelSet.union t (global_levels X),
+  ConstraintSet.union t0 (global_constraints X))).
+  rewrite - (is_consistent_spec global_ext_uctx) (is_consistent_spec2 HG').
   assert (reorder : forall a b c : Prop, (a -> b <-> c) -> a /\ b <-> a /\ c) by intuition; apply reorder.
   move=> ?; rewrite consistent_extension_on_union.
   1:{ pose proof (referenced_impl_wf X); sq.
       apply: PCUICUnivSubstitutionConv.levels_global_constraint. }
-  change (CS.union _ _) with (global_ext_uctx (X, udecl)).2.
+  cbn. 
+  change (CS.union _ _) with global_ext_uctx.2.
   apply: consistent_ext_on_full_ext=> //.
   apply: add_uctx_subgraph.
 Qed.
@@ -437,8 +435,8 @@ Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : 
   Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
-Next Obligation. now erewrite (@abstract_env_is_consistent_correct _ _ _ _ canonical_abstract_env_prop); eauto. Qed.
-Next Obligation. now erewrite (abstract_env_is_consistent_uctx_correct X.(wf_env_referenced)); eauto. Qed.
+Next Obligation. 
+  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced) _ _ (t,t0)); eauto. Qed.
 Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody r.
   pose proof (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
   specialize (prf _ eq_refl).

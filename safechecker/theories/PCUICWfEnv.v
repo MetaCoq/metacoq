@@ -42,8 +42,7 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
   abstract_env_guard : abstract_env_ext_impl -> FixCoFix -> context -> mfixpoint term -> bool;
   abstract_env_fixguard X := abstract_env_guard X Fix;
   abstract_env_cofixguard X := abstract_env_guard X CoFix;
-  abstract_env_is_consistent : VSet.t * GoodConstraintSet.t -> bool ;
-  abstract_env_is_consistent_uctx : abstract_env_impl -> VSet.t * GoodConstraintSet.t -> bool ;
+  abstract_env_is_consistent : abstract_env_impl -> VSet.t * GoodConstraintSet.t -> bool ;
 
 }.
 
@@ -52,6 +51,8 @@ Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl abstract_env_ex
 
 Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
   (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Cumul.
+
+Set Printing Coercions. 
 
 Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type)
   `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop := {
@@ -92,18 +93,14 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
   abstract_env_add_udecl_rel X {Σ} udecl H :
     (abstract_env_rel X Σ.1 /\ Σ.2 = udecl) <->
     abstract_env_ext_rel (abstract_env_add_udecl X udecl H) Σ;
-  abstract_env_is_consistent_correct uctx udecl :
-    global_uctx_invariants udecl ->
-    gc_of_uctx udecl = Some uctx ->
-    consistent udecl.2 <-> abstract_env_is_consistent uctx ;
-  abstract_env_is_consistent_uctx_correct X Σ uctx udecl :
+  abstract_env_is_consistent_correct X Σ uctx udecl :
     abstract_env_rel X Σ ->
     global_uctx_invariants (global_uctx Σ) ->
-    global_uctx_invariants (global_ext_uctx (Σ, udecl)) ->
-    gc_of_uctx (uctx_of_udecl udecl) = Some uctx ->
-    (consistent ((Σ,udecl):global_env_ext) /\
-       consistent_extension_on (global_uctx Σ) (uctx_of_udecl udecl).2)
-    <-> abstract_env_is_consistent_uctx X uctx ;
+    global_uctx_invariants (ContextSet.union udecl (global_uctx Σ)) ->
+    gc_of_uctx udecl = Some uctx ->
+    (consistent (ConstraintSet.union udecl.2 (global_constraints Σ)) /\
+       consistent_extension_on (global_uctx Σ) udecl.2)
+    <-> abstract_env_is_consistent X uctx ;
   abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ ->
             exists d, Σ.(declarations) = d :: decls) :
     let X' := abstract_pop_decls X in
@@ -203,3 +200,7 @@ Next Obligation.
     + econstructor; eauto. intros; exact 1%positive.
     + red. intros ? ?. cbn in *. inversion H.
 Defined. 
+
+Definition abstract_env_is_consistent_empty {cf:checker_flags} {X_type : abstract_env_impl} 
+  : VSet.t * GoodConstraintSet.t -> bool :=
+  fun uctx => abstract_env_is_consistent (@abstract_env_empty cf X_type) uctx. 

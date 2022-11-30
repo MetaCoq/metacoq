@@ -138,6 +138,18 @@ Definition TypeInstance : Common.TMInstance :=
 Class HasFix := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
 (* idk why this is needed... *)
 #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
+Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
+  := u <- @tmQuote Prop (Type@{U} -> True);;
+     match u with
+     | tProd _ (tSort u) _ => ret u
+     | _ => tmFail "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
+     end.
+Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
+  := u <- tmQuoteUniverse@{U t u};;
+     match Universe.get_is_level u with
+     | Some l => ret l
+     | None => tmFail "Universe is not a level"%bs
+     end.
 Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
   := f
        (fun a

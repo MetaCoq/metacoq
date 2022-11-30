@@ -403,8 +403,7 @@ Next Obligation.
   pose proof (referenced_impl_graph_wf X) as HG.
   set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
   pose proof (HG' := is_graph_of_uctx_add Hudecl HG).
-  pose (global_ext_uctx := (LevelSet.union t (global_levels X),
-  ConstraintSet.union t0 (global_constraints X))).
+  pose (global_ext_uctx := ContextSet.union udecl (global_uctx X)). 
   rewrite - (is_consistent_spec global_ext_uctx) (is_consistent_spec2 HG').
   assert (reorder : forall a b c : Prop, (a -> b <-> c) -> a /\ b <-> a /\ c) by intuition; apply reorder.
   move=> ?; rewrite consistent_extension_on_union.
@@ -436,7 +435,7 @@ Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : 
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
 Next Obligation. 
-  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced) _ _ (t,t0)); eauto. Qed.
+  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)); eauto. Qed.
 Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody r.
   pose proof (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
   specialize (prf _ eq_refl).

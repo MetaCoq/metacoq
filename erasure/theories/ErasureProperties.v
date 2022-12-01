@@ -535,14 +535,14 @@ Section wellscoped.
   Proof.
     eapply typing_ind_env; cbn; intros => //.
     all:try rtoProp; intuition auto.
-    - red in H0. rewrite /lookup_constant H0 //.
-    - now rewrite (declared_inductive_lookup isdecl).
-    - rewrite (declared_constructor_lookup isdecl) //.
-    - now rewrite (declared_inductive_lookup isdecl).
+    - red in H0. rewrite /lookup_constant /lookup_constant_gen H0 //.
+    - unfold lookup_inductive. now rewrite (declared_inductive_lookup isdecl).
+    - unfold lookup_constructor. rewrite (declared_constructor_lookup isdecl) //.
+    - unfold lookup_inductive. now rewrite (declared_inductive_lookup isdecl).
     - red in H8. eapply Forall2_All2 in H8.
       eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
-    - now rewrite (declared_projection_lookup isdecl).
+    - unfold lookup_projection. now rewrite (declared_projection_lookup isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
       solve_all. destruct a as [s []], a0.
@@ -589,7 +589,7 @@ Section trans_lookups.
     destruct g.
     destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= // _.
     eapply (lookup_constructor_declared (id:=(kn,c))) in hl.
-    specialize (H0 _ _ _ hl) as [mdecl' [idecl' [decli hl']]].
+    specialize (H0 _ _ _ hl.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', hl. cbn in * |-.
     destruct H2. eapply Forall2_nth_error_left in H0 as [? [? [erc erp]]]; tea.
     eapply Forall2_nth_error_left in erc as [? [? ?]]; tea.
@@ -602,7 +602,8 @@ Section trans_lookups.
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
     lookup_constructor Σ p.(proj_ind) 0 = Some (mdecl, idecl, cdecl).
   Proof using Type.
-    rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
+    rewrite /lookup_projection /lookup_projection_gen /lookup_constructor.
+    destruct lookup_constructor_gen as [[[? ?] ?]|]=> //=.
     now destruct nth_error => //.
   Qed.
 
@@ -613,9 +614,10 @@ Section trans_lookups.
     destruct g.
     destruct (lookup_projection Σ p) as [[[[]]]|] eqn:hl => /= // _.
     pose proof (lookup_projection_lookup_constructor hl) as lc.
-    unfold lookup_projection in hl. rewrite lc in hl.
+    unfold lookup_projection, lookup_projection_gen in hl. unfold lookup_constructor in lc.
+    rewrite lc in hl.
     eapply (lookup_constructor_declared (id:=(_,_))) in lc.
-    specialize (H0 _ _ _ lc) as [mdecl' [idecl' [decli hl']]].
+    specialize (H0 _ _ _ lc.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', lc.
     destruct H2.
     destruct (nth_error (ind_projs o)) eqn:hnth => //. noconf hl.

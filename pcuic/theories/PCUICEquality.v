@@ -50,10 +50,10 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   | _, _ => False
   end.
 
-Definition global_variance Σ gr napp :=
+Definition global_variance_gen lookup gr napp :=
   match gr with
   | IndRef ind =>
-    match lookup_inductive Σ ind with
+    match lookup_inductive_gen lookup ind with
     | Some (mdecl, idecl) =>
       match destArity [] idecl.(ind_type) with
       | Some (ctx, _) => if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
@@ -63,7 +63,7 @@ Definition global_variance Σ gr napp :=
     | None => None
     end
   | ConstructRef ind k =>
-    match lookup_constructor Σ ind k with
+    match lookup_constructor_gen lookup ind k with
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype,
@@ -75,14 +75,18 @@ Definition global_variance Σ gr napp :=
   | _ => None
   end.
 
+Notation global_variance Σ := (global_variance_gen (lookup_env Σ)).
+
 Definition R_opt_variance Re Rle v :=
   match v with
   | Some v => R_universe_instance_variance Re Rle v
   | None => R_universe_instance Re
   end.
 
-Definition R_global_instance Σ Re Rle gr napp :=
-  R_opt_variance Re Rle (global_variance Σ gr napp).
+Definition R_global_instance_gen Σ Re Rle gr napp :=
+  R_opt_variance Re Rle (global_variance_gen Σ gr napp).
+
+Notation R_global_instance Σ := (R_global_instance_gen (lookup_env Σ)).
 
 Definition R_ind_universes {cf:checker_flags} (Σ : global_env_ext) ind n i i' :=
   R_global_instance Σ (eq_universe (global_ext_constraints Σ))
@@ -409,8 +413,8 @@ Lemma R_global_instance_refl Σ Re Rle gr napp u :
   R_global_instance Σ Re Rle gr napp u u.
 Proof.
   intros rRE rRle.
-  rewrite /R_global_instance.
-  destruct global_variance as [v|] eqn:lookup.
+  unfold R_global_instance_gen.
+  destruct global_variance_gen as [v|] eqn:lookup.
   - induction u in v |- *; simpl; auto;
     unfold R_opt_variance in IHu; destruct v; simpl; auto.
     split; auto.
@@ -537,8 +541,8 @@ Lemma R_global_instance_sym Σ Re Rle gr napp u u' :
   R_global_instance Σ Re Rle gr napp u u'.
 Proof.
   intros rRE rRle.
-  rewrite /R_global_instance.
-  destruct global_variance as [v|] eqn:lookup.
+  unfold R_global_instance_gen.
+  destruct global_variance_gen as [v|] eqn:lookup.
   - induction u in u', v |- *; destruct u'; simpl; auto;
     destruct v as [|v vs]; unfold R_opt_variance in IHu; simpl; auto.
     intros [Ra Ru']. split.
@@ -625,8 +629,8 @@ Instance R_global_instance_trans Σ Re Rle gr napp :
   RelationClasses.Transitive (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros he hle x y z.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance as [v|].
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|].
   clear -he hle.
   induction x in y, z, v |- *; destruct y, z, v; simpl; auto => //. eauto.
   intros [Ra Rxy] [Rt Ryz].
@@ -800,8 +804,8 @@ Instance R_global_instance_antisym Σ Re Rle (hRe : RelationClasses.Equivalence 
   RelationClasses.Antisymmetric _ (R_global_instance Σ Re Re gr napp) (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros hR u v.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance; auto.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen; auto.
   induction u in l, v |- *; destruct v, l; simpl; auto.
   intros [at' uv] [ta vu]. split; auto.
   destruct t0; simpl in *; auto.
@@ -831,13 +835,13 @@ Lemma global_variance_napp_mon {Σ gr napp napp' v} :
   global_variance Σ gr napp' = Some v.
 Proof.
   intros hnapp.
-  rewrite /global_variance.
+  rewrite /global_variance_gen.
   destruct gr; try congruence.
-  - destruct lookup_inductive as [[mdecl idec]|] => //.
+  - destruct lookup_inductive_gen as [[mdecl idec]|] => //.
     destruct destArity as [[ctx s]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
-  - destruct lookup_constructor as [[[mdecl idecl] cdecl]|] => //.
+  - destruct lookup_constructor_gen as [[[mdecl idecl] cdecl]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
 Qed.
@@ -849,8 +853,8 @@ Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
 Proof.
   intros he hle t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
   destruct t0; simpl; auto.
@@ -866,8 +870,8 @@ Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele hnapp t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   rewrite (global_variance_napp_mon hnapp glob).
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
@@ -894,9 +898,9 @@ Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance empty_global_env Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
-  rewrite /R_global_instance /R_opt_variance. simpl.
+  unfold R_global_instance_gen, R_opt_variance.
   rewrite global_variance_empty //.
-  destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
+  destruct global_variance_gen as [v|]; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
   simpl.
   split; auto.
@@ -1622,8 +1626,8 @@ Lemma R_global_instance_flip Σ gr napp
   R_global_instance Σ Re Rle' gr napp v u.
 Proof.
   intros Rerefl Rlerefl Resym Retrans Rletrans incl incl'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [vs|] eqn:var.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [vs|] eqn:var.
   - induction u in vs, v |- *; destruct v; simpl; auto;
     destruct vs as [|v' vs]; simpl; auto.
     intros [Ra Ru']. split.

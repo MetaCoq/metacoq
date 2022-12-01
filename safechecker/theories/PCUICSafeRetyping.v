@@ -529,10 +529,10 @@ Qed.
     destruct decl as (?&?&isdecl').
     cbn in *.
     eapply declared_constructor_inj in isdecl as (?&[]).
-    2: now econstructor.
+    2: { econstructor. now eapply isdecl'. now idtac. }
     subst.
     econstructor ; tea.
-    now split.
+    econstructor. now eapply isdecl'. now idtac.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

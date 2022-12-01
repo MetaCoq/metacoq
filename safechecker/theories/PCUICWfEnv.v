@@ -35,7 +35,6 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
   (* Primitive decision procedures *)
 
   abstract_env_conv_pb_relb : abstract_env_ext_impl -> conv_pb -> Universe.t -> Universe.t -> bool;
-  abstract_env_compare_global_instance : abstract_env_ext_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
   abstract_env_level_mem : abstract_env_ext_impl -> LevelSet.t -> Level.t -> bool;
   abstract_env_ext_wf_universeb : abstract_env_ext_impl -> Universe.t -> bool;
   abstract_env_check_constraints : abstract_env_ext_impl -> ConstraintSet.t -> bool;
@@ -70,12 +69,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
         wf_universe Σ u -> wf_universe Σ u' ->
         compare_universe conv_pb Σ u u' <->
         abstract_env_conv_pb_relb X conv_pb u u';
-  abstract_env_compare_global_instance_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) R leq ref n l l' :
-      (forall u u', wf_universe Σ u -> wf_universe Σ u' -> reflect (R u u') (leq u u')) ->
-      wf_universe_instance Σ l ->
-      wf_universe_instance Σ l' ->
-      R_global_instance Σ (eq_universe Σ) R ref n l l' <->
-      abstract_env_compare_global_instance X leq ref n l l' ;
   abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) levels u : 
     LevelSet.mem u (LevelSet.union levels (global_ext_levels Σ)) = abstract_env_level_mem X levels u;
   abstract_env_ext_wf_universeb_correct X_ext {Σ} (wfΣ : abstract_env_ext_rel X_ext Σ) u :

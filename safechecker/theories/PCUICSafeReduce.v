@@ -589,7 +589,7 @@ Corollary R_Acc_aux :
   Next Obligation.
     left. econstructor. eapply red1_context.
     econstructor.
-    - unfold declared_constant.
+    - unfold declared_constant, declared_constant_gen.
       rewrite (abstract_env_lookup_correct _ _ wfΣ). rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
@@ -601,7 +601,7 @@ Corollary R_Acc_aux :
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d.
+    unfold declared_constant, declared_constant_gen in d.
     rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
@@ -612,7 +612,7 @@ Corollary R_Acc_aux :
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d.
+    unfold declared_constant, declared_constant_gen in d.
     rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.

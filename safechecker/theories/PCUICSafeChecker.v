@@ -561,7 +561,7 @@ Section CheckEnv.
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
     check_ws_cumul_ctx X_impl X_ext le Γ Δ Δ' wfΔ wfΔ'.
 
-  Notation eqb_term_conv X conv_pb := (eqb_term_upto_univ (abstract_env_eq X) (abstract_env_conv_pb_relb X conv_pb) (abstract_env_compare_global_instance X)).
+  Notation eqb_term_conv X conv_pb := (eqb_term_upto_univ (abstract_env_eq X) (abstract_env_conv_pb_relb X conv_pb) (abstract_env_compare_global_instance _ X)).
 
   Program Definition check_eq_term pb X_ext t u
      (wft : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universes Σ t)
@@ -578,9 +578,7 @@ Section CheckEnv.
       - intros u0 u'. repeat erewrite <- abstract_env_ext_wf_universeb_correct; eauto.
         move => /wf_universe_reflect ? => /wf_universe_reflect ?.
         apply iff_reflect. eapply (abstract_env_compare_universe_correct _ _ pb); eauto.
-      - intros. apply abstract_env_compare_global_instance_correct; eauto.
-        + move => ? ? /wf_universe_reflect ? => /wf_universe_reflect ?.
-          apply X;eauto.
+      - intros. apply compare_global_instance_correct; eauto.
         + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
         + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
       Unshelve. all: eauto.

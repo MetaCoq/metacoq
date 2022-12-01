@@ -352,13 +352,13 @@ Proof.
   now rewrite case_branch_context_length_args.
 Qed.
 
-Lemma lookup_inductive_declared Σ ind mdecl idecl :
-  lookup_inductive Σ ind = Some (mdecl, idecl) ->
-  declared_inductive Σ ind mdecl idecl.
+Lemma lookup_inductive_declared lookup ind mdecl idecl :
+  lookup_inductive_gen lookup ind = Some (mdecl, idecl) ->
+  declared_inductive_gen lookup ind mdecl idecl.
 Proof.
-  unfold lookup_inductive, lookup_minductive, declared_inductive,
-    declared_minductive.
-  destruct lookup_env => //.
+  unfold lookup_inductive_gen, lookup_minductive_gen, declared_inductive_gen,
+    declared_minductive_gen.
+  destruct lookup => //.
   destruct g => //.
   destruct nth_error eqn:e => //.
   intros [= -> ->]. now rewrite e.

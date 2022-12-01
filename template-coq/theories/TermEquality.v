@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUtils Induction Reflect.
+From MetaCoq.Template Require Import config utils Reflect Environment EnvironmentTyping Ast AstUtils Induction Reflect.
 
 Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
@@ -38,36 +38,10 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   | _, _ => False
   end.
 
-Definition lookup_minductive Σ mind :=
-  match lookup_env Σ mind with
-  | Some (InductiveDecl decl) => Some decl
-  | _ => None
-  end.
-
-Definition lookup_inductive Σ ind :=
-  match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl => Some (mdecl, idecl)
-    | None => None
-    end
-  | None => None
-  end.
-
-Definition lookup_constructor Σ ind k :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) =>
-    match nth_error idecl.(ind_ctors) k with
-    | Some cdecl => Some (mdecl, idecl, cdecl)
-    | None => None
-    end
-  | _ => None
-  end.
-
-Definition global_variance Σ gr napp :=
+Definition global_variance_gen lookup gr napp :=
   match gr with
   | IndRef ind =>
-    match lookup_inductive Σ ind with
+    match lookup_inductive_gen lookup ind with
     | Some (mdecl, idecl) =>
       match destArity [] idecl.(ind_type) with
       | Some (ctx, _) => if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
@@ -77,11 +51,11 @@ Definition global_variance Σ gr napp :=
     | None => None
     end
   | ConstructRef ind k =>
-    match lookup_constructor Σ ind k with
+    match lookup_constructor_gen lookup ind k with
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype,
-          which implies that no universe equality needs to be checked here. *)
+          which implies that no universe ws_cumul_pb needs to be checked here. *)
         Some []
       else None
     | _ => None
@@ -89,14 +63,18 @@ Definition global_variance Σ gr napp :=
   | _ => None
   end.
 
+Notation global_variance Σ := (global_variance_gen (lookup_env Σ)).
+
 Definition R_opt_variance Re Rle v :=
   match v with
   | Some v => R_universe_instance_variance Re Rle v
   | None => R_universe_instance Re
   end.
 
-Definition R_global_instance Σ Re Rle gr napp :=
-  R_opt_variance Re Rle (global_variance Σ gr napp).
+Definition R_global_instance_gen Σ Re Rle gr napp :=
+  R_opt_variance Re Rle (global_variance_gen Σ gr napp).
+
+Notation R_global_instance Σ := (R_global_instance_gen (lookup_env Σ)).
 
 Lemma R_universe_instance_impl R R' :
   RelationClasses.subrelation R R' ->
@@ -277,8 +255,8 @@ Lemma R_global_instance_refl Σ Re Rle gr napp u :
   R_global_instance Σ Re Rle gr napp u u.
 Proof.
   intros rRE rRle.
-  rewrite /R_global_instance.
-  destruct global_variance as [v|] eqn:lookup.
+  rewrite /R_global_instance_gen.
+  destruct global_variance_gen as [v|] eqn:lookup.
   - induction u in v |- *; simpl; auto;
     unfold R_opt_variance in IHu; destruct v; simpl; auto.
     split; auto.
@@ -367,8 +345,8 @@ Qed. *)
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
 Proof.
   intros he hle t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  rewrite /R_global_instance_gen /R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
   destruct t0; simpl; auto.
@@ -427,13 +405,13 @@ Lemma global_variance_napp_mon {Σ gr napp napp' v} :
   global_variance Σ gr napp' = Some v.
 Proof.
   intros hnapp.
-  rewrite /global_variance.
+  rewrite /global_variance_gen.
   destruct gr; try congruence.
-  - destruct lookup_inductive as [[mdecl idec]|] => //.
+  - destruct lookup_inductive_gen as [[mdecl idec]|] => //.
     destruct destArity as [[ctx s]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
-  - destruct lookup_constructor as [[[mdecl idecl] cdecl]|] => //.
+  - destruct lookup_constructor_gen as [[[mdecl idecl] cdecl]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
 Qed.
@@ -446,8 +424,8 @@ Qed.
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele hnapp t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  rewrite /R_global_instance_gen /R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   rewrite (global_variance_napp_mon hnapp glob).
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.

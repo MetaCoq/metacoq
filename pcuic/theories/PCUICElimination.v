@@ -650,7 +650,7 @@ Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_
 Proof.
   intros X H X0 H0.
   eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
-  destruct (declared_inductive_inj H d) as [-> ->].
+  destruct (declared_inductive_inj H d.p1) as [-> ->].
   destruct x2. cbn in *.
   pose proof (declared_projection_projs_nonempty X d).
   pose proof (on_declared_projection d) as [_ onp].

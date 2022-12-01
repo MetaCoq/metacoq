@@ -312,7 +312,7 @@ Section Typecheck.
           (hu : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ u)
     : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
     convert le Γ t u ht hu
-      with inspect (eqb_termp_napp_gen le (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance X) 0 t u) := {
+      with inspect (eqb_termp_napp_gen le (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance _ X) 0 t u) := {
         | @exist true He := ret _ ;
         | @exist false He with
           inspect (isconv_term _ X Γ le t ht u hu) := {
@@ -335,8 +335,7 @@ Section Typecheck.
     - intros. rewrite wf_universeb_instance_forall in H. rewrite wf_universeb_instance_forall in H0.
       apply wf_universe_instance_iff in H.
       apply wf_universe_instance_iff in H0.
-      eapply (abstract_env_compare_global_instance_correct X wfΣ); eauto.
-      intros. apply X0; now eapply wf_universe_iff.
+      eapply (compare_global_instance_correct _ X wfΣ); eauto.
     - destruct ht as [? ht]. eapply typing_wf_universes in ht; eauto.
       pose proof ht as [? ?]%andb_and; eassumption.
     - destruct hu as [? hu]. eapply typing_wf_universes in hu; eauto.
@@ -943,7 +942,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct in e0; eauto.
     depelim X2.
-    unfold declared_minductive in H. erewrite <- e0 in H.
+    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
     congruence.
   Qed.
   Next Obligation.
@@ -954,14 +953,14 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct in e1; eauto.
     depelim X2.
-    unfold declared_minductive in H. erewrite <- e1 in H.
+    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e1 in H.
     congruence.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct in e0; eauto.
     depelim X2.
-    unfold declared_minductive in H. erewrite <- e0 in H.
+    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
     congruence.
   Qed.
 
@@ -1404,7 +1403,7 @@ Section Typecheck.
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
     cu <- check_consistent_instance (ind_universes mdecl) _ p.(puinst) ;;
-    check_eq_true (abstract_env_compare_global_instance X (abstract_env_leq X) (IndRef ind')
+    check_eq_true (abstract_env_compare_global_instance _ X (abstract_env_leq X) (IndRef ind')
       #|args| u p.(puinst))
       (Msg "invalid universe annotation on case, not larger than the discriminee's universes") ;;
     wt_params <- check_inst infer Γ HΓ (List.rev (smash_context [] (ind_params mdecl))@[p.(puinst)]) _ _ p.(pparams) ;;
@@ -1660,7 +1659,7 @@ Section Typecheck.
   Next Obligation.
     apply absurd; intros. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     erewrite <- abstract_env_lookup_correct in HH; eauto.
-    inversion X1. unfold declared_constant in isdecl.
+    inversion X1. unfold declared_constant, declared_constant_gen in isdecl.
     rewrite <- HH in isdecl. inversion isdecl. now subst.
   Qed.
   Next Obligation.
@@ -1836,7 +1835,7 @@ Section Typecheck.
       rewrite -(subst_context_smash_context _ _ []).
       rewrite -(spine_subst_inst_subst X4).
       rewrite - !smash_context_subst /= !subst_context_nil.
-      erewrite <- abstract_env_compare_global_instance_correct in i1; eauto.
+      erewrite <- compare_global_instance_correct in i1; eauto.
       2: intros; eapply iff_reflect;
         eapply (abstract_env_compare_universe_correct _ wfΣ _);
         try eassumption; apply wf_universe_iff; eauto.
@@ -1942,7 +1941,7 @@ Section Typecheck.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
       - now eapply negbTE.
-    - erewrite <- abstract_env_compare_global_instance_correct in i1; eauto.
+    - erewrite <- compare_global_instance_correct in i1; eauto.
       1: intros; eapply iff_reflect;
         eapply (abstract_env_compare_universe_correct _ wfΣ Cumul);
         try eassumption; apply wf_universe_iff; eauto.
@@ -2119,7 +2118,7 @@ Section Typecheck.
     eapply declared_inductive_inj in isdecl as []; tea.
     subst.
     apply absurd.
-    erewrite <- abstract_env_compare_global_instance_correct; eauto.
+    erewrite <- compare_global_instance_correct; eauto.
     - eapply infering_ind_ind in X0 as [args'' []].
       2-3: now auto.
       2: now econstructor ; tea ; apply closed_red_red.
@@ -2374,7 +2373,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst.
     eapply declared_inductive_inj in decl as [].
-    2: exact H1.
+    2: exact H1.p1.
     subst.
     destruct H1 as [[] []] ; cbn in *.
     congruence.
@@ -2528,7 +2527,7 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
     split. econstructor. rewrite eqp.
     erewrite abstract_primitive_constant_correct; try reflexivity. eassumption.  red.
-    now rewrite -HH.
+    unfold declared_constant_gen. now rewrite -HH.
     destruct (cst_type d) eqn:hty => //.
     exists u. split => //.
   Qed.
@@ -2588,7 +2587,7 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in e0. rewrite /declared_constant in d.
+    symmetry in e0. rewrite /declared_constant /declared_constant_gen in d.
     rewrite e0 in d; noconf d.
   Qed.
 

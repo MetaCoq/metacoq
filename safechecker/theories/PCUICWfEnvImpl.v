@@ -110,9 +110,6 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
   abstract_env_struct referenced_impl referenced_impl_ext :=
   {| abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
      abstract_env_conv_pb_relb := fun Σ conv_pb => conv_pb_relb (referenced_impl_ext_graph Σ) conv_pb ;
-     abstract_env_compare_global_instance := fun Σ =>
-      compare_global_instance (referenced_impl_env_ext Σ)
-                              (check_eqb_universe (referenced_impl_ext_graph Σ));
      abstract_env_level_mem := fun Σ levels l => LevelSet.mem l (LevelSet.union levels (global_ext_levels (referenced_impl_env_ext Σ)));
      abstract_env_ext_wf_universeb := fun Σ u => wf_universeb Σ u;
      abstract_env_check_constraints := fun Σ => check_constraints (referenced_impl_ext_graph Σ);
@@ -241,7 +238,6 @@ Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard 
  {|
  abstract_env_lookup := fun Σ k => EnvMap.lookup k (wf_env_ext_map Σ);
  abstract_env_conv_pb_relb X := abstract_env_conv_pb_relb X.(wf_env_ext_referenced);
- abstract_env_compare_global_instance X := abstract_env_compare_global_instance X.(wf_env_ext_referenced);
  abstract_env_level_mem X := abstract_env_level_mem X.(wf_env_ext_referenced);
  abstract_env_ext_wf_universeb X := abstract_env_ext_wf_universeb X.(wf_env_ext_referenced);
  abstract_env_check_constraints X := abstract_env_check_constraints X.(wf_env_ext_referenced);
@@ -375,16 +371,6 @@ Program Global Instance canonical_abstract_env_prop {cf:checker_flags} {guard : 
 Next Obligation. wf_env. Qed.
 Next Obligation. apply check_conv_pb_relb_correct; eauto; wf_env.
    apply (graph_of_wf_ext X).π2. Qed.
-Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
-  move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
-  apply iff_reflect;  apply check_conv_pb_relb_correct with (conv_pb := Conv); eauto; wf_env.
-  apply (graph_of_wf_ext X).π2.
-  move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
-  apply X0; eauto.
-  all: rewrite wf_universeb_instance_forall.
-  revert H; move => / wf_universe_instanceP ?; eauto.
-  revert H0; move => / wf_universe_instanceP ?; eauto.
-Qed.
 Next Obligation. split; intros.
   - eapply check_constraints_complete; eauto.
     apply referenced_impl_sq_wf. apply Σudecl_ref.
@@ -428,7 +414,6 @@ Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : 
     1: apply wf_fresh_globals; eauto.
     1: apply wf_env_ext_map_repr. Qed.
   Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Qed.
-  Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Qed.
   Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Qed.
   Next Obligation. eapply guard_correct. Qed.
   Next Obligation. now sq. Qed.

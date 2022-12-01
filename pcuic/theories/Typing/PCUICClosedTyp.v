@@ -20,8 +20,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 _) as oib in *.
   clearbody oib. unfold declared_projection in isdecl.
-  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1.p1).
   simpl in onp.
   destruct (ind_ctors idecl) as [|? []] eqn:Heq; try contradiction.
   destruct onp as [_ onp].

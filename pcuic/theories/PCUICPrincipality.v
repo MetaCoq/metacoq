@@ -436,7 +436,7 @@ Lemma R_global_instance_empty_universe_instance Re Rle ref napp u u' :
   R_global_instance empty_global_env Re Rle ref napp u u' ->
   R_universe_instance Re u u'.
 Proof.
-  rewrite /R_global_instance.
+  rewrite /R_global_instance_gen.
   now rewrite global_variance_empty.
 Qed.
 

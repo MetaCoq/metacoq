@@ -187,7 +187,7 @@ Proof.
     pose proof e as Hnth.
     assert (lenppars : ind_npars mdecl = #|pparams p|).
     { now rewrite (wf_predicate_length_pars wf_pred). }
-    destruct (declared_inductive_inj d decli); subst mdecl0 idecl0.
+    destruct (declared_inductive_inj d.p1 decli); subst mdecl0 idecl0.
     eapply erases_mkApps_inv in Hv' as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     * subst.
       eapply Is_type_app in X1; auto. destruct X1.
@@ -440,7 +440,7 @@ Proof.
     rename e0 into hnth. rename e into eargs.
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ? & ?); [|easy].
     assert (Hpars : p.(proj_npars) = ind_npars x0).
-    { destruct (declared_constructor_inj d0 d). now subst. }
+    { destruct (declared_constructor_inj d0.p1 d.p1). now subst. }
     invs He.
 
     + depelim Hed.
@@ -449,7 +449,7 @@ Proof.
       eapply erases_mkApps_inv in Hvc'; eauto.
       destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
       * exists EAst.tBox.
-        destruct (declared_inductive_inj decli d) as [<- <-].
+        destruct (declared_inductive_inj decli.p1 d.p1) as [<- <-].
         assert (isprop : inductive_isprop_and_pars Σ' p.(proj_ind) = Some (true, ind_npars mdecl)).
         { eapply isPropositional_propositional. exact d. all:eauto. apply decli'.
           eapply isErasable_Propositional; eauto. }

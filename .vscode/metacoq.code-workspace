@@ -25,6 +25,6 @@
 	    ],
 	    
 	 // When enabled, will trim trailing whitespace when saving a file.
-	 "files.trimTrailingWhitespace": false
+	 "files.trimTrailingWhitespace": true
     }
 }

@@ -10,19 +10,34 @@ Open Scope bs_scope.
 Definition eta_expand p := 
   EtaExpand.eta_expand_program p.
 
+Definition check_const_decl_def kn const_decl : TemplateMonad unit :=
+  match const_decl.(cst_body) with
+  | Some body => 
+    tmMsg ("Unquoting eta-expanded " ++ string_of_kername kn)%bs ;;
+    tmUnquote body ;;
+    tmMsg ("Succeeded")
+  | None => ret tt
+  end.
+
+Fixpoint check_mod_decl_def kn impl modtype {struct impl}:=
+  match impl with
+  | mi_struct sb => let _ := map (fun '(kn, sf) => check_structure_field_def kn sf) sb in ret tt
+  | _ => ret tt
+  end
+with check_structure_field_def kn sf :=
+  match sf with
+  | sfconst cb => check_const_decl_def kn cb
+  | sfmind _ => ret tt
+  | sfmod (impl, modtype) => check_mod_decl_def kn impl modtype
+  | sfmodtype sb => let _ := map (fun '(kn, sf) => check_structure_field_def kn sf) sb in ret tt
+  end.
+
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
-  | ConstantDecl cb =>
-    match cb.(cst_body) with
-    | Some body => 
-      tmMsg ("Unquoting eta-expanded " ++ string_of_kername d.1)%bs ;;
-      tmUnquote body ;;
-      tmMsg ("Succeeded")
-    | None => ret tt
-    end
+  | ConstantDecl cb => check_const_decl_def d.1 cb
   | InductiveDecl idecl => ret tt
-  (** FIXME: define unquoting for modules *)
-  | _ => tmMsg ("Succeeded")
+  | ModuleDecl (impl, modtype) => check_mod_decl_def d.1 impl modtype
+  | ModuleTypeDecl sb => let _ := map (fun '(kn,sf) => check_structure_field_def kn sf) sb in ret tt
   end.
 
 Definition is_nil {A} (l : list A) :=

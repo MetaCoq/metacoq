@@ -168,7 +168,7 @@ let tmQuoteUniverses : UGraph.t tm =
 let quote_module (qualid : qualid) : global_reference list =
   let mp = Nametab.locate_module qualid in
   let mb = Global.lookup_module mp in
-  let rec aux mb =
+  let rec aux mp mb =
     let open Declarations in
     let me = mb.mod_expr in
     let get_refs s =
@@ -178,7 +178,7 @@ let quote_module (qualid : qualid) : global_reference list =
         match field with
         | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
         | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
-        | SFBmodule mb -> aux mb
+        | SFBmodule mb -> aux (MPdot (mp,label)) mb
         | SFBmodtype mtb -> []
       in
       CList.map_append get_ref body
@@ -188,7 +188,7 @@ let quote_module (qualid : qualid) : global_reference list =
     | Algebraic _ -> []
     | Struct s -> get_refs s
     | FullStruct -> get_refs mb.Declarations.mod_type
-  in aux mb
+  in aux mp mb 
 
 let tmQuoteModule (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->

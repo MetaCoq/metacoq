@@ -432,8 +432,8 @@ Proof.
   pose proof (on_declared_constructor declc).
   pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
   intros Hu. pose proof (R_global_instance_length _ _ _ _ _ _ _ Hu).
-  rewrite /R_global_instance /R_opt_variance /= /lookup_constructor.
-  rewrite (declared_inductive_lookup declc) (proj2 declc).
+  rewrite /R_global_instance_gen /R_opt_variance /= /lookup_constructor /lookup_constructor_gen.
+  rewrite (declared_inductive_lookup declc.p1) (proj2 declc).
   rewrite -(cstr_args_length onc).
   case: leb_spec_Set; try lia. move=> _ /=; cbn.
   now apply R_universe_instance_variance_irrelevant.
@@ -1241,8 +1241,9 @@ Proof.
   eapply (is_open_term_subst (Γ := []) (s:=inds (inductive_mind i.1) u (ind_bodies mdecl))) in clx.
   3:eapply inds_is_open_terms. 3:len.
   rewrite app_context_nil_l subst_context_app in clx.
-  rewrite closed_ctx_subst in clx.
-  now eapply declared_inductive_closed_params_inst.
+  rewrite closed_ctx_subst in clx. 
+  eapply declared_inductive_closed_params_inst. 
+  now unfold declared_inductive.
   len in clx. len.
   rewrite app_context_nil_l app_context_assoc.
   epose proof (on_constructor_wf_arities_pars_args H).

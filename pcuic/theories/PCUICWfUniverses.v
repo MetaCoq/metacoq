@@ -1110,7 +1110,7 @@ Qed.
       move/and3P: hty => [] wfp wfindis wfisort.
       have ond : on_udecl_prop Σ (ind_universes mdecl).
       { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
-        eapply isdecl. }
+        }
       eapply wf_ctx_universes_closed in wfp => //.
       eapply wf_ctx_universes_closed in wfindis => //.
       rewrite (consistent_instance_length H1).

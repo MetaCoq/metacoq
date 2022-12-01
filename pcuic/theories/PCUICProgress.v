@@ -696,7 +696,7 @@ Proof with eauto with wcbv; try congruence.
       { destruct H_ as [? []]; auto. now noconf H0. }
       clear H_. eapply Construct_Ind_ind_eq' in Hc as (? & ? & ? & ? & _); eauto.
       eexists.
-      destruct (declared_inductive_inj d Hidecl); subst x x0.
+      destruct (declared_inductive_inj d.p1 Hidecl); subst x x0.
       eapply All2i_nth_error in Hall as [eqctx _]; tea; [|eapply d].
       eapply PCUICCasesContexts.alpha_eq_context_assumptions in eqctx.
       rewrite cstr_branch_context_assumptions in eqctx.

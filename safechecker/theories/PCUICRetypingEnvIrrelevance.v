@@ -37,7 +37,8 @@ Definition Hlookup {cf} (X_type : abstract_env_impl) (X : X_type.π2.π1) (X_typ
     lookup_env Σ kn = Some decl ->
     lookup_env Σ' kn = Some decl' ->
     abstract_env_lookup X kn = abstract_env_lookup X' kn) /\
-  (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
+    (forall tag,
+    abstract_primitive_constant X tag = abstract_primitive_constant X' tag).
 
 Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_impl} {X : X_type.π2.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
 Proof.
@@ -612,15 +613,13 @@ Proof.
   - cbn -[infer]. unfold infer; rewrite Heq /= //.
   - cbn -[infer]. simp infer.
     eapply elim_inspect => y eq.
-    assert (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
+    assert (forall tag, abstract_primitive_constant X tag = abstract_primitive_constant X' tag).
     { epose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
       epose proof (abstract_env_ext_wf X wfΣ) as [hwfΣ].
       epose proof (abstract_env_ext_exists X') as [[Σ' wfΣ']].
       epose proof (abstract_env_ext_wf X' wfΣ') as [hwfΣ'].
       apply (hl _ wfΣ _ wfΣ'). }
-    assert (primitive_constant X_type X p.π1 = primitive_constant X_type' X' p.π1).
-    { unfold primitive_constant. now rewrite H. }
-    clear Heq. rewrite H0 in eqp. rewrite -eq in eqp.
+    clear Heq. rewrite H in eqp. rewrite -eq in eqp.
     destruct y;  simp infer; cbn; congruence.
 Qed.
 

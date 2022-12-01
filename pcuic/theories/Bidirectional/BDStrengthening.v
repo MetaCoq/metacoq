@@ -274,6 +274,7 @@ Proof.
     assert (#|pparams p| = (context_assumptions (subst_instance (puinst p) (ind_params mdecl)))) as ->.
     { erewrite context_assumptions_subst_instance, onNpars, wf_predicate_length_pars ; eauto.
       eapply PCUICInductives.oi ; eauto.
+      exact decli.p1.
     }
     apply on_free_vars_subst.
     + eapply foron_free_vars_extended_subst.

@@ -287,7 +287,7 @@ Section OnInductives.
     rewrite -(subst_instance_it_mkProd_or_LetIn u _ (tSort _)).
     rewrite -it_mkProd_or_LetIn_app in ar.
     eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u wfΣ) in ar.
-    all:pcuic. eapply decli.
+    all:pcuic.
   Qed.
 
   Lemma declared_inductive_valid_type Γ u :
@@ -301,7 +301,7 @@ Section OnInductives.
     destruct ar as [s ar].
     eapply isType_weaken => //.
     eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u wfΣ) in ar.
-    all:pcuic. eapply decli.
+    all:pcuic. 
   Qed.
 
   Local Definition oi := (on_declared_inductive decli).1.
@@ -1459,7 +1459,7 @@ Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl i
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
-  specialize (declared_projections wfΣ (let (x, _) := declp in x)).
+  specialize (declared_projections wfΣ (let (x , _) := declp in x.p1)).
   set(oib := declared_inductive_inv _ _ _ _) in *.
   intros onprojs u.
   clearbody oib.
@@ -1499,7 +1499,7 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
-  specialize (declared_projections wfΣ (let (x, _) := declp in x)).
+  specialize (declared_projections wfΣ (let (x, _) := declp in x.p1)).
   set(oib := declared_inductive_inv _ _ _ _) in *.
   intros onprojs u.
   clearbody oib.
@@ -1760,7 +1760,7 @@ Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p cdecl pdecl 
 Proof.
   intros declp wfΣ Hc Ha.
   destruct (on_declared_projection declp) as [[onind eqctr] y].
-  destruct (isType_mkApps_Ind_inv wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as
+  destruct (isType_mkApps_Ind_inv wfΣ (let (x, _) := declp in x.p1) (typing_wf_local Hc) Ha) as
     [parsubst [argsubst [sppars spargs cu]]].
   unfold projection_context.
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
@@ -2595,7 +2595,7 @@ Lemma inductive_ind_ind_bodies_length `{cf:checker_flags}
   inductive_ind ind < #|ind_bodies mib|.
 Proof.
   move: (declared_inductive_lookup inddecl).
-  rewrite /lookup_inductive (PCUICLookup.declared_minductive_lookup (PCUICGlobalEnv.declared_inductive_minductive inddecl)).
+  rewrite /lookup_inductive /lookup_inductive_gen (PCUICLookup.declared_minductive_lookup (PCUICGlobalEnv.declared_inductive_minductive inddecl)).
   remember (nth_error _ _) as o eqn:eo; symmetry in eo.
   move: o eo=> [io|] // /nth_error_Some_length //.
 Qed.

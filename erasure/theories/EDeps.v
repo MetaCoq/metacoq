@@ -472,7 +472,7 @@ Proof.
   induction er using erases_deps_forall_ind; try solve [now constructor].
   apply PCUICWeakeningEnv.lookup_env_Some_fresh in H as not_fresh.
   econstructor.
-  - unfold PCUICAst.declared_constant in *; cbn.
+  - unfold PCUICAst.declared_constant, PCUICAst.declared_constant_gen in *; cbn.
     inversion wfΣ; subst. destruct X0.
     destruct (eqb_spec kn0 kn) as [<-|]; [congruence|].
     eassumption.
@@ -484,7 +484,7 @@ Proof.
     destruct PCUICAst.PCUICEnvironment.cst_body eqn:body.
     + destruct E.cst_body eqn:ebody; [|easy].
       assert (PCUICAst.declared_constant (add_global_decl Σ (kn, decl)) kn0 cb).
-      { unfold PCUICAst.declared_constant.
+      { unfold PCUICAst.declared_constant, declared_constant_gen.
         cbn.
         inversion wfΣ; subst. destruct X0.
         destruct (eqb_spec kn0 kn) as [<-|]; [congruence|].
@@ -532,7 +532,7 @@ Proof.
   - econstructor; eauto.
     destruct H as [[[declm decli] declc] [declp hp]].
     repeat split; eauto.
-    inv wfΣ. destruct X0. unfold PCUICAst.declared_minductive in *.
+    inv wfΣ. destruct X0. unfold PCUICAst.declared_minductive, declared_minductive_gen in *.
     unfold PCUICEnvironment.lookup_env.
     simpl in *.
     destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn). subst.
@@ -690,7 +690,7 @@ Proof.
   - split.
     intros kn' cst' decl'.
     destruct (eq_dec kn kn') as [<-|].
-    + unfold PCUICAst.declared_constant, EGlobalEnv.declared_constant in *; cbn in *.
+    + unfold PCUICAst.declared_constant, declared_constant_gen, EGlobalEnv.declared_constant in *; cbn in *.
       rewrite eq_kername_refl in *.
       noconf decl'.
       depelim erg.
@@ -728,7 +728,7 @@ Proof.
           by now depelim erg; eexists _, _.
       apply IH in erg'. 2:{ depelim wf. now depelim o0. }
       assert (decl_ext: PCUICAst.declared_constant Σu kn' cst').
-      { unfold PCUICAst.declared_constant in *; cbn in *.
+      { unfold PCUICAst.declared_constant, declared_constant_gen in *; cbn in *.
         destruct (eqb_spec kn' kn); [|congruence]. subst. contradiction. }
       specialize (proj1 erg' kn' cst' decl_ext) as (cst & decl'' & ? & ?).
       exists cst.
@@ -764,14 +764,14 @@ Proof.
       red in decli.
       unfold declared_minductive in *.
       simpl. destruct (eqb_spec (inductive_mind k) kn); subst; auto.
-      unfold PCUICAst.declared_minductive in decli.
+      unfold declared_inductive_gen, declared_minductive_gen in decli.
       unfold PCUICEnvironment.lookup_env in decli.
       simpl in decli. rewrite eq_kername_refl in decli. intuition discriminate.
     * inv wf. inv X. destruct X1.
       specialize (IH _ (H0, X0) erg).
       destruct decli as [decli ?].
       simpl in decli |- *.
-      unfold PCUICAst.declared_minductive, PCUICEnvironment.lookup_env in decli.
+      unfold declared_minductive_gen, PCUICEnvironment.lookup_env in decli.
       simpl in decli.
       destruct (eqb_specT (inductive_mind k) kn). simpl in *. subst. noconf decli.
       destruct (Forall2_nth_error_left (proj1 H) _ _ H1); eauto.

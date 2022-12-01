@@ -49,7 +49,7 @@ Lemma declared_minductive_expanded Σ c mdecl :
   exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl.
 Proof.
   unfold expanded_global_env, declared_minductive, lookup_env.
-  destruct Σ as [univs Σ]; cbn.
+  destruct Σ as [univs Σ]; cbn. unfold declared_minductive_gen.
   intros exp; induction exp; cbn => //.
   destruct decl as [kn d]; cbn.
   destruct (eqb_spec c kn). intros [= ->].

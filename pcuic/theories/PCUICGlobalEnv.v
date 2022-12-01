@@ -9,24 +9,24 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 *)
 
 Lemma declared_constant_inj {Σ c} decl1 decl2 :
-  declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
+  declared_constant_gen Σ c decl1 -> declared_constant_gen Σ c decl2 -> decl1 = decl2.
 Proof.
-  intros. unfold declared_constant in *. rewrite H in H0.
+  intros. unfold declared_constant_gen in *. rewrite H in H0.
   now inv H0.
 Qed.
 
 Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
-  declared_inductive Σ ind mdecl' idecl' ->
-  declared_inductive Σ ind mdecl idecl ->
+  declared_inductive_gen Σ ind mdecl' idecl' ->
+  declared_inductive_gen Σ ind mdecl idecl ->
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
-  intros [] []. unfold declared_minductive in *.
+  intros [] []. unfold declared_minductive_gen in *.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
 
 Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
-  declared_constructor Σ c mdecl' idecl' cdecl ->
-  declared_constructor Σ c mdecl idecl cdecl' ->
+  declared_constructor_gen Σ c mdecl' idecl' cdecl ->
+  declared_constructor_gen Σ c mdecl idecl cdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
 Proof.
   intros [] [].
@@ -35,8 +35,8 @@ Proof.
 Qed.
 
 Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' pdecl pdecl' p} :
-  declared_projection Σ p mdecl idecl cdecl pdecl ->
-  declared_projection Σ p mdecl' idecl' cdecl' pdecl' ->
+  declared_projection_gen Σ p mdecl idecl cdecl pdecl ->
+  declared_projection_gen Σ p mdecl' idecl' cdecl' pdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl' /\ pdecl = pdecl'.
 Proof.
   intros [] [].
@@ -46,24 +46,41 @@ Proof.
 Qed.
 
 Lemma declared_inductive_minductive {Σ ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
+  declared_inductive_gen Σ ind mdecl idecl -> declared_minductive_gen Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
 #[global]
-Hint Resolve declared_inductive_minductive : pcuic core.
+Hint Extern 0 => eapply declared_inductive_minductive : pcuic core.
 
-Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
+Definition declared_inductive_minductive' {Σ ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl :=
+  declared_inductive_minductive.
+
+Coercion declared_inductive_minductive : declared_inductive_gen >-> declared_minductive_gen.
+Coercion declared_inductive_minductive' : declared_inductive >-> declared_minductive.
 
 Lemma declared_constructor_inductive {Σ ind mdecl idecl cdecl} :
-  declared_constructor Σ ind mdecl idecl cdecl ->
-  declared_inductive Σ ind.1 mdecl idecl.
+  declared_constructor_gen Σ ind mdecl idecl cdecl ->
+  declared_inductive_gen Σ ind.1 mdecl idecl.
 Proof. now intros []. Qed.
-Coercion declared_constructor_inductive : declared_constructor >-> declared_inductive.
+
+Definition declared_constructor_inductive' {Σ ind mdecl idecl cdecl} :
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  declared_inductive Σ ind.1 mdecl idecl := declared_constructor_inductive.
+
+Coercion declared_constructor_inductive : declared_constructor_gen >-> declared_inductive_gen.
+Coercion declared_constructor_inductive' : declared_constructor >-> declared_inductive.
 
 Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
-  declared_projection Σ ind mdecl idecl cdecl pdecl ->
-  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
+  declared_projection_gen Σ ind mdecl idecl cdecl pdecl ->
+  declared_constructor_gen Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
 Proof. now intros []. Qed.
-Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
+Definition declared_projection_constructor' {Σ ind mdecl idecl cdecl pdecl} :
+  declared_projection Σ ind mdecl idecl cdecl pdecl ->
+  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl :=
+  declared_projection_constructor.
+
+Coercion declared_projection_constructor : declared_projection_gen >-> declared_constructor_gen.
+Coercion declared_projection_constructor' : declared_projection >-> declared_constructor.
 
 Section DeclaredInv.
   Context {cf:checker_flags} {Σ} {wfΣ : wf Σ}.

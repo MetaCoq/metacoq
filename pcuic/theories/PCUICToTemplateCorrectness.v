@@ -151,9 +151,9 @@ Lemma trans_declared_constant Σ cst decl:
   S.declared_constant Σ cst decl ->
   T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
-  unfold T.declared_constant.
+  unfold T.declared_constant, T.declared_constant_gen. 
   rewrite trans_lookup.
-  unfold S.declared_constant.
+  unfold S.declared_constant, S.declared_constant_gen.
   intros ->.
   reflexivity.
 Qed.
@@ -182,7 +182,8 @@ Lemma trans_declared_inductive Σ ind mdecl idecl:
 Proof.
   intros [].
   split.
-  - unfold T.declared_minductive, S.declared_minductive in *.
+  - unfold T.declared_minductive,T.declared_minductive_gen,
+           S.declared_minductive,S.declared_minductive_gen in *.
     now rewrite trans_lookup H.
   - now apply map_nth_error.
 Qed.
@@ -1376,19 +1377,24 @@ Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
   PCUICEquality.R_global_instance Σ Re Rle gref napp u u' ->
   TermEquality.R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
 Proof.
-  unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
+  unfold PCUICEquality.R_global_instance, PCUICEquality.R_global_instance_gen, PCUICEquality.global_variance.
   unfold TermEquality.R_global_instance, TermEquality.global_variance.
   destruct gref; simpl; auto.
   - unfold S.lookup_inductive, S.lookup_minductive.
+    unfold S.lookup_inductive_gen, S.lookup_minductive_gen.
     unfold lookup_inductive, lookup_minductive.
+    unfold lookup_inductive_gen, lookup_minductive_gen.
     rewrite trans_lookup. destruct SE.lookup_env => //; simpl.
-    destruct g => /= //. rewrite nth_error_map.
+    destruct g => /= //. 
+    rewrite nth_error_map.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
     destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
+    unfold S.lookup_constructor_gen, S.lookup_inductive_gen, S.lookup_minductive_gen.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.
+    unfold lookup_constructor_gen, lookup_inductive_gen, lookup_minductive_gen.
     rewrite trans_lookup. destruct SE.lookup_env => //; simpl.
     destruct g => /= //. rewrite nth_error_map.
     destruct nth_error => /= //.

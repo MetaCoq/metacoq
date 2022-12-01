@@ -187,7 +187,8 @@ Section Pred1_inversion.
   Proof with solve_discr.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X...
-    - red in H, isdecl. rewrite isdecl in H; noconf H.
+    - red in H, isdecl. unfold declared_constant_gen in *. 
+      rewrite isdecl in H; noconf H.
       congruence.
     - exists []. intuition auto.
     - rewrite mkApps_app in X.

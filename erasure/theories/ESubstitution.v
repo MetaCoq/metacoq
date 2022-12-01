@@ -59,7 +59,7 @@ Proof.
 
   eapply weakening_env_declared_inductive in H; eauto; tc.
   destruct H, H1.
-  unfold PCUICAst.declared_minductive in *.
+  unfold PCUICAst.declared_minductive, declared_minductive_gen in *.
 
   eapply PCUICWeakeningEnv.extends_lookup in H1; eauto; tc.
   2:{ cbn. apply extends_refl. }
@@ -80,10 +80,11 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red. red in H4. rewrite (PCUICAst.declared_inductive_lookup isdecl) in H4.
+    red. red in H4. unfold PCUICAst.lookup_inductive in H4. 
+    rewrite (PCUICAst.declared_inductive_lookup isdecl.p1) in H4.
     destruct isdecl as [decli declc].
     eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.
-    now rewrite (PCUICAst.declared_inductive_lookup decli).
+    unfold PCUICAst.lookup_inductive. now rewrite (PCUICAst.declared_inductive_lookup decli).
   - econstructor. all:eauto.
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.
@@ -93,7 +94,7 @@ Proof.
     eapply e; tea.
     now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - econstructor. destruct isdecl. 2:eauto.
-    eapply Informative_extends; eauto. exact H.
+    eapply Informative_extends; eauto. exact H.p1.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.

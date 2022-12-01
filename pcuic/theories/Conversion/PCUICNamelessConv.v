@@ -264,7 +264,8 @@ Lemma global_variance_nl_sigma_mon {Σ gr napp} :
   global_variance (nl_global_env Σ) gr napp =
   global_variance Σ gr napp.
 Proof.
-  rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen 
+  /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - rewrite nl_lookup_env.
     destruct lookup_env => /= //.
@@ -288,7 +289,7 @@ Lemma R_global_instance_nl Σ Re Rle gr napp :
        (R_global_instance (nl_global_env Σ) Re Rle gr napp).
 Proof.
   intros t t'.
-  unfold R_global_instance.
+  unfold R_global_instance, R_global_instance_gen.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
@@ -851,7 +852,7 @@ Lemma nl_declared_inductive Σ ind mdecl idecl :
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl).
 Proof.
   intros []. split.
-  - unfold declared_minductive.
+  - unfold declared_minductive_gen.
     rewrite nl_lookup_env H.
     simpl. reflexivity.
   - simpl. now rewrite nth_error_map H0.
@@ -1327,7 +1328,7 @@ Proof.
     * reflexivity.
     * cbn. rewrite IHn. reflexivity.
   - econstructor.
-    + unfold declared_constant in *.
+    + unfold declared_constant, declared_constant_gen in *.
       rewrite nl_lookup_env H. reflexivity.
     + destruct decl as [? [?|] ?].
       all: cbn in *.

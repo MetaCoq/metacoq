@@ -155,8 +155,8 @@ Lemma subst_equal_inst_global_inst Σ Re Rle gr napp :
                                     (subst_instance u2 u).
 Proof.
   intros reflRe hRe subr u u1 u2 Ru1u2.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance as [v|]; auto using subst_equal_inst_inst.
+  unfold R_global_instance, R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|]; auto using subst_equal_inst_inst.
   induction u in v |- *; cbnr; try now constructor.
   - destruct v; simpl; auto.
     split; auto.
@@ -834,8 +834,8 @@ Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
   <~> R_global_instance Σ (precompose Re (subst_instance_univ u))
     (precompose Rle (subst_instance_univ u)) gr napp i i'.
 Proof.
-  unfold R_global_instance, R_opt_variance, subst_instance.
-  destruct global_variance as [v|]; eauto using precompose_subst_instance.
+  unfold R_global_instance, R_global_instance_gen, R_opt_variance, subst_instance.
+  destruct global_variance_gen as [v|]; eauto using precompose_subst_instance.
   induction i in i', v |- *; destruct i', v; simpl; try split; auto.
   - destruct (IHi i' []). intros; auto.
   - destruct (IHi i' []). intros; auto.

@@ -307,11 +307,13 @@ Proof.
         { destruct isdecl.
           apply validity in X1 as [].
           eapply invert_type_mkApps_ind ; eauto.
+          apply H1.p1.
         }
       assert (consistent_instance_ext Σ (ind_universes mdecl) ui').
         { destruct isdecl.
           apply validity in X2 as [] ; auto.
           eapply invert_type_mkApps_ind ; eauto.
+          eapply H2.p1.
         }
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).

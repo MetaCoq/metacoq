@@ -932,7 +932,8 @@ Lemma repr_lookup_constructor {Σg Σ} :
   forall ind idx r, lookup_constructor Σ ind idx = Some r -> GlobalEnvMap.lookup_constructor Σg ind idx = Some r.
 Proof.
   intros hrepr ind idx r.
-  rewrite /lookup_constructor /lookup_inductive /lookup_minductive /lookup_env.
+  rewrite /lookup_constructor /lookup_constructor_gen /lookup_inductive /lookup_inductive_gen 
+          /lookup_minductive /lookup_minductive_gen /lookup_env.
   destruct lookup_global eqn:hl => //.
   apply hrepr in hl.
   rewrite /GlobalEnvMap.lookup_constructor /GlobalEnvMap.lookup_inductive /GlobalEnvMap.lookup_minductive hl //.
@@ -1296,10 +1297,14 @@ Lemma eta_declared_constructor {Σ : GlobalEnvMap.t} {ind mdecl idecl cdecl} :
 Proof.
   rewrite /declared_constructor.
   intros [[] ?].
-  move: H. rewrite /declared_inductive /declared_minductive /lookup_env /=.
+  move: H. 
+  rewrite /declared_inductive /declared_inductive_gen /declared_minductive /declared_minductive_gen 
+         /lookup_env /=.
   destruct (lookup_global Σ.(declarations) _) eqn:heq => //.
   move: (eta_lookup_global (inductive_mind ind.1) g heq) => hl.
-  intros [= ->]. rewrite hl; split => //.
+  intros [= ->]. 
+  unfold declared_constructor_gen, declared_inductive_gen, declared_minductive_gen. 
+  rewrite hl; split => //.
   split => //. rewrite nth_error_map H0 //.
   rewrite nth_error_map H1 //.
 Qed.
@@ -1496,7 +1501,8 @@ Proof.
   induction Σ; intros ind idx mdecl idecl cdecl.
   - unfold declared_constructor, declared_inductive, declared_minductive.
     cbn => [[[]]] //.
-  - unfold declared_constructor, declared_inductive, declared_minductive.
+  - unfold declared_constructor, declared_constructor_gen, declared_inductive, declared_inductive_gen, 
+          declared_minductive, declared_minductive_gen.
     cbn. destruct a as [kn decl]; cbn.
     case: eqb_spec.
     * move=> _ [] [] [= ->] hnth hnth'.

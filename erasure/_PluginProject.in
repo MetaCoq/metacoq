@@ -38,8 +38,8 @@ src/pCUICAstUtils.mli
 # src/eqDecInstances.mli
 # src/pCUICReduction.ml
 # src/pCUICReduction.mli
-src/pCUICEquality.mli
-src/pCUICEquality.ml
+# src/pCUICEquality.mli
+# src/pCUICEquality.ml
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICPosition.mli

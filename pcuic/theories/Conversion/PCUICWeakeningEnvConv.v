@@ -174,14 +174,14 @@ Lemma weakening_env_cumulSpec0 Σ Σ' φ Γ pb M N :
 Proof.
   intros HΣ' Hextends Ind.
   pose proof (subrelations_leq_extends _ _  φ Hextends). revert H.
-  assert (RelationClasses.subrelation 
+  assert (RelationClasses.subrelation
           (eq_universe (global_ext_constraints (Σ,φ)))
-          (leq_universe (global_ext_constraints (Σ',φ)))). 
+          (leq_universe (global_ext_constraints (Σ',φ)))).
   { typeclasses eauto. } revert H.
-  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle . 
-  revert pb Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends. 
+  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle .
+  revert pb Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends.
   apply: (cumulSpec0_ind_all (Σ,φ)).
-  all:intros; try solve [econstructor; eauto with extends; intuition auto]. 
+  all:intros; try solve [econstructor; eauto with extends; intuition auto].
   - eapply cumul_Evar. solve_all.
   - eapply cumul_Case.
     * destruct X as (Hparams & Hinst & Hctx & Hret & IHret). repeat split; tas.

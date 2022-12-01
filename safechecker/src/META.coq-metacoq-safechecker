@@ -1,0 +1,10 @@
+
+package "plugin" (
+  directory = "."
+  requires = "coq-core.plugins.ltac coq-metacoq-template-ocaml.plugin stdlib-shims"
+  archive(byte) = "metacoq_safechecker_plugin.cma"
+  archive(native) = "metacoq_safechecker_plugin.cmxa"
+  plugin(byte) = "metacoq_safechecker_plugin.cma"
+  plugin(native) = "metacoq_safechecker_plugin.cmxs"
+)
+directory = "."

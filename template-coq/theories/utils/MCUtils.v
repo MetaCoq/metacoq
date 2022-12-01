@@ -75,11 +75,11 @@ Tactic Notation "toProp" ident(H) :=
   | (_ <? _)%Z  = false => apply Z.ltb_ge in H
   | (_ <=? _)%Z = false => apply Z.leb_gt in H
   | (_ =? _)%Z  = false => apply Z.eqb_neq in H
-     
+
   | is_true (_ && _) => apply andb_true_iff in H
   | (_ && _) = true  => apply andb_true_iff in H
   | (_ && _) = false  => apply andb_false_iff in H
-     
+
   | is_true (_ || _) => apply orb_true_iff in H
   | (_ || _) = true  => apply orb_true_iff in H
   | (_ || _) = false  => apply orb_false_iff in H
@@ -121,7 +121,7 @@ Tactic Notation "toProp" ident(H) "as" simple_intropattern(X) :=
    | is_true (_ && _) => apply andb_true_iff in H; destruct H as X
    | (_ && _) = true  => apply andb_true_iff in H; destruct H as X
    | (_ && _) = false  => apply andb_false_iff in H; destruct H as X
-      
+
    | is_true (_ || _) => apply orb_true_iff in H; destruct H as X
    | (_ || _) = true  => apply orb_true_iff in H; destruct H as X
    | (_ || _) = false  => apply orb_false_iff in H; destruct H as X

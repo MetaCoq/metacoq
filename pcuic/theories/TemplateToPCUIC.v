@@ -1,17 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
-From MetaCoq.Template Require Import config utils AstUtils EnvMap.
+From MetaCoq.Template Require Import config utils AstUtils Primitive EnvMap.
 From MetaCoq.Template Require TemplateProgram.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICProgram.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.
 
-Lemma to_Z_bounded_bool (i : Int63.int) : 
+Lemma to_Z_bounded_bool (i : Uint63.int) :
   ((0 <=? Uint63.to_Z i) && (Uint63.to_Z i <? wB))%Z.
 Proof.
   generalize (Uint63.to_Z_bounded i).
   now intros [->%Z.leb_le ->%Z.ltb_lt].
 Qed.
 
-Definition uint63_to_model (i : Int63.int) : uint63_model :=
+Definition uint63_to_model (i : Uint63.int) : uint63_model :=
   exist (Uint63.to_Z i) (to_Z_bounded_bool i).
 
 Definition float64_to_model (f : PrimFloat.float) : float64_model :=
@@ -19,7 +19,7 @@ Definition float64_to_model (f : PrimFloat.float) : float64_model :=
 
 Section Map2Bias.
   Context {A B C} (f : A -> B -> C) (default : B).
-  
+
   Fixpoint map2_bias_left (l : list A) (l' : list B) : list C :=
     match l, l' with
     | [], [] => []
@@ -44,19 +44,19 @@ End Map2Bias.
 Section Trans.
   Context (Σ : global_env_map).
 
-  Definition dummy_decl : context_decl := 
+  Definition dummy_decl : context_decl :=
     vass {| binder_name := nAnon; binder_relevance := Relevant |} (tSort Universe.type0).
 
-  Definition trans_predicate ind mdecl idecl pparams puinst pcontext preturn := 
+  Definition trans_predicate ind mdecl idecl pparams puinst pcontext preturn :=
     let pctx := map2_bias_left set_binder_name dummy_decl pcontext (ind_predicate_context ind mdecl idecl) in
-    {| pparams := pparams; 
+    {| pparams := pparams;
        puinst := puinst;
        pcontext := pctx;
        preturn := preturn |}.
 
   Definition trans_branch ind mdecl cdecl bcontext bbody :=
     let bctx := map2_bias_left set_binder_name dummy_decl bcontext (cstr_branch_context ind mdecl cdecl) in
-    {| bcontext := bctx; 
+    {| bcontext := bctx;
        bbody := bbody |}.
 
   Fixpoint trans (t : Ast.term) : term :=
@@ -77,13 +77,13 @@ Section Trans.
     let p' := Ast.map_predicate id trans trans p in
     let brs' := List.map (Ast.map_branch trans) brs in
     match TransLookup.lookup_inductive Σ ci.(ci_ind) with
-    | Some (mdecl, idecl) => 
+    | Some (mdecl, idecl) =>
       let tp := trans_predicate ci.(ci_ind) mdecl idecl p'.(Ast.pparams) p'.(Ast.puinst) p'.(Ast.pcontext) p'.(Ast.preturn) in
-      let tbrs := 
-        map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl br.(Ast.bcontext) br.(Ast.bbody)) 
+      let tbrs :=
+        map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl br.(Ast.bcontext) br.(Ast.bbody))
                   idecl.(ind_ctors) brs' in
       tCase ci tp (trans c) tbrs
-    | None => 
+    | None =>
       (** We build an ill-formed case if the term + environment are not well-formed.
           But we still give the right length to the context so that all syntactic operations
           still work. *)
@@ -100,8 +100,8 @@ Section Trans.
   | Ast.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  (* | Ast.tInt n => tPrim (primInt; primIntModel (uint63_to_model n)) *)
-  (* | Ast.tFloat n => tPrim (primFloat; primFloatModel (float64_to_model n)) *)
+  | Ast.tInt n => tPrim (primInt; primIntModel n)
+  | Ast.tFloat n => tPrim (primFloat; primFloatModel n)
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=
@@ -110,15 +110,15 @@ Section Trans.
       decl_type := trans d.(decl_type) |}.
 
   Definition trans_local Γ := List.map trans_decl Γ.
-  
+
   Definition trans_constructor_body (d : Ast.Env.constructor_body) :=
-    {| cstr_name := d.(Ast.Env.cstr_name); 
+    {| cstr_name := d.(Ast.Env.cstr_name);
       cstr_args := trans_local d.(Ast.Env.cstr_args);
-      cstr_indices := map trans d.(Ast.Env.cstr_indices); 
+      cstr_indices := map trans d.(Ast.Env.cstr_indices);
       cstr_type := trans d.(Ast.Env.cstr_type);
       cstr_arity := d.(Ast.Env.cstr_arity) |}.
   Definition trans_projection_body (d : Ast.Env.projection_body) :=
-    {| proj_name := d.(Ast.Env.proj_name); 
+    {| proj_name := d.(Ast.Env.proj_name);
         proj_type := trans d.(Ast.Env.proj_type);
         proj_relevance := d.(Ast.Env.proj_relevance) |}.
 
@@ -133,7 +133,7 @@ Section Trans.
       ind_projs := List.map trans_projection_body d.(Ast.Env.ind_projs) |}.
 
   Definition trans_constant_body bd :=
-    {| cst_type := trans bd.(Ast.Env.cst_type); 
+    {| cst_type := trans bd.(Ast.Env.cst_type);
        cst_body := option_map trans bd.(Ast.Env.cst_body);
        cst_universes := bd.(Ast.Env.cst_universes);
        cst_relevance := bd.(Ast.Env.cst_relevance) |}.
@@ -154,7 +154,7 @@ Section Trans.
 End Trans.
 
 Program Definition add_global_decl (env : global_env_map) (d : kername × global_decl) :=
-  {| trans_env_env := add_global_decl env.(trans_env_env) d; 
+  {| trans_env_env := add_global_decl env.(trans_env_env) d;
      trans_env_map := EnvMap.add d.1 d.2 env.(trans_env_map) |}.
 Next Obligation.
   pose proof env.(trans_env_repr).
@@ -162,24 +162,24 @@ Next Obligation.
 Qed.
 
 Definition trans_global_decls env (d : Ast.Env.global_declarations) : global_env_map :=
-  fold_right (fun decl Σ' => 
+  fold_right (fun decl Σ' =>
     let decl' := on_snd (trans_global_decl Σ') decl in
     add_global_decl Σ' decl') env d.
 
-Definition empty_trans_env univs := 
-  let init_global_env := {| universes := univs; declarations := [] |} in
-    {| trans_env_env := init_global_env; 
+Definition empty_trans_env univs retro :=
+  let init_global_env := {| universes := univs; declarations := []; retroknowledge := retro |} in
+    {| trans_env_env := init_global_env;
        trans_env_map := EnvMap.empty;
        trans_env_repr := fun y => eq_refl |}.
 
 Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
-  let init := empty_trans_env d.(Ast.Env.universes) in
+  let init := empty_trans_env d.(Ast.Env.universes) d.(Ast.Env.retroknowledge) in
   trans_global_decls init d.(Ast.Env.declarations).
 
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=
   (trans_global_env (fst Σ), snd Σ).
 
 Definition trans_template_program (p : TemplateProgram.template_program) : pcuic_program :=
-  let Σ' := trans_global (Ast.Env.empty_ext p.1) in 
+  let Σ' := trans_global (Ast.Env.empty_ext p.1) in
   (Σ', trans Σ' p.2).
-  
+

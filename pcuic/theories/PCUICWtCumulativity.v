@@ -22,7 +22,7 @@ Coercion wt_cumul_pb_ws_cumul_pb : wt_cumul_pb >-> equality.
 
 Section WtEquality.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-  
+
   Lemma type_wt_cumul_pb {le Γ t} T {U} :
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤[le] U ✓ ->

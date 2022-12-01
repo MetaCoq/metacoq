@@ -74,6 +74,20 @@ Qed.
 #[global]
 Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 
+Lemma extends_primitive_constant Σ Σ' p t :
+  extends Σ Σ' ->
+  primitive_constant Σ p = Some t ->
+  primitive_constant Σ' p = Some t.
+Proof.
+  intros [_ _ ext].
+  unfold primitive_constant.
+  case: ext.
+  destruct p; case => //.
+  - move=> _. case => //.
+  - move=> _; case => //.
+  - case => //.
+Qed.
+Local Hint Resolve extends_primitive_constant : extends.
 
 Lemma weakening_env `{checker_flags} :
   env_prop (fun Σ Γ t T =>
@@ -174,8 +188,8 @@ Proof.
         induction ind_indices; simpl in *; auto.
         -- eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
         -- destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-    + intros v onv.
-      move: (onIndices v onv). unfold ind_respects_variance.
+    + destruct ind_variance => //.
+      move: onIndices. unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
       intros idx; eapply (All2_fold_impl idx); simpl.
       intros par par' t t' d.
@@ -251,8 +265,8 @@ Proof.
         induction ind_indices; simpl in *; auto.
         -- eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto. tc.
         -- destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-    + intros v onv.
-      move: (onIndices v onv). unfold ind_respects_variance.
+    + destruct ind_variance => //.
+      move: onIndices. unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
       intros idx; eapply (All2_fold_impl idx); simpl.
       intros par par' t t' d.
@@ -277,17 +291,17 @@ Proof.
   intros HP wfΣ' Hext HΣ.
   assert (wfΣ := extends_decls_wf _ _ wfΣ' Hext).
   destruct HΣ as [onu onΣ].
-  destruct Σ as [univs Σ]; cbn in *.
+  destruct Σ as [univs Σ retro]; cbn in *.
   induction onΣ; simpl. 1: congruence.
-  assert (HH: extends_decls {| universes := univs; declarations := Σ |} Σ'). {
+  assert (HH: extends_decls {| universes := univs; declarations := Σ; retroknowledge := retro |} Σ'). {
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
   case: eqb_specT; intro eq; subst.
-  - intros [= ->]. subst.
+  - intros [= ->]. subst. destruct o.
     clear Hext; eapply weakening_on_global_decl_ext. 3:tea. all:eauto.
-  - apply IHonΣ; auto.
-    destruct wfΣ. split => //. now depelim o2.
+  - destruct o. apply IHonΣ; auto.
+    destruct wfΣ. split => //. now depelim o0.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
@@ -298,18 +312,18 @@ Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
 Proof.
   intros HP wfΣ wfΣ' Hext HΣ.
   destruct HΣ as [onu onΣ].
-  destruct Σ as [univs Σ]; cbn in *.
+  destruct Σ as [univs Σ retro]; cbn in *.
   induction onΣ; simpl. 1: congruence.
-  assert (HH: extends {| universes := univs; declarations := Σ |} Σ'). {
+  assert (HH: extends {| universes := univs; declarations := Σ; retroknowledge := retro |} Σ'). {
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  case: eqb_specT; intro e; subst.
+  destruct o. case: eqb_specT; intro e; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl. 5:tea. all:eauto.
-    destruct wfΣ. split => //. now depelim o2.
+    destruct wfΣ. split => //. now depelim o0.
   - apply IHonΣ; auto.
-    destruct wfΣ. split => //. now depelim o2.
+    destruct wfΣ. split => //. now depelim o0.
 Qed.
 
 Lemma weaken_lookup_on_global_env `{checker_flags} P Σ c decl :
@@ -319,9 +333,10 @@ Lemma weaken_lookup_on_global_env `{checker_flags} P Σ c decl :
   on_global_decl cumulSpec0 P (Σ, universes_decl_of_decl decl) c decl.
 Proof.
   intros. eapply weakening_env_lookup_on_global_env; eauto.
-  split => //. 
+  split => //.
   - split; [lsets|csets].
   - exists []; simpl; destruct Σ; eauto.
+  - apply Retroknowledge.extends_refl.
 Qed.
 
 Lemma weaken_decls_lookup_on_global_env `{checker_flags} P Σ c decl :
@@ -331,7 +346,7 @@ Lemma weaken_decls_lookup_on_global_env `{checker_flags} P Σ c decl :
   on_global_decl cumulSpec0 P (Σ, universes_decl_of_decl decl) c decl.
 Proof.
   intros. eapply weakening_env_decls_lookup_on_global_env; eauto.
-  split => //. 
+  split => //.
   - exists []; simpl; destruct Σ; eauto.
 Qed.
 
@@ -451,9 +466,9 @@ Proof.
   intros.
   destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in let (x, _) := x in x)) in *.
   destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl.
-  forward onProjections.
-  { eapply nth_error_Some_length in Hcdecl.
-    destruct (ind_projs idecl); simpl in *; try lia. congruence. }
+  move: onProjections. generalize (nth_error_Some_length Hcdecl).
+  case: (ind_projs idecl) => //= .
+  { lia. }
   destruct (ind_ctors idecl) as [|? []]; try contradiction.
   destruct ind_cunivs as [|? []]; try contradiction; depelim onConstructors.
   2:{ depelim onConstructors. }
@@ -577,5 +592,3 @@ Proof.
     destruct Hdecl. cbn in *. destruct d; cbn in *.
     now rewrite hctors in X.
 Qed.
-
-

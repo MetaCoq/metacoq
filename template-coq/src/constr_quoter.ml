@@ -187,26 +187,19 @@ struct
       Constr.VMcast -> Lazy.force kVmCast
     | Constr.DEFAULTcast -> Lazy.force kCast
     | Constr.NATIVEcast -> Lazy.force kNative
-    | Constr.REVERTcast -> Lazy.force kRevertCast
 
   let string_of_level s =
     to_string (Univ.Level.to_string s)
 
   let quote_nonprop_level l =
-    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
-      failwith "quote_nonprop_level : Prop or SProp found in levels"
-    else if Level.is_set l then Lazy.force lzero
+    if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
 
   let quote_level l =
     Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
-    if Level.is_sprop l then
-      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
-    else if Level.is_prop l then
-      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
-    else constr_mkApp (cInr, [|Lazy.force tproplevel;Lazy.force tlevel; quote_nonprop_level l |])
+    constr_mkApp (cInr, [|Lazy.force tproplevel;Lazy.force tlevel; quote_nonprop_level l |])
 
   let quote_universe s =
     match Univ.Universe.level s with
@@ -217,7 +210,7 @@ struct
            constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
 
   let quote_levelset s =
-    let levels = Univ.LSet.elements s in
+    let levels = Univ.Level.Set.elements s in
     let levels' =  to_coq_listl tlevel (List.map quote_nonprop_level levels) in
     constr_mkApp (tLevelSet_of_list, [|levels'|])
 
@@ -256,19 +249,10 @@ struct
     match cs with
     | [] -> []
     | (l, ct, l') :: cs' ->
-       if (* ignore trivial constraints *)
-         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
-          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
-       then constraints_ cs'
-       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
-         Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
-      else if (* fail on unisatisfiable ones -- well-typed term is expected *)
-        Univ.Level.is_prop l then failwith "Unisatisfiable constraint (Prop = l)"
-      else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
-         quote_univ_constraint (l,ct,l') :: constraints_ cs'
+      quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
-    let const = Univ.Constraint.elements const in
+    let const = Univ.Constraints.elements const in
     List.fold_left (fun tm c ->
         constr_mkApp (tConstraintSetadd, [| c; tm|])
       ) (Lazy.force tConstraintSetempty) (constraints_ const)
@@ -283,20 +267,18 @@ struct
     let var_list = CArray.map_to_list quote_variance var in
     to_coq_list (Lazy.force tVariance) var_list
 
-  let quote_ucontext inst const =
-    let inst' = quote_univ_instance inst in
-    let const' = quote_univ_constraints const in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
-
   let quote_univ_contextset uctx =
     let levels' = quote_levelset (ContextSet.levels uctx) in
     let const' = quote_univ_constraints (ContextSet.constraints uctx) in
     pairl tLevelSet tConstraintSet levels' const'
 
   let quote_univ_context uctx =
+    let arr = (UContext.names uctx) in
+    let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
     let inst' = quote_univ_instance (UContext.instance uctx) in
     let const' = quote_univ_constraints (UContext.constraints uctx) in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
+    let p = constr_mkApp (tUContextmake', [|inst'; const'|]) in
+    constr_mkApp (tUContextmake, [|idents; p |])
 
   (* let quote_variance_entry var =
     let listvar = constr_mkAppl (tlist, [| tVariance |]) in
@@ -307,9 +289,9 @@ struct
       constr_mkApp (cSome, [| listvar; var' |]) *)
   
  let quote_abstract_univ_context uctx =
-    let arr = (AUContext.names uctx) in
+    let arr = (AbstractContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
-    let const' = quote_univ_constraints (UContext.constraints (AUContext.repr uctx)) in
+    let const' = quote_univ_constraints (UContext.constraints (AbstractContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
   let mkMonomorphic_ctx () = Lazy.force cMonomorphic_ctx
@@ -320,20 +302,18 @@ struct
   let mkMonomorphic_entry ctx = 
      constr_mkApp (cMonomorphic_entry, [| ctx |])
   
-  let mkPolymorphic_entry names ctx = 
-     let names = to_coq_list (Lazy.force tname) names in
-     constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+  let mkPolymorphic_entry ctx = 
+     constr_mkApp (cPolymorphic_entry, [| ctx |])
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Entries.Monomorphic_entry uctx -> 
-      let ctx = quote_univ_context (Univ.ContextSet.to_context uctx) in
+    | Entries.Monomorphic_entry ->
+      let f inst = Array.map (fun _ -> Anonymous) (Instance.to_array inst) in
+      let ctx = quote_univ_context (Univ.ContextSet.to_context f Univ.ContextSet.empty) in
       constr_mkApp (cMonomorphic_entry, [| ctx |])
-    | Entries.Polymorphic_entry (names, uctx) ->
-      let names = CArray.map_to_list quote_name names in
-      let names = to_coq_list (Lazy.force tname) names in
+    | Entries.Polymorphic_entry uctx ->
       let ctx = quote_univ_context uctx in
-      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+      constr_mkApp (cPolymorphic_entry, [| ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -341,8 +321,17 @@ struct
     let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
     constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
 
-  let quote_sort s =
-    quote_universe (Sorts.univ_of_sort s)
+
+  let sprop_level =
+    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
+  let prop_level =
+    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
+
+  let quote_sort s = match s with
+  | Sorts.Set -> quote_universe Universe.type0
+  | Sorts.Prop -> constr_mkApp (tof_levels, [| prop_level |])
+  | Sorts.SProp -> constr_mkApp (tof_levels, [| sprop_level |])
+  | Sorts.Type u -> quote_universe u
 
   let quote_sort_family = function
     | Sorts.InProp -> Lazy.force sfProp
@@ -419,8 +408,17 @@ struct
     let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
 
-  let mk_global_env univs decls =
-    constr_mkApp (tBuild_global_env, [| univs; decls |])
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  let quote_retroknowledge r = 
+    let rint63 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_int63 in
+    let rfloat64 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_float64 in
+    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64 |])
+
+  let mk_global_env univs decls retro =
+    constr_mkApp (tBuild_global_env, [| univs; decls; retro |])
 
   let mk_program f s = pairl tglobal_env tTerm f s
 

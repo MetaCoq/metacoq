@@ -22,7 +22,7 @@ sig
   val unquote_inductive :  quoted_inductive -> Names.inductive
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
-  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
+  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Sorts.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
@@ -71,7 +71,7 @@ struct
       | ACoq_tEvar (n, l) -> 
         let evm, l' = map_evm (aux env) evm l in
         D.unquote_evar env evm n l'
-      | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkType u
+      | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkSort u
       | ACoq_tCast (t,c,ty) -> let evm, t = aux env evm t in
         let evm, ty = aux env evm ty in
         evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)
@@ -111,7 +111,7 @@ struct
         let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
         let evm, puinst = D.unquote_universe_instance evm p.auinst in
         let evm, pars = map_evm (aux env) evm p.apars in
-        let parsa = Array.of_list pars in
+        let pars = Array.of_list pars in
         let napctx = CArray.map_of_list D.unquote_aname (List.rev p.apcontext) in
         let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in 
         let evm, pret = aux (Environ.push_rel_context pctx env) evm p.apreturn in
@@ -125,7 +125,8 @@ struct
           evm, (nas, bbody)
         in
         let evm, brs = array_map_evm denote_br evm brs in
-        let pcase = (ci, puinst, parsa, (napctx, pret), Constr.NoInvert, c, brs) in
+        (* todo: reify better case_info *)
+        let pcase = (ci, puinst, pars, (napctx, pret), Constr.NoInvert, c, brs) in
         evm, Constr.mkCase pcase
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
@@ -149,18 +150,16 @@ struct
         evm, Constr.mkCoFix (D.unquote_int i, (lnames, ltypes, la bodies))
 
       | ACoq_tProj (proj,t) ->
-         let (ind, npars, arg) = D.unquote_proj proj in
+         let (ind, _npars, arg) = D.unquote_proj proj in
          let ind' = D.unquote_inductive ind in
-         let proj_npars = D.unquote_int npars in
          let proj_arg = D.unquote_int arg in
-         let l = (match List.nth (Structures.Structure.find_projections ind') proj_arg with
-                  | Some p -> Names.Constant.label p
-                  | None -> failwith "tproj case of denote_term") in
-         let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in
+         let mib = Environ.lookup_mind (fst ind') env in
+         let p' = Declareops.inductive_make_projection ind' mib ~proj_arg in
+         let p' = Names.Projection.make p' false in
          let evm, t' = aux env evm t in
          evm, Constr.mkProj (p', t')
-      (* | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x) *)
-      (* | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x) *)
+      | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
+      | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
 
     in aux env evm trm
 

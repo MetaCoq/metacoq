@@ -116,7 +116,7 @@ Qed.
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
 Definition global_env_add (Σ : global_env) d :=
-  {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
+  {| universes := Σ.(universes); declarations := d :: Σ.(declarations); retroknowledge := Σ.(retroknowledge) |}.
 
 Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} {guard : abstract_guard_impl}
   (_Σ :referenced_impl_ext) t :
@@ -131,13 +131,13 @@ Proof.
   destruct wfΣ as [wfΣ].
   assert (wf': wf_ext Σext).
   { constructor; [constructor|]; auto; try apply wfΣ.
-    constructor; auto.
+    constructor; try constructor; auto.
     - apply wfΣ.
     - apply make_fresh_name_fresh.
     - split; first now intros ? ?%LevelSet.empty_spec.
       split; first now intros ? ?%ConstraintSet.empty_spec.
       destruct wfΣ as (?&(?&?&[val sat]&monoval)); split.
-      1: { 
+      1: {
         exists val.
         intros l isin.
         apply sat; auto.
@@ -155,7 +155,6 @@ Proof.
           -- instantiate (1 := []).
              constructor.
           -- now cbn.
-          -- intros; congruence.
         * constructor.
       + constructor.
       + reflexivity.
@@ -164,7 +163,8 @@ Proof.
   eapply (env_prop_typing weakening_env) in cons; auto.
   2:instantiate (1:=Σext.1).
   3:{ split; auto; cbn. split; [lsets|csets].
-      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
+      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity.
+      apply Retroknowledge.extends_refl. }
   2: now destruct wf'.
 
   set (Σ' := Σext.1) in cons.
@@ -184,9 +184,9 @@ Proof.
       auto. }
   pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
-  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
+  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
   1: cbn; intros; subst; exact wt.
-  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
+  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
   1 : cbn; intros; subst; exact wt.
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.

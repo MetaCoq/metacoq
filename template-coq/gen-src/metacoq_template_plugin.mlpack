@@ -11,6 +11,7 @@ PeanoNat
 Specif
 Basics
 BinPosDef
+BinNums
 BinPos
 BinNat
 BinInt
@@ -24,6 +25,7 @@ Caml_byte
 ByteCompare
 ByteCompareSpec
 String0
+HexadecimalString
 Orders
 OrdersTac
 OrdersFacts
@@ -42,7 +44,6 @@ MSetDecide
 MSetList
 MSetAVL
 MSetProperties
-BinNums
 EqDec
 CRelationClasses
 Compare_dec
@@ -71,12 +72,14 @@ Zpower
 SpecFloat
 PrimFloat
 FloatOps
+DecimalString
 MCString
 MCUtils
 Signature
 All_Forall
 Config0
 Kernames
+Primitive
 BasicAst
 Universes0
 Environment

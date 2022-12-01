@@ -1,9 +1,9 @@
 Require Import MetaCoq.Template.Loader.
-Require Import Int63.
+Require Import Uint63.
 
-Definition n : Int63.int := 42.
+Definition n : Uint63.int := 42.
 Import List.ListNotations.
-Definition ns : list Int63.int := [n]%list.
+Definition ns : list Uint63.int := [n]%list.
 
 
 MetaCoq Quote Recursively Definition q_n := n.

@@ -3,11 +3,11 @@
 Section WfTerm.
 Context (Σ : global_env).
 
-(** Well-formedness of all the case nodes appearing in the term. 
-    This is necessary as reduction depends on invariants on the 
+(** Well-formedness of all the case nodes appearing in the term.
+    This is necessary as reduction depends on invariants on the
     case representation that should match the global declarations
     of the inductives. *)
-Equations(noind) wf_cases (t : term) : bool := 
+Equations(noind) wf_cases (t : term) : bool :=
 | tRel _ => true;
 | tVar _ => true;
 | tEvar ev l => forallb wf_cases l;
@@ -21,10 +21,10 @@ Equations(noind) wf_cases (t : term) : bool :=
 | tConstruct _ _ _ => true;
 | tCase ci p t brs with lookup_inductive Σ ci.(ci_ind) := {
   | None => false;
-  | Some (mdecl, idecl) => 
+  | Some (mdecl, idecl) =>
     [&& wf_predicateb mdecl idecl p,
         wf_branchesb idecl brs,
-        forallb wf_cases p.(pparams), 
+        forallb wf_cases p.(pparams),
         wf_cases t,
         wf_cases p.(preturn) & forallb (wf_cases ∘ bbody) brs]
   };
@@ -33,7 +33,7 @@ Equations(noind) wf_cases (t : term) : bool :=
 | tCoFix mfix idx => forallb (fun d => wf_cases d.(dtype) && wf_cases d.(dbody)) mfix;
 | tPrim p => true.
 
-Definition wf_cases_decl d := 
+Definition wf_cases_decl d :=
   wf_cases d.(decl_type) && option_default wf_cases d.(decl_body) true.
 
 Definition wf_cases_ctx ctx :=
@@ -87,10 +87,10 @@ Proof.
   eapply forallb2_ext => cdecl b.
   apply map_branch_wf_branchb.
 Qed.
-(* 
+(*
 Lemma wf_cases_rename Σ f t : wf_cases Σ (rename f t) = wf_cases Σ t.
 Proof.
-  induction t in f |- * using PCUICInduction.term_forall_list_ind; simpl; auto; 
+  induction t in f |- * using PCUICInduction.term_forall_list_ind; simpl; auto;
     rewrite ?forallb_map; solve_all.
   - eapply All_forallb_eq_forallb; eauto.
   - destruct (lookup_inductive) as [[mdecl idecl]|] => /= //.
@@ -112,7 +112,7 @@ Qed.
 
 Lemma wf_cases_fix_context Σ mfix :
   forallb (fun d : def term => wf_cases Σ (dtype d) && wf_cases Σ (dbody d))
-    mfix -> 
+    mfix ->
   wf_cases_ctx Σ (fix_context mfix).
 Proof.
   rewrite /wf_cases_ctx /fix_context.

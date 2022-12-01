@@ -2,7 +2,7 @@
 From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
-     PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution 
+     PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution
      PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import EGlobalEnv Extract Prelim.
 
@@ -49,11 +49,12 @@ Lemma Informative_extends:
 Proof.
   repeat intros ?.
   assert (extends_decls Σ Σ'0).
-  { destruct X0, X2. subst. cbn. split => //.
-    rewrite e -e0 //.
-    destruct s as [Σ'' eq]. destruct s0 as [Σ''' ->].
-    rewrite eq. cbn. exists (Σ''' ++ Σ''). cbn.
-    now rewrite <- app_assoc. }
+  { destruct X0 as [eu [Σ'' eq] er], X2 as [eu' [Σ''' eq'] er'].
+    subst. cbn in *. split => //.
+    * rewrite eu -eu' //.
+    * exists (Σ''' ++ Σ''). cbn. rewrite <- app_assoc.
+      congruence.
+    * congruence. }
   edestruct H0; eauto. destruct H3.
 
   eapply weakening_env_declared_inductive in H; eauto; tc.
@@ -83,7 +84,7 @@ Proof.
     destruct isdecl as [decli declc].
     eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.
     now rewrite (PCUICAst.declared_inductive_lookup decli).
-  - econstructor. all:eauto. 
+  - econstructor. all:eauto.
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.
     intros n cdecl br br'.
@@ -137,12 +138,12 @@ Proof.
   intros. now subst.
 Qed.
 
-Lemma lift_inst_case_branch_context (Γ'' Γ' : context) p br : 
+Lemma lift_inst_case_branch_context (Γ'' Γ' : context) p br :
   test_context_k
   (fun k : nat => on_free_vars (closedP k xpredT))
   #|pparams p| (bcontext br) ->
   inst_case_branch_context (map_predicate_k id (lift #|Γ''|) #|Γ'| p)
-    (map_branch_k (lift #|Γ''|) id #|Γ'| br) = 
+    (map_branch_k (lift #|Γ''|) id #|Γ'| br) =
     lift_context #|Γ''| #|Γ'| (inst_case_branch_context p br).
 Proof.
   intros hctx.
@@ -202,7 +203,7 @@ Proof.
   - econstructor.
     + eauto.
     + eapply H4; eauto.
-    + red in H6. 
+    + red in H6.
       eapply Forall2_All2 in H6.
       eapply All2i_All2_mix_left in X6; tea.
       clear H6.
@@ -211,9 +212,9 @@ Proof.
       eapply All2i_All2_All2; tea; cbv beta.
       intros n cdecl br br'.
       intros (hnth & ? & ? & ? & (? & ?) & ? & ?) []. split => //.
-      rewrite lift_inst_case_branch_context //. 
+      rewrite lift_inst_case_branch_context //.
       { rewrite test_context_k_closed_on_free_vars_ctx.
-        eapply alpha_eq_on_free_vars. symmetry; tea.  
+        eapply alpha_eq_on_free_vars. symmetry; tea.
         rewrite -closedn_ctx_on_free_vars.
         rewrite (wf_predicate_length_pars H0).
         rewrite (declared_minductive_ind_npars isdecl).
@@ -235,7 +236,7 @@ Proof.
     destruct X4; cbn in *; pcuicfo.
     exists x0; auto.
     eapply (All_impl X1). intros d [HT IH]. pcuicfo.
-    
+
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
@@ -269,7 +270,7 @@ Proof.
     destruct X4; cbn in *; pcuicfo.
     now exists x0.
     eapply (All_impl X1). intros d [HT IH]. pcuicfo.
-    
+
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
@@ -350,8 +351,8 @@ Proof.
 Qed.
 
 Lemma subst_case_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} ind (n : nat) mdecl idecl p br cdecl s k :
-  PCUICAst.declared_constructor Σ (ind, n) mdecl idecl cdecl -> 
-  wf_predicate mdecl idecl p -> 
+  PCUICAst.declared_constructor Σ (ind, n) mdecl idecl cdecl ->
+  wf_predicate mdecl idecl p ->
   All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
     (cstr_branch_context ind mdecl cdecl) ->
   subst_context s k (case_branch_context ind mdecl p (forget_types (bcontext br)) cdecl) =
@@ -456,7 +457,7 @@ Proof.
         eapply All2_impl_In; eauto.
         intros. destruct H11, x, y. cbn in e0. subst. split; eauto.
         eapply In_nth_error in H9 as [].
-        move: H6. rewrite /wf_branches. 
+        move: H6. rewrite /wf_branches.
         move/Forall2_All2 => hbrs.
         eapply All2_nth_error_Some_r in hbrs; tea.
         set (br := {| bcontext := _ |}).
@@ -508,7 +509,7 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as [? ? ? ?]. 
+      intros. destruct H4 as [? ? ? ?].
       repeat split; eauto.
       cbn. now eapply isLambda_subst.
       now eapply ELiftSubst.isLambda_subst.
@@ -559,6 +560,9 @@ Proof.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
+  - cbn. depelim H1.
+    * cbn; constructor.
+    * constructor. eapply is_type_subst in X3; tea.
   - eapply H; eauto.
 Qed.
 
@@ -572,7 +576,7 @@ Lemma erases_subst0 (Σ : global_env_ext) Γ t s t' s' T :
 Proof.
   intros Hwf Hwfl Hty He Hall.
   change (@nil (BasicAst.context_decl term)) with (subst_context s 0 [] ++ nil).
-  eapply erases_subst with (Γ' := Γ); eauto. 
+  eapply erases_subst with (Γ' := Γ); eauto.
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
 Qed.

@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
 Import MCMonadNotation.
 
 (** * The Template Monad
@@ -117,3 +118,18 @@ Definition tmMkDefinition (id : ident) (tm : term) : TemplateMonad unit
      t'' <- tmEval (unfold (Common_kn "my_projT2")) (my_projT2 t') ;;
      tmDefinitionRed id (Some (unfold (Common_kn "my_projT1"))) t'' ;;
      tmReturn tt.
+
+Definition TypeInstance : Common.TMInstance :=
+  {| Common.TemplateMonad := TemplateMonad
+   ; Common.tmReturn:=@tmReturn
+   ; Common.tmBind:=@tmBind
+   ; Common.tmFail:=@tmFail
+   ; Common.tmFreshName:=@tmFreshName
+   ; Common.tmLocate:=@tmLocate
+   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmQuoteInductive:=@tmQuoteInductive
+   ; Common.tmQuoteUniverses:=@tmQuoteUniverses
+   ; Common.tmQuoteConstant:=@tmQuoteConstant
+   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmExistingInstance:=@tmExistingInstance
+   |}.

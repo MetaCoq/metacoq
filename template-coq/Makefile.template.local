@@ -1,0 +1,3 @@
+CAMLPKGS+=-package stdlib-shims
+
+.PHONY: META

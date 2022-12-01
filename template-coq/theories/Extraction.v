@@ -7,15 +7,7 @@
 
 From Coq Require Ascii Extraction ZArith NArith.
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats
-    ExtrOCamlInt63.
-From MetaCoq.Template Require Import MC_ExtrOCamlZPosInt.
- 
-(* Ignore [Decimal.int] before the extraction issue is solved:
-  https://github.com/coq/coq/issues/7017. *)
-Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63.
 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".

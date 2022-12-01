@@ -41,7 +41,7 @@ mrproper:
 	rm -f Makefile.safechecker _CoqProject
 
 .merlin: Makefile.plugin
-	make -f $< $@
+	[ -e "src/pCUICSafeChecker.ml" ] && make -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

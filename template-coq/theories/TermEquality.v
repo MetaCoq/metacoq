@@ -12,7 +12,7 @@ Definition R_universe_instance R :=
 
 (** Cumulative inductive types:
 
-  To simplify the development, we allow the variance list to not exactly 
+  To simplify the development, we allow the variance list to not exactly
   match the instances, so as to keep syntactic equality an equivalence relation
   even on ill-formed terms. It corresponds to the right notion on well-formed terms.
 *)
@@ -28,7 +28,7 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   match u, u' return Prop with
   | u :: us, u' :: us' =>
     match v with
-    | [] => R_universe_instance_variance Re Rle v us us' 
+    | [] => R_universe_instance_variance Re Rle v us us'
       (* Missing variance stands for irrelevance, we still check that the instances have
         the same length. *)
     | v :: vs => R_universe_variance Re Rle v u u' /\
@@ -46,7 +46,7 @@ Definition lookup_minductive Σ mind :=
 
 Definition lookup_inductive Σ ind :=
   match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
+  | Some mdecl =>
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
     | Some idecl => Some (mdecl, idecl)
     | None => None
@@ -56,7 +56,7 @@ Definition lookup_inductive Σ ind :=
 
 Definition lookup_constructor Σ ind k :=
   match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => 
+  | Some (mdecl, idecl) =>
     match nth_error idecl.(ind_ctors) k with
     | Some cdecl => Some (mdecl, idecl, cdecl)
     | None => None
@@ -68,7 +68,7 @@ Definition global_variance Σ gr napp :=
   match gr with
   | IndRef ind =>
     match lookup_inductive Σ ind with
-    | Some (mdecl, idecl) => 
+    | Some (mdecl, idecl) =>
       match destArity [] idecl.(ind_type) with
       | Some (ctx, _) => if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
         else None
@@ -80,7 +80,7 @@ Definition global_variance Σ gr napp :=
     match lookup_constructor Σ ind k with
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
-        (** Fully applied constructors are always compared at the same supertype, 
+        (** Fully applied constructors are always compared at the same supertype,
           which implies that no universe equality needs to be checked here. *)
         Some []
       else None
@@ -90,7 +90,7 @@ Definition global_variance Σ gr napp :=
   end.
 
 Definition R_opt_variance Re Rle v :=
-  match v with 
+  match v with
   | Some v => R_universe_instance_variance Re Rle v
   | None => R_universe_instance Re
   end.
@@ -114,15 +114,15 @@ Qed.
 
 Inductive compare_decls (eq_term leq_term : term -> term -> Type) : context_decl -> context_decl -> Type :=
 	| compare_vass na T na' T' : eq_binder_annot na na' ->
-    leq_term T T' -> 
+    leq_term T T' ->
     compare_decls eq_term leq_term (vass na T) (vass na' T')
-  | compare_vdef na b T na' b' T' : eq_binder_annot na na' -> 
+  | compare_vdef na b T na' b' T' : eq_binder_annot na na' ->
     eq_term b b' -> leq_term T T' ->
     compare_decls eq_term leq_term (vdef na b T) (vdef na' b' T').
 
 Derive Signature NoConfusion for compare_decls.
 
-Lemma alpha_eq_context_assumptions {Γ Δ} : 
+Lemma alpha_eq_context_assumptions {Γ Δ} :
   All2 (compare_decls eq eq) Γ Δ ->
   context_assumptions Γ = context_assumptions Δ.
 Proof.
@@ -130,7 +130,7 @@ Proof.
   destruct r; subst; cbn; auto.
 Qed.
 
-Lemma alpha_eq_extended_subst {Γ Δ k} : 
+Lemma alpha_eq_extended_subst {Γ Δ k} :
   All2 (compare_decls eq eq) Γ Δ ->
   extended_subst Γ k = extended_subst Δ k.
 Proof.
@@ -139,20 +139,20 @@ Proof.
   rewrite IHX. now rewrite (alpha_eq_context_assumptions X).
 Qed.
 
-Lemma expand_lets_eq {Γ Δ t} : 
+Lemma expand_lets_eq {Γ Δ t} :
   All2 (compare_decls eq eq) Γ Δ ->
   expand_lets Γ t = expand_lets Δ t.
 Proof.
   intros. rewrite /expand_lets /expand_lets_k.
-  now rewrite (All2_length X) (alpha_eq_context_assumptions X) (alpha_eq_extended_subst X). 
+  now rewrite (All2_length X) (alpha_eq_context_assumptions X) (alpha_eq_extended_subst X).
 Qed.
 
-Lemma alpha_eq_subst_context {Γ Δ s k} : 
+Lemma alpha_eq_subst_context {Γ Δ s k} :
   All2 (compare_decls eq eq) Γ Δ ->
   All2 (compare_decls eq eq) (subst_context s k Γ) (subst_context s k Δ).
 Proof.
   intros.
-  rewrite /subst_context. 
+  rewrite /subst_context.
   induction X.
   - cbn; auto.
   - rewrite !fold_context_k_snoc0. constructor; auto.
@@ -165,7 +165,7 @@ Qed.
 
 (** Equality is indexed by a natural number that counts the number of applications
   that surround the current term, used to implement cumulativity of inductive types
-  correctly (only fully applied constructors and inductives benefit from it). *)  
+  correctly (only fully applied constructors and inductives benefit from it). *)
 
 Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) (napp : nat) : term -> term -> Type :=
 | eq_Rel n  :
@@ -251,15 +251,15 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
-    
+
 | eq_Cast t1 c t2 t1' c' t2' :
   eq_term_upto_univ_napp Σ Re Re 0 t1 t1' ->
   eq_cast_kind c c' ->
   eq_term_upto_univ_napp Σ Re Re 0 t2 t2' ->
-  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2').
+  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2')
 
-(* | eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
-| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f). *)
+| eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
+| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
@@ -271,7 +271,7 @@ Definition compare_term `{checker_flags} (pb : conv_pb) Σ φ :=
 Notation eq_term := (compare_term Conv).
 Notation leq_term := (compare_term Cumul).
 
-Lemma R_global_instance_refl Σ Re Rle gr napp u : 
+Lemma R_global_instance_refl Σ Re Rle gr napp u :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   R_global_instance Σ Re Rle gr napp u u.
@@ -288,12 +288,12 @@ Qed.
 
 #[global] Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
-  split. 
+  split.
   - red. reflexivity.
   - red; now symmetry.
   - intros x y z; unfold eq_binder_annot.
     congruence.
-Qed. 
+Qed.
 
 Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
@@ -302,11 +302,11 @@ Proof. reflexivity. Qed.
 #[global] Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
 Proof.
   split.
-  intros x. apply All2_reflexivity; tc. 
+  intros x. apply All2_reflexivity; tc.
   * intros l. reflexivity.
   * intros l l' H. eapply All2_symmetry => //.
   * intros l l' H. eapply All2_transitivity => //.
-    intros ? ? ? ? ?. now etransitivity. 
+    intros ? ? ? ? ?. now etransitivity.
 Qed.
 
 Lemma eq_term_upto_univ_refl Σ Re Rle :
@@ -328,7 +328,7 @@ Proof.
   - destruct X as [Ppars Preturn]. eapply All_All2. 1:eassumption.
     intros; easy.
   - destruct X as [Ppars Preturn]. now apply Preturn.
-  - red in X0. eapply All_All2_refl. solve_all. reflexivity. 
+  - red in X0. eapply All_All2_refl. solve_all. reflexivity.
   - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
   - eapply All_All2. 1: eassumption.
@@ -349,7 +349,7 @@ Proof.
   - intro; apply eq_universe_refl.
   - intro; apply leq_universe_refl.
 Qed.
-(* 
+(*
 Lemma eq_term_leq_term `{checker_flags} Σ φ napp t u :
   eq_term_upto_univ_napp Σ napp φ t u -> leq_term Σ φ t u.
 Proof.
@@ -421,7 +421,7 @@ Proof.
 Qed.
 
 
-Lemma global_variance_napp_mon {Σ gr napp napp' v} : 
+Lemma global_variance_napp_mon {Σ gr napp napp' v} :
   napp <= napp' ->
   global_variance Σ gr napp = Some v ->
   global_variance Σ gr napp' = Some v.

@@ -772,6 +772,56 @@ Section WeakNormalization.
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
 
+  Require Import Equations.Type.Relation_Properties.
+
+  (* TODO move *)
+  Lemma invert_red_axiom {Γ cst u cdecl T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
+    T = tConst cst u.
+  Proof using wfΣ.
+    intros hdecl hb.
+    generalize_eq x (tConst cst u).
+    move=> e [clΓ clt] red.
+    revert cst u hdecl hb e.
+    eapply clos_rt_rt1n_iff in red.
+    induction red; simplify_dep_elim.
+    - reflexivity.
+    - depelim r; solve_discr. congruence.
+  Qed.
+
+  Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ tConst cst u ≤[pb] T ->
+    ∑ u', Σ ;;; Γ ⊢ T ⇝ tConst cst u' × PCUICEquality.R_universe_instance (eq_universe Σ) u u'.
+  Proof using wfΣ.
+    intros hdecl hb H.
+    eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
+    epose proof (invert_red_axiom hdecl hb tv). subst v.
+    depelim eqp.
+    exists u'. split => //.
+  Qed.
+
+  Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ tConst cst u ≤ mkApps (tInd ind u') args -> False.
+  Proof using wfΣ.
+    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
+    eapply invert_red_mkApps_tInd in hred as (? & []); auto. solve_discr.
+  Qed.
+
+  Lemma invert_cumul_axiom_prod {Γ cst cdecl u na dom codom} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ tConst cst u ≤ tProd na dom codom -> False.
+  Proof using wfΣ.
+    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
+    eapply invert_red_prod in hred as (? & ? & []); auto. discriminate.
+  Qed.
+
   Lemma wh_normal_ind_discr t i u args :
     axiom_free_value Σ [] t ->
     wh_normal Σ [] t ->
@@ -792,7 +842,9 @@ Section WeakNormalization.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
     - now rewrite head_mkApps /head /=.
-    (* - now eapply inversion_Prim in typed. *)
+    - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
+      eapply invert_cumul_axiom_ind in w; eauto.
+      apply hp.
   Qed.
 
   Lemma whnf_ind_finite t ind u indargs :
@@ -1025,7 +1077,7 @@ Section WeakNormalization.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
       rewrite mkApps_app /=. now eapply red_app.
-    
+
     - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).

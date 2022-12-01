@@ -25,7 +25,7 @@ Lemma term_forall_list_ind :
         P t -> forall t0 : term, P t0 -> P (tLetIn n t t0)) ->
     (forall t u : term, P t -> P u -> P (tApp t u)) ->
     (forall s, P (tConst s)) ->
-    (forall (i : inductive) (n : nat) (args : list term), 
+    (forall (i : inductive) (n : nat) (args : list term),
       All P args -> P (tConstruct i n args)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall l : list (list name * term),
@@ -33,12 +33,12 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
-    (* (forall p, P (tPrim p)) -> *)
+    (forall p, P (tPrim p)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
   fix auxt 1.
-  move auxt at top. 
+  move auxt at top.
   destruct t; match goal with
                  H : _ |- _ => apply H
               end; auto.
@@ -120,7 +120,7 @@ Qed.
 Lemma decompose_app_size t :
   let da := decompose_app t in
   size da.1 + list_size size da.2 = size t.
-Proof. 
+Proof.
   unfold decompose_app.
   rewrite (decompose_app_rec_size t []); cbn. lia.
 Qed.
@@ -183,8 +183,8 @@ Qed.
 Section All_rec.
   Context (P : term -> Type).
   Context {A} (proj : A -> term).
-  
-  Equations? All_rec (l : list A) (auxt : forall y, size y < (list_size (fun x => size (proj x)) l) -> P y) : 
+
+  Equations? All_rec (l : list A) (auxt : forall y, size y < (list_size (fun x => size (proj x)) l) -> P y) :
     All (fun x => P (proj x)) l :=
     All_rec [] auxt := All_nil;
     All_rec (x :: xs) auxt := All_cons (auxt (proj x) _) (All_rec xs (fun y H => auxt y _)).
@@ -215,7 +215,8 @@ Section MkApps_rec.
         All (fun x => P x.2) l -> P (tCase p t l))
     (pproj : forall (s : projection) (t : term), P t -> P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n))
-    (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)).
+    (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n))
+    (pprim : forall p, P (tPrim p)).
 
   Definition inspect {A} (x : A) : { y : A | x = y } := exist _ x eq_refl.
 
@@ -228,11 +229,11 @@ Section MkApps_rec.
     | tBox => pbox
     | tLambda n1 t => plam n1 t (rec t)
     | tLetIn n2 t0 t1 => plet n2 t0 (rec t0) t1 (rec t1)
-    | tApp t2 t3 with inspect (decompose_app (tApp t2 t3)) := 
-      { | exist _ (t, l) da := 
+    | tApp t2 t3 with inspect (decompose_app (tApp t2 t3)) :=
+      { | exist _ (t, l) da :=
         let napp := decompose_app_notApp _ _ _ da in
         let nonnil := decompose_app_app _ _ _ _ da in
-        let pt := rec t in 
+        let pt := rec t in
         let pl := All_rec P id l (fun x H => rec x) in
         rew _ in papp t l napp nonnil pt pl }
     | tConst k => pconst k
@@ -240,7 +241,8 @@ Section MkApps_rec.
     | tCase ina c brs => pcase ina c (rec c) brs (All_rec P (fun x => x.2) brs (fun x H => rec x))
     | tProj p c => pproj p c (rec c)
     | tFix mfix idx => pfix mfix idx (All_rec P dbody mfix (fun x H => rec x))
-    | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x)).
+    | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x))
+    | tPrim p => pprim p.
   Proof.
     all:unfold MR; cbn; auto with arith. 4:lia.
     - clear -napp nonnil da rec.
@@ -249,7 +251,7 @@ Section MkApps_rec.
       abstract (destruct l; try congruence; cbn; lia).
     - clear -da rec H.
       pose proof (decompose_app_size (tApp t2 t3)).
-      rewrite da in H0. cbn in H0. rewrite <- H0. 
+      rewrite da in H0. cbn in H0. rewrite <- H0.
       unfold id in H. change (fun x => size x) with size in H. abstract lia.
     - clear -da. abstract (eapply decompose_app_inv in da; now symmetry).
   Qed.
@@ -271,10 +273,11 @@ Section MkApps_rec.
     (pcase : forall (p : inductive * nat) (t : term) (l : list (list name * term)), P (tCase p t l))
     (pproj : forall (s : projection) (t : term), P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), P (tFix m n))
-    (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n)).
+    (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n))
+    (pprim : forall p, P (tPrim p)).
 
   Import EqNotations.
-  
+
   Equations case (t : term) : P t :=
     | tRel n => prel n
     | tVar n => pvar n
@@ -282,8 +285,8 @@ Section MkApps_rec.
     | tBox => pbox
     | tLambda n1 t => plam n1 t
     | tLetIn n2 t0 t1 => plet n2 t0 t1
-    | tApp t2 t3 with inspect (decompose_app (tApp t2 t3)) := 
-      { | exist _ (t, l) da := 
+    | tApp t2 t3 with inspect (decompose_app (tApp t2 t3)) :=
+      { | exist _ (t, l) da :=
         let napp := decompose_app_notApp _ _ _ da in
         let nonnil := decompose_app_app _ _ _ _ da in
         rew [P] (eq_sym (decompose_app_inv da)) in papp t l napp nonnil }
@@ -292,15 +295,16 @@ Section MkApps_rec.
     | tCase ina c brs => pcase ina c brs
     | tProj p c => pproj p c
     | tFix mfix idx => pfix mfix idx
-    | tCoFix mfix idx => pcofix mfix idx.
+    | tCoFix mfix idx => pcofix mfix idx
+    | tPrim p => pprim p.
 
   End MkApps_case.
 
 End MkAppsInd.
 
-(*Equations? head (t : term) : term 
+(*Equations? head (t : term) : term
   by wf t (fun x y : term => size x < size y) :=
-  | t with TermSpineView.view t := 
+  | t with TermSpineView.view t :=
     { | TermSpineView.tApp f l Hf Hl => head f;
       | x => _ }.
 Proof.
@@ -333,8 +337,8 @@ Proof.
 
   Definition view : term -> t :=
     MkAppsInd.rec (P:=fun _ => t)
-      tBox tRel tVar 
-      (fun n l _ => tEvar n l) 
+      tBox tRel tVar
+      (fun n l _ => tEvar n l)
       (fun n t _ => tLambda n t)
       (fun n b _ t _ => tLetIn n b t)
       (fun f l napp nnil _ _ => tApp f l napp nnil)

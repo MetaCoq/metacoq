@@ -39,7 +39,7 @@ mrproper:
 	rm -f Makefile.pcuic _CoqProject
 
 .merlin: Makefile.plugin
-	make -f $< $@
+	[ -e "src/pCUICAst.ml" ] && make -f $< $@
 
 cleanplugin: Makefile.plugin
 #	make -f Makefile.plugin clean

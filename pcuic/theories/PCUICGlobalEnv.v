@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping.
 
-(** Injectivity of declared_*, inversion lemmas on declared global references and 
+(** Injectivity of declared_*, inversion lemmas on declared global references and
     universe consistency of the global environment.
 *)
 
@@ -29,7 +29,7 @@ Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
   declared_constructor Σ c mdecl idecl cdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
 Proof.
-  intros [] []. 
+  intros [] [].
   destruct (declared_inductive_inj H H1); subst.
   rewrite H0 in H2. intuition congruence.
 Qed.
@@ -39,7 +39,7 @@ Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' pdecl p
   declared_projection Σ p mdecl' idecl' cdecl' pdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl' /\ pdecl = pdecl'.
 Proof.
-  intros [] []. 
+  intros [] [].
   destruct (declared_constructor_inj H H1) as [? []]; subst.
   destruct H0, H2.
   rewrite H0 in H2. intuition congruence.
@@ -96,7 +96,7 @@ Proof.
    now specialize (decls _ Hctr).
 Qed.
 
-Lemma LevelSet_in_union_global Σ l ls : 
+Lemma LevelSet_in_union_global Σ l ls :
   LevelSet.In l (LevelSet.union ls (universes Σ).1) ->
   LevelSet.In l (LevelSet.union ls (global_levels (universes Σ))).
 Proof.
@@ -131,7 +131,7 @@ Qed.
 
 Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
  : on_global_env_ext cumulSpec0 P Σ -> consistent (global_ext_uctx Σ).2.
-Proof. 
+Proof.
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.
   destruct HΣ as (_ & _ & _ & HH & _). apply HH.

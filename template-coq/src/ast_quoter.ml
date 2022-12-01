@@ -52,6 +52,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = global_declarations
+  type quoted_retroknowledge = Environment.Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -79,20 +80,15 @@ struct
 
   (* NOTE: fails if it hits Prop or SProp *)
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
-    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
-      failwith "Prop or SProp found in levels"
-    else if Univ.Level.is_set l then Universes0.Level.Coq_lzero
+    if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (quote_string (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
-    if Univ.Level.is_prop l then Coq_inl Universes0.PropLevel.Coq_lProp
-    else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
-    else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
-      try Coq_inr (quote_nonprop_level l)
-      with e -> assert false
-    
+    try Coq_inr (quote_nonprop_level l)
+    with e -> assert false
+
   let quote_universe s : Universes0.Universe.t =
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
@@ -103,8 +99,11 @@ struct
           | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
       Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
-  let quote_sort s =
-    quote_universe (Sorts.univ_of_sort s)
+  let quote_sort s = match s with
+  | Sorts.Set -> quote_universe Univ.Universe.type0
+  | Sorts.SProp -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lSProp)
+  | Sorts.Prop -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lProp)
+  | Sorts.Type u -> quote_universe u
 
   let quote_sort_family s =
     match s with
@@ -117,7 +116,6 @@ struct
     | Constr.DEFAULTcast -> Cast
     | Constr.NATIVEcast -> NativeCast
     | Constr.VMcast -> VmCast
-    | Constr.REVERTcast -> RevertCast
 
   let quote_dirpath (dp : DirPath.t) : Kernames.dirpath =
     let l = DirPath.repr dp in
@@ -138,8 +136,8 @@ struct
   let quote_proj ind p a = { proj_ind = ind; proj_npars = p; proj_arg = a }
 
   let quote_constraint_type = function
-    | Univ.Lt -> Universes0.ConstraintType.Le 1
-    | Univ.Le -> Universes0.ConstraintType.Le 0
+    | Univ.Lt -> Universes0.ConstraintType.Le BinNums.(Zpos Coq_xH)
+    | Univ.Le -> Universes0.ConstraintType.Le BinNums.Z0
     | Univ.Eq -> Universes0.ConstraintType.Eq
 
   let is_Lt = function
@@ -169,19 +167,10 @@ struct
     match cs with
     | [] -> []
     | (l, ct, l') :: cs' ->
-       if (* ignore trivial constraints *)
-         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
-          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
-       then constraints_ cs'
-       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
-         Univ.Level.is_prop l' then failwith "Unsatisfiable constraint (l <= Prop)"
-       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
-          Univ.Level.is_prop l then failwith "Unsatisfiable constraint (Prop = l')"
-        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
-         quote_univ_constraint (l,ct,l') :: constraints_ cs'
+      quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
-  let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    let l = constraints_ (Univ.Constraint.elements c) in
+  let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
+    let l = constraints_ (Univ.Constraints.elements c) in
     Universes0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
@@ -191,9 +180,10 @@ struct
     | Univ.Variance.Invariant -> Universes0.Variance.Invariant
 
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
+    let names = CArray.map_to_list quote_name (Univ.UContext.names uctx)  in
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    (quote_univ_instance levels, quote_univ_constraints constraints)
+    (names, (quote_univ_instance levels, quote_univ_constraints constraints))
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
@@ -201,14 +191,14 @@ struct
       (fun l -> match quote_level l with
         | Coq_inl _ -> None
         | Coq_inr l -> Some l)
-      (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
+      (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context uctx : quoted_abstract_univ_context =
-    let names = Univ.AUContext.names uctx in
+    let names = Univ.AbstractContext.names uctx in
     let levels = CArray.map_to_list quote_name names in
-    let constraints = Univ.UContext.constraints (Univ.AUContext.repr uctx) in
+    let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in
     (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =
@@ -243,8 +233,8 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
-  (* let mkInt i = Coq_tInt i
-  let mkFloat f = Coq_tFloat f *)
+  let mkInt i = Coq_tInt i
+  let mkFloat f = Coq_tFloat f
 
   let rec seq f t =
     if f < t then
@@ -271,7 +261,7 @@ struct
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in
-    Coq_tFix (block, a)
+    Coq_tCoFix (block, a)
 
   let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
@@ -321,7 +311,15 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
-  let mk_global_env universes declarations = { universes; declarations }
+  type pre_quoted_retroknowledge = 
+    { retro_int63 : quoted_kernel_name option;
+      retro_float64 : quoted_kernel_name option }
+
+  let quote_retroknowledge r = 
+    { Environment.Retroknowledge.retro_int63 = r.retro_int63; 
+      Environment.Retroknowledge.retro_float64 = r.retro_float64 }
+
+  let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function
@@ -395,7 +393,7 @@ struct
        let k = (quote_int (k - 1)) in
        ConstructRef (quote_inductive (kn,n), k)
 
-  let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
+  let mkPolymorphic_entry c = Universes0.Polymorphic_entry c
   let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
 
 end

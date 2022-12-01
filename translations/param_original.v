@@ -105,7 +105,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tFix _ _ | tCoFix _ _ => todo "tsl"
   | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
-  (* | tInt _ | tFloat _ => todo "impossible" *)
+  | tInt _ | tFloat _ => todo "tsl"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
                | None => t1 end
@@ -165,12 +165,12 @@ MetaCoq Run (typ <- tmQuote (forall A, A -> A) ;;
 
 
 
-Instance param : Translation :=
+#[export] Instance param : Translation :=
   {| tsl_id := tsl_ident ;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
      (* Implement and Implement Existing cannot be used with this translation *)
      tsl_ty := None ;
-     tsl_ind := fun ΣE mp kn mind => 
+     tsl_ind := fun ΣE mp kn mind =>
      ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
 
 

@@ -114,6 +114,7 @@ Fixpoint eqb_term (u v : term) : bool :=
       eqb x.(rarg) y.(rarg) &&
       eqb x.(dname) y.(dname)) mfix mfix'
 
+  | tPrim p, tPrim p' => eqb p p'
   | _, _ => false
   end.
 
@@ -122,14 +123,14 @@ Proof.
   intros eqpq; split; intros []; constructor; intuition.
 Qed.
 
-Lemma reflectEq_andb {A B} {ra : ReflectEq A} {rb : ReflectEq B} {x x' : A} {y y' : B} : 
+Lemma reflectEq_andb {A B} {ra : ReflectEq A} {rb : ReflectEq B} {x x' : A} {y y' : B} :
   reflectProp ({| pr1 := x; pr2 := y |} = {| pr1 := x'; pr2 := y' |}) ((x == x') && (y == y')).
 Proof.
   destruct (eqb_spec x x'); try constructor; try congruence.
   destruct (eqb_spec y y'); constructor; congruence.
 Qed.
 
-Lemma reflectEq_andb_3 {A B C} {ra : ReflectEq A} {rb : ReflectEq B} {rc : ReflectEq C} {x x' : A} {y y' : B} {z z' : C} : 
+Lemma reflectEq_andb_3 {A B C} {ra : ReflectEq A} {rb : ReflectEq B} {rc : ReflectEq C} {x x' : A} {y y' : B} {z z' : C} :
   reflectProp ({| pr1 := x; pr2 := {| pr1 := y; pr2 := z |} |} = {| pr1 := x'; pr2 := {| pr1 := y'; pr2 := z' |} |}) ((x == x') && (y == y') && (z == z')).
 Proof.
   destruct (eqb_spec x x'); try constructor; try congruence.
@@ -161,14 +162,14 @@ Proof.
   split. eapply noConfusion_inv. eapply noConfusion.
 Qed.
 
-Lemma reflectProp_sigma_simpl {A B : Type} (x x' : A) (y y' : B) b : 
+Lemma reflectProp_sigma_simpl {A B : Type} (x x' : A) (y y' : B) b :
   reflectProp (x = x' /\ y = y') b <->
   reflectProp ({| pr1 := x; pr2 := y|} = {| pr1 := x'; pr2 := y' |}) b.
 Proof.
   eapply reflectProp_equiv. intuition auto; congruence.
 Qed.
- 
-Lemma reflect_prop_list {A} {l l' : list A} {p : A -> A -> bool} : 
+
+Lemma reflect_prop_list {A} {l l' : list A} {p : A -> A -> bool} :
   All (fun x : A => forall y : A, reflectProp (x = y) (p x y)) l ->
   reflectProp (l = l') (forallb2 p l l').
 Proof.
@@ -182,7 +183,7 @@ Qed.
 Local Ltac t := try constructor; intuition auto; try congruence.
 Local Ltac t' := rewrite /= ?andb_false_r ?andb_true_r /=; t.
 
-Lemma reflect_prop_context_decl d d' : 
+Lemma reflect_prop_context_decl d d' :
   ondecl (fun x : term => forall y : term, reflectProp (x = y) (eqb_term x y)) d ->
   reflectProp (d = d') (eqb_context_decl eqb_term d d').
 Proof.
@@ -218,7 +219,7 @@ Proof.
     case: (reflect_prop_list (l:=l) (l' := brs)); t'.
     { eapply All_impl; tea; cbv beta. intros [bctx bbody] [].
       intros [bctx' bbody']; cbn in *.
-      case: (reflect_prop_list (l' := bctx')); t'. 
+      case: (reflect_prop_list (l' := bctx')); t'.
       eapply All_impl; tea; cbv beta; intros.
       now eapply reflect_prop_context_decl.
       destruct (r0 bbody'); t'. }
@@ -246,7 +247,7 @@ Qed.
 #[global]
 Instance EqDec_term : EqDec term := ReflectEq_EqDec _.
 
-(** This is defined using reflect_list, so no issue of computing with proofs here. *)  
+(** This is defined using reflect_list, so no issue of computing with proofs here. *)
 #[global]
 Instance eqb_ctx : ReflectEq context := _.
 
@@ -268,7 +269,7 @@ Next Obligation.
 Proof. destruct x, y; cbn; case: eqb_spec; t. Qed.
 
 Definition eqb_context_decl (x y : context_decl) :=
-  eqb (x.(decl_name), x.(decl_body), x.(decl_type)) 
+  eqb (x.(decl_name), x.(decl_body), x.(decl_type))
     (y.(decl_name), y.(decl_body), y.(decl_type)).
 
 #[program, global]
@@ -310,9 +311,9 @@ Proof.
   destruct x, y; cbn in *.
   unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
 Qed.
-  
+
 Definition eqb_projection_body (x y : projection_body) :=
-  (x.(proj_name), x.(proj_type), x.(proj_relevance)) == 
+  (x.(proj_name), x.(proj_type), x.(proj_relevance)) ==
   (y.(proj_name), y.(proj_type), y.(proj_relevance)).
 
 #[program, global]

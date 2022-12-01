@@ -1,0 +1,13 @@
+# TODO: Generate automatically with Dune
+
+package "plugin" (
+    description = "The MetaCoq Coq Template Plugin"
+    version = "8.8"
+    directory = "src"
+    requires = "coq-core.plugins.ltac stdlib-shims"
+    archive(byte) = "template_coq.cma"
+    archive(native) = "template_coq.cmxa"
+    plugin(byte) = "template_coq.cma"
+    plugin(native) = "template_coq.cmxs"
+)
+directory = "."

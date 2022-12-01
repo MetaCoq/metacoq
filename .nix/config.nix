@@ -31,18 +31,17 @@
 
   ## select an entry to build in the following `bundles` set
   ## defaults to "default"
-  default-bundle = "default";
+  default-bundle = "coq-8.16";
 
-  ## write one `bundles.name` attribute set per
-  ## alternative configuration
-  ## When generating GitHub Action CI, one workflow file
-  ## will be created per bundle
-  bundles.default = {
+  # MetaCoq is expected to be compatible with a single coq version
+  # The name of the bundle should finish with the coq version to use
+  # cachedMake.sh
+  bundles."coq-8.16" = {
 
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
-    coqPackages.coq.override.version = "8.14";
-    coqPackages.equations.override.version = "1.3+8.14";
+    coqPackages.coq.override.version = "8.16";
+    coqPackages.equations.override.version = "1.3+8.16";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either

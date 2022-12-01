@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import All Loader.
 Import MCMonadNotation.
 Open Scope bs.
 
-Definition constructor (goal : Ast.term): TemplateMonad typed_term := 
+Definition constructor (goal : Ast.term): TemplateMonad typed_term :=
   let '(hd, iargs) := decompose_app goal in
   match hd with
   | Ast.tInd ind u =>
@@ -13,7 +13,7 @@ Definition constructor (goal : Ast.term): TemplateMonad typed_term :=
       let cstrs := Ast.Env.ind_ctors oib in
       match cstrs with
       | [] => tmFail "no constructor in this inductive type"
-      | hd :: _ => 
+      | hd :: _ =>
           let args := cstr_args hd in
           let params := firstn qi.(ind_npars) iargs in
           let args := (params ++ map (fun _ => Ast.hole) args)%list in
@@ -28,7 +28,7 @@ Definition constructor (goal : Ast.term): TemplateMonad typed_term :=
 
 Ltac constructor_tac :=
   match goal with
-  |- ?T => 
+  |- ?T =>
       let k tm := refine tm.(my_projT2) in
       unshelve quote_term T ltac:(fun gl => run_template_program (constructor gl) k)
   end.

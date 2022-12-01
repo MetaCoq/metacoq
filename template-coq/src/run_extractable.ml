@@ -58,6 +58,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
          (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
   in
   let envind = Environ.push_rel_context (List.rev indtys) env in
+  let ntyps = Array.length mib.mind_packets in
   let (ls,acc) =
     List.fold_left (fun (ls,acc) oib ->
     let named_ctors =
@@ -120,9 +121,8 @@ let get_constant_body b =
   | Def b -> Some b
   | Undef inline -> None
   | OpaqueDef pr -> 
-    let opaquetab = Global.opaque_tables () in
-    let proof, _ = Opaqueproof.force_proof Library.indirect_accessor opaquetab pr in
-    let ctx = Opaqueproof.force_constraints Library.indirect_accessor opaquetab pr in (* FIXME delayed univs skipped *)
+    let proof, _ = Global.force_proof Library.indirect_accessor pr in
+    (* FIXME delayed univs skipped *)
     Some proof
   | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
 
@@ -137,8 +137,7 @@ let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
-let of_nat (t : Datatypes.nat) : int =
-  failwith "of_constr"
+let of_nat (t : int) : int = t
 
 let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   match ck with

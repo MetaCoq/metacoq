@@ -54,7 +54,7 @@ Inductive term_direct_subterm : term -> term -> Type :=
 Derive Signature for term_direct_subterm.
 
 Definition term_direct_subterm_context (t u : term) (p : term_direct_subterm t u) : context :=
-  match p with 
+  match p with
   | term_direct_subterm_4_1 na A B => [vass na A]
   | term_direct_subterm_5_1 na A t => [vass na A]
   | term_direct_subterm_6_1 na b B t => [vdef na b B]
@@ -66,9 +66,9 @@ Require Equations.Type.WellFounded.
 Definition term_subterm := Relation.trans_clos term_direct_subterm.
 
 Fixpoint term_subterm_context {t u : term} (p : term_subterm t u) : context :=
-  match p with 
+  match p with
   | Relation.t_step y xy => term_direct_subterm_context _ _ xy
-  | Relation.t_trans y z rxy ryz => 
+  | Relation.t_trans y z rxy ryz =>
     term_subterm_context rxy ++ term_subterm_context ryz
   end.
 
@@ -88,7 +88,7 @@ Proof. econstructor 2; eauto. Qed.
 
 #[global]
 Instance redp_red Σ Γ : CRelationClasses.subrelation (redp Σ Γ) (red Σ Γ).
-Proof. 
+Proof.
   intros x y.
   induction 1; solve [econstructor; eauto].
 Qed.
@@ -112,7 +112,7 @@ Proof.
     + now transitivity y.
 Qed.
 
-(** Well-founded relation allowing to define functions using weak-head reduction 
+(** Well-founded relation allowing to define functions using weak-head reduction
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
@@ -156,7 +156,7 @@ Section fix_sigma.
       specialize (IHr2 t' ts').
       forward IHr2. now rewrite Hts.
       destruct IHr2 as [t'' [[zt' [ts'' Hts'']]]].
-      exists t''. split; split; auto. 
+      exists t''. split; split; auto.
       now transitivity t'.
       exists ts''.
       now rewrite Hts'' Hts.
@@ -180,7 +180,7 @@ Section fix_sigma.
     intros (Γ' & t2 & ?) [(t' & r & ts & eqctx)].
     eapply Relation_Properties.clos_rt_rtn1 in r. inversion r.
     + subst. eapply IH_sub; auto.
-      intros. 
+      intros.
       inversion H0.
       * subst.
         destruct (term_subterm_red1 X0) as [t'' [[redt' [tst' Htst']]]].
@@ -234,37 +234,37 @@ End fix_sigma.
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=
-    fun '(Γ2; t2; H) '(Γ1; t1; H2) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
+    fun '(Γ2; t2; H) '(Γ1; t1; H2) => forall Σ (wfΣ : abstract_env_ext_rel X Σ),
     ∥ (redp Σ Γ1 t1 t2 * (Γ1 = Γ2)) + ∑ ts : term_subterm t2 t1, Γ2 = (Γ1 ,,, term_subterm_context ts) ∥.
 
   Definition wf_redp_subterm_rel : WellFounded redp_subterm_rel.
   Proof.
     intros (Γ & s & H). pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    pose (wf_extΣ := abstract_env_ext_wf _ wfΣ). sq. 
+    pose (wf_extΣ := abstract_env_ext_wf _ wfΣ). sq.
     induction (normalisation Σ wf_extΣ Γ s (H _ wfΣ)) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?). intro R. specialize (R _ wfΣ).
     destruct R as [[[r eq]|[ts eqctx]]].
     + subst. eapply Relation_Properties.trans_clos_tn1 in r.
-      eapply IH. clear -r. 
+      eapply IH. clear -r.
       induction r; try solve [econstructor; auto].
       now eapply cored_trans with y.
     + subst.
       apply IH_sub. eauto.
       intros. eapply cored_redp in H0 as [].
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
-      eapply IH. eapply cored_redp. sq. eassumption. red. intros. 
+      eapply IH. eapply cored_redp. sq. eassumption. red. intros.
       sq. right. exists tst'. now rewrite Htst'.
-    Unshelve. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. 
+    Unshelve. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
               eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
-    Unshelve. eauto.  
+    Unshelve. eauto.
   Defined.
 
   Global Instance wf_redp_subterm : WellFounded redp_subterm_rel.

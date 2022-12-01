@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.     
+From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
-    ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap 
+    ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
 Local Open Scope string_scope.
@@ -18,7 +18,7 @@ Section sec.
 
 Variable gen_transform : global_context -> term -> term.
 
-Definition gen_transform_constant_decl Σ cb := 
+Definition gen_transform_constant_decl Σ cb :=
     {| cst_body := option_map (gen_transform Σ) cb.(cst_body) |}.
 
 Definition gen_transform_decl Σ d :=
@@ -27,7 +27,7 @@ Definition gen_transform_decl Σ d :=
   | InductiveDecl idecl => d
   end.
 
-Definition gen_transform_env Σ := 
+Definition gen_transform_env Σ :=
   map (on_snd (gen_transform_decl Σ)) Σ.
 
 Program Fixpoint gen_transform_env' Σ : global_context :=
@@ -39,7 +39,7 @@ end.
 Import EGlobalEnv EExtends.
 
 Lemma extends_lookup_projection {efl : EEnvFlags} {Σ Σ' p} : extends Σ Σ' -> wf_glob Σ' ->
-isSome (lookup_projection Σ p) -> 
+isSome (lookup_projection Σ p) ->
 lookup_projection Σ p = lookup_projection Σ' p.
 Proof.
 intros ext wf; cbn -[lookup_projection].
@@ -57,7 +57,7 @@ forall n, EWellformed.wellformed Σ n t ->
 forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ' ->
 gen_transform Σ t = gen_transform Σ' t.
 
-Lemma wellformed_gen_transform_decl_extends {Σ : global_context} t : 
+Lemma wellformed_gen_transform_decl_extends {Σ : global_context} t :
 wf_global_decl Σ t ->
 forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ' ->
 gen_transform_decl Σ t = gen_transform_decl Σ' t.
@@ -68,10 +68,10 @@ destruct (cst_body c) => /= //. f_equal.
 now eapply wellformed_gen_transform_extends.
 Qed.
 
-Lemma lookup_env_gen_transform_env_Some {Σ : global_context} kn d : 
+Lemma lookup_env_gen_transform_env_Some {Σ : global_context} kn d :
 wf_glob Σ ->
 lookup_env Σ kn = Some d ->
-∑ Σ' : global_context, 
+∑ Σ' : global_context,
   [× extends Σ' Σ, wf_global_decl Σ' d &
     lookup_env (gen_transform_env Σ) kn = Some (gen_transform_decl Σ' d)].
 Proof.
@@ -83,7 +83,7 @@ case: eqb_specT => //.
   cbn. now depelim wfg.
   f_equal. symmetry. eapply wellformed_gen_transform_decl_extends. cbn. now depelim wfg.
   cbn. now exists [a]. now cbn.
-- intros _. 
+- intros _.
   cbn in IHΣ. forward IHΣ. now depelim wfg.
   intros hl. specialize (IHΣ hl) as [Σ'' [ext wfgd hl']].
   exists Σ''. split => //.
@@ -104,14 +104,14 @@ induction Σ; cbn; auto.
 case: eqb_spec => //.
 Qed.
 
-Lemma lookup_env_gen_transform_env_None {Σ : global_context} kn : 
+Lemma lookup_env_gen_transform_env_None {Σ : global_context} kn :
 lookup_env Σ kn = None ->
 lookup_env (gen_transform_env Σ) kn = None.
 Proof.
 cbn. intros hl. rewrite lookup_env_map_snd hl //.
 Qed.
 
-Lemma lookup_env_gen_transform {Σ : global_context} kn : 
+Lemma lookup_env_gen_transform {Σ : global_context} kn :
 wf_glob Σ ->
 lookup_env (gen_transform_env Σ) kn = option_map (gen_transform_decl Σ) (lookup_env Σ kn).
 Proof.
@@ -120,12 +120,11 @@ destruct (lookup_env Σ kn) eqn:hl.
 - eapply lookup_env_gen_transform_env_Some in hl as [Σ' [ext wf' hl']] => /=.
   rewrite hl'. f_equal.
   eapply wellformed_gen_transform_decl_extends; eauto. auto.
-  
 - cbn. now eapply lookup_env_gen_transform_env_None in hl.
 Qed.
 
 
-Lemma is_propositional_gen_transform {Σ : global_context} ind : 
+Lemma is_propositional_gen_transform {Σ : global_context} ind :
   wf_glob Σ ->
   inductive_isprop_and_pars Σ ind = inductive_isprop_and_pars (gen_transform_env Σ) ind.
 Proof.
@@ -133,11 +132,11 @@ Proof.
   rewrite /lookup_inductive /lookup_minductive.
   rewrite (lookup_env_gen_transform (inductive_mind ind) wf).
   rewrite /GlobalContextMap.inductive_isprop_and_pars /GlobalContextMap.lookup_inductive
-    /GlobalContextMap.lookup_minductive.  
+    /GlobalContextMap.lookup_minductive.
   destruct lookup_env as [[decl|]|] => //.
 Qed.
 
-Lemma is_propositional_cstr_gen_transform {Σ : global_context} ind c : 
+Lemma is_propositional_cstr_gen_transform {Σ : global_context} ind c :
   wf_glob Σ ->
   constructor_isprop_pars_decl Σ ind c = constructor_isprop_pars_decl (gen_transform_env Σ) ind c.
 Proof.
@@ -145,7 +144,7 @@ Proof.
   rewrite /lookup_constructor /lookup_inductive /lookup_minductive.
   rewrite (lookup_env_gen_transform (inductive_mind ind) wf).
   rewrite /GlobalContextMap.inductive_isprop_and_pars /GlobalContextMap.lookup_inductive
-    /GlobalContextMap.lookup_minductive.  
+    /GlobalContextMap.lookup_minductive.
   destruct lookup_env as [[decl|]|] => //.
 Qed.
 
@@ -174,7 +173,7 @@ Proof.
 Qed.
 
 Lemma constructor_isprop_pars_decl_inductive {Σ ind c} {prop pars cdecl} :
-  constructor_isprop_pars_decl Σ ind c = Some (prop, pars, cdecl)  -> 
+  constructor_isprop_pars_decl Σ ind c = Some (prop, pars, cdecl)  ->
   inductive_isprop_and_pars Σ ind = Some (prop, pars).
 Proof.
   rewrite /constructor_isprop_pars_decl /inductive_isprop_and_pars /lookup_constructor.
@@ -194,9 +193,9 @@ Proof.
   rewrite wellformed_mkApps //. eapply andP.
 Qed.
 
-Lemma gen_transform_env_extends' {Σ Σ' : global_context} : 
+Lemma gen_transform_env_extends' {Σ Σ' : global_context} :
   extends Σ Σ' ->
-  wf_glob Σ' -> 
+  wf_glob Σ' ->
   List.map (on_snd (gen_transform_decl Σ)) Σ =
   List.map (on_snd (gen_transform_decl Σ')) Σ.
 Proof.
@@ -236,14 +235,14 @@ Variable Pre : global_context -> term -> Prop.
 
 Hypothesis gen_transform_wellformed : forall {Σ : global_context} n t,
   has_tBox -> has_tRel -> Pre Σ t ->
-  @wf_glob efl Σ -> @EWellformed.wellformed efl Σ n t -> 
+  @wf_glob efl Σ -> @EWellformed.wellformed efl Σ n t ->
   EWellformed.wellformed (efl := efl') Σ n (gen_transform Σ t).
 
 Import EWellformed.
 
 Lemma gen_transform_wellformed_irrel {Σ : global_context} t :
   wf_glob Σ ->
-  forall n, wellformed (efl := efl') Σ n t -> 
+  forall n, wellformed (efl := efl') Σ n t ->
   wellformed (efl := efl') (gen_transform_env Σ) n t.
 Proof.
   intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
@@ -267,7 +266,7 @@ Qed.
 
 Lemma gen_transform_wellformed_decl_irrel {Σ : global_context} d :
   wf_glob Σ ->
-  wf_global_decl (efl:= efl') Σ d -> 
+  wf_global_decl (efl:= efl') Σ d ->
   wf_global_decl (efl := efl') (gen_transform_env Σ) d.
 Proof.
   intros wf; destruct d => /= //.
@@ -281,7 +280,7 @@ Hypothesis cstrs_efl : forall _ : is_true (@has_cstr_params efl), is_true (@has_
 Definition Pre_decl Σ d := match d with ConstantDecl cb => match cb.(cst_body) with Some b => Pre Σ b | _ => True end | _ => True end.
 
 Lemma gen_transform_decl_wf {Σ : global_context} :
-  has_tBox -> has_tRel -> wf_glob Σ -> 
+  has_tBox -> has_tRel -> wf_glob Σ ->
   forall d, wf_global_decl Σ d -> Pre_decl Σ d ->
   wf_global_decl (efl := efl') (gen_transform_env Σ) (gen_transform_decl Σ d).
 Proof.
@@ -298,7 +297,7 @@ Proof.
    left. eapply cstrs_efl. now rewrite H.
 Qed.
 
-Lemma fresh_global_gen_transform_env {Σ : global_context} kn : 
+Lemma fresh_global_gen_transform_env {Σ : global_context} kn :
   fresh_global kn Σ ->
   fresh_global kn (gen_transform_env Σ).
 Proof.

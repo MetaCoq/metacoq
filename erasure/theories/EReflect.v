@@ -27,6 +27,7 @@ Local Ltac term_dec_tac term_dec :=
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
+         | x : recursivity_kind, y : recursivity_kind |- _ => fcase (eq_dec x y)
          end.
 
 Ltac nodec :=
@@ -110,6 +111,8 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
+  - destruct (eq_dec p p0); nodec.
+    left; subst. reflexivity.
 Defined.
 
 #[global]
@@ -120,7 +123,7 @@ Definition eqb_constant_body (x y : constant_body) :=
   eqb (cst_body x) (cst_body y).
 
 #[global, program]
-Instance reflect_constant_body : ReflectEq constant_body := 
+Instance reflect_constant_body : ReflectEq constant_body :=
   {| eqb := eqb_constant_body |}.
 Next Obligation.
 Proof.
@@ -134,7 +137,7 @@ Definition eqb_constructor_body (x y : constructor_body) :=
   (x.(cstr_name), x.(cstr_nargs)) == (y.(cstr_name), y.(cstr_nargs)).
 
 #[global, program]
-Instance reflect_constructor_body : ReflectEq constructor_body := 
+Instance reflect_constructor_body : ReflectEq constructor_body :=
   {| eqb := eqb_constructor_body |}.
 Next Obligation.
 Proof.
@@ -146,7 +149,7 @@ Definition eqb_projection_body (x y : projection_body) :=
   x.(proj_name) == y.(proj_name).
 
 #[global, program]
-Instance reflect_projection_body : ReflectEq projection_body := 
+Instance reflect_projection_body : ReflectEq projection_body :=
   {| eqb := eqb_projection_body |}.
 Next Obligation.
 Proof.
@@ -169,14 +172,14 @@ Proof.
 Defined.
 
 Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
-  let (n, b) := x in
-  let (n', b') := y in
-  eqb n n' && eqb b b'.
+  let (f, n, b) := x in
+  let (f', n', b') := y in
+  eqb f f' && eqb n n' && eqb b b'.
 
 #[global, program]
-Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body := 
+Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body :=
   {| eqb := eqb_mutual_inductive_body |}.
-Next Obligation.  
+Next Obligation.
 Proof.
   revert x y; intros [] [].
   unfold eqb_mutual_inductive_body; finish_reflect.

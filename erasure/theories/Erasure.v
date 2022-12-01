@@ -26,17 +26,17 @@ Obligation Tactic := program_simpl.
 
 Import EWcbvEval.
 
-Axiom assume_welltyped_template_program_expansion : 
+Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
   let p' := EtaExpand.eta_expand_program p in
   ∥ wt_template_program p' ∥ /\ EtaExpand.expanded_program p'.
 
-Axiom assume_preservation_template_program_env_expansion : 
+Axiom assume_preservation_template_program_env_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥) v,
   eval_template_program_env p v ->
   ∥ eval_template_program (EtaExpand.eta_expand_program p) (EtaExpand.eta_expand p.1 [] v) ∥.
 
-Program Definition eta_expand : Transform.t template_program_env template_program Ast.term Ast.term 
+Program Definition eta_expand : Transform.t template_program_env template_program Ast.term Ast.term
   eval_template_program_env eval_template_program :=
   {| name := "eta expand cstrs and fixpoints";
       pre := fun p => ∥ wt_template_program_env p ∥ ;
@@ -47,15 +47,15 @@ Next Obligation.
   destruct p. now apply assume_welltyped_template_program_expansion.
 Qed.
 Next Obligation.
-  red. intros p v [wt] ev. 
+  red. intros p v [wt] ev.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
 Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t TemplateProgram.template_program EProgram.eprogram 
+ Transform.t TemplateProgram.template_program EProgram.eprogram
   Ast.term EAst.term
   TemplateProgram.eval_template_program
-  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) := 
+  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   (* Build an efficient lookup map for the following eta-expansion phase *)
   build_template_program_env ▷
   (* Eta-expand constructors and fixpoint *)
@@ -66,29 +66,29 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   pcuic_expand_lets_transform ▷
   (* Erasure of proofs terms in Prop and types *)
   erase_transform ▷
-  (* Simulation of the guarded fixpoint rules with a single unguarded one: 
-    the only "stuck" fixpoints remaining are unapplied. 
+  (* Simulation of the guarded fixpoint rules with a single unguarded one:
+    the only "stuck" fixpoints remaining are unapplied.
     This translation is a noop on terms and environments.  *)
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   (* Remove all constructor parameters *)
-  remove_params_optimization (wcon := eq_refl) ▷ 
+  remove_params_optimization (wcon := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   (* Remove all cases / projections on propositional content *)
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
   (* Inline projections to cases *)
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl :=  efl) ▷
+  rebuild_wf_env_transform (efl :=  efl) true ▷
   (* First-order constructor representation *)
   constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
 
-(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
+(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
    parameters in inductive declarations. The constructor applications are also transformed to a first-order
-   "block"  application, of the right length, and the evaluation relation does not need to consider guarded 
+   "block"  application, of the right length, and the evaluation relation does not need to consider guarded
    fixpoints or case analyses on propositional content. All fixpoint bodies start with a lambda as well.
    Finally, projections are inlined to cases, so no `tProj` remains. *)
 
@@ -96,35 +96,35 @@ Import EGlobalEnv EWellformed.
 
 Next Obligation.
   destruct H. split => //. sq.
-  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
+  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
-Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) := 
+Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :=
   build_template_program_env ▷
   eta_expand ▷
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
-  erase_transform ▷ 
+  erase_transform ▷
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
-  remove_params_fast_optimization (wcon := eq_refl)  _ ▷ 
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  remove_params_fast_optimization (wcon := eq_refl)  _ ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
-  rebuild_wf_env_transform (efl :=  efl) ▷
+  rebuild_wf_env_transform (efl :=  efl) true ▷
   constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
 Next Obligation.
-  destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
+  destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
 Definition run_erase_program_fast {guard : abstract_guard_impl} := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
 
-Axiom fake_guard_impl_properties : 
+Axiom fake_guard_impl_properties :
 forall (fix_cofix: PCUICTyping.FixCoFix)
        (Σ: PCUICAst.PCUICEnvironment.global_env_ext)
        (Γ: PCUICAst.PCUICEnvironment.context)
@@ -136,9 +136,9 @@ Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
 Next Obligation. apply fake_guard_impl_properties. Qed.
 
-(** This uses the retyping-based erasure and assumes that the global environment and term 
-  are welltyped (for speed). As such this should only be used for testing, or when we know that 
-  the environment is wellformed and the term well-typed (e.g. when it comes directly from a 
+(** This uses the retyping-based erasure and assumes that the global environment and term
+  are welltyped (for speed). As such this should only be used for testing, or when we know that
+  the environment is wellformed and the term well-typed (e.g. when it comes directly from a
   Coq definition). *)
 
 

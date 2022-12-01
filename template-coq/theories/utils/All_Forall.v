@@ -84,7 +84,7 @@ Proof.
   now apply alli_ext.
 Qed.
 
-Lemma alli_impl {A} (p q : nat -> A -> bool) n (l : list A) : 
+Lemma alli_impl {A} (p q : nat -> A -> bool) n (l : list A) :
   (forall i x, p i x -> q i x) ->
   alli p n l -> alli q n l.
 Proof.
@@ -95,19 +95,19 @@ Proof.
 Qed.
 
 Lemma allbiP {A} (P : nat -> A -> Type) (p : nat -> A -> bool) n l :
-  (forall i x, reflectT (P i x) (p i x)) -> 
+  (forall i x, reflectT (P i x) (p i x)) ->
   reflectT (Alli P n l) (alli p n l).
 Proof.
   intros Hp.
   apply equiv_reflectT.
   - induction 1; rewrite /= // IHX // andb_true_r.
     now destruct (Hp n hd).
-  - induction l in n |- *; rewrite /= //. constructor. 
+  - induction l in n |- *; rewrite /= //. constructor.
     move/andb_and => [pa pl].
     constructor; auto. now destruct (Hp n a).
 Qed.
 
-Lemma alli_Alli {A} (p : nat -> A -> bool) n l : 
+Lemma alli_Alli {A} (p : nat -> A -> bool) n l :
   alli p n l <~> Alli p n l.
 Proof.
   destruct (allbiP p p n l).
@@ -128,7 +128,7 @@ Qed.
 Section alli.
   Context {A} (p q : nat -> A -> bool) (l l' : list A).
 
-  Lemma alli_app n : 
+  Lemma alli_app n :
     alli p n (l ++ l') =
     alli p n l && alli p (#|l| + n) l'.
   Proof using Type.
@@ -152,7 +152,7 @@ Section alli.
   Qed.
 End alli.
 
-Lemma alli_mapi {A B} (f : nat -> A -> bool) (g : nat -> B -> A) n l : 
+Lemma alli_mapi {A B} (f : nat -> A -> bool) (g : nat -> B -> A) n l :
   alli f n (mapi_rec g l n) = alli (fun i x => f i (g i x)) n l.
 Proof.
   revert n; induction l => n; simpl; auto.
@@ -220,7 +220,7 @@ Proof.
 Qed.
 
 Lemma forallbP {A} (P : A -> Prop) (p : A -> bool) l :
-  (forall x, reflect (P x) (p x)) -> 
+  (forall x, reflect (P x) (p x)) ->
   reflect (Forall P l) (forallb p l).
 Proof.
   intros Hp.
@@ -244,7 +244,7 @@ Proof.
   intros f g Hfg ? ? ->. now apply forallb_ext.
 Qed.
 
-Lemma forallbP_cond {A} (P Q : A -> Prop) (p : A -> bool) l : 
+Lemma forallbP_cond {A} (P Q : A -> Prop) (p : A -> bool) l :
   Forall Q l ->
   (forall x, Q x -> reflect (P x) (p x)) -> reflect (Forall P l) (forallb p l).
 Proof.
@@ -259,7 +259,7 @@ Qed.
 Lemma nth_error_forallb {A} {p : A -> bool} {l : list A} {n x} :
   nth_error l n = Some x -> forallb p l -> p x.
 Proof.
-  intros Hnth HPl. 
+  intros Hnth HPl.
   induction l in n, Hnth, HPl |- * => //.
   - rewrite nth_error_nil in Hnth => //.
   - destruct n => /=; noconf Hnth.
@@ -356,7 +356,7 @@ Lemma All2_map_equiv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l
 Proof.
   split.
   - induction 1; simpl; constructor; try congruence.
-  - induction l in l' |- *; destruct l'; intros H; depelim H; constructor; auto. 
+  - induction l in l' |- *; destruct l'; intros H; depelim H; constructor; auto.
 Qed.
 
 Lemma All2_map {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l l'} :
@@ -521,11 +521,11 @@ Proof.
   intros hp x. eapply All2_refl. intros; reflexivity.
 Qed.
 
-Lemma All2_symmetry {A} (R : A -> A -> Type) : 
+Lemma All2_symmetry {A} (R : A -> A -> Type) :
   CRelationClasses.Symmetric R ->
   CRelationClasses.Symmetric (All2 R).
 Proof.
-  intros HR x y l. 
+  intros HR x y l.
   induction l; constructor; auto.
 Qed.
 
@@ -538,19 +538,19 @@ Proof.
 Qed.
 
 Lemma All2_apply {A B C} {D : A -> B -> C -> Type} {l : list B} {l' : list C} :
-  forall (a : A), 
+  forall (a : A),
     All2 (fun x y => forall a : A, D a x y) l l' ->
     All2 (fun x y => D a x y) l l'.
 Proof.
   intros a all. eapply (All2_impl all); auto.
-Qed. 
+Qed.
 
 Lemma All2_apply_arrow {A B C} {D : B -> C -> Type} {l : list B} {l' : list C} :
   A -> All2 (fun x y => A -> D x y) l l' ->
   All2 (fun x y => D x y) l l'.
 Proof.
   intros a all. eapply (All2_impl all); auto.
-Qed. 
+Qed.
 
 Lemma All2_apply_dep_arrow {B C} {A} {D : B -> C -> Type} {l : list B} {l' : list C} :
   All A l ->
@@ -560,7 +560,7 @@ Proof.
   intros a all.
   eapply All2_All_mix_left in all; tea.
   eapply (All2_impl all); intuition auto.
-Qed. 
+Qed.
 
 Lemma All2_apply_dep_All {B C} {A} {D : C -> Type} {l : list B} {l' : list C} :
   All A l ->
@@ -571,7 +571,7 @@ Proof.
   eapply All2_All_mix_left in all; tea.
   eapply All2_impl in all. 2:{ intros x y [ha hd]. exact (hd ha). }
   eapply All2_All_right; tea. auto.
-Qed. 
+Qed.
 
 
 Lemma All2i_All_left {A B} {P : nat -> A -> B -> Type} {Q : A -> Type} {n l l'} :
@@ -625,7 +625,7 @@ Proof. induction 1; constructor; auto. Qed.
 Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (fun x => P (f x)) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
-Lemma In_All {A} {P : A -> Type} l : 
+Lemma In_All {A} {P : A -> Type} l :
     (∀ x : A, In x l -> P x) -> All P l.
 Proof.
   induction l; cbn; constructor; auto.
@@ -772,7 +772,7 @@ Proof.
   - move=> [=] <-. rewrite List.rev_length Nat.add_0_r in X.
     now rewrite Nat.sub_0_r.
   - simpl. eauto.
-Qed.  
+Qed.
 
 Lemma Alli_shiftn {A} {P : nat -> A -> Type} k l n :
   Alli (fun x => P (n + x)) k l -> Alli P (n + k) l.
@@ -936,7 +936,7 @@ Proof.
 Qed.
 
 Lemma OnOne2_nth_error {A} (l l' : list A) n t P :
-  OnOne2 P l l' ->        
+  OnOne2 P l l' ->
   nth_error l n = Some t ->
   ∑ t', (nth_error l' n = Some t') *
   ((t = t') + (P t t')).
@@ -950,7 +950,7 @@ Proof.
 Qed.
 
 Lemma OnOne2_nth_error_r {A} (l l' : list A) n t' P :
-  OnOne2 P l l' ->        
+  OnOne2 P l l' ->
   nth_error l' n = Some t' ->
   ∑ t, (nth_error l n = Some t) *
   ((t = t') + (P t t')).
@@ -965,7 +965,7 @@ Qed.
 
 
 
-Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' : 
+Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' :
   (forall x y, Q x -> P x y -> Q y) ->
   OnOne2 P l l' -> All Q l -> All Q l'.
 Proof.
@@ -1017,8 +1017,8 @@ Proof.
   intros H; induction 1; constructor; try inv H; intuition.
 Qed.
 
-Lemma OnOne2i_app {A} (P : nat -> A -> A -> Type) {i l tl tl'} : 
-  OnOne2i P (#|l| + i) tl tl' -> 
+Lemma OnOne2i_app {A} (P : nat -> A -> A -> Type) {i l tl tl'} :
+  OnOne2i P (#|l| + i) tl tl' ->
   OnOne2i P i (l ++ tl) (l ++ tl').
 Proof. induction l in i |- *; simpl; try constructor; eauto.
   eapply IHl. now rewrite Nat.add_succ_r.
@@ -1151,7 +1151,7 @@ Proof.
 Qed.
 
 Lemma OnOne2i_nth_error {A} (l l' : list A) i n t P :
-  OnOne2i P i l l' ->        
+  OnOne2i P i l l' ->
   nth_error l n = Some t ->
   ∑ t', (nth_error l' n = Some t') *
   ((t = t') + (P (i + n)%nat t t')).
@@ -1166,7 +1166,7 @@ Proof.
 Qed.
 
 Lemma OnOne2i_nth_error_r {A} i (l l' : list A) n t' P :
-  OnOne2i P i l l' ->        
+  OnOne2i P i l l' ->
   nth_error l' n = Some t' ->
   ∑ t, (nth_error l n = Some t) *
   ((t = t') + (P (i + n)%nat t t')).
@@ -1197,8 +1197,8 @@ Proof.
   intros a; induction 1; constructor; try inv a; intuition.
 Qed.
 
-Lemma OnOne2All_app {A B} (P : B -> A -> A -> Type) {i i' l tl tl'} : 
-  OnOne2All P i tl tl' -> 
+Lemma OnOne2All_app {A B} (P : B -> A -> A -> Type) {i i' l tl tl'} :
+  OnOne2All P i tl tl' ->
   #|i'| = #|l| ->
   OnOne2All P (i' ++ i) (l ++ tl) (l ++ tl').
 Proof. induction l in i, i' |- *; simpl; try constructor; eauto.
@@ -1254,7 +1254,7 @@ Qed.
 Lemma OnOne2All_ind_l :
   forall A B (R : list A -> B -> A -> A -> Type)
     (P : forall L i l l', OnOne2All (R L) i l l' -> Type),
-    (forall L b bs x y l (r : R L b x y) (len : #|bs| = #|l|), 
+    (forall L b bs x y l (r : R L b x y) (len : #|bs| = #|l|),
       P L (b :: bs) (x :: l) (y :: l) (OnOne2All_hd _ _ _ _ _ l r len)) ->
     (forall L b bs x l l' (h : OnOne2All (R L) bs l l'),
         P L bs l l' h ->
@@ -1343,7 +1343,7 @@ Proof.
 Qed.
 
 Lemma OnOne2All_nth_error {A B} {i : list B} (l l' : list A) n t P :
-  OnOne2All P i l l' ->        
+  OnOne2All P i l l' ->
   nth_error l n = Some t ->
   ∑ t', (nth_error l' n = Some t') *
   ((t = t') + (∑ i', (nth_error i n = Some i') * P i' t t')).
@@ -1357,7 +1357,7 @@ Proof.
 Qed.
 
 Lemma OnOne2All_nth_error_r {A B} (i : list B) (l l' : list A) n t' P :
-  OnOne2All P i l l' ->        
+  OnOne2All P i l l' ->
   nth_error l' n = Some t' ->
   ∑ t, (nth_error l n = Some t) *
   ((t = t') + (∑ i', (nth_error i n = Some i') * P i' t t')).
@@ -1371,7 +1371,7 @@ Proof.
     intros [= ->]. exists t'; intuition auto.
 Qed.
 
-Lemma OnOne2All_impl_All_r {A B} (P : B -> A -> A -> Type) (Q : A -> Type) i l l' : 
+Lemma OnOne2All_impl_All_r {A B} (P : B -> A -> A -> Type) (Q : A -> Type) i l l' :
   (forall i x y, Q x -> P i x y -> Q y) ->
   OnOne2All P i l l' -> All Q l -> All Q l'.
 Proof.
@@ -1647,7 +1647,7 @@ Qed.
 Lemma nth_error_all {A} {P : A -> Type} {l : list A} {n x} :
   nth_error l n = Some x -> All P l -> P x.
 Proof.
-  intros Hnth HPl. 
+  intros Hnth HPl.
   induction l in n, Hnth, HPl |- *. destruct n; discriminate.
   destruct n; cbn in Hnth.
   - inversion Hnth. subst. inversion HPl. eauto.
@@ -1867,7 +1867,7 @@ Proof.
   induction Hall; destruct n; simpl; try congruence. auto.
 Qed.
 
-Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' : 
+Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' :
   All2 P l l' ->
   All2 Q l l' ->
   All2 (fun x y => P x y × Q x y) l l'.
@@ -1973,10 +1973,10 @@ Proof.
   intros H1 H2 Hl.
   induction H1 in l', H2, Hl |- *; destruct l'; depelim Hl.
   - econstructor.
-  - econstructor; firstorder. eapply IHAll; firstorder. 
+  - econstructor; firstorder. eapply IHAll; firstorder.
 Qed.
 
-Lemma All_All_All2 {A} (P Q : A -> Prop) l l' : 
+Lemma All_All_All2 {A} (P Q : A -> Prop) l l' :
   All P l -> All Q l' -> #|l| = #|l'| -> All2 (fun x y => P x /\ Q y) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; auto => //.
@@ -2104,7 +2104,7 @@ Lemma Forall2_map_right {A B C} (P : A -> B -> Prop) (f : C -> B) (l : list A) (
 Proof.
   split; intros.
   + eapply Forall2_map_inv. now rewrite map_id.
-  + rewrite -(map_id l). now eapply Forall2_map.  
+  + rewrite -(map_id l). now eapply Forall2_map.
 Qed.
 
 Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
@@ -2351,7 +2351,7 @@ Proof.
   eauto.
 Qed.
 
-Require Import MCSquash.
+From MetaCoq.Template Require Import MCSquash.
 
 Lemma All2_swap :
   forall A B R l l',
@@ -2810,7 +2810,7 @@ Proof.
 Qed.
 
 Lemma forallb2P {A B} (P : A -> B -> Prop) (p : A -> B -> bool) l l' :
-  (forall x y, reflect (P x y) (p x y)) -> 
+  (forall x y, reflect (P x y) (p x y)) ->
   reflect (Forall2 P l l') (forallb2 p l l').
 Proof.
   intros Hp.
@@ -2824,7 +2824,7 @@ Qed.
 
 (** All, All2 and In interactions. *)
 
-Lemma All2_In {A B} (P : A -> B -> Type) l l' x : In x l -> 
+Lemma All2_In {A B} (P : A -> B -> Type) l l' x : In x l ->
   All2 P l l' -> ∥ ∑ x', P x x' ∥.
 Proof.
   induction 2; simpl in H => //.
@@ -2833,7 +2833,7 @@ Proof.
   now eapply IHX.
 Qed.
 
-Lemma All2_In_right {A B} (P : A -> B -> Type) l l' x' : In x' l' -> 
+Lemma All2_In_right {A B} (P : A -> B -> Type) l l' x' : In x' l' ->
   All2 P l l' -> ∥ ∑ x, P x x' ∥.
 Proof.
   induction 2; simpl in H => //.
@@ -2842,7 +2842,7 @@ Proof.
   now eapply IHX.
 Qed.
 
-Lemma All_In {A} (P : A -> Type) l x : In x l -> 
+Lemma All_In {A} (P : A -> Type) l x : In x l ->
   All P l -> ∥ P x ∥.
 Proof.
   induction 2; simpl in H => //.
@@ -2851,7 +2851,7 @@ Proof.
   now eapply IHX.
 Qed.
 
-Lemma In_Forall {A} {P : A -> Prop} l : 
+Lemma In_Forall {A} {P : A -> Prop} l :
   (forall x, In x l -> P x) ->
   Forall P l.
 Proof.
@@ -2860,7 +2860,7 @@ Proof.
   intros x xin; apply H; simpl; auto.
 Qed.
 
-Lemma All_forall {X Y} (f:X->Y->Prop) xs: 
+Lemma All_forall {X Y} (f:X->Y->Prop) xs:
   All (fun a => forall b, f a b) xs ->
   (forall b, All (fun a => f a b) xs).
 Proof.
@@ -2882,7 +2882,7 @@ Proof. induction 1; simpl; constructor; try congruence. Qed.
 
 Lemma All2i_nth_impl_gen {A B} (R : nat -> A -> B -> Type) n l l' :
   All2i R n l l' ->
-  All2i (fun i x y => 
+  All2i (fun i x y =>
     (if i <? n then False
     else nth_error l (i - n) = Some x) × R i x y) n l l'.
 Proof.
@@ -2894,7 +2894,7 @@ Proof.
       + rewrite Nat.sub_diag. auto.
     * simpl. eapply (All2i_impl IHa).
       intros. destruct (Nat.ltb i (S n)) eqn:ltb; simpl in *; destruct X =>  //.
-      apply Nat.ltb_nlt in ltb. 
+      apply Nat.ltb_nlt in ltb.
       destruct (Nat.ltb i n) eqn:ltb'; simpl in *.
       + eapply Nat.ltb_lt in ltb'. lia.
       + eapply Nat.ltb_nlt in ltb'.
@@ -2911,7 +2911,7 @@ Proof.
   now rewrite Nat.sub_0_r in X.
 Qed.
 
-Lemma All2i_nth_error_l {A B} (P : nat -> A -> B -> Type) l l' n x k : 
+Lemma All2i_nth_error_l {A B} (P : nat -> A -> B -> Type) l l' n x k :
   All2i P k l l' ->
   nth_error l n = Some x ->
   ∑ c, nth_error l' n = Some c × P (k + n)%nat x c.
@@ -2925,7 +2925,7 @@ Proof.
       now rewrite Nat.add_succ_r.
 Qed.
 
-Lemma All2i_nth_error_r {A B} (P : nat ->A -> B -> Type) l l' n x k : 
+Lemma All2i_nth_error_r {A B} (P : nat ->A -> B -> Type) l l' n x k :
   All2i P k l l' ->
   nth_error l' n = Some x ->
   ∑ c, nth_error l n = Some c × P (k + n)%nat c x.
@@ -3060,8 +3060,8 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma All_fold_app_inv {A} {P} (Γ Δ : list A) : 
-  All_fold P (Γ ++ Δ) -> 
+Lemma All_fold_app_inv {A} {P} (Γ Δ : list A) :
+  All_fold P (Γ ++ Δ) ->
   All_fold P Δ × All_fold (fun Γ => P (Γ ++ Δ)) Γ.
 Proof.
   induction Γ in Δ |- *; split; auto. constructor.
@@ -3109,17 +3109,17 @@ Qed.
 Section All_fold.
   Context {A} {P : list A -> A -> Type}.
 
-  Lemma All_fold_impl Q Γ : 
-    All_fold P Γ -> 
+  Lemma All_fold_impl Q Γ :
+    All_fold P Γ ->
     (forall Γ x, P Γ x -> Q Γ x) ->
     All_fold Q Γ.
   Proof using Type.
     induction 1; simpl; intros => //; constructor; eauto.
   Qed.
 
-  Lemma All_fold_app Γ Δ : 
-    All_fold (fun Γ => P (Γ ++ Δ)) Γ -> 
-    All_fold P Δ -> 
+  Lemma All_fold_app Γ Δ :
+    All_fold (fun Γ => P (Γ ++ Δ)) Γ ->
+    All_fold P Δ ->
     All_fold P (Γ ++ Δ).
   Proof using Type.
     induction 1; simpl; intros => //.
@@ -3129,7 +3129,7 @@ End All_fold.
 
 Section Alli_All_fold.
   Context {A : Type}.
-  Lemma Alli_All_fold {P : nat -> A -> Type} {n Γ} : 
+  Lemma Alli_All_fold {P : nat -> A -> Type} {n Γ} :
     Alli P n Γ <~>
     All_fold (fun Γ d => P (n + #|Γ|) d) (List.rev Γ).
   Proof using Type.
@@ -3149,7 +3149,7 @@ Section Alli_All_fold.
         now constructor; [len in p|constructor].
   Qed.
 
-  Lemma Alli_rev_All_fold (P : nat -> A -> Type) n Γ : 
+  Lemma Alli_rev_All_fold (P : nat -> A -> Type) n Γ :
     Alli P n (List.rev Γ) ->
     All_fold (fun Γ d => P (n + #|Γ|) d) Γ.
   Proof using Type.
@@ -3157,7 +3157,7 @@ Section Alli_All_fold.
     now rewrite List.rev_involutive.
   Qed.
 
-  Lemma All_fold_Alli_rev (P : nat -> A -> Type) n Γ : 
+  Lemma All_fold_Alli_rev (P : nat -> A -> Type) n Γ :
     All_fold (fun Γ d => P (n + #|Γ|) d) Γ ->
     Alli P n (List.rev Γ).
   Proof using Type.
@@ -3169,13 +3169,13 @@ End Alli_All_fold.
 Section All2_fold.
   Context {A} {P : list A -> list A -> A -> A -> Type}.
 
-  Lemma All2_fold_All2 (Q : A -> A -> Type) {Γ Δ : list A} : 
+  Lemma All2_fold_All2 (Q : A -> A -> Type) {Γ Δ : list A} :
     All2_fold (fun _ _ => Q) Γ Δ <~>
     All2 Q Γ Δ.
   Proof using Type.
     split; induction 1; simpl; constructor; auto.
   Qed.
- 
+
   Lemma All2_fold_refl: (forall Δ x, P Δ Δ x x) ->
     forall Δ : list A, All2_fold P Δ Δ.
   Proof using Type.
@@ -3238,11 +3238,11 @@ Section All2_fold.
     depelim H'; specialize (IHΔ H'); intuition auto;
     constructor; auto.
   Qed.
-  
-  Lemma All2_fold_impl_ind {P' Γ Δ} :  
+
+  Lemma All2_fold_impl_ind {P' Γ Δ} :
     All2_fold P Γ Δ ->
-    (forall Γ Δ d d', 
-      All2_fold P Γ Δ -> 
+    (forall Γ Δ d d',
+      All2_fold P Γ Δ ->
       All2_fold P' Γ Δ ->
       P Γ Δ d d' ->
       P' Γ Δ d d') ->
@@ -3261,7 +3261,7 @@ Section All2_fold.
     induction H; constructor; simpl; eauto.
   Qed.
 
-  Lemma All2_fold_forallb2 (Pb : A -> A -> bool) Γ Δ : 
+  Lemma All2_fold_forallb2 (Pb : A -> A -> bool) Γ Δ :
     All2_fold (fun _ _ => Pb) Γ Δ ->
     forallb2 Pb Γ Δ.
   Proof using Type.
@@ -3323,7 +3323,7 @@ Lemma All_fold_prod {A} (P : list A -> A -> Type) Q Γ Δ :
   #|Γ| = #|Δ| ->
   All_fold P Γ ->
   All_fold P Δ ->
-  (forall Δ Δ' x y, 
+  (forall Δ Δ' x y,
     All_fold P Δ ->
     All_fold P Δ' ->
     All2_fold Q Δ Δ' -> P Δ x -> P Δ' y -> Q Δ Δ' x y) ->
@@ -3335,7 +3335,7 @@ Proof.
   - eauto.
 Qed.
 
-Lemma All2_fold_All_fold_mix {A P Q} {l l' : list A} : 
+Lemma All2_fold_All_fold_mix {A P Q} {l l' : list A} :
   All2_fold P l l' ->
   All_fold Q l ->
   All_fold Q l' ->
@@ -3344,14 +3344,14 @@ Proof.
   induction 1; [constructor|] => l r; depelim l; depelim r; constructor; auto.
 Qed.
 
-Lemma All2_fold_All_fold_mix_inv {A} {P Q} {l l' : list A} : 
+Lemma All2_fold_All_fold_mix_inv {A} {P Q} {l l' : list A} :
   All2_fold (fun Γ Γ' x y => Q Γ x × Q Γ' y × P Γ Γ' x y) l l' ->
   All2_fold P l l' × All_fold Q l × All_fold Q l'.
 Proof.
   induction 1; intuition (try constructor; auto).
 Qed.
 
-Lemma All_fold_All2_fold_impl {A} {P Q} {Γ : list A} : 
+Lemma All_fold_All2_fold_impl {A} {P Q} {Γ : list A} :
   All_fold P Γ ->
   (forall Γ d, All_fold P Γ -> All2_fold Q Γ Γ -> P Γ d -> Q Γ Γ d d) ->
   All2_fold Q Γ Γ.
@@ -3359,7 +3359,7 @@ Proof.
   intros a H; induction a; constructor; auto.
 Qed.
 
-Lemma All_fold_All2_fold {A P} {Γ : list A} : 
+Lemma All_fold_All2_fold {A P} {Γ : list A} :
   All_fold (fun Γ d => P Γ Γ d d) Γ <~>
   All2_fold P Γ Γ.
 Proof.
@@ -3396,9 +3396,9 @@ Qed.
 Set Equations Transparent.
 
 Section map_All.
-  Context {A B C} {Q : C -> Type} {P : C -> A  -> Prop} 
+  Context {A B C} {Q : C -> Type} {P : C -> A  -> Prop}
     (fn : forall (x : A) , (forall (y:C),  Q y -> P y x) -> B).
-  
+
   Equations? map_All (l : list A) (Hl : forall y, Q y -> ∥ All (P y) l ∥) : list B :=
   | [], _ := []
   | x :: xs, h := fn x _ :: map_All xs _.
@@ -3409,7 +3409,7 @@ Section map_All.
 End map_All.
 
 Lemma All_map_All {A B C} {Q : C -> Type} {P : C -> A -> Prop}
-  {Q' : B -> Type} {R : C -> A -> Prop} 
+  {Q' : B -> Type} {R : C -> A -> Prop}
   f args (ha: forall y : C, Q y -> ∥ All (R y) args ∥) :
   (forall y : C, Q y -> All (P y) args) ->
   (forall x y rx, P y x -> Q' (f x rx)) ->
@@ -3420,9 +3420,9 @@ Proof.
   - intros ha hf y hy. pose proof (ha y hy). depelim X0. econstructor; eauto.
     eapply X; eauto. intros. eapply ha in X1. now depelim X1.
 Qed.
- 
+
 Lemma map_All_length {A B C : Type} {Q : C -> Type} {P : C -> A -> Prop}
-  (fn : forall x : A, (forall y : C, Q y -> P y x) -> B) 
+  (fn : forall x : A, (forall y : C, Q y -> P y x) -> B)
   (l : list A) (Hl : forall y : C, Q y -> ∥ All (P y) l ∥) :
   #|map_All fn l Hl| = #|l|.
 Proof.
@@ -3430,7 +3430,7 @@ Proof.
 Qed.
 #[export] Hint Rewrite @map_All_length : len.
 
-Lemma nth_error_map_All {A B C} {Q : C -> Type} {P : C -> A  -> Prop} 
+Lemma nth_error_map_All {A B C} {Q : C -> Type} {P : C -> A  -> Prop}
   (fn : forall (x : A) , (forall (y:C),  Q y -> P y x) -> B) :
   forall l : list A, forall H : (forall y : C, Q y -> ∥ All (P y) l ∥),
   forall n x,
@@ -3445,7 +3445,7 @@ Proof.
     + now eapply H.
 Qed.
 
-Lemma All2_map2_left {A B C D} {P : A -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> A} {l l' l'' l'''} : 
+Lemma All2_map2_left {A B C D} {P : A -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> A} {l l' l'' l'''} :
   All2 R l l''' ->
   All2 Q l' l'' ->
   #|l| = #|l'| ->
@@ -3461,14 +3461,14 @@ Proof.
     simpl. constructor; auto. eapply hPQ; eauto.
 Qed.
 
-Lemma All2_map2_left_All3 {A B C} {P : A -> A -> Type} {f : B -> C -> A} {l l' l''} : 
+Lemma All2_map2_left_All3 {A B C} {P : A -> A -> Type} {f : B -> C -> A} {l l' l''} :
   All3 (fun x y z => P (f x y) z) l l' l'' ->
   All2 P (map2 f l l') l''.
 Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma All3_impl {A B C} {P Q : A -> B -> C -> Type} {l l' l''} : 
+Lemma All3_impl {A B C} {P Q : A -> B -> C -> Type} {l l' l''} :
   All3 P l l' l'' ->
   (forall x y z, P x y z -> Q x y z) ->
   All3 Q l l' l''.
@@ -3478,11 +3478,36 @@ Qed.
 
 Lemma map2_app {A B C} (f : A -> B -> C) l0 l0' l1 l1' :
   #|l0| = #|l1| -> #|l0'| = #|l1'| ->
-  map2 f (l0 ++ l0') (l1 ++ l1') = 
+  map2 f (l0 ++ l0') (l1 ++ l1') =
   map2 f l0 l1 ++ map2 f l0' l1'.
 Proof.
   induction l0 in l0', l1, l1' |- *; simpl; auto.
   - destruct l1 => //.
   - destruct l1 => /= // [=] hl hl'.
     now rewrite IHl0.
+Qed.
+
+Lemma All1_map2_right_inv {A B C} R (g : A -> B -> C) l l' : #|l| = #|l'| ->  All2 R l (map2 g l l') ->  All2 (fun x y => R x (g x y)) l l'.
+Proof.
+  elim: l l'=> [|x xs ih] [|y ys] //= [=] eq z; try depelim z ; try constructor=> //.
+  by apply: ih.
+Qed.
+
+Lemma All1_map2_right {A B C} R (g : A -> B -> C) l l' : All2 (fun x y => R x (g x y)) l l' -> All2 R l (map2 g l l').
+Proof.
+  elim: l l'=> [|x xs ih] [|y ys] //= z; try constructor ; try depelim z=>//.
+  by apply: ih.
+Qed.
+
+Lemma All1i_map2_right {A B C} k R (g : A -> B -> C) l l' : All2i (fun i x y => R i x (g x y)) k l l' -> All2i R k l (map2 g l l').
+Proof.
+  elim: l l' k=> [|x xs ih] [|y ys] //= k z; try constructor ; try depelim z=>//.
+  by apply: ih.
+Qed.
+
+Lemma All1i_Alli_mix_left {A B k Q R} {l : list A} {l' : list B}
+  : Alli Q k l -> All2i R k l l' -> All2i (fun i x y => Q i x * R i x y)%type k l l'.
+Proof.
+  move=> + h; elim: h=> [n|n x y xs ys r rs ih] q; depelim q; constructor=> //.
+  by apply: ih.
 Qed.

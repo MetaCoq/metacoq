@@ -179,8 +179,8 @@ Qed.
 
 #[global] Hint Constructors context_subst : core.
 
-Lemma context_subst_app {ctx ctx' args s} : 
-  context_subst (ctx ++ ctx') args s -> 
+Lemma context_subst_app {ctx ctx' args s} :
+  context_subst (ctx ++ ctx') args s ->
   context_subst (subst_context (skipn #|ctx| s) 0 ctx) (skipn (context_assumptions ctx') args) (firstn #|ctx| s) *
   context_subst ctx' (firstn (context_assumptions ctx') args) (skipn #|ctx| s).
 Proof.
@@ -196,7 +196,7 @@ Proof.
       pose proof (context_subst_length2 IHctx).
       pose proof (context_subst_length2 IHctx').
       pose proof (context_subst_length2 Hc).
-      rewrite context_assumptions_app in H1. 
+      rewrite context_assumptions_app in H1.
       rewrite firstn_app. rewrite (firstn_0 [a0]).
       { rewrite firstn_length_le in H0; lia. }
       rewrite app_nil_r. split; auto.
@@ -242,7 +242,7 @@ Proof.
         pose proof (context_subst_length2 Hc').
         rewrite !context_assumptions_app ?app_length ?List.rev_length /= Nat.add_0_r in H.
         pose proof (context_subst_length2 Hc). lia.
-        
+
       + specialize (IHtele (vass na ty :: ctx) (args ++ [a]) (a :: s) args' s').
         forward IHtele. { econstructor. auto. }
         rewrite -app_assoc. rewrite -app_comm_cons /=.
@@ -257,4 +257,91 @@ Proof.
   forward H by constructor.
   rewrite app_nil_r in H. destruct H.
   simpl in *. auto.
+Qed.
+
+Lemma context_subst_subst_extended_subst inst s Δ :
+  context_subst Δ inst s ->
+  s = map (subst0 (List.rev inst)) (extended_subst Δ 0).
+Proof using Type.
+  intros sp.
+  induction sp.
+  - simpl; auto.
+  - rewrite List.rev_app_distr /= lift0_id. f_equal.
+    rewrite lift_extended_subst.
+    rewrite map_map_compose. rewrite IHsp. apply map_ext.
+    intros. rewrite (subst_app_decomp [_]). f_equal.
+    simpl. rewrite simpl_subst ?lift0_id //.
+  - simpl. len.
+    f_equal; auto.
+    rewrite IHsp.
+    rewrite distr_subst. f_equal.
+    simpl; len.
+    pose proof (context_subst_length2 sp).
+    rewrite -H. rewrite -(List.rev_length args).
+    rewrite -(Nat.add_0_r #|List.rev args|).
+    rewrite simpl_subst_rec; try lia.
+    now rewrite lift0_id.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICSigmaCalculus.
+
+
+(**************************)
+(* Section  mk_ctx_subst  *)
+(**************************)
+
+Lemma context_subst_subst_expand_lets inst s Δ t k :
+  context_subst Δ inst s ->
+  subst s k t = subst (List.rev inst) k (expand_lets_k Δ k t).
+Proof.
+  move=> /[dup] H /context_subst_subst_extended_subst ->.
+  apply: map_subst_expand_lets_k.
+  rewrite List.rev_length.
+  apply: context_subst_assumptions_length; eassumption.
+Qed.
+
+
+Lemma make_context_subst_context_assumptions Δ args s :
+  context_assumptions Δ = #|args| ->
+  ∑ s', make_context_subst Δ args s = Some s'.
+Proof.
+  elim: Δ args s=> [|[?[?|]?] Δ ih].
+  + move=> []//=;eexists; reflexivity.
+  + move=> /= ??; apply:ih.
+  + move=> /= [//|hd tl /=] s [=]. apply: ih.
+Qed.
+
+Definition mk_ctx_subst Δ args := option_get [] (make_context_subst (List.rev Δ) args []).
+
+Lemma mk_ctx_subst_spec {Δ args} :
+  context_assumptions Δ = #|args| ->
+  context_subst Δ args (mk_ctx_subst Δ args).
+Proof.
+  rewrite /mk_ctx_subst -context_assumptions_rev.
+  move=> /(make_context_subst_context_assumptions _ _ []) [? /[dup] ? ->] /=.
+  rewrite -[Δ]rev_involutive.
+  by apply: make_context_subst_spec.
+Qed.
+
+
+Lemma mk_ctx_subst_length Δ l :
+  context_assumptions Δ = #|l| -> #|mk_ctx_subst Δ l| = #|Δ|.
+Proof.
+  move=> /mk_ctx_subst_spec /context_subst_length //.
+Qed.
+
+From Coq Require Import ssrbool.
+From MetaCoq.PCUIC Require Import PCUICClosed.
+Lemma closedn_ctx_subst_forall n Δ l s :
+  context_subst Δ l s ->
+  closedn_ctx n Δ ->
+  forallb (closedn n) l ->
+  forallb (closedn n) s.
+Proof.
+  move=> z; depind z=> //= /andP[/=? d].
+  - rewrite forallb_app=> /andP[?] /andP[/= -> _] /=; by apply: IHz.
+  - move=> ?.
+    have ? : forallb (closedn n) s by apply: IHz.
+    apply/andP; split=> //; apply: closedn_subst0=> //.
+    move: d=> /andP /= []; rewrite (context_subst_length z) Nat.add_comm //.
 Qed.

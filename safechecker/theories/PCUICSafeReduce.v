@@ -190,9 +190,9 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (X_type : abstract_env_ext_impl).
+  Context (X_type : abstract_env_impl).
 
-  Context (X : X_type.π1).
+  Context (X : X_type.π2.π1).
 
 (*  Local Definition gΣ := abstract_env_ext_rel Σ. *)
 
@@ -1085,11 +1085,11 @@ Corollary R_Acc_aux :
 
   Section reducewf.
     Context (Γ : context).
-    
+
     Notation sigmaarg :=
       (sigma (fun t => sigma (fun π => forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ (zipc t π)))).
 
-    Local Instance wf_proof : WellFounded (fun x y : sigmaarg => 
+    Local Instance wf_proof : WellFounded (fun x y : sigmaarg =>
         forall Σ, abstract_env_ext_rel X Σ -> R Σ Γ (pr1 x, pr1 (pr2 x)) (pr1 y, pr1 (pr2 y))).
     Proof.
       intros [t [π wt]].
@@ -1104,7 +1104,7 @@ Corollary R_Acc_aux :
         destruct (hΣ _ wfΣ) as [hΣ]. pose proof (R_Acc Γ (t0.(pr1), t0.(pr2).(pr1)) H).
         clear -H0. destruct t0 as [t [π wt]].
         cbn in *. revert wt.
-        depind H0. intros wt. constructor. intros. eapply H0. 
+        depind H0. intros wt. constructor. intros. eapply H0.
         * cbn in H1. exact H1.
         * reflexivity.
   Defined.
@@ -1235,7 +1235,7 @@ Corollary R_Acc_aux :
     induction hx using Acc_ind'.
     cbn. eapply h. assumption.
   Qed.
-  
+
   Lemma reduce_stack_prop :
     forall Γ t π h (P : term × stack -> term × stack -> Prop),
       (forall t π h aux,
@@ -1314,6 +1314,8 @@ Corollary R_Acc_aux :
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
+    - eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? [? []]]); tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Definition isCoFix_app t :=
@@ -1345,7 +1347,8 @@ Corollary R_Acc_aux :
     - exfalso; eapply invert_fix_ind; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
-    (* - now eapply inversion_Prim in typ. *)
+    - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea.
+      now eapply invert_cumul_axiom_ind in w; tea.
   Qed.
 
   Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
@@ -1390,7 +1393,7 @@ Corollary R_Acc_aux :
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
     Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
-    whne flags Σ Γ (mkApps hd args). 
+    whne flags Σ Γ (mkApps hd args).
   Proof using Type.
     intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.
@@ -1451,7 +1454,7 @@ Corollary R_Acc_aux :
     apply_funelim (_reduce_stack Γ t π h aux); clear -wfΣ.
     all: simpl.
     all: intros *.
-    all: repeat match goal with 
+    all: repeat match goal with
       [ |- (forall (t' : term) (π' : stack)
          (hR : forall Σ,
                abstract_env_ext_rel X Σ -> R Σ _ _ _), { _ : _ | _ }) -> _ ] => intros reduce
@@ -1509,13 +1512,21 @@ Corollary R_Acc_aux :
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
           eapply PCUICConversion.ws_cumul_pb_Sort_Prod_inv; eauto.
-      (* + pose proof hΣ.
-        sq.
-        exfalso.
-        destruct (hΣ _ wfΣ) as [hΣ].
-        specialize (h _ wfΣ).
-        eapply welltyped_context in h as [s Hs]; tas.
-        now eapply inversion_Prim in Hs. *)
+        + unfold zipp.
+          case_eq (decompose_stack π). intros l ρ e.
+          apply decompose_stack_eq in e. subst.
+          destruct l.
+          * simpl. eauto with pcuic.
+          * exfalso.
+            destruct (hΣ _ wfΣ) as [hΣ].
+            cbn in h. zip fold in h.
+            specialize (h _ wfΣ).
+            apply welltyped_context in h; auto.
+            simpl in h. rewrite stack_context_appstack in h.
+            destruct h as [T h].
+            apply inversion_App in h as (?&?&?&?&?); auto.
+            apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto.
+            eapply PCUICCanonicity.invert_cumul_axiom_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1809,7 +1820,7 @@ End Reduce.
 Section ReduceFns.
 
   Context {cf : checker_flags} {no : normalizing_flags}
-          {X_type : abstract_env_ext_impl} {X : X_type.π1}.
+          {X_type : abstract_env_impl} {X : X_type.π2.π1}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -1869,7 +1880,7 @@ Section ReduceFns.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ X _ wfΣ). sq.
     eapply into_closed_red in r ; fvs.
-    Unshelve. eauto. 
+    Unshelve. eauto.
   Qed.
 
   Equations? reduce_to_prod (Γ : context) (t : term)
@@ -1998,7 +2009,7 @@ Section ReduceFns.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red ; fvs.
-    Unshelve. eauto. 
+    Unshelve. eauto.
   Qed.
 
   (* Definition of assumption-only arities (without lets) *)

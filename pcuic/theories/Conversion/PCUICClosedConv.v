@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms. 
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed 
+     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed
      PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnv
      PCUICEquality.
 
@@ -11,7 +11,7 @@ From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Lemma type_local_ctx_All_local_env {cf} P Σ Γ Δ s : 
+Lemma type_local_ctx_All_local_env {cf} P Σ Γ Δ s :
   All_local_env (lift_typing P Σ) Γ ->
   type_local_ctx (lift_typing P) Σ Γ Δ s ->
   All_local_env (lift_typing P Σ) (Γ ,,, Δ).
@@ -22,7 +22,7 @@ Proof.
    exists s; auto.
 Qed.
 
-Lemma sorts_local_ctx_All_local_env {cf} P Σ Γ Δ s : 
+Lemma sorts_local_ctx_All_local_env {cf} P Σ Γ Δ s :
   All_local_env (lift_typing P Σ) Γ ->
   sorts_local_ctx (lift_typing P) Σ Γ Δ s ->
   All_local_env (lift_typing P Σ) (Γ ,,, Δ).
@@ -38,7 +38,7 @@ Lemma type_local_ctx_Pclosed Σ Γ Δ s :
   type_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
 Proof.
-  induction Δ; simpl; auto; try constructor.  
+  induction Δ; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
@@ -55,7 +55,7 @@ Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :
   sorts_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
 Proof.
-  induction Δ in s |- *; simpl; auto; try constructor.  
+  induction Δ in s |- *; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
@@ -73,7 +73,7 @@ Lemma All_local_env_Pclosed Σ Γ :
   All_local_env ( lift_typing Pclosed Σ) Γ ->
   Alli (fun i d => closed_decl i d) 0 (List.rev Γ).
 Proof.
-  induction Γ; simpl; auto; try constructor.  
+  induction Γ; simpl; auto; try constructor.
   intros all; depelim all; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
@@ -85,13 +85,13 @@ Proof.
     now simpl.
 Qed.
 
-Lemma weaken_env_prop_closed {cf} : 
+Lemma weaken_env_prop_closed {cf} :
   weaken_env_prop cumulSpec0 (lift_typing typing) (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
 
-Lemma closedn_ctx_alpha {k ctx ctx'} : 
+Lemma closedn_ctx_alpha {k ctx ctx'} :
   eq_context_upto_names ctx ctx' ->
   closedn_ctx k ctx = closedn_ctx k ctx'.
 Proof.
@@ -102,7 +102,7 @@ Proof.
 Qed.
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
-  All_local_env 
+  All_local_env
     (fun (Γ : context) (b : term) (t : typ_or_sort) =>
       closedn #|Γ| b && typ_or_sort_default (closedn #|Γ|) t true) ctx ->
     closedn_ctx 0 ctx.
@@ -127,7 +127,7 @@ Proof.
   - simpl. eauto.
 Qed.
 
-Lemma closed_cstr_branch_context_gen {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} : 
+Lemma closed_cstr_branch_context_gen {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} :
   closed_inductive_decl mdecl ->
   closed_constructor_body mdecl cdecl ->
   closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context c mdecl cdecl).

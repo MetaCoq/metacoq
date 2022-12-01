@@ -18,16 +18,16 @@ Ltac pcuic_core :=
 Ltac pcuic :=
   pcuic_core || ltac:(try (red; repeat red; cbn in *; pcuic_core)).
 
-Definition lengths := 
-  (@context_assumptions_expand_lets_ctx, 
+Definition lengths :=
+  (@context_assumptions_expand_lets_ctx,
    @context_assumptions_subst_context,
-   context_assumptions_fold, 
+   context_assumptions_fold,
    @context_assumptions_app,
    @context_assumptions_map,
    @context_assumptions_mapi,
    @context_assumptions_mapi_context,
    @context_assumptions_smash_context,
-   @context_assumptions_subst_instance, 
+   @context_assumptions_subst_instance,
    @context_assumptions_lift_context,
    @inst_case_context_assumptions,
     @expand_lets_ctx_length, @subst_context_length,
@@ -37,7 +37,7 @@ Definition lengths :=
     @map_length, @mapi_length, @mapi_rec_length, @map_InP_length,
     @fold_context_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
-    fix_context_length, 
+    fix_context_length,
     @smash_context_length,
     @arities_context_length,
     @forget_types_length,
@@ -48,12 +48,12 @@ Definition lengths :=
     @inst_case_context_length,
     @ind_predicate_context_length,
     @map_context_length, @skipn_map_length,
-    @mapi_context_length, idsn_length, 
+    @mapi_context_length, idsn_length,
     @projs_length, ren_ids_length).
 
-Ltac len ::= 
+Ltac len ::=
   repeat (rewrite !lengths /= //); try solve [lia_f_equal].
-  
+
 Tactic Notation "len" "in" hyp(id) :=
   repeat (rewrite !lengths /= // in id);
   try solve [lia_f_equal].

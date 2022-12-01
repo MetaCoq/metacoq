@@ -1,3 +1,4 @@
+src/META.coq-metacoq-safechecker
 -I src
 -Q src MetaCoq.SafeChecker
 -R theories MetaCoq.SafeChecker
@@ -12,12 +13,10 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/mCProd.mli
-src/mCProd.ml
 
 # From PCUIC
-# src/pCUICPrimitive.mli
-# src/pCUICPrimitive.ml
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml

@@ -1,4 +1,5 @@
-DECLARE PLUGIN "template_coq"
+
+DECLARE PLUGIN "coq-metacoq-template-coq.plugin"
 
 {
 

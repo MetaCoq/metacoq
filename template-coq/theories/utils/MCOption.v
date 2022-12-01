@@ -27,6 +27,12 @@ Proof.
 Qed.
 
 
+Definition on_some_or_none {A} (P : A -> Type) : option A -> Type :=
+  fun x => match x with
+        | Some x => P x
+        | None => True
+        end.
+
 Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
   fun x => match x with
         | Some x => P x
@@ -137,7 +143,7 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
+Lemma option_map_Some {A B} (f : A -> B) (o : option A) x :
   option_map f o = Some x ->
   ∑ y, (o = Some y) /\ (x = f y).
 Proof.
@@ -145,7 +151,7 @@ Proof.
   move=> [] <-. exists a; auto.
 Qed.
 
-Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} : 
+Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} :
   (forall x, reflectT (P x) (p x)) ->
   forall x, reflectT (option_default P x unit) (option_default p x true).
 Proof.
@@ -186,4 +192,20 @@ Qed.
 Lemma foroptb_impl {A} (f g : A -> bool) x : (forall x, f x -> g x) -> foroptb f x -> foroptb g x.
 Proof.
   move=> Hf; destruct x; simpl => //; apply Hf.
+Qed.
+
+(* Extension *)
+
+Inductive option_extends {A} : relation (option A) :=
+| option_ext_fill t : option_extends None (Some t)
+| option_ext_keep t : option_extends (Some t) (Some t)
+| option_ext_non : option_extends None None.
+Derive Signature for option_extends.
+
+#[export] Instance option_extends_refl {A} : RelationClasses.Reflexive (@option_extends A).
+Proof. intros []; constructor. Qed.
+
+#[export] Instance option_extends_trans {A} : RelationClasses.Transitive (@option_extends A).
+Proof.
+  intros x y z [] H; inv H; constructor.
 Qed.

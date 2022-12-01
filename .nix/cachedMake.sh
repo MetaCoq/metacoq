@@ -8,8 +8,9 @@
 export currentDir=$PWD
 export configDir=$currentDir/.nix
 
-#There should be a way to ask nix directly
-coq_version='8.14'
+#Assume that the bundles are of the shape coq-version
+# (e.g. coq-8.14 with version being major)
+coq_version=${selectedBundle#*-}
 
 my-nix-build-with-target (){
     target=$1
@@ -37,7 +38,7 @@ my-cachedMake (){
         if [[ -d $vopath ]]
         then echo "Compiling/Fetching and copying vo from $vopath to $realpath"
                 cp -nr --no-preserve=mode,ownership  $vopath/* $dest
-        else echo "Error: cannot find compiled $logpath, check your .nix/config.nix"
+        else echo "Error: cannot find compiled $logpath at $vopath, check your .nix/config.nix"
         fi
     fi
 }

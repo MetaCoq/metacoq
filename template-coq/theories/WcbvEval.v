@@ -24,7 +24,7 @@ Local Ltac inv H := inversion H; subst.
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
-(** We use a different substitution function that requires no lifting as it assumes 
+(** We use a different substitution function that requires no lifting as it assumes
   we are substituting closed terms. *)
 
 Fixpoint csubst t k u :=
@@ -167,7 +167,7 @@ Definition cstr_arity mdecl cdecl :=
   (mdecl.(ind_npars) + context_assumptions cdecl.(cstr_args))%nat.
 
 Section Wcbv.
-  
+
   Context (Σ : global_env).
   (* The local context is fixed: we are only doing weak reductions *)
 
@@ -210,7 +210,7 @@ Section Wcbv.
       nth_error args (proj.(proj_npars) + proj.(proj_arg)) = Some a ->
       eval a res ->
       eval (tProj proj discr) res
-           
+
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx fixargsv args argsv narg fn res :
       ~~ isApp f ->
@@ -246,10 +246,10 @@ Section Wcbv.
       eval (tProj p discr) res
 
   (** Constructor congruence: we do not allow over-applications *)
-  | eval_construct ind c u mdecl idecl cdecl f args args' : 
+  | eval_construct ind c u mdecl idecl cdecl f args args' :
     declared_constructor Σ (ind, c) mdecl idecl cdecl ->
     ~~ isApp f -> args <> [] ->
-    eval f (tConstruct ind c u) -> 
+    eval f (tConstruct ind c u) ->
     #|args| <= cstr_arity mdecl cdecl ->
     All2 eval args args' ->
     eval (mkApps f args) (mkApps (tConstruct ind c u) args')
@@ -258,7 +258,7 @@ Section Wcbv.
   | eval_app_cong f f' a a' :
       ~~ isApp f -> a <> [] -> (* This ensures eval only applies to well-formed terms *)
       eval f f' ->
-      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->      
+      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
       All2 eval a a' ->
       eval (tApp f a) (mkApps f' a')
 
@@ -283,8 +283,8 @@ Section Wcbv.
           eval (mkApps (csubst a' 0 b) l) res -> P (mkApps (csubst a' 0 b) l) res ->
           P (tApp f (a :: l)) res) ->
       (forall (na : aname) (b0 b0' t b1 res : term),
-          eval b0 b0' -> P b0 b0' -> 
-          eval (csubst b0' 0 b1) res -> 
+          eval b0 b0' -> P b0 b0' ->
+          eval (csubst b0' 0 b1) res ->
           P (csubst b0' 0 b1) res -> P (tLetIn na b0 t b1) res) ->
       (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
@@ -301,7 +301,7 @@ Section Wcbv.
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
           let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
           #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
-          eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
+          eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res ->
           P (tCase ci p discr brs) res) ->
       (forall proj (discr : term) (args : list term) (u : Instance.t)
               a mdecl idecl cdecl pdecl res,
@@ -335,7 +335,7 @@ Section Wcbv.
           cunfold_fix mfix idx = Some (narg, fn) ->
           #|fixargsv ++ argsv| <= narg ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
-      (forall (ip : case_info) (mfix : mfixpoint term) (idx : nat) 
+      (forall (ip : case_info) (mfix : mfixpoint term) (idx : nat)
         (p : predicate term) discr (args : list term)
         (narg : nat) (fn : term) (brs : list (branch term)) (res : term),
           cunfold_cofix mfix idx = Some (narg, fn) ->
@@ -349,12 +349,12 @@ Section Wcbv.
           P discr (mkApps (tCoFix mfix idx) args) ->
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p discr) res) ->
-      
+
       (forall ind c u mdecl idecl cdecl f args args',
           declared_constructor Σ (ind, c) mdecl idecl cdecl ->
           ~~ isApp f -> args <> [] ->
-          eval f (tConstruct ind c u) -> 
-          P f (tConstruct ind c u) -> 
+          eval f (tConstruct ind c u) ->
+          P f (tConstruct ind c u) ->
           #|args| <= cstr_arity mdecl cdecl ->
           All2 eval args args' ->
           All2 P args args' ->
@@ -406,7 +406,7 @@ Section Wcbv.
     value_head nargs (tConstruct ind c u)
   | value_head_cofix mfix idx : value_head nargs (tCoFix mfix idx)
   | value_head_ind ind u : value_head nargs (tInd ind u)
-  | value_head_fix mfix idx rarg fn : 
+  | value_head_fix mfix idx rarg fn :
     cunfold_fix mfix idx = Some (rarg, fn) ->
     nargs <= rarg ->
     value_head nargs (tFix mfix idx).
@@ -452,10 +452,10 @@ Section Wcbv.
     intros. subst.
     - now eapply atom_mkApps in H.
     - intros * isapp appeq. move: (value_head_nApp X) => Ht.
-      right. 
+      right.
       apply mkApps_eq_inj in appeq => //. intuition subst; auto => //.
   Qed.
-  
+
   Lemma value_mkApps_values t l :
     value (mkApps t l) ->
     ~~ isApp t ->
@@ -493,12 +493,12 @@ Section Wcbv.
   Proof using Type.
     induction 1; congruence.
   Qed.
-  
+
   Lemma All2_nil_rev {A} {P} {l l' : list A} : All2 P l l' -> l' <> [] -> l <> [].
   Proof using Type.
     induction 1; congruence.
   Qed.
-  
+
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof using Type.
     intros eve. induction eve using eval_evals_ind; simpl; intros; auto using value.
@@ -515,7 +515,7 @@ Section Wcbv.
       eapply value_app; auto.
       econstructor; tea. rewrite -(All2_length X) //.
       now eapply All2_nil.
-    
+
     - eapply All2_right in X0.
       depelim IHeve.
       destruct t; simpl in * |- *; try congruence.
@@ -547,7 +547,7 @@ Section Wcbv.
     - now constructor.
     - now eapply eval_atom.
     - now eapply eval_atom.
-    - now eapply eval_atom. 
+    - now eapply eval_atom.
   Qed.
 
   Lemma value_final e : value e -> eval e e.
@@ -581,7 +581,7 @@ Section Wcbv.
       depelim a.
       apply atom_mkApps in H1 as (-> & ?).
       cbn in *. reflexivity.
-    
+
     - eapply atom_mkApps in Ha as [-> ato].
       rewrite (IHeval ato).
       now depelim a.

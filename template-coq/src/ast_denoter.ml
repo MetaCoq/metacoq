@@ -51,6 +51,7 @@ struct
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = (kername * global_decl) list
+  type quoted_retroknowledge = Environment.Retroknowledge.t
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -122,8 +123,8 @@ struct
     | Coq_tProj (a,b) -> ACoq_tProj (a,b)
     | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
-    (* | Coq_tInt i -> ACoq_tInt i *)
-    (* | Coq_tFloat f -> ACoq_tFloat f *)
+    | Coq_tInt i -> ACoq_tInt i
+    | Coq_tFloat f -> ACoq_tFloat f
 
   let unquote_string = Caml_bytestring.caml_string_of_bytestring
 
@@ -164,7 +165,6 @@ struct
     | VmCast -> VMcast
     | NativeCast -> NATIVEcast
     | Cast -> DEFAULTcast
-    | RevertCast -> REVERTcast
 
   let unquote_dirpath dp : DirPath.t =
     let l = List.map unquote_ident dp in
@@ -199,25 +199,25 @@ struct
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in
       (* TODO handle universes from workers *)
-      Univ.Level.make (Univ.Level.UGlobal.make dp "" idx)
+      Univ.Level.make (Univ.UGlobal.make dp "" idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
     let n = unquote_int (snd trm) in
-    if n > 0 && not (Univ.Level.is_prop l) then Univ.Universe.super u
-    else u
+    if n > 0 then Univ.Universe.super u else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
     match trm with
-    | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
-    | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
+    | Universes0.Universe.Coq_lSProp -> evd, Sorts.sprop
+    | Universes0.Universe.Coq_lProp -> evd, Sorts.prop
     | Universes0.Universe.Coq_lType u ->
        let u = Universes0.t_set u in
        let ux_list = Universes0.LevelExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
-       evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
+       let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
+       evd, Sorts.sort_of_univ u
 
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))

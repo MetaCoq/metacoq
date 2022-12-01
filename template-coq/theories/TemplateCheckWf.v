@@ -34,7 +34,14 @@ with check_structure_field_def kn sf :=
 
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
-  | ConstantDecl cb => check_const_decl_def d.1 cb
+  | ConstantDecl cb =>
+    match cb.(cst_body) with
+    | Some body =>
+      tmMsg ("Unquoting eta-expanded " ++ string_of_kername d.1)%bs ;;
+      tmUnquote body ;;
+      tmMsg ("Succeeded")
+    | None => ret tt
+    end
   | InductiveDecl idecl => ret tt
   | ModuleDecl (impl, modtype) => check_mod_decl_def d.1 impl modtype
   | ModuleTypeDecl sb => let _ := map (fun '(kn,sf) => check_structure_field_def kn sf) sb in ret tt
@@ -97,15 +104,15 @@ Definition wf_global_env (g : global_env) := wf_global_declarations g.(declarati
 Definition wf_program p := wf_global_env p.1 && wfterm p.2.
 
 Definition check_wf (g : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def g.1.(declarations) ;; 
+  monad_map check_def g.1.(declarations) ;;
   tmMsg "Wellformed global environment" ;; ret tt.
-  
+
 Axiom assume_wt_template_program : forall p : Ast.Env.program, ∥ wt_template_program p ∥.
 
 Definition check_wf_eta (p : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;; 
+  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;;
   tmMsg "Wellformed eta-expanded global environment" ;; ret tt.
 
-(* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use: 
- 
+(* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use:
+
   MetaCoq Run (tmQuoteRec wf_program >>= check_wf_eta). *)

@@ -69,7 +69,7 @@ Section map_predicate_shift.
   Lemma map_shift_puinst (p : predicate term) :
     finst (puinst p) = puinst (map_predicate_shift p).
   Proof using Type. reflexivity. Qed.
-  
+
 End map_predicate_shift.
 
 Section map_branch_shift.
@@ -85,7 +85,7 @@ Section map_branch_shift.
   Lemma map_shift_bbody (b : branch term) :
     fn (shift #|b.(bcontext)| f) (bbody b) = bbody (map_branch_shift b).
   Proof using Type. reflexivity. Qed.
-  
+
   Lemma map_shift_bcontext (b : branch term) :
     (bcontext b) = bcontext (map_branch_shift b).
   Proof using Type. reflexivity. Qed.
@@ -93,7 +93,7 @@ End map_branch_shift.
 
 Notation map_branches_shift ren f :=
   (map (map_branch_shift ren shiftn f)).
-  
+
 Fixpoint rename f t : term :=
   match t with
   | tRel i => tRel (f i)
@@ -153,7 +153,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_predicate_shift_eq_spec : all.
 
-Lemma map_branch_shift_eq_spec {T T'} (fn : (nat -> T) -> term -> term) 
+Lemma map_branch_shift_eq_spec {T T'} (fn : (nat -> T) -> term -> term)
   (fn' : (nat -> T') -> term -> term)
   shift shift' (f : nat -> T) (g : nat -> T') (x : branch term) :
   fn (shift #|x.(bcontext)| f) (bbody x) = fn' (shift' #|x.(bcontext)| g) (bbody x) ->
@@ -203,7 +203,7 @@ Proof. intros f f' Hff' t t' ->. now apply rename_ext. Qed.
 Instance rename_proper_pointwise : Proper (`=1` ==> pointwise_relation _ Logic.eq) rename.
 Proof. intros f f' Hff' t. now apply rename_ext. Qed.
 
-Lemma map_predicate_shift_proper {T} (fn : (nat -> T) -> term -> term) shift : 
+Lemma map_predicate_shift_proper {T} (fn : (nat -> T) -> term -> term) shift :
   Proper (`=1` ==> `=1`) fn ->
   Proper (Logic.eq ==> `=1` ==> `=1`) shift ->
   Proper (`=1` ==> `=1` ==> `=1`) (map_predicate_shift fn shift).
@@ -222,7 +222,7 @@ Proof.
   now intros x.
 Qed.
 
-Lemma map_branch_shift_proper {T} (fn : (nat -> T) -> term -> term) shift : 
+Lemma map_branch_shift_proper {T} (fn : (nat -> T) -> term -> term) shift :
   Proper (`=1` ==> `=1`) fn ->
   Proper (Logic.eq ==> `=1` ==> `=1`) shift ->
   Proper (`=1` ==> `=1`) (map_branch_shift fn shift).
@@ -263,7 +263,7 @@ Proof.
   - destruct (Nat.ltb_spec i (n + m)); try lia.
   - destruct (Nat.ltb_spec i (n + m)); try lia;
     destruct (Nat.ltb_spec (i - n) m); try lia.
-    rewrite Nat.add_assoc. f_equal. f_equal. lia.  
+    rewrite Nat.add_assoc. f_equal. f_equal. lia.
 Qed.
 
 #[global]
@@ -333,7 +333,7 @@ Proof.
     red in X. solve_all.
     rewrite b. now rewrite shiftn_lift_renaming.
   - f_equal; auto.
-    red in X. solve_all. 
+    red in X. solve_all.
     rewrite b. now rewrite shiftn_lift_renaming.
 Qed.
 #[global]
@@ -361,8 +361,8 @@ Proof.
     * assert (n + f' (x - n) - n = f' (x - n)) as ->; lia.
 Qed.
 
-(* Lemma map_branches_shiftn (fn : (nat -> nat) -> term -> term) f f' l : 
-  map_branches_shift fn f (map_branches_shift fn f' l) = 
+(* Lemma map_branches_shiftn (fn : (nat -> nat) -> term -> term) f f' l :
+  map_branches_shift fn f (map_branches_shift fn f' l) =
   List.map (fun i => map_branch (fn (shiftn #|bcontext i| f) ∘ (fn (shiftn #|bcontext i| f'))) i) l.
 Proof.
   rewrite map_map_compose. apply map_ext => i.
@@ -383,7 +383,7 @@ Hint Rewrite mapi_context_compose : map.
 Lemma rename_compose f f' : rename f ∘ rename f' =1 rename (f ∘ f').
 Proof.
   intros x.
-  induction x in f, f' |- * using term_forall_list_ind; simpl; 
+  induction x in f, f' |- * using term_forall_list_ind; simpl;
     f_equal;
     auto; solve_all;
     try match goal with
@@ -393,7 +393,7 @@ Proof.
 
   - rewrite /map_predicate_shift /= map_map.
     solve_all; len. rewrite e. f_equal; solve_all.
-    * apply rename_ext, shiftn_compose. 
+    * apply rename_ext, shiftn_compose.
   - rewrite /map_branch_shift /=. f_equal; solve_all.
     * len. rewrite b. apply rename_ext, shiftn_compose.
 Qed.
@@ -427,7 +427,7 @@ Lemma map_predicate_shift_map_predicate
       {shift : nat -> (nat -> T) -> nat -> T}
       {finst finst' f'}
       {f : nat -> T}
-      {p : predicate term} 
+      {p : predicate term}
       (compose : (nat -> T) -> (term -> term) -> (nat -> T))
       :
   Proper (`=1` ==> `=1`) fn ->
@@ -452,7 +452,7 @@ Lemma map_predicate_shift_map_predicate_gen
       {shift' : nat -> (nat -> T') -> nat -> T'}
       {finst finst' f'}
       {f : nat -> T}
-      {p : predicate term} 
+      {p : predicate term}
       (compose : (nat -> T) -> (term -> term) -> (nat -> T'))
       :
   Proper (`=1` ==> `=1`) fn ->
@@ -475,7 +475,7 @@ Lemma map_predicate_map_predicate_shift
       {shift : nat -> (nat -> T) -> nat -> T}
       {finst finst' f'}
       {f : nat -> T}
-      {p : predicate term} 
+      {p : predicate term}
       (compose : (term -> term) ->  (nat -> T) -> (nat -> T))
       :
   Proper (`=1` ==> `=1`) fn ->
@@ -503,7 +503,7 @@ Qed.
 #[global]
 Hint Rewrite rename_predicate_rename_predicate : map.
 
-Lemma map_branch_shift_map_branch_shift {T} 
+Lemma map_branch_shift_map_branch_shift {T}
   {fn : (nat -> T) -> term -> term}
   {shift : nat -> (nat -> T) -> nat -> T}
   {f f' : nat -> T} {b : branch term}
@@ -661,7 +661,7 @@ Instance ren_ext : Morphisms.Proper (`=1` ==> `=1`)%signature ren.
 Proof.
   reduce_goal. unfold ren. now rewrite H.
 Qed.
-  
+
 Lemma ren_shiftn n f : up n (ren f) =1 ren (shiftn n f).
 Proof.
   unfold ren, up, shiftn.
@@ -1280,8 +1280,8 @@ Lemma nat_recursion_ext {A} (x : A) f g n :
   Nat.recursion x f n = Nat.recursion x g n.
 Proof.
   intros.
-  generalize (Nat.le_refl n). 
-  induction n at 1 3 4; simpl; auto. 
+  generalize (Nat.le_refl n).
+  induction n at 1 3 4; simpl; auto.
   intros. simpl. rewrite IHn0; try lia. now rewrite H.
 Qed.
 
@@ -1311,7 +1311,7 @@ Proof.
   -- assert (Hr:i < #|ren_ids m |) by (rewrite ren_ids_length; lia).
      assert (Hi:i < #|idsn m |) by (rewrite idsn_length; lia).
      rewrite (subst_consn_lt Hi) subst_ids_lt //.
-     rewrite subst_consn_compose. 
+     rewrite subst_consn_compose.
      rewrite (subst_consn_lt); len => //.
      rewrite -rename_inst rename_idsn_idsn subst_ids_lt //.
 Qed.
@@ -1471,7 +1471,7 @@ Proof.
   rewrite subst_consn_tip. unfold Up. apply subst_consn_proper; auto.
   rewrite shiftk_shift_l.
   intros i'. unfold subst_cons, subst_compose.
-  destruct i' => //; auto; simpl. 
+  destruct i' => //; auto; simpl.
   - unfold shiftk. now rewrite Nat.add_0_r.
   - simpl. now rewrite inst_assoc.
 Qed.
@@ -1515,7 +1515,7 @@ Proof.
     * solve_all.
       unfold map_branch_k, map_branch_shift; destruct x; cbn in *; f_equal; solve_all.
       + now rewrite /shiftf up_up.
-  - f_equal; eauto; solve_all; auto. 
+  - f_equal; eauto; solve_all; auto.
     rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
   - f_equal; eauto.
     solve_all; auto.
@@ -1568,7 +1568,7 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 Lemma subst_consn_shiftn n (l : list term) σ : #|l| = n -> ↑^n ∘s (l ⋅n σ) =1 σ.
 Proof.
   induction n in l |- *; simpl; intros; sigma.
-  - destruct l; try discriminate. now sigma. 
+  - destruct l; try discriminate. now sigma.
   - destruct l; try discriminate. simpl in *.
     rewrite subst_consn_subst_cons.
     simpl; sigma. apply IHn. lia.
@@ -1639,7 +1639,7 @@ Proof.
 Qed.
 
 Lemma up_ext_closed k' k s s' :
-  (forall i, i < k' -> s i = s' i) -> 
+  (forall i, i < k' -> s i = s' i) ->
   forall i, i < k + k' ->
   up k s i = up k s' i.
 Proof.
@@ -1647,13 +1647,13 @@ Proof.
   intros. f_equal. apply Hs. lia.
 Qed.
 
-Lemma subst_consn_eq s0 s1 s2 s3 x : 
+Lemma subst_consn_eq s0 s1 s2 s3 x :
   x < #|s0| -> #|s0| = #|s2| ->
   subst_fn s0 x = subst_fn s2 x ->
   (s0 ⋅n s1) x = (s2 ⋅n s3) x.
 Proof.
   unfold subst_fn; intros Hx Heq Heqx.
-  unfold subst_consn. 
+  unfold subst_consn.
   destruct (nth_error s0 x) eqn:Heq';
   destruct (nth_error s2 x) eqn:Heq''; auto;
   (apply nth_error_None in Heq''|| apply nth_error_None in Heq'); lia.
@@ -1700,7 +1700,7 @@ Proof.
     red in X.
     eapply All_map_eq. eapply (All_impl X).
     intros x [IH IH'].
-    apply map_def_eq_spec. 
+    apply map_def_eq_spec.
     * apply IH.
     * specialize (IH' (#|m| + k)).
       sigma.
@@ -1710,7 +1710,7 @@ Proof.
     red in X.
     eapply All_map_eq. eapply (All_impl X).
     intros x [IH IH'].
-    apply map_def_eq_spec. 
+    apply map_def_eq_spec.
     * apply IH.
     * specialize (IH' (#|m| + k)). sigma.
       now rewrite - !up_Upn up_up !up_Upn.
@@ -1775,7 +1775,7 @@ Proof.
     rewrite /subst_compose; sigma.
     unfold shift. simpl. now rewrite /subst_compose /=.
 Qed.
-(* 
+(*
 Lemma subst_consn_compose_r l σ' σ : σ ∘s (l ⋅n σ') =1 map (inst (σ ∘s (subst_fn l))) l ⋅n (σ ∘s σ').
 Proof.
   induction l; simpl.
@@ -1812,7 +1812,7 @@ Proof.
   * f_equal. now rewrite !Nat.add_succ_r !subst_reli_lift_id //.
 Qed.
 
-Lemma expand_lets_k_vass Γ na ty k t : 
+Lemma expand_lets_k_vass Γ na ty k t :
   expand_lets_k (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) k t =
   expand_lets_k Γ k t.
 Proof.
@@ -1826,14 +1826,14 @@ Proof.
   move: (context_assumptions_length_bound Γ); lia.
 Qed.
 
-Lemma expand_lets_vass Γ na ty t : 
+Lemma expand_lets_vass Γ na ty t :
   expand_lets (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) t =
   expand_lets Γ t.
 Proof.
   rewrite /expand_lets; apply expand_lets_k_vass.
 Qed.
 
-Lemma expand_lets_k_vdef Γ na b ty k t : 
+Lemma expand_lets_k_vdef Γ na b ty k t :
   expand_lets_k (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) k t =
   expand_lets_k (subst_context [b] 0 Γ) k (subst [b] (k + #|Γ|) t).
 Proof.
@@ -1848,7 +1848,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma expand_lets_vdef Γ na b ty t : 
+Lemma expand_lets_vdef Γ na b ty t :
   expand_lets (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) t =
   expand_lets (subst_context [b] 0 Γ) (subst [b] #|Γ| t).
 Proof.
@@ -1859,13 +1859,13 @@ Definition expand_lets_k_ctx_vass Γ k Δ na ty :
   expand_lets_k_ctx Γ k (Δ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
   expand_lets_k_ctx Γ (S k) Δ ++ [{| decl_name := na; decl_body := None; decl_type :=
     expand_lets_k Γ k ty |}].
-Proof. 
+Proof.
   now  rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
 Qed.
 
 Definition expand_lets_k_ctx_decl Γ k Δ d :
   expand_lets_k_ctx Γ k (Δ ++ [d]) = expand_lets_k_ctx Γ (S k) Δ ++ [map_decl (expand_lets_k Γ k) d].
-Proof. 
+Proof.
   rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
   unfold app_context. simpl.
   rewrite /subst_context /fold_context_k /=.
@@ -1875,8 +1875,8 @@ Qed.
 Lemma expand_lets_nil t : expand_lets [] t = t.
 Proof. by rewrite /expand_lets /expand_lets_k /= subst_empty lift0_id. Qed.
 
-Lemma expand_lets_it_mkProd_or_LetIn Γ Δ k t : 
-  expand_lets_k Γ k (it_mkProd_or_LetIn Δ t) = 
+Lemma expand_lets_it_mkProd_or_LetIn Γ Δ k t :
+  expand_lets_k Γ k (it_mkProd_or_LetIn Δ t) =
   it_mkProd_or_LetIn (expand_lets_k_ctx Γ k Δ) (expand_lets_k Γ (k + #|Δ|) t).
 Proof.
   revert k; induction Δ as [|[na [b|] ty] Δ] using ctx_length_rev_ind; simpl; auto; intros k.
@@ -1893,31 +1893,31 @@ Proof.
     now rewrite -(H Δ ltac:(lia) (S k)).
 Qed.
 
-Lemma expand_lets_k_mkApps Γ k f args : 
+Lemma expand_lets_k_mkApps Γ k f args :
   expand_lets_k Γ k (mkApps f args) =
   mkApps (expand_lets_k Γ k f) (map (expand_lets_k Γ k) args).
 Proof.
   now rewrite /expand_lets_k lift_mkApps subst_mkApps map_map_compose.
 Qed.
 
-Lemma expand_lets_mkApps Γ f args : 
+Lemma expand_lets_mkApps Γ f args :
   expand_lets Γ (mkApps f args) =
   mkApps (expand_lets Γ f) (map (expand_lets Γ) args).
 Proof.
   now rewrite /expand_lets expand_lets_k_mkApps.
 Qed.
 
-Lemma expand_lets_tRel k Γ : 
+Lemma expand_lets_tRel k Γ :
   expand_lets Γ (tRel (k + #|Γ|)) = tRel (k + context_assumptions Γ).
 Proof.
-  rewrite /expand_lets /expand_lets_k. 
+  rewrite /expand_lets /expand_lets_k.
   rewrite lift_rel_ge; try lia.
   rewrite subst_rel_gt; len; try lia.
   lia_f_equal.
 Qed.
 
 Lemma context_assumptions_context {Γ} :
-  assumption_context Γ -> 
+  assumption_context Γ ->
   context_assumptions Γ = #|Γ|.
 Proof.
   induction 1; simpl; auto.
@@ -1932,23 +1932,23 @@ Proof.
   - depelim H. now eapply IHΓ.
 Qed.
 
-Lemma expand_lets_assumption_context Γ t : 
+Lemma expand_lets_assumption_context Γ t :
   assumption_context Γ ->
   expand_lets Γ t = t.
 Proof.
   induction Γ using rev_ind.
   - rewrite /expand_lets /expand_lets_k /=. intros _.
     rewrite lift0_id subst_empty //.
-  - intros ass. eapply assumption_context_app in ass as [assl assx]. 
+  - intros ass. eapply assumption_context_app in ass as [assl assx].
     depelim assx.
     rewrite /expand_lets /expand_lets_k; len; simpl.
-    rewrite extended_subst_app /=. 
+    rewrite extended_subst_app /=.
     rewrite subst_app_simpl /=; len.
     rewrite subst_context_lift_id // lift0_context.
     rewrite (context_assumptions_context assl). simpl.
     rewrite !Nat.add_1_r subst_reli_lift_id //.
     rewrite /expand_lets_ctx /expand_lets_k_ctx in IHΓ.
-    specialize (IHΓ assl). 
+    specialize (IHΓ assl).
     rewrite /expand_lets /expand_lets_k in IHΓ.
     now rewrite (context_assumptions_context assl) in IHΓ.
 Qed.
@@ -1961,7 +1961,7 @@ Proof.
   - intros ass. eapply assumption_context_app in ass as [assl assx].
     depelim assx.
     rewrite /expand_lets_ctx /expand_lets_k_ctx; len; simpl.
-    rewrite extended_subst_app /=. 
+    rewrite extended_subst_app /=.
     rewrite subst_app_context /=; len.
     rewrite subst_context_lift_id // lift0_context.
     rewrite (context_assumptions_context assl). simpl.
@@ -1971,7 +1971,7 @@ Proof.
     now simpl in IHΓ.
 Qed.
 
-Lemma subst_extended_subst s Γ k : extended_subst (subst_context s k Γ) 0 = 
+Lemma subst_extended_subst s Γ k : extended_subst (subst_context s k Γ) 0 =
   map (subst s (k + context_assumptions Γ)) (extended_subst Γ 0).
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
@@ -1980,13 +1980,13 @@ Proof.
     rewrite commut_lift_subst_rec; try lia.
     rewrite distr_subst. now len.
   - elim: Nat.leb_spec => //. lia.
-  - rewrite ? (lift_extended_subst _ 1); rewrite IHΓ. 
+  - rewrite ? (lift_extended_subst _ 1); rewrite IHΓ.
     rewrite !map_map_compose. apply map_ext.
-    intros x. 
+    intros x.
     erewrite (commut_lift_subst_rec); lia_f_equal.
 Qed.
 
-Lemma expand_lets_subst_comm Γ s : 
+Lemma expand_lets_subst_comm Γ s :
   expand_lets (subst_context s 0 Γ) ∘ subst s #|Γ| =1 subst s (context_assumptions Γ) ∘ expand_lets Γ.
 Proof.
   unfold expand_lets, expand_lets_k; simpl; intros x. len.
@@ -1996,14 +1996,14 @@ Proof.
 Qed.
 
 Lemma map_expand_lets_subst_comm Γ s :
-  map (expand_lets (subst_context s 0 Γ)) ∘ (map (subst s #|Γ|)) =1 
+  map (expand_lets (subst_context s 0 Γ)) ∘ (map (subst s #|Γ|)) =1
   map (subst s (context_assumptions Γ)) ∘ (map (expand_lets Γ)).
 Proof.
   intros l. rewrite !map_map_compose.
   apply map_ext. intros x; apply expand_lets_subst_comm.
 Qed.
 
-Lemma map_subst_expand_lets s Γ : 
+Lemma map_subst_expand_lets s Γ :
   context_assumptions Γ = #|s| ->
   subst0 (map (subst0 s) (extended_subst Γ 0)) =1 subst0 s ∘ expand_lets Γ.
 Proof.
@@ -2013,7 +2013,7 @@ Proof.
   simpl. rewrite simpl_subst_k //.
 Qed.
 
-Lemma map_subst_expand_lets_k s Γ k x : 
+Lemma map_subst_expand_lets_k s Γ k x :
   context_assumptions Γ = #|s| ->
   subst (map (subst0 s) (extended_subst Γ 0)) k x = (subst s k ∘ expand_lets_k Γ k) x.
 Proof.
@@ -2024,7 +2024,7 @@ Proof.
   simpl. rewrite simpl_subst_k //.
 Qed.
 
-Lemma subst_context_map_subst_expand_lets s Γ Δ : 
+Lemma subst_context_map_subst_expand_lets s Γ Δ :
   context_assumptions Γ = #|s| ->
   subst_context (map (subst0 s) (extended_subst Γ 0)) 0 Δ = subst_context s 0 (expand_lets_ctx Γ Δ).
 Proof.
@@ -2039,7 +2039,7 @@ Proof.
   rewrite map_subst_expand_lets_k //.
 Qed.
 
-Lemma subst_context_map_subst_expand_lets_k s Γ Δ k : 
+Lemma subst_context_map_subst_expand_lets_k s Γ Δ k :
   context_assumptions Γ = #|s| ->
   subst_context (map (subst0 s) (extended_subst Γ 0)) k Δ = subst_context s k (expand_lets_k_ctx Γ k Δ).
 Proof.
@@ -2171,16 +2171,16 @@ Lemma shift_subst_consn_ge (n : nat) (l : list term) (σ : nat -> term) :
 Proof.
   intros Hlt i.
   rewrite /subst_compose /shiftk /=.
-  rewrite subst_consn_ge; try lia. lia_f_equal. 
+  rewrite subst_consn_ge; try lia. lia_f_equal.
 Qed.
 
-Lemma skipn_subst n s σ : 
+Lemma skipn_subst n s σ :
   n <= #|s| ->
   skipn n s ⋅n σ =1 ↑^(n) ∘s (s ⋅n σ).
 Proof.
   intros hn i.
   rewrite /subst_consn /shiftk /subst_compose /=.
-  rewrite nth_error_skipn. 
+  rewrite nth_error_skipn.
   destruct nth_error => //.
   rewrite List.skipn_length. lia_f_equal.
 Qed.

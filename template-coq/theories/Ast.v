@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils Environment EnvironmentTyping.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
-From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
+From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import ssreflect Morphisms.
 From Equations Require Import Equations.
 
@@ -57,7 +57,7 @@ Global Instance predicate_eq_dec term :
 Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
-  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")"
   ^ "," ^ string_of_universe_instance (puinst p)
   ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
   ^ "," ^ f (preturn p) ^ ")".
@@ -71,12 +71,12 @@ Definition eqb_predicate {term} (eqb_univ_instance : Instance.t -> Instance.t ->
   eqb_univ_instance p.(puinst) p'.(puinst) &&
   forallb2 eqb_binder_annot p.(pcontext) p'.(pcontext) &&
   eqterm p.(preturn) p'.(preturn).
-  
+
 Section map_predicate.
   Context {term term' : Type}.
   Context (uf : Instance.t -> Instance.t).
   Context (paramf preturnf : term -> term').
-  
+
   Definition map_predicate (p : predicate term) :=
     {| pparams := map paramf p.(pparams);
         puinst := uf p.(puinst);
@@ -189,10 +189,10 @@ Section map_predicate_k.
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
   Proof using Type. reflexivity. Qed.
-  
-  Definition test_predicate_k (instp : Instance.t -> bool) 
+
+  Definition test_predicate_k (instp : Instance.t -> bool)
     (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
+    instp pred.(puinst) && forallb (p k) pred.(pparams) &&
     p (#|pred.(pcontext)| + k) pred.(preturn).
 
 End map_predicate_k.
@@ -204,7 +204,7 @@ Section Branch.
     bcontext : list aname; (* Names of binders of the branch, in "context" order.
                           Also used for lifting/substitution for the branch body. *)
     bbody : term; (* The branch body *) }.
-  
+
   Derive NoConfusion for branch.
   Global Instance branch_eq_dec :
     Classes.EqDec term ->
@@ -217,10 +217,10 @@ Section Branch.
 
   Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
     String.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
-  
+
   Definition test_branch (bodyf : term -> bool) (b : branch) :=
     bodyf b.(bbody).
-End Branch.  
+End Branch.
 Arguments branch : clear implicits.
 
 Section map_branch.
@@ -415,12 +415,11 @@ Inductive term : Type :=
         (discr:term) (branches : list (branch term))
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat).
-(* Not supported yet *)
-(* | tInt (i : Int63.int) *)
-(* | tFloat (f : PrimFloat.float). *)
+| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tInt (i : PrimInt63.int)
+| tFloat (f : PrimFloat.float).
 
-(** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 
+(** This can be used to represent holes, that, when unquoted, turn into fresh existential variables.
     The fresh evar will depend on the whole context at this point in the term, despite the empty instance.
     Denotation will call Coq's Typing.solve_evars to try and fill these holes using typing information.
 *)
@@ -436,7 +435,7 @@ Definition mkApps t us :=
   end.
 
 (** Term lifting / weakening *)
-  
+
 Fixpoint lift n k t : term :=
   match t with
   | tRel i => tRel (if Nat.leb k i then n + i else i)
@@ -557,8 +556,8 @@ Fixpoint noccur_between k n (t : term) : bool :=
 #[global] Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
-  | tRel _ | tVar _  => c
-  (* | tInt _ | tFloat _ => c *)
+  | tRel _ | tVar _ => c
+  | tInt _ | tFloat _ => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
@@ -606,7 +605,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (test_def (closedu k) (closedu k)) mfix
   | _ => true
-  end.  
+  end.
 
 Module TemplateTerm <: Term.
 
@@ -762,15 +761,15 @@ Proof.
   now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
-(** Helpers for "compact" case representation, reconstructing predicate and 
+(** Helpers for "compact" case representation, reconstructing predicate and
   branch contexts. *)
-  
+
 Definition ind_predicate_context ind mdecl idecl : context :=
   let ictx := (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)) in
   let indty := mkApps (tInd ind (abstract_instance mdecl.(ind_universes)))
     (to_extended_list (smash_context [] mdecl.(ind_params) ,,, ictx)) in
-  let inddecl := 
-    {| decl_name := 
+  let inddecl :=
+    {| decl_name :=
       {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
         decl_body := None;
         decl_type := indty |}
@@ -778,7 +777,7 @@ Definition ind_predicate_context ind mdecl idecl : context :=
 
 Definition inst_case_context params puinst (pctx : context) :=
   subst_context (List.rev params) 0 (subst_instance puinst pctx).
-  
+
 Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
   inst_case_context params puinst (ind_predicate_context ind mdecl idecl).
 
@@ -795,7 +794,7 @@ Definition cstr_branch_context ind mdecl cdecl : context :=
       cdecl.(cstr_args)).
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
-  map2 set_binder_name bctx 
+  map2 set_binder_name bctx
     (inst_case_context params puinst (cstr_branch_context ind mdecl cdecl)).
 
 Definition case_branch_context ind mdecl cdecl p (br : branch term) : context :=

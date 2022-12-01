@@ -58,7 +58,7 @@ Proof.
 Qed.
 
 Lemma decompose_app_rec_rename r t l :
-  forall hd args, 
+  forall hd args,
   decompose_app_rec t l = (hd, args) ->
   decompose_app_rec (rename r t) (map (rename r) l) = (rename r hd, map (rename r) args).
 Proof.
@@ -544,7 +544,7 @@ Definition rename_constructor_body mdecl f c :=
   map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
    (fun k => rename (shiftn k f)) c.
 
-(* TODO move *)   
+(* TODO move *)
 Lemma map2_set_binder_name_fold bctx f Γ :
   #|bctx| = #|Γ| ->
   map2 set_binder_name bctx (fold_context_k f Γ) =

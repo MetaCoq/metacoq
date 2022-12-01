@@ -1,3 +1,5 @@
+-generate-meta-for-package coq-metacoq-demo-plugin
+
 -I src
 -I gen-src
 -R theories MetaCoq.ExtractedPluginDemo

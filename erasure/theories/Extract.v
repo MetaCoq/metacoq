@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
+From MetaCoq.Template Require Import config utils Primitive.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
      PCUICElimination PCUICWcbvEval.
 From MetaCoq.Erasure Require EAst EGlobalEnv.
 
@@ -9,7 +9,7 @@ Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * 
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) *
   is_propositional u))%type.
 
 Definition isPropositionalArity ar b :=
@@ -18,7 +18,7 @@ Definition isPropositionalArity ar b :=
   | None => False
   end.
 
-Definition isPropositional Σ ind b := 
+Definition isPropositional Σ ind b :=
   match lookup_inductive Σ ind with
   | Some (mdecl, idecl) => isPropositionalArity idecl.(ind_type) b
   | _ => False
@@ -34,6 +34,15 @@ Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level
 
 Definition erase_context (Γ : context) : list name :=
   map (fun d => d.(decl_name).(binder_name)) Γ.
+
+Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @prim_model E.term t :=
+  match e in @prim_model _ x return prim_model E.term x with
+  | primIntModel i => primIntModel i
+  | primFloatModel f => primFloatModel f
+  end.
+
+Definition erase_prim_val (p : prim_val term) : prim_val E.term :=
+  (p.π1; erase_prim_model p.π2).
 
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
@@ -84,7 +93,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                          × Σ;;; Γ ,,, fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
-  | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
+  | erases_tPrim : forall p, Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim (erase_prim_val p)
+  | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox
+  where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
 Lemma erases_forall_list_ind
       Σ (P : context -> term -> E.term -> Prop)
@@ -118,7 +129,7 @@ Lemma erases_forall_list_ind
           PCUICElimination.Informative Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
-          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × 
+          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 ×
             erase_context (bcontext x) = x'.1) brs brs' ->
           Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
           P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
@@ -153,6 +164,7 @@ Lemma erases_forall_list_ind
                        (dbody d)
                        (EAst.dbody d') ) mfix mfix' ->
           P Γ (tCoFix mfix n) (E.tCoFix mfix' n))
+      (Hprim : forall Γ p, P Γ (tPrim p) (E.tPrim (erase_prim_val p)))
       (Hbox : forall Γ t, isErasable Σ Γ t -> P Γ t E.tBox) :
   forall Γ t t0,
     Σ;;; Γ |- t ⇝ℇ t0 ->
@@ -206,7 +218,7 @@ Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_in
   Forall2 (fun cdecl cstr => cdecl.(PCUICEnvironment.cstr_arity) = cstr.(E.cstr_nargs) /\ cdecl.(cstr_name) = cstr.(E.cstr_name)) oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun 'i i' => i.(PCUICEnvironment.proj_name) = i'.(E.proj_name)) oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
-  oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
+  oib'.(E.ind_kelim) = oib.(ind_kelim) /\
   isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).
 
 Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
@@ -215,18 +227,18 @@ Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.
   Forall2 erases_one_inductive_body bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
 
-Inductive erases_global_decls (univs : ContextSet.t) : global_declarations -> E.global_declarations -> Prop :=
-| erases_global_nil : erases_global_decls univs [] []
+Inductive erases_global_decls (univs : ContextSet.t) retro : global_declarations -> E.global_declarations -> Prop :=
+| erases_global_nil : erases_global_decls univs retro [] []
 | erases_global_cnst Σ cb cb' kn Σ' :
-    erases_constant_body ({| universes := univs; declarations := Σ |}, cst_universes cb) cb cb' ->
-    erases_global_decls univs Σ Σ' ->
-    erases_global_decls univs ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
+    erases_constant_body ({| universes := univs; declarations := Σ; retroknowledge := retro |}, cst_universes cb) cb cb' ->
+    erases_global_decls univs retro Σ Σ' ->
+    erases_global_decls univs retro ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
 | erases_global_ind Σ mib mib' kn Σ' :
     erases_mutual_inductive_body mib mib' ->
-    erases_global_decls univs Σ Σ' ->
-    erases_global_decls  univs((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
+    erases_global_decls univs retro Σ Σ' ->
+    erases_global_decls univs retro ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 
-Definition erases_global Σ Σ' := erases_global_decls Σ.(universes) Σ.(declarations) Σ'.
+Definition erases_global Σ Σ' := erases_global_decls Σ.(universes) Σ.(retroknowledge) Σ.(declarations) Σ'.
 
 Definition inductive_arity (t : term) :=
   match fst (decompose_app t) with
@@ -287,7 +299,8 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tFix defs i)
 | erases_deps_tCoFix defs i :
     Forall (fun d => erases_deps Σ Σ' (E.dbody d)) defs ->
-    erases_deps Σ Σ' (E.tCoFix defs i).
+    erases_deps Σ Σ' (E.tCoFix defs i)
+| erases_deps_tPrim p : erases_deps Σ Σ' (E.tPrim p).
 
 Definition option_is_none {A} (o : option A) :=
   match o with
@@ -324,4 +337,4 @@ Definition computational_ind Σ ind :=
 Definition computational_type Σ T :=
   exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
 
-  
+

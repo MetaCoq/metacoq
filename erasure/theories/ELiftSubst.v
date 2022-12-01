@@ -19,7 +19,7 @@ Fixpoint lift n k t : term :=
   | tApp u v => tApp (lift n k u) (lift n k v)
   | tLetIn na b b' => tLetIn na (lift n k b) (lift n (S k) b')
   | tCase ind c brs =>
-    let brs' := List.map (fun br => 
+    let brs' := List.map (fun br =>
       (br.1, lift n (#|br.1| + k) br.2)) brs in
     tCase ind (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
@@ -35,7 +35,7 @@ Fixpoint lift n k t : term :=
   | tVar _ => t
   | tConst _ => t
   | tConstruct ind i args => tConstruct ind i (map (lift n k) args)
-  (* | tPrim _ => t *)
+  | tPrim _ => t
   end.
 
 Notation lift0 n := (lift n 0).
@@ -452,7 +452,7 @@ Proof.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
   - cbn. f_equal; auto.
     rtoProp; solve_all.
-    rtoProp; solve_all.    
+    rtoProp; solve_all.
     destruct x; f_equal; cbn in *. eauto.
 Qed.
 
@@ -489,7 +489,7 @@ Proof.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-  - cbn. 
+  - cbn.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
     elim (Nat.leb_spec k n0); intros; try easy.
   - cbn. f_equal; auto.
@@ -574,7 +574,7 @@ Qed.
 Set SsrRewrite.
 
 Lemma closedn_subst_eq s k k' t :
-  forallb (closedn k) s -> 
+  forallb (closedn k) s ->
   closedn (k + k' + #|s|) t =
   closedn (k + k') (subst s k' t).
 Proof.
@@ -602,7 +602,7 @@ Proof.
   - eapply All_forallb_eq_forallb; tea; eauto.
   - specialize (IHt (S k')).
     rewrite <- Nat.add_succ_comm in IHt.
-    rewrite IHt //. 
+    rewrite IHt //.
   - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2.
     rewrite IHt1 // IHt2 //.
@@ -620,8 +620,8 @@ Proof.
     now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
 Qed.
 
-Lemma closedn_subst s k t : 
-  forallb (closedn k) s -> closedn (#|s| + k) t -> 
+Lemma closedn_subst s k t :
+  forallb (closedn k) s -> closedn (#|s| + k) t ->
   closedn k (subst0 s t).
 Proof.
   intros.

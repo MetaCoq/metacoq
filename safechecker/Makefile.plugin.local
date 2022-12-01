@@ -6,3 +6,15 @@ CAMLFLAGS+=-w -32 # Unused values
 CAMLFLAGS+=-w -34 # Unused types
 CAMLFLAGS+=-w -39 # Unused rec flags
 CAMLFLAGS+=-w -60 # Unused module in functor
+CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin,stdlib-shims
+
+-include ../Makefile.conf
+
+ifeq '$(METACOQ_CONFIG)' 'local'
+  ifeq ($(shell which cygpath 2>/dev/null),)
+  OCAMLPATH := $(shell pwd)/../template-coq/:$(OCAMLPATH)
+  else
+  OCAMLPATH := $(shell cygpath -m `pwd`)/../template-coq/;$(OCAMLPATH)
+  endif
+  export OCAMLPATH
+endif

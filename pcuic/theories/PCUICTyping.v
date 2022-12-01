@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.Template Require Import config utils Primitive.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
 From MetaCoq.PCUIC Require Export PCUICCumulativitySpec.
 From MetaCoq.PCUIC Require Export PCUICCases.
@@ -10,7 +10,7 @@ Import MCMonadNotation.
 (* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
 Set Equations With UIP.
@@ -137,7 +137,6 @@ Definition wf_cofixpoint_gen
   | _ => false
   end.
 
-
 Definition wf_cofixpoint (Σ : global_env) := wf_cofixpoint_gen (lookup_env Σ).
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
@@ -261,6 +260,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype)) mfix ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
+
+| type_Prim p prim_ty cdecl :
+   wf_local Σ Γ ->
+   primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+   declared_constant Σ prim_ty cdecl ->
+   primitive_invariants cdecl ->
+   Σ ;;; Γ |- tPrim p : tConst prim_ty []
 
 | type_Cumul : forall t A B s,
     Σ ;;; Γ |- t : A ->
@@ -399,6 +405,7 @@ Proof.
     (all_size _ (fun x p => (infer_sort_size (typing_sort_size typing_size)) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (All_local_env_size typing_size _ _ a)
     (all_size _ (fun x p => (infer_sort_size (typing_sort_size typing_size)) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
+  - exact (S (All_local_env_size typing_size _ _ a)).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -719,6 +726,13 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        wf_cofixpoint Σ mfix ->
        P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
+      PΓ Σ Γ ->
+      primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+      declared_constant Σ prim_ty cdecl ->
+      primitive_invariants cdecl ->
+      P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
        PΓ Σ Γ ->
        Σ ;;; Γ |- t : A ->
@@ -731,7 +745,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
       env_prop P PΓ.
 Proof.
   intros P Pdecl PΓ.
-  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
+  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 Σ wfΣ Γ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
     otherwise it takes forever to execure the "pose", for some reason *)
   pose proof (@Fix_F { Σ & { wfΣ : wf Σ.1 & { Γ & { t & { T & Σ ;;; Γ |- t : T }}}}}) as p0.
@@ -753,7 +767,7 @@ Proof.
   intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
   intros IH. simpl in IH.
   split.
-  - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12.
+  - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13.
     destruct Σ as [Σ φ].
     red. cbn. do 2 red in wfΣ. cbn in wfΣ.
     destruct Σ as [univs Σ]; cbn in *.
@@ -762,10 +776,12 @@ Proof.
     unfold Σg in o |- *; cbn in o.
     rename o into ongu. rename o0 into o. cbn in o |- *.
     destruct o. { constructor. }
-    rename o1 into Xg.
+    rename o0 into Xg.
     set (wfΣ := (ongu, o) : on_global_env cumulSpec0 (lift_typing typing) {| universes := univs; declarations := Σ |}).
     set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-    constructor; auto.
+    destruct Xg.
+    rename on_global_decl_d into Xg.
+    constructor; auto; try constructor; auto.
     * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort Universe.lProp); _; _))).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
@@ -786,7 +802,7 @@ Proof.
           eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp. intros n x Xg.
           refine {| ind_arity_eq := Xg.(ind_arity_eq);
                     ind_cunivs := Xg.(ind_cunivs) |}.
-          - apply onArity in Xg. 
+          - apply onArity in Xg.
             apply lift_typing_impl with (1 := Xg); intros ? Hs.
             apply (IH (_; _; _; Hs)).
           - pose proof Xg.(onConstructors) as Xg'.
@@ -804,7 +820,7 @@ Proof.
               generalize (cstr_indices x0). induction 1; constructor; auto.
               do 2 red in t0 |- *.
               apply (IH (_; (_; (_; t0)))). }
-          - intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
+          - pose proof (onProjections Xg); auto.
           - destruct Xg. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
@@ -828,7 +844,7 @@ Proof.
       forward IH.
       constructor 2. simpl. apply H0.
       split; apply IH. }
-    rename X13 into X14.
+    (* rename X13 into X14. *)
 
     assert (Hdecls: typing_size H > 1 -> Forall_decls_typing P Σ.1).
     { specialize (X14 _ _ _  (type_Prop _)).
@@ -1164,6 +1180,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_cofixpoint Σ mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
+        PΓ Σ Γ ->
+        primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+        declared_constant Σ prim_ty cdecl ->
+        primitive_invariants cdecl ->
+        P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ ->
         Σ ;;; Γ |- t : A ->
@@ -1176,7 +1199,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
        env_prop P PΓ.
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
-  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
+  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 Σ wfΣ Γ t T H.
   apply typing_ind_env_app_size; eauto.
 Qed.
 
@@ -1220,22 +1243,23 @@ Section All_local_env.
     { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
        on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
   Proof using Type.
-    destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
+    destruct Σ as [univs Σ retro]; rewrite /on_global_env /lookup_env; cbn.
     intros [cu Σp].
     induction Σp; simpl. congruence.
     destruct (eqb_specT c kn); subst.
     - intros [= ->].
-      exists ({| universes := univs; declarations := Σ |}).
+      exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}).
       split.
-      * red; cbn. split; [split;[lsets|csets]|].
+      * red; cbn. split; [split;[lsets|csets]| |].
         exists [(kn, decl)] => //.
+        apply Retroknowledge.extends_refl.
       * split => //.
-      * apply o0.
+      * destruct o; assumption.
     - intros hl. destruct (IHΣp hl) as [Σ' []].
       exists Σ'.
       split=> //.
       destruct e as [eu ed]. red; cbn in *.
-      split; [auto|].
+      split; [auto| |auto].
       destruct ed as [Σ'' ->].
       exists (Σ'' ,, (kn, d)) => //.
   Qed.

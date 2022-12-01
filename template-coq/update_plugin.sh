@@ -7,12 +7,17 @@ if [[ ! -f "gen-src/denoter.ml" ||
   "theories/Extraction.vo" -nt "gen-src/metacoq_template_plugin.cmx" || "$1" = "force" ]]
 then
     echo "Updating gen-src from src"
-    mkdir -p build
     echo "Copying from src to gen-src"
     for x in ${TOCOPY}; do rm -f gen-src/$x; cp -a src/$x gen-src/$x; done
     echo "Renaming files to camelCase"
     (cd gen-src; ./to-lower.sh)
     rm -f gen-src/*.d gen-src/*.cm*
+    echo "Prepare line endings for patching (for Windows)"
+    for f in gen-src/*.ml*
+    do
+      tr -d '\r' < "$f" > tmp
+      mv -f tmp $f
+    done
     # Fix an extraction bug: wrong type annotation on eq_equivalence
     patch -N -p0 < extraction.patch
     patch -N -p0 < specFloat.patch

@@ -10,42 +10,43 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICTypin
     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICInversion.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICWfEnv PCUICSafeRetyping.
 
-(** We might need to weaken calls to the retyping function w.r.t. the global environment: i.e. 
-    if we infer some type for a term in an environment Σ, then any other environment having at least 
+(** We might need to weaken calls to the retyping function w.r.t. the global environment: i.e.
+    if we infer some type for a term in an environment Σ, then any other environment having at least
     the same declarations as Σ should give us the same result. For example erasure can be called on
     all the declarations in a well-formed global environment without having to take successive prefixes of it.
-    
+
     This does not follow from correctness of retyping alone. We rather prove that the result of retyping (and hence also reduction) are invariant
     in this sense. As retyping relies on reduction of types also show that safe reduction is invariant under extension.
-    This cannot be shown using only the correctness and completeness lemmas of reduction either as 
-    in different enviroments we might find different declarations and hence produce different 
-    reduced terms. Morally we could hope that a parametericity style lemma could prove this: 
-    for two environments that are obsevationally equal on the declared constants/inductives 
-    appearing in a well-typed terms, the output of reduction/inference is equal. 
+    This cannot be shown using only the correctness and completeness lemmas of reduction either as
+    in different enviroments we might find different declarations and hence produce different
+    reduced terms. Morally we could hope that a parametericity style lemma could prove this:
+    for two environments that are obsevationally equal on the declared constants/inductives
+    appearing in a well-typed terms, the output of reduction/inference is equal.
     However parametricity would not directly allow us to restrict to observational
     equivalence only on declared constants, so we have to perform this relational proof meticulously.
-    As the functions involved use dependent types everywhere, we restrict our observations to the 
+    As the functions involved use dependent types everywhere, we restrict our observations to the
     computational results returned by each function and do not compare proofs (in potentially different types/fibers). *)
 
 Implicit Types (cf : checker_flags).
 
-Definition Hlookup {cf} (X_type : abstract_env_ext_impl) (X : X_type.π1) (X_type' : abstract_env_ext_impl)
-  (X' : X_type'.π1) := 
+Definition Hlookup {cf} (X_type : abstract_env_impl) (X : X_type.π2.π1) (X_type' : abstract_env_impl)
+  (X' : X_type'.π2.π1) :=
   forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
   forall Σ' : global_env_ext, abstract_env_ext_rel X' Σ' ->
-  forall kn decl decl',
+  (forall kn decl decl',
     lookup_env Σ kn = Some decl ->
     lookup_env Σ' kn = Some decl' ->
-    abstract_env_lookup X kn = abstract_env_lookup X' kn.
+    abstract_env_lookup X kn = abstract_env_lookup X' kn) /\
+  (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
 
-Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_ext_impl} {X : X_type.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
+Definition reduce_stack_eq {cf} {fl} {X_type : abstract_env_impl} {X : X_type.π2.π1} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
 Proof.
   unfold reduce_stack. destruct reduce_stack_full => //.
 Qed.
 
 Definition same_principal_type {cf}
-  {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+  {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   {Γ : context} {t} (p : PCUICSafeRetyping.principal_type X_type X Γ t) (p' : PCUICSafeRetyping.principal_type X_type' X' Γ t) :=
   p.π1 = p'.π1.
 
@@ -59,27 +60,27 @@ Proof.
 Qed.
 
 Section infer_irrel.
-  Context {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}.
+  Context {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+    {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}.
   Context (hl : Hlookup X_type X X_type' X').
-  
+
   Definition same_prod (Γ : context) {T}
      (pf : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥)
     (pf' : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥) :=
     let '(na; A; B; _) := pf in
     let '(na'; A'; B'; _) := pf' in
     (na, A, B) = (na', A', B').
-  
+
   Lemma same_prod_last (Γ : context) {T}
     (pf : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥)
-    (pf' : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥) 
+    (pf' : ∑ (na' : aname) (A' B' : term), forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥)
     : same_prod Γ pf pf' -> pf.π2.π2.π1 = pf'.π2.π2.π1.
   Proof using Type.
     destruct pf as [na [A [B prf]]].
     destruct pf' as [na' [A' []]].
     cbn. congruence.
   Qed.
-  
+
   Lemma same_reduce_stack {Γ t π} {fl} (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ (PCUICPosition.zip (t, π)))
     (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ (PCUICPosition.zip (t, π))) :
     reduce_stack fl X_type X Γ t π wi = reduce_stack fl X_type' X' Γ t π wi'.
@@ -106,7 +107,7 @@ Section infer_irrel.
       [ |- context [rec ?t ?π ?hr] ] =>
         match goal with
         [ |- context [rec' ?t' ?π' ?hr'] ] =>
-          let H := fresh in 
+          let H := fresh in
           assert (H := ih t π hr hr');
           set (call := rec t π hr) in *;
           set (call' := rec' t π' hr') in *;
@@ -148,7 +149,8 @@ Section infer_irrel.
         eapply (welltyped_mkApps_inv (Σ := Σ') _ _ _ H2) in wi' as [].
         destruct H0, H3.
         eapply inversion_Const in X0 as [decl [_ [Hdecl _]]]; eauto.
-        eapply inversion_Const in X1 as [decl' [_ [Hdecl' _]]]; eauto. }
+        eapply inversion_Const in X1 as [decl' [_ [Hdecl' _]]]; eauto.
+        now eapply hl. }
       destruct PCUICSafeReduce.inspect => //.
       destruct PCUICSafeReduce.inspect => //.
       destruct x as [[]|] => //; simp _reduce_stack. 2-3:bang.
@@ -177,7 +179,7 @@ Section infer_irrel.
         [ |- context [rec ?t ?π ?hr] ] =>
           match goal with
           [ |- context [rec' ?t' ?π' ?hr'] ] =>
-            let H := fresh in 
+            let H := fresh in
             assert (H := ih t π hr hr');
             set (call := rec t π hr) in *;
             set (call' := rec' t π' hr') in *
@@ -203,7 +205,7 @@ Section infer_irrel.
       subst x0. destruct x.
       simp _reduce_stack.
       destruct (construct_viewc); simp _reduce_stack.
-      * destruct PCUICSafeReduce.inspect; simp _reduce_stack. 
+      * destruct PCUICSafeReduce.inspect; simp _reduce_stack.
         destruct x as []; simp _reduce_stack.
         simpl. subst call call'.
         reccall ih rec rec'.
@@ -230,7 +232,7 @@ Section infer_irrel.
         reccall ih rec rec'. congruence. }
       subst x0. destruct x.
       simp _reduce_stack.
-      destruct PCUICSafeReduce.inspect; simp _reduce_stack. 
+      destruct PCUICSafeReduce.inspect; simp _reduce_stack.
       destruct x as []; simp _reduce_stack.
       destruct cc_viewc; simp _reduce_stack. 3:reflexivity.
       destruct PCUICSafeReduce.inspect; simp _reduce_stack.
@@ -262,7 +264,7 @@ Section infer_irrel.
         reccall ih rec rec'. congruence. }
       subst x0. destruct x.
       simp _reduce_stack.
-      destruct PCUICSafeReduce.inspect; simp _reduce_stack. 
+      destruct PCUICSafeReduce.inspect; simp _reduce_stack.
       destruct x as []; simp _reduce_stack.
       destruct cc0_viewc; simp _reduce_stack. 3:reflexivity.
       destruct PCUICSafeReduce.inspect; simp _reduce_stack.
@@ -284,7 +286,7 @@ Section infer_irrel.
     f_equal. apply same_reduce_stack.
   Qed.
 
-  Definition same_typing_result_comp {A B} (P : A -> B -> Prop) (c : typing_result_comp A) (c' : typing_result_comp B) : Prop := 
+  Definition same_typing_result_comp {A B} (P : A -> B -> Prop) (c : typing_result_comp A) (c' : typing_result_comp B) : Prop :=
     match c, c' with
     | Checked_comp a, Checked_comp a' => P a a'
     | TypeError_comp e ne, TypeError_comp e' na' => True
@@ -292,7 +294,7 @@ Section infer_irrel.
     end.
 
   Definition same_prod_comp {Γ T}
-     (pf : typing_result_comp (∑ (na' : aname) (A' B' : term), 
+     (pf : typing_result_comp (∑ (na' : aname) (A' B' : term),
        forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥))
     (pf' : typing_result_comp (∑ (na' : aname) (A' B' : term),
        forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥)) :=
@@ -300,7 +302,7 @@ Section infer_irrel.
 
   Lemma reduce_to_prod_irrel {Γ t}
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
-    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) : 
+    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) :
     same_prod_comp (reduce_to_prod Γ t wi) (reduce_to_prod Γ t wi').
   Proof using hl.
     unfold reduce_to_prod.
@@ -318,12 +320,12 @@ Section infer_irrel.
     destruct v'. cbn. subst t0. now cbn in n0.
     subst t1. cbn. auto.
   Qed.
-  
-  Lemma infer_as_prod_irrel {Γ t} 
+
+  Lemma infer_as_prod_irrel {Γ t}
     (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
     (wf' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ wf_local Σ Γ ∥)
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
-    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t) 
+    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t)
     hp hp' : same_prod Γ (infer_as_prod X_type X Γ t wf wi hp) (infer_as_prod X_type' X' Γ t wf' wi' hp').
   Proof using hl.
     unfold same_prod.
@@ -334,19 +336,19 @@ Section infer_irrel.
     rewrite h h' in H. now cbn in H.
   Qed.
 
-  Definition same_sort_comp {cf} {nor : normalizing_flags} 
-    {X_type : abstract_env_ext_impl} {X : X_type.π1}
-    {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+  Definition same_sort_comp {cf} {nor : normalizing_flags}
+    {X_type : abstract_env_impl} {X : X_type.π2.π1}
+    {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
     {Γ : context} {t t'}
     (pf : typing_result_comp
       (∑ u, forall Σ0 : global_env_ext, abstract_env_ext_rel X Σ0 -> ∥ Σ0 ;;; Γ ⊢ t ⇝ tSort u ∥))
-    (pf' : typing_result_comp 
+    (pf' : typing_result_comp
       (∑ u, forall Σ0 : global_env_ext, abstract_env_ext_rel X' Σ0 -> ∥ Σ0 ;;; Γ ⊢ t' ⇝ tSort u ∥)) :=
     same_typing_result_comp (fun x y => x.π1 = y.π1) pf pf'.
 
   Lemma reduce_to_sort_irrel {Γ t t'} (e : t = t')
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
-    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') : 
+    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') :
     same_sort_comp (reduce_to_sort Γ t wi) (reduce_to_sort Γ t' wi').
   Proof using hl.
     destruct e.
@@ -368,11 +370,11 @@ Section infer_irrel.
     subst t1. cbn. auto.
   Qed.
 
-  Lemma infer_as_sort_irrel {Γ t} 
+  Lemma infer_as_sort_irrel {Γ t}
     (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
     (wf' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ wf_local Σ Γ ∥)
     (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> well_sorted Σ Γ t)
-    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> well_sorted Σ Γ t) 
+    (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> well_sorted Σ Γ t)
     hp hp' : hp.π1 = hp'.π1 -> (infer_as_sort X_type X wf wi hp).π1 = (infer_as_sort X_type' X' wf' wi' hp').π1.
   Proof using hl.
     unfold infer_as_sort.
@@ -388,8 +390,8 @@ Section infer_irrel.
     rewrite h h' in H. now cbn in H.
   Qed.
 
-  Definition same_ind_comp {Γ t t'} 
-    (pf : typing_result_comp 
+  Definition same_ind_comp {Γ t t'}
+    (pf : typing_result_comp
     (∑ (i : inductive) (u : Instance.t) (l : list term),
          forall Σ : global_env_ext,
          abstract_env_ext_rel X Σ ->
@@ -399,7 +401,7 @@ Section infer_irrel.
     forall Σ : global_env_ext,
     abstract_env_ext_rel X' Σ -> ∥ Σ ;;; Γ ⊢ t' ⇝ mkApps (tInd i u) l ∥)) :=
  same_typing_result_comp (fun x y => (x.π1, x.π2.π1, x.π2.π2.π1) = (y.π1, y.π2.π1, y.π2.π2.π1)) pf pf'.
- 
+
 
   Lemma elim_inspect {A} (x : A) (P : { y : A | y = x } -> Type) :
     (forall y (e : y = x), P (exist y e)) -> P (PCUICSafeReduce.inspect x).
@@ -409,7 +411,7 @@ Section infer_irrel.
 
  Lemma reduce_to_ind_irrel {Γ t t'} (e : t = t')
   (wi : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
-  (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') : 
+  (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> welltyped Σ Γ t') :
   same_ind_comp (reduce_to_ind Γ t wi) (reduce_to_ind Γ t' wi').
   Proof using hl.
     subst t'.
@@ -426,17 +428,17 @@ Section infer_irrel.
     eapply elim_inspect => [[app st] eqst]. simp reduce_to_ind => //.
   Qed.
 
-  Definition same_typing_result {A B} (P : A -> B -> Prop) (c : typing_result A) (c' : typing_result B) : Prop := 
+  Definition same_typing_result {A B} (P : A -> B -> Prop) (c : typing_result A) (c' : typing_result B) : Prop :=
     match c, c' with
     | Checked a, Checked a' => P a a'
     | TypeError e, TypeError e' => True
     | _, _ => False
     end.
-  
+
   Lemma same_lookup_ind_decl ind :
     abstract_env_lookup X (inductive_mind ind) = abstract_env_lookup X' (inductive_mind ind) ->
     same_typing_result (fun x y => (x.π1, x.π2.π1) = (y.π1, y.π2.π1)) (lookup_ind_decl X_type X ind) (lookup_ind_decl X_type' X' ind).
-  Proof using Type. 
+  Proof using Type.
     intros eq.
     funelim (lookup_ind_decl X_type X ind); simp lookup_ind_decl;
     eapply elim_inspect; intros opt e'.
@@ -451,12 +453,12 @@ Section infer_irrel.
     - destruct opt as [[]|] => //. simp lookup_ind_decl.
       eapply elim_inspect; intros opt e''.
       destruct opt => //. simp lookup_ind_decl. cbn. congruence.
-  Qed.    
+  Qed.
 
 End infer_irrel.
 
-Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   (hl : Hlookup X_type X X_type' X')
   {Γ t}
   (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
@@ -522,7 +524,7 @@ Proof.
       pose proof (hd _ wfΣ).
       destruct isdecl, H0.
       unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ').  }        
+      now eapply (hl Σ wfΣ Σ' wfΣ').  }
     destruct (PCUICSafeReduce.inspect (lookup_ind_decl _ X' ind)).
     generalize (same_lookup_ind_decl ind H). rewrite -{1}e0 -{1}e.
     destruct x => //. cbn. cbn.
@@ -540,7 +542,7 @@ Proof.
       destruct isdecl, H0. inv X0.
       destruct H1. destruct isdecl as [[] ?].
       unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ'). }        
+      now eapply (hl Σ wfΣ Σ' wfΣ'). }
     destruct (PCUICSafeReduce.inspect (lookup_ind_decl _ X' ind)).
     generalize (same_lookup_ind_decl _ H). rewrite -{1}e1 -{1}e.
     destruct x => //.
@@ -582,7 +584,7 @@ Proof.
       pose proof (wt _ wfΣ).
       inv H1. inv X0. destruct H1 as [[[]]]. destruct H as [[[]]].
       unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ'). } 
+      now eapply (hl Σ wfΣ Σ' wfΣ'). }
     generalize (same_lookup_ind_decl _ H). rewrite -{1}eq -{1}e.
     destruct y => //.
     destruct a as [decl [body ?]], d as [decl' [body' ?]].
@@ -608,13 +610,25 @@ Proof.
     clear -e0 eq'. congruence.
   - cbn -[infer]. unfold infer; rewrite Heq /= //.
   - cbn -[infer]. unfold infer; rewrite Heq /= //.
+  - cbn -[infer]. simp infer.
+    eapply elim_inspect => y eq.
+    assert (abstract_env_ext_retroknowledge X = abstract_env_ext_retroknowledge X').
+    { epose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      epose proof (abstract_env_ext_wf X wfΣ) as [hwfΣ].
+      epose proof (abstract_env_ext_exists X') as [[Σ' wfΣ']].
+      epose proof (abstract_env_ext_wf X' wfΣ') as [hwfΣ'].
+      apply (hl _ wfΣ _ wfΣ'). }
+    assert (primitive_constant X_type X p.π1 = primitive_constant X_type' X' p.π1).
+    { unfold primitive_constant. now rewrite H. }
+    clear Heq. rewrite H0 in eqp. rewrite -eq in eqp.
+    destruct y;  simp infer; cbn; congruence.
 Qed.
 
 Lemma sort_of_type_irrel
-  {cf} {nor : normalizing_flags} {X_type : abstract_env_ext_impl} {X : X_type.π1}
-  {X_type' : abstract_env_ext_impl} {X' : X_type'.π1}
+  {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}
   (hl : Hlookup X_type X X_type' X')
-  {Γ : context} {t} 
+  {Γ : context} {t}
   (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥)
   (wt' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> ∥ isType Σ Γ t ∥) :
   (sort_of_type X_type X Γ t wt).π1 = (sort_of_type X_type' X' Γ t wt').π1.

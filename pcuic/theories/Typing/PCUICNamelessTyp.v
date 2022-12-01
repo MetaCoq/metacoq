@@ -13,8 +13,8 @@ Implicit Types cf : checker_flags.
 
 (** Typing does not rely on name annotations of binders.
 
-  We prove this by constructing a type-preserving translation to 
-  terms where all binders are anonymous. An alternative would be to 
+  We prove this by constructing a type-preserving translation to
+  terms where all binders are anonymous. An alternative would be to
   be parametrically polymorphic everywhere on the binder name type.
   This would allow to add implicit information too. *)
 
@@ -85,7 +85,7 @@ Qed.
 Lemma nl_wf_cofixpoint Σ mfix :
   wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ) (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_cofixpoint, wf_cofixpoint_gen.  
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
   replace (map check_one_cofix mfix) with (map check_one_cofix (map (map_def_anon nl nl) mfix)) => //.
   * destruct map_option_out => //. destruct l => //.
     f_equal. rewrite /check_recursivity_kind.
@@ -107,7 +107,7 @@ Qed.
 (* Seems unused *)
 
 (*
-Lemma nl_wf {cf:checker_flags} (Σ : global_env_ext) : 
+Lemma nl_wf {cf:checker_flags} (Σ : global_env_ext) :
   wf Σ -> wf (nlg Σ).
 
 Lemma nl_cumulSpec {cf:checker_flags} :
@@ -118,18 +118,18 @@ Lemma nl_cumulSpec {cf:checker_flags} :
   Σ ;;; Γ |- A <=s B ->
   nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
 Proof.
-  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (pb:=Cumul)). 
+  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (pb:=Cumul)).
   eapply into_ws_cumul_pb.
-  - eapply nl_cumul. eapply (ws_cumul_pb_forget (pb:=Cumul)). 
-  unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
-  - eapply closed_ctx_on_free_vars. apply closed_nlctx. 
+  - eapply nl_cumul. eapply (ws_cumul_pb_forget (pb:=Cumul)).
+  unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn.
+  - eapply closed_ctx_on_free_vars. apply closed_nlctx.
     rewrite is_closed_ctx_closed; eauto.
   - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length.
     rewrite on_free_vars_closedn; eauto.
   - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length.
     rewrite on_free_vars_closedn; eauto.
-  Unshelve. eapply nl_wf; eauto. 
-Defined. 
+  Unshelve. eapply nl_wf; eauto.
+Defined.
 
 Lemma typing_nlg {cf : checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T)
@@ -287,8 +287,8 @@ Proof.
         now rewrite -> XX, <- nl_lift.
     + now rewrite <-nl_wf_cofixpoint.
   - econstructor; tea.
-    apply nl_cumulSpec; eauto. 
-    + eapply wf_local_closed_context; eauto.  
+    apply nl_cumulSpec; eauto.
+    + eapply wf_local_closed_context; eauto.
     + eapply closedn_on_free_vars. eapply type_closed; eauto.
     + eapply closedn_on_free_vars. eapply subject_closed; eauto.
 Qed.

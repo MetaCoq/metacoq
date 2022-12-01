@@ -1,6 +1,8 @@
 -I gen-src
 -Q gen-src MetaCoq.Template
 -R theories MetaCoq.Template
+META.coq-metacoq-template-ocaml
+-I .
 
 # Generated Code by `ls -1 *.ml *.mli` in `template-coq/gen-src` after having compiled `Extraction.v`
 gen-src/signature.mli
@@ -19,18 +21,20 @@ gen-src/ast0.ml
 gen-src/ast0.mli
 gen-src/ast_denoter.ml
 gen-src/ast_quoter.ml
+gen-src/primitive.mli
+gen-src/primitive.ml
 gen-src/astUtils.ml
 gen-src/astUtils.mli
 gen-src/basicAst.ml
 gen-src/basicAst.mli
 gen-src/basics.ml
 gen-src/basics.mli
+gen-src/binNums.mli
+gen-src/binNums.ml
 gen-src/binInt.ml
 gen-src/binInt.mli
 gen-src/binNat.ml
 gen-src/binNat.mli
-gen-src/binNums.ml
-gen-src/binNums.mli
 gen-src/binPosDef.ml
 gen-src/binPosDef.mli
 gen-src/binPos.ml
@@ -100,6 +104,8 @@ gen-src/logic2.mli
 gen-src/logic2.ml
 gen-src/relation.mli
 gen-src/relation.ml
+gen-src/mCProd.mli
+gen-src/mCProd.ml
 gen-src/mCPrelude.mli
 gen-src/mCPrelude.ml
 gen-src/mCCompare.ml
@@ -116,8 +122,10 @@ gen-src/mCReflect.mli
 gen-src/mCReflect.ml
 gen-src/primFloat.mli
 gen-src/primFloat.ml
-#gen-src/decimalString.mli
-#gen-src/decimalString.ml
+gen-src/hexadecimalString.mli
+gen-src/hexadecimalString.ml
+gen-src/decimalString.mli
+gen-src/decimalString.ml
 gen-src/mCString.ml
 gen-src/mCString.mli
 gen-src/mCUtils.ml

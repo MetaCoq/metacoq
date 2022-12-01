@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Universes.
+From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
@@ -38,8 +39,8 @@ Inductive term : Set :=
                term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
-(* | tPrim      : prim_val term -> term. *)
+| tCoFix     : mfixpoint term -> nat -> term
+| tPrim      : prim_val term -> term.
 
 Derive NoConfusion for term.
 
@@ -105,11 +106,6 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
-
 Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
@@ -174,7 +170,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : erasure.
 
 (** *** Environments *)
 
-Record constructor_body := 
+Record constructor_body :=
   mkConstructor {
     cstr_name : ident;
     cstr_nargs : nat (* arity, w/o lets, w/o parameters *)
@@ -198,13 +194,14 @@ Derive NoConfusion for one_inductive_body.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
+  ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
 Derive NoConfusion for mutual_inductive_body.
 
-Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) := 
-  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.  
-  
+Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) :=
+  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.
+
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := { cst_body : option term }.
 

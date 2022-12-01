@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
+From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Reflect Environment Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -152,10 +152,10 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  (* - destruct (Int63.eqs i i0) ; nodec.
+  - destruct (eq_dec i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
-    subst. left. reflexivity. *)
+    subst. left. reflexivity.
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=
@@ -163,10 +163,10 @@ Defined.
 
 #[global] Instance eqb_ctx : ReflectEq context := _.
 
-(* Definition eqb_constant_body (x y : constant_body) :=
-  let (tyx, bodyx, univx) := x in
-  let (tyy, bodyy, univy) := y in
-  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
+Definition eqb_constant_body (x y : constant_body) :=
+  let (tyx, bodyx, univx, relx) := x in
+  let (tyy, bodyy, univy, rely) := y in
+  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy && eqb relx rely.
 
 #[global] Instance reflect_constant_body : ReflectEq constant_body.
 Proof.
@@ -188,7 +188,19 @@ Proof.
   intros [] [].
   unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
 Defined.
-  
+
+Definition eqb_projection_body (x y : projection_body) :=
+  x.(proj_name) ==? y.(proj_name) &&
+  x.(proj_type) ==? y.(proj_type) &&
+  x.(proj_relevance) ==? y.(proj_relevance).
+
+#[global] Instance reflect_projection_body : ReflectEq projection_body.
+Proof.
+  refine {| eqb := eqb_projection_body |}.
+  intros [] [].
+  unfold eqb_projection_body; cbn -[eqb]; finish_reflect.
+Defined.
+
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   x.(ind_name) ==? y.(ind_name) &&
   x.(ind_indices) ==? y.(ind_indices) &&
@@ -230,4 +242,4 @@ Proof.
   refine {| eqb := eqb_global_decl |}.
   unfold eqb_global_decl.
   intros [] []; finish_reflect.
-Defined. *)
+Defined.

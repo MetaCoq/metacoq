@@ -9,7 +9,7 @@ Proof. intros H; now depelim H. Qed.
 Lemma wf_fresh_globals {cf : checker_flags} (Σ : global_env) : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
 Proof.
   destruct Σ as [univs Σ]; cbn.
-  move=> [] onu; cbn. induction 1; constructor; auto.
+  move=> [] onu; cbn. induction 1; try destruct o; constructor; auto; constructor; eauto.
 Qed.
 
 Local Coercion declarations : global_env >-> global_declarations.

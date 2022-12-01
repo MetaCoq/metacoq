@@ -24,7 +24,7 @@ Section CheckerFlags.
     subst l. simpl.
     apply global_ext_levels_InSet.
   Qed.
-  
+
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
   Proof using Type.
     simpl.
@@ -39,7 +39,7 @@ Section CheckerFlags.
     1-2:intros _ l hin%LevelExprSet.singleton_spec; subst l; apply wf_universe_type1;
      now apply LevelExprSet.singleton_spec.
     intros Hl.
-    intros l hin. 
+    intros l hin.
     eapply Universes.spec_map_succ in hin as [x' [int ->]].
     simpl. now specialize (Hl _ int).
   Qed.
@@ -52,7 +52,7 @@ Section CheckerFlags.
     now apply (Hu _ Hl).
     now apply (Hu' _ Hl).
   Qed.
-  
+
   Lemma wf_universe_product {Σ u u'} : wf_universe Σ u -> wf_universe Σ u' ->
     wf_universe Σ (Universe.sort_of_product u u').
   Proof using Type.
@@ -64,12 +64,12 @@ Section CheckerFlags.
   Hint Resolve wf_universe_type1 wf_universe_super wf_universe_sup wf_universe_product : pcuic.
 
 
-  Definition wf_universeb_level Σ l := 
+  Definition wf_universeb_level Σ l :=
     LevelSet.mem l (global_ext_levels Σ).
 
-  Definition wf_universe_level Σ l := 
+  Definition wf_universe_level Σ l :=
     LevelSet.In l (global_ext_levels Σ).
-    
+
   Definition wf_universe_instance Σ u :=
     Forall (wf_universe_level Σ) u.
 
@@ -90,12 +90,12 @@ Section CheckerFlags.
     unfold wf_universe_instance, wf_universeb_instance.
     apply forallbP. intros x; apply wf_universe_levelP.
   Qed.
-  
+
   Lemma wf_universe_subst_instance_univ (Σ : global_env_ext) univs u s :
     wf Σ ->
     wf_universe Σ s ->
     wf_universe_instance (Σ.1, univs) u ->
-    wf_universe (Σ.1, univs) (subst_instance u s). 
+    wf_universe (Σ.1, univs) (subst_instance u s).
   Proof using Type.
     destruct s as [| |t]; cbnr.
     intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
@@ -118,7 +118,7 @@ Section CheckerFlags.
         * unfold subst_instance. simpl.
           destruct (nth_error u n') eqn:hnth.
           2:{ simpl. rewrite hnth. apply global_ext_levels_InSet. }
-          eapply nth_error_forall in Hu. 2:eauto. 
+          eapply nth_error_forall in Hu. 2:eauto.
           change (nth_error u n') with (nth_error u n') in *.
           rewrite -> hnth. simpl. apply Hu.
       + now apply not_var_global_levels in Hl.
@@ -134,7 +134,7 @@ Section CheckerFlags.
     apply (wf_universe_subst_instance_univ (Σ, univs) φ); auto.
   Qed.
 
-  Lemma subst_instance_empty u : 
+  Lemma subst_instance_empty u :
     forallb (fun x => ~~ Level.is_var x) u ->
     subst_instance [] u = u.
   Proof using Type.
@@ -145,7 +145,7 @@ Section CheckerFlags.
     now destruct a => /= //; auto.
   Qed.
 
-  Lemma wf_universe_level_mono Σ u : 
+  Lemma wf_universe_level_mono Σ u :
     wf Σ ->
     on_udecl_prop Σ (Monomorphic_ctx) ->
     Forall (wf_universe_level (Σ, Monomorphic_ctx)) u ->
@@ -181,7 +181,7 @@ Section CheckerFlags.
     intros. red in H. cbn in H. eapply wf_universe_level_sub; eauto.
   Qed.
 
-  Lemma In_Level_global_ext_poly s Σ cst : 
+  Lemma In_Level_global_ext_poly s Σ cst :
     LS.In (Level.Level s) (global_ext_levels (Σ, Polymorphic_ctx cst)) ->
     LS.In (Level.Level s) (global_levels Σ).
   Proof using Type.
@@ -198,7 +198,7 @@ Section CheckerFlags.
     intros x' [->|inx]; auto.
   Qed.
 
-  Lemma wf_universe_instance_In {Σ u} : wf_universe_instance Σ u <-> 
+  Lemma wf_universe_instance_In {Σ u} : wf_universe_instance Σ u <->
     (forall l, In l u -> LS.In l (global_ext_levels Σ)).
   Proof using Type.
     unfold wf_universe_instance.
@@ -206,7 +206,7 @@ Section CheckerFlags.
     apply In_Forall. auto.
   Qed.
 
-  Lemma in_subst_instance l u u' : 
+  Lemma in_subst_instance l u u' :
     In l (subst_instance u u') ->
     In l u \/ In l u' \/ l = Level.lzero.
   Proof using Type.
@@ -217,7 +217,7 @@ Section CheckerFlags.
     specialize (IHu' H). intuition auto.
   Qed.
 
-  Lemma wf_universe_subst_instance Σ univs u u' φ : 
+  Lemma wf_universe_subst_instance Σ univs u u' φ :
     wf Σ ->
     on_udecl_prop Σ univs ->
     wf_universe_instance (Σ, univs) u' ->
@@ -261,7 +261,7 @@ Section CheckerFlags.
       | _ => true
       end.
 
-    Lemma wf_universe_reflect {u : Universe.t} : 
+    Lemma wf_universe_reflect {u : Universe.t} :
       reflect (wf_universe Σ u) (wf_universeb u).
     Proof using Type.
       destruct u; simpl; try now constructor.
@@ -274,7 +274,7 @@ Section CheckerFlags.
         now eapply LS.mem_spec in H.
     Qed.
 
-    Fixpoint on_universes fu fc t := 
+    Fixpoint on_universes fu fc t :=
       match t with
       | tSort s => fu s
       | tApp t u
@@ -285,7 +285,7 @@ Section CheckerFlags.
         forallb fu (map Universe.make p.(puinst)) ,
         forallb (on_universes fu fc) p.(pparams) ,
         test_context (fc #|p.(puinst)|) p.(pcontext) ,
-        on_universes fu fc p.(preturn) , 
+        on_universes fu fc p.(preturn) ,
         on_universes fu fc c &
         forallb (test_branch (fc #|p.(puinst)|) (on_universes fu fc)) brs ]
       | tLetIn _ t t' u =>
@@ -301,7 +301,7 @@ Section CheckerFlags.
 
     Definition wf_universes t := on_universes wf_universeb closedu t.
 
-  
+
 
     Lemma wf_universeb_instance_forall u :
       forallb wf_universeb (map Universe.make u) = wf_universeb_instance Σ u.
@@ -400,19 +400,19 @@ Qed.
   End WfUniverses.
   Arguments wf_universe_reflect {Σ u}.
 
-  Ltac to_prop := 
-    repeat match goal with 
+  Ltac to_prop :=
+    repeat match goal with
     | [ H: is_true (?x && ?y) |- _ ] =>
      let x := fresh in let y := fresh in move/andP: H; move=> [x y]; rewrite ?x ?y; simpl
-    end. 
+    end.
 
-  Ltac to_wfu := 
-    repeat match goal with 
+  Ltac to_wfu :=
+    repeat match goal with
     | [ H: is_true (wf_universeb _ ?x) |- _ ] => apply (elimT (@wf_universe_reflect _ x)) in H
     | [ |- is_true (wf_universeb _ ?x) ] => apply (introT (@wf_universe_reflect _ x))
     end.
- 
-  Lemma wf_universes_inst {Σ : global_env_ext} univs t u : 
+
+  Lemma wf_universes_inst {Σ : global_env_ext} univs t u :
     wf Σ ->
     on_udecl_prop Σ.1 univs ->
     wf_universe_instance Σ u  ->
@@ -420,7 +420,7 @@ Qed.
     wf_universes Σ (subst_instance u t).
   Proof using Type.
     intros wfΣ onudecl cu wft.
-    induction t using term_forall_list_ind; simpl in *; auto; try to_prop; 
+    induction t using term_forall_list_ind; simpl in *; auto; try to_prop;
       try apply /andP; to_wfu; intuition eauto 4.
 
     all:cbn in * ; autorewrite with map; repeat (f_equal; solve_all).
@@ -452,7 +452,7 @@ Qed.
       eapply wf_universe_subst_instance; eauto.
       destruct Σ; simpl in *.
       now move/wf_universe_instanceP: wft.
-    
+
     - apply forallb_All.
       rewrite -forallb_map wf_universeb_instance_forall.
       apply All_forallb in H.
@@ -461,14 +461,14 @@ Qed.
       eapply wf_universe_subst_instance; eauto.
       destruct Σ ; simpl in *.
       now move/wf_universe_instanceP: H.
-      
-    - now len. 
+
+    - now len.
     - rewrite /test_branch. rtoProp.
       move/andP: a => [] tctx wfu.
       split; auto. simpl.
       solve_all. now len.
   Qed.
-  
+
   Lemma weaken_wf_universe Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
     wf_universe Σ t ->
     wf_universe (Σ', Σ.2) t.
@@ -531,10 +531,10 @@ Qed.
     rtoProp.
     intuition.
   - red in X; solve_all.
-  - red in X. solve_all. 
+  - red in X. solve_all.
   Qed.
 
-  Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => 
+  Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T =>
       wf_universes Σ t && wf_universes Σ T).
   Proof using Type.
     red. intros.
@@ -551,7 +551,7 @@ Qed.
     now eapply (wf_universes_weaken_full (Σ, _)).
   Qed.
 
-  Lemma wf_universes_inds Σ mind u bodies : 
+  Lemma wf_universes_inds Σ mind u bodies :
     wf_universe_instance Σ u ->
     All (fun t : term => wf_universes Σ t) (inds mind u bodies).
   Proof using Type.
@@ -565,13 +565,13 @@ Qed.
     now apply /wf_universe_instanceP.
   Qed.
 
-  Lemma wf_universes_mkApps Σ f args : 
+  Lemma wf_universes_mkApps Σ f args :
     wf_universes Σ (mkApps f args) = wf_universes Σ f && forallb (wf_universes Σ) args.
   Proof using Type.
     induction args using rev_ind; simpl; auto. now rewrite andb_true_r.
     now rewrite mkApps_app forallb_app /= andb_true_r andb_assoc -IHargs.
   Qed.
-    
+
   Lemma type_local_ctx_wf Σ Γ Δ s : type_local_ctx
     (lift_typing
      (fun (Σ : PCUICEnvironment.global_env_ext)
@@ -638,8 +638,8 @@ Qed.
     - now rewrite wf_universes_lift.
   Qed.
 
-  Lemma wf_sorts_local_ctx_nth_error Σ P Γ Δ s n d : 
-    sorts_local_ctx P Σ Γ Δ s -> 
+  Lemma wf_sorts_local_ctx_nth_error Σ P Γ Δ s n d :
+    sorts_local_ctx P Σ Γ Δ s ->
     nth_error Δ n = Some d ->
     ∑ Γ' t, P Σ Γ' (decl_type d) t.
   Proof using Type.
@@ -666,7 +666,7 @@ Qed.
       induction n in k, lt |- *. lia.
       simpl. apply in_or_app.
       destruct (lt_dec k n). left; auto.
-      right. left. f_equal. lia.      
+      right. left. f_equal. lia.
   Qed.
 
   Lemma wf_abstract_instance Σ decl :
@@ -697,8 +697,8 @@ Qed.
 
   Definition wf_ctx_universes Σ Γ :=
     forallb (wf_decl_universes Σ) Γ.
-  
-  Lemma wf_universes_it_mkProd_or_LetIn {Σ Γ T} : 
+
+  Lemma wf_universes_it_mkProd_or_LetIn {Σ Γ T} :
     wf_universes Σ (it_mkProd_or_LetIn Γ T) = wf_ctx_universes Σ Γ && wf_universes Σ T.
   Proof using Type.
     induction Γ as [ |[na [b|] ty] Γ] using rev_ind ; simpl; auto;
@@ -709,7 +709,7 @@ Qed.
 
   Qed.
 
-  Lemma test_context_app p Γ Δ : 
+  Lemma test_context_app p Γ Δ :
     test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
   Proof using Type.
     induction Δ; simpl; auto.
@@ -717,8 +717,8 @@ Qed.
     - now rewrite IHΔ andb_assoc.
   Qed.
 
-  
-  Lemma wf_universes_it_mkLambda_or_LetIn {Σ Γ T} : 
+
+  Lemma wf_universes_it_mkLambda_or_LetIn {Σ Γ T} :
     wf_universes Σ (it_mkLambda_or_LetIn Γ T) = test_context (wf_universes Σ) Γ && wf_universes Σ T.
   Proof using Type.
     induction Γ as [ |[na [b|] ty] Γ] using rev_ind; simpl; auto;
@@ -726,7 +726,7 @@ Qed.
       /= -!/(wf_universes _ _) IHΓ test_context_app /= /test_decl /= ;
     repeat bool_congr.
   Qed.
-  
+
   Lemma wf_projs Σ ind npars p :
     All (fun t : term => wf_universes Σ t) (projs ind npars p).
   Proof using Type.
@@ -760,7 +760,7 @@ Qed.
   Qed.
 
   Lemma closedu_abstract_instance univs : closedu_instance #|abstract_instance univs| (abstract_instance univs).
-  Proof using Type. 
+  Proof using Type.
     destruct univs as [|[l csts]] => // /=.
     rewrite /UContext.instance /AUContext.repr.
     rewrite /closedu_instance forallb_mapi //.
@@ -784,9 +784,9 @@ Qed.
     - rewrite /test_def /map_def /=. now rewrite a b.
   Qed.
 
-  Ltac try_hyp := 
+  Ltac try_hyp :=
     multimatch goal with H : _ |- _ => eapply H end.
-      
+
   Ltac crush := repeat (solve_all; try try_hyp; cbn).
 
 
@@ -817,7 +817,7 @@ Qed.
       rewrite fold_context_k_snoc0 /= IHΓ //. crush.
       unfold test_decl in *. crush.
       destruct decl_body eqn:heq => /= //.
-      rewrite closedu_subst //. crush. 
+      rewrite closedu_subst //. crush.
       rewrite closedu_subst //. crush.
   Qed.
 
@@ -828,20 +828,20 @@ Qed.
     induction Γ.
     * cbn; auto.
     * rtoProp.
-      rewrite fold_context_k_snoc0 /= IHΓ //. 
-      unfold test_decl in *. 
+      rewrite fold_context_k_snoc0 /= IHΓ //.
+      unfold test_decl in *.
       cbn.
-      rewrite closedu_lift. 
+      rewrite closedu_lift.
       destruct (decl_body a) => /= //.
       rewrite closedu_lift //.
   Qed.
 
-  Lemma closedu_extended_subst k Γ k' : 
+  Lemma closedu_extended_subst k Γ k' :
     closedu_ctx k Γ ->
     forallb (closedu k) (extended_subst Γ k').
   Proof using Type.
     induction Γ in k' |- *; cbn; auto. destruct a as [na [b|] ty] => /= //.
-    unfold test_decl; move/andP=> [] clΓ /= cld. apply/andP. split. 
+    unfold test_decl; move/andP=> [] clΓ /= cld. apply/andP. split.
     eapply closedu_subst. rewrite IHΓ // /= closedu_lift. crush.
     now rewrite IHΓ.
     unfold test_decl; move/andP=> [] clΓ /= cld. now apply IHΓ.
@@ -849,7 +849,7 @@ Qed.
 
   Lemma closedu_expand_lets_ctx k Γ Δ :
     closedu_ctx k Γ && closedu_ctx k Δ ->
-    closedu_ctx k (expand_lets_ctx Γ Δ). 
+    closedu_ctx k (expand_lets_ctx Γ Δ).
   Proof using Type.
     rewrite /expand_lets_ctx /expand_lets_k_ctx.
     move/andP => [] clΓ clΔ.
@@ -859,7 +859,7 @@ Qed.
 
   Lemma closedu_smash_context_gen k Γ Δ :
     closedu_ctx k Γ -> closedu_ctx k Δ ->
-    closedu_ctx k (smash_context Γ Δ). 
+    closedu_ctx k (smash_context Γ Δ).
   Proof using Type.
     induction Δ in Γ |- *; cbn; auto.
     move=> clΓ /andP[] clΔ cla.
@@ -869,19 +869,19 @@ Qed.
     - apply IHΔ => //.
       now rewrite test_context_app clΓ /= andb_true_r.
   Qed.
-  
+
   Lemma closedu_smash_context k Δ :
     closedu_ctx k Δ ->
-    closedu_ctx k (smash_context [] Δ). 
+    closedu_ctx k (smash_context [] Δ).
   Proof using Type.
     apply closedu_smash_context_gen => //.
   Qed.
-  
+
   Lemma wf_universe_level_closed {Σ : global_env} {wfΣ : wf Σ} univs u :
     on_udecl_prop Σ univs ->
     wf_universe_level (Σ, univs) u -> closedu_level #|polymorphic_instance univs| u.
   Proof using Type.
-    intros ond Ht; destruct u => //. 
+    intros ond Ht; destruct u => //.
     cbn in Ht. unfold closedu_universe, closedu_universe_levels.
     cbn. red in Ht.
     eapply in_var_global_ext in Ht => //.
@@ -901,7 +901,7 @@ Qed.
     on_udecl_prop Σ univs ->
     wf_universe (Σ, univs) u -> closedu #|polymorphic_instance univs| (tSort u).
   Proof using Type.
-    intros ond Ht; destruct u => //. 
+    intros ond Ht; destruct u => //.
     cbn in Ht. unfold closedu_universe, closedu_universe_levels.
     eapply LevelExprSet.for_all_spec.
     intros x y ?; subst; auto.
@@ -912,7 +912,7 @@ Qed.
 
   Lemma wf_universe_instance_closed {Σ : global_env} {wfΣ : wf Σ} {univs u} :
     on_udecl_prop Σ univs ->
-    wf_universe_instance (Σ, univs) u -> 
+    wf_universe_instance (Σ, univs) u ->
     closedu_instance #|polymorphic_instance univs| u.
   Proof using Type.
     intros ond Ht.
@@ -959,13 +959,13 @@ Qed.
     rewrite IHctx // /=.
     unfold wf_decl_universes, test_decl in *.
     destruct a as [na [b|] ty]; cbn in *.
-    move/andP: wfa => []. 
+    move/andP: wfa => [].
     now do 2 move/(wf_universes_closedu ond) => ->.
     now move/(wf_universes_closedu ond): wfa => ->.
   Qed.
 
 
-  Lemma closedu_reln k Γ k' acc : 
+  Lemma closedu_reln k Γ k' acc :
     closedu_ctx k Γ ->
     forallb (closedu k) acc ->
     forallb (closedu k) (reln acc k' Γ).
@@ -976,7 +976,7 @@ Qed.
     - unfold test_decl; move/andP=> [] clΓ /= cld clacc; now apply IHΓ => //.
   Qed.
 
-  Lemma closedu_to_extended_list_k k Γ k' : 
+  Lemma closedu_to_extended_list_k k Γ k' :
     closedu_ctx k Γ ->
     forallb (closedu k) (to_extended_list_k Γ k').
   Proof using Type.
@@ -1015,7 +1015,7 @@ Qed.
   Qed.
 
   Theorem wf_types :
-    env_prop (fun Σ Γ t T => 
+    env_prop (fun Σ Γ t T =>
       wf_universes Σ t && wf_universes Σ T)
       (fun Σ Γ =>
       All_local_env
@@ -1047,7 +1047,7 @@ Qed.
       + destruct X as [s Hs]. now to_prop.
 
     - apply/andP; split; to_wfu; cbn ; eauto with pcuic.
-       
+
     - cbn in *; to_wfu ; eauto with pcuic.
     - rewrite wf_universes_subst. constructor. to_wfu; auto. constructor.
       now move/andP: H4 => [].
@@ -1095,12 +1095,12 @@ Qed.
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
       now eapply consistent_instance_ext_wf.
-    
+
     - rewrite wf_universes_mkApps in H5.
       move/andP: H5 => /= [] wfu; rewrite forallb_app.
       move/andP=> [] wfpars wfinds.
       cbn in wfu.
-      rewrite wfu /= wfpars wf_universes_mkApps /= 
+      rewrite wfu /= wfpars wf_universes_mkApps /=
         forallb_app wfinds /= H /= !andb_true_r.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
       destruct X5. destruct onArity as [s Hs].
@@ -1153,7 +1153,7 @@ Qed.
       destruct ind_cunivs as [|cunivs []] => //;
       destruct X1 as [[[? ?] ?] ?] => //.
       red in o0.
-      destruct nth_error eqn:heq => //. 
+      destruct nth_error eqn:heq => //.
       destruct o0  as [_ ->].
       rewrite wf_universes_mkApps {1}/wf_universes /= -!/(wf_universes _ _)
         wf_universeb_instance_forall in H1.
@@ -1186,8 +1186,8 @@ Qed.
       eapply wf_sorts_local_ctx_smash in s.
       eapply wf_sorts_local_ctx_nth_error in s as [? [? H]]; eauto.
       red in H. destruct x0. now move/andP: H => [].
-      now destruct H as [s [Hs _]%andb_and]. 
-    
+      now destruct H as [s [Hs _]%andb_and].
+
     - apply/andP; split; auto.
       solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
@@ -1199,7 +1199,7 @@ Qed.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
   Qed.
 
-  Lemma typing_wf_universes {Σ : global_env_ext} {Γ t T} : 
+  Lemma typing_wf_universes {Σ : global_env_ext} {Γ t T} :
     wf Σ ->
     Σ ;;; Γ |- t : T -> wf_universes Σ t && wf_universes Σ T.
   Proof using Type.
@@ -1207,7 +1207,7 @@ Qed.
     exact (env_prop_typing wf_types _ wfΣ _ _ _ Hty).
   Qed.
 
-  Lemma typing_wf_universe {Σ : global_env_ext} {Γ t s} : 
+  Lemma typing_wf_universe {Σ : global_env_ext} {Γ t s} :
     wf Σ ->
     Σ ;;; Γ |- t : tSort s -> wf_universe Σ s.
   Proof using Type.
@@ -1220,14 +1220,14 @@ Qed.
   Proof using Type.
     intros wfΣ [s Hs]. now eapply typing_wf_universes in Hs as [HT _]%andb_and.
   Qed.
-  
+
 End CheckerFlags.
 
 Arguments wf_universe_reflect {Σ u}.
 #[global] Hint Resolve wf_universe_type1 wf_universe_super wf_universe_sup wf_universe_product : pcuic.
 
 #[global]
-Hint Extern 4 (wf_universe _ ?u) => 
+Hint Extern 4 (wf_universe _ ?u) =>
   match goal with
   [ H : typing _ _ _ (tSort u) |- _ ] => apply (typing_wf_universe _ H)
   end : pcuic.

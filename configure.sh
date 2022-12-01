@@ -17,26 +17,23 @@ then
     if [[ "$1" = "local" ]] || [[ "$1" = "--enable-local" ]] || [[ "$1" = "--enable-quick" ]]
     then
         echo "Building MetaCoq locally"
-        PCUIC_DEPS="-I ../template-coq/build -R ../template-coq/theories MetaCoq.Template"
+        PCUIC_DEPS="-R ../template-coq/theories MetaCoq.Template"
         SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
-        TRANSLATIONS_DEPS=""
-        EXAMPLES_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
-        TEST_SUITE_DEPS="-I ../safechecker/src  -I ../erasure/src -R ../erasure/theories MetaCoq.Erasure"
-        PLUGIN_DEMO_DEPS="-I ../../template-coq/build -R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
+        TRANSLATIONS_DEPS="-I ../template-coq"
+        EXAMPLES_DEPS="-R ../erasure/theories MetaCoq.Erasure"
+        TEST_SUITE_DEPS="-R ../erasure/theories MetaCoq.Erasure"
+        PLUGIN_DEMO_DEPS="-R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else
         echo "Building MetaCoq globally (default)"
-        # The safechecker and erasure plugins depend on the extractable template-coq plugin
-        # These dependencies should not be necessary when separate linking of ocaml object
-        # files is supported by coq_makefile
-        PCUIC_DEPS="-I ${COQLIB}/user-contrib/MetaCoq/Template"
+        PCUIC_DEPS=""
         SAFECHECKER_DEPS=""
         ERASURE_DEPS=""
         TRANSLATIONS_DEPS=""
         EXAMPLES_DEPS=""
         TEST_SUITE_DEPS=""
-        PLUGIN_DEMO_DEPS="-I ${COQLIB}/user-contrib/MetaCoq/Template"
+        PLUGIN_DEMO_DEPS=""
         echo "METACOQ_CONFIG = global" > Makefile.conf
     fi
 

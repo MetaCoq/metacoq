@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils BasicAst Universes Environment.
+From Coq Require Import ssreflect ssrbool.
+From MetaCoq.Template Require Import config utils BasicAst Universes Environment Primitive.
 From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
@@ -40,26 +40,26 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     | Some (ConstantDecl d) => Some d
     | _ => None
     end.
-    
+
   Definition lookup_minductive Σ mind :=
     match lookup_env Σ mind with
     | Some (InductiveDecl decl) => Some decl
     | _ => None
     end.
-  
+
   Definition lookup_inductive Σ ind :=
     match lookup_minductive Σ (inductive_mind ind) with
-    | Some mdecl => 
+    | Some mdecl =>
       match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
       | Some idecl => Some (mdecl, idecl)
       | None => None
       end
     | None => None
     end.
-  
+
   Definition lookup_constructor Σ ind k :=
     match lookup_inductive Σ ind with
-    | Some (mdecl, idecl) => 
+    | Some (mdecl, idecl) =>
       match nth_error idecl.(ind_ctors) k with
       | Some cdecl => Some (mdecl, idecl, cdecl)
       | None => None
@@ -69,7 +69,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition lookup_projection Σ p :=
     match lookup_constructor Σ p.(proj_ind) 0 with
-    | Some (mdecl, idecl, cdecl) => 
+    | Some (mdecl, idecl, cdecl) =>
       match nth_error idecl.(ind_projs) p.(proj_arg) with
       | Some pdecl => Some (mdecl, idecl, cdecl, pdecl)
       | None => None
@@ -97,13 +97,13 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Qed.
 
   Lemma lookup_constant_declared {Σ kn cdecl} :
-    lookup_constant Σ kn = Some cdecl -> 
+    lookup_constant Σ kn = Some cdecl ->
     declared_constant Σ kn cdecl.
   Proof.
     unfold declared_constant, lookup_constant.
     destruct lookup_env as [[]|] => //. congruence.
   Qed.
-  
+
   Lemma declared_minductive_lookup {Σ ind mdecl} :
     declared_minductive Σ ind mdecl ->
     lookup_minductive Σ ind = Some mdecl.
@@ -111,7 +111,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     rewrite /declared_minductive /lookup_minductive.
     now intros ->.
   Qed.
-  
+
   Lemma lookup_minductive_declared {Σ ind mdecl} :
     lookup_minductive Σ ind = Some mdecl ->
     declared_minductive Σ ind mdecl.
@@ -119,7 +119,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     rewrite /declared_minductive /lookup_minductive.
     destruct lookup_env as [[]|] => //. congruence.
   Qed.
-  
+
   Lemma declared_inductive_lookup {Σ ind mdecl idecl} :
     declared_inductive Σ ind mdecl idecl ->
     lookup_inductive Σ ind = Some (mdecl, idecl).
@@ -127,7 +127,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     rewrite /declared_inductive /lookup_inductive.
     intros []. now rewrite (declared_minductive_lookup H) H0.
   Qed.
-  
+
   Lemma lookup_inductive_declared {Σ ind mdecl idecl} :
     lookup_inductive Σ ind = Some (mdecl, idecl) ->
     declared_inductive Σ ind mdecl idecl.
@@ -140,7 +140,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Qed.
 
   Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
-    declared_constructor Σ id mdecl idecl cdecl -> 
+    declared_constructor Σ id mdecl idecl cdecl ->
     lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
   Proof.
     intros []. unfold lookup_constructor.
@@ -159,13 +159,13 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Qed.
 
   Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
-    declared_projection Σ p mdecl idecl cdecl pdecl -> 
+    declared_projection Σ p mdecl idecl cdecl pdecl ->
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
   Proof.
     intros [? []]. unfold lookup_projection.
     rewrite (declared_constructor_lookup (Σ := Σ) H) /= H0 //.
   Qed.
-  
+
   Lemma lookup_projection_declared {Σ p mdecl idecl cdecl pdecl} :
     ind_npars mdecl = p.(proj_npars) ->
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
@@ -216,7 +216,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   | ModuleDecl _ => F Monomorphic_ctx
   | ModuleTypeDecl _ => F Monomorphic_ctx
   end.
-  
+
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
   (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
@@ -230,7 +230,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     apply LevelSet.union_spec; right.
     now apply LevelSet.singleton_spec.
   Qed.
-  
+
   Lemma global_levels_memSet univs :
     LevelSet.mem Level.lzero (global_levels univs) = true.
   Proof.
@@ -288,10 +288,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition consistent_instance_ext `{checker_flags} Σ :=
     consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
-    
+
   Lemma consistent_instance_length {cf : checker_flags} {Σ : global_env_ext} {univs u} :
     consistent_instance_ext Σ univs u ->
-    #|u| = #|abstract_instance univs|. 
+    #|u| = #|abstract_instance univs|.
   Proof.
     unfold consistent_instance_ext, consistent_instance.
     destruct univs; simpl; auto.
@@ -304,7 +304,17 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     Universe.on_sort
       (fun u => forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ))
       True s.
-  
+
+  Lemma declared_ind_declared_constructors `{cf : checker_flags} {Σ ind mib oib} :
+    declared_inductive Σ ind mib oib ->
+    Alli (fun i => declared_constructor Σ (ind, i) mib oib) 0 (ind_ctors oib).
+  Proof using.
+    move=> inddecl.
+    apply: forall_nth_error_Alli=> /= i x eq.
+    apply: lookup_constructor_declared=> /=.
+    rewrite /lookup_constructor (declared_inductive_lookup inddecl) eq //.
+  Qed.
+
 End Lookup.
 
 Module Type LookupSig (T : Term) (E : EnvironmentSig T).
@@ -365,12 +375,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Proof.
     induction 1; intros; simpl; econstructor; eauto.
   Qed.
-  
+
   Lemma All_local_env_skipn P Γ : All_local_env P Γ -> forall n, All_local_env P (skipn n Γ).
   Proof.
     induction 1; simpl; intros; destruct n; simpl; try econstructor; eauto.
   Qed.
-  #[global] 
+  #[global]
   Hint Resolve All_local_env_skipn : wf.
 
   Section All_local_env_rel.
@@ -448,10 +458,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | Some b => P Γ b (Typ d.(decl_type))
     | None => P Γ d.(decl_type) Sort
     end.
-  
+
   Definition on_def_type (P : context -> term -> typ_or_sort -> Type) Γ d :=
     P Γ d.(dtype) Sort.
-  
+
   Definition on_def_body (P : context -> term -> typ_or_sort -> Type) types Γ d :=
     P (Γ ,,, types) d.(dbody) (Typ (lift0 #|types| d.(dtype))).
 
@@ -464,7 +474,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | Typ T => check Σ Γ t T
     | Sort => infer_sort Σ Γ t
     end.
-  
+
   Lemma lift_judgment_impl {P Ps Q Qs Σ Σ' Γ Γ' t t' T} :
     lift_judgment P Ps Σ Γ t T ->
     (forall T, P Σ Γ t T -> Q Σ' Γ' t' T) ->
@@ -483,10 +493,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Definition infer_sort (sorting : global_env_ext -> context -> term -> Universe.t -> Type) := (fun Σ Γ T => { s : Universe.t & sorting Σ Γ T s }).
   Notation typing_sort typing := (fun Σ Γ T s => typing Σ Γ T (tSort s)).
-  
+
   Definition lift_typing typing := lift_judgment typing (infer_sort (typing_sort typing)).
   Definition lift_sorting checking sorting := lift_judgment checking (infer_sort sorting).
-  
+
   Notation Prop_conj P Q := (fun Σ Γ t T => P Σ Γ t T × Q Σ Γ t T).
 
   Definition lift_typing2 P Q := lift_typing (Prop_conj P Q).
@@ -510,7 +520,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Qed.
 
   Lemma lift_typing_impl {P Q Σ Σ' Γ Γ' t t' T} :
-    lift_typing P Σ Γ t T -> 
+    lift_typing P Σ Γ t T ->
     (forall T, P Σ Γ t T -> Q Σ' Γ' t' T) ->
     lift_typing Q Σ' Γ' t' T.
   Proof.
@@ -556,7 +566,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Definition All_local_env_over typing property :=
     (All_local_env_over_gen typing (infer_sort (typing_sort typing)) property (fun Σ Γ H t tu => property _ _ H _ _ tu.π2)).
-  
+
   Definition All_local_env_over_sorting checking sorting cproperty (sproperty : forall Σ Γ _ t s, sorting Σ Γ t s -> Type) :=
     (All_local_env_over_gen checking (infer_sort sorting) cproperty (fun Σ Γ H t tu => sproperty Σ Γ H t tu.π1 tu.π2)).
 
@@ -566,7 +576,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     (* Γ |- s : Δ, where Δ is a telescope (reverse context) *)
     Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
     | ctx_inst_nil : ctx_inst Σ Γ [] []
-    | ctx_inst_ass na t i inst Δ : 
+    | ctx_inst_ass na t i inst Δ :
         typing Σ Γ i t ->
         ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
         ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
@@ -576,7 +586,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     Derive Signature NoConfusion for ctx_inst.
   End TypeCtxInst.
 
-  Lemma ctx_inst_impl P Q Σ Γ inst Δ : 
+  Lemma ctx_inst_impl P Q Σ Γ inst Δ :
     ctx_inst P Σ Γ inst Δ ->
     (forall t T, P Σ Γ t T -> Q Σ Γ t T) ->
     ctx_inst Q Σ Γ inst Δ.
@@ -594,7 +604,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       | localenv_cons_abs Γ' na t w' p => Psize _ _ _ _ p + All_local_env_size_gen base _ _ w'
       | localenv_cons_def Γ' na b t w' pt pb => Psize _ _ _ _ pt + Psize _ _ _ _ pb + All_local_env_size_gen base _ _ w'
       end.
-      
+
     Lemma All_local_env_size_pos base Σ Γ w : base <= All_local_env_size_gen base Σ Γ w.
     Proof using Type.
       induction w.
@@ -644,7 +654,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Section Regular.
     Context {typing : global_env_ext -> context -> term -> term -> Type}.
     Context (typing_size : forall Σ Γ t T, typing Σ Γ t T -> size).
-    
+
     Definition lift_typing_size := lift_judgment_size typing_size (infer_sort_size (typing_sort_size typing_size)).
     Definition All_local_env_size := All_local_env_size_gen lift_typing_size 0.
     Definition All_local_rel_size := All_local_rel_size_gen lift_typing_size 0.
@@ -678,10 +688,10 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : E
     (eqna : eq_binder_annot na na')
     (eqt : P pb t t') :
     All_decls_alpha_pb (vass na t) (vass na' t')
-  
+
   | all_decls_alpha_vdef {na na' : binder_annot name} {b t b' t' : term}
     (eqna : eq_binder_annot na na')
-    (eqb : P Conv b b') (* Note that definitions must be convertible, otherwise this notion 
+    (eqb : P Conv b b') (* Note that definitions must be convertible, otherwise this notion
     of cumulativity is useless *)
     (eqt : P pb t t') :
     All_decls_alpha_pb (vdef na b t) (vdef na' b' t').
@@ -689,13 +699,13 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : E
   Derive Signature NoConfusion for All_decls_alpha_pb.
 
   Arguments All_decls_alpha_pb pb P : clear implicits.
-  
+
   Definition cumul_pb_decls pb (Σ : global_env_ext) (Γ Γ' : context) : forall (x y : context_decl), Type :=
     All_decls_alpha_pb pb (cumul_gen Σ Γ).
 
-  Definition cumul_pb_context pb (Σ : global_env_ext) := 
+  Definition cumul_pb_context pb (Σ : global_env_ext) :=
     All2_fold (cumul_pb_decls pb Σ).
-  
+
   Definition cumul_ctx_rel Σ Γ Δ Δ' :=
     All2_fold (fun Δ Δ' => cumul_pb_decls Cumul Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
   End Conversion.
@@ -741,9 +751,9 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list Universe.t) : Type :=
       match Δ, us with
       | [], [] => unit
-      | {| decl_body := None;   decl_type := t |} :: Δ, u :: us => 
+      | {| decl_body := None;   decl_type := t |} :: Δ, u :: us =>
         sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) t (Typ (tSort u))
-      | {| decl_body := Some b; decl_type := t |} :: Δ, us => 
+      | {| decl_body := Some b; decl_type := t |} :: Δ, us =>
         sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) t Sort × P Σ (Γ ,,, Δ) b (Typ t)
       | _, _ => False
       end.
@@ -777,7 +787,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         /\ satisfiable_udecl univs udecl
         /\ valid_on_mono_udecl univs udecl.
 
-    (** Positivity checking of the inductive, ensuring that the inductive itself 
+    (** Positivity checking of the inductive, ensuring that the inductive itself
       can only appear at the right of an arrow in each argument's types. *)
     (*
     Definition positive_cstr_arg ninds npars narg (arg : term) : bool :=
@@ -789,14 +799,14 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       alli (fun i d => noccur_between (npars + narg + i) ninds d.(decl_type)) 0 (List.rev ctx) &&
       let (hd, args) := decompose_app concl in
       match hd with
-      | tRel i => 
-        if noccur_between (npars + narg + #|ctx|) ninds (tRel i) then 
+      | tRel i =>
+        if noccur_between (npars + narg + #|ctx|) ninds (tRel i) then
           (* Call to an unrelated variable *)
           true
         else (* Recursive call to the inductive *)
           (* Coq disallows the inductive to be applied to another inductive in the block *)
           forallb (noccur_between (npars + narg + #|ctx|) ninds) args
-      | tInd ind u => 
+      | tInd ind u =>
         if forallb (noccur_between (npars + narg + #|ctx|) ninds) args then
           (* Unrelated inductive *)
           true
@@ -806,36 +816,36 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition positive_cstr_args ninds npars (args : context) : bool :=
       alli (fun i decl => positive_cstr_arg nind npars i decl.(decl_type))
-      (* We smash the context, just as Coq's kernel computes positivity on 
+      (* We smash the context, just as Coq's kernel computes positivity on
         weak-head normalized types *)
       (List.rev (smash_context [] args))
     *)
 
     (** A constructor argument type [t] is positive w.r.t. an inductive block [mdecl]
-      when it's zeta-normal form is of the shape Π Δ. concl and: 
+      when it's zeta-normal form is of the shape Π Δ. concl and:
         - [t] does not refer to any inductive in the block.
           In that case [t] must be a closed type under the context of parameters and
           previous arguments.
-        - None of the variable assumptions in Δ refer to any inductive in the block, 
-          but the conclusion [concl] is of the form [mkApps (tRel k) args] for k 
+        - None of the variable assumptions in Δ refer to any inductive in the block,
+          but the conclusion [concl] is of the form [mkApps (tRel k) args] for k
           refering to an inductive in the block, and none of the arguments [args]
-          refer to the inductive. #|args| must be the length of the full inductive application.         
-      
+          refer to the inductive. #|args| must be the length of the full inductive application.
+
       Let-in assumptions in Δ are systematically unfolded, i.e. we really consider:
       the zeta-reduction of [t]. *)
-    
-    Definition ind_realargs (o : one_inductive_body) := 
+
+    Definition ind_realargs (o : one_inductive_body) :=
       match destArity [] o.(ind_type) with
       | Some (ctx, _) => #|smash_context [] ctx|
       | _ => 0
       end.
 
     Inductive positive_cstr_arg mdecl ctx : term -> Type :=
-    | positive_cstr_arg_closed t : 
+    | positive_cstr_arg_closed t :
       closedn #|ctx| t ->
       positive_cstr_arg mdecl ctx t
 
-    | positive_cstr_arg_concl l k i : 
+    | positive_cstr_arg_concl l k i :
       (** Mutual inductive references in the conclusion are ok *)
       #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
       All (closedn #|ctx|) l ->
@@ -845,7 +855,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     | positive_cstr_arg_let na b ty t :
       positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
-      positive_cstr_arg mdecl ctx (tLetIn na b ty t) 
+      positive_cstr_arg mdecl ctx (tLetIn na b ty t)
 
     | positive_cstr_arg_ass na ty t :
       closedn #|ctx| ty ->
@@ -853,23 +863,23 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       positive_cstr_arg mdecl ctx (tProd na ty t).
 
     (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
-      and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and: 
+      and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and:
         - All of the arguments in Δ are positive.
-        - The conclusion is of the shape [mkApps (tRel k) indices] 
+        - The conclusion is of the shape [mkApps (tRel k) indices]
           where [k] refers to the current inductive [i] and [indices] does not mention
           any of the inductive types in the block. I.e. [indices] are closed terms
           in [params ,,, args]. *)
-          
+
     Inductive positive_cstr mdecl i (ctx : context) : term -> Type :=
     | positive_cstr_concl indices :
-      let headrel : nat := 
+      let headrel : nat :=
         (#|mdecl.(ind_bodies)| - S i + #|ctx|)%nat in
       All (closedn #|ctx|) indices ->
       positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
 
     | positive_cstr_let na b ty t :
       positive_cstr mdecl i ctx (subst [b] 0 t) ->
-      positive_cstr mdecl i ctx (tLetIn na b ty t) 
+      positive_cstr mdecl i ctx (tLetIn na b ty t)
 
     | positive_cstr_ass na ty t :
       positive_cstr_arg mdecl ctx ty ->
@@ -877,7 +887,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       positive_cstr mdecl i ctx (tProd na ty t).
     
     Definition lift_level n l :=
-      match l with 
+      match l with
       | Level.lzero | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
@@ -899,7 +909,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Fixpoint variance_cstrs (v : list Variance.t) (u u' : Instance.t) :=
       match v, u, u' with
       | _, [], [] => ConstraintSet.empty
-      | v :: vs, u :: us, u' :: us' => 
+      | v :: vs, u :: us, u' :: us' =>
         match v with
         | Variance.Irrelevant => variance_cstrs vs us us'
         | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le 0, u') (variance_cstrs vs us us')
@@ -908,7 +918,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
       end.
 
-    (** This constructs a duplication of the polymorphic universe context of the inductive,  
+    (** This constructs a duplication of the polymorphic universe context of the inductive,
       where the two instances are additionally related according to the variance information.
     *)
 
@@ -925,10 +935,10 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         Some (Polymorphic_ctx auctx', u, u')
       end.
 
-    (** A constructor type respects the given variance [v] if each constructor 
+    (** A constructor type respects the given variance [v] if each constructor
         argument respects it and each index (in the conclusion) does as well.
         We formalize this by asking for a cumulativity relation between the contexts
-        of arguments and conversion of the lists of indices instanciated with [u] and 
+        of arguments and conversion of the lists of indices instanciated with [u] and
         [u'] where [u `v` u']. *)
 
     Definition ind_arities mdecl := arities_context (ind_bodies mdecl).
@@ -950,7 +960,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         cumul_ctx_rel Pcmp (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl))@[u]
           (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))@[u]
           (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))@[u'] *
-        All2 
+        All2
           (Pcmp (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))@[u] Conv)
           (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
           (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
@@ -962,20 +972,20 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cstr_args cdecl|).
 
     (* Constructor conclusion shape: the inductives type applied to variables for
-       the (non-let) parameters 
+       the (non-let) parameters
        followed by the indices *)
     Definition cstr_concl mdecl i cdecl :=
       (mkApps (cstr_concl_head mdecl i cdecl)
         (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
           ++ cstr_indices cdecl)).
-  
+
     Record on_constructor Σ mdecl i idecl ind_indices cdecl cunivs := {
       (* cdecl.1 fresh ?? *)
       cstr_args_length : context_assumptions (cstr_args cdecl) = cstr_arity cdecl;
 
       cstr_eq : cstr_type cdecl =
-       it_mkProd_or_LetIn mdecl.(ind_params) 
-        (it_mkProd_or_LetIn (cstr_args cdecl) 
+       it_mkProd_or_LetIn mdecl.(ind_params)
+        (it_mkProd_or_LetIn (cstr_args cdecl)
           (cstr_concl mdecl i cdecl));
       (* The type of the constructor canonically has this shape: parameters, real
         arguments ending with a reference to the inductive applied to the
@@ -985,7 +995,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       on_cargs :
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
                       cdecl.(cstr_args) cunivs;
-      on_cindices : 
+      on_cindices :
         ctx_inst (fun Σ Γ t T => P Σ Γ t (Typ T)) Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
                       cdecl.(cstr_indices)
                       (List.rev (lift_context #|cdecl.(cstr_args)| 0 ind_indices));
@@ -993,13 +1003,13 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       on_ctype_positive : (* The constructor type is positive *)
         positive_cstr mdecl i [] (cstr_type cdecl);
 
-      on_ctype_variance : (* The constructor type respect the variance annotation 
+      on_ctype_variance : (* The constructor type respect the variance annotation
         on polymorphic universes, if any. *)
-        forall v, ind_variance mdecl = Some v -> 
+        forall v, ind_variance mdecl = Some v ->
         cstr_respects_variance Σ mdecl v cdecl;
 
-      on_lets_in_type : if lets_in_constructor_types 
-                        then True else is_true (is_assumption_context (cstr_args cdecl)) 
+      on_lets_in_type : if lets_in_constructor_types
+                        then True else is_true (is_assumption_context (cstr_args cdecl))
     }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cunivs}.
@@ -1011,30 +1021,30 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition on_constructors Σ mdecl i idecl ind_indices :=
       All2 (on_constructor Σ mdecl i idecl ind_indices).
 
-    (** Each projection type corresponds to a non-let argument of the 
-        corresponding constructor. It is parameterized over the 
+    (** Each projection type corresponds to a non-let argument of the
+        corresponding constructor. It is parameterized over the
         parameters of the inductive type and all the preceding arguments
         of the constructor. When computing the type of a projection for argument
         [n] at a given instance of the parameters and a given term [t] in the inductive
         type, we instantiate the argument context by corresponsping projections
         [t.π1 ... t.πn-1]. This is essential for subject reduction to hold: each
         projections type can only refer to the record object through projections.
-    
+
       Projection types have their parameter and argument contexts smashed to avoid
       costly computations during type-checking and reduction: we can just substitute
-      the instances of parameters and the inductive value without considering the 
+      the instances of parameters and the inductive value without considering the
       presence of let bindings. *)
 
     Record on_proj mdecl mind i k (p : projection_body) decl :=
       { on_proj_name : (* All projections are be named after a constructor argument. *)
           binder_name (decl_name decl) = nNamed p.(proj_name);
-        on_proj_type : 
+        on_proj_type :
           (** The stored projection type already has the references to the inductive
               type substituted along with the previous arguments replaced by projections. *)
           let u := abstract_instance mdecl.(ind_universes) in
           let ind := {| inductive_mind := mind; inductive_ind := i |} in
           p.(proj_type) = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
-            (subst (projs ind mdecl.(ind_npars) k) 0 
+            (subst (projs ind mdecl.(ind_npars) k) 0
               (lift 1 k (decl_type decl)));
         on_proj_relevance : p.(proj_relevance) = decl.(decl_name).(binder_relevance) }.
 
@@ -1061,7 +1071,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         on_projs : Alli (on_projection mdecl mind i cdecl) 0 idecl.(ind_projs) }.
 
     Definition check_constructors_smaller φ cunivss ind_sort :=
-      Forall (fun cunivs => 
+      Forall (fun cunivs =>
         Forall (fun argsort => leq_universe φ argsort ind_sort) cunivs) cunivss.
 
     (** This ensures that all sorts in kelim are lower
@@ -1081,7 +1091,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           IntoPropSProp (* Squashed: some arguments are higher than Prop, restrict to Prop *)
       | _ => (* Squashed: at least 2 constructors *) IntoPropSProp
       end.
-      
+
     Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_univs) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive strict proposition: *) IntoAny
@@ -1107,7 +1117,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
           else True.
-      
+
     Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params
             as the rest of the block, and maybe having a context of indices. *)
@@ -1127,11 +1137,11 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
         (** Projections, if any, are well-typed *)
         onProjections :
-          idecl.(ind_projs) <> [] ->
-          match idecl.(ind_ctors) return Type with
-          | [ o ] =>
-            on_projections mdecl mind i idecl idecl.(ind_indices) o
-          | _ => False
+          match idecl.(ind_projs), idecl.(ind_ctors) return Type with
+          | [], _ => True
+          | _, [ o ] =>
+              on_projections mdecl mind i idecl idecl.(ind_indices) o
+          | _, _ => False
           end;
 
         (** The universes and elimination sorts must be correct w.r.t.
@@ -1141,27 +1151,29 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           idecl.(ind_indices) ind_cunivs idecl.(ind_sort);
 
-        onIndices : 
+        onIndices :
           (* The inductive type respect the variance annotation on polymorphic universes, if any. *)
-          forall v, ind_variance mdecl = Some v -> 
-          ind_respects_variance Σ mdecl v idecl.(ind_indices)
+          match ind_variance mdecl with
+          | Some v => ind_respects_variance Σ mdecl v idecl.(ind_indices)
+          | None => True
+          end
       }.
 
     Definition on_variance Σ univs (variances : option (list Variance.t)) :=
       match univs return Type with
       | Monomorphic_ctx => variances = None
-      | Polymorphic_ctx auctx => 
+      | Polymorphic_ctx auctx =>
         match variances with
         | None => unit
-        | Some v => 
-          ∑ univs' i i', 
+        | Some v =>
+          ∑ univs' i i',
             [× (variance_universes univs v = Some (univs', i, i')),
               consistent_instance_ext (Σ, univs') univs i,
               consistent_instance_ext (Σ, univs') univs i' &
               List.length v = #|UContext.instance (AUContext.repr auctx)|]
         end
       end.
-    
+
     (** We allow empty blocks for simplicity
         (no well-typed reference to them can be made). *)
 
@@ -1242,26 +1254,32 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
       Forall (fun g => g.1 <> s) g.
 
-    Inductive on_global_decls (univs : ContextSet.t) : global_declarations -> Type :=
-    | globenv_nil : on_global_decls univs []
+    Record on_global_decls_data (univs : ContextSet.t) retro (Σ : global_declarations) (kn : kername) (d : global_decl) :=
+        {
+          kn_fresh :  fresh_global kn Σ ;
+          udecl := universes_decl_of_decl d ;
+          on_udecl_udecl : on_udecl univs udecl ;
+          on_global_decl_d : on_global_decl (mk_global_env univs Σ retro, udecl) kn d
+        }.
+
+    Inductive on_global_decls (univs : ContextSet.t) (retro : Retroknowledge.t): global_declarations -> Type :=
+    | globenv_nil : on_global_decls univs retro []
     | globenv_decl Σ kn d :
-        on_global_decls univs Σ ->
-        fresh_global kn Σ ->
-        let udecl := universes_decl_of_decl d in
-        on_udecl univs udecl ->
-        on_global_decl ({| universes := univs; declarations := Σ |}, udecl) kn d ->
-        on_global_decls univs (Σ ,, (kn, d)).
+        on_global_decls univs retro Σ ->
+        on_global_decls_data univs retro Σ kn d ->
+        on_global_decls univs retro (Σ ,, (kn, d)).
+
     Derive Signature for on_global_decls.
 
-    Definition on_global_univs (c : ContextSet.t) := 
+    Definition on_global_univs (c : ContextSet.t) :=
       let levels := global_levels c in
       let cstrs := ContextSet.constraints c in
-      ConstraintSet.For_all (declared_cstr_levels levels) cstrs /\ 
+      ConstraintSet.For_all (declared_cstr_levels levels) cstrs /\
       LS.For_all (negb ∘ Level.is_var) levels /\
       consistent cstrs.
 
     Definition on_global_env (g : global_env) : Type :=
-      on_global_univs g.(universes) × on_global_decls g.(universes) g.(declarations).
+      on_global_univs g.(universes) × on_global_decls g.(universes) g.(retroknowledge) g.(declarations).
 
     Definition on_global_env_ext (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.(universes) Σ.2.
@@ -1349,8 +1367,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
               revert on_cindices0.
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
-              induction 1; simpl; constructor; auto. 
-        --- simpl; intros. pose (onProjections X1 H). simpl in *; auto.
+              induction 1; simpl; constructor; auto.
+        --- simpl; intros. pose (onProjections X1) as X2. simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
@@ -1415,7 +1433,7 @@ End GlobalMapsSig.
 Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU).
 
   Import T E TU ET.
-  
+
   Parameter Inline cumul_gen : forall {cf : checker_flags}, global_env_ext -> context -> conv_pb -> term -> term -> Type.
 
 End ConversionParSig.
@@ -1436,7 +1454,7 @@ End Typing.
 
 Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
-  (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS) 
+  (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS)
   (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
 
   Import T E L TU ET CT GM CS Ty.
@@ -1465,11 +1483,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
   Definition wf_local_rel `{checker_flags} Σ := All_local_rel (lift_typing typing Σ).
 
-  (** Functoriality of global environment typing derivations + folding of the well-formed 
+  (** Functoriality of global environment typing derivations + folding of the well-formed
     environment assumption. *)
   Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env cumul_gen (lift_typing typing) Σ} P Q :
-    (forall Σ Γ t T, on_global_env cumul_gen (lift_typing typing) Σ.1 -> 
-        on_global_env cumul_gen P Σ.1 -> 
+    (forall Σ Γ t T, on_global_env cumul_gen (lift_typing typing) Σ.1 ->
+        on_global_env cumul_gen P Σ.1 ->
         on_global_env cumul_gen Q Σ.1 ->
         P Σ Γ t T -> Q Σ Γ t T) ->
     on_global_env cumul_gen P Σ -> on_global_env cumul_gen Q Σ.
@@ -1477,11 +1495,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     unfold on_global_env in *.
     intros X [hu X0]. split; auto.
     simpl in *. destruct wfΣ as [cu wfΣ]. revert cu wfΣ.
-    revert X0. generalize (universes Σ) as univs, (declarations Σ). clear hu Σ.
-    induction 1; constructor; auto.
+    revert X0. generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear hu Σ.
+    induction 1; constructor; try destruct o; try constructor; auto.
     { depelim wfΣ. eauto. }
-    depelim wfΣ. specialize (IHX0 cu wfΣ).
-    assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T 
+    depelim wfΣ. specialize (IHX0 cu wfΣ). destruct o.
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T
       (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
     clear IHX0. destruct d; simpl.
@@ -1642,3 +1660,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
 End DeclarationTyping.
 
+Module Type DeclarationTypingSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
+       (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
+       (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS)
+       (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
+  Include DeclarationTyping T E TU ET CT CS Ty L GM.
+End DeclarationTypingSig.

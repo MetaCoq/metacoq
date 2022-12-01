@@ -1,8 +1,30 @@
-TIMED ?=
 
-all: template-coq pcuic safechecker erasure examples test-suite translations
+all: printconf template-coq pcuic safechecker erasure examples test-suite translations
 
-.PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
+-include Makefile.conf
+
+ifeq '$(METACOQ_CONFIG)' 'local'
+  ifeq ($(shell which cygpath 2>/dev/null),)
+  OCAMLPATH := $(shell pwd)/template-coq/:$(OCAMLPATH)
+  else
+  OCAMLPATH := $(shell cygpath -m `pwd`)/template-coq/;$(OCAMLPATH)
+  endif
+  export OCAMLPATH
+endif
+
+.PHONY: printconf all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
+
+printconf:
+ifeq '$(METACOQ_CONFIG)' 'local'
+	@echo "Local configuration"
+else
+ifeq '$(METACOQ_CONFIG)' 'global'
+	@echo "Global configuration"
+else
+	@echo "Run ./configure.sh first"
+	@exit 1
+endif
+endif
 
 install: all translations
 	$(MAKE) -C template-coq install
@@ -19,14 +41,15 @@ uninstall: all
 	$(MAKE) -C translations uninstall
 
 html: all
-	"coqdoc" --multi-index -toc -utf8 -interpolate -html \
+	"coqdoc" --multi-index -toc -utf8 -html \
     --with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
 		-R translations MetaCoq.Translations \
-		-d html */theories/*.v translations/*.v
+		-R examples MetaCoq.Examples \
+		-d html */theories/*.v */theories/*/*.v translations/*.v examples/*.v
 
 clean:
 	$(MAKE) -C template-coq clean

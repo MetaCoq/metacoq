@@ -13,10 +13,10 @@ Require Import ssreflect ssrbool.
   The invariants are:
   - Application nodes have always at least one argument, and they cannot
     be nested (keeping terms in "spine" representation).
-  - Each `Case` refers to a declared inductive in the environment, and 
-    the predicate context and branches contexts have lengths that match 
+  - Each `Case` refers to a declared inductive in the environment, and
+    the predicate context and branches contexts have lengths that match
     the inductive declaration. This eases the proof of translation to PCUIC,
-    in particular reduction on well-formed terms in Template translate to 
+    in particular reduction on well-formed terms in Template translate to
     reductions in PCUIC, without further typing assumptions.
 *)
 
@@ -45,18 +45,18 @@ Inductive wf {Σ} : term -> Type :=
     #|pparams p| = context_assumptions (ind_params mdecl) ->
     All wf (pparams p) -> wf (preturn p) ->
     wf c ->
-    All2 (fun cdecl br => 
+    All2 (fun cdecl br =>
       wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
       wf (bbody br)) idecl.(ind_ctors) brs ->
     wf (tCase ci p c brs)
-| wf_tProj p t : 
+| wf_tProj p t :
   wf t ->
   wf (tProj p t)
 | wf_tFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix ->
                    wf (tFix mfix k)
-| wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k).
-(* | wf_tInt i : wf (tInt i) *)
-(* | wf_tFloat f : wf (tFloat f). *)
+| wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k)
+| wf_tInt i : wf (tInt i)
+| wf_tFloat f : wf (tFloat f).
 Arguments wf : clear implicits.
 Derive Signature for wf.
 
@@ -65,7 +65,7 @@ Derive Signature for wf.
 Definition wf_Inv Σ (t : term) : Type :=
   match t with
   | tRel _ | tVar _ | tSort _ => unit
-  (* | tInt _ | tFloat _  *)
+  | tInt _ | tFloat _ => unit
   | tEvar n l => All (wf Σ) l
   | tCast t k t' => wf Σ t * wf Σ t'
   | tProd na t b => wf Σ t * wf Σ b
@@ -75,16 +75,16 @@ Definition wf_Inv Σ (t : term) : Type :=
   | tConst c _ => unit
   | tInd ind _ => unit
   | tConstruct ind k _ => unit
-  | tCase ci p c brs => 
-    ∑ mdecl idecl, 
+  | tCase ci p c brs =>
+    ∑ mdecl idecl,
     [× declared_inductive Σ ci.(ci_ind) mdecl idecl,
        ci.(ci_npar) = mdecl.(ind_npars),
        wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl),
        #|pparams p| = context_assumptions (ind_params mdecl),
        All (wf Σ) (pparams p),
-       wf Σ (preturn p), 
+       wf Σ (preturn p),
        wf Σ c &
-       All2 (fun cdecl br => 
+       All2 (fun cdecl br =>
          wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
         wf Σ (bbody br)) idecl.(ind_ctors) brs]
   | tProj p t => wf Σ t
@@ -106,7 +106,7 @@ Proof.
   apply lift_to_list. now inversion_clear X.
 Defined.
 
-Lemma lift_to_wf_list Σ (P : term -> Type) : forall l, All (fun t => wf Σ t -> P t) l -> 
+Lemma lift_to_wf_list Σ (P : term -> Type) : forall l, All (fun t => wf Σ t -> P t) l ->
   All (wf Σ) l -> All P l.
 Proof.
   induction 1. constructor.
@@ -139,19 +139,19 @@ Lemma term_wf_forall_list_ind Σ :
         #|pparams p| = context_assumptions (ind_params mdecl) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         tCasePredProp P P p -> forall t : term, P t -> forall l : list (branch term),
-        All2 (fun cdecl br => 
+        All2 (fun cdecl br =>
           wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
           P (bbody br)) idecl.(ind_ctors) l -> P (tCase ci p t l)) ->
-    (forall (s : projection) (t : term), 
-    
+    (forall (s : projection) (t : term),
+
       P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (* (forall i, P (tInt i)) ->
-    (forall f, P (tFloat f)) -> *)
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, wf Σ t -> P t.
 Proof.
-  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 (*H18 H19*).
+  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19.
   intros until t. revert t.
   apply (term_forall_list_rect (fun t => wf Σ t -> P t));
     intros; try solve [match goal with

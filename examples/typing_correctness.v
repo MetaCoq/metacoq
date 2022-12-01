@@ -1,3 +1,68 @@
+(*From MetaCoq.Template Require Import config All.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst TemplateToPCUIC.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
+From Equations Require Import Equations.
+
+
+
+
+Polymorphic Inductive list@{u} (A : Type@{u}) : Type@{u} :=
+(* | nil : list A *)
+(* | cons : A -> list A -> list A *)
+.
+
+Polymorphic Inductive rtree@{u} : Type@{u} :=
+| node : list rtree -> rtree.
+
+Universe u.
+
+Polymorphic Inductive empty@{u} : Type@{u} :=.
+
+Polymorphic Inductive unit@{u} : Type@{u} := tt.
+
+MetaCoq Quote Recursively Definition empty_sig_full_template := (fun (A : Type@{u}) (x : A) => x).
+Definition empty_sig_full := trans_template_program empty_sig_full_template.
+
+MetaCoq Quote Recursively Definition empty_full_template := empty@{u}.
+Definition empty_full := trans_template_program empty_full_template.
+
+MetaCoq Quote Recursively Definition unit_full_template := tt@{u}.
+Definition unit_full := trans_template_program unit_full_template.
+
+MetaCoq Quote Recursively Definition list_full_template := list@{u}.
+Definition list_full := trans_template_program list_full_template.
+
+MetaCoq Quote Recursively Definition rtree_full_template := rtree@{u}.
+Definition rtree_full := trans_template_program rtree_full_template.
+
+Definition extract_gctx : PCUICProgram.pcuic_program -> global_env_ext :=
+  fun p => (p.1.1.(PCUICProgram.trans_env_env), p.1.2).
+
+Definition gctx := Eval cbv in extract_gctx empty_full. (* Change here *)
+
+Global Program Instance fake_guard_impl : abstract_guard_impl :=
+{| guard_impl := fake_guard_impl |}.
+Next Obligation. Admitted.
+
+Local Existing Instance PCUICSN.default_normalizing.
+Import MCMonadNotation.
+
+Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
+  '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
+  ret Σ'.
+
+Local Existing Instance default_checker_flags.
+
+Definition gctx_wf_env : wf_env_ext.
+Proof.
+  let wf_proof := eval hnf in (make_wf_env_ext gctx) in
+  match wf_proof with
+  | CorrectDecl _ ?x => exact x
+  | ?z => set (error := z)
+   (* idtac z ; fail "Couldn't prove the global environment is well-formed" *)
+  end.
+Defined.
+*)
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
@@ -22,10 +87,11 @@ Definition univ := Level.Level "s".
 
 (* TODO move to SafeChecker *)
 
-Definition gctx : global_env_ext := 
-  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
+Definition gctx : global_env_ext :=
+  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := []
+    ; retroknowledge := Retroknowledge.empty |}, Monomorphic_ctx).
 
-(** We use the environment checker to produce the proof that gctx, which is a singleton with only 
+(** We use the environment checker to produce the proof that gctx, which is a singleton with only
     universe "s" declared  is well-formed. *)
 
 Definition kername_of_string (s : string) : kername :=
@@ -33,7 +99,7 @@ Definition kername_of_string (s : string) : kername :=
 
 Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
-Next Obligation. Admitted.  
+Next Obligation. Admitted.
 
 Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
   '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
@@ -41,7 +107,7 @@ Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ex
 
 Definition gctx_wf_env : wf_env_ext.
 Proof.
-  let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
+  let wf_proof := eval hnf in (make_wf_env_ext gctx) in
   match wf_proof with
   | CorrectDecl _ ?x => exact x
   | _ => fail "Couldn't prove the global environment is well-formed"
@@ -54,18 +120,18 @@ Defined.
 
 Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ typing Σ0 Γ t T ∥.
 
-Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) :=
   prf <- check_type_wf_env_fast optimized_abstract_env_impl Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 
-Ltac fill_inh t := 
+Ltac fill_inh t :=
   lazymatch goal with
-  [ wfΓ : forall _ _, ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
+  [ wfΓ : forall _ _, ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] =>
     let t := uconstr:(check_inh Σ Γ wfΓ t (T:=T)) in
     let proof := eval cbn in t in
     match proof with
     | Checked ?d => exact_no_check d
-    | TypeError ?e => 
+    | TypeError ?e =>
         let str := eval cbn in (string_of_type_error Σ e) in
         fail "Failed to inhabit " T " : " str
     | _ => set (blocked := proof)
@@ -85,8 +151,7 @@ Proof.
 Time Qed. *)
 
 
-Lemma identity_typing (u := Universe.make univ): 
-typing_result
+Lemma identity_typing (u := Universe.make univ):
      (∑ t : term,
         forall Σ0 : global_env_ext,
         Σ0 =
@@ -94,7 +159,8 @@ typing_result
            universes :=
              (LS.union (LevelSet.singleton Level.lzero)
                 (LevelSet.singleton univ), ConstraintSet.empty);
-           declarations := []
+           declarations := [];
+           retroknowledge := Retroknowledge.empty
          |}, Monomorphic_ctx) ->
         ∥ Σ0;;; [] |- t
           : tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0)) ∥).
@@ -106,16 +172,15 @@ Proof.
   pose (T := tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
   pose (Σ := gctx_wf_env).
   let t := uconstr:(check_inh Σ [] wfΓ impl (T:=T)) in
-  let proof := eval cbn in t in
+  let proof := eval hnf in t in
   match proof with
   | Checked ?d => exact_no_check d
-  | TypeError ?e => 
+  | TypeError ?e =>
       let str := eval cbn in (string_of_type_error Σ e) in
       fail "Failed to inhabit " T " : " str
   | _ => set (blocked := proof)
   (* fail "Anomaly: unexpected return value: " proof *)
   end.
-  exact blocked. 
-Defined. 
+Defined.
 
 (* Print Opaque Dependencies identity_typing. *)

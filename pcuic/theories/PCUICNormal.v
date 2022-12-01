@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases 
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases
      PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnvConv
      PCUICWeakeningEnvTyp PCUICReduction PCUICClosedTyp
      PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
@@ -39,6 +39,7 @@ Section Normal.
   Context (flags : RedFlags.t).
   Context (Σ : global_env).
 
+  (* Relative to reduction flags *)
   Inductive whne (Γ : context) : term -> Type :=
   | whne_rel i :
       option_map decl_body (nth_error Γ i) = Some None ->
@@ -47,7 +48,7 @@ Section Normal.
   | whne_rel_nozeta i :
       RedFlags.zeta flags = false ->
       whne Γ (tRel i)
-           
+
   | whne_lam_nobeta na A b :
       RedFlags.beta flags = false ->
       whne Γ (tLambda na A b)
@@ -78,14 +79,14 @@ Section Normal.
   (* Stuck fixpoints are neutrals *)
   | whne_fixapp mfix idx args rarg arg body :
      unfold_fix mfix idx = Some (rarg, body) ->
-     nth_error args rarg = Some arg -> 
+     nth_error args rarg = Some arg ->
      whne Γ arg ->
      whne Γ (mkApps (tFix mfix idx) args)
-          
+
   | whne_fix_nofix defs i :
       RedFlags.fix_ flags = false ->
       whne Γ (tFix defs i)
-  
+
   | whne_case i p c brs :
       whne Γ c ->
       whne Γ (tCase i p c brs)
@@ -102,7 +103,6 @@ Section Normal.
       RedFlags.iota flags = false ->
       whne Γ (tProj p c).
 
-
   (* Relative to reduction flags *)
   Inductive whnf (Γ : context) : term -> Type :=
   | whnf_ne t : whne Γ t -> whnf Γ t
@@ -118,7 +118,7 @@ Section Normal.
     end ->
     whnf Γ (mkApps (tFix mfix idx) v)
   | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
-  (* | whnf_prim p : whnf Γ (tPrim p) *).
+  | whnf_prim p : whnf Γ (tPrim p).
 
   Lemma whne_mkApps :
     forall Γ t args,
@@ -138,7 +138,7 @@ Section Normal.
   Proof using Type.
     intros. econstructor. now eapply whne_mkApps.
   Qed.
-  
+
   Lemma whne_mkApps_inv :
     forall Γ t l,
       negb (isApp t) ->
@@ -160,10 +160,10 @@ Section Normal.
       + rewrite <- mkApps_snoc in x.
         eapply (f_equal decompose_app) in x;
           rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence.
-        inversion x. subst. 
+        inversion x. subst.
         right. exists mfix, idx, rarg, body, arg. repeat split; eauto.
   Qed.
-  
+
 End Normal.
 
 Derive Signature for whnf.
@@ -177,7 +177,7 @@ Hint Constructors whnf whne : pcuic.
 Local Ltac inv H := inversion H; subst; clear H.
 
 Ltac help' := try repeat match goal with
-| [ H0 : _ = mkApps _ _ |- _ ] => 
+| [ H0 : _ = mkApps _ _ |- _ ] =>
   eapply (f_equal decompose_app) in H0;
     rewrite !decompose_app_mkApps in H0; cbn in *; intuition congruence
 | [ H1 : tApp _ _ = mkApps _ ?args |- _ ] =>
@@ -257,8 +257,8 @@ Proof.
     lia.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
-  (* - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq]. *)
-    (* cbn in *; subst; auto. *)
+  - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq].
+    cbn in *; subst; auto.
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -267,7 +267,7 @@ Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
   whnf flags Σ Γ (mkApps (tFix mfix idx) v).
 Proof.
  intros E1 H. eapply whnf_fixapp. rewrite E1. eauto.
-Qed. 
+Qed.
 #[global]
 Hint Resolve whnf_fixapp' : core.
 
@@ -328,8 +328,8 @@ Proof with eauto using sq with pcuic; try congruence.
   all: try now (right; intros [H]; depelim H;help).
   - destruct (RedFlags.zeta flags) eqn:Er.
     + destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E...
-      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help. 
-      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help. 
+      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help.
+      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help.
     + eauto using sq.
   - destruct (RedFlags.zeta flags) eqn:Er...
     destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E...
@@ -369,11 +369,11 @@ Proof with eauto using sq with pcuic; try congruence.
            destruct (nth_error_all E2 X Γ) as [_ []].
            ++ left. destruct s0...
            ++ destruct (RedFlags.fix_ flags) eqn:?.
-              ** right. intros [w]. depelim w. depelim w. all:help. clear IHv. 
+              ** right. intros [w]. depelim w. depelim w. all:help. clear IHv.
                  eapply whne_mkApps_inv in w as []; eauto.
-                 --- depelim w; [|congruence]. help. 
-                     eapply (f_equal decompose_app) in x; 
-                       rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence. 
+                 --- depelim w; [|congruence]. help.
+                     eapply (f_equal decompose_app) in x;
+                       rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence.
                      inv x. destruct rarg; inv e0.
                  --- destruct s0 as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                      rewrite E1 in e0. inv e0.
@@ -391,12 +391,12 @@ Proof with eauto using sq with pcuic; try congruence.
                  constructor.
                  assumption.
         -- left. constructor. eapply whnf_fixapp. rewrite E1. eauto.
-      (* * destruct v as [ | ? v]...
+      * destruct v as [ | ? v]...
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence. *)
-    + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv. 
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
+    + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv.
   - destruct (IHt Γ) as [_ []].
     + left. destruct s as [w]. constructor. now eapply whne_mkApps.
     + destruct t.
@@ -406,7 +406,7 @@ Proof with eauto using sq with pcuic; try congruence.
          ++ destruct (nth_error_all E2 X Γ) as [_ []].
             ** left. destruct s. constructor. eauto.
             ** destruct (RedFlags.fix_ flags) eqn:?.
-               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv. 
+               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv.
                    eapply whne_mkApps_inv in X0 as []...
                    destruct s as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                    rewrite E1 in e0. inv e0.
@@ -431,8 +431,8 @@ Proof with eauto using sq with pcuic; try congruence.
       right. intros [w]. depelim w. congruence. congruence. help.
     + right. intros [w]. depelim w. congruence. congruence. help.
     + right. intros [w]. depelim w. congruence. congruence. help.
-  - left. constructor. eapply whnf_indapp with (v := []). 
-  - left. constructor. eapply whnf_cstrapp with (v := []). 
+  - left. constructor. eapply whnf_indapp with (v := []).
+  - left. constructor. eapply whnf_cstrapp with (v := []).
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
     + left. destruct s...
@@ -475,7 +475,7 @@ Proof.
     + eapply IHv in X as (? & ? & ?). subst.
       exists (x0 ++ [x]). rewrite mkApps_snoc. split; eauto.
       apply OnOne2_app_r. assumption.
-    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto. 
+    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -491,7 +491,7 @@ Proof.
     + eapply IHv in X as (? & ? & ?). subst.
       exists (x0 ++ [x]). rewrite mkApps_snoc. split; eauto.
       apply OnOne2_app_r. assumption.
-    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto. 
+    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -509,7 +509,7 @@ Proof.
     rewrite app_length in nth.
     lia.
 Qed.
-  
+
 Lemma red1_mkApps_tFix_inv Σ Γ mfix id v t' :
   match unfold_fix mfix id with
   | Some (rarg, body) => is_constructor rarg v = false
@@ -539,7 +539,7 @@ Proof.
       * destruct unfold_fix as [(?&?)|]; [|easy].
         now eapply is_constructor_app_false.
     + left. left. exists (v ++ [N2]). split.
-      now rewrite mkApps_snoc. 
+      now rewrite mkApps_snoc.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -559,7 +559,7 @@ Proof.
       * subst. left. right. exists x0. split. now rewrite mkApps_snoc. eauto.
       * subst. right. exists x0. split. now rewrite mkApps_snoc. eauto.
     + left. left. exists (v ++ [N2]). split.
-      now rewrite mkApps_snoc. 
+      now rewrite mkApps_snoc.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -580,7 +580,7 @@ Proof.
   depelim wh.
   solve_discr.
 Qed.
-  
+
 Lemma whnf_mkApps_tSort_inv f Σ Γ s args :
   whnf f Σ Γ (mkApps (tSort s) args) -> args = [].
 Proof.
@@ -639,7 +639,7 @@ Context (Σ : global_env).
 Context (Γ : context).
 Context (P : term -> term -> Type).
 
-Lemma whne_red1_ind 
+Lemma whne_red1_ind
       (Hrel : forall i body,
           RedFlags.zeta flags = false ->
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -740,8 +740,8 @@ Lemma whne_red1_ind
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
       (Hcase_branch : forall i p c brs brs',
-          whne flags Σ Γ c ->          
-          OnOne2 (fun br br' => 
+          whne flags Σ Γ c ->
+          OnOne2 (fun br br' =>
             let ctx := inst_case_branch_context p br in
             (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br')%type)
             brs brs' ->
@@ -893,7 +893,7 @@ Lemma whne_pres Σ Γ t t' :
 Proof.
   induction 1 using red_rect_n1; eauto using whne_pres1.
 Qed.
-  
+
 Lemma whnf_pres1 Σ Γ t t' :
   red1 Σ Γ t t' ->
   whnf RedFlags.default Σ Γ t ->
@@ -941,7 +941,7 @@ Proof.
       destruct s as [->|(?&?)]; [easy|].
       now inv e.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
-  (* - depelim r. solve_discr. *)
+  - depelim r. solve_discr.
 Qed.
 
 Lemma whnf_pres Σ Γ t t' :
@@ -987,8 +987,8 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
     All2 (fun br br' =>
       red Σ (Γ ,,, inst_case_branch_context motive br) br.(bbody) br'.(bbody) ×
       bcontext br = bcontext br') brs brs' ->
-    whnf_red Σ Γ (tCase ci motive discr brs) 
-      (tCase ci {| pparams := motivepars; 
+    whnf_red Σ Γ (tCase ci motive discr brs)
+      (tCase ci {| pparams := motivepars;
                   puinst := motive.(puinst);
                   pcontext := motive.(pcontext);
                   preturn := motiveret |} discr' brs')
@@ -1014,16 +1014,16 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ Γ (dtype d) (dtype d') ×
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
-    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-(* | whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i). *)
+    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
+| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
 
 Derive Signature for whnf_red.
 
 #[global]
 Hint Constructors whnf_red : pcuic.
 
-Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''} 
-  (a : All3 P l l' l'') : 
+Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''}
+  (a : All3 P l l' l'') :
   (forall x y z, P x y z -> Q x y z) ->
   All3 Q l l' l''.
 Proof.
@@ -1164,11 +1164,11 @@ Ltac inv_on_free_vars :=
   match goal with
   | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
   | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
-  | [ H : is_true (_ && _) |- _ ] => 
+  | [ H : is_true (_ && _) |- _ ] =>
     move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+  | [ H : is_true (on_free_vars ?P ?t) |- _ ] =>
     progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] ||
       eapply forallb_All in H); intros
   | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
     move/andP: H => []; rewrite ?shiftnP_xpredT; intros
@@ -1178,7 +1178,7 @@ Ltac inv_on_free_vars :=
 
 Require Import PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICSR PCUICConversion PCUICSubstitution.
 
-Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ : 
+Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ :
   All2 (red Σ Γ) s s' ->
   All (on_free_vars (shiftnP #|Γ| P)) s ->
   untyped_subslet Γ s Γ' ->
@@ -1189,9 +1189,9 @@ Proof.
   induction Δ; cbn.
   * rewrite !subst_context_nil. constructor.
   * move: onctx => /=. rewrite on_free_vars_ctx_snoc => /andP[] onctx ona.
-    rewrite !subst_context_snoc !Nat.add_0_r. 
+    rewrite !subst_context_snoc !Nat.add_0_r.
     constructor; eauto.
-    now apply IHΔ. 
+    now apply IHΔ.
     destruct a as [na [b|] ty]; constructor; cbn.
     relativize #|Δ|. eapply red_red; tea. 4:auto.
     erewrite on_free_vars_ctx_on_ctx_free_vars => //; tea.
@@ -1210,7 +1210,7 @@ Proof.
     solve_all. rewrite !app_context_length Nat.add_assoc -shiftnP_add addnP_shiftnP //.
 Qed.
 
-Definition fake_params n : context := 
+Definition fake_params n : context :=
     unfold n (fun x => {| decl_name := {| binder_name := nAnon; binder_relevance := Relevant |};
                           decl_body := None;
                           decl_type := tSort Universe.type0 |}).
@@ -1258,7 +1258,7 @@ Lemma br_fvs_pres {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ mot
   All (br_fvs Γ motive) brs ->
   All2
     (fun br br' : branch term =>
-    red Σ (Γ,,, inst_case_branch_context motive br) 
+    red Σ (Γ,,, inst_case_branch_context motive br)
        (bbody br) (bbody br') * (bcontext br = bcontext br')) brs brs' ->
   All (br_fvs Γ motive) brs'.
 Proof.
@@ -1272,7 +1272,7 @@ Proof.
   eapply on_free_vars_ctx_inst_case_context; trea. solve_all.
 Qed.
 
-Lemma whnf_red_trans {cf:checker_flags} {Σ : global_env_ext} Γ x y z : wf Σ -> 
+Lemma whnf_red_trans {cf:checker_flags} {Σ : global_env_ext} Γ x y z : wf Σ ->
   is_closed_context Γ ->
   is_open_term Γ x ->
   whnf_red Σ Γ x y ->
@@ -1307,7 +1307,7 @@ Proof.
       have clp: on_ctx_free_vars (closedP #|Γ,,, inst_case_predicate_context motive| xpredT)
         (Γ,,, inst_case_predicate_context motive).
       { rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
         rewrite test_context_k_closed_on_free_vars_ctx //. }
       eapply red_red_ctx. 5:tea. all:eauto; revgoals.
@@ -1333,18 +1333,18 @@ Proof.
       * rewrite closedP_shiftnP_eq.
         relativize #|Γ ,,, _|; [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //. cbn.
         eapply red_terms_on_free_vars; tea.
-        rewrite test_context_k_closed_on_free_vars_ctx -(All2_length a) //. 
+        rewrite test_context_k_closed_on_free_vars_ctx -(All2_length a) //.
 
     + eapply forallb_All in p3.
       epose proof (br_fvs_pres _ _ _ _ onΓ p p3 a0).
-      eapply (All2_impl (P:=fun br br' => br_fvs Γ motive br × 
+      eapply (All2_impl (P:=fun br br' => br_fvs Γ motive br ×
         red Σ (Γ,,, inst_case_branch_context motive br) (bbody br) (bbody br') *
             (bcontext br = bcontext br'))).
       2:intuition.
-      eapply All2_trans with brs'. 
+      eapply All2_trans with brs'.
       { clear -wf p.
         intros br br' br''. intuition auto. 2:congruence.
         etransitivity; tea. unfold inst_case_branch_context in *. now rewrite -b1 in a2. }
@@ -1356,7 +1356,7 @@ Proof.
       eapply red_red_ctx. 5:tea. all:eauto; revgoals.
       apply red_context_app_right; eauto.
       * rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
       * apply red_context_refl.
       * rewrite /inst_case_branch_context /=.
@@ -1378,12 +1378,12 @@ Proof.
       * rewrite shiftnP_add.
         relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
       * rewrite shiftnP_add.
         relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
         eapply red_terms_on_free_vars; tea.
         now rewrite -(All2_length a).
@@ -1517,7 +1517,7 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-  (* - depelim r; solve_discr. *)
+  - depelim r; solve_discr.
 Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
@@ -1608,7 +1608,7 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.
-  (* - depelim eq; auto. *)
+  - depelim eq; auto.
 Qed.
 
 Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :

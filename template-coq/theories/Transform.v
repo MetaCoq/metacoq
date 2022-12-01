@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 
-(** Generic transofmations from one language to another, 
+(** Generic transofmations from one language to another,
     preserving an evaluation relation up-to some observational equality. *)
 
 From Coq Require Import Program ssreflect ssrbool.
@@ -11,11 +11,11 @@ Local Open Scope bs.
 Local Open Scope string_scope2.
 
 (* Used to show timings of the ML execution *)
- 
+
 Definition time : forall {A B}, string -> (A -> B) -> A -> B :=
   fun A B s f x => f x.
 
-Extract Constant time => 
+Extract Constant time =>
   "(fun c f x -> let s = Caml_bytestring.caml_string_of_bytestring c in Tm_util.time (Pp.str s) f x)".
 
 Module Transform.
@@ -24,23 +24,23 @@ Module Transform.
      Context {value value' : Type}.
      Context {eval :  program -> value -> Prop}.
      Context {eval' : program' -> value' -> Prop}.
-     
+
      Definition preserves_eval pre (transform : forall p : program, pre p -> program') obseq :=
       forall p v (pr : pre p),
         eval p v ->
         let p' := transform p pr in
         exists v', eval' p' v' /\ obseq p p' v v'.
 
-    Record t := 
-    { name : string; 
-      pre : program -> Prop; 
+    Record t :=
+    { name : string;
+      pre : program -> Prop;
       transform : forall p : program, pre p -> program';
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
       obseq : program -> program' -> value -> value' -> Prop;
       preservation : preserves_eval pre transform obseq; }.
 
-    Definition run (x : t) (p : program) (pr : pre x p) : program' := 
+    Definition run (x : t) (p : program) (pr : pre x p) : program' :=
       time x.(name) (fun _ => x.(transform) p pr) tt.
 
   End Opt.
@@ -54,11 +54,11 @@ Module Transform.
     Context {eval : program -> value -> Prop}.
     Context {eval' : program' -> value' -> Prop}.
     Context {eval'' : program'' -> value'' -> Prop}.
-    
+
     Local Obligation Tactic := idtac.
-    Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') 
+    Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'')
       (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
-      {| 
+      {|
         name := (o.(name) ^ " -> " ^ o'.(name))%bs;
         transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
         pre := o.(pre);

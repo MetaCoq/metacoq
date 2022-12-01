@@ -7,8 +7,7 @@ CAMLFLAGS+=-w -34 # Unused type
 CAMLFLAGS+=-w -60 # Unused module
 CAMLFLAGS+=-w -8 # Non-exhaustive pattern-matchings (BEWARE, just for extracted code)
 CAMLFLAGS+=-bin-annot # For merlin
-
+CAMLPKGS+=-package stdlib-shims
 INSTALLDEFAULTROOT=MetaCoq/Template
 
-post-all::
-	cp -a gen-src/metacoq_template_plugin.cm* build/
+.PHONY: META

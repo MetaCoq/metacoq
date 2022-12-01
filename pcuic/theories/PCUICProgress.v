@@ -21,7 +21,7 @@ From Equations Require Import Equations.
 Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res T :
   wf Σ ->
   Σ ;;; [] |- tCase ci p discr brs : T ->
-  eval Σ (tCase ci p discr brs) res -> 
+  eval Σ (tCase ci p discr brs) res ->
   ∑ c u args, red Σ [] (tCase ci p discr brs) (tCase ci p ((mkApps (tConstruct ci.(ci_ind) c u) args)) brs).
 Proof.
   intros wf wt H. depind H; try now (cbn in *; congruence).
@@ -29,7 +29,7 @@ Proof.
     eexists _, _, _. eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
   - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
     assert (Hred1 : Σ;;; [] |- tCase ip p discr brs ⇝* tCase ip p (mkApps fn args) brs). {
-      etransitivity. { eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. } 
+      etransitivity. { eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. }
       econstructor. econstructor.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
       enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
@@ -39,7 +39,7 @@ Proof.
     edestruct IHeval2 as (c & u & args0 & IH); eauto using subject_reduction.
     exists c, u, args0. etransitivity; eauto.
 Qed.
-  
+
 Local Existing Instance config.extraction_checker_flags.
 
 Inductive typing_spine_pred {cf : checker_flags} Σ (Γ : context) (P : forall t T (H : Σ ;;; Γ |- t : T), Type) : term -> list term -> term -> Type :=
@@ -61,15 +61,15 @@ Inductive typing_spine_pred {cf : checker_flags} Σ (Γ : context) (P : forall t
     forall H : Σ ;;; Γ |- hd : A,
     P hd A H ->
     typing_spine_pred Σ Γ P (subst10 hd B) tl B' ->
-    typing_spine_pred Σ Γ P ty (hd :: tl) B'.    
+    typing_spine_pred Σ Γ P ty (hd :: tl) B'.
 
 Section WfEnv.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Lemma typing_spine_pred_strengthen {Γ P T args U} : 
+  Lemma typing_spine_pred_strengthen {Γ P T args U} :
     typing_spine_pred Σ Γ P T args U ->
     isType Σ Γ T ->
-    forall T', 
+    forall T',
     isType Σ Γ T' ->
     Σ ;;; Γ ⊢ T' ≤ T ->
     typing_spine_pred Σ Γ P T' args U.
@@ -81,7 +81,7 @@ Section WfEnv.
         clear p.
         eapply inversion_Prod in H' as (? & ? & ? & ? & ?); tea.
         eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
-        econstructor; cbn; eauto. 
+        econstructor; cbn; eauto.
       }
       do 3 forward IHX by pcuic.
       intros Hsub.
@@ -104,14 +104,14 @@ Proof.
     econstructor. eexists; eauto. eexists; eauto. eapply isType_ws_cumul_pb_refl. eexists; eauto. }
   intros Hf Ht. simpl in Hf.
   specialize (IHu (tApp f a) T).
-  epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea. 
-  edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
-  exists (tProd na' A' B'). exists Hf'. exists s_. exists HA. 
+  epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea.
+  edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
+  exists (tProd na' A' B'). exists Hf'. exists s_. exists HA.
   split. rewrite <- H2. lia.
   split. rewrite <- Nat.le_max_l, <- H2. lia.
-  
+
   unshelve econstructor.
-  5: eauto. 1: eauto. 
+  5: eauto. 1: eauto.
   3:eapply isType_ws_cumul_pb_refl; eexists; eauto.
   1: eexists; eauto.
   1, 2: rewrite <- H2; lia.
@@ -120,7 +120,7 @@ Proof.
   eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
   eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
   econstructor;  cbn; eauto.
-  Unshelve. eauto. 
+  Unshelve. eauto.
 Qed.
 
 Lemma typing_ind_env_app_size `{cf : checker_flags} :
@@ -128,7 +128,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
        (PΓ : global_env_ext -> context -> Type),
 
-  (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ), 
+  (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ),
        All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
@@ -197,10 +197,10 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       consistent_instance_ext Σ mdecl.(ind_universes) u ->
       P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),
      forall (ci : case_info) p c brs indices ps mdecl idecl
        (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-       Forall_decls_typing P Σ.1 -> 
+       Forall_decls_typing P Σ.1 ->
        PΓ Σ Γ ->
        mdecl.(ind_npars) = ci.(ci_npar) ->
        eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
@@ -212,7 +212,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        wf_local Σ (Γ ,,, predctx) ->
        PΓ Σ (Γ ,,, predctx) ->
        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-       PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
+       PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -249,11 +249,18 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       let types := fix_context mfix in
       cofix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
-      PΓ Σ (Γ ,,, types) ->       
+      PΓ Σ (Γ ,,, types) ->
       All (on_def_type (lift_typing2 typing P Σ) Γ) mfix ->
       All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
       wf_cofixpoint Σ.1 mfix ->
       P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
+
+  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+    PΓ Σ Γ ->
+    primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
+    declared_constant Σ.1 prim_ty cdecl ->
+    primitive_invariants cdecl ->
+    P Σ Γ (tPrim p) (tConst prim_ty [])) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
       PΓ Σ Γ ->
@@ -264,7 +271,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       Σ ;;; Γ |- A <=s B ->
       P Σ Γ t B) ->
 
-     env_prop P PΓ. 
+     env_prop P PΓ.
 Proof.
  intros P Pdecl PΓ.
  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
@@ -274,15 +281,15 @@ Proof.
  destruct (decompose_app t) as [t1 L].
  subst. rename t1 into t. cbn in *.
  replace (tApp (mkApps t L) u) with (mkApps t (L ++ [u])) by now rewrite mkApps_app.
- 
+
  pose proof (@inversion_mkApps cf) as Happs. specialize Happs with (H := Ht).
  forward Happs; eauto.
  destruct (Happs _ Hprod) as (A' & Hf & s' & HA & sz_f & sz_A & HL).
- destruct @inversion_Prod_size with (H0 := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
+ destruct @inversion_Prod_size with (H := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ].
  eapply X4. 6:eauto. 4: exact HA. all: eauto.
  - intros. eapply (IH _ _ Hf). lia.
  - Unshelve. 2:exact Hf. intros. eapply (IH _ _ Ht'). lia.
- - clear sz_A. induction L in A', Hf, (* HA, sz_A, *) Ht, HL, t, Hf, IH (*, s' *) |- *. 
+ - clear sz_A. induction L in A', Hf, (* HA, sz_A, *) Ht, HL, t, Hf, IH (*, s' *) |- *.
    + inversion HL; subst. inversion X13. econstructor. econstructor; eauto. eauto. eauto. eauto. eauto. eauto.
      econstructor. 1,2: eapply isType_apply; eauto. eapply ws_cumul_pb_refl.
      eapply typing_closed_context; eauto. eapply type_is_open_term.
@@ -303,7 +310,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
          (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
          (PΓ : global_env_ext -> context -> Type),
 
-    (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ), 
+    (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ),
          All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
@@ -343,11 +350,11 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) T B L s,
         PΓ Σ Γ ->
         Σ ;;; Γ |- T : tSort s -> P Σ Γ T (tSort s) ->
-        forall (Ht : Σ ;;; Γ |- t : T), P Σ Γ t T -> 
-  
+        forall (Ht : Σ ;;; Γ |- t : T), P Σ Γ t T ->
+
         (* Give a stronger induction hypothesis allowing to crawl under applications *)
         typing_spine_pred Σ Γ (fun u ty H => Σ ;;; Γ |- u : ty × P Σ Γ u ty) T L B ->
-  
+
         P Σ Γ (mkApps t L) B) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
@@ -370,11 +377,11 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
-    
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),
     forall (ci : case_info) p c brs indices ps mdecl idecl
       (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-      Forall_decls_typing P Σ.1 -> 
+      Forall_decls_typing P Σ.1 ->
       PΓ Σ Γ ->
       mdecl.(ind_npars) = ci.(ci_npar) ->
       eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
@@ -386,7 +393,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       wf_local Σ (Γ ,,, predctx) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-      PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices) 
+      PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -400,7 +407,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
           (Prop_conj typing P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2) ×
           (Prop_conj typing P) Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
       P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
-      
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
         Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
@@ -429,6 +436,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+        PΓ Σ Γ ->
+        primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
+        declared_constant Σ.1 prim_ty cdecl ->
+        primitive_invariants cdecl ->
+        P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ ->
         Σ ;;; Γ |- t : A ->
@@ -441,7 +455,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
        env_prop P PΓ.
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
-  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
+  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 Σ wfΣ Γ t T H.
   apply typing_ind_env_app_size; eauto.
 Qed.
 
@@ -479,7 +493,7 @@ Import PCUICGlobalEnv.
 Lemma typing_constructor_arity_exact {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind c u u' args}
   {mdecl idecl cdecl indices} :
   declared_constructor Σ (ind, c) mdecl idecl cdecl ->
-  Σ ;;; [] |- mkApps (tConstruct ind c u) args : mkApps (tInd ind u') indices -> 
+  Σ ;;; [] |- mkApps (tConstruct ind c u) args : mkApps (tInd ind u') indices ->
   #|args| = cstr_arity mdecl cdecl.
 Proof.
   intros declc hc.
@@ -489,7 +503,7 @@ Qed.
 
 Lemma typing_constructor_arity {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind c u args T} {mdecl idecl cdecl} :
   declared_constructor Σ (ind, c) mdecl idecl cdecl ->
-  Σ ;;; [] |- mkApps (tConstruct ind c u) args : T -> 
+  Σ ;;; [] |- mkApps (tConstruct ind c u) args : T ->
   #|args| <= cstr_arity mdecl cdecl.
 Proof.
   intros declc hc.
@@ -512,13 +526,13 @@ Proof.
   now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars declc).
 Qed.
 
-Lemma value_mkApps_inv' Σ f args : 
+Lemma value_mkApps_inv' Σ f args :
   negb (isApp f) ->
-  value Σ (mkApps f args) -> 
-  atom f × All (value Σ) args. 
+  value Σ (mkApps f args) ->
+  atom f × All (value Σ) args.
 Proof.
   intros napp. move/value_mkApps_inv => [] => //.
-  - intros [-> hf]. split => //. 
+  - intros [-> hf]. split => //.
   - intros []. split; auto. destruct v; now constructor.
 Qed.
 
@@ -540,11 +554,22 @@ Proof.
   now eapply ws_cumul_pb_Sort_Prod_inv in w.
 Qed.
 
-Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T : 
+Lemma typing_spine_axiom {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ cst u cdecl args T :
+  declared_constant Σ cst cdecl ->
+  cdecl.(cst_body) = None ->
+  typing_spine Σ Γ (tConst cst u) args T -> args = [].
+Proof.
+  intros hdecl hb.
+  induction args => //.
+  intros sp. depelim sp.
+  now eapply invert_cumul_axiom_prod in w.
+Qed.
+
+Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T :
   negb (isApp fn) ->
-  Σ ;;; [] |- mkApps fn (args ++ [hd]) : T -> 
+  Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
-  value Σ (mkApps fn args) -> 
+  value Σ (mkApps fn args) ->
   (∑ t' : term, red1 Σ (mkApps fn (args ++ [hd])) t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
@@ -568,13 +593,13 @@ Proof.
     eapply inversion_Ind in hfn as [? [? [? [? [? cu]]]]]; tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity. econstructor; eauto. }
     right. eapply value_app. constructor. eauto with pcuic.
-  * (* constructor *) 
+  * (* constructor *)
     right. eapply value_app; auto. 2:{ eapply All_app_inv; eauto. }
     pose proof hfn as hfn'.
     eapply inversion_Construct in hfn' as [mdecl [idecl [cdecl [wf [declc _]]]]]; tea.
     eapply (typing_constructor_arity declc) in ht.
     econstructor; tea.
-  * (* fix *) 
+  * (* fix *)
     destruct (isStuckFix (tFix mfix idx) (args ++ [hd])) eqn:E.
     + right. eapply value_stuck_fix; eauto with pcuic.
     + cbn in E.
@@ -594,12 +619,17 @@ Proof.
   * (* cofix *)
     right. eapply value_app; eauto with pcuic.
     now constructor.
+  * (* primitive *)
+    cbn.
+    eapply inversion_Prim in hfn as [prim_ty [cdecl [hwf hp hdecl [s []]]]]; tea.
+    eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. now exists s. }
+    now eapply typing_spine_axiom, app_tip_nil in hcum.
 Qed.
 
-Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T : 
-  Σ ;;; [] |- mkApps fn (args ++ [hd]) : T -> 
+Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T :
+  Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
-  value Σ (mkApps fn args) -> 
+  value Σ (mkApps fn args) ->
   (∑ t' : term, red1 Σ (mkApps fn (args ++ [hd])) t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
@@ -611,7 +641,7 @@ Proof.
   rewrite mkApps_app //.
 Qed.
 
-Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
+Lemma cstr_branch_context_assumptions ci mdecl cdecl :
   context_assumptions (cstr_branch_context ci mdecl cdecl) =
   context_assumptions (cstr_args cdecl).
 Proof.
@@ -620,7 +650,7 @@ Proof.
   now do 2 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context.
 Qed.
 
-Lemma progress `{cf : checker_flags}: 
+Lemma progress `{cf : checker_flags}:
   env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & red1 Σ t t'} + (value Σ t))
            (fun _ _ => True).
 Proof with eauto with wcbv; try congruence.
@@ -686,7 +716,7 @@ Proof with eauto with wcbv; try congruence.
     eapply PCUICCanonicity.value_canonical in IH; eauto.
     unfold head in IH.
     rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc, Hval |- *.
-    destruct (decompose_app c) as [h l]. 
+    destruct (decompose_app c) as [h l].
     cbn - [decompose_app] in *.
     destruct h; inv IH.
     + eapply invert_Proj_Construct in H as H_; sq; eauto. destruct H_ as (<- & -> & Hl).
@@ -726,7 +756,7 @@ Proof.
 Qed.
 
 Lemma red1_incl {cf : checker_flags} {Σ t t' } :
-  closed t -> 
+  closed t ->
   red1 Σ t t' -> PCUICReduction.red1 Σ [] t t'.
 Proof.
   intros Hcl Hred.
@@ -735,7 +765,7 @@ Proof.
   1,2: now rewrite closed_subst; eauto; econstructor; eauto.
   - now rewrite e0 /cstr_arity -e1 -e2.
   - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
-    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.    
+    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.
   - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
     inversion e; subst.
     econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
@@ -750,7 +780,7 @@ Global Hint Constructors value eval : wcbv.
 Global Hint Resolve value_final : wcbv.
 
 (* Lemma eval_tApp_Construct {Σ a b ind c u args a'}
-  eval Σ a 
+  eval Σ a
 eval Σ (tApp a b) (mkApps (tConstruct ind c u) (args ++ [a']))
  *)
 
@@ -804,7 +834,7 @@ Proof.
     exists v. sq. eapply red1_eval; eauto.
     now eapply subject_closed in HA.
   - exists t. sq. eapply value_final; eauto.
-Qed.  
+Qed.
 
 From MetaCoq Require Import PCUICFirstorder.
 
@@ -843,8 +873,8 @@ Proof.
   - assert (x = y) as <- by eauto. eauto.
 Qed.
 
-Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ -> 
-  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : mkApps (tInd i u) args ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   closed_red Σ [] t v ->
@@ -860,7 +890,7 @@ Proof.
   2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
   destruct v as [v Hv].
   assert (v = v'') as <- by (eapply irred_equal; eauto).
-  assert (firstorder_value Σ [] v'). { 
+  assert (firstorder_value Σ [] v'). {
     eapply firstorder_value_spec; eauto.
     eapply subject_reduction_eval; eauto.
     eapply eval_to_value. eauto.
@@ -870,13 +900,13 @@ Proof.
   intros. eapply firstorder_value_irred; eauto.
 Qed.
 
-Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ -> 
-  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : mkApps (tInd i u) args ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   red Σ [] t v ->
   (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
-  squash (eval Σ t v).
+  ∥ eval Σ t v ∥.
 Proof.
   intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
   unshelve edestruct @ws_wcbv_standardization.
@@ -892,4 +922,4 @@ Proof.
   - now eapply subject_closed in Hty.
   - eapply @subject_closed with (Γ := []); eauto.
     eapply subject_reduction; eauto.
-Qed.  
+Qed.

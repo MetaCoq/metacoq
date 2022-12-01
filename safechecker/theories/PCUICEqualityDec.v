@@ -157,7 +157,7 @@ Fixpoint eqb_term_upto_univ_napp
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-(*  | tPrim p, tPrim p' => eqb p p' *)
+  | tPrim p, tPrim p' => eqb p p'
 
   | _, _ => false
   end.
@@ -195,7 +195,7 @@ Local Ltac ih :=
   repeat lazymatch goal with
   | ih : forall lequ Rle napp hle t' ht ht', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
     hle : forall u u' hu hu', reflect (?Rle u u') (?lequ u u') ,
-    hcompare : forall R leq H ref n l l' _ _ , _ <-> _ 
+    hcompare : forall R leq H ref n l l' _ _ , _ <-> _
     |- context [ eqb_term_upto_univ _ ?lequ _ ?t ?t' ] =>
     destruct (ih lequ Rle 0 hle t')
        ; nodec ; subst
@@ -740,7 +740,7 @@ Proof.
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
-(*  - cbn - [eqb]. eqspecs. do 2 constructor. *)
+ - cbn - [eqb]. eqspecs. do 2 constructor.
 Qed.
 
  Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool)
@@ -802,7 +802,7 @@ intros Hequ Heqlu Hcompare Hgen_compare Ht Hu. apply eq_true_iff_eq. split; intr
   * eapply reflect_eq_term_upto_univ; intros.
     1-2: apply idP.
     + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
-      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.   
+      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.
       1: intros; rewrite <- Hequ; eauto.  all: try apply idP.
       ++ revert H2. eapply reflect_iff; eapply wf_universe_reflect.
       ++ revert H3. eapply reflect_iff; eapply wf_universe_reflect.

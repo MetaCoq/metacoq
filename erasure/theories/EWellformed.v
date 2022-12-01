@@ -13,13 +13,13 @@ Set Equations Transparent.
 Local Set Keyed Unification.
 Require Import ssreflect ssrbool.
 
-Definition isSome {A} (o : option A) := 
-  match o with 
+Definition isSome {A} (o : option A) :=
+  match o with
   | None => false
   | Some _ => true
   end.
 
-Class ETermFlags := 
+Class ETermFlags :=
   { has_tBox : bool
   ; has_tRel : bool
   ; has_tVar : bool
@@ -33,6 +33,7 @@ Class ETermFlags :=
   ; has_tProj : bool
   ; has_tFix : bool
   ; has_tCoFix : bool
+  ; has_tPrim : bool
   }.
 
 Set Warnings "-future-coercion-class-field".
@@ -44,7 +45,7 @@ Class EEnvFlags := {
   }.
 Set Warnings "+future-coercion-class-field".
 
-Definition all_term_flags := 
+Definition all_term_flags :=
   {| has_tBox := true
     ; has_tRel := true
     ; has_tVar := true
@@ -58,22 +59,22 @@ Definition all_term_flags :=
     ; has_tProj := true
     ; has_tFix := true
     ; has_tCoFix := true
+    ; has_tPrim := true
   |}.
 
-Definition all_env_flags := 
+Definition all_env_flags :=
   {| has_axioms := true;
      term_switches := all_term_flags;
      has_cstr_params := true ;
      cstr_as_blocks := false |}.
-    
-Definition all_env_flags_blocks := 
+
+Definition all_env_flags_blocks :=
   {| has_axioms := true;
      term_switches := all_term_flags;
      has_cstr_params := true ;
      cstr_as_blocks := true |}.
-    
 Section wf.
-  
+
   Context {efl  : EEnvFlags}.
   Variable Σ : global_context.
 
@@ -84,12 +85,11 @@ Section wf.
     - all occuring constants are defined, and
     - if has_axioms is false, all occuring constants have bodies *)
 
-  Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx := 
-    let k' := List.length mfix + k in      
+  Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx :=
+    let k' := List.length mfix + k in
     (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
 
   Definition is_nil {A} (l : list A) := match l with [] => true | _ => false end.
-  
   Fixpoint wellformed k (t : term) : bool :=
     match t with
     | tRel i => has_tRel && Nat.ltb i k
@@ -97,24 +97,25 @@ Section wf.
     | tLambda _ M => has_tLambda && wellformed (S k) M
     | tApp u v => has_tApp && wellformed k u && wellformed k v
     | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
-    | tCase ind c brs => has_tCase && 
+    | tCase ind c brs => has_tCase &&
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
     | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
     | tFix mfix idx => has_tFix && List.forallb (isLambda ∘ dbody) mfix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox
-    | tConst kn => has_tConst && 
+    | tConst kn => has_tConst &&
       match lookup_constant Σ kn with
       | Some d => has_axioms || isSome d.(cst_body)
-      | _ => false 
+      | _ => false
       end
-    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) && 
-      if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with 
-        | Some (p, a) => (p + a) == #|block_args| 
-        | _ => true end 
+    | tConstruct ind c block_args => has_tConstruct && isSome (lookup_constructor Σ ind c) &&
+      if cstr_as_blocks then match lookup_constructor_pars_args Σ ind c with
+        | Some (p, a) => (p + a) == #|block_args|
+        | _ => true end
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
+    | tPrim _ => has_tPrim
     end.
 
 End wf.
@@ -154,7 +155,7 @@ Definition wf_global_decl {efl : EEnvFlags} Σ d : bool :=
 
 Inductive wf_glob {efl : EEnvFlags} : global_declarations -> Prop :=
 | wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
+| wf_glob_cons kn d Σ :
   wf_glob Σ ->
   wf_global_decl Σ d ->
   fresh_global kn Σ ->
@@ -167,7 +168,7 @@ Section EEnvFlags.
   Context {efl : EEnvFlags}.
   Context {Σ : global_declarations}.
   Notation wellformed := (wellformed Σ).
-  
+
   Lemma wellformed_closed {k t} : wellformed k t -> closedn k t.
   Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; intros;
@@ -179,7 +180,7 @@ Section EEnvFlags.
     destruct cstr_as_blocks. 2: destruct args; eauto; solve_all.
     rtoProp. solve_all.
   Qed.
-  
+
   Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
   Proof using Type.
     destruct t => /= //.
@@ -196,8 +197,8 @@ Section EEnvFlags.
       unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
     - eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
-    - destruct cstr_as_blocks; eauto. solve_all. 
-      destruct lookup_constructor_pars_args as [ [] |]; rtoProp; repeat solve_all. 
+    - destruct cstr_as_blocks; eauto. solve_all.
+      destruct lookup_constructor_pars_args as [ [] |]; rtoProp; repeat solve_all.
   Qed.
 
   Lemma wellformed_lift n k k' t : wellformed k t -> wellformed (k + n) (lift n k' t).
@@ -224,7 +225,7 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_subst_eq {s k k' t} :
-    forallb (wellformed k) s -> 
+    forallb (wellformed k) s ->
     wellformed (k + k' + #|s|) t ->
     wellformed (k + k') (subst s k' t).
   Proof using Type.
@@ -250,7 +251,7 @@ Section EEnvFlags.
     - f_equal. simpl. solve_all.
       specialize (IHt (S k')).
       rewrite <- Nat.add_succ_comm in IHt.
-      rewrite IHt //. 
+      rewrite IHt //.
     - specialize (IHt2 (S k')).
       rewrite <- Nat.add_succ_comm in IHt2.
       eapply IHt2; auto.
@@ -270,7 +271,7 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_subst s k t :
-    forallb (wellformed k) s -> wellformed (#|s| + k) t -> 
+    forallb (wellformed k) s -> wellformed (#|s| + k) t ->
     wellformed k (subst0 s t).
   Proof using Type.
     intros.
@@ -280,8 +281,8 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_csubst t k u :
-    wellformed 0 t -> 
-    wellformed (S k) u -> 
+    wellformed 0 t ->
+    wellformed (S k) u ->
     wellformed k (ECSubst.csubst t 0 u).
   Proof using Type.
     intros.
@@ -292,8 +293,8 @@ Section EEnvFlags.
   Qed.
 
   Lemma wellformed_substl ts k u :
-    forallb (wellformed 0) ts -> 
-    wellformed (#|ts| + k) u -> 
+    forallb (wellformed 0) ts ->
+    wellformed (#|ts| + k) u ->
     wellformed k (ECSubst.substl ts u).
   Proof using Type.
     induction ts in u |- *; cbn => //.
@@ -302,7 +303,7 @@ Section EEnvFlags.
     eapply wellformed_csubst => //.
   Qed.
 
-  Lemma wellformed_fix_subst mfix {hast : has_tFix}: 
+  Lemma wellformed_fix_subst mfix {hast : has_tFix}:
     forallb (isLambda ∘ dbody) mfix ->
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (fix_subst mfix).
@@ -316,7 +317,7 @@ Section EEnvFlags.
     apply/andP; split. apply Nat.ltb_lt. lia. apply IHn. lia.
   Qed.
 
-  Lemma wellformed_cofix_subst mfix {hasco : has_tCoFix}: 
+  Lemma wellformed_cofix_subst mfix {hasco : has_tCoFix}:
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (cofix_subst mfix).
   Proof using Type.
@@ -337,7 +338,7 @@ Section EEnvFlags.
     rewrite /cunfold_fix.
     destruct nth_error eqn:heq => //.
     cbn in cl. move/andP: cl => [/andP[] hastf isfix /andP[] hidx cl].
-    have := (nth_error_forallb heq cl) => cld. 
+    have := (nth_error_forallb heq cl) => cld.
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_fix_subst.
     rewrite fix_subst_length.
@@ -353,7 +354,7 @@ Section EEnvFlags.
     rewrite /cunfold_cofix.
     destruct nth_error eqn:heq => //.
     cbn in cl. move/andP: cl => [hastf /andP[] _ cl].
-    have := (nth_error_forallb heq cl) => cld. 
+    have := (nth_error_forallb heq cl) => cld.
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_cofix_subst.
     rewrite cofix_subst_length.
@@ -398,7 +399,7 @@ End EEnvFlags.
 
 Lemma wellformed_closed_env {efl} {Σ : global_declarations} : wf_glob Σ -> closed_env Σ.
 Proof.
-  induction 1; cbn; auto. 
+  induction 1; cbn; auto.
   apply/andP; split.
   - unfold test_snd => /=.
     now eapply wellformed_closed_decl.
@@ -423,9 +424,9 @@ Proof.
 Qed.
 
 
-Lemma extends_lookup_constructor {efl} {Σ Σ'} : 
+Lemma extends_lookup_constructor {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
-  forall ind c b, lookup_constructor Σ ind c = Some b -> 
+  forall ind c b, lookup_constructor Σ ind c = Some b ->
     lookup_constructor Σ' ind c = Some b.
 Proof.
   intros wf ex ind c b.
@@ -434,9 +435,9 @@ Proof.
   now rewrite (extends_lookup wf ex lookup).
 Qed.
 
-Lemma extends_constructor_isprop_pars_decl {efl} {Σ Σ'} : 
+Lemma extends_constructor_isprop_pars_decl {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
-  forall ind c b, constructor_isprop_pars_decl Σ ind c = Some b -> 
+  forall ind c b, constructor_isprop_pars_decl Σ ind c = Some b ->
     constructor_isprop_pars_decl Σ' ind c = Some b.
 Proof.
   intros wf ex ind c b.
@@ -445,7 +446,7 @@ Proof.
   now rewrite (extends_lookup_constructor wf ex _ _ _ lookup).
 Qed.
 
-Lemma extends_is_propositional {efl} {Σ Σ'} : 
+Lemma extends_is_propositional {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
   forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
 Proof.
@@ -455,7 +456,7 @@ Proof.
   now rewrite (extends_lookup wf ex lookup).
 Qed.
 
-Lemma extends_wellformed {efl} {Σ Σ'} : 
+Lemma extends_wellformed {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
   forall t n, wellformed Σ n t -> wellformed Σ' n t.
 Proof.
@@ -469,7 +470,7 @@ Proof.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
 Qed.
 
-Lemma extends_wf_global_decl {efl} {Σ Σ'} : 
+Lemma extends_wf_global_decl {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
   forall t, wf_global_decl Σ t -> wf_global_decl Σ' t.
 Proof.
@@ -478,7 +479,7 @@ Proof.
   now eapply extends_wellformed.
 Qed.
 
-Lemma lookup_env_wellformed {efl} {Σ kn decl} : wf_glob Σ -> 
+Lemma lookup_env_wellformed {efl} {Σ kn decl} : wf_glob Σ ->
   EGlobalEnv.lookup_env Σ kn = Some decl -> wf_global_decl Σ decl.
 Proof.
   induction Σ; cbn => //.

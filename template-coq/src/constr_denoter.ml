@@ -113,8 +113,6 @@ struct
       Constr.DEFAULTcast
     else if constr_equall trm kNative then
       Constr.VMcast
-    else if constr_equall trm kRevertCast then
-      Constr.REVERTcast
     else
       not_supported_verb trm "unquote_cast_kind"
 
@@ -163,11 +161,11 @@ struct
         let num = int_of_string n in
         let dp = DirPath.make (List.map Id.of_string dp) in
         (* TODO handle univs created in workers *)
-        let l = Univ.Level.make (Univ.Level.UGlobal.make dp "" num) in
+        let l = Univ.Level.make (Univ.UGlobal.make dp "" num) in
         try
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then
-            CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
+            CErrors.user_err (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
           else (evm, l)
         with
         | UGraph.AlreadyDeclared -> evm, l
@@ -179,7 +177,7 @@ struct
         let univ = Nametab.locate_universe (Libnames.qualid_of_string s) in
         evm, Univ.Level.make univ
       with Not_found ->
-        CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
+        CErrors.user_err (str ("Level "^s^" is not a declared level."))
 
   let is_fresh_level evm trm h args =
     if constr_equall h tLevel then
@@ -194,7 +192,7 @@ struct
     let (h,args) = app_full trm [] in
     if is_fresh_level evm trm h args then
       if !strict_unquote_universe_mode then
-        CErrors.user_err ~hdr:"unquote_level" (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
+        CErrors.user_err (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
         debug (fun () -> str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
@@ -229,34 +227,36 @@ struct
     let (h,args) = app_full trm [] in
     if constr_equall h lSProp then
       match args with
-         | [] -> evm, Univ.Universe.sprop
+         | [] -> evm, Sorts.sprop
          | _ -> bad_term_verb trm "unquote_univ_expr"
     else if constr_equall h lProp then
       match args with
-         | [] -> evm, Univ.Universe.type0m
+         | [] -> evm, Sorts.prop
          | _ -> bad_term_verb trm "unquote_univ_expr"
     else if constr_equall h lnpe then
       match args with
       | [x] ->
          let (h,args) = app_full x [] in
          if constr_equall h tBuild_Universe then
-            match args with
-              x :: _ :: [] -> 
-              (let (h,args) = app_full x [] in
+           (match args with
+           | x :: _ :: [] -> 
+             (let (h,args) = app_full x [] in
               if constr_equall h tMktLevelExprSet then
                 match args with
                 | x :: _ :: [] ->
                     (match unquote_list x with
                     | [] -> assert false
-                    | e::q -> List.fold_left (fun (evm,u) e ->
+                    | e::q ->
+                      let evm, u = List.fold_left (fun (evm,u) e ->
                                   let evm, u' = unquote_univ_expr evm e
                                   in evm, Univ.Universe.sup u u')
-                                (unquote_univ_expr evm e) q)
+                                (unquote_univ_expr evm e) q
+                      in evm, Sorts.sort_of_univ u)
                 | _ -> bad_term_verb trm "unquote_universe 0"
               else
                 not_supported_verb trm "unquote_universe 0")
-            | _ -> bad_term_verb trm "unquote_universe 1"
-      else  not_supported_verb trm "unquote_universe 2"
+           | _ -> bad_term_verb trm "unquote_universe 1")
+         else not_supported_verb trm "unquote_universe 2"
       | _ -> bad_term_verb trm "unquote_universe 3"
     else bad_term_verb trm "unquote_universe 4"
 

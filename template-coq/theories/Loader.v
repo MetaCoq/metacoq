@@ -6,3 +6,6 @@ Declare ML Module "coq-metacoq-template-coq.plugin".
 
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).
+
+Notation "<# x #>" := (ltac:(let p y := exact y in run_template_program (TemplateMonad.Core.tmQuoteRec x) p))
+  (only parsing).

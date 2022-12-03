@@ -1352,139 +1352,132 @@ Proof.
         apply lift_typing_impl with (1 := HT); intros ? Hs.
         apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
         constructor 1. simpl. subst Σ' Σg; cbn; lia.
-    
-    (** Module Declaration *)
-    + simpl in *. 
-      cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) m
-            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) s
-            -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) s)).
+    + cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
+            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
+        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
+        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
+            -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
       * intros md_sf_sb. apply md_sf_sb. apply Xg.
       (** start of mutual induction *)
       * apply on_moddecl_structfield_structbody_mutrect.
         -- intros. apply on_sfconst.
           destruct c; simpl in *.
-          destruct cst_body0; apply lift_typing_impl with (1 := o1); intros ? Hs.
+          destruct cst_body0; apply lift_typing_impl with (1 := o0); intros ? Hs.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-
-    -- intros. apply on_sfmind. 
-      destruct o1 as [onI onP onnp]; constructor; eauto.
-      --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
-        constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
-        clear IH; rename IH' into IH.
-        eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp Xg. intros n x Xg.
-        refine {| ind_arity_eq := Xg.(ind_arity_eq);
-                  ind_cunivs := Xg.(ind_cunivs) |}.
-        ** apply onArity in Xg.
-           apply lift_typing_impl with (1 := Xg); intros ? Hs.
-           apply (IH (_; _; _; Hs)).
-        ** pose proof Xg.(onConstructors) as Xg'.
-           eapply All2_impl; eauto. intros.
-           destruct X13 as [cass tyeq onctyp oncargs oncind].
-           unshelve econstructor; eauto.
-           { apply lift_typing_impl with (1 := onctyp); intros ? Hs.
-             apply (IH (_; _; _; Hs)). }
-           { apply sorts_local_ctx_impl with (1 := oncargs); intros Γ' t' T' HT'.
-             apply lift_typing_impl with (1 := HT'); intros ? Hs.
-             apply (IH (_; _; _; Hs)). }
-           { clear -IH oncind.
-             revert oncind.
-             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-             generalize (cstr_indices x0). induction 1; constructor; auto.
-             do 2 red in t0 |- *.
-             apply (IH (_; (_; (_; t0)))). }
-        ** intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
-        ** destruct Xg. simpl. unfold check_ind_sorts in *.
-           destruct Universe.is_prop; auto.
-           destruct Universe.is_sprop; auto.
-           split. apply ind_sorts0. destruct indices_matter; auto.
-           eapply type_local_ctx_impl. eapply ind_sorts0. intros ??? HT.
-           apply lift_typing_impl with (1 := HT); intros ? Hs.
-           apply (IH (_; _; _; Hs)).
-        ** apply (onIndices Xg).
-      --- red in onP |- *.
-        apply All_local_env_impl with (1 := onP); intros ??? HT.
-        apply lift_typing_impl with (1 := HT); intros ? Hs.
-        apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
-        constructor 1. simpl. subst Σ' Σg; cbn; lia.
-    -- intros; now apply on_sfmod.
-    -- intros; now apply on_sfmodtype.
-    -- intros; now apply on_mi_abstract_decl.
-    -- intros; now apply on_mi_algebraic_decl.
-    -- intros; now apply on_mi_struct_decl.
-    -- intros; now apply on_mi_fullstruct_decl.
-    -- constructor.
-    -- intros. now apply on_sb_cons.
-      
-    + simpl in *. 
-      cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) m
-            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) s
-            -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) s)).
+        -- intros. apply on_sfmind. 
+          destruct o0 as [onI onP onnp]; constructor; eauto.
+          --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
+            constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
+            clear IH; rename IH' into IH.
+            eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp Xg. intros n x Xg.
+            refine {| ind_arity_eq := Xg.(ind_arity_eq);
+                      ind_cunivs := Xg.(ind_cunivs) |}.
+            ** apply onArity in Xg.
+              apply lift_typing_impl with (1 := Xg); intros ? Hs.
+              apply (IH (_; _; _; Hs)).
+            ** pose proof Xg.(onConstructors) as Xg'.
+              eapply All2_impl; eauto. intros.
+              destruct X13 as [cass tyeq onctyp oncargs oncind].
+              unshelve econstructor; eauto.
+              { apply lift_typing_impl with (1 := onctyp); intros ? Hs.
+                apply (IH (_; _; _; Hs)). }
+              { apply sorts_local_ctx_impl with (1 := oncargs); intros Γ' t' T' HT'.
+                apply lift_typing_impl with (1 := HT'); intros ? Hs.
+                apply (IH (_; _; _; Hs)). }
+              { clear -IH oncind.
+                revert oncind.
+                generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+                generalize (cstr_indices x0). induction 1; constructor; auto.
+                do 2 red in t0 |- *.
+                apply (IH (_; (_; (_; t0)))). } 
+            ** pose proof (onProjections Xg); auto.
+            ** destruct Xg. simpl. unfold check_ind_sorts in *.
+              destruct Universe.is_prop; auto.
+              destruct Universe.is_sprop; auto.
+              split. apply ind_sorts0. destruct indices_matter; auto.
+              eapply type_local_ctx_impl. eapply ind_sorts0. intros ??? HT.
+              apply lift_typing_impl with (1 := HT); intros ? Hs.
+              apply (IH (_; _; _; Hs)).
+            ** apply (onIndices Xg).
+          --- red in onP |- *.
+            apply All_local_env_impl with (1 := onP); intros ??? HT.
+            apply lift_typing_impl with (1 := HT); intros ? Hs.
+            apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
+            constructor 1. simpl. subst Σ' Σg; cbn; lia.
+        -- intros; now apply on_sfmod.
+        -- intros; now apply on_sfmodtype.
+        -- intros; now apply on_mi_abstract_decl.
+        -- intros; now apply on_mi_algebraic_decl.
+        -- intros; now apply on_mi_struct_decl.
+        -- intros; now apply on_mi_fullstruct_decl.
+        -- constructor.
+        -- intros. now apply on_sb_cons.
+    + cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
+            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
+        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
+        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
+            -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
       * intros md_sf_sb. apply md_sf_sb. apply Xg.
       (** start of mutual induction *)
       * apply on_moddecl_structfield_structbody_mutrect.
         -- intros. apply on_sfconst.
           destruct c; simpl in *.
-          destruct cst_body0; apply lift_typing_impl with (1 := o1); intros ? Hs.
+          destruct cst_body0; apply lift_typing_impl with (1 := o0); intros ? Hs.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-
-    -- intros. apply on_sfmind. 
-      destruct o1 as [onI onP onnp]; constructor; eauto.
-      --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
-        constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
-        clear IH; rename IH' into IH.
-        eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp Xg. intros n x Xg.
-        refine {| ind_arity_eq := Xg.(ind_arity_eq);
-                  ind_cunivs := Xg.(ind_cunivs) |}.
-        ** apply onArity in Xg.
-           apply lift_typing_impl with (1 := Xg); intros ? Hs.
-           apply (IH (_; _; _; Hs)).
-        ** pose proof Xg.(onConstructors) as Xg'.
-           eapply All2_impl; eauto. intros.
-           destruct X13 as [cass tyeq onctyp oncargs oncind].
-           unshelve econstructor; eauto.
-           { apply lift_typing_impl with (1 := onctyp); intros ? Hs.
-             apply (IH (_; _; _; Hs)). }
-           { apply sorts_local_ctx_impl with (1 := oncargs); intros Γ' t' T' HT'.
-             apply lift_typing_impl with (1 := HT'); intros ? Hs.
-             apply (IH (_; _; _; Hs)). }
-           { clear -IH oncind.
-             revert oncind.
-             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-             generalize (cstr_indices x0). induction 1; constructor; auto.
-             do 2 red in t0 |- *.
-             apply (IH (_; (_; (_; t0)))). }
-        ** intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
-        ** destruct Xg. simpl. unfold check_ind_sorts in *.
-           destruct Universe.is_prop; auto.
-           destruct Universe.is_sprop; auto.
-           split. apply ind_sorts0. destruct indices_matter; auto.
-           eapply type_local_ctx_impl. eapply ind_sorts0. intros ??? HT.
-           apply lift_typing_impl with (1 := HT); intros ? Hs.
-           apply (IH (_; _; _; Hs)).
-        ** apply (onIndices Xg).
-      --- red in onP |- *.
-        apply All_local_env_impl with (1 := onP); intros ??? HT.
-        apply lift_typing_impl with (1 := HT); intros ? Hs.
-        apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
-        constructor 1. simpl. subst Σ' Σg; cbn; lia.
-    -- intros; now apply on_sfmod.
-    -- intros; now apply on_sfmodtype.
-    -- intros; now apply on_mi_abstract_decl.
-    -- intros; now apply on_mi_algebraic_decl.
-    -- intros; now apply on_mi_struct_decl.
-    -- intros; now apply on_mi_fullstruct_decl.
-    -- constructor.
-    -- intros. now apply on_sb_cons.
+        -- intros. apply on_sfmind. 
+          destruct o0 as [onI onP onnp]; constructor; eauto.
+          --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
+            constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
+            clear IH; rename IH' into IH.
+            eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp Xg. intros n x Xg.
+            refine {| ind_arity_eq := Xg.(ind_arity_eq);
+                      ind_cunivs := Xg.(ind_cunivs) |}.
+            ** apply onArity in Xg.
+              apply lift_typing_impl with (1 := Xg); intros ? Hs.
+              apply (IH (_; _; _; Hs)).
+            ** pose proof Xg.(onConstructors) as Xg'.
+              eapply All2_impl; eauto. intros.
+              destruct X13 as [cass tyeq onctyp oncargs oncind].
+              unshelve econstructor; eauto.
+              { apply lift_typing_impl with (1 := onctyp); intros ? Hs.
+                apply (IH (_; _; _; Hs)). }
+              { apply sorts_local_ctx_impl with (1 := oncargs); intros Γ' t' T' HT'.
+                apply lift_typing_impl with (1 := HT'); intros ? Hs.
+                apply (IH (_; _; _; Hs)). }
+              { clear -IH oncind.
+                revert oncind.
+                generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+                generalize (cstr_indices x0). induction 1; constructor; auto.
+                do 2 red in t0 |- *.
+                apply (IH (_; (_; (_; t0)))). } 
+            ** pose proof (onProjections Xg); auto.
+            ** destruct Xg. simpl. unfold check_ind_sorts in *.
+              destruct Universe.is_prop; auto.
+              destruct Universe.is_sprop; auto.
+              split. apply ind_sorts0. destruct indices_matter; auto.
+              eapply type_local_ctx_impl. eapply ind_sorts0. intros ??? HT.
+              apply lift_typing_impl with (1 := HT); intros ? Hs.
+              apply (IH (_; _; _; Hs)).
+            ** apply (onIndices Xg).
+          --- red in onP |- *.
+            apply All_local_env_impl with (1 := onP); intros ??? HT.
+            apply lift_typing_impl with (1 := HT); intros ? Hs.
+            apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
+            constructor 1. simpl. subst Σ' Σg; cbn; lia.
+        -- intros; now apply on_sfmod.
+        -- intros; now apply on_sfmodtype.
+        -- intros; now apply on_mi_abstract_decl.
+        -- intros; now apply on_mi_algebraic_decl.
+        -- intros; now apply on_mi_struct_decl.
+        -- intros; now apply on_mi_fullstruct_decl.
+        -- constructor.
+        -- intros. now apply on_sb_cons.
 
   - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
                typing_size Hty < typing_size H ->

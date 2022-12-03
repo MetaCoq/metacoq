@@ -334,9 +334,6 @@ Module PrintTermTree.
   | None => "."
   end.
     
-  Print "×".
-
-
   Definition print_assoc_list {A B: Type} (f: A -> B -> t) (sep: t) (l : list (prod A B)) : t :=
     let fix aux l := match l return t with
     | nil => ""
@@ -386,11 +383,11 @@ Module PrintTermTree.
           | None => "."
           end ^ acc)
       | (kn, ModuleDecl (impl, modtype)) :: Σ =>
-        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        let Σ := {| Env.universes := univs; declarations := Σ; retroknowledge := retro |} in
         let modtype_str := print_assoc_list (print_structure_field with_universes short Σ) nl modtype in
         print_env_aux with_universes short n Σ (print_module_decl kn impl modtype_str with_universes short Σ ^ acc)
       | (kn, ModuleTypeDecl mt) :: Σ =>
-        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        let Σ := {| Env.universes := univs; declarations := Σ; retroknowledge := retro |} in
         print_assoc_list (print_structure_field with_universes short Σ) nl mt
       end
     end.

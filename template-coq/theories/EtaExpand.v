@@ -1416,19 +1416,14 @@ Lemma expanded_decl_env_irrel (Σ Σ' : global_env) t :
 Proof.
   intros hrepr.
   unfold expanded_decl.
-  destruct t => //.
-  intros hrepr.
   cut ((forall (m : module_decl), expanded_module_decl Σ m -> expanded_module_decl Σ' m) /\
     (forall (p : kername × structure_field), expanded_structure_field Σ p -> expanded_structure_field Σ' p) /\
     (forall (s : structure_body structure_field), expanded_structure_body Σ s -> expanded_structure_body Σ' s)).
   intros [Hmd [Hsf Hsb]].
-  unfold expanded_decl.
   destruct t => //; auto.
-  intros []. constructor.
-
-  - destruct (cst_body c) => //. cbn in *.
+  - intros []. constructor.
+    destruct (cst_body c) => //. cbn in *.
     now eapply expanded_env_irrel.
-
   - intros []. split.
     eapply expanded_context_env_irrel; tea.
     solve_all.
@@ -1436,17 +1431,14 @@ Proof.
     solve_all. destruct H; split.
     eapply expanded_context_env_irrel; tea.
     eapply expanded_env_irrel; tea.
-
-  - eapply expanded_moddecl_structfield_structbody_mutind; intros; try now constructor.
+  - apply expanded_moddecl_structfield_structbody_mutind; try now constructor.
     -- repeat constructor. destruct e. destruct (cst_body c) => //. cbn in *. now eapply expanded_env_irrel.
-    -- constructor. revert e.
-      intros []. split.
-      eapply expanded_context_env_irrel; tea.
-      solve_all.
-      destruct H. constructor.
-      solve_all. destruct H; split.
-      eapply expanded_context_env_irrel; tea.
-      eapply expanded_env_irrel; tea.
+    -- constructor. split; destruct e; solve_all.
+      + eapply expanded_context_env_irrel; tea.
+      + destruct H. constructor.
+        solve_all. destruct H; split.
+        eapply expanded_context_env_irrel; tea.
+        eapply expanded_env_irrel; tea.
 Qed.
 
 Coercion wf_ext_wf : wf_ext >-> wf.
@@ -1608,7 +1600,10 @@ Proof.
 Qed.
 
 Lemma same_cstr_info_eta (Σ : global_env) (Σg: GlobalEnvMap.t) :
-  same_cstr_info Σ {| universes := Σ.(universes) ; declarations := List.map (on_snd (eta_global_declaration Σg)) Σ.(declarations) |}.
+  same_cstr_info Σ
+    {| universes := Σ.(universes) ;
+       declarations := List.map (on_snd (eta_global_declaration Σg)) Σ.(declarations);
+       retroknowledge := Σ.(retroknowledge) |}.
 Proof.
   destruct Σ as [univs Σ]; cbn.
   induction Σ; intros ind idx mdecl idecl cdecl.
@@ -1616,7 +1611,7 @@ Proof.
     cbn => [[[]]] //.
   - unfold declared_constructor, declared_inductive, declared_minductive.
     cbn. destruct a as [kn decl]; cbn.
-    case: eqb_spec. 
+    case: eqb_spec.
     * move=> _ [] [] [= ->] hnth hnth'.
       do 3 eexists; cbn. split. split. split => //.
       cbn. rewrite nth_error_map hnth; reflexivity.
@@ -1647,15 +1642,15 @@ Proof.
   apply lookup_global_Some_fresh.
 Qed.
 
-Lemma lookup_global_extends Σ Σ' kn d : 
+Lemma lookup_global_extends Σ Σ' kn d :
   lookup_env Σ kn = Some d ->
   extends_decls Σ Σ' ->
   EnvMap.fresh_globals Σ'.(declarations) ->
   lookup_env Σ' kn = Some d.
 Proof.
-  destruct Σ as [univs Σ]. 
-  destruct Σ' as [univs' Σ'].
-  cbn. move=> hl [] /=; intros <- [Σ'' ->].
+  destruct Σ as [univs Σ retro].
+  destruct Σ' as [univs' Σ' retro'].
+  cbn. move=> hl [] /=; intros <- [Σ'' ->] extretro.
   induction Σ''; cbn; auto.
   case: eqb_spec.
   - intros ->. intros fr.
@@ -1676,30 +1671,24 @@ Proof.
   assert (extends_decls env env). red; split => //. now exists [].
   revert X.
   move: map repr wf.
-  generalize env at 1 2 4 6.
-  destruct env as [univs' decls]. cbn in *.
+  generalize env at 1 2 4 6 7.
+  destruct env as [univs' decls retro']. cbn in *.
   induction ond; cbn; constructor; auto.
-  apply: IHond. cbn. deapply: IHond.
-  { cbn. destruct X as [truct X as [equ [Σ' exqu [Σ' ext]]. red. split. auto. 
-  rewrite ext. cbn. unfold snoc. exists (Σ' ++ [(kn, d)])%list. now rewrite -app_assoc.
-  set]]. red. split. auto.
+  apply: IHond.
+  { cbn. destruct X as [equ [Σ' ext]]. red. split. auto.
     rewrite ext. cbn. unfold snoc. exists (Σ' ++ [(kn, d)])%list. now rewrite -app_assoc.
     apply e. }
-  set (Σ' := {| universes := univs''; declarations := Σ; retroknowledge := retro' |}) in * in *.
+  set (Σ' := {| universes := univs'; declarations := Σ; retroknowledge := retro' |}) in *.
   set (Σg := {| GlobalEnvMap.env := _ |}). Unshelve.
-  destruct X as [equ [Σ'' ext]]. set (Σg := {| GlobalEnvMap.env := _ |}). Unshelve.
-  destruct X as [equ [Σ'' ext]]. cbn in * in *. ddestruct env as [univs0 env]. cbn in *. subst univs0.
-  subst env.
-  struct env as [univs0 env]. cbn in *. subst univs0.
+  destruct X as [equ [Σ'' ext]]. cbn in *. destruct env as [univs0 env]. cbn in *. subst univs0.
   subst env. destruct o as [? udecl ? o0].
-  pose proof (eta_expand_global_decl_expanded (Σ', udecl) (Σg, univs) (Σg, univs) kn d).
+  pose proof (eta_expand_global_decl_expanded (Σ', udecl) (Σg, univs) kn d).
   cbn in H.
   forward H. {
     move=> kn' d' /= hl.
     rewrite GlobalEnvMap.lookup_env_spec /=.
     cbn. unfold snoc.
-    eapply (lookup_global_extends {| universes := univs'; declarations := Σ |}
-      {| universes := univs'; declarations := (Σ'' ++ (kn, d) :: Σ)%list |}); eauto.
+    eapply (lookup_global_extends Σ' (set_declarations Σ' (Σ'' ++ (kn, d) :: Σ)%list)); eauto.
     split => //. cbn. now exists (Σ'' ++ [(kn, d)])%list; rewrite -app_assoc. }
   forward H. split. cbn. split => //. now cbn.
   specialize (H o0).

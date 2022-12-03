@@ -1379,7 +1379,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         --- apply X1.(onIndices).
       -- red in onP. red.
          eapply All_local_env_impl; eauto.
-         Qed.
+  Qed.
 
   Lemma on_global_decl_impl {cf : checker_flags} Pcmp P Q Σ kn d :
     (forall Γ t T,
@@ -1418,8 +1418,15 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         P Σ Γ t T -> Q Σ Γ t T) ->
     forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof.
-    intros X [univs Σ] [cu X0]; split => /= //. cbn in *.
-    induction X0; constructor; auto.
+    intros X Σ [cu IH]. split; auto.
+    revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
+    induction g; intros; auto. constructor; auto.
+    depelim IH. specialize (IHg cu IH). constructor; auto.
+    pose proof (globenv_decl _ _ _ _ _ _ _ IH o).
+    destruct o. constructor; auto.
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl0) Γ t T
+      (cu, IH) (cu, IHg)); clear X.
+    rename X' into X.
     eapply on_global_decl_impl; tea.
     - intros; apply X => //.
     - split => //.
@@ -1506,90 +1513,24 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
     - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
 
-    - red in o. simpl in *.
-      destruct o0 as [onI onP onNP].
-      constructor; auto.
-      -- eapply Alli_impl; tea. intros.
-        refine {| ind_arity_eq := X1.(ind_arity_eq);
-                  ind_cunivs := X1.(ind_cunivs) |}.
-        --- apply onArity in X1. unfold on_type in *; simpl in *.
-            now eapply X.
-        --- pose proof X1.(onConstructors) as X11. red in X11.
-            eapply All2_impl; eauto.
-            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
-            * apply X; eauto.
-            * clear -X0 X on_cargs0. revert on_cargs0.
-              generalize (cstr_args x0).
-              induction c in y |- *; destruct y; simpl; auto;
-                destruct a as [na [b|] ty]; simpl in *; auto;
-            split; intuition eauto.
-            * clear -X0 X on_cindices0.
-              revert on_cindices0.
-              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-              generalize (cstr_indices x0).
-              induction 1; simpl; constructor; auto.
-        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
-        --- destruct X1. simpl. unfold check_ind_sorts in *.
-            destruct Universe.is_prop; auto.
-            destruct Universe.is_sprop; auto.
-            split.
-            * apply ind_sorts0.
-            * destruct indices_matter; auto.
-              eapply type_local_ctx_impl; eauto.
-              eapply ind_sorts0.
-        --- eapply X1.(onIndices).
-      -- red in onP. red.
-        eapply All_local_env_impl; tea.
+    - simpl in *. apply on_inductive_decl_impl with (P := P); auto.
+      unfold on_global_env; auto.
 
     - simpl in *. 
-      assert (udecl = Monomorphic_ctx). { auto. }
-      rewrite H0 in o,o0.
-      assert (udecl0 = Monomorphic_ctx). { auto. }
-      rewrite H1 in o1,o2,X.
-      clear H0 H1 udecl udecl0.
-      remember ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) as gex.
+      assert (udecl0 = Monomorphic_ctx) by auto.
+      rewrite H0 in on_udecl_udecl0, on_global_decl_d0, X.
+      assert (udecl1 = Monomorphic_ctx) by auto.
+      rewrite H1 in on_udecl_udecl1, on_global_decl_d1.
+      clear H0 H1 udecl0 udecl1.
+      remember ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx) as gex; simpl in *.
       cut ((forall (m : module_decl), on_module_decl cumul_gen P gex m -> on_module_decl cumul_gen Q gex m)
         × (forall (p : kername × structure_field), on_structure_field cumul_gen P gex p -> on_structure_field cumul_gen Q gex p)
         × (forall (s : structure_body structure_field), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      -- intro md_sf_sb. apply md_sf_sb. exact o0.
+      -- intro md_sf_sb. apply md_sf_sb. exact on_global_decl_d0.
       -- apply on_moddecl_structfield_structbody_mutrect.
         --- intros. apply on_sfconst. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        --- intros. apply on_sfmind.
-        { - red in o. simpl in *.
-            destruct o3 as [onI onP onNP].
-            constructor; auto.
-            -- eapply Alli_impl; tea. intros.
-              refine {| ind_arity_eq := X1.(ind_arity_eq);
-                        ind_cunivs := X1.(ind_cunivs) |}.
-              --- apply onArity in X1. unfold on_type in *; simpl in *.
-                  now eapply X.
-              --- pose proof X1.(onConstructors) as X11. red in X11.
-                  eapply All2_impl; eauto.
-                  simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
-                  * apply X; eauto.
-                  * clear -X0 X on_cargs0. revert on_cargs0.
-                    generalize (cstr_args x0).
-                    induction c in y |- *; destruct y; simpl; auto;
-                      destruct a as [na [b|] ty]; simpl in *; auto;
-                  split; intuition eauto.
-                  * clear -X0 X on_cindices0.
-                    revert on_cindices0.
-                    generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-                    generalize (cstr_indices x0).
-                    induction 1; simpl; constructor; auto.
-              --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
-              --- destruct X1. simpl. unfold check_ind_sorts in *.
-                  destruct Universe.is_prop; auto.
-                  destruct Universe.is_sprop; auto.
-                  split.
-                  * apply ind_sorts0.
-                  * destruct indices_matter; auto.
-                    eapply type_local_ctx_impl; eauto.
-                    eapply ind_sorts0.
-              --- eapply X1.(onIndices).
-            -- red in onP. red.
-              eapply All_local_env_impl; tea.
-        }
+        --- intros. apply on_sfmind. apply on_inductive_decl_impl with (P:=P); auto.
+            unfold on_global_env. rewrite Heqgex; auto.
         --- intros. now apply on_sfmod.
         --- intros. now apply on_sfmodtype.
         --- intros. now apply on_mi_abstract_decl.
@@ -1600,54 +1541,20 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
         --- intros. now apply on_sb_cons.
 
     - simpl in *. 
-      assert (udecl = Monomorphic_ctx). { auto. }
-      rewrite H0 in o,o0.
-      assert (udecl0 = Monomorphic_ctx). { auto. }
-      rewrite H1 in o1,o2,X.
-      clear H0 H1 udecl udecl0.
-      remember ({| universes := univs; declarations := Σ |}, Monomorphic_ctx) as gex.
+      assert (udecl0 = Monomorphic_ctx) by auto.
+      rewrite H0 in on_udecl_udecl0, on_global_decl_d0, X.
+      assert (udecl1 = Monomorphic_ctx) by auto.
+      rewrite H1 in on_udecl_udecl1, on_global_decl_d1.
+      clear H0 H1 udecl0 udecl1.
+      remember ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx) as gex; simpl in *.
       cut ((forall (m : module_decl), on_module_decl cumul_gen P gex m -> on_module_decl cumul_gen Q gex m)
         × (forall (p : kername × structure_field), on_structure_field cumul_gen P gex p -> on_structure_field cumul_gen Q gex p)
         × (forall (s : structure_body structure_field), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      -- intro md_sf_sb. apply md_sf_sb. exact o0.
+      -- intro md_sf_sb. apply md_sf_sb. exact on_global_decl_d0.
       -- apply on_moddecl_structfield_structbody_mutrect.
         --- intros. apply on_sfconst. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        --- intros. apply on_sfmind.
-        { - red in o. simpl in *.
-            destruct o3 as [onI onP onNP].
-            constructor; auto.
-            -- eapply Alli_impl; tea. intros.
-              refine {| ind_arity_eq := X1.(ind_arity_eq);
-                        ind_cunivs := X1.(ind_cunivs) |}.
-              --- apply onArity in X1. unfold on_type in *; simpl in *.
-                  now eapply X.
-              --- pose proof X1.(onConstructors) as X11. red in X11.
-                  eapply All2_impl; eauto.
-                  simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
-                  * apply X; eauto.
-                  * clear -X0 X on_cargs0. revert on_cargs0.
-                    generalize (cstr_args x0).
-                    induction c in y |- *; destruct y; simpl; auto;
-                      destruct a as [na [b|] ty]; simpl in *; auto;
-                  split; intuition eauto.
-                  * clear -X0 X on_cindices0.
-                    revert on_cindices0.
-                    generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-                    generalize (cstr_indices x0).
-                    induction 1; simpl; constructor; auto.
-              --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
-              --- destruct X1. simpl. unfold check_ind_sorts in *.
-                  destruct Universe.is_prop; auto.
-                  destruct Universe.is_sprop; auto.
-                  split.
-                  * apply ind_sorts0.
-                  * destruct indices_matter; auto.
-                    eapply type_local_ctx_impl; eauto.
-                    eapply ind_sorts0.
-              --- eapply X1.(onIndices).
-            -- red in onP. red.
-              eapply All_local_env_impl; tea.
-        }
+        --- intros. apply on_sfmind. apply on_inductive_decl_impl with (P:=P); auto.
+            unfold on_global_env. rewrite Heqgex; auto.
         --- intros. now apply on_sfmod.
         --- intros. now apply on_sfmodtype.
         --- intros. now apply on_mi_abstract_decl.

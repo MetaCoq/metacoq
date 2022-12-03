@@ -153,19 +153,6 @@ Module Level.
     now generalize (eqb_spec l l').
   Qed.
 
-  Global Instance eqb_refl : @Reflexive Level.t eqb.
-  Proof.
-    intros x. apply ReflectEq.eqb_refl.
-  Qed.
-
-  Definition eqb := eq_level.
-
-  Lemma eqb_spec l l' : reflect (eq l l') (eqb l l').
-  Proof.
-    apply reflectProp_reflect.
-    now generalize (eqb_spec l l').
-  Qed.
-
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
   Definition eq_dec : forall (l1 l2 : t), {l1 = l2}+{l1 <> l2} := Classes.eq_dec.

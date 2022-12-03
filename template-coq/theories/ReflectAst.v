@@ -230,10 +230,74 @@ Proof.
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
+Scheme Equality for list.
+
+Fixpoint eqb_structure_field (sf sf': structure_field) {struct sf}:=
+  match sf, sf' with
+  | sfconst c, sfconst c' => c ==? c'
+  | sfmind m, sfmind m' => m ==? m'
+  | sfmod (mi, mt), sfmod (mi', mt') => eqb_module_impl mi mi' &&
+    (list_beq (kername × structure_field)
+      (fun '(kn, sf) '(kn', sf') => (kn == kn') && (eqb_structure_field sf sf')) mt mt')
+  | sfmodtype mt, sfmodtype mt' => list_beq (kername × structure_field)
+    (fun '(kn, sf) '(kn', sf') => (kn == kn') && (eqb_structure_field sf sf'))
+    mt mt'
+  | _, _ => false
+  end
+with eqb_module_impl (mi mi': module_implementation) {struct mi}:=
+  match mi, mi' with
+  | mi_abstract, mi_abstract | mi_fullstruct, mi_fullstruct => true
+  | mi_algebraic kn, mi_algebraic kn' => kn ==? kn'
+  | mi_struct mt, mi_struct mt' => list_beq (kername × structure_field)
+    (fun '(kn, sf) '(kn', sf') => (kn == kn') && (eqb_structure_field sf sf'))
+    mt mt'
+  | _, _ => false
+  end.
+
+#[global] Instance reflect_structure_field : ReflectEq structure_field.
+Proof.
+  (* refine {| eqb := eqb_structure_field |}.
+  intros [] []; unfold eqb_structure_field; try finish_reflect.
+  - destruct p. apply reflectF; discriminate.
+  - destruct p. apply reflectF; discriminate.
+  - destruct p, p0. simpl. destruct (eqb_module_impl m m1) eqn:E; simpl.
+    -- simpl. destruct m0, m2; simpl.
+      --- apply reflectP. apply f_equal. 
+  - destruct p. apply reflectF; discriminate.
+  - apply reflectF; discriminate.
+  - apply reflectF; discriminate. *)
+Admitted.
+
+#[global] Instance reflect_module_impl : ReflectEq module_implementation.
+Proof. Admitted.
+
+Definition eqb_module_type_decl (mt mt': module_type_decl) := 
+  list_beq (kername × structure_field)
+  (fun '(kn, sf) '(kn', sf') => (kn == kn') && (eqb_structure_field sf sf'))
+  mt mt'.
+
+#[global] Instance reflect_module_type_decl : ReflectEq module_type_decl.
+Proof.
+  refine {| eqb := eqb_module_type_decl |}.
+  intros [] [].
+  unfold eqb_module_type_decl; finish_reflect.
+  - apply reflectF. discriminate.
+  - apply reflectF. discriminate.
+  - simpl. destruct p, p0. 
+Admitted.
+
+Definition eqb_module_decl (m m': module_decl) :=
+  (eqb_module_impl m.1 m'.1) && (eqb_module_type_decl m.2 m'.2).
+
+#[global] Instance reflect_module_decl : ReflectEq module_decl.
+Proof. Admitted.
+
 Definition eqb_global_decl x y :=
   match x, y with
   | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
   | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
+  | ModuleDecl m, ModuleDecl m' => eqb m m'
+  | ModuleTypeDecl mt, ModuleTypeDecl mt' => eqb mt mt'
   | _, _ => false
   end.
 

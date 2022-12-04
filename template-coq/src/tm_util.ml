@@ -227,7 +227,9 @@ module RetypeMindEntry =
               (evm, sup_sort sort cstrsort))
             (evm, Sorts.prop) oib.mind_entry_lc
           in
+          let cstrsort = EConstr.ESorts.make cstrsort in
           let _, indsort = Reduction.dest_arity env oib.mind_entry_arity in
+          let indsort = EConstr.ESorts.make indsort in
           (* Hacky, but we don't have a good way to enfore max() <= max() constraints yet *)
           let evm = try Evd.set_leq_sort env evm cstrsort indsort with e -> evm in
           evm)

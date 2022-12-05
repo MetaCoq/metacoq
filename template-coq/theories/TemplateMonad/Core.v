@@ -134,10 +134,6 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
 
-(** This is a kludge, it would be nice to do better *)
-Class HasFix := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
-(* idk why this is needed... *)
-#[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
 Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
   := u <- @tmQuote Prop (Type@{U} -> True);;
      match u with
@@ -150,7 +146,14 @@ Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
      | Some l => ret l
      | None => tmFail "Universe is not a level"%bs
      end.
-Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
+
+(** This is a kludge, it would be nice to do better *)
+(* We use monomorphic universes for performance *)
+Monomorphic Universes fixa fixb fixt fixu.
+Monomorphic Class HasFix := tmFix_ : forall {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)), A -> TemplateMonad@{fixt fixu} B.
+(* idk why this is needed... *)
+#[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
+Monomorphic Definition tmFix {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)) : A -> TemplateMonad@{fixt fixu} B
   := f
        (fun a
         => tmFix <- tmInferInstance None HasFix;;

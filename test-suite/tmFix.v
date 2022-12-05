@@ -13,7 +13,32 @@ Goal True.
 Abort.
 
 (* Let's compare some timing numbers *)
+Module TCMonomorphic.
+  Import MCMonadNotation.
+  Import bytestring.
+  Local Unset Universe Polymorphism.
+  (* We use monomorphic universes for performance *)
+  Monomorphic Universes fixa fixb fixt fixu.
+  Monomorphic Class HasFix := tmFix_ : forall {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)), A -> TemplateMonad@{fixt fixu} B.
+  (* idk why this is needed... *)
+  #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
+  Monomorphic Definition tmFix {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)) : A -> TemplateMonad@{fixt fixu} B
+    := f
+         (fun a
+          => tmFix <- tmInferInstance None HasFix;;
+             match tmFix with
+             | Common.my_Some tmFix => tmFix _ _ f a
+             | Common.my_None => tmFail "Internal Error: No tmFix instance"%bs
+             end).
+  #[global] Hint Extern 0 HasFix => refine @tmFix : typeclass_instances.
+  Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
+  Goal True.
+    run_template_program six (fun v => constr_eq v 6%nat).
+  Abort.
+End TCMonomorphic.
 Module TC.
+  Local Set Universe Polymorphism.
+  Local Unset Universe Minimization ToSet.
   (** This is a kludge, it would be nice to do better *)
   Class HasFix := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
   (* idk why this is needed... *)
@@ -122,6 +147,12 @@ Definition count_down_MC_tc
                           | 0 => ret 0
                           | _ => f x
                           end%N).
+Definition count_down_MC_tc_monomorphic
+  := TCMonomorphic.tmFix (fun f x => let x := N.pred x in
+                                     match x with
+                                     | 0 => ret 0
+                                     | _ => f x
+                                     end%N).
 Definition count_down_MC_unquote
   := Unquote.tmFix (fun f x => let x := N.pred x in
                                match x with
@@ -189,6 +220,10 @@ Ltac2 count_down v :=
     else count_down v in
   count_down v.
 
+(* Make sure that we're using the TC-based fix *)
+Check eq_refl : @tmFix = @TCMonomorphic.tmFix.
+Check eq_refl : @count_down_MC = @count_down_MC_tc_monomorphic.
+
 (* --- *)
 
 Definition bignum := (2^20)%N.
@@ -196,24 +231,28 @@ Definition smallnum := (2^15)%N.
 Definition extremelysmallnum := (2^8)%N.
 
 (* This is pretty slow :-( *)
-Time Check ltac:(run_template_program (count_down_MC_tc extremelysmallnum) (fun v => exact v)). (* 0.039 secs (0.039u,0.s) *)
-(* But using unquote is about 2x slower *)
-Time Check ltac:(run_template_program (count_down_MC_unquote extremelysmallnum) (fun v => exact v)). (* 0.078 secs (0.078u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MC_noguard extremelysmallnum) (fun v => exact v)). (* 0.002 secs (0.002u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_tc extremelysmallnum) (fun v => exact v)). (* 5.378 secs (5.378u,0.s) *)
+(* universes are apparently a bottleneck *)
+Time Check ltac:(run_template_program (count_down_MC_tc_monomorphic extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_unquote extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_noguard extremelysmallnum) (fun v => exact v)). (* 0.001 secs (0.001u,0.s) *)
 (* test the actually used one *)
-Time Check ltac:(run_template_program (count_down_MC extremelysmallnum) (fun v => exact v)).
+Time Check ltac:(run_template_program (count_down_MC extremelysmallnum) (fun v => exact v)). (* 0.062 secs (0.062u,0.s) *)
+(* idk why it's faster... *)
 (* now we use bigger numbers *)
-Time Check ltac:(run_template_program (count_down_MC_tc smallnum) (fun v => exact v)). (* 5.472 secs (5.372u,0.099s) *)
-Time Check ltac:(run_template_program (count_down_MC_noguard smallnum) (fun v => exact v)). (* 0.182 secs (0.182u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MC smallnum) (fun v => exact v)).
-Time Eval lazy in count_down_wf smallnum. (* 0.244 secs (0.244u,0.s) *)
-Time Eval cbv in count_down_wf smallnum. (* 0.232 secs (0.232u,0.s) *)
-Time Eval lazy in count_down_noguard smallnum.
-Time Eval cbv in count_down_noguard smallnum.
-Time Check ltac:(let v := count_down smallnum in exact v). (* 3.148 secs (3.089u,0.059s) *)
-Time Check ltac2:(let v := count_down 'smallnum in exact $v). (* 1.377 secs (1.377u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_tc_monomorphic smallnum) (fun v => exact v)). (* 7.64 secs (7.64u,0.s) *)
+(* unquote is a bit slower here *)
+Time Check ltac:(run_template_program (count_down_MC_unquote smallnum) (fun v => exact v)). (* 10.874 secs (10.874u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_noguard smallnum) (fun v => exact v)). (* 0.115 secs (0.115u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC smallnum) (fun v => exact v)). (* 7.081 secs (7.081u,0.s) *)
+Time Eval lazy in count_down_wf smallnum. (* 0.305 secs (0.305u,0.s) *)
+Time Eval cbv in count_down_wf smallnum. (* 0.328 secs (0.328u,0.s) *)
+Time Eval lazy in count_down_noguard smallnum. (* 0.138 secs (0.138u,0.s) *)
+Time Eval cbv in count_down_noguard smallnum. (* 0.15 secs (0.15u,0.s) *)
+Time Check ltac:(let v := count_down smallnum in exact v). (* 4.612 secs (4.612u,0.s) *)
+Time Check ltac2:(let v := count_down 'smallnum in exact $v). (* 2.404 secs (2.404u,0.s) *)
 (* and now we can use even bigger numbers *)
-Time Eval native_compute in count_down_wf bignum. (* 0.292 secs (0.124u,0.s) *)
-Time Eval vm_compute in count_down_wf bignum. (* 0.297 secs (0.297u,0.s) *)
-Time Eval native_compute in count_down_noguard bignum.
-Time Eval vm_compute in count_down_noguard bignum.
+Time Eval native_compute in count_down_wf bignum. (* 1.133 secs (0.863u,0.s) *)
+Time Eval vm_compute in count_down_wf bignum. (* 0.432 secs (0.432u,0.s) *)
+Time Eval native_compute in count_down_noguard bignum. (* 0.336 secs (0.048u,0.s) *)
+Time Eval vm_compute in count_down_noguard bignum. (* 0.178 secs (0.178u,0.s) *)

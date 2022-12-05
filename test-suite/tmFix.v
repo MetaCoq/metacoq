@@ -109,6 +109,17 @@ Module Unquote.
               qu <- tmQuoteLevel@{u _ _};;
               let self := tConst (self, "tmFix'"%bs) [qa;qb;qt;qu] in
               @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).
+  (* reference that uses the constant in Core, for equality comparison *)
+  Definition tmFix_ref@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+    := f (fun a
+          => (qA <- tmQuote A;;
+              qB <- tmQuote B;;
+              qa <- tmQuoteLevel@{a _ _};;
+              qb <- tmQuoteLevel@{b _ _};;
+              qt <- tmQuoteLevel@{t _ _};;
+              qu <- tmQuoteLevel@{u _ _};;
+              let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
+              @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
     run_template_program six (fun v => constr_eq v 6%nat).
@@ -159,7 +170,13 @@ Definition count_down_MC_unquote
                                | 0 => ret 0
                                | _ => f x
                                end%N).
-
+(* reference that uses the constant in Core, for equality comparison *)
+Definition count_down_MC_unquote_ref
+  := Unquote.tmFix_ref (fun f x => let x := N.pred x in
+                                   match x with
+                                   | 0 => ret 0
+                                   | _ => f x
+                                   end%N).
 Definition count_down_MC_noguard
   := NoGuard.tmFix (fun f x => let x := N.pred x in
                        match x with
@@ -220,9 +237,9 @@ Ltac2 count_down v :=
     else count_down v in
   count_down v.
 
-(* Make sure that we're using the TC-based fix *)
-Check eq_refl : @tmFix = @TCMonomorphic.tmFix.
-Check eq_refl : @count_down_MC = @count_down_MC_tc_monomorphic.
+(* Make sure that we're using the unquote-based fix *)
+Check eq_refl : @tmFix = @Unquote.tmFix_ref.
+Check eq_refl : @count_down_MC = @count_down_MC_unquote_ref.
 
 (* --- *)
 
@@ -237,14 +254,13 @@ Time Check ltac:(run_template_program (count_down_MC_tc_monomorphic extremelysma
 Time Check ltac:(run_template_program (count_down_MC_unquote extremelysmallnum) (fun v => exact v)). (* 0.093 secs (0.093u,0.s) *)
 Time Check ltac:(run_template_program (count_down_MC_noguard extremelysmallnum) (fun v => exact v)). (* 0.001 secs (0.001u,0.s) *)
 (* test the actually used one *)
-Time Check ltac:(run_template_program (count_down_MC extremelysmallnum) (fun v => exact v)). (* 0.062 secs (0.062u,0.s) *)
-(* idk why it's faster... *)
+Time Check ltac:(run_template_program (count_down_MC extremelysmallnum) (fun v => exact v)).
 (* now we use bigger numbers *)
 Time Check ltac:(run_template_program (count_down_MC_tc_monomorphic smallnum) (fun v => exact v)). (* 7.64 secs (7.64u,0.s) *)
 (* unquote is a bit slower here *)
 Time Check ltac:(run_template_program (count_down_MC_unquote smallnum) (fun v => exact v)). (* 10.874 secs (10.874u,0.s) *)
 Time Check ltac:(run_template_program (count_down_MC_noguard smallnum) (fun v => exact v)). (* 0.115 secs (0.115u,0.s) *)
-Time Check ltac:(run_template_program (count_down_MC smallnum) (fun v => exact v)). (* 7.081 secs (7.081u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC smallnum) (fun v => exact v)).
 Time Eval lazy in count_down_wf smallnum. (* 0.305 secs (0.305u,0.s) *)
 Time Eval cbv in count_down_wf smallnum. (* 0.328 secs (0.328u,0.s) *)
 Time Eval lazy in count_down_noguard smallnum. (* 0.138 secs (0.138u,0.s) *)

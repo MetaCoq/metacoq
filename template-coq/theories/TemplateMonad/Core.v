@@ -147,18 +147,17 @@ Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
      | None => tmFail "Universe is not a level"%bs
      end.
 
-(** This is a kludge, it would be nice to do better *)
-(* We use monomorphic universes for performance *)
-Monomorphic Universes fixa fixb fixt fixu.
-Monomorphic Class HasFix := tmFix_ : forall {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)), A -> TemplateMonad@{fixt fixu} B.
-(* idk why this is needed... *)
-#[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
-Monomorphic Definition tmFix {A : Type@{fixa}} {B : Type@{fixb}} (f : (A -> TemplateMonad@{fixt fixu} B) -> (A -> TemplateMonad@{fixt fixu} B)) : A -> TemplateMonad@{fixt fixu} B
-  := f
-       (fun a
-        => tmFix <- tmInferInstance None HasFix;;
-           match tmFix with
-           | my_Some tmFix => tmFix _ _ f a
-           | my_None => tmFail "Internal Error: No tmFix instance"
-           end).
-#[global] Hint Extern 0 HasFix => refine @tmFix : typeclass_instances.
+Definition tmFix'@{a b t u} {A : Type@{a}} {B : Type@{b}} (qtmFix' : Ast.term) (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => tmFix <- tmUnquoteTyped (Ast.term -> ((A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) -> A -> TemplateMonad@{t u} B) qtmFix';;
+           tmFix qtmFix' f a).
+Definition tmFix@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => (qA <- tmQuote A;;
+            qB <- tmQuote B;;
+            qa <- tmQuoteLevel@{a _ _};;
+            qb <- tmQuoteLevel@{b _ _};;
+            qt <- tmQuoteLevel@{t _ _};;
+            qu <- tmQuoteLevel@{u _ _};;
+            let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
+            @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).

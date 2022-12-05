@@ -89,6 +89,27 @@ Module Unquote.
     run_template_program six (fun v => constr_eq v 6%nat).
   Abort.
 End Unquote.
+Module NoGuard.
+  (* N.B. This version is inconsistent *)
+  Import MCMonadNotation.
+  Import MetaCoq.Template.Universes.
+  Import MetaCoq.Template.Ast.
+  Import bytestring.
+  Import ListNotations.
+  Local Set Universe Polymorphism.
+  Local Unset Universe Minimization ToSet.
+  (* idk why this is needed... *)
+  #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
+  Local Unset Guard Checking. (* Inconsistent!  See https://coq.zulipchat.com/#narrow/stream/237658-MetaCoq/topic/.60tmFix.60point.20combinator/near/311488798 *)
+  Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
+    := (fix tmFix (dummy : unit) {struct dummy} : A -> @TemplateMonad B
+        := f (fun a => tmFix tt a)) tt.
+  Local Set Guard Checking.
+  Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
+  Goal True.
+    run_template_program six (fun v => constr_eq v 6%nat).
+  Abort.
+End NoGuard.
 Definition count_down_MC
   := tmFix (fun f x => let x := N.pred x in
                        match x with
@@ -108,6 +129,12 @@ Definition count_down_MC_unquote
                                | _ => f x
                                end%N).
 
+Definition count_down_MC_noguard
+  := NoGuard.tmFix (fun f x => let x := N.pred x in
+                       match x with
+                       | 0 => ret 0
+                       | _ => f x
+                       end%N).
 Definition count_down_wf (v : N) : N.
 Proof.
   refine (Fix (Acc_intro_generator (N.to_nat (2 * (1 + N.log2_up v))) N.lt_wf_0)
@@ -120,6 +147,21 @@ Proof.
             v).
   abstract lia.
 Defined.
+Module NoGuardFix.
+  Local Unset Guard Checking. (* Inconsistent! *)
+  Definition Fix {A B} (f : (A -> B) -> (A -> B)) : A -> B
+    := (fix Fix (dummy : unit) {struct dummy} : A -> B
+        := f (fun a => Fix tt a)) tt.
+  Local Set Guard Checking.
+End NoGuardFix.
+Definition count_down_noguard (v : N) : N
+  := NoGuardFix.Fix
+       (fun rec x => let x := N.pred x in
+                     match x with
+                     | 0 => 0
+                     | _ => rec x
+                     end%N)
+       v.
 Ltac count_down v :=
   lazymatch (eval vm_compute in (N.pred v)) with
   | 0%N => constr:(0%N)
@@ -157,15 +199,21 @@ Definition extremelysmallnum := (2^8)%N.
 Time Check ltac:(run_template_program (count_down_MC_tc extremelysmallnum) (fun v => exact v)). (* 0.039 secs (0.039u,0.s) *)
 (* But using unquote is about 2x slower *)
 Time Check ltac:(run_template_program (count_down_MC_unquote extremelysmallnum) (fun v => exact v)). (* 0.078 secs (0.078u,0.s) *)
+Time Check ltac:(run_template_program (count_down_MC_noguard extremelysmallnum) (fun v => exact v)). (* 0.002 secs (0.002u,0.s) *)
 (* test the actually used one *)
 Time Check ltac:(run_template_program (count_down_MC extremelysmallnum) (fun v => exact v)).
 (* now we use bigger numbers *)
 Time Check ltac:(run_template_program (count_down_MC_tc smallnum) (fun v => exact v)). (* 5.472 secs (5.372u,0.099s) *)
+Time Check ltac:(run_template_program (count_down_MC_noguard smallnum) (fun v => exact v)). (* 0.182 secs (0.182u,0.s) *)
 Time Check ltac:(run_template_program (count_down_MC smallnum) (fun v => exact v)).
 Time Eval lazy in count_down_wf smallnum. (* 0.244 secs (0.244u,0.s) *)
 Time Eval cbv in count_down_wf smallnum. (* 0.232 secs (0.232u,0.s) *)
+Time Eval lazy in count_down_noguard smallnum.
+Time Eval cbv in count_down_noguard smallnum.
 Time Check ltac:(let v := count_down smallnum in exact v). (* 3.148 secs (3.089u,0.059s) *)
 Time Check ltac2:(let v := count_down 'smallnum in exact $v). (* 1.377 secs (1.377u,0.s) *)
 (* and now we can use even bigger numbers *)
 Time Eval native_compute in count_down_wf bignum. (* 0.292 secs (0.124u,0.s) *)
 Time Eval vm_compute in count_down_wf bignum. (* 0.297 secs (0.297u,0.s) *)
+Time Eval native_compute in count_down_noguard bignum.
+Time Eval vm_compute in count_down_noguard bignum.

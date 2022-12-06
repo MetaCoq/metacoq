@@ -965,7 +965,7 @@ Section Typecheck.
   Qed.
 
   Definition abstract_env_level_mem_forallb {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
-    forallb (level_mem Σ) u = forallb (abstract_env_level_mem X LevelSet.empty) u.
+    forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
   Proof using Type.
     induction u; eauto; cbn.
     erewrite <- abstract_env_level_mem_correct; eauto. intuition.
@@ -983,7 +983,7 @@ Section Typecheck.
     with inspect (AUContext.repr (inst, cstrs)) := {
     | exist inst' _ with (Nat.eq_dec #|u| #|inst'.1|) := {
       | right e1 := raise (Msg "instance does not have the right length") ;
-      | left e1 with inspect (forallb (abstract_env_level_mem X LevelSet.empty) u) := {
+      | left e1 with inspect (forallb (abstract_env_level_mem X) u) := {
         | exist false e2 := raise (Msg "undeclared level in instance") ;
         | exist true e2 with inspect (abstract_env_check_constraints X (subst_instance_cstrs u cstrs)) := {
           | exist false e3 := raise (Msg "ctrs not satisfiable") ;

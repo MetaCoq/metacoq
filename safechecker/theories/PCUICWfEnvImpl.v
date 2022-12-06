@@ -50,7 +50,7 @@ Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard 
   {|
   abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
   abstract_env_leqb_level_n := fun Σ => leqb_level_n (referenced_impl_ext_graph Σ) ;
-  abstract_env_level_mem := fun Σ levels l => LevelSet.mem l (LevelSet.union levels (global_ext_levels (referenced_impl_env_ext Σ)));
+  abstract_env_level_mem := fun Σ l => LevelSet.mem l (global_ext_levels (referenced_impl_env_ext Σ));
   abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (referenced_impl_env_ext Σ);
   abstract_env_ext_rel := fun X Σ => Σ = referenced_impl_env_ext X;
   abstract_env_init := fun cs retro H =>  {|

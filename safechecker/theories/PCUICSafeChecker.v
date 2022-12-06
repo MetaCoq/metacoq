@@ -337,7 +337,7 @@ Section CheckEnv.
     let levels := levels_of_udecl udecl in
     check_eq_true_lazy (LevelSet.for_all (fun l => Level.is_var l) levels)
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels))));;
-    check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => abstract_env_level_mem (abstract_env_empty_ext X) levels l1 && abstract_env_level_mem (abstract_env_empty_ext X) levels l2) (constraints_of_udecl udecl))
+    check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => abstract_env_level_mem' (abstract_env_empty_ext X) levels l1 && abstract_env_level_mem' (abstract_env_empty_ext X) levels l2) (constraints_of_udecl udecl))
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
                                     " |= " ^ print_constraint_set (constraints_of_udecl udecl)))));;
     match gc_of_uctx (uctx_of_udecl udecl) as X' return (X' = _ -> EnvCheck X_env_ext_type _) with
@@ -348,7 +348,7 @@ Section CheckEnv.
                     (abstract_env_empty_ext X, IllFormedDecl id (Msg "constraints not satisfiable"));;
       ret (uctx'; _)
     end eq_refl.
-  Next Obligation. 
+  Next Obligation.
     simpl. intros id X udecl H H0 uctx' Huctx H2.
     rewrite <- Huctx.
     split; auto.
@@ -361,12 +361,12 @@ Section CheckEnv.
       2: now intros x y [].
       intros [[l ct] l'] Hl. specialize (H0 _ Hl). simpl in H0.
       apply andb_true_iff in H0. destruct H0 as [H H0].
-      rewrite <- abstract_env_level_mem_correct with (Σ := (Σ, Monomorphic_ctx)) in H.
+      rewrite <- abstract_env_level_mem_correct' with (Σ := (Σ, Monomorphic_ctx)) in H.
       apply LevelSet.mem_spec in H.
-      rewrite <- abstract_env_level_mem_correct with (Σ := (Σ, Monomorphic_ctx)) in H0.
+      rewrite <- abstract_env_level_mem_correct' with (Σ := (Σ, Monomorphic_ctx)) in H0.
       apply LevelSet.mem_spec in H0.
-      now split. rewrite <- abstract_env_empty_ext_rel. split; eauto. 
-      rewrite <- abstract_env_empty_ext_rel. split; eauto. 
+      now split. rewrite <- abstract_env_empty_ext_rel. split; eauto.
+      rewrite <- abstract_env_empty_ext_rel. split; eauto.
        }
     split; last (split; last split).
     - clear -H wfΣ. apply LevelSet.for_all_spec in H.
@@ -411,7 +411,7 @@ Section CheckEnv.
     - now apply abstract_env_empty_ext_rel in H.
   Qed.
   Next Obligation.
-    simpl; cbn; intros. eapply (proj2 uctx.π2); eauto. 
+    simpl; cbn; intros. eapply (proj2 uctx.π2); eauto.
   Qed.
   Next Obligation.
     simpl; cbn; intros. split; intros ? ?.
@@ -2290,8 +2290,8 @@ End monad_Alli_nth_forall.
     - red. red.
       eapply nth_error_all in wfars; eauto; simpl in wfars.
       destruct wfars as [s Hs]. now exists s.
-    - unfold check_projections_type in onprojs. 
-      destruct (ind_projs idecl) => //. 
+    - unfold check_projections_type in onprojs.
+      destruct (ind_projs idecl) => //.
     - now apply eqb_eq in eqsort; subst.
     - erewrite (abstract_env_ext_irr _ _ pf); eauto.
       destruct (ind_variance mdecl) => //.
@@ -2398,18 +2398,18 @@ End monad_Alli_nth_forall.
       unfold abstract_env_is_consistent_empty, abstract_env_empty in i2.
       pose proof (abs_init := abstract_env_init_correct (abstract_env_impl := X_env_type)
       (LS.singleton Level.lzero, CS.empty) Retroknowledge.empty PCUICWfEnv.abstract_env_empty_obligation_1).
-      pose proof (abs_consist := abstract_env_is_consistent_correct (@abstract_env_empty cf X_impl) _ uctx univs abs_init); cbn in *. 
-      rewrite HΣctrs in abs_consist, Huctx. 
-      rewrite <- abs_consist in i2; eauto ; clear abs_consist; cbn; sq. 
+      pose proof (abs_consist := abstract_env_is_consistent_correct (@abstract_env_empty cf X_impl) _ uctx univs abs_init); cbn in *.
+      rewrite HΣctrs in abs_consist, Huctx.
+      rewrite <- abs_consist in i2; eauto ; clear abs_consist; cbn; sq.
       - rewrite ConstraintSetProp.union_sym in i2. now rewrite CS_union_empty in i2.
-      - split; cbn. 
-        * rewrite LS.union_spec; left. now econstructor. 
+      - split; cbn.
+        * rewrite LS.union_spec; left. now econstructor.
         * intros ? H. inversion H.
       - split.
         * rewrite LS.union_spec; right. now econstructor.
         * red. cbn. rewrite ConstraintSetProp.union_sym. rewrite CS_union_empty. intros ? H.
           specialize (decll _ H). eapply PCUICWeakeningEnv.declared_cstr_levels_sub; eauto.
-          apply wGraph.VSetProp.union_subset_1. 
+          apply wGraph.VSetProp.union_subset_1.
   Qed.
   Next Obligation.
       cbv beta. intros univs retro id levels X H H0 Hconsistent ? ? Hunivs. clearbody Hunivs.
@@ -2438,10 +2438,10 @@ End monad_Alli_nth_forall.
       ret (exist (abstract_env_add_decl X d.1 d.2 _) _)
     end.
   Next Obligation.
-    cbn in *. destruct H0.  
-    specialize_Σ a. specialize_Σ H. rewrite wf_.  cbn in *. 
+    cbn in *. destruct H0.
+    specialize_Σ a. specialize_Σ H. rewrite wf_.  cbn in *.
     specialize_Σ H0. sq.
-    split; eauto. 
+    split; eauto.
     - pose proof (abstract_env_ext_wf _ H0). sq. destruct H3.
       cbn in *. now rewrite wf_ in o0.
     - sq; now rewrite wf_ in y.

@@ -37,34 +37,46 @@ Axiom assume_preservation_template_program_env_expansion :
   eval_template_program_env p v ->
   ∥ eval_template_program (EtaExpand.eta_expand_program p) (EtaExpand.eta_expand p.1 [] v) ∥.
 
-Program Definition eta_expand : Transform.t template_program_env template_program Ast.term Ast.term
+(** We kludge the normalisation assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
+
+Program Definition eta_expand K : Transform.t template_program_env template_program Ast.term Ast.term
   eval_template_program_env eval_template_program :=
   {| name := "eta expand cstrs and fixpoints";
-      pre := fun p => ∥ wt_template_program_env p ∥ ;
+      pre := fun p => ∥ wt_template_program_env p ∥ /\ K (eta_expand_global_env p.1) ;
       transform p _ := EtaExpand.eta_expand_program p ;
-      post := fun p => ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p;
+      post := fun p => ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K p.1;
       obseq p p' v v' := v' = EtaExpand.eta_expand p.1 [] v |}.
 Next Obligation.
-  destruct p. now apply assume_welltyped_template_program_expansion.
+  let p := match goal with H : template_program_env |- _ => H end in
+  destruct p. split; [|split]; auto; now apply assume_welltyped_template_program_expansion.
 Qed.
 Next Obligation.
   red. intros p v [wt] ev.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
-Program Definition erasure_pipeline {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (efl := EWellformed.all_env_flags) :
+Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program EProgram.eprogram
   Ast.term EAst.term
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
+  (* a bunch of nonsense for normalisation preconditions *)
+  let K ty (T : ty -> _) p
+    := let p := T p in
+       (PCUICTyping.wf_ext p -> PCUICSN.NormalisationIn p) /\
+         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn p) in
+  let T1 (p:global_env_ext_map) := p in
+  let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
+  let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
+  let T4 (p:GlobalEnvMap.t) := T3 (eta_expand_global_env p) in
   (* Build an efficient lookup map for the following eta-expansion phase *)
-  build_template_program_env ▷
+  build_template_program_env (K _ T4) ▷
   (* Eta-expand constructors and fixpoint *)
-  eta_expand ▷
+  eta_expand (K _ T3) ▷
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
-  template_to_pcuic_transform ▷
+  template_to_pcuic_transform (K _ T2) ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
-  pcuic_expand_lets_transform ▷
+  pcuic_expand_lets_transform (K _ T1) ▷
   (* Erasure of proofs terms in Prop and types *)
   erase_transform ▷
   (* Simulation of the guarded fixpoint rules with a single unguarded one:
@@ -100,13 +112,22 @@ Next Obligation.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
-Definition run_erase_program {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} := run erasure_pipeline.
+Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
-Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} (efl := EWellformed.all_env_flags) :=
-  build_template_program_env ▷
-  eta_expand ▷
-  template_to_pcuic_transform ▷
-  pcuic_expand_lets_transform ▷
+Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :=
+  (* a bunch of nonsense for normalisation preconditions *)
+  let K ty (T : ty -> _) p
+    := let p := T p in
+       (PCUICTyping.wf_ext p -> PCUICSN.NormalisationIn p) /\
+         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn p) in
+  let T1 (p:global_env_ext_map) := p in
+  let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
+  let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
+  let T4 (p:GlobalEnvMap.t) := T3 (eta_expand_global_env p) in
+  build_template_program_env (K _ T4) ▷
+  eta_expand (K _ T3) ▷
+  template_to_pcuic_transform (K _ T2) ▷
+  pcuic_expand_lets_transform (K _ T1) ▷
   erase_transform ▷
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   remove_params_fast_optimization (wcon := eq_refl)  _ ▷
@@ -121,7 +142,7 @@ Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
-Definition run_erase_program_fast {guard : abstract_guard_impl} {normalisation : PCUICSN.Normalisation} := run erasure_pipeline_fast.
+Definition run_erase_program_fast {guard : abstract_guard_impl} := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
 
@@ -155,7 +176,11 @@ Program Definition erase_and_print_template_program (p : Ast.Env.program)
   let p' := run_erase_program p _ in
   time "Pretty printing" EPretty.print_program p'.
 Next Obligation.
+  split.
   now eapply assume_that_we_only_erase_on_welltyped_programs.
+  cbv [PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn].
+  pose proof @PCUICSN.normalisation.
+  split; typeclasses eauto.
 Qed.
 
 Program Definition erase_fast_and_print_template_program (p : Ast.Env.program)
@@ -163,5 +188,9 @@ Program Definition erase_fast_and_print_template_program (p : Ast.Env.program)
   let p' := run_erase_program_fast p _ in
   time "pretty-printing" EPretty.print_program p'.
 Next Obligation.
+  split.
   now eapply assume_that_we_only_erase_on_welltyped_programs.
+  cbv [PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn].
+  pose proof @PCUICSN.normalisation.
+  split; typeclasses eauto.
 Qed.

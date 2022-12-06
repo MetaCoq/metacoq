@@ -62,7 +62,7 @@ Proof.
   induction Γ using rev_ind.
   - now reflexivity.
   - destruct x as [na [b|] ty].
-    intros ass. eapply assumption_context_app in ass as []. elimtype False; depelim a0.
+    intros ass. eapply assumption_context_app in ass as []. exfalso; depelim a0.
     intros ass.
     rewrite smash_context_app_ass IHΓ. now eapply assumption_context_app in ass as [].
     reflexivity.

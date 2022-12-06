@@ -785,7 +785,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Proof using Type.
       induction p.
       - destruct Hu as [Hu|Hu]. simpl in Hu.
-        now elimtype False; eapply VSetFact.empty_iff in Hu.
+        now exfalso; eapply VSetFact.empty_iff in Hu.
         destruct Hu; reflexivity.
       - simpl. destruct (V.eq_dec x u) as [X|X]; simpl.
         + destruct X; reflexivity.
@@ -2316,7 +2316,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
           unshelve erewrite (lsp_G'_spec_left (s G) x _ xs K) in Hky'. apply HI.
           apply eq_max in Hky'. destruct Hky' as [Hk|Hk].
           -- rewrite Hly in Hk. apply some_inj in Hk.
-            elimtype False.
+            exfalso.
             clear -XX ky'pos Hk Hle''. subst. subst K.
             destruct (Z.leb_spec n 0); lia.
           -- rewrite Hk. reflexivity.

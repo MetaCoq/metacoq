@@ -880,7 +880,7 @@ Proof.
   rewrite oib.(ind_arity_eq).
   rewrite /isPropositionalArity !destArity_it_mkProd_or_LetIn /=.
   destruct (is_propositional (ind_sort x0)) eqn:isp; auto.
-  elimtype False; eapply ise.
+  exfalso; eapply ise.
   red. eexists; intuition eauto. right.
   unfold type_of_constructor in e, X.
   destruct s as [indctors [nthcs onc]].

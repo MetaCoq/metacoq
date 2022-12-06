@@ -895,7 +895,7 @@ Lemma subst_consn_lt_spec {A} {l : list A} {i} :
   ∑ x, (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x)%type.
 Proof.
   induction l in i |- *; simpl.
-  - intros H; elimtype False; lia.
+  - intros H; exfalso; lia.
   - intros H.
     destruct i.
     + simpl. exists a. split; auto.

@@ -363,7 +363,7 @@ Proof.
   generalize (le_n #|Γ|).
   generalize #|Γ| at 2.
   induction n in Γ |- *.
-  destruct Γ; [|simpl; intros; elimtype False; lia].
+  destruct Γ; [|simpl; intros; exfalso; lia].
   intros. apply p0.
   intros.
   destruct Γ; simpl in *.
@@ -377,7 +377,7 @@ Proof.
   generalize (le_n #|Γ|).
   generalize #|Γ| at 2.
   induction n in Γ |- *.
-  destruct Γ using MCList.rev_ind; [|simpl; rewrite app_length; simpl; intros; elimtype False; try lia].
+  destruct Γ using MCList.rev_ind; [|simpl; rewrite app_length; simpl; intros; exfalso; try lia].
   intros. apply p0.
   destruct Γ using MCList.rev_ind; simpl in *; rewrite ?app_length; simpl; intros Hlen.
   intros. apply p0.

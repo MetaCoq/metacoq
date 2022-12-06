@@ -981,11 +981,11 @@ Section CheckEnv.
     * now eapply ws_cumul_pb_Sort_Prod_inv in e.
     * apply assumption_context_app in ass as [ass assd].
       destruct d as [na [b|] ty]; unfold mkProd_or_LetIn in e; simpl in *.
-      elimtype False; depelim assd.
+      exfalso; depelim assd.
       eapply ws_cumul_pb_Prod_Sort_inv in e; auto.
     * apply assumption_context_app in ass as [ass assd].
       destruct d as [na' [b'|] ty']; unfold mkProd_or_LetIn in e; simpl in *.
-      elimtype False; depelim assd.
+      exfalso; depelim assd.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqann eqdom codom]; auto.
       rewrite List.rev_app_distr.
       constructor.

@@ -1534,7 +1534,7 @@ Proof.
   * move=> [] hl [] ha [] ht /andP[] /andP[] etafix etab etal.
     rewrite ha.
     intros H; eapply eval_stuck_fix_eq in H as [args' [Hargs' [[]|]]]. subst v.
-    intros _ Hfix. elimtype False. eapply Hfix; trea.
+    intros _ Hfix. exfalso. eapply Hfix; trea.
     intros Hc Hfix. intuition auto. rewrite i /= etab /=.
     rewrite forallb_remove_last // /=.
     rewrite ht. eapply forallb_last => //. rewrite wguard //.
@@ -1789,7 +1789,7 @@ Proof.
       rewrite hf in H. eapply eval_mkApps_Construct_inv in H as [? []]; try solve_discr. eauto.
     * move => [hl [hf [ha /andP[] /andP[] etal etab]]] isel.
       rewrite hf in H.
-      elimtype False.
+      exfalso.
       pose proof H as Hfix.
       eapply eval_stuck_fix_eq in H as [args' [hargs [[hstuck ?]|]]].
       { solve_discr. noconf H.

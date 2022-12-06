@@ -1261,7 +1261,7 @@ Proof.
     unfold is_constructor in H0.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
-    destruct args. simpl. elimtype False; cbn in H1. lia.
+    destruct args. simpl. exfalso; cbn in H1. lia.
     cbn -[mkApps].
     eapply TT.red_fix. 
     apply trans_unfold_fix; eauto.

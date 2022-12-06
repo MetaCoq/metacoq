@@ -373,7 +373,7 @@ Proof.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
-      clear IH; rewrite ha in ev1. elimtype False.
+      clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
     * move=> /and4P [] etat0 etaargs etaa etat.
       split. eapply X; tea; (apply and_assum; [ih|hp' P'Q]).
@@ -382,7 +382,7 @@ Proof.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
-      clear IH; rewrite ha in ev1. elimtype False.
+      clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (ql : Q 0 (tLambda na b)).
@@ -446,7 +446,7 @@ Proof.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
-      clear IH; rewrite ha in ev1. elimtype False.
+      clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:{ clear ev1'; ih. }
@@ -480,7 +480,7 @@ Proof.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
-      clear IH; rewrite ha in ev1. elimtype False.
+      clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
     * move=> /and4P [] etat0 etaargs etaa etat.
       assert (isEtaExp Σ (tApp (mkApps (tFix mfix idx) argsv) av)).
@@ -496,7 +496,7 @@ Proof.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
-      clear IH; rewrite ha in ev1. elimtype False.
+      clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (qav : Q 0 av).
@@ -651,7 +651,7 @@ Proof.
       rewrite -[tApp _ a'](mkApps_app _ _ [a']).
       assert (P' f (mkApps (tConstruct ind c []) cargs) × isEtaExp Σ (mkApps (tConstruct ind c []) cargs)).
       { unshelve eapply IH; tea. cbn. lia. }
-      elimtype False.
+      exfalso.
       destruct X13 as [p'f etac].
       move: etac. rewrite isEtaExp_Constructor.
       move/andP => []. rewrite /isEtaExp_app.

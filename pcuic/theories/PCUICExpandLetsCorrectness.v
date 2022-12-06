@@ -1846,7 +1846,7 @@ Lemma untyped_subslet_length Γ s s' Δ :
 Proof.
   induction 1 in s' |- *; cbn; destruct s' => /= //. constructor.
   intros [=]. constructor ; auto. eapply IHX; auto. now depelim H.
-  intros. elimtype False; depelim H0. 
+  intros. exfalso; depelim H0. 
 Qed.
 
 Lemma wf_local_ind_params_weaken {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ind mdecl u} : 
@@ -1963,7 +1963,7 @@ Proof.
     unfold is_constructor in H0.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
-    destruct args. simpl. elimtype False; cbn in H1. lia.
+    destruct args. simpl. exfalso; cbn in H1. lia.
     cbn -[mkApps]. 
     eapply red1_red, red_fix.
     apply (trans_unfold_fix (shiftnP #|Γ| xpred0)); eauto.
@@ -2896,8 +2896,8 @@ Lemma to_extended_list_smash_context_eq Δ Δ' k :
 Proof.
   induction Δ in Δ', k |- *; cbn; destruct Δ' => /= //.
   intros [=].
-  intros ass ass'. destruct a as [na [b|] ty]. elimtype False; depelim ass.
-  destruct c as [na' [b'|] ty']; cbn. elimtype False; depelim ass'.
+  intros ass ass'. destruct a as [na [b|] ty]. exfalso; depelim ass.
+  destruct c as [na' [b'|] ty']; cbn. exfalso; depelim ass'.
   rewrite !(reln_acc [_]). f_equal. eapply IHΔ => //.
   now depelim ass. now depelim ass'.
 Qed.
@@ -4506,8 +4506,8 @@ Proof.
     eapply trans_on_free_vars; rewrite map_length /app_context; fvs.
     eapply trans_on_free_vars; len.
     rewrite (All2_fold_length X) eqlen -app_length; fvs.
-  - elimtype False. depelim ass.
-  - elimtype False; depelim ass.
+  - exfalso. depelim ass.
+  - exfalso; depelim ass.
 Qed.
 
 Lemma assumption_context_arities_context mdecl : 

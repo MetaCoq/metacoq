@@ -993,7 +993,7 @@ Section Wcbv.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
         noconf H. noconf IHev1.
-        elimtype False. rewrite e in e0. noconf e0. lia.
+        exfalso. rewrite e in e0. noconf e0. lia.
       + specialize (IHev1 _ ev'1). noconf IHev1.         
         exfalso.
         rewrite isFixApp_mkApps in i; try easy.
@@ -1047,7 +1047,7 @@ Section Wcbv.
         assert (l = l0) as -> by now apply le_irrel. reflexivity.
       * specialize (IHev1 _ ev'1); noconf IHev1.
         specialize (IHev2 _ ev'2). noconf IHev2.
-        elimtype False. rewrite isConstructApp_mkApps in i; auto.
+        exfalso. rewrite isConstructApp_mkApps in i; auto.
         cbn in i. rewrite !negb_or in i; rtoProp; intuition auto.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
@@ -1062,7 +1062,7 @@ Section Wcbv.
         now rewrite Bool.orb_true_r in i.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         specialize (IHev2 _ ev'2); noconf IHev2.
-        elimtype False.
+        exfalso.
         rewrite isConstructApp_mkApps in i; auto.
         cbn in i. rewrite !negb_or in i; rtoProp; intuition auto.
       + specialize (IHev1 _ ev'1); noconf IHev1.

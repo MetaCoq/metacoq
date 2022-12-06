@@ -702,12 +702,12 @@ Lemma eval_case_tBox_inv {wfl : Ee.WcbvFlags} {Σ ci e brs} :
 Proof.
   intros He.
   depind He. 
-  - depelim He1. clear -H. symmetry in H. elimtype False.
+  - depelim He1. clear -H. symmetry in H. exfalso.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
   - depelim He1. 
   - exists n, f4. intuition auto.
-  - depelim He1. clear -H. symmetry in H. elimtype False.
+  - depelim He1. clear -H. symmetry in H. exfalso.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
   - cbn in i. discriminate.

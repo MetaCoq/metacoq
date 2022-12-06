@@ -338,8 +338,8 @@ Qed.
 Lemma nth_error_Some' {A} l n : (∑ x : A, nth_error l n = Some x) <~> n < length l.
 Proof.
   revert n. induction l; destruct n; simpl.
-  - split; [now destruct 1 | intros H'; elimtype False; inversion H'].
-  - split; [now destruct 1 | intros H'; elimtype False; inversion H'].
+  - split; [now destruct 1 | intros H'; exfalso; inversion H'].
+  - split; [now destruct 1 | intros H'; exfalso; inversion H'].
   - split; now intuition eauto with arith.
   - destruct (IHl n); split; intros; auto with arith.
 Qed.

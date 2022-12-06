@@ -125,5 +125,5 @@ Definition trans_mutual_inductive_entry (mie : PCUICAst.mutual_inductive_entry) 
        mind_entry_universes := universes_entry_of_decl mie.(PCUICAst.mind_entry_universes);
        mind_entry_inds := List.map trans_one_inductive_entry mie.(PCUICAst.mind_entry_inds);
        mind_entry_params := trans_local mie.(PCUICAst.mind_entry_params);
-       mind_entry_variance := None (* Should something go here??? *);
-       mind_entry_template := false |}.
+       mind_entry_variance := None (* TODO: support universe variance in PCUIC *);
+       mind_entry_template := false (* TODO: support template polymorphism in PCUIC? *) |}.

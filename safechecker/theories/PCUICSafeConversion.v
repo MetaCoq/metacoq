@@ -1449,7 +1449,7 @@ Qed.
       + now apply IHu.
   Qed.
 
-  
+
   Lemma consistent_instance_ext_wf Σ udecl u :
     consistent_instance_ext Σ udecl u ->
     wf_universe_instance Σ u.
@@ -2670,7 +2670,7 @@ Qed.
     now apply invert_type_mkApps_tProd in typ.
   Qed.
 
-  Definition compare_global_instance_correct {Σ} 
+  Definition compare_global_instance_correct {Σ}
     (wfΣ : abstract_env_ext_rel X Σ) R leq ref n l l' :
       (forall u u', wf_universeb Σ u -> wf_universeb Σ u' -> reflect (R u u') (leq u u')) ->
       wf_universe_instance Σ l ->
@@ -3841,14 +3841,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c' _ _).
       rewrite H in eq4.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv) ; eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -3864,14 +3864,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c' _ _).
       rewrite H1 in eq4.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -3881,7 +3881,7 @@ Qed.
     all: try reflexivity.
     simpl. intros.  eapply cored_zipc. eapply cored_case.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct; eauto; reflexivity.
+    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto; reflexivity.
   Qed.
 
   Next Obligation.
@@ -3945,14 +3945,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c _ _).
       rewrite H in eq3.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -3968,14 +3968,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c _ _).
       rewrite H1 in eq3.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -3984,7 +3984,7 @@ Qed.
     unshelve eapply R_cored.
     simpl. intros; eapply cored_zipc. eapply cored_case.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct; eauto; reflexivity.
+    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto; reflexivity.
   Qed.
   Next Obligation.
     rename H into wfΣ; specialize_Σ wfΣ.
@@ -4096,14 +4096,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c' _ _).
       rewrite H in eq4.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -4118,14 +4118,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c' _ _).
       rewrite H1 in eq4.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -4134,7 +4134,7 @@ Qed.
     all: try reflexivity.
     simpl. intros; eapply cored_zipc. eapply cored_proj.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eassumption.
-    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct; eauto; reflexivity.
+    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto; reflexivity.
   Qed.
   Next Obligation.
     rename H into wfΣ. specialize_Σ wfΣ.
@@ -4201,14 +4201,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c _ _).
       rewrite H in eq3.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -4223,14 +4223,14 @@ Qed.
       epose proof (eqb_term_upto_univ_refl Σ _ _ _ _ 0 c _ _).
       rewrite H1 in eq3.
       - discriminate.
-      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct; eauto.
+      - intros. apply iff_reflect. eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto.
       - intros. rewrite wf_universeb_instance_forall in *.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4.
         eapply compare_global_instance_correct; eauto.
-        clear -X0. intros ? ? Hu Hu'; apply X0.  
+        clear -X0. intros ? ? Hu Hu'; apply X0.
         + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+        + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
       - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq.
         apply welltyped_zipc_inv in Hc; eauto.
         apply welltyped_wf in Hc; eauto.
@@ -4238,7 +4238,7 @@ Qed.
     unshelve eapply R_cored.
     simpl. intros; eapply cored_zipc. eapply cored_proj.
     erewrite (abstract_env_ext_irr _ _ wfΣ); eassumption.
-    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct; eauto; reflexivity.
+    Unshelve. all: eauto. all: intros; eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto; reflexivity.
   Qed.
   Next Obligation.
     rename H into wfΣ. specialize_Σ wfΣ.
@@ -5319,7 +5319,7 @@ Qed.
             isconv_prog leq t1 π1 rt2' (θ2' ++ θ2) aux
           }
         } ;
-      | exist None nored2 with inspect (eqb_termp_napp_gen leq (abstract_env_eq X) (abstract_env_leq X) 
+      | exist None nored2 with inspect (eqb_termp_napp_gen leq (abstract_env_eq X) (abstract_env_leq X)
                                                                 abstract_env_compare_global_instance #|(decompose_stack π1).1| t1 t2) := {
         | exist true eq1 := isconv_args leq t1 π1 t2 π2 aux;
         | exist false noteq :=
@@ -5693,11 +5693,13 @@ Qed.
          apply ssrbool.not_false_is_true. rewrite noteq. cbn.
          eapply compare_global_instance_correct; eauto.
          intros ? ? Hu Hu'. apply iff_reflect.
-         destruct leq; apply abstract_env_compare_universe_correct; eauto.
+         destruct leq;
+          [ apply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto |
+            apply abstract_env_compare_universe_correct with (conv_pb := Cumul); eauto].
          + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-         + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+         + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
          + revert Hu. apply reflect_iff. apply wf_universe_reflect.
-         + revert Hu'. apply reflect_iff. apply wf_universe_reflect.  
+         + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
          }
     all: apply conv_cum_alt in conv_hds as [(?&?&[r1 r2 ?])]; auto.
     all: eapply whnf_red_inv in r1; auto.

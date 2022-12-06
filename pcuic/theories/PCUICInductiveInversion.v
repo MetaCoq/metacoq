@@ -1647,8 +1647,8 @@ Proof.
     eapply ws_cumul_pb_is_closed_context in eqt.
     now rewrite is_closed_ctx_closed.
     rewrite app_context_nil_l !subst_instance_app_ctx // app_context_assoc //.
-  - elimtype False; now depelim ass.
-  - elimtype False; now depelim ass.
+  - exfalso; now depelim ass.
+  - exfalso; now depelim ass.
 Qed.
 
 Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'} 

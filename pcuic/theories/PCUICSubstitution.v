@@ -1122,7 +1122,7 @@ Proof.
       rewrite -shiftn_Upn - !Upn_Upn. intros i; lia_f_equal.
   - move: hnth.
     case: (nth_error_app_context Γ Γ' _) => // x' hnth hn' [=] eq; subst x'.
-    * elimtype False.
+    * exfalso.
       revert subs hnth hb; generalize (n - #|Γ''|); clear.
       intros n subs; induction subs in n |- *; simpl => //.
       { now rewrite nth_error_nil //. }

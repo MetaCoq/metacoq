@@ -470,7 +470,7 @@ Section WfEnv.
           exists []. split; try constructor; eauto with pcuic.
           all:now eapply isType_wf_local.
         ++ now eapply ws_cumul_pb_Sort_Prod_inv in cum.
-      + rewrite app_length /= in len; elimtype False; lia.
+      + rewrite app_length /= in len; exfalso; lia.
     - intros len s inst s' Hsp.
       destruct Γ' using rev_ind; try clear IHΓ'.
       -- dependent elimination Hsp as [spnil _ _ cum|spcons isty isty' cum tyhd sp].
@@ -604,7 +604,7 @@ Qed.*)
       + intros le Hsub Hsp.
         destruct args; simpl; try discriminate.
         simpl in Hsub. now depelim Hsub.
-      + rewrite app_length /=; intros; elimtype False; lia.
+      + rewrite app_length /=; intros; exfalso; lia.
     - destruct Δ using rev_ind.
       1:intros le Hsub Hsp; destruct args; simpl; try discriminate;
       simpl in Hsub; now depelim Hsub.
@@ -2386,13 +2386,13 @@ Section WfEnv.
     induction a in wf, wf', args, ass, ass' |- *.
     - inversion 1; constructor.
     - intros subsl; depelim subsl.
-      2:{ elimtype False; inv ass. }
+      2:{ exfalso; inv ass. }
       specialize (IHa s).
       forward IHa by now depelim ass.
       forward IHa by now depelim ass'.
       depelim wf.
       depelim wf'.
-      2:{ elimtype False; inv ass'. }
+      2:{ exfalso; inv ass'. }
       specialize (IHa wf wf' subsl).
       constructor; auto.
       eapply type_ws_cumul_pb; eauto. depelim p.
@@ -2418,7 +2418,7 @@ Section WfEnv.
       * depelim a. constructor.
       * depelim a. depelim a0. econstructor. eapply IHctxs. now depelim ass.
         now depelim ass'. red. split => //.
-      * elimtype False; depelim ass.
+      * exfalso; depelim ass.
     - eapply subslet_cumul. 6:eauto. all:eauto.
   Qed.
 

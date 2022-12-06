@@ -1141,7 +1141,7 @@ Proof.
 
     specialize (H1 kn). forward H1.
     now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
-    elimtype False. destruct H1 as [cst [declc _]].
+    exfalso. destruct H1 as [cst [declc _]].
     { red in declc. destruct x1 as [d _]. red in d. rewrite d in declc. noconf declc. }
     destruct H1 as [mib [mib' [declm [declm' em]]]].
     pose proof em as em'. destruct em'.
@@ -1165,7 +1165,7 @@ Proof.
     destruct (proj1 d).
     specialize (H0 (inductive_mind p.(proj_ind))). forward H0.
     now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
-    elimtype False. destruct H0 as [cst [declc _]].
+    exfalso. destruct H0 as [cst [declc _]].
     { red in declc. destruct d as [[[d _] _] _]. red in d. rewrite d in declc. noconf declc. }
     destruct H0 as [mib [mib' [declm [declm' em]]]].
     assert (mib = x0).
@@ -1419,7 +1419,7 @@ Lemma erase_global_includes X_type (X:X_type.π1) deps decls prf deps' :
   includes_deps Σ Σ' deps'.
 Proof.
   intros ? sub Σ wfΣ; cbn. induction decls in X, H, sub, prf, deps, deps', Σ , wfΣ |- *.
-  - simpl. intros i hin. elimtype False.
+  - simpl. intros i hin. exfalso.
     specialize (H i hin) as [[decl Hdecl]]; eauto.
     rewrite /lookup_env (prf _ wfΣ) in Hdecl. noconf Hdecl.
   - intros i hin.
@@ -2326,7 +2326,7 @@ Proof.
   destruct (inspect_bool (is_erasableb X_type.π2.π1 Xext [] t wt)) eqn:heq.
   - simp erase. rewrite heq.
     simp erase => //.
-  - elimtype False.
+  - exfalso.
     pose proof (abstract_env_exists X) as [[? wf]].
     destruct (@is_erasableP X_type.π2.π1 Xext [] t wt) => //. apply n. 
     intros. sq. now rewrite (abstract_env_ext_irr _ H H2).  

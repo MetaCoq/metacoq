@@ -164,7 +164,7 @@ Module EnvMap.
     - rewrite KernameMapFact.F.add_neq_o //. intros c. eapply Kername.compare_eq in c. contradiction.
       rewrite KernameMapFact.F.remove_o.
       destruct KernameMap.E.eq_dec => //.
-      elimtype False; apply n. now apply Kername.compare_eq.
+      exfalso; apply n. now apply Kername.compare_eq.
     - rewrite !KernameMapFact.F.add_o //.
       destruct (KernameMap.E.eq_dec k k'') => //.
       rewrite KernameMapFact.F.remove_neq_o //.

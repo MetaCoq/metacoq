@@ -606,7 +606,7 @@ Section Wcbv.
     intros H; depind H; try solve_discr'; try now easy.
     - depelim a.
       eapply eval_to_stuck_fix_inv in H; [|easy].
-      elimtype False. destruct H; subst; cbn in *; lia.
+      exfalso. destruct H; subst; cbn in *; lia.
 
     - depelim a.
       now rewrite app_nil_r.
@@ -624,7 +624,7 @@ Section Wcbv.
     - exists decl. intuition auto. now rewrite e.
     - depelim a.
       eapply eval_to_stuck_fix_inv in H; [|easy].
-      elimtype False. destruct H; subst; cbn in *; lia.
+      exfalso. destruct H; subst; cbn in *; lia.
     - depelim a.
       apply IHeval.
       now rewrite app_nil_r.

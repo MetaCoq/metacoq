@@ -1394,7 +1394,7 @@ Section All_local_env.
              on_local_decl_glob (P (skipn (S n) Γ)) decl.
   Proof.
     induction wfΓ in n, decl, eq |- *; simpl.
-    - elimtype False. destruct n; depelim eq.
+    - exfalso. destruct n; depelim eq.
     - destruct n.
       + simpl. exists wfΓ. injection eq; intros <-. apply t0.
       + apply IHwfΓ. auto with arith.
@@ -1420,7 +1420,7 @@ Section All_local_env.
     (All_local_env_over typing P Σ Γ' (projT1 p) * on_wf_local_decl P (projT1 p) (projT2 p))%type.
   Proof.
     induction 1 in n, decl, eq |- *. simpl.
-    - destruct n; simpl; elimtype False; discriminate eq.
+    - destruct n; simpl; exfalso; discriminate eq.
     - destruct n. cbn [skipn]. noconf eq. split. apply X. simpl. apply Hs.
       simpl. apply IHX.
     - destruct n. noconf eq. simpl. split; auto.

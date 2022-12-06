@@ -592,7 +592,7 @@ Section WfEnv.
     generalize (le_n #|Δ|).
     generalize #|Δ| at 2.
     induction n in Δ, T |- *.
-    - destruct Δ; simpl; intros; try (elimtype False; lia).
+    - destruct Δ; simpl; intros; try (exfalso; lia).
       depelim sub.
       rewrite subst_empty; auto.
     - destruct Δ using rev_ind; try clear IHΔ.

@@ -87,8 +87,8 @@ Lemma untyped_subslet_ass {Γ s Δ} :
 Proof.
   induction Δ as [|[na [b|] ty] Δ] in s |- *; destruct s; simpl; try discriminate.
   - constructor.
-  - intros h; elimtype False; inv h.
-  - intros h; elimtype False; inv h.
+  - intros h; exfalso; inv h.
+  - intros h; exfalso; inv h.
   - intros h [=]. constructor. apply IHΔ => //.
     now inv h.
 Qed.

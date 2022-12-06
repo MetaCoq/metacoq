@@ -1403,8 +1403,8 @@ Qed.
 Lemma Forall2_All2 {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> All2 P l l'.
 Proof.
   intros f; induction l in l', f |- *; destruct l'; try constructor; auto.
-  elimtype False. inv f.
-  elimtype False. inv f.
+  exfalso. inv f.
+  exfalso. inv f.
   inv f; auto.
   apply IHl. inv f; auto.
 Qed.

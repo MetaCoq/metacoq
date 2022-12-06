@@ -2059,7 +2059,7 @@ Section Rho.
     rewrite nth_error_app_lt in Hnth => //.
     pose proof (fix_context_assumption_context mfix1).
     destruct d' as [na [b'|] ty]; simpl; auto.
-    elimtype False. eapply nth_error_assumption_context in H; eauto.
+    exfalso. eapply nth_error_assumption_context in H; eauto.
     simpl in H; discriminate.
   Qed.
 
@@ -2083,7 +2083,7 @@ Section Rho.
     rewrite nth_error_app_lt in Hnth => //.
     pose proof (fix_context_assumption_context mfix1).
     destruct d' as [na [b'|] ty]; simpl; auto.
-    elimtype False. eapply nth_error_assumption_context in H; eauto.
+    exfalso. eapply nth_error_assumption_context in H; eauto.
     simpl in H; discriminate.
   Qed.
 

@@ -65,7 +65,7 @@ Proof.
   generalize (le_n #|Γ|).
   generalize #|Γ| at 2.
   induction n in Γ |- *.
-  destruct Γ using rev_case; [|simpl; intros; elimtype False; try lia].
+  destruct Γ using rev_case; [|simpl; intros; exfalso; try lia].
   cbn. intros; exact p0. len in H.
   intros.
   destruct Γ using rev_case; simpl in *. 

@@ -78,11 +78,11 @@ Proof.
   rewrite mapi_length in hlen.
   assert (H:∑ t', nth_error btys c = Some t').
   pose proof (All2_length _ _ Hbrtys) as e. eapply nth_error_Some_length in Hc.
-  destruct (nth_error_spec btys c). eexists; eauto. elimtype False; lia.
+  destruct (nth_error_spec btys c). eexists; eauto. exfalso; lia.
   destruct H as [[argty bty] Hbty].
   assert (H:∑ t', nth_error brs c = Some t').
   pose proof (All2_length _ _ Hbrtys) as e. eapply nth_error_Some_length in Hc.
-  destruct (nth_error_spec brs c). eexists; eauto. elimtype False; lia.
+  destruct (nth_error_spec brs c). eexists; eauto. exfalso; lia.
   destruct H as [[argbr br] Hbr].
   eapply All2_nth_error in Hbrtys; eauto.
   destruct Hbrtys as [Harg tybr]. simpl in *. subst.
@@ -1044,7 +1044,7 @@ Proof.
       pose proof (@smash_context_assumption_context [] (cstr_args c)).
       forward H3 by constructor.
       eapply assumption_context_skipn in H3.
-      rewrite -> eqargs in H3. elimtype False; inv H3.
+      rewrite -> eqargs in H3. exfalso; inv H3.
     * apply skipn_eq_cons in eqargs as [Hnth eqargs].
       constructor.
       + replace (S (context_assumptions (cstr_args c) - (S i)))

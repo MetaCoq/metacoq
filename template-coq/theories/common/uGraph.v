@@ -98,13 +98,13 @@ Module VariableLevel.
     destruct (compare_spec y z); auto.
     destruct (compare_spec y z); auto; try congruence.
     destruct (compare_spec x z); auto; try congruence.
-    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
-    elimtype False. eapply irreflexivity. etransitivity; [exact H|]. 
+    subst. exfalso. eapply irreflexivity. etransitivity; [exact H|exact H0].
+    exfalso. eapply irreflexivity. etransitivity; [exact H|]. 
     eapply transitivity; [exact H0|exact H1].
     destruct (compare_spec y z); auto; try congruence.
     destruct (compare_spec x z); auto; try congruence.
-    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
-    elimtype False. eapply irreflexivity. etransitivity; [exact H|]. 
+    subst. exfalso. eapply irreflexivity. etransitivity; [exact H|exact H0].
+    exfalso. eapply irreflexivity. etransitivity; [exact H|]. 
     eapply transitivity; [exact H1|exact H0].
   Qed.
 
@@ -1578,7 +1578,7 @@ Section CheckLeq.
         rewrite lspsli. rewrite Hs in Hni, lspsli, lspsl.
         assert (⎩ lt ⎭ <= - Z.of_nat b + lset + Z.of_nat bi + Z.of_nat (lab li)) by lia.
         destruct (lsp G l li) as [lli|] eqn:elli.
-        2:{ elimtype False.
+        2:{ exfalso.
           generalize (lsp_codistance G l lzero li).
           now rewrite elli Hlset lspsli. }
         simpl in Hlt.

@@ -1656,7 +1656,7 @@ Definition lookup_wf_local_decl {Γ P} (wfΓ : All_local_env P Γ) (n : nat)
     on_local_decl P (skipn (S n) Γ) decl.
 Proof.
   induction wfΓ in n, decl, eq |- *; simpl.
-  - elimtype False. destruct n; inversion eq.
+  - exfalso. destruct n; inversion eq.
   - destruct n.
     + simpl. exists wfΓ. injection eq; intros <-. apply t0.
     + apply IHwfΓ. auto with arith.
@@ -1684,7 +1684,7 @@ Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_e
   (All_local_env_over typing P Σ Γ' (projT1 p) * on_wf_local_decl P (projT1 p) (projT2 p))%type.
 Proof.
   induction 1 in n, decl, eq |- *. simpl.
-  - destruct n; simpl; elimtype False; discriminate eq.
+  - destruct n; simpl; exfalso; discriminate eq.
   - destruct n; simpl.
     + cbn [skipn]. simpl in *. split; tas.
       destruct (f_equal (fun e => match e with

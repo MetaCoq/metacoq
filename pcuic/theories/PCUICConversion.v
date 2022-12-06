@@ -1264,7 +1264,7 @@ Proof.
       eapply cumul_Sort_inv in X.
       split; constructor; auto.
     + destruct x as [na [b|] ty].
-      * elimtype False.
+      * exfalso.
         apply assumption_context_app in H0.
         destruct H0. inv a0.
       * rewrite it_mkProd_or_LetIn_app in X.
@@ -1278,13 +1278,13 @@ Proof.
     simpl in X.
     eapply assumption_context_app in H as [H H'].
     destruct x as [na [b|] ty].
-    + elimtype False. inv H'.
+    + exfalso. inv H'.
     + rewrite /mkProd_or_LetIn /= in X.
       destruct ctx' using rev_ind.
       * simpl in X.
         now eapply ws_cumul_pb_Prod_Sort_inv in X.
       * eapply assumption_context_app in H0 as [H0 Hx].
-        destruct x as [na' [b'|] ty']; [elimtype False; inv Hx|].
+        destruct x as [na' [b'|] ty']; [exfalso; inv Hx|].
         rewrite it_mkProd_or_LetIn_app in X.
         rewrite /= /mkProd_or_LetIn /= in X.
         eapply cumul_Prod_Prod_inv in X as [eqann [Hdom Hcodom]]; auto.

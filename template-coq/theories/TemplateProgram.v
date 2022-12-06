@@ -43,12 +43,14 @@ Proof. intros [[wfΣ _]]. eapply TemplateEnvMap.wf_fresh_globals, wfΣ. Qed.
 Definition make_template_program_env {cf : checker_flags} (p : template_program) (wtp : ∥ wt_template_program p ∥) : template_program_env :=
   (GlobalEnvMap.make p.1 (wt_template_program_fresh p wtp), p.2).
 
-Program Definition build_template_program_env {cf : checker_flags} :
+(** We kludge the normalisation assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
+
+Program Definition build_template_program_env {cf : checker_flags} K :
   Transform.t template_program template_program_env Ast.term Ast.term eval_template_program eval_template_program_env :=
   {| name := "rebuilding environment lookup table";
-     pre p := ∥ wt_template_program p ∥ ;
-     transform p pre := make_template_program_env p pre;
-     post p := ∥ wt_template_program_env p ∥;
+     pre p := ∥ wt_template_program p ∥ /\ forall pf, K (GlobalEnvMap.make p.1 (wt_template_program_fresh p pf)) : Prop ;
+     transform p pre := make_template_program_env p (proj1 pre);
+     post p := ∥ wt_template_program_env p ∥ /\ K p.1;
      obseq g g' v v' := v = v' |}.
 Next Obligation.
   cbn. exists v. cbn; split; auto.

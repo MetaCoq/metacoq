@@ -1,8 +1,0 @@
-@@ -5,6 +5,7 @@
- open Datatypes
- open Zbool
- open Zpower
-+open Float64
- 
- type spec_float =
- | S754_zero of bool

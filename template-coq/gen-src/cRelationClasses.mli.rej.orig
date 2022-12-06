@@ -1,9 +1,0 @@
-@@ -103,7 +103,7 @@
- val flip_Equivalence :
-   ('a1, 'a2) coq_Equivalence -> ('a1, 'a2) coq_Equivalence
- 
--val eq_equivalence : ('a1, __) coq_Equivalence
-+val eq_equivalence : (__, __) coq_Equivalence
- 
- val iff_equivalence : (__, __) coq_Equivalence
- 

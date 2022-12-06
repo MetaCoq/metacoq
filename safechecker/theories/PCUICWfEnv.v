@@ -35,7 +35,6 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext
 
   (* Primitive decision procedures *)
   abstract_env_level_mem : abstract_env_ext_impl -> LevelSet.t -> Level.t -> bool;
-  abstract_env_ext_wf_universeb : abstract_env_ext_impl -> Universe.t -> bool;
   abstract_env_leqb_level_n : abstract_env_ext_impl -> Z -> Level.t -> Level.t -> bool;
   abstract_env_guard : abstract_env_ext_impl -> FixCoFix -> context -> mfixpoint term -> bool;
   abstract_env_is_consistent : abstract_env_impl -> VSet.t * GoodConstraintSet.t -> bool ;
@@ -64,6 +63,14 @@ Definition abstract_env_check_constraints {cf:checker_flags} {abstract_env_impl 
   (X:abstract_env_ext_impl) : ConstraintSet.t -> bool :=
     check_constraints_gen (abstract_env_leqb_level_n X).
 
+Definition abstract_env_ext_wf_universeb {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+(X:abstract_env_ext_impl) : Universe.t -> bool :=
+    fun (s : Universe.t) =>
+      match s with
+      | Universe.lType l => LevelExprSet.for_all (fun l => abstract_env_level_mem X LevelSet.empty (LevelExpr.get_level l)) l
+      | _ => true
+      end.
+
 Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type)
   `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop := {
     abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
@@ -78,8 +85,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     leqb_level_n_spec_gen uctx (abstract_env_leqb_level_n X);
   abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) levels u :
     LevelSet.mem u (LevelSet.union levels (global_ext_levels Σ)) = abstract_env_level_mem X levels u;
-  abstract_env_ext_wf_universeb_correct X_ext {Σ} (wfΣ : abstract_env_ext_rel X_ext Σ) u :
-      wf_universeb Σ u = abstract_env_ext_wf_universeb X_ext u;
   abstract_env_guard_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) fix_cofix Γ mfix :
       guard fix_cofix Σ Γ mfix <-> abstract_env_guard X fix_cofix Γ mfix;
   abstract_env_exists X : ∥ ∑ Σ , abstract_env_rel X Σ ∥;
@@ -265,4 +270,14 @@ Proof.
   split; intros.
   - eapply check_constraints_complete; eauto.
   - eapply check_constraints_spec; eauto.
+Qed.
+
+Lemma abstract_env_ext_wf_universeb_correct {cf:checker_flags} {X_type : abstract_env_impl}
+( X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
+  wf_universeb Σ u = abstract_env_ext_wf_universeb X u.
+Proof.
+  destruct u => //; destruct t as [ [] ?]; cbn. clear is_ok t_ne.
+  induction this => //; cbn.
+  erewrite <- abstract_env_level_mem_correct; eauto. cbn.
+  set (LevelSet.Raw.mem _). clearbody b. destruct b => //.
 Qed.

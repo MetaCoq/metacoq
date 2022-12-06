@@ -1066,7 +1066,7 @@ Section Typecheck.
   Next Obligation.
     symmetry in e; toProp e; destruct e as [-> | e]; [auto|right].
     specialize_Σ wfΣ; pose proof (heΣ _ wfΣ) as [heΣ].
-    eapply abstract_env_compare_universe_correct in e; eauto using wf_universe_type0.
+    eapply abstract_env_compare_universe_correct with (conv_pb := Conv) in e; eauto using wf_universe_type0.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ;
@@ -1075,7 +1075,7 @@ Section Typecheck.
     symmetry in e0; toProp e0; destruct e0 as [e1 e0].
     destruct H as [H|H]; [rewrite H in e1; discriminate e1 | clear e1].
     apply diff_false_true. rewrite -e0.
-    eapply abstract_env_compare_universe_correct; eauto using wf_universe_type0.
+    eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto using wf_universe_type0.
   Qed.
 
   Notation wt_brs Γ ci mdecl idecl p ptm ctors brs n :=
@@ -1837,7 +1837,7 @@ Section Typecheck.
       rewrite - !smash_context_subst /= !subst_context_nil.
       erewrite <- compare_global_instance_correct in i1; eauto.
       2: intros; eapply iff_reflect;
-        eapply (abstract_env_compare_universe_correct _ wfΣ _);
+        eapply abstract_env_compare_universe_correct  with (conv_pb := Cumul);
         try eassumption; apply wf_universe_iff; eauto.
       2: { eapply consistent_instance_ext_wf; eauto. }
       2: { eapply consistent_instance_ext_wf; eauto. }
@@ -1943,7 +1943,7 @@ Section Typecheck.
       - now eapply negbTE.
     - erewrite <- compare_global_instance_correct in i1; eauto.
       1: intros; eapply iff_reflect;
-        eapply (abstract_env_compare_universe_correct _ wfΣ Cumul);
+        eapply abstract_env_compare_universe_correct  with (conv_pb := Cumul);
         try eassumption; apply wf_universe_iff; eauto.
       1: { apply/wf_universe_instanceP.
         rewrite -wf_universeb_instance_forall.
@@ -2127,7 +2127,7 @@ Section Typecheck.
       2: eassumption.
       erewrite <- All2_length ; tea.
     - intros. eapply iff_reflect.
-      eapply (abstract_env_compare_universe_correct _ wfΣ Cumul);
+      eapply abstract_env_compare_universe_correct with (conv_pb := Cumul);
       try eassumption; apply wf_universe_iff; eauto.
     - apply/wf_universe_instanceP.
       rewrite -wf_universeb_instance_forall.
@@ -2303,7 +2303,7 @@ Section Typecheck.
       destruct (on_declared_inductive decl) eqn:ond.
       rewrite -o.(onNpars) -Hl.
       pose proof (o0.(onProjections)) as onps.
-      assert (H : p0 :: l <> []) by discriminate. 
+      assert (H : p0 :: l <> []) by discriminate.
       rewrite eq in onps.
       destruct ind_ctors as [|cs []]; auto.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).

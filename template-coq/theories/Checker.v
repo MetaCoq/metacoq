@@ -874,36 +874,36 @@ Section Checker.
                           acc ;; check_wf_type body.(ind_name) Σ G body.(ind_type))
                        inds.(ind_bodies) (ret ()).
 
-    (** The [ List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) assoc_list_sf (ret ()) ]
-      cannot be defined as another fixpoint, otherwise Coq "cannot guess the decreasing argument",
-      since it is not the term being destructed. *)
-    Fixpoint check_wf_mod_body Σ G impl (modtype_wf: EnvCheck ()): EnvCheck () :=
-        match impl with
-        | mi_abstract => modtype_wf
-        (** TODO: check (get_definition a) <: modtype*)
-        | mi_algebraic _ => CorrectDecl ()
-        (** TODO: check assoc_list_modtype <: modtype*)
-        | mi_struct assoc_list_sf => 
-      List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) assoc_list_sf (ret ())
-        | mi_fullstruct => modtype_wf
-        end 
-    
+    (* FIXME: modify this to follow closely https://coq.inria.fr/refman/language/core/modules.html#typing-modules *)
+    Fixpoint check_wf_mod_impl Σ G impl: EnvCheck () :=
+    match impl with
+    | mi_abstract | mi_fullstruct | mi_algebraic _ => CorrectDecl ()
+    | mi_struct sb => check_wf_structure_body Σ G sb
+    end 
     with check_wf_structure_field Σ G kn sf: EnvCheck () :=
-      match sf with
-        | sfconst cst => check_wf_const_body Σ G kn cst
-        | sfmind inds => check_wf_ind_body Σ G inds
-        | sfmod (impl, modtype) => check_wf_mod_body Σ G impl 
-          (List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) modtype (ret ()))
-        | sfmodtype mt => 
-          List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) mt (ret ())
-      end.
+    match sf with
+    | sfconst cst => check_wf_const_body Σ G kn cst
+    | sfmind inds => check_wf_ind_body Σ G inds
+    | sfmod impl modtype => check_wf_mod_impl Σ G impl ;; check_wf_structure_body Σ G modtype
+    | sfmodtype mt => check_wf_structure_body Σ G mt
+    end
+    with check_wf_structure_body Σ G sb : EnvCheck() :=
+    match sb with
+    | sb_nil => CorrectDecl ()
+    | sb_cons kn sf sb' => check_wf_structure_field Σ G kn sf ;; check_wf_structure_body Σ G sb'
+    end.
+
+    Definition check_wf_modtype_decl := check_wf_structure_body.
+
+    Definition check_wf_mod_decl Σ G m :=
+      check_wf_mod_impl Σ G m.1 ;; check_wf_modtype_decl Σ G m.2.
 
     Definition check_wf_decl Σ G kn (g : global_decl) : EnvCheck () :=
       match g with
       | ConstantDecl cst => check_wf_const_body Σ G kn cst
       | InductiveDecl inds => check_wf_ind_body Σ G inds
-      | ModuleDecl (impl, modtype) => check_wf_mod_body Σ G impl (List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) modtype (ret ()))
-      | ModuleTypeDecl mt => List.fold_left (fun acc '(kn, sf) => acc ;; check_wf_structure_field Σ G kn sf) mt (ret ())
+      | ModuleDecl m => check_wf_mod_decl Σ G m
+      | ModuleTypeDecl mt => check_wf_modtype_decl Σ G mt
       end.
 
   Fixpoint check_fresh id (env : global_declarations) : EnvCheck () :=

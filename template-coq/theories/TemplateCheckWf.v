@@ -19,18 +19,26 @@ Definition check_const_decl_def kn const_decl : TemplateMonad unit :=
   | None => ret tt
   end.
 
-Fixpoint check_mod_decl_def kn impl modtype {struct impl}:=
+Fixpoint check_mod_impl_def impl {struct impl}:=
   match impl with
-  | mi_struct sb => let _ := map (fun '(kn, sf) => check_structure_field_def kn sf) sb in ret tt
+  | mi_struct sb => check_structure_body_def sb ;; ret tt
   | _ => ret tt
   end
 with check_structure_field_def kn sf :=
   match sf with
   | sfconst cb => check_const_decl_def kn cb
   | sfmind _ => ret tt
-  | sfmod (impl, modtype) => check_mod_decl_def kn impl modtype
-  | sfmodtype sb => let _ := map (fun '(kn, sf) => check_structure_field_def kn sf) sb in ret tt
+  | sfmod impl modtype => check_mod_impl_def impl ;; check_structure_body_def modtype
+  | sfmodtype sb => check_structure_body_def sb
+  end
+with check_structure_body_def sb :=
+  match sb with
+  | sb_nil => ret tt
+  | sb_cons kn sf sb' => check_structure_field_def kn sf ;; check_structure_body_def sb'
   end.
+
+Definition check_modtype_def := check_structure_body_def.
+Definition check_mod_decl_def m := check_mod_impl_def m.1 ;; check_modtype_def m.2.
 
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
@@ -43,8 +51,8 @@ Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
     | None => ret tt
     end
   | InductiveDecl idecl => ret tt
-  | ModuleDecl (impl, modtype) => check_mod_decl_def d.1 impl modtype
-  | ModuleTypeDecl sb => let _ := map (fun '(kn,sf) => check_structure_field_def kn sf) sb in ret tt
+  | ModuleDecl m => check_mod_decl_def m
+  | ModuleTypeDecl sb => check_modtype_def sb
   end.
 
 Definition is_nil {A} (l : list A) :=
@@ -75,30 +83,37 @@ Fixpoint wfterm (t : term) : bool :=
 
 From Coq Require Import ssrbool.
 
-Fixpoint wf_module_decl_aux impl wf_modtype :=
+Definition wf_constant_body cb := wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true.
+
+Fixpoint wf_module_impl impl :=
   match impl with
-  | mi_abstract => wf_modtype
-  | mi_algebraic _ => wf_modtype
-  | mi_struct sb => List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) sb true
-  | mi_fullstruct => wf_modtype
+  | mi_struct sb => wf_structure_body sb
+  | _ => true
   end
 with wf_structure_field sf :=
-match sf with
-| sfconst cb => wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true
-| sfmind _ => true
-| sfmod (impl, modtype) =>
-    wf_module_decl_aux impl (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
-| sfmodtype mt => List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) mt true
-end.
+  match sf with
+  | sfconst cb => wf_constant_body cb
+  | sfmind _ => true
+  | sfmod impl modtype => wf_module_impl impl && wf_structure_body modtype
+  | sfmodtype mt => wf_structure_body mt
+  end
+with wf_structure_body sb :=
+  match sb with 
+  | sb_nil => true
+  | sb_cons kn sf sb' => wf_structure_field sf && wf_structure_body sb'
+  end.
+
+Definition wf_module_type := wf_structure_body.
+Definition wf_module_decl m := wf_module_impl m.1 && wf_structure_body m.2.
 
 Definition wf_global_decl d := 
   match d with
-  | ConstantDecl cb => wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true
+  | ConstantDecl cb => wf_constant_body cb
   | InductiveDecl idecl => true
-  | ModuleDecl (impl, modtype) =>
-      wf_module_decl_aux impl (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
-  | ModuleTypeDecl modtype => (List.fold_left (fun acc kn_sf => acc && wf_structure_field kn_sf.2) modtype true)
+  | ModuleDecl m => wf_module_decl m
+  | ModuleTypeDecl modtype => wf_module_type modtype
   end.
+
 Definition wf_global_declarations : global_declarations -> bool := forallb (wf_global_decl ∘ snd).
 Definition wf_global_env (g : global_env) := wf_global_declarations g.(declarations).
 Definition wf_program p := wf_global_env p.1 && wfterm p.2.

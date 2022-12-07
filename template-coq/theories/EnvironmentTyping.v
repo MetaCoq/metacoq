@@ -1198,43 +1198,38 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     (** Interactive definitions are stored in modtype if not type-annotated.
       Otherwise, the interactive definition is in impl, type annotation in modtype. *)
-    Inductive on_structure_field Σ: (kername × structure_field) -> Type :=
-      | on_sfconst kn c : on_constant_decl Σ c -> on_structure_field Σ (kn, sfconst c)
-      | on_sfmind kn inds : on_inductive Σ kn inds -> on_structure_field Σ (kn, sfmind inds)
-      | on_sfmod kn mb : on_module_decl Σ mb -> on_structure_field Σ (kn, sfmod mb)
-      | on_sfmodtype kn mtd : on_structure_body Σ mtd -> on_structure_field Σ (kn, sfmodtype mtd)
+    Inductive on_structure_field Σ : kername -> structure_field -> Type :=
+      | on_sfconst kn c : on_constant_decl Σ c -> on_structure_field Σ kn (sfconst c)
+      | on_sfmind kn inds : on_inductive Σ kn inds -> on_structure_field Σ kn (sfmind inds)
+      | on_sfmod kn mi sb : on_module_impl Σ mi -> on_structure_body Σ sb -> on_structure_field Σ kn (sfmod mi sb)
+      | on_sfmodtype kn mtd : on_structure_body Σ mtd -> on_structure_field Σ kn (sfmodtype mtd)
 
-    with on_structure_body Σ : structure_body structure_field -> Type :=
-      | on_sb_nil : on_structure_body Σ []
-      | on_sb_cons hd tl : on_structure_field Σ hd -> on_structure_body Σ tl -> on_structure_body Σ (hd :: tl)
-
-    with on_module_decl Σ : module_decl -> Type :=
-    (** Declare Module M: T, so check T *)
-    | on_mi_abstract_decl modtype:
-      on_structure_body Σ modtype -> on_module_decl Σ (mi_abstract, modtype)
-
-    (** Module M := N, so check N *)
-    | on_mi_algebraic_decl (kn: kername) moddecl:
-      declared_module Σ kn moddecl -> on_module_decl Σ ((mi_algebraic kn), moddecl.2)
-
-    (** Module M:T ... End M, so check impl, check T, and and whether impl: T *)
-    | on_mi_struct_decl (body: structure_decl) (modtype: module_type_decl):
-      (on_structure_body Σ body )
-      -> (on_structure_body Σ modtype)
-      -> on_module_decl Σ ((mi_struct body), modtype)
-
-    (** Module M ... End M, so check impl *)
-    | on_mi_fullstruct_decl body:
-      on_structure_body Σ body 
-      -> on_module_decl Σ (mi_fullstruct, body).
+    with on_structure_body Σ : structure_body -> Type :=
+      | on_sb_nil : on_structure_body Σ sb_nil
+      | on_sb_cons kn sf sb : on_structure_field Σ kn sf
+                              -> on_structure_body Σ sb
+                              -> on_structure_body Σ (sb_cons kn sf sb)
+    with on_module_impl Σ : module_implementation -> Type :=
+      | on_mi_abstract : on_module_impl Σ mi_abstract
+      | on_mi_algebraic kn : on_module_impl Σ (mi_algebraic kn)
+      | on_mi_struct sb : on_structure_body Σ sb -> on_module_impl Σ (mi_struct sb)
+      | on_mi_fullstruct : on_module_impl Σ mi_fullstruct.
+    (* with on_module_decl Σ : (module_implementation × module_type_decl) -> Type :=
+      | on_mi_abstract_decl mt : on_structure_body Σ mt -> on_module_decl Σ (mi_abstract, mt)
+      | on_mi_algebraic_decl kn mt: on_structure_body Σ mt -> on_module_decl Σ ((mi_algebraic kn), mt)
+      | on_mi_struct_decl sb mt: on_structure_body Σ mt -> on_structure_body Σ sb -> on_module_decl Σ ((mi_struct sb), mt)
+      | on_mi_fullstruct_decl mt: on_structure_body Σ mt -> on_module_decl Σ (mi_fullstruct, mt). *)
+    
+    Definition on_module_type_decl := on_structure_body.
+    Definition on_module_decl Σ m := on_module_impl Σ m.1 × on_module_type_decl Σ m.2.
 
     Scheme onStructField_rect := Induction for on_structure_field Sort Type
-    with onModuleDecl_rect := Induction for on_module_decl Sort Type
+    with onModuleImpl_rect := Induction for on_module_impl Sort Type
     with onStructBody_rect := Induction for on_structure_body Sort Type.
 
     (** Generate mutual induction principle for module declarations. *)
-    Combined Scheme on_moddecl_structfield_structbody_mutrect from
-    onModuleDecl_rect,onStructField_rect,onStructBody_rect.
+    Combined Scheme on_mi_sf_sb_mutrect from
+    onModuleImpl_rect,onStructField_rect,onStructBody_rect.
 
     Definition on_global_decl Σ kn decl :=
       match decl with
@@ -1389,26 +1384,19 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     on_global_decl Pcmp P Σ kn d -> on_global_decl Pcmp Q Σ kn d.
   Proof.
   intros H HP.
-  cut ((forall (m : module_decl), on_module_decl Pcmp P Σ m -> on_module_decl Pcmp Q Σ m)
-    × (forall (p : kername × structure_field), on_structure_field Pcmp P Σ p -> on_structure_field Pcmp Q Σ p)
-    × (forall (s : structure_body structure_field), on_structure_body Pcmp P Σ s -> on_structure_body Pcmp Q Σ s)).
+  cut ((forall (m : module_implementation), on_module_impl Pcmp P Σ m -> on_module_impl Pcmp Q Σ m)
+    × (forall (kn: kername) (p : structure_field), on_structure_field Pcmp P Σ kn p -> on_structure_field Pcmp Q Σ kn p)
+    × (forall (s : structure_body), on_structure_body Pcmp P Σ s -> on_structure_body Pcmp Q Σ s)).
   intro md_sf_sb.
   destruct d; simpl.
   - now eapply on_constant_decl_impl.
   - now eapply on_inductive_decl_impl.
+  - unfold on_module_decl. destruct m as [mi mt]; simpl.
+    intros [onmip onmtp]. split; now apply md_sf_sb.
   - apply md_sf_sb.
-  - apply md_sf_sb.
-  - eapply (on_moddecl_structfield_structbody_mutrect).
-    -- intros kn0 c0 HP1. apply (on_sfconst Pcmp Q Σ kn0 c0). now apply (on_constant_decl_impl Pcmp P).
-    -- intros mind mind_body P1. apply (on_sfmind Pcmp Q Σ mind mind_body). now apply (on_inductive_decl_impl Pcmp P).
-    -- intros. now apply on_sfmod.
-    -- intros. now apply on_sfmodtype.
-    -- intros. now apply on_mi_abstract_decl.
-    -- intros. now apply on_mi_algebraic_decl.
-    -- intros. now apply on_mi_struct_decl.
-    -- intros. now apply on_mi_fullstruct_decl.
-    -- apply on_sb_nil.
-    -- intros. now apply on_sb_cons.
+  - apply (on_mi_sf_sb_mutrect); try now constructor.
+    -- intros kn' c oncp. constructor. now apply on_constant_decl_impl with (Pcmp := Pcmp) (P := P).
+    -- intros kn' mind onip. constructor. now apply on_inductive_decl_impl with (Pcmp := Pcmp) (P := P).
   Qed.
 
   Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
@@ -1509,60 +1497,35 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T
       (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
-    clear IHX0. destruct d; simpl.
+    clear IHX0.
+    destruct d; simpl.
 
     - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
 
     - simpl in *. apply on_inductive_decl_impl with (P := P); auto.
       unfold on_global_env; auto.
 
-    - simpl in *. 
-      assert (udecl0 = Monomorphic_ctx) by auto.
-      rewrite H0 in on_udecl_udecl0, on_global_decl_d0, X.
-      assert (udecl1 = Monomorphic_ctx) by auto.
-      rewrite H1 in on_udecl_udecl1, on_global_decl_d1.
-      clear H0 H1 udecl0 udecl1.
-      remember ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx) as gex; simpl in *.
-      cut ((forall (m : module_decl), on_module_decl cumul_gen P gex m -> on_module_decl cumul_gen Q gex m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen P gex p -> on_structure_field cumul_gen Q gex p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      -- intro md_sf_sb. apply md_sf_sb. exact on_global_decl_d0.
-      -- apply on_moddecl_structfield_structbody_mutrect.
-        --- intros. apply on_sfconst. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        --- intros. apply on_sfmind. apply on_inductive_decl_impl with (P:=P); auto.
-            unfold on_global_env. rewrite Heqgex; auto.
-        --- intros. now apply on_sfmod.
-        --- intros. now apply on_sfmodtype.
-        --- intros. now apply on_mi_abstract_decl.
-        --- intros. now apply on_mi_algebraic_decl.
-        --- intros. now apply on_mi_struct_decl.
-        --- intros. now apply on_mi_fullstruct_decl.
-        --- apply on_sb_nil.
-        --- intros. now apply on_sb_cons.
+    - set (gex := ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx)).
+      cut ((forall (m : module_implementation), on_module_impl cumul_gen P gex m -> on_module_impl cumul_gen Q gex m)
+        × (forall (kn: kername) (p: structure_field), on_structure_field cumul_gen P gex kn p -> on_structure_field cumul_gen Q gex kn p)
+        × (forall (s : structure_body), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
+      intros [Hmi [Hsf Hsb]].
+      -- constructor; destruct on_global_decl_d0 as [omip omtp].
+        + now apply Hmi. 
+        + now apply Hsb.
+      -- apply on_mi_sf_sb_mutrect; try now constructor.
+        + constructor. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+        + constructor. apply on_inductive_decl_impl with (P := P); unfold on_global_env; auto.
 
-    - simpl in *. 
-      assert (udecl0 = Monomorphic_ctx) by auto.
-      rewrite H0 in on_udecl_udecl0, on_global_decl_d0, X.
-      assert (udecl1 = Monomorphic_ctx) by auto.
-      rewrite H1 in on_udecl_udecl1, on_global_decl_d1.
-      clear H0 H1 udecl0 udecl1.
-      remember ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx) as gex; simpl in *.
-      cut ((forall (m : module_decl), on_module_decl cumul_gen P gex m -> on_module_decl cumul_gen Q gex m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen P gex p -> on_structure_field cumul_gen Q gex p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      -- intro md_sf_sb. apply md_sf_sb. exact on_global_decl_d0.
-      -- apply on_moddecl_structfield_structbody_mutrect.
-        --- intros. apply on_sfconst. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        --- intros. apply on_sfmind. apply on_inductive_decl_impl with (P:=P); auto.
-            unfold on_global_env. rewrite Heqgex; auto.
-        --- intros. now apply on_sfmod.
-        --- intros. now apply on_sfmodtype.
-        --- intros. now apply on_mi_abstract_decl.
-        --- intros. now apply on_mi_algebraic_decl.
-        --- intros. now apply on_mi_struct_decl.
-        --- intros. now apply on_mi_fullstruct_decl.
-        --- apply on_sb_nil.
-        --- intros. now apply on_sb_cons.
+    - set (gex := ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx)).
+      cut ((forall (m : module_implementation), on_module_impl cumul_gen P gex m -> on_module_impl cumul_gen Q gex m)
+        × (forall (kn: kername) (p: structure_field), on_structure_field cumul_gen P gex kn p -> on_structure_field cumul_gen Q gex kn p)
+        × (forall (s : structure_body), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
+      intros [Hmi [Hsf Hsb]].
+      -- destruct on_global_decl_d0; now constructor.
+      -- apply on_mi_sf_sb_mutrect; try now constructor.
+        + constructor. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+        + constructor. apply on_inductive_decl_impl with (P := P); unfold on_global_env; auto.
   Qed.
 
 End DeclarationTyping.

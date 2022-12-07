@@ -1352,23 +1352,22 @@ Proof.
         apply lift_typing_impl with (1 := HT); intros ? Hs.
         apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
         constructor 1. simpl. subst Σ' Σg; cbn; lia.
-    + cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
-            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
+
+    + cut ((forall (m : module_implementation), on_module_impl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
+            -> on_module_impl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
+        × (forall (k: kername) (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p)
+        × (forall (s : structure_body), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
             -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
-      * intros md_sf_sb. apply md_sf_sb. apply Xg.
+      * intros md_sf_sb. constructor; apply md_sf_sb; apply Xg.
       (** start of mutual induction *)
-      * apply on_moddecl_structfield_structbody_mutrect.
-        -- intros. apply on_sfconst.
-          destruct c; simpl in *.
+      * apply on_mi_sf_sb_mutrect; try now constructor.
+        -- constructor. destruct c; simpl in *.
           destruct cst_body0; apply lift_typing_impl with (1 := o0); intros ? Hs.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-        -- intros. apply on_sfmind. 
-          destruct o0 as [onI onP onnp]; constructor; eauto.
+        -- constructor. destruct o0 as [onI onP onnp]; constructor; eauto.
           --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
             constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
             clear IH; rename IH' into IH.
@@ -1407,31 +1406,23 @@ Proof.
             apply lift_typing_impl with (1 := HT); intros ? Hs.
             apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
             constructor 1. simpl. subst Σ' Σg; cbn; lia.
-        -- intros; now apply on_sfmod.
-        -- intros; now apply on_sfmodtype.
-        -- intros; now apply on_mi_abstract_decl.
-        -- intros; now apply on_mi_algebraic_decl.
-        -- intros; now apply on_mi_struct_decl.
-        -- intros; now apply on_mi_fullstruct_decl.
-        -- constructor.
-        -- intros. now apply on_sb_cons.
-    + cut ((forall (m : module_decl), on_module_decl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
-            -> on_module_decl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
-        × (forall (p : kername × structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
-        × (forall (s : structure_body structure_field), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
+
+    + cut ((forall (m : module_implementation), on_module_impl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
+            -> on_module_impl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
+        × (forall (k: kername) (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p)
+        × (forall (s : structure_body), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
             -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
-      * intros md_sf_sb. apply md_sf_sb. apply Xg.
+      * intros md_sf_sb. apply md_sf_sb; apply Xg.
       (** start of mutual induction *)
-      * apply on_moddecl_structfield_structbody_mutrect.
+      * apply on_mi_sf_sb_mutrect; try now constructor.
         -- intros. apply on_sfconst.
           destruct c; simpl in *.
           destruct cst_body0; apply lift_typing_impl with (1 := o0); intros ? Hs.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-        -- intros. apply on_sfmind. 
-          destruct o0 as [onI onP onnp]; constructor; eauto.
+        -- constructor. destruct o0 as [onI onP onnp]; constructor; eauto.
           --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
             constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
             clear IH; rename IH' into IH.
@@ -1470,14 +1461,6 @@ Proof.
             apply lift_typing_impl with (1 := HT); intros ? Hs.
             apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hs))).
             constructor 1. simpl. subst Σ' Σg; cbn; lia.
-        -- intros; now apply on_sfmod.
-        -- intros; now apply on_sfmodtype.
-        -- intros; now apply on_mi_abstract_decl.
-        -- intros; now apply on_mi_algebraic_decl.
-        -- intros; now apply on_mi_struct_decl.
-        -- intros; now apply on_mi_fullstruct_decl.
-        -- constructor.
-        -- intros. now apply on_sb_cons.
 
   - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
                typing_size Hty < typing_size H ->

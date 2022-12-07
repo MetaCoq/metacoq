@@ -320,25 +320,28 @@ Module Environment (T : Term).
 
   (** See [generic_module_body] from [declarations.ml]. We do not include the modpath
     in the body since it is already included in [global_declarations]. *)
-  Definition structure_body structure_field := list (kername × structure_field).
-  Definition module_type_body structure_field := structure_body structure_field.
   (** implementation -> module type -> algebraic (colon-annotated) module type (TODO) *)
   Inductive structure_field :=
   | sfconst : constant_body -> structure_field
   | sfmind : mutual_inductive_body -> structure_field
-  (** TODO: Consider currying impl and modtype. *)
-  (* | sfmod : module_implementation -> module_type_body structure_field -> structure_field *)
-  | sfmod : module_implementation × (module_type_body structure_field) -> structure_field
-  | sfmodtype : module_type_body structure_field-> structure_field
+  | sfmod : module_implementation -> structure_body -> structure_field
+  | sfmodtype : structure_body -> structure_field
   with module_implementation :=
   | mi_abstract : module_implementation (** Declare Module M: T. *)
   | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
-  | mi_struct : structure_body structure_field -> module_implementation (** Module M:T. ... End M.*)
-  | mi_fullstruct : module_implementation. (** Module M. ... End M.*)
-  (** Is a [module_body] without implementation. *)
+  | mi_struct : structure_body -> module_implementation (** Module M:T. ... End M.*)
+  | mi_fullstruct : module_implementation (** Module M. ... End M.*)
+  with structure_body :=
+  | sb_nil
+  | sb_cons : kername -> structure_field -> structure_body -> structure_body.
 
-  Definition structure_decl := structure_body structure_field.
-  Definition module_type_decl := module_type_body structure_field.
+  Scheme structureField_rect := Induction for structure_field Sort Type
+  with moduleImpl_rect := Induction for module_implementation Sort Type
+  with structureBody_rect := Induction for structure_body Sort Type.
+
+  Combined Scheme sf_mi_sb_mutind from structureField_rect, moduleImpl_rect, structureBody_rect.
+
+  Definition module_type_decl := structure_body.
   Definition module_decl := module_implementation × module_type_decl.
 
   Inductive global_decl :=

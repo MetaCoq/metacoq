@@ -204,33 +204,34 @@ Definition eta_minductive_decl Σ mdecl :=
      ind_universes := mdecl.(ind_universes);
      ind_variance := mdecl.(ind_variance); |}.
 
-Fixpoint eta_module_decl Σ impl eta_modtype {struct impl}:=
- match impl with
- | mi_struct struct_body => 
-    let new_impl := mi_struct (map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) struct_body) in
-      (new_impl, eta_modtype)
- | _ => (impl, eta_modtype)
- end
- with eta_structure_field Σ sf {struct sf}:= match sf with
- | sfconst c => sfconst (eta_global_decl Σ c)
- | sfmind m => sfmind (eta_minductive_decl Σ m)
- | sfmod (impl, modtype) =>
-  let new_modtype := (map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype) in
-    sfmod (eta_module_decl Σ impl new_modtype)
- | sfmodtype modtype => sfmodtype ((map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype))
- end.
-  
- Definition eta_module_type_decl Σ (modtype: list (kername × structure_field)) :=
-  map (fun '(kn, sf) => (kn, eta_structure_field Σ sf)) modtype.
+Fixpoint eta_structure_field Σ sf :=
+  match sf with
+  | sfconst c => sfconst (eta_global_decl Σ c)
+  | sfmind m => sfmind (eta_minductive_decl Σ m)
+  | sfmod impl modtype => sfmod (eta_module_impl Σ impl) (eta_structure_body Σ modtype)
+  | sfmodtype modtype => sfmodtype (eta_structure_body Σ modtype)
+  end
+with eta_module_impl Σ mi :=
+  match mi with
+  | mi_struct sb => mi_struct (eta_structure_body Σ sb)
+  | _ => mi
+  end
+with eta_structure_body Σ mt :=
+  match mt with
+  | sb_nil => sb_nil
+  | sb_cons kn sf sb => sb_cons kn (eta_structure_field Σ sf) (eta_structure_body Σ sb)
+end.
 
- Definition eta_structure_body Σ (sb: list (kername × structure_field)) := eta_module_type_decl Σ sb.
+Definition eta_module_type_decl := eta_structure_body.
+
+Definition eta_module_decl Σ m :=
+  (eta_module_impl Σ m.1, eta_module_type_decl Σ m.2).
 
 Definition eta_global_declaration (Σ : GlobalEnvMap.t) decl : global_decl :=
   match decl with
   | ConstantDecl cb => ConstantDecl (eta_global_decl Σ cb)
   | InductiveDecl idecl => InductiveDecl (eta_minductive_decl Σ idecl)
-  | ModuleDecl (impl, modtype) => let new_modtype := eta_module_type_decl Σ modtype in
-      ModuleDecl (eta_module_decl Σ impl new_modtype)
+  | ModuleDecl mdecl => ModuleDecl (eta_module_decl Σ mdecl)
   | ModuleTypeDecl modtype => ModuleTypeDecl (eta_module_type_decl Σ modtype)
   end.
 
@@ -429,42 +430,37 @@ Record expanded_minductive_decl Σ mdecl :=
   { expanded_params : expanded_context Σ [] mdecl.(ind_params);
     expanded_ind_bodies : Forall (expanded_inductive_decl Σ mdecl) mdecl.(ind_bodies) }.
 
-Inductive expanded_structure_field Σ: (kername × structure_field) -> Prop :=
-  | expanded_sfconst kn c : expanded_constant_decl Σ c -> expanded_structure_field Σ (kn, sfconst c)
-  | expanded_sfmind kn inds : expanded_minductive_decl Σ inds -> expanded_structure_field Σ (kn, sfmind inds)
-  | expanded_sfmod kn mb : expanded_module_decl Σ mb -> expanded_structure_field Σ (kn, sfmod mb)
-  | expanded_sfmodtype kn mtd : expanded_structure_body Σ mtd -> expanded_structure_field Σ (kn, sfmodtype mtd)
+Inductive expanded_structure_field Σ: kername -> structure_field -> Prop :=
+  | expanded_sfconst kn c : expanded_constant_decl Σ c -> expanded_structure_field Σ kn (sfconst c)
+  | expanded_sfmind kn inds : expanded_minductive_decl Σ inds -> expanded_structure_field Σ kn (sfmind inds)
+  | expanded_sfmod kn mi mt:
+    expanded_module_impl Σ mi ->
+    expanded_structure_body Σ mt ->
+    expanded_structure_field Σ kn (sfmod mi mt)
+  | expanded_sfmodtype kn mtd : expanded_structure_body Σ mtd -> expanded_structure_field Σ kn (sfmodtype mtd)
 
-with expanded_structure_body Σ : structure_body structure_field -> Prop :=
-  | expanded_sb_nil : expanded_structure_body Σ []
-  | expanded_sb_cons hd tl : expanded_structure_field Σ hd -> expanded_structure_body Σ tl -> expanded_structure_body Σ (hd :: tl)
+with expanded_structure_body Σ : structure_body -> Prop :=
+  | expanded_sb_nil : expanded_structure_body Σ sb_nil
+  | expanded_sb_cons kn sf tl :
+    expanded_structure_field Σ kn sf ->
+    expanded_structure_body Σ tl ->
+    expanded_structure_body Σ (sb_cons kn sf tl)
 
-with expanded_module_decl Σ : module_decl -> Prop :=
-(** Declare Module M: T, so expand T *)
-| expanded_mi_abstract_decl modtype:
-  expanded_structure_body Σ modtype -> expanded_module_decl Σ (mi_abstract, modtype)
+with expanded_module_impl Σ : module_implementation -> Prop :=
+  | expanded_mi_abstract : expanded_module_impl Σ mi_abstract
+  | expanded_mi_algebraic kn : expanded_module_impl Σ (mi_algebraic kn)
+  | expanded_mi_struct sb : expanded_structure_body Σ sb -> expanded_module_impl Σ (mi_struct sb)
+  | expanded_mi_fullstruct : expanded_module_impl Σ mi_fullstruct.
 
-(** Module M := N, if N is declared in Σ it must be expanded. *)
-(** induction-recursion *)
-| expanded_mi_algebraic_decl (kn: kername) (moddecl: module_decl):
-  expanded_module_decl Σ ((mi_algebraic kn), moddecl.2)
-
-(** Module M:T ... End M, so expand impl and T *)
-| expanded_mi_struct_decl (body: structure_decl) (modtype: module_type_decl):
-  (expanded_structure_body Σ body )
-  -> (expanded_structure_body Σ modtype)
-  -> expanded_module_decl Σ ((mi_struct body), modtype)
-
-(** Module M ... End M, so expand impl *)
-| expanded_mi_fullstruct_decl body:
-  expanded_structure_body Σ body 
-  -> expanded_module_decl Σ (mi_fullstruct, body).
+Definition expanded_modtype_decl := expanded_structure_body.
+Definition expanded_module_decl Σ m :=
+  expanded_module_impl Σ m.1 × expanded_modtype_decl Σ m.2.
 
 Scheme expanded_sf_ind := Induction for expanded_structure_field Sort Prop
 with expanded_sb_ind := Induction for expanded_structure_body Sort Prop
-with expanded_mod_ind := Induction for expanded_module_decl Sort Prop.
+with expanded_mi_ind := Induction for expanded_module_impl Sort Prop.
 
-Combined Scheme expanded_moddecl_structfield_structbody_mutind from expanded_mod_ind,expanded_sf_ind,expanded_sb_ind.
+Combined Scheme expanded_md_sf_sb_mutind from expanded_mi_ind, expanded_sf_ind, expanded_sb_ind.
 
 Definition expanded_decl Σ d :=
   match d with
@@ -1416,9 +1412,9 @@ Lemma expanded_decl_env_irrel (Σ Σ' : global_env) t :
 Proof.
   intros hrepr.
   unfold expanded_decl.
-  cut ((forall (m : module_decl), expanded_module_decl Σ m -> expanded_module_decl Σ' m) /\
-    (forall (p : kername × structure_field), expanded_structure_field Σ p -> expanded_structure_field Σ' p) /\
-    (forall (s : structure_body structure_field), expanded_structure_body Σ s -> expanded_structure_body Σ' s)).
+  cut ((forall (m : module_implementation), expanded_module_impl Σ m -> expanded_module_impl Σ' m) /\
+    (forall (k: kername) (p : structure_field), expanded_structure_field Σ k p -> expanded_structure_field Σ' k p) /\
+    (forall (s : structure_body), expanded_structure_body Σ s -> expanded_structure_body Σ' s)).
   intros [Hmd [Hsf Hsb]].
   destruct t => //; auto.
   - intros []. constructor.
@@ -1431,7 +1427,8 @@ Proof.
     solve_all. destruct H; split.
     eapply expanded_context_env_irrel; tea.
     eapply expanded_env_irrel; tea.
-  - apply expanded_moddecl_structfield_structbody_mutind; try now constructor.
+  - constructor; destruct H; auto. now apply Hsb.
+  - apply expanded_md_sf_sb_mutind; try now constructor.
     -- repeat constructor. destruct e. destruct (cst_body c) => //. cbn in *. now eapply expanded_env_irrel.
     -- constructor. split; destruct e; solve_all.
       + eapply expanded_context_env_irrel; tea.
@@ -1568,6 +1565,24 @@ Proof.
   now rewrite map_repeat in H.
 Qed.
 
+Lemma eta_expand_modtype_decl_expanded {cf : checker_flags} (Σ : global_env_ext) (Σg : global_env_ext_map) mt :
+  repr_decls Σg Σ ->
+  Typing.wf_ext Σ ->
+  on_structure_body cumul_gen (lift_typing typing) Σ mt ->
+  expanded_modtype_decl Σ (eta_module_type_decl Σg mt).
+Proof.
+  intros hrepr wf onm.
+  assert (H_md_sf_sd: (forall (m : module_implementation) (e : on_module_impl cumul_gen (lift_typing typing) Σ m), expanded_module_impl Σ (eta_module_impl Σg m)) ×
+    (forall (k: kername) (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ k p), expanded_structure_field Σ k (eta_structure_field Σg p)) ×
+    (forall (s : structure_body) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
+  {
+    apply on_mi_sf_sb_mutrect; try now constructor; simpl.
+    - intros kn c onc. constructor. now apply eta_expand_constant_decl_expanded.
+    - intros kn i oni. constructor. now apply eta_expand_inductive_expanded with (kn := kn).
+  }
+  destruct onm; now repeat constructor.
+Qed.
+
 Lemma eta_expand_global_decl_expanded {cf : checker_flags} (Σ : global_env_ext) (Σg : global_env_ext_map) kn d :
   repr_decls Σg Σ ->
   Typing.wf_ext Σ ->
@@ -1575,22 +1590,18 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} (Σ : global_env_ext)
   expanded_decl Σ (eta_global_declaration Σg d).
 Proof.
   intros hrepr wf ond.
-  assert (H_md_sf_sd: (forall (m : module_decl) (e : on_module_decl cumul_gen (lift_typing typing) Σ m), expanded_module_decl Σ (eta_module_decl Σg m.1 (eta_module_type_decl Σg m.2))) ×
-    (forall (p : kername × structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ p), expanded_structure_field Σ (p.1, (eta_structure_field Σg p.2))) ×
-    (forall (s : structure_body structure_field) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
+  assert (H_md_sf_sd: (forall (m : module_implementation) (e : on_module_impl cumul_gen (lift_typing typing) Σ m), expanded_module_impl Σ (eta_module_impl Σg m)) ×
+    (forall (k: kername) (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ k p), expanded_structure_field Σ k (eta_structure_field Σg p)) ×
+    (forall (s : structure_body) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
   {
-    unshelve eapply (on_moddecl_structfield_structbody_mutrect cumul_gen (lift_typing typing) Σ); try now constructor; simpl.
+    unshelve eapply (on_mi_sf_sb_mutrect cumul_gen (lift_typing typing) Σ); try now constructor; simpl.
     - intros. constructor. now apply eta_expand_constant_decl_expanded.
     - intros. constructor. now eapply eta_expand_inductive_expanded.
-    - intros kn' [impl modtype]. constructor. apply H.
-    - intros kn' [impl modtype] H. red in H. simpl.
-      apply (expanded_mi_algebraic_decl Σ kn' (impl, (eta_module_type_decl Σg modtype))).
-    - intros hd tl Hosf Hesf Hosb Hesb. simpl. constructor; now destruct hd as [kn0 sf].
   }
   destruct d; cbn in *.
   - now apply eta_expand_constant_decl_expanded.
-  - now simple eapply eta_expand_inductive_expanded.
-  - destruct m as [impl modtype]. simpl. apply H_md_sf_sd in ond. apply ond.
+  - now apply eta_expand_inductive_expanded with (kn := kn).
+  - destruct ond. constructor; now apply H_md_sf_sd.
   - now apply H_md_sf_sd.
 Qed.
 

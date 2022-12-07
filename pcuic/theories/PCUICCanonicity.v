@@ -18,6 +18,7 @@ Local Existing Instance config.extraction_checker_flags.
 
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
+Require Import Equations.Type.Relation_Properties.
 
 Set Default Proof Using "Type*".
 
@@ -772,8 +773,6 @@ Section WeakNormalization.
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
 
-  Require Import Equations.Type.Relation_Properties.
-
   (* TODO move *)
   Lemma invert_red_axiom {Γ cst u cdecl T} :
     declared_constant Σ cst cdecl ->
@@ -977,7 +976,7 @@ Section WeakNormalization.
 
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
-      destruct (declared_inductive_inj d isdecl); subst mdecl0 idecl0.
+      destruct (declared_inductive_inj d.p1 isdecl); subst mdecl0 idecl0.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).
       assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) p args br)).

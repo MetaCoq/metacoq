@@ -778,7 +778,7 @@ Proof using Type.
   - depelim r; solve_discr; eauto.
   - eauto.
   - depelim r; solve_discr.
-    unfold declared_constant in isdecl.
+    unfold declared_constant, declared_constant_gen in isdecl.
     rewrite e in isdecl.
     inv isdecl.
     congruence.

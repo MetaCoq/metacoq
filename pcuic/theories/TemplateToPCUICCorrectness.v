@@ -244,6 +244,7 @@ Proof.
   move: H.
   rewrite /lookup_inductive /lookup_minductive. intros ->.
   intros [Σ'' [ext' wfΣ'' _ ext'' hl]].
+  unfold lookup_inductive_gen, lookup_minductive_gen.
   rewrite hl => /= //. cbn.
   rewrite nth_error_map hnth /=.
   rewrite (extends_lookup _ _ _ _ wfΣ' (extends_decls_extends _ _ ext) hl) /=.
@@ -683,7 +684,8 @@ Section Trans_Global.
     Ast.declared_constant Σ cst decl ->
     declared_constant Σ' cst (trans_constant_body Σ' decl).
   Proof.
-    unfold declared_constant, Ast.declared_constant.
+    unfold declared_constant, Ast.declared_constant, 
+      declared_constant_gen, Ast.declared_constant_gen.
     now rewrite trans_lookup => -> /=.
   Qed.
 
@@ -692,6 +694,7 @@ Section Trans_Global.
     declared_minductive (trans_global_env Σ) cst (trans_minductive_body Σ' decl).
   Proof.
     unfold declared_minductive, Ast.declared_minductive.
+    unfold declared_minductive_gen, Ast.declared_minductive_gen.
     now rewrite trans_lookup => -> /=.
   Qed.
 
@@ -755,6 +758,7 @@ Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
   intros [] []. unfold Ast.declared_minductive in *.
+  unfold Ast.declared_minductive_gen in H1. 
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
 
@@ -763,8 +767,11 @@ Lemma lookup_inductive_None Σ ind : lookup_inductive Σ ind = None ->
 Proof.
   intros hl [mdecl [idecl [decli hnth]]].
   unfold declared_inductive, declared_minductive in decli.
-  unfold lookup_inductive, lookup_minductive in hl.
-  destruct lookup_env eqn:heq. noconf decli. cbn in hl.
+  unfold lookup_inductive, lookup_inductive_gen, 
+    lookup_minductive, lookup_minductive_gen in hl.
+  unfold declared_minductive_gen in decli. 
+  destruct lookup_env eqn:heq. 
+  noconf decli. cbn in hl.
   destruct nth_error; congruence. congruence.
 Qed.
 
@@ -781,9 +788,9 @@ Section Trans_Global.
   Proof.
     unfold SEq.R_global_instance, SEq.global_variance.
     destruct gref; simpl; auto.
-    - unfold R_global_instance, R_opt_variance; cbn.
-      unfold lookup_inductive, lookup_minductive.
-      unfold SEq.lookup_inductive, SEq.lookup_minductive.
+    - unfold R_global_instance_gen, R_opt_variance; cbn.
+      unfold Ast.lookup_inductive_gen, lookup_inductive_gen, 
+        Ast.lookup_minductive_gen, lookup_minductive_gen.
       rewrite trans_lookup. destruct Ast.Env.lookup_env eqn:look => //; simpl.
       destruct g => /= //.
       rewrite nth_error_map.
@@ -793,9 +800,11 @@ Section Trans_Global.
       generalize (trans_destArity Σ [] (Ast.Env.ind_type o) wfty wfΣ').
       destruct Ast.destArity as [[ctx ps]|] eqn:eq' => /= // -> //.
       now rewrite context_assumptions_map.
-    - unfold R_global_instance, R_opt_variance; cbn.
+    - unfold R_global_instance_gen, R_opt_variance; cbn.
       unfold lookup_constructor, lookup_inductive, lookup_minductive.
-      unfold SEq.lookup_constructor, SEq.lookup_inductive, SEq.lookup_minductive.
+      unfold Ast.lookup_constructor, Ast.lookup_inductive, Ast.lookup_minductive.
+      unfold lookup_constructor_gen, lookup_inductive_gen, lookup_minductive_gen.
+      unfold Ast.lookup_constructor_gen, Ast.lookup_inductive_gen, Ast.lookup_minductive_gen.
       rewrite trans_lookup. destruct Ast.Env.lookup_env => //; simpl.
       destruct g => /= //. rewrite nth_error_map.
       destruct nth_error => /= //.
@@ -1293,6 +1302,7 @@ Section Trans_Global.
     lookup_inductive Σ' ind = Some (mdecl, idecl).
   Proof.
     intros []. unfold lookup_inductive, lookup_minductive.
+    unfold lookup_inductive_gen, lookup_minductive_gen. 
     now rewrite H H0.
   Qed.
 

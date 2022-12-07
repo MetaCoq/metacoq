@@ -3241,7 +3241,7 @@ Proof.
   clear IHn.
   repeat constructor. destruct ind; simpl in *.
   eapply (R_global_instance_empty_impl _ _ _ _ _ _ 0).
-  4:{ unfold R_global_instance. simpl. eauto. }
+  4:{ unfold R_global_instance, R_global_instance_gen. simpl. eauto. }
   all:typeclasses eauto.
 Qed.
 
@@ -3257,15 +3257,15 @@ Proof.
   clear IHn.
   repeat constructor; auto. destruct ind; simpl in *.
   eapply (R_global_instance_empty_impl _ _ _ _ _ _ 0).
-  4:{ unfold R_global_instance. simpl. eauto. }
+  4:{ unfold R_global_instance, R_global_instance_gen. simpl. eauto. }
   all:typeclasses eauto.
 Qed.
 
 Lemma R_global_instance_length Σ Req Rle ref napp i i' :
   R_global_instance Σ Req Rle ref napp i i' -> #|i| = #|i'|.
 Proof.
-  unfold R_global_instance.
-  destruct global_variance.
+  unfold R_global_instance, R_global_instance_gen.
+  destruct global_variance_gen.
   { induction i in l, i' |- *; destruct l, i'; simpl; auto; try lia; try easy.
     * specialize (IHi i' []). simpl in IHi. intuition.
     * intros []. intuition.

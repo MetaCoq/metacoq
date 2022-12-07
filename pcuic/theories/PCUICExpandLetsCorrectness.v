@@ -292,7 +292,7 @@ Lemma trans_declared_constant (Σ : global_env) cst decl:
   S.declared_constant Σ cst decl ->
   T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
-  unfold T.declared_constant.
+  unfold T.declared_constant, T.declared_constant_gen.
   rewrite trans_lookup.
   unfold S.declared_constant.
   intros ->.
@@ -319,7 +319,7 @@ Lemma trans_declared_inductive Σ ind mdecl idecl:
 Proof.
   intros [].
   split.
-  - unfold T.declared_minductive, S.declared_minductive in *.
+  - unfold T.declared_minductive, T.declared_minductive_gen, S.declared_minductive in *.
     now rewrite trans_lookup H.
   - cbn. now rewrite nth_error_mapi H0 /=.
 Qed.
@@ -2197,6 +2197,7 @@ Proof.
   unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
   destruct gref; simpl; auto.
   - unfold S.lookup_inductive, S.lookup_minductive.
+    unfold S.lookup_inductive_gen, S.lookup_minductive_gen.
     unfold lookup_inductive, lookup_minductive.
     rewrite trans_lookup. destruct SE.lookup_env => //; simpl.
     destruct g => /= //. rewrite nth_error_mapi.
@@ -2205,6 +2206,7 @@ Proof.
     destruct PCUICAst.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold S.lookup_constructor, S.lookup_inductive, S.lookup_minductive.
+    unfold S.lookup_constructor_gen, S.lookup_inductive_gen, S.lookup_minductive_gen.
     unfold lookup_constructor, lookup_inductive, lookup_minductive.
     rewrite trans_lookup. destruct SE.lookup_env => //; simpl.
     destruct g => /= //. rewrite nth_error_mapi.
@@ -3055,6 +3057,7 @@ Proof.
       xpred0) (shiftnP #|Γ| xpred0)).
     { relativize (context_assumptions (ind_params mdecl)).
       eapply on_free_vars_expand_lets_k => //.
+      destruct declc.
       rewrite on_free_vars_ctx_subst_instance; eauto with pcuic.
       2:now len.
       rewrite shiftnP_add in fvssi. len in fvssi. len.
@@ -3081,7 +3084,8 @@ Proof.
     erewrite expand_lets_comm. len.
     rewrite subst_instance_subst_context.
     rewrite instantiate_inds //. exact declc. 4:now len.
-    4:now len. now rewrite Nat.add_comm. rewrite closedn_subst_instance_context. eauto with pcuic.
+    4:now len. now rewrite Nat.add_comm. rewrite closedn_subst_instance_context.
+    destruct declc. eauto with pcuic.
     len. eapply on_free_vars_subst_k. eapply (inds_is_open_terms []).
     len. rewrite on_free_vars_subst_instance.
     eapply closedn_on_free_vars. rewrite Nat.add_assoc //. }
@@ -3469,6 +3473,7 @@ Proof.
   rewrite map_rev. f_equal.
   rewrite /cstr_branch_context.
   rewrite trans_subst_instance_ctx.
+  destruct declc.
   rewrite (trans_expand_lets_ctx xpred0 (shiftnP #|ind_params mdecl| xpred0)); eauto with pcuic.
   f_equal. f_equal.
   rewrite (trans_subst_context
@@ -3479,6 +3484,7 @@ Proof.
   eapply alpha_eq_trans in onbctx.
   etransitivity; tea.
   rewrite /cstr_branch_context.
+  destruct declc.
   rewrite (trans_expand_lets_ctx xpred0 (shiftnP #|ind_params mdecl| xpred0)) //. eauto with pcuic.
   rewrite (trans_subst_context (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) xpred0) //.
   eapply (inds_is_open_terms []).

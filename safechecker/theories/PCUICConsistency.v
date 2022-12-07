@@ -174,14 +174,10 @@ Proof.
     destruct typ_prod.
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
-    - hnf.
-      cbn.
-      unfold declared_minductive.
-      cbn.
-      rewrite eq_kername_refl.
-      auto.
-    - cbn.
-      auto. }
+    - hnf. cbn.
+      unfold declared_minductive, declared_minductive_gen.
+      cbn. now rewrite eq_kername_refl. 
+    - now cbn. }
   pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
   unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].

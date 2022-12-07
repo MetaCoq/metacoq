@@ -841,7 +841,7 @@ Proof.
   unfold isPropositional.
   eapply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
   eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); auto.
-  rewrite (declared_inductive_lookup d).
+  unfold lookup_inductive. rewrite (declared_inductive_lookup d.p1).
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
   rewrite oib.(ind_arity_eq).
@@ -876,7 +876,7 @@ Proof.
   pose proof d as [decli ?].
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
-  red. rewrite (declared_inductive_lookup decli).
+  red. unfold lookup_inductive. rewrite (declared_inductive_lookup decli).
   rewrite oib.(ind_arity_eq).
   rewrite /isPropositionalArity !destArity_it_mkProd_or_LetIn /=.
   destruct (is_propositional (ind_sort x0)) eqn:isp; auto.
@@ -921,7 +921,7 @@ Lemma isPropositional_propositional Σ (Σ' : E.global_context) ind mdecl idecl 
 Proof.
   intros decli decli' [_ indp] [] b.
   unfold isPropositional, EGlobalEnv.inductive_isprop_and_pars.
-  rewrite (declared_inductive_lookup decli).
+  unfold lookup_inductive. rewrite (declared_inductive_lookup decli).
   rewrite (EGlobalEnv.declared_inductive_lookup decli') /=
     /isPropositionalArity.
   destruct H0 as [_ [_ [_ isP]]]. red in isP.

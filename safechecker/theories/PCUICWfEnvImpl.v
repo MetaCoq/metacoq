@@ -6,65 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICRedu
 From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfEnv.
 From Equations Require Import Equations.
 
-Lemma wf_gc_of_uctx {cf:checker_flags} {Σ : global_env} (HΣ : ∥ wf Σ ∥)
-: ∑ uctx', gc_of_uctx (global_uctx Σ) = Some uctx'.
-Proof.
-assert (consistent (global_uctx Σ).2) as HC.
-{ sq; apply (wf_consistent _ HΣ). }
-unfold gc_of_uctx; simpl in *.
-apply gc_consistent_iff in HC.
-destruct (gc_of_constraints (global_constraints Σ)).
-eexists; reflexivity.
-contradiction HC.
-Defined.
-
-Lemma graph_of_wf {cf:checker_flags} {Σ : global_env} (HΣ : ∥ wf Σ ∥)
-: ∑ G, is_graph_of_uctx G (global_uctx Σ).
-Proof.
-destruct (wf_gc_of_uctx HΣ) as [uctx Huctx].
-exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
-Defined.
-
-Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-: ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
-Proof.
-assert (consistent (global_ext_uctx Σ).2) as HC.
-{ sq; apply (global_ext_uctx_consistent _ HΣ). }
-destruct Σ as [Σ φ].
-simpl in HC.
-unfold gc_of_uctx; simpl in *.
-apply gc_consistent_iff in HC.
-destruct (gc_of_constraints (global_ext_constraints (Σ, φ))).
-eexists; reflexivity.
-contradiction HC.
-Defined.
-
-Lemma graph_of_wf_ext {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-: ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).
-Proof.
-destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
-exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
-Defined.
-
-Require Import Morphisms.
-
-Global Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.
-Proof.
-  intros c c' eq. rewrite /consistent.
-  now setoid_rewrite eq.
-Qed.
-
-Lemma on_udecl_mono {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} : on_udecl Σ Monomorphic_ctx.
-Proof.
-  repeat split; cbn.
-  - intros i; rewrite LevelSetFact.empty_iff //.
-  - intros i; rewrite ConstraintSetFact.empty_iff //.
-  - red. rewrite /univs_ext_constraints /=.
-    rewrite CS_union_empty.
-    apply wfΣ.
-  - apply consistent_extension_on_empty.
-Qed.
-
 Class abstract_guard_impl :=
   { guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool ;
     guard_correct : forall fix_cofix Σ Γ mfix, guard fix_cofix Σ Γ mfix <-> guard_impl fix_cofix Σ Γ mfix
@@ -87,39 +28,6 @@ Record referenced_impl {cf:checker_flags} := {
       referenced_impl_graph_wf := projT2 (graph_of_wf referenced_impl_wf)
   }.
 
-Definition init_env : global_env :=
-   {| universes := (LS.singleton Level.lzero , CS.empty); declarations := []; retroknowledge := Retroknowledge.empty |}.
-
-Definition on_global_univ_init_env : on_global_univs init_env.
-  repeat split.
-  - intros x Hx; cbn in *. inversion Hx.
-  - intros x Hx; cbn in *. destruct x; eauto. now inversion Hx.
-  - red. unshelve eexists.
-    + econstructor; eauto. intros; exact 1%positive.
-    + red. intros ? ?. cbn in *. inversion H.
-Qed.
-
-Definition check_conv_pb_relb_correct {cf:checker_flags} (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥) G
-  (HG : is_graph_of_uctx G (global_ext_uctx Σ)) conv_pb u u' :
-  wf_universe Σ u' -> wf_universe Σ u ->
-  compare_universe conv_pb Σ u u' <-> conv_pb_relb G conv_pb u u'.
-Proof.
-  intros.  sq.  destruct conv_pb; split; cbn; intro.
-  - apply (check_eqb_universe_complete _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - apply (check_eqb_universe_spec' G (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - apply (check_leqb_universe_complete _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - apply (check_leqb_universe_spec' G (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-Qed.
-
-
 Program Definition referenced_pop {cf:checker_flags} (Σ : referenced_impl) : referenced_impl :=
 match Σ.(declarations) with
  [] => Σ
@@ -139,52 +47,36 @@ Program Definition make_wf_env_ext {cf:checker_flags} {guard : abstract_guard_im
 
 Program Global Instance canonical_abstract_env_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_struct referenced_impl referenced_impl_ext :=
-  {| abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
-     abstract_env_ext_retroknowledge := fun Σ => (referenced_impl_env_ext Σ).(retroknowledge) ;
-     abstract_env_conv_pb_relb := fun Σ conv_pb => conv_pb_relb (referenced_impl_ext_graph Σ) conv_pb ;
-     abstract_env_compare_global_instance := fun Σ =>
-      compare_global_instance (referenced_impl_env_ext Σ)
-                              (check_eqb_universe (referenced_impl_ext_graph Σ));
-     abstract_env_level_mem := fun Σ => level_mem (referenced_impl_env_ext Σ);
-     abstract_env_ext_wf_universeb := fun Σ u => wf_universeb Σ u;
-     abstract_env_check_constraints := fun Σ => check_constraints (referenced_impl_ext_graph Σ);
-
-     abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (referenced_impl_env_ext Σ);
-     abstract_env_ext_rel := fun X Σ => Σ = referenced_impl_env_ext X;
-     abstract_env_empty := {|
-       referenced_impl_env := {| universes := init_env ; declarations := []; retroknowledge := Retroknowledge.empty |};
- |} ;
- abstract_env_init := fun cs retro H =>  {|
- referenced_impl_env := {| universes := cs ; declarations := []; retroknowledge := retro |};
- |} ;
- abstract_env_add_decl := fun X kn d H =>
-  {| referenced_impl_env := add_global_decl X.(referenced_impl_env) (kn,d);
-   |};
- abstract_env_empty_ext X := {| referenced_impl_env_ext := (X , Monomorphic_ctx);
- |} ;
- abstract_env_univ X := X ;
- abstract_env_global_declarations X := declarations X;
- abstract_env_retroknowledge X := X.(retroknowledge) ;
- abstract_env_is_consistent uctx := wGraph.is_acyclic (make_graph uctx);
- abstract_env_is_consistent_uctx X uctx :=
+  {|
+  abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
+  abstract_env_leqb_level_n := fun Σ => leqb_level_n (referenced_impl_ext_graph Σ) ;
+  abstract_env_level_mem := fun Σ l => LevelSet.mem l (global_ext_levels (referenced_impl_env_ext Σ));
+  abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (referenced_impl_env_ext Σ);
+  abstract_env_ext_rel := fun X Σ => Σ = referenced_impl_env_ext X;
+  abstract_env_init := fun cs retro H =>  {|
+     referenced_impl_env := {| universes := cs ;
+                               declarations := [];
+                               retroknowledge := retro |}; |} ;
+  abstract_env_add_decl := fun X kn d H =>
+    {| referenced_impl_env := add_global_decl X.(referenced_impl_env) (kn,d); |};
+  abstract_env_is_consistent X uctx :=
    let G := referenced_impl_graph X in
    let G' := add_uctx uctx G in
    wGraph.is_acyclic G' && wGraph.IsFullSubgraph.is_full_extension G G' ;
- abstract_env_add_uctx X uctx udecl Hdecl Hglobal := {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl);
- |} ;
- abstract_env_rel := fun X Σ => Σ = referenced_impl_env X ;
- abstract_pop_decls := referenced_pop ;
- abstract_make_wf_env_ext := make_wf_env_ext ;
+  abstract_env_add_udecl X udecl Hglobal :=
+    {| referenced_impl_env_ext := (X.(referenced_impl_env) , udecl); |} ;
+  abstract_primitive_constant := fun X tag => primitive_constant X tag;
+  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X ;
+  abstract_pop_decls := referenced_pop ;
  |}.
-Next Obligation. sq. constructor; cbn; eauto. apply on_global_univ_init_env. econstructor. Qed.
 Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
-Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
-  econstructor; eauto. econstructor; eauto. econstructor; eauto. Qed.
-Next Obligation. pose proof (referenced_impl_wf X) as [?]. sq. split; eauto.
-  apply on_udecl_mono.
-Qed.
 Next Obligation.
-  pose proof (referenced_impl_wf X). now sq.
+ pose proof (referenced_impl_wf X). destruct (H _ eq_refl).
+ sq. destruct H0.  econstructor; eauto. econstructor; eauto.
+  Qed.
+Next Obligation.
+  pose proof (referenced_impl_wf X). destruct (Hglobal _ eq_refl); sq.
+  now econstructor.
 Qed.
 
 (* We pack up all the information required on the global environment and graph in a
@@ -226,12 +118,6 @@ Proof.
   unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
   reflexivity.
 Qed.
-
-Program Definition wf_env_empty {cf:checker_flags} {guard : abstract_guard_impl} :=
- {|
-  wf_env_referenced := abstract_env_empty ;
-  wf_env_map := EnvMap.empty;
-  |}.
 
 Program Definition wf_env_init {cf:checker_flags} {guard : abstract_guard_impl} cs retro :
   on_global_univs cs -> wf_env := fun H =>
@@ -284,50 +170,34 @@ Next Obligation.
   specialize (H0 y). cbn in H0. rewrite H0. reflexivity.
 Qed.
 
-Program Definition optim_make_wf_env_ext {cf:checker_flags} {guard : abstract_guard_impl} (Σ : wf_env) (univs : universes_decl)
-  (prf : forall Σ0 : global_env, abstract_env_rel Σ.(wf_env_referenced) Σ0 -> ∥ wf_ext (Σ0, univs) ∥) : wf_env_ext :=
-  {| wf_env_ext_referenced := {| referenced_impl_env_ext := (Σ, univs);|} ;
-     wf_env_ext_map := Σ.(wf_env_map);
-     wf_env_ext_map_repr := Σ.(wf_env_map_repr) |}.
-
 Program Global Instance optimized_abstract_env_struct {cf:checker_flags} {guard : abstract_guard_impl} :
   abstract_env_struct wf_env wf_env_ext :=
  {|
  abstract_env_lookup := fun Σ k => EnvMap.lookup k (wf_env_ext_map Σ);
- abstract_env_ext_retroknowledge := fun X => X.(wf_env_ext_referenced).(retroknowledge);
- abstract_env_conv_pb_relb X := abstract_env_conv_pb_relb X.(wf_env_ext_referenced);
- abstract_env_compare_global_instance X := abstract_env_compare_global_instance X.(wf_env_ext_referenced);
+ abstract_env_leqb_level_n X := abstract_env_leqb_level_n X.(wf_env_ext_referenced);
  abstract_env_level_mem X := abstract_env_level_mem X.(wf_env_ext_referenced);
- abstract_env_ext_wf_universeb X := abstract_env_ext_wf_universeb X.(wf_env_ext_referenced);
- abstract_env_check_constraints X := abstract_env_check_constraints X.(wf_env_ext_referenced);
  abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (wf_env_ext_referenced Σ);
  abstract_env_ext_rel X := abstract_env_ext_rel X.(wf_env_ext_referenced);
 
- abstract_env_empty := wf_env_empty;
  abstract_env_init := wf_env_init;
  abstract_env_add_decl X kn d H :=
   {| wf_env_referenced := @abstract_env_add_decl _ _ referenced_impl_ext _ X.(wf_env_referenced) kn d H ;
      wf_env_map := EnvMap.add kn d X.(wf_env_map) |};
- abstract_env_empty_ext X :=
-  {| wf_env_ext_referenced := @abstract_env_empty_ext _ _ referenced_impl_ext _ X.(wf_env_referenced) ;
-     wf_env_ext_map := X.(wf_env_map) |};
- abstract_env_global_declarations X := abstract_env_global_declarations X.(wf_env_referenced);
- abstract_env_is_consistent univ := abstract_env_is_consistent univ;
- abstract_env_is_consistent_uctx X uctx := abstract_env_is_consistent_uctx X.(wf_env_referenced) uctx;
- abstract_env_add_uctx X uctx udecl Huctx Hdecl :=
- {| wf_env_ext_referenced := @abstract_env_add_uctx _ _ referenced_impl_ext _ X.(wf_env_referenced) uctx udecl Huctx Hdecl ;
+ abstract_env_is_consistent X uctx := abstract_env_is_consistent X.(wf_env_referenced) uctx;
+ abstract_env_add_udecl X udecl Hdecl :=
+ {| wf_env_ext_referenced := @abstract_env_add_udecl _ _ referenced_impl_ext _ X.(wf_env_referenced) udecl Hdecl ;
     wf_env_ext_map := X.(wf_env_map) |};
+ abstract_primitive_constant X := abstract_primitive_constant X.(wf_env_ext_referenced);
  abstract_env_rel X := abstract_env_rel X.(wf_env_referenced) ;
  abstract_pop_decls := optim_pop ;
- abstract_make_wf_env_ext := optim_make_wf_env_ext ;
  |}.
 Next Obligation.
   pose proof (X.(wf_env_referenced).(referenced_impl_wf)) as [?].
-  sq. destruct H.
+  sq. destruct (H _ eq_refl).
   apply EnvMap.repr_add; eauto; try eapply wf_fresh_globals; eauto.
+  destruct X1; eauto.
   apply wf_env_map_repr.
 Qed.
-Next Obligation. apply wf_env_map_repr. Qed.
 Next Obligation. apply wf_env_map_repr. Qed.
 
 Section WfEnv.
@@ -392,28 +262,6 @@ Section GraphSpec.
     destruct HΣ, Hφ; now constructor.
   Qed.
 
-  Lemma check_constraints_spec ctrs
-    : check_constraints G ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
-  Proof using HG HΣ Hφ.
-    pose proof HΣ'.
-    intros HH.
-    refine (check_constraints_spec G (global_ext_uctx Σ) _ _ HG _ HH).
-    sq; now eapply wf_ext_global_uctx_invariants.
-    sq; now eapply global_ext_uctx_consistent.
-  Qed.
-
-  Lemma check_constraints_complete ctrs (H : check_univs) :
-  uctx_invariants ((global_ext_uctx Σ).1, ctrs) -> valid_constraints (global_ext_constraints Σ) ctrs -> check_constraints G ctrs.
-  Proof.
-    pose proof HΣ'.
-    intros Huctx HH.
-    refine (check_constraints_complete G (global_ext_uctx Σ) _ _ HG _ _ _ HH); eauto; sq.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-    pose proof (wf_ext_global_uctx_invariants Σ H0) as [H1 H2].
-    split; eauto.
-  Qed.
-
   Lemma is_graph_of_uctx_levels (l : Level.t) :
     LevelSet.mem l (uGraph.wGraph.V G) <->
     LevelSet.mem l (global_ext_levels Σ).
@@ -434,46 +282,45 @@ Program Global Instance canonical_abstract_env_prop {cf:checker_flags} {guard : 
   @abstract_env_prop _ _ _ canonical_abstract_env_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
 Next Obligation. wf_env. Qed.
-Next Obligation. apply check_conv_pb_relb_correct; eauto; wf_env.
-   apply (graph_of_wf_ext X).π2. Qed.
-Next Obligation. eapply reflect_iff. eapply reflect_R_global_instance; eauto.
-  move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
-  apply iff_reflect;  apply check_conv_pb_relb_correct with (conv_pb := Conv); eauto; wf_env.
-  apply (graph_of_wf_ext X).π2.
-  move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
-  apply X0; eauto.
-  all: rewrite wf_universeb_instance_forall.
-  revert H; move => / wf_universe_instanceP ?; eauto.
-  revert H0; move => / wf_universe_instanceP ?; eauto.
+Next Obligation.
+  pose proof (referenced_impl_ext_wf X); sq.
+  set (uctx := wf_ext_gc_of_uctx _); destruct uctx as [[l ctrs] Huctx].
+  assert (consistent (global_ext_uctx X).2) as HC.
+      { sq; apply (global_ext_uctx_consistent _ H). }
+  simpl in HC. apply gc_consistent_iff in HC.
+  split.
+  - eapply leqb_level_n_spec0.
+    + eapply gc_of_uctx_invariants; try eapply wf_ext_global_uctx_invariants; eauto.
+    + Opaque gc_of_constraints. cbn in *. Transparent gc_of_constraints.
+      destruct (gc_of_constraints X); inversion Huctx. now destruct H2.
+    + unfold referenced_impl_ext_graph; cbn.
+      set (G := graph_of_wf_ext _); destruct G as [G HG].
+      cbn. unfold is_graph_of_uctx in HG. now rewrite Huctx in HG.
+  - eapply leqb_level_n_spec.
+    + eapply gc_of_uctx_invariants; try eapply wf_ext_global_uctx_invariants; eauto.
+    + Opaque gc_of_constraints. cbn in *. Transparent gc_of_constraints.
+      destruct (gc_of_constraints X); inversion Huctx. now destruct H2.
+    + unfold referenced_impl_ext_graph; cbn.
+      set (G := graph_of_wf_ext _); destruct G as [G HG].
+      cbn. unfold is_graph_of_uctx in HG. now rewrite Huctx in HG.
 Qed.
-Next Obligation. split; intros.
-  - eapply check_constraints_complete; eauto.
-    apply referenced_impl_sq_wf. apply Σudecl_ref.
-    apply (graph_of_wf_ext X).π2.
-    now destruct X.
-  - eapply check_constraints_spec; eauto.
-  apply referenced_impl_sq_wf. apply Σudecl_ref.
-  apply (graph_of_wf_ext X).π2.
-  Qed.
 Next Obligation. apply guard_correct. Qed.
 Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
-Next Obligation. now split. Qed.
-Next Obligation. unshelve epose proof (is_consistent_spec udecl _) as Hconsistent; eauto.
-  unfold is_consistent in Hconsistent; now rewrite H0 in Hconsistent.
-  Qed.
 Next Obligation.
   rename H2 into Hudecl. unfold referenced_impl_graph; rewrite andb_and.
   pose proof (referenced_impl_graph_wf X) as HG.
   set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
   pose proof (HG' := is_graph_of_uctx_add Hudecl HG).
-  rewrite - (is_consistent_spec (global_ext_uctx (X, udecl))) (is_consistent_spec2 HG').
+  pose (global_ext_uctx := ContextSet.union udecl (global_uctx X)).
+  rewrite - (is_consistent_spec global_ext_uctx) (is_consistent_spec2 HG').
   assert (reorder : forall a b c : Prop, (a -> b <-> c) -> a /\ b <-> a /\ c) by intuition; apply reorder.
   move=> ?; rewrite consistent_extension_on_union.
   1:{ pose proof (referenced_impl_wf X); sq.
       apply: PCUICUnivSubstitutionConv.levels_global_constraint. }
-  change (CS.union _ _) with (global_ext_uctx (X, udecl)).2.
+  cbn.
+  change (CS.union _ _) with global_ext_uctx.2.
   apply: consistent_ext_on_full_ext=> //.
   apply: add_uctx_subgraph.
 Qed.
@@ -485,21 +332,20 @@ Qed.
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_prop _ _ _ optimized_abstract_env_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
-  Next Obligation. wf_env. Qed.
-  Next Obligation. pose (referenced_impl_ext_wf X). sq.
+Next Obligation. wf_env. Qed.
+Next Obligation. pose (referenced_impl_ext_wf X). sq.
     erewrite EnvMap.lookup_spec; try reflexivity.
     1: apply wf_fresh_globals; eauto.
     1: apply wf_env_ext_map_repr. Qed.
-  Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Qed.
-  Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Qed.
-  Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Qed.
-  Next Obligation. eapply guard_correct. Qed.
-  Next Obligation. now sq. Qed.
+Next Obligation.
+    epose (prf := abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).
+    erewrite wf_ext_gc_of_uctx_irr.  exact prf. Qed.
+Next Obligation. eapply guard_correct. Qed.
+Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
-Next Obligation. now split. Qed.
-Next Obligation. now erewrite (@abstract_env_is_consistent_correct _ _ _ _ canonical_abstract_env_prop); eauto. Qed.
-Next Obligation. now erewrite (abstract_env_is_consistent_uctx_correct X.(wf_env_referenced)); eauto. Qed.
+Next Obligation.
+  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)); eauto. Qed.
 Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody r.
   pose proof (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
   specialize (prf _ eq_refl).

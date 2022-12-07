@@ -59,7 +59,8 @@ Lemma global_variance_sigma_mon {Σ Σ' gr napp v} :
   global_variance Σ' gr napp = Some v.
 Proof using P Pcmp cf.
   intros wfΣ' ext.
-  rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen 
+    /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - destruct (lookup_env Σ ind) eqn:look => //.
     eapply extends_lookup in look; eauto. rewrite look //.
@@ -76,8 +77,8 @@ Lemma R_global_instance_weaken_env Σ Σ' Re Re' Rle Rle' gr napp :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
 Proof using P Pcmp cf.
   intros wfΣ ext he hle hele t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:look.
+  rewrite /R_global_instance_gen /R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:look.
   - rewrite (global_variance_sigma_mon wfΣ ext look).
     induction t in v, t' |- *; destruct v, t'; simpl; auto.
     intros []; split; auto.

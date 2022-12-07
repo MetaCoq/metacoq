@@ -9,23 +9,31 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   (** ** Environment lookup *)
 
-  Definition declared_constant (Σ : global_env) (id : kername) decl : Prop :=
-    lookup_env Σ id = Some (ConstantDecl decl).
+  Definition declared_constant_gen (lookup : kername -> option global_decl) (id : kername) decl : Prop :=
+    lookup id = Some (ConstantDecl decl).
 
-  Definition declared_minductive Σ mind decl :=
-    lookup_env Σ mind = Some (InductiveDecl decl).
+  Definition declared_constant (Σ : global_env) := declared_constant_gen (lookup_env Σ).
 
-  Definition declared_inductive Σ ind mdecl decl :=
-    declared_minductive Σ (inductive_mind ind) mdecl /\
+  Definition declared_minductive_gen (lookup : kername -> option global_decl) mind decl :=
+    lookup mind = Some (InductiveDecl decl).
+
+  Definition declared_minductive Σ := declared_minductive_gen (lookup_env Σ).
+
+  Definition declared_inductive_gen lookup ind mdecl decl :=
+    declared_minductive_gen lookup (inductive_mind ind) mdecl /\
     List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
-  Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
-    declared_inductive Σ (fst cstr) mdecl idecl /\
+  Definition declared_inductive Σ := declared_inductive_gen (lookup_env Σ).
+
+  Definition declared_constructor_gen lookup cstr mdecl idecl cdecl : Prop :=
+    declared_inductive_gen lookup (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-  Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl
+  Definition declared_constructor Σ := declared_constructor_gen (lookup_env Σ).
+
+  Definition declared_projection_gen lookup (proj : projection) mdecl idecl cdecl pdecl
   : Prop :=
-    declared_constructor Σ (proj.(proj_ind), 0) mdecl idecl cdecl /\
+    declared_constructor_gen lookup (proj.(proj_ind), 0) mdecl idecl cdecl /\
     List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
     mdecl.(ind_npars) = proj.(proj_npars).
   
@@ -35,20 +43,26 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition declared_modtype Σ kn mtdecl :=
     lookup_env Σ kn = Some (ModuleTypeDecl mtdecl).
 
-  Definition lookup_constant Σ kn := 
-    match lookup_env Σ kn with
+  Definition declared_projection Σ := declared_projection_gen (lookup_env Σ).
+
+  Definition lookup_constant_gen (lookup : kername -> option global_decl) kn := 
+    match lookup kn with
     | Some (ConstantDecl d) => Some d
     | _ => None
     end.
 
-  Definition lookup_minductive Σ mind :=
-    match lookup_env Σ mind with
+  Definition lookup_constant Σ := lookup_constant_gen (lookup_env Σ).
+
+  Definition lookup_minductive_gen (lookup : kername -> option global_decl) mind :=
+    match lookup mind with
     | Some (InductiveDecl decl) => Some decl
     | _ => None
     end.
 
-  Definition lookup_inductive Σ ind :=
-    match lookup_minductive Σ (inductive_mind ind) with
+  Definition lookup_minductive Σ := lookup_minductive_gen (lookup_env Σ).
+
+  Definition lookup_inductive_gen lookup ind :=
+    match lookup_minductive_gen lookup (inductive_mind ind) with
     | Some mdecl =>
       match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
       | Some idecl => Some (mdecl, idecl)
@@ -57,8 +71,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     | None => None
     end.
 
-  Definition lookup_constructor Σ ind k :=
-    match lookup_inductive Σ ind with
+  Definition lookup_inductive Σ := lookup_inductive_gen (lookup_env Σ).
+
+  Definition lookup_constructor_gen lookup ind k :=
+    match lookup_inductive_gen lookup ind with
     | Some (mdecl, idecl) =>
       match nth_error idecl.(ind_ctors) k with
       | Some cdecl => Some (mdecl, idecl, cdecl)
@@ -67,8 +83,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     | _ => None
     end.
 
-  Definition lookup_projection Σ p :=
-    match lookup_constructor Σ p.(proj_ind) 0 with
+  Definition lookup_constructor Σ := lookup_constructor_gen (lookup_env Σ).
+
+  Definition lookup_projection_gen lookup p :=
+    match lookup_constructor_gen lookup p.(proj_ind) 0 with
     | Some (mdecl, idecl, cdecl) =>
       match nth_error idecl.(ind_projs) p.(proj_arg) with
       | Some pdecl => Some (mdecl, idecl, cdecl, pdecl)
@@ -89,90 +107,93 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     | _ => None
     end.
 
-  Lemma declared_constant_lookup {Σ kn cdecl} :
-    declared_constant Σ kn cdecl ->
-    lookup_constant Σ kn = Some cdecl.
+  Definition lookup_projection Σ := lookup_projection_gen (lookup_env Σ).
+  
+  Lemma declared_constant_lookup {lookup kn cdecl} :
+    declared_constant_gen lookup kn cdecl ->
+    lookup_constant_gen lookup kn = Some cdecl.
   Proof.
-    unfold declared_constant, lookup_constant. now intros ->.
-  Qed.
-
-  Lemma lookup_constant_declared {Σ kn cdecl} :
-    lookup_constant Σ kn = Some cdecl ->
-    declared_constant Σ kn cdecl.
-  Proof.
-    unfold declared_constant, lookup_constant.
-    destruct lookup_env as [[]|] => //. congruence.
-  Qed.
-
-  Lemma declared_minductive_lookup {Σ ind mdecl} :
-    declared_minductive Σ ind mdecl ->
-    lookup_minductive Σ ind = Some mdecl.
-  Proof.
-    rewrite /declared_minductive /lookup_minductive.
+    unfold declared_constant_gen, lookup_constant_gen. 
     now intros ->.
   Qed.
 
-  Lemma lookup_minductive_declared {Σ ind mdecl} :
-    lookup_minductive Σ ind = Some mdecl ->
-    declared_minductive Σ ind mdecl.
+  Lemma lookup_constant_declared {lookup kn cdecl} :
+    lookup_constant_gen lookup kn = Some cdecl ->
+    declared_constant_gen lookup kn cdecl.
   Proof.
-    rewrite /declared_minductive /lookup_minductive.
-    destruct lookup_env as [[]|] => //. congruence.
+    unfold declared_constant_gen, lookup_constant_gen. 
+    destruct lookup as [[]|] => //. congruence.
   Qed.
 
-  Lemma declared_inductive_lookup {Σ ind mdecl idecl} :
-    declared_inductive Σ ind mdecl idecl ->
-    lookup_inductive Σ ind = Some (mdecl, idecl).
+  Lemma declared_minductive_lookup {lookup ind mdecl} :
+    declared_minductive_gen lookup ind mdecl ->
+    lookup_minductive_gen lookup ind = Some mdecl.
   Proof.
-    rewrite /declared_inductive /lookup_inductive.
+    rewrite /declared_minductive_gen /lookup_minductive_gen.
+    now intros ->.
+  Qed.
+
+  Lemma lookup_minductive_declared {lookup ind mdecl} :
+    lookup_minductive_gen lookup ind = Some mdecl ->
+    declared_minductive_gen lookup ind mdecl.
+  Proof.
+    rewrite /declared_minductive_gen /lookup_minductive_gen.
+    destruct lookup as [[]|] => //. congruence.
+  Qed.
+
+  Lemma declared_inductive_lookup {lookup ind mdecl idecl} :
+    declared_inductive_gen lookup ind mdecl idecl ->
+    lookup_inductive_gen lookup ind = Some (mdecl, idecl).
+  Proof.
+    rewrite /declared_inductive_gen /lookup_inductive_gen.
     intros []. now rewrite (declared_minductive_lookup H) H0.
   Qed.
 
-  Lemma lookup_inductive_declared {Σ ind mdecl idecl} :
-    lookup_inductive Σ ind = Some (mdecl, idecl) ->
-    declared_inductive Σ ind mdecl idecl.
+  Lemma lookup_inductive_declared {lookup ind mdecl idecl} :
+    lookup_inductive_gen lookup ind = Some (mdecl, idecl) ->
+    declared_inductive_gen lookup ind mdecl idecl.
   Proof.
-    rewrite /declared_inductive /lookup_inductive.
-    destruct lookup_minductive as [[]|] eqn:hl => //=.
+    rewrite /declared_inductive_gen /lookup_inductive_gen.
+    destruct lookup_minductive_gen as [[]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-].
     split => //.
     apply (lookup_minductive_declared hl).
   Qed.
 
-  Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
-    declared_constructor Σ id mdecl idecl cdecl ->
-    lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
+  Lemma declared_constructor_lookup {lookup id mdecl idecl cdecl} :
+    declared_constructor_gen lookup id mdecl idecl cdecl ->
+    lookup_constructor_gen lookup id.1 id.2 = Some (mdecl, idecl, cdecl).
   Proof.
-    intros []. unfold lookup_constructor.
-    rewrite (declared_inductive_lookup (Σ := Σ) H) /= H0 //.
+    intros []. unfold lookup_constructor_gen.
+    rewrite (declared_inductive_lookup (lookup := lookup) H) /= H0 //.
   Qed.
 
-  Lemma lookup_constructor_declared {Σ id mdecl idecl cdecl} :
-    lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl) ->
-    declared_constructor Σ id mdecl idecl cdecl.
+  Lemma lookup_constructor_declared {lookup id mdecl idecl cdecl} :
+    lookup_constructor_gen lookup id.1 id.2 = Some (mdecl, idecl, cdecl) ->
+    declared_constructor_gen lookup id mdecl idecl cdecl.
   Proof.
-    unfold lookup_constructor.
-    destruct lookup_inductive as [[]|] eqn:hl => //=.
+    unfold lookup_constructor_gen.
+    destruct lookup_inductive_gen as [[]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-].
     split => //.
     apply (lookup_inductive_declared hl). congruence.
   Qed.
 
-  Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
-    declared_projection Σ p mdecl idecl cdecl pdecl ->
-    lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
+  Lemma declared_projection_lookup {lookup p mdecl idecl cdecl pdecl} :
+    declared_projection_gen lookup p mdecl idecl cdecl pdecl ->
+    lookup_projection_gen lookup p = Some (mdecl, idecl, cdecl, pdecl).
   Proof.
-    intros [? []]. unfold lookup_projection.
-    rewrite (declared_constructor_lookup (Σ := Σ) H) /= H0 //.
+    intros [? []]. unfold lookup_projection_gen.
+    rewrite (declared_constructor_lookup (lookup := lookup) H) /= H0 //.
   Qed.
 
-  Lemma lookup_projection_declared {Σ p mdecl idecl cdecl pdecl} :
+  Lemma lookup_projection_declared {lookup p mdecl idecl cdecl pdecl} :
     ind_npars mdecl = p.(proj_npars) ->
-    lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
-    declared_projection Σ p mdecl idecl cdecl pdecl.
+    lookup_projection_gen lookup p = Some (mdecl, idecl, cdecl, pdecl) ->
+    declared_projection_gen lookup p mdecl idecl cdecl pdecl.
   Proof.
-    intros hp. unfold lookup_projection.
-    destruct lookup_constructor as [[[] ?]|] eqn:hl => //=.
+    intros hp. unfold lookup_projection_gen.
+    destruct lookup_constructor_gen as [[[] ?]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-]. subst c p0.
     split => //.
     apply (lookup_constructor_declared (id:=(proj_ind p, 0)) hl).
@@ -312,7 +333,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     move=> inddecl.
     apply: forall_nth_error_Alli=> /= i x eq.
     apply: lookup_constructor_declared=> /=.
-    rewrite /lookup_constructor (declared_inductive_lookup inddecl) eq //.
+    rewrite /lookup_constructor_gen (declared_inductive_lookup inddecl) eq //.
   Qed.
 
 End Lookup.

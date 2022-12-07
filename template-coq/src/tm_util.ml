@@ -24,7 +24,7 @@ let gen_constant_in_modules s =
       | BoolValue b -> b
       | _ -> assert false
   with Not_found ->
-    declare_bool_option_and_ref ~depr:false ~key ~value:false
+    declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
 
 let time prefix f x =
   if timing_opt () then 
@@ -48,7 +48,7 @@ let debug_opt =
       | BoolValue b -> b
       | _ -> assert false
   with Not_found ->
-  declare_bool_option_and_ref ~depr:false ~key ~value:false
+  declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
 
 let debug (m : unit ->Pp.t) =
   if debug_opt () then

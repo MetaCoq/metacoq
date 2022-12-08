@@ -1454,3 +1454,17 @@ Proof.
   case=> [|l' z];
   [exact: (snoc_view_snoc nil) | exact: (snoc_view_snoc (a :: l'))].
 Qed.
+
+Lemma hd_error_skipn_iff_In {A v ls}
+  : (exists n, hd_error (@skipn A n ls) = Some v) <-> In v ls.
+Proof.
+  move: ls; elim => //=.
+  1: setoid_rewrite skipn_nil; cbn; firstorder congruence.
+  move => ?? <-.
+  split.
+  { move => [[|?]]; rewrite ?skipn_0 ?skipn_S => //=.
+    1: move => [->].
+    all: eauto. }
+  { move => [->|[n H]]; [ exists 0 | exists (S n) ];
+            rewrite ?skipn_0 ?skipn_S => //=. }
+Qed.

@@ -27,7 +27,7 @@ install: theory plugin
 	$(MAKE) -f Makefile.erasure install
 	$(MAKE) -f Makefile.plugin install
 
-uninstall: theory plugin
+uninstall: Makefile.erasure Makefile.plugin
 	$(MAKE) -f Makefile.erasure uninstall
 	$(MAKE) -f Makefile.plugin uninstall
 

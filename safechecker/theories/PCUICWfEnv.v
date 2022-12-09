@@ -77,24 +77,17 @@ Definition abstract_env_level_mem' {cf:checker_flags} {abstract_env_impl abstrac
 
 Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl: Type)
   `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl} : Prop := {
-    abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
-    abstract_env_ext_wf X {Σ} : abstract_env_ext_rel X Σ -> ∥ wf_ext Σ ∥ ;
-    abstract_env_ext_irr X {Σ Σ'} :
+
+  abstract_env_ext_exists X : ∥ ∑ Σ , abstract_env_ext_rel X Σ ∥;
+  abstract_env_ext_wf X {Σ} : abstract_env_ext_rel X Σ -> ∥ wf_ext Σ ∥ ;
+  abstract_env_ext_irr X {Σ Σ'} :
       abstract_env_ext_rel X Σ -> abstract_env_ext_rel X Σ' ->  Σ = Σ';
-   abstract_env_lookup_correct X {Σ} c : abstract_env_ext_rel X Σ ->
-      lookup_env Σ c = abstract_env_lookup X c ;
-  abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) :
-    let uctx := (wf_ext_gc_of_uctx (abstract_env_ext_wf X wfΣ)).π1 in
-    leqb_level_n_spec0_gen uctx (abstract_env_leqb_level_n X) /\
-    leqb_level_n_spec_gen uctx (abstract_env_leqb_level_n X);
-  abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
-    LevelSet.mem u (global_ext_levels Σ) = abstract_env_level_mem X u;
-  abstract_env_guard_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) fix_cofix Γ mfix :
-      guard fix_cofix Σ Γ mfix <-> abstract_env_guard X fix_cofix Γ mfix;
+
   abstract_env_exists X : ∥ ∑ Σ , abstract_env_rel X Σ ∥;
   abstract_env_wf X {Σ} : abstract_env_rel X Σ -> ∥ wf Σ ∥;
   abstract_env_irr X {Σ Σ'} :
     abstract_env_rel X Σ -> abstract_env_rel X Σ' ->  Σ = Σ';
+
   abstract_env_init_correct univs retro cuniv :
     abstract_env_rel (abstract_env_init univs retro cuniv)
     {| universes := univs; declarations := []; retroknowledge := retro |} ;
@@ -103,20 +96,30 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
   abstract_env_add_udecl_rel X {Σ} udecl H :
     (abstract_env_rel X Σ.1 /\ Σ.2 = udecl) <->
     abstract_env_ext_rel (abstract_env_add_udecl X udecl H) Σ;
-  abstract_env_is_consistent_correct X Σ uctx udecl :
-    abstract_env_rel X Σ ->
-    global_uctx_invariants (global_uctx Σ) ->
-    global_uctx_invariants (ContextSet.union udecl (global_uctx Σ)) ->
-    gc_of_uctx udecl = Some uctx ->
-    (consistent (ConstraintSet.union udecl.2 (global_constraints Σ)) /\
-       consistent_extension_on (global_uctx Σ) udecl.2)
-    <-> abstract_env_is_consistent X uctx ;
   abstract_pop_decls_correct X decls (prf : forall Σ : global_env, abstract_env_rel X Σ ->
             exists d, Σ.(declarations) = d :: decls) :
     let X' := abstract_pop_decls X in
     forall Σ Σ', abstract_env_rel X Σ -> abstract_env_rel X' Σ' ->
                       Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\
                       Σ.(retroknowledge) = Σ'.(retroknowledge);
+
+  abstract_env_lookup_correct X {Σ} c : abstract_env_ext_rel X Σ ->
+      lookup_env Σ c = abstract_env_lookup X c ;
+
+  abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) :
+    let uctx := (wf_ext_gc_of_uctx (abstract_env_ext_wf X wfΣ)).π1 in
+    leqb_level_n_spec0_gen uctx (abstract_env_leqb_level_n X) /\
+    leqb_level_n_spec_gen uctx (abstract_env_leqb_level_n X);
+  abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
+    LevelSet.mem u (global_ext_levels Σ) = abstract_env_level_mem X u;
+  abstract_env_is_consistent_correct X Σ uctx udecl :
+    abstract_env_rel X Σ ->
+    ConstraintSet.For_all (declared_cstr_levels (LevelSet.union udecl.1 (global_levels Σ))) udecl.2 ->
+    gc_of_uctx udecl = Some uctx ->
+    consistent_extension_on (global_uctx Σ) udecl.2 <-> abstract_env_is_consistent X uctx ;
+
+  abstract_env_guard_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) fix_cofix Γ mfix :
+      guard fix_cofix Σ Γ mfix <-> abstract_env_guard X fix_cofix Γ mfix;
   abstract_primitive_constant_correct X tag Σ :
     abstract_env_ext_rel X Σ -> abstract_primitive_constant X tag = PCUICEnvironment.primitive_constant Σ tag
   }.
@@ -292,4 +295,21 @@ Lemma abstract_env_level_mem_correct' {cf:checker_flags} {X_type : abstract_env_
 Proof.
   unfold abstract_env_level_mem'. erewrite <- abstract_env_level_mem_correct; eauto.
   apply wGraph.VSetProp.Dec.F.union_b.
+Qed.
+
+Lemma wf_consistent_extension_on_consistent {cf:checker_flags} {Σ} udecl :
+  wf Σ -> consistent_extension_on (global_uctx Σ) udecl ->
+  consistent (ConstraintSet.union udecl (global_constraints Σ)).
+Proof.
+  intros s Hext. pose proof (wf_consistent _ s).
+  destruct H as [val Hval].
+  destruct (Hext val Hval) as [val' [Hval' Hval'']]. exists val'.
+  intros [[l ct] l'] [Hl|Hl]%CS.union_spec; eauto.
+  destruct (Hval _ Hl); cbn; econstructor.
+  - erewrite <- (Hval'' l0). erewrite <- (Hval'' l'0) => //.
+    + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
+      + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
+    - erewrite <- (Hval'' l0). erewrite <- (Hval'' l'0) => //.
+      + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
+      + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
 Qed.

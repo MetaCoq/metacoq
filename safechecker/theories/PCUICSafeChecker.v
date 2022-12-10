@@ -377,17 +377,11 @@ Section CheckEnv.
     - eauto.
     - pose (HΣ := abstract_env_wf _ wfΣ); sq.
       apply wf_global_uctx_invariants in HΣ.
-      enough (satisfiable_udecl Σ udecl /\ valid_on_mono_udecl (global_uctx Σ) udecl).
-      1: case: H1; split=> //; apply: consistent_extension_on_global=> //.
-
+      pose (HΣ' := abstract_env_wf _ wfΣ); sq.
+      enough (valid_on_mono_udecl (global_uctx Σ) udecl).
+      1: { split. apply wf_consistent_extension_on_consistent => //.
+           apply: consistent_extension_on_global=> //. }
       eapply abstract_env_is_consistent_correct with (udecl := uctx_of_udecl udecl); eauto=> //.
-      split.
-      * apply LevelSet.union_spec; right ; apply HΣ.
-      * intros [[l ct] l'] [Hl|Hl]%CS.union_spec.
-        + apply (HH _ Hl).
-        + clear -Hl HΣ ct. destruct HΣ as [_ HΣ].
-          specialize (HΣ (l, ct, l') Hl).
-          split; apply LevelSet.union_spec; right; apply HΣ.
   Qed.
 
   Definition check_wf_env_ext_prop X X_ext ext :=
@@ -2395,21 +2389,17 @@ End monad_Alli_nth_forall.
       case_eq (gc_of_constraints univs.2);
       [|intro XX; rewrite XX in Huctx; noconf Huctx].
       intros Σctrs HΣctrs.
-      unfold abstract_env_is_consistent_empty, abstract_env_empty in i2.
+      unfold abstract_env_is_consistent_empty in i2.
       pose proof (abs_init := abstract_env_init_correct (abstract_env_impl := X_env_type)
       (LS.singleton Level.lzero, CS.empty) Retroknowledge.empty PCUICWfEnv.abstract_env_empty_obligation_1).
       pose proof (abs_consist := abstract_env_is_consistent_correct (@abstract_env_empty cf X_impl) _ uctx univs abs_init); cbn in *.
       rewrite HΣctrs in abs_consist, Huctx.
+      pose (abstract_env_wf _ abs_init). sq.
       rewrite <- abs_consist in i2; eauto ; clear abs_consist; cbn; sq.
-      - rewrite ConstraintSetProp.union_sym in i2. now rewrite CS_union_empty in i2.
-      - split; cbn.
-        * rewrite LS.union_spec; left. now econstructor.
-        * intros ? H. inversion H.
-      - split.
-        * rewrite LS.union_spec; right. now econstructor.
-        * red. cbn. rewrite ConstraintSetProp.union_sym. rewrite CS_union_empty. intros ? H.
-          specialize (decll _ H). eapply PCUICWeakeningEnv.declared_cstr_levels_sub; eauto.
-          apply wGraph.VSetProp.union_subset_1.
+      - pose proof (wf_consistent_extension_on_consistent _ _ i2).
+        rewrite ConstraintSetProp.union_sym in H. now rewrite CS_union_empty in H.
+      - intros ? H. specialize (decll _ H). eapply PCUICWeakeningEnv.declared_cstr_levels_sub; eauto.
+        apply wGraph.VSetProp.union_subset_1.
   Qed.
   Next Obligation.
       cbv beta. intros univs retro id levels X H H0 Hconsistent ? ? Hunivs. clearbody Hunivs.

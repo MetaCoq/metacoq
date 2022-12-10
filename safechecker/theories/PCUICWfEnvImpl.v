@@ -282,6 +282,12 @@ Program Global Instance canonical_abstract_env_prop {cf:checker_flags} {guard : 
   @abstract_env_prop _ _ _ canonical_abstract_env_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
 Next Obligation. wf_env. Qed.
+Next Obligation. now sq. Qed.
+Next Obligation. wf_env. Qed.
+Next Obligation. now split. Qed.
+Next Obligation.
+  apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
+Qed.
 Next Obligation.
   pose proof (referenced_impl_ext_wf X); sq.
   set (uctx := wf_ext_gc_of_uctx _); destruct uctx as [[l ctrs] Huctx].
@@ -304,16 +310,28 @@ Next Obligation.
       set (G := graph_of_wf_ext _); destruct G as [G HG].
       cbn. unfold is_graph_of_uctx in HG. now rewrite Huctx in HG.
 Qed.
-Next Obligation. apply guard_correct. Qed.
-Next Obligation. now sq. Qed.
-Next Obligation. wf_env. Qed.
-Next Obligation. now split. Qed.
 Next Obligation.
-  rename H2 into Hudecl. unfold referenced_impl_graph; rewrite andb_and.
+  pose (referenced_impl_wf X). sq.
+  rename H0 into Hudecl. rename H1 into Hudecl'.
+  assert (H0 : global_uctx_invariants (global_uctx X)).
+  { eapply wf_global_uctx_invariants; eauto. }
+  set (udecl := (t , t0)).
+  assert (H1 : global_uctx_invariants (ContextSet.union udecl (global_uctx X))).
+  { split => //.
+    - apply LevelSet.union_spec; right ; now destruct H0.
+    - intros [[l ct] l'] [Hl|Hl]%CS.union_spec.
+      + now specialize (Hudecl _ Hl).
+      + destruct H0 as [_ H0]. specialize (H0 _ Hl).
+        split; apply LevelSet.union_spec; right;
+        now cbn in H0.
+     }
+  unfold referenced_impl_graph; rewrite andb_and.
   pose proof (referenced_impl_graph_wf X) as HG.
   set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
-  pose proof (HG' := is_graph_of_uctx_add Hudecl HG).
+  pose proof (HG' := is_graph_of_uctx_add Hudecl' HG).
   pose (global_ext_uctx := ContextSet.union udecl (global_uctx X)).
+  pose (wf_consistent_extension_on_consistent udecl.2 s).
+  assert (reorder : forall a a' b c : Prop, (b -> a) -> (a /\ b <-> a' /\ c) -> b <-> a' /\ c) by intuition; eapply reorder; try eassumption; clear reorder.
   rewrite - (is_consistent_spec global_ext_uctx) (is_consistent_spec2 HG').
   assert (reorder : forall a b c : Prop, (a -> b <-> c) -> a /\ b <-> a /\ c) by intuition; apply reorder.
   move=> ?; rewrite consistent_extension_on_union.
@@ -324,15 +342,22 @@ Next Obligation.
   apply: consistent_ext_on_full_ext=> //.
   apply: add_uctx_subgraph.
 Qed.
-Next Obligation.
-  apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
-Qed.
+Next Obligation. apply guard_correct. Qed.
 
 
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} {guard : abstract_guard_impl} :
   @abstract_env_prop _ _ _ optimized_abstract_env_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
 Next Obligation. wf_env. Qed.
+Next Obligation. now sq. Qed.
+Next Obligation. wf_env. Qed.
+Next Obligation. now split. Qed.
+Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody r.
+  pose proof (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
+  specialize (prf _ eq_refl).
+  destruct (declarations X); cbn; inversion prf; inversion H0. subst.
+  now destruct x.
+Qed.
 Next Obligation. pose (referenced_impl_ext_wf X). sq.
     erewrite EnvMap.lookup_spec; try reflexivity.
     1: apply wf_fresh_globals; eauto.
@@ -340,18 +365,10 @@ Next Obligation. pose (referenced_impl_ext_wf X). sq.
 Next Obligation.
     epose (prf := abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).
     erewrite wf_ext_gc_of_uctx_irr.  exact prf. Qed.
-Next Obligation. eapply guard_correct. Qed.
-Next Obligation. now sq. Qed.
-Next Obligation. wf_env. Qed.
-Next Obligation. now split. Qed.
 Next Obligation.
-  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)); eauto. Qed.
-Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody r.
-  pose proof (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
-  specialize (prf _ eq_refl).
-  destruct (declarations X); cbn; inversion prf; inversion H0. subst.
-  now destruct x.
+  now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)) with (udecl := (t,t0)); eauto.
 Qed.
+Next Obligation. eapply guard_correct. Qed.
 
 Definition canonical_abstract_env_impl {cf:checker_flags} {guard : abstract_guard_impl} : abstract_env_impl :=
   (referenced_impl ; referenced_impl_ext ; canonical_abstract_env_struct ; canonical_abstract_env_prop).

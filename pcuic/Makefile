@@ -25,7 +25,7 @@ install: theory # plugin
 	$(MAKE) -f Makefile.pcuic install
 	# $(MAKE) -f Makefile.plugin install
 
-uninstall: theory # plugin
+uninstall: Makefile.pcuic # Makefile.plugin
 	$(MAKE) -f Makefile.pcuic uninstall
 	# $(MAKE) -f Makefile.plugin uninstall
 

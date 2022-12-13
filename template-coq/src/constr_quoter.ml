@@ -323,14 +323,14 @@ struct
 
 
   let sprop_level =
-    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
+    lazy (constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |]))
   let prop_level =
-    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
+    lazy (constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |]))
 
   let quote_sort s = match s with
   | Sorts.Set -> quote_universe Universe.type0
-  | Sorts.Prop -> constr_mkApp (tof_levels, [| prop_level |])
-  | Sorts.SProp -> constr_mkApp (tof_levels, [| sprop_level |])
+  | Sorts.Prop -> constr_mkApp (tof_levels, [| Lazy.force prop_level |])
+  | Sorts.SProp -> constr_mkApp (tof_levels, [| Lazy.force sprop_level |])
   | Sorts.Type u -> quote_universe u
 
   let quote_sort_family = function

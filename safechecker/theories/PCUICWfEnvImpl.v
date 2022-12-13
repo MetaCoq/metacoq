@@ -290,21 +290,13 @@ Next Obligation.
 Qed.
 Next Obligation.
   pose proof (referenced_impl_ext_wf X); sq.
-  set (uctx := wf_ext_gc_of_uctx _); destruct uctx as [[l ctrs] Huctx].
+  set (uctx := wf_ext_gc_of_uctx _) in *; destruct uctx as [[lc ctrs] Huctx].
   assert (consistent (global_ext_uctx X).2) as HC.
       { sq; apply (global_ext_uctx_consistent _ H). }
   simpl in HC. apply gc_consistent_iff in HC.
-  split.
-  - eapply leqb_level_n_spec0.
+  eapply leqb_level_n_spec; eauto.
     + eapply gc_of_uctx_invariants; try eapply wf_ext_global_uctx_invariants; eauto.
-    + Opaque gc_of_constraints. cbn in *. Transparent gc_of_constraints.
-      destruct (gc_of_constraints X); inversion Huctx. now destruct H2.
-    + unfold referenced_impl_ext_graph; cbn.
-      set (G := graph_of_wf_ext _); destruct G as [G HG].
-      cbn. unfold is_graph_of_uctx in HG. now rewrite Huctx in HG.
-  - eapply leqb_level_n_spec.
-    + eapply gc_of_uctx_invariants; try eapply wf_ext_global_uctx_invariants; eauto.
-    + Opaque gc_of_constraints. cbn in *. Transparent gc_of_constraints.
+    + clear Hl Hl'. Opaque gc_of_constraints. cbn in *. Transparent gc_of_constraints.
       destruct (gc_of_constraints X); inversion Huctx. now destruct H2.
     + unfold referenced_impl_ext_graph; cbn.
       set (G := graph_of_wf_ext _); destruct G as [G HG].
@@ -363,8 +355,9 @@ Next Obligation. pose (referenced_impl_ext_wf X). sq.
     1: apply wf_fresh_globals; eauto.
     1: apply wf_env_ext_map_repr. Qed.
 Next Obligation.
-    epose (prf := abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).
-    erewrite wf_ext_gc_of_uctx_irr.  exact prf. Qed.
+    revert n l l' Hl Hl'. erewrite wf_ext_gc_of_uctx_irr.
+    exact (abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).
+Qed.
 Next Obligation.
   now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)) with (udecl := (t,t0)); eauto.
 Qed.

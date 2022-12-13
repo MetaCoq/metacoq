@@ -108,7 +108,6 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
 
   abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) :
     let uctx := (wf_ext_gc_of_uctx (abstract_env_ext_wf X wfΣ)).π1 in
-    leqb_level_n_spec0_gen uctx (abstract_env_leqb_level_n X) /\
     leqb_level_n_spec_gen uctx (abstract_env_leqb_level_n X);
   abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
     LevelSet.mem u (global_ext_levels Σ) = abstract_env_level_mem X u;
@@ -225,8 +224,8 @@ Lemma abstract_env_compare_universe_correct {cf:checker_flags} {X_type : abstrac
         abstract_env_conv_pb_relb X conv_pb u u'.
 Proof.
   intros wfu wfu'. pose proof (abstract_env_ext_wf X wfΣ). sq.
-  destruct (abstract_env_leqb_level_n_correct X wfΣ) as [Hleq0 Hleq].
-  rewrite uctx'_eq in Hleq0, Hleq.
+  pose (Hleq := abstract_env_leqb_level_n_correct X wfΣ).
+  erewrite uctx'_eq in Hleq.
   destruct conv_pb; split; cbn; intro.
   - eapply (check_eqb_universe_complete_gen _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
       + eapply wf_ext_global_uctx_invariants; eauto.
@@ -244,15 +243,18 @@ Qed.
 
 Lemma check_constraints_spec {cf:checker_flags} {X_type : abstract_env_impl}
      (X:X_type.π2.π1)  {Σ} (wfΣ : abstract_env_ext_rel X Σ) ctrs :
-  abstract_env_check_constraints X ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
+     uctx_invariants ((global_ext_uctx Σ).1, ctrs) ->
+     abstract_env_check_constraints X ctrs -> valid_constraints (global_ext_constraints Σ) ctrs.
 Proof.
-    intros HH. pose proof (abstract_env_ext_wf X wfΣ). sq.
-    destruct (abstract_env_leqb_level_n_correct X wfΣ) as [Hleq0 Hleq].
-    rewrite uctx'_eq in Hleq0, Hleq.
+    intros Huctx HH. pose proof (abstract_env_ext_wf X wfΣ). sq.
+    pose (Hleq := abstract_env_leqb_level_n_correct X wfΣ).
+    erewrite uctx'_eq in Hleq.
     eapply (check_constraints_spec_gen _ (global_ext_uctx Σ)); eauto.
     - now eapply wf_ext_global_uctx_invariants.
     - now eapply global_ext_uctx_consistent.
-Qed.
+    - pose proof (wf_ext_global_uctx_invariants Σ H) as [H1 H2].
+      split; eauto.
+Defined.
 
 Lemma check_constraints_complete {cf:checker_flags} {X_type : abstract_env_impl}
     (X:X_type.π2.π1)  {Σ} (wfΣ : abstract_env_ext_rel X Σ) ctrs (H : check_univs) :
@@ -260,8 +262,8 @@ Lemma check_constraints_complete {cf:checker_flags} {X_type : abstract_env_impl}
     valid_constraints (global_ext_constraints Σ) ctrs -> abstract_env_check_constraints X ctrs.
 Proof.
     intros Huctx HH. pose proof (abstract_env_ext_wf X wfΣ). sq.
-    destruct (abstract_env_leqb_level_n_correct X wfΣ) as [Hleq0 Hleq].
-    rewrite uctx'_eq in Hleq0, Hleq.
+    pose (Hleq := abstract_env_leqb_level_n_correct X wfΣ).
+    erewrite uctx'_eq in Hleq.
     eapply (check_constraints_complete_gen _ (global_ext_uctx Σ)); eauto.
     - now eapply wf_ext_global_uctx_invariants.
     - now eapply global_ext_uctx_consistent.

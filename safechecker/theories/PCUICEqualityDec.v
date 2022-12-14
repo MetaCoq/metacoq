@@ -1143,7 +1143,6 @@ Section EqualityDecGen.
   Defined.
 
   Lemma eq_universeP_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen)
     u u' :
     wf_universe Σ u ->
@@ -1166,7 +1165,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma leq_universeP_gen leqb_level_n_gen
-  (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
   (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u u' :
   wf_universe Σ u ->
   wf_universe Σ u' ->
@@ -1194,7 +1192,6 @@ Section EqualityDecGen.
           (compare_global_instance (lookup_env Σ) (check_eqb_universe_gen leqb_level_n_gen)).
 
   Lemma reflect_eqb_termp_napp pb leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) napp t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
@@ -1213,7 +1210,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma eqb_termp_napp_spec pb leqb_level_n_gen
-  (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
   (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) napp t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
@@ -1235,7 +1231,6 @@ Section EqualityDecGen.
   Definition leqb_term := (eqb_termp Cumul).
 
   Lemma eqb_term_spec leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) t u :
     wf_universes Σ t -> wf_universes Σ u ->
     eqb_term leqb_level_n_gen t u ->
@@ -1246,7 +1241,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma leqb_term_spec leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen)
     t u :
     wf_universes Σ t -> wf_universes Σ u ->
@@ -1258,7 +1252,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma reflect_leq_term leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
@@ -1271,7 +1264,6 @@ Section EqualityDecGen.
   Notation eq_term Σ t u := (eq_term Σ Σ t u).
 
   Lemma reflect_eq_term leqb_level_n_gen
-  (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
   (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
@@ -1282,7 +1274,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma eqb_term_refl leqb_level_n_gen
-  (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
   (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) :
     forall t, wf_universes Σ t -> eqb_term leqb_level_n_gen t t.
   Proof using hΣ.
@@ -1295,7 +1286,6 @@ Section EqualityDecGen.
   Qed.
 
   Lemma eqb_ctx_spec leqb_level_n_gen
-  (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
   (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) :
     forall Γ Δ,
       wf_ctx_universes Σ Γ ->

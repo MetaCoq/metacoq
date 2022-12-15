@@ -106,11 +106,11 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
   abstract_env_lookup_correct X {Σ} c : abstract_env_ext_rel X Σ ->
       lookup_env Σ c = abstract_env_lookup X c ;
 
-  abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) :
+  abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ):
     let uctx := (wf_ext_gc_of_uctx (abstract_env_ext_wf X wfΣ)).π1 in
     leqb_level_n_spec_gen uctx (abstract_env_leqb_level_n X);
-  abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
-    LevelSet.mem u (global_ext_levels Σ) = abstract_env_level_mem X u;
+  abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ) l:
+    LevelSet.In l (global_ext_levels Σ) <-> abstract_env_level_mem X l;
   abstract_env_is_consistent_correct X Σ uctx udecl :
     abstract_env_rel X Σ ->
     ConstraintSet.For_all (declared_cstr_levels (LevelSet.union udecl.1 (global_levels Σ))) udecl.2 ->
@@ -286,17 +286,23 @@ Lemma abstract_env_ext_wf_universeb_correct {cf:checker_flags} {X_type : abstrac
   wf_universeb Σ u = abstract_env_ext_wf_universeb X u.
 Proof.
   destruct u => //; destruct t as [ [] ?]; cbn. clear is_ok t_ne.
-  induction this => //; cbn.
-  erewrite <- abstract_env_level_mem_correct; eauto. cbn.
-  set (LevelSet.Raw.mem _). clearbody b. destruct b => //.
+  induction this => //; cbn. set (b := LevelSet.Raw.mem _ _). set (b' := abstract_env_level_mem _ _).
+  assert (Hbb' : b = b').
+  { unfold b'. apply eq_true_iff_eq. rewrite <- (abstract_env_level_mem_correct X wfΣ (LevelExpr.get_level a)).
+    now erewrite <- (LevelSet.Raw.mem_spec (LevelSet.this (global_ext_levels Σ)) (LevelExpr.get_level a)). }
+  destruct Hbb', b => //.
 Qed.
 
 Lemma abstract_env_level_mem_correct' {cf:checker_flags} {X_type : abstract_env_impl}
 ( X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) levels u :
   LevelSet.mem u (LevelSet.union levels (global_ext_levels Σ)) = abstract_env_level_mem' X levels u.
 Proof.
-  unfold abstract_env_level_mem'. erewrite <- abstract_env_level_mem_correct; eauto.
-  apply wGraph.VSetProp.Dec.F.union_b.
+  unfold abstract_env_level_mem'. rewrite wGraph.VSetProp.Dec.F.union_b.
+  set (b0 := LevelSet.mem _ _). set (b := LevelSet.mem _ _). set (b' := abstract_env_level_mem _ _).
+  assert (Hbb' : b = b').
+  { unfold b'. apply eq_true_iff_eq. rewrite <- (abstract_env_level_mem_correct X wfΣ u).
+    unfold LevelSet.In. now erewrite <- (LevelSet.Raw.mem_spec _ u). }
+  destruct Hbb' => //.
 Qed.
 
 Lemma wf_consistent_extension_on_consistent {cf:checker_flags} {Σ} udecl :

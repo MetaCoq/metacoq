@@ -302,6 +302,7 @@ Next Obligation.
       set (G := graph_of_wf_ext _); destruct G as [G HG].
       cbn. unfold is_graph_of_uctx in HG. now rewrite Huctx in HG.
 Qed.
+Next Obligation. pose (referenced_impl_ext_wf X). sq. symmetry; apply LevelSet.Raw.mem_spec. typeclasses eauto. Defined.
 Next Obligation.
   pose (referenced_impl_wf X). sq.
   rename H0 into Hudecl. rename H1 into Hudecl'.
@@ -357,6 +358,9 @@ Next Obligation. pose (referenced_impl_ext_wf X). sq.
 Next Obligation.
     revert n l l' Hl Hl'. erewrite wf_ext_gc_of_uctx_irr.
     exact (abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).
+Qed.
+Next Obligation.
+  now erewrite (abstract_env_level_mem_correct X.(wf_env_ext_referenced)).
 Qed.
 Next Obligation.
   now erewrite (abstract_env_is_consistent_correct X.(wf_env_referenced)) with (udecl := (t,t0)); eauto.

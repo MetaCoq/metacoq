@@ -971,7 +971,13 @@ Section Typecheck.
     forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
   Proof using Type.
     induction u; eauto; cbn.
-    erewrite <- abstract_env_level_mem_correct; eauto. intuition.
+    set (b := LevelSet.Raw.mem _ _). set (b' := abstract_env_level_mem _ _).
+    assert (Hbb' : b = b').
+    { unfold b'. apply eq_true_iff_eq. split; intro.
+      eapply (abstract_env_level_mem_correct X wfΣ a); apply (LevelSet.Raw.mem_spec _ a); eauto.
+      apply (LevelSet.Raw.mem_spec _ a); eapply (abstract_env_level_mem_correct X wfΣ a); eauto.
+    }
+    now destruct Hbb'.
   Qed.
 
   Equations check_consistent_instance  uctx (wfg : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥)
@@ -998,10 +1004,7 @@ Section Typecheck.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [[_wfΣ s]]. specialize_Σ wfΣ.
     assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
-    { symmetry in e2.
-      eapply forallb_All in e2. eapply All_forallb'; tea.
-      intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
-    }
+    { symmetry in e2. rewrite abstract_env_level_mem_forallb; eauto. }
     repeat split; eauto.
     - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
       now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ].
@@ -1020,10 +1023,7 @@ Section Typecheck.
       pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ].
       eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
       assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
-      { symmetry in e2.
-        eapply forallb_All in e2. eapply All_forallb'; tea.
-        intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
-      }
+      { rewrite abstract_env_level_mem_forallb; eauto. }
       solve_all.
   Qed.
   Next Obligation.

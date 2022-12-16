@@ -593,7 +593,7 @@ Corollary R_Acc_aux :
     left. econstructor. eapply red1_context.
     econstructor.
     - unfold declared_constant, declared_constant_gen.
-      rewrite (abstract_env_lookup_correct _ _ wfΣ). rewrite <- eq. reflexivity.
+      rewrite (abstract_env_lookup_correct' _ _ wfΣ). rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
 
@@ -605,7 +605,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
@@ -616,7 +616,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
 
@@ -1567,7 +1567,7 @@ Corollary R_Acc_aux :
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
-      + symmetry. erewrite abstract_env_lookup_correct; eauto.
+      + symmetry. erewrite abstract_env_lookup_correct'; eauto.
       + reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>

@@ -260,7 +260,7 @@ Qed.
   Next Obligation.
     split.
     - symmetry in look.
-      etransitivity. erewrite (abstract_env_lookup_correct X); eauto.
+      etransitivity. erewrite (abstract_env_lookup_correct' X); eauto.
       reflexivity.
     - now symmetry.
   Defined.
@@ -271,10 +271,10 @@ Qed.
     cbn.
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
-      red in declm; erewrite <- abstract_env_lookup_correct, declm in e0; eauto;
+      red in declm; erewrite <- abstract_env_lookup_correct', declm in e0; eauto;
       congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
-    red in declm. erewrite <- abstract_env_lookup_correct, declm in look; eauto.
+    red in declm. erewrite <- abstract_env_lookup_correct', declm in look; eauto.
     noconf look.
     congruence.
   Qed.
@@ -486,7 +486,7 @@ Qed.
     cbn in *; intros. pose (hΣ _ wfΣ). specialize_Σ wfΣ.
     inversion wt. sq.
     inversion X0; subst.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
+    erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e. subst.
     now constructor.
   Defined.
@@ -494,14 +494,14 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
+    clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
+    clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.

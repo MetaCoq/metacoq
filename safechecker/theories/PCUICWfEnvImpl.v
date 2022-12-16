@@ -289,6 +289,11 @@ Next Obligation.
   apply (reference_pop_decls_correct X decls prf X (referenced_pop X) eq_refl eq_refl).
 Qed.
 Next Obligation.
+  epose proof (HΣ := referenced_impl_ext_wf X). sq.
+  apply lookup_global_Some_iff_In_NoDup => //.
+  destruct HΣ as [[] _]. now eapply NoDup_on_global_decls.
+Qed.
+Next Obligation.
   pose proof (referenced_impl_ext_wf X); sq.
   set (uctx := wf_ext_gc_of_uctx _) in *; destruct uctx as [[lc ctrs] Huctx].
   assert (consistent (global_ext_uctx X).2) as HC.
@@ -351,10 +356,15 @@ Next Obligation. unfold optim_pop. set (optim_pop_obligation_1 cf X). clearbody 
   destruct (declarations X); cbn; inversion prf; inversion H0. subst.
   now destruct x.
 Qed.
-Next Obligation. pose (referenced_impl_ext_wf X). sq.
-    erewrite EnvMap.lookup_spec; try reflexivity.
+Next Obligation.
+  epose proof (HΣ := referenced_impl_ext_wf X). sq.
+  etransitivity; try apply abstract_env_lookup_correct => //.
+  assert (lookup_env X kn = EnvMap.lookup kn X).
+  { erewrite EnvMap.lookup_spec; try reflexivity.
     1: apply wf_fresh_globals; eauto.
-    1: apply wf_env_ext_map_repr. Qed.
+    1: apply wf_env_ext_map_repr. }
+  now rewrite <- H.
+Qed.
 Next Obligation.
     revert n l l' Hl Hl'. erewrite wf_ext_gc_of_uctx_irr.
     exact (abstract_env_leqb_level_n_correct X.(wf_env_ext_referenced) eq_refl).

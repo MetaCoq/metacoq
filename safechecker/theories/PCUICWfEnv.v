@@ -103,8 +103,8 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
                       Σ'.(declarations) = decls /\ Σ.(universes) = Σ'.(universes) /\
                       Σ.(retroknowledge) = Σ'.(retroknowledge);
 
-  abstract_env_lookup_correct X {Σ} c : abstract_env_ext_rel X Σ ->
-      lookup_env Σ c = abstract_env_lookup X c ;
+  abstract_env_lookup_correct X {Σ} kn decl : abstract_env_ext_rel X Σ ->
+      In (kn, decl) (declarations Σ) <-> abstract_env_lookup X kn = Some decl ;
 
   abstract_env_leqb_level_n_correct X {Σ} (wfΣ : abstract_env_ext_rel X Σ):
     let uctx := (wf_ext_gc_of_uctx (abstract_env_ext_wf X wfΣ)).π1 in
@@ -321,3 +321,18 @@ Proof.
       + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
       + destruct s as [[Hs _] _]. now destruct (Hs _ Hl).
 Qed.
+
+Lemma abstract_env_lookup_correct' {cf:checker_flags} {X_type : abstract_env_impl}
+( X:X_type.π2.π1) {Σ} kn : abstract_env_ext_rel X Σ ->
+  lookup_env Σ kn = abstract_env_lookup X kn.
+Proof.
+  intro wfΣ; pose proof (HΣ := abstract_env_ext_wf X wfΣ); sq.
+  set (odecl := lookup_env _ _). case_eq odecl => [decl Hdecl| Hnotin].
+  - intros. destruct (abstract_env_lookup_correct X kn decl wfΣ) as [H _].
+    rewrite H; eauto. apply lookup_global_Some_iff_In_NoDup => //.
+    destruct HΣ as [[] _]. now eapply NoDup_on_global_decls.
+  - apply lookup_global_None in Hnotin. case_eq (abstract_env_lookup X kn) => //.
+    intros decl Hdecl. eapply abstract_env_lookup_correct in Hdecl; eauto.
+    destruct Hnotin. apply in_map_iff. now exists (kn,decl).
+Qed.
+

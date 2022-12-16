@@ -793,8 +793,8 @@ Proof.
   assert (hl : Hlookup X_type X X_type' X').
   { red. intros. specialize (ext _ _ H H0) as [[?] ?].
     split. intros.
-    rewrite -(abstract_env_lookup_correct _ _ H).
-    rewrite -(abstract_env_lookup_correct _ _ H0).
+    rewrite -(abstract_env_lookup_correct' _ _ H).
+    rewrite -(abstract_env_lookup_correct' _ _ H0).
     rewrite H2 H3. pose proof (abstract_env_ext_wf _ H) as [?].
     eapply extends_lookup_env in H3; try apply e; eauto. clear -H2 H3. congruence.
     destruct X0. intros tag.

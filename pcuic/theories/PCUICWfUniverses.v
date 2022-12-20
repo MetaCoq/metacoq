@@ -517,7 +517,6 @@ Qed.
 
   - solve_all.
   - now eapply weaken_wf_universe.
-  - apply /andP; to_wfu; intuition eauto 4.
   - eapply forallb_impl ; tea.
     now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - eapply forallb_impl ; tea.
@@ -1036,7 +1035,6 @@ Qed.
         now simpl in Hs.
       * induction X; simpl; auto.
         rewrite IHX /= /test_decl /=. now move/andP: Hs.
-        rewrite IHX /= /test_decl /=. now move/andP: Hc => [] -> ->.
 
     - rewrite wf_universes_lift.
       destruct X as [X _].

@@ -1479,7 +1479,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_constant_from_gen {Σ kn cdecl} :
     declared_constant_gen (lookup_env Σ) kn cdecl ->
     declared_constant Σ kn cdecl.
-  Proof.
+  Proof using Type.
     intro H. eapply lookup_global_Some_if_In.
     red in H. unfold lookup_env in H.
     apply lookup_constant_declared_gen => //.
@@ -1490,7 +1490,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   {wfΣ : wf Σ} :
   declared_constant Σ kn cdecl ->
   declared_constant_gen (lookup_env Σ) kn cdecl.
-  Proof.
+  Proof using P Pcmp cf.
     intro H; eapply lookup_global_Some_iff_In_NoDup in H.
     - apply lookup_constant_declared_gen => //.
       unfold lookup_constant_gen, lookup_env.
@@ -1503,7 +1503,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
    {wfΣ : wf Σ} :
     declared_minductive Σ ind mdecl ->
     declared_minductive_gen (lookup_env Σ) ind mdecl.
-  Proof.
+  Proof using P Pcmp cf.
     intro H; eapply lookup_global_Some_iff_In_NoDup in H.
     - apply lookup_minductive_declared_gen => //.
       unfold lookup_minductive_gen, lookup_env.
@@ -1515,7 +1515,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_minductive_from_gen {Σ ind mdecl} :
     declared_minductive_gen (lookup_env Σ) ind mdecl ->
     declared_minductive Σ ind mdecl.
-  Proof.
+  Proof using Type.
     intro H; eapply lookup_global_Some_if_In.
     apply lookup_minductive_declared_gen => //.
     apply declared_minductive_lookup_gen in H => //.
@@ -1525,7 +1525,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   {wfΣ : wf Σ} :
     declared_inductive Σ ind mdecl idecl ->
     declared_inductive_gen (lookup_env Σ) ind mdecl idecl.
-  Proof.
+  Proof using P Pcmp cf.
     intros []; split => //.
     eapply declared_minductive_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1534,7 +1534,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_inductive_from_gen {Σ ind mdecl idecl}:
     declared_inductive_gen (lookup_env Σ) ind mdecl idecl ->
     declared_inductive Σ ind mdecl idecl.
-  Proof.
+  Proof using Type.
     intros []; split => //.
     eapply declared_minductive_from_gen; eauto.
   Qed.
@@ -1543,7 +1543,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     {wfΣ : wf Σ} :
     declared_constructor Σ id mdecl idecl cdecl ->
     declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl.
-  Proof.
+  Proof using P Pcmp cf.
     intros []; split => //.
     eapply declared_inductive_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1552,7 +1552,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_constructor_from_gen {Σ id mdecl idecl cdecl} :
     declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl ->
     declared_constructor Σ id mdecl idecl cdecl.
-  Proof.
+  Proof using Type.
     intros []; split => //.
     eapply declared_inductive_from_gen; eauto.
   Qed.
@@ -1561,7 +1561,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     {wfΣ : wf Σ} :
     declared_projection Σ p mdecl idecl cdecl pdecl ->
     declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl.
-  Proof.
+  Proof using P Pcmp cf.
     intros [? []]. split => //.
     eapply declared_constructor_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1570,7 +1570,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_projection_from_gen {Σ p mdecl idecl cdecl pdecl} :
     declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
     declared_projection Σ p mdecl idecl cdecl pdecl.
-  Proof.
+  Proof using Type.
     intros [? []]. split => //.
     eapply declared_constructor_from_gen; eauto.
   Qed.

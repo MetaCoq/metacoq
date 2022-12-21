@@ -510,7 +510,9 @@ Proof.
   pose proof (validity hc).
   eapply PCUICSpine.inversion_mkApps_direct in hc as [A' [u' [s' [hs hsp]]]]; eauto.
   eapply inversion_Construct in s' as [mdecl' [idecl' [cdecl' [wf [declc' [cu cum]]]]]]; tea.
-  destruct (PCUICGlobalEnv.declared_constructor_inj declc declc') as [? []]. subst mdecl' idecl' cdecl'.
+  unshelve epose proof (declc_ := declared_constructor_to_gen declc); eauto.
+  unshelve epose proof (declc'_ := declared_constructor_to_gen declc'); eauto.
+  destruct (PCUICGlobalEnv.declared_constructor_inj declc_ declc'_) as [? []]. subst mdecl' idecl' cdecl'.
   clear declc'.
   eapply typing_spine_strengthen in hsp. 3:exact cum.
   2:{ eapply validity. econstructor; tea. }
@@ -598,7 +600,7 @@ Proof.
     pose proof hfn as hfn'.
     eapply inversion_Construct in hfn' as [mdecl [idecl [cdecl [wf [declc _]]]]]; tea.
     eapply (typing_constructor_arity declc) in ht.
-    econstructor; tea.
+    econstructor; tea. unshelve eapply declared_constructor_to_gen; eauto.
   * (* fix *)
     destruct (isStuckFix (tFix mfix idx) (args ++ [hd])) eqn:E.
     + right. eapply value_stuck_fix; eauto with pcuic.
@@ -696,7 +698,9 @@ Proof with eauto with wcbv; try congruence.
       { destruct H_ as [? []]; auto. now noconf H0. }
       clear H_. eapply Construct_Ind_ind_eq' in Hc as (? & ? & ? & ? & _); eauto.
       eexists.
-      destruct (declared_inductive_inj d.p1 Hidecl); subst x x0.
+      unshelve epose proof (d_ := declared_constructor_to_gen d); eauto.
+      unshelve epose proof (Hidecl_ := declared_inductive_to_gen Hidecl); eauto.
+      destruct (declared_inductive_inj d_ Hidecl_); subst x x0.
       eapply All2i_nth_error in Hall as [eqctx _]; tea; [|eapply d].
       eapply PCUICCasesContexts.alpha_eq_context_assumptions in eqctx.
       rewrite cstr_branch_context_assumptions in eqctx.
@@ -723,6 +727,7 @@ Proof with eauto with wcbv; try congruence.
       left. eapply nth_error_Some' in Hl as [x Hx].
       eexists.
       eapply red_proj; eauto.
+      unshelve eapply declared_projection_to_gen; eauto.
       now eapply (typing_constructor_arity_exact Hcon) in Hc.
       eapply value_mkApps_inv in Hval as [[-> Hval] | [? ? Hval]]; eauto.
     + left. eapply inversion_Proj in H as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
@@ -795,11 +800,16 @@ Proof.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6: now econstructor; eauto with wcbv.
     eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
-  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
-  - eapply eval_iota. eapply eval_mkApps_Construct; tea. now econstructor. unfold cstr_arity. rewrite e0.
+  - unshelve eapply declared_constant_to_gen in isdecl; eauto.
+    inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - eapply eval_iota. eapply eval_mkApps_Construct; tea.
+    unshelve eapply declared_constructor_to_gen; eauto.
+    now econstructor. unfold cstr_arity. rewrite e0.
     rewrite (PCUICGlobalEnv.declared_minductive_ind_npars d).
     now rewrite -(declared_minductive_ind_npars d) /cstr_arity.
     all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
+    unshelve eapply declared_constructor_to_gen; eauto.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
   - all:cbn in Hty; solve_all. eapply eval_proj; tea.
     eapply value_final. eapply value_app; auto. econstructor; tea. eapply d.

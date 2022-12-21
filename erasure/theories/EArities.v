@@ -805,6 +805,8 @@ Proof.
   eapply subject_reduction in hr; tea; eauto.
   eapply inversion_Case in hc as [mdecl [idecl [isdecl [indices ?]]]]; eauto.
   eapply inversion_Case in hr as [mdecl' [idecl' [isdecl' [indices' ?]]]]; eauto.
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
   destruct (declared_inductive_inj isdecl isdecl'). subst mdecl' idecl'.
   intros hp.
   epose proof (Is_proof_ind _ _ _ wfΣ hp).
@@ -841,7 +843,9 @@ Proof.
   unfold isPropositional.
   eapply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
   eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); auto.
-  unfold lookup_inductive. rewrite (declared_inductive_lookup d.p1).
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve epose proof (d_ := declared_constructor_to_gen d); eauto.
+  unfold lookup_inductive. rewrite (declared_inductive_lookup_gen d_.p1).
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
   rewrite oib.(ind_arity_eq).
@@ -876,7 +880,10 @@ Proof.
   pose proof d as [decli ?].
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
-  red. unfold lookup_inductive. rewrite (declared_inductive_lookup decli).
+  red. unfold lookup_inductive.
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+  rewrite (declared_inductive_lookup_gen decli_).
   rewrite oib.(ind_arity_eq).
   rewrite /isPropositionalArity !destArity_it_mkProd_or_LetIn /=.
   destruct (is_propositional (ind_sort x0)) eqn:isp; auto.
@@ -912,7 +919,7 @@ Proof.
   specialize (sorts' isp). rewrite -sorts'. reflexivity.
 Qed.
 
-Lemma isPropositional_propositional Σ (Σ' : E.global_context) ind mdecl idecl mdecl' idecl' :
+Lemma isPropositional_propositional Σ {wfΣ: wf Σ} (Σ' : E.global_context) ind mdecl idecl mdecl' idecl' :
   PCUICAst.declared_inductive Σ ind mdecl idecl ->
   EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
@@ -921,7 +928,9 @@ Lemma isPropositional_propositional Σ (Σ' : E.global_context) ind mdecl idecl 
 Proof.
   intros decli decli' [_ indp] [] b.
   unfold isPropositional, EGlobalEnv.inductive_isprop_and_pars.
-  unfold lookup_inductive. rewrite (declared_inductive_lookup decli).
+  unfold lookup_inductive.
+  unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+  rewrite (declared_inductive_lookup_gen decli_).
   rewrite (EGlobalEnv.declared_inductive_lookup decli') /=
     /isPropositionalArity.
   destruct H0 as [_ [_ [_ isP]]]. red in isP.
@@ -993,9 +1002,11 @@ Proof.
   eapply subject_reduction in X0 as X2'; eauto.
   eapply inversion_Case in X2' as (? & ? & ? & ? & [] & ?); eauto.
   eapply inversion_Case in X0 as (? & ? & ? & ? & [] & ?); eauto.
+  pose (X' := X.1). unshelve eapply declared_inductive_to_gen in x8, x4, H; eauto.
   destruct (declared_inductive_inj x8 x4); subst.
   destruct (declared_inductive_inj x8 H); subst.
-  eapply H0; eauto. reflexivity.
+  eapply H0; eauto. apply declared_inductive_from_gen; eauto.
+  reflexivity.
   eapply Is_proof_ind; tea.
 Qed.
 

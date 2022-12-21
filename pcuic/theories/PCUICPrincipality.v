@@ -73,7 +73,7 @@ Section Principality.
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
     ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
   Proof using wfΣ.
-    intros hA.
+    intros hA. pose wfΣ' := wfΣ.1.
     induction u in Γ, A, hA |- * using term_forall_list_ind.
     - apply inversion_Rel in hA as iA. 2: auto.
       destruct iA as [decl [? [e ?]]].
@@ -190,12 +190,15 @@ Section Principality.
       repeat outtimes.
       eexists; int inversion_Const.
       destruct hB as [decl' [wf [declc' [cu cum]]]].
-      now rewrite -(declared_constant_inj _ _ d declc') in cum.
+      unshelve epose proof (d_ := declared_constant_to_gen d); eauto.
+      unshelve epose proof (declc'_ := declared_constant_to_gen declc'); eauto.
+      now rewrite -(declared_constant_inj _ _ d_ declc'_) in cum.
 
     - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]] => //; auto.
       repeat outtimes.
       exists (subst_instance u (ind_type idecl)).
       int inversion_Ind. destruct hB as [mdecl' [idecl' [? [Hdecl' ?]]]] => //.
+      unshelve eapply declared_inductive_to_gen in Hdecl, Hdecl'; eauto.
       red in Hdecl, Hdecl'. destruct Hdecl as [? ?].
       destruct Hdecl' as [? ?]. red in H, H1.
       rewrite H1 in H; noconf H.
@@ -206,6 +209,7 @@ Section Principality.
       repeat outtimes.
       exists (type_of_constructor mdecl x (i, n) u).
       int inversion_Construct. destruct hB as [mdecl' [idecl' [? [? [Hdecl' [? ?]]]]]] => //.
+      unshelve eapply declared_constructor_to_gen in Hdecl, Hdecl'; eauto.
       red in Hdecl, Hdecl'.
       destruct Hdecl as [[? ?] ?].
       destruct Hdecl' as [[? ?] ?].
@@ -221,6 +225,7 @@ Section Principality.
       exists (mkApps ptm (indices ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
       eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?); tea. clear brs_ty0.
+      unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
       destruct (declared_inductive_inj isdecl isdecl') as [-> ->].
       destruct (p0 _ scrut_ty0).
       eapply ws_cumul_pb_Ind_r_inv in w1 as [u'' [x9' [redr' redu' ?]]]; auto.
@@ -257,7 +262,9 @@ Section Principality.
       eapply inversion_Proj in hB=>//; auto.
       repeat outsum. repeat outtimes.
       simpl in *.
-      destruct (declared_projection_inj d d0) as [-> [-> [-> ?]]]. subst x9.
+      unshelve epose proof (d_ := declared_projection_to_gen d); eauto.
+      unshelve epose proof (d0_ := declared_projection_to_gen d0); eauto.
+      destruct (declared_projection_inj d_ d0_) as [-> [-> [-> ?]]]. subst x9.
       destruct (HP _ t1).
       eapply ws_cumul_pb_Ind_r_inv in w1 as [u'' [x0'' [redr' redu' ?]]]; auto.
       split; cycle 1.
@@ -292,7 +299,7 @@ Section Principality.
         eapply type_reduction in t0. 2:eapply redr. eapply validity; eauto.
       * split.
         { eapply PCUICWeakeningTyp.weaken_wf_local; tea. pcuic. pcuic.
-          eapply (wf_projection_context _ (p:=p)); tea. pcuic. }
+          eapply (wf_projection_context _ (p:=p)); tea.  }
         eapply (projection_subslet _ _ _ _ _ _ p); eauto.
         simpl. eapply validity; eauto.
       * constructor; auto. now eapply wt_cumul_pb_refl. now apply All2_rev.
@@ -312,7 +319,8 @@ Section Principality.
         eapply validity; eauto. simpl in redu'.
         rewrite e0 in redu'.
         unshelve epose proof (projection_cumulative_indices d _ H H0 redu').
-        { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ (wfΣ : wf _) (proj1 (proj1 (proj1 d)))). }
+        { unshelve eapply declared_projection_to_gen in d ; eauto.
+          eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ (wfΣ : wf _) (proj1 (proj1 (proj1 d)))). }
         eapply on_declared_projection in d0; eauto.
         eapply weaken_ws_cumul_pb in X; eauto.
 
@@ -566,7 +574,9 @@ Proof.
     eapply validity; eauto.
     econstructor; eauto.
     eapply eq_term_upto_univ_cumulSpec.
-    pose proof (declared_constant_inj _ _ H declc); subst decl'.
+    unshelve epose proof (H_ := declared_constant_to_gen H); eauto.
+    unshelve epose proof (declc_ := declared_constant_to_gen declc); eauto.
+    pose proof (declared_constant_inj _ _ H_ declc_); subst decl'.
     eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
@@ -575,7 +585,9 @@ Proof.
     eapply validity; eauto.
     econstructor; eauto.
     eapply eq_term_upto_univ_cumulSpec.
-    pose proof (declared_inductive_inj isdecl declc) as [-> ->].
+    unshelve epose proof (isdecl_ := declared_inductive_to_gen isdecl); eauto.
+    unshelve epose proof (declc_ := declared_inductive_to_gen declc); eauto.
+    pose proof (declared_inductive_inj isdecl_ declc_) as [-> ->].
     eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
@@ -583,7 +595,9 @@ Proof.
     econstructor; eauto.
     eapply validity; eauto.
     econstructor; eauto.
-    pose proof (declared_constructor_inj isdecl declc) as [-> [-> ->]].
+    unshelve epose proof (isdecl_ := declared_constructor_to_gen isdecl); eauto.
+    unshelve epose proof (declc_ := declared_constructor_to_gen declc); eauto.
+    pose proof (declared_constructor_inj isdecl_ declc_) as [-> [-> ->]].
     unfold type_of_constructor.
     transitivity (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
     (subst_instance u0 cdecl'.(cstr_type))).
@@ -623,7 +637,9 @@ Proof.
     { eapply validity. econstructor; eauto. all:split; eauto.
       solve_all. }
     eapply inversion_Case in X9 as (mdecl' & idecl' & decli' & indices' & data & cum); auto.
-    destruct (declared_inductive_inj isdecl decli'). subst mdecl' idecl'.
+    unshelve epose proof (isdecl_ := declared_inductive_to_gen isdecl); eauto.
+    unshelve epose proof (decli'_ := declared_inductive_to_gen decli'); eauto.
+    destruct (declared_inductive_inj isdecl_ decli'_). subst mdecl' idecl'.
     destruct data.
     unshelve epose proof (X7 _ _ _ scrut_ty (eq_term_empty_leq_term X10)); tea.
     pose proof (eq_term_empty_eq_term X10).
@@ -664,7 +680,9 @@ Proof.
       now rewrite (All2_length X3').
     * eapply PCUICValidity.validity; eauto.
       eapply type_Proj; eauto.
-    * destruct (declared_projection_inj a isdecl) as [-> [-> [-> ->]]].
+    * unshelve epose proof (isdecl_ := declared_projection_to_gen isdecl); eauto.
+      unshelve epose proof (a_ := declared_projection_to_gen a); eauto.
+      destruct (declared_projection_inj a_ isdecl_) as [-> [-> [-> ->]]].
       set (ctx := PCUICInductives.projection_context p.(proj_ind) mdecl idecl u).
       have clctx : is_closed_context (Γ,,, ctx).
       { rewrite /ctx.

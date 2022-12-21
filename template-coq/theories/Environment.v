@@ -380,6 +380,14 @@ Module Environment (T : Term).
     move => ??; case: eqb_spec; intuition congruence.
   Qed.
 
+  Lemma lookup_global_Some_if_In Σ kn decl
+  : lookup_global Σ kn = Some decl -> In (kn, decl) Σ.
+  Proof.
+    move: Σ; elim => //=; try tauto.
+    move => [??]?; case: eqb_spec => ? IH; inversion 1; subst; try rewrite <- IH by assumption.
+    all: intuition try congruence; subst.
+  Qed.
+
   Lemma lookup_global_Some_iff_In_NoDup Σ kn decl (H : NoDup (List.map fst Σ))
     : In (kn, decl) Σ <-> lookup_global Σ kn = Some decl.
   Proof.

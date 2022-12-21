@@ -614,7 +614,7 @@ Proof.
     rewrite trans_csubst in IHev2; tea.
     econstructor; tea.
 
-  - econstructor.
+  - econstructor. unshelve eapply declared_constant_to_gen; eauto.
     eapply forall_decls_declared_constant; tea.
     rewrite /trans_constant_body H0 /=. reflexivity.
     rewrite -trans_subst_instance.
@@ -636,19 +636,21 @@ Proof.
     erewrite (nth_error_map2 _ _ _ _ _ _ (proj2 decl')).
     reflexivity.
     rewrite nth_error_map H /=. reflexivity.
+    unshelve eapply declared_constructor_to_gen; eauto.
     len. rewrite H1.
     { rewrite /cstr_arity e. cbn.
       eapply All2_length in a1. len in a1.
       rewrite /bctx case_branch_context_assumptions //.
       rewrite /trans_branch /=.
       rewrite context_assumptions_map //. }
+    { eapply All2_length in a1. len in a1. }
     { eapply All2_length in a1. len in a1.
       rewrite /bctx.
-      rewrite /trans_branch /=.
-      rewrite context_assumptions_map. f_equal.
-      rewrite map2_map2_bias_left. len.
-      rewrite PCUICCases.map2_set_binder_name_context_assumptions. len.
-      len. now rewrite context_assumptions_map. }
+    rewrite /trans_branch /=.
+    rewrite context_assumptions_map. f_equal.
+    rewrite map2_map2_bias_left. len.
+    rewrite PCUICCases.map2_set_binder_name_context_assumptions. len.
+    len. now rewrite context_assumptions_map. }
     forward IHev2.
     { rewrite /Typing.iota_red.
       eapply WfAst.wf_subst.
@@ -669,6 +671,7 @@ Proof.
   - wf_inv wf hdiscr.
     cbn in *; eapply eval_proj; tea.
     * eapply forall_decls_declared_projection in H; tea.
+      unshelve eapply declared_projection_to_gen in H; eauto.
     * rewrite trans_mkApps in IHev1.
       now eapply IHev1.
     * cbn. len. rewrite H0 /WcbvEval.cstr_arity. f_equal.
@@ -758,6 +761,7 @@ Proof.
   - wf_inv wf [wff wfa].
     rewrite !trans_mkApps.
     eapply forall_decls_declared_constructor in H; tea.
+    unshelve eapply declared_constructor_to_gen in H; eauto.
     eapply eval_mkApps_Construct; tea. now eapply IHev. len.
     { move: H2; unfold WcbvEval.cstr_arity, cstr_arity. cbn.
       rewrite context_assumptions_map //. }

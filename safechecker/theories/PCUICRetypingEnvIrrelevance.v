@@ -153,7 +153,9 @@ Section infer_irrel.
         destruct H0, H3.
         eapply inversion_Const in X0 as [decl [_ [Hdecl _]]]; eauto.
         eapply inversion_Const in X1 as [decl' [_ [Hdecl' _]]]; eauto.
-        now eapply hl. }
+        sq. eapply hl; eauto;
+        unshelve eapply declared_constant_to_gen in Hdecl, Hdecl'; eauto.
+        }
       destruct PCUICSafeReduce.inspect => //.
       destruct PCUICSafeReduce.inspect => //.
       destruct x as [[]|] => //; simp _reduce_stack. 2-3:bang.
@@ -510,7 +512,9 @@ Proof.
       specialize (wi' _ wfΣ').
       depelim wt. inv X0.
       depelim wi'. inv X0.
-      eapply hl; tea. }
+      destruct hwfΣ, hwfΣ'. eapply hl; eauto;
+      unshelve eapply declared_constant_to_gen in isdecl, isdecl0; eauto.
+    }
     move: e Heq.
     cbn -[infer].
     rewrite H. unfold infer.
@@ -525,9 +529,10 @@ Proof.
       epose proof (abstract_env_ext_wf X' wfΣ') as [hwfΣ'].
       destruct (wi' _ wfΣ'). inv X0.
       pose proof (hd _ wfΣ).
-      destruct isdecl, H0.
-      unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ').  }
+      destruct isdecl, H0. destruct hwfΣ, hwfΣ'.
+      eapply hl; eauto;
+      unshelve eapply declared_minductive_to_gen in H1, H0; eauto.
+      }
     destruct (PCUICSafeReduce.inspect (lookup_ind_decl _ X' ind)).
     generalize (same_lookup_ind_decl ind H). rewrite -{1}e0 -{1}e.
     destruct x => //. cbn. cbn.
@@ -544,8 +549,10 @@ Proof.
       pose proof (wt _ wfΣ).
       destruct isdecl, H0. inv X0.
       destruct H1. destruct isdecl as [[] ?].
-      unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ'). }
+      destruct hwfΣ, hwfΣ'.
+      eapply hl; eauto;
+      unshelve eapply declared_minductive_to_gen in H1, H4; eauto.
+      }
     destruct (PCUICSafeReduce.inspect (lookup_ind_decl _ X' ind)).
     generalize (same_lookup_ind_decl _ H). rewrite -{1}e1 -{1}e.
     destruct x => //.
@@ -586,13 +593,15 @@ Proof.
       destruct (wi' _ wfΣ'). inv X0.
       pose proof (wt _ wfΣ).
       inv H1. inv X0. destruct H1 as [[[]]]. destruct H as [[[]]].
-      unfold declared_minductive in *.
-      now eapply (hl Σ wfΣ Σ' wfΣ'). }
+      destruct hwfΣ, hwfΣ'.
+      eapply hl; eauto;
+      unshelve eapply declared_minductive_to_gen in H1, H; eauto.
+      }
     generalize (same_lookup_ind_decl _ H). rewrite -{1}eq -{1}e.
     destruct y => //.
     destruct a as [decl [body ?]], d as [decl' [body' ?]].
-    intros h. cbn in h. noconf h.
     simp infer.
+    intros h. cbn in h. noconf h.
     eapply elim_inspect => nth eq'.
     cbn in eq', e0. destruct nth as [[]|] => //.
     simp infer.

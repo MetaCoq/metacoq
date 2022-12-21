@@ -535,14 +535,19 @@ Section wellscoped.
   Proof.
     eapply typing_ind_env; cbn; intros => //.
     all:try rtoProp; intuition auto.
-    - red in H0. rewrite /lookup_constant /lookup_constant_gen H0 //.
-    - unfold lookup_inductive. now rewrite (declared_inductive_lookup isdecl).
-    - unfold lookup_constructor. rewrite (declared_constructor_lookup isdecl) //.
-    - unfold lookup_inductive. now rewrite (declared_inductive_lookup isdecl).
+    - unshelve eapply declared_constant_to_gen in H0; eauto.
+      red in H0. rewrite /lookup_constant /lookup_constant_gen H0 //.
+    - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
+      unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
+    - unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+      unfold lookup_constructor. rewrite (declared_constructor_lookup_gen isdecl) //.
+    - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
+      unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
     - red in H8. eapply Forall2_All2 in H8.
       eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
-    - unfold lookup_projection. now rewrite (declared_projection_lookup isdecl).
+    - unshelve eapply declared_projection_to_gen in isdecl; eauto.
+      unfold lookup_projection. now rewrite (declared_projection_lookup_gen isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
       solve_all. destruct a as [s []], a0.
@@ -571,8 +576,9 @@ Section trans_lookups.
   Proof using g.
     unfold lookup_constant.
     destruct (lookup_env Σ kn) as [[]|] eqn:hl => //.
-    eapply g in hl as [? []].
-    now rewrite (EGlobalEnv.declared_constant_lookup H).
+    destruct g as [? _]. destruct (H kn c) as [? [? ?]].
+    eapply declared_constant_from_gen; eauto.
+    erewrite EGlobalEnv.declared_constant_lookup; eauto.
   Qed.
 
   Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
@@ -580,6 +586,7 @@ Section trans_lookups.
     destruct g.
     destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // _.
     eapply lookup_inductive_declared in hl.
+    eapply declared_inductive_from_gen in hl.
     specialize (H0 kn m o hl) as [? [? [d _]]].
     now rewrite (EGlobalEnv.declared_inductive_lookup d).
   Qed.
@@ -588,7 +595,8 @@ Section trans_lookups.
   Proof using g.
     destruct g.
     destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= // _.
-    eapply (lookup_constructor_declared (id:=(kn,c))) in hl.
+    eapply (lookup_constructor_declared_gen (id:=(kn,c))) in hl.
+    eapply declared_constructor_from_gen in hl.
     specialize (H0 _ _ _ hl.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', hl. cbn in * |-.
     destruct H2. eapply Forall2_nth_error_left in H0 as [? [? [erc erp]]]; tea.
@@ -616,7 +624,8 @@ Section trans_lookups.
     pose proof (lookup_projection_lookup_constructor hl) as lc.
     unfold lookup_projection, lookup_projection_gen in hl. unfold lookup_constructor in lc.
     rewrite lc in hl.
-    eapply (lookup_constructor_declared (id:=(_,_))) in lc.
+    eapply (lookup_constructor_declared_gen (id:=(_,_))) in lc.
+    eapply declared_constructor_from_gen in lc.
     specialize (H0 _ _ _ lc.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', lc.
     destruct H2.

@@ -48,12 +48,13 @@ Qed.
 Lemma declared_inductive_minductive {Σ ind mdecl idecl} :
   declared_inductive_gen Σ ind mdecl idecl -> declared_minductive_gen Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
+
+Lemma declared_inductive_minductive' {Σ ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
+Proof. now intros []. Qed.
+
 #[global]
 Hint Extern 0 => eapply declared_inductive_minductive : pcuic core.
-
-Definition declared_inductive_minductive' {Σ ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl :=
-  declared_inductive_minductive.
 
 Coercion declared_inductive_minductive : declared_inductive_gen >-> declared_minductive_gen.
 Coercion declared_inductive_minductive' : declared_inductive >-> declared_minductive.
@@ -65,7 +66,8 @@ Proof. now intros []. Qed.
 
 Definition declared_constructor_inductive' {Σ ind mdecl idecl cdecl} :
   declared_constructor Σ ind mdecl idecl cdecl ->
-  declared_inductive Σ ind.1 mdecl idecl := declared_constructor_inductive.
+  declared_inductive Σ ind.1 mdecl idecl.
+Proof. now intros []. Qed.
 
 Coercion declared_constructor_inductive : declared_constructor_gen >-> declared_inductive_gen.
 Coercion declared_constructor_inductive' : declared_constructor >-> declared_inductive.
@@ -74,10 +76,11 @@ Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
   declared_projection_gen Σ ind mdecl idecl cdecl pdecl ->
   declared_constructor_gen Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
 Proof. now intros []. Qed.
+
 Definition declared_projection_constructor' {Σ ind mdecl idecl cdecl pdecl} :
   declared_projection Σ ind mdecl idecl cdecl pdecl ->
-  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl :=
-  declared_projection_constructor.
+  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
+Proof. now intros []. Qed.
 
 Coercion declared_projection_constructor : declared_projection_gen >-> declared_constructor_gen.
 Coercion declared_projection_constructor' : declared_projection >-> declared_constructor.
@@ -90,11 +93,13 @@ Section DeclaredInv.
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
   Proof using wfΣ.
     intros h.
+    eapply declared_minductive_to_gen in h.
     unfold declared_minductive in h.
     eapply lookup_on_global_env in h; tea.
     destruct h as [Σ' [ext wfΣ' decl']].
     red in decl'. destruct decl' as [h ? ? ?].
     now rewrite onNpars.
+    Unshelve. all: eauto.
   Qed.
 
 End DeclaredInv.

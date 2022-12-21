@@ -661,7 +661,7 @@ Section Lemmata.
   Proof using Type.
     intros Γ c u cty cb cu rel e.
     econstructor. econstructor.
-    - symmetry in e. exact e.
+    - apply declared_constant_from_gen. symmetry in e. exact e.
     - reflexivity.
   Qed.
 
@@ -676,7 +676,7 @@ Section Lemmata.
     symmetry in e.
     econstructor.
     econstructor.
-    - exact e.
+    - apply declared_constant_from_gen. exact e.
     - reflexivity.
   Qed.
 

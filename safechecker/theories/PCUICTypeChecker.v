@@ -944,26 +944,31 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct' in e0; eauto.
-    depelim X2.
-    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
+    depelim X2. destruct (hΣ _ wfΣ).
+    unshelve eapply declared_minductive_to_gen in H; eauto.
+    unfold declared_minductive_gen in H.
+    erewrite <- e0 in H.
     congruence.
   Qed.
   Next Obligation.
     erewrite <- abstract_env_lookup_correct' in e; eauto.
+    eapply declared_inductive_from_gen.
     now split.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct' in e1; eauto.
-    depelim X2.
-    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e1 in H.
+    depelim X2.  destruct (hΣ _ wfΣ).
+    unshelve eapply declared_minductive_to_gen in H; eauto.
+    unfold declared_minductive_gen in H. erewrite <- e1 in H.
     congruence.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct' in e0; eauto.
-    depelim X2.
-    unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
+    depelim X2. destruct (hΣ _ wfΣ).
+    unshelve eapply declared_minductive_to_gen in H; eauto.
+    unfold declared_minductive_gen in H. erewrite <- e0 in H.
     congruence.
   Qed.
 
@@ -1658,11 +1663,14 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     constructor; try assumption.
     symmetry in HH. erewrite <- abstract_env_lookup_correct' in HH; eauto.
+    eapply declared_constant_from_gen; eauto.
   Qed.
   Next Obligation.
     apply absurd; intros. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     erewrite <- abstract_env_lookup_correct' in HH; eauto.
-    inversion X1. unfold declared_constant, declared_constant_gen in isdecl.
+    inversion X1. destruct (hΣ _ wfΣ).
+    unshelve eapply declared_constant_to_gen in isdecl; eauto.
+    unfold declared_constant_gen in isdecl.
     rewrite <- HH in isdecl. inversion isdecl. now subst.
   Qed.
   Next Obligation.
@@ -1670,6 +1678,7 @@ Section Typecheck.
     cbn in *.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst. erewrite <- abstract_env_lookup_correct' in e0; eauto.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in isdecl; eauto.
     rewrite isdecl in e0.
     congruence.
   Qed.
@@ -1678,6 +1687,7 @@ Section Typecheck.
     cbn in *.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst. erewrite <- abstract_env_lookup_correct' in e0; eauto.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in isdecl; eauto.
     rewrite isdecl in e0.
     congruence.
   Qed.
@@ -1686,6 +1696,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     eapply global_uctx_invariants_ext.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in X1; eauto.
     eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
@@ -1694,6 +1705,7 @@ Section Typecheck.
   Next Obligation.
     apply absurd. intros. cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, X3; eauto.
     epose proof (H := declared_inductive_unique_sig isdecl X3).
     now injection H.
   Qed.
@@ -1709,6 +1721,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     eapply global_uctx_invariants_ext.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in decl; eauto.
     eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 decl)).
   Qed.
   Next Obligation.
@@ -1719,6 +1732,8 @@ Section Typecheck.
   Next Obligation.
     apply absurd. intros; cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in decl; eauto.
+    unshelve eapply declared_constructor_to_gen in isdecl; eauto.
     epose proof (H := declared_inductive_unique_sig isdecl decl).
     now injection H.
   Qed.
@@ -1726,6 +1741,8 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+    unshelve eapply declared_inductive_to_gen in decl; eauto.
     epose proof (H := declared_inductive_unique_sig isdecl decl).
     injection H.
     intros ; subst.
@@ -1751,6 +1768,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     eapply global_uctx_invariants_ext.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in X1; eauto.
     eapply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) (proj1 X1)).
   Qed.
   Next Obligation.
@@ -1758,7 +1776,8 @@ Section Typecheck.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     eapply wf_rel_weak ; eauto.
     rewrite subst_instance_smash ; eapply wf_local_smash_context.
-    now eapply on_minductive_wf_params.
+    eapply on_minductive_wf_params; eauto.
+    now destruct X1.
   Qed.
   Next Obligation.
     eapply assumption_context_rev.
@@ -1793,7 +1812,8 @@ Section Typecheck.
     rewrite subst_instance_smash /= in wt_params.
     eapply ctx_inst_smash in wt_params.
     unshelve epose proof (ctx_inst_spine_subst _ wt_params).
-    { eapply weaken_wf_local; eauto. eapply on_minductive_wf_params; eauto. }
+    { eapply weaken_wf_local; eauto. eapply on_minductive_wf_params; eauto.
+      now destruct X1. }
     eexists; eapply isType_mkApps_Ind_smash; tea.
     rewrite subst_instance_app List.rev_app_distr smash_context_app_expand.
     have wf_ctx : wf_local Σ
@@ -1989,7 +2009,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst. sq.
     eapply infering_ind_ind in X0 as [args'' []].
     2-3: now auto.
@@ -2012,10 +2033,12 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst. sq.
     eapply infering_sort_sort in s as <- ; eauto.
-    now eapply wf_case_predicate_context.
+    eapply wf_case_predicate_context; eauto.
+    eapply declared_inductive_from_gen; eauto.
   Qed.
 
   Next Obligation.
@@ -2029,7 +2052,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     apply absurd.
 
@@ -2048,7 +2072,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     apply absurd.
     sq.
@@ -2066,7 +2091,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     sq.
     rewrite /params /chop_args chop_firstn_skipn /=.
@@ -2098,12 +2124,14 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     sq.
     apply ctx_inst_bd_typing, ctx_inst_smash in X4 ; eauto.
     2: eapply weaken_wf_local, on_minductive_wf_params ; eauto.
-    now rewrite subst_instance_smash.
+    rewrite subst_instance_smash; eauto.
+    eapply declared_minductive_from_gen; eauto.
   Qed.
 
   Next Obligation.
@@ -2118,7 +2146,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     apply absurd.
     erewrite <- compare_global_instance_correct; eauto.
@@ -2145,8 +2174,8 @@ Section Typecheck.
       now move: tyu => /andP [].
     - apply infering_typing, typing_wf_universes in ty ; auto.
       move: ty => /andP [].
-      now rewrite {1}/wf_universes /= wf_universeb_instance_forall =>
-        /andP [] /wf_universe_instanceP.
+      rewrite {1}/wf_universes /= wf_universeb_instance_forall =>
+        /andP [] /wf_universe_instanceP; eauto.
   Qed.
 
   Next Obligation.
@@ -2160,7 +2189,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     now subst.
   Qed.
 
@@ -2176,7 +2206,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     apply absurd.
     now apply/eqb_specT.
@@ -2194,7 +2225,8 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     destruct X0 as [? [ty]]; eauto.
     inversion ty ; subst.
-    eapply declared_inductive_inj in isdecl as []; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H3.
     subst.
     apply absurd.
     now apply/negPf.
@@ -2324,7 +2356,8 @@ Section Typecheck.
     subst.
     destruct H1 as [[] []].
     cbn in * ; subst.
-    eapply declared_inductive_inj in decl as [-> ->] ; tea.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in decl, H; eauto.
+    eapply declared_inductive_inj in decl as [-> ->]. 2: exact H.
     now eapply Nat.eqb_eq.
   Qed.
   Next Obligation.
@@ -2375,6 +2408,8 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1 ; subst.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in decl; eauto.
+    unshelve eapply declared_projection_to_gen in H1; eauto.
     eapply declared_inductive_inj in decl as [].
     2: exact H1.p1.
     subst.
@@ -2530,6 +2565,7 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     split. econstructor. rewrite eqp.
     erewrite abstract_primitive_constant_correct; try reflexivity. eassumption.  red.
+    apply declared_constant_from_gen.
     unfold declared_constant_gen. now rewrite -HH.
     destruct (cst_type d) eqn:hty => //.
     exists u. split => //.
@@ -2542,7 +2578,8 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in HH. rewrite /declared_constant in d0.
+    symmetry in HH.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
     rewrite d0 in HH; noconf HH.
     destruct p1 as [s' []]. rewrite H in absurd. now apply absurd.
   Qed.
@@ -2554,8 +2591,8 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in HH. rewrite /declared_constant in d0.
-    rewrite d0 in HH; noconf HH.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
+    symmetry in HH. rewrite d0 in HH; noconf HH.
     destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
   Qed.
 
@@ -2567,8 +2604,8 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in HH. rewrite /declared_constant in d0.
-    rewrite d0 in HH; noconf HH.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
+    symmetry in HH. rewrite d0 in HH; noconf HH.
     destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
   Qed.
 
@@ -2579,8 +2616,8 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in e0. rewrite /declared_constant in d.
-    rewrite d in e0; noconf e0.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d; eauto.
+    symmetry in e0. rewrite d in e0; noconf e0.
   Qed.
 
   Next Obligation.
@@ -2590,7 +2627,8 @@ Section Typecheck.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in e0. rewrite /declared_constant /declared_constant_gen in d.
+    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d; eauto.
+    symmetry in e0. rewrite /declared_constant_gen in d.
     rewrite e0 in d; noconf d.
   Qed.
 

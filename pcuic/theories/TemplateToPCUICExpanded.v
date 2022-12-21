@@ -43,36 +43,37 @@ Proof.
   congruence.
 Qed.
 
-Lemma declared_minductive_expanded Σ c mdecl :
+Lemma declared_minductive_expanded {cf:checker_flags} Σ {wfΣ : wf Σ} c mdecl :
   expanded_global_env Σ ->
   declared_minductive Σ c mdecl ->
   exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl.
 Proof.
-  unfold expanded_global_env, declared_minductive, lookup_env.
-  destruct Σ as [univs Σ]; cbn. unfold declared_minductive_gen.
-  intros exp; induction exp; cbn => //.
+  unfold expanded_global_env.
+  intros decl H. unshelve eapply declared_minductive_to_gen in H; eauto.
+  clear wfΣ. move:decl H. unfold declared_minductive_gen, lookup_env.
+  destruct Σ as [univs Σ]; cbn.
+  intros exp; induction exp; cbn in * => //.
   destruct decl as [kn d]; cbn.
   destruct (eqb_spec c kn). intros [= ->].
   subst c. eexists. split ; [|exact H]. sq. red. split => //. cbn.
   eexists. cbn. instantiate (1:= [_]); reflexivity.
-  intros hl; destruct (IHexp hl). exists x. intuition auto.
+  intros hl; destruct (IHexp  hl). exists x. intuition auto.
   sq. eapply extends_decls_trans; tea.
   split => //. now exists [(kn, d)].
 Qed.
 
-Lemma declared_constructor_expanded {Σ c mdecl idecl cdecl} :
+Lemma declared_constructor_expanded {cf:checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl idecl cdecl} :
   expanded_global_env Σ ->
   declared_constructor Σ c mdecl idecl cdecl ->
   exists Σ', ∥ extends_decls Σ' Σ ∥ /\ expanded_minductive_decl Σ' mdecl /\ expanded_constructor_decl Σ' mdecl cdecl.
 Proof.
   intros exp [[decli hnth] hnth'].
-  eapply declared_minductive_expanded in decli.
+  eapply declared_minductive_expanded in decli; eauto.
   destruct decli as [Σ' [ext exp']]. exists Σ'; split => //. split => //.
   destruct exp' as [hp hb]. solve_all.
   eapply nth_error_all in hb; tea.
   destruct hb as [hb]. solve_all.
   eapply nth_error_all in hb; tea.
-  auto.
 Qed.
 
 Lemma expanded_extended_subst {Σ Γ Δ} :
@@ -226,6 +227,7 @@ Proof with eauto using expanded.
         - cbn. tea. rewrite context_assumptions_map. now rewrite e0. }
       * cbn. rewrite map2_bias_left_length. now eapply e1.
     + eapply template_to_pcuic_env; eauto.
+    + apply template_to_pcuic_env; eauto.
   - now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[]]. wf_inv w ?. eapply expanded_tFix.
     + solve_all.

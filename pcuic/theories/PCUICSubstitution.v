@@ -361,7 +361,7 @@ Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   map_constant_body (subst n k) (map_constant_body (subst_instance u) decl) =
   map_constant_body (subst_instance u) decl.
 Proof.
-  intros.
+  intros. unshelve eapply declared_constant_to_gen in H0; eauto.
   eapply declared_decl_closed in H0; eauto.
   unfold map_constant_body.
   do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.

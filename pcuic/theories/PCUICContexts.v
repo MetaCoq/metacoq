@@ -150,6 +150,7 @@ Lemma instantiate_minductive {cf:checker_flags} Σ ind mdecl u Γ t T :
   Σ ;;; subst_instance u Γ |- subst_instance u t : subst_instance u T.
 Proof.
   intros wfΣ isdecl Hu Ht.
+  unshelve eapply declared_minductive_to_gen in isdecl; eauto.
   red in isdecl. eapply typing_subst_instance_decl in isdecl; eauto.
 Qed.
 

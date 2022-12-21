@@ -59,10 +59,10 @@ Proof.
 
   eapply weakening_env_declared_inductive in H; eauto; tc.
   destruct H, H1.
-  unfold PCUICAst.declared_minductive, declared_minductive_gen in *.
-
-  eapply PCUICWeakeningEnv.extends_lookup in H1; eauto; tc.
-  2:{ cbn. apply extends_refl. }
+  pose (X1' := X1.1). unshelve eapply declared_minductive_to_gen in H, H1; eauto.
+  eapply PCUICWeakeningEnv.extends_lookup in H1.
+  3:{ cbn. apply extends_refl. } 2:eauto.
+  unfold declared_minductive_gen in *.
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.
@@ -80,11 +80,15 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red. red in H4. unfold PCUICAst.lookup_inductive in H4. 
-    rewrite (PCUICAst.declared_inductive_lookup isdecl.p1) in H4.
+    red. red in H4. unfold PCUICAst.lookup_inductive in H4.
+    unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+    rewrite (PCUICAst.declared_inductive_lookup_gen isdecl.p1) in H4.
     destruct isdecl as [decli declc].
+    eapply declared_inductive_from_gen in decli.
     eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.
-    unfold PCUICAst.lookup_inductive. now rewrite (PCUICAst.declared_inductive_lookup decli).
+    unfold PCUICAst.lookup_inductive.
+    unshelve eapply declared_inductive_to_gen in decli; eauto.
+    now rewrite (PCUICAst.declared_inductive_lookup_gen decli).
   - econstructor. all:eauto.
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.

@@ -92,7 +92,8 @@ Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ 
   declared_minductive Σ mind mdecl ->
   closed_inductive_decl mdecl.
 Proof.
-  intros HΣ decl.
+  intros HΣ decl. pose proof (decl_ := decl).
+  eapply declared_minductive_to_gen in decl.
   pose proof (declared_decl_closed_ind decl) as decl'.
   specialize (decl' HΣ).
   red in decl'.
@@ -105,7 +106,7 @@ Proof.
   assert (Alli (fun i =>  declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl)
     0 (ind_bodies mdecl)).
   { eapply forall_nth_error_Alli. intros.
-    split; auto. }
+    split; auto.  }
   eapply Alli_mix in decl'; eauto. clear X.
   clear decl.
   eapply Alli_All; eauto.
@@ -148,6 +149,7 @@ Proof.
       intros. split; auto. split; auto. cbn. now rewrite hcdecl. }
     eapply (Alli_All X0). intros.
     now eapply declared_projection_closed_ind in H.
+  Unshelve. all:eauto.
 Qed.
 
 
@@ -188,7 +190,8 @@ Proof.
     move=> Hs. apply: Hs => /=. simpl. rewrite H1 => //.
     rewrite Nat.add_1_r. auto.
 
-  - rewrite closedn_subst_instance.
+  - eapply declared_constant_to_gen in H0.
+    rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
     destruct X0 as [Σ' [hext [onu HΣ'] IH]].
     repeat red in IH. destruct decl, cst_body0. simpl in *.
@@ -290,6 +293,7 @@ Proof.
     eapply nth_error_all in X0; eauto.
     destruct X0 as [s [Hs cl]].
     now rewrite andb_true_r in cl.
+    Unshelve. all:eauto.
 Qed.
 
 Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind} :
@@ -489,8 +493,7 @@ Lemma declared_constant_closed_type {cf:checker_flags} {Σ : global_env} {wfΣ :
   declared_constant Σ cst decl ->
   closed decl.(cst_type).
 Proof.
-  intros h.
-  unfold declared_constant in h.
+  intros h. eapply declared_constant_to_gen in h.
   eapply lookup_on_global_env in h. 2: eauto.
   destruct h as [Σ' [ext wfΣ' decl']].
   red in decl'. red in decl'.
@@ -510,7 +513,7 @@ Lemma declared_constant_closed_body {cf : checker_flags} :
     closed body.
 Proof.
   intros Σ cst decl body hΣ h e.
-  unfold declared_constant in h.
+  eapply declared_constant_to_gen in h.
   eapply lookup_on_global_env in h. 2: eauto.
   destruct h as [Σ' [ext wfΣ' decl']].
   red in decl'. red in decl'.
@@ -530,7 +533,7 @@ Proof.
   intros Σ mdecl ind idecl hΣ h.
   unfold declared_inductive in h.
   destruct h as [h1 h2].
-  unfold declared_minductive in h1.
+  eapply declared_minductive_to_gen in h1.
   eapply lookup_on_global_env in h1. 2: eauto.
   destruct h1 as [Σ' [ext wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
@@ -538,6 +541,7 @@ Proof.
   simpl in h. destruct h as [? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto.
   now move: e => [_ /andP []].
+  Unshelve. all:eauto.
 Qed.
 
 
@@ -622,7 +626,8 @@ Proof.
   eapply All_nth_error in h. 2: eassumption.
   move/andP: h => [/andP [hargs hindices]] hty.
   eapply closedn_subst0.
-  - eapply declared_minductive_closed_inds. all: eauto.
+  - eapply declared_minductive_closed_inds.
+    now destruct hidecl.
   - simpl. rewrite inds_length.
     rewrite closedn_subst_instance. assumption.
 Qed.

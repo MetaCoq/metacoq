@@ -2,8 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICReduction PCUICCumulativity PCUICTyping
-  PCUICGuardCondition PCUICGlobalEnv
+  PCUICReduction PCUICCumulativity PCUICTyping PCUICGuardCondition
   PCUICWeakeningEnv PCUICWeakeningEnvConv.
 From Equations Require Import Equations.
 
@@ -357,7 +356,9 @@ Lemma declared_constant_inv `{checker_flags} Σ P cst decl :
   on_constant_decl (lift_typing P) (Σ, cst_universes decl) decl.
 Proof.
   intros.
+  eapply declared_constant_to_gen in H0.
   eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma declared_minductive_inv `{checker_flags} {Σ P ind mdecl} :
@@ -367,7 +368,9 @@ Lemma declared_minductive_inv `{checker_flags} {Σ P ind mdecl} :
   on_inductive cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) ind mdecl.
 Proof.
   intros.
+  eapply declared_minductive_to_gen in H0.
   eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma declared_inductive_inv `{checker_flags} {Σ P ind mdecl idecl} :
@@ -409,7 +412,9 @@ Lemma declared_minductive_inv_decls `{checker_flags} {Σ P ind mdecl} :
   on_inductive cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) ind mdecl.
 Proof.
   intros.
+  eapply declared_minductive_to_gen in H0.
   eapply weaken_decls_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma declared_inductive_inv_decls `{checker_flags} {Σ P ind mdecl idecl} :
@@ -562,7 +567,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
                  idecl idecl.(ind_indices) cdecl ind_ctor_sort.
 Proof.
   split.
-  - apply (on_declared_inductive Hdecl).
+  - destruct Hdecl; now apply on_declared_inductive.
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
@@ -586,8 +591,7 @@ Proof.
     move: e. destruct (ind_ctors idecl) as [|? []] => //.
     intros [= ->] => //. }
   split.
-  - split => //.
-    apply (on_declared_inductive Hdecl).
+  - split => //. destruct Hdecl as [[] ?]. now eapply on_declared_inductive.
   - pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
     destruct Hdecl. cbn in *. destruct d; cbn in *.
     now rewrite hctors in X.

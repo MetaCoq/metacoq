@@ -3167,9 +3167,9 @@ Proof.
               subst headrel.
               assert (#|PCUICEnvironment.ind_bodies (trans_minductive_body Σ' m)| = #|Ast.Env.ind_bodies m|) as <-.
               now rewrite /trans_minductive_body /= map_length.
-              assert (#|ctx| = #|map (trans_decl Σ') ctx|) as ->. now rewrite map_length.
+              assert (#|Γ| = #|map (trans_decl Σ') Γ|) as ->. now rewrite map_length.
               move/WfAst.wf_mkApps_inv => wfindices.
-              eapply positive_cstr_concl.
+              eapply pos_concl.
               rewrite map_length.
               eapply All_map. solve_all. now eapply trans_closedn.
               move/WfAst.wf_inv => /= [[wfb wfty] wft].
@@ -3180,14 +3180,14 @@ Proof.
               constructor. clear -onI X0 wfΣg onu IHond p wfty.
               induction p.
               { constructor; rewrite map_length; eapply trans_closedn => //. }
-              { rewrite trans_mkApps /=.
+              { destruct m0 as [? [? ?]]. rewrite trans_mkApps /=.
                 move/WfAst.wf_mkApps_inv: wfty => wfl.
-                econstructor 2; tea; rewrite ?map_length //.
-                solve_all. eapply trans_closedn => //.
-                rewrite -map_rev nth_error_map e //.
-                rewrite e0.
+                econstructor 2; tea; repeat econstructor; rewrite ?map_length //.
+                2: solve_all; eapply trans_closedn => //.
+                2: rewrite -map_rev nth_error_map H2//.
+                rewrite e.
                 have wfty : WfAst.wf Σg (Ast.Env.ind_type i).
-                { rewrite nth_error_rev in e. len. rewrite List.rev_involutive in e.
+                { rewrite nth_error_rev in H2. len. rewrite List.rev_involutive in H2.
                   eapply nth_error_alli in onI; tea. cbn in onI.
                   destruct onI as [onI _]. eapply Typing.onArity in onI as [s Hs].
                   now eapply typing_wf in Hs. }

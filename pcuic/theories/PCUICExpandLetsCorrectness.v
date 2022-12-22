@@ -4155,11 +4155,13 @@ Proof.
   induction 1 in p |- *.
   - intros ont.
     constructor; len. now eapply closedn_trans.
-  - rewrite on_free_vars_mkApps => /= /andP[] onk onl.
-    rewrite trans_mkApps. econstructor 2. now len. now len.
-    solve_all. len. now eapply closedn_trans. len.
-    cbn. rewrite rev_mapi. rewrite nth_error_mapi e /= //. len.
-    now rewrite -trans_ind_realargs.
+  - destruct m0 as [? [? ?]].
+    rewrite on_free_vars_mkApps => /= /andP[] onk onl.
+    rewrite trans_mkApps. econstructor 2.
+    2: {solve_all. len. now eapply closedn_trans. }
+    2: {repeat (econstructor; [now len|]).
+        len. cbn. rewrite rev_mapi. rewrite nth_error_mapi H1 /= //. }
+    len. now rewrite -trans_ind_realargs.
   - cbn. move/and3P => [] onb onty ont.
     constructor 3.
     rewrite (trans_subst (shiftnP 1 p) p) in IHX => /= //.
@@ -4178,7 +4180,7 @@ Lemma positive_cstr_trans m n acc p T :
 Proof.
   induction 1 in p |- *.
   - cbn. intros. rewrite trans_mkApps.
-    cbn. rewrite /headrel. relativize #|ctx|.
+    cbn. rewrite /headrel. relativize #|Γ|.
     relativize #|ind_bodies m|.
     constructor. solve_all.
     rewrite on_free_vars_closedn. eapply trans_on_free_vars. len.

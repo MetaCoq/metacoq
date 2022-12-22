@@ -1303,7 +1303,8 @@ Proof.
   induction 1.
   - constructor 1; len.
     now rewrite closedn_subst_instance.
-  - rewrite subst_instance_mkApps. econstructor 2; len => //; eauto.
+  - rewrite subst_instance_mkApps.
+    econstructor 2; unfold mdecl_at_i in *; len => //; eauto.
     eapply All_map; solve_all.
     now rewrite closedn_subst_instance.
   - simpl. constructor 3; len => //.
@@ -1486,11 +1487,12 @@ Proof.
   - epose proof (ws_cumul_pb_is_closed_context cum).
     rewrite !subst_instance_mkApps !subst_mkApps in cum |- *.
     simpl in cum. eapply ws_cumul_pb_mkApps_tRel in cum; eauto; cycle 1.
-    { rewrite nth_error_app_ge // subst_instance_length //
+    { destruct m as [? [? ?]].
+      rewrite nth_error_app_ge // subst_instance_length //
          nth_error_subst_instance.
       unfold ind_arities, arities_context.
       rewrite rev_map_spec -map_rev.
-      rewrite nth_error_map e /=. reflexivity. }
+      rewrite nth_error_map e0 /=. reflexivity. }
     1:trivial.
     rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in cum.
     eapply ws_cumul_pb_terms_subst in cum.
@@ -1503,39 +1505,40 @@ Proof.
         cbn; intros. eapply ws_cumul_pb_refl; eauto. }
     rewrite app_context_nil_l // in cum. len in cum.
     rewrite /ind_subst.
-    eapply ws_cumul_pb_mkApps_eq => //.
+    eapply ws_cumul_pb_mkApps_eq => //; destruct m as [? [? ?]].
     * move: cl. rewrite -is_closed_ctx_closed => cl.
       apply (closedn_ctx_subst 0 0). cbn. len.
       rewrite !closedn_subst_instance_context. rewrite /ind_arities in cl.
       move: cl. rewrite closedn_subst_instance_context closedn_ctx_app. len. move/andP=> []//.
       eapply closed_inds.
-    * cbn. destruct (leb_spec_Set #|ctx| k); try lia.
+    * cbn. destruct (leb_spec_Set #|Γ| k); try lia.
       destruct (nth_error (inds _ _ _) _) eqn:hnth.
       eapply inds_nth_error in hnth as [n ->]. now cbn.
       eapply nth_error_None in hnth. len in hnth; lia.
-    * cbn. destruct (leb_spec_Set #|ctx| k); try lia.
+    * cbn. destruct (leb_spec_Set #|Γ| k); try lia.
       destruct (nth_error (inds _ _ _) _) eqn:hnth.
       eapply inds_nth_error in hnth as [n ->]. now cbn.
       eapply nth_error_None in hnth. len in hnth; lia.
     * rewrite !map_length.
-      simpl. destruct (Nat.leb #|ctx| k) eqn:eqle.
+      simpl. destruct (Nat.leb #|Γ| k) eqn:eqle.
       eapply Nat.leb_le in eqle.
       rewrite /ind_subst !inds_spec !rev_mapi !nth_error_mapi.
       unshelve epose proof (declm' := declared_minductive_to_gen declm); eauto.
-      rewrite e /=. simpl. constructor. simpl.
+      rewrite H2 /=. simpl. constructor. simpl.
       unfold R_global_instance, R_global_instance_gen. simpl.
       assert(declared_inductive Σ {|
       inductive_mind := inductive_mind ind;
-      inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|ctx|) |} mdecl i).
-      { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
+      inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|Γ|) |} mdecl i).
+      { split; auto. simpl. rewrite -H2 nth_error_rev; lia_f_equal. }
       unfold lookup_inductive.
-      unshelve epose proof (H0' := declared_inductive_to_gen H0); eauto.
+      unshelve epose proof (H0' := declared_inductive_to_gen H3); eauto.
       rewrite (declared_inductive_lookup_gen H0') //.
-      destruct (on_declared_inductive H0) as [onmind onind] => //. simpl in *.
-      rewrite e0 /ind_realargs.
+      destruct (on_declared_inductive H3) as [onmind onind] => //. simpl in *.
+      rewrite e /ind_realargs.
       rewrite !onind.(ind_arity_eq).
-      rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
-      rewrite (Nat.leb_refl) //. eapply Nat.leb_nle in eqle. lia.
+      rewrite !destArity_it_mkProd_or_LetIn /=. len; simpl.
+      rewrite (Nat.leb_refl) //.
+      eapply Nat.leb_nle in eqle. lia.
     * do 2 eapply All2_map. do 2 eapply All2_map_inv in cum.
       eapply All2_All in cum. apply All_All2_refl.
       solve_all.

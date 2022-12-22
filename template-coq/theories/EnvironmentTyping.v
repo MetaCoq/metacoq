@@ -816,27 +816,35 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | _ => 0
       end.
 
-    Inductive positive_cstr_arg mdecl ctx : term -> Type :=
-    | positive_cstr_arg_closed t :
-      closedn #|ctx| t ->
-      positive_cstr_arg mdecl ctx t
+    Definition mdecl_at_i mdecl i (Γ:context) k : Prop :=
+      #|Γ| <= k /\ k < #|Γ| + #|mdecl.(ind_bodies)| /\
+       nth_error (List.rev mdecl.(ind_bodies)) (k - #|Γ|) = Some i.
 
-    | positive_cstr_arg_concl l k i :
+    Reserved Notation " mdecl ;;; Γ |arg+> t " (at level 50, Γ, t at next level).
+    Notation subst0 t := (subst t 0).
+    Notation "M { j := N }" := (subst [N] j M) (at level 10, right associativity).
+
+    Inductive positive_cstr_arg mdecl Γ : term -> Type :=
+    | pos_arg_closed ty :
+      closedn #|Γ| ty ->
+      mdecl ;;; Γ |arg+> ty
+
+    | pos_arg_concl l k i :
       (** Mutual inductive references in the conclusion are ok *)
-      #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
-      All (closedn #|ctx|) l ->
-      nth_error (List.rev mdecl.(ind_bodies)) (k - #|ctx|) = Some i ->
-      #|l| = ind_realargs i ->
-      positive_cstr_arg mdecl ctx (mkApps (tRel k) l)
+      #|l| = ind_realargs i -> All (closedn #|Γ|) l ->
+      mdecl_at_i mdecl i Γ k ->
+      mdecl ;;; Γ |arg+> mkApps (tRel k) l
 
-    | positive_cstr_arg_let na b ty t :
-      positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
-      positive_cstr_arg mdecl ctx (tLetIn na b ty t)
+    | pos_arg_let na b ty ty' :
+      mdecl ;;; Γ |arg+> ty' {0 := b} ->
+      mdecl ;;; Γ |arg+> tLetIn na b ty ty'
 
-    | positive_cstr_arg_ass na ty t :
-      closedn #|ctx| ty ->
-      positive_cstr_arg mdecl (vass na ty :: ctx) t ->
-      positive_cstr_arg mdecl ctx (tProd na ty t).
+    | pos_arg_ass na ty ty' :
+      closedn #|Γ| ty ->
+      mdecl ;;; vass na ty :: Γ |arg+> ty' ->
+      mdecl ;;; Γ |arg+> tProd na ty ty'
+
+  where " mdecl ;;; Γ |arg+> t " := (positive_cstr_arg mdecl Γ t) : type_scope.
 
     (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
       and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and:
@@ -846,21 +854,24 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           any of the inductive types in the block. I.e. [indices] are closed terms
           in [params ,,, args]. *)
 
-    Inductive positive_cstr mdecl i (ctx : context) : term -> Type :=
-    | positive_cstr_concl indices :
-      let headrel : nat :=
-        (#|mdecl.(ind_bodies)| - S i + #|ctx|)%nat in
-      All (closedn #|ctx|) indices ->
-      positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
+    Reserved Notation " mdecl @ i ;;; Γ |+> t " (at level 50, i, Γ, t at next level).
 
-    | positive_cstr_let na b ty t :
-      positive_cstr mdecl i ctx (subst [b] 0 t) ->
-      positive_cstr mdecl i ctx (tLetIn na b ty t)
 
-    | positive_cstr_ass na ty t :
-      positive_cstr_arg mdecl ctx ty ->
-      positive_cstr mdecl i (vass na ty :: ctx) t ->
-      positive_cstr mdecl i ctx (tProd na ty t).
+    Inductive positive_cstr mdecl i Γ : term -> Type :=
+    | pos_concl l (headrel := (#|mdecl.(ind_bodies)| - S i + #|Γ|)%nat) :
+      All (closedn #|Γ|) l ->
+      mdecl @ i ;;; Γ |+> mkApps (tRel headrel) l
+
+    | pos_let na b ty ty' :
+      mdecl @ i ;;; Γ |+> ty' {0 := b} ->
+      mdecl @ i ;;; Γ |+> tLetIn na b ty ty'
+
+    | pos_ass na ty ty' :
+      mdecl ;;; Γ |arg+> ty ->
+      mdecl @ i ;;; vass na ty :: Γ |+> ty' ->
+      mdecl @ i ;;; Γ |+> tProd na ty ty'
+
+    where " mdecl @ i ;;; Γ |+> t " := (positive_cstr mdecl i Γ t) : type_scope.
 
     Definition lift_level n l :=
       match l with

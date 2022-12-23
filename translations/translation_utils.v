@@ -372,5 +372,8 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
            ret (Σ', E')
          end
       end
+    (** FIXME:*)
+    | ModuleDecl _ => tmPrint "Module" ;; ret ΣE
+    | ModuleTypeDecl _ => tmPrint "Module Type" ;; ret ΣE
     end)
   (fst p).(declarations) ΣE.

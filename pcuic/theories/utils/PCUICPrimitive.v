@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Universes BasicAst Primitive Reflect
-     Environment EnvironmentTyping.
+From MetaCoq.Template Require Import utils Universes BasicAst Primitive Reflect.
+From MetaCoq.PCUIC Require Import Environment EnvironmentTyping.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.
 From Coq Require Import Uint63 SpecFloat.

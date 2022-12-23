@@ -324,7 +324,6 @@ Module PrintTermTree.
             else (" := " ^ nl ^ print_term Σ' true nil true false b ^ "." ^ nl)
           | None => "."
           end ^ acc)
-      | _ => ""
       end
     end.
 

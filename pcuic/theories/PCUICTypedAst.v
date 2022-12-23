@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Export utils Universes BasicAst Environment Reflect.
-From MetaCoq.Template Require EnvironmentTyping.
+From MetaCoq.PCUIC Require EnvironmentTyping.
 From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
 Require Vector Fin.

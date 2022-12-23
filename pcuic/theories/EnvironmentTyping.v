@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils BasicAst Universes Environment Primitive.
+From MetaCoq.Template Require Import config utils BasicAst Universes Primitive.
+From MetaCoq.PCUIC Require Import Environment.
 From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
@@ -36,16 +37,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     declared_constructor_gen lookup (proj.(proj_ind), 0) mdecl idecl cdecl /\
     List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
     mdecl.(ind_npars) = proj.(proj_npars).
-  
-  Definition declared_module Σ kn moddecl :=
-    lookup_env Σ kn = Some (ModuleDecl moddecl).
-    
-  Definition declared_modtype Σ kn mtdecl :=
-    lookup_env Σ kn = Some (ModuleTypeDecl mtdecl).
 
   Definition declared_projection Σ := declared_projection_gen (lookup_env Σ).
 
-  Definition lookup_constant_gen (lookup : kername -> option global_decl) kn := 
+  Definition lookup_constant_gen (lookup : kername -> option global_decl) kn :=
     match lookup kn with
     | Some (ConstantDecl d) => Some d
     | _ => None
@@ -94,26 +89,14 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       end
     | _ => None
     end.
-  
-  Definition lookup_module Σ kn: option module_decl := 
-    match lookup_env Σ kn with
-    | Some (ModuleDecl d) => Some d
-    | _ => None
-    end.
-  
-  Definition lookup_modtype Σ kn := 
-    match lookup_env Σ kn with
-    | Some (ModuleTypeDecl d) => Some d
-    | _ => None
-    end.
 
   Definition lookup_projection Σ := lookup_projection_gen (lookup_env Σ).
-  
+
   Lemma declared_constant_lookup {lookup kn cdecl} :
     declared_constant_gen lookup kn cdecl ->
     lookup_constant_gen lookup kn = Some cdecl.
   Proof.
-    unfold declared_constant_gen, lookup_constant_gen. 
+    unfold declared_constant_gen, lookup_constant_gen.
     now intros ->.
   Qed.
 
@@ -121,7 +104,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     lookup_constant_gen lookup kn = Some cdecl ->
     declared_constant_gen lookup kn cdecl.
   Proof.
-    unfold declared_constant_gen, lookup_constant_gen. 
+    unfold declared_constant_gen, lookup_constant_gen.
     destruct lookup as [[]|] => //. congruence.
   Qed.
 
@@ -199,43 +182,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     apply (lookup_constructor_declared (id:=(proj_ind p, 0)) hl).
   Qed.
 
-  Lemma declared_module_lookup {Σ mp mdecl} :
-    declared_module Σ mp mdecl ->
-    lookup_module Σ mp = Some mdecl.
-  Proof.
-    unfold declared_module, lookup_module. now intros ->.
-  Qed.
-
-  Lemma lookup_module_declared {Σ kn mdecl} :
-    lookup_module Σ kn = Some mdecl -> 
-    declared_module Σ kn mdecl.
-  Proof.
-    unfold declared_module, lookup_module.
-    destruct lookup_env as [[]|] => //. congruence.
-  Qed.
-
-  Lemma declared_modtype_lookup {Σ mp mtdecl} :
-    declared_modtype Σ mp mtdecl ->
-    lookup_modtype Σ mp = Some mtdecl.
-  Proof.
-    unfold declared_modtype, lookup_modtype. now intros ->.
-  Qed.
-
-  Lemma lookup_modtype_declared {Σ kn mtdecl} :
-    lookup_modtype Σ kn = Some mtdecl -> 
-    declared_modtype Σ kn mtdecl.
-  Proof.
-    unfold declared_modtype, lookup_modtype.
-    destruct lookup_env as [[]|] => //. congruence.
-  Qed.
-
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl cb => F cb.(cst_universes)
   | InductiveDecl mb => F mb.(ind_universes)
-  (** FIXME: Recursively check the universes of fields? *)
-  | ModuleDecl _ => F Monomorphic_ctx
-  | ModuleTypeDecl _ => F Monomorphic_ctx
   end.
 
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
@@ -906,7 +856,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       positive_cstr_arg mdecl ctx ty ->
       positive_cstr mdecl i (vass na ty :: ctx) t ->
       positive_cstr mdecl i ctx (tProd na ty t).
-    
+
     Definition lift_level n l :=
       match l with
       | Level.lzero | Level.Level _ => l
@@ -1217,47 +1167,10 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | None => on_type Σ [] d.(cst_type)
       end.
 
-    (** Interactive definitions are stored in modtype if not type-annotated.
-      Otherwise, the interactive definition is in impl, type annotation in modtype. *)
-    Inductive on_structure_field Σ : kername -> structure_field -> Type :=
-      | on_sfconst kn c : on_constant_decl Σ c -> on_structure_field Σ kn (sfconst c)
-      | on_sfmind kn inds : on_inductive Σ kn inds -> on_structure_field Σ kn (sfmind inds)
-      | on_sfmod kn mi sb : on_module_impl Σ mi -> on_structure_body Σ sb -> on_structure_field Σ kn (sfmod mi sb)
-      | on_sfmodtype kn mtd : on_structure_body Σ mtd -> on_structure_field Σ kn (sfmodtype mtd)
-
-    with on_structure_body Σ : structure_body -> Type :=
-      | on_sb_nil : on_structure_body Σ sb_nil
-      | on_sb_cons kn sf sb : on_structure_field Σ kn sf
-                              -> on_structure_body Σ sb
-                              -> on_structure_body Σ (sb_cons kn sf sb)
-    with on_module_impl Σ : module_implementation -> Type :=
-      | on_mi_abstract : on_module_impl Σ mi_abstract
-      | on_mi_algebraic kn : on_module_impl Σ (mi_algebraic kn)
-      | on_mi_struct sb : on_structure_body Σ sb -> on_module_impl Σ (mi_struct sb)
-      | on_mi_fullstruct : on_module_impl Σ mi_fullstruct.
-    (* with on_module_decl Σ : (module_implementation × module_type_decl) -> Type :=
-      | on_mi_abstract_decl mt : on_structure_body Σ mt -> on_module_decl Σ (mi_abstract, mt)
-      | on_mi_algebraic_decl kn mt: on_structure_body Σ mt -> on_module_decl Σ ((mi_algebraic kn), mt)
-      | on_mi_struct_decl sb mt: on_structure_body Σ mt -> on_structure_body Σ sb -> on_module_decl Σ ((mi_struct sb), mt)
-      | on_mi_fullstruct_decl mt: on_structure_body Σ mt -> on_module_decl Σ (mi_fullstruct, mt). *)
-    
-    Definition on_module_type_decl := on_structure_body.
-    Definition on_module_decl Σ m := on_module_impl Σ m.1 × on_module_type_decl Σ m.2.
-
-    Scheme onStructField_rect := Induction for on_structure_field Sort Type
-    with onModuleImpl_rect := Induction for on_module_impl Sort Type
-    with onStructBody_rect := Induction for on_structure_body Sort Type.
-
-    (** Generate mutual induction principle for module declarations. *)
-    Combined Scheme on_mi_sf_sb_mutrect from
-    onModuleImpl_rect,onStructField_rect,onStructBody_rect.
-
     Definition on_global_decl Σ kn decl :=
       match decl with
       | ConstantDecl d => on_constant_decl Σ d
       | InductiveDecl inds => on_inductive Σ kn inds
-      | ModuleDecl mb => on_module_decl Σ mb 
-      | ModuleTypeDecl mtd => on_structure_body Σ mtd
       end.
 
     (** *** Typing of global environment
@@ -1366,25 +1279,25 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     destruct u; auto. intuition eauto.
   Qed.
 
-  Lemma on_constant_decl_impl {cf : checker_flags} Pcmp P Q Σ d :
-    (forall Γ t T,
-      on_global_env Pcmp P Σ.1 ->
-      P Σ Γ t T -> Q Σ Γ t T) ->
-    on_global_env Pcmp P Σ.1 ->
-    on_constant_decl P Σ d -> on_constant_decl Q Σ d.
+  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
+    (forall Σ Γ t T,
+        on_global_env Pcmp P Σ.1 ->
+        on_global_env Pcmp Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof.
-    intros X X0 X1. destruct d; destruct cst_body0; unfold on_constant_decl in *; unfold on_type; now simpl.
-  Qed.
-
-  Lemma on_inductive_decl_impl {cf : checker_flags} Pcmp P Q Σ kn mdecl :
-    (forall Γ t T,
-      on_global_env Pcmp P Σ.1 ->
-      P Σ Γ t T -> Q Σ Γ t T) ->
-    on_global_env Pcmp P Σ.1 ->
-    on_inductive Pcmp P Σ kn mdecl -> on_inductive Pcmp Q Σ kn mdecl.
-  Proof.
-    intros X X0.
-    - intros [onI onP onNP].
+    intros X Σ [cu IH]. split; auto.
+    revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
+    induction g; intros; auto. constructor; auto.
+    depelim IH. specialize (IHg cu IH). constructor; auto.
+    pose proof (globenv_decl _ _ _ _ _ _ _ IH o).
+    destruct o. constructor; auto.
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl0) Γ t T
+      (cu, IH) (cu, IHg)); clear X.
+    rename X' into X.
+    clear IH IHg. destruct d; simpl.
+    - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
+    - destruct on_global_decl_d0 as [onI onP onNP].
       constructor; auto.
       -- eapply Alli_impl; tea. intros.
         refine {| ind_arity_eq := X1.(ind_arity_eq);
@@ -1412,55 +1325,13 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
             split.
             * apply ind_sorts0.
             * destruct indices_matter; auto.
-              eapply type_local_ctx_impl. eapply ind_sorts0. eauto.
-        --- apply X1.(onIndices).
+              eapply type_local_ctx_impl; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
       -- red in onP. red.
-         eapply All_local_env_impl; eauto.
+        eapply All_local_env_impl; tea.
   Qed.
 
-  Lemma on_global_decl_impl {cf : checker_flags} Pcmp P Q Σ kn d :
-    (forall Γ t T,
-      on_global_env Pcmp P Σ.1 ->
-      P Σ Γ t T -> Q Σ Γ t T) ->
-    on_global_env Pcmp P Σ.1 ->
-    on_global_decl Pcmp P Σ kn d -> on_global_decl Pcmp Q Σ kn d.
-  Proof.
-  intros H HP.
-  cut ((forall (m : module_implementation), on_module_impl Pcmp P Σ m -> on_module_impl Pcmp Q Σ m)
-    × (forall (kn: kername) (p : structure_field), on_structure_field Pcmp P Σ kn p -> on_structure_field Pcmp Q Σ kn p)
-    × (forall (s : structure_body), on_structure_body Pcmp P Σ s -> on_structure_body Pcmp Q Σ s)).
-  intro md_sf_sb.
-  destruct d; simpl.
-  - now eapply on_constant_decl_impl.
-  - now eapply on_inductive_decl_impl.
-  - unfold on_module_decl. destruct m as [mi mt]; simpl.
-    intros [onmip onmtp]. split; now apply md_sf_sb.
-  - apply md_sf_sb.
-  - apply (on_mi_sf_sb_mutrect); try now constructor.
-    -- intros kn' c oncp. constructor. now apply on_constant_decl_impl with (Pcmp := Pcmp) (P := P).
-    -- intros kn' mind onip. constructor. now apply on_inductive_decl_impl with (Pcmp := Pcmp) (P := P).
-  Qed.
-
-  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
-    (forall Σ Γ t T,
-        on_global_env Pcmp P Σ.1 ->
-        on_global_env Pcmp Q Σ.1 ->
-        P Σ Γ t T -> Q Σ Γ t T) ->
-    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
-  Proof.
-    intros X Σ [cu IH]. split; auto.
-    revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
-    induction g; intros; auto. constructor; auto.
-    depelim IH. specialize (IHg cu IH). constructor; auto.
-    pose proof (globenv_decl _ _ _ _ _ _ _ IH o).
-    destruct o. constructor; auto.
-    assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl0) Γ t T
-      (cu, IH) (cu, IHg)); clear X.
-    rename X' into X.
-    eapply on_global_decl_impl; tea.
-    - intros; apply X => //.
-    - split => //.
-  Qed.
 End GlobalMaps.
 
 Module Type GlobalMapsSig (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvTypingSig T E TU) (C: ConversionSig T E TU ET) (L: LookupSig T E).
@@ -1539,35 +1410,41 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T
       (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
-    clear IHX0.
-    destruct d; simpl.
-
+    clear IHX0. destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-
-    - simpl in *. apply on_inductive_decl_impl with (P := P); auto.
-      unfold on_global_env; auto.
-
-    - set (gex := ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx)).
-      cut ((forall (m : module_implementation), on_module_impl cumul_gen P gex m -> on_module_impl cumul_gen Q gex m)
-        × (forall (kn: kername) (p: structure_field), on_structure_field cumul_gen P gex kn p -> on_structure_field cumul_gen Q gex kn p)
-        × (forall (s : structure_body), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      intros [Hmi [Hsf Hsb]].
-      -- constructor; destruct on_global_decl_d0 as [omip omtp].
-        + now apply Hmi. 
-        + now apply Hsb.
-      -- apply on_mi_sf_sb_mutrect; try now constructor.
-        + constructor. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        + constructor. apply on_inductive_decl_impl with (P := P); unfold on_global_env; auto.
-
-    - set (gex := ({| universes := univs; declarations := Σ; retroknowledge := retro |}, Monomorphic_ctx)).
-      cut ((forall (m : module_implementation), on_module_impl cumul_gen P gex m -> on_module_impl cumul_gen Q gex m)
-        × (forall (kn: kername) (p: structure_field), on_structure_field cumul_gen P gex kn p -> on_structure_field cumul_gen Q gex kn p)
-        × (forall (s : structure_body), on_structure_body cumul_gen P gex s -> on_structure_body cumul_gen Q gex s)).
-      intros [Hmi [Hsf Hsb]].
-      -- destruct on_global_decl_d0; now constructor.
-      -- apply on_mi_sf_sb_mutrect; try now constructor.
-        + constructor. destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
-        + constructor. apply on_inductive_decl_impl with (P := P); unfold on_global_env; auto.
+    - simpl in *. destruct on_global_decl_d0 as [onI onP onNP].
+      constructor; auto.
+      -- eapply Alli_impl; tea. intros.
+        refine {| ind_arity_eq := X1.(ind_arity_eq);
+                  ind_cunivs := X1.(ind_cunivs) |}.
+        --- apply onArity in X1. unfold on_type in *; simpl in *.
+            now eapply X.
+        --- pose proof X1.(onConstructors) as X11. red in X11.
+            eapply All2_impl; eauto.
+            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+            * apply X; eauto.
+            * clear -X0 X on_cargs0. revert on_cargs0.
+              generalize (cstr_args x0).
+              induction c in y |- *; destruct y; simpl; auto;
+                destruct a as [na [b|] ty]; simpl in *; auto;
+            split; intuition eauto.
+            * clear -X0 X on_cindices0.
+              revert on_cindices0.
+              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+              generalize (cstr_indices x0).
+              induction 1; simpl; constructor; auto.
+        --- simpl; intros. pose (onProjections X1). simpl in *; auto.
+        --- destruct X1. simpl. unfold check_ind_sorts in *.
+            destruct Universe.is_prop; auto.
+            destruct Universe.is_sprop; auto.
+            split.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
+              eapply type_local_ctx_impl; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
+      -- red in onP. red.
+        eapply All_local_env_impl; tea.
   Qed.
 
 End DeclarationTyping.

@@ -378,7 +378,6 @@ Proof.
   - eapply lookup_env_optimize_env_Some in hl as [Σ' [ext wf' hl']] => /=.
     rewrite hl'. f_equal.
     eapply wellformed_optimize_decl_extends; eauto. auto.
-
   - cbn. now eapply lookup_env_optimize_env_None in hl.
 Qed.
 
@@ -502,7 +501,7 @@ Proof.
     eapply eval_wellformed in ev2; tea => //.
     eapply eval_wellformed in ev1; tea => //.
     econstructor; eauto.
-    rewrite -(optimize_csubst _ 1) //.
+    rewrite -(optimize_csubst _ 1) //. 
     apply IHev3. eapply wellformed_csubst => //.
 
   - move/andP => [] clb0 clb1.

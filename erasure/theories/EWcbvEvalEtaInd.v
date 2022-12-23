@@ -72,7 +72,6 @@ Class Qcofixs (Q : nat -> term -> Type) := qcofixs : forall mfix idx, Q 0 (tCoFi
   forall args fn, cunfold_cofix mfix idx = Some (args, fn) ->
   Q 0 fn.
 #[export] Hint Mode Qcofixs ! : typeclass_instances.
-
 Lemma Qfix_subst {etfl : ETermFlags} mfix Q : has_tFix -> Qfix Q -> Qpres Q -> forall idx, idx < #|mfix| -> Q 0 (tFix mfix idx) -> All (Q 0) (fix_subst mfix).
 Proof.
   intros hasfix qfix qpre; unfold fix_subst.
@@ -704,7 +703,6 @@ Definition env_flags :=
        term_switches := term_flags ;
        cstr_as_blocks := false
     |}.
-
 From MetaCoq.Erasure Require Import ELiftSubst.
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ :
   cstr_as_blocks = false ->

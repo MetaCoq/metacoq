@@ -73,7 +73,6 @@ Definition all_env_flags_blocks :=
      term_switches := all_term_flags;
      has_cstr_params := true ;
      cstr_as_blocks := true |}.
-
 Section wf.
 
   Context {efl  : EEnvFlags}.
@@ -91,7 +90,6 @@ Section wf.
     (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
 
   Definition is_nil {A} (l : list A) := match l with [] => true | _ => false end.
-
   Fixpoint wellformed k (t : term) : bool :=
     match t with
     | tRel i => has_tRel && Nat.ltb i k

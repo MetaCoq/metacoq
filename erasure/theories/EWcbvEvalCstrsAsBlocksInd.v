@@ -112,7 +112,6 @@ Proof.
   eapply qpres in hfix. depelim hfix. depelim i0. eapply nth_error_all in a; tea. now rewrite Nat.add_0_r in a.
   assumption.
 Qed.
-
 #[export] Instance Qsubst_Qcofixs {etfl : ETermFlags} Q : Qpres Q -> Qcofix Q -> Qsubst Q -> Qcofixs Q.
 Proof.
   move=> qpres qfix; rewrite /Qsubst /Qfixs.

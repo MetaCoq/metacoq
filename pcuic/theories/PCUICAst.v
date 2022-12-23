@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Morphisms.
-From MetaCoq.Template Require Export utils Universes BasicAst Environment Reflect.
-From MetaCoq.Template Require EnvironmentTyping.
-From MetaCoq.PCUIC Require Export PCUICPrimitive.
+From MetaCoq.Template Require Export utils Universes BasicAst Reflect.
+From MetaCoq.PCUIC Require Export PCUICPrimitive Environment.
+From MetaCoq.PCUIC Require EnvironmentTyping.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 

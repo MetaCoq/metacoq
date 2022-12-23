@@ -15,8 +15,8 @@ Qed.
 Local Coercion declarations : global_env >-> global_declarations.
 
 Module GlobalEnvMap.
-  Record t :=
-  { env :> global_env;
+  Record t := 
+  { env :> global_env; 
     map : EnvMap.t global_decl;
     repr : EnvMap.repr env.(declarations) map;
     wf : EnvMap.fresh_globals env.(declarations) }.
@@ -24,16 +24,17 @@ Module GlobalEnvMap.
   Definition lookup_env Σ kn := EnvMap.lookup kn Σ.(map).
 
   Lemma lookup_env_spec (Σ : t) kn : lookup_env Σ kn = Env.lookup_env Σ kn.
-  Proof.
+  Proof. 
     rewrite /lookup_env /Env.lookup_env.
     apply (EnvMap.lookup_spec Σ.(env).(declarations)); apply Σ.
   Qed.
 
   Definition lookup_minductive Σ kn : option mutual_inductive_body :=
-    decl <- lookup_env Σ kn;;
+    decl <- lookup_env Σ kn;; 
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl
+    | ModuleDecl _ | ModuleTypeDecl _ => None
     end.
 
   Lemma lookup_minductive_spec Σ kn : lookup_minductive Σ kn = Ast.lookup_minductive Σ kn.
@@ -46,7 +47,7 @@ Module GlobalEnvMap.
     mdecl <- lookup_minductive Σ (inductive_mind kn) ;;
     idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
     ret (mdecl, idecl).
-
+  
   Lemma lookup_inductive_spec Σ kn : lookup_inductive Σ kn = Ast.lookup_inductive Σ kn.
   Proof.
     rewrite /lookup_inductive /Ast.lookup_inductive.
@@ -56,7 +57,7 @@ Module GlobalEnvMap.
   Definition lookup_constructor Σ kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive Σ kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
-    ret (mdecl, idecl, cdecl).
+    ret (mdecl, idecl, cdecl).  
 
   Lemma lookup_constructor_spec Σ kn : lookup_constructor Σ kn = Ast.lookup_constructor Σ kn.
   Proof.

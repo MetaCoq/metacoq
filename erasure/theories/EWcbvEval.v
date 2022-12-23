@@ -107,6 +107,8 @@ Section Wcbv.
   Context {wfl : WcbvFlags}.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
+  
+  Local Unset Elimination Schemes.
 
   Local Unset Elimination Schemes.
 
@@ -217,7 +219,6 @@ Section Wcbv.
       nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
       eval a res ->
       eval (tProj p discr) res
-
   (** Proj *)
   | eval_proj_block p cdecl discr args a res :
       with_constructor_as_block = true ->
@@ -327,7 +328,6 @@ Defined.
 
 Set Equations Transparent.
 Section eval_rect.
-
   Variables (wfl : WcbvFlags) (Σ : global_declarations) (P : forall x y, eval Σ x y → Type).
 
   Equations All2_over {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} :
@@ -697,6 +697,15 @@ Section Wcbv.
     - repeat eexists; eauto.
     - invs i. destruct args; invs H0. exists []. repeat econstructor.
   Qed.
+  
+  Lemma eval_Construct_inv ind c args e  :
+     eval (tConstruct ind c args) e ->
+     ∑ args', e = tConstruct ind c args' × All2 eval args args'.
+  Proof.
+    intros H. depind H.
+    - repeat eexists; eauto.
+    - invs i. destruct args; invs H0. exists []. repeat econstructor.
+  Qed.    
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
@@ -724,12 +733,10 @@ Section Wcbv.
       + rewrite -[tApp _ _](mkApps_app _ _ [a']).
         eapply value_app. cbn; auto. econstructor; tea. cbn; len.
         eapply All_app_inv; auto.
-
     - econstructor 2; tea. now rewrite -(All2_length a).
       clear -a iha. induction a. constructor.
       destruct iha as [va' ih].
       constructor. exact va'. now apply IHa.
-
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHev1 => //.
       destruct IHev1 as [?|[]]; intuition subst.
@@ -1608,7 +1615,6 @@ Definition mk_env_flags has_ax has_pars tfl has_blocks :=
      has_cstr_params := has_pars;
      term_switches := tfl ;
      cstr_as_blocks := has_blocks |}.
-
 Global Hint Rewrite andb_true_r andb_false_r : simplifications.
 Global Hint Rewrite orb_false_r orb_true_r : simplifications.
 
@@ -2017,7 +2023,7 @@ Proof.
   eapply (eval_mkApps_Construct_inv _ _ _ [] _ hblock) in x as [? []]; auto. subst f''. depelim a1.
   f_equal.
   eapply eval_deterministic_all; tea.
-  eapply All2_impl; tea; cbn; eauto. now intros x y [].
+  eapply All2_impl; tea; cbn; eauto. now intros x y []. 
 Qed.
 
 Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] :

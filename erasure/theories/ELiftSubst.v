@@ -108,7 +108,7 @@ Require Import PeanoNat.
 Import Nat.
 
 Lemma lift_rel_ge :
-  forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n).
+  forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n). 
 Proof.
   intros; simpl in |- *.
   now elim (leb_spec p n).

@@ -120,7 +120,6 @@ destruct (lookup_env Σ kn) eqn:hl.
 - eapply lookup_env_gen_transform_env_Some in hl as [Σ' [ext wf' hl']] => /=.
   rewrite hl'. f_equal.
   eapply wellformed_gen_transform_decl_extends; eauto. auto.
-
 - cbn. now eapply lookup_env_gen_transform_env_None in hl.
 Qed.
 

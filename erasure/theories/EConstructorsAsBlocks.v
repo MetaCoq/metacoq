@@ -88,7 +88,6 @@ Section transform_blocks.
   Hint Rewrite @map_InP_spec : transform_blocks.
 
   Arguments eqb : simpl never.
-
   Opaque transform_blocks_unfold_clause_1.
   Opaque transform_blocks.
   Opaque isEtaExp.
@@ -276,7 +275,6 @@ Section transform_blocks.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-
     - destruct Nat.compare => //.
     - f_equal. solve_all. move/andP: b => [] _ he. solve_all.
     - rewrite csubst_mkApps.
@@ -357,7 +355,6 @@ Section transform_blocks.
     rewrite forallb_rev forallb_skipn //.
     now rewrite map_rev map_skipn.
   Qed.
-
   Lemma transform_blocks_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def transform_blocks) mfix) = map transform_blocks (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.

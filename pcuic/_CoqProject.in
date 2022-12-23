@@ -1,5 +1,7 @@
 -R theories MetaCoq.PCUIC
 
+theories/Environment.v
+theories/EnvironmentTyping.v
 theories/PCUICAst.v
 
 theories/utils/PCUICOnOne.v

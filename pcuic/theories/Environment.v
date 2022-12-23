@@ -2,54 +2,11 @@
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Template Require Import utils BasicAst Primitive.
 From MetaCoq.Template Require Import Universes.
+From MetaCoq.Template Require Environment.
 
-Module Type Term.
+Module Type Term := Environment.Term.
 
-  Parameter Inline term : Type.
-
-  Parameter Inline tRel : nat -> term.
-  Parameter Inline tSort : Universe.t -> term.
-  Parameter Inline tProd : aname -> term -> term -> term.
-  Parameter Inline tLambda : aname -> term -> term -> term.
-  Parameter Inline tLetIn : aname -> term -> term -> term -> term.
-  Parameter Inline tInd : inductive -> Instance.t -> term.
-  Parameter Inline tProj : projection -> term -> term.
-  Parameter Inline mkApps : term -> list term -> term.
-
-  Parameter Inline lift : nat -> nat -> term -> term.
-  Parameter Inline subst : list term -> nat -> term -> term.
-  Parameter Inline closedn : nat -> term -> bool.
-  Parameter Inline noccur_between : nat -> nat -> term -> bool.
-  Parameter Inline subst_instance_constr : UnivSubst term.
-
-  Notation lift0 n := (lift n 0).
-End Term.
-
-Module Retroknowledge.
-
-  Record t := mk_retroknowledge {
-    retro_int63 : option kername;
-    retro_float64 : option kername;
-  }.
-
-  Definition empty := {| retro_int63 := None; retro_float64 := None |}.
-
-  Definition extends (x y : t) :=
-    option_extends x.(retro_int63) y.(retro_int63) /\
-    option_extends x.(retro_float64) y.(retro_float64).
-  Existing Class extends.
-
-  #[global] Instance extends_refl x : extends x x.
-  Proof.
-    split; apply option_extends_refl.
-  Qed.
-
-  #[global] Instance extends_trans : RelationClasses.Transitive Retroknowledge.extends.
-  Proof.
-    intros x y z [] []; split; cbn; now etransitivity; tea.
-  Qed.
-
-End Retroknowledge.
+Module Retroknowledge := Environment.Retroknowledge.
 
 Module Environment (T : Term).
 
@@ -318,37 +275,9 @@ Module Environment (T : Term).
     option_map f (cst_body decl) = cst_body (map_constant_body f decl).
   Proof. destruct decl; reflexivity. Qed.
 
-  (** See [generic_module_body] from [declarations.ml]. We do not include the modpath
-    in the body since it is already included in [global_declarations]. *)
-  (** implementation -> module type -> algebraic (colon-annotated) module type (TODO) *)
-  Inductive structure_field :=
-  | sfconst : constant_body -> structure_field
-  | sfmind : mutual_inductive_body -> structure_field
-  | sfmod : module_implementation -> structure_body -> structure_field
-  | sfmodtype : structure_body -> structure_field
-  with module_implementation :=
-  | mi_abstract : module_implementation (** Declare Module M: T. *)
-  | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
-  | mi_struct : structure_body -> module_implementation (** Module M:T. ... End M.*)
-  | mi_fullstruct : module_implementation (** Module M. ... End M.*)
-  with structure_body :=
-  | sb_nil
-  | sb_cons : kername -> structure_field -> structure_body -> structure_body.
-
-  Scheme structureField_rect := Induction for structure_field Sort Type
-  with moduleImpl_rect := Induction for module_implementation Sort Type
-  with structureBody_rect := Induction for structure_body Sort Type.
-
-  Combined Scheme sf_mi_sb_mutind from structureField_rect, moduleImpl_rect, structureBody_rect.
-
-  Definition module_type_decl := structure_body.
-  Definition module_decl := module_implementation × module_type_decl.
-
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
-  | InductiveDecl : mutual_inductive_body -> global_decl
-  | ModuleDecl : module_decl -> global_decl
-  | ModuleTypeDecl : module_type_decl -> global_decl.
+  | InductiveDecl : mutual_inductive_body -> global_decl.
   Derive NoConfusion for global_decl.
 
   Definition global_declarations := list (kername * global_decl).

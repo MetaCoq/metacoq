@@ -230,10 +230,79 @@ Proof.
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
+Fixpoint eqb_structure_field (sf sf': structure_field) {struct sf}:=
+  match sf, sf' with
+  | sfconst c, sfconst c' => c ==? c'
+  | sfmind m, sfmind m' => m ==? m'
+  | sfmod mi mt, sfmod mi' mt' => eqb_module_impl mi mi' && eqb_module_type_decl mt mt'
+  | sfmodtype mt, sfmodtype mt' => eqb_module_type_decl mt mt'
+  | _, _ => false
+  end
+with eqb_module_impl (mi mi': module_implementation) {struct mi}:=
+  match mi, mi' with
+  | mi_abstract, mi_abstract | mi_fullstruct, mi_fullstruct => true
+  | mi_algebraic kn, mi_algebraic kn' => kn ==? kn'
+  | mi_struct mt, mi_struct mt' => eqb_module_type_decl mt mt'
+  | _, _ => false
+  end
+with eqb_module_type_decl (mt mt': module_type_decl) {struct mt} :=
+  match mt, mt' with
+  | sb_nil, sb_nil => true
+  | sb_cons k sf sb, sb_cons k' sf' sb' =>
+      k ==? k' && eqb_structure_field sf sf' && eqb_module_type_decl sb sb'
+  | _, _ => false
+  end.
+  
+Lemma reflect_sf_mi_sb: 
+(forall f f': structure_field, reflectProp (f = f') (eqb_structure_field f f')) ×
+(forall m m': module_implementation, reflectProp (m = m') (eqb_module_impl m m')) ×
+(forall s s': structure_body, reflectProp (s = s') (eqb_module_type_decl s s')).
+Proof.
+  apply sf_mi_sb_mutind; intros.
+  - destruct f'; simpl; try now constructor. destruct (eqb_spec c c0); now constructor.
+  - destruct f'; simpl; try now constructor. destruct (eqb_spec m m0); now constructor.
+  - destruct f'; simpl; try now constructor.
+    destruct (H m0), (H0 s0); simpl; now constructor.
+  - destruct f'; simpl; try now constructor.
+    destruct (H s0); simpl; now constructor.
+  - destruct m'; simpl; now constructor.
+  - destruct m'; simpl; try now constructor.
+    destruct (eqb_spec k k0); now constructor.
+  - destruct m'; simpl; try now constructor.
+    destruct (H s0); simpl; now constructor.
+  - destruct m'; simpl; now constructor.
+  - destruct s'; simpl; now constructor.
+  - destruct s'; simpl; try now constructor.
+    destruct (eqb_spec k k0), (H s1), (H0 s'); simpl; now constructor.
+Qed.
+
+#[global] Instance reflect_structure_field : ReflectEq structure_field := 
+{ eqb := eqb_structure_field ; eqb_spec := reflect_sf_mi_sb.1 }.
+
+#[global] Instance reflect_module_impl : ReflectEq module_implementation := 
+{ eqb := eqb_module_impl ; eqb_spec := reflect_sf_mi_sb.2.1 }.
+
+#[global] Instance reflect_structure_body : ReflectEq structure_body := 
+{ eqb := eqb_module_type_decl ; eqb_spec := reflect_sf_mi_sb.2.2 }.
+
+#[global] Instance reflect_module_type : ReflectEq module_type_decl := 
+{ eqb := eqb_module_type_decl ; eqb_spec := reflect_sf_mi_sb.2.2 }.
+
+Definition eqb_module_decl (m m': module_decl) := (m.1 ==? m'.1) && (m.2 ==? m'.2).
+
+#[global] Instance reflect_module_decl : ReflectEq module_decl.
+Proof.
+  refine {| eqb := eqb_module_decl |}.
+  intros [] [].
+  unfold eqb_module_decl; cbn -[eqb]; finish_reflect.
+Qed.
+
 Definition eqb_global_decl x y :=
   match x, y with
   | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
   | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
+  | ModuleDecl m, ModuleDecl m' => eqb m m'
+  | ModuleTypeDecl mt, ModuleTypeDecl mt' => eqb mt mt'
   | _, _ => false
   end.
 

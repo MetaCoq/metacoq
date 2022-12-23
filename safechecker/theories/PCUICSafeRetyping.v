@@ -142,6 +142,8 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
@@ -187,7 +189,7 @@ Qed.
     (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
     (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), well_sorted Σ Γ T)
     (tx : principal_type Γ T) : principal_sort Γ T :=
-    match @reduce_to_sort cf nor _ X Γ tx _ with
+    match @reduce_to_sort cf nor _ X _ Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
     end.
@@ -227,7 +229,7 @@ Qed.
     (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ T)
     (isprod : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) :
     ∑ na' A' B', forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf nor _ X Γ T wf with
+    match @reduce_to_prod cf nor _ X _ Γ T wf with
     | Checked_comp p => p
     | TypeError_comp e _ => !
     end.
@@ -258,7 +260,7 @@ Qed.
   Next Obligation.
     split.
     - symmetry in look.
-      etransitivity. erewrite (abstract_env_lookup_correct X); eauto.
+      etransitivity. erewrite (abstract_env_lookup_correct' X); eauto.
       reflexivity.
     - now symmetry.
   Defined.
@@ -269,10 +271,10 @@ Qed.
     cbn.
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
-      red in declm; erewrite <- abstract_env_lookup_correct, declm in e0; eauto;
+      red in declm; erewrite <- abstract_env_lookup_correct', declm in e0; eauto;
       congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
-    red in declm. erewrite <- abstract_env_lookup_correct, declm in look; eauto.
+    red in declm. erewrite <- abstract_env_lookup_correct', declm in look; eauto.
     noconf look.
     congruence.
   Qed.
@@ -484,7 +486,7 @@ Qed.
     cbn in *; intros. pose (hΣ _ wfΣ). specialize_Σ wfΣ.
     inversion wt. sq.
     inversion X0; subst.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
+    erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e. subst.
     now constructor.
   Defined.
@@ -492,14 +494,14 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
+    clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
-    clear wildcard. erewrite <- abstract_env_lookup_correct in e; eauto.
+    clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
@@ -554,8 +556,6 @@ Qed.
     1: now symmetry.
     now do 2 eexists.
   Defined.
-  Next Obligation. exact X_type. Defined.
-  Next Obligation. exact X. Defined.
   Next Obligation.
     specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
@@ -574,7 +574,7 @@ Qed.
   Next Obligation.
     cbn in *. intros.
     set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-    infer_obligations_obligation_26 Γ ci p c brs wt Σ0
+    infer_obligations_obligation_24 Γ ci p c brs wt Σ0
       wfΣ0) in indargs. cbn in *.
     set (infer _ wfΓ c H) in *. unfold H in *. clear H.
     pose proof p0.π2 as p02.
@@ -618,7 +618,7 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ : global_env_ext) (wfΣ : abstract_env_ext_rel X Σ),
-  infer_obligations_obligation_26 Γ ci p c brs wt Σ wfΣ) in a0.
+  infer_obligations_obligation_24 Γ ci p c brs wt Σ wfΣ) in a0.
   cbn in *.
   set (infer _ wfΓ c H) in *.
   unfold H in *. clear H e.
@@ -634,8 +634,6 @@ Qed.
     do 3 eexists. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. eauto.
   Defined.
-  Next Obligation. exact X_type. Defined.
-  Next Obligation. exact X. Defined.
   Next Obligation.
   specialize_Σ wfΣ. destruct wt.
     inversion X0. inversion X1.
@@ -653,7 +651,7 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-  infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0) in indargs. cbn in *.
+  infer_obligations_obligation_28 Γ p c wt Σ0 wfΣ0) in indargs. cbn in *.
   set (infer _ wfΓ c H) in *. unfold H in *. clear H.
   pose proof p0.π2 as p02.
   destruct indargs as (?&?&?&?).
@@ -687,7 +685,7 @@ Qed.
     cbn in *.
     set (H := (λ (Σ0 : global_env_ext)
     (wfΣ0 : abstract_env_ext_rel X Σ0),
-    infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0)) in a0.
+    infer_obligations_obligation_28 Γ p c wt Σ0 wfΣ0)) in a0.
       cbn in *.
       set (infer _ wfΓ c H) in *.
       unfold H in *. clear H e1.
@@ -891,7 +889,7 @@ Qed.
 
   Theorem principal_types {Γ t} (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :
     ∑ P, ∥ forall T Σ (wfΣ : abstract_env_ext_rel X Σ), Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
-  Proof using nor.
+  Proof using nor normalisation_in.
     unshelve eexists (infer Γ _ t _); intros.
     - destruct (wt _ wfΣ).
       pose (hΣ _ wfΣ); sq.

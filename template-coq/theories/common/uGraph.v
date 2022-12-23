@@ -1406,23 +1406,10 @@ Section CheckLeq.
   Definition leqb_level_n n (l l' : Level.t)
     := leqb_vertices G n l l'.
 
-  Definition leqb_level_n_spec0_gen (leqb_level_n : Z -> Level.t -> Level.t -> bool) :=
-    forall n l l',
-        leqb_level_n n l l'
-     -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
-
   Definition leqb_level_n_spec_gen (leqb_level_n : Z -> Level.t -> Level.t -> bool) :=
     forall n (l l' : Level.t)
       (Hl : VSet.In l uctx.1) (Hl' : VSet.In l' uctx.1), leqb_level_n n l l'
     <-> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
-
-  Lemma leqb_level_n_spec0 : leqb_level_n_spec0_gen leqb_level_n.
-  Proof using HC HG Huctx.
-    unfold leqb_level_n_spec0_gen; intros. intro HH. apply leq_levelalg_vertices0.
-    apply leqb_vertices_correct; tas; clear HH.
-    rewrite HG; exact _.
-    rewrite HG; exact _.
-  Qed.
 
   Lemma leqb_level_n_spec : leqb_level_n_spec_gen leqb_level_n.
   Proof using HC HG Huctx.
@@ -1435,33 +1422,34 @@ Section CheckLeq.
   Definition leqb_expr_n := (leqb_expr_n_gen leqb_level_n).
 
   Lemma leqb_expr_n_spec0_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
+    (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
     lt e e'
-    : leqb_expr_n_gen leqb_level_n_gen lt e e'
-      -> gc_leq0_levelalg_n lt uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
+    : gc_expr_declared e ->
+      gc_expr_declared e' ->
+      leqb_expr_n_gen leqb_level_n_gen lt e e' ->
+      gc_leq0_levelalg_n lt uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
   Proof.
     unfold leqb_expr_n.
     destruct e as [l k], e' as [l' k'];
-      try solve [try (cbn in *; discriminate);
-      intros H v Hv; cbn;
-        apply leqb_correct0 in H;
-        specialize (H v Hv); cbn in H;lia].
+    try (cbn in *; discriminate);
+      intros He He' H v Hv; cbn;
+        eapply leqb_correct in H; eauto;
+        specialize (H v Hv); cbn in H;lia.
   Qed.
 
-  Definition leqb_expr_n_spec0 := leqb_expr_n_spec0_gen _ leqb_level_n_spec0.
+  Definition leqb_expr_n_spec0 := leqb_expr_n_spec0_gen _ leqb_level_n_spec.
 
   Lemma andb_is_true (b b' : bool) : b /\ b' -> b && b'.
   Proof using Type. destruct b, b'; cbnr; intuition 0. Qed.
 
   Lemma leqb_expr_n_spec_gen leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen) n e e'
       (HHl  : gc_expr_declared e)
       (HHl' : gc_expr_declared e')
     : leqb_expr_n_gen leqb_level_n_gen ⎩ n ⎭ e e'
       <-> gc_leq0_levelalg_n ⎩ n ⎭ uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
   Proof.
-    split; [apply (leqb_expr_n_spec0_gen _ leqb_correct0)|].
+    split; [apply (leqb_expr_n_spec0_gen _ leqb_correct)|]; try assumption.
     destruct e as [l k] eqn:eqe, e' as [l' k'] eqn:eqe'; cbn; intro H;
       destruct HC as [v0 Hv0]; pose proof (H v0 Hv0) as H0; cbn in H0.
      simpl in H0 |- *.
@@ -1471,33 +1459,39 @@ Section CheckLeq.
     lia.
   Qed.
 
-  Definition leqb_expr_n_spec := leqb_expr_n_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition leqb_expr_n_spec := leqb_expr_n_spec_gen _ leqb_level_n_spec.
 
   Import NonEmptySetFacts.
 
   Definition leqb_expr_univ_n := (leqb_expr_univ_n_gen leqb_level_n).
 
   Lemma leqb_expr_univ_n_spec0_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
     n e1 u
-    : leqb_expr_univ_n_gen leqb_level_n_gen n e1 u
+    : gc_expr_declared e1 -> gc_levels_declared u -> leqb_expr_univ_n_gen leqb_level_n_gen n e1 u
       -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make e1) u.
   Proof.
-    unfold leqb_expr_univ_n_gen; intros H.
+    unfold leqb_expr_univ_n_gen; intros He1 Hu H.
     unfold_univ_rel0.
     rewrite val_fold_right.
-    destruct (LevelAlgExpr.exprs u) as [e u'] eqn:Ht0;cbn in *.
+    destruct (LevelAlgExpr.exprs u) as [e u'] eqn:ee;cbn in *.
     rewrite <- !fold_left_rev_right in H; cbn in *.
-    induction (List.rev u'); cbn in *.
+    red in Hu.
+    assert (Hu': gc_expr_declared e /\ Forall gc_expr_declared u'). {
+    split. apply Hu. apply In_to_nonempty_list. fold LevelAlgExpr.exprs. left. now rewrite ee.
+    apply Forall_forall. intros e' He'. apply Hu.
+    apply In_to_nonempty_list. fold LevelAlgExpr.exprs. right. now rewrite ee. }
+    destruct Hu' as [He Hu'].
+    apply Forall_rev in Hu'. revert Hu'.
+    induction (List.rev u'); cbn in *; intros.
     - eapply leqb_expr_n_spec0_gen; eauto; tas.
     - apply orb_true_iff in H. destruct H as [H|H].
       + eapply leqb_expr_n_spec0_gen in H; eauto. specialize (H v Hv); cbn in *.
-        lia.
-      + apply IHl in H; clear IHl. lia.
+        lia. now inversion Hu'.
+      + apply IHl in H; clear IHl. lia. now inversion Hu'.
   Qed.
 
-  Definition leqb_expr_univ_n_spec0 := leqb_expr_univ_n_spec0_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition leqb_expr_univ_n_spec0 := leqb_expr_univ_n_spec0_gen _ leqb_level_n_spec.
 
   Import Nbar Datatypes.
 
@@ -1854,7 +1848,6 @@ Section CheckLeq.
   Qed.
 
   Lemma leqb_expr_univ_n_spec_gen leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
       lt e1 (u : LevelAlgExpr.t)
       (He1 : gc_expr_declared e1)
@@ -1882,7 +1875,7 @@ Section CheckLeq.
       unfold leqb_expr_n_gen in HH. now rewrite HH. now rewrite IHl; auto; rewrite orb_true_r.
   Qed.
 
-  Definition leqb_expr_univ_n_spec := leqb_expr_univ_n_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition leqb_expr_univ_n_spec := leqb_expr_univ_n_spec_gen _ leqb_level_n_spec.
 
   Definition leqb_levelalg_n := (leqb_levelalg_n_gen leqb_level_n).
 
@@ -1890,17 +1883,23 @@ Section CheckLeq.
   Proof using Type. induction l; simpl; auto. Qed.
 
   Lemma leqb_levelalg_n_spec0_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
     lt (u1 u2 : LevelAlgExpr.t)
-    : leqb_levelalg_n_gen leqb_level_n_gen lt u1 u2 -> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 u1 u2.
+    (Hu1  : gc_levels_declared u1)
+    (Hu2  : gc_levels_declared u2)
+: leqb_levelalg_n_gen leqb_level_n_gen lt u1 u2 -> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 u1 u2.
   Proof.
     unfold leqb_levelalg_n_gen. intros H.
     unfold_univ_rel0.
     unfold val, LevelAlgExpr.Evaluable.
     destruct (LevelAlgExpr.exprs u1) as [e1 u1'] eqn:Hu1'.
     rewrite <- fold_left_rev_right in *; cbn in *.
-    induction (List.rev u1'); cbn in *.
+    assert (Hu': gc_expr_declared e1 /\ Forall gc_expr_declared u1'). {
+    split. apply Hu1. apply In_to_nonempty_list. fold LevelAlgExpr.exprs. left. now rewrite Hu1'.
+    apply Forall_forall. intros e' He'. apply Hu1.
+    apply In_to_nonempty_list. fold LevelAlgExpr.exprs. right. now rewrite Hu1'. }
+    destruct Hu' as [? Hu']. apply Forall_rev in Hu'. revert Hu'.
+    induction (List.rev u1'); cbn in *; intros.
     + eapply leqb_expr_univ_n_spec0_gen in H; eauto.
       specialize (H v Hv); cbn in H. assumption.
     + set (z := (fold_right (fun e x => Nat.max (val v e) x) (val v e1) l)) in *.
@@ -1908,13 +1907,13 @@ Section CheckLeq.
       eapply leqb_expr_univ_n_spec0_gen in H; eauto. specialize (H v Hv). cbn in H.
       destruct (Nat.max_dec (val v a) z) as [ee|ee]; rewrite ee.
       * assumption.
-      * apply IHl; tas.
+      * apply IHl; tas. now inversion Hu'.
+      * now inversion Hu'.
   Qed.
 
-  Definition leqb_levelalg_n_spec0 := leqb_levelalg_n_spec0_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition leqb_levelalg_n_spec0 := leqb_levelalg_n_spec0_gen _ leqb_level_n_spec.
 
   Lemma leqb_levelalg_n_spec_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
     lt (l1 l2 : LevelAlgExpr.t)
         (Hu1  : gc_levels_declared l1)
@@ -1939,12 +1938,11 @@ Section CheckLeq.
     eapply (val_ge_caract' l1 v (val v l1)).p2. lia. auto.
   Qed.
 
-  Definition leqb_levelalg_n_spec := leqb_levelalg_n_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition leqb_levelalg_n_spec := leqb_levelalg_n_spec_gen _ leqb_level_n_spec.
 
   Definition check_leqb_levelalg := (check_leqb_levelalg_gen leqb_level_n).
 
   Lemma check_leqb_levelalg_spec_gen leqb_level_n_gen
-     (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
      (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
      (u1 u2 : LevelAlgExpr.t)
      (Hu1  : gc_levels_declared u1)
@@ -1959,19 +1957,18 @@ Section CheckLeq.
     - move/orP => [|].
       + rewrite univ_expr_eqb_true_iff.
         intros <- v Hv. lia.
-      + now eapply (leqb_levelalg_n_spec0_gen _ _ _ false).
-    - intros H; eapply (leqb_levelalg_n_spec_gen _ _ _ false) in H; tas.
+      + now eapply (leqb_levelalg_n_spec0_gen _ _ false).
+    - intros H; eapply (leqb_levelalg_n_spec_gen _ _ false) in H; tas.
       unfold leqb_levelalg_n_gen in H. rewrite H.
       now rewrite orb_true_r.
     Unshelve. all:eauto.
   Qed.
 
-  Definition check_leqb_levelalg_spec := check_leqb_levelalg_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition check_leqb_levelalg_spec := check_leqb_levelalg_spec_gen _ leqb_level_n_spec.
 
   Definition check_eqb_levelalg := (check_eqb_levelalg_gen leqb_level_n).
 
   Lemma check_eqb_levelalg_spec_gen leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
       (l1 l2 : LevelAlgExpr.t)
       (Hu1  : gc_levels_declared l1)
@@ -1993,7 +1990,7 @@ Section CheckLeq.
       rewrite H. cbn; lia.
   Qed.
 
-  Definition check_eqb_levelalg_spec := check_eqb_levelalg_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition check_eqb_levelalg_spec := check_eqb_levelalg_spec_gen _ leqb_level_n_spec.
 
   Lemma fold_left_false {A} l : fold_left (B:=A) (fun _ : bool => xpred0) l false = false.
   Proof using Type.
@@ -2006,52 +2003,69 @@ Section CheckLeq.
 
   Definition check_constraints := (check_constraints_gen leqb_level_n).
 
+
+  Definition gc_levels_declared' (vset : VSet.t) gc :=
+     match gc with
+    | GoodConstraint.gc_le l _ l' => VSet.In (VariableLevel.to_noprop l) vset /\
+      VSet.In (VariableLevel.to_noprop l') vset
+    | GoodConstraint.gc_lt_set_level _ n | GoodConstraint.gc_le_level_set n _ =>
+	     VSet.In (Level.Level n) vset
+    | GoodConstraint.gc_le_set_var _ n | GoodConstraint.gc_le_var_set n _ => VSet.In (Level.Var n) vset
+     end.
+
+  Definition gcs_levels_declared (vset : VSet.t) gcs :=
+    GoodConstraintSet.For_all (gc_levels_declared' vset) gcs.
+
+
   Lemma check_gc_constraint_spec_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
+    (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
     gc
+    (Hu1 : gc_levels_declared' uctx.1 gc)
     : check_gc_constraint_gen leqb_level_n_gen gc
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies0 v gc else True.
   Proof.
     unfold check_gc_constraint_gen.
     destruct check_univs; [cbn|trivial].
     destruct gc as [l z l'|k l|k n|l k|n k].
-    - intros HH v Hv; eapply leqb_correct0 in HH; eauto.
+    - intros HH v Hv; eapply leqb_correct in HH; eauto.
       specialize (HH v Hv). cbn in *. toProp.
       pose proof (val_level_of_variable_level v l).
       pose proof (val_level_of_variable_level v l').
       destruct l, l'; cbn in *; lia.
-    - intros HH v Hv; eapply leqb_correct0 in HH; eauto.
+      all: now inversion Hu1.
+    - intros HH v Hv; eapply leqb_correct in HH; eauto.
       specialize (HH v Hv). cbn -[Z.of_nat] in HH. unfold gc_satisfies0. toProp.
       cbn in *. lia.
-    - intros HH v Hv; apply leqb_correct0 in HH.
+      now inversion Huctx.
+    - intros HH v Hv; apply leqb_correct in HH.
       specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lia.
-    - intros HH v Hv; apply leqb_correct0 in HH.
+      lia. now inversion Huctx. now inversion Hu1.
+    - intros HH v Hv; apply leqb_correct in HH.
       specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lia.
-    - intros HH v Hv; apply leqb_correct0 in HH.
+      lia. now inversion Hu1. now inversion Huctx.
+    - intros HH v Hv; apply leqb_correct in HH.
       specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
-      lia.
+      lia. now inversion Hu1. now inversion Huctx.
   Qed.
 
-  Definition check_gc_constraint_spec := check_gc_constraint_spec_gen _ leqb_level_n_spec0.
+  Definition check_gc_constraint_spec := check_gc_constraint_spec_gen _ leqb_level_n_spec.
 
   Lemma check_gc_constraints_spec_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
-    ctrs
+    (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
+    ctrs (Hu1 : gcs_levels_declared uctx.1 ctrs)
     : check_gc_constraints_gen leqb_level_n_gen ctrs
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs else True.
   Proof.
-    pose proof check_gc_constraint_spec_gen as XX.
+    rewrite /gcs_levels_declared in Hu1. pose proof check_gc_constraint_spec_gen as XX.
     unfold check_gc_constraints_gen. destruct check_univs; [cbn|trivial].
     intros HH v Hv.
     apply GoodConstraintSet.for_all_spec. now intros x y [].
     apply GoodConstraintSet.for_all_spec in HH. 2: now intros x y [].
     intros gc Hgc. specialize (HH gc Hgc).
-    eapply XX; eassumption.
+    eapply XX; try eassumption. now apply Hu1.
   Qed.
 
-  Definition check_gc_constraints_spec := check_gc_constraints_spec_gen _ leqb_level_n_spec0.
+  Definition check_gc_constraints_spec := check_gc_constraints_spec_gen _ leqb_level_n_spec.
 
   Definition eqb_univ_instance := (eqb_univ_instance_gen leqb_level_n).
 
@@ -2062,14 +2076,14 @@ Section CheckLeq.
   Definition check_eqb_universe := (check_eqb_universe_gen leqb_level_n).
 
   Lemma check_eqb_universe_refl_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen) u :
+    (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen) u :
     check_eqb_universe_gen leqb_level_n_gen u u.
   Proof using Type.
     unfold check_eqb_universe_gen; toProp; left.
     apply Universe.eqb_refl.
   Qed.
 
-  Definition check_eqb_universe_refl := check_eqb_universe_refl_gen _ leqb_level_n_spec0.
+  Definition check_eqb_universe_refl := check_eqb_universe_refl_gen _ leqb_level_n_spec.
 
   Definition gc_leq_universe :=
     leq_universe_n_ (fun n φ u u' => if check_univs then gc_leq0_levelalg_n n φ u u' else True) 0.
@@ -2084,7 +2098,6 @@ Section CheckLeq.
     end.
 
   Lemma check_eqb_universe_spec_gen leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen leqb_level_n_gen)
       (u1 u2 : Universe.t)
       (Hu1 : levels_declared_univ u1)
@@ -2113,7 +2126,7 @@ Section CheckLeq.
       + toProp; toProp; right; assumption.
   Defined.
 
-  Definition check_eqb_universe_spec := check_eqb_universe_spec_gen _ leqb_level_n_spec0 leqb_level_n_spec.
+  Definition check_eqb_universe_spec := check_eqb_universe_spec_gen _ leqb_level_n_spec.
 
 End CheckLeq.
 
@@ -2193,7 +2206,6 @@ Section CheckLeq2.
   Qed.
 
   Lemma leqb_univ_expr_n_spec_gen' leqb_level_n_gen
-        (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
         (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen)
         lt e1 u
         (He1 : expr_declared e1)
@@ -2213,16 +2225,16 @@ Section CheckLeq2.
   Qed.
 
   Definition leqb_univ_expr_n_spec' :=
-      leqb_univ_expr_n_spec_gen' _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                   (leqb_level_n_spec _ _ Huctx' HC' HG').
+      leqb_univ_expr_n_spec_gen' _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_leqb_levelalg_spec_gen' leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen)
       u1 u2
-    : check_leqb_levelalg_gen leqb_level_n_gen u1 u2 -> leq_levelalg uctx.2 u1 u2.
+    : levels_declared u1 ->
+      levels_declared u2 ->
+      check_leqb_levelalg_gen leqb_level_n_gen u1 u2 -> leq_levelalg uctx.2 u1 u2.
   Proof using HG' Huctx'.
-    unfold check_leqb_levelalg_gen; intro H.
+    unfold check_leqb_levelalg_gen; intros Hu1 Hu2 H.
     unfold_univ_rel.
     cbn in H; toProp H; destruct H as [e | ].
     { apply NonEmptySetFacts.univ_expr_eqb_true_iff in e. destruct e; lia. }
@@ -2232,15 +2244,13 @@ Section CheckLeq2.
     unfold is_graph_of_uctx, gc_of_uctx in HG.
     destruct (gc_of_constraints uctx.2). cbn in *. exact H.
     exact I.
-    Unshelve. all: eauto.
+    Unshelve. all: try eapply levels_gc_declared_declared; eauto.
   Qed.
 
   Definition check_leqb_levelalg_spec' :=
-    check_leqb_levelalg_spec_gen' _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                    (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_leqb_levelalg_spec_gen' _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_leqb_levelalg_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2 :
     levels_declared u1 ->
     levels_declared u2 ->
@@ -2260,16 +2270,16 @@ Section CheckLeq2.
   Qed.
 
   Definition check_leqb_levelalg_complete :=
-    check_leqb_levelalg_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                       (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_leqb_levelalg_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_eqb_levelalg_spec_gen' leqb_level_n_gen
-      (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
       (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen)
       u1 u2
-    : check_eqb_levelalg_gen leqb_level_n_gen u1 u2 -> eq_levelalg uctx.2 u1 u2.
+    : levels_declared u1 ->
+      levels_declared u2 ->
+      check_eqb_levelalg_gen leqb_level_n_gen u1 u2 -> eq_levelalg uctx.2 u1 u2.
   Proof using HG' Huctx'.
-    unfold check_eqb_levelalg_gen; intro H.
+    unfold check_eqb_levelalg_gen; intros Hu1 Hu2 H.
     unfold_univ_rel.
     cbn in H; toProp H; destruct H as [e | ].
     { apply NonEmptySetFacts.univ_expr_eqb_true_iff in e. destruct e; lia. }
@@ -2281,14 +2291,13 @@ Section CheckLeq2.
     apply <- eq0_leq0_levelalg; tea.
     split; eapply gc_leq0_levelalg_iff;
       (destruct (gc_of_constraints uctx.2); [cbn in *|contradiction HG]); tas.
+    all: now eapply levels_gc_declared_declared.
   Qed.
 
   Definition check_eqb_levelalg_spec' :=
-    check_eqb_levelalg_spec_gen' _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                   (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_eqb_levelalg_spec_gen' _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_eqb_levelalg_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2 :
     levels_declared u1 ->
     levels_declared u2 ->
@@ -2308,8 +2317,7 @@ Section CheckLeq2.
   Qed.
 
   Definition check_eqb_levelalg_complete :=
-    check_eqb_levelalg_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                      (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_eqb_levelalg_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Definition leq0_level_n z l l' :=
     leq0_levelalg_n z uctx.2 (LevelAlgExpr.make' l) (LevelAlgExpr.make' l').
@@ -2345,20 +2353,7 @@ Section CheckLeq2.
   Definition leq0_level_n_complete :=
     leq0_level_n_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
-  Definition gc_levels_declared' (vset : VSet.t) gc :=
-     match gc with
-    | GoodConstraint.gc_le l _ l' => VSet.In (VariableLevel.to_noprop l) vset /\
-      VSet.In (VariableLevel.to_noprop l') vset
-    | GoodConstraint.gc_lt_set_level _ n | GoodConstraint.gc_le_level_set n _ =>
-	     VSet.In (Level.Level n) vset
-    | GoodConstraint.gc_le_set_var _ n | GoodConstraint.gc_le_var_set n _ => VSet.In (Level.Var n) vset
-     end.
-
-  Definition gcs_levels_declared (vset : VSet.t) gcs :=
-    GoodConstraintSet.For_all (gc_levels_declared' vset) gcs.
-
   Lemma check_gc_constraint_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) cstr :
     gc_levels_declared' uctx.1 cstr ->
     valid_gc_constraint cstr ->
@@ -2372,11 +2367,9 @@ Section CheckLeq2.
   Qed.
 
   Definition check_gc_constraint_complete :=
-    check_gc_constraint_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                       (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_gc_constraint_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_gc_constraints_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) cstrs :
     gcs_levels_declared uctx.1 cstrs ->
     valid_gc_constraints cstrs ->
@@ -2390,8 +2383,7 @@ Section CheckLeq2.
   Qed.
 
   Definition check_gc_constraints_complete :=
-    check_gc_constraints_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                       (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_gc_constraints_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Definition valid_gc_constraints_ext gc :=
     forall v, satisfies v uctx.2 -> gc_satisfies v gc.
@@ -2439,33 +2431,30 @@ Section CheckLeq2.
   Qed.
 
   Lemma check_constraints_spec_gen  leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) ctrs
-    : check_constraints_gen leqb_level_n_gen ctrs -> valid_constraints uctx.2 ctrs.
+    : global_uctx_invariants (uctx.1, ctrs) ->
+      check_constraints_gen leqb_level_n_gen ctrs -> valid_constraints uctx.2 ctrs.
   Proof using HG' Huctx'.
     unfold check_constraints_gen, valid_constraints.
     case_eq (gc_of_constraints ctrs); [|try discriminate].
-    intros ctrs' Hctrs' HH.
+    intros ctrs' Hctrs' Hdeclared HH.
     epose proof check_gc_constraints_spec_gen.
     destruct check_univs => //=.
     intros v Hv.
-    cbn.
     apply gc_of_constraints_spec.
     apply gc_of_constraints_spec in Hv.
-    rewrite Hctrs'; cbn. eapply H; eauto.
-    clear -HG Hv.
-    unfold is_graph_of_uctx, gc_of_uctx in HG.
-    unfold uctx' in *.
-    destruct (gc_of_constraints uctx.2) => //; cbn in uctx', HG.
+    rewrite Hctrs'; cbn. eapply H; eauto;
+    clear -HG Hv Hdeclared Hctrs';
+    unfold is_graph_of_uctx, gc_of_uctx in HG;
+    unfold uctx' in *; destruct (gc_of_constraints uctx.2) => //; cbn in *.
+    eapply gc_of_constraints_declared; eauto.
   Qed.
 
   Definition check_constraints_spec :=
-    check_constraints_spec_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                 (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_constraints_spec_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   (* Completeness holds only for well-formed constraints sets *)
   Lemma check_constraints_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) ctrs :
     check_univs ->
     global_uctx_invariants (uctx.1, ctrs) ->
@@ -2490,8 +2479,7 @@ Section CheckLeq2.
   Qed.
 
   Definition check_constraints_complete :=
-    check_constraints_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                     (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_constraints_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Let levels_declared_univ (u : Universe.t)
     := match u with
@@ -2507,11 +2495,12 @@ Section CheckLeq2.
   Qed.
 
   Lemma check_leqb_universe_spec_gen' leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2
-    : check_leqb_universe_gen leqb_level_n_gen u1 u2 -> leq_universe uctx.2 u1 u2.
+    : levels_declared_univ u1 ->
+      levels_declared_univ u2 ->
+      check_leqb_universe_gen leqb_level_n_gen u1 u2 -> leq_universe uctx.2 u1 u2.
   Proof using HG' Huctx'.
-    move => /orP [H | H].
+    intros Hu1 Hu2. move => /orP [H | H].
     - apply eqb_true_iff in H as ->.
       reflexivity.
     - destruct u1, u2; cbn in *; trivial; try discriminate H.
@@ -2519,11 +2508,9 @@ Section CheckLeq2.
   Qed.
 
   Definition check_leqb_universe_spec' :=
-    check_leqb_universe_spec_gen' _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                    (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_leqb_universe_spec_gen' _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_leqb_universe_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2 :
     levels_declared_univ u1 ->
     levels_declared_univ u2 ->
@@ -2538,15 +2525,15 @@ Section CheckLeq2.
   Qed.
 
   Definition check_leqb_universe_complete :=
-    check_leqb_universe_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                       (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_leqb_universe_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_eqb_universe_spec_gen' leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2
-    : check_eqb_universe_gen leqb_level_n_gen u1 u2 -> eq_universe uctx.2 u1 u2.
+    : levels_declared_univ u1 ->
+      levels_declared_univ u2 ->
+      check_eqb_universe_gen leqb_level_n_gen u1 u2 -> eq_universe uctx.2 u1 u2.
   Proof using HG' Huctx'.
-    move : u1 u2 => [| | u1] [| | u2] //.
+    move : u1 u2 => [| | u1] [| | u2] //; intros Hu1 Hu2.
     { move/andP => [H HH] //. }
     move/orP => [H | H].
     - apply eqb_true_iff in H as ->.
@@ -2561,11 +2548,9 @@ Section CheckLeq2.
   Qed.
 
   Definition check_eqb_universe_spec' :=
-    check_eqb_universe_spec_gen' _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                   (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_eqb_universe_spec_gen' _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
   Lemma check_eqb_universe_complete_gen leqb_level_n_gen
-    (leqb_correct0 : leqb_level_n_spec0_gen uctx' leqb_level_n_gen)
     (leqb_correct : leqb_level_n_spec_gen uctx' leqb_level_n_gen) u1 u2 :
     levels_declared_univ u1 ->
     levels_declared_univ u2 ->
@@ -2583,8 +2568,7 @@ Section CheckLeq2.
   Qed.
 
   Definition check_eqb_universe_complete :=
-    check_eqb_universe_complete_gen _ (leqb_level_n_spec0 _ _ Huctx' HC' HG')
-                                      (leqb_level_n_spec _ _ Huctx' HC' HG').
+    check_eqb_universe_complete_gen _ (leqb_level_n_spec _ _ Huctx' HC' HG').
 
 End CheckLeq2.
 

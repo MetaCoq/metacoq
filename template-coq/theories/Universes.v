@@ -1562,6 +1562,11 @@ Proof.
   split; [lsets|csets].
 Qed.
 
+Lemma incl_cs_trans cs1 cs2 cs3 : cs1 ⊂_cs cs2 -> cs2 ⊂_cs cs3 -> cs1 ⊂_cs cs3.
+Proof.
+  intros [? ?] [? ?]; split; [lsets|csets].
+Qed.
+
 Lemma empty_contextset_subset u : ContextSet.empty ⊂_cs u.
 Proof.
   red. split; cbn; [lsets|csets].

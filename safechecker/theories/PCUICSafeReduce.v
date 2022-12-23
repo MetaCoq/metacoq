@@ -194,6 +194,8 @@ Section Reduce.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
 (*  Local Definition gΣ := abstract_env_ext_rel Σ. *)
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
@@ -251,7 +253,7 @@ Definition R_singleton Abs A
   (R : Abs -> A -> A -> Prop) (Q : Abs -> Prop) x (q : Q x)
   (HQ : forall x x' , Q x -> Q x' -> x = x') (a a' : A) :
   R x a a' <-> (forall x, Q x -> R x a a').
-Proof.
+Proof using Type.
   split.
   - intros H x' q'.  specialize (HQ x x' q q'). subst; eauto.
   - eauto.
@@ -260,6 +262,7 @@ Defined.
 Fixpoint Acc_equiv A (R R' : A -> A -> Prop)
   (Heq : forall a a', R a a' <-> R' a a') a
   (HAcc : Acc R a) : Acc R' a.
+Proof using Type.
   econstructor. intros. apply Heq in H.
   destruct HAcc. eapply Acc_equiv; eauto.
 Defined.
@@ -268,7 +271,7 @@ Corollary R_Acc_aux :
     forall Γ t p,
     (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) ->
     (Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R_aux Σ Γ t t') (t ; p)).
-  Proof.
+  Proof using normalisation_in.
     intros Γ t p h.
     eapply dlexprod_Acc_gen.
     - apply abstract_env_ext_exists.
@@ -278,7 +281,7 @@ Corollary R_Acc_aux :
     - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
       destruct (heΣ _ wfΣ).
       eapply Acc_equiv; try
-      eapply normalisation; eauto.
+      eapply normalisation_in; eauto.
       eapply R_singleton with (Q := abstract_env_ext_rel X)
           (R := fun Σ a a' => cored Σ Γ a a'); eauto.
       intros; eapply abstract_env_ext_irr; eauto.
@@ -288,7 +291,7 @@ Corollary R_Acc_aux :
     forall Γ t,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip t)) ->
       Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t') t.
-  Proof using Type.
+  Proof using normalisation_in.
     intros Γ t h.
     pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) h) as h'.
     clear h. rename h' into h.
@@ -590,7 +593,7 @@ Corollary R_Acc_aux :
     left. econstructor. eapply red1_context.
     econstructor.
     - unfold declared_constant, declared_constant_gen.
-      rewrite (abstract_env_lookup_correct _ _ wfΣ). rewrite <- eq. reflexivity.
+      rewrite (abstract_env_lookup_correct' _ _ wfΣ). rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
 
@@ -602,7 +605,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
@@ -613,7 +616,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
 
@@ -1074,7 +1077,7 @@ Corollary R_Acc_aux :
     intros x y H HR.
     pose proof (heΣ := heΣ _ wfΣ).
     pose proof (hΣ := hΣ _ wfΣ).
-    clear wfΣ X_type X.
+    clear wfΣ X_type X normalisation_in.
     sq.
     destruct x as [x πx], y as [y πy].
     dependent induction HR.
@@ -1091,7 +1094,7 @@ Corollary R_Acc_aux :
 
     Local Instance wf_proof : WellFounded (fun x y : sigmaarg =>
         forall Σ, abstract_env_ext_rel X Σ -> R Σ Γ (pr1 x, pr1 (pr2 x)) (pr1 y, pr1 (pr2 y))).
-    Proof.
+    Proof using normalisation_in.
       intros [t [π wt]].
       (* We fuel the accessibility proof to run reduction inside Coq. *)
       unshelve eapply (Acc_intro_generator
@@ -1564,7 +1567,7 @@ Corollary R_Acc_aux :
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
-      + symmetry. erewrite abstract_env_lookup_correct; eauto.
+      + symmetry. erewrite abstract_env_lookup_correct'; eauto.
       + reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
@@ -1820,7 +1823,7 @@ End Reduce.
 Section ReduceFns.
 
   Context {cf : checker_flags} {no : normalizing_flags}
-          {X_type : abstract_env_impl} {X : X_type.π2.π1}.
+          {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -1828,7 +1831,7 @@ Section ReduceFns.
   Definition hnf := reduce_term RedFlags.default X_type X.
 
   Theorem hnf_sound {Γ t h} Σ (wfΣ : abstract_env_ext_rel X Σ) : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
-  Proof.
+  Proof using Type.
     unfold hnf.
     destruct (reduce_term_sound RedFlags.default _ X _ _ h Σ wfΣ).
     sq. eapply into_closed_red; fvs.
@@ -1850,7 +1853,7 @@ Section ReduceFns.
           | view_sort_other hnft r => TypeError_comp (NotASort hnft) _
         }
       }.
-  Proof.
+  Proof using Type.
     * destruct (h _ wfΣ) as [? hs].
       pose proof (hΣ := hΣ _ X _ wfΣ). sq.
       eapply (wt_closed_red_refl hs).
@@ -1894,7 +1897,7 @@ Section ReduceFns.
           | view_prod_other hnft _ => TypeError_comp (NotAProduct t hnft) _
         }
       }.
-  Proof.
+  Proof using Type.
     * destruct (h _ wfΣ) as [? hs].
       pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
       now eapply wt_closed_red_refl.
@@ -1944,7 +1947,7 @@ Section ReduceFns.
           }
         }
       }.
-  Proof.
+  Proof using Type.
     - specialize (h _ wfΣ). destruct h  as [? h].
       assert (Xeq : mkApps (tInd i u) args = t).
       { etransitivity. 2: symmetry; eapply mkApps_decompose_app.
@@ -2098,7 +2101,7 @@ Section ReduceFns.
     eapply isArity_red; eauto. exact reda''.
   Qed.
 
-  Local Instance wellfounded Σ wfΣ : WellFounded (@hnf_subterm_rel _ Σ) :=
-    @wf_hnf_subterm _ _ (heΣ _ X Σ wfΣ).
+  Local Instance wellfounded Σ wfΣ {normalisation:NormalisationIn Σ} : WellFounded (@hnf_subterm_rel _ Σ) :=
+    @wf_hnf_subterm _ _ _ normalisation (heΣ _ X Σ wfΣ).
 
 End ReduceFns.

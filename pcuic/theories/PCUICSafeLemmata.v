@@ -1066,6 +1066,12 @@ Section Lemmata.
   Qed.
 End Lemmata.
 
+Lemma weakening_env_cored {cf : checker_flags} (Σ Σ' : global_env) (Hext : extends Σ Σ') (HΣ' : wf Σ') Γ :
+  forall x y, cored Σ Γ x y -> cored Σ' Γ x y.
+Proof.
+  induction 1; econstructor; now eauto using weakening_env_red1.
+Qed.
+
 Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T ->
     ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
 Proof.

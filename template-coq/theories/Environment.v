@@ -402,10 +402,29 @@ Module Environment (T : Term).
   Existing Class extends.
   Existing Class extends_decls.
 
+  Lemma lookup_global_None Σ kn : ~In kn (List.map fst Σ) <-> lookup_global Σ kn = None.
+  Proof.
+    move: Σ; elim => //=; try tauto.
+    move => ??; case: eqb_spec; intuition congruence.
+  Qed.
+
+  Lemma lookup_global_Some_iff_In_NoDup Σ kn decl (H : NoDup (List.map fst Σ))
+    : In (kn, decl) Σ <-> lookup_global Σ kn = Some decl.
+  Proof.
+    move: Σ H; elim => //=; try tauto.
+    move => [??]?; case: eqb_spec => ? IH; inversion 1; subst; try rewrite <- IH by assumption.
+    all: intuition try congruence; subst.
+    all: cbn in *.
+    all: repeat match goal with H : (_, _) = (_, _) |- _ => inversion H; clear H end.
+    all: repeat match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
+    all: subst => //=; auto.
+    all: try now epose proof (@in_map _ _ fst _ (_, _)); cbn in *; exfalso; eauto.
+  Qed.
+
   #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
   Proof.
-    intros []. split => //.
-    rewrite e. split; [lsets|csets]. rewrite e0. apply Retroknowledge.extends_refl.
+    destruct Σ, Σ'; intros []. cbn in *; subst. split => //=.
+    split; [lsets|csets]. apply Retroknowledge.extends_refl.
   Qed.
 
   #[global] Instance extends_decls_refl : CRelationClasses.Reflexive extends_decls.
@@ -418,6 +437,23 @@ Module Environment (T : Term).
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.
   Proof. apply extends_refl. Qed.
   *)
+
+  Local Ltac extends_trans_t :=
+    intros [?] [?] [?] [?] [?]; red; cbn in *; split;
+    try solve [ etransitivity; eassumption | eapply incl_cs_trans; eassumption ];
+    repeat first [ progress subst
+                 | match goal with
+                   | [ H : ∑ x : _, _ |- _ ] => destruct H
+                   | [ H : forall c : kername, _, kn : kername |- _ ] => specialize (H kn)
+                   | [ H : ?x = _ |- context[?x] ] => rewrite H
+                   end
+                 | split
+                 | intro
+                 | now eexists; rewrite app_assoc ].
+  #[global] Instance extends_decls_trans : CRelationClasses.Transitive extends_decls.
+  Proof. extends_trans_t. Qed.
+  #[global] Instance extends_trans : CRelationClasses.Transitive extends.
+  Proof. extends_trans_t. Qed.
 
   Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
     match p with

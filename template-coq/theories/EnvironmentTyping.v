@@ -1287,6 +1287,27 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Derive Signature for on_global_decls.
 
+    Lemma fresh_global_iff_not_In kn Σ
+      : fresh_global kn Σ <-> ~ In kn (map fst Σ).
+    Proof using Type.
+      rewrite /fresh_global; split; [ induction 1 | induction Σ; constructor ]; cbn in *.
+      all: tauto.
+    Qed.
+
+    Lemma fresh_global_iff_lookup_global_None kn Σ
+      : fresh_global kn Σ <-> lookup_global Σ kn = None.
+    Proof using Type. rewrite fresh_global_iff_not_In lookup_global_None //. Qed.
+
+    Lemma NoDup_on_global_decls univs retro decls
+      : on_global_decls univs retro decls -> NoDup (List.map fst decls).
+    Proof using Type.
+      induction 1; cbn in *; constructor => //.
+      let H := match goal with H : on_global_decls_data _ _ _ _ _ |- _ => H end in
+      move: H.
+      case.
+      rewrite fresh_global_iff_not_In; auto.
+    Qed.
+
     Definition on_global_univs (c : ContextSet.t) :=
       let levels := global_levels c in
       let cstrs := ContextSet.constraints c in

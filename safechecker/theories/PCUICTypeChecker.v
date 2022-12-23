@@ -261,6 +261,8 @@ Section Typecheck.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
@@ -295,6 +297,7 @@ Section Typecheck.
   forall u u',
     conv_pb_relb_gen pb equ eqlu u u' =
     conv_pb_relb_gen pb equ' eqlu' u u'.
+  Proof using Type.
    now destruct pb.
   Qed.
 
@@ -940,25 +943,25 @@ Section Typecheck.
       }.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    erewrite <- abstract_env_lookup_correct in e0; eauto.
+    erewrite <- abstract_env_lookup_correct' in e0; eauto.
     depelim X2.
     unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
     congruence.
   Qed.
   Next Obligation.
-    erewrite <- abstract_env_lookup_correct in e; eauto.
+    erewrite <- abstract_env_lookup_correct' in e; eauto.
     now split.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    erewrite <- abstract_env_lookup_correct in e1; eauto.
+    erewrite <- abstract_env_lookup_correct' in e1; eauto.
     depelim X2.
     unfold declared_minductive, declared_minductive_gen in H. erewrite <- e1 in H.
     congruence.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    erewrite <- abstract_env_lookup_correct in e0; eauto.
+    erewrite <- abstract_env_lookup_correct' in e0; eauto.
     depelim X2.
     unfold declared_minductive, declared_minductive_gen in H. erewrite <- e0 in H.
     congruence.
@@ -968,7 +971,13 @@ Section Typecheck.
     forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
   Proof using Type.
     induction u; eauto; cbn.
-    erewrite <- abstract_env_level_mem_correct; eauto. intuition.
+    set (b := LevelSet.Raw.mem _ _). set (b' := abstract_env_level_mem _ _).
+    assert (Hbb' : b = b').
+    { unfold b'. apply eq_true_iff_eq. split; intro.
+      eapply (abstract_env_level_mem_correct X wfΣ a); apply (LevelSet.Raw.mem_spec _ a); eauto.
+      apply (LevelSet.Raw.mem_spec _ a); eapply (abstract_env_level_mem_correct X wfΣ a); eauto.
+    }
+    now destruct Hbb'.
   Qed.
 
   Equations check_consistent_instance  uctx (wfg : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥)
@@ -995,10 +1004,7 @@ Section Typecheck.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [[_wfΣ s]]. specialize_Σ wfΣ.
     assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
-    { symmetry in e2.
-      eapply forallb_All in e2. eapply All_forallb'; tea.
-      intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
-    }
+    { symmetry in e2. rewrite abstract_env_level_mem_forallb; eauto. }
     repeat split; eauto.
     - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
       now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ].
@@ -1017,10 +1023,7 @@ Section Typecheck.
       pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ].
       eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
       assert (forallb (fun l : LevelSet.elt => LevelSet.mem l (global_ext_levels Σ)) u).
-      { symmetry in e2.
-        eapply forallb_All in e2. eapply All_forallb'; tea.
-        intros x; simpl. erewrite <- abstract_env_level_mem_correct; cbn; eauto.
-      }
+      { rewrite abstract_env_level_mem_forallb; eauto. }
       solve_all.
   Qed.
   Next Obligation.
@@ -1648,17 +1651,17 @@ Section Typecheck.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     eapply global_uctx_invariants_ext.
-    symmetry in HH. erewrite <- abstract_env_lookup_correct in HH; eauto.
+    symmetry in HH. erewrite <- abstract_env_lookup_correct' in HH; eauto.
     now apply (weaken_lookup_on_global_env' _ _ _ (heΣ : wf _) HH).
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     constructor; try assumption.
-    symmetry in HH. erewrite <- abstract_env_lookup_correct in HH; eauto.
+    symmetry in HH. erewrite <- abstract_env_lookup_correct' in HH; eauto.
   Qed.
   Next Obligation.
     apply absurd; intros. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
-    erewrite <- abstract_env_lookup_correct in HH; eauto.
+    erewrite <- abstract_env_lookup_correct' in HH; eauto.
     inversion X1. unfold declared_constant, declared_constant_gen in isdecl.
     rewrite <- HH in isdecl. inversion isdecl. now subst.
   Qed.
@@ -1666,7 +1669,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
-    inversion X1 ; subst. erewrite <- abstract_env_lookup_correct in e0; eauto.
+    inversion X1 ; subst. erewrite <- abstract_env_lookup_correct' in e0; eauto.
     rewrite isdecl in e0.
     congruence.
   Qed.
@@ -1674,7 +1677,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
-    inversion X1 ; subst. erewrite <- abstract_env_lookup_correct in e0; eauto.
+    inversion X1 ; subst. erewrite <- abstract_env_lookup_correct' in e0; eauto.
     rewrite isdecl in e0.
     congruence.
   Qed.
@@ -2395,7 +2398,7 @@ Section Typecheck.
     = check_recursivity_kind (lookup_env Σ) a Finite.
   Proof using Type.
     unfold  check_recursivity_kind.
-    erewrite <- abstract_env_lookup_correct; eauto.
+    erewrite <- abstract_env_lookup_correct'; eauto.
   Qed.
 
   Definition abstract_wf_fixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ):
@@ -2524,7 +2527,7 @@ Section Typecheck.
 
   Next Obligation.
     eapply eqb_eq in i. eapply eqb_eq in i0.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     split. econstructor. rewrite eqp.
     erewrite abstract_primitive_constant_correct; try reflexivity. eassumption.  red.
     unfold declared_constant_gen. now rewrite -HH.
@@ -2536,7 +2539,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
     eapply eqb_eq in i. eapply eqb_eq in i0.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
@@ -2548,7 +2551,7 @@ Section Typecheck.
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
     eapply eqb_eq in i.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
@@ -2561,7 +2564,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in HH.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in HH. rewrite /declared_constant in d0.
@@ -2573,7 +2576,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in e0. rewrite /declared_constant in d.
@@ -2584,7 +2587,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
     depelim X1.
-    rewrite -(abstract_env_lookup_correct _ (Σ := Σ)) // in e0.
+    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
     rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
     rewrite e1 in eqp. noconf eqp.
     symmetry in e0. rewrite /declared_constant /declared_constant_gen in d.

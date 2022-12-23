@@ -820,11 +820,11 @@ Qed.
 
 From MetaCoq Require Import PCUICSN.
 
-Lemma WN {Σ t} : wf_ext Σ -> axiom_free Σ ->
+Lemma WN {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf_ext Σ -> axiom_free Σ ->
   welltyped Σ [] t  -> exists v, squash (eval Σ t v).
 Proof.
   intros Hwf Hax Hwt.
-  eapply PCUICSN.normalisation in Hwt as HSN; eauto.
+  eapply PCUICSN.normalisation_in in Hwt as HSN; eauto.
   induction HSN as [t H IH].
   destruct Hwt as [A HA].
   edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
@@ -873,7 +873,7 @@ Proof.
   - assert (x = y) as <- by eauto. eauto.
 Qed.
 
-Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ ->
+Lemma ws_wcbv_standardization {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
@@ -882,7 +882,7 @@ Lemma ws_wcbv_standardization {Σ i u args mind} {t v : ws_term (fun _ => false)
   squash (eval Σ t v).
 Proof.
   intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
-  destruct (@WN Σ t) as (v' & Hv'); eauto.
+  destruct (@WN no Σ normalisation t) as (v' & Hv'); eauto.
   1:{ eexists; eauto. }
   sq.
   assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
@@ -900,7 +900,7 @@ Proof.
   intros. eapply firstorder_value_irred; eauto.
 Qed.
 
-Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ ->
+Lemma wcbv_standardization {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
@@ -910,7 +910,7 @@ Lemma wcbv_standardization {Σ i u args mind} {t v : term} : wf_ext Σ -> axiom_
 Proof.
   intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
   unshelve edestruct @ws_wcbv_standardization.
-  1-5: shelve.
+  1-6: shelve.
   1: exists t; shelve.
   1: exists v; shelve.
   all: sq; eauto.

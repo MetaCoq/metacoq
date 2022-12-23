@@ -81,6 +81,7 @@ theories/PCUICWcbvEval.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
+theories/PCUICWeakeningEnvSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 theories/PCUICFirstorder.v

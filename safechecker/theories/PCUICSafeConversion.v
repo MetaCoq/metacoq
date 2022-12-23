@@ -64,6 +64,8 @@ Section Conversion.
 
   Context (X : X_type.π2.π1).
 
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
@@ -145,12 +147,12 @@ Section Conversion.
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
-  Proof using Type.
+  Proof using normalisation_in.
     intros Γ [u hu].
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
-    pose proof (heΣ _ wfΣ) as heΣ.
+    pose proof (heΣ _ wfΣ) as [heΣ].
     pose proof (hu _ wfΣ) as h.
-    apply normalisation_upto in h. 2: exact heΣ.
+    apply normalisation_upto in h. 2: now apply normalisation_in.
     dependent induction h.
     constructor. intros [y hy] r.
     unfold wcored in r. cbn in r.
@@ -217,7 +219,7 @@ Section Conversion.
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->
       Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
-  Proof using Type.
+  Proof using normalisation_in.
     intros Γ t p w q s ht.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     rewrite R_aux_equation_1.
@@ -303,7 +305,7 @@ Section Conversion.
           -- left. unfold posR in *.
              simpl in *. assumption.
           -- right. assumption.
-    - pose proof (heΣ _ wfΣ).
+    - pose proof (heΣ _ wfΣ) as [?].
       eapply Acc_equiv; try eapply normalisation_upto; eauto.
       split; eauto; intros.
       erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
@@ -326,7 +328,7 @@ Section Conversion.
     forall Γ u,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zipc (tm1 u) (stk1 u))) ->
       Acc (R Γ) u.
-  Proof using Type.
+  Proof using normalisation_in.
     intros Γ u h.
     eapply Acc_fun with (f := fun x => obpack x).
     apply R_aux_Acc. assumption.
@@ -1534,8 +1536,8 @@ Qed.
   exfalso;
   Tactics.program_simplify;
   CoreTactics.equations_simpl;
-  try erewrite <- abstract_env_lookup_correct in eq1; eauto ;
-  try erewrite <- abstract_env_lookup_correct in eq2; eauto ;
+  try erewrite <- abstract_env_lookup_correct' in eq1; eauto ;
+  try erewrite <- abstract_env_lookup_correct' in eq2; eauto ;
   try clear aux; specialize_Σ wfΣ;
   try solve
       [match goal with
@@ -1551,8 +1553,8 @@ Qed.
   exfalso;
   Tactics.program_simplify;
   CoreTactics.equations_simpl;
-  try erewrite <- abstract_env_lookup_correct in eq1; eauto ;
-  try erewrite <- abstract_env_lookup_correct in eq2; eauto ;
+  try erewrite <- abstract_env_lookup_correct' in eq1; eauto ;
+  try erewrite <- abstract_env_lookup_correct' in eq2; eauto ;
   try clear aux; specialize_Σ wfΣ;
   solve
       [match goal with
@@ -1570,13 +1572,13 @@ Qed.
     sq.
     eapply red_welltyped; try eapply h2; eauto.
     eapply red_zipc.
-    eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+    eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     unshelve eapply R_cored2.
     all: try reflexivity.
     simpl. intros. eapply cored_zipc.
-    eapply cored_const. erewrite abstract_env_lookup_correct; eassumption.
+    eapply cored_const. erewrite abstract_env_lookup_correct'; eassumption.
   Qed.
   Next Obligation.
     rename H into wfΣ; destruct (hΣ _ wfΣ).
@@ -1588,7 +1590,7 @@ Qed.
       eapply welltyped_is_open_term in h2.
       sq. now rewrite (All2_fold_length hx).
     * eapply into_closed_red; fvs.
-      + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      + eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
       + red in h. sq. fvs.
    Unshelve. eauto.
   Qed.
@@ -1603,7 +1605,7 @@ Qed.
     * clear aux; eapply welltyped_zipc_zipp in h2; eauto.
       eapply welltyped_is_open_term in h2. sq. now rewrite (All2_fold_length hx).
     * eapply into_closed_red; fvs.
-      + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      + eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
       + sq. fvs.
   Unshelve. eauto.
   Qed.
@@ -1611,11 +1613,11 @@ Qed.
     pose proof (hΣ _ wfΣ). sq.
     eapply red_welltyped ; [eauto|exact (h1 _ wfΣ)|..].
     eapply red_zipc.
-    eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+    eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     eapply R_cored. simpl. intros. eapply cored_zipc.
-    eapply cored_const. erewrite abstract_env_lookup_correct; eauto.
+    eapply cored_const. erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     rename H into wfΣ. destruct (heΣ _ wfΣ) as [wΣ].
@@ -1624,7 +1626,7 @@ Qed.
     eapply closed_red_zipp.
     { eapply welltyped_zipc_zipp in h1; auto; fvs. }
     eapply into_closed_red; fvs.
-    + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+    + eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
     + specialize (hx _ wfΣ). clear -hx wΣ. sq.  fvs.
     Unshelve. all : eauto.
   Qed.
@@ -1637,7 +1639,7 @@ Qed.
     eapply closed_red_zipp.
     { eapply welltyped_zipc_zipp in h1; auto; fvs. }
     eapply into_closed_red; fvs.
-    + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+    + eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
     + specialize (hx _ wfΣ). sq; fvs.
     Unshelve. eauto.
   Qed.
@@ -1649,7 +1651,7 @@ Qed.
       apply conv_cum_alt in H as [(?&?&[r1 r2 eq])]; auto.
     2: pose proof (hΣ _ wfΣ); sq ; eauto.
     rewrite zipp_as_mkApps in r1, r2.
-    erewrite <- abstract_env_lookup_correct in eq1, eq2; eauto.
+    erewrite <- abstract_env_lookup_correct' in eq1, eq2; eauto.
     symmetry in eq1, eq2.
     generalize hΣ. intros []; eauto.
     unshelve eapply closed_red_mkApps_tConst_axiom in r1 as (?&->&?); eauto.
@@ -2682,7 +2684,7 @@ Qed.
     - intros ? ? Hu Hu'; apply iff_reflect; apply (abstract_env_compare_universe_correct _ wfΣ Conv).
       + revert Hu. apply reflect_iff. apply wf_universe_reflect.
       + revert Hu'. apply reflect_iff. apply wf_universe_reflect.
-    - intros; now eapply abstract_env_lookup_correct.
+    - intros; now eapply abstract_env_lookup_correct'.
     - revert hl. apply reflect_iff, wf_universe_instanceP.
     - revert hl'. apply reflect_iff, wf_universe_instanceP.
   Qed.
@@ -2733,7 +2735,7 @@ Qed.
   Qed.
 
   Lemma welltyped_zipc_inv Σ Γ t π : wf Σ -> welltyped Σ Γ (zipc t π) -> welltyped Σ (Γ,,, stack_context π) t.
-  Proof.
+  Proof using Type.
     intros ? Ht. apply welltyped_zipc_zipp in Ht; eauto.
     apply welltyped_zipp_inv in Ht; eauto.
   Defined.
@@ -3494,20 +3496,20 @@ Qed.
     eapply red_welltyped ; [auto|..].
     - exact h1.
     - eapply red_zipc.
-      eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     pose (heΣ _ wfΣ). clear aux. specialize_Σ wfΣ. sq.
     eapply red_welltyped ; [auto|..].
     - exact h2.
     - eapply red_zipc.
-      eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     eapply R_cored. simpl. intros.
     eapply cored_zipc.
     eapply cored_const.
-    erewrite abstract_env_lookup_correct; eauto.
+    erewrite abstract_env_lookup_correct'; eauto.
   Qed.
   Next Obligation.
     rename H into wfΣ. destruct (hΣ _ wfΣ).
@@ -3516,14 +3518,14 @@ Qed.
     - eapply red_conv_cum_l ; try assumption.
       eapply closed_red_zipp. 1:eapply welltyped_zipc_zipp in h1; fvs.
       eapply into_closed_red.
-      * eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      * eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
       * eapply welltyped_zipc_zipp in h1; fvs.
       * eapply welltyped_zipc_zipp in h1; fvs.
     - etransitivity ; try eassumption.
       eapply red_conv_cum_r ; try assumption.
       eapply closed_red_zipp; auto.
       2:{ eapply into_closed_red; auto.
-        * eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+        * eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
         * eapply welltyped_zipc_zipp in h1; fvs. }
       clear aux. eapply welltyped_zipc_zipp in h2; eauto.
       destruct hx as [hx]. rewrite (All2_fold_length hx); fvs.
@@ -3535,9 +3537,9 @@ Qed.
     eapply conv_cum_red_inv.
     - eauto.
     - apply red_zipp.
-      eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
     - apply red_zipp.
-      eapply red_const. erewrite abstract_env_lookup_correct; eauto.
+      eapply red_const. erewrite abstract_env_lookup_correct'; eauto.
     - now eapply H.
   Qed.
   Next Obligation.
@@ -3547,24 +3549,24 @@ Qed.
     eapply conv_cum_mkApps_inv in H as [(?&?)]; eauto.
     - apply whnf_mkApps.
       eapply whne_const.
-      + erewrite abstract_env_lookup_correct; eauto.
+      + erewrite abstract_env_lookup_correct'; eauto.
       + eauto.
     - apply whnf_mkApps.
       eapply whne_const.
-      + erewrite abstract_env_lookup_correct; eauto.
+      + erewrite abstract_env_lookup_correct'; eauto.
       + eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
     eapply welltyped_zipc_tConst_inv in h1 as (?&?&?); eauto.
     unfold declared_constant, declared_constant_gen in *.
-    erewrite abstract_env_lookup_correct in d; eauto. congruence.
+    erewrite abstract_env_lookup_correct' in d; eauto. congruence.
   Qed.
   Next Obligation.
   destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
   eapply welltyped_zipc_tConst_inv in h1 as (?&?&?); eauto.
   unfold declared_constant, declared_constant_gen in *.
-  erewrite abstract_env_lookup_correct in d; eauto. congruence.
+  erewrite abstract_env_lookup_correct' in d; eauto. congruence.
 Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
@@ -5086,7 +5088,7 @@ Qed.
       + reflexivity.
       + eapply red_delta.
       * unfold declared_constant, declared_constant_gen.
-        erewrite abstract_env_lookup_correct; eauto.
+        erewrite abstract_env_lookup_correct'; eauto.
         * reflexivity.
     - eapply unfold_one_case_cored in eq as r; eauto.
       apply cored_red in r.
@@ -5119,7 +5121,7 @@ Qed.
       + reflexivity.
       + eapply red_delta.
         * unfold declared_constant, declared_constant_gen.
-          erewrite abstract_env_lookup_correct;  eauto.
+          erewrite abstract_env_lookup_correct';  eauto.
         * reflexivity.
     - eapply unfold_one_case_cored in eq as r; eauto. apply cored_red in r.
       destruct r as [r].
@@ -5150,7 +5152,7 @@ Qed.
     - repeat zip fold. eapply cored_context.
       constructor. eapply red_delta.
       + unfold declared_constant, declared_constant_gen.
-        erewrite abstract_env_lookup_correct; eauto.
+        erewrite abstract_env_lookup_correct'; eauto.
       + reflexivity.
     - repeat zip fold. eapply cored_context.
       eapply unfold_one_case_cored; eauto.
@@ -5177,7 +5179,7 @@ Qed.
   Lemma whnf_mkApps_tPrim_inv :
     forall (f : RedFlags.t) (Σ : global_env) (Γ : context) p (args : list term),
       whnf f Σ Γ (mkApps (tPrim p) args) -> args = [].
-  Proof.
+  Proof using Type.
     intros * wh.
     inversion wh; solve_discr.
     clear -X0.
@@ -5253,7 +5255,7 @@ Qed.
       constructor; eexists _, [].
       eauto using whnf_red with pcuic.
     - constructor; eexists _, (decompose_stack π).1.
-      clear H. erewrite <- abstract_env_lookup_correct in e; eauto.
+      clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       split; [econstructor|]; eauto.
       split; [eauto with pcuic|].
       apply whnf_mkApps.
@@ -5264,7 +5266,7 @@ Qed.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d.
-      clear H. erewrite <- abstract_env_lookup_correct in e; eauto.
+      clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
     - zip fold in h.
       destruct (hΣ _ wfΣ).
@@ -5272,7 +5274,7 @@ Qed.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d.
-      clear H. erewrite <- abstract_env_lookup_correct in e; eauto.
+      clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
     - clear H.
       eapply unfold_one_case_None in e as [(c'&r&whcase)]; eauto.

@@ -36,6 +36,10 @@ Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
 Next Obligation. Admitted.
 
+Global Existing Instance normalisation. (* to convert from Normalisation to NormalisationIn *)
+Global Instance assume_normalisation : Normalisation.
+Admitted.
+
 Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
   '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
   ret Σ'.

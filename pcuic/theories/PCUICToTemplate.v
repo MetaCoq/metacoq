@@ -111,3 +111,19 @@ Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
 
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_env (fst Σ), snd Σ).
+
+Definition trans_one_inductive_entry (oie : PCUICAst.one_inductive_entry) : one_inductive_entry
+  := {| mind_entry_typename := oie.(PCUICAst.mind_entry_typename);
+       mind_entry_arity := trans oie.(PCUICAst.mind_entry_arity);
+       mind_entry_consnames := oie.(PCUICAst.mind_entry_consnames);
+       mind_entry_lc := List.map trans oie.(PCUICAst.mind_entry_lc); |}.
+
+Definition trans_mutual_inductive_entry (mie : PCUICAst.mutual_inductive_entry) : mutual_inductive_entry
+  := {| mind_entry_record := mie.(PCUICAst.mind_entry_record);
+       mind_entry_finite := mie.(PCUICAst.mind_entry_finite);
+       mind_entry_private := mie.(PCUICAst.mind_entry_private);
+       mind_entry_universes := universes_entry_of_decl mie.(PCUICAst.mind_entry_universes);
+       mind_entry_inds := List.map trans_one_inductive_entry mie.(PCUICAst.mind_entry_inds);
+       mind_entry_params := trans_local mie.(PCUICAst.mind_entry_params);
+       mind_entry_variance := None (* TODO: support universe variance in PCUIC *);
+       mind_entry_template := false (* TODO: support template polymorphism in PCUIC? *) |}.

@@ -6,22 +6,30 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 (* AXIOM postulate correctness of the guard condition checker *)
 
+Definition tFixCoFix (b:FixCoFix) := if b then tFix else tCoFix.
+
+Definition nl_mfix mfix := map (map_def_anon nl nl) mfix.
+
+Definition subst_instance_mfix (mfix : list (def term)) u := map (map_def (subst_instance u) (subst_instance u)) mfix.
+
+Definition inst_mfix mfix σ := map (map_def (inst σ) (inst (up (List.length mfix) σ))) mfix.
+
+Definition rename_mfix mfix f := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix.
+
 Class GuardCheckerCorrect :=
 {
   guard_red1 b Σ Γ mfix mfix' idx :
-      guard b Σ Γ mfix ->
-      red1 Σ Γ ((if b then tFix else tCoFix) mfix idx)
-               ((if b then tFix else tCoFix) mfix' idx) ->
-      guard b Σ Γ mfix' ;
+    Σ.1 ;;; Γ |- tFixCoFix b mfix idx ⇝ tFixCoFix b mfix' idx ->
+    guard b Σ Γ mfix ->
+    guard b Σ Γ mfix' ;
 
   guard_eq_term b Σ Γ mfix mfix' idx :
-      guard b Σ Γ mfix ->
-      upto_names ((if b then tFix else tCoFix) mfix idx)
-                 ((if b then tFix else tCoFix) mfix' idx) ->
-      guard b Σ Γ mfix' ;
+    upto_names (tFixCoFix b mfix idx) (tFixCoFix b mfix' idx) ->
+    guard b Σ Γ mfix ->
+    guard b Σ Γ mfix' ;
 
-  guard_extends b Σ Γ mfix Σ' :
-    extends Σ.1 Σ'.1 ->
+  guard_extends b (Σ Σ':global_env_ext) Γ mfix :
+    extends Σ Σ' ->
     guard b Σ Γ mfix ->
     guard b Σ' Γ mfix ;
 
@@ -31,26 +39,23 @@ Class GuardCheckerCorrect :=
     guard b Σ Γ' mfix ;
 
   guard_nl b Σ Γ mfix :
-    let mfix' := map (map_def_anon nl nl) mfix in
-    guard b Σ Γ mfix -> guard b (nlg Σ) (nlctx Γ) mfix' ;
+    guard b Σ Γ mfix ->
+    guard b (nlg Σ) (nlctx Γ) (nl_mfix mfix) ;
 
-  guard_subst_instance {cf:checker_flags} b Σ Γ mfix u univs :
-    let mfix' := map (map_def (subst_instance u) (subst_instance u)) mfix in
+  guard_subst_instance `{checker_flags} b Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     guard b Σ Γ mfix ->
-    guard b (Σ.1, univs) (subst_instance u Γ) mfix' ;
+    guard b (Σ.1, univs) (subst_instance u Γ) (subst_instance_mfix mfix u) ;
 
   guard_inst `{checker_flags} b Σ Γ Δ mfix σ :
-     let mfix' := map (map_def (inst σ) (inst (up (List.length mfix) σ))) mfix in
-     Σ ;;; Γ ⊢ σ : Δ ->
-     guard b Σ Δ mfix ->
-     guard b Σ Γ mfix' ;
+    Σ ;;; Γ ⊢ σ : Δ ->
+    guard b Σ Δ mfix ->
+    guard b Σ Γ (inst_mfix mfix σ) ;
 
   guard_rename b P Σ Γ Δ mfix f :
-      let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
-      urenaming P Γ Δ f ->
-      guard b Σ Δ mfix ->
-      guard b Σ Γ mfix' ;
+    urenaming P Γ Δ f ->
+    guard b Σ Δ mfix ->
+    guard b Σ Γ (rename_mfix mfix f) ;
 
 }.
 

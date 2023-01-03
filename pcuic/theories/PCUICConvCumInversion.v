@@ -340,7 +340,9 @@ Section fixed.
     set (pl := {| pparams := motivepars |}) in *.
     set (pr := {| pparams := motivepars0 |}) in *.
     specialize e as (?&?&?&?).
-    destruct (declared_inductive_inj decli decli') as [-> ->].
+    unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+    unshelve epose proof (decli'_ := declared_inductive_to_gen decli'); eauto.
+    destruct (declared_inductive_inj decli_ decli'_) as [-> ->].
     repeat inv_on_free_vars.
     have clred : red_terms Σ Γ (pparams p) motivepars.
     { eapply into_red_terms; tea. }

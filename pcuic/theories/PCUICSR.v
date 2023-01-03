@@ -190,6 +190,7 @@ Lemma declared_projection_declared_constructor {cf}
   mdecl = mdecl' /\ idecl = idecl' /\ cdecl = cdecl'.
 Proof.
   intros [[] ?] [].
+  unshelve eapply declared_inductive_to_gen in H, H2; eauto.
   pose proof (declared_inductive_inj H H2). intuition auto. subst.
   rewrite H0 in H3. congruence.
 Qed.
@@ -433,7 +434,8 @@ Proof.
   pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
   intros Hu. pose proof (R_global_instance_length _ _ _ _ _ _ _ Hu).
   rewrite /R_global_instance_gen /R_opt_variance /= /lookup_constructor /lookup_constructor_gen.
-  rewrite (declared_inductive_lookup declc.p1) (proj2 declc).
+  unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
+  rewrite (declared_inductive_lookup_gen declc'.p1) (proj2 declc').
   rewrite -(cstr_args_length onc).
   case: leb_spec_Set; try lia. move=> _ /=; cbn.
   now apply R_universe_instance_variance_irrelevant.
@@ -1230,6 +1232,7 @@ Lemma on_constructor_closed_indices_inst {cf} {Σ} {wfΣ : wf Σ} {i mdecl idecl
            (#|cstr_args cdecl| + #|ind_params mdecl|)) (cstr_indices cdecl)@[u]).
 Proof.
   intros H cu.
+  unshelve epose proof (H' := declared_constructor_to_gen H); eauto.
   pose proof (on_declared_constructor H) as [[onmind oib] [cs [hnth onc]]].
   pose proof (onc.(on_cindices)).
   eapply ctx_inst_inst in X; tea.
@@ -1241,16 +1244,17 @@ Proof.
   eapply (is_open_term_subst (Γ := []) (s:=inds (inductive_mind i.1) u (ind_bodies mdecl))) in clx.
   3:eapply inds_is_open_terms. 3:len.
   rewrite app_context_nil_l subst_context_app in clx.
-  rewrite closed_ctx_subst in clx. 
-  eapply declared_inductive_closed_params_inst. 
-  now unfold declared_inductive.
+  rewrite closed_ctx_subst in clx.
+  eapply declared_inductive_closed_params_inst.
+  unshelve eapply declared_inductive_from_gen; eauto.
   len in clx. len.
   rewrite app_context_nil_l app_context_assoc.
   epose proof (on_constructor_wf_arities_pars_args H).
   eapply (wf_local_instantiate (decl:=InductiveDecl mdecl)) in X0; tea.
   rewrite !subst_instance_app_ctx in X0.
-  now eapply wf_local_closed_context in X0. apply H.
-  now eapply declared_inductive_wf_global_ext.
+  now eapply wf_local_closed_context in X0. apply H'.
+  eapply declared_inductive_wf_global_ext; eauto.
+  unshelve eapply declared_minductive_from_gen; eauto.
 Qed.
 
 Arguments pair {A B}%type_scope &.
@@ -1694,6 +1698,8 @@ Proof.
     rewrite -(shiftnP_add 1) addnP_shiftnP. repeat inv_on_free_vars => //.
 
   - (* Constant unfolding *)
+    unshelve epose proof (H' := declared_constant_to_gen H); eauto.
+    unshelve epose proof (H0' := declared_constant_to_gen H0); eauto.
     unshelve epose proof (declared_constant_inj decl decl0 _ _); tea; subst decl.
     destruct decl0 as [ty body' univs]; simpl in *; subst body'.
     eapply on_declared_constant in H; tas; cbn in H.
@@ -1711,6 +1717,7 @@ Proof.
 
   - (* iota reduction *)
     clear forall_u forall_u0 X X0.
+    unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
     destruct X4 as [wfcpc IHcpc].
     eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
     eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as IHctxi.
@@ -1727,7 +1734,8 @@ Proof.
     clear tyc.
     2:{ eapply validity. econstructor; tea. }
     unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
-    pose proof (declared_inductive_inj isdecl (proj1 declc)) as [-> ->].
+    unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
+    pose proof (declared_inductive_inj isdecl' (proj1 declc')) as [-> ->].
     destruct typec' as [[[[[_ equ] cu] cu'] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci']]]]].
     destruct ci' as [cparsubst0 iparsubst0 idxsubst0 subsidx [s [typectx [Hpars Hargs]]]].
     pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
@@ -1740,7 +1748,8 @@ Proof.
     set (pargctxu := subst_context iparsubst 0 argctxu) in X |- *.
     destruct X as [cumargs convidx]; eauto.
     assert(wfparu : wf_local Σ (subst_instance (puinst p) (ind_params mdecl))).
-    { eapply on_minductive_wf_params; eauto. }
+    { eapply on_minductive_wf_params; eauto.
+      destruct isdecl; eauto.  }
     assert (wfps : wf_universe Σ ps).
     { eapply validity in IHp; auto. eapply PCUICWfUniverses.isType_wf_universes in IHp; tea.
       now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in IHp. }
@@ -2085,7 +2094,8 @@ Proof.
     eapply typing_spine_strengthen in t; eauto.
     eapply wf_cofixpoint_typing_spine in t; eauto.
     unfold check_recursivity_kind in t.
-    rewrite isdecl.p1 in t.
+    unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
+    rewrite isdecl'.p1 in t.
     apply ReflectEq.eqb_eq in t. rewrite t /= in heq_isCoFinite.
     discriminate.
 
@@ -2507,7 +2517,8 @@ Proof.
 
       ** move: Hty.
         move/(isType_subst_instance_decl _ _ _ _ (InductiveDecl mdecl) u _ _).
-        move/(_ _ isdecl.p1.p1.p1 cu).
+        unshelve epose proof (isdecl' := declared_projection_to_gen isdecl); eauto.
+        move/(_ _ isdecl'.p1.p1.p1 cu).
         rewrite !subst_instance_app_ctx -app_context_assoc.
         move/(isType_subst_arities isdecl cu).
         rewrite subst_context_app.
@@ -2581,7 +2592,8 @@ Proof.
         rewrite context_assumptions_subst_instance. rewrite H2.
         apply onNpars in onmind. lia. }
     rewrite closed_ctx_subst in spargs.
-    { eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto. }
+    { eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto.
+      destruct declc as [[] ?]; eauto. }
     pose proof (spine_subst_inj_subst spargs cparsubst0). subst arg_sub.
     clear Hty.
     rewrite subst_it_mkProd_or_LetIn in sp.
@@ -2594,7 +2606,8 @@ Proof.
     simpl in on_projs. red in on_projs. len in Hnth.
     eapply (type_ws_cumul_pb (pb:=Cumul)); eauto.
     { rewrite firstn_skipn.
-      eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1.p1) in projty; eauto.
+      unshelve epose proof (isdecl' := declared_projection_to_gen isdecl); eauto.
+      eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl'.p1.p1.p1) in projty; eauto.
       apply infer_typing_sort_impl with id projty; intros Hs.
       rewrite /= /map_decl /= in Hs.
       eapply (weaken_ctx Γ) in Hs; auto.
@@ -2714,7 +2727,8 @@ Proof.
     rewrite subst_app_decomp.
     rewrite (subslet_length iparsubst0); len.
     assert (wf_local Σ (Γ ,,, subst_instance u (ind_params mdecl))).
-    { eapply weaken_wf_local; eauto. eapply on_minductive_wf_params => //. pcuic. }
+    { eapply weaken_wf_local; eauto. eapply on_minductive_wf_params => //. pcuic.
+      apply declc. }
     eapply (substitution_ws_cumul_pb (Γ'' := [])); eauto. eapply iparsubst0.
     simpl.
     rewrite (distr_subst_rec _ _ _ #|ind_params mdecl| 0); len => /=.
@@ -2785,17 +2799,19 @@ Proof.
       eapply weakening_wf_local => //.
       eapply wf_local_smash_end, idxsubst0.
       move: Hty.
+      unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
       move/(isType_subst_instance_decl _ _ _ _ (InductiveDecl mdecl) u _ _).
-      move/(_ _ isdecl.p1.p1.p1 cu).
       rewrite !subst_instance_app_ctx -app_context_assoc.
-      move/(isType_subst_arities isdecl cu).
-      move/isType_open. len.
+      intro foo. pose (fun x y z => isType_subst_arities isdecl cu (foo x y z)).
+      move:i. clear foo.
+      intro foo. pose (fun x y z => isType_open (foo x y z)).
+      move:i. clear foo. len.
       rewrite skipn_length; len.
       assert (context_assumptions (cstr_args cdecl) -
           (context_assumptions (cstr_args cdecl) - parg) = parg) by lia.
-      rewrite H6.
-      rewrite skipn_length; len. rewrite H5.
-      eapply on_free_vars_impl.
+      cbn. rewrite H6.
+      rewrite skipn_length; len. rewrite H5. intro foo.
+      eapply on_free_vars_impl; [| eapply foo]; eauto.
       move=> i'. rewrite /shiftnP !orb_false_r.
       move/Nat.ltb_lt => lt. apply/Nat.ltb_lt. lia. }
 
@@ -2823,7 +2839,8 @@ Proof.
       move=> [[hctors isTy] Hdecl].
       move/validity/(isType_mkApps_Ind_proj_inv _ isdecl): typec => [sppars hpars hargs cu].
       move/(isType_subst_instance_decl _ _ _ _ (InductiveDecl mdecl) u _ _) : isTy.
-      move/(_ _ isdecl.p1.p1.p1 cu).
+      unshelve epose proof (isdecl' := declared_projection_to_gen isdecl); eauto.
+      move/(_ _ isdecl'.p1.p1.p1 cu).
       move/(isType_weaken wfΓ).
       rewrite [_@[u]](subst_instance_app_ctx _ _ [_]).
       rewrite app_context_assoc subst_instance_smash.

@@ -147,11 +147,13 @@ Proof.
     + now rewrite IHΣ.
 Qed.
 
-Lemma trans_declared_constant Σ cst decl:
+Lemma trans_declared_constant {cf} Σ {wfΣ : wf Σ} cst decl:
   S.declared_constant Σ cst decl ->
   T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
-  unfold T.declared_constant, T.declared_constant_gen. 
+  intro H. unshelve eapply declared_constant_to_gen in H; eauto.
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_constant_from_gen.
+  move:H. unfold T.declared_constant, T.declared_constant_gen.
   rewrite trans_lookup.
   unfold S.declared_constant, S.declared_constant_gen.
   intros ->.
@@ -176,11 +178,13 @@ Proof.
   destruct decl;trivial.
 Qed.
 
-Lemma trans_declared_inductive Σ ind mdecl idecl:
+Lemma trans_declared_inductive {cf} Σ {wfΣ : wf Σ} ind mdecl idecl:
   S.declared_inductive Σ ind mdecl idecl ->
   T.declared_inductive (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl).
 Proof.
-  intros [].
+  intro H. unshelve eapply declared_inductive_to_gen in H; eauto.
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_inductive_from_gen.
+  move:H. intros [].
   split.
   - unfold T.declared_minductive,T.declared_minductive_gen,
            S.declared_minductive,S.declared_minductive_gen in *.
@@ -188,7 +192,7 @@ Proof.
   - now apply map_nth_error.
 Qed.
 
-Lemma trans_declared_constructor Σ ind mdecl idecl cdecl :
+Lemma trans_declared_constructor {cf} Σ {wfΣ : wf Σ} ind mdecl idecl cdecl :
   S.declared_constructor Σ ind mdecl idecl cdecl ->
   T.declared_constructor (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl)
     (trans_constructor_body cdecl).
@@ -400,7 +404,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_declared_projection Σ p mdecl idecl cdecl pdecl :
+Lemma trans_declared_projection {cf} Σ {wfΣ : wf Σ.1} p mdecl idecl cdecl pdecl :
   S.declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl)
     (trans_constructor_body cdecl) (trans_projection_body pdecl).
@@ -1231,7 +1235,9 @@ Proof.
     eapply inversion_Case in Hs as [mdecl [idecl [decli [indices [[] ?]]]]].
     epose proof (PCUICValidity.inversion_mkApps scrut_ty) as [? [hc hsp]]; tea.
     eapply inversion_Construct in hc as (mdecl'&idecl'&cdecl&wfΓ&declc&cu&tyc); tea.
-    destruct (declared_inductive_inj decli (proj1 declc)) as [-> ->]. 2:auto.
+    unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+    unshelve epose proof (declc_ := declared_inductive_to_gen declc); eauto.
+    destruct (declared_inductive_inj decli_ declc_) as [-> ->]. 2:auto.
     rewrite trans_mkApps /=.
     relativize (trans (iota_red _ _ _ _)).
     eapply TT.red_iota; tea; eauto. all:auto.
@@ -1385,7 +1391,7 @@ Proof.
     unfold lookup_inductive, lookup_minductive.
     unfold lookup_inductive_gen, lookup_minductive_gen.
     rewrite trans_lookup. destruct SE.lookup_env => //; simpl.
-    destruct g => /= //. 
+    destruct g => /= //.
     rewrite nth_error_map.
     destruct nth_error => /= //.
     rewrite trans_destr_arity.
@@ -2316,7 +2322,7 @@ Proof.
   - rewrite trans_subst trans_subst_instance /= map_rev.
     change (trans (proj_type pdecl)) with (trans_projection_body pdecl).(Ast.Env.proj_type).
     eapply TT.type_Proj.
-    + now apply trans_declared_projection.
+    + apply trans_declared_projection; eauto.
     + rewrite trans_mkApps in X2.
       assumption.
     + rewrite map_length H. now destruct mdecl.

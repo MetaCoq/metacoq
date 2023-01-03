@@ -1551,19 +1551,21 @@ Qed.
        end].*)
   Ltac  solve_unfold_constants aux eq1 eq2 Σ wfΣ :=
   try destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
-  exfalso;
+  exfalso; pose (hΣ Σ wfΣ); sq;
   Tactics.program_simplify;
   CoreTactics.equations_simpl;
   try erewrite <- abstract_env_lookup_correct' in eq1; eauto ;
   try erewrite <- abstract_env_lookup_correct' in eq2; eauto ;
+  try unshelve eapply declared_constant_to_gen in eq1; eauto ;
+  try unshelve eapply declared_constant_to_gen in eq2; eauto ;
   try clear aux; specialize_Σ wfΣ;
   solve
       [match goal with
        | [H: welltyped ?Σ ?Γ ?t |- _] =>
          let id := fresh in
          apply welltyped_zipc_tConst_inv in H as id; eauto;
-           destruct id as (?&?&?);
-           unfold declared_constant in *;
+           destruct id as (?&decl&?);
+           unshelve eapply declared_constant_to_gen in decl; eauto;
            congruence
        end].
 
@@ -1654,6 +1656,7 @@ Qed.
     rewrite zipp_as_mkApps in r1, r2.
     erewrite <- abstract_env_lookup_correct' in eq1, eq2; eauto.
     symmetry in eq1, eq2.
+    eapply declared_constant_from_gen in eq1, eq2.
     generalize hΣ. intros []; eauto.
     unshelve eapply closed_red_mkApps_tConst_axiom in r1 as (?&->&?); eauto.
     eapply closed_red_mkApps_tConst_axiom in r2 as (?&->&?); eauto.
@@ -1664,13 +1667,14 @@ Qed.
     clear aux. specialize (h1 _ wfΣ). specialize (h2 _ wfΣ).
     apply welltyped_zipc_tConst_inv in h1 as (cst1&decl1&cons1); eauto.
     apply welltyped_zipc_tConst_inv in h2 as (cst2&decl2&cons2); eauto.
+    unshelve eapply declared_constant_to_gen in decl1, decl2; eauto.
     eapply declared_constant_inj in decl1; eauto; subst.
     apply consistent_instance_ext_wf in cons1.
     apply consistent_instance_ext_wf in cons2.
     eapply eqb_universe_instance_complete in r; auto.
   Qed.
   (* Why Solve All Obligations is not working here ??? *)
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed.
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined.
   Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed.
   Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed.
   Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed.
@@ -1914,6 +1918,8 @@ Qed.
     destruct hp as [].
     eapply inversion_Case in hcase as [mdecl [idecl [decli [indices [hcase _]]]]]; auto.
     eapply inversion_Case in hcase' as [mdecl' [idecl' [decli' [indices' [hcase' _]]]]]; auto.
+    pose proof (decli_ := decli); pose proof (decli'_ := decli').
+    unshelve eapply declared_inductive_to_gen in decli, decli'; eauto.
     destruct (declared_inductive_inj decli decli'). subst mdecl' idecl'.
     constructor.
     assert (clm' : test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
@@ -1933,7 +1939,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli_).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     destruct hcase.
@@ -1963,7 +1969,7 @@ Qed.
         split; auto. rewrite e; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli_).
       Unshelve. all: eauto.
   Qed.
 
@@ -2010,11 +2016,12 @@ Qed.
   Next Obligation.
     clear aux.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ.
+    specialize_Σ wfΣ. destruct (hΣ _ wfΣ).
     destruct h1 as [h1].
     apply All2_length in h1 as e1.
     apply welltyped_zipc_tCase_brs_length in h as (?&?&?&?); eauto.
     apply welltyped_zipc_tCase_brs_length in h' as (?&?&?&?); eauto.
+    unshelve eapply declared_inductive_to_gen in H, H1; eauto.
     pose proof (PCUICInductiveInversion.declared_inductive_unique_sig H H1) as u; noconf u.
     rewrite app_length in *.
     cbn in *.
@@ -2023,11 +2030,12 @@ Qed.
   Next Obligation.
     clear aux.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ.
+    specialize_Σ wfΣ. destruct (hΣ _ wfΣ).
     destruct h1 as [h1].
     apply All2_length in h1 as e1.
     apply welltyped_zipc_tCase_brs_length in h as (?&?&?&?); eauto.
     apply welltyped_zipc_tCase_brs_length in h' as (?&?&?&?); eauto.
+    unshelve eapply declared_inductive_to_gen in H, H1; eauto.
     pose proof (PCUICInductiveInversion.declared_inductive_unique_sig H H1) as u; noconf u.
     rewrite app_length in *.
     cbn in *.
@@ -3061,6 +3069,8 @@ Qed.
     eapply PCUICValidity.inversion_mkApps in h' as [A' [hcase' _]].
     eapply inversion_Case in hcase as [mdecl [idecl [decli [indices [hcase _]]]]]; auto.
     eapply inversion_Case in hcase' as [mdecl' [idecl' [decli' [indices' [hcase' _]]]]]; auto.
+    pose proof (decli_ := decli); pose proof (decli'_ := decli').
+    unshelve eapply declared_inductive_to_gen in decli, decli'; eauto.
     destruct (declared_inductive_inj decli decli'). subst mdecl' idecl'.
     constructor.
     assert (clp : test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
@@ -3072,9 +3082,9 @@ Qed.
       rewrite <- closedn_ctx_on_free_vars.
       eapply PCUICClosed.closedn_ctx_upwards.
       { eapply (closed_ind_predicate_context); tea.
-        eapply declared_minductive_closed; tea. exact decli'. }
+        eapply declared_minductive_closed; tea. exact decli'_. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli_).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     exists mdecl, idecl.
@@ -3095,9 +3105,9 @@ Qed.
       rewrite <- closedn_ctx_on_free_vars.
       relativize #|pparams p'|.
       { eapply (closed_ind_predicate_context); tea.
-        eapply declared_minductive_closed; tea. exact decli'. }
+        eapply declared_minductive_closed; tea. exact decli'_. }
       rewrite (wf_predicate_length_pars wf_pred0).
-      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli_).
   Qed.
 
   Definition forallb2_proper A B (R R' : A -> B -> bool) l l':
@@ -3560,14 +3570,14 @@ Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
     eapply welltyped_zipc_tConst_inv in h1 as (?&?&?); eauto.
-    unfold declared_constant, declared_constant_gen in *.
-    erewrite abstract_env_lookup_correct' in d; eauto. congruence.
+    unfold declared_constant in *.
+    erewrite abstract_env_lookup_correct in d; eauto. congruence.
   Qed.
   Next Obligation.
   destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
   eapply welltyped_zipc_tConst_inv in h1 as (?&?&?); eauto.
-  unfold declared_constant, declared_constant_gen in *.
-  erewrite abstract_env_lookup_correct' in d; eauto. congruence.
+  unfold declared_constant in *.
+  erewrite abstract_env_lookup_correct in d; eauto. congruence.
 Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
@@ -5089,7 +5099,7 @@ Qed.
       + reflexivity.
       + eapply red_delta.
       * unfold declared_constant, declared_constant_gen.
-        erewrite abstract_env_lookup_correct'; eauto.
+        erewrite abstract_env_lookup_correct; eauto.
         * reflexivity.
     - eapply unfold_one_case_cored in eq as r; eauto.
       apply cored_red in r.
@@ -5122,7 +5132,7 @@ Qed.
       + reflexivity.
       + eapply red_delta.
         * unfold declared_constant, declared_constant_gen.
-          erewrite abstract_env_lookup_correct';  eauto.
+          erewrite abstract_env_lookup_correct;  eauto.
         * reflexivity.
     - eapply unfold_one_case_cored in eq as r; eauto. apply cored_red in r.
       destruct r as [r].
@@ -5153,7 +5163,7 @@ Qed.
     - repeat zip fold. eapply cored_context.
       constructor. eapply red_delta.
       + unfold declared_constant, declared_constant_gen.
-        erewrite abstract_env_lookup_correct'; eauto.
+        erewrite abstract_env_lookup_correct; eauto.
       + reflexivity.
     - repeat zip fold. eapply cored_context.
       eapply unfold_one_case_cored; eauto.
@@ -5266,7 +5276,7 @@ Qed.
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
-      unfold declared_constant in d.
+      unshelve eapply declared_constant_to_gen in d; eauto.
       clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
     - zip fold in h.
@@ -5274,7 +5284,7 @@ Qed.
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
-      unfold declared_constant in d.
+      unshelve eapply declared_constant_to_gen in d; eauto.
       clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
     - clear H.

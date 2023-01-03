@@ -239,7 +239,7 @@ Proof.
         erewrite PCUICGlobalMaps.onNpars.
         2: eapply on_declared_minductive ; eauto.
         rewrite firstn_app_left //.
-        now destruct wfpred.
+        now destruct wfpred. apply isdecl.
 
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.
@@ -337,9 +337,9 @@ Proof.
         1: apply wf_local_closed_context ; auto.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
+        unshelve eapply declared_projection_to_gen in isdecl; eauto.
         eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)); eauto.
         apply isdecl.
-
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.

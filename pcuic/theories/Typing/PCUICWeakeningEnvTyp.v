@@ -2,8 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICReduction PCUICCumulativity PCUICTyping
-  PCUICGuardCondition PCUICGlobalEnv
+  PCUICReduction PCUICCumulativity PCUICTyping PCUICGuardCondition
   PCUICWeakeningEnv PCUICWeakeningEnvConv.
 From Equations Require Import Equations.
 
@@ -305,7 +304,9 @@ Lemma declared_constant_inv `{checker_flags} Σ P cst decl :
   on_constant_decl (lift_typing P) (Σ, cst_universes decl) decl.
 Proof.
   intros.
+  eapply declared_constant_to_gen in H0.
   eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma declared_minductive_inv `{checker_flags} {Σ P ind mdecl} :
@@ -315,7 +316,9 @@ Lemma declared_minductive_inv `{checker_flags} {Σ P ind mdecl} :
   on_inductive cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) ind mdecl.
 Proof.
   intros.
+  eapply declared_minductive_to_gen in H0.
   eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma declared_inductive_inv `{checker_flags} {Σ P ind mdecl idecl} :
@@ -346,6 +349,50 @@ Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
   set (declared_inductive_inv HP wfΣ HΣ Hidecl) as HH.
+  clearbody HH. pose proof HH.(onConstructors) as HH'.
+  eapply All2_nth_error_Some in Hcdecl; tea.
+Defined.
+
+Lemma declared_minductive_inv_decls `{checker_flags} {Σ P ind mdecl} :
+  weaken_env_decls_prop cumulSpec0 (lift_typing typing) (lift_typing P) ->
+  wf Σ -> Forall_decls_typing P Σ ->
+  declared_minductive Σ ind mdecl ->
+  on_inductive cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) ind mdecl.
+Proof.
+  intros.
+  eapply declared_minductive_to_gen in H0.
+  eapply weaken_decls_lookup_on_global_env in X1; eauto. apply X1.
+  Unshelve. all:eauto.
+Qed.
+
+Lemma declared_inductive_inv_decls `{checker_flags} {Σ P ind mdecl idecl} :
+  weaken_env_decls_prop cumulSpec0 (lift_typing typing) (lift_typing P) ->
+  wf Σ -> Forall_decls_typing P Σ ->
+  declared_inductive Σ ind mdecl idecl ->
+  on_ind_body cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl.
+Proof.
+  intros.
+  destruct H0 as [Hmdecl Hidecl].
+  eapply declared_minductive_inv_decls in Hmdecl; cbn in X; eauto.
+  apply onInductives in Hmdecl.
+  eapply nth_error_alli in Hidecl; eauto.
+  apply Hidecl.
+Qed.
+
+Lemma declared_constructor_inv_decls `{checker_flags} {Σ P mdecl idecl ref cdecl}
+  (HP : weaken_env_decls_prop cumulSpec0 (lift_typing typing) (lift_typing P))
+  (wfΣ : wf Σ)
+  (HΣ : Forall_decls_typing P Σ)
+  (Hdecl : declared_constructor Σ ref mdecl idecl cdecl) :
+  ∑ cs,
+  let onib := declared_inductive_inv_decls HP wfΣ HΣ (let (x, _) := Hdecl in x) in
+  nth_error onib.(ind_cunivs) ref.2 = Some cs
+  × on_constructor cumulSpec0 (lift_typing P) (Σ, ind_universes mdecl) mdecl
+                   (inductive_ind ref.1) idecl idecl.(ind_indices) cdecl cs.
+Proof.
+  intros.
+  destruct Hdecl as [Hidecl Hcdecl].
+  set (declared_inductive_inv_decls HP wfΣ HΣ Hidecl) as HH.
   clearbody HH. pose proof HH.(onConstructors) as HH'.
   eapply All2_nth_error_Some in Hcdecl; tea.
 Defined.
@@ -457,7 +504,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
                  idecl idecl.(ind_indices) cdecl ind_ctor_sort.
 Proof.
   split.
-  - apply (on_declared_inductive Hdecl).
+  - destruct Hdecl; now apply on_declared_inductive.
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
@@ -481,8 +528,7 @@ Proof.
     move: e. destruct (ind_ctors idecl) as [|? []] => //.
     intros [= ->] => //. }
   split.
-  - split => //.
-    apply (on_declared_inductive Hdecl).
+  - split => //. destruct Hdecl as [[] ?]. now eapply on_declared_inductive.
   - pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
     destruct Hdecl. cbn in *. destruct d; cbn in *.
     now rewrite hctors in X.

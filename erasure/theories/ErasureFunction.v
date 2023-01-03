@@ -1063,18 +1063,22 @@ Proof.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
     eapply KernameSet.singleton_spec in hin; subst.
+    unshelve eapply declared_constant_to_gen in d; eauto.
     red in d. red. sq. rewrite d. intuition eauto.
   - apply inversion_Construct in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
     destruct kn.
     eapply KernameSet.singleton_spec in hin; subst.
-    destruct d as [[H' _] _]. red in H'. simpl in *.
+    destruct d as [[H' _] _].
+    unshelve eapply declared_minductive_to_gen in H'; eauto.
+    red in H'. simpl in *.
     red. sq. rewrite H'. intuition eauto.
   - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
     destruct ci as [kn i']; simpl in *.
     eapply KernameSet.singleton_spec in H1; subst.
-    destruct x1 as [d _]. red in d.
+    destruct x1 as [d _].
+    unshelve eapply declared_minductive_to_gen in d; eauto.
+    red in d.
     simpl in *. eexists; intuition eauto.
-
   - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
     eapply knset_in_fold_left in H1.
     destruct H1. eapply IHer; eauto.
@@ -1092,7 +1096,9 @@ Proof.
 
   - eapply KernameSet.singleton_spec in H0; subst.
     apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
-    destruct d as [[[d _] _] _]. red in d. eexists; eauto.
+    unshelve eapply declared_projection_to_gen in d; eauto.
+    destruct d as [[[d _] _] _].
+    red in d. eexists; eauto.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
 
@@ -1143,37 +1149,56 @@ Proof.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
     specialize (Σer kn).
     forward Σer. rewrite KernameSet.singleton_spec //.
+    pose proof (wf' := wf.1).
+    unshelve eapply declared_constant_to_gen in d; eauto.
     destruct Σer as [[c' [declc' (? & ? & ? & ?)]]|].
+    unshelve eapply declared_constant_to_gen in declc'; eauto.
     pose proof (declared_constant_inj _ _ d declc'). subst x.
-    now econstructor; eauto.
+    econstructor; eauto. eapply declared_constant_from_gen; eauto.
     destruct H as [mib [mib' [declm declm']]].
-    red in declm, d. unfold declared_minductive_gen in declm. rewrite d in declm. noconf declm.
+    unshelve eapply declared_minductive_to_gen in declm; eauto.
+    red in declm, d. unfold declared_minductive_gen in declm.
+    rewrite d in declm. noconf declm.
   - apply inversion_Construct in wt as (? & ? & ? & ? & ? & ?); eauto.
     red in Σer. destruct kn.
     setoid_rewrite KernameSetFact.singleton_iff in Σer.
+    pose (wf' := wf.1).
     destruct (Σer _ eq_refl) as [ (? & ? & ? & ? & ? & ?) | (? & ? & ? & ? & ?) ].
-    + red in H0. destruct d as [[]]. red in H4. cbn in *. unfold PCUICEnvironment.fst_ctx in *. congruence.
-    + pose proof H2 as H2'. destruct d. cbn in *. destruct H3. cbn in *. red in H3. red in H0. rewrite H0 in H3. invs H3.
+    + destruct d as [[]].
+      unshelve eapply declared_constant_to_gen in H0; eauto.
+      unshelve eapply declared_minductive_to_gen in H4; eauto.
+      red in H4, H. cbn in *. unfold PCUICEnvironment.fst_ctx in *. congruence.
+    + pose proof H2 as H2'. destruct d. cbn in *.
+      destruct H3. cbn in *. red in H3.
+      unshelve eapply declared_minductive_to_gen in H0, H3; eauto.
+      red in H0, H3. rewrite H0 in H3. invs H3.
       destruct H2.
       red in H1.
       eapply Forall2_nth_error_Some_l in H2 as (? & ? & ?); eauto. pose proof H6 as H6'. destruct H6 as (? & ? & ? & ? & ?); eauto.
       eapply Forall2_nth_error_Some_l in H6 as ([] & ? & ? & ?); subst; eauto.
-      econstructor. repeat eapply conj; eauto.
+      econstructor.
+      eapply declared_constructor_from_gen; eauto.  repeat eapply conj; eauto.
       repeat eapply conj; cbn; eauto. eauto. eauto.
   - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
     destruct ci as [[kn i'] ? ?]; simpl in *.
     apply includes_deps_fold in H2 as [? ?].
-
+    pose proof (wf' := wf.1).
     specialize (H1 kn). forward H1.
     now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
     elimtype False. destruct H1 as [cst [declc _]].
-    { red in declc. destruct x1 as [d _]. red in d. unfold declared_constant_gen in declc. rewrite d in declc. noconf declc. }
+    { destruct x1 as [d _].
+      unshelve eapply declared_minductive_to_gen in d; eauto.
+      unshelve eapply declared_constant_to_gen in declc; eauto.
+      red in d, declc.
+      unfold declared_constant_gen in declc. rewrite d in declc. noconf declc. }
     destruct H1 as [mib [mib' [declm [declm' em]]]].
     pose proof em as em'. destruct em'.
     destruct x1 as [x1 hnth].
+    unshelve eapply declared_minductive_to_gen in x1, declm; eauto.
     red in x1, declm. unfold declared_minductive_gen in declm. rewrite x1 in declm. noconf declm.
     eapply Forall2_nth_error_left in H1; eauto. destruct H1 as [? [? ?]].
     eapply erases_deps_tCase; eauto.
+    apply declared_inductive_from_gen; auto.
     split; eauto. split; eauto.
     destruct H1.
     eapply In_Forall in H3.
@@ -1188,14 +1213,20 @@ Proof.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj1 d).
+    pose proof (wf' := wf.1).
     specialize (H0 (inductive_mind p.(proj_ind))). forward H0.
     now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
     elimtype False. destruct H0 as [cst [declc _]].
-    { red in declc. destruct d as [[[d _] _] _]. red in d.
+    {
+      unshelve eapply declared_constant_to_gen in declc; eauto.
+      red in declc. destruct d as [[[d _] _] _].
+      unshelve eapply declared_minductive_to_gen in d; eauto.
+      red in d.
       unfold declared_constant_gen in declc.  rewrite d in declc. noconf declc. }
     destruct H0 as [mib [mib' [declm [declm' em]]]].
     assert (mib = x0).
     { destruct d as [[[]]].
+      unshelve eapply declared_minductive_to_gen in declm, H0; eauto.
       red in H0, declm. unfold declared_minductive_gen in declm. rewrite H0 in declm. now noconf declm. }
     subst x0.
     pose proof em as em'. destruct em'.
@@ -1249,35 +1280,45 @@ Proof.
   assert (wfΣ' : wf Σ)
     by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
   induction er using erases_deps_forall_ind; try solve [now constructor].
-  - assert (kn <> kn0).
-    { inv wfΣ. inv X. intros <-.
+  - inv wfΣ. inv X.
+    assert (wf Σ) by (inversion H4;econstructor; eauto).
+    pose proof (H_ := H). unshelve eapply declared_constant_to_gen in H; eauto.
+    assert (kn <> kn0).
+    { intros <-.
       eapply lookup_env_Some_fresh in H. destruct X1. contradiction. }
     eapply erases_deps_tConst with cb cb'; eauto.
+    eapply declared_constant_from_gen.
     red. rewrite /declared_constant_gen /lookup_env lookup_env_cons_fresh //.
     red.
     red in H1.
     destruct (cst_body cb) eqn:cbe;
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
-    eapply on_declared_constant in H; auto.
-    red in H. rewrite cbe in H. simpl in H.
+    eapply on_declared_constant in H_; auto.
+    red in H_. rewrite cbe in H_. simpl in H_.
     eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
-    simpl.
+    simpl. econstructor; eauto. econstructor; eauto.
     split => //; eexists [(kn, d)]; intuition eauto.
   - econstructor; eauto. eapply weakening_env_declared_constructor; eauto; tc.
     eapply extends_decls_extends, strictly_extends_decls_extends_decls. econstructor; try reflexivity. eexists [(_, _)]; reflexivity.
   - econstructor; eauto.
+    eapply declared_inductive_from_gen.
+    inv wfΣ. inv X.
+    assert (wf Σ) by (inversion H5;econstructor; eauto).
+    unshelve eapply declared_inductive_to_gen in H; eauto.
     red. destruct H. split; eauto.
     red in H. red.
-    inv wfΣ. inv X.
     rewrite -H. simpl. unfold lookup_env; simpl. destruct (eqb_spec (inductive_mind p.1) kn); try congruence.
     eapply lookup_env_Some_fresh in H. destruct X1. subst kn; contradiction.
   - econstructor; eauto.
-    red. destruct H. split; eauto.
-    destruct d0; split; eauto.
-    destruct d0; split; eauto.
     inv wfΣ. inv X.
+    assert (wf Σ) by (inversion H3;econstructor; eauto).
+    eapply declared_projection_from_gen.
+    unshelve eapply declared_projection_to_gen in H; eauto.
+    red. destruct H. split; eauto.
+    destruct H; split; eauto.
+    destruct H; split; eauto.
     red in H |- *.
     rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.(proj_ind)) kn); try congruence.
     eapply lookup_env_Some_fresh in H. subst kn. destruct X1. contradiction.
@@ -1316,15 +1357,20 @@ Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' :
   global_erased_with_deps (add_global_decl Σ (kn', d)) ((kn', d') :: Σ') kn.
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
+  red. inv wf. inv X.
   assert (wfΣ : PCUICTyping.wf Σ)
     by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
-  red. inv wf. inv X. left.
+  left.
   exists cst. split.
+  eapply declared_constant_from_gen.
+  unshelve eapply declared_constant_to_gen in declc; eauto.
   red in declc |- *. unfold declared_constant_gen, lookup_env in *.
   rewrite lookup_env_cons_fresh //.
   { eapply lookup_env_Some_fresh in declc. destruct X1.
     intros <-; contradiction. }
   exists cst'.
+  pose proof (declc_ := declc).
+  unshelve eapply declared_constant_to_gen in declc; eauto.
   unfold EGlobalEnv.declared_constant. rewrite EGlobalEnv.elookup_env_cons_fresh //.
   { eapply lookup_env_Some_fresh in declc. destruct X1.
     intros <-; contradiction. }
@@ -1334,17 +1380,22 @@ Proof.
   eapply (erases_weakeninv_env (Σ  := (_, cst_universes cst)) (Σ' := (add_global_decl Σ (kn', d), cst_universes cst))); eauto.
   constructor; eauto. constructor; eauto.
   split => //. exists [(kn', d)]; intuition eauto.
-  eapply on_declared_constant in declc; auto.
-  red in declc. rewrite bod in declc. eapply declc.
+  eapply on_declared_constant in declc_; auto.
+  red in declc_. rewrite bod in declc_. eapply declc_.
   noconf H0.
   eapply erases_deps_cons; eauto.
   constructor; auto.
 
-  right. destruct H as [mib [mib' [? [? ?]]]].
+  right.
+  pose proof (wf_ := wf). inv wf. inv X.
+  assert (wf Σ) by (inversion H0;econstructor; eauto).
+  destruct H as [mib [mib' [? [? ?]]]].
+  unshelve eapply declared_minductive_to_gen in H; eauto.
   exists mib, mib'. intuition eauto.
-  * red. red in H. pose proof (lookup_env_ext wf H). unfold declared_minductive_gen.
+  * eapply declared_minductive_from_gen.
+    red. red in H. pose proof (lookup_env_ext wf_ H). unfold declared_minductive_gen.
     now rewrite lookup_env_cons_disc.
-  * red. pose proof (lookup_env_ext wf H).
+  * red. pose proof (lookup_env_ext wf_ H).
     now rewrite elookup_env_cons_disc.
 Qed.
 
@@ -1354,10 +1405,12 @@ Lemma global_erases_with_deps_weaken kn kn' d Σ Σ' :
   global_erased_with_deps (add_global_decl Σ (kn', d)) Σ' kn.
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
+  red. inv wf. inv X. left.
   assert (wfΣ : PCUICTyping.wf Σ)
     by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
-  red. inversion wf. inversion X. subst. left.
   exists cst. split.
+  eapply declared_constant_from_gen.
+  unshelve eapply declared_constant_to_gen in declc; eauto.
   red in declc |- *.
   unfold declared_constant_gen, lookup_env in *.
   rewrite lookup_env_cons_fresh //.
@@ -1377,10 +1430,15 @@ Proof.
   apply erases_deps_weaken; auto.
 
   right. destruct H as [mib [mib' [Hm [? ?]]]].
-  exists mib, mib'; intuition auto.
+  exists mib, mib'; intuition auto. pose proof (wf_ := wf).
+  inv wf. inv X.
+  assert (wf Σ) by (inversion H;econstructor; eauto).
+  eapply declared_minductive_from_gen.
+
+  unshelve eapply declared_minductive_to_gen in Hm; eauto.
   red. unfold declared_minductive_gen, lookup_env in *.
   rewrite lookup_env_cons_fresh //.
-  now epose proof (lookup_env_ext wf Hm).
+  now epose proof (lookup_env_ext wf_ Hm).
 Qed.
 
 (* TODO: Figure out if this (and [erases]) should use [strictly_extends_decls] or [extends] -Jason Gross *)
@@ -1464,7 +1522,8 @@ Proof.
         set (Xmake :=  abstract_make_wf_env_ext Xpop (cst_universes c) _).
         epose proof (abstract_env_exists Xpop) as [[Σpop wfpop]].
         epose proof (abstract_env_ext_exists Xmake) as [[Σmake wfmake]].
-        exists c. split; auto. red.
+        exists c. split; auto.
+        eapply declared_constant_from_gen.
         unfold declared_constant_gen, lookup_env; simpl; rewrite (prf _ wfΣ). cbn.
         rewrite eq_kername_refl //.
         pose proof (sub _ hin) as indeps.
@@ -1514,6 +1573,7 @@ Proof.
           intros x hin'. eapply KernameSet.union_spec. right; auto.
           now rewrite -Heqdeps. } }
         { eexists m, _; intuition eauto.
+          eapply declared_minductive_from_gen.
           simpl. rewrite /declared_minductive /declared_minductive_gen /lookup_env prf; eauto.
           simpl. rewrite eq_kername_refl. reflexivity.
           specialize (sub _ hin).
@@ -1522,7 +1582,7 @@ Proof.
           red. cbn. rewrite eq_kername_refl.
           reflexivity.
           assert (declared_minductive Σ kn m).
-          { red. unfold declared_minductive_gen, lookup_env. rewrite prf; eauto. cbn. now rewrite eqb_refl. }
+          { eapply declared_minductive_from_gen. red. unfold declared_minductive_gen, lookup_env. rewrite prf; eauto. cbn. now rewrite eqb_refl. }
           eapply on_declared_minductive in H0; tea.
           now eapply erases_mutual. }
 
@@ -1776,9 +1836,11 @@ Lemma erase_global_declared_constructor X_type X ind c mind idecl cdecl deps dec
     (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl)
     (EAst.mkConstructor cdecl.(cstr_name) cdecl.(cstr_arity)).
 Proof.
-  intros Σ wfΣ [[]] Hin.
+  intros Σ wfΣ [[]] Hin. pose (abstract_env_wf _ wfΣ). sq.
   cbn in *. split. split.
-  - red in H |- *. now eapply lookup_env_erase.
+  - unshelve eapply declared_minductive_to_gen in H; eauto.
+    red in H |- *. eapply lookup_env_erase; eauto.
+
   - cbn. now eapply map_nth_error.
   - cbn. erewrite map_nth_error; eauto.
 Qed.

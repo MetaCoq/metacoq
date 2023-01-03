@@ -1174,12 +1174,14 @@ Proof using Hcf Hcf'.
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
+    unshelve eapply declared_constant_to_gen in H, declc; eauto.
     pose proof (declared_constant_inj _ _ H declc); subst decl'.
     eapply cumul_prop_subst_instance; eauto. fvs.
     destruct (cumul_prop_is_open cum) as [].
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
+    unshelve eapply declared_inductive_to_gen in isdecl, declc; eauto.
     pose proof (declared_inductive_inj isdecl declc) as [-> ->].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
@@ -1188,7 +1190,9 @@ Proof using Hcf Hcf'.
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
-    pose proof (declared_constructor_inj isdecl declc) as [-> [-> ->]].
+    unshelve eapply declared_constructor_to_gen in declc; eauto.
+    unshelve epose proof (isdecl' := declared_constructor_to_gen isdecl); eauto.
+    pose proof (declared_constructor_inj isdecl' declc) as [-> [-> ->]].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     unfold type_of_constructor.
@@ -1226,6 +1230,7 @@ Proof using Hcf Hcf'.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
     clear X8.
+    unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
     destruct (declared_inductive_inj isdecl isdecl'). subst.
     destruct data.
     specialize (X7 _ _ H5 scrut_ty _ (eq_term_upto_univ_napp_leq X10)).
@@ -1261,7 +1266,9 @@ Proof using Hcf Hcf'.
     eapply cumul_cumul_prop in b; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
-    destruct (declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
+    unshelve epose proof (a' := declared_projection_to_gen a); eauto.
+    unshelve epose proof (isdecl' := declared_projection_to_gen isdecl); eauto.
+    destruct (declared_projection_inj a' isdecl') as [<- [<- [<- <-]]].
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
     epose proof (wf_projection_context _ _ isdecl c1).

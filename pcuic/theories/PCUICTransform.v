@@ -92,7 +92,8 @@ Next Obligation.
   red. intros cf K [Σ t] v [[]].
   unfold eval_pcuic_program.
   cbn. intros [ev]. destruct X.
-  eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ:=global_env_ext_map_global_env_ext Σ)) in ev.
+  unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ:=global_env_ext_map_global_env_ext Σ)) in ev; eauto.
+  apply trans_wf; eauto.
   eexists; split; split; eauto.
   destruct s as [T HT]. now apply PCUICClosedTyp.subject_closed in HT.
 Qed.

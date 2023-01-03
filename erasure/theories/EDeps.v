@@ -470,12 +470,15 @@ Lemma erases_deps_cons Σ Σ' kn decl decl' t :
 Proof.
   intros wfu wfΣ er.
   induction er using erases_deps_forall_ind; try solve [now constructor].
-  apply PCUICWeakeningEnv.lookup_env_Some_fresh in H as not_fresh.
+  inversion wfΣ.
+  unshelve epose proof (H_ := declared_constant_to_gen H); eauto.
+  3: econstructor; eauto.
+  apply PCUICWeakeningEnv.lookup_env_Some_fresh in H_ as not_fresh.
   econstructor.
   - unfold PCUICAst.declared_constant, PCUICAst.declared_constant_gen in *; cbn.
     inversion wfΣ; subst. destruct X0.
     destruct (eqb_spec kn0 kn) as [<-|]; [congruence|].
-    eassumption.
+    right. eassumption.
   - unfold EGlobalEnv.declared_constant in *. cbn -[ReflectEq.eqb].
     inversion wfΣ; subst. destruct X0.
     destruct (ReflectEq.eqb_spec kn0 kn); [congruence|].
@@ -514,25 +517,34 @@ Proof.
     destruct d. split; eauto.
     red. cbn. cbn in *. destruct X0.
     destruct (eqb_spec (inductive_mind ind) kn). cbn in *.
-    subst.
-    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in kn_fresh. eauto. eapply H. exact H0.
-  - econstructor; eauto.
-    destruct H as [H H'].
-    split; eauto. red in H |- *.
+    unshelve eapply declared_constructor_to_gen in H; eauto.
+    3: econstructor; eauto. destruct H as [[]]. cbn in *.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in kn_fresh. eauto.
+    rewrite H4 in H. eapply H. exact H0.
+  - destruct H as [H H'].
     inv wfΣ. destruct X0.
+    unshelve eapply declared_minductive_to_gen in H; eauto.
+    3: econstructor; eauto.
+    econstructor; eauto.
+    split; eauto. eapply declared_minductive_from_gen.
+    red in H |- *.
     unfold PCUICEnvironment.lookup_env.
     simpl. destruct (eqb_spec (inductive_mind p.1) kn); auto. subst.
     eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
-    split; eauto. red in H0 |- *.
-    inv wfΣ. destruct X0. cbn. change (eq_kername (inductive_mind p.1) kn) with (ReflectEq.eqb (inductive_mind p.1) kn).
+    split; eauto. red in H0 |- *. cbn.
+    change (eq_kername (inductive_mind p.1) kn) with (ReflectEq.eqb (inductive_mind p.1) kn).
     destruct (ReflectEq.eqb_spec (inductive_mind p.1) kn); auto. subst.
-    destruct H as [H _].
-    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto. contradiction.
-  - econstructor; eauto.
-    destruct H as [[[declm decli] declc] [declp hp]].
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto.
+    contradiction.
+  - destruct H as [[[declm decli] declc] [declp hp]].
+    inv wfΣ. destruct X0.
+    unshelve eapply declared_minductive_to_gen in declm; eauto.
+    3: econstructor; eauto.
+    econstructor; eauto.
+    apply declared_projection_from_gen.
     repeat split; eauto.
-    inv wfΣ. destruct X0. unfold PCUICAst.declared_minductive, declared_minductive_gen in *.
+    unfold PCUICAst.declared_minductive, declared_minductive_gen in *.
     unfold PCUICEnvironment.lookup_env.
     simpl in *.
     destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn). subst.
@@ -540,10 +552,12 @@ Proof.
     apply declm.
     destruct H0 as [[[]]]. destruct a.
     repeat split; eauto.
-    inv wfΣ. destruct X0. simpl. unfold declared_minductive. cbn.
-    destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn); auto. subst.
-    destruct H as [[[]]].
-    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in H. eauto. contradiction.
+    simpl. unfold declared_minductive. cbn.
+    destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn); auto.
+    unfold declared_minductive_gen in declm. cbn in *.
+    rewrite H in declm.
+    eapply PCUICWeakeningEnv.lookup_env_Some_fresh in kn_fresh.
+    eauto. eauto.
 Qed.
 
 Derive Signature for erases_global_decls.
@@ -685,12 +699,16 @@ Proof.
   set (Σg := Σ). destruct Σ as [univs Σ retro]; cbn in *.
   induction Σ as [|(kn, decl) Σ IH] in Σ', Σg, wf, erg |- *; cbn in *.
   - depelim erg.
-    split; [intros ? ? decl; discriminate decl|].
-    intros ? ? ? [decl _]; discriminate decl.
+    split; [intros ? ? decl|intros ? ? ? [decl ?]].
+    unshelve eapply declared_constant_to_gen in decl; eauto.
+    discriminate decl.
+    unshelve eapply declared_minductive_to_gen in decl; eauto.
+    discriminate decl.
   - split.
     intros kn' cst' decl'.
     destruct (eq_dec kn kn') as [<-|].
-    + unfold PCUICAst.declared_constant, declared_constant_gen, EGlobalEnv.declared_constant in *; cbn in *.
+    + unshelve eapply declared_constant_to_gen in decl'; eauto.
+      unfold declared_constant_gen, EGlobalEnv.declared_constant in *; cbn in *.
       rewrite eq_kername_refl in *.
       noconf decl'.
       depelim erg.
@@ -728,8 +746,10 @@ Proof.
           by now depelim erg; eexists _, _.
       apply IH in erg'. 2:{ depelim wf. now depelim o0. }
       assert (decl_ext: PCUICAst.declared_constant Σu kn' cst').
-      { unfold PCUICAst.declared_constant, declared_constant_gen in *; cbn in *.
-        destruct (eqb_spec kn' kn); [|congruence]. subst. contradiction. }
+      { unshelve eapply declared_constant_to_gen in decl'; eauto.
+        eapply declared_constant_from_gen.
+        unfold declared_constant_gen in *; cbn in *.
+        destruct (eqb_spec kn' kn); [|eauto]. subst. contradiction. }
       specialize (proj1 erg' kn' cst' decl_ext) as (cst & decl'' & ? & ?).
       exists cst.
       split; [|split].
@@ -748,20 +768,29 @@ Proof.
       * intros.
         apply H0 in H1.
         eapply (erases_deps_cons Σu); eauto. apply wfΣu. apply wf.
-  + intros k mdecl idecl decli.
+  + pose proof (wf' := wf). intros k mdecl idecl decli.
     depelim erg.
     * inv wf. inv X.
       specialize (IH _ (H0, X0) erg).
       apply proj2 in IH. specialize (IH k mdecl idecl).
       forward IH.
-      destruct decli as [decli ?]. split; auto.
+      assert (wf Σg).
+      { econstructor; eauto. unfold Σg; cbn. econstructor;
+        eauto. }
+      destruct decli as [decli ?]. split; auto. cbn in X0, X1.
+      unshelve eapply declared_minductive_to_gen in decli; eauto.
+      eapply declared_minductive_from_gen.
       red in decli |- *. simpl in decli |- *.
       unfold PCUICEnvironment.lookup_env in decli |- *. simpl in *.
       destruct (eqb_spec (inductive_mind k) kn).  subst. discriminate. auto.
       destruct IH as [mdecl' [idecl' [decli' er]]].
       exists mdecl', idecl'. split; auto.
       red. destruct decli'; split; auto.
-      red in decli.
+      assert (wf Σg).
+      { econstructor; eauto. unfold Σg; cbn. econstructor;
+        eauto. }
+      destruct decli as [decli ?].
+      unshelve eapply declared_minductive_to_gen in decli; eauto.
       unfold declared_minductive in *.
       simpl. destruct (eqb_spec (inductive_mind k) kn); subst; auto.
       unfold declared_inductive_gen, declared_minductive_gen in decli.
@@ -770,6 +799,7 @@ Proof.
     * inv wf. inv X. destruct X1.
       specialize (IH _ (H0, X0) erg).
       destruct decli as [decli ?].
+      unshelve eapply declared_minductive_to_gen in decli; eauto.
       simpl in decli |- *.
       unfold declared_minductive_gen, PCUICEnvironment.lookup_env in decli.
       simpl in decli.
@@ -777,6 +807,10 @@ Proof.
       destruct (Forall2_nth_error_left (proj1 H) _ _ H1); eauto.
       eexists _, _; intuition eauto. split; eauto. red.
       simpl. rewrite eqb_refl. congruence.
+      unshelve refine (let Σ_ : global_env := _ in _).
+      { econstructor. exact univs. exact Σ. eauto. }
+      change (declared_minductive_gen (PCUICEnvironment.lookup_env Σ_) (inductive_mind k) mdecl) in decli.
+      eapply declared_minductive_from_gen in decli.
       destruct (proj2 IH _ _ _ (conj decli H1)) as [m' [i' [decli' ei]]].
       eexists _, _; intuition eauto.
       destruct decli'; red; split; eauto.

@@ -260,7 +260,8 @@ Qed.
   Next Obligation.
     split.
     - symmetry in look.
-      etransitivity. erewrite (abstract_env_lookup_correct' X); eauto.
+      eapply declared_minductive_from_gen. etransitivity.
+      erewrite (abstract_env_lookup_correct' X); eauto.
       reflexivity.
     - now symmetry.
   Defined.
@@ -268,12 +269,15 @@ Qed.
   Lemma lookup_ind_decl_complete Σ (wfΣ : abstract_env_ext_rel X Σ) ind e : lookup_ind_decl ind = TypeError e ->
     ((∑ mdecl idecl, declared_inductive Σ ind mdecl idecl) -> False).
   Proof using Type.
-    cbn.
+    cbn. pose proof (abstract_env_ext_wf _ wfΣ) as [[? ?]].
     apply_funelim (lookup_ind_decl ind).
     1-2: intros * _ her [mdecl [idecl [declm decli]]];
-      red in declm; erewrite <- abstract_env_lookup_correct', declm in e0; eauto;
+      unshelve eapply declared_minductive_to_gen in declm; eauto;
+      red in declm;
+      erewrite <- abstract_env_lookup_correct', declm in e0; eauto;
       congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
+    unshelve eapply declared_minductive_to_gen in declm; eauto;
     red in declm. erewrite <- abstract_env_lookup_correct', declm in look; eauto.
     noconf look.
     congruence.
@@ -487,21 +491,23 @@ Qed.
     inversion wt. sq.
     inversion X0; subst.
     erewrite <- abstract_env_lookup_correct' in e; eauto.
-    rewrite isdecl in e. inversion e. subst.
-    now constructor.
+    unshelve eapply declared_constant_to_gen in isdecl; eauto.
+    rewrite isdecl in e. inversion e. subst. assumption.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt.
+    pose (hΣ _ wfΣ). sq. specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
+    unshelve eapply declared_constant_to_gen in isdecl; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt.
+    pose (hΣ _ wfΣ). sq. specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     clear wildcard. erewrite <- abstract_env_lookup_correct' in e; eauto.
+    unshelve eapply declared_constant_to_gen in isdecl; eauto.
     rewrite isdecl in e. inversion e.
   Defined.
   Next Obligation.
@@ -511,9 +517,10 @@ Qed.
     clear e.
     destruct decl as (?&?&isdecl').
     cbn.
-    eapply declared_inductive_inj in isdecl' as []; tea.
-    subst.
-    now econstructor.
+    unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
+    eapply declared_inductive_inj in isdecl' as [].
+    2: { exact isdecl. }
+    subst. assumption.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -525,26 +532,32 @@ Qed.
   Defined.
 
   Next Obligation.
-    cbn; intros. specialize_Σ wfΣ. inversion wt. sq.
+    cbn; intros. specialize_Σ wfΣ. pose (hΣ _ wfΣ). inversion wt. sq.
     inversion X0 ; subst.
     clear e.
     destruct decl as (?&?&isdecl').
     cbn in *.
+    unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+    pose proof (isdecl'_ := isdecl').
+    unshelve eapply declared_inductive_to_gen in isdecl'; eauto.
     eapply declared_constructor_inj in isdecl as (?&[]).
     2: { econstructor. now eapply isdecl'. now idtac. }
     subst.
     econstructor ; tea.
-    econstructor. now eapply isdecl'. now idtac.
+    econstructor. now eapply isdecl'_. now idtac.
   Defined.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize_Σ wfΣ. inversion wt.
+    pose (hΣ _ wfΣ). sq. specialize_Σ wfΣ. inversion wt.
     inversion X0 ; subst.
     clear e.
     destruct decl as (?&?&isdecl').
+    unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+    pose proof (isdecl'_ := isdecl'). cbn in *.
+    unshelve eapply declared_inductive_to_gen in isdecl'; eauto.
     destruct isdecl as [isdecl]; cbn -[lookup_ind_decl] in *.
-    eapply declared_inductive_inj in isdecl' as []; tea.
-    subst.
+    eapply declared_inductive_inj in isdecl' as [].
+    2: exact isdecl. subst.
     now congruence.
   Defined.
   Next Obligation.
@@ -665,6 +678,7 @@ Qed.
     inversion X0 ; subst.
     destruct H3 as [[isdecl' ] []].
     cbn -[nth_error] in *.
+    unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
     eapply declared_inductive_inj in isdecl' as [].
     2: eexact isdecl.
     subst.
@@ -673,7 +687,7 @@ Qed.
     2: now econstructor ; tea ; apply closed_red_red.
     subst.
     econstructor.
-    - now do 2 split.
+    - do 2 split; eauto. eapply declared_inductive_from_gen; eauto.
     - econstructor ; tea.
       now apply closed_red_red.
     - etransitivity ; tea.
@@ -706,10 +720,11 @@ Qed.
     destruct d as (?&?&isdecl).
     clear e.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    specialize (wt _ wfΣ). destruct wt. inversion X0.
+    pose (hΣ Σ wfΣ). sq. specialize (wt _ wfΣ). destruct wt. inversion X0.
     destruct H1 as [[] []].
     cbn -[lookup_ind_decl nth_error] in *.
-    eapply declared_inductive_inj in isdecl as [] ; tea.
+    unshelve eapply declared_inductive_to_gen in isdecl, H1; eauto.
+    eapply declared_inductive_inj in isdecl as []. 2: exact H1.
     subst.
     now congruence.
   Qed.

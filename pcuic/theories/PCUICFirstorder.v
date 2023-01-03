@@ -134,13 +134,14 @@ Proof using Type.
   induction H0; econstructor; eauto.
 Qed.
 
-Lemma firstorder_ind_propositional {Σ : global_env_ext} i mind oind :
+Lemma firstorder_ind_propositional {Σ : global_env_ext} {wfΣ:wf Σ} i mind oind :
   squash (wf_ext Σ) ->
   declared_inductive Σ i mind oind ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   isPropositional Σ i false.
 Proof using Type.
-  intros Hwf d. pose proof d as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
+  intros Hwf d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
+  pose proof d_ as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
   red. sq.
   unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
   solve_all.
@@ -452,7 +453,8 @@ Proof using Type.
   assert (@instantiated Σ [] T) as Hi end.
   { clear Hspine. destruct Hdecl as [[d1 d3] d2]. pose proof d3 as Hdecl.
     unfold firstorder_ind in Hind.
-    rewrite d1 in Hind. solve_all. clear a.
+    unshelve epose proof (d1_ := declared_minductive_to_gen d1); eauto.
+    rewrite d1_ in Hind. solve_all. clear a.
     move/andP: Hind => [indf H0].
     eapply forallb_nth_error in H0 as H'.
     erewrite d3 in H'.
@@ -529,7 +531,8 @@ Proof using Type.
           rewrite Nat.add_0_r in fot. eapply Nat.ltb_lt in fot.
           cbn. rewrite nth_error_inds. lia. cbn.
           econstructor.
-          { rewrite /firstorder_ind d1 /= /firstorder_mutind indf H0 //. }
+          unshelve epose proof (d1_ := declared_minductive_to_gen d1); eauto.
+          { rewrite /firstorder_ind d1_ /= /firstorder_mutind indf H0 //. }
           intros x.
           rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn subst_mkApps /=. len.
           rewrite -subst_app_context' // PCUICSigmaCalculus.subst_context_decompo.
@@ -659,7 +662,10 @@ Proof using Type.
       }
       eapply firstorder_value_C with (args := []); eauto.
       eapply firstorder_ind_propositional; eauto. sq. eauto.
-      now eapply (declared_constructor_inductive (ind := (i, _))).
+      apply declared_inductive_from_gen.
+      eapply (declared_constructor_inductive (ind := (i, _))).
+      destruct Hwf;
+      unshelve eapply declared_constructor_to_gen; eauto.
     + exfalso. eapply invert_fix_ind with (args := []) in Hty as [].
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
     + exfalso. eapply (typing_cofix_coind (args := [])) in Hty. red in Hty.
@@ -679,7 +685,11 @@ Proof using Type.
       eapply @PCUICInductiveInversion.Construct_Ind_ind_eq with (mdecl := x0) in Hty as Hty'; eauto.
       destruct Hty' as (([[[]]] & ?)  & ? & ? & ? & ? & _). subst.
       econstructor; eauto.
-      2:{ eapply firstorder_ind_propositional; sq; eauto. eapply declared_constructor_inductive in d. eauto. }
+      2:{ eapply firstorder_ind_propositional; sq; eauto.
+          destruct Hwf.
+          unshelve eapply declared_constructor_to_gen in d; eauto.
+          eapply declared_constructor_inductive in d.
+          apply declared_inductive_from_gen; eauto. }
       eapply PCUICSpine.typing_spine_strengthen in spine. 3: eauto.
       2: eapply PCUICInductiveInversion.declared_constructor_valid_ty; eauto.
 
@@ -689,7 +699,9 @@ Proof using Type.
       * econstructor.
       * destruct d as [d1 d2]. inv IH.
         econstructor. inv X.
-        eapply H0. tea. eapply d0. exact i3.
+        eapply H0. tea. destruct Hwf.
+        unshelve eapply declared_inductive_to_gen in d0; eauto.
+        exact i3.
         inv X. eapply IHspine; eauto.
      + exfalso.
        destruct PCUICWcbvEval.cunfold_fix as [[] | ] eqn:E; inversion H.

@@ -276,6 +276,8 @@ Section OnConstructor.
     pose proof (onc.(on_cargs)). simpl in X.
     split. split. split.
     2:{ eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); tea.
+        clear hnth. unshelve eapply declared_constructor_to_gen in declc; eauto.
+        exact (inductive_mind ind.1).
         eapply declc. }
     red. apply wfΣ.
     eapply sorts_local_ctx_wf_local in X => //. clear X.
@@ -645,7 +647,9 @@ Proof.
     as [mdecl' [idecl' [cdecl' [hΓ [isdecl [const htc]]]]]]; auto.
   assert (vty:=declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ hΓ isdecl const).
   eapply typing_spine_strengthen in hs. 3:eapply htc. all:eauto.
-  destruct (declared_constructor_inj isdecl declc) as [? [? ?]].
+  unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
+  unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+  destruct (declared_constructor_inj isdecl declc') as [? [? ?]].
   subst mdecl' idecl' cdecl'. clear isdecl.
   pose proof (on_constructor_inst declc _ const).
   destruct declc as [decli declc].
@@ -694,10 +698,11 @@ Proof.
   assert(wfar : wf_local Σ
   (Γ ,,, subst_instance u' (arities_context (ind_bodies mdecl)))).
   { eapply weaken_wf_local => //.
+    unshelve epose proof (declared_inductive_to_gen decli); eauto.
     eapply wf_local_instantiate => //; destruct decli; eauto.
     eapply wf_arities_context => //; eauto. }
   assert(wfpars : wf_local Σ (subst_instance u (ind_params mdecl))).
-    { eapply on_minductive_wf_params => //; eauto. }
+    { eapply on_minductive_wf_params => //; eauto. destruct decli; eauto. }
 
   split; auto; try split; auto.
   - apply weaken_wf_local => //.
@@ -734,6 +739,7 @@ Proof.
       now eapply subslet_inds; eauto.
       rewrite closed_ctx_subst ?closedn_subst_instance_context. auto.
       apply spars.
+      unshelve eapply declared_inductive_to_gen in decli; eauto.
     * move: (All2_firstn  _ _ _ _ _ mdecl.(ind_npars) Hargs).
       move: (All2_skipn  _ _ _ _ _ mdecl.(ind_npars) Hargs).
       clear Hargs.
@@ -879,7 +885,7 @@ Proof.
   constructor. constructor.
 Qed.
 
-Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ p mdecl idecl) : q = r.
+Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive_gen (lookup_env Σ) p mdecl idecl) : q = r.
 Proof.
   unfold declared_inductive in q, r.
   destruct q, r.
@@ -887,9 +893,9 @@ Proof.
 Qed.
 
 Lemma declared_inductive_unique_sig {cf:checker_flags} {Σ ind mib decl mib' decl'}
-      (decl1 : declared_inductive Σ ind mib decl)
-      (decl2 : declared_inductive Σ ind mib' decl') :
-  @sigmaI _ (fun '(m, d) => declared_inductive Σ ind m d)
+      (decl1 : declared_inductive_gen (lookup_env Σ) ind mib decl)
+      (decl2 : declared_inductive_gen (lookup_env Σ) ind mib' decl') :
+  @sigmaI _ (fun '(m, d) => declared_inductive_gen (lookup_env Σ) ind m d)
           (mib, decl) decl1 =
   @sigmaI _ _ (mib', decl') decl2.
 Proof.
@@ -930,6 +936,7 @@ Proof.
   subst.
   destruct declc as (decli&nthctor).
   cbn in nthctor.
+  unshelve eapply declared_inductive_to_gen in decli, isdecl; eauto.
   pose proof (declared_inductive_unique_sig isdecl decli) as H; noconf H.
   eapply All2i_nth_error_l in nthctor as H; eauto.
   destruct H as (br & nth & cc & ? & ? &?).
@@ -975,7 +982,9 @@ Proof.
   pose proof hc as typec.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  pose proof (declared_inductive_unique_sig declp.p1.p1 declc.p1) as H; noconf H.
+  unshelve epose proof (declp' := declared_projection_to_gen declp) ; eauto.
+  unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
+  pose proof (declared_inductive_unique_sig declp'.p1.p1 declc'.p1) as H; noconf H.
   cbn in H.
   clear H.
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
@@ -1158,7 +1167,8 @@ Proof.
   intros Ht.
   epose proof (declared_projections_subslet _ Hdecl cs Heq onp _ (Nat.le_refl _)).
   have v := !!(validity Ht). eapply isType_mkApps_Ind_inv in v as [? [? []]]; tea; pcuic.
-  eapply (instantiate_wf_subslet (decl:=InductiveDecl mdecl)) in X; tea. 2:apply Hdecl.
+  unshelve epose proof (Hdecl' := declared_inductive_to_gen Hdecl); eauto.
+  eapply (instantiate_wf_subslet (decl:=InductiveDecl mdecl)) in X; tea. 2:apply Hdecl'.
   move: X. rewrite Nat.sub_diag skipn_0.
   rewrite subst_instance_subst_context subst_instance_lift_context.
   rewrite subst_context_lift_context_comm //.
@@ -1293,7 +1303,8 @@ Proof.
   induction 1.
   - constructor 1; len.
     now rewrite closedn_subst_instance.
-  - rewrite subst_instance_mkApps. econstructor 2; len => //; eauto.
+  - rewrite subst_instance_mkApps.
+    econstructor 2; unfold mdecl_at_i in *; len => //; eauto.
     eapply All_map; solve_all.
     now rewrite closedn_subst_instance.
   - simpl. constructor 3; len => //.
@@ -1476,11 +1487,12 @@ Proof.
   - epose proof (ws_cumul_pb_is_closed_context cum).
     rewrite !subst_instance_mkApps !subst_mkApps in cum |- *.
     simpl in cum. eapply ws_cumul_pb_mkApps_tRel in cum; eauto; cycle 1.
-    { rewrite nth_error_app_ge // subst_instance_length //
+    { destruct m as [? [? ?]].
+      rewrite nth_error_app_ge // subst_instance_length //
          nth_error_subst_instance.
       unfold ind_arities, arities_context.
       rewrite rev_map_spec -map_rev.
-      rewrite nth_error_map e /=. reflexivity. }
+      rewrite nth_error_map e0 /=. reflexivity. }
     1:trivial.
     rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in cum.
     eapply ws_cumul_pb_terms_subst in cum.
@@ -1493,36 +1505,40 @@ Proof.
         cbn; intros. eapply ws_cumul_pb_refl; eauto. }
     rewrite app_context_nil_l // in cum. len in cum.
     rewrite /ind_subst.
-    eapply ws_cumul_pb_mkApps_eq => //.
+    eapply ws_cumul_pb_mkApps_eq => //; destruct m as [? [? ?]].
     * move: cl. rewrite -is_closed_ctx_closed => cl.
       apply (closedn_ctx_subst 0 0). cbn. len.
       rewrite !closedn_subst_instance_context. rewrite /ind_arities in cl.
       move: cl. rewrite closedn_subst_instance_context closedn_ctx_app. len. move/andP=> []//.
       eapply closed_inds.
-    * cbn. destruct (leb_spec_Set #|ctx| k); try lia.
+    * cbn. destruct (leb_spec_Set #|Γ| k); try lia.
       destruct (nth_error (inds _ _ _) _) eqn:hnth.
       eapply inds_nth_error in hnth as [n ->]. now cbn.
       eapply nth_error_None in hnth. len in hnth; lia.
-    * cbn. destruct (leb_spec_Set #|ctx| k); try lia.
+    * cbn. destruct (leb_spec_Set #|Γ| k); try lia.
       destruct (nth_error (inds _ _ _) _) eqn:hnth.
       eapply inds_nth_error in hnth as [n ->]. now cbn.
       eapply nth_error_None in hnth. len in hnth; lia.
     * rewrite !map_length.
-      simpl. destruct (Nat.leb #|ctx| k) eqn:eqle.
+      simpl. destruct (Nat.leb #|Γ| k) eqn:eqle.
       eapply Nat.leb_le in eqle.
       rewrite /ind_subst !inds_spec !rev_mapi !nth_error_mapi.
-      rewrite e /=. simpl. constructor. simpl.
+      unshelve epose proof (declm' := declared_minductive_to_gen declm); eauto.
+      rewrite H2 /=. simpl. constructor. simpl.
       unfold R_global_instance, R_global_instance_gen. simpl.
       assert(declared_inductive Σ {|
       inductive_mind := inductive_mind ind;
-      inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|ctx|) |} mdecl i).
-      { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
-      unfold lookup_inductive. rewrite (declared_inductive_lookup H0) //.
-      destruct (on_declared_inductive H0) as [onmind onind] => //. simpl in *.
-      rewrite e0 /ind_realargs.
+      inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|Γ|) |} mdecl i).
+      { split; auto. simpl. rewrite -H2 nth_error_rev; lia_f_equal. }
+      unfold lookup_inductive.
+      unshelve epose proof (H0' := declared_inductive_to_gen H3); eauto.
+      rewrite (declared_inductive_lookup_gen H0') //.
+      destruct (on_declared_inductive H3) as [onmind onind] => //. simpl in *.
+      rewrite e /ind_realargs.
       rewrite !onind.(ind_arity_eq).
-      rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
-      rewrite (Nat.leb_refl) //. eapply Nat.leb_nle in eqle. lia.
+      rewrite !destArity_it_mkProd_or_LetIn /=. len; simpl.
+      rewrite (Nat.leb_refl) //.
+      eapply Nat.leb_nle in eqle. lia.
     * do 2 eapply All2_map. do 2 eapply All2_map_inv in cum.
       eapply All2_All in cum. apply All_All2_refl.
       solve_all.
@@ -2319,23 +2335,24 @@ Proof.
   intros * decli.
   destruct (on_declared_inductive decli) as [onmind oib].
   intros cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  unshelve epose proof (decli' := declared_inductive_to_gen decli); eauto.
   assert (onu : on_udecl_prop Σ (ind_universes mdecl)).
-  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 decli)). }
+  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 decli')). }
   unfold R_global_instance, R_global_instance_gen.
-  pose proof decli as decli'.
   assert (closed_ctx
     (subst_instance u
       (PCUICEnvironment.ind_params mdecl))) as clpu.
-  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto.
+    destruct decli; eauto. }
   assert (closed_ctx
   (subst_instance u'
     (PCUICEnvironment.ind_params mdecl)))  as clpu'.
-  {  eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  {  eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto.
+     destruct decli; eauto. }
   assert (closed_ctx
     (subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
   { rewrite subst_instance_smash. now eapply closedn_smash_context. }
-  clear decli'.
   assert (wf_local Σ
   (smash_context []
      (subst_instance u (PCUICEnvironment.ind_params mdecl)) ,,,
@@ -2355,8 +2372,8 @@ Proof.
     eapply closedn_ctx_upwards; tea. lia. }
   destruct global_variance_gen eqn:gv.
   { move:gv.
-    simpl. unfold lookup_inductive. 
-    rewrite (declared_inductive_lookup decli).
+    simpl. unfold lookup_inductive.
+    rewrite (declared_inductive_lookup_gen decli').
     rewrite oib.(ind_arity_eq).
     rewrite !destArity_it_mkProd_or_LetIn. simpl.
     rewrite app_context_nil_l context_assumptions_app.
@@ -2555,19 +2572,22 @@ Proof.
   intros * declc.
   destruct (on_declared_constructor declc) as [[onmind oib] [cs [hnth onc]]].
   intros cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
   assert (onu : on_udecl_prop Σ (ind_universes mdecl)).
-  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 declc))). }
+  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 declc'))). }
   have clΓ : is_closed_context Γ.
   { apply spine_dom_wf in spu; eauto with fvs. }
   unfold R_global_instance, R_global_instance_gen.
   assert (closed_ctx
     (subst_instance u
       (PCUICEnvironment.ind_params mdecl))) as clpu.
-  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto.
+    destruct declc as [[] ?]; eauto.  }
   assert (closed_ctx
   (subst_instance u'
     (PCUICEnvironment.ind_params mdecl)))  as clpu'.
-  {  eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto.
+    destruct declc as [[] ?]; eauto. }
   assert (closed_ctx
     (subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
@@ -2579,7 +2599,7 @@ Proof.
   destruct global_variance_gen eqn:gv.
   { move:gv.
     simpl. unfold lookup_inductive.
-    rewrite (declared_inductive_lookup declc.p1).
+    rewrite (declared_inductive_lookup_gen declc'.p1).
     rewrite oib.(ind_arity_eq).
     rewrite !destArity_it_mkProd_or_LetIn. simpl.
     rewrite app_context_nil_l context_assumptions_app.
@@ -2790,7 +2810,7 @@ Proof.
       eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ := Γ)).
       3:{ eapply subslet_untyped_subslet, (weaken_subslet (Γ' := [])); eauto. eapply subslet_inds; eauto.
           eapply declc.p1. }
-      3:{ eapply subslet_untyped_subslet, PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. 
+      3:{ eapply subslet_untyped_subslet, PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto.
           eapply declc.p1. }
       3:{ simpl.
         rewrite !subst_instance_app_ctx in wfargs.
@@ -2901,7 +2921,7 @@ Proof.
   eapply closed_wf_local; eauto.
   rewrite subst_instance_smash /= //.
   eapply wf_local_smash_context; auto.
-  now eapply on_minductive_wf_params; pcuic.
+  destruct decli. eapply on_minductive_wf_params; pcuic.
 Qed.
 
 Lemma nth_error_expand_lets Γ Δ n :
@@ -2972,24 +2992,27 @@ Lemma projection_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
     subst_instance u pdecl.(proj_type) ≤ subst_instance u' pdecl.(proj_type).
 Proof.
   intros * declp onudecl cu cu' Ru.
-  epose proof (declared_projection_constructor declp) as declc.
-  destruct (on_declared_constructor declc) as [_ [sort onc]].
-  destruct declc. simpl in d.
-  pose proof (declared_inductive_unique d (let (x, _) := declp in let (x, _) := x in x)). subst d.
+  unshelve epose proof (declp' := declared_projection_to_gen declp); eauto.
+  epose proof (declared_projection_constructor declp') as declc.
+  unshelve epose proof (declc' := declared_constructor_from_gen declc); eauto.
+  destruct (on_declared_constructor declc') as [_ [sort onc]].
+  destruct declc'.
+  unshelve epose proof (d' := declared_inductive_to_gen d); eauto.
+  pose proof (declared_inductive_unique d' (let (x, _) := declp' in let (x, _) := x in x)).
+  subst d'.
   epose proof (declared_projection_type_and_eq wfΣ declp).
   destruct (on_declared_projection declp).
-  set (oib := declared_inductive_inv _ _ _ _) in *. simpl in p1, X.
+  set (oib := declared_inductive_inv _ _ _ _) in p1. simpl in p1, X.
   destruct X as [[? ?] ?].
   destruct p1 as [[[H onps] onidx] onproj].
   simpl in *.
-  destruct ind_cunivs as [|? []] eqn:cseq => //.
+  destruct (ind_cunivs oib) as [|? []] eqn:cseq => //.
   destruct onc as []. noconf e1.
   simpl in *.
   destruct s as [idecl' [idecl'nth _ _ pty pty']].
   rewrite -pty.
   unfold R_global_instance, R_global_instance_gen in Ru.
   unfold global_variance_gen, lookup_inductive, lookup_minductive in Ru.
-  pose proof declp as declp'.
   destruct declp' as [[[? ?] ?] ?]. red in H0.
   unfold lookup_inductive_gen, lookup_minductive_gen in Ru.
   rewrite H0 H1 in Ru.
@@ -3018,7 +3041,7 @@ Proof.
     constructor. eapply eq_term_leq_term.
       eapply eq_term_upto_univ_subst_instance; eauto. all:tc. }
   simpl in Ru.
-  epose proof (on_ctype_variance o _ eqv).
+  pose proof (on_ctype_variance o _ eqv); eauto.
   red in X.
   destruct variance_universes as [[[udecl inst] inst']|] eqn:vu => //.
   destruct X as [onctx _]. simpl in onctx.
@@ -3135,7 +3158,8 @@ Proof.
   exists (mdecl, idecl).
   assert (lookup_inductive Σ ind = Some (mdecl, idecl)).
   { destruct decli as [decli declmi].
-    rewrite /lookup_inductive /lookup_inductive_gen. red in decli. 
+    unshelve eapply declared_minductive_to_gen in decli; eauto.
+    rewrite /lookup_inductive /lookup_inductive_gen. red in decli.
     rewrite /lookup_minductive /lookup_minductive_gen decli.
     now rewrite declmi. }
   split; auto.
@@ -3164,7 +3188,8 @@ Proof.
   intros [? ty_args] ? cparams cum.
   pose proof (wt_ind_app_variance (x; ty_args)) as [mdecl' [idecl' gv]].
   unfold lookup_inductive in idecl'.
-  rewrite (declared_inductive_lookup isdecl) in idecl'. noconf idecl'.
+  unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
+  rewrite (declared_inductive_lookup_gen isdecl') in idecl'. noconf idecl'.
   eapply invert_type_mkApps_ind in ty_args as [ty_args ?] ; eauto.
   erewrite ind_arity_eq in ty_args.
   2: eapply PCUICInductives.oib ; eauto.
@@ -3176,8 +3201,8 @@ Proof.
     apply arity_typing_spine in ty_args as [eq _ _] ; auto.
     rewrite context_assumptions_app !context_assumptions_subst_instance in eq.
     erewrite declared_minductive_ind_npars.
-    2: eapply declared_inductive_minductive ; eauto.
-    lia.
+    2: eapply declared_minductive_from_gen; eapply declared_inductive_minductive ; eauto.
+    Unshelve. all:eauto. lia.
   }
 
   assert (cindices : ctx_inst Σ Γ (skipn (ind_npars mdecl) args) (subst_telescope (ctx_inst_sub cparams) 0
@@ -3191,6 +3216,7 @@ Proof.
             symmetry.
             eapply onNpars.
             eapply on_declared_inductive ; eauto.
+
         }
         lia.
     }
@@ -3706,6 +3732,7 @@ Lemma wf_case_branch_type {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf 
        Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps].
 Proof.
   intros isdecl Hc wfp bc Hp ptm wfpctx.
+  unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
   destruct (WfArity_build_case_predicate_type wfΣ isdecl Hc (PCUICWfUniverses.typing_wf_universe _ Hp) wfp) as [wfty _].
   set wfcpc := wf_case_predicate_context isdecl Hc wfp. simpl in wfcpc. clearbody wfcpc.
   have clipars : closed_ctx (subst_instance (puinst p) (ind_params mdecl)).
@@ -3740,7 +3767,7 @@ Proof.
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
     eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
-    2:eapply isdecl.
+    2:eapply isdecl'.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
     rewrite -(app_context_nil_l (_ ,,, _)) -app_context_assoc app_context_assoc in wfargs.
@@ -3772,7 +3799,7 @@ Proof.
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
     eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
-    2:eapply isdecl.
+    2:eapply isdecl'.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
     rewrite -(app_context_nil_l (_ ,,, _)) -app_context_assoc app_context_assoc in wfargs.
@@ -4068,6 +4095,7 @@ Lemma wf_case_branch_type' {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf
     Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps.
 Proof.
   intros isdecl Hc wfp bc Hp ptm wfpctx.
+  unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
   destruct (WfArity_build_case_predicate_type wfΣ isdecl Hc (PCUICWfUniverses.typing_wf_universe _ Hp) wfp) as [wfty _].
   set wfcpc := wf_case_predicate_context isdecl Hc wfp. simpl in wfcpc. clearbody wfcpc.
   have clipars : closed_ctx (subst_instance (puinst p) (ind_params mdecl)).
@@ -4102,7 +4130,7 @@ Proof.
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
     eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
-    2:eapply isdecl.
+    2:eapply isdecl'.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
     rewrite -(app_context_nil_l (_ ,,, _)) -app_context_assoc app_context_assoc in wfargs.
@@ -4130,7 +4158,7 @@ Proof.
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
     eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
-    2:eapply isdecl.
+    2:eapply isdecl'.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
     rewrite -(app_context_nil_l (_ ,,, _)) -app_context_assoc app_context_assoc in wfargs.

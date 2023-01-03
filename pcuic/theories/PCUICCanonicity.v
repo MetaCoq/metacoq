@@ -740,8 +740,8 @@ Section WeakNormalization.
     - now eapply typing_var in typed.
     - now eapply typing_evar in typed.
     - apply inversion_Const in typed as [decl' [wfd [declc [cu cum]]]]; eauto.
-      red in declc.
-      rewrite declc in e, axfree.
+      unshelve eapply declared_constant_to_gen in declc; eauto.
+      red in declc. rewrite declc in e, axfree.
       noconf e.
       destruct decl; cbn in *.
       rewrite e0 in axfree; congruence.
@@ -781,13 +781,16 @@ Section WeakNormalization.
     T = tConst cst u.
   Proof using wfΣ.
     intros hdecl hb.
+    unshelve eapply declared_constant_to_gen in hdecl; eauto.
     generalize_eq x (tConst cst u).
     move=> e [clΓ clt] red.
     revert cst u hdecl hb e.
     eapply clos_rt_rt1n_iff in red.
     induction red; simplify_dep_elim.
     - reflexivity.
-    - depelim r; solve_discr. congruence.
+    - depelim r; solve_discr.
+      unshelve eapply declared_constant_to_gen in isdecl; eauto.
+      congruence.
   Qed.
 
   Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
@@ -971,12 +974,15 @@ Section WeakNormalization.
 
     - redt (subst_instance u body); auto.
       eapply red1_red. econstructor; eauto.
+      apply declared_constant_from_gen; eauto.
       eapply IHHe. eapply subject_reduction; eauto.
       eapply red1_red. econstructor; eauto.
+      apply declared_constant_from_gen; eauto.
 
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
-      destruct (declared_inductive_inj d.p1 isdecl); subst mdecl0 idecl0.
+      unshelve epose proof (isdecl_ := declared_inductive_to_gen isdecl); eauto.
+      destruct (declared_inductive_inj d isdecl_); subst mdecl0 idecl0.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).
       assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) p args br)).

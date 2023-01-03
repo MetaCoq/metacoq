@@ -1713,9 +1713,10 @@ Section SubstIdentity.
     declared_minductive Σ mind mdecl ->
     wf_ext_wk (Σ, ind_universes mdecl).
   Proof using Type.
-    intros wfΣ decli.
+    intros wfΣ decli. eapply declared_minductive_to_gen in decli.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
     red. simpl. split; auto.
+    Unshelve. all:eauto.
   Qed.
 
   Lemma declared_inductive_wf_global_ext Σ mdecl mind :
@@ -1723,9 +1724,10 @@ Section SubstIdentity.
     declared_minductive Σ mind mdecl ->
     wf_global_ext Σ (ind_universes mdecl).
   Proof using Type.
-    intros wfΣ decli.
+    intros wfΣ decli. eapply declared_minductive_to_gen in decli.
     split; auto.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
+    Unshelve. all:eauto.
   Qed.
 
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.

@@ -72,6 +72,13 @@ Proof.
   lia.
 Qed.
 
+Lemma notInFresh Σ decl : ~In (make_fresh_name Σ, decl) (declarations Σ).
+Proof.
+  pose proof (max_name_length_ge Σ.(declarations)) as all.
+  intro H. eapply Forall_forall in all; eauto.
+  cbn in all. rewrite string_repeat_length in all. lia.
+Qed.
+
 Definition Prop_univ := Universe.of_levels (inl PropLevel.lProp).
 
 Definition False_oib : one_inductive_body :=
@@ -106,6 +113,7 @@ Proof.
   - destruct lookup_env eqn:find; auto.
     destruct g; auto.
     destruct c; auto.
+    apply declared_constant_from_gen in find.
     apply axfree in find; cbn in *.
     now destruct cst_body0.
   - destruct nth_error; auto.
@@ -113,6 +121,7 @@ Proof.
     destruct nth_error eqn:nth; auto.
     eapply nth_error_forall in nth; eauto.
 Qed.
+
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
@@ -181,9 +190,8 @@ Proof.
     destruct typ_prod.
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
-    - hnf. cbn.
-      unfold declared_minductive, declared_minductive_gen.
-      cbn. now rewrite eq_kername_refl.
+    - apply declared_inductive_from_gen. hnf. cbn.
+      unfold declared_minductive_gen. cbn. now rewrite eq_kername_refl.
     - now cbn. }
   pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf _ Σext (sq wf')). cbn in *.
@@ -208,23 +216,21 @@ Proof.
     destruct s.
     destruct p.
     destruct typ_false as (((((->&_)&_)&_)&_)&_).
-    clear -d.
+    clear -d wfΣ. destruct wfΣ. cbn in *.
+    (*unshelve eapply declared_constructor_to_gen in d; eauto.*)
     destruct d as ((?&?)&?).
-    cbn in *.
-    red in H.
-    cbn in *.
-    rewrite eq_kername_refl in H.
+    cbn in *. destruct H.
     noconf H.
     noconf H0.
     cbn in H1.
     rewrite nth_error_nil in H1.
     discriminate.
+    eapply notInFresh; eauto.
   - eapply axiom_free_axiom_free_value.
     intros kn decl isdecl.
-    hnf in isdecl.
-    cbn in isdecl.
-    destruct eq_kername; [noconf isdecl|].
-    eapply axfree; eauto.
+    destruct isdecl.
+    + inversion H.
+    + eapply axfree; eauto.
   - unfold check_recursivity_kind.
     cbn.
     rewrite eq_kername_refl; auto.

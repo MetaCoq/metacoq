@@ -127,11 +127,13 @@ Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext}
   (Is_proof Σ Γ (tCase ci p c brs) -> False) ->
   ind_kelim idecl = IntoAny \/ ind_kelim idecl = IntoSetPropSProp.
 Proof.
-  intros cu wfΣ. intros.
+  intros cu wfΣ. pose wfΣ' := wfΣ.1. intros.
   assert (HT := X).
   eapply inversion_Case in X as [mdecl' [idecl' [isdecl' [indices [data cum]]]]]; eauto.
   destruct data.
-  eapply declared_inductive_inj in isdecl' as []. 2:exact H. subst.
+  unshelve epose proof (H_ := declared_inductive_to_gen H); eauto.
+  unshelve epose proof (isdecl'_ := declared_inductive_to_gen isdecl'); eauto.
+  eapply declared_inductive_inj in isdecl'_ as []. 2:exact H_. subst.
   enough (~ (Universe.is_prop ps \/ Universe.is_sprop ps)).
   { clear -cu wfΣ allowed_elim H1.
     apply wf_ext_consistent in wfΣ as (val&sat).
@@ -324,7 +326,7 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
         is_propositional (subst_instance_univ u idecl.(ind_sort)) ->
         s = subst_instance_univ u idecl.(ind_sort)))))%type.
 Proof.
-  intros checku wfΣ Ht.
+  intros checku wfΣ Ht. pose wfΣ' := wfΣ.1.
   induction Δ using PCUICInduction.ctx_length_rev_ind in Γ, args', args, T', Ht |- *; simpl; intros sp.
   - dependent elimination sp as [spnil _ _ e|spcons isty isty' e _ sp].
     split; [repeat constructor|].
@@ -334,7 +336,9 @@ Proof.
       eapply subject_reduction_closed in Ht; eauto.
       eapply inversion_mkApps in Ht as [A [tInd sp]]; auto.
       eapply inversion_Ind in tInd as [mdecl' [idecl' [wfΓ [decli' [cu' cum]]]]]; auto.
-      destruct (declared_inductive_inj decli decli'); subst mdecl' idecl'.
+      unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+      unshelve epose proof (decli'_ := declared_inductive_to_gen decli'); eauto.
+      destruct (declared_inductive_inj decli_ decli'_); subst mdecl' idecl'.
       clear decli'.
       eapply typing_spine_strengthen in sp. 3:tea.
       rewrite (oib.(ind_arity_eq)) in sp.
@@ -520,7 +524,9 @@ Proof.
   set (onib := declared_inductive_inv _ _ _ _) in *.
   clearbody onib. clear oib.
   eapply typing_spine_strengthen in hsp; eauto.
-  pose proof (declared_inductive_inj decli (proj1 declc)) as [-> ->].
+  unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+  unshelve epose proof (declc_ := declared_inductive_to_gen declc); eauto.
+pose proof (declared_inductive_inj decli_ declc_) as [-> ->].
   assert (isType Σ Γ (type_of_constructor mdecl cdecl' (ind, n) u)).
   { eapply PCUICInductiveInversion.declared_constructor_valid_ty in declc; eauto. }
   move: X hsp.
@@ -584,7 +590,7 @@ Proof.
     eapply In_map in H1 as [cs' [ins ->]].
     rewrite is_propositional_subst_instance.
     eapply All_In in X1; eauto.
-    sq. apply X1.
+    sq. apply X1. apply decli.
 
   * intros _ sp.
     rewrite List.skipn_all2. lia.
@@ -614,7 +620,9 @@ Proof.
   assert (wfΣ : wf Σ) by apply HΣ.
   destruct (on_declared_inductive H) as [[]]; eauto.
   intros ?. intros.
-  eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
+  unshelve epose proof (H_ := declared_inductive_to_gen H); eauto.
+  unshelve epose proof (H0_ := declared_inductive_to_gen H0); eauto.
+  eapply declared_inductive_inj in H_ as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
   assert (wf Σ') by auto.
   now eapply weakening_env_declared_inductive; tc.
@@ -651,7 +659,9 @@ Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_
 Proof.
   intros X H X0 H0.
   eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
-  destruct (declared_inductive_inj H d.p1) as [-> ->].
+  unshelve epose proof (H_ := declared_inductive_to_gen H); eauto.
+  unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
+  destruct (declared_inductive_inj H_ d_) as [-> ->].
   destruct x2. cbn in *.
   pose proof (declared_projection_projs_nonempty X d).
   pose proof (on_declared_projection d) as [_ onp].

@@ -179,7 +179,8 @@ Section Pred1_inversion.
         eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_tConst_axiom (Σ : global_env) (Γ Δ : context)
+  Lemma pred1_mkApps_tConst_axiom {cf : checker_flags}
+      (Σ : global_env) {wfΣ : wf Σ} (Γ Δ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->
     pred1 Σ Γ Δ (mkApps (tConst cst u) args) c ->
@@ -187,7 +188,8 @@ Section Pred1_inversion.
   Proof with solve_discr.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X...
-    - red in H, isdecl. unfold declared_constant_gen in *. 
+    - unshelve eapply declared_constant_to_gen in H, isdecl; eauto.
+      red in H, isdecl. unfold declared_constant_gen in *.
       rewrite isdecl in H; noconf H.
       congruence.
     - exists []. intuition auto.
@@ -3615,16 +3617,17 @@ Section Rho.
       + eapply forallb_All in b;eapply All2_All_mix_left in X4; tea.
         eapply All2_sym, All2_map_left; solve_all.
 
-    - simpl; simp rho; simpl.
+    - unshelve eapply declared_constant_to_gen in H; eauto.
+      simpl; simp rho; simpl.
       simpl in X0. red in H. rewrite H /= heq_cst_body /=.
       now eapply pred1_refl_gen.
 
     - simpl in *. simp rho; simpl.
       destruct (lookup_env Σ c) eqn:Heq. 2:{ constructor; auto. }
       destruct g. 2:{ constructor; auto. }
-      destruct c0. destruct cst_body0 eqn:Heq'. pcuic.
+      destruct c0. destruct cst_body0 eqn:Heq'.
+      econstructor; try  unshelve eapply declared_constant_from_gen; eauto.
       constructor; auto.
-
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
       change eq_inductive with (@eqb inductive _).

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
 From Equations Require Import Equations.
 From MetaCoq Require Import LibHypsNaming.
 
@@ -195,8 +195,6 @@ Proof.
 Qed.
 
 
-
-
 Definition on_udecl_prop (Σ : global_env) (udecl : universes_decl)
   := let levels := levels_of_udecl udecl in
      let global_levels := global_levels Σ.(universes) in
@@ -264,7 +262,7 @@ Section ExtendsWf.
 
   Let wf := on_global_env Pcmp P.
 
-Lemma extends_lookup Σ Σ' c decl :
+  Lemma extends_lookup Σ Σ' c decl :
   wf Σ' ->
   extends Σ Σ' ->
   lookup_env Σ c = Some decl ->
@@ -283,8 +281,11 @@ Lemma weakening_env_declared_constant :
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
+  unfold declared_constant in *.
+  destruct H2 as [? []]. rewrite e.
+  apply in_or_app. now right.
 Qed.
+
 Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
@@ -293,8 +294,10 @@ Lemma weakening_env_declared_minductive `{CF:checker_flags}:
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
-Qed.
+  unfold declared_minductive in *.
+  destruct H2 as [? []]. rewrite e.
+  apply in_or_app. now right.
+  Qed.
 
 Hint Extern 0 => eapply weakening_env_declared_minductive : extends.
 

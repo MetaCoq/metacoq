@@ -263,7 +263,8 @@ Section BDToPCUICTyping.
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
-        move: (H) => [? ?].
+        move: (H) => [decl ?].
+        unshelve epose proof (decl' := declared_minductive_to_gen decl); eauto.
         eapply wf_local_subst_instance_decl ; eauto.
         eapply wf_local_app_inv.
         now eapply on_minductive_wf_params_indices.

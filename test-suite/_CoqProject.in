@@ -38,6 +38,7 @@ unfold.v
 univ.v
 tmVariable.v
 order_rec.v
+quotation_notations.v
 # primitive.v
 inferind.v
 inferindunivs.v

@@ -78,12 +78,16 @@ Proof.
   { apply forall_nth_error_Alli. intros.
     eapply Alli_nth_error in oind; eauto. simpl in oind.
     destruct oind. destruct onArity as [s Hs].
+    unshelve eapply declared_inductive_to_gen in isdecl; eauto.
     eapply type_Cumul; eauto.
     econstructor; eauto. split; eauto with pcuic.
+    unshelve eapply declared_minductive_from_gen; eauto with pcuic.
     eapply consistent_instance_ext_abstract_instance; eauto.
     eapply declared_inductive_wf_global_ext; eauto with pcuic.
+    unshelve eapply declared_minductive_from_gen; eauto with pcuic.
     rewrite (subst_instance_ind_type_id Σ _ {| inductive_mind := inductive_mind ind; inductive_ind := i |}); eauto.
-    destruct isdecl. split; eauto. reflexivity. }
+    unshelve eapply declared_inductive_from_gen; eauto with pcuic.
+    reflexivity. }
   clear oind.
   revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
@@ -654,7 +658,9 @@ Section WfEnv.
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     wf_local Σ (subst_instance u (ind_params mdecl)).
   Proof using wfΣ.
-    intros. eapply (wf_local_instantiate (decl := InductiveDecl mdecl)); eauto.
+    intros.
+    unshelve epose proof (declared_minductive_to_gen H); eauto with pcuic.
+    eapply (wf_local_instantiate (decl := InductiveDecl mdecl)); eauto.
     eapply on_declared_minductive in H; auto.
     now apply onParams in H.
   Qed.

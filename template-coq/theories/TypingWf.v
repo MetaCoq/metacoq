@@ -196,18 +196,37 @@ Proof.
   intro H; eapply lookup_env_extends_NoDup, NoDup_on_global_decls, H.
 Qed.
 
+Lemma In_lookup_globals k decls : In k (map fst decls) -> #| lookup_globals decls k | >= 1.
+Proof.
+  induction decls; cbn => //.
+  case_eq (k == a.1).
+  - intros e _. cbn. lia.
+  - intros e [].
+   + rewrite H in e. rewrite eqb_refl in e. inversion e.
+   + now apply IHdecls.
+Qed.
 
 Lemma NoDup_extends (Σ : global_env) (Σ' : global_env) :
-        NoDup (map fst (declarations Σ')) -> extends_decls Σ Σ' -> NoDup (map fst (declarations Σ)).
+        NoDup (map fst (declarations Σ')) -> extends Σ Σ' -> NoDup (map fst (declarations Σ)).
 Proof.
-  intros Hl [_ [Σ'' eq] _]. rewrite eq in Hl; clear -Hl.
-  induction Σ'' => //. eapply IHΣ''; cbn in *.
-  now inversion Hl.
+  intros Hl [_ Hex _].
+  destruct Σ, Σ'; cbn in *. clear - Hl Hex.
+  induction declarations0; cbn in *; econstructor.
+  - intros H. specialize (Hex a.1). destruct Hex as [decls Hdecls].
+    pose proof (NoDup_length_lookup_globals _ Hl a.1).
+    rewrite eqb_refl in Hdecls. apply In_lookup_globals in H.
+    rewrite Hdecls in H0. rewrite app_length in H0. cbn in H0.
+    destruct lookup_global; lia.
+  - eapply IHdeclarations0. intros. specialize (Hex c).
+    destruct Hex as [decls Hdecls]. case_eq (c == a.1).
+    + intros e. exists (decls ++ [a.2]). rewrite Hdecls e.
+      now rewrite <- app_assoc.
+    + intros e. exists decls. now rewrite Hdecls e.
 Qed.
 
 Lemma declared_env_extends {cf : checker_flags} (Σ : global_env) k d (Σ' : global_env) P :
   on_global_env cumul_gen P Σ' ->
-  In (k,d) (declarations Σ) -> extends_decls Σ Σ' -> In (k,d) (declarations Σ').
+  In (k, InductiveDecl d) (declarations Σ) -> extends Σ Σ' -> In (k,InductiveDecl d) (declarations Σ').
 Proof.
   intros; apply lookup_global_Some_iff_In_NoDup.
   - destruct X; eapply NoDup_on_global_decls; eauto.
@@ -223,6 +242,7 @@ Proof.
   intros wfΣ'.
   induction 1 using term_wf_forall_list_ind; try solve [econstructor; eauto; solve_all].
   - intros. destruct H. destruct X0.
+    unfold declared_minductive in H.
     eapply declared_env_extends in H; tea.
     econstructor; repeat split; eauto; solve_all.
 Qed.

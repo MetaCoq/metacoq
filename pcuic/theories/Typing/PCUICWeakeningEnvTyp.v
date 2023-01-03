@@ -335,6 +335,17 @@ Proof.
   apply Hidecl.
 Qed.
 
+Lemma weaken_decls_lookup_on_global_env `{checker_flags} P Σ c decl :
+  weaken_env_decls_prop cumulSpec0 (lift_typing typing) P ->
+  wf Σ -> on_global_env cumulSpec0 P Σ ->
+  lookup_env Σ c = Some decl ->
+  on_global_decl cumulSpec0 P (Σ, universes_decl_of_decl decl) c decl.
+Proof.
+  intros. eapply weakening_env_decls_lookup_on_global_env; eauto.
+  split => //.
+  - exists []; simpl; destruct Σ; eauto.
+Qed.
+
 Lemma declared_constructor_inv `{checker_flags} {Σ P mdecl idecl ref cdecl}
   (HP : weaken_env_strictly_decls_prop cumulSpec0 (lift_typing typing) (lift_typing P))
   (wfΣ : wf Σ)

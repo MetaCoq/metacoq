@@ -466,6 +466,7 @@ Module Environment (T : Term).
     move: Σ; elim => //=; try tauto.
     move => [??]?; case: eqb_spec => ? //=; subst => <-; cbn in *; firstorder (subst; auto).
     all: (idtac + constructor); congruence.
+  Qed.
 
   Lemma lookup_global_Some_if_In Σ kn decl
   : lookup_global Σ kn = Some decl -> In (kn, decl) Σ.

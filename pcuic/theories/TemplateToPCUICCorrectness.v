@@ -222,8 +222,6 @@ Proof.
   intros wfΣ ext wftΣ wfΣ' wft.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
   rewrite !trans_lookup_inductive.
-  unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
-  eapply extends_decls_wf; tea. rewrite {}H2.
   destruct H as [H hnth].
   unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
   red in H.

@@ -1358,8 +1358,10 @@ Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' :
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
   red. inv wf. inv X.
-  assert (wfΣ : PCUICTyping.wf Σ)
-    by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
+  assert (wfΣ : PCUICTyping.wf Σ).
+  { eapply strictly_extends_decls_wf; split; tea ; eauto. econstructor; eauto.
+    now eexists [_].
+  }
   left.
   exists cst. split.
   eapply declared_constant_from_gen.
@@ -1406,8 +1408,10 @@ Lemma global_erases_with_deps_weaken kn kn' d Σ Σ' :
 Proof.
   intros wf [[cst [declc [cst' [declc' [ebody IH]]]]]|].
   red. inv wf. inv X. left.
-  assert (wfΣ : PCUICTyping.wf Σ)
-    by now eapply strictly_extends_decls_wf; tea; split => //; eexists [_].
+  assert (wfΣ : PCUICTyping.wf Σ).
+  { eapply strictly_extends_decls_wf; split; tea ; eauto. econstructor; eauto.
+    now eexists [_].
+  }
   exists cst. split.
   eapply declared_constant_from_gen.
   unshelve eapply declared_constant_to_gen in declc; eauto.
@@ -1422,12 +1426,13 @@ Proof.
   destruct (cst_body cst) eqn:bod; destruct (E.cst_body cst') eqn:bod' => //.
   intuition auto.
   eapply (erases_weakeninv_env (Σ  := (Σ, cst_universes cst)) (Σ' := (add_global_decl Σ (kn', d), cst_universes cst))). 5:eauto.
-  split; auto. constructor; eauto.
+  split; auto. constructor; eauto. constructor; eauto.
   split; auto; exists [(kn', d)]; intuition eauto.
   eapply on_declared_constant in declc; auto.
   red in declc. rewrite bod in declc. eapply declc.
   noconf H0.
   apply erases_deps_weaken; auto.
+  constructor; eauto. constructor; eauto.
 
   right. destruct H as [mib [mib' [Hm [? ?]]]].
   exists mib, mib'; intuition auto. pose proof (wf_ := wf).

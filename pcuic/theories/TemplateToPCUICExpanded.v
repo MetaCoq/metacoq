@@ -51,7 +51,7 @@ Proof.
   subst c. eexists. split ; [|exact H]. sq. red. split => //. cbn.
   eexists. cbn. instantiate (1:= [_]); reflexivity.
   intros hl; destruct (IHexp  hl). exists x. intuition auto.
-  sq. eapply extends_decls_trans; tea.
+  sq. eapply strictly_extends_decls_trans; tea.
   split => //. now exists [(kn, d)].
 Qed.
 

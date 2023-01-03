@@ -494,7 +494,7 @@ Proof.
         easy. }
       inversion wfΣ; subst. destruct X0.
       eapply declared_constant_inv in H4; eauto.
-      2:eapply weaken_env_prop_typing.
+      2:exact weaken_env_prop_typing.
       red in H4.
       rewrite body in *.
       cbn in *.
@@ -502,7 +502,7 @@ Proof.
       1,3,5,6:constructor; auto.
       2:{ split; auto. eexists [_]; reflexivity. }
       eapply declared_constant_inv in H.
-      2:eapply weaken_env_prop_typing.
+      2:exact weaken_env_prop_typing.
       2: easy.
       2: easy.
       unfold on_constant_decl in H.
@@ -511,7 +511,7 @@ Proof.
     + now destruct E.cst_body.
   - easy.
   - econstructor; eauto. eapply weakening_env_declared_constructor; eauto with pcuic; tc.
-    { eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. }
+    { eapply extends_decls_extends, strictly_extends_decls_extends_decls. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. }
     invs wfΣ.
     destruct H0. split. 2: eauto.
     destruct d. split; eauto.
@@ -829,4 +829,3 @@ Proof.
   eapply erases_deps_single; eauto.
   now eapply erases_global_all_deps.
 Qed.
-

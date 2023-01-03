@@ -1563,19 +1563,12 @@ Qed.
 
 Lemma lookup_global_extends Σ Σ' kn d :
   lookup_env Σ kn = Some d ->
-  extends_decls Σ Σ' ->
+  extends Σ Σ' ->
   EnvMap.fresh_globals Σ'.(declarations) ->
   lookup_env Σ' kn = Some d.
 Proof.
-  destruct Σ as [univs Σ retro].
-  destruct Σ' as [univs' Σ' retro'].
-  cbn. move=> hl [] /=; intros <- [Σ'' ->] extretro.
-  induction Σ''; cbn; auto.
-  case: eqb_spec.
-  - intros ->. intros fr.
-    depelim fr. eapply lookup_global_Some_fresh in hl. cbn in hl.
-    red in H. eapply Forall_app in H as [frl frr]. contradiction.
-  - move=> _ hf. now depelim hf.
+  setoid_rewrite EnvMap.fresh_globals_iff_NoDup.
+  intros; eapply lookup_env_extends_NoDup; tea.
 Qed.
 
 Lemma eta_expand_global_env_expanded {cf : checker_flags} (Σ : global_env_ext_map) :
@@ -1587,7 +1580,7 @@ Proof.
   unfold Typing.wf, Typing.on_global_env. intros [onu ond].
   cbn in *.
   destruct Σ as []. cbn in *.
-  assert (extends_decls env env). red; split => //. now exists [].
+  assert (strictly_extends_decls env env) by reflexivity.
   revert X.
   move: map repr wf.
   generalize env at 1 2 4 6 7.
@@ -1608,6 +1601,7 @@ Proof.
     rewrite GlobalEnvMap.lookup_env_spec /=.
     cbn. unfold snoc.
     eapply (lookup_global_extends Σ' (set_declarations Σ' (Σ'' ++ (kn, d) :: Σ)%list)); eauto.
+    apply extends_decls_extends, strictly_extends_decls_extends_decls.
     split => //. cbn. now exists (Σ'' ++ [(kn, d)])%list; rewrite -app_assoc. }
   forward H. split. cbn. split => //. now cbn.
   specialize (H o0).

@@ -149,7 +149,7 @@ Proof.
 Qed.
 
 Lemma extends_trans_global_decls_acc (Σ' : global_env_map) (Σ : Ast.Env.global_declarations) :
-  extends_decls Σ' (trans_global_decls Σ' Σ).
+  strictly_extends_decls Σ' (trans_global_decls Σ' Σ).
 Proof.
   induction Σ.
   * split; cbn; now try exists [].
@@ -171,10 +171,10 @@ Lemma trans_lookup_env {cf} {Σ : Ast.Env.global_env} cst {wfΣ : Typing.wf Σ} 
   | None => lookup_env (trans_global_env Σ) cst = None
   | Some d =>
     ∑ Σ' : Ast.Env.global_env,
-      [× Ast.Env.extends_decls Σ' Σ,
+      [× Ast.Env.strictly_extends_decls Σ' Σ,
         Typing.wf Σ',
         wf_global_decl (Σ', Ast.universes_decl_of_decl d) cst d,
-        extends_decls (trans_global_env Σ') (trans_global_env Σ) &
+        strictly_extends_decls (trans_global_env Σ') (trans_global_env Σ) &
         lookup_env (trans_global_env Σ) cst = Some (trans_global_decl (trans_global_env Σ') d)]
   end.
 Proof.
@@ -215,15 +215,13 @@ Proof.
 Qed.
 
 Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t :
-  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
+  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf (trans_global_env Σ) -> wf Σ' ->
   WfAst.wf Σ t ->
   trans (trans_global_env Σ) t = trans Σ' t.
 Proof.
-  intros wfΣ ext wfΣ' wft.
+  intros wfΣ ext wftΣ wfΣ' wft.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
   rewrite !trans_lookup_inductive.
-  unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
-  eapply extends_decls_wf; tea. rewrite {}H2.
   destruct H as [H hnth].
   unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
   red in H.
@@ -234,7 +232,7 @@ Proof.
   unfold lookup_inductive_gen, lookup_minductive_gen.
   rewrite hl => /= //. cbn.
   rewrite nth_error_map hnth /=.
-  rewrite (extends_lookup _ _ _ _ wfΣ' (extends_decls_extends _ _ ext) hl) /=.
+  rewrite (extends_lookup _ _ _ _ wfΣ' ext hl) /=.
   rewrite nth_error_map hnth /=.
   red in X0.
   f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
@@ -242,11 +240,11 @@ Proof.
 Qed.
 
 Lemma trans_decl_weakening {cf} Σ {Σ' : global_env_map} t :
-  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
+  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf (trans_global_env Σ) -> wf Σ' ->
   WfAst.wf_decl Σ t ->
   trans_decl (trans_global_env Σ) t = trans_decl Σ' t.
 Proof.
-  intros wfΣ ext wfΣ' wft.
+  intros wfΣ ext wftΣ wfΣ' wft.
   rewrite /trans_decl; destruct t as [na [b|] ty] => /=; f_equal;
   rewrite trans_weakening => //; apply wft.
 Qed.
@@ -258,11 +256,11 @@ Proof. now rewrite map_length. Qed.
 Hint Rewrite @trans_local_length : len.
 
 Lemma trans_local_weakening {cf} Σ {Σ' : global_env_map} t :
-  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
+  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf (trans_global_env Σ) -> wf Σ' ->
   All (WfAst.wf_decl Σ) t ->
   trans_local (trans_global_env Σ) t = trans_local Σ' t.
 Proof.
-  intros wfΣ ext wfΣ' a.
+  intros wfΣ ext wftΣ wfΣ' a.
   induction a; cbn; auto.
   f_equal. 2:apply IHa.
   rewrite /trans_decl; destruct x as [na [b|] ty] => /=; f_equal;
@@ -270,11 +268,11 @@ Proof.
 Qed.
 
 Lemma trans_ind_body_weakening {cf} Σ {Σ' : global_env_map} b :
-  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
+  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf (trans_global_env Σ) -> wf Σ' ->
   TypingWf.wf_inductive_body Σ b ->
   trans_one_ind_body (trans_global_env Σ) b = trans_one_ind_body Σ' b.
 Proof.
-  intros wfΣ ext wfΣ' H.
+  intros wfΣ ext wftΣ wfΣ' H.
   destruct H. rewrite /trans_one_ind_body; destruct b; cbn in *.
   f_equal; solve_all.
   - rewrite trans_decl_weakening //.
@@ -288,31 +286,31 @@ Proof.
 Qed.
 
 Lemma trans_global_decl_weaken {cf} (Σ : Ast.Env.global_env_ext) {Σ' : global_env_map} kn d :
-  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
+  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf (trans_global_env Σ) -> wf Σ' ->
   wf_global_decl Σ kn d ->
   trans_global_decl (trans_global_env Σ) d = trans_global_decl Σ' d.
 Proof.
-  intros.
+  intros wfΣ ext wftΣ wfΣ' wfd.
   destruct d; cbn; f_equal.
   - rewrite /trans_constant_body /=.
-    do 3 red in X2.
+    do 3 red in wfd.
     destruct (Ast.Env.cst_body c) => /=. cbn.
     f_equal.
-    erewrite trans_weakening; tea. reflexivity. apply X2.
-    erewrite trans_weakening; tea. reflexivity. apply X2.
+    erewrite trans_weakening; tea. reflexivity. apply wfd.
+    erewrite trans_weakening; tea. reflexivity. apply wfd.
     f_equal.
-    erewrite trans_weakening; tea. reflexivity. apply X2.
+    erewrite trans_weakening; tea. reflexivity. apply wfd.
   - rewrite /trans_minductive_body. f_equal.
     * erewrite trans_local_weakening; trea.
-      eapply TypingWf.on_global_inductive_wf_params in X2. solve_all.
-    * eapply TypingWf.on_global_inductive_wf_bodies in X2. solve_all.
+      eapply TypingWf.on_global_inductive_wf_params in wfd. solve_all.
+    * eapply TypingWf.on_global_inductive_wf_bodies in wfd. solve_all.
       rewrite trans_ind_body_weakening //.
 Qed.
 
 Import TypingWf.
 
 Lemma weaken_wf_decl_pred {cf} (Σ Σ' : Ast.Env.global_env) Γ t T :
-  Typing.wf Σ -> Ast.Env.extends_decls Σ Σ' -> Typing.wf Σ' ->
+  Typing.wf Σ -> Ast.Env.extends Σ Σ' -> Typing.wf Σ' ->
   WfAst.wf_decl_pred Σ Γ t T -> WfAst.wf_decl_pred Σ' Γ t T.
 Proof.
   intros wf ext wf' ong.
@@ -331,7 +329,8 @@ Proof.
   destruct Ast.Env.lookup_env eqn:heq => //.
   intros [Σ' [ext wfΣ' wfdecl ext' hl]].
   rewrite hl. cbn. f_equal.
-  eapply (trans_global_decl_weaken (Σ', Ast.universes_decl_of_decl g)); tea.
+  eapply (trans_global_decl_weaken (Σ', Ast.universes_decl_of_decl g)); tea; tc.
+  eapply strictly_extends_decls_wf; tea.
 Qed.
 
 Section Translation.
@@ -342,7 +341,7 @@ Section Translation.
 
   Ltac dest_lookup :=
     destruct TransLookup.lookup_inductive as [[mdecl idecl]|].
-    Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' :
+  Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' :
     map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
   Proof.
     induction l in l' |- *; destruct l'; simpl; auto. f_equal.
@@ -751,7 +750,7 @@ Lemma declared_inductive_inj {cf Σ mdecl mdecl' ind idecl idecl'}
   Ast.declared_inductive Σ ind mdecl idecl ->
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
-  intros [] [].
+  intros [] []. unfold Ast.declared_minductive in *.
   unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H, H1; eauto.
   unfold Ast.declared_minductive_gen in H1.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.

@@ -537,7 +537,7 @@ Qed.
   Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T =>
       wf_universes Σ t && wf_universes Σ T).
   Proof using Type.
-    red. intros.
+    do 2 red. intros.
     to_prop; apply /andP; split; now apply weaken_wf_universes.
   Qed.
 

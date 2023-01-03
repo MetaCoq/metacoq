@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
      PCUICUnivSubst PCUICContextSubst PCUICTyping
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedConv PCUICClosedTyp
+     PCUICWeakeningEnvConv PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedConv PCUICClosedTyp
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity PCUICUnivSubstitutionConv
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICInstTyp PCUICOnFreeVars.
 
@@ -602,7 +602,7 @@ Lemma wf_arities_context {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mi
   declared_minductive Σ mind mdecl -> wf_local (Σ, ind_universes mdecl) (arities_context mdecl.(ind_bodies)).
 Proof.
   intros Hdecl.
-  eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
+  eapply declared_minductive_inv in Hdecl. 2:exact weaken_env_prop_typing. all:eauto.
   eapply wf_arities_context'; eauto.
 Qed.
 

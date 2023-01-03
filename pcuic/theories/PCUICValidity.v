@@ -26,7 +26,7 @@ Section Validity.
 
   Lemma isType_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => isType Σ Γ T).
   Proof using Type.
-    red. intros.
+    do 2 red. intros.
     apply infer_typing_sort_impl with id X2; intros Hs.
     unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort _))); eauto with pcuic.
     red. simpl. destruct Σ. eapply Hs.
@@ -38,7 +38,7 @@ Section Validity.
     weaken_env_prop cumulSpec0 (lift_typing typing)
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof using Type.
-    red. intros.
+    do 2 red. intros.
     apply lift_typing_impl with (1 := X2); intros ? Hs.
     now eapply (isType_weaken_full (Σ, _)).
   Qed.
@@ -284,7 +284,7 @@ Section Validity.
         eapply isType_weakening; eauto.
         unshelve eapply declared_constant_to_gen in H; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
-        eapply weaken_env_prop_isType.
+        exact weaken_env_prop_isType.
       * have ond := on_declared_constant wf H.
         do 2 red in ond. simpl in ond.
         simpl in ond.

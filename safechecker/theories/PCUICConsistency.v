@@ -18,6 +18,7 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
@@ -174,11 +175,12 @@ Proof.
       + reflexivity.
       + reflexivity.
   }
+  assert (strictly_extends_decls Σ Σext.1).
+  { split; auto.
+    exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
   eapply (env_prop_typing weakening_env) in cons; auto.
   2:instantiate (1:=Σext.1).
-  3:{ split; auto; cbn. split; [lsets|csets].
-      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity.
-      apply Retroknowledge.extends_refl. }
+  3:tc.
   2: now destruct wf'.
 
   set (Σ' := Σext.1) in cons.

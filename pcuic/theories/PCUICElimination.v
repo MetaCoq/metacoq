@@ -21,12 +21,13 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u ×
   (Universe.is_prop u || Universe.is_sprop u).
 
+(* TODO: Figure out whether [SingletonProp], [Computational], and [Informative] should use [strictly_extends_decls] or [extends]. -Jason Gross *)
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      extends_decls Σ Σ' ->
+      strictly_extends_decls Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       ∥Is_proof Σ' Γ (mkApps (tConstruct ind n u) args)∥ /\
        #|ind_ctors idecl| <= 1 /\
@@ -37,7 +38,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      extends_decls Σ Σ' ->
+      strictly_extends_decls Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
@@ -46,7 +47,7 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf_ext Σ' ->
-      extends_decls Σ Σ' ->
+      strictly_extends_decls Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).

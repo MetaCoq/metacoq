@@ -3332,39 +3332,85 @@ Proof.
   now apply trans_eq_annots.
 Qed.
 
-Lemma extends_trans {Σ Σ' : global_env} : extends Σ Σ' -> extends (trans_global_env Σ) (trans_global_env Σ').
+Lemma lookup_globals_trans decls c : lookup_globals (trans_global_decls decls) c = List.map trans_global_decl (lookup_globals decls c).
+Proof.
+  move: decls. elim => //= => [[kn d]] decls //=.
+  elim: eqb_spec => //= -> -> //=.
+Qed.
+
+Lemma extends_strictly_on_decls_trans {Σ Σ' : global_env} : extends_strictly_on_decls Σ Σ' -> extends_strictly_on_decls (trans_global_env Σ) (trans_global_env Σ').
 Proof.
   intros [onu [Σ'' eq]].
   split => //. exists (trans_global_decls Σ'').
   rewrite /= eq /trans_global_decls /= map_app //.
+Qed.
+
+Lemma strictly_extends_decls_trans {Σ Σ' : global_env} : strictly_extends_decls Σ Σ' ->
+  strictly_extends_decls (trans_global_env Σ) (trans_global_env Σ').
+Proof.
+  intros [onu [Σ'' eq]].
+  split => //. exists (trans_global_decls Σ'').
+  rewrite /= eq /trans_global_decls /= map_app //.
+Qed.
+
+Lemma extends_trans {Σ Σ' : global_env} : extends Σ Σ' -> extends (trans_global_env Σ) (trans_global_env Σ').
+Proof.
+  intros [onu eq].
+  split => // c. specialize (eq c). move: eq => [Σ'' eq].
+  exists (List.map trans_global_decl Σ'').
+  cbv [lookup_envs] in *.
+  rewrite /trans_global_env /= !lookup_globals_trans eq map_app //.
 Qed.
 
 Lemma extends_decls_trans {Σ Σ' : global_env} : extends_decls Σ Σ' ->
   extends_decls (trans_global_env Σ) (trans_global_env Σ').
 Proof.
-  intros [onu [Σ'' eq]].
-  split => //. exists (trans_global_decls Σ'').
-  rewrite /= eq /trans_global_decls /= map_app //.
+  intros [onu eq].
+  split => // c. specialize (eq c). move: eq => [Σ'' eq].
+  exists (List.map trans_global_decl Σ'').
+  cbv [lookup_envs] in *.
+  rewrite /trans_global_env /= !lookup_globals_trans eq map_app //.
 Qed.
 
-Lemma weaken_prop {cf} : weaken_env_decls_prop cumulSpec0 (lift_typing typing)
+(* we make this transparent so we can make use of the fact that the sort is the same in the next proof *)
+Lemma weaken_prop_gen {cf} : weaken_env_prop_gen cumulSpec0 (lift_typing typing) (fun Σ Σ' => wf_trans Σ × wf_trans Σ' × extends Σ Σ')
+  (lift_typing
+   (λ (Σ : global_env_ext) (Γ : context) (t T : term),
+      typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
+Proof.
+  intros Σ Σ' u wf wf' ext Γ t T.
+  destruct T.
+  - intros Ht.
+    eapply (weakening_env (trans_global (Σ, u))), extends_trans; eauto; destruct ext as (wfΣ&wfΣ'&ext); eauto.
+
+  - intros [s Hs]. exists s.
+    eapply (weakening_env (trans_global (Σ, u))), extends_trans; eauto; destruct ext as (wfΣ&wfΣ'&ext); eauto.
+Defined.
+
+(* to get a version that fits in one of the non-_gen lemmas, we need a strict enough version of extension to imply [wf_trans] from extension. *)
+Lemma weaken_prop {cf} : weaken_env_strictly_decls_prop cumulSpec0 (lift_typing typing)
   (lift_typing
    (λ (Σ : global_env_ext) (Γ : context) (t T : term),
       wf_trans Σ →
       typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
 Proof.
-  intros Σ Σ' u wf' ext Γ t T.
-  destruct T.
-  - intros Ht Hw.
-    pose proof (extends_decls_trans ext).
-    assert (wfΣ := extends_decls_wf _ _ Hw X).
-    eapply (weakening_env (trans_global (Σ, u))); eauto. tc.
-
-  - intros [s Hs]. exists s. intros Hw.
-    pose proof (extends_decls_trans ext).
-    pose proof (extends_decls_wf _ _ Hw X).
-    specialize (Hs X0).
-    eapply (weakening_env (trans_global (Σ, u))); eauto. tc.
+  pose weaken_prop_gen as H.
+  cbv [lift_typing lift_judgment infer_sort weaken_env_strictly_on_decls_prop weaken_env_prop_gen] in *.
+  repeat (intro; let x := lazymatch goal with x : _ |- _ => x end in pose (H x) as H'; subst H; rename H' into H).
+  move => Hext Γ t T.
+  pose (fun v wfΣ' wfΣ => H (wfΣ, (wfΣ', ltac:(tc))) Γ t T v) as H'; subst H; rename H' into H.
+  destruct T; eauto.
+  { move => H' Ht.
+    pose proof (strictly_extends_decls_trans Hext).
+    pose proof (strictly_extends_decls_wf _ _ Ht _).
+    eauto using strictly_extends_decls_trans, strictly_extends_decls_wf. }
+  { move => [s Hs]. exists s.
+    move => Ht.
+    pose proof (fun pf wfΣ wfΣ' => (H (s; pf) wfΣ wfΣ').π2) as H'; subst H; rename H' into H.
+    cbv [weaken_prop_gen] in *; cbn [projT1] in *.
+    pose proof (strictly_extends_decls_trans Hext).
+    pose proof (strictly_extends_decls_wf _ _ Ht _).
+    eauto. }
 Qed.
 
 Lemma trans_arities_context mdecl :
@@ -3581,7 +3627,7 @@ Proof.
     eapply TT.type_Construct. eauto.
     + eapply trans_declared_constructor in isdecl; tea.
     + now apply trans_consistent_instance_ext.
-    + red in X. epose proof (declared_constructor_inv_decls weaken_prop _ X isdecl) as [cs [hnth onc]].
+    + red in X. epose proof (declared_constructor_inv weaken_prop _ X isdecl) as [cs [hnth onc]].
       destruct onc. red in on_ctype.
       destruct on_ctype as [s Hs].
       rewrite /type_of_constructor. forward Hs. eauto.

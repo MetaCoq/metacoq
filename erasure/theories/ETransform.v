@@ -131,7 +131,7 @@ Proof.
     revert normalisation_in.
     apply PCUICWeakeningEnvSN.weakening_env_normalisation_in; eauto;
       try match goal with H : PCUICTyping.wf_ext _ |- _ => refine (@PCUICTyping.wf_ext_wf _ _ H) end.
-    apply PCUICAst.PCUICEnvironment.extends_decls_extends; split; cbn; try reflexivity.
+    apply PCUICAst.PCUICEnvironment.extends_decls_extends, PCUICAst.PCUICEnvironment.strictly_extends_decls_extends_decls; split; cbn; try reflexivity.
     eauto using firstn_skipn. }
 Qed.
 

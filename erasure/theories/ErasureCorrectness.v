@@ -6,7 +6,7 @@ From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prel
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICAstUtils PCUICConversion PCUICSigmaCalculus
   PCUICClosed PCUICClosedTyp
-  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICWeakeningEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
   PCUICLiftSubst
@@ -152,7 +152,7 @@ Proof.
         assert (isdecl'' := isdecl').
         apply declared_constant_from_gen in isdecl', isdecl''.
         eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
-        2:eapply weaken_env_prop_typing.
+        2:exact weaken_env_prop_typing.
         unfold on_constant_decl in isdecl'. rewrite e in isdecl'. red in isdecl'.
         unfold declared_constant in isdecl''.
         now eapply @typing_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
@@ -160,7 +160,7 @@ Proof.
         apply declared_constant_from_gen in isdecl', isdecl''.
         eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
         unfold on_constant_decl in isdecl'. rewrite e in isdecl'. cbn in *.
-        2:eapply weaken_env_prop_typing.
+        2:exact weaken_env_prop_typing.
         now eapply erases_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * now eauto.
       * exists x0. split; eauto. constructor; econstructor; eauto.

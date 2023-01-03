@@ -282,7 +282,11 @@ Lemma weakening_env_declared_constant :
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
   unfold declared_constant in *.
-  destruct H2 as [? []]. rewrite e.
+  eapply lookup_globals_In in H0.
+  eapply lookup_globals_In.
+  destruct H2 as [? H2 _].
+  specialize (H2 cst). destruct H2 as [decls Hdecls].
+  rewrite /lookup_envs in Hdecls. rewrite Hdecls.
   apply in_or_app. now right.
 Qed.
 
@@ -295,9 +299,13 @@ Lemma weakening_env_declared_minductive `{CF:checker_flags}:
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
   unfold declared_minductive in *.
-  destruct H2 as [? []]. rewrite e.
+  eapply lookup_globals_In in H0.
+  eapply lookup_globals_In.
+  destruct H2 as [? H2 _].
+  specialize (H2 cst). destruct H2 as [decls Hdecls].
+  rewrite /lookup_envs in Hdecls. rewrite Hdecls.
   apply in_or_app. now right.
-  Qed.
+Qed.
 
 Hint Extern 0 => eapply weakening_env_declared_minductive : extends.
 

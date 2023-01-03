@@ -848,6 +848,8 @@ Proof.
   intros. red in wfΣ.
   unfold type_of_constructor.
   destruct isdecl' as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
+  eapply lookup_global_Some_iff_In_NoDup in Hmdecl; eauto.
+  2: destruct wfΣ; now eapply NoDup_on_global_decls.
   eapply lookup_on_global_env in Hmdecl; eauto.
   destruct Hmdecl as (Σ' & wfΣ' & Hext & [Hind Hparam Hnpars Hvar]).
   unfold type_of_constructor.
@@ -932,7 +934,7 @@ Lemma repr_lookup_constructor {Σg Σ} :
   forall ind idx r, lookup_constructor Σ ind idx = Some r -> GlobalEnvMap.lookup_constructor Σg ind idx = Some r.
 Proof.
   intros hrepr ind idx r.
-  rewrite /lookup_constructor /lookup_constructor_gen /lookup_inductive /lookup_inductive_gen 
+  rewrite /lookup_constructor /lookup_constructor_gen /lookup_inductive /lookup_inductive_gen
           /lookup_minductive /lookup_minductive_gen /lookup_env.
   destruct lookup_global eqn:hl => //.
   apply hrepr in hl.
@@ -943,12 +945,13 @@ Import bytestring.String.
 
 Local Open Scope bs.
 
-Lemma constructor_declared {cf : checker_flags} {Σ Γ ind idx u ty} :
+Lemma constructor_declared {cf : checker_flags} {Σ :global_env_ext} {Γ ind idx u ty} {wfΣ : wf Σ.1}:
   Σ ;;; Γ |- tConstruct ind idx u : ty ->
   exists r, lookup_constructor Σ ind idx = Some r.
 Proof.
   intros H; depind H; eauto.
-  eexists. eapply declared_constructor_lookup in isdecl; tea.
+  eexists. eapply declared_constructor_to_gen, declared_constructor_lookup_gen in isdecl; tea.
+  Unshelve. all: eauto.
 Qed.
 
 Lemma eta_expand_expanded {cf : config.checker_flags} {Σ : global_env_ext} Γ Γ' t T :
@@ -1036,12 +1039,12 @@ Proof.
       * eapply constructor_declared in X as [[[mdecl' idecl'] cdecl'] hc].
         have h := (repr_lookup_constructor hrepr _ _ _ hc). rewrite GlobalEnvMap.lookup_constructor_spec in h.
         rewrite E1 in h. noconf h.
-        eapply expanded_mkApps_tConstruct. now eapply lookup_constructor_declared.
+        eapply expanded_mkApps_tConstruct. now eapply declared_constructor_from_gen, lookup_constructor_declared_gen.
         rewrite rev_map_spec. simpl_list. rewrite EE. lia. eapply Forall_typing_spine_Forall in X0.
         assert ((context_assumptions
         (decompose_prod_assum [] (type_of_constructor mdecl cdecl (ind, idx) u)).1) = ind_npars mdecl + context_assumptions (cstr_args cdecl)) as E. {
           eapply decompose_type_of_constructor; eauto.
-          now eapply lookup_constructor_declared. }
+          now eapply declared_constructor_from_gen, lookup_constructor_declared_gen. }
         eapply app_Forall.
         -- Opaque minus. solve_all. eapply @expanded_lift' with (Γ' := []). 2: reflexivity. reflexivity.
            2: reflexivity. len.
@@ -1135,7 +1138,7 @@ Proof.
       ++ cbn. eauto.
   - cbn. pose proof isdecl as isdecl'.
     unfold eta_constructor.
-    eapply declared_constructor_lookup in isdecl'.
+    eapply declared_constructor_to_gen, declared_constructor_lookup_gen in isdecl'.
     eapply (repr_lookup_constructor hrepr) in isdecl'. rewrite isdecl'.
     rewrite GlobalEnvMap.lookup_constructor_spec in isdecl'.
     eapply expanded_fold_lambda. rewrite Nat.sub_0_r.
@@ -1203,7 +1206,7 @@ Proof.
       intros. split. reflexivity. cbn.
       rewrite <- context_assumptions_lift.
       eapply wf_fixpoint_rarg in H4; eauto. len; lia.
-      Unshelve. cbn.  rewrite <- context_assumptions_lift. lia.
+      Unshelve. all: eauto. cbn.  rewrite <- context_assumptions_lift. lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. eapply Forall_rev.
       eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
       eapply in_seq in H4 as [_ ?]. cbn in *. len.
@@ -1290,23 +1293,26 @@ Proof.
   rewrite lookup_global_map_on_snd. destruct lookup_global => //.
 Qed.
 
-Lemma eta_declared_constructor {Σ : GlobalEnvMap.t} {ind mdecl idecl cdecl} :
+Lemma eta_declared_constructor {cf:checker_flags} {Σ : GlobalEnvMap.t}
+  {wfΣ : wf Σ} {ind mdecl idecl cdecl} :
   declared_constructor Σ ind mdecl idecl cdecl ->
   declared_constructor (eta_expand_global_env Σ) ind (eta_minductive_decl Σ mdecl)
     (eta_inductive_decl Σ mdecl idecl) (eta_constructor_decl Σ mdecl cdecl).
 Proof.
-  rewrite /declared_constructor.
-  intros [[] ?].
-  move: H. 
-  rewrite /declared_inductive /declared_inductive_gen /declared_minductive /declared_minductive_gen 
+  intros H. eapply declared_constructor_from_gen.
+  eapply declared_constructor_to_gen in H.
+  destruct H as [[] ?].
+  move: H.
+  rewrite /declared_inductive /declared_inductive_gen /declared_minductive /declared_minductive_gen
          /lookup_env /=.
   destruct (lookup_global Σ.(declarations) _) eqn:heq => //.
   move: (eta_lookup_global (inductive_mind ind.1) g heq) => hl.
-  intros [= ->]. 
-  unfold declared_constructor_gen, declared_inductive_gen, declared_minductive_gen. 
+  intros [= ->].
+  unfold declared_constructor_gen, declared_inductive_gen, declared_minductive_gen.
   rewrite hl; split => //.
   split => //. rewrite nth_error_map H0 //.
   rewrite nth_error_map H1 //.
+  Unshelve. all: eauto.
 Qed.
 
 Import ssreflect ssrbool.
@@ -1491,7 +1497,7 @@ Proof.
   now rewrite /eta_context context_assumptions_fold_context_k_defs.
 Qed.
 
-Lemma same_cstr_info_eta (Σ : global_env) (Σg: GlobalEnvMap.t) :
+Lemma same_cstr_info_eta {cf:checker_flags} (Σ : global_env) {wfΣ : wf Σ} (Σg: GlobalEnvMap.t) :
   same_cstr_info Σ
     {| universes := Σ.(universes) ;
        declarations := List.map (on_snd (eta_global_declaration Σg)) Σ.(declarations);
@@ -1501,21 +1507,41 @@ Proof.
   induction Σ; intros ind idx mdecl idecl cdecl.
   - unfold declared_constructor, declared_inductive, declared_minductive.
     cbn => [[[]]] //.
-  - unfold declared_constructor, declared_constructor_gen, declared_inductive, declared_inductive_gen, 
-          declared_minductive, declared_minductive_gen.
-    cbn. destruct a as [kn decl]; cbn.
+  - rewrite /declared_constructor.
+    intros [[H hnth] hnth'].
+    eapply declared_minductive_to_gen, declared_minductive_lookup_gen in H; eauto. move:H.
+    rewrite /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen
+            /lookup_env /=.
+    destruct a as [kn decl]; cbn.
     case: eqb_spec.
-    * move=> _ [] [] [= ->] hnth hnth'.
+    * destruct decl => //.
+      intros Hind Hm. inversion Hm.
       do 3 eexists; cbn. split. split. split => //.
+      apply lookup_global_Some_if_In; cbn.
+      subst.  case: eqb_spec=> //.
       cbn. rewrite nth_error_map hnth; reflexivity.
       cbn. rewrite nth_error_map hnth'; reflexivity.
       now cbn. cbn. apply eta_context_assumptions.
-    * move=> _ [] [] hl hnth htnh'.
+    * intros Hind Hm.
       red in IHΣ.
-      specialize (IHΣ ind idx mdecl idecl cdecl).
+      assert (wfΣ' : wf
+      {|
+        universes := univs;
+        declarations := Σ;
+        retroknowledge := retroknowledge0
+      |}).
+      { destruct wfΣ; econstructor =>//.
+        inversion o0 =>//. }
+      specialize (IHΣ wfΣ' ind idx mdecl idecl cdecl).
       forward IHΣ. repeat split => //.
-      destruct IHΣ as [mdecl' [idecl' [cdecl' []]]].
-      exists mdecl', idecl', cdecl'; repeat split => //.
+      unfold declared_minductive.
+      apply lookup_global_Some_if_In; cbn.
+      move :Hm. destruct (lookup_global _ _) => //.
+      destruct g =>//. intro H; inversion H; now subst.
+      clear - cf wfΣ wfΣ' IHΣ Hind. destruct IHΣ as [mdecl' [idecl' [cdecl' [[[H ?] ?] ?]]]].
+      exists mdecl', idecl', cdecl'. repeat split => //.
+      cbn in *. right. exact H.
+      Unshelve. all: eauto.
 Qed.
 
 Lemma lookup_global_Some_fresh Σ c decl :
@@ -1586,5 +1612,6 @@ Proof.
   forward H. split. cbn. split => //. now cbn.
   specialize (H o0).
   eapply expanded_decl_env_irrel in H; tea.
-  apply (same_cstr_info_eta Σ' Σg).
+  eapply (same_cstr_info_eta Σ' Σg).
+  Unshelve. all: eauto. econstructor =>//.
 Qed.

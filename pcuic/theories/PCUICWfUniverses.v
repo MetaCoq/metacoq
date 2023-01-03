@@ -1058,6 +1058,7 @@ Qed.
         eapply consistent_instance_ext_wf; eauto. }
       pose proof (declared_constant_inv _ _ _ _ wf_universes_weaken wf X H).
       red in X1; cbn in X1.
+      unshelve eapply declared_constant_to_gen in H; eauto.
       destruct (cst_body decl).
       * to_prop.
         epose proof (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
@@ -1077,6 +1078,7 @@ Qed.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
       cbn in X1. eapply onArity in X1. cbn in X1.
       move: X1 => [s /andP[Hind ?]].
+      unshelve eapply declared_inductive_to_gen in isdecl; eauto.
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 isdecl)).
       now eapply consistent_instance_ext_wf.
@@ -1092,6 +1094,7 @@ Qed.
         now eapply consistent_instance_ext_wf. }
       eapply on_ctype in onc. cbn in onc.
       move: onc=> [_ /andP[onc _]].
+      clear nthe. unshelve eapply declared_constructor_to_gen in isdecl; eauto.
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
       now eapply consistent_instance_ext_wf.
@@ -1110,7 +1113,8 @@ Qed.
       move/and3P: hty => [] wfp wfindis wfisort.
       have ond : on_udecl_prop Σ (ind_universes mdecl).
       { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
-        }
+      unshelve eapply declared_inductive_to_gen in isdecl; eauto.
+      }
       eapply wf_ctx_universes_closed in wfp => //.
       eapply wf_ctx_universes_closed in wfindis => //.
       rewrite (consistent_instance_length H1).
@@ -1158,7 +1162,7 @@ Qed.
       rewrite wf_universes_mkApps {1}/wf_universes /= -!/(wf_universes _ _)
         wf_universeb_instance_forall in H1.
       move/andP: H1 => [/wf_universe_instanceP wfu wfargs].
-
+      unshelve eapply declared_projection_to_gen in isdecl; eauto.
       eapply (wf_universes_inst (ind_universes mdecl)); eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
       rewrite wf_universes_subst.

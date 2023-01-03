@@ -177,8 +177,10 @@ Proof.
   apply closedn_ctx_on_free_vars_shift.
   replace #|pparams p| with (context_assumptions (ind_params mdecl)).
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
+  apply H0.
   erewrite wf_predicate_length_pars ; tea.
   eapply onNpars, on_declared_minductive ; eauto.
+  apply H0.
 Qed.
 
 Lemma on_free_vars_case_branch_context `{checker_flags} {Σ : global_env_ext } {wfΣ : wf Σ} {P ci mdecl idecl p br cdecl} :
@@ -773,7 +775,7 @@ Proof using wfΣ.
       1:exact (declared_inductive_closed_params H).
       1:rewrite (wf_branch_length wfbr) //.
       1:rewrite (wf_predicate_length_pars H1).
-      1:erewrite declared_minductive_ind_npars ; eauto.
+      1:erewrite declared_minductive_ind_npars ; eauto; apply H.
       assert (on_free_vars_ctx P brctxty.1).
       { rewrite case_branch_type_fst.
         eapply (@on_free_vars_case_branch_context _ _ _ _ (ci.(ci_ind),i)).

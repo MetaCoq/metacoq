@@ -12,24 +12,28 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition declared_constant_gen (lookup : kername -> option global_decl) (id : kername) decl : Prop :=
     lookup id = Some (ConstantDecl decl).
 
-  Definition declared_constant (Σ : global_env) := declared_constant_gen (lookup_env Σ).
+  Definition declared_constant (Σ : global_env) id decl := In (id,ConstantDecl decl) (declarations Σ).
 
   Definition declared_minductive_gen (lookup : kername -> option global_decl) mind decl :=
     lookup mind = Some (InductiveDecl decl).
 
-  Definition declared_minductive Σ := declared_minductive_gen (lookup_env Σ).
+  Definition declared_minductive Σ mind decl := In (mind,InductiveDecl decl) (declarations Σ).
 
   Definition declared_inductive_gen lookup ind mdecl decl :=
     declared_minductive_gen lookup (inductive_mind ind) mdecl /\
     List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
-  Definition declared_inductive Σ := declared_inductive_gen (lookup_env Σ).
+  Definition declared_inductive Σ ind mdecl decl :=
+    declared_minductive Σ (inductive_mind ind) mdecl /\
+    List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
   Definition declared_constructor_gen lookup cstr mdecl idecl cdecl : Prop :=
     declared_inductive_gen lookup (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-  Definition declared_constructor Σ := declared_constructor_gen (lookup_env Σ).
+  Definition declared_constructor Σ cstr mdecl idecl cdecl :=
+    declared_inductive Σ (fst cstr) mdecl idecl /\
+    List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
   Definition declared_projection_gen lookup (proj : projection) mdecl idecl cdecl pdecl
   : Prop :=
@@ -37,7 +41,11 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
     mdecl.(ind_npars) = proj.(proj_npars).
 
-  Definition declared_projection Σ := declared_projection_gen (lookup_env Σ).
+  Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl
+  : Prop :=
+    declared_constructor Σ (proj.(proj_ind), 0) mdecl idecl cdecl /\
+    List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
+    mdecl.(ind_npars) = proj.(proj_npars).
 
   Definition lookup_constant_gen (lookup : kername -> option global_decl) kn :=
     match lookup kn with
@@ -90,24 +98,24 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     end.
 
   Definition lookup_projection Σ := lookup_projection_gen (lookup_env Σ).
-  
-  Lemma declared_constant_lookup {lookup kn cdecl} :
+
+  Lemma declared_constant_lookup_gen {lookup kn cdecl} :
     declared_constant_gen lookup kn cdecl ->
     lookup_constant_gen lookup kn = Some cdecl.
   Proof.
-    unfold declared_constant_gen, lookup_constant_gen. 
+    unfold declared_constant_gen, lookup_constant_gen.
     now intros ->.
   Qed.
 
-  Lemma lookup_constant_declared {lookup kn cdecl} :
+  Lemma lookup_constant_declared_gen {lookup kn cdecl} :
     lookup_constant_gen lookup kn = Some cdecl ->
     declared_constant_gen lookup kn cdecl.
   Proof.
-    unfold declared_constant_gen, lookup_constant_gen. 
+    unfold declared_constant_gen, lookup_constant_gen.
     destruct lookup as [[]|] => //. congruence.
   Qed.
 
-  Lemma declared_minductive_lookup {lookup ind mdecl} :
+  Lemma declared_minductive_lookup_gen {lookup ind mdecl} :
     declared_minductive_gen lookup ind mdecl ->
     lookup_minductive_gen lookup ind = Some mdecl.
   Proof.
@@ -115,7 +123,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     now intros ->.
   Qed.
 
-  Lemma lookup_minductive_declared {lookup ind mdecl} :
+  Lemma lookup_minductive_declared_gen {lookup ind mdecl} :
     lookup_minductive_gen lookup ind = Some mdecl ->
     declared_minductive_gen lookup ind mdecl.
   Proof.
@@ -123,15 +131,15 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     destruct lookup as [[]|] => //. congruence.
   Qed.
 
-  Lemma declared_inductive_lookup {lookup ind mdecl idecl} :
+  Lemma declared_inductive_lookup_gen {lookup ind mdecl idecl} :
     declared_inductive_gen lookup ind mdecl idecl ->
     lookup_inductive_gen lookup ind = Some (mdecl, idecl).
   Proof.
     rewrite /declared_inductive_gen /lookup_inductive_gen.
-    intros []. now rewrite (declared_minductive_lookup H) H0.
+    intros []. now rewrite (declared_minductive_lookup_gen H) H0.
   Qed.
 
-  Lemma lookup_inductive_declared {lookup ind mdecl idecl} :
+  Lemma lookup_inductive_declared_gen {lookup ind mdecl idecl} :
     lookup_inductive_gen lookup ind = Some (mdecl, idecl) ->
     declared_inductive_gen lookup ind mdecl idecl.
   Proof.
@@ -139,18 +147,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     destruct lookup_minductive_gen as [[]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-].
     split => //.
-    apply (lookup_minductive_declared hl).
+    apply (lookup_minductive_declared_gen hl).
   Qed.
 
-  Lemma declared_constructor_lookup {lookup id mdecl idecl cdecl} :
+  Lemma declared_constructor_lookup_gen {lookup id mdecl idecl cdecl} :
     declared_constructor_gen lookup id mdecl idecl cdecl ->
     lookup_constructor_gen lookup id.1 id.2 = Some (mdecl, idecl, cdecl).
   Proof.
     intros []. unfold lookup_constructor_gen.
-    rewrite (declared_inductive_lookup (lookup := lookup) H) /= H0 //.
+    rewrite (declared_inductive_lookup_gen (lookup := lookup) H) /= H0 //.
   Qed.
 
-  Lemma lookup_constructor_declared {lookup id mdecl idecl cdecl} :
+  Lemma lookup_constructor_declared_gen {lookup id mdecl idecl cdecl} :
     lookup_constructor_gen lookup id.1 id.2 = Some (mdecl, idecl, cdecl) ->
     declared_constructor_gen lookup id mdecl idecl cdecl.
   Proof.
@@ -158,18 +166,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     destruct lookup_inductive_gen as [[]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-].
     split => //.
-    apply (lookup_inductive_declared hl). congruence.
+    apply (lookup_inductive_declared_gen hl). congruence.
   Qed.
 
-  Lemma declared_projection_lookup {lookup p mdecl idecl cdecl pdecl} :
+  Lemma declared_projection_lookup_gen {lookup p mdecl idecl cdecl pdecl} :
     declared_projection_gen lookup p mdecl idecl cdecl pdecl ->
     lookup_projection_gen lookup p = Some (mdecl, idecl, cdecl, pdecl).
   Proof.
     intros [? []]. unfold lookup_projection_gen.
-    rewrite (declared_constructor_lookup (lookup := lookup) H) /= H0 //.
+    rewrite (declared_constructor_lookup_gen (lookup := lookup) H) /= H0 //.
   Qed.
 
-  Lemma lookup_projection_declared {lookup p mdecl idecl cdecl pdecl} :
+  Lemma lookup_projection_declared_gen {lookup p mdecl idecl cdecl pdecl} :
     ind_npars mdecl = p.(proj_npars) ->
     lookup_projection_gen lookup p = Some (mdecl, idecl, cdecl, pdecl) ->
     declared_projection_gen lookup p mdecl idecl cdecl pdecl.
@@ -178,7 +186,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     destruct lookup_constructor_gen as [[[] ?]|] eqn:hl => //=.
     destruct nth_error eqn:hnth => //. intros [= <- <-]. subst c p0.
     split => //.
-    apply (lookup_constructor_declared (id:=(proj_ind p, 0)) hl).
+    apply (lookup_constructor_declared_gen (id:=(proj_ind p, 0)) hl).
   Qed.
 
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
@@ -280,9 +288,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     Alli (fun i => declared_constructor Σ (ind, i) mib oib) 0 (ind_ctors oib).
   Proof using.
     move=> inddecl.
-    apply: forall_nth_error_Alli=> /= i x eq.
-    apply: lookup_constructor_declared=> /=.
-    rewrite /lookup_constructor_gen (declared_inductive_lookup inddecl) eq //.
+    apply: forall_nth_error_Alli=> /= i x eq => //.
   Qed.
 
 End Lookup.
@@ -810,27 +816,35 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       | _ => 0
       end.
 
-    Inductive positive_cstr_arg mdecl ctx : term -> Type :=
-    | positive_cstr_arg_closed t :
-      closedn #|ctx| t ->
-      positive_cstr_arg mdecl ctx t
+    Definition mdecl_at_i mdecl i (Γ:context) k : Prop :=
+      #|Γ| <= k /\ k < #|Γ| + #|mdecl.(ind_bodies)| /\
+       nth_error (List.rev mdecl.(ind_bodies)) (k - #|Γ|) = Some i.
 
-    | positive_cstr_arg_concl l k i :
+    Reserved Notation " mdecl ;;; Γ |arg+> t " (at level 50, Γ, t at next level).
+    Notation subst0 t := (subst t 0).
+    Notation "M { j := N }" := (subst [N] j M) (at level 10, right associativity).
+
+    Inductive positive_cstr_arg mdecl Γ : term -> Type :=
+    | pos_arg_closed ty :
+      closedn #|Γ| ty ->
+      mdecl ;;; Γ |arg+> ty
+
+    | pos_arg_concl l k i :
       (** Mutual inductive references in the conclusion are ok *)
-      #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
-      All (closedn #|ctx|) l ->
-      nth_error (List.rev mdecl.(ind_bodies)) (k - #|ctx|) = Some i ->
-      #|l| = ind_realargs i ->
-      positive_cstr_arg mdecl ctx (mkApps (tRel k) l)
+      #|l| = ind_realargs i -> All (closedn #|Γ|) l ->
+      mdecl_at_i mdecl i Γ k ->
+      mdecl ;;; Γ |arg+> mkApps (tRel k) l
 
-    | positive_cstr_arg_let na b ty t :
-      positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
-      positive_cstr_arg mdecl ctx (tLetIn na b ty t)
+    | pos_arg_let na b ty ty' :
+      mdecl ;;; Γ |arg+> ty' {0 := b} ->
+      mdecl ;;; Γ |arg+> tLetIn na b ty ty'
 
-    | positive_cstr_arg_ass na ty t :
-      closedn #|ctx| ty ->
-      positive_cstr_arg mdecl (vass na ty :: ctx) t ->
-      positive_cstr_arg mdecl ctx (tProd na ty t).
+    | pos_arg_ass na ty ty' :
+      closedn #|Γ| ty ->
+      mdecl ;;; vass na ty :: Γ |arg+> ty' ->
+      mdecl ;;; Γ |arg+> tProd na ty ty'
+
+  where " mdecl ;;; Γ |arg+> t " := (positive_cstr_arg mdecl Γ t) : type_scope.
 
     (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
       and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and:
@@ -840,21 +854,24 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           any of the inductive types in the block. I.e. [indices] are closed terms
           in [params ,,, args]. *)
 
-    Inductive positive_cstr mdecl i (ctx : context) : term -> Type :=
-    | positive_cstr_concl indices :
-      let headrel : nat :=
-        (#|mdecl.(ind_bodies)| - S i + #|ctx|)%nat in
-      All (closedn #|ctx|) indices ->
-      positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
+    Reserved Notation " mdecl @ i ;;; Γ |+> t " (at level 50, i, Γ, t at next level).
 
-    | positive_cstr_let na b ty t :
-      positive_cstr mdecl i ctx (subst [b] 0 t) ->
-      positive_cstr mdecl i ctx (tLetIn na b ty t)
 
-    | positive_cstr_ass na ty t :
-      positive_cstr_arg mdecl ctx ty ->
-      positive_cstr mdecl i (vass na ty :: ctx) t ->
-      positive_cstr mdecl i ctx (tProd na ty t).
+    Inductive positive_cstr mdecl i Γ : term -> Type :=
+    | pos_concl l (headrel := (#|mdecl.(ind_bodies)| - S i + #|Γ|)%nat) :
+      All (closedn #|Γ|) l ->
+      mdecl @ i ;;; Γ |+> mkApps (tRel headrel) l
+
+    | pos_let na b ty ty' :
+      mdecl @ i ;;; Γ |+> ty' {0 := b} ->
+      mdecl @ i ;;; Γ |+> tLetIn na b ty ty'
+
+    | pos_ass na ty ty' :
+      mdecl ;;; Γ |arg+> ty ->
+      mdecl @ i ;;; vass na ty :: Γ |+> ty' ->
+      mdecl @ i ;;; Γ |+> tProd na ty ty'
+
+    where " mdecl @ i ;;; Γ |+> t " := (positive_cstr mdecl i Γ t) : type_scope.
 
     Definition lift_level n l :=
       match l with
@@ -1446,11 +1463,111 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
         eapply All_local_env_impl; tea.
   Qed.
 
-End DeclarationTyping.
 
-Module Type DeclarationTypingSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
-       (ET : EnvTypingSig T E TU) (CT : ConversionSig T E TU ET)
-       (CS : ConversionParSig T E TU ET) (Ty : Typing T E TU ET CT CS)
-       (L : LookupSig T E) (GM : GlobalMapsSig T E TU ET CT L).
-  Include DeclarationTyping T E TU ET CT CS Ty L GM.
-End DeclarationTypingSig.
+  Section Properties.
+    Context {cf : checker_flags}.
+    Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
+    Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+
+  Let wf := on_global_env Pcmp P.
+
+  Lemma declared_constant_from_gen {Σ kn cdecl} :
+    declared_constant_gen (lookup_env Σ) kn cdecl ->
+    declared_constant Σ kn cdecl.
+  Proof.
+    intro H. eapply lookup_global_Some_if_In.
+    red in H. unfold lookup_env in H.
+    apply lookup_constant_declared_gen => //.
+    unfold lookup_constant_gen. now rewrite H.
+  Qed.
+
+  Lemma declared_constant_to_gen {Σ kn cdecl}
+  {wfΣ : wf Σ} :
+  declared_constant Σ kn cdecl ->
+  declared_constant_gen (lookup_env Σ) kn cdecl.
+  Proof.
+    intro H; eapply lookup_global_Some_iff_In_NoDup in H.
+    - apply lookup_constant_declared_gen => //.
+      unfold lookup_constant_gen, lookup_env.
+      destruct (lookup_global _ _) => //.
+      destruct g => //. now inversion H.
+    - destruct wfΣ; now eapply NoDup_on_global_decls.
+  Qed.
+
+  Lemma declared_minductive_to_gen {Σ ind mdecl}
+   {wfΣ : wf Σ} :
+    declared_minductive Σ ind mdecl ->
+    declared_minductive_gen (lookup_env Σ) ind mdecl.
+  Proof.
+    intro H; eapply lookup_global_Some_iff_In_NoDup in H.
+    - apply lookup_minductive_declared_gen => //.
+      unfold lookup_minductive_gen, lookup_env.
+      destruct (lookup_global _ _) => //.
+      destruct g => //. now inversion H.
+    - destruct wfΣ; now eapply NoDup_on_global_decls.
+  Qed.
+
+  Lemma declared_minductive_from_gen {Σ ind mdecl} :
+    declared_minductive_gen (lookup_env Σ) ind mdecl ->
+    declared_minductive Σ ind mdecl.
+  Proof.
+    intro H; eapply lookup_global_Some_if_In.
+    apply lookup_minductive_declared_gen => //.
+    apply declared_minductive_lookup_gen in H => //.
+  Qed.
+
+  Lemma declared_inductive_to_gen {Σ ind mdecl idecl}
+  {wfΣ : wf Σ} :
+    declared_inductive Σ ind mdecl idecl ->
+    declared_inductive_gen (lookup_env Σ) ind mdecl idecl.
+  Proof.
+    intros []; split => //.
+    eapply declared_minductive_to_gen; eauto.
+    Unshelve. all:eauto.
+  Qed.
+
+  Lemma declared_inductive_from_gen {Σ ind mdecl idecl}:
+    declared_inductive_gen (lookup_env Σ) ind mdecl idecl ->
+    declared_inductive Σ ind mdecl idecl.
+  Proof.
+    intros []; split => //.
+    eapply declared_minductive_from_gen; eauto.
+  Qed.
+
+  Lemma declared_constructor_to_gen {Σ id mdecl idecl cdecl}
+    {wfΣ : wf Σ} :
+    declared_constructor Σ id mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl.
+  Proof.
+    intros []; split => //.
+    eapply declared_inductive_to_gen; eauto.
+    Unshelve. all:eauto.
+  Qed.
+
+  Lemma declared_constructor_from_gen {Σ id mdecl idecl cdecl} :
+    declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl ->
+    declared_constructor Σ id mdecl idecl cdecl.
+  Proof.
+    intros []; split => //.
+    eapply declared_inductive_from_gen; eauto.
+  Qed.
+
+  Lemma declared_projection_to_gen {Σ p mdecl idecl cdecl pdecl}
+    {wfΣ : wf Σ} :
+    declared_projection Σ p mdecl idecl cdecl pdecl ->
+    declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl.
+  Proof.
+    intros [? []]. split => //.
+    eapply declared_constructor_to_gen; eauto.
+    Unshelve. all:eauto.
+  Qed.
+
+  Lemma declared_projection_from_gen {Σ p mdecl idecl cdecl pdecl} :
+    declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
+    declared_projection Σ p mdecl idecl cdecl pdecl.
+  Proof.
+    intros [? []]. split => //.
+    eapply declared_constructor_from_gen; eauto.
+  Qed.
+  End Properties.
+End DeclarationTyping.

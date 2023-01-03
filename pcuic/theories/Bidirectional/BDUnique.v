@@ -108,28 +108,36 @@ Proof using wfΣ.
       eapply checking_typing ; tea.
       now eapply isType_tProd, validity, infering_prod_typing.
 
-  - replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
+  - unshelve epose proof (declared_constant_to_gen isdecl); eauto.
+    unshelve epose proof (declared_constant_to_gen H); eauto.
+    replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
     1,3: fvs.
     all: rewrite on_free_vars_subst_instance.
     all: now eapply closed_on_free_vars, declared_constant_closed_type.
 
-  - replace idecl0 with idecl by (eapply declared_inductive_inj ; eassumption).
+  - unshelve epose proof (declared_inductive_to_gen isdecl); eauto.
+    unshelve epose proof (declared_inductive_to_gen H); eauto.
+    replace idecl0 with idecl by (eapply declared_inductive_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
     1,3: fvs.
     all: rewrite on_free_vars_subst_instance.
     all: now eapply closed_on_free_vars, declared_inductive_closed_type.
 
-  - replace cdecl0 with cdecl by (eapply declared_constructor_inj ; eassumption).
+  - unshelve epose proof (declared_constructor_to_gen isdecl); eauto.
+    unshelve epose proof (declared_constructor_to_gen H); eauto.
+    replace cdecl0 with cdecl by (eapply declared_constructor_inj ; eassumption).
     replace mdecl0 with mdecl by (eapply declared_constructor_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
     1,3: fvs.
     all: now eapply closed_on_free_vars, declared_constructor_closed_type.
 
-  - eapply declared_projection_inj in H as (?&?&?&?); tea.
+  - unshelve epose proof (declared_projection_to_gen H1); eauto.
+    unshelve eapply declared_projection_to_gen in H; eauto.
+    eapply declared_projection_inj in H as (?&?&?&?); tea.
     subst.
     move: (X2) => tyc'.
     eapply X0 in X2 as [args'' []] ; tea.
@@ -193,6 +201,8 @@ Proof using wfΣ.
 
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
+    unshelve eapply declared_inductive_to_gen in H13; eauto.
+    unshelve eapply declared_inductive_to_gen in H; eauto.
     move: (H) => /declared_inductive_inj /(_ H13) [? ?].
     subst.
     assert (op' : is_open_term Γ (mkApps ptm0 (skipn (ci_npar ci) args0 ++ [c]))).
@@ -213,7 +223,7 @@ Proof using wfΣ.
         now apply r.
       * fvs.
       * eapply type_is_open_term, infering_typing ; tea.
-        now econstructor.
+        econstructor; eauto. apply declared_inductive_from_gen; eauto.
     + eapply into_closed_red.
       * eapply red_mkApps.
         1: reflexivity.
@@ -227,6 +237,7 @@ Proof using wfΣ.
 
   - inversion X1; subst.
     rewrite H in H2; noconf H2.
+    unshelve eapply declared_constant_to_gen in H0, H3; eauto.
     have eq := (declared_constant_inj _ _ H0 H3); subst cdecl0.
     exists (tConst prim_ty []).
     split; eapply closed_red_refl; fvs.

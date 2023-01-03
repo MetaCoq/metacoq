@@ -593,7 +593,7 @@ Corollary R_Acc_aux :
     left. econstructor. eapply red1_context.
     econstructor.
     - unfold declared_constant, declared_constant_gen.
-      rewrite (abstract_env_lookup_correct' _ _ wfΣ). rewrite <- eq. reflexivity.
+      rewrite (abstract_env_lookup_correct _ _ _ wfΣ). rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
 
@@ -605,7 +605,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct _ _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
@@ -616,7 +616,7 @@ Corollary R_Acc_aux :
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant, declared_constant_gen in d.
-    rewrite (abstract_env_lookup_correct' _ _ wfΣ), <- eq in d.
+    rewrite (abstract_env_lookup_correct _ _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
 
@@ -1406,6 +1406,7 @@ Corollary R_Acc_aux :
     - unfold isCoFinite in not_cofinite.
       unfold check_recursivity_kind.
       cbn.
+      unshelve eapply declared_inductive_to_gen in isdecl; eauto.
       unfold declared_inductive, declared_minductive in isdecl.
       cbn in isdecl.
       rewrite (proj1 isdecl).

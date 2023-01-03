@@ -115,6 +115,7 @@ Lemma declared_minductive_closed_inds {cf} {Σ ind mdecl u} {wfΣ : wf Σ} :
   forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
 Proof.
   intros h.
+  eapply declared_minductive_to_gen in h.
   red in h.
   eapply lookup_on_global_env in h. 2: eauto.
   destruct h as [Σ' [ext wfΣ' decl']].
@@ -125,6 +126,7 @@ Proof.
   induction h in n, m |- *.
   - reflexivity.
   - simpl. eauto.
+  Unshelve. all:eauto.
 Qed.
 
 Lemma closed_cstr_branch_context_gen {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} :

@@ -211,7 +211,7 @@ Section Wcbv.
       eval (tLetIn na b0 t b1) res
 
   (** Constant unfolding *)
-  | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
+  | eval_delta c decl body (isdecl : declared_constant_gen (lookup_env Σ) c decl) u res :
       decl.(cst_body) = Some body ->
       eval (subst_instance u body) res ->
       eval (tConst c u) res
@@ -220,7 +220,7 @@ Section Wcbv.
   | eval_iota ci discr c mdecl idecl cdecl u args p brs br res :
     eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
     nth_error brs c = Some br ->
-    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) (ci.(ci_ind), c) mdecl idecl cdecl ->
     #|args| = cstr_arity mdecl cdecl ->
     ci.(ci_npar) = mdecl.(ind_npars) ->
     context_assumptions cdecl.(cstr_args) = context_assumptions br.(bcontext) ->
@@ -229,7 +229,7 @@ Section Wcbv.
 
   (** Proj *)
   | eval_proj p discr args u a res mdecl idecl cdecl pdecl :
-      declared_projection Σ p mdecl idecl cdecl pdecl ->
+      declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
       eval discr (mkApps (tConstruct p.(proj_ind) 0 u) args) ->
       #|args| = cstr_arity mdecl cdecl ->
       nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
@@ -268,7 +268,7 @@ Section Wcbv.
 
   (** Constructor congruence: we do not allow over-applications *)
   | eval_construct ind c u mdecl idecl cdecl f args a a' :
-    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
     eval f (mkApps (tConstruct ind c u) args) ->
     #|args| < cstr_arity mdecl cdecl ->
     eval a a' ->
@@ -305,7 +305,7 @@ Section Wcbv.
 
    Variant value_head (nargs : nat) : term -> Type :=
    | value_head_cstr ind c u mdecl idecl cdecl :
-     declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+     declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
      nargs <= cstr_arity mdecl cdecl ->
      value_head nargs (tConstruct ind c u)
    | value_head_ind ind u : value_head nargs (tInd ind u)
@@ -406,7 +406,7 @@ Section Wcbv.
   | red_proj_in discr discr' p :
     red1 discr discr' -> red1 (tProj p discr) (tProj p discr')
   | red_proj p args u a mdecl idecl cdecl pdecl :
-    declared_projection Σ p mdecl idecl cdecl pdecl ->
+    declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
     #|args| = cstr_arity mdecl cdecl ->
     nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
     All value args ->
@@ -491,7 +491,7 @@ Section Wcbv.
   Qed.
 
   Lemma eval_mkApps_Construct ind c u mdecl idecl cdecl f args args' :
-    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
     eval f (tConstruct ind c u) ->
     #|args| <= cstr_arity mdecl cdecl ->
     All2 eval args args' ->
@@ -640,7 +640,7 @@ Section Wcbv.
     cst_body decl = Some b ->
     closed (subst_instance u b).
   Proof using Type.
-    move=> wfΣ Hc Hb.
+    move=> wfΣ Hc Hb. unshelve eapply declared_constant_to_gen in Hc; eauto.
     rewrite PCUICClosed.closedn_subst_instance.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
@@ -812,6 +812,7 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
+      apply declared_constant_from_gen; eauto.
     - apply IHev2.
       eapply closed_iota; tea.
       move/andP: Hc => [] /andP [] //.
@@ -905,19 +906,18 @@ Section Wcbv.
     eqdec_proof.
   Qed.
 
-  Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor Σ ind mdecl idecl cdecl) : d = d'.
+  Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor_gen (lookup_env Σ) ind mdecl idecl cdecl) : d = d'.
   Proof using Type.
     destruct d, d'.
     destruct d, d0.
-
-    assert (d0 = d) as -> by now apply uip.
+    assert (d0 = d) as -> by apply uip.
     assert (e1 = e2) as -> by now apply uip.
     assert (e = e0) as -> by now apply uip.
     reflexivity.
   Qed.
 
   Lemma declared_projection_unique {ind mdecl idecl cdecl pdecl}
-     (d d' : declared_projection Σ ind mdecl idecl cdecl pdecl) : d = d'.
+     (d d' : declared_projection_gen (lookup_env Σ) ind mdecl idecl cdecl pdecl) : d = d'.
   Proof using Type.
     destruct d, d'.
     rewrite (declared_constructor_unique d d0).
@@ -1108,7 +1108,7 @@ Section Wcbv.
                  end.
   Proof using Type.
     intros H; depelim H.
-    - exists decl.
+    - exists decl. apply declared_constant_from_gen in isdecl.
       split; [easy|].
       now rewrite e.
     - easy.

@@ -215,13 +215,34 @@ Proof.
     now rewrite -app_assoc.
 Qed.
 
+
+Lemma NoDup_extends (Σ : global_env) (Σ' : global_env) :
+        NoDup (map fst (declarations Σ')) -> extends_decls Σ Σ' -> NoDup (map fst (declarations Σ)).
+Proof.
+  intros Hl [_ [Σ'' eq] _]. rewrite eq in Hl; clear -Hl.
+  induction Σ'' => //. eapply IHΣ''; cbn in *.
+  now inversion Hl.
+Qed.
+
+Lemma declared_env_extends {cf : checker_flags} (Σ : global_env) k d (Σ' : global_env) P :
+  on_global_env cumul_gen P Σ' ->
+  In (k,d) (declarations Σ) -> extends_decls Σ Σ' -> In (k,d) (declarations Σ').
+Proof.
+  intros; apply lookup_global_Some_iff_In_NoDup.
+  - destruct X; eapply NoDup_on_global_decls; eauto.
+  - eapply lookup_env_extends; eauto.
+    destruct X; eapply lookup_global_Some_iff_In_NoDup; eauto.
+    eapply NoDup_extends; eauto.
+    now eapply NoDup_on_global_decls.
+Qed.
+
 Lemma wf_extends {cf} {Σ : global_env} T {Σ' : global_env} P :
   on_global_env cumul_gen P Σ' -> WfAst.wf Σ T -> extends_decls Σ Σ' -> WfAst.wf Σ' T.
 Proof.
   intros wfΣ'.
   induction 1 using term_wf_forall_list_ind; try solve [econstructor; eauto; solve_all].
   - intros. destruct H. destruct X0.
-    eapply lookup_env_extends in H; tea.
+    eapply declared_env_extends in H; tea.
     econstructor; repeat split; eauto; solve_all.
 Qed.
 
@@ -240,6 +261,8 @@ Lemma declared_inductive_wf {cf:checker_flags} {Σ : global_env} ind
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_global_Some_iff_In_NoDup in  Hmdecl; eauto.
+  2: destruct X; now eapply NoDup_on_global_decls.
   destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
   apply onInductives in prf.
   eapply nth_error_alli in Hidecl; eauto.
@@ -264,6 +287,8 @@ Lemma declared_inductive_wf_indices {cf:checker_flags} {Σ : global_env} {ind md
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_global_Some_iff_In_NoDup in  Hmdecl; eauto.
+  2: destruct X; now eapply NoDup_on_global_decls.
   destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
   apply onInductives in prf.
   eapply nth_error_alli in Hidecl; eauto.
@@ -282,6 +307,8 @@ Lemma declared_inductive_wf_ctors {cf:checker_flags} {Σ} {ind} {mdecl idecl} :
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_global_Some_iff_In_NoDup in  Hmdecl; eauto.
+  2: destruct X; now eapply NoDup_on_global_decls.
   destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
   apply onInductives in prf.
   eapply nth_error_alli in Hidecl; eauto.
@@ -529,7 +556,9 @@ Section WfAst.
   Proof using Type.
     intros.
     destruct H as [Hmdecl Hidecl]. red in Hmdecl.
-    destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
+    eapply lookup_global_Some_iff_In_NoDup in  Hmdecl; eauto.
+    2: destruct X; now eapply NoDup_on_global_decls.
+      destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
     eapply on_global_inductive_wf_params in prf.
     solve_all. eapply wf_decl_extends; tea.
   Qed.
@@ -543,7 +572,9 @@ Section WfAst.
   Proof using Type.
     intros X isdecl.
     destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
-    destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto. red in prf.
+    eapply lookup_global_Some_iff_In_NoDup in  Hmdecl; eauto.
+    2: destruct X; now eapply NoDup_on_global_decls.
+      destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto. red in prf.
     apply onInductives in prf.
     eapply nth_error_alli in Hidecl; eauto. simpl in *.
     pose proof (onConstructors Hidecl) as h. unfold on_constructors in h.
@@ -749,6 +780,8 @@ Section WfRed.
       apply wf_mkApps; intuition auto.
     - apply wf_subst_instance.
       unfold declared_constant in H.
+      eapply lookup_global_Some_iff_In_NoDup in H; eauto.
+      2: destruct wfΣ; now eapply NoDup_on_global_decls.
       eapply lookup_on_global_env in H as [Σ' [onΣ' [ext prf]]]; eauto.
       destruct decl; simpl in *.
       subst cst_body0; simpl in *; unfold on_constant_decl in prf; cbn in prf.
@@ -835,6 +868,8 @@ Section WfRed.
   Proof using Type.
     intros isdecl X.
     destruct isdecl as [[[Hmdecl Hidecl] Hcdecl] Hpdecl].
+    eapply lookup_global_Some_iff_In_NoDup in Hmdecl; eauto.
+    2: destruct X; now eapply NoDup_on_global_decls.
     destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
     assert (wfpars := on_inductive_wf_params prf).
     eapply on_global_inductive_wf_bodies in prf => //.
@@ -852,6 +887,8 @@ Section WfRed.
   Proof using Type.
     intros wΣ h.
     unfold declared_constant in h.
+    eapply lookup_global_Some_iff_In_NoDup in h; eauto.
+    2: destruct wΣ; now eapply NoDup_on_global_decls.
     destruct (lookup_on_global_env wΣ h) as [Σ' [wΣ' [ext h']]].
     simpl in h'.
     destruct decl as [ty [bo|]]. all: cbn in *.
@@ -944,6 +981,8 @@ Section TypingWf.
       induction X1; auto. apply IHX1.
       apply wf_subst. now destruct p0. destruct p. now inv w.
     - split. wf. apply wf_subst_instance. wf.
+      eapply lookup_global_Some_iff_In_NoDup in H; eauto.
+      2: destruct wfΣ; now eapply NoDup_on_global_decls.
       destruct (lookup_on_global_env X H) as [Σ' [wfΣ' [ext prf]]]; eauto.
       red in prf. destruct decl; destruct cst_body0; red in prf; simpl in *; wf.
       destruct prf as [s []]. wf.
@@ -1023,6 +1062,8 @@ Section TypingWf.
     intros declm.
     pose proof (typing_wf_gen (Env.empty_ext Σ) wfΣ _ localenv_nil _ _ (type_Prop _)) as [X _].
     eapply Forall_decls_on_global_wf in X.
+    eapply lookup_global_Some_iff_In_NoDup in declm; eauto.
+    2: destruct X; now eapply NoDup_on_global_decls.
     destruct (lookup_on_global_env X declm) as [? [? [ext ?]]]; eauto.
     split. eapply on_global_inductive_wf_params in o0. solve_all. eauto using wf_decl_extends.
     eapply on_global_inductive_wf_bodies in o0. solve_all.

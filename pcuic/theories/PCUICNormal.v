@@ -639,7 +639,7 @@ Context (Σ : global_env).
 Context (Γ : context).
 Context (P : term -> term -> Type).
 
-Lemma whne_red1_ind
+Lemma whne_red1_ind {cf:checker_flags} {wfΣ : wf Σ}
       (Hrel : forall i body,
           RedFlags.zeta flags = false ->
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -778,6 +778,7 @@ Proof using Type.
   - depelim r; solve_discr; eauto.
   - eauto.
   - depelim r; solve_discr.
+    unshelve eapply declared_constant_to_gen in isdecl; try exact wfΣ.
     unfold declared_constant, declared_constant_gen in isdecl.
     rewrite e in isdecl.
     inv isdecl.
@@ -842,7 +843,7 @@ Proof using Type.
 Qed.
 End whne_red1_ind.
 
-Lemma whne_pres1 Σ Γ t t' :
+Lemma whne_pres1 {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red1 Σ Γ t t' ->
   whne RedFlags.default Σ Γ t ->
   whne RedFlags.default Σ Γ t'.
@@ -887,14 +888,14 @@ Proof.
       reflexivity.
 Qed.
 
-Lemma whne_pres Σ Γ t t' :
+Lemma whne_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red Σ Γ t t' ->
   whne RedFlags.default Σ Γ t -> whne RedFlags.default Σ Γ t'.
 Proof.
   induction 1 using red_rect_n1; eauto using whne_pres1.
 Qed.
 
-Lemma whnf_pres1 Σ Γ t t' :
+Lemma whnf_pres1 {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red1 Σ Γ t t' ->
   whnf RedFlags.default Σ Γ t ->
   whnf RedFlags.default Σ Γ t'.
@@ -944,7 +945,7 @@ Proof.
   - depelim r. solve_discr.
 Qed.
 
-Lemma whnf_pres Σ Γ t t' :
+Lemma whnf_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red Σ Γ t t' ->
   whnf RedFlags.default Σ Γ t -> whnf RedFlags.default Σ Γ t'.
 Proof.
@@ -1413,7 +1414,7 @@ Proof.
     now apply All2_length in a.
 Qed.
 
-Lemma whne_red1_inv Σ Γ t t' :
+Lemma whne_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   whne RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
   whnf_red Σ Γ t t'.
@@ -1458,7 +1459,7 @@ Proof.
       intuition eauto; try reflexivity.
 Qed.
 
-Lemma whnf_red1_inv Σ Γ t t' :
+Lemma whnf_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   whnf RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
   whnf_red Σ Γ t t'.
@@ -1529,7 +1530,7 @@ Proof.
   intros wf wh [clΓ clt r].
   induction r using red_rect_n1.
   - apply whnf_red_refl; auto.
-  - eapply whnf_red1_inv in X.
+  - eapply whnf_red1_inv in X; eauto.
     + eapply whnf_red_trans; tea.
     + eapply whnf_pres; eauto.
 Qed.

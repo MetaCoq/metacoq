@@ -282,12 +282,14 @@ Section Validity.
       * eapply declared_constant_inv in X; eauto.
         red in X. simpl in X.
         eapply isType_weakening; eauto.
+        unshelve eapply declared_constant_to_gen in H; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
         eapply weaken_env_prop_isType.
       * have ond := on_declared_constant wf H.
         do 2 red in ond. simpl in ond.
         simpl in ond.
         eapply isType_weakening; eauto.
+        unshelve eapply declared_constant_to_gen in H; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto.
 
      - (* Inductive type *)
@@ -295,6 +297,7 @@ Section Validity.
       destruct isdecl.
       apply onArity in o0.
       eapply isType_weakening; eauto.
+      unshelve eapply declared_minductive_to_gen in H; eauto.
       eapply (isType_subst_instance_decl (Γ:=[])); eauto.
 
     - (* Constructor type *)
@@ -366,7 +369,8 @@ Section Validity.
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
       eapply infer_typing_sort_impl with _ isdecl'; intros Hs.
-      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
+      unshelve epose proof (isdecl_ := declared_projection_to_gen isdecl); eauto.
+      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl_.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
       eapply (weaken_ctx Γ) in Hs; eauto.
       rewrite -heq_length in sppar. rewrite firstn_all in sppar.

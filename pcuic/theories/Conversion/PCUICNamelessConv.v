@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction PCUICCases
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCumulativitySpec PCUICCumulativity PCUICPosition PCUICUnivSubst
      PCUICNamelessDef PCUICGuardCondition PCUICClosedConv PCUICClosedTyp PCUICUnivSubstitutionConv
-     PCUICClosed PCUICSigmaCalculus (* for context manipulations *).
+     PCUICClosed PCUICSigmaCalculus PCUICTyping (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
@@ -264,7 +264,7 @@ Lemma global_variance_nl_sigma_mon {Σ gr napp} :
   global_variance (nl_global_env Σ) gr napp =
   global_variance Σ gr napp.
 Proof.
-  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen 
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen
   /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - rewrite nl_lookup_env.
@@ -846,19 +846,21 @@ Proof.
 Qed.
 
 
-Lemma nl_declared_inductive Σ ind mdecl idecl :
+Lemma nl_declared_inductive {cf} Σ {wfΣ : wf Σ} ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->
   declared_inductive (nl_global_env Σ) ind
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl).
 Proof.
   intros []. split.
-  - unfold declared_minductive_gen.
+  - eapply declared_minductive_from_gen. eapply declared_minductive_to_gen in H.
+    unfold declared_minductive_gen.
     rewrite nl_lookup_env H.
     simpl. reflexivity.
   - simpl. now rewrite nth_error_map H0.
+  Unshelve. all:eauto.
 Qed.
 
-Lemma nl_declared_constructor Σ c mdecl idecl cdecl :
+Lemma nl_declared_constructor {cf} Σ {wfΣ : wf Σ} c mdecl idecl cdecl :
   declared_constructor Σ c mdecl idecl cdecl ->
   declared_constructor (nl_global_env Σ) c
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl)
@@ -1259,11 +1261,11 @@ Proof.
 Qed.
 
 Lemma nl_red1 :
-  forall Σ Γ M N,
+  forall {cf} Σ {wfΣ : wf Σ} Γ M N,
     red1 Σ Γ M N ->
     red1 (nl_global_env Σ) (nlctx Γ) (nl M) (nl N).
 Proof.
-  intros Σ Γ M N h.
+  intros ? Σ ? Γ M N h.
   induction h using red1_ind_all.
   all: simpl.
   all: rewrite ?nl_lift ?nl_subst ?nl_subst_instance.
@@ -1328,7 +1330,9 @@ Proof.
     * reflexivity.
     * cbn. rewrite IHn. reflexivity.
   - econstructor.
-    + unfold declared_constant, declared_constant_gen in *.
+    + eapply declared_constant_from_gen;
+      eapply declared_constant_to_gen in H;
+      unfold declared_constant_gen in *.
       rewrite nl_lookup_env H. reflexivity.
     + destruct decl as [? [?|] ?].
       all: cbn in *.
@@ -1365,43 +1369,44 @@ Proof.
     cbn. intros x y [[? ?] ?]. split.
     + rewrite nlctx_app_context nl_fix_context in r0. assumption.
     + cbn. congruence.
+    Unshelve. all:eauto.
 Qed.
 
 Lemma nl_conv {cf:checker_flags} :
-  forall Σ Γ A B,
+  forall {cf} Σ {wfΣ : wf_ext Σ} Γ A B,
     Σ ;;; Γ |- A = B ->
     nlg Σ ;;; nlctx Γ |- nl A = nl B.
 Proof.
-  intros Σ Γ A B h.
+  intros ? Σ ? Γ A B h.
   induction h.
   - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_eq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
   - eapply cumul_red_r. 1: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
 Qed.
 
 Lemma nl_cumul {cf:checker_flags} :
-  forall Σ Γ A B,
+  forall {cf} Σ {wfΣ : wf_ext Σ}  Γ A B,
     Σ ;;; Γ |- A <= B ->
     nlg Σ ;;; nlctx Γ |- nl A <= nl B.
 Proof.
-  intros Σ Γ A B h.
+  intros ? Σ ? Γ A B h.
   induction h.
   - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_leq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
   - eapply cumul_red_r. 1: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
 Qed.
 
 Notation nldecl := (map_decl_anon nl).
 
-Lemma nl_conv_decls {cf} {Σ Γ Γ'} {d d'} :
+Lemma nl_conv_decls {cf} {Σ Γ Γ'} `{wf_ext Σ} {d d'} :
   conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
   conv_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
@@ -1409,7 +1414,7 @@ Proof.
     eapply nl_conv; tea.
 Qed.
 
-Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} :
+Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} `{wf_ext Σ} :
    cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
    cumul_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
@@ -1417,7 +1422,7 @@ Proof.
     (eapply nl_conv || eapply nl_cumul); tea.
 Qed.
 
-Lemma nl_conv_ctx {cf} {Σ Γ Δ} :
+Lemma nl_conv_ctx {cf} {Σ Γ Δ} `{wf_ext Σ} :
   conv_context cumulAlgo_gen Σ Γ Δ ->
   conv_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
@@ -1426,7 +1431,7 @@ Proof.
 Qed.
 #[global] Hint Resolve nl_conv_ctx : nl.
 
-Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
+Lemma nl_cumul_ctx {cf} {Σ Γ Δ} `{wf_ext Σ} :
   cumul_context cumulAlgo_gen Σ Γ Δ ->
   cumul_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.

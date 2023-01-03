@@ -224,7 +224,9 @@ Proof.
   rewrite !trans_lookup_inductive.
   unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
   eapply extends_decls_wf; tea. rewrite {}H2.
-  destruct H as [H hnth]. red in H.
+  destruct H as [H hnth].
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
+  red in H.
   generalize (trans_lookup_env (inductive_mind ci)).
   move: H.
   rewrite /lookup_inductive /lookup_minductive. intros ->.
@@ -669,7 +671,10 @@ Section Trans_Global.
     Ast.declared_constant Σ cst decl ->
     declared_constant Σ' cst (trans_constant_body Σ' decl).
   Proof.
-    unfold declared_constant, Ast.declared_constant, 
+    intro H.
+    unshelve eapply Typing.TemplateDeclarationTyping.declared_constant_to_gen in H; eauto.
+    unshelve eapply declared_constant_from_gen; eauto. move:H.
+    unfold declared_constant, Ast.declared_constant,
       declared_constant_gen, Ast.declared_constant_gen.
     now rewrite trans_lookup => -> /=.
   Qed.
@@ -678,6 +683,9 @@ Section Trans_Global.
     Ast.declared_minductive Σ cst decl ->
     declared_minductive (trans_global_env Σ) cst (trans_minductive_body Σ' decl).
   Proof.
+    intro H.
+    unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
+    unshelve eapply declared_minductive_from_gen; eauto. move:H.
     unfold declared_minductive, Ast.declared_minductive.
     unfold declared_minductive_gen, Ast.declared_minductive_gen.
     now rewrite trans_lookup => -> /=.
@@ -737,25 +745,28 @@ Proof.
   now eapply typing_wf.
 Qed.
 
-Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
+Lemma declared_inductive_inj {cf Σ mdecl mdecl' ind idecl idecl'}
+  {wfΣ : Typing.wf Σ}:
   Ast.declared_inductive Σ ind mdecl' idecl' ->
   Ast.declared_inductive Σ ind mdecl idecl ->
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
-  intros [] []. unfold Ast.declared_minductive in *.
-  unfold Ast.declared_minductive_gen in H1. 
+  intros [] [].
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H, H1; eauto.
+  unfold Ast.declared_minductive_gen in H1.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
 
-Lemma lookup_inductive_None Σ ind : lookup_inductive Σ ind = None ->
+Lemma lookup_inductive_None {cf} Σ {wfΣ : wf Σ} ind : lookup_inductive Σ ind = None ->
     ~ (exists mdecl idecl, declared_inductive Σ ind mdecl idecl).
 Proof.
   intros hl [mdecl [idecl [decli hnth]]].
+  unshelve eapply declared_minductive_to_gen in decli; eauto.
   unfold declared_inductive, declared_minductive in decli.
-  unfold lookup_inductive, lookup_inductive_gen, 
+  unfold lookup_inductive, lookup_inductive_gen,
     lookup_minductive, lookup_minductive_gen in hl.
-  unfold declared_minductive_gen in decli. 
-  destruct lookup_env eqn:heq. 
+  unfold declared_minductive_gen in decli.
+  destruct lookup_env eqn:heq.
   noconf decli. cbn in hl.
   destruct nth_error; congruence. congruence.
 Qed.
@@ -774,14 +785,15 @@ Section Trans_Global.
     unfold SEq.R_global_instance, SEq.global_variance.
     destruct gref; simpl; auto.
     - unfold R_global_instance_gen, R_opt_variance; cbn.
-      unfold Ast.lookup_inductive_gen, lookup_inductive_gen, 
+      unfold Ast.lookup_inductive_gen, lookup_inductive_gen,
         Ast.lookup_minductive_gen, lookup_minductive_gen.
       rewrite trans_lookup. destruct Ast.Env.lookup_env eqn:look => //; simpl.
       destruct g => /= //.
       rewrite nth_error_map.
       destruct nth_error eqn:hnth => /= //.
       assert (wfty : WfAst.wf Σ (Ast.Env.ind_type o)).
-      { eapply declared_inductive_wf; eauto. eapply typing_wf_sigma; eauto. split; eauto. }
+      { eapply declared_inductive_wf; eauto. eapply typing_wf_sigma; eauto. split; eauto.
+        unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_from_gen; eauto. }
       generalize (trans_destArity Σ [] (Ast.Env.ind_type o) wfty wfΣ').
       destruct Ast.destArity as [[ctx ps]|] eqn:eq' => /= // -> //.
       now rewrite context_assumptions_map.
@@ -867,9 +879,10 @@ Section Trans_Global.
       eapply forall_decls_declared_inductive in decli; tea.
       rewrite trans_lookup_inductive.
       destruct lookup_inductive as [[mdecl idecl]|] eqn:hl => //.
-      2:{ eapply lookup_inductive_None in hl. elim hl. eauto. }
+      2:{ eapply lookup_inductive_None in hl; tea. elim hl. eauto. }
       apply lookup_inductive_declared in hl.
-      destruct (PCUICGlobalEnv.declared_inductive_inj decli hl). subst.
+      unshelve epose proof (decli'' := declared_inductive_to_gen decli); eauto.
+      destruct (PCUICGlobalEnv.declared_inductive_inj decli'' hl). subst.
       destruct X.
       constructor. all: try solve [
         match goal with
@@ -1282,12 +1295,14 @@ Section Trans_Global.
     rewrite map2_set_binder_name_context_assumptions; len.
   Qed.
 
-  Lemma declared_inductive_lookup {ind mdecl idecl} :
+  Lemma declared_inductive_lookup {wfΣ' : wf Σ'} {ind mdecl idecl} :
     declared_inductive Σ' ind mdecl idecl ->
     lookup_inductive Σ' ind = Some (mdecl, idecl).
   Proof.
-    intros []. unfold lookup_inductive, lookup_minductive.
-    unfold lookup_inductive_gen, lookup_minductive_gen. 
+    intros [].
+    unshelve eapply declared_minductive_to_gen in H; eauto.
+    unfold lookup_inductive, lookup_minductive.
+    unfold lookup_inductive_gen, lookup_minductive_gen.
     now rewrite H H0.
   Qed.
 
@@ -3152,9 +3167,9 @@ Proof.
               subst headrel.
               assert (#|PCUICEnvironment.ind_bodies (trans_minductive_body Σ' m)| = #|Ast.Env.ind_bodies m|) as <-.
               now rewrite /trans_minductive_body /= map_length.
-              assert (#|ctx| = #|map (trans_decl Σ') ctx|) as ->. now rewrite map_length.
+              assert (#|Γ| = #|map (trans_decl Σ') Γ|) as ->. now rewrite map_length.
               move/WfAst.wf_mkApps_inv => wfindices.
-              eapply positive_cstr_concl.
+              eapply pos_concl.
               rewrite map_length.
               eapply All_map. solve_all. now eapply trans_closedn.
               move/WfAst.wf_inv => /= [[wfb wfty] wft].
@@ -3165,14 +3180,14 @@ Proof.
               constructor. clear -onI X0 wfΣg onu IHond p wfty.
               induction p.
               { constructor; rewrite map_length; eapply trans_closedn => //. }
-              { rewrite trans_mkApps /=.
+              { destruct m0 as [? [? ?]]. rewrite trans_mkApps /=.
                 move/WfAst.wf_mkApps_inv: wfty => wfl.
-                econstructor 2; tea; rewrite ?map_length //.
-                solve_all. eapply trans_closedn => //.
-                rewrite -map_rev nth_error_map e //.
-                rewrite e0.
+                econstructor 2; tea; repeat econstructor; rewrite ?map_length //.
+                2: solve_all; eapply trans_closedn => //.
+                2: rewrite -map_rev nth_error_map H2//.
+                rewrite e.
                 have wfty : WfAst.wf Σg (Ast.Env.ind_type i).
-                { rewrite nth_error_rev in e. len. rewrite List.rev_involutive in e.
+                { rewrite nth_error_rev in H2. len. rewrite List.rev_involutive in H2.
                   eapply nth_error_alli in onI; tea. cbn in onI.
                   destruct onI as [onI _]. eapply Typing.onArity in onI as [s Hs].
                   now eapply typing_wf in Hs. }

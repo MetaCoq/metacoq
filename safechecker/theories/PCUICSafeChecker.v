@@ -1284,7 +1284,7 @@ Section CheckEnv.
         move/andP: isind => [/Nat.leb_le le /Nat.ltb_lt lt].
         eapply forallb_All in check_closed. sq.
         symmetry in Heq_anonymous2; eapply decompose_app_inv in Heq_anonymous2.
-        subst t0. econstructor 2; eauto.
+        subst t0. econstructor 2; repeat constructor; eauto.
         match goal with [ H : is_true (eqb _ _) |- _ ] => now apply eqb_eq in H end.
       Qed.
 

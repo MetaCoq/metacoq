@@ -502,6 +502,14 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
+Lemma All2_impl_All2 {A B} {P Q : A -> B -> Type} {l l'} :
+    All2 P l l' ->
+    All2 (fun x y => P x y -> Q x y) l l' ->
+    All2 Q l l'.
+Proof.
+  induction 1; inversion 1; constructor; auto.
+Qed.
+
 Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
     All2 P l l' ->
     (forall x y, P x y -> Q x y) ->
@@ -611,6 +619,12 @@ Proof.
   apply All_app in X as [Allx Alll]. inv Allx.
    apply All_app_inv; intuition eauto.
 Qed.
+
+Lemma All_impl_All {A} {P Q} {l : list A} : All P l -> All (fun x => P x -> Q x) l -> All Q l.
+Proof. induction 1; inversion 1; constructor; intuition auto. Qed.
+
+Lemma Alli_impl_Alli {A} {P Q} (l : list A) {n} : Alli P n l -> Alli (fun n x => P n x -> Q n x) n l -> Alli Q n l.
+Proof. induction 1; inversion 1; constructor; intuition auto. Defined.
 
 Lemma All_impl {A} {P Q} {l : list A} : All P l -> (forall x, P x -> Q x) -> All Q l.
 Proof. induction 1; try constructor; intuition auto. Qed.
@@ -1531,6 +1545,12 @@ Qed.
 Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (fun x => P (f x)) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
+Lemma Forall_impl_Forall {A} {P Q : A -> Prop} {l} :
+  Forall P l -> Forall (fun x => P x -> Q x) l -> Forall Q l.
+Proof.
+  induction 1; inversion 1; constructor; auto.
+Qed.
+
 Lemma Forall_impl {A} {P Q : A -> Prop} {l} :
   Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
 Proof.
@@ -2415,17 +2435,17 @@ Lemma All2_same {A} {P : A -> A -> Type} l : (forall x, P x x) -> All2 P l l.
 Proof. induction l; constructor; auto. Qed.
 
 
-Lemma All2_prod {A} P Q (l l' : list A) : All2 P l l' -> All2 Q l l' -> All2 (Trel_conj P Q) l l'.
+Lemma All2_prod {A B} P Q (l : list A) (l' : list B) : All2 P l l' -> All2 Q l l' -> All2 (Trel_conj P Q) l l'.
 Proof.
   induction 1; inversion 1; subst; auto.
 Defined.
 
 Lemma All2_prod_inv :
-  forall A (P : A -> A -> Type) Q l l',
+  forall A B (P : A -> B -> Type) Q l l',
     All2 (Trel_conj P Q) l l' ->
     All2 P l l' × All2 Q l l'.
 Proof.
-  intros A P Q l l' h.
+  intros A B P Q l l' h.
   induction h.
   - auto.
   - destruct IHh. destruct r.
@@ -3039,6 +3059,21 @@ Derive Signature NoConfusion for All2_fold.
 Definition All_over {A B} (P : list B -> list B -> A -> A -> Type) (Γ Γ' : list B) :=
   fun Δ Δ' => P (Δ ++ Γ) (Δ' ++ Γ').
 
+Lemma All2_fold_from_nth_error A L1 L2 P :
+  #|L1| = #|L2| ->
+                (forall n x1 x2, n < #|L1| -> nth_error L1 n = Some x1
+                                           -> nth_error L2 n = Some x2
+                                           -> P (skipn (S n) L1) (skipn (S n) L2) x1 x2) ->
+                @All2_fold A P L1 L2.
+Proof.
+  revert L2; induction L1; cbn; intros.
+  - destruct L2; inv H. econstructor.
+  - destruct L2; inversion H. econstructor.
+    { apply IHL1; eauto.
+      intros n x1 x2 ?; apply (X (S n)). lia. }
+    { eapply (X 0); cbn; eauto. lia. }
+Qed.
+
 Lemma All2_fold_app {A} {P} {Γ Γ' Γl Γr : list A} :
   All2_fold P Γ Γl ->
   All2_fold (All_over P Γ Γl) Γ' Γr ->
@@ -3510,4 +3545,147 @@ Lemma All1i_Alli_mix_left {A B k Q R} {l : list A} {l' : list B}
 Proof.
   move=> + h; elim: h=> [n|n x y xs ys r rs ih] q; depelim q; constructor=> //.
   by apply: ih.
+Qed.
+
+Lemma All_Alli_swap_iff A B P
+  : forall ls1 ls2 n, (@All A (fun x => @Alli B (P x) n ls1) ls2) <~> (@Alli B (fun n y => @All A (fun x => P x n y) ls2) n ls1).
+Proof.
+  induction ls1 as [|?? IH], ls2 as [|? ls2] => n; split.
+  all: inversion 1; subst; repeat constructor => //=; try (apply IH; clear IH) => //.
+  all: try match goal with H : _ |- _ => apply IH in H; clear IH end.
+  all: repeat match goal with H : All _ (_ :: _) |- _ => inversion H; clear H; subst end.
+  all: repeat match goal with H : Alli _ _ (_ :: _) |- _ => inversion H; clear H; subst end.
+  all: repeat constructor.
+  all: try now auto.
+  all: try now eapply All_impl; tea; cbn; inversion 1; subst => //.
+  all: repeat let H := multimatch goal with H : _ |- _ => H end in
+         eapply All_impl_All; [ exact H | clear H ].
+  all: now apply In_All; constructor => //.
+Qed.
+
+Lemma All_eta3 {A B C P} ls
+  : @All (A * B * C)%type (fun '(a, b, c) => P a b c) ls <~> All (fun abc => P abc.1.1 abc.1.2 abc.2) ls.
+Proof.
+  split; induction 1; constructor => //=.
+  all: repeat match goal with H : _ × _ |- _ => destruct H end => //.
+Qed.
+
+Local Ltac All2_All_swap_t_step :=
+  first [ progress intros
+        | progress subst
+        | let is_ctor_list x :=
+            lazymatch x with
+            | nil => idtac
+            | cons _ _ => idtac
+            end in
+          match goal with
+          | [ H : All2 _ ?x ?y |- _ ]
+            => first [ is_ctor_list x | is_ctor_list y ];
+               inversion H; clear H
+          | [ H : All2_fold _ ?x ?y |- _ ]
+            => first [ is_ctor_list x | is_ctor_list y ];
+               inversion H; clear H
+          | [ H : All _ ?x |- _ ]
+            => is_ctor_list x; inversion H; clear H
+          | [ |- (_ :: _ = []) + _ ] => right
+          | [ |- (?x = ?x) + _ ] => left
+          end
+        | exactly_once constructor
+        | solve [ eauto
+                | first [ eapply All2_impl | eapply All2_fold_impl | eapply All_impl ]; tea; cbn; intros *; (inversion 1 + constructor); subst; eauto ]
+        | congruence
+        | now apply All_refl; constructor
+        | apply All2_from_nth_error => //; lia
+        | progress cbn in *
+        | match goal with
+          | [ H : ?x <> ?x \/ ?A |- _ ]
+            => (assert A by now destruct H); clear H
+          end ].
+
+Lemma All2_All_swap A B C P
+  : forall ls1 ls2 ls3,
+    @All2 A B (fun x y => @All C (P x y) ls1) ls2 ls3 -> @All C (fun z => @All2 A B (fun x y => P x y z) ls2 ls3) ls1.
+Proof.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All_impl; [ eapply All_prod | intros ? [H1 H2]; constructor; first [ exact H1 | exact H2 ] ];
+                      eauto; apply IH; clear IH ].
+Qed.
+
+Lemma All_All2_swap_sum A B C P
+  : forall ls1 ls2 ls3,
+    @All C (fun z => @All2 A B (fun x y => P x y z) ls2 ls3) ls1 -> (ls1 = []) + (@All2 A B (fun x y => @All C (P x y) ls1) ls2 ls3).
+Proof.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_impl; [ eapply All2_prod | intros * [H1 H2]; constructor; first [ exact H1 | exact H2 ] ];
+                      let IH' := fresh in
+                      eauto; edestruct IH as [IH'|IH']; try (apply IH'; clear IH'); clear IH ].
+Qed.
+
+Lemma All_All2_swap A B C P
+  : forall ls1 ls2 ls3,
+    ls1 <> [] \/ List.length ls2 = List.length ls3 -> @All C (fun z => @All2 A B (fun x y => P x y z) ls2 ls3) ls1 -> @All2 A B (fun x y => @All C (P x y) ls1) ls2 ls3.
+Proof.
+  destruct ls1 as [|? ls1].
+  { move => ls2 ls3 H _.
+    assert (#|ls2| = #|ls3|) by now destruct H.
+    apply All2_from_nth_error; eauto. }
+  move => ls2 ls3 _; move: ls1 ls2 ls3.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_impl; [ eapply All2_prod | intros * [H1 H2]; constructor; first [ exact H1 | exact H2 ] ]
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_impl; [ eapply IH | ]; clear IH ].
+Qed.
+
+Lemma All2_fold_All_swap A B P
+  : forall ls1 ls2 ls3,
+    @All2_fold A (fun l1 l2 x y => @All B (P l1 l2 x y) ls1) ls2 ls3 -> @All B (fun z => @All2_fold A (fun l1 l2 x y => P l1 l2 x y z) ls2 ls3) ls1.
+Proof.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All_impl; [ eapply All_prod | intros ? [H1 H2]; constructor; first [ exact H1 | exact H2 ] ];
+                      eauto; apply IH; clear IH ].
+Qed.
+
+Lemma All_All2_fold_swap_sum A B P
+  : forall ls1 ls2 ls3,
+    @All B (fun z => @All2_fold A (fun l1 l2 x y => P l1 l2 x y z) ls2 ls3) ls1 -> (ls1 = []) + (@All2_fold A (fun l1 l2 x y => @All B (P l1 l2 x y) ls1) ls2 ls3).
+Proof.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_fold_impl; [ eapply All2_fold_prod | intros * [H1 H2]; constructor; first [ exact H1 | exact H2 ] ];
+                      let IH' := fresh in
+                      eauto; edestruct IH as [IH'|IH']; try (apply IH'; clear IH'); clear IH ].
+Qed.
+
+Lemma All_All2_fold_swap A B P
+  : forall ls1 ls2 ls3,
+    ls1 <> [] \/ List.length ls2 = List.length ls3 -> @All B (fun z => @All2_fold A (fun l1 l2 x y => P l1 l2 x y z) ls2 ls3) ls1 -> @All2_fold A (fun l1 l2 x y => @All B (P l1 l2 x y) ls1) ls2 ls3.
+Proof.
+  destruct ls1 as [|? ls1].
+  { move => ls2 ls3 H _.
+    assert (#|ls2| = #|ls3|) by now destruct H.
+    apply All2_fold_from_nth_error; eauto. }
+  move => ls2 ls3 _; move: ls1 ls2 ls3.
+  induction ls1 as [|?? IH], ls2 as [|? ls2], ls3 as [|? ls3].
+  all: repeat first [ All2_All_swap_t_step
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_fold_impl; [ eapply All2_fold_prod | intros * [H1 H2]; constructor; first [ exact H1 | exact H2 ] ]
+                    | let H1 := fresh in
+                      let H2 := fresh in
+                      eapply All2_fold_impl; [ eapply IH | ]; clear IH ].
 Qed.

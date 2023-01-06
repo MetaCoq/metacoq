@@ -198,8 +198,8 @@ module RetypeMindEntry =
   | (_, SProp) -> assert false (* template SProp not allowed *)
   | (SProp, s) | (Prop, s) | (s, Prop) -> s
   | (Set, Set) -> Sorts.set
-  | (Set, Type u) | (Type u, Set) -> Sorts.sort_of_univ (Universe.sup u Universe.type0)
-  | (Type u, Type v) -> Sorts.sort_of_univ (Universe.sup u v)
+  | (Set, (Type u | QSort (_, u))) | ((Type u | QSort (_, u)), Set) -> Sorts.sort_of_univ (Universe.sup u Universe.type0)
+  | ((Type u | QSort (_, u)), (Type v | QSort (_, v))) -> Sorts.sort_of_univ (Universe.sup u v)
 
 
   let infer_mentry_univs env evm mind =

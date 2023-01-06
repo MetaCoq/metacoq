@@ -332,12 +332,14 @@ struct
   | Sorts.Prop -> constr_mkApp (tof_levels, [| Lazy.force prop_level |])
   | Sorts.SProp -> constr_mkApp (tof_levels, [| Lazy.force sprop_level |])
   | Sorts.Type u -> quote_universe u
+  | Sorts.QSort (_, u) -> quote_universe u (* FIXME *)
 
   let quote_sort_family = function
     | Sorts.InProp -> Lazy.force sfProp
     | Sorts.InSet -> Lazy.force sfSet
     | Sorts.InType -> Lazy.force sfType
     | Sorts.InSProp -> Lazy.force sfProp (* FIXME SProp *)
+    | Sorts.InQSort -> Lazy.force sfType (* FIXME *)
 
   let quote_context_decl na b t =
     constr_mkApp (tmkdecl, [| Lazy.force tTerm; na; quote_optionl tTerm b; t |])

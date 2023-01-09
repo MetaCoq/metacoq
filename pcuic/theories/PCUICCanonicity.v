@@ -563,11 +563,10 @@ End Spines.
 
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
-Section WeakNormalization.
+Section Canonicity.
   Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
 
-  Section reducible.
   Notation wh_neutral := (whne RedFlags.default).
   Notation wh_normal := (whnf RedFlags.default).
 
@@ -849,7 +848,7 @@ Section WeakNormalization.
       apply hp.
   Qed.
 
-  Lemma whnf_ind_finite t ind u indargs :
+  Lemma canonicity t ind u indargs :
     axiom_free_value Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
@@ -886,11 +885,12 @@ Section WeakNormalization.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
     destruct_sigma t0.
     intros axfree norm.
-    eapply whnf_ind_finite in t1; eauto.
+    eapply canonicity in t1; eauto.
     intros chk.
     pose proof (check_recursivity_kind_inj chk t0).
     discriminate.
   Qed.
+
 
   Lemma value_axiom_free Σ' t :
     value Σ' t ->
@@ -1096,7 +1096,7 @@ Section WeakNormalization.
     eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
   Qed.
 
-  Lemma value_canonical {t i u args} :
+  Lemma value_canonicity {t i u args} :
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
     value Σ t ->
     construct_cofix_discr (head t).
@@ -1109,7 +1109,7 @@ Section WeakNormalization.
     eapply @subject_closed with (Γ := []); eauto.
   Qed.
 
-  Lemma eval_ind_canonical {t i u args} :
+  Lemma eval_canonicity {t i u args} :
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
     forall t', eval Σ t t' ->
     construct_cofix_discr (head t').
@@ -1123,7 +1123,6 @@ Section WeakNormalization.
     eapply wh_normal_ind_discr; eauto.
   Qed.
 
-  End reducible.
-End WeakNormalization.
+End Canonicity.
 
 (* Print Assumptions eval_ind_canonical. *)

@@ -17,7 +17,6 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
 
 From Equations Require Import Equations.
 
-
 Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res T :
   wf Σ ->
   Σ ;;; [] |- tCase ci p discr brs : T ->
@@ -28,7 +27,7 @@ Proof.
   - eapply inversion_Case in wt as (? & ? & ? & ? & cinv & ?); eauto.
     eexists _, _, _. eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
   - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
-    assert (Hred1 : Σ;;; [] |- tCase ip p discr brs ⇝* tCase ip p (mkApps fn args) brs). {
+    assert (Hwcbv_red1 : Σ;;; [] |- tCase ip p discr brs ⇝* tCase ip p (mkApps fn args) brs). {
       etransitivity. { eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. }
       econstructor. econstructor.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
@@ -459,7 +458,7 @@ Proof.
   apply typing_ind_env_app_size; eauto.
 Qed.
 
-Local Hint Constructors value red1 : wcbv.
+Local Hint Constructors value wcbv_red1 : wcbv.
 
 Definition axiom_free Σ :=
   forall c decl, declared_constant Σ c decl -> cst_body decl <> None. (* TODO: consolidate with PCUICConsistency *)
@@ -540,12 +539,12 @@ Qed.
 
 Global Hint Resolve All_app_inv : pcuic.
 
-Lemma red1_mkApps_left {Σ f f' args} : red1 Σ f f' -> red1 Σ (mkApps f args) (mkApps f' args).
+Lemma wcbv_red1_mkApps_left {Σ f f' args} : wcbv_red1 Σ f f' -> wcbv_red1 Σ (mkApps f args) (mkApps f' args).
 Proof.
   induction args using rev_ind.
   - auto.
   - intros. rewrite !mkApps_app.
-    eapply red_app_left. now apply IHargs.
+    eapply wcbv_red_app_left. now apply IHargs.
 Qed.
 
 Lemma typing_spine_sort {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ s args T :
@@ -572,7 +571,7 @@ Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : 
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
   value Σ (mkApps fn args) ->
-  (∑ t' : term, red1 Σ (mkApps fn (args ++ [hd])) t') +
+  (∑ t' : term, wcbv_red1 Σ (mkApps fn (args ++ [hd])) t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
   intros napp ht vhd clhd vapp.
@@ -588,9 +587,9 @@ Proof.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity. econstructor; eauto. }
     now eapply typing_spine_sort, app_tip_nil in hcum.
   * (* Lambda *) left. destruct args.
-    - cbn. eexists. now eapply red_beta.
-    - eexists. rewrite mkApps_app. rewrite (mkApps_app _ [t] args). do 2 eapply red1_mkApps_left.
-      cbn. eapply red_beta. now depelim a.
+    - cbn. eexists. now eapply wcbv_red_beta.
+    - eexists. rewrite mkApps_app. rewrite (mkApps_app _ [t] args). do 2 eapply wcbv_red1_mkApps_left.
+      cbn. eapply wcbv_red_beta. now depelim a.
   * (* Inductive *)
     eapply inversion_Ind in hfn as [? [? [? [? [? cu]]]]]; tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity. econstructor; eauto. }
@@ -610,7 +609,7 @@ Proof.
       len in E. cbn in E. assert (rarg = #|args|).
       eapply stuck_fix_value_args in vapp; tea. 2:{ unfold cunfold_fix. now rewrite Efix. }
       cbn in vapp. apply Nat.leb_gt in E. lia. subst rarg.
-      left. eexists. rewrite mkApps_app /=. eapply red_fix. eauto. eauto.
+      left. eexists. rewrite mkApps_app /=. eapply wcbv_red_fix. eauto. eauto.
       unfold unfold_fix. now rewrite Efix.
       eapply fix_app_is_constructor in ht.
       2:{ unfold unfold_fix. now rewrite Efix. }
@@ -632,7 +631,7 @@ Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
   value Σ (mkApps fn args) ->
-  (∑ t' : term, red1 Σ (mkApps fn (args ++ [hd])) t') +
+  (∑ t' : term, wcbv_red1 Σ (mkApps fn (args ++ [hd])) t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
   destruct (decompose_app fn) eqn:da.
@@ -653,7 +652,7 @@ Proof.
 Qed.
 
 Lemma progress `{cf : checker_flags}:
-  env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & red1 Σ t t'} + (value Σ t))
+  env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & wcbv_red1 Σ t t'} + (value Σ t))
            (fun _ _ => True).
 Proof with eauto with wcbv; try congruence.
   eapply typing_ind_env...
@@ -670,7 +669,7 @@ Proof with eauto with wcbv; try congruence.
       intros _ Happ.
       destruct (IHt Hax eq_refl Ht) as [[t' IH] | IH]; eauto with wcbv.
       assert (Ht' : Σ ;;; [] |- t : tProd na A B) by (econstructor; eauto; now eapply cumulAlgo_cumulSpec in w).
-      destruct p0 as [_ [[t' Hstep] | Hval]]; eauto using red1.
+      destruct p0 as [_ [[t' Hstep] | Hval]]; eauto using wcbv_red1.
       intros htapp.
       pose proof (typing_value_head t [] hd _ htapp Hval).
       forward X. now eapply subject_closed in H0. cbn in X.
@@ -684,7 +683,7 @@ Proof with eauto with wcbv; try congruence.
     intros Helim Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
     specialize (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv.
     pose proof IH as IHv.
-    eapply PCUICCanonicity.value_canonical in IH; eauto.
+    eapply value_canonicity in IH; eauto.
     unfold head in IH.
     rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc, IHv |- *.
     destruct (decompose_app c) as [h l].
@@ -704,20 +703,20 @@ Proof with eauto with wcbv; try congruence.
       eapply All2i_nth_error in Hall as [eqctx _]; tea; [|eapply d].
       eapply PCUICCasesContexts.alpha_eq_context_assumptions in eqctx.
       rewrite cstr_branch_context_assumptions in eqctx.
-      eapply red_iota; eauto.
+      eapply wcbv_red_iota; eauto.
       { rewrite /cstr_arity Hl. rewrite -Heq. lia. }
       eapply value_mkApps_inv in IHv as [[-> ]|[]]; eauto.
 
     + eapply inversion_Case in H as (? & ? & ? & ? & [] & ?); eauto.
       eapply PCUICValidity.inversion_mkApps in scrut_ty as (? & ? & ?); eauto.
       eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?); eauto.
-      left. eexists. eapply red_cofix_case. unfold cunfold_cofix. rewrite e. reflexivity.
+      left. eexists. eapply wcbv_red_cofix_case. unfold cunfold_cofix. rewrite e. reflexivity.
       eapply value_mkApps_inv in IHv as [[-> ]|[]]; eauto.
   - intros Σ wfΣ Γ _ p c u mdecl idecl cdecl pdecl Hcon args Hargs _ Hc IHc
            Hlen Hax -> H.
     destruct (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv; clear IHc.
     pose proof IH as Hval.
-    eapply PCUICCanonicity.value_canonical in IH; eauto.
+    eapply value_canonicity in IH; eauto.
     unfold head in IH.
     rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc, Hval |- *.
     destruct (decompose_app c) as [h l].
@@ -726,210 +725,13 @@ Proof with eauto with wcbv; try congruence.
     + eapply invert_Proj_Construct in H as H_; sq; eauto. destruct H_ as (<- & -> & Hl).
       left. eapply nth_error_Some' in Hl as [x Hx].
       eexists.
-      eapply red_proj; eauto.
+      eapply wcbv_red_proj; eauto.
       unshelve eapply declared_projection_to_gen; eauto.
       now eapply (typing_constructor_arity_exact Hcon) in Hc.
       eapply value_mkApps_inv in Hval as [[-> Hval] | [? ? Hval]]; eauto.
     + left. eapply inversion_Proj in H as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
       eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?); eauto.
-      eexists. eapply red_cofix_proj. unfold cunfold_cofix. rewrite e0. reflexivity.
+      eexists. eapply wcbv_red_cofix_proj. unfold cunfold_cofix. rewrite e0. reflexivity.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
-Qed.
-
-Lemma red1_closed {cf : checker_flags} {Σ t t'} :
-  wf Σ ->
-  closed t -> red1 Σ t t' -> closed t'.
-Proof.
-  intros Hwf Hcl Hred. induction Hred; cbn in *; solve_all.
-  all: eauto using closed_csubst, closed_def.
-  - eapply closed_iota; eauto. solve_all. unfold test_predicate_k in H. solve_all.
-    now rewrite e0 /cstr_arity -e1 -e2.
-  - eauto using closed_arg.
-  - rewrite !closedn_mkApps in H |- *. solve_all.
-    eapply closed_unfold_fix; tea.
-  - rewrite !closedn_mkApps in Hcl |- *. solve_all.
-    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
-    eapply closed_unfold_cofix with (narg := narg); eauto.
-    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
-    eapply closed_cofix_substl_subst_eq; eauto.
-  - rewrite !closedn_mkApps in H1 |- *. solve_all.
-    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
-    eapply closed_unfold_cofix with (narg := narg); eauto.
-    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
-    eapply closed_cofix_substl_subst_eq; eauto.
-Qed.
-
-Lemma red1_incl {cf : checker_flags} {Σ t t' } :
-  closed t ->
-  red1 Σ t t' -> PCUICReduction.red1 Σ [] t t'.
-Proof.
-  intros Hcl Hred.
-  induction Hred. all: cbn in *; solve_all.
-  1-10: try econstructor; eauto using red1_closed.
-  1,2: now rewrite closed_subst; eauto; econstructor; eauto.
-  - now rewrite e0 /cstr_arity -e1 -e2.
-  - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
-    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.
-  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
-    inversion e; subst.
-    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
-    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in Hcl. solve_all.
-  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
-    inversion e; subst.
-    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
-    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in H1. solve_all.
-Qed.
-
-Global Hint Constructors value eval : wcbv.
-Global Hint Resolve value_final : wcbv.
-
-(* Lemma eval_tApp_Construct {Σ a b ind c u args a'}
-  eval Σ a
-eval Σ (tApp a b) (mkApps (tConstruct ind c u) (args ++ [a']))
- *)
-
-Lemma red1_eval {Σ : global_env_ext } t t' v : wf Σ ->
-  closed t ->
-  red1 Σ t t' -> eval Σ t' v -> eval Σ t v.
-Proof.
-  intros Hwf Hty Hred Heval.
-  induction Hred in Heval, v, Hty |- *; eauto with wcbv.
-  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6:now econstructor; eauto with wcbv.
-    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
-  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6: now econstructor; eauto with wcbv.
-    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
-  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
-  - unshelve eapply declared_constant_to_gen in isdecl; eauto.
-    inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
-  - inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
-  - eapply eval_iota. eapply eval_mkApps_Construct; tea.
-    unshelve eapply declared_constructor_to_gen; eauto.
-    now econstructor. unfold cstr_arity. rewrite e0.
-    rewrite (PCUICGlobalEnv.declared_minductive_ind_npars d).
-    now rewrite -(declared_minductive_ind_npars d) /cstr_arity.
-    all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
-    unshelve eapply declared_constructor_to_gen; eauto.
-  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
-  - all:cbn in Hty; solve_all. eapply eval_proj; tea.
-    eapply value_final. eapply value_app; auto. econstructor; tea. eapply d.
-    rewrite e; lia.
-  - eapply eval_fix; eauto.
-    + eapply value_final. eapply value_app; auto. econstructor.
-      rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity. 2:eauto.
-      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
-    + eapply value_final; eauto.
-    + rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity.
-      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
-      Unshelve. all: now econstructor.
-  - destruct p as [[] ?]. eapply eval_cofix_proj; tea.
-    eapply value_final, value_app. now constructor. auto.
-  - eapply eval_cofix_case; tea.
-    eapply value_final, value_app. now constructor. auto.
-Qed.
-
-From MetaCoq Require Import PCUICSN.
-
-Lemma WN {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf_ext Σ -> axiom_free Σ ->
-  welltyped Σ [] t  -> exists v, squash (eval Σ t v).
-Proof.
-  intros Hwf Hax Hwt.
-  eapply PCUICSN.normalisation_in in Hwt as HSN; eauto.
-  induction HSN as [t H IH].
-  destruct Hwt as [A HA].
-  edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
-  - eapply red1_incl in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
-    edestruct IH as [v Hv]. econstructor. eauto.
-    econstructor. eapply subject_reduction; eauto.
-    exists v. sq. eapply red1_eval; eauto.
-    now eapply subject_closed in HA.
-  - exists t. sq. eapply value_final; eauto.
-Qed.
-
-From MetaCoq Require Import PCUICFirstorder.
-
-Lemma firstorder_value_irred Σ t t' :
-  firstorder_value Σ [] t ->
-  PCUICReduction.red1 Σ [] t t' -> False.
-Proof.
-  intros H.
-  revert t'. pattern t. revert t H.
-  eapply firstorder_value_inds.
-  intros i n ui u args pandi Hty Hargs IH Hprop t' Hred.
-  eapply red1_mkApps_tConstruct_inv in Hred as (x & -> & Hone).
-  solve_all.
-  clear - IH Hone. induction IH as [ | ? ? []] in x, Hone |- *.
-  - invs Hone.
-  - invs Hone; eauto.
-Qed.
-
-Definition ws_empty f : ws_context f.
-Proof.
-  unshelve econstructor.
-  exact nil.
-  reflexivity.
-Defined.
-
-Lemma irred_equal Σ Γ t t' :
-  Σ ;;; Γ ⊢ t ⇝ t' ->
-  (forall v', PCUICReduction.red1 Σ Γ t v' -> False) ->
-  t = t'.
-Proof.
-  intros Hred Hirred. destruct Hred.
-  clear clrel_ctx clrel_src.
-  induction clrel_rel.
-  - edestruct Hirred; eauto.
-  - reflexivity.
-  - assert (x = y) as <- by eauto. eauto.
-Qed.
-
-Lemma ws_wcbv_standardization {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ ->
-  Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
-  closed_red Σ [] t v ->
-  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
-  squash (eval Σ t v).
-Proof.
-  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
-  destruct (@WN no Σ normalisation t) as (v' & Hv'); eauto.
-  1:{ eexists; eauto. }
-  sq.
-  assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
-  eapply closed_red_confluence in Hred as Hred_. destruct Hred_ as (v'' & H1 & H2).
-  2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
-  destruct v as [v Hv].
-  assert (v = v'') as <- by (eapply irred_equal; eauto).
-  assert (firstorder_value Σ [] v'). {
-    eapply firstorder_value_spec; eauto.
-    eapply subject_reduction_eval; eauto.
-    eapply eval_to_value. eauto.
-  }
-  enough (v' = v) as -> by eauto.
-  eapply irred_equal. eauto.
-  intros. eapply firstorder_value_irred; eauto.
-Qed.
-
-Lemma wcbv_standardization {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ ->
-  Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
-  red Σ [] t v ->
-  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
-  ∥ eval Σ t v ∥.
-Proof.
-  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
-  unshelve edestruct @ws_wcbv_standardization.
-  1-6: shelve.
-  1: exists t; shelve.
-  1: exists v; shelve.
-  all: sq; eauto.
-  cbn.
-  econstructor; eauto.
-  eapply subject_is_open_term. eauto.
-  Unshelve.
-  all: rewrite -closed_on_free_vars_none.
-  - now eapply subject_closed in Hty.
-  - eapply @subject_closed with (Γ := []); eauto.
-    eapply subject_reduction; eauto.
 Qed.

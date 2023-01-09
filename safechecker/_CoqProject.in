@@ -12,6 +12,5 @@ theories/PCUICWfEnvImpl.v
 theories/SafeTemplateChecker.v
 theories/PCUICSafeRetyping.v
 theories/PCUICRetypingEnvIrrelevance.v
-theories/PCUICConsistency.v
 
 theories/Extraction.v

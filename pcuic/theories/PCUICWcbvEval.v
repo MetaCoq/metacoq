@@ -1119,3 +1119,93 @@ End Wcbv.
 Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
 Arguments eval_unique {_ _ _}.
+
+
+
+Lemma red1_closed {cf : checker_flags} {Σ t t'} :
+  wf Σ ->
+  closed t -> red1 Σ t t' -> closed t'.
+Proof.
+  intros Hwf Hcl Hred. induction Hred; cbn in *; solve_all.
+  all: eauto using closed_csubst, closed_def.
+  - eapply closed_iota; eauto. solve_all. unfold test_predicate_k in H. solve_all.
+    now rewrite e0 /cstr_arity -e1 -e2.
+  - eauto using closed_arg.
+  - rewrite !closedn_mkApps in H |- *. solve_all.
+    eapply closed_unfold_fix; tea.
+  - rewrite !closedn_mkApps in Hcl |- *. solve_all.
+    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
+    eapply closed_unfold_cofix with (narg := narg); eauto.
+    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto.
+  - rewrite !closedn_mkApps in H1 |- *. solve_all.
+    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
+    eapply closed_unfold_cofix with (narg := narg); eauto.
+    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto.
+Qed.
+
+Lemma red1_incl {cf : checker_flags} {Σ t t' } :
+  closed t ->
+  red1 Σ t t' -> PCUICReduction.red1 Σ [] t t'.
+Proof.
+  intros Hcl Hred.
+  induction Hred. all: cbn in *; solve_all.
+  1-10: try econstructor; eauto using red1_closed.
+  1,2: now rewrite closed_subst; eauto; econstructor; eauto.
+  - now rewrite e0 /cstr_arity -e1 -e2.
+  - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
+    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.
+  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
+    inversion e; subst.
+    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in Hcl. solve_all.
+  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
+    inversion e; subst.
+    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in H1. solve_all.
+Qed.
+
+
+Global Hint Constructors value eval : wcbv.
+Global Hint Resolve value_final : wcbv.
+
+Lemma red1_eval {cf : checker_flags} {Σ : global_env_ext } t t' v : wf Σ ->
+  closed t ->
+  red1 Σ t t' -> eval Σ t' v -> eval Σ t v.
+Proof.
+  intros Hwf Hty Hred Heval.
+  induction Hred in Heval, v, Hty |- *; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6:now econstructor; eauto with wcbv.
+    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6: now econstructor; eauto with wcbv.
+    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
+  - unshelve eapply declared_constant_to_gen in isdecl; eauto.
+    inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - eapply eval_iota. eapply eval_mkApps_Construct; tea.
+    unshelve eapply declared_constructor_to_gen; eauto.
+    now econstructor. unfold cstr_arity. rewrite e0.
+    rewrite (PCUICGlobalEnv.declared_minductive_ind_npars d).
+    now rewrite -(declared_minductive_ind_npars d) /cstr_arity.
+    all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
+    unshelve eapply declared_constructor_to_gen; eauto.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
+  - all:cbn in Hty; solve_all. eapply eval_proj; tea.
+    eapply value_final. eapply value_app; auto. econstructor; tea. eapply d.
+    rewrite e; lia.
+  - eapply eval_fix; eauto.
+    + eapply value_final. eapply value_app; auto. econstructor.
+      rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity. 2:eauto.
+      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
+    + eapply value_final; eauto.
+    + rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity.
+      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
+      Unshelve. all: now econstructor.
+  - destruct p as [[] ?]. eapply eval_cofix_proj; tea.
+    eapply value_final, value_app. now constructor. auto.
+  - eapply eval_cofix_case; tea.
+    eapply value_final, value_app. now constructor. auto.
+Qed.
+

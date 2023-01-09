@@ -86,6 +86,8 @@ theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 theories/PCUICFirstorder.v
 theories/PCUICProgress.v
+theories/PCUICNormalization.v
+theories/PCUICConsistency.v
 
 theories/PCUICSafeLemmata.v
 

@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity
-  PCUICWcbvEval PCUICCanonicity PCUICProgress PCUICSN.
+  PCUICWcbvEval PCUICCanonicity PCUICProgress PCUICSN PCUICNormalization.
 
 From Equations Require Import Equations.
 
@@ -37,22 +37,6 @@ Proof.
     destruct nth_error eqn:nth; auto.
     eapply nth_error_forall in nth; eauto.
 Qed.
-
-Lemma canonicity {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf_ext Σ -> axiom_free Σ ->
-welltyped Σ [] t  -> exists v, squash (whnf RedFlags.default Σ [] v * red Σ [] t v).
-Proof.
-intros Hwf Hax Hwt.
-eapply PCUICSN.normalisation_in in Hwt as HSN; eauto.
-induction HSN as [t H IH].
-destruct Hwt as [A HA].
-edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
-- eapply red1_incl in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
-  edestruct IH as [v Hv]. econstructor. eauto.
-  econstructor. eapply subject_reduction; eauto.
-  exists v. sq. destruct Hv. split; eauto. eapply red_step; eauto.
-- exists t. sq. split; eauto. eapply value_whnf; eauto.
-  eapply @subject_closed with (Γ := []); eauto.
-Defined.
 
 Definition Prop_univ := Universe.of_levels (inl PropLevel.lProp).
 
@@ -81,10 +65,10 @@ Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
   let False_ty := tInd (mkInd kn 0) [] in Σ ;;; [] |- t : False_ty -> False.
 Proof.
   intros Hdecl wfΣ axΣ False_ty typ_false. pose proof (iswelltyped typ_false) as wt.
-  eapply canonicity in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
+  eapply wh_normalization in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
   pose proof (Hempty_ := Hempty).
   eapply subject_reduction in typ_false; eauto.
-  eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
+  eapply canonicity with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.
     destruct decompose_app eqn:decomp.
     apply decompose_app_inv in decomp.

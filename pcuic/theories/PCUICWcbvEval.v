@@ -379,57 +379,57 @@ Section Wcbv.
    (** The codomain of evaluation is only values: *)
    (*     It means no redex can remain at the head of an evaluated term. *)
 
-  Inductive red1 : term -> term -> Type :=
-  | red_app_left a a' b :
-     red1 a a' -> red1 (tApp a b) (tApp a' b)
-  | red_app_right a b b' :
-     value a -> red1 b b' -> red1 (tApp a b) (tApp a b')
-  | red_beta na t b a :
-     value a -> red1 (tApp (tLambda na t b) a) (csubst a 0 b)
-  | red_let_in b0 b0' na t b1 :
-      red1 b0 b0' -> red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
-  | red_zeta b0 na t b1 :
-      value b0 -> red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
-  | red_delta decl body c u (isdecl : declared_constant Σ c decl) :
+  Inductive wcbv_red1 : term -> term -> Type :=
+  | wcbv_red_app_left a a' b :
+     wcbv_red1 a a' -> wcbv_red1 (tApp a b) (tApp a' b)
+  | wcbv_red_app_right a b b' :
+     value a -> wcbv_red1 b b' -> wcbv_red1 (tApp a b) (tApp a b')
+  | wcbv_red_beta na t b a :
+     value a -> wcbv_red1 (tApp (tLambda na t b) a) (csubst a 0 b)
+  | wcbv_red_let_in b0 b0' na t b1 :
+      wcbv_red1 b0 b0' -> wcbv_red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
+  | wcbv_red_zeta b0 na t b1 :
+      value b0 -> wcbv_red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
+  | wcbv_red_delta decl body c u (isdecl : declared_constant Σ c decl) :
      decl.(cst_body) = Some body ->
-     red1 (tConst c u) (subst_instance u body)
-  | red_case_in ci p discr discr' brs :
-     red1 discr discr' -> red1 (tCase ci p discr brs) (tCase ci p discr' brs)
-  | red_iota ci c mdecl idecl cdecl u args p brs br :
+     wcbv_red1 (tConst c u) (subst_instance u body)
+  | wcbv_red_case_in ci p discr discr' brs :
+     wcbv_red1 discr discr' -> wcbv_red1 (tCase ci p discr brs) (tCase ci p discr' brs)
+  | wcbv_red_iota ci c mdecl idecl cdecl u args p brs br :
     nth_error brs c = Some br ->
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
     #|args| = cstr_arity mdecl cdecl ->
     ci.(ci_npar) = mdecl.(ind_npars) ->
     context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
     All value args ->
-    red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
-  | red_proj_in discr discr' p :
-    red1 discr discr' -> red1 (tProj p discr) (tProj p discr')
-  | red_proj p args u a mdecl idecl cdecl pdecl :
+    wcbv_red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
+  | wcbv_red_proj_in discr discr' p :
+    wcbv_red1 discr discr' -> wcbv_red1 (tProj p discr) (tProj p discr')
+  | wcbv_red_proj p args u a mdecl idecl cdecl pdecl :
     declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
     #|args| = cstr_arity mdecl cdecl ->
     nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
     All value args ->
-    red1 (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) a
-  | red_fix mfix idx argsv a fn :
+    wcbv_red1 (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) a
+  | wcbv_red_fix mfix idx argsv a fn :
     All value argsv ->
     value a ->
     unfold_fix mfix idx = Some (#|argsv|, fn) ->
     isConstruct_app a = true ->
-    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
-  | red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
+    wcbv_red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
+  | wcbv_red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
                        (idx : nat) (args : list term)
                        (narg : nat) (fn : term),
                      cunfold_cofix mfix idx = Some (narg, fn) ->
                      All value args ->
-                     red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
-  | red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
+                     wcbv_red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
+  | wcbv_red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
                        (idx : nat) (p : predicate term)
                        (args : list term) (narg : nat)
                        (fn : term) (brs : list (branch term)),
                      cunfold_cofix mfix idx = Some (narg, fn) ->
                      All value args ->
-                     red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
+                     wcbv_red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
   .
 
   (** The codomain of evaluation is only values: *)
@@ -1122,9 +1122,9 @@ Arguments eval_unique {_ _ _}.
 
 
 
-Lemma red1_closed {cf : checker_flags} {Σ t t'} :
+Lemma wcbv_red1_closed {cf : checker_flags} {Σ t t'} :
   wf Σ ->
-  closed t -> red1 Σ t t' -> closed t'.
+  closed t -> wcbv_red1 Σ t t' -> closed t'.
 Proof.
   intros Hwf Hcl Hred. induction Hred; cbn in *; solve_all.
   all: eauto using closed_csubst, closed_def.
@@ -1145,13 +1145,13 @@ Proof.
     eapply closed_cofix_substl_subst_eq; eauto.
 Qed.
 
-Lemma red1_incl {cf : checker_flags} {Σ t t' } :
+Lemma wcbv_red1_red1 {cf : checker_flags} {Σ t t' } :
   closed t ->
-  red1 Σ t t' -> PCUICReduction.red1 Σ [] t t'.
+  wcbv_red1 Σ t t' -> red1 Σ [] t t'.
 Proof.
   intros Hcl Hred.
   induction Hred. all: cbn in *; solve_all.
-  1-10: try econstructor; eauto using red1_closed.
+  1-10: try econstructor; eauto using wcbv_red1_closed.
   1,2: now rewrite closed_subst; eauto; econstructor; eauto.
   - now rewrite e0 /cstr_arity -e1 -e2.
   - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
@@ -1170,9 +1170,9 @@ Qed.
 Global Hint Constructors value eval : wcbv.
 Global Hint Resolve value_final : wcbv.
 
-Lemma red1_eval {cf : checker_flags} {Σ : global_env_ext } t t' v : wf Σ ->
+Lemma wcbv_red1_eval {cf : checker_flags} {Σ : global_env_ext } t t' v : wf Σ ->
   closed t ->
-  red1 Σ t t' -> eval Σ t' v -> eval Σ t v.
+  wcbv_red1 Σ t t' -> eval Σ t' v -> eval Σ t v.
 Proof.
   intros Hwf Hty Hred Heval.
   induction Hred in Heval, v, Hty |- *; eauto with wcbv.

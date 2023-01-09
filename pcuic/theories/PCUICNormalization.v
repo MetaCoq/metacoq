@@ -29,7 +29,7 @@ eapply PCUICSN.normalisation_in in Hwt as HSN; eauto.
 induction HSN as [t H IH].
 destruct Hwt as [A HA].
 edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
-- eapply red1_incl in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
+- eapply wcbv_red1_red1 in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
   edestruct IH as [v Hv]. econstructor. eauto.
   econstructor. eapply subject_reduction; eauto.
   exists v. sq. destruct Hv. split; eauto. eapply red_step; eauto.
@@ -45,10 +45,10 @@ Proof.
   induction HSN as [t H IH].
   destruct Hwt as [A HA].
   edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
-  - eapply red1_incl in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
+  - eapply wcbv_red1_red1 in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
     edestruct IH as [v Hv]. econstructor. eauto.
     econstructor. eapply subject_reduction; eauto.
-    exists v. sq. eapply red1_eval; eauto.
+    exists v. sq. eapply wcbv_red1_eval; eauto.
     now eapply subject_closed in HA.
   - exists t. sq. eapply value_final; eauto.
 Qed.

@@ -168,7 +168,8 @@ struct
     match r with
     | Sorts.Relevant -> Lazy.force tRelevant
     | Sorts.Irrelevant -> Lazy.force tIrrelevant
-  
+    | Sorts.RelevanceVar _ -> Lazy.force tRelevant (* TODO *)
+
   let quote_name n =
     match n with
       Names.Name id -> constr_mkApp (nNamed, [| quote_ident id |])

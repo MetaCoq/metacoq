@@ -534,28 +534,28 @@ Context (wfΣ : wf Σ).
 
 Let Pinfer Γ t T :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹ rename f T.
 
 Let Psort Γ t u :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹□ u.
 
 Let Pprod Γ t na A B :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹Π (na,rename f A,rename (shiftn 1 f) B).
 
 Let Pind Γ ind t u args :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹{ind} (u, map (rename f) args).
@@ -563,7 +563,7 @@ Let Pind Γ ind t u args :=
 
 Let Pcheck Γ t T :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   on_free_vars P T ->
@@ -574,13 +574,13 @@ Let PΓ :=
 
 Let PΓ_rel Γ Γ' :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars_ctx P Γ' ->
   wf_local_bd_rel Σ Δ (rename_context f Γ').
 
 Lemma rename_telescope P f Γ Δ tel tys:
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   forallb (on_free_vars P) tys ->
   on_free_vars_ctx P (List.rev tel) ->
@@ -791,7 +791,8 @@ Proof using wfΣ.
       * rewrite case_branch_type_fst /=.
         relativize #|bcontext br| ; [eapply urenaming_context|] ; tea.
         by rewrite case_branch_context_length.
-      * rewrite case_branch_context_length ; tea.
+      * rewrite case_branch_type_length //.
+        erewrite <- wf_branch_length ; eauto.
         relativize (#|bcontext br|).
         1: erewrite on_ctx_free_vars_concat.
         2: rewrite case_branch_type_length //.
@@ -800,7 +801,8 @@ Proof using wfΣ.
         by rewrite on_free_vars_ctx_on_ctx_free_vars.
       * rewrite case_branch_type_length //.
         erewrite <- wf_branch_length ; eauto.
-      * rewrite case_branch_context_length //.
+      * rewrite case_branch_type_length //.
+        erewrite <- wf_branch_length ; eauto.
         eapply on_free_vars_case_branch_type.
         all: tea.
         split.
@@ -894,7 +896,7 @@ Qed.
 End BDRenaming.
 
 Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
-  renaming P Σ Δ Γ f ->
+  renaming P Σ Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Γ |- t : T ->
@@ -927,7 +929,7 @@ Proof.
 Qed.
 
 Lemma urenaming_strengthen P Γ Γ' Γ'' :
-  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
+  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (Γ,,,Γ'') (unlift_renaming #|Γ'| #|Γ''|).
 Proof.
   rewrite <- rename_context_lift_context.
   intros i decl' pi nthi.

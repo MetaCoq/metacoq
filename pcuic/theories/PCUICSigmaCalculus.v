@@ -20,8 +20,10 @@ Tactic Notation "sigma" "in" hyp(id) := autorewrite with sigma in id.
 
 Infix "∘i" := (fun (f g : nat -> term -> term) => fun i => f i ∘ g i) (at level 40).
 
-Definition substitution := nat -> term.
-Bind Scope sigma_scope with substitution.
+Definition renamingT := nat -> nat.
+Definition substitutionT := nat -> term.
+
+Bind Scope sigma_scope with substitutionT.
 
 #[global]
 Hint Rewrite Nat.add_0_r : sigma.
@@ -94,7 +96,7 @@ End map_branch_shift.
 Notation map_branches_shift ren f :=
   (map (map_branch_shift ren shiftn f)).
 
-Fixpoint rename f t : term :=
+Fixpoint rename (f : renamingT) t : term :=
   match t with
   | tRel i => tRel (f i)
   | tEvar ev args => tEvar ev (List.map (rename f) args)
@@ -346,7 +348,7 @@ Qed.
 #[global]
 Hint Rewrite lift0_rename : sigma.
 
-Definition up k (s : nat -> term) :=
+Definition up k (s : substitutionT) :=
   fun i =>
     if k <=? i then rename (Nat.add k) (s (i - k))
     else tRel i.
@@ -361,7 +363,7 @@ Proof.
     * assert (n + f' (x - n) - n = f' (x - n)) as ->; lia.
 Qed.
 
-(* Lemma map_branches_shiftn (fn : (nat -> nat) -> term -> term) f f' l :
+(* Lemma map_branches_shiftn (fn : (renamingT) -> term -> term) f f' l :
   map_branches_shift fn f (map_branches_shift fn f' l) =
   List.map (fun i => map_branch (fn (shiftn #|bcontext i| f) ∘ (fn (shiftn #|bcontext i| f'))) i) l.
 Proof.
@@ -492,7 +494,7 @@ Proof.
     now setoid_rewrite Hcom.
 Qed.
 
-Lemma rename_predicate_rename_predicate (f f' : nat -> nat) (p : predicate term) :
+Lemma rename_predicate_rename_predicate (f f' : renamingT) (p : predicate term) :
   rename_predicate f (rename_predicate f' p) =
   rename_predicate (f ∘ f') p.
 Proof.
@@ -653,7 +655,7 @@ Proof.
   apply map_branch_shift_proper; try tc.
 Qed.
 
-Definition ren (f : nat -> nat) : nat -> term :=
+Definition ren (f : renamingT) : substitutionT :=
   fun i => tRel (f i).
 
 #[global]
@@ -700,7 +702,7 @@ Hint Rewrite @rename_inst : sigma.
 
 Notation "t '.[' σ ]" := (inst σ t) (at level 6, format "t .[ σ ]") : sigma_scope.
 
-Definition subst_cons (t : term) (f : nat -> term) :=
+Definition subst_cons (t : term) (f : substitutionT) :=
   fun i =>
     match i with
     | 0 => t
@@ -713,10 +715,10 @@ Notation " t ⋅ s " := (subst_cons t s) (at level 70) : sigma_scope.
 Instance subst_cons_proper : Proper (Logic.eq ==> `=1` ==> `=1`) subst_cons.
 Proof. intros x y -> f f' Hff'. intros i. destruct i; simpl; trivial. Qed.
 
-Definition shift : nat -> term := tRel ∘ S.
+Definition shift : substitutionT := tRel ∘ S.
 Notation "↑" := shift : sigma_scope.
 
-Definition subst_compose (σ τ : nat -> term) :=
+Definition subst_compose (σ τ : substitutionT) :=
   fun i => (σ i).[τ].
 
 Infix "∘s" := subst_compose (at level 40) : sigma_scope.
@@ -728,7 +730,7 @@ Proof.
   now rewrite Hgg' Hff'.
 Qed.
 
-Definition Up σ : substitution := tRel 0 ⋅ (σ ∘s ↑).
+Definition Up σ : substitutionT := tRel 0 ⋅ (σ ∘s ↑).
 Notation "⇑ s" := (Up s) (at level 20).
 
 #[global]
@@ -1198,7 +1200,7 @@ Qed.
 (** Specific lemma for the fix/cofix cases where we are subst_cons'ing a list of ids in front
     of the substitution. *)
 Lemma ren_subst_consn_comm:
-  forall (f : nat -> nat) (σ : nat -> term) (n : nat),
+  forall (f : renamingT) (σ : substitutionT) (n : nat),
     ren (subst_consn (ren_ids n) (rshiftk n ∘ f)) ∘s subst_consn (idsn n) (σ ∘s ↑^n) =1
     subst_consn (idsn n) (ren f ∘s σ ∘s ↑^n).
 Proof.
@@ -1294,7 +1296,7 @@ Proof.
 Qed.
 
 Lemma inst_rename_assoc_n:
-  forall (f : nat -> nat) (σ : nat -> term) (n : nat),
+  forall (f : renamingT) (σ : substitutionT) (n : nat),
     subst_consn (idsn n) (σ ∘s ↑^n) ∘s ren (subst_consn (ren_ids n) (Init.Nat.add n ∘ f)) =1
     subst_consn (idsn n) (σ ∘s ren f ∘s ↑^n).
 Proof.
@@ -1375,7 +1377,7 @@ Proof.
 Qed.
 
 Lemma Up_Up_assoc:
-  forall s s' : nat -> term, (⇑ s) ∘s (⇑ s') =1 ⇑ (s ∘s s').
+  forall s s' : substitutionT, (⇑ s) ∘s (⇑ s') =1 ⇑ (s ∘s s').
 Proof.
   intros s s'.
   unfold Up.
@@ -1391,7 +1393,7 @@ Qed.
 Hint Rewrite Up_Up_assoc : sigma.
 
 Lemma up_up_assoc:
-  forall (s s' : nat -> term) (n : nat), up n s ∘s up n s' =1 up n (s ∘s s').
+  forall (s s' : substitutionT) (n : nat), up n s ∘s up n s' =1 up n (s ∘s s').
 Proof.
   intros s s' n i.
   unfold up, subst_compose. simpl.
@@ -1525,7 +1527,7 @@ Qed.
 Lemma subst_fn_subst_consn s : subst_fn s =1 subst_consn s ids.
 Proof. reflexivity. Qed.
 
-(** Substitution is faithfully modelled by instantiation *)
+(** substitutionT is faithfully modelled by instantiation *)
 Theorem subst_inst s k t : subst s k t = inst (⇑^k (subst_consn s ids)) t.
 Proof.
   rewrite subst_inst_aux up_Upn. apply inst_ext.
@@ -2166,7 +2168,7 @@ Proof.
     now autorewrite with len.
 Qed.
 
-Lemma shift_subst_consn_ge (n : nat) (l : list term) (σ : nat -> term) :
+Lemma shift_subst_consn_ge (n : nat) (l : list term) (σ : substitutionT) :
   #|l| <= n -> ↑^n ∘s (l ⋅n σ) =1 ↑^(n - #|l|) ∘s σ.
 Proof.
   intros Hlt i.
@@ -2190,7 +2192,7 @@ Proof.
   now rewrite Nat.add_comm Upn_Upn shiftn_Upn.
 Qed.
 
-Lemma Upn_subst_consn_ge (n i : nat) s (σ : nat -> term) :
+Lemma Upn_subst_consn_ge (n i : nat) s (σ : substitutionT) :
   n + #|s| <= i -> (⇑^n (s ⋅n σ)) i = (σ ∘s ↑^n) (i - n - #|s|).
 Proof.
   intros Hlt.
@@ -2199,7 +2201,7 @@ Proof.
   now rewrite subst_consn_compose subst_consn_ge; len; try lia.
 Qed.
 
-Lemma Upn_subst_consn_lt (n i : nat) s (σ : nat -> term) :
+Lemma Upn_subst_consn_lt (n i : nat) s (σ : substitutionT) :
   i < n + #|s| -> (⇑^n (s ⋅n σ)) i = (idsn n ⋅n (subst_fn s ∘s ↑^n)) i.
 Proof.
   intros Hlt.

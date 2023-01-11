@@ -22,6 +22,10 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+
+(* Seems unused *)
+
+(*
 Lemma nlg_wf_local {cf : checker_flags} :
   forall Σ Γ (hΓ : wf_local Σ Γ),
     All_local_env_over
@@ -104,9 +108,6 @@ Proof.
   now rewrite nl_global_ext_levels.
 Qed.
 
-(* Seems unused *)
-
-(*
 Lemma nl_wf {cf:checker_flags} (Σ : global_env_ext) :
   wf Σ -> wf (nlg Σ).
 

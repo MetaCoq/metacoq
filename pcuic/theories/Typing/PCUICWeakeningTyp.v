@@ -40,7 +40,7 @@ Proof.
     + apply wf_local_app; auto.
       apply (All_local_env_fold (fun Δ => lift_typing typing Σ (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
     + apply weakening_renaming.
-  - intros Hty. simple apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Δ Γ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty; intros Hs.
+  - intros Hty. simple apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Γ Δ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty; intros Hs.
     rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r !lift_rename.
     eapply (Hs xpredT).
@@ -67,9 +67,7 @@ Lemma weakening_rename_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ 
     rename (lift_renaming #|Γ''| #|Γ'|) T.
 Proof.
   intros wfext Ht.
-  eapply (typing_rename); eauto.
-  rewrite rename_context_lift_context.
-  split.
+  eapply (typing_rename); eauto; rewrite rename_context_lift_context.
   - eapply weakening_wf_local; cbn; eauto with pcuic.
   - now apply weakening_renaming.
 Qed.
@@ -82,7 +80,6 @@ Proof.
   intros wfext Ht.
   rewrite !lift_rename.
   eapply (typing_rename); eauto.
-  split.
   - eapply weakening_wf_local; eauto with pcuic.
   - now apply weakening_renaming.
 Qed.

@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst
+  PCUICLiftSubst PCUICUnivSubst PCUICOnFreeVars
   PCUICSigmaCalculus PCUICTyping.
 
 Require Import ssreflect ssrbool.
@@ -31,8 +31,8 @@ Context `{cf : checker_flags}.
 
 Definition urenaming (P : nat -> bool) Γ Δ f :=
   forall i decl, P i ->
-    nth_error Δ i = Some decl ->
-    ∑ decl', (nth_error Γ (f i) = Some decl') ×
+    nth_error Γ i = Some decl ->
+    ∑ decl', (nth_error Δ (f i) = Some decl') ×
     (eq_binder_annot decl.(decl_name) decl'.(decl_name) ×
     ((rename (f ∘ rshiftk (S i)) decl.(decl_type) =
      rename (rshiftk (S (f i))) decl'.(decl_type)) ×
@@ -41,7 +41,9 @@ Definition urenaming (P : nat -> bool) Γ Δ f :=
 
 (* Definition of a good renaming with respect to typing *)
 Definition renaming P Σ Γ Δ f :=
-  wf_local Σ Γ × urenaming P Γ Δ f.
+  wf_local Σ Δ × urenaming P Γ Δ f.
+
+Definition renaming_closed Γ Δ f := urenaming (closedP #|Γ| xpredT) Γ Δ f.
 
 End Renaming.
 

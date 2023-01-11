@@ -38,10 +38,6 @@ Class GuardCheckerCorrect :=
     guard b Σ Γ mfix ->
     guard b Σ Γ' mfix ;
 
-  guard_nl b Σ Γ mfix :
-    guard b Σ Γ mfix ->
-    guard b (nlg Σ) (nlctx Γ) (nl_mfix mfix) ;
-
   guard_subst_instance `{checker_flags} b Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     guard b Σ Γ mfix ->
@@ -54,8 +50,8 @@ Class GuardCheckerCorrect :=
 
   guard_rename b P Σ Γ Δ mfix f :
     urenaming P Γ Δ f ->
-    guard b Σ Δ mfix ->
-    guard b Σ Γ (rename_mfix mfix f) ;
+    guard b Σ Γ mfix ->
+    guard b Σ Δ (rename_mfix mfix f) ;
 
 }.
 
@@ -67,7 +63,6 @@ Definition fix_guard_eq_term := guard_eq_term Fix.
 Definition fix_guard_subst_instance `{checker_flags} := guard_subst_instance Fix.
 Definition fix_guard_extends := guard_extends Fix.
 Definition fix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity Fix.
-Definition fix_guard_nl := guard_nl Fix.
 Definition fix_guard_inst `{checker_flags} := guard_inst Fix.
 Definition fix_guard_rename := guard_rename Fix.
 
@@ -76,6 +71,5 @@ Definition cofix_guard_eq_term := guard_eq_term CoFix.
 Definition cofix_guard_subst_instance `{checker_flags} := guard_subst_instance CoFix.
 Definition cofix_guard_extends := guard_extends CoFix.
 Definition cofix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity CoFix.
-Definition cofix_guard_nl := guard_nl CoFix.
 Definition cofix_guard_inst `{checker_flags} := guard_inst CoFix.
 Definition cofix_guard_rename := guard_rename CoFix.

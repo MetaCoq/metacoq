@@ -68,7 +68,7 @@ Proof. rewrite !lift_context_alt.
 Qed.
 
 Lemma weakening_renaming P Γ Γ' Γ'' :
-  urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ')
+  urenaming P (Γ ,,, Γ') (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ')
     (lift_renaming #|Γ''| #|Γ'|).
 Proof.
   intros i d hpi hnth.

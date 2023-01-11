@@ -1060,8 +1060,8 @@ Qed.
     (forall Γ Γ' u v, pred1 Σ Γ Γ' u v ->
     forall {P f Δ Δ'},
     pred1_ctx Σ Δ Δ' ->
-    urenaming P Δ Γ f ->
-    urenaming P Δ' Γ' f ->
+    urenaming P Γ Δ f ->
+    urenaming P Γ' Δ' f ->
     on_free_vars P u ->
     on_ctx_free_vars P Γ ->
     pred1 Σ Δ Δ' (rename f u) (rename f v)) ×
@@ -1069,8 +1069,8 @@ Qed.
       pred1_ctx Σ Γ Γ' ->
       pred1_ctx_over Σ Γ Γ' Δ Δ' ->
       forall P f Δ0 Δ'0,
-        urenaming P Δ0 Γ f ->
-        urenaming P Δ'0 Γ' f ->
+        urenaming P Γ Δ0 f ->
+        urenaming P Γ' Δ'0 f ->
         pred1_ctx Σ Δ0 Δ'0 ->
         on_ctx_free_vars P Γ ->
         on_free_vars_ctx P Δ ->

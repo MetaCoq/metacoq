@@ -588,3 +588,12 @@ Proof.
         now eapply closedn_on_free_vars.
       * apply hcum.
 Qed.
+
+Lemma typing_inst {cf : checker_flags} Σ Γ t A Δ σ {wfΣ : wf Σ.1} :
+  wf_local Σ Δ ->
+  Σ ;;; Δ ⊢ σ : Γ ->
+  Σ ;;; Γ |- t : A ->
+  Σ ;;; Δ |- t.[σ] : A.[σ].
+Proof.
+  intros a b c; revert a b. eapply type_inst; eauto.
+Qed.

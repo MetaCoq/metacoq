@@ -26,9 +26,9 @@ Context `{cf : checker_flags}.
 
 Lemma renaming_vass :
   forall P Σ Γ Δ na A f,
-    wf_local Σ (Γ ,, vass na (rename f A)) ->
+    wf_local Σ (Δ ,, vass na (rename f A)) ->
     renaming P Σ Γ Δ f ->
-    renaming (shiftnP 1 P) Σ (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
+    renaming (shiftnP 1 P) Σ (Γ ,, vass na A) (Δ ,, vass na (rename f A)) (shiftn 1 f).
 Proof.
   intros P Σ Γ Δ na A f hΓ [? h].
   split. 1: auto.
@@ -37,9 +37,9 @@ Qed.
 
 Lemma renaming_vdef :
   forall P Σ Γ Δ na b B f,
-    wf_local Σ (Γ ,, vdef na (rename f b) (rename f B)) ->
+    wf_local Σ (Δ ,, vdef na (rename f b) (rename f B)) ->
     renaming P Σ Γ Δ f ->
-    renaming (shiftnP 1 P) Σ (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+    renaming (shiftnP 1 P) Σ (Γ ,, vdef na b B) (Δ ,, vdef na (rename f b) (rename f B)) (shiftn 1 f).
 Proof.
   intros P Σ Γ Δ na b B f hΓ [? h].
   split. 1: auto.
@@ -153,7 +153,7 @@ Qed.
 
 Lemma cumulSpec_renameP pb P Σ Γ Δ f A B : let sP := shiftnP #|Γ| P in
     wf Σ.1 ->
-    urenaming sP Δ Γ f ->
+    urenaming sP Γ Δ f ->
     is_closed_context Γ ->
     is_open_term Γ A ->
     is_open_term Γ B ->
@@ -437,7 +437,7 @@ Defined.
 
 Lemma convSpec_renameP P Σ Γ Δ f A B : let sP := shiftnP #|Γ| P in
     wf Σ.1 ->
-    urenaming sP Δ Γ f ->
+    urenaming sP Γ Δ f ->
     is_closed_context Γ ->
     is_open_term Γ A ->
     is_open_term Γ B ->
@@ -609,10 +609,10 @@ Proof. reflexivity. Qed.
 Lemma wf_local_app_renaming P Σ Γ Δ :
   All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
     forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
-    renaming (shiftnP #|Γ ,,, Γ'| P) Σ Δ (Γ ,,, Γ') f -> Σ ;;; Δ |- rename f t : rename f T) Σ)
+    renaming (shiftnP #|Γ ,,, Γ'| P) Σ (Γ ,,, Γ') Δ f -> Σ ;;; Δ |- rename f t : rename f T) Σ)
     Δ ->
   forall Δ' f,
-  renaming (shiftnP #|Γ| P) Σ Δ' Γ f ->
+  renaming (shiftnP #|Γ| P) Σ Γ Δ' f ->
   wf_local Σ (Δ' ,,, rename_context f Δ).
 Proof.
   intros. destruct X0.
@@ -791,7 +791,7 @@ Hint Rewrite <- Upn_ren : sigma.
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
     forall P Δ f,
-    renaming (shiftnP #|Γ| P) Σ Δ Γ f ->
+    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
     Σ ;;; Δ |- rename f t : rename f A)
    (fun Σ Γ =>
     wf_local Σ Γ ×
@@ -799,7 +799,7 @@ Lemma typing_rename_prop : env_prop
    (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
     =>
     forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
-    renaming (shiftnP #|Γ| P) Σ Δ Γ f ->
+    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
     Σ;;; Δ |- rename f t : rename f T) Σ) Γ).
 Proof.
   apply typing_ind_env.
@@ -965,7 +965,7 @@ Proof.
           { now rewrite app_context_length -shiftnP_add. }
           { reflexivity. }
           relativize #|bcontext br|; [eapply urenaming_context|].
-          1:apply Hf. rewrite /brctxty case_branch_type_fst case_branch_context_length //. }
+          1:apply Hf. rewrite case_branch_context_length //. }
         { eapply IHbty. split=> //.
           rewrite /brctx' case_branch_type_fst.
           rewrite (wf_branch_length wfbr).
@@ -1063,7 +1063,7 @@ Proof.
 Qed.
 
 Lemma typing_rename_P {P Σ Γ Δ f t A} {wfΣ : wf Σ.1} :
-  renaming (shiftnP #|Γ| P) Σ Δ Γ f ->
+  renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
   Σ ;;; Γ |- t : A ->
   Σ ;;; Δ |- rename f t : rename f A.
 Proof.
@@ -1072,13 +1072,13 @@ Proof.
   apply typing_rename_prop.
 Qed.
 
-Lemma typing_rename {Σ Γ Δ f t A} {wfΣ : wf Σ.1} :
-  renaming (closedP #|Γ| xpredT) Σ Δ Γ f ->
+Lemma typing_rename {Σ Γ Δ f t A} :
+  wf Σ.1 -> wf_local Σ Δ ->
+  renaming_closed Γ Δ f ->
   Σ ;;; Γ |- t : A ->
   Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-  intros hf h.
-  eapply (typing_rename_P (P:=fun _ => false)) ; eauto.
+  intros ? ? hf h. eapply (typing_rename_P (P:=fun _ => false)) ; eauto; split; eauto.
 Qed.
 
 End Renaming.

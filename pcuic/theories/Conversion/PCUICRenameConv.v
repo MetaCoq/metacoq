@@ -370,7 +370,7 @@ Arguments Nat.sub !_ !_.
 Lemma urenaming_vass :
   forall P Γ Δ na A f,
     urenaming P Γ Δ f ->
-    urenaming (shiftnP 1 P) (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
+    urenaming (shiftnP 1 P) (Γ ,, vass na A) (Δ ,, vass na (rename f A)) (shiftn 1 f).
 Proof using Type.
   intros P Γ Δ na A f h. unfold urenaming in *.
   intros [|i] decl hP e.
@@ -398,7 +398,7 @@ Qed.
 Lemma urenaming_vdef :
   forall P Γ Δ na b B f,
     urenaming P Γ Δ f ->
-    urenaming (shiftnP 1 P) (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+    urenaming (shiftnP 1 P) (Γ ,, vdef na b B) (Δ ,, vdef na (rename f b) (rename f B)) (shiftn 1 f).
 Proof using Type.
   intros P Γ Δ na b B f h. unfold urenaming in *.
   intros [|i] decl hP e.
@@ -455,8 +455,8 @@ Qed.
 
 Lemma urenaming_context :
   forall P Γ Δ Ξ f,
-    urenaming P Δ Γ f ->
-    urenaming (shiftnP #|Ξ| P) (Δ ,,, rename_context f Ξ) (Γ ,,, Ξ) (shiftn #|Ξ| f).
+    urenaming P Γ Δ f ->
+    urenaming (shiftnP #|Ξ| P) (Γ ,,, Ξ) (Δ ,,, rename_context f Ξ) (shiftn #|Ξ| f).
 Proof using Type.
   intros P Γ Δ Ξ f h.
   induction Ξ as [| [na [bo|] ty] Ξ ih] in Γ, Δ, f, h |- *.
@@ -933,7 +933,7 @@ Qed.
 Lemma red1_rename :
   forall P Σ Γ Δ u v f,
     wf Σ ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P u ->
     red1 Σ Γ u v ->
     red1 Σ Δ (rename f u) (rename f v).
@@ -1067,7 +1067,7 @@ Qed.
 Lemma red_rename :
   forall P (Σ : global_env_ext) Γ Δ u v f,
     wf Σ ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_ctx_free_vars P Γ ->
     on_free_vars P u ->
     red Σ Γ u v ->
@@ -1085,7 +1085,7 @@ Qed.
 Lemma conv_renameP :
   forall P Σ Γ Δ f A B,
     wf Σ.1 ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P A ->
     on_free_vars P B ->
     on_ctx_free_vars P Γ ->
@@ -1108,7 +1108,7 @@ Qed.
 Lemma cumul_renameP :
   forall P Σ Γ Δ f A B,
     wf Σ.1 ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P A ->
     on_free_vars P B ->
     on_ctx_free_vars P Γ ->

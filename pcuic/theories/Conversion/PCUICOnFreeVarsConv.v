@@ -102,7 +102,7 @@ Qed.
 
 Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ: context) :
    let sP := shiftnP #|Γ| P in
-   urenaming sP Δ Γ f ->
+   urenaming sP Γ Δ f ->
    is_closed_context Γ ->
    is_closed_context Δ ->
    on_free_vars (shiftnP #|Ξ| (shiftnP #|Γ| xpred0)) u ->
@@ -134,7 +134,7 @@ Proof.
 Defined.
 
 Lemma urename_is_open_term P Γ Δ f u : let sP := shiftnP #|Γ| P in
-   urenaming sP Δ Γ f -> is_closed_context Γ -> is_closed_context Δ -> is_open_term Γ u -> is_open_term Δ (rename f u).
+   urenaming sP Γ Δ f -> is_closed_context Γ -> is_closed_context Δ -> is_open_term Γ u -> is_open_term Δ (rename f u).
 Proof.
   intros sP hf HΓ HΔ Hu.
   unfold is_open_term.

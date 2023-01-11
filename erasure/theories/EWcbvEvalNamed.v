@@ -257,14 +257,15 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
   List.forallb (isLambda ∘ dbody) mfix ->  
   NoDup nms ->
   All2_Set (fun d n => d.(dname) = nNamed n) mfix nms ->
-  All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
+  All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' -> 
   Γ ;;; E ⊩ tFix mfix idx ~ tFix mfix' idx
 with represents_value : value -> term -> Set :=
 | represents_value_tBox : represents_value vBox tBox
 | represents_value_tClos na E s t na' : [na] ;;; E ⊩ s ~ t -> represents_value (vClos na s E) (tLambda na' t)
 | represents_value_tConstruct vs ts ind c : All2_Set represents_value vs ts -> represents_value (vConstruct ind c vs) (tConstruct ind c ts)
 | represents_value_tFix vfix i E mfix :
-  All2_Set (fun v d => map fst vfix ;;; (add_multiple (map fst vfix) (fix_env vfix E) E) ⊩ snd v ~ d.(dbody)) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
+  (* use cunfold here *)
+  All2_Set (fun v d => map fst vfix ;;; (add_multiple (map fst vfix) (fix_env vfix E) E) ⊩ snd v ~ (* use result of cunfold here *) d.(dbody)) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
 where "Γ ;;; E ⊩ s ~ t" := (represents Γ E s t).
 
 Program Definition represents_ind :=
@@ -921,7 +922,7 @@ Proof.
         - eapply IHAll.
     }
     1:{ eapply NoDup_gen_many_fresh. }
-    2:{ rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
+    2:{ todo "fix". (*  rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
         generalize (map_length dname m).
         generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H1, nms, Hnms |- *.        
         + econstructor.
@@ -931,7 +932,7 @@ Proof.
           * specialize IHm with (nms := nAnon :: nms). cbn in IHm.
             todo "fix".
           * cbn. todo "fix".
-          * todo "fix".
+          * todo "fix". *)
     }
     todo "fix".
 Qed.
@@ -958,10 +959,12 @@ Proof.
     eapply IHa0. eapply IH.
   - solve_all. induction a; cbn in *; rtoProp; eauto. 
     econstructor. cbn in *. eapply IH. eapply IHa. eapply IH.
-  - induction a; cbn in *; rtoProp; split.
-    + destruct IH. revert i0. len. eapply All2_Set_All2 in a as Haa. 
-      eapply All2_length in Haa as ->. eauto.
-    + todo "fix".
+  - rewrite map_length in IH.
+    assert (Hlen : #|vfix| = #|mfix|). { clear IH. eapply All2_Set_All2, All2_length in a. lia. }
+    rewrite Hlen in IH. revert IH. generalize (#|mfix|).
+    induction a; intros n H; cbn in *; rtoProp; split.  
+    + destruct H. revert i0. len.
+    + eapply IHa. lia. eapply H.
 Qed.
 
 Lemma represents_bound_head Γ E v s x :
@@ -1088,6 +1091,21 @@ Proof.
     { apply NoDup_rev in Hdup. rewrite rev_app_distr in Hdup. cbn in Hdup. invs Hdup.
       apply NoDup_rev in H3. now rewrite rev_involutive in H3. }
     lia. eauto. now rewrite <- app_assoc in Hrep.
+Qed.
+
+Lemma represents_substl_rev E s s' ts nms vs Γ : 
+  (forall na, In na nms -> ~ In na (map fst E)) ->
+  NoDup nms ->
+  #|nms| = #|vs| ->
+  All2 represents_value (List.rev vs) ts ->
+  (List.rev nms ++ Γ) ;;; E ⊩ s ~ s' ->
+  Γ ;;; add_multiple nms vs E ⊩ s ~ substl ts s'.
+Proof.
+  intros. eapply represents_substl in H2; eauto.
+  - now rewrite !List.rev_involutive in H2.
+  - now setoid_rewrite <- in_rev.
+  - now eapply NoDup_rev.
+  - len.
 Qed.
 
 Definition extraction_wcbv_flags :=
@@ -1284,6 +1302,109 @@ Proof.
   unfold constructor_isprop_pars_decl. erewrite lookup_in_env; eauto.
 Qed.  
 
+Lemma cunfold_fix_represents mfix idx narg fn vfix E :
+  cunfold_fix mfix idx = Some (narg, fn) -> 
+  All2
+        (λ (v : ident × term) (d : def term),
+           List.rev (map fst vfix) ;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
+  ∑ nm fnv, nth_error vfix idx = Some (nm, fnv) × ([] ;;;  add_multiple (map fst vfix) (fix_env vfix E) E ⊩ fnv ~ fn).
+Proof.
+  intros Hunf H. unfold cunfold_fix in *.
+  destruct nth_error eqn:e; try congruence.
+  eapply All2_nth_error_Some_r in e as (? & ? & ?). 2: eapply H.
+  destruct x.
+  exists i, t0. split; eauto. cbn in *. invs Hunf. eapply represents_substl_rev.
+  5: rewrite app_nil_r; eauto.
+  4:{ admit. }
+  admit.
+  admit.
+  len. admit.
+Admitted.
+
+Lemma fresh_subset Γ1 Γ2 i : 
+  fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
+Proof.
+  unfold fresh. repeat destruct in_dec; eauto; cbn.
+  intros. firstorder.
+Qed.
+
+Local Hint Resolve fresh_subset : core.
+
+Lemma sunny_subset Γ1 Γ2 t : 
+  sunny Γ1 t -> incl Γ2 Γ1 -> sunny Γ2 t.
+Proof.
+  intros H Hincl.
+  induction t using EInduction.term_forall_list_ind in Γ1, Γ2, H, Hincl |- * ; cbn in *; eauto.
+  - cbn in H. solve_all.
+  - destruct n; eauto. cbn in *. rtoProp. split. 1: eapply fresh_subset; eauto.
+    eapply IHt; eauto. intros ? []; cbn; eauto.
+  - destruct n; eauto. cbn in *. rtoProp. repeat split; eauto.
+    eapply IHt2; eauto. eapply incl_cons; cbn; eauto.
+    eapply incl_tl; eauto.
+  - rtoProp; split; eauto.
+  - solve_all.
+  - rtoProp; split; solve_all; rtoProp; eauto; repeat split; solve_all.
+    + destruct x0; eauto.
+    + eapply a0; eauto.
+      intros ? ?. rewrite -> in_app_iff in *.
+      destruct H3; eauto.
+  - rtoProp; repeat split; solve_all. destruct x; cbn in *.
+    eapply a; eauto.
+    intros ? ?. rewrite -> in_app_iff in *.
+    destruct H; eauto.
+Qed.
+
+Lemma represents_add_fresh nms Γ E vs s t :
+  Γ ;;; E ⊩ s ~ t ->
+  sunny nms s -> 
+  Γ ;;; (add_multiple nms vs E) ⊩ s ~ t.
+Proof.
+  pattern Γ, E, s, t.
+  revert Γ E s t.
+  refine (@represents_ind _ (fun _ _ _ => True) _ _ _ _ _ _ _ _ _ _ _ _ _ _).
+  all: intros; cbn in *; rtoProp; eauto.
+  - econstructor; eauto. eapply H; eauto.
+    eapply sunny_subset; eauto. firstorder.
+  - econstructor; eauto. eapply H0; eauto.
+    eapply sunny_subset; eauto. firstorder.
+  - econstructor; eauto. solve_all.
+    induction a; invs IH; invs H; econstructor; eauto.
+  - econstructor; eauto. solve_all.
+    induction a; invs IH; invs H0; econstructor.
+    + destruct r0 as (nms_ & ? & ? & ?).
+      exists nms_. split. eauto. split; eauto.
+      eapply H. rtoProp. eapply sunny_subset; eauto.
+      eapply incl_appr, incl_refl.
+    + eapply IHa; eauto. invs Heq; eauto.
+  - econstructor; eauto. solve_all. clear - IH H1 a0.
+    induction a0. econstructor. invs IH; invs H1; econstructor.
+    + eapply H. destruct H2 as (? & ? & ?).
+      destruct x; cbn in *.
+      eapply sunny_subset; eauto.
+      eapply incl_appr, incl_refl.
+    + eapply IHa0; eauto. solve_all.
+      destruct x0; cbn in *.
+      eapply sunny_subset; eauto.
+      rewrite <- app_assoc.
+      eapply incl_appr, incl_refl.
+Qed.
+
+Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> E} {l l' l'' l'''} : 
+All2 R l l''' ->
+All2 Q l' l'' ->
+#|l| = #|l'| ->
+(forall x y z w, R x w -> Q y z -> P (f x y) z) ->
+All2 P (MCList.map2 f l l') l''.
+Proof.
+intros hb ha hlen hPQ.
+induction ha in l, l''', hlen, hb |- *; simpl; try constructor; auto.
+- destruct l => //. simpl. constructor.
+- destruct l => //.
+  noconf hlen. depelim hb.
+  specialize (IHha _ _ hb H).
+  simpl. constructor; auto. eapply hPQ; eauto.
+Qed.  
+
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
@@ -1408,7 +1529,22 @@ Proof.
         rewrite -> !skipn_length in *. lia.
       * solve_all. 
       * now rewrite rev_involutive in Hv2_.
-  - todo "fix".
+  - invs Hrep.
+    + invs H5.
+    + cbn in *. rtoProp.
+      edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
+      edestruct s1 as (v' & IH1' & IH2'). 3, 1, 2: eauto.
+      invs IH1.
+      eapply cunfold_fix_represents in H1 as (nm & fnv & Hu1 & Hu2).
+      instantiate (1 := E0) in Hu2.
+      instantiate (2 := vfix) in Hu2.
+      edestruct s2 as (v'' & IH1'' & IH2'').
+      eapply represents_tApp; eauto.
+      all: todo "fix". (* 
+      admit. admit. admit.
+      eexists; split; eauto.
+      eapply eval_fix_unfold.
+      all: admit. *)
   - invs Hrep. 
     + invs H3.
     + cbn in *. rtoProp.
@@ -1480,6 +1616,19 @@ Proof.
       3:{ eapply All2_Set_All2 in H3. solve_all. }
       2:{ unfold wf_fix in H8. rtoProp. eapply Nat.ltb_lt in H5. eapply All2_Set_All2, All2_length in H4. lia. }
       eapply All2_Set_All2 in H3, H4. eapply All2_All2_Set. solve_all.
-      todo "fix".
-      Unshelve. all: todo "evar".
+      assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, dbody d0)) nms mfix) = nms) as ->. {
+        clear - H3. induction H3; cbn; f_equal; eauto. } 
+      eapply All2_map2_left. eapply All2_swap; eauto. eauto.
+      symmetry. eapply All2_length; eauto.
+      intros.
+      cbn in *. destruct H1 as (([? []] & ?) & ?).
+      rewrite app_nil_r in r.
+
+      eapply represents_add_fresh. eauto.
+      eapply sunny_subset; eauto.
+      eapply incl_appl. clear - H3.
+      induction H3; cbn; intros ? ?;  cbn in *; eauto.
+      destruct H; subst; eauto. rewrite r; cbn; eauto.
+      eapply in_app_iff. right. eauto.
+      Unshelve. all: repeat econstructor.
 Qed.

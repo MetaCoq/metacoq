@@ -3480,7 +3480,7 @@ Proof.
     + now eapply H.
 Qed.
 
-Lemma All2_map2_left {A B C D} {P : A -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> A} {l l' l'' l'''} :
+Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> E} {l l' l'' l'''} : 
   All2 R l l''' ->
   All2 Q l' l'' ->
   #|l| = #|l'| ->
@@ -3496,7 +3496,7 @@ Proof.
     simpl. constructor; auto. eapply hPQ; eauto.
 Qed.
 
-Lemma All2_map2_left_All3 {A B C} {P : A -> A -> Type} {f : B -> C -> A} {l l' l''} :
+Lemma All2_map2_left_All3 {A B C} {P : A -> A -> Type} {f : B -> C -> A} {l l' l''} : 
   All3 (fun x y z => P (f x y) z) l l' l'' ->
   All2 P (map2 f l l') l''.
 Proof.

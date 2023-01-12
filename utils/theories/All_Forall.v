@@ -3689,3 +3689,11 @@ Proof.
                       let H2 := fresh in
                       eapply All2_fold_impl; [ eapply IH | ]; clear IH ].
 Qed.
+
+
+Lemma All2i_map2_right {A B C} {n} {l : list A} {l' : list B} (f : A -> B -> C) P :
+  All2i (fun n x y => P n x (f x y)) n l l' ->
+  All2i P n l (map2 f l l').
+Proof.
+  induction 1; cbn; constructor; auto.
+Qed.

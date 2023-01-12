@@ -13,8 +13,8 @@ Require Import Coq.micromega.Lia.
 From Equations Require Import Equations.
 Set Primitive Projections.
 Set Default Proof Using "Type".
-From MetaCoq.Template Require Import MCCompare ReflectEq.
-From MetaCoq.Template Require ByteCompare ByteCompareSpec.
+From MetaCoq.Utils Require Import MCCompare ReflectEq.
+From MetaCoq.Utils Require ByteCompare ByteCompareSpec.
 (** bytes *)
 
 Definition byte_parse (b : Byte.byte) : Byte.byte := b.

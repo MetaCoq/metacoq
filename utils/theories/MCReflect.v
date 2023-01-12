@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Bool.
-From MetaCoq.Template Require Import MCPrelude.
+From MetaCoq.Utils Require Import MCPrelude.
 Require Import ssreflect.
 From Equations Require Import Equations.
 

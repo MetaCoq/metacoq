@@ -5,7 +5,7 @@
 
 From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 Import bytestring.
 Local Open Scope bs.
 Local Open Scope string_scope2.

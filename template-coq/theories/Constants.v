@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import bytestring BasicAst uGraph TemplateMonad
+From MetaCoq.Utils Require Import bytestring.
+From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad
      TemplateMonad.Extractable.
 
 (* Base types *)

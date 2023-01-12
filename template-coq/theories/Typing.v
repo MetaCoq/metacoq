@@ -3,7 +3,8 @@
 From Equations.Type Require Import Relation.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Environment Primitive
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config Ast AstUtils Environment Primitive
     LiftSubst UnivSubst EnvironmentTyping Reflect ReflectAst TermEquality WfAst.
 
 Import MCMonadNotation.

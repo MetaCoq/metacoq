@@ -12,7 +12,7 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   export OCAMLPATH
 endif
 
-.PHONY: printconf all template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations
+.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations
 
 printconf:
 ifeq '$(METACOQ_CONFIG)' 'local'
@@ -27,6 +27,7 @@ endif
 endif
 
 install: all translations
+	$(MAKE) -C utils install
 	$(MAKE) -C template-coq install
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
@@ -34,6 +35,7 @@ install: all translations
 	$(MAKE) -C translations install
 
 uninstall:
+	$(MAKE) -C utils uninstall
 	$(MAKE) -C template-coq uninstall
 	$(MAKE) -C pcuic uninstall
 	$(MAKE) -C safechecker uninstall
@@ -43,6 +45,7 @@ uninstall:
 html: all
 	"coqdoc" --multi-index -toc -utf8 -html \
     --with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
+		-R utils/theories MetaCoq.Utils \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
@@ -52,6 +55,7 @@ html: all
 		-d html */theories/*.v */theories/*/*.v translations/*.v examples/*.v
 
 clean:
+	$(MAKE) -C utils clean
 	$(MAKE) -C template-coq clean
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
@@ -61,6 +65,7 @@ clean:
 	$(MAKE) -C translations clean
 
 vos:
+	$(MAKE) -C utils
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
@@ -68,6 +73,7 @@ vos:
 	$(MAKE) -C translations vos
 
 quick:
+	$(MAKE) -C utils
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic quick 
 	$(MAKE) -C safechecker quick
@@ -75,6 +81,7 @@ quick:
 	$(MAKE) -C translations quick
 
 mrproper:
+	$(MAKE) -C utils mrproper
 	$(MAKE) -C template-coq mrproper
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
@@ -84,12 +91,16 @@ mrproper:
 	$(MAKE) -C translations mrproper
 
 .merlin:
+	$(MAKE) -C utils .merlin
 	$(MAKE) -C template-coq .merlin
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
 	$(MAKE) -C erasure .merlin
 
-template-coq:
+utils:
+	$(MAKE) -C utils
+
+template-coq: utils
 	$(MAKE) -C template-coq
 
 pcuic: template-coq

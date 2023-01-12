@@ -6,7 +6,8 @@
 *)
 
 From Coq Require Ascii Extraction ZArith NArith.
-From MetaCoq.Template Require Import utils Ast Reflect Induction.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Ast Reflect Induction.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63.
 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].

@@ -1,6 +1,4 @@
--I src
 -R theories MetaCoq.Utils
--I .
 
 # canonical tries library
 theories/canonicaltries/String2pos.v
@@ -30,4 +28,5 @@ theories/MC_ExtrOCamlInt63.v
 theories/MC_ExtrOCamlZPosInt.v
 theories/ReflectEq.v
 theories/monad_utils.v
+theories/utils.v
 

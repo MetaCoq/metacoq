@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import ssreflect ssrbool.
 Require PeanoNat.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config Ast AstUtils Induction
      UnivSubst WfAst Reflect Typing.
 From Equations Require Import Equations.
 

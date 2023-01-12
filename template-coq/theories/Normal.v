@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast Typing.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config Ast Typing.
 
 
 Section Normal.

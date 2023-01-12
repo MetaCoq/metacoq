@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config Environment Ast AstUtils utils
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config Environment Ast AstUtils
      LiftSubst UnivSubst uGraph Typing.
 Import MCMonadNotation.
 

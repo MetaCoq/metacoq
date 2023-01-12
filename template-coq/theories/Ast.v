@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Environment EnvironmentTyping.
-From MetaCoq.Template Require Export Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Export Environment EnvironmentTyping Universes.
 (* For primitive integers and floats  *)
 From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import ssreflect Morphisms.

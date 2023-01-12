@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
-From MetaCoq.Template Require Import utils BasicAst Primitive.
-From MetaCoq.Template Require Import Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import BasicAst Primitive Universes.
 
 Module Type Term.
 

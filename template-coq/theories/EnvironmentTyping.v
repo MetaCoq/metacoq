@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils BasicAst Universes Environment Primitive.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config BasicAst Universes Environment Primitive.
 From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).

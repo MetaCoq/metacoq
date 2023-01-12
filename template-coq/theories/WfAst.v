@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
-     UnivSubst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import config Ast AstUtils Induction UnivSubst.
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
 

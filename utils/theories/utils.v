@@ -6,7 +6,7 @@
 
 From Coq Require Export Bool ZArith Arith Lia List.
 
-From MetaCoq.Template Require Export utils.MCUtils monad_utils.
+From MetaCoq.Utils Require Export MCUtils monad_utils.
 
 Global Set Asymmetric Patterns.
 

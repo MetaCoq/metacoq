@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool Decimal DecimalString ZArith.
-From MetaCoq.Template Require Import MCCompare bytestring ReflectEq.
+From MetaCoq.Utils Require Import MCCompare bytestring ReflectEq.
 
 Local Open Scope bs.
 Notation string := String.t.

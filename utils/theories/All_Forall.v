@@ -1,5 +1,5 @@
 From Coq Require Import List Bool Arith ssreflect Morphisms Lia Utf8.
-From MetaCoq.Template Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
+From MetaCoq.Utils Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 Import ListNotations.
 
@@ -2371,7 +2371,7 @@ Proof.
   eauto.
 Qed.
 
-From MetaCoq.Template Require Import MCSquash.
+From MetaCoq.Utils Require Import MCSquash.
 
 Lemma All2_swap :
   forall A B R l l',

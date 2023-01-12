@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Morphisms Orders Setoid.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Template Require Export Kernames.
 From Coq Require Floats.SpecFloat.
 From Equations Require Import Equations.

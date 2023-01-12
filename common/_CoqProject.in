@@ -1,0 +1,13 @@
+-R theories MetaCoq.Common
+
+theories/Primitive.v
+theories/uGraph.v
+theories/config.v
+theories/Kernames.v
+theories/Universes.v
+theories/BasicAst.v
+theories/Environment.v
+theories/Reflect.v
+theories/EnvironmentTyping.v
+theories/EnvMap.v
+theories/Transform.v

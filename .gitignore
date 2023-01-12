@@ -233,6 +233,8 @@ checker/src/wf.mli
 /pcuic/src/classes0.mli
 /pcuic/src/classes0.ml
 /checker/metacoq-config
+/template-coq/metacoq-config
+/common/metacoq-config
 /translations/metacoq-config
 /erasure/_CoqProject
 /erasure/_PluginProject
@@ -244,6 +246,8 @@ checker/src/wf.mli
 /safechecker/metacoq-config
 /safechecker/_PluginProject
 /safechecker/_CoqProject
+/template-coq/_CoqProject
+/common/_CoqProject
 /safechecker/Makefile.safechecker.conf
 /safechecker/Makefile.safechecker
 /safechecker/Makefile.plugin.conf

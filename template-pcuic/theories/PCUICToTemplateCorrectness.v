@@ -9,11 +9,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
 Set Warnings "-notation-overridden".
-From MetaCoq.Template Require Import config utils Ast TypingWf UnivSubst
+From MetaCoq.Common Require Import config utils Ast TypingWf UnivSubst
      TermEquality LiftSubst Reduction.
 Set Warnings "+notation_overridden".
 
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICT.Common.
 
 Import MCMonadNotation.
 
@@ -38,11 +38,11 @@ From Equations Require Import Equations.
     For example one couldn't do recursive calls on such "rebuilt" contexts using simple structural
     recursion, the new contexts having no structural relation to the terms at hand.
 
-    This means that Template-Coq's `red1` reduction of cases requires well-formedness conditions
+    This means that.Common-Coq's `red1` reduction of cases requires well-formedness conditions
     not readily available in PCUIC's. We solve this conundrum using subject reduction: indeed
     cumulativity is always called starting with two well-sorted types, and we can hence show
     that every one-step reduction in a PCUIC cumulativity derivation goes from a well-typed term
-    to a well-typed term. We can hence prove that Template-Coq's `red1` reductions follow from the
+    to a well-typed term. We can hence prove that.Common-Coq's `red1` reductions follow from the
     untyped PCUIC reduction when restricted to well-typed terms (which have many more invariants).
     We actually just need the term to be reduced to be well-typed to show that the interpretation
     preserves one-step reduction in [trans_red1}].
@@ -52,11 +52,11 @@ From Equations Require Import Equations.
 Module S := PCUICAst.
 Module SE := PCUICEnvironment.
 Module ST := PCUICTyping.
-Module T := Template.Ast.
-Module TT := Template.Typing.
+Module T :=.Common.Ast.
+Module TT :=.Common.Typing.
 
 Module SL := PCUICLiftSubst.
-Module TL := Template.LiftSubst.
+Module TL :=.Common.LiftSubst.
 
 
 Ltac solve_list :=
@@ -152,7 +152,7 @@ Lemma trans_declared_constant {cf} Σ {wfΣ : wf Σ} cst decl:
   T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
   intro H. unshelve eapply declared_constant_to_gen in H; eauto.
-  unshelve eapply Typing.TemplateDeclarationTyping.declared_constant_from_gen.
+  unshelve eapply Typing.CommonDeclarationTyping.declared_constant_from_gen.
   move:H. unfold T.declared_constant, T.declared_constant_gen.
   rewrite trans_lookup.
   unfold S.declared_constant, S.declared_constant_gen.
@@ -183,7 +183,7 @@ Lemma trans_declared_inductive {cf} Σ {wfΣ : wf Σ} ind mdecl idecl:
   T.declared_inductive (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl).
 Proof.
   intro H. unshelve eapply declared_inductive_to_gen in H; eauto.
-  unshelve eapply Typing.TemplateDeclarationTyping.declared_inductive_from_gen.
+  unshelve eapply Typing.CommonDeclarationTyping.declared_inductive_from_gen.
   move:H. intros [].
   split.
   - unfold T.declared_minductive,T.declared_minductive_gen,
@@ -1837,7 +1837,7 @@ Axiom cofix_guard_trans :
 
 (* This version of typing spine allows to not require [isType] assumptions at the end of the
   application chain, which is crucial to be able to build a spine that both encompasses PCUIC's
-  applications and mimicks the typing rule of Template. Otherwise we would only model:
+  applications and mimicks the typing rule of.Common. Otherwise we would only model:
 
   |- tProd na A B : s
   |- f : tProd na A B
@@ -1952,7 +1952,7 @@ Proof.
     * simpl. lia.
 Qed.
 
-(** Likewise, in Template-Coq, we can append without re-typing the result *)
+(** Likewise, in.Common-Coq, we can append without re-typing the result *)
 Lemma TT_typing_spine_app {cf:checker_flags} Σ Γ ty T' args na A B arg s :
   TT.typing Σ Γ (T.tProd na A B) (T.tSort s) ->
   TT.typing_spine Σ Γ ty args T' ->
@@ -2034,7 +2034,7 @@ Qed.
   We have two cases to consider at the "end" of the spine: either we have the same translation of the
   PCUIC conclusion type, or there is exactly one cumulativity step to get to this type. *)
 Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T}
-  (sp : PCUICToTemplateCorrectness.typing_spine Σ Γ fty l T) n
+  (sp : PCUICT.CommonCorrectness.typing_spine Σ Γ fty l T) n
   (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'),
       typing_size Ht' <= n ->
       TT.typing (trans_global Σ) (trans_local Γ) (trans t') (trans T')) :
@@ -2279,7 +2279,7 @@ Proof.
     eapply TT.type_Case; auto.
     + now apply trans_declared_inductive.
     + cbn. now apply trans_ind_predicate_context_eq.
-    + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
+    + cbn. rewrite PCUICT.CommonCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
     + move: X5.

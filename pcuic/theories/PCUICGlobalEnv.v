@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ProofIrrelevance.
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Common Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping.
 

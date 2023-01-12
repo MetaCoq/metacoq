@@ -1,20 +1,20 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
-From MetaCoq.Template Require Import config utils AstUtils MonadAst MonadBasicAst Primitive EnvMap.
-From MetaCoq.Template Require TemplateProgram.
-From MetaCoq.Template Require TemplateMonad.Core.
-From MetaCoq.Template Require Import TemplateMonad.Common monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram TemplateToPCUIC.
+From MetaCoq.Common Require Import config utils AstUtils MonadAst MonadBasicAst Primitive EnvMap.
+From MetaCoq.Common Require TemplateProgram.
+From MetaCoq.Common Require TemplateMonad.Core.
+From MetaCoq.Common Require Import TemplateMonad.Common monad_utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.CommonToPCUIC.
 
 Import MCMonadNotation.
 
 Section with_tc.
   Context {TM : TMInstance}.
-  Local Notation TemplateMonad := (@TemplateMonad TM).
-  Context {M : Monad TemplateMonad}.
+  Local Notation.CommonMonad := (@TemplateMonad TM).
+  Context {M : Monad.CommonMonad}.
 
   Section helpers.
-    Context (monad_trans : Ast.term -> TemplateMonad term).
+    Context (monad_trans : Ast.term ->.CommonMonad term).
 
     Definition monad_trans_decl' (d : Ast.Env.context_decl) :=
       decl_body <- monad_option_map monad_trans d.(decl_body);;
@@ -78,11 +78,11 @@ Section with_tc.
       | Ast.Env.InductiveDecl bd => bd <- monad_trans_minductive_body' bd;; ret (InductiveDecl bd)
       end.
 
-    Definition tmQuoteInductive' (mind : kername) : TemplateMonad mutual_inductive_body :=
+    Definition tmQuoteInductive' (mind : kername) :.CommonMonad mutual_inductive_body :=
       bd <- tmQuoteInductive TM mind;;
       monad_trans_minductive_body' bd.
 
-    Definition TransLookup_lookup_inductive' (ind : inductive) : TemplateMonad (mutual_inductive_body × one_inductive_body) :=
+    Definition TransLookup_lookup_inductive' (ind : inductive) :.CommonMonad (mutual_inductive_body × one_inductive_body) :=
       mdecl <- tmQuoteInductive' (inductive_mind ind);;
       match nth_error (ind_bodies mdecl) (inductive_ind ind) with
       | Some idecl => ret (mdecl, idecl)
@@ -92,9 +92,9 @@ Section with_tc.
   End helpers.
 
   Section with_helper.
-    Context (TransLookup_lookup_inductive' : inductive -> TemplateMonad (mutual_inductive_body × one_inductive_body)).
+    Context (TransLookup_lookup_inductive' : inductive ->.CommonMonad (mutual_inductive_body × one_inductive_body)).
 
-    Fixpoint monad_trans' (t : Ast.term) : TemplateMonad term
+    Fixpoint monad_trans' (t : Ast.term) :.CommonMonad term
       := match t with
          | Ast.tRel n => ret (tRel n)
          | Ast.tVar n => ret (tVar n)
@@ -131,17 +131,17 @@ Section with_tc.
   End with_helper.
 End with_tc.
 
-Import TemplateMonad.Core.
+Import.CommonMonad.Core.
 
-Definition monad_trans : Ast.term -> TemplateMonad term
-  := tmFix (fun monad_trans => @monad_trans' TypeInstance TemplateMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans)).
+Definition monad_trans : Ast.term ->.CommonMonad term
+  := tmFix (fun monad_trans => @monad_trans' TypeInstance.CommonMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans)).
 
-Definition monad_trans_decl := @monad_trans_decl' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_local := @monad_trans_local' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_constructor_body := @monad_trans_constructor_body' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_projection_body := @monad_trans_projection_body' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_one_ind_body := @monad_trans_one_ind_body' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_constant_body := @monad_trans_constant_body' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_minductive_body := @monad_trans_minductive_body' TypeInstance TemplateMonad_Monad monad_trans.
-Definition monad_trans_global_decl := @monad_trans_global_decl' TypeInstance TemplateMonad_Monad monad_trans.
-Definition tmQuoteInductive := @tmQuoteInductive' TypeInstance TemplateMonad_Monad monad_trans.
+Definition monad_trans_decl := @monad_trans_decl' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_local := @monad_trans_local' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_constructor_body := @monad_trans_constructor_body' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_projection_body := @monad_trans_projection_body' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_one_ind_body := @monad_trans_one_ind_body' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_constant_body := @monad_trans_constant_body' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_minductive_body := @monad_trans_minductive_body' TypeInstance.CommonMonad_Monad monad_trans.
+Definition monad_trans_global_decl := @monad_trans_global_decl' TypeInstance.CommonMonad_Monad monad_trans.
+Definition tmQuoteInductive := @tmQuoteInductive' TypeInstance.CommonMonad_Monad monad_trans.

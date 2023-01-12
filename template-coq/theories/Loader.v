@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require TemplateMonad.Core
-  TemplateMonad.Extractable BasicAst Ast Constants.
+From MetaCoq.Common Require BasicAst.
+
+From MetaCoq.Template Require TemplateMonad.Core TemplateMonad.Extractable Ast Constants.
 
 Declare ML Module "coq-metacoq-template-coq.plugin".
 

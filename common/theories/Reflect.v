@@ -2,7 +2,7 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Template Require Import BasicAst Universes Kernames.
+From MetaCoq.Common Require Import BasicAst Universes Kernames.
 Require Import ssreflect.
 From Equations Require Import Equations.
 

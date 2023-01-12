@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils EnvMap.
-From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
+From MetaCoq.Common Require Import config utils EnvMap.
+From MetaCoq.Common Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction
-     PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv.CommonToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnv
      PCUICSubstitution PCUICGeneration PCUICCasesContexts
      PCUICProgram.
@@ -67,12 +67,12 @@ Tactic Notation "len" "in" hyp(id) :=
     rewrite !pclengths /= // in id);
   try lia.
 
-(* Source = Template, Target (unqualified) = Coq *)
+(* Source =.Common, Target (unqualified) = Coq *)
 
-Module S := Template.Ast.
-Module SEq := Template.TermEquality.
-Module ST := Template.Typing.
-Module SL := Template.LiftSubst.
+Module S :=.Common.Ast.
+Module SEq :=.Common.TermEquality.
+Module ST :=.Common.Typing.
+Module SL :=.Common.LiftSubst.
 
 Lemma wf_fresh_globals {cf : checker_flags} (Σ : global_env) : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
 Proof.
@@ -223,7 +223,7 @@ Proof.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
   rewrite !trans_lookup_inductive.
   destruct H as [H hnth].
-  unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
+  unshelve eapply Typing.CommonDeclarationTyping.declared_minductive_to_gen in H; eauto.
   red in H.
   generalize (trans_lookup_env (inductive_mind ci)).
   move: H.
@@ -349,9 +349,9 @@ Section Translation.
   Qed.
 
 Lemma trans_lift n k t :
-  trans (Template.Ast.lift n k t) = lift n k (trans t).
+  trans .Common.Ast.lift n k t) = lift n k (trans t).
 Proof.
-  revert k. induction t using Template.Induction.term_forall_list_ind; simpl; intros; try congruence.
+  revert k. induction t using.Common.Induction.term_forall_list_ind; simpl; intros; try congruence.
   - f_equal. rewrite !map_map_compose. solve_all.
   - rewrite lift_mkApps IHt map_map.
     f_equal. rewrite map_map; solve_all.
@@ -379,7 +379,7 @@ Proof.
   - f_equal; auto; solve_all.
 Qed.
 
-Lemma trans_mkApp u a : trans (Template.Ast.mkApp u a) = tApp (trans u) (trans a).
+Lemma trans_mkApp u a : trans .Common.Ast.mkApp u a) = tApp (trans u) (trans a).
 Proof.
   induction u; simpl; try reflexivity.
   rewrite map_app.
@@ -389,20 +389,20 @@ Proof.
 Qed.
 
 Lemma trans_mkApps u v :
-  trans (Template.Ast.mkApps u v) = mkApps (trans u) (List.map trans v).
+  trans .Common.Ast.mkApps u v) = mkApps (trans u) (List.map trans v).
 Proof.
   revert u; induction v.
   simpl; trivial.
   intros.
-  rewrite <- Template.AstUtils.mkApps_mkApp; auto.
+  rewrite <-.Common.AstUtils.mkApps_mkApp; auto.
   rewrite IHv. simpl. f_equal.
   apply trans_mkApp.
 Qed.
 
 Lemma trans_subst t k u :
-  trans (Template.Ast.subst t k u) = subst (map trans t) k (trans u).
+  trans .Common.Ast.subst t k u) = subst (map trans t) k (trans u).
 Proof.
-  revert k. induction u using Template.Induction.term_forall_list_ind; simpl; intros; try congruence.
+  revert k. induction u using.Common.Induction.term_forall_list_ind; simpl; intros; try congruence.
 
   - repeat nth_leb_simpl; auto.
     rewrite trans_lift.
@@ -435,8 +435,8 @@ Proof.
   - f_equal; auto; solve_list.
 Qed.
 
-Notation Tterm := Template.Ast.term.
-Notation Tcontext := Template.Ast.Env.context.
+Notation Tterm :=.Common.Ast.term.
+Notation Tcontext :=.Common.Ast.Env.context.
 
 Lemma All_map2 {A B C} P (l : list A) (l' : list B) (f g : A -> B -> C) :
   All P l' ->
@@ -451,7 +451,7 @@ Qed.
 Lemma trans_subst_instance u t : trans (subst_instance u t) = subst_instance u (trans t).
 Proof.
   rewrite /subst_instance /=.
-  induction t using Template.Induction.term_forall_list_ind; simpl; try congruence.
+  induction t using.Common.Induction.term_forall_list_ind; simpl; try congruence.
   { f_equal. rewrite !map_map_compose. solve_all. }
   { rewrite IHt. rewrite map_map_compose.
     rewrite mkApps_morphism; auto. f_equal.
@@ -472,7 +472,7 @@ Qed.
 
 
 Lemma trans_destArity {cf} {wfΣ : Typing.wf Σ} ctx t :
-  Template.WfAst.wf Σ t ->
+ .Common.WfAst.wf Σ t ->
   wf (trans_global_env Σ) ->
   match Ast.destArity ctx t with
   | Some (args, s) =>
@@ -642,9 +642,9 @@ Proof.
   induction ctx as [|[na [b|] ty] ctx]; simpl; auto; lia.
 Qed.
 
-Hint Resolve Template.TypingWf.typing_wf : wf.
+Hint Resolve.Common.TypingWf.typing_wf : wf.
 
-Lemma mkApps_trans_wf U l : Template.WfAst.wf Σ (Template.Ast.tApp U l) -> exists U' V', trans (Template.Ast.tApp U l) = tApp U' V'.
+Lemma mkApps_trans_wf U l :.Common.WfAst.wf Σ (Template.Ast.tApp U l) -> exists U' V', trans (Template.Ast.tApp U l) = tApp U' V'.
 Proof.
   simpl. induction l using rev_ind. intros. inv X. congruence.
   intros. rewrite map_app. simpl. exists (mkApps (trans U) (map trans l)), (trans x).
@@ -671,7 +671,7 @@ Section Trans_Global.
     declared_constant Σ' cst (trans_constant_body Σ' decl).
   Proof.
     intro H.
-    unshelve eapply Typing.TemplateDeclarationTyping.declared_constant_to_gen in H; eauto.
+    unshelve eapply Typing.CommonDeclarationTyping.declared_constant_to_gen in H; eauto.
     unshelve eapply declared_constant_from_gen; eauto. move:H.
     unfold declared_constant, Ast.declared_constant,
       declared_constant_gen, Ast.declared_constant_gen.
@@ -683,7 +683,7 @@ Section Trans_Global.
     declared_minductive (trans_global_env Σ) cst (trans_minductive_body Σ' decl).
   Proof.
     intro H.
-    unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H; eauto.
+    unshelve eapply Typing.CommonDeclarationTyping.declared_minductive_to_gen in H; eauto.
     unshelve eapply declared_minductive_from_gen; eauto. move:H.
     unfold declared_minductive, Ast.declared_minductive.
     unfold declared_minductive_gen, Ast.declared_minductive_gen.
@@ -751,7 +751,7 @@ Lemma declared_inductive_inj {cf Σ mdecl mdecl' ind idecl idecl'}
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
   intros [] []. unfold Ast.declared_minductive in *.
-  unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_to_gen in H, H1; eauto.
+  unshelve eapply Typing.CommonDeclarationTyping.declared_minductive_to_gen in H, H1; eauto.
   unfold Ast.declared_minductive_gen in H1.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
@@ -792,7 +792,7 @@ Section Trans_Global.
       destruct nth_error eqn:hnth => /= //.
       assert (wfty : WfAst.wf Σ (Ast.Env.ind_type o)).
       { eapply declared_inductive_wf; eauto. eapply typing_wf_sigma; eauto. split; eauto.
-        unshelve eapply Typing.TemplateDeclarationTyping.declared_minductive_from_gen; eauto. }
+        unshelve eapply Typing.CommonDeclarationTyping.declared_minductive_from_gen; eauto. }
       generalize (trans_destArity Σ [] (Ast.Env.ind_type o) wfty wfΣ').
       destruct Ast.destArity as [[ctx ps]|] eqn:eq' => /= // -> //.
       now rewrite context_assumptions_map.
@@ -841,7 +841,7 @@ Section Trans_Global.
     induction 1 in l' |- *; intros H; depelim H; intros H'; depelim H'; cbn; constructor; auto.
   Qed.
 
-  (* TODO update Template Coq's eq_term to reflect PCUIC's cumulativity *)
+  (* TODO update.Common Coq's eq_term to reflect PCUIC's cumulativity *)
   Lemma trans_eq_term_upto_univ {Re Rle t u napp} :
     RelationClasses.subrelation Re Rle ->
     WfAst.wf Σ t ->
@@ -1622,7 +1622,7 @@ Section Trans_Global.
       apply red1_mkApps_f.
       apply app_red_r. apply r0. now depelim a.
       inv a. intros. specialize (IHX X1).
-      eapply (IHX (Template.Ast.tApp M1 [hd])).
+      eapply (IHX .Common.Ast.tApp M1 [hd])).
 
     - constructor. apply IHX. constructor; hnf; simpl; auto. auto.
     - constructor. induction X; simpl; repeat constructor. apply p; auto. now inv Hwf.
@@ -1755,7 +1755,7 @@ Definition Tlift_typing (P : Ast.Env.global_env_ext -> Ast.Env.context -> Ast.te
   fun Σ Γ t T =>
     match T with
     | Some T => P Σ Γ t T
-    | None => { s : Universe.t & P Σ Γ t (Template.Ast.tSort s) }
+    | None => { s : Universe.t & P Σ Γ t .Common.Ast.tSort s) }
     end.
 
 Definition TTy_wf_local {cf : checker_flags} Σ Γ := ST.All_local_env (ST.lift_typing ST.typing Σ) Γ.
@@ -2626,7 +2626,7 @@ From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
 Lemma trans_cumul_ctx_rel {cf} {Σ : Ast.Env.global_env_ext} Γ Δ Δ' :
   let Σ' := trans_global Σ in
   Typing.wf Σ -> wf Σ' ->
-  ST.TemplateConversion.cumul_ctx_rel Typing.cumul_gen Σ Γ Δ Δ' ->
+  ST.CommonConversion.cumul_ctx_rel Typing.cumul_gen Σ Γ Δ Δ' ->
   closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ)) ->
   closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ')) ->
   All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ) ->
@@ -2887,7 +2887,7 @@ Lemma trans_type_local_ctx {cf} {Σ : Ast.Env.global_env_ext} Γ cs s (Σ' := tr
   (typ_or_sort_map (trans (trans_global_env Σ)) T)) ->
   Typing.wf Σ ->
   wf Σ' ->
-  ST.type_local_ctx (Typing.TemplateEnvTyping.lift_typing Typing.typing) Σ Γ cs s ->
+  ST.type_local_ctx (Typing.CommonEnvTyping.lift_typing Typing.typing) Σ Γ cs s ->
   type_local_ctx (PCUICEnvTyping.lift_typing typing)
     (trans_global Σ)
   (trans_local Σ' Γ)
@@ -2922,10 +2922,10 @@ Lemma trans_check_ind_sorts {cf} Σ udecl kn mdecl n idecl
     (trans_local (trans_global_env Σ) Γ)
     (trans (trans_global_env Σ) t)
     (typ_or_sort_map (trans (trans_global_env Σ)) T)) ->
-  forall (oni: Typing.on_ind_body Typing.cumul_gen (Typing.TemplateEnvTyping.lift_typing Typing.typing)
+  forall (oni: Typing.on_ind_body Typing.cumul_gen (Typing.CommonEnvTyping.lift_typing Typing.typing)
         (Σ, udecl) kn mdecl n idecl),
   ST.check_ind_sorts
-  (Typing.TemplateEnvTyping.lift_typing Typing.typing)
+  (Typing.CommonEnvTyping.lift_typing Typing.typing)
   (Σ, Ast.Env.ind_universes mdecl) (Ast.Env.ind_params mdecl) (Ast.Env.ind_kelim idecl)
   (Ast.Env.ind_indices idecl) (ST.ind_cunivs oni)
   (Ast.Env.ind_sort idecl) ->
@@ -2949,7 +2949,7 @@ Qed.
 
 Lemma on_global_decl_wf {cf} {Σ : Ast.Env.global_env_ext} {kn d} :
   Typing.wf Σ ->
-  Typing.on_global_decl Typing.cumul_gen (Typing.TemplateEnvTyping.lift_typing Typing.typing) Σ kn d ->
+  Typing.on_global_decl Typing.cumul_gen (Typing.CommonEnvTyping.lift_typing Typing.typing) Σ kn d ->
   Typing.on_global_decl Typing.cumul_gen (fun Σ => WfAst.wf_decl_pred Σ) Σ kn d.
 Proof.
   intros. eapply TypingWf.on_global_decl_impl; tea.
@@ -3280,7 +3280,7 @@ Proof.
             now eapply trans_consistent_instance_ext_gen.
 Qed.
 
-Lemma template_to_pcuic_env {cf} Σ : Template.Typing.wf Σ -> wf (trans_global_env Σ).
+Lemma template_to_pcuic_env {cf} Σ :.Common.Typing.wf Σ -> wf (trans_global_env Σ).
 Proof.
   intros Hu.
   eapply trans_on_global_env; eauto. simpl; intros.
@@ -3295,7 +3295,7 @@ Proof.
     eapply (X2 _ (Ast.tSort s)); eauto.
 Qed.
 
-Lemma template_to_pcuic_env_ext {cf} Σ : Template.Typing.wf_ext Σ -> wf_ext (trans_global Σ).
+Lemma template_to_pcuic_env_ext {cf} Σ :.Common.Typing.wf_ext Σ -> wf_ext (trans_global Σ).
 Proof.
   intros [u Hu].
   split. now apply template_to_pcuic_env.

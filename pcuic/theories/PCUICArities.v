@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses ProofIrrelevance ssreflect ssrbool.
-From MetaCoq.Template Require Import config Universes utils BasicAst.
+From MetaCoq.Common Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv
      PCUICUnivSubstitutionTyp

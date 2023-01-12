@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Universes BasicAst Primitive Reflect
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Universes BasicAst Primitive Reflect
      Environment EnvironmentTyping.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.

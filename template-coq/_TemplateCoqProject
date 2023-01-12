@@ -1,6 +1,7 @@
 -I src
 -Q src MetaCoq.Template
 -R theories MetaCoq.Template
+-R ../utils/theories MetaCoq.Utils -R ../common/theories MetaCoq.Common
 META.coq-metacoq-template-coq
 -I .
 

@@ -998,7 +998,7 @@ Proof.
     simpl. eapply meta_conv.
     + eapply type_Fix.
       * apply hf.
-      * destruct hf; eapply fix_guard_rename; eauto.
+      * eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
         intros x t. apply infer_typing_sort_impl with id t.
@@ -1024,7 +1024,7 @@ Proof.
     simpl. eapply meta_conv.
     + eapply type_CoFix; auto.
       * apply hf.
-      * destruct hf; eapply cofix_guard_rename; eauto.
+      * eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
         intros x t. apply infer_typing_sort_impl with id t.

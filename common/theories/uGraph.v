@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import ssreflect ssrbool OrderedTypeAlt MSetAVL MSetFacts MSetProperties MSetDecide Morphisms.
 From MetaCoq.Utils Require Import utils wGraph.
-From MetaCoq.Template Require Import config Universes.
+From MetaCoq.Common Require Import config Universes.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Import ConstraintType.

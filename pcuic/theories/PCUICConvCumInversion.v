@@ -6,8 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextConversion 
   PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity PCUICOnFreeVars PCUICSR.
 
-From MetaCoq.Template Require Import config.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Common Require Import utils.
 
 Local Set Keyed Unification.
 

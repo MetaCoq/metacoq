@@ -1,10 +1,10 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
 
-From MetaCoq.Template Require Import config.
+From MetaCoq.Common Require Import config.
 
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICArities PCUICInductives PCUICSpine
   PCUICWeakeningTyp PCUICUnivSubstitutionConv PCUICValidity PCUICGeneration
-  PCUICAst PCUICPrimitive PCUICCases PCUICProgram TemplateToPCUIC TemplateToPCUICCorrectness
+  PCUICAst PCUICPrimitive PCUICCases PCUICProgram.CommonToPCUIC TemplateToPCUICCorrectness
   PCUICSubstitution PCUICConversion PCUICInductiveInversion
   PCUICContextSubst PCUICOnFreeVars PCUICSR PCUICTactics PCUICClosed.
 

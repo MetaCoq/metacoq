@@ -1,6 +1,6 @@
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Common Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst
   PCUICReduction PCUICContextReduction.
 

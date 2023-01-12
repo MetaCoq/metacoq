@@ -28,6 +28,7 @@ endif
 
 install: all translations
 	$(MAKE) -C utils install
+	$(MAKE) -C common install
 	$(MAKE) -C template-coq install
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
@@ -36,6 +37,7 @@ install: all translations
 
 uninstall:
 	$(MAKE) -C utils uninstall
+	$(MAKE) -C common uninstall
 	$(MAKE) -C template-coq uninstall
 	$(MAKE) -C pcuic uninstall
 	$(MAKE) -C safechecker uninstall
@@ -46,6 +48,7 @@ html: all
 	"coqdoc" --multi-index -toc -utf8 -html \
     --with-header ./html/resources/header.html --with-footer ./html/resources/footer.html \
 		-R utils/theories MetaCoq.Utils \
+		-R common/theories MetaCoq.Common \
 		-R template-coq/theories MetaCoq.Template \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
@@ -56,6 +59,7 @@ html: all
 
 clean:
 	$(MAKE) -C utils clean
+	$(MAKE) -C common clean
 	$(MAKE) -C template-coq clean
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
@@ -66,6 +70,7 @@ clean:
 
 vos:
 	$(MAKE) -C utils
+	$(MAKE) -C common
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
@@ -74,6 +79,7 @@ vos:
 
 quick:
 	$(MAKE) -C utils
+	$(MAKE) -C common
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic quick 
 	$(MAKE) -C safechecker quick
@@ -82,6 +88,7 @@ quick:
 
 mrproper:
 	$(MAKE) -C utils mrproper
+	$(MAKE) -C common mrproper
 	$(MAKE) -C template-coq mrproper
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
@@ -92,6 +99,7 @@ mrproper:
 
 .merlin:
 	$(MAKE) -C utils .merlin
+	$(MAKE) -C common .merlin
 	$(MAKE) -C template-coq .merlin
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
@@ -100,7 +108,10 @@ mrproper:
 utils:
 	$(MAKE) -C utils
 
-template-coq: utils
+common: utils
+	$(MAKE) -C common
+
+template-coq: common
 	$(MAKE) -C template-coq
 
 pcuic: template-coq

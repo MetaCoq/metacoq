@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
+From MetaCoq.Common Require Import config utils.
+From MetaCoq.Common Require Ast TypingWf WfAst TermEquality.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping.CommonToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
      PCUICClosed PCUICCSubst PCUICProgram.
 Set Warnings "+notation-overridden".
@@ -12,14 +12,14 @@ Set Warnings "+notation-overridden".
 From Equations.Prop Require Import DepElim.
 Implicit Types cf : checker_flags.
 
-(* Source = Template, Target (unqualified) = PCUIC *)
+(* Source =.Common, Target (unqualified) = PCUIC *)
 
-Module SEq := Template.TermEquality.
-Module ST := Template.Typing.
-Module SL := Template.LiftSubst.
+Module SEq :=.Common.TermEquality.
+Module ST :=.Common.Typing.
+Module SL :=.Common.LiftSubst.
 
-From MetaCoq.PCUIC Require Import TemplateToPCUIC TemplateToPCUICCorrectness.
-From MetaCoq.Template Require Import TypingWf WcbvEval.
+From MetaCoq.PCUIC Require Import.CommonToPCUIC TemplateToPCUICCorrectness.
+From MetaCoq.Common Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
@@ -133,7 +133,7 @@ Lemma trans_csubst {cf} Σ a k b :
 Proof.
   intros wfΣ Σ' wfΣ' wfa.
   revert wfa k.
-  induction b using Template.Induction.term_forall_list_ind; simpl; intros; try congruence;
+  induction b using.Common.Induction.term_forall_list_ind; simpl; intros; try congruence;
     try solve [repeat (f_equal; eauto)].
 
   - cbn. destruct (k ?= n); auto.

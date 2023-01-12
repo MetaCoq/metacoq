@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Template Require Import Ast AstUtils Environment Induction WfAst.
+From MetaCoq.Common Require Import Environment.
+From MetaCoq.Template Require Import Ast AstUtils Induction WfAst.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 

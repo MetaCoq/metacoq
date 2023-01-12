@@ -1,5 +1,5 @@
 From Coq Require Import Program ssreflect ssrbool List.
-From MetaCoq.Template Require Import config utils Kernames MCRelations.
+From MetaCoq.Common Require Import config utils Kernames MCRelations.
 
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive

@@ -4,9 +4,6 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject
 	cat _CoqProject.in >> _CoqProject
 
-Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
-
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
@@ -18,17 +15,17 @@ install: Makefile.coq
 uninstall: Makefile.coq
 	$(MAKE) -f Makefile.coq uninstall
 
+html: all
+	$(MAKE) -f Makefile.coq html
+
 clean: Makefile.coq
-	make -f Makefile.coq clean
+	$(MAKE) -f Makefile.coq clean
 
 mrproper:
 	rm -f Makefile.coq
 
-vos: Makefile.coq
-	$(MAKE) -f Makefile.coq vos
+Makefile.coq: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.coq
 
 .merlin:
 	$(MAKE) -f $< $@
-
-quick: Makefile.coq
-	$(MAKE) -f Makefile.coq COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

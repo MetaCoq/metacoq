@@ -2,3 +2,4 @@
 *.ml
 .generate
 *.mli.bak
+*.orig

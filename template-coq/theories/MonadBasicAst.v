@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils monad_utils.
-From MetaCoq.Template Require Import BasicAst.
+From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Template Require Import TemplateMonad.Common.
 
 Import MCMonadNotation.

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Template Require Import config Ast AstUtils WfAst Induction LiftSubst
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Import Ast AstUtils WfAst Induction LiftSubst
      UnivSubst TermEquality Typing.
 
 From Equations Require Import Equations.

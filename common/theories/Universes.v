@@ -1,7 +1,7 @@
 From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Template Require Import BasicAst config.
+From MetaCoq.Common Require Import BasicAst config.
 Require Import ssreflect.
 
 Local Open Scope nat_scope.

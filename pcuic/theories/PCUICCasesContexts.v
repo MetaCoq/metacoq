@@ -1,7 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Common Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICSigmaCalculus.
 

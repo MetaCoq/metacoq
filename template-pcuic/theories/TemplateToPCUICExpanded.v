@@ -1,12 +1,12 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand TemplateProgram.
+From MetaCoq.Common Require Import config utils.
+From MetaCoq.Common Require Ast TypingWf WfAst TermEquality EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction
-     PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv.CommonToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
-     PCUICCasesContexts TemplateToPCUICCorrectness PCUICEtaExpand
+     PCUICCasesContexts.CommonToPCUICCorrectness PCUICEtaExpand
      PCUICProgram.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
@@ -178,7 +178,7 @@ Proof.
   destruct ext. eapply expanded_context_weakening; tea; tc.
 Qed.
 
-Lemma trans_expanded {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} Γ T  :
+Lemma trans_expanded {cf : checker_flags} {Σ} {wfΣ :.Common.Typing.wf Σ} Γ T  :
   let Σ' := trans_global_env Σ in
   WfAst.wf Σ T ->
   PCUICEtaExpand.expanded_global_env Σ' ->
@@ -355,7 +355,7 @@ Proof.
           cbn. split => /= //. exact w. }
 Qed.
 
-Import TemplateProgram.
+Import.CommonProgram.
 
 Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
   EtaExpand.expanded_program p ->

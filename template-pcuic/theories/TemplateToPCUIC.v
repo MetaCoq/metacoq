@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
-From MetaCoq.Template Require Import config utils AstUtils Primitive EnvMap.
-From MetaCoq.Template Require TemplateProgram.
+From MetaCoq.Common Require Import config utils AstUtils Primitive EnvMap.
+From MetaCoq.Common Require TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.
 
 Lemma to_Z_bounded_bool (i : Uint63.int) :
@@ -179,7 +179,7 @@ Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=
   (trans_global_env (fst Σ), snd Σ).
 
-Definition trans_template_program (p : TemplateProgram.template_program) : pcuic_program :=
+Definition trans_template_program (p :.CommonProgram.template_program) : pcuic_program :=
   let Σ' := trans_global (Ast.Env.empty_ext p.1) in
   (Σ', trans Σ' p.2).
 

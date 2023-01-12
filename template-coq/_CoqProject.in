@@ -2,28 +2,12 @@
 -R theories MetaCoq.Template
 -I .
 
-theories/Primitive.v
-
-# common
-theories/common/uGraph.v
-
-theories/Transform.v
-
 # Basic Ast files
-theories/utils.v
-theories/config.v
-theories/Kernames.v
-theories/Universes.v
-theories/BasicAst.v
-theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
-theories/Reflect.v
 theories/ReflectAst.v
-theories/EnvMap.v
 theories/TemplateEnvMap.v
 theories/Induction.v
-theories/EnvironmentTyping.v
 theories/WfAst.v
 theories/LiftSubst.v
 theories/UnivSubst.v

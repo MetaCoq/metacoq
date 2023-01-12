@@ -1,0 +1,33 @@
+-I src
+-R theories MetaCoq.Utils
+-I .
+
+# canonical tries library
+theories/canonicaltries/String2pos.v
+theories/canonicaltries/CanonicalTries.v
+
+# utils
+theories/ByteCompare.v
+theories/ByteCompareSpec.v
+theories/bytestring.v
+theories/MCPrelude.v
+theories/MCReflect.v
+theories/All_Forall.v
+theories/MCArith.v
+theories/MCCompare.v
+theories/MCEquality.v
+theories/LibHypsNaming.v
+theories/MCList.v
+theories/MCOption.v
+theories/MCProd.v
+theories/MCPred.v
+theories/MCRelations.v
+theories/MCSquash.v
+theories/MCString.v
+theories/wGraph.v
+theories/MCUtils.v
+theories/MC_ExtrOCamlInt63.v
+theories/MC_ExtrOCamlZPosInt.v
+theories/ReflectEq.v
+theories/monad_utils.v
+

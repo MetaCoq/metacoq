@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Template Require Import config.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst.
 
 Require Import ssreflect.

@@ -3,8 +3,8 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.
-From MetaCoq.Template Require Import utils.
-From MetaCoq.Template Require Export Reflect.
+From MetaCoq.Common Require Import utils.
+From MetaCoq.Common Require Export Reflect.
 
 Open Scope pcuic.
 

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils Reflect.
+From MetaCoq.Common Require Import config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)
 

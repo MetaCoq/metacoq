@@ -1,6 +1,6 @@
 
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils BasicAst.
+From MetaCoq.Common Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst
   PCUICSigmaCalculus.
 

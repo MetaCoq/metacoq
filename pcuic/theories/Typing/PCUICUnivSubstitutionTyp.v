@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect CRelationClasses.
-From MetaCoq.Template Require Import utils config Universes uGraph.
+From MetaCoq.Common Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICOnFreeVars
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
      PCUICCases PCUICCumulativity PCUICTyping PCUICReduction PCUICWeakeningEnv PCUICWeakeningEnvTyp

@@ -1,16 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Common Require Import config utils AstUtils MonadAst MonadBasicAst Primitive EnvMap.
-From MetaCoq.Common Require TemplateProgram.
-From MetaCoq.Common Require TemplateMonad.Core.
-From MetaCoq.Common Require Import TemplateMonad.Common monad_utils.
+From MetaCoq.Common Require.CommonProgram.
+From MetaCoq.Common Require.CommonMonad.Core.
+From MetaCoq.Common Require Import.CommonMonad.Common monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.CommonToPCUIC.
 
 Import MCMonadNotation.
 
 Section with_tc.
   Context {TM : TMInstance}.
-  Local Notation.CommonMonad := (@TemplateMonad TM).
+  Local Notation.CommonMonad := (.CommonMonad TM).
   Context {M : Monad.CommonMonad}.
 
   Section helpers.
@@ -134,7 +134,7 @@ End with_tc.
 Import.CommonMonad.Core.
 
 Definition monad_trans : Ast.term ->.CommonMonad term
-  := tmFix (fun monad_trans => @monad_trans' TypeInstance.CommonMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans)).
+  := tmFix (fun monad_trans => @monad_trans' TypeInstance.CommonMonad_Monad (@TransLookup_lookup_inductive' TypeInstance.CommonMonad_Monad monad_trans)).
 
 Definition monad_trans_decl := @monad_trans_decl' TypeInstance.CommonMonad_Monad monad_trans.
 Definition monad_trans_local := @monad_trans_local' TypeInstance.CommonMonad_Monad monad_trans.

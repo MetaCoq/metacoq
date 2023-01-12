@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import config.
 
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICArities PCUICInductives PCUICSpine
   PCUICWeakeningTyp PCUICUnivSubstitutionConv PCUICValidity PCUICGeneration
-  PCUICAst PCUICPrimitive PCUICCases PCUICProgram.CommonToPCUIC TemplateToPCUICCorrectness
+  PCUICAst PCUICPrimitive PCUICCases PCUICProgram.CommonToPCUIC.CommonToPCUICCorrectness
   PCUICSubstitution PCUICConversion PCUICInductiveInversion
   PCUICContextSubst PCUICOnFreeVars PCUICSR PCUICTactics PCUICClosed.
 

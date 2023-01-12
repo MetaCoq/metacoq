@@ -1,5 +1,5 @@
 From Coq Require Import Bool List Arith Lia.
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Common Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnv.
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC.
 

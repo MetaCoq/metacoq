@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
 Require Import ssreflect ssrfun ssrbool.
-From MetaCoq.Common Require Import config utils MCPred.
+From MetaCoq.Utils Require Import utils MCPred.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst
   PCUICEquality PCUICSigmaCalculus PCUICClosed.

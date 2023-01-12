@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
-From MetaCoq.Common Require Import config utils monad_utils.
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.

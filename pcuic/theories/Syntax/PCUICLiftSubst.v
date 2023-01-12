@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import ssreflect Morphisms.
-From MetaCoq.Common Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Import Nat.
 

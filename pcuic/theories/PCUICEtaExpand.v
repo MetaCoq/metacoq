@@ -1,6 +1,7 @@
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram.CommonToPCUIC.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram.
 
 Definition isConstruct t :=
    match t with tConstruct _ _ _ => true | _ => false end.

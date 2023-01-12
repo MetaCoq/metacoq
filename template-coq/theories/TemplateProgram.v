@@ -2,10 +2,9 @@
 
 From MetaCoq.Utils Require Import utils.
 
-From MetaCoq.Common Require Export config.
+From MetaCoq.Common Require Export config Transform.
 
 From MetaCoq.Template Require Import
-        Transform
         Ast           (* The term AST *)
         Typing        (* Typing judgment *)
         WcbvEval

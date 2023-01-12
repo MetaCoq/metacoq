@@ -1,6 +1,7 @@
 (** * Definition of programs in template-coq, well-typed terms and provided transformations **)
 From Coq Require Import ssreflect.
-From MetaCoq.Common Require Import utils config EnvMap.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAstUtils PCUICAst PCUICGlobalEnv PCUICTyping.
 
 (** Global environment with a map for efficient lookups *)

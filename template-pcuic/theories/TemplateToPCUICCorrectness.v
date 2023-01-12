@@ -2071,33 +2071,6 @@ Proof.
   now rewrite PCUICUnivSubstitutionConv.subst_instance_app_ctx.
 Qed.
 
-Lemma All2_map2_right {A B C} {l : list A} {l' : list B} (f : A -> B -> C) P :
-  All2 (fun x y => P x (f x y)) l l' ->
-  All2 P l (map2 f l l').
-Proof.
-  induction 1; cbn; constructor; auto.
-Qed.
-
-Lemma All2_map2_right_inv {A B C} R (g : A -> B -> C) l l' : #|l| = #|l'| ->  All2 R l (map2 g l l') ->  All2 (fun x y => R x (g x y)) l l'.
-Proof.
-  elim: l l'=> [|x xs ih] [|y ys] //= [=] eq z; try depelim z ; try constructor=> //.
-  by apply: ih.
-Qed.
-
-Lemma All2i_map2_right {A B C} {n} {l : list A} {l' : list B} (f : A -> B -> C) P :
-  All2i (fun n x y => P n x (f x y)) n l l' ->
-  All2i P n l (map2 f l l').
-Proof.
-  induction 1; cbn; constructor; auto.
-Qed.
-
-Lemma All2i_Alli_mix_left {A B k Q R} {l : list A} {l' : list B}
-  : Alli Q k l -> All2i R k l l' -> All2i (fun i x y => Q i x * R i x y) k l l'.
-Proof.
-  move=> + h; elim: h=> [n|n x y xs ys r rs ih] q; depelim q; constructor=> //.
-  by apply: ih.
-Qed.
-
 Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_info} {p c brs ps mdecl idecl indices} {wfΣ : wf Σ} :
   declared_inductive Σ ci mdecl idecl ->
   ind_npars mdecl = ci_npar ci ->

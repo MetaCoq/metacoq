@@ -1,6 +1,6 @@
 From Coq Require Import List.
-From MetaCoq.Common Require Import config.
-From MetaCoq.Template Require Import Transform TemplateProgram Pretty EtaExpand All Loader.
+From MetaCoq.Common Require Import config Transform.
+From MetaCoq.Template Require Import TemplateProgram Pretty EtaExpand All Loader.
 Import ListNotations.
 Import MCMonadNotation.
 Import bytestring.

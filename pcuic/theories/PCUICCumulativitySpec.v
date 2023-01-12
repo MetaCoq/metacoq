@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
-From MetaCoq.Common Require Import config utils BasicAst Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICEquality
      PCUICLiftSubst PCUICUnivSubst PCUICCases PCUICOnFreeVars.
 

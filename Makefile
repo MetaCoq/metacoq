@@ -33,6 +33,7 @@ install: all translations
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
 	$(MAKE) -C template-pcuic install
+	$(MAKE) -C safechecker-plugin install
 	$(MAKE) -C erasure install
 	$(MAKE) -C translations install
 
@@ -42,7 +43,8 @@ uninstall:
 	$(MAKE) -C template-coq uninstall
 	$(MAKE) -C pcuic uninstall
 	$(MAKE) -C safechecker uninstall
-	$(MAKE) -C template-pcuic install
+	$(MAKE) -C template-pcuic uninstall
+	$(MAKE) -C safechecker-plugin uninstall
 	$(MAKE) -C erasure uninstall
 	$(MAKE) -C translations uninstall
 
@@ -55,6 +57,7 @@ html: all
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R template-pcuic/theories MetaCoq.TemplatePCUIC \
+		-R safechecker-plugin/theories MetaCoq.SafeCheckerPlugin \
 		-R erasure/theories MetaCoq.Erasure \
 		-R translations MetaCoq.Translations \
 		-R examples MetaCoq.Examples \
@@ -67,6 +70,7 @@ clean:
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C template-pcuic clean
+	$(MAKE) -C safechecker-plugin clean
 	$(MAKE) -C erasure clean
 	$(MAKE) -C examples clean
 	$(MAKE) -C test-suite clean
@@ -79,6 +83,7 @@ vos:
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
 	$(MAKE) -C template-pcuic vos
+	$(MAKE) -C safechecker-plugin vos
 	$(MAKE) -C erasure vos
 	$(MAKE) -C translations vos
 
@@ -89,6 +94,7 @@ quick:
 	$(MAKE) -C pcuic quick 
 	$(MAKE) -C safechecker quick
 	$(MAKE) -C template-pcuic quick 
+	$(MAKE) -C safechecker-plugin quick
 	$(MAKE) -C erasure quick
 	$(MAKE) -C translations quick
 
@@ -99,6 +105,7 @@ mrproper:
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C template-pcuic mrproper
+	$(MAKE) -C safechecker-plugin mrproper
 	$(MAKE) -C erasure mrproper
 	$(MAKE) -C examples mrproper
 	$(MAKE) -C test-suite mrproper
@@ -111,6 +118,7 @@ mrproper:
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
 	$(MAKE) -C template-pcuic .merlin
+	$(MAKE) -C safechecker-plugin .merlin
 	$(MAKE) -C erasure .merlin
 
 utils:
@@ -128,8 +136,11 @@ pcuic: common
 safechecker: pcuic
 	$(MAKE) -C safechecker
 
-template-pcuic: template-coq safechecker
+template-pcuic: template-coq pcuic
 	$(MAKE) -C template-pcuic
+
+safechecker-plugin: safechecker template-pcuic
+	$(MAKE) -C safechecker-plugin
 
 erasure: template-pcuic
 	$(MAKE) -C erasure
@@ -145,7 +156,7 @@ translations: template-coq
 
 cleanplugins:
 	$(MAKE) -C template-coq cleanplugin
-	$(MAKE) -C template-pcuic cleanplugin
+	$(MAKE) -C safechecker-plugin cleanplugin
 	$(MAKE) -C erasure cleanplugin
 
 ci-local-noclean:

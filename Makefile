@@ -142,8 +142,11 @@ template-pcuic: template-coq pcuic
 safechecker-plugin: safechecker template-pcuic
 	$(MAKE) -C safechecker-plugin
 
-erasure: template-pcuic
+erasure: safechecker
 	$(MAKE) -C erasure
+
+erasure-plugin: erasure template-pcuic
+	$(MAKE) -C safechecker-plugin
 
 examples: safechecker erasure
 	$(MAKE) -C examples

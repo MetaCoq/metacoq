@@ -1,8 +1,11 @@
 CAMLFLAGS+=-open Metacoq_template_plugin
+CAMLFLAGS+=-w -8 # Non-exhaustive matches due to translation of comparison to int
 CAMLFLAGS+=-w -20 # Unused arguments
 CAMLFLAGS+=-w -33 # Unused opens
 CAMLFLAGS+=-w -32 # Unused values
-CAMLFLAGS+=-w -8 # Non-exhaustive pattern-matching (due to comparison -> int translation)
+CAMLFLAGS+=-w -34 # Unused types
+CAMLFLAGS+=-w -39 # Unused rec flags
+CAMLFLAGS+=-w -60 # Unused module in functor
 CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin,stdlib-shims
 
 -include ../Makefile.conf

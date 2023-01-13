@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
-From MetaCoq.Erasure Require Import ETransform.
+From MetaCoq.ErasurePlugin Require Import ETransform.
 
 Import PCUICProgram.
 Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform).

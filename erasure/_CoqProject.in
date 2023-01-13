@@ -18,7 +18,6 @@ theories/EWcbvEvalInd.v
 theories/EWcbvEvalEtaInd.v
 theories/Extract.v
 theories/EDeps.v
-theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
 theories/EArities.v
@@ -32,7 +31,5 @@ theories/EEtaExpanded.v
 theories/EProgram.v
 theories/ERemoveParams.v
 theories/EInlineProjections.v
-theories/ETransform.v
 theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
-theories/Erasure.v

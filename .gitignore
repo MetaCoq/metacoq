@@ -293,6 +293,7 @@ test-suite/myMain.mli
 test-suite/myMain.ml
 test-suite/plugin-demo/Makefile.plugin
 
+
 template-coq/Makefile.plugin-e
 template-coq/Makefile.template-e
 template-coq/src/g_template_coq.ml
@@ -369,3 +370,12 @@ test-suite/plugin-demo/metacoq-config
 erasure/META
 safechecker/META
 template-coq/META
+
+
+template-pcuic/demo.v
+template-pcuic/Makefile.local
+template-pcuic/_CoqProject
+template-pcuic/Makefile.templatepcuic
+template-pcuic/Makefile.templatepcuic.conf
+
+safechecker-plugin/metacoq-config

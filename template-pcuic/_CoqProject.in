@@ -1,7 +1,7 @@
 -R theories MetaCoq.TemplatePCUIC
 
-theories/PCUICToTemplate.v
 theories/TemplateToPCUIC.v
+theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/TemplateToPCUICCorrectness.v
 
@@ -14,7 +14,3 @@ theories/TemplateMonadToPCUIC.v
 
 theories/PCUICTemplateMonad/Core.v
 theories/PCUICTemplateMonad.v
-
-theories/SafeTemplateChecker.v
-
-theories/Extraction.v

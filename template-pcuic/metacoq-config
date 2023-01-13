@@ -1,0 +1,1 @@
+-R ../utils/theories MetaCoq.Utils -R ../common/theories MetaCoq.Common -R ../pcuic/theories MetaCoq.PCUIC -R ../safechecker/theories MetaCoq.SafeChecker -R ../template-coq/theories MetaCoq.Template -I ../template-coq

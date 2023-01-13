@@ -13,7 +13,7 @@ From MetaCoq.TemplatePCUIC Require TemplateToPCUIC TemplateToPCUICWcbvEval
 
 Import Transform TemplateToPCUIC.
 
-(** * Translation from.Common to PCUIC, directly preserves evaluation *)
+(** * Translation from Template to PCUIC, directly preserves evaluation *)
 
 Definition eval_pcuic_program (p : pcuic_program) (v : term) :=
   ∥ PCUICWcbvEval.eval p.1.(trans_env_env) p.2 v ∥.

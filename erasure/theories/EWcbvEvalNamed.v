@@ -264,8 +264,7 @@ with represents_value : value -> term -> Set :=
 | represents_value_tClos na E s t na' : [na] ;;; E ⊩ s ~ t -> represents_value (vClos na s E) (tLambda na' t)
 | represents_value_tConstruct vs ts ind c : All2_Set represents_value vs ts -> represents_value (vConstruct ind c vs) (tConstruct ind c ts)
 | represents_value_tFix vfix i E mfix :
-  (* use cunfold here *)
-  All2_Set (fun v d => map fst vfix ;;; (add_multiple (map fst vfix) (fix_env vfix E) E) ⊩ snd v ~ (* use result of cunfold here *) d.(dbody)) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
+  All2_Set (fun v d => map fst vfix ;;; E ⊩ snd v ~ d.(dbody)) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
 where "Γ ;;; E ⊩ s ~ t" := (represents Γ E s t).
 
 Program Definition represents_ind :=
@@ -354,8 +353,8 @@ Program Definition represents_ind :=
            (represents_value_tConstruct vs ts ind c a)) 
      (f12 : ∀ (vfix : list (ident × term)) (i : nat) 
               (E : list (ident × value)) (mfix : list (def term)) 
-              (a : All2_Set (λ (v : ident × term) (d : def term), map fst vfix;;; add_multiple (map fst vfix) (fix_env vfix E) E ⊩ v.2 ~ dbody d) vfix mfix)
-              (IH : All2_over  a (fun v d => P (map fst vfix) (add_multiple (map fst vfix) (fix_env vfix E) E) v.2 (dbody d)  ) ),
+              (a : All2_Set (λ (v : ident × term) (d : def term), map fst vfix ;;; E ⊩ v.2 ~ dbody d) vfix mfix)
+              (IH : All2_over  a (fun v d => P (map fst vfix) E v.2 (dbody d)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
@@ -500,10 +499,8 @@ Program Definition represents_value_ind :=
               (E : list (ident × value)) (mfix : list (def term)) 
               (a : All2_Set
                      (λ (v : ident × term) (d : def term),
-                       map fst vfix;;;
-                         add_multiple (map fst vfix) (fix_env vfix E) E ⊩ v.2 ~
-                         dbody d) vfix mfix)
-              (IH : All2_over  a (fun v d => P (map fst vfix) (add_multiple (map fst vfix) (fix_env vfix E) E) v.2 (dbody d)  ) ),
+                     (map fst vfix) ;;; E ⊩ snd v ~ d.(dbody)) vfix mfix)
+              (IH : All2_over  a (fun v d => P (map fst vfix) (E) v.2 (dbody d)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
@@ -648,10 +645,10 @@ Definition rep_ind :=
               (E : list (ident × value)) (mfix : list (def term)) 
               (a : All2_Set
                      (λ (v : ident × term) (d : def term),
-                       map fst vfix;;;
-                         add_multiple (map fst vfix) (fix_env vfix E) E ⊩ v.2 ~
+                     (map fst vfix) ;;;
+                         E ⊩ v.2 ~
                          dbody d) vfix mfix)
-              (IH : All2_over  a (fun v d => P (map fst vfix) (add_multiple (map fst vfix) (fix_env vfix E) E) v.2 (dbody d)  ) ),
+              (IH : All2_over  a (fun v d => P (map fst vfix) (E) v.2 (dbody d)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     (represents_ind P P0 f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12,
@@ -1093,20 +1090,45 @@ Proof.
     lia. eauto. now rewrite <- app_assoc in Hrep.
 Qed.
 
+Lemma add_multiple_app nms1 nms2 vs1 vs2 E :
+  #|nms1| = #|vs1| ->
+  add_multiple (nms1 ++ nms2) (vs1 ++ vs2) E = 
+  add_multiple nms1 vs1 (add_multiple nms2 vs2 E).
+Proof.
+  induction nms1 in vs1 |- *; intros Hlen; cbn;
+    destruct vs1; cbn in *; try congruence.
+  f_equal. eapply IHnms1. lia.
+Qed.
+
 Lemma represents_substl_rev E s s' ts nms vs Γ : 
   (forall na, In na nms -> ~ In na (map fst E)) ->
   NoDup nms ->
   #|nms| = #|vs| ->
-  All2 represents_value (List.rev vs) ts ->
-  (List.rev nms ++ Γ) ;;; E ⊩ s ~ s' ->
+  All2 represents_value vs ts ->
+  (nms ++ Γ) ;;; E ⊩ s ~ s' ->
   Γ ;;; add_multiple nms vs E ⊩ s ~ substl ts s'.
 Proof.
-  intros. eapply represents_substl in H2; eauto.
-  - now rewrite !List.rev_involutive in H2.
-  - now setoid_rewrite <- in_rev.
-  - now eapply NoDup_rev.
-  - len.
-Qed.
+  revert ts vs s s' E Γ.
+  induction nms using rev_ind; intros ts vs s s' E Γ Hna Hdup Hlen Hall Hrep.
+  - destruct vs; cbn in *; try lia. invs Hall. eauto.
+  - destruct vs using rev_ind; repeat rewrite app_length in Hlen; cbn in *; try lia.
+    clear IHvs.
+    eapply All2_app_inv_l in Hall as (vs' & ? & -> & H1 & H2). invs H2. invs X.
+    unfold substl. rewrite fold_left_app. cbn.
+    rewrite add_multiple_app. 1: lia. cbn.
+    rewrite <- substl_csubst_comm.
+    + eapply IHnms.
+      * intros ? ? ?. eapply Hna; eauto. now rewrite in_app_iff. cbn in H0.
+        destruct H0; eauto. subst. admit. 
+      * rewrite <- app_nil_r. eapply NoDup_remove_1; eauto.
+      * lia.
+      * eauto.
+      * rewrite <- plus_n_O. assert (#|vs'| = #|nms|) as ->. { eapply All2_length in H1. lia. }
+        eapply represents_subst'; eauto.
+        2: now rewrite <- app_assoc in Hrep. eapply Hna, in_app_iff; cbn; eauto.
+    + admit.
+    + admit.
+Admitted.
 
 Definition extraction_wcbv_flags :=
   {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := true |}.
@@ -1302,12 +1324,24 @@ Proof.
   unfold constructor_isprop_pars_decl. erewrite lookup_in_env; eauto.
 Qed.  
 
+Lemma represents_value_fix_env vfix mfix E : 
+  All2 (λ (v : ident × term) (d : def term), map fst vfix;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
+  All2 represents_value (fix_env vfix E) (fix_subst mfix).
+Proof.
+Admitted.
+
+Lemma fix_env_length vfix E : 
+  #| fix_env vfix E | = #| vfix |.
+Proof.
+  unfold fix_env. induction #|vfix|; cbn; eauto. f_equal. eauto.
+Qed.
+
 Lemma cunfold_fix_represents mfix idx narg fn vfix E :
   cunfold_fix mfix idx = Some (narg, fn) -> 
   All2
         (λ (v : ident × term) (d : def term),
-           List.rev (map fst vfix) ;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
-  ∑ nm fnv, nth_error vfix idx = Some (nm, fnv) × ([] ;;;  add_multiple (map fst vfix) (fix_env vfix E) E ⊩ fnv ~ fn).
+           map fst vfix ;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
+  ∑ nm fnv, nth_error vfix idx = Some (nm, fnv) × ([] ;;; add_multiple (map fst vfix) (fix_env vfix E) E ⊩ fnv ~ fn).
 Proof.
   intros Hunf H. unfold cunfold_fix in *.
   destruct nth_error eqn:e; try congruence.
@@ -1315,11 +1349,14 @@ Proof.
   destruct x.
   exists i, t0. split; eauto. cbn in *. invs Hunf. eapply represents_substl_rev.
   5: rewrite app_nil_r; eauto.
-  4:{ admit. }
-  admit.
-  admit.
-  len. admit.
-Admitted.
+  
+  4: eapply represents_value_fix_env; eauto.
+
+  3: rewrite fix_env_length; len.
+
+  todo "dup".
+  todo "dup".
+Qed.
 
 Lemma fresh_subset Γ1 Γ2 i : 
   fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
@@ -1535,11 +1572,48 @@ Proof.
       edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
       edestruct s1 as (v' & IH1' & IH2'). 3, 1, 2: eauto.
       invs IH1.
-      eapply cunfold_fix_represents in H1 as (nm & fnv & Hu1 & Hu2).
-      instantiate (1 := E0) in Hu2.
-      instantiate (2 := vfix) in Hu2.
+      eapply cunfold_fix_represents in H1 as Hfix. destruct Hfix as (nm & fnv & Hu1 & Hu2).
+      2:eauto.
+      unfold cunfold_fix in H1. destruct nth_error eqn:Hnth; try congruence.
+      eapply eval_wellformed in H0 as Hwf; eauto.
+      cbn in Hwf. rtoProp. solve_all.
+      eapply All_nth_error in Hnth as Hnth'; eauto. cbn in Hnth'.
+      eapply All2_Set_All2 in H14 as Hall; eauto.
+      eapply All2_nth_error in Hall; eauto.
+      destruct Hnth' as [Hlambda _].
+      destruct (dbody d); invs Hlambda. cbn in *.
       edestruct s2 as (v'' & IH1'' & IH2'').
       eapply represents_tApp; eauto.
+      eapply represents_unbound_tRel. 2: eauto.
+      1-3:admit. invs H1. instantiate (1 := nm) in IH2''.
+      inversion IH2''; subst. invs IH1''. cbn in *. 
+      * admit.
+      * invs H17. admit.
+      * invs H19. admit.
+
+      exists v''. split; eauto.
+      
+      inversion IH2''.
+      5: eauto.
+      5: eauto.
+      (* here: fhnv is a lambda!
+         thus, IH2'' is beta
+         then go on      
+      *)
+      
+
+      (* besides the result, we believe that the exposition has several valuable contributions:
+         - it discusses proofs techniques to get similar results
+         - it gives an exposition how to extract from type theory to (cbv) programming languages in general, including the invariants
+         - many of these things are known, but not in central places
+      
+      *)
+      8: exact IH2''.
+      
+      eapply eval_represents_value.
+
+
+      eapply represents_add_fresh.
       all: todo "fix". (* 
       admit. admit. admit.
       eexists; split; eauto.
@@ -1622,13 +1696,7 @@ Proof.
       symmetry. eapply All2_length; eauto.
       intros.
       cbn in *. destruct H1 as (([? []] & ?) & ?).
-      rewrite app_nil_r in r.
+      rewrite app_nil_r in r. eauto.
 
-      eapply represents_add_fresh. eauto.
-      eapply sunny_subset; eauto.
-      eapply incl_appl. clear - H3.
-      induction H3; cbn; intros ? ?;  cbn in *; eauto.
-      destruct H; subst; eauto. rewrite r; cbn; eauto.
-      eapply in_app_iff. right. eauto.
       Unshelve. all: repeat econstructor.
 Qed.

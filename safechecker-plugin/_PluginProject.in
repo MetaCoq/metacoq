@@ -1,7 +1,7 @@
-src/META.coq-metacoq-templatepcuic
+src/META.coq-metacoq-safecheckerplugin
 -I src
--Q src MetaCoq.TemplatePCUIC
--R theories MetaCoq.TemplatePCUIC
+-Q src MetaCoq.SafecheckerPlugin
+-R theories MetaCoq.SafecheckerPlugin
 
 # src/classes0.mli
 # src/classes0.ml

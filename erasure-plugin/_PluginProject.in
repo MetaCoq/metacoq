@@ -1,6 +1,6 @@
 -I src
--Q src MetaCoq.Erasure
--R theories MetaCoq.Erasure
+-Q src MetaCoq.ErasurePlugin
+-R theories MetaCoq.ErasurePlugin
 src/META.coq-metacoq-erasure
 
 src/ssrbool.ml

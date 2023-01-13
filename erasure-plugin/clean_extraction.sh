@@ -11,8 +11,8 @@ shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
 files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | sed -e s/gen-src/src/`
 
-if [[ ! -f "src/metacoq_safechecker_plugin.cmxs" ||
-           "src/metacoq_safechecker_plugin.cmxs" -ot "theories/Extraction.vo" ]]
+if [[ ! -f "src/metacoq_erasure_plugin.cmxs" ||
+           "src/metacoq_erasure_plugin.cmxs" -ot "theories/Extraction.vo" ]]
 then
     cd src
     # Move extracted modules to build the certicoq compiler plugin

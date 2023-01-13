@@ -148,10 +148,10 @@ erasure: safechecker
 erasure-plugin: erasure template-pcuic
 	$(MAKE) -C safechecker-plugin
 
-examples: safechecker erasure
+examples: safechecker-plugin erasure-plugin
 	$(MAKE) -C examples
 
-test-suite: template-coq safechecker erasure
+test-suite: safechecker-plugin erasure-plugin
 	$(MAKE) -C test-suite
 
 translations: template-coq

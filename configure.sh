@@ -26,8 +26,8 @@ then
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
         ERASURE_PLUGIN_DEPS="-R ../template-pcuic/theories MetaCoq.TemplatePCUIC -R ../erasure/theories MetaCoq.Erasure  -I ../template-coq"
         TRANSLATIONS_DEPS="-R ../template-coq/theories MetaCoq.Template -I ../template-coq"
-        EXAMPLES_DEPS="-R ../erasure/theories MetaCoq.Erasure"
-        TEST_SUITE_DEPS="-R ../erasure/theories MetaCoq.Erasure"
+        EXAMPLES_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafecheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin"
+        TEST_SUITE_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafecheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin"
         PLUGIN_DEMO_DEPS="-R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else
@@ -69,8 +69,8 @@ then
     echo ${COMMON_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} >> erasure/metacoq-config
     echo ${COMMON_DEPS} ${PCUIC_DEPS} ${ERASURE_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_PLUGIN_DEPS} >> erasure-plugin/metacoq-config
     echo ${COMMON_DEPS} ${PCUIC_DEPS} ${TRANSLATIONS_DEPS} >> translations/metacoq-config
-    echo ${COMMON_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${EXAMPLES_DEPS} >> examples/metacoq-config
-    echo ${COMMON_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${TEST_SUITE_DEPS} >> test-suite/metacoq-config
+    echo ${COMMON_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${ERASURE_PLUGIN_DEPS} ${EXAMPLES_DEPS} >> examples/metacoq-config
+    echo ${COMMON_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${ERASURE_PLUGIN_DEPS} ${TEST_SUITE_DEPS} >> test-suite/metacoq-config
     echo ${PLUGIN_DEMO_DEPS} >> test-suite/plugin-demo/metacoq-config
 
 else

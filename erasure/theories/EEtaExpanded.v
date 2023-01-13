@@ -3,7 +3,8 @@
 (* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
 
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames EnvMap BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.

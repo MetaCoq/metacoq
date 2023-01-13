@@ -1,7 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Common.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Ast AstUtils Common.
 From MetaCoq.Template.TemplateMonad Require Export Core.
-From MetaCoq.PCUIC Require Import PCUICAst TemplateMonadToPCUIC TemplateToPCUIC PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICAst.
+From MetaCoq.TemplatePCUIC Require Import TemplateMonadToPCUIC TemplateToPCUIC PCUICToTemplate.
 
 Local Set Universe Polymorphism.
 Import MCMonadNotation.

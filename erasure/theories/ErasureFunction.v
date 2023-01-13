@@ -2,7 +2,8 @@
 From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
 Set Equations Transparent.
-From MetaCoq.Template Require Import config utils Kernames MCRelations.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICReduction PCUICReflect PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp PCUICContextConversionTyp PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
@@ -855,7 +856,6 @@ Proof.
 Qed.
 
 Require Import Morphisms.
-From MetaCoq.Template Require Import uGraph.
 Global Instance proper_pair_levels_gcs : Proper ((=_lset) ==> GoodConstraintSet.Equal ==> (=_gcs)) (@pair LevelSet.t GoodConstraintSet.t).
 Proof.
   intros l l' eq gcs gcs' eq'.

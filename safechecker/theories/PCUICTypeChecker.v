@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
@@ -1486,7 +1487,7 @@ Section Typecheck.
   (* tVar *)
   Next Obligation. destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
                    specialize_Σ wfΣ; sq; now inversion X1. Qed.
-  (*tEvar *)
+  (* tEvar *)
   Next Obligation. destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
                    specialize_Σ wfΣ; sq; now inversion X1. Qed.
   (* tSort *)

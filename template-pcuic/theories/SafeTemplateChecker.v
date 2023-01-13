@@ -1,12 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require AstUtils Typing.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Import AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC PCUICSN BDToPCUIC PCUICProgram.
+    PCUICSN BDToPCUIC PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl.
 
 Import MCMonadNotation.
+
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC.
 
 Definition trans_program (p : Ast.Env.program) : program :=
   let Σ' := trans_global_env p.1 in

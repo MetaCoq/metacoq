@@ -2,7 +2,9 @@
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases.
 Set Warnings "-notation-overridden".
-From MetaCoq.Common Require Import config utils AstUtils BasicAst Ast.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst.
+From MetaCoq.Template Require Import  AstUtils Ast.
 Set Warnings "+notation-overridden".
 
 Definition uint63_from_model (i : uint63_model) : Uint63.int :=

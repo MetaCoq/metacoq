@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 Set Warnings "-notation-overridden".
 
-From MetaCoq.Template Require Import utils All Checker.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
 

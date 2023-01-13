@@ -1,17 +1,17 @@
 (** * Definition of programs in template-coq, well-typed terms and provided transformations **)
 From Coq Require Import ssreflect.
-From MetaCoq.Common Require Import utils config Transform.
-From MetaCoq.Common Require TemplateProgram.
-Import.CommonProgram (template_program, wt_template_program, eval_template_program).
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Transform.
+From MetaCoq.Template Require TemplateProgram.
+Import TemplateProgram (template_program, wt_template_program, eval_template_program).
 
-From MetaCoq.PCUIC Require Import PCUICAstUtils PCUICAst.CommonToPCUIC
+From MetaCoq.PCUIC Require Import PCUICAstUtils PCUICAst
     PCUICGlobalEnv PCUICTyping PCUICEtaExpand
     PCUICProgram.
-From MetaCoq.PCUIC Require.CommonToPCUICWcbvEval
- .CommonToPCUICCorrectness
- .CommonToPCUICExpanded.
+From MetaCoq.TemplatePCUIC Require TemplateToPCUIC TemplateToPCUICWcbvEval
+  TemplateToPCUICCorrectness TemplateToPCUICExpanded.
 
-Import Transform.
+Import Transform TemplateToPCUIC.
 
 (** * Translation from.Common to PCUIC, directly preserves evaluation *)
 
@@ -26,9 +26,9 @@ Proof.
   move: p wtp.
   intros [Σ t] [wfext ht].
   unfold wt_pcuic_program, trans_template_program; cbn in *.
-  cbn. split. eapply.CommonToPCUICCorrectness.template_to_pcuic_env_ext in wfext. apply wfext.
+  cbn. split. eapply TemplateToPCUICCorrectness.template_to_pcuic_env_ext in wfext. apply wfext.
   destruct ht as [T HT]. exists (trans (trans_global_env Σ) T).
-  eapply .CommonToPCUICCorrectness.template_to_pcuic_typing (Σ := Ast.Env.empty_ext Σ) []). apply wfext.
+  eapply (TemplateToPCUICCorrectness.template_to_pcuic_typing (Σ := Ast.Env.empty_ext Σ) []). apply wfext.
   apply HT.
 Qed.
 
@@ -48,16 +48,16 @@ Next Obligation.
   cbn. intros cf K p [[wtp] [etap ?]].
   split; split.
   now eapply trans_template_program_wt.
-  now eapply.CommonToPCUICExpanded.expanded_trans_program in etap.
+  now eapply TemplateToPCUICExpanded.expanded_trans_program in etap.
   assumption.
 Qed.
 Next Obligation.
   red. intros cf K [Σ t] v [[]].
   unfold eval_pcuic_program, eval_template_program.
   cbn. intros [ev].
-  unshelve eapply.CommonToPCUICWcbvEval.trans_wcbvEval in ev; eauto. apply X.
+  unshelve eapply TemplateToPCUICWcbvEval.trans_wcbvEval in ev; eauto. apply X.
   eexists; split; split; eauto.
-  eapply.CommonToPCUICCorrectness.template_to_pcuic_env.
+  eapply TemplateToPCUICCorrectness.template_to_pcuic_env.
   apply X. destruct X as [wfΣ [T HT]]. apply TypingWf.typing_wf in HT. apply HT. auto.
 Qed.
 

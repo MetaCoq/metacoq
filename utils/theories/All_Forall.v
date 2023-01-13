@@ -3690,6 +3690,12 @@ Proof.
                       eapply All2_fold_impl; [ eapply IH | ]; clear IH ].
 Qed.
 
+Lemma All2_map2_right {A B C} {l : list A} {l' : list B} (f : A -> B -> C) P :
+  All2 (fun x y => P x (f x y)) l l' ->
+  All2 P l (map2 f l l').
+Proof.
+  induction 1; cbn; constructor; auto.
+Qed.
 
 Lemma All2i_map2_right {A B C} {n} {l : list A} {l' : list B} (f : A -> B -> C) P :
   All2i (fun n x y => P n x (f x y)) n l l' ->

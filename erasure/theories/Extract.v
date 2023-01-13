@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils Primitive.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
      PCUICElimination PCUICWcbvEval.
 From MetaCoq.Erasure Require EAst EGlobalEnv.

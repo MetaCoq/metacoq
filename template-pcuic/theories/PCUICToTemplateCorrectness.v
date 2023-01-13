@@ -9,11 +9,15 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
 Set Warnings "-notation-overridden".
-From MetaCoq.Common Require Import config utils Ast TypingWf UnivSubst
+
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Import Ast TypingWf UnivSubst
      TermEquality LiftSubst Reduction.
 Set Warnings "+notation_overridden".
 
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICT.Common.
+From MetaCoq.PCUIC Require Import PCUICEquality.
+From MetaCoq.TemplatePCUIC Require Import PCUICToTemplate.
 
 Import MCMonadNotation.
 
@@ -52,11 +56,11 @@ From Equations Require Import Equations.
 Module S := PCUICAst.
 Module SE := PCUICEnvironment.
 Module ST := PCUICTyping.
-Module T :=.Common.Ast.
-Module TT :=.Common.Typing.
+Module T := Template.Ast.
+Module TT := Template.Typing.
 
 Module SL := PCUICLiftSubst.
-Module TL :=.Common.LiftSubst.
+Module TL := Template.LiftSubst.
 
 
 Ltac solve_list :=
@@ -152,7 +156,7 @@ Lemma trans_declared_constant {cf} Σ {wfΣ : wf Σ} cst decl:
   T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
   intro H. unshelve eapply declared_constant_to_gen in H; eauto.
-  unshelve eapply Typing.CommonDeclarationTyping.declared_constant_from_gen.
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_constant_from_gen.
   move:H. unfold T.declared_constant, T.declared_constant_gen.
   rewrite trans_lookup.
   unfold S.declared_constant, S.declared_constant_gen.
@@ -183,7 +187,7 @@ Lemma trans_declared_inductive {cf} Σ {wfΣ : wf Σ} ind mdecl idecl:
   T.declared_inductive (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl).
 Proof.
   intro H. unshelve eapply declared_inductive_to_gen in H; eauto.
-  unshelve eapply Typing.CommonDeclarationTyping.declared_inductive_from_gen.
+  unshelve eapply Typing.TemplateDeclarationTyping.declared_inductive_from_gen.
   move:H. intros [].
   split.
   - unfold T.declared_minductive,T.declared_minductive_gen,
@@ -2034,7 +2038,7 @@ Qed.
   We have two cases to consider at the "end" of the spine: either we have the same translation of the
   PCUIC conclusion type, or there is exactly one cumulativity step to get to this type. *)
 Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T}
-  (sp : PCUICT.CommonCorrectness.typing_spine Σ Γ fty l T) n
+  (sp : PCUICToTemplateCorrectness.typing_spine Σ Γ fty l T) n
   (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'),
       typing_size Ht' <= n ->
       TT.typing (trans_global Σ) (trans_local Γ) (trans t') (trans T')) :
@@ -2279,7 +2283,7 @@ Proof.
     eapply TT.type_Case; auto.
     + now apply trans_declared_inductive.
     + cbn. now apply trans_ind_predicate_context_eq.
-    + cbn. rewrite PCUICT.CommonCorrectness.context_assumptions_map map_length.
+    + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
     + move: X5.

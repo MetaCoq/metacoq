@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
-From MetaCoq.Template Require Import Transform bytestring config utils EtaExpand TemplateProgram.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Transform config.
+From MetaCoq.Template Require Import EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.

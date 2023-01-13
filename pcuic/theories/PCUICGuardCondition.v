@@ -50,7 +50,7 @@ Class GuardCheckerCorrect :=
     guard b Σ Γ (inst_mfix mfix σ) ;
 
   guard_rename `{checker_flags} b P Σ Γ Δ mfix f :
-    renaming P Σ Γ Δ f ->
+    urenaming P Γ Δ f ->
     guard b Σ Γ mfix ->
     guard b Σ Δ (rename_mfix mfix f) ;
 

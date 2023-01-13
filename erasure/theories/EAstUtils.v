@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils BasicAst Kernames.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst Kernames.
 From MetaCoq.Erasure Require Import EAst.
 Require Import ssreflect ssrbool.
 

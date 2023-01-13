@@ -1,6 +1,7 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils Kernames EnvMap BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EGlobalEnv EAstUtils.
 Import MCMonadNotation.
 

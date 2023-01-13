@@ -1,5 +1,6 @@
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import utils BasicAst Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
 From Equations Require Import Equations.
 

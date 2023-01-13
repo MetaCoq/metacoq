@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
 From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 From MetaCoq.Erasure Require Import EInduction ELiftSubst ESpineView ECSubst EProgram.

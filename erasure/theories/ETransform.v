@@ -1,14 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import Transform bytestring config utils BasicAst uGraph.
-From MetaCoq.Template Require Pretty Environment Typing WcbvEval EtaExpand.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Environment Transform config BasicAst uGraph.
+From MetaCoq.Template Require Pretty Typing WcbvEval EtaExpand.
 Set Warnings "-notation-overridden".
-From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICTransform PCUICWeakeningEnvSN.
+From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICWeakeningEnvSN.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract
    EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.TemplatePCUIC Require Import PCUICTransform.
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
     EAst Transform ERemoveParams.

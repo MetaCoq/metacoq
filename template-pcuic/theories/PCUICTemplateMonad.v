@@ -1,3 +1,3 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Common Require Export.CommonMonad.
-From MetaCoq.PCUIC.PCUI.CommonMonad Require Export Core.
+From MetaCoq.Template Require Export TemplateMonad.
+From MetaCoq.TemplatePCUIC.PCUICTemplateMonad Require Export Core.

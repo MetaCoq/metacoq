@@ -1,12 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Common Require Import config utils.
-From MetaCoq.Common Require Ast TypingWf WfAst TermEquality.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Ast TypingWf WfAst TermEquality TypingWf WcbvEval.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping.CommonToPCUIC
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
-     PCUICClosed PCUICCSubst PCUICProgram.
+     PCUICClosed PCUICCSubst PCUICProgram PCUICCSubst PCUICCanonicity PCUICWcbvEval.
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC TemplateToPCUICCorrectness.
+
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
@@ -14,13 +17,9 @@ Implicit Types cf : checker_flags.
 
 (* Source =.Common, Target (unqualified) = PCUIC *)
 
-Module SEq :=.Common.TermEquality.
-Module ST :=.Common.Typing.
-Module SL :=.Common.LiftSubst.
-
-From MetaCoq.PCUIC Require Import.CommonToPCUIC TemplateToPCUICCorrectness.
-From MetaCoq.Common Require Import TypingWf WcbvEval.
-From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
+Module SEq := Template.TermEquality.
+Module ST := Template.Typing.
+Module SL := Template.LiftSubst.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
   (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) ||
@@ -133,7 +132,7 @@ Lemma trans_csubst {cf} Σ a k b :
 Proof.
   intros wfΣ Σ' wfΣ' wfa.
   revert wfa k.
-  induction b using.Common.Induction.term_forall_list_ind; simpl; intros; try congruence;
+  induction b using Template.Induction.term_forall_list_ind; simpl; intros; try congruence;
     try solve [repeat (f_equal; eauto)].
 
   - cbn. destruct (k ?= n); auto.
@@ -485,7 +484,7 @@ Lemma eval_wf {cf} {Σ} {wfΣ : ST.wf Σ} {T U} :
 Proof.
   intros wf ev.
   revert wf.
-  induction ev using eval_evals_ind; cbn; intros wf.
+  induction ev using WcbvEval.eval_evals_ind; cbn; intros wf.
   - wf_inv wf [[[napp argl] f'] hal].
     eapply IHev3. depelim hal.
     eapply WfAst.wf_mkApps => //.
@@ -495,9 +494,9 @@ Proof.
     eapply wf_csubst; eauto.
   - wf_inv wf a. eapply IHev.
     eapply WfAst.wf_subst_instance.
-    eapply declared_constant_wf in H.
+    eapply TypingWf.declared_constant_wf in H.
     now rewrite H0 in H.
-    now apply typing_wf_sigma in wfΣ.
+    now apply TypingWf.typing_wf_sigma in wfΣ.
 
   - eapply IHev2.
     wf_inv wf [mdecl' [idecl' []]].
@@ -511,10 +510,10 @@ Proof.
       now wf_inv IHev1 [].
     * eapply wf_expand_lets => //.
       rewrite /bctx.
-      eapply (wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
-      now eapply typing_wf_sigma.
-      eapply declared_inductive_wf_ctors.
-      now eapply typing_wf_sigma.
+      eapply (TypingWf.wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
+      now eapply TypingWf.typing_wf_sigma.
+      eapply TypingWf.declared_inductive_wf_ctors.
+      now eapply TypingWf.typing_wf_sigma.
       apply H0. apply a1.
 
   - apply IHev2.
@@ -575,7 +574,7 @@ Lemma value_mkApps_tFix Σ mfix idx args rarg fn :
   value Σ (mkApps (tFix mfix idx) args).
 Proof.
   intros hc hargs vargs.
-  destruct (is_nil args).
+  destruct (WcbvEval.is_nil args).
   - subst args. constructor => //.
   - eapply value_app => //. econstructor; tea.
 Qed.
@@ -589,7 +588,7 @@ Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
 Proof.
   intros Σ' wfΣ' wf ev.
   move: wf.
-  induction ev using eval_evals_ind; intros wf; cbn -[Σ'].
+  induction ev using WcbvEval.eval_evals_ind; intros wf; cbn -[Σ'].
 
   - wf_inv wf [[[napp argl] wff] wfa].
     dependent elimination wfa as [All_cons (l:=l) wfx wfl].
@@ -619,9 +618,9 @@ Proof.
     rewrite /trans_constant_body H0 /=. reflexivity.
     rewrite -trans_subst_instance.
     eapply IHev. apply WfAst.wf_subst_instance.
-    eapply declared_constant_wf in H.
+    eapply TypingWf.declared_constant_wf in H.
     now rewrite H0 in H.
-    now apply typing_wf_sigma in wfΣ.
+    now apply TypingWf.typing_wf_sigma in wfΣ.
 
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
     pose proof (declared_inductive_inj decli (proj1 H0)) as []. subst mdecl' idecl'.
@@ -659,10 +658,10 @@ Proof.
         now wf_inv ev1 [].
       * eapply wf_expand_lets => //.
         rewrite /bctx.
-        eapply (wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
-        now eapply typing_wf_sigma.
-        eapply declared_inductive_wf_ctors.
-        now eapply typing_wf_sigma.
+        eapply (TypingWf.wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
+        now eapply TypingWf.typing_wf_sigma.
+        eapply TypingWf.declared_inductive_wf_ctors.
+        now eapply TypingWf.typing_wf_sigma.
         apply H0. }
     rewrite (trans_iota_red Σ ci.(ci_ind) mdecl idecl) in IHev2.
     { eapply All2_length in a1. len in a1. }

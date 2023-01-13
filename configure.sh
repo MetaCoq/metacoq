@@ -21,8 +21,9 @@ then
         TEMPLATE_COQ_DEPS="-R ../common/theories MetaCoq.Common"
         PCUIC_DEPS="-R ../common/theories MetaCoq.Common"
         SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
-        ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
-        TRANSLATIONS_DEPS="-I ../template-coq"
+        TEMPLATE_PCUIC_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker -R ../template-coq/theories MetaCoq.Template"
+        ERASURE_DEPS="-R ../template-pcuic/theories MetaCoq.TemplatePCUIC"
+        TRANSLATIONS_DEPS="-R ../template-coq/theories MetaCoq.Template -I ../template-coq"
         EXAMPLES_DEPS="-R ../erasure/theories MetaCoq.Erasure"
         TEST_SUITE_DEPS="-R ../erasure/theories MetaCoq.Erasure"
         PLUGIN_DEMO_DEPS="-R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
@@ -33,6 +34,7 @@ then
         TEMPLATE_COQ_DEPS=""
         PCUIC_DEPS=""
         SAFECHECKER_DEPS=""
+        TEMPLATE_PCUIC_DEPS=""
         ERASURE_DEPS=""
         TRANSLATIONS_DEPS=""
         EXAMPLES_DEPS=""
@@ -54,10 +56,11 @@ then
     echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} >> template-coq/metacoq-config
     echo ${COMMON_DEPS} ${PCUIC_DEPS} >> pcuic/metacoq-config
     echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} >> safechecker/metacoq-config
-    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} >> erasure/metacoq-config
+    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} >> template-pcuic/metacoq-config
+    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} >> erasure/metacoq-config
     echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${TRANSLATIONS_DEPS} >> translations/metacoq-config
-    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${EXAMPLES_DEPS} >> examples/metacoq-config
-    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${TEST_SUITE_DEPS} >> test-suite/metacoq-config
+    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${EXAMPLES_DEPS} >> examples/metacoq-config
+    echo ${COMMON_DEPS} ${TEMPLATE_COQ_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${TEMPLATE_PCUIC_DEPS} ${ERASURE_DEPS} ${TRANSLATIONS_DEPS} ${TEST_SUITE_DEPS} >> test-suite/metacoq-config
     echo ${PLUGIN_DEMO_DEPS} >> test-suite/plugin-demo/metacoq-config
 
 else

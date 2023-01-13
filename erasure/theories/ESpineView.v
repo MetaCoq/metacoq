@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import List ssreflect ssrbool.
-From MetaCoq.Template Require Import utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EReflect.
 From MetaCoq.PCUIC Require Import PCUICSize.
 From Equations Require Import Equations.

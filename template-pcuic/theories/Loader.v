@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Common Require Import Loader.
-From MetaCoq.PCUIC.PCUI.CommonMonad Require Core.
-From MetaCoq.PCUIC Require Import.TemplateMonadToPCUIC.
+From MetaCoq.Template Require Import Loader.
+From MetaCoq.TemplatePCUIC.PCUICTemplateMonad Require Core.
+From MetaCoq.TemplatePCUIC Require Import.TemplateMonadToPCUIC.
 
 Set Warnings "-notation-overridden".
 (* Work around COQBUG(https://github.com/coq/coq/issues/16715) *)

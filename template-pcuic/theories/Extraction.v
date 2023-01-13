@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOCamlInt63 ExtrOCamlFloats.
-From MetaCoq.Template Require Import utils.
-From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
-     SafeTemplateChecker.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl PCUICSafeChecker PCUICSafeConversion.
+From MetaCoq.TemplatePCUIC Require Import SafeTemplateChecker.
 
 (** * Extraction setup for the safechecker phase of MetaCoq.
 
@@ -51,6 +51,6 @@ Definition infer_and_print_template_program_with_guard {cf} {nor} :=
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
          infer_and_print_template_program_with_guard
          (* The following directives ensure separate extraction does not produce name clashes *)
-         Coq.Strings.String utils UnivSubst PCUICPretty.
+         Coq.Strings.String UnivSubst PCUICPretty.
 
 Cd "..".

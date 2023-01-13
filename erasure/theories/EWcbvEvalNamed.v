@@ -112,10 +112,11 @@ Section Wcbv.
     eval Γ (tCase (ind, 0) discr brs) res
 
   (** Fix unfolding, without guard *)
-  | eval_fix_unfold f mfix idx a fn res Γ' :
+  | eval_fix_unfold f mfix idx a na na' av fn res Γ' :
     eval Γ f (vRecClos mfix idx Γ') ->
     NoDup (map fst mfix) ->
-    eval (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') (tApp fn a) res ->
+    nth_error mfix idx = Some (na', tLambda (nNamed na) fn) ->
+    eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ')) fn res ->
     eval Γ (tApp f a) res
 
   | eval_fix mfix idx nms : 
@@ -141,8 +142,7 @@ Section Wcbv.
   | eval_construct_block_empty ind c mdecl idecl cdecl :
      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
      eval Γ (tConstruct ind c []) (vConstruct ind c []).
-  Print eval_ind.
-
+  
   Program Definition eval_ind := 
     λ (P : ∀ (Γ : environment) (t : term) (v : value), eval Γ t v → Type) (f : ∀ (Γ : environment) (na : string) (v : value) (e : lookup Γ na = Some v),
           P Γ (tVar na) v (eval_var Γ na v e)) (f0 : ∀ (Γ : environment) (a t : term) 
@@ -171,39 +171,49 @@ Section Wcbv.
               (e3 : #|args| = #|br.1|) (f4 : Forall2 (λ (x : name) (y : ident), x = nNamed y) br.1 nms) (e4 : eval (add_multiple (List.rev nms) args Γ) br.2 res),
             P (add_multiple (List.rev nms) args Γ) br.2 res e4
             → ∀ n : NoDup nms, P Γ (tCase (ind, 0) discr brs) res (eval_iota_block Γ ind cdecl discr c args brs br res nms e e0 e1 e2 e3 f4 e4 n)) 
-            (f5 : 
-                                                ∀ (Γ : environment) 
-                                                 (f5 : term) 
-                                                 (mfix : 
-                                                 list (ident × term)) 
-                                                 (idx : nat) 
-                                                 (a fn : term) 
-                                                 (res : value) 
-                                                 (Γ' : 
-                                                 list (ident × value)) 
-                                                 (e : 
-                                                 eval Γ f5
-                                                 (vRecClos mfix idx Γ')),
-                                                 P Γ f5
-                                                 (vRecClos mfix idx Γ') e
-                                                 → 
-                                                 ∀ (n : NoDup (map fst mfix)) 
-                                                 (e0 : 
-                                                 eval
-                                                 (add_multiple 
-                                                 (map fst mfix)
-                                                 (fix_env mfix Γ') Γ')
-                                                 (tApp fn a) res),
-                                                 P
-                                                 (add_multiple 
-                                                 (map fst mfix)
-                                                 (fix_env mfix Γ') Γ')
-                                                 (tApp fn a) res e0
-                                                 → 
-                                                 P Γ 
-                                                 (tApp f5 a) res
-                                                 (eval_fix_unfold Γ f5 mfix
-                                                 idx a fn res Γ' e n e0)) 
+      (f5 : 
+            ∀ (Γ : environment) 
+             (f5 : term) 
+             (mfix : 
+             list (ident × term)) 
+             (idx : nat) 
+             (a : term) 
+             (na na' : ident) 
+             (av : value) 
+             (fn : term) 
+             (res : value) 
+             (Γ' : 
+             list (ident × value)) 
+             (e : 
+             eval Γ f5
+             (vRecClos mfix idx Γ')),
+             P Γ f5
+             (vRecClos mfix idx Γ') e
+             → 
+             ∀ (n : NoDup (map fst mfix)) 
+             (e0 : 
+             nth_error mfix idx =
+             Some
+             (na', tLambda (nNamed na) fn)) 
+             (e1 : 
+             eval
+             (add na av
+             (add_multiple 
+             (map fst mfix)
+             (fix_env mfix Γ') Γ')) fn
+             res),
+             P
+             (add na av
+             (add_multiple 
+             (map fst mfix)
+             (fix_env mfix Γ') Γ')) fn
+             res e1
+             → 
+             P Γ 
+             (tApp f5 a) res
+             (eval_fix_unfold Γ f5 mfix
+             idx a na na' av fn res Γ' e
+             n e0 e1)) 
       (f6 : ∀ (Γ : environment) (mfix : list (def term)) (idx : nat) (nms : list ident) (Hlen : (idx < #|mfix|)) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (n : NoDup nms) (f6 : Forall2 (λ (d : def term) (n0 : ident), nNamed n0 = dname d) mfix
                                                                                                               nms),
           P Γ (tFix mfix idx) (vRecClos (map2 (λ (n0 : ident) (d : def term), (n0, dbody d)) nms mfix) idx Γ) (eval_fix Γ mfix idx nms Hlen Hbodies n f6)) (f7 : 
@@ -240,11 +250,11 @@ Section Wcbv.
       | @eval_zeta _ na b0 b0' b1 res e0 e1 => f3 Γ na b0 b0' b1 res e0 (F Γ b0 b0' e0) e1 (F (add na b0' Γ) b1 res e1)
       | @eval_iota_block _ ind cdecl discr c args brs br res nms e0 e1 e2 e3 e4 f10 e5 n =>
           f4 Γ ind cdecl discr c args brs br res nms e0 (F Γ discr (vConstruct ind c args) e0) e1 e2 e3 e4 f10 e5 (F (add_multiple (List.rev nms) args Γ) br.2 res e5) n
-      | @eval_fix_unfold _ f10 mfix idx a fn res Γ' e0 n e1 =>
-          f5 Γ f10 mfix idx a fn res Γ' e0 (F Γ f10 (vRecClos mfix idx Γ') e0)
-            n e1
-            (F (add_multiple (map fst mfix) (fix_env mfix Γ') Γ') 
-               (tApp fn a) res e1)
+      | @eval_fix_unfold _ f10 mfix idx a na na' av fn res Γ' e0 n e1 e2 =>
+          f5 Γ f10 mfix idx a na na' av fn res Γ' e0
+            (F Γ f10 (vRecClos mfix idx Γ') e0) n e1 e2
+            (F (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ'))
+               fn res e2)
       | @eval_fix _ mfix idx nms Hlen Hbodies n f10 => f6 Γ mfix idx nms Hlen Hbodies n f10
       | @eval_delta _ c decl body isdecl res e0 e1 => f7 Γ c decl body isdecl res e0 e1 (F [] body res e1)
       | @eval_construct_block _ ind c mdecl idecl cdecl args args' e0 l a => f8 Γ ind c mdecl idecl cdecl args args' e0 l a _
@@ -1314,7 +1324,7 @@ Proof.
     + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
 
-From MetaCoq Require Import EWcbvEvalCstrsAsBlocksInd.
+From MetaCoq Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
 
 Lemma lookup_in_env Σ Σ' ind i :
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
@@ -1470,13 +1480,6 @@ Lemma sunny_eq t E :
 Proof.
 Admitted.
 
-Local Instance extraction_wcbv_flags_fix : WcbvFlags :=
-  {|
-  with_prop_case := false;
-  with_guarded_fix := unguarded_fix_dont_touch_arg_rule;
-  with_constructor_as_block := true
-  |}.
-
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
@@ -1601,8 +1604,9 @@ Proof.
         rewrite -> !skipn_length in *. lia.
       * solve_all. 
       * now rewrite rev_involutive in Hv2_.
+  - eapply X; eauto. (* artifact of the indution being weird and having a trivial assumption to not mess up proof script. FIXME! *)
   - invs Hrep.
-    + invs H4.
+    + invs H5.
     + cbn in *. rtoProp.
       edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
       invs IH1.
@@ -1610,14 +1614,11 @@ Proof.
       eapply cunfold_fix_represents in H1 as Hfix. destruct Hfix as (nm & fnv & Hu1 & Hu2).
       2:eauto.
 
-      edestruct s1 as (v'' & IH1'' & IH2'').
-
-      eapply represents_tApp; eauto. 
-      4:{ exists v''. split. eauto.
-          eapply eval_fix_unfold. eauto. todo "nodup". eauto. }
-      
-          instantiate (1 := fnv).
-          todo "fix". }
+      edestruct s1 as (v' & IH1' & IH2'); eauto.
+      edestruct s2 as (v'' & IH1'' & IH2''). eapply represents_subst_ctx; eauto.
+      5:{
+        exists v''. split. eauto.
+        eapply eval_fix_unfold; eauto. all: todo "fix". }
       all: todo "fix".
 
       (* besides the result, we believe that the exposition has several valuable contributions:

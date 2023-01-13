@@ -230,16 +230,7 @@ Lemma eval_preserve_mkApps_ind :
                            → P' (tApp f5 a)
                                (tApp
                                   (mkApps (tFix mfix idx) argsv) av))
-            → (∀ (f5 : term) (mfix : mfixpoint term) 
-            (idx : nat) (a av : term) (narg : nat) (fn : term) res,
-            with_guarded_fix = false ->
-            eval Σ f5 (tFix mfix idx)
-            → P f5 (tFix mfix idx)
-              → cunfold_fix mfix idx = Some (narg, fn)
-              -> eval Σ a av -> P a av
-              → eval Σ (tApp fn av) res
-              → P (tApp fn av) res
-              → P' (tApp f5 a) res) → 
+            → (forall t, P' t t -> P' t t) ->
               
           (∀ (f5 : term) (mfix : mfixpoint term) 
             (idx : nat) (a av : term) (narg : nat) (fn : term) na res,
@@ -305,7 +296,7 @@ Lemma eval_preserve_mkApps_ind :
      forall (ev : eval Σ f11 f'), 
      P f11 f' ->  
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u) →
-     ~~ (isLambda f' || (if is_guarded with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
+     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
       || isConstructApp f' || isPrimApp f') → 
      eval Σ a a' → P a a' → 
      P' (tApp f11 a) (tApp f' a')) → 
@@ -433,13 +424,11 @@ Proof.
       *)
     
     eapply X7; tea.
-    1, 3:(apply and_assum; [ih|hp' P'Q]). admit.
+    1, 3:(apply and_assum; [ih|hp' P'Q]). todo "lambda".
     todo "because ev3 is beta".
     eapply and_assum. ih. todo "ev3 is beta".
     eapply P'Q. todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta".
-    admit.
-  - admit.
-    
+    todo "end".
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
@@ -478,6 +467,11 @@ Proof.
     1,3:(apply and_assum; [ih|hp' P'Q]).
     intros. apply and_assum; [ih|hp' P'Q].
   - eapply Qatom; tea.
+  - todo "??".
+  - todo "??".
+  - todo "??".
+  - todo "??".
+  Unshelve. all: repeat econstructor.
 Qed.
 
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.

@@ -34,3 +34,5 @@ theories/ERemoveParams.v
 theories/EInlineProjections.v
 theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
+theories/EWcbvEvalCstrsAsBlocksFixLambdaInd.v
+

@@ -13,41 +13,42 @@ Makefile.plugin: _PluginProject
 # Avoid conflicting dependency file creation for the template plugin
 	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
 
-Makefile.safechecker: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.safechecker $(DEPS)
+Makefile.templatepcuic: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.templatepcuic $(DEPS)
 
-theory: Makefile.safechecker
-	$(MAKE) -f Makefile.safechecker
+theory: Makefile.templatepcuic
+	$(MAKE) -f Makefile.templatepcuic
+	./clean_extraction.sh
 
 plugin: theory Makefile.plugin
 # Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.plugin
 
 install: theory plugin
-	$(MAKE) -f Makefile.safechecker install
+	$(MAKE) -f Makefile.templatepcuic install
 	$(MAKE) -f Makefile.plugin install
 
-uninstall: Makefile.safechecker Makefile.plugin
-	$(MAKE) -f Makefile.safechecker uninstall
+uninstall: Makefile.templatepcuic Makefile.plugin
+	$(MAKE) -f Makefile.templatepcuic uninstall
 	$(MAKE) -f Makefile.plugin uninstall
 
-clean: Makefile.safechecker Makefile.plugin
-	make -f Makefile.safechecker clean
+clean: Makefile.templatepcuic Makefile.plugin
+	make -f Makefile.templatepcuic clean
 	make -f Makefile.plugin clean
 
 mrproper:
 	rm -f metacoq-config
 	rm -f Makefile.plugin _PluginProject
-	rm -f Makefile.safechecker _CoqProject
+	rm -f Makefile.templatepcuic _CoqProject
 
 .merlin: Makefile.plugin
-	[ -e "src/pCUICSafeChecker.ml" ] && make -f $< $@
+	[ -e "src/pCUICtemplatepcuic.ml" ] && make -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
 
-vos: Makefile.safechecker
-	$(MAKE) -f Makefile.safechecker vos
+vos: Makefile.templatepcuic
+	$(MAKE) -f Makefile.templatepcuic vos
 
-quick: Makefile.safechecker
-	$(MAKE) -f Makefile.safechecker COQEXTRAFLAGS="-unset \"Universe Checking\"" vos
+quick: Makefile.templatepcuic
+	$(MAKE) -f Makefile.templatepcuic COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

@@ -2,7 +2,7 @@
 From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOCamlInt63 ExtrOCamlFloats.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl PCUICSafeChecker PCUICSafeConversion.
-From MetaCoq.TemplatePCUIC Require Import SafeTemplateChecker.
+From MetaCoq.SafecheckerPlugin Require Import SafeTemplateChecker.
 
 (** * Extraction setup for the safechecker phase of MetaCoq.
 

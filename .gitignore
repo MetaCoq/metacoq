@@ -379,3 +379,11 @@ template-pcuic/Makefile.templatepcuic
 template-pcuic/Makefile.templatepcuic.conf
 
 safechecker-plugin/metacoq-config
+safechecker-plugin/demo.v
+safechecker-plugin/Makefile.local
+safechecker-plugin/_CoqProject
+safechecker-plugin/_PluginProject
+safechecker-plugin/Makefile.safecheckerplugin
+safechecker-plugin/Makefile.safecheckerplugin.conf
+safechecker-plugin/Makefile.plugin
+safechecker-plugin/Makefile.plugin.conf

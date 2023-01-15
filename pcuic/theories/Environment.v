@@ -294,7 +294,7 @@ Module Environment (T : Term).
        declarations := [];
        retroknowledge := Retroknowledge.empty |}.
 
-  Definition add_global_decl Σ decl :=
+  Definition add_global_decl decl Σ :=
     {| universes := Σ.(universes);
        declarations := decl :: Σ.(declarations);
        retroknowledge := Σ.(retroknowledge) |}.

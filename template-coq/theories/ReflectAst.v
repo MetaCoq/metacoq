@@ -252,8 +252,8 @@ with eqb_module_type_decl (mt mt': module_type_decl) {struct mt} :=
       k ==? k' && eqb_structure_field sf sf' && eqb_module_type_decl sb sb'
   | _, _ => false
   end.
-  
-Lemma reflect_sf_mi_sb: 
+
+Lemma reflect_sf_mi_sb:
 (forall f f': structure_field, reflectProp (f = f') (eqb_structure_field f f')) ×
 (forall m m': module_implementation, reflectProp (m = m') (eqb_module_impl m m')) ×
 (forall s s': structure_body, reflectProp (s = s') (eqb_module_type_decl s s')).
@@ -273,19 +273,19 @@ Proof.
   - destruct m'; simpl; now constructor.
   - destruct s'; simpl; now constructor.
   - destruct s'; simpl; try now constructor.
-    destruct (eqb_spec k k0), (H s1), (H0 s'); simpl; now constructor.
+    destruct (eqb_spec i i0), (H s1), (H0 s'); simpl; now constructor.
 Qed.
 
-#[global] Instance reflect_structure_field : ReflectEq structure_field := 
+#[global] Instance reflect_structure_field : ReflectEq structure_field :=
 { eqb := eqb_structure_field ; eqb_spec := reflect_sf_mi_sb.1 }.
 
-#[global] Instance reflect_module_impl : ReflectEq module_implementation := 
+#[global] Instance reflect_module_impl : ReflectEq module_implementation :=
 { eqb := eqb_module_impl ; eqb_spec := reflect_sf_mi_sb.2.1 }.
 
-#[global] Instance reflect_structure_body : ReflectEq structure_body := 
+#[global] Instance reflect_structure_body : ReflectEq structure_body :=
 { eqb := eqb_module_type_decl ; eqb_spec := reflect_sf_mi_sb.2.2 }.
 
-#[global] Instance reflect_module_type : ReflectEq module_type_decl := 
+#[global] Instance reflect_module_type : ReflectEq module_type_decl :=
 { eqb := eqb_module_type_decl ; eqb_spec := reflect_sf_mi_sb.2.2 }.
 
 Definition eqb_module_decl (m m': module_decl) := (m.1 ==? m'.1) && (m.2 ==? m'.2).

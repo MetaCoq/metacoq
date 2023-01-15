@@ -1355,8 +1355,8 @@ Proof.
 
     + cut ((forall (m : module_implementation), on_module_impl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
             -> on_module_impl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
-        × (forall (k: kername) (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p)
+        × (forall (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
         × (forall (s : structure_body), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
             -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
       * intros md_sf_sb. constructor; apply md_sf_sb; apply Xg.
@@ -1367,7 +1367,8 @@ Proof.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-        -- constructor. destruct o0 as [onI onP onnp]; constructor; eauto.
+        -- intros kn0 inds o0.
+          apply on_sfmind with (kn:=kn0). destruct o0 as [onI onP onnp]; constructor; eauto.
           --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
             constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
             clear IH; rename IH' into IH.
@@ -1391,7 +1392,7 @@ Proof.
                 generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
                 generalize (cstr_indices x0). induction 1; constructor; auto.
                 do 2 red in t0 |- *.
-                apply (IH (_; (_; (_; t0)))). } 
+                apply (IH (_; (_; (_; t0)))). }
             ** pose proof (onProjections Xg); auto.
             ** destruct Xg. simpl. unfold check_ind_sorts in *.
               destruct Universe.is_prop; auto.
@@ -1409,8 +1410,8 @@ Proof.
 
     + cut ((forall (m : module_implementation), on_module_impl cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m
             -> on_module_impl cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) m)
-        × (forall (k: kername) (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p
-            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) k p)
+        × (forall (p : structure_field), on_structure_field cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p
+            -> on_structure_field cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) p)
         × (forall (s : structure_body), on_structure_body cumul_gen (lift_typing typing) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s
             -> on_structure_body cumul_gen (lift_typing P) ({| universes := univs; declarations := Σ; retroknowledge := retroknowledge0 |}, Monomorphic_ctx) s)).
       * intros md_sf_sb. apply md_sf_sb; apply Xg.
@@ -1422,7 +1423,8 @@ Proof.
           all: specialize (IH ((Σ', udecl); wfΣ; _; _; _; Hs)).
           all: forward IH; [constructor 1; simpl; subst Σ' Σg; cbn; lia|].
           all: apply IH.
-        -- constructor. destruct o0 as [onI onP onnp]; constructor; eauto.
+        -- intros kn0 inds o0. apply on_sfmind with (kn:=kn0).
+          destruct o0 as [onI onP onnp]; constructor; eauto.
           --- unshelve eset (IH' := fun p => IH ((Σ', udecl); wfΣ; p) _).
             constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
             clear IH; rename IH' into IH.
@@ -1446,7 +1448,7 @@ Proof.
                 generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
                 generalize (cstr_indices x0). induction 1; constructor; auto.
                 do 2 red in t0 |- *.
-                apply (IH (_; (_; (_; t0)))). } 
+                apply (IH (_; (_; (_; t0)))). }
             ** pose proof (onProjections Xg); auto.
             ** destruct Xg. simpl. unfold check_ind_sorts in *.
               destruct Universe.is_prop; auto.

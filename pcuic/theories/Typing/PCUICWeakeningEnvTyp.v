@@ -336,7 +336,7 @@ Proof.
   split => //.
   - split; [lsets|csets].
   - exists []; simpl; destruct Σ; eauto.
-  - apply Retroknowledge.extends_refl.
+  - apply Environment.Retroknowledge.extends_refl.
 Qed.
 
 Lemma weaken_decls_lookup_on_global_env `{checker_flags} P Σ c decl :

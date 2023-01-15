@@ -430,19 +430,19 @@ Record expanded_minductive_decl Σ mdecl :=
   { expanded_params : expanded_context Σ [] mdecl.(ind_params);
     expanded_ind_bodies : Forall (expanded_inductive_decl Σ mdecl) mdecl.(ind_bodies) }.
 
-Inductive expanded_structure_field Σ: kername -> structure_field -> Prop :=
-  | expanded_sfconst kn c : expanded_constant_decl Σ c -> expanded_structure_field Σ kn (sfconst c)
-  | expanded_sfmind kn inds : expanded_minductive_decl Σ inds -> expanded_structure_field Σ kn (sfmind inds)
-  | expanded_sfmod kn mi mt:
+Inductive expanded_structure_field Σ: structure_field -> Prop :=
+  | expanded_sfconst c : expanded_constant_decl Σ c -> expanded_structure_field Σ (sfconst c)
+  | expanded_sfmind inds : expanded_minductive_decl Σ inds -> expanded_structure_field Σ (sfmind inds)
+  | expanded_sfmod mi mt:
     expanded_module_impl Σ mi ->
     expanded_structure_body Σ mt ->
-    expanded_structure_field Σ kn (sfmod mi mt)
-  | expanded_sfmodtype kn mtd : expanded_structure_body Σ mtd -> expanded_structure_field Σ kn (sfmodtype mtd)
+    expanded_structure_field Σ (sfmod mi mt)
+  | expanded_sfmodtype mtd : expanded_structure_body Σ mtd -> expanded_structure_field Σ (sfmodtype mtd)
 
 with expanded_structure_body Σ : structure_body -> Prop :=
   | expanded_sb_nil : expanded_structure_body Σ sb_nil
   | expanded_sb_cons kn sf tl :
-    expanded_structure_field Σ kn sf ->
+    expanded_structure_field Σ sf ->
     expanded_structure_body Σ tl ->
     expanded_structure_body Σ (sb_cons kn sf tl)
 
@@ -991,7 +991,7 @@ Lemma repr_lookup_constructor {Σg Σ} :
   forall ind idx r, lookup_constructor Σ ind idx = Some r -> GlobalEnvMap.lookup_constructor Σg ind idx = Some r.
 Proof.
   intros hrepr ind idx r.
-  rewrite /lookup_constructor /lookup_constructor_gen /lookup_inductive /lookup_inductive_gen 
+  rewrite /lookup_constructor /lookup_constructor_gen /lookup_inductive /lookup_inductive_gen
           /lookup_minductive /lookup_minductive_gen /lookup_env.
   destruct lookup_global eqn:hl => //.
   apply hrepr in hl.
@@ -1361,13 +1361,13 @@ Lemma eta_declared_constructor {Σ : GlobalEnvMap.t} {ind mdecl idecl cdecl} :
 Proof.
   rewrite /declared_constructor.
   intros [[] ?].
-  move: H. 
-  rewrite /declared_inductive /declared_inductive_gen /declared_minductive /declared_minductive_gen 
+  move: H.
+  rewrite /declared_inductive /declared_inductive_gen /declared_minductive /declared_minductive_gen
          /lookup_env /=.
   destruct (lookup_global Σ.(declarations) _) eqn:heq => //.
   move: (eta_lookup_global (inductive_mind ind.1) g heq) => hl.
-  intros [= ->]. 
-  unfold declared_constructor_gen, declared_inductive_gen, declared_minductive_gen. 
+  intros [= ->].
+  unfold declared_constructor_gen, declared_inductive_gen, declared_minductive_gen.
   rewrite hl; split => //.
   split => //. rewrite nth_error_map H0 //.
   rewrite nth_error_map H1 //.
@@ -1418,7 +1418,7 @@ Proof.
   intros hrepr.
   unfold expanded_decl.
   cut ((forall (m : module_implementation), expanded_module_impl Σ m -> expanded_module_impl Σ' m) /\
-    (forall (k: kername) (p : structure_field), expanded_structure_field Σ k p -> expanded_structure_field Σ' k p) /\
+    (forall (p : structure_field), expanded_structure_field Σ p -> expanded_structure_field Σ' p) /\
     (forall (s : structure_body), expanded_structure_body Σ s -> expanded_structure_body Σ' s)).
   intros [Hmd [Hsf Hsb]].
   destruct t => //; auto.
@@ -1561,7 +1561,7 @@ Proof.
   constructor. cbn. len.
   pose proof onc.(on_cargs).
   eapply eta_expand_context_sorts in X0. now len in X0. exact hrepr.
-  len. len. 
+  len. len.
   pose proof onc.(on_ctype). destruct X0.
   epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None #|ind_bodies m|) _ _ wf t0).
   forward H. rewrite -arities_context_length.
@@ -1578,11 +1578,11 @@ Lemma eta_expand_modtype_decl_expanded {cf : checker_flags} (Σ : global_env_ext
 Proof.
   intros hrepr wf onm.
   assert (H_md_sf_sd: (forall (m : module_implementation) (e : on_module_impl cumul_gen (lift_typing typing) Σ m), expanded_module_impl Σ (eta_module_impl Σg m)) ×
-    (forall (k: kername) (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ k p), expanded_structure_field Σ k (eta_structure_field Σg p)) ×
+    (forall (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ p), expanded_structure_field Σ (eta_structure_field Σg p)) ×
     (forall (s : structure_body) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
   {
     apply on_mi_sf_sb_mutrect; try now constructor; simpl.
-    - intros kn c onc. constructor. now apply eta_expand_constant_decl_expanded.
+    - intros c onc. constructor. now apply eta_expand_constant_decl_expanded.
     - intros kn i oni. constructor. now apply eta_expand_inductive_expanded with (kn := kn).
   }
   destruct onm; now repeat constructor.
@@ -1596,7 +1596,7 @@ Lemma eta_expand_global_decl_expanded {cf : checker_flags} (Σ : global_env_ext)
 Proof.
   intros hrepr wf ond.
   assert (H_md_sf_sd: (forall (m : module_implementation) (e : on_module_impl cumul_gen (lift_typing typing) Σ m), expanded_module_impl Σ (eta_module_impl Σg m)) ×
-    (forall (k: kername) (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ k p), expanded_structure_field Σ k (eta_structure_field Σg p)) ×
+    (forall (p : structure_field) (e : on_structure_field cumul_gen (lift_typing typing) Σ p), expanded_structure_field Σ (eta_structure_field Σg p)) ×
     (forall (s : structure_body) (e : on_structure_body cumul_gen (lift_typing typing) Σ s), expanded_structure_body Σ (eta_structure_body Σg s))).
   {
     unshelve eapply (on_mi_sf_sb_mutrect cumul_gen (lift_typing typing) Σ); try now constructor; simpl.
@@ -1625,7 +1625,7 @@ Proof.
   induction Σ; intros ind idx mdecl idecl cdecl.
   - unfold declared_constructor, declared_inductive, declared_minductive.
     cbn => [[[]]] //.
-  - unfold declared_constructor, declared_constructor_gen, declared_inductive, declared_inductive_gen, 
+  - unfold declared_constructor, declared_constructor_gen, declared_inductive, declared_inductive_gen,
           declared_minductive, declared_minductive_gen.
     cbn. destruct a as [kn decl]; cbn.
     case: eqb_spec.

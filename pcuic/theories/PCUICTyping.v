@@ -1252,7 +1252,7 @@ Section All_local_env.
       split.
       * red; cbn. split; [split;[lsets|csets]| |].
         exists [(kn, decl)] => //.
-        apply Retroknowledge.extends_refl.
+        apply Environment.Retroknowledge.extends_refl.
       * split => //.
       * destruct o; assumption.
     - intros hl. destruct (IHΣp hl) as [Σ' []].

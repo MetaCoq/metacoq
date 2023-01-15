@@ -333,7 +333,7 @@ Module Environment (T : Term).
   | mi_fullstruct : module_implementation (** Module M. ... End M.*)
   with structure_body :=
   | sb_nil
-  | sb_cons : kername -> structure_field -> structure_body -> structure_body.
+  | sb_cons : ident -> structure_field -> structure_body -> structure_body.
 
   Scheme structureField_rect := Induction for structure_field Sort Type
   with moduleImpl_rect := Induction for module_implementation Sort Type

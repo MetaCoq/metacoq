@@ -81,8 +81,8 @@ Proof.
   destruct o; auto.
 Qed.
 
-Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
-  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl d g).(declarations) ->
+  EnvMap.of_global_env (add_global_decl d g).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
 Proof.
   unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
   reflexivity.
@@ -104,6 +104,48 @@ Proof.
   unfold TransLookup.lookup_inductive, lookup_inductive.
   rewrite trans_lookup_minductive //.
 Qed.
+
+Lemma lookup_env_add_global_decl : forall univs decls retro kn d,
+  lookup_env (add_global_decl (kn, d)
+   (build_global_env_map({| universes := univs; declarations := decls; retroknowledge := retro |}))) =
+  lookup_env ({| universes := univs; declarations := (kn, d)::decls; retroknowledge := retro |}).
+Proof.
+  simpl. unfold PCUICEnvironment.add_global_decl; simpl.
+  reflexivity.
+Qed.
+
+(* Lemma lookup_env_trans_global_decl_app : forall univs decls retro kn d,
+let Σmap := (build_global_env_map {| universes := univs; declarations := decls; retroknowledge := retro |}) in
+trans_global_decls Σmap [(kn,d)] =
+(build_global_env_map {|
+  universes := univs;
+  declarations := (trans_global_decl Σmap (kn, d)) ++ decls;
+  retroknowledge := retro |}).
+Proof.
+  intros univs decls retro kn d Σmap.
+  destruct d; cbn; auto.
+  - unfold add_global_decl; cbn.
+    unfold build_global_env_map; cbn.
+    unfold PCUICEnvironment.add_global_decl; cbn.
+    unfold PCUICProgram.build_global_env_map_obligation_1; cbn.
+    unfold TemplateToPCUIC.add_global_decl_obligation_1. *)
+
+
+Lemma trans_lookup_module {cf} {Σ : Ast.Env.global_env} cst m :
+  Ast.Env.lookup_env Σ cst = Some (Ast.Env.ModuleDecl m) ->
+  lookup_env (trans_global_env Σ) cst = None.
+Proof.
+  destruct Σ as [univs decls retro].
+  intros H.
+  cbn -[fold_right].
+  induction decls as [|[kn g] tl IHtl]; cbn -[fold_right]; auto.
+  cbn in H.
+  (** immediately to inductive case: a::Σ *)
+  destruct eq_kername eqn: E.
+  - apply eqb_eq in E. subst kn.
+    unfold trans_global_env in *; simpl in *.
+    (* remember (fun (decl : kername × Ast.Env.global_decl) (Σ' : global_env_map) => fold_right add_global_decl Σ' (trans_global_decl Σ' decl)) as f. *)
+
 
 Lemma mkApps_morphism (f : term -> term) u v :
   (forall x y, f (tApp x y) = tApp (f x) (f y)) ->
@@ -148,16 +190,27 @@ Proof.
   split; [lsets|csets].
 Qed.
 
+Lemma invariant_fold {A B: Type} (f: B -> A -> A) (P: A -> Prop):
+  (forall a b, (P a -> P (f b a))) -> (forall a l, P a -> P (fold_right f a l)).
+Proof.
+  intros H a l.
+  induction l; try now cbn.
+Qed.
+
 Lemma extends_trans_global_decls_acc (Σ' : global_env_map) (Σ : Ast.Env.global_declarations) :
   extends_decls Σ' (trans_global_decls Σ' Σ).
 Proof.
   induction Σ.
   * split; cbn; now try exists [].
-  * rewrite /=.
-    destruct IHΣ as [univs [Σ'' eq]]. cbn in *.
-    split; cbn; auto.
-    eexists (_ :: Σ'').
-    rewrite -app_comm_cons. now f_equal.
+  * destruct IHΣ as [univs [Σ'' eq]].
+    split.
+    - simpl. now apply invariant_fold.
+    - simpl.
+      exists ((trans_global_decl (trans_global_decls Σ' Σ) a) ++ Σ'').
+      induction (trans_global_decl (trans_global_decls Σ' Σ) a); cbn in *.
+      -- exact eq.
+      -- f_equal. exact IHl.
+    - simpl; now apply invariant_fold.
 Qed.
 
 Definition wf_global_decl {cf} (Σ : Ast.Env.global_env_ext) kn decl :=
@@ -169,13 +222,18 @@ Definition wf_global_decl {cf} (Σ : Ast.Env.global_env_ext) kn decl :=
 Lemma trans_lookup_env {cf} {Σ : Ast.Env.global_env} cst {wfΣ : Typing.wf Σ} :
   match Ast.Env.lookup_env Σ cst with
   | None => lookup_env (trans_global_env Σ) cst = None
-  | Some d =>
-    ∑ Σ' : Ast.Env.global_env,
-      [× Ast.Env.extends_decls Σ' Σ,
-        Typing.wf Σ',
-        wf_global_decl (Σ', Ast.universes_decl_of_decl d) cst d,
-        extends_decls (trans_global_env Σ') (trans_global_env Σ) &
-        lookup_env (trans_global_env Σ) cst = Some (trans_global_decl (trans_global_env Σ') d)]
+  | Some d => match d with
+    | Ast.Env.ConstantDecl _ | Ast.Env.InductiveDecl _ =>
+      ∑ (Σ' : Ast.Env.global_env) (d': global_decl),
+        [× Ast.Env.extends_decls Σ' Σ,
+          Typing.wf Σ',
+          wf_global_decl (Σ', Ast.universes_decl_of_decl d) cst d,
+          extends_decls (trans_global_env Σ') (trans_global_env Σ),
+          trans_global_decl (trans_global_env Σ') (cst, d) = (cst, d')::[] &
+          lookup_env (trans_global_env Σ) cst = Some d']
+    (** Modules are elaborated away. *)
+    | Ast.Env.ModuleDecl _ | Ast.Env.ModuleTypeDecl _ => lookup_env (trans_global_env Σ) cst = None
+    end
   end.
 Proof.
   destruct Σ as [univs Σ retro].
@@ -183,24 +241,198 @@ Proof.
   - cbn; auto.
   - unfold Ast.Env.lookup_env. cbn -[trans_global_env].
     destruct eq_kername eqn:eqk.
-    change (eq_kername cst a.1) with (eqb cst a.1) in eqk.
+    (* change (eq_kername cst a.1) with (eqb cst a.1) in eqk. *)
     apply eqb_eq in eqk; subst.
-    eexists {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |}.
-    split.
-    * split => //. now exists [a].
-    * destruct wfΣ as [onu ond]. depelim ond.
-      split => //.
-    * eapply TypingWf.typing_wf_sigma in wfΣ.
-      destruct wfΣ as [onu ond]. depelim ond. now destruct o.
-    * split => //.
-      now exists [(a.1, trans_global_decl (trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ;
-        S.Env.retroknowledge := retro |}) a.2)].
-    * cbn. now rewrite eq_kername_refl.
-    * destruct wfΣ as [onu ond]. depelim ond.
+    set {| S.Env.universes := univs; S.Env.declarations := Σ; S.Env.retroknowledge := retro |} as Σmap.
+    set {| S.Env.universes := univs; S.Env.declarations := a::Σ; S.Env.retroknowledge := retro |} as Σmap'.
+
+    -- (** Case 1: looking up [cst] in [a::Σ], and a.1 == cst.
+          Strategy: if a.2 is constant or inductive, then we should be able to
+          find its obvious translation. If a.2 is a module or inductive, cst
+          should not exist in the translated environment. *)
+      destruct a.2 eqn:E => //= .
+
+      --- (** a.2 is a Constant decl *)
+          exists Σmap.
+          exists (ConstantDecl (trans_constant_body (trans_global_env Σmap) c)).
+          split => //=.
+        * split => //. now exists [a].
+        * destruct wfΣ as [onu ond]. depelim ond.
+          split => //.
+        * eapply TypingWf.typing_wf_sigma in wfΣ.
+          destruct wfΣ as [onu ond]. depelim ond.
+          simpl in E. rewrite E in o; now destruct o.
+        * subst Σmap Σmap'. unfold trans_global_env.
+          split => /=; try now apply invariant_fold.
+          induction (trans_global_decl (trans_global_decls (empty_trans_env univs retro) Σ) a).
+          ** now exists [].
+          ** simpl. destruct IHl as [Σ'' IHl].
+            exists (a0 :: Σ''). now rewrite IHl.
+        * destruct wfΣ as [onu ond]. depelim ond.
+          specialize (IHΣ (onu, ond)).
+          unfold Ast.Env.lookup_env in IHΣ. cbn [Ast.Env.declarations] in IHΣ.
+          destruct (Ast.Env.lookup_global Σ (kn, d).1) eqn:h.
+          ** simpl in *. subst.
+            destruct o. apply ST.fresh_global_iff_lookup_global_None in kn_fresh.
+            rewrite kn_fresh in h. exfalso. inversion h.
+          ** simpl in *. subst.
+            cbn. now rewrite eqb_refl.
+
+      --- (** a.2 is an Inductive decl *)
+          exists Σmap. exists (InductiveDecl (trans_minductive_body (trans_global_env Σmap) m)).
+          split => //=.
+        * split => //. now exists [a].
+        * destruct wfΣ as [onu ond]. depelim ond.
+          split => //.
+        * eapply TypingWf.typing_wf_sigma in wfΣ.
+          destruct wfΣ as [onu ond]. depelim ond.
+          simpl in E. rewrite E in o; now destruct o.
+        * subst Σmap Σmap'. unfold trans_global_env.
+          split => /=; try now apply invariant_fold.
+          induction (trans_global_decl (trans_global_decls (empty_trans_env univs retro) Σ) a).
+          ** now exists [].
+          ** simpl. destruct IHl as [Σ'' IHl].
+            exists (a0 :: Σ''). now rewrite IHl.
+        * destruct wfΣ as [onu ond]. depelim ond.
+          specialize (IHΣ (onu, ond)).
+          unfold Ast.Env.lookup_env in IHΣ. cbn [Ast.Env.declarations] in IHΣ.
+          destruct (Ast.Env.lookup_global Σ (kn, d).1) eqn:h.
+          ** simpl in *. subst.
+            destruct o. apply ST.fresh_global_iff_lookup_global_None in kn_fresh.
+            rewrite kn_fresh in h. inversion h.
+          ** simpl in *. subst.
+            cbn. now rewrite eqb_refl.
+
+        (** Module. *)
+      --- (** a.2 is a *)
+        unfold trans_global_env. subst Σmap'; simpl.
+        destruct a as [kn d]; simpl in *.
+        rewrite E.
+        remember (trans_global_decls (empty_trans_env univs retro) Σ) as Σtrans.
+        set (P := fun sf => forall id, lookup_env (fold_right add_global_decl Σtrans (trans_structure_field Σtrans kn id sf)) kn = None).
+        set (P0 := fun mi => lookup_env (fold_right add_global_decl Σtrans (trans_module_impl Σtrans kn mi)) kn = None).
+        set (P1 := fun mt => lookup_env (fold_right add_global_decl Σtrans (trans_structure_body Σtrans kn mt)) kn = None).
+        assert ((forall s : Ast.Env.structure_field, P s) × (forall m : Ast.Env.module_implementation, P0 m) × (forall s : Ast.Env.structure_body, P1 s)).
+        (** proving assertion by mutual induction *)
+        * subst P P0 P1. apply Ast.Env.sf_mi_sb_mutind => //=.
+          ** cbn. intros c id.
+            pose proof (kn_appended_not_eq kn id).
+            destruct eq_kername eqn: K.
+            apply eqb_eq in K; contradiction.
+            destruct wfΣ as [onu ond]. depelim ond.
+            specialize (IHΣ (onu, ond)).
+            unfold Ast.Env.lookup_env in IHΣ. cbn [Ast.Env.declarations] in IHΣ.
+            destruct (Ast.Env.lookup_global Σ kn) eqn:h.
+            *** simpl in *. subst.
+              destruct o. apply ST.fresh_global_iff_lookup_global_None in kn_fresh.
+              rewrite kn_fresh in h. inversion h.
+            *** subst. apply IHΣ.
+          ** cbn. intros i id.
+            pose proof (kn_appended_not_eq kn id).
+            destruct eq_kername eqn: K.
+            apply eqb_eq in K; contradiction.
+            destruct wfΣ as [onu ond]. depelim ond.
+            specialize (IHΣ (onu, ond)).
+            unfold Ast.Env.lookup_env in IHΣ. cbn [Ast.Env.declarations] in IHΣ.
+            destruct (Ast.Env.lookup_global Σ kn) eqn:h.
+            *** simpl in *. subst.
+              destruct o. apply ST.fresh_global_iff_lookup_global_None in kn_fresh.
+              rewrite kn_fresh in h. inversion h.
+            *** subst. apply IHΣ.
+          ** intros [] Hmi sb Hsb id; cbn; auto.
+            *** admit.
+            ***
+
+
+
+        * destruct m as [[] mt] => /=.
+          **
+          generalize (trans_global_decls (empty_trans_env univs retro) Σ).
+          generalize m.
+        *
+
+
+        (** Module Type. *)
+      --- admit.
+
+
+    -- (** Case where a.1 != cst. *)
+      destruct wfΣ as [onu ond]. depelim ond.
       specialize (IHΣ (onu, ond)).
       unfold Ast.Env.lookup_env in IHΣ. cbn [Ast.Env.declarations] in IHΣ.
       destruct (Ast.Env.lookup_global Σ cst) eqn:h.
-      destruct IHΣ as [Σ' [ext wf ext' hl]].
+      destruct g => //=.
+
+      --- destruct IHΣ as [Σ' [d' [ext wf ext' sth hl]]].
+        exists Σ', d'. split => //.
+        * split => //=.
+          ** apply ext.
+          ** destruct ext as [_ [Σ'' HΣ''] _].
+            exists ((kn,d)::Σ''). simpl in HΣ''.
+            now rewrite HΣ''.
+          ** apply ext.
+        * destruct sth as [Hunivs [Σ'' HΣ] Hretro]. split => //=.
+          ** cbn. now apply invariant_fold.
+          ** exists ((trans_global_decl (trans_global_decls (empty_trans_env univs retro) Σ) (kn, d)) ++ Σ'').
+            destruct d => /=; try now rewrite HΣ.
+            unfold trans_global_env; simpl.
+            induction (trans_module_decl (trans_global_decls (empty_trans_env univs retro) Σ)
+            kn m); try now cbn.
+          ** cbn. now apply invariant_fold.
+        * unfold lookup_env.
+          unfold lookup_global; simpl.
+          destruct d => /=; try now rewrite eqk.
+          (** prove that kn of module cannot be found in the translated env.
+            most probably need to do an induction. *)
+          ** unfold trans_global_env; simpl.
+            destruct m as [mi mt].
+            admit.
+          ** unfold trans_global_env; simpl. apply e.
+
+      --- destruct IHΣ as [Σ' [d' [ext wf ext' sth hl]]].
+        exists Σ', d'. split => //.
+        * split => //=.
+          ** apply ext.
+          ** destruct ext as [_ [Σ'' HΣ''] _].
+            exists ((kn,d)::Σ''). simpl in HΣ''.
+            now rewrite HΣ''.
+          ** apply ext.
+        * destruct sth as [Hunivs [Σ'' HΣ] Hretro]. split => //=.
+          ** cbn. now apply invariant_fold.
+          ** exists ((trans_global_decl (trans_global_decls (empty_trans_env univs retro) Σ) (kn, d)) ++ Σ'').
+            destruct d => /=; try now rewrite HΣ.
+            unfold trans_global_env; simpl.
+            induction (trans_module_decl (trans_global_decls (empty_trans_env univs retro) Σ)
+            kn m0); try now cbn.
+          ** cbn. now apply invariant_fold.
+        * unfold lookup_env.
+          unfold lookup_global; simpl.
+          destruct d => /=; try now rewrite eqk.
+          (** A repeat of the above (possibly) induction. *)
+          ** unfold trans_global_env; simpl.
+            destruct m as [mi mt].
+            admit.
+          ** apply e.
+
+      --- unfold lookup_env.
+          unfold lookup_global; simpl.
+          destruct d => /=; try now rewrite eqk.
+          (** another repeat *)
+          admit. apply IHΣ.
+
+      --- unfold lookup_env.
+          unfold lookup_global; simpl.
+          destruct d => /=; try now rewrite eqk.
+          (** another repeat *)
+          admit. apply IHΣ.
+
+      --- unfold lookup_env.
+          unfold lookup_global; simpl.
+          destruct d => /=; try now rewrite eqk.
+          (** another repeat *)
+          admit. apply IHΣ.
+Admitted.
+      (* destruct IHΣ as [Σ' [ext wf ext' hl]].
       exists Σ'. split => //.
       destruct ext as [equ [? eq]].
       split => //. exists ((kn, d) :: x). cbn.
@@ -212,7 +444,7 @@ Proof.
       cbn. rewrite -eq'. reflexivity.
       cbn. rewrite eqk /=. apply e.
       cbn. now rewrite eqk.
-Qed.
+Qed. *)
 
 Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t :
   Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
@@ -237,7 +469,7 @@ Proof.
   red in X0.
   f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
   f_equal. solve_all.
-Qed.
+Admitted.
 
 Lemma trans_decl_weakening {cf} Σ {Σ' : global_env_map} t :
   Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
@@ -288,7 +520,7 @@ Qed.
 Lemma trans_global_decl_weaken {cf} (Σ : Ast.Env.global_env_ext) {Σ' : global_env_map} kn d :
   Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   wf_global_decl Σ kn d ->
-  trans_global_decl (trans_global_env Σ) d = trans_global_decl Σ' d.
+  trans_global_decl (trans_global_env Σ) (kn,d) = trans_global_decl Σ' (kn,d).
 Proof.
   intros.
   destruct d; cbn; f_equal.
@@ -305,7 +537,7 @@ Proof.
       eapply TypingWf.on_global_inductive_wf_params in X2. solve_all.
     * eapply TypingWf.on_global_inductive_wf_bodies in X2. solve_all.
       rewrite trans_ind_body_weakening //.
-Qed.
+Admitted.
 
 Import TypingWf.
 
@@ -318,7 +550,8 @@ Proof.
   destruct T; intuition eauto using wf_extends.
 Qed.
 
-Lemma trans_lookup {cf} Σ cst :
+(** FIXME: only true if cst refers to constant or mutind *)
+(* Lemma trans_lookup {cf} Σ cst :
   Typing.wf Σ ->
   wf (trans_global_env Σ) ->
   lookup_env (trans_global_env Σ) cst =
@@ -330,7 +563,7 @@ Proof.
   intros [Σ' [ext wfΣ' wfdecl ext' hl]].
   rewrite hl. cbn. f_equal.
   eapply (trans_global_decl_weaken (Σ', Ast.universes_decl_of_decl g)); tea.
-Qed.
+Qed. *)
 
 Section Translation.
   Context (Σ : Ast.Env.global_env).
@@ -669,7 +902,7 @@ Section Trans_Global.
     Ast.declared_constant Σ cst decl ->
     declared_constant Σ' cst (trans_constant_body Σ' decl).
   Proof.
-    unfold declared_constant, Ast.declared_constant, 
+    unfold declared_constant, Ast.declared_constant,
       declared_constant_gen, Ast.declared_constant_gen.
     now rewrite trans_lookup => -> /=.
   Qed.
@@ -743,7 +976,7 @@ Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
   intros [] []. unfold Ast.declared_minductive in *.
-  unfold Ast.declared_minductive_gen in H1. 
+  unfold Ast.declared_minductive_gen in H1.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
 
@@ -752,10 +985,10 @@ Lemma lookup_inductive_None Σ ind : lookup_inductive Σ ind = None ->
 Proof.
   intros hl [mdecl [idecl [decli hnth]]].
   unfold declared_inductive, declared_minductive in decli.
-  unfold lookup_inductive, lookup_inductive_gen, 
+  unfold lookup_inductive, lookup_inductive_gen,
     lookup_minductive, lookup_minductive_gen in hl.
-  unfold declared_minductive_gen in decli. 
-  destruct lookup_env eqn:heq. 
+  unfold declared_minductive_gen in decli.
+  destruct lookup_env eqn:heq.
   noconf decli. cbn in hl.
   destruct nth_error; congruence. congruence.
 Qed.
@@ -774,7 +1007,7 @@ Section Trans_Global.
     unfold SEq.R_global_instance, SEq.global_variance.
     destruct gref; simpl; auto.
     - unfold R_global_instance_gen, R_opt_variance; cbn.
-      unfold Ast.lookup_inductive_gen, lookup_inductive_gen, 
+      unfold Ast.lookup_inductive_gen, lookup_inductive_gen,
         Ast.lookup_minductive_gen, lookup_minductive_gen.
       rewrite trans_lookup. destruct Ast.Env.lookup_env eqn:look => //; simpl.
       destruct g => /= //.
@@ -1287,7 +1520,7 @@ Section Trans_Global.
     lookup_inductive Σ' ind = Some (mdecl, idecl).
   Proof.
     intros []. unfold lookup_inductive, lookup_minductive.
-    unfold lookup_inductive_gen, lookup_minductive_gen. 
+    unfold lookup_inductive_gen, lookup_minductive_gen.
     now rewrite H H0.
   Qed.
 
@@ -1989,17 +2222,20 @@ Proof.
   destruct l; auto. now rewrite -trans_check_rec_kind.
 Qed.
 
-Lemma trans_global_decl_universes Σ d :
-  Ast.universes_decl_of_decl d =
-  universes_decl_of_decl (trans_global_decl Σ d).
+Lemma trans_global_decl_universes Σ kn d :
+  Forall (fun '(_, d') =>  Ast.universes_decl_of_decl d = universes_decl_of_decl d')
+  (trans_global_decl Σ (kn,d)).
 Proof.
-  destruct d; reflexivity.
-Qed.
+  destruct d; try now cbn.
+  apply Forall_forall.
+  (** possibly induction again. *)
+Admitted.
 
-Lemma trans_consistent_instance_ext {cf:checker_flags} Σ d u :
+Lemma trans_consistent_instance_ext {cf:checker_flags} Σ kn d u :
   let Σ' := trans_global Σ in
   Ast.consistent_instance_ext Σ (Ast.universes_decl_of_decl d) u ->
-  consistent_instance_ext Σ' (universes_decl_of_decl (trans_global_decl Σ' d)) u.
+  Forall (fun '(_, d') => consistent_instance_ext Σ' (universes_decl_of_decl d') u)
+  (trans_global_decl Σ' (kn, d)).
 Proof.
   intros Σ'.
   unfold Ast.consistent_instance_ext, consistent_instance_ext.

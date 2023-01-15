@@ -7,38 +7,39 @@ Open Scope bs_scope.
 
 #[local] Existing Instance config.default_checker_flags.
 
-Definition eta_expand p := 
+Definition eta_expand p :=
   EtaExpand.eta_expand_program p.
 
 Definition check_const_decl_def kn const_decl : TemplateMonad unit :=
   match const_decl.(cst_body) with
-  | Some body => 
+  | Some body =>
     tmMsg ("Unquoting eta-expanded " ++ string_of_kername kn)%bs ;;
     tmUnquote body ;;
     tmMsg ("Succeeded")
   | None => ret tt
   end.
 
-Fixpoint check_mod_impl_def impl {struct impl}:=
+Fixpoint check_mod_impl_def kn impl {struct impl}:=
   match impl with
-  | mi_struct sb => check_structure_body_def sb ;; ret tt
+  | mi_struct sb => check_structure_body_def kn sb ;; ret tt
   | _ => ret tt
   end
-with check_structure_field_def kn sf :=
+with check_structure_field_def kn id sf :=
+  let kn' := ((MPdot kn.1 kn.2), id) in
   match sf with
-  | sfconst cb => check_const_decl_def kn cb
+  | sfconst cb => check_const_decl_def kn' cb
   | sfmind _ => ret tt
-  | sfmod impl modtype => check_mod_impl_def impl ;; check_structure_body_def modtype
-  | sfmodtype sb => check_structure_body_def sb
+  | sfmod impl modtype => check_mod_impl_def kn' impl ;; check_structure_body_def kn' modtype
+  | sfmodtype sb => check_structure_body_def kn' sb
   end
-with check_structure_body_def sb :=
+with check_structure_body_def kn sb :=
   match sb with
   | sb_nil => ret tt
-  | sb_cons kn sf sb' => check_structure_field_def kn sf ;; check_structure_body_def sb'
+  | sb_cons id sf sb' => check_structure_field_def kn id sf ;; check_structure_body_def kn sb'
   end.
 
 Definition check_modtype_def := check_structure_body_def.
-Definition check_mod_decl_def m := check_mod_impl_def m.1 ;; check_modtype_def m.2.
+Definition check_mod_decl_def kn m := check_mod_impl_def kn m.1 ;; check_modtype_def kn m.2.
 
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
@@ -51,8 +52,8 @@ Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
     | None => ret tt
     end
   | InductiveDecl idecl => ret tt
-  | ModuleDecl m => check_mod_decl_def m
-  | ModuleTypeDecl sb => check_modtype_def sb
+  | ModuleDecl m => check_mod_decl_def d.1 m
+  | ModuleTypeDecl sb => check_modtype_def d.1 sb
   end.
 
 Definition is_nil {A} (l : list A) :=
@@ -98,7 +99,7 @@ with wf_structure_field sf :=
   | sfmodtype mt => wf_structure_body mt
   end
 with wf_structure_body sb :=
-  match sb with 
+  match sb with
   | sb_nil => true
   | sb_cons kn sf sb' => wf_structure_field sf && wf_structure_body sb'
   end.
@@ -106,7 +107,7 @@ with wf_structure_body sb :=
 Definition wf_module_type := wf_structure_body.
 Definition wf_module_decl m := wf_module_impl m.1 && wf_structure_body m.2.
 
-Definition wf_global_decl d := 
+Definition wf_global_decl d :=
   match d with
   | ConstantDecl cb => wf_constant_body cb
   | InductiveDecl idecl => true

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Morphisms.
 From MetaCoq.Template Require Export utils Universes BasicAst Reflect.
-From MetaCoq.PCUIC Require Export PCUICPrimitive Environment.
-From MetaCoq.PCUIC Require EnvironmentTyping.
+From MetaCoq.PCUIC Require Export PCUICPrimitive.
+From MetaCoq.PCUIC Require Environment EnvironmentTyping.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
@@ -443,7 +443,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
   | _ => true
   end.
 
-Module PCUICTerm <: Term.
+Module PCUICTerm <: Environment.Term.
 
   Definition term := term.
 
@@ -465,7 +465,7 @@ End PCUICTerm.
 
 (* These functors derive the notion of local context and lift substitution, term lifting,
   the closed predicate to them. *)
-Module PCUICEnvironment := Environment PCUICTerm.
+Module PCUICEnvironment := Environment.Environment PCUICTerm.
 Export PCUICEnvironment.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
 
@@ -489,7 +489,7 @@ Definition inds ind u (l : list one_inductive_body) :=
       end
   in aux (List.length l).
 
-Module PCUICTermUtils <: TermUtils PCUICTerm PCUICEnvironment.
+Module PCUICTermUtils <: Environment.TermUtils PCUICTerm PCUICEnvironment.
 
 Definition destArity := destArity.
 Definition inds := inds.

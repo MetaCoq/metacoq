@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Uint63 FloatOps FloatAxioms.
+From Coq Require Import Uint63 FloatOps FloatAxioms Logic.Decidable.
 From MetaCoq.Template Require Import config utils AstUtils Primitive EnvMap.
 From MetaCoq.Template Require TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.
@@ -146,15 +146,376 @@ Section Trans.
       ind_universes := md.(Ast.Env.ind_universes);
       ind_variance := md.(Ast.Env.ind_variance) |}.
 
-  Definition trans_global_decl (d : Ast.Env.global_decl) :=
-    match d with
-    | Ast.Env.ConstantDecl bd => ConstantDecl (trans_constant_body bd)
-    | Ast.Env.InductiveDecl bd => InductiveDecl (trans_minductive_body bd)
+      (* kn := Coq.Init.M := (Coq.Init, M) *)
+  Definition kn_append (kn: kername) (id: ident) : kername := ((MPdot kn.1 kn.2), id).
+
+  Inductive kn_extends : kername -> kername -> Prop :=
+  | kn_extends_one kn id : kn_extends kn (kn_append kn id)
+  | kn_extends_step id kn kn' (H: kn_extends kn kn') : kn_extends kn (kn_append kn' id).
+
+  Lemma kn_extends_exists : forall kn kn', kn_extends kn kn' -> exists l: list ident,
+    l <> [] /\ fold_right (fun id kn => kn_append kn id) kn l = kn'.
+  Proof.
+    intros kn kn' Hext.
+    induction Hext.
+    - exists [id]. split; auto. discriminate.
+    - destruct IHHext as [l [Hne H]].
+      exists (id::l).
+      split. simpl. discriminate.
+      simpl. now rewrite <- H.
+  Qed.
+
+  Lemma kn_append_neq : forall kn id, kn_append kn id <> kn.
+  Proof.
+    intros [mp i]. revert i.
+    induction mp; try discriminate.
+    intros i' id'.
+    unfold kn_append in *; simpl in *.
+    intros contra. inversion contra; subst.
+    assert ((MPdot mp id, id) = (mp, id)) by now rewrite H0.
+    apply IHmp in H. apply H.
+  Qed.
+
+  Lemma kn_extends' : forall id kn kn',
+  kn_extends (kn_append kn id) kn' -> kn_extends kn kn'.
+  Proof.
+    intros id kn kn' H.
+    remember (kn_append kn id) as knid.
+    induction H; subst.
+    - apply kn_extends_step. apply kn_extends_one.
+    - assert (kn_extends kn kn') by now apply IHkn_extends.
+      now apply kn_extends_step.
+  Qed.
+
+  Lemma kn_extends_trans : forall kn kn' kn'',
+  kn_extends kn kn' -> kn_extends kn' kn'' -> kn_extends kn kn''.
+  Proof.
+    intros kn kn' kn'' H1 H2.
+    generalize dependent kn''.
+    induction H1.
+    - remember (kn_append kn id) as knid.
+      intros kn'' H2. induction H2; subst.
+      -- apply kn_extends_step. apply kn_extends_one.
+      -- assert (kn_extends kn kn') by now apply IHkn_extends.
+        now apply kn_extends_step.
+    - intros kn'' H2. apply IHkn_extends.
+      remember (kn_append kn' id) as kn'id.
+      induction H2; subst.
+      -- apply kn_extends_step. apply kn_extends_one.
+      -- apply kn_extends_step.
+        assert (kn_extends kn (kn_append kn'0 id0)). {
+          apply IHkn_extends. apply kn_extends_step.
+          now apply kn_extends' with (id := id).
+        }
+        now apply IHkn_extends0.
+  Qed.
+
+  Lemma kn_extends_inversion_true : forall mp mp' i i' id id',
+    kn_extends (MPdot mp i, id) (MPdot mp' i', id') -> kn_extends (mp, i) (mp', i').
+  Proof.
+    intros. inversion H; subst.
+    - apply kn_extends_one.
+    - destruct kn' as [mp' i']; cbn in *.
+      apply (kn_extends' id).
+      apply H2.
+  Qed.
+
+  Lemma kn_appended_is_mpdot : forall kn id,
+  exists mp i, (kn_append kn id) = (MPdot mp i, id).
+  Proof.
+    intros. unfold kn_append. now exists kn.1, kn.2.
+  Qed.
+
+  Lemma kn_extends_is_mpdot : forall kn kn', kn_extends kn kn' -> exists mp i, kn'.1 = (MPdot mp i).
+  Proof.
+    intros. apply kn_extends_exists in H as [l [Hne H]].
+    destruct l. contradiction.
+    simpl in H. remember (fold_right (fun (id : ident) (kn : kername) => kn_append kn id) kn l) as kn''.
+    pose proof (kn_appended_is_mpdot kn'' i) as [mp [id Hdot]].
+    exists mp, id.
+    subst kn'. rewrite Hdot. reflexivity.
+  Qed.
+
+  Lemma kn_extends_irrefl : forall kn, ~(kn_extends kn kn).
+  Proof.
+    intros [mp id].
+    revert id.
+    induction mp.
+    - intros id contra. apply kn_extends_is_mpdot in contra as [? [? ?]].
+      discriminate.
+    - intros id' contra. apply kn_extends_is_mpdot in contra as [? [? ?]].
+      discriminate.
+    - intros id' H. inversion H; subst.
+      -- rewrite H2 in H. now apply IHmp in H.
+      -- destruct kn' as [mp i]; cbn in *.
+        apply kn_extends_inversion_true in H.
+        now apply IHmp in H.
+  Qed.
+
+  Lemma kn_extends_neq : forall kn kn', kn_extends kn kn' -> kn <> kn'.
+  Proof.
+    intros kn kn' H contra.
+    rewrite contra in H.
+    now apply kn_extends_irrefl in H.
+  Qed.
+
+  (**
+    Claim: The aliasing is a tree.
+    Reason:
+      1. One can only alias backwards to a already defined module.
+      2. As a naive implementation, aliasing is (deep) copying.
+
+      We can than verify the claim inductively: an actual module is a
+      single-node tree. For the inductive step, suppose we already have a tree
+      of aliases. Then a new alias can only refer to a node on the tree, forming
+      a tree.
+
+      For the case of aliasing of submodules such as:
+      Module M.
+        Module A.
+          Module B: End B.
+        End A.
+        Module C: End C.
+      End M.
+
+        M
+       / \
+      A,L C
+        \
+         B
+
+      The "submodule" relation can also be considered as a different directed
+      edge on the tree, and will not affect the tree structure (because cannot
+      have self-reference). Once one proves the submodule relationship forms a
+      tree (identical to above), one can prove "aliasing with submodules" form
+      a tree too, inductively:
+
+      Base case: A module is a tree.
+      Inductive case: Suppose an alias refers to a certain (sub)module (aliased or not)
+      on the existing tree, which refers to a whole subtree identifiable by a node
+      (technically: kername). Call the node K and its parent K'. The aliasing is
+      equivalent to copying K to a sibling L under K', where L is the new aliased
+      module. This is still a tree. Qed.
+  *)
+
+  (**
+    Therefore, strategy:
+    Build and store such a tree.
+    In technical terms, all of these are [structure_body]s.
+    We can use sfmod with fullstruct.
+    Finding the correct branch is tree-traversal given a path (kername).
+    However, every time a subtree is aliased, we add the aliased name to the
+    list of labels for that root node.
+
+    [([idents...], tree), ([idents...], tree), ... ]
+
+  *)
+
+  Fixpoint trans_structure_field kn id (sf : Ast.Env.structure_field) :=
+    let kn' := kn_append kn id in
+    match sf with
+    | Ast.Env.sfconst c => [(kn', ConstantDecl (trans_constant_body c))]
+    | Ast.Env.sfmind m => [(kn', InductiveDecl (trans_minductive_body m))]
+    | Ast.Env.sfmod mi sb => match mi with
+      | Ast.Env.mi_fullstruct => trans_structure_body kn' sb
+      | Ast.Env.mi_struct s => trans_structure_body kn' s
+      | _ => trans_module_impl kn' mi
+      end
+    | Ast.Env.sfmodtype _ => []
+    end
+  with trans_module_impl kn (mi: Ast.Env.module_implementation) :=
+    match mi with
+    | Ast.Env.mi_abstract => []
+    | Ast.Env.mi_algebraic kn' => []
+      (* let target := find_target_structure_body kn' in trans_structure_body kn' target *)
+    | Ast.Env.mi_struct sb => trans_structure_body kn sb
+    | Ast.Env.mi_fullstruct => []
+    end
+  with trans_structure_body kn (sb: Ast.Env.structure_body) :=
+    match sb with
+    | Ast.Env.sb_nil => []
+    | Ast.Env.sb_cons id sf tl =>
+      trans_structure_field kn id sf ++ trans_structure_body kn tl
+    end.
+
+  Definition trans_modtype_decl := trans_structure_body.
+
+  Definition trans_module_decl kn (m: Ast.Env.module_decl) : list(kername × global_decl) :=
+    match m with
+    | (Ast.Env.mi_fullstruct, mt) => trans_modtype_decl kn mt
+    | (mi, _) => trans_module_impl kn mi
+    end.
+
+
+  Lemma translated_structure_field_all_kn_extends:
+  forall sf kn id, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_field kn id sf).
+  Proof.
+    set (P := fun sf => forall kn id, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_field kn id sf)).
+    set (P0 := fun mi => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_module_impl kn mi)).
+    set (P1 := fun sb => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_body kn sb)).
+    apply (Ast.Env.sf_mi_sb_mutind P P0 P1); subst P P0 P1; cbn; try auto.
+    - intros c kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros m kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros mi Hmi sb Hsb kn id.
+      rewrite Forall_forall. intros [kn' d].
+      destruct mi; cbn; try auto.
+      -- intros Hin. specialize (Hmi (kn_append kn id)).
+        rewrite Forall_forall in Hmi.
+        specialize (Hmi (kn', d)).
+        simpl in Hmi. specialize (Hmi Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+      -- intros Hin. specialize (Hsb (kn_append kn id)).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. specialize (Hsb Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+    - intros i sf Hsf sb Hsb kn.
+      apply Forall_forall.
+      intros [kn' d] Hin.
+      apply in_app_or in Hin. destruct Hin.
+      -- specialize (Hsf kn i).
+        rewrite Forall_forall in Hsf.
+        specialize (Hsf (kn', d)).
+        simpl in Hsf. apply (Hsf H).
+      -- specialize (Hsb kn).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. apply (Hsb H).
+  Qed.
+
+  Lemma translated_module_impl_all_kn_extends:
+  forall mi kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_module_impl kn mi).
+  Proof.
+    set (P := fun sf => forall kn id, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_field kn id sf)).
+    set (P0 := fun mi => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_module_impl kn mi)).
+    set (P1 := fun sb => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_body kn sb)).
+    apply (Ast.Env.sf_mi_sb_mutind P P0 P1); subst P P0 P1; cbn; try auto.
+    - intros c kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros m kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros mi Hmi sb Hsb kn id.
+      rewrite Forall_forall. intros [kn' d].
+      destruct mi; cbn; try auto.
+      -- intros Hin. specialize (Hmi (kn_append kn id)).
+        rewrite Forall_forall in Hmi.
+        specialize (Hmi (kn', d)).
+        simpl in Hmi. specialize (Hmi Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+      -- intros Hin. specialize (Hsb (kn_append kn id)).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. specialize (Hsb Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+    - intros i sf Hsf sb Hsb kn.
+      apply Forall_forall.
+      intros [kn' d] Hin.
+      apply in_app_or in Hin. destruct Hin.
+      -- specialize (Hsf kn i).
+        rewrite Forall_forall in Hsf.
+        specialize (Hsf (kn', d)).
+        simpl in Hsf. apply (Hsf H).
+      -- specialize (Hsb kn).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. apply (Hsb H).
+  Qed.
+
+  Lemma translated_structure_body_all_kn_extends:
+  forall sb kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_body kn sb).
+  Proof.
+    set (P := fun sf => forall kn id, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_field kn id sf)).
+    set (P0 := fun mi => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_module_impl kn mi)).
+    set (P1 := fun sb => forall kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_structure_body kn sb)).
+    apply (Ast.Env.sf_mi_sb_mutind P P0 P1); subst P P0 P1; cbn; try auto.
+    - intros c kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros m kn id. rewrite Forall_forall.
+      intros [kn' d] [].
+      inversion H.
+      constructor.
+      inversion H.
+    - intros mi Hmi sb Hsb kn id.
+      rewrite Forall_forall. intros [kn' d].
+      destruct mi; cbn; try auto.
+      -- intros Hin. specialize (Hmi (kn_append kn id)).
+        rewrite Forall_forall in Hmi.
+        specialize (Hmi (kn', d)).
+        simpl in Hmi. specialize (Hmi Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+      -- intros Hin. specialize (Hsb (kn_append kn id)).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. specialize (Hsb Hin).
+        apply kn_extends_trans with (kn' := (kn_append kn id)); auto.
+        constructor.
+    - intros i sf Hsf sb Hsb kn.
+      apply Forall_forall.
+      intros [kn' d] Hin.
+      apply in_app_or in Hin. destruct Hin.
+      -- specialize (Hsf kn i).
+        rewrite Forall_forall in Hsf.
+        specialize (Hsf (kn', d)).
+        simpl in Hsf. apply (Hsf H).
+      -- specialize (Hsb kn).
+        rewrite Forall_forall in Hsb.
+        specialize (Hsb (kn', d)).
+        simpl in Hsb. apply (Hsb H).
+  Qed.
+
+  Lemma translated_module_decl_all_kn_extends:
+  forall m kn, Forall (fun '(kn', _) => kn_extends kn kn') (trans_module_decl kn m).
+  Proof.
+    destruct m as [[] mt]; cbn; auto; apply translated_structure_body_all_kn_extends.
+  Qed.
+
+  Lemma translated_modtype_decl_all_kn_neq:
+  forall mt kn, Forall (fun '(kn', _) => kn <> kn') (trans_modtype_decl kn mt).
+  Proof.
+    intros mt kn; apply (Forall_impl (P := (fun '(kn', _) => kn_extends kn kn'))).
+    apply translated_structure_body_all_kn_extends.
+    intros [kn' _]; apply kn_extends_neq.
+  Qed.
+
+  Lemma translated_module_decl_all_kn_neq:
+  forall m kn, Forall (fun '(kn', _) => kn <> kn') (trans_module_decl kn m).
+  Proof.
+    destruct m as [[] mt]; cbn; auto; apply translated_modtype_decl_all_kn_neq.
+  Qed.
+
+  Definition trans_global_decl (d : kername × Ast.Env.global_decl) :=
+    let (kn, decl) := d in match decl with
+    | Ast.Env.ConstantDecl bd => [(kn, ConstantDecl (trans_constant_body bd))]
+    | Ast.Env.InductiveDecl bd => [(kn, InductiveDecl (trans_minductive_body bd))]
+    | Ast.Env.ModuleDecl bd => trans_module_decl kn bd
+    | Ast.Env.ModuleTypeDecl _ => []
     end.
 End Trans.
 
-Program Definition add_global_decl (env : global_env_map) (d : kername × global_decl) :=
-  {| trans_env_env := add_global_decl env.(trans_env_env) d;
+Program Definition add_global_decl (d : kername × global_decl) (env : global_env_map) :=
+  {| trans_env_env := add_global_decl d env.(trans_env_env);
      trans_env_map := EnvMap.add d.1 d.2 env.(trans_env_map) |}.
 Next Obligation.
   pose proof env.(trans_env_repr).
@@ -163,8 +524,8 @@ Qed.
 
 Definition trans_global_decls env (d : Ast.Env.global_declarations) : global_env_map :=
   fold_right (fun decl Σ' =>
-    let decl' := on_snd (trans_global_decl Σ') decl in
-    add_global_decl Σ' decl') env d.
+    let decls := (trans_global_decl Σ' decl) in
+    fold_right add_global_decl Σ' decls) env d.
 
 Definition empty_trans_env univs retro :=
   let init_global_env := {| universes := univs; declarations := []; retroknowledge := retro |} in

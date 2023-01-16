@@ -24,7 +24,7 @@ build: [
   [make "-j" "%{jobs}%" "-C" "pcuic"]
 ]
 install: [
-  [make "-C" pcuic" "install"]
+  [make "-C" "pcuic" "install"]
 ]
 depends: [
   "coq-metacoq-common" {= version}

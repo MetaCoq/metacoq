@@ -21,26 +21,15 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["bash" "./configure.sh"]
-  [make "-j" "%{jobs}%" "-C" "safechecker-plugin"]
-  [make "-j" "%{jobs}%" "-C" "erasure-plugin"]
+  [make "-j" "%{jobs}%" "-C" "template-pcuic"]
 ]
 install: [
-  [make "-C" "safechecker-plugin" "install"]
-  [make "-C" "erasure-plugin" "install"]
+  [make "-C" "template-pcuic" "install"]
 ]
 depends: [
-  "coq-metacoq-template-pcuic" {= version}
-  "coq-metacoq-erasure" {= version}
+  "coq-metacoq-template" {= version}
+  "coq-metacoq-pcuic" {= version}
 ]
-synopsis: "Implementation and verification of an erasure procedure for Coq"
+synopsis: "Translations between Template Coq and PCUIC and proofs of correctness."
 description: """
-MetaCoq is a meta-programming framework for Coq.
-
-The Erasure module provides a complete specification of Coq's so-called
-\"extraction\" procedure, starting from the PCUIC calculus and targeting
-untyped call-by-value lambda-calculus.
-
-The `erasure` function translates types and proofs in well-typed terms
-into a dummy `tBox` constructor, following closely P. Letouzey's PhD
-thesis.
 """

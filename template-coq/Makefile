@@ -1,12 +1,17 @@
 all: coq template-coq plugin
 
-#_PluginProject: _PluginProject.in metacoq-config
-#	cat metacoq-config > _PluginProject
-#	cat _PluginProject.in >> _PluginProject
+_PluginProject: _PluginProject.in metacoq-config
+	cat metacoq-config > _PluginProject
+	cat _PluginProject.in >> _PluginProject
 
 _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject
 	cat _CoqProject.in >> _CoqProject
+
+_TemplateCoqProject: _TemplateCoqProject.in metacoq-config
+	cat metacoq-config > _TemplateCoqProject
+	cat _TemplateCoqProject.in >> _TemplateCoqProject
+
 
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq

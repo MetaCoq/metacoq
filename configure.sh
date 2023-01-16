@@ -32,7 +32,7 @@ then
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else
         echo "Building MetaCoq globally (default)"
-        COMMON_DEPS=""
+        COMMON_DEPS="-R ../utils/theories MetaCoq.Utils"
         TEMPLATE_COQ_DEPS=""
         PCUIC_DEPS=""
         SAFECHECKER_DEPS=""

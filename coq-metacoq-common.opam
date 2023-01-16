@@ -24,6 +24,7 @@ build: [
   [make "-j" "%{jobs}%" "common"]
 ]
 install: [
+  [make "-C" "utils" "install"]
   [make "-C" "common" "install"]
 ]
 depends: [

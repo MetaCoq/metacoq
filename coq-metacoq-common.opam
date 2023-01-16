@@ -21,28 +21,17 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["bash" "./configure.sh"]
-  [make "-j" "%{jobs}%" "template-coq"]
+  [make "-j" "%{jobs}%" "common"]
 ]
 install: [
-  [make "-C" "template-coq" "install"]
+  [make "-C" "common" "install"]
 ]
 depends: [
-  "coq-metacoq-common" {= version}
+  "stdlib-shims"
+  "coq" { >= "8.16" & < "8.17~" }
+  "coq-equations" { >= "1.3" }
 ]
-synopsis: "A quoting and unquoting library for Coq in Coq"
+synopsis: "The common library of Template Coq and PCUIC"
 description: """
 MetaCoq is a meta-programming framework for Coq.
-
-Template Coq is a quoting library for Coq. It takes Coq terms and
-constructs a representation of their syntax tree as a Coq inductive data
-type. The representation is based on the kernel's term representation.
-
-In addition to a complete reification and denotation of CIC terms,
-Template Coq includes:
-
-- Reification of the environment structures, for constant and inductive declarations.
-- Denotation of terms and global declarations
-- A monad for manipulating global declarations, calling the type
-  checker, and inserting them in the global environment, in the style of
-  MetaCoq/MTac.
 """

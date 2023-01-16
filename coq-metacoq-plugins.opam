@@ -21,28 +21,26 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["bash" "./configure.sh"]
-  [make "-j" "%{jobs}%" "template-coq"]
+  [make "-j" "%{jobs}%" "-C" "safechecker-plugin"]
+  [make "-j" "%{jobs}%" "-C" "erasure-plugin"]
 ]
 install: [
-  [make "-C" "template-coq" "install"]
+  [make "-C" "safechecker-plugin" "install"]
+  [make "-C" "erasure-plugin" "install"]
 ]
 depends: [
-  "coq-metacoq-common" {= version}
+  "coq-metacoq-template" {= version}
+  "coq-metacoq-erasure" {= version}
 ]
-synopsis: "A quoting and unquoting library for Coq in Coq"
+synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-Template Coq is a quoting library for Coq. It takes Coq terms and
-constructs a representation of their syntax tree as a Coq inductive data
-type. The representation is based on the kernel's term representation.
+The Erasure module provides a complete specification of Coq's so-called
+\"extraction\" procedure, starting from the PCUIC calculus and targeting
+untyped call-by-value lambda-calculus.
 
-In addition to a complete reification and denotation of CIC terms,
-Template Coq includes:
-
-- Reification of the environment structures, for constant and inductive declarations.
-- Denotation of terms and global declarations
-- A monad for manipulating global declarations, calling the type
-  checker, and inserting them in the global environment, in the style of
-  MetaCoq/MTac.
+The `erasure` function translates types and proofs in well-typed terms
+into a dummy `tBox` constructor, following closely P. Letouzey's PhD
+thesis.
 """

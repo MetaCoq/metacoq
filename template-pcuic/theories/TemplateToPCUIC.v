@@ -2,7 +2,7 @@
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive EnvMap.
-From MetaCoq.Template Require  AstUtils TemplateProgram.
+From MetaCoq.Template Require AstUtils TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgram.
 
 Lemma to_Z_bounded_bool (i : Uint63.int) :

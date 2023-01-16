@@ -43,10 +43,13 @@ my-cachedMake (){
     fi
 }
 
+my-cachedMake 'utils' 'utils/theories' 'MetaCoq.Utils'
+my-cachedMake 'common' 'common/theories' 'MetaCoq.Common'
 my-cachedMake 'template-coq' 'template-coq/theories' 'MetaCoq.Template'
 my-cachedMake 'pcuic' 'pcuic/theories' 'MetaCoq.PCUIC'
 my-cachedMake 'safechecker' 'safechecker/theories' 'MetaCoq.SafeChecker'
 my-cachedMake 'erasure' 'erasure/theories' 'MetaCoq.Erasure'
+my-cachedMake 'template-pcuic' 'template-pcuic/theories' 'MetaCoq.TemplatePCUIC'
 
 unset -f my-nix-build-with-target
 unset -f my-cachedMake

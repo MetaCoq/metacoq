@@ -2502,7 +2502,7 @@ Proof.
   now rewrite trans_subst.
 Qed.
 
-Require Import PCUICInstDef PCUICInstConv.
+From MetaCoq.PCUIC Require Import PCUICInstDef PCUICInstConv.
 Require Import ssrbool.
 (* Lemma closed_ctx_map2_set_binder_name (n : nat) (bctx : list aname) (ctx : list context_decl) :
   closedn_ctx n ctx -> closedn_ctx n (map2_bias_left set_binder_name dummy_decl bctx ctx).

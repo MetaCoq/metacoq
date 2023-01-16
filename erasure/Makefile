@@ -10,13 +10,13 @@ Makefile.erasure: _CoqProject
 theory: Makefile.erasure
 	$(MAKE) -f Makefile.erasure
 
-install: theory plugin
+install: theory
 	$(MAKE) -f Makefile.erasure install
 
-uninstall: Makefile.erasure Makefile.plugin
+uninstall: Makefile.erasure
 	$(MAKE) -f Makefile.erasure uninstall
 
-clean: Makefile.erasure Makefile.plugin
+clean: Makefile.erasure
 	make -f Makefile.erasure clean
 
 mrproper:

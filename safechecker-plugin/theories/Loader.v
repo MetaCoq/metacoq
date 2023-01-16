@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require ExtractableLoader.
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.TemplatePCUIC.PCUICTemplateMonad Require Core.
 From MetaCoq.TemplatePCUIC Require Import TemplateMonadToPCUIC.
@@ -13,3 +14,5 @@ Notation "<% x %>" := (match monad_trans return _ with monad_trans => ltac:(let 
 Notation "<# x #>" := (match PCUICTemplateMonad.Core.tmQuoteRec x return _ with qx => ltac:(let p y := exact y in run_template_program qx p) end)
   (only parsing).
 Set Warnings "+notation-overridden".
+
+Declare ML Module "coq-metacoq-safechecker.plugin".

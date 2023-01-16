@@ -61,7 +61,7 @@ Check PCUICSR.subject_reduction.
 (** Verified conversion and type-checking *)
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping.
-From MetaCoq.SafecheckerPlugin Require Import Loader.
+From MetaCoq.SafeCheckerPlugin Require Import Loader.
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 

@@ -1,7 +1,7 @@
-src/META.coq-metacoq-safecheckerplugin
+src/META.coq-metacoq-safechecker
 -I src
--Q src MetaCoq.SafecheckerPlugin
--R theories MetaCoq.SafecheckerPlugin
+-Q src MetaCoq.SafeCheckerPlugin
+-R theories MetaCoq.SafeCheckerPlugin
 
 # src/classes0.mli
 # src/classes0.ml

@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Loader.
-From MetaCoq.SafeChecker Require Import Loader.
-Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
+From MetaCoq.SafeCheckerPlugin Require Import Loader.
+Require Import MetaCoq.SafeCheckerPlugin.SafeTemplateChecker.
 
 Local Open Scope string_scope.
 

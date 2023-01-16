@@ -1,5 +1,5 @@
 (* Some tests for the notations of quoting *)
-From MetaCoq.Template Require Import utils.bytestring.
+From MetaCoq.Utils Require Import bytestring.
 From MetaCoq.Template Require Loader.
 Local Open Scope bs_scope.
 Local Open Scope nat_scope.
@@ -19,10 +19,10 @@ Module template.
    *)
 End template.
 
-From MetaCoq.PCUIC Require Loader.
+From MetaCoq.SafeCheckerPlugin Require Loader.
 
 Module pcuic.
-  Import PCUIC.Loader.
+  Import SafeCheckerPlugin.Loader.
   Time Definition zero : nat := 0. (* 0. secs (0.u,0.s) *)
   Time Definition qzero : PCUIC.PCUICAst.term := <% zero %>. (* 0.001 secs (0.001u,0.s) *)
   Time Definition qzero_rec : PCUICProgram.pcuic_program := <# zero #>. (* 0.008 secs (0.008u,0.s) *)

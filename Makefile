@@ -57,8 +57,8 @@ html: all
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R template-pcuic/theories MetaCoq.TemplatePCUIC \
-		-R safechecker-plugin/theories MetaCoq.SafeCheckerPlugin \
 		-R erasure/theories MetaCoq.Erasure \
+		-R erasure-plugin/theories MetaCoq.ErasurePlugin \
 		-R translations MetaCoq.Translations \
 		-R examples MetaCoq.Examples \
 		-d html */theories/*.v */theories/*/*.v translations/*.v examples/*.v
@@ -70,8 +70,8 @@ clean:
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C template-pcuic clean
-	$(MAKE) -C safechecker-plugin clean
 	$(MAKE) -C erasure clean
+	$(MAKE) -C erasure-plugin clean
 	$(MAKE) -C examples clean
 	$(MAKE) -C test-suite clean
 	$(MAKE) -C translations clean
@@ -83,8 +83,8 @@ vos:
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
 	$(MAKE) -C template-pcuic vos
-	$(MAKE) -C safechecker-plugin vos
 	$(MAKE) -C erasure vos
+	$(MAKE) -C erasure-plugin vos
 	$(MAKE) -C translations vos
 
 quick:
@@ -94,8 +94,8 @@ quick:
 	$(MAKE) -C pcuic quick 
 	$(MAKE) -C safechecker quick
 	$(MAKE) -C template-pcuic quick 
-	$(MAKE) -C safechecker-plugin quick
 	$(MAKE) -C erasure quick
+	$(MAKE) -C erasure-plugin quick
 	$(MAKE) -C translations quick
 
 mrproper:
@@ -105,8 +105,8 @@ mrproper:
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C template-pcuic mrproper
-	$(MAKE) -C safechecker-plugin mrproper
 	$(MAKE) -C erasure mrproper
+	$(MAKE) -C erasure-plugin mrproper
 	$(MAKE) -C examples mrproper
 	$(MAKE) -C test-suite mrproper
 	$(MAKE) -C translations mrproper
@@ -118,8 +118,8 @@ mrproper:
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
 	$(MAKE) -C template-pcuic .merlin
-	$(MAKE) -C safechecker-plugin .merlin
 	$(MAKE) -C erasure .merlin
+	$(MAKE) -C erasure-plugin .merin
 
 utils:
 	$(MAKE) -C utils
@@ -146,7 +146,7 @@ erasure: safechecker
 	$(MAKE) -C erasure
 
 erasure-plugin: erasure template-pcuic
-	$(MAKE) -C safechecker-plugin
+	$(MAKE) -C erasure-plugin
 
 examples: safechecker-plugin erasure-plugin
 	$(MAKE) -C examples

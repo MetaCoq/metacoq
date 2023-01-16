@@ -1,14 +1,16 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN.
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 
-From MetaCoq.Erasure Require Import Erasure.
+From MetaCoq.ErasurePlugin Require Import Erasure.
 
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils config.
+From MetaCoq.Utils Require Import utils bytestring.
+From MetaCoq.Common Require Import config.
 Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
@@ -337,7 +339,8 @@ Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
 (* We don't run this one every time as it is really expensive *)
 (*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 
-From MetaCoq.Erasure Require Import Loader.
+From MetaCoq.ErasurePlugin Require Import Loader.
+
 MetaCoq Erase provedCopyx.
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)

@@ -149,7 +149,7 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 MetaCoq Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
-Require Import MetaCoq.Template.monad_utils. Import MCMonadNotation.
+Require Import MetaCoq.Utils.monad_utils. Import MCMonadNotation.
 Require Import MetaCoq.Template.TemplateMonad.Core.
 
 MetaCoq Run (tmQuoteInductive (cp "foo") >>= tmPrint).
@@ -162,7 +162,7 @@ MetaCoq Quote Recursively Definition qTT := TT.
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
 MetaCoq Quote Recursively Definition qTT2 := TT2.
 
-Require Import MetaCoq.Template.utils.
+Require Import MetaCoq.Utils.utils.
 Require Import List. Import ListNotations.
 
 Module toto.

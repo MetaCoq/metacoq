@@ -26,9 +26,9 @@ then
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
         ERASURE_PLUGIN_DEPS="-R ../template-pcuic/theories MetaCoq.TemplatePCUIC -R ../erasure/theories MetaCoq.Erasure  -I ../template-coq"
         TRANSLATIONS_DEPS="-R ../template-coq/theories MetaCoq.Template -I ../template-coq"
-        EXAMPLES_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafecheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin"
-        TEST_SUITE_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafecheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin"
-        PLUGIN_DEMO_DEPS="-R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/"
+        EXAMPLES_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafeCheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin -I ../erasure-plugin/src -I ../safechecker-plugin/src/"
+        TEST_SUITE_DEPS="-R ../safechecker-plugin/theories MetaCoq.SafeCheckerPlugin -R ../erasure-plugin/theories MetaCoq.ErasurePlugin -I ../erasure-plugin/src -I ../safechecker-plugin/src/"
+        PLUGIN_DEMO_DEPS="-R ../../utils/theories MetaCoq.Utils -R ../../common/theories MetaCoq.Common -R ../../template-coq/theories MetaCoq.Template -I ../../template-coq/  -I ../../erasure-plugin/src -I ../../safechecker-plugin/src/"
         echo "METACOQ_CONFIG = local" > Makefile.conf
     else
         echo "Building MetaCoq globally (default)"

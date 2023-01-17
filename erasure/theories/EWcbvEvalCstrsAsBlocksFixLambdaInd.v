@@ -233,14 +233,15 @@ Lemma eval_preserve_mkApps_ind :
             → (forall t, P' t t -> P' t t) ->
               
           (∀ (f5 : term) (mfix : mfixpoint term) 
-            (idx : nat) (a av : term) (narg : nat) (fn : term) na res,
+            (idx : nat) (a av : term) (narg : nat) (fn : term) na d res,
             with_guarded_fix = false ->
             eval Σ f5 (tFix mfix idx)
             → P f5 (tFix mfix idx)
-              → cunfold_fix mfix idx = Some (narg, tLambda na fn)
+              → nth_error mfix idx = Some d 
+              -> d.(dbody) = tLambda na fn
               -> eval Σ a av -> P a av
-              → eval Σ (csubst av 0 fn) res
-              → P (csubst av 0 fn) res
+              → eval Σ (csubst av 0 (substl (fix_subst mfix) fn)) res
+              → P (csubst av 0 (substl (fix_subst mfix) fn)) res
               → P' (tApp f5 a) res) →
 
               (∀ (ip : inductive × nat) (mfix : mfixpoint term) 
@@ -424,11 +425,12 @@ Proof.
       *)
     
     eapply X7; tea.
+    all: todo "". (* 
     1, 3:(apply and_assum; [ih|hp' P'Q]). todo "lambda".
     todo "because ev3 is beta".
     eapply and_assum. ih. todo "ev3 is beta".
     eapply P'Q. todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta".
-    todo "end".
+    todo "end". *)
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.

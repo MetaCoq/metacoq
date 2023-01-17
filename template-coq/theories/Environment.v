@@ -324,22 +324,42 @@ Module Environment (T : Term).
   Inductive structure_field :=
   | sfconst : constant_body -> structure_field
   | sfmind : mutual_inductive_body -> structure_field
-  | sfmod : module_implementation -> structure_body -> structure_field
-  | sfmodtype : structure_body -> structure_field
+  | sfmod : module_implementation -> list (ident × structure_field) -> structure_field
+  | sfmodtype : list (ident × structure_field) -> structure_field
   with module_implementation :=
   | mi_abstract : module_implementation (** Declare Module M: T. *)
   | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
-  | mi_struct : structure_body -> module_implementation (** Module M:T. ... End M.*)
-  | mi_fullstruct : module_implementation (** Module M. ... End M.*)
-  with structure_body :=
+  | mi_struct : list (ident × structure_field) -> module_implementation (** Module M:T. ... End M.*)
+  | mi_fullstruct : module_implementation (** Module M. ... End M.*).
+  (* with structure_body := list (ident × structure_field).
   | sb_nil
-  | sb_cons : ident -> structure_field -> structure_body -> structure_body.
+  | sb_cons : ident -> structure_field -> structure_body -> structure_body. *)
+  Print structure_field_rect.
 
   Scheme structureField_rect := Induction for structure_field Sort Type
-  with moduleImpl_rect := Induction for module_implementation Sort Type
-  with structureBody_rect := Induction for structure_body Sort Type.
+  with moduleImpl_rect := Induction for module_implementation Sort Type.
+  (* with structureBody_rect := Induction for structure_body Sort Type. *)
+  Print structureField_rect.
 
-  Combined Scheme sf_mi_sb_mutind from structureField_rect, moduleImpl_rect, structureBody_rect.
+  Definition structure_body := list (ident × structure_field).
+
+  Definition sf_rect : forall (P : structure_field -> Type)
+         (P0 : module_implementation -> Type),
+       (forall c : constant_body, P (sfconst c)) ->
+       (forall m : mutual_inductive_body, P (sfmind m)) ->
+       (forall m : module_implementation,
+        P0 m -> forall l : structure_body, All P (map snd l) -> P (sfmod m l)) ->
+       (forall l : structure_body, All P (map snd l) -> P (sfmodtype l)) ->
+       P0 mi_abstract ->
+       (forall k : kername, P0 (mi_algebraic k)) ->
+       (forall l : structure_body, All P (map snd l) -> P0 (mi_struct l)) ->
+       P0 mi_fullstruct -> forall s : structure_field, P s.
+  Proof.
+    intros Psf Pmi.
+    intros Hcst Hind Hsfmod Hsfmt Hmiabs Hmialg.
+    intros H Hmifs.
+    destruct s; auto.
+    apply Hsfmod.
 
   Definition module_type_decl := structure_body.
   Definition module_decl := module_implementation × module_type_decl.
@@ -351,7 +371,7 @@ Module Environment (T : Term).
   | ModuleTypeDecl : module_type_decl -> global_decl.
   Derive NoConfusion for global_decl.
 
-  Definition global_declarations := list (kername * global_decl).
+  Definition global_declarations := structure_body.
 
   Record global_env := mk_global_env
     { universes : ContextSet.t;
@@ -379,6 +399,7 @@ Module Environment (T : Term).
        declarations := decls;
        retroknowledge := Σ.(retroknowledge) |}.
 
+  (* only looks for base ?? *)
   Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
     match Σ with
     | nil => None

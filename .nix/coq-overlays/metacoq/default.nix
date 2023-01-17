@@ -57,7 +57,7 @@ let
 
         configurePhase = optionalString (package == "all") pkgallMake + ''
           touch ${pkgpath}/metacoq-config
-        '' + optionalString (elem package ["safechecker" "erasure"]) ''
+        '' + optionalString (elem package ["safechecker" "erasure" "template-pcuic" "plugins"]) ''
           echo  "-I ${template-coq}/lib/coq/${coq.coq-version}/user-contrib/MetaCoq/Template/" > ${pkgpath}/metacoq-config
         '' + optionalString (package == "single") ''
           ./configure.sh local

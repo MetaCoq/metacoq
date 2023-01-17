@@ -22,15 +22,12 @@ license: "MIT"
 build: [
   ["bash" "./configure.sh"]
   [make "-j" "%{jobs}%" "-C" "safechecker-plugin"]
-  [make "-j" "%{jobs}%" "-C" "erasure-plugin"]
 ]
 install: [
   [make "-C" "safechecker-plugin" "install"]
-  [make "-C" "erasure-plugin" "install"]
 ]
 depends: [
   "coq-metacoq-template-pcuic" {= version}
-  "coq-metacoq-erasure" {= version}
 ]
 synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """

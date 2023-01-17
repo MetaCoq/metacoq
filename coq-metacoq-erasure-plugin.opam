@@ -1,4 +1,4 @@
-opam-version: "2.0"              
+opam-version: "2.0"
 version: "8.16.dev"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
@@ -19,23 +19,26 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Théo Winterhalter <theo.winterhalter@inria.fr>"
 ]
 license: "MIT"
-depends: [
-  "coq-metacoq-safechecker-plugin" {= version}
-  "coq-metacoq-erasure-plugin" {= version}
-  "coq-metacoq-translations" {= version}
-]
 build: [
-  ["bash" "./configure.sh" ] {with-test}
-  [make "-C" "examples" ] {with-test}
-  [make "-C" "test-suite" ] {with-test}
+  ["bash" "./configure.sh"]
+  [make "-j" "%{jobs}%" "-C" "erasure-plugin"]
 ]
-synopsis: "A meta-programming framework for Coq"
+install: [
+  [make "-C" "erasure-plugin" "install"]
+]
+depends: [
+  "coq-metacoq-template-pcuic" {= version}
+  "coq-metacoq-erasure" {= version}
+]
+synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-The meta-package includes the template-coq library,
-the PCUIC development including a verified equivalence between Coq and PCUIC, 
-a safe type checker and verified erasure for PCUIC and example translations. 
+The Erasure module provides a complete specification of Coq's so-called
+\"extraction\" procedure, starting from the PCUIC calculus and targeting
+untyped call-by-value lambda-calculus.
 
-See individual packages for more detailed descriptions.
+The `erasure` function translates types and proofs in well-typed terms
+into a dummy `tBox` constructor, following closely P. Letouzey's PhD
+thesis.
 """

@@ -25,7 +25,7 @@ let
   releaseRev = v: "v${v}";
 
   # list of core metacoq packages sorted by dependency order
-  packages = [ "utils" "common" "template-coq" "pcuic" "safechecker" "erasure" "template-pcuic" "plugins" "all" ];
+  packages = [ "utils" "common" "template-coq" "pcuic" "safechecker" "erasure" "template-pcuic" "safechecker-plugin" "erasure-plugin" "all" ];
 
   template-coq = metacoq_ "template-coq";
 
@@ -57,7 +57,7 @@ let
 
         configurePhase = optionalString (package == "all") pkgallMake + ''
           touch ${pkgpath}/metacoq-config
-        '' + optionalString (elem package ["safechecker" "erasure" "template-pcuic" "plugins"]) ''
+        '' + optionalString (elem package ["safechecker" "erasure" "template-pcuic" "safechecker-plugin" "erasure-plugin"]) ''
           echo  "-I ${template-coq}/lib/coq/${coq.coq-version}/user-contrib/MetaCoq/Template/" > ${pkgpath}/metacoq-config
         '' + optionalString (package == "single") ''
           ./configure.sh local

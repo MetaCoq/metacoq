@@ -117,6 +117,7 @@ Section Wcbv.
     NoDup (map fst mfix) ->
     nth_error mfix idx = Some (na', tLambda (nNamed na) fn) ->
     eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ')) fn res ->
+    eval Γ a av ->
     eval Γ (tApp f a) res
 
   | eval_fix mfix idx nms : 
@@ -209,11 +210,13 @@ Section Wcbv.
              (fix_env mfix Γ') Γ')) fn
              res e1
              → 
+             forall e2 : eval Γ a av,
+             P Γ a av e2 ->
              P Γ 
              (tApp f5 a) res
              (eval_fix_unfold Γ f5 mfix
              idx a na na' av fn res Γ' e
-             n e0 e1)) 
+             n e0 e1 e2)) 
       (f6 : ∀ (Γ : environment) (mfix : list (def term)) (idx : nat) (nms : list ident) (Hlen : (idx < #|mfix|)) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (n : NoDup nms) (f6 : Forall2 (λ (d : def term) (n0 : ident), nNamed n0 = dname d) mfix
                                                                                                               nms),
           P Γ (tFix mfix idx) (vRecClos (map2 (λ (n0 : ident) (d : def term), (n0, dbody d)) nms mfix) idx Γ) (eval_fix Γ mfix idx nms Hlen Hbodies n f6)) (f7 : 
@@ -250,11 +253,8 @@ Section Wcbv.
       | @eval_zeta _ na b0 b0' b1 res e0 e1 => f3 Γ na b0 b0' b1 res e0 (F Γ b0 b0' e0) e1 (F (add na b0' Γ) b1 res e1)
       | @eval_iota_block _ ind cdecl discr c args brs br res nms e0 e1 e2 e3 e4 f10 e5 n =>
           f4 Γ ind cdecl discr c args brs br res nms e0 (F Γ discr (vConstruct ind c args) e0) e1 e2 e3 e4 f10 e5 (F (add_multiple (List.rev nms) args Γ) br.2 res e5) n
-      | @eval_fix_unfold _ f10 mfix idx a na na' av fn res Γ' e0 n e1 e2 =>
-          f5 Γ f10 mfix idx a na na' av fn res Γ' e0
-            (F Γ f10 (vRecClos mfix idx Γ') e0) n e1 e2
-            (F (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ'))
-               fn res e2)
+      | @eval_fix_unfold _ f10 mfix idx a na na' av fn res Γ' e0 n e1 e2 e3 =>
+          f5 Γ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
       | @eval_fix _ mfix idx nms Hlen Hbodies n f10 => f6 Γ mfix idx nms Hlen Hbodies n f10
       | @eval_delta _ c decl body isdecl res e0 e1 => f7 Γ c decl body isdecl res e0 e1 (F [] body res e1)
       | @eval_construct_block _ ind c mdecl idecl cdecl args args' e0 l a => f8 Γ ind c mdecl idecl cdecl args args' e0 l a _
@@ -951,7 +951,7 @@ Proof.
         - eapply IHAll.
     }
     1:{ eapply NoDup_gen_many_fresh. }
-    2:{ todo "fix". (*  rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
+    2:{ rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
         generalize (map_length dname m).
         generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H1, nms, Hnms |- *.        
         + econstructor.
@@ -961,7 +961,7 @@ Proof.
           * specialize IHm with (nms := nAnon :: nms). cbn in IHm.
             todo "fix".
           * cbn. todo "fix".
-          * todo "fix". *)
+          * todo "fix".
     }
     todo "fix".
 Qed.
@@ -1063,7 +1063,19 @@ Proof.
       rewrite app_assoc. split.
       * eapply IH1. eauto. cbn. now rewrite <- app_assoc. eauto.
       * eapply H2.
-  - econstructor; eauto. todo "fix".
+  - econstructor; eauto.
+    eapply All2_Set_All2, All2_length in a.
+    clear - Hp IH a Hna. revert Γ1 mfix' a0 a IH Hp Hna.
+    induction mfix; intros.
+    + inversion a0; subst. cbn. eauto.
+    + cbn. depelim a0. cbn. invs IH. econstructor.
+      * cbn. cbn in a1.
+        specialize (H (nms ++ Γ1) Γ2).
+        rewrite app_length -a1 in H.
+        eapply All2_Set_All2 in a0 as Hlen.
+        eapply All2_length in Hlen. rewrite <- Hlen.
+        rewrite <- !app_assoc in *. eapply H; eauto.
+      * specialize (IHmfix (na :: Γ1) l'). todo "".
 Qed.
 
 Lemma represents_subst E s s' t v na : 
@@ -1213,7 +1225,7 @@ Fixpoint sunny Γ (t : term) : bool :=
       && sunny Γ c 
   | tProj p c => sunny Γ c
   | tFix mfix idx =>
-      forallb (fun x => match x.(dname) with nNamed _ => true | _ => false end) mfix
+      forallb (fun x => match x.(dname) with nNamed na => fresh na Γ | _ => false end) mfix
       && let names := flat_map (fun d => match d.(dname) with nNamed i => [i] | _ => [] end) mfix in
          dupfree names &&
            forallb (test_def (sunny (names ++ Γ))) mfix
@@ -1225,8 +1237,13 @@ Fixpoint sunny Γ (t : term) : bool :=
 Inductive wf : value -> Type :=
 | wf_vBox : wf vBox
 | wf_vClos na b E : ~ In na (map fst E) -> sunny (na :: map fst E) b -> All (fun v => wf (snd v)) E -> wf (vClos na b E)
-| wf_vConstruct ind c args : All wf args -> wf (vConstruct ind c args). (* 
-| wf_vRecClos mfix idx E :  *)
+| wf_vConstruct ind c args : All wf args -> wf (vConstruct ind c args)
+| wf_vRecClos vfix idx E : 
+  NoDup (map fst vfix) ->
+  (forall nm, In nm (map fst vfix) -> ~ In nm (map fst E)) ->
+  All (fun t => sunny (map fst vfix ++ map fst E) (snd t)) vfix ->
+  All (fun v => wf (snd v)) E ->
+  wf (vRecClos vfix idx E).
 
 Lemma declared_constant_Forall P Σ c decl : 
   Forall (P ∘ snd) Σ ->
@@ -1267,6 +1284,12 @@ Proof.
   - econstructor; eauto.
 Qed.
 
+Lemma fix_env_length vfix E : 
+  #| fix_env vfix E | = #| vfix |.
+Proof.
+  unfold fix_env. induction #|vfix|; cbn; eauto. f_equal. eauto.
+Qed.
+
 Lemma eval_wf Σ E s v : 
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ ->
   All (fun x => wf (snd x)) E ->
@@ -1296,7 +1319,60 @@ Proof.
                  end) br.1) as -> by eauto.
     clear - f4. induction f4; cbn; f_equal; destruct r, x; cbn; congruence. 
   - do 2 forward X; eauto. invs X.
-  - todo "fix".
+    eapply X0.
+    + econstructor; cbn; eauto.
+      eapply wf_add_multiple; eauto.
+      now rewrite map_length fix_env_length.
+      todo "wf fix_env, idx small?".      
+    + eapply All_nth_error in X2; eauto. cbn in X2. rtoProp.
+      rewrite map_fst_add_multiple. now rewrite map_length fix_env_length.
+      eauto.
+  - assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, EAst.dbody d0)) nms mfix) = nms) as EE. {
+    clear - f6. induction f6; cbn; f_equal; eauto. }
+    econstructor.
+    + solve_all. clear H0.
+      rewrite EE. clear EE.
+      induction f6; cbn.
+      * econstructor.
+      * invs n.
+        econstructor; eauto.
+    + rewrite EE. solve_all.
+      assert ((flat_map
+      (λ d : def term,
+         match dname d with
+         | nAnon => []
+         | nNamed i => [i]
+         end) mfix = nms)).
+      { clear - f6. induction f6; cbn; eauto.
+        destruct r as [[? []]].
+        destruct x; cbn in *; subst. cbn. f_equal.
+      }
+      rewrite -> H2 in *. clear H2 EE.
+      revert f6. generalize nms at 1.
+      clear - H H1.
+      intros nms_. induction 1.
+      * eauto.
+      * cbn in *. destruct H as [-> | ]; eauto.
+        solve_all. rewrite <- b in a.
+        unfold fresh in a. destruct in_dec; cbn in *; eauto.
+   + solve_all. rewrite EE.
+     assert ((flat_map
+      (λ d : def term,
+         match dname d with
+         | nAnon => []
+         | nNamed i => [i]
+         end) mfix = nms)).
+      { clear - f6. induction f6; cbn; eauto.
+        destruct r as [[? []]].
+        destruct x; cbn in *; subst. cbn. f_equal.
+      }
+      rewrite -> H in *. clear H EE.
+      revert f6. generalize nms at 1 3.
+      clear. intros nms_ f6.
+      induction f6; cbn; econstructor; eauto.
+      destruct r as [[? []]].
+      destruct x; cbn in *; subst; eauto.
+   + eauto.
   - eapply X; eauto. eapply declared_constant_Forall in isdecl.
     2: eapply Forall_impl. 2: eauto.
     2: { cbn. intros [] ?. cbn in *.  exact H. }
@@ -1357,39 +1433,13 @@ Proof.
   unfold constructor_isprop_pars_decl. erewrite lookup_in_env; eauto.
 Qed.  
 
+(* 
 Lemma represents_value_fix_env vfix mfix E : 
   All2 (λ (v : ident × term) (d : def term), map fst vfix;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
   All2 represents_value (fix_env vfix E) (fix_subst mfix).
 Proof.
-Admitted.
-
-Lemma fix_env_length vfix E : 
-  #| fix_env vfix E | = #| vfix |.
-Proof.
-  unfold fix_env. induction #|vfix|; cbn; eauto. f_equal. eauto.
 Qed.
-
-(* Lemma cunfold_fix_represents mfix idx narg fn vfix E : *)
-(*   cunfold_fix mfix idx = Some (narg, fn) ->  *)
-(*   All2 *)
-(*         (λ (v : ident × term) (d : def term), *)
-(*            map fst vfix ;;; E ⊩ v.2 ~ dbody d) vfix mfix -> *)
-(*   ∑ nm fnv, nth_error vfix idx = Some (nm, fnv) × ([] ;;; add_multiple (map fst vfix) (fix_env vfix E) E ⊩ fnv ~ fn). *)
-(* Proof. *)
-(*   intros Hunf H. unfold cunfold_fix in *. *)
-(*   destruct nth_error eqn:e; try congruence. *)
-(*   eapply All2_nth_error_Some_r in e as (? & ? & ?). 2: eapply H. *)
-(*   destruct x. *)
-(*   exists i, t0. split; eauto. cbn in *. invs Hunf. eapply represents_substl_rev. *)
-(*   5: rewrite app_nil_r; eauto. *)
-  
-(*   4: eapply represents_value_fix_env; eauto. *)
-
-(*   3: rewrite fix_env_length; len. *)
-
-(*   todo "dup". *)
-(*   todo "dup". *)
-(* Qed. *)
+ *)
 
 Lemma fresh_subset Γ1 Γ2 i : 
   fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
@@ -1419,6 +1469,7 @@ Proof.
       intros ? ?. rewrite -> in_app_iff in *.
       destruct H3; eauto.
   - rtoProp; repeat split; solve_all. destruct x; cbn in *.
+    { destruct dname; cbn in *; eauto. }
     eapply a; eauto.
     intros ? ?. rewrite -> in_app_iff in *.
     destruct H; eauto.
@@ -1605,19 +1656,70 @@ Proof.
       destruct b; invs Hlam.
 
       invs Hb2.
+      eapply eval_wf in IH2 as Hwf; eauto.
+      invs Hwf.
+      
+      rename H12 into dupfree_vfix, H16 into distinct_vfix_E0, X into sunny_in_vfix, X0 into wf_E0.
       
       edestruct s2 as (v'' & IH1'' & IH2'').
-      4:{ eexists. split. eauto.
-          eapply eval_fix_unfold; eauto. todo "nodup".
-      }
+      
       eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: map fst vfix); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
-      todo "fresh".
-      todo "nodup".
-      cbn. todo "length".
-      econstructor; eauto. todo "All2 represents_value".
+      8:{ eexists. split. eauto.
+          eapply eval_fix_unfold; eauto.
+          (* eapply eval_wf in IH2; eauto.
+          invs IH2.
+          Lemma NoDup_app_inv {A} (l1 l2 : list A) :
+            NoDup (l1 ++ l2) -> NoDup l1 /\ NoDup l2.
+          Proof.
+            induction l1; cbn; eauto using NoDup.
+            inversion 1; subst; firstorder. 
+            rewrite in_app_iff in H2. econstructor; eauto.
+          Qed. eapply NoDup_app_inv in H9 as []; eauto. *)
+      }
+      { intros ? [-> | ?].
+        - eapply All_nth_error in sunny_in_vfix; eauto.
+          cbn in sunny_in_vfix. rtoProp. unfold fresh in H2. 
+          destruct in_dec; cbn in *; eauto.
+          rewrite in_app_iff in n. eauto.
+        - eapply distinct_vfix_E0; eauto.
+         Lemma NoDup_In_1 {A} (l1 l2 : list A) a :
+             NoDup (l1 ++ l2) -> In a l1 -> ~ In a l2.
+           Proof.
+             induction l1; cbn.
+             - eauto.
+             - inversion 1; subst. intros [-> | ?]; eauto.
+               rewrite in_app_iff in H2; eauto.
+           Qed.
+      }
+      { 
+        econstructor.
+        - eapply All_nth_error in sunny_in_vfix; eauto.
+          cbn in *. rtoProp. unfold fresh in *.
+          destruct in_dec; cbn in *; eauto.
+          rewrite in_app_iff in n. eauto.
+        - eauto.
+      }
+      { cbn. now rewrite map_length fix_env_length. }
+      econstructor; eauto.
+      { clear - H13. unfold fix_env, fix_subst.
+        eapply All2_length in H13 as Hlen. rewrite Hlen. clear Hlen.
+        generalize #|mfix|.
+        induction n; econstructor; eauto.
+      }
       now rewrite app_nil_r.
-      todo "sunny".
-      todo "wf".
+      { cbn. rewrite map_fst_add_multiple.
+        now rewrite map_length fix_env_length.
+        eapply All_nth_error in sunny_in_vfix; eauto. cbn in sunny_in_vfix.
+        now rtoProp.
+      }
+      { econstructor.
+        - cbn. eapply eval_wf. 4: eauto. all:eauto.
+        - eapply wf_add_multiple.
+          + eauto.
+          + now rewrite map_length fix_env_length.
+          + eapply eval_wf in IH2; eauto.
+            todo "idx small?".
+      }
       (* besides the result, we believe that the exposition has several valuable contributions:
          - it discusses proofs techniques to get similar results
          - it gives an exposition how to extract from type theory to (cbv) programming languages in general, including the invariants

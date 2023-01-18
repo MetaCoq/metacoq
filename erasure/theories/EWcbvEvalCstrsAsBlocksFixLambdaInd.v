@@ -273,7 +273,7 @@ Lemma eval_preserve_mkApps_ind :
               → nth_error mfix idx = Some d 
               -> d.(dbody) = tLambda na fn
               -> eval Σ a av -> P a av
-              → eval Σ (csubst av 0 (substl (fix_subst mfix) fn)) res
+              → eval Σ (substl (av :: fix_subst mfix) fn) res
               → P (substl (av :: fix_subst mfix) fn) res
               → P' (tApp f5 a) res) →
 
@@ -480,21 +480,42 @@ Proof.
     assert (a' = av) as -> by todo "value".
     eapply X7; tea.
     1,3: now eapply and_assum; [ih|hp' P'Q].
-    1: reflexivity.
-    
-    enough (csubst av 0 (substl (fix_subst mfix) dbody) = csubst av 0 b).
-    { rewrite H3. eauto. }
-    todo "eq".
+    1: reflexivity.    
+
+    all: todo "...".
+(* 
+    clear IH H1.
+    rewrite substl_subst in ev3_1. admit.
+    cbn in ev3_1. invs ev3_1.
+    rewrite closed_subst in ev3_3.
+    admit. rewrite <- (subst_app_simpl _ _ 0) in ev3_3.
+    rewrite substl_subst; eauto. admit.
+
 
     eapply and_assum.
     ih.
+    clear IH H1.
+    rewrite substl_subst in ev3_1. admit.
+    cbn in ev3_1. invs ev3_1.
+    rewrite closed_subst in ev3_3.
+    admit. rewrite <- (subst_app_simpl _ _ 0) in ev3_3.
+    rewrite substl_subst; eauto. admit.
+    2:{ clear IH H1. depelim ev3_1.
+    admit.
+    
+    clear IH H1.
+    rewrite substl_subst in ev3_1. admit.
+    cbn in ev3_1. invs ev3_1.
+    rewrite closed_subst in ev3_3.
+    admit. admit. admit.
+    cbn.
     
     enough (substl (av :: fix_subst mfix) dbody = csubst av 0 b).
     { rewrite H3. eauto. }
     todo "eq".
     todo "Q".
     todo "ineq".
-    todo "".
+    todo "". *)
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.

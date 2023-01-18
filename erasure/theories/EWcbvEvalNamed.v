@@ -1065,17 +1065,19 @@ Proof.
       * eapply H2.
   - econstructor; eauto.
     eapply All2_Set_All2, All2_length in a.
-    clear - Hp IH a Hna. revert Γ1 mfix' a0 a IH Hp Hna.
+    assert (#|mfix'| = #|nms|) as ->.
+    eapply All2_Set_All2 in a0 as Hlen.
+    now eapply All2_length in Hlen.
+    clear a.
+    clear - Hp IH Hna. revert nms Γ1 mfix' a0 IH Hp Hna.
     induction mfix; intros.
     + inversion a0; subst. cbn. eauto.
     + cbn. depelim a0. cbn. invs IH. econstructor.
-      * cbn. cbn in a1.
+      * cbn.
         specialize (H (nms ++ Γ1) Γ2).
-        rewrite app_length -a1 in H.
-        eapply All2_Set_All2 in a0 as Hlen.
-        eapply All2_length in Hlen. rewrite <- Hlen.
+        rewrite app_length in H.        
         rewrite <- !app_assoc in *. eapply H; eauto.
-      * specialize (IHmfix (na :: Γ1) l'). todo "".
+      * eapply IHmfix; eauto.
 Qed.
 
 Lemma represents_subst E s s' t v na : 

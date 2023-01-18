@@ -149,13 +149,46 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
     qpres_qcofix :> Qcofix Q }.
 Set Warnings "+future-coercion-class-field".
 
+
+Lemma eval_beta_inv {wfl : WcbvFlags} Σ t a v : 
+  isLambda t -> 
+  forall ev : eval Σ (tApp t a) v,
+  match ev with
+  | eval_beta _ _ _ _ _ _ ev' _ _ => match ev' with
+                                     | eval_atom _ _ => True
+                                     | _ => False
+                                     end
+  | _ => False
+  end.
+Proof.
+  intros H; destruct t; invs H.
+  intros ev. depelim ev.
+  - depelim ev1.
+  - depelim ev1; eauto.
+  - depelim ev1;
+    eapply (f_equal head) in H; rewrite head_mkApps in H; cbn in H;
+    congruence.
+  - depelim ev1;
+    eapply (f_equal head) in H; rewrite head_mkApps in H; cbn in H;
+    congruence.
+  - depelim ev1;
+    eapply (f_equal head) in H; rewrite head_mkApps in H; cbn in H;
+    congruence.
+  - depelim ev1;
+    eapply (f_equal head) in H; rewrite head_mkApps in H; cbn in H;
+    congruence.
+  - depelim ev1. cbn in *. eauto.
+  - invs i.
+Qed.
+
 Lemma eval_preserve_mkApps_ind :
 ∀ (wfl : WcbvFlags), with_constructor_as_block = true -> forall  {efl : EEnvFlags} (Σ : global_declarations) 
   (P' : term → term → Type)
   (Q : nat -> term -> Type)
   {Qpres : Qpreserves Q Σ}
   (P := (fun x y => [× P' x y, Q 0 x & Q 0 y])%type)
-  (HPQ : ∀ t u, eval Σ t u -> Q 0 t -> P' t u -> Q 0 u),
+  (HPQ : ∀ t u, eval Σ t u -> Q 0 t -> P' t u -> Q 0 u)
+  (Qwf : forall n t, Q n t -> wellformed Σ n t),
   wf_glob Σ ->
   has_tApp ->
   (∀ (a t t' : term),
@@ -311,7 +344,8 @@ Lemma eval_preserve_mkApps_ind :
   (∀ t : term, atom Σ t → Q 0 t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> eval Σ t t0 → P' t t0.
 Proof.
-  intros wfl hcon. intros * Qpres P P'Q wfΣ hasapp.
+  Arguments substl : simpl never.
+  intros wfl hcon. intros * Qpres P P'Q Qwf wfΣ hasapp.
   assert (qfixs: Qfixs Q) by tc.
   assert (qcofixs: Qcofixs Q) by tc.
   intros.
@@ -424,13 +458,43 @@ Proof.
          - instantiating Q with wellformed will enforce that
       *)
     
+    pose proof e as e'. unfold cunfold_fix in e'.
+    destruct (nth_error mfix idx) eqn:E; invs e'.
+
+    eapply Qwf in qf as wfix.
+    cbn in wfix. rtoProp.
+    unfold wf_fix in H0. rtoProp.
+    solve_all.  
+
+    eapply All_nth_error in H2 as Hnth. 2: exact E.
+    destruct Hnth as [H1 Hnth].
+    destruct d; cbn in *; destruct dbody; invs H1.
+    
+    unshelve epose proof (eval_beta_inv _ _ _ _ _ ev3).
+    { rewrite substl_subst.
+      eapply closed_fix_subst; solve_all; destruct x; cbn; eapply wellformed_closed; eauto.
+      cbn; eauto.
+    }
+    depelim ev3; try now tauto.
+
+    assert (a' = av) as -> by todo "value".
     eapply X7; tea.
-    all: todo "". (* 
-    1, 3:(apply and_assum; [ih|hp' P'Q]). todo "lambda".
-    todo "because ev3 is beta".
-    eapply and_assum. ih. todo "ev3 is beta".
-    eapply P'Q. todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta". todo "ev3 is beta".
-    todo "end". *)
+    1,3: now eapply and_assum; [ih|hp' P'Q].
+    1: reflexivity.
+    
+    enough (csubst av 0 (substl (fix_subst mfix) dbody) = csubst av 0 b).
+    { rewrite H3. eauto. }
+    todo "eq".
+
+    eapply and_assum.
+    ih.
+    
+    enough (substl (av :: fix_subst mfix) dbody = csubst av 0 b).
+    { rewrite H3. eauto. }
+    todo "eq".
+    todo "Q".
+    todo "ineq".
+    todo "".
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.

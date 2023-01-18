@@ -94,21 +94,8 @@ theories/PCUICSafeLemmata.v
 theories/PCUICEtaExpand.v
 
 theories/PCUICProgram.v
-theories/TemplateMonadToPCUIC.v
-theories/TemplateToPCUIC.v
-theories/TemplateToPCUICCorrectness.v
-theories/TemplateToPCUICWcbvEval.v
-theories/TemplateToPCUICExpanded.v
-theories/PCUICToTemplate.v
-theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
-theories/PCUICTransform.v
-
-# The Template monad
-theories/Loader.v
-theories/PCUICTemplateMonad.v
-theories/PCUICTemplateMonad/Core.v
 
 theories/Bidirectional/BDTyping.v
 theories/Bidirectional/BDToPCUIC.v

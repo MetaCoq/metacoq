@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import Transform bytestring config utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Transform config BasicAst.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 (* From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl. *)
 From MetaCoq.Erasure Require EAstUtils EWellformed EEnvMap EWcbvEval.

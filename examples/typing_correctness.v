@@ -64,7 +64,9 @@ Proof.
 Defined.
 *)
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config Universes Loader.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Universes.
+From MetaCoq.Template Require Import Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.

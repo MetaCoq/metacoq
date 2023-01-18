@@ -1,11 +1,15 @@
 From Coq Require Import Recdef.
-From MetaCoq.Template Require Import TemplateMonad bytestring Loader.
+From MetaCoq.Utils Require Import bytestring.
+From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN.
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils config.
+From MetaCoq.Utils Require Import utils bytestring.
+From MetaCoq.Common Require Import config.
+
 Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
@@ -15,7 +19,8 @@ From MetaCoq.TestSuite Require hott_example.
 
 (* MetaCoq Quote Recursively Definition qequiv_adjointify := @isequiv_adjointify. *)
 
-From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion.
+From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl PCUICSafeConversion.
+From MetaCoq.SafeCheckerPlugin Require Import SafeTemplateChecker.
 
 #[local,program] Instance fake_abstract_guard_impl : PCUICWfEnvImpl.abstract_guard_impl :=
   {

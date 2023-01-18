@@ -1,7 +1,11 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
+From MetaCoq.Common Require Import
+     BasicAst.
 From MetaCoq.Template Require Import
-     BasicAst Ast Loader utils.
+     Ast Loader.
+From MetaCoq.Utils Require Import
+     utils.
 From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 

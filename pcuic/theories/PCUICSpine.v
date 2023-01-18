@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Universes BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus
      PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
@@ -3215,7 +3216,7 @@ Lemma spine_subst_vass `{cf: checker_flags} Σ Γ s t σ Δ na A :
   isType Σ (Γ ,,, Δ) A ->
   Σ ;;; Γ |- t : subst0 σ A ->
   spine_subst Σ Γ (s ++ [t]) (t :: σ) (Δ ,, vass na A).
-Proof. 
+Proof.
   move=> wfΣ sss Atyp ttyp; move: (sss)=> [????].
   change (?x ,, ?y) with (x ,,, [ y ]).
   apply: spine_subst_app=> //=.
@@ -3228,7 +3229,7 @@ Proof.
     * apply: (PCUICContextSubst.context_subst_ass [] [] [] na _ t); constructor.
     * econstructor; first constructor.
       by rewrite PCUICLiftSubst.subst_empty.
-Qed.  
+Qed.
 
 Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
   wf_local Σ Γ ->
@@ -3250,11 +3251,11 @@ Lemma spine_subst_vass' `{cf:checker_flags} Σ Γ s t σ Δ na A :
     isType Σ Γ (subst0 σ A) ->
     Σ ;;; Γ |- t : subst0 σ A) ->
   spine_subst Σ Γ (s ++ [t]) (t :: σ) (Δ ,, vass na A).
-Proof. 
+Proof.
   move=> wfΣ sss Atyp /(_ sss) ttyp; apply: spine_subst_vass=> //.
   2: apply: ttyp; apply: isType_subst; first (apply: inst_subslet; eassumption).
   all: exact (wf_local_nth_isType (n := 0) Atyp eq_refl).
-Qed.  
+Qed.
 
 Lemma mk_ctx_subst_spec' `{cf : checker_flags} {Σ Γ Δ args} (c : ctx_inst Σ Γ args (List.rev Δ)) :
   mk_ctx_subst Δ args = ctx_inst_sub c.
@@ -3267,7 +3268,7 @@ Qed.
 
 Section ClosedSpineSubst.
   Context `{cf: checker_flags}.
-  
+
   Lemma closed_subslet {Σ} {wfΣ : wf Σ.1} {Γ s Δ} : subslet Σ Γ s Δ -> forallb (closedn #|Γ|) s.
   Proof using cf.
     move=> z; depind z=> //=; rewrite IHz andb_true_r;
@@ -3281,8 +3282,8 @@ Section ClosedSpineSubst.
 
   Lemma closed_spine_subst_inst {Σ} {wfΣ : wf Σ.1} {Γ inst s Δ} :
     spine_subst Σ Γ inst s Δ -> forallb (closedn #|Γ|) inst.
-  Proof using cf. 
+  Proof using cf.
     move=> /spine_subst_smash /closed_spine_subst; by rewrite forallb_rev.
-  Qed.  
-End ClosedSpineSubst. 
+  Qed.
+End ClosedSpineSubst.
 

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import bytestring BasicAst uGraph TemplateMonad
-     TemplateMonad.Extractable.
+From MetaCoq.Utils Require Import bytestring.
+From MetaCoq.Common Require Import BasicAst uGraph.
+From MetaCoq.Template Require Import TemplateMonad TemplateMonad.Extractable.
 
 (* Base types *)
 
@@ -53,103 +54,103 @@ Register Coq.Numbers.BinNums.Zneg as metacoq.Z.neg.
 Register Coq.Numbers.BinNums.Z0 as metacoq.Z.zero.
 
 (* Ast *)
-Register MetaCoq.Template.BasicAst.relevance as metacoq.ast.relevance.
-Register MetaCoq.Template.BasicAst.Relevant as metacoq.ast.Relevant.
-Register MetaCoq.Template.BasicAst.Irrelevant as metacoq.ast.Irrelevant.
-Register MetaCoq.Template.BasicAst.mkBindAnn as metacoq.ast.mkBindAnn.
-Register MetaCoq.Template.BasicAst.aname as metacoq.ast.aname.
+Register MetaCoq.Common.BasicAst.relevance as metacoq.ast.relevance.
+Register MetaCoq.Common.BasicAst.Relevant as metacoq.ast.Relevant.
+Register MetaCoq.Common.BasicAst.Irrelevant as metacoq.ast.Irrelevant.
+Register MetaCoq.Common.BasicAst.mkBindAnn as metacoq.ast.mkBindAnn.
+Register MetaCoq.Common.BasicAst.aname as metacoq.ast.aname.
 
-Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
-Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
-Register MetaCoq.Template.Kernames.ident as metacoq.ast.ident.
-Register MetaCoq.Template.Kernames.kername as metacoq.ast.kername.
-Register MetaCoq.Template.Kernames.modpath as metacoq.ast.modpath.
-Register MetaCoq.Template.Kernames.MPfile as metacoq.ast.MPfile.
-Register MetaCoq.Template.Kernames.MPbound as metacoq.ast.MPbound.
-Register MetaCoq.Template.Kernames.MPdot as metacoq.ast.MPdot.
-Register MetaCoq.Template.Kernames.inductive as metacoq.ast.inductive.
-Register MetaCoq.Template.Kernames.mkInd as metacoq.ast.mkInd.
-Register MetaCoq.Template.Kernames.mkProjection as metacoq.ast.mkProjection.
-Register MetaCoq.Template.Kernames.global_reference as metacoq.ast.global_reference.
-Register MetaCoq.Template.Kernames.VarRef as metacoq.ast.VarRef.
-Register MetaCoq.Template.Kernames.ConstRef as metacoq.ast.ConstRef.
-Register MetaCoq.Template.Kernames.IndRef as metacoq.ast.IndRef.
-Register MetaCoq.Template.Kernames.ConstructRef as metacoq.ast.ConstructRef.
+Register MetaCoq.Common.BasicAst.nAnon as metacoq.ast.nAnon.
+Register MetaCoq.Common.BasicAst.nNamed as metacoq.ast.nNamed.
+Register MetaCoq.Common.Kernames.ident as metacoq.ast.ident.
+Register MetaCoq.Common.Kernames.kername as metacoq.ast.kername.
+Register MetaCoq.Common.Kernames.modpath as metacoq.ast.modpath.
+Register MetaCoq.Common.Kernames.MPfile as metacoq.ast.MPfile.
+Register MetaCoq.Common.Kernames.MPbound as metacoq.ast.MPbound.
+Register MetaCoq.Common.Kernames.MPdot as metacoq.ast.MPdot.
+Register MetaCoq.Common.Kernames.inductive as metacoq.ast.inductive.
+Register MetaCoq.Common.Kernames.mkInd as metacoq.ast.mkInd.
+Register MetaCoq.Common.Kernames.mkProjection as metacoq.ast.mkProjection.
+Register MetaCoq.Common.Kernames.global_reference as metacoq.ast.global_reference.
+Register MetaCoq.Common.Kernames.VarRef as metacoq.ast.VarRef.
+Register MetaCoq.Common.Kernames.ConstRef as metacoq.ast.ConstRef.
+Register MetaCoq.Common.Kernames.IndRef as metacoq.ast.IndRef.
+Register MetaCoq.Common.Kernames.ConstructRef as metacoq.ast.ConstructRef.
 
-Register MetaCoq.Template.BasicAst.name as metacoq.ast.name.
-Register MetaCoq.Template.BasicAst.def as metacoq.ast.def.
-Register MetaCoq.Template.BasicAst.mkdef as metacoq.ast.mkdef.
-Register MetaCoq.Template.BasicAst.cast_kind as metacoq.ast.cast_kind.
-Register MetaCoq.Template.BasicAst.case_info as metacoq.ast.case_info.
-Register MetaCoq.Template.BasicAst.mk_case_info as metacoq.ast.mk_case_info.
-Register MetaCoq.Template.BasicAst.VmCast as metacoq.ast.VmCast.
-Register MetaCoq.Template.BasicAst.NativeCast as metacoq.ast.NativeCast.
-Register MetaCoq.Template.BasicAst.Cast as metacoq.ast.Cast.
-Register MetaCoq.Template.BasicAst.recursivity_kind as metacoq.ast.recursivity_kind.
-Register MetaCoq.Template.BasicAst.Finite as metacoq.ast.Finite.
-Register MetaCoq.Template.BasicAst.CoFinite as metacoq.ast.CoFinite.
-Register MetaCoq.Template.BasicAst.BiFinite as metacoq.ast.BiFinite.
-Register MetaCoq.Template.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
+Register MetaCoq.Common.BasicAst.name as metacoq.ast.name.
+Register MetaCoq.Common.BasicAst.def as metacoq.ast.def.
+Register MetaCoq.Common.BasicAst.mkdef as metacoq.ast.mkdef.
+Register MetaCoq.Common.BasicAst.cast_kind as metacoq.ast.cast_kind.
+Register MetaCoq.Common.BasicAst.case_info as metacoq.ast.case_info.
+Register MetaCoq.Common.BasicAst.mk_case_info as metacoq.ast.mk_case_info.
+Register MetaCoq.Common.BasicAst.VmCast as metacoq.ast.VmCast.
+Register MetaCoq.Common.BasicAst.NativeCast as metacoq.ast.NativeCast.
+Register MetaCoq.Common.BasicAst.Cast as metacoq.ast.Cast.
+Register MetaCoq.Common.BasicAst.recursivity_kind as metacoq.ast.recursivity_kind.
+Register MetaCoq.Common.BasicAst.Finite as metacoq.ast.Finite.
+Register MetaCoq.Common.BasicAst.CoFinite as metacoq.ast.CoFinite.
+Register MetaCoq.Common.BasicAst.BiFinite as metacoq.ast.BiFinite.
+Register MetaCoq.Common.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
 
 (* Universes *)
 
-Register MetaCoq.Template.Universes.allowed_eliminations as metacoq.ast.allowed_eliminations.
-Register MetaCoq.Template.Universes.fresh_level as metacoq.ast.fresh_level.
-Register MetaCoq.Template.Universes.fresh_universe as metacoq.ast.fresh_universe.
-Register MetaCoq.Template.Universes.IntoSProp as metacoq.ast.IntoSProp.
-Register MetaCoq.Template.Universes.IntoPropSProp as metacoq.ast.IntoPropSProp.
-Register MetaCoq.Template.Universes.IntoSetPropSProp as metacoq.ast.IntoSetPropSProp.
-Register MetaCoq.Template.Universes.IntoAny as metacoq.ast.IntoAny.
+Register MetaCoq.Common.Universes.allowed_eliminations as metacoq.ast.allowed_eliminations.
+Register MetaCoq.Common.Universes.fresh_level as metacoq.ast.fresh_level.
+Register MetaCoq.Common.Universes.fresh_universe as metacoq.ast.fresh_universe.
+Register MetaCoq.Common.Universes.IntoSProp as metacoq.ast.IntoSProp.
+Register MetaCoq.Common.Universes.IntoPropSProp as metacoq.ast.IntoPropSProp.
+Register MetaCoq.Common.Universes.IntoSetPropSProp as metacoq.ast.IntoSetPropSProp.
+Register MetaCoq.Common.Universes.IntoAny as metacoq.ast.IntoAny.
 (* We convert from simple constraints to ones in Z *)
-Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
-Register MetaCoq.Template.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le0.
-Register MetaCoq.Template.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
-Register MetaCoq.Template.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
-Register MetaCoq.Template.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
-Register MetaCoq.Template.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
-Register MetaCoq.Template.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
-Register MetaCoq.Template.Universes.Level.t as metacoq.ast.level.t.
-Register MetaCoq.Template.Universes.Level.Level as metacoq.ast.level.Level.
-Register MetaCoq.Template.Universes.PropLevel.t as metacoq.ast.level.prop_level_type.
-Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
-Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
-Register MetaCoq.Template.Universes.Level.lzero as metacoq.ast.level.lzero.
-Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
-Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
+Register MetaCoq.Common.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
+Register MetaCoq.Common.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le0.
+Register MetaCoq.Common.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
+Register MetaCoq.Common.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
+Register MetaCoq.Common.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
+Register MetaCoq.Common.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
+Register MetaCoq.Common.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
+Register MetaCoq.Common.Universes.Level.t as metacoq.ast.level.t.
+Register MetaCoq.Common.Universes.Level.Level as metacoq.ast.level.Level.
+Register MetaCoq.Common.Universes.PropLevel.t as metacoq.ast.level.prop_level_type.
+Register MetaCoq.Common.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
+Register MetaCoq.Common.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
+Register MetaCoq.Common.Universes.Level.lzero as metacoq.ast.level.lzero.
+Register MetaCoq.Common.Universes.Level.Var as metacoq.ast.level.Var.
+Register MetaCoq.Common.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
-Register MetaCoq.Template.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
-Register MetaCoq.Template.Universes.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
-Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
-Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
-Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.universe.lnpe.
+Register MetaCoq.Common.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
+Register MetaCoq.Common.Universes.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
+Register MetaCoq.Common.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
+Register MetaCoq.Common.Universes.Universe.lProp as metacoq.ast.universe.lprop.
+Register MetaCoq.Common.Universes.Universe.lType as metacoq.ast.universe.lnpe.
 
 
-Register MetaCoq.Template.Universes.Variance.t as metacoq.ast.variance.t.
-Register MetaCoq.Template.Universes.Variance.Irrelevant as metacoq.ast.variance.Irrelevant.
-Register MetaCoq.Template.Universes.Variance.Covariant as metacoq.ast.variance.Covariant.
-Register MetaCoq.Template.Universes.Variance.Invariant as metacoq.ast.variance.Invariant.
+Register MetaCoq.Common.Universes.Variance.t as metacoq.ast.variance.t.
+Register MetaCoq.Common.Universes.Variance.Irrelevant as metacoq.ast.variance.Irrelevant.
+Register MetaCoq.Common.Universes.Variance.Covariant as metacoq.ast.variance.Covariant.
+Register MetaCoq.Common.Universes.Variance.Invariant as metacoq.ast.variance.Invariant.
 
-Register MetaCoq.Template.Universes.universes_decl as metacoq.ast.universes_decl.
-Register MetaCoq.Template.Universes.Monomorphic_ctx as metacoq.ast.Monomorphic_ctx.
-Register MetaCoq.Template.Universes.Polymorphic_ctx as metacoq.ast.Polymorphic_ctx.
+Register MetaCoq.Common.Universes.universes_decl as metacoq.ast.universes_decl.
+Register MetaCoq.Common.Universes.Monomorphic_ctx as metacoq.ast.Monomorphic_ctx.
+Register MetaCoq.Common.Universes.Polymorphic_ctx as metacoq.ast.Polymorphic_ctx.
 
-Register MetaCoq.Template.Universes.ConstraintSet.t_ as metacoq.ast.ConstraintSet.t_.
-Register MetaCoq.Template.Universes.ConstraintSet.empty as metacoq.ast.ConstraintSet.empty.
-Register MetaCoq.Template.Universes.ConstraintSet.add as metacoq.ast.ConstraintSet.add.
-Register MetaCoq.Template.Universes.ConstraintSet.elements as metacoq.ast.ConstraintSet.elements.
+Register MetaCoq.Common.Universes.ConstraintSet.t_ as metacoq.ast.ConstraintSet.t_.
+Register MetaCoq.Common.Universes.ConstraintSet.empty as metacoq.ast.ConstraintSet.empty.
+Register MetaCoq.Common.Universes.ConstraintSet.add as metacoq.ast.ConstraintSet.add.
+Register MetaCoq.Common.Universes.ConstraintSet.elements as metacoq.ast.ConstraintSet.elements.
 
-Register MetaCoq.Template.Universes.UContext.t as metacoq.ast.UContext.t.
-Register MetaCoq.Template.Universes.UContext.make as metacoq.ast.UContext.make.
-Register MetaCoq.Template.Universes.AUContext.t as metacoq.ast.AUContext.t.
-Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make.
+Register MetaCoq.Common.Universes.UContext.t as metacoq.ast.UContext.t.
+Register MetaCoq.Common.Universes.UContext.make as metacoq.ast.UContext.make.
+Register MetaCoq.Common.Universes.AUContext.t as metacoq.ast.AUContext.t.
+Register MetaCoq.Common.Universes.AUContext.make as metacoq.ast.AUContext.make.
 
-Register MetaCoq.Template.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
-Register MetaCoq.Template.Universes.LevelSet.elements as metacoq.ast.LevelSet.elements.
-Register MetaCoq.Template.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
+Register MetaCoq.Common.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
+Register MetaCoq.Common.Universes.LevelSet.elements as metacoq.ast.LevelSet.elements.
+Register MetaCoq.Common.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
 
-Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.
+Register MetaCoq.Common.uGraph.init_graph as metacoq.ast.graph.init.
 (* FIXME wrong! *)
-Register MetaCoq.Template.common.uGraph.gc_of_constraints as metacoq.ast.graph.add_global_constraints.
+Register MetaCoq.Common.uGraph.gc_of_constraints as metacoq.ast.graph.add_global_constraints.
 
 (* Terms *)
 
@@ -184,8 +185,8 @@ Register MetaCoq.Template.Ast.Build_parameter_entry as metacoq.ast.Build_paramet
 Register MetaCoq.Template.Ast.definition_entry as metacoq.ast.definition_entry.
 Register MetaCoq.Template.Ast.Build_definition_entry as metacoq.ast.Build_definition_entry.
 
-Register MetaCoq.Template.Universes.Monomorphic_entry as metacoq.ast.Monomorphic_entry.
-Register MetaCoq.Template.Universes.Polymorphic_entry as metacoq.ast.Polymorphic_entry.
+Register MetaCoq.Common.Universes.Monomorphic_entry as metacoq.ast.Monomorphic_entry.
+Register MetaCoq.Common.Universes.Polymorphic_entry as metacoq.ast.Polymorphic_entry.
 
 Register MetaCoq.Template.Ast.constant_entry as metacoq.ast.constant_entry.
 Register MetaCoq.Template.Ast.ParameterEntry as metacoq.ast.ParameterEntry.
@@ -196,8 +197,8 @@ Register MetaCoq.Template.Ast.Build_one_inductive_entry as metacoq.ast.Build_one
 Register MetaCoq.Template.Ast.mutual_inductive_entry as metacoq.ast.mutual_inductive_entry.
 Register MetaCoq.Template.Ast.Build_mutual_inductive_entry as metacoq.ast.Build_mutual_inductive_entry.
 
-Register MetaCoq.Template.BasicAst.context_decl as metacoq.ast.context_decl.
-Register MetaCoq.Template.BasicAst.mkdecl as metacoq.ast.mkdecl.
+Register MetaCoq.Common.BasicAst.context_decl as metacoq.ast.context_decl.
+Register MetaCoq.Common.BasicAst.mkdecl as metacoq.ast.mkdecl.
 Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
 
 Register MetaCoq.Template.Ast.Env.constructor_body as metacoq.ast.constructor_body.
@@ -214,7 +215,7 @@ Register MetaCoq.Template.Ast.Env.Build_constant_body as metacoq.ast.Build_const
 Register MetaCoq.Template.Ast.Env.global_decl as metacoq.ast.global_decl.
 Register MetaCoq.Template.Ast.Env.ConstantDecl as metacoq.ast.ConstantDecl.
 Register MetaCoq.Template.Ast.Env.InductiveDecl as metacoq.ast.InductiveDecl.
-Register MetaCoq.Template.Environment.Retroknowledge.mk_retroknowledge as metacoq.ast.mk_retroknowledge.
+Register MetaCoq.Common.Environment.Retroknowledge.mk_retroknowledge as metacoq.ast.mk_retroknowledge.
 Register MetaCoq.Template.Ast.Env.mk_global_env as metacoq.ast.Build_global_env.
 Register MetaCoq.Template.Ast.Env.global_env as metacoq.ast.global_env.
 Register MetaCoq.Template.Ast.Env.global_env_ext as metacoq.ast.global_env_ext.

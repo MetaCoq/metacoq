@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils Reflect Environment EnvironmentTyping Ast AstUtils Induction Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Reflect Environment EnvironmentTyping.
+From MetaCoq.Template Require Import Ast AstUtils Induction.
 
 Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.

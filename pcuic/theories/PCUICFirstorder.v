@@ -1,5 +1,6 @@
 From Coq Require Import Program ssreflect ssrbool List.
-From MetaCoq.Template Require Import config utils Kernames MCRelations.
+From MetaCoq.Utils Require Import utils MCRelations.
+From MetaCoq.Common Require Import config Kernames.
 
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
@@ -220,7 +221,7 @@ Proof using Type.
          ++ eapply type_ws_cumul_pb. 3: eapply PCUICContextConversion.ws_cumul_pb_eq_le; symmetry. all:eauto.
             eapply isType_tProd in i0. eapply i0.
          ++ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. autorewrite with subst.
-            cbn. eapply X. len. lia.
+            cbn. eapply X. len.
             eapply typing_spine_strengthen. eauto.
             2:{ replace (it_mkProd_or_LetIn (subst_context [hd] 0 Γ0)
             (mkApps (tInd i u) (map (subst [hd] (#|Γ0| + 0)) pars))) with ((PCUICAst.subst10 hd (it_mkProd_or_LetIn Γ0 (mkApps (tInd i u) pars)))).

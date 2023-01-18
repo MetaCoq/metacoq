@@ -1,4 +1,6 @@
-From MetaCoq.Template Require config utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Import All.
 From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICReduction PCUICCumulativity PCUICTyping PCUICSafeLemmata.
 
@@ -58,7 +60,8 @@ Check PCUICSR.subject_reduction.
 
 (** Verified conversion and type-checking *)
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping.
+From MetaCoq.SafeCheckerPlugin Require Import Loader.
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 
@@ -92,7 +95,7 @@ Qed. *)
 (* MetaCoq SafeCheck (fun x : nat => x + 1). *)
 
 (** Erasure *)
-From MetaCoq.Erasure Require Import Erasure Loader.
+From MetaCoq.ErasurePlugin Require Import Erasure Loader.
 
 (** Running erasure live in Coq *)
 Definition test (p : Ast.Env.program) : string :=

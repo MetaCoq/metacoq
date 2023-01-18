@@ -6,7 +6,9 @@
 *)
 
 From Coq Require Ascii Extraction ZArith NArith.
-From MetaCoq.Template Require Import utils Ast Reflect Induction.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Reflect config.
+From MetaCoq.Template Require Import Ast Induction.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63.
 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
@@ -20,7 +22,7 @@ Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
-From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
+From MetaCoq.Template Require Import TemplateMonad.Extractable Induction
      LiftSubst UnivSubst Pretty TemplateProgram.
 Import Init.Nat.
 

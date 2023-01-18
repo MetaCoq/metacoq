@@ -1,7 +1,9 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Primitive Ast Environment monad_utils.
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Import BasicAst Primitive Environment.
+From MetaCoq.Template Require Import Ast.
 Require Import ssreflect ssrbool.
 Require Import ZArith.
 

@@ -1,11 +1,12 @@
 (** * Definition of programs in template-coq, well-typed terms and provided transformations **)
 
+From MetaCoq.Utils Require Import utils.
+
+From MetaCoq.Common Require Export config Transform.
+
 From MetaCoq.Template Require Import
-        utils
-        Transform
         Ast           (* The term AST *)
         Typing        (* Typing judgment *)
-        config        (* Typing configuration *)
         WcbvEval
         TemplateEnvMap.
 

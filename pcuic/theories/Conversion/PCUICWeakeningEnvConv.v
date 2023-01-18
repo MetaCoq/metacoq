@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICWeakeningEnv PCUICEquality PCUICReduction PCUICCumulativity PCUICCumulativitySpec
   (* PCUICContextSubst *) (* PCUICUnivSubst *) (* PCUICCases *) (* PCUICTyping *)
@@ -59,7 +60,7 @@ Lemma global_variance_sigma_mon {Σ Σ' gr napp v} :
   global_variance Σ' gr napp = Some v.
 Proof using P Pcmp cf.
   intros wfΣ' ext.
-  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen 
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen
     /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - destruct (lookup_env Σ ind) eqn:look => //.

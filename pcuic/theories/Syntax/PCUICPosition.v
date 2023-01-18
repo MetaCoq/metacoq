@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst PCUICCases.
 

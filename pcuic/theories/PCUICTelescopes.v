@@ -1,7 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes utils BasicAst.
+From MetaCoq.Common Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus
      PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp

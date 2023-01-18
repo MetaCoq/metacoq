@@ -7,18 +7,18 @@
 
 
 From Coq Require Import List PeanoNat Bool Lia.
-From MetaCoq.Template Require Export
-     utils (* Utility functions *)
-     monad_utils   (* Monadic notations *)
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Export
      uGraph        (* The graph of universes *)
      BasicAst      (* The basic AST structures *)
+     config.        (* Typing configuration *)
+From MetaCoq.Template Require Export
      Ast           (* The term AST *)
      AstUtils      (* Utilities on the AST *)
      Induction     (* Induction *)
      LiftSubst     (* Lifting and substitution for terms *)
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *)
-     config        (* Typing configuration *)
      TemplateEnvMap (* Efficient lookup table *)
      TemplateProgram.
 

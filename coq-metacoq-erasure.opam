@@ -27,8 +27,6 @@ install: [
   [make "-C" "erasure" "install"]
 ]
 depends: [
-  "coq-metacoq-template" {= version}
-  "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
 ]
 synopsis: "Implementation and verification of an erasure procedure for Coq"

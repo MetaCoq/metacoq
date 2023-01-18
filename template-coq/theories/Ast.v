@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Environment EnvironmentTyping.
-From MetaCoq.Template Require Export Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Export Environment EnvironmentTyping Universes BasicAst.
 (* For primitive integers and floats  *)
 From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import ssreflect Morphisms.
@@ -33,8 +33,6 @@ From Equations Require Import Equations.
 
       The global environment [global_env_ext]: a list of [global_decl] and
     a universe graph [constraints].  *)
-
-From MetaCoq.Template Require Export BasicAst.
 
 (* Defined here since BasicAst does not have access to universe instances.
   Parameterized by term types as they are not yet defined. *)

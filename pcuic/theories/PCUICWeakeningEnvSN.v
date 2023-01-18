@@ -1,4 +1,5 @@
 From Coq Require Import ssreflect Wellfounded.Inclusion.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSN PCUICTyping PCUICSafeLemmata PCUICWeakeningEnvTyp.
 Import PCUICEnvironment.
 

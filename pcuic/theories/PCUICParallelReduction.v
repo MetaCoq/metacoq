@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import RelationClasses CRelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICTactics PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction

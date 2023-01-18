@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 
 #[global]

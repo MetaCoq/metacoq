@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICEquality PCUICTyping PCUICReduction PCUICSigmaCalculus
      PCUICNamelessDef PCUICRenameDef PCUICInstDef.
@@ -48,7 +49,7 @@ Class GuardCheckerCorrect :=
     guard b Σ Δ mfix ->
     guard b Σ Γ (inst_mfix mfix σ) ;
 
-  guard_rename b P Σ Γ Δ mfix f :
+  guard_rename `{checker_flags} b P Σ Γ Δ mfix f :
     urenaming P Γ Δ f ->
     guard b Σ Γ mfix ->
     guard b Σ Δ (rename_mfix mfix f) ;
@@ -64,7 +65,7 @@ Definition fix_guard_subst_instance `{checker_flags} := guard_subst_instance Fix
 Definition fix_guard_extends := guard_extends Fix.
 Definition fix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity Fix.
 Definition fix_guard_inst `{checker_flags} := guard_inst Fix.
-Definition fix_guard_rename := guard_rename Fix.
+Definition fix_guard_rename `{checker_flags} := guard_rename Fix.
 
 Definition cofix_guard_red1 := guard_red1 CoFix.
 Definition cofix_guard_eq_term := guard_eq_term CoFix.
@@ -72,4 +73,4 @@ Definition cofix_guard_subst_instance `{checker_flags} := guard_subst_instance C
 Definition cofix_guard_extends := guard_extends CoFix.
 Definition cofix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity CoFix.
 Definition cofix_guard_inst `{checker_flags} := guard_inst CoFix.
-Definition cofix_guard_rename := guard_rename CoFix.
+Definition cofix_guard_rename `{checker_flags} := guard_rename CoFix.

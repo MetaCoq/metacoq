@@ -1,7 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
-From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Reflect Environment Induction.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst Reflect Environment.
+From MetaCoq.Template Require Import AstUtils Ast Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
 

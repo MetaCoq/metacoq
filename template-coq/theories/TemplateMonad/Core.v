@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Common.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
 Local Unset Universe Minimization ToSet.

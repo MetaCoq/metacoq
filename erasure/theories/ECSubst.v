@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
 
 Require Import ssreflect ssrbool.

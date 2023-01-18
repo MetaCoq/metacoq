@@ -1,5 +1,34 @@
 all: coq template-coq plugin
 
+_PluginProject: _PluginProject.in metacoq-config
+	cat metacoq-config > _PluginProject
+	cat _PluginProject.in >> _PluginProject
+
+_CoqProject: _CoqProject.in metacoq-config
+	cat metacoq-config > _CoqProject
+	cat _CoqProject.in >> _CoqProject
+
+_TemplateCoqProject: _TemplateCoqProject.in metacoq-config
+	cat metacoq-config > _TemplateCoqProject
+	cat _TemplateCoqProject.in >> _TemplateCoqProject
+
+
+Makefile.coq: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.coq
+
+Makefile.plugin: _PluginProject
+	coq_makefile -f _PluginProject -o Makefile.plugin
+# Avoid conflicting dependency file creation for the template plugin
+	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
+
+Makefile.template: _TemplateCoqProject
+	coq_makefile -f _TemplateCoqProject -o Makefile.template
+# Avoid conflicting dependency file creation for the template plugin
+	sed -e s/coqdeps/coqdeps.template/g Makefile.template > Makefile.template.tmp && mv -f Makefile.template.tmp Makefile.template
+
+.merlin: Makefile.plugin
+	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
+
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
@@ -40,22 +69,6 @@ mrproper:
 	rm -f Makefile.coq
 	rm -f Makefile.plugin
 	rm -f Makefile.template
-
-Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
-
-Makefile.plugin: _PluginProject
-	coq_makefile -f _PluginProject -o Makefile.plugin
-# Avoid conflicting dependency file creation for the template plugin
-	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
-
-Makefile.template: _TemplateCoqProject
-	coq_makefile -f _TemplateCoqProject -o Makefile.template
-# Avoid conflicting dependency file creation for the template plugin
-	sed -e s/coqdeps/coqdeps.template/g Makefile.template > Makefile.template.tmp && mv -f Makefile.template.tmp Makefile.template
-
-.merlin: Makefile.plugin
-	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

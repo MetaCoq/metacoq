@@ -1,4 +1,4 @@
-From MetaCoq.Erasure Require Import Loader.
+From MetaCoq.ErasurePlugin Require Import Loader.
 From MetaCoq.Template Require Import Loader.
 Set MetaCoq Timing.
 Local Open Scope string_scope.

@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import bytestring Loader All.
+From MetaCoq.Utils Require Import bytestring.
+From MetaCoq.Template Require Import Loader All.
 Import MCMonadNotation.
 Module Foo.
     Inductive bar : Set := .

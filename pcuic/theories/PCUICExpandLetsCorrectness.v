@@ -5,7 +5,8 @@ Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Set Warnings "-notation-overridden".
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
@@ -1206,7 +1207,7 @@ Lemma trans_ind_predicate_context ci mdecl idecl :
       (trans_one_ind_body mdecl (inductive_ind ci) idecl)).
 Proof.
   move=> clpars clindices.
-  rewrite /ind_predicate_context /Ast.ind_predicate_context /=.
+  rewrite /ind_predicate_context /=.
   rewrite /trans_decl /=. f_equal.
   f_equal. rewrite trans_mkApps /=. f_equal.
   rewrite trans_to_extended_list trans_local_app /to_extended_list.

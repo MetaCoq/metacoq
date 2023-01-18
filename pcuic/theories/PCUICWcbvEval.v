@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
      PCUICClosedTyp. (* Due to reliance on wf Σ instead of closed_env Σ *)
@@ -452,7 +453,7 @@ Section Wcbv.
     - apply value_mkApps_inv in IHev1; [|easy].
       destruct IHev1 as [(-> & _)|[]].
       + eapply value_app; cbn; auto. econstructor; tea.
-      + eapply value_app; cbn; auto. econstructor; tea. cbn; len. lia.
+      + eapply value_app; cbn; auto. econstructor; tea. cbn; len.
         eapply All_app_inv; auto.
 
     - destruct (mkApps_elim f' [a']).

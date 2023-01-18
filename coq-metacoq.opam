@@ -20,10 +20,8 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 ]
 license: "MIT"
 depends: [
-  "coq-metacoq-template" {= version}
-  "coq-metacoq-pcuic" {= version}
-  "coq-metacoq-safechecker" {= version}
-  "coq-metacoq-erasure" {= version}
+  "coq-metacoq-safechecker-plugin" {= version}
+  "coq-metacoq-erasure-plugin" {= version}
   "coq-metacoq-translations" {= version}
 ]
 build: [

@@ -7,7 +7,8 @@ From MetaCoq.Erasure Require Import EAst EAstUtils ECSubst EInduction
   ELiftSubst EGlobalEnv EWcbvEval Extract ESubstitution.
 From MetaCoq.Erasure Require EExtends.
 Set Warnings "+notation-overridden".
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 
 Derive NoConfusion for term.
 Derive Signature for erases_deps.

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICTyping PCUICInversion
@@ -838,7 +839,7 @@ Proof.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
   - cbn -[lookup_constructor]. intros. destruct cstr_as_blocks; rtoProp; repeat split; eauto. 2:solve_all.
-    2: now destruct args; inv H0. len. eauto.
+    2: now destruct args; inv H0. len.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     destruct l as [|[br n'] [|l']] eqn:eql; simpl.

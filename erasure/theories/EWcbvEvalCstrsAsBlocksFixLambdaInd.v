@@ -241,7 +241,7 @@ Lemma eval_preserve_mkApps_ind :
               -> d.(dbody) = tLambda na fn
               -> eval Σ a av -> P a av
               → eval Σ (csubst av 0 (substl (fix_subst mfix) fn)) res
-              → P (csubst av 0 (substl (fix_subst mfix) fn)) res
+              → P (substl (av :: fix_subst mfix) fn) res
               → P' (tApp f5 a) res) →
 
               (∀ (ip : inductive × nat) (mfix : mfixpoint term) 

@@ -1137,12 +1137,12 @@ Lemma represents_substl_rev E s s' ts nms vs Γ :
   NoDup nms ->
   #|nms| = #|vs| ->
   All2 represents_value vs ts ->
-  (Γ ++ nms) ;;; E ⊩ s ~ s' ->
+  (nms ++ Γ) ;;; E ⊩ s ~ s' ->
   Γ ;;; add_multiple nms vs E ⊩ s ~ substl ts s'.
 Proof.
   revert ts vs s s' E Γ.
   induction nms using rev_ind; intros ts vs s s' E Γ Hna Hdup Hlen Hall Hrep.
-  - destruct vs; cbn in *; try lia. invs Hall. rewrite -> app_nil_r in *. eauto.
+  - destruct vs; cbn in *; try lia. invs Hall. eauto.
   - destruct vs using rev_ind; repeat rewrite app_length in Hlen; cbn in *; try lia.
     clear IHvs.
     eapply All2_app_inv_l in Hall as (vs' & ? & -> & H1 & H2). invs H2. invs X.
@@ -1150,19 +1150,18 @@ Proof.
     rewrite add_multiple_app. 1: lia. cbn.
     rewrite <- substl_csubst_comm.
     + eapply IHnms.
-      * intros ? ? ?. eapply Hna; eauto. now rewrite in_app_iff. cbn in H0.
-        destruct H0; eauto. subst. admit. 
+      * intros ? ? ?. cbn in H0. destruct H0 as [-> | H0].
+        -- eapply NoDup_remove_2 in Hdup. now rewrite app_nil_r in Hdup.
+        -- eapply Hna; eauto. now rewrite in_app_iff.
       * rewrite <- app_nil_r. eapply NoDup_remove_1; eauto.
       * lia.
       * eauto.
       * rewrite <- plus_n_O. assert (#|vs'| = #|nms|) as ->. { eapply All2_length in H1. lia. }
-        (* eapply IHnms. *)
-        (* eapply represents_subst'; eauto. *)
-        (* 2: now rewrite <- app_assoc in Hrep. eapply Hna, in_app_iff; cbn; eauto. *)
-        todo "mh".
-    + admit.
-    + admit.
-Admitted.
+        eapply represents_subst'; eauto. 
+        2: now rewrite <- app_assoc in Hrep. eapply Hna, in_app_iff; cbn; eauto.
+    + solve_all. now eapply unfolds_bound.
+    + now eapply unfolds_bound.
+Qed.
 
 Definition extraction_wcbv_flags :=
   {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := true |}.
@@ -1460,27 +1459,12 @@ Proof.
       eapply incl_appr, incl_refl.
 Qed.
 
-Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> E} {l l' l'' l'''} : 
-All2 R l l''' ->
-All2 Q l' l'' ->
-#|l| = #|l'| ->
-(forall x y z w, R x w -> Q y z -> P (f x y) z) ->
-All2 P (MCList.map2 f l l') l''.
-Proof.
-intros hb ha hlen hPQ.
-induction ha in l, l''', hlen, hb |- *; simpl; try constructor; auto.
-- destruct l => //. simpl. constructor.
-- destruct l => //.
-  noconf hlen. depelim hb.
-  specialize (IHha _ _ hb H).
-  simpl. constructor; auto. eapply hPQ; eauto.
-Qed.
-
+(*
 Lemma sunny_eq t E : 
   sunny E t ->
   annotate E t = t.
 Proof.
-Admitted.
+Admitted. *)
 
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
@@ -1500,7 +1484,7 @@ Proof.
   revert u E Hrep Hsunny HE.
   pattern s, t.
   revert Heval.
-  eapply eval_preserve_mkApps_ind with (Σ := Σ); cbn in *; rtoProp.
+  eapply eval_preserve_mkApps_ind with (Σ := Σ); cbn -[substl] in *; rtoProp.
   1: reflexivity.
   1: eapply Qpreserves_wellformed with (efl := extraction_env_flags).
   1: eauto.
@@ -1609,29 +1593,29 @@ Proof.
   - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *) 
   - invs Hrep.
     + invs H5. invs H6. 
-    + cbn in *. rtoProp.
+    + cbn -[substl] in *. rtoProp.
       edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
       invs IH1.
       edestruct s1 as (v' & IH1' & IH2'); eauto.
      
-      destruct d; cbn in *; subst.
+      destruct d; cbn -[substl] in *; subst.
       eapply All2_Set_All2 in H13.
       eapply All2_nth_error_Some_r in H13 as Hnth; eauto.
-      destruct Hnth as ([na' b] & Hb1 & [Hlam Hb2]); cbn in *.
+      destruct Hnth as ([na' b] & Hb1 & [Hlam Hb2]); cbn -[substl] in *.
       destruct b; invs Hlam.
 
-      invs Hb2. 
+      invs Hb2.
+      
       edestruct s2 as (v'' & IH1'' & IH2'').
-      eapply represents_subst_ctx; eauto.
-      5:{ eexists. split. eauto.
+      4:{ eexists. split. eauto.
           eapply eval_fix_unfold; eauto. todo "nodup".
       }
-      todo "fresh".
-      eapply represents_substl_rev; eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
+      eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: map fst vfix); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
       todo "fresh".
       todo "nodup".
-      todo "length".
-      todo "All2 represents_value".
+      cbn. todo "length".
+      econstructor; eauto. todo "All2 represents_value".
+      now rewrite app_nil_r.
       todo "sunny".
       todo "wf".
       (* besides the result, we believe that the exposition has several valuable contributions:

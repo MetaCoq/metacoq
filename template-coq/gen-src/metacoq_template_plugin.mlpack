@@ -109,3 +109,11 @@ TermEquality
 Typing0
 TemplateProgram
 
+Wf
+NoConfusion
+MCUint63
+Init
+FloatClass
+DepElim
+CoreTactics
+CarryType

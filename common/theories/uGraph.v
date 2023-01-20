@@ -106,16 +106,8 @@ Module VariableLevel.
     destruct (compare_spec y z); auto; try congruence.
     destruct (compare_spec x z); auto; try congruence.
     subst. exfalso. eapply irreflexivity. etransitivity; [exact H|exact H0].
-
     exfalso. eapply irreflexivity. etransitivity; [exact H|].
-    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
-    elimtype False. eapply irreflexivity. etransitivity; [exact H|].
-    eapply transitivity; [exact H0|exact H1].
-    destruct (compare_spec y z); auto; try congruence.
-    destruct (compare_spec x z); auto; try congruence.
-    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
-    elimtype False. eapply irreflexivity. etransitivity; [exact H|].
-    eapply transitivity; [exact H1|exact H0].
+    etransitivity; [exact H1|exact H0].
   Qed.
 
   Definition to_noprop (l : t) : Level.t :=

@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 Set Warnings "-notation-overridden".
 
-From MetaCoq.Template Require Import utils All Checker.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
 
@@ -158,7 +159,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
                [{| ind_npars := mind.(ind_npars);
                    ind_params := _;
                    ind_bodies := snd LI;
-                   ind_universes := mind.(ind_universes); 
+                   ind_universes := mind.(ind_universes);
                    ind_variance := mind.(ind_variance)|}])). (* FIXME always ok? *)
   intros i ind.
   simple refine (let ind_type' := _ in
@@ -241,22 +242,22 @@ Unset Universe Checking.
 MetaCoq Run (TC <- TranslateRec emptyTC NotFunext ;;
                      tmDefinition "TC" TC ;;
                      Implement TC "notFunext" NotFunext).
-Next Obligation. 
+Next Obligation.
   unfold NotFunextᵗ; cbn in *.
-  tIntro H. 
-  tSpecialize H unit. tSpecialize H unit. 
-  tSpecialize H (fun x => x; true). tSpecialize H (fun x => x; false). 
+  tIntro H.
+  tSpecialize H unit. tSpecialize H unit.
+  tSpecialize H (fun x => x; true). tSpecialize H (fun x => x; false).
   tSpecialize H (fun x => eq_reflᵗ _ _; true).
-  inversion H. 
+  inversion H.
 Defined.
 
 MetaCoq Run (Implement TC "notη" ((forall (A B : Set) (f : A -> B), f = fun x => f x) -> False)).
 
 Next Obligation.
-  tIntro H. 
-  tSpecialize H unit. tSpecialize H unit. 
+  tIntro H.
+  tSpecialize H unit. tSpecialize H unit.
   tSpecialize H (fun x => x; false). cbn in H.
-  inversion H. 
+  inversion H.
 Defined.
 
 (* Require Import Vector Even. *)

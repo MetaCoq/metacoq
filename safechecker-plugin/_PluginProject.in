@@ -1,0 +1,68 @@
+src/META.coq-metacoq-safechecker
+-I src
+-Q src MetaCoq.SafeCheckerPlugin
+-R theories MetaCoq.SafeCheckerPlugin
+
+# src/classes0.mli
+# src/classes0.ml
+
+# From template
+src/ssrbool.ml
+src/ssrbool.mli
+src/uGraph0.ml
+src/uGraph0.mli
+src/wGraph.ml
+src/wGraph.mli
+
+# From PCUIC
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
+src/pCUICAst.ml
+src/pCUICAst.mli
+src/pCUICAstUtils.ml
+src/pCUICAstUtils.mli
+src/pCUICCases.mli
+src/pCUICCases.ml
+src/pCUICReflect.mli
+src/pCUICReflect.ml
+src/pCUICEquality.mli
+src/pCUICEquality.ml
+src/pCUICTyping.ml
+src/pCUICTyping.mli
+src/pCUICPosition.mli
+src/pCUICPosition.ml
+src/pCUICNormal.mli
+src/pCUICNormal.ml
+src/templateToPCUIC.mli
+src/templateToPCUIC.ml
+src/pCUICPretty.mli
+src/pCUICPretty.ml
+src/pCUICProgram.mli
+src/pCUICProgram.ml
+
+# From SafeChecker
+src/pCUICErrors.mli
+src/pCUICErrors.ml
+src/pCUICEqualityDec.mli
+src/pCUICEqualityDec.ml
+src/pCUICWfEnv.mli
+src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
+src/pCUICSafeReduce.mli
+src/pCUICSafeReduce.ml
+src/pCUICSafeConversion.mli
+src/pCUICSafeConversion.ml
+src/pCUICTypeChecker.mli
+src/pCUICTypeChecker.ml
+src/pCUICSafeChecker.mli
+src/pCUICSafeChecker.ml
+src/safeTemplateChecker.mli
+src/safeTemplateChecker.ml
+src/extraction.mli
+src/extraction.ml
+
+src/g_metacoq_safechecker.mlg
+src/metacoq_safechecker_plugin.mlpack
+
+theories/Loader.v

@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Template Require Import All.
+From MetaCoq.Utils Require Import utils.
 Import MCMonadNotation.
 
 
@@ -39,13 +40,13 @@ Section S.
                     tmMkDefinition "bb" bc ;;
                     tmPrint "lol").
   Check bb.
-  
+
   Variable x : nat.
   MetaCoq Run (bc <- tmQuote x ;;
                     tmPrint bc ;;
                     tmMkDefinition "bx" bc ;;
                     tmPrint "lol").
-  
+
   Check bx.
 
 End S.

@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils uGraph Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import uGraph Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.
@@ -97,7 +98,7 @@ Proof.
   intros diff look. intuition auto.
 Qed.
 
-Lemma lookup_env_cons_fresh {kn d Σ kn'} : 
+Lemma lookup_env_cons_fresh {kn d Σ kn'} :
   kn <> kn' ->
   lookup_global ((kn, d) :: Σ) kn' = lookup_global Σ kn'.
 Proof.
@@ -132,7 +133,7 @@ Qed.
 Definition mkApps_decompose_app t :
   t = mkApps (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
-  
+
 Lemma decompose_app_rec_mkApps f l l' : decompose_app_rec (mkApps f l) l' =
                                     decompose_app_rec f (l ++ l').
 Proof.
@@ -155,8 +156,8 @@ Proof.
 Qed.
 
 
-Lemma mkApps_tApp_inj fn args t u : 
-  ~~ isApp fn -> 
+Lemma mkApps_tApp_inj fn args t u :
+  ~~ isApp fn ->
   mkApps fn args = tApp t u ->
   t = mkApps fn (removelast args) /\ u = last args t.
 Proof.
@@ -173,7 +174,7 @@ Proof.
   now rewrite (removelast_app [_]) // app_length IHargs /=.
 Qed.
 
-Lemma nth_error_removelast {A} {args : list A} {n arg} : 
+Lemma nth_error_removelast {A} {args : list A} {n arg} :
   nth_error (removelast args) n = Some arg ->
   nth_error args n = Some arg.
 Proof.
@@ -182,7 +183,7 @@ Proof.
   now rewrite removelast_length in h.
 Qed.
 
-Lemma mkApps_discr f args t : 
+Lemma mkApps_discr f args t :
   args <> [] ->
   mkApps f args = t ->
   ~~ isApp t -> False.
@@ -233,9 +234,7 @@ Proof.
     destruct typ as [[names types] _].
     apply (List.firstn decl.(ind_npars)) in names.
     apply (List.firstn decl.(ind_npars)) in types.
-    refine (List.combine _ _).
-    exact (List.map string_of_aname names).
-    exact (List.map LocalAssum types).
+    refine (map (fun '(x, ty) => vass x ty) (combine names types)).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
     refine {| mind_entry_typename := ind_name0;
@@ -255,7 +254,7 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
   | _ => (Γ, t)
   end.
-  
+
 Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
   let (ctx', t') := decompose_prod_assum [] t in
   (ctx ,,, ctx', t').
@@ -472,7 +471,7 @@ Lemma decompose_app_inv {t f l} :
   decompose_app t = (f, l) -> t = mkApps f l.
 Proof. by apply/decompose_app_rec_inv. Qed.
 
-Lemma decompose_app_nonnil t f l : 
+Lemma decompose_app_nonnil t f l :
   isApp t ->
   decompose_app t = (f, l) -> l <> [].
 Proof.
@@ -680,7 +679,7 @@ Ltac solve_discr' :=
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
   end.
-  
+
 Lemma mkApps_eq_decompose_app {t t' l l'} :
   mkApps t l = mkApps t' l' ->
   decompose_app_rec t l = decompose_app_rec t' l'.
@@ -946,7 +945,7 @@ Qed.
 
 Lemma nth_error_map_InP {A B : Type} {P : A -> Type} (f : forall x : A, P x -> B) (l : list A) (H : forall x, In x l -> P x) n x :
   nth_error (map_InP f l H) n = Some x ->
-  ∑ a, (nth_error l n = Some a) * 
+  ∑ a, (nth_error l n = Some a) *
   ∑ p : P a, x = f a p.
 Proof.
   induction l in n, H |- *. simpl. rewrite nth_error_nil => //.
@@ -1016,7 +1015,7 @@ Inductive view_prod_sort : term -> Type :=
     ~isSort t ->
     view_prod_sort t.
 
-Equations view_prod_sortc (t : term) : view_prod_sort t := { 
+Equations view_prod_sortc (t : term) : view_prod_sort t := {
   | tProd na A B => view_prod_sort_prod na A B;
   | tSort u => view_prod_sort_sort u;
   | t => view_prod_sort_other t _ _
@@ -1024,7 +1023,7 @@ Equations view_prod_sortc (t : term) : view_prod_sort t := {
 
 
 
-Lemma nth_error_ass_subst_context s k Γ : 
+Lemma nth_error_ass_subst_context s k Γ :
   (forall n d, nth_error Γ n = Some d -> decl_body d = None) ->
   forall n d, nth_error (subst_context s k Γ) n = Some d -> decl_body d = None.
 Proof.
@@ -1038,7 +1037,7 @@ Proof.
     now specialize (H (S n0) d0 H1).
 Qed.
 
-Lemma nth_error_smash_context Γ Δ : 
+Lemma nth_error_smash_context Γ Δ :
   (forall n d, nth_error Δ n = Some d -> decl_body d = None) ->
   forall n d, nth_error (smash_context Δ Γ) n = Some d -> decl_body d = None.
 Proof.
@@ -1058,14 +1057,14 @@ Qed.
 
 
 Lemma context_assumptions_smash_context Δ Γ :
-  context_assumptions (smash_context Δ Γ) = 
+  context_assumptions (smash_context Δ Γ) =
   context_assumptions Δ + context_assumptions Γ.
 Proof.
   induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto;
   rewrite IHΓ.
   - now rewrite context_assumptions_fold.
   - rewrite context_assumptions_app /=. lia.
-Qed. 
+Qed.
 
 Lemma context_assumptions_expand_lets_ctx Γ Δ :
   context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.

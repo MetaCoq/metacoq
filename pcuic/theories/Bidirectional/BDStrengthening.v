@@ -1,7 +1,8 @@
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
-From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv 
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
   PCUICTactics
   PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed PCUICRenameDef PCUICInstConv PCUICClosedTyp PCUICWeakeningEnvTyp PCUICRenameTyp PCUICRenameConv PCUICGuardCondition PCUICWeakeningConv.
@@ -146,16 +147,16 @@ Qed.
 Lemma on_free_vars_ctx_tip P d : on_free_vars_ctx P [d] = on_free_vars_decl P d.
 Proof. cbn; rewrite andb_true_r // shiftnP0 //. Qed.
 
-Lemma on_free_vars_it_mkLambda_or_LetIn {P Δ t} : 
-  on_free_vars P (it_mkLambda_or_LetIn Δ t) = 
+Lemma on_free_vars_it_mkLambda_or_LetIn {P Δ t} :
+  on_free_vars P (it_mkLambda_or_LetIn Δ t) =
     on_free_vars_ctx P Δ && on_free_vars (shiftnP #|Δ| P) t.
 Proof.
   move: P. induction Δ using rev_ind => P.
   - cbn. now rewrite shiftnP0.
   - destruct x as [na [b|] ty]; rewrite it_mkLambda_or_LetIn_app /= /mkLambda_or_LetIn /=.
-    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
+    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /=
       /on_free_vars_decl /test_decl /=. ring.
-    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
+    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /=
      /on_free_vars_decl /test_decl /=. ring.
 Qed.
 
@@ -177,8 +178,10 @@ Proof.
   apply closedn_ctx_on_free_vars_shift.
   replace #|pparams p| with (context_assumptions (ind_params mdecl)).
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
+  apply H0.
   erewrite wf_predicate_length_pars ; tea.
   eapply onNpars, on_declared_minductive ; eauto.
+  apply H0.
 Qed.
 
 Lemma on_free_vars_case_branch_context `{checker_flags} {Σ : global_env_ext } {wfΣ : wf Σ} {P ci mdecl idecl p br cdecl} :
@@ -213,7 +216,7 @@ Proof.
   by rewrite /= (Nat.add_comm k n) Nat.sub_add_distr Nat.add_sub orb_diag.
 Qed.
 
-Lemma on_free_vars_subst (p : nat -> bool) k s t : 
+Lemma on_free_vars_subst (p : nat -> bool) k s t :
   forallb (on_free_vars p) s ->
   on_free_vars (shiftnP (k + #|s|) p) t ->
   on_free_vars (shiftnP k p) (subst s k t).
@@ -274,6 +277,7 @@ Proof.
     assert (#|pparams p| = (context_assumptions (subst_instance (puinst p) (ind_params mdecl)))) as ->.
     { erewrite context_assumptions_subst_instance, onNpars, wf_predicate_length_pars ; eauto.
       eapply PCUICInductives.oi ; eauto.
+      exact decli.p1.
     }
     apply on_free_vars_subst.
     + eapply foron_free_vars_extended_subst.
@@ -382,7 +386,7 @@ Section OnFreeVars.
     - constructor.
 
     - intros. red.
-      intros P HΓ Hn. 
+      intros P HΓ Hn.
       eapply alli_Alli, Alli_nth_error in HΓ ; tea.
       apply on_free_vars_lift0.
       by move: HΓ => /implyP /(_ Hn) /andP [].
@@ -434,13 +438,13 @@ Section OnFreeVars.
         apply /andP ; split.
         2: by rewrite case_predicate_context_length.
         eapply on_free_vars_case_predicate_context ; eassumption.
-        
+
       + rewrite forallb_app.
         apply /andP ; split.
         2: by rewrite /= andb_true_r.
         apply All_forallb, All_skipn.
         auto.
-    
+
     - intros until args.
       move => ? _ ? largs ? ? ?.
       apply on_free_vars_subst0.
@@ -450,7 +454,7 @@ Section OnFreeVars.
         auto.
       + eapply closedn_on_free_vars.
         rewrite closedn_subst_instance /= List.rev_length largs.
-        eapply declared_projection_closed_type ; tea. 
+        eapply declared_projection_closed_type ; tea.
 
     - intros until decl.
       move => ? ndec ? ? ? ? ? /= Hmfix.
@@ -465,7 +469,7 @@ Section OnFreeVars.
       erewrite ndec in Hmfix.
       cbn in Hmfix.
       by move: Hmfix => /andP [].
-    
+
     - easy.
     - easy.
 
@@ -515,7 +519,7 @@ Lemma on_free_vars_type `{checker_flags} P Σ (wfΣ : wf Σ.1) Γ t T :
   ∑ T', on_free_vars P T' × Σ ;;; Γ |- t : T'.
 Proof.
   intros oΓ ot ty.
-  assert (wf_local Σ Γ) by (eapply typing_wf_local ; tea). 
+  assert (wf_local Σ Γ) by (eapply typing_wf_local ; tea).
   apply typing_infering in ty as [T' []] ; tea.
   exists T' ; split.
   - edestruct bidirectional_on_free_vars as (_&_&_&?&_).
@@ -531,36 +535,36 @@ Context (wfΣ : wf Σ).
 
 Let Pinfer Γ t T :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹ rename f T.
 
 Let Psort Γ t u :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹□ u.
 
 Let Pprod Γ t na A B :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹Π (na,rename f A,rename (shiftn 1 f) B).
 
 Let Pind Γ ind t u args :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Δ |- rename f t ▹{ind} (u, map (rename f) args).
-  
+
 
 Let Pcheck Γ t T :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   on_free_vars P T ->
@@ -571,13 +575,13 @@ Let PΓ :=
 
 Let PΓ_rel Γ Γ' :=
   forall P Δ f,
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars_ctx P Γ' ->
   wf_local_bd_rel Σ Δ (rename_context f Γ').
 
 Lemma rename_telescope P f Γ Δ tel tys:
-  urenaming P Δ Γ f ->
+  urenaming P Γ Δ f ->
   on_ctx_free_vars P Γ ->
   forallb (on_free_vars P) tys ->
   on_free_vars_ctx P (List.rev tel) ->
@@ -656,7 +660,7 @@ Proof using wfΣ.
         rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
         by rewrite on_free_vars_ctx_on_ctx_free_vars.
-  
+
   - intros Γ n decl isdecl P Δ f hf hΓ ht.
     eapply hf in isdecl as h => //.
     destruct h as [decl' [isdecl' [? [h1 h2]]]].
@@ -665,14 +669,14 @@ Proof using wfΣ.
 
   - intros. red. intros. cbn in *.
     by constructor.
-    
+
   - intros. red. move => P Δ f hf hΓ /= /andP [] ? ?.
     econstructor ; eauto.
     eapply X2 ; tea.
     1: by apply urenaming_vass.
     rewrite on_ctx_free_vars_snoc /=.
     apply /andP ; split ; tea.
-    
+
   - intros. red. move => P Δ f hf hΓ /= /andP [] ? ?.
     econstructor ; eauto.
     eapply X2 ; tea.
@@ -706,7 +710,7 @@ Proof using wfΣ.
     erewrite rename_closed.
     2: by eapply declared_inductive_closed_type ; tea.
     econstructor ; tea.
-  
+
   - intros. red. move => P Δ f hf hΓ /= _.
     erewrite rename_closed.
     2: by eapply declared_constructor_closed_type ; tea.
@@ -772,7 +776,7 @@ Proof using wfΣ.
       1:exact (declared_inductive_closed_params H).
       1:rewrite (wf_branch_length wfbr) //.
       1:rewrite (wf_predicate_length_pars H1).
-      1:erewrite declared_minductive_ind_npars ; eauto.
+      1:erewrite declared_minductive_ind_npars ; eauto; apply H.
       assert (on_free_vars_ctx P brctxty.1).
       { rewrite case_branch_type_fst.
         eapply (@on_free_vars_case_branch_context _ _ _ _ (ci.(ci_ind),i)).
@@ -788,7 +792,8 @@ Proof using wfΣ.
       * rewrite case_branch_type_fst /=.
         relativize #|bcontext br| ; [eapply urenaming_context|] ; tea.
         by rewrite case_branch_context_length.
-      * rewrite case_branch_context_length ; tea.
+      * rewrite case_branch_type_length //.
+        erewrite <- wf_branch_length ; eauto.
         relativize (#|bcontext br|).
         1: erewrite on_ctx_free_vars_concat.
         2: rewrite case_branch_type_length //.
@@ -797,18 +802,19 @@ Proof using wfΣ.
         by rewrite on_free_vars_ctx_on_ctx_free_vars.
       * rewrite case_branch_type_length //.
         erewrite <- wf_branch_length ; eauto.
-      * rewrite case_branch_context_length //.
+      * rewrite case_branch_type_length //.
+        erewrite <- wf_branch_length ; eauto.
         eapply on_free_vars_case_branch_type.
         all: tea.
         split.
         all: assumption.
-  
+
   - intros. red. move => P Δ f hf hΓ /= ?.
     rewrite rename_subst0 /= rename_subst_instance map_rev List.rev_length.
     erewrite rename_closedn.
     2: rewrite H0 ; eapply declared_projection_closed_type ; tea.
     econstructor ; eauto.
-    by rewrite map_length.    
+    by rewrite map_length.
 
   - intros. red. move => P Δ f hf hΓ /= /forallb_All ht.
     erewrite map_dtype.
@@ -832,7 +838,7 @@ Proof using wfΣ.
       * rewrite -(Nat.add_0_r (#|mfix|)) fix_context_length.
         apply on_free_vars_lift_impl.
         by rewrite shiftnP0.
-    + by apply rename_wf_fixpoint. 
+    + by apply rename_wf_fixpoint.
 
   - intros. red. move => P Δ f hf hΓ /= /forallb_All ht.
     erewrite map_dtype.
@@ -856,11 +862,11 @@ Proof using wfΣ.
       * rewrite -(Nat.add_0_r (#|mfix|)) fix_context_length.
         apply on_free_vars_lift_impl.
         by rewrite shiftnP0.
-    + by apply rename_wf_cofixpoint. 
-  
+    + by apply rename_wf_cofixpoint.
+
   - intros. red. intros P Δ f hf ht.
     cbn. econstructor; tea.
-    
+
   - intros. red. intros P Δ f hf ht.
     econstructor ; eauto.
     rewrite -/(rename f (tSort u)).
@@ -891,7 +897,7 @@ Qed.
 End BDRenaming.
 
 Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
-  renaming P Σ Δ Γ f ->
+  renaming P Σ Γ Δ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Γ |- t : T ->
@@ -924,7 +930,7 @@ Proof.
 Qed.
 
 Lemma urenaming_strengthen P Γ Γ' Γ'' :
-  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
+  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (Γ,,,Γ'') (unlift_renaming #|Γ'| #|Γ''|).
 Proof.
   rewrite <- rename_context_lift_context.
   intros i decl' pi nthi.
@@ -989,7 +995,7 @@ Proof.
       case_inequalities.
       all: lia.
 Qed.
-  
+
 Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :
   Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : T ->
   ∑ T', Σ ;;; Γ ,,, Γ'' |- t : T'.

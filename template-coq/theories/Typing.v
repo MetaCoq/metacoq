@@ -3,8 +3,9 @@
 From Equations.Type Require Import Relation.
 From Equations Require Import Equations.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Environment Primitive
-    LiftSubst UnivSubst EnvironmentTyping Reflect ReflectAst TermEquality WfAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Environment Primitive EnvironmentTyping Reflect.
+From MetaCoq.Template Require Import Ast AstUtils LiftSubst UnivSubst ReflectAst TermEquality WfAst.
 
 Import MCMonadNotation.
 
@@ -16,16 +17,16 @@ Import MCMonadNotation.
 
 Definition isSort T :=
   match T with
-  | tSort u => True
-  | _ => False
+  | tSort u => true
+  | _ => false
   end.
 
 Fixpoint isArity T :=
   match T with
-  | tSort u => True
+  | tSort u => true
   | tProd _ _ codom => isArity codom
   | tLetIn _ _ _ codom => isArity codom
-  | _ => False
+  | _ => false
   end.
 
 Definition type_of_constructor mdecl cdecl (c : inductive * nat) (u : list Level.t) :=
@@ -97,10 +98,10 @@ Definition iota_red npar args bctx br :=
 
 Inductive instantiate_params_subst_spec : context -> list term -> list term -> term -> list term -> term -> Prop :=
 | instantiate_params_subst_nil s ty : instantiate_params_subst_spec [] [] s ty s ty
-| instantiate_params_subst_vass na ty params pari pars s na' ty' pty s' pty' : 
+| instantiate_params_subst_vass na ty params pari pars s na' ty' pty s' pty' :
   instantiate_params_subst_spec params pars (pari :: s) pty s' pty' ->
   instantiate_params_subst_spec (vass na ty :: params) (pari :: pars) s (tProd na' ty' pty) s' pty'
-| instantiate_params_subst_vdef na b ty params pars s na' b' ty' pty s' pty' : 
+| instantiate_params_subst_vdef na b ty params pars s na' b' ty' pty s' pty' :
   instantiate_params_subst_spec params pars (subst s 0 b :: s) pty s' pty' ->
   instantiate_params_subst_spec (vdef na b ty :: params) pars s (tLetIn na' b' ty' pty) s' pty'.
 Derive Signature for instantiate_params_subst_spec.
@@ -130,7 +131,7 @@ Fixpoint instantiate_params_subst
     end
   end.
 
-Lemma instantiate_params_substP params pars s ty s' ty' : 
+Lemma instantiate_params_substP params pars s ty s' ty' :
   instantiate_params_subst params pars s ty = Some (s', ty') <->
   instantiate_params_subst_spec params pars s ty s' ty'.
 Proof.
@@ -178,8 +179,8 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Case *)
 | red_iota ci mdecl idecl cdecl c u args p brs br :
     nth_error brs c = Some br ->
-    (* In the compact representation, reduction must fetch the 
-       global declaration of the constructor to gather the let-bindings 
+    (* In the compact representation, reduction must fetch the
+       global declaration of the constructor to gather the let-bindings
        in its argument context. Implementations can be more clever
        in the common case where no let-binding appears to avoid this. *)
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
@@ -236,12 +237,12 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ (Γ ,,, case_predicate_context ind.(ci_ind) mdecl idecl p) preturn preturn' ->
     red1 Σ Γ (tCase ind p c brs)
              (tCase ind p' c brs)
-    
+
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 
 | case_red_brs ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs' :
-    OnOne2All (fun brctx br br' => 
-      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') 
+    OnOne2All (fun brctx br br' =>
+      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br')
       (case_branches_contexts ind.(ci_ind) mdecl idecl p brs) brs brs' ->
     red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
@@ -292,7 +293,7 @@ Lemma red1_ind_all :
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
           let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
           #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
-          P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) 
+          P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
                 (iota_red ci.(ci_npar) args bctx br)) ->
 
        (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
@@ -344,13 +345,13 @@ Lemma red1_ind_all :
            P (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl p) preturn preturn' ->
            P Γ (tCase ci p c brs)
                (tCase ci (mk_predicate puinst params pcontext preturn') c brs)) ->
-       
+
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs',        
-          OnOne2All (fun brctx br br' => 
-            on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') 
+       (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs',
+          OnOne2All (fun brctx br br' =>
+            on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br')
               (case_branches_contexts ind.(ci_ind) mdecl idecl p brs) brs brs' ->
           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
@@ -407,14 +408,14 @@ Proof.
           match goal with
           | H : _ |- _ => eapply H; eauto; fail
           end].
-  
+
   - apply X13.
     revert params params' o.
     fix auxl 3.
     intros params params' [].
     + constructor. split; auto.
     + constructor. auto.
-      
+
   - eapply X16; eauto.
     revert brs brs' o.
     intros brs.
@@ -489,9 +490,9 @@ Reserved Notation " Σ ;;; Γ |- t <=[ pb ] u " (at level 50, Γ, t, u at next l
 
 (** ** Cumulativity:
 
-  Reduction to terms in the cumulativity relation. In PCUIC we show that 
+  Reduction to terms in the cumulativity relation. In PCUIC we show that
   this is equivalent to the reflexive-transitive closure or reduction + leq_term
-  on well-typed terms. 
+  on well-typed terms.
 *)
 
 Inductive cumul_gen `{checker_flags} (Σ : global_env_ext) (Γ : context) (pb : conv_pb) : term -> term -> Type :=
@@ -545,7 +546,7 @@ Module TemplateConversionPar <: ConversionParSig TemplateTerm Env TemplateTermUt
 End TemplateConversionPar.
 
 
-Class GuardChecker := 
+Class GuardChecker :=
 { (* Structural recursion check *)
   fix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
   (* Guarded by destructors check *)
@@ -555,7 +556,7 @@ Class GuardChecker :=
       fix_guard Σ Γ mfix ->
       red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
       fix_guard Σ Γ mfix' ;
-  
+
   fix_guard_lift Σ Γ Γ' Γ'' mfix :
     let k' := (#|mfix| + #|Γ'|)%nat in
     let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
@@ -574,7 +575,7 @@ Class GuardChecker :=
     fix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
 
-  fix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
+  fix_guard_extends Σ Γ mfix (Σ' : global_env_ext) :
     fix_guard Σ Γ mfix ->
     extends Σ.1 Σ' ->
     fix_guard Σ' Γ mfix ;
@@ -601,8 +602,8 @@ Class GuardChecker :=
     cofix_guard Σ Γ mfix ->
     cofix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
-  
-  cofix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
+
+  cofix_guard_extends Σ Γ mfix (Σ' : global_env_ext) :
     cofix_guard Σ Γ mfix ->
     extends Σ.1 Σ' ->
     cofix_guard Σ' Γ mfix }.
@@ -812,7 +813,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       let brctxty := case_branch_type ci.(ci_ind) mdecl p ptm i cdecl br in
       (wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl)) *
       (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
-      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
+      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))
       0 idecl.(ind_ctors) brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
@@ -840,20 +841,20 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
-| type_Int p prim_ty cdecl : 
-    wf_local Σ Γ ->  
+| type_Int p prim_ty cdecl :
+    wf_local Σ Γ ->
     primitive_constant Σ primInt = Some prim_ty ->
     declared_constant Σ prim_ty cdecl ->
     primitive_invariants cdecl ->
     Σ ;;; Γ |- tInt p : tConst prim_ty []
 
-| type_Float p prim_ty cdecl : 
-    wf_local Σ Γ ->  
+| type_Float p prim_ty cdecl :
+    wf_local Σ Γ ->
     primitive_constant Σ primFloat = Some prim_ty ->
     declared_constant Σ prim_ty cdecl ->
     primitive_invariants cdecl ->
     Σ ;;; Γ |- tFloat p : tConst prim_ty []
- 
+
 | type_Conv t A B s :
     Σ ;;; Γ |- t : A ->
     Σ ;;; Γ |- B : tSort s ->
@@ -940,7 +941,7 @@ Proof.
   fix typing_size 5.
   destruct 1 ;
     repeat match goal with
-           | H : typing _ _ _ _ |- _ => apply typing_size in H           
+           | H : typing _ _ _ _ |- _ => apply typing_size in H
            end;
     match goal with
     | H : All2 _ _ _ |- _ => idtac
@@ -981,7 +982,7 @@ Fixpoint globdecls_size (Σ : global_declarations) : size :=
   | d :: Σ => S (globdecls_size Σ)
   end.
 
-Definition globenv_size (Σ : global_env) : size := 
+Definition globenv_size (Σ : global_env) : size :=
   globdecls_size Σ.(declarations).
 
 
@@ -1011,7 +1012,7 @@ Defined.
 Lemma type_Prop_wf `{checker_flags} Σ Γ :
   wf_local Σ Γ ->
   Σ ;;; Γ |- tSort Universe.lProp : tSort Universe.type1.
-Proof. 
+Proof.
   constructor;auto. constructor.
 Defined.
 
@@ -1115,7 +1116,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
          (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
          (PΓ : forall Σ Γ, wf_local Σ Γ -> Type),
 
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ), 
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),
       All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
@@ -1183,10 +1184,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-     (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+     (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),
       forall (ci : case_info) p c brs indices ps mdecl idecl
         (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-        on_global_env cumul_gen (lift_typing P) Σ.1 -> 
+        on_global_env cumul_gen (lift_typing P) Σ.1 ->
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
@@ -1194,7 +1195,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-        (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->  
+        (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
@@ -1207,13 +1208,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
           let brctxty := case_branch_type ci.(ci_ind) mdecl p ptm i cdecl br in
           wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) *
           Prop_conj typing P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-          Prop_conj typing P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
+          Prop_conj typing P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))
           0 idecl.(ind_ctors) brs ->
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
-        on_global_env cumul_gen (lift_typing P) Σ.1 -> 
+        on_global_env cumul_gen (lift_typing P) Σ.1 ->
         PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
         P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
@@ -1246,7 +1247,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         declared_constant Σ prim_ty cdecl ->
         primitive_invariants cdecl ->
         P Σ Γ (tInt p) (tConst prim_ty [])) ->
-    
+
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) p prim_ty cdecl,
         PΓ Σ Γ wfΓ ->
         primitive_constant Σ primFloat = Some prim_ty ->
@@ -1263,7 +1264,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- A <= B ->
         P Σ Γ t B) ->
 
-       env_prop P PΓ. 
+       env_prop P PΓ.
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
   intros XΓ.
@@ -1289,16 +1290,18 @@ Proof.
   intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
   intros IH. simpl in IH.
   split.
-  destruct Σ as [Σ φ]. 
+  destruct Σ as [Σ φ].
   red. cbn. do 2 red in wfΣ. cbn in wfΣ.
   destruct Σ as [univs Σ]; cbn in *.
   set (Σg:= {| universes := univs; declarations := Σ |}) in *.
   destruct wfΣ; split => //.
   rename o into ongu. rename o0 into o.
   destruct o. { constructor. }
-  rename o1 into Xg. set (wfΣ := (ongu, o) : on_global_env cumul_gen (lift_typing typing) {| universes := univs; declarations := Σ |}).
+  rename o0 into Xg. set (wfΣ := (ongu, o) : on_global_env cumul_gen (lift_typing typing) {| universes := univs; declarations := Σ |}).
   set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-  constructor; auto.
+  destruct Xg. rename udecl0 into udecl.
+  rename on_global_decl_d0 into Xg.
+  constructor; auto; try constructor; auto.
   - unshelve eset (IH' := IH ((Σ', udecl); wfΣ; []; tSort Universe.lProp; _; _)).
     shelve. simpl. apply type_Prop.
     forward IH'. constructor 1; cbn. lia.
@@ -1336,7 +1339,7 @@ Proof.
              generalize (cstr_indices x0). induction 1; constructor; auto.
              do 2 red in t0 |- *.
              apply (IH (_; (_; (_; t0)))). }
-        -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
+        -- pose proof (onProjections Xg); auto.
         -- destruct Xg. simpl. unfold check_ind_sorts in *.
            destruct Universe.is_prop; auto.
            destruct Universe.is_sprop; auto.
@@ -1379,7 +1382,7 @@ Proof.
       - simpl in *. apply IHfoo. lia.
       - red. apply (X14 _ _ _ t4). lia.
       - red. simpl. apply (X14 _ _ _ Hu). lia. }
-      
+
     clear IH.
     assert (pΓ : PΓ Σ Γ (typing_wf_local H)).
     { apply (X13 _ _ _ H). lia. }
@@ -1448,7 +1451,7 @@ Proof.
        * split; tas. eapply (IH _ _ _ t0); simpl; auto. lia.
        * eapply IHctxi. intros. eapply (IH _ _ _ Hty). simpl. lia.
        * eapply IHctxi. intros. eapply (IH _ _ _ Hty). simpl. lia.
-       
+
        ++ simpl in X13. simpl in pΓ. auto. eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.
          eapply (X13 _ _ _ H); eauto. simpl. subst predctx. lia.
@@ -1567,11 +1570,12 @@ Arguments on_global_env {cf} Pcmp P !g.
 Lemma lookup_on_global_env `{checker_flags} {Pcmp P} {Σ : global_env} {c decl} :
   on_global_env Pcmp P Σ ->
   lookup_env Σ c = Some decl ->
-  { Σ' : global_env_ext & on_global_env Pcmp P Σ' × extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
+  { Σ' : global_env_ext & on_global_env Pcmp P Σ' × strictly_extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl }.
 Proof.
   unfold on_global_env.
   destruct Σ as [univs Σ retro]; cbn. intros [cu ond].
   induction ond; cbn in * => //.
+  destruct o. rename udecl0 into udecl.
   case: eqb_specT => [-> [= <-]| ne].
   - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl).
     split; try constructor; tas.

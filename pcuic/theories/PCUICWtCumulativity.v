@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Common Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
      PCUICSigmaCalculus PCUICContextReduction
@@ -22,7 +22,7 @@ Coercion wt_cumul_pb_ws_cumul_pb : wt_cumul_pb >-> equality.
 
 Section WtEquality.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-  
+
   Lemma type_wt_cumul_pb {le Γ t} T {U} :
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤[le] U ✓ ->

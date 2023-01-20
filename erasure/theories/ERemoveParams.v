@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.     
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
-    ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap 
+    ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
 Local Open Scope string_scope.
@@ -29,7 +30,7 @@ Section strip.
 
   Section Def.
   Import TermSpineView.
-  Equations? strip (t : term) : term 
+  Equations? strip (t : term) : term
     by wf t (fun x y : EAst.term => size x < size y) :=
   | e with TermSpineView.view e := {
     | tRel i => EAst.tRel i
@@ -40,7 +41,7 @@ Section strip.
         | Some npars :=
             mkApps (EAst.tConstruct kn c block_args) (List.skipn npars (map_InP v (fun x H => strip x)))
         | None => mkApps (EAst.tConstruct kn c block_args) (map_InP v (fun x H => strip x)) }
-      | view_other u nconstr => 
+      | view_other u nconstr =>
         mkApps (strip u) (map_InP v (fun x H => strip x))
     }
     | tLetIn na b b' => EAst.tLetIn na (strip b) (strip b')
@@ -75,22 +76,22 @@ Section strip.
   End Def.
 
   Hint Rewrite @map_InP_spec : strip.
-  
+
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
   Proof using Type.
     now induction n; simpl; auto; rewrite IHn.
   Qed.
-  
+
   Lemma map_strip_repeat_box n : map strip (repeat tBox n) = repeat tBox n.
   Proof using Type. now rewrite map_repeat. Qed.
-  
+
   Arguments eqb : simpl never.
-  
+
   Opaque strip_unfold_clause_1.
   Opaque strip.
   Opaque isEtaExp.
   Opaque isEtaExp_unfold_clause_1.
-  
+
   Lemma closedn_mkApps k f l : closedn k (mkApps f l) = closedn k f && forallb (closedn k) l.
   Proof using Type.
     induction l in f |- *; cbn; auto.
@@ -109,17 +110,17 @@ Section strip.
     - rewrite !closedn_mkApps in H1 *.
       rtoProp; intuition auto.
       solve_all.
-    - rewrite !closedn_mkApps /= in H0 *. rtoProp.      
+    - rewrite !closedn_mkApps /= in H0 *. rtoProp.
       rewrite forallb_skipn; solve_all. solve_all.
     - rewrite !closedn_mkApps /= in H0 *. rtoProp. repeat solve_all.
   Qed.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
   Transparent isEtaExp_unfold_clause_1.
-  
+
   Local Lemma strip_mkApps_nonnil f v :
     ~~ isApp f -> v <> [] ->
-    strip (mkApps f v) = match construct_viewc f with 
+    strip (mkApps f v) = match construct_viewc f with
       | view_construct kn c block_args =>
         match lookup_inductive_pars Σ (inductive_mind kn) with
         | Some npars => mkApps (EAst.tConstruct kn c block_args) (List.skipn npars (map strip v))
@@ -139,7 +140,7 @@ Section strip.
   Qed.
 
   Lemma strip_mkApps f v : ~~ isApp f ->
-    strip (mkApps f v) = match construct_viewc f with 
+    strip (mkApps f v) = match construct_viewc f with
       | view_construct kn c block_args =>
         match lookup_inductive_pars Σ (inductive_mind kn) with
         | Some npars => mkApps (EAst.tConstruct kn c block_args) (List.skipn npars (map strip v))
@@ -156,7 +157,7 @@ Section strip.
     - apply (strip_mkApps_nonnil f (v ++ [x])) => //.
   Qed.
 
-  Lemma lookup_inductive_pars_constructor_pars_args {ind n pars args} : 
+  Lemma lookup_inductive_pars_constructor_pars_args {ind n pars args} :
     lookup_constructor_pars_args Σ ind n = Some (pars, args) ->
     lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
   Proof using Type.
@@ -165,7 +166,7 @@ Section strip.
     cbn. do 2 destruct nth_error => //. congruence.
   Qed.
 
-  Lemma strip_csubst a k b : 
+  Lemma strip_csubst a k b :
     closed a ->
     isEtaExp Σ a ->
     isEtaExp Σ b ->
@@ -177,7 +178,7 @@ Section strip.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    
+
     - destruct Nat.compare => //.
     - f_equal. rtoProp. solve_all. destruct block_args; inv H0. eauto.
     - f_equal. solve_all.  move/andP: b => [] _ he. solve_all.
@@ -232,7 +233,7 @@ Section strip.
           subst pars. rewrite skipn_0.
           simp strip; rewrite -strip_equation_1.
           { f_equal. rewrite !map_map_compose. clear -etaa cla ev H0. solve_all. } }
-    - pose proof (etaExp_csubst _ _ k _ etaa H0). 
+    - pose proof (etaExp_csubst _ _ k _ etaa H0).
       rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
@@ -246,9 +247,9 @@ Section strip.
       f_equal.
       now destruct block_args; inv etav.
       rewrite map_skipn. f_equal.
-      rewrite !map_map_compose. 
+      rewrite !map_map_compose.
       rewrite isEtaExp_Constructor // in H0. rtoProp. solve_all.
-    - pose proof (etaExp_csubst _ _ k _ etaa H0). 
+    - pose proof (etaExp_csubst _ _ k _ etaa H0).
       rewrite !csubst_mkApps /= in H1 *.
       assert (map (csubst a k) v <> []).
       { destruct v; cbn; congruence. }
@@ -262,7 +263,7 @@ Section strip.
       now rewrite (lookup_inductive_pars_constructor_pars_args eqpars) in Heq.
   Qed.
 
-  Lemma strip_substl s t : 
+  Lemma strip_substl s t :
     forallb (closedn 0) s ->
     forallb (isEtaExp Σ) s ->
     isEtaExp Σ t ->
@@ -287,7 +288,7 @@ Section strip.
     rewrite forallb_rev forallb_skipn //.
     now rewrite map_rev map_skipn.
   Qed.
-  
+
   Lemma strip_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def strip) mfix) = map strip (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
@@ -306,7 +307,7 @@ Section strip.
     f_equal; auto. now simp strip.
   Qed.
 
-  Lemma strip_cunfold_fix mfix idx n f : 
+  Lemma strip_cunfold_fix mfix idx n f :
     forallb (closedn 0) (fix_subst mfix) ->
     forallb (fun d =>  isLambda (dbody d) && isEtaExp Σ (dbody d)) mfix ->
     cunfold_fix mfix idx = Some (n, f) ->
@@ -325,8 +326,8 @@ Section strip.
     discriminate.
   Qed.
 
-  
-  Lemma strip_cunfold_cofix mfix idx n f : 
+
+  Lemma strip_cunfold_cofix mfix idx n f :
     forallb (closedn 0) (cofix_subst mfix) ->
     forallb (isEtaExp Σ ∘ dbody) mfix ->
     cunfold_cofix mfix idx = Some (n, f) ->
@@ -344,7 +345,7 @@ Section strip.
     discriminate.
   Qed.
 
-  Lemma strip_nth {n l d} : 
+  Lemma strip_nth {n l d} :
     strip (nth n l d) = nth n (map strip l) (strip d).
   Proof using Type.
     induction l in n |- *; destruct n; simpl; auto.
@@ -358,10 +359,10 @@ Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.
 Ltac simp_strip := simp strip; rewrite -?strip_equation_1.
 
-Definition strip_constant_decl Σ cb := 
+Definition strip_constant_decl Σ cb :=
   {| cst_body := option_map (strip Σ) cb.(cst_body) |}.
-  
-Definition strip_inductive_decl idecl := 
+
+Definition strip_inductive_decl idecl :=
   {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
 Definition strip_decl Σ d :=
@@ -378,8 +379,8 @@ Definition strip_program (p : eprogram_env) : eprogram :=
 
 Import EGlobalEnv.
 
-Lemma lookup_env_strip Σ kn : 
-  lookup_env (strip_env Σ) kn = 
+Lemma lookup_env_strip Σ kn :
+  lookup_env (strip_env Σ) kn =
   option_map (strip_decl Σ) (lookup_env Σ.(GlobalContextMap.global_decls) kn).
 Proof.
   unfold strip_env.
@@ -388,8 +389,8 @@ Proof.
   case: eqb_spec => //.
 Qed.
 
-Lemma lookup_constructor_strip {Σ kn c} : 
-  lookup_constructor (strip_env Σ) kn c = 
+Lemma lookup_constructor_strip {Σ kn c} :
+  lookup_constructor (strip_env Σ) kn c =
   match lookup_constructor Σ.(GlobalContextMap.global_decls) kn c with
   | Some (mdecl, idecl, cdecl) => Some (strip_inductive_decl mdecl, idecl, cdecl)
   | None => None
@@ -401,11 +402,11 @@ Proof.
   do 2 destruct nth_error => //.
 Qed.
 
-Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind : 
+Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind :
   match inductive_isprop_and_pars Σ.(GlobalContextMap.global_decls) ind with
-  | Some (prop, npars) => 
+  | Some (prop, npars) =>
     inductive_isprop_and_pars (strip_env Σ) ind = Some (prop, 0)
-  | None => 
+  | None =>
     inductive_isprop_and_pars (strip_env Σ) ind = None
   end.
 Proof.
@@ -415,11 +416,11 @@ Proof.
   destruct g; simpl; auto. destruct nth_error => //.
 Qed.
 
-Lemma is_propositional_cstr_strip {Σ : GlobalContextMap.t} {ind c} : 
+Lemma is_propositional_cstr_strip {Σ : GlobalContextMap.t} {ind c} :
   match constructor_isprop_pars_decl Σ.(GlobalContextMap.global_decls) ind c with
-  | Some (prop, npars, cdecl) => 
+  | Some (prop, npars, cdecl) =>
     constructor_isprop_pars_decl (strip_env Σ) ind c = Some (prop, 0, cdecl)
-  | None => 
+  | None =>
   constructor_isprop_pars_decl (strip_env Σ) ind c = None
   end.
 Proof.
@@ -433,13 +434,13 @@ Arguments eval {wfl}.
 
 Arguments isEtaExp : simpl never.
 
-Lemma isEtaExp_mkApps {Σ} {f u} : isEtaExp Σ (tApp f u) -> 
+Lemma isEtaExp_mkApps {Σ} {f u} : isEtaExp Σ (tApp f u) ->
   let (hd, args) := decompose_app (tApp f u) in
   match construct_viewc hd with
   | view_construct kn c block_args =>
-    args <> [] /\ f = mkApps hd (remove_last args) /\ u = last args u /\ 
+    args <> [] /\ f = mkApps hd (remove_last args) /\ u = last args u /\
     isEtaExp_app Σ kn c #|args| && forallb (isEtaExp Σ) args && is_nil block_args
-  | view_other _ discr => 
+  | view_other _ discr =>
     [&& isEtaExp Σ hd, forallb (isEtaExp Σ) args, isEtaExp Σ f & isEtaExp Σ u]
   end.
 Proof.
@@ -518,7 +519,7 @@ Qed.
 Module Fast.
   Section faststrip.
     Context (Σ : GlobalContextMap.t).
-    
+
     Equations strip (app : list term) (t : term) : term := {
     | app, tEvar ev args => mkApps (EAst.tEvar ev (strip_args args)) app
     | app, tLambda na M => mkApps (EAst.tLambda na (strip [] M)) app
@@ -538,27 +539,27 @@ Module Fast.
         | Some npars => mkApps (EAst.tConstruct kn c block_args) (List.skipn npars app)
         | None => mkApps (EAst.tConstruct kn c block_args) app }
     | app, x => mkApps x app }
-    
+
     where strip_args (t : list term) : list term :=
-    { | [] := [] 
+    { | [] := []
       | a :: args := (strip [] a) :: strip_args args
     }
-    
+
     where strip_brs (t : list (list BasicAst.name × term)) : list (list BasicAst.name × term) :=
-    { | [] := [] 
+    { | [] := []
       | a :: args := (a.1, (strip [] a.2)) :: strip_brs args }
-      
+
     where strip_defs (t : mfixpoint term) : mfixpoint term :=
     { | [] := []
       | d :: defs := {| dname := dname d; dbody := strip [] d.(dbody); rarg := d.(rarg) |} :: strip_defs defs
     }.
 
-    Local Ltac specIH := 
+    Local Ltac specIH :=
           match goal with
           | [ H : (forall args : list term, _) |- _ ] => specialize (H [] eq_refl)
           end.
-          
-    Lemma strip_acc_opt t : 
+
+    Lemma strip_acc_opt t :
       forall args, ERemoveParams.strip Σ (mkApps t args) = strip (map (ERemoveParams.strip Σ) args) t.
     Proof using Type.
       intros args.
@@ -593,13 +594,13 @@ Module Fast.
     Proof using Type. now apply (strip_acc_opt t []). Qed.
 
   End faststrip.
-  
+
   Notation strip' Σ := (strip Σ []).
 
-  Definition strip_constant_decl Σ cb := 
+  Definition strip_constant_decl Σ cb :=
     {| cst_body := option_map (strip' Σ) cb.(cst_body) |}.
-    
-  Definition strip_inductive_decl idecl := 
+
+  Definition strip_inductive_decl idecl :=
     {| ind_finite := idecl.(ind_finite); ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
 
   Definition strip_decl Σ d :=
@@ -633,7 +634,7 @@ Proof.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma isBox_mkApps' f l : 
+Lemma isBox_mkApps' f l :
   l <> nil ->
   ~~ isBox (EAst.mkApps f l).
 Proof.
@@ -641,7 +642,7 @@ Proof.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma isFix_mkApps' f l : 
+Lemma isFix_mkApps' f l :
   l <> nil ->
   ~~ isFix (EAst.mkApps f l).
 Proof.
@@ -649,28 +650,28 @@ Proof.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma isLambda_mkApps_Construct ind n block_args l : 
+Lemma isLambda_mkApps_Construct ind n block_args l :
   ~~ EAst.isLambda (EAst.mkApps (EAst.tConstruct ind n block_args) l).
 Proof.
   induction l using rev_ind; cbn; try congruence.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma isBox_mkApps_Construct ind n block_args l : 
+Lemma isBox_mkApps_Construct ind n block_args l :
   ~~ isBox (EAst.mkApps (EAst.tConstruct ind n block_args) l).
 Proof.
   induction l using rev_ind; cbn; try congruence.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma isFix_mkApps_Construct ind n block_args l : 
+Lemma isFix_mkApps_Construct ind n block_args l :
   ~~ isFix (EAst.mkApps (EAst.tConstruct ind n block_args) l).
 Proof.
   induction l using rev_ind; cbn; try congruence.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma strip_isLambda Σ f : 
+Lemma strip_isLambda Σ f :
   EAst.isLambda f = EAst.isLambda (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip]; (try simp_strip) => //.
@@ -679,7 +680,7 @@ Proof.
   all:rewrite !(negbTE (isLambda_mkApps_Construct _ _ _ _)) //.
 Qed.
 
-Lemma strip_isBox Σ f : 
+Lemma strip_isBox Σ f :
   isBox f = isBox (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
@@ -695,7 +696,7 @@ Proof.
   rewrite mkApps_app /= //.
 Qed.
 
-Lemma strip_isApp Σ f : 
+Lemma strip_isApp Σ f :
   ~~ EAst.isApp f ->
   ~~ EAst.isApp (strip Σ f).
 Proof.
@@ -704,7 +705,7 @@ Proof.
   all:rewrite isApp_mkApps //.
 Qed.
 
-Lemma strip_isFix Σ f : 
+Lemma strip_isFix Σ f :
   isFix f = isFix (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
@@ -714,7 +715,7 @@ Proof.
   all:rewrite !(negbTE (isFix_mkApps_Construct _ _ _ _)) //.
 Qed.
 
-Lemma strip_isFixApp Σ f : 
+Lemma strip_isFixApp Σ f :
   isFixApp f = isFixApp (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
@@ -722,7 +723,7 @@ Proof.
   all:rewrite isFixApp_mkApps isFixApp_mkApps //.
 Qed.
 
-Lemma strip_isConstructApp Σ f : 
+Lemma strip_isConstructApp Σ f :
   isConstructApp f = isConstructApp (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
@@ -730,7 +731,7 @@ Proof.
   all:rewrite isConstructApp_mkApps isConstructApp_mkApps //.
 Qed.
 
-Lemma strip_isPrimApp Σ f : 
+Lemma strip_isPrimApp Σ f :
   isPrimApp f = isPrimApp (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
@@ -799,7 +800,7 @@ Proof.
     now rewrite H1 skipn_0.
   + move=> /andP[] etat0 etal0.
     rewrite -mkApps_app !strip_mkApps; try now eapply decompose_app_notApp.
-    rewrite vc. rewrite -mkApps_app !map_app //. 
+    rewrite vc. rewrite -mkApps_app !map_app //.
 Qed.
 
  #[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
@@ -818,7 +819,7 @@ Proof.
   - red. intros kn decl.
     move/(lookup_env_closed clΣ).
     unfold closed_decl. destruct EAst.cst_body => //.
-  - red. move=> hasapp n t args. rewrite closedn_mkApps. 
+  - red. move=> hasapp n t args. rewrite closedn_mkApps.
     split; intros; rtoProp; intuition auto; solve_all.
   - red. move=> hascase n ci discr brs. simpl.
     intros; rtoProp; intuition auto; solve_all.
@@ -853,10 +854,10 @@ Proof.
     econstructor; eauto.
 
   - rewrite strip_tApp //. simp_strip in e1.
-    econstructor; eauto. 
+    econstructor; eauto.
     rewrite strip_csubst // in e. now simp_eta in i10.
 
-  - simp_strip. 
+  - simp_strip.
     rewrite strip_csubst // in e.
     econstructor; eauto.
 
@@ -879,7 +880,7 @@ Proof.
       rewrite strip_iota_red // in e.
       rewrite closedn_mkApps in i4. now move/andP: i4.
       cbn. now eapply nth_error_forallb in H; tea.
-  
+
   - subst brs. cbn in H4.
     rewrite andb_true_r in H4.
     rewrite strip_substl // in e.
@@ -915,7 +916,7 @@ Proof.
     { move: i4.
       rewrite closedn_mkApps. now move/andP => []. }
     { move: i6. rewrite isEtaExp_mkApps_napp // /= => /andP[] //. now simp isEtaExp. }
-    now rewrite map_length. 
+    now rewrite map_length.
 
   - rewrite strip_tApp //. simp_strip in e0.
     simp_strip in e1.
@@ -938,7 +939,7 @@ Proof.
     rewrite strip_mkApps_etaexp // in e.
 
   - destruct p as [[ind pars] arg].
-    simp_strip. 
+    simp_strip.
     simp_strip in e.
     rewrite strip_mkApps // /= in e0.
     simp_strip in e0.
@@ -949,12 +950,12 @@ Proof.
     { eapply closed_cofix_subst; tea.
       move: i4; rewrite closedn_mkApps => /andP[] //. }
     { move: i6. rewrite isEtaExp_mkApps_napp // /= => /andP[] //. now simp isEtaExp. }
-  
+
   - econstructor. red in H |- *.
     rewrite lookup_env_strip H //.
     now rewrite /strip_constant_decl H0.
     exact e.
-  
+
   - simp_strip.
     rewrite strip_mkApps // /= in e0.
     rewrite (constructor_isprop_pars_decl_lookup H2) in e0.
@@ -971,7 +972,7 @@ Proof.
     move: H1. eapply contraNN.
     rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
     rewrite -strip_isFix //.
-  
+
   - rewrite !strip_mkApps // /=.
     rewrite (lookup_constructor_lookup_inductive_pars H).
     eapply eval_mkApps_Construct; tea.
@@ -983,7 +984,7 @@ Proof.
     + cbn in H0. eapply All2_skipn, All2_map.
       eapply All2_impl; tea; cbn -[strip].
       intros x y []; auto.
-    
+
   - destruct t => //.
     all:constructor; eauto. simp strip.
     cbn [atom strip] in H |- *.
@@ -993,7 +994,7 @@ Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
 
-Lemma strip_declared_constructor {Σ : GlobalContextMap.t} {k mdecl idecl cdecl} : 
+Lemma strip_declared_constructor {Σ : GlobalContextMap.t} {k mdecl idecl cdecl} :
   declared_constructor Σ.(GlobalContextMap.global_decls)  k mdecl idecl cdecl ->
   declared_constructor (strip_env Σ) k (strip_inductive_decl mdecl) idecl cdecl.
 Proof.
@@ -1002,7 +1003,7 @@ Proof.
   rewrite lookup_env_strip H //.
 Qed.
 
-Lemma lookup_inductive_pars_spec {Σ} {mind} {mdecl} : 
+Lemma lookup_inductive_pars_spec {Σ} {mind} {mdecl} :
   declared_minductive Σ mind mdecl ->
   lookup_inductive_pars Σ mind = Some (ind_npars mdecl).
 Proof.
@@ -1013,8 +1014,8 @@ Qed.
 
 (* Stripping preserves well-formedness directly, not caring about eta-expansion *)
 Lemma strip_wellformed {Σ : GlobalContextMap.t} n t :
-  @wf_glob all_env_flags Σ -> 
-  @wellformed all_env_flags Σ n t -> 
+  @wf_glob all_env_flags Σ ->
+  @wellformed all_env_flags Σ n t ->
   @wellformed all_env_flags (strip_env Σ) n (strip Σ t).
 Proof.
   intros wfΣ.
@@ -1102,15 +1103,15 @@ Proof.
 Qed.
 
 Definition switch_no_params (efl : EEnvFlags) :=
-  {| has_axioms := has_axioms; 
+  {| has_axioms := has_axioms;
      has_cstr_params := false;
      term_switches := term_switches ;
      cstr_as_blocks := false
      |}.
 
 Lemma strip_decl_wf (efl := all_env_flags) {Σ : GlobalContextMap.t} :
-  wf_glob Σ -> 
-  forall d, wf_global_decl Σ d -> 
+  wf_glob Σ ->
+  forall d, wf_global_decl Σ d ->
   wf_global_decl (efl := switch_no_params efl) (strip_env Σ) (strip_decl Σ d).
 Proof.
   intros wf d.
@@ -1119,13 +1120,13 @@ Proof.
   now apply (strip_wellformed (Σ := Σ) 0 t).
 Qed.
 
-Lemma fresh_global_strip_env {Σ : GlobalContextMap.t} kn : 
+Lemma fresh_global_strip_env {Σ : GlobalContextMap.t} kn :
   fresh_global kn Σ ->
   fresh_global kn (strip_env Σ).
 Proof.
   unfold fresh_global. cbn. unfold strip_env.
   induction (GlobalContextMap.global_decls Σ); cbn; constructor; auto. cbn.
-  now depelim H. depelim H. eauto. 
+  now depelim H. depelim H. eauto.
 Qed.
 
 From MetaCoq.Erasure Require Import EProgram.
@@ -1134,18 +1135,18 @@ Program Fixpoint strip_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
   match Σ with
   | [] => fun _ => []
   | hd :: tl => fun HΣ =>
-    let Σg := GlobalContextMap.make tl (fresh_globals_cons_inv HΣ) in 
-    on_snd (strip_decl Σg) hd :: strip_env' tl (fresh_globals_cons_inv HΣ) 
+    let Σg := GlobalContextMap.make tl (fresh_globals_cons_inv HΣ) in
+    on_snd (strip_decl Σg) hd :: strip_env' tl (fresh_globals_cons_inv HΣ)
   end.
 
-Lemma lookup_minductive_declared_minductive Σ ind mdecl : 
+Lemma lookup_minductive_declared_minductive Σ ind mdecl :
   lookup_minductive Σ ind = Some mdecl <-> declared_minductive Σ ind mdecl.
 Proof.
   unfold declared_minductive, lookup_minductive.
   destruct lookup_env => /= //. destruct g => /= //; split => //; congruence.
 Qed.
 
-Lemma lookup_minductive_declared_inductive Σ ind mdecl idecl : 
+Lemma lookup_minductive_declared_inductive Σ ind mdecl idecl :
   lookup_inductive Σ ind = Some (mdecl, idecl) <-> declared_inductive Σ ind mdecl idecl.
 Proof.
   unfold declared_inductive, lookup_inductive.
@@ -1160,7 +1161,7 @@ Qed.
 
 Lemma extends_lookup_inductive_pars {efl : EEnvFlags} {Σ Σ'} :
   extends Σ Σ' -> wf_glob Σ' ->
-  forall ind t, lookup_inductive_pars Σ ind = Some t -> 
+  forall ind t, lookup_inductive_pars Σ ind = Some t ->
     lookup_inductive_pars Σ' ind = Some t.
 Proof.
   intros ext wf ind t.
@@ -1211,10 +1212,10 @@ Proof.
   intros _ => //.
 Qed.
 
-Lemma strip_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} : 
+Lemma strip_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
   has_tApp ->
   extends Σ Σ' ->
-  wf_glob Σ' -> 
+  wf_glob Σ' ->
   List.map (on_snd (strip_decl Σ)) Σ.(GlobalContextMap.global_decls) =
   List.map (on_snd (strip_decl Σ')) Σ.(GlobalContextMap.global_decls).
 Proof.
@@ -1327,7 +1328,7 @@ Proof.
   - constructor; auto.
   - set (Σ' := GlobalContextMap.make Σ (fresh_globals_cons_inv wf')).
     constructor; auto.
-    eapply IHexp. eapply Σ'. now depelim wf. cbn. 
+    eapply IHexp. eapply Σ'. now depelim wf. cbn.
     eapply (strip_expanded_decl (Σ := Σ')) in H.
     rewrite -(strip_env_eq Σ'). cbn. now depelim wf.
     exact H.

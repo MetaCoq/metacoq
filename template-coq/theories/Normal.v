@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast Typing.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Template Require Import Ast Typing.
 
 
 Section Normal.
@@ -29,7 +31,7 @@ Section Normal.
            lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
            neutral Γ (tConst c u)
        | ne_app f v : neutral Γ f -> Forall (normal Γ) v -> neutral Γ (tApp f v)
-       | ne_case i p c brs : neutral Γ c -> 
+       | ne_case i p c brs : neutral Γ c ->
             (* FIXME context of the branch can contain let-ins *)
             Forall (normal Γ ∘ bbody) brs ->
             neutral Γ (tCase i p c brs)

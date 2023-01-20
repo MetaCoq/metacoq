@@ -1,6 +1,7 @@
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram TemplateToPCUIC.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram.
 
 Definition isConstruct t :=
    match t with tConstruct _ _ _ => true | _ => false end.
@@ -29,14 +30,14 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
 | expanded_tConst (c : kername) (u : Instance.t) : expanded Γ (tConst c u)
 | expanded_tInd (ind : inductive) (u : Instance.t) : expanded Γ (tInd ind u)
 | expanded_tCase (ci : case_info) (type_info:predicate term)
-        (discr:term) (branches : list (branch term)) : expanded Γ discr -> 
+        (discr:term) (branches : list (branch term)) : expanded Γ discr ->
         Forall (expanded Γ) type_info.(pparams) ->
         Forall (fun br =>
           ∥ All_fold (fun Δ d => ForOption (fun b => expanded (repeat 0 #|Δ| ++ repeat 0 #|type_info.(pparams)|) b) d.(decl_body)) br.(bcontext) ∥ /\
-          expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> 
+          expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches ->
         expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
-| expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
+| expanded_tFix (mfix : mfixpoint term) (idx : nat) args d :
   Forall (fun d => isLambda d.(dbody) /\ let ctx := rev_map (fun  d => 1 + d.(rarg)) mfix in expanded (ctx ++ Γ) d.(dbody)) mfix ->
   Forall (expanded Γ) args ->
   args <> [] ->
@@ -97,7 +98,7 @@ Lemma expanded_ind :
       P Γ (tCase ci type_info discr branches)) ->
   (forall (Γ : list nat) (proj : projection) (t : term),
   expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
-  (forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat) 
+  (forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat)
     (args : list term) (d : def term),
   Forall
     (fun d0 : def term =>
@@ -115,9 +116,9 @@ Lemma expanded_ind :
   Forall (fun d : def term => expanded Σ (repeat 0 #|mfix| ++ Γ) (dbody d))
     mfix ->  Forall (fun d : def term => P (repeat 0 #|mfix| ++ Γ) (dbody d))
     mfix  -> P Γ (tCoFix mfix idx)) ->
-  (forall (Γ : list nat) (ind : inductive) (c : nat) 
+  (forall (Γ : list nat) (ind : inductive) (c : nat)
     (u : Instance.t) (mind : mutual_inductive_body)
-    (idecl : one_inductive_body) (cdecl : constructor_body) 
+    (idecl : one_inductive_body) (cdecl : constructor_body)
     (args : list term),
   declared_constructor Σ (ind, c) mind idecl cdecl ->
   #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
@@ -160,7 +161,7 @@ Record expanded_constructor_decl Σ mdecl cdecl :=
   { expanded_cstr_args : expanded_context Σ (repeat 0 (#|mdecl.(ind_params)| + #|mdecl.(ind_bodies)|)) cdecl.(cstr_args) }.
     (* expanded_cstr_indices : All (expanded Σ []) cdecl.(cstr_indices); *)
     (* expanded_cstr_type : expanded Σ (repeat 0 #|mdecl.(ind_bodies)|) cdecl.(cstr_type) }. *)
-    
+
 Record expanded_inductive_decl Σ mdecl idecl :=
   { (* expanded_ind_type : expanded Σ [] idecl.(ind_type); *)
     expanded_ind_ctors : Forall (expanded_constructor_decl Σ mdecl) idecl.(ind_ctors) }.
@@ -174,10 +175,10 @@ Definition expanded_decl Σ d :=
   | ConstantDecl cb => expanded_constant_decl Σ cb
   | InductiveDecl idecl => expanded_minductive_decl Σ idecl
   end.
-        
+
 Inductive expanded_global_declarations (univs : ContextSet.t) retro : forall (Σ : global_declarations), Prop :=
 | expanded_global_nil : expanded_global_declarations univs retro []
-| expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ -> 
+| expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ ->
   expanded_decl {| universes := univs; declarations := Σ; retroknowledge := retro |} decl.2 ->
   expanded_global_declarations univs retro (decl :: Σ).
 
@@ -191,7 +192,7 @@ Definition expanded_pcuic_program (p : pcuic_program) :=
 Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
 Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
 
-Lemma expanded_mkApps_expanded {Σ Γ f args} : 
+Lemma expanded_mkApps_expanded {Σ Γ f args} :
   expanded Σ Γ f -> All (expanded Σ Γ) args ->
   expanded Σ Γ (mkApps f args).
 Proof.
@@ -211,10 +212,10 @@ Proof.
   - eapply expanded_mkApps. now rewrite eqc. auto. solve_all.
 Qed.
 
-Lemma expanded_lift Σ n k b Γ Δ Δ' : 
+Lemma expanded_lift Σ n k b Γ Δ Δ' :
   #|Γ| = k ->
   #|Δ'| = n ->
-  expanded Σ (Γ ++ Δ) b -> 
+  expanded Σ (Γ ++ Δ) b ->
   expanded Σ (Γ ++ Δ' ++ Δ) (lift n k b).
 Proof.
   intros Hk Hn.
@@ -251,7 +252,7 @@ Proof.
   - rewrite lift_mkApps. cbn.
     eapply expanded_tFix.
     + solve_all.
-      specialize (a 
+      specialize (a
       (rev_map (fun d0 : def term => S (rarg d0))
       (map (map_def (lift n' k) (lift n' (#|mfix| + k))) mfix) ++ Γ') n' (#|mfix| + k) Hn).
       forward a. { rewrite rev_map_spec; len. }
@@ -273,10 +274,10 @@ Proof.
     solve_all.
 Qed.
 
-Lemma expanded_subst Σ a k b Γ Δ : 
+Lemma expanded_subst Σ a k b Γ Δ :
     #|Γ| = k ->
-  Forall (expanded Σ Δ) a -> 
-  expanded Σ (Γ ++ repeat 0 #|a| ++ Δ) b -> 
+  Forall (expanded Σ Δ) a ->
+  expanded Σ (Γ ++ repeat 0 #|a| ++ Δ) b ->
   expanded Σ (Γ ++ Δ) (subst a k b).
 Proof.
   intros Hk H.
@@ -289,16 +290,16 @@ Proof.
     destruct (Nat.leb_spec k n).
     destruct (nth_error a _) eqn:hnth.
     * eapply expanded_mkApps_expanded.
-      eapply nth_error_forall in H; tea.  
+      eapply nth_error_forall in H; tea.
       eapply (expanded_lift Σ k 0 _ [] Δ Γ'); auto.
-      solve_all. 
+      solve_all.
     * rewrite nth_error_app_ge in H0. lia.
       eapply nth_error_None in hnth.
       rewrite nth_error_app_ge in H0. rewrite repeat_length. lia.
       rewrite repeat_length in H0.
       eapply expanded_tRel. rewrite nth_error_app_ge. lia. erewrite <- H0.
       lia_f_equal. len. solve_all.
-    * rewrite nth_error_app_lt in H0. lia.  
+    * rewrite nth_error_app_lt in H0. lia.
       eapply expanded_tRel. rewrite nth_error_app_lt. lia. tea. now len.
       solve_all.
   - cbn. econstructor.
@@ -318,7 +319,7 @@ Proof.
   - rewrite subst_mkApps. cbn.
     eapply expanded_tFix.
     + solve_all. now eapply isLambda_subst.
-      specialize (a0 
+      specialize (a0
       (rev_map (fun d0 : def term => S (rarg d0))
       (map (map_def (subst a k) (subst a (#|mfix| + k))) mfix) ++ Γ') (#|mfix| + k)).
       forward a0 by len.
@@ -328,7 +329,7 @@ Proof.
     + solve_all.
     + now destruct args.
     + rewrite nth_error_map /= H5 //.
-    + len. 
+    + len.
   - cbn. constructor.
     solve_all.
     specialize (a0 (repeat 0 #|mfix| ++ Γ') (#|mfix| + k)).
@@ -376,7 +377,7 @@ Proof.
     * rewrite expand_lets_vass /= //.
       rewrite !repeat_app -!app_assoc.
       intros exp. relativize (context_assumptions Γ).
-      eapply H. lia.  
+      eapply H. lia.
       { eapply All_fold_app_inv in ha as [].
         depelim a. cbn in f. depelim a.
         eapply All_fold_impl; tea. cbn; intros.
@@ -406,7 +407,7 @@ Proof.
   - econstructor; eauto. 2:solve_all.
     rewrite subst_instance_isConstruct subst_instance_isFix subst_instance_isRel //.
   - econstructor; eauto. cbn. solve_all.
-    solve_all. 
+    solve_all.
   - cbn; eapply expanded_tFix. solve_all. rewrite subst_instance_isLambda //.
     rewrite rev_map_spec map_map_compose -rev_map_spec //.
     solve_all. now destruct args => //.

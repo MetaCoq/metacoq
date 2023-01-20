@@ -1,11 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils BasicAst Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
 Import MCMonadNotation.
 
-(** * Global environments 
+(** * Global environments
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -39,26 +40,26 @@ Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl : 
   List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
   proj.(proj_npars) = ind_npars mdecl.
 
-Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
+Lemma elookup_env_cons_fresh {kn d Σ kn'} :
   kn <> kn' ->
   EGlobalEnv.lookup_env ((kn, d) :: Σ) kn' = EGlobalEnv.lookup_env Σ kn'.
 Proof.
   simpl. change (eq_kername kn' kn) with (eqb kn' kn).
-  destruct (eqb_spec kn' kn). subst => //. auto. 
+  destruct (eqb_spec kn' kn). subst => //. auto.
 Qed.
 
 Section Lookups.
   Context (Σ : global_declarations).
 
   Definition lookup_constant kn : option constant_body :=
-    decl <- lookup_env Σ kn;; 
+    decl <- lookup_env Σ kn;;
     match decl with
     | ConstantDecl cdecl => ret cdecl
     | InductiveDecl mdecl => None
     end.
 
   Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- lookup_env Σ kn;; 
+    decl <- lookup_env Σ kn;;
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl
@@ -68,30 +69,30 @@ Section Lookups.
     mdecl <- lookup_minductive (inductive_mind kn) ;;
     idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
     ret (mdecl, idecl).
-  
-  Definition lookup_inductive_pars kn : option nat := 
+
+  Definition lookup_inductive_pars kn : option nat :=
     mdecl <- lookup_minductive kn ;;
     ret mdecl.(ind_npars).
-  
-  Definition lookup_inductive_kind kn : option recursivity_kind := 
+
+  Definition lookup_inductive_kind kn : option recursivity_kind :=
     mdecl <- lookup_minductive kn ;;
     ret mdecl.(ind_finite).
-    
+
   Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
     ret (mdecl, idecl, cdecl).
-  
-  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+
+  Definition lookup_constructor_pars_args kn c : option (nat * nat) :=
     '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
     ret (mdecl.(ind_npars), cdecl.(cstr_nargs)).
 
-  Definition lookup_projection (p : projection) : 
+  Definition lookup_projection (p : projection) :
     option (mutual_inductive_body * one_inductive_body * constructor_body * projection_body) :=
     '(mdecl, idecl, cdecl) <- lookup_constructor p.(proj_ind) 0 ;;
     pdecl <- nth_error idecl.(ind_projs) p.(proj_arg) ;;
     ret (mdecl, idecl, cdecl, pdecl).
-  
+
 End Lookups.
 
 Lemma declared_constant_lookup {Σ kn cdecl} :
@@ -104,7 +105,7 @@ Qed.
 Lemma declared_minductive_lookup {Σ ind mdecl} :
   declared_minductive Σ ind mdecl ->
   lookup_minductive Σ ind = Some mdecl.
-Proof. 
+Proof.
   rewrite /declared_minductive /lookup_minductive.
   intros -> => /= //.
 Qed.
@@ -118,7 +119,7 @@ Proof.
 Qed.
 
 Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
-  declared_constructor Σ id mdecl idecl cdecl -> 
+  declared_constructor Σ id mdecl idecl cdecl ->
   lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
 Proof.
   intros []. unfold lookup_constructor.
@@ -126,7 +127,7 @@ Proof.
 Qed.
 
 Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
-  declared_projection Σ p mdecl idecl cdecl pdecl -> 
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
 Proof.
   intros [hc [hp hn]]. unfold lookup_projection.
@@ -153,7 +154,7 @@ Qed.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
-Lemma lookup_constructor_pars_args_cstr_arity Σ ind c mdecl idecl cdecl : 
+Lemma lookup_constructor_pars_args_cstr_arity Σ ind c mdecl idecl cdecl :
   lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
   lookup_constructor_pars_args Σ ind c = Some (mdecl.(ind_npars), cdecl.(cstr_nargs)).
 Proof.
@@ -169,17 +170,17 @@ Definition constructor_isprop_pars_decl Σ ind c :=
   '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
   ret (idecl.(ind_propositional), mdecl.(ind_npars), cdecl).
 Arguments constructor_isprop_pars_decl : simpl never.
-  
-Definition closed_decl (d : EAst.global_decl) := 
+
+Definition closed_decl (d : EAst.global_decl) :=
   match d with
-  | EAst.ConstantDecl cb => 
+  | EAst.ConstantDecl cb =>
     option_default (ELiftSubst.closedn 0) (EAst.cst_body cb) true
   | EAst.InductiveDecl _ => true
   end.
 
-Definition closed_env (Σ : EAst.global_declarations) := 
+Definition closed_env (Σ : EAst.global_declarations) :=
   forallb (test_snd closed_decl) Σ.
-  
+
 (** Environment extension and uniqueness of declarations in well-formed global environments *)
 
 Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.

@@ -27,9 +27,7 @@ install: [
   [make "-C" "template-coq" "install"]
 ]
 depends: [
-  "stdlib-shims"
-  "coq" { = "dev" }
-  "coq-equations" { = "dev" }
+  "coq-metacoq-common" {= version}
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

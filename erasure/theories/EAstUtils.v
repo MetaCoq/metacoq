@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import utils BasicAst Kernames.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst Kernames.
 From MetaCoq.Erasure Require Import EAst.
 Require Import ssreflect ssrbool.
 
@@ -242,7 +243,7 @@ Proof.
   * split => //.
     rewrite mkApps_app in eq. cbn in eq. noconf eq.
     rewrite remove_last_app. split => //.
-    now rewrite last_last. 
+    now rewrite last_last.
 Qed.
 
 Ltac solve_discr :=
@@ -259,8 +260,8 @@ Ltac solve_discr :=
 
 Definition isRel t :=
   match t with
-  | tRel _ => true 
-  | _ => false 
+  | tRel _ => true
+  | _ => false
   end.
 
 Definition isEvar t :=
@@ -293,7 +294,7 @@ Definition isPrim t :=
   | _ => false
   end.
 
-  
+
 Definition isBox t :=
   match t with
   | tBox => true
@@ -376,13 +377,13 @@ Fixpoint term_global_deps (t : EAst.term) :=
   | EAst.tApp x y
   | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
   | EAst.tCase (ind, _) x brs =>
-    KernameSet.union (KernameSet.singleton (inductive_mind ind)) 
-      (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs 
+    KernameSet.union (KernameSet.singleton (inductive_mind ind))
+      (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs
         (term_global_deps x))
    | EAst.tFix mfix _ | EAst.tCoFix mfix _ =>
      List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
       KernameSet.empty
-  | EAst.tProj p c => 
+  | EAst.tProj p c =>
     KernameSet.union (KernameSet.singleton (inductive_mind p.(proj_ind)))
       (term_global_deps c)
   | _ => KernameSet.empty

@@ -12,9 +12,15 @@ then
     echo "Renaming files to camelCase"
     (cd gen-src; ./to-lower.sh)
     rm -f gen-src/*.d gen-src/*.cm*
+    echo "Prepare line endings for patching (for Windows)"
+    for f in gen-src/*.ml*
+    do
+      tr -d '\r' < "$f" > tmp
+      mv -f tmp $f
+    done
     # Fix an extraction bug: wrong type annotation on eq_equivalence
-    patch -N -p0 < extraction.patch
-    patch -N -p0 < specFloat.patch
+    patch -N -p0 < extraction.patch || exit $?
+    patch -N -p0 < specFloat.patch || exit $?
     exit 0
 else
     echo "Extracted code is up-to-date"

@@ -1,5 +1,6 @@
 From Coq Require Import List.
-From MetaCoq.Template Require Import config Transform TemplateProgram Pretty EtaExpand All Loader.
+From MetaCoq.Common Require Import config Transform.
+From MetaCoq.Template Require Import TemplateProgram Pretty EtaExpand All Loader.
 Import ListNotations.
 Import MCMonadNotation.
 Import bytestring.
@@ -7,14 +8,14 @@ Open Scope bs_scope.
 
 #[local] Existing Instance config.default_checker_flags.
 
-Definition eta_expand p := 
+Definition eta_expand p :=
   EtaExpand.eta_expand_program p.
 
 Definition check_def (d : kername × global_decl) : TemplateMonad unit :=
   match d.2 with
   | ConstantDecl cb =>
     match cb.(cst_body) with
-    | Some body => 
+    | Some body =>
       tmMsg ("Unquoting eta-expanded " ++ string_of_kername d.1)%bs ;;
       tmUnquote body ;;
       tmMsg ("Succeeded")
@@ -51,7 +52,7 @@ Fixpoint wfterm (t : term) : bool :=
 
 From Coq Require Import ssrbool.
 
-Definition wf_global_decl d := 
+Definition wf_global_decl d :=
   match d with
   | ConstantDecl cb => wfterm cb.(cst_type) && option_default wfterm cb.(cst_body) true
   | InductiveDecl idecl => true
@@ -61,15 +62,15 @@ Definition wf_global_env (g : global_env) := wf_global_declarations g.(declarati
 Definition wf_program p := wf_global_env p.1 && wfterm p.2.
 
 Definition check_wf (g : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def g.1.(declarations) ;; 
+  monad_map check_def g.1.(declarations) ;;
   tmMsg "Wellformed global environment" ;; ret tt.
-  
+
 Axiom assume_wt_template_program : forall p : Ast.Env.program, ∥ wt_template_program p ∥.
 
 Definition check_wf_eta (p : Ast.Env.program) : TemplateMonad unit :=
-  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;; 
+  monad_map check_def (eta_expand (make_template_program_env p (assume_wt_template_program p))).1.(declarations) ;;
   tmMsg "Wellformed eta-expanded global environment" ;; ret tt.
 
-(* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use: 
- 
+(* To test that a program's eta-expansion is indeed well-typed according to Coq's kernel use:
+
   MetaCoq Run (tmQuoteRec wf_program >>= check_wf_eta). *)

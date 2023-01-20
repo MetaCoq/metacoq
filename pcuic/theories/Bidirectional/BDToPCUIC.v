@@ -1,5 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars PCUICWeakeningTyp PCUICUnivSubstitutionTyp PCUICClosedTyp PCUICUnivSubstitutionConv.
 From MetaCoq.PCUIC Require Import BDTyping.
 
@@ -84,7 +85,7 @@ Proof.
     + apply IHΓ'. assumption.
     + apply infer_typing_sort_impl with id X0; intros Hs.
       apply weaken_ctx ; eauto.
-Qed.      
+Qed.
 
 Lemma wf_local_local_rel `{checker_flags} Σ Γ Γ' : wf_local Σ (Γ ,,, Γ') -> wf_local_rel Σ Γ Γ'.
 Proof.
@@ -134,7 +135,7 @@ Section BDToPCUICTyping.
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
     All_local_env_over_sorting checking infering_sort
       (fun Σ Γ _ t T _ => Pcheck Γ t T)
-      (fun Σ Γ _ t s _ => Psort Γ t s) 
+      (fun Σ Γ _ t s _ => Psort Γ t s)
       Σ Γ all ->
     wf_local Σ Γ.
   Proof using Type.
@@ -151,7 +152,7 @@ Section BDToPCUICTyping.
       (fun Σ Δ => checking Σ (Γ,,,Δ))
       (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
       (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
-      (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s) 
+      (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s)
       Σ Γ' all ->
     wf_local_rel Σ Γ Γ'.
   Proof using Type.
@@ -164,7 +165,7 @@ Section BDToPCUICTyping.
     all: now apply Hs, wf_local_app.
   Qed.
 
-  Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
+  Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) :
     forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
   Proof using wfΣ.
     revert wfΔ.
@@ -209,7 +210,7 @@ Section BDToPCUICTyping.
       cbn in wfΔ |- *.
       eassumption.
   Qed.
-    
+
   (** The big theorem, proven by mutual induction using the custom induction principle *)
   Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
   Proof using wfΣ.
@@ -232,16 +233,16 @@ Section BDToPCUICTyping.
       apply X2.
       constructor. 1: by auto.
       eexists. eauto.
-    
+
     - red ; intros ; econstructor ; eauto.
       + apply X2 ; auto.
         eexists. eauto.
-    
+
       + apply X4.
         constructor ; auto.
         * eexists. eauto.
         * apply X2 ; auto. eexists. eauto.
-    
+
     - red ; intros.
       eapply type_App' ; auto.
       apply X2 ; auto.
@@ -263,7 +264,8 @@ Section BDToPCUICTyping.
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
-        move: (H) => [? ?].
+        move: (H) => [decl ?].
+        unshelve epose proof (decl' := declared_minductive_to_gen decl); eauto.
         eapply wf_local_subst_instance_decl ; eauto.
         eapply wf_local_app_inv.
         now eapply on_minductive_wf_params_indices.
@@ -301,7 +303,7 @@ Section BDToPCUICTyping.
         1: eapply validity ; auto.
         now rewrite H0.
       }
-      
+
       assert (isType Σ Γ (mkApps (tInd ci (puinst p))
         (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
       {
@@ -324,7 +326,7 @@ Section BDToPCUICTyping.
         eapply wf_case_predicate_context ; tea.
         eexists ; tea.
       }
-      
+
       econstructor ; eauto.
       2-3: split ; eauto.
       1: now eapply type_Cumul ; eauto ; apply cumulAlgo_cumulSpec in cum.
@@ -344,7 +346,7 @@ Section BDToPCUICTyping.
       apply Hbody ; auto.
       eexists.
       eassumption.
-        
+
     - red ; intros ; econstructor ; eauto.
 
     - red ; intros ; econstructor ; eauto.
@@ -429,9 +431,9 @@ Section BDToPCUICTyping.
       destruct X3.
       econstructor ; eauto.
       eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_ws_cumul_pb ; tea.
-      + fvs. 
+      + fvs.
       + now eapply type_is_open_term.
-      + now eapply subject_is_open_term. 
+      + now eapply subject_is_open_term.
   Qed.
 
 End BDToPCUICTyping.

@@ -81,25 +81,21 @@ theories/PCUICWcbvEval.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
+theories/PCUICWeakeningEnvSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 theories/PCUICFirstorder.v
 theories/PCUICProgress.v
+theories/PCUICNormalization.v
+theories/PCUICConsistency.v
 
 theories/PCUICSafeLemmata.v
 
 theories/PCUICEtaExpand.v
 
 theories/PCUICProgram.v
-theories/TemplateToPCUIC.v
-theories/TemplateToPCUICCorrectness.v
-theories/TemplateToPCUICWcbvEval.v
-theories/TemplateToPCUICExpanded.v
-theories/PCUICToTemplate.v
-theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
-theories/PCUICTransform.v
 
 theories/Bidirectional/BDTyping.v
 theories/Bidirectional/BDToPCUIC.v
@@ -108,6 +104,8 @@ theories/Bidirectional/BDUnique.v
 theories/Bidirectional/BDStrengthening.v
 
 theories/PCUICWeakeningEnv.v
+
+theories/PCUICCasesHelper.v
 
 # theories/All.v
 

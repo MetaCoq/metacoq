@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 Import MCMonadNotation.
 
 Goal True.

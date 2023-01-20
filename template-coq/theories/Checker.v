@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config Environment Ast AstUtils utils
-     LiftSubst UnivSubst uGraph Typing.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Environment uGraph.
+From MetaCoq.Template Require Import Ast AstUtils LiftSubst UnivSubst Typing.
 Import MCMonadNotation.
 
 (** * Coq type-checker for kernel terms
@@ -95,7 +96,7 @@ Global Instance monad_exc : MonadExc type_error typing_result :=
       end
   }.
 
-Section Lookups. 
+Section Lookups.
   Context (Σ : global_env).
 
   Definition polymorphic_constraints u :=
@@ -239,10 +240,10 @@ Section Reduce.
       match c' with
       | (tConstruct ind c _, args) =>
         match nth_error brs c with
-        | Some br => 
+        | Some br =>
           match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) c with
-          | Checked (mdecl, cdecl) => 
-            let bctx := case_branch_context ind mdecl cdecl p br in  
+          | Checked (mdecl, cdecl) =>
+            let bctx := case_branch_context ind mdecl cdecl p br in
               reduce_stack Γ n (iota_red ci.(ci_npar) args bctx br) stack
           | TypeError e => ret (t, stack)
           end
@@ -285,7 +286,7 @@ Section Reduce.
        puinst := p.(puinst);
        pcontext := p.(pcontext);
        preturn := f Γparams (preturn p) |}.
-  
+
   Definition rebuild_case_branch_ctx ind i p br :=
     match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i with
     | TypeError _ => []
@@ -914,7 +915,7 @@ Section Checker.
       if wGraph.is_acyclic G then
         check_wf_declarations univs retro G decls ;;
         infer_term Σ G (snd p)
-      else EnvError (IllFormedDecl "toplevel" 
+      else EnvError (IllFormedDecl "toplevel"
         (UnsatisfiableConstraints univs.2))
     end.
 

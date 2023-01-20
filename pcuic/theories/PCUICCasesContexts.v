@@ -1,12 +1,13 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICSigmaCalculus.
-     
+
 Require Import Equations.Type.Relation_Properties.
-Require Import Equations.Prop.DepElim.     
+Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Local Set SimplIsCbn.
@@ -25,7 +26,7 @@ Proof.
 Qed.
 Notation eq_names := (All2 (fun x y => x = (decl_name y))).
 
-Lemma eq_names_subst_context nas Γ s k : 
+Lemma eq_names_subst_context nas Γ s k :
   eq_names nas Γ ->
   eq_names nas (subst_context s k Γ).
 Proof.
@@ -34,7 +35,7 @@ Proof.
   * rewrite subst_context_snoc. constructor; auto.
 Qed.
 
-Lemma eq_names_subst_instance nas Γ u : 
+Lemma eq_names_subst_instance nas Γ u :
   eq_names nas Γ ->
   eq_names nas (subst_instance u Γ).
 Proof.
@@ -46,7 +47,7 @@ Qed.
 (* Lemma All2_compare_decls_subst pars n Γ i :
   eq_context_upto_names (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i])
   eq_context_upto_names (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i]) *)
-Lemma alpha_eq_subst_instance Δ Δ' i : 
+Lemma alpha_eq_subst_instance Δ Δ' i :
   eq_context_upto_names Δ Δ' ->
   eq_context_upto_names Δ@[i] Δ'@[i].
 Proof.
@@ -57,7 +58,7 @@ Proof.
 Qed.
 
 
-Lemma alpha_eq_context_assumptions Δ Δ' : 
+Lemma alpha_eq_context_assumptions Δ Δ' :
   eq_context_upto_names Δ Δ' ->
   context_assumptions Δ = context_assumptions Δ'.
 Proof.
@@ -65,7 +66,7 @@ Proof.
   destruct r; simpl; auto; lia.
 Qed.
 
-Lemma alpha_eq_extended_subst Δ Δ' k : 
+Lemma alpha_eq_extended_subst Δ Δ' k :
   eq_context_upto_names Δ Δ' ->
   extended_subst Δ k = extended_subst Δ' k.
 Proof.
@@ -74,7 +75,7 @@ Proof.
   rewrite IHX (alpha_eq_context_assumptions l l') //.
 Qed.
 
-Lemma alpha_eq_smash_context Δ Δ' : 
+Lemma alpha_eq_smash_context Δ Δ' :
   eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (smash_context [] Δ) (smash_context [] Δ').
 Proof.
@@ -86,7 +87,7 @@ Proof.
     rewrite (All2_length X) -(alpha_eq_extended_subst l l' 0) // (alpha_eq_context_assumptions l l') //.
 Qed.
 
-Lemma alpha_eq_lift_context n k Δ Δ' : 
+Lemma alpha_eq_lift_context n k Δ Δ' :
   eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (lift_context n k Δ) (lift_context n k Δ').
 Proof.
@@ -97,7 +98,7 @@ Proof.
     now rewrite (All2_length X).
 Qed.
 
-Lemma alpha_eq_subst_context s k Δ Δ' : 
+Lemma alpha_eq_subst_context s k Δ Δ' :
   eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (subst_context s k Δ) (subst_context s k Δ').
 Proof.
@@ -110,14 +111,14 @@ Qed.
 
 Lemma inst_case_predicate_context_eq {mdecl idecl ind p} :
   eq_context_upto_names p.(pcontext) (ind_predicate_context ind mdecl idecl) ->
-  case_predicate_context ind mdecl idecl p = 
+  case_predicate_context ind mdecl idecl p =
   inst_case_predicate_context p.
 Proof.
   intros a.
   eapply map2_set_binder_name_alpha_eq.
   { eapply eq_names_subst_context, eq_names_subst_instance.
     eapply All2_map_left. eapply All2_refl. reflexivity. }
-  { apply alpha_eq_subst_context, alpha_eq_subst_instance. 
+  { apply alpha_eq_subst_context, alpha_eq_subst_instance.
     now symmetry. }
 Qed.
 
@@ -136,7 +137,7 @@ Definition case_predicate_context' ind mdecl idecl p :=
     (subst_instance p.(puinst)
        (expand_lets_ctx (ind_params mdecl) (ind_indices idecl))).
 
-Lemma eq_binder_annots_eq nas Γ : 
+Lemma eq_binder_annots_eq nas Γ :
   All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Γ ->
   eq_context_upto_names (map2 set_binder_name nas Γ) Γ.
 Proof.
@@ -145,7 +146,7 @@ Proof.
 Qed.
 
 
-Definition pre_case_branch_context (ind : inductive) (mdecl : mutual_inductive_body) 
+Definition pre_case_branch_context (ind : inductive) (mdecl : mutual_inductive_body)
   (params : list term) (puinst : Instance.t) (cdecl : constructor_body) :=
   subst_context (List.rev params) 0
   (expand_lets_ctx (subst_instance puinst (ind_params mdecl))
@@ -173,14 +174,14 @@ Proof.
   induction 1; rewrite ?subst_context_snoc //; constructor; auto.
 Qed.
 
-Lemma inst_case_branch_context_eq {ind mdecl cdecl p br} : 
+Lemma inst_case_branch_context_eq {ind mdecl cdecl p br} :
   eq_context_upto_names br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
   case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl = inst_case_branch_context p br.
 Proof.
   intros.
   rewrite /case_branch_context /case_branch_context_gen.
   rewrite /inst_case_branch_context /inst_case_context.
-  eapply map2_set_binder_name_alpha_eq. 
+  eapply map2_set_binder_name_alpha_eq.
   eapply eq_names_subst_context, eq_names_subst_instance.
   eapply All2_map_left. eapply All2_refl. reflexivity.
   rewrite /pre_case_branch_context_gen /inst_case_context.

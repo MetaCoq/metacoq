@@ -1,6 +1,8 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import config utils Kernames EnvMap Ast Typing.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames EnvMap.
+From MetaCoq.Template Require Import Ast Typing.
 Import MCMonadNotation.
 
 Lemma fresh_globals_cons_inv {Σ : global_declarations} {d} : EnvMap.fresh_globals (d :: Σ) -> EnvMap.fresh_globals Σ.
@@ -9,14 +11,14 @@ Proof. intros H; now depelim H. Qed.
 Lemma wf_fresh_globals {cf : checker_flags} (Σ : global_env) : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
 Proof.
   destruct Σ as [univs Σ]; cbn.
-  move=> [] onu; cbn. induction 1; constructor; auto.
+  move=> [] onu; cbn. induction 1; try destruct o; constructor; auto; constructor; eauto.
 Qed.
 
 Local Coercion declarations : global_env >-> global_declarations.
 
 Module GlobalEnvMap.
-  Record t := 
-  { env :> global_env; 
+  Record t :=
+  { env :> global_env;
     map : EnvMap.t global_decl;
     repr : EnvMap.repr env.(declarations) map;
     wf : EnvMap.fresh_globals env.(declarations) }.
@@ -24,13 +26,13 @@ Module GlobalEnvMap.
   Definition lookup_env Σ kn := EnvMap.lookup kn Σ.(map).
 
   Lemma lookup_env_spec (Σ : t) kn : lookup_env Σ kn = Env.lookup_env Σ kn.
-  Proof. 
+  Proof.
     rewrite /lookup_env /Env.lookup_env.
     apply (EnvMap.lookup_spec Σ.(env).(declarations)); apply Σ.
   Qed.
 
   Definition lookup_minductive Σ kn : option mutual_inductive_body :=
-    decl <- lookup_env Σ kn;; 
+    decl <- lookup_env Σ kn;;
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl
@@ -46,7 +48,7 @@ Module GlobalEnvMap.
     mdecl <- lookup_minductive Σ (inductive_mind kn) ;;
     idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
     ret (mdecl, idecl).
-  
+
   Lemma lookup_inductive_spec Σ kn : lookup_inductive Σ kn = Ast.lookup_inductive Σ kn.
   Proof.
     rewrite /lookup_inductive /Ast.lookup_inductive.
@@ -56,7 +58,7 @@ Module GlobalEnvMap.
   Definition lookup_constructor Σ kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive Σ kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
-    ret (mdecl, idecl, cdecl).  
+    ret (mdecl, idecl, cdecl).
 
   Lemma lookup_constructor_spec Σ kn : lookup_constructor Σ kn = Ast.lookup_constructor Σ kn.
   Proof.

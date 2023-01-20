@@ -1,10 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction PCUICCases
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCumulativitySpec PCUICCumulativity PCUICPosition PCUICUnivSubst
      PCUICNamelessDef PCUICGuardCondition PCUICClosedConv PCUICClosedTyp PCUICUnivSubstitutionConv
-     PCUICClosed PCUICSigmaCalculus (* for context manipulations *).
+     PCUICClosed PCUICSigmaCalculus PCUICTyping (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
@@ -12,8 +13,8 @@ Implicit Types cf : checker_flags.
 
 (** Conversion does not rely on name annotations of binders.
 
-  We prove this by constructing a type-preserving translation to 
-  terms where all binders are anonymous. An alternative would be to 
+  We prove this by constructing a type-preserving translation to
+  terms where all binders are anonymous. An alternative would be to
   be parametrically polymorphic everywhere on the binder name type.
   This would allow to add implicit information too. *)
 
@@ -113,7 +114,7 @@ Proof.
     eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
     * destruct e as [eqpar [eqinst [eqctx eqret]]].
-      destruct X as [? [? ?]]. 
+      destruct X as [? [? ?]].
       destruct p, p'; simpl in *. f_equal.
       + apply All2_eq; solve_all.
       + red in eqinst.
@@ -264,7 +265,8 @@ Lemma global_variance_nl_sigma_mon {Σ gr napp} :
   global_variance (nl_global_env Σ) gr napp =
   global_variance Σ gr napp.
 Proof.
-  rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen
+  /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - rewrite nl_lookup_env.
     destruct lookup_env => /= //.
@@ -288,7 +290,7 @@ Lemma R_global_instance_nl Σ Re Rle gr napp :
        (R_global_instance (nl_global_env Σ) Re Rle gr napp).
 Proof.
   intros t t'.
-  unfold R_global_instance.
+  unfold R_global_instance, R_global_instance_gen.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
@@ -304,7 +306,7 @@ Lemma eq_context_nl_IH Σ Re ctx ctx' :
     (map (map_decl_anon nl) ctx').
 Proof.
   intros aux H.
-  induction H; simpl; constructor; simpl; destruct p; simpl; 
+  induction H; simpl; constructor; simpl; destruct p; simpl;
   intuition (constructor; auto); subst; reflexivity.
 Defined.
 
@@ -357,7 +359,7 @@ Lemma eq_context_nl Σ Re Rle ctx ctx' :
     (nlctx ctx) (nlctx ctx').
 Proof.
   intros H.
-  induction H; constructor; simpl; destruct p; intuition 
+  induction H; constructor; simpl; destruct p; intuition
     (constructor; auto using nl_eq_term_upto_univ).
 Qed.
 
@@ -409,7 +411,7 @@ Local Ltac ih3 :=
 (*Lemma eq_context_nl_inv_IH Σ Re ctx ctx' :
   onctx
   (fun u : term =>
- forall (Rle : Universe.t -> Universe.t -> Prop) 
+ forall (Rle : Universe.t -> Universe.t -> Prop)
    (napp : nat) (v : term),
  eq_term_upto_univ_napp Σ Re Rle napp (nl u) (nl v) ->
  eq_term_upto_univ_napp Σ Re Rle napp u v) ctx ->
@@ -417,10 +419,10 @@ Local Ltac ih3 :=
  eq_context_gen eq eq ctx ctx'.
 Proof.
   intros Hctx. unfold ondecl in *.
-  induction ctx as [|[na [b|] ty] Γ] in ctx', Hctx |- *; 
+  induction ctx as [|[na [b|] ty] Γ] in ctx', Hctx |- *;
   destruct ctx' as [|[na' [b'|] ty'] Δ]; simpl; intros H;
   depelim H; constructor; simpl in *; depelim Hctx; intuition eauto.
-  * depelim c; constructor; auto. 
+  * depelim c; constructor; auto.
     + cbn in *.
   * depelim c.
   * depelim c.
@@ -475,7 +477,7 @@ Proof. destruct n; reflexivity. Qed.
 Hint Resolve binder_anonymize : core.
 #[global] Hint Constructors compare_decls : core.
 Local Hint Unfold map_decl_anon : core.
-(* 
+(*
 Lemma eq_term_upto_univ_tm_nl :
   forall Σ Re Rle napp u,
     Reflexive Re ->
@@ -497,7 +499,7 @@ Proof.
       + reflexivity.
       + clear -a0 hRe hRle. induction a0.
         { constructor; auto. }
-        destruct x as [na [b|] ty]; simpl; constructor; auto; 
+        destruct x as [na [b|] ty]; simpl; constructor; auto;
           destruct p; simpl in *; intuition (simpl; auto);
           constructor; auto.
     * induction l.
@@ -507,7 +509,7 @@ Proof.
         ++ simpl.
           clear -hRe hRle a0.
           induction a0; [constructor; auto|].
-          destruct x as [na [b|] ty]; simpl; constructor; auto; 
+          destruct x as [na [b|] ty]; simpl; constructor; auto;
           destruct p; simpl in *; intuition auto; constructor; auto.
         ++ auto.
         ++ eapply IHl. assumption.
@@ -629,7 +631,7 @@ Qed.
 Lemma global_ext_constraints_nlg :
   forall Σ,
     global_ext_constraints (nlg Σ) = global_ext_constraints Σ.
-Proof. 
+Proof.
   intros [[univs g] ?]. reflexivity.
 Qed.
 
@@ -786,7 +788,7 @@ Lemma nl_eq_decl {cf:checker_flags} :
     compare_decl le Σ φ d d' ->
     compare_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
-  intros le Σ φ d d' []; constructor; destruct le; 
+  intros le Σ φ d d' []; constructor; destruct le;
   intuition auto using nl_eq_term, nl_leq_term.
 Qed.
 
@@ -822,11 +824,11 @@ Proof.
   apply IHt1.
 Qed.
 
-Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) = 
+Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) =
   set_preturn (nl_predicate nl p) (nl pret).
 Proof. reflexivity. Qed.
 
-Lemma nl_pred_set_pparams p pret : nl_predicate nl (set_pparams p pret) = 
+Lemma nl_pred_set_pparams p pret : nl_predicate nl (set_pparams p pret) =
   set_pparams (nl_predicate nl p) (map nl pret).
 Proof. reflexivity. Qed.
 
@@ -845,19 +847,21 @@ Proof.
 Qed.
 
 
-Lemma nl_declared_inductive Σ ind mdecl idecl :
+Lemma nl_declared_inductive {cf} Σ {wfΣ : wf Σ} ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->
   declared_inductive (nl_global_env Σ) ind
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl).
 Proof.
   intros []. split.
-  - unfold declared_minductive.
+  - eapply declared_minductive_from_gen. eapply declared_minductive_to_gen in H.
+    unfold declared_minductive_gen.
     rewrite nl_lookup_env H.
     simpl. reflexivity.
   - simpl. now rewrite nth_error_map H0.
+  Unshelve. all:eauto.
 Qed.
 
-Lemma nl_declared_constructor Σ c mdecl idecl cdecl :
+Lemma nl_declared_constructor {cf} Σ {wfΣ : wf Σ} c mdecl idecl cdecl :
   declared_constructor Σ c mdecl idecl cdecl ->
   declared_constructor (nl_global_env Σ) c
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl)
@@ -911,7 +915,7 @@ Proof.
   - simpl. f_equal; auto.
     rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
     * now rewrite nl_subst; len.
-    * now rewrite nl_subst; len. 
+    * now rewrite nl_subst; len.
   - simpl. f_equal; [|apply ih].
     rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
     now rewrite nl_subst; len.
@@ -929,7 +933,7 @@ Proof.
   - simpl. f_equal; auto.
     rewrite /lift_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
     * now rewrite nl_lift; len.
-    * now rewrite nl_lift; len. 
+    * now rewrite nl_lift; len.
   - simpl. f_equal; [|apply ih].
     rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
     now rewrite nl_lift; len.
@@ -957,16 +961,16 @@ Qed.
 #[global]
 Hint Rewrite nl_context_assumptions : len.
 
-Lemma nl_expand_lets_k Γ k t : 
-  nl (expand_lets_k Γ k t) = 
+Lemma nl_expand_lets_k Γ k t :
+  nl (expand_lets_k Γ k t) =
   expand_lets_k (nlctx Γ) k (nl t).
 Proof.
   rewrite /expand_lets_k.
   now rewrite nl_subst nl_extended_subst nl_lift; len; autorewrite with len.
 Qed.
 
-Lemma nl_expand_lets Γ t : 
-  nl (expand_lets Γ t) = 
+Lemma nl_expand_lets Γ t :
+  nl (expand_lets Γ t) =
   expand_lets (nlctx Γ) (nl t).
 Proof.
   now rewrite /expand_lets nl_expand_lets_k.
@@ -981,13 +985,13 @@ Proof.
   all: now rewrite nl_subst_instance.
 Qed.
 
-Lemma map_anon_fold_context_k g g' ctx : 
+Lemma map_anon_fold_context_k g g' ctx :
   (forall i, nl ∘ g i =1 g' i ∘ nl) ->
-  map (map_decl_anon nl) (fold_context_k g ctx) = 
+  map (map_decl_anon nl) (fold_context_k g ctx) =
   fold_context_k g' (map (map_decl_anon nl) ctx).
 Proof.
   intros hg.
-  rewrite !fold_context_k_alt map_mapi mapi_map. 
+  rewrite !fold_context_k_alt map_mapi mapi_map.
   apply mapi_ext => i d.
   rewrite /map_decl /map_decl_anon. len.
   f_equal.
@@ -997,16 +1001,16 @@ Proof.
 Qed.
 
 Lemma nl_subst_context s k ctx :
-  nlctx (subst_context s k ctx) = 
+  nlctx (subst_context s k ctx) =
   subst_context (map nl s) k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_context.
-  apply map_anon_fold_context_k. 
+  apply map_anon_fold_context_k.
   intros i x. now rewrite nl_subst.
 Qed.
 
 Lemma nl_subst_telescope s k ctx :
-  nlctx (subst_telescope s k ctx) = 
+  nlctx (subst_telescope s k ctx) =
   subst_telescope (map nl s) k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_telescope.
@@ -1016,16 +1020,16 @@ Proof.
 Qed.
 
 Lemma nl_lift_context n k ctx :
-  nlctx (lift_context n k ctx) = 
+  nlctx (lift_context n k ctx) =
   lift_context n k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_context.
-  apply map_anon_fold_context_k. 
+  apply map_anon_fold_context_k.
   intros i x. now rewrite nl_lift.
 Qed.
 
-Lemma nl_expand_lets_ctx Γ Δ : 
-  nlctx (expand_lets_ctx Γ Δ) = 
+Lemma nl_expand_lets_ctx Γ Δ :
+  nlctx (expand_lets_ctx Γ Δ) =
   expand_lets_ctx (nlctx Γ) (nlctx Δ).
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
@@ -1041,14 +1045,14 @@ Proof.
 Qed.
 
 
-Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
+Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' :
   map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; auto. f_equal.
   apply IHl.
 Qed.
 
-Lemma map2_map {A A' B B' C} (f : A -> B) (f' : A' -> B') (g : B -> B' -> C) l l' : 
+Lemma map2_map {A A' B B' C} (f : A -> B) (f' : A' -> B') (g : B -> B' -> C) l l' :
   map2 g (map f l) (map f' l') = map2 (fun x y => g (f x) (f' y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; auto. f_equal.
@@ -1067,7 +1071,7 @@ Proof.
 Qed.
 
 Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
-  (forall x y, f x y = g x y) ->  
+  (forall x y, f x y = g x y) ->
   map2 f l l' = map2 g l l'.
 Proof.
   intros H.
@@ -1092,7 +1096,7 @@ Proof.
 
  *)
 
-Lemma nlctx_smash_context Γ Δ : 
+Lemma nlctx_smash_context Γ Δ :
   nlctx (smash_context Γ Δ) = smash_context (nlctx Γ) (nlctx Δ).
 Proof.
   induction Δ as [|[na [b|] ty] Δ] in Γ |- *; simpl; auto.
@@ -1102,7 +1106,7 @@ Qed.
 
 Lemma nl_case_predicate_context ind mdecl idecl p :
   nlctx (case_predicate_context ind mdecl idecl p) =
-  case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) 
+  case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl)
     (nl_predicate nl p).
 Proof.
   unfold case_predicate_context, case_predicate_context_gen.
@@ -1139,21 +1143,21 @@ Qed.
 Lemma nl_case_branch_context ind mdecl p br cdecl :
   nlctx (case_branch_context ind mdecl p br cdecl) =
   case_branch_context ind (nl_mutual_inductive_body mdecl)
-    (nl_predicate nl p) (map anonymize br) 
+    (nl_predicate nl p) (map anonymize br)
     (nl_constructor_body cdecl).
 Proof.
   unfold case_branch_context, case_branch_context_gen. simpl.
-  rewrite /pre_case_branch_context_gen. 
+  rewrite /pre_case_branch_context_gen.
   rewrite /nlctx -nl_cstr_branch_context -nl_inst_case_context. cbn.
   now rewrite map_map2 map2_map.
 Qed.
 
-Lemma nl_case_branch_type ci mdecl idecl p br i cdecl : 
+Lemma nl_case_branch_type ci mdecl idecl p br i cdecl :
   let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
   case_branch_type ci (nl_mutual_inductive_body mdecl)
-    (nl_one_inductive_body idecl) (nl_predicate nl p) 
+    (nl_one_inductive_body idecl) (nl_predicate nl p)
     (nl_branch nl br)
-    (nl ptm) i (nl_constructor_body cdecl) = 
+    (nl ptm) i (nl_constructor_body cdecl) =
   map_pair nlctx nl (case_branch_type ci mdecl idecl p br ptm i cdecl).
 Proof.
   intros ptm.
@@ -1173,18 +1177,18 @@ Proof.
       now rewrite nl_to_extended_list.
 Qed.
 
-Lemma nl_forget_types ctx : 
-  forget_types (map (map_decl_anon nl) ctx) = 
+Lemma nl_forget_types ctx :
+  forget_types (map (map_decl_anon nl) ctx) =
   map anonymize (forget_types ctx).
 Proof.
   now rewrite /forget_types !map_map_compose.
 Qed.
 
-Lemma nl_wf_predicate mdecl idecl p : 
+Lemma nl_wf_predicate mdecl idecl p :
   wf_predicate mdecl idecl p ->
   wf_predicate (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) (nl_predicate nl p).
 Proof.
-  intros []; split. 
+  intros []; split.
   { len => //. }
   depelim H0.
   simpl. rewrite nl_forget_types H2 /=. constructor; auto.
@@ -1193,7 +1197,7 @@ Qed.
 
 Lemma nl_wf_branch cdecl br :
   wf_branch cdecl br ->
-  wf_branch (nl_constructor_body cdecl) (nl_branch nl br).  
+  wf_branch (nl_constructor_body cdecl) (nl_branch nl br).
 Proof.
   unfold wf_branch, wf_branch_gen.
   simpl.
@@ -1203,7 +1207,7 @@ Qed.
 
 Lemma nl_wf_branches idecl brs :
   wf_branches idecl brs ->
-  wf_branches (nl_one_inductive_body idecl) (map (nl_branch nl) brs).  
+  wf_branches (nl_one_inductive_body idecl) (map (nl_branch nl) brs).
 Proof.
   unfold wf_branches, wf_branches_gen.
   simpl. intros H; apply Forall2_map.
@@ -1215,7 +1219,7 @@ Lemma closed_ctx_IH :
   forall (l : list context_decl) (n : nat),
   onctx_k (fun (k : nat) (t : term) => closedn k (nl t)) n l ->
   closedn_ctx n (map (map_decl_anon nl) l).
-Proof.   
+Proof.
   unfold onctx_k. intros l n.
   solve_all.
   induction l; simpl; auto. len.
@@ -1258,11 +1262,11 @@ Proof.
 Qed.
 
 Lemma nl_red1 :
-  forall Σ Γ M N,
+  forall {cf} Σ {wfΣ : wf Σ} Γ M N,
     red1 Σ Γ M N ->
     red1 (nl_global_env Σ) (nlctx Γ) (nl M) (nl N).
 Proof.
-  intros Σ Γ M N h.
+  intros ? Σ ? Γ M N h.
   induction h using red1_ind_all.
   all: simpl.
   all: rewrite ?nl_lift ?nl_subst ?nl_subst_instance.
@@ -1327,7 +1331,9 @@ Proof.
     * reflexivity.
     * cbn. rewrite IHn. reflexivity.
   - econstructor.
-    + unfold declared_constant in *.
+    + eapply declared_constant_from_gen;
+      eapply declared_constant_to_gen in H;
+      unfold declared_constant_gen in *.
       rewrite nl_lookup_env H. reflexivity.
     + destruct decl as [? [?|] ?].
       all: cbn in *.
@@ -1364,43 +1370,44 @@ Proof.
     cbn. intros x y [[? ?] ?]. split.
     + rewrite nlctx_app_context nl_fix_context in r0. assumption.
     + cbn. congruence.
+    Unshelve. all:eauto.
 Qed.
 
 Lemma nl_conv {cf:checker_flags} :
-  forall Σ Γ A B,
+  forall {cf} Σ {wfΣ : wf_ext Σ} Γ A B,
     Σ ;;; Γ |- A = B ->
     nlg Σ ;;; nlctx Γ |- nl A = nl B.
 Proof.
-  intros Σ Γ A B h.
+  intros ? Σ ? Γ A B h.
   induction h.
   - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_eq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
   - eapply cumul_red_r. 1: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
 Qed.
 
 Lemma nl_cumul {cf:checker_flags} :
-  forall Σ Γ A B,
+  forall {cf} Σ {wfΣ : wf_ext Σ}  Γ A B,
     Σ ;;; Γ |- A <= B ->
     nlg Σ ;;; nlctx Γ |- nl A <= nl B.
 Proof.
-  intros Σ Γ A B h.
+  intros ? Σ ? Γ A B h.
   induction h.
   - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_leq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
   - eapply cumul_red_r. 1: eassumption.
-    destruct Σ. apply nl_red1. assumption.
+    destruct Σ. apply nl_red1; eauto. now destruct wfΣ.
 Qed.
 
 Notation nldecl := (map_decl_anon nl).
 
-Lemma nl_conv_decls {cf} {Σ Γ Γ'} {d d'} :
+Lemma nl_conv_decls {cf} {Σ Γ Γ'} `{wf_ext Σ} {d d'} :
   conv_decls cumulAlgo_gen Σ Γ Γ' d d' ->
   conv_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
@@ -1408,7 +1415,7 @@ Proof.
     eapply nl_conv; tea.
 Qed.
 
-Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} :
+Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} `{wf_ext Σ} :
    cumul_decls cumulAlgo_gen Σ Γ Γ' d d' ->
    cumul_decls cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
 Proof.
@@ -1416,7 +1423,7 @@ Proof.
     (eapply nl_conv || eapply nl_cumul); tea.
 Qed.
 
-Lemma nl_conv_ctx {cf} {Σ Γ Δ} :
+Lemma nl_conv_ctx {cf} {Σ Γ Δ} `{wf_ext Σ} :
   conv_context cumulAlgo_gen Σ Γ Δ ->
   conv_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
@@ -1425,12 +1432,12 @@ Proof.
 Qed.
 #[global] Hint Resolve nl_conv_ctx : nl.
 
-Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
+Lemma nl_cumul_ctx {cf} {Σ Γ Δ} `{wf_ext Σ} :
   cumul_context cumulAlgo_gen Σ Γ Δ ->
   cumul_context cumulAlgo_gen (nlg Σ) (nlctx Γ) (nlctx Δ).
 Proof.
   intros.
-  induction X; simpl; constructor; eauto; simpl; now 
+  induction X; simpl; constructor; eauto; simpl; now
     (eapply nl_conv_decls in p || eapply nl_cumul_decls in p).
 Qed.
 #[global] Hint Resolve nl_cumul_ctx : nl.
@@ -1449,7 +1456,7 @@ Proof.
 Qed.
 
 
-Lemma All2i_map {A B C D} (f : A -> B) (g : C -> D) P n l l' : 
+Lemma All2i_map {A B C D} (f : A -> B) (g : C -> D) P n l l' :
   All2i (fun i x y => P i (f x) (g y)) n l l' <~>
   All2i P n (map f l) (map g l').
 Proof.
@@ -1529,7 +1536,7 @@ Proof.
     destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.
   - f_equal. induction X; cbnr. f_equal; tas.
-    destruct p, x; unfold map_def_anon; simpl in *. 
+    destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.
 Qed.
 

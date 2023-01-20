@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv
   EWellformed ECSubst EInduction EWcbvEvalInd EEtaExpanded.
 
@@ -37,7 +38,7 @@ Section OnSubterm.
   | on_lambda na t : has_tLambda -> Q (S n) t -> on_subterms Q n (tLambda na t)
   | on_letin na t u : has_tLetIn -> Q n t -> Q (S n) u -> on_subterms Q n (tLetIn na t u)
   | on_app f u : has_tApp -> Q n f -> Q n u -> on_subterms Q n (tApp f u)
-  | on_case ci discr brs : has_tCase -> Q n discr -> 
+  | on_case ci discr brs : has_tCase -> Q n discr ->
     All (fun br => Q (#|br.1| + n) br.2) brs -> on_subterms Q n (tCase ci discr brs)
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
@@ -51,7 +52,7 @@ Class Qpres {etfl : ETermFlags} (Q : nat -> term -> Type) := qpres : forall n t,
 Class Qapp {etfl : ETermFlags} (Q : nat -> term -> Type) := qapp : has_tApp -> forall n f args, Q n (mkApps f args) <~> Q n f × All (Q n) args.
 #[export] Hint Mode Qapp - ! : typeclass_instances.
 
-Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCase -> 
+Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCase ->
   forall n ci discr brs, Q n (tCase ci discr brs) -> forall discr', Q n discr' -> Q n (tCase ci discr' brs).
 #[export] Hint Mode Qcase - ! : typeclass_instances.
 
@@ -64,22 +65,22 @@ Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFi
 #[export] Hint Mode Qcofix - ! : typeclass_instances.
 Class Qsubst (Q : nat -> term -> Type) := qsubst : forall t l, Q (#|l|) t -> All (Q 0) l -> Q 0 (substl l t).
 #[export] Hint Mode Qsubst ! : typeclass_instances.
-Class Qfixs (Q : nat -> term -> Type) := qfixs : forall mfix idx, Q 0 (tFix mfix idx) -> 
+Class Qfixs (Q : nat -> term -> Type) := qfixs : forall mfix idx, Q 0 (tFix mfix idx) ->
     forall args fn, cunfold_fix mfix idx = Some (args, fn) ->
     Q 0 fn.
 #[export] Hint Mode Qfixs ! : typeclass_instances.
-Class Qcofixs (Q : nat -> term -> Type) := qcofixs : forall mfix idx, Q 0 (tCoFix mfix idx) -> 
+Class Qcofixs (Q : nat -> term -> Type) := qcofixs : forall mfix idx, Q 0 (tCoFix mfix idx) ->
   forall args fn, cunfold_cofix mfix idx = Some (args, fn) ->
   Q 0 fn.
 #[export] Hint Mode Qcofixs ! : typeclass_instances.
-      
+
 Lemma Qfix_subst {etfl : ETermFlags} mfix Q : has_tFix -> Qfix Q -> Qpres Q -> forall idx, idx < #|mfix| -> Q 0 (tFix mfix idx) -> All (Q 0) (fix_subst mfix).
 Proof.
   intros hasfix qfix qpre; unfold fix_subst.
   generalize (Nat.le_refl #|mfix|).
   generalize #|mfix| at 1 4.
   induction n. intros. constructor; auto.
-  intros. constructor. eapply qfix => //. 2:tea. tea. 
+  intros. constructor. eapply qfix => //. 2:tea. tea.
   eapply IHn. lia. 2:tea. assumption.
 Qed.
 
@@ -89,7 +90,7 @@ Proof.
   generalize (Nat.le_refl #|mfix|).
   generalize #|mfix| at 1 4.
   induction n. intros. constructor; auto.
-  intros. constructor. eapply qcofix => //. 2:tea. tea. 
+  intros. constructor. eapply qcofix => //. 2:tea. tea.
   eapply IHn. lia. 2:tea. assumption.
 Qed.
 
@@ -126,7 +127,7 @@ Proof.
 Qed.
 
 Class Qconst Σ (Q : nat -> term -> Type) := qconst :
-  ∀ kn decl, declared_constant Σ kn decl → 
+  ∀ kn decl, declared_constant Σ kn decl →
     match cst_body decl with
     | None => unit
     | Some b => Q 0 b
@@ -146,7 +147,7 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
 Set Warnings "+future-coercion-class-field".
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : WcbvFlags), with_constructor_as_block = false -> forall  {efl : EEnvFlags} (Σ : global_declarations) 
+∀ (wfl : WcbvFlags), with_constructor_as_block = false -> forall  {efl : EEnvFlags} (Σ : global_declarations)
   (P' : term → term → Type)
   (Q : nat -> term -> Type)
   {Qpres : Qpreserves Q Σ}
@@ -158,9 +159,9 @@ Lemma eval_preserve_mkApps_ind :
   (∀ (a t t' : term),
 	 eval Σ a tBox ->
      P a tBox →
-     eval Σ t t' → P t t' → P' (tApp a t) tBox) → 
+     eval Σ t t' → P t t' → P' (tApp a t) tBox) →
   (∀ (f0 : term) (na : name) (b a a' res : term),
-      eval Σ f0 (tLambda na b) → 
+      eval Σ f0 (tLambda na b) →
       P f0 (tLambda na b)
          → eval Σ a a'
            → P a a'
@@ -172,26 +173,26 @@ Lemma eval_preserve_mkApps_ind :
          -> isEtaExp Σ b1
          -> Q 1 b1
            → eval Σ (ECSubst.csubst b0' 0 b1) res
-             → P (ECSubst.csubst b0' 0 b1) res → 
+             → P (ECSubst.csubst b0' 0 b1) res →
              P' (tLetIn na b0 b1) res)
-      → (∀ (ind : inductive) (pars : nat) cdecl (discr : term) 
-           (c : nat) (args : list term) (brs : 
-                                              list 
-                                                (list name × term)) 
+      → (∀ (ind : inductive) (pars : nat) cdecl (discr : term)
+           (c : nat) (args : list term) (brs :
+                                              list
+                                                (list name × term))
            (br : list name × term) (res : term),
            forallb (λ x : list name × term, isEtaExp Σ x.2) brs ->
            eval Σ discr (mkApps (tConstruct ind c []) args)
            → P discr (mkApps (tConstruct ind c []) args)
            → constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl)
                → nth_error brs c = Some br
-               → #|args| = pars + cdecl.(cstr_nargs) 
+               → #|args| = pars + cdecl.(cstr_nargs)
                  → #|skipn pars args| = #|br.1|
                  -> Q #|br.1| br.2
                    → eval Σ (iota_red pars args br) res
                      → P (iota_red pars args br) res
                        → P' (tCase (ind, pars) discr brs) res)
-        → (∀ (ind : inductive) (pars : nat) (discr : term) 
-             (brs : list (list name × term)) 
+        → (∀ (ind : inductive) (pars : nat) (discr : term)
+             (brs : list (list name × term))
              (n : list name) (f3 res : term),
              with_prop_case
              → eval Σ discr tBox
@@ -204,8 +205,8 @@ Lemma eval_preserve_mkApps_ind :
                          res
                        → P (ECSubst.substl (repeat tBox #|n|) f3) res
                          → P' (tCase (ind, pars) discr brs) res)
-          → (∀ (f4 : term) (mfix : mfixpoint term) 
-               (idx : nat) (argsv : list term) 
+          → (∀ (f4 : term) (mfix : mfixpoint term)
+               (idx : nat) (argsv : list term)
                (a av fn res : term),
                with_guarded_fix ->
                eval Σ f4 (mkApps (tFix mfix idx) argsv)
@@ -218,8 +219,8 @@ Lemma eval_preserve_mkApps_ind :
                       → eval Σ (tApp (mkApps fn argsv) av) res
                          → P (tApp (mkApps fn argsv) av) res
                            → P' (tApp f4 a) res)
-            → (∀ (f5 : term) (mfix : mfixpoint term) 
-                 (idx : nat) (argsv : list term) 
+            → (∀ (f5 : term) (mfix : mfixpoint term)
+                 (idx : nat) (argsv : list term)
                  (a av : term) (narg : nat) (fn : term),
                  with_guarded_fix ->
                  eval Σ f5 (mkApps (tFix mfix idx) argsv)
@@ -232,7 +233,7 @@ Lemma eval_preserve_mkApps_ind :
                            → P' (tApp f5 a)
                                (tApp
                                   (mkApps (tFix mfix idx) argsv) av))
-            → (∀ (f5 : term) (mfix : mfixpoint term) 
+            → (∀ (f5 : term) (mfix : mfixpoint term)
             (idx : nat) (a av : term) (narg : nat) (fn : term) res,
             with_guarded_fix = false ->
             eval Σ f5 (tFix mfix idx)
@@ -243,13 +244,13 @@ Lemma eval_preserve_mkApps_ind :
               → eval Σ (tApp fn av) res
               → P (tApp fn av) res
               -> isEtaExp Σ (tApp f5 a)
-              → P' (tApp f5 a) res) → 
-              
-              (∀ (ip : inductive × nat) (mfix : mfixpoint term) 
-                   (idx : nat) (args : list term) 
-                   (narg : nat) discr (fn : term) (brs : 
-                                                 list 
-                                                 (list name × term)) 
+              → P' (tApp f5 a) res) →
+
+              (∀ (ip : inductive × nat) (mfix : mfixpoint term)
+                   (idx : nat) (args : list term)
+                   (narg : nat) discr (fn : term) (brs :
+                                                 list
+                                                 (list name × term))
                    (res : term),
                    cunfold_cofix mfix idx = Some (narg, fn)
                    -> isEtaExp Σ fn
@@ -262,8 +263,8 @@ Lemma eval_preserve_mkApps_ind :
                        → P'
                            (tCase ip discr brs)
                            res)
-                → (∀ (p : projection) (mfix : mfixpoint term) 
-                     (idx : nat) (args : list term) 
+                → (∀ (p : projection) (mfix : mfixpoint term)
+                     (idx : nat) (args : list term)
                      (narg : nat) discr (fn res : term),
                      has_tProj ->
                      cunfold_cofix mfix idx = Some (narg, fn)
@@ -275,7 +276,7 @@ Lemma eval_preserve_mkApps_ind :
                        → P (tProj p (mkApps fn args)) res
                          → P'
                              (tProj p discr) res)
-                  → (∀ (c : kername) (decl : constant_body) 
+                  → (∀ (c : kername) (decl : constant_body)
                        (body : term),
                        declared_constant Σ c decl
                        → ∀ res : term,
@@ -287,7 +288,7 @@ Lemma eval_preserve_mkApps_ind :
                          eval Σ discr
                            (mkApps (tConstruct p.(proj_ind) 0 []) args)
                          → P discr (mkApps (tConstruct p.(proj_ind) 0 []) args)
-                         → constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) 
+                         → constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl)
                          → #|args| = p.(proj_npars) + cdecl.(cstr_nargs)
                          -> nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a
                          -> eval Σ a res
@@ -301,14 +302,14 @@ Lemma eval_preserve_mkApps_ind :
                                → inductive_isprop_and_pars Σ p.(proj_ind) = Some (true, p.(proj_npars))
                                  → P' (tProj p discr) tBox) →
   (∀ (f11 f' : term) a a',
-     forall (ev : eval Σ f11 f'), 
-     P f11 f' ->  
+     forall (ev : eval Σ f11 f'),
+     P f11 f' ->
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> isEtaExp Σ t -> P t u) →
-     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f' || 
-      isPrimApp f') → 
-     eval Σ a a' → P a a' → 
+     ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f' ||
+      isPrimApp f') →
+     eval Σ a a' → P a a' →
      isEtaExp Σ (tApp f' a') ->
-     P' (tApp f11 a) (tApp f' a')) → 
+     P' (tApp f11 a) (tApp f' a')) →
   (∀ ind i mdecl idecl cdecl args args',
     lookup_constructor Σ ind i = Some (mdecl, idecl, cdecl) ->
     #|args| = cstr_arity mdecl cdecl ->
@@ -317,7 +318,7 @@ Lemma eval_preserve_mkApps_ind :
     Q 0 (mkApps (tConstruct ind i []) args) ->
     Q 0 (mkApps (tConstruct ind i []) args') ->
     All2 P args args' ->
-    P' (mkApps (tConstruct ind i []) args) (mkApps (tConstruct ind i []) args')) → 
+    P' (mkApps (tConstruct ind i []) args) (mkApps (tConstruct ind i []) args')) →
 
   (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
@@ -344,23 +345,23 @@ Proof.
   rename X15 into qt. rename X13 into Xcappexp.
   rename X14 into Qatom.
   clear t t0 qt H0.
-  intros (t & t0 & qt & ev). 
+  intros (t & t0 & qt & ev).
   intros IH.
   set (IH' t t0 q H := IH (t; t0; q; H)). clearbody IH'; clear IH; rename IH' into IH.
   Opaque isEtaExp.
   cbn in IH. unfold MR in IH; cbn in IH. cbn.
-  Ltac ih := 
-    match goal with 
+  Ltac ih :=
+    match goal with
     [ IH : forall x y, ?Q 0 x -> _ |- _ ] => unshelve eapply IH; tea; cbn; try lia
     end.
-  Ltac iheta e := 
-    match goal with 
+  Ltac iheta e :=
+    match goal with
     [ IH : forall x y, ?Q 0 x -> _ |- _ ] => unshelve eapply (IH _ _ e); tea; cbn; try lia
     end.
   Ltac hp' P'Q := intros [hp' heta]; repeat split => //; try eapply P'Q; tea.
-  assert (and_assum : forall x y, (P' x y × isEtaExp Σ y) -> 
+  assert (and_assum : forall x y, (P' x y × isEtaExp Σ y) ->
     ((P' x y × isEtaExp Σ y) -> Q 0 x × Q 0 y × isEtaExp Σ x) ->
-    P x y).    
+    P x y).
   { intuition auto. red. intuition auto. }
   Ltac ih' P'Q :=
     match goal with
@@ -368,7 +369,7 @@ Proof.
       eapply H; tea; (apply and_assum; [ih|hp' P'Q])
     end.
   destruct ev.
-  1-18:eapply qpres in qt as qt'; depelim qt' => //.  
+  1-18:eapply qpres in qt as qt'; depelim qt' => //.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
@@ -384,7 +385,7 @@ Proof.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
       clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
+    * move=> /and4P [] etat0 etaargs etaa etat.
       assert (ql : Q 0 (tLambda na b)).
       { eapply P'Q; tea. ih. }
        assert (qs: Q 0 (csubst a' 0 b)).
@@ -421,7 +422,7 @@ Proof.
       rewrite -(List.rev_length (skipn pars args)) in a.
       rewrite Nat.add_0_r in a.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
-      2:{ eapply All_rev, All_skipn. 
+      2:{ eapply All_rev, All_skipn.
         assert (Q 0 (mkApps (tConstruct ind c []) args)).
         eapply P'Q; tea; ih.
         eapply qapp in X13; tea. eapply X13. }
@@ -448,7 +449,7 @@ Proof.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
       clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
+    * move=> /and4P [] etat0 etaargs etaa etat.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:{ clear ev1'; ih. }
       eapply qapp in ev1' as [hfix qargs] => //.
       assert (hastfix : has_tFix).
@@ -459,7 +460,7 @@ Proof.
       { rewrite -[tApp _ _](mkApps_app _ _ [av]).
         unshelve eapply (qapp _ _ _ _).2; auto.
         split => //.
-        eapply (qfixs mfix idx) in hfix; tea. 
+        eapply (qfixs mfix idx) in hfix; tea.
         eapply All_app_inv => //. eapply All_tip.1.
         eapply P'Q; tea; ih. }
       assert (etaapp : isEtaExp Σ fn × isEtaExp Σ (tApp (mkApps fn argsv) av)).
@@ -470,7 +471,7 @@ Proof.
         apply MCProd.and_assum.
         eapply isEtaExp_cunfold_fix. now simp_eta in efix. exact e.
         intros hfn.
-        eapply isEtaExp_mkApps_intro => //.        
+        eapply isEtaExp_mkApps_intro => //.
         eapply All_app_inv. now eapply forallb_All in hargs. eapply (fst All_tip).
         iheta q0. }
       destruct etaapp as [etafn etafnapp].
@@ -498,7 +499,7 @@ Proof.
     * move=> [] argsn [] ha [] ht /andP[] /andP[] etaind etaargs bargs. destruct block_args; inv bargs.
       clear IH; rewrite ha in ev1. exfalso.
       eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr. auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
+    * move=> /and4P [] etat0 etaargs etaa etat.
       assert (qav : Q 0 av).
       { eapply P'Q; tea; ih. }
       assert (qa : Q 0 (tApp fn av)).
@@ -524,7 +525,7 @@ Proof.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply qapp in ev1' as [hfix qargs] => //.
       eapply qapp => //. split => //.
-      eapply (qcofixs mfix idx) in hfix; tea. 
+      eapply (qcofixs mfix idx) in hfix; tea.
       clear ev1'; ih. }
     assert (etafn : isEtaExp Σ fn && forallb (isEtaExp Σ) args).
     { assert (hfix : isEtaExp Σ (mkApps (tCoFix mfix idx) args)) by iheta q.
@@ -620,7 +621,7 @@ Proof.
         eapply All2_All_right; tea; cbn.
         intros ? ? [? [? [? []]]]. split. eapply P'Q; tea. apply p. apply p. }
       eapply mkApps_eq_inj in e1 as [] => //. subst ex. noconf H.
-      split. 
+      split.
       unshelve eapply Xcappexp; tea.
       + rewrite ht -remove_last_last //.
         move: etaind; rewrite /isEtaExp_app.
@@ -632,7 +633,7 @@ Proof.
         constructor; [|constructor]. apply ev2.
       + rewrite ht. rewrite -remove_last_last //.
       + eapply qapp in q as []; auto.
-        eapply qapp => //. 
+        eapply qapp => //.
       + eapply qapp in q as [] => //. eapply qapp; auto. split => //.
         eapply All_impl; tea; cbn; intuition auto.
       + eapply All2_All_mix_left in X16; [|exact X14].
@@ -647,7 +648,7 @@ Proof.
         rewrite ht -remove_last_last //.
         rtoProp. split. eauto.
         eapply All_forallb. eapply All_impl; tea. cbn; intuition auto. auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
+    * move=> /and4P [] etat0 etaargs etaa etat.
       rewrite -[tApp _ a'](mkApps_app _ _ [a']).
       assert (P' f (mkApps (tConstruct ind c []) cargs) × isEtaExp Σ (mkApps (tConstruct ind c []) cargs)).
       { unshelve eapply IH; tea. cbn. lia. }
@@ -667,8 +668,8 @@ Proof.
       subst f. exfalso.
       eapply eval_mkApps_Construct_inv in ev1' as [? [hf' hargs']]. subst f'.
       clear IH; move: i; rewrite !negb_or isConstructApp_mkApps /= !andb_false_r //.  auto.
-    * move=> /and4P [] etat0 etaargs etaa etat. 
-      split. eapply (X12 _ _ _ _ ev1); tea. 
+    * move=> /and4P [] etat0 etaargs etaa etat.
+      split. eapply (X12 _ _ _ _ ev1); tea.
       1,3:(apply and_assum; [ih|hp' P'Q]).
       intros. apply and_assum; [ih|hp' P'Q].
       pose proof (decompose_app_inv da). clear cv.
@@ -697,14 +698,14 @@ Definition term_flags :=
     has_tCoFix := false;
     has_tPrim := true
   |}.
-  
-Definition env_flags := 
+
+Definition env_flags :=
     {| has_axioms := false;
        has_cstr_params := false;
        term_switches := term_flags ;
        cstr_as_blocks := false
     |}.
-  
+
 From MetaCoq.Erasure Require Import ELiftSubst.
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ :
   cstr_as_blocks = false ->
@@ -729,7 +730,7 @@ Proof.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.
-  - red. move=> hasapp n t args. rewrite wellformed_mkApps //. 
+  - red. move=> hasapp n t args. rewrite wellformed_mkApps //.
     split; intros; rtoProp; intuition auto; solve_all.
   - red. intros. simpl in H0. simpl. rtoProp; intuition auto.
   - red. move=> hasproj n p discr. simpl; rtoProp; intuition auto.
@@ -743,11 +744,11 @@ Proof.
 Qed.
 
 Ltac destruct_nary_times :=
-  match goal with 
+  match goal with
   | [ H : _ × _ |- _ ] => destruct H
-  | [ H : [× _, _ & _] |- _ ] => destruct H 
-  | [ H : [× _, _, _ & _] |- _ ] => destruct H 
-  | [ H : [× _, _, _, _ & _] |- _ ] => destruct H 
+  | [ H : [× _, _ & _] |- _ ] => destruct H
+  | [ H : [× _, _, _ & _] |- _ ] => destruct H
+  | [ H : [× _, _, _, _ & _] |- _ ] => destruct H
   end.
 
 Lemma eval_etaexp {fl : WcbvFlags} (efl := env_flags) {Σ a a'} :
@@ -759,7 +760,7 @@ Lemma eval_etaexp {fl : WcbvFlags} (efl := env_flags) {Σ a a'} :
 Proof.
   intros hcon etaΣ wfΣ wf ev eta.
   revert a a' wf eta ev.
-  eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t) 
+  eapply (eval_preserve_mkApps_ind (efl:=env_flags) fl hcon Σ (fun _ x => isEtaExp Σ x) (fun n t => wellformed Σ n t)
     (Qpres := Qpreserves_wellformed env_flags Σ eq_refl wfΣ)) => //.
   all:intros; repeat destruct_nary_times.
   all:intuition auto.

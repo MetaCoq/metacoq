@@ -1,16 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICSigmaCalculus
-     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnv PCUICWeakeningEnvTyp 
+     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConfluence
-     PCUICConversion PCUICContexts 
+     PCUICConversion PCUICContexts
      PCUICArities PCUICSpine PCUICInductives
      PCUICWellScopedCumulativity PCUICContexts PCUICWfUniverses.
-     
+
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
@@ -26,7 +27,7 @@ Section Validity.
 
   Lemma isType_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T => isType Σ Γ T).
   Proof using Type.
-    red. intros.
+    do 2 red. intros.
     apply infer_typing_sort_impl with id X2; intros Hs.
     unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Typ (tSort _))); eauto with pcuic.
     red. simpl. destruct Σ. eapply Hs.
@@ -38,7 +39,7 @@ Section Validity.
     weaken_env_prop cumulSpec0 (lift_typing typing)
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof using Type.
-    red. intros.
+    do 2 red. intros.
     apply lift_typing_impl with (1 := X2); intros ? Hs.
     now eapply (isType_weaken_full (Σ, _)).
   Qed.
@@ -85,7 +86,7 @@ Section Validity.
     eapply infer_typing_sort_impl with _ Hty; intros Hs.
     eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
   Qed.
-  
+
   Lemma isWfArity_subst_instance_decl {Σ Γ T c decl u} :
     wf Σ.1 ->
     lookup_env Σ.1 c = Some decl ->
@@ -98,8 +99,8 @@ Section Validity.
     exists (subst_instance u ctx), (subst_instance_univ u s).
     rewrite (subst_instance_destArity []) eq. intuition auto.
   Qed.
-  
-  Lemma isType_weakening {Σ Γ T} : 
+
+  Lemma isType_weakening {Σ Γ T} :
     wf Σ.1 ->
     wf_local Σ Γ ->
     isType Σ [] T ->
@@ -132,7 +133,7 @@ Section Validity.
 
   Lemma eq_binder_annots_eq_ctx (Σ : global_env_ext) (Δ : context) (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ) 
+    PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ)
       (map2 set_binder_name nas Δ) Δ.
   Proof using Type.
     induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
@@ -148,7 +149,7 @@ Section Validity.
       destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
       try reflexivity.
   Qed.
-  
+
   Lemma eq_term_set_binder_name (Σ : global_env_ext) (Δ : context) T U (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
     PCUICEquality.eq_term Σ Σ T U ->
@@ -160,10 +161,10 @@ Section Validity.
     - auto.
     - rewrite /= /mkProd_or_LetIn.
       destruct r => /=; intros; eapply IHa;
-      constructor; auto. 
+      constructor; auto.
   Qed.
 
-  Lemma All2_eq_binder_subst_context_inst l s k i Δ Γ : 
+  Lemma All2_eq_binder_subst_context_inst l s k i Δ Γ :
     All2
       (fun (x : binder_annot name) (y : context_decl) =>
         eq_binder_annot x (decl_name y)) l Γ ->
@@ -190,7 +191,7 @@ Section Validity.
   Lemma wf_pre_case_predicate_context_gen {ci mdecl idecl} {p} :
     wf_predicate mdecl idecl p ->
     All2 (fun (x : binder_annot name) (y : context_decl) => eq_binder_annot x (decl_name y))
-      (forget_types (pcontext p)) 
+      (forget_types (pcontext p))
       (pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p)).
   Proof using Type.
     move=> [] hlen /Forall2_All2.
@@ -225,7 +226,7 @@ Section Validity.
 
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
-      (fun Σ Γ => wf_local Σ Γ × All_local_env 
+      (fun Σ Γ => wf_local Σ Γ × All_local_env
         (fun Γ t T => match T with Typ T => (isType Σ Γ T × Σ ;;; Γ |- t : T) | Sort => isType Σ Γ t end) Γ).
   Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps.
@@ -241,12 +242,12 @@ Section Validity.
         now apply nth_error_Some_length in heq_nth_error.
         now exists x.
 
-    - (* Universe *) 
+    - (* Universe *)
        exists (Universe.super (Universe.super u)).
        constructor; auto.
        now apply wf_universe_super.
-        
-    - (* Product *) 
+
+    - (* Product *)
       eexists.
       eapply isType_Sort_inv in X1; eapply isType_Sort_inv in X3; auto.
       econstructor; eauto.
@@ -282,19 +283,22 @@ Section Validity.
       * eapply declared_constant_inv in X; eauto.
         red in X. simpl in X.
         eapply isType_weakening; eauto.
+        unshelve eapply declared_constant_to_gen in H; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
-        eapply weaken_env_prop_isType.
+        exact weaken_env_prop_isType.
       * have ond := on_declared_constant wf H.
         do 2 red in ond. simpl in ond.
         simpl in ond.
         eapply isType_weakening; eauto.
+        unshelve eapply declared_constant_to_gen in H; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto.
-     
+
      - (* Inductive type *)
       destruct (on_declared_inductive isdecl); pcuic.
       destruct isdecl.
       apply onArity in o0.
       eapply isType_weakening; eauto.
+      unshelve eapply declared_minductive_to_gen in H; eauto.
       eapply (isType_subst_instance_decl (Γ:=[])); eauto.
 
     - (* Constructor type *)
@@ -311,7 +315,7 @@ Section Validity.
 
     - (* Case predicate application *)
       assert (cu : consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
-      { eapply (isType_mkApps_Ind_inv wf isdecl) in X7 as [parsubst [argsubst Hind]]; 
+      { eapply (isType_mkApps_Ind_inv wf isdecl) in X7 as [parsubst [argsubst Hind]];
         repeat intuition auto. }
       eassert (ctx_inst Σ Γ _ (List.rev _)).
       { eapply ctx_inst_impl with (1 := X5); now intros t T [Hty _]. }
@@ -337,7 +341,7 @@ Section Validity.
       2:{ rewrite /predctx /case_predicate_context /case_predicate_context_gen.
           eapply ws_cumul_pb_compare. 1-2:eauto with fvs.
           2:{ red.
-              instantiate (1 := 
+              instantiate (1 :=
                 it_mkProd_or_LetIn (pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p))
                     (tSort ps)).
             eapply PCUICEquality.eq_term_leq_term.
@@ -348,7 +352,7 @@ Section Validity.
           epose proof (isType_case_predicate (puinst p) _ _ wfΓ isdecl cu wfps sppars).
           eauto with fvs. len.
           rewrite (wf_predicate_length_pars H0).
-          now rewrite onmind.(onNpars). } 
+          now rewrite onmind.(onNpars). }
       eapply wf_arity_spine_typing_spine; auto.
       rewrite subst_instance_app_ctx in X6.
       eapply spine_subst_smash_app_inv in X6 as [sppars spidx].
@@ -362,11 +366,12 @@ Section Validity.
     - (* Proj *)
       pose proof isdecl as isdecl'.
       eapply declared_projection_type in isdecl'; eauto.
-      unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
+      unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
       eapply infer_typing_sort_impl with _ isdecl'; intros Hs.
-      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
+      unshelve epose proof (isdecl_ := declared_projection_to_gen isdecl); eauto.
+      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl_.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
       eapply (weaken_ctx Γ) in Hs; eauto.
       rewrite -heq_length in sppar. rewrite firstn_all in sppar.
@@ -385,15 +390,15 @@ Section Validity.
       rewrite subst_instance_smash.
       rewrite (spine_subst_subst_to_extended_list_k sppar).
       assumption.
-      
+
     - (* Fix *)
       eapply nth_error_all in X0 as [s Hs]; eauto.
       pcuic.
-    
+
     - (* CoFix *)
       eapply nth_error_all in X0 as [s Hs]; pcuic.
 
-    - (* Primitive *) 
+    - (* Primitive *)
       destruct X0 as [s [hty hbod huniv]].
       exists s@[[]].
       change (tSort s@[[]]) with (tSort s)@[[]].
@@ -413,10 +418,24 @@ Proof.
   intros. eapply validity_env; try eassumption.
 Defined.
 
+Lemma wf_local_validity `{cf : checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ :
+  wf_local Σ (Γ ,,, Δ) ->
+  ∑ us, sorts_local_ctx (lift_typing typing) Σ Γ Δ us.
+Proof.
+  move=> wfΓΔ.
+  apply: validity_wf_local.
+  enough (h : wf_local_rel Σ Γ Δ).
+  apply: All_local_env_impl; first exact h.
+  1: move=> ?? [?|] //= ?; split=> //; apply: validity; eassumption.
+  by apply: (wf_local_app_inv _).2.
+Qed.
+
+
+
 (* To deprecate *)
 Notation validity_term wf Ht := (validity (wfΣ:=wf) Ht).
 
-(* This corollary relies strongly on validity to ensure 
+(* This corollary relies strongly on validity to ensure
    every type in the derivation is well-typed.
    It should be used instead of the weaker [invert_type_mkApps],
    which is only used as a stepping stone to validity.
@@ -449,7 +468,7 @@ Proof.
 Qed.
 
 (** "Economical" typing rule for applications, not requiring to check the product type *)
-Lemma type_App' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B u} : 
+Lemma type_App' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B u} :
   Σ;;; Γ |- t : tProd na A B ->
   Σ;;; Γ |- u : A -> Σ;;; Γ |- tApp t u : B {0 := u}.
 Proof.
@@ -462,7 +481,7 @@ Qed.
     as it avoids having to give intermediate well-typing and cumulativity proofs. *)
 Lemma type_mkApps_arity {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u tty T} :
   Σ;;; Γ |- t : tty ->
-  arity_spine Σ Γ tty u T -> 
+  arity_spine Σ Γ tty u T ->
   Σ;;; Γ |- mkApps t u : T.
 Proof.
   intros Ht Hty.

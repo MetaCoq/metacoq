@@ -1,7 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Common.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
 Import MCMonadNotation.
 
 (** * The Template Monad
@@ -117,3 +119,46 @@ Definition tmMkDefinition (id : ident) (tm : term) : TemplateMonad unit
      t'' <- tmEval (unfold (Common_kn "my_projT2")) (my_projT2 t') ;;
      tmDefinitionRed id (Some (unfold (Common_kn "my_projT1"))) t'' ;;
      tmReturn tt.
+
+Definition TypeInstance : Common.TMInstance :=
+  {| Common.TemplateMonad := TemplateMonad
+   ; Common.tmReturn:=@tmReturn
+   ; Common.tmBind:=@tmBind
+   ; Common.tmFail:=@tmFail
+   ; Common.tmFreshName:=@tmFreshName
+   ; Common.tmLocate:=@tmLocate
+   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmQuoteInductive:=@tmQuoteInductive
+   ; Common.tmQuoteUniverses:=@tmQuoteUniverses
+   ; Common.tmQuoteConstant:=@tmQuoteConstant
+   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmExistingInstance:=@tmExistingInstance
+   |}.
+
+Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
+  := u <- @tmQuote Prop (Type@{U} -> True);;
+     match u with
+     | tProd _ (tSort u) _ => ret u
+     | _ => tmFail "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
+     end.
+Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
+  := u <- tmQuoteUniverse@{U t u};;
+     match Universe.get_is_level u with
+     | Some l => ret l
+     | None => tmFail "Universe is not a level"%bs
+     end.
+
+Definition tmFix'@{a b t u} {A : Type@{a}} {B : Type@{b}} (qtmFix' : Ast.term) (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => tmFix <- tmUnquoteTyped (Ast.term -> ((A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) -> A -> TemplateMonad@{t u} B) qtmFix';;
+           tmFix qtmFix' f a).
+Definition tmFix@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => (qA <- tmQuote A;;
+            qB <- tmQuote B;;
+            qa <- tmQuoteLevel@{a _ _};;
+            qb <- tmQuoteLevel@{b _ _};;
+            qt <- tmQuoteLevel@{t _ _};;
+            qu <- tmQuoteLevel@{u _ _};;
+            let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
+            @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).

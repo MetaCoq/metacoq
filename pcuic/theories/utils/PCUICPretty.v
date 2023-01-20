@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 
 (** * Pretty printing *)
@@ -67,8 +67,8 @@ Section fresh.
   Definition fresh_name (Γ : list ident) (na : name) (t : option term) : ident :=
     let id := match na with
               | nNamed id => id
-              | nAnon => 
-                match t with 
+              | nAnon =>
+                match t with
                 | Some t => name_from_term t
                 | None => "_"
                 end
@@ -81,7 +81,7 @@ Section fresh.
     {| decl_name := na;
         decl_type := decl_type decl;
         decl_body := decl_body decl |}.
-  
+
   (* Definition build_return_context
               (ind : inductive)
               (oib : one_inductive_body)
@@ -99,7 +99,7 @@ Section fresh.
           vass ind_binder_name (mkApps (tInd ind (puinst pred)) (pparams pred)))
     | None => None
     end. *)
-    
+
   Definition fresh_names (Γ : list ident) (Γ' : context) : list ident :=
     let fix aux Γids Γ :=
         match Γ with
@@ -138,7 +138,7 @@ Module PrintTermTree.
 
       Definition pr_context_decl Γ (c : context_decl) : ident * t :=
         match c with
-        | {| decl_name := na; decl_type := ty; decl_body := None |} => 
+        | {| decl_name := na; decl_type := ty; decl_body := None |} =>
           let na' := (fresh_name Σ Γ na.(binder_name) (Some ty)) in
           (na', ("(" ^ na' ^ " : " ^ print_term Γ true false ty ^ ")")%bs)
         | {| decl_name := na; decl_type := ty; decl_body := Some b |} =>
@@ -146,11 +146,11 @@ Module PrintTermTree.
           (na', ("(" ^ na' ^ " : " ^ print_term Γ true false ty ^ " := " ^
             print_term Γ true false b ^ ")")%bs)
         end.
-      
+
       Fixpoint print_context_gen Γ Δ :=
         match Δ with
         | [] => (Γ, "" : t)
-        | d :: decls => 
+        | d :: decls =>
           let '(Γ, s) := print_context_gen Γ decls in
           let '(na, s') := pr_context_decl Γ d in
           match decls with
@@ -158,11 +158,11 @@ Module PrintTermTree.
           | _ => (na :: Γ, s ^ " " ^ s')
           end
         end.
-            
+
       Fixpoint print_context_names Γ Δ :=
         match Δ with
         | [] => (Γ, "" : t)
-        | d :: decls => 
+        | d :: decls =>
           let '(Γ, s) := print_context_names Γ decls in
           let na := (fresh_name Σ Γ d.(decl_name).(binder_name) (Some d.(decl_type))) in
           match decls with
@@ -172,7 +172,7 @@ Module PrintTermTree.
         end.
 
     End Aux.
-          
+
     Context (all : bool).
 
     Fixpoint print_term (Γ : list ident) (top : bool)(inapp : bool) (t : term) {struct t} : Tree.t :=
@@ -231,14 +231,14 @@ Module PrintTermTree.
         let in_args := (repeat "_" #|pparams p| ++ indices)%list in
         let in_str := oib.(ind_name) ^ concat "" (map (fun a : String.t => " " ^ a) in_args) in
 
-        let brs := map (fun br => 
-            let (Γctx, pctx) := 
-              if all then print_context_gen print_term Γ br.(bcontext) 
+        let brs := map (fun br =>
+            let (Γctx, pctx) :=
+              if all then print_context_gen print_term Γ br.(bcontext)
               else print_context_names Γ br.(bcontext)
             in
             pctx ^ " ⇒ " ^ print_term Γctx true false br.(bbody)) brs in
         let brs := combine brs oib.(ind_ctors) in
-                              
+
         parens top ("match " ^ print_term Γ true false t ^
                     " as " ^ as_name ^
                     " in " ^ in_str ^
@@ -248,7 +248,7 @@ Module PrintTermTree.
                     (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
     | None =>
       "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-              ^ string_of_predicate string_of_term p ^ "," ^ 
+              ^ string_of_predicate string_of_term p ^ "," ^
               string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
       end
     | tProj p c =>
@@ -282,7 +282,7 @@ Module PrintTermTree.
     Definition print_one_cstr Γ (mib : mutual_inductive_body) (c : constructor_body) : t :=
       let '(Γargs, s) := print_context Γ c.(cstr_args) in
       c.(cstr_name) ^ " : " ^ s ^ "_" ^ print_list (pr_term Γargs true) " " c.(cstr_indices).
-    
+
     Definition print_one_ind (short : bool) Γ (mib : mutual_inductive_body) (oib : one_inductive_body) : t :=
       let '(Γpars, spars) := print_context Γ mib.(ind_params) in
       let '(Γinds, sinds) := print_context Γpars oib.(ind_indices) in
@@ -298,28 +298,28 @@ Module PrintTermTree.
     | BiFinite => "Variant"
     end.
 
-  Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
-    match prefix with 
+  Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t :=
+    match prefix with
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
-    | S n => 
+    | S n =>
       match Σ.(declarations) with
       | [] => acc
-      | (kn, InductiveDecl mib) :: decls => 
+      | (kn, InductiveDecl mib) :: decls =>
         let Σ' := (set_declarations Σ decls, mib.(ind_universes)) in
         let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
         print_env_aux short n Σ'.1
           (print_recursivity_kind mib.(ind_finite) ^ " " ^
-          print_list (print_one_ind Σ' short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^ 
+          print_list (print_one_ind Σ' short names mib) (nl ^ "with ") mib.(ind_bodies) ^ "." ^
           nl ^ acc)
       | (kn, ConstantDecl cb) :: decls =>
         let Σ' := (set_declarations Σ decls, cb.(cst_universes)) in
         print_env_aux short n Σ'.1
-          ((match cb.(cst_body) with 
+          ((match cb.(cst_body) with
             | Some _ => "Definition "
             | None => "Axiom "
           end) ^ string_of_kername kn ^ " : " ^ print_term Σ' true nil true false cb.(cst_type) ^
           match cb.(cst_body) with
-          | Some b => 
+          | Some b =>
             if short then ("..." ^ nl)
             else (" := " ^ nl ^ print_term Σ' true nil true false b ^ "." ^ nl)
           | None => "."
@@ -327,22 +327,22 @@ Module PrintTermTree.
       end
     end.
 
-  Definition print_env (short : bool) (prefix : nat) Σ := 
+  Definition print_env (short : bool) (prefix : nat) Σ :=
     print_env_aux short prefix Σ (Tree.string "").
 
-  Definition print_program (short : bool) (prefix : nat) (p : program) : t := 
-    print_env short prefix (fst p) ^ nl ^ print_term (empty_ext (fst p)) true nil true false (snd p). 
+  Definition print_program (short : bool) (prefix : nat) (p : program) : t :=
+    print_env short prefix (fst p) ^ nl ^ print_term (empty_ext (fst p)) true nil true false (snd p).
 
-End PrintTermTree.  
+End PrintTermTree.
 
-Definition print_term Σ all Γ top inapp t := 
+Definition print_term Σ all Γ top inapp t :=
   Tree.to_string (PrintTermTree.print_term Σ all Γ top inapp t).
 
-Definition print_context Σ Γ Δ : string := 
+Definition print_context Σ Γ Δ : string :=
   Tree.to_string (PrintTermTree.print_context_gen Σ (PrintTermTree.print_term Σ true) Γ Δ).2.
 
-Definition print_env (short : bool) (prefix : nat) Σ := 
+Definition print_env (short : bool) (prefix : nat) Σ :=
   Tree.to_string (PrintTermTree.print_env short prefix Σ).
-  
-Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
+
+Definition print_program (short : bool) (prefix : nat) (p : program) : string :=
   Tree.to_string (PrintTermTree.print_program short prefix p).

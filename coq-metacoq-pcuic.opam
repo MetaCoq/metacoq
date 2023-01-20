@@ -27,7 +27,7 @@ install: [
   [make "-C" "pcuic" "install"]
 ]
 depends: [
-  "coq-metacoq-template" {= version}
+  "coq-metacoq-common" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"
 description: """

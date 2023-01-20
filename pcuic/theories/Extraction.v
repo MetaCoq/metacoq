@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import MetaCoq.Template.utils.
+Require Import MetaCoq.Common.utils.
 Require Import FSets ssreflect ExtrOcamlBasic ExtrOcamlZInt.
 
 (** * Extraction setup for the pcuic phase of MetaCoq.
@@ -20,7 +20,7 @@ Extraction Library Init.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst
   PCUICInduction PCUICLiftSubst PCUICTyping PCUICNormal PCUICSafeLemmata
   PCUICEquality (* PCUICWeakeningEnv *) (* PCUICWeakening *)
-  (* PCUICSubstitution *) PCUICPretty TemplateToPCUIC.
+  (* PCUICSubstitution *) PCUICPretty.CommonToPCUIC.
 From Equations Require Import Equations.
 
 (* Should be in Equations *)
@@ -50,7 +50,7 @@ Extraction Library CMorphisms.
 (* Separate Extraction PCUICNormal PCUICAst PCUICAstUtils PCUICUnivSubst PCUICLiftSubst PCUICReflect PCUICPosition *)
 (*          PCUICCumulativity PCUICSubstitution *)
 (*          (* PCUICTyping PCUICEquality *) *)
-(*          TemplateToPCUIC (* PCUICSafeLemmata *). *)
+(*         .CommonToPCUIC (* PCUICSafeLemmata *). *)
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUtils.
@@ -61,6 +61,6 @@ Extraction Library PCUICReflect.
 Extraction Library EqDecInstances.
 Extraction Library PCUICEquality.
 Extraction Library PCUICTyping.
-Extraction Library TemplateToPCUIC.
+Extraction Library.CommonToPCUIC.
 Extraction Library PCUICPretty.
 Cd "..".

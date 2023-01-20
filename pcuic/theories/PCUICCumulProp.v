@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine
      PCUICGlobalEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
@@ -8,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactic
      PCUICUnivSubstitutionTyp PCUICClosedTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICContextConversionTyp PCUICEquality PCUICReduction PCUICOnFreeVars 
+     PCUICContextConversionTyp PCUICEquality PCUICReduction PCUICOnFreeVars
      PCUICWellScopedCumulativity
      PCUICInductiveInversion.
 
@@ -45,7 +46,7 @@ Qed.
 Lemma cumul_ind_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A ind u v l l'} :
   Σ ;;; Γ ⊢ A ≤ mkApps (tInd ind u) l  ->
   Σ ;;; Γ ⊢ A ≤ mkApps (tInd ind v) l' ->
-  ∑ v' l'', 
+  ∑ v' l'',
     [× Σ ;;; Γ ⊢ A ⇝ (mkApps (tInd ind v') l''),
        ws_cumul_pb_terms Σ Γ l l'',
        ws_cumul_pb_terms Σ Γ l' l'',
@@ -62,9 +63,9 @@ Proof using Type.
   all:auto. exists u'u, args'; split; auto.
   - transitivity (mkApps (tInd ind u'u) l'u).
     auto. eapply closed_red_mkApps => //.
-  - eapply red_terms_ws_cumul_pb_terms in conv. 
+  - eapply red_terms_ws_cumul_pb_terms in conv.
     transitivity l'u => //. now symmetry.
-  - eapply red_terms_ws_cumul_pb_terms in conv'. 
+  - eapply red_terms_ws_cumul_pb_terms in conv'.
     transitivity l''u => //. now symmetry.
 Qed.
 
@@ -109,23 +110,23 @@ Proof using Hcf'.
   unshelve eapply (leq_universe_sprop_l _ _ _ _ _ leq'); eauto.
 Qed.
 
-Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' -> 
+Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' ->
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof using Type.
   destruct u, u';
   move=> //_ //_.
-  constructor => //. constructor. 
+  constructor => //. constructor.
   red. red. constructor.
 Qed.
 
-Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -> 
+Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' ->
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof using Type.
   destruct u, u';
   move=> //_ //_.
-  constructor => //. constructor. 
+  constructor => //. constructor.
   do 2 red. constructor.
 Qed.
 
@@ -142,16 +143,16 @@ Qed.
 
 Lemma is_prop_superE {Σ l} : wf_ext Σ -> Universe.is_prop (Universe.super l) -> False.
 Proof using Hcf'.
-  intros wfΣ. 
+  intros wfΣ.
   eapply is_prop_gt; eauto.
   eapply leq_universe_refl.
 Qed.
 
 Lemma is_sprop_superE {Σ l} : wf_ext Σ -> Universe.is_sprop (Universe.super l) -> False.
 Proof using Type.
-  intros wfΣ. destruct l => //. 
+  intros wfΣ. destruct l => //.
 Qed.
-  
+
 Lemma is_prop_prod {s s'} : Universe.is_prop s' -> Universe.is_prop (Universe.sort_of_product s s').
 Proof using Type.
   intros isp.
@@ -174,12 +175,12 @@ Definition eq_term_prop (Σ : global_env) napp :=
 Reserved Notation " Σ ;;; Γ |- t ~~ u " (at level 50, Γ, t, u at next level).
 
 Inductive cumul_prop `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  | cumul_refl t u : 
+  | cumul_refl t u :
     is_closed_context Γ ->
     is_open_term Γ t ->
     is_open_term Γ u ->
     eq_term_prop Σ.1 0 t u -> Σ ;;; Γ |- t ~~ u
-  | cumul_red_l t u v : 
+  | cumul_red_l t u v :
     is_closed_context Γ ->
     is_open_term Γ t ->
     is_open_term Γ u ->
@@ -191,7 +192,7 @@ Inductive cumul_prop `{checker_flags} (Σ : global_env_ext) (Γ : context) : ter
     is_open_term Γ u ->
     is_open_term Γ v ->
     Σ ;;; Γ |- t ~~ v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t ~~ u
-  
+
 where " Σ ;;; Γ |- t ~~ u " := (cumul_prop Σ Γ t u) : type_scope.
 
 Lemma eq_term_prop_impl Σ Re Rle t u :
@@ -205,7 +206,7 @@ Proof using Type.
   intros wfΣ n eq.
   intros.
   eapply PCUICEquality.eq_term_upto_univ_impl in eq. eauto.
-  all:auto. 
+  all:auto.
 Qed.
 
 Lemma leq_universe_prop_spec Σ u1 u2 :
@@ -228,7 +229,7 @@ Proof using Type.
   apply (leq_universe_props _ _ _ cu wf leq).
 Qed.
 
-Lemma subrelation_eq_universe_eq_prop Σ : 
+Lemma subrelation_eq_universe_eq_prop Σ :
   wf_ext Σ ->
   subrelation (eq_universe Σ) eq_univ_prop.
 Proof using Hcf Hcf'.
@@ -242,7 +243,7 @@ Proof using Hcf Hcf'.
   destruct x, y; simpl in *; auto; cong.
 Qed.
 
-Lemma subrelation_leq_universe_eq_prop Σ : 
+Lemma subrelation_leq_universe_eq_prop Σ :
   wf_ext Σ ->
   subrelation (leq_universe Σ) eq_univ_prop.
 Proof using Hcf Hcf'.
@@ -274,7 +275,7 @@ Proof using Hcf Hcf'.
   now apply subrelation_leq_universe_eq_prop.
 Qed.
 
-Lemma cumul_cumul_prop Σ Γ A B : 
+Lemma cumul_cumul_prop Σ Γ A B :
   wf_ext Σ ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A ~~ B.
@@ -285,7 +286,7 @@ Proof using Hcf Hcf'.
   - econstructor 3; eauto.
 Qed.
 
-Lemma conv_cumul_prop Σ Γ A B : 
+Lemma conv_cumul_prop Σ Γ A B :
   wf_ext Σ ->
   Σ ;;; Γ ⊢ A = B ->
   Σ ;;; Γ |- A ~~ B.
@@ -309,7 +310,7 @@ Proof using Type.
     transitivity v; auto. apply redl.
     destruct IHX as [nf [nf' [redl redr eq]]].
     exists nf, nf'; split; pcuic.
-    transitivity v; auto. 
+    transitivity v; auto.
     apply into_closed_red; auto.
   - intros [nf [nf' [redv redv' eq]]].
     assert (clnf := closed_red_open_right redv).
@@ -326,7 +327,7 @@ Proof using Type.
       econstructor 2; eauto.
 Qed.
 
-Lemma cumul_prop_props {Σ Γ u u'} {wfΣ : wf Σ}: 
+Lemma cumul_prop_props {Σ Γ u u'} {wfΣ : wf Σ}:
   Universe.is_prop u ->
   Σ ;;; Γ |- tSort u ~~ tSort u' ->
   Universe.is_prop u'.
@@ -338,7 +339,7 @@ Proof using Type.
   depelim eq. red in e. intuition auto.
 Qed.
 
-Lemma cumul_sprop_props {Σ Γ u u'} {wfΣ : wf Σ} : 
+Lemma cumul_sprop_props {Σ Γ u u'} {wfΣ : wf Σ} :
   Universe.is_sprop u ->
   Σ ;;; Γ |- tSort u ~~ tSort u' ->
   Universe.is_sprop u'.
@@ -376,7 +377,7 @@ Proof using Type.
   intros H'; inv H'; intuition.
 Qed.
 
-Lemma univ_expr_set_in_elements e s : 
+Lemma univ_expr_set_in_elements e s :
   LevelExprSet.In e s <-> In e (LevelExprSet.elements s).
 Proof using Type.
   rewrite -LevelExprSet.elements_spec1. generalize (LevelExprSet.elements s).
@@ -390,12 +391,12 @@ Proof using Type.
   intros e.
   unfold NonEmptySetFacts.map.
   pose proof (NonEmptySetFacts.to_nonempty_list_spec s).
-  destruct (NonEmptySetFacts.to_nonempty_list s) as [e' l] eqn:eq.  
+  destruct (NonEmptySetFacts.to_nonempty_list s) as [e' l] eqn:eq.
   rewrite -univ_expr_set_in_elements NonEmptySetFacts.add_list_spec.
   rewrite -H. simpl. rewrite LevelExprSet.singleton_spec.
   intuition auto.
 Qed.
-  
+
 Lemma Forall_elements_in P s : Forall P (LevelExprSet.elements s) <->
   (forall x, LevelExprSet.In x s -> P x).
 Proof using Type.
@@ -409,7 +410,7 @@ Proof using Type.
   apply IHl. intros x inxl. apply H. right; auto.
 Qed.
 
-Lemma univ_exprs_map_all P g s : 
+Lemma univ_exprs_map_all P g s :
   Forall P (LevelExprSet.elements (NonEmptySetFacts.map g s)) <->
   Forall (fun x => P (g x)) (LevelExprSet.elements s).
 Proof using Type.
@@ -420,7 +421,7 @@ Proof using Type.
   destruct H0 as [e' [ins ->]]. apply H; auto.
 Qed.
 
-Lemma expr_set_forall_map f g s : 
+Lemma expr_set_forall_map f g s :
   LevelExprSet.for_all f (NonEmptySetFacts.map g s) <->
   LevelExprSet.for_all (fun e => f (g e)) s.
 Proof using Type.
@@ -433,7 +434,7 @@ Proof using Type.
   destruct x; simpl; auto.
 Qed.
 
-(* Lemma is_prop_subst_level_expr u1 u2 s : 
+(* Lemma is_prop_subst_level_expr u1 u2 s :
   Forall2 (fun x y : Level.t => eq_univ_prop (Universe.make x) (Universe.make y)) u1 u2  ->
   LevelExpr.is_prop (subst_instance_level_expr u1 s) = LevelExpr.is_prop (subst_instance_level_expr u2 s).
 Proof.
@@ -458,7 +459,7 @@ Proof using Type.
   destruct s; red; simpl; auto; try intuition reflexivity.
 Qed.
 
-Lemma cumul_prop_sym Σ Γ T U : 
+Lemma cumul_prop_sym Σ Γ T U :
   wf Σ.1 ->
   Σ ;;; Γ |- T ~~ U ->
   Σ ;;; Γ |- U ~~ T.
@@ -470,7 +471,7 @@ Proof using Type.
   now symmetry.
 Qed.
 
-Lemma cumul_prop_trans Σ Γ T U V : 
+Lemma cumul_prop_trans Σ Γ T U V :
   wf Σ ->
   Σ ;;; Γ |- T ~~ U ->
   Σ ;;; Γ |- U ~~ V ->
@@ -494,8 +495,8 @@ Qed.
 Global Instance cumul_prop_transitive Σ Γ : wf Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof using Type. intros. red. intros. now eapply cumul_prop_trans. Qed.
 
-Lemma cumul_prop_cum_l {Σ Γ A T B} {wfΣ : wf_ext Σ} : 
-  Σ ;;; Γ |- A ~~ T -> 
+Lemma cumul_prop_cum_l {Σ Γ A T B} {wfΣ : wf_ext Σ} :
+  Σ ;;; Γ |- A ~~ T ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- B ~~ T.
 Proof using Hcf Hcf'.
@@ -506,7 +507,7 @@ Proof using Hcf Hcf'.
 Qed.
 
 Lemma cumul_prop_cum_r {Σ Γ A T B} {wfΣ : wf_ext Σ} :
-  Σ ;;; Γ |- A ~~ T -> 
+  Σ ;;; Γ |- A ~~ T ->
   Σ ;;; Γ ⊢ B ≤ A ->
   Σ ;;; Γ |- B ~~ T.
 Proof using Hcf Hcf'.
@@ -516,7 +517,7 @@ Proof using Hcf Hcf'.
 Qed.
 
 Lemma cumul_prop_conv_l {Σ Γ A T B} {wfΣ : wf_ext Σ} :
-  Σ ;;; Γ |- A ~~ T -> 
+  Σ ;;; Γ |- A ~~ T ->
   Σ ;;; Γ ⊢ A = B ->
   Σ ;;; Γ |- B ~~ T.
 Proof using Hcf Hcf'.
@@ -527,7 +528,7 @@ Proof using Hcf Hcf'.
 Qed.
 
 Lemma cumul_prop_conv_r {Σ Γ A T B} {wfΣ : wf_ext Σ} :
-  Σ ;;; Γ |- A ~~ T -> 
+  Σ ;;; Γ |- A ~~ T ->
   Σ ;;; Γ ⊢ B = A ->
   Σ ;;; Γ |- B ~~ T.
 Proof using Hcf Hcf'.
@@ -566,7 +567,7 @@ Lemma red1_upto_conv_ctx_prop Σ Γ Γ' t t' :
   conv_ctx_prop Σ Γ Γ' ->
   red1 Σ.1 Γ' t t'.
 Proof using Type.
-  intros Hred; induction Hred using red1_ind_all in Γ' |- *; 
+  intros Hred; induction Hred using red1_ind_all in Γ' |- *;
     try solve [econstructor; eauto; try solve [solve_all]].
   - econstructor. destruct (nth_error Γ i) eqn:eq; simpl in H => //.
     noconf H; simpl in H; noconf H.
@@ -598,7 +599,7 @@ Proof using Type.
   intros clΓ' [] conv.
   eapply red1_upto_conv_ctx_prop in clrel_rel; eauto.
   split; auto.
-  now rewrite -(All2_fold_length conv). 
+  now rewrite -(All2_fold_length conv).
 Qed.
 
 Lemma red_upto_conv_ctx_prop Σ Γ Γ' t t' :
@@ -621,7 +622,7 @@ Proof using Type.
   intros clΓ' [] conv.
   eapply red_upto_conv_ctx_prop in clrel_rel; eauto.
   split; auto.
-  now rewrite -(All2_fold_length conv). 
+  now rewrite -(All2_fold_length conv).
 Qed.
 
 Lemma cumul_prop_prod_inv {Σ Γ na A B na' A' B'} {wfΣ : wf Σ} :
@@ -667,7 +668,7 @@ Proof using Type.
   now eapply subslet_untyped_subslet.
 Qed.
 
-Lemma substitution_untyped_cumul_prop_equiv {Σ Γ Δ Γ' s s' M} {wfΣ : wf Σ} : 
+Lemma substitution_untyped_cumul_prop_equiv {Σ Γ Δ Γ' s s' M} {wfΣ : wf Σ} :
   is_closed_context (Γ ,,, Δ ,,, Γ') ->
   forallb (is_open_term Γ) s ->
   forallb (is_open_term Γ) s' ->
@@ -704,12 +705,12 @@ Proof using Type.
   move/andP => []; split; auto.
   unfold ws_decl in b. destruct d as [na [bod|] ty]; cbn in *; auto.
   move/andP: b => /= [] clb clt.
-  unfold closed_decl. cbn. 
+  unfold closed_decl. cbn.
   now rewrite !closedP_on_free_vars clb clt.
   now rewrite closedP_on_free_vars.
 Qed.
 
-Lemma red_conv_prop {Σ Γ T U} {wfΣ : wf_ext Σ} : 
+Lemma red_conv_prop {Σ Γ T U} {wfΣ : wf_ext Σ} :
   Σ ;;; Γ ⊢ T ⇝ U ->
   Σ ;;; Γ |- T ~~ U.
 Proof using Hcf Hcf'.
@@ -717,7 +718,7 @@ Proof using Hcf Hcf'.
   now apply conv_cumul_prop.
 Qed.
 
-Lemma substitution_red_terms_conv_prop {Σ Γ Δ Γ' s s' M} {wfΣ : wf_ext Σ} : 
+Lemma substitution_red_terms_conv_prop {Σ Γ Δ Γ' s s' M} {wfΣ : wf_ext Σ} :
   is_closed_context (Γ ,,, Δ ,,, Γ') ->
   is_open_term (Γ ,,, Δ ,,, Γ') M ->
   untyped_subslet Γ s Δ ->
@@ -729,7 +730,7 @@ Proof using Hcf Hcf'.
   eapply closed_red_red_subst; tea.
 Qed.
 
-Lemma context_conversion_cumul_prop {Σ Γ Δ M N} {wfΣ : wf_ext Σ} : 
+Lemma context_conversion_cumul_prop {Σ Γ Δ M N} {wfΣ : wf_ext Σ} :
   Σ ;;; Γ |- M ~~ N ->
   Σ ⊢ Γ = Δ ->
   Σ ;;; Δ |- M ~~ N.
@@ -755,11 +756,11 @@ Proof using Hcf Hcf'.
     symmetry in X1. now eapply conv_cumul_prop.
 Qed.
 
-(** Note: a more general version involving substitution in an extended context Γ ,,, Δ would be 
+(** Note: a more general version involving substitution in an extended context Γ ,,, Δ would be
   harder as it requires a more involved proof about reduction being "preserved" when converting contexts using
   cumul_prop rather than standard conversion.
 *)
-Lemma substitution_untyped_cumul_prop_cumul {Σ Γ Δ Δ' s s' M} {wfΣ : wf_ext Σ} : 
+Lemma substitution_untyped_cumul_prop_cumul {Σ Γ Δ Δ' s s' M} {wfΣ : wf_ext Σ} :
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   is_open_term (Γ ,,, Δ) M ->
@@ -776,10 +777,10 @@ Proof using Hcf Hcf'.
   * transitivity (subst0 nf' M).
     constructor.
     - rewrite on_free_vars_ctx_app in clctx. now move/andP: clctx.
-    - eapply (is_open_term_subst (Γ' := [])). apply clctx. 
+    - eapply (is_open_term_subst (Γ' := [])). apply clctx.
       eapply closed_red_terms_open_right in redl. solve_all.
       now rewrite -(All2_length redl) -(untyped_subslet_length subs). apply clM.
-    - eapply (is_open_term_subst (Γ' := [])). apply clctx. 
+    - eapply (is_open_term_subst (Γ' := [])). apply clctx.
       eapply closed_red_terms_open_right in redr. solve_all.
       now rewrite -(All2_length redr) -(untyped_subslet_length subs). apply clM.
     - eapply PCUICEquality.eq_term_upto_univ_substs => //. reflexivity.
@@ -805,7 +806,7 @@ Proof using Type.
   destruct l; simpl; auto.
 Qed.
 
-Lemma R_opt_variance_impl Re Rle v x y : 
+Lemma R_opt_variance_impl Re Rle v x y :
   subrelation Re Rle ->
   R_universe_instance Re x y ->
   R_opt_variance Re Rle v x y.
@@ -819,7 +820,7 @@ Proof using Type.
   eauto.
 Qed.
 
-Lemma cumul_prop_subst_instance_instance Σ univs u u' (i : Instance.t) : 
+Lemma cumul_prop_subst_instance_instance Σ univs u u' (i : Instance.t) :
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
@@ -835,7 +836,7 @@ Proof using Type.
 Qed.
 
 Lemma cumul_prop_subst_instance {Σ Γ univs u u' T} {wfΣ : wf Σ} :
-  is_closed_context Γ -> 
+  is_closed_context Γ ->
   is_open_term Γ T ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
@@ -849,14 +850,14 @@ Proof using Type.
   eexists _, _; split; intuition auto. clear clΓ clT.
   induction T using PCUICInduction.term_forall_list_ind; cbn; intros;
     try solve [constructor; eauto; solve_all].
-  - cbn. constructor. 
+  - cbn. constructor.
     destruct s; split; reflexivity.
   - constructor. eapply PCUICEquality.eq_term_upto_univ_impl in IHT1; eauto.
     all:try typeclasses eauto.
     apply IHT2.
   - constructor. now eapply cumul_prop_subst_instance_instance.
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
-    now eapply cumul_prop_subst_instance_instance. 
+    now eapply cumul_prop_subst_instance_instance.
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
     now eapply cumul_prop_subst_instance_instance.
   - cbn. constructor. splits; simpl; solve_all.
@@ -867,7 +868,7 @@ Proof using Type.
     intuition auto. rewrite /id. reflexivity.
 Qed.
 
-Lemma R_eq_univ_prop_consistent_instances Σ univs u u' : 
+Lemma R_eq_univ_prop_consistent_instances Σ univs u u' :
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
@@ -898,7 +899,7 @@ Proof using Type.
   simpl. rewrite app_length /= => Hlen.
   unfold arities_context.
   simpl. rewrite /arities_context rev_map_spec /=.
-  rewrite map_app /= rev_app_distr /=. 
+  rewrite map_app /= rev_app_distr /=.
   rewrite /= Nat.add_1_r /=.
   constructor.
   rewrite -rev_map_spec. apply IHl. lia.
@@ -916,7 +917,7 @@ Proof using Hcf Hcf'.
   eapply cumul_prop_alt in cum as (nf & nf' & [redl redr eq']).
   eapply cumul_prop_alt. eexists (tProd na t nf), (tProd na' t' nf'); split; eauto.
   - eapply closed_red_prod_codom; auto.
-  - eapply clrel_ctx in redl. 
+  - eapply clrel_ctx in redl.
     move: redl; rewrite on_free_vars_ctx_snoc /= => /andP[]; rewrite /on_free_vars_decl /test_decl /= => onΓ ont.
     have clt' : is_open_term Γ t'.
     eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars in eq; tea.
@@ -938,7 +939,7 @@ Lemma cumul_prop_tLetIn (Σ : global_env_ext) {Γ na t d ty na' t' d' ty'} {wfΣ
 Proof using Hcf Hcf'.
   intros eqann eq eq' cum.
   eapply cumul_prop_alt in cum as (nf & nf' & [redl redr eq'']).
-  eapply cumul_prop_alt. 
+  eapply cumul_prop_alt.
   assert(eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) (Γ ,, vdef na d t) (Γ ,, vdef na' d' t')).
   { repeat constructor; pcuic. eapply eq_context_upto_refl; typeclasses eauto. }
   eapply (closed_red_eq_context_upto_l (pb:=Conv)) in redr; eauto.
@@ -959,7 +960,7 @@ Proof using Hcf Hcf'.
 Qed.
 
 Lemma cumul_prop_mkApps {Σ Γ f args f' args'} {wfΣ : wf_ext Σ} :
-  is_closed_context Γ -> 
+  is_closed_context Γ ->
   is_open_term Γ f ->
   is_open_term Γ f' ->
   eq_term Σ.1 Σ f f' ->
@@ -1017,7 +1018,7 @@ Proof using Type.
   eapply All2_impl; eauto. eapply red_cumul_prop.
   eapply All2_trans. typeclasses eauto.
   2:{ eapply All2_symP. intros x y H; now eapply cumul_prop_sym.
-      eapply All2_impl; eauto. eapply red_cumul_prop. } 
+      eapply All2_impl; eauto. eapply red_cumul_prop. }
   eapply eq_term_prop_mkApps_inv in eq' => //.
   eapply closed_red_terms_open_right in eqargs.
   eapply closed_red_terms_open_right in eqargs'.
@@ -1034,15 +1035,15 @@ Notation eq_term_napp Σ n x y :=
 
 Notation leq_term_napp Σ n x y :=
     (eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n x y).
-    
+
 Lemma eq_term_upto_univ_napp_leq {Σ : global_env_ext} {n x y} :
-  eq_term_napp Σ n x y -> 
+  eq_term_napp Σ n x y ->
   leq_term_napp Σ n x y.
 Proof using Type.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
 
-Lemma cumul_prop_is_open {Σ Γ T U} : 
+Lemma cumul_prop_is_open {Σ Γ T U} :
   Σ ;;; Γ |- T ~~ U ->
   [× is_closed_context Γ, is_open_term Γ T & is_open_term Γ U].
 Proof using Type.
@@ -1084,13 +1085,13 @@ Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
 Proof using Hcf Hcf'.
   intros wfΣ Ht.
   revert Σ wfΣ Γ t T Ht t' T'.
-  eapply (typing_ind_env 
+  eapply (typing_ind_env
   (fun Σ Γ t T =>
   forall t' T' : term,
   on_udecl Σ.1 Σ.2 ->
   Σ;;; Γ |- t' : T' ->
   forall n, leq_term_napp Σ n t' t ->
-  Σ ;;; Γ |- T ~~ T')%type 
+  Σ ;;; Γ |- T ~~ T')%type
   (fun Σ Γ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
 
   1-13:match goal with
@@ -1116,7 +1117,7 @@ Proof using Hcf Hcf'.
       rewrite shiftnP_add. now eapply cumul_prop_is_open in X3 as [].
       eapply eq_term_eq_term_prop_impl => //.
       eapply PCUICEquality.eq_term_upto_univ_substs.
-      all:try typeclasses eauto. 
+      all:try typeclasses eauto.
       eapply PCUICEquality.eq_term_upto_univ_refl. all:try typeclasses eauto.
       constructor. 2:constructor. now symmetry. }
 
@@ -1133,7 +1134,7 @@ Proof using Hcf Hcf'.
     1,2:now eapply is_sprop_superE in H'.
 
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
-    specialize (X1 _ _ H Ha). 
+    specialize (X1 _ _ H Ha).
     specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
     eapply context_conversion in Hb.
     3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
@@ -1151,7 +1152,7 @@ Proof using Hcf Hcf'.
 
   - eapply inversion_Lambda in X4 as (s & B & dom & bod & cum).
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X5_1)).
-    specialize (X3 t0 B H). 
+    specialize (X3 t0 B H).
     assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
     { repeat constructor; pcuic. }
     forward X3 by eapply context_conversion; eauto; pcuic.
@@ -1174,21 +1175,25 @@ Proof using Hcf Hcf'.
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
+    unshelve eapply declared_constant_to_gen in H, declc; eauto.
     pose proof (declared_constant_inj _ _ H declc); subst decl'.
     eapply cumul_prop_subst_instance; eauto. fvs.
-    destruct (cumul_prop_is_open cum) as []. 
+    destruct (cumul_prop_is_open cum) as [].
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
+    unshelve eapply declared_inductive_to_gen in isdecl, declc; eauto.
     pose proof (declared_inductive_inj isdecl declc) as [-> ->].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_subst_instance; tea. fvs.
-    destruct (cumul_prop_is_open cum) as []. 
+    destruct (cumul_prop_is_open cum) as [].
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
-    pose proof (declared_constructor_inj isdecl declc) as [-> [-> ->]].
+    unshelve eapply declared_constructor_to_gen in declc; eauto.
+    unshelve epose proof (isdecl' := declared_constructor_to_gen isdecl); eauto.
+    pose proof (declared_constructor_inj isdecl' declc) as [-> [-> ->]].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     unfold type_of_constructor.
@@ -1198,7 +1203,7 @@ Proof using Hcf Hcf'.
     { eapply closedn_on_free_vars, closed_upwards.
       eapply PCUICClosedTyp.declared_constructor_closed_gen_type; tea. len. }
     rewrite on_free_vars_ctx_subst_instance in clars.
-    etransitivity. 
+    etransitivity.
     eapply (@substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies))) []); auto.
     * simpl.
       apply is_closed_context_weaken. fvs.
@@ -1226,12 +1231,13 @@ Proof using Hcf Hcf'.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
     clear X8.
+    unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
     destruct (declared_inductive_inj isdecl isdecl'). subst.
     destruct data.
     specialize (X7 _ _ H5 scrut_ty _ (eq_term_upto_univ_napp_leq X10)).
     eapply cumul_prop_sym => //.
     destruct e as [eqpars [eqinst [eqpctx eqpret]]].
-    rewrite /ptm. 
+    rewrite /ptm.
     eapply cumul_prop_mkApps => //. fvs.
     { eapply cumul_prop_is_open in cum as [].
       rewrite on_free_vars_mkApps in i0.
@@ -1253,7 +1259,7 @@ Proof using Hcf Hcf'.
     move: (All2_length eqpars).
     move: (All2_length a0). lia. fvs. now eapply subject_is_open_term in scrut_ty.
     now apply subject_is_open_term in X6.
-    
+
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & cdecl' & pdecl' & args' & inv); auto.
     intuition auto.
     specialize (X2 _ _  H0 a0 _ (eq_term_upto_univ_napp_leq X4)).
@@ -1261,7 +1267,9 @@ Proof using Hcf Hcf'.
     eapply cumul_cumul_prop in b; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
-    destruct (declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
+    unshelve epose proof (a' := declared_projection_to_gen a); eauto.
+    unshelve epose proof (isdecl' := declared_projection_to_gen isdecl); eauto.
+    destruct (declared_projection_inj a' isdecl') as [<- [<- [<- <-]]].
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
     epose proof (wf_projection_context _ _ isdecl c1).
@@ -1303,7 +1311,7 @@ Proof using Hcf Hcf'.
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.
-  
+
   - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.

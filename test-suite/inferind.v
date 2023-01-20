@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import All.
 Import ListNotations.
 Import MCMonadNotation.
 Open Scope bs_scope.
-Definition qlist := Eval compute in match <% list %> with 
+Definition qlist := Eval compute in match <% list %> with
     | tInd ind _ => ind.(inductive_mind)
     | _ => (MPfile nil, ""%bs)
     end.
@@ -12,7 +12,7 @@ Definition qlist := Eval compute in match <% list %> with
 
 Definition refresh_sort t :=
   match t with
-  | tSort s => 
+  | tSort s =>
       match s with
       | Universe.lProp => tSort Universe.lProp
       | Universe.lSProp => tSort Universe.lSProp
@@ -21,7 +21,7 @@ Definition refresh_sort t :=
   | _ => t
   end.
 
-Definition refresh_arity s := 
+Definition refresh_arity s :=
   let (ctx, concl) := decompose_prod_assum [] s in
   it_mkProd_or_LetIn ctx (refresh_sort concl).
 
@@ -75,12 +75,12 @@ Definition refresh_arity s :=
   mind_entry_variance := option_map (map Some) (ind_variance decl);
   mind_entry_private := None
   |}.
-      
-      
+
+
 
 Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Run (tmQuoteInductive qlist >>= fun mib =>
-  let entry := mind_body_to_entry mib in 
+  let entry := mind_body_to_entry mib in
   entry <- tmEval all entry;;
   tmPrint entry ;;
   tmMkInductive true entry).

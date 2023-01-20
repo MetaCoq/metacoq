@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICCumulativity PCUICConfluence PCUICConversion
      PCUICOnFreeVars PCUICClosedTyp PCUICWellScopedCumulativity.
@@ -37,7 +38,7 @@ Section Inversion.
       destruct ih as [? ?]
     end.
 
-  Lemma into_ws_cumul {Γ t T U s} : 
+  Lemma into_ws_cumul {Γ t T U s} :
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ |- U : tSort s ->
     Σ ;;; Γ |- T <= U ->
@@ -51,7 +52,7 @@ Section Inversion.
       eapply PCUICOnFreeVars.closedn_on_free_vars in X0; tea.
   Qed.
 
-  Lemma typing_closed_ctx Γ t T : 
+  Lemma typing_closed_ctx Γ t T :
     Σ ;;; Γ |- t : T ->
     is_closed_context Γ.
   Proof using wfΣ.
@@ -59,7 +60,7 @@ Section Inversion.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
 
-  Lemma typing_ws_cumul_pb le Γ t T : 
+  Lemma typing_ws_cumul_pb le Γ t T :
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤[le] T.
   Proof using wfΣ.
@@ -82,7 +83,7 @@ Section Inversion.
       repeat insum ;
       repeat intimes ;
       [ try first [ eassumption | reflexivity ] ..
-      | try etransitivity ; try eassumption; 
+      | try etransitivity ; try eassumption;
         try eauto with pcuic;
         try solve [eapply into_ws_cumul; tea] ]
     ].
@@ -100,7 +101,7 @@ Section Inversion.
     rewrite -on_free_vars_ctx_on_ctx_free_vars in isc.
     rewrite <- (addnP0) in isc.
     eapply nth_error_on_free_vars_ctx in isc; tea.
-    2:{ rewrite /shiftnP orb_false_r. eapply Nat.ltb_lt. 
+    2:{ rewrite /shiftnP orb_false_r. eapply Nat.ltb_lt.
         eapply nth_error_Some_length in hnth. lia. }
     now move/andP: isc=> [] _ /on_free_vars_lift0 /=.
   Qed.
@@ -196,7 +197,7 @@ Section Inversion.
     intros Γ u v T h. invtac h.
   Qed.
 
-  Lemma inversion_App_size : 
+  Lemma inversion_App_size :
   forall {Γ u v T}
       (H : Σ ;;; Γ |- tApp u v : T),
       ∑ na A B s  (H1 : Σ ;;; Γ |- u : tProd na A B) (H2 : Σ ;;; Γ |- v : A) (H3 : Σ ;;; Γ |- tProd na A B : tSort s),
@@ -274,7 +275,7 @@ Section Inversion.
   Lemma inversion_Case :
     forall {Γ ci p c brs T},
       Σ ;;; Γ |- tCase ci p c brs : T ->
-      ∑ mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) indices, 
+      ∑ mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) indices,
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         case_inversion_data Γ ci p c brs mdecl idecl indices ×
@@ -282,7 +283,7 @@ Section Inversion.
   Proof using wfΣ.
     intros Γ ci p c brs T h.
     dependent induction h.
-    {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ; 
+    {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ;
 	    [ try first [ eassumption | reflexivity ].. | try eapply typing_ws_cumul_pb; econstructor; eauto ]. }
     repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
       [ try first
@@ -337,12 +338,12 @@ Section Inversion.
 
   Lemma inversion_Prim :
     forall {Γ p T},
-    Σ ;;; Γ |- tPrim p : T -> 
-    ∑ prim_ty cdecl, 
+    Σ ;;; Γ |- tPrim p : T ->
+    ∑ prim_ty cdecl,
       [× wf_local Σ Γ,
         primitive_constant Σ (prim_val_tag p) = Some prim_ty,
         declared_constant Σ prim_ty cdecl,
-        primitive_invariants cdecl & 
+        primitive_invariants cdecl &
         Σ ;;; Γ ⊢ tConst prim_ty [] ≤ T].
   Proof.
     intros Γ p T h. depind h.
@@ -350,7 +351,7 @@ Section Inversion.
       eapply ws_cumul_pb_refl; fvs.
     - destruct IHh1 as [prim_ty [cdecl []]].
       exists prim_ty, cdecl. split => //.
-      transitivity A; tea. eapply cumulSpec_cumulAlgo_curry; tea; fvs. 
+      transitivity A; tea. eapply cumulSpec_cumulAlgo_curry; tea; fvs.
   Qed.
 
   Lemma inversion_it_mkLambda_or_LetIn :

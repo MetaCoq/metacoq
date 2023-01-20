@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion PCUICViews
@@ -18,6 +19,7 @@ Local Existing Instance config.extraction_checker_flags.
 
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
+Require Import Equations.Type.Relation_Properties.
 
 Set Default Proof Using "Type*".
 
@@ -562,11 +564,10 @@ End Spines.
 
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
-Section WeakNormalization.
+Section Canonicity.
   Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
 
-  Section reducible.
   Notation wh_neutral := (whne RedFlags.default).
   Notation wh_normal := (whnf RedFlags.default).
 
@@ -739,8 +740,8 @@ Section WeakNormalization.
     - now eapply typing_var in typed.
     - now eapply typing_evar in typed.
     - apply inversion_Const in typed as [decl' [wfd [declc [cu cum]]]]; eauto.
-      red in declc.
-      rewrite declc in e, axfree.
+      unshelve eapply declared_constant_to_gen in declc; eauto.
+      red in declc. rewrite declc in e, axfree.
       noconf e.
       destruct decl; cbn in *.
       rewrite e0 in axfree; congruence.
@@ -771,28 +772,29 @@ Section WeakNormalization.
     Σ ;;; [] |- t : ty ->
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
-  
-  Require Import Equations.Type.Relation_Properties.
 
   (* TODO move *)
   Lemma invert_red_axiom {Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
     T = tConst cst u.
   Proof using wfΣ.
     intros hdecl hb.
+    unshelve eapply declared_constant_to_gen in hdecl; eauto.
     generalize_eq x (tConst cst u).
     move=> e [clΓ clt] red.
     revert cst u hdecl hb e.
     eapply clos_rt_rt1n_iff in red.
     induction red; simplify_dep_elim.
     - reflexivity.
-    - depelim r; solve_discr. congruence.
+    - depelim r; solve_discr.
+      unshelve eapply declared_constant_to_gen in isdecl; eauto.
+      congruence.
   Qed.
 
   Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤[pb] T ->
     ∑ u', Σ ;;; Γ ⊢ T ⇝ tConst cst u' × PCUICEquality.R_universe_instance (eq_universe Σ) u u'.
@@ -805,7 +807,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤ mkApps (tInd ind u') args -> False.
   Proof using wfΣ.
@@ -814,7 +816,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma invert_cumul_axiom_prod {Γ cst cdecl u na dom codom} :
-    declared_constant Σ cst cdecl -> 
+    declared_constant Σ cst cdecl ->
     cst_body cdecl = None ->
     Σ ;;; Γ ⊢ tConst cst u ≤ tProd na dom codom -> False.
   Proof using wfΣ.
@@ -844,10 +846,10 @@ Section WeakNormalization.
     - now rewrite head_mkApps /head /=.
     - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
       eapply invert_cumul_axiom_ind in w; eauto.
-      apply hp. 
+      apply hp.
   Qed.
 
-  Lemma whnf_ind_finite t ind u indargs :
+  Lemma canonicity t ind u indargs :
     axiom_free_value Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
@@ -884,11 +886,12 @@ Section WeakNormalization.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
     destruct_sigma t0.
     intros axfree norm.
-    eapply whnf_ind_finite in t1; eauto.
+    eapply canonicity in t1; eauto.
     intros chk.
     pose proof (check_recursivity_kind_inj chk t0).
     discriminate.
   Qed.
+
 
   Lemma value_axiom_free Σ' t :
     value Σ' t ->
@@ -972,12 +975,15 @@ Section WeakNormalization.
 
     - redt (subst_instance u body); auto.
       eapply red1_red. econstructor; eauto.
+      apply declared_constant_from_gen; eauto.
       eapply IHHe. eapply subject_reduction; eauto.
       eapply red1_red. econstructor; eauto.
+      apply declared_constant_from_gen; eauto.
 
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
-      destruct (declared_inductive_inj d isdecl); subst mdecl0 idecl0.
+      unshelve epose proof (isdecl_ := declared_inductive_to_gen isdecl); eauto.
+      destruct (declared_inductive_inj d isdecl_); subst mdecl0 idecl0.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).
       assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) p args br)).
@@ -1077,7 +1083,7 @@ Section WeakNormalization.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
       rewrite mkApps_app /=. now eapply red_app.
-    
+
     - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
@@ -1091,7 +1097,7 @@ Section WeakNormalization.
     eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
   Qed.
 
-  Lemma value_canonical {t i u args} :
+  Lemma value_canonicity {t i u args} :
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
     value Σ t ->
     construct_cofix_discr (head t).
@@ -1104,7 +1110,7 @@ Section WeakNormalization.
     eapply @subject_closed with (Γ := []); eauto.
   Qed.
 
-  Lemma eval_ind_canonical {t i u args} :
+  Lemma eval_canonicity {t i u args} :
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
     forall t', eval Σ t t' ->
     construct_cofix_discr (head t').
@@ -1118,7 +1124,6 @@ Section WeakNormalization.
     eapply wh_normal_ind_discr; eauto.
   Qed.
 
-  End reducible.
-End WeakNormalization.
+End Canonicity.
 
 (* Print Assumptions eval_ind_canonical. *)

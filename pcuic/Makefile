@@ -1,51 +1,34 @@
-all: theory # plugin
-
-_PluginProject: _PluginProject.in metacoq-config
-	cat metacoq-config > _PluginProject
-	cat _PluginProject.in >> _PluginProject
+all: coq
 
 _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject
 	cat _CoqProject.in >> _CoqProject
 
-Makefile.plugin: _PluginProject
-	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
-	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
+Makefile.coq: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.coq
 
-Makefile.pcuic: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.pcuic $(DEPS)
+coq: Makefile.coq
+	$(MAKE) -f Makefile.coq
 
-theory: Makefile.pcuic
-	$(MAKE) -f Makefile.pcuic
+.PHONY: install html clean mrproper all
 
-plugin: theory Makefile.plugin
-	$(MAKE) -f Makefile.plugin
+install: Makefile.coq
+	$(MAKE) -f Makefile.coq install
 
-install: theory # plugin
-	$(MAKE) -f Makefile.pcuic install
-	# $(MAKE) -f Makefile.plugin install
+uninstall: Makefile.coq
+	$(MAKE) -f Makefile.coq uninstall
 
-uninstall: theory # plugin
-	$(MAKE) -f Makefile.pcuic uninstall
-	# $(MAKE) -f Makefile.plugin uninstall
-
-clean: Makefile.pcuic Makefile.plugin
-	make -f Makefile.pcuic clean
-	# make -f Makefile.plugin clean
+clean: Makefile.coq
+	$(MAKE) -f Makefile.coq clean
 
 mrproper:
-	rm -f metacoq-config
-	rm -f Makefile.plugin _PluginProject
-	rm -f Makefile.pcuic _CoqProject
+	rm -f Makefile.coq
 
-.merlin: Makefile.plugin
-	[ -e "src/pCUICAst.ml" ] && make -f $< $@
+vos: Makefile.coq
+	$(MAKE) -f Makefile.coq vos
 
-cleanplugin: Makefile.plugin
-#	make -f Makefile.plugin clean
+.merlin:
+	$(MAKE) -f $< $@
 
-vos: Makefile.pcuic
-	$(MAKE) -f Makefile.pcuic vos
-
-quick: Makefile.pcuic
-	$(MAKE) -f Makefile.pcuic COQEXTRAFLAGS="-unset \"Universe Checking\"" vos
+quick: Makefile.coq
+	$(MAKE) -f Makefile.coq COQEXTRAFLAGS="-unset \"Universe Checking\"" vos

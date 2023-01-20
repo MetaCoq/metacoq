@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 From MetaCoq.Translations Require Import translation_utils.
 Import MCMonadNotation.
 
@@ -35,10 +36,10 @@ Definition suffix0 (n : name) s : name :=
 
 Definition nAnon := {| binder_name := BasicAst.nAnon; binder_relevance := Relevant |}.
 Definition nNamed n := {| binder_name := BasicAst.nNamed n; binder_relevance := Relevant |}.
-  
+
 Definition suffix na n := map_binder_annot (fun na => suffix0 na n) na.
 
-  
+
 Fixpoint apply (app : list term) (t : term) :=
   match app with
   | t' :: app =>  apply app (mkApp t (t' {3 := tRel 1} {2 := tRel 0}))
@@ -75,7 +76,7 @@ Fixpoint tsl_rec1_app (app : list term) (E : tsl_table) (t : term) : term :=
       let A1 := tsl_rec1 E A in
       let B1 := tsl_rec1 E B in
       let ΠAB0 := tProd na A0 B0 in
-      
+
       tLambda (nNamed "f₁") ΠAB0
         (tLambda (nNamed "f₂") ΠAB0
           (tProd (suffix na "₁") (lift0 2 A0)
@@ -192,11 +193,11 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
       refine (subst_app _ [tConstruct (mkInd kn i) k []; tConstruct (mkInd kn i) k []]).
       refine (fold_left_i (fun t0 i u => t0 {S i := u} {S i := u}) _ (tsl_rec1 E type)).
       (* [I_0; ... I_(n-1)] *)
-      
+
       refine (rev (mapi (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
       refine (3 * arity)%nat.
-      
+
 Defined.
 
 #[global]
@@ -247,7 +248,7 @@ Module FreeTheorems.
   (* taken from coq-community/paramcoq *)
   Definition graph {A B} (f : A -> B) := fun x y => f x = y.
   Definition map_rel {A B} (f : A -> B) := listᵗ A B (graph f).
-  
+
   Definition map_rel_map A B (f : A -> B) :
     forall (l : list A), map_rel f l (map f l).
   induction l; constructor; compute; auto.
@@ -256,7 +257,7 @@ Module FreeTheorems.
   Lemma rel_map_map A B (f : A -> B) :
     forall (l : list A) fl, map_rel f l fl -> fl = map f l.
   intros l fl H. induction H; unfold graph in *; subst; auto.
-  Defined.  
+  Defined.
 
   Definition FREE_THEOREM (F : MAP) :=
     forall A B (f : A -> B) l,

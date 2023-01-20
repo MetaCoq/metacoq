@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Environment Induction WfAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Environment.
+From MetaCoq.Template Require Import Ast AstUtils Induction WfAst.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -148,7 +150,7 @@ Lemma permute_lift :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; 
+    intros; simpl;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
       ?Nat.add_assoc, ?map_predicate_map_predicate, ?map_branches_map_branches; f_equal;
       try solve [auto; solve_all]; repeat nth_leb_simpl.
@@ -313,7 +315,7 @@ Proof.
 
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
-    
+
     + destruct (nth_error_spec N (n - p)).
       ++ rewrite -> subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.
@@ -403,7 +405,7 @@ Lemma simpl_subst_k Σ (N : list term) (M : term) :
   wf Σ M -> forall k p, p = #|N| -> subst N k (lift p k M) = M.
 Proof.
   intros. subst p. rewrite <- (Nat.add_0_r #|N|).
-  erewrite simpl_subst_rec, lift0_id; eauto. 
+  erewrite simpl_subst_rec, lift0_id; eauto.
 Qed.
 
 Lemma subst_app_decomp Σ l l' k t :
@@ -423,7 +425,7 @@ Proof.
     rewrite -> permute_lift by auto.
     rewrite <- (Nat.add_0_r #|l'|).
     erewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia. apply wf_lift.
-    eapply nth_error_all in e; eauto. 
+    eapply nth_error_all in e; eauto.
 Qed.
 
 Lemma subst_app_simpl Σ l l' k t :
@@ -457,16 +459,16 @@ Proof.
   intros. unfold map_decl, vass; simpl; f_equal.
   rewrite permute_lift. lia. f_equal; lia.
 Qed.
-(* 
-Lemma noccur_between_subst k n t : noccur_between k n t -> 
+(*
+Lemma noccur_between_subst k n t : noccur_between k n t ->
   closedn (n + k) t -> closedn k t.
 Proof.
 Qed.  *)                        (* TODO *)
 
-Lemma strip_casts_lift n k t : 
+Lemma strip_casts_lift n k t :
   strip_casts (lift n k t) = lift n k (strip_casts t).
 Proof.
-  induction t in k |- * using term_forall_list_ind; simpl; auto; 
+  induction t in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
    f_equal; solve_all; eauto.
 
@@ -481,13 +483,13 @@ Lemma mkApps_ex t u l : ∑ f args, Ast.mkApps t (u :: l) = Ast.tApp f args.
 Proof.
   induction t; simpl; eexists _, _; reflexivity.
 Qed.
-(* 
+(*
 Lemma mkApps_tApp' f l l' : mkApps (tApp f l) l' = mkApps f (l ++ l').
 Proof.
   induction l'; simpl. rewrite app_nil_r.  *)
 
 Lemma list_length_ind {A} (P : list A -> Type) (p0 : P [])
-  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ))
   Γ : P Γ.
 Proof.
   generalize (le_n #|Γ|).
@@ -500,7 +502,7 @@ Proof.
   apply p0. apply pS. intros. apply IHn. simpl. lia.
 Qed.
 
-Lemma strip_casts_mkApps_tApp f l : 
+Lemma strip_casts_mkApps_tApp f l :
   isApp f = false ->
   strip_casts (mkApps f l) = strip_casts (tApp f l).
 Proof.
@@ -509,7 +511,7 @@ Proof.
   rewrite mkApps_tApp //.
 Qed.
 
-Lemma strip_casts_mkApps f l : 
+Lemma strip_casts_mkApps f l :
   isApp f = false ->
   strip_casts (mkApps f l) = mkApps (strip_casts f) (map strip_casts l).
 Proof.

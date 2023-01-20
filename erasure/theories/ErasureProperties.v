@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prelim
      ESubstitution EArities EDeps.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
@@ -147,7 +148,7 @@ Lemma is_ConstructApp_erases Σ Γ t t' :
   negb (isConstructApp t) -> negb (EAstUtils.isConstructApp t').
 Proof.   induction 1; cbn; try congruence.
 - unfold isConstructApp in *. clear IHerases2.
-  cbn. rewrite head_tapp. 
+  cbn. rewrite head_tapp.
   unfold EAstUtils.isConstructApp in *.
   cbn. now rewrite EAstUtils.head_tApp.
 Qed.
@@ -157,7 +158,7 @@ Lemma is_PrimApp_erases Σ Γ t t' :
   negb (isPrimApp t) -> negb (EAstUtils.isPrimApp t').
 Proof.   induction 1; cbn; try congruence.
 - unfold isPrimApp in *. clear IHerases2.
-  cbn. rewrite head_tapp. 
+  cbn. rewrite head_tapp.
   unfold EAstUtils.isPrimApp in *.
   cbn. now rewrite EAstUtils.head_tApp.
 Qed.
@@ -241,7 +242,7 @@ Proof.
     + subst types.
       eapply conv_context_app_same; auto.
     + eapply conv_context_wf_local_app; eauto.
-    + assumption. 
+    + assumption.
   - econstructor.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
@@ -330,7 +331,7 @@ Proof.
     intros ? ? [] [] (? & ? & (? & ?) & (? & ?)) (? & ?). split.
     2: now cbn in *.
     cbn -[app_context] in *. fold (subst_instance u bbody).
-    eapply erases_ext_eq. 
+    eapply erases_ext_eq.
     2, 4, 5: reflexivity. eapply e; eauto.
     + eapply typing_subst_instance_wf_local; eauto.
       destruct Σ; eassumption.
@@ -344,7 +345,7 @@ Proof.
       eapply (All_impl X0); pcuicfo.
       now destruct X5 as [s [Hs ?]]; exists s.
       eapply All_mfix_wf in X5; auto. subst types.
-      
+
       revert X5. clear - wfΣ wfΓ H2 X2 X3.
       induction 1.
       - eauto.
@@ -380,7 +381,7 @@ Proof.
     eapply (All_impl X0); pcuicfo.
     destruct X5 as [s [Hs ?]]; now exists s.
     eapply All_mfix_wf in X5; auto. subst types.
-    
+
     revert X5. clear - wfΣ wfΓ H2 X2 X3.
     induction 1.
     - eauto.
@@ -460,7 +461,7 @@ Proof.
   intros cla era.
   revert Γ e era Heq.
   pattern Γl, a.
-  match goal with 
+  match goal with
   |- ?P Γl a => simpl; eapply (term_closedn_list_ind P); auto; clear
   end; simpl; intros; subst k;
     match goal with [H:erases _ _ _ _ |- _] => depelim H end; trivial;
@@ -470,7 +471,7 @@ Proof.
     eapply All_forallb. unfold tCaseBrsProp_k in X0.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b0. eauto. 
+    solve_all. subst. rewrite map_length. eapply b0. eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - epose proof (All2_length X0).
@@ -489,14 +490,14 @@ Qed.
 
 Section wellscoped.
   Import PCUICAst PCUICGlobalEnv.
-  
-  Definition lookup_constant Σ kn := 
+
+  Definition lookup_constant Σ kn :=
     match PCUICEnvironment.lookup_env Σ kn with
     | Some (ConstantDecl d) => Some d
     | _ => None
     end.
   Import MCMonadNotation.
-    
+
   Section Def.
   Context (Σ : global_env).
   Import ssrbool.
@@ -509,11 +510,11 @@ Section wellscoped.
   | tLambda _ N M => wellformed N && wellformed M
   | tApp u v => wellformed u && wellformed v
   | tLetIn na b ty b' => wellformed b && wellformed ty && wellformed b'
-  | tCase ind p c brs => 
+  | tCase ind p c brs =>
     let brs' := forallb (wellformed ∘ bbody) brs in
     isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
   | tProj p c => isSome (lookup_projection Σ p) && wellformed c
-  | tFix mfix idx => 
+  | tFix mfix idx =>
     (idx <? #|mfix|) &&
     List.forallb (test_def (wellformed) (fun b => (isLambda b) && wellformed b)) mfix
   | tCoFix mfix idx =>
@@ -535,14 +536,19 @@ Section wellscoped.
   Proof.
     eapply typing_ind_env; cbn; intros => //.
     all:try rtoProp; intuition auto.
-    - red in H0. rewrite /lookup_constant H0 //.
-    - now rewrite (declared_inductive_lookup isdecl).
-    - rewrite (declared_constructor_lookup isdecl) //.
-    - now rewrite (declared_inductive_lookup isdecl).
+    - unshelve eapply declared_constant_to_gen in H0; eauto.
+      red in H0. rewrite /lookup_constant /lookup_constant_gen H0 //.
+    - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
+      unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
+    - unshelve eapply declared_constructor_to_gen in isdecl; eauto.
+      unfold lookup_constructor. rewrite (declared_constructor_lookup_gen isdecl) //.
+    - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
+      unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
     - red in H8. eapply Forall2_All2 in H8.
       eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
-    - now rewrite (declared_projection_lookup isdecl).
+    - unshelve eapply declared_projection_to_gen in isdecl; eauto.
+      unfold lookup_projection. now rewrite (declared_projection_lookup_gen isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
       solve_all. destruct a as [s []], a0.
@@ -557,7 +563,7 @@ Section wellscoped.
   Proof.
     intros []. eapply typing_wellformed; tea.
   Qed.
-  
+
 End wellscoped.
 
 Import EWellformed.
@@ -571,8 +577,9 @@ Section trans_lookups.
   Proof using g.
     unfold lookup_constant.
     destruct (lookup_env Σ kn) as [[]|] eqn:hl => //.
-    eapply g in hl as [? []].
-    now rewrite (EGlobalEnv.declared_constant_lookup H).
+    destruct g as [? _]. destruct (H kn c) as [? [? ?]].
+    eapply declared_constant_from_gen; eauto.
+    erewrite EGlobalEnv.declared_constant_lookup; eauto.
   Qed.
 
   Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
@@ -580,6 +587,7 @@ Section trans_lookups.
     destruct g.
     destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // _.
     eapply lookup_inductive_declared in hl.
+    eapply declared_inductive_from_gen in hl.
     specialize (H0 kn m o hl) as [? [? [d _]]].
     now rewrite (EGlobalEnv.declared_inductive_lookup d).
   Qed.
@@ -588,8 +596,9 @@ Section trans_lookups.
   Proof using g.
     destruct g.
     destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= // _.
-    eapply (lookup_constructor_declared (id:=(kn,c))) in hl.
-    specialize (H0 _ _ _ hl) as [mdecl' [idecl' [decli hl']]].
+    eapply (lookup_constructor_declared_gen (id:=(kn,c))) in hl.
+    eapply declared_constructor_from_gen in hl.
+    specialize (H0 _ _ _ hl.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', hl. cbn in * |-.
     destruct H2. eapply Forall2_nth_error_left in H0 as [? [? [erc erp]]]; tea.
     eapply Forall2_nth_error_left in erc as [? [? ?]]; tea.
@@ -602,20 +611,23 @@ Section trans_lookups.
     lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
     lookup_constructor Σ p.(proj_ind) 0 = Some (mdecl, idecl, cdecl).
   Proof using Type.
-    rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
+    rewrite /lookup_projection /lookup_projection_gen /lookup_constructor.
+    destruct lookup_constructor_gen as [[[? ?] ?]|]=> //=.
     now destruct nth_error => //.
   Qed.
 
-  Lemma trans_lookup_projection p : 
-    isSome (lookup_projection Σ p) -> 
+  Lemma trans_lookup_projection p :
+    isSome (lookup_projection Σ p) ->
     isSome (EGlobalEnv.lookup_projection Σ' p).
   Proof using g.
     destruct g.
     destruct (lookup_projection Σ p) as [[[[]]]|] eqn:hl => /= // _.
     pose proof (lookup_projection_lookup_constructor hl) as lc.
-    unfold lookup_projection in hl. rewrite lc in hl.
-    eapply (lookup_constructor_declared (id:=(_,_))) in lc.
-    specialize (H0 _ _ _ lc) as [mdecl' [idecl' [decli hl']]].
+    unfold lookup_projection, lookup_projection_gen in hl. unfold lookup_constructor in lc.
+    rewrite lc in hl.
+    eapply (lookup_constructor_declared_gen (id:=(_,_))) in lc.
+    eapply declared_constructor_from_gen in lc.
+    specialize (H0 _ _ _ lc.p1) as [mdecl' [idecl' [decli hl']]].
     destruct hl', lc.
     destruct H2.
     destruct (nth_error (ind_projs o)) eqn:hnth => //. noconf hl.
@@ -629,7 +641,7 @@ Section trans_lookups.
 
 End trans_lookups.
 
-Lemma erases_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a e} : welltyped Σ Γ a -> Σ ;;; Γ |- a ⇝ℇ e -> 
+Lemma erases_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a e} : welltyped Σ Γ a -> Σ ;;; Γ |- a ⇝ℇ e ->
   forall Σ', globals_erased_with_deps Σ Σ' -> @EWellformed.wellformed EWellformed.all_env_flags Σ' #|Γ| e.
 Proof.
   intros wf.
@@ -639,7 +651,7 @@ Proof.
   intros cla wfa era.
   revert Γ e wfa era Heq.
   pattern Γl, a.
-  match goal with 
+  match goal with
   |- ?P Γl a => simpl; eapply (term_closedn_list_ind P); auto; clear
   end; simpl; intros; subst k;
     match goal with [H:erases _ _ _ _ |- _] => depelim H end; trivial;
@@ -655,14 +667,14 @@ Proof.
     eapply forallb_All in wfbrs.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []; move=> [] wf. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b; eauto. 
+    solve_all. subst. rewrite map_length. eapply b; eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - move/andP: wfa => [] hl hc.
-    apply/andP; split. 
+    apply/andP; split.
     now eapply trans_lookup_projection in hl.
     eauto.
-  - epose proof (All2_length X0). 
+  - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
     move/forallb_All. cbn. intros wfa.
@@ -687,7 +699,7 @@ Qed.
 Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ▷ e -> False.
 Proof.
   intros He.
-  depind He. 
+  depind He.
   - clear -e2. now rewrite nth_error_nil in e2.
   - clear -e2. now rewrite nth_error_nil in e2.
   - discriminate.
@@ -695,9 +707,9 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_tBox_inv {wfl : Ee.WcbvFlags} {Σ ci e brs} : 
-  Σ ⊢ E.tCase ci EAst.tBox brs ▷ e -> 
-  ∑ n br, brs = [(n, br)] × inductive_isprop_and_pars Σ ci.1 = Some (true, ci.2) × 
+Lemma eval_case_tBox_inv {wfl : Ee.WcbvFlags} {Σ ci e brs} :
+  Σ ⊢ E.tCase ci EAst.tBox brs ▷ e ->
+  ∑ n br, brs = [(n, br)] × inductive_isprop_and_pars Σ ci.1 = Some (true, ci.2) ×
   Σ ⊢ ECSubst.substl (repeat EAst.tBox #|n|) br ▷ e.
 Proof.
   intros He.
@@ -705,7 +717,7 @@ Proof.
   - depelim He1. clear -H. symmetry in H. exfalso.
     destruct args using rev_case. discriminate.
     rewrite EAstUtils.mkApps_app in H. discriminate.
-  - depelim He1. 
+  - depelim He1.
   - exists n, f4. intuition auto.
   - depelim He1. clear -H. symmetry in H. exfalso.
     destruct args using rev_case. discriminate.
@@ -713,13 +725,13 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_eval_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} : 
-  Σ ⊢ E.tCase ci c brs ▷ e -> 
+Lemma eval_case_eval_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
+  Σ ⊢ E.tCase ci c brs ▷ e ->
   Σ ⊢ c ▷ c' ->
   Σ ⊢ E.tCase ci c' brs ▷ e.
 Proof.
   intros He Hc.
-  depind He. 
+  depind He.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     econstructor; eauto. now eapply Ee.value_final, Ee.eval_to_value.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
@@ -732,13 +744,13 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} : 
-  Σ ⊢ E.tCase ci c brs ▷ e -> 
+Lemma eval_case_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
+  Σ ⊢ E.tCase ci c brs ▷ e ->
   Σ ⊢ c' ▷ c ->
   Σ ⊢ E.tCase ci c' brs ▷ e.
 Proof.
   intros He Hc.
-  depind He. 
+  depind He.
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
@@ -750,8 +762,8 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} : 
-  Σ ⊢ E.tProj p c ▷ e -> 
+Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} :
+  Σ ⊢ E.tProj p c ▷ e ->
   Σ ⊢ c' ▷ c ->
   Σ ⊢ E.tProj p c' ▷ e.
 Proof.
@@ -760,11 +772,10 @@ Proof.
   - pose proof (eval_trans' Hc He1); subst discr.
     econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
-    now econstructor; tea. 
+    now econstructor; tea.
   - pose proof (eval_trans' Hc He1); subst discr.
-    now econstructor; tea. 
+    now econstructor; tea.
   - pose proof (eval_trans' Hc He); subst discr.
-    now econstructor; tea. 
+    now econstructor; tea.
   - cbn in i. discriminate.
 Qed.
-

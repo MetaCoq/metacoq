@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
-From MetaCoq.Template Require Import config utils BasicAst Reflect.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICEquality
      PCUICLiftSubst PCUICUnivSubst PCUICCases PCUICOnFreeVars.
 
@@ -19,10 +20,10 @@ Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
 
 Definition cumul_Ind_univ {cf} (Σ : global_env_ext) pb i napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (IndRef i) napp).
+  R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef i) napp.
 
 Definition cumul_Construct_univ {cf} (Σ : global_env_ext) pb  i k napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (ConstructRef i k) napp).
+  R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (ConstructRef i k) napp.
 
 (** * Definition of cumulativity and conversion relations *)
 
@@ -31,16 +32,16 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
 (* transitivity *)
 
 | cumul_Trans : forall t u v,
-    is_closed_context Γ -> is_open_term Γ u -> 
+    is_closed_context Γ -> is_open_term Γ u ->
     Σ ;;; Γ ⊢ t ≤s[pb] u ->
-    Σ ;;; Γ ⊢ u ≤s[pb] v ->    
-    Σ ;;; Γ ⊢ t ≤s[pb] v 
+    Σ ;;; Γ ⊢ u ≤s[pb] v ->
+    Σ ;;; Γ ⊢ t ≤s[pb] v
 
 (* symmetry *)
 
-| cumul_Sym : forall t u, 
+| cumul_Sym : forall t u,
     Σ ;;; Γ ⊢ t ≤s[Conv] u ->
-    Σ ;;; Γ ⊢ u ≤s[pb] t  
+    Σ ;;; Γ ⊢ u ≤s[pb] t
 
 (* reflexivity *)
 
@@ -49,7 +50,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
 
 (* Cumulativity rules *)
 
-| cumul_Ind : forall i u u' args args', 
+| cumul_Ind : forall i u u' args args',
     cumul_Ind_univ Σ pb i #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Conv] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tInd i u) args ≤s[pb] mkApps (tInd i u') args'
@@ -58,7 +59,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     cumul_Construct_univ Σ pb i k #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Conv] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tConstruct i k u) args ≤s[pb] mkApps (tConstruct i k u') args'
-   
+
 | cumul_Sort : forall s s',
     compare_universe pb Σ s s' ->
     Σ ;;; Γ ⊢ tSort s ≤s[pb] tSort s'
@@ -69,11 +70,11 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
 
 (* congruence rules *)
 
-| cumul_Evar : forall e args args', 
+| cumul_Evar : forall e args args',
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Conv] u) args args' ->
     Σ ;;; Γ ⊢ tEvar e args ≤s[pb] tEvar e args'
 
-| cumul_App : forall t t' u u', 
+| cumul_App : forall t t' u u',
     Σ ;;; Γ ⊢ t ≤s[pb] t' ->
     Σ ;;; Γ ⊢ u ≤s[Conv] u' ->
     Σ ;;; Γ ⊢ tApp t u ≤s[pb] tApp t' u'
@@ -90,23 +91,23 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     Σ ;;; Γ ,, vass na a ⊢ b ≤s[pb] b' ->
     Σ ;;; Γ ⊢ tProd na a b ≤s[pb] tProd na' a' b'
 
-| cumul_LetIn : forall na na' t t' ty ty' u u', 
+| cumul_LetIn : forall na na' t t' ty ty' u u',
     eq_binder_annot na na' ->
     Σ ;;; Γ ⊢ t ≤s[Conv] t' ->
     Σ ;;; Γ ⊢ ty ≤s[Conv] ty' ->
     Σ ;;; Γ ,, vdef na t ty ⊢ u ≤s[pb] u' ->
     Σ ;;; Γ ⊢ tLetIn na t ty u ≤s[pb] tLetIn na' t' ty' u'
 
-| cumul_Case indn : forall p p' c c' brs brs', 
+| cumul_Case indn : forall p p' c c' brs brs',
     cumul_predicate (fun Γ t u => Σ ;;; Γ ⊢ t ≤s[Conv] u) Γ (compare_universe Conv Σ) p p' ->
     Σ ;;; Γ ⊢ c ≤s[Conv] c' ->
     All2 (fun br br' =>
-      eq_context_gen eq eq (bcontext br) (bcontext br') × 
+      eq_context_gen eq eq (bcontext br) (bcontext br') ×
       Σ ;;; Γ ,,, inst_case_branch_context p br ⊢ bbody br ≤s[Conv] bbody br'
     ) brs brs' ->
     Σ ;;; Γ ⊢ tCase indn p c brs ≤s[pb] tCase indn p' c' brs'
 
-| cumul_Proj : forall p c c', 
+| cumul_Proj : forall p c c',
     Σ ;;; Γ ⊢ c ≤s[Conv] c' ->
     Σ ;;; Γ ⊢ tProj p c ≤s[pb] tProj p c'
 
@@ -143,7 +144,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     Σ ;;; Γ ⊢ tRel i ≤s[pb] lift0 (S i) body
 
 (** iota red *)
-| cumul_iota : forall ci c u args p brs br, 
+| cumul_iota : forall ci c u args p brs br,
     nth_error brs c = Some br ->
     #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     Σ ;;; Γ ⊢ tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs  ≤s[pb] iota_red ci.(ci_npar) p args br
@@ -183,7 +184,7 @@ Definition cumulSpec `{checker_flags} (Σ : global_env_ext) Γ := cumulSpec0 Σ 
 
 Notation " Σ ;;; Γ |- t <=s u " := (@cumulSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
 Notation " Σ ;;; Γ |- t =s u " := (@convSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
- 
+
 Include PCUICConversion.
 
 Module PCUICConversionParSpec <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
@@ -205,7 +206,7 @@ Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (convSpec Σ Γ) := _.
 #[global]
 Instance cumul_pb_decls_refl {cf:checker_flags} pb Σ Γ Γ' : Reflexive (cumul_pb_decls cumulSpec0 pb Σ Γ Γ').
 Proof.
-  intros x. destruct x as [na [b|] ty]; constructor; auto. 
+  intros x. destruct x as [na [b|] ty]; constructor; auto.
   all:constructor; reflexivity.
 Qed.
 
@@ -218,7 +219,7 @@ Section ContextConversion.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  Notation conv_context := (conv_context cumulSpec0 Σ). 
+  Notation conv_context := (conv_context cumulSpec0 Σ).
   Notation cumul_context := (cumul_context cumulSpec0 Σ).
 
   Global Instance cumul_pb_ctx_refl pb : Reflexive (cumul_pb_context cumulSpec0 pb Σ).
@@ -301,24 +302,24 @@ Lemma cumulSpec0_ind_all :
         (* reflexivity *)
         (forall (pb : conv_pb) (Γ : context) (t : term),
         P pb Γ t t) ->
-        
+
         (* congruence rules *)
 
         (forall (pb : conv_pb) (Γ : context) (ev : nat) (l l' : list term),
           All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Conv Γ)) l l' -> P pb Γ (tEvar ev l) (tEvar ev l')) ->
 
-        (forall (pb : conv_pb) (Γ : context) (t t' u u' : term), 
+        (forall (pb : conv_pb) (Γ : context) (t t' u u' : term),
           cumulSpec0 Σ Γ pb t t' -> P pb Γ t t' ->
           cumulSpec0 Σ Γ Conv u u' -> P Conv Γ u u' ->
           P pb Γ (tApp t u) (tApp t' u')) ->
 
         (forall (pb : conv_pb) (Γ : context) (na na' : aname) (ty ty' t t' : term),
-          eq_binder_annot na na' ->  
-          cumulSpec0 Σ Γ Conv ty ty' -> P Conv Γ ty ty' -> 
-          cumulSpec0 Σ (Γ ,, vass na ty) pb t t' -> P pb (Γ ,, vass na ty) t t' -> 
+          eq_binder_annot na na' ->
+          cumulSpec0 Σ Γ Conv ty ty' -> P Conv Γ ty ty' ->
+          cumulSpec0 Σ (Γ ,, vass na ty) pb t t' -> P pb (Γ ,, vass na ty) t t' ->
           P pb Γ (tLambda na ty t) (tLambda na' ty' t')) ->
 
-        (forall (pb : conv_pb) (Γ : context) (na na' : binder_annot name) (a a' b b' : term), 
+        (forall (pb : conv_pb) (Γ : context) (na na' : binder_annot name) (a a' b b' : term),
           eq_binder_annot na na' ->
           cumulSpec0 Σ Γ Conv a a' -> P Conv Γ a a' ->
           cumulSpec0 Σ (Γ,, vass na a) pb b b' -> P pb (Γ,, vass na a) b b' ->
@@ -332,68 +333,68 @@ Lemma cumulSpec0_ind_all :
 
       (forall (pb : conv_pb) (Γ : context) (indn : case_info) (p p' : predicate term)
         (c c' : term) (brs brs' : list (branch term)),
-        cumul_predicate (fun Γ t u => cumulSpec0 Σ Γ Conv t u × P Conv Γ t u) Γ 
-          (compare_universe Conv Σ) p p' -> 
+        cumul_predicate (fun Γ t u => cumulSpec0 Σ Γ Conv t u × P Conv Γ t u) Γ
+          (compare_universe Conv Σ) p p' ->
         cumulSpec0 Σ Γ Conv c c' -> P Conv Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
                eq_context_gen eq eq (bcontext br) (bcontext br') *
                cumulSpec0 Σ (Γ,,, inst_case_branch_context p br) Conv
-                 (bbody br) (bbody br')) 
-            (fun br br' => P Conv (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
+                 (bbody br) (bbody br'))
+            (fun br br' => P Conv (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' ->
        P pb Γ (tCase indn p c brs) (tCase indn p' c' brs')) ->
 
-       (forall (pb : conv_pb) (Γ : context) 
+       (forall (pb : conv_pb) (Γ : context)
           (p : projection) (c c' : term),
         cumulSpec0 Σ Γ Conv c c' -> P Conv Γ c c' ->
          P pb Γ (tProj p c) (tProj p c')) ->
 
-       (forall (pb : conv_pb) (Γ : context) 
+       (forall (pb : conv_pb) (Γ : context)
           (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
           All2
             (fun x y : def term =>
-             ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) × 
+             ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) ×
                 P Conv Γ (dtype x) (dtype y)
                × cumulSpec0 Σ (Γ,,, fix_context mfix) Conv
-                   (dbody x) (dbody y)) × 
+                   (dbody x) (dbody y)) ×
                 P Conv (Γ,,, fix_context mfix) (dbody x) (dbody y) × rarg x = rarg y) *
              eq_binder_annot (dname x) (dname y)) mfix mfix' ->
            P pb Γ (tFix mfix idx) (tFix mfix' idx)) ->
 
-       (forall (pb : conv_pb) (Γ : context) 
+       (forall (pb : conv_pb) (Γ : context)
            (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
            All2
              (fun x y : def term =>
-              ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) × 
+              ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) ×
                  P Conv Γ (dtype x) (dtype y)
                 × cumulSpec0 Σ (Γ,,, fix_context mfix) Conv
-                    (dbody x) (dbody y)) × P Conv (Γ,,, fix_context mfix) 
+                    (dbody x) (dbody y)) × P Conv (Γ,,, fix_context mfix)
                     (dbody x) (dbody y) × rarg x = rarg y) *
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
             P pb Γ (tCoFix mfix idx) (tCoFix mfix' idx)) ->
- 
+
       (* cumulativity rules *)
-      
-      (forall (pb : conv_pb) 
+
+      (forall (pb : conv_pb)
             (Γ : context) (i : inductive) (u u' : list Level.t)
-            (args args' : list term), 
+            (args args' : list term),
       R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef i) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Conv Γ)) args args' ->
       P pb Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
-    (forall (pb : conv_pb) 
-      (Γ : context) (i : inductive) (k : nat) 
-      (u u' : list Level.t) (args args' : list term), 
+    (forall (pb : conv_pb)
+      (Γ : context) (i : inductive) (k : nat)
+      (u u' : list Level.t) (args args' : list term),
       R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (ConstructRef i k) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Conv Γ)) args args' ->
       P pb Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->
 
-      (forall (pb : conv_pb) 
+      (forall (pb : conv_pb)
           (Γ : context) (s s' : Universe.t),
           compare_universe pb Σ s s' -> P pb Γ (tSort s) (tSort s')) ->
 
-      (forall (pb : conv_pb) 
+      (forall (pb : conv_pb)
           (Γ : context) (c : kername) (u u' : list Level.t),
           R_universe_instance (compare_universe Conv Σ) u u' -> P pb Γ (tConst c u) (tConst c u') ) ->
 
@@ -404,50 +405,50 @@ Proof.
   move aux at top.
   destruct 1.
   - eapply X8; eauto.
-  - eapply X9; eauto.   
-  - eapply X10; eauto.   
+  - eapply X9; eauto.
+  - eapply X10; eauto.
   - eapply X20; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X21; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
-  - eapply X22; eauto. 
-  - eapply X23; eauto. 
+  - eapply X22; eauto.
+  - eapply X23; eauto.
   - eapply X11.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X12; eauto.
-  - eapply X13; eauto.   
-  - eapply X14; eauto.   
-  - eapply X15; eauto.   
-  - eapply X16 ; eauto. 
+  - eapply X13; eauto.
+  - eapply X14; eauto.
+  - eapply X15; eauto.
+  - eapply X16 ; eauto.
     + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
       repeat split ; eauto.
       * revert c0. generalize (pparams p), (pparams p').
         fix aux' 3; destruct 1; constructor; auto.
     + revert brs brs' a.
       fix aux' 3; destruct 1; constructor; intuition auto.
-  - eapply X17 ; eauto. 
-  - eapply X18 ; eauto. 
-    revert a.  
+  - eapply X17 ; eauto.
+  - eapply X18 ; eauto.
+    revert a.
     set (mfixAbs := mfix). unfold mfixAbs at 2 5.
     clearbody mfixAbs.
     revert mfix mfix'.
-    fix aux' 3; destruct 1; constructor. 
+    fix aux' 3; destruct 1; constructor.
     + intuition auto.
     + auto.
-  - eapply X19 ; eauto. 
-    revert a.  
+  - eapply X19 ; eauto.
+    revert a.
     set (mfixAbs := mfix). unfold mfixAbs at 2 5.
     clearbody mfixAbs.
     revert mfix mfix'.
-    fix aux' 3; destruct 1; constructor. 
+    fix aux' 3; destruct 1; constructor.
     + intuition auto.
     + auto.
   - eapply X.
   - eapply X0.
-  - eapply X1; eauto. 
+  - eapply X1; eauto.
   - eapply X2; eauto.
   - eapply X3; eauto.
   - eapply X4; eauto.
@@ -519,24 +520,24 @@ Lemma convSpec0_ind_all :
         (* reflexivity *)
         (forall  (Γ : context) (t : term),
         P Γ t t) ->
-        
+
         (* congruence rules *)
 
         (forall  (Γ : context) (ev : nat) (l l' : list term),
           All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
 
-        (forall  (Γ : context) (t t' u u' : term), 
+        (forall  (Γ : context) (t t' u u' : term),
           cumulSpec0 Σ Γ Conv t t' -> P Γ t t' ->
           cumulSpec0 Σ Γ Conv u u' -> P Γ u u' ->
           P Γ (tApp t u) (tApp t' u')) ->
 
         (forall  (Γ : context) (na na' : aname) (ty ty' t t' : term),
-          eq_binder_annot na na' ->  
-          cumulSpec0 Σ Γ Conv ty ty' -> P Γ ty ty' -> 
-          cumulSpec0 Σ (Γ ,, vass na ty) Conv t t' -> P (Γ ,, vass na ty) t t' -> 
+          eq_binder_annot na na' ->
+          cumulSpec0 Σ Γ Conv ty ty' -> P Γ ty ty' ->
+          cumulSpec0 Σ (Γ ,, vass na ty) Conv t t' -> P (Γ ,, vass na ty) t t' ->
           P Γ (tLambda na ty t) (tLambda na' ty' t')) ->
 
-        (forall  (Γ : context) (na na' : binder_annot name) (a a' b b' : term), 
+        (forall  (Γ : context) (na na' : binder_annot name) (a a' b b' : term),
           eq_binder_annot na na' ->
           cumulSpec0 Σ Γ Conv a a' -> P Γ a a' ->
           cumulSpec0 Σ (Γ,, vass na a) Conv b b' -> P (Γ,, vass na a) b b' ->
@@ -550,67 +551,67 @@ Lemma convSpec0_ind_all :
 
       (forall  (Γ : context) (indn : case_info) (p p' : predicate term)
         (c c' : term) (brs brs' : list (branch term)),
-        cumul_predicate (fun Γ t u => cumulSpec0 Σ Γ Conv t u * P Γ t u) Γ (compare_universe Conv Σ) p p' -> 
+        cumul_predicate (fun Γ t u => cumulSpec0 Σ Γ Conv t u * P Γ t u) Γ (compare_universe Conv Σ) p p' ->
         cumulSpec0 Σ Γ Conv c c' -> P Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
                eq_context_gen eq eq (bcontext br) (bcontext br') *
                cumulSpec0 Σ (Γ,,, inst_case_branch_context p br) Conv
-                 (bbody br) (bbody br')) 
-            (fun br br' => P (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
+                 (bbody br) (bbody br'))
+            (fun br br' => P (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' ->
        P Γ (tCase indn p c brs) (tCase indn p' c' brs')) ->
 
-       (forall  (Γ : context) 
+       (forall  (Γ : context)
           (p : projection) (c c' : term),
         cumulSpec0 Σ Γ Conv c c' -> P Γ c c' ->
          P Γ (tProj p c) (tProj p c')) ->
 
-       (forall  (Γ : context) 
+       (forall  (Γ : context)
           (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
           All2
             (fun x y : def term =>
-             ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) × 
+             ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) ×
                 P Γ (dtype x) (dtype y)
                × cumulSpec0 Σ (Γ,,, fix_context mfix) Conv
-                   (dbody x) (dbody y)) × P (Γ,,, fix_context mfix) 
+                   (dbody x) (dbody y)) × P (Γ,,, fix_context mfix)
                    (dbody x) (dbody y) × rarg x = rarg y) *
              eq_binder_annot (dname x) (dname y)) mfix mfix' ->
            P Γ (tFix mfix idx) (tFix mfix' idx)) ->
 
-       (forall  (Γ : context) 
+       (forall  (Γ : context)
            (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
            All2
              (fun x y : def term =>
-              ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) × 
+              ((cumulSpec0 Σ Γ Conv (dtype x) (dtype y) ×
                  P Γ (dtype x) (dtype y)
                 × cumulSpec0 Σ (Γ,,, fix_context mfix) Conv
-                    (dbody x) (dbody y)) × P (Γ,,, fix_context mfix) 
+                    (dbody x) (dbody y)) × P (Γ,,, fix_context mfix)
                     (dbody x) (dbody y) × rarg x = rarg y) *
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
             P Γ (tCoFix mfix idx) (tCoFix mfix' idx)) ->
- 
+
       (* cumulativiity rules *)
-      
-      (forall  
+
+      (forall
             (Γ : context) (i : inductive) (u u' : list Level.t)
-            (args args' : list term), 
+            (args args' : list term),
       R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef i) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Γ)) args args' ->
       P Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
-    (forall  
-      (Γ : context) (i : inductive) (k : nat) 
-      (u u' : list Level.t) (args args' : list term), 
+    (forall
+      (Γ : context) (i : inductive) (k : nat)
+      (u u' : list Level.t) (args args' : list term),
       R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (ConstructRef i k) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Γ)) args args' ->
       P Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->
 
-      (forall  
+      (forall
           (Γ : context) (s s' : Universe.t),
           eq_universe Σ s s' -> P Γ (tSort s) (tSort s')) ->
 
-      (forall  
+      (forall
           (Γ : context) (c : kername) (u u' : list Level.t),
           R_universe_instance (eq_universe Σ) u u' -> P Γ (tConst c u) (tConst c u') ) ->
 
@@ -621,50 +622,50 @@ Proof.
   move aux at top.
   destruct 1.
   - eapply X8; eauto.
-  - eapply X9; eauto.   
-  - eapply X10; eauto.   
+  - eapply X9; eauto.
+  - eapply X10; eauto.
   - eapply X20; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X21; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
-  - eapply X22; eauto. 
-  - eapply X23; eauto. 
+  - eapply X22; eauto.
+  - eapply X23; eauto.
   - eapply X11.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X12; eauto.
-  - eapply X13; eauto.   
-  - eapply X14; eauto.   
-  - eapply X15; eauto.   
-  - eapply X16 ; eauto. 
+  - eapply X13; eauto.
+  - eapply X14; eauto.
+  - eapply X15; eauto.
+  - eapply X16 ; eauto.
     + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
       repeat split ; eauto.
       * revert c0. generalize (pparams p), (pparams p').
         fix aux' 3; destruct 1; constructor; auto.
     + revert brs brs' a.
       fix aux' 3; destruct 1; constructor; intuition auto.
-  - eapply X17 ; eauto. 
-  - eapply X18 ; eauto. 
-    revert a.  
+  - eapply X17 ; eauto.
+  - eapply X18 ; eauto.
+    revert a.
     set (mfixAbs := mfix). unfold mfixAbs at 2 5.
     clearbody mfixAbs.
     revert mfix mfix'.
-    fix aux' 3; destruct 1; constructor. 
+    fix aux' 3; destruct 1; constructor.
     + intuition auto.
     + auto.
-  - eapply X19 ; eauto. 
-    revert a.  
+  - eapply X19 ; eauto.
+    revert a.
     set (mfixAbs := mfix). unfold mfixAbs at 2 5.
     clearbody mfixAbs.
     revert mfix mfix'.
-    fix aux' 3; destruct 1; constructor. 
+    fix aux' 3; destruct 1; constructor.
     + intuition auto.
     + auto.
   - eapply X.
   - eapply X0.
-  - eapply X1; eauto. 
+  - eapply X1; eauto.
   - eapply X2; eauto.
   - eapply X3; eauto.
   - eapply X4; eauto.

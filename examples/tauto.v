@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 
 From Equations Require Import Equations.
 
@@ -567,14 +568,14 @@ Definition decl_size (size : term -> nat) (x : context_decl) :=
 
 Definition context_size (size : term -> nat) (l : context) :=
   list_size (decl_size size) l.
-  
-Definition branch_size (size : term -> nat) (br : branch term) := 
+
+Definition branch_size (size : term -> nat) (br : branch term) :=
   size br.(bbody).
 
-Definition predicate_size (size : term -> nat) (p : predicate term) := 
-  list_size size p.(pparams) + 
+Definition predicate_size (size : term -> nat) (p : predicate term) :=
+  list_size size p.(pparams) +
   size p.(preturn).
-  
+
 Fixpoint tsize t : nat :=
   match t with
   | tRel i => 1
@@ -661,8 +662,8 @@ Proof.
     f_equal; simpl; auto.
     induction a; simpl; auto.
     induction X0; simpl; auto.
-    f_equal; auto. f_equal; auto. 
-    unfold branch_size; simpl; auto. 
+    f_equal; auto. f_equal; auto.
+    unfold branch_size; simpl; auto.
   - generalize (#|m| + k). intro p.
     induction X.
     + reflexivity.
@@ -793,7 +794,7 @@ Proof.
     }
     lia.
   - repeat inst.
-    
+
     assert (
       list_size (branch_size tsize) (map_branches_k (subst [tRel 0]) k l)
       <= list_size (branch_size tsize) l
@@ -1017,18 +1018,18 @@ Section Plugin.
 
   Definition trivial_hyp (h:list form) v : forall h : form, In h [] -> sem h v.
     intro. destruct 1.
-  Qed. 
+  Qed.
 
-  Transparent reify. 
+  Transparent reify.
 
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
 
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext empty_global_env) gamma Mphi with
-      Some phi => 
-      match tauto_proc (size phi) {| hyps := []; concl := phi |} with 
+      Some phi =>
+      match tauto_proc (size phi) {| hyps := []; concl := phi |} with
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
-      | _ => NotSolvable "not a valid formula" end 
+      | _ => NotSolvable "not a valid formula" end
     | None => NotSolvable "not a formaula" end.
     destruct (reify (empty_ext _) gamma Mphi); try exact (notSolvable _).
     destruct (tauto_proc (size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
@@ -1048,9 +1049,9 @@ Section Plugin.
     end.
 
   Ltac extract_form_tac k l :=
-    match goal with | |- forall X:Prop, _ => 
+    match goal with | |- forall X:Prop, _ =>
                       let H := fresh "H" in
-                      intros H; 
+                      intros H;
                      extract_form_tac k ltac:(constr:(H::l))
     | |- _ => k l end.
 
@@ -1059,7 +1060,7 @@ Section Plugin.
         pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) l) as H; compute in H
       in
         quote_term T k.
-            
+
   Ltac tauto :=
     let L := fresh "L" in
     let P := fresh "P" in
@@ -1073,10 +1074,10 @@ Section Plugin.
 
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
     tauto.
-  Qed. 
+  Qed.
 
   Lemma test2 : forall (A B C:Prop), (A->C)->(B->C)->A\/B->B.
     Fail tauto.
-  Abort. 
+  Abort.
 
 End Plugin.

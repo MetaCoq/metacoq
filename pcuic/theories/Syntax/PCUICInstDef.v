@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst 
+  PCUICLiftSubst PCUICUnivSubst
   PCUICTyping PCUICEquality PCUICOnFreeVars
   PCUICSigmaCalculus PCUICRenameDef.
 
@@ -56,8 +57,8 @@ Definition usubst (Γ : context) σ (Δ : context) :=
 
 (* Untyped substitution for untyped reduction / cumulativity *)
 Definition closed_subst (Γ : context) σ (Δ : context) :=
-  is_closed_context Δ × 
-  (forall x decl, nth_error Γ x = Some decl -> is_open_term Δ (σ x)) × 
+  is_closed_context Δ ×
+  (forall x decl, nth_error Γ x = Some decl -> is_open_term Δ (σ x)) ×
   usubst Γ σ Δ.
 
 (* Well-typedness of a substitution *)
@@ -66,7 +67,7 @@ Definition well_subst {cf} Σ (Γ : context) σ (Δ : context) :=
   (forall x decl,
     nth_error Γ x = Some decl ->
     Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ]) ×
-  usubst Γ σ Δ.  
+  usubst Γ σ Δ.
 
 Notation "Σ ;;; Δ ⊢ σ : Γ" :=
   (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICReduction
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
@@ -8,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICWeakeningEnv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity
   PCUICContextConversion PCUICConversion PCUICCanonicity
-  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence 
+  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence
   PCUICArities PCUICPrincipality.
 
 From MetaCoq.Erasure Require Import Extract.
@@ -60,7 +61,7 @@ Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
   declared_inductive (fst Σ) ind mind idecl ->
   isArity (ind_type idecl).
 Proof.
-  intros. 
+  intros.
   eapply (declared_inductive_inv weaken_env_prop_typing) in H; eauto.
   - inv H. rewrite ind_arity_eq.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn.
@@ -108,14 +109,14 @@ Proof.
   - eapply IHL in H. cbn in H. tauto.
 Qed.
 
-Lemma typing_spine_red (Σ : global_env_ext) Γ (args args' : list PCUICAst.term) 
+Lemma typing_spine_red (Σ : global_env_ext) Γ (args args' : list PCUICAst.term)
   (X : All2 (red Σ Γ) args args') (wfΣ : wf Σ)
-  (T x x0 : PCUICAst.term) 
-  (t0 : typing_spine Σ Γ x args x0) 
+  (T x x0 : PCUICAst.term)
+  (t0 : typing_spine Σ Γ x args x0)
   (c : Σ;;; Γ ⊢ x0 ≤ T) x1
   (c0 : Σ;;; Γ ⊢ x1 ≤ x) :
   isType Σ Γ x1 ->
-  isType Σ Γ T -> 
+  isType Σ Γ T ->
   typing_spine Σ Γ x1 args' T.
 Proof.
   intros ? ?. revert args' X.
@@ -128,7 +129,7 @@ Proof.
     + eapply IHt0; eauto.
       eapply red_ws_cumul_pb_inv.
       unfold subst1.
-      eapply isType_tProd in i0 as [dom codom]. 
+      eapply isType_tProd in i0 as [dom codom].
       eapply (closed_red_red_subst (Δ := [vass na A]) (Γ' := [])); auto.
       simpl. eapply isType_wf_local in codom. fvs.
       constructor; auto. eapply into_closed_red; auto. fvs. fvs.
@@ -137,11 +138,11 @@ Proof.
       eapply subject_reduction; tea.
 Qed.
 
-Lemma it_mkProd_red_Arity {Σ : global_env_ext} {Γ c0 i u l} {wfΣ : wf Σ} : 
+Lemma it_mkProd_red_Arity {Σ : global_env_ext} {Γ c0 i u l} {wfΣ : wf Σ} :
   ~ Is_conv_to_Arity Σ Γ (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
 Proof.
   intros (? & [] & ?). eapply red_it_mkProd_or_LetIn_mkApps_Ind in X as (? & ? & ?). subst.
-  eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [[] ]. 
+  eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [[] ].
 Qed.
 
 Lemma invert_it_Ind_eq_prod:
@@ -203,7 +204,7 @@ Proof.
     * rewrite /mkProd_or_LetIn /=. simpl => /= sp.
       simpl.
       dependent elimination sp as [spnil i i' e|spcons i i' e e' sp].
-      { exists (Γ0 ++ [vass na ty]). 
+      { exists (Γ0 ++ [vass na ty]).
         exists args. now rewrite it_mkProd_or_LetIn_app. }
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; pcuic.
       eapply (substitution0_ws_cumul_pb (t:=hd0)) in codom; eauto.
@@ -255,7 +256,7 @@ Proof.
   eapply PCUICValidity.validity. econstructor; eauto.
 Qed.
 
-Lemma nIs_conv_to_Arity_nArity {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
+Lemma nIs_conv_to_Arity_nArity {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} :
   isType Σ Γ T ->
   ~ Is_conv_to_Arity Σ Γ T -> ~ isArity T.
 Proof.
@@ -270,12 +271,12 @@ Lemma tConstruct_no_Type (Σ : global_env_ext) Γ ind c u x1 : wf Σ ->
   Is_proof Σ Γ (mkApps (tConstruct ind c u) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
-  - exfalso. 
+  - exfalso.
     eapply nIs_conv_to_Arity_nArity; tea.
     eapply PCUICValidity.validity; tea.
     eapply type_mkApps_tConstruct_n_conv_arity in t; auto.
   - exists x, x0. eauto.
-Qed.                      
+Qed.
 
 (* if a cofixpoint is a type or proof, it is a proof *)
 
@@ -316,7 +317,7 @@ Qed.
 Lemma typing_spine_wat (Σ : global_env_ext) (Γ : context) (L : list term)
   (x x0 : term) :
     wf Σ ->
-    typing_spine Σ Γ x L x0 -> 
+    typing_spine Σ Γ x L x0 ->
     isType Σ Γ x0.
 Proof.
   intros wfΣ; induction 1; auto.
@@ -394,8 +395,8 @@ Lemma sort_typing_spine:
   forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : Universe.t) (x x0 : term),
     wf_ext Σ ->
     is_propositional u ->
-    typing_spine Σ Γ x L x0 -> 
-    Σ;;; Γ |- x : tSort u -> 
+    typing_spine Σ Γ x L x0 ->
+    Σ;;; Γ |- x : tSort u ->
     ∑ u', Σ;;; Γ |- x0 : tSort u' × is_propositional u'.
 Proof.
   intros Σ Γ L u x x0 HΣ ? t1 c0.
@@ -422,8 +423,8 @@ Qed.
 Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf_ext Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
-  intros wfΣ wfΓ. intros. 
-  destruct (common_typing _ _ X X0) as (? & e & ? & ?). 
+  intros wfΣ wfΓ. intros.
+  destruct (common_typing _ _ X X0) as (? & e & ? & ?).
   eapply invert_cumul_arity_l_gen; tea.
   eapply invert_cumul_arity_r_gen. 2:exact e.
   exists T1. split; auto. sq.
@@ -467,7 +468,7 @@ Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> is_propositional u -> 
+  Σ;;; Γ |- v' : tSort u' -> is_propositional u ->
   leq_universe (global_ext_constraints Σ) u' u.
 Proof.
   intros wf leq Hv Hv' isp.
@@ -481,7 +482,7 @@ Lemma leq_term_propopositional_sorted_r {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
-  Σ;;; Γ |- v' : tSort u' -> is_propositional u' -> 
+  Σ;;; Γ |- v' : tSort u' -> is_propositional u' ->
   leq_universe (global_ext_constraints Σ) u u'.
 Proof.
   intros wfΣ leq hv hv' isp.
@@ -579,7 +580,7 @@ Proof.
   destruct s as [ | (u & ? & ?)].
   - eapply invert_cumul_arity_r in e; eauto. destruct e as (? & [] & ?).
     eapply invert_red_prod in X1 as (? & ? & []); eauto; subst. cbn in H.
-    econstructor. exists x3. econstructor. 
+    econstructor. exists x3. econstructor.
     eapply type_reduction_closed; eauto. econstructor; eauto.
   - sq. eapply cumul_prop1' in e; eauto.
     eapply inversion_Prod in e as (? & ? & ? & ? & e) ; auto.
@@ -587,7 +588,7 @@ Proof.
     eapply leq_universe_propositional_r in e as H0; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
     eapply is_propositional_sort_prod in H0; eauto.
-    eapply type_Lambda in t1; eauto. 
+    eapply type_Lambda in t1; eauto.
     now apply PCUICValidity.validity in t1.
 Qed.
 
@@ -614,7 +615,7 @@ Proof.
   eapply wcbeval_red; eauto. assumption.
 Qed.
 
-(* Thanks to the restriction to Prop </= Type, erasability is also closed by expansion 
+(* Thanks to the restriction to Prop </= Type, erasability is also closed by expansion
   on well-typed terms. *)
 
 Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
@@ -646,7 +647,7 @@ Proof.
   intros [s hs]; eapply wt_closed_red_refl; tea.
 Qed.
 
-Lemma nIs_conv_to_Arity_isWfArity_elim {Σ} {wfΣ : wf Σ} {Γ x} : 
+Lemma nIs_conv_to_Arity_isWfArity_elim {Σ} {wfΣ : wf Σ} {Γ x} :
   ~ Is_conv_to_Arity Σ Γ x ->
   isWfArity Σ Γ x ->
   False.
@@ -659,11 +660,11 @@ Proof.
   now eapply it_mkProd_isArity.
 Qed.
 
-Definition isErasable_Type (Σ : global_env_ext) Γ T := 
+Definition isErasable_Type (Σ : global_env_ext) Γ T :=
   (Is_conv_to_Arity Σ Γ T +
     (∑ u : Universe.t, Σ;;; Γ |- T : tSort u × is_propositional u))%type.
 
-Lemma isErasable_any_type {Σ} {wfΣ : wf_ext Σ} {Γ t T} : 
+Lemma isErasable_any_type {Σ} {wfΣ : wf_ext Σ} {Γ t T} :
   isErasable Σ Γ t ->
   Σ ;;; Γ |- t : T ->
   isErasable_Type Σ Γ T.
@@ -680,12 +681,12 @@ Proof.
   eapply cumul_prop1'; eauto. eapply PCUICValidity.validity; eauto.
 Qed.
 
-Lemma Is_proof_ty Σ Γ t : 
+Lemma Is_proof_ty Σ Γ t :
   wf_ext Σ ->
-  Is_proof Σ Γ t -> 
-  forall t' ty, 
+  Is_proof Σ Γ t ->
+  forall t' ty,
   Σ ;;; Γ |- t : ty ->
-  Σ ;;; Γ |- t' : ty -> 
+  Σ ;;; Γ |- t' : ty ->
   Is_proof Σ Γ t'.
 Proof.
   intros wfΣ [ty [u [Hty isp]]].
@@ -750,7 +751,7 @@ Proof.
     eapply leq_universe_sprop_l in leu; tea => //.
 Qed.
 
-Lemma typing_spine_inj {Σ Γ Δ s args args' u u'} : 
+Lemma typing_spine_inj {Σ Γ Δ s args args' u u'} :
   wf_ext Σ ->
   check_univs ->
   prop_sub_type = false ->
@@ -765,12 +766,12 @@ Proof.
   eapply is_propositional_lower; tea. apply wf.
 Qed.
 
-Lemma Is_proof_ind Σ Γ t : 
+Lemma Is_proof_ind Σ Γ t :
   wf_ext Σ ->
-  Is_proof Σ Γ t -> 
-  forall t' ind u args args', 
+  Is_proof Σ Γ t ->
+  forall t' ind u args args',
   Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
-  Σ ;;; Γ |- t' : mkApps (tInd ind u) args' -> 
+  Σ ;;; Γ |- t' : mkApps (tInd ind u) args' ->
   Is_proof Σ Γ t'.
 Proof.
   intros wfΣ [ty [u [Hty isp]]].
@@ -805,22 +806,24 @@ Proof.
   eapply subject_reduction in hr; tea; eauto.
   eapply inversion_Case in hc as [mdecl [idecl [isdecl [indices ?]]]]; eauto.
   eapply inversion_Case in hr as [mdecl' [idecl' [isdecl' [indices' ?]]]]; eauto.
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve eapply declared_inductive_to_gen in isdecl, isdecl'; eauto.
   destruct (declared_inductive_inj isdecl isdecl'). subst mdecl' idecl'.
-  intros hp. 
+  intros hp.
   epose proof (Is_proof_ind _ _ _ wfΣ hp).
   destruct p0 as [[] ?]. destruct p1 as [[] ?].
   exact (X _ _ _ _ _ scrut_ty scrut_ty0).
 Qed.
 
 Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
-  Is_proof Σ Γ t -> 
+  Is_proof Σ Γ t ->
   Σ ;;; Γ |- mkApps t args : ty ->
   Is_proof Σ Γ (mkApps t args).
 Proof.
   intros [ty' [u [Hty [isp pu]]]] Htargs.
   eapply PCUICValidity.inversion_mkApps in Htargs as [A [Ht sp]].
-  pose proof (PCUICValidity.validity Hty).  
-  pose proof (PCUICValidity.validity Ht).  
+  pose proof (PCUICValidity.validity Hty).
+  pose proof (PCUICValidity.validity Ht).
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp. 3:tea.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
@@ -831,7 +834,7 @@ Proof.
   now eapply validity.
 Qed.
 
-Lemma isErasable_Propositional {Σ : global_env_ext} {Γ ind n u args} : 
+Lemma isErasable_Propositional {Σ : global_env_ext} {Γ ind n u args} :
   wf_ext Σ ->
   isErasable Σ Γ (mkApps (tConstruct ind n u) args) -> isPropositional Σ ind true.
 Proof.
@@ -841,7 +844,9 @@ Proof.
   unfold isPropositional.
   eapply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
   eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); auto.
-  rewrite (declared_inductive_lookup d).
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve epose proof (d_ := declared_constructor_to_gen d); eauto.
+  unfold lookup_inductive. rewrite (declared_inductive_lookup_gen d_.p1).
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
   rewrite oib.(ind_arity_eq).
@@ -863,7 +868,7 @@ Proof.
   eapply validity. econstructor; tea.
 Qed.
 
-Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} : 
+Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} :
   wf_ext Σ ->
   welltyped Σ Γ (tConstruct ind n u) ->
   (isErasable Σ Γ (tConstruct ind n u) -> False) -> isPropositional Σ ind false.
@@ -876,7 +881,10 @@ Proof.
   pose proof d as [decli ?].
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
-  red. rewrite (declared_inductive_lookup decli).
+  red. unfold lookup_inductive.
+  pose proof (wfΣ' := wfΣ.1).
+  unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+  rewrite (declared_inductive_lookup_gen decli_).
   rewrite oib.(ind_arity_eq).
   rewrite /isPropositionalArity !destArity_it_mkProd_or_LetIn /=.
   destruct (is_propositional (ind_sort x0)) eqn:isp; auto.
@@ -887,7 +895,7 @@ Proof.
   rewrite onc.(cstr_eq) in e, X.
   rewrite !subst_instance_it_mkProd_or_LetIn !PCUICLiftSubst.subst_it_mkProd_or_LetIn in e, X.
   len in e; len in X.
-  rewrite subst_cstr_concl_head in e, X. 
+  rewrite subst_cstr_concl_head in e, X.
   destruct decli. eapply nth_error_Some_length in H1; eauto.
   rewrite -it_mkProd_or_LetIn_app in e, X.
   exists (subst_instance_univ u (ind_sort x0)).
@@ -910,9 +918,9 @@ Proof.
   do 2 constructor.
   rewrite is_propositional_subst_instance in sorts, sorts' |- *.
   specialize (sorts' isp). rewrite -sorts'. reflexivity.
-Qed.  
+Qed.
 
-Lemma isPropositional_propositional Σ (Σ' : E.global_context) ind mdecl idecl mdecl' idecl' : 
+Lemma isPropositional_propositional Σ {wfΣ: wf Σ} (Σ' : E.global_context) ind mdecl idecl mdecl' idecl' :
   PCUICAst.declared_inductive Σ ind mdecl idecl ->
   EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
@@ -921,7 +929,9 @@ Lemma isPropositional_propositional Σ (Σ' : E.global_context) ind mdecl idecl 
 Proof.
   intros decli decli' [_ indp] [] b.
   unfold isPropositional, EGlobalEnv.inductive_isprop_and_pars.
-  rewrite (declared_inductive_lookup decli).
+  unfold lookup_inductive.
+  unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
+  rewrite (declared_inductive_lookup_gen decli_).
   rewrite (EGlobalEnv.declared_inductive_lookup decli') /=
     /isPropositionalArity.
   destruct H0 as [_ [_ [_ isP]]]. red in isP.
@@ -929,14 +939,14 @@ Proof.
   rewrite isP. intros ->. f_equal. f_equal. now rewrite indp.
 Qed.
 
-Lemma isPropositional_propositional_cstr Σ (Σ' : E.global_context) ind c mdecl idecl cdecl mdecl' idecl' : 
+Lemma isPropositional_propositional_cstr Σ (Σ' : E.global_context) ind c mdecl idecl cdecl mdecl' idecl' :
   wf Σ ->
   PCUICAst.declared_constructor Σ (ind, c) mdecl idecl cdecl ->
   EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
   erases_one_inductive_body idecl idecl' ->
-  forall b, isPropositional Σ ind b -> 
-  EGlobalEnv.constructor_isprop_pars_decl Σ' ind c = 
+  forall b, isPropositional Σ ind b ->
+  EGlobalEnv.constructor_isprop_pars_decl Σ' ind c =
   Some (b, mdecl.(ind_npars), EAst.mkConstructor cdecl.(cstr_name) (context_assumptions cdecl.(cstr_args))).
 Proof.
   intros wfΣ declc decli' em ei b isp.
@@ -959,7 +969,7 @@ Qed.
 Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res T :
   wf Σ ->
   Σ ;;; [] |- tCase ci p discr brs : T ->
-  eval Σ (tCase ci p discr brs) res -> 
+  eval Σ (tCase ci p discr brs) res ->
   ∑ c u args, PCUICReduction.red Σ [] (tCase ci p discr brs) (tCase ci p ((mkApps (tConstruct ci.(ci_ind) c u) args)) brs).
 Proof.
   intros wf wt H. depind H; try now (cbn in *; congruence).
@@ -967,7 +977,7 @@ Proof.
     eexists _, _, _. eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
   - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
     assert (Hred1 : PCUICReduction.red Σ [] (tCase ip p discr brs) (tCase ip p (mkApps fn args) brs)). {
-      etransitivity. { eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. } 
+      etransitivity. { eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. }
       econstructor. econstructor.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
       enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
@@ -993,14 +1003,16 @@ Proof.
   eapply subject_reduction in X0 as X2'; eauto.
   eapply inversion_Case in X2' as (? & ? & ? & ? & [] & ?); eauto.
   eapply inversion_Case in X0 as (? & ? & ? & ? & [] & ?); eauto.
+  pose (X' := X.1). unshelve eapply declared_inductive_to_gen in x8, x4, H; eauto.
   destruct (declared_inductive_inj x8 x4); subst.
   destruct (declared_inductive_inj x8 H); subst.
-  eapply H0; eauto. reflexivity.
+  eapply H0; eauto. apply declared_inductive_from_gen; eauto.
+  reflexivity.
   eapply Is_proof_ind; tea.
 Qed.
 
 Lemma isErasable_unfold_cofix {Σ : global_env_ext} {Γ mfix idx} {wfΣ : wf Σ} decl :
-  isErasable Σ Γ (tCoFix mfix idx) -> 
+  isErasable Σ Γ (tCoFix mfix idx) ->
   nth_error mfix idx = Some decl ->
   isErasable Σ Γ (subst0 (cofix_subst mfix) (dbody decl)).
 Proof.

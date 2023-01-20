@@ -132,6 +132,12 @@ gen-src/mCReflect.ml
 gen-src/mCReflect.mli
 gen-src/mCRelations.ml
 gen-src/mCRelations.mli
+gen-src/primFloat.mli
+gen-src/primFloat.ml
+gen-src/hexadecimalString.mli
+gen-src/hexadecimalString.ml
+gen-src/decimalString.mli
+gen-src/decimalString.ml
 gen-src/mCString.ml
 gen-src/mCString.mli
 gen-src/mCUint63.ml

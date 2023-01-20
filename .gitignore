@@ -372,6 +372,7 @@ erasure/META
 safechecker/META
 template-coq/META
 
+template-coq/_PluginProject
 
 template-pcuic/demo.v
 template-pcuic/Makefile.local

@@ -1527,13 +1527,6 @@ Proof.
       eapply incl_appr, incl_refl.
 Qed.
 
-(*
-Lemma sunny_eq t E : 
-  sunny E t ->
-  annotate E t = t.
-Proof.
-Admitted. *)
-
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->

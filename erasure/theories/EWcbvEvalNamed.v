@@ -951,19 +951,22 @@ Proof.
         - eapply IHAll.
     }
     1:{ eapply NoDup_gen_many_fresh. }
-    2:{ rename H0 into Hwf. unfold wf_fix in Hwf. rtoProp. solve_all. eapply Nat.ltb_lt in H0.
-        generalize (map_length dname m).
-        generalize (map dname m). intros nms Hnms. induction m in Γ, H0, n, H1, nms, Hnms |- *.        
-        + econstructor.
-        + destruct nms; invs Hnms. invs H1.
-          destruct n0; cbn in *; econstructor.
-          * eapply H3. cbn. rewrite app_length gen_many_fresh_length H2. eapply H3.
-          * specialize IHm with (nms := nAnon :: nms). cbn in IHm.
-            todo "fix".
-          * cbn. todo "fix".
-          * todo "fix".
+    { clear.  generalize (((gen_many_fresh Γ (map dname m) ++ Γ))).
+      generalize Γ. induction m; cbn.
+      - econstructor.
+      - intros. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
+    }  
+    { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
+      eapply All_impl in H1. 2:{ intros ? [[] ].
+      specialize (r (gen_many_fresh Γ (map dname m) ++ Γ)).
+      revert r. rewrite app_length gen_many_fresh_length map_length. intros r. eapply r in i0. exact i0.
+      }
+      revert H1.
+      generalize (((gen_many_fresh Γ (map dname m) ++ Γ))). 
+      intros. induction H1 in Γ |- *.
+      - econstructor.
+      - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto.
     }
-    todo "fix".
 Qed.
 
 Lemma unfolds_bound : 
@@ -1325,7 +1328,19 @@ Proof.
     + econstructor; cbn; eauto.
       eapply wf_add_multiple; eauto.
       now rewrite map_length fix_env_length.
-      todo "wf fix_env, idx small?".      
+      Lemma wf_fix_env mfix Γ' :
+        NoDup (map fst mfix) ->
+        (∀ nm : ident, In nm (map fst mfix) → ¬ In nm (map fst Γ')) ->
+        All (λ t0 : ident × term, sunny (map fst mfix ++ map fst Γ') t0.2) mfix ->
+        All (λ v : ident × value, wf v.2) Γ' ->
+        All wf (fix_env mfix Γ').
+      Proof.
+        intros H.
+        unfold fix_env. induction #|mfix|; econstructor.
+        - econstructor; eauto.
+        - eapply IHn; eauto.
+      Qed.
+      eapply wf_fix_env; eauto.
     + eapply All_nth_error in X2; eauto. cbn in X2. rtoProp.
       rewrite map_fst_add_multiple. now rewrite map_length fix_env_length.
       eauto.
@@ -1720,7 +1735,7 @@ Proof.
           + eauto.
           + now rewrite map_length fix_env_length.
           + eapply eval_wf in IH2; eauto.
-            todo "idx small?".
+            eapply wf_fix_env; eauto.
       }
       (* besides the result, we believe that the exposition has several valuable contributions:
          - it discusses proofs techniques to get similar results

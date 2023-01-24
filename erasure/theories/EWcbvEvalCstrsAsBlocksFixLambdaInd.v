@@ -446,6 +446,7 @@ Proof.
     assert (qf : Q 0 (tFix mfix idx)).
     { pose (ev1' := ev1). unshelve eapply P'Q in ev1' => //.
       ih. unfold ev1'. lia. }
+    
       (* 
          - we use a fix rule which knows that bodies of fixpoints are lambdas and intermediately substitutes
          - named fix rule does the same
@@ -461,11 +462,12 @@ Proof.
     pose proof e as e'. unfold cunfold_fix in e'.
     destruct (nth_error mfix idx) eqn:E; invs e'.
 
+
     eapply Qwf in qf as wfix.
     cbn in wfix. rtoProp.
     unfold wf_fix in H0. rtoProp.
-    solve_all.  
-
+    solve_all.
+    
     eapply All_nth_error in H2 as Hnth. 2: exact E.
     destruct Hnth as [H1 Hnth].
     destruct d; cbn in *; destruct dbody; invs H1.
@@ -475,47 +477,43 @@ Proof.
       eapply closed_fix_subst; solve_all; destruct x; cbn; eapply wellformed_closed; eauto.
       cbn; eauto.
     }
-    depelim ev3; try now tauto.
+    depelim ev3; try now tauto. clear H1.
+    assert (qsubstl : Q 0 (substl (av :: fix_subst mfix) dbody)).
+    { eapply qsubst. 2:{ econstructor. eauto. eapply Qfix_subst; tea. eapply qpres_qfix. eapply qpres_qpres. eapply nth_error_Some_length; eauto. }
+      eapply qpres in qf. depelim qf. cbn in *. eauto.
+      eapply All_nth_error in a0; eauto.
+      cbn in a0. eapply qpres  in a0. depelim a0. cbn in *. eauto. cbn. rewrite Nat.add_0_r in q1. now rewrite fix_subst_length. }
+      eapply qfixs in qf. unfold cunfold_fix in qf. rewrite E in qf. cbn in qf. specialize (qf _ _ eq_refl).
 
-    assert (a' = av) as -> by todo "value".
+
+            unfold substl. cbn. fold (substl (fix_subst mfix) (csubst av 0 dbody)).
+      eapply qsubst.
+      { admit. }
+      eapply Qfix_subst; tea. eapply qpres_qfix. eapply qpres_qpres. eapply nth_error_Some_length; eauto.
+    }
+    cbn in IH.
+    
+    revert IH.
+    revert ev3_1.
+    rewrite substl_subst. { eapply Qwf, wellformed_closed in qf as Hwf. cbn in Hwf. now eapply closed_fix_subst. }
+    intros ev3_1 IH. depelim ev3_1.
+
+    assert (a' = av) as ->. { eapply eval_deterministic; eauto. eapply value_final. eapply eval_to_value; eauto. }
+    revert ev3_3 IH.
+    rewrite closed_subst. now eapply Qwf, wellformed_closed in qav.
+    rewrite -(subst_app_simpl [_]).
+    rewrite -(substl_subst). cbn. rtoProp. split. now eapply Qwf, wellformed_closed in qav. eapply Qwf, wellformed_closed in qf as Hwf. cbn in Hwf. now eapply closed_fix_subst.
+    
+    intros ev3_3 IH.
+    
+
     eapply X7; tea.
-    1,3: now eapply and_assum; [ih|hp' P'Q].
-    1: reflexivity.    
+    2: cbn; reflexivity.
+    { apply and_assum; [ ih | hp' P'Q]. }
+    { apply and_assum; [ ih | hp' P'Q]. }
 
-    all: todo "...".
-(* 
-    clear IH H1.
-    rewrite substl_subst in ev3_1. admit.
-    cbn in ev3_1. invs ev3_1.
-    rewrite closed_subst in ev3_3.
-    admit. rewrite <- (subst_app_simpl _ _ 0) in ev3_3.
-    rewrite substl_subst; eauto. admit.
-
-
-    eapply and_assum.
-    ih.
-    clear IH H1.
-    rewrite substl_subst in ev3_1. admit.
-    cbn in ev3_1. invs ev3_1.
-    rewrite closed_subst in ev3_3.
-    admit. rewrite <- (subst_app_simpl _ _ 0) in ev3_3.
-    rewrite substl_subst; eauto. admit.
-    2:{ clear IH H1. depelim ev3_1.
-    admit.
-    
-    clear IH H1.
-    rewrite substl_subst in ev3_1. admit.
-    cbn in ev3_1. invs ev3_1.
-    rewrite closed_subst in ev3_3.
-    admit. admit. admit.
-    cbn.
-    
-    enough (substl (av :: fix_subst mfix) dbody = csubst av 0 b).
-    { rewrite H3. eauto. }
-    todo "eq".
-    todo "Q".
-    todo "ineq".
-    todo "". *)
+    apply and_assum; [ | hp' P'Q].
+    unshelve eapply IH. eassumption. eassumption. cbn -[Nat.max]. lia.
   - assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { eapply qcase; tea => //.
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
@@ -554,10 +552,10 @@ Proof.
     1,3:(apply and_assum; [ih|hp' P'Q]).
     intros. apply and_assum; [ih|hp' P'Q].
   - eapply Qatom; tea.
-  - todo "??".
-  - todo "??".
-  - todo "??".
-  - todo "??".
+  - eapply Qatom; cbn; auto.
+  - eapply Qatom; cbn; auto.
+  - eapply Qatom; cbn; auto.
+  - eapply Qatom; cbn; auto.
   Unshelve. all: repeat econstructor.
 Qed.
 

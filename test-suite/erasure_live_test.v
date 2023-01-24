@@ -1,10 +1,12 @@
 From Coq Require Import Recdef.
+
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN.
 From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 
 From MetaCoq.ErasurePlugin Require Import Erasure.
+
 
 From Coq Require Import String.
 Local Open Scope string_scope.

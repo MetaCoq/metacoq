@@ -759,7 +759,14 @@ Require Import DecimalNat.
 Lemma string_of_nat_empty n :
   string_of_nat n <> "".
 Proof.
-Admitted.
+  unfold string_of_nat.
+  enough (Nat.to_uint n <> Decimal.Nil).
+  destruct (Nat.to_uint n); cbn; congruence.
+  rewrite Unsigned.to_uint_alt.
+  intros E % DecimalFacts.rev_nil_inv.
+  destruct n; cbn in E; try congruence.
+  destruct (Unsigned.to_lu n); cbn in *; congruence.
+Qed.
 
 Lemma string_of_uint_inj n1 n2 :
   string_of_uint n1 = string_of_uint n2 → n1 = n2.

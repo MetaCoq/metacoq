@@ -36,11 +36,11 @@ Inductive value : Set :=
 Definition environment := list (ident * value).
 Definition add : ident -> value -> environment -> environment := fun (x : ident) (v : value) env =>
                                                                 (x, v) :: env.
-Fixpoint add_multiple (xs : list ident) (vs : list value) (env : environment) : environment := 
+Fixpoint add_multiple (xs : list ident) (vs : list value) (env : environment) : environment :=
   match xs, vs with
   | x :: xs, v :: vs => add x v (add_multiple xs vs env)
   | _, _ => env
-  end. 
+  end.
 
 Definition lookup (E : environment) x :=
   match find (fun '(s, v) => String.eqb x s) E with
@@ -56,7 +56,7 @@ Definition fix_env (l : list (ident * term)) Γ :=
     end in
   aux #|l|.
 
-(* 
+(*
 Definition cunfold_fix (mfix : list (ident * term)) (idx : nat) Γ :=
   match nth_error mfix idx with
   | Some d => match map_option_out (map (fun d => match fst d with nNamed a => Some a | nAnon => @None ident end) mfix), d.(dname) with
@@ -90,7 +90,7 @@ Section Wcbv.
     eval (add na a' Γ') b res ->
     eval Γ (tApp f a) res
 
-  | eval_lambda na b : 
+  | eval_lambda na b :
     eval Γ (tLambda (nNamed na) b) (vClos na b Γ)
 
   (** Let *)
@@ -120,7 +120,7 @@ Section Wcbv.
     eval Γ a av ->
     eval Γ (tApp f a) res
 
-  | eval_fix mfix idx nms : 
+  | eval_fix mfix idx nms :
     forall (Hlen : (idx < #|mfix|)),
     List.forallb (isLambda ∘ dbody) mfix ->
     NoDup nms ->
@@ -134,114 +134,114 @@ Section Wcbv.
     eval Γ (tConst c) res
 
   (** Constructor congruence: we do not allow over-applications *)
-  | eval_construct_block ind c mdecl idecl cdecl args args' : 
+  | eval_construct_block ind c mdecl idecl cdecl args args' :
     lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
     #|args| <= cstr_arity mdecl cdecl ->
     All2_Set (eval Γ) args args' ->
     eval Γ (tConstruct ind c args) (vConstruct ind c args')
-  
+
   | eval_construct_block_empty ind c mdecl idecl cdecl :
      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
      eval Γ (tConstruct ind c []) (vConstruct ind c []).
-  
-  Program Definition eval_ind := 
+
+  Program Definition eval_ind :=
     λ (P : ∀ (Γ : environment) (t : term) (v : value), eval Γ t v → Type) (f : ∀ (Γ : environment) (na : string) (v : value) (e : lookup Γ na = Some v),
-          P Γ (tVar na) v (eval_var Γ na v e)) (f0 : ∀ (Γ : environment) (a t : term) 
+          P Γ (tVar na) v (eval_var Γ na v e)) (f0 : ∀ (Γ : environment) (a t : term)
                                                        (t' : value) (e : eval Γ a vBox),
           P Γ a vBox e
           → ∀ e0 : eval Γ t t',
             P Γ t t' e0
             → P Γ (tApp a t) vBox
-                (eval_box Γ a t t' e e0)) 
+                (eval_box Γ a t t' e e0))
       (f1 : ∀ (Γ : environment) (f1 : term) (na : ident) (b a : term) (a' res : value) (Γ' : list (ident × value)) (e : eval Γ f1 (vClos na b Γ')),
           P Γ f1 (vClos na b Γ') e
-          → ∀ e0 : eval Γ a a', P Γ a a' e0 → ∀ e1 : eval (add na a' Γ') b res, P (add na a' Γ') b res e1 → P Γ (tApp f1 a) res (eval_beta Γ f1 na b a a' res Γ' e e0 e1)) 
-      (f2 : ∀ (Γ : environment) (na : ident) (b : term), P Γ (tLambda (nNamed na) b) (vClos na b Γ) (eval_lambda Γ na b)) (f3 : ∀ (Γ : environment) 
-                                                                                                                                  (na : ident) (b0 : term) 
-                                                                                                                                  (b0' : value) (b1 : term) 
+          → ∀ e0 : eval Γ a a', P Γ a a' e0 → ∀ e1 : eval (add na a' Γ') b res, P (add na a' Γ') b res e1 → P Γ (tApp f1 a) res (eval_beta Γ f1 na b a a' res Γ' e e0 e1))
+      (f2 : ∀ (Γ : environment) (na : ident) (b : term), P Γ (tLambda (nNamed na) b) (vClos na b Γ) (eval_lambda Γ na b)) (f3 : ∀ (Γ : environment)
+                                                                                                                                  (na : ident) (b0 : term)
+                                                                                                                                  (b0' : value) (b1 : term)
                                                                                                                                   (res : value) (e : eval Γ b0 b0'),
           P Γ b0 b0' e
           → ∀ e0 : eval (add na b0' Γ) b1 res,
             P (add na b0' Γ) b1 res e0
             → P Γ (tLetIn (nNamed na) b0 b1) res
-                (eval_zeta Γ na b0 b0' b1 res e e0)) 
-      (f4 : ∀ (Γ : environment) (ind : inductive) (cdecl : constructor_body) (discr : term) (c : nat) (args : list value) (brs : list (list name × term)) 
+                (eval_zeta Γ na b0 b0' b1 res e e0))
+      (f4 : ∀ (Γ : environment) (ind : inductive) (cdecl : constructor_body) (discr : term) (c : nat) (args : list value) (brs : list (list name × term))
               (br : list name × term) (res : value) (nms : list ident) (e : eval Γ discr (vConstruct ind c args)),
           P Γ discr (vConstruct ind c args) e
-          → ∀ (e0 : constructor_isprop_pars_decl Σ ind c = Some (false, 0, cdecl)) (e1 : nth_error brs c = Some br) (e2 : #|args| = cstr_nargs cdecl) 
+          → ∀ (e0 : constructor_isprop_pars_decl Σ ind c = Some (false, 0, cdecl)) (e1 : nth_error brs c = Some br) (e2 : #|args| = cstr_nargs cdecl)
               (e3 : #|args| = #|br.1|) (f4 : Forall2 (λ (x : name) (y : ident), x = nNamed y) br.1 nms) (e4 : eval (add_multiple (List.rev nms) args Γ) br.2 res),
             P (add_multiple (List.rev nms) args Γ) br.2 res e4
-            → ∀ n : NoDup nms, P Γ (tCase (ind, 0) discr brs) res (eval_iota_block Γ ind cdecl discr c args brs br res nms e e0 e1 e2 e3 f4 e4 n)) 
-      (f5 : 
-            ∀ (Γ : environment) 
-             (f5 : term) 
-             (mfix : 
-             list (ident × term)) 
-             (idx : nat) 
-             (a : term) 
-             (na na' : ident) 
-             (av : value) 
-             (fn : term) 
-             (res : value) 
-             (Γ' : 
-             list (ident × value)) 
-             (e : 
+            → ∀ n : NoDup nms, P Γ (tCase (ind, 0) discr brs) res (eval_iota_block Γ ind cdecl discr c args brs br res nms e e0 e1 e2 e3 f4 e4 n))
+      (f5 :
+            ∀ (Γ : environment)
+             (f5 : term)
+             (mfix :
+             list (ident × term))
+             (idx : nat)
+             (a : term)
+             (na na' : ident)
+             (av : value)
+             (fn : term)
+             (res : value)
+             (Γ' :
+             list (ident × value))
+             (e :
              eval Γ f5
              (vRecClos mfix idx Γ')),
              P Γ f5
              (vRecClos mfix idx Γ') e
-             → 
-             ∀ (n : NoDup (map fst mfix)) 
-             (e0 : 
+             →
+             ∀ (n : NoDup (map fst mfix))
+             (e0 :
              nth_error mfix idx =
              Some
-             (na', tLambda (nNamed na) fn)) 
-             (e1 : 
+             (na', tLambda (nNamed na) fn))
+             (e1 :
              eval
              (add na av
-             (add_multiple 
+             (add_multiple
              (map fst mfix)
              (fix_env mfix Γ') Γ')) fn
              res),
              P
              (add na av
-             (add_multiple 
+             (add_multiple
              (map fst mfix)
              (fix_env mfix Γ') Γ')) fn
              res e1
-             → 
+             →
              forall e2 : eval Γ a av,
              P Γ a av e2 ->
-             P Γ 
+             P Γ
              (tApp f5 a) res
              (eval_fix_unfold Γ f5 mfix
              idx a na na' av fn res Γ' e
-             n e0 e1 e2)) 
+             n e0 e1 e2))
       (f6 : ∀ (Γ : environment) (mfix : list (def term)) (idx : nat) (nms : list ident) (Hlen : (idx < #|mfix|)) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (n : NoDup nms) (f6 : Forall2 (λ (d : def term) (n0 : ident), nNamed n0 = dname d) mfix
                                                                                                               nms),
-          P Γ (tFix mfix idx) (vRecClos (map2 (λ (n0 : ident) (d : def term), (n0, dbody d)) nms mfix) idx Γ) (eval_fix Γ mfix idx nms Hlen Hbodies n f6)) (f7 : 
-        ∀ (Γ : environment) 
-          (c : kername) 
-          (decl : constant_body) 
-          (body : term) 
-          (isdecl : 
-            declared_constant Σ c decl) 
-          (res : value) 
-          (e : 
-            cst_body decl = 
-              Some body) 
-          (e0 : 
+          P Γ (tFix mfix idx) (vRecClos (map2 (λ (n0 : ident) (d : def term), (n0, dbody d)) nms mfix) idx Γ) (eval_fix Γ mfix idx nms Hlen Hbodies n f6)) (f7 :
+        ∀ (Γ : environment)
+          (c : kername)
+          (decl : constant_body)
+          (body : term)
+          (isdecl :
+            declared_constant Σ c decl)
+          (res : value)
+          (e :
+            cst_body decl =
+              Some body)
+          (e0 :
             eval [] body res),
           P [] body res e0
-          → 
-            P Γ 
+          →
+            P Γ
               (tConst c) res
               (eval_delta Γ c decl body
-                 isdecl res e e0)) 
-      (f8 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body) 
-              (args : list term) (args' : list value) (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) (l : #|args| ≤ cstr_arity mdecl cdecl) 
-              (a : All2_Set (eval Γ) args args') (IHa : All2_over a (P Γ)), P Γ (tConstruct ind c args) (vConstruct ind c args') (eval_construct_block Γ ind c mdecl idecl cdecl args args' e l a)) 
-      (f9 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body) 
+                 isdecl res e e0))
+      (f8 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body)
+              (args : list term) (args' : list value) (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) (l : #|args| ≤ cstr_arity mdecl cdecl)
+              (a : All2_Set (eval Γ) args args') (IHa : All2_over a (P Γ)), P Γ (tConstruct ind c args) (vConstruct ind c args') (eval_construct_block Γ ind c mdecl idecl cdecl args args' e l a))
+      (f9 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body)
               (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)),
           P Γ (tConstruct ind c []) (vConstruct ind c []) (eval_construct_block_empty Γ ind c mdecl idecl cdecl e)),
       fix F (Γ : environment) (t : term) (v : value) (e : eval Γ t v) {struct e} : P Γ t v e :=
@@ -285,11 +285,11 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
   All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs' ->
   (All2_Set (fun b b' => {nms & (All2_Set (fun n n' => n = nNamed n') b.1 nms × ((nms ++ Γ) ;;; E ⊩ (b.2) ~ (b'.2)) × NoDup nms)}) brs brs') ->
   Γ ;;; E  ⊩ tCase ind discr brs ~ tCase ind discr' brs'
-| represents_tFix Γ E mfix mfix' idx nms  : 
-  List.forallb (isLambda ∘ dbody) mfix ->  
+| represents_tFix Γ E mfix mfix' idx nms  :
+  List.forallb (isLambda ∘ dbody) mfix ->
   NoDup nms ->
   All2_Set (fun d n => d.(dname) = nNamed n) mfix nms ->
-  All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' -> 
+  All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
   Γ ;;; E ⊩ tFix mfix idx ~ tFix mfix' idx
 with represents_value : value -> term -> Set :=
 | represents_value_tBox : represents_value vBox tBox
@@ -302,95 +302,95 @@ where "Γ ;;; E ⊩ s ~ t" := (represents Γ E s t).
 Program Definition represents_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
-         represents_value v t → Type) 
+         represents_value v t → Type)
      (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 : 
-       ∀ (Γ : list ident) 
-         (n : nat) 
-         (na : ident) 
-         (E : environment) 
-         (e : 
+         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+       ∀ (Γ : list ident)
+         (n : nat)
+         (na : ident)
+         (E : environment)
+         (e :
            nth_error Γ n = Some na),
-         P Γ E 
-           (tVar na) 
+         P Γ E
+           (tVar na)
            (tRel n)
            (represents_bound_tRel Γ n
-              na E e)) 
-     (f1 : ∀ (E : environment) (na : string) (v : value) 
-             (Γ : list ident) (s : term) (e : lookup E na = Some v) 
+              na E e))
+     (f1 : ∀ (E : environment) (na : string) (v : value)
+             (Γ : list ident) (s : term) (e : lookup E na = Some v)
              (r : represents_value v s),
          P0 v s r
-         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r)) 
-     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident) 
+         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r))
+     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident)
              (na' : name) (b b' : term) (r : (na :: Γ);;; E ⊩ b ~ b'),
          P (na :: Γ) E b b' r
          → P Γ E (tLambda (nNamed na) b) (tLambda na' b')
-             (represents_tLambda Γ E na na' b b' r)) 
-     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident) 
-             (b0 b1 : term) (na' : name) (b0' b1' : term) 
+             (represents_tLambda Γ E na na' b b' r))
+     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident)
+             (b0 b1 : term) (na' : name) (b0' b1' : term)
              (r : Γ;;; E ⊩ b0 ~ b0'),
          P Γ E b0 b0' r
          → ∀ r0 : (na :: Γ);;; E ⊩ b1 ~ b1',
            P (na :: Γ) E b1 b1' r0
            → P Γ E (tLetIn (nNamed na) b0 b1) (tLetIn na' b0' b1')
-               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0)) 
-     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term) 
+               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0))
+     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term)
              (r : Γ;;; E ⊩ s ~ s'),
          P Γ E s s' r
          → ∀ r0 : Γ;;; E ⊩ t ~ t',
            P Γ E t t' r0
            → P Γ E (tApp s t) (tApp s' t')
-               (represents_tApp Γ E s s' t t' r r0)) 
+               (represents_tApp Γ E s s' t t' r r0))
      (f5 : ∀ (Γ : list ident) (E : environment) (c : kername),
-         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c)) 
-     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive) 
+         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c))
+     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive)
              (i : nat) (args args' : list term) (a : All2_Set (represents Γ E) args args') (IH : All2_over a (fun t t' => P Γ E t t')),
          P Γ E (tConstruct ind i args) (tConstruct ind i args')
-           (represents_tConstruct Γ E ind i args args' a)) 
-     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat) 
-             (discr discr' : term) (brs brs' : list (list name × term)) 
+           (represents_tConstruct Γ E ind i args args' a))
+     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat)
+             (discr discr' : term) (brs brs' : list (list name × term))
              (r : Γ;;; E ⊩ discr ~ discr'),
          P Γ E discr discr' r
          -> forall Heq : All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs',
          ∀ (a : All2_Set (λ b b' : list name × term, ∑ nms : list ident, All2_Set (λ (n : name) (n' : ident), n = nNamed n') b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs'),
          forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
-             (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
-     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
+             (represents_tCase Γ E ind discr discr' brs brs' r Heq a))
+     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term))
              (idx : nat) (nms : list ident) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
-                                                   dname d = nNamed n) mfix nms) 
+                                                   dname d = nNamed n) mfix nms)
              (a0 : All2_Set
                      (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0)) 
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
-       ∀ (na : ident) 
-         (E : environment) 
-         (s t : term) 
-         (na' : name) 
-         (r : 
+           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
+     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+       ∀ (na : ident)
+         (E : environment)
+         (s t : term)
+         (na' : name)
+         (r :
            [na];;; E ⊩ s ~ t),
          P [na] E s t r
-         → P0 
+         → P0
              (vClos na s E)
              (tLambda na' t)
              (represents_value_tClos na E
-                s t na' r)) 
-     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive) 
+                s t na' r))
+     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive)
               (c : nat) (a : All2_Set represents_value vs ts) (IH : All2_over a P0),
          P0 (vConstruct ind c vs) (tConstruct ind c ts)
-           (represents_value_tConstruct vs ts ind c a)) 
-     (f12 : ∀ (vfix : list (ident × term)) (i : nat) 
-              (E : list (ident × value)) (mfix : list (def term)) 
+           (represents_value_tConstruct vs ts ind c a))
+     (f12 : ∀ (vfix : list (ident × term)) (i : nat)
+              (E : list (ident × value)) (mfix : list (def term))
               (a : All2_Set (λ (v : ident × term) (d : def term), isLambda v.2 × map fst vfix ;;; E ⊩ v.2 ~ dbody d) vfix mfix)
               (IH : All2_over a (fun v d H => P (map fst vfix) E v.2 (dbody d) (snd H)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
-      (l : list ident) (e : environment) (t t0 : term) 
+      (l : list ident) (e : environment) (t t0 : term)
       (r : l;;; e ⊩ t ~ t0) {struct r} : P l e t t0 r :=
      match r as r0 in (l0;;; e0 ⊩ t1 ~ t2) return (P l0 e0 t1 t2 r0) with
      | represents_tBox Γ E => f Γ E
@@ -442,53 +442,53 @@ Defined.
 Program Definition represents_value_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
-         represents_value v t → Type) 
+         represents_value v t → Type)
      (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 : 
-       ∀ (Γ : list ident) 
-         (n : nat) 
-         (na : ident) 
-         (E : environment) 
-         (e : 
+         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+       ∀ (Γ : list ident)
+         (n : nat)
+         (na : ident)
+         (E : environment)
+         (e :
            nth_error Γ n = Some na),
-         P Γ E 
-           (tVar na) 
+         P Γ E
+           (tVar na)
            (tRel n)
            (represents_bound_tRel Γ n
-              na E e)) 
-     (f1 : ∀ (E : environment) (na : string) (v : value) 
-             (Γ : list ident) (s : term) (e : lookup E na = Some v) 
+              na E e))
+     (f1 : ∀ (E : environment) (na : string) (v : value)
+             (Γ : list ident) (s : term) (e : lookup E na = Some v)
              (r : represents_value v s),
          P0 v s r
-         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r)) 
-     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident) 
+         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r))
+     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident)
              (na' : name) (b b' : term) (r : (na :: Γ);;; E ⊩ b ~ b'),
          P (na :: Γ) E b b' r
          → P Γ E (tLambda (nNamed na) b) (tLambda na' b')
-             (represents_tLambda Γ E na na' b b' r)) 
-     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident) 
-             (b0 b1 : term) (na' : name) (b0' b1' : term) 
+             (represents_tLambda Γ E na na' b b' r))
+     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident)
+             (b0 b1 : term) (na' : name) (b0' b1' : term)
              (r : Γ;;; E ⊩ b0 ~ b0'),
          P Γ E b0 b0' r
          → ∀ r0 : (na :: Γ);;; E ⊩ b1 ~ b1',
            P (na :: Γ) E b1 b1' r0
            → P Γ E (tLetIn (nNamed na) b0 b1) (tLetIn na' b0' b1')
-               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0)) 
-     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term) 
+               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0))
+     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term)
              (r : Γ;;; E ⊩ s ~ s'),
          P Γ E s s' r
          → ∀ r0 : Γ;;; E ⊩ t ~ t',
            P Γ E t t' r0
            → P Γ E (tApp s t) (tApp s' t')
-               (represents_tApp Γ E s s' t t' r r0)) 
+               (represents_tApp Γ E s s' t t' r r0))
      (f5 : ∀ (Γ : list ident) (E : environment) (c : kername),
-         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c)) 
-     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive) 
+         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c))
+     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive)
              (i : nat) (args args' : list term) (a : All2_Set (represents Γ E) args args') (IH : All2_over a (fun t t' => P Γ E t t')),
          P Γ E (tConstruct ind i args) (tConstruct ind i args')
-           (represents_tConstruct Γ E ind i args args' a)) 
-     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat) 
-             (discr discr' : term) (brs brs' : list (list name × term)) 
+           (represents_tConstruct Γ E ind i args args' a))
+     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat)
+             (discr discr' : term) (brs brs' : list (list name × term))
              (r : Γ;;; E ⊩ discr ~ discr'),
          P Γ E discr discr' r
          → forall Heq : All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs',
@@ -499,36 +499,36 @@ Program Definition represents_value_ind :=
                            b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs',
             forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
-             (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
-     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
+             (represents_tCase Γ E ind discr discr' brs brs' r Heq a))
+     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term))
              (idx : nat) (nms : list ident) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
-                                                   dname d = nNamed n) mfix nms) 
+                                                   dname d = nNamed n) mfix nms)
              (a0 : All2_Set
                      (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0)) 
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
-       ∀ (na : ident) 
-         (E : environment) 
-         (s t : term) 
-         (na' : name) 
-         (r : 
+           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
+     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+       ∀ (na : ident)
+         (E : environment)
+         (s t : term)
+         (na' : name)
+         (r :
            [na];;; E ⊩ s ~ t),
          P [na] E s t r
-         → P0 
+         → P0
              (vClos na s E)
              (tLambda na' t)
              (represents_value_tClos na E
-                s t na' r)) 
-     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive) 
+                s t na' r))
+     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive)
               (c : nat) (a : All2_Set represents_value vs ts) (IH : All2_over a P0),
          P0 (vConstruct ind c vs) (tConstruct ind c ts)
-           (represents_value_tConstruct vs ts ind c a)) 
-     (f12 : ∀ (vfix : list (ident × term)) (i : nat) 
-              (E : list (ident × value)) (mfix : list (def term)) 
+           (represents_value_tConstruct vs ts ind c a))
+     (f12 : ∀ (vfix : list (ident × term)) (i : nat)
+              (E : list (ident × value)) (mfix : list (def term))
               (a : All2_Set
                      (λ (v : ident × term) (d : def term), isLambda v.2 ×
                      (map fst vfix) ;;; E ⊩ v.2 ~ d.(dbody)) vfix mfix)
@@ -536,7 +536,7 @@ Program Definition represents_value_ind :=
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
-      (l : list ident) (e : environment) (t t0 : term) 
+      (l : list ident) (e : environment) (t t0 : term)
       (r : l;;; e ⊩ t ~ t0) {struct r} : P l e t t0 r :=
      match r as r0 in (l0;;; e0 ⊩ t1 ~ t2) return (P l0 e0 t1 t2 r0) with
      | represents_tBox Γ E => f Γ E
@@ -588,53 +588,53 @@ Defined.
 Definition rep_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
-         represents_value v t → Type) 
+         represents_value v t → Type)
      (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 : 
-       ∀ (Γ : list ident) 
-         (n : nat) 
-         (na : ident) 
-         (E : environment) 
-         (e : 
+         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+       ∀ (Γ : list ident)
+         (n : nat)
+         (na : ident)
+         (E : environment)
+         (e :
            nth_error Γ n = Some na),
-         P Γ E 
-           (tVar na) 
+         P Γ E
+           (tVar na)
            (tRel n)
            (represents_bound_tRel Γ n
-              na E e)) 
-     (f1 : ∀ (E : environment) (na : string) (v : value) 
-             (Γ : list ident) (s : term) (e : lookup E na = Some v) 
+              na E e))
+     (f1 : ∀ (E : environment) (na : string) (v : value)
+             (Γ : list ident) (s : term) (e : lookup E na = Some v)
              (r : represents_value v s),
          P0 v s r
-         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r)) 
-     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident) 
+         → P Γ E (tVar na) s (represents_unbound_tRel E na v Γ s e r))
+     (f2 : ∀ (Γ : list ident) (E : environment) (na : ident)
              (na' : name) (b b' : term) (r : (na :: Γ);;; E ⊩ b ~ b'),
          P (na :: Γ) E b b' r
          → P Γ E (tLambda (nNamed na) b) (tLambda na' b')
-             (represents_tLambda Γ E na na' b b' r)) 
-     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident) 
-             (b0 b1 : term) (na' : name) (b0' b1' : term) 
+             (represents_tLambda Γ E na na' b b' r))
+     (f3 : ∀ (Γ : list ident) (E : environment) (na : ident)
+             (b0 b1 : term) (na' : name) (b0' b1' : term)
              (r : Γ;;; E ⊩ b0 ~ b0'),
          P Γ E b0 b0' r
          → ∀ r0 : (na :: Γ);;; E ⊩ b1 ~ b1',
            P (na :: Γ) E b1 b1' r0
            → P Γ E (tLetIn (nNamed na) b0 b1) (tLetIn na' b0' b1')
-               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0)) 
-     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term) 
+               (represents_tLetIn Γ E na b0 b1 na' b0' b1' r r0))
+     (f4 : ∀ (Γ : list ident) (E : environment) (s s' t t' : term)
              (r : Γ;;; E ⊩ s ~ s'),
          P Γ E s s' r
          → ∀ r0 : Γ;;; E ⊩ t ~ t',
            P Γ E t t' r0
            → P Γ E (tApp s t) (tApp s' t')
-               (represents_tApp Γ E s s' t t' r r0)) 
+               (represents_tApp Γ E s s' t t' r r0))
      (f5 : ∀ (Γ : list ident) (E : environment) (c : kername),
-         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c)) 
-     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive) 
+         P Γ E (tConst c) (tConst c) (represents_tConst Γ E c))
+     (f6 : ∀ (Γ : list ident) (E : environment) (ind : inductive)
              (i : nat) (args args' : list term) (a : All2_Set (represents Γ E) args args') (IH : All2_over a (fun t t' => P Γ E t t')),
          P Γ E (tConstruct ind i args) (tConstruct ind i args')
-           (represents_tConstruct Γ E ind i args args' a)) 
-     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat) 
-             (discr discr' : term) (brs brs' : list (list name × term)) 
+           (represents_tConstruct Γ E ind i args args' a))
+     (f7 : ∀ (Γ : list ident) (E : environment) (ind : inductive × nat)
+             (discr discr' : term) (brs brs' : list (list name × term))
              (r : Γ;;; E ⊩ discr ~ discr'),
          P Γ E discr discr' r
          → forall Heq : All2_Set (fun b b' => #|b.1| = #|b'.1|) brs brs',
@@ -645,36 +645,36 @@ Definition rep_ind :=
                            b.1 nms × (nms ++ Γ);;; E ⊩ b.2 ~ b'.2 × NoDup nms) brs brs',
           forall IH : All2_over a (fun b b' H => P (projT1 H ++ Γ) E b.2 b'.2 (fst (snd (projT2 H)))),
            P Γ E (tCase ind discr brs) (tCase ind discr' brs')
-             (represents_tCase Γ E ind discr discr' brs brs' r Heq a)) 
-     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term)) 
+             (represents_tCase Γ E ind discr discr' brs brs' r Heq a))
+     (f8 : ∀ (Γ : list ident) (E : environment) (mfix mfix' : list (def term))
              (idx : nat) (nms : list ident) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (Hnodup : NoDup nms) (a : All2_Set
                                                  (λ (d : def term) (n : ident),
-                                                   dname d = nNamed n) mfix nms) 
+                                                   dname d = nNamed n) mfix nms)
              (a0 : All2_Set
                      (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
              (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
-           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0)) 
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 : 
-       ∀ (na : ident) 
-         (E : environment) 
-         (s t : term) 
-         (na' : name) 
-         (r : 
+           (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
+     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+       ∀ (na : ident)
+         (E : environment)
+         (s t : term)
+         (na' : name)
+         (r :
            [na];;; E ⊩ s ~ t),
          P [na] E s t r
-         → P0 
+         → P0
              (vClos na s E)
              (tLambda na' t)
              (represents_value_tClos na E
-                s t na' r)) 
-     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive) 
+                s t na' r))
+     (f11 : ∀ (vs : list value) (ts : list term) (ind : inductive)
               (c : nat) (a : All2_Set represents_value vs ts) (IH : All2_over a P0),
          P0 (vConstruct ind c vs) (tConstruct ind c ts)
-           (represents_value_tConstruct vs ts ind c a)) 
-     (f12 : ∀ (vfix : list (ident × term)) (i : nat) 
-              (E : list (ident × value)) (mfix : list (def term)) 
+           (represents_value_tConstruct vs ts ind c a))
+     (f12 : ∀ (vfix : list (ident × term)) (i : nat)
+              (E : list (ident × value)) (mfix : list (def term))
               (a : All2_Set
                      (λ (v : ident × term) (d : def term), isLambda v.2 ×
                      (map fst vfix) ;;;
@@ -699,7 +699,7 @@ Fixpoint gen_fresh_aux (na : ident) (Γ : list string) i :=
   | 0 => na
   | S i' =>
       let na' := String.append na (string_of_nat ((List.length Γ) - i)) in
-      if in_dec (ReflectEq_EqDec _) na' Γ then gen_fresh_aux na Γ i' else na' 
+      if in_dec (ReflectEq_EqDec _) na' Γ then gen_fresh_aux na Γ i' else na'
   end.
 
 Definition gen_fresh (na : string) (Γ : list string) :=
@@ -708,7 +708,7 @@ Definition gen_fresh (na : string) (Γ : list string) :=
 Lemma gen_fresh_aux_spec na Γ i :
   i <= List.length Γ ->
   (exists j, j <= i /\
-          let na' := append na (string_of_nat ((List.length Γ - j))) in 
+          let na' := append na (string_of_nat ((List.length Γ - j))) in
           gen_fresh_aux na Γ i = na' /\
             ~ In na' Γ /\
             forall k, j < k <= i -> In (append na (string_of_nat ((List.length Γ - k)))) Γ) \/
@@ -722,7 +722,7 @@ Proof.
     + lia.
     + destruct in_dec.
       * left. exists j. repeat split; [ firstorder .. | ].
-        intros k []. 
+        intros k [].
         assert (k = S i \/ k <= i) as [-> | Ha] by lia; eauto.
       * left. exists (S i). firstorder. lia.
     + destruct in_dec.
@@ -756,12 +756,12 @@ Qed.
 
 Require Import DecimalNat.
 
-Lemma string_of_nat_empty n : 
+Lemma string_of_nat_empty n :
   string_of_nat n <> "".
 Proof.
 Admitted.
 
-Lemma string_of_uint_inj n1 n2 : 
+Lemma string_of_uint_inj n1 n2 :
   string_of_uint n1 = string_of_uint n2 → n1 = n2.
 Proof.
   revert n2.
@@ -771,7 +771,7 @@ Qed.
 
 Require Import DecimalNat.
 
-Lemma string_of_nat_inj n1 n2 : 
+Lemma string_of_nat_inj n1 n2 :
   string_of_nat n1 = string_of_nat n2 -> n1 = n2.
 Proof.
   intros H % string_of_uint_inj.
@@ -816,7 +816,7 @@ Proof.
   induction nms as [ | [] ] in Γ |- *; cbn; congruence.
 Qed.
 
-Definition map_def_name := 
+Definition map_def_name :=
   λ (term : Set) g (f : term → term) (d : def term),
     {| dname := g (dname d); dbody := f (dbody d); rarg := rarg d |}.
 
@@ -845,13 +845,13 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
               end
   | tEvar ev args => tEvar ev (map (annotate s) args)
   | tLambda na M => let na' := match na with
-                               | nNamed na => if in_dec (ReflectEq_EqDec _) na s then gen_fresh na s else na 
+                               | nNamed na => if in_dec (ReflectEq_EqDec _) na s then gen_fresh na s else na
                                | nAnon => gen_fresh "wildcard" s
-                               end in  
+                               end in
                     tLambda (nNamed na') (annotate (na' :: s) M)
-  | tLetIn na b b' => 
+  | tLetIn na b b' =>
       let na' := match na with
-                 | nNamed na => if in_dec (ReflectEq_EqDec _) na s then gen_fresh na s else na 
+                 | nNamed na => if in_dec (ReflectEq_EqDec _) na s then gen_fresh na s else na
                  | nAnon => gen_fresh "wildcard" s
                  end in
       tLetIn (nNamed na') (annotate s b) (annotate (na' :: s) b')
@@ -859,7 +859,7 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
   | tConstruct ind i args => tConstruct ind i (map (annotate s) args)
   | tCase ind c brs =>
       let brs' :=
-        map (λ br : list name × term, 
+        map (λ br : list name × term,
               let nms := gen_many_fresh s br.1 in
               (map nNamed nms, annotate (nms ++ s) br.2)) brs
       in
@@ -879,7 +879,7 @@ Fixpoint annotate_env Γ (Σ : global_declarations) :=
   | nil => nil
   end.
 
-Definition extraction_term_flags := 
+Definition extraction_term_flags :=
   {| has_tBox := true
   ; has_tRel := true
   ; has_tVar := false
@@ -896,7 +896,7 @@ Definition extraction_term_flags :=
   ; has_tPrim := false
   |}.
 
-Definition extraction_env_flags := 
+Definition extraction_env_flags :=
   {| has_axioms := false;
     term_switches := extraction_term_flags;
     has_cstr_params := false ;
@@ -955,21 +955,21 @@ Proof.
       generalize Γ. induction m; cbn.
       - econstructor.
       - intros. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
-    }  
+    }
     { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
       eapply All_impl in H1. 2:{ intros ? [[] ].
       specialize (r (gen_many_fresh Γ (map dname m) ++ Γ)).
       revert r. rewrite app_length gen_many_fresh_length map_length. intros r. eapply r in i0. exact i0.
       }
       revert H1.
-      generalize (((gen_many_fresh Γ (map dname m) ++ Γ))). 
+      generalize (((gen_many_fresh Γ (map dname m) ++ Γ))).
       intros. induction H1 in Γ |- *.
       - econstructor.
       - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto.
     }
 Qed.
 
-Lemma unfolds_bound : 
+Lemma unfolds_bound :
   (forall Γ E s t, Γ ;;; E ⊩ s ~ t -> closedn #|Γ| t) ×
     (forall v s, ⊩ v ~ s -> closedn 0 s).
 Proof.
@@ -983,18 +983,18 @@ Proof.
     eapply All2_Set_All2, All2_length in Hl1 as ->. eauto.
     eapply IHa. now invs Heq. eauto.
   - solve_all. eapply All2_Set_All2 in a.
-    enough (#|mfix'| = #|nms|) as ->. 
+    enough (#|mfix'| = #|nms|) as ->.
     2:{ eapply All2_length in a. clear IH. eapply All2_Set_All2, All2_length in a0.
         len. }
     clear Hbodies a. induction a0; cbn in *; econstructor.
     rewrite app_length in IH. eapply IH.
     eapply IHa0. eapply IH.
-  - solve_all. induction a; cbn in *; rtoProp; eauto. 
+  - solve_all. induction a; cbn in *; rtoProp; eauto.
     econstructor. cbn in *. eapply IH. eapply IHa. eapply IH.
   - rewrite map_length in IH.
     assert (Hlen : #|vfix| = #|mfix|). { clear IH. eapply All2_Set_All2, All2_length in a. lia. }
     rewrite Hlen in IH. revert IH. generalize (#|mfix|).
-    induction a; intros n H; cbn in *; rtoProp; split.  
+    induction a; intros n H; cbn in *; rtoProp; split.
     + destruct H. revert i0. len.
     + eapply IHa. lia. eapply H.
 Qed.
@@ -1020,14 +1020,14 @@ Proof.
 
   all: intros; subst. all: cbn; eauto.
   - destruct (Nat.compare #|Γ1| n) eqn:Eq.
-    + eapply Nat.compare_eq in Eq. subst. 
+    + eapply Nat.compare_eq in Eq. subst.
       rewrite nth_error_app2 in e. 1: lia.
       rewrite Nat.sub_diag in e. invs e.
       econstructor; eauto. unfold lookup. cbn.
       change (eqb na0 na0) with (na0 == na0); now rewrite eqb_refl.
     + eapply Nat.compare_lt_iff in Eq.
-      econstructor. destruct n; [lia | ]. 
-      rewrite !nth_error_app2 in e |- *; cbn; [ lia .. | ]. 
+      econstructor. destruct n; [lia | ].
+      rewrite !nth_error_app2 in e |- *; cbn; [ lia .. | ].
       now replace (S n - #|Γ1|) with (S (n - #|Γ1|)) in * by lia.
     + eapply Nat.compare_gt_iff in Eq.
       econstructor. rewrite !nth_error_app1 in e |- *; eauto.
@@ -1040,7 +1040,7 @@ Proof.
       eapply eqb_eq in H2. subst.
       destruct Hna. eapply in_map_iff. exists (t0, v0); cbn; eauto.
     + rewrite csubst_closed; eauto.
-      eapply closed_upwards. 
+      eapply closed_upwards.
       * now eapply unfolds_bound.
       * lia.
   - econstructor. eapply (H (na0 :: Γ1)); eauto.
@@ -1056,7 +1056,7 @@ Proof.
     + cbn in *.
       destruct r0 as (nms & H1 & H2).
       destruct IH as [IH1 IH2].
-      econstructor. 2: eapply IHa. 3: eapply IH2. 
+      econstructor. 2: eapply IHa. 3: eapply IH2.
       2:{ now invs Heq. }
       exists nms. split. eauto.
       specialize (IH1 (nms ++ Γ1)).
@@ -1078,12 +1078,12 @@ Proof.
     + cbn. depelim a0. cbn. invs IH. econstructor.
       * cbn.
         specialize (H (nms ++ Γ1) Γ2).
-        rewrite app_length in H.        
+        rewrite app_length in H.
         rewrite <- !app_assoc in *. eapply H; eauto.
       * eapply IHmfix; eauto.
 Qed.
 
-Lemma represents_subst E s s' t v na : 
+Lemma represents_subst E s s' t v na :
   ~ In na (map fst E) ->
   ⊩ v ~ t ->
   [na] ;;; E ⊩ s ~ s' ->
@@ -1092,16 +1092,16 @@ Proof.
   eapply represents_subst' with (Γ1 := []) (Γ2 := []).
 Qed.
 
-Lemma represents_subst_ctx Γ E s s' t v na : 
+Lemma represents_subst_ctx Γ E s s' t v na :
   ~ In na (map fst E) ->
   ⊩ v ~ t ->
   (na :: Γ) ;;; E ⊩ s ~ s' ->
   Γ ;;; add na v E ⊩ s ~ csubst t 0 s'.
 Proof.
   eapply represents_subst' with (Γ1 := []) (Γ2 := Γ).
-Qed.  
+Qed.
 
-Lemma map_fst_add_multiple nms args Γ : 
+Lemma map_fst_add_multiple nms args Γ :
   #|nms| = #|args| ->
   map fst (add_multiple nms args Γ) = nms ++ map fst Γ.
 Proof.
@@ -1109,7 +1109,7 @@ Proof.
   now rewrite IHnms.
 Qed.
 
-Lemma represents_substl E s s' ts nms vs Γ : 
+Lemma represents_substl E s s' ts nms vs Γ :
   (forall na, In na nms -> ~ In na (map fst E)) ->
   NoDup nms ->
   #|nms| = #|vs| ->
@@ -1125,9 +1125,9 @@ Proof.
     eapply All2_app_inv_l in Hall as (vs' & ? & -> & H1 & H2). invs H2. invs X.
     unfold substl. rewrite fold_left_app. cbn.
     rewrite !rev_app_distr. cbn.
-    eapply represents_subst_ctx. 
+    eapply represents_subst_ctx.
     { apply NoDup_rev in Hdup. rewrite rev_app_distr in Hdup. cbn in Hdup. invs Hdup.
-      rewrite <- in_rev in H2.      
+      rewrite <- in_rev in H2.
       rewrite map_fst_add_multiple. len. intros [ ? % in_rev | (? & <- & ?) % in_map_iff ] % in_app_iff; eauto.
       eapply Hna. rewrite in_app_iff. right. cbn. now left.
       eapply in_map_iff. exists x1. eauto.
@@ -1141,7 +1141,7 @@ Qed.
 
 Lemma add_multiple_app nms1 nms2 vs1 vs2 E :
   #|nms1| = #|vs1| ->
-  add_multiple (nms1 ++ nms2) (vs1 ++ vs2) E = 
+  add_multiple (nms1 ++ nms2) (vs1 ++ vs2) E =
   add_multiple nms1 vs1 (add_multiple nms2 vs2 E).
 Proof.
   induction nms1 in vs1 |- *; intros Hlen; cbn;
@@ -1149,7 +1149,7 @@ Proof.
   f_equal. eapply IHnms1. lia.
 Qed.
 
-Lemma represents_substl_rev E s s' ts nms vs Γ : 
+Lemma represents_substl_rev E s s' ts nms vs Γ :
   (forall na, In na nms -> ~ In na (map fst E)) ->
   NoDup nms ->
   #|nms| = #|vs| ->
@@ -1174,7 +1174,7 @@ Proof.
       * lia.
       * eauto.
       * rewrite <- plus_n_O. assert (#|vs'| = #|nms|) as ->. { eapply All2_length in H1. lia. }
-        eapply represents_subst'; eauto. 
+        eapply represents_subst'; eauto.
         2: now rewrite <- app_assoc in Hrep. eapply Hna, in_app_iff; cbn; eauto.
     + solve_all. now eapply unfolds_bound.
     + now eapply unfolds_bound.
@@ -1185,7 +1185,7 @@ Definition extraction_wcbv_flags :=
 
 Local Existing Instance extraction_wcbv_flags.
 
-Lemma eval_represents_value Σ s t : 
+Lemma eval_represents_value Σ s t :
   EWcbvEval.eval Σ s t -> forall v, represents_value v s -> represents_value v t.
 Proof.
   intros Heval v Hv.
@@ -1212,8 +1212,8 @@ Proof.
       * right. abstract (intros H; invs H; auto).
 Defined.
 
-Definition dupfree (Γ : list ident) := 
-  if dupfree_dec_ident Γ then true else false.  
+Definition dupfree (Γ : list ident) :=
+  if dupfree_dec_ident Γ then true else false.
 
 Fixpoint sunny Γ (t : term) : bool :=
   match t with
@@ -1224,10 +1224,10 @@ Fixpoint sunny Γ (t : term) : bool :=
   | tLetIn (nNamed na) b b' => fresh na Γ && sunny Γ b && sunny (na :: Γ) b'
   | tCase ind c brs =>
       forallb (fun br => let names := flat_map (fun x => match x with nNamed na => [na] | _ => [] end) br.1 in
-                         forallb (fun x => match x with nNamed na => fresh na Γ | _ => false end) br.1 
+                         forallb (fun x => match x with nNamed na => fresh na Γ | _ => false end) br.1
                          && dupfree names
                          && sunny (List.rev names ++ Γ) br.2) brs
-      && sunny Γ c 
+      && sunny Γ c
   | tProj p c => sunny Γ c
   | tFix mfix idx =>
       forallb (fun x => match x.(dname) with nNamed na => fresh na Γ | _ => false end) mfix
@@ -1243,14 +1243,14 @@ Inductive wf : value -> Type :=
 | wf_vBox : wf vBox
 | wf_vClos na b E : ~ In na (map fst E) -> sunny (na :: map fst E) b -> All (fun v => wf (snd v)) E -> wf (vClos na b E)
 | wf_vConstruct ind c args : All wf args -> wf (vConstruct ind c args)
-| wf_vRecClos vfix idx E : 
+| wf_vRecClos vfix idx E :
   NoDup (map fst vfix) ->
   (forall nm, In nm (map fst vfix) -> ~ In nm (map fst E)) ->
   All (fun t => sunny (map fst vfix ++ map fst E) (snd t)) vfix ->
   All (fun v => wf (snd v)) E ->
   wf (vRecClos vfix idx E).
 
-Lemma declared_constant_Forall P Σ c decl : 
+Lemma declared_constant_Forall P Σ c decl :
   Forall (P ∘ snd) Σ ->
   declared_constant Σ c decl ->
   P (ConstantDecl decl).
@@ -1262,7 +1262,7 @@ Proof.
     + eauto.
 Qed.
 
-Lemma declared_constant_All P Σ c decl : 
+Lemma declared_constant_All P Σ c decl :
   All (P ∘ snd) Σ ->
   declared_constant Σ c decl ->
   P (ConstantDecl decl).
@@ -1289,20 +1289,20 @@ Proof.
   - econstructor; eauto.
 Qed.
 
-Lemma fix_env_length vfix E : 
+Lemma fix_env_length vfix E :
   #| fix_env vfix E | = #| vfix |.
 Proof.
   unfold fix_env. induction #|vfix|; cbn; eauto. f_equal. eauto.
 Qed.
 
-Lemma eval_wf Σ E s v : 
+Lemma eval_wf Σ E s v :
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ ->
   All (fun x => wf (snd x)) E ->
-  sunny (map fst E) s -> 
-  eval Σ E s v -> 
+  sunny (map fst E) s ->
+  eval Σ E s v ->
   wf v.
 Proof.
-  intros HΣ HE Hsunny. 
+  intros HΣ HE Hsunny.
   intros Heval.
   revert HE Hsunny. pattern E, s, v, Heval.
   revert E s v Heval.
@@ -1322,7 +1322,7 @@ Proof.
                  | nAnon => []
                  | nNamed na => [na]
                  end) br.1) as -> by eauto.
-    clear - f4. induction f4; cbn; f_equal; destruct r, x; cbn; congruence. 
+    clear - f4. induction f4; cbn; f_equal; destruct r, x; cbn; congruence.
   - do 2 forward X; eauto. invs X.
     eapply X0.
     + econstructor; cbn; eauto.
@@ -1421,10 +1421,10 @@ Qed.
 From MetaCoq Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
 
 Lemma lookup_in_env Σ Σ' ind i :
-  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
     ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
   | decl => d'.2 = decl
-  end) Σ Σ' -> 
+  end) Σ Σ' ->
   lookup_constructor Σ ind i = lookup_constructor Σ' ind i.
 Proof.
   induction 1; cbn.
@@ -1437,28 +1437,28 @@ Proof.
         -- now rewrite y0.
       * now rewrite y0.
     + eapply IHX.
-Qed.  
+Qed.
 
 Lemma constructor_isprop_pars_decl_in_env Σ Σ' ind c :
-  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
     ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
   | decl => d'.2 = decl
-  end) Σ Σ' -> 
+  end) Σ Σ' ->
   constructor_isprop_pars_decl Σ ind c = constructor_isprop_pars_decl Σ' ind c.
 Proof.
   intros H.
   unfold constructor_isprop_pars_decl. erewrite lookup_in_env; eauto.
-Qed.  
+Qed.
 
-(* 
-Lemma represents_value_fix_env vfix mfix E : 
+(*
+Lemma represents_value_fix_env vfix mfix E :
   All2 (λ (v : ident × term) (d : def term), map fst vfix;;; E ⊩ v.2 ~ dbody d) vfix mfix ->
   All2 represents_value (fix_env vfix E) (fix_subst mfix).
 Proof.
 Qed.
  *)
 
-Lemma fresh_subset Γ1 Γ2 i : 
+Lemma fresh_subset Γ1 Γ2 i :
   fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
 Proof.
   unfold fresh. repeat destruct in_dec; eauto; cbn.
@@ -1467,7 +1467,7 @@ Qed.
 
 Local Hint Resolve fresh_subset : core.
 
-Lemma sunny_subset Γ1 Γ2 t : 
+Lemma sunny_subset Γ1 Γ2 t :
   sunny Γ1 t -> incl Γ2 Γ1 -> sunny Γ2 t.
 Proof.
   intros H Hincl.
@@ -1494,7 +1494,7 @@ Qed.
 
 Lemma represents_add_fresh nms Γ E vs s t :
   Γ ;;; E ⊩ s ~ t ->
-  sunny nms s -> 
+  sunny nms s ->
   Γ ;;; (add_multiple nms vs E) ⊩ s ~ t.
 Proof.
   pattern Γ, E, s, t.
@@ -1530,12 +1530,12 @@ Qed.
 Lemma implication (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
-  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) => 
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
     ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
   | decl => d'.2 = decl
-  end) Σ Σ' -> 
+  end) Σ Σ' ->
   All (fun x => wf (snd x)) E ->
-  sunny (map fst E) u -> 
+  sunny (map fst E) u ->
   EWcbvEval.eval Σ s t ->
   [] ;;; E ⊩ u ~ s ->
   wellformed Σ 0 s ->
@@ -1557,16 +1557,16 @@ Proof.
   all: repeat match reverse goal with  [H : MCProd.and3 _ _ _ |- _] => destruct H end.
   - invs Hrep.
     + invs H2.
-    + cbn in Hsunny. rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto. 
+    + cbn in Hsunny. rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto.
       edestruct s1 as (? & ? & ?); eauto.
-      invs Hv1. eexists; split; eauto. econstructor; eauto.      
+      invs Hv1. eexists; split; eauto. econstructor; eauto.
   - invs Hrep.
     + invs H3.
     + cbn in Hsunny. rtoProp.
       edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
       invs Hv1.
       edestruct s1 as (v2 & Hv1_ & Hv2_). 3: eauto. eauto. eauto.
-      eapply eval_wf in Hv2 as Hwf; eauto. invs Hwf; eauto. 
+      eapply eval_wf in Hv2 as Hwf; eauto. invs Hwf; eauto.
       edestruct s2 as (v3 & Hv1__ & Hv2__).
       1: eapply represents_subst; eauto.
       2:{ econstructor. eapply eval_wf in Hv2_; eauto. eauto. }
@@ -1574,7 +1574,7 @@ Proof.
       eexists; split; eauto. econstructor; eauto.
   - invs Hrep.
     + invs H3.
-    + cbn in Hsunny. rtoProp. 
+    + cbn in Hsunny. rtoProp.
       edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
       edestruct s1 as (v2 & Hv1_ & Hv2_).
       1: eapply represents_subst; eauto.
@@ -1582,9 +1582,9 @@ Proof.
       2:{ eapply eval_wf in Hv2; eauto. }
       1:{ unfold fresh in *. destruct in_dec; cbn in *; congruence. }
       eexists; split; eauto. econstructor; eauto.
-  - assert (pars = 0) as ->. { 
+  - assert (pars = 0) as ->. {
       unfold constructor_isprop_pars_decl in *.
-      destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence. 
+      destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence.
       invs H0.
       destruct lookup_env eqn:EEE; try congruence.
       eapply lookup_env_wellformed in EEE; eauto.
@@ -1595,13 +1595,13 @@ Proof.
       destruct nth_error eqn:EEE; cbn in *; try congruence.
       destruct (nth_error (EAst.ind_ctors o) c) eqn:EEEE; cbn in *; try congruence.
       now invs EE.
-  }       
+  }
    invs Hrep.
     + invs H7.
     + cbn in Hsunny. rtoProp.
       edestruct s0 as (v & Hv1 & Hv2). 3,1,2: eauto.
       eapply All2_Set_All2 in H14. eapply All2_nth_error_Some_right in H14 as He2. 2: eauto.
-      destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1. 
+      destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1.
       edestruct s1 as (v2 & Hv1_ & Hv2_).
       1: { eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            assert (nms = flat_map (λ x : name, match x with
@@ -1623,7 +1623,7 @@ Proof.
             rewrite -> !skipn_length in *. lia.
       }
       3: eexists; split; [ eauto | econstructor; eauto].
-      * rewrite map_fst_add_multiple. 
+      * rewrite map_fst_add_multiple.
         -- len.
            eapply All2_Set_All2, All2_nth_error in H13; eauto.
            eapply All2_Set_All2, All2_length in H10; eauto.
@@ -1649,16 +1649,16 @@ Proof.
         eapply All2_Set_All2, All2_nth_error in H13; eauto.
         eapply All2_Set_All2, All2_length in Hbrs; eauto.
         rewrite -> !skipn_length in *. lia.
-      * solve_all. 
+      * solve_all.
       * now rewrite rev_involutive in Hv2_.
-  - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *) 
+  - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
   - invs Hrep.
-    + invs H5. invs H6. 
+    + invs H5. invs H6.
     + cbn -[substl] in *. rtoProp.
       edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
       invs IH1.
       edestruct s1 as (v' & IH1' & IH2'); eauto.
-     
+
       destruct d; cbn -[substl] in *; subst.
       eapply All2_Set_All2 in H13.
       eapply All2_nth_error_Some_r in H13 as Hnth; eauto.
@@ -1668,11 +1668,11 @@ Proof.
       invs Hb2.
       eapply eval_wf in IH2 as Hwf; eauto.
       invs Hwf.
-      
+
       rename H12 into dupfree_vfix, H16 into distinct_vfix_E0, X into sunny_in_vfix, X0 into wf_E0.
-      
+
       edestruct s2 as (v'' & IH1'' & IH2'').
-      
+
       eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: map fst vfix); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
       8:{ eexists. split. eauto.
           eapply eval_fix_unfold; eauto.
@@ -1682,13 +1682,13 @@ Proof.
             NoDup (l1 ++ l2) -> NoDup l1 /\ NoDup l2.
           Proof.
             induction l1; cbn; eauto using NoDup.
-            inversion 1; subst; firstorder. 
+            inversion 1; subst; firstorder.
             rewrite in_app_iff in H2. econstructor; eauto.
           Qed. eapply NoDup_app_inv in H9 as []; eauto. *)
       }
       { intros ? [-> | ?].
         - eapply All_nth_error in sunny_in_vfix; eauto.
-          cbn in sunny_in_vfix. rtoProp. unfold fresh in H2. 
+          cbn in sunny_in_vfix. rtoProp. unfold fresh in H2.
           destruct in_dec; cbn in *; eauto.
           rewrite in_app_iff in n. eauto.
         - eapply distinct_vfix_E0; eauto.
@@ -1701,7 +1701,7 @@ Proof.
                rewrite in_app_iff in H2; eauto.
            Qed.
       }
-      { 
+      {
         econstructor.
         - eapply All_nth_error in sunny_in_vfix; eauto.
           cbn in *. rtoProp. unfold fresh in *.
@@ -1734,9 +1734,9 @@ Proof.
          - it discusses proofs techniques to get similar results
          - it gives an exposition how to extract from type theory to (cbv) programming languages in general, including the invariants
          - many of these things are known, but not in central places
-      
+
       *)
-  - invs Hrep. 
+  - invs Hrep.
     + invs H3.
     + cbn in *. rtoProp.
       edestruct s0 as (v1 & Hv1 & Hv2); eauto.
@@ -1752,7 +1752,7 @@ Proof.
           + invs isdecl. eapply eqb_eq in E. subst.
             destruct r as ((H1 & H2) & H3). rewrite H0 in H2.
             destruct decl; cbn in *. subst. destruct H2 as (body' & H4 & H5).
-            rewrite H4 in H3. 
+            rewrite H4 in H3.
             eexists (Build_constant_body _). eexists.  repeat split. 2: exact H3.
             2: eauto. unfold declared_constant. cbn.
             destruct (eqb_spec x.1 y.1); congruence.
@@ -1808,7 +1808,7 @@ Proof.
       2:{ unfold wf_fix in H8. rtoProp. eapply Nat.ltb_lt in H5. eapply All2_Set_All2, All2_length in H4. lia. }
       eapply All2_Set_All2 in H3, H4. eapply All2_All2_Set. solve_all.
       assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, dbody d0)) nms mfix) = nms) as ->. {
-        clear - H3. induction H3; cbn; f_equal; eauto. } 
+        clear - H3. induction H3; cbn; f_equal; eauto. }
       eapply All2_map2_left. eapply All2_swap; eauto. eauto.
       symmetry. eapply All2_length; eauto.
       intros.

@@ -7,7 +7,6 @@ From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 
 From MetaCoq.ErasurePlugin Require Import Erasure.
 
-
 From Coq Require Import String.
 Local Open Scope string_scope.
 

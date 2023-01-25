@@ -82,9 +82,10 @@ Section wf.
 
   (* a term term is wellformed if
     - it is closed up to k,
-    - it only contains constructos as indicated by sw,
+    - it only contains constructors as indicated by sw,
     - all occuring constructors are defined,
     - all occuring constants are defined, and
+    - all occuring fixpoints have lambdas as bodies
     - if has_axioms is false, all occuring constants have bodies *)
 
   Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx :=

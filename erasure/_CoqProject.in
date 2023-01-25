@@ -36,3 +36,24 @@ theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
 theories/EWcbvEvalCstrsAsBlocksFixLambdaInd.v
 
+theories/Erasure.v
+
+theories/Typed/Annotations.v
+theories/Typed/CertifyingBeta.v
+theories/Typed/CertifyingEta.v
+theories/Typed/CertifyingInlining.v
+theories/Typed/Certifying.v
+theories/Typed/ClosedAux.v
+theories/Typed/ErasureCorrectness.v
+theories/Typed/Erasure.v
+theories/Typed/ExAst.v
+theories/Typed/ExtractionCorrectness.v
+theories/Typed/Extraction.v
+theories/Typed/OptimizeCorrectness.v
+theories/Typed/OptimizePropDiscr.v
+theories/Typed/Optimize.v
+theories/Typed/ResultMonad.v
+theories/Typed/Transform.v
+theories/Typed/TypeAnnotations.v
+theories/Typed/Utils.v
+theories/Typed/WcbvEvalAux.v

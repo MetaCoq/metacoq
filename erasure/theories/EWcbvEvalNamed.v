@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils BasicAst.
+From MetaCoq Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed EWcbvEval.
@@ -1302,6 +1302,19 @@ Proof.
   unfold fix_env. induction #|vfix|; cbn; eauto. f_equal. eauto.
 Qed.
 
+Lemma wf_fix_env mfix Γ' :
+  NoDup (map fst mfix) ->
+  (∀ nm : ident, In nm (map fst mfix) → ¬ In nm (map fst Γ')) ->
+  All (λ t0 : ident × term, sunny (map fst mfix ++ map fst Γ') t0.2) mfix ->
+  All (λ v : ident × value, wf v.2) Γ' ->
+  All wf (fix_env mfix Γ').
+Proof.
+  intros H.
+  unfold fix_env. induction #|mfix|; econstructor.
+  - econstructor; eauto.
+  - eapply IHn; eauto.
+Qed.
+
 Lemma eval_wf Σ E s v :
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ ->
   All (fun x => wf (snd x)) E ->
@@ -1335,18 +1348,6 @@ Proof.
     + econstructor; cbn; eauto.
       eapply wf_add_multiple; eauto.
       now rewrite map_length fix_env_length.
-      Lemma wf_fix_env mfix Γ' :
-        NoDup (map fst mfix) ->
-        (∀ nm : ident, In nm (map fst mfix) → ¬ In nm (map fst Γ')) ->
-        All (λ t0 : ident × term, sunny (map fst mfix ++ map fst Γ') t0.2) mfix ->
-        All (λ v : ident × value, wf v.2) Γ' ->
-        All wf (fix_env mfix Γ').
-      Proof.
-        intros H.
-        unfold fix_env. induction #|mfix|; econstructor.
-        - econstructor; eauto.
-        - eapply IHn; eauto.
-      Qed.
       eapply wf_fix_env; eauto.
     + eapply All_nth_error in X2; eauto. cbn in X2. rtoProp.
       rewrite map_fst_add_multiple. now rewrite map_length fix_env_length.
@@ -1534,7 +1535,16 @@ Proof.
       eapply incl_appr, incl_refl.
 Qed.
 
-Lemma implication (Σ Σ' : global_context) E s t u :
+Lemma NoDup_In_1 {A} (l1 l2 : list A) a :
+    NoDup (l1 ++ l2) -> In a l1 -> ~ In a l2.
+Proof.
+  induction l1; cbn.
+  - eauto.
+  - inversion 1; subst. intros [-> | ?]; eauto.
+    rewrite in_app_iff in H2; eauto.
+Qed.
+
+Lemma eval_to_eval_named (Σ Σ' : global_context) E s t u :
   wf_glob Σ ->
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
@@ -1699,14 +1709,6 @@ Proof.
           destruct in_dec; cbn in *; eauto.
           rewrite in_app_iff in n. eauto.
         - eapply distinct_vfix_E0; eauto.
-         Lemma NoDup_In_1 {A} (l1 l2 : list A) a :
-             NoDup (l1 ++ l2) -> In a l1 -> ~ In a l2.
-           Proof.
-             induction l1; cbn.
-             - eauto.
-             - inversion 1; subst. intros [-> | ?]; eauto.
-               rewrite in_app_iff in H2; eauto.
-           Qed.
       }
       {
         econstructor.

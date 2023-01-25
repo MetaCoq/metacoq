@@ -5,7 +5,7 @@ From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Erasure.Typed Require Import Certifying.
 From MetaCoq.Template Require Import All.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Common Require Import Kernames.
 
 Import MCMonadNotation.
 
@@ -77,15 +77,15 @@ Module Ex1.
   Definition foo (n : nat) := (fun x => x) n.
 
   MetaCoq Run (betared_def foo).
-  
+
   (* FIXME: it's a bit fragile to refer to unquoted definitions, because their names depend on a module/path they are in *)
   MetaCoq Quote Recursively Definition foo_after :=
-    MetaCoq.Erasure.Typed.CertifyingBeta.Ex1.CertifyingBeta_Ex1_foo_after_betared.
+    MetaCoq_Erasure_Typed_CertifyingBeta_Ex1_foo_after_betared.
 
   MetaCoq Quote Recursively Definition foo_before := foo.
 
   Lemma after_not_before :
-    lookup_env foo_after.1 <%% MetaCoq.Erasure.Typed.CertifyingBeta.Ex1.CertifyingBeta_Ex1_foo_after_betared %%> =
+    lookup_env foo_after.1 <%% MetaCoq_Erasure_Typed_CertifyingBeta_Ex1_foo_after_betared %%> =
     lookup_env foo_before.1 <%% foo %%> -> False.
   Proof. easy. Qed.
 End Ex1.

@@ -1,14 +1,14 @@
 From Equations Require Import Equations.
 From MetaCoq.Erasure.Typed Require Import ClosedAux.
-From MetaCoq.Template Require Import MCPrelude.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Utils Require Import MCPrelude.
+From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Erasure Require Import EAst.
 From MetaCoq.Erasure Require Import EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.
 From MetaCoq.Erasure Require Import ELiftSubst.
 From MetaCoq.Erasure Require Import EWcbvEval.
 From MetaCoq.Erasure Require Import EOptimizePropDiscr.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 
 Set Equations Transparent.
 

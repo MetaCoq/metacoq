@@ -15,10 +15,10 @@ From MetaCoq.Erasure Require Import EInduction.
 From MetaCoq.Erasure Require Import ELiftSubst.
 From MetaCoq.Erasure Require Import EWcbvEval.
 From MetaCoq.Erasure Require Import EGlobalEnv.
-From MetaCoq.Template Require Import MCList.
-From MetaCoq.Template Require Import MCPrelude.
-From MetaCoq.Template Require Import utils.
-From MetaCoq.Template Require Import All_Forall.
+From MetaCoq.Utils Require Import MCList.
+From MetaCoq.Utils Require Import MCPrelude.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Utils Require Import All_Forall.
 
 Import ExAst.
 Import Kernames.

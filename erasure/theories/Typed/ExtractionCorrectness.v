@@ -1,7 +1,7 @@
 From Coq Require Import List.
 From MetaCoq.Erasure.Typed Require Import ErasureCorrectness.
 From MetaCoq.Erasure.Typed Require Import ExAst.
-From MetaCoq.Erasure.Typed Require Import Extraction.
+(* From MetaCoq.Erasure.Typed Require Import Extraction. *)
 From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require Import OptimizeCorrectness.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
@@ -15,8 +15,8 @@ From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICInversion.
-From MetaCoq.Template Require Import Kernames.
-From MetaCoq.Template Require Import MCSquash.
+From MetaCoq.Common Require Import Kernames.
+From MetaCoq.Utils Require Import MCSquash.
 
 Import ListNotations.
 

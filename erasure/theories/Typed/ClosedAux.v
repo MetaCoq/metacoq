@@ -1,7 +1,7 @@
 From Coq Require Import List.
 From Coq Require Import ssrbool.
 From MetaCoq.Erasure.Typed Require Import Utils.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Erasure Require Import EAst.
 From MetaCoq.Erasure Require Import EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.

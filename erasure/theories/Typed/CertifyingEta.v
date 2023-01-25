@@ -8,7 +8,7 @@ From Coq Require Import List.
 From Coq Require Import PeanoNat.
 From Coq Require Import Bool.
 From Coq Require Import String.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Template Require Import All.
 From MetaCoq.Erasure.Typed Require Import Erasure.
 From MetaCoq.Erasure.Typed Require Import Optimize.

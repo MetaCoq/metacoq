@@ -10,7 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICSR.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICAst.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames.
 From Coq Require Import List.
 
 Import ListNotations.
@@ -53,14 +54,15 @@ Qed.
 Section ECorrect.
 
   Existing Instance config.extraction_checker_flags.
-
+  Existing Instance PCUICSN.extraction_normalizing.
   Context {X_type : PCUICWfEnv.abstract_env_impl} {X : projT1 (projT2 X_type)}.
+  Context {normalising_in:
+    forall Σ : global_env_ext, wf_ext Σ -> PCUICWfEnv.abstract_env_ext_rel X Σ -> PCUICSN.NormalisationIn Σ}.
 
 Lemma erase_ind_body_correct Σ wfΣ kn mib oib wf :
-  erases_one_inductive_body oib (trans_oib (@erase_ind_body X_type X Σ wfΣ kn mib oib wf)).
+  erases_one_inductive_body oib (trans_oib (@erase_ind_body X_type X _ _ Σ wfΣ kn mib oib wf)).
 Proof.
-  unfold erases_one_inductive_body, trans_oib, erase_ind_body.
-  simpl.
+  unfold erases_one_inductive_body, trans_oib, erase_ind_body; simpl.
   apply and_assoc.
   split; [|intuition auto].
   split.
@@ -81,7 +83,7 @@ Proof.
 Qed.
 
 Lemma erase_ind_correct Σ wfΣ kn mib wf :
-  erases_mutual_inductive_body mib (trans_mib (@erase_ind X_type X Σ wfΣ kn mib wf)).
+  erases_mutual_inductive_body mib (trans_mib (@erase_ind X_type X _ _ Σ wfΣ kn mib wf)).
 Proof.
   unfold trans_mib, erase_ind.
   cbn.
@@ -167,7 +169,7 @@ Proof.
          P.declared_constant, P.declared_minductive; cbn.
     all: unfold eq_kername in *.
     all: try rewrite eq_kername_refl.
-    + eexists; split; [reflexivity|].
+    + eexists; split; [left;reflexivity|].
       unfold erase_constant_decl.
       destruct flag_of_type; cbn in *.
       destruct conv_ar; cbn in *.
@@ -192,8 +194,9 @@ Proof.
         2: { repeat invert_wf;split;auto;split;auto. }
         constructor.
         eapply (Is_type_extends (({| P.universes := univs; P.declarations := Σ0 |}, _))).
+        constructor.
         2: now eauto.
-        2: { eexists. reflexivity. eexists [_]. eexists. cbn. reflexivity. }
+        2: { eexists. cbn. eapply incl_cs_refl. eexists [_]. cbn. eexists. cbn. reflexivity. }
         1: now eauto.
         eexists _.
         split; [eassumption|].

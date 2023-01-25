@@ -7,16 +7,19 @@ From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Erasure.Typed Require Import Certifying.
-From MetaCoq.Template Require Import Kernames.
-From MetaCoq.Template Require Import config.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames.
+From MetaCoq.Common Require Import config.
 From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICTyping.
-From MetaCoq.PCUIC Require Import TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import SafeTemplateChecker.
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC.
+From MetaCoq.SafeCheckerPlugin Require Import SafeTemplateChecker.
 
 #[export]
 Existing Instance extraction_checker_flags.
+
+Local Open Scope list_scope.
 
 Module PEnv := P.PCUICEnvironment.
 

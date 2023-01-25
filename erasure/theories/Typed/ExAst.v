@@ -1,6 +1,6 @@
 From Coq Require Import List.
-From MetaCoq.Template Require Import Kernames.
-From MetaCoq.Template Require Import BasicAst.
+From MetaCoq.Common Require Import Kernames.
+From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Export EAst.
 From MetaCoq.Erasure Require EPretty.
 

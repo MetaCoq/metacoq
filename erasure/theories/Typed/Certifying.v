@@ -2,9 +2,9 @@
 From Coq Require Import List.
 From Coq Require Import Ascii.
 From Coq Require Import String.
-From MetaCoq.Template Require Import Kernames.
-From MetaCoq.Template Require Import All.
-From MetaCoq.Template Require Import Checker.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames.
+From MetaCoq.Template Require Import Ast Checker All.
 
 Open Scope bs.
 Import MCMonadNotation.

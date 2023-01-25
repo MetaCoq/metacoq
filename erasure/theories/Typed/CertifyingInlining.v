@@ -11,7 +11,7 @@ From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Erasure.Typed Require Import Certifying.
 From MetaCoq.Template Require Import All.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Common Require Import Kernames.
 
 Import MCMonadNotation.
 
@@ -120,7 +120,7 @@ Definition inline_globals (should_inline : kername -> bool)
                       the lookup functions take [global_env]. *)
                   let Σ0 := {| universes := ContextSet.empty;
                               declarations := decls;
-                              retroknowledge := MetaCoq.Template.Environment.Retroknowledge.empty |} in
+                              retroknowledge := MetaCoq.Common.Environment.Retroknowledge.empty |} in
                   (kn, inline_in_decl should_inline Σ0 decl) :: decls) [] Σ in
   filter (fun '(kn, _) => negb (should_inline kn)) newΣ.
 
@@ -147,7 +147,7 @@ Definition inline_def {A}
 
 
 Definition template_inline (should_inline : kername -> bool) : TemplateTransform :=
-  fun Σ => Ok (timed "Inlining" 
+  fun Σ => Ok (timed "Inlining"
     (fun _ => (mk_global_env (universes Σ)
                              (inline_globals should_inline (declarations Σ))
                              (retroknowledge Σ)))).

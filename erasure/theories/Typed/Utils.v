@@ -1,14 +1,14 @@
 From Equations Require Import Equations.
 From MetaCoq Require Import utils.
-From MetaCoq.Template Require Import BasicAst.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Common Require Import BasicAst.
+From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Template Require Import Ast.
 From MetaCoq.Template Require Import LiftSubst.
 From MetaCoq.Template Require Import AstUtils.
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.Template Require Import Typing.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 
 Import MCMonadNotation.
 
@@ -206,7 +206,7 @@ Definition iota_body (Σ : global_env) (body : term) : term :=
     | tConstruct _ c _ =>
       match nth_error brs c with
       | Some br =>
-          match TermEquality.lookup_constructor Σ ci.(ci_ind) c with
+          match lookup_constructor Σ ci.(ci_ind) c with
           | Some (mib, _, cb) =>
               let bctx := case_branch_context ci.(ci_ind) mib cb p br in
               iota_red ci.(ci_npar) args bctx br

@@ -28,14 +28,15 @@ From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From MetaCoq.SafeChecker Require Import PCUICSafeRetyping.
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
-From MetaCoq.Template Require Import Kernames.
-From MetaCoq.Template Require Import config.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames.
+From MetaCoq.Common Require Import config.
 
 Import PCUICAst.PCUICEnvTyping.
 Import PCUICErrors.
 Import PCUICReduction.
 
-Import VectorDef.VectorNotations.
+(* Import VectorDef.VectorNotations. *)
 Set Equations Transparent.
 
 Module P := PCUICAst.
@@ -50,9 +51,12 @@ Local Obligation Tactic := simpl in *; program_simplify; CoreTactics.equations_s
                               try program_solve_wf.
 
 Section FixSigmaExt.
+Import ErasureFunction.
 
 Context {X_type : abstract_env_impl}
-        {X : X_type.π2.π1}.
+        {X : X_type.π2.π1}
+        {no : normalizing_flags}
+        {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
 
 Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ := abstract_env_ext_wf _ wfΣ.
@@ -130,10 +134,9 @@ Definition is_prod_or_sort (t : term) : bool :=
   | _ => false
   end.
 
-Import ErasureFunction.
-
-Lemma not_prod_or_sort_hnf {Σ} {wfΣ : abstract_env_ext_rel X Σ} {Γ : context} {t : term}
-      {h : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t} :
+Lemma not_prod_or_sort_hnf {Σ} {wfΣ : abstract_env_ext_rel X Σ}
+  {Γ : context} {t : term}
+  {h : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> welltyped Σ Γ t} :
   negb (is_prod_or_sort (hnf (X_type := X_type) Γ t h)) ->
   ~Is_conv_to_Arity Σ Γ t.
 Proof.
@@ -241,7 +244,7 @@ Lemma well_founded_erase_rel : well_founded erase_rel.
 Proof.
   intros (Γl & l & wfl).
   assert (w : ∥ wf_ext rΣ ∥) by now apply heΣ. sq.
-  induction (normalisation _ w Γl l wfl) as [l _ IH].
+  induction (normalisation_in rΣ w wfrΣ Γl l wfl) as [l _ IH].
   remember (Γl, l) as p.
   revert wfl IH.
   replace Γl with (fst p) by (now subst).
@@ -280,7 +283,7 @@ Proof.
       destruct p as [Γ t];cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation; eauto.
+      eapply @normalisation_in; eauto.
   - eapply Relation_Properties.clos_rt_rtn1 in mred; inversion mred; subst.
     + apply (IH' (p.1,, vass na A, s)).
       { replace p with (p.1, tProd na A s) by (destruct p; cbn in *; congruence).
@@ -314,7 +317,7 @@ Proof.
       destruct p as [Γ t];cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation; eauto.
+      eapply @normalisation_in; eauto.
   - eapply Relation_Properties.clos_rt_rtn1 in mred; inversion mred; subst.
     + apply (IH' (p.1, s)).
       { replace p with (p.1, tApp hd arg1) by (destruct p; cbn in *; congruence).
@@ -391,7 +394,7 @@ Proof.
       destruct p;cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation; eauto.
+      eapply @normalisation_in; eauto.
 Qed.
 
 Instance WellFounded_erase_rel : WellFounded erase_rel :=
@@ -418,8 +421,8 @@ Definition arity_ass := aname * term.
 
 Fixpoint mkNormalArity (l : list arity_ass) (s : Universe.t) : term :=
   match l with
-  | [] => tSort s
-  | (na, A) :: l => tProd na A (mkNormalArity l s)
+  | []%list => tSort s
+  | ((na, A) :: l)%list => tProd na A (mkNormalArity l s)
   end.
 
 Lemma isArity_mkNormalArity l s :
@@ -458,7 +461,7 @@ Import PCUICSigmaCalculus.
 Lemma red_it_mkProd_or_LetIn_smash_context Σ Γ Δ t :
   red Σ Γ
       (it_mkProd_or_LetIn Δ t)
-      (it_mkProd_or_LetIn (smash_context [] Δ) (expand_lets Δ t)).
+      (it_mkProd_or_LetIn (smash_context []%list Δ) (expand_lets Δ t)).
 Proof.
   induction Δ in Γ, t |- * using PCUICInduction.ctx_length_rev_ind; cbn.
   - now rewrite expand_lets_nil.
@@ -571,8 +574,6 @@ Global Arguments type_flag : clear implicits.
 
 Import PCUICSN.
 
-Existing Instance extraction_normalizing.
-
 Hint Resolve abstract_env_wf : erase.
 
 Definition isTT Γ T :=
@@ -613,7 +614,7 @@ Ltac reduce_term_sound :=
   match goal with
   | [H : reduce_term ?flags _ _ ?Γ ?t ?wft = ?a |- _] =>
       let r := fresh "r" in
-      pose proof (@reduce_term_sound _ flags _ _ Γ t wft _ (ltac:(eassumption))) as [r];
+      pose proof (@reduce_term_sound _ _ flags _ _ _ Γ t wft _ (ltac:(eassumption))) as [r];
       rewrite -> H in r
   end.
 
@@ -671,7 +672,6 @@ Next Obligation.
   sq.
   now apply BDFromPCUIC.isType_infering_sort.
 Defined.
-Next Obligation. eauto. Defined.
 Next Obligation.
   remember (hnf Γ T _) as nf. symmetry in Heqnf.
   reduce_term_sound.
@@ -759,6 +759,9 @@ Inductive tRel_kind :=
 | RelInductive (ind : inductive)
 (** tRel refers to something else, for example something logical or a value *)
 | RelOther.
+
+Import VectorDef.VectorNotations.
+Open Scope list_scope.
 
 Equations(noeqns) erase_type_aux
           (Γ : context)
@@ -1048,7 +1051,7 @@ Next Obligation.
   { apply validity in typ; auto.
     apply isType_tProd in typ as (_ & typ); auto.
     eapply isType_wf_local; eauto. }
-  rewrite <- (PCUICSpine.subst_rel0_lift_id 0 (mkNormalArity ar_ctx univ)).
+  rewrite <- (subst_rel0_lift_id 0 (mkNormalArity ar_ctx univ)).
   eapply validity in typ as typ_valid;auto.
   destruct typ_valid as [u Hty].
   eapply type_App.
@@ -1158,7 +1161,7 @@ erase_constant_decl cst wt with flag_of_type [] (PCUICEnvironment.cst_type cst) 
     | {| conv_ar := inl car |} =>
         inr (erase_arity cst car wt)
     | {| conv_ar := inr notar |} =>
-        let erased_body := erase_constant_body X_type X cst _ in
+        let erased_body := erase_constant_body X_type X (normalisation_in := normalisation_in) cst _ in
         inl {| cst_type := erase_type (PCUICEnvironment.cst_type cst) _; cst_body := EAst.cst_body (fst erased_body) |}
     }.
 Proof.
@@ -1393,6 +1396,7 @@ End FixSigmaExt.
 
 Section EraseEnv.
 Local Existing Instance extraction_checker_flags.
+Local Existing Instance extraction_normalizing.
 
 Import ExAst.
 
@@ -1408,6 +1412,9 @@ Instance fake_guard_impl_instance : abstract_guard_impl :=
   {| guard_impl := fake_guard_impl;
      guard_correct := fake_guard_correct |}.
 
+Axiom fake_normalisation : PCUICSN.Normalisation.
+Global Existing Instance fake_normalisation.
+
 Program Definition erase_global_decl
         (Σext : global_env_ext)
         (wfΣext : ∥ wf_ext Σext ∥)
@@ -1417,13 +1424,16 @@ Program Definition erase_global_decl
         : global_decl :=
   match decl with
   | PCUICEnvironment.ConstantDecl cst =>
-    match @erase_constant_decl canonical_abstract_env_impl _ Σext _ cst _ with
+    match @erase_constant_decl canonical_abstract_env_impl _ _ _ Σext _ cst _ with
     | inl cst => ConstantDecl cst
     | inr ta => TypeAliasDecl ta
     end
-  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind canonical_abstract_env_impl _ Σext _ kn mib _)
+  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind canonical_abstract_env_impl _ _ _ Σext _ kn mib _)
   end.
-Solve Obligations with now unshelve econstructor;eauto.
+Next Obligation. now unshelve econstructor;eauto. Defined.
+Next Obligation. unshelve eapply normalisation_in; tc; eauto. now eapply fake_normalisation. Defined.
+Next Obligation. now unshelve econstructor;eauto. Defined.
+Next Obligation. unshelve eapply normalisation_in; tc; eauto. now eapply fake_normalisation. Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with

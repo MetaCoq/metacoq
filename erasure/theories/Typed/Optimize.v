@@ -5,7 +5,7 @@ From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Erasure Require Import ELiftSubst.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 
 Import Kernames.
 

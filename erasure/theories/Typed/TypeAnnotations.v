@@ -18,7 +18,8 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
 From MetaCoq.SafeChecker Require Import PCUICSafeRetyping.
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
-From MetaCoq.Template Require Import Kernames.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Kernames.
 
 Import VectorNotations.
 
@@ -37,10 +38,13 @@ Import config.
 
 Implicit Types (cf : checker_flags).
 Existing Instance extraction_checker_flags.
+Existing Instance PCUICSN.extraction_normalizing.
 
 Existing Instance fake_guard_impl_instance.
 
-Definition flag_of_type_impl := @flag_of_type canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)).
+Program Definition flag_of_type_impl := @flag_of_type canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
+  PCUICSN.extraction_normalizing _.
+Next Obligation. apply fake_normalisation; eauto. Qed.
 
 Definition app_length_transparent {A} (l1 l2 : list A) :
   #|l1| + #|l2| = #|l1 ++ l2|.
@@ -161,11 +165,18 @@ Fixpoint vec_repeat {A} (a : A) (n : nat) : Vector.t A n :=
 
 Existing Instance PCUICSN.extraction_normalizing.
 
-Definition type_of_impl :=
-  type_of canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)).
+#[program] Definition type_of_impl :=
+  @type_of _ PCUICSN.extraction_normalizing canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
+    _.
+Next Obligation.
+  apply fake_normalisation; eauto.
+Qed.
 
-Definition erase_type_aux_impl :=
-  @erase_type_aux canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)).
+#[program] Definition erase_type_aux_impl :=
+  @erase_type_aux canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)) PCUICSN.extraction_normalizing _.
+Next Obligation.
+  apply fake_normalisation; eauto.
+Qed.
 
 Program Definition erase_type_of Γ erΓ t (wt : welltyped Σ Γ t) : box_type :=
   let ty := type_of_impl Γ _ t _ in
@@ -364,7 +375,10 @@ Proof.
     econstructor; eauto.
 Qed. (* Admitted causes anomaly in Lemmas.save_lemma_admitted: more than one statement *)
 
-Definition erase_constant_decl_impl := @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)).
+#[program] Definition erase_constant_decl_impl :=
+  @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
+    PCUICSN.extraction_normalizing _.
+Next Obligation. apply fake_normalisation; eauto. Qed.
 
 Definition annotate_types_erase_constant_decl cst wt :
   match erase_constant_decl_impl Σ eq_refl cst wt with

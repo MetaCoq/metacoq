@@ -8,8 +8,13 @@
 
 	// A list of arguments to send to coqtop. Use seperate elements instead of spaces to seperate each argument, especially when a flag expects another trailing argument, e.g. `["-I","./bin"]` instead of `["-I ./bin"]`
         "coqtop.args": [
+
+
+			"-R", "safechecker-plugin/theories", "MetaCoq.SafeCheckerPlugin",
+
 			"-R", "utils/theories", "MetaCoq.Utils",
 			"-R", "common/theories", "MetaCoq.Common",
+			"-R", "template-pcuic/theories", "MetaCoq.TemplatePCUIC",
 
 		"-I", "template-coq",
     	//	"-bt", get backtraces from Coq on errors

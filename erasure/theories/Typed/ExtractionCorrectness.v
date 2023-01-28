@@ -1,7 +1,7 @@
 From Coq Require Import List.
 From MetaCoq.Erasure.Typed Require Import ErasureCorrectness.
 From MetaCoq.Erasure.Typed Require Import ExAst.
-(* From MetaCoq.Erasure.Typed Require Import Extraction. *)
+From MetaCoq.Erasure.Typed Require Import Extraction.
 From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require Import OptimizeCorrectness.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
@@ -16,7 +16,7 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICInversion.
 From MetaCoq.Common Require Import Kernames.
-From MetaCoq.Utils Require Import MCSquash.
+From MetaCoq.Utils Require Import utils.
 
 Import ListNotations.
 
@@ -30,16 +30,48 @@ Lemma wf_squash {Σ} :
   ∥wf Σ∥.
 Proof. intros []. now constructor. Qed.
 
+Lemma lookup_env_In d Σ : wf Σ -> In d (PEnv.declarations Σ) -> forall d', In d' (PEnv.declarations Σ) ->
+  fst d = fst d' -> snd d = snd d'.
+Proof using Type.
+  intros [_].
+  destruct Σ as [univs decls retro]; cbn in *.
+  induction o in d |- *; auto.
+  - intros H; inversion H.
+  - intros [H|H].
+    + subst. cbn.
+      intros d' [H'|H']; subst; auto.
+      intros eq.
+      destruct o0 as [fresh _ _ _].
+      subst kn. eapply P.fresh_global_iff_not_In in fresh.
+      eapply (in_map fst) in H'.
+      now apply fresh in H'.
+    + intros d' [H'|H'] eq; subst; cbn in *; auto.
+      subst.
+      destruct o0 as [fresh _ _ _].
+      eapply P.fresh_global_iff_not_In in fresh.
+      eapply (in_map fst) in H.
+      now apply fresh in H.
+Qed.
+
+Lemma lookup_global_In_wf d Σ : wf Σ ->
+  In d (PEnv.declarations Σ) -> P.lookup_global (PEnv.declarations Σ) d.1 <> None.
+Proof using Type.
+  intros wfΣ. destruct d as [kn decl].
+  intros hin. eapply (in_map fst) in hin.
+  intros hne; rewrite <- P.lookup_global_None in hne. contradiction.
+Qed.
+
 Lemma global_erased_with_deps_erases_deps_tConst Σ Σer kn cst :
+  wf Σ ->
   P.declared_constant Σ kn cst ->
   global_erased_with_deps Σ Σer kn ->
   erases_deps Σ Σer (E.tConst kn).
 Proof.
-  intros decl glob.
+  intros wf decl glob.
   destruct glob as [(?&?&?&?&?&?)|(?&?&?&?&?)].
   - econstructor; eauto.
-  - unfold EGlobalEnv.declared_constant, EGlobalEnv.declared_minductive in *.
-    congruence.
+  - unfold P.declared_constant, PCUICAst.declared_minductive in *.
+    eapply lookup_env_In in decl; tea. now cbn in decl. auto.
 Qed.
 
 Module PEnv := PCUICAst.PCUICEnvironment.
@@ -173,7 +205,10 @@ Proof.
     apply wf_ext_wf in w as w1.
     eapply erase_global_decls_deps_recursive_correct;eauto.
     * unfold PCUICAst.declared_constant in *.
-      now intros ? ->%KernameSet.singleton_spec;cbn in *.
+      cbn.
+      intros ? ->%KernameSet.singleton_spec;cbn in *.
+      intros eq. set (env := {| PEnv.declarations := Σ1 |}) in *.
+      eapply (lookup_global_In_wf _ env) in d; eauto.
     * now apply KernameSet.singleton_spec.
 Qed.
 

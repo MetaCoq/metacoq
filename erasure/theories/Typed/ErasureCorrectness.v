@@ -173,6 +173,7 @@ Proof.
       unfold erase_constant_decl.
       destruct flag_of_type; cbn in *.
       destruct conv_ar; cbn in *.
+      destruct wfΣprev as [wfΣprev].
       * destruct c eqn:Hc; cbn in *.
         destruct cst_body0 eqn:Hcb; cbn in *; cycle 1.
         { eexists; split;cbn; unfold EGlobalEnv.declared_constant;cbn.
@@ -191,14 +192,14 @@ Proof.
         destruct r.
         apply @type_reduction with (B := mkNormalArity ctx univ) in wfdecl; eauto.
         cbn in *.
-        2: { repeat invert_wf;split;auto;split;auto. }
         constructor.
-        eapply (Is_type_extends (({| P.universes := univs; P.declarations := Σ0 |}, _))).
+        eapply (Is_type_extends (({| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro |}, _))).
         constructor.
         2: now eauto.
-        2: { eexists. cbn. eapply incl_cs_refl. eexists [_]. cbn. eexists. cbn. reflexivity. }
-        1: now eauto.
-        eexists _.
+        2:{ eapply extends_decls_extends_subrel, strictly_extends_decls_extends_decls.
+           unfold strictly_extends_decls; trea. eexists. cbn; auto. eexists [_].
+           cbn. reflexivity. reflexivity. } eauto.
+        eexists.
         split; [eassumption|].
         left.
         apply isArity_mkNormalArity.
@@ -244,7 +245,7 @@ Proof.
               eapply term_global_deps_spec in isin' as [(? & ?)]; eauto.
               ** cbn in *. congruence.
               ** now apply erases_erase.
-    + eexists _, _; split; [reflexivity|]; split.
+    + eexists _, _; split; [left; reflexivity|]; split.
       unfold EGlobalEnv.declared_minductive;cbn.
       now rewrite eq_kername_refl.
       cbn in *.

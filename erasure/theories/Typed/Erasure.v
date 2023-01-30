@@ -1414,7 +1414,7 @@ Instance fake_guard_impl_instance : abstract_guard_impl :=
 
 Axiom fake_normalisation : PCUICSN.Normalisation.
 Global Existing Instance fake_normalisation.
-
+(* Definition norm := forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ. *)
 Program Definition erase_global_decl
         (Σext : global_env_ext)
         (wfΣext : ∥ wf_ext Σext ∥)
@@ -1430,10 +1430,11 @@ Program Definition erase_global_decl
     end
   | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind canonical_abstract_env_impl _ _ _ Σext _ kn mib _)
   end.
+Next Obligation. unshelve econstructor; eauto. Defined.
+
+Next Obligation. now eapply fake_normalisation. Defined.
 Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. unshelve eapply normalisation_in; tc; eauto. now eapply fake_normalisation. Defined.
-Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. unshelve eapply normalisation_in; tc; eauto. now eapply fake_normalisation. Defined.
+Next Obligation. eapply (fake_normalisation _ X _ _ H). Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with

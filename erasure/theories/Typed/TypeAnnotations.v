@@ -378,7 +378,7 @@ Qed. (* Admitted causes anomaly in Lemmas.save_lemma_admitted: more than one sta
 #[program] Definition erase_constant_decl_impl :=
   @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
     PCUICSN.extraction_normalizing _.
-Next Obligation. apply fake_normalisation; eauto. Qed.
+Next Obligation. apply Erasure.fake_normalisation; eauto. Defined.
 
 Definition annotate_types_erase_constant_decl cst wt :
   match erase_constant_decl_impl Σ eq_refl cst wt with
@@ -402,6 +402,8 @@ Proof.
     reflexivity.
 Defined.
 
+
+(* Context (nin : forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> PCUICSN.NormalisationIn Σ). *)
 Definition annotate_types_erase_global_decl kn decl wt :
   global_decl_annots box_type (erase_global_decl Σ wfextΣ kn decl wt).
 Proof.
@@ -410,9 +412,10 @@ Proof.
   cbn.
   pose proof (annotate_types_erase_constant_decl c wt).
   unfold erase_constant_decl_impl in *.
-  destruct erase_constant_decl; [|exact tt].
-  cbn.
-  exact X.
+  unfold Erasure.erase_global_decl_obligation_2; cbn.
+  unfold erase_constant_decl_impl_obligation_1 in X.
+  cbn. destruct erase_constant_decl; [|exact tt].
+  cbn. exact X.
 Defined.
 
 End fix_env.

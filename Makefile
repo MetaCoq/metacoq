@@ -76,6 +76,12 @@ clean:
 	$(MAKE) -C test-suite clean
 	$(MAKE) -C translations clean
 
+nix-CI:
+	rm .github/workflows/nix-action-*.yml
+	nix-shell --arg do-nothing true --run "genNixActions"
+	# In order to obtain the mac OS CI target
+	sh .nix/renameNixActions.sh
+
 vos:
 	$(MAKE) -C utils
 	$(MAKE) -C common

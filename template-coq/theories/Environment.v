@@ -2,6 +2,7 @@
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Template Require Import utils BasicAst Primitive.
 From MetaCoq.Template Require Import Universes.
+From Equations Require Import Equations.
 
 Module Type Term.
 
@@ -322,108 +323,244 @@ Module Environment (T : Term).
     in the body since it is already included in [global_declarations]. *)
   (** implementation -> module type -> algebraic (colon-annotated) module type (TODO) *)
   Inductive structure_field :=
-  | sfconst : constant_body -> structure_field
-  | sfmind : mutual_inductive_body -> structure_field
-  | sfmod : module_implementation -> list (ident × structure_field) -> structure_field
-  | sfmodtype : list (ident × structure_field) -> structure_field
+  | ConstantDecl : constant_body -> structure_field
+  | InductiveDecl : mutual_inductive_body -> structure_field
+  | ModuleDecl : module_implementation -> list (ident × structure_field) -> structure_field
+  | ModuleTypeDecl : list (ident × structure_field) -> structure_field
   with module_implementation :=
   | mi_abstract : module_implementation (** Declare Module M: T. *)
   | mi_algebraic : kername -> module_implementation (** Module M [:T] := N. *)
   | mi_struct : list (ident × structure_field) -> module_implementation (** Module M:T. ... End M.*)
   | mi_fullstruct : module_implementation (** Module M. ... End M.*).
-  (* with structure_body := list (ident × structure_field).
-  | sb_nil
-  | sb_cons : ident -> structure_field -> structure_body -> structure_body. *)
-  Print structure_field_rect.
 
-  Scheme structureField_rect := Induction for structure_field Sort Type
-  with moduleImpl_rect := Induction for module_implementation Sort Type.
-  (* with structureBody_rect := Induction for structure_body Sort Type. *)
-  Print structureField_rect.
+  Notation structure_body := (list (ident × structure_field))%type.
 
-  Definition structure_body := list (ident × structure_field).
+  Section Induction.
+    Variable (P : structure_field -> Type) (P0 : module_implementation -> Type).
+    Definition P1 : structure_body -> Type := All (fun x => P (snd x)).
 
-  Definition sf_rect : forall (P : structure_field -> Type)
-         (P0 : module_implementation -> Type),
-       (forall c : constant_body, P (sfconst c)) ->
-       (forall m : mutual_inductive_body, P (sfmind m)) ->
-       (forall m : module_implementation,
-        P0 m -> forall l : structure_body, All P (map snd l) -> P (sfmod m l)) ->
-       (forall l : structure_body, All P (map snd l) -> P (sfmodtype l)) ->
-       P0 mi_abstract ->
-       (forall k : kername, P0 (mi_algebraic k)) ->
-       (forall l : structure_body, All P (map snd l) -> P0 (mi_struct l)) ->
-       P0 mi_fullstruct -> forall s : structure_field, P s.
+    Variable (f : forall c : constant_body, P (ConstantDecl c))
+    (f0 : forall m : mutual_inductive_body, P (InductiveDecl m))
+    (f1 : forall m : module_implementation,
+        P0 m -> forall s : structure_body, P1 s -> P (ModuleDecl m s))
+    (f2 : forall s : structure_body, P1 s -> P (ModuleTypeDecl s))
+    (f3 : P0 mi_abstract) (f4 : forall k : kername, P0 (mi_algebraic k))
+    (f5 : forall s : structure_body, P1 s -> P0 (mi_struct s))
+    (f6 : P0 mi_fullstruct).
+
+    Definition f7 : P1 nil := All_nil.
+    Definition f8 : forall (i : ident) (s : structure_field),
+          P s -> forall s0 : structure_body, P1 s0 -> P1 (cons (i,s) s0).
+    Proof. intros i sf Psf sb Psb. apply All_cons => //. Defined.
+
+    Section Nested.
+      Variable F : forall (s: structure_field), P s.
+      Fixpoint F1 (s : structure_body) : P1 s :=
+        match s as s0 return (P1 s0) with
+        | nil => f7
+        | cons (i,s0) s1 => f8 i s0 (F s0) s1 (F1 s1)
+        end.
+    End Nested.
+
+    Fixpoint F (s : structure_field) : P s :=
+    match s as s0 return (P s0) with
+    | ConstantDecl c => f c
+    | InductiveDecl m => f0 m
+    | ModuleDecl m s0 => f1 m (F0 m) s0 (F1 F s0)
+    | ModuleTypeDecl s0 => f2 s0 (F1 F s0)
+    end
+  with F0 (m : module_implementation) : P0 m :=
+    match m as m0 return (P0 m0) with
+    | mi_abstract => f3
+    | mi_algebraic k => f4 k
+    | mi_struct s => f5 s (F1 F s)
+    | mi_fullstruct => f6
+    end.
+
+  Definition structureField_rect := F.
+  Definition moduleImpl_rect := F0.
+  Definition structureBody_rect := F1 F.
+  End Induction.
+
+  Definition sf_mi_sb_mutrect
+    (P : structure_field -> Type) (P0 : module_implementation -> Type)
+    (P1 : structure_body -> Type := All (fun x => P (snd x)))
+    (f : forall c : constant_body, P (ConstantDecl c))
+    (f0 : forall m : mutual_inductive_body, P (InductiveDecl m))
+    (f1 : forall m : module_implementation,
+        P0 m -> forall s : structure_body, P1 s -> P (ModuleDecl m s))
+    (f2 : forall s : structure_body, P1 s -> P (ModuleTypeDecl s))
+    (f3 : P0 mi_abstract) (f4 : forall k : kername, P0 (mi_algebraic k))
+    (f5 : forall s : structure_body, P1 s -> P0 (mi_struct s))
+    (f6 : P0 mi_fullstruct) :
+    (forall s: structure_field, P s) * (forall m: module_implementation, P0 m)
+    * (forall s: structure_body, P1 s).
   Proof.
-    intros Psf Pmi.
-    intros Hcst Hind Hsfmod Hsfmt Hmiabs Hmialg.
-    intros H Hmifs.
-    destruct s; auto.
-    apply Hsfmod.
+  repeat split.
+  eapply structureField_rect; eauto.
+  eapply moduleImpl_rect; eauto.
+  eapply structureBody_rect; eauto.
+  Defined.
 
   Definition module_type_decl := structure_body.
   Definition module_decl := module_implementation × module_type_decl.
+  Notation global_decl := structure_field.
+  Notation global_declarations := structure_body.
 
-  Inductive global_decl :=
-  | ConstantDecl : constant_body -> global_decl
-  | InductiveDecl : mutual_inductive_body -> global_decl
-  | ModuleDecl : module_decl -> global_decl
-  | ModuleTypeDecl : module_type_decl -> global_decl.
-  Derive NoConfusion for global_decl.
+  Section WellFounded.
+    Equations alt_size_sf (sf: structure_field) : nat :=
+      | ConstantDecl _ := 1;
+      | InductiveDecl _ := 1;
+      | ModuleDecl mi mt := 1 + (max (alt_size_mi mi) (alt_size_sb mt));
+      | ModuleTypeDecl mt := 1 + (alt_size_sb mt);
+    where alt_size_sb (sb: structure_body) : nat :=
+      | nil := 0;
+      | (hd::tl) := alt_size_sf hd.2 + alt_size_sb tl;
+    where alt_size_mi (mi: module_implementation) : nat :=
+      | mi_struct s := alt_size_sb s;
+      | _ := 0.
 
-  Definition global_declarations := structure_body.
+    Lemma alt_size_sf_ge_one: (forall sf: structure_field, 0 < alt_size_sf sf).
+    Proof.
+      destruct sf; simp alt_size_sf; lia.
+    Qed.
+
+    Equations paths_of_structure_field (sf: structure_field) (prefix: list ident)
+      : list (list ident) by wf (alt_size_sf sf) lt :=
+      | ConstantDecl _, p := [p];
+      | InductiveDecl _, p := [p];
+      | ModuleDecl (mi_struct nil) _, p := [];
+      | ModuleDecl (mi_struct (hd::tl)) _, p :=
+        (paths_of_structure_field hd.2 (p++[hd.1])) ++
+        (paths_of_structure_field (ModuleTypeDecl tl) p)
+      | ModuleDecl (mi_fullstruct) nil, p := [];
+      | ModuleDecl (mi_fullstruct) (hd::tl), p :=
+        (paths_of_structure_field hd.2 (p++[hd.1])) ++
+        (paths_of_structure_field (ModuleTypeDecl tl) p)
+      | ModuleDecl _ mt, p := [];
+      | ModuleTypeDecl nil, p := [];
+      | ModuleTypeDecl (hd::tl), p :=
+        (paths_of_structure_field hd.2 (p++[hd.1])) ++
+        (paths_of_structure_field (ModuleTypeDecl tl) p).
+    Next Obligation.
+      simp alt_size_sf.
+      simpl; rewrite Nat.succ_max_distr. lia.
+    Defined. Next Obligation.
+      pose proof (alt_size_sf_ge_one s).
+      simp alt_size_sf.
+      simpl; rewrite Nat.succ_max_distr. lia.
+    Defined. Next Obligation.
+      pose proof (alt_size_sf_ge_one s).
+      simp alt_size_sf.
+      simpl. lia.
+    Defined. Next Obligation.
+      pose proof (alt_size_sf_ge_one s).
+      simp alt_size_sf. simpl. lia.
+    Defined. Next Obligation.
+      pose proof (alt_size_sf_ge_one s).
+      simp alt_size_sf. simpl. lia.
+    Defined. Next Obligation.
+      pose proof (alt_size_sf_ge_one s).
+      simp alt_size_sf. simpl. lia.
+    Defined.
+
+    Definition paths_of_structure_body (sb: structure_body) (prefix: list ident)
+      : list (list ident)
+      := fold_left
+          (fun acc '(i, sf) => acc ++ (paths_of_structure_field sf (prefix ++ [i])))
+          sb [].
+  End WellFounded.
 
   Record global_env := mk_global_env
     { universes : ContextSet.t;
-      declarations : global_declarations;
-      retroknowledge : Retroknowledge.t }.
+      declarations : structure_body;
+      retroknowledge : Retroknowledge.t;
+      path : dirpath }.
 
   Coercion universes : global_env >-> ContextSet.t.
 
   Definition empty_global_env :=
     {| universes := ContextSet.empty;
        declarations := [];
-       retroknowledge := Retroknowledge.empty |}.
+       retroknowledge := Retroknowledge.empty;
+       path := []; |}.
 
   Definition add_global_decl Σ decl :=
     {| universes := Σ.(universes);
        declarations := decl :: Σ.(declarations);
-       retroknowledge := Σ.(retroknowledge) |}.
+       retroknowledge := Σ.(retroknowledge);
+       path := Σ.(path) |}.
 
-  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations);
-    retroknowledge := Σ.(retroknowledge) |}.
+  Lemma eta_global_env Σ :
+  Σ = {| universes := Σ.(universes); declarations := Σ.(declarations);
+    retroknowledge := Σ.(retroknowledge); path := Σ.(path) |}.
   Proof. now destruct Σ. Qed.
 
   Definition set_declarations Σ decls :=
     {| universes := Σ.(universes);
        declarations := decls;
-       retroknowledge := Σ.(retroknowledge) |}.
+       retroknowledge := Σ.(retroknowledge);
+       path := Σ.(path) |}.
 
-  (* only looks for base ?? *)
-  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
-    match Σ with
+  (* MetaCoq.TemplateCoq.Environment.Environment.destruct_kername =>
+    (MetaCoq.TemplateCoq.Environment, [Environment; destruct_kername])
+    for easy lookup. *)
+  Definition destruct_kername kn : dirpath × list ident :=
+  let destruct_modpath := fix aux mp :=
+    match mp with
+    | MPfile dp => (dp, [])
+    | MPbound dp id n => (dp, [id])
+    | MPdot mp id => let (dp, l) := aux mp in (dp, l++[id])
+    end in
+  let (dp, l) := destruct_modpath kn.1 in (dp, l++[kn.2]).
+
+  Fixpoint lookup_ident_structure_body (sb: structure_body) i : option structure_field :=
+    match sb with
     | nil => None
-    | d :: tl =>
-      if kn == d.1 then Some d.2
-      else lookup_global tl kn
+    | (id, sf) :: tl => if id == i then Some sf else lookup_ident_structure_body tl i
     end.
 
-  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
+  Fixpoint lookup_idents_structure_body (sb: structure_body) (ids: list ident)
+  : option structure_field :=
+  match ids with
+  | nil => None
+  | hd :: nil => lookup_ident_structure_body sb hd
+  | hd :: tl => match lookup_ident_structure_body sb hd with
+    | Some (ModuleDecl mi mt) => match mi with
+      | mi_struct bd => lookup_idents_structure_body bd tl
+      | mi_fullstruct => lookup_idents_structure_body mt tl
+      | _ => None
+      end
+    | Some (ModuleTypeDecl mt) => lookup_idents_structure_body mt tl
+    | _ => None
+    end
+  end.
+
+  Definition lookup_global (s : global_declarations) (dp: dirpath) (kn : kername)
+  : option structure_field :=
+    let (kn_dp, kn_l) := destruct_kername kn in
+      if (dp == kn_dp) then lookup_idents_structure_body s kn_l
+      else None.
+
+  Definition lookup_env (Σ : global_env) (kn : kername) : option structure_field :=
+    lookup_global Σ.(declarations) Σ.(path) kn.
 
   Definition extends (Σ Σ' : global_env) :=
     [× Σ.(universes) ⊂_cs Σ'.(universes),
-      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
-      Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
+      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations),
+      Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge) &
+      Σ.(path) = Σ'.(path)].
 
   Definition extends_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) = Σ'.(universes),
-       ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
-       Σ.(retroknowledge) = Σ'.(retroknowledge)].
+       ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations),
+       Σ.(retroknowledge) = Σ'.(retroknowledge) &
+      Σ.(path) = Σ'.(path)].
 
   Existing Class extends.
   Existing Class extends_decls.
 
-  Lemma lookup_global_None Σ kn : ~In kn (List.map fst Σ) <-> lookup_global Σ kn = None.
+  (* Lemma lookup_global_None Σ kn : ~In kn (List.map fst Σ) <-> lookup_global Σ kn = None.
   Proof.
     move: Σ; elim => //=; try tauto.
     move => ??; case: eqb_spec; intuition congruence.
@@ -440,7 +577,7 @@ Module Environment (T : Term).
     all: repeat match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
     all: subst => //=; auto.
     all: try now epose proof (@in_map _ _ fst _ (_, _)); cbn in *; exfalso; eauto.
-  Qed.
+  Qed. *)
 
   #[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
   Proof.
@@ -452,7 +589,8 @@ Module Environment (T : Term).
   Proof. red. intros x. split => //; try exists [] => //. Qed.
 
   Lemma extends_refl : CRelationClasses.Reflexive extends.
-  Proof. red. intros x. split; [apply incl_cs_refl | now exists [] | apply Retroknowledge.extends_refl]. Qed.
+  Proof. red. intros x. unfold extends.
+  split; [apply incl_cs_refl | now exists [] | apply Retroknowledge.extends_refl | reflexivity]. Qed.
 
   (* easy prefers this to the local hypotheses, which is annoying
   #[global] Instance extends_refl : CRelationClasses.Reflexive extends.

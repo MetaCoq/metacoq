@@ -1,3 +1,4 @@
+From MetaCoq.Template Require TypingWf. (* Kludge to avoid universe inconsistencies that arise when this file is required later, things like Error: Universe inconsistency. Cannot enforce Coq.Init.Datatypes.26 < replace_quotation_of.u0 because replace_quotation_of.u0 <= MetaCoq.Template.MonadAst.6 <= prod.u0 = Coq.Init.Datatypes.26. *)
 From MetaCoq.Utils Require Import utils monad_utils MCList.
 From MetaCoq.Common Require Import Kernames MonadBasicAst.
 From MetaCoq.Template Require MonadAst TemplateMonad Ast Loader.

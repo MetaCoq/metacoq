@@ -70,9 +70,9 @@ Import MCMonadNotation.
 Open Scope monad.
 
 Section MapOpt.
-  Context {A} (f : A -> option A).
+  Context {A} {B} (f : A -> option B).
 
-  Fixpoint mapopt (l : list A) : option (list A) :=
+  Fixpoint mapopt (l : list A) : option (list B) :=
     match l with
     | nil => ret nil
     | x :: xs => x' <- f x ;;

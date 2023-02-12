@@ -113,6 +113,85 @@ Proof.
                     | solve [ auto ] ].
 Qed.
 
+Lemma consistent_extension_on_iff cs cstr
+      (cf := config.default_checker_flags) (lvls := levels_of_cscs cs cstr)
+  : @consistent_extension_on cs cstr
+    <-> is_true
+          match uGraph.is_consistent cs, uGraph.is_consistent (lvls, cstr),
+            uGraph.gc_of_uctx cs, uGraph.gc_of_uctx (lvls, cstr) with
+          | false, _, _, _
+          | _, _, None, _
+            => true
+          | _, true, Some G, Some G'
+            => uGraph.wGraph.IsFullSubgraph.is_full_extension (uGraph.make_graph G) (uGraph.make_graph G')
+          | _, _, _, _ => false
+          end.
+Proof.
+  destruct (levels_of_cscs_spec cs cstr).
+  cbv zeta; repeat destruct ?; subst.
+  let H := fresh in pose proof (fun uctx uctx' G => @uGraph.consistent_ext_on_full_ext _ uctx G (lvls, uctx')) as H; cbn [fst snd] in H; erewrite H; clear H.
+  1: reflexivity.
+  all: cbn [fst snd ContextSet.constraints] in *.
+  all: repeat
+         repeat
+         first [ match goal with
+                 | [ H : _ = Some _ |- _ ] => rewrite H
+                 | [ H : _ = None |- _ ] => rewrite H
+                 | [ |- _ <-> is_true false ]
+                   => cbv [is_true]; split; [ let H := fresh in intro H; contradict H | congruence ]
+                 | [ |- _ <-> is_true true ]
+                   => split; [ reflexivity | intros _ ]
+                 end
+               | progress cbv [uGraph.is_graph_of_uctx monad_utils.bind monad_utils.ret monad_utils.option_monad] in *
+               | progress cbn [MCOption.on_Some fst snd] in *
+               | rewrite <- uGraph.is_consistent_spec2
+               | progress subst
+               | assert_fails (idtac; lazymatch goal with |- ?G => has_evar G end);
+                 first [ reflexivity | assumption ]
+               | match goal with
+                 | [ H : ?T, H' : ~?T |- _ ] => exfalso; apply H', H
+                 | [ H : context[match ?x with _ => _ end] |- _ ] => destruct x eqn:?
+                 | [ H : uGraph.gc_of_uctx _ = None |- _ ] => cbv [uGraph.gc_of_uctx] in *
+                 | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                 | [ H : Some _ = None |- _ ] => inversion H
+                 | [ H : None = Some _ |- _ ] => inversion H
+                 | [ H : ?T <-> False |- _ ] => destruct H as [H _]; try change (~T) in H
+                 | [ H : ~consistent ?cs |- consistent_extension_on (_, ?cs) _ ]
+                   => intros ? ?; exfalso; apply H; eexists; eassumption
+                 | [ H : ~consistent (snd ?cs) |- consistent_extension_on ?cs _ ]
+                   => intros ? ?; exfalso; apply H; eexists; eassumption
+                 | [ H : @uGraph.is_consistent ?cf ?uctx = false |- _ ]
+                   => assert (~consistent (snd uctx));
+                      [ rewrite <- (@uGraph.is_consistent_spec cf uctx), H; clear H; auto
+                      | clear H ]
+                 | [ H : @uGraph.gc_of_constraints ?cf ?ctrs = None |- _ ]
+                   => let H' := fresh in
+                      pose proof (@uGraph.gc_consistent_iff cf ctrs) as H';
+                      rewrite H in H';
+                      clear H
+                 | [ H : @uGraph.is_consistent ?cf ?uctx = true |- _ ]
+                   => assert_fails (idtac; match goal with
+                                           | [ H' : consistent ?v |- _ ] => unify v (snd uctx)
+                                           end);
+                      assert (consistent (snd uctx));
+                      [ rewrite <- (@uGraph.is_consistent_spec cf uctx), H; clear H; auto
+                      | ]
+                 end ].
+  all: try solve [ repeat first [ progress cbv [consistent consistent_extension_on not] in *
+                                | progress intros
+                                | progress destruct_head'_ex
+                                | progress destruct_head'_and
+                                | progress specialize_under_binders_by eassumption
+                                | solve [ eauto ] ] ].
+Admitted.
+
+Definition consistent_extension_on_dec cs cstr : {@consistent_extension_on cs cstr} + {~@consistent_extension_on cs cstr}.
+Proof.
+  pose proof (@consistent_extension_on_iff cs cstr) as H; cbv beta zeta in *.
+  let b := lazymatch type of H with context[is_true ?b] => b end in
+  destruct b; [ left; apply H; reflexivity | right; intro H'; apply H in H'; auto ].
+Defined.
+
 Definition leq0_levelalg_n_dec n ϕ u u' : {@leq0_levelalg_n (uGraph.Z_of_bool n) ϕ u u'} + {~@leq0_levelalg_n (uGraph.Z_of_bool n) ϕ u u'}.
 Proof.
   pose proof (@uGraph.gc_leq0_levelalg_n_iff config.default_checker_flags (uGraph.Z_of_bool n) ϕ u u') as H.

@@ -1809,7 +1809,7 @@ Hint Rewrite lift_instance_length : len.
 Lemma variance_universes_insts {cf} {Σ mdecl l} :
   on_variance Σ (ind_universes mdecl) (Some l) ->
   ∑ v i i',
-  [/\ variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i'),
+  [× variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i'),
     match ind_universes mdecl with
     | Monomorphic_ctx => False
     | Polymorphic_ctx (inst, cstrs) =>

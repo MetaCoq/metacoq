@@ -284,6 +284,19 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       (fun u => forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ))
       True s.
 
+  Definition wf_universe_dec Σ s : {@wf_universe Σ s} + {~@wf_universe Σ s}.
+  Proof.
+    destruct s; try (left; exact I).
+    cbv [wf_universe Universe.on_sort LevelExprSet.In LevelExprSet.this t_set].
+    destruct t as [[t _] _].
+    induction t as [|t ts [IHt|IHt]]; [ left | | right ].
+    { inversion 1. }
+    { destruct (LevelSetProp.In_dec (LevelExpr.get_level t) (global_ext_levels Σ)) as [H|H]; [ left | right ].
+      { inversion 1; subst; auto. }
+      { intro H'; apply H, H'; now constructor. } }
+    { intro H; apply IHt; intros; apply H; now constructor. }
+  Defined.
+
   Lemma declared_ind_declared_constructors `{cf : checker_flags} {Σ ind mib oib} :
     declared_inductive Σ ind mib oib ->
     Alli (fun i => declared_constructor Σ (ind, i) mib oib) 0 (ind_ctors oib).

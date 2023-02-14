@@ -221,7 +221,7 @@ Lemma Forall2_forallb2:
   forall (A : Type) (p : A -> A -> bool) (l l' : list A),
   Forall2 (fun x y : A => p x y) l l' -> forallb2 p l l'.
 Proof.
-  induction 1; simpl; auto.
+  induction 1; simpl; auto;
   now rewrite H IHForall2.
 Qed.
 

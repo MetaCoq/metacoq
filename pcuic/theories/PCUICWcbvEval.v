@@ -697,7 +697,7 @@ Section Wcbv.
     unfold unfold_fix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold fix_subst. clear -Hf. generalize #|mfix|.
-    induction n; simpl; auto. apply/andP; split; auto.
+    induction n; simpl; auto; try solve [apply/andP; split; auto].
     simpl. rewrite fix_subst_length. solve_all.
     eapply All_nth_error in Hf; eauto. unfold test_def in Hf.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.
@@ -796,7 +796,7 @@ Section Wcbv.
     unfold unfold_cofix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold cofix_subst. clear -Hf. generalize #|mfix|.
-    induction n; simpl; auto. apply/andP; split; auto.
+    induction n; simpl; auto; try solve [apply/andP; split; auto].
     simpl. rewrite cofix_subst_length. solve_all.
     eapply All_nth_error in Hf; eauto. unfold test_def in Hf.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.

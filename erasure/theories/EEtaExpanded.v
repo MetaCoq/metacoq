@@ -615,7 +615,7 @@ Proof.
     (try eapply forallb_Forall); 
     eauto).
   - eapply isEtaExp_mkApps_intro; eauto. solve_all.
-  - solve_all. now rewrite b H.
+  - solve_all; now rewrite b H.
   - rewrite isEtaExp_Constructor. rtoProp; repeat split.
     2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.

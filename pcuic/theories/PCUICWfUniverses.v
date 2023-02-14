@@ -512,11 +512,10 @@ Qed.
   Proof using Type.
     intros wfΣ wfΣ' ext.
     induction t using term_forall_list_ind; cbn in *; auto; intros; to_prop;
-    try apply /andP; to_wfu; intuition eauto 4.
+    try apply /andP; to_wfu; intuition eauto 4; try solve [apply /andP; to_wfu; intuition eauto 4].
 
   - solve_all.
   - now eapply weaken_wf_universe.
-  - apply /andP; to_wfu; intuition eauto 4.
   - eapply forallb_impl ; tea.
     now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - eapply forallb_impl ; tea.
@@ -1033,9 +1032,9 @@ Qed.
         now simpl in Hs.
         destruct tu as [s tu]; exists s; simpl.
         now simpl in Hs.
-      * induction X; simpl; auto.
-        rewrite IHX /= /test_decl /=. now move/andP: Hs.
-        rewrite IHX /= /test_decl /=. now move/andP: Hc => [] -> ->.
+      * induction X; simpl; auto; try solve
+          [rewrite IHX /= /test_decl /=; now move/andP: Hs
+          |rewrite IHX /= /test_decl /=; now move/andP: Hc => [] -> ->].
 
     - rewrite wf_universes_lift.
       destruct X as [X _].

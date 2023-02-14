@@ -1402,7 +1402,7 @@ Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} :
   forallb p (repeat a n).
 Proof.
   intros pa.
-  induction n; cbn; auto.
+  induction n; cbn; auto;
   now rewrite pa IHn.
 Qed.
 

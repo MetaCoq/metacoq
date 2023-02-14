@@ -637,6 +637,10 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       | @pathOf_step x y z e p => negb (VSet.mem x (nodes p)) && is_simple p
       end.
 
+    Obligation Tactic := Program.Tactics.program_simpl;
+      try match goal with
+          | H : _ |- _ => solve [apply andb_andI in H as [? ?]; auto]
+          end.
     Program Definition to_simple : forall {x y} (p : PathOf x y),
         is_simple p = true -> SPath (nodes p) x y
       := fix to_simple {x y} p (Hp : is_simple p = true) {struct p} :=
@@ -655,9 +659,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       - apply andb_andI in Hp0 as [h1 h2].
         apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
         assumption.
-    Defined.
-    Next Obligation.
-      apply andb_andI in Hp0 as [? ?]. auto.
     Defined.
 
 
@@ -2219,7 +2220,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       is_simple _ p -> ~~ VSet.mem y (nodes G p) -> is_simple _ (PathOf_add_end p e).
     Proof using HI.
       induction p; simpl; auto.
-      now rewrite andb_true_r.
+      try now rewrite andb_true_r.
       move/andP => [nmen iss].
       specialize (IHp e iss). intros Hm%negbe.
       rewrite andb_and. split; auto.

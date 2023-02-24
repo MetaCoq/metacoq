@@ -90,19 +90,19 @@ Module Type X.
   Parameter t' : nat.
   Parameter t'' : nat.
   Print Instances nat.
-  MetaCoq Run (tmLocate1 "t" >>= tmExistingInstance).
-  MetaCoq Run (tmLocate1 "t'" >>= tmExistingInstance).
+  MetaCoq Run (tmLocate1 "t" >>= tmExistingInstance global).
+  MetaCoq Run (tmLocate1 "t'" >>= tmExistingInstance global).
   Print Instances nat.
 End X.
 
 Section XX.
   Variable u : nat.
-  Fail MetaCoq Run (tmLocate1 "u" >>= tmExistingInstance).
+  Fail MetaCoq Run (tmLocate1 "u" >>= tmExistingInstance global).
   Print Instances nat.
 End XX.
 
 Module Y (A : X).
   Print Instances nat.
-  MetaCoq Run (tmLocate1 "t''" >>= tmExistingInstance).
+  MetaCoq Run (tmLocate1 "t''" >>= tmExistingInstance global).
   Print Instances nat.
 End Y.

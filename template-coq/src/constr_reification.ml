@@ -245,6 +245,9 @@ struct
   let (tcbv, tcbn, thnf, tall, tlazy, tunfold) =
     (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")
 
+  let (thints_local, thints_export, thints_global) =
+    (template "hints.local", template "hints.export", template "hints.global")
+
 
   let constr_equall h t = Constr.equal h (Lazy.force t)
 

@@ -57,7 +57,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmInductive : bool -> mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : global_reference -> TM unit
+| tmExistingInstance : hint_locality -> global_reference -> TM unit
 | tmInferInstance (type : Ast.term)
   : TM (option Ast.term)
 .

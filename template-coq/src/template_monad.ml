@@ -180,7 +180,7 @@ type template_monad =
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
 
     (* typeclass resolution *)
-  | TmExistingInstance of Constr.t
+  | TmExistingInstance of Constr.t * Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 
@@ -372,9 +372,9 @@ let next_action env evd (pgm : constr) : template_monad * _ =
 
   else if eq_gr ptmExistingInstance || eq_gr ttmExistingInstance then
     match args with
-    | name :: [] ->
-       (TmExistingInstance name, universes)
-    | _ -> monad_failure "tmExistingInstance" 1
+    | locality :: name :: [] ->
+       (TmExistingInstance (locality, name), universes)
+    | _ -> monad_failure "tmExistingInstance" 2
   else if eq_gr ptmInferInstance then
     match args with
     | s :: typ :: [] ->

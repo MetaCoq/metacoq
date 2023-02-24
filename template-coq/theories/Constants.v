@@ -230,6 +230,11 @@ Register MetaCoq.Template.TemplateMonad.Common.all as metacoq.template.all.
 Register MetaCoq.Template.TemplateMonad.Common.lazy as metacoq.template.lazy.
 Register MetaCoq.Template.TemplateMonad.Common.unfold as metacoq.template.unfold.
 
+Register MetaCoq.Template.TemplateMonad.Common.local as metacoq.template.hints.local.
+Register MetaCoq.Template.TemplateMonad.Common.export as metacoq.template.hints.export.
+Register MetaCoq.Template.TemplateMonad.Common.global as metacoq.template.hints.global.
+
+
 (* Prop *)
 Register MetaCoq.Template.TemplateMonad.Core.tmReturn as metacoq.templatemonad.prop.tmReturn.
 Register MetaCoq.Template.TemplateMonad.Core.tmBind as metacoq.templatemonad.prop.tmBind.

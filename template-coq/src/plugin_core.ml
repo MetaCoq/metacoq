@@ -171,24 +171,18 @@ let quote_module (qualid : qualid) : global_reference list =
   let mb = Global.lookup_module mp in
   let rec aux mb =
     let open Declarations in
-    let me = mb.mod_expr in
-    let get_refs s =
-      let body = Modops.destr_nofunctor mp s in
+    match mb.mod_type with
+    | MoreFunctor (_, _, body) -> []
+    | NoFunctor body ->
       let get_ref (label, field) =
-        let open Names in 
+        let open Names in
         match field with
-        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
-        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mb.mod_mp label)]
+        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mb.mod_mp label, 0)]
         | SFBmodule mb -> aux mb
         | SFBmodtype mtb -> []
       in
       CList.map_append get_ref body
-    in
-    match me with
-    | Abstract -> []
-    | Algebraic _ -> []
-    | Struct s -> get_refs s
-    | FullStruct -> get_refs mb.Declarations.mod_type
   in aux mb
 
 let tmQuoteModule (qualid : qualid) : global_reference list tm =

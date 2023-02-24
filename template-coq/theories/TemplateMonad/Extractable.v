@@ -51,6 +51,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
   : TM constant_body
 | tmQuoteUniverses : TM ConstraintSet.t
 | tmQuoteModule : qualid -> TM (list global_reference)
+| tmQuoteModFunctor : qualid -> TM (list global_reference)
+| tmQuoteModType : qualid -> TM (list global_reference)
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

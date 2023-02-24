@@ -37,6 +37,8 @@ let (ptmReturn,
      ptmQuoteConstant,
      ptmQuoteUniverses,
      ptmQuoteModule,
+     ptmQuoteModFunctor,
+     ptmQuoteModType,
 
      ptmUnquote,
      ptmUnquoteTyped,
@@ -76,6 +78,8 @@ let (ptmReturn,
    r_template_monad_prop_p "tmQuoteConstant",
    r_template_monad_prop_p "tmQuoteUniverses",
    r_template_monad_prop_p "tmQuoteModule",
+   r_template_monad_prop_p "tmQuoteModFunctor",
+   r_template_monad_prop_p "tmQuoteModType",
 
    r_template_monad_prop_p "tmUnquote",
    r_template_monad_prop_p "tmUnquoteTyped",
@@ -106,6 +110,8 @@ let (ttmReturn,
      ttmQuoteInductive,
      ttmQuoteUniverses,
      ttmQuoteModule,
+     ttmQuoteModFunctor,
+     ttmQuoteModType,
      ttmQuoteConstant,
      ttmInductive,
      ttmInferInstance,
@@ -130,6 +136,8 @@ let (ttmReturn,
    r_template_monad_type_p "tmQuoteInductive",
    r_template_monad_type_p "tmQuoteUniverses",
    r_template_monad_type_p "tmQuoteModule",
+   r_template_monad_type_p "tmQuoteModFunctor",
+   r_template_monad_type_p "tmQuoteModType",
    r_template_monad_type_p "tmQuoteConstant",
 
    r_template_monad_type_p "tmInductive",
@@ -175,6 +183,8 @@ type template_monad =
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
   | TmQuoteModule of Constr.t
+  | TmQuoteModFunctor of Constr.t
+  | TmQuoteModType of Constr.t
 
   | TmUnquote of Constr.t                   (* only Prop *)
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
@@ -336,6 +346,16 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | [id] ->
        (TmQuoteModule id, universes)
     | _ -> monad_failure "tmQuoteModule" 0
+  else if eq_gr ptmQuoteModFunctor || eq_gr ttmQuoteModFunctor then
+    match args with
+    | [id] ->
+       (TmQuoteModFunctor id, universes)
+    | _ -> monad_failure "tmQuoteModFunctor" 0
+  else if eq_gr ptmQuoteModType || eq_gr ttmQuoteModType then
+    match args with
+    | [id] ->
+       (TmQuoteModType id, universes)
+    | _ -> monad_failure "tmQuoteModType" 0
   else if eq_gr ptmQuoteConstant then
     match args with
     | name::bypass::[] ->

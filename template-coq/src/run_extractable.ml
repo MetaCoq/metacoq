@@ -228,6 +228,10 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteModule id ->
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModule (to_qualid id))
+  | Coq_tmQuoteModFunctor id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModFunctor (to_qualid id))
+  | Coq_tmQuoteModType id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModType (to_qualid id))
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))

@@ -166,28 +166,47 @@ let tmQuoteUniverses : UGraph.t tm =
   fun ~st env evm success _fail ->
     success ~st env evm (Environ.universes env)
 
-let quote_module (qualid : qualid) : global_reference list =
+let quote_module ~(include_functor : bool) ~(include_submodule : bool) ~(include_submodtype : bool) (qualid : qualid) : global_reference list =
   let mp = Nametab.locate_module qualid in
   let mb = Global.lookup_module mp in
-  let rec aux mb =
-    let open Declarations in
-    match mb.mod_type with
-    | MoreFunctor (_, _, body) -> []
-    | NoFunctor body ->
-      let get_ref (label, field) =
-        let open Names in
-        match field with
-        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mb.mod_mp label)]
-        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mb.mod_mp label, 0)]
-        | SFBmodule mb -> aux mb
-        | SFBmodtype mtb -> []
-      in
-      CList.map_append get_ref body
-  in aux mb
+  let open Declarations in
+  let rec aux mb mp =
+    let rec aux' mt mp =
+      match mt with
+      | MoreFunctor (_, _, body) -> if include_functor then aux' body mp else []
+      | NoFunctor body ->
+        let get_ref (label, field) =
+          let open Names in
+          match field with
+          | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
+          | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+          | SFBmodule mb -> if include_submodule then aux mb.mod_type mb.mod_mp else []
+          | SFBmodtype mtb -> if include_submodtype then aux mtb.mod_type mtb.mod_mp else []
+        in
+        CList.map_append get_ref body
+    in aux' mb mp
+  in aux mb.mod_type mb.mod_mp
 
 let tmQuoteModule (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->
-  success ~st env evd (quote_module qualid)
+  let include_functor = false in
+  let include_submodule = true in
+  let include_submodtype = false in
+  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
+
+let tmQuoteModFunctor (qualid : qualid) : global_reference list tm =
+  fun ~st env evd success _fail ->
+  let include_functor = true in
+  let include_submodule = true in
+  let include_submodtype = false in
+  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
+
+let tmQuoteModType (qualid : qualid) : global_reference list tm =
+  fun ~st env evd success _fail ->
+  let include_functor = true in
+  let include_submodule = true in
+  let include_submodtype = true in
+  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
 
 (*let universes_entry_of_decl ?withctx d =
   let open Declarations in

@@ -32,3 +32,32 @@ MetaCoq Run (m <- tmQuoteModule "Outer"%bs;; _ <- tmPrint m;; match m ==
                                                => ret tt
                                                               | _ => tmFail "bad"%bs
                                                               end).
+(** currently QuoteModFunctor means "include functors", maybe it should mean something else? *)
+MetaCoq Run (m <- tmQuoteModFunctor "Outer"%bs;; _ <- tmPrint m;; match m ==
+                                   [ConstRef
+   (MPdot (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs) "Inner"%bs,
+    "t"%bs);
+ ConstRef (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs, "t"%bs);
+ ConstRef
+   (MPdot (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs) "InnerF"%bs,
+    "t"%bs)]%list
+ with true
+                                               => ret tt
+                                                              | _ => tmFail "bad"%bs
+                                                                  end).
+(** currently QuoteModType means "include functors and types", but maybe it should mean something else? *)
+MetaCoq Run (m <- tmQuoteModType "Outer"%bs;; _ <- tmPrint m;; match m ==
+[ConstRef
+   (MPdot (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs) "Inner"%bs,
+    "t"%bs);
+ ConstRef (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs, "t"%bs);
+ ConstRef
+   (MPdot (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs) "InnerT"%bs,
+    "t"%bs);
+ ConstRef
+   (MPdot (MPdot (MPfile ["tmQuoteModule"%bs; "TestSuite"%bs; "MetaCoq"%bs]) "Outer"%bs) "InnerF"%bs,
+    "t"%bs)]%list
+ with true
+                                               => ret tt
+                                                              | _ => tmFail "bad"%bs
+                                                              end).

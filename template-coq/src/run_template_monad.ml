@@ -471,6 +471,20 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
          let l = List.map quote_global_reference l in
          let l = to_coq_listl tglobal_reference l in
          k ~st env evm l)
+  | TmQuoteModFunctor id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmQuoteModFunctor (Libnames.qualid_of_string id)) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
+  | TmQuoteModType id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmQuoteModType (Libnames.qualid_of_string id)) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k ~st env evm (Lazy.force unit_tt)

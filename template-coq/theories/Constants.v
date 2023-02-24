@@ -245,6 +245,8 @@ Register MetaCoq.Template.TemplateMonad.Core.tmMkDefinition as metacoq.templatem
 Register MetaCoq.Template.TemplateMonad.Core.tmMkInductive as metacoq.templatemonad.prop.tmMkInductive.
 Register MetaCoq.Template.TemplateMonad.Core.tmFreshName as metacoq.templatemonad.prop.tmFreshName.
 Register MetaCoq.Template.TemplateMonad.Core.tmLocate as metacoq.templatemonad.prop.tmLocate.
+Register MetaCoq.Template.TemplateMonad.Core.tmLocateModule as metacoq.templatemonad.prop.tmLocateModule.
+Register MetaCoq.Template.TemplateMonad.Core.tmLocateModType as metacoq.templatemonad.prop.tmLocateModType.
 Register MetaCoq.Template.TemplateMonad.Core.tmCurrentModPath as metacoq.templatemonad.prop.tmCurrentModPath.
 
 Register MetaCoq.Template.TemplateMonad.Core.tmQuote as metacoq.templatemonad.prop.tmQuote.
@@ -280,6 +282,8 @@ Register MetaCoq.Template.TemplateMonad.Extractable.tmAxiom as metacoq.templatem
 Register MetaCoq.Template.TemplateMonad.Extractable.tmLemma as metacoq.templatemonad.type.tmLemma.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmFreshName as metacoq.templatemonad.type.tmFreshName.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmLocate as metacoq.templatemonad.type.tmLocate.
+Register MetaCoq.Template.TemplateMonad.Extractable.tmLocateModule as metacoq.templatemonad.type.tmLocateModule.
+Register MetaCoq.Template.TemplateMonad.Extractable.tmLocateModType as metacoq.templatemonad.type.tmLocateModType.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmCurrentModPath as metacoq.templatemonad.type.tmCurrentModPath.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteInductive as metacoq.templatemonad.type.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteUniverses as metacoq.templatemonad.type.tmQuoteUniverses.

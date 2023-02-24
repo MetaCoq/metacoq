@@ -39,6 +39,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Returns the list of globrefs corresponding to a qualid,
    the head is the default one if any. *)
 | tmLocate : qualid -> TemplateMonad (list global_reference)
+| tmLocateModule : qualid -> TemplateMonad (list modpath)
+| tmLocateModType : qualid -> TemplateMonad (list modpath)
 | tmCurrentModPath : unit -> TemplateMonad modpath
 
 (* Quoting and unquoting commands *)
@@ -98,6 +100,20 @@ Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
   | x :: _ => tmReturn x
   end.
 
+Definition tmLocateModule1 (q : qualid) : TemplateMonad modpath :=
+  l <- tmLocateModule q ;;
+  match l with
+  | [] => tmFail ("Module [" ^ q ^ "] not found")
+  | x :: _ => tmReturn x
+  end.
+
+Definition tmLocateModType1 (q : qualid) : TemplateMonad modpath :=
+  l <- tmLocateModType q ;;
+  match l with
+  | [] => tmFail ("ModType [" ^ q ^ "] not found")
+  | x :: _ => tmReturn x
+  end.
+
 (** Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmQuote t >>= tmPrint.
 
@@ -127,6 +143,8 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
    ; Common.tmLocate:=@tmLocate
+   ; Common.tmLocateModule:=@tmLocateModule
+   ; Common.tmLocateModType:=@tmLocateModType
    ; Common.tmCurrentModPath:=@tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses

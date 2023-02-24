@@ -33,6 +33,8 @@ Record TMInstance@{t u r} :=
 ; tmFreshName : ident -> TemplateMonad ident
 
 ; tmLocate : qualid -> TemplateMonad (list global_reference)
+; tmLocateModule : qualid -> TemplateMonad (list modpath)
+; tmLocateModType : qualid -> TemplateMonad (list modpath)
 ; tmCurrentModPath : unit -> TemplateMonad modpath
 
 (* Quote the body of a definition or inductive. Its name need not be fully quaified *)

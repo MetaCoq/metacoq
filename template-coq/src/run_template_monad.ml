@@ -482,6 +482,20 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
          let l = List.map quote_global_reference l in
          let l = to_coq_listl tglobal_reference l in
          k ~st env evm l)
+  | TmLocateModule id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmLocateModuleString id) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_modpath l in
+         let l = to_coq_listl tmodpath l in
+         k ~st env evm l)
+  | TmLocateModType id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmLocateModTypeString id) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_modpath l in
+         let l = to_coq_listl tmodpath l in
+         k ~st env evm l)
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
     let s = quote_modpath mp in

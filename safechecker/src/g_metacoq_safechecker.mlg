@@ -69,7 +69,7 @@ let retypecheck_term_dependencies env gr =
   in
   let st = Conv_oracle.get_transp_state (Environ.oracle (Global.env())) in
   let deps = Assumptions.assumptions ~add_opaque:true ~add_transparent:true
-      st gr (Globnames.printable_constr_of_global gr) in
+      st gr (fst (UnivGen.fresh_global_instance env gr)) in
   let process_object k _ty =
     let open Printer in
     match k with

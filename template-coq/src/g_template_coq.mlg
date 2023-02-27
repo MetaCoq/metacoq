@@ -20,7 +20,7 @@ open Tacexpr
 open Tacinterp
 open Stdarg
 open Tacarg
-open Genredexpr
+open Redexpr
 
 (* If strict unquote universe mode is on then fail when unquoting a non *)
 (* declared universe / an empty list of level expressions. *)

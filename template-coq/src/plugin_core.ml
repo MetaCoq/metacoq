@@ -111,7 +111,7 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
   fun ~st env evm success _fail ->
     let kind = Decls.(IsDefinition Definition) in
-    let hole = CAst.make (Constrexpr.CHole (Some Evar_kinds.(QuestionMark default_question_mark), Namegen.IntroAnonymous, None)) in
+    let hole = CAst.make (Constrexpr.CHole (Some Evar_kinds.(QuestionMark default_question_mark), Namegen.IntroAnonymous)) in
     Feedback.msg_debug (Pp.str "interp_casted called");
     let evm, (c, _) =
       try Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr ty)

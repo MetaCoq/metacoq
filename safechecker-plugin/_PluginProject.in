@@ -9,6 +9,8 @@ src/META.coq-metacoq-safechecker
 # From template
 src/ssrbool.ml
 src/ssrbool.mli
+src/specif.ml
+src/specif.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml

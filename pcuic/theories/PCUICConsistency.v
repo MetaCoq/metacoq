@@ -41,12 +41,14 @@ Definition False_mib : mutual_inductive_body :=
 
 Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
   {normalisation_in: NormalisationIn Σ} t kn :
-  declared_minductive Σ kn False_mib ->
+  let False_pcuic := tInd kn [] in
+  declared_inductive Σ kn False_mib False_oib ->
   wf_ext Σ -> axiom_free Σ ->
-  let False_ty := tInd (mkInd kn 0) [] in
-  Σ ;;; [] |- t : False_ty -> False.
+  Σ ;;; [] |- t : False_pcuic -> False.
 Proof.
-  intros Hdecl wfΣ axΣ False_ty typ_false. pose proof (iswelltyped typ_false) as wt.
+  intros False_pcui Hdecl wfΣ axΣ typ_false. pose proof (iswelltyped typ_false) as wt.
+  destruct Hdecl as [Hdecl Hidecl].
+  destruct kn as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
   eapply wh_normalization in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
   pose proof (Hempty_ := Hempty).
   eapply subject_reduction in typ_false; eauto.

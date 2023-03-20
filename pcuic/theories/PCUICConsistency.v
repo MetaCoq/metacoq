@@ -15,29 +15,9 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity
-  PCUICWcbvEval PCUICCanonicity PCUICProgress PCUICSN PCUICNormalization.
+  PCUICWcbvEval PCUICCanonicity PCUICSN PCUICNormalization.
 
 From Equations Require Import Equations.
-
-Lemma axiom_free_axiom_free_value Σ t :
-  axiom_free Σ ->
-  axiom_free_value Σ [] t.
-Proof.
-  intros axfree.
-  cut (Forall is_true []); [|constructor].
-  generalize ([] : list bool).
-  induction t; intros axfree_args all_true; cbn; auto.
-  - destruct lookup_env eqn:find; auto.
-    destruct g; auto.
-    destruct c; auto.
-    apply declared_constant_from_gen in find.
-    apply axfree in find; cbn in *.
-    now destruct cst_body0.
-  - destruct nth_error; auto.
-    rewrite nth_nth_error.
-    destruct nth_error eqn:nth; auto.
-    eapply nth_error_forall in nth; eauto.
-Qed.
 
 Definition Prop_univ := Universe.of_levels (inl PropLevel.lProp).
 
@@ -63,7 +43,8 @@ Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
   {normalisation_in: NormalisationIn Σ} t kn :
   declared_minductive Σ kn False_mib ->
   wf_ext Σ -> axiom_free Σ ->
-  let False_ty := tInd (mkInd kn 0) [] in Σ ;;; [] |- t : False_ty -> False.
+  let False_ty := tInd (mkInd kn 0) [] in
+  Σ ;;; [] |- t : False_ty -> False.
 Proof.
   intros Hdecl wfΣ axΣ False_ty typ_false. pose proof (iswelltyped typ_false) as wt.
   eapply wh_normalization in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
@@ -94,7 +75,6 @@ Proof.
     cbn in H0. noconf H0.
     cbn in H1. rewrite nth_error_nil in H1.
     discriminate.
-  - eapply axiom_free_axiom_free_value; eauto.
   - unfold check_recursivity_kind. destruct wfΣ.
     unshelve eapply declared_minductive_to_gen in Hdecl; eauto.
     red in Hdecl. cbn. rewrite Hdecl; cbn. auto.

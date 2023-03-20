@@ -461,9 +461,6 @@ Qed.
 
 Local Hint Constructors value wcbv_red1 : wcbv.
 
-Definition axiom_free Σ :=
-  forall c decl, declared_constant Σ c decl -> cst_body decl <> None. (* TODO: consolidate with PCUICConsistency *)
-
 Lemma value_stuck_fix Σ mfix idx args : isStuckFix (tFix mfix idx) args -> All (value Σ) args -> value Σ (mkApps (tFix mfix idx) args).
 Proof.
   unfold isStuckFix; intros isstuck vargs.

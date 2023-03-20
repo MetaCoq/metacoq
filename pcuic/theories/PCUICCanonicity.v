@@ -564,6 +564,46 @@ End Spines.
 
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
+Definition axiom_free Σ :=
+  forall c decl, declared_constant Σ c decl -> cst_body decl <> None. (* TODO: consolidate with PCUICConsistency *)
+
+Fixpoint axiom_free_value Σ args t :=
+  match t with
+  | tApp hd arg => axiom_free_value Σ (axiom_free_value Σ [] arg :: args) hd
+  | tConst kn _ => match lookup_env Σ kn with
+                   | Some (ConstantDecl {| cst_body := None |}) => false
+                   | _ => true
+                   end
+  | tCase _ _ discr _ => axiom_free_value Σ [] discr
+  | tProj _ t => axiom_free_value Σ [] t
+  | tFix defs i =>
+    match nth_error defs i with
+    | Some def => nth (rarg def) args true
+    | None => true
+    end
+  | _ => true
+  end.
+
+Lemma axiom_free_axiom_free_value Σ t :
+  axiom_free Σ ->
+  axiom_free_value Σ [] t.
+Proof.
+  intros axfree.
+  cut (Forall is_true []); [|constructor].
+  generalize ([] : list bool).
+  induction t; intros axfree_args all_true; cbn; auto.
+  - destruct lookup_env eqn:find; auto.
+    destruct g; auto.
+    destruct c; auto.
+    apply declared_constant_from_gen in find.
+    apply axfree in find; cbn in *.
+    now destruct cst_body0.
+  - destruct nth_error; auto.
+    rewrite nth_nth_error.
+    destruct nth_error eqn:nth; auto.
+    eapply nth_error_forall in nth; eauto.
+Qed.
+
 Section Canonicity.
   Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
@@ -698,22 +738,6 @@ Section Canonicity.
     now eapply nth_error_all in a; tea.
   Qed.
 
-  Fixpoint axiom_free_value Σ args t :=
-    match t with
-    | tApp hd arg => axiom_free_value Σ (axiom_free_value Σ [] arg :: args) hd
-    | tConst kn _ => match lookup_env Σ kn with
-                     | Some (ConstantDecl {| cst_body := None |}) => false
-                     | _ => true
-                     end
-    | tCase _ _ discr _ => axiom_free_value Σ [] discr
-    | tProj _ t => axiom_free_value Σ [] t
-    | tFix defs i =>
-      match nth_error defs i with
-      | Some def => nth (rarg def) args true
-      | None => true
-      end
-    | _ => true
-    end.
 
   Lemma axiom_free_value_mkApps Σ' args hd args' :
     axiom_free_value Σ' args (mkApps hd args') =
@@ -824,7 +848,7 @@ Section Canonicity.
     eapply invert_red_prod in hred as (? & ? & []); auto. discriminate.
   Qed.
 
-  Lemma wh_normal_ind_discr t i u args :
+  Lemma wh_normal_ind_canonicity t i u args :
     axiom_free_value Σ [] t ->
     wh_normal Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
@@ -849,7 +873,7 @@ Section Canonicity.
       apply hp.
   Qed.
 
-  Lemma canonicity t ind u indargs :
+  Lemma canonicity' t ind u indargs :
     axiom_free_value Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
@@ -858,13 +882,24 @@ Section Canonicity.
   Proof.
     intros axfree typed whnf ck.
     rewrite /isConstruct_app.
-    eapply wh_normal_ind_discr in whnf; eauto.
+    eapply wh_normal_ind_canonicity in whnf; eauto.
     rewrite /head in whnf.
     destruct (decompose_app t) as [hd tl] eqn:da; simpl in *.
     destruct hd eqn:eqh => //. subst hd.
     eapply decompose_app_inv in da. subst.
     eapply typing_cofix_coind in typed.
     congruence.
+  Qed.
+
+  Lemma canonicity t ind u indargs :
+    axiom_free Σ ->
+    Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
+    wh_normal Σ [] t ->
+    ~check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite ->
+     isConstruct_app t.
+  Proof.
+    intros axfree; eapply axiom_free_axiom_free_value in axfree.
+    eapply canonicity'; eauto.
   Qed.
 
   Lemma fix_app_is_constructor {mfix idx args ty narg fn} :
@@ -886,7 +921,7 @@ Section Canonicity.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
     destruct_sigma t0.
     intros axfree norm.
-    eapply canonicity in t1; eauto.
+    eapply canonicity' in t1; eauto.
     intros chk.
     pose proof (check_recursivity_kind_inj chk t0).
     discriminate.
@@ -1104,7 +1139,7 @@ Section Canonicity.
   Proof.
     intros Ht Hvalue.
     eapply value_axiom_free in Hvalue as H.
-    eapply wh_normal_ind_discr; eauto.
+    eapply wh_normal_ind_canonicity; eauto.
     eapply eval_whne.
     2: eapply value_final; eauto.
     eapply @subject_closed with (Γ := []); eauto.
@@ -1121,7 +1156,7 @@ Section Canonicity.
     eapply eval_to_value in eval as axfree.
     eapply value_axiom_free in axfree.
     eapply eval_whne in eval; auto.
-    eapply wh_normal_ind_discr; eauto.
+    eapply wh_normal_ind_canonicity; eauto.
   Qed.
 
 End Canonicity.

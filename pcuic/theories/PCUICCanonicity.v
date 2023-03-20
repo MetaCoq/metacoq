@@ -621,7 +621,8 @@ Section Canonicity.
     - eapply (whnf_indapp _ _ [] _ _ []).
     - eapply (whnf_cstrapp _ _ [] _ _ _ []).
     - eapply (whnf_fixapp _ _ [] _ _ []).
-      destruct unfold_fix as [[rarg body]|] => /= //.
+      destruct nth_error as [rarg|] => /= //; [|easy].
+      left ; eexists; split; eauto.
       now rewrite nth_error_nil.
     - eapply (whnf_cofixapp _ _ [] _ _ []).
     - destruct X => //.
@@ -630,7 +631,7 @@ Section Canonicity.
       rewrite -closed_unfold_fix_cunfold_eq in e => //.
       rewrite /unfold_fix in e.
       destruct nth_error eqn:nth => //. noconf e.
-      eapply whnf_fixapp. rewrite /unfold_fix nth.
+      eapply whnf_fixapp. rewrite nth. left; eexists; split; eauto.
       now eapply nth_error_None.
   Qed.
 
@@ -867,6 +868,8 @@ Section Canonicity.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
+      unfold unfold_fix. destruct nth_error; [|easy].
+      destruct o as [[? [? ?]]|]; [|easy]. inversion H; eauto.
     - now rewrite head_mkApps /head /=.
     - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
       eapply invert_cumul_axiom_ind in w; eauto.

@@ -311,7 +311,8 @@ Definition eq_constant := eq_kername.
 
 Module KernameSet := MSetAVL.Make Kername.
 Module KernameSetFact := MSetFacts.WFactsOn Kername KernameSet.
-Module KernameSetProp := MSetProperties.WPropertiesOn Kername KernameSet.
+Module KernameSetOrdProp := MSetProperties.OrdProperties KernameSet.
+Module KernameSetProp := KernameSetOrdProp.P.
 
 Lemma knset_in_fold_left {A} kn f (l : list A) acc :
   KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->
@@ -424,4 +425,3 @@ Defined.
 Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'} := Classes.eq_dec gr gr'.
 
 #[global] Hint Resolve Kername.eq_dec : eq_dec.
-

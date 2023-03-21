@@ -50,7 +50,7 @@ type template_monad =
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
 
     (* typeclass resolution *)
-  | TmExistingInstance of Constr.t
+  | TmExistingInstance of Constr.t * Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 

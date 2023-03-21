@@ -68,5 +68,5 @@ val tmQuoteModule : qualid -> global_reference list tm
 
 val tmInductive : bool -> mutual_inductive_entry -> unit tm
 
-val tmExistingInstance : global_reference -> unit tm
+val tmExistingInstance : Hints.hint_locality -> global_reference -> unit tm
 val tmInferInstance : term -> term option tm

@@ -183,7 +183,7 @@ let dbg = function
   | Coq_tmQuoteUniverses -> "tmQuoteUniverses"
   | Coq_tmQuoteConstant (kn, b) -> "tmQuoteConstant"
   | Coq_tmInductive i -> "tmInductive"
-  | Coq_tmExistingInstance k -> "tmExistingInstance"
+  | Coq_tmExistingInstance (l, k) -> "tmExistingInstance"
   | Coq_tmInferInstance t -> "tmInferInstance"
 *)
 
@@ -241,8 +241,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
            (fun x -> Obj.magic (tmOfConstantBody x))
   | Coq_tmInductive (inferu, i) ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (unquote_bool inferu) (to_mie i))
-  | Coq_tmExistingInstance k ->
-    Obj.magic (tmExistingInstance (unquote_global_reference k))
+  | Coq_tmExistingInstance (locality, k) ->
+    Obj.magic (tmExistingInstance (unquote_hint_locality locality) (unquote_global_reference k))
   | Coq_tmInferInstance t ->
     tmBind (tmInferInstance (to_constr t))
       (function

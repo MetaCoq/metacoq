@@ -62,8 +62,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
-(* Rk: This is *Global* Existing Instance, not Local *)
-| tmExistingInstance : global_reference -> TemplateMonad unit
+| tmExistingInstance : hint_locality -> global_reference -> TemplateMonad unit
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 

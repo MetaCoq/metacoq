@@ -275,10 +275,10 @@ let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
     ignore (DeclareInd.declare_mutual_inductive_with_eliminations mie names []) ;
     success ~st (Global.env ()) evd ()
 
-let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
+let tmExistingInstance (locality : Hints.hint_locality) (gr : Names.GlobRef.t) : unit tm =
   fun ~st env evd success _fail ->
     let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance Hints.Local q None;
+    Classes.existing_instance locality q None;
     success ~st env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

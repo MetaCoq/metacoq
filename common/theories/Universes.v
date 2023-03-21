@@ -162,8 +162,9 @@ End Level.
 
 Module LevelSet := MSetAVL.Make Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
-Module LevelSetProp := WPropertiesOn Level LevelSet.
-Module LevelSetDecide := WDecide (LevelSet).
+Module LevelSetOrdProp := MSetProperties.OrdProperties LevelSet.
+Module LevelSetProp := LevelSetOrdProp.P.
+Module LevelSetDecide := LevelSetProp.Dec.
 Module LS := LevelSet.
 
 Ltac lsets := LevelSetDecide.fsetdec.

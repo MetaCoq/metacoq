@@ -106,3 +106,10 @@ Module Y (A : X).
   MetaCoq Run (tmLocate1 "t''" >>= tmExistingInstance).
   Print Instances nat.
 End Y.
+
+MetaCoq Run (tmLocateModule1 "B" >>= tmPrint).
+MetaCoq Run (tmLocateModule1 "S" >>= tmPrint).
+MetaCoq Run (tmLocateModType1 "X" >>= tmPrint).
+Fail MetaCoq Run (tmLocateModType1 "B" >>= tmPrint).
+Fail MetaCoq Run (tmLocateModType1 "modules_sections.S" >>= tmPrint). (* finds (MPdot (MPfile ["FMapInterface"; "FSets"; "Coq"]) "S") if unqualified *)
+Fail MetaCoq Run (tmLocateModule1 "X" >>= tmPrint).

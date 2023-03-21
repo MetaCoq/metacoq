@@ -176,6 +176,8 @@ let dbg = function
   | Coq_tmLemma (nm, typ) -> "tmLemma"
   | Coq_tmFreshName nm -> "tmFreshName"
   | Coq_tmLocate id -> "tmLocate"
+  | Coq_tmLocateModule id -> "tmLocateModule"
+  | Coq_tmLocateModType id -> "tmLocateModType"
   | Coq_tmCurrentModPath -> "tmCurrentModPath"
   | Coq_tmQuoteInductive kn -> "tmQuoteInductive"
   | Coq_tmQuoteUniverses -> "tmQuoteUniverses"
@@ -216,8 +218,14 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmLocate id ->
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x))
           (tmLocate (to_qualid id))
+  | Coq_tmLocateModule id ->
+    tmMap (fun mp -> Obj.magic (List.map quote_modpath mp))
+          (tmLocateModule (to_qualid id))
+  | Coq_tmLocateModType id ->
+    tmMap (fun mp -> Obj.magic (List.map quote_modpath mp))
+          (tmLocateModType (to_qualid id))
   | Coq_tmCurrentModPath ->
-    tmMap (fun mp -> Obj.magic (quote_string (Names.ModPath.to_string mp)))
+    tmMap (fun mp -> Obj.magic (quote_modpath mp))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
     tmBind (tmQuoteInductive (unquote_kn kn))

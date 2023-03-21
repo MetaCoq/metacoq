@@ -42,6 +42,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmFreshName : ident -> TM ident
 
 | tmLocate : qualid -> TM (list global_reference)
+| tmLocateModule : qualid -> TM (list modpath)
+| tmLocateModType : qualid -> TM (list modpath)
 | tmCurrentModPath : TM modpath
 
 (* Quote the body of a definition or inductive. *)
@@ -69,6 +71,8 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
    ; Common.tmLocate:=@tmLocate
+   ; Common.tmLocateModule:=@tmLocateModule
+   ; Common.tmLocateModType:=@tmLocateModType
    ; Common.tmCurrentModPath:=fun _ => @tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses

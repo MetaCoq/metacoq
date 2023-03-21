@@ -29,6 +29,8 @@ let (ptmReturn,
      ptmFreshName,
 
      ptmLocate,
+     ptmLocateModule,
+     ptmLocateModType,
      ptmCurrentModPath,
 
      ptmQuote,
@@ -68,6 +70,8 @@ let (ptmReturn,
    r_template_monad_prop_p "tmFreshName",
 
    r_template_monad_prop_p "tmLocate",
+   r_template_monad_prop_p "tmLocateModule",
+   r_template_monad_prop_p "tmLocateModType",
    r_template_monad_prop_p "tmCurrentModPath",
 
    r_template_monad_prop_p "tmQuote",
@@ -102,6 +106,8 @@ let (ttmReturn,
      ttmLemma,
      ttmFreshName,
      ttmLocate,
+     ttmLocateModule,
+     ttmLocateModType,
      ttmCurrentModPath,
      ttmQuoteInductive,
      ttmQuoteUniverses,
@@ -125,6 +131,8 @@ let (ttmReturn,
    r_template_monad_type_p "tmFreshName",
 
    r_template_monad_type_p "tmLocate",
+   r_template_monad_type_p "tmLocateModule",
+   r_template_monad_type_p "tmLocateModType",
    r_template_monad_type_p "tmCurrentModPath",
 
    r_template_monad_type_p "tmQuoteInductive",
@@ -166,6 +174,8 @@ type template_monad =
   | TmFreshName of Constr.t
 
   | TmLocate of Constr.t
+  | TmLocateModule of Constr.t
+  | TmLocateModType of Constr.t
   | TmCurrentModPath
 
     (* quoting *)
@@ -294,6 +304,16 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | id::[] ->
        (TmLocate id, universes)
     | _ -> monad_failure "tmLocate" 1
+  else if eq_gr ptmLocateModule || eq_gr ttmLocateModule then
+    match args with
+    | id::[] ->
+       (TmLocateModule id, universes)
+    | _ -> monad_failure "tmLocateModule" 1
+  else if eq_gr ptmLocateModType || eq_gr ttmLocateModType then
+    match args with
+    | id::[] ->
+       (TmLocateModType id, universes)
+    | _ -> monad_failure "tmLocateModType" 1
   else if eq_gr ptmCurrentModPath then
     match args with
     | _::[] -> (TmCurrentModPath, universes)

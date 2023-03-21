@@ -144,10 +144,25 @@ let tmLocate (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->
   let grs = Nametab.locate_all qualid in success ~st env evd grs
 
+let tmLocateModule (qualid : qualid) : Names.ModPath.t list tm =
+  fun ~st env evd success _fail ->
+  let mps = Nametab.locate_extended_all_module qualid in success ~st env evd mps
+
+let tmLocateModType (qualid : qualid) : Names.ModPath.t list tm =
+  fun ~st env evd success _fail ->
+  let mps = Nametab.locate_extended_all_modtype qualid in success ~st env evd mps
 
 let tmLocateString (s : string) : global_reference list tm =
   let id = Libnames.qualid_of_string s in
   tmLocate id
+
+let tmLocateModuleString (s : string) : Names.ModPath.t list tm =
+  let id = Libnames.qualid_of_string s in
+  tmLocateModule id
+
+let tmLocateModTypeString (s : string) : Names.ModPath.t list tm =
+  let id = Libnames.qualid_of_string s in
+  tmLocateModType id
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun ~st env evd success _fail ->

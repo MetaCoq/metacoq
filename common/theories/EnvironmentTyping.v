@@ -1155,7 +1155,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         | None => unit
         | Some v =>
           ∑ univs' i i',
-            [× (variance_universes univs v = Some (univs', i, i')),
+            [/\ (variance_universes univs v = Some (univs', i, i')),
               consistent_instance_ext (Σ, univs') univs i,
               consistent_instance_ext (Σ, univs') univs i' &
               List.length v = #|UContext.instance (AUContext.repr auctx)|]

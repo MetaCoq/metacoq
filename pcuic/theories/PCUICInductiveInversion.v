@@ -1827,9 +1827,11 @@ Proof.
   destruct (ind_universes mdecl); simpl => //.
   destruct cst as [inst cstrs].
   intros [univs' [i [i' []]]].
+  let e := match goal with H : Some _ = Some _ |- _ => H end in
   noconf e.
   do 3 eexists; split. trea. all:eauto. 1-3:len.
-  len in e0. len.
+  repeat match goal with H : _ |- _ => progress len in H end.
+  len.
   rewrite /closedu_instance /level_var_instance forallb_mapi //.
   intros i hi. simpl. now eapply Nat.ltb_lt.
   now len.
@@ -4536,4 +4538,3 @@ Proof.
     rewrite -eqsubst. apply: red_betas_typed; last eassumption.
     rewrite (ctx_inst_length instl) context_assumptions_rev //.
 Qed.
-

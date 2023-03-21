@@ -40,19 +40,18 @@ Definition False_mib : mutual_inductive_body :=
      ind_variance := None |}.
 
 Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
-  {normalisation_in: NormalisationIn Σ} t kn :
-  let False_pcuic := tInd kn [] in
-  declared_inductive Σ kn False_mib False_oib ->
+  {normalisation_in: NormalisationIn Σ} t False_pcuic :
+  declared_inductive Σ False_pcuic False_mib False_oib ->
   wf_ext Σ -> axiom_free Σ ->
-  Σ ;;; [] |- t : False_pcuic -> False.
+  Σ ;;; [] |- t : tInd False_pcuic []  -> False.
 Proof.
-  intros False_pcui Hdecl wfΣ axΣ typ_false. pose proof (iswelltyped typ_false) as wt.
+  intros Hdecl wfΣ axΣ typ_false. pose proof (iswelltyped typ_false) as wt.
   destruct Hdecl as [Hdecl Hidecl].
-  destruct kn as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
+  destruct False_pcuic as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
   eapply wh_normalization in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
   pose proof (Hempty_ := Hempty).
   eapply subject_reduction in typ_false; eauto.
-  eapply canonicity with (indargs := []) in typ_false as ctor; auto.
+  eapply ind_whnf_canonicity with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.
     destruct decompose_app eqn:decomp.
     apply decompose_app_inv in decomp.
@@ -77,7 +76,7 @@ Proof.
     cbn in H0. noconf H0.
     cbn in H1. rewrite nth_error_nil in H1.
     discriminate.
-  - unfold check_recursivity_kind. destruct wfΣ.
+  - unfold notCoInductive, check_recursivity_kind. destruct wfΣ.
     unshelve eapply declared_minductive_to_gen in Hdecl; eauto.
     red in Hdecl. cbn. rewrite Hdecl; cbn. auto.
 Qed.

@@ -565,7 +565,7 @@ End Spines.
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
 Definition axiom_free Σ :=
-  forall c decl, declared_constant Σ c decl -> cst_body decl <> None. (* TODO: consolidate with PCUICConsistency *)
+  forall c decl, declared_constant Σ c decl -> cst_body decl <> None.
 
 Fixpoint axiom_free_value Σ args t :=
   match t with
@@ -849,7 +849,7 @@ Section Canonicity.
     eapply invert_red_prod in hred as (? & ? & []); auto. discriminate.
   Qed.
 
-  Lemma wh_normal_ind_canonicity t i u args :
+  Lemma whnf_canonicity' t i u args :
     axiom_free_value Σ [] t ->
     wh_normal Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
@@ -876,16 +876,28 @@ Section Canonicity.
       apply hp.
   Qed.
 
-  Lemma canonicity' t ind u indargs :
-    axiom_free_value Σ [] t ->
+  Lemma whnf_canonicity t i u args :
+    axiom_free Σ ->
+    wh_normal Σ [] t ->
+    Σ ;;; [] |- t : mkApps (tInd i u) args ->
+    construct_cofix_discr (head t).
+  Proof.
+    intros axfree; eapply axiom_free_axiom_free_value in axfree.
+    intros; eapply whnf_canonicity'; eauto.
+  Qed.
+
+  Definition notCoInductive Σ ind :=
+    ~check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite.
+
+  Lemma ind_whnf_canonicity' t ind u indargs :
+    axiom_free_value Σ [] t -> notCoInductive Σ ind ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
-    ~check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite ->
     isConstruct_app t.
   Proof.
-    intros axfree typed whnf ck.
+    intros axfree ck typed whnf.
     rewrite /isConstruct_app.
-    eapply wh_normal_ind_canonicity in whnf; eauto.
+    eapply whnf_canonicity' in whnf; eauto.
     rewrite /head in whnf.
     destruct (decompose_app t) as [hd tl] eqn:da; simpl in *.
     destruct hd eqn:eqh => //. subst hd.
@@ -894,15 +906,14 @@ Section Canonicity.
     congruence.
   Qed.
 
-  Lemma canonicity t ind u indargs :
-    axiom_free Σ ->
+  Lemma ind_whnf_canonicity t ind u indargs :
+    axiom_free Σ -> notCoInductive Σ ind ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
-    ~check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite ->
-     isConstruct_app t.
+    isConstruct_app t.
   Proof.
     intros axfree; eapply axiom_free_axiom_free_value in axfree.
-    eapply canonicity'; eauto.
+    intros; eapply ind_whnf_canonicity'; eauto.
   Qed.
 
   Lemma fix_app_is_constructor {mfix idx args ty narg fn} :
@@ -924,7 +935,7 @@ Section Canonicity.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
     destruct_sigma t0.
     intros axfree norm.
-    eapply canonicity' in t1; eauto.
+    eapply ind_whnf_canonicity' in t1; eauto.
     intros chk.
     pose proof (check_recursivity_kind_inj chk t0).
     discriminate.
@@ -1142,7 +1153,7 @@ Section Canonicity.
   Proof.
     intros Ht Hvalue.
     eapply value_axiom_free in Hvalue as H.
-    eapply wh_normal_ind_canonicity; eauto.
+    eapply whnf_canonicity'; eauto.
     eapply eval_whne.
     2: eapply value_final; eauto.
     eapply @subject_closed with (Γ := []); eauto.
@@ -1159,7 +1170,7 @@ Section Canonicity.
     eapply eval_to_value in eval as axfree.
     eapply value_axiom_free in axfree.
     eapply eval_whne in eval; auto.
-    eapply wh_normal_ind_canonicity; eauto.
+    eapply whnf_canonicity'; eauto.
   Qed.
 
 End Canonicity.

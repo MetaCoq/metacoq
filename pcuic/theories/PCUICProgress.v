@@ -14,7 +14,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
-  PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity PCUICCanonicity PCUICWcbvEval.
+  PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICViews
+  PCUICWellScopedCumulativity PCUICCanonicity PCUICWcbvEval.
 
 From Equations Require Import Equations.
 
@@ -733,3 +734,31 @@ Proof with eauto with wcbv; try congruence.
       eexists. eapply wcbv_red_cofix_proj. unfold cunfold_cofix. rewrite e0. reflexivity.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
 Qed.
+
+Lemma whnf_progress `{cf : checker_flags}:
+  forall (Σ:global_env_ext) t T,
+    axiom_free Σ -> wf Σ ->
+    Σ ;;; [] |- t : T ->
+    ~ (exists t', ∥red1 Σ [] t t'∥) ->
+    whnf RedFlags.default Σ [] t.
+Proof.
+  intros.
+  edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
+  eapply wcbv_red1_red1 in Ht'.
+  exfalso; apply H0. eexists. now constructor.
+  eapply subject_closed in X0; eauto.
+  eapply value_whnf in Hval. eauto.
+  eapply subject_closed in X0; eauto.
+Qed.
+
+Lemma canonicity : forall (Σ:global_env_ext) t i u args,
+  axiom_free Σ -> wf Σ ->
+  ~ (exists t', ∥red1 Σ [] t t'∥) ->
+  Σ ;;; [] |- t : mkApps (tInd i u) args ->
+  construct_cofix_discr (head t).
+Proof.
+  intros; eapply whnf_canonicity; eauto.
+  eapply whnf_progress; eauto.
+Qed.
+
+

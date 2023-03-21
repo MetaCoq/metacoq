@@ -193,3 +193,15 @@ Ltac todo s := exact (todo s).
 
 From Coq Require Import Extraction.
 Extract Constant todo => "fun s -> failwith (Caml_bytestring.caml_string_of_bytestring s)".
+
+From Ltac2 Require Import Init.
+From Ltac2 Require Control Ltac1.
+
+Ltac2 gtry (tac : unit -> unit) :=
+  Control.plus tac (fun _ => ()).
+
+Ltac gtry tac :=
+  let f := ltac2:(tac |- gtry (fun () => Ltac1.run tac)) in
+  f tac.
+
+Tactic Notation "gtry" tactic3(tac) := gtry tac.

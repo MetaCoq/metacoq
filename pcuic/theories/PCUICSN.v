@@ -29,6 +29,17 @@ Proof.
   now constructor.
 Qed.
 
+#[local] Instance weakening_config_normalizing {cf1 cf2} :
+  config.impl cf2 cf1 -> @normalizing_flags cf1 -> @normalizing_flags cf2.
+Proof.
+  intros Hcf no.
+  destruct cf1, cf2, no; constructor; cbv -[andb] in *.
+  subst; simpl in *.
+  revert Hcf; cbv [andb].
+  repeat match goal with |- context[if ?b then _ else _] => is_var b; destruct b end.
+  all: trivial.
+Qed.
+
 Class NormalisationIn {cf : checker_flags} {no : normalizing_flags} (Σ : global_env_ext) :=
   normalisation_in :
     forall Γ t,

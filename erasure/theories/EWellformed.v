@@ -248,7 +248,6 @@ Section EEnvFlags.
         now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
       -- simpl. elim (Nat.ltb_spec); auto. rtoProp; intuition auto.
         apply nth_error_None in Heq. intros.
-        rewrite H.
         apply Nat.ltb_lt in H0. lia.
       -- simpl. f_equal. rewrite H /=.
         elim: Nat.ltb_spec => //. intros. apply Nat.ltb_lt in H0. lia.

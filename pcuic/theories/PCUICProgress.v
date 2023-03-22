@@ -751,7 +751,7 @@ Lemma whnf_progress `{cf : checker_flags}:
   forall (Σ:global_env_ext) t T,
     axiom_free Σ -> wf Σ ->
     Σ ;;; [] |- t : T ->
-    ¬ { t' & red1 Σ [] t t'} ->
+    ¬ { t' & Σ ;;; [] |- t ⇝ t' } ->
     whnf RedFlags.default Σ [] t.
 Proof.
   intros.
@@ -765,7 +765,7 @@ Qed.
 
 Lemma canonicity : forall (Σ:global_env_ext) t i u args,
   axiom_free Σ -> wf Σ ->
-  ¬ { t' & red1 Σ [] t t'} ->
+  ¬ { t' & Σ ;;; [] |- t ⇝ t'} ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   construct_cofix_discr (head t).
 Proof.

@@ -650,7 +650,7 @@ Proof.
   now do 2 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context.
 Qed.
 
-Lemma progress `{cf : checker_flags}:
+Lemma progress_env_prop `{cf : checker_flags}:
   env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & wcbv_red1 Σ t t'} + (value Σ t))
            (fun _ _ => True).
 Proof with eauto with wcbv; try congruence.
@@ -735,17 +735,29 @@ Proof with eauto with wcbv; try congruence.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
 Qed.
 
+Lemma progress `{cf : checker_flags}:
+  forall (Σ:global_env_ext) t T,
+    axiom_free Σ -> wf Σ ->
+    Σ ;;; [] |- t : T ->
+    {t' & wcbv_red1 Σ t t'} + (value Σ t).
+Proof.
+  intros.
+  edestruct progress_env_prop as [_ [_ [[t' Ht'] | Hval]]]; eauto.
+Defined.
+
+Notation "¬ A" := (A -> False) (at level 50).
+
 Lemma whnf_progress `{cf : checker_flags}:
   forall (Σ:global_env_ext) t T,
     axiom_free Σ -> wf Σ ->
     Σ ;;; [] |- t : T ->
-    ~ (exists t', ∥red1 Σ [] t t'∥) ->
+    ¬ { t' & red1 Σ [] t t'} ->
     whnf RedFlags.default Σ [] t.
 Proof.
   intros.
-  edestruct progress as [_ [_ [[t' Ht'] | Hval]]]; eauto.
+  edestruct progress_env_prop as [_ [_ [[t' Ht'] | Hval]]]; eauto.
   eapply wcbv_red1_red1 in Ht'.
-  exfalso; apply H0. eexists. now constructor.
+  exfalso; apply H0. eexists; eauto.
   eapply subject_closed in X0; eauto.
   eapply value_whnf in Hval. eauto.
   eapply subject_closed in X0; eauto.
@@ -753,7 +765,7 @@ Qed.
 
 Lemma canonicity : forall (Σ:global_env_ext) t i u args,
   axiom_free Σ -> wf Σ ->
-  ~ (exists t', ∥red1 Σ [] t t'∥) ->
+  ¬ { t' & red1 Σ [] t t'} ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   construct_cofix_discr (head t).
 Proof.

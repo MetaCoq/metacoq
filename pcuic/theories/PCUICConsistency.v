@@ -45,10 +45,10 @@ Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
   wf_ext Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : tInd False_pcuic []  -> False.
 Proof.
-  intros Hdecl wfΣ axΣ typ_false. pose proof (iswelltyped typ_false) as wt.
+  intros Hdecl wfΣ axΣ typ_false. pose proof (_ ; typ_false) as wt.
   destruct Hdecl as [Hdecl Hidecl].
   destruct False_pcuic as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
-  eapply wh_normalization in wt ; eauto. destruct wt as [empty [[Hnormal Hempty]]].
+  eapply wh_normalization in wt ; eauto. destruct wt as [empty [Hnormal Hempty]].
   pose proof (Hempty_ := Hempty).
   eapply subject_reduction in typ_false; eauto.
   eapply ind_whnf_canonicity with (indargs := []) in typ_false as ctor; auto.

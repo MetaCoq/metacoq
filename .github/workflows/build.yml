@@ -49,6 +49,7 @@ jobs:
             endGroup
           before_install: |
             startGroup "Print opam config"
+              sudo chown -R coq:coq .
               opam config list; opam repo list; opam list
             endGroup
           script: |

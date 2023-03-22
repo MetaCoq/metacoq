@@ -1314,6 +1314,7 @@ Corollary R_Acc_aux :
       now rewrite decompose_app_mkApps in ctor.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
+      unfold unfold_fix. destruct o as [[? [-> ?]] | ->]; eauto.
     - apply typing_cofix_coind in typ; auto.
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
@@ -1349,6 +1350,7 @@ Corollary R_Acc_aux :
       now rewrite decompose_app_mkApps in ctor.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
+      unfold unfold_fix. destruct o as [[? [-> ?]] | ->]; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
     - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea.
@@ -1599,7 +1601,7 @@ Corollary R_Acc_aux :
       destruct decompose_stack.
       constructor.
       apply whnf_fixapp.
-      now rewrite <- e.
+      clear -e. unfold unfold_fix in e. now destruct nth_error.
     - unfold zipp.
       destruct decompose_stack eqn:eq.
       apply decompose_stack_noStackApp in eq as ?.
@@ -1607,8 +1609,9 @@ Corollary R_Acc_aux :
       subst.
       constructor.
       apply whnf_fixapp.
-      rewrite <- eq1.
-      apply <- decompose_stack_at_appstack_None; eauto.
+      clear -e eq1 H. unfold unfold_fix in eq1. symmetry in e.
+      apply <- decompose_stack_at_appstack_None in e ; eauto.
+      destruct (nth_error mfix idx) ; [left | now right]. eexists; split ; now eauto.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         specialize (haux x y z) as ?;
@@ -1665,12 +1668,14 @@ Corollary R_Acc_aux :
       destruct haux.
       symmetry in eq1.
       constructor.
-      constructor.
+      constructor. unfold unfold_fix in eq1.
+      case_eq (nth_error mfix idx); [intros d e | intro e]; rewrite e in eq1; inversion eq1.
       eapply whne_fixapp.
       + eassumption.
       + now apply nth_error_snoc.
       + eapply whnf_fix_arg_whne; eauto.
-        now destruct t.
+        * unfold unfold_fix. now rewrite e.
+        * now destruct t.
     - unfold zipp.
       destruct decompose_stack.
       constructor.

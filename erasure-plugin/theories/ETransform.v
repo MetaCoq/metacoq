@@ -17,7 +17,7 @@ Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract 
 Import EEnvMap EGlobalEnv EWellformed.
 
 Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ PCUICTyping.wf Σ ∥) : wf_env :=
-  {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
+  {| wf_env_reference := {| reference_impl_env := Σ.(trans_env_env); reference_impl_wf := wfΣ |} ;
      wf_env_map := Σ.(trans_env_map);
      wf_env_map_repr := Σ.(trans_env_repr);
  |}.
@@ -33,15 +33,15 @@ Notation NormalisationIn_erase_pcuic_program_2 p
 
 (* TODO: Where should this go? *)
 #[local]
-Lemma referenced_impl_env_iter_pop_eq'
+Lemma reference_impl_env_iter_pop_eq'
   (cf := config.extraction_checker_flags)
   (no := PCUICSN.extraction_normalizing)
   {guard : abstract_guard_impl}
   (wfe : wf_env)
   (n : nat)
   (X' := ErasureFunction.iter abstract_pop_decls (S n) wfe)
-  (wfe' := ErasureFunction.iter referenced_pop (S n) (referenced_impl_env wfe))
-  : referenced_impl_env X' = wfe'.
+  (wfe' := ErasureFunction.iter reference_pop (S n) (reference_impl_env wfe))
+  : reference_impl_env X' = wfe'.
 Proof.
   subst X' wfe'.
   revert wfe; cbn; induction n as [|n IHn]; cbn; intros;
@@ -50,17 +50,17 @@ Proof.
 Qed.
 
 #[local]
-Lemma referenced_impl_env_iter_pop_eq
+Lemma reference_impl_env_iter_pop_eq
   (cf := config.extraction_checker_flags)
   (no := PCUICSN.extraction_normalizing)
   {guard : abstract_guard_impl}
   (wfe : wf_env)
   (n : nat)
   (X' := ErasureFunction.iter abstract_pop_decls (S n) wfe)
-  : referenced_impl_env X'
-    = {| PCUICAst.PCUICEnvironment.universes := PCUICAst.PCUICEnvironment.universes (referenced_impl_env wfe)
-      ; PCUICAst.PCUICEnvironment.declarations := skipn (S n) (PCUICAst.PCUICEnvironment.declarations (referenced_impl_env wfe))
-      ; PCUICAst.PCUICEnvironment.retroknowledge := PCUICAst.PCUICEnvironment.retroknowledge (referenced_impl_env wfe) |}.
+  : reference_impl_env X'
+    = {| PCUICAst.PCUICEnvironment.universes := PCUICAst.PCUICEnvironment.universes (reference_impl_env wfe)
+      ; PCUICAst.PCUICEnvironment.declarations := skipn (S n) (PCUICAst.PCUICEnvironment.declarations (reference_impl_env wfe))
+      ; PCUICAst.PCUICEnvironment.retroknowledge := PCUICAst.PCUICEnvironment.retroknowledge (reference_impl_env wfe) |}.
 Proof.
   subst X'.
   revert wfe; cbn; induction n as [|n IHn]; cbn; intros;
@@ -121,8 +121,8 @@ Proof.
   { destruct p as [Σ ?]; cbn in *.
     match goal with H : PCUICSN.NormalisationIn _ |- _ => revert H end.
     move => normalisation_in.
-    rewrite referenced_impl_env_iter_pop_eq.
-    repeat match goal with H : _ |- _ => rewrite referenced_impl_env_iter_pop_eq in H end.
+    rewrite reference_impl_env_iter_pop_eq.
+    repeat match goal with H : _ |- _ => rewrite reference_impl_env_iter_pop_eq in H end.
     eapply normalisation_in_adjust_universes in normalisation_in; eauto; revgoals.
     { repeat match goal with H : PCUICTyping.wf_ext _ |- _ => destruct H end;
         split; eassumption. }
@@ -250,8 +250,8 @@ Next Obligation.
     multimatch goal with
     | [ H : _ |- _ ] => eapply H
     end; try eassumption;
-    rewrite referenced_impl_env_iter_pop_eq;
-    repeat match goal with H : _ |- _ => rewrite referenced_impl_env_iter_pop_eq in H end;
+    rewrite reference_impl_env_iter_pop_eq;
+    repeat match goal with H : _ |- _ => rewrite reference_impl_env_iter_pop_eq in H end;
     assumption. }
   cbn; intros. sq. now subst.
 Qed.

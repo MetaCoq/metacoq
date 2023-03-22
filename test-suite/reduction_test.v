@@ -39,7 +39,7 @@ Definition typecheck_template (cf := default_checker_flags)
       infer_template_program (cf:=cf) p Monomorphic_ctx
     with CorrectDecl X =>
       X.π1
-      (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
+      (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_reference).(reference_impl_env_ext) *)
     | _ => todo "should not happen"
   end.
 
@@ -100,8 +100,8 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
 := let p' := trans_program p in
   let tm := reduce_term RedFlags.default
      canonical_abstract_env_impl
-    {| referenced_impl_env_ext := (p'.1 , φ);
-       referenced_impl_ext_wf := (todo "wf") |}
+    {| reference_impl_env_ext := (p'.1 , φ);
+       reference_impl_ext_wf := (todo "wf") |}
     [] p'.2 (todo "welltyped") in
     PCUICToTemplate.trans tm.
 

@@ -2548,7 +2548,7 @@ forall Σ, abstract_env_ext_rel Xext Σ ->
   forall wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
 Proof.
   intros wt Σ Hrel Hax Hty Hdecl Hfo <- Hsub <- Hred Hirred wt'.
-  pose proof (heΣ _ _ _ Hrel) as [Hwf].  eapply wcbv_standardization in Hty as Hty_; eauto. destruct Hty_ as [Heval].
+  pose proof (heΣ _ _ _ Hrel) as [Hwf]. eapply wcbv_standardization in Hty as Heval; eauto.
   edestruct (erase_correct X_type X univs wfext t v) as [v' [H1 H2]]; eauto.
   1:{ intros ? H_. sq. enough (Σ0 = Σ) as -> by eauto.
       pose proof (abstract_make_wf_env_ext_correct _ _ _ _ _ H_ Hrel). now subst. }

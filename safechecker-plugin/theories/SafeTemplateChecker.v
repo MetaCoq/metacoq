@@ -40,7 +40,7 @@ Program Definition infer_template_program {cf : checker_flags} {nor : normalizin
       ((trans_program p).1, φ) ∼_ext x ->
       forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext x -> NormalisationIn Σ}
   : EnvCheck_wf_env_ext (let p' := trans_program p in ∑ A, { X : wf_env_ext |
-    ∥ (p'.1, φ) = X.(wf_env_ext_referenced).(referenced_impl_env_ext) × wf_ext (p'.1, φ) ×  (p'.1, φ) ;;; [] |- p'.2 : A ∥ }) :=
+    ∥ (p'.1, φ) = X.(wf_env_ext_reference).(reference_impl_env_ext) × wf_ext (p'.1, φ) ×  (p'.1, φ) ;;; [] |- p'.2 : A ∥ }) :=
   pp <- typecheck_program (cf := cf) (nor:=nor) optimized_abstract_env_impl (trans_program p) φ ;;
   ret (pp.π1 ; (exist (proj1_sig pp.π2) _)).
 Next Obligation.

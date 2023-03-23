@@ -117,7 +117,7 @@ Qed.
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
-  Context {Σ : global_env_ext} {normalisation:NormalisationIn Σ} {HΣ : ∥wf_ext Σ∥}.
+  Context {Σ : global_env_ext} {normalization:NormalizationIn Σ} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
     red1 Σ (Γ ,,, term_subterm_context ts) s s' ->
@@ -175,7 +175,7 @@ Section fix_sigma.
   Definition wf_hnf_subterm_rel : WellFounded hnf_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation_in Γ s H) as [s _ IH].
+    induction (normalization_in Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?) [(t' & r & ts & eqctx)].
@@ -210,7 +210,7 @@ Section fix_sigma.
         eapply Relation_Properties.clos_rtn1_rt in X1.
         eapply cored_red_trans in X0; [| exact X1 ].
         eapply Acc_no_loop in X0. eauto.
-        eapply @normalisation; eauto.
+        eapply @normalization; eauto.
       * split. exists t'. split; eauto.
     Unshelve.
     - eapply red_welltyped; sq.
@@ -239,7 +239,7 @@ Section fix_sigma.
 
   Context (X : X_type.π2.π1).
 
-  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=
@@ -250,7 +250,7 @@ Section fix_sigma.
   Proof.
     intros (Γ & s & H). pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose (wf_extΣ := abstract_env_ext_wf _ wfΣ). sq.
-    induction (normalisation_in Σ wf_extΣ wfΣ Γ s (H _ wfΣ)) as [s _ IH].
+    induction (normalization_in Σ wf_extΣ wfΣ Γ s (H _ wfΣ)) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?). intro R. specialize (R _ wfΣ).

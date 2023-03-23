@@ -73,7 +73,7 @@ From Equations Require Import Equations.
 
 Local Existing Instance default_checker_flags.
 Local Existing Instance PCUICSN.default_normalizing.
-Local Existing Instance PCUICSN.normalisation.
+Local Existing Instance PCUICSN.normalization.
 Import MCMonadNotation.
 
 (* ********************************************************* *)
@@ -103,7 +103,7 @@ Definition kername_of_string (s : string) : kername :=
 Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
 Next Obligation. Admitted.
-Global Instance assume_normalisation : PCUICSN.Normalisation.
+Global Instance assume_normalization : PCUICSN.Normalization.
 Admitted.
 
 Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=

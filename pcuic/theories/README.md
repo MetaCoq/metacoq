@@ -22,7 +22,7 @@
 
 ## AST
 
-| File             | Description                                  
+| File             | Description
 |------------------|----------------------------------------------
 | [PCUICAst]       | Definition of the Abstract Syntax Tree of PCUIC
 | [PCUICAstUtils]  | General utilities on the AST
@@ -182,7 +182,7 @@
 
 | File                | Description                                               |
 |---------------------|-----------------------------------------------------------|
-| [PCUICGuardCondition]| Axioms on the stability of the guard condition 
+| [PCUICGuardCondition]| Axioms on the stability of the guard condition
 | [PCUICRenameTyp]    | Stability of typing by renaming
 | [PCUICWeakeningTyp] | Stability of typing by extension of the local context (special case of renaming)
 | [PCUICInstTyp]      | Stability of typing by instatiation
@@ -250,7 +250,7 @@
 | [PCUICNormal]      | (Weak-head) neutral and normal forms                    |
 | [PCUICSafelemmas] | Lemma-base for the safe checker                         |
 | [PCUICConvCumInversion] | Definition of the relation used as specification by the safe conversion function
-| [PCUICSN]          | Axiom of normalisation                                  |
+| [PCUICSN]          | Axiom of normalization                                  |
 
 [PCUICNormal]: ./PCUICNormal.v
 [PCUICSafelemmas]: ./PCUICSafelemmas.v

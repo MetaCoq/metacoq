@@ -21,7 +21,7 @@ Set Equations With UIP.
 (** * Reduction machine for PCUIC without fuel
 
   We implement the reduction machine of Coq without relying on fuel.
-  Instead we assume strong normalisation of the system (for well-typed terms)
+  Instead we assume strong normalization of the system (for well-typed terms)
   and proceed by well-founded induction.
 
   Once extracted, this should roughly correspond to the OCaml implementation.
@@ -52,7 +52,7 @@ Qed.
 #[global] Hint Resolve welltyped_is_open_term : fvs.
 
 
-(* We assume normalisation of the reduction.
+(* We assume normalization of the reduction.
 
    We state is as well-foundedness of the reduction.
 *)
@@ -195,7 +195,7 @@ Section Reduce.
 
   Context (X : X_type.π2.π1).
 
-  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
 (*  Local Definition gΣ := abstract_env_ext_rel Σ. *)
 
@@ -272,7 +272,7 @@ Corollary R_Acc_aux :
     forall Γ t p,
     (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) ->
     (Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R_aux Σ Γ t t') (t ; p)).
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ t p h.
     eapply dlexprod_Acc_gen.
     - apply abstract_env_ext_exists.
@@ -282,7 +282,7 @@ Corollary R_Acc_aux :
     - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
       destruct (heΣ _ wfΣ).
       eapply Acc_equiv; try
-      eapply normalisation_in; eauto.
+      eapply normalization_in; eauto.
       eapply R_singleton with (Q := abstract_env_ext_rel X)
           (R := fun Σ a a' => cored Σ Γ a a'); eauto.
       intros; eapply abstract_env_ext_irr; eauto.
@@ -292,7 +292,7 @@ Corollary R_Acc_aux :
     forall Γ t,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip t)) ->
       Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t') t.
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ t h.
     pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) h) as h'.
     clear h. rename h' into h.
@@ -1078,7 +1078,7 @@ Corollary R_Acc_aux :
     intros x y H HR.
     pose proof (heΣ := heΣ _ wfΣ).
     pose proof (hΣ := hΣ _ wfΣ).
-    clear wfΣ X_type X normalisation_in.
+    clear wfΣ X_type X normalization_in.
     sq.
     destruct x as [x πx], y as [y πy].
     dependent induction HR.
@@ -1095,7 +1095,7 @@ Corollary R_Acc_aux :
 
     Local Instance wf_proof : WellFounded (fun x y : sigmaarg =>
         forall Σ, abstract_env_ext_rel X Σ -> R Σ Γ (pr1 x, pr1 (pr2 x)) (pr1 y, pr1 (pr2 y))).
-    Proof using normalisation_in.
+    Proof using normalization_in.
       intros [t [π wt]].
       (* We fuel the accessibility proof to run reduction inside Coq. *)
       unshelve eapply (Acc_intro_generator
@@ -1830,7 +1830,7 @@ End Reduce.
 Section ReduceFns.
 
   Context {cf : checker_flags} {no : normalizing_flags}
-          {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+          {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -2108,7 +2108,7 @@ Section ReduceFns.
     eapply isArity_red; eauto. exact reda''.
   Qed.
 
-  Local Instance wellfounded Σ wfΣ {normalisation:NormalisationIn Σ} : WellFounded (@hnf_subterm_rel _ Σ) :=
-    @wf_hnf_subterm _ _ _ normalisation (heΣ _ X Σ wfΣ).
+  Local Instance wellfounded Σ wfΣ {normalization:NormalizationIn Σ} : WellFounded (@hnf_subterm_rel _ Σ) :=
+    @wf_hnf_subterm _ _ _ normalization (heΣ _ X Σ wfΣ).
 
 End ReduceFns.

@@ -23,12 +23,12 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
  |}.
 
 
-Notation NormalisationIn_erase_pcuic_program_1 p
-  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICSN.NormalisationIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
+Notation NormalizationIn_erase_pcuic_program_1 p
+  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICSN.NormalizationIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
        (only parsing).
 
-Notation NormalisationIn_erase_pcuic_program_2 p
-  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
+Notation NormalizationIn_erase_pcuic_program_2 p
+  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
        (only parsing).
 
 (* TODO: Where should this go? *)
@@ -68,11 +68,11 @@ Proof.
   all: destruct wfe as [[[? [|[]]]]]; cbv [optim_pop]; cbn; reflexivity.
 Qed.
 
-#[local] Lemma erase_pcuic_program_normalisation_helper
+#[local] Lemma erase_pcuic_program_normalization_helper
   (cf := config.extraction_checker_flags) (no := PCUICSN.extraction_normalizing)
   {guard : abstract_guard_impl} (p : pcuic_program)
-  {normalisation_in : NormalisationIn_erase_pcuic_program_1 p}
-  {normalisation_in_adjust_universes : NormalisationIn_erase_pcuic_program_2 p}
+  {normalization_in : NormalizationIn_erase_pcuic_program_1 p}
+  {normalization_in_adjust_universes : NormalizationIn_erase_pcuic_program_2 p}
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   : (let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)) in
      forall n : nat,
@@ -85,7 +85,7 @@ Qed.
           Σ
             ∼_ext @abstract_make_wf_env_ext extraction_checker_flags
             (@optimized_abstract_env_impl extraction_checker_flags _) wfe
-            (PCUICAst.PCUICEnvironment.cst_universes cb) pf -> PCUICSN.NormalisationIn Σ)
+            (PCUICAst.PCUICEnvironment.cst_universes cb) pf -> PCUICSN.NormalizationIn Σ)
     /\
       (let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)) in
        forall n : nat,
@@ -100,7 +100,7 @@ Qed.
                  (@optimized_abstract_env_impl extraction_checker_flags _) X'
                  (PCUICAst.PCUICEnvironment.cst_universes cb) pf in
              forall Σ : PCUICAst.PCUICEnvironment.global_env_ext,
-               PCUICTyping.wf_ext Σ -> Σ ∼_ext Xext -> PCUICSN.NormalisationIn Σ).
+               PCUICTyping.wf_ext Σ -> Σ ∼_ext Xext -> PCUICSN.NormalizationIn Σ).
 Proof.
   match goal with |- ?A /\ ?B => cut (A /\ (A -> B)); [ tauto | ] end.
   cbv beta zeta; split.
@@ -111,50 +111,50 @@ Proof.
       | [ H : ?A -> ?B, H' : ?A |- _ ] => specialize (H H')
       end.
   { destruct p as [Σ ?]; cbn in *.
-    match goal with H : PCUICSN.NormalisationIn _ |- _ => revert H end.
-    eapply normalisation_in_adjust_universes; try assumption.
-    cbv [PCUICSN.NormalisationIn]; cbn.
+    match goal with H : PCUICSN.NormalizationIn _ |- _ => revert H end.
+    eapply normalization_in_adjust_universes; try assumption.
+    cbv [PCUICSN.NormalizationIn]; cbn.
     let H := match goal with H : PCUICTyping.wf_ext _ |- _ => H end in
     rewrite /PCUICAst.PCUICEnvironment.lookup_env -PCUICAst.PCUICEnvironment.lookup_global_Some_iff_In_NoDup -?hd_error_skipn_iff_In;
     [ eapply PCUICAst.NoDup_on_global_decls, H
     | eexists; eassumption ]. }
   { destruct p as [Σ ?]; cbn in *.
-    match goal with H : PCUICSN.NormalisationIn _ |- _ => revert H end.
-    move => normalisation_in.
+    match goal with H : PCUICSN.NormalizationIn _ |- _ => revert H end.
+    move => normalization_in.
     rewrite reference_impl_env_iter_pop_eq.
     repeat match goal with H : _ |- _ => rewrite reference_impl_env_iter_pop_eq in H end.
-    eapply normalisation_in_adjust_universes in normalisation_in; eauto; revgoals.
+    eapply normalization_in_adjust_universes in normalization_in; eauto; revgoals.
     { repeat match goal with H : PCUICTyping.wf_ext _ |- _ => destruct H end;
         split; eassumption. }
     { let H := multimatch goal with H : PCUICTyping.wf_ext _ |- _ => H end in
       rewrite /PCUICAst.PCUICEnvironment.lookup_env -PCUICAst.PCUICEnvironment.lookup_global_Some_iff_In_NoDup -?hd_error_skipn_iff_In;
       [ eapply PCUICAst.NoDup_on_global_decls, H
       | eexists; eassumption ]. }
-    revert normalisation_in.
-    apply PCUICWeakeningEnvSN.weakening_env_normalisation_in; eauto;
+    revert normalization_in.
+    apply PCUICWeakeningEnvSN.weakening_env_normalization_in; eauto;
       try match goal with H : PCUICTyping.wf_ext _ |- _ => refine (@PCUICTyping.wf_ext_wf _ _ H) end.
     apply PCUICAst.PCUICEnvironment.extends_decls_extends, PCUICAst.PCUICEnvironment.strictly_extends_decls_extends_decls; split; cbn; try reflexivity.
     eauto using firstn_skipn. }
 Qed.
 
 Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_program)
-  {normalisation_in : NormalisationIn_erase_pcuic_program_1 p}
-  {normalisation_in_adjust_universes : NormalisationIn_erase_pcuic_program_2 p}
+  {normalization_in : NormalizationIn_erase_pcuic_program_1 p}
+  {normalization_in_adjust_universes : NormalizationIn_erase_pcuic_program_2 p}
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
   let wfext := @abstract_make_wf_env_ext _ optimized_abstract_env_impl wfe p.1.2 _ in
-  let t := ErasureFunction.erase (normalisation_in:=_) optimized_abstract_env_impl wfext nil p.2
+  let t := ErasureFunction.erase (normalization_in:=_) optimized_abstract_env_impl wfext nil p.2
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
-  let Σ' := ErasureFunction.erase_global_fast (normalisation_in:=_) optimized_abstract_env_impl
+  let Σ' := ErasureFunction.erase_global_fast (normalization_in:=_) optimized_abstract_env_impl
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
     (EEnvMap.GlobalContextMap.make Σ' _, t).
 
-Next Obligation. unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto. Qed.
+Next Obligation. unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto. Qed.
 Next Obligation.
   eapply wf_glob_fresh.
   eapply ErasureFunction.erase_global_fast_wf_glob.
-  unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto.
+  unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
 Qed.
 
 Obligation Tactic := idtac.
@@ -162,21 +162,21 @@ Obligation Tactic := idtac.
 Import Extract.
 
 Definition erase_program {guard : abstract_guard_impl} (p : pcuic_program)
-  {normalisation_in normalisation_in_adjust_universes}
+  {normalization_in normalization_in_adjust_universes}
   (wtp : ∥ wt_pcuic_program (cf:=config.extraction_checker_flags) p ∥)
   : eprogram_env :=
-  @erase_pcuic_program guard p normalisation_in normalisation_in_adjust_universes (map_squash fst wtp) (map_squash snd wtp).
+  @erase_pcuic_program guard p normalization_in normalization_in_adjust_universes (map_squash fst wtp) (map_squash snd wtp).
 
-Lemma expanded_erase_program {guard : abstract_guard_impl} p {normalisation_in normalisation_in_adjust_universes} (wtp : ∥ wt_pcuic_program p ∥) :
+Lemma expanded_erase_program {guard : abstract_guard_impl} p {normalization_in normalization_in_adjust_universes} (wtp : ∥ wt_pcuic_program p ∥) :
   PCUICEtaExpand.expanded_pcuic_program p ->
-  EEtaExpandedFix.expanded_eprogram_env (@erase_program guard p normalisation_in normalisation_in_adjust_universes wtp).
+  EEtaExpandedFix.expanded_eprogram_env (@erase_program guard p normalization_in normalization_in_adjust_universes wtp).
 Proof.
   intros [etaenv etat]. split;
   unfold erase_program, erase_pcuic_program.
   eapply ErasureFunction.expanded_erase_global_fast, etaenv; try reflexivity; eauto.
-  unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto.
+  unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
   apply: (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
-  unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto.
+  unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
   reflexivity. exact etat.
 Qed.
 
@@ -199,8 +199,8 @@ Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t p
     pre p :=
      ∥ wt_pcuic_program (cf := config.extraction_checker_flags) p ∥
      /\ PCUICEtaExpand.expanded_pcuic_program p
-     /\ NormalisationIn_erase_pcuic_program_1 p
-     /\ NormalisationIn_erase_pcuic_program_2 p ;
+     /\ NormalizationIn_erase_pcuic_program_1 p
+     /\ NormalizationIn_erase_pcuic_program_2 p ;
    transform p hp := let nhs := proj2 (proj2 hp) in
                      @erase_program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
     post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
@@ -218,17 +218,17 @@ Next Obligation.
     split.
     eapply ErasureFunction.erase_global_fast_wf_glob; eauto;
       try match goal with H : _ |- _ => eapply H end.
-    unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto.
+    unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
     apply: (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl)); eauto;
       try match goal with H : _ |- _ => eapply H end.
-    unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; eauto.
+    unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
   - rewrite -e. cbn.
     now eapply expanded_erase_program.
 Qed.
 
 Next Obligation.
   red. move=> guard p v [[wf [T [HT1 HT2]]]]. unfold eval_pcuic_program, eval_eprogram.
-  unshelve edestruct erase_pcuic_program_normalisation_helper; cbn in *; try now destruct wf; eauto.
+  unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; try now destruct wf; eauto.
   destruct p as [Σ t].
   intros [ev].
   destruct erase_program eqn:e.

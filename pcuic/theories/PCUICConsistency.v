@@ -40,7 +40,7 @@ Definition False_mib : mutual_inductive_body :=
      ind_variance := None |}.
 
 Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
-  {normalisation_in: NormalisationIn Σ} t False_pcuic :
+  {normalization_in: NormalizationIn Σ} t False_pcuic :
   declared_inductive Σ False_pcuic False_mib False_oib ->
   wf_ext Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : tInd False_pcuic []  -> False.

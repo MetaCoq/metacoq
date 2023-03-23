@@ -44,7 +44,7 @@ Proof. intros [[wfΣ _]]. eapply TemplateEnvMap.wf_fresh_globals, wfΣ. Qed.
 Definition make_template_program_env {cf : checker_flags} (p : template_program) (wtp : ∥ wt_template_program p ∥) : template_program_env :=
   (GlobalEnvMap.make p.1 (wt_template_program_fresh p wtp), p.2).
 
-(** We kludge the normalisation assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
+(** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition build_template_program_env {cf : checker_flags} K :
   Transform.t template_program template_program_env Ast.term Ast.term eval_template_program eval_template_program_env :=

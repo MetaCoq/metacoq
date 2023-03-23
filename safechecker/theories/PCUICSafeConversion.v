@@ -65,7 +65,7 @@ Section Conversion.
 
   Context (X : X_type.π2.π1).
 
-  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
@@ -148,12 +148,12 @@ Section Conversion.
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ [u hu].
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
     pose proof (heΣ _ wfΣ) as [heΣ].
     pose proof (hu _ wfΣ) as h.
-    apply normalisation_upto in h. 2: now apply normalisation_in.
+    apply normalization_upto in h. 2: now apply normalization_in.
     dependent induction h.
     constructor. intros [y hy] r.
     unfold wcored in r. cbn in r.
@@ -221,7 +221,7 @@ Section Conversion.
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->
       Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ t p w q s ht.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     rewrite R_aux_equation_1.
@@ -308,7 +308,7 @@ Section Conversion.
              simpl in *. assumption.
           -- right. assumption.
     - pose proof (heΣ _ wfΣ) as [?].
-      eapply Acc_equiv; try eapply normalisation_upto; eauto.
+      eapply Acc_equiv; try eapply normalization_upto; eauto.
       split; eauto; intros.
       erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. all: eauto.
@@ -330,7 +330,7 @@ Section Conversion.
     forall Γ u,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zipc (tm1 u) (stk1 u))) ->
       Acc (R Γ) u.
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ u h.
     eapply Acc_fun with (f := fun x => obpack x).
     apply R_aux_Acc. assumption.

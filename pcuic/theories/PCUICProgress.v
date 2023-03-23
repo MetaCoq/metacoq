@@ -538,7 +538,7 @@ Qed.
 
 Global Hint Resolve All_app_inv : pcuic.
 
-Lemma wcbv_red1_mkApps_left {Σ f f' args} : wcbv_red1 Σ f f' -> wcbv_red1 Σ (mkApps f args) (mkApps f' args).
+Lemma wcbv_red1_mkApps_left {Σ f f' args} : Σ ⊢ f ⇝ᵥ f' -> Σ ⊢ mkApps f args ⇝ᵥ mkApps f' args.
 Proof.
   induction args using rev_ind.
   - auto.
@@ -570,7 +570,7 @@ Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : 
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
   value Σ (mkApps fn args) ->
-  (∑ t' : term, wcbv_red1 Σ (mkApps fn (args ++ [hd])) t') +
+  (∑ t' : term, Σ ⊢ mkApps fn (args ++ [hd]) ⇝ᵥ t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
   intros napp ht vhd clhd vapp.
@@ -630,7 +630,7 @@ Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
   value Σ hd -> closed hd ->
   value Σ (mkApps fn args) ->
-  (∑ t' : term, wcbv_red1 Σ (mkApps fn (args ++ [hd])) t') +
+  (∑ t' : term, Σ ⊢ mkApps fn (args ++ [hd]) ⇝ᵥ t') +
   value Σ (mkApps fn (args ++ [hd])).
 Proof.
   destruct (decompose_app fn) eqn:da.
@@ -651,7 +651,7 @@ Proof.
 Qed.
 
 Lemma progress_env_prop `{cf : checker_flags}:
-  env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & wcbv_red1 Σ t t'} + (value Σ t))
+  env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & Σ ⊢ t ⇝ᵥ t'} + (value Σ t))
            (fun _ _ => True).
 Proof with eauto with wcbv; try congruence.
   eapply typing_ind_env...
@@ -739,7 +739,7 @@ Lemma progress `{cf : checker_flags}:
   forall (Σ:global_env_ext) t T,
     axiom_free Σ -> wf Σ ->
     Σ ;;; [] |- t : T ->
-    {t' & wcbv_red1 Σ t t'} + (value Σ t).
+    {t' & Σ ⊢ t ⇝ᵥ t'} + (value Σ t).
 Proof.
   intros.
   edestruct progress_env_prop as [_ [_ [[t' Ht'] | Hval]]]; eauto.

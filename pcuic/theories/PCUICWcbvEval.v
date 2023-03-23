@@ -380,59 +380,6 @@ Section Wcbv.
    (** The codomain of evaluation is only values: *)
    (*     It means no redex can remain at the head of an evaluated term. *)
 
-  Inductive wcbv_red1 : term -> term -> Type :=
-  | wcbv_red_app_left a a' b :
-     wcbv_red1 a a' -> wcbv_red1 (tApp a b) (tApp a' b)
-  | wcbv_red_app_right a b b' :
-     value a -> wcbv_red1 b b' -> wcbv_red1 (tApp a b) (tApp a b')
-  | wcbv_red_beta na t b a :
-     value a -> wcbv_red1 (tApp (tLambda na t b) a) (csubst a 0 b)
-  | wcbv_red_let_in b0 b0' na t b1 :
-      wcbv_red1 b0 b0' -> wcbv_red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
-  | wcbv_red_zeta b0 na t b1 :
-      value b0 -> wcbv_red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
-  | wcbv_red_delta decl body c u (isdecl : declared_constant Σ c decl) :
-     decl.(cst_body) = Some body ->
-     wcbv_red1 (tConst c u) (subst_instance u body)
-  | wcbv_red_case_in ci p discr discr' brs :
-     wcbv_red1 discr discr' -> wcbv_red1 (tCase ci p discr brs) (tCase ci p discr' brs)
-  | wcbv_red_iota ci c mdecl idecl cdecl u args p brs br :
-    nth_error brs c = Some br ->
-    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-    #|args| = cstr_arity mdecl cdecl ->
-    ci.(ci_npar) = mdecl.(ind_npars) ->
-    context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
-    All value args ->
-    wcbv_red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
-  | wcbv_red_proj_in discr discr' p :
-    wcbv_red1 discr discr' -> wcbv_red1 (tProj p discr) (tProj p discr')
-  | wcbv_red_proj p args u a mdecl idecl cdecl pdecl :
-    declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
-    #|args| = cstr_arity mdecl cdecl ->
-    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
-    All value args ->
-    wcbv_red1 (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) a
-  | wcbv_red_fix mfix idx argsv a fn :
-    All value argsv ->
-    value a ->
-    unfold_fix mfix idx = Some (#|argsv|, fn) ->
-    isConstruct_app a = true ->
-    wcbv_red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
-  | wcbv_red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
-                       (idx : nat) (args : list term)
-                       (narg : nat) (fn : term),
-                     cunfold_cofix mfix idx = Some (narg, fn) ->
-                     All value args ->
-                     wcbv_red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
-  | wcbv_red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
-                       (idx : nat) (p : predicate term)
-                       (args : list term) (narg : nat)
-                       (fn : term) (brs : list (branch term)),
-                     cunfold_cofix mfix idx = Some (narg, fn) ->
-                     All value args ->
-                     wcbv_red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
-  .
-
   (** The codomain of evaluation is only values: *)
   (*     It means no redex can remain at the head of an evaluated term. *)
 
@@ -1121,11 +1068,67 @@ Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
 Arguments eval_unique {_ _ _}.
 
+Reserved Notation " Σ ⊢ t ⇝ᵥ u " (at level 50, t, u at next level).
+
+Local Open Scope type_scope.
+
+Inductive wcbv_red1 (Σ: global_env) : term -> term -> Type :=
+| wcbv_red_app_left a a' b :
+  Σ ⊢ a ⇝ᵥ a' -> Σ ⊢ tApp a b ⇝ᵥ tApp a' b
+| wcbv_red_app_right a b b' :
+  value Σ a -> Σ ⊢ b ⇝ᵥ b' -> Σ ⊢ tApp a b ⇝ᵥ tApp a b'
+| wcbv_red_beta na t b a :
+  value Σ a -> Σ ⊢ tApp (tLambda na t b) a ⇝ᵥ csubst a 0 b
+| wcbv_red_let_in b0 b0' na t b1 :
+  Σ ⊢ b0 ⇝ᵥ b0' -> Σ ⊢ tLetIn na b0 t b1 ⇝ᵥ tLetIn na b0' t b1
+| wcbv_red_zeta b0 na t b1 :
+  value Σ b0 -> Σ ⊢ tLetIn na b0 t b1 ⇝ᵥ csubst b0 0 b1
+| wcbv_red_delta decl body c u (isdecl : declared_constant Σ c decl) :
+   decl.(cst_body) = Some body ->
+  Σ ⊢ tConst c u ⇝ᵥ subst_instance u body
+| wcbv_red_case_in ci p discr discr' brs :
+  Σ ⊢ discr ⇝ᵥ discr' -> Σ ⊢ tCase ci p discr brs ⇝ᵥ tCase ci p discr' brs
+| wcbv_red_iota ci c mdecl idecl cdecl u args p brs br :
+  nth_error brs c = Some br ->
+  declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+  #|args| = cstr_arity mdecl cdecl ->
+  ci.(ci_npar) = mdecl.(ind_npars) ->
+  context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
+  All (value Σ) args ->
+  Σ ⊢ tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs ⇝ᵥ iota_red ci.(ci_npar) p args br
+| wcbv_red_proj_in discr discr' p :
+  Σ ⊢ discr ⇝ᵥ discr' -> Σ ⊢ tProj p discr ⇝ᵥ tProj p discr'
+| wcbv_red_proj p args u a mdecl idecl cdecl pdecl :
+  declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
+  #|args| = cstr_arity mdecl cdecl ->
+  nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
+  All (value Σ) args ->
+  Σ ⊢ tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args) ⇝ᵥ a
+| wcbv_red_fix mfix idx argsv a fn :
+  All (value Σ) argsv ->
+  value Σ a ->
+  unfold_fix mfix idx = Some (#|argsv|, fn) ->
+  isConstruct_app a = true ->
+  Σ ⊢ tApp ((mkApps (tFix mfix idx) argsv)) a ⇝ᵥ tApp (mkApps fn argsv) a
+| wcbv_red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
+                     (idx : nat) (args : list term)
+                     (narg : nat) (fn : term),
+                   cunfold_cofix mfix idx = Some (narg, fn) ->
+                   All (value Σ) args ->
+                   Σ ⊢ tProj p (mkApps (tCoFix mfix idx) args) ⇝ᵥ tProj p (mkApps fn args)
+| wcbv_red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
+                     (idx : nat) (p : predicate term)
+                     (args : list term) (narg : nat)
+                     (fn : term) (brs : list (branch term)),
+                   cunfold_cofix mfix idx = Some (narg, fn) ->
+                   All (value Σ) args ->
+                   Σ ⊢ tCase ip p (mkApps (tCoFix mfix idx) args) brs ⇝ᵥ tCase ip p (mkApps fn args) brs
+where " Σ ⊢ t ⇝ᵥ u " := (wcbv_red1 Σ t u).
 
 
 Lemma wcbv_red1_closed {cf : checker_flags} {Σ t t'} :
   wf Σ ->
-  closed t -> wcbv_red1 Σ t t' -> closed t'.
+  closed t -> Σ ⊢ t ⇝ᵥ t' -> closed t'.
 Proof.
   intros Hwf Hcl Hred. induction Hred; cbn in *; solve_all.
   all: eauto using closed_csubst, closed_def.
@@ -1148,7 +1151,7 @@ Qed.
 
 Lemma wcbv_red1_red1 {cf : checker_flags} {Σ t t' } :
   closed t ->
-  wcbv_red1 Σ t t' -> red1 Σ [] t t'.
+  Σ ⊢ t ⇝ᵥ t' -> Σ ;;; [] |- t ⇝ t'.
 Proof.
   intros Hcl Hred.
   induction Hred. all: cbn in *; solve_all.
@@ -1173,7 +1176,7 @@ Global Hint Resolve value_final : wcbv.
 
 Lemma wcbv_red1_eval {cf : checker_flags} {Σ : global_env_ext } t t' v : wf Σ ->
   closed t ->
-  wcbv_red1 Σ t t' -> eval Σ t' v -> eval Σ t v.
+  Σ ⊢ t ⇝ᵥ t' -> eval Σ t' v -> eval Σ t v.
 Proof.
   intros Hwf Hty Hred Heval.
   induction Hred in Heval, v, Hty |- *; eauto with wcbv.

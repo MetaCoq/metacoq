@@ -14,7 +14,6 @@ From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC.
-From MetaCoq.SafeCheckerPlugin Require Import SafeTemplateChecker.
 
 #[export]
 Existing Instance extraction_checker_flags.

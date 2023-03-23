@@ -75,7 +75,8 @@ Proof.
 Qed.
 
 Module PEnv := PCUICAst.PCUICEnvironment.
-Lemma wf_erase_global_decl :
+
+(*Lemma wf_erase_global_decl :
   forall (H : EWellformed.EEnvFlags) (k : kername) (g : PCUICAst.PCUICEnvironment.global_decl)
          (decls : list (kername * PCUICAst.PCUICEnvironment.global_decl))
          (univs : Universes.ContextSet.t) retros w wt (Σex : global_env),
@@ -100,7 +101,7 @@ Proof.
       unfold MCOption.option_default.
       (* global_erased_with_deps *)
       (* erase_constant_body_correct'' *)
-Admitted.
+Qed *)
 
 
 Ltac invert_wf :=
@@ -110,6 +111,7 @@ Ltac invert_wf :=
   | [H : P.on_global_decls_data _ _ _ _ _ _ _ |- _] => inversion H; subst; clear H; cbn in *
   end.
 
+(*
 Lemma wf_erase_global_decls_recursive `{EWellformed.EEnvFlags} :
   forall decls univs retros w seeds (ignored : kername -> bool),
     let Σex :=
@@ -211,6 +213,8 @@ Proof.
       eapply (lookup_global_In_wf _ env) in d; eauto.
     * now apply KernameSet.singleton_spec.
 Qed.
+
+*)
 
 (* Print Assumptions extract_correct. *)
 

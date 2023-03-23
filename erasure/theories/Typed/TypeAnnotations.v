@@ -9,7 +9,7 @@ From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From Coq Require Import VectorDef.
 From Equations Require Import Equations.
 From MetaCoq.Erasure Require Import Extract.
-From MetaCoq.PCUIC Require Import PCUICAst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICInversion.
 From MetaCoq.PCUIC Require Import PCUICLiftSubst.
 From MetaCoq.PCUIC Require Import PCUICTyping.
@@ -312,27 +312,20 @@ Proof.
     destruct c as [??].
     depelim er0.
     clear -brs_ty X.
-    (* induction X in brs, brs_ty, X |- *; [constructor|]. *)
-    induction X; [constructor|].
-    depelim brs_ty.
-    constructor; eauto.
-    destruct x1, y.
-    destruct r.
-    destruct p as [?[?[??]]].
+    eapply All2_Forall2.
+    eapply All2i_All2_All2; tea. cbn.
+    clear X brs_ty.
+    intros n x1 y [bcontext bbody] [?[?[??]]].
     cbn in *. unfold pre_case_branch_context_gen,inst_case_branch_context in *;cbn in *.
-    remember (map2 _ _ _) as Γ0.
-    (* assert (All2 (PCUICEquality.compare_decls eq eq) bcontext Γ0). *)
-    (* { unfold inst_case_context in HeqΓ0. *)
-    (*   PCUICInstConv.inst_context_set_binder_name *)
-    (*   alpha_eq_inst_case_context } *)
-    (*   alpha_eq_inst_case_context *)
-    (* inst_case_branch_context *)
+    remember (case_branch_type _ _ _ _ _ _ _ _).1 as Γ0.
+    intros [].
+    destruct y as [bctx bbody'].
     split;[|now auto].
-    (* admit. *) apply (todo "todo").
-    (* admit. *) apply (todo "todo").
-    (* compare_decls_conv *)
-    (*   PCUICContextConversionTyp.context_conversion *)
-    (* econstructor; eauto. *)
+    eexists.
+    pose proof (eqctx := PCUICCasesContexts.inst_case_branch_context_eq (p := pr) (br := {| bbody := bbody'; bcontext := bctx |}) a).
+    cbn in eqctx. unfold case_branch_context, case_branch_context_gen in eqctx. cbn in eqctx.
+    unfold case_branch_type in HeqΓ0. cbn in HeqΓ0.
+    rewrite eqctx in HeqΓ0. unfold inst_case_branch_context in HeqΓ0. cbn in HeqΓ0. rewrite <-HeqΓ0. exact t.
   - apply inversion_Proj in X as (?&?&?&?&?&?&?&?&?); auto.
     econstructor; eauto.
   - apply inversion_Fix in X as (?&?&?&?&?&?&?); auto.
@@ -373,7 +366,7 @@ Proof.
     destruct r as (? & ? & ? & ?).
     split; [|now auto].
     econstructor; eauto.
-Qed. (* Admitted causes anomaly in Lemmas.save_lemma_admitted: more than one statement *)
+Qed.
 
 #[program] Definition erase_constant_decl_impl :=
   @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))

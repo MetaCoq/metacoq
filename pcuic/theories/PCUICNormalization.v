@@ -21,7 +21,7 @@ From Equations Require Import Equations.
 
 From MetaCoq Require Import PCUICSN.
 
-Lemma wh_normalization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf_ext Σ -> axiom_free Σ ->
+Lemma wh_normalization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf Σ -> axiom_free Σ ->
 {A & Σ ;;; [] |- t : A}  -> { v & whnf RedFlags.default Σ [] v * red Σ [] t v}.
 Proof.
 intros Hwf Hax [A HA].
@@ -37,12 +37,9 @@ edestruct progress_env_prop as [_ [_ [[t' Ht'] | Hval]]]; eauto.
   eapply @subject_closed with (Γ := []); eauto.
 Defined.
 
-Lemma wcbv_normalization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {t} : wf_ext Σ -> axiom_free Σ ->
-  {A & Σ ;;; [] |- t : A} -> { v & eval Σ t v}.
-Proof.
-  intros Hwf Hax [A HA].
-  assert (welltyped Σ [] t) as Hwt. { econstructor; eauto. }
-  eapply PCUICSN.normalisation_in in Hwt as HSN; eauto. clear Hwt.
+Lemma SN_to_WN {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {A t} : wf Σ -> axiom_free Σ ->
+  Acc (cored Σ []) t -> Σ ;;; [] |- t : A -> { v & eval Σ t v}.
+  intros Hwf Hax HSN HA.
   induction HSN as [t H IH].
   edestruct progress_env_prop as [_ [_ [[t' Ht'] | Hval]]]; eauto.
   - eapply wcbv_red1_red1 in Ht' as Hred. 2:{ change 0 with (#|@nil context_decl|). eapply subject_closed. eauto. }
@@ -51,6 +48,15 @@ Proof.
     exists v. sq. eapply wcbv_red1_eval; eauto.
     now eapply subject_closed in HA.
   - exists t. sq. eapply value_final; eauto.
+Qed.
+
+Lemma wcbv_normalization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {A t} : wf Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : A -> { v & eval Σ t v}.
+Proof.
+  intros Hwf Hax HA.
+  assert (welltyped Σ [] t) as Hwt. { econstructor; eauto. }
+  eapply PCUICSN.normalisation_in in Hwt as HSN; eauto. clear Hwt.
+  eapply SN_to_WN; eauto.
 Qed.
 
 From MetaCoq Require Import PCUICFirstorder.
@@ -90,21 +96,32 @@ Proof.
   - assert (x = y) as <- by eauto. eauto.
 Qed.
 
-Lemma ws_wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : ws_term (fun _ => false)} : wf_ext Σ -> axiom_free Σ ->
-  Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+Lemma ws_wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {T} {t v : ws_term (fun _ => false)} : wf Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : T ->
   closed_red Σ [] t v ->
-  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
-  eval Σ t v.
+  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
+  {v' & eval Σ t v' * (Σ ;;; [] ⊢ v' ⇝ v)}.
 Proof.
-  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  intros Hwf Hax Hty Hred Hirred.
   destruct (@wcbv_normalization _ no Σ normalisation t) as (v' & Hv'); eauto.
   assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
   eapply closed_red_confluence in Hred as Hred_. destruct Hred_ as (v'' & H1 & H2).
   2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
   destruct v as [v Hv].
   assert (v = v'') as <- by (eapply irred_equal; eauto).
+  exists v'; split; eauto.
+Qed.
+
+Lemma ws_wcbv_standardization_fst {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : ws_term (fun _ => false)} : wf Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : mkApps (tInd i u) args ->
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  closed_red Σ [] t v ->
+  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
+  eval Σ t v.
+Proof.
+  intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
+  destruct (ws_wcbv_standardization Hwf Hax Hty Hred Hirred) as [v' [H H']].
   assert (firstorder_value Σ [] v'). {
     eapply firstorder_value_spec; eauto.
     eapply subject_reduction_eval; eauto.
@@ -113,18 +130,38 @@ Proof.
   enough (v' = v) as -> by eauto.
   eapply irred_equal. eauto.
   intros. eapply firstorder_value_irred; eauto.
+  Unshelve.
 Qed.
 
-Lemma wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : term} : wf_ext Σ -> axiom_free Σ ->
+Lemma wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {T t v : term} : wf Σ -> axiom_free Σ ->
+  Σ ;;; [] |- t : T ->
+  Σ ;;; [] |- t ⇝ v ->
+  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
+  {v' & eval Σ t v' * (Σ ;;; [] ⊢ v' ⇝ v)}.
+Proof.
+  intros Hwf Hax Hty Hred Hirred.
+  unshelve eapply @ws_wcbv_standardization with (T := T) (t := (exist t _)) (v := (exist v _)).
+  all: sq; eauto; cbn.
+  1-2: shelve.
+  econstructor; eauto.
+  eapply subject_is_open_term. eauto.
+  Unshelve.
+  all: rewrite -closed_on_free_vars_none.
+  - now eapply subject_closed in Hty.
+  - eapply @subject_closed with (Γ := []); eauto.
+    eapply subject_reduction; eauto.
+Qed.
+
+Lemma wcbv_standardization_fst {cf:checker_flags} {no:normalizing_flags} {Σ} {normalisation:NormalisationIn Σ} {i u args mind} {t v : term} : wf Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   red Σ [] t v ->
-  (forall v', PCUICReduction.red1 Σ [] v v' -> False) ->
+  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
   eval Σ t v.
 Proof.
   intros Hwf Hax Hty Hdecl Hfo Hred Hirred.
-  unshelve eapply @ws_wcbv_standardization with (t := (exist t _)) (v := (exist v _)).
+  unshelve eapply @ws_wcbv_standardization_fst with (t := (exist t _)) (v := (exist v _)).
   all: sq; eauto; cbn.
   1-2: shelve.
   econstructor; eauto.

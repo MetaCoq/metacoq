@@ -136,13 +136,17 @@ Definition inline_globals_template
   gen_defs_and_proofs Σ decls_inlined mpath suffix seeds;;
   ret decls_inlined.
 
+(* Needs to set universe to Set otherwise make vos without Universe Checking fails *)
+Definition extract_def_name {A : Type} (a : A) : TemplateMonad@{_ Set} KernameSet.elt :=
+  extract_def_name a.
+
 (* Mainly for testing purposes *)
 Definition inline_def {A}
            (should_inline : kername -> bool)
-           (def : A) : TemplateMonad _ :=
+           (def : A) : TemplateMonad global_declarations :=
   mpath <- tmCurrentModPath tt;;
-  p <- tmQuoteRecTransp def false ;;
-  kn <- extract_def_name def ;;
+  p <- tmQuoteRecTransp def false;;
+  kn <- extract_def_name def;;
   inline_globals_template mpath (declarations p.1) should_inline (KernameSet.singleton kn).
 
 

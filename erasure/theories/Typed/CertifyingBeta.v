@@ -61,20 +61,19 @@ Definition betared_globals_template
   ret Σbeta.
 
 (** Mainly for testing purposes *)
-(* fails quick compilation *)
+(* Needs to set universe to Set otherwise make vos without Universe Checking fails *)
+Definition extract_def_name {A : Type} (a : A) : TemplateMonad@{_ Set} KernameSet.elt :=
+  extract_def_name a.
 
-(*Definition betared_def {A}
+Definition betared_def {A}
            (def : A) : TemplateMonad global_declarations :=
   mpath <- tmCurrentModPath tt;;
   p <- tmQuoteRecTransp def false ;;
   kn <- (extract_def_name def : TemplateMonad KernameSet.elt) ;;
   betared_globals_template mpath (declarations p.1) (KernameSet.singleton kn).
-*)
 
 Definition template_betared : TemplateTransform :=
   fun Σ => Ok (timed "Inlining" (fun _ => mk_global_env (universes Σ) (betared_globals (declarations Σ)) (retroknowledge Σ))).
-
-(*
 
 Module Ex1.
 
@@ -93,4 +92,3 @@ Module Ex1.
     lookup_env foo_before.1 <%% foo %%> -> False.
   Proof. easy. Qed.
 End Ex1.
-*)

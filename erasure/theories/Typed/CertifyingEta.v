@@ -207,6 +207,11 @@ Definition eta_global_env_template
   ret Σext.
 
 (** Mainly for testing purposes *)
+
+(* Needs to set universe to Set otherwise make vos without Universe Checking fails *)
+Definition extract_def_name {A : Type} (a : A) : TemplateMonad@{_ Set} KernameSet.elt :=
+  extract_def_name a.
+
 Definition eta_expand_def
            {A}
            (overridden_masks : kername -> option bitmask)

@@ -44,7 +44,7 @@ Existing Instance fake_guard_impl_instance.
 
 Program Definition flag_of_type_impl := @flag_of_type canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
   PCUICSN.extraction_normalizing _.
-Next Obligation. apply fake_normalisation; eauto. Qed.
+Next Obligation. apply fake_normalization; eauto. Qed.
 
 Definition app_length_transparent {A} (l1 l2 : list A) :
   #|l1| + #|l2| = #|l1 ++ l2|.
@@ -169,13 +169,13 @@ Existing Instance PCUICSN.extraction_normalizing.
   @type_of _ PCUICSN.extraction_normalizing canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
     _.
 Next Obligation.
-  apply fake_normalisation; eauto.
+  apply fake_normalization; eauto.
 Qed.
 
 #[program] Definition erase_type_aux_impl :=
   @erase_type_aux canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto)) PCUICSN.extraction_normalizing _.
 Next Obligation.
-  apply fake_normalisation; eauto.
+  apply fake_normalization; eauto.
 Qed.
 
 Program Definition erase_type_of Γ erΓ t (wt : welltyped Σ Γ t) : box_type :=
@@ -371,7 +371,7 @@ Qed.
 #[program] Definition erase_constant_decl_impl :=
   @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
     PCUICSN.extraction_normalizing _.
-Next Obligation. apply Erasure.fake_normalisation; eauto. Defined.
+Next Obligation. apply Erasure.fake_normalization; eauto. Defined.
 
 Definition annotate_types_erase_constant_decl cst wt :
   match erase_constant_decl_impl Σ eq_refl cst wt with
@@ -396,7 +396,7 @@ Proof.
 Defined.
 
 
-(* Context (nin : forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> PCUICSN.NormalisationIn Σ). *)
+(* Context (nin : forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> PCUICSN.NormalizationIn Σ). *)
 Definition annotate_types_erase_global_decl kn decl wt :
   global_decl_annots box_type (erase_global_decl Σ wfextΣ kn decl wt).
 Proof.

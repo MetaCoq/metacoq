@@ -56,7 +56,7 @@ Import ErasureFunction.
 Context {X_type : abstract_env_impl}
         {X : X_type.π2.π1}
         {no : normalizing_flags}
-        {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+        {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
 Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ := abstract_env_ext_wf _ wfΣ.
@@ -244,7 +244,7 @@ Lemma well_founded_erase_rel : well_founded erase_rel.
 Proof.
   intros (Γl & l & wfl).
   assert (w : ∥ wf_ext rΣ ∥) by now apply heΣ. sq.
-  induction (normalisation_in rΣ w wfrΣ Γl l wfl) as [l _ IH].
+  induction (normalization_in rΣ w wfrΣ Γl l wfl) as [l _ IH].
   remember (Γl, l) as p.
   revert wfl IH.
   replace Γl with (fst p) by (now subst).
@@ -283,7 +283,7 @@ Proof.
       destruct p as [Γ t];cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation_in; eauto.
+      eapply @normalization_in; eauto.
   - eapply Relation_Properties.clos_rt_rtn1 in mred; inversion mred; subst.
     + apply (IH' (p.1,, vass na A, s)).
       { replace p with (p.1, tProd na A s) by (destruct p; cbn in *; congruence).
@@ -317,7 +317,7 @@ Proof.
       destruct p as [Γ t];cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation_in; eauto.
+      eapply @normalization_in; eauto.
   - eapply Relation_Properties.clos_rt_rtn1 in mred; inversion mred; subst.
     + apply (IH' (p.1, s)).
       { replace p with (p.1, tApp hd arg1) by (destruct p; cbn in *; congruence).
@@ -394,7 +394,7 @@ Proof.
       destruct p;cbn in *;subst.
       eapply cored_red_trans in X0; eauto.
       eapply ErasureFunction.Acc_no_loop in X0; [easy|].
-      eapply @normalisation_in; eauto.
+      eapply @normalization_in; eauto.
 Qed.
 
 Instance WellFounded_erase_rel : WellFounded erase_rel :=
@@ -1161,7 +1161,7 @@ erase_constant_decl cst wt with flag_of_type [] (PCUICEnvironment.cst_type cst) 
     | {| conv_ar := inl car |} =>
         inr (erase_arity cst car wt)
     | {| conv_ar := inr notar |} =>
-        let erased_body := erase_constant_body X_type X (normalisation_in := normalisation_in) cst _ in
+        let erased_body := erase_constant_body X_type X (normalization_in := normalization_in) cst _ in
         inl {| cst_type := erase_type (PCUICEnvironment.cst_type cst) _; cst_body := EAst.cst_body (fst erased_body) |}
     }.
 Proof.
@@ -1412,9 +1412,9 @@ Instance fake_guard_impl_instance : abstract_guard_impl :=
   {| guard_impl := fake_guard_impl;
      guard_correct := fake_guard_correct |}.
 
-Axiom fake_normalisation : PCUICSN.Normalisation.
-Global Existing Instance fake_normalisation.
-(* Definition norm := forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ. *)
+Axiom fake_normalization : PCUICSN.Normalization.
+Global Existing Instance fake_normalization.
+(* Definition norm := forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ. *)
 Program Definition erase_global_decl
         (Σext : global_env_ext)
         (wfΣext : ∥ wf_ext Σext ∥)
@@ -1432,9 +1432,9 @@ Program Definition erase_global_decl
   end.
 Next Obligation. unshelve econstructor; eauto. Defined.
 
-Next Obligation. now eapply fake_normalisation. Defined.
+Next Obligation. now eapply fake_normalization. Defined.
 Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. eapply (fake_normalisation _ X _ _ H). Defined.
+Next Obligation. eapply (fake_normalization _ X _ _ H). Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with

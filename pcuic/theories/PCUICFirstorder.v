@@ -17,6 +17,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
 
 From MetaCoq Require Import PCUICArities PCUICSpine.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 
 Section firstorder.
 
@@ -715,8 +716,6 @@ Proof using Type.
       rewrite /check_recursivity_kind Hlookup in Hty.
       apply eqb_eq in Hfo, Hty. congruence.
 Qed.
-
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 
 Lemma firstorder_value_alpha Σ t t' :
   t ≡α t' ->

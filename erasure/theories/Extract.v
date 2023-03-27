@@ -69,7 +69,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
         (brs' : list (list name × E.term)) :
-        Informative Σ ci.(ci_ind) ->
+        Subsingleton Σ ci.(ci_ind) ->
         Σ;;; Γ |- c ⇝ℇ c' ->
         All2
           (fun (x : branch term) (x' : list name × E.term) =>
@@ -77,7 +77,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
         Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
   | erases_tProj : forall p (c : term) (c' : E.term),
                    let ind := p.(proj_ind) in
-                   Informative Σ ind ->
+                   Subsingleton Σ ind ->
                    Σ;;; Γ |- c ⇝ℇ c' -> Σ;;; Γ |- tProj p c ⇝ℇ E.tProj p c'
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                   All2
@@ -127,7 +127,7 @@ Lemma erases_forall_list_ind
           isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k []))
       (Hcase : forall Γ ci p c brs c' brs',
-          PCUICElimination.Informative Σ ci.(ci_ind) ->
+          PCUICElimination.Subsingleton Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
           All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 ×
@@ -136,7 +136,7 @@ Lemma erases_forall_list_ind
           P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',
           let ind := p.(proj_ind) in
-          PCUICElimination.Informative Σ ind ->
+          PCUICElimination.Subsingleton Σ ind ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
           P Γ (tProj p c) (E.tProj p c'))

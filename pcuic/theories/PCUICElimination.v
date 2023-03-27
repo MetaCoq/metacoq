@@ -22,7 +22,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u ×
   (Universe.is_prop u || Universe.is_sprop u).
 
-(* TODO: Figure out whether [SingletonProp], [Computational], and [Informative] should use [strictly_extends_decls] or [extends]. -Jason Gross *)
+(* TODO: Figure out whether [SingletonProp], [Computational], and [Subsingleton] should use [strictly_extends_decls] or [extends]. -Jason Gross *)
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
     declared_inductive (fst Σ) ind mdecl idecl ->
@@ -43,7 +43,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
-Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
+Definition Subsingleton `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
@@ -615,7 +615,7 @@ Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) i
   check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mind idecl ->
-  (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Informative Σ ind.
+  (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Subsingleton Σ ind.
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
@@ -634,7 +634,7 @@ Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (c
   wf_ext Σ ->
   declared_inductive (fst Σ) ci mind idecl ->
   Σ ;;; Γ |- tCase ci p c brs : T ->
-  (Is_proof Σ Γ (tCase ci p c brs) -> False) -> Informative Σ ci.(ci_ind).
+  (Is_proof Σ Γ (tCase ci p c brs) -> False) -> Subsingleton Σ ci.(ci_ind).
 Proof.
   intros cu wfΣ decli HT H.
   eapply elim_restriction_works_kelim1 in HT; eauto.
@@ -676,7 +676,7 @@ Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ
   check_univs -> wf_ext Σ ->
   declared_inductive (fst Σ) p.(proj_ind) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
-  (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ p.(proj_ind).
+  (Is_proof Σ Γ (tProj p c) -> False) -> Subsingleton Σ p.(proj_ind).
 Proof.
   intros cu; intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1 in H0; eauto.

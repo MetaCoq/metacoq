@@ -339,7 +339,9 @@ End LevelExpr.
 
 Module LevelExprSet := MSetList.MakeWithLeibniz LevelExpr.
 Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
-Module LevelExprSetProp := WPropertiesOn LevelExpr LevelExprSet.
+Module LevelExprSetOrdProp := MSetProperties.OrdProperties LevelExprSet.
+Module LevelExprSetProp := LevelExprSetOrdProp.P.
+Module LevelExprSetDecide := LevelExprSetProp.Dec.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
   This means concreteUniverses also have a decidable equality. *)
@@ -1406,9 +1408,10 @@ End UnivConstraint.
 
 Module ConstraintSet := MSetAVL.Make UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
-Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
+Module ConstraintSetOrdProp := MSetProperties.OrdProperties ConstraintSet.
+Module ConstraintSetProp := ConstraintSetOrdProp.P.
 Module CS := ConstraintSet.
-Module ConstraintSetDecide := WDecide (ConstraintSet).
+Module ConstraintSetDecide := ConstraintSetProp.Dec.
 Ltac csets := ConstraintSetDecide.fsetdec.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).

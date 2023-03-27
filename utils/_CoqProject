@@ -30,3 +30,16 @@ theories/ReflectEq.v
 theories/monad_utils.v
 theories/utils.v
 
+# extra tactics
+theories/MCTactics/DestructHead.v
+theories/MCTactics/DestructHyps.v
+theories/MCTactics/FindHyp.v
+theories/MCTactics/GeneralizeOverHoles.v
+theories/MCTactics/Head.v
+theories/MCTactics/InHypUnderBindersDo.v
+theories/MCTactics/SpecializeAllWays.v
+theories/MCTactics/SpecializeBy.v
+theories/MCTactics/SpecializeUnderBindersBy.v
+theories/MCTactics/SplitInContext.v
+theories/MCTactics/UniquePose.v
+theories/MCTactics/Zeta1.v

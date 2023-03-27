@@ -12,6 +12,15 @@ Require Export MCPrelude
         MCSquash
         MCRelations
         MCString
+        MCTactics.InHypUnderBindersDo
+        MCTactics.SpecializeUnderBindersBy
+        MCTactics.Zeta1
+        MCTactics.DestructHead
+        MCTactics.SpecializeAllWays
+        MCTactics.SplitInContext
+        MCTactics.Head
+        MCTactics.SpecializeBy
+        MCTactics.UniquePose
         ReflectEq
         bytestring
 .

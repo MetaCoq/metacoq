@@ -5,6 +5,7 @@ theories/uGraph.v
 theories/config.v
 theories/Kernames.v
 theories/Universes.v
+theories/UniversesDec.v
 theories/BasicAst.v
 theories/Environment.v
 theories/Reflect.v

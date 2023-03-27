@@ -1429,7 +1429,7 @@ Section CheckLeq.
       gc_expr_declared e' ->
       leqb_expr_n_gen leqb_level_n_gen lt e e' ->
       gc_leq0_levelalg_n lt uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using Type.
     unfold leqb_expr_n.
     destruct e as [l k], e' as [l' k'];
     try (cbn in *; discriminate);
@@ -1449,7 +1449,7 @@ Section CheckLeq.
       (HHl' : gc_expr_declared e')
     : leqb_expr_n_gen leqb_level_n_gen ⎩ n ⎭ e e'
       <-> gc_leq0_levelalg_n ⎩ n ⎭ uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using HC.
     split; [apply (leqb_expr_n_spec0_gen _ leqb_correct)|]; try assumption.
     destruct e as [l k] eqn:eqe, e' as [l' k'] eqn:eqe'; cbn; intro H;
       destruct HC as [v0 Hv0]; pose proof (H v0 Hv0) as H0; cbn in H0.
@@ -1471,7 +1471,7 @@ Section CheckLeq.
     n e1 u
     : gc_expr_declared e1 -> gc_levels_declared u -> leqb_expr_univ_n_gen leqb_level_n_gen n e1 u
       -> gc_leq0_levelalg_n n uctx.2 (LevelAlgExpr.make e1) u.
-  Proof.
+  Proof using Type.
     unfold leqb_expr_univ_n_gen; intros He1 Hu H.
     unfold_univ_rel0.
     rewrite val_fold_right.
@@ -1565,7 +1565,7 @@ Section CheckLeq.
       gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e) u ->
       exists (e' : LevelExpr.t), LevelExprSet.In e' u
             /\ gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e) (LevelAlgExpr.make e').
-  Proof.
+  Proof using HC HG Huctx.
     intros Hl Hu H.
     assert (HG1 : invariants G) by (rewrite HG; exact _).
     assert (HG2 : acyclic_no_loop G) by (rewrite HG; exact _).
@@ -1855,7 +1855,7 @@ Section CheckLeq.
       (Hu  : gc_levels_declared u)
     : leqb_expr_univ_n_gen leqb_level_n_gen ⎩ lt ⎭ e1 u
       <-> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 (LevelAlgExpr.make e1) u.
-  Proof.
+  Proof using HC HG Huctx.
     split; [eapply leqb_expr_univ_n_spec0_gen; eauto|].
     unfold leqb_expr_univ_n_gen; intro HH.
     case_eq (LevelAlgExpr.exprs u). intros e u' ee.
@@ -1889,7 +1889,7 @@ Section CheckLeq.
     (Hu1  : gc_levels_declared u1)
     (Hu2  : gc_levels_declared u2)
 : leqb_levelalg_n_gen leqb_level_n_gen lt u1 u2 -> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 u1 u2.
-  Proof.
+  Proof using Type.
     unfold leqb_levelalg_n_gen. intros H.
     unfold_univ_rel0.
     unfold val, LevelAlgExpr.Evaluable.
@@ -1921,7 +1921,7 @@ Section CheckLeq.
         (Hu2  : gc_levels_declared l2)
     : leqb_levelalg_n_gen leqb_level_n_gen lt l1 l2
       <-> gc_leq0_levelalg_n ⎩ lt ⎭ uctx.2 l1 l2.
-  Proof.
+  Proof using HC HG Huctx.
     split; [eapply leqb_levelalg_n_spec0_gen; eauto |].
     unfold leqb_levelalg_n_gen; intro HH.
     unfold LevelAlgExpr.exprs.
@@ -1949,7 +1949,7 @@ Section CheckLeq.
      (Hu1  : gc_levels_declared u1)
      (Hu2  : gc_levels_declared u2)
     : check_leqb_levelalg_gen leqb_level_n_gen u1 u2 <-> gc_leq_levelalg uctx.2 u1 u2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_leqb_levelalg_gen,
           gc_leq_levelalg, gc_leq_levelalg_n,
           leqb_levelalg_n_gen, gc_leq0_levelalg_n.
@@ -1975,7 +1975,7 @@ Section CheckLeq.
       (Hu1  : gc_levels_declared l1)
       (Hu2  : gc_levels_declared l2)
     : check_eqb_levelalg_gen leqb_level_n_gen l1 l2 <-> gc_eq_levelalg uctx.2 l1 l2.
-  Proof.
+  Proof using HC HG Huctx.
     unfold check_eqb_levelalg_gen, gc_eq_levelalg.
     destruct check_univs; [|split; trivial].
     split; cbn.
@@ -2024,7 +2024,7 @@ Section CheckLeq.
     (Hu1 : gc_levels_declared' uctx.1 gc)
     : check_gc_constraint_gen leqb_level_n_gen gc
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies0 v gc else True.
-  Proof.
+  Proof using Huctx.
     unfold check_gc_constraint_gen.
     destruct check_univs; [cbn|trivial].
     destruct gc as [l z l'|k l|k n|l k|n k].
@@ -2056,7 +2056,7 @@ Section CheckLeq.
     ctrs (Hu1 : gcs_levels_declared uctx.1 ctrs)
     : check_gc_constraints_gen leqb_level_n_gen ctrs
       -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs else True.
-  Proof.
+  Proof using Huctx.
     rewrite /gcs_levels_declared in Hu1. pose proof check_gc_constraint_spec_gen as XX.
     unfold check_gc_constraints_gen. destruct check_univs; [cbn|trivial].
     intros HH v Hv.
@@ -3252,3 +3252,56 @@ Proof.
   unfold is_consistent. by move=> /on_SomeP [? [-> <-]].
 Qed.
 
+From MetaCoq.Utils Require Import MCUtils.
+
+Lemma global_uctx_invariants_union_or lvls1 lvls2 cs
+  : global_uctx_invariants (lvls1, cs) \/ global_uctx_invariants (lvls2, cs)
+    -> global_uctx_invariants (LevelSet.union lvls1 lvls2, cs).
+Proof.
+  cbv [global_uctx_invariants uctx_invariants ConstraintSet.For_all declared_cstr_levels]; cbn [fst snd ContextSet.levels ContextSet.constraints].
+  repeat first [ apply conj
+               | progress intros
+               | progress cbv beta iota in *
+               | progress destruct ?
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress split_and
+               | rewrite !LevelSet.union_spec
+               | progress specialize_dep_under_binders_by eapply pair
+               | solve [ eauto ] ].
+Qed.
+
+Lemma global_gc_uctx_invariants_union_or lvls1 lvls2 cs
+  : global_gc_uctx_invariants (lvls1, cs) \/ global_gc_uctx_invariants (lvls2, cs)
+    -> global_gc_uctx_invariants (VSet.union lvls1 lvls2, cs).
+Proof.
+  cbv [global_gc_uctx_invariants uctx_invariants GoodConstraintSet.For_all declared_cstr_levels]; cbn [fst snd ContextSet.levels ContextSet.constraints].
+  repeat first [ apply conj
+               | progress intros
+               | progress cbv beta iota in *
+               | progress subst
+               | progress destruct ?
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress split_and
+               | rewrite !VSet.union_spec
+               | progress specialize_dep_under_binders_by eassumption
+               | solve [ eauto ] ].
+Qed.
+
+Lemma gc_levels_declared_union_or lvls1 lvls2 cstr u
+  : gc_levels_declared (lvls1, cstr) u \/ gc_levels_declared (lvls2, cstr) u
+    -> gc_levels_declared (VSet.union lvls1 lvls2, cstr) u.
+Proof.
+  cbv [gc_levels_declared LevelExprSet.For_all gc_expr_declared on_Some_or_None LevelExpr.get_noprop]; cbn [fst].
+  repeat first [ apply conj
+               | progress intros
+               | progress cbv beta iota in *
+               | progress destruct ?
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress split_and
+               | rewrite !VSet.union_spec
+               | progress specialize_dep_under_binders_by eassumption
+               | solve [ eauto ] ].
+Qed.

@@ -253,7 +253,6 @@ let monad_failure s k =
 let next_action env evd (pgm : constr) : template_monad * _ =
   let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to reduce " ++ Printer.pr_constr_env env evd pgm)) in
   let pgm = Reduction.whd_all env pgm in
-  let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to run " ++ Printer.pr_constr_env env evd pgm)) in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
     try
@@ -268,16 +267,19 @@ let next_action env evd (pgm : constr) : template_monad * _ =
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
   let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
-  if eq_gr ptmReturn || eq_gr ttmReturn then
-    match args with
-    | _::h::[] ->
-       (TmReturn h, universes)
-    | _ -> monad_failure "tmReturn" 2
-  else if eq_gr ptmBind || eq_gr ttmBind then
+  if eq_gr ptmBind || eq_gr ttmBind then
+    let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
     match args with
     | _::_::a::f::[] ->
        (TmBind (a, f), universes)
     | _ -> monad_failure "tmBind" 4
+  else
+    let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to run " ++ Printer.pr_constr_env env evd pgm)) in
+    if eq_gr ptmReturn || eq_gr ttmReturn then
+      match args with
+      | _::h::[] ->
+        (TmReturn h, universes)
+      | _ -> monad_failure "tmReturn" 2
   else if eq_gr ptmPrint then
     match args with
     | _::trm::[] ->

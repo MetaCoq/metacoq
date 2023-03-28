@@ -187,7 +187,7 @@ let quote_module (qualid : qualid) : global_reference list =
     match me with
     | Abstract -> []
     | Algebraic _ -> []
-    | Struct s -> get_refs (Modops.annotate_struct_body s mb.Declarations.mod_type)
+    | Struct (reso,s) -> get_refs (Modops.annotate_struct_body s mb.Declarations.mod_type)
     | FullStruct -> get_refs mb.Declarations.mod_type
   in aux mb
 

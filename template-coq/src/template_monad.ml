@@ -251,7 +251,7 @@ let monad_failure s k =
                           str "Please file a bug with MetaCoq.")
 
 let next_action env evd (pgm : constr) : template_monad * _ =
-  let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to reduce " ++ Printer.pr_constr_env env evd pgm)) in
+  let () = ppdebug 2 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to reduce " ++ Printer.pr_constr_env env evd pgm)) in
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
@@ -268,7 +268,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
   in
   let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
   if eq_gr ptmBind || eq_gr ttmBind then
-    let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
+    let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
     match args with
     | _::_::a::f::[] ->
        (TmBind (a, f), universes)

@@ -318,7 +318,7 @@ struct
 
 
   let unquote_int = unquote_nat
-  let print_term = Printer.pr_constr_env (Global.env ()) Evd.empty
+  let print_term x = Printer.pr_constr_env (Global.env ()) Evd.empty x
 
 
   let unquote_global_reference (trm : Constr.t) (* of type global_reference *) : GlobRef.t =

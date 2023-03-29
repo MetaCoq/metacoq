@@ -1,19 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Template Require Import Ast.
-From MetaCoq.Template Require Import TemplateMonad.Common.
 
 Import MCMonadNotation.
 
-Section with_tc.
-  Context {TM : TMInstance}.
-  Local Notation TemplateMonad := (@TemplateMonad TM).
-  Context {M : Monad TemplateMonad}.
+Section with_monad.
+  Context {T} {M : Monad T}.
 
   Section map_predicate.
     Context {term term' : Type}.
-    Context (uf : Instance.t -> TemplateMonad Instance.t).
-    Context (paramf preturnf : term -> TemplateMonad term').
+    Context (uf : Instance.t -> T Instance.t).
+    Context (paramf preturnf : term -> T term').
 
     Definition monad_map_predicate (p : predicate term) :=
       pparams <- monad_map paramf p.(pparams);;
@@ -27,8 +24,8 @@ Section with_tc.
 
   Section map_predicate_k.
     Context {term : Type}.
-    Context (uf : Instance.t -> TemplateMonad Instance.t).
-    Context (f : nat -> term -> TemplateMonad term).
+    Context (uf : Instance.t -> T Instance.t).
+    Context (f : nat -> term -> T term).
 
     Definition monad_map_predicate_k k (p : predicate term) :=
       pparams <- monad_map (f k) p.(pparams);;
@@ -43,7 +40,7 @@ Section with_tc.
 
   Section map_branch.
     Context {term term' : Type}.
-    Context (bbodyf : term -> TemplateMonad term').
+    Context (bbodyf : term -> T term').
 
     Definition monad_map_branch (b : branch term) :=
       bbody <- bbodyf b.(bbody);;
@@ -51,8 +48,8 @@ Section with_tc.
             bbody := bbody |}.
   End map_branch.
 
-  Definition monad_map_branches {term B} (f : term -> TemplateMonad B) l := monad_map (monad_map_branch f) l.
+  Definition monad_map_branches {term B} (f : term -> T B) l := monad_map (monad_map_branch f) l.
 
   Notation map_branches_k f k brs :=
     (monad_map (fun b => monad_map_branch (f (#|b.(bcontext)| + k)) b) brs).
-End with_tc.
+End with_monad.

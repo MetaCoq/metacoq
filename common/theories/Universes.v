@@ -1,4 +1,4 @@
-From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
+From Coq Require Import OrdersAlt MSetList MSetAVL MSetFacts MSetProperties MSetDecide FMapAVL.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst config.
@@ -651,6 +651,15 @@ Module LevelAlgExpr.
     : val v (make' l) = val v l.
   Proof. reflexivity. Qed.
 
+  Definition lt : t -> t -> Prop := LevelExprSet.lt.
+  Definition lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof. repeat intro; subst; reflexivity. Qed.
+  #[global] Instance lt_strorder : StrictOrder lt.
+  Proof.
+    cbv [lt]; constructor.
+    { intros ? H. apply irreflexivity in H; assumption. }
+    { intros ??? H1 H2; etransitivity; tea. }
+  Qed.
 End LevelAlgExpr.
 
 Ltac u :=
@@ -1141,7 +1150,71 @@ Module Universe.
     destruct x, y; try now inversion 1.
   Qed.
 
+  Inductive lt_ : t -> t -> Prop :=
+  | ltPropSProp : lt_ lProp lSProp
+  | ltPropType s : lt_ lProp (lType s)
+  | ltSPropType s : lt_ lSProp (lType s)
+  | ltTypeType s1 s2 : LevelAlgExpr.lt s1 s2 -> lt_ (lType s1) (lType s2).
+  Derive Signature for lt_.
+
+  Definition lt := lt_.
+
+  Module OT <: OrderedType.
+    Definition t := t.
+    #[local] Definition eq : t -> t -> Prop := eq.
+    #[local] Definition eq_equiv : Equivalence eq := _.
+    Definition lt := lt.
+    #[local] Instance lt_strorder : StrictOrder lt.
+    Proof.
+      constructor.
+      - intros [| |] X; inversion X.
+        now eapply irreflexivity in H1.
+      - intros [| |] [| |] [| |] X1 X2;
+          inversion X1; inversion X2; constructor.
+        subst.
+        etransitivity; tea.
+    Qed.
+
+    Definition lt_compat : Proper (eq ==> eq ==> iff) lt.
+    Proof.
+      intros x y e z t e'. hnf in * |- ; subst. reflexivity.
+    Qed.
+    Definition compare (x y : t) : comparison
+      := match x, y with
+         | lProp, lProp => Eq
+         | lProp, _ => Lt
+         | _, lProp => Gt
+         | lSProp, lSProp => Eq
+         | lSProp, _ => Lt
+         | _, lSProp => Gt
+         | lType x, lType y => LevelExprSet.compare x y
+         end.
+    Lemma compare_spec x y : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+    Proof.
+      cbv [compare eq].
+      destruct x, y.
+      all: lazymatch goal with
+           | [ |- context[LevelExprSet.compare ?x ?y] ]
+             => destruct (LevelExprSet.compare_spec x y)
+           | _ => idtac
+           end.
+      all: lazymatch goal with
+           | [ H : LevelExprSet.eq (?f ?x) (?f ?y) |- _ ]
+             => apply LevelExprSet.eq_leibniz in H;
+                is_var x; is_var y; destruct x, y; cbn in H; subst
+           | _ => idtac
+           end.
+      all: repeat constructor; try apply f_equal; try assumption.
+      f_equal; apply Eqdep_dec.UIP_dec; decide equality.
+    Qed.
+    Definition eq_dec (x y : t) : {x = y} + {x <> y}.
+    Proof. repeat decide equality. apply LevelAlgExpr.eq_dec_univ0. Defined.
+  End OT.
+  Module OTOrig <: OrderedTypeOrig := Backport_OT OT.
 End Universe.
+
+Module UniverseMap := FMapAVL.Make Universe.OTOrig.
+Module UniverseMapFact := FMapFacts.WProperties UniverseMap.
 
 Definition is_propositional u :=
   Universe.is_prop u || Universe.is_sprop u.

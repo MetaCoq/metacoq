@@ -72,3 +72,13 @@ mrproper:
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
+
+.PHONY: update-_PluginProject.in
+update-_PluginProject.in:
+	@echo 'WARNING: This target only works correctly when gen-src has been populated from making Extraction.vo and contains no outdated .ml{,i} files'
+	contents="$$(cat _PluginProject.in | grep -v '^gen-src/.*\.\(mli\|ml\)$$')"; \
+	line="$$(printf "%s\n" "$${contents}" | grep -n "^# Generated" | head -1 | cut -d: -f1)"; \
+	{ printf "%s\n" "$${contents}" | head -n$${line}; \
+	  ls -1 gen-src/*.ml gen-src/*.mli | env LC_COLLATE=C sort; \
+	  printf "%s\n" "$${contents}" | tail -n+$$((line+1)); \
+	} > _PluginProject.in

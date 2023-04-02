@@ -2,10 +2,13 @@
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes.
+From Equations.Prop Require Import Classes EqDecInstances Tactics.
 
 Module Type Term.
 
   Parameter Inline term : Type.
+  Parameter Inline term_EqDec : EqDec term.
+  #[export] Existing Instance term_EqDec.
 
   Parameter Inline tRel : nat -> term.
   Parameter Inline tSort : Universe.t -> term.
@@ -242,6 +245,9 @@ Module Environment (T : Term).
     (* Closed type: on well-formed constructors: forall params, cstr_args, I params cstr_indices *)
     cstr_arity : nat; (* arity, w/o lets, w/o parameters *)
   }.
+  Derive NoConfusion for constructor_body.
+  #[export] Instance constructor_body_eq_dec : EqDec constructor_body.
+  Proof. eqdec_proof. Defined.
 
   Record projection_body := {
     proj_name : ident;
@@ -250,6 +256,9 @@ Module Environment (T : Term).
     proj_relevance : relevance;
     proj_type : term; (* Type under context of params and inductive object *)
   }.
+  Derive NoConfusion for projection_body.
+  #[export] Instance projection_body_eq_dec : EqDec projection_body.
+  Proof. eqdec_proof. Defined.
 
   Definition map_constructor_body npars arities f c :=
     {| cstr_name := c.(cstr_name);
@@ -277,6 +286,9 @@ Module Environment (T : Term).
     ind_ctors : list constructor_body;
     ind_projs : list projection_body; (* names and types of projections, if any. *)
     ind_relevance : relevance (* relevance of the inductive definition *) }.
+  Derive NoConfusion for one_inductive_body.
+  #[export] Instance one_inductive_body_eq_dec : EqDec one_inductive_body.
+  Proof. eqdec_proof. Defined.
 
   Definition map_one_inductive_body npars arities f m :=
     match m with
@@ -296,6 +308,9 @@ Module Environment (T : Term).
     ind_bodies : list one_inductive_body ;
     ind_universes : universes_decl;
     ind_variance : option (list Universes.Variance.t) }.
+  Derive NoConfusion for mutual_inductive_body.
+  #[export] Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body.
+  Proof. eqdec_proof. Defined.
 
   (** See [constant_body] from [declarations.ml] *)
   Record constant_body := {
@@ -303,6 +318,9 @@ Module Environment (T : Term).
     cst_body : option term;
     cst_universes : universes_decl;
     cst_relevance : relevance }.
+  Derive NoConfusion for constant_body.
+  #[export] Instance constant_body_eq_dec : EqDec constant_body.
+  Proof. eqdec_proof. Defined.
 
   Definition map_constant_body f decl :=
     {| cst_type := f decl.(cst_type);
@@ -322,6 +340,8 @@ Module Environment (T : Term).
   | ConstantDecl : constant_body -> global_decl
   | InductiveDecl : mutual_inductive_body -> global_decl.
   Derive NoConfusion for global_decl.
+  #[export] Instance global_decl_eq_dec : EqDec global_decl.
+  Proof. eqdec_proof. Defined.
 
   Definition global_declarations := list (kername * global_decl).
 

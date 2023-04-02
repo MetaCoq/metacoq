@@ -236,6 +236,9 @@ End Contexts.
 
 Arguments context_decl : clear implicits.
 
+#[export] Instance context_decl_eq_dec {term} : Classes.EqDec term -> Classes.EqDec (context_decl term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Defined.
+
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
   {| decl_name := d.(decl_name);
      decl_body := option_map f d.(decl_body);

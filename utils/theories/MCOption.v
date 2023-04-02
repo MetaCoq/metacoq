@@ -1,6 +1,7 @@
 From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
 
 From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
+From Equations.Prop Require Import Classes Tactics.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -209,3 +210,7 @@ Proof. intros []; constructor. Qed.
 Proof.
   intros x y z [] H; inv H; constructor.
 Qed.
+
+#[export]
+Polymorphic Instance option_eqdec {A} `(EqDec A) : EqDec (option A).
+Proof. eqdec_proof. Defined.

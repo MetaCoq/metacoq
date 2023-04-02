@@ -1701,6 +1701,18 @@ Inductive universes_decl : Type :=
 
 Derive NoConfusion for universes_decl.
 
+Definition universes_decl_eq_dec (x y : universes_decl) : {x = y} + {x <> y}.
+Proof.
+  destruct x as [|x], y as [|y];
+    try solve [ constructor; constructor; constructor
+              | right; abstract congruence ].
+  destruct ((_ : EqDec AUContext.t) x y); [ left | right ].
+  { apply f_equal; assumption. }
+  { abstract congruence. }
+Defined.
+
+#[global] Instance universes_decl_EqDec : EqDec universes_decl := { eq_dec := universes_decl_eq_dec }.
+
 Definition levels_of_udecl u :=
   match u with
   | Monomorphic_ctx => LevelSet.empty

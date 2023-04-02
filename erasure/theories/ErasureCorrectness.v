@@ -264,6 +264,7 @@ Proof.
       2:{
       exists x2. split; eauto. constructor. eapply eval_iota_sing => //.
       pose proof (Ee.eval_to_value _ _ He_v').
+      let X0 := match goal with H : Ee.value _ (EAst.mkApps _ _) |- _ => H end in
       eapply value_app_inv in X0. subst. eassumption.
       depelim H2.
       eapply isErasable_Propositional in X0; eauto.
@@ -417,7 +418,11 @@ Proof.
             eapply declared_constructor_from_gen in d.
             eapply (declared_constructor_assumption_context d).
             destruct s3 as [? [? [eqp _]]].
-            rewrite lenppars (firstn_app_left) // in eqp. congruence.
+            rewrite lenppars (firstn_app_left) // in eqp.
+            match goal with
+            | [ H : ?f (firstn ?n ?ls) ?p |- ?f (firstn ?n' ?ls) ?p ]
+              => replace n' with n; first [ exact H | congruence ]
+            end.
             move: wf_brs. now rewrite /wf_branches hctors => h; depelim h.
             rewrite -eq_npars. exact s1.
           - eapply All2_rev. cbn.
@@ -438,7 +443,7 @@ Proof.
          constructor.
          destruct x1 as [n br'].
          eapply eval_iota_sing => //.
-         pose proof (Ee.eval_to_value _ _ He_v').
+         pose proof (Ee.eval_to_value _ _ He_v') as X0.
          apply value_app_inv in X0; subst x0.
          apply He_v'.
          now rewrite -eq_npars.
@@ -509,7 +514,7 @@ Proof.
         eapply isErasable_Proof. constructor. eauto.
 
         eapply eval_proj_prop => //.
-        pose proof (Ee.eval_to_value _ _ Hty_vc').
+        pose proof (Ee.eval_to_value _ _ Hty_vc') as X0.
         eapply value_app_inv in X0. subst. eassumption.
         now rewrite -eqpars.
       * rename H3 into Hinf.
@@ -549,7 +554,7 @@ Proof.
           eassumption.
           eapply isErasable_Proof.
           constructor. eapply eval_proj_prop => //.
-          pose proof (Ee.eval_to_value _ _ Hty_vc').
+          pose proof (Ee.eval_to_value _ _ Hty_vc') as X0.
           eapply value_app_inv in X0. subst. eassumption.
           now rewrite -eqpars.
         -- eapply erases_deps_eval in Hty_vc'; [|now eauto].

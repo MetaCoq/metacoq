@@ -1570,7 +1570,7 @@ Lemma eval_app_cong_tApp' fl Σ t arg arg' res :
   @eval (switch_unguarded_fix fl) Σ (tApp t arg') res ->
   @eval (switch_unguarded_fix fl) Σ (tApp t arg) res.
 Proof.
-  intros. depind H0.
+  intros X H H0. depind H0.
   - eapply eval_app_cong_tApp; tea. econstructor. constructor. constructor. exact H.
   - pose proof (eval_trans' H H0_0). subst a'. econstructor; tea.
   - pose proof (eval_trans' H H0_0). subst av. eapply eval_fix; tea.
@@ -1612,7 +1612,7 @@ Lemma eval_app_cong_mkApps {fl} {Σ} {f f' res : EAst.term} {args args'} :
   @eval (switch_unguarded_fix fl) Σ (mkApps f args) res.
 Proof.
   revert args' res; induction args using rev_ind.
-  - cbn. intros. eapply eval_trans. tea. now depelim X.
+  - cbn. intros args' res ? X ?. eapply eval_trans. tea. now depelim X.
   - intros args' res evf evargs evf'.
     rewrite !mkApps_app. cbn.
     eapply All2_app_inv_l in evargs as [r1 [r2 [? []]]]. depelim a0. depelim a0. subst args'.
@@ -1737,7 +1737,7 @@ Proof.
       rewrite -[tApp _ _](mkApps_app _ _ [av]) in IHeval3.
       forward_keep IHeval2.
       { rewrite ha. now eapply forallb_last. }
-      unshelve epose proof (eval_mkApps_tFix_inv_size _ _ _ _ _ _ H') => //; auto.
+      unshelve epose proof (eval_mkApps_tFix_inv_size _ _ _ _ _ _ H') as X => //; auto.
       intros hev.
       destruct X as [[args' [hargs heq]]|].
       { solve_discr. noconf H5.

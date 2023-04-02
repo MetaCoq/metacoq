@@ -355,7 +355,7 @@ Lemma All2_map_equiv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l
   All2 (fun x y => R (f x) (g y)) l l' <~> All2 R (map f l) (map g l').
 Proof.
   split.
-  - induction 1; simpl; constructor; try congruence.
+  - induction 1; simpl; constructor; try congruence; try assumption.
   - induction l in l' |- *; destruct l'; intros H; depelim H; constructor; auto.
 Qed.
 
@@ -833,11 +833,11 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2_mapP {A B} {P} {l l' : list A} (f : A -> B) :
   OnOne2 (on_rel P f) l l' -> OnOne2 P (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2_map {A B} {P : B -> B -> Type} {l l' : list A} (f : A -> B) :
   OnOne2 (on_Trel P f) l l' -> OnOne2 P (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2_sym {A} (P : A -> A -> Type) l l' : OnOne2 (fun x y => P y x) l' l -> OnOne2 P l l'.
 Proof.
@@ -1048,11 +1048,11 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2i_mapP {A B} {P} {i} {l l' : list A} (f : A -> B) :
   OnOne2i (fun i => on_rel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2i_map {A B} {P : nat -> B -> B -> Type} {i} {l l' : list A} (f : A -> B) :
   OnOne2i (fun i => on_Trel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2i_sym {A} (P : nat -> A -> A -> Type) i l l' : OnOne2i (fun i x y => P i y x) i l' l -> OnOne2i P i l l'.
 Proof.
@@ -1234,15 +1234,15 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2All_mapP {A B I} {P} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_rel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map {A I B} {P : I -> B -> B -> Type} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_Trel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : I -> I') (f : A -> B) :
   OnOne2All (fun i => on_Trel (P (g i)) f) i l l' -> OnOne2All P (map g i) (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite !map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite !map_length. Qed.
 
 
 Lemma OnOne2All_sym {A B} (P : B -> A -> A -> Type) i l l' : OnOne2All (fun i x y => P i y x) i l' l -> OnOne2All P i l l'.
@@ -2894,11 +2894,11 @@ Qed.
 
 Lemma All2i_map {A B C D} (R : nat -> C -> D -> Type) (f : A -> C) (g : B -> D) n l l' :
   All2i (fun i x y => R i (f x) (g y)) n l l' -> All2i R n (map f l) (map g l').
-Proof. induction 1; simpl; constructor; try congruence. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma All2i_map_right {B C D} (R : nat -> C -> D -> Type) (g : B -> D) n l l' :
   All2i (fun i x y => R i x (g y)) n l l' -> All2i R n l (map g l').
-Proof. induction 1; simpl; constructor; try congruence. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma All2i_nth_impl_gen {A B} (R : nat -> A -> B -> Type) n l l' :
   All2i R n l l' ->

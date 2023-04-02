@@ -899,7 +899,7 @@ Section Wcbv.
 
   Lemma value_app_inv L : value (mkApps tBox L) -> L = nil.
   Proof.
-    intros. depelim X.
+    intro X. depelim X.
     - destruct L using rev_ind.
       reflexivity.
       rewrite mkApps_app in i. inv i.
@@ -1059,7 +1059,8 @@ Section Wcbv.
       { clear -X; induction X; constructor; auto. }
       econstructor; tea; auto.
     - assert (All2 eval args args).
-      { clear -X0; induction X0; constructor; auto. }
+      { let X0 := match goal with H : All (fun t => eval t t) _ |- _ => H end in
+        clear -X0; induction X0; constructor; auto. }
       eapply eval_mkApps_cong => //. now eapply value_head_final.
   Qed.
 
@@ -1294,7 +1295,7 @@ Section Wcbv.
     All2 eval t v' ->
     v = v'.
   Proof.
-    induction 1 in v' |- *; intros H; depelim H; auto. f_equal; eauto.
+    induction 1 in v' |- *; intros H'; depelim H'; auto. f_equal; eauto.
     now eapply eval_deterministic.
   Qed.
 
@@ -2037,7 +2038,7 @@ Lemma eval_box_apps {wfl : WcbvFlags}:
     eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
 Proof.
   intros Σ' e x H2.
-  revert e H2; induction x using rev_ind; cbn; intros; eauto.
+  revert e H2; induction x using rev_ind; cbn; intros e ? X ?; eauto.
   eapply All2_app_inv_l in X as (l1' & l2' & -> & H' & H2).
   depelim H2.
   specialize (IHx e _ H'). simpl.

@@ -87,8 +87,8 @@ struct
   let cposI = resolve "metacoq.pos.xI"
   let cposO = resolve "metacoq.pos.xO"
 
-  let cSome_instance = resolve "metacoq.option_instance.some"
-  let cNone_instance = resolve "metacoq.option_instance.none"
+  let cSome_instance = resolve_ref "metacoq.option_instance.some"
+  let cNone_instance = resolve_ref "metacoq.option_instance.none"
 
   let unit_tt = resolve "metacoq.unit.intro"
 

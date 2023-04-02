@@ -18,7 +18,7 @@ Record typed_term : Type := existT_typed_term
 ; my_projT2 : my_projT1
 }.
 
-Monomorphic Inductive option_instance (A : Type) : Type := my_Some : A -> option_instance A | my_None : option_instance A.
+Inductive option_instance (A : Type) : Type := my_Some : A -> option_instance A | my_None : option_instance A.
 
 Arguments Some {A} a.
 Arguments None {A}.

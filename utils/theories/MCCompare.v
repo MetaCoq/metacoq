@@ -7,6 +7,8 @@ Proof.
   destruct c; split; inversion 1; constructor; intuition.
 Qed.
 
+Derive NoConfusion EqDec for comparison.
+
 Definition compare_cont (c : comparison) (d : comparison) : comparison :=
   match c with
   | Datatypes.Lt => Datatypes.Lt
@@ -234,4 +236,3 @@ Module ListOrderedType (A : UsualOrderedType) <: UsualOrderedType.
   Global Instance eq_dec : EqDec t := { eq_dec := eqb_dec }.
 
 End ListOrderedType.
-

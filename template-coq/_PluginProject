@@ -167,6 +167,8 @@ gen-src/orderedTypeAlt.ml
 gen-src/orderedTypeAlt.mli
 gen-src/orders.ml
 gen-src/orders.mli
+gen-src/ordersAlt.ml
+gen-src/ordersAlt.mli
 gen-src/ordersFacts.ml
 gen-src/ordersFacts.mli
 gen-src/ordersLists.ml

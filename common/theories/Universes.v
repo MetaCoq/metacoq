@@ -1,6 +1,6 @@
 From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From Equations Require Import Equations.
-From MetaCoq.Utils Require Import utils.
+From MetaCoq.Utils Require Import utils MCMSets MCCompare.
 From MetaCoq.Common Require Import BasicAst config.
 Require Import ssreflect.
 
@@ -158,6 +158,40 @@ Module Level.
 
   Definition eq_dec : forall (l1 l2 : t), {l1 = l2}+{l1 <> l2} := Classes.eq_dec.
 
+  Definition inv_lt {x y} (p : lt x y)
+    := match p as p in lt_ x y
+             return match x, y return lt x y -> Prop with
+                    | lzero, Level s
+                      => fun p => ltSetLevel s = p
+                    | lzero, Var n
+                      => fun p => ltSetVar n = p
+                    | Level s, Level s'
+                      => fun p => { q : StringOT.lt s s' | ltLevelLevel s s' q = p }
+                    | Level s, Var n
+                      => fun p => ltLevelVar s n = p
+                    | Var n, Var n'
+                      => fun p => { q : Nat.lt n n' | ltVarVar n n' q = p }
+                    | _, _ => fun _ => False
+                    end p
+       with
+       | ltSetLevel s => eq_refl
+       | ltSetVar n => eq_refl
+       | ltLevelLevel s s' q => exist _ q eq_refl
+       | ltLevelVar s n => eq_refl
+       | ltVarVar n n' q => exist _ q eq_refl
+       end.
+
+  Lemma lt_irrel x y (p q : lt x y) : p = q.
+  Proof.
+    pose proof (inv_lt p).
+    pose proof (inv_lt q).
+    destruct x, y; subst => //.
+    all: repeat match goal with H : sig _ |- _ => destruct H end; subst.
+    all: f_equal.
+    all: hnf in *.
+    all: try now apply le_unique.
+    all: try now apply eq_proofs_unicity.
+  Qed.
 End Level.
 
 Module LevelSet := MSetAVL.Make Level.
@@ -1347,6 +1381,31 @@ Module ConstraintType.
   Proof.
     unfold eq. decide equality. apply Z.eq_dec.
   Qed.
+
+  Definition inv_lt {x y} (p : lt x y)
+    := match p as p in lt_ x y
+             return match x, y return lt x y -> Prop with
+                    | Le n, Le m
+                      => fun p => { q : _ | LeLe n m q = p }
+                    | Le n, Eq
+                      => fun p => LeEq n = p
+                    | _, _ => fun _ => False
+                    end p
+       with
+       | LeLe n m q => exist _ q eq_refl
+       | LeEq n => eq_refl
+       end.
+
+  Lemma lt_irrel x y (p q : lt x y) : p = q.
+  Proof.
+    pose proof (inv_lt p).
+    pose proof (inv_lt q).
+    destruct x, y; subst => //.
+    all: repeat match goal with H : sig _ |- _ => destruct H end; subst.
+    all: f_equal.
+    all: hnf in *.
+    all: try now apply eq_proofs_unicity.
+  Qed.
 End ConstraintType.
 
 Module UnivConstraint.
@@ -1396,7 +1455,7 @@ Module UnivConstraint.
     invs H.
     destruct (Level.compare_spec l2 l2'); cbn; repeat constructor; tas.
     invs H. reflexivity.
-  Qed.
+  Defined.
 
   Lemma eq_dec x y : {eq x y} + {~ eq x y}.
   Proof.
@@ -1404,6 +1463,47 @@ Module UnivConstraint.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+
+  #[local] Existing Instance lt_strorder.
+  Definition extract_lt_of_CompareSpec {x y} (p : lt x y) : lt x y.
+  Proof.
+    destruct (compare_spec x y) as [H|H|H]; try exact H.
+    all: exfalso.
+    { abstract now rewrite H in p; apply lt_strorder in p. }
+    { abstract now assert (H' : lt x x) by (etransitivity; tea); apply lt_strorder in H'. }
+  Defined.
+
+  Lemma lt_irrel x y (p q : lt x y) : p = q.
+  Proof.
+    transitivity (extract_lt_of_CompareSpec p); [ | transitivity (extract_lt_of_CompareSpec q) ];
+      cbv [extract_lt_of_CompareSpec];
+      [ destruct p | destruct compare_spec; cbv [False_ind]; now try destruct ? | destruct q ].
+    all: cbv [compare_spec].
+    all: destruct Level.compare_spec.
+    all: repeat first [ progress subst
+                      | match goal with
+                        | [ |- context[False_ind _ ?pf] ] => exfalso; exact pf
+                        | [ H : Level.lt ?x ?x |- _ ] => now exfalso; apply Level.lt_strorder in H
+                        | [ H : ConstraintType.lt ?x ?x |- _ ] => now exfalso; apply ConstraintType.lt_strorder in H
+                        | [ H : ?x = ?x :> Level.t |- _ ]
+                          => assert (eq_refl = H) by apply eq_proofs_unicity;
+                             subst
+                        | [ H : ?x = ?x :> ConstraintType.t |- _ ]
+                          => assert (eq_refl = H) by apply eq_proofs_unicity;
+                             subst
+                        end
+                      | progress cbn
+                      | progress cbv [ConstraintType.eq] in *
+                      | progress f_equal
+                      | apply Level.lt_irrel
+                      | apply ConstraintType.lt_irrel
+                      | match goal with
+                        | [ |- context[Level.compare_spec ?x ?y] ]
+                          => destruct (Level.compare_spec x y)
+                        | [ |- context[ConstraintType.compare_spec ?x ?y] ]
+                          => destruct (ConstraintType.compare_spec x y)
+                        end ].
+  Qed.
 End UnivConstraint.
 
 Module ConstraintSet := MSetAVL.Make UnivConstraint.
@@ -1413,6 +1513,8 @@ Module ConstraintSetProp := ConstraintSetOrdProp.P.
 Module CS := ConstraintSet.
 Module ConstraintSetDecide := ConstraintSetProp.Dec.
 Ltac csets := ConstraintSetDecide.fsetdec.
+Module ConstraintSetDecideTree := MSetAVL.Decide UnivConstraint ConstraintSet.
+Module ConstraintSetDecideEq := MSetAVL.DecideWithLeibniz UnivConstraint ConstraintSet UnivConstraint UnivConstraint ConstraintSetDecideTree.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).
 Infix "=_cset" := ConstraintSet.Equal (at level 30).

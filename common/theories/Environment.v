@@ -2,6 +2,7 @@
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes.
+From Equations.Prop Require Import Classes.
 
 Module Type Term.
 
@@ -24,6 +25,10 @@ Module Type Term.
 
   Notation lift0 n := (lift n 0).
 End Term.
+
+Module Type TermDecide (Import T : Term).
+  #[export] Declare Instance term_eq_dec : EqDec term.
+End TermDecide.
 
 Module Retroknowledge.
 
@@ -969,6 +974,16 @@ End Environment.
 Module Type EnvironmentSig (T : Term).
  Include Environment T.
 End EnvironmentSig.
+
+Module Type EnvironmentDecide (T : Term) (Import E : EnvironmentSig T).
+  #[export] Declare Instance context_eq_dec : EqDec context.
+  #[export] Declare Instance constructor_body_eq_dec : EqDec constructor_body.
+  #[export] Declare Instance projection_body_eq_dec : EqDec projection_body.
+  #[export] Declare Instance one_inductive_body_eq_dec : EqDec one_inductive_body.
+  #[export] Declare Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body.
+  #[export] Declare Instance constant_body_eq_dec : EqDec constant_body.
+  #[export] Declare Instance global_decl_eq_dec : EqDec global_decl.
+End EnvironmentDecide.
 
 Module Type TermUtils (T: Term) (E: EnvironmentSig T).
   Import T E.

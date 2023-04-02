@@ -372,3 +372,17 @@ Next Obligation.
 Proof.
   unfold eqb_global_decl. destruct x, y; finish_reflect.
 Qed.
+
+Module PCUICTermDecide <: TermDecide PCUICTerm.
+  #[export] Instance term_eq_dec : EqDec term := _.
+End PCUICTermDecide.
+
+Module PCUICEnvironmentDecide <: EnvironmentDecide PCUICTerm PCUICEnvironment.
+  #[export] Instance context_eq_dec : EqDec context := _.
+  #[export] Instance constructor_body_eq_dec : EqDec constructor_body := _.
+  #[export] Instance projection_body_eq_dec : EqDec projection_body := _.
+  #[export] Instance one_inductive_body_eq_dec : EqDec one_inductive_body := _.
+  #[export] Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body := _.
+  #[export] Instance constant_body_eq_dec : EqDec constant_body := _.
+  #[export] Instance global_decl_eq_dec : EqDec global_decl := _.
+End PCUICEnvironmentDecide.

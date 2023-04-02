@@ -25,7 +25,7 @@ let
   releaseRev = v: "v${v}";
 
   # list of core metacoq packages sorted by dependency order
-  packages = [ "utils" "common" "template-coq" "pcuic" "safechecker" "erasure" "template-pcuic" "safechecker-plugin" "erasure-plugin" "all" ];
+  packages = [ "utils" "common" "template-coq" "pcuic" "safechecker" "template-pcuic" "erasure" "safechecker-plugin" "erasure-plugin" "all" ];
 
   template-coq = metacoq_ "template-coq";
 

@@ -48,6 +48,8 @@ gen-src/caml_byte.mli
 gen-src/caml_bytestring.ml
 gen-src/caml_nat.ml
 gen-src/caml_nat.mli
+gen-src/carryType.ml
+gen-src/carryType.mli
 gen-src/classes0.ml
 gen-src/classes0.mli
 gen-src/common0.ml
@@ -56,6 +58,8 @@ gen-src/compare_dec.ml
 gen-src/compare_dec.mli
 gen-src/config0.ml
 gen-src/config0.mli
+gen-src/coreTactics.ml
+gen-src/coreTactics.mli
 gen-src/datatypes.ml
 gen-src/datatypes.mli
 gen-src/decidableType.ml
@@ -65,6 +69,8 @@ gen-src/decimal.mli
 gen-src/decimalString.ml
 gen-src/decimalString.mli
 gen-src/denoter.ml
+gen-src/depElim.ml
+gen-src/depElim.mli
 gen-src/envMap.ml
 gen-src/envMap.mli
 gen-src/environment.ml
@@ -87,8 +93,8 @@ gen-src/fMapInterface.ml
 gen-src/fMapInterface.mli
 gen-src/fMapList.ml
 gen-src/fMapList.mli
-# gen-src/float64.ml
-# gen-src/float64.mli
+gen-src/floatClass.ml
+gen-src/floatClass.mli
 gen-src/floatOps.ml
 gen-src/floatOps.mli
 gen-src/hexadecimal.ml
@@ -96,9 +102,9 @@ gen-src/hexadecimal.mli
 gen-src/hexadecimalString.ml
 gen-src/hexadecimalString.mli
 gen-src/induction.ml
-# gen-src/induction.ml
 gen-src/induction.mli
-# gen-src/induction.mli
+gen-src/init.ml
+gen-src/init.mli
 gen-src/int0.ml
 gen-src/int0.mli
 gen-src/kernames.ml
@@ -129,8 +135,8 @@ gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
-# gen-src/mCUint63.ml
-# gen-src/mCUint63.mli
+gen-src/mCUint63.ml
+gen-src/mCUint63.mli
 gen-src/mCUtils.ml
 gen-src/mCUtils.mli
 gen-src/mSetAVL.ml
@@ -149,6 +155,8 @@ gen-src/monad_utils.ml
 gen-src/monad_utils.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
+gen-src/noConfusion.ml
+gen-src/noConfusion.mli
 gen-src/number.ml
 gen-src/number.mli
 gen-src/orderedType0.ml
@@ -210,6 +218,8 @@ gen-src/uint0.ml
 gen-src/uint0.mli
 gen-src/universes0.ml
 gen-src/universes0.mli
+gen-src/wf.ml
+gen-src/wf.mli
 gen-src/zArith_dec.ml
 gen-src/zArith_dec.mli
 gen-src/zbool.ml

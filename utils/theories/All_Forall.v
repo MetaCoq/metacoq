@@ -3,12 +3,16 @@ From MetaCoq.Utils Require Import MCPrelude MCReflect MCList MCRelations MCProd 
 From Equations Require Import Equations.
 Import ListNotations.
 
+Local Set Universe Polymorphism.
+Local Set Polymorphic Inductive Cumulativity.
+Local Unset Universe Minimization ToSet.
+
 Derive Signature for Forall Forall2.
 
 (** Combinators *)
 
 (** Forall combinators in Type to allow building them by recursion *)
-Polymorphic Cumulative Inductive All {A} (P : A -> Type) : list A -> Type :=
+Inductive All {A} (P : A -> Type) : list A -> Type :=
     All_nil : All P []
   | All_cons : forall (x : A) (l : list A),
                   P x -> All P l -> All P (x :: l).
@@ -3563,7 +3567,6 @@ Proof.
   all: now apply In_All; constructor => //.
 Qed.
 
-Local Set Universe Polymorphism.
 Lemma All_eta3 {A B C P} ls
   : @All (A * B * C)%type (fun '(a, b, c) => P a b c) ls <~> All (fun abc => P abc.1.1 abc.1.2 abc.2) ls.
 Proof.

@@ -988,11 +988,11 @@ Proof.
     exists c, u, args0. etransitivity; eauto.
 Qed.
 
-Lemma Informative_cofix v ci p brs T (Σ : global_env_ext) :
+Lemma Subsingleton_cofix v ci p brs T (Σ : global_env_ext) :
    wf_ext Σ ->
    forall (mdecl : mutual_inductive_body) (idecl : one_inductive_body) mfix idx,
    declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
-   forall (args : list term), Informative Σ ci.(ci_ind) ->
+   forall (args : list term), Subsingleton Σ ci.(ci_ind) ->
    Σ ;;; [] |- tCase ci p (mkApps (tCoFix mfix idx) args) brs : T ->
    Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ▷ v ->
    Is_proof Σ [] (mkApps (tCoFix mfix idx) args) ->

@@ -6,6 +6,7 @@ Coercion is_true : bool >-> Sortclass.
 Import ListNotations.
 
 Set Universe Polymorphism.
+Set Polymorphic Inductive Cumulativity.
 
 Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 { ret : forall {t : Type@{d}}, t -> m t

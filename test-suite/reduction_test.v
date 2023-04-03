@@ -27,9 +27,9 @@ From MetaCoq.SafeCheckerPlugin Require Import SafeTemplateChecker.
     guard_impl := PCUICWfEnvImpl.fake_guard_impl
   }.
 Next Obligation. todo "this axiom is inconsitent, only used to make infer compute". Qed.
-#[local,program] Instance assume_normalisation {nor} : @PCUICSN.Normalisation default_checker_flags nor.
-Next Obligation. todo "we should write a Template Monad program to prove normalisation for the particular program being inferred, rather than axiomatizing it". Qed.
-#[local] Existing Instance PCUICSN.normalisation.
+#[local,program] Instance assume_normalization {nor} : @PCUICSN.Normalization default_checker_flags nor.
+Next Obligation. todo "we should write a Template Monad program to prove normalization for the particular program being inferred, rather than axiomatizing it". Qed.
+#[local] Existing Instance PCUICSN.normalization.
 
 Definition typecheck_template (cf := default_checker_flags)
   {nor : normalizing_flags} (p : Ast.Env.program)
@@ -39,7 +39,7 @@ Definition typecheck_template (cf := default_checker_flags)
       infer_template_program (cf:=cf) p Monomorphic_ctx
     with CorrectDecl X =>
       X.π1
-      (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
+      (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_reference).(reference_impl_env_ext) *)
     | _ => todo "should not happen"
   end.
 
@@ -100,8 +100,8 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
 := let p' := trans_program p in
   let tm := reduce_term RedFlags.default
      canonical_abstract_env_impl
-    {| referenced_impl_env_ext := (p'.1 , φ);
-       referenced_impl_ext_wf := (todo "wf") |}
+    {| reference_impl_env_ext := (p'.1 , φ);
+       reference_impl_ext_wf := (todo "wf") |}
     [] p'.2 (todo "welltyped") in
     PCUICToTemplate.trans tm.
 

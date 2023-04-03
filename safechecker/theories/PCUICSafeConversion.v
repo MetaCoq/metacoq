@@ -65,7 +65,7 @@ Section Conversion.
 
   Context (X : X_type.π2.π1).
 
-  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
+  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
@@ -148,12 +148,12 @@ Section Conversion.
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ [u hu].
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
     pose proof (heΣ _ wfΣ) as [heΣ].
     pose proof (hu _ wfΣ) as h.
-    apply normalisation_upto in h. 2: now apply normalisation_in.
+    apply normalization_upto in h. 2: now apply normalization_in.
     dependent induction h.
     constructor. intros [y hy] r.
     unfold wcored in r. cbn in r.
@@ -221,7 +221,7 @@ Section Conversion.
     forall Γ t p w q s,
       (forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) ->
       Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ t p w q s ht.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     rewrite R_aux_equation_1.
@@ -308,7 +308,7 @@ Section Conversion.
              simpl in *. assumption.
           -- right. assumption.
     - pose proof (heΣ _ wfΣ) as [?].
-      eapply Acc_equiv; try eapply normalisation_upto; eauto.
+      eapply Acc_equiv; try eapply normalization_upto; eauto.
       split; eauto; intros.
       erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. all: eauto.
@@ -330,7 +330,7 @@ Section Conversion.
     forall Γ u,
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zipc (tm1 u) (stk1 u))) ->
       Acc (R Γ) u.
-  Proof using normalisation_in.
+  Proof using normalization_in.
     intros Γ u h.
     eapply Acc_fun with (f := fun x => obpack x).
     apply R_aux_Acc. assumption.
@@ -1209,16 +1209,16 @@ Section Conversion.
     all: intros [=].
     - constructor; eexists _; split; [apply All2_same; reflexivity|].
       eapply whnf_fixapp.
-      now rewrite <- e.
+      clear -e. unfold unfold_fix in e. now destruct nth_error.
     - constructor; eexists _; split; [apply All2_same; reflexivity|].
       eapply whnf_fixapp.
-      rewrite <- eq1.
+      clear -e eq1. unfold unfold_fix in eq1. symmetry in e.
       destruct (decompose_stack π) eqn:decomp.
       apply decompose_stack_noStackApp in decomp as ?.
       apply decompose_stack_eq in decomp as ->.
-      clear H.
-      symmetry in e.
-      now apply decompose_stack_at_appstack_None in e.
+      apply decompose_stack_at_appstack_None in e; eauto.
+      destruct nth_error ; [|now right].
+      left. eexists; split; eauto; cbn. now inversion eq1.
     - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       match type of eq3 with
       | _ = reduce_stack ?a ?b ?c ?d ?e ?f ?g =>
@@ -1261,6 +1261,8 @@ Section Conversion.
       1,3: apply All2_app; [apply All2_same; reflexivity|].
       1,2: constructor; [|apply All2_same; reflexivity].
       1-2: eapply r.
+      inversion H1. unfold unfold_fix in H0.
+      case_eq (nth_error mfix idx); [intros d e | intro e]; rewrite e in H0; inversion H0.
       apply whnf_ne.
       econstructor.
       + eauto.
@@ -2720,7 +2722,7 @@ Qed.
       eapply whnf_eq_term in eq; [|exact wh'].
       rewrite zipp_as_mkApps in wh.
       depelim wh; solve_discr.
-      apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?&?)]; [|easy|easy].
+      apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?)]; [|easy|easy].
       depelim w; cbn in *; try easy; solve_discr.
       apply whnf_whne_nodelta_upgrade in eq; auto using sq.
     - pose proof (reduce_term_sound RedFlags.default X_type X (Γ,,, stack_context π) c h) as Hreduce.
@@ -2816,7 +2818,7 @@ Qed.
       eapply whnf_eq_term in eq; [|exact wh'].
       rewrite zipp_as_mkApps in wh.
       depelim wh; solve_discr.
-      apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?&?)]; [|easy|easy].
+      apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?)]; [|easy|easy].
       depelim w; cbn in *; try easy; solve_discr.
       apply whnf_whne_nodelta_upgrade in eq; auto using sq.
     - pose proof (reduce_term_sound RedFlags.default X_type X (Γ,,, stack_context π) c h) as Hreduce.
@@ -5244,7 +5246,7 @@ Qed.
       constructor; eexists _, [].
       eauto using whnf_red with pcuic.
     - depelim wh; solve_discr.
-      + apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?&?)]; auto; try discriminate.
+      + apply whne_mkApps_inv in w as [|(?&?&?&?&?&?&?&?)]; auto; try discriminate.
         depelim w; solve_discr.
         discriminate.
       + rewrite H1.

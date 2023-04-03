@@ -10,6 +10,9 @@ Local Set Universe Polymorphism.
 Monomorphic Variant reductionStrategy : Set :=
   cbv | cbn | hnf | all | lazy | unfold (i : kername).
 
+Monomorphic Variant hint_locality : Set :=
+  local | export | global.
+
 Record typed_term : Type := existT_typed_term
 { my_projT1 : Type
 ; my_projT2 : my_projT1
@@ -33,6 +36,8 @@ Record TMInstance@{t u r} :=
 ; tmFreshName : ident -> TemplateMonad ident
 
 ; tmLocate : qualid -> TemplateMonad (list global_reference)
+; tmLocateModule : qualid -> TemplateMonad (list modpath)
+; tmLocateModType : qualid -> TemplateMonad (list modpath)
 ; tmCurrentModPath : unit -> TemplateMonad modpath
 
 (* Quote the body of a definition or inductive. Its name need not be fully quaified *)
@@ -43,7 +48,7 @@ Record TMInstance@{t u r} :=
 (* FIXME take an optional universe context as well *)
 ; tmMkInductive : bool (* infer universes? *) -> mutual_inductive_entry -> TemplateMonad unit
 (* Typeclass registration and querying for an instance *)
-; tmExistingInstance : global_reference -> TemplateMonad unit
+; tmExistingInstance : hint_locality -> global_reference -> TemplateMonad unit
 }.
 
 Monomorphic Variant import_status : Set :=

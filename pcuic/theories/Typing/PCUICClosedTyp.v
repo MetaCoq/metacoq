@@ -752,7 +752,6 @@ Proof.
   - move: h4; rewrite !on_free_vars_mkApps.
     move=> /andP [] hcofix ->.
     eapply on_free_vars_unfold_cofix in hcofix; eauto.
-    now rewrite hcofix.
   - move: hav; rewrite !on_free_vars_mkApps => /andP [] hcofix ->.
     eapply on_free_vars_unfold_cofix in H as ->; eauto.
   - eapply closed_on_free_vars. rewrite closedn_subst_instance.

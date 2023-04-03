@@ -15,7 +15,6 @@ open Template_monad
 let reduce_all env evm trm =
   EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
-
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
@@ -33,6 +32,13 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
        Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (GlobRef.ConstRef (Constant.make1 name))]
     | _ -> bad_term_verb trm "unquote_reduction_strategy"
   else not_supported_verb trm "unquote_reduction_strategy"
+
+let unquote_hint_locality env evm trm (* of type Hints.hint_locality *) : Hints.hint_locality =
+  let (trm, args) = app_full trm [] in
+  if constr_equall trm thints_local then Hints.Local
+  else if constr_equall trm thints_export then Hints.Export
+  else if constr_equall trm thints_global then Hints.SuperGlobal
+  else not_supported_verb trm "unquote_hint_locality"
 
 let denote_mind_entry_finite trm =
   let (h,args) = app_full trm [] in
@@ -465,6 +471,20 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
          let l = List.map quote_global_reference l in
          let l = to_coq_listl tglobal_reference l in
          k ~st env evm l)
+  | TmQuoteModFunctor id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmQuoteModFunctor (Libnames.qualid_of_string id)) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
+  | TmQuoteModType id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmQuoteModType (Libnames.qualid_of_string id)) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k ~st env evm (Lazy.force unit_tt)
@@ -481,6 +501,20 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       (fun ~st env evm l ->
          let l = List.map quote_global_reference l in
          let l = to_coq_listl tglobal_reference l in
+         k ~st env evm l)
+  | TmLocateModule id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmLocateModuleString id) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_modpath l in
+         let l = to_coq_listl tmodpath l in
+         k ~st env evm l)
+  | TmLocateModType id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run ~st (Plugin_core.tmLocateModTypeString id) env evm
+      (fun ~st env evm l ->
+         let l = List.map quote_modpath l in
+         let l = to_coq_listl tmodpath l in
          k ~st env evm l)
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
@@ -531,12 +565,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let name = reduce_all env evm name in
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k ~st env evm (quote_ident name')
-  | TmExistingInstance gr ->
+  | TmExistingInstance (locality, gr) ->
+    let locality = reduce_all env evm locality in
+    let locality = unquote_hint_locality env evm locality in
     let gr = reduce_all env evm gr in
     let gr = unquote_global_reference gr in
-    let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance Hints.SuperGlobal q None;
-    k ~st env evm (Lazy.force unit_tt)
+    Plugin_core.run ~st (Plugin_core.tmExistingInstance locality gr) env evm
+      (fun ~st env evm () -> k ~st env evm (Lazy.force unit_tt))
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ =

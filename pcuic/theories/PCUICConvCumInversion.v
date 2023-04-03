@@ -445,8 +445,8 @@ Section fixed.
     sq.
     assert (forall defs i, whnf RedFlags.default Σ Γ (tFix defs i)).
     { intros defs i.
-      apply whnf_fixapp with (v := []).
-      destruct unfold_fix as [(?&?)|]; [|easy].
+      apply whnf_fixapp with (args := []).
+      destruct nth_error; [|easy]. left; eexists; split; eauto.
       now rewrite nth_error_nil. }
     have clΓ := clrel_ctx r1.
     have cll := clrel_src r1.

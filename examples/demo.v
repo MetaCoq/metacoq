@@ -11,6 +11,8 @@ MetaCoq Test Quote (fun (f : nat -> nat) (x : nat) => f x).
 
 MetaCoq Test Quote (let x := 2 in x).
 
+MetaCoq Test Quote (fun l : list nat => match l with nil => 0 | cons x l => 1 end).
+
 MetaCoq Test Quote (let x := 2 in
             match x with
               | 0 => 0

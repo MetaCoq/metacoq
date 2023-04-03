@@ -28,6 +28,7 @@ theories/Conversion/PCUICNamelessConv.v
 theories/Conversion/PCUICRenameConv.v
 theories/Conversion/PCUICInstConv.v
 theories/Conversion/PCUICWeakeningEnvConv.v
+theories/Conversion/PCUICWeakeningConfigConv.v
 theories/Conversion/PCUICUnivSubstitutionConv.v
 theories/Conversion/PCUICWeakeningConv.v
 theories/Conversion/PCUICClosedConv.v
@@ -37,6 +38,7 @@ theories/Typing/PCUICNamelessTyp.v
 theories/Typing/PCUICRenameTyp.v
 theories/Typing/PCUICInstTyp.v
 theories/Typing/PCUICWeakeningEnvTyp.v
+theories/Typing/PCUICWeakeningConfigTyp.v
 theories/Typing/PCUICWeakeningTyp.v
 theories/Typing/PCUICUnivSubstitutionTyp.v
 theories/Typing/PCUICClosedTyp.v
@@ -82,6 +84,7 @@ theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
 theories/PCUICWeakeningEnvSN.v
+theories/PCUICWeakeningConfigSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 theories/PCUICFirstorder.v
@@ -104,6 +107,7 @@ theories/Bidirectional/BDUnique.v
 theories/Bidirectional/BDStrengthening.v
 
 theories/PCUICWeakeningEnv.v
+theories/PCUICWeakeningConfig.v
 
 theories/PCUICCasesHelper.v
 

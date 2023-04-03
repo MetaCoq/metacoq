@@ -223,7 +223,6 @@ Lemma Forall2_forallb2:
   Forall2 (fun x y : A => p x y) l l' -> forallb2 p l l'.
 Proof.
   induction 1; simpl; auto.
-  now rewrite H IHForall2.
 Qed.
 
 Lemma eqb_annot_spec {A} na na' : eqb_binder_annot na na' <-> @eq_binder_annot A A na na'.

@@ -27,6 +27,7 @@ ByteCompareSpec
 String0
 HexadecimalString
 Orders
+OrdersAlt
 OrdersTac
 OrdersFacts
 OrdersLists
@@ -111,4 +112,3 @@ TermEquality
 Typing0
 EtaExpand
 TemplateProgram
-

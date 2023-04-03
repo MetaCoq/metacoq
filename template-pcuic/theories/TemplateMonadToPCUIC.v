@@ -2,7 +2,8 @@
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive EnvMap.
-From MetaCoq.Template Require Import  AstUtils MonadAst MonadBasicAst.
+From MetaCoq.Common Require Import MonadBasicAst.
+From MetaCoq.Template Require Import AstUtils MonadAst.
 From MetaCoq.Template Require TemplateProgram.
 From MetaCoq.Template Require TemplateMonad.Core.
 From MetaCoq.Template Require Import TemplateMonad.Common.

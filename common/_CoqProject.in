@@ -7,6 +7,7 @@ theories/Kernames.v
 theories/Universes.v
 theories/UniversesDec.v
 theories/BasicAst.v
+theories/MonadBasicAst.v
 theories/Environment.v
 theories/Reflect.v
 theories/EnvironmentTyping.v

@@ -10,5 +10,3 @@ Template_monad
 Plugin_core
 Run_template_monad
 G_template_coq
-
-OrdersAlt

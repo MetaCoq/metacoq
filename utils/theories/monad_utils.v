@@ -53,6 +53,11 @@ Import MCMonadNotation.
        end
   |}.
 
+#[global] Instance id_monad : Monad (fun x => x) :=
+  {| ret A a := a ;
+     bind A B m f := f m
+  |}.
+
 #[global] Instance option_monad_exc : MonadExc unit option :=
 {| raise T _ := None ;
     catch T m f :=

@@ -26,7 +26,6 @@ From MetaCoq.Template Require Import TemplateMonad.Extractable Induction
      LiftSubst UnivSubst Pretty TemplateProgram.
 Import Init.Nat.
 
-Extract Inductive Common.hint_locality => "Hints.hint_locality" ["Hints.Local" "Hints.Export" "Hints.SuperGlobal"].
 Extract Constant Typing.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 
 Cd "gen-src".

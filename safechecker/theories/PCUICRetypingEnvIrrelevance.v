@@ -41,7 +41,7 @@ Definition Hlookup {cf} (X_type : abstract_env_impl) (X : X_type.π2.π1) (X_typ
     (forall tag,
     abstract_primitive_constant X tag = abstract_primitive_constant X' tag).
 
-Definition reduce_stack_eq {cf} {fl} {nor:normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
+Definition reduce_stack_eq {cf} {fl} {nor:normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ} Γ t π wi : reduce_stack fl X_type X Γ t π wi = ` (reduce_stack_full fl X_type X Γ t π wi).
 Proof.
   unfold reduce_stack. destruct reduce_stack_full => //.
 Qed.
@@ -64,8 +64,8 @@ Qed.
 Section infer_irrel.
   Context {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1}
     {X_type' : abstract_env_impl} {X' : X_type'.π2.π1}.
-  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}
-    {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalizationIn Σ}.
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}
+    {normalisation_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalisationIn Σ}.
   Context (hl : Hlookup X_type X X_type' X').
 
   Definition same_prod (Γ : context) {T}
@@ -90,7 +90,7 @@ Section infer_irrel.
     reduce_stack fl X_type X Γ t π wi = reduce_stack fl X_type' X' Γ t π wi'.
   Proof using hl.
     rewrite !reduce_stack_eq.
-    revert X_type' X' wi' hl normalization_in'.
+    revert X_type' X' wi' hl normalisation_in'.
     apply_funelim (reduce_stack_full fl X_type X Γ t π wi).
     intros.
     rewrite reduce_stack_full_unfold_eq.
@@ -463,8 +463,8 @@ Section infer_irrel.
 
 End infer_irrel.
 
-Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}
-  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1} {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalizationIn Σ}
+Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1} {normalisation_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalisationIn Σ}
   (hl : Hlookup X_type X X_type' X')
   {Γ t}
   (wf : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ wf_local Σ Γ ∥)
@@ -473,7 +473,7 @@ Lemma infer_irrel {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X
   (wi' : forall Σ : global_env_ext, abstract_env_ext_rel X' Σ -> wellinferred Σ Γ t) :
   (infer X_type X Γ wf t wi).π1 = (infer X_type' X' Γ wf' t wi').π1.
 Proof.
-  revert X_type' X' hl wf' wi' normalization_in'. apply_funelim (infer X_type X Γ wf t wi).
+  revert X_type' X' hl wf' wi' normalisation_in'. apply_funelim (infer X_type X Γ wf t wi).
   all:intros.
   all:try bang.
   - now cbn.
@@ -636,8 +636,8 @@ Proof.
 Qed.
 
 Lemma sort_of_type_irrel
-  {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}
-  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1} {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalizationIn Σ}
+  {cf} {nor : normalizing_flags} {X_type : abstract_env_impl} {X : X_type.π2.π1} {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}
+  {X_type' : abstract_env_impl} {X' : X_type'.π2.π1} {normalisation_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalisationIn Σ}
   (hl : Hlookup X_type X X_type' X')
   {Γ : context} {t}
   (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥)

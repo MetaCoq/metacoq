@@ -61,8 +61,8 @@ takes `Coq` terms and constructs a representation of their syntax tree as
 an inductive data type. The representation is based on the kernel's
 term representation.
 
-After importing `MetaCoq.Template.Loader` there are commands `MetaCoq Test Quote t.`,
-`MetaCoq Quote Definition name := (t).` and `MetaCoq Quote Recursively Definition name := (t).` as
+After importing `MetaCoq.Template.Loader` there are commands `MetaCoq Test Quote t.`, 
+`MetaCoq Quote Definition name := (t).` and `MetaCoq Quote Recursively Definition name := (t).` as 
 well as a tactic `quote_term t k`,
 where in all cases `t` is a term and `k` a continuation tactic.
 
@@ -77,7 +77,7 @@ In addition to this representation of terms, Template Coq includes:
   checker, and inserting them in the global environment, in
   the style of MTac. Monadic programs `p : TemplateMonad A` can be run using `MetaCoq Run p`.
 
-- A formalization of the typing rules reflecting the ones of Coq, covering all of Coq
+- A formalisation of the typing rules reflecting the ones of Coq, covering all of Coq 
   except eta-expansion and template polymorphism.
 
 ### [PCUIC](https://github.com/MetaCoq/metacoq/tree/master/pcuic/theories)
@@ -109,11 +109,11 @@ calculus has proofs of standard metatheoretical results:
 - Canonicity: The weak head normal form of a term of inductive type is a constructor application.
 
 - Consistency under the assumption of strong normalization
-
+  
 - Weak call-by-value standardization: Normal forms of terms of first-order inductive type
 can be found via weak call-by-value evaluation.
 
-See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/pcuic/theories/README.md) for
+See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/master/pcuic/theories/README.md) for 
 a detailed view of the development.
 
 ### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/master/safechecker/theories)
@@ -133,10 +133,10 @@ type-checker, one can use:
 
     MetaCoq CoqCheck <term>
 
-This also includes a verified, efficient re-typing procedure (useful in tactics) in
+This also includes a verified, efficient re-typing procedure (useful in tactics) in 
 `MetaCoq.SafeChecker.PCUICSafeRetyping`.
 
-See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/safechecker/theories/README.md) for
+See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/master/safechecker/theories/README.md) for 
 a detailed view of the development.
 
 ### [Erasure](https://github.com/MetaCoq/metacoq/tree/master/erasure/theories)
@@ -150,10 +150,10 @@ The extracted safe erasure is available in Coq through a new vernacular command:
 After importing `MetaCoq.Erasure.Loader`.
 
 The erasure pipeline includes verified optimizations to remove lets in constructors,
-remove cases on propositional terms, switch to an unguarded fixpoint reduction rule and
-transform the higher-order constructor applications to first-order blocks for easier
-translation to usual programming languages. See the erasure
-[README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/erasure/theories/README.md) for
+remove cases on propositional terms, switch to an unguarded fixpoint reduction rule and 
+transform the higher-order constructor applications to first-order blocks for easier 
+translation to usual programming languages. See the erasure 
+[README](https://github.com/MetaCoq/metacoq/tree/master/erasure/theories/README.md) for 
 a detailed view of the development.
 
 ### [Translations](https://github.com/MetaCoq/metacoq/tree/master/translations)
@@ -179,8 +179,8 @@ Examples of translations built on top of this:
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the extracted verified checker and erasure.
-
-- The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/test-suite/self_erasure.v) file checks that erasure
+  
+- The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/self_erasure.v) file checks that erasure
   works on the verified typechecking and erasure programs themselves.
 
 - The test-suite file [test-suite/erasure_live_test.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/erasure_live_test.v)
@@ -198,7 +198,7 @@ Examples of translations built on top of this:
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
   and Théo Winterhalter. POPL 2020, New Orleans.
 
-- ["Formalization and meta-theory of type theory"](https://theowinterhalter.github.io/#phd) Théo Winterhalter, PhD thesis, September 2020.
+- ["Formalisation and meta-theory of type theory"](https://theowinterhalter.github.io/#phd) Théo Winterhalter, PhD thesis, September 2020. 
   Part 3 describes in detail the verified reduction, conversion and type checker.
 
 - ["Coq Coq Codet! Towards a Verified Toolchain for Coq in

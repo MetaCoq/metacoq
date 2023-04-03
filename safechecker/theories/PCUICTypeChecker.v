@@ -262,7 +262,7 @@ Section Typecheck.
 
   Context (X : X_type.π2.π1).
 
-  Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
+  Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalisationIn Σ}.
 
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.

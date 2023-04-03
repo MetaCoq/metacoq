@@ -34,8 +34,6 @@ type template_monad =
   | TmFreshName of Constr.t
 
   | TmLocate of Constr.t
-  | TmLocateModule of Constr.t
-  | TmLocateModType of Constr.t
   | TmCurrentModPath
 
     (* quoting *)
@@ -45,14 +43,12 @@ type template_monad =
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
   | TmQuoteModule of Constr.t
-  | TmQuoteModFunctor of Constr.t
-  | TmQuoteModType of Constr.t
 
   | TmUnquote of Constr.t                   (* only Prop *)
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
 
     (* typeclass resolution *)
-  | TmExistingInstance of Constr.t * Constr.t
+  | TmExistingInstance of Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 

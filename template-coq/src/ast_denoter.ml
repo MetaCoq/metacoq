@@ -55,8 +55,6 @@ struct
   type quoted_global_env = global_env
   type quoted_program = program
 
-  type quoted_hint_locality = Hints.hint_locality
-
   let mkAnon = Ast_quoter.mkAnon
   let mkName = Ast_quoter.mkName
   let mkRel = mkRel
@@ -155,8 +153,6 @@ struct
     evm, mkEvar (id, SList.of_full_list l)
 
   let unquote_bool (q : quoted_bool) : bool = q
-
-  let unquote_hint_locality (l : quoted_hint_locality) : Hints.hint_locality = l
   
   let unquote_int63 i = i
 

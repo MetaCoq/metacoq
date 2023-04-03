@@ -289,15 +289,15 @@ Section CheckEnv.
   Local Definition hΣ X_ext Σ (wfΣ : abstract_env_ext_rel X_ext Σ) :
     ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ.
 
-  Definition check_wf_type (kn : kername) X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} t :
+  Definition check_wf_type (kn : kername) X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} t :
     EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ isType Σ [] t ∥) :=
     wrap_error _ X_ext (string_of_kername kn) (check_isType X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
 
-  Definition check_wf_judgement kn X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} t ty :
+  Definition check_wf_judgement kn X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} t ty :
   EnvCheck X_env_ext_type (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; [] |- t : ty ∥)
     :=  wrap_error _ X_ext (string_of_kername kn) (check X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t ty).
 
-  Definition infer_term X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} t :=
+  Definition infer_term X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} t :=
     wrap_error _ X_ext "toplevel term" (infer X_impl X_ext [] (fun _ _ => sq_wfl_nil _) t).
 
   Definition abstract_env_ext_empty := @abstract_env_empty_ext _ X_impl abstract_env_empty.
@@ -421,7 +421,7 @@ Section CheckEnv.
   Ltac specialize_Σ wfΣ :=
     repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end.
 
-  Equations infer_typing X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ
+  Equations infer_typing X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ
       (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
       typing_result (∑ T, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥) :=
     infer_typing X_ext Γ wfΓ t := typing_error_forget (infer X_impl X_ext Γ wfΓ t) ;;  ret _.
@@ -430,15 +430,15 @@ Section CheckEnv.
     pose proof (hΣ _ _ H). specialize_Σ H. sq. cbn in *. now apply infering_typing.
   Qed.
 
-  Definition check_type_wf_env X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥)
+  Definition check_type_wf_env X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥)
       t T : typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥) :=
     check X_impl X_ext Γ wfΓ t T.
 
-  Definition infer_wf_env X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
+  Definition infer_wf_env X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
     typing_result (∑ T, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t ▹ T ∥) :=
     infer X_impl X_ext Γ wfΓ t.
 
-  Equations infer_type_wf_env X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
+  Equations infer_type_wf_env X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t :
     typing_result (∑ u, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : tSort u∥) :=
     infer_type_wf_env X_ext Γ wfΓ t :=
       '(y ; H) <- typing_error_forget (infer_type X_impl X_ext (infer X_impl X_ext) Γ wfΓ t) ;;
@@ -448,7 +448,7 @@ Section CheckEnv.
     sq. now apply infering_sort_typing.
   Qed.
 
-  Definition check_context_wf_env X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (Γ : context) :
+  Definition check_context_wf_env X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (Γ : context) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :=
     check_context X_impl X_ext (infer X_impl X_ext) Γ.
 
@@ -477,7 +477,7 @@ Section CheckEnv.
         reflexivity.
   Qed.
 
-  Program Fixpoint check_type_local_ctx X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}
+  Program Fixpoint check_type_local_ctx X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ}
      Γ Δ s (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) :=
     match Δ with
@@ -511,7 +511,7 @@ Section CheckEnv.
       eapply PCUICValidity.validity in checkty; auto.
     Qed.
 
-  Program Fixpoint infer_sorts_local_ctx X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ Δ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
+  Program Fixpoint infer_sorts_local_ctx X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ Δ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
     typing_result (∑ s, forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ sorts_local_ctx (lift_typing typing) Σ Γ Δ s ∥) :=
     match Δ with
     | [] => ret ([]; fun _ _ => sq _)
@@ -541,16 +541,16 @@ Section CheckEnv.
 
   Definition cumul_decl Pcmp Σ Γ (d d' : context_decl) : Type := cumul_decls Pcmp Σ Γ Γ d d'.
 
-  Program Definition wf_env_conv X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (le : conv_pb) (Γ : context) (t u : term) :
+  Program Definition wf_env_conv X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (le : conv_pb) (Γ : context) (t u : term) :
     (forall Σ, abstract_env_ext_rel X_ext Σ -> welltyped Σ Γ t) ->
     (forall Σ, abstract_env_ext_rel X_ext Σ -> welltyped Σ Γ u) ->
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ ->  ∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
     convert X_impl X_ext le Γ t u.
 
-  Program Definition wf_env_check_cumul_decl X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} le Γ d d' :=
+  Program Definition wf_env_check_cumul_decl X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} le Γ d d' :=
     check_ws_cumul_pb_decl X_impl X_ext le Γ d d'.
 
-  Program Fixpoint wf_env_check_ws_cumul_ctx (le : conv_pb) X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ Δ Δ'
+  Program Fixpoint wf_env_check_ws_cumul_ctx (le : conv_pb) X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ Δ Δ'
     (wfΔ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (Γ ,,, Δ) ∥)
     (wfΔ' : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (Γ ,,, Δ') ∥) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
@@ -685,7 +685,7 @@ Section CheckEnv.
 
   Definition wt_terms Σ Γ l := Forall (welltyped Σ Γ) l.
 
-  Program Fixpoint check_conv_args X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) l l'
+  Program Fixpoint check_conv_args X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) l l'
     (wfl : forall Σ, abstract_env_ext_rel X_ext Σ -> wt_terms Σ Γ l)
     (wfl' : forall Σ, abstract_env_ext_rel X_ext Σ -> wt_terms Σ Γ l') :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ ws_cumul_pb_terms Σ Γ l l' ∥) :=
@@ -804,7 +804,7 @@ Section CheckEnv.
       constructor; pcuic.
   Qed.
 
-  Program Definition check_constructor X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (ind : nat) (mdecl : mutual_inductive_body)
+  Program Definition check_constructor X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (ind : nat) (mdecl : mutual_inductive_body)
     (wfar : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥)
     (wfpars : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (ind_params mdecl) ∥)
     (cdecl : constructor_body) :
@@ -885,7 +885,7 @@ Section CheckEnv.
       sq (All2_cons rxy all)
     end.
 
-   Definition check_constructors_univs X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (id : ident) (mdecl : mutual_inductive_body)
+   Definition check_constructors_univs X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (id : ident) (mdecl : mutual_inductive_body)
     (wfar : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥)
     (wfpars : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ (ind_params mdecl) ∥)
     (ind : nat)
@@ -1204,7 +1204,7 @@ Section CheckEnv.
 
     Context {X_ext : X_env_ext_type}.
 
-    Context {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}.
+    Context {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ}.
 
     Obligation Tactic := Program.Tactics.program_simpl.
 
@@ -1365,7 +1365,7 @@ Section CheckEnv.
   End PositivityCheck.
 
 
-  Program Fixpoint check_wf_local X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ :
+  Program Fixpoint check_wf_local X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :=
     match Γ with
     | [] => ret (fun _ _ => sq localenv_nil)
@@ -1829,7 +1829,7 @@ Section CheckEnv.
 
     End MonadLiftExt.
 
-  Program Definition check_constructors X X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}
+  Program Definition check_constructors X X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ}
     (id : kername) (mdecl : mutual_inductive_body)
     (HX : check_wf_env_ext_prop X X_ext (ind_universes mdecl))
     (wfar : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥)
@@ -2029,7 +2029,7 @@ End monad_Alli_nth_forall.
     apply iff_reflect. apply (abstract_env_compare_universe_correct _ H Cumul); eauto.
   Qed.
 
-  Program Definition do_check_ind_sorts X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (params : context)
+  Program Definition do_check_ind_sorts X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (params : context)
     (wfparams : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ params ∥)
     (kelim : allowed_eliminations) (indices : context)
     (cs : list constructor_univs)
@@ -2167,7 +2167,7 @@ End monad_Alli_nth_forall.
     rewrite -eqvaru in e; discriminate.
   Qed.
 
-  Program Definition check_ind_types X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (mdecl : mutual_inductive_body)
+  Program Definition check_ind_types X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} (mdecl : mutual_inductive_body)
       : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_ind_types Σ mdecl ∥) :=
     indtys <- monad_All (fun ind => wrap_error _ X_ext ind.(ind_name)
       (infer_type_wf_env X_ext [] (fun _ _ => sq_wfl_nil _) ind.(ind_type))) mdecl.(ind_bodies) ;;
@@ -2179,7 +2179,7 @@ End monad_Alli_nth_forall.
       solve_all. now exists y.
     Qed.
 
-  Program Definition check_one_ind_body X X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}
+  Program Definition check_one_ind_body X X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ}
       (mind : kername) (mdecl : mutual_inductive_body)
       (pf : check_wf_env_ext_prop X X_ext (ind_universes mdecl))
       (wfpars : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ mdecl.(ind_params) ∥)
@@ -2295,7 +2295,7 @@ End monad_Alli_nth_forall.
     Unshelve. eauto.
   Qed.
 
-  Program Definition check_wf_decl X X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}
+  Program Definition check_wf_decl X X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ}
     kn (d : global_decl)
     (pf : check_wf_env_ext_prop X X_ext (universes_decl_of_decl d))
     : EnvCheck X_env_ext_type (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_global_decl cumulSpec0 (lift_typing typing) Σ kn d ∥) :=
@@ -2417,7 +2417,7 @@ End monad_Alli_nth_forall.
   Program Fixpoint check_wf_decls (univs : ContextSet.t) (retro : Retroknowledge.t)
     (decls : global_declarations) :
     (* this is exactly what we need, I don't understand this function enough to know what the appropriate generalization is - JasonGross *)
-    forall {normalization_in
+    forall {normalisation_in
         : forall (d : kername × global_decl)
                (decls' : global_declarations)
                (Hdecls' : exists n, List.skipn n decls = decls')
@@ -2427,7 +2427,7 @@ End monad_Alli_nth_forall.
                (isfresh : ∥ PCUICAst.fresh_global d.1 decls' ∥)
                (udecl := universes_decl_of_decl d.2 : universes_decl)
                (X' : {X_ext : X_env_ext_type | check_wf_env_ext_prop X X_ext udecl}),
-        forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext ` X' -> NormalizationIn Σ},
+        forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext ` X' -> NormalisationIn Σ},
       EnvCheck X_env_ext_type ({ X : X_env_type |
     (forall Σ, abstract_env_rel X Σ -> Σ = {| universes := univs; declarations := decls; retroknowledge := retro |})})
     :=
@@ -2435,7 +2435,7 @@ End monad_Alli_nth_forall.
     [] => fun _ =>
       X <- check_univs univs retro ;;
       ret (exist (proj1_sig X) _)
-    | d :: decls => fun normalization_in =>
+    | d :: decls => fun normalisation_in =>
       '(exist X wf_) <- @check_wf_decls univs retro decls _ ;;
       isfresh <- check_fresh d.1 decls ;;
       let udecl := universes_decl_of_decl d.2 in
@@ -2448,13 +2448,13 @@ End monad_Alli_nth_forall.
   Next Obligation.
     let H := match goal with H : @ex nat _ |- _ => H end in
     destruct H as [n H];
-    eapply normalization_in; try solve [ exists (S n); exact H ];
+    eapply normalisation_in; try solve [ exists (S n); exact H ];
     eassumption.
   Qed.
   Obligation Tactic := Tactics.program_simpl.
 
   Next Obligation.
-    unshelve eapply normalization_in; try ((idtac + unshelve econstructor); eassumption).
+    unshelve eapply normalisation_in; try ((idtac + unshelve econstructor); eassumption).
     exists 1; reflexivity.
   Qed.
 
@@ -2478,7 +2478,7 @@ End monad_Alli_nth_forall.
 
   Program Definition check_wf_env (Σ : global_env)
     (* this is the hypothesis we need, idk how to simplify it or appropriately generalize it *)
-    {normalization_in
+    {normalisation_in
       : forall (g : global_decl) (Hdecls' : nat) X,
         (forall Σ0 : global_env,
             Σ0 ∼ X ->
@@ -2490,7 +2490,7 @@ End monad_Alli_nth_forall.
               |}) ->
         forall X' : X_env_ext_type,
           check_wf_env_ext_prop X X' (universes_decl_of_decl g) ->
-          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalizationIn Σ0}
+          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalisationIn Σ0}
     :
     EnvCheck X_env_ext_type ({ X : X_env_type | abstract_env_rel X Σ}) :=
     X <- @check_wf_decls Σ.(universes) Σ.(retroknowledge) Σ.(declarations) _ ;;
@@ -2503,7 +2503,7 @@ End monad_Alli_nth_forall.
 
   Program Definition check_wf_ext (Σ : global_env_ext)
     (* this is the hypothesis we need, idk how to simplify it or appropriately generalize it, maybe use check_wf_env_ext_prop to simplify Σ0 ∼_ext X' into _ ∼ X so that we get an equality? *)
-    {normalization_in
+    {normalisation_in
       : forall (g : global_decl) (Hdecls' : nat) X,
         (forall Σ0 : global_env,
             Σ0 ∼ X ->
@@ -2515,7 +2515,7 @@ End monad_Alli_nth_forall.
               |}) ->
         forall X' : X_env_ext_type,
           check_wf_env_ext_prop X X' (universes_decl_of_decl g) ->
-          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalizationIn Σ0}
+          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalisationIn Σ0}
     :
     EnvCheck X_env_ext_type ({ X : X_env_ext_type | abstract_env_ext_rel X Σ}) :=
     X <- @check_wf_env Σ.1 _ ;;
@@ -2526,14 +2526,14 @@ End monad_Alli_nth_forall.
     specialize_Σ a. now destruct H as [? ?], Σ.
   Qed.
 
-  Definition check_type_wf_env_bool X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ
+  Definition check_type_wf_env_bool X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ
     (wfΓ : forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t T : bool :=
     match check_type_wf_env X_ext Γ wfΓ t T with
     | Checked _ => true
     | TypeError e => false
     end.
 
-  Definition check_wf_env_bool_spec X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ
+  Definition check_wf_env_bool_spec X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ
     (wfΓ : forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t T :
     check_type_wf_env_bool X_ext Γ wfΓ t T = true ->
     forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥.
@@ -2543,7 +2543,7 @@ End monad_Alli_nth_forall.
     discriminate.
   Qed.
 
-  Definition check_wf_env_bool_spec2 X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ
+  Definition check_wf_env_bool_spec2 X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ
     (wfΓ : forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t T :
     check_type_wf_env_bool X_ext Γ wfΓ t T = false -> type_error.
   Proof.
@@ -2555,7 +2555,7 @@ End monad_Alli_nth_forall.
   (* This function is appropriate for live evaluation inside Coq:
      it forgets about the derivation produced by typing and replaces it with an opaque constant. *)
 
-  Program Definition check_type_wf_env_fast X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ
+  Program Definition check_type_wf_env_fast X_ext {normalisation_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalisationIn Σ} Γ
   (wfΓ : forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) t {T} :
   typing_result (forall Σ,  abstract_env_ext_rel X_ext Σ -> ∥ Σ ;;; Γ |- t : T ∥) :=
     (if check_type_wf_env_bool X_ext Γ wfΓ t T as x return (check_type_wf_env_bool X_ext Γ wfΓ t T = x -> typing_result _) then
@@ -2574,7 +2574,7 @@ End monad_Alli_nth_forall.
 
   Program Definition typecheck_program (p : program) φ
     (* this is the hypothesis we need, idk how to simplify it or appropriately generalize it, maybe use check_wf_env_ext_prop to simplify Σ0 ∼_ext X' into _ ∼ X so that we get an equality? *)
-    {normalization_in
+    {normalisation_in
       : forall (g : global_decl) (Hdecls' : nat) X,
         (forall Σ0 : global_env,
             Σ0 ∼ X ->
@@ -2586,10 +2586,10 @@ End monad_Alli_nth_forall.
               |}) ->
         forall X' : X_env_ext_type,
           check_wf_env_ext_prop X X' (universes_decl_of_decl g) ->
-          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalizationIn Σ0}
-    {normalization_in'
+          forall Σ0 : global_env_ext, wf_ext Σ0 -> Σ0 ∼_ext X' -> NormalisationIn Σ0}
+    {normalisation_in'
       : forall x : X_env_ext_type,
-        (p.1, φ) ∼_ext x -> forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext x -> NormalizationIn Σ}
+        (p.1, φ) ∼_ext x -> forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext x -> NormalisationIn Σ}
     : EnvCheck_X_env_ext_type (∑ A, { X: X_env_ext_type | ∥ abstract_env_ext_rel X (p.1, φ) ×
                                                           wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥}) :=
     '(exist xx pf) <- @check_wf_ext (p.1, φ) _ ;;

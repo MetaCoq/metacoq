@@ -734,6 +734,7 @@ Proof.
     split; intros; rtoProp; intuition auto; solve_all.
   - red. intros. simpl in H0. simpl. rtoProp; intuition auto.
   - red. move=> hasproj n p discr. simpl; rtoProp; intuition auto.
+    rtoProp; intuition auto.
   - red. move=> t args clt cll.
     eapply wellformed_substl. solve_all. now rewrite Nat.add_0_r.
   - red. move=> n mfix idx. cbn. unfold EWellformed.wf_fix.

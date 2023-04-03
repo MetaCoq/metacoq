@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From Coq Require CMorphisms CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config BasicAst Universes Environment Primitive.
 From Equations Require Import Equations.
@@ -564,21 +563,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     Derive Signature NoConfusion for ctx_inst.
   End TypeCtxInst.
 
-  Lemma ctx_inst_impl_gen Σ Γ inst Δ args P :
-    { P' & ctx_inst P' Σ Γ inst Δ } ->
-    (forall t T,
-        All (fun P' => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    All (fun P' => ctx_inst P' Σ Γ inst Δ) args ->
-    ctx_inst P Σ Γ inst Δ.
-  Proof.
-    intros [? Hexists] HPQ H.
-    induction Hexists; constructor; tea.
-    all: first [ apply IHHexists; clear IHHexists
-               | apply HPQ ].
-    all: eapply All_impl; tea; cbn; intros *; inversion 1; subst; eauto.
-  Qed.
-
   Lemma ctx_inst_impl P Q Σ Γ inst Δ :
     ctx_inst P Σ Γ inst Δ ->
     (forall t T, P Σ Γ t T -> Q Σ Γ t T) ->
@@ -712,10 +696,6 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : E
   Notation conv_context cumul_gen Σ := (cumul_pb_context cumul_gen Conv Σ).
   Notation cumul_context cumul_gen Σ := (cumul_pb_context cumul_gen Cumul Σ).
 
-  Lemma All_decls_alpha_pb_impl {pb} {P Q : conv_pb -> term -> term -> Type} {t t'} :
-    (forall pb t t', P pb t t' -> Q pb t t') ->
-    All_decls_alpha_pb pb P t t' -> All_decls_alpha_pb pb Q t t'.
-  Proof. induction 2; constructor; eauto. Qed.
 End Conversion.
 
 Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU).
@@ -1175,7 +1155,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         | None => unit
         | Some v =>
           ∑ univs' i i',
-            [/\ (variance_universes univs v = Some (univs', i, i')),
+            [× (variance_universes univs v = Some (univs', i, i')),
               consistent_instance_ext (Σ, univs') univs i,
               consistent_instance_ext (Σ, univs') univs i' &
               List.length v = #|UContext.instance (AUContext.repr auctx)|]
@@ -1299,31 +1279,6 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
   Arguments onVariance {_ Pcmp P Σ mind mdecl}.
 
 
-  Local Ltac destr_prod :=
-    repeat match goal with H : _ × _ |- _ => destruct H end.
-  Lemma type_local_ctx_impl_gen Σ Γ Δ u args P :
-    { P' & type_local_ctx P' Σ Γ Δ u } ->
-    (forall Γ t T,
-        All (fun P' => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    All (fun P' => type_local_ctx P' Σ Γ Δ u) args ->
-    type_local_ctx P Σ Γ Δ u.
-  Proof.
-    intros Hexists HP HPQ. revert HP Hexists; induction Δ in Γ, HPQ |- *; simpl; auto.
-    { intros ? [? ?]; auto. }
-    { intros HP Hexists; cbn in *.
-      specialize (fun H1 Γ P' H2 H => IHΔ Γ H H1 (P'; H2)).
-      forward IHΔ => //=; [].
-      destruct Hexists as [? Hexists].
-      all: destruct a as [na [b|] ty].
-      all: repeat match goal with H : _ × _ |- _ => destruct H end.
-      all: repeat split; eauto.
-      all: simpl in *.
-      all: first [ eapply IHΔ; clear IHΔ | apply HP; clear HP ]; tea.
-      all: eapply All_impl; tea => //=; intros.
-      all: repeat match goal with H : _ × _ |- _ => destruct H end => //=. }
-  Qed.
-
   Lemma type_local_ctx_impl (P Q : global_env_ext -> context -> term -> typ_or_sort -> Type) Σ Γ Δ u :
     type_local_ctx P Σ Γ Δ u ->
     (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
@@ -1332,29 +1287,6 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     intros HP HPQ. revert HP; induction Δ in Γ, HPQ |- *; simpl; auto.
     destruct a as [na [b|] ty]; simpl; auto.
     intros. intuition auto. intuition auto.
-  Qed.
-
-  Lemma sorts_local_ctx_impl_gen Σ Γ Δ u args P :
-    { P' & sorts_local_ctx P' Σ Γ Δ u } ->
-    (forall Γ t T,
-        All (fun P' => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    All (fun P' => sorts_local_ctx P' Σ Γ Δ u) args ->
-    sorts_local_ctx P Σ Γ Δ u.
-  Proof.
-    intros Hexists HP HPQ. revert HP Hexists; induction Δ in Γ, HPQ, u |- *; simpl; auto.
-    { intros ? [? ?]; auto. }
-    { intros HP Hexists; cbn in *.
-      specialize (fun H1 Γ u P' H2 H => IHΔ Γ u H H1 (P'; H2)).
-      forward IHΔ => //=; []; cbn in *.
-      destruct Hexists as [? Hexists].
-      destruct a as [na [b|] ty]; [ | destruct u ].
-      all: repeat match goal with H : _ × _ |- _ => destruct H end.
-      all: repeat split; eauto.
-      all: simpl in *.
-      all: first [ eapply IHΔ; clear IHΔ | apply HP; clear HP ]; tea.
-      all: eapply All_impl; tea => //=; intros.
-      all: repeat match goal with H : _ × _ |- _ => destruct H end => //=. }
   Qed.
 
   Lemma sorts_local_ctx_impl (P Q : global_env_ext -> context -> term -> typ_or_sort -> Type) Σ Γ Δ u :
@@ -1368,184 +1300,14 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     destruct u; auto. intuition eauto.
   Qed.
 
-  Lemma cstr_respects_variance_impl_gen Σ mdecl v cs args Pcmp :
-    { Pcmp' & @cstr_respects_variance Pcmp' Σ mdecl v cs } ->
-    (match variance_universes (ind_universes mdecl) v with
-     | Some (univs, u, u')
-       => forall Γ t T pb,
-         All (fun Pcmp' => Pcmp' (Σ, univs) Γ pb t T) args ->
-         Pcmp (Σ, univs) Γ pb t T
-     | None => True
-     end) ->
-    All (fun Pcmp' => @cstr_respects_variance Pcmp' Σ mdecl v cs) args ->
-    @cstr_respects_variance Pcmp Σ mdecl v cs.
-  Proof.
-    rewrite /cstr_respects_variance/cumul_ctx_rel/cumul_pb_decls.
-    destruct variance_universes; destr_prod; try now case.
-    move => Hexists HPQ HP.
-    apply All_prod_inv in HP.
-    destruct HP as [HP1 HP2].
-    apply All_All2_fold_swap_sum in HP1.
-    apply All_All2_swap_sum in HP2.
-    destruct args.
-    { specialize (fun Γ t T pb => HPQ Γ t T pb ltac:(constructor)).
-      destruct Hexists as [? [? ?]];
-        split; first [ eapply All2_fold_impl | eapply All2_impl ]; tea; intros *; cbn; eauto.
-      eapply All_decls_alpha_pb_impl; eauto. }
-    { destruct HP1 as [HP1|HP1], HP2 as [HP2|HP2]; subst; try congruence.
-      split; first [ eapply All2_fold_impl | eapply All2_impl ]; tea; intros *; cbn; eauto.
-      inversion 1; subst.
-      let H := match goal with X : All_decls_alpha_pb _ _ _ _ |- _ => X end in
-      inversion H; clear H; subst; constructor => //.
-      all: apply HPQ; constructor; tea.
-      all: eapply All_impl; tea; intros *; cbn.
-      all: inversion 1; subst => //=. }
-  Qed.
-
-  Lemma cstr_respects_variance_impl Σ mdecl v cs Pcmp Pcmp' :
-    (match variance_universes (ind_universes mdecl) v with
-     | Some (univs, u, u')
-       => forall Γ t T pb,
-         Pcmp' (Σ, univs) Γ pb t T ->
-         Pcmp (Σ, univs) Γ pb t T
-     | None => True
-     end) ->
-    @cstr_respects_variance Pcmp' Σ mdecl v cs ->
-    @cstr_respects_variance Pcmp Σ mdecl v cs.
-  Proof.
-    rewrite /cstr_respects_variance/cumul_ctx_rel/cumul_pb_decls.
-    destruct variance_universes; destr_prod; try now case.
-    move => HPQ [HP1 HP2].
-    split; first [ eapply All2_fold_impl | eapply All2_impl ]; tea; intros *; cbn; eauto.
-    eapply All_decls_alpha_pb_impl; eauto.
-  Qed.
-
-  Lemma on_constructor_impl_config_gen Σ mdecl i idecl ind_indices cdecl cunivs args cf Pcmp P :
-    { '(cf', Pcmp', P') & config.impl cf' cf × @on_constructor cf' Pcmp' P' Σ mdecl i idecl ind_indices cdecl cunivs } ->
-    (forall Γ t T,
-        All (fun '(cf', Pcmp', P') => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    (forall u Γ t T pb,
-        All (fun '(cf', Pcmp', P') => Pcmp' (Σ.1, u) Γ pb t T) args ->
-        Pcmp (Σ.1, u) Γ pb t T) ->
-    All (fun '(cf', Pcmp', P') => @on_constructor cf' Pcmp' P' Σ mdecl i idecl ind_indices cdecl cunivs) args
-    -> @on_constructor cf Pcmp P Σ mdecl i idecl ind_indices cdecl cunivs.
-  Proof.
-    intros Hexists H1 H2 Hargs.
-    destruct Hexists as [[[??]?] [? Hexists]].
-    destruct Hexists; split; tea.
-    all: unfold on_type, config.impl in *; eauto.
-    { apply H1; clear H1.
-      eapply All_impl; tea; intros *; destr_prod; destruct 1; tea. }
-    { eapply sorts_local_ctx_impl_gen; tea.
-      { eexists; tea. }
-      { intros; eapply H1, All_eta3; cbn; apply All_map_inv with (P:=fun P => P _ _ _ _) (f:=snd); tea. }
-      { eapply All_map, All_impl; tea; intros *; destr_prod; destruct 1; cbn; tea. } }
-    { eapply ctx_inst_impl_gen; tea.
-      { eexists; tea. }
-      { intros; eapply H1, All_eta3; cbn; apply All_map_inv with (P:=fun P => P _ _ _ _) (f:=fun P Σ Γ t T => snd P Σ Γ t (Typ T)); tea. }
-      { eapply All_map, All_impl; tea; intros *; destr_prod; destruct 1; cbn; tea. } }
-    { move => ? H'.
-      match goal with H : _ |- _ => specialize (H _ H'); revert H end => H''.
-      eapply cstr_respects_variance_impl_gen; revgoals.
-      { eapply All_map, All_impl; tea; intros *; destr_prod; destruct 1; cbn.
-        instantiate (1:=ltac:(intros [[??]?])); cbn.
-        match goal with H : _ |- _ => refine (H _ H') end. }
-      { repeat match goal with |- context[match ?x with _ => _ end] => destruct x eqn:?; subst end => //.
-        intros; eapply H2, All_eta3; cbn; apply All_map_inv with (P:=fun P => P _ _ _ _ _) (f:=fun x => x.1.2).
-        erewrite map_ext; tea; intros; destr_prod; cbn => //. }
-      { eexists; tea. } }
-    { unfold config.impl in *.
-      do 2 destruct lets_in_constructor_types; cbn in *; rewrite -> ?andb_false_r in * => //. }
-  Qed.
-
-  Lemma on_constructors_impl_config_gen Σ mdecl i idecl ind_indices cdecl cunivs args cf Pcmp P :
-    { '(cf', Pcmp', P') & config.impl cf' cf × @on_constructors cf' Pcmp' P' Σ mdecl i idecl ind_indices cdecl cunivs } ->
-    All (fun '(cf', Pcmp', P') => config.impl cf' cf) args ->
-    (forall Γ t T,
-        All (fun '(cf', Pcmp', P') => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    (forall u Γ t T pb,
-        All (fun '(cf', Pcmp', P') => Pcmp' (Σ.1, u) Γ pb t T) args ->
-        Pcmp (Σ.1, u) Γ pb t T) ->
-    All (fun '(cf', Pcmp', P') => @on_constructors cf' Pcmp' P' Σ mdecl i idecl ind_indices cdecl cunivs) args
-    -> @on_constructors cf Pcmp P Σ mdecl i idecl ind_indices cdecl cunivs.
-  Proof.
-    intros Hexists Hargsconfig H1 H2 Hargs.
-    destruct Hexists as [[[??]?] [? Hexists]].
-    unfold on_constructors in *.
-    destruct args.
-    { eapply All2_impl; tea; intros.
-      eapply on_constructor_impl_config_gen; tea; try eexists (_, _, _); eauto. }
-    apply All_eta3, All_All2_swap in Hargs; [ | constructor; congruence ].
-    eapply All2_impl; try exact Hargs; cbv beta => ?? Hargs'.
-    eapply on_constructor_impl_config_gen; tea.
-    all: repeat first [ progress destr_prod
-                      | match goal with
-                        | [ H : All _ (_ :: _) |- _ ] => inversion H; clear H; subst
-                        end ].
-    { eexists; instantiate (1:=ltac:(repeat eapply pair)); cbn in *.
-      eauto. }
-    constructor; eauto.
-    now eapply All_impl; [ multimatch goal with H : _ |- _ => exact H end | ]; intros; destr_prod; eauto.
-  Qed.
-
-  Lemma ind_respects_variance_impl Σ mdecl v cs Pcmp' Pcmp :
-    match variance_universes (ind_universes mdecl) v with
-     | Some (univs, u, u')
-       => forall Γ t T pb,
-         Pcmp' (Σ, univs) Γ pb t T ->
-         Pcmp (Σ, univs) Γ pb t T
-     | None => True
-     end ->
-    @ind_respects_variance Pcmp' Σ mdecl v cs ->
-    @ind_respects_variance Pcmp Σ mdecl v cs.
-  Proof.
-    rewrite /ind_respects_variance/cumul_ctx_rel/cumul_pb_decls.
-    destruct variance_universes; destr_prod; try now case.
-    move => HPQ HP.
-    eapply All2_fold_impl; tea; intros *; cbn; eauto.
-    inversion 1; subst; subst; constructor => //; auto.
-  Qed.
-
-  Lemma on_variance_impl Σ univs variances cf' cf :
-    config.impl cf' cf ->
-    @on_variance cf' Σ univs variances ->
-    @on_variance cf Σ univs variances.
-  Proof.
-    rewrite /on_variance; case: univs; case: variances => //; intros.
-    repeat first [ match goal with
-                   | [ H : sigT _ |- _ ] => destruct H
-                   | [ H : and4 _ _ _ _ |- _ ] => destruct H
-                   | [ H : ssrbool.and4 _ _ _ _ |- _ ] => destruct H
-                   | [ H : prod _ _ |- _ ] => destruct H
-                   | [ H : and _ _ |- _ ] => destruct H
-                   | [ |- and _ _ ] => split
-                   | [ |- sigT _ ]
-                     => repeat match goal with |- sigT _ => eexists end;
-                        split; tea
-                   end
-                 | progress unfold config.impl, consistent_instance_ext, consistent_instance, valid_constraints in *
-                 | progress cbn in * => //=
-                 | match goal with
-                   | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
-                   | [ H : context[match ?x with _ => _ end] |- _ ] => destruct x eqn:?; subst
-                   end ].
-  Qed.
-
-  Lemma on_global_env_impl_config {cf1 cf2 : checker_flags} Pcmp Pcmp' P Q :
-    config.impl cf1 cf2 ->
+  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
     (forall Σ Γ t T,
-        @on_global_env cf1 Pcmp P Σ.1 ->
-        @on_global_env cf2 Pcmp' Q Σ.1 ->
+        on_global_env Pcmp P Σ.1 ->
+        on_global_env Pcmp Q Σ.1 ->
         P Σ Γ t T -> Q Σ Γ t T) ->
-    (forall Σ Γ t T pb,
-        @on_global_env cf1 Pcmp P Σ.1 ->
-        @on_global_env cf2 Pcmp' Q Σ.1 ->
-        Pcmp Σ Γ pb t T -> Pcmp' Σ Γ pb t T) ->
-    forall Σ, @on_global_env cf1 Pcmp P Σ -> @on_global_env cf2 Pcmp' Q Σ.
+    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof.
-    intros Hcf X Y Σ [cu IH]. split; auto.
+    intros X Σ [cu IH]. split; auto.
     revert cu IH; generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear Σ.
     induction g; intros; auto. constructor; auto.
     depelim IH. specialize (IHg cu IH). constructor; auto.
@@ -1554,9 +1316,6 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     assert (X' := fun Γ t T => X ({| universes := univs; declarations := _ |}, udecl0) Γ t T
       (cu, IH) (cu, IHg)); clear X.
     rename X' into X.
-    assert (Y' := fun udecl0 Γ t T pb => Y ({| universes := univs; declarations := _ |}, udecl0) Γ t T pb
-      (cu, IH) (cu, IHg)); clear Y.
-    rename Y' into Y.
     clear IH IHg. destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; cbn in *; now eapply X.
     - destruct on_global_decl_d0 as [onI onP onNP].
@@ -1580,41 +1339,19 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
               induction 1; simpl; constructor; auto.
-            * intros; eapply cstr_respects_variance_impl; [ | now eauto ].
-              repeat destruct ?; subst; eauto.
-            * move: Hcf; unfold config.impl.
-              do 2 destruct lets_in_constructor_types => //=; rewrite ?andb_false_r => //.
         --- simpl; intros. pose (onProjections X1) as X2. simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
             split.
-            * unfold check_constructors_smaller in *.
-              eapply Forall_impl; [ apply ind_sorts0 | ]; cbv beta; intros *.
-              move => H'; eapply Forall_impl; [ exact H' | ]; cbv beta; intros *.
-              unfold leq_universe, leq_universe_n, leq_universe_n_, leq_levelalg_n, config.impl in *.
-              repeat match goal with |- context[match ?x with _ => _ end] => destruct x eqn:?; subst end => //=.
-              move: Hcf; do 2 destruct prop_sub_type => //=; rewrite ?andb_false_r => //=.
-            * move: Hcf; unfold config.impl.
-              destr_prod.
-              do 2 destruct indices_matter => //=; rewrite ?andb_false_r => //= Hcf; auto.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
               eapply type_local_ctx_impl; eauto.
-        --- generalize X1.(onIndices).
-            destruct ind_variance eqn:? => //.
-            eapply ind_respects_variance_impl; eauto.
-            repeat destruct ?; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
       -- red in onP. red.
         eapply All_local_env_impl; tea.
-      -- move: onVariance0; eapply on_variance_impl; eauto.
   Qed.
-
-  Lemma on_global_env_impl {cf : checker_flags} Pcmp P Q :
-    (forall Σ Γ t T,
-        on_global_env Pcmp P Σ.1 ->
-        on_global_env Pcmp Q Σ.1 ->
-        P Σ Γ t T -> Q Σ Γ t T) ->
-    forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
-  Proof. intros; eapply on_global_env_impl_config; eauto; reflexivity. Qed.
 
 End GlobalMaps.
 
@@ -1677,17 +1414,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
   (** Functoriality of global environment typing derivations + folding of the well-formed
     environment assumption. *)
-  Lemma on_wf_global_env_impl_config {cf1 cf2 cf3 : checker_flags} {Σ : global_env} {wfΣ : @on_global_env cf1 (@cumul_gen cf1) (lift_typing (@typing cf1)) Σ} P Q :
-    config.impl cf2 cf3 ->
-    (forall Σ Γ pb t T, @cumul_gen cf2 Σ Γ pb t T -> @cumul_gen cf3 Σ Γ pb t T) ->
-    (forall Σ Γ t T, @on_global_env cf1 (@cumul_gen cf1) (lift_typing (@typing cf1)) Σ.1 ->
-        @on_global_env cf2 (@cumul_gen cf2) P Σ.1 ->
-        @on_global_env cf3 (@cumul_gen cf3) Q Σ.1 ->
+  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env cumul_gen (lift_typing typing) Σ} P Q :
+    (forall Σ Γ t T, on_global_env cumul_gen (lift_typing typing) Σ.1 ->
+        on_global_env cumul_gen P Σ.1 ->
+        on_global_env cumul_gen Q Σ.1 ->
         P Σ Γ t T -> Q Σ Γ t T) ->
-    @on_global_env cf2 (@cumul_gen cf2) P Σ -> @on_global_env cf3 (@cumul_gen cf3) Q Σ.
+    on_global_env cumul_gen P Σ -> on_global_env cumul_gen Q Σ.
   Proof.
     unfold on_global_env in *.
-    intros Hcf Hcumul X [hu X0]. split; auto.
+    intros X [hu X0]. split; auto.
     simpl in *. destruct wfΣ as [cu wfΣ]. revert cu wfΣ.
     revert X0. generalize (universes Σ) as univs, (retroknowledge Σ) as retro, (declarations Σ). clear hu Σ.
     induction 1; constructor; try destruct o; try constructor; auto.
@@ -1719,57 +1454,20 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
               generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
               generalize (cstr_indices x0).
               induction 1; simpl; constructor; auto.
-            * move => v H.
-              move: Hcf (on_ctype_variance0 v H).
-              rewrite /config.impl/cstr_respects_variance/cumul_ctx_rel/cumul_pb_decls.
-              repeat match goal with
-                     | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
-                     end => //=.
-              move => Hcf [H1 H2]; split.
-              all: [ > eapply All2_fold_impl; try eapply H1 | eapply All2_impl; try eapply H2 ]; intros *; cbn; try eapply All_decls_alpha_pb_impl; intros *.
-              all: auto.
-            * move: on_lets_in_type0.
-              move: Hcf.
-              rewrite /config.impl.
-              do 3 destruct lets_in_constructor_types => //=.
-              all: rewrite ?andb_false_r //=.
         --- simpl; intros. pose (onProjections X1). simpl in *; auto.
         --- destruct X1. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
             split.
-            * eapply Forall_impl; [ apply ind_sorts0 | cbn ]; intros.
-              eapply Forall_impl; [ eassumption | cbn ] => ?.
-              move: Hcf.
-              rewrite /leq_universe/leq_universe_n/leq_universe_n_/leq_levelalg_n/config.impl.
-              do 2 destruct check_univs => //=.
-              all: do 2 destruct prop_sub_type => //=.
-              all: repeat match goal with
-                     | [ |- context[match ?x with _ => _ end] ] => destruct x eqn:?; subst
-                     end => //=.
-            * move: Hcf; unfold config.impl.
-              repeat match goal with H : _ × _ |- _ => destruct H end.
-              do 2 destruct indices_matter; cbn [implb andb]; rewrite ?andb_false_r => //= Hcf.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
               eapply type_local_ctx_impl; eauto.
-        --- move: X1.(onIndices).
-            destruct ind_variance eqn:Heq => //.
-            eapply ind_respects_variance_impl.
-            repeat match goal with |- context[match ?x with _ => _ end] => destruct x eqn:?; subst end; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
       -- red in onP. red.
         eapply All_local_env_impl; tea.
-      -- move: onVariance0.
-         eapply on_variance_impl; eauto.
   Qed.
 
-  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env cumul_gen (lift_typing typing) Σ} P Q :
-    (forall Σ Γ t T, on_global_env cumul_gen (lift_typing typing) Σ.1 ->
-        on_global_env cumul_gen P Σ.1 ->
-        on_global_env cumul_gen Q Σ.1 ->
-        P Σ Γ t T -> Q Σ Γ t T) ->
-    on_global_env cumul_gen P Σ -> on_global_env cumul_gen Q Σ.
-  Proof.
-    unshelve eapply on_wf_global_env_impl_config; eauto; reflexivity.
-  Qed.
 
   Section Properties.
     Context {cf : checker_flags}.
@@ -1781,7 +1479,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_constant_from_gen {Σ kn cdecl} :
     declared_constant_gen (lookup_env Σ) kn cdecl ->
     declared_constant Σ kn cdecl.
-  Proof using Type.
+  Proof.
     intro H. eapply lookup_global_Some_if_In.
     red in H. unfold lookup_env in H.
     apply lookup_constant_declared_gen => //.
@@ -1792,7 +1490,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   {wfΣ : wf Σ} :
   declared_constant Σ kn cdecl ->
   declared_constant_gen (lookup_env Σ) kn cdecl.
-  Proof using P Pcmp cf.
+  Proof.
     intro H; eapply lookup_global_Some_iff_In_NoDup in H.
     - apply lookup_constant_declared_gen => //.
       unfold lookup_constant_gen, lookup_env.
@@ -1805,7 +1503,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
    {wfΣ : wf Σ} :
     declared_minductive Σ ind mdecl ->
     declared_minductive_gen (lookup_env Σ) ind mdecl.
-  Proof using P Pcmp cf.
+  Proof.
     intro H; eapply lookup_global_Some_iff_In_NoDup in H.
     - apply lookup_minductive_declared_gen => //.
       unfold lookup_minductive_gen, lookup_env.
@@ -1817,7 +1515,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_minductive_from_gen {Σ ind mdecl} :
     declared_minductive_gen (lookup_env Σ) ind mdecl ->
     declared_minductive Σ ind mdecl.
-  Proof using Type.
+  Proof.
     intro H; eapply lookup_global_Some_if_In.
     apply lookup_minductive_declared_gen => //.
     apply declared_minductive_lookup_gen in H => //.
@@ -1827,7 +1525,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   {wfΣ : wf Σ} :
     declared_inductive Σ ind mdecl idecl ->
     declared_inductive_gen (lookup_env Σ) ind mdecl idecl.
-  Proof using P Pcmp cf.
+  Proof.
     intros []; split => //.
     eapply declared_minductive_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1836,7 +1534,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_inductive_from_gen {Σ ind mdecl idecl}:
     declared_inductive_gen (lookup_env Σ) ind mdecl idecl ->
     declared_inductive Σ ind mdecl idecl.
-  Proof using Type.
+  Proof.
     intros []; split => //.
     eapply declared_minductive_from_gen; eauto.
   Qed.
@@ -1845,7 +1543,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     {wfΣ : wf Σ} :
     declared_constructor Σ id mdecl idecl cdecl ->
     declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl.
-  Proof using P Pcmp cf.
+  Proof.
     intros []; split => //.
     eapply declared_inductive_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1854,7 +1552,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_constructor_from_gen {Σ id mdecl idecl cdecl} :
     declared_constructor_gen (lookup_env Σ) id mdecl idecl cdecl ->
     declared_constructor Σ id mdecl idecl cdecl.
-  Proof using Type.
+  Proof.
     intros []; split => //.
     eapply declared_inductive_from_gen; eauto.
   Qed.
@@ -1863,7 +1561,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
     {wfΣ : wf Σ} :
     declared_projection Σ p mdecl idecl cdecl pdecl ->
     declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl.
-  Proof using P Pcmp cf.
+  Proof.
     intros [? []]. split => //.
     eapply declared_constructor_to_gen; eauto.
     Unshelve. all:eauto.
@@ -1872,7 +1570,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
   Lemma declared_projection_from_gen {Σ p mdecl idecl cdecl pdecl} :
     declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
     declared_projection Σ p mdecl idecl cdecl pdecl.
-  Proof using Type.
+  Proof.
     intros [? []]. split => //.
     eapply declared_constructor_from_gen; eauto.
   Qed.

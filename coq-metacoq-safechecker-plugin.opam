@@ -28,7 +28,6 @@ install: [
 ]
 depends: [
   "coq-metacoq-template-pcuic" {= version}
-  "coq-metacoq-safechecker" {= version}
 ]
 synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """

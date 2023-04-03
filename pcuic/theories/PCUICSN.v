@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import
 
 Require Import Equations.Prop.DepElim.
 
-(** We assume normalization of the reduction.
+(** We assume normalisation of the reduction.
     We state is as well-foundedness of the reduction.
 *)
 
@@ -29,26 +29,15 @@ Proof.
   now constructor.
 Qed.
 
-#[local] Instance weakening_config_normalizing {cf1 cf2} :
-  config.impl cf2 cf1 -> @normalizing_flags cf1 -> @normalizing_flags cf2.
-Proof.
-  intros Hcf no.
-  destruct cf1, cf2, no; constructor; cbv -[andb] in *.
-  subst; simpl in *.
-  revert Hcf; cbv [andb].
-  repeat match goal with |- context[if ?b then _ else _] => is_var b; destruct b end.
-  all: trivial.
-Qed.
-
-Class NormalizationIn {cf : checker_flags} {no : normalizing_flags} (Σ : global_env_ext) :=
-  normalization_in :
+Class NormalisationIn {cf : checker_flags} {no : normalizing_flags} (Σ : global_env_ext) :=
+  normalisation_in :
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
-Class Normalization {cf : checker_flags} {no : normalizing_flags} :=
-  normalization : forall Σ, wf_ext Σ -> NormalizationIn Σ.
-#[export] Hint Mode NormalizationIn - - + : typeclass_instances.
-#[export] Typeclasses Opaque Normalization.
+Class Normalisation {cf : checker_flags} {no : normalizing_flags} :=
+  normalisation : forall Σ, wf_ext Σ -> NormalisationIn Σ.
+#[export] Hint Mode NormalisationIn - - + : typeclass_instances.
+#[export] Typeclasses Opaque Normalisation.
 
 (** Since we are working with name annotations, reduction is sensitive to names.
     In this section we provide cored' which corresponds to reduction up to
@@ -59,7 +48,7 @@ Class Normalization {cf : checker_flags} {no : normalizing_flags} :=
 Section Alpha.
 
   Context {cf : checker_flags} {no : normalizing_flags}.
-  Context (Σ : global_env_ext) {normalization : NormalizationIn Σ}.
+  Context (Σ : global_env_ext) {normalisation : NormalisationIn Σ}.
 
   Notation eqt u v := (∥ upto_names u v ∥).
 
@@ -159,13 +148,13 @@ Section Alpha.
     - destruct ee. constructor. symmetry; etransitivity; eassumption.
   Qed.
 
-  Lemma normalization_upto :
+  Lemma normalisation_upto :
     forall Γ u,
       welltyped Σ Γ u ->
       Acc (cored' Γ) u.
-  Proof using normalization.
+  Proof using normalisation.
     intros Γ u h.
-    apply normalization in h.
+    apply normalisation in h.
     eapply Acc_cored_cored'.
     - eassumption.
     - constructor; reflexivity.

@@ -144,25 +144,10 @@ let tmLocate (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->
   let grs = Nametab.locate_all qualid in success ~st env evd grs
 
-let tmLocateModule (qualid : qualid) : Names.ModPath.t list tm =
-  fun ~st env evd success _fail ->
-  let mps = Nametab.locate_extended_all_module qualid in success ~st env evd mps
-
-let tmLocateModType (qualid : qualid) : Names.ModPath.t list tm =
-  fun ~st env evd success _fail ->
-  let mps = Nametab.locate_extended_all_modtype qualid in success ~st env evd mps
 
 let tmLocateString (s : string) : global_reference list tm =
   let id = Libnames.qualid_of_string s in
   tmLocate id
-
-let tmLocateModuleString (s : string) : Names.ModPath.t list tm =
-  let id = Libnames.qualid_of_string s in
-  tmLocateModule id
-
-let tmLocateModTypeString (s : string) : Names.ModPath.t list tm =
-  let id = Libnames.qualid_of_string s in
-  tmLocateModType id
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun ~st env evd success _fail ->
@@ -181,57 +166,44 @@ let tmQuoteUniverses : UGraph.t tm =
   fun ~st env evm success _fail ->
     success ~st env evm (Environ.universes env)
 
-let quote_module ~(include_functor : bool) ~(include_submodule : bool) ~(include_submodtype : bool) (qualid : qualid) : global_reference list =
+let quote_module (qualid : qualid) : global_reference list =
   let mp = Nametab.locate_module qualid in
   let mb = Global.lookup_module mp in
-  let open Declarations in
-  let rec aux mb mp =
-    let rec aux' mt mp =
-      match mt with
-      | MoreFunctor (_, _, body) -> if include_functor then aux' body mp else []
-      | NoFunctor body ->
-        let get_ref (label, field) =
-          let open Names in
-          match field with
-          | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
-          | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
-          | SFBmodule mb -> if include_submodule then aux mb.mod_type mb.mod_mp else []
-          | SFBmodtype mtb -> if include_submodtype then aux mtb.mod_type mtb.mod_mp else []
-        in
-        CList.map_append get_ref body
-    in aux' mb mp
-  in aux mb.mod_type mb.mod_mp
+  let rec aux mb =
+    let open Declarations in
+    let me = mb.mod_expr in
+    let get_refs s =
+      let body = Modops.destr_nofunctor mp s in
+      let get_ref (label, field) =
+        let open Names in 
+        match field with
+        | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
+        | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+        | SFBmodule mb -> aux mb
+        | SFBmodtype mtb -> []
+      in
+      CList.map_append get_ref body
+    in
+    match me with
+    | Abstract -> []
+    | Algebraic _ -> []
+    | Struct s -> get_refs (Modops.annotate_struct_body s mb.Declarations.mod_type)
+    | FullStruct -> get_refs mb.Declarations.mod_type
+  in aux mb
 
 let tmQuoteModule (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->
-  let include_functor = false in
-  let include_submodule = true in
-  let include_submodtype = false in
-  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
-
-let tmQuoteModFunctor (qualid : qualid) : global_reference list tm =
-  fun ~st env evd success _fail ->
-  let include_functor = true in
-  let include_submodule = true in
-  let include_submodtype = false in
-  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
-
-let tmQuoteModType (qualid : qualid) : global_reference list tm =
-  fun ~st env evd success _fail ->
-  let include_functor = true in
-  let include_submodule = true in
-  let include_submodtype = true in
-  success ~st env evd (quote_module ~include_functor ~include_submodule ~include_submodtype qualid)
+  success ~st env evd (quote_module qualid)
 
 (*let universes_entry_of_decl ?withctx d =
   let open Declarations in
   let open Entries in
   match d with
-  | Monomorphic ctx ->
+  | Monomorphic ctx -> 
     (match withctx with
     | Some ctx' -> Monomorphic_entry (Univ.ContextSet.union ctx ctx')
     | None -> Monomorphic_entry ctx)
-  | Polymorphic ctx ->
+  | Polymorphic ctx -> 
     assert(Option.is_empty withctx);
     Polymorphic_entry (Univ.AUContext.names ctx, Univ.AUContext.repr ctx)*)
 (*
@@ -256,7 +228,7 @@ let _constant_entry_of_cb (cb : Declarations.constant_body) =
   match cb.const_body with
   | Def b -> DefinitionEntry (with_body_opaque (Mod_subst.force_constr b) false)
   | Undef inline -> ParameterEntry (parameter inline)
-  | OpaqueDef pr ->
+  | OpaqueDef pr -> 
     let opaquetab = Global.opaque_tables () in
     let proof = Opaqueproof.force_proof opaquetab pr in
     let ctx = Opaqueproof.force_constraints opaquetab pr in
@@ -277,7 +249,7 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body 
 
 let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
-    let mie =
+    let mie = 
       if infer_univs then
         let evm = Evd.from_env env in
         let ctx, mie = Tm_util.RetypeMindEntry.infer_mentry_univs env evm mie in
@@ -288,10 +260,10 @@ let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
     ignore (DeclareInd.declare_mutual_inductive_with_eliminations mie names []) ;
     success ~st (Global.env ()) evd ()
 
-let tmExistingInstance (locality : Hints.hint_locality) (gr : Names.GlobRef.t) : unit tm =
+let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
   fun ~st env evd success _fail ->
     let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance locality q None;
+    Classes.existing_instance Hints.Local q None;
     success ~st env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

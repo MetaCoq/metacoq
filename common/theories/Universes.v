@@ -162,9 +162,8 @@ End Level.
 
 Module LevelSet := MSetAVL.Make Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
-Module LevelSetOrdProp := MSetProperties.OrdProperties LevelSet.
-Module LevelSetProp := LevelSetOrdProp.P.
-Module LevelSetDecide := LevelSetProp.Dec.
+Module LevelSetProp := WPropertiesOn Level LevelSet.
+Module LevelSetDecide := WDecide (LevelSet).
 Module LS := LevelSet.
 
 Ltac lsets := LevelSetDecide.fsetdec.
@@ -2042,49 +2041,6 @@ Section Univ.
   Qed.
 
 End Univ.
-
-Section UnivCF2.
-  Context {cf1 cf2 : checker_flags}.
-
-  Lemma valid_config_impl φ ctrs
-    : config.impl cf1 cf2 -> @valid_constraints cf1 φ ctrs
-      -> @valid_constraints cf2 φ ctrs.
-  Proof using Type.
-    unfold valid_constraints, config.impl, is_true.
-    do 2 destruct check_univs; trivial; cbn => //.
-  Qed.
-
-  Lemma cmp_universe_config_impl ctrs pb t u
-    : config.impl cf1 cf2
-      -> @compare_universe cf1 pb ctrs t u -> @compare_universe cf2 pb ctrs t u.
-  Proof using Type.
-    destruct pb, t, u; cbnr; trivial.
-    all: unfold config.impl, eq_levelalg, leq_levelalg_n, is_true.
-    all: do 2 destruct check_univs, prop_sub_type; cbn => //.
-  Qed.
-
-  Lemma eq_universe_config_impl ctrs t u
-    : config.impl cf1 cf2
-      -> @eq_universe cf1 ctrs t u -> @eq_universe cf2 ctrs t u.
-  Proof using Type. apply cmp_universe_config_impl with (pb := Conv). Qed.
-
-  Lemma leq_universe_config_impl ctrs t u
-    : config.impl cf1 cf2
-      -> @leq_universe cf1 ctrs t u -> @leq_universe cf2 ctrs t u.
-  Proof using Type. apply cmp_universe_config_impl with (pb := Cumul). Qed.
-
-  (** Elimination restriction *)
-
-  Lemma allowed_eliminations_config_impl φ a s
-    : config.impl cf1 cf2 ->
-      @is_allowed_elimination cf1 φ a s -> @is_allowed_elimination cf2 φ a s.
-  Proof using Type.
-    destruct a, s; cbnr; trivial.
-    unfold eq_levelalg, config.impl, is_true.
-    do 2 destruct check_univs; cbnr; auto => //.
-  Qed.
-
-End UnivCF2.
 
 Ltac unfold_univ_rel0 :=
   unfold eq0_levelalg, leq0_levelalg_n in *;

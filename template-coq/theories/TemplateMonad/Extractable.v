@@ -42,8 +42,6 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmFreshName : ident -> TM ident
 
 | tmLocate : qualid -> TM (list global_reference)
-| tmLocateModule : qualid -> TM (list modpath)
-| tmLocateModType : qualid -> TM (list modpath)
 | tmCurrentModPath : TM modpath
 
 (* Quote the body of a definition or inductive. *)
@@ -53,15 +51,13 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
   : TM constant_body
 | tmQuoteUniverses : TM ConstraintSet.t
 | tmQuoteModule : qualid -> TM (list global_reference)
-| tmQuoteModFunctor : qualid -> TM (list global_reference)
-| tmQuoteModType : qualid -> TM (list global_reference)
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
 | tmInductive : bool -> mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : hint_locality -> global_reference -> TM unit
+| tmExistingInstance : global_reference -> TM unit
 | tmInferInstance (type : Ast.term)
   : TM (option Ast.term)
 .
@@ -73,8 +69,6 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
    ; Common.tmLocate:=@tmLocate
-   ; Common.tmLocateModule:=@tmLocateModule
-   ; Common.tmLocateModType:=@tmLocateModType
    ; Common.tmCurrentModPath:=fun _ => @tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses

@@ -39,7 +39,7 @@ Axiom assume_preservation_template_program_env_expansion :
   eval_template_program_env p v ->
   ∥ eval_template_program (EtaExpand.eta_expand_program p) (EtaExpand.eta_expand p.1 [] v) ∥.
 
-(** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
+(** We kludge the normalisation assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition eta_expand K : Transform.t template_program_env template_program Ast.term Ast.term
   eval_template_program_env eval_template_program :=
@@ -62,11 +62,11 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   Ast.term EAst.term
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
-  (* a bunch of nonsense for normalization preconditions *)
+  (* a bunch of nonsense for normalisation preconditions *)
   let K ty (T : ty -> _) p
     := let p := T p in
-       (PCUICTyping.wf_ext p -> PCUICSN.NormalizationIn p) /\
-         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p) in
+       (PCUICTyping.wf_ext p -> PCUICSN.NormalisationIn p) /\
+         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn p) in
   let T1 (p:global_env_ext_map) := p in
   let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
   let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
@@ -117,11 +117,11 @@ Qed.
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :=
-  (* a bunch of nonsense for normalization preconditions *)
+  (* a bunch of nonsense for normalisation preconditions *)
   let K ty (T : ty -> _) p
     := let p := T p in
-       (PCUICTyping.wf_ext p -> PCUICSN.NormalizationIn p) /\
-         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p) in
+       (PCUICTyping.wf_ext p -> PCUICSN.NormalisationIn p) /\
+         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn p) in
   let T1 (p:global_env_ext_map) := p in
   let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
   let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
@@ -160,9 +160,9 @@ Global Program Instance fake_guard_impl : abstract_guard_impl :=
 {| guard_impl := fake_guard_impl |}.
 Next Obligation. apply fake_guard_impl_properties. Qed.
 
-(** Ideally we'd have a MetaCoq template program that generates a proof of Strong Normalization for the particular program we're erasing.  For now we just axiomatize SN. *)
-Axiom fake_normalization : PCUICSN.Normalization.
-Global Existing Instance fake_normalization.
+(** Ideally we'd have a MetaCoq template program that generates a proof of Strong Normalisation for the particular program we're erasing.  For now we just axiomatize SN. *)
+Axiom fake_normalisation : PCUICSN.Normalisation.
+Global Existing Instance fake_normalisation.
 
 (** This uses the retyping-based erasure and assumes that the global environment and term
   are welltyped (for speed). As such this should only be used for testing, or when we know that
@@ -180,8 +180,8 @@ Program Definition erase_and_print_template_program (p : Ast.Env.program)
 Next Obligation.
   split.
   now eapply assume_that_we_only_erase_on_welltyped_programs.
-  cbv [PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn].
-  pose proof @PCUICSN.normalization.
+  cbv [PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn].
+  pose proof @PCUICSN.normalisation.
   split; typeclasses eauto.
 Qed.
 
@@ -192,7 +192,7 @@ Program Definition erase_fast_and_print_template_program (p : Ast.Env.program)
 Next Obligation.
   split.
   now eapply assume_that_we_only_erase_on_welltyped_programs.
-  cbv [PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn].
-  pose proof @PCUICSN.normalization.
+  cbv [PCUICWeakeningEnvSN.NormalisationInAdjustUniversesIn].
+  pose proof @PCUICSN.normalisation.
   split; typeclasses eauto.
 Qed.

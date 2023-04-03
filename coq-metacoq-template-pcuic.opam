@@ -30,6 +30,6 @@ depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-pcuic" {= version}
 ]
-synopsis: "Translations between Template Coq and PCUIC and proofs of correctness"
+synopsis: "Translations between Template Coq and PCUIC and proofs of correctness."
 description: """
 """

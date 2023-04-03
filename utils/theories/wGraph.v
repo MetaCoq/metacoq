@@ -983,19 +983,19 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
 
   Lemma fold_left_map {A B C} (f : A -> B -> A) (g : C -> B) l acc : fold_left f (map g l) acc =
     fold_left (fun acc x => f acc (g x)) l acc.
-  Proof using Type.
+  Proof.
     induction l in acc |- *; cbn; auto.
   Qed.
 
   Lemma fold_left_filter {A B} (f : A -> B -> A) (g : B -> bool) l acc : fold_left f (filter g l) acc =
     fold_left (fun acc x => if g x then f acc x else acc) l acc.
-  Proof using Type.
+  Proof.
     induction l in acc |- *; cbn; auto.
     destruct (g a) => //=.
   Qed.
 
   #[global] Instance fold_left_proper {A B} : Proper (`=2` ==> `=2`) (@fold_left A B).
-  Proof using Type.
+  Proof.
     intros f g hfg x acc.
     induction x in acc |- * => //.
     cbn. rewrite (hfg acc a). apply IHx.
@@ -1005,7 +1005,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     (forall acc x, f acc (h x) = g acc x) ->
     l = map h l' ->
     fold_left f l acc = fold_left g l' acc.
-  Proof using Type.
+  Proof.
     intros hfg ->.
     induction l' in acc |- *; cbn; auto.
     rewrite fold_left_map. rewrite hfg.
@@ -1013,7 +1013,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Qed.
 
   Lemma lsp00_optim fuel s x z : lsp00_fast fuel s x z = lsp00 fuel s x z.
-  Proof using Type.
+  Proof.
     induction fuel in s, x, z |- *; auto. simpl.
     destruct VSet.mem => //.
     rewrite EdgeSet.fold_spec.
@@ -1045,7 +1045,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Definition lsp := lsp0 (V G).
 
     Lemma lsp_optim x y : lsp_fast x y = lsp x y.
-    Proof using Type.
+    Proof.
       now rewrite /lsp /lsp_fast /lsp0 lsp00_optim.
     Qed.
 
@@ -3556,5 +3556,3 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     case eqlsp1: (lsp _ _ _)=> [nxy1|]; first cbn; lia.
   Qed.
 End WeightedGraph.
-
-Module Type WeightedGraphSig (V : UsualOrderedType) (VSet : MSetInterface.S with Module E := V) := Nop <+ WeightedGraph V VSet.

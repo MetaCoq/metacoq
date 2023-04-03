@@ -34,7 +34,7 @@ Section fresh.
     end.
 
   Definition is_fresh (Γ : list ident) (id : ident) :=
-    negb (List.existsb (eqb id) Γ).
+    List.forallb (fun id' => negb (eqb id id')) Γ.
 
   Fixpoint name_from_term (t : term) :=
     match t with
@@ -75,7 +75,7 @@ Section fresh.
               end
     in
     if is_fresh Γ id then id
-    else fresh_id_from Γ #|Γ| id.
+    else fresh_id_from Γ 10 id.
 
   Definition rename_decl (na : aname) (decl : context_decl) : context_decl :=
     {| decl_name := na;

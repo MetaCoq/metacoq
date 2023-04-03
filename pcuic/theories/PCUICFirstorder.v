@@ -17,7 +17,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
 
 From MetaCoq Require Import PCUICArities PCUICSpine.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 
 Section firstorder.
 
@@ -137,11 +136,12 @@ Proof using Type.
 Qed.
 
 Lemma firstorder_ind_propositional {Σ : global_env_ext} {wfΣ:wf Σ} i mind oind :
+  squash (wf_ext Σ) ->
   declared_inductive Σ i mind oind ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   isPropositional Σ i false.
 Proof using Type.
-  intros d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
+  intros Hwf d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
   pose proof d_ as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
   red. sq.
   unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
@@ -625,8 +625,8 @@ Proof using Type.
     * intros hl. now eapply invert_cumul_prod_ind in hl.
 Qed.
 
-Lemma firstorder_value_spec (Σ:global_env_ext) t i u args mind :
-  wf Σ -> wf_local Σ [] ->
+Lemma firstorder_value_spec Σ t i u args mind :
+  wf_ext Σ -> wf_local Σ [] ->
    Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
   lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
@@ -665,6 +665,7 @@ Proof using Type.
       eapply firstorder_ind_propositional; eauto. sq. eauto.
       apply declared_inductive_from_gen.
       eapply (declared_constructor_inductive (ind := (i, _))).
+      destruct Hwf;
       unshelve eapply declared_constructor_to_gen; eauto.
     + exfalso. eapply invert_fix_ind with (args := []) in Hty as [].
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
@@ -686,6 +687,7 @@ Proof using Type.
       destruct Hty' as (([[[]]] & ?)  & ? & ? & ? & ? & _). subst.
       econstructor; eauto.
       2:{ eapply firstorder_ind_propositional; sq; eauto.
+          destruct Hwf.
           unshelve eapply declared_constructor_to_gen in d; eauto.
           eapply declared_constructor_inductive in d.
           apply declared_inductive_from_gen; eauto. }
@@ -698,7 +700,7 @@ Proof using Type.
       * econstructor.
       * destruct d as [d1 d2]. inv IH.
         econstructor. inv X.
-        eapply H0. tea.
+        eapply H0. tea. destruct Hwf.
         unshelve eapply declared_inductive_to_gen in d0; eauto.
         exact i3.
         inv X. eapply IHspine; eauto.
@@ -715,18 +717,6 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind Hlookup in Hty.
       apply eqb_eq in Hfo, Hty. congruence.
-Qed.
-
-Lemma firstorder_value_alpha Σ t t' :
-  t ≡α t' ->
-  firstorder_value Σ [] t ->
-  t = t'.
-Proof.
-  intros Ha H. induction H in t', Ha |- using firstorder_value_inds.
-  eapply eq_term_upto_univ_napp_mkApps_l_inv in Ha as (? & ? & [] & ->).
-  invs e. repeat f_equal.
-  - now eapply eq_univ_make.
-  - revert x0 a. clear - H0. induction H0; intros; invs a; f_equal; eauto.
 Qed.
 
 End cf.

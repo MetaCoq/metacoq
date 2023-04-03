@@ -34,7 +34,7 @@ Qed.
 
 Local Obligation Tactic := idtac.
 
-(** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
+(** We kludge the normalisation assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition template_to_pcuic_transform {cf : checker_flags} K :
   Transform.t template_program pcuic_program Ast.term term

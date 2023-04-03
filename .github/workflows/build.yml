@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
 
@@ -33,7 +33,7 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
 
@@ -49,7 +49,6 @@ jobs:
             endGroup
           before_install: |
             startGroup "Print opam config"
-              sudo chown -R coq:coq .
               opam config list; opam repo list; opam list
             endGroup
           script: |

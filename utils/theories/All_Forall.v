@@ -3480,7 +3480,7 @@ Proof.
     + now eapply H.
 Qed.
 
-Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> E} {l l' l'' l'''} :
+Lemma All2_map2_left {A B C D} {P : A -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> A} {l l' l'' l'''} :
   All2 R l l''' ->
   All2 Q l' l'' ->
   #|l| = #|l'| ->

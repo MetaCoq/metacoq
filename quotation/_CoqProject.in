@@ -1,6 +1,7 @@
 -R theories MetaCoq.Quotation
 
 theories/CommonUtils.v
+theories/ToTemplate/All.v
 theories/ToTemplate/Common/BasicAst.v
 theories/ToTemplate/Common/Environment.v
 theories/ToTemplate/Common/EnvironmentTyping.v

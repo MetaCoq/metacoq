@@ -77,6 +77,7 @@ Section quote_typing.
 End quote_typing.
 #[export] Instance quote_typing {cf Σ Γ t T} : ground_quotable (@typing cf Σ Γ t T) := quote_typing'.
 #[export] Instance quote_typing_spine {cf Σ Γ t s T} : ground_quotable (@typing_spine cf Σ Γ t s T) := quote_typing_spine'.
+Definition quote_wf_local {cf : config.checker_flags} {Σ Γ} : ground_quotable (wf_local Σ Γ) := _.
 
 #[export] Instance quote_has_nparams {npars ty} : ground_quotable (@has_nparams npars ty) := ltac:(cbv [has_nparams]; exact _).
 #[export] Instance quote_infer_sorting {cf Σ Γ T} : ground_quotable (@infer_sorting cf Σ Γ T) := ltac:(cbv [infer_sorting]; exact _).

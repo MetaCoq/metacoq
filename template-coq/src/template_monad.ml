@@ -155,6 +155,41 @@ let (ttmReturn,
 
 type constr = Constr.t
 
+module Debug : sig
+  val ppdebug : int -> (unit -> Pp.t) -> unit
+end = struct
+  let template_monad_debug = ref 0
+
+  let set_template_monad_debug d = (:=) template_monad_debug (if d then 1 else 0)
+  let get_template_monad_debug () = if !template_monad_debug > 0 then true else false
+
+  let set_template_monad_verbose = function
+    | None -> template_monad_debug := 0
+    | Some n -> template_monad_debug := n
+  let get_template_monad_verbose () =
+    if !template_monad_debug = 0 then None else Some !template_monad_debug
+
+  let () =
+    let open Goptions in
+    declare_bool_option
+      { optdepr  = false;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug"];
+        optread  = get_template_monad_debug;
+        optwrite = set_template_monad_debug; }
+
+  let () =
+    let open Goptions in
+    declare_int_option
+      { optdepr  = false;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug";"Verbosity"];
+        optread  = get_template_monad_verbose;
+        optwrite = set_template_monad_verbose; }
+
+  let ppdebug lvl pp =
+    if !template_monad_debug > lvl then Feedback.msg_debug (pp ())
+end
+open Debug
+
 type template_monad =
     TmReturn of Constr.t
   | TmBind  of Constr.t * Constr.t
@@ -216,6 +251,7 @@ let monad_failure s k =
                           str "Please file a bug with MetaCoq.")
 
 let next_action env evd (pgm : constr) : template_monad * _ =
+  let () = ppdebug 2 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to reduce " ++ fnl () ++ Printer.pr_constr_env env evd pgm)) in
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
@@ -231,16 +267,19 @@ let next_action env evd (pgm : constr) : template_monad * _ =
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
   let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
-  if eq_gr ptmReturn || eq_gr ttmReturn then
-    match args with
-    | _::h::[] ->
-       (TmReturn h, universes)
-    | _ -> monad_failure "tmReturn" 2
-  else if eq_gr ptmBind || eq_gr ttmBind then
+  if eq_gr ptmBind || eq_gr ttmBind then
+    let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
     match args with
     | _::_::a::f::[] ->
        (TmBind (a, f), universes)
     | _ -> monad_failure "tmBind" 4
+  else
+    let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to run:" ++ fnl () ++ Printer.pr_constr_env env evd pgm)) in
+    if eq_gr ptmReturn || eq_gr ttmReturn then
+      match args with
+      | _::h::[] ->
+        (TmReturn h, universes)
+      | _ -> monad_failure "tmReturn" 2
   else if eq_gr ptmPrint then
     match args with
     | _::trm::[] ->

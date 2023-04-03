@@ -259,7 +259,7 @@ Module WithTemplate.
                       else ret (tSort u))
             t).
 
-  Polymorphic Inductive list_of_types := nil | cons (x : Type) (xs : list_of_types).
+  Polymorphic Inductive list_of_types@{u} : Type@{u+1} := nil | cons (x : Type@{u}) (xs : list_of_types).
   Declare Scope list_of_types_scope.
   Delimit Scope list_of_types_scope with list_of_types.
   Bind Scope list_of_types_scope with list_of_types.
@@ -349,7 +349,7 @@ Module WithTemplate.
   (* Hack around https://github.com/MetaCoq/metacoq/pull/876#issuecomment-1487743822 *)
   Monomorphic Variant exn : Set := GenericError.
 
-  Polymorphic Variant option_try (A : Type) : Type := my_Value (val : A) | my_Error (err : exn).
+  Polymorphic Variant option_try@{u} (A : Type@{u}) : Type@{max(Set, u)} := my_Value (val : A) | my_Error (err : exn).
 
   Arguments my_Value {A} val.
   Arguments my_Error {A} _.

@@ -9,6 +9,7 @@ Export TemplateMonad.Common (export, local, global).
 Import ListNotations.
 
 Local Set Primitive Projections.
+Local Unset Universe Minimization ToSet.
 Local Open Scope bs.
 Import MCMonadNotation.
 
@@ -48,7 +49,7 @@ Fixpoint head (t : term) : term
      | _ => t
      end.
 
-Definition infer_replacement_inductive {debug : debug_opt} (qt : term) : TemplateMonad (option inductive).
+Polymorphic Definition infer_replacement_inductive {debug : debug_opt} (qt : term) : TemplateMonad (option inductive).
 Proof.
   simple
     refine (match qt with
@@ -79,7 +80,7 @@ Proof.
             end).
 Defined.
 
-Fixpoint replace_quotation_of' {debug : debug_opt} (do_top_inference : bool) (qt : term) : TemplateMonad term.
+Polymorphic Fixpoint replace_quotation_of' {debug : debug_opt} (do_top_inference : bool) (qt : term) : TemplateMonad term.
 Proof.
   specialize (replace_quotation_of' debug).
   simple
@@ -183,12 +184,12 @@ Proof.
     try exact _.
 Defined.
 
-Definition replace_quotation_of {debug : debug_opt} {T} (t : T) : TemplateMonad term
+Polymorphic Definition replace_quotation_of {debug : debug_opt} {T} (t : T) : TemplateMonad term
   := qt <- tmQuote t;;
      replace_quotation_of' false qt.
 
 (** for fancier goals when we have [ground_quotable] for some subterms but not for subterms of those subterms *)
-Definition make_quotation_of {debug : debug_opt} {T} (t : T) : TemplateMonad (quotation_of t).
+Polymorphic Definition make_quotation_of {debug : debug_opt} {T} (t : T) : TemplateMonad (quotation_of t).
 Proof.
   simple
     refine
@@ -465,7 +466,7 @@ Polymorphic Definition tmPrepareMakeQuotationOfConstants@{U t u u' _T _above_u _
      let cs := dedup_grefs cs in
      cs <- tmEval cbv cs;;
      _ <- tmDebugMsg "tmPrepareMakeQuotationOfConstants: looking up module constants";;
-     ps <- monad_map@{_ _ _ _above_u'}
+     ps <- monad_map@{_ _ Set _above_u'}
              (fun r
               => _ <- tmDebugMsg "tmPrepareMakeQuotationOfConstants: handling";;
                  _ <- tmDebugPrint r;;
@@ -549,7 +550,7 @@ Polymorphic Definition tmMakeQuotationOfConstants_gen@{U d t u u' _T _above_u _a
      _ <- (match existing_instance with
            | Some locality
              => _ <- tmDebugMsg "tmMakeQuotationOfConstants_gen: making instances";;
-                monad_map
+                monad_map@{_ _ Set Set}
                   (fun p
                    => let tmEx := tmExistingInstance locality p in
                       _ <- tmDebugPrint tmEx;;

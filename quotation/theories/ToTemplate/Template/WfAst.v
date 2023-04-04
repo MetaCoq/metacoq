@@ -14,5 +14,5 @@ Defined.
 
 #[export] Instance quote_wf_Inv {Σ t} : ground_quotable (@wf_Inv Σ t) := ltac:(cbv [wf_Inv]; exact _).
 Import StrongerInstances.
-#[export] Instance quote_wf_decl {Σ d} : ground_quotable (@wf_decl Σ d) := ltac:(cbv [wf_decl]; exact _).
+#[export] Instance quote_wf_decl {Σ d} : ground_quotable (@wf_decl Σ d) := ltac:(cbv [wf_decl]; destruct decl_body; exact _).
 #[export] Instance quote_wf_decl_pred {Σ Γ t T} : ground_quotable (@wf_decl_pred Σ Γ t T) := ltac:(cbv [wf_decl_pred]; exact _).

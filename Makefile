@@ -99,7 +99,7 @@ quick:
 	$(MAKE) -C pcuic quick
 	$(MAKE) -C safechecker quick
 	$(MAKE) -C template-pcuic quick
-	$(MAKE) -C quotation quick
+	$(MAKE) -C quotation # quick # we cannot unset universe checking in 8.16 due to COQBUG(https://github.com/coq/coq/issues/17361), and quick does not buy much in quotation anyway, where almost everything is transparent
 	$(MAKE) -C erasure quick
 	$(MAKE) -C erasure-plugin quick
 	$(MAKE) -C translations quick

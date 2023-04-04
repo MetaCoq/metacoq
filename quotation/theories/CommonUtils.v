@@ -152,11 +152,11 @@ Module WithTemplate.
               tmFail "tmQuoteToGlobalReference: Not a global reference"
        end.
 
-  Polymorphic Definition tmObj_magic {A B} (x : A) : TemplateMonad B
+  Polymorphic Definition tmObj_magic@{a b t u} {A : Type@{a}} {B : Type@{b}} (x : A) : TemplateMonad@{t u} B
     := qx <- tmQuote x;;
        tmUnquoteTyped B qx.
 
-  Polymorphic Definition tmRetype {A} (x : A) : TemplateMonad A
+  Polymorphic Definition tmRetype@{a t u} {A : Type@{a}} (x : A) : TemplateMonad@{t u} A
     := tmObj_magic x.
 
   Polymorphic Definition tmExtractBaseModPathFromMod (mp : qualid) : TemplateMonad modpath

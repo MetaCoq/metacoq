@@ -582,9 +582,12 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
         | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-        k ~st env evm (constr_mkApp (cSome_instance, [| typ; EConstr.to_constr evm t|]))
+        let (evm, cSome_instance) = Evd.fresh_global env evm (Lazy.force cSome_instance) in
+        k ~st env evm (Constr.mkApp (EConstr.to_constr evm cSome_instance, [| typ; EConstr.to_constr evm t|]))
       with
-        Not_found -> k ~st env evm (constr_mkApp (cNone_instance, [|typ|]))
+        Not_found ->
+        let (evm, cNone_instance) = Evd.fresh_global env evm (Lazy.force cNone_instance) in
+        k ~st env evm (Constr.mkApp (EConstr.to_constr evm cNone_instance, [|typ|]))
     end
   | TmInferInstanceTerm typ ->
     let evm,typ = denote_term env evm (reduce_all env evm typ) in

@@ -244,11 +244,13 @@ Defined.
 
 Ltac replace_quotation_of_goal _ :=
   let t := match goal with |- quotation_of ?t => t end in
-  run_template_program (replace_quotation_of t) (fun v => exact v).
+  let T := match goal with |- @quotation_of ?T ?t => T end in
+  run_template_program (@replace_quotation_of _ T t) (fun v => exact v).
 
 Ltac make_quotation_of_goal _ :=
   let t := match goal with |- quotation_of ?t => t end in
-  run_template_program (make_quotation_of t) (fun v => exact v).
+  let T := match goal with |- @quotation_of ?T ?t => T end in
+  run_template_program (@make_quotation_of _ T t) (fun v => exact v).
 
 Ltac adjust_quotation_of_by_econstructor_then tac1 tac2 :=
   let f := match goal with |- ?f _ => f end in

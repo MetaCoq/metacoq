@@ -90,6 +90,8 @@ Module QuoteEnvironment (T : Term) (Import E : EnvironmentSig T) (Import QEH : Q
     typ_or_sort
   .
 
+  Import PolymorphicInstances.
+
   #[export] Instance quote_constructor_body : ground_quotable constructor_body := ltac:(destruct 1; exact _).
   #[export] Instance quote_projection_body : ground_quotable projection_body := ltac:(destruct 1; exact _).
   #[export] Instance quote_one_inductive_body : ground_quotable one_inductive_body := ltac:(destruct 1; exact _).

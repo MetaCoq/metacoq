@@ -326,6 +326,16 @@ Module Export Instances.
     ] : typeclass_instances.
 End Instances.
 
+Module PolymorphicInstances.
+  #[export] Polymorphic Instance quote_relax_universe@{a b c} {A : Type@{a}} {q : @quotation_of Type@{b} A} : @quotation_of Type@{c} A | 100 := (q : Ast.term).
+  #[export] Hint Cut [
+      ( _ * )
+        quote_relax_universe
+        ( _ * )
+        quote_relax_universe
+    ] : typeclass_instances.
+End PolymorphicInstances.
+
 Module StrongerInstances.
   #[export]
    Hint Extern 1 (quotation_of match ?t with _ => _ end) => destruct t : typeclass_instances.

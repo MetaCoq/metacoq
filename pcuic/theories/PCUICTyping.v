@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Export PCUICCases.
 Import MCMonadNotation.
 
 (* TODO: remove this export *)
-From MetaCoq Require Export LibHypsNaming.
+From MetaCoq.Utils Require Export LibHypsNaming.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Type.Relation.

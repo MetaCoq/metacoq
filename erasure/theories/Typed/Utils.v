@@ -1,5 +1,4 @@
 From Equations Require Import Equations.
-From MetaCoq Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Template Require Import Ast.

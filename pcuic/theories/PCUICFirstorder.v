@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICValidity PCUICPrincipality PCUICElimination
   PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICCanonicity.
 
-From MetaCoq Require Import PCUICArities PCUICSpine.
+From MetaCoq.PCUIC Require Import PCUICArities PCUICSpine.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICAlpha.
 

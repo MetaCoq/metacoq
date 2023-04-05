@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Environment.
+From MetaCoq.Template Require Import Ast AstUtils.
 
 (** * Deriving a compact induction principle for terms
 

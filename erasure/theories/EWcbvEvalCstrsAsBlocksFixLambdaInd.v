@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program ssreflect ssrbool.
-From MetaCoq Require Import config utils Kernames BasicAst EnvMap.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst EWcbvEval EGlobalEnv
   EWellformed ECSubst EInduction EWcbvEvalInd EEtaExpanded.
 

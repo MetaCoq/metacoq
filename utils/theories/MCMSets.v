@@ -34,6 +34,73 @@ Module Export MSets.
   Module Type WPropertiesSig (M : WSets) := Nop <+ WProperties M.
   Module Type PropertiesSig (M : WSets) := Nop <+ Properties M.
   Module Type OrdPropertiesSig (M : Sets) := Nop <+ OrdProperties M.
+
+  Module WExtraPropertiesOn (E : DecidableType) (Import W : WSetsOn E) (WProperties : WPropertiesOnSig E W).
+
+    Definition For_all_alt (P : elt -> Prop) (s : t) : Prop
+    := List.Forall P (elements s).
+    #[local] Hint Extern 1 (E.eq _ _) => reflexivity : core.
+    Lemma For_all_alt_iff {P} {P_Proper : Proper (E.eq ==> Basics.impl) P} {s}
+      : For_all_alt P s <-> For_all P s.
+    Proof using Type.
+      cbv [For_all_alt For_all].
+      setoid_rewrite WProperties.FM.elements_iff.
+      induction (elements s) as [|x xs IH].
+      { split; solve [ constructor | inversion 2 ]. }
+      { setoid_rewrite Forall_cons_iff; setoid_rewrite InA_cons; setoid_rewrite IH.
+        intuition auto.
+        eapply P_Proper; (idtac + symmetry); eassumption. }
+    Qed.
+    Lemma For_all_forall_iff {P s} : (For_all P s) <-> (forall v, In v s -> P v).
+    Proof using Type. reflexivity. Qed.
+    Lemma For_all_forall2_iff {P s} : (For_all (fun v1 => For_all (P v1) s) s) <-> (forall v1 v2, In v1 s -> In v2 s -> P v1 v2).
+    Proof using Type. cbv [For_all]; intuition eauto. Qed.
+
+    Definition Exists_alt (P : elt -> Prop) (s : t) : Prop
+      := List.Exists P (elements s).
+    Lemma Exists_alt_iff {P} {P_Proper : Proper (E.eq ==> Basics.impl) P} {s}
+      : Exists_alt P s <-> Exists P s.
+    Proof.
+      cbv [Exists_alt Exists].
+      setoid_rewrite WProperties.FM.elements_iff.
+      induction (elements s) as [|x xs IH].
+      { split; try solve [ constructor | inversion 1 | intros [x [H H']]; inversion H ]. }
+      { setoid_rewrite Exists_cons; setoid_rewrite InA_cons; setoid_rewrite IH.
+        firstorder intuition auto. }
+    Qed.
+    Definition Exists_dec {P s} (P_dec : forall x, {P x} + {~P x}) {P_Proper : Proper (E.eq ==> Basics.impl) P} : {Exists P s} + {~Exists P s}.
+    Proof.
+      destruct (List.Exists_dec P (elements s) P_dec) as [H|H]; [ left | right ]; revert H.
+      { intro H; apply Exists_alt_iff, H. }
+      { intros H H'; apply H, Exists_alt_iff, H'. }
+    Defined.
+  End WExtraPropertiesOn.
+
+  Module Type WExtraPropertiesOnSig (E : DecidableType) (W : WSetsOn E) (WProperties : WPropertiesOnSig E W) := Nop <+ WExtraPropertiesOn E W WProperties.
+
+  Module ExtraOrdProperties (Import M : Sets) (Import MOrdProperties : OrdPropertiesSig M).
+
+    Definition above x s : bool := for_all (fun y => if ME.lt_dec y x then true else false) s.
+    Definition below x s : bool := for_all (fun y => if ME.lt_dec x y then true else false) s.
+    Lemma above_spec x s : above x s = true <-> Above x s.
+    Proof.
+      cbv [Above above].
+      rewrite for_all_spec
+        by (intros ?? H; repeat (let H' := fresh in destruct ME.lt_dec as [H'|H']; rewrite ?H in H'); try reflexivity; tauto).
+      cbv [For_all].
+      split; intros H y H'; generalize (H y H'); destruct ME.lt_dec; try reflexivity; eauto; congruence.
+    Qed.
+    Lemma below_spec x s : below x s = true <-> Below x s.
+    Proof.
+      cbv [Below below].
+      rewrite for_all_spec
+        by (intros ?? H; repeat (let H' := fresh in destruct ME.lt_dec as [H'|H']; rewrite ?H in H'); try reflexivity; tauto).
+      cbv [For_all].
+      split; intros H y H'; generalize (H y H'); destruct ME.lt_dec; try reflexivity; eauto; congruence.
+    Qed.
+  End ExtraOrdProperties.
+
+  Module Type ExtraOrdPropertiesSig (M : Sets) (MOrdProperties : OrdPropertiesSig M) := Nop <+ ExtraOrdProperties M MOrdProperties.
 End MSets.
 
 Module MSetAVL.

@@ -3,6 +3,8 @@ From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Template Require Import Ast.
 
 Import MCMonadNotation.
+Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
 
 Section with_monad.
   Context {T} {M : Monad T}.

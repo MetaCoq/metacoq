@@ -1,5 +1,6 @@
 From Coq.FSets Require Import FMapAVL.
 From Coq.Structures Require Import Equalities OrdersAlt.
+From MetaCoq.Utils Require Import MCFSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Coq.Structures Require Import OrdersAlt.Sig.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Coq.FSets Require Import FMapList.Sig.
@@ -7,9 +8,7 @@ Import List.ListNotations.
 Local Open Scope list_scope.
 
 Module FMapAVL.
-  Module Type MakeSig (T : OrderedTypeOrig) := Nop <+ FMapAVL.Make T.
-
-  Module Type QuotationOfMake (T : OrderedTypeOrig) (M : MakeSig T).
+  Module Type QuotationOfMake (T : OrderedTypeOrig) (M : FMapAVL.MakeSig T).
     Module qRaw.
       Module qProofs.
         Module qMX := Nop <+ QuotationOfOrderedTypeOrigFacts T M.Raw.Proofs.MX.

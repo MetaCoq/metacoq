@@ -1,4 +1,5 @@
 From Coq.MSets Require Import MSetProperties.
+From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Coq.Structures Require Import OrdersFacts.Sig.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Coq.MSets Require Import MSetFacts.Sig MSetDecide.Sig.
@@ -6,11 +7,6 @@ Import List.ListNotations.
 Local Open Scope list_scope.
 
 Module Export MSets.
-  Module Type WPropertiesOnSig (E : DecidableType) (M : WSetsOn E) := Nop <+ WPropertiesOn E M.
-  Module Type WPropertiesSig (M : WSets) := Nop <+ WProperties M.
-  Module Type PropertiesSig (M : WSets) := Nop <+ Properties M.
-  Module Type OrdPropertiesSig (M : Sets) := Nop <+ OrdProperties M.
-
   Module Type QuotationOfWPropertiesOn (E : DecidableType) (M : WSetsOn E) (F : WPropertiesOnSig E M).
     Module qDec := Nop <+ QuotationOfWDecideOn E M F.Dec.
     Module qFM := Nop <+ QuotationOfWFactsOn E M F.FM.

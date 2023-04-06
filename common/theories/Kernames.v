@@ -1,7 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Lia MSetList OrderedTypeAlt OrderedTypeEx FMapAVL FMapFacts MSetAVL MSetFacts MSetProperties.
-From MetaCoq.Utils Require Import utils.
+From MetaCoq.Utils Require Import utils MCMSets MCFSets.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -296,6 +296,8 @@ End Kername.
 
 Module KernameMap := FMapAVL.Make Kername.OT.
 Module KernameMapFact := FMapFacts.WProperties KernameMap.
+Module KernameMapExtraFact := FSets.WFactsExtra_fun Kername.OT KernameMap KernameMapFact.F.
+Module KernameMapDecide := FMapAVL.Decide Kername.OT KernameMap.
 
 Notation eq_kername := (eqb (A:=kername)) (only parsing).
 
@@ -313,6 +315,9 @@ Module KernameSet := MSetAVL.Make Kername.
 Module KernameSetFact := MSetFacts.WFactsOn Kername KernameSet.
 Module KernameSetOrdProp := MSetProperties.OrdProperties KernameSet.
 Module KernameSetProp := KernameSetOrdProp.P.
+Module KernameSetDecide := KernameSetProp.Dec.
+Module KernameSetExtraOrdProp := MSets.ExtraOrdProperties KernameSet KernameSetOrdProp.
+Module KernameSetExtraDecide := MSetAVL.Decide Kername KernameSet.
 
 Lemma knset_in_fold_left {A} kn f (l : list A) acc :
   KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->

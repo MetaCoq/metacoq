@@ -79,6 +79,7 @@ Module Export MSets.
   Module Type WExtraPropertiesOnSig (E : DecidableType) (W : WSetsOn E) (WProperties : WPropertiesOnSig E W) := Nop <+ WExtraPropertiesOn E W WProperties.
 
   Module ExtraOrdProperties (Import M : Sets) (Import MOrdProperties : OrdPropertiesSig M).
+    Module P := WExtraPropertiesOn M.E M MOrdProperties.P.
 
     Definition above x s : bool := for_all (fun y => if ME.lt_dec y x then true else false) s.
     Definition below x s : bool := for_all (fun y => if ME.lt_dec x y then true else false) s.

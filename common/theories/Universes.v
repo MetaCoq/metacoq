@@ -1,6 +1,6 @@
 From Coq Require Import OrdersAlt MSetList MSetAVL MSetFacts MSetProperties MSetDecide FMapAVL.
 From Equations Require Import Equations.
-From MetaCoq.Utils Require Import utils.
+From MetaCoq.Utils Require Import utils MCMSets MCFSets.
 From MetaCoq.Common Require Import BasicAst config.
 Require Import ssreflect.
 
@@ -165,6 +165,8 @@ Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetOrdProp := MSetProperties.OrdProperties LevelSet.
 Module LevelSetProp := LevelSetOrdProp.P.
 Module LevelSetDecide := LevelSetProp.Dec.
+Module LevelSetExtraOrdProp := MSets.ExtraOrdProperties LevelSet LevelSetOrdProp.
+Module LevelSetExtraDecide := MSetAVL.Decide Level LevelSet.
 Module LS := LevelSet.
 
 Ltac lsets := LevelSetDecide.fsetdec.
@@ -342,6 +344,7 @@ Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
 Module LevelExprSetOrdProp := MSetProperties.OrdProperties LevelExprSet.
 Module LevelExprSetProp := LevelExprSetOrdProp.P.
 Module LevelExprSetDecide := LevelExprSetProp.Dec.
+Module LevelExprSetExtraOrdProp := MSets.ExtraOrdProperties LevelExprSet LevelExprSetOrdProp.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
   This means concreteUniverses also have a decidable equality. *)
@@ -1215,6 +1218,8 @@ End Universe.
 
 Module UniverseMap := FMapAVL.Make Universe.OTOrig.
 Module UniverseMapFact := FMapFacts.WProperties UniverseMap.
+Module UniverseMapExtraFact := FSets.WFactsExtra_fun Universe.OTOrig UniverseMap UniverseMapFact.F.
+Module UniverseMapDecide := FMapAVL.Decide Universe.OTOrig UniverseMap.
 
 Definition is_propositional u :=
   Universe.is_prop u || Universe.is_sprop u.
@@ -1485,6 +1490,8 @@ Module ConstraintSetOrdProp := MSetProperties.OrdProperties ConstraintSet.
 Module ConstraintSetProp := ConstraintSetOrdProp.P.
 Module CS := ConstraintSet.
 Module ConstraintSetDecide := ConstraintSetProp.Dec.
+Module ConstraintSetExtraOrdProp := MSets.ExtraOrdProperties ConstraintSet ConstraintSetOrdProp.
+Module ConstraintSetExtraDecide := MSetAVL.Decide UnivConstraint ConstraintSet.
 Ltac csets := ConstraintSetDecide.fsetdec.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).

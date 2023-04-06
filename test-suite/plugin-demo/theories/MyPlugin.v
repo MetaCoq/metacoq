@@ -3,7 +3,7 @@ From MetaCoq.Utils Require Import bytestring.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Template Require Import Ast Loader TemplateMonad.Extractable.
 Import TemplateMonad.Extractable.
-From MetaCoq Require Import Template.AstUtils Ast.
+From MetaCoq.Template Require Import AstUtils Ast.
 
 Open Scope bs_scope.
 

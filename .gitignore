@@ -378,6 +378,11 @@ template-pcuic/_CoqProject
 template-pcuic/Makefile.templatepcuic
 template-pcuic/Makefile.templatepcuic.conf
 
+quotation/Makefile.local
+quotation/_CoqProject
+quotation/Makefile.quotation
+quotation/Makefile.quotation.conf
+
 safechecker-plugin/metacoq-config
 safechecker-plugin/demo.v
 safechecker-plugin/Makefile.local

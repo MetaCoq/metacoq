@@ -50,6 +50,7 @@ my-cachedMake 'pcuic' 'pcuic/theories' 'MetaCoq.PCUIC'
 my-cachedMake 'safechecker' 'safechecker/theories' 'MetaCoq.SafeChecker'
 my-cachedMake 'template-pcuic' 'template-pcuic/theories' 'MetaCoq.TemplatePCUIC'
 my-cachedMake 'erasure' 'erasure/theories' 'MetaCoq.Erasure'
+my-cachedMake 'quotation' 'quotation/theories' 'MetaCoq.Quotation'
 
 unset -f my-nix-build-with-target
 unset -f my-cachedMake

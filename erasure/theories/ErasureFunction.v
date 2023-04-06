@@ -2452,7 +2452,7 @@ Proof.
     intros. sq. now rewrite (abstract_env_ext_irr _ H H2).
 Qed.
 
-From MetaCoq Require Import PCUICFirstorder.
+From MetaCoq.PCUIC Require Import PCUICFirstorder.
 
 
 Lemma welltyped_mkApps_inv {cf} {Σ : global_env_ext} Γ f args :  ∥ wf Σ ∥ ->
@@ -2527,7 +2527,7 @@ Proof.
     Unshelve. all: try exact False.
 Qed.
 
-From MetaCoq Require Import PCUICProgress.
+From MetaCoq.PCUIC Require Import PCUICProgress.
 
 Lemma erase_correct_strong' (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
 univs wfext {t v Σ' t' deps i u args mind} decls normalization_in prf

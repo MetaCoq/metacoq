@@ -1,6 +1,6 @@
 From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
 
-From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
+From MetaCoq.Utils Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with

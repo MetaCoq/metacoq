@@ -3,7 +3,7 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
 From Equations Require Import Equations.
-From MetaCoq Require Import LibHypsNaming.
+From MetaCoq.Utils Require Import LibHypsNaming.
 
 Require Import ssreflect.
 

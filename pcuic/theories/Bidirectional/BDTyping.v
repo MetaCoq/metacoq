@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.
 
-From MetaCoq Require Export LibHypsNaming.
+From MetaCoq.Utils Require Export LibHypsNaming.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.

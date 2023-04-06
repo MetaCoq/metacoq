@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Primitive Environment LiftSubst Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Primitive Environment Universes.
+From MetaCoq.Template Require Import Ast AstUtils LiftSubst.
 
 (** * Pretty printing *)
 

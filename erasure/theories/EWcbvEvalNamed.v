@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq Require Import config utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed EWcbvEval.
@@ -690,7 +691,7 @@ Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
 Local Hint Constructors represents_value : core.
 
-From MetaCoq Require Import bytestring MCString.
+From MetaCoq.Utils Require Import bytestring MCString.
 Require Import BinaryString.
 Import String.
 
@@ -1426,7 +1427,7 @@ Proof.
     + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
 
-From MetaCoq Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
+From MetaCoq.Erasure Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
 
 Lemma lookup_in_env Σ Σ' ind i :
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>

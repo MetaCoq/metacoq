@@ -10,9 +10,9 @@ From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Kernames.Ins
 #[export] Instance quote_modpath : ground_quotable modpath := ltac:(induction 1; exact _).
 #[export] Instance quote_kername : ground_quotable kername := _.
 
-Module QuoteKernameSet := MSets.QuoteMSetAVL Kername KernameSet KernameSetOrdProp qKername qKernameSet qKernameSetOrdProp.
+Module QuoteKernameSet := MSets.QuoteMSetAVL Kername KernameSet KernameSetOrdProp KernameSetExtraOrdProp KernameSetExtraDecide qKername qKernameSet qKernameSetOrdProp qKernameSetExtraOrdProp qKernameSetExtraDecide.
 Export (hints) QuoteKernameSet.
-Module QuoteKernameMap := FSets.QuoteFMapAVL Kername.OT KernameMap KernameMapFact.F qKername.qOT qKernameMap qKernameMapFact.qF.
+Module QuoteKernameMap := FSets.QuoteFMapAVL Kername.OT KernameMap KernameMapFact.F KernameMapExtraFact KernameMapDecide qKername.qOT qKernameMap qKernameMapFact.qF qKernameMapExtraFact qKernameMapDecide.
 Export (hints) QuoteKernameMap.
 
 #[export] Instance quote_inductive : ground_quotable inductive := ltac:(destruct 1; exact _).

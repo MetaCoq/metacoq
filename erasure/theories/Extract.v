@@ -66,7 +66,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
         isPropositional Σ kn false ->
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k []
-  | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
+  | erases_tCase (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
         (brs' : list (list name × E.term)) :
         Subsingleton Σ ci.(ci_ind) ->

@@ -4,7 +4,7 @@ From MetaCoq.Utils Require Import MCReflect MCUtils.
 From MetaCoq.Utils.MCTactics Require Import SpecializeUnderBindersBy DestructHead SplitInContext.
 From Equations.Prop Require Import Classes.
 
-Module FSets.
+Module Export FSets.
   Module Type WFacts_funSig (E : DecidableTypeOrig) (M : WSfun E) := Nop <+ WFacts_fun E M.
 
   Module WFactsExtra_fun (E : DecidableTypeOrig) (Import W : WSfun E) (Import WFacts : WFacts_funSig E W).

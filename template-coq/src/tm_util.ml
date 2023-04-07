@@ -11,20 +11,16 @@ let gen_constant_in_modules s =
 
 (* This allows to load template_plugin and the extractable plugin at the same time 
   while have option settings apply to both *)
-  let timing_opt =
+let timing_opt =
   let open Goptions in
   let key = ["MetaCoq"; "Timing"] in
-  let tables = get_tables () in
-  try 
-    let _ = OptionMap.find key tables in
-    fun () -> 
-      let tables = get_tables () in
-      let opt = OptionMap.find key tables in
-      match opt.opt_value with
+  match get_option_value key with
+  | Some get -> fun () ->
+      begin match get () with
       | BoolValue b -> b
       | _ -> assert false
-  with Not_found ->
-    declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
+      end
+  | None -> declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
 
 let time prefix f x =
   if timing_opt () then 
@@ -38,17 +34,13 @@ let time prefix f x =
 let debug_opt =
   let open Goptions in
   let key = ["MetaCoq"; "Debug"] in
-  let tables = get_tables () in
-  try 
-    let _ = OptionMap.find key tables in
-    fun () -> 
-      let tables = get_tables () in
-      let opt = OptionMap.find key tables in
-      match opt.opt_value with
+  match get_option_value key with
+  | Some get -> fun () ->
+      begin match get () with
       | BoolValue b -> b
       | _ -> assert false
-  with Not_found ->
-  declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
+      end
+  | None -> declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
 
 let debug (m : unit ->Pp.t) =
   if debug_opt () then

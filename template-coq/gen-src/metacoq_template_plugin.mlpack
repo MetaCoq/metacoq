@@ -78,6 +78,8 @@ MCString
 MCUtils
 Signature
 All_Forall
+MCFSets
+MCMSets
 Config0
 Kernames
 Primitive

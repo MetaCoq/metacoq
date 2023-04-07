@@ -2467,7 +2467,7 @@ Qed.
 From MetaCoq.PCUIC Require Import PCUICProgress.
 
 Lemma firstorder_erases_deterministic X_type (X : X_type.π1)
-  univs wfext {v t' i u args mind}
+  univs wfext {v t' i u args}
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
   :
@@ -2475,12 +2475,12 @@ Lemma firstorder_erases_deterministic X_type (X : X_type.π1)
   forall Σ, Σ ∼_ext Xext ->
   Σ ;;; [] |- v : mkApps (tInd i u) args ->
   Σ |-p v ▷ v ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   erases Σ [] v t' ->
   t' = erase X_type Xext (normalization_in:=normalization_in) [] v wv.
 Proof.
-  intros wv Σ Hrel Hty Hvalue Hdecl Hfo Herase.
+  intros wv Σ Hrel Hty Hvalue Hfo Herase.
+  destruct (firstorder_lookup_inv Hfo) as [mind Hdecl].
   assert (Hext : ∥ wf_ext Σ∥) by now eapply heΣ.
   sq. eapply firstorder_value_spec in Hty as Hfov; eauto.
   clear - Hrel Hext Hfov Herase.
@@ -2530,7 +2530,7 @@ Proof.
 Qed.
 
 Lemma erase_correct_strong' (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
-univs wfext {t v Σ' t' deps i u args mind} decls normalization_in prf
+univs wfext {t v Σ' t' deps i u args} decls normalization_in prf
 (Xext :=  abstract_make_wf_env_ext X univs wfext)
 {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
 :
@@ -2538,7 +2538,6 @@ forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t),
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   erase X_type Xext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
@@ -2547,7 +2546,8 @@ forall Σ, abstract_env_ext_rel Xext Σ ->
   ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
   forall wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
 Proof.
-  intros wt Σ Hrel Hax Hty Hdecl Hfo <- Hsub <- Hred Hirred wt'.
+  intros wt Σ Hrel Hax Hty Hfo <- Hsub <- Hred Hirred wt'.
+  destruct (firstorder_lookup_inv Hfo) as [mind Hdecl].
   pose proof (heΣ _ _ _ Hrel) as [Hwf]. eapply wcbv_standardization_fst in Hty as Heval; eauto.
   edestruct (erase_correct X_type X univs wfext t v) as [v' [H1 H2]]; eauto.
   1:{ intros ? H_. sq. enough (Σ0 = Σ) as -> by eauto.
@@ -2561,7 +2561,7 @@ Proof.
 Qed.
 
 Lemma erase_correct_strong (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
-univs wfext {t v deps i u args mind} decls normalization_in prf
+univs wfext {t v deps i u args} decls normalization_in prf
 (Xext :=  abstract_make_wf_env_ext X univs wfext)
 {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
 :
@@ -2569,7 +2569,6 @@ forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t),
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   let t' := erase X_type Xext [] t wt in
   let Σ' := erase_global_decls X_type deps X decls normalization_in prf in
   @firstorder_ind Σ (firstorder_env Σ) i ->

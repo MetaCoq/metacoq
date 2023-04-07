@@ -765,7 +765,10 @@ Proof.
   all:intuition auto.
   - eapply eval_wellformed; tea => //.
   - rewrite isEtaExp_Constructor => //.
+    let X0 := multimatch goal with H : All2 _ _ _ |- _ => H end in
+    let H1 := multimatch goal with H : _ = _ |- _ => H end in
     rewrite -(All2_length X0) H1. cbn. rtoProp; intuition eauto.
+    match goal with H : ?f ?n |- ?f ?n' => replace n' with n by congruence; exact H end.
     cbn; eapply All_forallb. eapply All2_All_right; tea.
     cbn. intros x y []; auto.
 Qed.

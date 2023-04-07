@@ -662,6 +662,7 @@ Proof.
   destruct (isConstruct f) eqn:eqc.
   destruct f => //.
   - depelim H; try solve_discr_args => //.
+    let H3 := match goal with H : tConstruct _ _ _ = tConstruct _ _ _ |- _ => H end in
     noconf H3.
     eapply expanded_tConstruct_app; tea. cbn in H0. lia. solve_all.
   - destruct args using rev_ind; cbn => //.

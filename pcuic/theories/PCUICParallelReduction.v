@@ -2220,7 +2220,7 @@ Section ParallelSubstitution.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all.
         eapply pred1_pred1_ctx in X7.
-        eapply on_contexts_app_inv => //. now rewrite /id.
+        eapply on_contexts_app_inv => //. now rewrite /id; (* congruence is enough in monomorphic mode, but we have to work around COQBUG(https://github.com/coq/coq/issues/5481) *) cbv [pcontext] in *; repeat destruct ?; cbn in *; subst; assumption.
         eapply (on_contexts_length X).
         rewrite /id. rewrite {2}H1.
         apply: X6; tea. 3:now len.
@@ -2351,7 +2351,7 @@ Section ParallelSubstitution.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all.
         eapply pred1_pred1_ctx in X3 => //.
-        eapply on_contexts_app_inv => //. now rewrite /id.
+        eapply on_contexts_app_inv => //. now rewrite /id; (* congruence is enough in monomorphic mode, but we have to work around COQBUG(https://github.com/coq/coq/issues/5481) *) cbv [pcontext] in *; repeat destruct ?; cbn in *; subst; assumption.
         eapply (on_contexts_length X). 2:len; lia.
         now rewrite {2}H0.
       + solve_all. rewrite /inst_case_branch_context in a1 *.

@@ -215,7 +215,7 @@ Proof.
     destruct (eqb_spec (puinst p) (puinst p0)); t'.
     destruct X as [? []]. red in X0.
     destruct (r (preturn p0)); t'.
-    destruct (reflect_prop_list (l':= pparams p0) a); t'.
+    case: (reflect_prop_list (l':= pparams p0) a); t'.
     case: (reflect_prop_list (l:=l) (l' := brs)); t'.
     { eapply All_impl; tea; cbv beta. intros [bctx bbody] [].
       intros [bctx' bbody']; cbn in *.

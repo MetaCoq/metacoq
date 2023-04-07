@@ -57,7 +57,7 @@ Section ECorrect.
   Existing Instance PCUICSN.extraction_normalizing.
   Context {X_type : PCUICWfEnv.abstract_env_impl} {X : projT1 (projT2 X_type)}.
   Context {normalising_in:
-    forall Σ : global_env_ext, wf_ext Σ -> PCUICWfEnv.abstract_env_ext_rel X Σ -> PCUICSN.NormalizationIn Σ}.
+    forall Σ : global_env_ext, PCUICWfEnv.abstract_env_ext_rel X Σ -> PCUICSN.NormalizationIn Σ}.
 
 Lemma erase_ind_body_correct Σ wfΣ kn mib oib wf :
   erases_one_inductive_body oib (trans_oib (@erase_ind_body X_type X _ _ Σ wfΣ kn mib oib wf)).

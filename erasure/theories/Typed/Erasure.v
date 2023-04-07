@@ -56,7 +56,7 @@ Import ErasureFunction.
 Context {X_type : abstract_env_impl}
         {X : X_type.π2.π1}
         {no : normalizing_flags}
-        {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}.
+        {normalization_in : forall Σ, Σ ∼_ext X -> NormalizationIn Σ}.
 
 Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf_ext Σ ∥ := abstract_env_ext_wf _ wfΣ.
@@ -244,7 +244,7 @@ Lemma well_founded_erase_rel : well_founded erase_rel.
 Proof.
   intros (Γl & l & wfl).
   assert (w : ∥ wf_ext rΣ ∥) by now apply heΣ. sq.
-  induction (normalization_in rΣ w wfrΣ Γl l wfl) as [l _ IH].
+  induction (normalization_in rΣ wfrΣ Γl l wfl) as [l _ IH].
   remember (Γl, l) as p.
   revert wfl IH.
   replace Γl with (fst p) by (now subst).
@@ -1432,9 +1432,9 @@ Program Definition erase_global_decl
   end.
 Next Obligation. unshelve econstructor; eauto. Defined.
 
-Next Obligation. now eapply fake_normalization. Defined.
+Next Obligation. destruct wfΣext; eapply fake_normalization; eauto. Defined.
 Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. eapply (fake_normalization _ X _ _ H). Defined.
+Next Obligation. destruct wfΣext. eapply fake_normalization; eauto. Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with

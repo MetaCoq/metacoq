@@ -12,7 +12,7 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   export OCAMLPATH
 endif
 
-.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations
+.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations quotation
 
 printconf:
 ifeq '$(METACOQ_CONFIG)' 'local'
@@ -147,7 +147,7 @@ safechecker: pcuic
 template-pcuic: template-coq pcuic
 	$(MAKE) -C template-pcuic
 
-quotation: template-coq pcuic template-pcuic
+quotation: template-coq # pcuic template-pcuic
 	$(MAKE) -C quotation
 
 safechecker-plugin: safechecker template-pcuic

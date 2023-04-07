@@ -21,8 +21,3 @@ Module Type QuotationOfSetsOn (E : OrderedType) (Import M : SetsOn E).
   #[export] Declare Instance qchoose_spec3 : quotation_of M.choose_spec3.
 End QuotationOfSetsOn.
 Module Type QuotationOfSets (M : Sets) := QuotationOfSetsOn M.E M.
-
-Module Type UsualSets <: Sets.
-  Declare Module E : UsualOrderedType.
-  Include SetsOn E.
-End UsualSets.

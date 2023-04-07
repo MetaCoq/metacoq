@@ -111,6 +111,13 @@ Proof.
     split; eauto.
 Qed.
 
+Lemma erases_extends' (Σ:global_env_ext) Γ t T:
+  wf Σ -> Σ ;;; Γ |- t : T ->
+    forall Σ', wf Σ' -> strictly_extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t'.
+Proof.
+  intro; eapply erases_extends; eauto.
+Defined.
+
 (** ** Weakening *)
 
 Lemma Is_type_weakening:

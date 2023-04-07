@@ -40,15 +40,15 @@ Notation "Σ ⊢ s ▷ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next 
 
 Import ssrbool.
 
-Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
+Lemma erases_correct (wfl := default_wcbv_flags) Σ t t' v Σ' :
   wf_ext Σ ->
-  Σ;;; [] |- t : T ->
+  welltyped Σ [] t ->
   Σ;;; [] |- t ⇝ℇ t' ->
   erases_deps Σ Σ' t' ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
-  intros wfΣ Hty He Hed H.
+  intros wfΣ [T Hty] He Hed H.
   revert T Hty t' He Hed.
   induction H; intros T Hty t' He Hed.
   - assert (Hty' := Hty).

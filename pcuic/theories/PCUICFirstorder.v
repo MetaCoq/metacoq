@@ -68,7 +68,7 @@ Section firstorder.
 
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
-    (mind.(ind_finite) == Finite) &&
+    ~~ (mind.(ind_finite) == CoFinite) &&
     forallb (firstorder_oneind mind) mind.(ind_bodies)
     (* else repeat false (length mind.(ind_bodies)). *).
 
@@ -673,7 +673,7 @@ Proof using Type.
       rewrite Hlookup in Hfo.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind Hlookup in Hty.
-      apply eqb_eq in Hfo, Hty. congruence.
+      now eapply (negb_False _ Hfo).
     + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
       now eapply invert_cumul_axiom_ind in cum; tea.
   - destruct t; inv Hhead.
@@ -714,7 +714,7 @@ Proof using Type.
       rewrite Hlookup in Hfo.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind Hlookup in Hty.
-      apply eqb_eq in Hfo, Hty. congruence.
+      now eapply (negb_False _ Hfo).
 Qed.
 
 Lemma firstorder_value_alpha Σ t t' :

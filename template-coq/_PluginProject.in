@@ -121,8 +121,12 @@ gen-src/logic2.ml
 gen-src/logic2.mli
 gen-src/mCCompare.ml
 gen-src/mCCompare.mli
+gen-src/mCFSets.ml
+gen-src/mCFSets.mli
 gen-src/mCList.ml
 gen-src/mCList.mli
+gen-src/mCMSets.ml
+gen-src/mCMSets.mli
 gen-src/mCOption.ml
 gen-src/mCOption.mli
 gen-src/mCPrelude.ml
@@ -230,6 +234,22 @@ gen-src/zeven.ml
 gen-src/zeven.mli
 gen-src/zpower.ml
 gen-src/zpower.mli
+# gen-src/carryType.ml
+# gen-src/carryType.mli
+# gen-src/coreTactics.ml
+# gen-src/coreTactics.mli
+# gen-src/depElim.ml
+# gen-src/depElim.mli
+# gen-src/floatClass.ml
+# gen-src/floatClass.mli
+# gen-src/init.ml
+# gen-src/init.mli
+# gen-src/mCUint63.ml
+# gen-src/mCUint63.mli
+# gen-src/noConfusion.ml
+# gen-src/noConfusion.mli
+# gen-src/wf.ml
+# gen-src/wf.mli
 
 gen-src/metacoq_template_plugin.mlpack
 

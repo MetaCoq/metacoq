@@ -4,7 +4,7 @@ From MetaCoq.Utils Require Import MCReflect MCUtils.
 From MetaCoq.Utils.MCTactics Require Import SpecializeUnderBindersBy DestructHead SplitInContext.
 From Equations.Prop Require Import Classes.
 
-Module FSets.
+Module Export FSets.
   Module Type WFacts_funSig (E : DecidableTypeOrig) (M : WSfun E) := Nop <+ WFacts_fun E M.
 
   Module WFactsExtra_fun (E : DecidableTypeOrig) (Import W : WSfun E) (Import WFacts : WFacts_funSig E W).
@@ -70,7 +70,7 @@ End FMapList.
 Module FMapAVL.
   Module Type MakeSig (T : OrderedTypeOrig) := Nop <+ FMapAVL.Make T.
 
-  Module Decide (T : OrderedTypeOrig) (M : FMapAVL.MakeSig T). (* (Import WFacts : WFacts_funSig T M) (qT : QuotationOfOrderedTypeOrig T) (qM : FMapAVL.QuotationOfMake T M) (qWFacts : QuotationOfWFacts_fun T M WFacts).*)
+  Module Decide (T : OrderedTypeOrig) (M : FMapAVL.MakeSig T).
     Module Raw.
       Scheme Induction for M.Raw.tree Sort Type.
       Scheme Induction for M.Raw.tree Sort Set.
@@ -145,4 +145,6 @@ Module FMapAVL.
       End with_t.
     End Raw.
   End Decide.
+
+  Module Type DecideSig (T : OrderedTypeOrig) (M : FMapAVL.MakeSig T) := Nop <+ Decide T M.
 End FMapAVL.

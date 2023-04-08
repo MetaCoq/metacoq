@@ -214,6 +214,9 @@ Derive NoConfusion for term.
 
 Notation prim_val := (prim_val term).
 
+Notation tInt i := (tPrim (_; primIntModel i)) (only parsing).
+Notation tFloat f := (tPrim (_; primFloatModel f)) (only parsing).
+
 Fixpoint mkApps t us :=
   match us with
   | nil => t

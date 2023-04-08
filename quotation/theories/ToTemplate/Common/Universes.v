@@ -4,11 +4,6 @@ From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) MCOption bytestri
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) BasicAst config.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Universes.Instances.
 From MetaCoq.Common Require Import Kernames Universes UniversesDec.
-From MetaCoq.Utils Require Import bytestring monad_utils.
-From MetaCoq.Template Require Import Loader TemplateMonad.
-
-Local Open Scope bs.
-Import MCMonadNotation.
 
 (* Grrr, [valuation]s cause so much trouble, because they're not quotable *)
 (*

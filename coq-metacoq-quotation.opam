@@ -29,10 +29,10 @@ install: [
 ]
 depends: [
   "coq-metacoq-template" {= version}
-#  "coq-metacoq-pcuic" {= version}
-#  "coq-metacoq-template-pcuic" {= version}
+  "coq-metacoq-pcuic" {= version}
+  "coq-metacoq-template-pcuic" {= version}
 ]
-synopsis: "Gallina quotation functions for Template Coq (PCUIC support in the works)."
+synopsis: "Gallina quotation functions for Template Coq."
 description: """
 MetaCoq is a meta-programming framework for Coq.
 

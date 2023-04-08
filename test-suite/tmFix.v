@@ -3,7 +3,8 @@ From Coq Require Import Lists.List.
 From Coq Require Import Lia.
 From Coq Require Import Arith.
 From Coq Require Import NArith.
-From MetaCoq.Template Require Import Loader TemplateMonad.Core monad_utils.
+From MetaCoq.Utils Require Import monad_utils.
+From MetaCoq.Template Require Import Loader TemplateMonad.Core.
 
 Local Set Default Proof Mode "Classic".
 
@@ -45,11 +46,12 @@ Module TC.
   #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
   Import MCMonadNotation.
   Import bytestring.
+  Local Unset Universe Checking.
   Definition tmFix {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)) : A -> TemplateMonad B
     := f
          (fun a
           => tmFix <- tmInferInstance None HasFix;;
-             match tmFix with
+             match tmFix return TemplateMonad B with
              | Common.my_Some tmFix => tmFix _ _ f a
              | Common.my_None => tmFail "Internal Error: No tmFix instance"%bs
              end).
@@ -61,7 +63,7 @@ Module TC.
 End TC.
 Module Unquote.
   Import MCMonadNotation.
-  Import MetaCoq.Template.Universes.
+  Import MetaCoq.Common.Universes.
   Import MetaCoq.Template.Ast.
   Import bytestring.
   Import ListNotations.
@@ -128,7 +130,7 @@ End Unquote.
 Module NoGuard.
   (* N.B. This version is inconsistent *)
   Import MCMonadNotation.
-  Import MetaCoq.Template.Universes.
+  Import MetaCoq.Common.Universes.
   Import MetaCoq.Template.Ast.
   Import bytestring.
   Import ListNotations.

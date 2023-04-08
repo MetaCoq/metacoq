@@ -2,6 +2,7 @@
 
 # list obtained with `ls -1 *.v`
 
+# CheckerTest.v disabled
 bug1.v
 bug2.v
 bug5.v
@@ -11,34 +12,33 @@ bug8.v
 bugkncst.v
 case.v
 castprop.v
-hott_example.v
-# CheckerTest.v disabled
 cofix.v
-vs.v
-reduction_test.v
 erasure_live_test.v
 erasure_test.v
 evars.v
 extractable.v
 hnf_ctor.v
+hott_example.v
+inferind.v
+inferindunivs.v
 issue27.v
 issue28.v
 letin.v
 modules_sections.v
 mutind.v
 opaque.v
+order_rec.v
+# primitive.v
 proj.v
+quotation_notations.v
+reduction_test.v
 run_in_tactic.v
 safechecker_test.v
 tmExistingInstance.v
 tmFreshName.v
 tmInferInstance.v
 tmQuoteModule.v
+tmVariable.v
 unfold.v
 univ.v
-tmVariable.v
-order_rec.v
-quotation_notations.v
-# primitive.v
-inferind.v
-inferindunivs.v
+vs.v

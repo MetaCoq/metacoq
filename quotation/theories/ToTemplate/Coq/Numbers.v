@@ -29,7 +29,7 @@ Module Export Numbers.
   End Int31.
 End Numbers.
 
-#[export] Instance quote_int : ground_quotable int := Ast.tInt.
+#[export] Instance quote_int : ground_quotable int := fun i => Ast.tInt i.
 #[export] Instance quote_pos_neg_int63 : ground_quotable pos_neg_int63 := ltac:(destruct 1; exact _).
 #[export] Instance quote_int_wrapper : ground_quotable int_wrapper := ltac:(destruct 1; exact _).
 #[export] Instance quote_int31 : ground_quotable int31 := ltac:(destruct 1; exact _).

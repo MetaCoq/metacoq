@@ -126,18 +126,21 @@ Lemma weakening_config_cumulSpec0 {cf1 cf2} Σ Γ pb M N :
   @cumulSpec0 cf2 Σ Γ pb M N.
 Proof.
   intros Hcf.
-  revert pb Γ M N.
-  apply: (@cumulSpec0_ind_all cf1 Σ).
+  induction 1.
   all:intros; try solve [econstructor; try eassumption; intuition auto].
+  all: lazymatch goal with
+       | [ H : cumul_predicate_dep _ _ _ |- _ ] => apply cumul_predicate_undep in H
+       | _ => idtac
+       end.
   - eapply cumul_Evar. solve_all.
   - eapply cumul_Case.
-    * destruct X as (Hparams & Hinst & Hctx & Hret & IHret). repeat split; tas.
-      + solve_all.
-      + eapply R_universe_instance_impl'; eauto.
-        hnf; intros *; eapply (@cmp_universe_config_impl cf1 cf2); assumption.
+    * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; tas.
+      + eapply R_universe_instance_impl';
+          [ hnf; intros * ?; eapply (@cmp_universe_config_impl cf1 cf2) | ];
+          eassumption.
     * solve_all.
     * solve_all.
-  - eapply cumul_Fix; solve_all.
+  - eapply cumul_Fix. solve_all.
   - eapply cumul_CoFix; solve_all.
   - eapply cumul_Ind; eauto. 2:solve_all.
     eapply @R_global_instance_weaken_subrel; [ .. | eassumption ].

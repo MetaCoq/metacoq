@@ -113,4 +113,3 @@ theories/ToTemplate/Utils/ReflectEq.v
 theories/ToTemplate/Utils/bytestring.v
 theories/ToTemplate/Utils/monad_utils.v
 theories/ToTemplate/Utils/utils.v
-theories/ToTemplate/Utils/wGraph.v

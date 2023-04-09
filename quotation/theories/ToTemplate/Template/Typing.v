@@ -57,14 +57,6 @@ Section quote_typing.
   Context {cf : config.checker_flags} {Σ : global_env_ext}.
 
   #[local] Hint Extern 1 => progress cbv zeta : typeclass_instances.
-  Typeclasses Transparent typ_or_sort.
-  Hint Unfold
-    consistent_instance_ext
-  : quotation.
-  Typeclasses Transparent
-    consistent_instance_ext
-  .
-
 
   Fixpoint quote_typing' {Γ t T} (pf : @typing cf Σ Γ t T) {struct pf} : quotation_of pf
   with quote_typing_spine' {Γ t s T} (pf : @typing_spine cf Σ Γ t s T) {struct pf} : quotation_of pf.

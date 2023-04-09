@@ -174,9 +174,9 @@ Definition monad_trans@{t u} : Ast.term -> TemplateMonad@{t u} term
        (fun monad_trans v
         => v <- @monad_trans'@{t u} TemplateMonad TemplateMonad_Monad
                   (@TransLookup_lookup_inductive' TemplateMonad TemplateMonad_Monad monad_trans tmQuoteInductive (@tmFail))
-                  (@tmEval cbv)
+                  (@tmReturn)
                   v;;
-           tmEval cbv v).
+           ret v).
 
 Definition monad_trans_decl@{t u} := @monad_trans_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
 Definition monad_trans_local@{t u} := @monad_trans_local'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.

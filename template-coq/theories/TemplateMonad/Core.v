@@ -4,6 +4,7 @@ From MetaCoq.Template Require Import Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
 Local Unset Universe Minimization ToSet.
+Local Unset Asymmetric Patterns.
 Import MCMonadNotation.
 
 (** * The Template Monad
@@ -68,9 +69,26 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
+(** This version of [tmBind] flattens nesting structure; using it in deeply recursive template programs can speed things up drastically *)
+Fixpoint tmOptimizedBind@{t u} {A B : Type@{t}} (v : TemplateMonad@{t u} A) : (A -> TemplateMonad@{t u} B) -> TemplateMonad@{t u} B
+  := match v with
+     | tmReturn x => fun f => f x
+     | tmBind v k => fun f => tmOptimizedBind v (fun v => tmOptimizedBind (k v) f)
+     | tmFail msg => fun _ => tmFail msg
+     | v => tmBind v
+     end.
+
+(** Flatten nested [tmBind] *)
+Definition tmOptimize@{t u} {A : Type@{t}} (v : TemplateMonad@{t u} A) : TemplateMonad@{t u} A
+  := tmOptimizedBind v tmReturn.
+
 (** This allow to use notations of MonadNotation *)
 Global Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
+
+(* We don't want to make this an instance, becuase it blows up performance in some cases *)
+Definition TemplateMonad_OptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+  {| ret := @tmReturn ; bind := @tmOptimizedBind |}.
 
 Polymorphic Definition tmDefinitionRed
 : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A :=

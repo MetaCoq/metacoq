@@ -88,6 +88,7 @@ theories/ToTemplate/Template/LiftSubst.v
 theories/ToTemplate/Template/ReflectAst.v
 theories/ToTemplate/Template/TermEquality.v
 theories/ToTemplate/Template/Typing.v
+theories/ToTemplate/Template/TypingWf.v
 theories/ToTemplate/Template/UnivSubst.v
 theories/ToTemplate/Template/WfAst.v
 theories/ToTemplate/Utils/All_Forall.v

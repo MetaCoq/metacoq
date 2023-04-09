@@ -1,7 +1,7 @@
 From MetaCoq.Common Require Import config.
 From MetaCoq.Template Require Import Ast Typing.
-From MetaCoq.Template Require WfAst (*WfTyping*).
-From MetaCoq.Quotation.ToTemplate.Template Require Ast Typing WfAst (*WfTyping*).
+From MetaCoq.Template Require WfAst TypingWf.
+From MetaCoq.Quotation.ToTemplate.Template Require Ast Typing WfAst TypingWf.
 
 (* without typing derivations *)
 Module Raw.
@@ -14,7 +14,7 @@ Module Raw.
   Module WfAst.
     Definition quote_wf {Σ t} : @WfAst.wf Σ t -> Ast.term := WfAst.quote_wf.
   End WfAst.
-  (* TODO: do we want anything from WfTyping? Is there anything else missing here? *)
+  (* TODO: do we want anything from TypingWf? Is there anything else missing here? *)
 End Raw.
 
 (* eventually we'll have proofs that the above definitions are well-typed *)

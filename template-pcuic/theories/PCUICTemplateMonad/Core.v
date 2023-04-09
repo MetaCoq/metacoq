@@ -6,6 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.TemplatePCUIC Require Import TemplateMonadToPCUIC TemplateToPCUIC PCUICToTemplate.
 
 Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
 Import MCMonadNotation.
 
 Definition tmQuote {A:Type} (a : A) : TemplateMonad PCUICAst.term := qa <- tmQuote a;; monad_trans qa.

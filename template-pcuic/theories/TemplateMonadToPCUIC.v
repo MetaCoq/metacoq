@@ -11,6 +11,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICPrimitive PCUICCases PCUICProgra
 From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC.
 
 Import MCMonadNotation.
+Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
 
 Section with_tc.
   Context {TM : TMInstance}.

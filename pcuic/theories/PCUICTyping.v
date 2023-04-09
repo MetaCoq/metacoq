@@ -28,10 +28,10 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Fixpoint isArity T :=
   match T with
-  | tSort u => True
+  | tSort u => true
   | tProd _ _ codom => isArity codom
   | tLetIn _ _ _ codom => isArity codom
-  | _ => False
+  | _ => false
   end.
 
 Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive * nat) (u : list Level.t) :=

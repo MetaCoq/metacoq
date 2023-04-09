@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Utils Require Import utils monad_utils MCList.
 From MetaCoq.Common Require Import BasicAst.
 
 Import MCMonadNotation.
@@ -57,7 +57,7 @@ Section with_monad.
     Notation context term := (list (context_decl term)).
 
     Definition monad_fold_context_k (f : nat -> term -> T term') Γ :=
-      Γ <- monad_map_i (fun k' decl => monad_map_decl (f k') decl) (List.rev Γ);; ret (List.rev Γ).
+      Γ <- monad_map_i (fun k' decl => monad_map_decl (f k') decl) (rev Γ);; ret (rev Γ).
 
     Arguments monad_fold_context_k f Γ%list_scope.
 

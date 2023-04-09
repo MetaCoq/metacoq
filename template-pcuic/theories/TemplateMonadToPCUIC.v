@@ -96,7 +96,8 @@ Section with_tc.
   End helpers.
 
   Section with_helper.
-    Context (TransLookup_lookup_inductive' : inductive -> TemplateMonad (mutual_inductive_body × one_inductive_body)).
+    Context (TransLookup_lookup_inductive' : inductive -> TemplateMonad (mutual_inductive_body × one_inductive_body))
+      (tmEval : forall {A}, A -> TemplateMonad A).
 
     Fixpoint monad_trans' (t : Ast.term) : TemplateMonad term
       := match t with
@@ -116,10 +117,10 @@ Section with_tc.
              p' <- monad_map_predicate ret monad_trans' monad_trans' p;;
              brs' <- monad_map (monad_map_branch monad_trans') brs;;
              '(mdecl, idecl) <- TransLookup_lookup_inductive' ci.(ci_ind);;
-             let tp := trans_predicate ci.(ci_ind) mdecl idecl p'.(Ast.pparams) p'.(Ast.puinst) p'.(Ast.pcontext) p'.(Ast.preturn) in
-             let tbrs :=
-               map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl br.(Ast.bcontext) br.(Ast.bbody))
-                    idecl.(ind_ctors) brs' in
+             tp <- tmEval _ (trans_predicate ci.(ci_ind) mdecl idecl p'.(Ast.pparams) p'.(Ast.puinst) p'.(Ast.pcontext) p'.(Ast.preturn));;
+             tbrs <- tmEval
+                       _ (map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl br.(Ast.bcontext) br.(Ast.bbody))
+                            idecl.(ind_ctors) brs');;
              c <- monad_trans' c;;
              ret (tCase ci tp c tbrs)
          | Ast.tProj p c => c <- monad_trans' c;; ret (tProj p c)
@@ -138,7 +139,9 @@ End with_tc.
 Import TemplateMonad.Core.
 
 Definition monad_trans : Ast.term -> TemplateMonad term
-  := tmFix (fun monad_trans => @monad_trans' TypeInstance TemplateMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans)).
+  := tmFix (fun monad_trans v
+            => v <- @monad_trans' TypeInstance TemplateMonad_Monad (@TransLookup_lookup_inductive' TypeInstance TemplateMonad_Monad monad_trans) (@tmEval cbv) v;;
+               tmEval cbv v).
 
 Definition monad_trans_decl := @monad_trans_decl' TypeInstance TemplateMonad_Monad monad_trans.
 Definition monad_trans_local := @monad_trans_local' TypeInstance TemplateMonad_Monad monad_trans.

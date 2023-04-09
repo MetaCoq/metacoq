@@ -15,12 +15,16 @@ Section with_monad.
     Context (paramf preturnf : term -> T term').
 
     Definition monad_map_predicate (p : predicate term) :=
-      pparams <- monad_map paramf p.(pparams);;
-      puinst <- uf p.(puinst);;
-      preturn <- preturnf p.(preturn);;
+      let '{| pparams := pparams;
+             puinst := puinst;
+             pcontext := pcontext;
+             preturn := preturn |} := p in
+      pparams <- monad_map paramf pparams;;
+      puinst <- uf puinst;;
+      preturn <- preturnf preturn;;
       ret {| pparams := pparams;
             puinst := puinst;
-            pcontext := p.(pcontext);
+            pcontext := pcontext;
             preturn := preturn |}.
   End map_predicate.
 
@@ -30,12 +34,16 @@ Section with_monad.
     Context (f : nat -> term -> T term).
 
     Definition monad_map_predicate_k k (p : predicate term) :=
-      pparams <- monad_map (f k) p.(pparams);;
-      puinst <- uf p.(puinst);;
-      preturn <- f (#|p.(pcontext)| + k) p.(preturn);;
+      let '{| pparams := pparams;
+             puinst := puinst;
+             pcontext := pcontext;
+             preturn := preturn |} := p in
+      pparams <- monad_map (f k) pparams;;
+      puinst <- uf puinst;;
+      preturn <- f (#|pcontext| + k) preturn;;
       ret {| pparams := pparams;
             puinst := puinst;
-            pcontext := p.(pcontext);
+            pcontext := pcontext;
             preturn := preturn |}.
 
   End map_predicate_k.
@@ -45,13 +53,15 @@ Section with_monad.
     Context (bbodyf : term -> T term').
 
     Definition monad_map_branch (b : branch term) :=
-      bbody <- bbodyf b.(bbody);;
-      ret {| bcontext := b.(bcontext);
+      let '{| bcontext := bcontext;
+             bbody := bbody |} := b in
+      bbody <- bbodyf bbody;;
+      ret {| bcontext := bcontext;
             bbody := bbody |}.
   End map_branch.
 
   Definition monad_map_branches {term B} (f : term -> T B) l := monad_map (monad_map_branch f) l.
 
-  Notation map_branches_k f k brs :=
+  Notation monad_map_branches_k f k brs :=
     (monad_map (fun b => monad_map_branch (f (#|b.(bcontext)| + k)) b) brs).
 End with_monad.

@@ -10,10 +10,17 @@ Section with_monad.
   Context {T} {M : Monad T}.
 
   Definition monad_map_binder_annot {A B} (f : A -> T B) (b : binder_annot A) : T (binder_annot B) :=
-    binder_name <- f b.(binder_name);; ret {| binder_name := binder_name; binder_relevance := b.(binder_relevance) |}.
+    let '{| binder_name := binder_name;
+           binder_relevance := binder_relevance |} := b in
+    binder_name <- f binder_name;;
+    ret {| binder_name := binder_name;
+          binder_relevance := binder_relevance |}.
 
   Definition monad_map_def {A B} (tyf bodyf : A -> T B) (d : def A) :=
-    dtype <- tyf d.(dtype);; dbody <- bodyf d.(dbody);; ret {| dname := d.(dname); dtype := dtype; dbody := dbody; rarg := d.(rarg) |}.
+    let '{| dname := dname; dtype := dtype; dbody := dbody; rarg := rarg |} := d in
+    dtype <- tyf dtype;;
+    dbody <- bodyf dbody;;
+    ret {| dname := dname; dtype := dtype; dbody := dbody; rarg := rarg |}.
 
   Definition monad_typ_or_sort_map {T' T''} (f: T' -> T T'') t :=
     match t with
@@ -22,9 +29,12 @@ Section with_monad.
     end.
 
   Definition monad_map_decl {term term'} (f : term -> T term') (d : context_decl term) : T (context_decl term') :=
-    decl_body <- monad_option_map f d.(decl_body);;
-    decl_type <- f d.(decl_type);;
-    ret {| decl_name := d.(decl_name);
+    let '{| decl_name := decl_name;
+           decl_body := decl_body;
+           decl_type := decl_type |} := d in
+    decl_body <- monad_option_map f decl_body;;
+    decl_type <- f decl_type;;
+    ret {| decl_name := decl_name;
           decl_body := decl_body;
           decl_type := decl_type |}.
 

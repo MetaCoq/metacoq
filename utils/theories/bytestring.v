@@ -196,7 +196,7 @@ Notation "x ++ y" := (String.append x y) : bs_scope.
 Import String.
 
 (** comparison *)
-Require Import Orders Coq.Structures.OrderedType.
+Require Import Orders Coq.Structures.OrderedType Coq.Structures.OrdersAlt.
 
 Lemma to_N_inj : forall x y, Byte.to_N x = Byte.to_N y <-> x = y.
 Proof.
@@ -400,6 +400,8 @@ Module StringOT <: UsualOrderedType.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
 End StringOT.
+
+Module StringOTOrig := OrdersAlt.Backport_OT StringOT.
 
 Notation string_compare := StringOT.compare.
 Notation string_compare_eq := StringOT.compare_eq.

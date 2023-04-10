@@ -2,9 +2,6 @@ jobs:
   coq:
     needs: []
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ env.RUNNER_OS }}-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\

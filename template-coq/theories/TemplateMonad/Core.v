@@ -83,12 +83,16 @@ Definition tmOptimize@{t u} {A : Type@{t}} (v : TemplateMonad@{t u} A) : Templat
   := tmOptimizedBind v tmReturn.
 
 (** This allow to use notations of MonadNotation *)
-Global Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+Definition TemplateMonad_UnoptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
 
-(* We don't want to make this an instance, becuase it blows up performance in some cases *)
 Definition TemplateMonad_OptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmOptimizedBind |}.
+
+(* We don't want to make the optimized monad an instance, because it blows up performance in some cases *)
+Definition TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+  Eval hnf in TemplateMonad_UnoptimizedMonad.
+Global Existing Instance TemplateMonad_Monad.
 
 Polymorphic Definition tmDefinitionRed
 : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A :=
@@ -155,7 +159,7 @@ Definition tmMkDefinition (id : ident) (tm : term) : TemplateMonad unit
      tmDefinitionRed id (Some (unfold (Common_kn "my_projT1"))) t'' ;;
      tmReturn tt.
 
-Definition TypeInstance : Common.TMInstance :=
+Definition TypeInstanceUnoptimized : Common.TMInstance :=
   {| Common.TemplateMonad := TemplateMonad
    ; Common.tmReturn:=@tmReturn
    ; Common.tmBind:=@tmBind
@@ -171,6 +175,26 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmMkInductive:=@tmMkInductive
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
+
+Definition TypeInstanceOptimized : Common.TMInstance :=
+  {| Common.TemplateMonad := TemplateMonad
+   ; Common.tmReturn:=@tmReturn
+   ; Common.tmBind:=@tmOptimizedBind
+   ; Common.tmFail:=@tmFail
+   ; Common.tmFreshName:=@tmFreshName
+   ; Common.tmLocate:=@tmLocate
+   ; Common.tmLocateModule:=@tmLocateModule
+   ; Common.tmLocateModType:=@tmLocateModType
+   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmQuoteInductive:=@tmQuoteInductive
+   ; Common.tmQuoteUniverses:=@tmQuoteUniverses
+   ; Common.tmQuoteConstant:=@tmQuoteConstant
+   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmExistingInstance:=@tmExistingInstance
+   |}.
+
+Definition TypeInstance : Common.TMInstance :=
+  Eval hnf in TypeInstanceUnoptimized.
 
 Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
   := u <- @tmQuote Prop (Type@{U} -> True);;

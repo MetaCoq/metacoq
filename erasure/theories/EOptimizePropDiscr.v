@@ -31,6 +31,12 @@ Hint Constructors eval : core.
 Section optimize.
   Context (Σ : GlobalContextMap.t).
 
+  Definition isprop_ind Σ (ind:inductive × nat)
+    := match GlobalContextMap.inductive_isprop_and_pars Σ (fst ind) with
+        | Some (true, _) => true
+        | _ => false
+    end.
+
   Fixpoint optimize (t : term) : term :=
     match t with
     | tRel i => tRel i
@@ -40,14 +46,13 @@ Section optimize.
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
     | tCase ind c brs =>
       let brs' := List.map (on_snd optimize) brs in
-      match GlobalContextMap.inductive_isprop_and_pars Σ (fst ind) with
-      | Some (true, npars) =>
+      if isprop_ind Σ ind
+      then
         match brs' with
         | [(a, b)] => ECSubst.substl (repeat tBox #|a|) b
         | _ => tCase ind (optimize c) brs'
         end
-      | _ => tCase ind (optimize c) brs'
-      end
+      else tCase ind (optimize c) brs'
     | tProj p c =>
       match GlobalContextMap.inductive_isprop_and_pars Σ p.(proj_ind) with
       | Some (true, _) => tBox
@@ -108,7 +113,7 @@ Section optimize.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - move/andP: H => [] clt cll.
+    - move/andP: H => [] clt cll. unfold isprop_ind.
       destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       rewrite IHt //.
@@ -168,7 +173,7 @@ Section optimize.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros cl; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    unfold test_def in *;
+    unfold test_def,isprop_ind in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
     - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
@@ -366,7 +371,7 @@ Proof.
   induction t using EInduction.term_forall_list_ind; cbn -[lookup_constant lookup_inductive
     lookup_projection
     GlobalContextMap.inductive_isprop_and_pars]; intros => //.
-  all:unfold wf_fix_gen in *; rtoProp; intuition auto.
+  all:unfold wf_fix_gen, isprop_ind in *; rtoProp; intuition auto.
   all:try now f_equal; eauto; solve_all.
   - destruct cstr_as_blocks; rtoProp; eauto. f_equal. solve_all. destruct args; inv H2. reflexivity.
   - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
@@ -551,6 +556,7 @@ Proof.
     have := (eval_closed _ clΣ _ _ cld ev1); rewrite closedn_mkApps => /andP[] _ clargs.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
+    unfold isprop_ind.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
     rewrite (constructor_isprop_pars_decl_inductive e1).
     eapply eval_iota; eauto.
@@ -564,7 +570,7 @@ Proof.
 
   - congruence.
 
-  - move/andP => [] cld clbrs.
+  - move/andP => [] cld clbrs. unfold isprop_ind.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
     rewrite e0 e1 /=.
     subst brs. cbn in clbrs. rewrite Nat.add_0_r andb_true_r in clbrs.
@@ -619,7 +625,7 @@ Proof.
     forward IHev2.
     { rewrite clargs clbrs !andb_true_r.
       eapply closed_cunfold_cofix; tea. }
-    rewrite -> optimize_mkApps in IHev1, IHev2. simpl.
+    rewrite -> optimize_mkApps in IHev1, IHev2. simpl. unfold isprop_ind in *.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec in IHev2 |- *.
     destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
@@ -724,7 +730,7 @@ Proof.
   all:try solve[constructor; eauto; solve_all].
   all:rewrite ?optimize_mkApps.
   - eapply expanded_mkApps_expanded => //. solve_all.
-  - cbn -[GlobalContextMap.inductive_isprop_and_pars].
+  - cbn -[GlobalContextMap.inductive_isprop_and_pars]. unfold isprop_ind.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
     destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
     2-3:constructor; eauto; solve_all.
@@ -841,6 +847,7 @@ Proof.
   - cbn -[lookup_constructor]. intros. destruct cstr_as_blocks; rtoProp; repeat split; eauto. 2:solve_all.
     2: now destruct args; inv H0. len.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
+    unfold isprop_ind.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     destruct l as [|[br n'] [|l']] eqn:eql; simpl.
     all:rewrite ?hasc ?hs /= ?andb_true_r.

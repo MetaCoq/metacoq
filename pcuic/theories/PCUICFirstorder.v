@@ -94,6 +94,14 @@ Fixpoint firstorder_env' (Σ : global_declarations) :=
 Definition firstorder_env (Σ : global_env_ext) :=
   firstorder_env' Σ.1.(declarations).
 
+Lemma firstorder_lookup_inv {Σ i} :
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  {mind & lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind)}.
+Proof.
+  unfold firstorder_ind; destruct lookup_env; eauto.
+  destruct g; eauto.
+Defined.
+
 Section cf.
 
 Context {cf : config.checker_flags}.

@@ -28,6 +28,9 @@ Definition on_Trel {A B} (R : A -> A -> Type) (f : B -> A) : B -> B -> Type :=
 Notation Trel_conj R S :=
   (fun x y => R x y * S x y)%type.
 
+Notation Trel_sig R S :=
+  (fun x y => { r : R x y & S x y r })%type.
+
 Notation on_Trel_eq R f g :=
   (fun x y => (R (f x) (f y) * (g x = g y)))%type.
 
@@ -202,4 +205,3 @@ Proof with auto.
     intros. apply Acc_intro.
     intros. rewrite H0 in H1. apply (H (m y))...
 Defined.
-

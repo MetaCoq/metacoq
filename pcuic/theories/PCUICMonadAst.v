@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils monad_utils.
-From MetaCoq.Template Require Import Ast.
+From MetaCoq.PCUIC Require Import PCUICAst.
 
 Import MCMonadNotation.
 Local Set Universe Polymorphism.
@@ -13,15 +13,13 @@ Section with_monad.
     Context {term term' : Type}.
     Context (uf : Instance.t -> T Instance.t).
     Context (paramf preturnf : term -> T term').
+    Context (pcontextf : list (BasicAst.context_decl term) -> T (list (BasicAst.context_decl term'))).
 
     Definition monad_map_predicate (p : predicate term) :=
-      let '{| pparams := pparams;
-             puinst := puinst;
-             pcontext := pcontext;
-             preturn := preturn |} := p in
-      pparams <- monad_map paramf pparams;;
-      puinst <- uf puinst;;
-      preturn <- preturnf preturn;;
+      pparams <- monad_map paramf p.(pparams);;
+      puinst <- uf p.(puinst);;
+      preturn <- preturnf p.(preturn);;
+      pcontext <- pcontextf p.(pcontext);;
       ret {| pparams := pparams;
             puinst := puinst;
             pcontext := pcontext;
@@ -34,16 +32,12 @@ Section with_monad.
     Context (f : nat -> term -> T term).
 
     Definition monad_map_predicate_k k (p : predicate term) :=
-      let '{| pparams := pparams;
-             puinst := puinst;
-             pcontext := pcontext;
-             preturn := preturn |} := p in
-      pparams <- monad_map (f k) pparams;;
-      puinst <- uf puinst;;
-      preturn <- f (#|pcontext| + k) preturn;;
+      pparams <- monad_map (f k) p.(pparams);;
+      puinst <- uf p.(puinst);;
+      preturn <- f (#|p.(pcontext)| + k) p.(preturn);;
       ret {| pparams := pparams;
             puinst := puinst;
-            pcontext := pcontext;
+            pcontext := p.(pcontext);
             preturn := preturn |}.
 
   End map_predicate_k.
@@ -51,17 +45,20 @@ Section with_monad.
   Section map_branch.
     Context {term term' : Type}.
     Context (bbodyf : term -> T term').
+    Context (bcontextf : list (BasicAst.context_decl term) -> T (list (BasicAst.context_decl term'))).
 
     Definition monad_map_branch (b : branch term) :=
-      let '{| bcontext := bcontext;
-             bbody := bbody |} := b in
-      bbody <- bbodyf bbody;;
+      bbody <- bbodyf b.(bbody);;
+      bcontext <- bcontextf b.(bcontext);;
       ret {| bcontext := bcontext;
             bbody := bbody |}.
   End map_branch.
 
-  Definition monad_map_branches {term B} (f : term -> T B) l := monad_map (monad_map_branch f) l.
+  Definition monad_map_branches {term B} (f : term -> T B) (g : list (BasicAst.context_decl term) -> T (list (BasicAst.context_decl B))) l := monad_map (monad_map_branch f g) l.
 
-  Notation monad_map_branches_k f k brs :=
-    (monad_map (fun b => monad_map_branch (f (#|b.(bcontext)| + k)) b) brs).
+  Definition monad_map_branch_k {term term'} (f : nat -> term -> T term') g k b
+    := @monad_map_branch term term' (f (#|bcontext b| + k)) g b.
+
+  Notation map_branches_k f h k brs :=
+    (monad_map (monad_map_branch_k f h k) brs).
 End with_monad.

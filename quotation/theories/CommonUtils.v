@@ -223,71 +223,6 @@ Module WithTemplate.
          end.
   End with_monad.
 
-  #[local] Definition CacheT T : Type := term * list term * UniverseMap.t term -> T * (term * list term * UniverseMap.t term).
-  #[local] Instance CacheT_Monad : Monad CacheT
-    := {| ret A v := fun st => (v, st)
-       ; bind A B v f := fun st => let '(v, st) := v st in f v st |}.
-  #[local] Definition init_cache_and_run (lProp_t lSProp_t lSet_t : term) (default_univ : term) (available_univs : list term) {T} : CacheT T -> T
-    := fun f
-       => fst
-            (f (default_univ,
-                 available_univs,
-                 UniverseMap.add
-                   Universe.lProp lProp_t
-                   (UniverseMap.add
-                      Universe.lSProp lSProp_t
-                      (UniverseMap.add
-                         (Universe.of_levels (inr Level.lzero)) lSet_t
-                         (UniverseMap.empty _))))).
-  #[local] Definition lookupU (u : Universe.t) : CacheT term
-    := fun '((default_univ, fresh_univs, map) as st)
-       => match UniverseMap.find u map, fresh_univs with
-          | Some t, _ => (t, st)
-          | None, nil => (default_univ, st)
-          | None, t :: fresh_univs
-            => (t, (default_univ, fresh_univs, UniverseMap.add u t map))
-          end.
-
-  #[local]
-    Definition tmRelaxSortsCached (in_domain : bool) (do_replace_U : Universe.t -> bool) (lProp_t lSProp_t lSet_t : term) (default_univ : term) (available_univs : list term) (t : term) : term
-    := init_cache_and_run
-         lProp_t lSProp_t lSet_t default_univ available_univs
-         (tmRelaxSortsM
-            in_domain
-            (fun u => if do_replace_U u
-                      then lookupU u
-                      else ret (tSort u))
-            t).
-
-  Polymorphic Inductive list_of_types@{u} : Type@{u+1} := nil | cons (x : Type@{u}) (xs : list_of_types).
-  Declare Scope list_of_types_scope.
-  Delimit Scope list_of_types_scope with list_of_types.
-  Bind Scope list_of_types_scope with list_of_types.
-
-  Infix "::" := cons : list_of_types_scope.
-  Notation "[ ]" := nil : list_of_types_scope.
-  Notation "[ x ]" := (cons x nil) : list_of_types_scope.
-  Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..))  : list_of_types_scope.
-
-  Polymorphic Definition types_monad_map@{l b a t u} {T} {M : Monad@{t u} T} {B : Type@{b}} (f : Type@{a} -> T B)
-    := fix types_monad_map (l : list_of_types@{l}) : T (list B)
-      := match l with
-         | []%list_of_types => ret []%list
-         | (x :: xs)%list_of_types
-           => fx <- f x;;
-              fxs <- types_monad_map xs;;
-              ret (fx :: fxs)%list
-         end.
-
-  #[local] Polymorphic Definition tmRelaxSortsQuote@{uP uSP uS uD uL t u _high} (in_domain : bool) (do_replace_U : Universe.t -> bool) (available_univs : list_of_types@{uL}) (t : term) : TemplateMonad@{t u} term
-    := lProp_t <- @tmQuote Type@{_high} Type@{uP};;
-       lSProp_t <- @tmQuote Type@{_high} Type@{uSP};;
-       lSet_t <- @tmQuote Type@{_high} Type@{uS};;
-       default_univ <- @tmQuote Type@{_high} Type@{uD};;
-       available_univs <- types_monad_map@{uL _high _ _ _} tmQuote available_univs;;
-       ret (tmRelaxSortsCached in_domain do_replace_U lProp_t lSProp_t lSet_t default_univ available_univs t).
-
-
   #[local] Definition is_set (s : Universe.t) : bool
     := match option_map Level.is_set (Universe.get_is_level s) with
        | Some true => true
@@ -306,77 +241,91 @@ Module WithTemplate.
        | _ => false
        end.
 
-  Polymorphic Definition tmRetypeMagicRelaxSetInCodomain@{U a b t u _high} {A : Type@{a}} (B : Type@{b}) (x : A) : TemplateMonad@{t u} B
-    := qx <- tmQuote x;;
-       qx <- tmRelaxSortsQuote@{U U U U _high t u _high} false is_set [] qx;;
-       tmUnquoteTyped B qx.
-  Polymorphic Definition tmRetypeRelaxSetInCodomain@{U a t u _high} {A : Type@{a}} (x : A) : TemplateMonad@{t u} A
-    := tmRetypeMagicRelaxSetInCodomain@{U a a t u _high} A x.
+  Definition tmRelaxSet (in_domain : bool) (prefix : string) (t : term) : term
+    := tmRelaxSortsM
+         (M:=fun T => T) in_domain
+         (fun u => tSort (if is_set u then Universe.of_levels (inr (Level.Level (prefix ++ "._Set.0")%bs)) else u))
+         t.
 
-  Local Notation many_Types_2 tail := (Type :: Type :: Type :: Type :: tail)%list_of_types (only parsing).
-  Local Notation many_Types_3 tail := (many_Types_2 (many_Types_2 tail)) (only parsing).
-  Local Notation many_Types_4 tail := (many_Types_3 (many_Types_3 tail)) (only parsing).
-  Local Notation many_Types_5 tail := (many_Types_4 (many_Types_4 tail)) (only parsing).
-  Local Notation many_Types := (many_Types_5 nil) (only parsing).
+  Module Import PrefixUniverse.
+    Module Level.
+      Definition prefix_with (prefix : string) (l : Level.t) : Level.t
+        := match l with
+           | Level.lzero | Level.Var _ => l
+           | Level.Level u => Level.Level (prefix ++ "." ++ u)%bs
+           end.
+    End Level.
 
-  Polymorphic Definition tmRetypeMagicRelaxOnlyType0@{U a b t u _high} {A : Type@{a}} (B : Type@{b}) (x : A) : TemplateMonad@{t u} B
-    := qx <- tmQuote x;;
-       qx <- tmRelaxSortsQuote@{U U U U _high t u _high} true is_only_type [] qx;;
-       tmUnquoteTyped B qx.
-  Polymorphic Definition tmRetypeRelaxOnlyType0@{U a t u _high} {A : Type@{a}} (x : A) : TemplateMonad@{t u} A
-    := tmRetypeMagicRelaxOnlyType0@{U a a t u _high} A x.
+    Module LevelExprSet.
+      Module Raw.
+        Definition prefix_with (prefix : string) (l : LevelExprSet.Raw.t) : LevelExprSet.Raw.t
+          := List.map (fun '(l, n) => (Level.prefix_with prefix l, n)) l.
+      End Raw.
+      Lemma prefix_with_Ok {prefix : string} {l : LevelExprSet.Raw.t} (pf : LevelExprSet.Raw.Ok l) : LevelExprSet.Raw.Ok (Raw.prefix_with prefix l).
+      Proof.
+        hnf in *; cbv [Raw.prefix_with] in *; cbn in *.
+        induction l as [|[l n] ls IH]; cbn in *; [ reflexivity | ].
+        apply Bool.andb_true_iff in pf; destruct pf as [pf1 pf2].
+        rewrite IH, Bool.andb_true_r by assumption.
+        clear IH pf2.
+        destruct ls as [|[l' n'] ls]; cbn in *; [ reflexivity | ].
+        destruct l, l'; cbn in *; try assumption.
+        induction prefix as [|?? IH];
+          cbn in *; try assumption.
+        rewrite ByteCompareSpec.compare_eq_refl; assumption.
+      Qed.
+      Definition prefix_with (prefix : string) (l : LevelExprSet.t) : LevelExprSet.t
+        := @LevelExprSet.Mkt (Raw.prefix_with prefix (@LevelExprSet.this l)) (prefix_with_Ok (@LevelExprSet.is_ok l)).
+      Lemma is_empty_prefix_with {prefix} {l} : LevelExprSet.is_empty (prefix_with prefix l) = LevelExprSet.is_empty l.
+      Proof.
+        destruct l as [l pf]; cbn.
+        cbv [LevelExprSet.is_empty prefix_with LevelExprSet.Raw.is_empty]; cbn.
+        destruct l; cbn; reflexivity.
+      Qed.
+    End LevelExprSet.
 
-  Polymorphic Definition tmRetypeMagicRelaxOnlyType {A : Type} (B : Type) (x : A) : TemplateMonad B
+    Module nonEmptyLevelExprSet.
+      Definition prefix_with (prefix : string) (l : nonEmptyLevelExprSet) : nonEmptyLevelExprSet
+        := {| t_set := LevelExprSet.prefix_with prefix l.(t_set)
+           ; t_ne := eq_trans LevelExprSet.is_empty_prefix_with l.(t_ne) |}.
+    End nonEmptyLevelExprSet.
+
+    Module LevelAlgExpr := nonEmptyLevelExprSet.
+
+    Module Universe.
+      Definition prefix_with (prefix : string) (u : Universe.t) : Universe.t
+        := match u with
+           | Universe.lProp | Universe.lSProp => u
+           | Universe.lType u => Universe.lType (LevelAlgExpr.prefix_with prefix u)
+           end.
+    End Universe.
+  End PrefixUniverse.
+
+  Definition tmRelaxOnlyType (in_domain : bool) (prefix : string) (t : term) : term
+    := tmRelaxSortsM
+         (M:=fun T => T) in_domain
+         (fun u => tSort (PrefixUniverse.Universe.prefix_with prefix u))
+         t.
+
+  Polymorphic Definition tmRetypeMagicRelaxSetInCodomain@{a b t u} (prefix : string) {A : Type@{a}} (B : Type@{b}) (x : A) : TemplateMonad@{t u} B
     := qx <- tmQuote x;;
-       qx <- tmRelaxSortsQuote true is_only_type many_Types qx;;
+       let qx := tmRelaxSet false prefix qx in
        tmUnquoteTyped B qx.
-  Polymorphic Definition tmRetypeRelaxOnlyType {A} (x : A) : TemplateMonad A
-    := tmRetypeMagicRelaxOnlyType A x.
+  Polymorphic Definition tmRetypeRelaxSetInCodomain@{a t u} (prefix : string) {A : Type@{a}} (x : A) : TemplateMonad@{t u} A
+    := tmRetypeMagicRelaxSetInCodomain@{a a t u} prefix A x.
+
+  Polymorphic Definition tmRetypeMagicRelaxOnlyType@{a b t u} (prefix : string) {A : Type@{a}} (B : Type@{b}) (x : A) : TemplateMonad@{t u} B
+    := qx <- tmQuote x;;
+       let qx := tmRelaxOnlyType true prefix qx in
+       tmUnquoteTyped B qx.
+  Polymorphic Definition tmRetypeRelaxOnlyType@{a t u} (prefix : string) {A : Type@{a}} (x : A) : TemplateMonad@{t u} A
+    := tmRetypeMagicRelaxOnlyType@{a a t u} prefix A x.
 
   (* Hack around https://github.com/MetaCoq/metacoq/issues/853 *)
-  Polymorphic Definition tmRetypeAroundMetaCoqBug853_0 (t : typed_term) : TemplateMonad typed_term
+  Definition tmRetypeAroundMetaCoqBug853 (prefix : string) (t : typed_term) : TemplateMonad typed_term
     := let '{| my_projT1 := ty ; my_projT2 := v |} := t in
-       ty <- tmRetypeRelaxOnlyType0 ty;;
-       v <- tmRetypeMagicRelaxOnlyType0 ty v;;
+       ty <- tmRetypeRelaxOnlyType prefix ty;;
+       v <- tmRetypeMagicRelaxOnlyType prefix ty v;;
        ret {| my_projT1 := ty ; my_projT2 := v |}.
-
-  Polymorphic Definition tmRetypeAroundMetaCoqBug853_gen (t : typed_term) : TemplateMonad typed_term
-    := let '{| my_projT1 := ty ; my_projT2 := v |} := t in
-       ty <- tmRetypeRelaxOnlyType ty;;
-       v <- tmRetypeMagicRelaxOnlyType ty v;;
-       ret {| my_projT1 := ty ; my_projT2 := v |}.
-
-  (* Hack around https://github.com/MetaCoq/metacoq/pull/876#issuecomment-1487743822 *)
-  Monomorphic Variant exn : Set := GenericError.
-
-  Polymorphic Variant option_try@{u} (A : Type@{u}) : Type@{max(Set, u)} := my_Value (val : A) | my_Error (err : exn).
-
-  Arguments my_Value {A} val.
-  Arguments my_Error {A} _.
-  Polymorphic Class tmCheckSuccessHelper@{t u} {A : Type@{t}} (run : TemplateMonad@{t u} A) := tmCheckSuccess_ret : unit.
-  #[global] Hint Extern 0 (tmCheckSuccessHelper ?run) => run_template_program run (fun v => exact tt) : typeclass_instances.
-  Polymorphic Definition tmCheckSuccess@{t u} {A : Type@{t}} (run : TemplateMonad@{t u} A) : TemplateMonad@{t u} bool
-  := tmBind (tmInferInstance None (tmCheckSuccessHelper run))
-            (fun inst => match inst with
-                         | my_Some _ => tmReturn true
-                         | my_None => tmReturn false
-                         end).
-  Polymorphic Definition tmTryWorseButNoAnomaly@{t u} {A : Type@{t}} (run : TemplateMonad@{t u} A) : TemplateMonad@{t u} (option_try@{t} A)
-    := succeeds <- tmCheckSuccess run;;
-       if succeeds:bool
-       then v <- run;; ret (my_Value v)
-       else ret (my_Error GenericError).
-
-  Definition tmRetypeAroundMetaCoqBug853 (t : typed_term) : TemplateMonad typed_term
-    := Eval cbv [List.fold_right] in
-      List.fold_right
-        (fun tmRetype acc
-         => res <- tmTryWorseButNoAnomaly (tmRetype t);;
-            match res with
-            | my_Value v => ret v
-            | my_Error _ => acc
-            end)
-        (tmRetypeAroundMetaCoqBug853_gen t)
-        [tmRetypeAroundMetaCoqBug853_0; tmRetypeAroundMetaCoqBug853_gen].
 End WithTemplate.
 Export WithTemplate (transparentify, tmQuoteToGlobalReference, tmRetypeRelaxSetInCodomain, tmRetypeRelaxOnlyType, tmRetypeMagicRelaxSetInCodomain, tmRetypeMagicRelaxOnlyType, tmObj_magic, tmRetype, tmExtractBaseModPathFromMod, tmRetypeAroundMetaCoqBug853).

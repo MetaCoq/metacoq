@@ -4,11 +4,6 @@ From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) MCOption bytestri
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) BasicAst config.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Universes.Instances.
 From MetaCoq.Common Require Import Kernames Universes UniversesDec.
-From MetaCoq.Utils Require Import bytestring monad_utils.
-From MetaCoq.Template Require Import Loader TemplateMonad.
-
-Local Open Scope bs.
-Import MCMonadNotation.
 
 (* Grrr, [valuation]s cause so much trouble, because they're not quotable *)
 (*
@@ -18,11 +13,11 @@ Record valuation :=
 Class Evaluable (A : Type) := val : valuation -> A -> nat.
  *)
 
-Module QuoteLevelSet := MSets.QuoteMSetAVL Level LevelSet LevelSetOrdProp qLevel qLevelSet qLevelSetOrdProp.
+Module QuoteLevelSet := MSets.QuoteMSetAVL Level LevelSet LevelSetOrdProp LevelSetExtraOrdProp LevelSetExtraDecide qLevel qLevelSet qLevelSetOrdProp qLevelSetExtraOrdProp qLevelSetExtraDecide.
 Export (hints) QuoteLevelSet.
-Module QuoteLevelExprSet := MSets.QuoteMSetListWithLeibniz LevelExpr LevelExprSet LevelExprSetOrdProp qLevelExpr qLevelExprSet qLevelExprSetOrdProp.
+Module QuoteLevelExprSet := MSets.QuoteMSetListWithLeibniz LevelExpr LevelExprSet LevelExprSetOrdProp LevelExprSetExtraOrdProp qLevelExpr qLevelExprSet qLevelExprSetOrdProp qLevelExprSetExtraOrdProp.
 Export (hints) QuoteLevelExprSet.
-Module QuoteConstraintSet := MSets.QuoteMSetAVL UnivConstraint ConstraintSet ConstraintSetOrdProp qUnivConstraint qConstraintSet qConstraintSetOrdProp.
+Module QuoteConstraintSet := MSets.QuoteMSetAVL UnivConstraint ConstraintSet ConstraintSetOrdProp ConstraintSetExtraOrdProp ConstraintSetExtraDecide qUnivConstraint qConstraintSet qConstraintSetOrdProp qConstraintSetExtraOrdProp qConstraintSetExtraDecide.
 Export (hints) QuoteConstraintSet.
 
 Module QuoteUniverses1.

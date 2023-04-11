@@ -134,8 +134,6 @@ Proof.
 
   destruct s as [? | [u []]].
   - left. clear - i. generalize (#|Γ''|), (#|Γ'|). induction T; cbn in *; intros; try now inv i.
-    + now eapply IHT2.
-    + now eapply IHT3.
   - right. exists u. split; eauto.
     eapply weakening_typing in t1; eauto.
     now apply All_local_env_app_inv in X1.

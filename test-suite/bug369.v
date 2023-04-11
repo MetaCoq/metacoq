@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 
 Definition anonb := {| binder_name := nAnon; binder_relevance := Relevant |}.
 Definition bnamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
@@ -37,4 +38,3 @@ Check fun p => p.(coordx _).
 Check {| coordx := 0 ; coordy := 1 |}.
 
 Check eq_refl : {| coordx := 0 ; coordy := 1 |}.(coordx _) = 0.
-

@@ -846,7 +846,7 @@ Section Inversions.
       (exists u, ∥ Σ ;;; Γ ⊢ T ⇝ (tSort u) ∥).
   Proof using wfΣ.
     intros Γ T.
-    induction T in Γ |- *. all: try contradiction.
+    induction T in Γ |- *. all: cbn [isArity]; try contradiction; try congruence.
     - right. eexists. constructor. pcuic.
     - left. eexists _,_,_. constructor. pcuic.
     - intros clΓ clt a. simpl in a. eapply IHT3 in a as [[na' [A [B [r]]]] | [u [r]]].
@@ -886,7 +886,7 @@ Section Inversions.
   Proof using wfΣ.
     intros Γ T [T' [r a]].
     induction T'.
-    all: try contradiction.
+    all: try (cbn [isArity] in *; congruence).
     - right. eexists. eassumption.
     - left. eexists _, _, _. eassumption.
     - destruct r as [r1].
@@ -919,7 +919,7 @@ Section Inversions.
       Is_conv_to_Arity Σ Γ v.
   Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
-    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
+    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try (cbn [isArity] in *; congruence).
     all: dependent destruction e.
     - eexists. split.
       + constructor. eapply closed_red_refl => //.
@@ -954,7 +954,7 @@ Section Inversions.
     Is_conv_to_Arity Σ Γ v.
   Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
-    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
+    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try (cbn [isArity] in *; congruence).
     all: dependent destruction e.
     - eexists. split.
       + constructor. eapply closed_red_refl => //.
@@ -986,7 +986,7 @@ Section Inversions.
       isArity (u { k := v }).
   Proof using Type.
     intros u v k h.
-    induction u in v, k, h |- *. all: try contradiction.
+    induction u in v, k, h |- *. all: try (cbn [isArity] in *; congruence).
     - simpl. constructor.
     - simpl in *. eapply IHu2. assumption.
     - simpl in *. eapply IHu3. assumption.
@@ -999,7 +999,7 @@ Section Inversions.
       isArity v.
   Proof using Type.
     intros Γ u v h a.
-    induction u in Γ, v, h, a |- *. all: try contradiction.
+    induction u in Γ, v, h, a |- *. all: try (cbn [isArity] in *; congruence).
     - dependent destruction h.
       apply (f_equal nApp) in H as eq. simpl in eq.
       rewrite nApp_mkApps in eq. simpl in eq.

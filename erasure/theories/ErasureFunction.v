@@ -2585,6 +2585,45 @@ Proof.
     all: reflexivity.
 Qed.
 
+Lemma unique_decls {X_type} {X : X_type.π1} univs wfext
+(Xext :=  abstract_make_wf_env_ext X univs wfext) {Σ'} (wfΣ' : Σ' ∼_ext Xext) :
+  forall Σ, Σ ∼ X -> declarations Σ = declarations Σ'.
+Proof.
+  intros Σ wfΣ. pose (abstract_make_wf_env_ext_correct X univs wfext Σ Σ' wfΣ wfΣ').
+  rewrite e. reflexivity.
+Qed.
+
+Lemma unique_type {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {Σ:global_env_ext}
+  (wfΣ : Σ ∼_ext X) {t T}:
+  Σ ;;; [] |- t : T -> forall Σ, Σ ∼_ext X -> welltyped Σ [] t.
+Proof.
+  intros wt Σ' wfΣ'. erewrite (abstract_env_ext_irr X wfΣ' wfΣ).
+  now exists T.
+Qed.
+
+Definition erase_correct_firstorder (wfl := Ee.default_wcbv_flags)
+  X_type (X : X_type.π1) univs wfext {t v i u args}
+(Xext :=  abstract_make_wf_env_ext X univs wfext)
+{normalization_in : forall X Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}
+:
+forall Σ (wfΣ : abstract_env_ext_rel Xext Σ)
+  (wt : Σ ;;; [] |- t : mkApps (tInd i u) args),
+  axiom_free Σ ->
+  let t' := erase X_type Xext [] t (unique_type wfΣ wt) in
+  let decls := declarations (fst Σ) in
+  let Σ' := erase_global_decls X_type (term_global_deps t') X decls
+              (fun _ _ _ _ _ _ _ =>  normalization_in _ _) (unique_decls univs wfext wfΣ) in
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  red Σ [] t v ->
+  ¬ { v' & Σ ;;; [] |- v ⇝ v'} ->
+  exists wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
+Proof.
+  intros.
+  eapply erase_correct_strong; eauto.
+  apply KernameSetOrdProp.P.Dec.F.subset_iff. reflexivity.
+Qed.
+
 (* we use the [match] trick to get typeclass resolution to pick up the right instances without leaving any evidence in the resulting term, and without having to pass them manually everywhere *)
 Notation NormalizationIn_erase_global_decls_fast X decls
   := (match extraction_checker_flags, extraction_normalizing return _ with

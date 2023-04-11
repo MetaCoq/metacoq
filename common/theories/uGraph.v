@@ -22,7 +22,7 @@ Notation "⎩ b ⎭" := (Z_of_bool b).
 
 (** variable levels are levels which are Level or Var *)
 Module VariableLevel.
-  Inductive t_ := Level (_ : string) | Var (_ : nat).
+  Inductive t_ := level (_ : string) | lvar (_ : nat).
   Definition t := t_.
 
   Declare Scope var_level.
@@ -30,10 +30,10 @@ Module VariableLevel.
 
   Definition lt : t -> t -> Prop :=
     fun x y => match x, y with
-            | Level _, Var _ => True
-            | Level s, Level s' => StringOT.lt s s'
-            | Var n, Var n' => n < n'
-            | Var _, Level _ => False
+            | level  _, lvar _ => True
+            | level s, level s' => StringOT.lt s s'
+            | lvar n, lvar n' => n < n'
+            | lvar _, level  _ => False
             end.
   Global Instance lt_strorder : StrictOrder lt.
     split.
@@ -50,10 +50,10 @@ Module VariableLevel.
   Qed.
   Definition compare : t -> t -> comparison :=
     fun x y => match x, y with
-            | Level _, Var _ => Datatypes.Lt
-            | Level s, Level s' => string_compare s s'
-            | Var n, Var n' => Nat.compare n n'
-            | Var _, Level _ => Datatypes.Gt
+            | level  _, lvar _ => Datatypes.Lt
+            | level  s, level  s' => string_compare s s'
+            | lvar n, lvar n' => Nat.compare n n'
+            | lvar _, level  _ => Datatypes.Gt
             end.
   Infix "?=" := compare : var_level.
   Definition compare_spec :
@@ -111,16 +111,16 @@ Module VariableLevel.
 
   Definition to_noprop (l : t) : Level.t :=
     match l with
-    | Level s => Level.Level s
-    | Var n => Level.Var n
+    | level  s => Level.level  s
+    | lvar n => Level.lvar n
     end.
 
   Definition to_level (l : t) : Level.t := to_noprop l.
 
   Global Instance Evaluable : Evaluable t
     := fun v l => match l with
-               | Level s => Pos.to_nat (v.(valuation_mono) s)
-               | Var x => (v.(valuation_poly) x)
+               | level  s => Pos.to_nat (v.(valuation_mono) s)
+               | lvar x => (v.(valuation_poly) x)
                end.
 End VariableLevel.
 
@@ -371,43 +371,43 @@ Section GcOfConstraint.
       | Datatypes.Gt => (* Set + n <= l *)
         match r with
         | Level.lzero => None
-        | Level.Level s => singleton (gc_lt_set_level (Z.to_nat (z - 1)) s)
-        | Level.Var n => singleton (gc_le_set_var (Z.to_nat z) n)
+        | Level.level  s => singleton (gc_lt_set_level (Z.to_nat (z - 1)) s)
+        | Level.lvar n => singleton (gc_le_set_var (Z.to_nat z) n)
         end
       end
      | (Level.lzero, Eq, Level.lzero) => empty
-     | (Level.lzero, Eq, Level.Level _) => None
-     | (Level.lzero, Eq, Level.Var n) => singleton (gc_le_var_set n 0%nat)
+     | (Level.lzero, Eq, Level.level  _) => None
+     | (Level.lzero, Eq, Level.lvar n) => singleton (gc_le_var_set n 0%nat)
 
      (* Level _ _ *)
-     | (Level.Level l, Le z, Level.lzero) =>
+     | (Level.level  l, Le z, Level.lzero) =>
        (* l - n <= Set <-> l <= Set + n *)
         if (z <=? 0)%Z then singleton (gc_le_level_set l (Z.to_nat (Z.abs z)))
         else None
 
-     | (Level.Level l, Le z, Level.Level l')
-       => singleton (gc_le (Level l) z (Level l'))
-     | (Level.Level l, Le z, Level.Var n) => singleton (gc_le (Level l) z (Var n))
-     | (Level.Level _, Eq, Level.lzero) => None
-     | (Level.Level l, Eq, Level.Level l')
-       => pair (gc_le (Level l) 0 (Level l')) (gc_le (Level l') 0 (Level l))
-     | (Level.Level l, Eq, Level.Var n)
-       => pair (gc_le (Level l) 0 (Var n)) (gc_le (Var n) 0 (Level l))
+     | (Level.level  l, Le z, Level.level  l')
+       => singleton (gc_le (level l) z (level l'))
+     | (Level.level  l, Le z, Level.lvar n) => singleton (gc_le (level l) z (lvar n))
+     | (Level.level  _, Eq, Level.lzero) => None
+     | (Level.level  l, Eq, Level.level  l')
+       => pair (gc_le (level l) 0 (level l')) (gc_le (level l') 0 (level l))
+     | (Level.level  l, Eq, Level.lvar n)
+       => pair (gc_le (level l) 0 (lvar n)) (gc_le (lvar n) 0 (level l))
 
      (* Var _ _ *)
-     | (Level.Var n, Le z, Level.lzero) =>
+     | (Level.lvar n, Le z, Level.lzero) =>
       (* l - n <= Set <-> l <= Set + n *)
       if (z <=? 0)%Z then singleton (gc_le_var_set n (Z.to_nat (Z.abs z)))
       else None
 
-     | (Level.Var n, Le z, Level.Level l) => singleton (gc_le (Var n) z (Level l))
-     | (Level.Var n, Le z, Level.Var n') => singleton (gc_le (Var n) z (Var n'))
-     | (Level.Var n, Eq, Level.lzero) => singleton (gc_le_var_set n 0)
-     | (Level.Var n, Eq, Level.Level l)
-       => pair (gc_le (Var n) 0%Z (Level l)) (gc_le (Level l) 0%Z (Var n))
+     | (Level.lvar n, Le z, Level.level  l) => singleton (gc_le (lvar n) z (level l))
+     | (Level.lvar n, Le z, Level.lvar n') => singleton (gc_le (lvar n) z (lvar n'))
+     | (Level.lvar n, Eq, Level.lzero) => singleton (gc_le_var_set n 0)
+     | (Level.lvar n, Eq, Level.level  l)
+       => pair (gc_le (lvar n) 0%Z (level l)) (gc_le (level l) 0%Z (lvar n))
 
-     | (Level.Var n, Eq, Level.Var n')
-       => pair (gc_le (Var n) 0 (Var n')) (gc_le (Var n') 0 (Var n))
+     | (Level.lvar n, Eq, Level.lvar n')
+       => pair (gc_le (lvar n) 0 (lvar n')) (gc_le (lvar n') 0 (lvar n))
      end.
 End GcOfConstraint.
 
@@ -686,9 +686,9 @@ Definition global_gc_uctx_invariants (uctx : VSet.t * GoodConstraintSet.t)
                  | GoodConstraint.gc_le l z l' => VSet.In (vtn l) uctx.1
                                  /\ VSet.In (vtn l') uctx.1
                  | GoodConstraint.gc_lt_set_level _ n
-                 | GoodConstraint.gc_le_level_set n _ => VSet.In (Level.Level n) uctx.1
+                 | GoodConstraint.gc_le_level_set n _ => VSet.In (Level.level  n) uctx.1
                  | GoodConstraint.gc_le_var_set n _
-                 | GoodConstraint.gc_le_set_var _ n => VSet.In (Level.Var n) uctx.1
+                 | GoodConstraint.gc_le_set_var _ n => VSet.In (Level.lvar n) uctx.1
                  end) uctx.2.
 
 Definition gc_of_uctx `{checker_flags} (uctx : ContextSet.t)
@@ -790,8 +790,8 @@ Qed.
 
 Definition edge_of_level (l : VariableLevel.t) : EdgeSet.elt :=
   match l with
-  | VariableLevel.Level l => (lzero, 1%Z, Level.Level l)
-  | VariableLevel.Var n => (lzero, 0%Z, Level.Var n)
+  | VariableLevel.level  l => (lzero, 1%Z, Level.level  l)
+  | VariableLevel.lvar n => (lzero, 0%Z, Level.lvar n)
   end.
 
 Definition EdgeSet_pair x y
@@ -802,10 +802,10 @@ Definition EdgeSet_triple x y z
 Definition edge_of_constraint (gc : GoodConstraint.t) : EdgeSet.elt :=
   match gc with
   | GoodConstraint.gc_le l z l' => (vtn l, z, vtn l')
-  | GoodConstraint.gc_lt_set_level k s => (lzero, Z.of_nat (S k), vtn (VariableLevel.Level s))
-  | GoodConstraint.gc_le_set_var k n => (lzero, Z.of_nat k, vtn (VariableLevel.Var n))
-  | GoodConstraint.gc_le_level_set s k => (vtn (VariableLevel.Level s), (- Z.of_nat k)%Z, lzero)
-  | GoodConstraint.gc_le_var_set n k => (vtn (VariableLevel.Var n), (- Z.of_nat k)%Z, lzero)
+  | GoodConstraint.gc_lt_set_level k s => (lzero, Z.of_nat (S k), vtn (VariableLevel.level  s))
+  | GoodConstraint.gc_le_set_var k n => (lzero, Z.of_nat k, vtn (VariableLevel.lvar n))
+  | GoodConstraint.gc_le_level_set s k => (vtn (VariableLevel.level  s), (- Z.of_nat k)%Z, lzero)
+  | GoodConstraint.gc_le_var_set n k => (vtn (VariableLevel.lvar n), (- Z.of_nat k)%Z, lzero)
   end.
 
 Lemma source_edge_of_level g : (edge_of_level g)..s = lzero.
@@ -821,8 +821,8 @@ Qed.
 Definition variable_of_level (l : Level.t) : option VariableLevel.t
   := match l with
       | Level.lzero => None
-      | Level.Level s => Some (VariableLevel.Level s)
-      | Level.Var n => Some (VariableLevel.Var n)
+      | Level.level  s => Some (VariableLevel.level  s)
+      | Level.lvar n => Some (VariableLevel.lvar n)
       end.
 
 Definition option_edge_of_level l : option EdgeSet.elt :=
@@ -934,10 +934,10 @@ Proof.
         destruct a as [|l'|l']. right; tas.
         all: apply EdgeSet.add_spec in HH; destruct HH;
           [left|right; tas].
-        exists (VariableLevel.Level l'); intuition. exists (VariableLevel.Var l'); intuition.
+        exists (VariableLevel.level  l'); intuition. exists (VariableLevel.lvar l'); intuition.
       * intros [[l' [[H1|H1] H2]]|H].
         right. subst a. destruct l'; apply EdgeSet.add_spec; left; tas.
-        destruct l'; left; [exists (VariableLevel.Level t0)|exists (VariableLevel.Var n)]; intuition.
+        destruct l'; left; [exists (VariableLevel.level  t0)|exists (VariableLevel.lvar n)]; intuition.
         right. destruct a; tas; apply EdgeSet.add_spec; right; tas.
 Qed.
 
@@ -957,13 +957,13 @@ Proof.
   - apply Hi.
   - cbn. intros l Hl. sq. destruct l as [|s|n].
     exists (pathOf_refl _ _). sq. simpl. reflexivity.
-    assert (He: EdgeSet.In (edge_of_level (VariableLevel.Level s)) (wGraph.E (make_graph uctx))). {
-      apply make_graph_E. left. exists (VariableLevel.Level s). intuition. }
+    assert (He: EdgeSet.In (edge_of_level (VariableLevel.level  s)) (wGraph.E (make_graph uctx))). {
+      apply make_graph_E. left. exists (VariableLevel.level  s). intuition. }
     unshelve eexists _.
     econstructor. 2: constructor.
     eexists; exact He. simpl. sq; lia.
-    assert (He: EdgeSet.In (edge_of_level (VariableLevel.Var n)) (wGraph.E (make_graph uctx))). {
-      apply make_graph_E. left. exists (VariableLevel.Var n). intuition. }
+    assert (He: EdgeSet.In (edge_of_level (VariableLevel.lvar n)) (wGraph.E (make_graph uctx))). {
+      apply make_graph_E. left. exists (VariableLevel.lvar n). intuition. }
     unshelve eexists _.
     econstructor. 2: constructor.
     eexists; exact He. simpl. sq; auto. lia.
@@ -1023,13 +1023,13 @@ Ltac simplify_sets :=
 Definition labelling_of_valuation (v : valuation) : labelling
   := fun x => match x with
            | lzero => 0
-           | Level.Level l => Pos.to_nat (v.(valuation_mono) l)
-           | Level.Var n => (v.(valuation_poly) n)
+           | Level.level  l => Pos.to_nat (v.(valuation_mono) l)
+           | Level.lvar n => (v.(valuation_poly) n)
            end.
 
 Definition valuation_of_labelling (l : labelling) : valuation
-  := {| valuation_mono := fun s => Pos.of_nat (l (vtn (VariableLevel.Level s)));
-        valuation_poly := fun n => l (vtn (VariableLevel.Var n)) |}.
+  := {| valuation_mono := fun s => Pos.of_nat (l (vtn (VariableLevel.level  s)));
+        valuation_poly := fun n => l (vtn (VariableLevel.lvar n)) |}.
 
 
 Section MakeGraph.
@@ -1044,9 +1044,9 @@ Section MakeGraph.
     destruct x as [|s|n]; cbnr.
     - intros _. now apply proj1 in Hl; cbn in Hl.
     - intro Hs. apply Nat2Pos.id.
-      assert (HH: EdgeSet.In (lzero, Z.of_nat 1, vtn (VariableLevel.Level s)) (wGraph.E G)). {
+      assert (HH: EdgeSet.In (lzero, Z.of_nat 1, vtn (VariableLevel.level  s)) (wGraph.E G)). {
         subst G. apply make_graph_E. left.
-        exists (VariableLevel.Level s). intuition. }
+        exists (VariableLevel.level  s). intuition. }
       apply (proj2 Hl) in HH; cbn in HH. lia.
   Qed.
 
@@ -1235,10 +1235,10 @@ Section CheckLeqProcedure.
     ~~ check_univs ||
     match gc with
     | GoodConstraint.gc_le l z l' => leqb_level_n z l l'
-    | GoodConstraint.gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lzero (Level.Level l)
-    | GoodConstraint.gc_le_set_var k n => leqb_level_n (Z.of_nat k) lzero (Level.Var n)
-    | GoodConstraint.gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level.Level l) lzero
-    | GoodConstraint.gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Level.Var n) lzero
+    | GoodConstraint.gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lzero (Level.level  l)
+    | GoodConstraint.gc_le_set_var k n => leqb_level_n (Z.of_nat k) lzero (Level.lvar n)
+    | GoodConstraint.gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level.level  l) lzero
+    | GoodConstraint.gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Level.lvar n) lzero
     end.
 
   Definition check_gc_constraints_gen :=
@@ -1332,12 +1332,12 @@ Section CheckLeq.
   Proof using HG.
     intros Hl [HG1 HG2]. rewrite [wGraph.s _](proj2 (proj2 HG)) in HG1. simpl in HG1.
     destruct l as [|l|l]; rewrite ?HG1; cbnr.
-    pose proof (make_graph_E uctx (edge_of_level (VariableLevel.Level l))).p2 as H.
+    pose proof (make_graph_E uctx (edge_of_level (VariableLevel.level  l))).p2 as H.
     forward H. {
       left. eexists; split; try reflexivity; tas. }
     apply HG in H.
     specialize (HG2 _ H); cbn in HG2. rewrite HG1 in HG2; cbn in HG2.
-    f_equal. clear -HG2. set (L (Level.Level l)) in *; clearbody n.
+    f_equal. clear -HG2. set (L (Level.level  l)) in *; clearbody n.
     destruct n; try lia.
   Qed.
 
@@ -2010,8 +2010,8 @@ Section CheckLeq.
     | GoodConstraint.gc_le l _ l' => VSet.In (VariableLevel.to_noprop l) vset /\
       VSet.In (VariableLevel.to_noprop l') vset
     | GoodConstraint.gc_lt_set_level _ n | GoodConstraint.gc_le_level_set n _ =>
-	     VSet.In (Level.Level n) vset
-    | GoodConstraint.gc_le_set_var _ n | GoodConstraint.gc_le_var_set n _ => VSet.In (Level.Var n) vset
+	     VSet.In (Level.level  n) vset
+    | GoodConstraint.gc_le_set_var _ n | GoodConstraint.gc_le_var_set n _ => VSet.In (Level.lvar n) vset
      end.
 
   Definition gcs_levels_declared (vset : VSet.t) gcs :=
@@ -2326,10 +2326,10 @@ Section CheckLeq2.
   Definition valid_gc_constraint (gc : GoodConstraint.t) :=
     match gc with
     | GoodConstraint.gc_le l z l' => leq0_level_n z l l'
-    | GoodConstraint.gc_lt_set_level k l => leq0_level_n (Z.of_nat (S k)) lzero (Level.Level l)
-    | GoodConstraint.gc_le_set_var k n => leq0_level_n (Z.of_nat k) lzero (Level.Var n)
-    | GoodConstraint.gc_le_level_set l k => leq0_level_n (- Z.of_nat k)%Z (Level.Level l) lzero
-    | GoodConstraint.gc_le_var_set n k => leq0_level_n (- Z.of_nat k)%Z (Level.Var n) lzero
+    | GoodConstraint.gc_lt_set_level k l => leq0_level_n (Z.of_nat (S k)) lzero (Level.level  l)
+    | GoodConstraint.gc_le_set_var k n => leq0_level_n (Z.of_nat k) lzero (Level.lvar n)
+    | GoodConstraint.gc_le_level_set l k => leq0_level_n (- Z.of_nat k)%Z (Level.level  l) lzero
+    | GoodConstraint.gc_le_var_set n k => leq0_level_n (- Z.of_nat k)%Z (Level.lvar n) lzero
     end.
 
   Definition valid_gc_constraints (gcs : GoodConstraintSet.t) :=
@@ -2602,13 +2602,13 @@ Section AddLevelsCstrs.
     * intros [[c [eq inl]]|?]; firstorder auto.
       destruct a as [|s|n]; simpl in *; auto.
       rewrite -> EdgeSet.add_spec in H. intuition auto.
-      subst e. left; exists (Level.Level s); intuition auto.
+      subst e. left; exists (Level.level  s); intuition auto.
       rewrite -> EdgeSet.add_spec in H. intuition auto.
       subst e. left; eexists; intuition eauto. reflexivity.
     * intros [[[|s|n] [[= <-] [->|inl]]]|?]; simpl; auto;
       rewrite -> ?EdgeSet.add_spec; simpl; intuition auto.
-      left. exists (Level.Level s); auto.
-      left. exists (Level.Var n); auto.
+      left. exists (Level.level  s); auto.
+      left. exists (Level.lvar n); auto.
       destruct a; simpl; rewrite -> ?EdgeSet.add_spec; simpl; intuition auto.
   Qed.
 

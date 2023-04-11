@@ -25,7 +25,7 @@ Hint Extern 10 => absurd : core.
 (** * Valuations *)
 
 (** A valuation is a universe level (nat) given for each
-    universe variable (Level.t).
+    universe lvariable (Level.t).
     It is >= for polymorphic concreteUniverses and > 0 for monomorphic concreteUniverses. *)
 Record valuation :=
   { valuation_mono : string -> positive ;
@@ -34,12 +34,12 @@ Record valuation :=
 Class Evaluable (A : Type) := val : valuation -> A -> nat.
 
 
-(** Levels are Set or Level or Var *)
+(** Levels are Set or Level or lvar *)
 Module Level.
   Inductive t_ : Set :=
   | lzero
-  | Level (_ : string)
-  | Var (_ : nat) (* these are debruijn indices *).
+  | level (_ : string)
+  | lvar (_ : nat) (* these are debruijn indices *).
   Derive NoConfusion for t_.
 
   Definition t := t_.
@@ -52,15 +52,15 @@ Module Level.
 
   Definition is_var (l : t) :=
     match l with
-    | Var _ => true
+    | lvar _ => true
     | _ => false
     end.
 
   Global Instance Evaluable : Evaluable t
     := fun v l => match l with
                | lzero =>  (0%nat)
-               | Level s => (Pos.to_nat (v.(valuation_mono) s))
-               | Var x => (v.(valuation_poly) x)
+               | level s => (Pos.to_nat (v.(valuation_mono) s))
+               | lvar x => (v.(valuation_poly) x)
                end.
 
 
@@ -69,21 +69,21 @@ Module Level.
     | lzero, lzero => Eq
     | lzero, _ => Lt
     | _, lzero => Gt
-    | Level s1, Level s2 => string_compare s1 s2
-    | Level _, _ => Lt
-    | _, Level _ => Gt
-    | Var n, Var m => Nat.compare n m
+    | level s1, level s2 => string_compare s1 s2
+    | level _, _ => Lt
+    | _, level _ => Gt
+    | lvar n, lvar m => Nat.compare n m
     end.
 
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
   Inductive lt_ : t -> t -> Prop :=
-  | ltSetLevel s : lt_ lzero (Level s)
-  | ltSetVar n : lt_ lzero (Var n)
-  | ltLevelLevel s s' : StringOT.lt s s' -> lt_ (Level s) (Level s')
-  | ltLevelVar s n : lt_ (Level s) (Var n)
-  | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+  | ltSetLevel s : lt_ lzero (level s)
+  | ltSetlvar n : lt_ lzero (lvar n)
+  | ltLevelLevel s s' : StringOT.lt s s' -> lt_ (level s) (level s')
+  | ltLevellvar s n : lt_ (level s) (lvar n)
+  | ltlvarlvar n n' : Nat.lt n n' -> lt_ (lvar n) (lvar n').
   Derive Signature for lt_.
 
   Definition lt := lt_.
@@ -122,8 +122,8 @@ Module Level.
   Definition eq_level l1 l2 :=
     match l1, l2 with
     | Level.lzero, Level.lzero => true
-    | Level.Level s1, Level.Level s2 => ReflectEq.eqb s1 s2
-    | Level.Var n1, Level.Var n2 => ReflectEq.eqb n1 n2
+    | Level.level     s1, Level.level     s2 => ReflectEq.eqb s1 s2
+    | Level.lvar n1, Level.lvar n2 => ReflectEq.eqb n1 n2
     | _, _ => false
     end.
 
@@ -967,7 +967,7 @@ End ConcreteUniverses.
 
 
 (** This inductive classifies which eliminations are allowed for inductive types
-  in various sorts. *)
+  in lvarious sorts. *)
 Inductive allowed_eliminations : Set :=
   | IntoSProp
   | IntoPropSProp
@@ -1575,7 +1575,7 @@ Module AUContext.
   Definition make (ids : list name) (ctrs : ConstraintSet.t) : t := (ids, ctrs).
   Definition repr (x : t) : UContext.t :=
     let (u, cst) := x in
-    (u, (mapi (fun i _ => Level.Var i) u, cst)).
+    (u, (mapi (fun i _ => Level.lvar i) u, cst)).
 
   Definition levels (uctx : t) : LevelSet.t :=
     LevelSetProp.of_list (fst (snd (repr uctx))).
@@ -1584,7 +1584,7 @@ Module AUContext.
   Existing Instance EqDec_ReflectEq.
   Definition inter (au av : AUContext.t) : AUContext.t :=
     let prefix := (split_prefix au.1 av.1).1.1 in
-    let lvls := fold_left_i (fun s i _ => LevelSet.add (Level.Var i) s) prefix LevelSet.empty in
+    let lvls := fold_left_i (fun s i _ => LevelSet.add (Level.lvar i) s) prefix LevelSet.empty in
     let filter := ConstraintSet.filter (is_declared_cstr_levels lvls) in
     make prefix (ConstraintSet.union (filter au.2) (filter av.2)).
 End AUContext.
@@ -1660,7 +1660,7 @@ Qed.
 (* Variance info is needed to do full universe polymorphism *)
 Module Variance.
   (** A universe position in the instance given to a cumulative
-     inductive can be the following. Note there is no Contravariant
+     inductive can be the following. Note there is no Contralvariant
      case because [forall x : A, B <= forall x : A', B'] requires [A =
      A'] as opposed to [A' <= A]. *)
   Inductive t :=
@@ -2436,13 +2436,13 @@ End no_prop_leq_type.
 
 
 (* This level is a hack used in plugings to generate fresh levels *)
-Definition fresh_level : Level.t := Level.Level "__metacoq_fresh_level__".
+Definition fresh_level : Level.t := Level.level     "__metacoq_fresh_level__".
 (* This universe is a hack used in plugins to generate fresh concreteUniverses *)
 Definition fresh_universe : Universe.t := Universe.make fresh_level.
 
 (** * Universe substitution
 
-  Substitution of universe levels for universe level variables, used to
+  Substitution of universe levels for universe level lvariables, used to
   implement universe polymorphism. *)
 
 
@@ -2455,8 +2455,8 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 
 #[global] Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
-            Level.lzero | Level.Level _ => l
-          | Level.Var n => List.nth n u Level.lzero
+            Level.lzero | Level.level     _ => l
+          | Level.lvar n => List.nth n u Level.lzero
           end.
 
 #[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
@@ -2469,8 +2469,8 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 #[global] Instance subst_instance_level_expr : UnivSubst LevelExpr.t :=
   fun u e => match e with
           | (Level.lzero, _)
-          | (Level.Level _, _) => e
-          | (Level.Var n, b) =>
+          | (Level.level     _, _) => e
+          | (Level.lvar n, b) =>
             match nth_error u n with
             | Some l => (l,b)
             | None => (Level.lzero, b)
@@ -2489,13 +2489,13 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 #[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
 
-(** Tests that the term is closed over [k] universe variables *)
+(** Tests that the term is closed over [k] universe lvariables *)
 Section Closedu.
   Context (k : nat).
 
   Definition closedu_level (l : Level.t) :=
     match l with
-    | Level.Var n => (n <? k)%nat
+    | Level.lvar n => (n <? k)%nat
     | _ => true
     end.
 
@@ -2620,8 +2620,8 @@ Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
 Definition string_of_level (l : Level.t) : string :=
   match l with
   | Level.lzero => "Set"
-  | Level.Level s => s
-  | Level.Var n => "Var" ^ string_of_nat n
+  | Level.level     s => s
+  | Level.lvar n => "lvar" ^ string_of_nat n
   end.
 
 Definition string_of_level_expr (e : LevelExpr.t) : string :=

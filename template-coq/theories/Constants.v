@@ -110,12 +110,12 @@ Register MetaCoq.Common.Universes.Universe.from_kernel_repr as metacoq.ast.unive
 Register MetaCoq.Common.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
 Register MetaCoq.Common.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
 Register MetaCoq.Common.Universes.Level.t as metacoq.ast.level.t.
-Register MetaCoq.Common.Universes.Level.Level as metacoq.ast.level.Level.
+Register MetaCoq.Common.Universes.Level.level as metacoq.ast.level.Level.
 Register MetaCoq.Common.Universes.PropLevel.t as metacoq.ast.level.prop_level_type.
 Register MetaCoq.Common.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
 Register MetaCoq.Common.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
 Register MetaCoq.Common.Universes.Level.lzero as metacoq.ast.level.lzero.
-Register MetaCoq.Common.Universes.Level.Var as metacoq.ast.level.Var.
+Register MetaCoq.Common.Universes.Level.lvar as metacoq.ast.level.Var.
 Register MetaCoq.Common.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
 Register MetaCoq.Common.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.

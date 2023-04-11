@@ -20,7 +20,7 @@ Definition bNamed s := {| binder_name := nNamed s; binder_relevance := Relevant 
 
 Definition tImpl X Y := tProd bAnon X (lift0 1 Y).
 
-Definition univ := Level.Level "s".
+Definition univ := Level.level "s".
 
 (* TODO move to SafeChecker *)
 

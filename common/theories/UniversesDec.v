@@ -121,7 +121,7 @@ Qed.
  *)
 Definition uniquify_level_level (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (prefix : Byte.byte) (x : string) : string
   := (String.String
-        (if LevelSet.mem (Level.Level x) shared_levels
+        (if LevelSet.mem (Level.level x) shared_levels
          then shared_prefix
          else prefix)
         x).
@@ -131,7 +131,7 @@ Definition ununiquify_level_level (x : string) : string
      | String.String _ x => x
      end.
 Definition uniquify_level_var (shared_levels : LevelSet.t) (total_sets : nat) (offset : nat) (x : nat) : nat
-  := x * S total_sets + (if LevelSet.mem (Level.Var x) shared_levels
+  := x * S total_sets + (if LevelSet.mem (Level.lvar x) shared_levels
                          then O
                          else S offset).
 Definition ununiquify_level_var (total_sets : nat) (x : nat) : nat
@@ -139,14 +139,14 @@ Definition ununiquify_level_var (total_sets : nat) (x : nat) : nat
 Definition uniquify_level (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (total_sets : nat) (prefix : Byte.byte) (offset : nat) (lvl : Level.t) : Level.t
   := match lvl with
      | Level.lzero => Level.lzero
-     | Level.Level x => Level.Level (uniquify_level_level shared_levels shared_prefix prefix x)
-     | Level.Var x => Level.Var (uniquify_level_var shared_levels total_sets offset x)
+     | Level.level x => Level.level (uniquify_level_level shared_levels shared_prefix prefix x)
+     | Level.lvar x => Level.lvar (uniquify_level_var shared_levels total_sets offset x)
      end.
 Definition ununiquify_level (total_sets : nat) (lvl : Level.t) : Level.t
   := match lvl with
      | Level.lzero => Level.lzero
-     | Level.Level x => Level.Level (ununiquify_level_level x)
-     | Level.Var x => Level.Var (ununiquify_level_var total_sets x)
+     | Level.level x => Level.level (ununiquify_level_level x)
+     | Level.lvar x => Level.lvar (ununiquify_level_var total_sets x)
      end.
 Definition uniquify_constraint (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (total_sets : nat) (prefix : Byte.byte) (offset : nat) (c : ConstraintSet.elt) : ConstraintSet.elt
   := let '((l1, c), l2) := c in
@@ -482,8 +482,8 @@ Proof.
                     | lia
                     | progress subst
                     | match goal with
-                      | [ H : Level.Var _ = Level.Var _ |- _ ] => inversion H; clear H
-                      | [ H : Level.Level _ = Level.Level _ |- _ ] => inversion H; clear H
+                      | [ H : Level.lvar _ = Level.lvar _ |- _ ] => inversion H; clear H
+                      | [ H : Level.level _ = Level.level _ |- _ ] => inversion H; clear H
                       | [ H : (@eqb ?T ?R ?x ?y) = true |- _ ]
                         => destruct (@eqb_spec T R x y)
                       | [ H : (@eqb ?T ?R ?x ?y) = false |- _ ]

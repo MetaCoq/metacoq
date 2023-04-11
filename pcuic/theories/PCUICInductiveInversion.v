@@ -1722,7 +1722,7 @@ Section Betweenu.
 
   Definition betweenu_level (l : Level.t) :=
     match l with
-    | Level.Var n => (start <=? n) && (n <? start + k)%nat
+    | Level.lvar n => (start <=? n) && (n <? start + k)%nat
     | _ => true
     end.
 

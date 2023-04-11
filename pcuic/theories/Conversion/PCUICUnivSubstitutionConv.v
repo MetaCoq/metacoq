@@ -485,7 +485,7 @@ Proof.
 Qed.
 
 Lemma monomorphic_level_notin_AUContext s φ :
-  ~ LS.In (Level.Level s) (AUContext.levels φ).
+  ~ LS.In (Level.level s) (AUContext.levels φ).
 Proof.
   destruct φ as [φ1 φ2].
   intro H. apply (proj1 (LevelSetProp.of_list_1 _ _)) in H. cbn in H.
@@ -929,7 +929,7 @@ Proof.
 Qed.
 
 Lemma monomorphic_level_notin_levels_of_udecl s udecl :
-  LevelSet.In (Level.Level s) (levels_of_udecl udecl) -> False.
+  LevelSet.In (Level.level s) (levels_of_udecl udecl) -> False.
 Proof.
   destruct udecl; cbn.
   - lsets.
@@ -1621,20 +1621,20 @@ Qed.
 
 Lemma in_var_global_ext {cf : checker_flags} n Σ :
   wf Σ.1 ->
-  LevelSet.In (Level.Var n) (global_ext_levels Σ) ->
-  LevelSet.In (Level.Var n) (levels_of_udecl Σ.2).
+  LevelSet.In (Level.lvar n) (global_ext_levels Σ) ->
+  LevelSet.In (Level.lvar n) (levels_of_udecl Σ.2).
 Proof.
   intros wfΣ Hin.
   eapply LevelSet.union_spec in Hin.
   destruct Hin; auto.
   eapply not_var_global_levels in wfΣ.
-  specialize (wfΣ (Level.Var n) H).
+  specialize (wfΣ (Level.lvar n) H).
   now simpl in wfΣ.
 Qed.
 
 Lemma monomorphic_level_in_global_ext l Σ :
-  LevelSet.In (Level.Level l) (global_ext_levels Σ) ->
-  LevelSet.In (Level.Level l) (global_levels Σ).
+  LevelSet.In (Level.level l) (global_ext_levels Σ) ->
+  LevelSet.In (Level.level l) (global_levels Σ).
 Proof.
   unfold global_ext_levels.
   intros [hin|hin] % LevelSet.union_spec.
@@ -1652,10 +1652,10 @@ Proof.
   intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
   destruct l as [|s|n']; simpl; auto.
   - apply global_ext_levels_InSet.
-  - specialize (Hl (Level.Level s, n) inl).
+  - specialize (Hl (Level.level s, n) inl).
     simpl in Hl. apply monomorphic_level_in_global_ext in Hl.
     eapply LS.union_spec. now right.
-  - specialize (Hl (Level.Var n', n) inl).
+  - specialize (Hl (Level.lvar n', n) inl).
     eapply LS.union_spec in Hl as [Hl|Hl].
     + red in Hu.
       unfold levels_of_udecl in Hl.
@@ -1737,8 +1737,8 @@ Section SubstIdentity.
     wf Σ ->
     LevelSet.In l (LevelSet.union
      (fold_right LevelSet.add LevelSet.empty
-        (unfold n Level.Var)) (global_levels Σ)) ->
-    subst_instance_level (unfold n Level.Var) l = l.
+        (unfold n Level.lvar)) (global_levels Σ)) ->
+    subst_instance_level (unfold n Level.lvar) l = l.
   Proof using Type.
     intros wfΣ lin.
     eapply LevelSet.union_spec in lin.
@@ -1746,7 +1746,7 @@ Section SubstIdentity.
     - apply LevelSet_In_fold_right_add in H.
       destruct l; simpl; auto.
       eapply In_unfold_inj in H; [|congruence].
-      pose proof (proj1 (nth_error_unfold Level.Var n n0) H).
+      pose proof (proj1 (nth_error_unfold Level.lvar n n0) H).
       now rewrite (nth_error_nth _ _ _ H0).
     - eapply not_var_global_levels in wfΣ.
       specialize (wfΣ l H). simpl in wfΣ.
@@ -1768,15 +1768,15 @@ Section SubstIdentity.
       intros i Hi. unfold global_ext_levels.
       apply LevelSet.mem_spec, LevelSet.union_spec. left.
       unfold levels_of_udecl. simpl.
-      rewrite (mapi_unfold Level.Var).
+      rewrite (mapi_unfold Level.lvar).
       eapply LevelSet_In_fold_right_add.
       induction #|univs| in i, Hi |- *; try lia.
       simpl. eapply in_or_app. destruct (eq_dec i n).
       * subst. right; simpl; auto.
       * left; apply IHn; lia.
     - now rewrite mapi_length.
-    - simpl. rewrite (mapi_unfold Level.Var).
-      assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
+    - simpl. rewrite (mapi_unfold Level.lvar).
+      assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.lvar) cst) cst).
       { unfold CS.Equal; intros a.
         unfold subst_instance_cstrs.
         red in wf_glob_ext.
@@ -1784,7 +1784,7 @@ Section SubstIdentity.
         unfold on_udecl_prop in wfext.
         simpl constraints_of_udecl in wfext.
         simpl levels_of_udecl in wfext.
-        rewrite (mapi_unfold Level.Var) in wfext.
+        rewrite (mapi_unfold Level.lvar) in wfext.
         clear indu.
         simpl fst in wfext.
         revert wfext.
@@ -1811,7 +1811,7 @@ Section SubstIdentity.
       eapply CS_For_all_union.
   Qed.
 
-  Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
+  Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.lvar n) (levels_of_udecl Σ.2) ->
     ∑ ctx, Σ.2 = Polymorphic_ctx ctx.
   Proof using cf.
     intros onu lin.
@@ -1840,7 +1840,7 @@ Section SubstIdentity.
       rewrite mapi_unfold in IHu, ina |- *.
       eapply LevelSet_In_fold_right_add in ina.
       eapply In_unfold_inj in ina; try congruence.
-      eapply (nth_error_unfold Level.Var) in ina.
+      eapply (nth_error_unfold Level.lvar) in ina.
       now rewrite (nth_error_nth _ _ _ ina).
   Qed.
 
@@ -1857,7 +1857,7 @@ Section SubstIdentity.
     rewrite eq. simpl.
     rewrite eq in cu. simpl in cu.
     apply LevelSet_In_fold_right_add in cu.
-    unfold AUContext.repr in *. rewrite (mapi_unfold Level.Var) in cu |- *.
+    unfold AUContext.repr in *. rewrite (mapi_unfold Level.lvar) in cu |- *.
     destruct nth_error eqn:hnth.
     * apply nth_error_unfold_inv in hnth. subst; auto.
     * apply nth_error_None in hnth. rewrite unfold_length in hnth.

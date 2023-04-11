@@ -136,7 +136,7 @@ Section OnUdecl.
 
   Lemma In_Var_global_ext_poly {n Σ inst cstrs} :
     n < #|inst| ->
-    LevelSet.mem (Level.Var n) (global_ext_levels (Σ, Polymorphic_ctx (inst, cstrs))).
+    LevelSet.mem (Level.lvar n) (global_ext_levels (Σ, Polymorphic_ctx (inst, cstrs))).
   Proof using Type.
     intros Hn.
     unfold global_ext_levels; simpl.

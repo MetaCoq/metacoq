@@ -909,8 +909,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition lift_level n l :=
       match l with
-      | Level.lzero | Level.Level _ => l
-      | Level.Var k => Level.Var (n + k)
+      | Level.lzero | Level.level _ => l
+      | Level.lvar k => Level.lvar (n + k)
       end.
 
     Definition lift_instance n l :=
@@ -925,7 +925,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         cstrs ConstraintSet.empty.
 
     Definition level_var_instance n (inst : list name) :=
-      mapi_rec (fun i _ => Level.Var i) inst n.
+      mapi_rec (fun i _ => Level.lvar i) inst n.
 
     Fixpoint variance_cstrs (v : list Variance.t) (u u' : Instance.t) :=
       match v, u, u' with

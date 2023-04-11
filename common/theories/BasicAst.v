@@ -89,6 +89,13 @@ Inductive conv_pb :=
   | Cumul.
 Derive NoConfusion EqDec for conv_pb.
 
+Definition conv_pb_leqb (pb1 pb2 : conv_pb) : bool
+  := match pb1, pb2 with
+     | Conv, _ => true
+     | _, Conv => false
+     | Cumul, Cumul => true
+     end.
+
 (* This opaque natural number is a hack to inform unquoting to generate
   a fresh evar when encountering it. *)
 Definition fresh_evar_id : nat. exact 0. Qed.

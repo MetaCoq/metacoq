@@ -91,9 +91,8 @@ Derive NoConfusion EqDec for conv_pb.
 
 Definition conv_pb_leqb (pb1 pb2 : conv_pb) : bool
   := match pb1, pb2 with
-     | Conv, _ => true
-     | _, Conv => false
-     | Cumul, Cumul => true
+     | Cumul, Conv => false
+     | _, _ => true
      end.
 
 (* This opaque natural number is a hack to inform unquoting to generate

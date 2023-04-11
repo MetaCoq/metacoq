@@ -83,6 +83,8 @@ gen-src/eqDec.ml
 gen-src/eqDec.mli
 gen-src/eqDecInstances.ml
 gen-src/eqDecInstances.mli
+gen-src/eqdepFacts.ml
+gen-src/eqdepFacts.mli
 gen-src/equalities.ml
 gen-src/equalities.mli
 gen-src/extractable.ml

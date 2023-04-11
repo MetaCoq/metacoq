@@ -16,6 +16,24 @@ Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' 
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     cumul (Γ ,,, inst_case_predicate_context p) p.(preturn) p'.(preturn))).
 
+Definition cumul_predicate_dep {cumul Γ Re p p'}
+  (H : cumul_predicate cumul Γ Re p p')
+  (cumul' : forall Γ p p', cumul Γ p p' -> Type)
+  Re'
+  :=
+  let '(Hparams, (Huinst, (Heq, Hcumul))) := H in
+  All2_dep (cumul' Γ) Hparams *
+    (R_universe_instance_dep Re Re' Huinst
+     * cumul' _ _ _ Hcumul).
+
+Lemma cumul_predicate_undep {cumul Γ Re p p' H cumul' Re'}
+  : @cumul_predicate cumul' Γ Re' p p' <~> @cumul_predicate_dep cumul Γ Re p p' H (fun Γ p p' _ => cumul' Γ p p') (fun x y _ => Re' x y).
+Proof.
+  cbv [cumul_predicate cumul_predicate_dep R_universe_instance R_universe_instance_dep] in *.
+  split; intro; repeat destruct ?; subst; rdest; try assumption.
+  all: repeat first [ assumption | toAll ].
+Qed.
+
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
 

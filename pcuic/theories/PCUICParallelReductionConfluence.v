@@ -3481,9 +3481,9 @@ Section Rho.
         eapply All2_prop2_eq_split in X3.
         eapply (pred_subst_rho_fix Γ _ _ _ _ idx); intuition auto. cbn. solve_all.
         clear b0. solve_all. unfold on_Trel in *. intuition auto.
-        clear b0; solve_all. eapply X4; eauto.
+        solve_all. eapply X4; eauto.
         now move/andP: a0 => []. solve_all. unfold on_Trel in *.
-        intuition eauto with fvs. apply X4.
+        intuition eauto with fvs. exactly_once (idtac; multimatch goal with H : _ |- _ => apply H end).
         move/andP: a0 => []. now rewrite shiftnP_xpredT.
         eapply on_contexts_app => //. eapply X3; eauto.
       * eapply forallb_All in onfvs. eapply All2_All_mix_left in Hargs; tea.
@@ -3569,7 +3569,7 @@ Section Rho.
           eapply (All2_impl a1); solve_all. inv_on_free_vars.
           solve_all. unfold on_Trel in *; solve_all.
           solve_all. unfold on_Trel in *; solve_all. inv_on_free_vars.
-          eapply X3; eauto with fvs.
+          exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto with fvs.
           eapply on_contexts_app => //.
           eapply X0 => //.
         + eapply forallb_All in b. eapply All2_All_mix_left in X4; tea.
@@ -3921,7 +3921,7 @@ Section Rho.
           --- eapply All2_mix; pcuic.
               eapply All2_prod_inv in a1 as [].
               rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //. solve_all.
-              eapply All2_mix; pcuic.
+              eapply All2_impl; [ eassumption | ]; pcuic.
           --- pcuic.
 
       + apply decompose_app_inv in Heq. subst c0.

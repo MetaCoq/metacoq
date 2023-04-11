@@ -122,3 +122,8 @@ Tactic Notation "relativize" open_constr(c) :=
   let ty := type of c in
   let x := fresh in
   evar (x : ty); replace c with x; subst x.
+
+(* A version of [sig] that avoids extraction errors about informative Prop instances, while not suffering from the lack of projections that plague [ex] *)
+Record sigP {A : Prop} {B : A -> Prop} := existP { projP1 : A ; projP2 : B projP1 }.
+Arguments sigP {A} B.
+Arguments existP {A} B _ _.

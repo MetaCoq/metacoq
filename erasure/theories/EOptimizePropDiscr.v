@@ -49,7 +49,7 @@ Section optimize.
       if isprop_ind Σ ind
       then
         match brs' with
-        | [(a, b)] => substl (repeat tBox #|a|) b
+        | [(a, b)] => ECSubst.substl (repeat tBox #|a|) b
         | _ => tCase ind (optimize c) brs'
         end
       else tCase ind (optimize c) brs'

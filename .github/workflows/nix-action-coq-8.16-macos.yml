@@ -2,6 +2,9 @@ jobs:
   coq:
     needs: []
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-coq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -39,6 +42,9 @@ jobs:
     needs:
     - coq
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-equations-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -81,6 +87,9 @@ jobs:
     - coq
     - equations
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-metacoq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\

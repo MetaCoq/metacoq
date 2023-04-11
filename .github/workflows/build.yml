@@ -23,12 +23,16 @@ jobs:
 
     strategy:
       matrix:
-        coq_version: 
+        coq_version:
           - '8.16'
         ocaml_version:
           - '4.14-flambda'
         target: [ local, opam, quick ]
       fail-fast: true
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ matrix.target }}-Ubuntu-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
 
     steps:
 

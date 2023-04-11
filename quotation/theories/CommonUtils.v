@@ -244,15 +244,15 @@ Module WithTemplate.
   Definition tmRelaxSet (in_domain : bool) (prefix : string) (t : term) : term
     := tmRelaxSortsM
          (M:=fun T => T) in_domain
-         (fun u => tSort (if is_set u then Universe.of_levels (inr (Level.Level (prefix ++ "._Set.0")%bs)) else u))
+         (fun u => tSort (if is_set u then Universe.of_levels (inr (Level.level (prefix ++ "._Set.0")%bs)) else u))
          t.
 
   Module Import PrefixUniverse.
     Module Level.
       Definition prefix_with (prefix : string) (l : Level.t) : Level.t
         := match l with
-           | Level.lzero | Level.Var _ => l
-           | Level.Level u => Level.Level (prefix ++ "." ++ u)%bs
+           | Level.lzero | Level.lvar _ => l
+           | Level.level u => Level.level (prefix ++ "." ++ u)%bs
            end.
     End Level.
 

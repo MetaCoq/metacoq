@@ -82,8 +82,8 @@ struct
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
-         | Some x -> Universes0.Level.lvar (quote_int x)
-         | None -> Universes0.Level.level (quote_string (Univ.Level.to_string l))
+         | Some x -> Universes0.Level.Coq_lvar (quote_int x)
+         | None -> Universes0.Level.Coq_level (quote_string (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
     try Coq_inr (quote_nonprop_level l)

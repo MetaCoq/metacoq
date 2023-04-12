@@ -70,17 +70,25 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 .
 
 (** This version of [tmBind] flattens nesting structure; using it in deeply recursive template programs can speed things up drastically *)
+(** We use [tmBind] in the recursive position to avoid quadratic blowup in the number of [tmOptimizedBind]s *)
 Fixpoint tmOptimizedBind@{t u} {A B : Type@{t}} (v : TemplateMonad@{t u} A) : (A -> TemplateMonad@{t u} B) -> TemplateMonad@{t u} B
   := match v with
      | tmReturn x => fun f => f x
-     | tmBind v k => fun f => tmOptimizedBind v (fun v => tmOptimizedBind (k v) f)
+     | tmBind v k => fun f => tmOptimizedBind v (fun v => tmBind (k v) f)
      | tmFail msg => fun _ => tmFail msg
      | v => tmBind v
      end.
 
 (** Flatten nested [tmBind] *)
+Fixpoint tmOptimize'@{t u} {A B : Type@{t}} (v : TemplateMonad@{t u} A) : (A -> TemplateMonad@{t u} B) -> TemplateMonad@{t u} B
+  := match v with
+     | tmReturn x => fun f => f x
+     | tmBind v k => fun f => tmOptimize' v (fun v => tmOptimize' (k v) f)
+     | tmFail msg => fun _ => tmFail msg
+     | v => tmBind v
+     end.
 Definition tmOptimize@{t u} {A : Type@{t}} (v : TemplateMonad@{t u} A) : TemplateMonad@{t u} A
-  := tmOptimizedBind v tmReturn.
+  := tmOptimize' v tmReturn.
 
 (** This allow to use notations of MonadNotation *)
 Definition TemplateMonad_UnoptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=

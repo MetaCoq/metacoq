@@ -14,6 +14,10 @@ Open Scope pair_scope.
 
 Notation "x × y" := (prod x y ) (at level 80, right associativity).
 
+(* transparent version of [proj1], [proj2] *)
+Definition proj1 {A B} (x : A /\ B) : A := let (a, b) := x in a.
+Definition proj2 {A B} (x : A /\ B) : B := let (a, b) := x in b.
+
 Notation "p .p1" := (proj1 p) (at level 2, left associativity, format "p .p1").
 Notation "p .p2" := (proj2 p) (at level 2, left associativity, format "p .p2").
 

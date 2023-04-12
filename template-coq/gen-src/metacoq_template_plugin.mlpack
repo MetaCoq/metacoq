@@ -54,6 +54,7 @@ Logic1
 Logic2
 Number
 Relation
+EqdepFacts
 MCPrelude
 MCReflect
 ReflectEq

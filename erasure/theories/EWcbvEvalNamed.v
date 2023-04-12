@@ -1819,27 +1819,33 @@ Proof.
         eapply All2_Set_All2 in H5.
         let X := match goal with H : All2 (EWcbvEval.eval _) _ _ |- _ => H end in
         eapply All2_All2_mix in X. 2: let X0 := match goal with H : All2 (fun _ _ => MCProd.and3 _ _ _) _ _ |- _ => H end in exact X0.
-        solve_all. eapply All2_trans'. 2: eauto. 2: let X := match goal with H : All2 (fun _ _ => _ * EWcbvEval.eval _ _ _) _ _ |- _ => H end in exact X.
-        intros x y z [? [? ?]]. eapply eval_represents_value; eauto.
+        solve_all. eapply All2_trans'. 2: eauto. 2: match goal with H : context[EWcbvEval.eval] |- _ => exact H end.
+        intros x y z [? [? ?]]. rdest; destruct_head' MCProd.and3. eapply eval_represents_value; tea.
       * econstructor. eauto.
     + cbn in Hsunny.
       solve_all.
       let H5' := multimatch goal with H : _ |- _ => H end in
       rename H5' into H5.
       eapply All2_Set_All2 in H5.
-      eapply All2_All_mix_left in H5. 2: eauto.
-       rename X into X_old;
-       let X' := match goal with H : All2 (EWcbvEval.eval _) _ _ |- _ => H end in
-       rename X' into X.
-       let X0' := match goal with H : All2 (fun _ _ => MCProd.and3 _ _ _) _ _ |- _ => H end in
-       rename X0' into X0.
-       eapply All2_All2_mix in X. 2: eapply X0.
-       cbn in X. eapply All2_trans' in X. 3: eapply H5.
-       2:{ intros x y z [[? r] [[s0] ?]].
-           eapply s0 in r; eauto. exact r. }
-       assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. {
-         clear - X. induction X. eexists; econstructor. destruct IHX as [vs Hvs].
-         destruct r as [v Hv]. exists (v :: vs). econstructor; eauto.
+      eapply All2_All_mix_left in H5; tea.
+      toAll.
+       cbn in *. match goal with H : All2 _ ?x ?y, H' : All2 _ ?y ?z |- _ => eapply All2_trans' in H'; [ | | exact H ]; cbv beta end.
+       2:{ intros x y z ?; destruct_head'_prod; destruct_head' MCProd.and3.
+           match goal with
+           | [ H : context[y], H' : _ |- _ ] => eapply H' in H; [ | now eauto .. ]
+           end.
+           clear dependent y.
+           repeat match goal with H : ?x, H' : ?x |- _ => clear H' end.
+           repeat match goal with
+                  | [ H : ?A, H' : ?B |- _ ]
+                    => lazymatch A with context[x] => idtac | context[z] => idtac end;
+                       lazymatch B with context[x] => idtac | context[z] => idtac end;
+                       pose proof (pair H H'); clear H H'
+                  end.
+           revert dependent x; intros x H'; exact H'. }
+       assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. { let X := match goal with H : All2 _ ?x ?y |- context[All3 _ _ ?x ?y] => H end in
+         clear - X; induction X. eexists; econstructor. repeat (destruct_head'_sigT; destruct_head'_prod).
+         eexists (_ :: _). econstructor; eauto.
        }
        eexists. split. econstructor.
        { instantiate (1 := vs). clear - Hvs; induction Hvs; econstructor; eauto. eapply r. }

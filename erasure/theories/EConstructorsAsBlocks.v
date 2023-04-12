@@ -1166,7 +1166,7 @@ Proof.
     now rewrite lookup_constructor_transform_blocks.
     unfold cstr_arity. cbn. rewrite H4; len.
     solve_all. clear -X0. eapply All2_All2_Set. solve_all.
-    apply H.
+    match goal with H : _ |- _ => apply H end.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct l => //.
     destruct lookup_constructor eqn:hl => //.

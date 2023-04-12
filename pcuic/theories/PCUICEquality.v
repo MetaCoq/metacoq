@@ -23,6 +23,9 @@ Implicit Types (cf : checker_flags).
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
+Definition R_universe_instance_dep R R' :=
+  fun {u u'} (H : R_universe_instance R u u') => Forall2_dep R' H.
+
 (** Cumulative inductive types:
 
   To simplify the development, we allow the variance list to not exactly

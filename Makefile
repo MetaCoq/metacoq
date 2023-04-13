@@ -153,7 +153,7 @@ quotation: template-coq # pcuic template-pcuic
 safechecker-plugin: safechecker template-pcuic
 	$(MAKE) -C safechecker-plugin
 
-erasure: safechecker
+erasure: safechecker template-pcuic
 	$(MAKE) -C erasure
 
 erasure-plugin: erasure template-pcuic

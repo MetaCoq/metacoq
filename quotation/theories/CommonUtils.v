@@ -123,6 +123,17 @@ Module WithTemplate.
   Import MetaCoq.Template.TemplateMonad.Common.
   Import MetaCoq.Template.TemplateMonad.Core.
 
+  (* versions that can be the same for both template and PCUIC, bypassing translation, for performance *)
+  Polymorphic Definition tmQuoteConstantUniversesAndRelevance@{t u} (kn : kername) (bypass_opacity : bool) : TemplateMonad@{t u} (universes_decl * relevance)
+    := cb <- tmQuoteConstant kn bypass_opacity;;
+       let '{| cst_universes := cst_universes ; cst_relevance := cst_relevance |} := cb in
+       ret (cst_universes, cst_relevance).
+
+  Polymorphic Definition tmQuoteInductiveUniverses@{t u} (kn : kername) : TemplateMonad@{t u} universes_decl
+    := mib <- tmQuoteInductive kn;;
+       let '{| ind_universes := ind_universes |} := mib in
+       ret ind_universes.
+
   (* unfolding Qed'd definitions for the benefit of quotation *)
   Polymorphic Definition tmUnfoldQed {A} (v : A) : TemplateMonad A
     := p <- tmQuote v;;
@@ -328,4 +339,4 @@ Module WithTemplate.
        v <- tmRetypeMagicRelaxOnlyType prefix ty v;;
        ret {| my_projT1 := ty ; my_projT2 := v |}.
 End WithTemplate.
-Export WithTemplate (transparentify, tmQuoteToGlobalReference, tmRetypeRelaxSetInCodomain, tmRetypeRelaxOnlyType, tmRetypeMagicRelaxSetInCodomain, tmRetypeMagicRelaxOnlyType, tmObj_magic, tmRetype, tmExtractBaseModPathFromMod, tmRetypeAroundMetaCoqBug853).
+Export WithTemplate (transparentify, tmQuoteToGlobalReference, tmRetypeRelaxSetInCodomain, tmRetypeRelaxOnlyType, tmRetypeMagicRelaxSetInCodomain, tmRetypeMagicRelaxOnlyType, tmObj_magic, tmRetype, tmExtractBaseModPathFromMod, tmRetypeAroundMetaCoqBug853, tmQuoteConstantUniversesAndRelevance, tmQuoteInductiveUniverses).

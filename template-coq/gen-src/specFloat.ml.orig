@@ -468,8 +468,8 @@ let coq_SFsqrt prec emax x = match x with
 | S754_zero _ -> x
 | S754_infinity s -> if s then S754_nan else x
 | S754_nan -> S754_nan
-| S754_finite (sx, mx, ex) ->
-  if sx
+| S754_finite (s, mx, ex) ->
+  if s
   then S754_nan
   else let (p, lz) = coq_SFsqrt_core_binary prec emax (Zpos mx) ex in
        let (mz, ez) = p in binary_round_aux prec emax false mz ez lz

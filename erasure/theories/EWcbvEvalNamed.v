@@ -935,7 +935,7 @@ Lemma nclosed_represents Σ Γ E s :
   wellformed Σ #|Γ| s -> Γ ;;; E ⊩ annotate Γ s ~ s.
 Proof.
   intros Hwf.
-  induction s in Γ, Hwf |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; eauto.
+  induction s in Γ, Hwf |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve eauto. intuition.
   - eapply Nat.ltb_lt in Hwf. destruct nth_error eqn:Eq; eauto.
     eapply nth_error_None in Eq. lia.
   - econstructor. solve_all. clear - H1. induction H1; econstructor; eauto. eapply p, p.

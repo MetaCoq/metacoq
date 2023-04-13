@@ -169,21 +169,30 @@ End with_tc.
 
 Import TemplateMonad.Core.
 
-Definition monad_trans@{t u} : Ast.term -> TemplateMonad@{t u} term
+Class eval_pcuic_quotation := pcuic_quotation_red_strategy : option reductionStrategy.
+#[export] Instance default_eval_pcuic_quotation : eval_pcuic_quotation := None.
+
+Definition tmMaybeEval@{t u} `{eval_pcuic_quotation} {A : Type@{t}} (v : A) : TemplateMonad@{t u} A
+  := match pcuic_quotation_red_strategy with
+     | None => tmReturn v
+     | Some s => tmEval s v
+     end.
+
+Definition monad_trans@{t u} `{eval_pcuic_quotation} : Ast.term -> TemplateMonad@{t u} term
   := tmFix@{u u t u}
        (fun monad_trans v
         => v <- @monad_trans'@{t u} TemplateMonad TemplateMonad_Monad
                   (@TransLookup_lookup_inductive' TemplateMonad TemplateMonad_Monad monad_trans tmQuoteInductive (@tmFail))
-                  (@tmEval cbv)
+                  (fun A => tmMaybeEval)
                   v;;
-           tmEval cbv v).
+           tmMaybeEval v).
 
-Definition monad_trans_decl@{t u} := @monad_trans_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_local@{t u} := @monad_trans_local'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_constructor_body@{t u} := @monad_trans_constructor_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_projection_body@{t u} := @monad_trans_projection_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_one_ind_body@{t u} := @monad_trans_one_ind_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_constant_body@{t u} := @monad_trans_constant_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_minductive_body@{t u} := @monad_trans_minductive_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition monad_trans_global_decl@{t u} := @monad_trans_global_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
-Definition tmQuoteInductive@{t u} := @tmQuoteInductive'@{t u} TemplateMonad TemplateMonad_Monad monad_trans tmQuoteInductive.
+Definition monad_trans_decl@{t u} `{eval_pcuic_quotation} := @monad_trans_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_local@{t u} `{eval_pcuic_quotation} := @monad_trans_local'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_constructor_body@{t u} `{eval_pcuic_quotation} := @monad_trans_constructor_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_projection_body@{t u} `{eval_pcuic_quotation} := @monad_trans_projection_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_one_ind_body@{t u} `{eval_pcuic_quotation} := @monad_trans_one_ind_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_constant_body@{t u} `{eval_pcuic_quotation} := @monad_trans_constant_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_minductive_body@{t u} `{eval_pcuic_quotation} := @monad_trans_minductive_body'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition monad_trans_global_decl@{t u} `{eval_pcuic_quotation} := @monad_trans_global_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
+Definition tmQuoteInductive@{t u} `{eval_pcuic_quotation} := @tmQuoteInductive'@{t u} TemplateMonad TemplateMonad_Monad monad_trans tmQuoteInductive.

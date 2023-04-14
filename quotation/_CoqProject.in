@@ -20,6 +20,8 @@ theories/ToTemplate/Coq/MSets.v
 theories/ToTemplate/Coq/Numbers.v
 theories/ToTemplate/Coq/Strings.v
 theories/ToTemplate/Coq/ssr.v
+theories/ToTemplate/Equations.v
+theories/ToTemplate/Equations/Type.v
 theories/ToTemplate/Init.v
 theories/ToTemplate/QuotationOf/Common/Environment/Sig.v
 theories/ToTemplate/QuotationOf/Common/EnvironmentTyping/Sig.v

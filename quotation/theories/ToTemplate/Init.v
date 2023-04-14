@@ -494,34 +494,37 @@ Polymorphic Definition tmMakeQuotationOfConstants_gen@{d t u _T _above_u'} {debu
                  _ <- tmDebugPrint r;;
                  match r with
                  | ConstRef cr
-                   => '(inst, rel) <- (cb <- tmQuoteConstant cr false;;
-                                       inst <- match cb.(cst_universes) with
-                                               | Monomorphic_ctx => tmReturn ([] : Instance.t)
-                                               | (Polymorphic_ctx (univs, constraints)) as ctx
-                                                 => _ <- warn_bad_ctx r ctx;;
-                                                    tmReturn ([] : Instance.t)
-                                               end;;
-                                       tmReturn (inst, cb.(cst_relevance)));;
-                      match rel, make_qname cr with
-                      | Irrelevant, _ => on_bad_relevance r
-                      | _, None => tmDebugSkipGR cr
-                      | Relevant, Some qname
-                        => let c := tConst cr inst in
-                           _ <- tmDebugMsg "tmMakeQuotationOfConstants_gen: tmUnquote";;
-                           '{| my_projT1 := cty ; my_projT2 := cv |} <- tmUnquote c;;
-                           _ <- tmDebugMsg "tmMakeQuotationOfConstants_gen: tmUnquote done";;
-                           def <- make_definition
-                                    (qname, if work_around_coq_bug_17303
-                                            then {| my_projT1 := term ; my_projT2 := c |}
-                                            else {| my_projT1 := @quotation_of cty cv ; my_projT2 := c |});;
-                           make_instance def
+                   => match make_qname cr with
+                      | None => tmDebugSkipGR cr
+                      | Some qname
+                        => '(univs, rel) <- tmQuoteConstantUniversesAndRelevance cr false;;
+                           match rel with
+                           | Irrelevant => on_bad_relevance cr
+                           | Relevant
+                             => inst <- match univs with
+                                        | Monomorphic_ctx => tmReturn ([] : Instance.t)
+                                        | (Polymorphic_ctx (univs, constraints)) as ctx
+                                          => _ <- warn_bad_ctx cr ctx;;
+                                             tmReturn ([] : Instance.t)
+                                        end;;
+                                let c := tConst cr inst in
+                                _ <- tmDebugMsg "tmMakeQuotationOfConstants_gen: tmUnquote";;
+                                '{| my_projT1 := cty ; my_projT2 := cv |} <- tmUnquote c;;
+                                _ <- tmDebugMsg "tmMakeQuotationOfConstants_gen: tmUnquote done";;
+                                def <- make_definition
+                                         (qname, if work_around_coq_bug_17303
+                                                 then {| my_projT1 := term ; my_projT2 := c |}
+                                                 else {| my_projT1 := @quotation_of cty cv ; my_projT2 := c |});;
+                                make_instance def
+                           end
                       end
                  | IndRef ind
-                   => match make_qname ind.(inductive_mind) with
-                      | None => tmDebugSkipGR ind.(inductive_mind)
+                   => let '{| inductive_mind := r |} := ind in
+                      match make_qname r with
+                      | None => tmDebugSkipGR r
                       | Some qname
-                        => inst <- (mib <- tmQuoteInductive ind.(inductive_mind);;
-                                    match mib.(ind_universes) with
+                        => inst <- (univs <- tmQuoteInductiveUniverses r;;
+                                    match univs with
                                     | Monomorphic_ctx => tmReturn ([] : Instance.t)
                                     | (Polymorphic_ctx (univs, constraints)) as ctx
                                       => _ <- warn_bad_ctx r ctx;;

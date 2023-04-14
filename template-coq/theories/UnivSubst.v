@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment Induction.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Environment.
+From MetaCoq.Template Require Import Ast AstUtils Induction.
 
 (** * Universe substitution
 

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq Require Import config utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed EWcbvEval.
@@ -690,7 +691,7 @@ Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
 Local Hint Constructors represents_value : core.
 
-From MetaCoq Require Import bytestring MCString.
+From MetaCoq.Utils Require Import bytestring MCString.
 Require Import BinaryString.
 Import String.
 
@@ -1327,13 +1328,20 @@ Proof.
   revert HE Hsunny. pattern E, s, v, Heval.
   revert E s v Heval.
   eapply eval_ind; intros; eauto; cbn in *; rtoProp; eauto using Forall.
-  - do 2 forward X; eauto. inv X.
-    eapply X1; eauto. econstructor; cbn; eauto.
+  - let X := match reverse goal with H : All _ _ -> _ -> _ |- _ => H end in
+    do 2 forward X; eauto; inv X.
+    let X1 := multimatch goal with H : _ |- _ => H end in
+    now eapply X1; eauto; econstructor; cbn; eauto.
   - econstructor; eauto. unfold fresh in H. destruct in_dec; cbn in *; congruence.
-  - eapply X0. econstructor; cbn; eauto. eauto.
-  - solve_all. inv X.
+  - let X0 := multimatch goal with H : _ |- _ => H end in
+    now eapply X0; [ econstructor; cbn; eauto | eauto ].
+  - solve_all.
+    let X := match goal with H : wf (vConstruct _ _ _) |- _ => H end in
+    inv X.
+    let X0 := match goal with H : All _ _ -> _ -> _ |- _ => H end in
     eapply X0. eapply wf_add_multiple; eauto.
     len. eapply All2_length in f4. lia.
+    let H := match goal with H : All (fun x => is_true (_ && _ && _)) _ |- _ => H end in
     eapply All_nth_error in H. 2: eauto. rtoProp.
     solve_all.
     rewrite map_fst_add_multiple. len.
@@ -1343,15 +1351,18 @@ Proof.
                  | nNamed na => [na]
                  end) br.1) as -> by eauto.
     clear - f4. induction f4; cbn; f_equal; destruct r, x; cbn; congruence.
-  - do 2 forward X; eauto. invs X.
+  - let X := match goal with H : All _ _ -> _ -> wf (vRecClos _ _ _) |- _ => H end in
+    do 2 forward X; eauto; invs X.
+    let X0 := match goal with H : All _ (add _ _ _) -> _ -> wf _ |- _ => H end in
     eapply X0.
     + econstructor; cbn; eauto.
       eapply wf_add_multiple; eauto.
       now rewrite map_length fix_env_length.
       eapply wf_fix_env; eauto.
-    + eapply All_nth_error in X2; eauto. cbn in X2. rtoProp.
-      rewrite map_fst_add_multiple. now rewrite map_length fix_env_length.
-      eauto.
+    + let X2 := multimatch goal with H : All _ _ |- _ => H end in
+      eapply All_nth_error in X2; eauto; cbn in X2; rtoProp;
+      rewrite map_fst_add_multiple; first [ now rewrite map_length fix_env_length
+      | eauto ].
   - assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, EAst.dbody d0)) nms mfix) = nms) as EE. {
     clear - f6. induction f6; cbn; f_equal; eauto. }
     econstructor.
@@ -1398,9 +1409,10 @@ Proof.
       destruct r as [[? []]].
       destruct x; cbn in *; subst; eauto.
    + eauto.
-  - eapply X; eauto. eapply declared_constant_Forall in isdecl.
+  - let X := match goal with H : All _ _ -> _ -> wf _ |- _ => H end in
+    eapply X; eauto. eapply declared_constant_Forall in isdecl.
     2: eapply Forall_impl. 2: eauto.
-    2: { cbn. intros [] ?. cbn in *.  exact H. }
+    2: { cbn. intros [] ?. cbn in *. let H := match goal with H : match _ with ConstantDecl _ => _ | _ => _ end |- _ => H end in exact H. }
     cbn in *. destruct decl; cbn in *.
     subst. eauto.
   - solve_all. econstructor.
@@ -1426,7 +1438,7 @@ Proof.
     + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
 
-From MetaCoq Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
+From MetaCoq.Erasure Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
 
 Lemma lookup_in_env Σ Σ' ind i :
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
@@ -1578,7 +1590,8 @@ Proof.
       edestruct s1 as (? & ? & ?); eauto.
       invs Hv1. eexists; split; eauto. econstructor; eauto.
   - invs Hrep.
-    + invs H3.
+    + let H3 := match goal with H : ⊩ _ ~ tApp _ _ |- _ => H end in
+      invs H3.
     + cbn in Hsunny. rtoProp.
       edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
       invs Hv1.
@@ -1602,6 +1615,7 @@ Proof.
   - assert (pars = 0) as ->. {
       unfold constructor_isprop_pars_decl in *.
       destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence.
+      let H0 := match goal with H : Some _ = Some _ |- _ => H end in
       invs H0.
       destruct lookup_env eqn:EEE; try congruence.
       eapply lookup_env_wellformed in EEE; eauto.
@@ -1620,7 +1634,8 @@ Proof.
       eapply All2_Set_All2 in H14. eapply All2_nth_error_Some_right in H14 as He2. 2: eauto.
       destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1.
       edestruct s1 as (v2 & Hv1_ & Hv2_).
-      1: { eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
+      1: { let H6 := match goal with H : is_true (forallb _ _) |- _ => H end in
+        eapply forallb_nth_error in H6; setoid_rewrite Hnth in H6; cbn in H6. rtoProp.
            assert (nms = flat_map (λ x : name, match x with
                | nAnon => []
                | nNamed na => [na]
@@ -1629,6 +1644,9 @@ Proof.
            { rewrite Heqnms flat_map_concat_map.
              intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
             destruct Hd; subst; eauto.
+            rename H6 into H6_old;
+            let H6' := match goal with H : is_true (forallb _ _) |- _ => H end in
+            rename H6' into H6.
             eapply forallb_forall in H6; eauto.
             cbn in H6. unfold fresh in H6. destruct in_dec; cbn in *; congruence. }
             { subst. unfold dupfree in H9. destruct dupfree_dec_ident; cbn in *; congruence. }
@@ -1646,7 +1664,10 @@ Proof.
            eapply All2_Set_All2, All2_length in H10; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
            rewrite -> !skipn_length in *. lia.
-        -- eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
+        -- rename H6 into H6_old;
+           let H6' := match goal with H : is_true (forallb _ _) |- _ => H end in
+           rename H6' into H6.
+           eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            enough (nms = flat_map (λ x : name, match x with
            | nAnon => []
            | nNamed na => [na]
@@ -1668,9 +1689,10 @@ Proof.
         rewrite -> !skipn_length in *. lia.
       * solve_all.
       * now rewrite rev_involutive in Hv2_.
-  - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
+  - eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
   - invs Hrep.
-    + invs H5. invs H6.
+    + let H5 := match goal with H : ⊩ _ ~ tApp _ _ |- _ => H end in
+      invs H5.
     + cbn -[substl] in *. rtoProp.
       edestruct s0 as (v & IH1 & IH2). 3, 1, 2: eauto.
       invs IH1.
@@ -1686,6 +1708,10 @@ Proof.
       eapply eval_wf in IH2 as Hwf; eauto.
       invs Hwf.
 
+      let H12 := match goal with H : NoDup (map fst vfix) |- _ => H end in
+      let H16 := match goal with H : forall nm, In nm (map fst vfix) -> ~In nm _ |- _ => H end in
+      let X := match goal with H : All (fun t => is_true (sunny _ _)) vfix |- _ => H end in
+      let X0 := match goal with H : All (fun v => wf _) _ |- _ => H end in
       rename H12 into dupfree_vfix, H16 into distinct_vfix_E0, X into sunny_in_vfix, X0 into wf_E0.
 
       edestruct s2 as (v'' & IH1'' & IH2'').
@@ -1705,7 +1731,7 @@ Proof.
       }
       { intros ? [-> | ?].
         - eapply All_nth_error in sunny_in_vfix; eauto.
-          cbn in sunny_in_vfix. rtoProp. unfold fresh in H2.
+          cbn in sunny_in_vfix. rtoProp. unfold fresh in *.
           destruct in_dec; cbn in *; eauto.
           rewrite in_app_iff in n. eauto.
         - eapply distinct_vfix_E0; eauto.
@@ -1775,7 +1801,8 @@ Proof.
       edestruct s0 as (v & Hv1 & Hv2). 1: eauto. eauto. econstructor.
       eexists. split. eauto. econstructor; eauto.
   - invs Hrep.
-    + invs H2.
+    + let H2 := multimatch goal with H : _ |- _ => H end in
+      now invs H2.
     + cbn in Hsunny. rtoProp.
       eapply eval_to_value in ev as Hval. invs Hval.
       * destruct f'; cbn in *; try congruence.
@@ -1785,23 +1812,40 @@ Proof.
         invs Hv1; destruct args using rev_ind; cbn in *; try congruence.
         all: match goal with [H : _ = mkApps _ _ |- _ ] => now rewrite mkApps_app in H end.
   - invs Hrep.
-    + invs H2. eexists. split. econstructor.  instantiate (1 := vs).
-      * eapply All2_All2_Set. eapply All2_Set_All2 in H5.
-        eapply All2_All2_mix in X. 2: eapply X0.
-        solve_all. eapply All2_trans'. 2: eauto. 2: exact X.
-        intros. destruct X1, p, a. eapply eval_represents_value; eauto.
+    + let H2 := match goal with H : ⊩ _ ~ tConstruct _ _ _ |- _ => H end in
+      invs H2. eexists. split. econstructor.  instantiate (1 := vs).
+      * eapply All2_All2_Set.
+        let H5 := multimatch goal with H : _ |- _ => H end in
+        eapply All2_Set_All2 in H5.
+        let X := match goal with H : All2 (EWcbvEval.eval _) _ _ |- _ => H end in
+        eapply All2_All2_mix in X. 2: let X0 := match goal with H : All2 (fun _ _ => MCProd.and3 _ _ _) _ _ |- _ => H end in exact X0.
+        solve_all. eapply All2_trans'. 2: eauto. 2: match goal with H : context[EWcbvEval.eval] |- _ => exact H end.
+        intros x y z [? [? ?]]. rdest; destruct_head' MCProd.and3. eapply eval_represents_value; tea.
       * econstructor. eauto.
     + cbn in Hsunny.
       solve_all.
+      let H5' := multimatch goal with H : _ |- _ => H end in
+      rename H5' into H5.
       eapply All2_Set_All2 in H5.
-      eapply All2_All_mix_left in H5. 2: eauto.
-       eapply All2_All2_mix in X. 2: eapply X0.
-       cbn in X. eapply All2_trans' in X. 3: eapply H5.
-       2:{ intros. destruct X1, p, p0, a.
-           eapply s0 in r; eauto. exact r. }
-       assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. {
-         clear - X. induction X. eexists; econstructor. destruct IHX as [vs Hvs].
-         destruct r as [v Hv]. exists (v :: vs). econstructor; eauto.
+      eapply All2_All_mix_left in H5; tea.
+      toAll.
+       cbn in *. match goal with H : All2 _ ?x ?y, H' : All2 _ ?y ?z |- _ => eapply All2_trans' in H'; [ | | exact H ]; cbv beta end.
+       2:{ intros x y z ?; destruct_head'_prod; destruct_head' MCProd.and3.
+           match goal with
+           | [ H : context[y], H' : _ |- _ ] => eapply H' in H; [ | now eauto .. ]
+           end.
+           clear dependent y.
+           repeat match goal with H : ?x, H' : ?x |- _ => clear H' end.
+           repeat match goal with
+                  | [ H : ?A, H' : ?B |- _ ]
+                    => lazymatch A with context[x] => idtac | context[z] => idtac end;
+                       lazymatch B with context[x] => idtac | context[z] => idtac end;
+                       pose proof (pair H H'); clear H H'
+                  end.
+           revert dependent x; intros x H'; exact H'. }
+       assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. { let X := match goal with H : All2 _ ?x ?y |- context[All3 _ _ ?x ?y] => H end in
+         clear - X; induction X. eexists; econstructor. repeat (destruct_head'_sigT; destruct_head'_prod).
+         eexists (_ :: _). econstructor; eauto.
        }
        eexists. split. econstructor.
        { instantiate (1 := vs). clear - Hvs; induction Hvs; econstructor; eauto. eapply r. }

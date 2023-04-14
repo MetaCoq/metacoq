@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import Bool Arith Lia SetoidList Utf8.
-From MetaCoq Require Import MCPrelude MCRelations.
+From MetaCoq.Utils Require Import MCPrelude MCRelations.
 
 Set Equations Transparent.
 
@@ -1218,7 +1218,7 @@ Proof.
 Qed.
 
 
-From MetaCoq Require Import ReflectEq.
+From MetaCoq.Utils Require Import ReflectEq.
 
 Section SplitPrefix.
   Context {A : Type} `{ReflectEq A}.

@@ -452,7 +452,7 @@ Proof.
       1: eapply (All2_All_mix_left H0), (All2_All_mix_right H3), All2_map_inv ;
         eassumption.
       now move=> x y [? []] /X.
-    * destruct (reflect_eq_ctx (pcontext pr) (pcontext pr')) => //.
+    * case: (reflect_eq_ctx (pcontext pr) (pcontext pr')) => //.
     * now destruct (r equ Re 0 X (preturn pr')) ; nodec ; subst.
   - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
     intuition auto.
@@ -464,7 +464,7 @@ Proof.
       1: eapply (All2_All_mix_left H0), (All2_All_mix_right H3), All2_map_inv;
         eassumption.
       now move=> x y [? []] /X.
-    * now destruct (reflect_eq_ctx (pcontext pr) (pcontext pr')).
+    * move: pctx; case: (reflect_eq_ctx (pcontext pr) (pcontext pr')) => //.
     * now destruct (r _ _ 0 X (preturn pr')).
 Qed.
 
@@ -639,7 +639,7 @@ Proof.
     2:{ rewrite andb_false_r /=.
         constructor. intros bot; inv bot; contradiction.
     }
-    destruct Hr => /=.
+    case: Hr => e' /=.
     2:{
       constructor. intro bot. inversion bot. subst.
       auto.
@@ -657,17 +657,17 @@ Proof.
         cbn - [eqb]. inversion X. subst.
         destruct a, b. cbn - [eqb eqb_binder_annots].
         destruct X0 as [onc onbod].
-        destruct (reflect_eq_ctx bcontext bcontext0) => // /=.
+        case: (reflect_eq_ctx bcontext bcontext0) => a // /=.
         2:{ constructor. intro bot. inversion bot. subst.
-          inversion X3. subst. destruct X4. cbn in e1. subst.
+          inversion X3. subst. destruct X4. cbn in *. subst.
           contradiction.
         }
         cbn - [eqb].
         pose proof (onbod equ Re 0 he bbody0) as hh. cbn in hh.
-        destruct hh => //=.
+        case: hh => //= [e1|f].
         2:{ constructor. intro bot. apply f. inversion bot. subst.
           inversion X3. subst. destruct X4. assumption. }
-        cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs) => //.
+        cbn -[eqb eqb_binder_annots] in *. case: (IHl X1 brs) => // [e2|f].
         2:{ constructor. intro bot. apply f. inversion bot. subst.
         inversion X3. subst. constructor; auto. }
         constructor. inversion e2. subst.

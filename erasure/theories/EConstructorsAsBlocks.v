@@ -103,7 +103,7 @@ Section transform_blocks.
   Qed.
 
   Lemma chop_eq {A} n (l : list A) l1 l2 : chop n l = (l1, l2) -> l = l1 ++ l2.
-  Proof.
+  Proof using Type.
     rewrite chop_firstn_skipn. intros [= <- <-].
     now rewrite firstn_skipn.
   Qed.
@@ -188,7 +188,7 @@ Section transform_blocks.
       | view_other fn nconstr =>
           mkApps (transform_blocks fn) (map transform_blocks args)
       end.
-  Proof.
+  Proof using Type.
     destruct (decompose_app f) eqn:da.
     rewrite (decompose_app_inv da). rewrite transform_blocks_mkApps.
     now eapply decompose_app_notApp.
@@ -210,7 +210,7 @@ Section transform_blocks.
         P (mkApps (transform_blocks fn) (map transform_blocks args))
     end) ->
     P (transform_blocks (mkApps fn args)).
-  Proof.
+  Proof using Type.
     intros napp.
     move/isEtaExp_mkApps.
     rewrite decompose_app_mkApps //.
@@ -228,7 +228,7 @@ Section transform_blocks.
 
   Lemma transform_blocks_mkApps_eta_fn f args : isEtaExp Σ f ->
     transform_blocks (mkApps f args) = mkApps (transform_blocks f) (map (transform_blocks) args).
-  Proof.
+  Proof using Type.
     intros ef.
     destruct (decompose_app f) eqn:df.
     rewrite (decompose_app_inv df) in ef |- *.
@@ -1147,6 +1147,9 @@ Proof.
     destruct nth_error; try now inv Heq.
     destruct nth_error; invs Heq.
     rewrite /wf_minductive in E. rtoProp.
+    rename H4 into H4_old;
+    let H4' := match goal with H : context[has_cstr_params] |- _ => H end in
+    rename H4' into H4.
     rewrite haspars /= in H4.
     cbn in H4. eapply eqb_eq in H4.
     unfold cstr_arity in H0.
@@ -1154,6 +1157,8 @@ Proof.
     revert E1 E2.
     rewrite <- H0.
     rewrite !chop_firstn_skipn !firstn_all. intros [= <- <-] [= <- <-].
+    let X0' := match goal with H : All2 _ _ _ |- _ => H end in
+    rename X0' into X0.
     eapply All2_length in X0 as Hlen.
     cbn.
     rewrite !skipn_all Hlen skipn_all firstn_all. cbn.
@@ -1161,7 +1166,7 @@ Proof.
     now rewrite lookup_constructor_transform_blocks.
     unfold cstr_arity. cbn. rewrite H4; len.
     solve_all. clear -X0. eapply All2_All2_Set. solve_all.
-    apply H.
+    match goal with H : _ |- _ => apply H end.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct l => //.
     destruct lookup_constructor eqn:hl => //.

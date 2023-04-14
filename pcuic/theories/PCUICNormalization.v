@@ -19,7 +19,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
 
 From Equations Require Import Equations.
 
-From MetaCoq Require Import PCUICSN.
+From MetaCoq.PCUIC Require Import PCUICSN.
 
 Lemma wh_normalization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalization:NormalizationIn Σ} {t} : wf Σ -> axiom_free Σ ->
 {A & Σ ;;; [] |- t : A}  -> { v & whnf RedFlags.default Σ [] v * red Σ [] t v}.
@@ -59,7 +59,7 @@ Proof.
   eapply SN_to_WN; eauto.
 Qed.
 
-From MetaCoq Require Import PCUICFirstorder.
+From MetaCoq.PCUIC Require Import PCUICFirstorder.
 
 Lemma firstorder_value_irred {cf:checker_flags} Σ t t' :
   firstorder_value Σ [] t ->

@@ -1,4 +1,4 @@
-From MetaCoq Require Import monad_utils.
+From MetaCoq.Utils Require Import monad_utils.
 
 Inductive result T E :=
 | Ok (t : T)

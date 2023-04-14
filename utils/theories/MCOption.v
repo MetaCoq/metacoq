@@ -1,6 +1,6 @@
 From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
 
-From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
+From MetaCoq.Utils Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -8,7 +8,7 @@ Definition option_get {A} (default : A) (x : option A) : A
      | None => default
      end.
 
-Definition on_some {A} (P : A -> Type) (o : option A) :=
+Polymorphic Definition on_some {A} (P : A -> Type) (o : option A) :=
   match o with
   | Some t => P t
   | None => False
@@ -27,7 +27,7 @@ Proof.
 Qed.
 
 
-Definition on_some_or_none {A} (P : A -> Type) : option A -> Type :=
+Polymorphic Definition on_some_or_none {A} (P : A -> Type) : option A -> Type :=
   fun x => match x with
         | Some x => P x
         | None => True

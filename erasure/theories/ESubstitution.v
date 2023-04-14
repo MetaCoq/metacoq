@@ -38,8 +38,8 @@ Proof.
   eapply weakening_env; eauto.
 Qed.
 
-(* TODO: Figure out whether this lemma (and [Informative]) should use [strictly_extends_decls] or [extends]. -Jason Gross *)
-Lemma Informative_extends:
+(* TODO: Figure out whether this lemma (and [Subsingleton]) should use [strictly_extends_decls] or [extends]. -Jason Gross *)
+Lemma Subsingleton_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.PCUICEnvironment.mutual_inductive_body) (idecl : PCUICAst.PCUICEnvironment.one_inductive_body),
 
@@ -47,7 +47,7 @@ Lemma Informative_extends:
     forall (Σ' : global_env),
       wf Σ' ->
       strictly_extends_decls Σ Σ' ->
-      Informative Σ ind -> Informative (Σ', Σ.2) ind.
+      Subsingleton Σ ind -> Subsingleton (Σ', Σ.2) ind.
 Proof.
   repeat intros ?.
   assert (strictly_extends_decls Σ Σ'0).
@@ -90,7 +90,7 @@ Proof.
     unshelve eapply declared_inductive_to_gen in decli; eauto.
     now rewrite (PCUICAst.declared_inductive_lookup_gen decli).
   - econstructor. all:eauto.
-    eapply Informative_extends; eauto.
+    eapply Subsingleton_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.
     intros n cdecl br br'.
     intros (? & ? & (? & ?) & (? & ?)) (? & ?); split; auto.
@@ -98,7 +98,7 @@ Proof.
     eapply e; tea.
     now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - econstructor. destruct isdecl. 2:eauto.
-    eapply Informative_extends; eauto. exact H.p1.
+    eapply Subsingleton_extends; eauto. exact H.p1.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.
@@ -110,6 +110,13 @@ Proof.
     intros ? ? [[] [? []]].
     split; eauto.
 Qed.
+
+Lemma erases_extends' (Σ:global_env_ext) Γ t T:
+  wf Σ -> Σ ;;; Γ |- t : T ->
+    forall Σ', wf Σ' -> strictly_extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t'.
+Proof.
+  intro; eapply erases_extends; eauto.
+Defined.
 
 (** ** Weakening *)
 
@@ -127,8 +134,6 @@ Proof.
 
   destruct s as [? | [u []]].
   - left. clear - i. generalize (#|Γ''|), (#|Γ'|). induction T; cbn in *; intros; try now inv i.
-    + now eapply IHT2.
-    + now eapply IHT3.
   - right. exists u. split; eauto.
     eapply weakening_typing in t1; eauto.
     now apply All_local_env_app_inv in X1.

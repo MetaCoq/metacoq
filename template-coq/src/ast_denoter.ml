@@ -98,14 +98,14 @@ struct
   let unquote_branch (x : 't Ast0.branch) : ('t, quoted_aname) abranch =
     { abcontext = bcontext x;
       abbody = bbody x }
-      
+
   let unquote_case_info (x : BasicAst.case_info) : (quoted_int, quoted_inductive, quoted_relevance) acase_info =
     { aci_ind = x.ci_ind;
       aci_npar = x.ci_npar;
       aci_relevance = x.ci_relevance }
-  
-  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+
+  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
     match tt with
     | Coq_tRel n -> ACoq_tRel n
@@ -120,7 +120,7 @@ struct
     | Coq_tConst (a,b) -> ACoq_tConst (a,b)
     | Coq_tInd (a,b) -> ACoq_tInd (a,b)
     | Coq_tConstruct (a,b,c) -> ACoq_tConstruct (a,b,c)
-    | Coq_tCase (a,b,c,d) -> 
+    | Coq_tCase (a,b,c,d) ->
       ACoq_tCase (unquote_case_info a,unquote_predicate b,c,List.map unquote_branch d)
     | Coq_tProj (a,b) -> ACoq_tProj (a,b)
     | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
@@ -149,15 +149,15 @@ struct
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 
   let unquote_int (q: quoted_int) : int = Caml_nat.caml_int_of_nat q
-  
-  let unquote_evar env evm n l = 
+
+  let unquote_evar env evm n l =
     let id = Evar.unsafe_of_int (unquote_int n) in
     evm, mkEvar (id, SList.of_full_list l)
 
   let unquote_bool (q : quoted_bool) : bool = q
 
   let unquote_hint_locality (l : quoted_hint_locality) : Hints.hint_locality = l
-  
+
   let unquote_int63 i = i
 
   let unquote_float64 i = i
@@ -196,7 +196,7 @@ struct
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
     | Universes0.Level.Coq_lzero -> Univ.Level.set
-    | Universes0.Level.Level s ->
+    | Universes0.Level.Coq_level s ->
       let s = unquote_string s in
       let comps = CString.split_on_char '.' s in
       let last, dp = CList.sep_last comps in
@@ -204,7 +204,7 @@ struct
       let idx = int_of_string last in
       (* TODO handle universes from workers *)
       Univ.Level.make (Univ.UGlobal.make dp "" idx)
-    | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
+    | Universes0.Level.Coq_lvar n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
     let l = unquote_level (fst trm) in

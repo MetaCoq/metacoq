@@ -36,6 +36,25 @@ Derive Signature for All2.
 Derive NoConfusionHom for All2.
 #[global] Hint Constructors All2 : core.
 
+Inductive All2_dep {A B : Type} {R : A -> B -> Type} (R' : forall a b, R a b -> Type) : forall {xs ys}, All2 R xs ys -> Type :=
+| All2_dep_nil : All2_dep R' All2_nil
+| All2_dep_cons : forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (rs : All2 R l l'),
+    R' x y r -> All2_dep R' rs -> All2_dep R' (All2_cons r rs).
+Arguments All2_dep_nil {_ _ _ _}.
+Arguments All2_dep_cons {_ _ _ _ _ _ _ _ _ _} _ _.
+Derive Signature for All2_dep.
+Derive NoConfusionHom for All2_dep.
+#[global] Hint Constructors All2_dep : core.
+
+Inductive Forall2_dep {A B : Type} {R : A -> B -> Prop} (R' : forall a b, R a b -> Prop) : forall {xs ys}, Forall2 R xs ys -> Prop :=
+| Forall2_dep_nil : Forall2_dep R' (@Forall2_nil _ _ _)
+| Forall2_dep_cons : forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (rs : Forall2 R l l'),
+    R' x y r -> Forall2_dep R' rs -> Forall2_dep R' (@Forall2_cons _ _ _ _ _ _ _ r rs).
+Arguments Forall2_dep_nil {_ _ _ _}.
+Arguments Forall2_dep_cons {_ _ _ _ _ _ _ _ _ _} _ _.
+Derive Signature for Forall2_dep.
+#[global] Hint Constructors Forall2_dep : core.
+
 Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
   : list A -> list B -> Type :=
 | All2i_nil : All2i R n [] []
@@ -57,6 +76,80 @@ Inductive All3 {A B C : Type} (R : A -> B -> C -> Type) : list A -> list B -> li
 Arguments All3_nil {_ _ _ _}.
 Arguments All3_cons {_ _ _ _ _ _ _ _ _ _}.
 Derive Signature NoConfusionHom for All3.
+
+Definition invert_Forall2 {A B R l l'} (a : @Forall2 A B R l l')
+  := match a in Forall2 _ l l'
+           return
+           match l, l' return @Forall2 A B R l l' -> Prop with
+           | [], [] => fun a => Forall2_nil _ = a
+           | [], _ | _, [] => fun _ => False
+           | x :: xs, y :: ys
+             => fun a => sigP (fun v => Forall2_cons _ _ (proj1 v) (proj2 v) = a)
+           end a
+     with
+     | Forall2_nil _ => eq_refl
+     | Forall2_cons _ _ r a => existP _ (conj r a) eq_refl
+     end.
+Import EqNotations.
+Definition invert_Forall2_dep {A B R R' l l' a} (a' : @Forall2_dep A B R R' l l' a)
+  := match a' in @Forall2_dep _ _ _ _ l l' a
+           return
+           match l, l' return forall a, @Forall2_dep A B R R' l l' a -> Prop with
+           | [], [] => fun a a' => (rew [Forall2_dep _] invert_Forall2 a in Forall2_dep_nil) = a'
+           | [], _ | _, [] => fun _ _ => False
+           | x :: xs, y :: ys
+             => fun a a' => sigP (fun v => (rew projP2 (invert_Forall2 a) in Forall2_dep_cons (proj1 v) (proj2 v)) = a')
+           end a a'
+     with
+     | Forall2_dep_nil => eq_refl
+     | Forall2_dep_cons r a => existP _ (conj r a) eq_refl
+     end.
+
+Definition Forall2_rect A B R (P : forall x y, Forall2 R x y -> Type)
+  (Hn : P [] [] (@Forall2_nil _ _ _))
+  (Hc : forall x y l l' r (a : Forall2 R l l'),
+      P l l' a -> P (x :: l) (y :: l') (Forall2_cons _ _ r a))
+  : forall l l' (a : @Forall2 A B R l l'), P l l' a.
+Proof.
+  fix F 1.
+  destruct l as [|x xs], l' as [|y ys]; intro H;
+    first [ specialize (F xs ys) | clear F ].
+  all: generalize (invert_Forall2 H); cbn; try solve [ destruct 1 ].
+  { intro; subst; exact Hn. }
+  { intro H'.
+    specialize (Hc x y xs ys (proj1 (projP1 H')) (proj2 (projP1 H')) (F _)).
+    destruct (projP2 H').
+    exact Hc. }
+Defined.
+
+Definition Forall2_rec A B R (P : forall x y, Forall2 R x y -> Set)
+  (Hn : P [] [] (@Forall2_nil _ _ _))
+  (Hc : forall x y l l' r (a : Forall2 R l l'),
+      P l l' a -> P (x :: l) (y :: l') (Forall2_cons _ _ r a))
+  : forall l l' (a : @Forall2 A B R l l'), P l l' a
+  := @Forall2_rect A B R P Hn Hc.
+
+Definition Forall2_dep_rect A B R R' (P : forall x y a, @Forall2_dep A B R R' x y a -> Type)
+  (Hn : P [] [] (@Forall2_nil _ _ _) Forall2_dep_nil)
+  (Hc : forall x y l l' r rs r' (a : Forall2_dep R' rs),
+      P l l' rs a -> P (x :: l) (y :: l') (Forall2_cons _ _ r rs) (Forall2_dep_cons r' a))
+  : forall l l' a (a' : @Forall2_dep A B R R' l l' a), P l l' a a'.
+Proof.
+  intros l l' a a'.
+  induction a; generalize (invert_Forall2_dep a'); cbn.
+  { intro; subst; exact Hn. }
+  { intro H'.
+    specialize (Hc _ _ _ _ _ _ (proj1 (projP1 H')) (proj2 (projP1 H')) (IHa _)).
+    destruct (projP2 H').
+    exact Hc. }
+Defined.
+
+Definition Forall2_dep_rec A B R R' (P : forall x y a, @Forall2_dep A B R R' x y a -> Set)
+  (Hn : P [] [] (@Forall2_nil _ _ _) Forall2_dep_nil)
+  (Hc : forall x y l l' r rs r' (a : Forall2_dep R' rs),
+      P l l' rs a -> P (x :: l) (y :: l') (Forall2_cons _ _ r rs) (Forall2_dep_cons r' a))
+  : forall l l' a (a' : @Forall2_dep A B R R' l l' a), P l l' a a'
+  := @Forall2_dep_rect A B R R' P Hn Hc.
 
 Section alli.
   Context {A} (p : nat -> A -> bool).
@@ -355,7 +448,7 @@ Lemma All2_map_equiv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l
   All2 (fun x y => R (f x) (g y)) l l' <~> All2 R (map f l) (map g l').
 Proof.
   split.
-  - induction 1; simpl; constructor; try congruence.
+  - induction 1; simpl; constructor; try congruence; try assumption.
   - induction l in l' |- *; destruct l'; intros H; depelim H; constructor; auto.
 Qed.
 
@@ -598,6 +691,14 @@ Proof.
   intros HF H. induction HF; constructor; eauto.
 Qed.
 
+Lemma All2_dep_impl {A B} {P : A -> B -> Type} {P' Q' : forall a b, P a b -> Type} {l l'} {a : All2 P l l'} :
+    All2_dep P' a ->
+    (forall x y r, P' x y r -> Q' x y r) ->
+    All2_dep Q' a.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 Lemma All_refl {A} (P : A -> Type) l : (forall x, P x) -> All P l.
 Proof.
   intros Hp; induction l; constructor; auto.
@@ -833,11 +934,11 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2_mapP {A B} {P} {l l' : list A} (f : A -> B) :
   OnOne2 (on_rel P f) l l' -> OnOne2 P (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2_map {A B} {P : B -> B -> Type} {l l' : list A} (f : A -> B) :
   OnOne2 (on_Trel P f) l l' -> OnOne2 P (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2_sym {A} (P : A -> A -> Type) l l' : OnOne2 (fun x y => P y x) l' l -> OnOne2 P l l'.
 Proof.
@@ -1048,11 +1149,11 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2i_mapP {A B} {P} {i} {l l' : list A} (f : A -> B) :
   OnOne2i (fun i => on_rel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2i_map {A B} {P : nat -> B -> B -> Type} {i} {l l' : list A} (f : A -> B) :
   OnOne2i (fun i => on_Trel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma OnOne2i_sym {A} (P : nat -> A -> A -> Type) i l l' : OnOne2i (fun i x y => P i y x) i l' l -> OnOne2i P i l l'.
 Proof.
@@ -1234,15 +1335,15 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2All_mapP {A B I} {P} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_rel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map {A I B} {P : I -> B -> B -> Type} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_Trel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : I -> I') (f : A -> B) :
   OnOne2All (fun i => on_Trel (P (g i)) f) i l l' -> OnOne2All P (map g i) (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite !map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite !map_length. Qed.
 
 
 Lemma OnOne2All_sym {A B} (P : B -> A -> A -> Type) i l l' : OnOne2All (fun i x y => P i y x) i l' l -> OnOne2All P i l l'.
@@ -1444,6 +1545,40 @@ Definition All2_map_left_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
 Definition All2_map_right_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
   All2 P l (map f l') -> All2 (fun x y => P x (f y)) l l' := (snd All2_map_right_equiv).
 
+Lemma All2_undep {A B R R' l l' a}
+  : @All2 A B R' l l' <~> @All2_dep A B R (fun x y _ => R' x y) l l' a.
+Proof.
+  split; [ induction a; inversion 1 | induction 1 ]; constructor; subst; eauto.
+Qed.
+
+Lemma Forall2_undep {A B R R' l l' a}
+  : @Forall2 A B R' l l' <-> @Forall2_dep A B R (fun x y _ => R' x y) l l' a.
+Proof.
+  split; [ induction a using Forall2_rect; inversion 1 | induction 1 ]; constructor; subst; eauto.
+Qed.
+
+Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' :
+  All2 P l l' ->
+  All2 Q l l' ->
+  All2 (fun x y => P x y × Q x y) l l'.
+Proof.
+  induction 1; intros H; depelim H; constructor; auto.
+Qed.
+
+Lemma All2_mix {A} {P Q : A -> A -> Type} {l l'} :
+  All2 P l l' -> All2 Q l l' -> All2 (fun x y => (P x y * Q x y))%type l l'.
+Proof.
+  induction 1; intros HQ; inv HQ; constructor; eauto.
+Qed.
+
+Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
+  All2 (fun x y => (P x y * Q x y))%type l l' ->
+  (All2 P l l' * All2 Q l l').
+Proof.
+  induction 1; split; constructor; intuition eauto.
+Qed.
+
+
 Ltac toAll :=
   match goal with
   | H : is_true (forallb _ _) |- _ => apply forallb_All in H
@@ -1462,8 +1597,19 @@ Ltac toAll :=
 
   | |- is_true (forallb2 _ _ _) => apply All2_forallb2
 
+  | [ H : All2_dep (fun x y _ => @?R' x y) ?a |- _ ] => apply (@All2_undep _ _ _ R' _ _ a) in H
+
+  | [ |- All2_dep (fun x y _ => @?R' x y) ?a ] => apply (@All2_undep _ _ _ R' _ _ a)
+
+  | [ H : Forall2_dep (fun x y _ => @?R' x y) ?a |- _ ] => apply (@Forall2_undep _ _ _ R' _ _ a) in H
+
+  | [ |- Forall2_dep (fun x y _ => @?R' x y) ?a ] => apply (@Forall2_undep _ _ _ R' _ _ a)
+
   | H : All _ ?x, H' : All _ ?x |- _ =>
     apply (All_mix H) in H'; clear H
+
+  | H : All2 _ ?x ?y, H' : All2 _ ?x ?y |- _ =>
+    apply (All2_mix H) in H'; clear H
 
   | H : Alli _ _ ?x, H' : Alli _ _ ?x |- _ =>
     apply (Alli_mix H) in H'; clear H
@@ -1885,14 +2031,6 @@ Lemma All2_nth_error_None {A B} {P : A -> B -> Type} {l l'} n :
 Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence. auto.
-Qed.
-
-Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' :
-  All2 P l l' ->
-  All2 Q l l' ->
-  All2 (fun x y => P x y × Q x y) l l'.
-Proof.
-  induction 1; intros H; depelim H; constructor; auto.
 Qed.
 
 Lemma All2_app_inv_l : forall (A B : Type) (R : A -> B -> Type),
@@ -2369,6 +2507,92 @@ Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence.
   eauto.
+Defined.
+
+Lemma All2_dep_from_nth_error A B L1 L2 (P : A -> B -> Type) (P' : forall a b, P a b -> Type) (H : All2 P L1 L2) :
+  (forall n x1 x2 (_ : n < #|L1|)
+          (H1 : nth_error L1 n = Some x1)
+          (H2 : nth_error L2 n = Some x2),
+      P' x1 x2 (All2_nth_error n x1 x2 H H1 H2)) ->
+  All2_dep P' H.
+Proof.
+  induction H; cbn; intro H'; constructor.
+  { specialize (H' 0 _ _ ltac:(lia) eq_refl eq_refl); cbn in H'.
+    exact H'. }
+  { apply IHAll2; intros n x1 x2 Hn H1 H2.
+    specialize (H' (S n) _ _ ltac:(lia) H1 H2); cbn in H'.
+    exact H'. }
+Qed.
+
+Lemma All2_dep_nth_error {A B} {P : A -> B -> Type} {P' : forall a b, P a b -> Type} {l l'} n t t' {H : All2 P l l'}
+  (H' : All2_dep P' H)
+  (H1 : nth_error l n = Some t)
+  (H2 : nth_error l' n = Some t') :
+  P' t t' (All2_nth_error n t t' H H1 H2).
+Proof.
+  revert dependent n; induction H'; destruct n; cbn; try congruence.
+  { intros H1 H2.
+    set (k := f_equal _ H1); clearbody k; cbn in k; clear H1; subst.
+    set (k := f_equal _ H2); clearbody k; cbn in k; clear H2; subst.
+    cbn.
+    assumption. }
+  { exact (IHH' _). }
+Qed.
+
+Lemma Forall2_from_nth_error A B L1 L2 (P : A -> B -> Prop) :
+  #|L1| = #|L2| ->
+                (forall n x1 x2, n < #|L1| -> nth_error L1 n = Some x1
+                                      -> nth_error L2 n = Some x2
+                                      -> P x1 x2) ->
+                Forall2 P L1 L2.
+Proof.
+  revert L2; induction L1; cbn; intros.
+  - destruct L2; inv H. econstructor.
+  - destruct L2; inversion H. econstructor.
+    eapply (H0 0); cbn; eauto. lia.
+    eapply IHL1. eauto.
+    intros. eapply (H0 (S n)); cbn; eauto. lia.
+Qed.
+
+Lemma Forall2_nth_error {A B} {P : A -> B -> Prop} {l l'} n t t' :
+  Forall2 P l l' ->
+  nth_error l n = Some t ->
+  nth_error l' n = Some t' ->
+  P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence.
+  eauto.
+Defined.
+
+Lemma Forall2_dep_from_nth_error A B L1 L2 (P : A -> B -> Prop) (P' : forall a b, P a b -> Prop) (H : Forall2 P L1 L2) :
+  (forall n x1 x2 (_ : n < #|L1|)
+          (H1 : nth_error L1 n = Some x1)
+          (H2 : nth_error L2 n = Some x2),
+      P' x1 x2 (Forall2_nth_error n x1 x2 H H1 H2)) ->
+  Forall2_dep P' H.
+Proof.
+  induction H using Forall2_rect; cbn; intro H'; constructor.
+  { specialize (H' 0 _ _ ltac:(lia) eq_refl eq_refl); cbn in H'.
+    exact H'. }
+  { apply IHForall2; intros n x1 x2 Hn H1 H2.
+    specialize (H' (S n) _ _ ltac:(lia) H1 H2); cbn in H'.
+    exact H'. }
+Qed.
+
+Lemma Forall2_dep_nth_error {A B} {P : A -> B -> Prop} {P' : forall a b, P a b -> Prop} {l l'} n t t' {H : Forall2 P l l'}
+  (H' : Forall2_dep P' H)
+  (H1 : nth_error l n = Some t)
+  (H2 : nth_error l' n = Some t') :
+  P' t t' (Forall2_nth_error n t t' H H1 H2).
+Proof.
+  revert dependent n; induction H'; destruct n; cbn; try congruence.
+  { intros H1 H2.
+    set (k := f_equal _ H1); clearbody k; cbn in k; clear H1; subst.
+    set (k := f_equal _ H2); clearbody k; cbn in k; clear H2; subst.
+    cbn.
+    assumption. }
+  { exact (IHH' _). }
 Qed.
 
 From MetaCoq.Utils Require Import MCSquash.
@@ -2486,19 +2710,6 @@ Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists x. intuition auto.
   eauto.
-Qed.
-
-Lemma All2_mix {A} {P Q : A -> A -> Type} {l l'} :
-  All2 P l l' -> All2 Q l l' -> All2 (fun x y => (P x y * Q x y))%type l l'.
-Proof.
-  induction 1; intros HQ; inv HQ; constructor; eauto.
-Qed.
-
-Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
-  All2 (fun x y => (P x y * Q x y))%type l l' ->
-  (All2 P l l' * All2 Q l l').
-Proof.
-  induction 1; split; constructor; intuition eauto.
 Qed.
 
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}
@@ -2894,11 +3105,11 @@ Qed.
 
 Lemma All2i_map {A B C D} (R : nat -> C -> D -> Type) (f : A -> C) (g : B -> D) n l l' :
   All2i (fun i x y => R i (f x) (g y)) n l l' -> All2i R n (map f l) (map g l').
-Proof. induction 1; simpl; constructor; try congruence. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma All2i_map_right {B C D} (R : nat -> C -> D -> Type) (g : B -> D) n l l' :
   All2i (fun i x y => R i x (g y)) n l l' -> All2i R n l (map g l').
-Proof. induction 1; simpl; constructor; try congruence. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. Qed.
 
 Lemma All2i_nth_impl_gen {A B} (R : nat -> A -> B -> Type) n l l' :
   All2i R n l l' ->

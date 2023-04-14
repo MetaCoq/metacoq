@@ -21,6 +21,7 @@ Makefile.coq.conf
 .merlin
 html/*.html
 .lia.cache
+*/.nia.cache
 .hidden
 _opam/
 .vscode/settings.json
@@ -362,6 +363,7 @@ test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
 pcuic/src/META.coq-metacoq-pcuic
 examples/_CoqProject
 test-suite/_CoqProject
+quotation/metacoq-config
 examples/metacoq-config
 test-suite/metacoq-config
 test-suite/plugin-demo/_CoqProject
@@ -377,6 +379,11 @@ template-pcuic/Makefile.local
 template-pcuic/_CoqProject
 template-pcuic/Makefile.templatepcuic
 template-pcuic/Makefile.templatepcuic.conf
+
+quotation/Makefile.local
+quotation/_CoqProject
+quotation/Makefile.quotation
+quotation/Makefile.quotation.conf
 
 safechecker-plugin/metacoq-config
 safechecker-plugin/demo.v

@@ -6,6 +6,7 @@ Coercion is_true : bool >-> Sortclass.
 Import ListNotations.
 
 Set Universe Polymorphism.
+Set Polymorphic Inductive Cumulativity.
 
 Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 { ret : forall {t : Type@{d}}, t -> m t
@@ -52,6 +53,11 @@ Import MCMonadNotation.
        end
   |}.
 
+#[global] Instance id_monad : Monad (fun x => x) :=
+  {| ret A a := a ;
+     bind A B m f := f m
+  |}.
+
 #[global] Instance option_monad_exc : MonadExc unit option :=
 {| raise T _ := None ;
     catch T m f :=
@@ -64,9 +70,9 @@ Import MCMonadNotation.
 Open Scope monad.
 
 Section MapOpt.
-  Context {A} (f : A -> option A).
+  Context {A} {B} (f : A -> option B).
 
-  Fixpoint mapopt (l : list A) : option (list A) :=
+  Fixpoint mapopt (l : list A) : option (list B) :=
     match l with
     | nil => ret nil
     | x :: xs => x' <- f x ;;

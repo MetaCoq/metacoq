@@ -102,11 +102,11 @@ Section CheckerFlags.
     intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
     destruct l as [|s|n']; simpl; auto.
     - apply global_ext_levels_InSet.
-    - specialize (Hl (Level.Level s, n) inl).
+    - specialize (Hl (Level.level s, n) inl).
       simpl in Hl.
       apply monomorphic_level_in_global_ext in Hl.
       eapply LS.union_spec. now right.
-    - specialize (Hl (Level.Var n', n) inl).
+    - specialize (Hl (Level.lvar n', n) inl).
       eapply LS.union_spec in Hl as [Hl|Hl].
       + red in Hu.
         unfold levels_of_udecl in Hl.
@@ -183,8 +183,8 @@ Section CheckerFlags.
   Qed.
 
   Lemma In_Level_global_ext_poly s Σ cst :
-    LS.In (Level.Level s) (global_ext_levels (Σ, Polymorphic_ctx cst)) ->
-    LS.In (Level.Level s) (global_levels Σ).
+    LS.In (Level.level s) (global_ext_levels (Σ, Polymorphic_ctx cst)) ->
+    LS.In (Level.level s) (global_levels Σ).
   Proof using Type.
     intros [hin|hin]%LS.union_spec.
     simpl in hin.
@@ -653,7 +653,7 @@ Qed.
       now simpl; eapply IHΔ.
   Qed.
 
-  Lemma In_unfold_var x n : In x (unfold n Level.Var) <-> exists k, k < n /\ (x = Level.Var k).
+  Lemma In_unfold_var x n : In x (unfold n Level.lvar) <-> exists k, k < n /\ (x = Level.lvar k).
   Proof using Type.
     split.
     - induction n => /= //.

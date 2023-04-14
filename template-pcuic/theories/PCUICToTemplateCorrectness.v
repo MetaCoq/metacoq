@@ -1210,7 +1210,7 @@ Qed.
 Lemma OnOne2All_map2_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : B -> I -> I') (f : A -> B) :
   OnOne2All (fun i x y => P (g (f x) i) (f x) (f y)) i l l' -> OnOne2All P (map2 g (map f l) i) (map f l) (map f l').
 Proof.
-  induction 1; simpl; constructor; try congruence. len.
+  induction 1; simpl; constructor; try congruence; try assumption. len.
   now rewrite map2_length !map_length.
 Qed.
 

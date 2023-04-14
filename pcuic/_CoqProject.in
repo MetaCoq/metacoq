@@ -2,6 +2,8 @@
 
 theories/PCUICAst.v
 
+theories/PCUICMonadAst.v
+
 theories/utils/PCUICOnOne.v
 theories/utils/PCUICPrimitive.v
 theories/utils/PCUICAstUtils.v

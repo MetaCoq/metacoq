@@ -19,10 +19,10 @@ Module template.
    *)
 End template.
 
-From MetaCoq.SafeCheckerPlugin Require Loader.
+From MetaCoq.TemplatePCUIC Require Loader.
 
 Module pcuic.
-  Import SafeCheckerPlugin.Loader.
+  Import TemplatePCUIC.Loader.
   Time Definition zero : nat := 0. (* 0. secs (0.u,0.s) *)
   Time Definition qzero : PCUIC.PCUICAst.term := <% zero %>. (* 0.001 secs (0.001u,0.s) *)
   Time Definition qzero_rec : PCUICProgram.pcuic_program := <# zero #>. (* 0.008 secs (0.008u,0.s) *)

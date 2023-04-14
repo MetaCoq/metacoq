@@ -27,6 +27,7 @@ ByteCompareSpec
 String0
 HexadecimalString
 Orders
+OrdersAlt
 OrdersTac
 OrdersFacts
 OrdersLists
@@ -53,6 +54,7 @@ Logic1
 Logic2
 Number
 Relation
+EqdepFacts
 MCPrelude
 MCReflect
 ReflectEq
@@ -77,6 +79,8 @@ MCString
 MCUtils
 Signature
 All_Forall
+MCFSets
+MCMSets
 Config0
 Kernames
 Primitive
@@ -110,4 +114,3 @@ TemplateEnvMap
 TermEquality
 Typing0
 TemplateProgram
-

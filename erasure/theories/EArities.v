@@ -36,7 +36,7 @@ Qed.
 Lemma isType_isErasable Σ Γ T : isType Σ Γ T -> isErasable Σ Γ T.
 Proof.
   intros [s Hs].
-  exists (tSort s). intuition auto. left; simpl; auto.
+  exists (tSort s). intuition auto.
 Qed.
 
 Lemma isType_red:
@@ -106,7 +106,7 @@ Lemma isArity_mkApps t L : isArity (mkApps t L) -> isArity t /\ L = [].
 Proof.
   revert t; induction L; cbn; intros.
   - eauto.
-  - eapply IHL in H. cbn in H. tauto.
+  - eapply IHL in H. cbn in H. intuition.
 Qed.
 
 Lemma typing_spine_red (Σ : global_env_ext) Γ (args args' : list PCUICAst.term)
@@ -142,7 +142,7 @@ Lemma it_mkProd_red_Arity {Σ : global_env_ext} {Γ c0 i u l} {wfΣ : wf Σ} :
   ~ Is_conv_to_Arity Σ Γ (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
 Proof.
   intros (? & [] & ?). eapply red_it_mkProd_or_LetIn_mkApps_Ind in X as (? & ? & ?). subst.
-  eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [[] ].
+  eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [? ?]. cbn in *. congruence.
 Qed.
 
 Lemma invert_it_Ind_eq_prod:
@@ -988,11 +988,11 @@ Proof.
     exists c, u, args0. etransitivity; eauto.
 Qed.
 
-Lemma Informative_cofix v ci p brs T (Σ : global_env_ext) :
+Lemma Subsingleton_cofix v ci p brs T (Σ : global_env_ext) :
    wf_ext Σ ->
    forall (mdecl : mutual_inductive_body) (idecl : one_inductive_body) mfix idx,
    declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
-   forall (args : list term), Informative Σ ci.(ci_ind) ->
+   forall (args : list term), Subsingleton Σ ci.(ci_ind) ->
    Σ ;;; [] |- tCase ci p (mkApps (tCoFix mfix idx) args) brs : T ->
    Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ▷ v ->
    Is_proof Σ [] (mkApps (tCoFix mfix idx) args) ->

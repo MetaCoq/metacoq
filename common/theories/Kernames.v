@@ -1,7 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Lia MSetList OrderedTypeAlt OrderedTypeEx FMapAVL FMapFacts MSetAVL MSetFacts MSetProperties.
-From MetaCoq.Utils Require Import utils.
+From MetaCoq.Utils Require Import utils MCMSets MCFSets.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -46,8 +46,36 @@ Definition qualid  := string. (* e.g. Datatypes.nat *)
 Definition dirpath := list ident.
 
 Module IdentOT := StringOT.
+Module IdentOTOrig := OrdersAlt.Backport_OT IdentOT.
+
+Module IdentSet := MSetAVL.Make IdentOT.
+Module IdentSetFact := MSetFacts.WFactsOn IdentOT IdentSet.
+Module IdentSetOrdProp := MSetProperties.OrdProperties IdentSet.
+Module IdentSetProp := IdentSetOrdProp.P.
+Module IdentSetDecide := IdentSetProp.Dec.
+Module IdentSetExtraOrdProp := MSets.ExtraOrdProperties IdentSet IdentSetOrdProp.
+Module IdentSetExtraDecide := MSetAVL.Decide IdentOT IdentSet.
+
+Module IdentMap := FMapAVL.Make IdentOTOrig.
+Module IdentMapFact := FMapFacts.WProperties IdentMap.
+Module IdentMapExtraFact := FSets.WFactsExtra_fun IdentOTOrig IdentMap IdentMapFact.F.
+Module IdentMapDecide := FMapAVL.Decide IdentOTOrig IdentMap.
 
 Module DirPathOT := ListOrderedType IdentOT.
+Module DirPathOTOrig := OrdersAlt.Backport_OT DirPathOT.
+
+Module DirPathSet := MSetAVL.Make DirPathOT.
+Module DirPathSetFact := MSetFacts.WFactsOn DirPathOT DirPathSet.
+Module DirPathSetOrdProp := MSetProperties.OrdProperties DirPathSet.
+Module DirPathSetProp := DirPathSetOrdProp.P.
+Module DirPathSetDecide := DirPathSetProp.Dec.
+Module DirPathSetExtraOrdProp := MSets.ExtraOrdProperties DirPathSet DirPathSetOrdProp.
+Module DirPathSetExtraDecide := MSetAVL.Decide DirPathOT DirPathSet.
+
+Module DirPathMap := FMapAVL.Make DirPathOTOrig.
+Module DirPathMapFact := FMapFacts.WProperties DirPathMap.
+Module DirPathMapExtraFact := FSets.WFactsExtra_fun DirPathOTOrig DirPathMap DirPathMapFact.F.
+Module DirPathMapDecide := FMapAVL.Decide DirPathOTOrig DirPathMap.
 
 #[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
@@ -186,6 +214,20 @@ Module ModPathComp.
 End ModPathComp.
 
 Module ModPathOT := OrderedType_from_Alt ModPathComp.
+Module ModPathOTNew := OrdersAlt.Update_OT ModPathOT.
+
+Module ModPathSet := MSetAVL.Make ModPathOTNew.
+Module ModPathSetFact := MSetFacts.WFactsOn ModPathOTNew ModPathSet.
+Module ModPathSetOrdProp := MSetProperties.OrdProperties ModPathSet.
+Module ModPathSetProp := ModPathSetOrdProp.P.
+Module ModPathSetDecide := ModPathSetProp.Dec.
+Module ModPathSetExtraOrdProp := MSets.ExtraOrdProperties ModPathSet ModPathSetOrdProp.
+Module ModPathSetExtraDecide := MSetAVL.Decide ModPathOTNew ModPathSet.
+
+Module ModPathMap := FMapAVL.Make ModPathOT.
+Module ModPathMapFact := FMapFacts.WProperties ModPathMap.
+Module ModPathMapExtraFact := FSets.WFactsExtra_fun ModPathOT ModPathMap ModPathMapFact.F.
+Module ModPathMapDecide := FMapAVL.Decide ModPathOT ModPathMap.
 
 Program Definition modpath_eq_dec (x y : modpath) : { x = y } + { x <> y } :=
   match ModPathComp.compare x y with
@@ -197,7 +239,7 @@ Next Obligation.
   now eapply ModPathComp.compare_eq in Heq_anonymous.
 Qed.
 Next Obligation.
-  match goal with [ H : _ <> _ |- _ ] => rewrite ModPathOT.eq_refl in H end. congruence.
+  match goal with [ H : _ <> _ |- _ ] => pose proof ModPathOT.eq_refl end. congruence.
 Qed.
 
 #[global] Instance modpath_EqDec : Classes.EqDec modpath := { eq_dec := modpath_eq_dec }.
@@ -296,6 +338,8 @@ End Kername.
 
 Module KernameMap := FMapAVL.Make Kername.OT.
 Module KernameMapFact := FMapFacts.WProperties KernameMap.
+Module KernameMapExtraFact := FSets.WFactsExtra_fun Kername.OT KernameMap KernameMapFact.F.
+Module KernameMapDecide := FMapAVL.Decide Kername.OT KernameMap.
 
 Notation eq_kername := (eqb (A:=kername)) (only parsing).
 
@@ -313,6 +357,9 @@ Module KernameSet := MSetAVL.Make Kername.
 Module KernameSetFact := MSetFacts.WFactsOn Kername KernameSet.
 Module KernameSetOrdProp := MSetProperties.OrdProperties KernameSet.
 Module KernameSetProp := KernameSetOrdProp.P.
+Module KernameSetDecide := KernameSetProp.Dec.
+Module KernameSetExtraOrdProp := MSets.ExtraOrdProperties KernameSet KernameSetOrdProp.
+Module KernameSetExtraDecide := MSetAVL.Decide Kername KernameSet.
 
 Lemma knset_in_fold_left {A} kn f (l : list A) acc :
   KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->

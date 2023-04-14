@@ -846,7 +846,7 @@ Section Inversions.
       (exists u, ∥ Σ ;;; Γ ⊢ T ⇝ (tSort u) ∥).
   Proof using wfΣ.
     intros Γ T.
-    induction T in Γ |- *. all: try contradiction.
+    induction T in Γ |- *. all: cbn [isArity]; try contradiction; try congruence.
     - right. eexists. constructor. pcuic.
     - left. eexists _,_,_. constructor. pcuic.
     - intros clΓ clt a. simpl in a. eapply IHT3 in a as [[na' [A [B [r]]]] | [u [r]]].
@@ -886,7 +886,7 @@ Section Inversions.
   Proof using wfΣ.
     intros Γ T [T' [r a]].
     induction T'.
-    all: try contradiction.
+    all: try (cbn [isArity] in *; congruence).
     - right. eexists. eassumption.
     - left. eexists _, _, _. eassumption.
     - destruct r as [r1].
@@ -919,7 +919,7 @@ Section Inversions.
       Is_conv_to_Arity Σ Γ v.
   Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
-    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
+    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try (cbn [isArity] in *; congruence).
     all: dependent destruction e.
     - eexists. split.
       + constructor. eapply closed_red_refl => //.
@@ -954,7 +954,7 @@ Section Inversions.
     Is_conv_to_Arity Σ Γ v.
   Proof using Type.
     intros Re Rle Γ u v a clΓ clu clv e.
-    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try contradiction.
+    induction u in Γ, clΓ, clv, clu, a, v, Rle, e |- *. all: try (cbn [isArity] in *; congruence).
     all: dependent destruction e.
     - eexists. split.
       + constructor. eapply closed_red_refl => //.
@@ -986,7 +986,7 @@ Section Inversions.
       isArity (u { k := v }).
   Proof using Type.
     intros u v k h.
-    induction u in v, k, h |- *. all: try contradiction.
+    induction u in v, k, h |- *. all: try (cbn [isArity] in *; congruence).
     - simpl. constructor.
     - simpl in *. eapply IHu2. assumption.
     - simpl in *. eapply IHu3. assumption.
@@ -999,7 +999,7 @@ Section Inversions.
       isArity v.
   Proof using Type.
     intros Γ u v h a.
-    induction u in Γ, v, h, a |- *. all: try contradiction.
+    induction u in Γ, v, h, a |- *. all: try (cbn [isArity] in *; congruence).
     - dependent destruction h.
       apply (f_equal nApp) in H as eq. simpl in eq.
       rewrite nApp_mkApps in eq. simpl in eq.
@@ -3685,19 +3685,18 @@ Proof.
   destruct Γ as [Γ HΓ], M as [M HM], N as [N HN] ; cbn in *.
   unfold cumulSpec in *.
   intros e.
-  revert pb Γ M N e HΓ HM HN.
-  apply: (cumulSpec0_ind_all Σ).
+  revert e HΓ HM HN.
+  elim; clear pb Γ M N.
   1-9: intros; subst; econstructor 2; eauto; try solve [econstructor; eauto];
     match goal with |- _ ;;; _  ⊢ ?t ≤[_] _ =>
       eapply (ws_cumul_pb_refl' (exist Γ _) (exist t _)) end.
-  all: intro pb.
+  all: intros Γ pb; revert Γ.
   - intros; etransitivity; eauto.
   - intros. apply ws_cumul_pb_eq_le_gen. apply symmetry.
-    now apply X0.
+    eauto.
   - intros Γ t; intros. unshelve eapply (ws_cumul_pb_refl' (exist Γ _) (exist t _)); eauto.
-  - intros Γ ev args args' Hargsargs' HΓ Hargs Hargs'. cbn in *. eapply ws_cumul_pb_Evar; eauto.
-    apply forallb_All in Hargs, Hargs'. apply (All2_All_mix_left Hargs) in Hargsargs'. clear Hargs.
-    apply (All2_All_mix_right Hargs') in Hargsargs'. clear Hargs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
+  - intros Γ ev args args' Hargsargs' Hargsargs'_dep HΓ Hargs Hargs'. cbn in *. eapply ws_cumul_pb_Evar; eauto.
+    repeat toAll. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
     eapply Heqxy; eauto.
   - intros Γ t t' u u' Htt' Heqtt' Huu' Hequu' HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Hu]; destruct HN as [Ht' Hu'].
     eapply ws_cumul_pb_App; eauto.
@@ -3720,7 +3719,7 @@ Proof.
       rewrite /on_free_vars_decl /test_decl. apply andb_and. split; eauto.
     * rewrite shiftnP_S; eauto.
     * rewrite shiftnP_S; eauto.
-  - intros Γ indn p p' c c' brs brs' Hpp' _ Hcc' Hbrsbrs' HΓ H H'.
+  - intros Γ indn p p' c c' brs brs' Hpp' Hpp'_dep _ Hcc' Hbrsbrs' Hbrsbrs'_dep HΓ H H'.
     cbn in *. apply andb_andI in H; apply andb_andI in H'; destruct H as [Hp H]; destruct H' as [Hp' H'].
     apply andb_andI in H; apply andb_andI in H'; destruct H as [Hreturn H]; destruct H' as [Hreturn' H'].
     apply andb_andI in H; apply andb_andI in H'; destruct H as [Hcontext H]; destruct H' as [Hcontext' H'].
@@ -3729,13 +3728,12 @@ Proof.
     * rewrite is_open_case_split. repeat (apply andb_and; split); eauto.
     * rewrite is_open_case_split. repeat (apply andb_and; split); eauto.
     * unfold cumul_predicate in Hpp'. unfold ws_cumul_pb_predicate. destruct Hpp' as [Hpp' [Hinst [Hpcon Hpret]]].
+      unfold cumul_predicate_dep in *; destruct_head'_prod.
       split; eauto.
-      + clear - Hp Hp' Hpp' HΓ. apply forallb_All in Hp, Hp'.
-        apply (All2_All_mix_left Hp) in Hpp'. clear Hp.
-        apply (All2_All_mix_right Hp') in Hpp'. clear Hp'.
-        eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
-        eapply Heqxy.2; eauto.
-      + eapply Hpret; eauto.
+      + repeat toAll. cbv beta in *.
+        eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
+        eauto.
+      + exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
         ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
            unfold inst_case_predicate_context. apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto.
         ++ rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn.
@@ -3743,53 +3741,47 @@ Proof.
         ++ rewrite shiftnP_add in Hreturn'. rewrite <- (All2_fold_length Hpcon) in Hreturn'.
            rewrite <- inst_case_predicate_context_length in Hreturn'.
            rewrite <- app_length in Hreturn'. eassumption.
-    * unfold ws_cumul_pb_brs. clear - Hp Hp' Hbrs Hbrs' HΓ Hbrsbrs'.
-      apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.
-      apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
-      split; try apply Heqxy.1. clear Hbrsbrs'. rewrite test_context_k_closed_on_free_vars_ctx in Hx. toProp Hx.
-      rewrite test_context_k_closed_on_free_vars_ctx in Hy. toProp Hy. eapply Heqxy.2; eauto.
-      + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; intuition.
-      + rewrite shiftnP_add in Hx. erewrite <- inst_case_branch_context_length in Hx.
-        rewrite <- app_length in Hx. intuition.
-      + rewrite shiftnP_add in Hy. rewrite <- (All2_fold_length Heqxy.1.1) in Hy. erewrite <- inst_case_branch_context_length in Hy.
-        rewrite <- app_length in Hy. intuition.
+    * unfold ws_cumul_pb_brs.
+      repeat toAll. eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
+      split; eauto. rewrite -> test_context_k_closed_on_free_vars_ctx in *.
+      repeat match goal with H : _ |- _ => progress toProp H end; destruct_head'_and.
+      exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
+      + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; repeat toAll; eauto.
+      + let H := multimatch goal with H : _ |- _ => H end in
+        erewrite -> shiftnP_add, <- inst_case_branch_context_length, <- app_length in H; exact H.
+      + rewrite -> shiftnP_add in *. rewrite <- (All2_fold_length ltac:(eassumption)) in *. erewrite <- inst_case_branch_context_length in *.
+        rewrite <- app_length in *. tea.
   - intros; eapply ws_cumul_pb_Proj_c; eauto.
-  - intros Γ mfix mfix' idx Hmfixmfix' HΓ H H'. cbn in *.
-    eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_Fix; eauto. apply forallb_All in H, H'.
-    apply (All2_All_mix_left H) in Hmfixmfix'.
-    apply (All2_All_mix_right H') in Hmfixmfix'.
-    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
-    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
-    repeat split; eauto. eapply rbody; eauto.
-    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
-    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
-      rewrite <- app_length in Hdbodyx. intuition.
-    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
-      rewrite <- app_length in Hdbodyy. intuition.
-  - intros Γ mfix mfix' idx Hmfixmfix' HΓ H H'. cbn in *.
-    eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_CoFix; eauto. apply forallb_All in H, H'.
-    apply (All2_All_mix_left H) in Hmfixmfix'.
-    apply (All2_All_mix_right H') in Hmfixmfix'.
-    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
-    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
-    repeat split; eauto. eapply rbody; eauto.
-    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
-    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
-      rewrite <- app_length in Hdbodyx. intuition.
-    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
-      rewrite <- app_length in Hdbodyy. intuition.
-  - intros Γ i u u' args args' H X H0 H1 H2. eapply ws_cumul_pb_Ind; eauto. split; eauto.
+  - intros Γ mfix mfix' idx Hmfixmfix' Hmfixmfix'_dep HΓ H H'. cbn in *.
+    eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_Fix; eauto. repeat toAll.
+    eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
+    pose proof (Hfix := All2_length ltac:(eassumption)).
+    unfold test_def in *; repeat toProp; destruct_head'_and.
+    repeat split; eauto.
+    exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto; solve_all.
+    * rewrite -> shiftnP_add, <- fix_context_length, <- app_length in *; tea.
+    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- app_length in *; tea.
+  - intros Γ mfix mfix' idx Hmfixmfix' Hmfixmfix'_dep HΓ H H'. cbn in *.
+    eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_CoFix; eauto. repeat toAll.
+    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length ltac:(eassumption)); cbn; intros. destruct_head'_prod.
+    unfold test_def in *.
+    repeat toProp; destruct_head'_and.
+    repeat split; eauto.
+    exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto; solve_all.
+    * rewrite -> shiftnP_add, <- fix_context_length, <- app_length in *; tea.
+    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- app_length in *; tea.
+  - intros Γ i u u' args args' H X X_dep H0 H1 H2. eapply ws_cumul_pb_Ind; eauto. split; eauto.
     rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2.
-    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4.
-    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.
-    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].
-    eapply Heqxy.2; eauto.
-  - intros Γ i k u u' args args' H X H0 H1 H2. eapply ws_cumul_pb_Construct; eauto ; split; eauto.
+    repeat toProp; destruct_head'_and.
+    repeat match goal with H : ?x = true |- _ => change (is_true x) in H end.
+    solve_all.
+  - intros Γ i k u u' args args' H X X_dep H0 H1 H2. eapply ws_cumul_pb_Construct; eauto ; split; eauto.
     rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2.
-    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4.
-    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.
-    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].
-    eapply Heqxy.2; eauto.
+    repeat toProp; destruct_head'_and.
+    repeat match goal with H : ?x = true |- _ => change (is_true x) in H end.
+    solve_all.
   - intros. econstructor 1; eauto. destruct pb; subst; econstructor; eauto.
   - intros. econstructor 1; eauto. destruct pb; subst; econstructor; eauto.
   Unshelve. all: eauto.

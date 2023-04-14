@@ -2,6 +2,9 @@ jobs:
   coq:
     needs: []
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-coq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -39,6 +42,9 @@ jobs:
     needs:
     - coq
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-equations-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -81,6 +87,9 @@ jobs:
     - coq
     - equations
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-MacOS-metacoq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -147,6 +156,10 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
         --argstr job "metacoq-erasure"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-quotation'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-quotation"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-safechecker-plugin'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
         --argstr job "metacoq-safechecker-plugin"
@@ -171,3 +184,4 @@ name: Nix CI for bundle coq-8.16
   push:
     branches:
     - master
+    - coq-8.16

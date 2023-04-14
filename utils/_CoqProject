@@ -14,8 +14,10 @@ theories/All_Forall.v
 theories/MCArith.v
 theories/MCCompare.v
 theories/MCEquality.v
+theories/MCFSets.v
 theories/LibHypsNaming.v
 theories/MCList.v
+theories/MCMSets.v
 theories/MCOption.v
 theories/MCProd.v
 theories/MCPred.v

@@ -1,0 +1,48 @@
+opam-version: "2.0"
+version: "8.16.dev"
+maintainer: "matthieu.sozeau@inria.fr"
+homepage: "https://metacoq.github.io/metacoq"
+dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.16"
+bug-reports: "https://github.com/MetaCoq/metacoq/issues"
+authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
+          "Danil Annenkov <danil.v.annenkov@gmail.com>"
+          "Simon Boulier <simon.boulier@inria.fr>"
+          "Cyril Cohen <cyril.cohen@inria.fr>"
+          "Yannick Forster <forster@ps.uni-saarland.de>"
+          "Jason Gross <jgross@mit.edu>"
+          "Fabian Kunze <fkunze@fakusb.de>"
+          "Meven Lennon-Bertrand <Meven.Bertrand@univ-nantes.fr>"
+          "Kenji Maillard <kenji.maillard@inria.fr>"
+          "Gregory Malecha <gmalecha@gmail.com>"
+          "Jakob Botsch Nielsen <Jakob.botsch.nielsen@gmail.com>"
+          "Matthieu Sozeau <matthieu.sozeau@inria.fr>"
+          "Nicolas Tabareau <nicolas.tabareau@inria.fr>"
+          "Théo Winterhalter <theo.winterhalter@inria.fr>"
+]
+license: "MIT"
+build: [
+  ["bash" "./configure.sh"]
+  [make "-j" "%{jobs}%" "-C" "quotation"]
+]
+install: [
+  [make "-C" "quotation" "install"]
+]
+depends: [
+  "coq-metacoq-template" {= version}
+#  "coq-metacoq-pcuic" {= version}
+#  "coq-metacoq-template-pcuic" {= version}
+]
+synopsis: "Gallina quotation functions for Template Coq (PCUIC support in the works)."
+description: """
+MetaCoq is a meta-programming framework for Coq.
+
+The Quotation module is geared at providing functions `□T → □□T` for `□T :=
+Ast.term` (currently implemented) and for `□T := { t : Ast.term & Σ ;;; [] |- t
+: T }` (still in the works).  Currently `Ast.term → Ast.term` and `(Σ ;;; [] |-
+t : T) → Ast.term` functions are provided for Template terms.  Proving
+well-typedness and adding support for PCUIC are still works in progress.
+
+Ultimately the goal of this development is to prove that `□` is a lax monoidal
+semicomonad (a functor with `cojoin : □T → □□T` that codistributes over `unit`
+and `×`), which is sufficient for proving Löb's theorem.
+"""

@@ -711,6 +711,7 @@ Module AnnotOptimizePropDiscr.
     - assert (br_annots : bigprod (fun br => annots box_type br.2) (map (on_snd (optimize Σ)) l)).
       { refine (bigprod_map _ a.2.2).
         intros ? a'; apply (f _ a'). }
+      unfold isprop_ind.
       destruct EEnvMap.GlobalContextMap.inductive_isprop_and_pars as [[]|]; cbn.
       destruct b;cbn.
       2-3: exact (a.1, (f _ a.2.1, br_annots)).

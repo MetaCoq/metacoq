@@ -41,47 +41,51 @@ Lemma cumulSpec_subst_instance (Σ : global_env_ext) Γ u A B pb univs :
   (Σ.1,univs) ;;; subst_instance u Γ ⊢ subst_instance u A ≤s[pb] subst_instance u B.
 Proof.
   intros e H. unfold cumulSpec.
-  revert pb Γ A B H e.
-  apply: cumulSpec0_ind_all; intros; cbn; try solve [econstructor; intuition eauto].
+  induction H; intros; cbn; try solve [econstructor; intuition eauto].
+  all: lazymatch goal with
+       | [ H : cumul_predicate_dep _ _ _ |- _ ] => apply cumul_predicate_undep in H
+       | _ => idtac
+       end.
   - rewrite subst_instance_subst. solve [econstructor].
   - rewrite subst_instance_subst. solve [econstructor].
   - rewrite subst_instance_lift. eapply cumul_rel.
     unfold subst_instance.
-    unfold option_map in *. destruct (nth_error Γ) eqn:E; inversion H.
-    unfold map_context. rewrite nth_error_map E. cbn.
-    rewrite map_decl_body. destruct c. cbn in *. subst.
+    cbv [option_map subst_instance_context map_context map_decl] in *.
+    rewrite nth_error_map; cbv [option_map].
+    repeat destruct ?; inversion pf; clear pf; try congruence.
+    match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
+    subst; cbn.
     reflexivity.
   - rewrite subst_instance_mkApps. cbn.
     rewrite iota_red_subst_instance.
     change (bcontext br) with (bcotext (map_branch (subst_instance u) br)).
     eapply cumul_iota; eauto with pcuic.
-    * rewrite nth_error_map H //.
+    * rewrite nth_error_map Hbrs //.
     * simpl. now len.
   - rewrite !subst_instance_mkApps. cbn.
     eapply cumul_fix.
     + unfold unfold_fix in *. destruct (nth_error mfix idx) eqn:E.
-      * inversion H.
+      * match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
         rewrite nth_error_map E. cbn.
         destruct d. cbn in *. cbn in *; try congruence.
         f_equal. f_equal.
         now rewrite subst_instance_subst fix_subst_instance_subst.
-      * inversion H.
+      * congruence.
     + unfold is_constructor in *.
-      destruct (nth_error args narg) eqn:E; inversion H0; clear H0.
-      rewrite nth_error_map E. cbn.
-     eapply isConstruct_app_subst_instance.
+      destruct (nth_error args narg) eqn:E; try congruence.
+      rewrite nth_error_map E; cbn.
+      now rewrite isConstruct_app_subst_instance.
   - rewrite !subst_instance_mkApps.
-    unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E.
-    + inversion H.
+    unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E; try congruence.
+    match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
     eapply cumul_cofix_case.  fold subst_instance_constr.
     unfold unfold_cofix.
     rewrite nth_error_map E. cbn.
     rewrite subst_instance_subst.
     now rewrite cofix_subst_instance_subst.
-    + cbn.
-    inversion H.
   - unfold unfold_cofix in *.
-    destruct nth_error eqn:E; inversion H.
+    destruct nth_error eqn:E; try congruence.
+    match goal with H : Some _ = Some _ |- _ => inversion H; clear H end.
     rewrite !subst_instance_mkApps.
     eapply cumul_cofix_proj. fold subst_instance.
     unfold unfold_cofix.
@@ -90,42 +94,44 @@ Proof.
     all: now inversion E.
   - rewrite subst_instance_two. solve [econstructor; eauto].
   - rewrite !subst_instance_mkApps.
-    eapply cumul_proj. now rewrite nth_error_map H.
+    eapply cumul_proj. now rewrite nth_error_map Hargs.
   - eapply cumul_Trans; intuition.
     * rewrite on_free_vars_ctx_subst_instance; eauto.
     * rewrite on_free_vars_subst_instance. unfold is_open_term.
       replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
   - eapply cumul_Evar. eapply All2_map.
-    eapply All2_impl. 1: tea. cbn; intros. eapply X0.2; eauto.
+    repeat toAll.
+    eapply All2_impl.  1: tea. cbn; intros. eapply X0.2; eauto.
   - eapply cumul_Case; try solve [intuition; eauto].
-    * destruct X as [X [Xuni [Xcont [_ Xret]]]]. repeat split; eauto; cbn.
-      + apply All2_map. eapply All2_impl. 1: tea. cbn; intros. eapply X3.2; eauto.
-      + apply precompose_subst_instance. eapply R_universe_instance_impl; eauto.
-        now apply eq_universe_subst_instance.
-      + rewrite subst_instance_app inst_case_predicate_context_subst_instance in Xret.
-        eapply Xret; eauto.
-    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+    * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; eauto; cbn.
+      + apply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros. destruct_head'_prod; eauto.
+      + apply precompose_subst_instance. eapply R_universe_instance_impl.
+        1:now apply eq_universe_subst_instance.
+        eauto.
+      + rewrite -> subst_instance_app, inst_case_predicate_context_subst_instance in *.
+        eauto.
+    * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       repeat split; eauto; intuition.
-      rewrite subst_instance_app inst_case_branch_context_subst_instance in X1; eauto.
-  - eapply cumul_Fix. apply All2_map. eapply All2_impl. 1: tea.
+      rewrite -> subst_instance_app, inst_case_branch_context_subst_instance in *; eauto.
+  - eapply cumul_Fix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
     cbn; intros; intuition.
-    rewrite subst_instance_app fix_context_subst_instance in X0; eauto.
-  - eapply cumul_CoFix. apply All2_map. eapply All2_impl. 1: tea.
+    rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
+  - eapply cumul_CoFix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
     cbn; intros; intuition.
-    rewrite subst_instance_app fix_context_subst_instance in X0; eauto.
+    rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
     * apply precompose_subst_instance_global.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
-    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+    * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
     * apply precompose_subst_instance_global. cbn.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
-    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+    * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
   - eapply cumul_Sort. now apply compare_universe_subst_instance.
   - eapply cumul_Const. apply precompose_subst_instance.

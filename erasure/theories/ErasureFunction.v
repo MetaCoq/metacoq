@@ -1686,7 +1686,8 @@ Proof.
   now rewrite (abstract_make_wf_env_ext_correct X univs wfext Σ _ wfΣX wfΣex).
   epose proof (abstract_env_exists X) as [[Σ wfΣX]].
   eapply erases_correct; tea.
-  rewrite (abstract_make_wf_env_ext_correct X univs wfext _ _ wfΣX wfΣex); eauto.
+  - eexists; eauto.
+  - rewrite (abstract_make_wf_env_ext_correct X univs wfext _ _ wfΣX wfΣex); eauto.
 Qed.
 
 Lemma global_env_ind (P : global_env -> Type)
@@ -2452,7 +2453,7 @@ Proof.
     intros. sq. now rewrite (abstract_env_ext_irr _ H H2).
 Qed.
 
-From MetaCoq Require Import PCUICFirstorder.
+From MetaCoq.PCUIC Require Import PCUICFirstorder.
 
 
 Lemma welltyped_mkApps_inv {cf} {Σ : global_env_ext} Γ f args :  ∥ wf Σ ∥ ->
@@ -2463,29 +2464,29 @@ Proof.
   induction t0 in f |- *; econstructor; eauto; econstructor; eauto.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICProgress.
+
 Lemma firstorder_erases_deterministic X_type (X : X_type.π1)
-  univs wfext {t t' i u args mind}
+  univs wfext {v t' i u args}
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
   :
-  forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t),
+  forall wv : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] v),
   forall Σ, Σ ∼_ext Xext ->
-  Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  PCUICWcbvEval.value Σ t ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  Σ ;;; [] |- v : mkApps (tInd i u) args ->
+  Σ |-p v ▷ v ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
-  erases Σ [] t t' ->
-  t' = erase X_type Xext (normalization_in:=normalization_in) [] t wt.
+  erases Σ [] v t' ->
+  t' = erase X_type Xext (normalization_in:=normalization_in) [] v wv.
 Proof.
-  (* pose proof (referenced_impl_ext_wf (@wf_env_ext_referenced extraction_checker_flags Σ)) as Hext. *)
-  (* rename X into Hext. *)
-  intros wt Σ Hrel Hty Hvalue Hdecl Hfo Herase.
+  intros wv Σ Hrel Hty Hvalue Hfo Herase.
+  destruct (firstorder_lookup_inv Hfo) as [mind Hdecl].
   assert (Hext : ∥ wf_ext Σ∥) by now eapply heΣ.
   sq. eapply firstorder_value_spec in Hty as Hfov; eauto.
   clear - Hrel Hext Hfov Herase.
-  revert t' wt Herase.
-  pattern t.
-  revert t Hfov.
+  revert t' wv Herase.
+  pattern v.
+  revert v Hfov.
   eapply firstorder_value_inds. intros.
   rewrite erase_mkApps.
   - intros Σ0 HΣ0. pose proof (abstract_env_ext_irr _ HΣ0 Hrel). subst.
@@ -2504,7 +2505,7 @@ Proof.
            eapply (isErasable_Propositional (args := [])) in s; eauto.
            red in H1, s. unfold PCUICAst.lookup_inductive, lookup_inductive_gen, PCUICAst.lookup_minductive, lookup_minductive_gen, isPropositionalArity in *.
            edestruct PCUICEnvironment.lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.
-        -- f_equal. eapply Forall2_eq. clear X0 H wt. induction H3.
+        -- f_equal. eapply Forall2_eq. clear X0 H wv. induction H3.
            ++ cbn. econstructor.
            ++ cbn. econstructor.
                ** inv H0. eapply H5. eauto.
@@ -2522,15 +2523,14 @@ Proof.
     red in H1, H3. unfold PCUICAst.lookup_inductive, lookup_inductive_gen, PCUICAst.lookup_minductive, lookup_minductive_gen, isPropositionalArity in *.
     edestruct PCUICEnvironment.lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.
   - intros.  assert (Hext__ : ∥ wf_ext Σ0∥) by now eapply heΣ.
-    specialize_Σ H2. eapply welltyped_mkApps_inv in wt; eauto. eapply wt.
+    specialize_Σ H2. eapply welltyped_mkApps_inv in wv; eauto. eapply wv.
     now sq.
     Unshelve. all: try exact False.
+  - eapply PCUICWcbvEval.eval_to_value; eauto.
 Qed.
 
-From MetaCoq Require Import PCUICProgress.
-
 Lemma erase_correct_strong' (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
-univs wfext {t v Σ' t' deps i u args mind} decls normalization_in prf
+univs wfext {t v Σ' t' deps i u args} decls normalization_in prf
 (Xext :=  abstract_make_wf_env_ext X univs wfext)
 {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
 :
@@ -2538,7 +2538,6 @@ forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t),
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   erase X_type Xext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
@@ -2547,7 +2546,8 @@ forall Σ, abstract_env_ext_rel Xext Σ ->
   ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
   forall wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
 Proof.
-  intros wt Σ Hrel Hax Hty Hdecl Hfo <- Hsub <- Hred Hirred wt'.
+  intros wt Σ Hrel Hax Hty Hfo <- Hsub <- Hred Hirred wt'.
+  destruct (firstorder_lookup_inv Hfo) as [mind Hdecl].
   pose proof (heΣ _ _ _ Hrel) as [Hwf]. eapply wcbv_standardization_fst in Hty as Heval; eauto.
   edestruct (erase_correct X_type X univs wfext t v) as [v' [H1 H2]]; eauto.
   1:{ intros ? H_. sq. enough (Σ0 = Σ) as -> by eauto.
@@ -2555,13 +2555,13 @@ Proof.
   eapply firstorder_erases_deterministic in H1; eauto.
   { rewrite H1 in H2. eapply H2. }
   { eapply subject_reduction; eauto. }
-  { eapply PCUICWcbvEval.eval_to_value. eauto. }
+  { eapply PCUICWcbvEval.value_final. eapply PCUICWcbvEval.eval_to_value. eauto. }
   all: eauto.
   Unshelve. eauto.
 Qed.
 
 Lemma erase_correct_strong (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
-univs wfext {t v Σ' t' deps i u args mind} decls normalization_in prf
+univs wfext {t v deps i u args} decls normalization_in prf
 (Xext :=  abstract_make_wf_env_ext X univs wfext)
 {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
 :
@@ -2569,20 +2569,59 @@ forall wt : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] t),
 forall Σ, abstract_env_ext_rel Xext Σ ->
   axiom_free Σ ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
-  PCUICEnvironment.lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  let t' := erase X_type Xext [] t wt in
+  let Σ' := erase_global_decls X_type deps X decls normalization_in prf in
   @firstorder_ind Σ (firstorder_env Σ) i ->
-  erase X_type Xext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
-  erase_global_decls X_type deps X decls normalization_in prf = Σ' ->
   red Σ [] t v ->
-  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
+  ¬ { v' & Σ ;;; [] |- v ⇝ v'} ->
   exists wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
 Proof.
-  intros wt Σ Hrel Hax Hty Hdecl Hfo <- Hsub <- Hred Hirred.
+  intros wt Σ Hrel Hax Hty Hdecl Hfo Hsub Hred Hirred.
   unshelve eexists.
   - abstract (intros Σ_ H_; pose proof (heΣ _ _ _ H_); sq;
     pose proof (abstract_env_ext_irr _ H_ Hrel); subst; eapply red_welltyped; eauto; econstructor; eauto).
   - eapply erase_correct_strong'; eauto.
+    all: reflexivity.
+Qed.
+
+Lemma unique_decls {X_type} {X : X_type.π1} univs wfext
+(Xext :=  abstract_make_wf_env_ext X univs wfext) {Σ'} (wfΣ' : Σ' ∼_ext Xext) :
+  forall Σ, Σ ∼ X -> declarations Σ = declarations Σ'.
+Proof.
+  intros Σ wfΣ. pose (abstract_make_wf_env_ext_correct X univs wfext Σ Σ' wfΣ wfΣ').
+  rewrite e. reflexivity.
+Qed.
+
+Lemma unique_type {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  {Σ:global_env_ext}
+  (wfΣ : Σ ∼_ext X) {t T}:
+  Σ ;;; [] |- t : T -> forall Σ, Σ ∼_ext X -> welltyped Σ [] t.
+Proof.
+  intros wt Σ' wfΣ'. erewrite (abstract_env_ext_irr X wfΣ' wfΣ).
+  now exists T.
+Qed.
+
+Definition erase_correct_firstorder (wfl := Ee.default_wcbv_flags)
+  X_type (X : X_type.π1) univs wfext {t v i u args}
+(Xext :=  abstract_make_wf_env_ext X univs wfext)
+{normalization_in : forall X Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ}
+:
+forall Σ (wfΣ : abstract_env_ext_rel Xext Σ)
+  (wt : Σ ;;; [] |- t : mkApps (tInd i u) args),
+  axiom_free Σ ->
+  let t' := erase X_type Xext [] t (unique_type wfΣ wt) in
+  let decls := declarations (fst Σ) in
+  let Σ' := erase_global_decls X_type (term_global_deps t') X decls
+              (fun _ _ _ _ _ _ _ =>  normalization_in _ _) (unique_decls univs wfext wfΣ) in
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  red Σ [] t v ->
+  ¬ { v' & Σ ;;; [] |- v ⇝ v'} ->
+  exists wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
+Proof.
+  intros.
+  eapply erase_correct_strong; eauto.
+  apply KernameSetOrdProp.P.Dec.F.subset_iff. reflexivity.
 Qed.
 
 (* we use the [match] trick to get typeclass resolution to pick up the right instances without leaving any evidence in the resulting term, and without having to pass them manually everywhere *)

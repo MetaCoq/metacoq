@@ -1,3 +1,4 @@
+From Coq Require Import PArith NArith ZArith Lia.
 From MetaCoq.Utils Require Import MCList MCOption MCUtils.
 From MetaCoq.Common Require Import uGraph.
 From MetaCoq.Common Require Import Universes.
@@ -112,6 +113,643 @@ Proof.
                     | rewrite !VSetFact.add_iff
                     | solve [ auto ] ].
 Qed.
+
+(** Gives an equivalent pair of [((lvls, cs), cstr)] such that
+- [global_uctx_invariants (lvls, cs)]
+- all levels used in cs are in lvls
+- and constraints mentioning levels not in the original [lvls] are refreshed
+ *)
+Definition uniquify_level_level (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (prefix : Byte.byte) (x : string) : string
+  := (String.String
+        (if LevelSet.mem (Level.level x) shared_levels
+         then shared_prefix
+         else prefix)
+        x).
+Definition ununiquify_level_level (x : string) : string
+  := match x with
+     | String.EmptyString => String.EmptyString
+     | String.String _ x => x
+     end.
+Definition uniquify_level_var (shared_levels : LevelSet.t) (total_sets : nat) (offset : nat) (x : nat) : nat
+  := x * S total_sets + (if LevelSet.mem (Level.lvar x) shared_levels
+                         then O
+                         else S offset).
+Definition ununiquify_level_var (total_sets : nat) (x : nat) : nat
+  := Z.to_nat (Z.of_nat x / Z.of_nat (S total_sets)).
+Definition uniquify_level (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (total_sets : nat) (prefix : Byte.byte) (offset : nat) (lvl : Level.t) : Level.t
+  := match lvl with
+     | Level.lzero => Level.lzero
+     | Level.level x => Level.level (uniquify_level_level shared_levels shared_prefix prefix x)
+     | Level.lvar x => Level.lvar (uniquify_level_var shared_levels total_sets offset x)
+     end.
+Definition ununiquify_level (total_sets : nat) (lvl : Level.t) : Level.t
+  := match lvl with
+     | Level.lzero => Level.lzero
+     | Level.level x => Level.level (ununiquify_level_level x)
+     | Level.lvar x => Level.lvar (ununiquify_level_var total_sets x)
+     end.
+Definition uniquify_constraint (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (total_sets : nat) (prefix : Byte.byte) (offset : nat) (c : ConstraintSet.elt) : ConstraintSet.elt
+  := let '((l1, c), l2) := c in
+     let u := uniquify_level shared_levels shared_prefix total_sets prefix offset in
+     ((u l1, c), u l2).
+Definition ununiquify_constraint (total_sets : nat) (c : ConstraintSet.elt) : ConstraintSet.elt
+  := let '((l1, c), l2) := c in
+     let u := ununiquify_level total_sets in
+     ((u l1, c), u l2).
+Definition uniquify_valuation (shared_levels : LevelSet.t) (shared_prefix : Byte.byte) (total_sets : nat) (prefix : Byte.byte) (offset : nat) (v : valuation) : valuation
+  := {| valuation_mono s
+       := v.(valuation_mono) (uniquify_level_level shared_levels shared_prefix prefix s)
+     ; valuation_poly n
+       := v.(valuation_poly) (uniquify_level_var shared_levels total_sets offset n)
+     |}.
+Definition ununiquify_valuation (total_sets : nat) (v : valuation) : valuation
+  := {| valuation_mono s
+       := v.(valuation_mono) (ununiquify_level_level s)
+     ; valuation_poly n
+       := v.(valuation_poly) (ununiquify_level_var total_sets n)
+     |}.
+Definition uniquify_level_for lvls (side:bool) lvl
+  := uniquify_level lvls "b"%byte 2 (if side then "l" else "r")%byte (if side then 0 else 1) lvl.
+Definition uniquify_constraint_for lvls (side:bool) c
+  := uniquify_constraint lvls "b"%byte 2 (if side then "l" else "r")%byte (if side then 0 else 1) c.
+Definition uniquify_valuation_for lvls (side:bool) v
+  := uniquify_valuation lvls "b"%byte 2 (if side then "l" else "r")%byte (if side then 0 else 1) v.
+Definition declare_and_uniquify_levels : ContextSet.t * ConstraintSet.t -> ContextSet.t * ConstraintSet.t
+  := fun '(cs, cstr)
+     => let '(lvls, cs) := (ContextSet.levels cs, ContextSet.constraints cs) in
+        let '(cs_all_lvls, cstr_all_lvls) := (levels_of_cs cs, levels_of_cs cstr) in
+        ((LevelSet.fold
+            (fun l => LevelSet.add (uniquify_level_for lvls true l))
+            cs_all_lvls
+            (LevelSet.fold
+               (fun l => LevelSet.add (uniquify_level_for lvls true l))
+               lvls
+               (LevelSet.singleton Level.lzero)),
+           ConstraintSet.fold
+             (fun c => ConstraintSet.add (uniquify_constraint_for lvls true c))
+             cs
+             ConstraintSet.empty),
+           ConstraintSet.fold
+             (fun c => ConstraintSet.add (uniquify_constraint_for lvls false c))
+             cstr
+             ConstraintSet.empty).
+
+Definition declare_and_uniquify_and_combine_levels : ContextSet.t * ConstraintSet.t -> ContextSet.t * ConstraintSet.t
+  := fun '(cs, cstr)
+     => let cscstr := declare_and_uniquify_levels (cs, cstr) in
+        let '(cs, cstr) := (cscstr.1, cscstr.2) in
+        (cs, ConstraintSet.union cstr (ContextSet.constraints cs)).
+
+Definition combine_valuations (shared_prefix prefixl prefixr : Byte.byte) (total_sets : nat := 2) (vd vl vr : valuation) : valuation
+  := let __ := reflectEq_Z in
+     {| valuation_mono s
+       := match s with
+          | ""%bs => vd.(valuation_mono) s
+          | String.String p _
+            => if p == shared_prefix
+               then vd.(valuation_mono) s
+               else if p == prefixl
+                    then vl.(valuation_mono) s
+                    else if p == prefixr
+                         then vr.(valuation_mono) s
+                         else vd.(valuation_mono) s
+          end
+     ; valuation_poly n
+       := let r := (Z.of_nat n mod 3)%Z in
+          if r == 0%Z
+          then vd.(valuation_poly) n
+          else if r == 1%Z
+               then vl.(valuation_poly) n
+               else if r == 2%Z
+                    then vr.(valuation_poly) n
+                    else vd.(valuation_poly) n
+     |}.
+
+Lemma ConstraintSet_In_fold_add c cs1 cs2 f
+  : ConstraintSet.In c (ConstraintSet.fold (fun c => ConstraintSet.add (f c)) cs1 cs2)
+    <-> (ConstraintSet.Exists (fun c' => c = f c') cs1 \/ ConstraintSet.In c cs2).
+Proof.
+  cbv [ConstraintSet.Exists]; rewrite ConstraintSetProp.fold_spec_right.
+  setoid_rewrite (ConstraintSetFact.elements_iff cs1).
+  setoid_rewrite InA_In_eq.
+  setoid_rewrite (@List.in_rev _ (ConstraintSet.elements cs1)).
+  induction (List.rev (ConstraintSet.elements cs1)) as [|x xs IH]; cbn [List.In List.fold_right];
+    [ now firstorder idtac | ].
+  rewrite ConstraintSet.add_spec.
+  repeat first [ progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress subst
+               | progress intuition eauto ].
+Qed.
+
+Lemma LevelSet_In_fold_add c cs1 cs2 f
+  : LevelSet.In c (LevelSet.fold (fun c => LevelSet.add (f c)) cs1 cs2)
+    <-> (LevelSet.Exists (fun c' => c = f c') cs1 \/ LevelSet.In c cs2).
+Proof.
+  cbv [LevelSet.Exists]; rewrite LevelSetProp.fold_spec_right.
+  setoid_rewrite (LevelSetFact.elements_iff cs1).
+  setoid_rewrite InA_In_eq.
+  setoid_rewrite (@List.in_rev _ (LevelSet.elements cs1)).
+  induction (List.rev (LevelSet.elements cs1)) as [|x xs IH]; cbn [List.In List.fold_right];
+    [ now firstorder idtac | ].
+  rewrite LevelSet.add_spec.
+  repeat first [ progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress subst
+               | progress intuition eauto ].
+Qed.
+
+Lemma ununiquify_level_var__uniquify_level_var lvls n offset v (Hn : offset < n)
+  : ununiquify_level_var n (uniquify_level_var lvls n offset v) = v.
+Proof.
+  cbv [uniquify_level_var ununiquify_level_var].
+  destruct ?; f_equal.
+  all: Z.to_euclidean_division_equations; nia.
+Qed.
+
+Lemma ununiquify_level_level__uniquify_level_level lvls sp p v
+  : ununiquify_level_level (uniquify_level_level lvls sp p v) = v.
+Proof. reflexivity. Qed.
+
+Lemma ununiquify_level__uniquify_level lvls n offset sp p v (Hn : offset < n)
+  : ununiquify_level n (uniquify_level lvls sp n p offset v) = v.
+Proof.
+  destruct v; try reflexivity.
+  cbv [ununiquify_level uniquify_level].
+  f_equal; now apply ununiquify_level_var__uniquify_level_var.
+Qed.
+
+Lemma ConstraintSet_In__declare_and_uniquify_and_combine_levels_1__0 cs cstr c
+  : ConstraintSet.In c (ContextSet.constraints cs)
+    -> ConstraintSet.In (uniquify_constraint_for (ContextSet.levels cs) true c) (ContextSet.constraints (declare_and_uniquify_and_combine_levels (cs, cstr)).1).
+Proof.
+  cbv [declare_and_uniquify_levels declare_and_uniquify_and_combine_levels uniquify_constraint_for uniquify_constraint].
+  repeat first [ progress subst
+               | progress cbn [ContextSet.constraints fst snd]
+               | progress cbv [ConstraintSet.Exists]
+               | destruct ?
+               | rewrite ConstraintSet_In_fold_add
+               | solve [ eauto ] ].
+Qed.
+
+Lemma ConstraintSet_In__declare_and_uniquify_and_combine_levels_1__1 cs cstr c
+  : ConstraintSet.In c (ContextSet.constraints (declare_and_uniquify_and_combine_levels (cs, cstr)).1)
+    -> ConstraintSet.In (ununiquify_constraint 2 c) (ContextSet.constraints cs).
+Proof.
+  cbv [declare_and_uniquify_levels declare_and_uniquify_and_combine_levels ununiquify_constraint uniquify_constraint_for uniquify_constraint].
+  repeat first [ progress subst
+               | progress cbn [ContextSet.constraints fst snd]
+               | progress cbv [ConstraintSet.Exists]
+               | destruct ?
+               | rewrite ConstraintSet_In_fold_add
+               | rewrite ConstraintSetFact.empty_iff
+               | progress intros
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress destruct_head'_ex
+               | progress destruct_head'_False
+               | rewrite ununiquify_level__uniquify_level by lia
+               | match goal with
+                 | [ H : (_, _) = (_, _) |- _ ] => inv H
+                 end
+               | solve [ eauto ] ].
+Qed.
+
+Lemma ConstraintSet_In__declare_and_uniquify_and_combine_levels_2__0 cs cstr c
+  : ConstraintSet.In c cstr
+    -> ConstraintSet.In (uniquify_constraint_for (ContextSet.levels cs) false c) (declare_and_uniquify_and_combine_levels (cs, cstr)).2.
+Proof.
+  cbv [declare_and_uniquify_levels declare_and_uniquify_and_combine_levels uniquify_constraint_for uniquify_constraint].
+  repeat first [ progress subst
+               | progress cbn [ContextSet.constraints fst snd]
+               | progress cbv [ConstraintSet.Exists]
+               | destruct ?
+               | rewrite ConstraintSet_In_fold_add
+               | rewrite ConstraintSet.union_spec
+               | solve [ eauto ] ].
+Qed.
+
+Lemma ConstraintSet_In__declare_and_uniquify_levels_2__1 cs cstr c
+  : ConstraintSet.In c (declare_and_uniquify_levels (cs, cstr)).2
+    -> ConstraintSet.In (ununiquify_constraint 2 c) cstr.
+Proof.
+  cbv [declare_and_uniquify_levels ununiquify_constraint uniquify_constraint_for uniquify_constraint].
+  repeat first [ progress subst
+               | progress cbn [ContextSet.constraints fst snd]
+               | progress cbv [ConstraintSet.Exists]
+               | destruct ?
+               | rewrite ConstraintSet_In_fold_add
+               | rewrite ConstraintSetFact.empty_iff
+               | progress intros
+               | progress destruct_head'_and
+               | progress destruct_head'_or
+               | progress destruct_head'_ex
+               | progress destruct_head'_False
+               | rewrite ununiquify_level__uniquify_level by lia
+               | match goal with
+                 | [ H : (_, _) = (_, _) |- _ ] => inv H
+                 end
+               | solve [ eauto ] ].
+Qed.
+
+Lemma LevelSet_In_declare_and_uniquify_and_combine_levels_1_1 cs cstr side x
+  : LevelSet.In x (ContextSet.levels cs)
+    -> LevelSet.In (uniquify_level_for (ContextSet.levels cs) side x)
+         (ContextSet.levels (declare_and_uniquify_and_combine_levels (cs, cstr)).1).
+Proof.
+  cbv [declare_and_uniquify_and_combine_levels declare_and_uniquify_levels ContextSet.levels]; cbn [fst snd].
+  rewrite !LevelSet_In_fold_add.
+  intro Hx.
+  repeat lazymatch goal with
+         | [ |- ?x \/ ?y ]
+           => first [ lazymatch x with
+                      | context[LevelSet.Exists _ cs.1] => left
+                      end
+                    | lazymatch y with
+                      | context[LevelSet.Exists _ cs.1] => right
+                      end ]
+         end.
+  cbv [LevelSet.Exists uniquify_level_var uniquify_level_level uniquify_level_for uniquify_level].
+  exists x; split; trivial.
+  destruct x; try reflexivity.
+  all: now rewrite LevelSetFact.mem_1 by assumption.
+Qed.
+
+Lemma satisfies_declare_and_uniquify_and_combine_levels_1_0 {cs cstr v}
+  : satisfies v (ContextSet.constraints (declare_and_uniquify_and_combine_levels (cs, cstr)).1)
+    -> satisfies (uniquify_valuation_for (ContextSet.levels cs) true v) (ContextSet.constraints cs).
+Proof.
+  cbv [satisfies ConstraintSet.For_all uniquify_valuation_for].
+  intros H x Hi; specialize (H _ ltac:(eapply ConstraintSet_In__declare_and_uniquify_and_combine_levels_1__0, Hi)).
+  destruct x as [[l []] r]; cbn in *;
+    inversion H; clear H; subst; constructor.
+  all: destruct l, r; assumption.
+Qed.
+
+Lemma satisfies_declare_and_uniquify_and_combine_levels_1_1 {cs cstr v}
+  : satisfies v (ContextSet.constraints cs)
+    -> satisfies (ununiquify_valuation 2 v) (ContextSet.constraints (declare_and_uniquify_and_combine_levels (cs, cstr)).1).
+Proof.
+  cbv [satisfies ConstraintSet.For_all ununiquify_valuation].
+  intros H x Hi; specialize (H _ ltac:(eapply ConstraintSet_In__declare_and_uniquify_and_combine_levels_1__1, Hi)).
+  destruct x as [[l []] r]; cbn in *;
+    inversion H; clear H; subst; constructor.
+  all: destruct l, r; assumption.
+Qed.
+
+Lemma satisfies_declare_and_uniquify_and_combine_levels_2_0 {cs cstr v}
+  : satisfies v (declare_and_uniquify_and_combine_levels (cs, cstr)).2
+    -> satisfies (uniquify_valuation_for (ContextSet.levels cs) false v) cstr.
+Proof.
+  cbv [satisfies ConstraintSet.For_all uniquify_valuation_for].
+  intros H x Hi; specialize (H _ ltac:(eapply ConstraintSet_In__declare_and_uniquify_and_combine_levels_2__0, Hi)).
+  destruct x as [[l []] r]; cbn in *;
+    inversion H; clear H; subst; constructor.
+  all: destruct l, r; assumption.
+Qed.
+
+Lemma satisfies_declare_and_uniquify_levels_2_1 {cs cstr v}
+  : satisfies v cstr
+    -> satisfies (ununiquify_valuation 2 v) (declare_and_uniquify_levels (cs, cstr)).2.
+Proof.
+  cbv [satisfies ConstraintSet.For_all uniquify_valuation_for].
+  intros H x Hi; specialize (H _ ltac:(eapply ConstraintSet_In__declare_and_uniquify_levels_2__1, Hi)).
+  destruct x as [[l []] r]; cbn in *;
+    inversion H; clear H; subst; constructor.
+  all: destruct l, r; try assumption.
+Qed.
+
+Lemma satisfies_combine_valuations {cs cstr v v'}
+  (cscstr := declare_and_uniquify_levels (cs, cstr))
+  (cscstr' := declare_and_uniquify_and_combine_levels (cs, cstr))
+  (cs' := cscstr'.1) (cstr' := cscstr.2) (cstr'' := cscstr'.2)
+  (Hv : satisfies v (ContextSet.constraints cs'))
+  (Hv' : satisfies v' cstr')
+  (Hagree
+    : LevelSet.For_all (fun l => val v (uniquify_level_for (ContextSet.levels cs) true l) = val v' (uniquify_level_for (ContextSet.levels cs) false l)) (ContextSet.levels cs))
+  (vc := combine_valuations "b"%byte "l"%byte "r"%byte v v v')
+  : satisfies vc cstr''
+    /\ LevelSet.For_all (fun l => val v l = val vc l) (ContextSet.levels cs').
+Proof.
+  repeat match goal with H := _ |- _ => subst H end.
+  cbv [satisfies ConstraintSet.For_all LevelSet.For_all combine_valuations val Level.Evaluable ContextSet.constraints ContextSet.levels declare_and_uniquify_and_combine_levels declare_and_uniquify_levels] in *;
+    cbn [fst snd valuation_poly valuation_mono] in *.
+  revert Hv Hv' Hagree.
+  progress repeat setoid_rewrite ConstraintSet.union_spec.
+  progress repeat setoid_rewrite LevelSet_In_fold_add.
+  progress repeat setoid_rewrite ConstraintSet_In_fold_add.
+  progress repeat setoid_rewrite ConstraintSetFact.empty_iff.
+  progress repeat setoid_rewrite LevelSet.singleton_spec.
+  cbv [LevelSet.Exists ConstraintSet.Exists uniquify_constraint_for uniquify_constraint uniquify_level_for uniquify_level].
+  intros.
+  split.
+  2: intro x; specialize (Hagree (ununiquify_level 2 x)).
+  2: cbv [ununiquify_level ununiquify_level_level ununiquify_level_var] in *.
+  all: repeat first [ progress intros
+                    | progress subst
+                    | progress rdest
+                    | progress destruct_head'_False
+                    | progress destruct_head'_or
+                    | progress destruct_head'_ex
+                    | progress specialize_by_assumption
+                    | progress cbv beta iota in *
+                    | reflexivity
+                    | match goal with
+                      | [ H : forall x, _ \/ _ -> _ |- _ ]
+                        => pose proof (fun x H' => H x (or_introl H'));
+                           pose proof (fun x H' => H x (or_intror H'));
+                           clear H
+                      | [ H : _ \/ _ -> _ |- _ ]
+                        => pose proof (fun H' => H (or_introl H'));
+                           pose proof (fun H' => H (or_intror H'));
+                           clear H
+                      | [ H : forall x, ex _ -> _ |- _ ]
+                        => specialize (fun x x' H' => H x (ex_intro _ x' H'))
+                      | [ H : ex _ -> _ |- _ ]
+                        => specialize (fun x' H' => H (ex_intro _ x' H'))
+                      | [ H : forall x x', _ /\ x = @?f x' -> _ |- _ ]
+                        => specialize (fun x' H' => H _ x' (conj H' eq_refl))
+                      | [ H : forall x, _ /\ _ = _ -> _ |- _ ]
+                        => specialize (fun H' => H _ (conj H' eq_refl))
+                      | [ H : forall x, x = _ -> _ |- _ ]
+                        => specialize (H _ eq_refl)
+                      | [ H : forall x, False -> _ |- _ ] => clear H
+                      end ].
+  all: repeat first [ progress cbv [uniquify_level_level uniquify_level_var] in *
+                    | congruence
+                    | lia
+                    | progress subst
+                    | match goal with
+                      | [ H : Level.lvar _ = Level.lvar _ |- _ ] => inversion H; clear H
+                      | [ H : Level.level _ = Level.level _ |- _ ] => inversion H; clear H
+                      | [ H : (@eqb ?T ?R ?x ?y) = true |- _ ]
+                        => destruct (@eqb_spec T R x y)
+                      | [ H : (@eqb ?T ?R ?x ?y) = false |- _ ]
+                        => destruct (@eqb_spec T R x y)
+                      end
+                    | progress destruct ? ].
+  all: repeat first [ progress rewrite ?Nat2Z.inj_add, ?Nat2Z.inj_mul in *
+                    | progress change (Z.of_nat 3) with 3%Z in *
+                    | progress change (?n mod 3)%Z with n in *
+                    | match goal with
+                      | [ H : context[((?x * ?y + ?z) mod ?y)%Z] |- _ ]
+                        => rewrite (Z.add_comm (x * y) z) in *
+                      end
+                    | progress rewrite ?Z_mod_plus_full in *
+                    | lia ].
+  all: repeat match goal with
+         | [ H : LevelSet.In _ _ |- _ ]
+           => progress specialize_all_ways_under_binders_by exact H
+         | [ H : ConstraintSet.In _ _ |- _ ]
+           => progress specialize_all_ways_under_binders_by exact H
+         end.
+  all: repeat first [ progress subst
+                    | assumption
+                    | progress cbv [val Level.Evaluable] in *
+                    | progress cbn [fst snd valuation_mono valuation_poly] in *
+                    | progress destruct_head_hnf' prod
+                    | match goal with
+                      | [ H : satisfies0 _ _ |- _ ] => inversion H; clear H; constructor
+                      end ].
+  all: repeat first [ progress cbv [uniquify_level_level uniquify_level_var] in *
+                    | rewrite eqb_refl
+                    | assumption
+                    | match goal with
+                      | [ H : ?x = true, H' : context[match ?x with _ => _ end] |- _ ]
+                        => rewrite H in H'
+                      | [ H : ?x = false, H' : context[match ?x with _ => _ end] |- _ ]
+                        => rewrite H in H'
+                      | [ |- context[LevelSet.mem ?l ?x] ]
+                        => let H := fresh in
+                           pose proof (@LevelSetFact.mem_2 x l) as H;
+                           destruct (LevelSet.mem l x) eqn:?;
+                             try (specialize (H eq_refl);
+                                  specialize_all_ways_under_binders_by exact H)
+                      | [ H : LevelSet.mem ?x ?l = true |- _ ]
+                        => unique pose proof (@LevelSetFact.mem_2 _ _ H);
+                           let H' := match goal with H' : LevelSet.In x l |- _ => H' end in
+                           specialize_all_ways_under_binders_by exact H'
+                      end ].
+  all: repeat first [ progress cbv beta iota in *
+                    | rewrite !Nat2Z.inj_add, !Nat2Z.inj_mul
+                    | progress change (Z.of_nat 3) with 3%Z
+                    | rewrite Z.add_comm, Z_mod_plus_full
+                    | rewrite eqb_refl
+                    | assumption
+                    | lia
+                    | match goal with
+                      | [ |- context[(?x == ?y)] ]
+                        => change (x == y) with false
+                      end ].
+Qed.
+
+Lemma consistent_extension_on_iff_declare_and_uniquify_and_combine_levels cs cstr
+  : @consistent_extension_on cs cstr
+    <-> @consistent_extension_on (declare_and_uniquify_and_combine_levels (cs, cstr)).1 (declare_and_uniquify_and_combine_levels (cs, cstr)).2.
+Proof.
+  cbv [consistent_extension_on].
+  split; intros H v Hs.
+  { specialize (H _ (satisfies_declare_and_uniquify_and_combine_levels_1_0 Hs)).
+    destruct H as [v' [H0 H1]].
+    apply (@satisfies_declare_and_uniquify_levels_2_1 cs cstr) in H0.
+    eexists; eapply satisfies_combine_valuations; try eassumption.
+    revert H1.
+    cbv [LevelSet.For_all ununiquify_valuation uniquify_valuation_for uniquify_valuation val Level.Evaluable uniquify_level_for uniquify_level].
+    cbn [valuation_mono valuation_poly].
+    intros H1 x Hx; specialize (H1 x Hx); revert H1.
+    destruct x; try lia.
+    all: first [ rewrite ununiquify_level_level__uniquify_level_level
+               | rewrite ununiquify_level_var__uniquify_level_var by lia ].
+    all: trivial. }
+  { specialize (H _ (satisfies_declare_and_uniquify_and_combine_levels_1_1 Hs)).
+    destruct H as [v' [H0 H1]].
+    eexists; split;
+      [ eapply satisfies_declare_and_uniquify_and_combine_levels_2_0; eassumption | ].
+    cbv [LevelSet.For_all] in *.
+    intros l Hl; specialize (fun side => H1 _ ltac:(unshelve eapply LevelSet_In_declare_and_uniquify_and_combine_levels_1_1, Hl; exact side)).
+    pose proof (H1 true) as H1t.
+    pose proof (H1 false) as H1f.
+    clear H1.
+    cbv [val Level.Evaluable ununiquify_valuation uniquify_level_for uniquify_level uniquify_valuation_for uniquify_valuation] in *.
+    destruct l; trivial.
+    cbn [valuation_poly valuation_mono] in *.
+    rewrite ?ununiquify_level_var__uniquify_level_var in * by lia.
+    congruence. }
+Qed.
+
+Lemma global_uctx_invariants__declare_and_uniquify_and_combine_levels cs cstr
+  : global_uctx_invariants (declare_and_uniquify_and_combine_levels (cs, cstr)).1.
+Proof.
+  pose proof (levels_of_cs_spec (ContextSet.constraints cs)).
+  pose proof (levels_of_cs_spec cstr).
+  cbv [declare_and_uniquify_levels]; cbn [fst snd].
+  cbv [uGraph.global_uctx_invariants uGraph.uctx_invariants ConstraintSet.For_all declared_cstr_levels] in *; cbn [fst snd ContextSet.levels ContextSet.constraints] in *.
+  repeat first [ progress subst
+               | progress cbv [LevelSet.Exists ConstraintSet.Exists uniquify_constraint_for uniquify_constraint uniquify_level_for] in *
+               | rewrite !LevelSet_In_fold_add
+               | rewrite !ConstraintSet_In_fold_add
+               | rewrite !LevelSet.singleton_spec
+               | rewrite ConstraintSetFact.empty_iff
+               | setoid_rewrite LevelSet_In_fold_add
+               | setoid_rewrite ConstraintSet_In_fold_add
+               | setoid_rewrite LevelSet.singleton_spec
+               | setoid_rewrite ConstraintSetFact.empty_iff
+               | match goal with
+                 | [ H : (_, _) = (_, _) |- _ ] => inv H
+                 | [ H : forall x : ConstraintSet.elt, _ |- _ ]
+                   => specialize (fun a b c => H ((a, b), c))
+                 end
+               | solve [ eauto ]
+               | progress rdest
+               | progress destruct_head'_ex
+               | progress split_and
+               | progress intros
+               | progress destruct ?
+               | progress destruct_head'_or ].
+Qed.
+
+Lemma consistent_extension_on_iff_subgraph_helper cs cstr G G'
+  (cscstr := declare_and_uniquify_and_combine_levels (cs, cstr))
+  (cs' := cscstr.1) (cstr' := cscstr.2)
+  (cf := config.default_checker_flags) (lvls := levels_of_cscs cs' cstr')
+  (HG : gc_of_uctx cs' = Some G)
+  (HG' : gc_of_uctx (lvls, cstr') = Some G')
+  : subgraph (make_graph G) (make_graph G').
+Proof.
+  repeat first [ progress cbv [gc_of_uctx monad_utils.bind monad_utils.ret monad_utils.option_monad] in *
+               | progress cbn [fst snd] in *
+               | progress subst
+               | progress destruct ?
+               | match goal with
+                 | [ H : Some ?x = Some ?y |- _ ] => assert (x = y) by congruence; clear H
+                 end
+               | congruence ].
+  repeat match goal with H := _ |- _ => subst H end.
+  split; try reflexivity;
+    cbv [levels_of_cscs ContextSet.levels uGraph.wGraph.E make_graph uGraph.wGraph.V];
+    cbn [fst snd] in *;
+    try solve [ clear; LevelSetDecide.fsetdec ];
+    [].
+  all: lazymatch goal with
+       | [ |- EdgeSet.Subset _ _ ] => idtac
+       end.
+  intro;
+    rewrite !add_cstrs_spec, !add_level_edges_spec, !EdgeSetFact.empty_iff;
+    repeat setoid_rewrite VSet.union_spec.
+  all: repeat first [ intro
+                    | progress destruct_head'_or
+                    | progress destruct_head'_ex
+                    | progress destruct_head'_and
+                    | progress subst
+                    | exfalso; assumption
+                    | progress rewrite ?@gc_of_constraint_iff in * by eassumption
+                    | progress cbv [ConstraintSet.Exists on_Some] in *
+                    | progress destruct ?
+                    | solve [ eauto 6 ] ].
+  all: [ > ].
+  left; eexists; split; [ reflexivity | ].
+  all: repeat first [ intro
+                    | progress destruct_head'_or
+                    | progress destruct_head'_ex
+                    | progress destruct_head'_and
+                    | progress subst
+                    | exfalso; assumption
+                    | progress rewrite ?@gc_of_constraint_iff in * by eassumption
+                    | progress cbv [ConstraintSet.Exists on_Some] in *
+                    | progress destruct ?
+                    | solve [ eauto 6 ] ].
+  eexists; split;
+    [ | match goal with H : _ |- _ => rewrite H; eassumption end ].
+  cbv [declare_and_uniquify_and_combine_levels ContextSet.constraints] in *; cbn [fst snd] in *.
+  ConstraintSetDecide.fsetdec.
+Qed.
+
+Lemma consistent_extension_on_iff cs cstr
+  (cscstr := declare_and_uniquify_and_combine_levels (cs, cstr))
+  (cs' := cscstr.1) (cstr' := cscstr.2)
+  (cf := config.default_checker_flags) (lvls := levels_of_cscs cs' cstr')
+  : @consistent_extension_on cs cstr
+    <-> is_true
+          match uGraph.is_consistent cs', uGraph.is_consistent (lvls, cstr'),
+            uGraph.gc_of_uctx cs', uGraph.gc_of_uctx (lvls, cstr') with
+          | false, _, _, _
+          | _, _, None, _
+            => true
+          | _, true, Some G, Some G'
+            => uGraph.wGraph.IsFullSubgraph.is_full_extension (uGraph.make_graph G) (uGraph.make_graph G')
+          | _, _, _, _ => false
+          end.
+Proof.
+  rewrite consistent_extension_on_iff_declare_and_uniquify_and_combine_levels.
+  destruct (levels_of_cscs_spec cs' cstr').
+  subst cscstr cs' cstr'.
+  cbv zeta; repeat destruct ?; subst.
+  let H := fresh in pose proof (fun uctx uctx' G => @uGraph.consistent_ext_on_full_ext _ uctx G (lvls, uctx')) as H; cbn [fst snd] in H; erewrite H; clear H.
+  1: reflexivity.
+  all: cbn [fst snd ContextSet.constraints] in *.
+  all: repeat
+         repeat
+         first [ match goal with
+                 | [ H : _ = Some _ |- _ ] => rewrite H
+                 | [ H : _ = None |- _ ] => rewrite H
+                 | [ |- _ <-> is_true false ]
+                   => cbv [is_true]; split; [ let H := fresh in intro H; contradict H | congruence ]
+                 | [ |- _ <-> is_true true ]
+                   => split; [ reflexivity | intros _ ]
+                 end
+               | progress cbv [uGraph.is_graph_of_uctx monad_utils.bind monad_utils.ret monad_utils.option_monad] in *
+               | progress cbn [MCOption.on_Some fst snd] in *
+               | rewrite <- uGraph.is_consistent_spec2
+               | progress subst
+               | assert_fails (idtac; lazymatch goal with |- ?G => has_evar G end);
+                 first [ reflexivity | assumption ]
+               | match goal with
+                 | [ H : ?T, H' : ~?T |- _ ] => exfalso; apply H', H
+                 | [ H : context[match ?x with _ => _ end] |- _ ] => destruct x eqn:?
+                 | [ H : uGraph.gc_of_uctx _ = None |- _ ] => cbv [uGraph.gc_of_uctx] in *
+                 | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+                 | [ H : Some _ = None |- _ ] => inversion H
+                 | [ H : None = Some _ |- _ ] => inversion H
+                 | [ H : ?T <-> False |- _ ] => destruct H as [H _]; try change (~T) in H
+                 | [ H : ~consistent ?cs |- consistent_extension_on (_, ?cs) _ ]
+                   => intros ? ?; exfalso; apply H; eexists; eassumption
+                 | [ H : ~consistent (snd ?cs) |- consistent_extension_on ?cs _ ]
+                   => intros ? ?; exfalso; apply H; eexists; eassumption
+                 | [ H : @uGraph.is_consistent ?cf ?uctx = false |- _ ]
+                   => assert (~consistent (snd uctx));
+                      [ rewrite <- (@uGraph.is_consistent_spec cf uctx), H; clear H; auto
+                      | clear H ]
+                 | [ H : @uGraph.gc_of_constraints ?cf ?ctrs = None |- _ ]
+                   => let H' := fresh in
+                      pose proof (@uGraph.gc_consistent_iff cf ctrs) as H';
+                      rewrite H in H';
+                      clear H
+                 | [ H : @uGraph.is_consistent ?cf ?uctx = true |- _ ]
+                   => assert_fails (idtac; match goal with
+                                           | [ H' : consistent ?v |- _ ] => unify v (snd uctx)
+                                           end);
+                      assert (consistent (snd uctx));
+                      [ rewrite <- (@uGraph.is_consistent_spec cf uctx), H; clear H; auto
+                      | ]
+                 end ].
+  all: try now apply global_uctx_invariants__declare_and_uniquify_and_combine_levels.
+  all: try now eapply @consistent_extension_on_iff_subgraph_helper.
+  all: try solve [ repeat first [ progress cbv [consistent consistent_extension_on not] in *
+                                | progress intros
+                                | progress destruct_head'_ex
+                                | progress destruct_head'_and
+                                | progress specialize_under_binders_by eassumption
+                                | solve [ eauto ] ] ].
+Qed.
+
+Definition consistent_extension_on_dec cs cstr : {@consistent_extension_on cs cstr} + {~@consistent_extension_on cs cstr}.
+Proof.
+  pose proof (@consistent_extension_on_iff cs cstr) as H; cbv beta zeta in *.
+  let b := lazymatch type of H with context[is_true ?b] => b end in
+  destruct b; [ left; apply H; reflexivity | right; intro H'; apply H in H'; auto ].
+Defined.
 
 Definition leq0_levelalg_n_dec n ϕ u u' : {@leq0_levelalg_n (uGraph.Z_of_bool n) ϕ u u'} + {~@leq0_levelalg_n (uGraph.Z_of_bool n) ϕ u u'}.
 Proof.

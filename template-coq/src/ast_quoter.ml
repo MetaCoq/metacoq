@@ -82,8 +82,8 @@ struct
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
-         | Some x -> Universes0.Level.Var (quote_int x)
-         | None -> Universes0.Level.Level (quote_string (Univ.Level.to_string l))
+         | Some x -> Universes0.Level.Coq_lvar (quote_int x)
+         | None -> Universes0.Level.Coq_level (quote_string (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
     try Coq_inr (quote_nonprop_level l)
@@ -92,8 +92,8 @@ struct
   let quote_universe s : Universes0.Universe.t =
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
-    | _ -> 
-      let univs = List.map (fun (l,i) -> 
+    | _ ->
+      let univs = List.map (fun (l,i) ->
           match quote_level l with
           | Coq_inl lprop -> assert false
           | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
@@ -187,7 +187,7 @@ struct
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = filter_map 
+    let levels = filter_map
       (fun l -> match quote_level l with
         | Coq_inl _ -> None
         | Coq_inr l -> Some l)
@@ -265,8 +265,8 @@ struct
 
   let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
-    let pred = { pparams = Array.to_list pars; 
-                 puinst = univs; 
+    let pred = { pparams = Array.to_list pars;
+                 puinst = univs;
                  pcontext = List.rev (Array.to_list pctx);
                  preturn = pret } in
     let branches = List.map (fun (bctx, br) -> { bcontext = List.rev (Array.to_list bctx); bbody = br }) brs in
@@ -279,20 +279,20 @@ struct
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
   let mk_one_inductive_body (id, indices, sort, ty, kel, ctrs, projs, relevance) =
-    let ctrs = List.map (fun (name, args, indices, ty, arity) -> 
-      { cstr_name = name; 
+    let ctrs = List.map (fun (name, args, indices, ty, arity) ->
+      { cstr_name = name;
         cstr_args = args;
         cstr_indices = indices;
         cstr_type = ty;
         cstr_arity = arity }) ctrs in
-    let projs = List.map (fun (proj_name, proj_relevance, proj_type) -> 
+    let projs = List.map (fun (proj_name, proj_relevance, proj_type) ->
         { proj_name; proj_relevance; proj_type }) projs in
     { ind_name = id; ind_type = ty;
       ind_indices = indices;
       ind_sort = sort;
-      ind_kelim = kel; 
+      ind_kelim = kel;
       ind_ctors = ctrs;
-      ind_projs = projs; 
+      ind_projs = projs;
       ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =
@@ -311,12 +311,12 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
-  type pre_quoted_retroknowledge = 
+  type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
       retro_float64 : quoted_kernel_name option }
 
-  let quote_retroknowledge r = 
-    { Environment.Retroknowledge.retro_int63 = r.retro_int63; 
+  let quote_retroknowledge r =
+    { Environment.Retroknowledge.retro_int63 = r.retro_int63;
       Environment.Retroknowledge.retro_float64 = r.retro_float64 }
 
   let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
@@ -366,7 +366,7 @@ struct
     | None -> None *)
 
   let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind,
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n

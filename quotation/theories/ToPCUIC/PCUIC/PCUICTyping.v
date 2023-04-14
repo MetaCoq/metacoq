@@ -24,9 +24,11 @@ From MetaCoq.Quotation.ToPCUIC.QuotationOf.PCUIC Require Import PCUICAst.Instanc
 #[export] Instance quote_guard_checking {k Σ Γ t} : ground_quotable (@guard guard_checking k Σ Γ t).
 Proof.
   tryif unfold_quotation_of ()
-  then fail "It seems that guard_checking is no longer an axiom, please remove the Admitted of this theorem and properly define quotability"
+  then fail "It seems that guard_checking is no longer an axiom, please remove the Axiom of this theorem and properly define quotability"
   else idtac.
-Admitted.
+Abort.
+Axiom quote_guard_checking : forall {k Σ Γ t}, ground_quotable (@guard guard_checking k Σ Γ t).
+#[export] Existing Instance quote_guard_checking.
 
 #[export] Hint Unfold
   fix_guard

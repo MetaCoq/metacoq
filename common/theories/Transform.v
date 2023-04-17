@@ -85,7 +85,7 @@ Module Transform.
   Declare Scope transform_scope.
   Bind Scope transform_scope with t.
 
-  Notation " o ⇓ o' " := (Transform.compose o o' _) (at level 50, left associativity) : transform_scope.
+  Notation " o ▷ o' " := (Transform.compose o o' _) (at level 50, left associativity) : transform_scope.
 
   Open Scope transform_scope.
 End Transform.

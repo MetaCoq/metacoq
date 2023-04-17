@@ -52,7 +52,7 @@ Coq. The project currently has a single repository extending
 Template-Coq with additional features. Each extension is in a dedicated folder.
 The [dependency graph](https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/depgraph-2022-07-01.png)
 might be useful to navigate the project.
-Statistics: ~150kLoC of Coq, ~30kLoC of OCaml.
+Statistics: ~200kLoC of Coq, ~30kLoC of OCaml.
 
 ### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.16/template-coq/theories)
 
@@ -164,6 +164,19 @@ Examples of translations built on top of this:
 
 - a plugin to negate functional extensionality in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.16/translations/times_bool_fun.v)
 
+### [Quotation](https://github.com/MetaCoq/metacoq/tree/coq-8.16/quotation/theories)
+
+The `Quotation` module is geared at providing functions `□T → □□T` for
+`□T := Ast.term` (currently implemented) and for `□T := { t : Ast.term
+& Σ ;;; [] |- t : T }` (still in the works).
+
+Ultimately the goal of this development is to prove that `□` is a lax monoidal
+semicomonad (a functor with `cojoin : □T → □□T` that codistributes over `unit`
+and `×`), which is sufficient for proving Löb's theorem.
+
+The public-facing interface of this development is provided in [`MetaCoq.Quotation.ToTemplate.All`](./quotation/theories/ToTemplate/All.v) and [`MetaCoq.Quotation.ToPCUIC.All`](./quotation/theories/ToPCUIC/All.v).
+
+See the Quotation [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/quotation/theories/README.md) for a more detailed view of the development.
 
 ### Examples
 

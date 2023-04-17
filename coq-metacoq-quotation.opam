@@ -29,18 +29,20 @@ install: [
 ]
 depends: [
   "coq-metacoq-template" {= version}
-#  "coq-metacoq-pcuic" {= version}
-#  "coq-metacoq-template-pcuic" {= version}
+  "coq-metacoq-pcuic" {= version}
+  "coq-metacoq-template-pcuic" {= version}
 ]
-synopsis: "Gallina quotation functions for Template Coq (PCUIC support in the works)."
+synopsis: "Gallina quotation functions for Template Coq"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-The Quotation module is geared at providing functions `□T → □□T` for `□T :=
-Ast.term` (currently implemented) and for `□T := { t : Ast.term & Σ ;;; [] |- t
-: T }` (still in the works).  Currently `Ast.term → Ast.term` and `(Σ ;;; [] |-
-t : T) → Ast.term` functions are provided for Template terms.  Proving
-well-typedness and adding support for PCUIC are still works in progress.
+The Quotation module is geared at providing functions `□T → □□T` for
+`□T := Ast.term` (currently implemented) and for `□T := { t : Ast.term
+& Σ ;;; [] |- t : T }` (still in the works).  Currently `Ast.term →
+Ast.term` and `(Σ ;;; [] |- t : T) → Ast.term` functions are provided
+for Template and PCUIC terms, in `MetaCoq.Quotation.ToTemplate.All`
+and `MetaCoq.Quotation.ToPCUIC.All`.  Proving well-typedness is still
+a work in progress.
 
 Ultimately the goal of this development is to prove that `□` is a lax monoidal
 semicomonad (a functor with `cojoin : □T → □□T` that codistributes over `unit`

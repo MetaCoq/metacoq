@@ -283,7 +283,7 @@ Proof.
   eexists; eauto.
 Qed.
 
-Lemma eval_is_box {wfl:WcbvFlags} Σ t u : Σ ⊢ t ▷ u -> is_box t -> u = EAst.tBox.
+Lemma eval_is_box {wfl:WcbvFlags} Σ t u : Σ ⊢ t ⇓ u -> is_box t -> u = EAst.tBox.
 Proof.
   intros ev; induction ev => //.
   - rewrite is_box_tApp.

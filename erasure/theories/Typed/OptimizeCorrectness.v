@@ -360,8 +360,8 @@ Lemma eval_dearg_lambdas_inv {wfl : WcbvFlags} Σ mask Γ inner v :
   env_closed Σ ->
   closed (it_mkLambda_or_LetIn Γ inner) ->
   #|mask| = #|vasses Γ| ->
-  Σ e⊢ dearg_lambdas mask (it_mkLambda_or_LetIn Γ inner) ▷ v ->
-  ∑ tv, Σ e⊢ it_mkLambda_or_LetIn Γ inner ▷ tv.
+  Σ e⊢ dearg_lambdas mask (it_mkLambda_or_LetIn Γ inner) ⇓ v ->
+  ∑ tv, Σ e⊢ it_mkLambda_or_LetIn Γ inner ⇓ tv.
 Proof.
   intros env_clos clos len_eq ev.
   induction #|Γ| as [|Γlen IH] eqn:Γlen_eq in Γ, mask, inner, v, clos, len_eq, ev |- *.
@@ -475,8 +475,8 @@ Lemma dearg_lambdas_correct {wfl : WcbvFlags} Σ body args mask v :
   Forall (closedn 0) args ->
   valid_dearg_mask mask body ->
   #|mask| <= #|args| ->
-  Σ e⊢ mkApps body args ▷ v ->
-  Σ e⊢ mkApps (dearg_lambdas mask body) (masked mask args) ▷ v.
+  Σ e⊢ mkApps body args ⇓ v ->
+  Σ e⊢ mkApps (dearg_lambdas mask body) (masked mask args) ⇓ v.
 Proof.
   intros env_clos body_clos args_clos valid_mask l ev.
   destruct (valid_dearg_mask_spec _ _ valid_mask) as (Γ & inner & vasses_len & <-).
@@ -1825,7 +1825,7 @@ Qed.
 
 Lemma eval_is_expanded_aux {wfl : WcbvFlags} Σ t v k :
   with_constructor_as_block = false ->
-  trans_env Σ e⊢ t ▷ v ->
+  trans_env Σ e⊢ t ⇓ v ->
   is_expanded_env Σ ->
   is_expanded_aux k t ->
   is_expanded_aux k v.
@@ -2430,7 +2430,7 @@ Ltac invert_facts :=
 Lemma eval_valid_cases {wfl : WcbvFlags} Σ t v :
   with_constructor_as_block = false ->
 
-  trans_env Σ e⊢ t ▷ v ->
+  trans_env Σ e⊢ t ⇓ v ->
 
   env_closed (trans_env Σ) ->
   closed t ->
@@ -2770,7 +2770,7 @@ Lemma eval_mkApps_tConstruct {wfl : WcbvFlags} Σ ind c args argsv mdecl idecl c
   with_constructor_as_block = false ->
   EGlobalEnv.lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
   #|argsv| <= cstr_arity mdecl cdecl ->
-  Σ e⊢ mkApps (tConstruct ind c []) args ▷ mkApps (tConstruct ind c []) argsv.
+  Σ e⊢ mkApps (tConstruct ind c []) args ⇓ mkApps (tConstruct ind c []) argsv.
 Proof.
   revert argsv a.
   induction args using MCList.rev_ind; intros argsv all block ctor_look argsv_lt.
@@ -2795,7 +2795,7 @@ Qed.
 
 Ltac facts :=
   (repeat match goal with
-   | H : ?Σ e⊢ ?t ▷ ?v
+   | H : ?Σ e⊢ ?t ⇓ ?v
      |- _ =>
          match goal with
          | H' : is_true (closed v) |- _ => fail 1
@@ -2804,7 +2804,7 @@ Ltac facts :=
    end);
   (repeat
      match goal with
-     | [H : ?Σ e⊢ ?t ▷ ?v |- _] =>
+     | [H : ?Σ e⊢ ?t ⇓ ?v |- _] =>
        match goal with
        | [H' : is_true (valid_cases v) |- _] =>
          fail 1
@@ -2814,7 +2814,7 @@ Ltac facts :=
      end);
   (repeat
      match goal with
-     | [H : ?Σ e⊢ ?t ▷ ?v |- _] =>
+     | [H : ?Σ e⊢ ?t ⇓ ?v |- _] =>
        match goal with
        | [H' : is_true (is_expanded v) |- _] =>
          fail 1
@@ -2873,9 +2873,9 @@ Section dearg.
         closed t ->
         valid_cases t ->
         is_expanded t ->
-        forall ev : trans_env Σ e⊢ t ▷ v,
+        forall ev : trans_env Σ e⊢ t ⇓ v,
         deriv_length ev <= n ->
-        trans_env (dearg_env Σ) e⊢ dearg t ▷ dearg v).
+        trans_env (dearg_env Σ) e⊢ dearg t ⇓ dearg v).
 
   Lemma lookup_ctor_trans_env ind c Σ0 mdecl idecl cdecl :
     EGlobalEnv.lookup_constructor (trans_env Σ0) ind c = Some (mdecl, idecl, cdecl) ->
@@ -2975,9 +2975,9 @@ Section dearg.
     closed arg ->
     valid_cases arg ->
     is_expanded arg ->
-    forall (ev : trans_env Σ e⊢ tApp hd arg ▷ v),
+    forall (ev : trans_env Σ e⊢ tApp hd arg ⇓ v),
       deriv_length ev <= S n ->
-      trans_env (dearg_env Σ) e⊢ tApp (dearg hd) (dearg arg) ▷ dearg v.
+      trans_env (dearg_env Σ) e⊢ tApp (dearg hd) (dearg arg) ⇓ dearg v.
   Proof with auto with dearg.
     intros ? clos_hd valid_hd exp_hd clos_arg valid_arg exp_arg ev ev_len.
     depind ev; cbn in *;try congruence.
@@ -3150,9 +3150,9 @@ Section dearg.
     Forall (closedn 0) args ->
     Forall valid_cases args ->
     Forall is_expanded args ->
-    forall (ev : trans_env Σ e⊢ mkApps hd args ▷ v),
+    forall (ev : trans_env Σ e⊢ mkApps hd args ⇓ v),
       deriv_length ev <= n ->
-      trans_env (dearg_env Σ) e⊢ mkApps (dearg hd) (map dearg args) ▷ dearg v.
+      trans_env (dearg_env Σ) e⊢ mkApps (dearg hd) (map dearg args) ⇓ dearg v.
   Proof.
     intros ? clos_hd valid_hd exp_hd clos_args valid_args exp_args ev ev_len.
     pose proof (eval_mkApps_deriv ev) as (hdv & ev_hd & argsv & ev_args & ev_args_len).
@@ -3187,10 +3187,10 @@ Section dearg.
     Forall (closedn 0) args ->
     Forall valid_cases args ->
     Forall is_expanded args ->
-    (args = [] -> trans_env (dearg_env Σ) e⊢ dearg hd ▷ dearg v) ->
-    forall (ev : trans_env Σ e⊢ mkApps hd args ▷ v),
+    (args = [] -> trans_env (dearg_env Σ) e⊢ dearg hd ⇓ dearg v) ->
+    forall (ev : trans_env Σ e⊢ mkApps hd args ⇓ v),
       deriv_length ev <= S n ->
-      trans_env (dearg_env Σ) e⊢ mkApps (dearg hd) (map dearg args) ▷ dearg v.
+      trans_env (dearg_env Σ) e⊢ mkApps (dearg hd) (map dearg args) ⇓ dearg v.
   Proof.
     intros ? clos_hd valid_hd exp_hd clos_args valid_args exp_args no_args ev ev_len.
     destruct args as [|? ? _] using MCList.rev_ind; cbn in *; [easy|].
@@ -3666,13 +3666,13 @@ Lemma dearg_correct {wfl : WcbvFlags} Σ t v :
   is_expanded_env Σ ->
   is_expanded t ->
 
-  trans_env Σ e⊢ t ▷ v ->
-  trans_env (dearg_env Σ) e⊢ dearg t ▷ dearg v.
+  trans_env Σ e⊢ t ⇓ v ->
+  trans_env (dearg_env Σ) e⊢ dearg t ⇓ dearg v.
 Proof.
   intros block clos_env clos_t valid_env valid_t exp_env exp_t.
-  enough (forall n (ev : trans_env Σ e⊢ t ▷ v),
+  enough (forall n (ev : trans_env Σ e⊢ t ⇓ v),
              deriv_length ev <= n ->
-             trans_env (dearg_env Σ) e⊢ dearg t ▷ dearg v).
+             trans_env (dearg_env Σ) e⊢ dearg t ⇓ dearg v).
   { intros ev.
     eapply (H _ ev).
     apply Nat.le_refl. }
@@ -3690,7 +3690,7 @@ Proof.
 
     enough (trans_env (dearg_env Σ)
             e⊢ mkApps (dearg (dearg_lambdas (get_const_mask kn) body))
-                      (masked (get_const_mask kn) (map dearg args)) ▷ dearg v) as ev'.
+                      (masked (get_const_mask kn) (map dearg args)) ⇓ dearg v) as ev'.
     { eapply eval_mkApps_head in ev' as ev_hd.
       destruct ev_hd as (hdv & ev_hd).
       eapply eval_mkApps_heads.
@@ -3700,7 +3700,7 @@ Proof.
 
     rewrite dearg_dearg_lambdas by
         eauto using valid_dearg_mask_constant, valid_cases_constant.
-    assert (∑ ev' : trans_env Σ e⊢ mkApps body args ▷ v,
+    assert (∑ ev' : trans_env Σ e⊢ mkApps body args ⇓ v,
                deriv_length ev' < deriv_length ev) as (ev_body & deriv_body).
     { unshelve epose proof (eval_mkApps_heads_deriv _ ev_const ev) as (ev' & ?).
       - now econstructor.
@@ -4303,8 +4303,8 @@ Qed.
 
 Lemma eval_debox_env_types {wfl : WcbvFlags} Σ t v :
   with_constructor_as_block = false ->
-  trans_env Σ e⊢ t ▷ v ->
-  trans_env (debox_env_types Σ) e⊢ t ▷ v.
+  trans_env Σ e⊢ t ⇓ v ->
+  trans_env (debox_env_types Σ) e⊢ t ⇓ v.
 Proof.
   intros wcab.
   induction 1; eauto;try congruence.
@@ -4349,7 +4349,7 @@ Proof.
 Qed.
 
 Lemma eval_const_construct_expanded {wfl : WcbvFlags} Σ kn ind c im cm :
-  trans_env Σ e⊢ tConst kn ▷ tConstruct ind c [] ->
+  trans_env Σ e⊢ tConst kn ⇓ tConstruct ind c [] ->
   valid_masks_env im cm Σ ->
   is_expanded im cm (tConst kn).
 Proof.

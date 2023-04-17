@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.Erasure Require Import Extract.
 
-Notation "Σ ⊢p s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ ⊢p s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Require Import Program.
 From Equations Require Import Equations.
@@ -994,7 +994,7 @@ Lemma Subsingleton_cofix v ci p brs T (Σ : global_env_ext) :
    declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
    forall (args : list term), Subsingleton Σ ci.(ci_ind) ->
    Σ ;;; [] |- tCase ci p (mkApps (tCoFix mfix idx) args) brs : T ->
-   Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ▷ v ->
+   Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ⇓ v ->
    Is_proof Σ [] (mkApps (tCoFix mfix idx) args) ->
    #|ind_ctors idecl| <= 1.
 Proof.

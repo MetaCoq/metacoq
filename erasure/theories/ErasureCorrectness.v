@@ -31,8 +31,8 @@ Local Existing Instance config.extraction_checker_flags.
 
 (** * Correctness of erasure  *)
 
-Notation "Σ |-p s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
-Notation "Σ ⊢ s ▷ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ |-p s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ ⊢ s ⇓ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 (** ** The correctness proof  *)
 
@@ -45,8 +45,8 @@ Lemma erases_correct (wfl := default_wcbv_flags) Σ t t' v Σ' :
   welltyped Σ [] t ->
   Σ;;; [] |- t ⇝ℇ t' ->
   erases_deps Σ Σ' t' ->
-  Σ |-p t ▷ v ->
-  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
+  Σ |-p t ⇓ v ->
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ⇓ v' ∥.
 Proof.
   intros wfΣ [T Hty] He Hed H.
   revert T Hty t' He Hed.
@@ -99,7 +99,7 @@ Proof.
       eapply Is_type_eval; eauto.
     + auto.
   - assert (Hty' := Hty).
-    assert (Σ |-p tLetIn na b0 t b1 ▷ res) by eauto.
+    assert (Σ |-p tLetIn na b0 t b1 ⇓ res) by eauto.
     eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?); auto.
     invs He.
     + depelim Hed.
@@ -138,7 +138,7 @@ Proof.
     + exists EAst.tBox. split. 2:constructor; econstructor; eauto.
       econstructor. eapply Is_type_eval; eauto.
 
-  - assert (Σ |-p tConst c u ▷ res) by eauto.
+  - assert (Σ |-p tConst c u ⇓ res) by eauto.
     eapply inversion_Const in Hty as (? & ? & ? & ? & ?); [|easy].
     invs He.
     + depelim Hed.
@@ -169,8 +169,8 @@ Proof.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. eauto. constructor. econstructor. eauto.
 
   - assert (Hty' := Hty).
-  assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
-  (* assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
+  assert (Σ |-p tCase ci p discr brs ⇓ res) by eauto.
+  (* assert (Σ |-p tCase ci p discr brs ⇓ res) by eauto.
  *)
   eapply inversion_Case in Hty' as (mdecl' & idecl' & di & indices & [] & c0); auto.
 

@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.Erasure Require Import Extract.
 
-Notation "Σ ⊢p s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ ⊢p s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Require Import Program.
 From Equations Require Import Equations.
@@ -612,7 +612,7 @@ Lemma Is_type_eval (Σ : global_env_ext) t v:
 Proof.
   intros; eapply Is_type_red. eauto.
   red in X1. destruct X1 as [T [HT _]].
-  eapply wcbeval_red; eauto. assumption.
+  eapply wcbveval_red; eauto. assumption.
 Qed.
 
 (* Thanks to the restriction to Prop </= Type, erasability is also closed by expansion
@@ -626,7 +626,7 @@ Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
   ∥ isErasable Σ [] t ∥.
 Proof.
   intros wfΣ [T HT] ev [vt [Ht Hp]].
-  eapply wcbeval_red in ev; eauto.
+  eapply wcbveval_red in ev; eauto.
   pose proof (subject_reduction _ _ _ _ _ wfΣ.1 HT ev).
   pose proof (common_typing _ wfΣ Ht X) as [P [Pvt [Pt vP]]].
   destruct Hp.
@@ -974,10 +974,10 @@ Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res 
 Proof.
   intros wf wt H. depind H; try now (cbn in *; congruence).
   - eapply inversion_Case in wt as (? & ? & ? & ? & cinv & ?); eauto.
-    eexists _, _, _. eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
+    eexists _, _, _. eapply PCUICReduction.red_case_c. eapply wcbveval_red. 2: eauto. eapply cinv.
   - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
     assert (Hred1 : PCUICReduction.red Σ [] (tCase ip p discr brs) (tCase ip p (mkApps fn args) brs)). {
-      etransitivity. { eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. }
+      etransitivity. { eapply PCUICReduction.red_case_c. eapply wcbveval_red. 2: eauto. eapply cinv. }
       econstructor. econstructor.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
       enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
@@ -994,7 +994,7 @@ Lemma Subsingleton_cofix v ci p brs T (Σ : global_env_ext) :
    declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
    forall (args : list term), Subsingleton Σ ci.(ci_ind) ->
    Σ ;;; [] |- tCase ci p (mkApps (tCoFix mfix idx) args) brs : T ->
-   Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ▷ v ->
+   Σ ⊢p tCase ci p (mkApps (tCoFix mfix idx) args) brs ⇓ v ->
    Is_proof Σ [] (mkApps (tCoFix mfix idx) args) ->
    #|ind_ctors idecl| <= 1.
 Proof.

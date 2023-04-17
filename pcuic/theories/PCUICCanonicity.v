@@ -970,7 +970,7 @@ Section Canonicity.
 
   Import PCUICGlobalEnv.
 
-  Lemma wcbeval_red t ty u :
+  Lemma wcbveval_red t ty u :
     Σ ;;; [] |- t : ty ->
     eval Σ t u -> red Σ [] t u.
   Proof.
@@ -1143,7 +1143,7 @@ Section Canonicity.
     Σ ;;; [] |- t : T -> eval Σ t u -> Σ ;;; [] |- u : T.
   Proof.
     intros Hty Hred.
-    eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
+    eapply wcbveval_red in Hred; eauto. eapply subject_reduction; eauto.
   Qed.
 
   Lemma value_canonicity {t i u args} :
@@ -1166,7 +1166,7 @@ Section Canonicity.
   Proof.
     intros Ht t' eval.
     pose proof (subject_closed Ht).
-    eapply subject_reduction in Ht. 3:eapply wcbeval_red; eauto. 2:auto.
+    eapply subject_reduction in Ht. 3:eapply wcbveval_red; eauto. 2:auto.
     eapply eval_to_value in eval as axfree.
     eapply value_axiom_free in axfree.
     eapply eval_whne in eval; auto.

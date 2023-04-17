@@ -12,7 +12,7 @@ From MetaCoq.Utils Require Import utils.
 
 Set Equations Transparent.
 
-Notation "Σ 'e⊢' s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ 'e⊢' s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Global Arguments eval_unique_sig {_ _ _ _ _}.
 Global Arguments eval_deterministic {_ _ _ _ _}.
@@ -22,24 +22,24 @@ Section fix_flags.
 Context {wfl : WcbvFlags}.
 
 Lemma eval_tApp_head Σ hd arg v :
-  Σ e⊢ tApp hd arg ▷ v ->
-  ∑ hdv, Σ e⊢ hd ▷ hdv.
+  Σ e⊢ tApp hd arg ⇓ v ->
+  ∑ hdv, Σ e⊢ hd ⇓ hdv.
 Proof.
   intros ev.
   now depelim ev.
 Qed.
 
 Lemma eval_tApp_arg Σ hd arg v :
-  Σ e⊢ tApp hd arg ▷ v ->
-  ∑ argv, Σ e⊢ arg ▷ argv.
+  Σ e⊢ tApp hd arg ⇓ v ->
+  ∑ argv, Σ e⊢ arg ⇓ argv.
 Proof.
   intros ev.
   now depelim ev.
 Qed.
 
 Lemma eval_mkApps_head Σ hd args v :
-  Σ e⊢ mkApps hd args ▷ v ->
-  ∑ hdv, Σ e⊢ hd ▷ hdv.
+  Σ e⊢ mkApps hd args ⇓ v ->
+  ∑ hdv, Σ e⊢ hd ⇓ hdv.
 Proof.
   revert hd v.
   induction args; intros hd v ev; [easy|].
@@ -49,7 +49,7 @@ Proof.
 Qed.
 
 Lemma eval_mkApps_args Σ hd args v :
-  Σ e⊢ mkApps hd args ▷ v ->
+  Σ e⊢ mkApps hd args ⇓ v ->
   ∑ argsv, All2 (eval Σ) args argsv.
 Proof.
   revert hd v.
@@ -64,10 +64,10 @@ Proof.
 Qed.
 
 Lemma eval_tApp_heads Σ hd hd' hdv arg v :
-  Σ e⊢ hd ▷ hdv ->
-  Σ e⊢ hd' ▷ hdv ->
-  Σ e⊢ tApp hd arg ▷ v ->
-  Σ e⊢ tApp hd' arg ▷ v.
+  Σ e⊢ hd ⇓ hdv ->
+  Σ e⊢ hd' ⇓ hdv ->
+  Σ e⊢ tApp hd arg ⇓ v ->
+  Σ e⊢ tApp hd' arg ⇓ v.
 Proof.
   intros ev_hd ev_hd' ev_app.
   depind ev_app.
@@ -92,22 +92,22 @@ Derive Signature for eval.
 Derive NoConfusionHom for term.
 
 Lemma eval_tLetIn_inv Σ na val body res :
-  Σ e⊢ tLetIn na val body ▷ res ->
+  Σ e⊢ tLetIn na val body ⇓ res ->
   ∑ val_res,
-    Σ e⊢ val ▷ val_res ×
-    Σ e⊢ csubst val_res 0 body ▷ res.
+    Σ e⊢ val ⇓ val_res ×
+    Σ e⊢ csubst val_res 0 body ⇓ res.
 Proof. intros ev; depelim ev; easy. Qed.
 
 Lemma eval_tLambda_inv Σ na body v :
-  Σ e⊢ tLambda na body ▷ v ->
+  Σ e⊢ tLambda na body ⇓ v ->
   v = tLambda na body.
 Proof. now intros ev; depelim ev. Qed.
 
 Lemma eval_tApp_tLambda_inv Σ na body a v :
-  Σ e⊢ tApp (tLambda na body) a ▷ v ->
+  Σ e⊢ tApp (tLambda na body) a ⇓ v ->
   ∑ av,
-    Σ e⊢ a ▷ av ×
-    Σ e⊢ csubst av 0 body ▷ v.
+    Σ e⊢ a ⇓ av ×
+    Σ e⊢ csubst av 0 body ⇓ v.
 Proof.
   intros ev.
   depelim ev.
@@ -128,10 +128,10 @@ Proof.
 Qed.
 
 Lemma eval_mkApps_heads Σ hd hd' hdv args v :
-  Σ e⊢ hd ▷ hdv ->
-  Σ e⊢ hd' ▷ hdv ->
-  Σ e⊢ mkApps hd args ▷ v ->
-  Σ e⊢ mkApps hd' args ▷ v.
+  Σ e⊢ hd ⇓ hdv ->
+  Σ e⊢ hd' ⇓ hdv ->
+  Σ e⊢ mkApps hd args ⇓ v ->
+  Σ e⊢ mkApps hd' args ⇓ v.
 Proof.
   revert hd hd' hdv v.
   induction args as [|a args]; intros hd hd' hdv v ev_hd ev_hd' ev.
@@ -278,7 +278,7 @@ Proof.
 Qed.
 
 
-Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ▷ v) : nat :=
+Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ⇓ v) : nat :=
   match ev with
   | eval_atom _ _ => 1
   | eval_delta _ _ _ _ _ _ ev
@@ -302,14 +302,14 @@ Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ▷ v) : nat :=
   | eval_construct_block _ _ _ _ _ args _ _ _ _ _ => S #|args|
   end.
 
-Lemma deriv_length_min {Σ t v} (ev : Σ e⊢ t ▷ v) :
+Lemma deriv_length_min {Σ t v} (ev : Σ e⊢ t ⇓ v) :
   1 <= deriv_length ev.
 Proof.
   destruct ev; cbn in *;lia.
 Qed.
 
-Lemma eval_tApp_deriv {Σ hd arg v} (ev : Σ e⊢ tApp hd arg ▷ v) :
-  ∑ hdv (ev_hd : Σ e⊢ hd ▷ hdv) argv (ev_arg : Σ e⊢ arg ▷ argv),
+Lemma eval_tApp_deriv {Σ hd arg v} (ev : Σ e⊢ tApp hd arg ⇓ v) :
+  ∑ hdv (ev_hd : Σ e⊢ hd ⇓ hdv) argv (ev_arg : Σ e⊢ arg ⇓ argv),
     S (deriv_length ev_hd + deriv_length ev_arg) <= deriv_length ev.
 Proof.
   depelim ev; cbn in *;
@@ -336,8 +336,8 @@ Proof.
     exact (app_All2 _ _ _ _ _ _ _ a1 a2).
 Defined.
 
-Lemma eval_mkApps_deriv {Σ hd args v} (ev : Σ e⊢ mkApps hd args ▷ v) :
-  ∑ hdv (ev_hd : Σ e⊢ hd ▷ hdv) argsv (ev_args : All2 (eval Σ) args argsv),
+Lemma eval_mkApps_deriv {Σ hd args v} (ev : Σ e⊢ mkApps hd args ⇓ v) :
+  ∑ hdv (ev_hd : Σ e⊢ hd ⇓ hdv) argsv (ev_args : All2 (eval Σ) args argsv),
     deriv_length ev_hd + #|args| + sum_deriv_lengths ev_args <= deriv_length ev.
 Proof.
   revert hd v ev.
@@ -398,7 +398,7 @@ Inductive All2_eval_app_spec Σ : list term -> term ->
                                  list term -> term ->
                                  forall ts tsv, All2 (eval Σ) ts tsv -> Type :=
 | All2_eval_app_intro {ts tsv} (a : All2 (eval Σ) ts tsv)
-                      {x xv} (evx : Σ e⊢ x ▷ xv) :
+                      {x xv} (evx : Σ e⊢ x ⇓ xv) :
     All2_eval_app_spec
       Σ ts x tsv xv
       (ts ++ [x])
@@ -422,10 +422,10 @@ Proof.
 Qed.
 
 Lemma eval_tApp_heads_deriv {Σ hd hd' hdv arg v}
-      (ev_hd : Σ e⊢ hd ▷ hdv)
-      (ev_hd' : Σ e⊢ hd' ▷ hdv)
-      (ev_app : Σ e⊢ tApp hd arg ▷ v) :
-  ∑ (ev_app' : Σ e⊢ tApp hd' arg ▷ v),
+      (ev_hd : Σ e⊢ hd ⇓ hdv)
+      (ev_hd' : Σ e⊢ hd' ⇓ hdv)
+      (ev_app : Σ e⊢ tApp hd arg ⇓ v) :
+  ∑ (ev_app' : Σ e⊢ tApp hd' arg ⇓ v),
     (deriv_length ev_app + deriv_length ev_hd' = deriv_length ev_app' + deriv_length ev_hd)%nat.
 Proof.
   depind ev_app.
@@ -454,10 +454,10 @@ Proof.
 Qed.
 
 Lemma eval_mkApps_heads_deriv {Σ hd hd' hdv args v}
-      (ev_hd : Σ e⊢ hd ▷ hdv)
-      (ev_hd' : Σ e⊢ hd' ▷ hdv)
-      (ev_apps : Σ e⊢ mkApps hd args ▷ v) :
-  ∑ (ev_apps' : Σ e⊢ mkApps hd' args ▷ v),
+      (ev_hd : Σ e⊢ hd ⇓ hdv)
+      (ev_hd' : Σ e⊢ hd' ⇓ hdv)
+      (ev_apps : Σ e⊢ mkApps hd args ⇓ v) :
+  ∑ (ev_apps' : Σ e⊢ mkApps hd' args ⇓ v),
   (deriv_length ev_apps + deriv_length ev_hd' = deriv_length ev_apps' + deriv_length ev_hd)%nat.
 Proof.
   revert hd hd' hdv v ev_hd ev_hd' ev_apps.

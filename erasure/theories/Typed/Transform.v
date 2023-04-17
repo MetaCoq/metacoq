@@ -16,8 +16,8 @@ Definition ExtractTransformCorrect `{wcbvf : EWcbvEval.WcbvFlags} (transform : E
   forall Σ Σopt kn ind c,
     EWcbvEval.with_constructor_as_block = false ->
     transform Σ = Ok Σopt ->
-    trans_env Σ e⊢ tConst kn ▷ tConstruct ind c [] ->
-    trans_env Σopt e⊢ tConst kn ▷ tConstruct ind c [].
+    trans_env Σ e⊢ tConst kn ⇓ tConstruct ind c [] ->
+    trans_env Σopt e⊢ tConst kn ⇓ tConstruct ind c [].
 
 Definition CorrectExtractTransform `{EWcbvEval.WcbvFlags} := ∑ t, ExtractTransformCorrect t.
 

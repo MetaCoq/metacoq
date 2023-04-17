@@ -31,8 +31,8 @@ Local Existing Instance config.extraction_checker_flags.
 
 (** * Correctness of erasure  *)
 
-Notation "Σ |-p s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
-Notation "Σ ⊢ s ▷ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ |-p s ⇓ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ ⊢ s ⇓ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 (** ** The correctness proof  *)
 
@@ -45,8 +45,8 @@ Lemma erases_correct (wfl := default_wcbv_flags) Σ t t' v Σ' :
   welltyped Σ [] t ->
   Σ;;; [] |- t ⇝ℇ t' ->
   erases_deps Σ Σ' t' ->
-  Σ |-p t ▷ v ->
-  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
+  Σ |-p t ⇓ v ->
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ⇓ v' ∥.
 Proof.
   intros wfΣ [T Hty] He Hed H.
   revert T Hty t' He Hed.
@@ -99,7 +99,7 @@ Proof.
       eapply Is_type_eval; eauto.
     + auto.
   - assert (Hty' := Hty).
-    assert (Σ |-p tLetIn na b0 t b1 ▷ res) by eauto.
+    assert (Σ |-p tLetIn na b0 t b1 ⇓ res) by eauto.
     eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?); auto.
     invs He.
     + depelim Hed.
@@ -107,7 +107,7 @@ Proof.
       assert (Hc : conv_context cumulAlgo_gen Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
-        now eapply wcbeval_red; eauto.
+        now eapply wcbveval_red; eauto.
         reflexivity.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
@@ -138,7 +138,7 @@ Proof.
     + exists EAst.tBox. split. 2:constructor; econstructor; eauto.
       econstructor. eapply Is_type_eval; eauto.
 
-  - assert (Σ |-p tConst c u ▷ res) by eauto.
+  - assert (Σ |-p tConst c u ⇓ res) by eauto.
     eapply inversion_Const in Hty as (? & ? & ? & ? & ?); [|easy].
     invs He.
     + depelim Hed.
@@ -169,8 +169,8 @@ Proof.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. eauto. constructor. econstructor. eauto.
 
   - assert (Hty' := Hty).
-  assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
-  (* assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
+  assert (Σ |-p tCase ci p discr brs ⇓ res) by eauto.
+  (* assert (Σ |-p tCase ci p discr brs ⇓ res) by eauto.
  *)
   eapply inversion_Case in Hty' as (mdecl' & idecl' & di & indices & [] & c0); auto.
 
@@ -223,7 +223,7 @@ Proof.
       edestruct IHeval2 as (? & ? & [?]).
       eapply subject_reduction. eauto. exact Hty.
       etransitivity.
-      eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto.
+      eapply PCUICReduction.red_case_c. eapply wcbveval_red; eauto.
       econstructor. econstructor.
       eauto.
       all:unfold iota_red in *. all:cbn in *.
@@ -301,7 +301,7 @@ Proof.
       edestruct IHeval2 as (? & ? & [?]).
       eapply subject_reduction. eauto. exact Hty.
       etransitivity.
-      eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
+      eapply PCUICReduction.red_case_c. eapply wcbveval_red. eauto.
       eauto. eauto.
 
       etransitivity. constructor. constructor.
@@ -391,7 +391,7 @@ Proof.
          edestruct IHeval2 as (? & ? & [?]).
          eapply subject_reduction. eauto. exact Hty.
          etransitivity.
-         eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
+         eapply PCUICReduction.red_case_c. eapply wcbveval_red. eauto.
          eauto. eauto.
          etransitivity. constructor. constructor. cbn. reflexivity.
          { rewrite e0 /cstr_arity e2 e1 //. }
@@ -459,7 +459,7 @@ Proof.
          edestruct invert_Case_Construct as (? & ? & ? & ?).
          { econstructor. eauto. }
          { eapply subject_reduction. eauto. exact Hty.
-           eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
+           eapply PCUICReduction.red_case_c. eapply wcbveval_red; eauto. }
 
         rewrite eq_npars. rewrite List.skipn_length e0 /cstr_arity -e1 e2.
         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
@@ -567,7 +567,7 @@ Proof.
     assert (Hcon := H0).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & e0); eauto.
     assert (Ht := t).
-    eapply subject_reduction in t. 2:auto. 2:eapply wcbeval_red; eauto.
+    eapply subject_reduction in t. 2:auto. 2:eapply wcbveval_red; eauto.
     assert (HT := t).
     apply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
     assert (Ht1 := t1).
@@ -597,7 +597,7 @@ Proof.
         - rewrite -mkApps_app app_assoc mkApps_snoc.
           eapply PCUICValidity.type_App'; eauto.
           eapply subject_reduction; eauto.
-          eapply wcbeval_red; eauto.
+          eapply wcbveval_red; eauto.
         - eapply erases_box.
           eapply Is_type_eval; auto. 2:eauto.
           rewrite mkApps_app /=.
@@ -632,8 +632,8 @@ Proof.
           eapply IHeval3 in H2 as (? & ? & [?]); cbn; eauto; cycle 1.
            { eapply subject_reduction. eauto. exact Hty.
              etransitivity.
-             eapply PCUICReduction.red_app. eapply wcbeval_red; eauto.
-             eapply wcbeval_red; eauto.
+             eapply PCUICReduction.red_app. eapply wcbveval_red; eauto.
+             eapply wcbveval_red; eauto.
              rewrite <- !mkApps_snoc.
              eapply PCUICReduction.red1_red.
              eapply PCUICReduction.red_fix.
@@ -727,13 +727,13 @@ Proof.
         -- rewrite mkApps_snoc.
            eapply PCUICValidity.type_App'; eauto.
            eapply subject_reduction; eauto.
-           eapply wcbeval_red; eauto.
+           eapply wcbveval_red; eauto.
 
   - apply inversion_App in Hty as Hty'; [|eauto].
     destruct Hty' as (? & ? & ? & ? & ? & ?).
 
     eapply subject_reduction in t as typ_stuck_fix; [|eauto|]; first last.
-    { eapply wcbeval_red; eauto. }
+    { eapply wcbveval_red; eauto. }
 
     eapply erases_App in He as [(-> & [])|(? & ? & -> & ? & ?)].
     + exists E.tBox.
@@ -742,12 +742,12 @@ Proof.
       eapply Is_type_red.
       * eauto.
       * eapply PCUICReduction.red_app.
-        -- eapply wcbeval_red; revgoals; eauto.
-        -- eapply wcbeval_red; revgoals; eauto.
+        -- eapply wcbveval_red; revgoals; eauto.
+        -- eapply wcbveval_red; revgoals; eauto.
       * eauto.
     + depelim Hed.
       eapply subject_reduction in t0 as typ_arg; [|eauto|]; first last.
-      { eapply wcbeval_red; revgoals; eauto. }
+      { eapply wcbveval_red; revgoals; eauto. }
 
       eapply IHeval1 in H1 as (? & ? & [?]); [|now eauto|now eauto].
       eapply IHeval2 in H2 as (? & ? & [?]); [|now eauto|now eauto].
@@ -800,7 +800,7 @@ Proof.
     pose proof (subject_closed t) as clfix.
     assert (htcof : Σ ;;; [] |- tCase ip p (mkApps (tCoFix mfix idx) args) brs : T).
     { eapply subject_reduction; eauto. eapply PCUICReduction.red_case_c.
-      eapply wcbeval_red in H; eauto. }
+      eapply wcbveval_red in H; eauto. }
     assert (hredcasecof :
       PCUICReduction.red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
         (tCase ip p (mkApps fn args) brs)).
@@ -811,8 +811,8 @@ Proof.
     assert (hredcasediscrcof :
       PCUICReduction.red Σ [] (tCase ip p discr brs) res).
     { etransitivity. eapply PCUICReduction.red_case_c; tea.
-      eapply wcbeval_red in H. tea. eauto.
-      etransitivity; tea. eapply wcbeval_red; tea. }
+      eapply wcbveval_red in H. tea. eauto.
+      etransitivity; tea. eapply wcbveval_red; tea. }
     assert (htunfcof : Σ ;;; [] |- tCase ip p (mkApps fn args) brs : T).
     { eapply subject_reduction; eauto. }
     specialize (IHeval1 _ t0').
@@ -915,7 +915,7 @@ Proof.
     * depelim Hed.
       exists E.tBox. split; repeat constructor; auto.
       assert (PCUICReduction.red Σ [] (tCase ip p discr brs) res).
-      eapply wcbeval_red in Heval; tea.
+      eapply wcbveval_red in Heval; tea.
       now eapply isErasable_red.
 
   - assert (Hty' := Hty).
@@ -936,7 +936,7 @@ Proof.
     assert(Hty' := Hty).
     eapply subject_reduction in Hty'. 2:auto.
     2:{ etransitivity. eapply PCUICReduction.red_proj_c.
-        eapply wcbeval_red; tea.
+        eapply wcbveval_red; tea.
         constructor. eapply PCUICReduction.red_cofix_proj. eauto.
         rewrite closed_unfold_cofix_cunfold_eq; eauto. }
     specialize (IHeval2 _ Hty').
@@ -1036,10 +1036,10 @@ Proof.
     * depelim Hed.
       exists E.tBox. split; repeat constructor; auto.
       assert (PCUICReduction.red Σ [] (tProj p discr) res).
-      eapply wcbeval_red in H0; tea.
+      eapply wcbveval_red in H0; tea.
       etransitivity; tea.
       etransitivity. eapply PCUICReduction.red_proj_c.
-      eapply wcbeval_red; tea.
+      eapply wcbveval_red; tea.
       constructor. eapply PCUICReduction.red_cofix_proj.
       move: e. rewrite closed_unfold_cofix_cunfold_eq //. intros e; exact e.
       now eapply isErasable_red.
@@ -1058,9 +1058,9 @@ Proof.
         inversion H1.
         edestruct H7; eauto. cbn. eapply subject_reduction. eauto.
         exact Hty. eapply PCUICReduction.red_app.
-        eapply wcbeval_red; eauto.
+        eapply wcbveval_red; eauto.
         eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; eauto.
-        eapply wcbeval_red; eauto. constructor. rewrite mkApps_app //.
+        eapply wcbveval_red; eauto. constructor. rewrite mkApps_app //.
       * exists (E.tApp x2 x3).
         rewrite mkApps_app.
         split; [econstructor; eauto|].
@@ -1101,9 +1101,9 @@ Proof.
       rewrite mkApps_app.
       eapply PCUICReduction.red_app.
       eapply subject_closed in Hf; auto.
-      eapply wcbeval_red; eauto.
+      eapply wcbveval_red; eauto.
       eapply subject_closed in Ha; auto.
-      eapply wcbeval_red; eauto.
+      eapply wcbveval_red; eauto.
 
   - pose (Hty' := Hty).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
@@ -1117,9 +1117,9 @@ Proof.
         inversion H1.
         edestruct H7; eauto. cbn. eapply subject_reduction. eauto.
         exact Hty. eapply PCUICReduction.red_app.
-        eapply wcbeval_red; eauto.
+        eapply wcbveval_red; eauto.
         eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; eauto.
-        eapply wcbeval_red; eauto.
+        eapply wcbveval_red; eauto.
       * exists (E.tApp x2 x3).
         split; [econstructor; eauto|].
         constructor; eapply Ee.eval_app_cong; eauto.
@@ -1149,9 +1149,9 @@ Proof.
       eapply Is_type_red. 3:eauto. eauto.
       eapply PCUICReduction.red_app.
       eapply subject_closed in Hf; auto.
-      eapply wcbeval_red; eauto.
+      eapply wcbveval_red; eauto.
       eapply subject_closed in Ha; auto.
-      eapply wcbeval_red; eauto.
+      eapply wcbveval_red; eauto.
 
   - destruct t; try easy.
     + invs He. eexists. split; eauto. now constructor; econstructor.

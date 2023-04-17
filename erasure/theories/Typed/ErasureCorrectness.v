@@ -20,7 +20,7 @@ Import PCUICEnvironment.
 Module P := PCUICEnvironment.
 Module E := EAst.
 
-Notation "Σ 'p⊢' s ▷ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ 'p⊢' s ⇓ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Local Ltac invert_wf :=
   match goal with

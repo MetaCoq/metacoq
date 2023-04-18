@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICViews
-  PCUICWellScopedCumulativity PCUICCanonicity PCUICWcbvEval.
+  PCUICWellScopedCumulativity PCUICClassification PCUICWcbvEval.
 
 From Equations Require Import Equations.
 
@@ -682,7 +682,7 @@ Proof with eauto with wcbv; try congruence.
     intros Helim Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
     specialize (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv.
     pose proof IH as IHv.
-    eapply value_canonicity in IH; eauto.
+    eapply value_classification in IH; eauto.
     unfold head in IH.
     rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc, IHv |- *.
     destruct (decompose_app c) as [h l].
@@ -715,7 +715,7 @@ Proof with eauto with wcbv; try congruence.
            Hlen Hax -> H.
     destruct (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv; clear IHc.
     pose proof IH as Hval.
-    eapply value_canonicity in IH; eauto.
+    eapply value_classification in IH; eauto.
     unfold head in IH.
     rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc, Hval |- *.
     destruct (decompose_app c) as [h l].
@@ -763,14 +763,15 @@ Proof.
   eapply subject_closed in X0; eauto.
 Qed.
 
-Lemma canonicity : forall (Σ:global_env_ext) t i u args,
+Lemma classification : forall (Σ:global_env_ext) t i u args,
   axiom_free Σ -> wf Σ ->
   ¬ { t' & Σ ;;; [] |- t ⇝ t'} ->
   Σ ;;; [] |- t : mkApps (tInd i u) args ->
   construct_cofix_discr (head t).
 Proof.
-  intros; eapply whnf_canonicity; eauto.
+  intros; eapply whnf_classification; eauto.
   eapply whnf_progress; eauto.
 Qed.
+
 
 

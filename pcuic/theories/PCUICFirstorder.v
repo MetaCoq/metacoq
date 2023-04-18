@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICUnivSubstitutionTyp
   PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination
-  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICCanonicity.
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICClassification.
 
 From MetaCoq.PCUIC Require Import PCUICArities PCUICSpine.
 From MetaCoq.PCUIC Require PCUICWcbvEval.

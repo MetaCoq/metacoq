@@ -98,8 +98,8 @@ Lemma firstorder_lookup_inv {Σ i} :
   @firstorder_ind Σ (firstorder_env Σ) i ->
   {mind & lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind)}.
 Proof.
-  unfold firstorder_ind; destruct lookup_env; eauto.
-  destruct g; eauto.
+  unfold firstorder_ind. destruct lookup_env. 2:auto.
+  destruct g; auto with core; eauto.
 Defined.
 
 Section cf.

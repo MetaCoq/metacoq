@@ -23,7 +23,7 @@ Import ListNotations.
 Module P := PCUICAst.
 Module E := EAst.
 
-Notation "Σ 'p⊢' s ▷ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Notation "Σ 'p⊢' s ⇓ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Lemma wf_squash {Σ} :
   ∥wf_ext Σ∥ ->
@@ -174,13 +174,13 @@ Theorem extract_correct
         kn ui ind c ui' ignored exΣ :
   axiom_free Σ ->
   welltyped Σ [] (P.tConst kn ui) ->
-  Σ p⊢ P.tConst kn ui ▷ P.tConstruct ind c ui' ->
+  Σ p⊢ P.tConst kn ui ⇓ P.tConstruct ind c ui' ->
   (isErasable Σ [] (P.tConstruct ind c ui') -> False) ->
   (forall k, ignored k = false) ->
   extract_pcuic_env
     (pcuic_args extract_within_coq)
     Σ (wf_squash wfΣ) (KernameSet.singleton kn) ignored = Ok exΣ ->
-  ∥trans_env exΣ e⊢ E.tConst kn ▷ E.tConstruct ind c []∥.
+  ∥trans_env exΣ e⊢ E.tConst kn ⇓ E.tConstruct ind c []∥.
 Proof.
   intros ax [T wt] ev not_erasable no_ignores ex.
   cbn -[dearg_transform] in *.

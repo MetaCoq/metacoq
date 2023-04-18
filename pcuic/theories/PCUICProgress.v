@@ -27,10 +27,10 @@ Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res 
 Proof.
   intros wf wt H. depind H; try now (cbn in *; congruence).
   - eapply inversion_Case in wt as (? & ? & ? & ? & cinv & ?); eauto.
-    eexists _, _, _. eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
+    eexists _, _, _. eapply red_case_c. eapply wcbveval_red. 2: eauto. eapply cinv.
   - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
     assert (Hwcbv_red1 : Σ;;; [] |- tCase ip p discr brs ⇝* tCase ip p (mkApps fn args) brs). {
-      etransitivity. { eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. }
+      etransitivity. { eapply red_case_c. eapply wcbveval_red. 2: eauto. eapply cinv. }
       econstructor. econstructor.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
       enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).

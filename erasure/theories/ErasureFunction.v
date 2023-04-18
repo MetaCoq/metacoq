@@ -1665,9 +1665,9 @@ Lemma erase_correct (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
   erase X_type Xext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
   erase_global_decls deps X decls (normalization_in:=normalization_in) prf = Σ' ->
-  (forall Σ : global_env, abstract_env_rel X Σ -> Σ |-p t ▷ v) ->
+  (forall Σ : global_env, abstract_env_rel X Σ -> Σ |-p t ⇓ v) ->
   forall Σ : global_env_ext, abstract_env_ext_rel Xext Σ ->
-  exists v', Σ ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
+  exists v', Σ ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ⇓ v' ∥.
 Proof.
   intros wt.
   intros HΣ' Hsub Ht' ev Σext wfΣex.
@@ -2393,7 +2393,7 @@ Qed.
 (* Sanity checks: the [erase] function maximally erases terms *)
 Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
   forall wt : Σ ;;; [] |- t : T,
-  Σ |-p t ▷ v -> erases Σ [] v E.tBox -> ∥ isErasable Σ [] t ∥.
+  Σ |-p t ⇓ v -> erases Σ [] v E.tBox -> ∥ isErasable Σ [] t ∥.
 Proof.
   intros.
   depind H.
@@ -2474,7 +2474,7 @@ Lemma firstorder_erases_deterministic X_type (X : X_type.π1)
   forall wv : (forall Σ, Σ ∼_ext Xext -> welltyped Σ [] v),
   forall Σ, Σ ∼_ext Xext ->
   Σ ;;; [] |- v : mkApps (tInd i u) args ->
-  Σ |-p v ▷ v ->
+  Σ |-p v ⇓ v ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   erases Σ [] v t' ->
   t' = erase X_type Xext (normalization_in:=normalization_in) [] v wv.
@@ -2544,7 +2544,7 @@ forall Σ, abstract_env_ext_rel Xext Σ ->
   erase_global_decls X_type deps X decls normalization_in prf = Σ' ->
   red Σ [] t v ->
   ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
-  forall wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
+  forall wt', ∥ Σ' ⊢ t' ⇓ erase X_type Xext [] v wt' ∥.
 Proof.
   intros wt Σ Hrel Hax Hty Hfo <- Hsub <- Hred Hirred wt'.
   destruct (firstorder_lookup_inv Hfo) as [mind Hdecl].
@@ -2575,7 +2575,7 @@ forall Σ, abstract_env_ext_rel Xext Σ ->
   KernameSet.subset (term_global_deps t') deps ->
   red Σ [] t v ->
   ¬ { v' & Σ ;;; [] |- v ⇝ v'} ->
-  exists wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
+  exists wt', ∥ Σ' ⊢ t' ⇓ erase X_type Xext [] v wt' ∥.
 Proof.
   intros wt Σ Hrel Hax Hty Hdecl Hfo Hsub Hred Hirred.
   unshelve eexists.
@@ -2617,7 +2617,7 @@ forall Σ (wfΣ : abstract_env_ext_rel Xext Σ)
   @firstorder_ind Σ (firstorder_env Σ) i ->
   red Σ [] t v ->
   ¬ { v' & Σ ;;; [] |- v ⇝ v'} ->
-  exists wt', ∥ Σ' ⊢ t' ▷ erase X_type Xext [] v wt' ∥.
+  exists wt', ∥ Σ' ⊢ t' ⇓ erase X_type Xext [] v wt' ∥.
 Proof.
   intros.
   eapply erase_correct_strong; eauto.

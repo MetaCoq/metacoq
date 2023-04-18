@@ -696,7 +696,7 @@ Qed.
 
 
 
-Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ▷ e -> False.
+Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ⇓ e -> False.
 Proof.
   intros He.
   depind He.
@@ -708,9 +708,9 @@ Proof.
 Qed.
 
 Lemma eval_case_tBox_inv {wfl : Ee.WcbvFlags} {Σ ci e brs} :
-  Σ ⊢ E.tCase ci EAst.tBox brs ▷ e ->
+  Σ ⊢ E.tCase ci EAst.tBox brs ⇓ e ->
   ∑ n br, brs = [(n, br)] × inductive_isprop_and_pars Σ ci.1 = Some (true, ci.2) ×
-  Σ ⊢ ECSubst.substl (repeat EAst.tBox #|n|) br ▷ e.
+  Σ ⊢ ECSubst.substl (repeat EAst.tBox #|n|) br ⇓ e.
 Proof.
   intros He.
   depind He.
@@ -726,9 +726,9 @@ Proof.
 Qed.
 
 Lemma eval_case_eval_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
-  Σ ⊢ E.tCase ci c brs ▷ e ->
-  Σ ⊢ c ▷ c' ->
-  Σ ⊢ E.tCase ci c' brs ▷ e.
+  Σ ⊢ E.tCase ci c brs ⇓ e ->
+  Σ ⊢ c ⇓ c' ->
+  Σ ⊢ E.tCase ci c' brs ⇓ e.
 Proof.
   intros He Hc.
   depind He.
@@ -745,9 +745,9 @@ Proof.
 Qed.
 
 Lemma eval_case_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
-  Σ ⊢ E.tCase ci c brs ▷ e ->
-  Σ ⊢ c' ▷ c ->
-  Σ ⊢ E.tCase ci c' brs ▷ e.
+  Σ ⊢ E.tCase ci c brs ⇓ e ->
+  Σ ⊢ c' ⇓ c ->
+  Σ ⊢ E.tCase ci c' brs ⇓ e.
 Proof.
   intros He Hc.
   depind He.
@@ -763,9 +763,9 @@ Proof.
 Qed.
 
 Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} :
-  Σ ⊢ E.tProj p c ▷ e ->
-  Σ ⊢ c' ▷ c ->
-  Σ ⊢ E.tProj p c' ▷ e.
+  Σ ⊢ E.tProj p c ⇓ e ->
+  Σ ⊢ c' ⇓ c ->
+  Σ ⊢ E.tProj p c' ⇓ e.
 Proof.
   intros He Hc.
   depind He.

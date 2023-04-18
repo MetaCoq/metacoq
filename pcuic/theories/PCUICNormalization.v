@@ -104,7 +104,7 @@ Lemma ws_wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {no
 Proof.
   intros Hwf Hax Hty Hred Hirred.
   destruct (@wcbv_normalization _ no Σ normalization T t) as (v' & Hv'); eauto.
-  assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbeval_red.
+  assert (Σ;;; [] |- t ⇝* v') as Hred' by now eapply wcbveval_red.
   eapply closed_red_confluence in Hred as Hred_. destruct Hred_ as (v'' & H1 & H2).
   2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
   destruct v as [v Hv].

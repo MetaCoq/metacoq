@@ -48,7 +48,7 @@ Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.
   eapply All2_All_mix_left in X; eauto. simpl in X.
-  eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbeval_red; eauto.
+  eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbveval_red; eauto.
   eapply (projT2 ct).
 Qed.
 

@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity
-  PCUICWcbvEval PCUICCanonicity PCUICProgress PCUICSN.
+  PCUICWcbvEval PCUICClassification PCUICProgress PCUICSN.
 
 From Equations Require Import Equations.
 

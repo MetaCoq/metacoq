@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICUtils PCUICReduction PCUICValidity PCUICSafeLemmata
      PCUICConfluence PCUICConversion
      PCUICOnFreeVars PCUICWellScopedCumulativity
-     PCUICCanonicity.
+     PCUICClassification.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfReduction PCUICWfEnv.
 
@@ -1533,7 +1533,7 @@ Corollary R_Acc_aux :
             destruct h as [T h].
             apply inversion_App in h as (?&?&?&?&?); auto.
             apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto.
-            eapply PCUICCanonicity.invert_cumul_axiom_prod; eauto.
+            eapply PCUICClassification.invert_cumul_axiom_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.

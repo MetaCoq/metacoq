@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity
-  PCUICWcbvEval PCUICClassification PCUICSN PCUICNormalization PCUICViews.
+  PCUICWcbvEval PCUICClassification PCUICCanonicity PCUICSN PCUICNormalization PCUICViews.
 
 From Equations Require Import Equations.
 
@@ -46,28 +46,23 @@ Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ
   Σ ;;; [] |- t : tInd False_pcuic []  -> False.
 Proof.
   intros Hdecl wfΣ axΣ typ_false.
-  pose proof (_ ; typ_false) as wt.
+  destruct (pcuic_canonicity Σ t False_pcuic [] []) as [t' [[typ_false' eqtt'] ctor]]; eauto.
   destruct Hdecl as [Hdecl Hidecl].
   destruct False_pcuic as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
-  eapply wh_normalization in wt ; eauto. destruct wt as [empty [Hnormal Hempty]].
-  pose proof (Hempty_ := Hempty).
-  eapply subject_reduction in typ_false; eauto.
-  eapply ind_whnf_classification with (indargs := []) in typ_false as ctor; auto.
-  - unfold isConstruct_app in ctor.
-    destruct decompose_app eqn:decomp.
-    apply decompose_app_inv in decomp.
-    rewrite decomp in typ_false.
-    destruct t0; try discriminate ctor.
-    apply PCUICValidity.inversion_mkApps in typ_false as H; auto.
+  rewrite /construct_cofix_discr /head in ctor.
+  destruct decompose_app eqn:decomp.
+  apply decompose_app_inv in decomp; subst.
+  destruct t0; try discriminate ctor.
+  - apply PCUICValidity.inversion_mkApps in typ_false' as H; auto.
     destruct H as (?&typ_ctor&_).
     apply inversion_Construct in typ_ctor as (?&?&?&?&?&?&?); auto.
-    eapply Construct_Ind_ind_eq with (args' := []) in typ_false; tea.
+    eapply Construct_Ind_ind_eq with (args' := []) in typ_false'; tea.
     2: eauto.
     destruct (on_declared_constructor d).
     destruct p.
     destruct s.
     destruct p.
-    destruct typ_false as (((((->&_)&_)&_)&_)&_).
+    destruct typ_false' as (((((->&_)&_)&_)&_)&_).
     clear -Hdecl d wfΣ. destruct wfΣ.
     cbn in *.
     destruct d as ((?&?)&?).
@@ -77,7 +72,9 @@ Proof.
     cbn in H0. noconf H0.
     cbn in H1. rewrite nth_error_nil in H1.
     discriminate.
-  - unfold notCoInductive, check_recursivity_kind. destruct wfΣ.
+  - eapply @typing_cofix_coind with (indargs := []) in typ_false'; eauto.
+    unfold check_recursivity_kind in typ_false'. destruct wfΣ.
     unshelve eapply declared_minductive_to_gen in Hdecl; eauto.
-    red in Hdecl. cbn. rewrite Hdecl; cbn. auto.
+    red in Hdecl. rewrite Hdecl in typ_false'.
+    cbn in typ_false'. inversion typ_false'.
 Qed.

@@ -20,7 +20,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
 Lemma pcuic_canonicity {cf:checker_flags} {nor : normalizing_flags} Σ {normalization_in: NormalizationIn Σ} t i u args :
      axiom_free Σ -> wf Σ ->
      Σ ;;; [] |- t : mkApps (tInd i u) args ->
-     { t':term & (Σ ;;; [] |- t =s t') * construct_cofix_discr (head t')}.
+     { t':term & (Σ ;;; [] |- t' : mkApps (tInd i u) args) * (Σ ;;; [] |- t =s t') * construct_cofix_discr (head t')}.
 Proof.
   intros axΣ wfΣ typ_ind. pose proof (_ ; typ_ind) as wt.
   eapply wh_normalization in wt ; eauto.
@@ -29,7 +29,7 @@ Proof.
   pose proof (typ_ind' := typ_ind).
   eapply subject_reduction in typ_ind; eauto.
   eapply whnf_classification with (args := args) in typ_ind as ctor; auto.
-  exists t'; split; eauto.
+  exists t'; repeat split; eauto.
   eapply cumulAlgo_cumulSpec.
   eapply red_ws_cumul_pb. split; eauto.
   now eapply subject_is_open_term.

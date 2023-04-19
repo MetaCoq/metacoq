@@ -24,15 +24,22 @@ Then, simply issue:
 MetaCoq is split into multiple packages that get all installed using the
 `coq-metacoq` meta-package:
 
+ - `coq-metacoq-utils` for a general library used by all MetaCoq packages
+ - `coq-metacoq-common` for definitions used both by Template-Coq and PCUIC packages
  - `coq-metacoq-template` for the Template Monad and quoting plugin
- - `coq-metacoq-pcuic` for the PCUIC development and proof of the
-   Template-Coq -> PCUIC translation
+ - `coq-metacoq-pcuic` for the PCUIC metatheory development
+ - `coq-metacoq-template-pcuic` for the verified Template-Coq <-> PCUIC translations
  - `coq-metacoq-safechecker` for the verified checker on PCUIC terms
+ - `coq-metacoq-safechecker-plugin` for the extracted verified checker plugin
  - `coq-metacoq-erasure` for the verifed erasure from PCUIC to
    untyped lambda-calculus.
+ - `coq-metacoq-erasure-plugin` for the extracted verifed erasure plugin
  - `coq-metacoq-translations` for example translations from type theory
    to type theory: e.g. variants of parametricity.
-
+ - `coq-metacoq-quotation` for a quotation library, allowing to 
+   quote MetaCoq terms and typing derivations as MetaCoq terms,
+   with a work-in-progress proof of Löb's theorem.
+   
 There are also `.dev` packages available in the `extra-dev` repository
 of Coq, to get those you will need to activate the following repositories:
 

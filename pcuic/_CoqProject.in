@@ -78,6 +78,7 @@ theories/PCUICInductives.v
 theories/PCUICValidity.v
 theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
+theories/PCUICClassification.v
 theories/PCUICCanonicity.v
 
 theories/PCUICCSubst.v

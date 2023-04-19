@@ -5141,7 +5141,7 @@ Qed.
 
 (* Print Assumptions expand_lets_sound. *)
 
-From MetaCoq.PCUIC Require Import PCUICWcbvEval PCUICCanonicity PCUICCSubst.
+From MetaCoq.PCUIC Require Import PCUICWcbvEval PCUICClassification PCUICCSubst.
 
 Lemma trans_csubst a k b :
   closed a ->

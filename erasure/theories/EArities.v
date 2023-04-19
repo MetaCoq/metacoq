@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICSR PCUICGeneration PCUICSubstitution PCUICElimination
   PCUICWeakeningEnv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity
-  PCUICContextConversion PCUICConversion PCUICCanonicity
+  PCUICContextConversion PCUICConversion PCUICClassification
   PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence
   PCUICArities PCUICPrincipality.
 

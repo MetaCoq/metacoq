@@ -952,7 +952,7 @@ Section CheckEnv.
   Proof using Type.
     intros wf sp.
     pose proof (wf_local_smash_end _ _ wf). clear wf.
-    eapply PCUICCanonicity.typing_spine_smash in sp; auto.
+    eapply PCUICClassification.typing_spine_smash in sp; auto.
     unfold expand_lets, expand_lets_k in sp. simpl in sp.
     apply ctx_inst_smash; auto.
     rewrite /smash_telescope List.rev_involutive.

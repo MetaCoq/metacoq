@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity
-  PCUICWcbvEval PCUICCanonicity PCUICSN PCUICNormalization.
+  PCUICWcbvEval PCUICClassification PCUICSN PCUICNormalization PCUICViews.
 
 From Equations Require Import Equations.
 
@@ -39,19 +39,20 @@ Definition False_mib : mutual_inductive_body :=
      ind_universes := Monomorphic_ctx;
      ind_variance := None |}.
 
-Theorem pcuic_consistent  {cf:checker_flags} {nor : normalizing_flags} Σ
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ
   {normalization_in: NormalizationIn Σ} t False_pcuic :
   declared_inductive Σ False_pcuic False_mib False_oib ->
   wf_ext Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : tInd False_pcuic []  -> False.
 Proof.
-  intros Hdecl wfΣ axΣ typ_false. pose proof (_ ; typ_false) as wt.
+  intros Hdecl wfΣ axΣ typ_false.
+  pose proof (_ ; typ_false) as wt.
   destruct Hdecl as [Hdecl Hidecl].
   destruct False_pcuic as [kn n]. destruct n; cbn in *; [| now rewrite nth_error_nil in Hidecl].
   eapply wh_normalization in wt ; eauto. destruct wt as [empty [Hnormal Hempty]].
   pose proof (Hempty_ := Hempty).
   eapply subject_reduction in typ_false; eauto.
-  eapply ind_whnf_canonicity with (indargs := []) in typ_false as ctor; auto.
+  eapply ind_whnf_classification with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.
     destruct decompose_app eqn:decomp.
     apply decompose_app_inv in decomp.

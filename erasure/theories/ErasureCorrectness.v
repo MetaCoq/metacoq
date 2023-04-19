@@ -12,7 +12,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICWcbvEval PCUICSR PCUICInversion
   PCUICLiftSubst
   PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
-  PCUICElimination PCUICCanonicity
+  PCUICElimination PCUICClassification
   PCUICUnivSubst PCUICViews
   PCUICCumulativity PCUICSafeLemmata
   PCUICArities PCUICInductiveInversion

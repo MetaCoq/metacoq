@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosedTyp
      PCUICReduction PCUICWcbvEval PCUICSR PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICConversion
-     PCUICWeakeningEnvTyp PCUICCanonicity.
+     PCUICWeakeningEnvTyp PCUICClassification.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 

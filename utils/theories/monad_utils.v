@@ -69,12 +69,20 @@ Import MCMonadNotation.
 
 Open Scope monad.
 
+(* state is underneath the other monad *)
 Definition StateT S M T := S -> M (T * S)%type.
 Definition StateT_Monad {S T} {TM : Monad T} : Monad (StateT S T) :=
   {| ret A a st := ret (a, st) ;
      bind A B m f st := '(m, st) <- m st;; f m st
   |}.
 #[export] Hint Extern 1 (Monad (StateT ?S ?T)) => simple apply (@StateT_Monad S T) : typeclass_instances.
+
+Definition get_state {S T} {TM : Monad T} : StateT S T S
+  := fun s => ret (s, s).
+Definition update_state {S T} {TM : Monad T} (f : S -> S) : StateT S T unit
+  := fun s => ret (tt, f s).
+Definition set_state {S T} {TM : Monad T} (s : S) : StateT S T unit
+  := update_state (fun _ => s).
 
 Section MapOpt.
   Context {A} {B} (f : A -> option B).

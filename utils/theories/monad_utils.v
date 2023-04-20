@@ -7,6 +7,7 @@ Import ListNotations.
 
 Set Universe Polymorphism.
 Set Polymorphic Inductive Cumulativity.
+Unset Universe Minimization ToSet.
 
 Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 { ret : forall {t : Type@{d}}, t -> m t

@@ -59,6 +59,6 @@ Section with_monad.
   Definition monad_map_branch_k {term term'} (f : nat -> term -> T term') g k b
     := @monad_map_branch term term' (f (#|bcontext b| + k)) g b.
 
-  Notation map_branches_k f h k brs :=
+  Notation monad_map_branches_k f h k brs :=
     (monad_map (monad_map_branch_k f h k) brs).
 End with_monad.

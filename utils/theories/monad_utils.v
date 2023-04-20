@@ -69,6 +69,13 @@ Import MCMonadNotation.
 
 Open Scope monad.
 
+Definition StateT S M T := S -> M (T * S)%type.
+Definition StateT_Monad {S T} {TM : Monad T} : Monad (StateT S T) :=
+  {| ret A a st := ret (a, st) ;
+     bind A B m f st := '(m, st) <- m st;; f m st
+  |}.
+#[export] Hint Extern 1 (Monad (StateT ?S ?T)) => simple apply (@StateT_Monad S T) : typeclass_instances.
+
 Section MapOpt.
   Context {A} {B} (f : A -> option B).
 

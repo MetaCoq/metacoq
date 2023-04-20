@@ -67,10 +67,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.14 origin/coq-8.14
+    # git checkout -b coq-8.16 origin/coq-8.16
     # git status
 
-This checks that you are indeed on the `coq-8.14` branch.
+This checks that you are indeed on the `coq-8.16` branch.
 
 ### Setting up an `opam` switch
 
@@ -109,14 +109,12 @@ the sources directory.
 Then use:
 
 - `make` to compile the `template-coq` plugin, the `pcuic`
-  development and the `safechecker` and `erasure` plugins.
+  development and the `safechecker` and `erasure` plugins, 
+  along with the `test-suite`, `translations`, `examples` 
+  and `quotation` libraries.
   You can also selectively build each target.
 
-- `make translations` to compile the translation plugins
-
-- `make test-suite` to compile the test suite
-
-- `make install` to install the plugin in `Coq`'s `user-contrib` local
+- `make install` to install the plugins in `Coq`'s `user-contrib` local
   library. Then the `MetaCoq` namespace can be used for `Require
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
 

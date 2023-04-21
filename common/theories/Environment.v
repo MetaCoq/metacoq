@@ -467,24 +467,36 @@ Module Environment (T : Term).
 └-----------------------------┴------------------------┴---------------------------┘
 >>>
    *)
+  Notation extends_decls_part_globals Σ Σ'
+    := (forall c, ∑ decls, lookup_globals Σ' c = decls ++ lookup_globals Σ c)
+         (only parsing).
+  Notation strictly_extends_decls_part_globals Σ Σ'
+    := (∑ Σ'', Σ' = Σ'' ++ Σ)
+         (only parsing).
+  Notation extends_decls_part Σ Σ'
+    := (forall c, ∑ decls, lookup_envs Σ' c = decls ++ lookup_envs Σ c)
+         (only parsing).
+  Notation strictly_extends_decls_part Σ Σ'
+    := (strictly_extends_decls_part_globals Σ.(declarations) Σ'.(declarations))
+         (only parsing).
   Definition extends (Σ Σ' : global_env) :=
     [× Σ.(universes) ⊂_cs Σ'.(universes),
-      forall c, ∑ decls, lookup_envs Σ' c = decls ++ lookup_envs Σ c &
+      extends_decls_part Σ Σ' &
       Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
 
   Definition extends_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) = Σ'.(universes),
-      forall c, ∑ decls, lookup_envs Σ' c = decls ++ lookup_envs Σ c &
+      extends_decls_part Σ Σ' &
       Σ.(retroknowledge) = Σ'.(retroknowledge)].
 
   Definition extends_strictly_on_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) ⊂_cs Σ'.(universes),
-      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
+      strictly_extends_decls_part Σ Σ' &
       Retroknowledge.extends Σ.(retroknowledge) Σ'.(retroknowledge)].
 
   Definition strictly_extends_decls (Σ Σ' : global_env) :=
     [× Σ.(universes) = Σ'.(universes),
-      ∑ Σ'', Σ'.(declarations) = Σ'' ++ Σ.(declarations) &
+      strictly_extends_decls_part Σ Σ' &
       Σ.(retroknowledge) = Σ'.(retroknowledge)].
 
   Existing Class extends.
@@ -551,22 +563,30 @@ Module Environment (T : Term).
     all: intuition congruence.
   Qed.
 
-  Lemma lookup_env_extends_NoDup Σ Σ' k d :
-    NoDup (List.map fst Σ'.(declarations)) ->
-    lookup_env Σ k = Some d ->
-    extends Σ Σ' -> lookup_env Σ' k = Some d.
+  Lemma lookup_global_extends_NoDup Σ Σ' k d :
+    NoDup (List.map fst Σ') ->
+    lookup_global Σ k = Some d ->
+    extends_decls_part_globals Σ Σ' -> lookup_global Σ' k = Some d.
   Proof.
-    rewrite /lookup_env /= -!hd_error_lookup_globals => Hnd.
+    rewrite /= -!hd_error_lookup_globals => Hnd.
     move: (@NoDup_length_lookup_globals _ Hnd k); clear Hnd.
     rewrite -hd_error_lookup_globals.
-    move=> H Hd [? eq].
+    move=> H Hd eq.
     move: (eq k); clear eq.
-    rewrite /lookup_envs.
     case => ls eq.
     move: eq Hd H => ->.
     case: ls => //= ?.
     case => //=.
     case: lookup_globals => //=.
+  Qed.
+
+  Lemma lookup_env_extends_NoDup Σ Σ' k d :
+    NoDup (List.map fst Σ'.(declarations)) ->
+    lookup_env Σ k = Some d ->
+    extends Σ Σ' -> lookup_env Σ' k = Some d.
+  Proof.
+    move => Hnd Hd; case => *.
+    eapply lookup_global_extends_NoDup; tea.
   Qed.
 
   Lemma lookup_globals_app Σ Σ' kn :
@@ -577,12 +597,23 @@ Module Environment (T : Term).
     case: eqb_spec => //= -> -> //=.
   Qed.
 
-  #[global] Instance strictly_extends_decls_extends_decls Σ Σ' : strictly_extends_decls Σ Σ' -> extends_decls Σ Σ'.
+  Lemma strictly_extends_decls_extends_part_globals Σ Σ'
+    : strictly_extends_decls_part_globals Σ Σ' -> extends_decls_part_globals Σ Σ'.
   Proof.
-    destruct Σ, Σ'; case => //= -> [Σ'' ->] ->.
-    rewrite /extends_decls/lookup_envs //=; split => //= ?.
+    case => //= ? -> c.
     rewrite lookup_globals_app.
     eexists; reflexivity.
+  Qed.
+
+  Lemma strictly_extends_decls_extends_part Σ Σ'
+    : strictly_extends_decls_part Σ Σ' -> extends_decls_part Σ Σ'.
+  Proof. apply strictly_extends_decls_extends_part_globals. Qed.
+
+  #[global] Instance strictly_extends_decls_extends_decls Σ Σ' : strictly_extends_decls Σ Σ' -> extends_decls Σ Σ'.
+  Proof.
+    destruct Σ, Σ'; case => //= -> ? ->.
+    rewrite /extends_decls; split; try reflexivity.
+    now apply strictly_extends_decls_extends_part.
   Qed.
 
   #[global] Instance strictly_extends_decls_extends_strictly_on_decls Σ Σ' : strictly_extends_decls Σ Σ' -> extends_strictly_on_decls Σ Σ'.
@@ -599,10 +630,9 @@ Module Environment (T : Term).
 
   #[global] Instance extends_strictly_on_decls_extends Σ Σ' : extends_strictly_on_decls Σ Σ' -> extends Σ Σ'.
   Proof.
-    destruct Σ, Σ'; case => //= ? [Σ'' ->] ?.
-    rewrite /extends/lookup_envs //=; split => //= ?.
-    rewrite lookup_globals_app.
-    eexists; reflexivity.
+    destruct Σ, Σ'; case => //= ? ? ?.
+    rewrite /extends; split => //=.
+    now apply strictly_extends_decls_extends_part.
   Qed.
 
   #[global] Instance strictly_extends_decls_extends_decls_subrel : CRelationClasses.subrelation strictly_extends_decls extends_decls := strictly_extends_decls_extends_decls.
@@ -628,18 +658,48 @@ Module Environment (T : Term).
   Proof. apply extends_refl. Qed.
   *)
 
+  Lemma extends_decls_part_globals_refl Σ : extends_decls_part_globals Σ Σ.
+  Proof. now exists [] => //. Qed.
+
+  Lemma extends_decls_part_refl Σ : extends_decls_part Σ Σ.
+  Proof. apply extends_decls_part_globals_refl. Qed.
+
+  Lemma strictly_extends_decls_part_globals_refl (Σ : global_declarations)
+    : strictly_extends_decls_part_globals Σ Σ.
+  Proof. now exists [] => //. Qed.
+
+  Lemma strictly_extends_decls_part_refl Σ : strictly_extends_decls_part Σ Σ.
+  Proof. apply strictly_extends_decls_part_globals_refl. Qed.
+
+  Lemma extends_decls_part_globals_trans Σ Σ' Σ''
+    : extends_decls_part_globals Σ Σ' -> extends_decls_part_globals Σ' Σ'' -> extends_decls_part_globals Σ Σ''.
+  Proof.
+    move => H1 H2 c; move: (H1 c) (H2 c) => [? ->] [? ->].
+    now eexists; rewrite app_assoc.
+  Qed.
+
+  Lemma extends_decls_part_trans Σ Σ' Σ''
+    : extends_decls_part Σ Σ' -> extends_decls_part Σ' Σ'' -> extends_decls_part Σ Σ''.
+  Proof. apply extends_decls_part_globals_trans. Qed.
+
+  Lemma strictly_extends_decls_part_globals_trans (Σ Σ' Σ'' : global_declarations)
+    : strictly_extends_decls_part_globals Σ Σ' -> strictly_extends_decls_part_globals Σ' Σ'' -> strictly_extends_decls_part_globals Σ Σ''.
+  Proof.
+    move => [? ->] [? ->].
+    now eexists; rewrite app_assoc.
+  Qed.
+
+  Lemma strictly_extends_decls_part_trans Σ Σ' Σ''
+    : strictly_extends_decls_part Σ Σ' -> strictly_extends_decls_part Σ' Σ'' -> strictly_extends_decls_part Σ Σ''.
+  Proof. apply strictly_extends_decls_part_globals_trans. Qed.
+
   Local Ltac extends_trans_t :=
     intros [?] [?] [?] [?] [?]; red; cbn in *; split;
-    try solve [ etransitivity; eassumption | eapply incl_cs_trans; eassumption ];
-    repeat first [ progress subst
-                 | match goal with
-                   | [ H : ∑ x : _, _ |- _ ] => destruct H
-                   | [ H : forall c : kername, _, kn : kername |- _ ] => specialize (H kn)
-                   | [ H : ?x = _ |- context[?x] ] => rewrite H
-                   end
-                 | split
-                 | intro
-                 | now eexists; rewrite app_assoc ].
+    try solve [ etransitivity; eassumption
+              | eapply incl_cs_trans; eassumption
+              | eapply strictly_extends_decls_part_globals_trans; eassumption
+              | eapply extends_decls_part_globals_trans; eassumption ].
+
   #[global] Instance strictly_extends_decls_trans : CRelationClasses.Transitive strictly_extends_decls.
   Proof. extends_trans_t. Qed.
   #[global] Instance extends_decls_trans : CRelationClasses.Transitive extends_decls.
@@ -650,8 +710,11 @@ Module Environment (T : Term).
   Proof. extends_trans_t. Qed.
 
   (** Merge two lists of global_declarations, assuming that any globals sharing a name are identical *)
+  Definition declared_kername_set (Σ : global_declarations) : KernameSet.t
+    := List.fold_right KernameSet.add KernameSet.empty (List.map fst Σ).
+
   Definition merge_globals (Σ Σ' : global_declarations) : global_declarations
-    := let known_kns := List.fold_right KernameSet.add KernameSet.empty (List.map fst Σ) in
+    := let known_kns := declared_kername_set Σ in
        List.filter (fun '(kn, _) => negb (KernameSet.mem kn known_kns)) Σ' ++ Σ.
 
   Definition merge_global_envs (Σ Σ' : global_env) : global_env
@@ -687,6 +750,22 @@ Module Environment (T : Term).
     all: try congruence.
   Qed.
 
+  Lemma declared_kername_set_spec
+    : forall Σ c, KernameSet.In c (declared_kername_set Σ) <-> List.In c (map fst Σ).
+  Proof.
+    elim => //=; try setoid_rewrite KernameSetFact.empty_iff => //=.
+    move => [? ?] ? IH c //=.
+    rewrite KernameSet.add_spec.
+    intuition.
+  Qed.
+
+  Lemma declared_kername_set_mem_iff Σ c
+    : KernameSet.mem c (declared_kername_set Σ) <-> List.In c (map fst Σ).
+  Proof.
+    setoid_rewrite <- KernameSetFact.mem_iff.
+    apply declared_kername_set_spec.
+  Qed.
+
   Lemma extends_r_merge_globals Σ Σ'
     : compatible_globals Σ Σ' ->
       forall c,
@@ -698,24 +777,13 @@ Module Environment (T : Term).
     intro c.
     specialize (H2 c).
     rewrite lookup_globals_app lookup_globals_filter.
-    set (s := fold_right _ _ _).
-    assert (Hs : forall kn, KernameSet.mem kn s <-> List.In kn (map fst Σ)).
-    { setoid_rewrite <- KernameSetFact.mem_iff.
-      clear.
-      generalize dependent Σ; clear.
-      elim => //=; try setoid_rewrite KernameSetFact.empty_iff => //=.
-      move => [? ?] ? IH kn //=.
-      rewrite KernameSet.add_spec.
-      intuition. }
-    clearbody s.
-    specialize (Hs c).
     destruct (in_dec eq_dec c (map fst Σ')) as [H'|H'];
       [ exists nil | exists (lookup_globals Σ c) ].
     2: apply lookup_globals_nil in H'; rewrite H'; clear H'.
     2: now destruct ?; cbn; rewrite app_nil_r.
     pose proof (lookup_globals_nil Σ c) as Hc.
-    rewrite <- !lookup_globals_nil, <- Hs in H2.
-    rewrite <- Hs in Hc.
+    rewrite <- !lookup_globals_nil in H2.
+    rewrite <- (declared_kername_set_mem_iff Σ) in *.
     destruct KernameSet.mem; cbn in *.
     { intuition. }
     { destruct Hc as [Hc _].

@@ -12,7 +12,7 @@ Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec 
     := (skipn (#|Σ'.(declarations)| - #|Σ.(declarations)|) Σ'.(declarations) == Σ.(declarations)) (only parsing).
 
   Lemma extends_decls_partT (Σ Σ' : global_env)
-    : reflectT (forall c, ∑ decls, lookup_envs Σ' c = decls ++ lookup_envs Σ c) (extendsb_decls_part Σ Σ').
+    : reflectT (extends_decls_part Σ Σ') (extendsb_decls_part Σ Σ').
   Proof.
     case: (@forallbP _ _ _ _ (fun _ => eqb_specT _ _)) => H; constructor.
     all: setoid_rewrite Forall_forall in H.
@@ -35,7 +35,7 @@ Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec 
   Qed.
 
   Lemma strictly_extends_decls_partT (Σ Σ' : global_env)
-    : reflectT (∑ Σ'', declarations Σ' = Σ'' ++ declarations Σ) (strictly_extendsb_decls_part Σ Σ').
+    : reflectT (strictly_extends_decls_part Σ Σ') (strictly_extendsb_decls_part Σ Σ').
   Proof.
     case: eqb_specT => H; constructor.
     { rewrite -H.
@@ -111,6 +111,48 @@ Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec 
   Proof.
     case: strictly_extends_declsT; split; intuition congruence.
   Qed.
+
+  Definition compatible_globalsb (Σ Σ' : global_declarations) : bool
+    := KernameSet.for_all
+         (fun c => lookup_globals Σ c == lookup_globals Σ' c)
+         (KernameSet.inter (declared_kername_set Σ) (declared_kername_set Σ')).
+
+  Definition compatibleb (Σ Σ' : global_env) : bool
+    := Retroknowledge.compatible Σ.(retroknowledge) Σ'.(retroknowledge)
+       && compatible_globalsb Σ.(declarations) Σ'.(declarations).
+
+  Lemma compatible_globalsP Σ Σ' : reflect (compatible_globals Σ Σ') (compatible_globalsb Σ Σ').
+  Proof.
+    rewrite /compatible_globals/compatible_globalsb.
+    lazymatch goal with
+    | [ |- context[KernameSet.for_all ?f ?s] ]
+      => generalize (@KernameSet.for_all_spec s f _)
+    end.
+    rewrite /KernameSet.For_all.
+    case: KernameSet.for_all; move => [H1 H2]; constructor.
+    all: first [ specialize (H1 eq_refl); rename H1 into H | clear H1 ].
+    all: try pose proof (fun x => diff_false_true (H2 x)) as H; clear H2.
+    all: move: H.
+    all: setoid_rewrite KernameSet.inter_spec.
+    all: setoid_rewrite declared_kername_set_spec.
+    all: setoid_rewrite <- lookup_globals_nil.
+    1: move => H c; move: (H c); clear H.
+    2: move => H nH; apply H => c; move: (nH c); clear H nH.
+    all: case: eqb_spec.
+    all: intuition.
+  Qed.
+
+  Lemma compatible_globals_spec Σ Σ' : compatible_globalsb Σ Σ' <-> compatible_globalsb Σ Σ'.
+  Proof. case: compatible_globalsP; intuition. Qed.
+
+  Lemma compatibleP Σ Σ' : reflect (compatible Σ Σ') (compatibleb Σ Σ').
+  Proof.
+    rewrite /compatible/compatibleb.
+    case: compatible_globalsP; destruct Retroknowledge.compatible; cbn; constructor; intuition.
+  Qed.
+
+  Lemma compatible_spec Σ Σ' : compatibleb Σ Σ' <-> compatibleb Σ Σ'.
+  Proof. case: compatibleP; intuition. Qed.
 
 End EnvironmentReflect.
 

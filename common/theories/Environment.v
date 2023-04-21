@@ -80,6 +80,39 @@ Module Retroknowledge.
   Next Obligation.
     do 2 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
   Qed.
+
+  (** This operation is asymmetric; it perfers the first argument when the arguments are incompatible, but otherwise takes the join *)
+  Definition merge (r1 r2 : t) : t
+    := {| retro_int63 := match r1.(retro_int63) with Some v => Some v | None => r2.(retro_int63) end
+       ; retro_float64 := match r1.(retro_float64) with Some v => Some v | None => r2.(retro_float64) end |}.
+
+  Lemma extends_l_merge r1 r2
+    : extends r1 (merge r1 r2).
+  Proof.
+    rewrite /extends/merge; destruct r1, r2; cbn; repeat destruct ?; subst;
+      repeat constructor; clear; destruct_head' option; constructor.
+  Qed.
+
+  Lemma extends_merge_idempotent r1 r2
+    : extends r1 r2 -> merge r1 r2 = r2.
+  Proof.
+    rewrite /extends/merge; destruct r1, r2; cbn.
+    intro; rdest; destruct_head' (@option_extends); reflexivity.
+  Qed.
+
+  Definition compatible (x y : t) : bool
+    := match x.(retro_int63), y.(retro_int63) with Some x, Some y => x == y | _, _ => true end
+       && match x.(retro_float64), y.(retro_float64) with Some x, Some y => x == y | _, _ => true end.
+
+  Lemma extends_r_merge r1 r2
+    : compatible r1 r2 -> extends r2 (merge r1 r2).
+  Proof.
+    rewrite /extends/merge/compatible; destruct r1, r2; cbn; repeat destruct ?; subst.
+    all: repeat case: eqb_spec => //=.
+    all: intros; subst.
+    all: repeat constructor; clear; destruct_head' option; constructor.
+  Qed.
+
 End Retroknowledge.
 Export (hints) Retroknowledge.
 
@@ -615,6 +648,90 @@ Module Environment (T : Term).
   Proof. extends_trans_t. Qed.
   #[global] Instance extends_trans : CRelationClasses.Transitive extends.
   Proof. extends_trans_t. Qed.
+
+  (** Merge two lists of global_declarations, assuming that any globals sharing a name are identical *)
+  Definition merge_globals (Σ Σ' : global_declarations) : global_declarations
+    := let known_kns := List.fold_right KernameSet.add KernameSet.empty (List.map fst Σ) in
+       List.filter (fun '(kn, _) => negb (KernameSet.mem kn known_kns)) Σ' ++ Σ.
+
+  Definition merge_global_envs (Σ Σ' : global_env) : global_env
+    := {| universes := ContextSet.union Σ.(universes) Σ'.(universes)
+       ; declarations := merge_globals Σ.(declarations) Σ'.(declarations)
+       ; retroknowledge := Retroknowledge.merge Σ.(retroknowledge) Σ'.(retroknowledge) |}.
+
+  Definition compatible_globals (Σ Σ' : global_declarations) : Prop
+    := forall c, lookup_globals Σ c <> [] -> lookup_globals Σ' c <> [] -> lookup_globals Σ c = lookup_globals Σ' c.
+
+  Lemma extends_strictly_on_decls_l_merge Σ Σ'
+    : extends_strictly_on_decls Σ (merge_global_envs Σ Σ').
+  Proof.
+    rewrite /extends_strictly_on_decls/merge_global_envs/merge_globals; cbn.
+    split;
+      try first [ apply ContextSet.union_spec
+                | apply Retroknowledge.extends_l_merge
+                | now eexists ].
+  Qed.
+
+  Definition compatible (Σ Σ' : global_env)
+    := Retroknowledge.compatible Σ.(retroknowledge) Σ'.(retroknowledge)
+       /\ compatible_globals Σ.(declarations) Σ'.(declarations).
+
+  Lemma lookup_globals_filter p Σ c
+    : lookup_globals (filter (fun '(kn, _) => p kn) Σ) c = if p c then lookup_globals Σ c else [].
+  Proof.
+    induction Σ as [|?? IH]; cbn; rdest; cbn; try now repeat destruct ?.
+    case: eqb_spec => ?; repeat destruct ?; subst => //=.
+    all: rewrite ?eqb_refl.
+    all: try case: eqb_spec => ?; subst.
+    all: rewrite IH //=.
+    all: try congruence.
+  Qed.
+
+  Lemma extends_r_merge_globals Σ Σ'
+    : compatible_globals Σ Σ' ->
+      forall c,
+        ∑ decls, lookup_globals (merge_globals Σ Σ') c = decls ++ lookup_globals Σ' c.
+  Proof.
+    rewrite /merge_globals.
+    intro H2; cbn.
+    cbv [compatible_globals] in *.
+    intro c.
+    specialize (H2 c).
+    rewrite lookup_globals_app lookup_globals_filter.
+    set (s := fold_right _ _ _).
+    assert (Hs : forall kn, KernameSet.mem kn s <-> List.In kn (map fst Σ)).
+    { setoid_rewrite <- KernameSetFact.mem_iff.
+      clear.
+      generalize dependent Σ; clear.
+      elim => //=; try setoid_rewrite KernameSetFact.empty_iff => //=.
+      move => [? ?] ? IH kn //=.
+      rewrite KernameSet.add_spec.
+      intuition. }
+    clearbody s.
+    specialize (Hs c).
+    destruct (in_dec eq_dec c (map fst Σ')) as [H'|H'];
+      [ exists nil | exists (lookup_globals Σ c) ].
+    2: apply lookup_globals_nil in H'; rewrite H'; clear H'.
+    2: now destruct ?; cbn; rewrite app_nil_r.
+    pose proof (lookup_globals_nil Σ c) as Hc.
+    rewrite <- !lookup_globals_nil, <- Hs in H2.
+    rewrite <- Hs in Hc.
+    destruct KernameSet.mem; cbn in *.
+    { intuition. }
+    { destruct Hc as [Hc _].
+      rewrite Hc ?app_nil_r //=. }
+  Qed.
+
+  Lemma extends_r_merge Σ Σ'
+    : compatible Σ Σ' -> extends Σ' (merge_global_envs Σ Σ').
+  Proof.
+    rewrite /extends/compatible/merge_global_envs/lookup_envs.
+    intros [H1 H2].
+    split;
+      try first [ apply ContextSet.union_spec
+                | now apply Retroknowledge.extends_r_merge
+                | now apply extends_r_merge_globals ].
+  Qed.
 
   Definition primitive_constant (Σ : global_env) (p : prim_tag) : option kername :=
     match p with

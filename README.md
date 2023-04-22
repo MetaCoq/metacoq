@@ -18,6 +18,7 @@ manipulating Coq terms and developing certified plugins
 - [Documentation](#documentation)
 - [Overview of the project](#overview-of-the-project)
 - [Papers](#papers)
+- [Related Projects](#related-projects)
 - [Team & Credits](#team--credits)
 - [Bugs](#bugs)
 
@@ -247,6 +248,17 @@ See the Quotation [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/quot
   ITP 2018.
 
 - The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+
+## Related Projects
+
+- The [CertiCoq](https://github.com/CertiCoq/certicoq) project develops a certified compiler from the output of verified erasure down
+  to CompCert C-light. It provides in particular OCaml and fully foundationally verified plugins
+  for the whole compilation pipeline from Gallina to Clight and the verified type-checker of MetaCoq.
+
+- The [ConCert](https://github.com/AU-COBRA/ConCert) project develops certified or certifying compilers from Gallina to smart contract languages (Liquidity and
+  CameLIGO), the functional language Elm, and a subset of the Rust programming languages. It uses the typed erasure variant to
+  gather more type information about erased terms and perform optimizations based on this information.
+  The project focuses in particular on the verification and safe extraction of smart contracts for blockchains.
 
 ## Team & Credits
 

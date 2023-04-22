@@ -183,5 +183,5 @@ name: Nix CI for bundle coq-dev
     - reopened
   push:
     branches:
-    - master
+    - main
     - coq-8.16

@@ -54,7 +54,7 @@ of Coq, to get those you will need to activate the following repositories:
 To compile the library, you need:
 
 - The `Coq` version corrsponding to your branch (you can use the `coq.dev` package
-  for the `master` branch).
+  for the `main` branch).
 - `OCaml` (tested with `4.06.1`, `4.07.1`, and `4.10.0`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)
 - [`Equations 1.3`](http://mattam82.github.io/Coq-Equations/)

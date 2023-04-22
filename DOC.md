@@ -14,7 +14,7 @@ Currently (unless you are reading the README of an outdated branch),
 it is the [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16).
 You should use it both for usage of MetaCoq and development of MetaCoq.
 
-The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following Coq's master
+The [main](https://github.com/MetaCoq/metacoq/tree/main) branch is following Coq's master
 branch and gets regular updates from the the main development branch which follows the latest
 stable release of Coq.
 
@@ -22,19 +22,14 @@ stable release of Coq.
 <!-- gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated -->
 <!-- "alpha"-quality `opam` packages. -->
 
-The branches [coq-8.14](https://github.com/MetaCoq/metacoq/tree/coq-8.14), [coq-8.15](https://github.com/MetaCoq/metacoq/tree/coq-8.15)
-and [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16) are being kept in sync.
-The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
-[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)
-and [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9), [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10),
-[coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11), [coq-8.12](https://github.com/MetaCoq/metacoq/tree/coq-8.12)
-and [coq-8.13](https://github.com/MetaCoq/metacoq/tree/coq-8.13) are frozen.
+The branches [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16) and [coq-8.17](https://github.com/MetaCoq/metacoq/tree/coq-8.17) are being kept in sync.
+The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6) to [coq-8.15](https://github.com/MetaCoq/metacoq/tree/coq-8.15) are frozen.
 
 
 ## Program and Equations
 
-MetaCoq relies on `Program` and `Equations` plugins, however try to avoid `Program` as it 
-inserts some JMeq and UIP axioms silently, whereas we try to keep the development axiom-free. 
+MetaCoq relies on `Program` and `Equations` plugins, however try to avoid `Program` as it
+inserts some JMeq and UIP axioms silently, whereas we try to keep the development axiom-free.
 You can use `Equations` to do some dependent induction (`dependent induction`,
 `dependent destruction`, `depelim`). You may need to add:
 ```
@@ -62,13 +57,13 @@ of the TemplateMonad also allow partially qualified names.
 
 The development uses three main hint databases:
 
-- The "len" databases which gathers all relevant length lemmas (mainly list length lemmas 
+- The "len" databases which gathers all relevant length lemmas (mainly list length lemmas
   relevant to the operations). This database is large (> 100 lemmas) for a given theory
   (PCUIC or Template-Coq) and it is advisable to not mix together both databases,
   as autorewrite would become very slow.
-  BEWARE: If working in the PCUIC theory, do not require anything besides the BasicAst and utils modules from the Template-Coq module. 
-- The "pcuic" rewrite and auto database gathers lemmas helping solving side-conditions 
-  of typing judgements. 
+  BEWARE: If working in the PCUIC theory, do not require anything besides the BasicAst and utils modules from the Template-Coq module.
+- The "pcuic" rewrite and auto database gathers lemmas helping solving side-conditions
+  of typing judgements.
 
 ## Options
 

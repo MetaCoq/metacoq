@@ -33,8 +33,8 @@ gen-src/binPosDef.ml
 gen-src/binPosDef.mli
 gen-src/bool.ml
 gen-src/bool.mli
-# gen-src/byte.ml
-# gen-src/byte.mli
+gen-src/byte.ml
+gen-src/byte.mli
 gen-src/byte0.ml
 gen-src/byte0.mli
 gen-src/byteCompare.ml

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
      PCUICSigmaCalculus PCUICContextReduction
@@ -13,11 +14,11 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 From Equations Require Import Equations.
 
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
-  We first use typing to decorate the reductions/comparisons with invariants 
+  We first use typing to decorate the reductions/comparisons with invariants
   showing that all the considered contexts/terms are well-scoped. In a second step
-  we use confluence of one-step reduction on well-scoped terms [ws_red_confluence], which also 
+  we use confluence of one-step reduction on well-scoped terms [ws_red_confluence], which also
   commutes with alpha,universe-equivalence of contexts and terms [red1_eq_context_upto_l].
-  We can now derive transitivity of the conversion relation on *well-scoped* 
+  We can now derive transitivity of the conversion relation on *well-scoped*
   terms. To deal with the closedness side condition we put them in the definition
   of conversion/cumulativity: as terms need to move between contexts, and
   we sometimes need to consider conversion in open contexts, we work with
@@ -32,7 +33,7 @@ Reserved Notation " Σ ;;; Γ ⊢ t ≤[ pb ] u" (at level 50, Γ, t, u at next 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Inductive ws_cumul_pb {cf} (pb : conv_pb) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| ws_cumul_pb_compare (t u : term) : 
+| ws_cumul_pb_compare (t u : term) :
   is_closed_context Γ -> is_open_term Γ t -> is_open_term Γ u ->
   compare_term pb Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ ⊢ t ≤[pb] u
 | ws_cumul_pb_red_l (t u v : term) :
@@ -54,7 +55,7 @@ Notation " Σ ;;; Γ ⊢ t = u " := (ws_cumul_pb Conv Σ Γ t u) (at level 50, �
 
 Lemma ws_cumul_pb_refl' {pb} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_cumul_pb pb Σ Γ t t.
 Proof.
-  constructor; eauto with fvs. reflexivity. 
+  constructor; eauto with fvs. reflexivity.
 Qed.
 
 #[global]
@@ -70,7 +71,7 @@ Proof.
     econstructor 2; tea.
 Qed.
 
-Lemma red1_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x y : 
+Lemma red1_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x y :
   red1 Σ Γ x y ->
   is_closed_context Γ ->
   is_open_term Γ x ->
@@ -80,7 +81,7 @@ Proof.
 Qed.
 #[global] Hint Immediate red1_is_open_term : fvs.
 
-Lemma red_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x y : 
+Lemma red_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x y :
   red Σ Γ x y ->
   is_closed_context Γ ->
   is_open_term Γ x ->
@@ -90,27 +91,27 @@ Proof.
 Qed.
 #[global] Hint Immediate red_is_open_term : fvs.
 
-Lemma ws_cumul_pb_is_open_term {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+Lemma ws_cumul_pb_is_open_term {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} :
   ws_cumul_pb pb Σ Γ x y ->
   [&& is_closed_context Γ, is_open_term Γ x & is_open_term Γ y].
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_cumul_pb_is_closed_context {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+Lemma ws_cumul_pb_is_closed_context {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} :
   ws_cumul_pb pb Σ Γ x y -> is_closed_context Γ.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_cumul_pb_is_open_term_left {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ : context} {x y} : 
+Lemma ws_cumul_pb_is_open_term_left {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ : context} {x y} :
   ws_cumul_pb pb Σ Γ x y -> is_open_term Γ x.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_cumul_pb_is_open_term_right {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+Lemma ws_cumul_pb_is_open_term_right {cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} :
   ws_cumul_pb pb Σ Γ x y -> is_open_term Γ y.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1.
@@ -119,7 +120,7 @@ Qed.
 #[global] Hint Resolve ws_cumul_pb_is_closed_context ws_cumul_pb_is_open_term_left ws_cumul_pb_is_open_term_right : fvs.
 
 Lemma ws_cumul_pb_alt `{cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
-  Σ ;;; Γ ⊢ t ≤[pb] u <~> 
+  Σ ;;; Γ ⊢ t ≤[pb] u <~>
   ∑ v v',
     [× is_closed_context Γ, is_open_term Γ t, is_open_term Γ u,
       red Σ Γ t v, red Σ Γ u v' & compare_term pb Σ (global_ext_constraints Σ) v v'].
@@ -197,7 +198,7 @@ Section EqualityLemmas.
     move/isType_closedPT. now rewrite closedP_shiftnP.
   Qed.
 
-  Lemma into_ws_cumul_pb {pb} {Γ : context} {T U} : 
+  Lemma into_ws_cumul_pb {pb} {Γ : context} {T U} :
     Σ;;; Γ |- T <=[pb] U ->
     is_closed_context Γ -> is_open_term Γ T ->
     is_open_term Γ U ->
@@ -210,14 +211,14 @@ Section EqualityLemmas.
   Qed.
 
   Lemma isType_ws_cumul_pb_refl {pb} Γ T : isType Σ Γ T -> Σ ;;; Γ ⊢ T ≤[pb] T.
-  Proof using wfΣ. 
+  Proof using wfΣ.
     intros H.
     pose proof (isType_wf_local H).
     eapply (ws_cumul_pb_refl' (exist Γ (wf_local_closed_context X)) (exist T (isType_open H))).
   Qed.
 
   (** From well-typed to simply well-scoped equality. *)
-  Lemma wt_cumul_pb_ws_cumul_pb {pb} {Γ : context} {T U} : 
+  Lemma wt_cumul_pb_ws_cumul_pb {pb} {Γ : context} {T U} :
     wt_cumul_pb pb Σ Γ T U ->
     ws_cumul_pb pb Σ Γ T U.
   Proof using wfΣ.
@@ -240,7 +241,7 @@ Section EqualityLemmas.
 
   Global Instance conv_trans Γ : Transitive (wt_conv Σ Γ).
   Proof using wfΣ. apply wt_cumul_pb_trans. Qed.
-  
+
   Global Instance cumul_trans Γ : Transitive (wt_cumul Σ Γ).
   Proof using wfΣ. apply wt_cumul_pb_trans. Qed.
 
@@ -293,9 +294,9 @@ Proof.
 Qed.
 
 Lemma ws_cumul_pb_alt_closed {cf} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
-  Σ ;;; Γ ⊢ t ≤[pb] u <~> 
+  Σ ;;; Γ ⊢ t ≤[pb] u <~>
   ∑ v v',
-    [× closed_red Σ Γ t v, closed_red Σ Γ u v' & 
+    [× closed_red Σ Γ t v, closed_red Σ Γ u v' &
        compare_term pb Σ (global_ext_constraints Σ) v v'].
 Proof.
   etransitivity. apply ws_cumul_pb_alt.
@@ -367,7 +368,7 @@ Definition conv_cum {cf:checker_flags} pb Σ Γ T T' :=
   Σ ;;; Γ |- T <=[pb] T'.
 
 Notation ws_decl Γ d := (on_free_vars_decl (shiftnP #|Γ| xpred0) d).
-  
+
 Definition open_decl (Γ : context) := { d : context_decl | ws_decl Γ d }.
 Definition open_decl_proj {Γ : context} (d : open_decl Γ) := proj1_sig d.
 Coercion open_decl_proj : open_decl >-> context_decl.
@@ -391,10 +392,10 @@ Proof.
   intros []; cbn; eauto with fvs.
 Qed.
 #[global] Hint Immediate ws_cumul_decls_wf_decl_left ws_cumul_decls_wf_decl_right : fvs.
- 
-Lemma ws_cumul_decls_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ} 
+
+Lemma ws_cumul_decls_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ Γ' : context} {d d'} :
-  ws_cumul_decls pb Σ Γ d d' -> 
+  ws_cumul_decls pb Σ Γ d d' ->
   cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d'.
 Proof.
   intros. intuition eauto with fvs.
@@ -403,21 +404,21 @@ Qed.
 
 Lemma into_ws_cumul_decls {cf : checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ}
   (Γ Γ' : context) d d' :
-  cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d' -> 
+  cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d' ->
   on_free_vars_ctx xpred0 Γ ->
   on_free_vars_ctx xpred0 Γ' ->
   is_open_decl Γ d ->
   is_open_decl Γ d' ->
   ws_cumul_decls pb Σ Γ d d'.
 Proof.
-  case: pb; move=> pb clΓ clΓ' isd isd'; 
+  case: pb; move=> pb clΓ clΓ' isd isd';
     destruct pb; cbn; constructor; auto; try inv_on_free_vars; eauto with fvs.
   all:try apply: into_ws_cumul_pb; tea; eauto 3 with fvs.
 Qed.
- 
-Lemma ws_cumul_decls_inv {cf} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ} 
+
+Lemma ws_cumul_decls_inv {cf} (pb : conv_pb) {Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ Γ' : context} {d d'} :
-  ws_cumul_decls pb Σ Γ d d' -> 
+  ws_cumul_decls pb Σ Γ d d' ->
   [× on_free_vars_ctx xpred0 Γ, is_open_decl Γ d, is_open_decl Γ d' & cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d'].
 Proof.
   intros. split; eauto with fvs.
@@ -450,7 +451,7 @@ Inductive wt_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) (Σ : global_env
     conv_cum pb Σ Γ T T' ->
     wt_cumul_pb_decls pb Σ Γ Γ' (vdef na b T) (vdef na' b' T').
 Derive Signature for wt_cumul_pb_decls.
-    
+
 Definition ws_cumul_ctx_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) (Γ Γ' : context) :=
   All2_fold (fun Γ Γ' => ws_cumul_decls pb Σ Γ) Γ Γ'.
 
@@ -495,13 +496,13 @@ Notation wt_conv_context Σ := (wt_cumul_ctx_pb Conv Σ).
 Section WtContextConversion.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Definition wt_decl Γ d := 
+  Definition wt_decl Γ d :=
     match d with
     | {| decl_body := None; decl_type := ty |} => isType Σ Γ ty
     | {| decl_body := Some b; decl_type := ty |} => isType Σ Γ ty × Σ ;;; Γ |- b : ty
     end.
 
-  Lemma wf_local_All_fold Γ : 
+  Lemma wf_local_All_fold Γ :
     wf_local Σ Γ <~>
     All_fold wt_decl Γ.
   Proof using Type.
@@ -544,7 +545,7 @@ Section WtContextConversion.
     ws_cumul_ctx_pb pb Σ Γ Γ'.
   Proof using wfΣ.
     intros a; eapply All2_fold_impl_ind; tea.
-    intros ???? wt ws eq; 
+    intros ???? wt ws eq;
     pose proof (All2_fold_length wt).
     destruct eq.
     - pose proof (isType_wf_local i).
@@ -560,7 +561,7 @@ Section WtContextConversion.
       eapply PCUICClosedTyp.subject_closed in t0.
       eapply (@closedn_on_free_vars xpred0) in t.
       eapply (@closedn_on_free_vars xpred0) in t0.
-      eapply into_ws_cumul_decls with Δ; eauto with fvs. 
+      eapply into_ws_cumul_decls with Δ; eauto with fvs.
       destruct pb; constructor; auto.
       rewrite (All2_fold_length ws) //; eauto with fvs.
   Qed.
@@ -574,7 +575,7 @@ Section WtContextConversion.
     eapply All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
     all:try now eapply ws_cumul_pb_forget in eqt.
   Qed.
-  
+
   #[global]
   Instance ws_cumul_decls_sym Γ : Symmetric (ws_cumul_decls Conv Σ Γ).
   Proof using Type.
@@ -582,12 +583,12 @@ Section WtContextConversion.
     constructor; now symmetry.
   Qed.
 
-  Lemma ws_cumul_ctx_pb_forget {pb Γ Γ'} : 
+  Lemma ws_cumul_ctx_pb_forget {pb Γ Γ'} :
     ws_cumul_ctx_pb pb Σ Γ Γ' -> cumul_pb_context cumulAlgo_gen pb Σ Γ Γ'.
   Proof using wfΣ.
     now move/ws_cumul_ctx_pb_inv => [].
   Qed.
-  
+
   Lemma ws_cumul_ctx_pb_refl pb Γ : is_closed_context Γ -> ws_cumul_ctx_pb pb Σ Γ Γ.
   Proof using wfΣ.
     move=> onΓ. cbn.
@@ -598,5 +599,5 @@ Section WtContextConversion.
     eapply (into_ws_cumul_decls _ Γ); auto.
     destruct d as [na [b|] ty]; constructor; auto; reflexivity.
   Qed.
-  
+
 End WtContextConversion.

@@ -1,9 +1,9 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes utils BasicAst.
+From MetaCoq.Common Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
+     PCUICReflect PCUICLiftSubst PCUICSigmaCalculus
      PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICCumulativity PCUICPosition PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICContextSubst
      PCUICWellScopedCumulativity
      PCUICWeakeningConv PCUICWeakeningTyp PCUICGeneration PCUICUtils PCUICContexts
-     PCUICArities PCUICSpine. 
+     PCUICArities PCUICSpine.
 
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
@@ -34,4 +34,3 @@ Inductive tele_inst {cf:checker_flags} Σ (Γ : context) : list term -> telescop
   tele_inst Σ Γ s (Δ ,, vdef na t T).
 
 
-  

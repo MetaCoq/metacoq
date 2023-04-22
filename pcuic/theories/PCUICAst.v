@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Morphisms.
-From MetaCoq.Template Require Export utils Universes BasicAst Environment Reflect.
-From MetaCoq.Template Require EnvironmentTyping.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Export Universes BasicAst Environment Reflect.
+From MetaCoq.Common Require EnvironmentTyping.
 From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
@@ -34,8 +35,8 @@ Notation length_of t := ltac:(let lemma := constr:(PCUICAst.len t) in exact lemm
 Record predicate {term} := mk_predicate {
   pparams : list term; (* The parameters *)
   puinst : Instance.t; (* The universe instance *)
-  pcontext : list (context_decl term); 
-    (* The predicate context, 
+  pcontext : list (context_decl term);
+    (* The predicate context,
     initially built from params and puinst *)
   preturn : term; (* The return type *) }.
 Derive NoConfusion for predicate.
@@ -47,7 +48,7 @@ Section map_predicate.
   Context (uf : Instance.t -> Instance.t).
   Context (paramf preturnf : term -> term').
   Context (pcontextf : list (context_decl term) -> list (context_decl term')).
-  
+
   Definition map_predicate (p : predicate term) :=
     {| pparams := map paramf p.(pparams);
         puinst := uf p.(puinst);
@@ -100,21 +101,21 @@ Section map_predicate_k.
   Lemma map_k_puinst k (p : predicate term) :
     uf (puinst p) = puinst (map_predicate_k k p).
   Proof using Type. reflexivity. Qed.
-  
-  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool) 
+
+  Definition test_predicate (instp : Instance.t -> bool) (p : term -> bool)
     (pred : predicate term) :=
-    instp pred.(puinst) && forallb p pred.(pparams) && 
+    instp pred.(puinst) && forallb p pred.(pparams) &&
     test_context p pred.(pcontext) && p pred.(preturn).
 
-  Definition test_predicate_k (instp : Instance.t -> bool) 
+  Definition test_predicate_k (instp : Instance.t -> bool)
     (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
+    instp pred.(puinst) && forallb (p k) pred.(pparams) &&
     test_context_k p #|pred.(pparams)| pred.(pcontext) &&
     p (#|pred.(pcontext)| + k) pred.(preturn).
 
-  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
+  Definition test_predicate_ku (instp : nat -> Instance.t -> bool)
     (p : nat -> term -> bool) k (pred : predicate term) :=
-    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
+    instp k pred.(puinst) && forallb (p k) pred.(pparams) &&
     test_context (p #|pred.(puinst)|) pred.(pcontext) &&
     p k pred.(preturn).
 
@@ -124,8 +125,8 @@ Section Branch.
   Context {term : Type}.
   (* Parameterized by term types as they are not yet defined. *)
   Record branch := mk_branch {
-    bcontext : list (context_decl term); 
-    (* Context of binders of the branch, including lets. 
+    bcontext : list (context_decl term);
+    (* Context of binders of the branch, including lets.
        This context is open w.r.t. to an instance of the parameters of the inductive type only,
        it is NOT subject to substitution/lifting
       *)
@@ -138,14 +139,14 @@ Section Branch.
 
   Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
     String.concat " " (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ " => " ^ f (bbody b).
-  
+
   Definition test_branch (pctx : term -> bool) (p : term -> bool) (b : branch) :=
     test_context pctx b.(bcontext) && p b.(bbody).
 
   Definition test_branch_k (pred : predicate term) (p : nat -> term -> bool) k (b : branch) :=
     test_context_k p #|pred.(pparams)| b.(bcontext) && p (#|b.(bcontext)| + k) b.(bbody).
 
-End Branch.  
+End Branch.
 Arguments branch : clear implicits.
 
 Section map_branch.
@@ -160,7 +161,7 @@ Section map_branch.
   Lemma map_bbody (b : branch term) :
     f (bbody b) = bbody (map_branch b).
   Proof using Type. reflexivity. Qed.
-  
+
   Lemma map_bcontext (b : branch term) :
     g (bcontext b) = bcontext (map_branch b).
   Proof using Type. reflexivity. Qed.
@@ -179,7 +180,7 @@ Section map_branch_k.
   Lemma map_k_bbody k (b : branch term) :
     f (#|b.(bcontext)| + k) (bbody b) = bbody (map_branch_k k b).
   Proof using Type. reflexivity. Qed.
-  
+
   Lemma map_k_bcontext k (b : branch term) :
     g (bcontext b) = bcontext (map_branch_k k b).
   Proof using Type. reflexivity. Qed.
@@ -213,6 +214,9 @@ Derive NoConfusion for term.
 
 Notation prim_val := (prim_val term).
 
+Notation tInt i := (tPrim (_; primIntModel i)) (only parsing).
+Notation tFloat f := (tPrim (_; primFloatModel f)) (only parsing).
+
 Fixpoint mkApps t us :=
   match us with
   | nil => t
@@ -233,76 +237,6 @@ Definition isLambda t :=
 
 Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
 Proof. destruct t => //; eauto. Qed.
-
-(** ** Entries
-
-  The kernel accepts these inputs and typechecks them to produce
-  declarations. Reflects [kernel/entries.mli].
-*)
-
-(** *** Constant and axiom entries *)
-
-Record parameter_entry := {
-  parameter_entry_type      : term;
-  parameter_entry_universes : universes_decl }.
-
-Record definition_entry := {
-  definition_entry_type      : term;
-  definition_entry_body      : term;
-  definition_entry_universes : universes_decl;
-  definition_entry_opaque    : bool }.
-
-Inductive constant_entry :=
-| ParameterEntry  (p : parameter_entry)
-| DefinitionEntry (def : definition_entry).
-
-Derive NoConfusion for parameter_entry definition_entry constant_entry.
-
-(** *** Inductive entries *)
-
-(** This is the representation of mutual inductives.
-    nearly copied from [kernel/entries.mli]
-
-  Assume the following definition in concrete syntax:
-
-[[
-  Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
-  ...
-  with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1  ... | cpnp : Tpnp.
-]]
-
-  then, in [i]th block, [mind_entry_params] is [xn:Xn;...;x1:X1];
-  [mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
-  [mind_entry_lc] is [Ti1;...;Tini], defined in context
-  [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
-  [x1:X1;...;xn:Xn].
-*)
-
-Inductive local_entry :=
-| LocalDef : term -> local_entry (* local let binding *)
-| LocalAssum : term -> local_entry.
-
-Record one_inductive_entry := {
-  mind_entry_typename : ident;
-  mind_entry_arity : term;
-  mind_entry_template : bool; (* template polymorphism *)
-  mind_entry_consnames : list ident;
-  mind_entry_lc : list term (* constructor list *) }.
-
-Record mutual_inductive_entry := {
-  mind_entry_record    : option (option ident);
-  (* Is this mutual inductive defined as a record?
-     If so, is it primitive, using binder name [ident]
-     for the record in primitive projections ? *)
-  mind_entry_finite    : recursivity_kind;
-  mind_entry_params    : list (ident * local_entry);
-  mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universes_decl;
-  mind_entry_private   : option bool
-  (* Private flag for sealing an inductive definition in an enclosing
-     module. Not handled by Template Coq yet. *) }.
-
-Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.
 
 (** Basic operations on the AST: lifting, substitution and tests for variable occurrences. *)
 
@@ -405,7 +339,7 @@ Fixpoint test_context_nlict (bcontext : list (context_decl term)) :=
 
 End fix_test.
 
-Definition test_branch_nlict test b := 
+Definition test_branch_nlict test b :=
   test_context_nlict test (bcontext b) && test (bbody b).
 
 Definition test_branches_nlict test brs :=
@@ -454,7 +388,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
   | _ => true
   end.
-    
+
 (** * Universe substitution
 
   Substitution of universe levels for universe level variables, used to
@@ -533,13 +467,13 @@ Module PCUICTerm <: Term.
   Definition subst_instance_constr := subst_instance.
 End PCUICTerm.
 
-(* These functors derive the notion of local context and lift substitution, term lifting, 
-  the closed predicate to them. *)                 
+(* These functors derive the notion of local context and lift substitution, term lifting,
+  the closed predicate to them. *)
 Module PCUICEnvironment := Environment PCUICTerm.
 Export PCUICEnvironment.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
 
-  
+
 (** Decompose an arity into a context and a sort *)
 
 Fixpoint destArity Γ (t : term) :=
@@ -577,9 +511,9 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
                  unfold PCUICTermUtils.destArity in *; unfold PCUICTermUtils.inds in *.
 
 
-Lemma context_assumptions_mapi_context f (ctx : context) : 
+Lemma context_assumptions_mapi_context f (ctx : context) :
   context_assumptions (mapi_context f ctx) = context_assumptions ctx.
-Proof. 
+Proof.
   now rewrite mapi_context_fold; len.
 Qed.
 #[global]
@@ -590,7 +524,7 @@ Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment 
 
 Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICTermUtils PCUICEnvTyping.
 
-Global Instance context_reflect`(ReflectEq term) : 
+Global Instance context_reflect`(ReflectEq term) :
   ReflectEq (list (BasicAst.context_decl term)) := _.
 
 Local Ltac finish :=
@@ -606,7 +540,7 @@ Local Ltac fcase c :=
   case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
 
 Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
-  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")"
   ^ "," ^ string_of_universe_instance (puinst p)
   ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name ∘ decl_name) (pcontext p)) ^ ")"
   ^ "," ^ f (preturn p) ^ ")".
@@ -623,7 +557,7 @@ Definition eqb_predicate_gen (eqb_univ_instance : Instance.t -> Instance.t -> bo
 
 Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term) :=
   eqb_predicate_gen eqb (eqb_context_decl eqterm) eqterm p p'.
-  
+
 (** Theory of [map] variants on branches and predicates. *)
 
 (* The [map] rewrite database gathers all the map composition rewrite lemmas
@@ -657,7 +591,7 @@ Proof.
 Qed.
 #[global]
 Hint Rewrite @map_predicate_id : map.
-  
+
 Definition tCasePredProp_k
             (P : nat -> term -> Type)
             k (p : predicate term) :=
@@ -671,7 +605,7 @@ Definition tCasePredProp {term}
   onctx Pparams p.(pcontext) ×
   Preturn p.(preturn).
 
-Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) 
+Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t)
   (f f' g g' : A -> B) h h' (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
   map f (pparams p) = map g (pparams p) ->
@@ -683,7 +617,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_predicate_eq_spec : all.
 
-Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t) 
+Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t)
   (f g : nat -> A -> A) k k' (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
   map (f k) (pparams p) = map (g k') (pparams p) ->
@@ -714,7 +648,7 @@ Lemma map_decl_id_spec_cond P p f d :
 Proof.
   intros [].
   unfold map_decl; destruct d; cbn in *.
-  unfold test_decl; simpl. 
+  unfold test_decl; simpl.
   intros [pty pbody]%andb_and. intros Hx.
   f_equal; eauto.
   destruct decl_body; simpl; eauto. f_equal.
@@ -727,7 +661,7 @@ Lemma map_context_id_spec P f ctx :
   map_context f ctx = ctx.
 Proof.
   intros Hc Hf. induction Hc; simpl; auto.
-  rewrite IHHc. f_equal; eapply map_decl_id_spec; eauto. 
+  rewrite IHHc. f_equal; eapply map_decl_id_spec; eauto.
 Qed.
 #[global] Hint Resolve map_context_id_spec : all.
 
@@ -739,7 +673,7 @@ Lemma map_context_id_spec_cond P p f ctx :
 Proof.
   intros Hc Hc' Hf. induction Hc in Hc' |- *; simpl; auto.
   revert Hc'; simpl; intros [hx hl]%andb_and.
-  rewrite IHHc; auto. f_equal. eapply map_decl_id_spec_cond; eauto. 
+  rewrite IHHc; auto. f_equal. eapply map_decl_id_spec_cond; eauto.
 Qed.
 #[global] Hint Resolve map_context_id_spec_cond : all.
 
@@ -767,7 +701,7 @@ Qed.
 #[global] Hint Resolve map_predicate_k_id_spec : all.
 
 #[global]
-Instance map_predicate_proper {term} : 
+Instance map_predicate_proper {term} :
   Proper (`=1` ==> `=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
   intros eqf0 eqf1 eqf.
@@ -792,7 +726,7 @@ Proof. intros x. unfold shiftf. now rewrite Nat.add_0_r. Qed.
 #[global]
 Hint Rewrite @shiftf0 : map.
 
-Lemma map_predicate_k_map_predicate_k 
+Lemma map_predicate_k_map_predicate_k
   (finst finst' : Instance.t -> Instance.t)
   (f f' : nat -> term -> term)
   k k' (p : predicate term) :
@@ -807,7 +741,7 @@ Qed.
 #[global]
 Hint Rewrite map_predicate_k_map_predicate_k : map.
 
-Lemma map_predicate_map_predicate_k 
+Lemma map_predicate_map_predicate_k
   (finst finst' : Instance.t -> Instance.t)
   (f : term -> term) (f' : nat -> term -> term)
   k (p : predicate term) :
@@ -823,7 +757,7 @@ Hint Rewrite map_predicate_map_predicate_k : map.
 
 Lemma map_predicate_k_map_predicate
   (finst finst' : Instance.t -> Instance.t)
-  (f' : term -> term) (f : nat -> term -> term) 
+  (f' : term -> term) (f : nat -> term -> term)
   k (p : predicate term) :
   map_predicate_k finst f k (map_predicate finst' f' f' id p) =
   map_predicate_k (finst ∘ finst') (fun k => (f k) ∘ f') k p.
@@ -839,7 +773,7 @@ Lemma map_branch_map_branch
       {term term' term''}
       (f : term' -> term'')
       (f' : term -> term')
-      h h' 
+      h h'
       (b : branch term) :
   map_branch f h (map_branch f' h' b) =
   map_branch (f ∘ f') (h ∘ h') b.
@@ -900,7 +834,7 @@ Hint Rewrite map_branch_k_map_branch : map.
 Lemma map_branch_id x : map_branch (@id term) id x = id x.
 Proof.
   unfold map_branch, id; destruct x; cbn.
-  f_equal. 
+  f_equal.
 Qed.
 #[global]
 Hint Rewrite @map_branch_id : map.
@@ -913,7 +847,7 @@ Proof.
   destruct d; cbn; intros [Pty Pbod] Hfg.
   unfold map_decl; cbn in *; f_equal.
   * destruct decl_body; cbn in *; eauto. f_equal.
-    eauto. 
+    eauto.
   * eauto.
 Qed.
 
@@ -947,7 +881,7 @@ Qed.
 #[global] Hint Resolve map_branch_eq_spec : all.
 
 #[global]
-Instance map_branch_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) 
+Instance map_branch_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)
   (@map_branch term term).
 Proof.
   intros eqf0 eqf1 eqf h h' eqh'.
@@ -1000,7 +934,7 @@ Lemma map_branches_k_map_branches_k
       {term term' term''}
       (f : nat -> term' -> term'')
       (g : term -> term')
-      (f' : nat -> term -> term') 
+      (f' : nat -> term -> term')
       h h' k
       (l : list (branch term)) :
   (forall ctx, #|h' ctx| = #|ctx|) ->
@@ -1013,7 +947,7 @@ Proof.
   simpl; autorewrite with len. now rewrite Hh.
 Qed.
 
-Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} 
+Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B}
   {h h' : list (BasicAst.context_decl A) -> list (BasicAst.context_decl B)} :
   tCaseBrsProp P l -> (forall x, P x -> f x = g x) -> h =1 h' ->
   map_branches f h l = map_branches g h' l.
@@ -1027,21 +961,21 @@ Qed.
 Lemma map_decl_eqP_spec {A B} {P : A -> Type} {p : A -> bool}
    {d} {f g : A -> B} :
   ondecl P d ->
-  test_decl p d -> 
+  test_decl p d ->
   (forall x, P x -> p x -> f x = g x) ->
   map_decl f d = map_decl g d.
 Proof.
   destruct d; cbn; intros [Pty Pbod] [pty pbody]%andb_and Hfg.
   unfold map_decl; cbn in *; f_equal.
   * destruct decl_body; cbn in *; eauto. f_equal.
-    eauto. 
+    eauto.
   * eauto.
 Qed.
 
 Lemma map_context_eqP_spec {A B} {P : A -> Type} {p : A -> bool}
    {ctx} {f g : A -> B} :
   All (ondecl P) ctx ->
-  test_context p ctx -> 
+  test_context p ctx ->
   (forall x, P x -> p x -> f x = g x) ->
   map_context f ctx = map_context g ctx.
 Proof.
@@ -1093,7 +1027,7 @@ Proof.
   destruct p0 as [Hty Hbody].
   unfold map_decl; destruct x ; cbn in *; f_equal; eauto.
   destruct decl_body; cbn in *; auto.
-  f_equal. unfold shiftf. eapply Hfg; auto. 
+  f_equal. unfold shiftf. eapply Hfg; auto.
 Qed.
 
 Lemma test_context_k_eqP_id_spec {A} {P : A -> Type} (p q : nat -> A -> bool) k k' {ctx} :
@@ -1135,7 +1069,7 @@ Proof.
   induction ctx as [|[na [b|] ty] ctx]; simpl; auto; now rewrite IHctx Hfg.
 Qed.
 
-Lemma test_context_k_eq (p : nat -> term -> bool) n ctx : 
+Lemma test_context_k_eq (p : nat -> term -> bool) n ctx :
   test_context_k p n ctx = alli (fun k d => test_decl (p (n + k)) d) 0 (List.rev ctx).
 Proof.
   induction ctx; simpl; auto.
@@ -1175,14 +1109,14 @@ Proof.
 Qed.
 
 Lemma case_brs_map_spec_cond {A B} {P : A -> Type} pctx p {l} {f g : A -> B} {h h'}:
-  tCaseBrsProp P l -> 
+  tCaseBrsProp P l ->
   forallb (test_branch pctx p) l ->
   (forall x, P x -> p x -> f x = g x) ->
   (* (forall ctx, onctx P ctx -> test_context pctx ctx -> h ctx = h' ctx) -> *)
   h =1 h' ->
   map_branches f h l = map_branches g h' l.
 Proof.
-  intros. red in X. 
+  intros. red in X.
   eapply forallb_All in H.
   eapply All_map_eq.
   eapply All_prod in X; tea. clear H.
@@ -1216,7 +1150,7 @@ Proof.
   eapply All_impl. eapply All_prod. exact X. exact H. simpl.
   intros [bctx bbod] [Hbr hb]. cbn in *.
   unfold map_branch; cbn. f_equal.
-  - apply H1. 
+  - apply H1.
   - eapply H0; eauto. apply Hbr.
     now move/andb_and: hb => [].
 Qed.
@@ -1231,10 +1165,10 @@ Qed.
 #[global]
 Hint Rewrite test_context_map : map.
 
-Lemma onctx_test P (p q : term -> bool) ctx : 
+Lemma onctx_test P (p q : term -> bool) ctx :
   onctx P ctx ->
   test_context p ctx ->
-  (forall t, P t -> p t -> q t) -> 
+  (forall t, P t -> p t -> q t) ->
   test_context q ctx.
 Proof.
   intros Hc tc HP. revert tc.
@@ -1317,3 +1251,73 @@ Module PCUICGlobalMaps := EnvironmentTyping.GlobalMaps
   PCUICLookup
 .
 Include PCUICGlobalMaps.
+
+(** ** Entries
+
+  The kernel accepts these inputs and typechecks them to produce
+  declarations. Reflects [kernel/entries.mli].
+*)
+
+(** *** Constant and axiom entries *)
+
+Record parameter_entry := {
+  parameter_entry_type      : term;
+  parameter_entry_universes : universes_decl }.
+
+Record definition_entry := {
+  definition_entry_type      : term;
+  definition_entry_body      : term;
+  definition_entry_universes : universes_decl;
+  definition_entry_opaque    : bool }.
+
+Inductive constant_entry :=
+| ParameterEntry  (p : parameter_entry)
+| DefinitionEntry (def : definition_entry).
+
+Derive NoConfusion for parameter_entry definition_entry constant_entry.
+
+(** *** Inductive entries *)
+
+(** This is the representation of mutual inductives.
+    nearly copied from [kernel/entries.mli]
+
+  Assume the following definition in concrete syntax:
+
+[[
+  Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
+  ...
+  with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1  ... | cpnp : Tpnp.
+]]
+
+  then, in [i]th block, [mind_entry_params] is [xn:Xn;...;x1:X1];
+  [mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
+  [mind_entry_lc] is [Ti1;...;Tini], defined in context
+  [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
+  [x1:X1;...;xn:Xn].
+*)
+
+Inductive local_entry :=
+| LocalDef : term -> local_entry (* local let binding *)
+| LocalAssum : term -> local_entry.
+
+Record one_inductive_entry := {
+  mind_entry_typename : ident;
+  mind_entry_arity : term;
+  mind_entry_template : bool; (* template polymorphism *)
+  mind_entry_consnames : list ident;
+  mind_entry_lc : list term (* constructor list *) }.
+
+Record mutual_inductive_entry := {
+  mind_entry_record    : option (option ident);
+  (* Is this mutual inductive defined as a record?
+     If so, is it primitive, using binder name [ident]
+     for the record in primitive projections ? *)
+  mind_entry_finite    : recursivity_kind;
+  mind_entry_params    : context;
+  mind_entry_inds      : list one_inductive_entry;
+  mind_entry_universes : universes_decl;
+  mind_entry_private   : option bool
+  (* Private flag for sealing an inductive definition in an enclosing
+     module. Not handled by.Common Coq yet. *) }.
+
+Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.

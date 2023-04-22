@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 From MetaCoq.Translations Require Import translation_utils.
 Import MCMonadNotation.
 
@@ -170,7 +171,7 @@ MetaCoq Run (typ <- tmQuote (forall A, A -> A) ;;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
      (* Implement and Implement Existing cannot be used with this translation *)
      tsl_ty := None ;
-     tsl_ind := fun ΣE mp kn mind => 
+     tsl_ind := fun ΣE mp kn mind =>
      ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
 
 

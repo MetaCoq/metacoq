@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 Set Warnings "-notation-overridden".
 
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 Unset Universe Checking.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
 Import MCMonadNotation.
@@ -154,7 +155,7 @@ Definition contr_retract_α : contr_retractα.
   - intros [g p] x. refine (_ # (g x).2).
     exact (ap10 p x).
   - intro f; lazy. exact 1. (* uses eta! *)
-Defined. 
+Defined.
 
 (* MetaCoq Run (TC <- TranslateRec eqTC3 contr_retractα ;; *)
 (*                      TC <- ImplementExisting TC "contr_retract_α" ;; *)

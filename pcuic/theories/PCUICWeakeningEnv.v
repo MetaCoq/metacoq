@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
 From Equations Require Import Equations.
-From MetaCoq Require Import LibHypsNaming.
+From MetaCoq.Utils Require Import LibHypsNaming.
 
 Require Import ssreflect.
 
@@ -44,7 +45,7 @@ Proof.
   intros Hl. apply LevelSet.union_spec in Hl.
   apply LevelSet.union_spec.
   destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
-  destruct H as [[lsub csub] [Σ'' eq]]; subst.
+  destruct H as [[lsub csub] _].
   apply LevelSet.union_spec in Hl.
   apply LevelSet.union_spec; intuition auto.
 Qed.
@@ -62,13 +63,13 @@ Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ', φ)).
 Proof.
-  destruct H as [sub [Σ'' eq]]. subst.
+  destruct H as [sub _].
   apply global_ext_constraints_app, sub.
 Qed.
 
-#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ, ϕ)))
     (compare_universe pb (global_ext_constraints (Σ', ϕ))).
 Proof.
   intros ext u u'.
@@ -76,9 +77,9 @@ Proof.
   apply weakening_env_global_ext_constraints, ext.
 Qed.
 
-#[global] Instance subrel_extends_eq_pb {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq_pb {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (compare_universe pb (global_ext_constraints (Σ', ϕ))).
 Proof.
   change eq_universe with (compare_universe Conv).
@@ -88,21 +89,21 @@ Proof.
   - transitivity (compare_universe Conv (global_ext_constraints (Σ', ϕ))); tc.
 Qed.
 
-#[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (eq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change eq_universe with (compare_universe Conv). tc. Qed.
 
-#[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ)))
     (leq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
 
-#[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) : 
+#[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
     (leq_universe (global_ext_constraints (Σ', ϕ))).
 Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
 
@@ -118,13 +119,13 @@ Proof. typeclasses eauto. Qed.
 
 Lemma subrelations_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ,φ))) 
+  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ,φ)))
     (compare_universe pb (global_ext_constraints (Σ',φ))).
 Proof. destruct pb; typeclasses eauto. Qed.
 
 Lemma subrelations_eq_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) 
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ)))
     (compare_universe pb (global_ext_constraints (Σ',φ))).
 Proof. destruct pb; typeclasses eauto. Qed.
 
@@ -173,8 +174,8 @@ Lemma global_levels_sub {univs univs'} : univs ⊂_cs univs' ->
   LevelSet.Subset (global_levels univs) (global_levels univs').
 Proof.
   unfold global_levels => sub.
-  intros x hin % LevelSet.union_spec. 
-  apply LevelSet.union_spec. 
+  intros x hin % LevelSet.union_spec.
+  apply LevelSet.union_spec.
   intuition auto. left. now apply sub.
 Qed.
 
@@ -182,7 +183,7 @@ Lemma extends_wf_universe {Σ : global_env_ext} Σ' u : extends Σ Σ' ->
   wf_universe Σ u -> wf_universe (Σ', Σ.2) u.
 Proof.
   destruct Σ as [Σ univ]; cbn.
-  intros [sub [Σ'' eq]].
+  intros [sub _].
   destruct u; simpl; auto.
   intros Hl.
   intros l inl; specialize (Hl l inl).
@@ -193,8 +194,6 @@ Proof.
   - simpl. simpl in Hl. now left.
   - right. eapply global_levels_sub; tea.
 Qed.
-
-
 
 
 Definition on_udecl_prop (Σ : global_env) (udecl : universes_decl)
@@ -210,14 +209,14 @@ Definition on_udecl_prop (Σ : global_env) (udecl : universes_decl)
        | _ => True
        end. *)
 
-Lemma in_global_levels l u : 
+Lemma in_global_levels l u :
   LevelSet.In l (ContextSet.levels u) ->
   LevelSet.In l (global_levels u).
 Proof.
   intros hin; now apply LevelSet.union_spec.
 Qed.
 
-Lemma declared_cstr_levels_sub l l' c : 
+Lemma declared_cstr_levels_sub l l' c :
   LevelSet.Subset l l' ->
   declared_cstr_levels l c -> declared_cstr_levels l' c.
 Proof.
@@ -264,21 +263,16 @@ Section ExtendsWf.
 
   Let wf := on_global_env Pcmp P.
 
-Lemma extends_lookup Σ Σ' c decl :
+  Lemma extends_lookup Σ Σ' c decl :
   wf Σ' ->
   extends Σ Σ' ->
   lookup_env Σ c = Some decl ->
   lookup_env Σ' c = Some decl.
 Proof using P Pcmp cf.
-  destruct Σ as [univs Σ], Σ' as [univs' Σ']; cbn.
-  intros [hu hΣ].
-  rewrite /lookup_env; intros [sub [Σ'' eq]]; cbn in *. subst Σ'.
-  induction Σ'' in hΣ, c, decl |- *.
-  - simpl. auto.
-  - intros hl. depelim hΣ. specialize (IHΣ'' c decl hΣ hl).
-    simpl in *.
-    destruct (eqb_spec c kn); subst; auto.
-    apply lookup_global_Some_fresh in IHΣ''; contradiction.
+  cbv [wf on_global_env].
+  intros; eapply lookup_env_extends_NoDup; tea.
+  repeat match goal with H : _ × _ |- _ => destruct H end.
+  eapply NoDup_on_global_decls; tea.
 Qed.
 Hint Resolve extends_lookup : extends.
 
@@ -288,8 +282,15 @@ Lemma weakening_env_declared_constant :
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
+  unfold declared_constant in *.
+  eapply lookup_globals_In in H0.
+  eapply lookup_globals_In.
+  destruct H2 as [? H2 _].
+  specialize (H2 cst). destruct H2 as [decls Hdecls].
+  rewrite /lookup_envs in Hdecls. rewrite Hdecls.
+  apply in_or_app. now right.
 Qed.
+
 Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
@@ -298,9 +299,16 @@ Lemma weakening_env_declared_minductive `{CF:checker_flags}:
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
 Proof using P Pcmp cf.
   intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
+  unfold declared_minductive in *.
+  eapply lookup_globals_In in H0.
+  eapply lookup_globals_In.
+  destruct H2 as [? H2 _].
+  specialize (H2 cst). destruct H2 as [decls Hdecls].
+  rewrite /lookup_envs in Hdecls. rewrite Hdecls.
+  apply in_or_app. now right.
 Qed.
-Hint Resolve weakening_env_declared_minductive : extends.
+
+Hint Extern 0 => eapply weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
   forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
@@ -309,7 +317,8 @@ Lemma weakening_env_declared_inductive:
 Proof using P Pcmp cf.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_inductive : extends.
+
+Hint Extern 0 => eapply weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
@@ -320,7 +329,7 @@ Proof using P Pcmp cf.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_constructor : extends.
+Hint Extern 0 => eapply weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl cdecl pdecl,
@@ -331,12 +340,11 @@ Proof using P Pcmp cf.
   intros H Σ cst mdecl idecl cdecl pdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_projection : extends.
-
+Hint Extern 0 => eapply weakening_env_declared_projection : extends.
 
 (* Lemma wf_extends {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
 Proof.
-  intros HΣ' [univs [Σ'' eq]]. simpl in *.
+  intros HΣ' [univs H]. simpl in *.
   split => //.
   - red.
   induction Σ''; auto.
@@ -354,6 +362,7 @@ Proof using P Pcmp cf.
   intros [onu wfΣ] HH.
   destruct Σ as [univs Σ]; cbn in *.
   induction wfΣ; simpl. 1: discriminate.
+  destruct o as [? udecl o ?].
   cbn in HH. subst udecl.
   destruct (eqb_spec c kn); subst.
   - apply some_inj in HH; destruct HH. subst.
@@ -394,7 +403,7 @@ Proof using P Pcmp cf.
       destruct H'; [now left|right]; auto.
     * apply LevelSet.union_spec in H''. apply LevelSet.union_spec.
       destruct H''; [now left|right]; auto.
-      
+
     (*+ destruct d'; trivial. repeat split.
       * destruct H2; auto.
       * intros l Hl. apply H2 in Hl.
@@ -415,25 +424,72 @@ Qed.
 
 
 
-Definition weaken_env_prop_full
-  (P : global_env_ext -> context -> term -> term -> Type) :=
-  forall (Σ : global_env_ext) (Σ' : global_env), 
-    wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
+Definition weaken_env_prop_full_gen
+             (R : global_env_ext -> global_env_ext -> Type)
+             (P : global_env_ext -> context -> term -> term -> Type) :=
+  forall (Σ : global_env_ext) (Σ' : global_env),
+    wf Σ -> wf Σ' -> R Σ (Σ', Σ.2) ->
     forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
-Definition weaken_env_prop
+Definition weaken_env_prop_gen
+           (R : global_env_ext -> global_env_ext -> Type)
            (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+  forall Σ Σ' φ, wf Σ -> wf Σ' -> R (Σ, φ) (Σ', φ) -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Definition weaken_env_decls_prop
-  (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+Definition weaken_env_prop_full := weaken_env_prop_full_gen extends.
+Definition weaken_env_decls_prop_full := weaken_env_prop_full_gen extends_decls.
+Definition weaken_env_strictly_decls_prop_full := weaken_env_prop_full_gen strictly_extends_decls.
+Definition weaken_env_strictly_on_decls_prop_full := weaken_env_prop_full_gen extends_strictly_on_decls.
 
-Lemma extends_decls_wf Σ Σ' : 
-  wf Σ' -> extends_decls Σ Σ' -> wf Σ.
+Definition weaken_env_prop := weaken_env_prop_gen extends.
+Definition weaken_env_decls_prop := weaken_env_prop_gen extends_decls.
+Definition weaken_env_strictly_decls_prop := weaken_env_prop_gen strictly_extends_decls.
+Definition weaken_env_strictly_on_decls_prop := weaken_env_prop_gen extends_strictly_on_decls.
+
+Import CMorphisms CRelationClasses.
+#[global] Instance weaken_env_prop_gen_impl
+  : Proper (flip subrelation ==> (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ iffT)))) ==> arrow)%signatureT weaken_env_prop_gen | 10.
+Proof using Type.
+  cbv -[weaken_env_prop_gen iffT]; cbv [weaken_env_prop_gen]; intros * H1 * H2 H3.
+  unshelve
+    (repeat (let x := fresh in
+             intro x;
+             first [ specialize (H3 x)
+                   | let x := open_constr:(_) in specialize (H3 x) ]));
+    eauto.
+  all: rewrite -> H2 in *; assumption.
+Qed.
+
+#[global] Instance Proper_weaken_env_prop_gen_respectful
+  : Proper (flip subrelation ==> (eq ==> eq ==> eq ==> eq ==> iffT) ==> arrow)%signatureT weaken_env_prop_gen | 10.
+Proof using Type.
+  generalize weaken_env_prop_gen_impl; cbv -[weaken_env_prop_gen]; eauto.
+Qed.
+
+#[global] Instance weaken_env_prop_full_gen_impl
+  : Proper (flip subrelation ==> (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ iffT)))) ==> arrow)%signatureT weaken_env_prop_full_gen | 10.
+Proof using Type.
+  cbv -[weaken_env_prop_full_gen iffT]; cbv [weaken_env_prop_full_gen]; intros * H1 * H2 H3.
+  unshelve
+    (repeat (let x := fresh in
+             intro x;
+             first [ specialize (H3 x)
+                   | let x := open_constr:(_) in specialize (H3 x) ]));
+    eauto.
+  all: rewrite -> H2 in *; assumption.
+Qed.
+
+#[global] Instance Proper_weaken_env_prop_full_gen_respectful
+  : Proper (flip subrelation ==> (eq ==> eq ==> eq ==> eq ==> iffT) ==> arrow)%signatureT weaken_env_prop_full_gen | 10.
+Proof using Type.
+  generalize weaken_env_prop_full_gen_impl; cbv -[weaken_env_prop_full_gen]; eauto.
+Qed.
+
+Lemma strictly_extends_decls_wf Σ Σ' :
+  wf Σ' -> strictly_extends_decls Σ Σ' -> wf Σ.
 Proof using P Pcmp cf.
   intros [onu ond] [eq [Σ'' eq']].
-  split => //. 
+  split => //.
   - red. rewrite eq. apply onu.
   - rewrite eq. rewrite eq' in ond.
     rewrite -e in ond.
@@ -441,13 +497,20 @@ Proof using P Pcmp cf.
     induction Σ''; cbn; auto.
     intros H; depelim H.
     apply IHΣ''. apply H.
-Qed. 
+Qed.
 
 End ExtendsWf.
 
+Arguments weaken_env_prop_full_gen {cf} (Pcmp P R)%function_scope _%function_scope.
+Arguments weaken_env_prop_gen {cf} (Pcmp P R)%function_scope _%function_scope.
 Arguments weaken_env_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_strictly_on_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_strictly_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
 Arguments weaken_env_prop {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_strictly_on_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_strictly_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
 
 #[global] Hint Resolve extends_lookup : extends.
 #[global] Hint Resolve weakening_env_declared_constant : extends.
@@ -455,3 +518,36 @@ Arguments weaken_env_prop {cf} (Pcmp P)%function_scope _%function_scope.
 #[global] Hint Resolve weakening_env_declared_inductive : extends.
 #[global] Hint Resolve weakening_env_declared_constructor : extends.
 #[global] Hint Resolve weakening_env_declared_projection : extends.
+
+(* diamond dependency, but the proofs should never matter *)
+(* we export disabling this warning here so these coercions don't result in warnings, and then we re-enable it later to not suppress other warnings *)
+#[export] Set Warnings Append "-ambiguous-paths".
+Import CMorphisms CRelationClasses.
+Global Coercion weaken_env_prop_full_to_decls {cf Pcmp P P0} : @weaken_env_prop_full cf Pcmp P P0 -> @weaken_env_decls_prop_full cf Pcmp P P0.
+Proof. eapply weaken_env_prop_full_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_full_to_strictly_on_decls {cf Pcmp P P0} : @weaken_env_prop_full cf Pcmp P P0 -> @weaken_env_strictly_on_decls_prop_full cf Pcmp P P0.
+Proof. eapply weaken_env_prop_full_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_full_decls_to_strictly_decls {cf Pcmp P P0} : @weaken_env_decls_prop_full cf Pcmp P P0 -> @weaken_env_strictly_decls_prop_full cf Pcmp P P0.
+Proof. eapply weaken_env_prop_full_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_full_strictly_on_decls_to_strictly_decls {cf Pcmp P P0} : @weaken_env_strictly_on_decls_prop_full cf Pcmp P P0 -> @weaken_env_strictly_decls_prop_full cf Pcmp P P0.
+Proof. eapply weaken_env_prop_full_gen_impl; repeat intro; tc; reflexivity. Qed.
+
+Global Coercion weaken_env_prop_to_decls {cf Pcmp P P0} : @weaken_env_prop cf Pcmp P P0 -> @weaken_env_decls_prop cf Pcmp P P0.
+Proof. eapply weaken_env_prop_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_to_strictly_on_decls {cf Pcmp P P0} : @weaken_env_prop cf Pcmp P P0 -> @weaken_env_strictly_on_decls_prop cf Pcmp P P0.
+Proof. eapply weaken_env_prop_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_decls_to_strictly_decls {cf Pcmp P P0} : @weaken_env_decls_prop cf Pcmp P P0 -> @weaken_env_strictly_decls_prop cf Pcmp P P0.
+Proof. eapply weaken_env_prop_gen_impl; repeat intro; tc; reflexivity. Qed.
+Global Coercion weaken_env_prop_strictly_on_decls_to_strictly_decls {cf Pcmp P P0} : @weaken_env_strictly_on_decls_prop cf Pcmp P P0 -> @weaken_env_strictly_decls_prop cf Pcmp P P0.
+Proof. eapply weaken_env_prop_gen_impl; repeat intro; tc; reflexivity. Qed.
+#[export] Set Warnings Append "ambiguous-paths".
+
+#[global] Hint Resolve weaken_env_prop_full_to_decls : extends.
+#[global] Hint Resolve weaken_env_prop_full_to_strictly_on_decls : extends.
+#[global] Hint Resolve weaken_env_prop_full_decls_to_strictly_decls : extends.
+#[global] Hint Resolve weaken_env_prop_full_strictly_on_decls_to_strictly_decls : extends.
+
+#[global] Hint Resolve weaken_env_prop_to_decls : extends.
+#[global] Hint Resolve weaken_env_prop_to_strictly_on_decls : extends.
+#[global] Hint Resolve weaken_env_prop_decls_to_strictly_decls : extends.
+#[global] Hint Resolve weaken_env_prop_strictly_on_decls_to_strictly_decls : extends.

@@ -1,10 +1,11 @@
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 
 Set Primitive Projections.
 
 Record Eq (A : Type) := { eq : A -> A -> bool; eq_proof : forall x y, eq x y = true <-> x = y }.
 
-Record Sigma (A : Type) (B : A -> Type) : Type := 
+Record Sigma (A : Type) (B : A -> Type) : Type :=
   { fst : A ; snd : B fst }.
 Arguments fst {A B}.
 Arguments snd {A B}.

@@ -1,15 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality
      PCUICGlobalEnv PCUICNamelessDef
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICContextConversionTyp PCUICValidity
-     PCUICArities PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICGeneration 
+     PCUICArities PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICGeneration
      PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICParallelReductionConfluence PCUICWellScopedCumulativity
-     PCUICOnFreeVars  PCUICSpine PCUICInductives 
+     PCUICOnFreeVars  PCUICSpine PCUICInductives
      PCUICWeakeningConv PCUICWeakeningTyp PCUICContexts PCUICInductiveInversion.
 
 Require Import ssreflect ssrbool.
@@ -661,7 +662,7 @@ Section Lemmata.
   Proof using Type.
     intros Γ c u cty cb cu rel e.
     econstructor. econstructor.
-    - symmetry in e. exact e.
+    - apply declared_constant_from_gen. symmetry in e. exact e.
     - reflexivity.
   Qed.
 
@@ -676,7 +677,7 @@ Section Lemmata.
     symmetry in e.
     econstructor.
     econstructor.
-    - exact e.
+    - apply declared_constant_from_gen. exact e.
     - reflexivity.
   Qed.
 
@@ -1066,7 +1067,13 @@ Section Lemmata.
   Qed.
 End Lemmata.
 
-Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
+Lemma weakening_env_cored {cf : checker_flags} (Σ Σ' : global_env) (Hext : extends Σ Σ') (HΣ' : wf Σ') Γ :
+  forall x y, cored Σ Γ x y -> cored Σ' Γ x y.
+Proof.
+  induction 1; econstructor; now eauto using weakening_env_red1.
+Qed.
+
+Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T ->
     ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
 Proof.
   intros Ht. destruct HΣ. constructor.

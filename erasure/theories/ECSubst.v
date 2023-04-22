@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
 
 Require Import ssreflect ssrbool.
@@ -44,11 +44,11 @@ Definition substl defs body : term :=
   fold_left (fun bod term => csubst term 0 bod)
     defs body.
 
-(** It is equivalent to general substitution on closed terms. *)  
+(** It is equivalent to general substitution on closed terms. *)
 Lemma closed_subst t k u : closed t ->
     csubst t k u = subst [t] k u.
 Proof.
-  revert k; induction u using term_forall_list_ind; intros k Hs; 
+  revert k; induction u using term_forall_list_ind; intros k Hs;
     simpl; try f_equal; eauto; solve_all.
   - destruct (PeanoNat.Nat.compare_spec k n).
     + subst k.
@@ -71,7 +71,7 @@ Proof.
     rewrite closed_subst; try eassumption.
     change (a :: s) with ([a] ++ s).
     rewrite subst_app_decomp. cbn.
-    repeat f_equal. rewrite lift_closed; eauto. 
+    repeat f_equal. rewrite lift_closed; eauto.
 Qed.
 
 (*
@@ -130,9 +130,9 @@ Proof.
 Qed.
 *)
 
-Lemma closed_csubst t k u : 
-  closed t -> 
-  closedn (S k) u -> 
+Lemma closed_csubst t k u :
+  closed t ->
+  closedn (S k) u ->
   closedn k (ECSubst.csubst t 0 u).
 Proof.
   intros.
@@ -141,9 +141,9 @@ Proof.
   rewrite andb_true_r. eapply closed_upwards; tea. lia.
 Qed.
 
-Lemma closed_substl ts k u : 
-  forallb (closedn 0) ts -> 
-  closedn (#|ts| + k) u -> 
+Lemma closed_substl ts k u :
+  forallb (closedn 0) ts ->
+  closedn (#|ts| + k) u ->
   closedn k (ECSubst.substl ts u).
 Proof.
   induction ts in u |- *; cbn => //.
@@ -171,9 +171,9 @@ Proof.
     destruct x0; cbn in *. f_equal; auto.
 Qed.
 
-Lemma subst_csubst_comm l t k b : 
+Lemma subst_csubst_comm l t k b :
   forallb (closedn 0) l -> closed t ->
-  subst l 0 (csubst t (#|l| + k) b) = 
+  subst l 0 (csubst t (#|l| + k) b) =
   csubst t k (subst l 0 b).
 Proof.
   intros hl cl.
@@ -181,17 +181,17 @@ Proof.
   rewrite distr_subst. f_equal.
   symmetry. solve_all.
   rewrite subst_closed //.
-  eapply closed_upwards; tea. lia. 
+  eapply closed_upwards; tea. lia.
 Qed.
 
-Lemma substl_csubst_comm l t k b : 
+Lemma substl_csubst_comm l t k b :
   forallb (closedn 0) l -> closed t ->
-  substl l (csubst t (#|l| + k) b) = 
+  substl l (csubst t (#|l| + k) b) =
   csubst t k (substl l b).
 Proof.
   intros hl cl.
   rewrite substl_subst //.
-  rewrite substl_subst //. 
+  rewrite substl_subst //.
   apply subst_csubst_comm => //.
 Qed.
 

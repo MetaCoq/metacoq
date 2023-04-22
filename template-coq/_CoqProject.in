@@ -1,0 +1,38 @@
+-I src
+-R theories MetaCoq.Template
+-I .
+
+# Basic Ast files
+theories/Ast.v
+theories/AstUtils.v
+theories/ReflectAst.v
+theories/TemplateEnvMap.v
+theories/Induction.v
+theories/WfAst.v
+theories/LiftSubst.v
+theories/UnivSubst.v
+theories/Pretty.v
+theories/TermEquality.v
+theories/Typing.v
+theories/Reduction.v
+theories/TypingWf.v
+theories/Normal.v
+theories/WcbvEval.v
+theories/Checker.v
+theories/EtaExpand.v
+theories/TemplateProgram.v
+
+# The Template monad
+theories/TemplateMonad.v
+theories/TemplateMonad/Common.v
+theories/TemplateMonad/Core.v
+theories/TemplateMonad/Extractable.v
+
+# Extra Template monad
+theories/MonadAst.v
+
+# Bindings of Coq terms to the "metacoq.*" names
+theories/Constants.v
+
+# Extract the extractable monad, built by _PluginProject
+theories/Extraction.v

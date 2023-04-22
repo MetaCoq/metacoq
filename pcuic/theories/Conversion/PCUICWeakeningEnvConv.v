@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICWeakeningEnv PCUICEquality PCUICReduction PCUICCumulativity PCUICCumulativitySpec
   (* PCUICContextSubst *) (* PCUICUnivSubst *) (* PCUICCases *) (* PCUICTyping *)
@@ -59,7 +60,8 @@ Lemma global_variance_sigma_mon {Σ Σ' gr napp v} :
   global_variance Σ' gr napp = Some v.
 Proof using P Pcmp cf.
   intros wfΣ' ext.
-  rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen
+    /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
   destruct gr as [|ind|[ind i]|] => /= //.
   - destruct (lookup_env Σ ind) eqn:look => //.
     eapply extends_lookup in look; eauto. rewrite look //.
@@ -76,8 +78,8 @@ Lemma R_global_instance_weaken_env Σ Σ' Re Re' Rle Rle' gr napp :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
 Proof using P Pcmp cf.
   intros wfΣ ext he hle hele t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:look.
+  rewrite /R_global_instance_gen /R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:look.
   - rewrite (global_variance_sigma_mon wfΣ ext look).
     induction t in v, t' |- *; destruct v, t'; simpl; auto.
     intros []; split; auto.
@@ -174,20 +176,24 @@ Lemma weakening_env_cumulSpec0 Σ Σ' φ Γ pb M N :
 Proof.
   intros HΣ' Hextends Ind.
   pose proof (subrelations_leq_extends _ _  φ Hextends). revert H.
-  assert (RelationClasses.subrelation 
+  assert (RelationClasses.subrelation
           (eq_universe (global_ext_constraints (Σ,φ)))
-          (leq_universe (global_ext_constraints (Σ',φ)))). 
+          (leq_universe (global_ext_constraints (Σ',φ)))).
   { typeclasses eauto. } revert H.
-  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle . 
-  revert pb Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends. 
-  apply: (cumulSpec0_ind_all (Σ,φ)).
-  all:intros; try solve [econstructor; eauto with extends; intuition auto]. 
+  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle .
+  revert pb Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends.
+  induction 1.
+  all:intros; try solve [econstructor; eauto with extends; intuition auto].
+  all: lazymatch goal with
+       | [ H : cumul_predicate_dep _ _ _ |- _ ] => apply cumul_predicate_undep in H
+       | _ => idtac
+       end.
   - eapply cumul_Evar. solve_all.
   - eapply cumul_Case.
-    * destruct X as (Hparams & Hinst & Hctx & Hret & IHret). repeat split; tas.
+    * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; tas.
       + solve_all.
-      + eapply R_universe_instance_impl'; eauto; apply subrelations_extends; eauto.
-      + eapply IHret; eauto.
+      + eapply R_universe_instance_impl'; try apply subrelations_extends; eassumption.
+      + eauto.
     * solve_all.
     * solve_all.
   - eapply cumul_Fix; solve_all.

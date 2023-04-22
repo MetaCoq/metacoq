@@ -25,7 +25,9 @@ Caml_byte
 ByteCompare
 ByteCompareSpec
 String0
+HexadecimalString
 Orders
+OrdersAlt
 OrdersTac
 OrdersFacts
 OrdersLists
@@ -52,6 +54,7 @@ Logic1
 Logic2
 Number
 Relation
+EqdepFacts
 MCPrelude
 MCReflect
 ReflectEq
@@ -71,10 +74,13 @@ Zpower
 SpecFloat
 PrimFloat
 FloatOps
+DecimalString
 MCString
 MCUtils
 Signature
 All_Forall
+MCFSets
+MCMSets
 Config0
 Kernames
 Primitive

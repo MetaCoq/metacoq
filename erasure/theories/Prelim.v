@@ -1,11 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosedTyp
      PCUICReduction PCUICWcbvEval PCUICSR PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICConversion
-     PCUICWeakeningEnvTyp PCUICCanonicity.
+     PCUICWeakeningEnvTyp PCUICClassification.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
@@ -38,16 +39,16 @@ Proof.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : global_env_ext) (args args' : list PCUICAst.term) 
+  forall (Σ : global_env_ext) (args args' : list PCUICAst.term)
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0)
     (c : Σ;;; [] ⊢ x0 ≤ T) (x1 : PCUICAst.term)
     (c0 : Σ;;; [] ⊢ x1 ≤ x), isType Σ [] x1 -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.
   eapply All2_All_mix_left in X; eauto. simpl in X.
-  eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbeval_red; eauto.
+  eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbveval_red; eauto.
   eapply (projT2 ct).
 Qed.
 
@@ -243,7 +244,7 @@ Lemma declared_constructor_assumption_context (wfl := default_wcbv_flags) {Σ c 
 Proof.
   intros.
   destruct (on_declared_constructor H) as [? [cu [_ onc]]].
-  destruct onc. 
+  destruct onc.
   now eapply is_assumption_context_spec.
 Qed.
 
@@ -259,10 +260,10 @@ Qed.
 Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c brs p} {wfΣ : wf_ext Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->
   wf_branches idecl brs ->
-  All2i (fun i cdecl br => 
+  All2i (fun i cdecl br =>
    All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
       (cstr_branch_context c.1 mdecl cdecl)) 0 idecl.(ind_ctors) brs ->
-  All (fun br => 
+  All (fun br =>
     expand_lets (inst_case_branch_context p br) (bbody br) = bbody br) brs.
 Proof.
   intros decl wfbrs.
@@ -283,15 +284,15 @@ Proof.
   eapply (assumption_context_cstr_branch_context (c:=(i0, i))). split. apply decl. tea.
 Qed.
 
-Lemma assumption_context_compare_decls Γ Δ : 
+Lemma assumption_context_compare_decls Γ Δ :
   PCUICEquality.eq_context_upto_names Γ Δ ->
   assumption_context Γ ->
   assumption_context Δ.
 Proof.
   induction 1; auto.
-  intros H; depelim H. 
+  intros H; depelim H.
   depelim r; econstructor; auto.
-Qed. 
+Qed.
 
 Lemma smash_assumption_context Γ Δ : assumption_context Γ ->
   smash_context Δ Γ = Γ ,,, Δ.
@@ -306,8 +307,8 @@ Proof.
 Qed.
 
 Import PCUICGlobalEnv PCUICSpine.
-Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ pars parsubst parsubst' s' inst' ind n mdecl idecl cdecl u p br napp} : 
+Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ pars parsubst parsubst' s' inst' ind n mdecl idecl cdecl u p br napp} :
   declared_constructor Σ (ind, n) mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
@@ -318,7 +319,7 @@ Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wf
   ws_cumul_pb_terms Σ Γ pars (pparams p) ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
-  PCUICSpine.spine_subst Σ Γ s' inst' 
+  PCUICSpine.spine_subst Σ Γ s' inst'
     (subst_context parsubst 0 (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) #|ind_params mdecl| (cstr_args cdecl)@[u])) ->
   subslet Σ Γ (List.rev s') (case_branch_context ind mdecl p (forget_types (bcontext br)) cdecl).
 Proof.
@@ -335,7 +336,7 @@ Proof.
   cbn in eqctx.
   epose proof (spine_subst_smash spargs).
   eapply spine_subst_cumul in X. eapply X.
-  pcuic. pcuic. apply X. 
+  pcuic. pcuic. apply X.
   { eapply substitution_wf_local. eapply (spine_subst_smash sppars').
     eapply PCUICInductives.wf_local_expand_lets.
     rewrite -app_context_assoc.

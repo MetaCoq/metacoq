@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils All.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import All.
 
 Import MCMonadNotation.
 
@@ -9,6 +10,8 @@ MetaCoq Test Quote (fun x : nat => x).
 MetaCoq Test Quote (fun (f : nat -> nat) (x : nat) => f x).
 
 MetaCoq Test Quote (let x := 2 in x).
+
+MetaCoq Test Quote (fun l : list nat => match l with nil => 0 | cons x l => 1 end).
 
 MetaCoq Test Quote (let x := 2 in
             match x with
@@ -149,7 +152,7 @@ Definition one_list_i : one_inductive_entry :=
   mind_entry_typename := "demoList";
   mind_entry_arity := tSort Universe.type0;
   mind_entry_consnames := ["demoNil"; "demoCons"];
-  mind_entry_lc := [tApp (tRel 1) [tRel 0]; 
+  mind_entry_lc := [tApp (tRel 1) [tRel 0];
     mkImpl (tRel 0) (mkImpl (tApp (tRel 2) [tRel 1]) (tApp (tRel 3) [tRel 2]))];
 |}.
 
@@ -306,7 +309,7 @@ MetaCoq Run (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>= tmPrint).
 
 
 
-Inductive NonRec (A:Set) (C: A -> Set): Set := 
+Inductive NonRec (A:Set) (C: A -> Set): Set :=
 | SS : forall (f:A), C f -> NonRec A C.
 
 MetaCoq Run (printInductive "NonRec").
@@ -319,7 +322,7 @@ Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 (* Locate Funtm. *)
 (* MetaCoq Run (printConstant "Top.Funtm"). *)
 
-Polymorphic Definition Funtp2@{i j} 
+Polymorphic Definition Funtp2@{i j}
    (A: Type@{i}) (B: Type@{j}) := A->B.
 (* MetaCoq Run (printConstant "Top.demo.Funtp2"). *) (* TODOO *)
 
@@ -371,7 +374,7 @@ Inductive T : Type :=
 MetaCoq Quote Recursively Definition TT := T.
 
 Unset MetaCoq Strict Unquote Universe Mode.
-MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
+MetaCoq Unquote Definition t := (tSort (Universe.make (Level.level "Top.20000"))).
 MetaCoq Unquote Definition t' := (tSort fresh_universe).
 MetaCoq Unquote Definition myProp := (tSort (Universe.lProp)).
 MetaCoq Unquote Definition mySet := (tSort (Universe.make Level.lzero)).

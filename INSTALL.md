@@ -24,14 +24,21 @@ Then, simply issue:
 MetaCoq is split into multiple packages that get all installed using the
 `coq-metacoq` meta-package:
 
+ - `coq-metacoq-utils` for a general library used by all MetaCoq packages
+ - `coq-metacoq-common` for definitions used both by Template-Coq and PCUIC packages
  - `coq-metacoq-template` for the Template Monad and quoting plugin
- - `coq-metacoq-pcuic` for the PCUIC development and proof of the
-   Template-Coq -> PCUIC translation
+ - `coq-metacoq-pcuic` for the PCUIC metatheory development
+ - `coq-metacoq-template-pcuic` for the verified Template-Coq <-> PCUIC translations
  - `coq-metacoq-safechecker` for the verified checker on PCUIC terms
+ - `coq-metacoq-safechecker-plugin` for the extracted verified checker plugin
  - `coq-metacoq-erasure` for the verifed erasure from PCUIC to
    untyped lambda-calculus.
+ - `coq-metacoq-erasure-plugin` for the extracted verifed erasure plugin
  - `coq-metacoq-translations` for example translations from type theory
    to type theory: e.g. variants of parametricity.
+ - `coq-metacoq-quotation` for a quotation library, allowing to
+   quote MetaCoq terms and typing derivations as MetaCoq terms,
+   with a work-in-progress proof of Löb's theorem.
 
 There are also `.dev` packages available in the `extra-dev` repository
 of Coq, to get those you will need to activate the following repositories:
@@ -60,10 +67,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.14 origin/coq-8.14
+    # git checkout -b coq-8.17 origin/coq-8.17
     # git status
 
-This checks that you are indeed on the `coq-8.14` branch.
+This checks that you are indeed on the `coq-8.17` branch.
 
 ### Setting up an `opam` switch
 
@@ -72,10 +79,10 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.16 --packages=ocaml-variants.4.13.1+options,ocaml-option-flambda
+    # opam switch create coq.8.17 --packages=ocaml-variants.4.13.1+options,ocaml-option-flambda
     # eval $(opam env)
 
-This creates the `coq.8.16` switch which initially contains only the
+This creates the `coq.8.17` switch which initially contains only the
 basic `OCaml` `4.13.1` compiler with the `flambda` option enabled,
 and puts you in the right environment (check with `ocamlc -v`).
 
@@ -102,14 +109,12 @@ the sources directory.
 Then use:
 
 - `make` to compile the `template-coq` plugin, the `pcuic`
-  development and the `safechecker` and `erasure` plugins.
+  development and the `safechecker` and `erasure` plugins,
+  along with the `test-suite`, `translations`, `examples`
+  and `quotation` libraries.
   You can also selectively build each target.
 
-- `make translations` to compile the translation plugins
-
-- `make test-suite` to compile the test suite
-
-- `make install` to install the plugin in `Coq`'s `user-contrib` local
+- `make install` to install the plugins in `Coq`'s `user-contrib` local
   library. Then the `MetaCoq` namespace can be used for `Require
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
 
@@ -122,5 +127,5 @@ For faster development one can use:
   to construct the template-coq plugin. The `safechecker` and
   `erasure` ML plugins *cannot* be built using this mode.
 
-- `make quick` is a synonymous for `make vos` with the addition of a global `Unset Universe Checking` option, i.e. 
+- `make quick` is a synonymous for `make vos` with the addition of a global `Unset Universe Checking` option, i.e.
 universes are not checked anywhere.

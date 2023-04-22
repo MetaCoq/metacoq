@@ -18,6 +18,7 @@ manipulating Coq terms and developing certified plugins
 - [Documentation](#documentation)
 - [Overview of the project](#overview-of-the-project)
 - [Papers](#papers)
+- [Related Projects](#related-projects)
 - [Team & Credits](#team--credits)
 - [Bugs](#bugs)
 
@@ -52,7 +53,7 @@ Coq. The project currently has a single repository extending
 Template-Coq with additional features. Each extension is in a dedicated folder.
 The [dependency graph](https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/depgraph-2022-07-01.png)
 might be useful to navigate the project.
-Statistics: ~150kLoC of Coq, ~30kLoC of OCaml.
+Statistics: ~300kLoC of Coq, ~30kLoC of OCaml.
 
 ### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/master/template-coq/theories)
 
@@ -61,8 +62,8 @@ takes `Coq` terms and constructs a representation of their syntax tree as
 an inductive data type. The representation is based on the kernel's
 term representation.
 
-After importing `MetaCoq.Template.Loader` there are commands `MetaCoq Test Quote t.`, 
-`MetaCoq Quote Definition name := (t).` and `MetaCoq Quote Recursively Definition name := (t).` as 
+After importing `MetaCoq.Template.Loader` there are commands `MetaCoq Test Quote t.`,
+`MetaCoq Quote Definition name := (t).` and `MetaCoq Quote Recursively Definition name := (t).` as
 well as a tactic `quote_term t k`,
 where in all cases `t` is a term and `k` a continuation tactic.
 
@@ -77,7 +78,7 @@ In addition to this representation of terms, Template Coq includes:
   checker, and inserting them in the global environment, in
   the style of MTac. Monadic programs `p : TemplateMonad A` can be run using `MetaCoq Run p`.
 
-- A formalisation of the typing rules reflecting the ones of Coq, covering all of Coq 
+- A formalization of the typing rules reflecting the ones of Coq, covering all of Coq
   except eta-expansion and template polymorphism.
 
 ### [PCUIC](https://github.com/MetaCoq/metacoq/tree/master/pcuic/theories)
@@ -109,11 +110,11 @@ calculus has proofs of standard metatheoretical results:
 - Canonicity: The weak head normal form of a term of inductive type is a constructor application.
 
 - Consistency under the assumption of strong normalization
-  
+
 - Weak call-by-value standardization: Normal forms of terms of first-order inductive type
 can be found via weak call-by-value evaluation.
 
-See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/master/pcuic/theories/README.md) for 
+See the PCUIC [README](https://github.com/MetaCoq/metacoq/tree/master/pcuic/theories/README.md) for
 a detailed view of the development.
 
 ### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/master/safechecker/theories)
@@ -133,10 +134,10 @@ type-checker, one can use:
 
     MetaCoq CoqCheck <term>
 
-This also includes a verified, efficient re-typing procedure (useful in tactics) in 
+This also includes a verified, efficient re-typing procedure (useful in tactics) in
 `MetaCoq.SafeChecker.PCUICSafeRetyping`.
 
-See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/master/safechecker/theories/README.md) for 
+See the SafeChecker [README](https://github.com/MetaCoq/metacoq/tree/master/safechecker/theories/README.md) for
 a detailed view of the development.
 
 ### [Erasure](https://github.com/MetaCoq/metacoq/tree/master/erasure/theories)
@@ -150,10 +151,10 @@ The extracted safe erasure is available in Coq through a new vernacular command:
 After importing `MetaCoq.Erasure.Loader`.
 
 The erasure pipeline includes verified optimizations to remove lets in constructors,
-remove cases on propositional terms, switch to an unguarded fixpoint reduction rule and 
-transform the higher-order constructor applications to first-order blocks for easier 
-translation to usual programming languages. See the erasure 
-[README](https://github.com/MetaCoq/metacoq/tree/master/erasure/theories/README.md) for 
+remove cases on propositional terms, switch to an unguarded fixpoint reduction rule and
+transform the higher-order constructor applications to first-order blocks for easier
+translation to usual programming languages. See the erasure
+[README](https://github.com/MetaCoq/metacoq/tree/master/erasure/theories/README.md) for
 a detailed view of the development.
 
 ### [Translations](https://github.com/MetaCoq/metacoq/tree/master/translations)
@@ -164,6 +165,19 @@ Examples of translations built on top of this:
 
 - a plugin to negate functional extensionality in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/master/translations/times_bool_fun.v)
 
+### [Quotation](https://github.com/MetaCoq/metacoq/tree/master/quotation/theories)
+
+The `Quotation` module is geared at providing functions `□T → □□T` for
+`□T := Ast.term` (currently implemented) and for `□T := { t : Ast.term
+& Σ ;;; [] |- t : T }` (still in the works).
+
+Ultimately the goal of this development is to prove that `□` is a lax monoidal
+semicomonad (a functor with `cojoin : □T → □□T` that codistributes over `unit`
+and `×`), which is sufficient for proving Löb's theorem.
+
+The public-facing interface of this development is provided in [`MetaCoq.Quotation.ToTemplate.All`](./quotation/theories/ToTemplate/All.v) and [`MetaCoq.Quotation.ToPCUIC.All`](./quotation/theories/ToPCUIC/All.v).
+
+See the Quotation [README](https://github.com/MetaCoq/metacoq/tree/master/quotation/theories/README.md) for a more detailed view of the development.
 
 ### Examples
 
@@ -179,7 +193,7 @@ Examples of translations built on top of this:
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the extracted verified checker and erasure.
-  
+
 - The [test-suite/self_erasure.v](https://github.com/MetaCoq/metacoq/tree/master/test-suite/self_erasure.v) file checks that erasure
   works on the verified typechecking and erasure programs themselves.
 
@@ -187,6 +201,10 @@ Examples of translations built on top of this:
   shows uses of the verified erasure running *inside* Coq.
 
 ## Papers
+
+- ["Correct and Complete Type Checking and Certified Erasure for Coq, in Coq"](https://inria.hal.science/hal-04077552) Matthieu Sozeau, Yannick Forster, Meven Lennon-Bertrand, Nicolas Tabareau and Théo Winterhalter. Submitted. April 2023.
+
+  This paper presents the whole metatheoretical development of PCUIC and verified typechecking and erasure, as of version 1.2 of MetaCoq.
 
 - ["The Curious Case of Case"](https://sozeau.gitlabpages.inria.fr/www/research/publications/The_Curious_Case_of_Case-WITS22-220122.pdf) Matthieu Sozeau, Meven Lennon-Bertrand and Yannick Forster. WITS 2022 presentation, Philadelphia.
   This presents the challenges around the representation of cases in Coq and PCUIC.
@@ -198,11 +216,14 @@ Examples of translations built on top of this:
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
   and Théo Winterhalter. POPL 2020, New Orleans.
 
-- ["Formalisation and meta-theory of type theory"](https://theowinterhalter.github.io/#phd) Théo Winterhalter, PhD thesis, September 2020. 
+  This paper presented the formal proofs of soundness of conversion, type checking and erasure.
+  Now superseded by the April 2023 article above.
+
+- ["Formalization and meta-theory of type theory"](https://theowinterhalter.github.io/#phd) Théo Winterhalter, PhD thesis, September 2020.
   Part 3 describes in detail the verified reduction, conversion and type checker.
 
 - ["Coq Coq Codet! Towards a Verified Toolchain for Coq in
-  MetaCoq"](http://www.irif.fr/~sozeau/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
+  MetaCoq"](https://sozeau.gitlabpages.inria.fr/www/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau and
   Théo Winterhalter. Abstract and
   [presentation](http://www.ps.uni-saarland.de/~forster/downloads/slides-coqws19.pdf)
@@ -210,7 +231,7 @@ Examples of translations built on top of this:
   2019](https://staff.aist.go.jp/reynald.affeldt/coq2019/), September
   2019.
 
-- ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
+- ["The MetaCoq Project"](https://sozeau.gitlabpages.inria.fr/www/research/publications/drafts/The_MetaCoq_Project.pdf)
   Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
   Gregory Malecha, Nicolas Tabareau and Théo Winterhalter. JAR, February 2020.
   Extended version of the ITP 2018 paper.
@@ -227,6 +248,17 @@ Examples of translations built on top of this:
   ITP 2018.
 
 - The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+
+## Related Projects
+
+- The [CertiCoq](https://github.com/CertiCoq/certicoq) project develops a certified compiler from the output of verified erasure down
+  to CompCert C-light. It provides in particular OCaml and fully foundationally verified plugins
+  for the whole compilation pipeline from Gallina to Clight and the verified type-checker of MetaCoq.
+
+- The [ConCert](https://github.com/AU-COBRA/ConCert) project develops certified or certifying compilers from Gallina to smart contract languages (Liquidity and
+  CameLIGO), the functional language Elm, and a subset of the Rust programming languages. It uses the typed erasure variant to
+  gather more type information about erased terms and perform optimizations based on this information.
+  The project focuses in particular on the verification and safe extraction of smart contracts for blockchains.
 
 ## Team & Credits
 
@@ -247,23 +279,26 @@ alt="Cyril Cohen" width="150px"/>
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/yannick-forster.jpg"
 alt="Yannick Forster" width="150px"/>
 <img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/jason-gross.jpg" alt="Jason Gross"
+width="150px"/><br/>
+<img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/meven-lennon-bertrand.jpeg"
-alt="Meven Lennon-Bertrand" width="150px"/><br/>
+alt="Meven Lennon-Bertrand" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/kenji-maillard.jpg"
 alt="Kenji Maillard" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/gregory-malecha.jpg"
-alt="Gregory Malecha" width="150px"/>
+alt="Gregory Malecha" width="150px"/><br/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/jakob-botsch-nielsen.png"
-alt="Jakob Botsch Nielsen" width="150px"/><br/>
+alt="Jakob Botsch Nielsen" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/matthieu-sozeau.png"
 alt="Matthieu Sozeau" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/nicolas-tabareau.jpg"
-alt="Nicolas Tabareau" width="150px"/>
+alt="Nicolas Tabareau" width="150px"/><br/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/theo-winterhalter.jpg"
 alt="Théo Winterhalter" width="150px"/>
@@ -276,6 +311,7 @@ MetaCoq is developed by (left to right)
 <a href="https://github.com/SimonBoulier">Simon Boulier</a>,
 <a href="https://github.com/CohenCyril">Cyril Cohen</a>,
 <a href="https://github.com/yforster">Yannick Forster</a>,
+<a href="https://jasongross.github.io">Jason Gross</a>,
 <a href="https://www.meven.ac">Meven Lennon-Bertrand</a>,
 <a href="https://github.com/kyoDralliam">Kenji Maillard</a>,
 <a href="https://github.com/gmalecha">Gregory Malecha</a>,
@@ -287,12 +323,13 @@ MetaCoq is developed by (left to right)
 
 
 ```
-Copyright (c) 2014-2022 Gregory Malecha
-Copyright (c) 2015-2022 Abhishek Anand, Matthieu Sozeau
-Copyright (c) 2017-2022 Simon Boulier, Nicolas Tabareau, Cyril Cohen
-Copyright (c) 2018-2022 Danil Annenkov, Yannick Forster, Théo Winterhalter
-Copyright (c) 2020-2022 Jakob Botsch Nielsen, Meven Lennon-Bertrand
-Copyright (c) 2022      Kenji Maillard
+Copyright (c) 2014-2023 Gregory Malecha
+Copyright (c) 2015-2023 Abhishek Anand, Matthieu Sozeau
+Copyright (c) 2017-2023 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+Copyright (c) 2018-2023 Danil Annenkov, Yannick Forster, Théo Winterhalter
+Copyright (c) 2020-2023 Jakob Botsch Nielsen, Meven Lennon-Bertrand
+Copyright (c) 2022-2023 Kenji Maillard
+Copyright (c) 2023      Jason Gross
 ```
 
 This software is distributed under the terms of the MIT license.

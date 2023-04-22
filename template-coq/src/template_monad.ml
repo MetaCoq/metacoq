@@ -29,6 +29,8 @@ let (ptmReturn,
      ptmFreshName,
 
      ptmLocate,
+     ptmLocateModule,
+     ptmLocateModType,
      ptmCurrentModPath,
 
      ptmQuote,
@@ -37,6 +39,8 @@ let (ptmReturn,
      ptmQuoteConstant,
      ptmQuoteUniverses,
      ptmQuoteModule,
+     ptmQuoteModFunctor,
+     ptmQuoteModType,
 
      ptmUnquote,
      ptmUnquoteTyped,
@@ -68,6 +72,8 @@ let (ptmReturn,
    r_template_monad_prop_p "tmFreshName",
 
    r_template_monad_prop_p "tmLocate",
+   r_template_monad_prop_p "tmLocateModule",
+   r_template_monad_prop_p "tmLocateModType",
    r_template_monad_prop_p "tmCurrentModPath",
 
    r_template_monad_prop_p "tmQuote",
@@ -76,6 +82,8 @@ let (ptmReturn,
    r_template_monad_prop_p "tmQuoteConstant",
    r_template_monad_prop_p "tmQuoteUniverses",
    r_template_monad_prop_p "tmQuoteModule",
+   r_template_monad_prop_p "tmQuoteModFunctor",
+   r_template_monad_prop_p "tmQuoteModType",
 
    r_template_monad_prop_p "tmUnquote",
    r_template_monad_prop_p "tmUnquoteTyped",
@@ -102,10 +110,14 @@ let (ttmReturn,
      ttmLemma,
      ttmFreshName,
      ttmLocate,
+     ttmLocateModule,
+     ttmLocateModType,
      ttmCurrentModPath,
      ttmQuoteInductive,
      ttmQuoteUniverses,
      ttmQuoteModule,
+     ttmQuoteModFunctor,
+     ttmQuoteModType,
      ttmQuoteConstant,
      ttmInductive,
      ttmInferInstance,
@@ -125,11 +137,15 @@ let (ttmReturn,
    r_template_monad_type_p "tmFreshName",
 
    r_template_monad_type_p "tmLocate",
+   r_template_monad_type_p "tmLocateModule",
+   r_template_monad_type_p "tmLocateModType",
    r_template_monad_type_p "tmCurrentModPath",
 
    r_template_monad_type_p "tmQuoteInductive",
    r_template_monad_type_p "tmQuoteUniverses",
    r_template_monad_type_p "tmQuoteModule",
+   r_template_monad_type_p "tmQuoteModFunctor",
+   r_template_monad_type_p "tmQuoteModType",
    r_template_monad_type_p "tmQuoteConstant",
 
    r_template_monad_type_p "tmInductive",
@@ -138,6 +154,41 @@ let (ttmReturn,
    r_template_monad_type_p "tmExistingInstance")
 
 type constr = Constr.t
+
+module Debug : sig
+  val ppdebug : int -> (unit -> Pp.t) -> unit
+end = struct
+  let template_monad_debug = ref 0
+
+  let set_template_monad_debug d = (:=) template_monad_debug (if d then 1 else 0)
+  let get_template_monad_debug () = if !template_monad_debug > 0 then true else false
+
+  let set_template_monad_verbose = function
+    | None -> template_monad_debug := 0
+    | Some n -> template_monad_debug := n
+  let get_template_monad_verbose () =
+    if !template_monad_debug = 0 then None else Some !template_monad_debug
+
+  let () =
+    let open Goptions in
+    declare_bool_option
+      { optdepr  = false;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug"];
+        optread  = get_template_monad_debug;
+        optwrite = set_template_monad_debug; }
+
+  let () =
+    let open Goptions in
+    declare_int_option
+      { optdepr  = false;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug";"Verbosity"];
+        optread  = get_template_monad_verbose;
+        optwrite = set_template_monad_verbose; }
+
+  let ppdebug lvl pp =
+    if !template_monad_debug > lvl then Feedback.msg_debug (pp ())
+end
+open Debug
 
 type template_monad =
     TmReturn of Constr.t
@@ -166,6 +217,8 @@ type template_monad =
   | TmFreshName of Constr.t
 
   | TmLocate of Constr.t
+  | TmLocateModule of Constr.t
+  | TmLocateModType of Constr.t
   | TmCurrentModPath
 
     (* quoting *)
@@ -175,12 +228,14 @@ type template_monad =
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
   | TmQuoteModule of Constr.t
+  | TmQuoteModFunctor of Constr.t
+  | TmQuoteModType of Constr.t
 
   | TmUnquote of Constr.t                   (* only Prop *)
   | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
 
     (* typeclass resolution *)
-  | TmExistingInstance of Constr.t
+  | TmExistingInstance of Constr.t * Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 
@@ -196,6 +251,7 @@ let monad_failure s k =
                           str "Please file a bug with MetaCoq.")
 
 let next_action env evd (pgm : constr) : template_monad * _ =
+  let () = ppdebug 2 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to reduce " ++ fnl () ++ Printer.pr_constr_env env evd pgm)) in
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
@@ -211,16 +267,19 @@ let next_action env evd (pgm : constr) : template_monad * _ =
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
   let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
-  if eq_gr ptmReturn || eq_gr ttmReturn then
-    match args with
-    | _::h::[] ->
-       (TmReturn h, universes)
-    | _ -> monad_failure "tmReturn" 2
-  else if eq_gr ptmBind || eq_gr ttmBind then
+  if eq_gr ptmBind || eq_gr ttmBind then
+    let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
     match args with
     | _::_::a::f::[] ->
        (TmBind (a, f), universes)
     | _ -> monad_failure "tmBind" 4
+  else
+    let () = ppdebug 0 (fun () -> Pp.(str "MetaCoq: TemplateProgram: Going to run:" ++ fnl () ++ Printer.pr_constr_env env evd pgm)) in
+    if eq_gr ptmReturn || eq_gr ttmReturn then
+      match args with
+      | _::h::[] ->
+        (TmReturn h, universes)
+      | _ -> monad_failure "tmReturn" 2
   else if eq_gr ptmPrint then
     match args with
     | _::trm::[] ->
@@ -294,6 +353,16 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | id::[] ->
        (TmLocate id, universes)
     | _ -> monad_failure "tmLocate" 1
+  else if eq_gr ptmLocateModule || eq_gr ttmLocateModule then
+    match args with
+    | id::[] ->
+       (TmLocateModule id, universes)
+    | _ -> monad_failure "tmLocateModule" 1
+  else if eq_gr ptmLocateModType || eq_gr ttmLocateModType then
+    match args with
+    | id::[] ->
+       (TmLocateModType id, universes)
+    | _ -> monad_failure "tmLocateModType" 1
   else if eq_gr ptmCurrentModPath then
     match args with
     | _::[] -> (TmCurrentModPath, universes)
@@ -336,6 +405,16 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | [id] ->
        (TmQuoteModule id, universes)
     | _ -> monad_failure "tmQuoteModule" 0
+  else if eq_gr ptmQuoteModFunctor || eq_gr ttmQuoteModFunctor then
+    match args with
+    | [id] ->
+       (TmQuoteModFunctor id, universes)
+    | _ -> monad_failure "tmQuoteModFunctor" 0
+  else if eq_gr ptmQuoteModType || eq_gr ttmQuoteModType then
+    match args with
+    | [id] ->
+       (TmQuoteModType id, universes)
+    | _ -> monad_failure "tmQuoteModType" 0
   else if eq_gr ptmQuoteConstant then
     match args with
     | name::bypass::[] ->
@@ -372,9 +451,9 @@ let next_action env evd (pgm : constr) : template_monad * _ =
 
   else if eq_gr ptmExistingInstance || eq_gr ttmExistingInstance then
     match args with
-    | name :: [] ->
-       (TmExistingInstance name, universes)
-    | _ -> monad_failure "tmExistingInstance" 1
+    | locality :: name :: [] ->
+       (TmExistingInstance (locality, name), universes)
+    | _ -> monad_failure "tmExistingInstance" 2
   else if eq_gr ptmInferInstance then
     match args with
     | s :: typ :: [] ->

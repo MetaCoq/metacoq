@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils Primitive.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
      PCUICElimination PCUICWcbvEval.
 From MetaCoq.Erasure Require EAst EGlobalEnv.
@@ -9,7 +10,7 @@ Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * 
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) *
   is_propositional u))%type.
 
 Definition isPropositionalArity ar b :=
@@ -18,7 +19,7 @@ Definition isPropositionalArity ar b :=
   | None => False
   end.
 
-Definition isPropositional Σ ind b := 
+Definition isPropositional Σ ind b :=
   match lookup_inductive Σ ind with
   | Some (mdecl, idecl) => isPropositionalArity idecl.(ind_type) b
   | _ => False
@@ -40,7 +41,7 @@ Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @prim_mode
   | primIntModel i => primIntModel i
   | primFloatModel f => primFloatModel f
   end.
-  
+
 Definition erase_prim_val (p : prim_val term) : prim_val E.term :=
   (p.π1; erase_prim_model p.π2).
 
@@ -65,10 +66,10 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
         isPropositional Σ kn false ->
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k []
-  | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
+  | erases_tCase (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
         (brs' : list (list name × E.term)) :
-        Informative Σ ci.(ci_ind) ->
+        Subsingleton Σ ci.(ci_ind) ->
         Σ;;; Γ |- c ⇝ℇ c' ->
         All2
           (fun (x : branch term) (x' : list name × E.term) =>
@@ -76,7 +77,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
         Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
   | erases_tProj : forall p (c : term) (c' : E.term),
                    let ind := p.(proj_ind) in
-                   Informative Σ ind ->
+                   Subsingleton Σ ind ->
                    Σ;;; Γ |- c ⇝ℇ c' -> Σ;;; Γ |- tProj p c ⇝ℇ E.tProj p c'
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                   All2
@@ -94,7 +95,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
   | erases_tPrim : forall p, Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim (erase_prim_val p)
-  | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox 
+  | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox
   where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
 Lemma erases_forall_list_ind
@@ -126,16 +127,16 @@ Lemma erases_forall_list_ind
           isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k []))
       (Hcase : forall Γ ci p c brs c' brs',
-          PCUICElimination.Informative Σ ci.(ci_ind) ->
+          PCUICElimination.Subsingleton Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
-          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × 
+          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 ×
             erase_context (bcontext x) = x'.1) brs brs' ->
           Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
           P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',
           let ind := p.(proj_ind) in
-          PCUICElimination.Informative Σ ind ->
+          PCUICElimination.Subsingleton Σ ind ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
           P Γ (tProj p c) (E.tProj p c'))
@@ -218,7 +219,7 @@ Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_in
   Forall2 (fun cdecl cstr => cdecl.(PCUICEnvironment.cstr_arity) = cstr.(E.cstr_nargs) /\ cdecl.(cstr_name) = cstr.(E.cstr_name)) oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun 'i i' => i.(PCUICEnvironment.proj_name) = i'.(E.proj_name)) oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
-  oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
+  oib'.(E.ind_kelim) = oib.(ind_kelim) /\
   isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).
 
 Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
@@ -337,4 +338,4 @@ Definition computational_ind Σ ind :=
 Definition computational_type Σ T :=
   exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
 
-  
+

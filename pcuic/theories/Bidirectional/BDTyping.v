@@ -2,12 +2,13 @@
 
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.
 
-From MetaCoq Require Export LibHypsNaming.
+From MetaCoq.Utils Require Export LibHypsNaming.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.
@@ -69,7 +70,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   Σ ;;; Γ |- tConstruct ind i u ▹ type_of_constructor mdecl cdecl (ind, i) u
 
-| infer_Case ci p c brs args u ps mdecl idecl : 
+| infer_Case ci p c brs args u ps mdecl idecl :
   let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
@@ -109,7 +110,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   nth_error mfix n = Some decl ->
   All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
   All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) mfix ->
-  wf_fixpoint Σ mfix -> 
+  wf_fixpoint Σ mfix ->
   Σ ;;; Γ |- tFix mfix n ▹ dtype decl
 
 | infer_CoFix mfix n decl :
@@ -142,7 +143,7 @@ with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : induc
 | infer_ind_Ind ind t T u args:
   Σ ;;; Γ |- t ▹ T ->
   red Σ Γ T (mkApps (tInd ind u) args) ->
-  Σ ;;; Γ |- t ▹{ind} (u,args) 
+  Σ ;;; Γ |- t ▹{ind} (u,args)
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cumul t T T':
@@ -164,7 +165,7 @@ Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
     (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
     let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
-    (wf_local_bd_rel Σ Γ brctxty.1) × 
+    (wf_local_bd_rel Σ Γ brctxty.1) ×
     Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
   n ctors brs.
 
@@ -174,8 +175,8 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
   {n ctors}
   (a : tybranches Σ Γ ci mdecl idecl p ptm n ctors brs) : size :=
 
-  (all2i_size _ (fun i cdecl br p => 
-    (Nat.max 
+  (all2i_size _ (fun i cdecl br p =>
+    (Nat.max
       (All_local_rel_sorting_size checking_size infering_size _ _ _ p.2.1)
       (checking_size _ _ _ _ p.2.2)))
   a).
@@ -191,7 +192,7 @@ Proof.
           | H : infering _ _ _ _ |- _ => apply infering_size in H
           | H : infering_sort _ _ _ _ |- _ => apply infering_sort_size in H
           | H : infering_prod _ _ _ _ _ _ |- _ => apply infering_prod_size in H
-          | H : infering_indu _ _ _ _ _ _ |- _ => apply infering_indu_size in H 
+          | H : infering_indu _ _ _ _ _ _ |- _ => apply infering_indu_size in H
           | H : checking _ _ _ _ |- _ => apply checking_size in H
           | H : wf_local_bd _ _ |- _ => apply (All_local_env_sorting_size _ _ (checking_size _) (infering_sort_size _) _ _) in H
           | H : wf_local_bd_rel _ _ _ |- _ => apply (All_local_rel_sorting_size (checking_size _) (infering_sort_size _) _ _) in H
@@ -320,10 +321,10 @@ Section BidirectionalInduction.
     let Pdecl_check_rel Γ := fun _ Δ _ t T _ => Pcheck (Γ,,,Δ) t T in
     let Pdecl_sort_rel Γ := fun _ Δ _ t u _ => Psort (Γ,,,Δ) t u in
 
-    (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), 
+    (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ),
       All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ) ->
 
-    (forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'), 
+    (forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'),
       All_local_env_over_sorting (fun Σ Δ => checking Σ (Γ,,,Δ)) (fun Σ Δ => infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Σ Γ' wfΓ' -> PΓ_rel Γ Γ') ->
 
     (forall (Γ : context) (n : nat) decl,
@@ -434,7 +435,7 @@ Section BidirectionalInduction.
                 Pcheck (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
       wf_fixpoint Σ mfix ->
       Pinfer Γ (tFix mfix n) (dtype decl)) ->
-    
+
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       cofix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
@@ -474,7 +475,7 @@ Section BidirectionalInduction.
       Pinfer Γ t T ->
       Σ ;;; Γ |- T <= T' ->
       Pcheck Γ t T') ->
-      
+
     env_prop_bd.
   Proof using Type.
     intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
@@ -485,7 +486,7 @@ Section BidirectionalInduction.
     enough (HP : forall x : typing_sum, Ptyping_sum x).
     - repeat split ; intros.
       + exact (HP (context_cons Γ X)).
-      + exact (HP (context_rel_cons Γ Γ' X)). 
+      + exact (HP (context_rel_cons Γ Γ' X)).
       + exact (HP (check_cons Γ T t X)).
       + exact (HP (inf_cons Γ T t X)).
       + exact (HP (sort_cons Γ t u X)).
@@ -498,7 +499,7 @@ Section BidirectionalInduction.
     intros d IH.
     destruct d ; simpl.
     4: destruct i.
-    
+
     - eapply HΓ.
       dependent induction wfΓ.
       + constructor.
@@ -559,7 +560,7 @@ Section BidirectionalInduction.
 
     - unshelve eapply HProd ; auto.
       all: applyIH.
-    
+
     - unshelve eapply HLambda ; auto.
       all: applyIH.
 
@@ -596,7 +597,7 @@ Section BidirectionalInduction.
           intros.
           apply IH.
           cbn -[Nat.max].
-          lia. 
+          lia.
 
       + cbn in IH.
         clear - IH a2.
@@ -615,7 +616,7 @@ Section BidirectionalInduction.
           apply IH.
           simpl.
           lia.
-    
+
     - unshelve eapply HProj ; auto.
       all: applyIH.
 
@@ -680,7 +681,7 @@ Section BidirectionalInduction.
           cbn. lia.
 
     - unshelve eapply HPrim; eauto.
-    
+
     - destruct i.
       unshelve (eapply HiSort ; try eassumption) ; try eassumption.
       all:applyIH.

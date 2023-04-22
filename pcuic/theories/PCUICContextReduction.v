@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction
      PCUICReduction PCUICCases PCUICWeakeningConv PCUICWeakeningTyp
      PCUICTyping PCUICOnFreeVars PCUICSubstitution
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv.
@@ -38,8 +39,8 @@ Section CtxReduction.
     apply All2_fold_refl => ? ?.
     apply red_decls_refl.
   Qed.
-  
-  Lemma red_context_app_same {Γ Δ Γ'} : 
+
+  Lemma red_context_app_same {Γ Δ Γ'} :
     red_context Σ Γ Δ ->
     red_context Σ (Γ ,,, Γ') (Δ ,,, Γ').
   Proof using Type.
@@ -49,8 +50,8 @@ Section CtxReduction.
     intros; apply red_decls_refl.
   Qed.
   Hint Rewrite inst_case_predicate_context_length : len.
-  
-  Lemma on_inst_case_context P Γ pars puinst ctx : 
+
+  Lemma on_inst_case_context P Γ pars puinst ctx :
     on_ctx_free_vars P Γ ->
     test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
        #|pars| ctx ->
@@ -61,12 +62,12 @@ Section CtxReduction.
     relativize #|ctx|; [erewrite on_ctx_free_vars_extend, onΓ|now len].
     eapply on_free_vars_ctx_inst_case_context; tea; auto.
   Qed.
-  
+
   Ltac inv_on_free_vars ::=
     match goal with
-    | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-      progress cbn in H; 
-      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+    | [ H : is_true (on_free_vars ?P ?t) |- _ ] =>
+      progress cbn in H;
+      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] ||
         eapply forallb_All in H); intros
     end.
 
@@ -107,7 +108,7 @@ Section CtxReduction.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - eapply red_abs_alt; eauto.
-    - eapply red_abs_alt; eauto. 
+    - eapply red_abs_alt; eauto.
       unshelve eapply (IHr (shiftnP 1 P)); tea.
       3:repeat (constructor; auto).
       all:rewrite on_ctx_free_vars_snoc ?onΓ ?onΔ /= //; auto with fvs.
@@ -123,7 +124,7 @@ Section CtxReduction.
     - eapply red_case_p. eapply IHr; tea.
       3:now apply red_context_app_same.
       all:apply on_inst_case_context; tea.
-    - eapply red_case_c; eauto. 
+    - eapply red_case_c; eauto.
     - eapply red_case_brs.
       unfold on_Trel; pcuic.
       eapply forallb_All in p4.
@@ -195,7 +196,7 @@ Section CtxReduction.
     eapply IHX2; tea. eapply red_on_free_vars in X1; tea.
   Qed.
 
-  Lemma red_context_app {Γ Γ' Δ Δ'} : 
+  Lemma red_context_app {Γ Γ' Δ Δ'} :
     red_context Σ Γ Δ ->
     red_context_rel Σ Γ Γ' Δ' ->
     red_context Σ (Γ ,,, Γ') (Δ ,,, Δ').
@@ -206,7 +207,7 @@ Section CtxReduction.
     intros h; depelim h; constructor; auto.
   Qed.
 
-  Lemma red_context_app_same_left {Γ Γ' Δ'} : 
+  Lemma red_context_app_same_left {Γ Γ' Δ'} :
     red_context_rel Σ Γ Γ' Δ' ->
     red_context Σ (Γ ,,, Γ') (Γ ,,, Δ').
   Proof using Type.
@@ -214,8 +215,8 @@ Section CtxReduction.
     eapply All2_fold_app => //.
     apply red_context_refl.
   Qed.
-  
-  Lemma on_ctx_free_vars_cons P d Γ : 
+
+  Lemma on_ctx_free_vars_cons P d Γ :
     on_ctx_free_vars P (d :: Γ) =
     on_ctx_free_vars (addnP 1 P) Γ && (P 0 ==> on_free_vars_decl (addnP 1 P) d).
   Proof using Type.
@@ -243,7 +244,7 @@ Section CtxReduction.
   Qed.
 
   Lemma red_context_rel_on_ctx_free_vars {P Γ Δ Δ'} :
-    on_ctx_free_vars (addnP #|Δ| P) Γ -> 
+    on_ctx_free_vars (addnP #|Δ| P) Γ ->
     on_ctx_free_vars P Δ ->
     red_context_rel Σ Γ Δ Δ' ->
     on_ctx_free_vars P Δ'.
@@ -269,9 +270,9 @@ Section CtxReduction.
         now rewrite on_ctx_free_vars_app onΔ onΓ.
   Qed.
 
-  Definition on_ctx_free_vars_fold P ctx := 
+  Definition on_ctx_free_vars_fold P ctx :=
     All_fold (fun Γ d =>
-      let k := Nat.pred #|ctx| - #|Γ| in 
+      let k := Nat.pred #|ctx| - #|Γ| in
       P k ==> on_free_vars_decl (addnP (S k) P) d) ctx.
 
   Lemma addnP_closedP n P : addnP 1 (closedP (S n) P) =1 closedP n (addnP 1 P).
@@ -280,7 +281,7 @@ Section CtxReduction.
     repeat (PCUICSigmaCalculus.nat_compare_specs => //).
   Qed.
 
-  Lemma red_context_trans Γ Δ Δ' : 
+  Lemma red_context_trans Γ Δ Δ' :
     on_ctx_free_vars (closedP #|Γ| xpredT) Γ ->
     red_context Σ Γ Δ -> red_context Σ Δ Δ' -> red_context Σ Γ Δ'.
   Proof using wfΣ.
@@ -309,7 +310,7 @@ Section CtxReduction.
           move/andP: ond => [] /= //. }
   Qed.
 
-  Lemma red_context_app_right {Γ Γ' Δ Δ'} : 
+  Lemma red_context_app_right {Γ Γ' Δ Δ'} :
     on_ctx_free_vars (closedP #|Γ ,,, Γ'| xpredT) (Γ ,,, Γ') ->
     red_context Σ Γ Δ ->
     red_context_rel Σ Δ Γ' Δ' ->
@@ -321,7 +322,7 @@ Section CtxReduction.
     - eapply red_context_app; [apply red_context_refl|tas].
   Qed.
 
-  Lemma red_context_rel_inv {Γ Γ' Δ'} : 
+  Lemma red_context_rel_inv {Γ Γ' Δ'} :
     red_context Σ (Γ ,,, Γ') (Γ ,,, Δ') ->
     red_context_rel Σ Γ Γ' Δ'.
   Proof using Type.
@@ -329,8 +330,8 @@ Section CtxReduction.
     eapply All2_fold_app_inv => //.
     move: (All2_fold_length r). len.
   Qed.
-    
-  (* 
+
+  (*
     intros onΓ r r'.
     eapply All2_fold_app => //.
     * now rewrite (All2_fold_length r').
@@ -352,14 +353,14 @@ Section CtxReduction.
           { rewrite on_ctx_free_vars_app. erewrite onΓ0. now rewrite addnP_add Nat.add_1_r onΔ. }
           { rewrite on_ctx_free_vars_app. erewrite onΓ0. now rewrite addnP_add Nat.add_1_r onΓ. }
   Abort. *)
-  
+
   Lemma OnOne2_local_env_All2_fold {P Q Γ Δ} :
     OnOne2_local_env P Γ Δ ->
     (forall Γ d d', P Γ d d' -> Q Γ Γ d d') ->
     (forall Γ Δ d, Q Γ Δ d d) ->
     All2_fold Q Γ Δ.
   Proof using Type.
-    intros onc HPQ HQ. 
+    intros onc HPQ HQ.
     induction onc; try constructor; auto.
     - apply All2_fold_refl => //.
     - apply All2_fold_refl => //.
@@ -396,17 +397,17 @@ Section CtxReduction.
         econstructor 3; tea.
       * transitivity (vdef na b' T :: Γ0).
         + eapply red_one_decl_red_ctx_rel.
-          do 2 constructor; auto. 
+          do 2 constructor; auto.
         + transitivity (vdef na b' T' :: Γ0).
           ++ eapply red_one_decl_red_ctx_rel.
-             do 2 constructor; auto. 
+             do 2 constructor; auto.
           ++ rewrite /= on_ctx_free_vars_cons in cl;
               move/andP: cl=> [] ond cl. specialize (IHX ond). clear -IHX.
              induction IHX; try now do 2 constructor.
              econstructor 3; tea.
   Qed.
-        
-End CtxReduction.    
+
+End CtxReduction.
 
 
 

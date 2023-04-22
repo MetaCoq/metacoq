@@ -1,12 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment Induction.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import Environment.
+From MetaCoq.Template Require Import Ast AstUtils Induction.
 
 (** * Universe substitution
 
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
-Lemma subst_instance_cons {A} {ua : UnivSubst A} u x xs : 
+Lemma subst_instance_cons {A} {ua : UnivSubst A} u x xs :
   subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
 Proof. reflexivity. Qed.
 
@@ -16,7 +18,7 @@ Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-            ?map_predicate_map_predicate, ?map_predicate_subst_instance_predicate, 
+            ?map_predicate_map_predicate, ?map_predicate_subst_instance_predicate,
             ?map_branch_map_branch;
     f_equal; eauto; solve_all; eauto.
 Qed.
@@ -53,7 +55,7 @@ Lemma subst_instance_subst u c N k :
 Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
             ?map_predicate_map_predicate,
             ?map_branch_map_branch; simpl;
     try solve [f_equal; eauto; solve_all; eauto].
@@ -61,7 +63,7 @@ Proof.
   - elim (Nat.leb k n). rewrite nth_error_map.
     destruct (nth_error N (n - k)). simpl.
     apply subst_instance_lift. reflexivity. reflexivity.
-    
+
   - rewrite subst_instance_mkApps. f_equal; auto.
     rewrite map_map_compose. solve_all.
 Qed.

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Import EAst EAstUtils EGlobalEnv.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 
@@ -121,7 +122,7 @@ Module PrintTermTree.
       match lookup_ind_decl Σ i k with
       | Some oib =>
         match nth_error oib.(ind_ctors) l with
-        | Some cstr => 
+        | Some cstr =>
           match args with
           | [] => cstr.(cstr_name)
           | args => parens (top || inapp) (cstr.(cstr_name) ^ "[" ^ print_list (print_term Γ false false) " " args ^ "]")
@@ -137,8 +138,8 @@ Module PrintTermTree.
       | Some oib =>
         let fix print_args Γ nas br {struct nas} :=
           match nas with
-          | [] => "=>" ^ " " ^ br Γ 
-          | na :: nas => 
+          | [] => "=>" ^ " " ^ br Γ
+          | na :: nas =>
             string_of_name na ^ "  " ^ print_args (vass na :: Γ) nas br
           end
         in
@@ -157,7 +158,7 @@ Module PrintTermTree.
       | Some (mdecl, idecl, cdecl, pdecl) =>
         print_term Γ false false c ^ ".(" ^ pdecl.(proj_name) ^ ")"
       | None =>
-        "UnboundProj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) 
+        "UnboundProj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars)
           ^ "," ^ string_of_nat p.(proj_arg) ^ ","
           ^ print_term Γ true false c ^ ")"
       end
@@ -182,7 +183,7 @@ Module PrintTermTree.
     end.
 
   Definition pr_allowed_elim (elims : Universes.allowed_eliminations) :=
-    match elims with 
+    match elims with
     | Universes.IntoSProp => "into sprop"
     | Universes.IntoPropSProp => "into prop or sprop"
     | Universes.IntoSetPropSProp => "into set, prop or sprop"
@@ -193,12 +194,12 @@ Module PrintTermTree.
     let params := string_of_nat npars ^ " parameters" in
     let prop := if body.(ind_propositional) then "propositional" else "computational" in
     let kelim := pr_allowed_elim body.(ind_kelim) in
-    let ctors := print_list (fun cstr => "| " ^ (cstr.(cstr_name) : ident) ^ " " ^ 
+    let ctors := print_list (fun cstr => "| " ^ (cstr.(cstr_name) : ident) ^ " " ^
       string_of_nat cstr.(cstr_nargs) ^ " arguments") nl body.(ind_ctors) in
     let projs :=
     match body.(ind_projs) return Tree.t with
     | [] => ""
-    | _ => nl ^ "projections: " ^ print_list (fun x => x.(proj_name)) ", " body.(ind_projs) 
+    | _ => nl ^ "projections: " ^ print_list (fun x => x.(proj_name)) ", " body.(ind_projs)
     end
     in
     body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
@@ -214,17 +215,17 @@ Module PrintTermTree.
     print_recursivity_kind decl.(ind_finite) ^ " " ^
     print_list (print_one_inductive_body decl.(ind_npars)) (nl ^ " with ") decl.(ind_bodies).
 
-  Definition print_decl Σ '(kn, d) := 
+  Definition print_decl Σ '(kn, d) :=
     match d with
     | ConstantDecl body => print_constant_body Σ kn body
     | InductiveDecl mind => print_inductive_body mind
     end.
 
-  Definition print_global_context (g : global_context) := 
+  Definition print_global_context (g : global_context) :=
     print_list (print_decl g) nl (List.rev g).
   Notation print_env := print_global_context.
 
-  Definition print_program (p : program) : t := 
+  Definition print_program (p : program) : t :=
     pr p.1 p.2 ^ nl ^ "in" ^ print_env p.1.
 
 End PrintTermTree.

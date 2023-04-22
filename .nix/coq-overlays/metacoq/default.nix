@@ -26,7 +26,7 @@ let
   releaseRev = v: "v${v}";
 
   # list of core metacoq packages sorted by dependency order
-  packages = [ "template-coq" "pcuic" "safechecker" "erasure" "all" ];
+  packages = [ "utils" "common" "template-coq" "pcuic" "safechecker" "template-pcuic" "erasure" "quotation" "safechecker-plugin" "erasure-plugin" "all" ];
 
   template-coq = metacoq_ "template-coq";
 
@@ -50,16 +50,15 @@ let
           patchShebangs ./configure.sh
           patchShebangs ./template-coq/update_plugin.sh
           patchShebangs ./template-coq/gen-src/to-lower.sh
-          patchShebangs ./pcuic/clean_extraction.sh
-          patchShebangs ./safechecker/clean_extraction.sh
-          patchShebangs ./erasure/clean_extraction.sh
+          patchShebangs ./safechecker-plugin/clean_extraction.sh
+          patchShebangs ./erasure-plugin/clean_extraction.sh
           echo "CAMLFLAGS+=-w -60 # Unused module" >> ./safechecker/Makefile.plugin.local
-          sed -i -e 's/mv $i $newi;/mv $i tmp; mv tmp $newi;/' ./template-coq/gen-src/to-lower.sh ./pcuic/clean_extraction.sh ./safechecker/clean_extraction.sh ./erasure/clean_extraction.sh
+          sed -i -e 's/mv $i $newi;/mv $i tmp; mv tmp $newi;/' ./template-coq/gen-src/to-lower.sh ./safechecker-plugin/clean_extraction.sh ./erasure-plugin/clean_extraction.sh
         '' ;
 
         configurePhase = optionalString (package == "all") pkgallMake + ''
           touch ${pkgpath}/metacoq-config
-        '' + optionalString (elem package ["safechecker" "erasure"]) ''
+        '' + optionalString (elem package ["safechecker" "erasure" "template-pcuic" "quotation" "safechecker-plugin" "erasure-plugin"]) ''
           echo  "-I ${template-coq}/lib/coq/${coq.coq-version}/user-contrib/MetaCoq/Template/" > ${pkgpath}/metacoq-config
         '' + optionalString (package == "single") ''
           ./configure.sh local

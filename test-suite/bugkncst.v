@@ -41,7 +41,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
         | tApp fn args => pocc_term n fn || fold_left orb (map (pocc_term n) args) false
         | tConst nm _ => if eqb str nm then true else false
         | tCase _ ty mch brs =>
-          existsb (pocc_term n) (pparams ty) || pocc_term n (preturn ty) || 
+          existsb (pocc_term n) (pparams ty) || pocc_term n (preturn ty) ||
           pocc_term n mch ||
           fold_left orb (map (fun x => pocc_term n (bbody x)) brs) false
         | tFix ds _ =>

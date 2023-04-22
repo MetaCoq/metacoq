@@ -3,7 +3,7 @@ Require Import MetaCoq.Template.All.
 
 Import ListNotations MCMonadNotation.
 
-Open Scope string.
+Open Scope bs.
 
 Notation "'unfolded' d" :=
   ltac:(let y := eval unfold d in d in exact y) (at level 100, only parsing).

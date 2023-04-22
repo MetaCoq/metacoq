@@ -176,12 +176,14 @@ let dbg = function
   | Coq_tmLemma (nm, typ) -> "tmLemma"
   | Coq_tmFreshName nm -> "tmFreshName"
   | Coq_tmLocate id -> "tmLocate"
+  | Coq_tmLocateModule id -> "tmLocateModule"
+  | Coq_tmLocateModType id -> "tmLocateModType"
   | Coq_tmCurrentModPath -> "tmCurrentModPath"
   | Coq_tmQuoteInductive kn -> "tmQuoteInductive"
   | Coq_tmQuoteUniverses -> "tmQuoteUniverses"
   | Coq_tmQuoteConstant (kn, b) -> "tmQuoteConstant"
   | Coq_tmInductive i -> "tmInductive"
-  | Coq_tmExistingInstance k -> "tmExistingInstance"
+  | Coq_tmExistingInstance (l, k) -> "tmExistingInstance"
   | Coq_tmInferInstance t -> "tmInferInstance"
 *)
 
@@ -216,8 +218,14 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmLocate id ->
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x))
           (tmLocate (to_qualid id))
+  | Coq_tmLocateModule id ->
+    tmMap (fun mp -> Obj.magic (List.map quote_modpath mp))
+          (tmLocateModule (to_qualid id))
+  | Coq_tmLocateModType id ->
+    tmMap (fun mp -> Obj.magic (List.map quote_modpath mp))
+          (tmLocateModType (to_qualid id))
   | Coq_tmCurrentModPath ->
-    tmMap (fun mp -> Obj.magic (quote_string (Names.ModPath.to_string mp)))
+    tmMap (fun mp -> Obj.magic (quote_modpath mp))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
     tmBind (tmQuoteInductive (unquote_kn kn))
@@ -228,13 +236,17 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteModule id ->
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModule (to_qualid id))
+  | Coq_tmQuoteModFunctor id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModFunctor (to_qualid id))
+  | Coq_tmQuoteModType id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x)) (tmQuoteModType (to_qualid id))
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))
   | Coq_tmInductive (inferu, i) ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (unquote_bool inferu) (to_mie i))
-  | Coq_tmExistingInstance k ->
-    Obj.magic (tmExistingInstance (unquote_global_reference k))
+  | Coq_tmExistingInstance (locality, k) ->
+    Obj.magic (tmExistingInstance (unquote_hint_locality locality) (unquote_global_reference k))
   | Coq_tmInferInstance t ->
     tmBind (tmInferInstance (to_constr t))
       (function

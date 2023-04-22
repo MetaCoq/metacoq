@@ -17,7 +17,7 @@ MetaCoq Quote Definition a_random_univ := Type.
 
 Example a_random_univ_ex :
   exists l, a_random_univ =
-            tSort (Universe.from_kernel_repr (Level.Level l, false) []).
+            tSort (Universe.from_kernel_repr (Level.level l, false) []).
 Proof. eexists. reflexivity. Qed.
 
 (* Back and forth *)
@@ -30,18 +30,18 @@ Check eq_refl : univ_foo = univ_foo_back.
 
 Print univ_foo_back.
 
-Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
+Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.level "Top.400"))).
 (* Fails with "Level Top.<something> not a declared level and you are in Strict Unquote Universe Mode." *)
 
 Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t2 := (tSort fresh_universe).
-MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
+MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.level "Top.400"))).
 
 Monomorphic Universe i j.
 
 Set MetaCoq Strict Unquote Universe Mode.
 MetaCoq Test Quote (Type@{j} -> Type@{i}).
-MetaCoq Unquote Definition T'' := (tSort (Universe.make (Level.Level "j"))).
+MetaCoq Unquote Definition T'' := (tSort (Universe.make (Level.level "j"))).
 Unset MetaCoq Strict Unquote Universe Mode.
 
 
@@ -57,7 +57,7 @@ MetaCoq Test Quote @selfpid.
 Constraint i < j.
 
 MetaCoq Unquote Definition yuyu :=
-  (tConst (cp "selfpid") [Level.Level "j"; Level.Level "i"]).
+  (tConst (cp "selfpid") [Level.level "j"; Level.level "i"]).
 
 
 MetaCoq Quote Definition t0 := nat.
@@ -70,7 +70,7 @@ Polymorphic Cumulative Record packType := {pk : Type}.
 MetaCoq Run (α <- tmQuoteInductive (cp "test") ;; tmPrint α).
 MetaCoq Run (tmQuoteInductive (cp "packType") >>= tmEval all >>= tmPrint).
 
-  
+
 Polymorphic Cumulative Record Category@{i j} :=
 { Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
 Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
@@ -137,7 +137,7 @@ Definition foo2_instance := foo2.
 
 MetaCoq Quote Recursively Definition qfoo2 := foo2.
 Compute qfoo2.
-(* (Level.Var 0, Le, Level.Level "Coq.Init.Datatypes.44") *)
+(* (Level.lvar 0, Le, Level.level "Coq.Init.Datatypes.44") *)
 
 Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 | fooc3 : @eq Type@{l} (list A) B-> foo3 A B.
@@ -149,7 +149,7 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 MetaCoq Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
-Require Import MetaCoq.Template.monad_utils. Import MCMonadNotation.
+Require Import MetaCoq.Utils.monad_utils. Import MCMonadNotation.
 Require Import MetaCoq.Template.TemplateMonad.Core.
 
 MetaCoq Run (tmQuoteInductive (cp "foo") >>= tmPrint).
@@ -162,20 +162,20 @@ MetaCoq Quote Recursively Definition qTT := TT.
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
 MetaCoq Quote Recursively Definition qTT2 := TT2.
 
-Require Import MetaCoq.Template.utils.
+Require Import MetaCoq.Utils.utils.
 Require Import List. Import ListNotations.
 
 Module toto.
 
   (* MetaCoq Run (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
   (*  ind_name := "TT2"; *)
-  (*  ind_type := tSort ((Level.Var 1, false) :: nil)%list; *)
+  (*  ind_type := tSort ((Level.lvar 1, false) :: nil)%list; *)
   (*  ind_kelim := InProp :: (InSet :: InType :: nil)%list; *)
   (*  ind_ctors := ("tt2", *)
-  (*               tProd nAnon (tSort ((Level.Var 0, false) :: nil)%list) (tRel 1), *)
+  (*               tProd nAnon (tSort ((Level.lvar 0, false) :: nil)%list) (tRel 1), *)
   (*               1) :: nil; *)
-  (*  ind_projs := nil |}] (UContext.make (Level.Var 0 :: Level.Var 1 :: nil)%list *)
-  (*    (ConstraintSet.add (make_univ_constraint (Level.Var 0) Lt (Level.Var 1)) *)
+  (*  ind_projs := nil |}] (UContext.make (Level.lvar 0 :: Level.lvar 1 :: nil)%list *)
+  (*    (ConstraintSet.add (make_univ_constraint (Level.lvar 0) Lt (Level.lvar 1)) *)
   (*       ConstraintSet.empty)))) ;; *)
 
 End toto.
@@ -185,7 +185,7 @@ Definition test2 := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
 
-Unset Printing Universes. 
+Unset Printing Universes.
 
 MetaCoq Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
@@ -196,7 +196,7 @@ Definition nNamedR (s : string) := mkBindAnn (nNamed s) Relevant.
 Definition nAnonR := mkBindAnn nAnon Relevant.
 
 Unset MetaCoq Strict Unquote Universe Mode.
-MetaCoq Unquote Definition bla' := (tLambda (nNamedR "T") (tSort (Universe.make (Level.Level "Top.46"))) (tLambda (nNamedR "T2") (tSort (Universe.make (Level.Level "Top.477"))) (tProd nAnonR (tRel 1) (tRel 1)))).
+MetaCoq Unquote Definition bla' := (tLambda (nNamedR "T") (tSort (Universe.make (Level.level "Top.46"))) (tLambda (nNamedR "T2") (tSort (Universe.make (Level.level "Top.477"))) (tProd nAnonR (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -213,7 +213,7 @@ Section test.
   Set Printing Universes.
   Print t.
 
-  
+
 End test.
 
 Compute t.
@@ -232,7 +232,7 @@ MetaCoq Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
 (* NOTE: the command below doesn't work -- gives Error: Anomaly "Universe Var(1) undefined." *)
 (* Fail MetaCoq Unquote Definition T'2 := *)
-(*   (tSort (Universe.make (Level.Var 1))). *)
+(*   (tSort (Universe.make (Level.lvar 1))). *)
 
 MetaCoq Quote Recursively Definition qT' := F.
 
@@ -252,7 +252,7 @@ MetaCoq Quote Recursively Definition ff := f'.
 (* Require Import MetaCoq.Checker.All. *)
 (* Compute (infer' (empty_ext (fst ff)) [] (snd ff)). *)
 (* Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) = *)
-(*          Checked (tSort (Universe.from_kernel_repr (Level.Level _, true) [(Level.Level _, true)]))). *)
+(*          Checked (tSort (Universe.from_kernel_repr (Level.level _, true) [(Level.level _, true)]))). *)
 (* Open Scope string_scope. *)
-(* Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make (Level.Level _))) (tProd (nNamed "B") (tSort (Universe.make (Level.Level _))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)). *)
+(* Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make (Level.level _))) (tProd (nNamed "B") (tSort (Universe.make (Level.level _))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)). *)
 

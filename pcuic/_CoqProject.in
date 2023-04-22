@@ -2,6 +2,8 @@
 
 theories/PCUICAst.v
 
+theories/PCUICMonadAst.v
+
 theories/utils/PCUICOnOne.v
 theories/utils/PCUICPrimitive.v
 theories/utils/PCUICAstUtils.v
@@ -28,6 +30,7 @@ theories/Conversion/PCUICNamelessConv.v
 theories/Conversion/PCUICRenameConv.v
 theories/Conversion/PCUICInstConv.v
 theories/Conversion/PCUICWeakeningEnvConv.v
+theories/Conversion/PCUICWeakeningConfigConv.v
 theories/Conversion/PCUICUnivSubstitutionConv.v
 theories/Conversion/PCUICWeakeningConv.v
 theories/Conversion/PCUICClosedConv.v
@@ -37,6 +40,7 @@ theories/Typing/PCUICNamelessTyp.v
 theories/Typing/PCUICRenameTyp.v
 theories/Typing/PCUICInstTyp.v
 theories/Typing/PCUICWeakeningEnvTyp.v
+theories/Typing/PCUICWeakeningConfigTyp.v
 theories/Typing/PCUICWeakeningTyp.v
 theories/Typing/PCUICUnivSubstitutionTyp.v
 theories/Typing/PCUICClosedTyp.v
@@ -74,6 +78,7 @@ theories/PCUICInductives.v
 theories/PCUICValidity.v
 theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
+theories/PCUICClassification.v
 theories/PCUICCanonicity.v
 
 theories/PCUICCSubst.v
@@ -81,25 +86,22 @@ theories/PCUICWcbvEval.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
+theories/PCUICWeakeningEnvSN.v
+theories/PCUICWeakeningConfigSN.v
 theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 theories/PCUICFirstorder.v
 theories/PCUICProgress.v
+theories/PCUICNormalization.v
+theories/PCUICConsistency.v
 
 theories/PCUICSafeLemmata.v
 
 theories/PCUICEtaExpand.v
 
 theories/PCUICProgram.v
-theories/TemplateToPCUIC.v
-theories/TemplateToPCUICCorrectness.v
-theories/TemplateToPCUICWcbvEval.v
-theories/TemplateToPCUICExpanded.v
-theories/PCUICToTemplate.v
-theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
-theories/PCUICTransform.v
 
 theories/Bidirectional/BDTyping.v
 theories/Bidirectional/BDToPCUIC.v
@@ -108,6 +110,9 @@ theories/Bidirectional/BDUnique.v
 theories/Bidirectional/BDStrengthening.v
 
 theories/PCUICWeakeningEnv.v
+theories/PCUICWeakeningConfig.v
+
+theories/PCUICCasesHelper.v
 
 # theories/All.v
 

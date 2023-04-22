@@ -20,7 +20,7 @@ Definition tsl_name n :=
 Definition mkApps t us := tApp t us. (* meanwhile *)
 Definition mkApp t u := mkApps t [u].
 
-Definition default_term := tRel 0.    
+Definition default_term := tRel 0.
 
 Definition up := lift 1 0.
 
@@ -272,7 +272,7 @@ Definition map_context_decl (f : term -> term) (decl : context_decl): context_de
 
 
 Notation " Γ ,, d " := (d :: Γ) (at level 20, d at next level, only parsing).
-  
+
 Fixpoint tsl_ctx (E : tsl_table) (Γ : context) : context :=
   match Γ with
   | [] => []
@@ -281,7 +281,7 @@ Fixpoint tsl_ctx (E : tsl_table) (Γ : context) : context :=
   | Γ ,, decl => let n := decl.(decl_name) in
                 let x := decl.(decl_body) in
                 let A := decl.(decl_type) in
-    tsl_ctx E Γ ,, Build_context_decl n (omap (tsl_rec0 0) x) (tsl_rec0 0 A) 
+    tsl_ctx E Γ ,, Build_context_decl n (omap (tsl_rec0 0) x) (tsl_rec0 0 A)
                 ,, Build_context_decl (tsl_name n) (omap (lift 1 0 \o tsl_rec1 E 0) x) (mkApps (lift0 1 (tsl_rec1 E 0 A)) [tRel 0])
   end.
 
@@ -289,7 +289,7 @@ Delimit Scope term_scope with term.
 
 Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |") : term_scope.
 
-  
+
 Lemma tsl_ctx_length E (Γ : context) : #|tsl_ctx E Γ| = 2 * #|Γ|%term.
 Proof.
   induction Γ.
@@ -339,7 +339,7 @@ Notation "( x ; y )" := (exist _ x y).
 (*     set (Typing.safe_nth_obligation_2 context_decl (A :: Γ) (S n; p) A Γ eq_refl n eq_refl). *)
 (*     specialize (IHn Γ c0 Heqt0 l). *)
 (*     destruct IHn. *)
-    
+
 (*     unshelve econstructor. *)
 (*     cbn. rewrite <- (tsl_ctx_length fuel Σ E Γ _ Heqt0). exact p. *)
 (*     etransitivity. exact π2. cbn. *)
@@ -454,7 +454,7 @@ elim/term_forall_list_ind : t n => //; rewrite ?plusE.
 (* - admit. *)
 Admitted.
 
-  
+
 
 
 
@@ -483,9 +483,9 @@ Proof. by []. Qed.
 (* From mathcomp Require Import ssrnat. *)
 
 Arguments safe_nth : simpl nomatch.
-    
+
 Lemma eq_safe_nth T (l : list T) n n' p p' : n = n' ->
-  safe_nth l (n; p) = safe_nth l (n'; p') :> T. 
+  safe_nth l (n; p) = safe_nth l (n'; p') :> T.
 Proof.
 move=> eq_n; case: _ / eq_n in p p' *.
 elim: l => [|x l IHl] in n p p' *.
@@ -513,7 +513,7 @@ Qed.
 
 Lemma tsl_rec1_decl_type (Γ : context) (n : nat) (E : tsl_table) p p'
   (Γ' := tsl_ctx E Γ) :
-  mkApps (lift0 1 (decl_type (safe_nth Γ' ((2 * n); p)))) [tRel 0] = 
+  mkApps (lift0 1 (decl_type (safe_nth Γ' ((2 * n); p)))) [tRel 0] =
   decl_type (safe_nth Γ' (2 * n; p')).
 Proof.
 subst Γ'; elim: Γ => [|a Γ IHΓ] in n p p' *.
@@ -537,7 +537,7 @@ Admitted.
     (* Lemma tsl_rec1_decl_type (Γ : context) (n : nat) (isdecl : (n < #|Γ|%term)%coq_nat) (E : tsl_table) (isdecl' : (2 * n + 1 < #|tsl_ctx E Γ|%term)%coq_nat) *)
     (*   : tsl_rec1 E (decl_type (safe_nth Γ (n; isdecl))) = *)
     (*     decl_type (safe_nth (tsl_ctx E Γ) (2 * n + 1; isdecl')). *)
-   
+
 Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
   : forall E, tsl_table_correct Σ E ->
     let Γ' := tsl_ctx E Γ in
@@ -565,7 +565,7 @@ elim/typing_ind: H => {Γ t T} Γ.
   (* by rewrite plusE addn0 addn1. *)
 
 
-  
+
 
 - admit.
 - admit.
@@ -581,17 +581,17 @@ elim/typing_ind: H => {Γ t T} Γ.
     have [] := IHt' _ ΣE_correct.
     by move=> ? t1_ty; exact: t1_ty.
   admit.
-   
 
-    
-  
+
+
+
 
 
     rewrite /Γ' => isdecl'; clear.
     case: Γ isdecl isdecl'.
-    
-    
-      
+
+
+
 
 
 Require Import Vector.

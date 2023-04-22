@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From Coq Require Import ssreflect.
 
 Definition def_size (size : term -> nat) (x : def term)
   := size (dtype x) + size (dbody x).
-  
+
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
   list_size (def_size size) l.
 
@@ -14,12 +14,12 @@ Definition decl_size (size : term -> nat) (x : context_decl) :=
 
 Definition context_size (size : term -> nat) (l : context) :=
   list_size (decl_size size) l.
- 
-Definition branch_size (size : term -> nat) (br : branch term) := 
+
+Definition branch_size (size : term -> nat) (br : branch term) :=
   context_size size br.(bcontext) + size br.(bbody).
 
-Definition predicate_size (size : term -> nat) (p : PCUICAst.predicate term) := 
-  list_size size p.(pparams) + 
+Definition predicate_size (size : term -> nat) (p : PCUICAst.predicate term) :=
+  list_size size p.(pparams) +
   context_size size p.(pcontext) +
   size p.(preturn).
 
@@ -45,9 +45,9 @@ Proof.
   rewrite IHl. simpl. lia.
 Qed.
 
-Lemma nth_error_size {A} (f : A -> nat) {l : list A} {n x} : 
+Lemma nth_error_size {A} (f : A -> nat) {l : list A} {n x} :
   nth_error l n = Some x ->
-  f x < list_size f l. 
+  f x < list_size f l.
 Proof.
   induction l in n |- *; destruct n; simpl => //; auto.
   - intros [= <-]. lia.

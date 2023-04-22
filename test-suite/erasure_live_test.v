@@ -1,14 +1,17 @@
 From Coq Require Import Recdef.
+
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN.
+From MetaCoq.TemplatePCUIC Require Import TemplateToPCUIC PCUICToTemplate.
 
-From MetaCoq.Erasure Require Import Erasure.
+From MetaCoq.ErasurePlugin Require Import Erasure.
 
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils config.
+From MetaCoq.Utils Require Import utils bytestring.
+From MetaCoq.Common Require Import config.
 Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
@@ -19,7 +22,7 @@ Definition test (p : Ast.Env.program) : string :=
 
 Definition test_fast (p : Ast.Env.program) : string :=
   erase_fast_and_print_template_program p.
-  
+
 MetaCoq Quote Recursively Definition zero := 0.
 
 Definition zerocst := Eval lazy in test zero.
@@ -42,12 +45,12 @@ Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
                   end)).
 
 Definition erase {A} (a : A) : TemplateMonad unit :=
-  aq <- tmQuoteRec a ;;  
+  aq <- tmQuoteRec a ;;
   s <- tmEval lazy (erase_and_print_template_program aq) ;;
   tmMsg s.
 
 Definition erase_fast {A} (a : A) : TemplateMonad unit :=
-  aq <- tmQuoteRec a ;;  
+  aq <- tmQuoteRec a ;;
   s <- tmEval lazy (erase_fast_and_print_template_program aq) ;;
   tmMsg s.
 
@@ -224,7 +227,7 @@ Time Definition ans_fib9 :=
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_fib9 := fib9.
 Definition P_fib9 := Eval lazy in (test p_fib9).
-(* 
+(*
 Goal
   let env := (env P_fib9) in
   let main := (main P_fib9) in
@@ -337,7 +340,8 @@ Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
 (* We don't run this one every time as it is really expensive *)
 (*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 
-From MetaCoq.Erasure Require Import Loader.
+From MetaCoq.ErasurePlugin Require Import Loader.
+
 MetaCoq Erase provedCopyx.
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
@@ -362,23 +366,23 @@ Definition fold_matchdecl {A B} (e : EnvCheck A) (b : A -> B) (c : PCUICAst.glob
 
 Ltac fold_matchdecls' := repeat
     match goal with
-    |- context C [?x] => 
-    match x with 
+    |- context C [?x] =>
+    match x with
     | match ?l with CorrectDecl a => @?b a | EnvError g a' => @?c g a' end =>
     change x with (fold_matchdecl l b c)
     end
     end.
-        
+
 
     Set Printing Depth 20.
 
-    
+
 Ltac eval_first :=
 match goal with
 |- context C [fold_matchdecl ?l ?p ?g] =>
   match l with
   (* | fold_matchdecl _ _ _ => fail 1
-   *)| _ => 
+   *)| _ =>
     idtac "evaluating" l;
     let l' := eval lazy in l in
     let C' := context C [ fold_matchdecl l' p g] in
@@ -388,7 +392,7 @@ end.
 
 Ltac show_match :=
   match goal with
-  |- context [match ?x with _ => _ end] => 
+  |- context [match ?x with _ => _ end] =>
     match x with
     | match _ with _ => _ end => fail 1
     | fold_matchdecl _ _ _ => fail 1

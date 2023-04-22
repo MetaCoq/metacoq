@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Common Require Import config.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
      PCUICClosedTyp. (* Due to reliance on wf Σ instead of closed_env Σ *)
@@ -40,13 +41,13 @@ Ltac solve_discr :=
 
 Definition atom t :=
   match t with
-  | tInd _ _ 
+  | tInd _ _
   | tConstruct _ _ _
   | tFix _ _
   | tCoFix _ _
   | tLambda _ _ _
   | tSort _
-  | tProd _ _ _ 
+  | tProd _ _ _
   | tPrim _ => true
   | _ => false
   end.
@@ -211,7 +212,7 @@ Section Wcbv.
       eval (tLetIn na b0 t b1) res
 
   (** Constant unfolding *)
-  | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
+  | eval_delta c decl body (isdecl : declared_constant_gen (lookup_env Σ) c decl) u res :
       decl.(cst_body) = Some body ->
       eval (subst_instance u body) res ->
       eval (tConst c u) res
@@ -220,16 +221,16 @@ Section Wcbv.
   | eval_iota ci discr c mdecl idecl cdecl u args p brs br res :
     eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
     nth_error brs c = Some br ->
-    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) (ci.(ci_ind), c) mdecl idecl cdecl ->
     #|args| = cstr_arity mdecl cdecl ->
     ci.(ci_npar) = mdecl.(ind_npars) ->
     context_assumptions cdecl.(cstr_args) = context_assumptions br.(bcontext) ->
     eval (iota_red ci.(ci_npar) p args br) res ->
     eval (tCase ci p discr brs) res
- 
+
   (** Proj *)
   | eval_proj p discr args u a res mdecl idecl cdecl pdecl :
-      declared_projection Σ p mdecl idecl cdecl pdecl ->
+      declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
       eval discr (mkApps (tConstruct p.(proj_ind) 0 u) args) ->
       #|args| = cstr_arity mdecl cdecl ->
       nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
@@ -265,11 +266,11 @@ Section Wcbv.
       eval discr (mkApps (tCoFix mfix idx) args) ->
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p discr) res
-  
+
   (** Constructor congruence: we do not allow over-applications *)
-  | eval_construct ind c u mdecl idecl cdecl f args a a' : 
-    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
-    eval f (mkApps (tConstruct ind c u) args) -> 
+  | eval_construct ind c u mdecl idecl cdecl f args a a' :
+    declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
+    eval f (mkApps (tConstruct ind c u) args) ->
     #|args| < cstr_arity mdecl cdecl ->
     eval a a' ->
     eval (tApp f a) (mkApps (tConstruct ind c u) (args ++ [a']))
@@ -305,17 +306,17 @@ Section Wcbv.
 
    Variant value_head (nargs : nat) : term -> Type :=
    | value_head_cstr ind c u mdecl idecl cdecl :
-     declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+     declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
      nargs <= cstr_arity mdecl cdecl ->
      value_head nargs (tConstruct ind c u)
    | value_head_ind ind u : value_head nargs (tInd ind u)
    | value_head_cofix mfix idx : value_head nargs (tCoFix mfix idx)
-   | value_head_fix mfix idx rarg fn : 
+   | value_head_fix mfix idx rarg fn :
      cunfold_fix mfix idx = Some (rarg, fn) ->
      nargs <= rarg ->
      value_head nargs (tFix mfix idx).
    Derive Signature NoConfusion for value_head.
- 
+
    Inductive value : term -> Type :=
    | value_atom t : atom t -> value t
    | value_app_nonnil f args : value_head #|args| f -> args <> [] -> All value args -> value (mkApps f args).
@@ -340,19 +341,19 @@ Section Wcbv.
        clear v n. revert args a. fix aux 2. destruct 1. constructor; auto.
        constructor. now eapply value_values_ind. now apply aux.
    Defined.
- 
+
    Lemma value_head_nApp {nargs t} : value_head nargs t -> ~~ isApp t.
    Proof using Type. destruct 1; auto. Qed.
    Hint Resolve value_head_nApp : core.
- 
+
    Lemma isStuckfix_nApp {t args} : isStuckFix t args -> ~~ isApp t.
    Proof using Type. destruct t; auto. Qed.
    Hint Resolve isStuckfix_nApp : core.
- 
+
    Lemma atom_nApp {t} : atom t -> ~~ isApp t.
    Proof using Type. destruct t; auto. Qed.
    Hint Resolve atom_nApp : core.
- 
+
    Lemma value_mkApps_inv t l :
      ~~ isApp t ->
      value (mkApps t l) ->
@@ -363,10 +364,10 @@ Section Wcbv.
      intros. subst.
      - now eapply atom_mkApps in H.
      - intros * isapp appeq. move: (value_head_nApp X) => Ht.
-       right. 
+       right.
        apply mkApps_eq_inj in appeq => //. intuition subst; auto => //.
    Qed.
-   
+
    Lemma value_mkApps_values t l :
      value (mkApps t l) ->
      ~~ isApp t ->
@@ -375,62 +376,9 @@ Section Wcbv.
      intros val not_app.
      now apply value_mkApps_inv in val as [(-> & ?)|[]].
    Qed.
- 
+
    (** The codomain of evaluation is only values: *)
    (*     It means no redex can remain at the head of an evaluated term. *)
- 
-  Inductive red1 : term -> term -> Type :=
-  | red_app_left a a' b :
-     red1 a a' -> red1 (tApp a b) (tApp a' b)
-  | red_app_right a b b' :
-     value a -> red1 b b' -> red1 (tApp a b) (tApp a b')
-  | red_beta na t b a :
-     value a -> red1 (tApp (tLambda na t b) a) (csubst a 0 b)
-  | red_let_in b0 b0' na t b1 :
-      red1 b0 b0' -> red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
-  | red_zeta b0 na t b1 :
-      value b0 -> red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
-  | red_delta decl body c u (isdecl : declared_constant Σ c decl) :
-     decl.(cst_body) = Some body ->
-     red1 (tConst c u) (subst_instance u body)
-  | red_case_in ci p discr discr' brs :
-     red1 discr discr' -> red1 (tCase ci p discr brs) (tCase ci p discr' brs)
-  | red_iota ci c mdecl idecl cdecl u args p brs br :  
-    nth_error brs c = Some br ->
-    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-    #|args| = cstr_arity mdecl cdecl ->
-    ci.(ci_npar) = mdecl.(ind_npars) ->
-    context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
-    All value args ->
-    red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
-  | red_proj_in discr discr' p : 
-    red1 discr discr' -> red1 (tProj p discr) (tProj p discr')
-  | red_proj p args u a mdecl idecl cdecl pdecl :
-    declared_projection Σ p mdecl idecl cdecl pdecl ->
-    #|args| = cstr_arity mdecl cdecl ->
-    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
-    All value args ->
-    red1 (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) a
-  | red_fix mfix idx argsv a fn :
-    All value argsv ->
-    value a ->
-    unfold_fix mfix idx = Some (#|argsv|, fn) ->
-    isConstruct_app a = true ->
-    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
-  | red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
-                       (idx : nat) (args : list term) 
-                       (narg : nat) (fn : term),
-                     cunfold_cofix mfix idx = Some (narg, fn) ->
-                     All value args ->
-                     red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
-  | red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
-                       (idx : nat) (p : predicate term) 
-                       (args : list term) (narg : nat) 
-                       (fn : term) (brs : list (branch term)),
-                     cunfold_cofix mfix idx = Some (narg, fn) ->
-                     All value args ->
-                     red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
-  .
 
   (** The codomain of evaluation is only values: *)
   (*     It means no redex can remain at the head of an evaluated term. *)
@@ -441,18 +389,18 @@ Section Wcbv.
 
     - change (tApp ?h ?a) with (mkApps h [a]).
       rewrite -mkApps_app.
-      apply value_mkApps_inv in IHev1; [|easy].      
+      apply value_mkApps_inv in IHev1; [|easy].
       destruct IHev1 as [(-> & _)|[]].
       + apply value_app; auto. len.
         cbn in *. econstructor; tea. cbn; auto.
       + depelim v. rewrite e0 in e. noconf e.
         eapply value_app; auto. econstructor; tea.
           len; lia. apply All_app_inv; auto.
-          
-    - apply value_mkApps_inv in IHev1; [|easy].      
+
+    - apply value_mkApps_inv in IHev1; [|easy].
       destruct IHev1 as [(-> & _)|[]].
       + eapply value_app; cbn; auto. econstructor; tea.
-      + eapply value_app; cbn; auto. econstructor; tea. cbn; len. lia.
+      + eapply value_app; cbn; auto. econstructor; tea. cbn; len.
         eapply All_app_inv; auto.
 
     - destruct (mkApps_elim f' [a']).
@@ -460,7 +408,7 @@ Section Wcbv.
       destruct IHev1 as [?|[]]; intuition subst.
       * rewrite a0 /=.
         rewrite a0 in i. simpl in *.
-        apply (value_app f0 [a']). 
+        apply (value_app f0 [a']).
         destruct f0; simpl in * |- *; try congruence.
         all:try solve [repeat constructor; auto].
         auto.
@@ -486,12 +434,12 @@ Section Wcbv.
     destruct 1.
     - now constructor.
     - now eapply eval_atom.
-    - now eapply eval_atom. 
-    - now eapply eval_atom. 
+    - now eapply eval_atom.
+    - now eapply eval_atom.
   Qed.
 
   Lemma eval_mkApps_Construct ind c u mdecl idecl cdecl f args args' :
-    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    declared_constructor_gen (lookup_env Σ) (ind, c) mdecl idecl cdecl ->
     eval f (tConstruct ind c u) ->
     #|args| <= cstr_arity mdecl cdecl ->
     All2 eval args args' ->
@@ -519,7 +467,7 @@ Section Wcbv.
     - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
       depelim evr. depelim evr.
       rewrite !mkApps_app /=.
-      eapply eval_app_cong; tea. 
+      eapply eval_app_cong; tea.
       eapply IHargs => //.
       rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
       rtoProp; intuition auto.
@@ -537,7 +485,7 @@ Section Wcbv.
     - eapply All2_app_inv_l in evargs as [r1 [r2 [-> [evl evr]]]].
       depelim evr. depelim evr.
       rewrite !mkApps_app /=.
-      eapply eval_app_cong; tea. 
+      eapply eval_app_cong; tea.
       eapply IHargs => //.
       rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
       rtoProp; intuition auto.
@@ -558,11 +506,11 @@ Section Wcbv.
       rewrite !mkApps_app /=.
       destruct cunfold_fix as [[rarg fn]|] eqn:eqc => //.
       len; cbn. move/Nat.leb_le => hrarg.
-      eapply eval_fix_value. 
+      eapply eval_fix_value.
       eapply IHargs => //. unfold isStuckFix. rewrite eqc. apply Nat.leb_le; lia. auto. tea.
       rewrite -(All2_length evl). lia.
   Qed.
-  
+
   Lemma value_head_antimon {n n' f} : n' <= n -> value_head n f -> value_head n' f.
   Proof using Type.
     intros hn []; econstructor; tea. lia. lia.
@@ -592,7 +540,7 @@ Section Wcbv.
     - now constructor.
     - assert (All2 eval args args).
       { clear -X1; induction X1; constructor; auto. }
-      eapply eval_mkApps_cong => //. now eapply value_head_final. 
+      eapply eval_mkApps_cong => //. now eapply value_head_final.
   Qed.
 
   Lemma eval_stuck_fix args argsv mfix idx :
@@ -604,9 +552,9 @@ Section Wcbv.
     move: H. unfold isStuckFix. destruct cunfold_fix as [[rarg fn]|] => //.
     now rewrite (All2_length X).
   Qed.
-  
+
   Lemma stuck_fix_value_inv argsv mfix idx narg fn :
-    value (mkApps (tFix mfix idx) argsv) -> 
+    value (mkApps (tFix mfix idx) argsv) ->
     cunfold_fix mfix idx = Some (narg, fn) ->
     (All value argsv * isStuckFix (tFix mfix idx) argsv).
   Proof using Type.
@@ -620,7 +568,7 @@ Section Wcbv.
     depelim X. rewrite e. intros [= -> ->]. split => //.
     unfold isStuckFix. rewrite e. now apply Nat.leb_le.
   Qed.
-    
+
   Lemma stuck_fix_value_args argsv mfix idx narg fn :
     value (mkApps (tFix mfix idx) argsv) ->
     cunfold_fix mfix idx = Some (narg, fn) ->
@@ -636,17 +584,17 @@ Section Wcbv.
   Lemma closed_beta na t b u : closed (tLambda na t b) -> closed u -> closed (csubst u 0 b).
   Proof using Type. simpl; move/andP => [ct cb] cu. now eapply closed_csubst. Qed.
 
-  Lemma closed_def `{checker_flags} c decl u b : wf Σ -> declared_constant Σ c decl -> 
+  Lemma closed_def `{checker_flags} c decl u b : wf Σ -> declared_constant Σ c decl ->
     cst_body decl = Some b ->
     closed (subst_instance u b).
   Proof using Type.
-    move=> wfΣ Hc Hb.
+    move=> wfΣ Hc Hb. unshelve eapply declared_constant_to_gen in Hc; eauto.
     rewrite PCUICClosed.closedn_subst_instance.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
   Qed.
 
-  Lemma closed_iota ci ind p c u args brs br : 
+  Lemma closed_iota ci ind p c u args brs br :
     forallb (test_branch_k p closedn 0) brs ->
     forallb (closedn 0) p.(pparams) ->
     closed (mkApps (tConstruct ind c u) args) ->
@@ -677,11 +625,11 @@ Section Wcbv.
       rewrite forallb_rev. solve_all. }
     rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm -hl.
     eapply closedn_lift.
-    rewrite inst_case_branch_context_length. 
+    rewrite inst_case_branch_context_length.
     now rewrite Nat.add_0_r in clb.
   Qed.
 
-  Lemma closed_arg f args n a :  
+  Lemma closed_arg f args n a :
     closed (mkApps f args) ->
     nth_error args n = Some a -> closed a.
   Proof using Type.
@@ -690,25 +638,25 @@ Section Wcbv.
     solve_all. eapply All_nth_error in cargs; eauto.
   Qed.
 
-  Lemma closed_unfold_fix mfix idx narg fn : 
+  Lemma closed_unfold_fix mfix idx narg fn :
     closed (tFix mfix idx) ->
     unfold_fix mfix idx = Some (narg, fn) -> closed fn.
   Proof using Type.
     unfold unfold_fix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold fix_subst. clear -Hf. generalize #|mfix|.
-    induction n; simpl; auto. apply/andP; split; auto.
+    induction n; simpl; auto.
     simpl. rewrite fix_subst_length. solve_all.
     eapply All_nth_error in Hf; eauto. unfold test_def in Hf.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.
     discriminate.
   Qed.
 
-  Lemma closed_fix_substl_subst_eq {mfix idx d} : 
+  Lemma closed_fix_substl_subst_eq {mfix idx d} :
     closed (tFix mfix idx) ->
     nth_error mfix idx = Some d ->
     subst0 (fix_subst mfix) (dbody d) = substl (fix_subst mfix) (dbody d).
-  Proof using Type.  
+  Proof using Type.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
     { clear idx.
@@ -729,11 +677,11 @@ Section Wcbv.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 
-  Lemma closed_cofix_substl_subst_eq {mfix idx d} : 
+  Lemma closed_cofix_substl_subst_eq {mfix idx d} :
     closed (tCoFix mfix idx) ->
     nth_error mfix idx = Some d ->
     subst0 (cofix_subst mfix) (dbody d) = substl (cofix_subst mfix) (dbody d).
-  Proof using Type.  
+  Proof using Type.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (cofix_subst mfix).
     { clear idx.
@@ -754,7 +702,7 @@ Section Wcbv.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 
-  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+  Lemma closed_unfold_fix_cunfold_eq mfix idx :
     closed (tFix mfix idx) ->
     unfold_fix mfix idx = cunfold_fix mfix idx.
   Proof using Type.
@@ -763,11 +711,11 @@ Section Wcbv.
     intros cl; f_equal; f_equal.
     now rewrite (closed_fix_substl_subst_eq cl).
   Qed.
-  
-  Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
+
+  Lemma closed_unfold_cofix_cunfold_eq mfix idx :
     closed (tCoFix mfix idx) ->
     unfold_cofix mfix idx = cunfold_cofix mfix idx.
-  Proof using Type.  
+  Proof using Type.
     unfold unfold_cofix, cunfold_cofix.
     destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
@@ -789,14 +737,14 @@ Section Wcbv.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 
-  Lemma closed_unfold_cofix mfix idx narg fn : 
+  Lemma closed_unfold_cofix mfix idx narg fn :
     closed (tCoFix mfix idx) ->
     unfold_cofix mfix idx = Some (narg, fn) -> closed fn.
   Proof using Type.
     unfold unfold_cofix. destruct (nth_error mfix idx) eqn:Heq.
     move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold cofix_subst. clear -Hf. generalize #|mfix|.
-    induction n; simpl; auto. apply/andP; split; auto.
+    induction n; simpl; auto.
     simpl. rewrite cofix_subst_length. solve_all.
     eapply All_nth_error in Hf; eauto. unfold test_def in Hf.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.
@@ -812,6 +760,7 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
+      apply declared_constant_from_gen; eauto.
     - apply IHev2.
       eapply closed_iota; tea.
       move/andP: Hc => [] /andP [] //.
@@ -883,11 +832,11 @@ Section Wcbv.
         now rewrite mkApps_app.
       * easy.
   Qed.
-  
+
   Set Equations With UIP.
-  
+
   Scheme Induction for le Sort Prop.
-  
+
   Lemma le_irrel n m (p q : n <= m) : p = q.
   Proof using Type.
     revert q.
@@ -905,19 +854,18 @@ Section Wcbv.
     eqdec_proof.
   Qed.
 
-  Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor Σ ind mdecl idecl cdecl) : d = d'.
+  Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor_gen (lookup_env Σ) ind mdecl idecl cdecl) : d = d'.
   Proof using Type.
     destruct d, d'.
     destruct d, d0.
-
-    assert (d0 = d) as -> by now apply uip.
+    assert (d0 = d) as -> by apply uip.
     assert (e1 = e2) as -> by now apply uip.
     assert (e = e0) as -> by now apply uip.
     reflexivity.
   Qed.
 
   Lemma declared_projection_unique {ind mdecl idecl cdecl pdecl}
-     (d d' : declared_projection Σ ind mdecl idecl cdecl pdecl) : d = d'.
+     (d d' : declared_projection_gen (lookup_env Σ) ind mdecl idecl cdecl pdecl) : d = d'.
   Proof using Type.
     destruct d, d'.
     rewrite (declared_constructor_unique d d0).
@@ -958,7 +906,7 @@ Section Wcbv.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
         noconf eq1. noconf eq2. noconf IHev1.
         epose proof (declared_constructor_inj d d0) as [-> [-> <-]].
-        pose proof e3. rewrite e in H. noconf H.        
+        pose proof e3. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2). noconf IHev2.
         assert (e = e3) as -> by now apply uip.
         assert (d = d0) as -> by apply declared_constructor_unique.
@@ -994,7 +942,7 @@ Section Wcbv.
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
         noconf H. noconf IHev1.
         exfalso. rewrite e in e0. noconf e0. lia.
-      + specialize (IHev1 _ ev'1). noconf IHev1.         
+      + specialize (IHev1 _ ev'1). noconf IHev1.
         exfalso.
         rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
@@ -1071,7 +1019,7 @@ Section Wcbv.
     - depelim ev'; try go.
       now assert (i0 = i) as -> by now apply uip.
   Qed.
-  
+
   Lemma eval_deterministic {t v v'} :
     eval t v ->
     eval t v' ->
@@ -1090,7 +1038,7 @@ Section Wcbv.
     pose proof (eval_unique_sig ev ev').
     now noconf H.
   Qed.
-  
+
   Set SsrRewrite.
 
   Lemma eval_LetIn {n b ty t v} :
@@ -1108,7 +1056,7 @@ Section Wcbv.
                  end.
   Proof using Type.
     intros H; depelim H.
-    - exists decl.
+    - exists decl. apply declared_constant_from_gen in isdecl.
       split; [easy|].
       now rewrite e.
     - easy.
@@ -1119,3 +1067,148 @@ End Wcbv.
 Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
 Arguments eval_unique {_ _ _}.
+
+Reserved Notation " Σ ⊢ t ⇝ᵥ u " (at level 50, t, u at next level).
+
+Local Open Scope type_scope.
+
+Inductive wcbv_red1 (Σ: global_env) : term -> term -> Type :=
+| wcbv_red_app_left a a' b :
+  Σ ⊢ a ⇝ᵥ a' -> Σ ⊢ tApp a b ⇝ᵥ tApp a' b
+| wcbv_red_app_right a b b' :
+  value Σ a -> Σ ⊢ b ⇝ᵥ b' -> Σ ⊢ tApp a b ⇝ᵥ tApp a b'
+| wcbv_red_beta na t b a :
+  value Σ a -> Σ ⊢ tApp (tLambda na t b) a ⇝ᵥ csubst a 0 b
+| wcbv_red_let_in b0 b0' na t b1 :
+  Σ ⊢ b0 ⇝ᵥ b0' -> Σ ⊢ tLetIn na b0 t b1 ⇝ᵥ tLetIn na b0' t b1
+| wcbv_red_zeta b0 na t b1 :
+  value Σ b0 -> Σ ⊢ tLetIn na b0 t b1 ⇝ᵥ csubst b0 0 b1
+| wcbv_red_delta decl body c u (isdecl : declared_constant Σ c decl) :
+   decl.(cst_body) = Some body ->
+  Σ ⊢ tConst c u ⇝ᵥ subst_instance u body
+| wcbv_red_case_in ci p discr discr' brs :
+  Σ ⊢ discr ⇝ᵥ discr' -> Σ ⊢ tCase ci p discr brs ⇝ᵥ tCase ci p discr' brs
+| wcbv_red_iota ci c mdecl idecl cdecl u args p brs br :
+  nth_error brs c = Some br ->
+  declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+  #|args| = cstr_arity mdecl cdecl ->
+  ci.(ci_npar) = mdecl.(ind_npars) ->
+  context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
+  All (value Σ) args ->
+  Σ ⊢ tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs ⇝ᵥ iota_red ci.(ci_npar) p args br
+| wcbv_red_proj_in discr discr' p :
+  Σ ⊢ discr ⇝ᵥ discr' -> Σ ⊢ tProj p discr ⇝ᵥ tProj p discr'
+| wcbv_red_proj p args u a mdecl idecl cdecl pdecl :
+  declared_projection_gen (lookup_env Σ) p mdecl idecl cdecl pdecl ->
+  #|args| = cstr_arity mdecl cdecl ->
+  nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
+  All (value Σ) args ->
+  Σ ⊢ tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args) ⇝ᵥ a
+| wcbv_red_fix mfix idx argsv a fn :
+  All (value Σ) argsv ->
+  value Σ a ->
+  unfold_fix mfix idx = Some (#|argsv|, fn) ->
+  isConstruct_app a = true ->
+  Σ ⊢ tApp ((mkApps (tFix mfix idx) argsv)) a ⇝ᵥ tApp (mkApps fn argsv) a
+| wcbv_red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
+                     (idx : nat) (args : list term)
+                     (narg : nat) (fn : term),
+                   cunfold_cofix mfix idx = Some (narg, fn) ->
+                   All (value Σ) args ->
+                   Σ ⊢ tProj p (mkApps (tCoFix mfix idx) args) ⇝ᵥ tProj p (mkApps fn args)
+| wcbv_red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
+                     (idx : nat) (p : predicate term)
+                     (args : list term) (narg : nat)
+                     (fn : term) (brs : list (branch term)),
+                   cunfold_cofix mfix idx = Some (narg, fn) ->
+                   All (value Σ) args ->
+                   Σ ⊢ tCase ip p (mkApps (tCoFix mfix idx) args) brs ⇝ᵥ tCase ip p (mkApps fn args) brs
+where " Σ ⊢ t ⇝ᵥ u " := (wcbv_red1 Σ t u).
+
+
+Lemma wcbv_red1_closed {cf : checker_flags} {Σ t t'} :
+  wf Σ ->
+  closed t -> Σ ⊢ t ⇝ᵥ t' -> closed t'.
+Proof.
+  intros Hwf Hcl Hred. induction Hred; cbn in *; solve_all.
+  all: eauto using closed_csubst, closed_def.
+  - eapply closed_iota; eauto. solve_all. unfold test_predicate_k in H. solve_all.
+    now rewrite e0 /cstr_arity -e1 -e2.
+  - eauto using closed_arg.
+  - rewrite !closedn_mkApps in H |- *. solve_all.
+    eapply closed_unfold_fix; tea.
+  - rewrite !closedn_mkApps in Hcl |- *. solve_all.
+    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
+    eapply closed_unfold_cofix with (narg := narg); eauto.
+    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto.
+  - rewrite !closedn_mkApps in H1 |- *. solve_all.
+    unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; inversion e.
+    eapply closed_unfold_cofix with (narg := narg); eauto.
+    unfold unfold_cofix. rewrite E. subst. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto.
+Qed.
+
+Lemma wcbv_red1_red1 {cf : checker_flags} {Σ t t' } :
+  closed t ->
+  Σ ⊢ t ⇝ᵥ t' -> Σ ;;; [] |- t ⇝ t'.
+Proof.
+  intros Hcl Hred.
+  induction Hred. all: cbn in *; solve_all.
+  1-10: try econstructor; eauto using wcbv_red1_closed.
+  1,2: now rewrite closed_subst; eauto; econstructor; eauto.
+  - now rewrite e0 /cstr_arity -e1 -e2.
+  - rewrite !tApp_mkApps -!mkApps_app. econstructor. eauto.
+    unfold is_constructor. now rewrite nth_error_app2 // Nat.sub_diag.
+  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
+    inversion e; subst.
+    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in Hcl. solve_all.
+  - unfold cunfold_cofix in e. destruct nth_error as [d | ] eqn:E; try congruence.
+    inversion e; subst.
+    econstructor. unfold unfold_cofix. rewrite E. repeat f_equal.
+    eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in H1. solve_all.
+Qed.
+
+
+Global Hint Constructors value eval : wcbv.
+Global Hint Resolve value_final : wcbv.
+
+Lemma wcbv_red1_eval {cf : checker_flags} {Σ : global_env_ext } t t' v : wf Σ ->
+  closed t ->
+  Σ ⊢ t ⇝ᵥ t' -> eval Σ t' v -> eval Σ t v.
+Proof.
+  intros Hwf Hty Hred Heval.
+  induction Hred in Heval, v, Hty |- *; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6:now econstructor; eauto with wcbv.
+    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. 1-3,6: now econstructor; eauto with wcbv.
+    eapply eval_construct; tea. eauto. eapply eval_app_cong; eauto with wcbv.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
+  - unshelve eapply declared_constant_to_gen in isdecl; eauto.
+    inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - inversion Heval; subst. all:cbn in Hty; solve_all. all: try now econstructor; eauto with wcbv.
+  - eapply eval_iota. eapply eval_mkApps_Construct; tea.
+    unshelve eapply declared_constructor_to_gen; eauto.
+    now econstructor. unfold cstr_arity. rewrite e0.
+    rewrite (PCUICGlobalEnv.declared_minductive_ind_npars d).
+    now rewrite -(declared_minductive_ind_npars d) /cstr_arity.
+    all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
+    unshelve eapply declared_constructor_to_gen; eauto.
+  - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
+  - all:cbn in Hty; solve_all. eapply eval_proj; tea.
+    eapply value_final. eapply value_app; auto. econstructor; tea. eapply d.
+    rewrite e; lia.
+  - eapply eval_fix; eauto.
+    + eapply value_final. eapply value_app; auto. econstructor.
+      rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity. 2:eauto.
+      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
+    + eapply value_final; eauto.
+    + rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity.
+      cbn in Hty. rewrite closedn_mkApps in Hty. solve_all.
+      Unshelve. all: now econstructor.
+  - destruct p as [[] ?]. eapply eval_cofix_proj; tea.
+    eapply value_final, value_app. now constructor. auto.
+  - eapply eval_cofix_case; tea.
+    eapply value_final, value_app. now constructor. auto.
+Qed.

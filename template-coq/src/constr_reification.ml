@@ -87,8 +87,8 @@ struct
   let cposI = resolve "metacoq.pos.xI"
   let cposO = resolve "metacoq.pos.xO"
 
-  let cSome_instance = resolve "metacoq.option_instance.some"
-  let cNone_instance = resolve "metacoq.option_instance.none"
+  let cSome_instance = resolve_ref "metacoq.option_instance.some"
+  let cNone_instance = resolve_ref "metacoq.option_instance.none"
 
   let unit_tt = resolve "metacoq.unit.intro"
 
@@ -244,6 +244,9 @@ struct
 
   let (tcbv, tcbn, thnf, tall, tlazy, tunfold) =
     (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")
+
+  let (thints_local, thints_export, thints_global) =
+    (template "hints.local", template "hints.export", template "hints.global")
 
 
   let constr_equall h t = Constr.equal h (Lazy.force t)

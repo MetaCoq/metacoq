@@ -1,5 +1,34 @@
 all: coq template-coq plugin
 
+_PluginProject: _PluginProject.in metacoq-config
+	cat metacoq-config > _PluginProject
+	cat _PluginProject.in >> _PluginProject
+
+_CoqProject: _CoqProject.in metacoq-config
+	cat metacoq-config > _CoqProject
+	cat _CoqProject.in >> _CoqProject
+
+_TemplateCoqProject: _TemplateCoqProject.in metacoq-config
+	cat metacoq-config > _TemplateCoqProject
+	cat _TemplateCoqProject.in >> _TemplateCoqProject
+
+
+Makefile.coq: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.coq
+
+Makefile.plugin: _PluginProject
+	coq_makefile -f _PluginProject -o Makefile.plugin
+# Avoid conflicting dependency file creation for the template plugin
+	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
+
+Makefile.template: _TemplateCoqProject
+	coq_makefile -f _TemplateCoqProject -o Makefile.template
+# Avoid conflicting dependency file creation for the template plugin
+	sed -e s/coqdeps/coqdeps.template/g Makefile.template > Makefile.template.tmp && mv -f Makefile.template.tmp Makefile.template
+
+.merlin: Makefile.plugin
+	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
+
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
@@ -41,21 +70,30 @@ mrproper:
 	rm -f Makefile.plugin
 	rm -f Makefile.template
 
-Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
-
-Makefile.plugin: _PluginProject
-	coq_makefile -f _PluginProject -o Makefile.plugin
-# Avoid conflicting dependency file creation for the template plugin
-	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
-
-Makefile.template: _TemplateCoqProject
-	coq_makefile -f _TemplateCoqProject -o Makefile.template
-# Avoid conflicting dependency file creation for the template plugin
-	sed -e s/coqdeps/coqdeps.template/g Makefile.template > Makefile.template.tmp && mv -f Makefile.template.tmp Makefile.template
-
-.merlin: Makefile.plugin
-	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
-
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
+
+PLUGIN_PROJECT_BLACKLIST := \
+	carryType \
+	coreTactics \
+	depElim \
+	floatClass \
+	init \
+	mCUint63 \
+	noConfusion \
+	wf \
+	#
+
+space := $(subst ,, )
+
+PLUGIN_PROJECT_BLACKLIST_SED:=\($(subst $(space),\|,$(PLUGIN_PROJECT_BLACKLIST))\)\.\(ml\|mli\)
+
+.PHONY: update-_PluginProject.in
+update-_PluginProject.in:
+	@echo 'WARNING: This target only works correctly when gen-src has been populated from making Extraction.vo and contains no outdated .ml{,i} files'
+	contents="$$(cat _PluginProject.in | grep -v '^\(# \|\)gen-src/.*\.\(mli\|ml\)$$')"; \
+	line="$$(printf "%s\n" "$${contents}" | grep -n "^# Generated" | head -1 | cut -d: -f1)"; \
+	{ printf "%s\n" "$${contents}" | head -n$${line}; \
+	  ls -1 gen-src/*.ml gen-src/*.mli | env LC_COLLATE=C sort | sed 's,^\(gen-src/$(PLUGIN_PROJECT_BLACKLIST_SED)\)$$,# \1,g'; \
+	  printf "%s\n" "$${contents}" | tail -n+$$((line+1)); \
+	} > _PluginProject.in

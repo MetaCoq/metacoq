@@ -1,4 +1,5 @@
-Require Import MetaCoq.Template.Loader MetaCoq.Template.utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Loader.
 Require Import String.
 Set Template Cast Propositions.
 

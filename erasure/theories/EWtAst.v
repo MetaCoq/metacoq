@@ -21,14 +21,14 @@ Section WellScoped.
   Context (Σ : global_context).
 
   Definition lookup_constant kn : option constant_body :=
-    decl <- EGlobalEnv.lookup_env Σ kn;; 
+    decl <- EGlobalEnv.lookup_env Σ kn;;
     match decl with
     | ConstantDecl decl => Some decl
     | InductiveDecl mdecl => None
     end.
-  
+
   Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- EGlobalEnv.lookup_env Σ kn;; 
+    decl <- EGlobalEnv.lookup_env Σ kn;;
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl
@@ -46,24 +46,24 @@ Section WellScoped.
 
   Definition lookup_projection (proj : projection) :=
     '(mdecl, idecl) <- lookup_inductive (fst (fst proj)) ;;
-    pdecl <- List.nth_error idecl.(ind_projs) (snd proj) ;; 
+    pdecl <- List.nth_error idecl.(ind_projs) (snd proj) ;;
     ret (mdecl, idecl, pdecl).
-  
+
   Definition declared_constant id : bool :=
     isSome (lookup_constant id).
-  
+
   Definition declared_minductive mind :=
     isSome (lookup_minductive mind).
-  
+
   Definition declared_inductive ind :=
     isSome (lookup_inductive ind).
-  
+
   Definition declared_constructor kn c :=
     isSome (lookup_constructor kn c).
-  
+
   Definition declared_projection kn :=
     isSome (lookup_projection kn).
-  
+
   Equations well_scoped (n : nat) (t : EAst.term) : bool :=
   { | n, tBox => true
     | n, tRel i := i <? n
@@ -76,10 +76,10 @@ Section WellScoped.
     | n, tApp f u := well_scoped n f && well_scoped n u
     | n, tCase (ind, pars) c brs :=
       declared_inductive ind && well_scoped n c && well_scoped_brs n brs
-    | n, tProj p c := 
+    | n, tProj p c :=
       declared_projection p && well_scoped n c
     | n, tFix mfix idx :=
-      well_scoped_mfix (#|mfix| + n) mfix 
+      well_scoped_mfix (#|mfix| + n) mfix
     | n, tCoFix mfix idx :=
       well_scoped_mfix (#|mfix| + n) mfix }
   where well_scoped_terms (n : nat) (l : list term) : bool :=
@@ -117,15 +117,15 @@ Coercion well_scoped_eterm : eterm >-> is_true.
 Module Constructors.
   Section Constructors.
   Context {Σ : global_context} {n : nat}.
-  
+
   Obligation Tactic := idtac.
   Program Definition tBox : eterm Σ n := tBox.
   Next Obligation. cbn. exact eq_refl. Defined.
-  
-  
+
+
   Program Definition tRel (i : nat) (Hi : i < n) : eterm Σ n := tRel i.
   Next Obligation. cbn; intros. eapply Nat.leb_le, Hi. Defined.
-  
+
   Lemma andP (a b : bool) : a -> b -> a && b.
   Proof. destruct a, b; cbn; intros; try exact eq_refl; try discriminate. Defined.
 
@@ -133,9 +133,9 @@ Module Constructors.
   Next Obligation.
     cbn; intros.
     induction l; cbn. exact eq_refl.
-    apply andP. exact a. exact IHl. 
+    apply andP. exact a. exact IHl.
   Defined.
-  
+
   Program Definition tLambda na (b : eterm Σ (S n)) : eterm Σ n := tLambda na b.
   Next Obligation.
     intros. exact b.
@@ -171,7 +171,7 @@ Module Constructors.
   Program Definition tConst kn (isdecl : declared_constant Σ kn) : eterm Σ n := tConst kn.
 
   Program Definition tConstruct ind k (isdecl : declared_constructor Σ ind k) : eterm Σ n := tConstruct ind k.
-  
+
   Program Definition tCase ci (c : eterm Σ n) (brs : list (∑ args : list name, eterm Σ (#|args| + n)))
     (isdecl : declared_inductive Σ ci.1) : eterm Σ n :=
     tCase ci c (map (fun br : ∑ args, eterm Σ (#|args| + n) => (br.π1, proj1_sig br.π2)) brs).
@@ -202,7 +202,7 @@ Module Constructors.
   Next Obligation.
     cbn; intros. exact mfix.π2.
   Defined.
-  
+
   Program Definition tCoFix (mfix : edefs) idx : eterm Σ n := (tCoFix mfix.π1 idx).
   Next Obligation.
     cbn; intros; exact mfix.π2.
@@ -231,7 +231,7 @@ Module View.
     | tCoFix mfix idx : t (Constructors.tCoFix mfix idx).
     Derive Signature for t.
 
-    Equations view_term {e} (v : t e) : term := 
+    Equations view_term {e} (v : t e) : term :=
     | tBox => EAst.tBox
     | tRel i le => EAst.tRel i
     | tEvar k l => EAst.tEvar k (map eterm_term l)
@@ -255,14 +255,14 @@ Module View.
 
     Lemma view_size_let_body {na} {b : eterm Σ n} {b' : eterm Σ (S n)} : size b' < size (Constructors.tLetIn na b b').
     Proof. cbn. lia. Qed.
-    
+
     Lemma view_size_lambda {na} {b : eterm Σ (S n)} : size b < size (Constructors.tLambda na b).
     Proof. cbn. lia. Qed.
-    
+
   End ViewSizes.
-    
+
 End View.
-    
+
 
 Lemma well_scoped_irr {Σ n t} (ws ws' : well_scoped Σ n t) : ws = ws'.
 Proof. apply uip. Defined.
@@ -379,7 +379,7 @@ Section view.
       rewrite (well_scoped_irr ws ws'); subst ws' t'.
       unshelve econstructor.
       cbn. apply (andb_left (andb_left ws)).
-      
+
     - change t with (eterm_term (t ⧆ andb_right ws)) in t'.
       set (prf := andb_right ws) in *. clearbody prf.
       evar (ws' : well_scoped Σ n t' = true).
@@ -414,7 +414,7 @@ Section test_view.
   Context (Σ : global_context).
   Import View.
 
-  Definition eterm_size : relation (∑ n, eterm Σ n) := 
+  Definition eterm_size : relation (∑ n, eterm Σ n) :=
     MR lt (fun x : ∑ n, eterm Σ n => size x.π2).
 
   Instance wf_size : WellFounded eterm_size.
@@ -422,7 +422,7 @@ Section test_view.
   Obligation Tactic := idtac.
 
   #[derive(eliminator=no)]
-  Equations? test_view (n : nat) (t : eterm Σ n) : bool 
+  Equations? test_view (n : nat) (t : eterm Σ n) : bool
     by wf (n; t) eterm_size :=
     test_view n t with view t := {
       | tBox => true

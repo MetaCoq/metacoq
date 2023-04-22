@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect CRelationClasses.
-From MetaCoq.Template Require Import utils config Universes uGraph.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
      PCUICCases PCUICCumulativity PCUICTyping
@@ -102,7 +103,7 @@ Lemma subst_instance_level_val' u l v
 Proof.
   now apply subst_instance_level_val.
 Qed.
-   
+
 
 Lemma subst_instance_univ0_val' u exprs v
   : val v (subst_instance_univ0 u exprs) = val (subst_instance_valuation u v) exprs.
@@ -155,8 +156,8 @@ Lemma subst_equal_inst_global_inst Σ Re Rle gr napp :
                                     (subst_instance u2 u).
 Proof.
   intros reflRe hRe subr u u1 u2 Ru1u2.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance as [v|]; auto using subst_equal_inst_inst.
+  unfold R_global_instance, R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|]; auto using subst_equal_inst_inst.
   induction u in v |- *; cbnr; try now constructor.
   - destruct v; simpl; auto.
     split; auto.
@@ -262,7 +263,7 @@ Proof.
   subst val1.
   apply map_spec in ine'' as [e0 [ine0 eq]].
   specialize (He e0). subst e''.
-  etransitivity. 
+  etransitivity.
   - eassumption.
   - eapply H.
     eapply map_spec.
@@ -332,7 +333,7 @@ Lemma subst_instance_two_instance u1 u2 (u : Instance.t) :
   subst_instance u1 (subst_instance u2 u)
   = subst_instance (subst_instance u1 u2) u.
 Proof.
-  rewrite /subst_instance /= /subst_instance_instance. 
+  rewrite /subst_instance /= /subst_instance_instance.
   rewrite map_map.
   apply map_ext, subst_instance_level_two.
 Qed.
@@ -436,7 +437,7 @@ Lemma is_prop_subst_instance_univ u l
   : Universe.is_prop (subst_instance_univ u l) = Universe.is_prop l.
 Proof.
   destruct l; cbnr.
-Qed.  
+Qed.
 
 Lemma is_sprop_subst_instance_univ u l
   : Universe.is_sprop (subst_instance_univ u l) = Universe.is_sprop l.
@@ -475,7 +476,7 @@ Proof.
 Qed.
 
 Lemma consistent_instance_declared {cf: checker_flags} lvs φ uctx u :
-  consistent_instance lvs φ uctx u -> 
+  consistent_instance lvs φ uctx u ->
   forallb (fun l => LS.mem l lvs) u.
 Proof.
   unfold consistent_instance. destruct uctx as [|ctx].
@@ -484,7 +485,7 @@ Proof.
 Qed.
 
 Lemma monomorphic_level_notin_AUContext s φ :
-  ~ LS.In (Level.Level s) (AUContext.levels φ).
+  ~ LS.In (Level.level s) (AUContext.levels φ).
 Proof.
   destruct φ as [φ1 φ2].
   intro H. apply (proj1 (LevelSetProp.of_list_1 _ _)) in H. cbn in H.
@@ -545,13 +546,13 @@ Qed.
 
 Definition wf_ext_wk {cf : checker_flags} (Σ : global_env_ext)
   := wf Σ.1 × on_udecl_prop Σ.1 Σ.2.
-  
+
 Lemma wf_ext_wk_wf {cf:checker_flags} Σ : wf_ext_wk Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
 
 #[global]
 Hint Resolve wf_ext_wk_wf : core.
-  
+
 Lemma not_var_global_ext_levels {cf : checker_flags} Σ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx)) :
   LS.For_all (negb ∘ Level.is_var) (global_ext_levels (Σ, Monomorphic_ctx)).
 Proof. apply hΣ. Qed.
@@ -562,7 +563,7 @@ Lemma levels_global_constraint {cf : checker_flags} Σ (hΣ : wf Σ) c :
     /\ LS.In c.2 (global_levels Σ).
 Proof.
   intros inc.
-  destruct hΣ. destruct o. specialize (H c inc). 
+  destruct hΣ. destruct o. specialize (H c inc).
   destruct c as [[l eq] r]; apply H.
 Qed.
 
@@ -815,14 +816,14 @@ Definition precompose_subst_instance__1 Rle u i i'
 Definition precompose_subst_instance__2 Rle u i i'
   := snd (precompose_subst_instance Rle u i i').
 
-Lemma subst_instance_level_expr_make u l : 
+Lemma subst_instance_level_expr_make u l :
   subst_instance_level_expr u (LevelExpr.make l) = LevelExpr.make (subst_instance_level u l).
 Proof.
   destruct l; simpl; auto.
   rewrite nth_nth_error. now destruct nth_error.
 Qed.
 
-Lemma subst_instance_make'_make u l : 
+Lemma subst_instance_make'_make u l :
   subst_instance u (LevelAlgExpr.make (LevelExpr.make l)) =
   LevelAlgExpr.make (LevelExpr.make (subst_instance_level u l)).
 Proof.
@@ -834,8 +835,8 @@ Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
   <~> R_global_instance Σ (precompose Re (subst_instance_univ u))
     (precompose Rle (subst_instance_univ u)) gr napp i i'.
 Proof.
-  unfold R_global_instance, R_opt_variance, subst_instance.
-  destruct global_variance as [v|]; eauto using precompose_subst_instance.
+  unfold R_global_instance, R_global_instance_gen, R_opt_variance, subst_instance.
+  destruct global_variance_gen as [v|]; eauto using precompose_subst_instance.
   induction i in i', v |- *; destruct i', v; simpl; try split; auto.
   - destruct (IHi i' []). intros; auto.
   - destruct (IHi i' []). intros; auto.
@@ -910,7 +911,7 @@ Proof.
   rewrite In_subst_instance.
   rewrite spec_map_succ. split.
   * intros [x' [hin eq]].
-    subst. 
+    subst.
     apply spec_map_succ in hin as [y [int eq]].
     subst x'. exists (subst_instance u y).
     split; auto.
@@ -924,11 +925,11 @@ Proof.
     rewrite spec_map_succ. split.
     - exists y; auto.
     - destruct y as [[] ?]; cbn; auto.
-      now destruct nth_error. 
+      now destruct nth_error.
 Qed.
 
 Lemma monomorphic_level_notin_levels_of_udecl s udecl :
-  LevelSet.In (Level.Level s) (levels_of_udecl udecl) -> False.
+  LevelSet.In (Level.level s) (levels_of_udecl udecl) -> False.
 Proof.
   destruct udecl; cbn.
   - lsets.
@@ -965,9 +966,9 @@ Proof.
   apply sup_subst_instance_univ0.
 Qed.
 
-Lemma subst_instance_extended_subst u Γ : 
-  subst_instance u (extended_subst Γ 0) = 
-  extended_subst (subst_instance u Γ) 0. 
+Lemma subst_instance_extended_subst u Γ :
+  subst_instance u (extended_subst Γ 0) =
+  extended_subst (subst_instance u Γ) 0.
 Proof.
   rewrite /subst_instance /= /subst_instance_list /subst_instance /=.
   induction Γ as [|[na [b|] ty] Γ]; auto; rewrite /=; len; f_equal; auto.
@@ -1058,7 +1059,7 @@ Definition map_constructor_body' f c :=
 
 Global Instance subst_instance_constructor_body : UnivSubst constructor_body
   := fun u => map_constructor_body' (subst_instance u).
-  
+
 Definition map_one_inductive_body' fu f oib :=
 	{|
     ind_name := oib.(ind_name);
@@ -1084,19 +1085,19 @@ Definition map_mutual_inductive_body' fu f mib :=
 Global Instance subst_instance_mutual_inductive_body : UnivSubst mutual_inductive_body
   := fun u => map_mutual_inductive_body' (subst_instance u) (subst_instance u).
 
-Lemma subst_instance_cstr_args u cdecl : 
+Lemma subst_instance_cstr_args u cdecl :
   cstr_args (subst_instance u cdecl) =
   subst_instance u (cstr_args cdecl).
 Proof. reflexivity. Qed.
 
-Lemma map_fold_context_k {term term' term''} (f : term' -> term) (g : nat -> term'' -> term') (Γ : list (BasicAst.context_decl term'')) : 
+Lemma map_fold_context_k {term term' term''} (f : term' -> term) (g : nat -> term'' -> term') (Γ : list (BasicAst.context_decl term'')) :
   map_context f (fold_context_k g Γ) = fold_context_k (fun i => f ∘ (g i)) Γ.
 Proof.
   now rewrite /map_context map_fold_context_k.
 Qed.
 
 Lemma subst_instance_subst_context u s k ctx :
-  subst_instance u (subst_context s k ctx) = 
+  subst_instance u (subst_context s k ctx) =
   subst_context (subst_instance u s) k (subst_instance u ctx).
 Proof.
   rewrite /subst_instance /= /subst_instance /subst_instance_context map_fold_context_k.
@@ -1106,7 +1107,7 @@ Proof.
 Qed.
 
 Lemma subst_instance_subst_telescope u s k ctx :
-  subst_instance u (subst_telescope s k ctx) = 
+  subst_instance u (subst_telescope s k ctx) =
   subst_telescope (subst_instance u s) k (subst_instance u ctx).
 Proof.
   rewrite /subst_instance /= /subst_instance /subst_instance_context /= /subst_telescope /=
@@ -1117,7 +1118,7 @@ Proof.
 Qed.
 
 Lemma subst_instance_lift_context u n k ctx :
-  subst_instance u (lift_context n k ctx) = 
+  subst_instance u (lift_context n k ctx) =
   lift_context n k (subst_instance u ctx).
 Proof.
   rewrite /subst_instance /= /subst_instance_context map_fold_context_k.
@@ -1194,14 +1195,14 @@ Proof.
 Qed.
 
 Lemma map2_set_binder_name_map bctx f Γ :
-  map2 set_binder_name bctx (map_context f Γ) = 
+  map2 set_binder_name bctx (map_context f Γ) =
   map_context f (map2 set_binder_name bctx Γ).
 Proof.
   now rewrite /map_context map_map2 map2_map_r.
 Qed.
 
 Lemma subst_instance_case_branch_context ind mdecl u p bctx cdecl :
-  subst_instance u (case_branch_context ind mdecl p bctx cdecl) = 
+  subst_instance u (case_branch_context ind mdecl p bctx cdecl) =
   case_branch_context ind mdecl (subst_instance u p) bctx cdecl.
 Proof.
   unfold case_branch_context, case_branch_context_gen.
@@ -1212,7 +1213,7 @@ Proof.
 Qed.
 
 Lemma subst_instance_case_predicate_context ind mdecl idecl p u :
-  subst_instance u (case_predicate_context ind mdecl idecl p) = 
+  subst_instance u (case_predicate_context ind mdecl idecl p) =
   case_predicate_context ind mdecl idecl (subst_instance u p).
 Proof.
   unfold case_predicate_context, case_predicate_context_gen.
@@ -1245,7 +1246,7 @@ Proof.
 Qed.
 
 Lemma subst_instance_expand_lets u Γ t :
-  subst_instance u (expand_lets Γ t) = 
+  subst_instance u (expand_lets Γ t) =
   expand_lets (subst_instance u Γ) (subst_instance u t).
 Proof.
   rewrite /expand_lets /expand_lets_k.
@@ -1258,7 +1259,7 @@ Qed.
 #[global] Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
 
 Lemma subst_instance_expand_lets_ctx u Γ Δ :
-  subst_instance u (expand_lets_ctx Γ Δ) = 
+  subst_instance u (expand_lets_ctx Γ Δ) =
   (expand_lets_ctx (subst_instance u Γ) (subst_instance u Δ)).
 Proof.
   now rewrite /expand_lets_ctx /expand_lets_k_ctx; substu; len.
@@ -1271,18 +1272,18 @@ Proof.
   now rewrite /forget_types map_map_compose /=.
 Qed.
 
-Lemma subst_instance_case_branch_type {cf : checker_flags} {Σ} {wfΣ : wf Σ} u (ci : case_info) mdecl idecl p predctx br i cdecl : 
-  let ptm := 
-    it_mkLambda_or_LetIn predctx (preturn p) 
+Lemma subst_instance_case_branch_type {cf : checker_flags} {Σ} {wfΣ : wf Σ} u (ci : case_info) mdecl idecl p predctx br i cdecl :
+  let ptm :=
+    it_mkLambda_or_LetIn predctx (preturn p)
   in
   let p' := subst_instance u p in
   let ptm' :=
-    it_mkLambda_or_LetIn 
+    it_mkLambda_or_LetIn
       (subst_instance u predctx)
       (preturn p') in
   case_branch_type ci mdecl idecl
-     (subst_instance u p) 
-     (map_branch (subst_instance u) id br) 
+     (subst_instance u p)
+     (map_branch (subst_instance u) id br)
      ptm' i cdecl =
   map_pair (subst_instance u) (subst_instance u)
   (case_branch_type ci mdecl idecl p br ptm i cdecl).
@@ -1291,7 +1292,7 @@ Proof.
   rewrite /case_branch_type /case_branch_type_gen /map_pair /=.
   rewrite subst_instance_case_branch_context //.
   f_equal; substu.
-  f_equal. 
+  f_equal.
   rewrite map_app. f_equal.
   + rewrite !map_map_compose. apply map_ext => x.
     substu.
@@ -1317,7 +1318,7 @@ Qed.
 Lemma subst_instance_wf_branch u cdecl br :
   wf_branch cdecl br ->
   wf_branch cdecl (map_branch (subst_instance u) id br).
-Proof. 
+Proof.
   now unfold wf_branch, wf_branch_gen.
 Qed.
 
@@ -1332,17 +1333,17 @@ Qed.
   subst_instance_wf_branch subst_instance_wf_branches : pcuic.
 
 Lemma subst_instance_predicate_set_pparams u p params :
-  subst_instance u (set_pparams p params) = 
+  subst_instance u (set_pparams p params) =
   set_pparams (subst_instance u p) (List.map (subst_instance u) params).
 Proof. reflexivity. Qed.
 
 (* Lemma subst_instance_predicate_set_pcontext u p pcontext :
-  subst_instance u (set_pcontext p pcontext) = 
+  subst_instance u (set_pcontext p pcontext) =
   set_pcontext (subst_instance u p) (subst_instance u pcontext).
 Proof. reflexivity. Qed. *)
 
 Lemma subst_instance_predicate_set_preturn u p pret :
-  subst_instance u (set_preturn p pret) = 
+  subst_instance u (set_preturn p pret) =
   set_preturn (subst_instance u p) (subst_instance u pret).
 Proof. reflexivity. Qed.
 
@@ -1364,7 +1365,7 @@ Proof.
     reflexivity.
   - cbn. rewrite subst_instance_mkApps. cbn.
     rewrite iota_red_subst_instance.
-    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)). 
+    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)).
     eapply red_iota; eauto with pcuic.
     * rewrite nth_error_map H //.
     * simpl. now len.
@@ -1374,7 +1375,7 @@ Proof.
       * inversion H.
         rewrite nth_error_map E. cbn.
         destruct d. cbn in *. cbn in *; try congruence.
-        f_equal. f_equal. 
+        f_equal. f_equal.
         now rewrite subst_instance_subst fix_subst_instance_subst.
       * inversion H.
     + unfold is_constructor in *.
@@ -1413,7 +1414,7 @@ Proof.
     eapply case_red_return; eauto with pcuic.
     rewrite subst_instance_app in IHX0.
     now rewrite -inst_case_predicate_context_subst_instance.
-  - cbn. econstructor; eauto with pcuic. 
+  - cbn. econstructor; eauto with pcuic.
     * eapply OnOne2_map. eapply OnOne2_impl; [eassumption | pcuicfo];
       unfold on_Trel; simpl; intuition eauto.
       rewrite /map_branch /id.
@@ -1620,41 +1621,41 @@ Qed.
 
 Lemma in_var_global_ext {cf : checker_flags} n Σ :
   wf Σ.1 ->
-  LevelSet.In (Level.Var n) (global_ext_levels Σ) -> 
-  LevelSet.In (Level.Var n) (levels_of_udecl Σ.2).
+  LevelSet.In (Level.lvar n) (global_ext_levels Σ) ->
+  LevelSet.In (Level.lvar n) (levels_of_udecl Σ.2).
 Proof.
   intros wfΣ Hin.
   eapply LevelSet.union_spec in Hin.
   destruct Hin; auto.
   eapply not_var_global_levels in wfΣ.
-  specialize (wfΣ (Level.Var n) H).
+  specialize (wfΣ (Level.lvar n) H).
   now simpl in wfΣ.
 Qed.
 
 Lemma monomorphic_level_in_global_ext l Σ :
-  LevelSet.In (Level.Level l) (global_ext_levels Σ) ->
-  LevelSet.In (Level.Level l) (global_levels Σ).
+  LevelSet.In (Level.level l) (global_ext_levels Σ) ->
+  LevelSet.In (Level.level l) (global_levels Σ).
 Proof.
   unfold global_ext_levels.
   intros [hin|hin] % LevelSet.union_spec.
   - now eapply monomorphic_level_notin_levels_of_udecl in hin.
   - apply hin.
-Qed. 
+Qed.
 
 Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs u s :
    wf Σ ->
    wf_universe Σ s ->
    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-   wf_universe (Σ.1, univs) (subst_instance u s). 
+   wf_universe (Σ.1, univs) (subst_instance u s).
 Proof.
   destruct s as [| | t]; cbnr.
   intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
   destruct l as [|s|n']; simpl; auto.
   - apply global_ext_levels_InSet.
-  - specialize (Hl (Level.Level s, n) inl).
+  - specialize (Hl (Level.level s, n) inl).
     simpl in Hl. apply monomorphic_level_in_global_ext in Hl.
     eapply LS.union_spec. now right.
-  - specialize (Hl (Level.Var n', n) inl).
+  - specialize (Hl (Level.lvar n', n) inl).
     eapply LS.union_spec in Hl as [Hl|Hl].
     + red in Hu.
       unfold levels_of_udecl in Hl.
@@ -1678,7 +1679,7 @@ Lemma global_context_set_sub_ext Σ φ :
 Proof.
   split.
   - cbn. unfold global_ext_levels. cbn.
-    unfold global_levels. 
+    unfold global_levels.
     intros x hin. apply LevelSet.union_spec; right.
     now apply LevelSet.union_spec; left.
   - apply ConstraintSetProp.union_subset_2.
@@ -1713,9 +1714,10 @@ Section SubstIdentity.
     declared_minductive Σ mind mdecl ->
     wf_ext_wk (Σ, ind_universes mdecl).
   Proof using Type.
-    intros wfΣ decli.
+    intros wfΣ decli. eapply declared_minductive_to_gen in decli.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
     red. simpl. split; auto.
+    Unshelve. all:eauto.
   Qed.
 
   Lemma declared_inductive_wf_global_ext Σ mdecl mind :
@@ -1723,9 +1725,10 @@ Section SubstIdentity.
     declared_minductive Σ mind mdecl ->
     wf_global_ext Σ (ind_universes mdecl).
   Proof using Type.
-    intros wfΣ decli.
+    intros wfΣ decli. eapply declared_minductive_to_gen in decli.
     split; auto.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
+    Unshelve. all:eauto.
   Qed.
 
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
@@ -1734,8 +1737,8 @@ Section SubstIdentity.
     wf Σ ->
     LevelSet.In l (LevelSet.union
      (fold_right LevelSet.add LevelSet.empty
-        (unfold n Level.Var)) (global_levels Σ)) ->
-    subst_instance_level (unfold n Level.Var) l = l.
+        (unfold n Level.lvar)) (global_levels Σ)) ->
+    subst_instance_level (unfold n Level.lvar) l = l.
   Proof using Type.
     intros wfΣ lin.
     eapply LevelSet.union_spec in lin.
@@ -1743,7 +1746,7 @@ Section SubstIdentity.
     - apply LevelSet_In_fold_right_add in H.
       destruct l; simpl; auto.
       eapply In_unfold_inj in H; [|congruence].
-      pose proof (proj1 (nth_error_unfold Level.Var n n0) H).
+      pose proof (proj1 (nth_error_unfold Level.lvar n n0) H).
       now rewrite (nth_error_nth _ _ _ H0).
     - eapply not_var_global_levels in wfΣ.
       specialize (wfΣ l H). simpl in wfΣ.
@@ -1765,15 +1768,15 @@ Section SubstIdentity.
       intros i Hi. unfold global_ext_levels.
       apply LevelSet.mem_spec, LevelSet.union_spec. left.
       unfold levels_of_udecl. simpl.
-      rewrite (mapi_unfold Level.Var).
+      rewrite (mapi_unfold Level.lvar).
       eapply LevelSet_In_fold_right_add.
       induction #|univs| in i, Hi |- *; try lia.
       simpl. eapply in_or_app. destruct (eq_dec i n).
       * subst. right; simpl; auto.
       * left; apply IHn; lia.
     - now rewrite mapi_length.
-    - simpl. rewrite (mapi_unfold Level.Var).
-      assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
+    - simpl. rewrite (mapi_unfold Level.lvar).
+      assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.lvar) cst) cst).
       { unfold CS.Equal; intros a.
         unfold subst_instance_cstrs.
         red in wf_glob_ext.
@@ -1781,7 +1784,7 @@ Section SubstIdentity.
         unfold on_udecl_prop in wfext.
         simpl constraints_of_udecl in wfext.
         simpl levels_of_udecl in wfext.
-        rewrite (mapi_unfold Level.Var) in wfext.
+        rewrite (mapi_unfold Level.lvar) in wfext.
         clear indu.
         simpl fst in wfext.
         revert wfext.
@@ -1808,7 +1811,7 @@ Section SubstIdentity.
       eapply CS_For_all_union.
   Qed.
 
-  Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
+  Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.lvar n) (levels_of_udecl Σ.2) ->
     ∑ ctx, Σ.2 = Polymorphic_ctx ctx.
   Proof using cf.
     intros onu lin.
@@ -1837,7 +1840,7 @@ Section SubstIdentity.
       rewrite mapi_unfold in IHu, ina |- *.
       eapply LevelSet_In_fold_right_add in ina.
       eapply In_unfold_inj in ina; try congruence.
-      eapply (nth_error_unfold Level.Var) in ina.
+      eapply (nth_error_unfold Level.lvar) in ina.
       now rewrite (nth_error_nth _ _ _ ina).
   Qed.
 
@@ -1854,7 +1857,7 @@ Section SubstIdentity.
     rewrite eq. simpl.
     rewrite eq in cu. simpl in cu.
     apply LevelSet_In_fold_right_add in cu.
-    unfold AUContext.repr in *. rewrite (mapi_unfold Level.Var) in cu |- *.
+    unfold AUContext.repr in *. rewrite (mapi_unfold Level.lvar) in cu |- *.
     destruct nth_error eqn:hnth.
     * apply nth_error_unfold_inv in hnth. subst; auto.
     * apply nth_error_None in hnth. rewrite unfold_length in hnth.
@@ -1886,7 +1889,7 @@ Section SubstIdentity.
   Lemma consistent_instance_ext_subst_abs_inds Σ decl ind u bodies :
     wf_ext_wk Σ ->
     consistent_instance_ext Σ decl u ->
-    subst_instance (abstract_instance Σ.2) (inds ind u bodies) = 
+    subst_instance (abstract_instance Σ.2) (inds ind u bodies) =
       (inds ind u bodies).
   Proof using Type.
     intros wf cu.
@@ -1909,14 +1912,14 @@ Section SubstIdentity.
     1-2:intros _ l hin%LevelExprSet.singleton_spec; subst l; apply wf_universe_type1;
      now apply LevelExprSet.singleton_spec.
     intros Hl.
-    intros l hin. 
+    intros l hin.
     eapply Universes.spec_map_succ in hin as [x' [int ->]].
     simpl. now specialize (Hl _ int).
   Qed.
 
-  Lemma app_inj {A} (l l' l0 l0' : list A) : 
+  Lemma app_inj {A} (l l' l0 l0' : list A) :
     #|l| = #|l0| ->
-    l ++ l' = l0 ++ l0' -> 
+    l ++ l' = l0 ++ l0' ->
     l = l0 /\ l' = l0'.
   Proof using Type.
     induction l in l', l0, l0' |- *; destruct l0; simpl in * => //; auto.
@@ -1924,7 +1927,7 @@ Section SubstIdentity.
     now destruct (IHl _ _ _ eq eql).
   Qed.
 
-  Lemma subst_abstract_instance_id : 
+  Lemma subst_abstract_instance_id :
     env_prop (fun Σ Γ t T =>
         wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
@@ -1939,14 +1942,14 @@ Section SubstIdentity.
       * f_equal; auto.
         unfold map_decl. simpl. unfold vass. f_equal. intuition auto.
       * unfold map_decl. simpl. unfold vdef. repeat f_equal; intuition auto. }
-     
+
     1:{ rewrite subst_instance_lift. f_equal.
       generalize H. rewrite -H1 /subst_instance /= nth_error_map H /= => [=].
       intros Hdecl. now rewrite -{2}Hdecl. }
 
     all:try (solve [f_equal; eauto; try congruence]).
     all:try (rewrite ?subst_instance_two; f_equal; eapply consistent_instance_ext_subst_abs; eauto).
-      
+
     - now rewrite consistent_instance_ext_subst_abs_univ.
 
     - rewrite consistent_instance_ext_subst_abs_univ //.

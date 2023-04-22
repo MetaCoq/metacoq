@@ -2,6 +2,9 @@ jobs:
   coq:
     needs: []
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-Ubuntu-coq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -11,16 +14,16 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v16
+      uses: cachix/install-nix-action@v20
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
-      uses: cachix/cachix-action@v10
+      uses: cachix/cachix-action@v12
       with:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         extraPullNames: coq, coq-community
@@ -39,6 +42,9 @@ jobs:
     needs:
     - coq
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-Ubuntu-equations-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -48,16 +54,16 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v16
+      uses: cachix/install-nix-action@v20
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
-      uses: cachix/cachix-action@v10
+      uses: cachix/cachix-action@v12
       with:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         extraPullNames: coq, coq-community
@@ -81,6 +87,9 @@ jobs:
     - coq
     - equations
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-Ubuntu-metacoq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      cancel-in-progress: true
     steps:
     - name: Determine which commit to test
       run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
@@ -90,16 +99,16 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v16
+      uses: cachix/install-nix-action@v20
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
-      uses: cachix/cachix-action@v10
+      uses: cachix/cachix-action@v12
       with:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         extraPullNames: coq, coq-community
@@ -119,6 +128,14 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-dev"
         --argstr job "equations"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-utils'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-utils"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-common'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-common"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-template-coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-dev"
         --argstr job "metacoq-template-coq"
@@ -131,9 +148,25 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-dev"
         --argstr job "metacoq-safechecker"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-template-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-erasure'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-dev"
         --argstr job "metacoq-erasure"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-quotation'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-quotation"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-safechecker-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-safechecker-plugin"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-erasure-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.16"
+        --argstr job "metacoq-erasure-plugin"
     - if: steps.stepCheck.outputs.status == 'built'
       name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-dev"
@@ -151,3 +184,4 @@ name: Nix CI for bundle coq-dev
   push:
     branches:
     - master
+    - coq-8.16

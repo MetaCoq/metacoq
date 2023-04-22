@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 
 #[global]
@@ -16,11 +16,11 @@ Qed.
 #[global]
 Hint Rewrite subst_instance_instance_length : len.
 
-Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 
+Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) :
   subst_instance u [] = [].
 Proof. reflexivity. Qed.
 
-Lemma subst_instance_cons {A} {ua : UnivSubst A} u x (xs : list A) : 
+Lemma subst_instance_cons {A} {ua : UnivSubst A} u x (xs : list A) :
   subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
 Proof. reflexivity. Qed.
 

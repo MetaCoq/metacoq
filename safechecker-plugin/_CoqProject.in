@@ -1,0 +1,6 @@
+-R theories MetaCoq.SafeCheckerPlugin
+
+
+theories/SafeTemplateChecker.v
+
+theories/Extraction.v

@@ -1,7 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Common.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Template Require Import Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
+Local Unset Universe Minimization ToSet.
+Local Unset Asymmetric Patterns.
 Import MCMonadNotation.
 
 (** * The Template Monad
@@ -37,6 +40,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Returns the list of globrefs corresponding to a qualid,
    the head is the default one if any. *)
 | tmLocate : qualid -> TemplateMonad (list global_reference)
+| tmLocateModule : qualid -> TemplateMonad (list modpath)
+| tmLocateModType : qualid -> TemplateMonad (list modpath)
 | tmCurrentModPath : unit -> TemplateMonad modpath
 
 (* Quoting and unquoting commands *)
@@ -51,6 +56,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmQuoteUniverses : TemplateMonad ConstraintSet.t
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
 | tmQuoteModule : qualid -> TemplateMonad (list global_reference)
+| tmQuoteModFunctor : qualid -> TemplateMonad (list global_reference)
+| tmQuoteModType : qualid -> TemplateMonad (list global_reference)
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
 | tmMkInductive : bool -> mutual_inductive_entry -> TemplateMonad unit
@@ -58,14 +65,42 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
-(* Rk: This is *Global* Existing Instance, not Local *)
-| tmExistingInstance : global_reference -> TemplateMonad unit
+| tmExistingInstance : hint_locality -> global_reference -> TemplateMonad unit
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
+(** This version of [tmBind] flattens nesting structure; using it in deeply recursive template programs can speed things up drastically *)
+(** We use [tmBind] in the recursive position to avoid quadratic blowup in the number of [tmOptimizedBind]s *)
+Fixpoint tmOptimizedBind@{t u} {A B : Type@{t}} (v : TemplateMonad@{t u} A) : (A -> TemplateMonad@{t u} B) -> TemplateMonad@{t u} B
+  := match v with
+     | tmReturn x => fun f => f x
+     | tmBind v k => fun f => tmOptimizedBind v (fun v => tmBind (k v) f)
+     | tmFail msg => fun _ => tmFail msg
+     | v => tmBind v
+     end.
+
+(** Flatten nested [tmBind] *)
+Fixpoint tmOptimize'@{t u} {A B : Type@{t}} (v : TemplateMonad@{t u} A) : (A -> TemplateMonad@{t u} B) -> TemplateMonad@{t u} B
+  := match v with
+     | tmReturn x => fun f => f x
+     | tmBind v k => fun f => tmOptimize' v (fun v => tmOptimize' (k v) f)
+     | tmFail msg => fun _ => tmFail msg
+     | v => tmBind v
+     end.
+Definition tmOptimize@{t u} {A : Type@{t}} (v : TemplateMonad@{t u} A) : TemplateMonad@{t u} A
+  := tmOptimize' v tmReturn.
+
 (** This allow to use notations of MonadNotation *)
-Global Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+Definition TemplateMonad_UnoptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
+
+Definition TemplateMonad_OptimizedMonad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+  {| ret := @tmReturn ; bind := @tmOptimizedBind |}.
+
+(* We don't want to make the optimized monad an instance, because it blows up performance in some cases *)
+Definition TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+  Eval hnf in TemplateMonad_UnoptimizedMonad.
+Global Existing Instance TemplateMonad_Monad.
 
 Polymorphic Definition tmDefinitionRed
 : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A :=
@@ -96,6 +131,20 @@ Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
   | x :: _ => tmReturn x
   end.
 
+Definition tmLocateModule1 (q : qualid) : TemplateMonad modpath :=
+  l <- tmLocateModule q ;;
+  match l with
+  | [] => tmFail ("Module [" ^ q ^ "] not found")
+  | x :: _ => tmReturn x
+  end.
+
+Definition tmLocateModType1 (q : qualid) : TemplateMonad modpath :=
+  l <- tmLocateModType q ;;
+  match l with
+  | [] => tmFail ("ModType [" ^ q ^ "] not found")
+  | x :: _ => tmReturn x
+  end.
+
 (** Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmQuote t >>= tmPrint.
 
@@ -117,3 +166,68 @@ Definition tmMkDefinition (id : ident) (tm : term) : TemplateMonad unit
      t'' <- tmEval (unfold (Common_kn "my_projT2")) (my_projT2 t') ;;
      tmDefinitionRed id (Some (unfold (Common_kn "my_projT1"))) t'' ;;
      tmReturn tt.
+
+Definition TypeInstanceUnoptimized : Common.TMInstance :=
+  {| Common.TemplateMonad := TemplateMonad
+   ; Common.tmReturn:=@tmReturn
+   ; Common.tmBind:=@tmBind
+   ; Common.tmFail:=@tmFail
+   ; Common.tmFreshName:=@tmFreshName
+   ; Common.tmLocate:=@tmLocate
+   ; Common.tmLocateModule:=@tmLocateModule
+   ; Common.tmLocateModType:=@tmLocateModType
+   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmQuoteInductive:=@tmQuoteInductive
+   ; Common.tmQuoteUniverses:=@tmQuoteUniverses
+   ; Common.tmQuoteConstant:=@tmQuoteConstant
+   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmExistingInstance:=@tmExistingInstance
+   |}.
+
+Definition TypeInstanceOptimized : Common.TMInstance :=
+  {| Common.TemplateMonad := TemplateMonad
+   ; Common.tmReturn:=@tmReturn
+   ; Common.tmBind:=@tmOptimizedBind
+   ; Common.tmFail:=@tmFail
+   ; Common.tmFreshName:=@tmFreshName
+   ; Common.tmLocate:=@tmLocate
+   ; Common.tmLocateModule:=@tmLocateModule
+   ; Common.tmLocateModType:=@tmLocateModType
+   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmQuoteInductive:=@tmQuoteInductive
+   ; Common.tmQuoteUniverses:=@tmQuoteUniverses
+   ; Common.tmQuoteConstant:=@tmQuoteConstant
+   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmExistingInstance:=@tmExistingInstance
+   |}.
+
+Definition TypeInstance : Common.TMInstance :=
+  Eval hnf in TypeInstanceUnoptimized.
+
+Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
+  := u <- @tmQuote Prop (Type@{U} -> True);;
+     match u with
+     | tProd _ (tSort u) _ => ret u
+     | _ => tmFail "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
+     end.
+Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
+  := u <- tmQuoteUniverse@{U t u};;
+     match Universe.get_is_level u with
+     | Some l => ret l
+     | None => tmFail "Universe is not a level"%bs
+     end.
+
+Definition tmFix'@{a b t u} {A : Type@{a}} {B : Type@{b}} (qtmFix' : Ast.term) (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => tmFix <- tmUnquoteTyped (Ast.term -> ((A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) -> A -> TemplateMonad@{t u} B) qtmFix';;
+           tmFix qtmFix' f a).
+Definition tmFix@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
+  := f (fun a
+        => (qA <- tmQuote A;;
+            qB <- tmQuote B;;
+            qa <- tmQuoteLevel@{a _ _};;
+            qb <- tmQuoteLevel@{b _ _};;
+            qt <- tmQuoteLevel@{t _ _};;
+            qu <- tmQuoteLevel@{u _ _};;
+            let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
+            @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).

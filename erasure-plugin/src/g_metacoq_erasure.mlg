@@ -1,0 +1,58 @@
+
+DECLARE PLUGIN "coq-metacoq-erasure.plugin"
+
+{
+
+open Stdarg
+open Pp
+open PeanoNat.Nat
+open Datatypes
+open Vernacextend
+open Tm_util
+
+let pr_char c = str (Char.escaped c)
+
+let bytes_of_list l =
+  let bytes = Bytes.create (List.length l) in
+  let rec fill acc = function
+    | [] -> bytes
+    | c :: cs ->
+      Bytes.set bytes acc c;
+      fill (1 + acc) cs
+  in fill 0 l
+
+let pr_char_list l =
+  (* We allow utf8 encoding *)
+  str (Caml_bytestring.caml_string_of_bytestring l)
+
+let check ~bypass ~fast env evm c =
+  debug (fun () -> str"Quoting");
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass env evm) (EConstr.to_constr evm c) in
+  let erase = time (str"Erasure")
+      (if fast then Erasure.erase_fast_and_print_template_program
+       else Erasure.erase_and_print_template_program)
+      term
+  in
+  Feedback.msg_info (pr_char_list erase)
+}
+
+VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
+| [ "MetaCoq" "Bypass" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:true ~fast:false env evm c
+  }
+| [ "MetaCoq" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:false ~fast:false env evm c
+  }
+| [ "MetaCoq" "Fast" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:false ~fast:true env evm c
+  }
+END

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import LibHypsNaming config utils Reflect.
+From MetaCoq.Utils Require Import LibHypsNaming utils.
+From MetaCoq.Common Require Import config Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICReflect.
 
@@ -22,9 +23,12 @@ Implicit Types (cf : checker_flags).
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
+Definition R_universe_instance_dep R R' :=
+  fun {u u'} (H : R_universe_instance R u u') => Forall2_dep R' H.
+
 (** Cumulative inductive types:
 
-  To simplify the development, we allow the variance list to not exactly 
+  To simplify the development, we allow the variance list to not exactly
   match the instances, so as to keep syntactic ws_cumul_pb an equivalence relation
   even on ill-formed terms. It corresponds to the right notion on well-formed terms.
 *)
@@ -40,7 +44,7 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   match u, u' return Prop with
   | u :: us, u' :: us' =>
     match v with
-    | [] => R_universe_instance_variance Re Rle v us us' 
+    | [] => R_universe_instance_variance Re Rle v us us'
       (* Missing variance stands for irrelevance, we still check that the instances have
         the same length. *)
     | v :: vs => R_universe_variance Re Rle v u u' /\
@@ -50,11 +54,11 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   | _, _ => False
   end.
 
-Definition global_variance Σ gr napp :=
+Definition global_variance_gen lookup gr napp :=
   match gr with
   | IndRef ind =>
-    match lookup_inductive Σ ind with
-    | Some (mdecl, idecl) => 
+    match lookup_inductive_gen lookup ind with
+    | Some (mdecl, idecl) =>
       match destArity [] idecl.(ind_type) with
       | Some (ctx, _) => if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
         else None
@@ -63,10 +67,10 @@ Definition global_variance Σ gr napp :=
     | None => None
     end
   | ConstructRef ind k =>
-    match lookup_constructor Σ ind k with
+    match lookup_constructor_gen lookup ind k with
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
-        (** Fully applied constructors are always compared at the same supertype, 
+        (** Fully applied constructors are always compared at the same supertype,
           which implies that no universe ws_cumul_pb needs to be checked here. *)
         Some []
       else None
@@ -75,18 +79,22 @@ Definition global_variance Σ gr napp :=
   | _ => None
   end.
 
+Notation global_variance Σ := (global_variance_gen (lookup_env Σ)).
+
 Definition R_opt_variance Re Rle v :=
-  match v with 
+  match v with
   | Some v => R_universe_instance_variance Re Rle v
   | None => R_universe_instance Re
   end.
 
-Definition R_global_instance Σ Re Rle gr napp :=
-  R_opt_variance Re Rle (global_variance Σ gr napp).
+Definition R_global_instance_gen Σ Re Rle gr napp :=
+  R_opt_variance Re Rle (global_variance_gen Σ gr napp).
+
+Notation R_global_instance Σ := (R_global_instance_gen (lookup_env Σ)).
 
 Definition R_ind_universes {cf:checker_flags} (Σ : global_env_ext) ind n i i' :=
   R_global_instance Σ (eq_universe (global_ext_constraints Σ))
-    (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.  
+    (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.
 
 Lemma R_universe_instance_impl R R' :
   RelationClasses.subrelation R R' ->
@@ -116,7 +124,7 @@ Section compare_decls.
   | compare_vdef {na b T na' b' T'} :
     eq_binder_annot na na' ->
     eq_term b b' ->
-    leq_term T T' -> 
+    leq_term T T' ->
     compare_decls (vdef na b T) (vdef na' b' T').
 
   Derive Signature NoConfusion for compare_decls.
@@ -182,10 +190,10 @@ Definition bcompare_decls (eq_term leq_term : term -> term -> bool) (d d' : cont
   end.
 
 #[global]
-Polymorphic Instance compare_decl_refl eq_term leq_term : 
-  CRelationClasses.Reflexive eq_term -> 
-  CRelationClasses.Reflexive leq_term -> 
-  CRelationClasses.Reflexive (compare_decls eq_term leq_term).    
+Polymorphic Instance compare_decl_refl eq_term leq_term :
+  CRelationClasses.Reflexive eq_term ->
+  CRelationClasses.Reflexive leq_term ->
+  CRelationClasses.Reflexive (compare_decls eq_term leq_term).
 Proof.
   intros heq hle d.
   destruct d as [na [b|] ty]; constructor; auto; reflexivity.
@@ -193,18 +201,18 @@ Qed.
 
 #[global]
 Polymorphic Instance compare_decl_sym eq_term leq_term :
-  CRelationClasses.Symmetric eq_term -> 
-  CRelationClasses.Symmetric leq_term -> 
-  CRelationClasses.Symmetric (compare_decls eq_term leq_term).    
+  CRelationClasses.Symmetric eq_term ->
+  CRelationClasses.Symmetric leq_term ->
+  CRelationClasses.Symmetric (compare_decls eq_term leq_term).
 Proof.
   intros heq hle d d' []; constructor; auto; now symmetry.
 Qed.
 
 #[global]
 Polymorphic Instance compare_decl_trans eq_term leq_term :
-  CRelationClasses.Transitive eq_term -> 
-  CRelationClasses.Transitive leq_term -> 
-  CRelationClasses.Transitive (compare_decls eq_term leq_term).    
+  CRelationClasses.Transitive eq_term ->
+  CRelationClasses.Transitive leq_term ->
+  CRelationClasses.Transitive (compare_decls eq_term leq_term).
 Proof.
   intros hle hre x y z h h'; depelim h; depelim h'; constructor; auto;
   etransitivity; eauto.
@@ -229,36 +237,36 @@ Proof.
 Qed.
 
 #[global]
-Polymorphic Instance eq_context_refl eq_term leq_term : 
-  CRelationClasses.Reflexive eq_term -> 
-  CRelationClasses.Reflexive leq_term -> 
-  CRelationClasses.Reflexive (eq_context_gen eq_term leq_term).    
+Polymorphic Instance eq_context_refl eq_term leq_term :
+  CRelationClasses.Reflexive eq_term ->
+  CRelationClasses.Reflexive leq_term ->
+  CRelationClasses.Reflexive (eq_context_gen eq_term leq_term).
 Proof.
   intros heq hle x.
   eapply All2_fold_refl.
-  intros. reflexivity. 
+  intros. reflexivity.
 Qed.
 
 #[global]
-Polymorphic Instance eq_context_sym eq_term leq_term : 
-  CRelationClasses.Symmetric eq_term -> 
-  CRelationClasses.Symmetric leq_term -> 
-  CRelationClasses.Symmetric (eq_context_gen eq_term leq_term).    
+Polymorphic Instance eq_context_sym eq_term leq_term :
+  CRelationClasses.Symmetric eq_term ->
+  CRelationClasses.Symmetric leq_term ->
+  CRelationClasses.Symmetric (eq_context_gen eq_term leq_term).
 Proof.
   intros heq hle x.
   eapply All2_fold_sym.
-  intros. now symmetry. 
+  intros. now symmetry.
 Qed.
 
 #[global]
-Polymorphic Instance eq_context_trans eq_term leq_term : 
-  CRelationClasses.Transitive eq_term -> 
-  CRelationClasses.Transitive leq_term -> 
-  CRelationClasses.Transitive (eq_context_gen eq_term leq_term).    
+Polymorphic Instance eq_context_trans eq_term leq_term :
+  CRelationClasses.Transitive eq_term ->
+  CRelationClasses.Transitive leq_term ->
+  CRelationClasses.Transitive (eq_context_gen eq_term leq_term).
 Proof.
   intros hr x y z.
   eapply All2_fold_trans; intros.
-  now transitivity y0. 
+  now transitivity y0.
 Qed.
 
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
@@ -272,7 +280,7 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
 
 (** ws_cumul_pb is indexed by a natural number that counts the number of applications
   that surround the current term, used to implement cumulativity of inductive types
-  correctly (only fully applied constructors and inductives benefit from it). *)  
+  correctly (only fully applied constructors and inductives benefit from it). *)
 
 Reserved Notation " Σ ⊢ t <==[ Rle , napp ] u" (at level 50, t, u at next level,
   format "Σ  ⊢  t  <==[ Rle , napp ]  u").
@@ -359,7 +367,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
-    
+
 | eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
@@ -369,7 +377,7 @@ Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
 Definition compare_term_napp `{checker_flags} (pb : conv_pb) Σ φ napp (t u : term) :=
   eq_term_upto_univ_napp Σ (eq_universe φ) (compare_universe pb φ) napp t u.
-  
+
 Definition compare_term `{checker_flags} (pb : conv_pb) Σ φ (t u : term) :=
   eq_term_upto_univ Σ (eq_universe φ) (compare_universe pb φ) t u.
 
@@ -396,21 +404,21 @@ Notation leq_decl := (compare_decl Cumul).
 
 Definition compare_context `{checker_flags} pb Σ φ (Γ Δ : context) :=
   eq_context_gen (compare_term Conv Σ φ) (compare_term pb Σ φ) Γ Δ.
-  
+
 Notation eq_context := (compare_context Conv).
 Notation leq_context := (compare_context Cumul).
 
-Notation eq_context_upto Σ Re Rle := 
+Notation eq_context_upto Σ Re Rle :=
   (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle)).
 
-Lemma R_global_instance_refl Σ Re Rle gr napp u : 
+Lemma R_global_instance_refl Σ Re Rle gr napp u :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   R_global_instance Σ Re Rle gr napp u u.
 Proof.
   intros rRE rRle.
-  rewrite /R_global_instance.
-  destruct global_variance as [v|] eqn:lookup.
+  unfold R_global_instance_gen.
+  destruct global_variance_gen as [v|] eqn:lookup.
   - induction u in v |- *; simpl; auto;
     unfold R_opt_variance in IHu; destruct v; simpl; auto.
     split; auto.
@@ -421,12 +429,12 @@ Qed.
 #[global]
 Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
-  split. 
+  split.
   - red. reflexivity.
   - red; now symmetry.
   - intros x y z; unfold eq_binder_annot.
     apply transitivity.
-Qed. 
+Qed.
 
 Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
@@ -455,19 +463,19 @@ Proof. now eapply All_All2_refl, All_refl. Qed.
 Hint Resolve eq_binder_relevances_refl : core.
 
 #[global]
-Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re -> 
+Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive (R_universe_instance Re).
-Proof. intros tRe x. eapply Forall2_map. 
+Proof. intros tRe x. eapply Forall2_map.
   induction x; constructor; auto.
 Qed.
 
 #[global]
-Instance R_universe_instance_sym Re : RelationClasses.Symmetric Re -> 
+Instance R_universe_instance_sym Re : RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric (R_universe_instance Re).
 Proof. intros tRe x y. now eapply Forall2_symP. Qed.
- 
+
 #[global]
-Instance R_universe_instance_trans Re : RelationClasses.Transitive Re -> 
+Instance R_universe_instance_trans Re : RelationClasses.Transitive Re ->
   RelationClasses.Transitive (R_universe_instance Re).
 Proof. intros tRe x y z. now eapply Forall2_trans. Qed.
 
@@ -530,15 +538,15 @@ Proof. eapply eq_term_upto_univ_refl; tc. Qed.
 
 Derive Signature for eq_term_upto_univ_napp.
 
-Lemma R_global_instance_sym Σ Re Rle gr napp u u' : 
+Lemma R_global_instance_sym Σ Re Rle gr napp u u' :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
   R_global_instance Σ Re Rle gr napp u' u ->
   R_global_instance Σ Re Rle gr napp u u'.
 Proof.
   intros rRE rRle.
-  rewrite /R_global_instance.
-  destruct global_variance as [v|] eqn:lookup.
+  unfold R_global_instance_gen.
+  destruct global_variance_gen as [v|] eqn:lookup.
   - induction u in u', v |- *; destruct u'; simpl; auto;
     destruct v as [|v vs]; unfold R_opt_variance in IHu; simpl; auto.
     intros [Ra Ru']. split.
@@ -546,7 +554,7 @@ Proof.
     apply IHu; auto.
   - apply Forall2_symP; eauto.
 Qed.
- 
+
 Lemma onctx_eq_ctx_sym P ctx ctx' eq_term :
   onctx P ctx ->
   (forall x, P x -> forall y, eq_term x y -> eq_term y x) ->
@@ -625,8 +633,8 @@ Instance R_global_instance_trans Σ Re Rle gr napp :
   RelationClasses.Transitive (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros he hle x y z.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance as [v|].
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|].
   clear -he hle.
   induction x in y, z, v |- *; destruct y, z, v; simpl; auto => //. eauto.
   intros [Ra Rxy] [Rt Ryz].
@@ -762,7 +770,7 @@ Proof. split; tc. Qed.
 
 #[global]
 Polymorphic Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ).
-Proof. split; tc. Qed. 
+Proof. split; tc. Qed.
 
 #[global]
 Instance R_universe_instance_equiv R (hR : RelationClasses.Equivalence R)
@@ -800,12 +808,12 @@ Instance R_global_instance_antisym Σ Re Rle (hRe : RelationClasses.Equivalence 
   RelationClasses.Antisymmetric _ (R_global_instance Σ Re Re gr napp) (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros hR u v.
-  unfold R_global_instance, R_opt_variance.
-  destruct global_variance; auto.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen; auto.
   induction u in l, v |- *; destruct v, l; simpl; auto.
   intros [at' uv] [ta vu]. split; auto.
   destruct t0; simpl in *; auto.
-Qed.  
+Qed.
 
 Lemma eq_term_upto_univ_antisym Σ Re Rle (hRe : RelationClasses.Equivalence Re) :
   RelationClasses.Antisymmetric _ Re Rle ->
@@ -825,19 +833,19 @@ Proof.
   eapply eq_term_upto_univ_antisym; exact _.
 Qed.
 
-Lemma global_variance_napp_mon {Σ gr napp napp' v} : 
+Lemma global_variance_napp_mon {Σ gr napp napp' v} :
   napp <= napp' ->
   global_variance Σ gr napp = Some v ->
   global_variance Σ gr napp' = Some v.
 Proof.
   intros hnapp.
-  rewrite /global_variance.
+  rewrite /global_variance_gen.
   destruct gr; try congruence.
-  - destruct lookup_inductive as [[mdecl idec]|] => //.
+  - destruct lookup_inductive_gen as [[mdecl idec]|] => //.
     destruct destArity as [[ctx s]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
-  - destruct lookup_constructor as [[[mdecl idecl] cdecl]|] => //.
+  - destruct lookup_constructor_gen as [[[mdecl idecl] cdecl]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
 Qed.
@@ -849,8 +857,8 @@ Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
 Proof.
   intros he hle t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
   destruct t0; simpl; auto.
@@ -866,8 +874,8 @@ Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele hnapp t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [v|] eqn:glob.
   rewrite (global_variance_napp_mon hnapp glob).
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
@@ -894,9 +902,9 @@ Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance empty_global_env Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
-  rewrite /R_global_instance /R_opt_variance. simpl.
+  unfold R_global_instance_gen, R_opt_variance.
   rewrite global_variance_empty //.
-  destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
+  destruct global_variance_gen as [v|]; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
   simpl.
   split; auto.
@@ -961,7 +969,7 @@ Proof.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-  - inversion 1; subst; constructor. 
+  - inversion 1; subst; constructor.
     (* eapply shelf bug... fixed in unifall *)
     eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor.
@@ -975,7 +983,7 @@ Proof.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.    
+    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
 
 #[global]
@@ -1051,7 +1059,7 @@ Lemma lift_compare_context `{checker_flags} pb Σ φ l l' n k :
 Proof.
   unfold compare_context.
   induction 1; rewrite -> ?lift_context_snoc0. constructor.
-  constructor; auto. 
+  constructor; auto.
   eapply lift_compare_decls in p.
   now rewrite (All2_fold_length X).
 Qed.
@@ -1091,7 +1099,7 @@ Proof.
         destruct h as [t' [e' h]].
         rewrite e'.
         eapply eq_term_upto_univ_lift.
-        eapply eq_term_upto_univ_leq. 3:eauto. all:auto with arith.  
+        eapply eq_term_upto_univ_leq. 3:eauto. all:auto with arith.
       * intros h. eapply All2_nth_error_None in h as hh ; eauto.
         rewrite hh.
         apply All2_length in hl as e. rewrite <- e.
@@ -1145,7 +1153,7 @@ Qed.
 
 Lemma eq_term_eq_term_napp Σ Re Rle napp t t' :
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto_univ Σ Re Rle t t' -> 
+  eq_term_upto_univ Σ Re Rle t t' ->
   eq_term_upto_univ_napp Σ Re Rle napp t t'.
 Proof.
   intros. eapply eq_term_upto_univ_impl. 5:eauto.
@@ -1154,7 +1162,7 @@ Qed.
 
 Lemma leq_term_leq_term_napp Σ Re Rle napp t t' :
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto_univ Σ Re Rle t t' -> 
+  eq_term_upto_univ Σ Re Rle t t' ->
   eq_term_upto_univ_napp Σ Re Rle napp t t'.
 Proof.
   intros. eapply eq_term_upto_univ_impl. 5:eauto.
@@ -1249,7 +1257,7 @@ Proof.
   subst. constructor ; auto.
 Qed.
 
-Lemma valid_constraints_empty {cf} i : 
+Lemma valid_constraints_empty {cf} i :
   valid_constraints (empty_ext empty_global_env) (subst_instance_cstrs i (empty_ext empty_global_env)).
 Proof.
   red. destruct check_univs => //.
@@ -1429,10 +1437,10 @@ Qed.
 Hint Resolve All2_fold_nil : pcuic.
 
 Lemma eq_context_upto_smash_context Σ ctx ctx' x y :
-  eq_context_upto Σ eq eq ctx ctx' -> eq_context_upto Σ eq eq x y -> 
+  eq_context_upto Σ eq eq ctx ctx' -> eq_context_upto Σ eq eq x y ->
   eq_context_upto Σ eq eq (smash_context ctx x) (smash_context ctx' y).
 Proof.
-  induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
+  induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl;
     try split; auto; try constructor; auto. depelim X0 => /=.
   - apply IHx; auto. apply eq_context_upto_cat; auto.
     constructor; pcuic.
@@ -1441,12 +1449,12 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_nth_error Σ Re Rle ctx ctx' n :
-  eq_context_upto Σ Re Rle ctx ctx' -> 
+  eq_context_upto Σ Re Rle ctx ctx' ->
   rel_option (eq_decl_upto_gen Σ Re Rle) (nth_error ctx n) (nth_error ctx' n).
 Proof.
   induction 1 in n |- *.
   - rewrite nth_error_nil. constructor.
-  - destruct n; simpl; auto. 
+  - destruct n; simpl; auto.
     constructor. depelim p; constructor; intuition auto;
     now constructor.
 Qed.
@@ -1461,7 +1469,7 @@ Proof.
   intros Σ Re Re' Rle Rle' hR hR' hReRle' Γ Δ h.
   induction h.
   - constructor.
-  - constructor; auto. 
+  - constructor; auto.
     depelim p; constructor; auto.
     all:eapply eq_term_upto_univ_impl. 5,10,15:tea. all:eauto.
     all:now transitivity Re'.
@@ -1622,8 +1630,8 @@ Lemma R_global_instance_flip Σ gr napp
   R_global_instance Σ Re Rle' gr napp v u.
 Proof.
   intros Rerefl Rlerefl Resym Retrans Rletrans incl incl'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [vs|] eqn:var.  
+  unfold R_global_instance_gen, R_opt_variance.
+  destruct global_variance_gen as [vs|] eqn:var.
   - induction u in vs, v |- *; destruct v; simpl; auto;
     destruct vs as [|v' vs]; simpl; auto.
     intros [Ra Ru']. split.
@@ -1652,7 +1660,7 @@ Proof.
   all:try solve [now symmetry].
   all:eauto using R_global_instance_flip.
   - eapply All2_sym. solve_all.
-    * eapply eq_context_sym; try tc. tas. 
+    * eapply eq_context_sym; try tc. tas.
     * now eapply eq_term_upto_univ_sym.
   - eapply All2_sym. solve_all.
     now eapply eq_term_upto_univ_sym.
@@ -1678,14 +1686,14 @@ Qed.
 Notation eq_annots Γ Δ :=
   (Forall2 (fun na decl => eq_binder_annot na (decl_name decl)) Γ Δ).
 
-Lemma eq_context_gen_binder_annot Γ Δ : 
+Lemma eq_context_gen_binder_annot Γ Δ :
   eq_context_gen eq eq Γ Δ -> eq_annots (forget_types Γ) Δ.
 Proof.
   induction 1; constructor; auto.
   destruct p; auto.
 Qed.
 
-Lemma eq_annots_fold (Γ : list aname) (f : nat -> term -> term) (Δ : context) : 
+Lemma eq_annots_fold (Γ : list aname) (f : nat -> term -> term) (Δ : context) :
   eq_annots Γ (fold_context_k f Δ) <-> eq_annots Γ Δ.
 Proof.
   induction Δ in Γ |- *.
@@ -1695,13 +1703,13 @@ Proof.
     now apply IHΔ.
 Qed.
 
-Lemma eq_annots_subst_context (Γ : list aname) s k (Δ : context) : 
+Lemma eq_annots_subst_context (Γ : list aname) s k (Δ : context) :
   eq_annots Γ (subst_context s k Δ) <-> eq_annots Γ Δ.
 Proof.
   apply eq_annots_fold.
 Qed.
 
-Lemma eq_annots_lift_context (Γ : list aname) n k (Δ : context) : 
+Lemma eq_annots_lift_context (Γ : list aname) n k (Δ : context) :
   eq_annots Γ (lift_context n k Δ) <-> eq_annots Γ Δ.
 Proof.
   apply eq_annots_fold.
@@ -1715,7 +1723,7 @@ Proof.
   split; intro; eapply Forall2_impl; tea; apply Hfg.
 Qed.
 
-Lemma eq_annots_subst_instance_ctx (Γ : list aname) u (Δ : context) : 
+Lemma eq_annots_subst_instance_ctx (Γ : list aname) u (Δ : context) :
   eq_annots Γ Δ@[u] <-> eq_annots Γ Δ.
 Proof.
   etransitivity. eapply Forall2_map_right.
@@ -1729,6 +1737,6 @@ Lemma eq_annots_inst_case_context (Γ : list aname) pars puinst (ctx : context) 
 Proof.
   etransitivity. symmetry; eapply (eq_annots_subst_instance_ctx _ puinst).
   etransitivity.
-  symmetry; eapply (eq_annots_subst_context _ (List.rev pars) 0). 
+  symmetry; eapply (eq_annots_subst_context _ (List.rev pars) 0).
   reflexivity.
 Qed.

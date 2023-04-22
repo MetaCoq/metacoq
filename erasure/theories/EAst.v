@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Universes.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import BasicAst Universes.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
@@ -170,7 +171,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : erasure.
 
 (** *** Environments *)
 
-Record constructor_body := 
+Record constructor_body :=
   mkConstructor {
     cstr_name : ident;
     cstr_nargs : nat (* arity, w/o lets, w/o parameters *)
@@ -199,9 +200,9 @@ Record mutual_inductive_body := {
   ind_bodies : list one_inductive_body }.
 Derive NoConfusion for mutual_inductive_body.
 
-Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) := 
-  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.  
-  
+Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) :=
+  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.
+
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := { cst_body : option term }.
 

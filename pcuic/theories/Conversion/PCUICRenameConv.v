@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
@@ -58,7 +59,7 @@ Proof.
 Qed.
 
 Lemma decompose_app_rec_rename r t l :
-  forall hd args, 
+  forall hd args,
   decompose_app_rec t l = (hd, args) ->
   decompose_app_rec (rename r t) (map (rename r) l) = (rename r hd, map (rename r) args).
 Proof.
@@ -370,7 +371,7 @@ Arguments Nat.sub !_ !_.
 Lemma urenaming_vass :
   forall P Γ Δ na A f,
     urenaming P Γ Δ f ->
-    urenaming (shiftnP 1 P) (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
+    urenaming (shiftnP 1 P) (Γ ,, vass na A) (Δ ,, vass na (rename f A)) (shiftn 1 f).
 Proof using Type.
   intros P Γ Δ na A f h. unfold urenaming in *.
   intros [|i] decl hP e.
@@ -398,7 +399,7 @@ Qed.
 Lemma urenaming_vdef :
   forall P Γ Δ na b B f,
     urenaming P Γ Δ f ->
-    urenaming (shiftnP 1 P) (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+    urenaming (shiftnP 1 P) (Γ ,, vdef na b B) (Δ ,, vdef na (rename f b) (rename f B)) (shiftn 1 f).
 Proof using Type.
   intros P Γ Δ na b B f h. unfold urenaming in *.
   intros [|i] decl hP e.
@@ -455,8 +456,8 @@ Qed.
 
 Lemma urenaming_context :
   forall P Γ Δ Ξ f,
-    urenaming P Δ Γ f ->
-    urenaming (shiftnP #|Ξ| P) (Δ ,,, rename_context f Ξ) (Γ ,,, Ξ) (shiftn #|Ξ| f).
+    urenaming P Γ Δ f ->
+    urenaming (shiftnP #|Ξ| P) (Γ ,,, Ξ) (Δ ,,, rename_context f Ξ) (shiftn #|Ξ| f).
 Proof using Type.
   intros P Γ Δ Ξ f h.
   induction Ξ as [| [na [bo|] ty] Ξ ih] in Γ, Δ, f, h |- *.
@@ -544,7 +545,7 @@ Definition rename_constructor_body mdecl f c :=
   map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
    (fun k => rename (shiftn k f)) c.
 
-(* TODO move *)   
+(* TODO move *)
 Lemma map2_set_binder_name_fold bctx f Γ :
   #|bctx| = #|Γ| ->
   map2 set_binder_name bctx (fold_context_k f Γ) =
@@ -933,7 +934,7 @@ Qed.
 Lemma red1_rename :
   forall P Σ Γ Δ u v f,
     wf Σ ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P u ->
     red1 Σ Γ u v ->
     red1 Σ Δ (rename f u) (rename f v).
@@ -1067,7 +1068,7 @@ Qed.
 Lemma red_rename :
   forall P (Σ : global_env_ext) Γ Δ u v f,
     wf Σ ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_ctx_free_vars P Γ ->
     on_free_vars P u ->
     red Σ Γ u v ->
@@ -1085,7 +1086,7 @@ Qed.
 Lemma conv_renameP :
   forall P Σ Γ Δ f A B,
     wf Σ.1 ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P A ->
     on_free_vars P B ->
     on_ctx_free_vars P Γ ->
@@ -1108,7 +1109,7 @@ Qed.
 Lemma cumul_renameP :
   forall P Σ Γ Δ f A B,
     wf Σ.1 ->
-    urenaming P Δ Γ f ->
+    urenaming P Γ Δ f ->
     on_free_vars P A ->
     on_free_vars P B ->
     on_ctx_free_vars P Γ ->

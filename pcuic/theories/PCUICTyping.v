@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Primitive.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
 From MetaCoq.PCUIC Require Export PCUICCumulativitySpec.
@@ -8,7 +9,7 @@ From MetaCoq.PCUIC Require Export PCUICCases.
 Import MCMonadNotation.
 
 (* TODO: remove this export *)
-From MetaCoq Require Export LibHypsNaming.
+From MetaCoq.Utils Require Export LibHypsNaming.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Type.Relation.
@@ -27,10 +28,10 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Fixpoint isArity T :=
   match T with
-  | tSort u => True
+  | tSort u => true
   | tProd _ _ codom => isArity codom
   | tLetIn _ _ _ codom => isArity codom
-  | _ => False
+  | _ => false
   end.
 
 Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive * nat) (u : list Level.t) :=
@@ -261,8 +262,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
-| type_Prim p prim_ty cdecl : 
-   wf_local Σ Γ ->  
+| type_Prim p prim_ty cdecl :
+   wf_local Σ Γ ->
    primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
    declared_constant Σ prim_ty cdecl ->
    primitive_invariants cdecl ->
@@ -725,7 +726,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
        wf_cofixpoint Σ mfix ->
        P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
-  
+
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
       PΓ Σ Γ ->
       primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
@@ -776,10 +777,12 @@ Proof.
     unfold Σg in o |- *; cbn in o.
     rename o into ongu. rename o0 into o. cbn in o |- *.
     destruct o. { constructor. }
-    rename o1 into Xg.
+    rename o0 into Xg.
     set (wfΣ := (ongu, o) : on_global_env cumulSpec0 (lift_typing typing) {| universes := univs; declarations := Σ |}).
     set (Σ':= {| universes := univs; declarations := Σ |}) in *.
-    constructor; auto.
+    destruct Xg.
+    rename on_global_decl_d into Xg.
+    constructor; auto; try constructor; auto.
     * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort Universe.lProp); _; _))).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
@@ -800,7 +803,7 @@ Proof.
           eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp. intros n x Xg.
           refine {| ind_arity_eq := Xg.(ind_arity_eq);
                     ind_cunivs := Xg.(ind_cunivs) |}.
-          - apply onArity in Xg. 
+          - apply onArity in Xg.
             apply lift_typing_impl with (1 := Xg); intros ? Hs.
             apply (IH (_; _; _; Hs)).
           - pose proof Xg.(onConstructors) as Xg'.
@@ -818,7 +821,7 @@ Proof.
               generalize (cstr_indices x0). induction 1; constructor; auto.
               do 2 red in t0 |- *.
               apply (IH (_; (_; (_; t0)))). }
-          - intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
+          - pose proof (onProjections Xg); auto.
           - destruct Xg. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
@@ -1177,7 +1180,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (on_def_body (lift_typing2 typing P Σ) types Γ) mfix ->
         wf_cofixpoint Σ mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
-    
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val term) prim_ty cdecl,
         PΓ Σ Γ ->
         primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
@@ -1238,7 +1241,7 @@ Section All_local_env.
   Lemma lookup_on_global_env P (Σ : global_env) c decl :
     on_global_env cumulSpec0 P Σ ->
     lookup_env Σ c = Some decl ->
-    { Σ' : global_env & [× extends Σ' Σ, on_global_env cumulSpec0 P Σ' &
+    { Σ' : global_env & [× extends_strictly_on_decls Σ' Σ, on_global_env cumulSpec0 P Σ' &
        on_global_decl cumulSpec0 P (Σ', universes_decl_of_decl decl) c decl] }.
   Proof using Type.
     destruct Σ as [univs Σ retro]; rewrite /on_global_env /lookup_env; cbn.
@@ -1252,7 +1255,7 @@ Section All_local_env.
         exists [(kn, decl)] => //.
         apply Retroknowledge.extends_refl.
       * split => //.
-      * apply o0.
+      * destruct o; assumption.
     - intros hl. destruct (IHΣp hl) as [Σ' []].
       exists Σ'.
       split=> //.

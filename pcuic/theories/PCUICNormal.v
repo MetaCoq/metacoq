@@ -1,9 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template
-Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases 
+From MetaCoq.Utils Require Import utils monad_utils.
+From MetaCoq.Common
+Require Import config Universes BasicAst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases
      PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnvConv
      PCUICWeakeningEnvTyp PCUICReduction PCUICClosedTyp
      PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
@@ -48,7 +49,7 @@ Section Normal.
   | whne_rel_nozeta i :
       RedFlags.zeta flags = false ->
       whne Γ (tRel i)
-           
+
   | whne_lam_nobeta na A b :
       RedFlags.beta flags = false ->
       whne Γ (tLambda na A b)
@@ -77,16 +78,16 @@ Section Normal.
       whne Γ (tApp f v)
 
   (* Stuck fixpoints are neutrals *)
-  | whne_fixapp mfix idx args rarg arg body :
-     unfold_fix mfix idx = Some (rarg, body) ->
-     nth_error args rarg = Some arg -> 
+  | whne_fixapp mfix idx args d arg :
+     nth_error mfix idx = Some d ->
+     nth_error args (rarg d) = Some arg ->
      whne Γ arg ->
      whne Γ (mkApps (tFix mfix idx) args)
-          
+
   | whne_fix_nofix defs i :
       RedFlags.fix_ flags = false ->
       whne Γ (tFix defs i)
-  
+
   | whne_case i p c brs :
       whne Γ c ->
       whne Γ (tCase i p c brs)
@@ -111,12 +112,10 @@ Section Normal.
   | whnf_lam na A B : whnf Γ (tLambda na A B)
   | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
   | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
-  | whnf_fixapp mfix idx v :
-    match unfold_fix mfix idx with
-    | Some (rarg, body) => nth_error v rarg = None
-    | None => True
-    end ->
-    whnf Γ (mkApps (tFix mfix idx) v)
+  | whnf_fixapp mfix idx args :
+    (exists d, nth_error mfix idx = Some d /\ nth_error args (rarg d) = None)
+      \/ (nth_error mfix idx = None) ->
+    whnf Γ (mkApps (tFix mfix idx) args)
   | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
   | whnf_prim p : whnf Γ (tPrim p).
 
@@ -138,16 +137,16 @@ Section Normal.
   Proof using Type.
     intros. econstructor. now eapply whne_mkApps.
   Qed.
-  
+
   Lemma whne_mkApps_inv :
     forall Γ t l,
       negb (isApp t) ->
       whne Γ (mkApps t l) ->
       whne Γ t +
-      ∑ mfix idx narg body a,
+      ∑ mfix idx d a,
         t = tFix mfix idx ×
-        unfold_fix mfix idx = Some (narg, body) ×
-        nth_error l narg = Some a ×
+        nth_error mfix idx = Some d ×
+        nth_error l (rarg d) = Some a ×
         whne Γ a.
   Proof using Type.
     intros Γ t l Ha h. revert t Ha h.
@@ -155,15 +154,15 @@ Section Normal.
     - eauto.
     - rewrite mkApps_snoc in h.
       depelim h.
-      + edestruct IHl as [ | (? & ? & ? & ? & ? & ? & ? & ? & ?)]; eauto. subst.
-        right. exists x0, x1, x2, x3, x4. repeat split; eauto. now eapply nth_error_app_left.
+      + edestruct IHl as [ | (? & ? & ? & ? & ? & ? & ? & ?)]; eauto. subst.
+        right. exists x0, x1, x2, x3. repeat split; eauto. now eapply nth_error_app_left.
       + rewrite <- mkApps_snoc in x.
         eapply (f_equal decompose_app) in x;
           rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence.
-        inversion x. subst. 
-        right. exists mfix, idx, rarg, body, arg. repeat split; eauto.
+        inversion x. subst.
+        right. exists mfix, idx, d, arg. repeat split; eauto.
   Qed.
-  
+
 End Normal.
 
 Derive Signature for whnf.
@@ -177,7 +176,7 @@ Hint Constructors whnf whne : pcuic.
 Local Ltac inv H := inversion H; subst; clear H.
 
 Ltac help' := try repeat match goal with
-| [ H0 : _ = mkApps _ _ |- _ ] => 
+| [ H0 : _ = mkApps _ _ |- _ ] =>
   eapply (f_equal decompose_app) in H0;
     rewrite !decompose_app_mkApps in H0; cbn in *; intuition congruence
 | [ H1 : tApp _ _ = mkApps _ ?args |- _ ] =>
@@ -221,18 +220,18 @@ Proof.
   induction h in h, t, l, t0 |- *; intros eq; subst.
   - destruct (mkApps_elim t l).
     apply whne_mkApps_inv in w; auto.
-    destruct w as [wh|(?&?&?&?&?&->&?&?&?)].
+    destruct w as [wh|(?&?&?&?&->&?&?&?)].
     + now apply whnf_mkApps.
-    + destruct (leb_spec_Set n x1).
-      * apply whnf_fixapp.
-        rewrite e.
-        apply nth_error_Some_length in e0.
-        apply nth_error_None.
+    + destruct (leb_spec_Set n (rarg x1)).
+      * eapply whnf_fixapp.
+        rewrite e. left.
+        apply nth_error_Some_length in e0. eexists.
+        split; try reflexivity. apply nth_error_None.
         rewrite firstn_length.
         lia.
       * apply whnf_ne.
         eapply whne_fixapp; eauto.
-        assert (x1 < #|l|) by (now apply nth_error_Some_length in e0).
+        assert (rarg x1 < #|l|) by (now apply nth_error_Some_length in e0).
         rewrite <- (firstn_skipn n l) in e0.
         rewrite nth_error_app1 in e0; auto.
         rewrite firstn_length.
@@ -249,10 +248,11 @@ Proof.
     apply mkApps_eq_inj in eq as (<-&<-); auto.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
-    apply whnf_fixapp.
-    destruct unfold_fix as [(?&?)|]; [|easy].
+    eapply whnf_fixapp. destruct o; [| now right].
+    left; try reflexivity. destruct H; eexists.
+    destruct H. split; eauto. destruct nth_error as [?|]; [|easy].
     apply nth_error_None.
-    apply nth_error_None in y.
+    apply nth_error_None in e0.
     rewrite firstn_length.
     lia.
   - destruct (mkApps_elim t l).
@@ -261,13 +261,13 @@ Proof.
     cbn in *; subst; auto.
 Qed.
 
-Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
-  unfold_fix mfix idx = Some (narg, body) ->
-  nth_error v narg = None ->
+Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg v :
+  nth_error mfix idx = Some narg ->
+  nth_error v (rarg narg) = None ->
   whnf flags Σ Γ (mkApps (tFix mfix idx) v).
 Proof.
- intros E1 H. eapply whnf_fixapp. rewrite E1. eauto.
-Qed. 
+ intros E1 H. eapply whnf_fixapp. now left.
+Qed.
 #[global]
 Hint Resolve whnf_fixapp' : core.
 
@@ -293,14 +293,13 @@ Proof.
       constructor.
       eapply IHwhe.
       apply whnf_indapp.
-    + destruct v0 as [|? ? _] using MCList.rev_ind; [discriminate|].
+    + destruct args as [|? ? _] using MCList.rev_ind; [discriminate|].
       rewrite mkApps_app in H H0 *.
       cbn in *; inv H.
       constructor.
-      eapply IHwhe.
-      apply whnf_fixapp.
-      destruct unfold_fix; [|easy].
-      destruct p.
+      eapply IHwhe. eapply whnf_fixapp.
+      destruct H0 as [H0 |]; [left; destruct H0 as [? [? ?]] | now right].
+      eexists; split; eauto.
       apply nth_error_None.
       apply nth_error_None in H0.
       rewrite app_length in H0; cbn in *.
@@ -312,8 +311,8 @@ Proof.
       eapply IHwhe.
       apply whnf_cofixapp.
   - inv whn; solve_discr; try easy.
-    rewrite e in H0.
-    congruence.
+    rewrite e in H0. exfalso.
+    destruct H0 as [[? H0]|H0] ; inversion H0. congruence.
   - inv whn; solve_discr; easy.
   - inv whn; solve_discr; easy.
 Qed.
@@ -328,8 +327,8 @@ Proof with eauto using sq with pcuic; try congruence.
   all: try now (right; intros [H]; depelim H;help).
   - destruct (RedFlags.zeta flags) eqn:Er.
     + destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E...
-      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help. 
-      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help. 
+      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help.
+      * right. intros [H]. depelim H. depelim w. congruence. congruence. all:help.
     + eauto using sq.
   - destruct (RedFlags.zeta flags) eqn:Er...
     destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E...
@@ -364,28 +363,29 @@ Proof with eauto using sq with pcuic; try congruence.
            apply whnf_mkApps.
            constructor.
            assumption.
-      * destruct (unfold_fix mfix idx) as [(narg, body) |] eqn:E1.
-        -- destruct (nth_error v narg) as [a  | ] eqn:E2...
+      * destruct (nth_error mfix idx) as [narg |] eqn:E1.
+        -- destruct (nth_error v (rarg narg)) as [a  | ] eqn:E2...
            destruct (nth_error_all E2 X Γ) as [_ []].
            ++ left. destruct s0...
            ++ destruct (RedFlags.fix_ flags) eqn:?.
-              ** right. intros [w]. depelim w. depelim w. all:help. clear IHv. 
+              ** right. intros [w]. depelim w. depelim w. all:help. clear IHv.
                  eapply whne_mkApps_inv in w as []; eauto.
-                 --- depelim w; [|congruence]. help. 
-                     eapply (f_equal decompose_app) in x; 
-                       rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence. 
-                     inv x. destruct rarg; inv e0.
-                 --- destruct s0 as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
+                 --- depelim w; [|congruence]. help.
+                     eapply (f_equal decompose_app) in x;
+                       rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence.
+                     inv x. destruct (rarg d); inv e0.
+                 --- destruct s0 as (? & ? & ? & ? & ? & ? & ? & ?). inv e.
                      rewrite E1 in e0. inv e0.
                      eapply (nth_error_app_left v [x0]) in e1.
                      rewrite E2 in e1. inv e1...
                  --- solve_discr.
-                     rewrite E1 in e. injection e as -> ->.
+                     rewrite E1 in e. injection e as ->.
                      rewrite E2 in e0. injection e0 as ->.
                      apply n; sq; auto.
                  --- solve_discr.
-                     rewrite E1 in y. congruence.
-              ** left.
+                     rewrite E1 in o. destruct o. destruct H1. destruct H1.  congruence.
+                     congruence.
+            ** left.
                  constructor.
                  apply whnf_mkApps.
                  constructor.
@@ -395,30 +395,30 @@ Proof with eauto using sq with pcuic; try congruence.
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence. 
-    + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv. 
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
+    + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv.
   - destruct (IHt Γ) as [_ []].
     + left. destruct s as [w]. constructor. now eapply whne_mkApps.
     + destruct t.
-      all: try (right; intros [[ | (mfix & idx & narg & body & a & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst)...
-      * destruct (unfold_fix mfix idx) as [(narg, body) |] eqn:E1.
-      -- destruct (nth_error v narg) as [a  | ] eqn:E2.
+      all: try (right; intros [[ | (mfix & idx & narg & a & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst)...
+      * destruct (nth_error mfix idx) as [narg |] eqn:E1.
+      -- destruct (nth_error v (rarg narg)) as [a  | ] eqn:E2.
          ++ destruct (nth_error_all E2 X Γ) as [_ []].
             ** left. destruct s. constructor. eauto.
             ** destruct (RedFlags.fix_ flags) eqn:?.
-               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv. 
+               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv.
                    eapply whne_mkApps_inv in X0 as []...
-                   destruct s as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
+                   destruct s as (? & ? & ? & ? & ? & ? & ? & ?). inv e.
                    rewrite E1 in e0. inv e0.
                    eapply (nth_error_app_left v [x0]) in e1.
                    rewrite E2 in e1. inv e1... solve_discr.
-                   rewrite E1 in e. injection e as -> ->.
+                   rewrite E1 in e. injection e as ->.
                    rewrite E2 in e0. injection e0 as ->.
                    apply n0; sq; auto.
                --- left. constructor. apply whne_mkApps. constructor. assumption.
-         ++ right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-      -- right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-      * right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
+         ++ right. intros [[ | (mfix' & idx' & narg' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
+      -- right. intros [[ | (mfix' & idx' & narg' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
+      * right. intros [[ | (mfix' & idx' & narg' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
   - destruct (RedFlags.delta flags) eqn:Er...
     destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2...
@@ -431,8 +431,8 @@ Proof with eauto using sq with pcuic; try congruence.
       right. intros [w]. depelim w. congruence. congruence. help.
     + right. intros [w]. depelim w. congruence. congruence. help.
     + right. intros [w]. depelim w. congruence. congruence. help.
-  - left. constructor. eapply whnf_indapp with (v := []). 
-  - left. constructor. eapply whnf_cstrapp with (v := []). 
+  - left. constructor. eapply whnf_indapp with (v := []).
+  - left. constructor. eapply whnf_cstrapp with (v := []).
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
     + left. destruct s...
@@ -449,9 +449,10 @@ Proof with eauto using sq with pcuic; try congruence.
     destruct (IHt Γ) as [_ []].
     + left. destruct s0...
     + right. intros [w]. depelim w. all:help...
-  - destruct (unfold_fix m n) as [(narg, body) |] eqn:E1.
-    + left. constructor. eapply whnf_fixapp with (v := []). rewrite E1. now destruct narg.
-    + left. constructor. eapply whnf_fixapp with (v := []). now rewrite E1.
+  - destruct (nth_error m n) as [narg |] eqn:E1.
+    + left. constructor. eapply whnf_fixapp with (args := []). rewrite E1.
+      left; eexists; split; eauto. now destruct (rarg narg).
+    + left. constructor. eapply whnf_fixapp with (args := []). now right.
   - destruct (RedFlags.fix_ flags) eqn:?...
     right. intros [w]. depelim w; [|congruence].
     destruct args using rev_ind.
@@ -475,7 +476,7 @@ Proof.
     + eapply IHv in X as (? & ? & ?). subst.
       exists (x0 ++ [x]). rewrite mkApps_snoc. split; eauto.
       apply OnOne2_app_r. assumption.
-    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto. 
+    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -491,7 +492,7 @@ Proof.
     + eapply IHv in X as (? & ? & ?). subst.
       exists (x0 ++ [x]). rewrite mkApps_snoc. split; eauto.
       apply OnOne2_app_r. assumption.
-    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto. 
+    + exists (v ++ [N2]). rewrite mkApps_snoc. split; eauto.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -509,7 +510,7 @@ Proof.
     rewrite app_length in nth.
     lia.
 Qed.
-  
+
 Lemma red1_mkApps_tFix_inv Σ Γ mfix id v t' :
   match unfold_fix mfix id with
   | Some (rarg, body) => is_constructor rarg v = false
@@ -539,7 +540,7 @@ Proof.
       * destruct unfold_fix as [(?&?)|]; [|easy].
         now eapply is_constructor_app_false.
     + left. left. exists (v ++ [N2]). split.
-      now rewrite mkApps_snoc. 
+      now rewrite mkApps_snoc.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -559,7 +560,7 @@ Proof.
       * subst. left. right. exists x0. split. now rewrite mkApps_snoc. eauto.
       * subst. right. exists x0. split. now rewrite mkApps_snoc. eauto.
     + left. left. exists (v ++ [N2]). split.
-      now rewrite mkApps_snoc. 
+      now rewrite mkApps_snoc.
       eapply OnOne2_app. econstructor. eauto.
 Qed.
 
@@ -580,7 +581,7 @@ Proof.
   depelim wh.
   solve_discr.
 Qed.
-  
+
 Lemma whnf_mkApps_tSort_inv f Σ Γ s args :
   whnf f Σ Γ (mkApps (tSort s) args) -> args = [].
 Proof.
@@ -639,7 +640,7 @@ Context (Σ : global_env).
 Context (Γ : context).
 Context (P : term -> term -> Type).
 
-Lemma whne_red1_ind 
+Lemma whne_red1_ind {cf:checker_flags} {wfΣ : wf Σ}
       (Hrel : forall i body,
           RedFlags.zeta flags = false ->
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -671,8 +672,8 @@ Lemma whne_red1_ind
       (Hfix_nofix :
          forall v mfix idx args narg fn,
            RedFlags.fix_ flags = false ->
-           unfold_fix mfix idx = Some (narg, fn) ->
-           is_constructor narg (args ++ [v]) = true ->
+           nth_error mfix idx = Some narg ->
+           is_constructor (rarg narg) (args ++ [v]) = true ->
            P (mkApps (tFix mfix idx) (args ++ [v])) (mkApps fn (args ++ [v])))
       (Happ_1 : forall f v N1,
           whne flags Σ Γ f ->
@@ -683,16 +684,16 @@ Lemma whne_red1_ind
           whne flags Σ Γ f ->
           red1 Σ Γ v N2 ->
           P (tApp f v) (tApp f N2))
-      (Hfix_red_arg : forall mfix idx args rarg arg body x,
-          unfold_fix mfix idx = Some (rarg, body) ->
-          nth_error args rarg = Some arg ->
+      (Hfix_red_arg : forall mfix idx args narg arg x,
+          nth_error mfix idx = Some narg ->
+          nth_error args (rarg narg) = Some arg ->
           whne flags Σ Γ arg ->
           OnOne2 (fun a a' => red1 Σ Γ a a') args x ->
           (forall t', red1 Σ Γ arg t' -> P arg t') ->
           P (mkApps (tFix mfix idx) args) (mkApps (tFix mfix idx) x))
-      (Hfix_red_def_type : forall mfix idx args rarg arg body x,
-          unfold_fix mfix idx = Some (rarg, body) ->
-          nth_error args rarg = Some arg ->
+      (Hfix_red_def_type : forall mfix idx args d arg x,
+          nth_error mfix idx = Some d ->
+          nth_error args (rarg d) = Some arg ->
           whne flags Σ Γ arg ->
           OnOne2
             (fun x y : def term =>
@@ -700,9 +701,9 @@ Lemma whne_red1_ind
                ((dname x, dbody x, BasicAst.rarg x) =
                 (dname y, dbody y, BasicAst.rarg y))) mfix x ->
           P (mkApps (tFix mfix idx) args) (mkApps (tFix x idx) args))
-      (Hfix_red_def_body : forall mfix idx args rarg arg body x,
-          unfold_fix mfix idx = Some (rarg, body) ->
-          nth_error args rarg = Some arg ->
+      (Hfix_red_def_body : forall mfix idx args narg arg x,
+          nth_error mfix idx = Some narg ->
+          nth_error args (rarg narg) = Some arg ->
           whne flags Σ Γ arg ->
           OnOne2
             (fun x y : def term =>
@@ -740,8 +741,8 @@ Lemma whne_red1_ind
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
       (Hcase_branch : forall i p c brs brs',
-          whne flags Σ Γ c ->          
-          OnOne2 (fun br br' => 
+          whne flags Σ Γ c ->
+          OnOne2 (fun br br' =>
             let ctx := inst_case_branch_context p br in
             (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br')%type)
             brs brs' ->
@@ -778,7 +779,8 @@ Proof using Type.
   - depelim r; solve_discr; eauto.
   - eauto.
   - depelim r; solve_discr.
-    unfold declared_constant in isdecl.
+    unshelve eapply declared_constant_to_gen in isdecl; try exact wfΣ.
+    unfold declared_constant, declared_constant_gen in isdecl.
     rewrite e in isdecl.
     inv isdecl.
     congruence.
@@ -786,7 +788,8 @@ Proof using Type.
   - depelim r; eauto.
     + depelim wh; solve_discr.
       now apply Hbeta_nobeta.
-    + destruct args as [|? ? _] using MCList.rev_ind; [now solve_discr|].
+    + unfold unfold_fix in *.
+      destruct args as [|? ? _] using MCList.rev_ind; [now solve_discr|].
       rewrite mkApps_app in x.
       cbn in *.
       inv x.
@@ -796,8 +799,9 @@ Proof using Type.
         -- solve_discr.
            rewrite nth_error_nil in e0; congruence.
         -- rewrite <- mkApps_snoc.
-           now eapply Hfix_nofix.
-      * destruct s as (?&?&?&?&?&?&?&?&?).
+           case_eq (nth_error mfix idx); intros.
+           eapply Hfix_nofix; eauto. all: rewrite H in e0; congruence.
+      * destruct s as (?&?&?&?&?&?&?&?).
         inv e1.
         rewrite e2 in e.
         inv e.
@@ -805,7 +809,7 @@ Proof using Type.
         erewrite nth_error_app_left in e0 by eassumption.
         now apply whne_isConstruct_app in w; auto.
   - eapply red1_mkApps_tFix_inv in r; eauto.
-    2: { rewrite e.
+    2: { unfold unfold_fix. rewrite e.
          unfold is_constructor.
          rewrite e0.
          destruct isConstruct_app eqn:ctor; [|easy].
@@ -842,7 +846,7 @@ Proof using Type.
 Qed.
 End whne_red1_ind.
 
-Lemma whne_pres1 Σ Γ t t' :
+Lemma whne_pres1 {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red1 Σ Γ t t' ->
   whne RedFlags.default Σ Γ t ->
   whne RedFlags.default Σ Γ t'.
@@ -861,40 +865,25 @@ Proof.
     inv H.
     destruct nth as (?&?&[->|(?&?)]).
     + eapply whne_fixapp; eauto.
-      unfold unfold_fix.
-      rewrite e.
-      reflexivity.
     + eapply whne_fixapp; eauto.
-      unfold unfold_fix.
-      rewrite e.
-      inv e0.
-      rewrite H3.
-      reflexivity.
-  - unfold unfold_fix in *.
-    destruct (nth_error mfix idx) eqn:nth; [|easy].
+      now inv e0.
+  - destruct (nth_error mfix idx) eqn:nth; [|easy].
     eapply OnOne2_nth_error in nth; eauto.
     inv H.
     destruct nth as (?&?&[->|(?&?)]).
     + eapply whne_fixapp; eauto.
-      unfold unfold_fix.
-      rewrite e.
-      reflexivity.
     + eapply whne_fixapp; eauto.
-      unfold unfold_fix.
-      rewrite e.
-      inv e0.
-      rewrite H3.
-      reflexivity.
+      now inv e0.
 Qed.
 
-Lemma whne_pres Σ Γ t t' :
+Lemma whne_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red Σ Γ t t' ->
   whne RedFlags.default Σ Γ t -> whne RedFlags.default Σ Γ t'.
 Proof.
   induction 1 using red_rect_n1; eauto using whne_pres1.
 Qed.
-  
-Lemma whnf_pres1 Σ Γ t t' :
+
+Lemma whnf_pres1 {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red1 Σ Γ t t' ->
   whnf RedFlags.default Σ Γ t ->
   whnf RedFlags.default Σ Γ t'.
@@ -914,37 +903,40 @@ Proof.
   - apply red1_mkApps_tInd_inv in r as (?&->&?).
     apply whnf_indapp.
   - eapply red1_mkApps_tFix_inv in r; eauto.
-    2: { destruct unfold_fix as [(?&?)|]; [|easy].
-         unfold is_constructor.
-         now rewrite y. }
+    2: { unfold unfold_fix. destruct o as [[? [-> ?]] | ];
+        unfold is_constructor; now rewrite H. }
     destruct r as [[(?&->&?)|(?&->&?)]|(?&->&?)].
-    + apply whnf_fixapp.
-      apply OnOne2_length in o.
-      destruct unfold_fix as [(?&?)|]; [|easy].
+    + apply whnf_fixapp. destruct o as [[d [? ?]] | ]; [left ; exists d| easy].
+      split; eauto.
+      apply OnOne2_length in o0.
       apply nth_error_None.
-      apply nth_error_None in y.
+      apply nth_error_None in H0.
       lia.
     + apply whnf_fixapp.
-      unfold unfold_fix in *.
-      destruct (nth_error x idx) eqn:nth; [|easy].
-      eapply OnOne2_nth_error_r in nth; eauto.
-      destruct nth as (?&nth&?).
-      rewrite nth in y.
-      destruct s as [->|(?&?)]; [easy|].
-      now inv e.
+      destruct o as [[d [? ?]] | ]; [left| right].
+      eapply OnOne2_sym in o0.
+      eapply OnOne2_nth_error_r in o0; eauto.
+      destruct o0 as [? [? ?]]. eexists; split; eauto.
+      destruct s as [| [? ?]]. now subst. now inv e0.
+      apply OnOne2_length in o0.
+      apply nth_error_None.
+      apply nth_error_None in H.
+      lia.
     + apply whnf_fixapp.
-      unfold unfold_fix in *.
-      destruct (nth_error x idx) eqn:nth; [|easy].
-      eapply OnOne2_nth_error_r in nth; eauto.
-      destruct nth as (?&nth&?).
-      rewrite nth in y.
-      destruct s as [->|(?&?)]; [easy|].
-      now inv e.
+      destruct o as [[d [? ?]] | ]; [left| right].
+      eapply OnOne2_sym in o0.
+      eapply OnOne2_nth_error_r in o0; eauto.
+      destruct o0 as [? [? ?]]. eexists; split; eauto.
+      destruct s as [| [? ?]]. now subst. now inv e0.
+      apply OnOne2_length in o0.
+      apply nth_error_None.
+      apply nth_error_None in H.
+      lia.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
   - depelim r. solve_discr.
 Qed.
 
-Lemma whnf_pres Σ Γ t t' :
+Lemma whnf_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red Σ Γ t t' ->
   whnf RedFlags.default Σ Γ t -> whnf RedFlags.default Σ Γ t'.
 Proof.
@@ -987,8 +979,8 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
     All2 (fun br br' =>
       red Σ (Γ ,,, inst_case_branch_context motive br) br.(bbody) br'.(bbody) ×
       bcontext br = bcontext br') brs brs' ->
-    whnf_red Σ Γ (tCase ci motive discr brs) 
-      (tCase ci {| pparams := motivepars; 
+    whnf_red Σ Γ (tCase ci motive discr brs)
+      (tCase ci {| pparams := motivepars;
                   puinst := motive.(puinst);
                   pcontext := motive.(pcontext);
                   preturn := motiveret |} discr' brs')
@@ -1022,8 +1014,8 @@ Derive Signature for whnf_red.
 #[global]
 Hint Constructors whnf_red : pcuic.
 
-Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''} 
-  (a : All3 P l l' l'') : 
+Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''}
+  (a : All3 P l l' l'') :
   (forall x y z, P x y z -> Q x y z) ->
   All3 Q l l' l''.
 Proof.
@@ -1164,11 +1156,11 @@ Ltac inv_on_free_vars :=
   match goal with
   | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
   | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
-  | [ H : is_true (_ && _) |- _ ] => 
+  | [ H : is_true (_ && _) |- _ ] =>
     move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+  | [ H : is_true (on_free_vars ?P ?t) |- _ ] =>
     progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] ||
       eapply forallb_All in H); intros
   | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
     move/andP: H => []; rewrite ?shiftnP_xpredT; intros
@@ -1178,7 +1170,7 @@ Ltac inv_on_free_vars :=
 
 Require Import PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICSR PCUICConversion PCUICSubstitution.
 
-Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ : 
+Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ :
   All2 (red Σ Γ) s s' ->
   All (on_free_vars (shiftnP #|Γ| P)) s ->
   untyped_subslet Γ s Γ' ->
@@ -1189,9 +1181,9 @@ Proof.
   induction Δ; cbn.
   * rewrite !subst_context_nil. constructor.
   * move: onctx => /=. rewrite on_free_vars_ctx_snoc => /andP[] onctx ona.
-    rewrite !subst_context_snoc !Nat.add_0_r. 
+    rewrite !subst_context_snoc !Nat.add_0_r.
     constructor; eauto.
-    now apply IHΔ. 
+    now apply IHΔ.
     destruct a as [na [b|] ty]; constructor; cbn.
     relativize #|Δ|. eapply red_red; tea. 4:auto.
     erewrite on_free_vars_ctx_on_ctx_free_vars => //; tea.
@@ -1210,7 +1202,7 @@ Proof.
     solve_all. rewrite !app_context_length Nat.add_assoc -shiftnP_add addnP_shiftnP //.
 Qed.
 
-Definition fake_params n : context := 
+Definition fake_params n : context :=
     unfold n (fun x => {| decl_name := {| binder_name := nAnon; binder_relevance := Relevant |};
                           decl_body := None;
                           decl_type := tSort Universe.type0 |}).
@@ -1258,7 +1250,7 @@ Lemma br_fvs_pres {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ mot
   All (br_fvs Γ motive) brs ->
   All2
     (fun br br' : branch term =>
-    red Σ (Γ,,, inst_case_branch_context motive br) 
+    red Σ (Γ,,, inst_case_branch_context motive br)
        (bbody br) (bbody br') * (bcontext br = bcontext br')) brs brs' ->
   All (br_fvs Γ motive) brs'.
 Proof.
@@ -1272,7 +1264,7 @@ Proof.
   eapply on_free_vars_ctx_inst_case_context; trea. solve_all.
 Qed.
 
-Lemma whnf_red_trans {cf:checker_flags} {Σ : global_env_ext} Γ x y z : wf Σ -> 
+Lemma whnf_red_trans {cf:checker_flags} {Σ : global_env_ext} Γ x y z : wf Σ ->
   is_closed_context Γ ->
   is_open_term Γ x ->
   whnf_red Σ Γ x y ->
@@ -1307,7 +1299,7 @@ Proof.
       have clp: on_ctx_free_vars (closedP #|Γ,,, inst_case_predicate_context motive| xpredT)
         (Γ,,, inst_case_predicate_context motive).
       { rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
         rewrite test_context_k_closed_on_free_vars_ctx //. }
       eapply red_red_ctx. 5:tea. all:eauto; revgoals.
@@ -1333,18 +1325,18 @@ Proof.
       * rewrite closedP_shiftnP_eq.
         relativize #|Γ ,,, _|; [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //. cbn.
         eapply red_terms_on_free_vars; tea.
-        rewrite test_context_k_closed_on_free_vars_ctx -(All2_length a) //. 
+        rewrite test_context_k_closed_on_free_vars_ctx -(All2_length a) //.
 
     + eapply forallb_All in p3.
       epose proof (br_fvs_pres _ _ _ _ onΓ p p3 a0).
-      eapply (All2_impl (P:=fun br br' => br_fvs Γ motive br × 
+      eapply (All2_impl (P:=fun br br' => br_fvs Γ motive br ×
         red Σ (Γ,,, inst_case_branch_context motive br) (bbody br) (bbody br') *
             (bcontext br = bcontext br'))).
       2:intuition.
-      eapply All2_trans with brs'. 
+      eapply All2_trans with brs'.
       { clear -wf p.
         intros br br' br''. intuition auto. 2:congruence.
         etransitivity; tea. unfold inst_case_branch_context in *. now rewrite -b1 in a2. }
@@ -1356,7 +1348,7 @@ Proof.
       eapply red_red_ctx. 5:tea. all:eauto; revgoals.
       apply red_context_app_right; eauto.
       * rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
       * apply red_context_refl.
       * rewrite /inst_case_branch_context /=.
@@ -1378,12 +1370,12 @@ Proof.
       * rewrite shiftnP_add.
         relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
       * rewrite shiftnP_add.
         relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
         2:len.
-        rewrite on_free_vars_ctx_app onΓ /=.  
+        rewrite on_free_vars_ctx_app onΓ /=.
         eapply on_free_vars_ctx_inst_case_context => //.
         eapply red_terms_on_free_vars; tea.
         now rewrite -(All2_length a).
@@ -1413,7 +1405,7 @@ Proof.
     now apply All2_length in a.
 Qed.
 
-Lemma whne_red1_inv Σ Γ t t' :
+Lemma whne_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   whne RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
   whnf_red Σ Γ t t'.
@@ -1458,7 +1450,7 @@ Proof.
       intuition eauto; try reflexivity.
 Qed.
 
-Lemma whnf_red1_inv Σ Γ t t' :
+Lemma whnf_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   whnf RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
   whnf_red Σ Γ t t'.
@@ -1476,8 +1468,8 @@ Proof.
     apply whnf_red_mkApps; eauto using whnf_red.
     eapply OnOne2_All2; eauto.
   - apply red1_mkApps_tFix_inv in r.
-    2: { destruct unfold_fix as [(?&?)|]; [|easy].
-         now unfold is_constructor; rewrite y. }
+    2: { unfold unfold_fix. destruct o as [[? [-> ?]]|];
+         now unfold is_constructor; rewrite H. }
     destruct r as [[(?&->&?)|(?&->&?)]|(?&->&?)].
     + apply whnf_red_mkApps; auto.
       2: eapply OnOne2_All2; eauto.
@@ -1529,7 +1521,7 @@ Proof.
   intros wf wh [clΓ clt r].
   induction r using red_rect_n1.
   - apply whnf_red_refl; auto.
-  - eapply whnf_red1_inv in X.
+  - eapply whnf_red1_inv in X; eauto.
     + eapply whnf_red_trans; tea.
     + eapply whnf_pres; eauto.
 Qed.
@@ -1598,13 +1590,15 @@ Proof.
     apply whnf_indapp.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
-    apply whnf_fixapp.
-    unfold unfold_fix in *.
-    destruct (nth_error mfix' idx) eqn:nth; [|easy].
-    eapply All2_nth_error_Some_r in nth; eauto.
-    destruct nth as (?&?&((? & ?)&?)&?).
-    rewrite e e2 in y.
+    apply whnf_fixapp. destruct o as [[? [? ?]] |].
+    eapply All2_nth_error_Some in a; eauto.
+    destruct a as (?&?&((? & ?)&?)&?).
+    rewrite e. left; eexists; split; eauto. rewrite <- e2.
     eapply All2_nth_error_None; eauto.
+    apply All2_length in a.
+    right. apply nth_error_None.
+    apply nth_error_None in H.
+    lia.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.

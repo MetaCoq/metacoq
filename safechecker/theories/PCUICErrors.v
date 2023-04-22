@@ -1,6 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPretty.
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.

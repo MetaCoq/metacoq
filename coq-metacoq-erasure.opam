@@ -2,13 +2,14 @@ opam-version: "2.0"
 version: "dev"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
-dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.16"
+dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.17"
 bug-reports: "https://github.com/MetaCoq/metacoq/issues"
 authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Danil Annenkov <danil.v.annenkov@gmail.com>"
           "Simon Boulier <simon.boulier@inria.fr>"
           "Cyril Cohen <cyril.cohen@inria.fr>"
           "Yannick Forster <forster@ps.uni-saarland.de>"
+          "Jason Gross <jgross@mit.edu>"
           "Fabian Kunze <fkunze@fakusb.de>"
           "Meven Lennon-Bertrand <Meven.Bertrand@univ-nantes.fr>"
           "Kenji Maillard <kenji.maillard@inria.fr>"
@@ -27,9 +28,8 @@ install: [
   [make "-C" "erasure" "install"]
 ]
 depends: [
-  "coq-metacoq-template" {= version}
-  "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
+  "coq-metacoq-template-pcuic" {= version}
 ]
 synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """

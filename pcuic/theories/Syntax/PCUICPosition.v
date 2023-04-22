@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses ssrbool.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst PCUICCases.
 
@@ -74,7 +75,7 @@ Fixpoint validpos t (p : position) {struct p} :=
     match c, t with
     | app_l, tApp u v => validpos u p
     | app_r, tApp u v => validpos v p
-    | case_par par, tCase ci pr c brs => 
+    | case_par par, tCase ci pr c brs =>
       match nth_error pr.(pparams) par with
       | Some par =>  validpos par p
       | None => false
@@ -965,7 +966,7 @@ Instance reflect_stack : ReflectEq stack :=
 Definition fill_mfix_hole '((mfix1, m, mfix2) : mfix_hole) (t : term) : mfixpoint term :=
   let def :=
       match m with
-      | def_hole_type dname dbody rarg => 
+      | def_hole_type dname dbody rarg =>
         {| dname := dname;
            dtype := t;
            dbody := dbody;
@@ -1196,7 +1197,7 @@ Definition context_hole_context '((ctx1, decl, ctx2) : context_hole) : context :
 Definition predicate_hole_context (p : predicate_hole) : context :=
   match p with
   | pred_hole_params _ _ _ _ _ => []
-  | pred_hole_return pparams puinst pcontext => 
+  | pred_hole_return pparams puinst pcontext =>
     inst_case_context pparams puinst pcontext
   end.
 
@@ -1216,7 +1217,7 @@ Definition stack_entry_context (se : stack_entry) : context :=
   | LetIn_in na b B => [vdef na b B]
   | _ => []
   end.
-    
+
 Definition stack_context : stack -> context :=
   flat_map stack_entry_context.
 
@@ -1234,7 +1235,7 @@ Definition closedn_mfix_hole k '((mfix1, m, mfix2) : mfix_hole) : bool :=
   let k' := (k + #|mfix1| + 1 + #|mfix2|) in
   let def :=
       match m with
-      | def_hole_type dname dbody rarg => 
+      | def_hole_type dname dbody rarg =>
         closedn k' dbody
       | def_hole_body dname dtype rarg =>
         closedn k dtype
@@ -1290,12 +1291,12 @@ Definition closedn_stack_entry k se :=
   | Fix mfix idx => closedn_mfix_hole k mfix
   | CoFix_app mfix idx args => closedn k (mkApps (tCoFix mfix idx) args)
   | CoFix mfix idx => closedn_mfix_hole k mfix
-  | Case_pred ci p c brs => 
+  | Case_pred ci p c brs =>
     [&& closedn_predicate_hole k p, closedn k c &
         test_branches_k_pars (predicate_hole_pars p) closedn k brs]
   | Case_discr ci p brs =>
     test_predicate_k xpredT closedn k p && test_branches_k p closedn k brs
-  | Case_branch ci p c brs => 
+  | Case_branch ci p c brs =>
     [&& test_predicate_k xpredT closedn k p, closedn k c &
         closedn_branches_hole k p brs]
   | Proj p => true
@@ -1311,7 +1312,7 @@ Definition closedn_stack_entry k se :=
 Fixpoint closedn_stack k π :=
   match π with
   | [] => true
-  | se :: π => 
+  | se :: π =>
     closedn_stack_entry (k + #|stack_context π|) se &&
     closedn_stack k π
   end.
@@ -1444,7 +1445,7 @@ Qed.
 Section Stacks.
   Context (Σ : global_env_ext).
   Context `{checker_flags}.
-  
+
   Lemma fill_context_hole_inj c t t' :
     fill_context_hole c t = fill_context_hole c t' ->
     t = t'.
@@ -1674,12 +1675,12 @@ Require Import ssreflect.
 
 (* Lemma fill_mfix_hole_length mfix t : #|fill_mfix_hole mfix t| = #| *)
 
-(* Lemma closedn_fill_hole k mfix t : closedn k (fill_mfix_hole mfix t) = closedn (#|stack_entry_context se| + k) t && 
+(* Lemma closedn_fill_hole k mfix t : closedn k (fill_mfix_hole mfix t) = closedn (#|stack_entry_context se| + k) t &&
   closedn_stack_entry k se.
 Proof.
   destruct se; simpl => //; try bool_congr. *)
 
-Lemma closedn_fill_hole k t se : closedn k (fill_hole t se) = closedn (#|stack_entry_context se| + k) t && 
+Lemma closedn_fill_hole k t se : closedn k (fill_hole t se) = closedn (#|stack_entry_context se| + k) t &&
   closedn_stack_entry k se.
 Proof.
   destruct se; simpl => //; try bool_congr; try ring.
@@ -1699,11 +1700,11 @@ Proof.
       rewrite !andb_assoc andb_true_r /= map_length. ring.
   - destruct p; cbn.
     * unfold test_predicate_k; cbn.
-      rewrite !forallb_app /=. len. ring_simplify. 
+      rewrite !forallb_app /=. len. ring_simplify.
       replace (k + #|pcontext|) with (#|pcontext| + k) by lia.
       rewrite - !andb_assoc. repeat bool_congr.
       apply forallb_ext. intros []; cbn.
-      unfold test_branch_k, test_branch_k_pars; cbn; len. 
+      unfold test_branch_k, test_branch_k_pars; cbn; len.
       now rewrite -Nat.add_assoc /=.
     * unfold test_predicate_k; cbn; len.
       rewrite - !andb_assoc. repeat bool_congr.
@@ -1717,6 +1718,6 @@ Proof.
   induction π in k, t |- * => //.
   simpl.
   rewrite IHπ. bool_congr. len.
-  rewrite closedn_fill_hole. 
+  rewrite closedn_fill_hole.
   rewrite Nat.add_assoc (Nat.add_comm #|stack_context π| k). ring.
 Qed.

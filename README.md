@@ -52,7 +52,7 @@ Coq. The project currently has a single repository extending
 Template-Coq with additional features. Each extension is in a dedicated folder.
 The [dependency graph](https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/depgraph-2022-07-01.png)
 might be useful to navigate the project.
-Statistics: ~200kLoC of Coq, ~30kLoC of OCaml.
+Statistics: ~300kLoC of Coq, ~30kLoC of OCaml.
 
 ### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.16/template-coq/theories)
 
@@ -201,6 +201,10 @@ See the Quotation [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/quot
 
 ## Papers
 
+- ["Correct and Complete Type Checking and Certified Erasure for Coq, in Coq"](https://inria.hal.science/hal-04077552) Matthieu Sozeau, Yannick Forster, Meven Lennon-Bertrand, Nicolas Tabareau and Théo Winterhalter. Submitted. April 2023.
+
+  This paper presents the whole metatheoretical development of PCUIC and verified typechecking and erasure, as of version 1.2 of MetaCoq.
+
 - ["The Curious Case of Case"](https://sozeau.gitlabpages.inria.fr/www/research/publications/The_Curious_Case_of_Case-WITS22-220122.pdf) Matthieu Sozeau, Meven Lennon-Bertrand and Yannick Forster. WITS 2022 presentation, Philadelphia.
   This presents the challenges around the representation of cases in Coq and PCUIC.
 
@@ -210,6 +214,9 @@ See the Quotation [README](https://github.com/MetaCoq/metacoq/tree/coq-8.16/quot
 - ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](https://metacoq.github.io/coqcoqcorrect)
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
   and Théo Winterhalter. POPL 2020, New Orleans.
+
+  This paper presented the formal proofs of soundness of conversion, type checking and erasure.
+  Now superseded by the April 2023 article above.
 
 - ["Formalization and meta-theory of type theory"](https://theowinterhalter.github.io/#phd) Théo Winterhalter, PhD thesis, September 2020.
   Part 3 describes in detail the verified reduction, conversion and type checker.
@@ -260,23 +267,26 @@ alt="Cyril Cohen" width="150px"/>
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/yannick-forster.jpg"
 alt="Yannick Forster" width="150px"/>
 <img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/jason-gross.jpg" alt="Jason Gross"
+width="150px"/><br/>
+<img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/meven-lennon-bertrand.jpeg"
-alt="Meven Lennon-Bertrand" width="150px"/><br/>
+alt="Meven Lennon-Bertrand" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/kenji-maillard.jpg"
 alt="Kenji Maillard" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/gregory-malecha.jpg"
-alt="Gregory Malecha" width="150px"/>
+alt="Gregory Malecha" width="150px"/><br/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/jakob-botsch-nielsen.png"
-alt="Jakob Botsch Nielsen" width="150px"/><br/>
+alt="Jakob Botsch Nielsen" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/matthieu-sozeau.png"
 alt="Matthieu Sozeau" width="150px"/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/nicolas-tabareau.jpg"
-alt="Nicolas Tabareau" width="150px"/>
+alt="Nicolas Tabareau" width="150px"/><br/>
 <img
 src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/theo-winterhalter.jpg"
 alt="Théo Winterhalter" width="150px"/>
@@ -289,6 +299,7 @@ MetaCoq is developed by (left to right)
 <a href="https://github.com/SimonBoulier">Simon Boulier</a>,
 <a href="https://github.com/CohenCyril">Cyril Cohen</a>,
 <a href="https://github.com/yforster">Yannick Forster</a>,
+<a href="https://jasongross.github.io">Jason Gross</a>,
 <a href="https://www.meven.ac">Meven Lennon-Bertrand</a>,
 <a href="https://github.com/kyoDralliam">Kenji Maillard</a>,
 <a href="https://github.com/gmalecha">Gregory Malecha</a>,
@@ -300,12 +311,13 @@ MetaCoq is developed by (left to right)
 
 
 ```
-Copyright (c) 2014-2022 Gregory Malecha
-Copyright (c) 2015-2022 Abhishek Anand, Matthieu Sozeau
-Copyright (c) 2017-2022 Simon Boulier, Nicolas Tabareau, Cyril Cohen
-Copyright (c) 2018-2022 Danil Annenkov, Yannick Forster, Théo Winterhalter
-Copyright (c) 2020-2022 Jakob Botsch Nielsen, Meven Lennon-Bertrand
-Copyright (c) 2022      Kenji Maillard
+Copyright (c) 2014-2023 Gregory Malecha
+Copyright (c) 2015-2023 Abhishek Anand, Matthieu Sozeau
+Copyright (c) 2017-2023 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+Copyright (c) 2018-2023 Danil Annenkov, Yannick Forster, Théo Winterhalter
+Copyright (c) 2020-2023 Jakob Botsch Nielsen, Meven Lennon-Bertrand
+Copyright (c) 2022-2023 Kenji Maillard
+Copyright (c) 2023      Jason Gross
 ```
 
 This software is distributed under the terms of the MIT license.

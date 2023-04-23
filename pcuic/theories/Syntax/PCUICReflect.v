@@ -4,6 +4,7 @@ From Equations Require Import Equations.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.
 From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import EnvironmentReflect.
 From MetaCoq.Common Require Export Reflect.
 
 Open Scope pcuic.
@@ -375,6 +376,7 @@ Qed.
 
 Module PCUICTermDecide <: TermDecide PCUICTerm.
   #[export] Instance term_eq_dec : EqDec term := _.
+  Include TermDecideReflectInstances PCUICTerm.
 End PCUICTermDecide.
 
 Module PCUICEnvironmentDecide <: EnvironmentDecide PCUICTerm PCUICEnvironment.
@@ -385,4 +387,7 @@ Module PCUICEnvironmentDecide <: EnvironmentDecide PCUICTerm PCUICEnvironment.
   #[export] Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body := _.
   #[export] Instance constant_body_eq_dec : EqDec constant_body := _.
   #[export] Instance global_decl_eq_dec : EqDec global_decl := _.
+  Include EnvironmentDecideReflectInstances PCUICTerm PCUICEnvironment.
 End PCUICEnvironmentDecide.
+
+Module PCUICEnvironmentReflect := EnvironmentReflect PCUICTerm PCUICEnvironment PCUICTermDecide PCUICEnvironmentDecide.

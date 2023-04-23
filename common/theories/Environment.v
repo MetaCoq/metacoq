@@ -2,7 +2,7 @@
 From Coq Require Import ssreflect ssrbool ssrfun Morphisms Setoid.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes.
-From Equations.Prop Require Import Classes.
+From Equations.Prop Require Import Classes EqDecInstances.
 
 Module Type Term.
 
@@ -28,7 +28,12 @@ End Term.
 
 Module Type TermDecide (Import T : Term).
   #[export] Declare Instance term_eq_dec : EqDec term.
+  #[export] Hint Extern 0 (ReflectEq term) => exact (@EqDec_ReflectEq term term_eq_dec) : typeclass_instances.
 End TermDecide.
+
+Module TermDecideReflectInstances (Import T : Term) (Import TDec : TermDecide T).
+  #[export] Hint Extern 0 (ReflectEq term) => exact (@EqDec_ReflectEq term term_eq_dec) : typeclass_instances.
+End TermDecideReflectInstances.
 
 Module Retroknowledge.
 
@@ -44,6 +49,20 @@ Module Retroknowledge.
     option_extends x.(retro_float64) y.(retro_float64).
   Existing Class extends.
 
+  Definition extendsb (x y : t) :=
+    option_extendsb x.(retro_int63) y.(retro_int63) &&
+    option_extendsb x.(retro_float64) y.(retro_float64).
+
+  Lemma extendsT x y : reflect (extends x y) (extendsb x y).
+  Proof.
+    rewrite /extends/extendsb; do 2 case: option_extendsT; cbn; constructor; intuition.
+  Qed.
+
+  Lemma extends_spec x y : extendsb x y <-> extends x y.
+  Proof.
+    rewrite /extends/extendsb -!option_extends_spec /is_true !Bool.andb_true_iff //=.
+  Qed.
+
   #[global] Instance extends_refl x : extends x x.
   Proof.
     split; apply option_extends_refl.
@@ -54,7 +73,15 @@ Module Retroknowledge.
     intros x y z [] []; split; cbn; now etransitivity; tea.
   Qed.
 
+  #[export,program] Instance reflect_t : ReflectEq t := {
+      eqb x y := (x.(retro_int63) == y.(retro_int63)) &&
+                   (x.(retro_float64) == y.(retro_float64))
+    }.
+  Next Obligation.
+    do 2 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
+  Qed.
 End Retroknowledge.
+Export (hints) Retroknowledge.
 
 Module Environment (T : Term).
 
@@ -983,7 +1010,24 @@ Module Type EnvironmentDecide (T : Term) (Import E : EnvironmentSig T).
   #[export] Declare Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body.
   #[export] Declare Instance constant_body_eq_dec : EqDec constant_body.
   #[export] Declare Instance global_decl_eq_dec : EqDec global_decl.
+  #[export] Hint Extern 0 (ReflectEq context) => exact (@EqDec_ReflectEq context context_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq constructor_body) => exact (@EqDec_ReflectEq constructor_body constructor_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq projection_body) => exact (@EqDec_ReflectEq projection_body projection_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq one_inductive_body) => exact (@EqDec_ReflectEq one_inductive_body one_inductive_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq mutual_inductive_body) => exact (@EqDec_ReflectEq mutual_inductive_body mutual_inductive_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq constant_body) => exact (@EqDec_ReflectEq constant_body constant_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq global_decl) => exact (@EqDec_ReflectEq global_decl global_decl_eq_dec) : typeclass_instances.
 End EnvironmentDecide.
+
+Module EnvironmentDecideReflectInstances (T : Term) (Import E : EnvironmentSig T) (Import EDec : EnvironmentDecide T E).
+  #[export] Hint Extern 0 (ReflectEq context) => exact (@EqDec_ReflectEq context context_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq constructor_body) => exact (@EqDec_ReflectEq constructor_body constructor_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq projection_body) => exact (@EqDec_ReflectEq projection_body projection_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq one_inductive_body) => exact (@EqDec_ReflectEq one_inductive_body one_inductive_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq mutual_inductive_body) => exact (@EqDec_ReflectEq mutual_inductive_body mutual_inductive_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq constant_body) => exact (@EqDec_ReflectEq constant_body constant_body_eq_dec) : typeclass_instances.
+  #[export] Hint Extern 0 (ReflectEq global_decl) => exact (@EqDec_ReflectEq global_decl global_decl_eq_dec) : typeclass_instances.
+End EnvironmentDecideReflectInstances.
 
 Module Type TermUtils (T: Term) (E: EnvironmentSig T).
   Import T E.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ProofIrrelevance ssreflect ssrbool.
+From Coq Require Import ProofIrrelevance ssreflect ssrbool btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
@@ -216,7 +216,6 @@ Proof.
   - intro. eapply forallb2_Forall2 in H.
     eapply Forall2_impl; tea; eauto.
 Qed. *)
-
 
 Lemma Forall2_forallb2:
   forall (A : Type) (p : A -> A -> bool) (l l' : list A),

@@ -767,7 +767,7 @@ Module Environment (T : Term).
     eexists; reflexivity.
   Qed.
 
-  #[export] Instance extends_strictly_on_decls_l_merge Σ Σ'
+  Lemma extends_strictly_on_decls_l_merge Σ Σ'
     : extends_strictly_on_decls Σ (merge_global_envs Σ Σ').
   Proof.
     rewrite /extends_strictly_on_decls/merge_global_envs/merge_globals; cbn.
@@ -776,6 +776,7 @@ Module Environment (T : Term).
                 | apply Retroknowledge.extends_l_merge
                 | apply strictly_extends_decls_l_merge_globals ].
   Qed.
+  #[export] Hint Extern 0 (extends_strictly_on_decls _ (merge_global_envs ?Σ ?Σ')) => simple apply (@extends_strictly_on_decls_l_merge Σ Σ') : typeclass_instances.
 
   Lemma extends_l_merge Σ Σ'
     : extends Σ (merge_global_envs Σ Σ').

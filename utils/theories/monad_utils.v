@@ -87,6 +87,9 @@ Module State.
     := update (fun _ => s).
   Definition lift {S T} {TM : Monad T} {A} (m : T A) : StateT S T A
     := fun s => v <- m;; ret (v, s).
+  Definition run_drop_state {S T A} {TM : Monad T} (p : StateT S T A) (st : S) : T A
+    := '(v, st) <- p st;;
+       ret v.
 End State.
 
 Section MapOpt.

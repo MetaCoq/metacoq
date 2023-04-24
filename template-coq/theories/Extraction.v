@@ -6,6 +6,7 @@
 *)
 
 From Coq Require Ascii Extraction ZArith NArith.
+From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Reflect config.
 From MetaCoq.Template Require Import Ast Induction.

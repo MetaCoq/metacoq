@@ -31,6 +31,8 @@ gen-src/binPos.ml
 gen-src/binPos.mli
 gen-src/binPosDef.ml
 gen-src/binPosDef.mli
+gen-src/decidableClass.mli
+gen-src/decidableClass.ml
 gen-src/bool.ml
 gen-src/bool.mli
 gen-src/byte.ml
@@ -228,8 +230,18 @@ gen-src/uint0.ml
 gen-src/uint0.mli
 gen-src/universes0.ml
 gen-src/universes0.mli
-# gen-src/wf.ml
-# gen-src/wf.mli
+gen-src/wf.mli
+gen-src/wf.ml
+gen-src/noConfusion.mli
+gen-src/noConfusion.ml
+gen-src/mCUint63.mli
+gen-src/mCUint63.ml
+gen-src/init.mli
+gen-src/init.ml
+gen-src/floatClass.mli
+gen-src/floatClass.ml
+gen-src/depElim.mli
+gen-src/depElim.ml
 gen-src/zArith_dec.ml
 gen-src/zArith_dec.mli
 gen-src/zbool.ml

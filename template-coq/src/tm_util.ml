@@ -1,5 +1,5 @@
 open Pp
-  
+
 let contrib_name = "template-coq"
 
 let gen_constant_in_modules s =
@@ -9,7 +9,43 @@ let gen_constant_in_modules s =
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
-(* This allows to load template_plugin and the extractable plugin at the same time 
+module Debug : sig
+  val ppdebug : int -> (unit -> Pp.t) -> unit
+end = struct
+  let template_monad_debug = ref 0
+
+  let set_template_monad_debug d = (:=) template_monad_debug (if d then 1 else 0)
+  let get_template_monad_debug () = if !template_monad_debug > 0 then true else false
+
+  let set_template_monad_verbose = function
+    | None -> template_monad_debug := 0
+    | Some n -> template_monad_debug := n
+  let get_template_monad_verbose () =
+    if !template_monad_debug = 0 then None else Some !template_monad_debug
+
+  let () =
+    let open Goptions in
+    declare_bool_option
+      { optdepr  = false;
+        optstage = Interp;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug"];
+        optread  = get_template_monad_debug;
+        optwrite = set_template_monad_debug; }
+
+  let () =
+    let open Goptions in
+    declare_int_option
+      { optdepr  = false;
+        optstage = Interp;
+        optkey   = ["MetaCoq";"Template";"Monad";"Debug";"Verbosity"];
+        optread  = get_template_monad_verbose;
+        optwrite = set_template_monad_verbose; }
+
+  let ppdebug lvl pp =
+    if !template_monad_debug > lvl then Feedback.msg_debug (pp ())
+end
+
+(* This allows to load template_plugin and the extractable plugin at the same time
   while have option settings apply to both *)
 let timing_opt =
   let open Goptions in
@@ -23,14 +59,14 @@ let timing_opt =
   | None -> declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
 
 let time prefix f x =
-  if timing_opt () then 
+  if timing_opt () then
     let start = Unix.gettimeofday () in
     let res = f x in
     let stop = Unix.gettimeofday () in
     let () = Feedback.msg_info Pp.(prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
     res
   else f x
-  
+
 let debug_opt =
   let open Goptions in
   let key = ["MetaCoq"; "Debug"] in
@@ -57,7 +93,7 @@ let rec filter_map f l =
     match f x with
     | Some x' -> x' :: filter_map f xs
     | None -> filter_map f xs
-    
+
 let rec app_full trm acc =
   match Constr.kind trm with
     Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)
@@ -132,7 +168,7 @@ module CaseCompat =
     let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
     let paramsubst = Vars.subst_of_rel_context_instance paramdecl params in
     case_predicate_context_gen mip ci u paramsubst nas
-      
+
   let case_branches_contexts_gen mib ci u params brs =
     (* Γ ⊢ c : I@{u} params args *)
     (* Γ, indices, self : I@{u} params indices ⊢ p : Type *)
@@ -148,7 +184,7 @@ module CaseCompat =
         (nas, ctx, br)
       in
       Array.map2_i build_one_branch brs mip.mind_nf_lc
-    in 
+    in
     ebr
 
   let case_branches_contexts env ci u pars brs =
@@ -163,7 +199,7 @@ module RetypeMindEntry =
   open Names
   open Univ
 
-  let retype env evm c = 
+  let retype env evm c =
     Typing.type_of env evm (EConstr.of_constr c)
 
   let retype_decl env evm decl =
@@ -176,15 +212,15 @@ module RetypeMindEntry =
       let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
       let evm = Typing.check env evm b ty in
       evm, Context.Rel.Declaration.LocalDef (na, b, ty)
-    
-  let retype_context env evm ctx = 
+
+  let retype_context env evm ctx =
     let env, evm, ctx = Context.Rel.fold_outside (fun decl (env, evm, ctx) ->
       let evm, d = retype_decl env evm decl in
-      (EConstr.push_rel d env, evm, d :: ctx)) 
+      (EConstr.push_rel d env, evm, d :: ctx))
       ctx ~init:(env, evm, [])
     in evm, ctx
 
-  let sup_sort s1 s2 = 
+  let sup_sort s1 s2 =
     let open Sorts in
     match s1, s2 with
   | (_, SProp) -> assert false (* template SProp not allowed *)
@@ -199,8 +235,8 @@ module RetypeMindEntry =
     let evm, pars' = retype_context env evm pars in
     let envpars = Environ.push_rel_context pars env in
     let evm, arities =
-      List.fold_left 
-        (fun (evm, ctx) oib -> 
+      List.fold_left
+        (fun (evm, ctx) oib ->
           let ty = oib.mind_entry_arity in
           let evm, s = retype envpars evm ty in
           let ty = Term.it_mkProd_or_LetIn ty pars in
@@ -210,9 +246,9 @@ module RetypeMindEntry =
     let env = Environ.push_rel_context arities env in
     let env = Environ.push_rel_context pars env in
     let evm =
-      List.fold_left 
+      List.fold_left
         (fun evm oib ->
-          let evm, cstrsort = 
+          let evm, cstrsort =
             List.fold_left (fun (evm, sort) cstr ->
               let evm, cstrty = retype env evm cstr in
               let _, cstrsort = Reduction.dest_arity env (EConstr.to_constr evm cstrty) in
@@ -234,7 +270,7 @@ module RetypeMindEntry =
     let nf_evar c = EConstr.Unsafe.to_constr (Evarutil.nf_evar evm (EConstr.of_constr c)) in
     let inds =
       List.map
-          (fun oib -> 
+          (fun oib ->
             let arity = nf_evar oib.mind_entry_arity in
             let cstrs = List.map nf_evar oib.mind_entry_lc in
             { oib with mind_entry_arity = arity; mind_entry_lc = cstrs })
@@ -242,8 +278,8 @@ module RetypeMindEntry =
       in
       { mind with mind_entry_params = pars; mind_entry_inds = inds }
 
-  let infer_mentry_univs env evm mind = 
-    let evm = 
+  let infer_mentry_univs env evm mind =
+    let evm =
       match mind.mind_entry_universes with
       | Entries.Monomorphic_ind_entry -> evm
       | Entries.Template_ind_entry uctx -> evm
@@ -254,7 +290,7 @@ module RetypeMindEntry =
     let evm, mind = infer_mentry_univs env evm mind in
     let evm = Evd.minimize_universes evm in
     let mind = nf_mentry_univs evm mind in
-    let ctx, mind = 
+    let ctx, mind =
       match mind.mind_entry_universes with
       | Entries.Monomorphic_ind_entry ->
         Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_ind_entry }
@@ -264,14 +300,14 @@ module RetypeMindEntry =
         let uctx' = Evd.to_universe_context evm in
         Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_ind_entry uctx' }
     in ctx, mind
-end 
+end
 
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
 
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
 
-type ('term, 'name, 'universe_instance) apredicate = 
-  { auinst : 'universe_instance; 
+type ('term, 'name, 'universe_instance) apredicate =
+  { auinst : 'universe_instance;
     apars : 'term list;
     apcontext : 'name list;
     apreturn : 'term }
@@ -284,7 +320,7 @@ type ('nat, 'inductive, 'relevance) acase_info =
   { aci_ind : 'inductive;
     aci_npar : 'nat;
     aci_relevance : 'relevance }
-    
+
 type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'relevance, 'universe_instance, 'projection, 'int63, 'float64) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
@@ -298,7 +334,7 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tConst of 'kername * 'universe_instance
   | ACoq_tInd of 'inductive * 'universe_instance
   | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of ('nat, 'inductive, 'relevance) acase_info * 
+  | ACoq_tCase of ('nat, 'inductive, 'relevance) acase_info *
     ('term, 'name, 'universe_instance) apredicate *
     'term * ('term, 'name) abranch list
   | ACoq_tProj of 'projection * 'term

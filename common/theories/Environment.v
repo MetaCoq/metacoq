@@ -537,6 +537,20 @@ Module Environment (T : Term).
     rewrite (proj1 (@lookup_global_None _ _)) => //= -> //=.
   Qed.
 
+  Lemma NoDup_lookup_globals_eq Σ
+    : NoDup (List.map fst Σ)
+      -> forall kn, lookup_globals Σ kn = match lookup_global Σ kn with
+                                          | Some v => [v]
+                                          | None => []
+                                          end.
+  Proof.
+    move => H kn.
+    move: (NoDup_length_lookup_globals Σ H kn) (hd_error_lookup_globals Σ kn).
+    repeat destruct ?; subst.
+    all: case: lookup_globals; cbn; try congruence.
+    move => ? [|]; cbn; congruence.
+  Qed.
+
   Lemma lookup_globals_In Σ kn decl
     : In (kn, decl) Σ <-> In decl (lookup_globals Σ kn).
   Proof.
@@ -725,16 +739,6 @@ Module Environment (T : Term).
   Definition compatible_globals (Σ Σ' : global_declarations) : Prop
     := forall c, lookup_globals Σ c <> [] -> lookup_globals Σ' c <> [] -> lookup_globals Σ c = lookup_globals Σ' c.
 
-  Lemma extends_strictly_on_decls_l_merge Σ Σ'
-    : extends_strictly_on_decls Σ (merge_global_envs Σ Σ').
-  Proof.
-    rewrite /extends_strictly_on_decls/merge_global_envs/merge_globals; cbn.
-    split;
-      try first [ apply ContextSet.union_spec
-                | apply Retroknowledge.extends_l_merge
-                | now eexists ].
-  Qed.
-
   Definition compatible (Σ Σ' : global_env)
     := Retroknowledge.compatible Σ.(retroknowledge) Σ'.(retroknowledge)
        /\ compatible_globals Σ.(declarations) Σ'.(declarations).
@@ -749,6 +753,33 @@ Module Environment (T : Term).
     all: rewrite IH //=.
     all: try congruence.
   Qed.
+
+  Lemma strictly_extends_decls_l_merge_globals Σ Σ'
+    : strictly_extends_decls_part_globals Σ (merge_globals Σ Σ').
+  Proof. now eexists. Qed.
+
+  Lemma extends_l_merge_globals Σ Σ'
+    : extends_decls_part_globals Σ (merge_globals Σ Σ').
+  Proof.
+    rewrite /merge_globals.
+    intro c.
+    rewrite lookup_globals_app lookup_globals_filter.
+    eexists; reflexivity.
+  Qed.
+
+  #[export] Instance extends_strictly_on_decls_l_merge Σ Σ'
+    : extends_strictly_on_decls Σ (merge_global_envs Σ Σ').
+  Proof.
+    rewrite /extends_strictly_on_decls/merge_global_envs/merge_globals; cbn.
+    split;
+      try first [ apply ContextSet.union_spec
+                | apply Retroknowledge.extends_l_merge
+                | apply strictly_extends_decls_l_merge_globals ].
+  Qed.
+
+  Lemma extends_l_merge Σ Σ'
+    : extends Σ (merge_global_envs Σ Σ').
+  Proof. exact _. Qed.
 
   Lemma declared_kername_set_spec
     : forall Σ c, KernameSet.In c (declared_kername_set Σ) <-> List.In c (map fst Σ).
@@ -768,8 +799,7 @@ Module Environment (T : Term).
 
   Lemma extends_r_merge_globals Σ Σ'
     : compatible_globals Σ Σ' ->
-      forall c,
-        ∑ decls, lookup_globals (merge_globals Σ Σ') c = decls ++ lookup_globals Σ' c.
+      extends_decls_part_globals Σ' (merge_globals Σ Σ').
   Proof.
     rewrite /merge_globals.
     intro H2; cbn.

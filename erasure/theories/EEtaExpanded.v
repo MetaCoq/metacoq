@@ -2,7 +2,7 @@
 
 (* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
 
-From Coq Require Import Utf8 Program.
+From Coq Require Import Utf8 Program btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.

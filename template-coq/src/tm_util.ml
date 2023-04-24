@@ -12,37 +12,49 @@ let gen_constant_in_modules s =
 module Debug : sig
   val ppdebug : int -> (unit -> Pp.t) -> unit
 end = struct
-  let template_monad_debug = ref 0
 
-  let set_template_monad_debug d = (:=) template_monad_debug (if d then 1 else 0)
-  let get_template_monad_debug () = if !template_monad_debug > 0 then true else false
+  let key = ["MetaCoq"; "Template"; "Monad"; "Debug"; "Verbosity"]
 
-  let set_template_monad_verbose = function
-    | None -> template_monad_debug := 0
-    | Some n -> template_monad_debug := n
-  let get_template_monad_verbose () =
-    if !template_monad_debug = 0 then None else Some !template_monad_debug
-
-  let () =
+  let get_template_monad_verbose =
     let open Goptions in
-    declare_bool_option
-      { optdepr  = false;
-        optstage = Interp;
-        optkey   = ["MetaCoq";"Template";"Monad";"Debug"];
-        optread  = get_template_monad_debug;
-        optwrite = set_template_monad_debug; }
+    match get_option_value key with
+    | Some get -> fun () ->
+      begin match get () with
+      | IntValue i -> (match i with None -> 0 | Some i -> i)
+      | _  -> assert false
+      end
+    | None ->
+      declare_int_option_and_ref ~stage:Interp ~depr:false ~key ~value:0
 
-  let () =
+  let set_template_monad_verbose =
     let open Goptions in
-    declare_int_option
-      { optdepr  = false;
-        optstage = Interp;
-        optkey   = ["MetaCoq";"Template";"Monad";"Debug";"Verbosity"];
-        optread  = get_template_monad_verbose;
-        optwrite = set_template_monad_verbose; }
+    match get_option_value key with
+    | Some get ->
+      let set = fun i ->
+        set_option_value ~stage:Interp (fun _ v -> v) key i
+      in set
+    | None -> assert false
+
+  let set_template_monad_debug d =
+    set_template_monad_verbose (if d then 1 else 0)
+  let get_template_monad_debug () =
+    if get_template_monad_verbose () > 0 then true else false
+
+  let _ =
+    let open Goptions in
+    let key = ["MetaCoq"; "Template"; "Monad"; "Debug"] in
+    match get_option_value key with
+    | Some get -> ()
+    | None ->
+      declare_bool_option
+        { optdepr  = false;
+          optstage = Interp;
+          optkey   = key;
+          optread  = get_template_monad_debug;
+          optwrite = set_template_monad_debug; }
 
   let ppdebug lvl pp =
-    if !template_monad_debug > lvl then Feedback.msg_debug (pp ())
+    if get_template_monad_verbose () > lvl then Feedback.msg_debug (pp ())
 end
 
 (* This allows to load template_plugin and the extractable plugin at the same time

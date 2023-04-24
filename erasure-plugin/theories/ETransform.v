@@ -157,7 +157,7 @@ Next Obligation.
   unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
 Qed.
 
-Obligation Tactic := idtac.
+Local Obligation Tactic := idtac.
 
 Import Extract.
 
@@ -191,7 +191,7 @@ Proof.
   - eapply EEtaExpanded.isEtaExpFix_isEtaExp. now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
 
-Obligation Tactic := try solve [ eauto ].
+Local Obligation Tactic := try solve [ eauto ].
 
 Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
@@ -256,7 +256,7 @@ Next Obligation.
   cbn; intros. sq. now subst.
 Qed.
 
-Obligation Tactic := idtac.
+Local Obligation Tactic := idtac.
 
 (** This transformation is the identity on terms but changes the evaluation relation to one
     where fixpoints are not guarded. It requires eta-expanded fixpoints and evaluation

@@ -5,6 +5,7 @@ From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import WcbvEvalAux.
 From Coq Require Import Btauto.
+From Coq Require Import btauto.Algebra.
 From Coq Require Import List.
 From Coq Require Import ssrbool.
 From Coq Require Import PeanoNat.

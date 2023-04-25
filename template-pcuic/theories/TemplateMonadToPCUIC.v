@@ -181,11 +181,10 @@ Definition tmMaybeEval@{t u} `{eval_pcuic_quotation} {A : Type@{t}} (v : A) : Te
 Definition monad_trans@{t u} `{eval_pcuic_quotation} : Ast.term -> TemplateMonad@{t u} term
   := tmFix@{u u t u}
        (fun monad_trans v
-        => v <- @monad_trans'@{t u} TemplateMonad TemplateMonad_OptimizedMonad
-                  (@TransLookup_lookup_inductive' TemplateMonad TemplateMonad_OptimizedMonad monad_trans tmQuoteInductive (@tmFail))
-                  (fun A => tmMaybeEval)
-                  v;;
-           tmMaybeEval v).
+        => bind@{t u} (@monad_trans'@{t u} TemplateMonad@{t u} TemplateMonad_OptimizedMonad@{t u}
+                  (@TransLookup_lookup_inductive'@{t u} TemplateMonad@{t u} TemplateMonad_OptimizedMonad@{t u} monad_trans tmQuoteInductive@{t u} (@tmFail@{t u}))
+                  (fun A => tmMaybeEval@{t u})
+                  v) tmMaybeEval@{t u}).
 
 Definition monad_trans_decl@{t u} `{eval_pcuic_quotation} := @monad_trans_decl'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.
 Definition monad_trans_local@{t u} `{eval_pcuic_quotation} := @monad_trans_local'@{t u} TemplateMonad TemplateMonad_Monad monad_trans.

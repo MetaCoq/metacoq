@@ -1,6 +1,5 @@
 Require Import String List.
 Require Import MetaCoq.Template.All.
-
 Import ListNotations MCMonadNotation.
 
 Open Scope bs.
@@ -25,10 +24,10 @@ Inductive sle : nat -> nat -> SProp :=
 
 Definition zero_leq_zero : sle 0 0 := sle_0 _.
 
-MetaCoq Quote Recursively Definition zero_leq_zero_syn := zero_leq_zero.
+MetaCoq Quote Recursively Definition zero_leq_zero_syn := (sbox zero_leq_zero).
 MetaCoq Unquote Definition zero_leq_zero' := (snd zero_leq_zero_syn).
 
-Check eq_refl : sbox zero_leq_zero = sbox zero_leq_zero'.
+Check eq_refl : sbox zero_leq_zero = zero_leq_zero'.
 
 Lemma sle_irrelevant n m (p q : sle n m) : sbox p = sbox q.
 Proof. reflexivity. Defined.

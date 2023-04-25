@@ -72,17 +72,18 @@ Module Unquote.
   (* idk why this is needed... *)
   #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
   Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
-    := u <- @tmQuote Prop (Type@{U} -> True);;
-       match u with
-       | tProd _ (tSort u) _ => ret u
-       | _ => tmFail "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
-       end.
+    := bind@{t u} (@tmQuote@{t u} Prop (Type@{U} -> True))
+       (fun u => match u with
+       | tProd _ (tSort u) _ => ret@{t u} u
+       | _ => tmFail@{t u} "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
+       end).
   Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
-    := u <- tmQuoteUniverse@{U t u};;
+    := bind@{t u} tmQuoteUniverse@{U t u}
+       (fun u =>
        match Universe.get_is_level u with
        | Some l => ret l
        | None => tmFail "Universe is not a level"%bs
-       end.
+       end).
   Definition self := ltac:(run_template_program (tmCurrentModPath tt) (fun v => exact v)).
   (* (* this one is 5x slower *)
   Definition tmFix@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
@@ -99,29 +100,29 @@ Module Unquote.
    *)
   Definition tmFix'@{a b t u} {A : Type@{a}} {B : Type@{b}} (qtmFix' : Ast.term) (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
     := f (fun a
-          => tmFix <- tmUnquoteTyped (Ast.term -> ((A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) -> A -> TemplateMonad@{t u} B) qtmFix';;
-             tmFix qtmFix' f a).
+          => bind@{t u} (tmUnquoteTyped (Ast.term -> ((A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) -> A -> TemplateMonad@{t u} B) qtmFix')
+             (fun tmFix => tmFix qtmFix' f a)).
   Definition tmFix@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
     := f (fun a
-          => (qA <- tmQuote A;;
-              qB <- tmQuote B;;
-              qa <- tmQuoteLevel@{a _ _};;
-              qb <- tmQuoteLevel@{b _ _};;
-              qt <- tmQuoteLevel@{t _ _};;
-              qu <- tmQuoteLevel@{u _ _};;
+          => (bind@{t u} (tmQuote@{t u} A) (fun qA =>
+              bind@{t u} (tmQuote@{t u} B) (fun qB =>
+              bind@{t u} tmQuoteLevel@{a t u} (fun qa =>
+              bind@{t u} tmQuoteLevel@{b t u} (fun qb =>
+              bind@{t u} tmQuoteLevel@{t t u} (fun qt =>
+              bind@{t u} tmQuoteLevel@{u t u} (fun qu =>
               let self := tConst (self, "tmFix'"%bs) [qa;qb;qt;qu] in
-              @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).
+              @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)))))))).
   (* reference that uses the constant in Core, for equality comparison *)
   Definition tmFix_ref@{a b t u} {A : Type@{a}} {B : Type@{b}} (f : (A -> TemplateMonad@{t u} B) -> (A -> TemplateMonad@{t u} B)) : A -> TemplateMonad@{t u} B
-    := f (fun a
-          => (qA <- tmQuote A;;
-              qB <- tmQuote B;;
-              qa <- tmQuoteLevel@{a _ _};;
-              qb <- tmQuoteLevel@{b _ _};;
-              qt <- tmQuoteLevel@{t _ _};;
-              qu <- tmQuoteLevel@{u _ _};;
-              let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
-              @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a)).
+    := f (fun a =>
+            bind@{t u} (tmQuote@{t u} A) (fun qA =>
+            bind@{t u} (tmQuote@{t u} B) (fun qB =>
+            bind@{t u} tmQuoteLevel@{a t u} (fun qa =>
+            bind@{t u} tmQuoteLevel@{b t u} (fun qb =>
+            bind@{t u} tmQuoteLevel@{t t u} (fun qt =>
+            bind@{t u} tmQuoteLevel@{u t u} (fun qu =>
+            let self := tConst (MPfile ["Core"; "TemplateMonad"; "Template"; "MetaCoq"], "tmFix'")%bs [qa;qb;qt;qu] in
+            @tmFix'@{a b t u} A B (mkApps self [qA; qB]) f a))))))).
   Definition six := tmFix (fun f a => if (6 <? a) then ret 6 else f (S a))%nat 0%nat.
   Goal True.
     run_template_program six (fun v => constr_eq v 6%nat).

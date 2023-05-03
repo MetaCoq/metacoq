@@ -71,3 +71,75 @@ Qed.
   impl_refl impl_crefl
   impl_trans impl_ctrans
 | 100.
+
+Definition laxest_checker_flags : checker_flags := {|
+  check_univs := false ;
+  prop_sub_type := true;
+  indices_matter := false;
+  lets_in_constructor_types := true
+|}.
+
+Definition strictest_checker_flags : checker_flags := {|
+  check_univs := true ;
+  prop_sub_type := false;
+  indices_matter := true;
+  lets_in_constructor_types := false
+|}.
+
+Lemma laxest_checker_flags_laxest : forall cf, impl cf laxest_checker_flags.
+Proof.
+  intro cf; cbv; destruct cf.
+  repeat match goal with
+         | [ |- context[match ?x with _ => _ end] ] => case_eq x
+         end; try reflexivity; congruence.
+Qed.
+
+Lemma strictest_checker_flags_strictest : forall cf, impl strictest_checker_flags cf.
+Proof.
+  intro cf; cbv; destruct cf.
+  repeat match goal with
+         | [ |- context[match ?x with _ => _ end] ] => case_eq x
+         end; try reflexivity; congruence.
+Qed.
+
+(** can check everything that either one can check *)
+Definition union_checker_flags (cf1 cf2 : checker_flags) : checker_flags
+  := {| check_univs := andb cf2.(@check_univs) cf1.(@check_univs)
+     ; prop_sub_type := orb cf1.(@prop_sub_type) cf2.(@prop_sub_type)
+     ; indices_matter := andb cf2.(@indices_matter) cf1.(@indices_matter)
+     ; lets_in_constructor_types := orb cf1.(@lets_in_constructor_types) cf2.(@lets_in_constructor_types) |}.
+
+(** can check everything that both can check *)
+Definition inter_checker_flags (cf1 cf2 : checker_flags) : checker_flags
+  := {| check_univs := orb cf2.(@check_univs) cf1.(@check_univs)
+     ; prop_sub_type := andb cf1.(@prop_sub_type) cf2.(@prop_sub_type)
+     ; indices_matter := orb cf2.(@indices_matter) cf1.(@indices_matter)
+     ; lets_in_constructor_types := andb cf1.(@lets_in_constructor_types) cf2.(@lets_in_constructor_types) |}.
+
+Lemma union_checker_flags_spec cf1 cf2 (cf' := union_checker_flags cf1 cf2)
+  : impl cf1 cf' /\ impl cf2 cf' /\ (forall cf'', impl cf1 cf'' -> impl cf2 cf'' -> impl cf' cf'').
+Proof.
+  destruct cf1, cf2; subst cf'.
+  cbv.
+  repeat split.
+  3: intro cf''; destruct cf''.
+  all: repeat first [ match goal with
+                      | [ |- context[match ?x with _ => _ end] ] => is_var x; destruct x
+                      end
+                    | reflexivity
+                    | congruence ].
+Qed.
+
+Lemma inter_checker_flags_spec cf1 cf2 (cf' := inter_checker_flags cf1 cf2)
+  : impl cf' cf1 /\ impl cf' cf2 /\ (forall cf'', impl cf'' cf1 -> impl cf'' cf2 -> impl cf'' cf').
+Proof.
+  destruct cf1, cf2; subst cf'.
+  cbv.
+  repeat split.
+  3: intro cf''; destruct cf''.
+  all: repeat first [ match goal with
+                      | [ |- context[match ?x with _ => _ end] ] => is_var x; destruct x
+                      end
+                    | reflexivity
+                    | congruence ].
+Qed.

@@ -2008,7 +2008,7 @@ Section Typecheck.
     cbn in *. apply absurd. intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2032,7 +2032,7 @@ Section Typecheck.
     cbn in *. apply absurd. intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2051,7 +2051,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2071,7 +2071,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2090,7 +2090,7 @@ Section Typecheck.
     cbn in *. apply absurd. intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2123,7 +2123,7 @@ Section Typecheck.
     cbn in *. apply absurd. intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2145,7 +2145,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2188,7 +2188,7 @@ Section Typecheck.
     cbn in *. apply absurd; intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2205,7 +2205,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2224,7 +2224,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     destruct (hΣ _ wfΣ). unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
     eapply declared_inductive_inj in isdecl as []. 2: exact H3.
@@ -2239,7 +2239,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     apply absurd.
     do 2 eexists. intros; erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
@@ -2254,7 +2254,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     cbn in *.
     apply absurd.
@@ -2270,7 +2270,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     cbn in *.
     apply absurd.
@@ -2292,7 +2292,7 @@ Section Typecheck.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    destruct X0 as [? [ty]]; eauto.
+    edestruct X0 as [? [ty]]; clear X0; eauto.
     inversion ty ; subst.
     cbn in *.
     sq.

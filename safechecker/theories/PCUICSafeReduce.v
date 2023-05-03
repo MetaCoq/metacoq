@@ -1129,7 +1129,7 @@ Corollary R_Acc_aux :
   Proof using Type.
     intros Σ wfΣ Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]];
+    edestruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]];
     eassumption.
   Qed.
 
@@ -1152,7 +1152,7 @@ Corollary R_Acc_aux :
     intros Γ t π h.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]];
+    edestruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]];
     try eassumption.
     unfold Pr in p. symmetry. assumption.
   Qed.
@@ -1186,7 +1186,7 @@ Corollary R_Acc_aux :
     intros Γ t π h hr.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
+    edestruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
     split.
     - assumption.
     - apply hLam. assumption.
@@ -1199,7 +1199,7 @@ Corollary R_Acc_aux :
     intros Γ t π h.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
+    edestruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
   Qed.
 
   Lemma reduce_stack_noLamApp :
@@ -1211,7 +1211,7 @@ Corollary R_Acc_aux :
     intros Γ t π h.
     unfold reduce_stack.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
+    edestruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
   Qed.
 
   Definition reduce_term Γ t
@@ -1868,8 +1868,8 @@ Section ReduceFns.
       now rewrite eq.
     * destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]. specialize (X1 _ wfΣ).
       pose proof (hΣ := hΣ _ X _ wfΣ). sq.
-      pose proof (@hnf_complete Γ t h) as [wh]; eauto.
-      pose proof (@hnf_sound Γ t h) as [r']; eauto.
+      edestruct (@hnf_complete Γ t h) as [wh]; eauto.
+      edestruct (@hnf_sound Γ t h) as [r']; eauto.
       eapply PCUICContextConversion.closed_red_confluence in X1 as (?&r1&r2); eauto.
       apply invert_red_sort in r2 as ->.
       eapply whnf_red_inv in r1; eauto.
@@ -1913,8 +1913,8 @@ Section ReduceFns.
     * destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       specialize (X3 _ wfΣ).
       sq.
-      pose proof (@hnf_complete Γ t h) as [wh]; eauto.
-      pose proof (@hnf_sound Γ t h) as [r']; eauto.
+      edestruct (@hnf_complete Γ t h) as [wh]; eauto.
+      edestruct (@hnf_sound Γ t h) as [r']; eauto.
       destruct (hΣ _ _ _ wfΣ).
       eapply PCUICContextConversion.closed_red_confluence in X3 as (?&r1&r2); eauto.
       apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
@@ -1966,7 +1966,7 @@ Section ReduceFns.
       assert (π = appstack l []) as ->.
       2: { now rewrite zipc_appstack in H. }
       unfold reduce_stack in eq.
-      destruct reduce_stack_full as (?&_&stack_val&?); eauto.
+      edestruct reduce_stack_full as (?&_&stack_val&?); eauto.
       subst x.
       unfold Pr in stack_val.
       cbn in *.
@@ -1980,7 +1980,7 @@ Section ReduceFns.
       pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
       pose proof (reduce_stack_whnf RedFlags.default _ X Γ t [] h _  wfΣ) as wh.
       unfold reduce_stack in *.
-      destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)); eauto.
+      edestruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)); eauto.
       destruct wh as [wh].
       apply Req_red in r' as [r'].
       unfold Pr in stack_valid.

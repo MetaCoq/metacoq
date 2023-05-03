@@ -128,7 +128,7 @@ Section fix_sigma.
     induction (normalization_in Σ wf wfΣ' Γ s H') as [s _ IH]. cbn in IH.
     induction (wf_cod' s) as [s _ IH_sub] in Γ, H , H', IH |- *.
     econstructor.
-    intros (Γ' & B & ?) [(na & A & ? & ?)]; eauto. subst.
+    eintros (Γ' & B & ?) [(na & A & ? & ?)]; eauto. subst.
     eapply Relation_Properties.clos_rt_rtn1 in r. inversion r.
       + subst. eapply IH_sub. econstructor. cbn. reflexivity.
         intros. eapply IH.
@@ -240,7 +240,7 @@ Section fix_sigma.
       * pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
         pose proof (abstract_env_ext_wf X wfΣ) as [wfΣ'].
         specialize_Σ wfΣ. sq.
-        intros [T' [[HT'] isa]]; eauto.
+        eintros [T' [[HT'] isa]]; eauto.
         destruct (PCUICContextConversion.closed_red_confluence H HT') as (? & ? & ?); eauto.
         eapply invert_red_prod in c as (? & ? & []); eauto. subst.
         apply n. intros. rewrite (abstract_env_ext_irr _ H0 wfΣ).
@@ -633,7 +633,7 @@ Proof.
     all:try bang.
     all:try match goal with
       [ H : context [@is_erasableb ?X_type ?X ?normalization_in ?Γ ?t ?Ht ] |- _ ] =>
-        destruct (@is_erasableP X_type X normalization_in Γ t Ht) as [[H']|H'] => //; eauto ;
+        edestruct (@is_erasableP X_type X normalization_in Γ t Ht) as [[H']|H'] => //; eauto ;
         try now eapply erases_box
     end.
     all: try solve [constructor; eauto].
@@ -1512,7 +1512,7 @@ Lemma erase_global_includes X_type (X:X_type.π1) deps decls {normalization_in} 
 Proof.
   intros ? sub Σ wfΣ; cbn. induction decls in X, H, sub, prf, deps, deps', Σ , wfΣ, normalization_in |- *.
   - simpl. intros i hin. exfalso.
-    specialize (H i hin) as [[decl Hdecl]]; eauto.
+    edestruct (H i hin) as [[decl Hdecl]]; eauto.
     rewrite /lookup_env (prf _ wfΣ) in Hdecl. noconf Hdecl.
   - intros i hin.
     destruct (abstract_env_wf _ wfΣ) as [wf].

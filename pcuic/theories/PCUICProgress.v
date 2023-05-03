@@ -105,7 +105,7 @@ Proof.
     econstructor. eexists; eauto. eexists; eauto. eapply isType_ws_cumul_pb_refl. eexists; eauto. }
   intros Hf Ht. simpl in Hf.
   specialize (IHu (tApp f a) T).
-  epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea.
+  edestruct (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea.
   edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
   exists (tProd na' A' B'). exists Hf'. exists s_. exists HA.
   split. rewrite <- H2. lia.

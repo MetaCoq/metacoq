@@ -238,7 +238,7 @@ Section Conversion.
         * intros [t' h']. eapply Subterm.wf_lexprod.
           -- intro. eapply posR_Acc.
           -- intro. eapply stateR_Acc.
-        * intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto.
+        * eintros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto.
           eexists _,_. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
           intuition eauto using sq.
           constructor. etransitivity; tea.
@@ -269,7 +269,7 @@ Section Conversion.
              end.
             rewrite ee. right. clear ee. assumption.
         * eapply wcored_wf.
-    - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto.
+    - eintros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto.
       intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
       eexists _,_. intuition eauto using sq.
       constructor. etransitivity; eauto.
@@ -1660,7 +1660,7 @@ Qed.
     erewrite <- abstract_env_lookup_correct' in eq1, eq2; eauto.
     symmetry in eq1, eq2.
     eapply declared_constant_from_gen in eq1, eq2.
-    generalize hΣ. intros []; eauto.
+    generalize hΣ. eintros []; eauto.
     unshelve eapply closed_red_mkApps_tConst_axiom in r1 as (?&->&?); eauto.
     eapply closed_red_mkApps_tConst_axiom in r2 as (?&->&?); eauto.
     apply eq_termp_mkApps_inv in eq as (eq&?); [|easy|easy].
@@ -2710,7 +2710,7 @@ Qed.
   Proof using Type.
     intros eq ir. pose proof (heΣ _ wfΣ) as [[]].
     pose proof (hΣ _ wfΣ).
-    destruct ir as (_&[wh]); eauto.
+    edestruct ir as (_&[wh]); eauto.
     eapply eqb_term_upto_univ_impl with (p := wf_universeb Σ) (q := closedu) in eq; tea.
     2-3: intros; apply iff_reflect; eapply (abstract_env_compare_universe_correct _ wfΣ Conv) ; now eapply wf_universe_iff.
     2:{ intros. rewrite wf_universeb_instance_forall in *.
@@ -2718,7 +2718,7 @@ Qed.
       apply wf_universe_instance_iff in H1.
       apply compare_global_instance_correct; eauto.
     }
-    - epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
+    - epose proof (reduce_term_complete _ _ _ _ _ _) as Hr; edestruct Hr as [wh'].
       eapply whnf_eq_term in eq; [|exact wh'].
       rewrite zipp_as_mkApps in wh.
       depelim wh; solve_discr.
@@ -2780,7 +2780,7 @@ Qed.
      ws_cumul_pb_brs Σ (Γ,,, stack_context π) p brs brs' &
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1]∥.
   Proof using Type.
-    intros [] c_is_red%eq_sym c'_is_red%eq_sym wtc wtc' isr1 isr2 cc; eauto.
+    eintros [] c_is_red%eq_sym c'_is_red%eq_sym wtc wtc' isr1 isr2 cc; eauto.
     eapply reduced_case_discriminee_whne in c_is_red as wh1; eauto.
     eapply reduced_case_discriminee_whne in c'_is_red as wh2; eauto.
     destruct (hΣ _ wfΣ) as [hΣ], wh1 as [wh1], wh2 as [wh2].
@@ -2806,7 +2806,7 @@ Qed.
     ∥whne RedFlags.default Σ (Γ,,, stack_context π) c∥.
   Proof using Type.
     intros eq%eq_sym ir.
-    destruct ir as (_&[wh]); eauto.
+    edestruct ir as (_&[wh]); eauto.
     pose proof (hΣ _ wfΣ).
     eapply eqb_term_upto_univ_impl in eq; tea.
     2-3: intros; apply iff_reflect; eapply (abstract_env_compare_universe_correct _ wfΣ Conv) ; now eapply wf_universe_iff.
@@ -2814,7 +2814,7 @@ Qed.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1.
         eapply (compare_global_instance_correct wfΣ); eauto. }
-    - epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
+    - epose proof (reduce_term_complete _ _ _ _ _ _) as Hr; edestruct Hr as [wh'].
       eapply whnf_eq_term in eq; [|exact wh'].
       rewrite zipp_as_mkApps in wh.
       depelim wh; solve_discr.
@@ -2846,7 +2846,7 @@ Qed.
      Σ;;; Γ,,, stack_context π ⊢ c = c' ×
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof using Type.
-    intros [] c_is_red c'_is_red isr1 isr2 cc; eauto.
+    eintros [] c_is_red c'_is_red isr1 isr2 cc; eauto.
     eapply reduced_proj_body_whne in c_is_red as wh1; eauto.
     eapply reduced_proj_body_whne in c'_is_red as wh2; eauto.
     destruct (hΣ _ wfΣ) as [hΣ], wh1 as [wh1], wh2 as [wh2].
@@ -2888,12 +2888,12 @@ Qed.
           mfix mfix' &
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1]∥.
   Proof using Type.
-    intros [?] uf1 uf2 cc; eauto.
+    eintros [?] uf1 uf2 cc; eauto.
     rewrite !zipp_as_mkApps in cc; eauto.
     apply unfold_one_fix_None in uf1.
-    destruct uf1 as [(?&?&?)]; eauto.
+    edestruct uf1 as [(?&?&?)]; eauto.
     apply unfold_one_fix_None in uf2.
-    destruct uf2 as [(?&?&?)]; eauto.
+    edestruct uf2 as [(?&?&?)]; eauto.
     destruct (hΣ _ wfΣ).
     eapply conv_cum_red_conv_inv in cc.
     2: eassumption.
@@ -2932,7 +2932,7 @@ Qed.
           mfix mfix' ×
      ws_cumul_pb_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof using Type.
-    intros [?] cc; eauto. specialize_Σ wfΣ.
+    eintros [?] cc; eauto. specialize_Σ wfΣ.
     rewrite !zipp_as_mkApps in cc.
     destruct (hΣ _ wfΣ).
     apply conv_cum_mkApps_inv in cc as [(ws_cumul_pb_CoFix&conv_args)]; auto.
@@ -3835,7 +3835,7 @@ Qed.
     specialize_Σ wfΣ.
     match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
+        pose proof (reduce_term_sound f Σ hΣ Γ t h) as Hr; edestruct Hr as [hr]
     end; eauto.
     eapply red_welltyped ; [auto|..].
     - exact h2'.
@@ -3843,7 +3843,7 @@ Qed.
       eapply red_case_c; auto. eapply hr.
   Qed.
   Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
+    edestruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
     specialize_Σ wfΣ.
     match goal with
     | |- context [ reduce_term ?f _ ?X ?Γ c' ?h ] =>
@@ -3925,7 +3925,7 @@ Qed.
     pose proof (hΣ _ wfΣ) as []. pose proof hx as hx'.
     specialize_Σ wfΣ.
     destruct hx'.
-    epose proof (reduce_term_sound _ _ _ _ _ _) as [r]; eauto.
+    epose proof (reduce_term_sound _ _ _ _ _ _) as Hr; edestruct Hr as [r]; eauto.
     eapply conv_cum_red_conv_inv.
     all: tea.
     1: reflexivity.
@@ -3939,7 +3939,7 @@ Qed.
     clear aux eq3. specialize_Σ wfΣ.
     match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
+        pose proof (reduce_term_sound f Σ hΣ Γ t h) as Hr; edestruct Hr as [hr]
     end; eauto.
     sq.
     eapply red_welltyped ; [auto|..].
@@ -4024,7 +4024,7 @@ Qed.
     apply h; clear h. intros Σ wfΣ.
     pose proof (hΣ _ wfΣ) as [].
     destruct (hx _ wfΣ).
-    epose proof (reduce_term_sound _ _ _ _ _ _) as [r]; eauto.
+    epose proof (reduce_term_sound _ _ _ _ _ _) as Hr; edestruct Hr as [r]; eauto.
     eapply conv_cum_red_inv.
     1: eauto.
     2: reflexivity.
@@ -4091,7 +4091,7 @@ Qed.
     pose proof (heΣ _ wfΣ) as [].
     match goal with
     | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-      pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
+      pose proof (reduce_term_sound f Σ hΣ Γ t h) as Hr; edestruct Hr as [hr]
     end; eauto.
     eapply red_welltyped ; [auto|..].
     - exact (h2 _ wfΣ).
@@ -4195,7 +4195,7 @@ Qed.
     pose proof (heΣ _ wfΣ) as [].
     match goal with
       | |- context [ reduce_term ?f _ ?X ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f _ X Γ t h) as [hr]
+        pose proof (reduce_term_sound f _ X Γ t h) as Hr; edestruct Hr as [hr]
     end; eauto.
     sq.
     eapply red_welltyped ; [auto|..].
@@ -5611,7 +5611,7 @@ Qed.
   Qed.
   Next Obligation.
     apply h; clear h. intros Σ wfΣ.
-    destruct ir1 as (notapp1&[whδ1]), ir2 as (notapp2&[whδ2]); eauto.
+    edestruct ir1 as (notapp1&[whδ1]), ir2 as (notapp2&[whδ2]); eauto.
     erewrite !zipp_as_mkApps in *.
     eapply reducible_head_None in nored1 as [(?&?&s1&r1&wh1)]; eauto.
     eapply reducible_head_None in nored2 as [(?&?&s2&r2&wh2)]; eauto.
@@ -5643,7 +5643,7 @@ Qed.
   Next Obligation.
     unfold eqb_termp_napp in noteq.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    destruct ir1 as (notapp1&[whδ1]), ir2 as (notapp2&[whδ2]); eauto.
+    edestruct ir1 as (notapp1&[whδ1]), ir2 as (notapp2&[whδ2]); eauto.
     erewrite !zipp_as_mkApps in *.
     eapply reducible_head_None in nored1 as [(?&?&s1&rargs1&wh1)]; eauto.
     eapply reducible_head_None in nored2 as [(?&?&s2&rargs2&wh2)]; eauto.

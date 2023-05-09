@@ -924,7 +924,7 @@ Qed.
 Next Obligation.
   cbv [id].
   unshelve eapply (normalization_in 0); cbn; try reflexivity; try lia.
-Qed.
+Defined.
 Next Obligation.
   pose proof (abstract_env_ext_wf _ H) as [wf].
   pose proof (abstract_env_exists (abstract_pop_decls X)) as [[? HX']].
@@ -941,7 +941,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   pose proof (abstract_env_exists X) as [[? HX]].
   assert (prop': forall Σ : global_env, abstract_env_rel X Σ -> exists d, Σ.(declarations) = d :: decls).
@@ -950,7 +950,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
 pose proof (abstract_env_exists X) as [[? HX]].
 assert (prop': forall Σ : global_env, abstract_env_rel X Σ -> exists d, Σ.(declarations) = d :: decls).
@@ -959,7 +959,7 @@ now pose proof (abstract_pop_decls_correct X decls prop' _ _ HX H).
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   pose proof (abstract_env_exists X) as [[? HX]].
   assert (prop': forall Σ : global_env, abstract_env_rel X Σ -> exists d, Σ.(declarations) = d :: decls).
@@ -968,7 +968,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
 pose proof (abstract_env_exists X) as [[? HX]].
 assert (prop': forall Σ : global_env, abstract_env_rel X Σ -> exists d, Σ.(declarations) = d :: decls).
@@ -2719,7 +2719,7 @@ Qed.
 Next Obligation.
   cbv [id].
   unshelve eapply (normalization_in 0); cbn; try reflexivity; try lia.
-Qed.
+Defined.
 Next Obligation.
   pose proof (abstract_env_ext_wf _ H) as [?].
   pose proof (abstract_env_exists X) as [[? wf]].
@@ -2732,28 +2732,28 @@ Next Obligation.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   specialize_Σ H. sq; red. destruct prop as [Σ' ->].
   eexists (Σ' ++ [(kn, ConstantDecl cb)]); rewrite -app_assoc //.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   specialize_Σ H. sq; red. destruct prop as [Σ' ->].
   eexists (Σ' ++ [(kn, ConstantDecl cb)]); rewrite -app_assoc //.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   specialize_Σ H. sq; red. destruct prop as [Σ' ->].
   eexists (Σ' ++ [(kn, _)]); rewrite -app_assoc //.
 Qed.
 Next Obligation.
   unshelve eapply (normalization_in (S _)); cbn in *; revgoals; try eassumption; lia.
-Qed.
+Defined.
 Next Obligation.
   specialize_Σ H. sq; red. destruct prop as [Σ' ->].
   eexists (Σ' ++ [(kn, _)]); rewrite -app_assoc //.

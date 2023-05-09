@@ -17,6 +17,7 @@ theories/MCEquality.v
 theories/MCFSets.v
 theories/LibHypsNaming.v
 theories/MCList.v
+theories/MCListable.v
 theories/MCMSets.v
 theories/MCOption.v
 theories/MCProd.v

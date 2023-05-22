@@ -15,11 +15,23 @@ let cast_prop = ref (false)
 
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
+
+let metacoq_cat = match CWarnings.get_category "metacoq" with
+  | There c -> c
+  | OtherType -> assert false
+  | NotThere -> CWarnings.create_category ~name:"metacoq" ()
+
+let make_warning_if_not_exist w =
+  match CWarnings.get_warning w with
+  | There w -> w
+  | OtherType -> assert false (* used as category *)
+  | NotThere -> CWarnings.create_warning ~name:w ~from:[metacoq_cat] ()
+
 let warn_primitive_turned_into_axiom = 
-  CWarnings.create ~name:"primitive-turned-into-axiom" ~category:"metacoq"
+  CWarnings.create_in (make_warning_if_not_exist "primitive-turned-into-axiom")
           Pp.(fun prim -> str "Quoting primitive " ++ str prim ++ str " into an axiom.")
 let warn_ignoring_private_polymorphic_universes =
-  CWarnings.create ~name:"private-polymorphic-universes-ignored" ~category:"metacoq"
+  CWarnings.create_in (make_warning_if_not_exist "private-polymorphic-universes-ignored")
           Pp.(fun () -> str "Ignoring private polymorphic universes.")
           
 let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =

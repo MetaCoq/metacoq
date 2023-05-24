@@ -392,7 +392,7 @@ struct
               let envcstr = push_rel_context parsctx envind in
               let qargctx, acc = quote_rel_context quote_term acc envcstr sigma argctx in
               let qindices, acc = 
-                let hd, args = Constr.decompose_appvect concl in
+                let hd, args = Constr.decompose_app concl in
                 let pars, args = CArray.chop mib.mind_nparams args in
                 let envconcl = push_rel_context argctx envcstr in
                 quote_terms quote_term acc envconcl sigma args

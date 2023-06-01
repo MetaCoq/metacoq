@@ -36,7 +36,7 @@ Inductive value : Set :=
 Definition environment := list (ident * value).
 Definition add : ident -> value -> environment -> environment := fun (x : ident) (v : value) env =>
                                                                 (x, v) :: env.
-Fixpoint add_multiple (xs : list ident) (vs : list value) (env : environment) : environment :=
+Fixpoint add_multiple (xs : list ident) (vs : list value) (env : environment) {struct vs} : environment :=
   match xs, vs with
   | x :: xs, v :: vs => add x v (add_multiple xs vs env)
   | _, _ => env
@@ -118,7 +118,7 @@ Section Wcbv.
     eval Γ f (vRecClos mfix idx Γ') ->
     NoDup (map fst mfix) ->
     nth_error mfix idx = Some (na', tLambda (nNamed na) fn) ->
-    eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') (Γ'))) fn res ->
+    eval (add na av (add_multiple (List.rev (map fst mfix)) (fix_env mfix Γ') (Γ'))) fn res ->
     eval Γ a av ->
     eval Γ (tApp f a) res
 
@@ -203,12 +203,12 @@ Section Wcbv.
              (e1 :
              eval
              (add na av  (add_multiple
-             (map fst mfix)
+             (List.rev (map fst mfix))
              (fix_env mfix Γ') (Γ'))) fn
              res),
              P
              (add na av (add_multiple
-             (map fst mfix)
+             (List.rev (map fst mfix))
              (fix_env mfix Γ') (Γ'))) fn
              res e1
              →
@@ -291,14 +291,14 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
   List.forallb (isLambda ∘ dbody) mfix ->
   NoDup nms ->
   All2_Set (fun d n => d.(dname) = nNamed n) mfix nms ->
-  All2_Set (fun d d' => (nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
+  All2_Set (fun d d' => (List.rev nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
   Γ ;;; E ⊩ tFix mfix idx ~ tFix mfix' idx
 with represents_value : value -> term -> Set :=
 | represents_value_tBox : represents_value vBox tBox
 | represents_value_tClos na E s t na' : [na] ;;; E ⊩ s ~ t -> represents_value (vClos na s E) (tLambda na' t)
 | represents_value_tConstruct vs ts ind c : All2_Set represents_value vs ts -> represents_value (vConstruct ind c vs) (tConstruct ind c ts)
 | represents_value_tFix vfix i E mfix :
-  All2_Set (fun v d => isLambda (snd v) × (map fst vfix ;;; E ⊩ snd v ~ d.(dbody))) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
+  All2_Set (fun v d => isLambda (snd v) × (List.rev (map fst vfix) ;;; E ⊩ snd v ~ d.(dbody))) vfix mfix -> represents_value (vRecClos vfix i E) (tFix mfix i)
 where "Γ ;;; E ⊩ s ~ t" := (represents Γ E s t).
 
 Program Definition represents_ind :=
@@ -363,9 +363,9 @@ Program Definition represents_ind :=
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms)
              (a0 : All2_Set
-                     (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
+                     (λ d d' : def term, (List.rev nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
-             (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
+             (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
      (f9 : P0 vBox tBox represents_value_tBox) (f10 :
@@ -387,8 +387,8 @@ Program Definition represents_ind :=
            (represents_value_tConstruct vs ts ind c a))
      (f12 : ∀ (vfix : list (ident × term)) (i : nat)
               (E : list (ident × value)) (mfix : list (def term))
-              (a : All2_Set (λ (v : ident × term) (d : def term), isLambda v.2 × map fst vfix ;;; E ⊩ v.2 ~ dbody d) vfix mfix)
-              (IH : All2_over a (fun v d H => P (map fst vfix) E v.2 (dbody d) (snd H)  ) ),
+              (a : All2_Set (λ (v : ident × term) (d : def term), isLambda v.2 × List.rev (map fst vfix) ;;; E ⊩ v.2 ~ dbody d) vfix mfix)
+              (IH : All2_over a (fun v d H => P (List.rev (map fst vfix)) E v.2 (dbody d) (snd H)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
@@ -507,9 +507,9 @@ Program Definition represents_value_ind :=
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms)
              (a0 : All2_Set
-                     (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
+                     (λ d d' : def term, (List.rev nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
-             (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
+             (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
      (f9 : P0 vBox tBox represents_value_tBox) (f10 :
@@ -533,8 +533,8 @@ Program Definition represents_value_ind :=
               (E : list (ident × value)) (mfix : list (def term))
               (a : All2_Set
                      (λ (v : ident × term) (d : def term), isLambda v.2 ×
-                     (map fst vfix) ;;; E ⊩ v.2 ~ d.(dbody)) vfix mfix)
-              (IH : All2_over a (fun v d H => P (map fst vfix) E v.2 (dbody d) (snd H)  ) ),
+                     (List.rev (map fst vfix)) ;;; E ⊩ v.2 ~ d.(dbody)) vfix mfix)
+              (IH : All2_over a (fun v d H => P (List.rev (map fst vfix)) E v.2 (dbody d) (snd H)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     fix F
@@ -653,9 +653,9 @@ Definition rep_ind :=
                                                  (λ (d : def term) (n : ident),
                                                    dname d = nNamed n) mfix nms)
              (a0 : All2_Set
-                     (λ d d' : def term, (nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
+                     (λ d d' : def term, (List.rev nms ++ Γ);;; E ⊩ dbody d ~ dbody d')
                      mfix mfix')
-             (IH : All2_over a0 (fun t t' : def term => P (nms ++ Γ) E (dbody t) (dbody t'))),
+             (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
      (f9 : P0 vBox tBox represents_value_tBox) (f10 :
@@ -679,10 +679,10 @@ Definition rep_ind :=
               (E : list (ident × value)) (mfix : list (def term))
               (a : All2_Set
                      (λ (v : ident × term) (d : def term), isLambda v.2 ×
-                     (map fst vfix) ;;;
+                     (List.rev (map fst vfix)) ;;;
                          E ⊩ v.2 ~
                          dbody d) vfix mfix)
-              (IH : All2_over a (fun v d H => P (map fst vfix) E v.2 (dbody d) (snd H)  ) ),
+              (IH : All2_over a (fun v d H => P (List.rev (map fst vfix)) E v.2 (dbody d) (snd H)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
     (represents_ind P P0 f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12,
@@ -875,8 +875,8 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
       tCase ind (annotate s c) brs'
   | tProj p c => tProj p (annotate s c)
   | tFix mfix idx =>
-      let nms := gen_many_fresh s (map dname mfix) in
-      let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (gen_many_fresh s (map dname mfix) ++ s)) d) mfix nms in
+      let nms := gen_many_fresh s (List.rev (map dname mfix)) in
+      let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (gen_many_fresh s (List.rev (map dname mfix)) ++ s)) d) mfix nms in
       tFix mfix' idx
   | _ => u
   end.
@@ -951,30 +951,34 @@ Proof.
     + split.
       * eapply p. rewrite app_length gen_many_fresh_length. eapply p.
       * eapply NoDup_gen_many_fresh.
-  - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
-    1:{ solve_all. generalize (gen_many_fresh Γ (map dname m) ++ Γ). clear - H.
-        induction H in Γ; cbn. econstructor. intros. destruct x, dname; cbn. all: econstructor.
-        - cbn in *. destruct p, dbody; cbn in *; try congruence.
-        - eapply IHAll.
-        - cbn in *. destruct p, dbody; cbn in *; try congruence.
-        - eapply IHAll.
+  - eapply represents_tFix with (nms := gen_many_fresh Γ ((map dname m))).
+    1:{ solve_all. generalize (gen_many_fresh Γ (List.rev (map dname m)) ++ Γ). clear - H.
+        induction m using rev_ind.
+        - cbn. econstructor.
+        - eapply All_app in H as [H1 H2]. invs H2.
+          intros. rewrite map_app rev_app_distr. cbn. destruct x, dname; cbn. 
+        (* - cbn in *. destruct p, dbody; cbn in *; try congruence. *)
+        (* - eapply IHAll. *)
+        (* - cbn in *. destruct p, dbody; cbn in *; try congruence. *)
+        (* - eapply IHAll. *) all:todo "ooo".
     }
     1:{ eapply NoDup_gen_many_fresh. }
-    { clear.  generalize (((gen_many_fresh Γ (map dname m) ++ Γ))).
-      generalize Γ. induction m; cbn.
+    { clear.  generalize (((gen_many_fresh Γ (List.rev (map dname m)) ++ Γ))).
+      induction m in Γ |- *; cbn.
       - econstructor.
-      - intros. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
+      - intros. destruct a; cbn. destruct dname; cbn; try econstructor; eauto.  all:todo "ooo".
     }
     { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
       eapply All_impl in H1. 2:{ intros ? [[] ].
-      specialize (r (gen_many_fresh Γ (map dname m) ++ Γ)).
-      revert r. rewrite app_length gen_many_fresh_length map_length. intros r. eapply r in i0. exact i0.
+      specialize (r (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+      revert r. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i0. exact i0.
       }
       revert H1.
-      generalize (((gen_many_fresh Γ (map dname m) ++ Γ))).
-      intros. induction H1 in Γ |- *.
+      generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+
+      intros. induction H1.
       - econstructor.
-      - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto.
+      - cbn. destruct x; cbn. all:todo "ooo". (* destruct dname; cbn; econstructor; eauto. *)
     }
 Qed.
 
@@ -996,11 +1000,11 @@ Proof.
     2:{ eapply All2_length in a. clear IH. eapply All2_Set_All2, All2_length in a0.
         len. }
     clear Hbodies a. induction a0; cbn in *; econstructor.
-    rewrite app_length in IH. eapply IH.
+    rewrite app_length List.rev_length in IH. eapply IH.
     eapply IHa0. eapply IH.
   - solve_all. induction a; cbn in *; rtoProp; eauto.
     econstructor. cbn in *. eapply IH. eapply IHa. eapply IH.
-  - rewrite map_length in IH.
+  - rewrite List.rev_length map_length in IH.
     assert (Hlen : #|vfix| = #|mfix|). { clear IH. eapply All2_Set_All2, All2_length in a. lia. }
     rewrite Hlen in IH. revert IH. generalize (#|mfix|).
     induction a; intros n H; cbn in *; rtoProp; split.
@@ -1086,9 +1090,9 @@ Proof.
     + inversion a0; subst. cbn. eauto.
     + cbn. depelim a0. cbn. invs IH. econstructor.
       * cbn.
-        specialize (H (nms ++ Γ1) Γ2).
+        specialize (H (List.rev nms ++ Γ1) Γ2).
         rewrite app_length in H.
-        rewrite <- !app_assoc in *. eapply H; eauto.
+        rewrite <- !app_assoc in *. rewrite List.rev_length in H. eapply H; eauto.
       * eapply IHmfix; eauto.
 Qed.
 
@@ -1392,12 +1396,12 @@ Proof.
     eapply X0.
     + econstructor; cbn; eauto.
       eapply wf_add_multiple; eauto.
-      now rewrite map_length fix_env_length.
+      now rewrite List.rev_length map_length fix_env_length.
       eapply wf_fix_env; eauto.
     + let X2 := multimatch goal with H : All _ _ |- _ => H end in
       eapply All_nth_error in X2; eauto; cbn in X2; rtoProp;
-      rewrite map_fst_add_multiple; first [ now rewrite map_length fix_env_length
-      | eauto ].
+      rewrite map_fst_add_multiple; first [ now rewrite List.rev_length map_length fix_env_length
+      | eauto ]. todo "incl".
   - assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, EAst.dbody d0)) nms mfix) = nms) as EE. {
     clear - f6. induction f6; cbn; f_equal; eauto. }
     econstructor.
@@ -1708,7 +1712,7 @@ Proof.
 
       edestruct s2 as (v'' & IH1'' & IH2'').
 
-      eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: map fst vfix); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
+      eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: List.rev (map fst vfix)); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
       8:{ eexists. split. eauto.
           eapply eval_fix_unfold; eauto.
           solve_all.
@@ -1726,17 +1730,17 @@ Proof.
           cbn in sunny_in_vfix. rtoProp. unfold fresh in *.
           destruct in_dec; cbn in *; eauto.
           rewrite in_app_iff in n. eauto.
-        - eapply distinct_vfix_E0; eauto.
+        - eapply distinct_vfix_E0; eauto. now eapply in_rev.
       }
       {
         econstructor.
         - eapply All_nth_error in sunny_in_vfix; eauto.
           cbn in *. rtoProp. unfold fresh in *.
           destruct in_dec; cbn in *; eauto.
-          rewrite in_app_iff in n. eauto.
-        - eauto.
+          rewrite in_app_iff in n. rewrite <- in_rev. eauto.
+        - eapply NoDup_rev. eauto.
       }
-      { cbn. now rewrite map_length fix_env_length. }
+      { cbn. now rewrite List.rev_length map_length fix_env_length. }
       econstructor; eauto.
       { clear - H13. unfold fix_env, fix_subst.
         eapply All2_length in H13 as Hlen. rewrite Hlen. clear Hlen.
@@ -1745,15 +1749,17 @@ Proof.
       }
       now rewrite app_nil_r.
       { cbn. rewrite map_fst_add_multiple.
-        now rewrite map_length fix_env_length.
+        now rewrite List.rev_length map_length fix_env_length.
         eapply All_nth_error in sunny_in_vfix; eauto. cbn in sunny_in_vfix.
-        now rtoProp.
+        rtoProp.
+        eapply sunny_subset; eauto.
+        intros ?; cbn in *. rewrite !in_app_iff. rewrite <- !in_rev. eauto.
       }
       { econstructor.
         - cbn. eapply eval_wf. 4: eauto. all:eauto.
         - eapply wf_add_multiple.
           + eauto.
-          + now rewrite map_length fix_env_length.
+          + now rewrite List.rev_length map_length fix_env_length.
           + eapply eval_wf in IH2; eauto.
             eapply wf_fix_env; eauto.
       }
@@ -1857,6 +1863,7 @@ Proof.
       symmetry. eapply All2_length; eauto.
       intros.
       cbn in *. destruct H1 as (([? []] & ?) & ?).
-      rewrite app_nil_r in r. eauto.
-      Unshelve. all: repeat econstructor.
+      rewrite app_nil_r in r. all: eauto.
+
+      Unshelve. all: repeat econstructor. 
 Qed.

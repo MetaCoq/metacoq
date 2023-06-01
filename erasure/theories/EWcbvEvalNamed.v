@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import config BasicAst.
+From MetaCoq Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed EWcbvEval.
@@ -114,10 +113,12 @@ Section Wcbv.
 
   (** Fix unfolding, without guard *)
   | eval_fix_unfold f mfix idx a na na' av fn res Γ' :
+    forallb (λ x, isLambda (snd x)) mfix ->
+    ~ In na (map fst mfix) ->
     eval Γ f (vRecClos mfix idx Γ') ->
     NoDup (map fst mfix) ->
     nth_error mfix idx = Some (na', tLambda (nNamed na) fn) ->
-    eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') Γ')) fn res ->
+    eval (add na av (add_multiple (map fst mfix) (fix_env mfix Γ') (Γ'))) fn res ->
     eval Γ a av ->
     eval Γ (tApp f a) res
 
@@ -186,6 +187,8 @@ Section Wcbv.
              (res : value)
              (Γ' :
              list (ident × value))
+             (Hbodies : forallb (λ x, isLambda (snd x)) mfix)
+             (Hfresh : ~ In na (map fst mfix))
              (e :
              eval Γ f5
              (vRecClos mfix idx Γ')),
@@ -199,16 +202,14 @@ Section Wcbv.
              (na', tLambda (nNamed na) fn))
              (e1 :
              eval
-             (add na av
-             (add_multiple
+             (add na av  (add_multiple
              (map fst mfix)
-             (fix_env mfix Γ') Γ')) fn
+             (fix_env mfix Γ') (Γ'))) fn
              res),
              P
-             (add na av
-             (add_multiple
+             (add na av (add_multiple
              (map fst mfix)
-             (fix_env mfix Γ') Γ')) fn
+             (fix_env mfix Γ') (Γ'))) fn
              res e1
              →
              forall e2 : eval Γ a av,
@@ -216,7 +217,7 @@ Section Wcbv.
              P Γ
              (tApp f5 a) res
              (eval_fix_unfold Γ f5 mfix
-             idx a na na' av fn res Γ' e
+             idx a na na' av fn res Γ' Hbodies Hfresh e
              n e0 e1 e2))
       (f6 : ∀ (Γ : environment) (mfix : list (def term)) (idx : nat) (nms : list ident) (Hlen : (idx < #|mfix|)) (Hbodies : List.forallb (isLambda ∘ dbody) mfix) (n : NoDup nms) (f6 : Forall2 (λ (d : def term) (n0 : ident), nNamed n0 = dname d) mfix
                                                                                                               nms),
@@ -254,8 +255,8 @@ Section Wcbv.
       | @eval_zeta _ na b0 b0' b1 res e0 e1 => f3 Γ na b0 b0' b1 res e0 (F Γ b0 b0' e0) e1 (F (add na b0' Γ) b1 res e1)
       | @eval_iota_block _ ind cdecl discr c args brs br res nms e0 e1 e2 e3 e4 f10 e5 n =>
           f4 Γ ind cdecl discr c args brs br res nms e0 (F Γ discr (vConstruct ind c args) e0) e1 e2 e3 e4 f10 e5 (F (add_multiple (List.rev nms) args Γ) br.2 res e5) n
-      | @eval_fix_unfold _ f10 mfix idx a na na' av fn res Γ' e0 n e1 e2 e3 =>
-          f5 Γ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+      | @eval_fix_unfold _ f10 mfix idx a na na' av fn res Γ' Hbodies Hfresh e0 n e1 e2 e3 =>
+          f5 Γ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
       | @eval_fix _ mfix idx nms Hlen Hbodies n f10 => f6 Γ mfix idx nms Hlen Hbodies n f10
       | @eval_delta _ c decl body isdecl res e0 e1 => f7 Γ c decl body isdecl res e0 e1 (F [] body res e1)
       | @eval_construct_block _ ind c mdecl idecl cdecl args args' e0 l a => f8 Γ ind c mdecl idecl cdecl args args' e0 l a _
@@ -691,7 +692,7 @@ Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
 Local Hint Constructors represents_value : core.
 
-From MetaCoq.Utils Require Import bytestring MCString.
+From MetaCoq Require Import bytestring MCString.
 Require Import BinaryString.
 Import String.
 
@@ -1316,6 +1317,40 @@ Proof.
   - eapply IHn; eauto.
 Qed.
 
+Lemma fresh_subset Γ1 Γ2 i :
+  fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
+Proof.
+  unfold fresh. repeat destruct in_dec; eauto; cbn.
+  intros. firstorder.
+Qed.
+
+Local Hint Resolve fresh_subset : core.
+
+Lemma sunny_subset Γ1 Γ2 t :
+  sunny Γ1 t -> incl Γ2 Γ1 -> sunny Γ2 t.
+Proof.
+  intros H Hincl.
+  induction t using EInduction.term_forall_list_ind in Γ1, Γ2, H, Hincl |- * ; cbn in *; eauto.
+  - cbn in H. solve_all.
+  - destruct n; eauto. cbn in *. rtoProp. split. 1: eapply fresh_subset; eauto.
+    eapply IHt; eauto. intros ? []; cbn; eauto.
+  - destruct n; eauto. cbn in *. rtoProp. repeat split; eauto.
+    eapply IHt2; eauto. eapply incl_cons; cbn; eauto.
+    eapply incl_tl; eauto.
+  - rtoProp; split; eauto.
+  - solve_all.
+  - rtoProp; split; solve_all; rtoProp; eauto; repeat split; solve_all.
+    + destruct x0; eauto.
+    + eapply a0; eauto.
+      intros ? ?. rewrite -> in_app_iff in *.
+      destruct H3; eauto.
+  - rtoProp; repeat split; solve_all. destruct x; cbn in *.
+    { destruct dname; cbn in *; eauto. }
+    eapply a; eauto.
+    intros ? ?. rewrite -> in_app_iff in *.
+    destruct H; eauto.
+Qed.
+
 Lemma eval_wf Σ E s v :
   Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ ->
   All (fun x => wf (snd x)) E ->
@@ -1438,7 +1473,7 @@ Proof.
     + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
 
-From MetaCoq.Erasure Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
+From MetaCoq Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
 
 Lemma lookup_in_env Σ Σ' ind i :
   All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
@@ -1477,40 +1512,6 @@ Lemma represents_value_fix_env vfix mfix E :
 Proof.
 Qed.
  *)
-
-Lemma fresh_subset Γ1 Γ2 i :
-  fresh i Γ1 -> incl Γ2 Γ1 -> fresh i Γ2.
-Proof.
-  unfold fresh. repeat destruct in_dec; eauto; cbn.
-  intros. firstorder.
-Qed.
-
-Local Hint Resolve fresh_subset : core.
-
-Lemma sunny_subset Γ1 Γ2 t :
-  sunny Γ1 t -> incl Γ2 Γ1 -> sunny Γ2 t.
-Proof.
-  intros H Hincl.
-  induction t using EInduction.term_forall_list_ind in Γ1, Γ2, H, Hincl |- * ; cbn in *; eauto.
-  - cbn in H. solve_all.
-  - destruct n; eauto. cbn in *. rtoProp. split. 1: eapply fresh_subset; eauto.
-    eapply IHt; eauto. intros ? []; cbn; eauto.
-  - destruct n; eauto. cbn in *. rtoProp. repeat split; eauto.
-    eapply IHt2; eauto. eapply incl_cons; cbn; eauto.
-    eapply incl_tl; eauto.
-  - rtoProp; split; eauto.
-  - solve_all.
-  - rtoProp; split; solve_all; rtoProp; eauto; repeat split; solve_all.
-    + destruct x0; eauto.
-    + eapply a0; eauto.
-      intros ? ?. rewrite -> in_app_iff in *.
-      destruct H3; eauto.
-  - rtoProp; repeat split; solve_all. destruct x; cbn in *.
-    { destruct dname; cbn in *; eauto. }
-    eapply a; eauto.
-    intros ? ?. rewrite -> in_app_iff in *.
-    destruct H; eauto.
-Qed.
 
 Lemma represents_add_fresh nms Γ E vs s t :
   Γ ;;; E ⊩ s ~ t ->
@@ -1590,8 +1591,7 @@ Proof.
       edestruct s1 as (? & ? & ?); eauto.
       invs Hv1. eexists; split; eauto. econstructor; eauto.
   - invs Hrep.
-    + let H3 := match goal with H : ⊩ _ ~ tApp _ _ |- _ => H end in
-      invs H3.
+    + invs H3.
     + cbn in Hsunny. rtoProp.
       edestruct s0 as (v1 & Hv1 & Hv2). 3: eauto. eauto. eauto.
       invs Hv1.
@@ -1615,7 +1615,6 @@ Proof.
   - assert (pars = 0) as ->. {
       unfold constructor_isprop_pars_decl in *.
       destruct lookup_constructor as [[[[] [? ?]] ?] | ] eqn:EE; cbn in *; try congruence.
-      let H0 := match goal with H : Some _ = Some _ |- _ => H end in
       invs H0.
       destruct lookup_env eqn:EEE; try congruence.
       eapply lookup_env_wellformed in EEE; eauto.
@@ -1634,8 +1633,7 @@ Proof.
       eapply All2_Set_All2 in H14. eapply All2_nth_error_Some_right in H14 as He2. 2: eauto.
       destruct He2 as (br' & Hnth & nms & Hbrs & Hbr & Hnodup). invs Hv1.
       edestruct s1 as (v2 & Hv1_ & Hv2_).
-      1: { let H6 := match goal with H : is_true (forallb _ _) |- _ => H end in
-        eapply forallb_nth_error in H6; setoid_rewrite Hnth in H6; cbn in H6. rtoProp.
+      1: { eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            assert (nms = flat_map (λ x : name, match x with
                | nAnon => []
                | nNamed na => [na]
@@ -1644,9 +1642,6 @@ Proof.
            { rewrite Heqnms flat_map_concat_map.
              intros ? (? & ([] & <- & ?) % in_map_iff & Hd) % in_concat; cbn in *; eauto.
             destruct Hd; subst; eauto.
-            rename H6 into H6_old;
-            let H6' := match goal with H : is_true (forallb _ _) |- _ => H end in
-            rename H6' into H6.
             eapply forallb_forall in H6; eauto.
             cbn in H6. unfold fresh in H6. destruct in_dec; cbn in *; congruence. }
             { subst. unfold dupfree in H9. destruct dupfree_dec_ident; cbn in *; congruence. }
@@ -1664,10 +1659,7 @@ Proof.
            eapply All2_Set_All2, All2_length in H10; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
            rewrite -> !skipn_length in *. lia.
-        -- rename H6 into H6_old;
-           let H6' := match goal with H : is_true (forallb _ _) |- _ => H end in
-           rename H6' into H6.
-           eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
+        -- eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            enough (nms = flat_map (λ x : name, match x with
            | nAnon => []
            | nNamed na => [na]
@@ -1689,7 +1681,7 @@ Proof.
         rewrite -> !skipn_length in *. lia.
       * solve_all.
       * now rewrite rev_involutive in Hv2_.
-  - eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
+  - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
   - invs Hrep.
     + let H5 := match goal with H : ⊩ _ ~ tApp _ _ |- _ => H end in
       invs H5.
@@ -1719,15 +1711,15 @@ Proof.
       eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: map fst vfix); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
       8:{ eexists. split. eauto.
           eapply eval_fix_unfold; eauto.
-          (* eapply eval_wf in IH2; eauto.
+          solve_all.
+          eapply eval_wf in IH2; eauto.
           invs IH2.
-          Lemma NoDup_app_inv {A} (l1 l2 : list A) :
-            NoDup (l1 ++ l2) -> NoDup l1 /\ NoDup l2.
-          Proof.
-            induction l1; cbn; eauto using NoDup.
-            inversion 1; subst; firstorder.
-            rewrite in_app_iff in H2. econstructor; eauto.
-          Qed. eapply NoDup_app_inv in H9 as []; eauto. *)
+          eapply All_nth_error in Hb1. 2: exact X. cbn in *.
+          rtoProp.
+          intros Hna.
+          unfold fresh in H2.
+          destruct in_dec; cbn in *; try congruence.
+          eapply n. rewrite in_app_iff. eauto.
       }
       { intros ? [-> | ?].
         - eapply All_nth_error in sunny_in_vfix; eauto.
@@ -1801,8 +1793,7 @@ Proof.
       edestruct s0 as (v & Hv1 & Hv2). 1: eauto. eauto. econstructor.
       eexists. split. eauto. econstructor; eauto.
   - invs Hrep.
-    + let H2 := multimatch goal with H : _ |- _ => H end in
-      now invs H2.
+    + invs H2.
     + cbn in Hsunny. rtoProp.
       eapply eval_to_value in ev as Hval. invs Hval.
       * destruct f'; cbn in *; try congruence.
@@ -1867,6 +1858,5 @@ Proof.
       intros.
       cbn in *. destruct H1 as (([? []] & ?) & ?).
       rewrite app_nil_r in r. eauto.
-
       Unshelve. all: repeat econstructor.
 Qed.

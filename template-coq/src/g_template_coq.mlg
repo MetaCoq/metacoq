@@ -29,7 +29,7 @@ open Redexpr
 let _ =
   let open Goptions in
   declare_bool_option
-    { optdepr  = false;
+    { optdepr  = None;
       optstage = Interp;
       optkey   = ["MetaCoq"; "Strict"; "Unquote"; "Universe"; "Mode"];
       optread  = (fun () -> !Denoter.strict_unquote_universe_mode);

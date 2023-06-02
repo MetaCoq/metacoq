@@ -24,7 +24,7 @@ end = struct
       | _  -> assert false
       end
     | None ->
-      declare_int_option_and_ref ~stage:Interp ~depr:false ~key ~value:0
+      match declare_int_option_and_ref ~key ~value:0 () with { get } -> get
 
   let set_template_monad_verbose =
     let open Goptions in
@@ -47,7 +47,7 @@ end = struct
     | Some get -> ()
     | None ->
       declare_bool_option
-        { optdepr  = false;
+        { optdepr  = None;
           optstage = Interp;
           optkey   = key;
           optread  = get_template_monad_debug;
@@ -68,7 +68,8 @@ let timing_opt =
       | BoolValue b -> b
       | _ -> assert false
       end
-  | None -> declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
+  | None ->
+    match declare_bool_option_and_ref ~key ~value:false () with { get } -> get
 
 let time prefix f x =
   if timing_opt () then
@@ -88,7 +89,8 @@ let debug_opt =
       | BoolValue b -> b
       | _ -> assert false
       end
-  | None -> declare_bool_option_and_ref ~stage:Interp ~depr:false ~key ~value:false
+  | None ->
+    match declare_bool_option_and_ref ~key ~value:false () with { get } -> get
 
 let debug (m : unit ->Pp.t) =
   if debug_opt () then

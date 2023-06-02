@@ -404,3 +404,5 @@ erasure-plugin/Makefile.erasureplugin
 erasure-plugin/Makefile.erasureplugin.conf
 erasure-plugin/Makefile.plugin
 erasure-plugin/Makefile.plugin.conf
+erasure-plugin/META
+safechecker-plugin/META

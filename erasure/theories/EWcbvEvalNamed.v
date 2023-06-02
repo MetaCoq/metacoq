@@ -138,7 +138,7 @@ Section Wcbv.
   (** Constructor congruence: we do not allow over-applications *)
   | eval_construct_block ind c mdecl idecl cdecl args args' :
     lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-    #|args| <= cstr_arity mdecl cdecl ->
+    #|args| <= cstr_nargs cdecl ->
     All2_Set (eval Γ) args args' ->
     eval Γ (tConstruct ind c args) (vConstruct ind c args')
 
@@ -241,7 +241,7 @@ Section Wcbv.
               (eval_delta Γ c decl body
                  isdecl res e e0))
       (f8 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body)
-              (args : list term) (args' : list value) (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) (l : #|args| ≤ cstr_arity mdecl cdecl)
+              (args : list term) (args' : list value) (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)) (l : #|args| ≤ cstr_nargs cdecl)
               (a : All2_Set (eval Γ) args args') (IHa : All2_over a (P Γ)), P Γ (tConstruct ind c args) (vConstruct ind c args') (eval_construct_block Γ ind c mdecl idecl cdecl args args' e l a))
       (f9 : ∀ (Γ : environment) (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body)
               (e : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl)),
@@ -1460,7 +1460,7 @@ Qed.
 
 Lemma eval_construct_All2 Σ E ind c args vs mdecl idecl cdecl :
   lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-  #|args| <= cstr_arity mdecl cdecl ->
+  #|args| <= cstr_nargs cdecl ->
   All2 (eval Σ E) args vs -> eval Σ E (tConstruct ind c args) (vConstruct ind c vs).
 Proof.
   intros Hind.
@@ -1843,8 +1843,14 @@ Proof.
        eexists. split. econstructor.
        { instantiate (1 := vs). clear - Hvs; induction Hvs; econstructor; eauto. eapply r. }
        econstructor. erewrite <- lookup_in_env. 2: solve_all.
-       eapply H. eapply All2_length in H5. lia.
-        clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
+       eapply H. eapply All2_length in H5.
+       destruct lookup_env as [ [] | ] eqn:Elo; try congruence.
+       epose proof (@lookup_env_wellformed _ Σ (inductive_mind ind) _ HwfΣ Elo).
+       cbn in H1. unfold wf_minductive in H1. rtoProp. cbn in *. eapply Nat.eqb_eq in H1. unfold cstr_arity in *.
+       destruct nth_error eqn:E1; cbn in *; try congruence.
+       destruct (nth_error (ind_ctors o) i) eqn:E2; cbn in *; try congruence.
+       unfold cstr_arity in *.  invs H. lia.
+       clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
   - invs Hrep; cbn in *; try congruence; rtoProp.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.

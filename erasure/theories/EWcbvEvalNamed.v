@@ -875,8 +875,8 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
       tCase ind (annotate s c) brs'
   | tProj p c => tProj p (annotate s c)
   | tFix mfix idx =>
-      let nms := gen_many_fresh s (List.rev (map dname mfix)) in
-      let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (gen_many_fresh s (List.rev (map dname mfix)) ++ s)) d) mfix nms in
+      let nms := gen_many_fresh s (map dname mfix) in
+      let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (List.rev (gen_many_fresh s ((map dname mfix))) ++ s)) d) mfix nms in
       tFix mfix' idx
   | _ => u
   end.
@@ -951,22 +951,19 @@ Proof.
     + split.
       * eapply p. rewrite app_length gen_many_fresh_length. eapply p.
       * eapply NoDup_gen_many_fresh.
-  - eapply represents_tFix with (nms := gen_many_fresh Γ ((map dname m))).
-    1:{ solve_all. generalize (gen_many_fresh Γ (List.rev (map dname m)) ++ Γ). clear - H.
-        induction m using rev_ind.
-        - cbn. econstructor.
-        - eapply All_app in H as [H1 H2]. invs H2.
-          intros. rewrite map_app rev_app_distr. cbn. destruct x, dname; cbn. 
-        (* - cbn in *. destruct p, dbody; cbn in *; try congruence. *)
-        (* - eapply IHAll. *)
-        (* - cbn in *. destruct p, dbody; cbn in *; try congruence. *)
-        (* - eapply IHAll. *) all:todo "ooo".
+  - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
+    1:{ solve_all. generalize (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ). clear - H.
+        induction H in Γ; cbn. econstructor. intros. destruct x, dname; cbn. all: econstructor.
+        - cbn in *. destruct p, dbody; cbn in *; try congruence.
+        - eapply IHAll.
+        - cbn in *. destruct p, dbody; cbn in *; try congruence.
+        - eapply IHAll.
     }
     1:{ eapply NoDup_gen_many_fresh. }
-    { clear.  generalize (((gen_many_fresh Γ (List.rev (map dname m)) ++ Γ))).
+    { clear.  generalize ((List.rev (gen_many_fresh Γ ( (map dname m))) ++ Γ)).
       induction m in Γ |- *; cbn.
       - econstructor.
-      - intros. destruct a; cbn. destruct dname; cbn; try econstructor; eauto.  all:todo "ooo".
+      - intros. destruct a; cbn. destruct dname; cbn; try econstructor; eauto.  
     }
     { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
       eapply All_impl in H1. 2:{ intros ? [[] ].
@@ -975,10 +972,9 @@ Proof.
       }
       revert H1.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-
-      intros. induction H1.
+      intros. induction H1 in Γ |- *.
       - econstructor.
-      - cbn. destruct x; cbn. all:todo "ooo". (* destruct dname; cbn; econstructor; eauto. *)
+      - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto. 
     }
 Qed.
 

@@ -1396,8 +1396,9 @@ Proof.
       eapply wf_fix_env; eauto.
     + let X2 := multimatch goal with H : All _ _ |- _ => H end in
       eapply All_nth_error in X2; eauto; cbn in X2; rtoProp;
-      rewrite map_fst_add_multiple; first [ now rewrite List.rev_length map_length fix_env_length
-      | eauto ]. todo "incl".
+      rewrite map_fst_add_multiple; first [ now rewrite List.rev_length map_length fix_env_length | eauto ].
+      eapply sunny_subset. eauto.
+      intros ?. cbn. rewrite !in_app_iff. now rewrite <- in_rev.
   - assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, EAst.dbody d0)) nms mfix) = nms) as EE. {
     clear - f6. induction f6; cbn; f_equal; eauto. }
     econstructor.

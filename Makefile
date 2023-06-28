@@ -36,6 +36,7 @@ install: all translations
 	$(MAKE) -C quotation install
 	$(MAKE) -C safechecker-plugin install
 	$(MAKE) -C erasure install
+	$(MAKE) -C erasure-plugin install
 	$(MAKE) -C translations install
 
 uninstall:
@@ -48,6 +49,7 @@ uninstall:
 	$(MAKE) -C quotation uninstall
 	$(MAKE) -C safechecker-plugin uninstall
 	$(MAKE) -C erasure uninstall
+	$(MAKE) -C erasure-plugin uninstall
 	$(MAKE) -C translations uninstall
 
 html: all

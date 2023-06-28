@@ -19,8 +19,8 @@ then
       mv -f tmp $f
     done
     # Fix an extraction bug: wrong type annotation on eq_equivalence
-    patch -N -p0 < extraction.patch || exit $?
-    patch -N -p0 < specFloat.patch || exit $?
+    patch -N -p0 < extraction.patch
+    patch -N -p0 < specFloat.patch
     exit 0
 else
     echo "Extracted code is up-to-date"

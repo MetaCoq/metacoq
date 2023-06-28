@@ -895,7 +895,7 @@ Program Fixpoint erase_global_decls
     let X' := abstract_pop_decls X in
     if KernameSet.mem kn deps then
       let Xext := abstract_make_wf_env_ext X' (cst_universes cb) _ in
-      let normalization_in' : id _ := _ in (* hack to avoid program erroring out on unresolved tc *)
+      let normalization_in' : @id Prop _ := _ in (* hack to avoid program erroring out on unresolved tc *)
       let cb' := @erase_constant_body X_type Xext normalization_in' cb _ in
       let deps := KernameSet.union deps (snd cb') in
       let X'' := erase_global_decls deps X' decls _ in
@@ -2637,6 +2637,7 @@ Notation NormalizationIn_erase_global_decls_fast X decls
       end)
        (only parsing).
 
+
 Section EraseGlobalFast.
 
   Import PCUICEnvironment.
@@ -2694,7 +2695,7 @@ Program Fixpoint erase_global_decls_fast (deps : KernameSet.t)
   | (kn, ConstantDecl cb) :: decls =>
     if KernameSet.mem kn deps then
       let Xext' :=  abstract_make_wf_env_ext X (cst_universes cb) _ in
-      let normalization_in' : id _ := _ in (* hack to avoid program erroring out on unresolved tc *)
+      let normalization_in' : @id Prop _ := _ in (* hack to avoid program erroring out on unresolved tc *)
       let cb' := @erase_constant_body X_type Xext' normalization_in' cb _ in
       let deps := KernameSet.union deps (snd cb') in
       let Σ' := erase_global_decls_fast deps X_type X decls _ in

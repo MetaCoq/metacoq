@@ -41,7 +41,7 @@ Module TC.
   Local Set Universe Polymorphism.
   Local Unset Universe Minimization ToSet.
   (** This is a kludge, it would be nice to do better *)
-  Class HasFix := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
+  Class HasFix : Prop := tmFix_ : forall {A B} (f : (A -> TemplateMonad B) -> (A -> TemplateMonad B)), A -> TemplateMonad B.
   (* idk why this is needed... *)
   #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
   Import MCMonadNotation.

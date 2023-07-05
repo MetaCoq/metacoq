@@ -9,3 +9,27 @@ updates:
       interval: "daily"
     labels:
       - "dependencies"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "master"
+    schedule:
+      # Check for updates to GitHub Actions every weekday
+      interval: "daily"
+    labels:
+      - "dependencies"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "coq-8.17"
+    schedule:
+      # Check for updates to GitHub Actions every weekday
+      interval: "daily"
+    labels:
+      - "dependencies"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "coq-8.16"
+    schedule:
+      # Check for updates to GitHub Actions every weekday
+      interval: "daily"
+    labels:
+      - "dependencies"

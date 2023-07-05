@@ -375,7 +375,7 @@ Qed.
     { intros. eapply nth_error_None in H0. simpl in H0 |- *. destruct args => //; simpl in H0; try lia.
       rewrite subst_empty. simpl in X0. now depelim X0. }
     destruct d as [na [b|] ty]; intros ass; eapply assumption_context_app in ass as [assΓ ass].
-    * elimtype False; depelim ass.
+    * exfalso; depelim ass.
     * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
       intros wf sp.
       pose proof (wf_local_app_inv wf) as [_ wfty].
@@ -447,7 +447,7 @@ Qed.
     destruct ctx using rev_case; simpl in *. lia.
     rewrite it_mkProd_or_LetIn_app in sp.
     move/assumption_context_app: H0 => [ass' assx].
-    destruct x as [na [b|] ty]. elimtype False. depelim assx.
+    destruct x as [na [b|] ty]. exfalso. depelim assx.
     rewrite /mkProd_or_LetIn in sp.
     eexists _, _, _; eauto. eapply sp.
   Qed.
@@ -672,7 +672,7 @@ Section classification.
       assert (#|ctx| > 0).
       { rewrite /ctx; len; rewrite firstn_length_le. len; lia. lia. }
       destruct ctx as [|ctx [na [b|] ty]] using rev_case. simpl in H0; lia.
-      elimtype False; move/assumption_context_app: H => [ass assd]; depelim assd.
+      exfalso; move/assumption_context_app: H => [ass assd]; depelim assd.
       move/assumption_context_app: H => [ass assd]; depelim assd.
       rewrite it_mkProd_or_LetIn_app /mkProd_or_LetIn /= => cum.
       now eapply invert_cumul_prod_ind in cum.
@@ -858,7 +858,7 @@ Section classification.
     intros axfree ne typed.
     pose proof (subject_closed typed) as cl.
     depelim ne; simpl in *.
-    - elimtype False. eauto using wh_neutral_empty.
+    - exfalso. eauto using wh_neutral_empty.
     - eapply inversion_Sort in typed as (? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
     - eapply inversion_Prod in typed as (? & ? & ? & ? & e); auto.

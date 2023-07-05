@@ -15,7 +15,7 @@ Import MCMonadNotation.
 
 Class quotation_of {T} (t : T) := quoted_term_of : Ast.term.
 Class ground_quotable T := quote_ground : forall t : T, quotation_of t.
-Class inductive_quotation_of {T} (t : T)
+Class inductive_quotation_of {T} (t : T) : Set
   := { qinductive : inductive
      ; qinst : Instance.t
      ; qquotation : quotation_of t := tInd qinductive qinst }.
@@ -560,7 +560,7 @@ Definition tmMakeQuotationOfConstantsWorkAroundCoqBug17303 {debug:debug_opt} (in
 Definition tmDeclareQuotationOfConstants {debug:debug_opt} (include_submodule : list ident -> bool) (include_supermodule : list ident -> list ident -> bool) (existing_instance : option hint_locality) (base : modpath) (cs : list global_reference) : TemplateMonad unit
   := tmMakeQuotationOfConstants_gen false include_submodule include_supermodule existing_instance base cs (fun name ty _ => @tmAxiom name ty).
 
-Variant submodule_inclusion := only_toplevel | all_submodules_except (_ : list (list ident)) | toplevel_and_submodules (_ : list (list ident)) | everything.
+Variant submodule_inclusion : Set := only_toplevel | all_submodules_except (_ : list (list ident)) | toplevel_and_submodules (_ : list (list ident)) | everything.
 
 #[local] Typeclasses Transparent ident IdentOT.t.
 Definition is_submodule_of (super : list ident) (sub : list ident) : bool

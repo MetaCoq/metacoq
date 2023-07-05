@@ -169,7 +169,7 @@ End with_tc.
 
 Import TemplateMonad.Core.
 
-Class eval_pcuic_quotation := pcuic_quotation_red_strategy : option reductionStrategy.
+Class eval_pcuic_quotation : Set := pcuic_quotation_red_strategy : option reductionStrategy.
 #[export] Instance default_eval_pcuic_quotation : eval_pcuic_quotation := None.
 
 Definition tmMaybeEval@{t u} `{eval_pcuic_quotation} {A : Type@{t}} (v : A) : TemplateMonad@{t u} A

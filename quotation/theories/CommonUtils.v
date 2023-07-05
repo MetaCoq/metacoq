@@ -10,8 +10,8 @@ Local Set Primitive Projections.
 Local Open Scope bs.
 Import MCMonadNotation.
 
-Class debug_opt := debug : bool.
-Class cls_is_true (b : bool) := is_truev : is_true b.
+Class debug_opt : Set := debug : bool.
+Class cls_is_true (b : bool) : Set := is_truev : is_true b.
 
 (* returns true if a modpath is suitable for quotation, i.e., does not mention functor-bound arguments *)
 Fixpoint modpath_is_absolute (mp : modpath) : bool

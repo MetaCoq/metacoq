@@ -11,7 +11,7 @@ updates:
       - "dependencies"
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "master"
+    target-branch: "main"
     schedule:
       # Check for updates to GitHub Actions every weekday
       interval: "daily"

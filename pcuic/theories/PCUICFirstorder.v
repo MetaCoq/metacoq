@@ -622,19 +622,18 @@ Proof using Type.
     * intros hl. now eapply invert_cumul_prod_ind in hl.
 Qed.
 
-Lemma firstorder_value_spec (Σ:global_env_ext) t i u args mind :
+Lemma firstorder_value_spec (Σ:global_env_ext) t i u args :
   wf Σ -> wf_local Σ [] ->
    Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
-  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
 Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
-  revert mind i u args Hty.
+  revert i u args Hty.
 
   induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
-   intros mind i u args Hty Hlookup Hfo.
+   intros i u args Hty Hfo.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
@@ -667,9 +666,10 @@ Proof using Type.
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
     + exfalso. eapply (typing_cofix_coind (args := [])) in Hty. red in Hty.
       red in Hfo. unfold firstorder_ind in Hfo.
-      rewrite Hlookup in Hfo.
+      destruct lookup_env eqn:E; try congruence.
+      destruct g; try congruence.
       eapply andb_true_iff in Hfo as [Hfo _].
-      rewrite /check_recursivity_kind Hlookup in Hty.
+      rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
     + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
       now eapply invert_cumul_axiom_ind in cum; tea.
@@ -697,7 +697,6 @@ Proof using Type.
         econstructor. inv X.
         eapply H0. tea.
         unshelve eapply declared_inductive_to_gen in d0; eauto.
-        exact i3.
         inv X. eapply IHspine; eauto.
      + exfalso.
        destruct PCUICWcbvEval.cunfold_fix as [[] | ] eqn:E; inversion H.
@@ -708,9 +707,10 @@ Proof using Type.
        eapply nth_error_None. lia.
     + exfalso. eapply (typing_cofix_coind (args := args')) in Hty.
       red in Hfo. unfold firstorder_ind in Hfo.
-      rewrite Hlookup in Hfo.
+      destruct lookup_env eqn:E; try congruence.
+      destruct g; try congruence.
       eapply andb_true_iff in Hfo as [Hfo _].
-      rewrite /check_recursivity_kind Hlookup in Hty.
+      rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
 Qed.
 

@@ -431,3 +431,26 @@ Next Obligation.
   cbn -[transform_blocks].
   eapply transform_blocks_eval; cbn; eauto.
 Qed.
+
+From MetaCoq.Erasure Require Import EImplementBox.
+
+Program Definition implement_box_transformation (efl : EEnvFlags)
+  {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+  Transform.t eprogram eprogram EAst.term EAst.term (eval_eprogram block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
+  {| name := "transforming to constuctors as blocks";
+    transform p _ := EImplementBox.implement_box_program p ;
+    pre p := wf_eprogram efl p ;
+    post p := wf_eprogram (switch_off_box efl) p ;
+    obseq g g' v v' := v' = implement_box v |}.
+
+Next Obligation.
+  intros. cbn in *. destruct p. split.
+  - eapply transform_wf_global; eauto.
+  - eapply transform_wellformed; eauto.
+Qed.
+Next Obligation.
+  red. intros. destruct pr. destruct H.
+  eexists. split; [ | eauto].
+  econstructor.
+  eapply implement_box_eval; cbn; eauto.
+Qed.

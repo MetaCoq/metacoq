@@ -35,6 +35,7 @@ theories/EInlineProjections.v
 theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
 theories/EWcbvEvalCstrsAsBlocksFixLambdaInd.v
+theories/EImplementBox.v
 
 theories/Typed/Annotations.v
 theories/Typed/ClosedAux.v

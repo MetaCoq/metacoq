@@ -28,7 +28,6 @@ Local Ltac inv H := inversion H; subst.
 (** ** Big step *named* version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
 Inductive value : Set :=
-| vBox
 | vClos (na : ident) (b : term) (env : list (ident * value))
 | vConstruct (ind : inductive) (c : nat) (args : list (value))
 | vRecClos (b : list (ident * term)) (idx : nat) (env : list (ident * value)).
@@ -77,13 +76,6 @@ Section Wcbv.
   | eval_var na v :
     lookup Γ na = Some v ->
     eval Γ (tVar na) v
-
-  | eval_vbox : eval Γ tBox vBox
-
-  | eval_box a t t' :
-    eval Γ a vBox ->
-    eval Γ t t' ->
-    eval Γ (tApp a t) vBox
 
   (** Beta *)
   | eval_beta f na b a a' res Γ' :
@@ -152,14 +144,6 @@ Section Wcbv.
     λ (P : ∀ (Γ : environment) (t : term) (v : value), eval Γ t v → Type) (f : ∀ (Γ : environment) (na : string) (v : value) (e : lookup Γ na = Some v),
           P Γ (tVar na) v (eval_var Γ na v e))
 
-      (f_vbox : ∀ (Γ : environment) (e : eval Γ tBox vBox), P Γ tBox vBox e)
-      (f0 : ∀ (Γ : environment) (a t : term)
-                                                       (t' : value) (e : eval Γ a vBox),
-          P Γ a vBox e
-          → ∀ e0 : eval Γ t t',
-            P Γ t t' e0
-            → P Γ (tApp a t) vBox
-                (eval_box Γ a t t' e e0))
       (f1 : ∀ (Γ : environment) (f1 : term) (na : ident) (b a : term) (a' res : value) (Γ' : list (ident × value)) (e : eval Γ f1 (vClos na b Γ')),
           P Γ f1 (vClos na b Γ') e
           → ∀ e0 : eval Γ a a', P Γ a a' e0 → ∀ e1 : eval (add na a' Γ') b res, P (add na a' Γ') b res e1 → P Γ (tApp f1 a) res (eval_beta Γ f1 na b a a' res Γ' e e0 e1))
@@ -254,8 +238,6 @@ Section Wcbv.
       fix F (Γ : environment) (t : term) (v : value) (e : eval Γ t v) {struct e} : P Γ t v e :=
       match e as e0 in (eval _ t0 v0) return (P Γ t0 v0 e0) with
       | @eval_var _ na v0 e0 => f Γ na v0 e0
-      | @eval_vbox _ => f_vbox Γ _
-      | @eval_box _ a t0 t' e0 e1 => f0 Γ a t0 t' e0 (F Γ a vBox e0) e1 (F Γ t0 t' e1)
       | @eval_beta _ f10 na b a a' res Γ' e0 e1 e2 => f1 Γ f10 na b a a' res Γ' e0 (F Γ f10 (vClos na b Γ') e0) e1 (F Γ a a' e1) e2 (F (add na a' Γ') b res e2)
       | @eval_lambda _ na b => f2 Γ na b
       | @eval_zeta _ na b0 b0' b1 res e0 e1 => f3 Γ na b0 b0' b1 res e0 (F Γ b0 b0' e0) e1 (F (add na b0' Γ) b1 res e1)
@@ -280,7 +262,6 @@ Definition ident_of_name (na : name) : ident :=
 Reserved Notation "Γ ;;; E ⊩ s ~ t" (at level 50, E, s, t at next level).
 
 Inductive represents : list ident -> environment -> term -> term -> Set :=
-| represents_tBox Γ E : Γ ;;; E ⊩ tBox ~ tBox
 | represents_bound_tRel Γ n na E : nth_error Γ n = Some na -> Γ ;;; E ⊩ tVar na ~ tRel n
 | represents_unbound_tRel E na v Γ s : lookup E na = Some v -> represents_value v s -> Γ ;;; E ⊩ tVar na ~ s
 | represents_tLambda Γ E na na' b b' : (na :: Γ) ;;; E ⊩ b ~ b' -> Γ ;;; E ⊩ tLambda (nNamed na) b ~ tLambda na' b'
@@ -300,7 +281,6 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
   All2_Set (fun d d' => (List.rev nms ++ Γ) ;;; E ⊩ d.(dbody) ~ d'.(dbody)) mfix mfix' ->
   Γ ;;; E ⊩ tFix mfix idx ~ tFix mfix' idx
 with represents_value : value -> term -> Set :=
-| represents_value_tBox : represents_value vBox tBox
 | represents_value_tClos na E s t na' : [na] ;;; E ⊩ s ~ t -> represents_value (vClos na s E) (tLambda na' t)
 | represents_value_tConstruct vs ts ind c : All2_Set represents_value vs ts -> represents_value (vConstruct ind c vs) (tConstruct ind c ts)
 | represents_value_tFix vfix i E mfix :
@@ -311,8 +291,7 @@ Program Definition represents_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
-     (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+     (f0 :
        ∀ (Γ : list ident)
          (n : nat)
          (na : ident)
@@ -374,7 +353,7 @@ Program Definition represents_ind :=
              (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+     (f10 :
        ∀ (na : ident)
          (E : environment)
          (s t : term)
@@ -401,7 +380,6 @@ Program Definition represents_ind :=
       (l : list ident) (e : environment) (t t0 : term)
       (r : l;;; e ⊩ t ~ t0) {struct r} : P l e t t0 r :=
      match r as r0 in (l0;;; e0 ⊩ t1 ~ t2) return (P l0 e0 t1 t2 r0) with
-     | represents_tBox Γ E => f Γ E
      | represents_bound_tRel Γ n na E e0 => f0 Γ n na E e0
      | represents_unbound_tRel E na v Γ s e0 r0 =>
          f1 E na v Γ s e0 r0 (F0 v s r0)
@@ -423,7 +401,6 @@ Program Definition represents_ind :=
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
      P0 v t r :=
           match r as r0 in (represents_value v0 t0) return (P0 v0 t0 r0) with
-          | represents_value_tBox => f9
           | represents_value_tClos na E s t0 na' r0 =>
               f10 na E s t0 na' r0 (F [na] E s t0 r0)
           | represents_value_tConstruct vs ts ind c a => f11 vs ts ind c a _
@@ -451,8 +428,7 @@ Program Definition represents_value_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
-     (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+     (f0 :
        ∀ (Γ : list ident)
          (n : nat)
          (na : ident)
@@ -518,7 +494,7 @@ Program Definition represents_value_ind :=
              (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+     (f10 :
        ∀ (na : ident)
          (E : environment)
          (s t : term)
@@ -547,7 +523,6 @@ Program Definition represents_value_ind :=
       (l : list ident) (e : environment) (t t0 : term)
       (r : l;;; e ⊩ t ~ t0) {struct r} : P l e t t0 r :=
      match r as r0 in (l0;;; e0 ⊩ t1 ~ t2) return (P l0 e0 t1 t2 r0) with
-     | represents_tBox Γ E => f Γ E
      | represents_bound_tRel Γ n na E e0 => f0 Γ n na E e0
      | represents_unbound_tRel E na v Γ s e0 r0 =>
          f1 E na v Γ s e0 r0 (F0 v s r0)
@@ -569,7 +544,6 @@ Program Definition represents_value_ind :=
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
      P0 v t r :=
           match r as r0 in (represents_value v0 t0) return (P0 v0 t0 r0) with
-          | represents_value_tBox => f9
           | represents_value_tClos na E s t0 na' r0 =>
               f10 na E s t0 na' r0 (F [na] E s t0 r0)
           | represents_value_tConstruct vs ts ind c a => f11 vs ts ind c a _
@@ -597,8 +571,7 @@ Definition rep_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
 	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
-     (f : ∀ (Γ : list ident) (E : environment),
-         P Γ E tBox tBox (represents_tBox Γ E)) (f0 :
+   (f0 :
        ∀ (Γ : list ident)
          (n : nat)
          (na : ident)
@@ -664,7 +637,7 @@ Definition rep_ind :=
              (IH : All2_over a0 (fun t t' : def term => P (List.rev nms ++ Γ) E (dbody t) (dbody t'))),
          P Γ E (tFix mfix idx) (tFix mfix' idx)
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
-     (f9 : P0 vBox tBox represents_value_tBox) (f10 :
+   (f10 :
        ∀ (na : ident)
          (E : environment)
          (s t : term)
@@ -691,8 +664,8 @@ Definition rep_ind :=
               (IH : All2_over a (fun v d H => P (List.rev (map fst vfix)) E v.2 (dbody d) (snd H)  ) ),
          P0 (vRecClos vfix i E) (tFix mfix i)
            (represents_value_tFix vfix i E mfix a)),
-    (represents_ind P P0 f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12,
-      represents_value_ind P P0 f f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12)).
+    (represents_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f10 f11 f12,
+      represents_value_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f10 f11 f12)).
 
 Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
@@ -895,7 +868,7 @@ Fixpoint annotate_env Γ (Σ : global_declarations) :=
   end.
 
 Definition extraction_term_flags :=
-  {| has_tBox := true
+  {| has_tBox := false
   ; has_tRel := true
   ; has_tVar := false
   ; has_tEvar := false
@@ -988,7 +961,7 @@ Lemma unfolds_bound :
   (forall Γ E s t, Γ ;;; E ⊩ s ~ t -> closedn #|Γ| t) ×
     (forall v s, ⊩ v ~ s -> closedn 0 s).
 Proof.
-  refine (rep_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros; cbn; rtoProp; eauto.
+  refine (rep_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros; cbn; rtoProp; eauto.
   - eapply Nat.ltb_lt, nth_error_Some. congruence.
   - eapply closed_upwards; eauto. lia.
   - solve_all. induction a; cbn in *; econstructor; firstorder.
@@ -1256,7 +1229,6 @@ Fixpoint sunny Γ (t : term) : bool :=
   end.
 
 Inductive wf : value -> Type :=
-| wf_vBox : wf vBox
 | wf_vClos na b E : ~ In na (map fst E) -> sunny (na :: map fst E) b -> All (fun v => wf (snd v)) E -> wf (vClos na b E)
 | wf_vConstruct ind c args : All wf args -> wf (vConstruct ind c args)
 | wf_vRecClos vfix idx E :
@@ -1376,7 +1348,6 @@ Proof.
       destruct eqb eqn:E.
       * invs e. cbn in *; eauto.
       * eapply IHHE. exact e.
-  - econstructor.
   - let X := match reverse goal with H : All _ _ -> _ -> _ |- _ => H end in
     do 2 forward X; eauto; inv X.
     let X1 := multimatch goal with H : _ |- _ => H end in
@@ -1605,11 +1576,7 @@ Proof.
   all: try congruence.
   all: intros; rtoProp.
   all: repeat match reverse goal with  [H : MCProd.and3 _ _ _ |- _] => destruct H end.
-  - invs Hrep.
-    + invs H2.
-    + cbn in Hsunny. rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto.
-      edestruct s1 as (? & ? & ?); eauto.
-      invs Hv1. eexists; split; eauto. econstructor; eauto.
+  - cbn in i0. congruence.
   - invs Hrep.
     + invs H3.
     + cbn in Hsunny. rtoProp.
@@ -1872,7 +1839,6 @@ Proof.
        unfold cstr_arity in *.  invs H. lia.
        clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
   - invs Hrep; cbn in *; try congruence; rtoProp.
-    + econstructor. split; eauto. eapply eval_vbox.
     + econstructor. split; eauto. econstructor. eauto.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.

@@ -358,23 +358,23 @@ Qed.
 
 Import EOptimizePropDiscr EWcbvEval.
 
-Program Definition optimize_prop_discr_optimization {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+Program Definition remove_match_on_box_trans {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram (disable_prop_cases fl)) :=
   {| name := "optimize_prop_discr";
-    transform p _ := optimize_program p ;
+    transform p _ := remove_match_on_box_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram efl p /\ EEtaExpanded.expanded_eprogram_cstrs p;
-    obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v |}.
+    obseq g g' v v' := v' = EOptimizePropDiscr.remove_match_on_box g.1 v |}.
 
 Next Obligation.
   move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
   cbn in *. split.
-  - now eapply optimize_program_wf.
-  - now eapply optimize_program_expanded.
+  - now eapply remove_match_on_box_program_wf.
+  - now eapply remove_match_on_box_program_expanded.
 Qed.
 Next Obligation.
   red. move=> fl wcon efl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
-  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
+  eapply EOptimizePropDiscr.remove_match_on_box_correct in ev; eauto.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
   eapply wellformed_closed_env, wfe.
   eapply wellformed_closed, wfe.

@@ -57,10 +57,10 @@ Next Obligation.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
-Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t TemplateProgram.template_program EProgram.eprogram
-  Ast.term EAst.term
-  TemplateProgram.eval_template_program
+Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+ Transform.t pcuic_program EProgram.eprogram
+  PCUICAst.term EAst.term
+  PCUICTransform.eval_pcuic_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   (* a bunch of nonsense for normalization preconditions *)
   let K ty (T : ty -> _) p
@@ -68,15 +68,6 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
        (PCUICTyping.wf_ext p -> PCUICSN.NormalizationIn p) /\
          (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p) in
   let T1 (p:global_env_ext_map) := p in
-  let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
-  let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
-  let T4 (p:GlobalEnvMap.t) := T3 (eta_expand_global_env p) in
-  (* Build an efficient lookup map for the following eta-expansion phase *)
-  build_template_program_env (K _ T4) ▷
-  (* Eta-expand constructors and fixpoint *)
-  eta_expand (K _ T3) ▷
-  (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
-  template_to_pcuic_transform (K _ T2) ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
   pcuic_expand_lets_transform (K _ T1) ▷
   (* Erasure of proofs terms in Prop and types *)
@@ -90,7 +81,7 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   (* Remove all cases / projections on propositional content *)
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  remove_match_on_box_trans (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
   (* Inline projections to cases *)
@@ -114,6 +105,43 @@ Next Obligation.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
+Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+ Transform.t TemplateProgram.template_program pcuic_program
+  Ast.term PCUICAst.term
+  TemplateProgram.eval_template_program
+   PCUICTransform.eval_pcuic_program :=
+  (* a bunch of nonsense for normalization preconditions *)
+  let K ty (T : ty -> _) p
+    := let p := T p in
+       (PCUICTyping.wf_ext p -> PCUICSN.NormalizationIn p) /\
+         (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p) in
+  let T1 (p:global_env_ext_map) := p in
+  let T2 (p:global_env_ext_map) := T1 (build_global_env_map (PCUICExpandLets.trans_global_env p.1), p.2) in
+  let T3 (p:global_env) := T2 (TemplateToPCUIC.trans_global_env p, Monomorphic_ctx) in
+  let T4 (p:GlobalEnvMap.t) := T3 (eta_expand_global_env p) in
+  (* Build an efficient lookup map for the following eta-expansion phase *)
+  build_template_program_env (K _ T4) ▷
+  (* Eta-expand constructors and fixpoint *)
+  eta_expand (K _ T3) ▷
+  (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
+  template_to_pcuic_transform (K _ T2).
+
+Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+ Transform.t TemplateProgram.template_program EProgram.eprogram
+  Ast.term EAst.term
+  TemplateProgram.eval_template_program
+  (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
+  pre_erasure_pipeline ▷
+  verified_erasure_pipeline.
+
+(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
+   parameters in inductive declarations. The constructor applications are also transformed to a first-order
+   "block"  application, of the right length, and the evaluation relation does not need to consider guarded
+   fixpoints or case analyses on propositional content. All fixpoint bodies start with a lambda as well.
+   Finally, projections are inlined to cases, so no `tProj` remains. *)
+
+Import EGlobalEnv EWellformed.
+
 Definition run_erase_program {guard : abstract_guard_impl} := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :=
@@ -134,7 +162,7 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
   remove_params_fast_optimization (wcon := eq_refl)  _ ▷
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
-  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  remove_match_on_box_trans (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in

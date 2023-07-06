@@ -78,6 +78,8 @@ Section Wcbv.
     lookup Γ na = Some v ->
     eval Γ (tVar na) v
 
+  | eval_vbox : eval Γ tBox vBox
+
   | eval_box a t t' :
     eval Γ a vBox ->
     eval Γ t t' ->
@@ -148,7 +150,10 @@ Section Wcbv.
 
   Program Definition eval_ind :=
     λ (P : ∀ (Γ : environment) (t : term) (v : value), eval Γ t v → Type) (f : ∀ (Γ : environment) (na : string) (v : value) (e : lookup Γ na = Some v),
-          P Γ (tVar na) v (eval_var Γ na v e)) (f0 : ∀ (Γ : environment) (a t : term)
+          P Γ (tVar na) v (eval_var Γ na v e))
+
+      (f_vbox : ∀ (Γ : environment) (e : eval Γ tBox vBox), P Γ tBox vBox e)
+      (f0 : ∀ (Γ : environment) (a t : term)
                                                        (t' : value) (e : eval Γ a vBox),
           P Γ a vBox e
           → ∀ e0 : eval Γ t t',
@@ -249,6 +254,7 @@ Section Wcbv.
       fix F (Γ : environment) (t : term) (v : value) (e : eval Γ t v) {struct e} : P Γ t v e :=
       match e as e0 in (eval _ t0 v0) return (P Γ t0 v0 e0) with
       | @eval_var _ na v0 e0 => f Γ na v0 e0
+      | @eval_vbox _ => f_vbox Γ _
       | @eval_box _ a t0 t' e0 e1 => f0 Γ a t0 t' e0 (F Γ a vBox e0) e1 (F Γ t0 t' e1)
       | @eval_beta _ f10 na b a a' res Γ' e0 e1 e2 => f1 Γ f10 na b a a' res Γ' e0 (F Γ f10 (vClos na b Γ') e0) e1 (F Γ a a' e1) e2 (F (add na a' Γ') b res e2)
       | @eval_lambda _ na b => f2 Γ na b
@@ -963,7 +969,7 @@ Proof.
     { clear.  generalize ((List.rev (gen_many_fresh Γ ( (map dname m))) ++ Γ)).
       induction m in Γ |- *; cbn.
       - econstructor.
-      - intros. destruct a; cbn. destruct dname; cbn; try econstructor; eauto.  
+      - intros. destruct a; cbn. destruct dname; cbn; try econstructor; eauto.
     }
     { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
       eapply All_impl in H1. 2:{ intros ? [[] ].
@@ -974,7 +980,7 @@ Proof.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
       intros. induction H1 in Γ |- *.
       - econstructor.
-      - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto. 
+      - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto.
     }
 Qed.
 
@@ -1226,7 +1232,9 @@ Definition dupfree (Γ : list ident) :=
 
 Fixpoint sunny Γ (t : term) : bool :=
   match t with
-  | tRel i => true
+  | tBox => true
+  | tRel _ => true
+  | tVar na => true
   | tEvar ev args => List.forallb (sunny Γ) args
   | tLambda (nNamed na) M => fresh na Γ && sunny (na :: Γ) M
   | tApp u v => sunny Γ u && sunny Γ v
@@ -1244,8 +1252,7 @@ Fixpoint sunny Γ (t : term) : bool :=
          dupfree names &&
            forallb (test_def (sunny (names ++ Γ))) mfix
   | tConstruct _ _ args => forallb (sunny Γ) args
-  | tConst _ => true
-  | _ => false
+  | _ => true
   end.
 
 Inductive wf : value -> Type :=
@@ -1363,6 +1370,13 @@ Proof.
   revert HE Hsunny. pattern E, s, v, Heval.
   revert E s v Heval.
   eapply eval_ind; intros; eauto; cbn in *; rtoProp; eauto using Forall.
+  - induction HE.
+    + cbn in *. congruence.
+    + unfold lookup in e. cbn in e. destruct x.
+      destruct eqb eqn:E.
+      * invs e. cbn in *; eauto.
+      * eapply IHHE. exact e.
+  - econstructor.
   - let X := match reverse goal with H : All _ _ -> _ -> _ |- _ => H end in
     do 2 forward X; eauto; inv X.
     let X1 := multimatch goal with H : _ |- _ => H end in
@@ -1514,6 +1528,8 @@ Proof.
 Qed.
  *)
 
+(*)
+
 Lemma represents_add_fresh nms Γ E vs s t :
   Γ ;;; E ⊩ s ~ t ->
   sunny nms s ->
@@ -1523,6 +1539,7 @@ Proof.
   revert Γ E s t.
   refine (@represents_ind _ (fun _ _ _ => True) _ _ _ _ _ _ _ _ _ _ _ _ _ _).
   all: intros; cbn in *; rtoProp; eauto.
+  - econstructor; eauto.
   - econstructor; eauto. eapply H; eauto.
     eapply sunny_subset; eauto. firstorder.
   - econstructor; eauto. eapply H0; eauto.
@@ -1548,6 +1565,8 @@ Proof.
       rewrite <- app_assoc.
       eapply incl_appr, incl_refl.
 Qed.
+
+*)
 
 Lemma NoDup_In_1 {A} (l1 l2 : list A) a :
     NoDup (l1 ++ l2) -> In a l1 -> ~ In a l2.
@@ -1853,6 +1872,8 @@ Proof.
        unfold cstr_arity in *.  invs H. lia.
        clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
   - invs Hrep; cbn in *; try congruence; rtoProp.
+    + econstructor. split; eauto. eapply eval_vbox.
+    + econstructor. split; eauto. econstructor. eauto.
     + econstructor. split; eauto. econstructor.
     + destruct args'; congruence.
     + solve_all. eexists. split. 2: econstructor; eauto. 4: solve_all.
@@ -1868,5 +1889,130 @@ Proof.
       cbn in *. destruct H1 as (([? []] & ?) & ?).
       rewrite app_nil_r in r. all: eauto.
 
-      Unshelve. all: repeat econstructor. 
+      Unshelve. all: repeat econstructor.
+Qed.
+
+Lemma concat_sing {X} l :
+  List.concat (map (fun x :X  => [x]) l) = l.
+Proof.
+  induction l; cbn in *; try congruence.
+Qed.
+
+Lemma sunny_annotate Γ s :
+  sunny Γ (annotate Γ s).
+Proof.
+  induction s in Γ |- * using EInduction.term_forall_list_ind; cbn; eauto; rtoProp.
+  - destruct nth_error; cbn; eauto.
+  - solve_all.
+  - split; eauto. destruct n; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto.
+    eapply gen_fresh_fresh in i; eauto.
+    destruct in_dec; cbn; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto.
+    eapply gen_fresh_fresh in i1; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto. exfalso; eauto.
+  - split; eauto. destruct n; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto.
+    eapply gen_fresh_fresh in i; eauto.
+    destruct in_dec; cbn; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto.
+    eapply gen_fresh_fresh in i1; eauto.
+    unfold fresh. destruct in_dec; cbn; eauto. exfalso; eauto.
+  - split; eauto.
+  - solve_all.
+  - split; eauto. solve_all. rtoProp. repeat split; eauto.
+    + solve_all. eapply In_All. intros.
+      unfold fresh. destruct in_dec; cbn; eauto.
+      exfalso. eapply NoDup_gen_many_fresh; eauto.
+    + unfold dupfree. destruct dupfree_dec_ident; eauto.
+      exfalso. eapply n.
+      rewrite flat_map_concat_map. rewrite map_map.
+      rewrite concat_sing.
+      eapply NoDup_gen_many_fresh; eauto.
+    + rewrite flat_map_concat_map map_map concat_sing.
+      eapply sunny_subset. eapply H.
+      intros ? ? %in_app_iff. eapply in_app_iff. rewrite <- in_rev in H0.
+      eauto.
+  - repeat split; eauto.
+    1:{ unfold map_def_name.  generalize (annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+        cbn. intros. solve_all.
+        clear. induction m in Γ |- *.
+        - cbn. econstructor.
+        - cbn. destruct a; cbn. destruct dname; cbn.
+          + econstructor; cbn.
+            unfold fresh. destruct in_dec; eauto; cbn. exfalso.
+            eapply gen_fresh_fresh; eauto.
+            specialize (IHm (gen_fresh "wildcard" Γ :: Γ)).
+            solve_all. destruct x, dname; cbn in *; try congruence.
+            unfold fresh in *. repeat (destruct in_dec; cbn in *; try congruence).
+            exfalso. eapply n. eauto.
+          + econstructor; cbn.
+            { destruct in_dec; cbn.
+              + unfold fresh. destruct in_dec; eauto; cbn. exfalso.
+                eapply gen_fresh_fresh; eauto.
+              + unfold fresh. destruct in_dec; eauto; cbn. exfalso. eauto. }
+            specialize (IHm ((if is_left (in_dec (ReflectEq_EqDec IdentOT.reflect_eq_string) i Γ) then gen_fresh i Γ else i) :: Γ)).
+            solve_all. destruct x, dname; cbn in *; try congruence.
+            destruct in_dec; cbn in *.
+            * unfold fresh in *.
+              repeat (destruct in_dec; cbn in *; try congruence).
+              exfalso. eapply n. eauto.
+            * unfold fresh in *.
+              repeat (destruct in_dec; cbn in *; try congruence).
+              exfalso. eapply n0. eauto.
+    }
+    { unfold map_def_name. generalize (annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+      intros t0.
+      assert ((flat_map (λ d : def term, match dname d with
+      | nAnon => []
+      | nNamed i => [i]
+      end)
+(map2 (λ (d : def term) (na : ident), {| dname := nNamed na; dbody := t0 (dbody d); rarg := rarg d |}) m (gen_many_fresh Γ (map dname m)))) = (gen_many_fresh Γ (map dname m))) as ->.
+      { pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+        generalize (gen_many_fresh Γ (map dname m)). clear. induction m; destruct l; cbn; try congruence.
+        intros. f_equal. eapply IHm. lia. }
+
+      unfold dupfree. intros. destruct dupfree_dec_ident; cbn; eauto.
+      exfalso. apply n0.
+      eapply NoDup_gen_many_fresh.
+    }
+    {
+      unfold map_def_name.
+      assert ((flat_map (λ d : def term, match dname d with
+      | nAnon => []
+      | nNamed i => [i]
+      end)
+(map2 (λ (d : def term) (na : ident), {| dname := nNamed na; dbody := annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ) (dbody d); rarg := rarg d |}) m (gen_many_fresh Γ (map dname m)))) = (gen_many_fresh Γ (map dname m))) as ->.
+      { generalize (annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+         pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+        generalize (gen_many_fresh Γ (map dname m)). clear. induction m; destruct l; cbn; try congruence.
+        intros. f_equal. eapply IHm. lia. }
+
+      solve_all.
+      eapply (All_impl(P := (λ x : def term, test_def (sunny (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)) x))).
+      2:{ intros x H. unfold test_def. eapply sunny_subset. eassumption.
+          intros ? ? % in_app_iff. eapply in_app_iff. rewrite <- in_rev. eauto. }
+
+      generalize (List.rev (gen_many_fresh Γ (map dname m))).
+      pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+      generalize (gen_many_fresh Γ (map dname m)). clear - X. induction X.
+      + intros l. destruct l; cbn in *; try congruence. econstructor.
+      + intros []; cbn in *; try congruence. intros. econstructor; eauto.
+    }
+Qed.
+
+Lemma eval_to_eval_named_full (Σ Σ' : global_context) s t :
+  wf_glob Σ ->
+  Forall (fun d => match d.2 with ConstantDecl (Build_constant_body (Some d)) => sunny [] d | _ => true end) Σ' ->
+  All2 (fun d d' => d.1 = d'.1 × match d.2 with ConstantDecl (Build_constant_body (Some body)) =>
+    ∑ body', d'.2 = ConstantDecl (Build_constant_body (Some body')) × [] ;;; [] ⊩ body' ~ body
+  | decl => d'.2 = decl
+  end) Σ Σ' ->
+  EWcbvEval.eval Σ s t ->
+  wellformed Σ 0 s ->
+  ∑ v, ⊩ v ~ t × eval Σ' [] (annotate [] s) v.
+Proof.
+  intros. eapply eval_to_eval_named; eauto.
+  eapply sunny_annotate.
+  eapply nclosed_represents. eauto.
 Qed.

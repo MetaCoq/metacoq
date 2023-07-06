@@ -1,5 +1,5 @@
 
-all: printconf template-coq pcuic safechecker erasure examples test-suite translations quotation
+all: printconf template-coq pcuic safechecker erasure 
 
 -include Makefile.conf
 
@@ -37,7 +37,6 @@ install: all translations
 	$(MAKE) -C safechecker-plugin install
 	$(MAKE) -C erasure install
 	$(MAKE) -C erasure-plugin install
-	$(MAKE) -C translations install
 
 uninstall:
 	$(MAKE) -C utils uninstall

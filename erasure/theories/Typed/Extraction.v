@@ -89,7 +89,7 @@ Program Definition extract_pcuic_env
            (ignore : kername -> bool) : result ExAst.global_env _ :=
   let Σ := timed "Erasure" (fun _ => erase_global_decls_deps_recursive (declarations Σ) (universes Σ) (retroknowledge Σ) wfΣ seeds ignore) in
   if optimize_prop_discr params then
-    let Σ := timed "Removal of prop discrimination" (fun _ => OptimizePropDiscr.optimize_env Σ _) in
+    let Σ := timed "Removal of prop discrimination" (fun _ => OptimizePropDiscr.remove_match_on_box_env Σ _) in
     compose_transforms (extract_transforms params) Σ
   else
     Ok Σ.

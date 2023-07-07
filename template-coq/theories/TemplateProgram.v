@@ -52,7 +52,7 @@ Program Definition build_template_program_env {cf : checker_flags} K :
      pre p := ∥ wt_template_program p ∥ /\ forall pf, K (GlobalEnvMap.make p.1 (wt_template_program_fresh p pf)) : Prop ;
      transform p pre := make_template_program_env p (proj1 pre);
      post p := ∥ wt_template_program_env p ∥ /\ K p.1;
-     obseq g g' v v' := v = v' |}.
+     obseq g preg g' v v' := v = v' |}.
 Next Obligation.
   cbn. exists v. cbn; split; auto.
 Qed.

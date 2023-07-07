@@ -25,11 +25,12 @@ Module Transform.
      Context {eval :  program -> value -> Prop}.
      Context {eval' : program' -> value' -> Prop}.
 
-     Definition preserves_eval pre (transform : forall p : program, pre p -> program') obseq :=
+     Definition preserves_eval pre (transform : forall p : program, pre p -> program')
+      (obseq : forall p : program, pre p -> program' -> value -> value' -> Prop) :=
       forall p v (pr : pre p),
         eval p v ->
         let p' := transform p pr in
-        exists v', eval' p' v' /\ obseq p p' v v'.
+        exists v', eval' p' v' /\ obseq p pr p' v v'.
 
     Record t :=
     { name : string;
@@ -37,7 +38,7 @@ Module Transform.
       transform : forall p : program, pre p -> program';
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
-      obseq : program -> program' -> value -> value' -> Prop;
+      obseq : forall p : program, pre p -> program' -> value -> value' -> Prop;
       preservation : preserves_eval pre transform obseq; }.
 
     Definition run (x : t) (p : program) (pr : pre x p) : program' :=
@@ -63,7 +64,9 @@ Module Transform.
         transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
         pre := o.(pre);
         post := o'.(post);
-        obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
+        obseq g preg g' v v' :=
+        exists v'', o.(obseq) g preg (run o g preg) v v'' ×
+            o'.(obseq) (run o g preg) (hpp _ (o.(correctness) _ preg)) g' v'' v'
         |}.
     Next Obligation.
       intros o o' hpp inp pre.
@@ -78,7 +81,7 @@ Module Transform.
       specialize (H0 (hpp _ (o.(correctness) _ pr)) ev).
       destruct H0 as [v'' [ev' obs']].
       exists v''. constructor => //.
-      exists (transform o p pr), v'. now split.
+      exists v'. now split.
     Qed.
   End Comp.
 

@@ -47,7 +47,7 @@ Program Definition eta_expand K : Transform.t template_program_env template_prog
       pre := fun p => ∥ wt_template_program_env p ∥ /\ K (eta_expand_global_env p.1) ;
       transform p _ := EtaExpand.eta_expand_program p ;
       post := fun p => ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K p.1;
-      obseq p p' v v' := v' = EtaExpand.eta_expand p.1 [] v |}.
+      obseq p hp p' v v' := v' = EtaExpand.eta_expand p.1 [] v |}.
 Next Obligation.
   let p := match goal with H : template_program_env |- _ => H end in
   destruct p. split; [|split]; auto; now apply assume_welltyped_template_program_expansion.

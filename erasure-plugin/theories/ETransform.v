@@ -204,7 +204,7 @@ Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t p
    transform p hp := let nhs := proj2 (proj2 hp) in
                      @erase_program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
     post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
-   obseq g g' v v' := let Σ := g.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
+   obseq p hp p' v v' := let Σ := p.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
 
 Next Obligation.
   cbn -[erase_program].
@@ -271,7 +271,7 @@ Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {wcon : E
     transform p pre := p;
     pre p := wf_eprogram_env efl p /\ EEtaExpandedFix.expanded_eprogram_env p;
     post p := wf_eprogram_env efl p /\ EEtaExpandedFix.expanded_eprogram_env p;
-    obseq g g' v v' := v' = v |}.
+    obseq p hp p' v v' := v' = v |}.
 Next Obligation. cbn. eauto. Qed.
 Next Obligation.
   cbn.
@@ -292,7 +292,7 @@ Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (wi
      pre p := wf_eprogram efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_cstrs p);
      transform p pre := rebuild_wf_env p (proj1 pre);
      post p := wf_eprogram_env efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_env_cstrs p);
-     obseq g g' v v' := v = v' |}.
+     obseq p hp p' v v' := v = v' |}.
 Next Obligation.
   cbn. intros fl efl [] input [wf exp]; cbn; split => //.
 Qed.
@@ -307,7 +307,7 @@ Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon :
     transform p pre := ERemoveParams.strip_program p;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+    obseq p hp p' v v' := v' = (ERemoveParams.strip p.1 v) |}.
 Next Obligation.
   move=> fl wcon efl [Σ t] [wfp etap].
   simpl.
@@ -333,7 +333,7 @@ Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {w
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+    obseq p hp p' v v' := v' = (ERemoveParams.strip p.1 v) |}.
 Next Obligation.
   move=> fl wcon efl [Σ t] [wfp etap].
   simpl.
@@ -364,7 +364,7 @@ Program Definition remove_match_on_box_trans {fl : WcbvFlags} {wcon : with_const
     transform p _ := remove_match_on_box_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram efl p /\ EEtaExpanded.expanded_eprogram_cstrs p;
-    obseq g g' v v' := v' = EOptimizePropDiscr.remove_match_on_box g.1 v |}.
+    obseq p hp p' v v' := v' = EOptimizePropDiscr.remove_match_on_box p.1 v |}.
 
 Next Obligation.
   move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
@@ -390,7 +390,7 @@ Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcb
     transform p _ := EInlineProjections.optimize_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (disable_projections_env_flag efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
-    obseq g g' v v' := v' = EInlineProjections.optimize g.1 v |}.
+    obseq p hp p' v v' := v' = EInlineProjections.optimize p.1 v |}.
 
 Next Obligation.
   move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
@@ -414,7 +414,7 @@ Program Definition constructors_as_blocks_transformation (efl : EEnvFlags)
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (switch_cstr_as_blocks efl) p ;
-    obseq g g' v v' := v' = EConstructorsAsBlocks.transform_blocks g.1 v |}.
+    obseq p hp p' v v' := v' = EConstructorsAsBlocks.transform_blocks p.1 v |}.
 
 Next Obligation.
   move=> efl hasapp haspars hascstrs [Σ t] [] [wftp wft] /andP [etap etat].
@@ -441,7 +441,7 @@ Program Definition implement_box_transformation (efl : EEnvFlags)
     transform p _ := EImplementBox.implement_box_program p ;
     pre p := wf_eprogram efl p ;
     post p := wf_eprogram (switch_off_box efl) p ;
-    obseq g g' v v' := v' = implement_box v |}.
+    obseq p hp p' v v' := v' = implement_box v |}.
 
 Next Obligation.
   intros. cbn in *. destruct p. split.

@@ -57,11 +57,17 @@ Next Obligation.
   simpl in H. auto with arith.
 Defined.
 
-Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
-  match l, l' with
-  | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
-  | _, _ => []
-  end.
+Section map2.
+
+  Context {A B C} (f : A -> B -> C).
+
+  Fixpoint map2 (l : list A) (l' : list B) : list C :=
+    match l, l' with
+    | hd :: tl, hd' :: tl' => f hd hd' :: map2 tl tl'
+    | _, _ => []
+    end.
+
+End map2.
 
 Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
   (forall x y, f x y = g x y) ->

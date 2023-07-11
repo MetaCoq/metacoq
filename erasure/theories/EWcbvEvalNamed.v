@@ -289,7 +289,7 @@ where "Γ ;;; E ⊩ s ~ t" := (represents Γ E s t).
 
 Program Definition represents_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
-	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
+         l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
      (f0 :
        ∀ (Γ : list ident)
@@ -426,7 +426,7 @@ Defined.
 
 Program Definition represents_value_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
-	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
+         l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
      (f0 :
        ∀ (Γ : list ident)
@@ -569,7 +569,7 @@ Defined.
 
 Definition rep_ind :=
   (λ (P : ∀ (l : list ident) (e : environment) (t t0 : term),
-	       l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
+         l;;; e ⊩ t ~ t0 → Type) (P0 : ∀ (v : value) (t : term),
          represents_value v t → Type)
    (f0 :
        ∀ (Γ : list ident)
@@ -809,21 +809,21 @@ Definition map_def_name :=
     {| dname := g (dname d); dbody := f (dbody d); rarg := rarg d |}.
 
 
-Section Map2.
+(* Section Map2. *)
 
-  Context {A B C : Type}.
-  Variable (f : A → B → C).
-  Fixpoint map2 (l : list A) (l' : list B) {struct l} :
-	  list C :=
-    match l with
-    | [] => []
-    | hd :: tl =>
-        match l' with
-        | [] => []
-        | hd' :: tl' => f hd hd' :: map2 tl tl'
-        end
-    end.
-End Map2.
+(*   Context {A B C : Type}. *)
+(*   Variable (f : A → B → C). *)
+(*   Fixpoint map2 (l : list A) (l' : list B) {struct l} : *)
+(*    list C := *)
+(*     match l with *)
+(*     | [] => [] *)
+(*     | hd :: tl => *)
+(*         match l' with *)
+(*         | [] => [] *)
+(*         | hd' :: tl' => f hd hd' :: map2 tl tl' *)
+(*         end *)
+(*     end. *)
+(* End Map2. *)
 
 Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
   match u with
@@ -910,6 +910,76 @@ Proof.
       * intros H % IHl. eapply H. now left.
       * eapply IHl.
       * intros x [<- | ?]. 1: eauto. eapply IHl in H. firstorder.
+Qed.
+
+Definition named_extraction_term_flags :=
+  {| has_tBox := false
+  ; has_tRel := false
+  ; has_tVar := true
+  ; has_tEvar := false
+  ; has_tLambda := true
+  ; has_tLetIn := true
+  ; has_tApp := true
+  ; has_tConst := true
+  ; has_tConstruct := true
+  ; has_tCase := true
+  ; has_tProj := false
+  ; has_tFix := true
+  ; has_tCoFix := false
+  ; has_tPrim := false
+  |}.
+
+Definition named_extraction_env_flags :=
+  {| has_axioms := false;
+    term_switches := named_extraction_term_flags;
+    has_cstr_params := false ;
+    cstr_as_blocks := true |}.
+
+Lemma wellformed_annotate Σ Γ s :
+  wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) Σ #|Γ| (annotate Γ s).
+Proof.
+  intros Hwf.
+  induction s in Γ, Hwf |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve eauto.
+  - eapply Nat.ltb_lt in Hwf. destruct nth_error eqn:Eq; eauto.
+    eapply nth_error_None in Eq. lia.
+  - destruct n; cbn. 2: destruct in_dec.
+    all: eapply (IHs (_ :: Γ)); cbn; eauto.
+  - split; eauto. destruct n; cbn. 2: destruct in_dec; cbn.
+    all: eapply (IHs2 (_ :: Γ)); cbn; eauto.
+  - destruct lookup_env as [ [] | ]; cbn in *; eauto.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
+    repeat split. len. solve_all.
+  - destruct lookup_env as [ [] | ]; cbn in *; eauto.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
+    repeat split. eauto.
+    solve_all. rewrite map_length. rewrite <- app_length.
+    eapply a0. len. rewrite gen_many_fresh_length. eauto.
+  - split.
+    { clear - H.  generalize ((List.rev (gen_many_fresh Γ ( (map dname m))) ++ Γ)).
+      induction m in Γ, H |- *; cbn.
+      - econstructor.
+      - intros. destruct a; cbn in *. destruct dname; cbn; rtoProp; repeat split; eauto.
+        all: destruct dbody; cbn in *; eauto.
+
+    }
+    { solve_all. unfold wf_fix in *. rtoProp. split.
+      rewrite map2_length gen_many_fresh_length map_length.
+      { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
+      solve_all. clear H0. unfold test_def in *. cbn in *.
+      eapply All_impl in H1. 2:{ intros ? [[] ].
+      specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+      revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i1. exact i1.
+      }
+      revert H1.
+      generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
+      intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
+      revert H1. generalize (#|m| + #|Γ|).
+      intros.
+      induction m in Γ, n, n0, l, H1 |- *.
+      - econstructor.
+      - invs H1. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
+    }
 Qed.
 
 Lemma nclosed_represents Σ Γ E s :

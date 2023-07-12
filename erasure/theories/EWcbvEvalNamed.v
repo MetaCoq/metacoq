@@ -862,7 +862,7 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
 
 Fixpoint annotate_env Γ (Σ : global_declarations) :=
   match Σ with
-  | (na, ConstantDecl (Build_constant_body (Some b))) :: Σ => (na, ConstantDecl (Build_constant_body (Some (annotate Γ b)))) :: annotate_env (string_of_kername na :: Γ) Σ
+  | (na, ConstantDecl (Build_constant_body (Some b))) :: Σ => (na, ConstantDecl (Build_constant_body (Some (annotate Γ b)))) :: annotate_env (Γ) Σ
   | d :: Σ => d :: annotate_env Γ Σ
   | nil => nil
   end.
@@ -935,33 +935,57 @@ Definition named_extraction_env_flags :=
     has_cstr_params := false ;
     cstr_as_blocks := true |}.
 
-Lemma wellformed_annotate Σ Γ s :
-  wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) Σ #|Γ| (annotate Γ s).
+Lemma lookup_annotate_env Γ Σ i d :
+  lookup_env Σ i = Some d ->
+  lookup_env (annotate_env Γ Σ) i = Some
+    match d with
+    | ConstantDecl {| cst_body := b |} => ConstantDecl {| cst_body := option_map (annotate Γ) b |}
+    | InductiveDecl m => InductiveDecl m
+    end.
 Proof.
-  intros Hwf.
-  induction s in Γ, Hwf |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve eauto.
+  induction Σ in i |- *; cbn; try congruence.
+  destruct a. cbn.
+  destruct (eqb_spec i k).
+  + subst. intros [= ->].
+    destruct d as [ [ []] | ]; cbn; now rewrite eqb_refl.
+  + intros Hi % IHΣ. destruct d as [ [] | ]; cbn in *;
+    destruct g as [ [[]]| ]; cbn; destruct (eqb_spec i k); try congruence.
+Qed.
+
+Local Hint Resolve incl_tl incl_appr incl_appl : core.
+
+Lemma wellformed_annotate' Σ Γ Γ' s :
+  incl Γ' Γ -> 
+  wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) (annotate_env Γ' Σ) #|Γ| (annotate Γ s).
+Proof.
+  intros Hincl Hwf.
+  induction s in Γ, Hwf, Γ', Hincl |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve eauto.
   - eapply Nat.ltb_lt in Hwf. destruct nth_error eqn:Eq; eauto.
     eapply nth_error_None in Eq. lia.
   - destruct n; cbn. 2: destruct in_dec.
     all: eapply (IHs (_ :: Γ)); cbn; eauto.
   - split; eauto. destruct n; cbn. 2: destruct in_dec; cbn.
     all: eapply (IHs2 (_ :: Γ)); cbn; eauto.
-  - destruct lookup_env as [ [] | ]; cbn in *; eauto.
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    destruct c, cst_body; cbn in *; try congruence.
+    erewrite lookup_annotate_env; eauto. cbn; eauto.
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    erewrite lookup_annotate_env; eauto. cbn.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     repeat split. len. solve_all.
-  - destruct lookup_env as [ [] | ]; cbn in *; eauto.
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    erewrite lookup_annotate_env; eauto. cbn.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     repeat split. eauto.
     solve_all. rewrite map_length. rewrite <- app_length.
-    eapply a0. len. rewrite gen_many_fresh_length. eauto.
+    eapply a; eauto. len. rewrite gen_many_fresh_length. eauto.
   - split.
     { clear - H.  generalize ((List.rev (gen_many_fresh Γ ( (map dname m))) ++ Γ)).
       induction m in Γ, H |- *; cbn.
       - econstructor.
       - intros. destruct a; cbn in *. destruct dname; cbn; rtoProp; repeat split; eauto.
         all: destruct dbody; cbn in *; eauto.
-
     }
     { solve_all. unfold wf_fix in *. rtoProp. split.
       rewrite map2_length gen_many_fresh_length map_length.
@@ -970,6 +994,7 @@ Proof.
       eapply All_impl in H1. 2:{ intros ? [[] ].
       specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
       revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i1. exact i1.
+      eapply incl_appr. eauto.
       }
       revert H1.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
@@ -980,6 +1005,12 @@ Proof.
       - econstructor.
       - invs H1. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
     }
+Qed.
+
+Lemma wellformed_annotate Σ Γ s :
+  wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) (annotate_env Γ Σ) #|Γ| (annotate Γ s).
+Proof.
+  eapply wellformed_annotate'. firstorder.
 Qed.
 
 Lemma nclosed_represents Σ Γ E s :
@@ -1385,7 +1416,6 @@ Proof.
     eapply IHt; eauto. intros ? []; cbn; eauto.
   - destruct n; eauto. cbn in *. rtoProp. repeat split; eauto.
     eapply IHt2; eauto. eapply incl_cons; cbn; eauto.
-    eapply incl_tl; eauto.
   - rtoProp; split; eauto.
   - solve_all.
   - rtoProp; split; solve_all; rtoProp; eauto; repeat split; solve_all.

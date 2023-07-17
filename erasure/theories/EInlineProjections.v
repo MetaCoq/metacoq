@@ -33,6 +33,30 @@ Definition switch_no_params (efl : EEnvFlags) :=
      |}.
 Definition flags_after_projs := (switch_no_params all_env_flags).
 Local Existing Instance flags_after_projs.
+
+Definition disable_projections_term_flags (et : ETermFlags) :=
+  {| has_tBox := has_tBox
+    ; has_tRel := has_tRel
+    ; has_tVar := has_tVar
+    ; has_tEvar := has_tEvar
+    ; has_tLambda := has_tLambda
+    ; has_tLetIn := has_tLetIn
+    ; has_tApp := has_tApp
+    ; has_tConst := has_tConst
+    ; has_tConstruct := has_tConstruct
+    ; has_tCase := true
+    ; has_tProj := false
+    ; has_tFix := has_tFix
+    ; has_tCoFix := has_tCoFix
+    ; has_tPrim := has_tPrim
+  |}.
+
+Definition disable_projections_env_flag (efl : EEnvFlags) :=
+  {| has_axioms := efl.(@has_axioms);
+     term_switches := disable_projections_term_flags term_switches;
+     has_cstr_params := efl.(@has_cstr_params) ;
+     cstr_as_blocks := efl.(@cstr_as_blocks) |}.
+
 Arguments lookup_projection : simpl never.
 Arguments GlobalContextMap.lookup_projection : simpl never.
 
@@ -323,7 +347,7 @@ Lemma lookup_env_optimize_env_Some {efl : EEnvFlags} {Σ : GlobalContextMap.t} k
   wf_glob Σ ->
   GlobalContextMap.lookup_env Σ kn = Some d ->
   ∑ Σ' : GlobalContextMap.t,
-    [× extends Σ' Σ, wf_global_decl Σ' d &
+    [× extends_prefix Σ' Σ, wf_global_decl Σ' d &
       lookup_env (optimize_env Σ) kn = Some (optimize_decl Σ' d)].
 Proof.
   rewrite GlobalContextMap.lookup_env_spec.
@@ -336,7 +360,8 @@ Proof.
     now eexists [_].
     cbn. now depelim wfg.
     f_equal. symmetry. eapply wellformed_optimize_decl_extends. cbn. now depelim wfg.
-    cbn. now exists [a]. now cbn.
+    eapply extends_prefix_extends.
+    cbn. now exists [a]. now cbn. now cbn.
   - intros _.
     set (Σ' := GlobalContextMap.make Σ (fresh_globals_cons_inv wf)).
     specialize (IHΣ (GlobalContextMap.map Σ') (GlobalContextMap.repr Σ') (GlobalContextMap.wf Σ')).
@@ -351,7 +376,8 @@ Proof.
       symmetry. eapply wellformed_optimize_decl_extends => //. cbn.
       eapply lookup_env_In in hin. 2:now depelim wfg.
       depelim wfg. eapply lookup_env_wellformed; tea.
-      cbn. now exists [a].
+      eapply extends_prefix_extends.
+      cbn. now exists [a]. now cbn.
 Qed.
 
 Lemma lookup_env_map_snd Σ f kn : lookup_env (List.map (on_snd f) Σ) kn = option_map f (lookup_env Σ kn).
@@ -378,7 +404,8 @@ Proof.
   destruct (GlobalContextMap.lookup_env Σ kn) eqn:hl.
   - eapply lookup_env_optimize_env_Some in hl as [Σ' [ext wf' hl']] => /=.
     rewrite hl'. f_equal.
-    eapply wellformed_optimize_decl_extends; eauto. auto.
+    eapply wellformed_optimize_decl_extends; eauto.
+    now eapply extends_prefix_extends. auto.
 
   - cbn. now eapply lookup_env_optimize_env_None in hl.
 Qed.
@@ -729,88 +756,7 @@ Proof.
   apply optimize_expanded_irrel.
 Qed.
 
-Lemma optimize_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
-  extends Σ Σ' ->
-  wf_glob Σ' ->
-  List.map (on_snd (optimize_decl Σ)) Σ.(GlobalContextMap.global_decls) =
-  List.map (on_snd (optimize_decl Σ')) Σ.(GlobalContextMap.global_decls).
-Proof.
-  intros ext.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  move=> wfΣ.
-  assert (extends Σ Σ); auto. now exists [].
-  assert (wf_glob Σ).
-  { eapply extends_wf_glob. exact ext. tea. }
-  revert H H0.
-  generalize Σ at 1 3 5 6. intros Σ''.
-  induction Σ'' => //. cbn.
-  intros hin wfg. depelim wfg.
-  f_equal.
-  2:{ eapply IHΣ'' => //. destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //. }
-  unfold on_snd. cbn. f_equal.
-  eapply wellformed_optimize_decl_extends => //. cbn.
-  eapply extends_wf_global_decl. 3:tea.
-  eapply extends_wf_glob; tea.
-  destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
-Qed.
-
-Lemma optimize_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) : wf_glob Σ -> optimize_env Σ = optimize_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
-Proof.
-  intros wf.
-  unfold optimize_env.
-  destruct Σ; cbn. cbn in wf.
-  induction global_decls in map, repr, wf0, wf |- * => //.
-  cbn. f_equal.
-  destruct a as [kn d]; unfold on_snd; cbn. f_equal. symmetry.
-  eapply wellformed_optimize_decl_extends => //. cbn. now depelim wf. cbn. now exists [(kn, d)]. cbn.
-  set (Σg' := GlobalContextMap.make global_decls (fresh_globals_cons_inv wf0)).
-  erewrite <- (IHglobal_decls (GlobalContextMap.map Σg') (GlobalContextMap.repr Σg')).
-  2:now depelim wf.
-  set (Σg := {| GlobalContextMap.global_decls := _ :: _ |}).
-  symmetry. eapply (optimize_env_extends' (Σ := Σg') (Σ' := Σg)) => //.
-  cbn. now exists [a].
-Qed.
-
-Lemma optimize_env_expanded {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
-  wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (optimize_env Σ).
-Proof.
-  unfold expanded_global_env; move=> wfg.
-  rewrite optimize_env_eq //.
-  destruct Σ as [Σ map repr wf]. cbn in *.
-  clear map repr.
-  induction 1; cbn; constructor; auto.
-  cbn in IHexpanded_global_declarations.
-  unshelve eapply IHexpanded_global_declarations. now depelim wfg. cbn.
-  set (Σ' := GlobalContextMap.make _ _).
-  rewrite -(optimize_env_eq Σ'). cbn. now depelim wfg.
-  eapply (optimize_expanded_decl_irrel (Σ := Σ')). now depelim wfg.
-  now unshelve eapply (optimize_expanded_decl (Σ:=Σ')).
-Qed.
-
-Definition disable_projections_term_flags (et : ETermFlags) :=
-  {| has_tBox := has_tBox
-    ; has_tRel := has_tRel
-    ; has_tVar := has_tVar
-    ; has_tEvar := has_tEvar
-    ; has_tLambda := has_tLambda
-    ; has_tLetIn := has_tLetIn
-    ; has_tApp := has_tApp
-    ; has_tConst := has_tConst
-    ; has_tConstruct := has_tConstruct
-    ; has_tCase := true
-    ; has_tProj := false
-    ; has_tFix := has_tFix
-    ; has_tCoFix := has_tCoFix
-    ; has_tPrim := has_tPrim
-  |}.
-
-Definition disable_projections_env_flag (efl : EEnvFlags) :=
-  {| has_axioms := efl.(@has_axioms);
-     term_switches := disable_projections_term_flags term_switches;
-     has_cstr_params := efl.(@has_cstr_params) ;
-     cstr_as_blocks := efl.(@cstr_as_blocks) |}.
-
-Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
+Lemma optimize_wellformed_term {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
   wf_glob Σ -> EWellformed.wellformed Σ n t ->
   EWellformed.wellformed (efl := disable_projections_env_flag efl) Σ n (optimize Σ t).
@@ -862,52 +808,81 @@ Proof.
     intros; rtoProp; intuition auto; solve_all.
 Qed.
 
-Lemma optimize_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
+Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
+  has_tBox -> has_tRel ->
+  wf_glob Σ -> EWellformed.wellformed Σ n t ->
+  EWellformed.wellformed (efl := disable_projections_env_flag efl) (optimize_env Σ) n (optimize Σ t).
+Proof.
+  intros. apply optimize_wellformed_irrel => //.
+  now apply optimize_wellformed_term.
+Qed.
+
+From MetaCoq.Erasure Require Import EGenericGlobalMap.
+
+#[local]
+Instance GT : GenTransform := { gen_transform := optimize }.
+#[local]
+Instance GTExt efl : GenTransformExtends efl (disable_projections_env_flag efl) GT.
+Proof.
+  intros Σ t n wfΣ Σ' ext wf wf'.
+  unfold gen_transform, GT.
+  eapply wellformed_optimize_extends; tea.
+Qed.
+#[local]
+Instance GTWf efl : GenTransformWf efl (disable_projections_env_flag efl) GT.
+Proof.
+  refine {| gen_transform_pre := fun _ _ => True |}; auto.
+  intros Σ n t hasb hasr _ wfΣ wft.
+  now apply optimize_wellformed.
+Defined.
+
+Lemma optimize_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  extends Σ Σ' ->
   wf_glob Σ ->
-  wf_global_decl (efl:= disable_projections_env_flag efl) Σ d ->
-  wf_global_decl (efl := disable_projections_env_flag efl) (optimize_env Σ) d.
+  wf_glob Σ' ->
+  List.map (on_snd (optimize_decl Σ)) Σ.(GlobalContextMap.global_decls) =
+  List.map (on_snd (optimize_decl Σ')) Σ.(GlobalContextMap.global_decls).
 Proof.
-  intros wf; destruct d => /= //.
-  destruct (cst_body c) => /= //.
-  now eapply optimize_wellformed_irrel.
+  intros.
+  epose proof (gen_transform_env_extends' (gt := GTExt efl)).
+  now eapply H2.
 Qed.
 
-Lemma optimize_decl_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
-  has_tBox -> has_tRel -> wf_glob Σ ->
-  forall d, wf_global_decl Σ d ->
-  wf_global_decl (efl := disable_projections_env_flag efl) (optimize_env Σ) (optimize_decl Σ d).
+Lemma optimize_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) : wf_glob Σ -> optimize_env Σ = optimize_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
 Proof.
-  intros hasb hasr wf d.
-  intros hd.
-  eapply optimize_wellformed_decl_irrel; tea; eauto.
-  move: hd.
-  destruct d => /= //.
-  destruct (cst_body c) => /= //.
-  intros hwf. eapply optimize_wellformed => //.
+  intros wf.
+  now apply (gen_transform_env_eq (gt := GTExt efl)).
 Qed.
 
-Lemma fresh_global_optimize_env {Σ : GlobalContextMap.t} kn :
-  fresh_global kn Σ ->
-  fresh_global kn (optimize_env Σ).
+Lemma optimize_env_expanded {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
+  wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (optimize_env Σ).
 Proof.
-  destruct Σ as [Σ map repr wf]; cbn in *.
+  unfold expanded_global_env; move=> wfg.
+  rewrite optimize_env_eq //.
+  destruct Σ as [Σ map repr wf]. cbn in *.
+  clear map repr.
   induction 1; cbn; constructor; auto.
-  now eapply Forall_map; cbn.
+  cbn in IHexpanded_global_declarations.
+  unshelve eapply IHexpanded_global_declarations. now depelim wfg. cbn.
+  set (Σ' := GlobalContextMap.make _ _).
+  rewrite -(optimize_env_eq Σ'). cbn. now depelim wfg.
+  eapply (optimize_expanded_decl_irrel (Σ := Σ')). now depelim wfg.
+  now unshelve eapply (optimize_expanded_decl (Σ:=Σ')).
+Qed.
+
+Lemma Pre_glob efl Σ wf : Pre_glob (GTWF:=GTWf efl) Σ wf.
+Proof.
+  induction Σ => //. destruct a as [kn d]; cbn.
+  split => //. destruct d as [[[|]]|] => //=.
 Qed.
 
 Lemma optimize_env_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   has_tBox -> has_tRel ->
   wf_glob Σ -> wf_glob (efl := disable_projections_env_flag efl) (optimize_env Σ).
 Proof.
-  intros hasb hasrel.
-  intros wfg. rewrite optimize_env_eq //.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  clear map repr.
-  induction wfg; cbn; constructor; auto.
-  - rewrite /= -(optimize_env_eq (GlobalContextMap.make Σ (fresh_globals_cons_inv wf))) //.
-    eapply optimize_decl_wf => //.
-  - rewrite /= -(optimize_env_eq (GlobalContextMap.make Σ (fresh_globals_cons_inv wf))) //.
-    now eapply fresh_global_optimize_env.
+  intros hasb hasre wfg.
+  eapply (gen_transform_env_wf (gt := GTExt efl)) => //.
+  apply Pre_glob.
 Qed.
 
 Definition optimize_program (p : eprogram_env) :=
@@ -918,7 +893,7 @@ Definition optimize_program_wf {efl : EEnvFlags} (p : eprogram_env) {hastbox : h
 Proof.
   intros []; split.
   now eapply optimize_env_wf.
-  cbn. eapply optimize_wellformed_irrel => //. now eapply optimize_wellformed.
+  cbn. now eapply optimize_wellformed.
 Qed.
 
 Definition optimize_program_expanded {efl} (p : eprogram_env) :

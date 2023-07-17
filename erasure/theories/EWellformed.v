@@ -415,17 +415,8 @@ Lemma extends_lookup {efl} {Σ Σ' c decl} :
   lookup_env Σ c = Some decl ->
   lookup_env Σ' c = Some decl.
 Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      case: eqb_spec; intros e; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
+  intros wfΣ' Hl; apply Hl.
 Qed.
-
 
 Lemma extends_lookup_constructor {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
@@ -482,14 +473,33 @@ Proof.
   now eapply extends_wellformed.
 Qed.
 
+Lemma extends_fresh Σ kn d :
+  fresh_global kn Σ ->
+  extends Σ ((kn, d) :: Σ).
+Proof.
+  induction 1 in d |- *. red. cbn => //.
+  intros kn' decl.
+  cbn.
+  destruct (eqb_spec x.1 kn) => //.
+  destruct (eqb_spec kn' x.1) => //.
+  - intros [= <-]. subst kn'.
+    destruct (eqb_spec x.1 kn) => //.
+  - intros hl.
+    destruct (eqb_spec kn' kn) => //.
+    subst. eapply (IHForall d) in hl.
+    now cbn in hl; move: hl; rewrite eqb_refl.
+Qed.
+
 Lemma lookup_env_wellformed {efl} {Σ kn decl} : wf_glob Σ ->
   EGlobalEnv.lookup_env Σ kn = Some decl -> wf_global_decl Σ decl.
 Proof.
   induction Σ; cbn => //.
   intros wf. depelim wf => /=.
   destruct (eqb_spec kn kn0).
-  move=> [= <-]. eapply extends_wf_global_decl; tea. constructor; auto. now eexists [_].
+  move=> [= <-]. eapply extends_wf_global_decl; tea. constructor; auto.
+  now apply extends_fresh.
   intros hn.
   eapply extends_wf_global_decl; tea. 3:eapply IHΣ => //.
-  now constructor. now eexists [_].
+  now constructor.
+  now apply extends_fresh.
 Qed.

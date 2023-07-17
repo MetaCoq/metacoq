@@ -13,6 +13,7 @@ theories/EWcbvEvalNamed.v
 # theories/EWtAst.v
 theories/EGlobalEnv.v
 theories/EGenericMapEnv.v
+theories/EGenericGlobalMap.v
 theories/EWellformed.v
 theories/EEnvMap.v
 theories/EWcbvEvalInd.v

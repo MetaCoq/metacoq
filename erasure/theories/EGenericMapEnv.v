@@ -55,16 +55,16 @@ Variable efl : EEnvFlags.
 
 Hypothesis wellformed_gen_transform_extends : forall {Σ : global_context} t,
 forall n, EWellformed.wellformed Σ n t ->
-forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ' ->
+forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ -> wf_glob Σ' ->
 gen_transform Σ t = gen_transform Σ' t.
 
 Lemma wellformed_gen_transform_decl_extends {Σ : global_context} t :
 wf_global_decl Σ t ->
-forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ' ->
+forall {Σ' : global_context}, extends Σ Σ' -> wf_glob Σ -> wf_glob Σ' ->
 gen_transform_decl Σ t = gen_transform_decl Σ' t.
 Proof.
 destruct t => /= //.
-intros wf Σ' ext wf'. f_equal. unfold gen_transform_constant_decl. f_equal.
+intros wf Σ' ext wfΣ wf'. f_equal. unfold gen_transform_constant_decl. f_equal.
 destruct (cst_body c) => /= //. f_equal.
 now eapply wellformed_gen_transform_extends.
 Qed.
@@ -73,7 +73,7 @@ Lemma lookup_env_gen_transform_env_Some {Σ : global_context} kn d :
 wf_glob Σ ->
 lookup_env Σ kn = Some d ->
 ∑ Σ' : global_context,
-  [× extends Σ' Σ, wf_global_decl Σ' d &
+  [× extends_prefix Σ' Σ, wf_global_decl Σ' d &
     lookup_env (gen_transform_env Σ) kn = Some (gen_transform_decl Σ' d)].
 Proof.
 induction Σ in |- *; simpl; auto => //.
@@ -83,7 +83,8 @@ case: eqb_specT => //.
   now eexists [_].
   cbn. now depelim wfg.
   f_equal. symmetry. eapply wellformed_gen_transform_decl_extends. cbn. now depelim wfg.
-  cbn. now exists [a]. now cbn.
+  eapply extends_prefix_extends => //.
+  cbn. now exists [a]. now depelim wfg. auto.
 - intros _.
   cbn in IHΣ. forward IHΣ. now depelim wfg.
   intros hl. specialize (IHΣ hl) as [Σ'' [ext wfgd hl']].
@@ -96,7 +97,8 @@ case: eqb_specT => //.
     symmetry. eapply wellformed_gen_transform_decl_extends => //. cbn.
     eapply lookup_env_In in hin. 2:now depelim wfg.
     depelim wfg. eapply lookup_env_wellformed; tea.
-    cbn. now exists [a].
+    eapply extends_prefix_extends => //.
+    cbn. now exists [a]. now depelim wfg.
 Qed.
 
 Lemma lookup_env_map_snd Σ f kn : lookup_env (List.map (on_snd f) Σ) kn = option_map f (lookup_env Σ kn).
@@ -120,7 +122,10 @@ intros wf.
 destruct (lookup_env Σ kn) eqn:hl.
 - eapply lookup_env_gen_transform_env_Some in hl as [Σ' [ext wf' hl']] => /=.
   rewrite hl'. f_equal.
-  eapply wellformed_gen_transform_decl_extends; eauto. auto.
+  eapply wellformed_gen_transform_decl_extends; eauto.
+  eapply extends_prefix_extends; auto.
+  eapply extends_wf_glob; eauto.
+  auto.
 
 - cbn. now eapply lookup_env_gen_transform_env_None in hl.
 Qed.
@@ -195,28 +200,45 @@ Proof.
   rewrite wellformed_mkApps //. eapply andP.
 Qed.
 
+Lemma extends_cons_inv Σ kn d Σ' :
+  extends ((kn, d) :: Σ) Σ' ->
+  fresh_global kn Σ ->
+  extends Σ Σ'.
+Proof.
+  intros ext fr kn' d' hl.
+  apply ext. rewrite elookup_env_cons_fresh => //.
+  intros <-. now apply lookup_env_Some_fresh in hl.
+Qed.
+
+Lemma extends_cons_wf Σ a :
+  wf_glob (a :: Σ) ->
+  extends Σ (a :: Σ).
+Proof.
+  intros hwf; depelim hwf.
+  now apply extends_fresh.
+Qed.
+
 Lemma gen_transform_env_extends' {Σ Σ' : global_context} :
   extends Σ Σ' ->
+  wf_glob Σ ->
   wf_glob Σ' ->
   List.map (on_snd (gen_transform_decl Σ)) Σ =
   List.map (on_snd (gen_transform_decl Σ')) Σ.
 Proof.
   intros ext.
-  move=> wfΣ.
-  assert (Hext : extends Σ Σ); auto. now exists [].
-  assert (Hwfg : wf_glob Σ).
-  { eapply extends_wf_glob. exact ext. tea. }
-  revert Hext Hwfg.
+  move=> wfΣ wfΣ'.
+  assert (Hext : extends Σ Σ); auto. red; tauto.
+  generalize wfΣ.
+  revert Hext.
   generalize Σ at 1 3 5 6. intros Σ''.
   induction Σ'' => //. cbn.
   intros hin wfg. depelim wfg.
   f_equal.
-  2:{ eapply IHΣ'' => //. destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //. }
+  2:{ eapply IHΣ'' => //. now apply extends_cons_inv in hin. }
   unfold on_snd. cbn. f_equal.
   eapply wellformed_gen_transform_decl_extends => //. cbn.
-  eapply extends_wf_global_decl. 3:tea.
-  eapply extends_wf_glob; tea.
-  destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
+  eapply extends_wf_global_decl => //. 2:tea.
+  now apply extends_cons_inv in hin.
 Qed.
 
 Lemma gen_transform_env_eq (Σ : global_context) : wf_glob Σ -> gen_transform_env Σ = gen_transform_env' Σ.
@@ -226,11 +248,12 @@ Proof.
   induction Σ => //.
   cbn. f_equal.
   destruct a as [kn d]; unfold on_snd; cbn. f_equal. symmetry.
-  eapply wellformed_gen_transform_decl_extends => //. cbn. now depelim wf. cbn. now exists [(kn, d)]. cbn.
+  eapply wellformed_gen_transform_decl_extends => //. cbn. now depelim wf.
+  now apply extends_cons_wf. now depelim wf.
   erewrite <- IHΣ.
   2:now depelim wf.
   symmetry. eapply gen_transform_env_extends'; eauto.
-  cbn. now exists [a].
+  now apply extends_cons_wf. now depelim wf.
 Qed.
 
 Variable Pre : global_context -> term -> Prop.

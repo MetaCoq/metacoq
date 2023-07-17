@@ -405,7 +405,7 @@ Lemma lookup_env_remove_match_on_box_env_Some {efl : EEnvFlags} {Σ : GlobalCont
   wf_glob Σ ->
   GlobalContextMap.lookup_env Σ kn = Some d ->
   ∑ Σ' : GlobalContextMap.t,
-    [× extends Σ' Σ, wf_global_decl Σ' d &
+    [× extends_prefix Σ' Σ, wf_global_decl Σ' d &
       lookup_env (remove_match_on_box_env Σ) kn = Some (remove_match_on_box_decl Σ' d)].
 Proof.
   rewrite GlobalContextMap.lookup_env_spec.
@@ -418,7 +418,8 @@ Proof.
     now eexists [_].
     cbn. now depelim wfg.
     f_equal. symmetry. eapply wellformed_remove_match_on_box_decl_extends. cbn. now depelim wfg.
-    cbn. now exists [a]. now cbn.
+    eapply extends_prefix_extends.
+    cbn. now exists [a]. now cbn. now cbn.
   - intros _.
     set (Σ' := GlobalContextMap.make Σ (fresh_globals_cons_inv wf)).
     specialize (IHΣ (GlobalContextMap.map Σ') (GlobalContextMap.repr Σ') (GlobalContextMap.wf Σ')).
@@ -433,7 +434,7 @@ Proof.
       symmetry. eapply wellformed_remove_match_on_box_decl_extends => //. cbn.
       eapply lookup_env_In in hin. 2:now depelim wfg.
       depelim wfg. eapply lookup_env_wellformed; tea.
-      cbn. now exists [a].
+      cbn. eapply extends_prefix_extends => //. now exists [a].
 Qed.
 
 Lemma lookup_env_map_snd Σ f kn : lookup_env (List.map (on_snd f) Σ) kn = option_map f (lookup_env Σ kn).
@@ -460,7 +461,8 @@ Proof.
   destruct (GlobalContextMap.lookup_env Σ kn) eqn:hl.
   - eapply lookup_env_remove_match_on_box_env_Some in hl as [Σ' [ext wf' hl']] => /=.
     rewrite hl'. f_equal.
-    eapply wellformed_remove_match_on_box_decl_extends; eauto. auto.
+    eapply wellformed_remove_match_on_box_decl_extends; eauto.
+    now eapply extends_prefix_extends. auto.
 
   - cbn. now eapply lookup_env_remove_match_on_box_env_None in hl.
 Qed.
@@ -780,7 +782,7 @@ Proof.
 Qed.
 
 Lemma remove_match_on_box_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
-  extends Σ Σ' ->
+  extends_prefix Σ Σ' ->
   wf_glob Σ' ->
   List.map (on_snd (remove_match_on_box_decl Σ)) Σ.(GlobalContextMap.global_decls) =
   List.map (on_snd (remove_match_on_box_decl Σ')) Σ.(GlobalContextMap.global_decls).
@@ -788,7 +790,7 @@ Proof.
   intros ext.
   destruct Σ as [Σ map repr wf]; cbn in *.
   move=> wfΣ.
-  assert (extends Σ Σ); auto. now exists [].
+  assert (extends_prefix Σ Σ); auto. now exists [].
   assert (wf_glob Σ).
   { eapply extends_wf_glob. exact ext. tea. }
   revert H H0.
@@ -801,7 +803,10 @@ Proof.
   eapply wellformed_remove_match_on_box_decl_extends => //. cbn.
   eapply extends_wf_global_decl. 3:tea.
   eapply extends_wf_glob; tea.
+  eapply extends_prefix_extends.
   destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
+  eapply extends_wf_glob; tea. cbn.
+  eapply extends_prefix_extends; tea.
 Qed.
 
 Lemma remove_match_on_box_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) : wf_glob Σ -> remove_match_on_box_env Σ = remove_match_on_box_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).

@@ -955,7 +955,7 @@ Qed.
 Local Hint Resolve incl_tl incl_appr incl_appl : core.
 
 Lemma wellformed_annotate' Σ Γ Γ' s :
-  incl Γ' Γ -> 
+  incl Γ' Γ ->
   wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) (annotate_env Γ' Σ) #|Γ| (annotate Γ s).
 Proof.
   intros Hincl Hwf.

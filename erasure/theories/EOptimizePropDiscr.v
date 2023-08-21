@@ -780,68 +780,6 @@ Proof.
   unfold expanded_constant_decl => /=.
   apply remove_match_on_box_expanded_irrel.
 Qed.
-
-Lemma remove_match_on_box_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
-  extends_prefix Σ Σ' ->
-  wf_glob Σ' ->
-  List.map (on_snd (remove_match_on_box_decl Σ)) Σ.(GlobalContextMap.global_decls) =
-  List.map (on_snd (remove_match_on_box_decl Σ')) Σ.(GlobalContextMap.global_decls).
-Proof.
-  intros ext.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  move=> wfΣ.
-  assert (extends_prefix Σ Σ); auto. now exists [].
-  assert (wf_glob Σ).
-  { eapply extends_wf_glob. exact ext. tea. }
-  revert H H0.
-  generalize Σ at 1 3 5 6. intros Σ''.
-  induction Σ'' => //. cbn.
-  intros hin wfg. depelim wfg.
-  f_equal.
-  2:{ eapply IHΣ'' => //. destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //. }
-  unfold on_snd. cbn. f_equal.
-  eapply wellformed_remove_match_on_box_decl_extends => //. cbn.
-  eapply extends_wf_global_decl. 3:tea.
-  eapply extends_wf_glob; tea.
-  eapply extends_prefix_extends.
-  destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
-  eapply extends_wf_glob; tea. cbn.
-  eapply extends_prefix_extends; tea.
-Qed.
-
-Lemma remove_match_on_box_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) : wf_glob Σ -> remove_match_on_box_env Σ = remove_match_on_box_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
-Proof.
-  intros wf.
-  unfold remove_match_on_box_env.
-  destruct Σ; cbn. cbn in wf.
-  induction global_decls in map, repr, wf0, wf |- * => //.
-  cbn. f_equal.
-  destruct a as [kn d]; unfold on_snd; cbn. f_equal. symmetry.
-  eapply wellformed_remove_match_on_box_decl_extends => //. cbn. now depelim wf. cbn. now exists [(kn, d)]. cbn.
-  set (Σg' := GlobalContextMap.make global_decls (fresh_globals_cons_inv wf0)).
-  erewrite <- (IHglobal_decls (GlobalContextMap.map Σg') (GlobalContextMap.repr Σg')).
-  2:now depelim wf.
-  set (Σg := {| GlobalContextMap.global_decls := _ :: _ |}).
-  symmetry. eapply (remove_match_on_box_env_extends' (Σ := Σg') (Σ' := Σg)) => //.
-  cbn. now exists [a].
-Qed.
-
-Lemma remove_match_on_box_env_expanded {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
-  wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (remove_match_on_box_env Σ).
-Proof.
-  unfold expanded_global_env; move=> wfg.
-  rewrite remove_match_on_box_env_eq //.
-  destruct Σ as [Σ map repr wf]. cbn in *.
-  clear map repr.
-  induction 1; cbn; constructor; auto.
-  cbn in IHexpanded_global_declarations.
-  unshelve eapply IHexpanded_global_declarations. now depelim wfg. cbn.
-  set (Σ' := GlobalContextMap.make _ _).
-  rewrite -(remove_match_on_box_env_eq Σ'). cbn. now depelim wfg.
-  eapply (remove_match_on_box_expanded_decl_irrel (Σ := Σ')). now depelim wfg.
-  now unshelve eapply (remove_match_on_box_expanded_decl (Σ:=Σ')).
-Qed.
-
 Lemma remove_match_on_box_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
   wf_glob Σ -> EWellformed.wellformed Σ n t -> EWellformed.wellformed Σ n (remove_match_on_box Σ t).
@@ -905,6 +843,67 @@ Proof.
     all:intros; rtoProp; intuition auto; solve_all.
 Qed.
 
+From MetaCoq.Erasure Require Import EGenericGlobalMap.
+
+#[local]
+Instance GT : GenTransform := { gen_transform := remove_match_on_box; gen_transform_inductive_decl := id }.
+#[local]
+Instance GTID : GenTransformId GT.
+Proof.
+  red. reflexivity.
+Qed.
+#[local]
+Instance GTExt efl : GenTransformExtends efl efl GT.
+Proof.
+  intros Σ t n wfΣ Σ' ext wf wf'.
+  unfold gen_transform, GT.
+  eapply wellformed_remove_match_on_box_extends; tea.
+Qed.
+#[local]
+Instance GTWf efl : GenTransformWf efl efl GT.
+Proof.
+  refine {| gen_transform_pre := fun _ _ => has_tBox /\ has_tRel |}; auto.
+  intros Σ n t [] wfΣ wft.
+  eapply remove_match_on_box_wellformed_irrel => //.
+  now eapply remove_match_on_box_wellformed.
+Defined.
+
+Lemma remove_match_on_box_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  extends Σ Σ' ->
+  wf_glob Σ ->
+  wf_glob Σ' ->
+  List.map (on_snd (remove_match_on_box_decl Σ)) Σ.(GlobalContextMap.global_decls) =
+  List.map (on_snd (remove_match_on_box_decl Σ')) Σ.(GlobalContextMap.global_decls).
+Proof.
+  intros ext wf.
+  eapply (gen_transform_env_extends' (gt := GTExt efl)) => //.
+Qed.
+
+Lemma remove_match_on_box_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) :
+  wf_glob Σ ->
+  remove_match_on_box_env Σ = remove_match_on_box_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
+Proof.
+  intros wf.
+  eapply (gen_transform_env_eq (gt := GTExt efl)) => //.
+Qed.
+
+Lemma remove_match_on_box_env_expanded {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
+  wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (remove_match_on_box_env Σ).
+Proof.
+  unfold expanded_global_env; move=> wfg.
+  rewrite remove_match_on_box_env_eq //.
+  destruct Σ as [Σ map repr wf]. cbn in *.
+  clear map repr.
+  induction 1; cbn; constructor; auto.
+  cbn in IHexpanded_global_declarations.
+  unshelve eapply IHexpanded_global_declarations. now depelim wfg. cbn.
+  set (Σ' := GlobalContextMap.make _ _).
+  rewrite -(remove_match_on_box_env_eq Σ'). cbn. now depelim wfg.
+  eapply (remove_match_on_box_expanded_decl_irrel (Σ := Σ')). now depelim wfg.
+  now unshelve eapply (remove_match_on_box_expanded_decl (Σ:=Σ')).
+Qed.
+
+
 Lemma remove_match_on_box_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
   wf_glob Σ ->
   wf_global_decl Σ d -> wf_global_decl (remove_match_on_box_env Σ) d.
@@ -936,23 +935,26 @@ Proof.
   now eapply Forall_map; cbn.
 Qed.
 
+
+Lemma Pre_glob efl Σ wf :
+  has_tBox -> has_tRel ->
+  Pre_glob (GTWF:=GTWf efl) Σ wf.
+Proof.
+  intros hasb hasr. induction Σ => //. destruct a as [kn d]; cbn.
+  split => //. destruct d as [[[|]]|] => //=.
+Qed.
+
 Lemma remove_match_on_box_env_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   has_tBox -> has_tRel ->
   wf_glob Σ -> wf_glob (remove_match_on_box_env Σ).
 Proof.
-  intros hasb hasrel.
-  intros wfg. rewrite remove_match_on_box_env_eq //.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  clear map repr.
-  induction wfg; cbn; constructor; auto.
-  - rewrite /= -(remove_match_on_box_env_eq (GlobalContextMap.make Σ (fresh_globals_cons_inv wf))) //.
-    eapply remove_match_on_box_decl_wf => //.
-  - rewrite /= -(remove_match_on_box_env_eq (GlobalContextMap.make Σ (fresh_globals_cons_inv wf))) //.
-    now eapply fresh_global_remove_match_on_box_env.
+  intros hasb hasrel wfg.
+  eapply (gen_transform_env_wf (gt := GTExt efl)) => //.
+  now apply Pre_glob.
 Qed.
 
 Definition remove_match_on_box_program (p : eprogram_env) :=
-(remove_match_on_box_env p.1, remove_match_on_box p.1 p.2).
+  (remove_match_on_box_env p.1, remove_match_on_box p.1 p.2).
 
 Definition remove_match_on_box_program_wf {efl} (p : eprogram_env) {hastbox : has_tBox} {hastrel : has_tRel} :
   wf_eprogram_env efl p -> wf_eprogram efl (remove_match_on_box_program p).

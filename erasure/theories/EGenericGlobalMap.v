@@ -16,7 +16,11 @@ Local Set Keyed Unification.
 Require Import ssreflect ssrbool.
 
 Class GenTransform :=
-  gen_transform : GlobalContextMap.t -> term -> term.
+  { gen_transform : GlobalContextMap.t -> term -> term;
+    gen_transform_inductive_decl : mutual_inductive_body -> mutual_inductive_body }.
+
+Class GenTransformId (G : GenTransform) :=
+  gen_transform_inductive_decl_id : forall idecl, gen_transform_inductive_decl idecl = idecl.
 
 Section GenTransformEnv.
   Context {GT : GenTransform}.
@@ -27,7 +31,7 @@ Section GenTransformEnv.
   Definition gen_transform_decl Σ d :=
     match d with
     | ConstantDecl cb => ConstantDecl (gen_transform_constant_decl Σ cb)
-    | InductiveDecl idecl => d
+    | InductiveDecl idecl => InductiveDecl (gen_transform_inductive_decl idecl)
     end.
 
   Definition gen_transform_env Σ :=
@@ -52,10 +56,11 @@ Class GenTransformExtends (efl efl' : EEnvFlags) (GT : GenTransform) :=
 Class GenTransformWf (efl efl' : EEnvFlags) (GT : GenTransform) :=
 { gen_transform_pre : GlobalContextMap.t -> term -> Prop;
   gtwf_axioms_efl : forall _ : is_true (@has_axioms efl), is_true (@has_axioms efl');
-  gtwf_cstrs_efl : forall _ : is_true (@has_cstr_params efl), is_true (@has_cstr_params efl');
+  gen_transform_inductive_decl_wf :
+    forall idecl, @wf_minductive efl idecl -> @wf_minductive efl' (gen_transform_inductive_decl idecl);
 
   gen_transform_wellformed : forall {Σ : GlobalContextMap.t} n t,
-    has_tBox -> has_tRel -> gen_transform_pre Σ t ->
+    gen_transform_pre Σ t ->
     @wf_glob efl Σ -> @EWellformed.wellformed efl Σ n t ->
     EWellformed.wellformed (efl := efl') (gen_transform_env Σ) n (gen_transform Σ t) }.
 
@@ -143,6 +148,17 @@ destruct (lookup_env Σ kn) eqn:hl.
 Qed.
 
 
+Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
+Proof.
+  induction l using rev_ind; cbn.
+  - now rewrite andb_true_r.
+  - rewrite mkApps_app /=. now destruct l => /= //; rewrite andb_false_r.
+Qed.
+
+Section GenTransformId.
+
+  Context {gid : GenTransformId gen_transform}.
+
 Lemma is_propositional_gen_transform {Σ : GlobalContextMap.t} ind :
   @wf_glob efl Σ ->
   inductive_isprop_and_pars Σ ind = inductive_isprop_and_pars (gen_transform_env Σ) ind.
@@ -152,7 +168,8 @@ Proof.
   rewrite (lookup_env_gen_transform (inductive_mind ind) wf).
   rewrite /GlobalContextMap.inductive_isprop_and_pars /GlobalContextMap.lookup_inductive
     /GlobalContextMap.lookup_minductive.
-  destruct lookup_env as [[decl|]|] => //.
+  destruct lookup_env as [[decl|]|] => //. cbn.
+  now rewrite gen_transform_inductive_decl_id.
 Qed.
 
 Lemma is_propositional_cstr_gen_transform {Σ : GlobalContextMap.t} ind c :
@@ -164,15 +181,10 @@ Proof.
   rewrite (lookup_env_gen_transform (inductive_mind ind) wf).
   rewrite /GlobalContextMap.inductive_isprop_and_pars /GlobalContextMap.lookup_inductive
     /GlobalContextMap.lookup_minductive.
-  destruct lookup_env as [[decl|]|] => //.
+  destruct lookup_env as [[decl|]|] => //=.
+  now rewrite gen_transform_inductive_decl_id.
 Qed.
 
-Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
-Proof.
-  induction l using rev_ind; cbn.
-  - now rewrite andb_true_r.
-  - rewrite mkApps_app /=. now destruct l => /= //; rewrite andb_false_r.
-Qed.
 
 Lemma lookup_constructor_gen_transform {Σ : GlobalContextMap.t} {ind c} :
   @wf_glob efl Σ ->
@@ -180,7 +192,7 @@ Lemma lookup_constructor_gen_transform {Σ : GlobalContextMap.t} {ind c} :
 Proof.
   intros wfΣ. rewrite /lookup_constructor /lookup_inductive /lookup_minductive.
   rewrite lookup_env_gen_transform // /=. destruct lookup_env => // /=.
-  destruct g => //.
+  destruct g => //=. now rewrite gen_transform_inductive_decl_id.
 Qed.
 
 Lemma lookup_projection_gen_transform {Σ : GlobalContextMap.t} {p} :
@@ -206,6 +218,8 @@ Lemma constructor_isprop_pars_decl_constructor {Σ ind c} {mdecl idecl cdecl} :
 Proof.
   rewrite /constructor_isprop_pars_decl. intros -> => /= //.
 Qed.
+
+End GenTransformId.
 
 Lemma wf_mkApps (ha : has_tApp) Σ k f args : reflect (wellformed Σ k f /\ forallb (wellformed Σ k) args) (wellformed Σ k (mkApps f args)).
 Proof.
@@ -277,7 +291,7 @@ Qed.
 
 Import EWellformed.
 
-Lemma gen_transform_wellformed_irrel {Σ : GlobalContextMap.t} t :
+Lemma gen_transform_wellformed_irrel {genid : GenTransformId gen_transform} {Σ : GlobalContextMap.t} t :
   @wf_glob efl Σ ->
   forall n, wellformed (efl := efl) Σ n t ->
   wellformed (efl := efl) (gen_transform_env Σ) n t.
@@ -290,18 +304,21 @@ Proof.
   - rewrite lookup_env_gen_transform //.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
+    rewrite gen_transform_inductive_decl_id.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; eauto. solve_all.
   - rewrite lookup_env_gen_transform //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
+    rewrite gen_transform_inductive_decl_id.
     destruct nth_error => /= //.
     intros; rtoProp; intuition auto; solve_all.
   - rewrite lookup_env_gen_transform //.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; repeat split; eauto.
     destruct g eqn:hg => /= //.
+    now rewrite gen_transform_inductive_decl_id.
 Qed.
 
-Lemma gen_transform_wellformed_decl_irrel {Σ : GlobalContextMap.t} d :
+Lemma gen_transform_wellformed_decl_irrel {genid : GenTransformId gen_transform} {Σ : GlobalContextMap.t} d :
   @wf_glob efl Σ ->
   wf_global_decl (efl:= efl) Σ d ->
   wf_global_decl (efl := efl) (gen_transform_env Σ) d.
@@ -313,25 +330,22 @@ Qed.
 
 Context {GTWF : GenTransformWf efl efl' gen_transform}.
 
-
 Definition Pre_decl Σ d := match d with ConstantDecl cb => match cb.(cst_body) with
   | Some b =>  gen_transform_pre Σ b | _ => True end | _ => True end.
 
 Lemma gen_transform_decl_wf {Σ : GlobalContextMap.t} :
-  has_tBox -> has_tRel -> @wf_glob efl Σ ->
+  @wf_glob efl Σ ->
   forall d, @wf_global_decl efl Σ d -> Pre_decl Σ d ->
   wf_global_decl (efl := efl') (gen_transform_env Σ) (gen_transform_decl Σ d).
 Proof.
-  intros hasb hasr wf d.
+  intros wf d.
   intros hd. intros pre.
   move: hd.
   destruct d => /= //. cbn in pre.
   destruct (cst_body c) => /= //.
   intros hwf. eapply gen_transform_wellformed => //. apply gtwf_axioms_efl. auto.
-  destruct m => //. cbn. unfold wf_minductive.
-  cbn. move/andP => [] hp //. rtoProp. solve_all.
-   eapply orb_true_iff. eapply orb_true_iff in hp as []; eauto.
-   left. eapply gtwf_cstrs_efl. now rewrite H.
+  destruct m => //. cbn.
+  eapply gen_transform_inductive_decl_wf.
 Qed.
 
 Lemma fresh_global_gen_transform_env {Σ : GlobalContextMap.t} kn :
@@ -354,10 +368,9 @@ Fixpoint Pre_glob Σ : EnvMap.fresh_globals Σ -> Prop :=
 
 Import GlobalContextMap (repr, map, global_decls, wf).
 Lemma gen_transform_env_wf {Σ : GlobalContextMap.t} :
-  has_tBox -> has_tRel ->
   @wf_glob efl Σ -> Pre_glob Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf) -> wf_glob (efl := efl') (gen_transform_env Σ).
 Proof.
-  intros hasb hasrel wfg pre.
+  intros wfg pre.
   rewrite gen_transform_env_eq //.
   destruct Σ as [Σ ? ? ?]. cbn in *. revert pre.
   induction Σ in map0, repr0, wf0, wfg |- *; auto; cbn; constructor; auto.

@@ -817,78 +817,55 @@ Proof.
   eapply transform_wellformed'; eauto.
 Qed.
 
-(*Lemma optimize_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
-  wf_glob Σ ->
-  wf_global_decl (efl := env_flags) Σ d ->
-  wf_global_decl (efl := env_flags_blocks) (transform_blocks_env Σ) d.
-Proof.
-  intros wf; destruct d => /= //.
-  destruct (cst_body c) => /= //.
-  intros wf'. eapply transform_wellformed.
-Qed. *)
+From MetaCoq.Erasure Require Import EGenericGlobalMap.
 
-Lemma optimize_decl_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
+#[local]
+Instance GT : GenTransform := { gen_transform := transform_blocks }.
+#[local]
+Instance GTExt efl : has_tApp -> GenTransformExtends efl (switch_cstr_as_blocks efl) GT.
+Proof.
+  intros Σ t n wfΣ Σ' ext wf wf'.
+  unfold gen_transform, GT.
+  eapply transform_blocks_extends; tea.
+Qed.
+#[local]
+Instance GTWf efl :
+  GenTransformWf efl (switch_cstr_as_blocks efl) GT.
+Proof.
+  refine {| gen_transform_pre := fun Σ t =>
+    has_tApp /\
+    has_cstr_params = false /\
+    cstr_as_blocks = false /\
+    isEtaExp Σ t |}; auto.
+    intros Σ n t [hasapp [cstrp [cstrb pre]]] wfΣ wft.
+  apply transform_wellformed => //.
+Defined.
+
+Lemma Pre_glob efl Σ wf :
   has_cstr_params = false ->
   cstr_as_blocks = false ->
   has_tApp ->
-  wf_glob (efl := efl) Σ ->
-  forall d,
-  wf_global_decl (efl := efl) Σ d ->
-  isEtaExp_decl Σ d ->
-  wf_global_decl (efl := switch_cstr_as_blocks efl) (transform_blocks_env Σ) (transform_blocks_decl Σ d).
+  EEtaExpanded.isEtaExp_env Σ ->
+  Pre_glob (GTWF:=GTWf efl) Σ wf.
 Proof.
-  intros hasp cstrbl hasapp wf d.
-  destruct d => /= //.
-  rewrite /isEtaExp_constant_decl.
-  destruct (cst_body c) => /= //.
-  intros hwf etat. eapply transform_wellformed => //.
-Qed.
-
-Lemma fresh_global_optimize_env {Σ : GlobalContextMap.t} kn :
-  fresh_global kn Σ ->
-  fresh_global kn (transform_blocks_env Σ).
-Proof.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  induction 1; cbn; constructor; auto.
-  now eapply Forall_map; cbn.
-Qed.
-
-Lemma fresh_global_map_on_snd Σ f kn :
-  fresh_global kn Σ ->
-  fresh_global kn (map (on_snd f) Σ).
-Proof.
-  induction 1; cbn; constructor; auto.
+  intros cstrp cstrb happ.
+  induction Σ => //. destruct a as [kn d]; cbn.
+  split => //. destruct d as [[[|]]|] => //=.
+  repeat split => //. move/andP: H => /= [] /=.
+  now rewrite /isEtaExp_constant_decl /=.
+  eapply IHΣ. now move/andP: H.
 Qed.
 
 Lemma transform_wf_global {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   has_cstr_params = false ->
   cstr_as_blocks = false ->
-  has_tApp ->
+  has_tApp -> has_tBox -> has_tRel ->
   EEtaExpanded.isEtaExp_env Σ ->
   wf_glob (efl := efl) Σ -> wf_glob (efl := switch_cstr_as_blocks efl) (transform_blocks_env Σ).
 Proof.
-  intros hasp cstrbl hasapp etag wfg.
-  destruct Σ as [Σ map repr wf]; cbn in *.
-  revert etag wfg.
-  assert (extends Σ Σ). now exists [].
-  revert H.
-  revert repr wf. generalize Σ at 1 2 4 6 7.
-  induction Σ; cbn; constructor; auto.
-  - eapply IHΣ; rtoProp; intuition auto. destruct H. subst Σ0. exists (x ++ [a]). now rewrite -app_assoc.
-  - set (Σm := {| GlobalContextMap.global_decls := _ |}).
-    clear IHΣ.
-    epose proof (EExtends.extends_wf_glob _ H wfg); tea.
-    depelim H0.
-    set (Σm' := GlobalContextMap.make Σ (wf_glob_fresh _ H0)).
-    pose proof (transform_blocks_decl_extends hasapp Σm' _ H1 Σm).
-    forward H3. cbn. destruct H. subst Σ0. exists (x ++ [(kn, d)]). now rewrite -app_assoc.
-    specialize (H3 wfg). rewrite -H3.
-    move/andP: etag => [etad etag].
-    unshelve epose proof (@transform_wellformed_decl' _ Σm' d _ _ _ H0 H1 etad); tea.
-    cbn in H4. unfold Σm.
-    eapply gen_transform_wellformed_decl_irrel; trea.
-  - eapply fresh_global_map_on_snd.
-    eapply EExtends.extends_wf_glob in wfg; tea. now depelim wfg.
+  intros hasp cstrbl hasapp hasb hasr etag wfg.
+  unshelve eapply (gen_transform_env_wf (gt := GTExt efl _)) => //. exact hasapp.
+  eapply Pre_glob => //.
 Qed.
 
 Transparent transform_blocks.

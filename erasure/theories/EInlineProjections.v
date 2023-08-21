@@ -287,7 +287,7 @@ Definition optimize_constant_decl Σ cb :=
 Definition optimize_decl Σ d :=
   match d with
   | ConstantDecl cb => ConstantDecl (optimize_constant_decl Σ cb)
-  | InductiveDecl idecl => d
+  | InductiveDecl idecl => InductiveDecl idecl
   end.
 
 Definition optimize_env Σ :=
@@ -820,7 +820,12 @@ Qed.
 From MetaCoq.Erasure Require Import EGenericGlobalMap.
 
 #[local]
-Instance GT : GenTransform := { gen_transform := optimize }.
+Instance GT : GenTransform := { gen_transform := optimize; gen_transform_inductive_decl := id }.
+#[local]
+Instance GTID : GenTransformId GT.
+Proof.
+  red. reflexivity.
+Qed.
 #[local]
 Instance GTExt efl : GenTransformExtends efl (disable_projections_env_flag efl) GT.
 Proof.
@@ -831,8 +836,8 @@ Qed.
 #[local]
 Instance GTWf efl : GenTransformWf efl (disable_projections_env_flag efl) GT.
 Proof.
-  refine {| gen_transform_pre := fun _ _ => True |}; auto.
-  intros Σ n t hasb hasr _ wfΣ wft.
+  refine {| gen_transform_pre := fun _ _ => has_tBox /\ has_tRel |}; auto.
+  intros Σ n t [] wfΣ wft.
   now apply optimize_wellformed.
 Defined.
 
@@ -870,8 +875,10 @@ Proof.
   now unshelve eapply (optimize_expanded_decl (Σ:=Σ')).
 Qed.
 
-Lemma Pre_glob efl Σ wf : Pre_glob (GTWF:=GTWf efl) Σ wf.
+Lemma Pre_glob efl Σ wf :
+  has_tBox -> has_tRel -> Pre_glob (GTWF:=GTWf efl) Σ wf.
 Proof.
+  intros hasb hasr.
   induction Σ => //. destruct a as [kn d]; cbn.
   split => //. destruct d as [[[|]]|] => //=.
 Qed.
@@ -882,7 +889,7 @@ Lemma optimize_env_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
 Proof.
   intros hasb hasre wfg.
   eapply (gen_transform_env_wf (gt := GTExt efl)) => //.
-  apply Pre_glob.
+  now apply Pre_glob.
 Qed.
 
 Definition optimize_program (p : eprogram_env) :=

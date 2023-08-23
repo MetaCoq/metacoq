@@ -6,6 +6,7 @@ From MetaCoq.Template Require Import EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
+From MetaCoq.Erasure Require Import EProgram.
 From MetaCoq.ErasurePlugin Require Import ETransform.
 
 Import PCUICProgram.
@@ -90,7 +91,7 @@ Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl 
   (* Rebuild the efficient lookup table *)
   rebuild_wf_env_transform (efl :=  efl) true ▷
   (* First-order constructor representation *)
-  constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
+  constructors_as_blocks_transformation (efl := efl) (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (hasbox := eq_refl) (has_cstrblocks := eq_refl).
 
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
    parameters in inductive declarations. The constructor applications are also transformed to a first-order
@@ -104,6 +105,54 @@ Next Obligation.
   destruct H. split => //. sq.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
+
+
+Definition transform_compose
+  {program program' program'' value value' value'' : Type}
+  {eval : program -> value -> Prop} {eval' : program' -> value' -> Prop}
+  {eval'' : program'' -> value'' -> Prop}
+  (o : t program program' value value' eval eval')
+  (o' : t program' program'' value' value'' eval' eval'')
+  (pre : forall p : program', post o p -> pre o' p) :
+  forall x p1, exists p3,
+    transform (compose o o' pre) x p1 = transform o' (transform o x p1) p3.
+Proof.
+  cbn. intros.
+  unfold run, time.
+  eexists;reflexivity.
+Qed.
+
+#[global]
+Instance pcuic_expand_lets_transform_ext  {cf : checker_flags} K :
+  TransformExt.t (pcuic_expand_lets_transform K) extends_pcuic_program PCUICAst.term snd.
+Proof.
+  red. intros p p' pre pre' []. cbn. now rewrite H0.
+Qed.
+
+Lemma verified_erasure_pipeline_extends {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+  TransformExt.t verified_erasure_pipeline extends_pcuic_program EAst.term snd.
+Proof.
+  unfold verified_erasure_pipeline.
+  eapply TransformExt.compose.
+  2:eapply TransformExt.compose.
+  2: typeclasses eauto. 2:typeclasses eauto.
+  2:{ auto. }
+  repeat try (eapply TransformExt.compose; [|typeclasses eauto|]).
+  typeclasses eauto.
+  all:unfold extends_pcuic_program; cbn.
+  all:intros; intuition auto; try congruence.
+  red. cbn.
+
+
+
+
+
+
+
+
+  }
+  red.
+
 
 Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program pcuic_program
@@ -160,14 +209,14 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   pcuic_expand_lets_transform (K _ T1) ▷
   erase_transform ▷
   guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
-  remove_params_fast_optimization (wcon := eq_refl)  _ ▷
+  remove_params_fast_optimization (wcon := eq_refl)  ▷
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   remove_match_on_box_trans (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
   inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   rebuild_wf_env_transform (efl :=  efl) true ▷
-  constructors_as_blocks_transformation efl (has_app := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl).
+  constructors_as_blocks_transformation (efl := efl) (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (hasbox := eq_refl) (has_cstrblocks := eq_refl).
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.

@@ -39,7 +39,7 @@ Module Transform.
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
       obseq : forall p : program, pre p -> program' -> value -> value' -> Prop;
-      preservation : preserves_eval pre transform obseq; }.
+      preservation : preserves_eval pre transform obseq }.
 
     Definition run (x : t) (p : program) (pr : pre x p) : program' :=
       time x.(name) (fun _ => x.(transform) p pr) tt.
@@ -58,7 +58,8 @@ Module Transform.
 
     Local Obligation Tactic := idtac.
     Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'')
-      (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
+      (hpp : (forall p, o.(post) p -> o'.(pre) p))
+      : t program program'' value value'' eval eval'' :=
       {|
         name := (o.(name) ^ " -> " ^ o'.(name))%bs;
         transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
@@ -79,10 +80,11 @@ Module Transform.
       cbn in ev. destruct ev as [v' [ev]].
       epose proof (o'.(preservation) (o.(transform) p pr) v').
       specialize (H0 (hpp _ (o.(correctness) _ pr)) ev).
-      destruct H0 as [v'' [ev' obs']].
+      destruct H0 as [v'' [ev' obs'']].
       exists v''. constructor => //.
       exists v'. now split.
     Qed.
+
   End Comp.
 
   Declare Scope transform_scope.

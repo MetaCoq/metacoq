@@ -256,6 +256,155 @@ Next Obligation.
   cbn; intros. sq. now subst.
 Qed.
 
+Definition extends_eprogram (p p' : eprogram) :=
+  extends p.1 p'.1 /\ p.2 = p'.2.
+
+Definition extends_eprogram_env (p p' : eprogram_env) :=
+  extends p.1 p'.1 /\ p.2 = p'.2.
+
+Section PCUICEnv. (* Locally reuse the short names for PCUIC environment handling *)
+Import PCUICAst.PCUICEnvironment.
+
+Lemma build_wf_env_from_env_eq {cf : checker_flags} (guard : abstract_guard_impl) (Σ : global_env_ext_map) (wfΣ : ∥ PCUICTyping.wf_ext Σ ∥) :
+  let wfe := build_wf_env_from_env Σ (map_squash (PCUICTyping.wf_ext_wf Σ) wfΣ) in
+  forall Σ' : global_env, Σ' ∼ wfe -> declarations Σ' = declarations Σ.
+Proof.
+  cbn; intros. rewrite H. reflexivity.
+Qed.
+
+Definition extends_global_env (Σ Σ' : global_env_ext_map) :=
+  [/\ (forall kn decl, lookup_env Σ kn = Some decl ->lookup_env Σ' kn = Some decl),
+      Σ.(universes) = Σ'.(universes), Σ.2 = Σ'.2 & Σ.(retroknowledge) = Σ'.(retroknowledge)].
+
+Definition extends_pcuic_program (p p' : pcuic_program) :=
+  extends_global_env p.1 p'.1 /\ p.2 = p'.2.
+Import ErasureFunction.
+Import PCUICAst.
+Lemma fresh_global_app kn Σ Σ' : fresh_global kn (Σ ++ Σ') ->
+  fresh_global kn Σ /\ fresh_global kn Σ'.
+Proof.
+  induction Σ; cbn; intuition auto.
+  - constructor.
+  - depelim H. constructor => //.
+    now eapply Forall_app in H0.
+  - depelim H.
+    now eapply Forall_app in H0.
+Qed.
+
+Lemma lookup_global_app_wf Σ Σ' kn : EnvMap.EnvMap.fresh_globals (Σ ++ Σ') ->
+  forall decl, lookup_global Σ' kn = Some decl -> lookup_global (Σ ++ Σ') kn = Some decl.
+Proof.
+  induction Σ in kn |- *; cbn; auto.
+  intros fr; depelim fr.
+  intros decl hd; cbn.
+  destruct (eqb_spec kn kn0).
+  eapply PCUICWeakeningEnv.lookup_global_Some_fresh in hd.
+  subst. now eapply fresh_global_app in H as [H H'].
+  now eapply IHΣ.
+Qed.
+
+Lemma strictly_extends_lookups {cf:checker_flags} (X X' : wf_env) (Σ Σ' : global_env) :
+  (forall (kn : kername) (decl decl' : global_decl), lookup_env Σ' kn = Some decl -> lookup_env Σ kn = Some decl' -> decl = decl') ->
+  retroknowledge Σ = retroknowledge Σ' ->
+  strictly_extends_decls X Σ -> strictly_extends_decls X' Σ' ->
+  PCUICTyping.wf Σ -> PCUICTyping.wf Σ' ->
+  equiv_env_inter X' X.
+Proof.
+  intros hl hr [] [] wf wf'.
+  split.
+  - intros kn d.
+    unfold lookup_env in *.
+    destruct s as [? eq], s0 as [? eq'].
+    rewrite eq' eq in hl.
+    intros decl' hl' hl''.
+    specialize (hl kn d decl').
+    eapply wf_fresh_globals in wf.
+    eapply wf_fresh_globals in wf'.
+    rewrite eq in wf; rewrite eq' in wf'.
+    eapply lookup_global_app_wf in hl'; tea.
+    eapply lookup_global_app_wf in hl''; tea.
+    eauto.
+  - rewrite /primitive_constant. now rewrite e0 e2 hr.
+Qed.
+
+#[global]
+Instance erase_transform_extends {guard : abstract_guard_impl} :
+  TransformExt.t (erase_transform (guard := guard)) extends_pcuic_program extends_eprogram_env.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=.
+  destruct pr.
+  epose proof (erase_pcuic_program_normalization_helper p (map_squash fst s)).
+  destruct p as [Σ t]. destruct p' as [Σ' t'].
+  simpl in *. subst t'. red. split.
+  - destruct ext. red.
+    cbn. rewrite /ErasureFunction.erase_global_fast.
+    unshelve erewrite ErasureFunction.erase_global_deps_fast_spec.
+    { intros. intuition auto. eapply H11; tea. admit. admit. }
+    { intros. red in H4. cbn in H4. subst. reflexivity. }
+    destruct Σ'. cbn in *. subst u.
+    set (fst := ErasureFunction.erase _ _ _ _ _).
+    set (snd:= ErasureFunction.erase _ _ _ _ _).
+    assert (fst = snd).
+    { subst fst snd. symmetry.
+      eapply ErasureFunction.erase_irrel_global_env.
+      eapply ErasureFunction.equiv_env_inter_hlookup.
+      intros ? ? -> ->. cbn.
+      eapply ErasureFunction.equiv_env_inter_sym.
+      eapply ErasureFunction.extends_global_env_equiv_env.
+      cbn. split => //.
+      sq. unfold primitive_constant. now rewrite H3. }
+    clearbody fst snd. subst snd.
+    intros.
+    set (X := build_wf_env_from_env g _) in *.
+    destruct (lookup_env Σ kn) eqn:E.
+    unshelve epose proof (abstract_env_exists X). 3:tc. tc.
+    destruct H4 as [[Σ' ΣX]].
+    unshelve epose proof (build_wf_env_from_env_eq _ (g, Σ.2) _ _ ΣX). cbn in H4.
+    epose proof (hl := ErasureFunction.lookup_env_erase_decl (optimized_abstract_env_impl) _ (EAstUtils.term_global_deps fst) _ _ _ kn g0 _ ΣX).
+    unfold lookup_env in E, hl. rewrite H4 in hl. specialize (hl (H0 _ _ E)).
+    forward hl. admit.
+    destruct g0.
+    + destruct hl as [X' [nin [pf [eq ext]]]].
+      unshelve erewrite ErasureFunction.erase_global_deps_fast_spec. shelve.
+      { intros. red in H5. cbn in H5. subst. reflexivity. }
+      erewrite eq.
+      set (Xs := build_wf_env_from_env Σ.1 _) in *.
+      unshelve epose proof (abstract_env_exists Xs). 3:tc. tc.
+      destruct H5 as [[Σs Hs]].
+      epose proof (hl' := ErasureFunction.lookup_env_erase_decl (optimized_abstract_env_impl) _ (EAstUtils.term_global_deps fst) _ _ _ kn _ _ Hs).
+      unshelve epose proof (build_wf_env_from_env_eq _ _ _ _ Hs). rewrite /lookup_env H5 in hl'. specialize (hl' E).
+      forward hl'. admit. cbn in hl'.
+      destruct hl' as [X'' [nin' [pf' [eq' ext']]]].
+      erewrite eq' in H2. rewrite -H2. f_equal. f_equal.
+      f_equal. unfold erase_constant_decl.
+      eapply erase_constant_body_irrel.
+      eapply ErasureFunction.equiv_env_inter_hlookup. cbn.
+      intros ? ? H6 H7.
+      cbn in ext. specialize (ext _ _ eq_refl eq_refl) as [ext].
+      specialize (ext' _ _ eq_refl eq_refl) as [ext'].
+      cbn in H6, H7. subst Σ0 Σ'0. cbn. split => //.
+      { intros kn' decl'. rewrite /lookup_env.
+        destruct (map_squash Datatypes.fst s).
+        destruct pr' as [pr' ?].
+        destruct (map_squash Datatypes.fst pr').
+        eapply strictly_extends_lookups. 2-3:tea.
+        intros kn'' ? ? hg hΣ. eapply H0 in hΣ. congruence. auto.
+        apply X0. apply X1. }
+      { rewrite /primitive_constant.
+        destruct ext as [_ _ ->].
+        destruct ext' as [_ _ ->].
+        now rewrite H3. }
+    +
+  - symmetry.
+    eapply ErasureFunction.erase_irrel_global_env.
+    intros Σg Σg' eq eq'.
+    destruct ext as [hl hu hr].
+    destruct Σ as [m univs]. destruct Σ' as [m' univs']. simpl in *.
+    subst. cbn. destruct m, m'. cbn in *. split => //. sq. red. split => //.
+    unfold primitive_constant. now rewrite H.
+Qed.
+End PCUICEnv.
+
 Obligation Tactic := idtac.
 
 (** This transformation is the identity on terms but changes the evaluation relation to one
@@ -283,6 +432,13 @@ Next Obligation.
   now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
 
+#[global]
+Instance guarded_to_unguarded_fix_extends {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix) :
+  TransformExt.t (guarded_to_unguarded_fix (wcon:=wcon) wguard) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. now rewrite /transform /=.
+Qed.
+
 Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
   (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
 
@@ -298,6 +454,13 @@ Next Obligation.
 Qed.
 Next Obligation.
   cbn. intros fl efl [] input v [] ev p'; exists v; split => //.
+Qed.
+
+#[global]
+Instance rebuild_wf_env_extends {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp :
+  TransformExt.t (rebuild_wf_env_transform with_exp) extends_eprogram term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. now rewrite /transform /=.
 Qed.
 
 Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
@@ -326,7 +489,16 @@ Next Obligation.
   now move/andP: etap.
 Qed.
 
-Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) {wcon : EWcbvEval.with_constructor_as_block = false}
+#[global]
+Instance remove_params_extends {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
+  (efl := all_env_flags):
+  TransformExt.t (remove_params_optimization (wcon:=wcon)) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite eq.
+  eapply strip_extends => //. apply pr'. rewrite -eq. apply pr.
+Qed.
+
+Program Definition remove_params_fast_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags) :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "stripping constructor parameters (faster?)";
@@ -356,6 +528,16 @@ Next Obligation.
   now move/andP: etap.
 Qed.
 
+#[global]
+Instance remove_params_fast_extends {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
+  (efl := all_env_flags):
+  TransformExt.t (remove_params_fast_optimization (wcon:=wcon)) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite eq.
+  rewrite -!ERemoveParams.Fast.strip_fast.
+  eapply strip_extends => //. apply pr'. rewrite -eq. apply pr.
+Qed.
+
 Import EOptimizePropDiscr EWcbvEval.
 
 Program Definition remove_match_on_box_trans {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
@@ -379,6 +561,14 @@ Next Obligation.
   eapply wellformed_closed_env, wfe.
   eapply wellformed_closed, wfe.
   Unshelve. eauto.
+Qed.
+
+#[global]
+Instance remove_match_on_box_extends  {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+  TransformExt.t (remove_match_on_box_trans (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite -eq.
+  eapply wellformed_remove_match_on_box_extends; eauto. apply pr. apply pr'.
 Qed.
 
 From MetaCoq.Erasure Require Import EInlineProjections.
@@ -405,10 +595,19 @@ Next Obligation.
   cbn. eapply wfe. Unshelve. auto.
 Qed.
 
+#[global]
+Instance inline_projections_optimization_extends {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
+  {hastrel : has_tRel} {hastbox : has_tBox} :
+  TransformExt.t (inline_projections_optimization (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite -eq.
+  eapply wellformed_optimize_extends; eauto. apply pr. apply pr'.
+Qed.
+
 From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
 
-Program Definition constructors_as_blocks_transformation (efl : EEnvFlags)
-  {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+Program Definition constructors_as_blocks_transformation {efl : EEnvFlags}
+  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ;
@@ -417,13 +616,13 @@ Program Definition constructors_as_blocks_transformation (efl : EEnvFlags)
     obseq p hp p' v v' := v' = EConstructorsAsBlocks.transform_blocks p.1 v |}.
 
 Next Obligation.
-  move=> efl hasapp haspars hascstrs [Σ t] [] [wftp wft] /andP [etap etat].
+  move=> efl hasapp hasrel hasbox haspars hascstrs [Σ t] [] [wftp wft] /andP [etap etat].
   cbn in *. split.
   - eapply transform_wf_global; eauto.
   - eapply transform_wellformed; eauto.
 Qed.
 Next Obligation.
-  red. move=> efl hasapp haspars hascstrs [Σ t] /= v [[wfe1 wfe2] wft] [ev].
+  red. move=> efl hasapp hasrel hasbox haspars hascstrs [Σ t] /= v [[wfe1 wfe2] wft] [ev].
   eexists. split; [ | eauto].
   unfold EEtaExpanded.expanded_eprogram_env_cstrs in *.
   revert wft. move => /andP // [e1 e2].
@@ -432,9 +631,18 @@ Next Obligation.
   eapply transform_blocks_eval; cbn; eauto.
 Qed.
 
+#[global]
+Instance constructors_as_blocks_extends (efl : EEnvFlags)
+  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (hasbox := hasbox) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks)) extends_eprogram_env term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite -eq.
+  eapply transform_blocks_extends; eauto. apply pr. apply pr'.
+Qed.
+
 From MetaCoq.Erasure Require Import EImplementBox.
 
-Program Definition implement_box_transformation (efl : EEnvFlags)
+Program Definition implement_box_transformation {efl : EEnvFlags}
   {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
   Transform.t eprogram eprogram EAst.term EAst.term (eval_eprogram block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
@@ -446,11 +654,18 @@ Program Definition implement_box_transformation (efl : EEnvFlags)
 Next Obligation.
   intros. cbn in *. destruct p. split.
   - eapply transform_wf_global; eauto.
-  - eapply transform_wellformed; eauto.
+  - now eapply transform_wellformed'.
 Qed.
 Next Obligation.
   red. intros. destruct pr. destruct H.
   eexists. split; [ | eauto].
   econstructor.
   eapply implement_box_eval; cbn; eauto.
+Qed.
+
+#[global]
+Instance implement_box_extends (efl : EEnvFlags) {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+   TransformExt.t (implement_box_transformation (has_app := has_app) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks)) extends_eprogram term snd.
+Proof.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. now rewrite -eq.
 Qed.

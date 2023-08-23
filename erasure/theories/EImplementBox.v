@@ -190,7 +190,7 @@ Definition implement_box_constant_decl cb :=
 Definition implement_box_decl d :=
   match d with
   | ConstantDecl cb => ConstantDecl (implement_box_constant_decl cb)
-  | InductiveDecl idecl => d
+  | InductiveDecl idecl => InductiveDecl idecl
   end.
 
 Definition implement_box_env (Σ : global_declarations) :=
@@ -325,6 +325,21 @@ Proof.
   destruct lookup_env as [ [] | ]; cbn; congruence.
 Qed.
 
+Lemma lookup_inductive_implement_box Σ ind :
+  lookup_inductive (implement_box_env Σ) ind =
+  lookup_inductive Σ ind.
+Proof.
+  unfold lookup_constructor, lookup_inductive, lookup_minductive in *.
+  rewrite lookup_env_implement_box.
+  destruct lookup_env as [ [] | ]; cbn; congruence.
+Qed.
+
+Lemma lookup_constructor_pars_args_implement_box {efl : EEnvFlags} {Σ ind n} :
+  lookup_constructor_pars_args (implement_box_env Σ) ind n = lookup_constructor_pars_args Σ ind n.
+Proof.
+  cbn -[lookup_constructor]. now rewrite lookup_constructor_implement_box.
+Qed.
+
 Lemma isLambda_implement_box c : isLambda c -> isLambda (implement_box c).
 Proof. destruct c => //. Qed.
 
@@ -352,20 +367,23 @@ Lemma transform_wellformed' {efl : EEnvFlags} {Σ : list (kername × global_decl
   has_tApp ->
   wf_glob Σ ->
   @wellformed efl Σ n t ->
-  @wellformed (switch_off_box efl) Σ n (implement_box t).
+  @wellformed (switch_off_box efl) (implement_box_env Σ) n (implement_box t).
 Proof.
   intros hasa.
   revert n. funelim (implement_box t); simp_eta; cbn -[implement_box
     lookup_inductive lookup_constructor lookup_constructor_pars_args
     GlobalContextMap.lookup_constructor_pars_args isEtaExp]; intros m Hwf Hw; rtoProp; try split; eauto.
   all: rewrite ?map_InP_spec; toAll; eauto; try now solve_all.
+  - rewrite lookup_env_implement_box. destruct (lookup_env Σ n) => //. destruct g => //=.
+    destruct (cst_body c) => //=.
   - unfold lookup_constructor_pars_args in *.
-    destruct (lookup_constructor Σ) as [[[]] | ]; try congruence; cbn - [implement_box].
-    all: destruct cstr_as_blocks; cbn in *; rtoProp; try split; eauto.
-    + now rewrite map_length.
+    rewrite lookup_constructor_implement_box. rewrite H2. intuition auto.
+  - rewrite lookup_constructor_pars_args_implement_box. len.
+    all: destruct cstr_as_blocks; rtoProp; try split; eauto.
     + solve_all.
     + destruct block_args; cbn in *; eauto.
-  - repeat split; eauto. solve_all.
+  - rewrite lookup_inductive_implement_box. intuition auto. solve_all.
+  - rewrite lookup_constructor_implement_box. intuition auto.
   - unfold wf_fix in *. rtoProp. solve_all. solve_all. now eapply isLambda_implement_box.
   - unfold wf_fix in *. rtoProp. solve_all.
     len. solve_all. len. destruct x.
@@ -378,7 +396,7 @@ Lemma transform_wellformed_decl' {efl : EEnvFlags} {Σ : global_declarations} d 
   has_tApp ->
   wf_glob Σ ->
   @wf_global_decl efl Σ d ->
-  @wf_global_decl (switch_off_box efl) Σ (implement_box_decl d).
+  @wf_global_decl (switch_off_box efl) (implement_box_env Σ) (implement_box_decl d).
 Proof.
   intros.
   destruct d => //=. cbn.
@@ -386,40 +404,7 @@ Proof.
   eapply transform_wellformed'; tea.
 Qed.
 
-From MetaCoq.Erasure Require Import EGenericMapEnv.
-
-Lemma transform_wellformed {efl : EEnvFlags} {Σ : global_declarations} n t :
-  has_tApp ->
-  wf_glob Σ ->
-  @wellformed efl Σ n t ->
-  @wellformed (switch_off_box efl) (implement_box_env Σ) n (implement_box t).
-Proof.
-  intros. eapply gen_transform_wellformed_irrel; eauto.
-  eapply transform_wellformed'; eauto.
-Qed.
-
-Lemma optimize_decl_wf {efl : EEnvFlags} {Σ : global_declarations} :
-  has_tApp ->
-  wf_glob (efl := efl) Σ ->
-  forall d,
-  wf_global_decl (efl := efl) Σ d ->
-  wf_global_decl (efl := switch_off_box efl) (implement_box_env Σ) (implement_box_decl d).
-Proof.
-  intros.
-  destruct d => /= //.
-  rewrite /isEtaExp_constant_decl. cbn in H1.
-  destruct (cst_body c) => /= //.
-  eapply transform_wellformed => //.
-Qed.
-
-Lemma fresh_global_optimize_env {Σ : global_declarations} kn :
-  fresh_global kn Σ ->
-  fresh_global kn (implement_box_env Σ).
-Proof.
-  induction 1; cbn; constructor; auto.
-Qed.
-
-Lemma fresh_global_map_on_snd Σ f kn :
+Lemma fresh_global_map_on_snd {Σ : global_context} f kn :
   fresh_global kn Σ ->
   fresh_global kn (map (on_snd f) Σ).
 Proof.
@@ -430,19 +415,15 @@ Lemma transform_wf_global {efl : EEnvFlags} {Σ : global_declarations} :
   has_tApp ->
   wf_glob (efl := efl) Σ -> wf_glob (efl := switch_off_box efl) (implement_box_env Σ).
 Proof.
-  intros hasapp wfg. clear - hasapp wfg.
-  assert (extends Σ Σ). now exists [].
+  intros hasapp wfg.
+  assert (extends_prefix Σ Σ). now exists [].
   revert H wfg. generalize Σ at 2 3.
   induction Σ; cbn; constructor; auto.
   - eapply IHΣ; rtoProp; intuition eauto.
     destruct H. subst Σ0. exists (x ++ [a]). now rewrite -app_assoc.
   - epose proof (EExtends.extends_wf_glob _ H wfg); tea.
     depelim H0. cbn.
-    eapply gen_transform_wellformed_decl_irrel; trea.
-    destruct d; cbn in *; eauto.
-    destruct (cst_body c); eauto.
-    cbn -[implement_box]. cbn in H1.
-    eapply transform_wellformed'; eauto.
+    now eapply transform_wellformed_decl'.
   - eapply fresh_global_map_on_snd.
     eapply EExtends.extends_wf_glob in wfg; tea. now depelim wfg.
 Qed.

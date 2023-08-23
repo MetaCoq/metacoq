@@ -1,6 +1,5 @@
 -R theories MetaCoq.ErasurePlugin
 
-
 theories/ETransform.v
 theories/Erasure.v
 theories/Extraction.v

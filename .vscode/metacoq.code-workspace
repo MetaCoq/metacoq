@@ -10,6 +10,7 @@
         "coqtop.args": [
 
 
+
 			"-R", "safechecker-plugin/theories", "MetaCoq.SafeCheckerPlugin",
 
 			"-R", "utils/theories", "MetaCoq.Utils",
@@ -27,6 +28,7 @@
 		"-R", "safechecker/theories", "MetaCoq.SafeChecker",
 		"-I", "erasure/src",
 		"-R", "erasure/theories", "MetaCoq.Erasure",
+		"-R", "erasure-plugin/theories", "MetaCoq.ErasurePlugin",
 		"-R", "translations", "MetaCoq.Translations",
 		"-R", "test-suite/plugin-demo/theories", "MetaCoq.ExtractedPluginDemo",
 		"-R", "test-suite", "MetaCoq.TestSuite"

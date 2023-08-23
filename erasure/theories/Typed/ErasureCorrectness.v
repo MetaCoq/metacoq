@@ -167,11 +167,12 @@ Proof.
     destruct decl; [left|right].
     all: unfold declared_constant, declared_minductive,
          P.declared_constant, P.declared_minductive; cbn.
+    unfold Erasure.erase_constant_decl.
     all: unfold eq_kername in *.
     all: try rewrite eq_kername_refl.
     + eexists; split; [left;reflexivity|].
-      unfold erase_constant_decl.
-      destruct flag_of_type; cbn in *.
+    unfold erase_constant_decl.
+    destruct flag_of_type; cbn in *.
       destruct conv_ar; cbn in *.
       destruct wfΣprev as [wfΣprev].
       * destruct c eqn:Hc; cbn in *.

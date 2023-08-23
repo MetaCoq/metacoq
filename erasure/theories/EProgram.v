@@ -51,3 +51,45 @@ Proof.
   intros wf; depelim wf. constructor; auto.
 Qed.
 
+Module TransformExt.
+  Section Opt.
+     Context {program program' : Type}.
+     Context {value value' : Type}.
+     Context {eval :  program -> value -> Prop}.
+     Context {eval' : program' -> value' -> Prop}.
+     Context (o : Transform.t program program' value value' eval eval').
+     Context (extends : program -> program -> Prop).
+     Context (extends' : program' -> program' -> Prop).
+
+    Class t := preserves_obs : forall p p' (pr : o.(pre) p) (pr' : o.(pre) p'),
+        extends p p' -> extends' (o.(transform) p pr) (o.(transform) p' pr').
+
+  End Opt.
+
+  Section Comp.
+    Context {program program' program'' : Type}.
+    Context {value value' value'' : Type}.
+    Context {eval : program -> value -> Prop}.
+    Context {eval' : program' -> value' -> Prop}.
+    Context {eval'' : program'' -> value'' -> Prop}.
+
+    Context {extends : program -> program -> Prop}.
+    Context {extends' : program' -> program' -> Prop}.
+    Context {extends'' : program'' -> program'' -> Prop}.
+
+    Local Obligation Tactic := idtac.
+    #[global]
+    Instance compose (o : Transform.t program program' value value' eval eval')
+      (o' : Transform.t program' program'' value' value'' eval' eval'')
+      (oext : t o extends extends')
+      (o'ext : t o' extends' extends'')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p))
+      : t (Transform.compose o o' hpp) extends extends''.
+    Proof. red.
+      intros p p' pr pr' ext.
+      eapply o'ext. now apply oext.
+    Qed.
+
+  End Comp.
+
+End TransformExt.

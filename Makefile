@@ -1,5 +1,5 @@
 
-all: printconf template-coq pcuic safechecker erasure 
+all: printconf template-coq pcuic safechecker erasure erasure-plugin
 
 -include Makefile.conf
 

@@ -319,7 +319,7 @@ Definition remove_match_on_box_constant_decl Σ cb :=
 Definition remove_match_on_box_decl Σ d :=
   match d with
   | ConstantDecl cb => ConstantDecl (remove_match_on_box_constant_decl Σ cb)
-  | InductiveDecl idecl => d
+  | InductiveDecl idecl => InductiveDecl idecl
   end.
 
 Definition remove_match_on_box_env Σ :=

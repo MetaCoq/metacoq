@@ -58,6 +58,45 @@ Next Obligation.
   apply assume_preservation_template_program_env_expansion in ev as [ev']; eauto.
 Qed.
 
+Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+ Transform.t EProgram.eprogram_env EProgram.eprogram EAst.term EAst.term
+   (EProgram.eval_eprogram_env {| with_prop_case := true; with_guarded_fix := true; with_constructor_as_block := false |})
+   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
+  (* Simulation of the guarded fixpoint rules with a single unguarded one:
+    the only "stuck" fixpoints remaining are unapplied.
+    This translation is a noop on terms and environments.  *)
+  guarded_to_unguarded_fix (fl := default_wcbv_flags) (wcon := eq_refl) eq_refl ▷
+  (* Remove all constructor parameters *)
+  remove_params_optimization (wcon := eq_refl) ▷
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
+  (* Remove all cases / projections on propositional content *)
+  remove_match_on_box_trans (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
+  (* Inline projections to cases *)
+  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) true ▷
+  (* First-order constructor representation *)
+  constructors_as_blocks_transformation
+    (efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags))
+    (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (hasbox := eq_refl) (has_cstrblocks := eq_refl).
+
+(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
+   parameters in inductive declarations. The constructor applications are also transformed to a first-order
+   "block"  application, of the right length, and the evaluation relation does not need to consider guarded
+   fixpoints or case analyses on propositional content. All fixpoint bodies start with a lambda as well.
+   Finally, projections are inlined to cases, so no `tProj` remains. *)
+
+Import EGlobalEnv EWellformed.
+
+Next Obligation.
+  destruct H. split => //. sq.
+  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
+Qed.
+
+
 Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t pcuic_program EProgram.eprogram
   PCUICAst.term EAst.term
@@ -73,39 +112,9 @@ Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl 
   pcuic_expand_lets_transform (K _ T1) ▷
   (* Erasure of proofs terms in Prop and types *)
   erase_transform ▷
-  (* Simulation of the guarded fixpoint rules with a single unguarded one:
-    the only "stuck" fixpoints remaining are unapplied.
-    This translation is a noop on terms and environments.  *)
-  guarded_to_unguarded_fix (wcon := eq_refl) eq_refl ▷
-  (* Remove all constructor parameters *)
-  remove_params_optimization (wcon := eq_refl) ▷
-  (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true ▷
-  (* Remove all cases / projections on propositional content *)
-  remove_match_on_box_trans (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
-  (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) true  ▷
-  (* Inline projections to cases *)
-  inline_projections_optimization (fl := EWcbvEval.target_wcbv_flags) (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
-  let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
-  (* Rebuild the efficient lookup table *)
-  rebuild_wf_env_transform (efl :=  efl) true ▷
-  (* First-order constructor representation *)
-  constructors_as_blocks_transformation (efl := efl) (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (hasbox := eq_refl) (has_cstrblocks := eq_refl).
-
-(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
-   parameters in inductive declarations. The constructor applications are also transformed to a first-order
-   "block"  application, of the right length, and the evaluation relation does not need to consider guarded
-   fixpoints or case analyses on propositional content. All fixpoint bodies start with a lambda as well.
-   Finally, projections are inlined to cases, so no `tProj` remains. *)
+  verified_lambdabox_pipeline.
 
 Import EGlobalEnv EWellformed.
-
-Next Obligation.
-  destruct H. split => //. sq.
-  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
-Qed.
-
 
 Definition transform_compose
   {program program' program'' value value' value'' : Type}
@@ -122,37 +131,11 @@ Proof.
   eexists;reflexivity.
 Qed.
 
-#[global]
-Instance pcuic_expand_lets_transform_ext  {cf : checker_flags} K :
-  TransformExt.t (pcuic_expand_lets_transform K) extends_pcuic_program PCUICAst.term snd.
+Lemma verified_lambdabox_pipeline_extends {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+  TransformExt.t verified_lambdabox_pipeline extends_eprogram_env extends_eprogram.
 Proof.
-  red. intros p p' pre pre' []. cbn. now rewrite H0.
+  unfold verified_lambdabox_pipeline. tc.
 Qed.
-
-Lemma verified_erasure_pipeline_extends {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
-  TransformExt.t verified_erasure_pipeline extends_pcuic_program EAst.term snd.
-Proof.
-  unfold verified_erasure_pipeline.
-  eapply TransformExt.compose.
-  2:eapply TransformExt.compose.
-  2: typeclasses eauto. 2:typeclasses eauto.
-  2:{ auto. }
-  repeat try (eapply TransformExt.compose; [|typeclasses eauto|]).
-  typeclasses eauto.
-  all:unfold extends_pcuic_program; cbn.
-  all:intros; intuition auto; try congruence.
-  red. cbn.
-
-
-
-
-
-
-
-
-  }
-  red.
-
 
 Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program pcuic_program

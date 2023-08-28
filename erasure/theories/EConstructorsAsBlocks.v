@@ -857,6 +857,16 @@ Proof.
   eapply transform_wellformed => //.
 Defined.
 
+Lemma transform_blocks_env_extends {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  has_tApp ->
+  extends Σ Σ' ->
+  wf_glob Σ ->
+  wf_glob Σ' ->
+  extends (transform_blocks_env Σ) (transform_blocks_env Σ').
+Proof.
+  intros hast ext wf.
+  now apply (gen_transform_extends (gt := GTExt efl hast) ext).
+Qed.
 
 Lemma Pre_glob efl Σ wf :
   has_cstr_params = false ->

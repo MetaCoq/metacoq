@@ -879,6 +879,16 @@ Proof.
   eapply (gen_transform_env_extends' (gt := GTExt efl)) => //.
 Qed.
 
+Lemma remove_match_on_box_extends_env {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  extends Σ Σ' ->
+  wf_glob Σ ->
+  wf_glob Σ' ->
+  extends (remove_match_on_box_env Σ) (remove_match_on_box_env Σ').
+Proof.
+  intros ext wf.
+  now apply (gen_transform_extends (gt := GTExt efl) ext).
+Qed.
+
 Lemma remove_match_on_box_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) :
   wf_glob Σ ->
   remove_match_on_box_env Σ = remove_match_on_box_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).

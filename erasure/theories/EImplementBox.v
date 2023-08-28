@@ -411,7 +411,7 @@ Proof.
   induction 1; cbn; constructor; auto.
 Qed.
 
-Lemma transform_wf_global {efl : EEnvFlags} {Σ : global_declarations} :
+Lemma implement_box_env_wf_glob {efl : EEnvFlags} {Σ : global_declarations} :
   has_tApp ->
   wf_glob (efl := efl) Σ -> wf_glob (efl := switch_off_box efl) (implement_box_env Σ).
 Proof.
@@ -426,6 +426,23 @@ Proof.
     now eapply transform_wellformed_decl'.
   - eapply fresh_global_map_on_snd.
     eapply EExtends.extends_wf_glob in wfg; tea. now depelim wfg.
+Qed.
+
+From MetaCoq.Erasure Require Import EGenericGlobalMap.
+
+Lemma implement_box_env_extends {efl : EEnvFlags} {Σ Σ' : global_declarations} :
+  has_tApp ->
+  extends Σ Σ' ->
+  wf_glob Σ ->
+  wf_glob Σ' ->
+  extends (implement_box_env Σ) (implement_box_env Σ').
+Proof.
+  intros hast ext wf wf'.
+  intros kn d.
+  rewrite !lookup_env_map_snd.
+  specialize (ext kn). destruct (lookup_env) eqn:E => //=.
+  intros [= <-].
+  rewrite (ext g) => //.
 Qed.
 
 Transparent implement_box.

@@ -289,6 +289,24 @@ Proof.
   now apply extends_cons_wf. now depelim wf.
 Qed.
 
+Lemma gen_transform_extends {Σ Σ' : GlobalContextMap.t} :
+  extends Σ Σ' ->
+  @wf_glob efl Σ ->
+  @wf_glob efl Σ' ->
+  extends (gen_transform_env Σ) (gen_transform_env Σ').
+Proof.
+  intros ext.
+  unfold gen_transform_env.
+  intros wf wf'.
+  rewrite (gen_transform_env_extends' ext wf wf').
+  intros kn d. specialize (ext kn).
+  rewrite lookup_env_map_snd.
+  destruct (lookup_env) eqn:E; cbn => //.
+  intros [= <-].
+  specialize (ext _ eq_refl).
+  now rewrite lookup_env_map_snd ext /=.
+Qed.
+
 Import EWellformed.
 
 Lemma gen_transform_wellformed_irrel {genid : GenTransformId gen_transform} {Σ : GlobalContextMap.t} t :

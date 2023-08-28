@@ -1247,6 +1247,17 @@ Proof.
   now apply (gen_transform_env_extends' (gt := GTExt efl hast) ext).
 Qed.
 
+Lemma strip_extends_env {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  has_tApp ->
+  extends Σ Σ' ->
+  wf_glob Σ ->
+  wf_glob Σ' ->
+  extends (strip_env Σ) (strip_env Σ').
+Proof.
+  intros hast ext wf.
+  now apply (gen_transform_extends (gt := GTExt efl hast) ext).
+Qed.
+
 Lemma strip_env_eq (efl := all_env_flags) (Σ : GlobalContextMap.t) : wf_glob Σ -> strip_env Σ = strip_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
 Proof.
   intros wf.

@@ -841,16 +841,15 @@ Proof.
   now apply optimize_wellformed.
 Defined.
 
-Lemma optimize_env_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+Lemma optimize_extends_env {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  has_tApp ->
   extends Σ Σ' ->
   wf_glob Σ ->
   wf_glob Σ' ->
-  List.map (on_snd (optimize_decl Σ)) Σ.(GlobalContextMap.global_decls) =
-  List.map (on_snd (optimize_decl Σ')) Σ.(GlobalContextMap.global_decls).
+  extends (optimize_env Σ) (optimize_env Σ').
 Proof.
-  intros.
-  epose proof (gen_transform_env_extends' (gt := GTExt efl)).
-  now eapply H2.
+  intros hast ext wf.
+  now apply (gen_transform_extends (gt := GTExt efl) ext).
 Qed.
 
 Lemma optimize_env_eq {efl : EEnvFlags} (Σ : GlobalContextMap.t) : wf_glob Σ -> optimize_env Σ = optimize_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).

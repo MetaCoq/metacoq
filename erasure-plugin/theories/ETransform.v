@@ -148,7 +148,7 @@ Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
   let Σ' := ErasureFunction.erase_global_fast (normalization_in:=_) optimized_abstract_env_impl
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
-    (EEnvMap.GlobalContextMap.make Σ' _, t).
+    (EEnvMap.GlobalContextMap.make Σ'.1 _, t).
 
 Next Obligation. unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto. Qed.
 Next Obligation.
@@ -280,28 +280,6 @@ Definition extends_pcuic_program (p p' : pcuic_program) :=
   extends_global_env p.1 p'.1 /\ p.2 = p'.2.
 Import ErasureFunction.
 Import PCUICAst.
-Lemma fresh_global_app kn Σ Σ' : fresh_global kn (Σ ++ Σ') ->
-  fresh_global kn Σ /\ fresh_global kn Σ'.
-Proof.
-  induction Σ; cbn; intuition auto.
-  - constructor.
-  - depelim H. constructor => //.
-    now eapply Forall_app in H0.
-  - depelim H.
-    now eapply Forall_app in H0.
-Qed.
-
-Lemma lookup_global_app_wf Σ Σ' kn : EnvMap.EnvMap.fresh_globals (Σ ++ Σ') ->
-  forall decl, lookup_global Σ' kn = Some decl -> lookup_global (Σ ++ Σ') kn = Some decl.
-Proof.
-  induction Σ in kn |- *; cbn; auto.
-  intros fr; depelim fr.
-  intros decl hd; cbn.
-  destruct (eqb_spec kn kn0).
-  eapply PCUICWeakeningEnv.lookup_global_Some_fresh in hd.
-  subst. now eapply fresh_global_app in H as [H H'].
-  now eapply IHΣ.
-Qed.
 
 Lemma strictly_extends_lookups {cf:checker_flags} (X X' : wf_env) (Σ Σ' : global_env) :
   (forall (kn : kername) (decl decl' : global_decl), lookup_env Σ' kn = Some decl -> lookup_env Σ kn = Some decl' -> decl = decl') ->
@@ -327,6 +305,49 @@ Proof.
   - rewrite /primitive_constant. now rewrite e0 e2 hr.
 Qed.
 
+
+Lemma lookup_env_In_map_fst Σ kn decl : EGlobalEnv.lookup_env Σ kn = Some decl -> In kn (map fst Σ).
+Proof.
+  induction Σ; cbn => //.
+  case: eqb_spec.
+  + intros -> [= <-]. now left.
+  + intros _ hl. eauto.
+Qed.
+
+Lemma in_erase_global_decls_acc {X_type : abstract_env_impl} (X : X_type.π1) deps decls kn normalization_in prf  :
+  In kn (map fst (erase_global_decls deps X decls (normalization_in:=normalization_in) prf).1) ->
+  KernameSet.In kn (erase_global_decls deps X decls (normalization_in:=normalization_in) prf).2.
+Proof.
+  induction decls in X, prf, deps, normalization_in |- *.
+  cbn; auto. destruct a as [kn' []].
+  + cbn. set (ec := erase_constant_decl _ _ _ _).
+  set (eg := erase_global_decls _ _ _ _).
+  set (eg' := erase_global_decls _ _ _ _).
+    case_eq (KernameSet.mem kn' deps).
+  * cbn; intros. destruct H0. subst; auto.
+    eapply KernameSet.mem_spec in H.
+
+Admitted.
+    (*auto.
+    specialize (IHdecls _ _ _ _ H0).
+    unfold ec in H0; cbn in H0.
+    set (Xpop := abstract_pop_decls X) in *.
+    epose proof (abstract_env_exists Xpop) as [[Σp wfpop]].
+    epose proof (abstract_env_exists X) as [[ΣX HX]].
+    unshelve epose proof (abstract_pop_decls_correct _ decls _ _ _ HX wfpop).
+    intros. rewrite prf => //. now eexists.
+    destruct H1 as [<- ?]. auto.
+  * intros hdeps hin.
+    eapply IHdecls in hin. intuition auto.
+  + cbn; set (eg := erase_global_decls _ _ _ _);
+    set (eg' := erase_global_decls _ _ _ _).
+    case_eq (KernameSet.mem kn' deps).
+  * cbn; intros. intuition auto. now specialize (IHdecls _ _ _ _ H1).
+  * intros hdeps hin.
+    eapply IHdecls in hin. intuition auto.
+    Unshelve. all:tc.
+Qed.
+*)
 #[global]
 Instance erase_transform_extends {guard : abstract_guard_impl} :
   TransformExt.t (erase_transform (guard := guard)) extends_pcuic_program extends_eprogram_env.
@@ -360,14 +381,14 @@ Proof.
     unshelve epose proof (abstract_env_exists X). 3:tc. tc.
     destruct H4 as [[Σ' ΣX]].
     unshelve epose proof (build_wf_env_from_env_eq _ (g, Σ.2) _ _ ΣX). cbn in H4.
-    epose proof (hl := ErasureFunction.lookup_env_erase_decl (optimized_abstract_env_impl) _ (EAstUtils.term_global_deps fst) _ _ _ kn g0 _ ΣX).
+    epose proof (hl := ErasureFunction.lookup_env_erase_decl (optimized_abstract_env_impl) _ (EAstUtils.term_global_deps fst) (declarations g) _ _ kn g0 _ ΣX).
     unfold lookup_env in E, hl. rewrite H4 in hl. specialize (hl (H0 _ _ E)).
-    forward hl. admit.
     destruct g0.
-    + destruct hl as [X' [nin [pf [eq ext]]]].
+    + destruct hl as [X' [nin [pf [eq ext]]]]; revgoals.
       unshelve erewrite ErasureFunction.erase_global_deps_fast_spec. shelve.
       { intros. red in H5. cbn in H5. subst. reflexivity. }
       erewrite eq.
+      2:{ eapply lookup_env_In_map_fst in H2. eapply in_erase_global_decls_acc in H2. }
       set (Xs := build_wf_env_from_env Σ.1 _) in *.
       unshelve epose proof (abstract_env_exists Xs). 3:tc. tc.
       destruct H5 as [[Σs Hs]].

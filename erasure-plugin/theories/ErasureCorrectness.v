@@ -271,11 +271,12 @@ Proof.
   intros ev.
   cbn.
   unfold ErasureFunction.erase_global_fast.
-  set (eg := ErasureFunction.erase _ _ _ _ _).
-  set (eg' := ErasureFunction.erase _ _ _ _ _).
+  set (et := ErasureFunction.erase _ _ _ _ _).
+  set (et' := ErasureFunction.erase _ _ _ _ _).
   erewrite ErasureFunction.erase_global_deps_fast_spec.
   erewrite ErasureFunction.erase_global_deps_fast_spec.
   epose proof ErasureFunction.erase_global_decls_irr.
+  intros kn decl.
 Admitted.
 
 Section pipeline_theorem.

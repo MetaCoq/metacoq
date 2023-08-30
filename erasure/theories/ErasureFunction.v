@@ -68,8 +68,588 @@ Section OnInductives.
     eapply PCUICInductives.on_minductive_wf_params_indices_inst; tea.
   Qed.
 
-
 End OnInductives.
+
+Infix "=kn" := KernameSet.Equal (at level 90).
+Ltac knset := KernameSetDecide.fsetdec.
+
+Lemma term_global_deps_csubst a k b :
+  KernameSet.Subset (term_global_deps (ECSubst.csubst a k b))
+    (KernameSet.union (term_global_deps a) (term_global_deps b)).
+Proof.
+  induction b in k |- * using EInduction.term_forall_list_ind; cbn; try knset; eauto.
+  - destruct Nat.compare; knset.
+  - specialize (IHb1 k); specialize (IHb2 (S k)); knset.
+  - specialize (IHb1 k); specialize (IHb2 k); knset.
+  - destruct i. intros kn. rewrite knset_in_fold_left.
+    rewrite KernameSet.union_spec knset_in_fold_left.
+    intuition auto. destruct H0 as [a' [hin hin']].
+    eapply in_map_iff in hin as [cs [<- hin]].
+    eapply All_In in X as [X]; tea. specialize (X k).
+    specialize (X _ hin').
+    eapply KernameSet.union_spec in X as []. knset.
+    right; right. now exists cs.
+  - destruct p. intros kn.
+    rewrite !KernameSet.union_spec !knset_in_fold_left.
+    specialize (IHb k kn). intuition auto. knset.
+    destruct H as [? []].
+    eapply in_map_iff in H as [cs [<- hin]].
+    eapply All_In in X as [X]; tea. specialize (X _ _ H0). intuition auto; try knset.
+    cbn in H0. apply KernameSet.union_spec in X as []; [knset|].
+    right; right; right. now exists cs.
+  - specialize (IHb k). knset.
+  - intros kn; rewrite knset_in_fold_left !KernameSet.union_spec knset_in_fold_left.
+    intuition auto.
+    destruct H0 as [? []].
+    eapply in_map_iff in H as [cs [<- hin]].
+    eapply All_In in X as [X]; tea. specialize (X _ _ H0). intuition auto; try knset.
+    cbn in H0. apply KernameSet.union_spec in X as []; [knset|].
+    right; right. now exists cs.
+  - intros kn; rewrite knset_in_fold_left !KernameSet.union_spec knset_in_fold_left.
+    intuition auto.
+    destruct H0 as [? []].
+    eapply in_map_iff in H as [cs [<- hin]].
+    eapply All_In in X as [X]; tea. specialize (X _ _ H0). intuition auto; try knset.
+    cbn in H0. apply KernameSet.union_spec in X as []; [knset|].
+    right; right. now exists cs.
+Qed.
+
+
+Arguments KernameSet.mem : simpl never.
+
+Lemma lookup_env_In Σ kn d : EGlobalEnv.lookup_env Σ kn = Some d -> In kn (map fst Σ).
+Proof.
+  induction Σ; cbn; auto.
+  - easy.
+  - destruct (eqb_spec kn a.1).
+    intros [= <-]. left; auto.
+    intros hl; right; auto.
+Qed.
+
+
+Notation terms_global_deps l :=
+  (fold_left (fun (acc : KernameSet.t) (x : EAst.term) =>
+   KernameSet.union (term_global_deps x) acc) l
+    KernameSet.empty).
+
+Lemma term_global_deps_fresh {efl : EWellformed.EEnvFlags} Σ k t :
+  EWellformed.wellformed Σ k t ->
+  forall kn, KernameSet.In kn (term_global_deps t) -> In kn (map fst Σ).
+Proof.
+  induction t in k |- * using EInduction.term_forall_list_ind; intros; try (cbn in *; try knset;
+    rtoProp; intuition eauto).
+  all:try eapply KernameSet.union_spec in H0; intuition eauto.
+  - apply KernameSet.singleton_spec in H0. subst s.
+    destruct (EGlobalEnv.lookup_env Σ kn) eqn:E.
+    destruct g => //. destruct c => //. cbn in H1.
+    now eapply lookup_env_In in E. easy.
+  - destruct i. rewrite knset_in_fold_left in H0.
+    destruct H0.
+    apply KernameSet.singleton_spec in H0. subst kn.
+    destruct (EGlobalEnv.lookup_env Σ _) eqn:E.
+    destruct g => //. cbn in E.
+    now eapply lookup_env_In in E. easy.
+    destruct H0 as [a []].
+    eapply All_In in X as [X]; tea. specialize (X k).
+    destruct EWellformed.cstr_as_blocks. move/andP: H1 => [_ wf].
+    solve_all. eapply All_In in wf as [wf]; tea. now specialize (X wf kn).
+    destruct args => //.
+  - destruct p. rewrite KernameSet.union_spec knset_in_fold_left in H0.
+    destruct H0.
+    apply KernameSet.singleton_spec in H0. subst kn. cbn in *.
+    destruct (EGlobalEnv.lookup_env Σ _) eqn:E.
+    destruct g => //.
+    now eapply lookup_env_In in E. easy. clear H1.
+    destruct H0. now apply (IHt k H3).
+    destruct H0 as [a []].
+    eapply All_In in X as [X]; tea.
+    solve_all. eapply All_In in H2 as [wf]; tea. now specialize (X _ wf kn).
+  - apply KernameSet.singleton_spec in H3. subst kn. cbn in *.
+    destruct (EGlobalEnv.lookup_env Σ _) eqn:E.
+    destruct g => //.
+    now eapply lookup_env_In in E. easy.
+  - rewrite knset_in_fold_left in H0; destruct H0; [knset|].
+    destruct H0 as [a []].
+    unfold EWellformed.wf_fix_gen in H1. move/andP: H1 => [_ hm]. solve_all.
+    eapply All_In in hm as [hm]; tea. intuition auto.
+    eapply (a0 (#|m| + k)) => //.
+  - rewrite knset_in_fold_left in H0; destruct H0; [knset|].
+    destruct H0 as [a []].
+    unfold EWellformed.wf_fix_gen in H1. move/andP: H1 => [_ hm]. solve_all.
+    eapply All_In in hm as [hm]; tea. intuition auto.
+    eapply (a0 (#|m| + k)) => //.
+Qed.
+
+Lemma knset_mem_spec kn s : reflect (KernameSet.In kn s) (KernameSet.mem kn s).
+Proof.
+  destruct (KernameSet.mem_spec s kn).
+  destruct (KernameSet.mem kn s).
+  - now constructor.
+  - constructor. intros hin. now apply H0 in hin.
+Qed.
+
+Definition constant_decls_deps decl :=
+  match decl with
+  | {| EAst.cst_body := Some b |} => term_global_deps b
+  | _ => KernameSet.empty
+  end.
+
+Definition global_decl_deps decl :=
+  match decl with
+  | EAst.ConstantDecl cst => constant_decls_deps cst
+  | _ => KernameSet.empty
+  end.
+
+Fixpoint global_deps (Σ : EAst.global_declarations) deps :=
+  match Σ with
+  | [] => deps
+  | (kn, decl) :: decls =>
+    if KernameSet.mem kn deps then
+      global_deps decls
+        (KernameSet.union deps (global_decl_deps decl))
+    else global_deps decls deps
+  end.
+
+Lemma global_deps_union Σ deps deps' :
+  global_deps Σ (KernameSet.union deps deps') =kn
+  KernameSet.union (global_deps Σ deps) (global_deps Σ deps').
+Proof.
+  induction Σ in deps, deps' |- *; auto.
+  - reflexivity.
+  - destruct a. cbn -[KernameSet.mem].
+    destruct (knset_mem_spec k deps').
+    * case: (knset_mem_spec k _).
+      move/KernameSet.union_spec => hin.
+      destruct hin.
+      eapply KernameSet.mem_spec in H. rewrite H.
+      rewrite !IHΣ. knset.
+      ** case: (knset_mem_spec k _); intros hin';
+        rewrite !IHΣ; knset.
+      ** intros hin'.
+         case: (knset_mem_spec k _); intros hin'';
+        rewrite !IHΣ; knset.
+    * case: (knset_mem_spec k _); intros hin''.
+      case: (knset_mem_spec k _); intros hin'''.
+      rewrite !IHΣ. knset.
+      rewrite !IHΣ. knset.
+      case: (knset_mem_spec k _); intros hin'''.
+      rewrite !IHΣ. knset.
+      rewrite !IHΣ. knset.
+Qed.
+
+Lemma in_global_deps deps Σ :
+  KernameSet.Subset deps (global_deps Σ deps).
+Proof.
+  induction Σ => //.
+  destruct a as [kn [[[]]|]]; cbn; eauto;
+  case: (knset_mem_spec kn _); intros hin''';
+  rewrite ?global_deps_union;
+   intros h hin; rewrite ?KernameSet.union_spec; try left; knset.
+Qed.
+
+Lemma global_deps_subset Σ deps deps' :
+  KernameSet.Subset deps deps' ->
+  KernameSet.Subset (global_deps Σ deps) (global_deps Σ deps').
+Proof.
+  induction Σ in deps, deps' |- *.
+  - cbn. auto.
+  - destruct a; cbn.
+    intros sub.
+    case: (knset_mem_spec k deps) => hin.
+    eapply sub in hin. eapply KernameSet.mem_spec in hin. rewrite hin.
+    rewrite !global_deps_union.
+    specialize (IHΣ _ _ sub). knset.
+    case: (knset_mem_spec k deps') => hin'.
+    rewrite !global_deps_union.
+    specialize (IHΣ _ _ sub). knset.
+    now eapply IHΣ.
+Qed.
+
+Lemma wf_global_decl_deps {efl : EWellformed.EEnvFlags} Σ d :
+  EWellformed.wf_global_decl Σ d ->
+  forall kn, KernameSet.In kn (global_decl_deps d) -> In kn (map fst Σ).
+Proof.
+  intros wf kn hin.
+  destruct d as [[[]]|] => //; cbn in hin.
+    * eapply term_global_deps_fresh in hin. exact hin. cbn in wf; tea.
+    * knset.
+    * knset.
+Qed.
+
+Lemma lookup_global_deps {efl : EWellformed.EEnvFlags} Σ kn decl :
+  EWellformed.wf_glob Σ ->
+  EGlobalEnv.lookup_env Σ kn = Some decl ->
+  forall kn, KernameSet.In kn (global_decl_deps decl) -> In kn (map fst Σ).
+Proof.
+  induction 1 in kn, decl |- *.
+  - cbn => //.
+  - cbn.
+    case: (eqb_spec kn kn0) => heq.
+    subst kn0; intros [= <-].
+    intros kn' hkn'.
+    * eapply wf_global_decl_deps in H0; tea. now right.
+    * intros hl kn' kin.
+      eapply IHwf_glob in hl; tea. now right.
+Qed.
+
+Lemma fresh_global_In kn Σ : EGlobalEnv.fresh_global kn Σ <-> ~ In kn (map fst Σ).
+Proof.
+  split.
+  - intros fr.
+    eapply (Forall_map (fun x => x <> kn) fst) in fr.
+    intros hin.
+    now eapply PCUICWfUniverses.Forall_In in fr; tea.
+  - intros nin.
+    red. eapply In_Forall. intros kn' hin <-.
+    eapply nin. now eapply (in_map fst).
+Qed.
+
+Lemma global_deps_kn {fl :EWellformed.EEnvFlags} Σ kn decl :
+  EWellformed.wf_glob Σ ->
+  EGlobalEnv.declared_constant Σ kn decl ->
+  KernameSet.Subset (global_deps Σ (constant_decls_deps decl)) (global_deps Σ (KernameSet.singleton kn)).
+Proof.
+  induction 1 in kn, decl |- *.
+  - cbn. unfold EGlobalEnv.declared_constant. cbn => //.
+  - cbn. unfold EGlobalEnv.declared_constant. cbn => //.
+    destruct (eqb_spec kn kn0). subst kn0. cbn. intros [= ->].
+    + case: (knset_mem_spec kn _) => hin.
+      * eapply wf_global_decl_deps in H0; tea.
+        now eapply fresh_global_In in H1.
+      * case: (knset_mem_spec kn _) => hin'.
+        rewrite !global_deps_union. cbn. knset.
+        knset.
+
+    + intros hl.
+      case: (knset_mem_spec kn0 _) => hin.
+      * elimtype False.
+        eapply lookup_global_deps in hl; tea.
+        now eapply fresh_global_In in H1.
+      * case: (knset_mem_spec kn0 _).
+       ** move/KernameSet.singleton_spec. intros <-. congruence.
+      ** intros hnin. now eapply IHwf_glob.
+Qed.
+
+Lemma term_global_deps_mkApps f args :
+  term_global_deps (EAst.mkApps f args) =kn
+  KernameSet.union (term_global_deps f) (terms_global_deps args).
+Proof.
+  induction args in f |- *.
+  - cbn; knset.
+  - cbn. rewrite IHargs. cbn.
+    intros kn.
+    rewrite !KernameSet.union_spec !knset_in_fold_left KernameSet.union_spec.
+    intuition auto.
+Qed.
+
+From Coq Require Import Morphisms.
+
+#[export] Instance global_deps_proper : Proper (eq ==> KernameSet.Equal ==> KernameSet.Equal) global_deps.
+Proof.
+  intros ? ? -> kns kns' eq.
+  induction y in kns, kns', eq |- *; cbn; auto; try knset.
+  destruct a. setoid_rewrite eq. destruct KernameSet.mem. rewrite IHy; [|reflexivity].
+  now rewrite eq. now apply IHy.
+Qed.
+
+#[export] Instance global_deps_proper_subset : Proper (eq ==> KernameSet.Subset ==> KernameSet.Subset) global_deps.
+Proof.
+  intros ? ? -> kns kns' eq.
+  induction y in kns, kns', eq |- *; cbn; auto; try knset.
+  destruct a. destruct (knset_mem_spec k kns). eapply eq in i.
+  eapply KernameSet.mem_spec in i. rewrite i. eapply IHy. knset.
+  destruct (knset_mem_spec k kns'). specialize (IHy _ _ eq).
+  rewrite global_deps_union. knset.
+  eauto.
+Qed.
+
+Lemma term_global_deps_substl defs body :
+  KernameSet.Subset (term_global_deps (ECSubst.substl defs body))
+    (KernameSet.union (terms_global_deps defs) (term_global_deps body)).
+Proof.
+  intros kn. rewrite KernameSet.union_spec.
+  unfold ECSubst.substl.
+  induction defs in body |- *; cbn; auto.
+  - intros hin. eapply IHdefs in hin as []; eauto. left.
+    rewrite knset_in_fold_left. right.
+    rewrite knset_in_fold_left in H.
+    intuition. knset.
+    rewrite knset_in_fold_left.
+    eapply term_global_deps_csubst in H.
+    intuition knset.
+Qed.
+
+Lemma terms_global_deps_rev l : terms_global_deps (List.rev l) =kn terms_global_deps l.
+Proof.
+  intros kn.
+  rewrite !knset_in_fold_left. intuition auto; try knset.
+  - destruct H0 as [x []]; right. exists x. now eapply In_rev in H.
+  - destruct H0 as [x []]; right. exists x. now eapply In_rev in H.
+Qed.
+
+Lemma In_skipn {A} n (l : list A) : forall x, In x (skipn n l) -> In x l.
+Proof.
+  induction l in n |- *; destruct n => //.
+  rewrite skipn_S. intros x hin; right; eauto.
+Qed.
+
+Lemma terms_global_deps_skipn n l : KernameSet.Subset (terms_global_deps (List.skipn n l)) (terms_global_deps l).
+Proof.
+  intros kn.
+  rewrite !knset_in_fold_left. intuition auto; try knset.
+  destruct H0 as [x []]; right. eapply In_skipn in H. now exists x.
+Qed.
+
+
+Lemma term_global_deps_iota_red pars args br :
+  KernameSet.Subset (term_global_deps (EGlobalEnv.iota_red pars args br))
+    (KernameSet.union (terms_global_deps args) (term_global_deps br.2)).
+Proof.
+  intros kn hin.
+  eapply term_global_deps_substl in hin.
+  rewrite !KernameSet.union_spec in hin *. intuition auto. left.
+  rewrite terms_global_deps_rev in H.
+  now apply terms_global_deps_skipn in H.
+Qed.
+
+Lemma fold_left_eq {A} f acc l :
+  fold_left (fun acc (x : A) => KernameSet.union (f x) acc) l acc =kn
+  KernameSet.union (fold_left (fun acc x => KernameSet.union (f x) acc) l KernameSet.empty) acc.
+Proof.
+  induction l in acc |- *; cbn. knset.
+  rewrite IHl. rewrite (IHl (KernameSet.union _ _)). knset.
+Qed.
+
+Lemma term_global_deps_repeat t n : KernameSet.Subset (terms_global_deps (repeat t n)) (term_global_deps t).
+Proof.
+  induction n; cbn; auto; try knset.
+  intros kn hin.
+  rewrite fold_left_eq in hin.
+  rewrite KernameSet.union_spec in hin. intuition auto.
+  rewrite KernameSet.union_spec in H; intuition auto.
+  knset.
+Qed.
+
+Notation terms_global_deps_gen f l :=
+  (fold_left
+    (fun (acc : KernameSet.t) (x : _) =>
+    KernameSet.union (term_global_deps (f x)) acc) l KernameSet.empty).
+
+Lemma term_global_deps_fix_subst mfix :
+  KernameSet.Subset (terms_global_deps (EGlobalEnv.fix_subst mfix)) (terms_global_deps_gen EAst.dbody mfix).
+Proof.
+  unfold EGlobalEnv.fix_subst.
+  induction #|mfix|; cbn.
+  - knset.
+  - rewrite fold_left_eq.
+    intros kn. rewrite KernameSet.union_spec.
+    intros [].
+    + now eapply IHn in H.
+    + knset.
+Qed.
+
+Lemma term_global_deps_cunfold_fix mfix idx n f :
+  EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
+  KernameSet.Subset (term_global_deps f) (terms_global_deps_gen EAst.dbody mfix).
+Proof.
+  unfold EGlobalEnv.cunfold_fix.
+  destruct nth_error eqn:E => //.
+  intros [= <- <-].
+  intros kn hin.
+  eapply term_global_deps_substl in hin.
+  rewrite KernameSet.union_spec in hin.
+  destruct hin.
+  now eapply term_global_deps_fix_subst in H.
+  eapply nth_error_In in E.
+  rewrite knset_in_fold_left. right. now exists d.
+Qed.
+
+Lemma term_global_deps_cofix_subst mfix :
+  KernameSet.Subset (terms_global_deps (EGlobalEnv.cofix_subst mfix)) (terms_global_deps_gen EAst.dbody mfix).
+Proof.
+  unfold EGlobalEnv.cofix_subst.
+  induction #|mfix|; cbn.
+  - knset.
+  - rewrite fold_left_eq.
+    intros kn. rewrite KernameSet.union_spec.
+    intros [].
+    + now eapply IHn in H.
+    + knset.
+Qed.
+
+Lemma term_global_deps_cunfold_cofix mfix idx n f :
+  EGlobalEnv.cunfold_cofix mfix idx = Some (n, f) ->
+  KernameSet.Subset (term_global_deps f) (terms_global_deps_gen EAst.dbody mfix).
+Proof.
+  unfold EGlobalEnv.cunfold_cofix.
+  destruct nth_error eqn:E => //.
+  intros [= <- <-].
+  intros kn hin.
+  eapply term_global_deps_substl in hin.
+  rewrite KernameSet.union_spec in hin.
+  destruct hin.
+  now eapply term_global_deps_cofix_subst in H.
+  eapply nth_error_In in E.
+  rewrite knset_in_fold_left. right. now exists d.
+Qed.
+
+Lemma global_deps_empty Σ : global_deps Σ KernameSet.empty = KernameSet.empty.
+Proof.
+  induction Σ; cbn; auto.
+  destruct a as [kn d].
+  destruct (knset_mem_spec kn KernameSet.empty).
+  knset. auto.
+Qed.
+
+Lemma eval_global_deps {fl : EWcbvEval.WcbvFlags} {efl : EWellformed.EEnvFlags} Σ t t' :
+  EWellformed.wf_glob Σ ->
+  Σ ⊢ t ⇓ t' -> KernameSet.Subset (global_deps Σ (term_global_deps t')) (global_deps Σ (term_global_deps t)).
+Proof.
+  intros wf.
+  induction 1 using EWcbvEval.eval_ind; cbn; rewrite ?global_deps_union; try knset.
+  - cbn in IHeval1.
+    epose proof (term_global_deps_csubst a' 0 b).
+    eapply (global_deps_subset Σ) in H2.
+    rewrite global_deps_union in H2.
+    knset.
+  - epose proof (term_global_deps_csubst b0' 0 b1).
+    eapply (global_deps_subset Σ) in H1.
+    rewrite global_deps_union in H1.
+    knset.
+  - rewrite term_global_deps_mkApps in IHeval1.
+    rewrite global_deps_union /= in IHeval1. destruct ind; cbn in *.
+    intros kn hr.
+    eapply IHeval2 in hr.
+    eapply global_deps_proper_subset in hr.
+    3:eapply (term_global_deps_iota_red pars args br). 2:reflexivity.
+    rewrite global_deps_union KernameSet.union_spec in hr.
+    specialize (IHeval1 kn); rewrite !KernameSet.union_spec in IHeval1 *.
+    right.
+    destruct hr.
+    eapply global_deps_proper_subset. reflexivity.
+    intros kn'. rewrite knset_in_fold_left. intros; left; eauto.
+    now eapply IHeval1.
+    rewrite fold_left_eq global_deps_union KernameSet.union_spec. left.
+    eapply global_deps_proper_subset. reflexivity.
+    intros kn'. rewrite knset_in_fold_left. intros; right.
+    eapply nth_error_In in e2. exists br; split. auto. exact H2.
+    exact H1.
+  - intros kn hr.
+    eapply IHeval2 in hr.
+    eapply global_deps_proper_subset in hr; [|reflexivity|].
+    2:eapply term_global_deps_iota_red.
+    rewrite global_deps_union KernameSet.union_spec in hr.
+    rewrite KernameSet.union_spec.
+    right.
+    eapply global_deps_proper_subset. reflexivity.
+    intros kn'. rewrite fold_left_eq. intros h; exact h.
+    rewrite global_deps_union KernameSet.union_spec.
+    destruct hr. right. eapply IHeval1. cbn. destruct ind.
+    now rewrite fold_left_eq global_deps_union KernameSet.union_spec.
+    left.
+    eapply global_deps_proper_subset. reflexivity.
+    intros kn'. rewrite knset_in_fold_left. intros; right.
+    eapply nth_error_In in e2. exists br; split. auto. exact H2.
+    exact H1.
+  - intros kn hr. eapply IHeval2 in hr.
+    rewrite KernameSet.union_spec.
+    eapply global_deps_proper_subset in hr; [|reflexivity|].
+    2:eapply term_global_deps_substl.
+    right. rewrite fold_left_eq global_deps_union KernameSet.union_spec.
+    subst brs. cbn. left.
+    rewrite global_deps_union KernameSet.union_spec in hr. destruct hr.
+    eapply global_deps_proper_subset. reflexivity. 2:exact H1.
+    setoid_rewrite term_global_deps_repeat. cbn. knset.
+    now rewrite global_deps_union KernameSet.union_spec.
+  - intros kn hin. eapply IHeval3 in hin.
+    cbn in hin. rewrite global_deps_union KernameSet.union_spec in hin.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec in hin.
+    rewrite KernameSet.union_spec. intuition auto.
+    + left. eapply IHeval1.
+      rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec. left.
+      cbn. eapply term_global_deps_cunfold_fix in e1.
+      now setoid_rewrite e1 in H3.
+    + left. eapply IHeval1.
+      rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec. now right.
+  - intros kn hin. eapply IHeval3 in hin.
+    cbn in hin. rewrite global_deps_union KernameSet.union_spec in hin.
+    rewrite KernameSet.union_spec. intuition auto.
+    left. eapply IHeval1. cbn.
+    eapply term_global_deps_cunfold_fix in e0.
+    now setoid_rewrite e0 in H2.
+  - intros kn hin. eapply IHeval2 in hin.
+    cbn in hin. destruct ip.
+    rewrite global_deps_union KernameSet.union_spec in hin.
+    rewrite global_deps_union KernameSet.union_spec. intuition auto. right.
+    rewrite fold_left_eq. rewrite fold_left_eq in H1.
+    rewrite global_deps_union KernameSet.union_spec in H1.
+    rewrite global_deps_union KernameSet.union_spec. intuition auto.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec in H2.
+    right. eapply IHeval1.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec. intuition auto.
+    left. cbn.
+    eapply term_global_deps_cunfold_cofix in e0.
+    now setoid_rewrite e0 in H1.
+  - intros kn hin. eapply IHeval2 in hin.
+    cbn in hin. rewrite global_deps_union KernameSet.union_spec in hin.
+    rewrite KernameSet.union_spec. intuition auto. right.
+    eapply IHeval1. cbn.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec in H1.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec.
+    intuition auto. left.
+    eapply term_global_deps_cunfold_cofix in e0.
+    now setoid_rewrite e0 in H2.
+  - cbn.
+    epose proof (global_deps_kn Σ c decl wf isdecl).
+    unfold constant_decls_deps in H0. destruct decl => //.
+    cbn in e. subst cst_body0. knset.
+  - move=> kn /IHeval2 hin.
+    rewrite KernameSet.union_spec; right. eapply IHeval1.
+    rewrite term_global_deps_mkApps global_deps_union KernameSet.union_spec.
+    right. eapply nth_error_In in e3.
+    eapply global_deps_proper_subset. reflexivity. 2:exact hin.
+    intros k h. rewrite knset_in_fold_left. right. now exists a.
+  - eapply nth_error_In in e3.
+    move=> kn /IHeval2 hin.
+    rewrite KernameSet.union_spec. right; apply IHeval1; cbn.
+    destruct proj_ind. rewrite fold_left_eq.
+    rewrite global_deps_union KernameSet.union_spec. left.
+    eapply global_deps_proper_subset. reflexivity.
+    intros kn'. rewrite knset_in_fold_left. intros; right. 2:tea.
+    now exists a.
+  - destruct ind.
+    rewrite fold_left_eq. rewrite (fold_left_eq _ (KernameSet.singleton _)).
+    intros kn. rewrite !global_deps_union !KernameSet.union_spec. intuition auto.
+    left. clear -a iha H0.
+    induction a; auto.
+    move: H0. cbn.
+    rewrite fold_left_eq (fold_left_eq _ (KernameSet.union _ _)).
+    rewrite !global_deps_union !KernameSet.union_spec.
+    destruct iha as [sub ih]. specialize (IHa ih). intuition eauto.
+Qed.
+
+Lemma in_global_deps_fresh {efl : EWellformed.EEnvFlags} kn Σ deps :
+  EWellformed.wf_glob Σ ->
+  KernameSet.In kn (global_deps Σ deps) ->
+  EGlobalEnv.fresh_global kn Σ ->
+  KernameSet.In kn deps.
+Proof.
+  induction Σ in deps |- *.
+  - now cbn.
+  - intros wf. destruct a as [kn' d]; cbn. depelim wf.
+    case: (knset_mem_spec kn' deps) => hin.
+    * rewrite global_deps_union KernameSet.union_spec.
+      intros [] fr.
+    ** depelim fr. now eapply IHΣ.
+    ** depelim fr. elimtype False. eapply IHΣ in H1; eauto.
+      destruct d as [[[]]|] eqn:eqd; cbn in H.
+      + cbn in H1. eapply (term_global_deps_fresh Σ) in H1; tea. cbn in H2.
+        eapply (Forall_map (fun x => x <> kn) fst) in fr.
+        now eapply PCUICWfUniverses.Forall_In in fr.
+      + cbn in H1; knset.
+      + cbn in H1; knset.
+    * intros hin' fr. depelim fr. now eapply IHΣ.
+Qed.
 
 Local Existing Instance extraction_checker_flags.
 (* Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
@@ -2048,14 +2628,14 @@ Proof.
   simpl. destruct d'.
   + destruct KernameSet.mem. cbn.
     destruct (eqb_spec kn kn') => //.
-    do 3 eexists. split; [|split;[reflexivity|]]. KernameSetDecide.fsetdec.
+    do 3 eexists. split; [|split;[reflexivity|]]. knset.
     auto.
-    do 3 eexists. split; [|split;[reflexivity|]]. KernameSetDecide.fsetdec.
+    do 3 eexists. split; [|split;[reflexivity|]]. knset.
     auto.
   + destruct KernameSet.mem. cbn.
     destruct (eqb_spec kn kn') => //.
-    do 3 eexists. split; [|split;[reflexivity|]]. KernameSetDecide.fsetdec. auto.
-    do 3 eexists. split; [|split;[reflexivity|]]. KernameSetDecide.fsetdec. auto.
+    do 3 eexists. split; [|split;[reflexivity|]]. knset. auto.
+    do 3 eexists. split; [|split;[reflexivity|]]. knset. auto.
 Qed.
 
 Lemma lookup_env_In_map_fst Σ kn decl : lookup_global Σ kn = Some decl -> In kn (map fst Σ).
@@ -2074,7 +2654,7 @@ Proof.
   unfold erase_constant_decl.
   set (ec := erase_constant_body _ _ _ _).
   destruct cb. destruct cst_body0.
-  2:{ subst ec; cbn. KernameSetDecide.fsetdec. }
+  2:{ subst ec; cbn. knset. }
   intros hc.
   epose proof (erase_constant_body_correct' (@eq_refl _ (EAst.cst_body ec.1))).
   subst ec.
@@ -2259,9 +2839,9 @@ Proof.
       case_eq (KernameSet.mem k deps).
       * cbn. intros hm.
         destruct (eqb_spec k kn).
-        ++ subst k. eapply IHdecls. KernameSetDecide.fsetdec.
+        ++ subst k. eapply IHdecls. knset.
         ++ eapply IHdecls.
-           KernameSetDecide.fsetdec.
+           knset.
       * intros hnin. eapply IHdecls; tea.
     +  set (eg := erase_global_deps _ _ _ _ _ _);
       set (eg' := erase_global_deps _ _ _ _ _ _).
@@ -2273,12 +2853,6 @@ Proof.
       ++ eapply IHdecls. tea.
     * intros hnin. eapply IHdecls; tea.
 Qed.
-
-Definition constant_decls_deps decl :=
-  match decl with
-  | {| EAst.cst_body := Some b |} => term_global_deps b
-  | _ => KernameSet.empty
-  end.
 
 Fixpoint filter_deps deps decls :=
   match decls with
@@ -2320,248 +2894,6 @@ Proof.
       eapply IHdecls.
 Qed.
 
-Lemma knset_mem_spec kn s : reflect (KernameSet.In kn s) (KernameSet.mem kn s).
-Proof.
-  destruct (KernameSet.mem_spec s kn).
-  destruct (KernameSet.mem kn s).
-  - now constructor.
-  - constructor. intros hin. now apply H0 in hin.
-Qed.
-
-Definition global_decl_deps decl :=
-  match decl with
-  | EAst.ConstantDecl cst => constant_decls_deps cst
-  | _ => KernameSet.empty
-  end.
-
-Fixpoint global_deps (Σ : EAst.global_declarations) deps :=
-  match Σ with
-  | [] => deps
-  | (kn, decl) :: decls =>
-    if KernameSet.mem kn deps then
-      global_deps decls
-        (KernameSet.union deps (global_decl_deps decl))
-    else global_deps decls deps
-  end.
-
-Infix "=kn" := KernameSet.Equal (at level 90).
-
-Ltac knset := KernameSetDecide.fsetdec.
-
-Lemma global_deps_union Σ deps deps' :
-  global_deps Σ (KernameSet.union deps deps') =kn
-  KernameSet.union (global_deps Σ deps) (global_deps Σ deps').
-Proof.
-  induction Σ in deps, deps' |- *; auto.
-  - reflexivity.
-  - destruct a. cbn -[KernameSet.mem].
-    destruct (knset_mem_spec k deps').
-    * case: (knset_mem_spec k _).
-      move/KernameSet.union_spec => hin.
-      destruct hin.
-      eapply KernameSet.mem_spec in H. rewrite H.
-      rewrite !IHΣ. KernameSetDecide.fsetdec.
-      ** case: (knset_mem_spec k _); intros hin';
-        rewrite !IHΣ; KernameSetDecide.fsetdec.
-      ** intros hin'.
-         case: (knset_mem_spec k _); intros hin'';
-        rewrite !IHΣ; KernameSetDecide.fsetdec.
-    * case: (knset_mem_spec k _); intros hin''.
-      case: (knset_mem_spec k _); intros hin'''.
-      rewrite !IHΣ. knset.
-      rewrite !IHΣ. knset.
-      case: (knset_mem_spec k _); intros hin'''.
-      rewrite !IHΣ. knset.
-      rewrite !IHΣ. knset.
-Qed.
-
-Lemma in_global_deps deps Σ :
-  KernameSet.Subset deps (global_deps Σ deps).
-Proof.
-  induction Σ => //.
-  destruct a as [kn [[[]]|]]; cbn; eauto;
-  case: (knset_mem_spec kn _); intros hin''';
-  rewrite ?global_deps_union;
-   intros h hin; rewrite ?KernameSet.union_spec; try left; knset.
-Qed.
-
-Lemma term_global_deps_csubst a k b :
-  KernameSet.Subset (term_global_deps (ECSubst.csubst a k b))
-    (KernameSet.union (term_global_deps a) (term_global_deps b)).
-Admitted.
-
-Lemma global_deps_subset Σ deps deps' :
-  KernameSet.Subset deps deps' ->
-  KernameSet.Subset (global_deps Σ deps) (global_deps Σ deps').
-Proof.
-  induction Σ in deps, deps' |- *.
-  - cbn. auto.
-  - destruct a; cbn.
-    intros sub.
-    case: (knset_mem_spec k deps) => hin.
-    eapply sub in hin. eapply KernameSet.mem_spec in hin. rewrite hin.
-    rewrite !global_deps_union.
-    specialize (IHΣ _ _ sub). knset.
-    case: (knset_mem_spec k deps') => hin'.
-    rewrite !global_deps_union.
-    specialize (IHΣ _ _ sub). knset.
-    now eapply IHΣ.
-Qed.
-
-Arguments KernameSet.mem : simpl never.
-
-Lemma lookup_env_In Σ kn d : EGlobalEnv.lookup_env Σ kn = Some d -> In kn (map fst Σ).
-Proof.
-  induction Σ; cbn; auto.
-  - easy.
-  - destruct (eqb_spec kn a.1).
-    intros [= <-]. left; auto.
-    intros hl; right; auto.
-Qed.
-
-
-Lemma term_global_deps_fresh {efl : EWellformed.EEnvFlags} Σ k t :
-  EWellformed.wellformed Σ k t ->
-  forall kn, KernameSet.In kn (term_global_deps t) -> In kn (map fst Σ).
-Proof.
-  induction t in k |- * using EInduction.term_forall_list_ind; intros; try cbn in *; try knset;
-    rtoProp; intuition eauto.
-  all:try eapply KernameSet.union_spec in H0; intuition eauto.
-  - apply KernameSet.singleton_spec in H0. subst s.
-    destruct (EGlobalEnv.lookup_env Σ kn) eqn:E.
-    destruct g => //. destruct c => //. cbn in H1.
-    now eapply lookup_env_In in E. easy.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-Admitted.
-
-Lemma wf_global_decl_deps {efl : EWellformed.EEnvFlags} Σ d :
-  EWellformed.wf_global_decl Σ d ->
-  forall kn, KernameSet.In kn (global_decl_deps d) -> In kn (map fst Σ).
-Proof.
-  intros wf kn hin.
-  destruct d as [[[]]|] => //; cbn in hin.
-    * eapply term_global_deps_fresh in hin. exact hin. cbn in wf; tea.
-    * knset.
-    * knset.
-Qed.
-
-Lemma lookup_global_deps {efl : EWellformed.EEnvFlags} Σ kn decl :
-  EWellformed.wf_glob Σ ->
-  EGlobalEnv.lookup_env Σ kn = Some decl ->
-  forall kn, KernameSet.In kn (global_decl_deps decl) -> In kn (map fst Σ).
-Proof.
-  induction 1 in kn, decl |- *.
-  - cbn => //.
-  - cbn.
-    case: (eqb_spec kn kn0) => heq.
-    subst kn0; intros [= <-].
-    intros kn' hkn'.
-    * eapply wf_global_decl_deps in H0; tea. now right.
-    * intros hl kn' kin.
-      eapply IHwf_glob in hl; tea. now right.
-Qed.
-
-Lemma fresh_global_In kn Σ : EGlobalEnv.fresh_global kn Σ <-> ~ In kn (map fst Σ).
-Proof.
-  split.
-  - intros fr.
-    eapply (Forall_map (fun x => x <> kn) fst) in fr.
-    intros hin.
-    now eapply PCUICWfUniverses.Forall_In in fr; tea.
-  - intros nin.
-    red. eapply In_Forall. intros kn' hin <-.
-    eapply nin. now eapply (in_map fst).
-Qed.
-
-Lemma global_deps_kn {fl :EWellformed.EEnvFlags} Σ kn decl :
-  EWellformed.wf_glob Σ ->
-  EGlobalEnv.declared_constant Σ kn decl ->
-  KernameSet.Subset (global_deps Σ (constant_decls_deps decl)) (global_deps Σ (KernameSet.singleton kn)).
-Proof.
-  induction 1 in kn, decl |- *.
-  - cbn. unfold EGlobalEnv.declared_constant. cbn => //.
-  - cbn. unfold EGlobalEnv.declared_constant. cbn => //.
-    destruct (eqb_spec kn kn0). subst kn0. cbn. intros [= ->].
-    + case: (knset_mem_spec kn _) => hin.
-      * eapply wf_global_decl_deps in H0; tea.
-        now eapply fresh_global_In in H1.
-      * case: (knset_mem_spec kn _) => hin'.
-        rewrite !global_deps_union. cbn. knset.
-        knset.
-
-    + intros hl.
-      case: (knset_mem_spec kn0 _) => hin.
-      * elimtype False.
-        eapply lookup_global_deps in hl; tea.
-        now eapply fresh_global_In in H1.
-      * case: (knset_mem_spec kn0 _).
-       ** move/KernameSet.singleton_spec. intros <-. congruence.
-      ** intros hnin. now eapply IHwf_glob.
-Qed.
-
-Lemma eval_global_deps {fl : EWcbvEval.WcbvFlags} {efl : EWellformed.EEnvFlags} Σ t t' :
-  EWellformed.wf_glob Σ ->
-  Σ ⊢ t ⇓ t' -> KernameSet.Subset (global_deps Σ (term_global_deps t')) (global_deps Σ (term_global_deps t)).
-Proof.
-  intros wf.
-  induction 1 using EWcbvEval.eval_ind; cbn; rewrite ?global_deps_union; try knset.
-  - cbn in IHeval1.
-    epose proof (term_global_deps_csubst a' 0 b).
-    eapply (global_deps_subset Σ) in H2.
-    rewrite global_deps_union in H2.
-    knset.
-  - epose proof (term_global_deps_csubst b0' 0 b1).
-    eapply (global_deps_subset Σ) in H1.
-    rewrite global_deps_union in H1.
-    knset.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - cbn.
-    epose proof (global_deps_kn Σ c decl wf isdecl).
-    unfold constant_decls_deps in H0. destruct decl => //.
-    cbn in e. subst cst_body0. knset.
-  - admit.
-Admitted.
-
-Lemma in_global_deps_fresh {efl : EWellformed.EEnvFlags} kn Σ deps :
-  EWellformed.wf_glob Σ ->
-  KernameSet.In kn (global_deps Σ deps) ->
-  EGlobalEnv.fresh_global kn Σ ->
-  KernameSet.In kn deps.
-Proof.
-  induction Σ in deps |- *.
-  - now cbn.
-  - intros wf. destruct a as [kn' d]; cbn. depelim wf.
-    case: (knset_mem_spec kn' deps) => hin.
-    * rewrite global_deps_union KernameSet.union_spec.
-      intros [] fr.
-    ** depelim fr. now eapply IHΣ.
-    ** depelim fr. elimtype False. eapply IHΣ in H1; eauto.
-      destruct d as [[[]]|] eqn:eqd; cbn in H.
-      + cbn in H1. eapply (term_global_deps_fresh Σ) in H1; tea. cbn in H2.
-        eapply (Forall_map (fun x => x <> kn) fst) in fr.
-        now eapply PCUICWfUniverses.Forall_In in fr.
-      + cbn in H1; knset.
-      + cbn in H1; knset.
-    * intros hin' fr. depelim fr. now eapply IHΣ.
-Qed.
-
-Lemma global_deps_empty Σ : global_deps Σ KernameSet.empty = KernameSet.empty.
-Proof.
-  induction Σ; cbn; auto.
-  destruct a as [kn d].
-  destruct (knset_mem_spec kn KernameSet.empty).
-  knset. auto.
-Qed.
 
 Lemma filter_deps_filter {efl : EWellformed.EEnvFlags} deps Σ :
   EWellformed.wf_glob Σ ->
@@ -2657,6 +2989,24 @@ Proof.
     + constructor; auto.
       eapply IHdecls => //.
     + eapply IHdecls => //.
+Qed.
+
+Lemma erase_global_fresh X_type kn X decls normalization_in heq :
+  let Σ' := @erase_global X_type X decls normalization_in heq in
+  PCUICAst.fresh_global kn decls ->
+  fresh_global kn Σ'.
+Proof.
+  cbn.
+  revert X normalization_in heq.
+  induction decls; [cbn; auto|].
+  - intros. red. constructor.
+  - destruct a as [kn' d]. intros. depelim H.
+    cbn in H, H0. cbn.
+    destruct d as []; simpl.
+    + cbn [EGlobalEnv.closed_env forallb]. cbn.
+      constructor => //. eapply IHdecls => //.
+    + constructor; auto.
+      eapply IHdecls => //.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
@@ -3145,24 +3495,24 @@ Proof.
   pose proof (abstract_env_ext_exists X') as [[Σmake wfmake]].
   destruct (wfΣ _ wf), (hcb _ wfmake). red in X1.
   destruct EAst.cst_body eqn:hb => /= //.
-  eapply (erase_constant_body_correct'') in hb; eauto.
-  destruct hb as [[t0 [T [[] ?]]]]. rewrite e in i. exact i.
+  eapply (erase_constant_body_correct_glob) in hb; eauto.
+  destruct hb as [[t0 [T [[] ?]]]]. exact i.
 Qed.
 
-Lemma erase_global_ind_decl_wf_glob {X_type X} {deps decls normalization_in kn m} heq :
+Lemma erase_global_ind_decl_wf_glob' {X_type X} {decls normalization_in kn m} heq :
   (forall Σ : global_env, abstract_env_rel X Σ -> on_inductive cumulSpec0 (lift_typing typing) (Σ, ind_universes m) kn m) ->
   let m' := erase_mutual_inductive_body m in
-  let Σ' := erase_global_deps X_type deps X decls normalization_in heq in
-  @wf_global_decl all_env_flags Σ'.1 (EAst.InductiveDecl m').
+  let Σ' := @erase_global X_type X decls normalization_in heq in
+  @wf_global_decl all_env_flags Σ' (EAst.InductiveDecl m').
 Proof.
   set (m' := erase_mutual_inductive_body m).
-  set (Σ' := erase_global_deps _ _ _ _ _ _). simpl.
+  set (Σ' := erase_global _ _ _). simpl.
   intros oni.
   pose proof (abstract_env_exists X) as [[Σ wf]]. specialize_Σ wf.
   pose proof (abstract_env_wf _ wf) as [wfΣ].
   assert (erases_mutual_inductive_body m (erase_mutual_inductive_body m)).
   { eapply (erases_mutual (mdecl:=kn)); tea. }
-  eapply (erases_mutual_inductive_body_wf (univs := Σ.(universes)) (retro := Σ.(retroknowledge)) (Σ := decls) (kn := kn) (Σ' := Σ'.1)) in H; tea.
+  eapply (erases_mutual_inductive_body_wf (univs := Σ.(universes)) (retro := Σ.(retroknowledge)) (Σ := decls) (kn := kn) (Σ' := Σ')) in H; tea.
   rewrite -(heq _ wf). now destruct Σ.
 Qed.
 
@@ -3181,25 +3531,22 @@ Proof.
   epose proof (abstract_env_exists Xpop) as [[Σpop wfpop]];
   pose proof (abstract_env_wf _ wfpop) as [wfΣpop].
   + constructor. eapply IHdecls => //; eauto.
-    eapply erase_global_cst_decl_wf_glob; auto.
-    eapply erase_global_deps_fresh; auto.
+    eapply erase_global_cst_wf_glob; auto.
+    eapply erase_global_fresh; auto.
     destruct wfΣ. destruct wfΣpop.
     rewrite (heq _ wf) in o0. depelim o0. now destruct o3.
-  + cbn. eapply IHdecls; eauto.
   + constructor. eapply IHdecls; eauto.
     destruct wfΣ as [[onu ond]].
     rewrite (heq _ wf) in o. depelim o. destruct o0.
-    eapply (erase_global_ind_decl_wf_glob (kn:=kn)); tea.
+    eapply (erase_global_ind_decl_wf_glob' (kn:=kn)); tea.
     intros. rewrite (abstract_env_irr _ H wfpop).
     unshelve epose proof (abstract_pop_decls_correct X decls _ _ _ wf wfpop) as [? ?].
-    {intros; now eexists. }
+    { intros; now eexists. }
     destruct Σpop, Σ; cbn in *. now subst.
-    eapply erase_global_deps_fresh.
+    eapply erase_global_fresh.
     destruct wfΣ as [[onu ond]].
     rewrite (heq _ wf) in o. depelim o. now destruct o0.
-  + eapply IHdecls; eauto.
 Qed.
-
 
 Lemma extends_cons d Σ Σ' : extends Σ Σ' -> extends (d :: Σ) (d :: Σ').
 Proof.
@@ -3269,9 +3616,9 @@ Proof.
   intros.
   move: (erase_global_deps_wf_glob X_type X (term_global_deps t') decls nin prf).
   subst eg eg'.
-  rewrite -!erase_global_deps.
+  rewrite !erase_global_deps_erase_global.
   assert (wfer : wf_glob (efl := all_env_flags) (@erase_global X_type X decls nin prf)).
-  { admit. }
+  { eapply erase_global_wf_glob. }
   rewrite !(filter_deps_filter (efl := all_env_flags)) //.
   cbn.
   intros wf.
@@ -3280,7 +3627,7 @@ Proof.
   rewrite /is_true !KernameSet.mem_spec. revert kn.
   eapply EWcbvEval.weakening_eval_env in H. 2:exact wfer.
   now eapply eval_global_deps in H.
-  rewrite -!erase_global_deps (filter_deps_filter (efl := all_env_flags)) //.
+  rewrite !erase_global_deps_erase_global (filter_deps_filter (efl := all_env_flags)) //.
   now eapply extends_filter.
 Qed.
 
@@ -4063,58 +4410,8 @@ Lemma erase_wellformed_fast (efl := all_env_flags)
 Proof using Type.
   intros.
   cbn. unfold erase_global_fast. erewrite erase_global_deps_fast_spec.
-  eapply erase_wellformed.
+  eapply erase_wellformed_deps.
   Unshelve. all: eauto.
 Qed.
 
 End EraseGlobalFast.
-
-#[local] Instance extends_trans : Transitive extends.
-Proof.
-  Admitted.
-
-Lemma extends_erase_pcuic_program {wfl : EWcbvEval.WcbvFlags} X_type X decls nin pf :
-  forall Σ et et',
-  EWcbvEval.eval Σ et' et ->
-  Σ = (@erase_global_deps X_type (term_global_deps et') X decls nin pf).1 ->
-  EGlobalEnv.extends
-    (@erase_global_deps X_type (term_global_deps et) X decls nin pf).1
-    (@erase_global_deps X_type (term_global_deps et') X decls nin pf).1.
-Proof.
-  intros Σ et et'.
-  induction 1; intros eqΣ.
-  - cbn. eapply lookup_erase_global. KernameSetDecide.fsetdec.
-  - cbn in *. etransitivity; tea.
-    transitivity ((erase_global_deps X_type (term_global_deps (ECSubst.csubst a 0 f0)) X decls nin pf).1).
-    admit. admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - cbn. etransitivity; tea.
-    intros kn decl'.
-    intros hl. epose proof (lookup_env_erase_decl X_type X). in hl.
-
-
-
-Lemma extends_erase_pcuic_program X_type X t t' Γ :
-  (forall Σ, Σ ∼ X -> PCUICWcbvEval.eval Σ t' t) ->
-  forall Xext norm decls nin pf wt wt',
-  let et := @erase X_type Xext norm Γ t wt in
-  let et' := @erase X_type Xext norm Γ t' wt' in
-  EGlobalEnv.extends
-  (@erase_global_deps X_type (term_global_deps et) X decls nin pf).1
-  (@erase_global_deps X_type (term_global_deps et') X decls nin pf).1.
-Proof.
-  intros ev Xext norm decls nin pf wt wt' et et'.
-  intros kn decl.
-  pose proof (abstract_env_exists X) as [[Σ H]].
-  specialize (ev _ H).
-  induction ev.
-
-Admitted.

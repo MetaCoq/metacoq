@@ -2,4 +2,5 @@
 
 theories/ETransform.v
 theories/Erasure.v
+theories/ErasureCorrectness.v
 theories/Extraction.v

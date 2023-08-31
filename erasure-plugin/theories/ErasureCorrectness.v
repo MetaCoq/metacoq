@@ -20,22 +20,20 @@ Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform)
 
 Import Transform.
 
-Obligation Tactic := program_simpl.
+#[local] Obligation Tactic := program_simpl.
 
 #[local] Existing Instance extraction_checker_flags.
 
 Import EWcbvEval.
 
 Lemma transform_compose_assoc
-  {program program' program'' program''' value value' value'' value''' : Type}
-  {eval : program -> value -> Prop} {eval' : program' -> value' -> Prop}
-  {eval'' : program'' -> value'' -> Prop}
-  {eval''' : program''' -> value''' -> Prop}
-  (o : t program program' value value' eval eval')
-  (o' : t program' program'' value' value'' eval' eval'')
-  (o'' : t program'' program''' value'' value''' eval'' eval''')
-  (prec : forall p : program', post o p -> pre o' p)
-  (prec' : forall p : program'', post o' p -> pre o'' p) :
+  {env env' env'' env''' term term' term'' term''' : Type}
+  {eval eval' eval'' eval'''}
+  (o : t env env' term term' eval eval')
+  (o' : t env' env'' term' term'' eval' eval'')
+  (o'' : t env'' env''' term'' term''' eval'' eval''')
+  (prec : forall p, post o p -> pre o' p)
+  (prec' : forall p, post o' p -> pre o'' p) :
   forall x p1,
     transform (compose o (compose o' o'' prec') prec) x p1 =
     transform (compose (compose o o' prec) o'' prec') x p1.
@@ -47,15 +45,13 @@ Proof.
 Qed.
 
 Lemma obseq_compose_assoc
-  {program program' program'' program''' value value' value'' value''' : Type}
-  {eval : program -> value -> Prop} {eval' : program' -> value' -> Prop}
-  {eval'' : program'' -> value'' -> Prop}
-  {eval''' : program''' -> value''' -> Prop}
-  (o : t program program' value value' eval eval')
-  (o' : t program' program'' value' value'' eval' eval'')
-  (o'' : t program'' program''' value'' value''' eval'' eval''')
-  (prec : forall p : program', post o p -> pre o' p)
-  (prec' : forall p : program'', post o' p -> pre o'' p) :
+  {env env' env'' env''' term term' term'' term''' : Type}
+  {eval eval' eval'' eval'''}
+  (o : t env env' term term' eval eval')
+  (o' : t env' env'' term' term'' eval' eval'')
+  (o'' : t env'' env''' term'' term''' eval'' eval''')
+  (prec : forall p, post o p -> pre o' p)
+  (prec' : forall p, post o' p -> pre o'' p) :
   forall x p1 p2 v1 v2, obseq (compose o (compose o' o'' prec') prec) x p1 p2 v1 v2 <->
       obseq (compose (compose o o' prec) o'' prec') x p1 p2 v1 v2.
 Proof.
@@ -326,14 +322,126 @@ Proof.
   red. intros. split; reflexivity.
 Qed.
 
-Section pipeline_theorem.
+Lemma expand_lets_fo (Σ : global_env_ext_map) t :
+  PCUICFirstorder.firstorder_value Σ [] t ->
+  let p := (Σ, t) in
+  PCUICExpandLets.expand_lets_program p =
+  (build_global_env_map (PCUICAst.PCUICEnvironment.fst_ctx (PCUICExpandLets.trans_global p.1)), p.1.2, t).
+Proof.
+  intros p.
+  cbn. unfold PCUICExpandLets.expand_lets_program. f_equal. cbn.
+  move: p. apply: (PCUICFirstorder.firstorder_value_inds _ _ (fun t => PCUICExpandLets.trans t = t)).
+  intros i n ui u args pandi ht hf ih isp.
+  rewrite PCUICExpandLetsCorrectness.trans_mkApps /=. f_equal.
+  now eapply forall_map_id_spec.
+Qed.
 
-  Fixpoint compile_value_box (t : PCUICAst.term) (acc : list EAst.term) : EAst.term :=
-    match t with
-    | PCUICAst.tApp f a => compile_value_box f (acc ++ [compile_value_box a []])
-    | PCUICAst.tConstruct i n _ => EAst.tConstruct i n acc
-    | _ => EAst.tVar "error"
-    end.
+Fixpoint compile_value_box (t : PCUICAst.term) (acc : list EAst.term) : EAst.term :=
+  match t with
+  | PCUICAst.tApp f a => compile_value_box f (acc ++ [compile_value_box a []])
+  | PCUICAst.tConstruct i n _ => EAst.tConstruct i n acc
+  | _ => EAst.tVar "error"
+  end.
+
+From Equations Require Import Equations.
+
+Lemma erase_transform_fo_gen (p : pcuic_program) pr :
+  PCUICFirstorder.firstorder_value p.1 [] p.2 ->
+  forall ep, transform erase_transform p pr = ep -> ep.2 = compile_value_erase p.2 [].
+Proof.
+  destruct p as [Σ t]. cbn.
+  intros hev ep <-. move: hev pr.
+  unfold erase_program, erase_pcuic_program; cbn -[erase PCUICWfEnv.abstract_make_wf_env_ext].
+  intros fo pr.
+  set (prf0 := fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _).
+  set (prf1 := fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _).
+  clearbody prf0 prf1.
+  destruct pr as [].
+  destruct s as [[]].
+  epose proof (erases_erase (X_type := optimized_abstract_env_impl) prf1 _ eq_refl).
+  eapply erases_firstorder' in H; eauto.
+Qed.
+
+Lemma erase_transform_fo (p : pcuic_program) pr :
+  PCUICFirstorder.firstorder_value p.1 [] p.2 ->
+  transform erase_transform p pr = ((transform erase_transform p pr).1, compile_value_erase p.2 []).
+Proof.
+  intros fo.
+  set (tr := transform _ _ _).
+  change tr with (tr.1, tr.2). f_equal.
+  eapply erase_transform_fo_gen; tea. reflexivity.
+Qed.
+
+Inductive firstorder_evalue : EAst.term -> Prop :=
+  | is_fo i n args : Forall firstorder_evalue args -> firstorder_evalue (EAst.tConstruct i n args).
+
+Lemma compile_fo_value Σ t :
+  PCUICFirstorder.firstorder_value Σ [] t ->
+  firstorder_evalue (compile_value_erase t []).
+Proof. Admitted.
+
+Fixpoint compile_evalue_box (t : EAst.term) (acc : list EAst.term) :=
+  match t with
+  | EAst.tApp f a => compile_evalue_box f (compile_evalue_box a [] :: acc)
+  | EAst.tConstruct i n _ => EAst.tConstruct i n acc
+  | _ => EAst.tVar "error"
+  end.
+
+Import MetaCoq.Common.Transform.
+
+Module ETransformPresFO.
+  Section Opt.
+    Context {env env' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context (o : Transform.t _ _ _ _ eval eval').
+    Context (compile_fo_value : EAst.term -> EAst.term).
+
+    Class t :=
+      { preserves_fo : forall v, firstorder_evalue v -> firstorder_evalue (compile_fo_value v);
+        transform_fo : forall v (pr : o.(pre) v),
+          firstorder_evalue v.2 -> (o.(transform) v pr).2 = compile_fo_value v.2 }.
+  End Opt.
+
+  Section Comp.
+    Context {env env' env'' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context {eval'' : program env'' EAst.term -> EAst.term -> Prop}.
+    Context (compile_fo_value compile_fo_value' : EAst.term -> EAst.term).
+
+    Local Obligation Tactic := idtac.
+    #[global]
+    Instance compose (o : Transform.t _ _ _ _ eval eval')
+      (o' : Transform.t _ _ _ _ eval' eval'')
+      (oext : t o compile_fo_value)
+      (o'ext : t o' compile_fo_value')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p))
+      : t (Transform.compose o o' hpp) (compile_fo_value' ∘ compile_fo_value).
+    Proof.
+      split.
+      - intros. eapply preserves_fo; tea. eapply preserves_fo; tea.
+      - intros. cbn. unfold run, time.
+        rewrite o'ext.(transform_fo _ _).
+        rewrite oext.(transform_fo _ _) //.
+        eapply preserves_fo; tea.
+        rewrite oext.(transform_fo _ _) //.
+    Qed.
+  End Comp.
+
+End ETransformPresFO.
+
+Axiom lambdabox_pres_fo : ETransformPresFO.t verified_lambdabox_pipeline (flip compile_evalue_box []).
+
+Lemma transform_lambda_box_firstorder (Σer : EEnvMap.GlobalContextMap.t) v pre :
+  firstorder_evalue v ->
+  (transform verified_lambdabox_pipeline (Σer, v) pre).2 = (compile_evalue_box v []).
+Proof.
+  intros fo.
+  now rewrite (ETransformPresFO.transform_fo _ _ (t:=lambdabox_pres_fo)).
+Qed.
+
+Section pipeline_theorem.
 
   Instance cf : checker_flags := extraction_checker_flags.
   Instance nf : PCUICSN.normalizing_flags := PCUICSN.extraction_normalizing.
@@ -369,12 +477,12 @@ Section pipeline_theorem.
 
   Lemma precond2 : pre verified_erasure_pipeline (Σ, v).
   Proof.
-    cbn.  repeat eapply conj; sq; cbn; eauto.
+    cbn. destruct Heval. repeat eapply conj; sq; cbn; eauto.
     - red. cbn. split; eauto.
       eexists.
       eapply PCUICClassification.subject_reduction_eval; eauto.
     - todo "preservation of eta expandedness".
-    - todo "normalization".
+    - cbn. todo "normalization".
     - todo "normalization".
   Qed.
 
@@ -384,7 +492,7 @@ Section pipeline_theorem.
 
   Lemma fo_v : PCUICFirstorder.firstorder_value Σ [] v.
   Proof.
-    sq.
+    destruct Heval. sq.
     eapply PCUICFirstorder.firstorder_value_spec; eauto.
     - eapply PCUICClassification.subject_reduction_eval; eauto.
     - eapply PCUICWcbvEval.eval_to_value; eauto.
@@ -394,11 +502,24 @@ Section pipeline_theorem.
   Lemma v_t_spec : v_t = (transform verified_erasure_pipeline (Σ, v) precond2).2.
   Proof.
     unfold v_t. generalize fo_v, precond2. clear.
-    induction 1.
-    intros. unfold verified_erasure_pipeline.
-    repeat destruct_compose. intros.
-    cbn [transform erase_transform].
+    intros hv pre.
+    unfold verified_erasure_pipeline.
+    rewrite -transform_compose_assoc.
+    destruct_compose.
     cbn [transform pcuic_expand_lets_transform].
+    rewrite (expand_lets_fo _ _ hv).
+    cbn [fst snd].
+    intros h.
+    destruct_compose.
+    rewrite erase_transform_fo. cbn. admit.
+    set (Σer := (transform erase_transform _ _).1).
+    cbn [fst snd]. intros pre'.
+    symmetry.
+    erewrite transform_lambda_box_firstorder; tea.
+    eapply obseq_lambdabox. intros kn decl H; exact H.
+    Unshelve. 2:exact pre'. 2:exact (Σer, compile_value_erase v []).
+    cbn [snd].
+    red. cbn.
   Admitted.
 
   Import PCUICWfEnv.

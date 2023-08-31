@@ -13,7 +13,7 @@ Local Open Scope string_scope2.
 
 Import Transform.
 
-Obligation Tactic := program_simpl.
+Local Obligation Tactic := program_simpl.
 
 Import EGlobalEnv EWellformed.
 
@@ -53,13 +53,14 @@ Qed.
 
 Module TransformExt.
   Section Opt.
-     Context {program program' : Type}.
-     Context {value value' : Type}.
-     Context {eval :  program -> value -> Prop}.
-     Context {eval' : program' -> value' -> Prop}.
-     Context (o : Transform.t program program' value value' eval eval').
-     Context (extends : program -> program -> Prop).
-     Context (extends' : program' -> program' -> Prop).
+    Context {env env' env'' : Type}.
+    Context {term term' term'' : Type}.
+    Context {eval : program env term -> term -> Prop}.
+    Context {eval' : program env' term' -> term' -> Prop}.
+    Context {eval'' : program env'' term'' -> term'' -> Prop}.
+    Context (o : Transform.t env env' term term' eval eval').
+    Context (extends : program env term -> program env term -> Prop).
+    Context (extends' : program env' term' -> program env' term' -> Prop).
 
     Class t := preserves_obs : forall p p' (pr : o.(pre) p) (pr' : o.(pre) p'),
         extends p p' -> extends' (o.(transform) p pr) (o.(transform) p' pr').
@@ -67,20 +68,19 @@ Module TransformExt.
   End Opt.
 
   Section Comp.
-    Context {program program' program'' : Type}.
-    Context {value value' value'' : Type}.
-    Context {eval : program -> value -> Prop}.
-    Context {eval' : program' -> value' -> Prop}.
-    Context {eval'' : program'' -> value'' -> Prop}.
-
-    Context {extends : program -> program -> Prop}.
-    Context {extends' : program' -> program' -> Prop}.
-    Context {extends'' : program'' -> program'' -> Prop}.
+    Context {env env' env'' : Type}.
+    Context {term term' term'' : Type}.
+    Context {eval : program env term -> term -> Prop}.
+    Context {eval' : program env' term' -> term' -> Prop}.
+    Context {eval'' : program env'' term'' -> term'' -> Prop}.
+    Context {extends : program env term -> program env term -> Prop}.
+    Context {extends' : program env' term' -> program env' term' -> Prop}.
+    Context {extends'' : program env'' term'' -> program env'' term'' -> Prop}.
 
     Local Obligation Tactic := idtac.
     #[global]
-    Instance compose (o : Transform.t program program' value value' eval eval')
-      (o' : Transform.t program' program'' value' value'' eval' eval'')
+    Instance compose (o : Transform.t env env' term term' eval eval')
+      (o' : Transform.t env' env'' term' term'' eval' eval'')
       (oext : t o extends extends')
       (o'ext : t o' extends' extends'')
       (hpp : (forall p, o.(post) p -> o'.(pre) p))

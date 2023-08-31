@@ -4051,6 +4051,8 @@ Qed.
 (* This version of global environment erasure keeps the same global environment throughout the whole
    erasure, while folding over the list of declarations. *)
 
+Local Obligation Tactic := program_simpl.
+
 Program Fixpoint erase_global_deps_fast (deps : KernameSet.t)
   X_type (X:X_type.π1) (decls : global_declarations)
   {normalization_in : NormalizationIn_erase_global_deps_fast X decls}
@@ -4515,3 +4517,82 @@ Proof using Type.
 Qed.
 
 End EraseGlobalFast.
+
+Fixpoint compile_value_erase (t : PCUICAst.term) (acc : list EAst.term) : EAst.term :=
+  match t with
+  | PCUICAst.tApp f a => compile_value_erase f (compile_value_erase a [] :: acc)
+  | PCUICAst.tConstruct i n _ => EAst.mkApps (EAst.tConstruct i n []) acc
+  | _ => EAst.tVar "error"
+  end.
+
+Lemma compile_value_erase_mkApps i n ui args acc :
+  compile_value_erase (mkApps (tConstruct i n ui) args) acc =
+  EAst.mkApps (EAst.tConstruct i n []) (map (flip compile_value_erase []) args ++ acc).
+Proof.
+  revert acc; induction args using rev_ind.
+  - cbn. auto.
+  - intros acc. rewrite PCUICAstUtils.mkApps_app /=. cbn.
+    now rewrite IHargs map_app /= -app_assoc /=.
+Qed.
+
+Lemma erases_firstorder Σ Γ t :
+  PCUICFirstorder.firstorder_value Σ Γ t ->
+  erases Σ Γ t (compile_value_erase t []).
+Proof.
+  move: t.
+  apply: (PCUICFirstorder.firstorder_value_inds Σ Γ).
+  intros i n ui u args pandi hty hfo ih isp.
+  assert (Forall2 (erases Σ Γ) args (map (flip compile_value_erase []) args)).
+  { solve_all. eapply All_All2; tea.
+    cbn. intros x [fo hx]. exact hx. }
+  unshelve epose proof (erases_mkApps Σ Γ (tConstruct i n ui) (EAst.tConstruct i n []) args _ _ H).
+  constructor.
+  { move: isp. rewrite /isPropositional /Extract.isPropositional /PCUICAst.lookup_inductive /= /lookup_inductive_gen /lookup_minductive_gen.
+    destruct PCUICEnvironment.lookup_env => //.
+    destruct g => //. destruct nth_error => //. }
+  now rewrite compile_value_erase_mkApps app_nil_r.
+Qed.
+
+Lemma erases_firstorder' Σ Γ t :
+  wf_ext Σ ->
+  PCUICFirstorder.firstorder_value Σ Γ t ->
+  forall t', erases Σ Γ t t' -> t' = (compile_value_erase t []).
+Proof.
+  intros wf. move: t.
+  apply: (PCUICFirstorder.firstorder_value_inds Σ Γ).
+  intros i n ui u args pandi hty hfo ih isp.
+  assert (Forall2 (erases Σ Γ) args (map (flip compile_value_erase []) args)).
+  { solve_all. eapply All_All2; tea.
+    cbn. intros x [fo hx]. now eapply erases_firstorder. }
+  unshelve epose proof (erases_mkApps Σ Γ (tConstruct i n ui) (EAst.tConstruct i n []) args _ _ H).
+  constructor.
+  { move: isp. rewrite /isPropositional /Extract.isPropositional /PCUICAst.lookup_inductive /= /lookup_inductive_gen /lookup_minductive_gen.
+    destruct PCUICEnvironment.lookup_env => //.
+    destruct g => //. destruct nth_error => //. }
+  rewrite compile_value_erase_mkApps app_nil_r.
+  intros t' ht'.
+  eapply erases_mkApps_inv in ht'.
+  destruct ht'.
+  { destruct H1 as [? [? [? [? [[] ?]]]]].
+    eapply isErasable_Propositional in X => //.
+    clear -isp X. elimtype False.
+    move: isp X.
+    rewrite /isPropositional /Extract.isPropositional /PCUICAst.lookup_inductive /= /lookup_inductive_gen /lookup_minductive_gen.
+    destruct PCUICEnvironment.lookup_env => //.
+    destruct g => //. destruct nth_error => //.
+    rewrite /isPropositionalArity. destruct destArity => //.
+    destruct p. intros ->. auto. }
+  destruct H1 as [f' [L' [-> [erc erargs]]]].
+  depelim erc. f_equal.
+  solve_all. clear -erargs.
+  induction erargs => //. rewrite IHerargs. cbn. f_equal.
+  destruct r as [[] ?]. eapply e in e0. now unfold flip.
+  eapply (isErasable_Propositional (args := [])) in X => //.
+  clear -isp X. elimtype False.
+  move: isp X.
+  rewrite /isPropositional /Extract.isPropositional /PCUICAst.lookup_inductive /= /lookup_inductive_gen /lookup_minductive_gen.
+  destruct PCUICEnvironment.lookup_env => //.
+  destruct g => //. destruct nth_error => //.
+  rewrite /isPropositionalArity. destruct destArity => //.
+  destruct p. intros ->. auto.
+Qed.

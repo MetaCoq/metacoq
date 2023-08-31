@@ -34,7 +34,7 @@ Local Obligation Tactic := idtac.
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition template_to_pcuic_transform {cf : checker_flags} K :
-  Transform.t template_program pcuic_program Ast.term term
+  Transform.t Ast.Env.global_env global_env_ext_map Ast.term term
   eval_template_program eval_pcuic_program :=
  {| name := "template to pcuic";
     pre p := ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K (trans_global (Ast.Env.empty_ext p.1)) ;
@@ -66,7 +66,7 @@ From MetaCoq.PCUIC Require Import PCUICExpandLets PCUICExpandLetsCorrectness.
 *)
 
 Program Definition pcuic_expand_lets_transform {cf : checker_flags} K :
-  self_transform pcuic_program term eval_pcuic_program eval_pcuic_program :=
+  self_transform global_env_ext_map term eval_pcuic_program eval_pcuic_program :=
  {| name := "let expansion in branches/constructors";
     pre p := ∥ wt_pcuic_program p ∥ /\ PCUICEtaExpand.expanded_pcuic_program p /\ K (build_global_env_map (trans_global_env p.1.1), p.1.2) ;
     transform p hp := expand_lets_program p;

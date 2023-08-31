@@ -23,12 +23,12 @@ Local Open Scope string_scope2.
 
 Import Transform.
 
-Local Obligation Tactic := program_simpl.
-
 #[local] Existing Instance extraction_checker_flags.
 #[local] Existing Instance PCUICSN.extraction_normalizing.
 
 Import EWcbvEval.
+
+Local Obligation Tactic := program_simpl.
 
 Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
@@ -42,7 +42,7 @@ Axiom assume_preservation_template_program_env_expansion :
 
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
-Program Definition eta_expand K : Transform.t template_program_env template_program Ast.term Ast.term
+Program Definition eta_expand K : Transform.t _ _ Ast.term Ast.term
   eval_template_program_env eval_template_program :=
   {| name := "eta expand cstrs and fixpoints";
       pre := fun p => ∥ wt_template_program_env p ∥ /\ K (eta_expand_global_env p.1) ;
@@ -50,7 +50,7 @@ Program Definition eta_expand K : Transform.t template_program_env template_prog
       post := fun p => ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K p.1;
       obseq p hp p' v v' := v' = EtaExpand.eta_expand p.1 [] v |}.
 Next Obligation.
-  let p := match goal with H : template_program_env |- _ => H end in
+  let p := match goal with H : program _ _ |- _ => H end in
   destruct p. split; [|split]; auto; now apply assume_welltyped_template_program_expansion.
 Qed.
 Next Obligation.
@@ -59,7 +59,7 @@ Next Obligation.
 Qed.
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t EProgram.eprogram_env EProgram.eprogram EAst.term EAst.term
+ Transform.t _ _ EAst.term EAst.term
    (EProgram.eval_eprogram_env {| with_prop_case := true; with_guarded_fix := true; with_constructor_as_block := false |})
    (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   (* Simulation of the guarded fixpoint rules with a single unguarded one:
@@ -98,7 +98,7 @@ Qed.
 
 
 Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t pcuic_program EProgram.eprogram
+ Transform.t _ _
   PCUICAst.term EAst.term
   PCUICTransform.eval_pcuic_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
@@ -117,12 +117,11 @@ Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl 
 Import EGlobalEnv EWellformed.
 
 Definition transform_compose
-  {program program' program'' value value' value'' : Type}
-  {eval : program -> value -> Prop} {eval' : program' -> value' -> Prop}
-  {eval'' : program'' -> value'' -> Prop}
-  (o : t program program' value value' eval eval')
-  (o' : t program' program'' value' value'' eval' eval'')
-  (pre : forall p : program', post o p -> pre o' p) :
+  {env env' env'' term term' term'' : Type}
+  {eval eval' eval''}
+  (o : t env env' term term' eval eval')
+  (o' : t env' env'' term' term'' eval' eval'')
+  (pre : forall p, post o p -> pre o' p) :
   forall x p1, exists p3,
     transform (compose o o' pre) x p1 = transform o' (transform o x p1) p3.
 Proof.
@@ -138,7 +137,7 @@ Proof.
 Qed.
 
 Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t TemplateProgram.template_program pcuic_program
+ Transform.t _ _
   Ast.term PCUICAst.term
   TemplateProgram.eval_template_program
    PCUICTransform.eval_pcuic_program :=
@@ -159,7 +158,7 @@ Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EW
   template_to_pcuic_transform (K _ T2).
 
 Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t TemplateProgram.template_program EProgram.eprogram
+ Transform.t _ _
   Ast.term EAst.term
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=

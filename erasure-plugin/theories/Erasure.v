@@ -23,7 +23,7 @@ Local Open Scope string_scope2.
 
 Import Transform.
 
-Obligation Tactic := program_simpl.
+Local Obligation Tactic := program_simpl.
 
 #[local] Existing Instance extraction_checker_flags.
 #[local] Existing Instance PCUICSN.extraction_normalizing.

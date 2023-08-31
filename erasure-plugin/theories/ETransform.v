@@ -24,11 +24,11 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
 
 
 Notation NormalizationIn_erase_pcuic_program_1 p
-  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICSN.NormalizationIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
+  := (@PCUICTyping.wf_ext config.extraction_checker_flags p -> PCUICSN.NormalizationIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p)
        (only parsing).
 
 Notation NormalizationIn_erase_pcuic_program_2 p
-  := (@PCUICTyping.wf_ext config.extraction_checker_flags p.1 -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p.1)
+  := (@PCUICTyping.wf_ext config.extraction_checker_flags p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p)
        (only parsing).
 
 (* TODO: Where should this go? *)
@@ -70,11 +70,11 @@ Qed.
 
 #[local] Lemma erase_pcuic_program_normalization_helper
   (cf := config.extraction_checker_flags) (no := PCUICSN.extraction_normalizing)
-  {guard : abstract_guard_impl} (p : pcuic_program)
+  {guard : abstract_guard_impl} (p : global_env_ext_map)
   {normalization_in : NormalizationIn_erase_pcuic_program_1 p}
   {normalization_in_adjust_universes : NormalizationIn_erase_pcuic_program_2 p}
-  (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
-  : (let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)) in
+  (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p ∥)
+  : (let wfe := build_wf_env_from_env p.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p ∥)) in
      forall n : nat,
        n < #|PCUICAst.PCUICEnvironment.declarations p.1|
       -> forall kn cb pf,
@@ -87,7 +87,7 @@ Qed.
             (@optimized_abstract_env_impl extraction_checker_flags _) wfe
             (PCUICAst.PCUICEnvironment.cst_universes cb) pf -> PCUICSN.NormalizationIn Σ)
     /\
-      (let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)) in
+      (let wfe := build_wf_env_from_env p.1 (map_squash (PCUICTyping.wf_ext_wf _) (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p ∥)) in
        forall n : nat,
          n < #|PCUICAst.PCUICEnvironment.declarations p.1|
         -> let X' :=
@@ -138,8 +138,8 @@ Proof.
 Qed.
 
 Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_program)
-  {normalization_in : NormalizationIn_erase_pcuic_program_1 p}
-  {normalization_in_adjust_universes : NormalizationIn_erase_pcuic_program_2 p}
+  {normalization_in : NormalizationIn_erase_pcuic_program_1 p.1}
+  {normalization_in_adjust_universes : NormalizationIn_erase_pcuic_program_2 p.1}
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
@@ -150,14 +150,14 @@ Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
     (EEnvMap.GlobalContextMap.make Σ'.1 _, t).
 
-Next Obligation. unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto. Qed.
+Next Obligation. unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto. Defined.
 Next Obligation.
   eapply wf_glob_fresh.
   eapply ErasureFunction.erase_global_fast_wf_glob.
   unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
-Qed.
+Defined.
 
-Obligation Tactic := idtac.
+Local Obligation Tactic := idtac.
 
 Import Extract.
 
@@ -191,7 +191,7 @@ Proof.
   - eapply EEtaExpanded.isEtaExpFix_isEtaExp. now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
 
-Obligation Tactic := try solve [ eauto ].
+Local Obligation Tactic := try solve [ eauto ].
 
 Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
@@ -199,8 +199,8 @@ Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t p
     pre p :=
      ∥ wt_pcuic_program (cf := config.extraction_checker_flags) p ∥
      /\ PCUICEtaExpand.expanded_pcuic_program p
-     /\ NormalizationIn_erase_pcuic_program_1 p
-     /\ NormalizationIn_erase_pcuic_program_2 p ;
+     /\ NormalizationIn_erase_pcuic_program_1 p.1
+     /\ NormalizationIn_erase_pcuic_program_2 p.1 ;
    transform p hp := let nhs := proj2 (proj2 hp) in
                      @erase_program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
     post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
@@ -316,7 +316,7 @@ Qed.
 
 End PCUICEnv.
 
-Obligation Tactic := idtac.
+#[local] Obligation Tactic := idtac.
 
 (** This transformation is the identity on terms but changes the evaluation relation to one
     where fixpoints are not guarded. It requires eta-expanded fixpoints and evaluation

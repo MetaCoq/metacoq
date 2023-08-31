@@ -262,22 +262,69 @@ Proof.
   now eapply rebuild_wf_env_irr.
 Qed.
 
-Lemma extends_erase_pcuic_program {guard : abstract_guard_impl} (Σ : global_env_ext_map) t t' nin nin' nin0 nin0' wf wf' ty ty' :
-  PCUICWcbvEval.eval Σ t' t ->
-  EGlobalEnv.extends
-    (@erase_pcuic_program guard (Σ, t) nin nin' wf ty).1
-    (@erase_pcuic_program guard (Σ, t') nin0 nin0' wf' ty').1.
+From MetaCoq.Erasure Require Import Erasure Extract ErasureFunction.
+From MetaCoq.PCUIC Require Import PCUICTyping.
+
+Lemma extends_erase_pcuic_program (efl := EWcbvEval.default_wcbv_flags) {guard : abstract_guard_impl} (Σ : global_env_ext_map) t v nin nin' nin0 nin0'
+  wf wf' ty ty' i u args :
+  PCUICWcbvEval.eval Σ t v ->
+  axiom_free Σ ->
+  Σ ;;; [] |- t : PCUICAst.mkApps (PCUICAst.tInd i u) args ->
+  @PCUICFirstorder.firstorder_ind Σ (PCUICFirstorder.firstorder_env Σ) i ->
+  let pt := @erase_pcuic_program guard (Σ, t) nin0 nin0' wf' ty' in
+  let pv := @erase_pcuic_program guard (Σ, v) nin nin' wf ty in
+  EGlobalEnv.extends pv.1 pt.1 /\ ∥ eval pt.1 pt.2 pv.2 ∥.
 Proof.
-  intros ev.
-  cbn.
+  intros ev axf ht fo.
+  cbn -[erase_pcuic_program].
+  unfold erase_pcuic_program.
+  set (prf0 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env) => _)).
+  set (prf1 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env) => _)).
+  set (prf2 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env) => _)).
+  set (prf3 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _)).
+  set (prf4 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _)).
+  set (prf5 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _)).
+  set (prf6 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env_ext) => _)).
+  set (env' := build_wf_env_from_env _ _).
+  set (env := build_wf_env_from_env _ _).
+  set (X := PCUICWfEnv.abstract_make_wf_env_ext _ _ _).
+  set (X' := PCUICWfEnv.abstract_make_wf_env_ext _ _ _).
   unfold ErasureFunction.erase_global_fast.
+  set (prf7 := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env) => _)).
   set (et := ErasureFunction.erase _ _ _ _ _).
   set (et' := ErasureFunction.erase _ _ _ _ _).
-  erewrite ErasureFunction.erase_global_deps_fast_spec.
-  erewrite ErasureFunction.erase_global_deps_fast_spec.
-  epose proof ErasureFunction.erase_global_decls_irr.
-  intros kn decl.
-Admitted.
+  destruct Σ as [Σ ext].
+  cbn -[et et' PCUICWfEnv.abstract_make_wf_env_ext] in *.
+  unshelve (epose proof ErasureFunction.erase_global_deps_fast_erase_global_deps as [norm eq];
+    erewrite eq).
+  { cbn. now intros ? ->. }
+  unshelve (epose proof ErasureFunction.erase_global_deps_fast_erase_global_deps as [norm' eq'];
+  erewrite eq').
+  { cbn. now intros ? ->. }
+  set (prf := (fun (Σ0 : PCUICAst.PCUICEnvironment.global_env) => _)). cbn in prf.
+  rewrite (ErasureFunction.erase_global_deps_irr optimized_abstract_env_impl (EAstUtils.term_global_deps et) env' env _ prf prf).
+  { cbn. now intros ? ? -> ->. }
+  clearbody prf0 prf1 prf2 prf3 prf4 prf5 prf6 prf7.
+  epose proof (ErasureFunction.erase_correct_strong optimized_abstract_env_impl (v:=v) env ext prf2
+    (PCUICAst.PCUICEnvironment.declarations Σ) norm' prf prf6 X eq_refl axf ht fo).
+  pose proof wf as [].
+  forward H by (eapply Kernames.KernameSet.subset_spec; reflexivity).
+  forward H by unshelve (eapply PCUICClassification.wcbveval_red; tea).
+  forward H. {
+    intros [? hr].
+    eapply PCUICNormalization.firstorder_value_irred; tea. cbn.
+    eapply PCUICFirstorder.firstorder_value_spec; tea. apply X0. constructor.
+    eapply PCUICClassification.subject_reduction_eval; tea.
+    eapply PCUICWcbvEval.eval_to_value; tea. }
+  destruct H as [wt' []].
+  split => //.
+  eapply (ErasureFunction.erase_global_deps_eval optimized_abstract_env_impl env env' ext).
+  unshelve erewrite (ErasureFunction.erase_irrel_global_env (X_type:=optimized_abstract_env_impl) (t:=v)); tea.
+  red. intros. split; reflexivity.
+  sq. unfold et', et.
+  unshelve erewrite (ErasureFunction.erase_irrel_global_env (X_type:=optimized_abstract_env_impl) (t:=v)); tea.
+  red. intros. split; reflexivity.
+Qed.
 
 Section pipeline_theorem.
 

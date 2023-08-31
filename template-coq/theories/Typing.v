@@ -1410,10 +1410,11 @@ Proof.
                 typing_size Hty <
                 S
                   ((typing_spine_size
-                      (fun x (x0 : context) (x1 x2 : term) (x3 : x;;; x0 |- x1 : x2) =>
-                         typing_size x3) Σ Γ t_ty l t' t0)) ->
+                      (@typing_size cf) Σ Γ t_ty l t' t0)) ->
                 on_global_env cumul_gen (lift_typing P) Σ.1 * P Σ Γ0 t1 T). {
-       intros. unshelve eapply X14; eauto. lia. }
+       intros. unshelve eapply X14; eauto.
+       change (fun x x0 x1 x2 x3 => typing_size x3) with (@typing_size cf). (* Needed with old versions of "simpl" in "simpl in X14" *) 
+       lia. }
        clear X14. simpl in pΓ. clear n e H pΓ.
        induction t0; constructor.
        unshelve eapply X; clear X; simpl; auto with arith.

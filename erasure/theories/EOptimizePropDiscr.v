@@ -491,6 +491,16 @@ Proof.
   destruct lookup_env as [[decl|]|] => //.
 Qed.
 
+Lemma lookup_inductive_pars_optimize {efl : EEnvFlags} {Σ : GlobalContextMap.t} ind :
+  wf_glob Σ ->
+  EGlobalEnv.lookup_inductive_pars Σ ind = EGlobalEnv.lookup_inductive_pars (remove_match_on_box_env Σ) ind.
+Proof.
+  rewrite /lookup_inductive_pars => wf.
+  rewrite /lookup_inductive /lookup_minductive.
+  rewrite (lookup_env_remove_match_on_box ind wf).
+  rewrite /GlobalContextMap.lookup_inductive /GlobalContextMap.lookup_minductive.
+  destruct lookup_env as [[decl|]|] => //.
+Qed.
 
 Lemma closed_iota_red pars c args brs br :
   forallb (closedn 0) args ->

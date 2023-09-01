@@ -336,10 +336,15 @@ Proof.
   now eapply forall_map_id_spec.
 Qed.
 
-Fixpoint compile_value_box (t : PCUICAst.term) (acc : list EAst.term) : EAst.term :=
+Fixpoint compile_value_box Σ (t : PCUICAst.term) (acc : list EAst.term) : EAst.term :=
   match t with
-  | PCUICAst.tApp f a => compile_value_box f (acc ++ [compile_value_box a []])
-  | PCUICAst.tConstruct i n _ => EAst.tConstruct i n acc
+  | PCUICAst.tApp f a => compile_value_box Σ f (compile_value_box Σ a [] :: acc)
+  | PCUICAst.tConstruct i n _ =>
+    match PCUICAst.PCUICEnvironment.lookup_env Σ (Kernames.inductive_mind i) with
+    | Some (PCUICAst.PCUICEnvironment.InductiveDecl mdecl) =>
+      EAst.tConstruct i n (skipn mdecl.(PCUICAst.PCUICEnvironment.ind_npars) acc)
+    | _ => EAst.tVar "error"
+    end
   | _ => EAst.tVar "error"
   end.
 
@@ -372,13 +377,95 @@ Proof.
   eapply erase_transform_fo_gen; tea. reflexivity.
 Qed.
 
-Inductive firstorder_evalue : EAst.term -> Prop :=
-  | is_fo i n args : Forall firstorder_evalue args -> firstorder_evalue (EAst.tConstruct i n args).
+Inductive firstorder_evalue Σ : EAst.term -> Prop :=
+  | is_fo i n args npars :
+  EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars ->
+  Forall (firstorder_evalue Σ) (skipn npars args) ->
+  firstorder_evalue Σ (EAst.mkApps (EAst.tConstruct i n []) args).
 
-Lemma compile_fo_value Σ t :
+Lemma list_size_skipn {A} (l : list A) size n :
+  list_size size (skipn n l) <= list_size size l.
+Proof.
+  induction n in l |- *.
+  - rewrite skipn_0 //.
+  - destruct l. rewrite skipn_nil. now cbn.
+    rewrite skipn_S. cbn. specialize (IHn l); lia.
+Qed.
+
+Section elim.
+  Context (Σ : E.global_context).
+  Context (P : EAst.term -> Prop).
+  Context (ih : (forall i n args npars,
+    EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars ->
+    Forall (firstorder_evalue Σ) (skipn npars args) ->
+    Forall P (skipn npars args) ->
+    P (EAst.mkApps (EAst.tConstruct i n []) args))).
+
+  Equations? firstorder_evalue_elim (t : EAst.term) (fo : firstorder_evalue Σ t) : P t by wf t (MR lt EInduction.size) :=
+  { | _, is_fo i n args npars hl hf => _ }.
+  Proof.
+    eapply ih; tea.
+    eapply In_Forall. intros x hin.
+    eapply PCUICWfUniverses.Forall_In in hf; tea.
+    apply firstorder_evalue_elim => //. red.
+    rewrite EInduction.size_mkApps.
+    eapply (In_size id EInduction.size) in hin.
+    unfold id in *. pose proof (list_size_skipn args EInduction.size npars).
+    change (fun x => EInduction.size x) with EInduction.size in hin. clear -hin H.
+    eapply Nat.lt_le_trans; tea. cbn. lia.
+  Qed.
+End elim.
+
+(*Lemma firstorder_evalue_elim Σ {P : EAst.term -> Prop} :
+  (forall i n args npars,
+    EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars ->
+    Forall (firstorder_evalue Σ) (skipn npars args) ->
+    Forall P (skipn npars args) ->
+    P (EAst.mkApps (EAst.tConstruct i n []) args)) ->
+  forall t, firstorder_evalue Σ t -> P t.
+Proof.
+  intros Hf.
+  induction t using term_size
+  fix aux 2.
+  intros t fo; destruct fo.x
+  eapply Hf => //; tea.
+  clear H.
+  move: H0.
+  move: args H0.
+  fix aux' 2.
+  intros args []; constructor.
+  now apply aux. now apply aux'.
+Qed.*)
+
+Inductive firstorder_evalue_block : EAst.term -> Prop :=
+  | is_fo_block i n args :
+    Forall (firstorder_evalue_block) args ->
+    firstorder_evalue_block (EAst.tConstruct i n args).
+
+Lemma firstorder_evalue_block_elim {P : EAst.term -> Prop} :
+  (forall i n args,
+    Forall firstorder_evalue_block args ->
+    Forall P args ->
+    P (EAst.tConstruct i n args)) ->
+  forall t, firstorder_evalue_block t -> P t.
+Proof.
+  intros Hf.
+  fix aux 2.
+  intros t fo; destruct fo.
+  eapply Hf => //.
+  move: args H.
+  fix aux' 2.
+  intros args []; constructor.
+  now apply aux. now apply aux'.
+Qed.
+
+(* Import PCUICAst.
+
+Lemma compile_fo_value (Σ : global_env_ext) Σ' t :
   PCUICFirstorder.firstorder_value Σ [] t ->
-  firstorder_evalue (compile_value_erase t []).
-Proof. Admitted.
+  erases_global
+  firstorder_evalue Σ (compile_value_erase t []).
+Proof. Admitted. *)
 
 Fixpoint compile_evalue_box (t : EAst.term) (acc : list EAst.term) :=
   match t with
@@ -388,6 +475,7 @@ Fixpoint compile_evalue_box (t : EAst.term) (acc : list EAst.term) :=
   end.
 
 Import MetaCoq.Common.Transform.
+From Coq Require Import Morphisms.
 
 Module ETransformPresFO.
   Section Opt.
@@ -395,50 +483,263 @@ Module ETransformPresFO.
     Context {eval : program env EAst.term -> EAst.term -> Prop}.
     Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
     Context (o : Transform.t _ _ _ _ eval eval').
-    Context (compile_fo_value : EAst.term -> EAst.term).
+    Context (firstorder_value : program env EAst.term -> Prop).
+    Context (firstorder_value' : program env' EAst.term -> Prop).
+    Context (compile_fo_value : forall p : program env EAst.term, o.(pre) p ->
+      firstorder_value p -> program env' EAst.term).
 
     Class t :=
-      { preserves_fo : forall v, firstorder_evalue v -> firstorder_evalue (compile_fo_value v);
-        transform_fo : forall v (pr : o.(pre) v),
-          firstorder_evalue v.2 -> (o.(transform) v pr).2 = compile_fo_value v.2 }.
+      { preserves_fo : forall p pr (fo : firstorder_value p), firstorder_value' (compile_fo_value p pr fo);
+        transform_fo : forall v (pr : o.(pre) v) (fo : firstorder_value v), o.(transform) v pr = compile_fo_value v pr fo }.
   End Opt.
 
+  Section ExtEq.
+    Context {env env' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context (o : Transform.t _ _ _ _ eval eval').
+    Context (firstorder_value : program env EAst.term -> Prop).
+    Context (firstorder_value' : program env' EAst.term -> Prop).
+
+    Lemma proper_pres (compile_fo_value compile_fo_value' : forall p : program env EAst.term, o.(pre) p -> firstorder_value p -> program env' EAst.term) :
+      (forall p pre fo, compile_fo_value p pre fo = compile_fo_value' p pre fo) ->
+      t o firstorder_value firstorder_value' compile_fo_value <->
+      t o firstorder_value firstorder_value' compile_fo_value'.
+    Proof.
+      intros Hfg.
+      split; move=> []; split; eauto.
+      - now intros ? ? ?; rewrite -Hfg.
+      - now intros v pr ?; rewrite -Hfg.
+      - now intros ???; rewrite Hfg.
+      - now intros ???; rewrite Hfg.
+    Qed.
+  End ExtEq.
   Section Comp.
     Context {env env' env'' : Type}.
     Context {eval : program env EAst.term -> EAst.term -> Prop}.
     Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
     Context {eval'' : program env'' EAst.term -> EAst.term -> Prop}.
-    Context (compile_fo_value compile_fo_value' : EAst.term -> EAst.term).
+    Context (firstorder_value : program env EAst.term -> Prop).
+    Context (firstorder_value' : program env' EAst.term -> Prop).
+    Context (firstorder_value'' : program env'' EAst.term -> Prop).
+    Context (o : Transform.t _ _ _ _ eval eval') (o' : Transform.t _ _ _ _ eval' eval'').
+    Context compile_fo_value compile_fo_value'
+      (oext : t o firstorder_value firstorder_value' compile_fo_value)
+      (o'ext : t o' firstorder_value' firstorder_value'' compile_fo_value')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p)).
 
     Local Obligation Tactic := idtac.
+
+    Definition compose_compile_fo_value (p : program env EAst.term) (pr : o.(pre) p) (fo : firstorder_value p) : program env'' EAst.term :=
+      compile_fo_value' (compile_fo_value p pr fo) (eq_rect_r (o'.(pre)) (hpp _ (correctness o p pr)) (eq_sym (oext.(transform_fo _ _ _ _) _ _ _))) (oext.(preserves_fo _ _ _ _) p pr fo).
+
     #[global]
-    Instance compose (o : Transform.t _ _ _ _ eval eval')
-      (o' : Transform.t _ _ _ _ eval' eval'')
-      (oext : t o compile_fo_value)
-      (o'ext : t o' compile_fo_value')
-      (hpp : (forall p, o.(post) p -> o'.(pre) p))
-      : t (Transform.compose o o' hpp) (compile_fo_value' ∘ compile_fo_value).
+    Instance compose
+      : t (Transform.compose o o' hpp) firstorder_value firstorder_value'' compose_compile_fo_value.
     Proof.
       split.
-      - intros. eapply preserves_fo; tea. eapply preserves_fo; tea.
+      - intros. eapply o'ext.(preserves_fo _ _ _ _); tea.
       - intros. cbn. unfold run, time.
-        rewrite o'ext.(transform_fo _ _).
-        rewrite oext.(transform_fo _ _) //.
-        eapply preserves_fo; tea.
-        rewrite oext.(transform_fo _ _) //.
+        unfold compose_compile_fo_value.
+        set (cor := correctness o v pr). clearbody cor. move: cor.
+        set (foo := eq_sym (transform_fo _ _ _ _ _ _ _)). clearbody foo.
+        destruct foo. cbn. intros cor.
+        apply o'ext.(transform_fo _ _ _ _).
     Qed.
   End Comp.
 
 End ETransformPresFO.
 
-Axiom lambdabox_pres_fo : ETransformPresFO.t verified_lambdabox_pipeline (flip compile_evalue_box []).
+Import EWellformed.
 
-Lemma transform_lambda_box_firstorder (Σer : EEnvMap.GlobalContextMap.t) v pre :
-  firstorder_evalue v ->
-  (transform verified_lambdabox_pipeline (Σer, v) pre).2 = (compile_evalue_box v []).
+Lemma compile_value_box_mkApps Σ i n ui args acc :
+  compile_value_box Σ (PCUICAst.mkApps (PCUICAst.tConstruct i n ui) args) acc =
+  EAst.tConstruct i n (List.map (flip compile_value_box []) args ++ acc).
+Proof.
+  revert acc; induction args using rev_ind.
+  - cbn. auto.
+  - intros acc. rewrite PCUICAstUtils.mkApps_app /=. cbn.
+    now rewrite IHargs map_app /= -app_assoc /=.
+Qed.
+
+Lemma compile_evalue_box_mkApps i n ui args acc :
+  compile_evalue_box (EAst.mkApps (EAst.tConstruct i n ui) args) acc =
+  EAst.tConstruct i n (List.map (flip compile_evalue_box []) args ++ acc).
+Proof.
+  revert acc; induction args using rev_ind.
+  - cbn. auto.
+  - intros acc. rewrite EAstUtils.mkApps_app /=. cbn.
+    now rewrite IHargs map_app /= -app_assoc /=.
+Qed.
+
+Lemma compile_evalue_erase Σ v :
+  PCUICFirstorder.firstorder_value Σ [] v ->
+  compile_evalue_box (compile_value_erase v []) [] = compile_value_box v [].
+Proof.
+  move=> fo; move: v fo.
+  apply: PCUICFirstorder.firstorder_value_inds.
+  intros i n ui u args pandi hty hargs ih isp.
+  rewrite compile_value_erase_mkApps compile_value_box_mkApps compile_evalue_box_mkApps.
+  rewrite !app_nil_r. f_equal.
+  rewrite map_map.
+  now eapply map_ext_Forall.
+Qed.
+
+Lemma compile_evalue_box_firstorder {efl : EEnvFlags} Σ v :
+  has_cstr_params = false ->
+  EWellformed.wf_glob Σ ->
+  firstorder_evalue Σ v -> firstorder_evalue_block (flip compile_evalue_box [] v).
+Proof.
+  intros hpars wf.
+  move: v; apply: firstorder_evalue_elim.
+  intros.
+  rewrite /flip compile_evalue_box_mkApps app_nil_r.
+  rewrite /EGlobalEnv.lookup_inductive_pars /= in H.
+  destruct EGlobalEnv.lookup_minductive eqn:e => //.
+  eapply wellformed_lookup_inductive_pars in hpars; tea => //.
+  noconf H. rewrite hpars in H1. rewrite skipn_0 in H1.
+  constructor. ELiftSubst.solve_all.
+Qed.
+
+Definition fo_evalue (p : program E.global_context EAst.term) : Prop := firstorder_evalue p.1 p.2.
+Definition fo_evalue_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := firstorder_evalue p.1 p.2.
+
+#[global] Instance rebuild_wf_env_transform_pres {fl : WcbvFlags} {efl : EEnvFlags} we  :
+  ETransformPresFO.t
+    (rebuild_wf_env_transform we) fo_evalue fo_evalue_map (fun p pr fo => rebuild_wf_env p pr.p1).
+Proof. split => //. Qed.
+
+Lemma wf_glob_lookup_inductive_pars {efl : EEnvFlags} (Σ : E.global_context) (kn : Kernames.kername) :
+  has_cstr_params = false ->
+  wf_glob Σ ->
+  forall pars, EGlobalEnv.lookup_inductive_pars Σ kn = Some pars -> pars = 0.
+Proof.
+  intros hasp wf.
+  rewrite /EGlobalEnv.lookup_inductive_pars.
+  destruct EGlobalEnv.lookup_minductive eqn:e => //=.
+  eapply wellformed_lookup_inductive_pars in e => //. congruence.
+Qed.
+
+#[global] Instance inline_projections_optimization_pres {fl : WcbvFlags}
+ (efl := EInlineProjections.switch_no_params all_env_flags) {wcon : with_constructor_as_block = false}
+  {has_rel : has_tRel} {has_box : has_tBox} :
+  ETransformPresFO.t
+    (inline_projections_optimization (wcon := wcon) (hastrel := has_rel) (hastbox := has_box))
+    fo_evalue_map fo_evalue (fun p pr fo => (EInlineProjections.optimize_env p.1, p.2)).
+Proof. split => //.
+  - intros [] pr fo.
+    cbn in *.
+    destruct pr as [pr _]. destruct pr as [pr wf]; cbn in *.
+    clear wf; move: t1 fo. unfold fo_evalue, fo_evalue_map. cbn.
+    apply: firstorder_evalue_elim; intros.
+    econstructor.
+    rewrite EInlineProjections.lookup_inductive_pars_optimize in H => //; tea. auto.
+  - rewrite /fo_evalue_map. intros [] pr fo. cbn in *. unfold EInlineProjections.optimize_program. cbn. f_equal.
+    destruct pr as [[pr _] _]. cbn in *. move: t1 fo.
+    apply: firstorder_evalue_elim; intros.
+    eapply wf_glob_lookup_inductive_pars in H => //. subst npars; rewrite skipn_0 in H0 H1.
+    rewrite EInlineProjections.optimize_mkApps /=. f_equal.
+    ELiftSubst.solve_all.
+Qed.
+
+#[global] Instance remove_match_on_box_pres {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as_block = false}
+  {has_rel : has_tRel} {has_box : has_tBox} :
+  has_cstr_params = false ->
+  ETransformPresFO.t
+    (remove_match_on_box_trans (wcon := wcon) (hastrel := has_rel) (hastbox := has_box))
+    fo_evalue_map fo_evalue (fun p pr fo => (EOptimizePropDiscr.remove_match_on_box_env p.1, p.2)).
+Proof. split => //.
+  - unfold fo_evalue, fo_evalue_map; intros [] pr fo. cbn in *.
+    destruct pr as [pr _]. destruct pr as [pr wf]; cbn in *.
+    clear wf; move: t1 fo.
+    apply: firstorder_evalue_elim; intros.
+    econstructor; tea.
+    rewrite EOptimizePropDiscr.lookup_inductive_pars_optimize in H0 => //; tea.
+  - intros [] pr fo.
+    cbn in *.
+    unfold EOptimizePropDiscr.remove_match_on_box_program; cbn. f_equal.
+    destruct pr as [[pr _] _]; cbn in *; move: t1 fo.
+    apply: firstorder_evalue_elim; intros.
+    eapply wf_glob_lookup_inductive_pars in H0 => //. subst npars; rewrite skipn_0 in H2.
+    rewrite EOptimizePropDiscr.remove_match_on_box_mkApps /=. f_equal.
+    ELiftSubst.solve_all.
+Qed.
+
+#[global] Instance remove_params_optimization_pres {fl : WcbvFlags} {wcon : with_constructor_as_block = false} :
+  ETransformPresFO.t
+    (remove_params_optimization (wcon := wcon))
+    fo_evalue_map fo_evalue (fun p pr fo => (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2)).
+Proof. split => //.
+  intros [] pr fo.
+  cbn [transform remove_params_optimization] in *.
+  destruct pr as [[pr _] _]; cbn -[ERemoveParams.strip] in *; move: t1 fo.
+  apply: firstorder_evalue_elim; intros.
+  rewrite ERemoveParams.strip_mkApps //. cbn -[EGlobalEnv.lookup_inductive_pars]. rewrite H.
+  econstructor. cbn -[EGlobalEnv.lookup_inductive_pars].
+  now eapply ERemoveParams.lookup_inductive_pars_strip in H; tea.
+  rewrite skipn_0 /=.
+  rewrite skipn_map.
+  ELiftSubst.solve_all.
+Qed.
+
+#[global] Instance constructors_as_blocks_transformation_pres {efl : EWellformed.EEnvFlags}
+  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  ETransformPresFO.t
+    (@constructors_as_blocks_transformation efl has_app has_rel hasbox has_pars has_cstrblocks)
+    fo_evalue_map (fun p => firstorder_evalue_block p.2)
+    (fun p pr fo => (transform_blocks_env p.1, compile_evalue_box p.2 [])).
+Proof.
+  split.
+  - intros v pr fo; eapply compile_evalue_box_firstorder; tea. apply pr.
+  - move=> [Σ v] /= pr fo. rewrite /flip.
+    clear pr. move: v fo.
+    apply: firstorder_evalue_elim; intros.
+    rewrite /transform_blocks_program /=. f_equal.
+    rewrite EConstructorsAsBlocks.transform_blocks_decompose.
+    rewrite EAstUtils.decompose_app_mkApps // /=.
+    rewrite compile_evalue_box_mkApps app_nil_r.
+    admit.
+Admitted.
+
+
+#[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}
+  {has_guard : with_guarded_fix} {has_cstrblocks : with_constructor_as_block = false} :
+  ETransformPresFO.t
+    (@guarded_to_unguarded_fix default_wcbv_flags has_cstrblocks efl has_guard)
+    fo_evalue_map fo_evalue_map
+    (fun p pr fo => p).
+Proof.
+  split => //.
+Qed.
+
+Lemma lambdabox_pres_fo :
+  exists compile_value, ETransformPresFO.t verified_lambdabox_pipeline fo_evalue_map (fun p => firstorder_evalue_block p.2) compile_value /\
+    forall p pr fo, (compile_value p pr fo).2 = compile_evalue_box (ERemoveParams.strip p.1 p.2) [].
+Proof.
+  eexists.
+  split.
+  unfold verified_lambdabox_pipeline.
+  unshelve eapply ETransformPresFO.compose; tc. shelve.
+  2:intros p pr fo; unfold ETransformPresFO.compose_compile_fo_value; f_equal. 2:cbn.
+  unshelve eapply ETransformPresFO.compose; tc. shelve.
+  2:unfold ETransformPresFO.compose_compile_fo_value; cbn.
+  unshelve eapply ETransformPresFO.compose; tc. shelve.
+  2:unfold ETransformPresFO.compose_compile_fo_value; cbn.
+  unshelve eapply ETransformPresFO.compose; tc. shelve.
+  2:unfold ETransformPresFO.compose_compile_fo_value; cbn.
+  unshelve eapply ETransformPresFO.compose. shelve. eapply remove_match_on_box_pres => //.
+  unfold ETransformPresFO.compose_compile_fo_value; cbn -[ERemoveParams.strip ERemoveParams.strip_env].
+  reflexivity.
+Qed.
+
+Lemma transform_lambda_box_firstorder (Σer : EEnvMap.GlobalContextMap.t) p pre :
+  firstorder_evalue Σer p ->
+  (transform verified_lambdabox_pipeline (Σer, p) pre).2 = (compile_evalue_box (ERemoveParams.strip Σer p) []).
 Proof.
   intros fo.
-  now rewrite (ETransformPresFO.transform_fo _ _ (t:=lambdabox_pres_fo)).
+  destruct lambdabox_pres_fo as [fn [tr hfn]].
+  rewrite (ETransformPresFO.transform_fo _ _ _ _ (t:=tr)).
+  nowrewrite hfn.
 Qed.
 
 Section pipeline_theorem.
@@ -488,7 +789,7 @@ Section pipeline_theorem.
 
   Let Σ_t := (transform verified_erasure_pipeline (Σ, t) precond).1.
   Let t_t := (transform verified_erasure_pipeline (Σ, t) precond).2.
-  Let v_t := compile_value_box v [].
+  Let v_t := compile_value_box Σ v [].
 
   Lemma fo_v : PCUICFirstorder.firstorder_value Σ [] v.
   Proof.
@@ -497,7 +798,6 @@ Section pipeline_theorem.
     - eapply PCUICClassification.subject_reduction_eval; eauto.
     - eapply PCUICWcbvEval.eval_to_value; eauto.
   Qed.
-
 
   Lemma v_t_spec : v_t = (transform verified_erasure_pipeline (Σ, v) precond2).2.
   Proof.
@@ -511,16 +811,18 @@ Section pipeline_theorem.
     cbn [fst snd].
     intros h.
     destruct_compose.
-    rewrite erase_transform_fo. cbn. admit.
+    rewrite erase_transform_fo. cbn. unfold global_env_ext_map_global_env_ext; cbn.
+    todo "expand lets preserves fo values".
     set (Σer := (transform erase_transform _ _).1).
     cbn [fst snd]. intros pre'.
     symmetry.
     erewrite transform_lambda_box_firstorder; tea.
-    eapply obseq_lambdabox. intros kn decl H; exact H.
-    Unshelve. 2:exact pre'. 2:exact (Σer, compile_value_erase v []).
-    cbn [snd].
-    red. cbn.
-  Admitted.
+    now eapply compile_evalue_erase.
+    clear -hv.
+    move: v hv; eapply PCUICFirstorder.firstorder_value_inds.
+    intros. rewrite compile_value_erase_mkApps app_nil_r.
+    econstructor. ELiftSubst.solve_all.
+  Qed.
 
   Import PCUICWfEnv.
 

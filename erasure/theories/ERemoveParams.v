@@ -430,6 +430,17 @@ Proof.
   destruct g; simpl; auto. do 2 destruct nth_error => //.
 Qed.
 
+Lemma lookup_inductive_pars_strip {efl : EEnvFlags} {Σ : GlobalContextMap.t} ind :
+  wf_glob Σ ->
+  forall pars, lookup_inductive_pars Σ ind = Some pars ->
+  EGlobalEnv.lookup_inductive_pars (strip_env Σ) ind = Some 0.
+Proof.
+  rewrite /lookup_inductive_pars => wf pars.
+  rewrite /lookup_inductive /lookup_minductive.
+  rewrite (lookup_env_strip _ ind).
+  destruct lookup_env as [[decl|]|] => //=.
+Qed.
+
 Arguments eval {wfl}.
 
 Arguments isEtaExp : simpl never.

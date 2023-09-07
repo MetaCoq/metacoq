@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program.
+From Coq Require Import Program ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
-     PCUICElimination PCUICWcbvEval.
+     PCUICElimination PCUICWcbvEval PCUICFirstorder.
 From MetaCoq.Erasure Require EAst EGlobalEnv.
 
 Module E := EAst.
@@ -12,18 +12,6 @@ Local Existing Instance extraction_checker_flags.
 
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) *
   is_propositional u))%type.
-
-Definition isPropositionalArity ar b :=
-  match destArity [] ar with
-  | Some (_, s) => is_propositional s = b
-  | None => False
-  end.
-
-Definition isPropositional Σ ind b :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => isPropositionalArity idecl.(ind_type) b
-  | _ => False
-  end.
 
 Fixpoint mkAppBox c n :=
   match n with
@@ -64,7 +52,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConst : forall (kn : kername) (u : Instance.t),
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
-        isPropositional Σ kn false ->
+        ~~ isPropositional Σ kn ->
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k []
   | erases_tCase (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
@@ -124,7 +112,7 @@ Lemma erases_forall_list_ind
       (Hconst : forall Γ kn u,
           P Γ (tConst kn u) (E.tConst kn))
       (Hconstruct : forall Γ kn k n,
-          isPropositional Σ kn false ->
+          ~~ isPropositional Σ kn ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k []))
       (Hcase : forall Γ ci p c brs c' brs',
           PCUICElimination.Subsingleton Σ ci.(ci_ind) ->
@@ -220,7 +208,7 @@ Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_in
   Forall2 (fun 'i i' => i.(PCUICEnvironment.proj_name) = i'.(E.proj_name)) oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\
-  isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).
+  isPropositionalArity oib.(ind_type) = oib'.(E.ind_propositional).
 
 Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in

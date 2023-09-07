@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICWellScopedCumulativity
   PCUICContextConversion PCUICConversion PCUICClassification
   PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence
-  PCUICArities PCUICPrincipality.
+  PCUICArities PCUICPrincipality PCUICFirstorder.
 
 From MetaCoq.Erasure Require Import Extract.
 
@@ -836,7 +836,7 @@ Qed.
 
 Lemma isErasable_Propositional {Σ : global_env_ext} {Γ ind n u args} :
   wf_ext Σ ->
-  isErasable Σ Γ (mkApps (tConstruct ind n u) args) -> isPropositional Σ ind true.
+  isErasable Σ Γ (mkApps (tConstruct ind n u) args) -> isPropositional Σ ind.
 Proof.
   intros wfΣ ise.
   eapply tConstruct_no_Type in ise; eauto.
@@ -871,7 +871,7 @@ Qed.
 Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} :
   wf_ext Σ ->
   welltyped Σ Γ (tConstruct ind n u) ->
-  (isErasable Σ Γ (tConstruct ind n u) -> False) -> isPropositional Σ ind false.
+  (isErasable Σ Γ (tConstruct ind n u) -> False) -> ~~ isPropositional Σ ind.
 Proof.
   intros wfΣ wt ise.
   destruct wt as [T HT].
@@ -881,7 +881,7 @@ Proof.
   pose proof d as [decli ?].
   destruct (on_declared_constructor d).
   destruct p as [onind oib].
-  red. unfold lookup_inductive.
+  unfold isPropositional, lookup_inductive.
   pose proof (wfΣ' := wfΣ.1).
   unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
   rewrite (declared_inductive_lookup_gen decli_).
@@ -925,18 +925,18 @@ Lemma isPropositional_propositional Σ {wfΣ: wf Σ} (Σ' : E.global_context) in
   EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
   erases_one_inductive_body idecl idecl' ->
-  forall b, isPropositional Σ ind b -> EGlobalEnv.inductive_isprop_and_pars Σ' ind = Some (b, mdecl.(ind_npars)).
+  EGlobalEnv.inductive_isprop_and_pars Σ' ind = Some (isPropositional Σ ind, mdecl.(ind_npars)).
 Proof.
-  intros decli decli' [_ indp] [] b.
+  intros decli decli' [_ indp] [].
   unfold isPropositional, EGlobalEnv.inductive_isprop_and_pars.
   unfold lookup_inductive.
   unshelve epose proof (decli_ := declared_inductive_to_gen decli); eauto.
   rewrite (declared_inductive_lookup_gen decli_).
   rewrite (EGlobalEnv.declared_inductive_lookup decli') /=
     /isPropositionalArity.
-  destruct H0 as [_ [_ [_ isP]]]. red in isP.
+  destruct H0 as [_ [_ [_ isP]]]. unfold isPropositionalArity in isP.
   destruct destArity as [[ctx s]|] eqn:da => //.
-  rewrite isP. intros ->. f_equal. f_equal. now rewrite indp.
+  rewrite isP; congruence. congruence.
 Qed.
 
 Lemma isPropositional_propositional_cstr Σ (Σ' : E.global_context) ind c mdecl idecl cdecl mdecl' idecl' :
@@ -945,11 +945,10 @@ Lemma isPropositional_propositional_cstr Σ (Σ' : E.global_context) ind c mdecl
   EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
   erases_one_inductive_body idecl idecl' ->
-  forall b, isPropositional Σ ind b ->
   EGlobalEnv.constructor_isprop_pars_decl Σ' ind c =
-  Some (b, mdecl.(ind_npars), EAst.mkConstructor cdecl.(cstr_name) (context_assumptions cdecl.(cstr_args))).
+  Some (isPropositional Σ ind, mdecl.(ind_npars), EAst.mkConstructor cdecl.(cstr_name) (context_assumptions cdecl.(cstr_args))).
 Proof.
-  intros wfΣ declc decli' em ei b isp.
+  intros wfΣ declc decli' em ei.
   pose proof declc as [decli'' _].
   eapply isPropositional_propositional in decli''; tea.
   move: decli''.

@@ -8,8 +8,8 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram PCUICWeakeningEnvSN.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness Extract
-   EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.Erasure Require EAstUtils ErasureCorrectness Extract EOptimizePropDiscr ERemoveParams EProgram.
+From MetaCoq.Erasure Require Import ErasureFunction ErasureFunctionProperties.
 From MetaCoq.TemplatePCUIC Require Import PCUICTransform.
 
 Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract EProgram
@@ -148,14 +148,14 @@ Program Definition erase_pcuic_program {guard : abstract_guard_impl} (p : pcuic_
   let wfext := @abstract_make_wf_env_ext _ optimized_abstract_env_impl wfe p.1.2 _ in
   let t := ErasureFunction.erase (normalization_in:=_) optimized_abstract_env_impl wfext nil p.2
     (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
-  let Σ' := ErasureFunction.erase_global_fast (normalization_in:=_) optimized_abstract_env_impl
+  let Σ' := ErasureFunctionProperties.erase_global_fast (normalization_in:=_) optimized_abstract_env_impl
     (EAstUtils.term_global_deps t) wfe (p.1.(PCUICAst.PCUICEnvironment.declarations)) _ in
     (EEnvMap.GlobalContextMap.make Σ'.1 _, t).
 
 Next Obligation. unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto. Defined.
 Next Obligation.
   eapply wf_glob_fresh.
-  eapply ErasureFunction.erase_global_fast_wf_glob.
+  eapply ErasureFunctionProperties.erase_global_fast_wf_glob.
   unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
 Defined.
 
@@ -175,9 +175,9 @@ Lemma expanded_erase_program {guard : abstract_guard_impl} p {normalization_in n
 Proof.
   intros [etaenv etat]. split;
   unfold erase_program, erase_pcuic_program.
-  eapply ErasureFunction.expanded_erase_global_fast, etaenv; try reflexivity; eauto.
+  eapply ErasureFunctionProperties.expanded_erase_global_fast, etaenv; try reflexivity; eauto.
   unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
-  apply: (ErasureFunction.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
+  apply: (ErasureFunctionProperties.expanded_erase_fast (X_type:=optimized_abstract_env_impl)).
   unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
   reflexivity. exact etat.
 Qed.
@@ -214,14 +214,14 @@ Next Obligation.
   destruct erase_program eqn:e.
   split.
   - unfold erase_program, erase_pcuic_program in e.
-    set (egf := ErasureFunction.erase_global_fast _ _ _ _ _) in e.
-    set (ef := ErasureFunction.erase _ _ _ _ _) in e.
+    set (egf := erase_global_fast _ _ _ _ _) in e.
+    set (ef := erase _ _ _ _ _) in e.
     cbn -[egf ef] in e. injection e. intros <- <-.
     split.
-    eapply ErasureFunction.erase_global_fast_wf_glob; eauto;
+    eapply erase_global_fast_wf_glob; eauto;
       try match goal with H : _ |- _ => eapply H end.
     unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
-    apply: (ErasureFunction.erase_wellformed_fast (X_type:=optimized_abstract_env_impl)); eauto;
+    apply: (erase_wellformed_fast (X_type:=optimized_abstract_env_impl)); eauto;
       try match goal with H : _ |- _ => eapply H end.
     unshelve edestruct erase_pcuic_program_normalization_helper; cbn in *; eauto.
   - rewrite -e. cbn.
@@ -240,8 +240,8 @@ Next Obligation.
   set (Σ' := build_wf_env_from_env _ _).
   assert (ev' :forall Σ0 : PCUICAst.PCUICEnvironment.global_env, Σ0 = Σ' -> PCUICWcbvEval.eval Σ0 t v).
   { intros; now subst. }
-  eapply (ErasureFunction.erase_correct optimized_abstract_env_impl Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev'.
-  4:{ erewrite <- ErasureFunction.erase_global_deps_fast_spec. reflexivity. }
+  eapply (erase_correct optimized_abstract_env_impl Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev'.
+  4:{ erewrite <- erase_global_deps_fast_spec. reflexivity. }
   all:trea.
   2:eapply Kernames.KernameSet.subset_spec; reflexivity.
   destruct ev' as [v' [he [hev]]]. exists v'; split => //.

@@ -870,6 +870,19 @@ Admitted.
 
 Arguments PCUICFirstorder.firstorder_ind _ _ : clear implicits.
 
+Section PCUICExpandLets.
+  Import PCUICExpandLets PCUICExpandLetsCorrectness.
+
+  Lemma trans_axiom_free Σ : axiom_free Σ -> axiom_free (trans_global_env Σ).
+  Proof.
+    intros ax kn decl.
+    rewrite /trans_global_env /= /PCUICAst.declared_constant /= /trans_global_decls.
+    intros h; apply PCUICElimination.In_map in h as [[kn' decl']  [hin heq]].
+    noconf heq. destruct decl'; noconf H.
+    apply ax in hin.
+    destruct c as [? [] ? ?] => //.
+  Qed.
+
 Section pipeline_theorem.
 
   Instance cf : checker_flags := extraction_checker_flags.
@@ -910,7 +923,7 @@ Section pipeline_theorem.
     - red. cbn. split; eauto.
       eexists.
       eapply PCUICClassification.subject_reduction_eval; eauto.
-    -  todo "preservation of eta expandedness".
+    - todo "preservation of eta expandedness".
     - cbn. todo "normalization".
     - todo "normalization".
   Qed.
@@ -1052,8 +1065,12 @@ Section pipeline_theorem.
     unfold erase_pcuic_program. cbn [fst snd]. exact obs.
     clear obs b0 ev e w.
     eapply extends_erase_pcuic_program. cbn.
-    eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ := (Σ.1, Σ.2))). admit. exact X0.
-    cbn. 2:cbn. 3:cbn.
+    eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ := (Σ.1, Σ.2))).
+    { clear -HΣ typing. now eapply PCUICClosedTyp.subject_closed in typing. }
+    cbn. 2:cbn. 3:cbn. exact X0.
+
+
+
   Admitted.
 
   Lemma verified_erasure_pipeline_lambda :

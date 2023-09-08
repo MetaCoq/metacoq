@@ -1,7 +1,7 @@
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram PCUICCSubst.
 
 Definition isConstruct t :=
    match t with tConstruct _ _ _ => true | _ => false end.
@@ -341,6 +341,14 @@ Proof.
     solve_all.
 Qed.
 
+Lemma csubst_mkApps a k f l :
+  csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
+Proof.
+  induction l in f |- *; cbn; [auto|].
+  rewrite IHl.
+  now cbn.
+Qed.
+
 Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
 Proof.
   intros a; now depelim a.
@@ -425,3 +433,4 @@ Proof.
     solve_all. }
   all:intros; try solve [econstructor; eauto 1; solve_all; try now rewrite app_assoc].
 Qed.
+

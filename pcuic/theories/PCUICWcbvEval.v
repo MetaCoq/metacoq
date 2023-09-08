@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import config.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
-     PCUICClosedTyp. (* Due to reliance on wf Σ instead of closed_env Σ *)
+     PCUICClosedTyp PCUICEtaExpand. (* Due to reliance on wf Σ instead of closed_env Σ *)
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -24,14 +24,23 @@ From Equations Require Import Equations.
 
 Local Ltac inv H := inversion H; subst.
 
+Lemma nApp_mkApps t f args :
+  t = mkApps f args -> ~~ isApp t -> t = f /\ args = [].
+Proof.
+  intros -> napp.
+  destruct args using rev_case; cbn in *; solve_discr; try discriminate => //. split => //.
+  now rewrite mkApps_app /= in napp.
+Qed.
+
 Ltac solve_discr :=
   try progress (prepare_discr; finish_discr; cbn[mkApps] in * );
   try match goal with
     H : mkApps _ _ = mkApps ?f ?l |- _ =>
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
   | H : ?t = mkApps ?f ?l |- _ =>
-    change t with (mkApps t []) in H ;
-    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+    (change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H) ||
+    (eapply nApp_mkApps in H as [? ?]; [|easy]; subst)
   | H : mkApps ?f ?l = ?t |- _ =>
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
@@ -1212,3 +1221,118 @@ Proof.
   - eapply eval_cofix_case; tea.
     eapply value_final, value_app. now constructor. auto.
 Qed.
+
+Lemma expanded_tApp Σ Γ f a :
+  ~ isConstructApp f || isFixApp f || isRel (head f) ->
+  expanded Σ Γ (tApp f a) ->
+  expanded Σ Γ f /\ expanded Σ Γ a.
+Proof.
+  rewrite /isConstructApp /isFixApp.
+  intros hf exp; depind exp.
+  - destruct args using rev_case; solve_discr; try discriminate.
+    rewrite mkApps_app in H3; noconf H3.
+    eapply Forall_app in H1 as [? ha]. depelim ha.
+    destruct args using rev_case; cbn in hf => //.
+    now rewrite !head_mkApps /= in hf.
+  - destruct args using rev_case; solve_discr. subst f6.
+    eapply IHexp => //.
+    rewrite mkApps_app in H2; noconf H2.
+    eapply Forall_app in H0 as [? H0]. depelim H0. split => //.
+    rewrite !head_mkApps in hf.
+    eapply expanded_mkApps => //.
+  - destruct args using rev_case; solve_discr. discriminate.
+    rewrite mkApps_app in H6; noconf H6.
+    eapply Forall_app in H1 as [? h]. depelim h. split => //.
+    now rewrite !head_mkApps /= in hf.
+  - destruct args using rev_case; solve_discr. discriminate.
+    rewrite mkApps_app in H3; noconf H3.
+    now rewrite !head_mkApps /= in hf.
+Qed.
+
+Lemma expanded_tLambda_inv Σ Γ na t b :
+  expanded Σ Γ (tLambda na t b) ->
+  expanded Σ (0 :: Γ) b.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
+Lemma expanded_tLetIn_inv Σ Γ na t t' b :
+  expanded Σ Γ (tLetIn na t t' b) ->
+  expanded Σ Γ t /\ expanded Σ (0 :: Γ) b.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
+Lemma expanded_tCase_inv Σ Γ ci p c brs :
+  expanded Σ Γ (tCase ci p c brs) ->
+  Forall (expanded Σ Γ) (pparams p) /\
+  Forall
+    (fun br : branch term =>
+     ∥ All_fold
+         (fun (Δ : list context_decl) (d : context_decl)
+          =>
+          ForOption
+            (fun b : term =>
+             expanded Σ
+               (repeat 0 #|Δ| ++
+                repeat 0 #|pparams p|) b)
+            (decl_body d)) (bcontext br) ∥ /\
+     expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br))
+    brs /\
+  expanded Σ Γ c.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
+Lemma expanded_tProj_inv Σ Γ p c :
+  expanded Σ Γ (tProj p c) ->
+  expanded Σ Γ c.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
+Lemma expanded_red {cf : checker_flags} {Σ : global_env_ext} Γ Γ' t v : wf Σ ->
+  red1 Σ Γ t v ->
+  expanded Σ Γ' t ->
+  expanded Σ Γ' v.
+Proof.
+  intros wf red; induction red using red1_ind_all in Γ' |- *;  intros exp.
+  - eapply expanded_tApp in exp as [] => //.
+    eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
+    now eapply expanded_tLambda_inv in H.
+  - eapply expanded_tLetIn_inv in exp as [].
+    eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
+  - admit.
+  - eapply expanded_tCase_inv in exp as [? []].
+    unfold iota_red. admit.
+  - admit.
+  - admit.
+  - eapply expanded_tProj_inv in exp. econstructor. admit.
+  - admit.
+  - admit.
+  - constructor. now eapply expanded_tLambda_inv in exp.
+  - constructor. eapply IHred. now eapply expanded_tLambda_inv in exp.
+  - eapply expanded_tLetIn_inv in exp; now constructor.
+  - eapply expanded_tLetIn_inv in exp. now constructor.
+  - eapply expanded_tLetIn_inv in exp. now constructor.
+  - eapply expanded_tCase_inv in exp as [? []].
+    constructor; eauto. cbn.
+    solve_all. eapply OnOne2_impl_All_r; tea. intuition eauto. now apply X0.
+    now rewrite /PCUICOnOne.set_pparams /= -(OnOne2_length X).
+  - eapply expanded_tCase_inv in exp as [? []].
+    constructor; eauto.
+  - eapply expanded_tCase_inv in exp as [? []].
+    econstructor; eauto.
+  - eapply expanded_tCase_inv in exp as [? []].
+    econstructor; eauto. solve_all.
+    eapply OnOne2_impl_All_r; tea.
+    intros x y [? ?]. intros [[] ?]. rewrite -e0.
+    solve_all.
+  - eapply expanded_tProj_inv in exp. now econstructor.
+  - case_eq (isConstructApp (tApp M1 M2) || isFixApp (tApp M1 M2) || isRel (head (tApp M1 M2))).
+    intros h.
+    clear red. specialize (IHred Γ').
+    depelim exp.
+    { destruct args using rev_case; cbn in *; noconf H1. rewrite mkApps_app in H1; noconf H1.
+(* not the right way to go about this, we need some mkApps induction hypothesis *)
+Abort.

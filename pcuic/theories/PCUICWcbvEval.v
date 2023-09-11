@@ -1222,7 +1222,28 @@ Proof.
     eapply value_final, value_app. now constructor. auto.
 Qed.
 
-Lemma expanded_tApp Σ Γ f a :
+Lemma expanded_tApp (Σ : global_env) (Γ : list nat) (f : term) a :
+  expanded Σ Γ f -> expanded Σ Γ a ->
+  expanded Σ Γ (tApp f a).
+Proof.
+  induction 1 using expanded_ind; intros expa.
+  all:rewrite -?[tApp _ a](mkApps_app _ _ [a]).
+  all:try (eapply (expanded_mkApps _ _ _ [a]) => //; econstructor; eauto).
+
+  - econstructor; tea. rewrite app_length. lia. eapply app_Forall;eauto.
+  - econstructor; tea. eapply app_Forall; eauto.
+  - eapply expanded_tFix; tea. eapply app_Forall; eauto. eauto. rewrite app_length; cbn; eauto. lia.
+  - eapply expanded_tConstruct_app; tea. rewrite app_length ; lia. eapply app_Forall; eauto.
+Qed.
+
+Lemma expanded_mkApps (Σ : global_env) (Γ : list nat) (f : term) (args : list term) :
+  expanded Σ Γ f -> Forall (expanded Σ Γ) args -> expanded Σ Γ (mkApps f args).
+Proof.
+  intros expf expa; induction expa in f, expf |- *; eauto.
+  cbn. eapply IHexpa. now eapply expanded_tApp.
+Qed.
+
+Lemma expanded_tApp_inv Σ Γ f a :
   ~ isConstructApp f || isFixApp f || isRel (head f) ->
   expanded Σ Γ (tApp f a) ->
   expanded Σ Γ f /\ expanded Σ Γ a.
@@ -1263,6 +1284,13 @@ Proof.
   intros exp; depind exp; solve_discr => //; eauto.
 Qed.
 
+Lemma expanded_tEvar_inv Σ Γ ev l:
+  expanded Σ Γ (tEvar ev l) ->
+  Forall (expanded Σ Γ) l.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
 Lemma expanded_tCase_inv Σ Γ ci p c brs :
   expanded Σ Γ (tCase ci p c brs) ->
   Forall (expanded Σ Γ) (pparams p) /\
@@ -1291,15 +1319,469 @@ Proof.
   intros exp; depind exp; solve_discr => //; eauto.
 Qed.
 
+Lemma expanded_tCoFix_inv Σ Γ mfix idx :
+ expanded Σ Γ (tCoFix mfix idx) ->
+ Forall (fun d : def term => expanded Σ (repeat 0 #|mfix| ++ Γ) (dbody d)) mfix.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
+
+Import PCUICOnOne.
+
+Module Red1Apps.
+
+
+  Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
+  (** Reductions *)
+  (** Beta *)
+  | red_beta na t b a ts :
+    Σ ;;; Γ |- mkApps (tLambda na t b) (a :: ts) ⇝ mkApps (b {0 := a}) ts
+
+  (** Let *)
+  | red_zeta na b t b' :
+    Σ ;;; Γ |- tLetIn na b t b' ⇝ b' {0 := b}
+
+  | red_rel i body :
+      option_map decl_body (nth_error Γ i) = Some (Some body) ->
+      Σ ;;; Γ |- tRel i ⇝ lift0 (S i) body
+
+  (** Case *)
+  | red_iota ci c u args p brs br :
+      nth_error brs c = Some br ->
+      #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+      Σ ;;; Γ |- tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs
+          ⇝ iota_red ci.(ci_npar) p args br
+
+  (** Fix unfolding, with guard *)
+  | red_fix mfix idx args narg fn :
+      unfold_fix mfix idx = Some (narg, fn) ->
+      is_constructor narg args = true ->
+      Σ ;;; Γ |- mkApps (tFix mfix idx) args ⇝ mkApps fn args
+
+  (** CoFix-case unfolding *)
+  | red_cofix_case ip p mfix idx args narg fn brs :
+      unfold_cofix mfix idx = Some (narg, fn) ->
+      Σ ;;; Γ |- tCase ip p (mkApps (tCoFix mfix idx) args) brs ⇝
+          tCase ip p (mkApps fn args) brs
+
+  (** CoFix-proj unfolding *)
+  | red_cofix_proj p mfix idx args narg fn :
+      unfold_cofix mfix idx = Some (narg, fn) ->
+      Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args) ⇝ tProj p (mkApps fn args)
+
+  (** Constant unfolding *)
+  | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
+      decl.(cst_body) = Some body ->
+      Σ ;;; Γ |- tConst c u ⇝ subst_instance u body
+
+  (** Proj *)
+  | red_proj p args u arg:
+      nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+      Σ ;;; Γ |- tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args) ⇝ arg
+
+
+  | abs_red_l na M M' N : Σ ;;; Γ |- M ⇝ M' -> Σ ;;; Γ |- tLambda na M N ⇝ tLambda na M' N
+  | abs_red_r na M M' N : Σ ;;; Γ ,, vass na N |- M ⇝ M' -> Σ ;;; Γ |- tLambda na N M ⇝ tLambda na N M'
+
+  | letin_red_def na b t b' r : Σ ;;; Γ |- b ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na r t b'
+  | letin_red_ty na b t b' r : Σ ;;; Γ |- t ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b r b'
+  | letin_red_body na b t b' r : Σ ;;; Γ ,, vdef na b t |- b' ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b t r
+
+  | case_red_param ci p params' c brs :
+      OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) p.(pparams) params' ->
+      Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_pparams p params') c brs
+
+  | case_red_return ci p preturn' c brs :
+    Σ ;;; Γ ,,, inst_case_predicate_context p |- p.(preturn) ⇝ preturn' ->
+    Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_preturn p preturn') c brs
+
+  | case_red_discr ci p c c' brs :
+    Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c' brs
+
+  | case_red_brs ci p c brs brs' :
+      OnOne2 (fun br br' =>
+        on_Trel_eq (fun t u => Σ ;;; Γ ,,, inst_case_branch_context p br |- t ⇝ u) bbody bcontext br br')
+        brs brs' ->
+      Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c brs'
+
+  | proj_red p c c' : Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tProj p c ⇝ tProj p c'
+
+  | app_red_l M1 N1 M2 : Σ ;;; Γ |- M1 ⇝ N1 -> ~~ isApp M1 -> ~~ isFix M1 -> M2 <> nil ->
+    Σ ;;; Γ |- mkApps M1 M2 ⇝ mkApps N1 M2
+
+  | app_red_r M2 N2 M1 : ~~ isApp M1 -> OnOne2 (fun M2 N2 => Σ ;;; Γ |- M2 ⇝ N2) M2 N2 -> Σ ;;; Γ |- mkApps M1 M2 ⇝ mkApps M1 N2
+
+  | app_fix_red_ty mfix0 mfix1 idx M2 :
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- mkApps (tFix mfix0 idx) M2 ⇝ mkApps (tFix mfix1 idx) M2
+
+  | app_fix_red_body mfix0 mfix1 idx M2 :
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- mkApps (tFix mfix0 idx) M2 ⇝ mkApps (tFix mfix1 idx) M2
+
+  | prod_red_l na M1 M2 N1 : Σ ;;; Γ |- M1 ⇝ N1 -> Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na N1 M2
+  | prod_red_r na M2 N2 M1 : Σ ;;; Γ ,, vass na M1 |- M2 ⇝ N2 ->
+                            Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na M1 N2
+
+  | evar_red ev l l' : OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) l l' -> Σ ;;; Γ |- tEvar ev l ⇝ tEvar ev l'
+
+  | fix_red_ty mfix0 mfix1 idx :
+      OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+      Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
+
+  | fix_red_body mfix0 mfix1 idx :
+      OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x)))
+            mfix0 mfix1 ->
+      Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
+
+  | cofix_red_ty mfix0 mfix1 idx :
+      OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+      Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+
+  | cofix_red_body mfix0 mfix1 idx :
+      OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+      Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+  where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
+
+Lemma red1_ind_all :
+  forall (Σ : global_env) (P : context -> term -> term -> Type),
+
+       (forall (Γ : context) (na : aname) (t b a : term) ts,
+        P Γ (mkApps (tLambda na t b) (a :: ts)) (mkApps (b {0 := a}) ts)) ->
+
+       (forall (Γ : context) (na : aname) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
+
+       (forall (Γ : context) (i : nat) (body : term),
+        option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
+
+       (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
+          (p : predicate term) (brs : list (branch term)) br,
+          nth_error brs c = Some br ->
+          #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+          P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
+              (iota_red ci.(ci_npar) p args br)) ->
+
+       (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
+        unfold_fix mfix idx = Some (narg, fn) ->
+        is_constructor narg args = true -> P Γ (mkApps (tFix mfix idx) args) (mkApps fn args)) ->
+
+       (forall (Γ : context) ci (p : predicate term) (mfix : mfixpoint term) (idx : nat)
+          (args : list term) (narg : nat) (fn : term) (brs : list (branch term)),
+        unfold_cofix mfix idx = Some (narg, fn) ->
+        P Γ (tCase ci p (mkApps (tCoFix mfix idx) args) brs) (tCase ci p (mkApps fn args) brs)) ->
+
+       (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
+          (narg : nat) (fn : term),
+        unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
+
+       (forall (Γ : context) c (decl : constant_body) (body : term),
+        declared_constant Σ c decl ->
+        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
+
+       (forall (Γ : context) p (args : list term) (u : Instance.t)
+         (arg : term),
+           nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+           P Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg) ->
+
+       (forall (Γ : context) (na : aname) (M M' N : term),
+        red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
+
+       (forall (Γ : context) (na : aname) (M M' N : term),
+        red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
+
+       (forall (Γ : context) (ci : case_info) p params' c brs,
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) p.(pparams) params' ->
+           P Γ (tCase ci p c brs)
+               (tCase ci (set_pparams p params') c brs)) ->
+
+       (forall (Γ : context) (ci : case_info) p preturn' c brs,
+          red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
+          P (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
+          P Γ (tCase ci p c brs)
+              (tCase ci (set_preturn p preturn') c brs)) ->
+
+       (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
+        red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
+
+       (forall (Γ : context) ci p c brs brs',
+          OnOne2 (fun br br' =>
+          (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, inst_case_branch_context p br))
+            (P (Γ ,,, inst_case_branch_context p br)))
+            bbody bcontext br br')) brs brs' ->
+          P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
+
+       (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
+                                                             P Γ (tProj p c) (tProj p c')) ->
+
+       (forall (Γ : context) M1 N1 M2, red1 Σ Γ M1 N1 -> P Γ M1 N1 -> ~~ isApp M1 -> ~~ isFix M1 -> M2 <> [] ->
+                                                         P Γ (mkApps M1 M2) (mkApps N1 M2)) ->
+
+       (forall (Γ : context) M1 N2 M2, ~~ isApp M1 ->
+        OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) M2 N2 ->
+        P Γ (mkApps M1 M2) (mkApps M1 N2)) ->
+
+      (forall (Γ : context) mfix0 mfix1 idx M2,
+        OnOne2 (on_Trel_eq (Trel_conj (fun t u => Σ ;;; Γ |- t ⇝ u) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (mkApps (tFix mfix0 idx) M2) (mkApps (tFix mfix1 idx) M2)) ->
+
+      (forall (Γ : context) mfix0 mfix1 idx M2,
+        OnOne2 (on_Trel_eq (Trel_conj (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) (P (Γ ,,, fix_context mfix0))) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (mkApps (tFix mfix0 idx) M2) (mkApps (tFix mfix1 idx) M2)) ->
+
+       (forall (Γ : context) (na : aname) (M1 M2 N1 : term),
+        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
+
+       (forall (Γ : context) (na : aname) (M2 N2 M1 : term),
+        red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
+
+       (forall (Γ : context) (ev : nat) (l l' : list term),
+           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+
+       forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
+Proof.
+  intros. rename X29 into Xlast. revert Γ t t0 Xlast.
+  fix aux 4. intros Γ t T.
+  move aux at top.
+  destruct 1; match goal with
+              | |- P _ (tFix _ _) (tFix _ _) => idtac
+              | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
+              | |- P _ (mkApps (tFix _ _) _) _ => idtac
+              | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
+              | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
+              | H : _ |- _ => eapply H; eauto
+              end.
+  - eapply X3; eauto.
+  - eapply X4; eauto.
+  - eapply X5; eauto.
+
+  - revert params' o.
+    generalize (pparams p).
+    fix auxl 3.
+    intros params params' [].
+    + constructor. split; auto.
+    + constructor. auto.
+
+  - revert brs' o.
+    revert brs.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + simpl in *. constructor; intros; intuition auto.
+    + constructor. eapply auxl. apply Hl.
+
+  - revert M2 N2 o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. split; auto.
+    + constructor. auto.
+
+  - eapply X20.
+    revert mfix0 mfix1 o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor; split; auto; intuition.
+    + constructor; try split; auto; intuition.
+
+  - eapply X21. revert o.
+    generalize (fix_context mfix0).
+    intros c o. revert mfix0 mfix1 o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. split; auto; intuition.
+    + constructor; try split; auto; intuition.
+
+  - revert l l' o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. split; auto.
+    + constructor. auto.
+
+  - eapply X25.
+    revert mfix0 mfix1 o; fix auxl 3.
+    intros l l' Hl; destruct Hl;
+    constructor; try split; auto; intuition.
+
+  - eapply X26.
+    revert o. generalize (fix_context mfix0). intros c Xnew.
+    revert mfix0 mfix1 Xnew; fix auxl 3; intros l l' Hl;
+    destruct Hl; constructor; try split; auto; intuition.
+
+  - eapply X27.
+    revert mfix0 mfix1 o.
+    fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply X28.
+    revert o. generalize (fix_context mfix0). intros c new.
+    revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+Defined.
+
+Lemma red_tApp Σ Γ t v u :
+  red1 Σ Γ t v ->
+  red1 Σ Γ (tApp t u) (tApp v u).
+Proof.
+  induction 1.
+  all:try solve [eapply (app_red_l _ _ _ _ [u]) => //; econstructor; eauto].
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]).
+    eapply red_beta.
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]). econstructor; eauto.
+    now apply is_constructor_app_ge.
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]). econstructor; eauto.
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]). econstructor; eauto.
+    now eapply OnOne2_app_r.
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]). now eapply app_fix_red_ty.
+  - rewrite -![tApp _ u](mkApps_app _ _ [u]). now eapply app_fix_red_body.
+  - now eapply (app_fix_red_ty _ _ _ _ _ [_]).
+  - now eapply (app_fix_red_body _ _ _ _ _ [_]).
+Qed.
+
+Lemma isLambda_red1 Σ Γ b b' : isLambda b -> red1 Σ Γ b b' -> isLambda b'.
+Proof.
+  destruct b; simpl; try discriminate.
+  intros _ red.
+  depelim red; solve_discr; eauto. depelim o.
+Qed.
+
+End Red1Apps.
+
+Lemma red1_red1apps Σ Γ t v :
+  red1 Σ Γ t v -> Red1Apps.red1 Σ Γ t v.
+Proof.
+  intros red; induction red using red1_ind_all in |- *.
+  all:try solve [econstructor; eauto; solve_all; eauto].
+  - eapply (Red1Apps.red_beta _ _ _ _ _ _ []).
+  - now eapply Red1Apps.red_tApp.
+  - remember (decompose_app (tApp M1 M2)).
+    destruct p as [hd args].
+    edestruct (decompose_app_rec_inv' M1 [M2]). rewrite /decompose_app in Heqp.
+    cbn in Heqp. rewrite -Heqp. reflexivity.
+    destruct a as [napp [hm2 hm1]].
+    symmetry in Heqp; eapply decompose_app_inv in Heqp. rewrite Heqp.
+    assert (tApp M1 N2 = mkApps hd (firstn x args ++ [N2])) as ->.
+    { now rewrite mkApps_app -hm1. }
+    rewrite -{1}(firstn_skipn x args) -hm2. eapply Red1Apps.app_red_r => //.
+    eapply OnOne2_app. now constructor.
+Qed.
+
+Lemma head_nApp f :
+  ~~ isApp f -> head f = f.
+Proof.
+  induction f => //.
+Qed.
+
+Lemma expanded_mkApps_inv Σ Γ f v :
+  ~~ isApp f ->
+  ~~ (isConstruct f || isFix f || isRel f) ->
+  expanded Σ Γ (mkApps f v) ->
+  expanded Σ Γ f /\ Forall (expanded Σ Γ) v.
+Proof.
+  intros happ hc.
+  induction v using rev_ind; cbn.
+  - intros exp; split => //.
+  - rewrite mkApps_app /=.
+    move/expanded_tApp_inv => e.
+    forward e. rewrite /isConstructApp /isFixApp head_mkApps.
+    rewrite head_nApp //. now move/negbTE: hc ->.
+    intuition auto. eapply app_Forall; eauto.
+Qed.
+
+
+Lemma arguments_mkApps f args :
+  ~~ isApp f ->
+  arguments (mkApps f args) = args.
+Proof.
+  rewrite /arguments => isa.
+  rewrite decompose_app_mkApps //.
+Qed.
+
+Lemma arguments_mkApps' f args :
+  arguments (mkApps f args) = arguments f ++ args.
+Proof.
+  rewrite /arguments.
+  rewrite /decompose_app decompose_app_rec_mkApps //.
+  rewrite app_nil_r.
+  induction f in args |- * => //=.
+  rewrite IHf1. now rewrite (IHf1 [f2]) -app_assoc.
+Qed.
+
+Lemma expanded_mkApps_inv' Σ Γ f :
+  expanded Σ Γ f ->
+  let args := arguments f in
+  Forall (expanded Σ Γ) args /\
+    match head f with
+    | tRel n => exists m, nth_error Γ n = Some m /\ m <= #|args|
+    | tConstruct ind c u => exists mind idecl cdecl,
+      declared_constructor Σ (ind, c) mind idecl cdecl /\ #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl)
+    | tFix mfix idx => exists d,
+      Forall
+        (fun d0 : def term =>
+        isLambda (dbody d0) /\
+        (let ctx :=
+            rev_map (fun d1 : def term => (1 + rarg d1)%nat)
+              mfix in
+          expanded Σ (ctx ++ Γ) (dbody d0))) mfix /\
+      args <> [] /\
+      nth_error mfix idx = Some d /\ #|args| > rarg d
+    | _ => expanded Σ Γ (head f)
+    end.
+Proof.
+  induction 1 using expanded_ind; cbn.
+  all: try solve [split; econstructor; eauto].
+  all:rewrite head_mkApps /=.
+  - rewrite arguments_mkApps //. split => //. now exists m.
+  - destruct IHexpanded. rewrite arguments_mkApps'. split.
+    eapply app_Forall => //.
+    rewrite app_length.
+    destruct (head f6) => //; firstorder (eauto; try lia).
+    exists x. split => //. firstorder (eauto; try lia).
+    intros heq; apply H5. now eapply app_eq_nil in heq.
+  - rewrite arguments_mkApps //. split => //. now exists d.
+  - rewrite arguments_mkApps //. split => //.
+    firstorder.
+Qed.
+
 Lemma expanded_red {cf : checker_flags} {Σ : global_env_ext} Γ Γ' t v : wf Σ ->
+  (forall n body, option_map decl_body (nth_error Γ n) = Some (Some body) -> expanded Σ (skipn (S n) Γ') body) ->
   red1 Σ Γ t v ->
   expanded Σ Γ' t ->
   expanded Σ Γ' v.
 Proof.
-  intros wf red; induction red using red1_ind_all in Γ' |- *;  intros exp.
-  - eapply expanded_tApp in exp as [] => //.
+  move=> wf wfΓ /red1_red1apps red.
+  induction red using Red1Apps.red1_ind_all in wfΓ, Γ' |- *;  intros exp.
+  - eapply expanded_mkApps_inv in exp as [] => //.
+    eapply expanded_tLambda_inv in H.
+    depelim H0.
+    eapply expanded_mkApps => //.
     eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
-    now eapply expanded_tLambda_inv in H.
   - eapply expanded_tLetIn_inv in exp as [].
     eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
   - admit.
@@ -1311,10 +1793,15 @@ Proof.
   - admit.
   - admit.
   - constructor. now eapply expanded_tLambda_inv in exp.
-  - constructor. eapply IHred. now eapply expanded_tLambda_inv in exp.
+  - constructor. eapply expanded_tLambda_inv in exp.
+    eapply IHred => //.
+    { intros [] body; cbn => //. rewrite skipn_S. eapply wfΓ. }
   - eapply expanded_tLetIn_inv in exp; now constructor.
   - eapply expanded_tLetIn_inv in exp. now constructor.
-  - eapply expanded_tLetIn_inv in exp. now constructor.
+  - eapply expanded_tLetIn_inv in exp. constructor; intuition eauto.
+    eapply IHred => //.
+    { intros [] ? => //=. intros [=]. subst b. now rewrite skipn_S skipn_0.
+      rewrite skipn_S. eapply wfΓ. }
   - eapply expanded_tCase_inv in exp as [? []].
     constructor; eauto. cbn.
     solve_all. eapply OnOne2_impl_All_r; tea. intuition eauto. now apply X0.
@@ -1327,12 +1814,72 @@ Proof.
     econstructor; eauto. solve_all.
     eapply OnOne2_impl_All_r; tea.
     intros x y [? ?]. intros [[] ?]. rewrite -e0.
-    solve_all.
+    solve_all. eapply e => //. admit.
   - eapply expanded_tProj_inv in exp. now econstructor.
-  - case_eq (isConstructApp (tApp M1 M2) || isFixApp (tApp M1 M2) || isRel (head (tApp M1 M2))).
-    intros h.
-    clear red. specialize (IHred Γ').
-    depelim exp.
-    { destruct args using rev_case; cbn in *; noconf H1. rewrite mkApps_app in H1; noconf H1.
-(* not the right way to go about this, we need some mkApps induction hypothesis *)
-Abort.
+  - eapply expanded_mkApps_inv' in exp.
+    rewrite head_mkApps head_nApp in exp => //.
+    rewrite arguments_mkApps // in exp. destruct exp as [].
+    specialize (IHred Γ' wfΓ).
+    destruct M1; try solve [eapply expanded_mkApps => //; eauto].
+    * depelim red; solve_discr. eapply wfΓ in e.
+      eapply expanded_mkApps => //.
+      rewrite -(firstn_skipn (S n) Γ'). eapply (expanded_lift _ _ _ _ []) => //.
+      destruct H3 as [m [hn ha]].
+      rewrite firstn_length_le //. now eapply nth_error_Some_length in hn.
+      depelim o.
+    * depelim red; solve_discr. depelim o.
+
+  - eapply expanded_mkApps_inv' in exp.
+    move: exp.
+    rewrite head_mkApps head_nApp // arguments_mkApps //.
+    intros [].
+    assert(Forall (expanded Σ Γ') N2).
+    { clear H1. solve_all. eapply OnOne2_impl_All_r; tea. cbn. intuition auto. }
+    destruct M1; try solve [eapply expanded_mkApps => //; eauto].
+    + rewrite (OnOne2_length X) in H1. destruct H1 as [m []]; eapply expanded_tRel; tea.
+    + rewrite (OnOne2_length X) in H1. destruct H1 as [m [? [? []]]]; eapply expanded_tConstruct_app; tea.
+    + rewrite (OnOne2_length X) in H1.
+      destruct H1 as [d [? [? []]]]; eapply expanded_tFix; tea.
+      destruct N2; cbn in *; eauto. lia. intros eq; discriminate.
+
+  - move/expanded_mkApps_inv': exp.
+    rewrite head_mkApps head_nApp // arguments_mkApps // => [] [] hargs [d [hf [hm2 [hnth harg]]]].
+    eapply OnOne2_nth_error in hnth as [t' [hnth hor]]; tea.
+    eapply expanded_tFix; tea.
+    { clear hor. solve_all. eapply OnOne2_impl_All_r; tea.
+      intros ? ? [] []. noconf e. rewrite -H2. split => //. solve_all.
+      clear -X H1.
+      enough (rev_map (fun d1 : def term => S (rarg d1)) mfix0 = (rev_map (fun d1 : def term => S (rarg d1)) mfix1)) as <- => //.
+      clear -X. rewrite !rev_map_spec. f_equal. induction X. destruct p as []. cbn in *. congruence. cbn. congruence. }
+    { destruct hor; subst => //. destruct p as [? e]; noconf e. now congruence. }
+
+  - move/expanded_mkApps_inv': exp.
+    rewrite head_mkApps head_nApp // arguments_mkApps // => [] [] hargs [d [hf [hm2 [hnth harg]]]].
+    eapply OnOne2_nth_error in hnth as [t' [hnth hor]]; tea.
+    eapply expanded_tFix; tea.
+    { clear hor. solve_all.
+      assert (rev_map (fun d1 : def term => S (rarg d1)) mfix0 = (rev_map (fun d1 : def term => S (rarg d1)) mfix1)).
+      { clear -X. rewrite !rev_map_spec. f_equal. induction X. destruct p as []. cbn in *. congruence. cbn. congruence. }
+      rewrite -H.
+      eapply OnOne2_impl_All_r; tea.
+      intros ? ? [] []. noconf e. destruct p.
+      eapply Red1Apps.isLambda_red1 in r; tea. split => //.
+      set(Γ'' := rev_map (fun d1 : def term => S (rarg d1)) mfix0).
+      eapply e => //.
+      { intros n b hnth'. admit. } }
+    { destruct hor; subst => //. destruct p as [? e]; noconf e. now congruence. }
+  - eapply expanded_tProd.
+  - constructor.
+  - constructor.
+    eapply expanded_tEvar_inv in exp.
+    solve_all; eapply OnOne2_impl_All_r; tea. intuition eauto.
+    now eapply X0.
+  - depelim exp; solve_discr. now cbn in H.
+  - depelim exp; solve_discr. now cbn in H.
+  - eapply expanded_tCoFix_inv in exp. econstructor.
+    rewrite -(OnOne2_length X). solve_all; eapply OnOne2_impl_All_r; tea; intuition eauto.
+    destruct X0. noconf e. now rewrite -H1.
+  - eapply expanded_tCoFix_inv in exp. econstructor.
+    rewrite -(OnOne2_length X). solve_all; eapply OnOne2_impl_All_r; tea; intuition eauto.
+    destruct X0. destruct p. noconf e. eapply e0 => //. admit.
+Qed.

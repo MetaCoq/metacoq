@@ -1408,7 +1408,7 @@ Proof.
     split. eapply All2_app => //. rewrite -H3. eauto.
     destruct s.
     * destruct p; solve_discr. noconf H2.
-      left. split.w
+      left. split.
       unfold isStuckFix'; rewrite e1. len. eapply Nat.leb_le. lia.
       now rewrite -[tApp _ _](mkApps_app _ _ [av]).
     * right. len. eapply isEtaExp_fixapp_mon; tea. lia.

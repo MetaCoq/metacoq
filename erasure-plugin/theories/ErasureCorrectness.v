@@ -866,11 +866,22 @@ Lemma compile_evalue_strip (Σer : EEnvMap.GlobalContextMap.t) p :
   firstorder_evalue Σer p ->
   compile_evalue_box (ERemoveParams.strip Σer p) [] = compile_evalue_box_strip Σer p [].
 Proof.
-Admitted.
+  move: p.
+  apply: firstorder_evalue_elim; intros.
+  rewrite ERemoveParams.strip_mkApps //=. rewrite H.
+  rewrite compile_evalue_box_mkApps.
+  rewrite (compile_evalue_box_strip_mkApps (npars:=npars)).
+  rewrite lookup_inductive_pars_spec //.
+  rewrite !app_nil_r !skipn_map. f_equal.
+  rewrite map_map.
+  ELiftSubst.solve_all.
+Qed.
 
 Arguments PCUICFirstorder.firstorder_ind _ _ : clear implicits.
 
 Section PCUICExpandLets.
+  Import PCUICAst.
+  Import PCUICEnvironment.
   Import PCUICExpandLets PCUICExpandLetsCorrectness.
 
   Lemma trans_axiom_free Σ : axiom_free Σ -> axiom_free (trans_global_env Σ).
@@ -883,6 +894,29 @@ Section PCUICExpandLets.
     destruct c as [? [] ? ?] => //.
   Qed.
 
+  Lemma expand_lets_preserves_fo (Σ : global_env_ext) Γ v :
+    wf Σ ->
+    PCUICFirstorder.firstorder_value Σ Γ v ->
+    PCUICFirstorder.firstorder_value (trans_global Σ) (trans_local Γ) (trans v).
+  Proof.
+    intros wfΣ; move: v; apply: PCUICFirstorder.firstorder_value_inds.
+    intros i n ui u args pandi hty hargs ihargs isp.
+    rewrite trans_mkApps. econstructor.
+    apply expand_lets_sound in hty.
+    rewrite !trans_mkApps in hty. cbn in hty. exact hty.
+    ELiftSubst.solve_all.
+    move/negbTE: isp.
+    rewrite /PCUICFirstorder.isPropositional.
+    rewrite /lookup_inductive /lookup_inductive_gen /lookup_minductive_gen trans_lookup.
+    destruct lookup_env => //. destruct g => //. cbn. rewrite nth_error_mapi.
+    destruct nth_error => //=.
+    rewrite /PCUICFirstorder.isPropositionalArity.
+    rewrite (trans_destArity []). destruct destArity => //.
+    destruct p => //. now intros ->.
+  Qed.
+End PCUICExpandLets.
+
+
 Section pipeline_theorem.
 
   Instance cf : checker_flags := extraction_checker_flags.
@@ -894,7 +928,7 @@ Section pipeline_theorem.
 
   Variable t : PCUICAst.term.
   Variable expt : PCUICEtaExpand.expanded Σ.1 [] t.
-
+  Variable axfree : axiom_free Σ.
   Variable v : PCUICAst.term.
 
   Variable i : Kernames.inductive.
@@ -923,7 +957,9 @@ Section pipeline_theorem.
     - red. cbn. split; eauto.
       eexists.
       eapply PCUICClassification.subject_reduction_eval; eauto.
-    - todo "preservation of eta expandedness".
+    - eapply (PCUICClassification.wcbveval_red (Σ := Σ)) in X; tea.
+      eapply PCUICEtaExpand.expanded_red in X; tea. apply HΣ.
+      intros ? ?; rewrite nth_error_nil => //.
     - cbn. todo "normalization".
     - todo "normalization".
   Qed.
@@ -952,19 +988,51 @@ Section pipeline_theorem.
     cbn [fst snd].
     intros h.
     destruct_compose.
+    destruct Heval.
+    assert (eqtr : PCUICExpandLets.trans v = v).
+    { clear -hv.
+      move: v hv.
+      eapply PCUICFirstorder.firstorder_value_inds.
+      intros.
+      rewrite PCUICExpandLetsCorrectness.trans_mkApps /=.
+      f_equal. ELiftSubst.solve_all. }
     assert (PCUICFirstorder.firstorder_value (PCUICExpandLets.trans_global_env Σ.1, Σ.2) [] v).
-    { todo "expand lets preserves fo values". }
+    { eapply expand_lets_preserves_fo in hv; eauto. now rewrite eqtr in hv. }
+
     assert (Normalisation': PCUICSN.NormalizationIn (PCUICExpandLets.trans_global Σ)).
-    { destruct h as [[] ?]. apply H0. cbn. apply X. }
+    { destruct h as [[] ?]. apply H0. cbn. apply X0. }
     set (Σ' := build_global_env_map _).
     set (p := transform erase_transform _ _).
-    pose proof (@erase_tranform_firstorder _ h v i u args Normalisation').
+    pose proof (@erase_tranform_firstorder _ h v i u (List.map PCUICExpandLets.trans args) Normalisation').
     forward H0.
-    { todo "preserves typing of fo values". }
+    { cbn. rewrite -eqtr.
+      eapply (PCUICClassification.subject_reduction_eval (Σ := Σ)) in X; tea.
+      eapply PCUICExpandLetsCorrectness.expand_lets_sound in X.
+      now rewrite PCUICExpandLetsCorrectness.trans_mkApps /= in X. }
+    forward H0. { cbn. now eapply trans_axiom_free. }
     forward H0.
-    { cbn. todo "preserves axiom freeness". }
-    forward H0.
-    { cbn. todo "preserves fo ind". }
+    { cbn. clear -HΣ fo.
+      move: fo.
+      rewrite /PCUICFirstorder.firstorder_ind /= PCUICExpandLetsCorrectness.trans_lookup /=.
+      destruct PCUICAst.PCUICEnvironment.lookup_env => //. destruct g => //=.
+      unfold PCUICFirstorder.firstorder_mutind. cbn.
+      move/andP => [] -> /=. ELiftSubst.solve_all.
+      eapply forallb_Forall in b. apply forallb_Forall.
+      ELiftSubst.solve_all. eapply All_mapi.
+      eapply All_Alli; tea. cbn.
+      intros n []. rewrite /PCUICFirstorder.firstorder_oneind /=.
+      move/andP => [] hf ->; rewrite andb_true_r.
+      eapply forallb_Forall in hf. apply forallb_Forall.
+      ELiftSubst.solve_all.
+      rewrite /PCUICFirstorder.firstorder_con in H *.
+      eapply alli_Alli. eapply alli_Alli in H.
+      destruct x; cbn in *.
+      eapply Alli_rev.
+      ELiftSubst.solve_all.
+
+      re
+      destruct m; cbn in *.
+
     forward H0.
     { cbn. todo "preserves values". }
     specialize (H0 _ eq_refl).

@@ -1383,6 +1383,7 @@ Lemma app_tip_nil {A} (l : list A) (x : A) : (l ++ [x])%list <> [].
 Proof.
   destruct l; cbn; congruence.
 Qed.
+Global Hint Resolve app_tip_nil : core.
 
 Definition remove_last {A} (args : list A) :=
   List.firstn (#|args| - 1) args.

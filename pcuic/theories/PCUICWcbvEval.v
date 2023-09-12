@@ -1769,13 +1769,203 @@ Proof.
     firstorder.
 Qed.
 
+Lemma All_fold_map_context (P : context -> context_decl -> Type) (f : term -> term) ctx :
+  All_fold P (map_context f ctx) <~> All_fold (fun Γ d => P (map_context f Γ) (map_decl f d)) ctx.
+Proof.
+  induction ctx.
+  - split; constructor.
+  - cbn. split; intros H; depelim H; constructor; auto; now apply IHctx.
+Qed.
+
+Lemma expanded_fix_subst Σ a k b Γ Γs Δ :
+  #|Γ| = k ->
+  Forall2 (fun n arg => forall args Γ' k',
+    Forall (expanded Σ (Γ' ++ Δ)) args ->
+    n <= #|args| ->
+    #|Γ'| = k' ->
+    expanded Σ (Γ' ++ Δ) (mkApps (lift0 k' arg) args)) Γs a ->
+  expanded Σ (Γ ++ Γs ++ Δ) b ->
+  expanded Σ (Γ ++ Δ) (subst a k b).
+Proof.
+  intros Hk Hs.
+  remember (Γ ++ _ ++ Δ)%list as Γ_.
+  intros exp; revert Γ k Hk HeqΓ_.
+  induction exp using expanded_ind; intros Γ' k Hk ->.
+  all:try solve[ cbn; econstructor => // ].
+  2,7:solve[ cbn; econstructor => //; solve_all ].
+  - rewrite subst_mkApps /=.
+    destruct (Nat.leb_spec k n).
+    destruct (nth_error a _) eqn:hnth.
+    * pose proof (Forall2_length Hs).
+      pose proof (Forall2_nth_error_Some_r _ _ _ _ _ _ _ hnth Hs) as [t' [hnth' hargs]].
+      eapply hargs => //.
+      eapply Forall_map.
+      2:{ len. rewrite nth_error_app_ge in H. lia. subst k.
+        rewrite nth_error_app_lt in H.
+        eapply nth_error_Some_length in hnth'. lia. rewrite hnth' in H. noconf H. exact H0. }
+      solve_all.
+    * rewrite nth_error_app_ge in H. lia.
+      eapply nth_error_None in hnth.
+      pose proof (Forall2_length Hs).
+      rewrite nth_error_app_ge in H. lia.
+      eapply expanded_tRel. rewrite nth_error_app_ge. lia. erewrite <- H.
+      lia_f_equal. len. solve_all.
+    * rewrite nth_error_app_lt in H. lia.
+      eapply expanded_tRel. rewrite nth_error_app_lt. lia. tea. now len.
+      solve_all.
+  - cbn. econstructor.
+    eapply (IHexp (0 :: Γ') (S k)); cbn; auto; try lia.
+  - cbn. econstructor. apply IHexp1; auto.
+    eapply (IHexp2 (0 :: Γ') (S k)); cbn; auto; lia.
+  - rewrite subst_mkApps.
+    destruct (isConstruct (subst a k f6) || isFix (subst a k f6) || isRel (subst a k f6)) eqn:eqc.
+    specialize (IHexp  _ _ Hk eq_refl).
+    eapply expanded_mkApps_expanded => //. solve_all.
+    eapply expanded_mkApps => //. now eapply IHexp. solve_all.
+  - cbn. econstructor. eauto. cbn. solve_all. solve_all.
+    specialize (H1 (repeat 0 #|bcontext x| ++ Γ') (#|bcontext x| + k)%nat).
+    forward H1 by len.
+    forward H1. now rewrite app_assoc.
+    rewrite /id. rewrite app_assoc. apply H1.
+  - rewrite subst_mkApps. cbn.
+    eapply expanded_tFix.
+    + solve_all. now eapply isLambda_subst.
+      specialize (a0
+      (rev_map (fun d0 : def term => S (rarg d0))
+      (map (map_def (subst a k) (subst a (#|mfix| + k))) mfix) ++ Γ') (#|mfix| + k)%nat).
+      forward a0 by len.
+      forward a0. { rewrite app_assoc. f_equal. f_equal.
+        rewrite !rev_map_spec. f_equal. now rewrite map_map_compose /=. }
+      rewrite app_assoc. eapply a0.
+    + solve_all.
+    + now destruct args.
+    + rewrite nth_error_map /= H4 //.
+    + len.
+  - cbn. constructor.
+    solve_all.
+    specialize (a0 (repeat 0 #|mfix| ++ Γ') (#|mfix| + k)%nat).
+    forward a0 by len.
+    forward a0. { rewrite app_assoc //. }
+    rewrite app_assoc. eapply a0.
+  - rewrite subst_mkApps. cbn.
+    eapply expanded_tConstruct_app; tea. now len.
+    solve_all.
+Qed.
+
+Lemma expanded_unfold_fix Σ Γ' mfix idx narg fn :
+  unfold_fix mfix idx = Some (narg, fn) ->
+  All (fun d0 : def term => isLambda (dbody d0) /\ expanded Σ (rev_map (fun d1 : def term => S (rarg d1)) mfix ++ Γ') (dbody d0)) mfix ->
+  expanded Σ Γ' fn.
+Proof.
+  unfold unfold_fix.
+  destruct nth_error eqn:e => //.
+  intros [= <- <-] hf.
+  pose proof (nth_error_all e hf) as [hl hf'].
+  eapply (expanded_fix_subst _ _ _ _ []) => //; tea.
+  rewrite rev_map_spec.
+  eapply Forall2_from_nth_error. len.
+  intros n rarg f. len. intros hn hrarg hnthf args Γ'' k' hargs hrarg' <-.
+  eapply PCUICParallelReductionConfluence.nth_error_fix_subst in hnthf. subst f.
+  move: hrarg.
+  rewrite nth_error_rev; len. rewrite List.rev_involutive nth_error_map.
+  intros hrarg.
+  destruct (nth_error mfix (_ - _)) eqn:e'. cbn in hrarg. noconf hrarg.
+  eapply expanded_tFix => //. solve_all.
+  eapply expanded_lift; len. rewrite !rev_map_spec in H1 *.
+  rewrite map_map => //. destruct args => //. cbn in hrarg'. lia.
+  rewrite nth_error_map /= e' /= //. cbn. lia.
+  eapply nth_error_None in e'. lia.
+Qed.
+
+Lemma expanded_unfold_cofix Σ Γ' mfix idx narg fn :
+  unfold_cofix mfix idx = Some (narg, fn) ->
+  All (fun d0 : def term => expanded Σ (repeat 0 #|mfix| ++ Γ') (dbody d0)) mfix ->
+  expanded Σ Γ' fn.
+Proof.
+  unfold unfold_cofix.
+  destruct nth_error eqn:e => //.
+  intros [= <- <-] hf.
+  pose proof (nth_error_all e hf) as hf'.
+  eapply (expanded_subst _ _ _ _ []) => //; tea.
+  rewrite /cofix_subst.
+  generalize #|mfix|.
+  induction n; repeat constructor; eauto. solve_all.
+  len.
+Qed.
+
+Lemma expanded_weakening_env {cf : checker_flags} Σ Σ' Γ t :
+  wf Σ' ->
+  extends Σ Σ' ->
+  expanded Σ Γ t -> expanded Σ' Γ t.
+Proof.
+  intros w s.
+  eapply expanded_ind; intros.
+  all:try solve [econstructor; eauto].
+  - econstructor; eauto. solve_all. sq. eapply All_fold_impl; tea. cbn.
+    intros. now rewrite repeat_app in H6.
+  - eapply expanded_tFix; eauto. solve_all.
+  - eapply expanded_tConstruct_app; eauto.
+    eapply PCUICWeakeningEnv.weakening_env_declared_constructor; tea.
+Qed.
+
+Lemma expanded_global_env_constant {cf : checker_flags} Σ c decl :
+  wf Σ ->
+  expanded_global_env Σ ->
+  declared_constant Σ c decl ->
+  ForOption (expanded Σ []) (cst_body decl).
+Proof.
+  intros wf; destruct Σ as [Σ univs] => /=. cbn.
+  unfold expanded_global_env. cbn.
+  induction 1; cbn => //.
+  intros [->|H'].
+  - depelim H0.
+    destruct decl as [? [] ?]; cbn in *.
+    constructor. cbn.
+    eapply expanded_weakening_env; tea.
+    eapply extends_strictly_on_decls_extends.
+    split => //=. eapply incl_cs_refl. 2:eapply Retroknowledge.extends_refl.
+    set (cb := ConstantDecl _). now exists [(c, cb)].
+    constructor.
+  - forward IHexpanded_global_declarations.
+    destruct wf. cbn in *. split => //.
+    cbn. now depelim o0.
+    eapply IHexpanded_global_declarations in H'.
+    destruct decl as [? [] ?]; cbn in * => //. 2:constructor.
+    depelim H'. constructor.
+    eapply expanded_weakening_env; tea.
+    eapply extends_strictly_on_decls_extends.
+    split => //=. eapply incl_cs_refl. 2:eapply Retroknowledge.extends_refl.
+    now exists [decl0].
+Qed.
+
+Lemma All_fold_nth_error P (ctx : context) n b :
+  All_fold P ctx -> nth_error ctx n = Some b ->
+  P (skipn (S n) ctx) b.
+Proof.
+  induction 1 in n, b |- *.
+  - rewrite nth_error_nil //.
+  - destruct n => //=.
+    * intros [= <-]. now rewrite skipn_S skipn_0.
+    * intros hnth. now rewrite skipn_S.
+Qed.
+
+Lemma skipn_repeat {A} k n (a : A) :
+  skipn n (repeat a k) = repeat a (k - n).
+Proof.
+  induction n in k |- *.
+  - rewrite skipn_0. lia_f_equal.
+  - destruct k => //=.
+    rewrite skipn_S IHn. lia_f_equal.
+Qed.
+
 Lemma expanded_red {cf : checker_flags} {Σ : global_env_ext} Γ Γ' t v : wf Σ ->
+  expanded_global_env Σ ->
   (forall n body, option_map decl_body (nth_error Γ n) = Some (Some body) -> expanded Σ (skipn (S n) Γ') body) ->
   red1 Σ Γ t v ->
   expanded Σ Γ' t ->
   expanded Σ Γ' v.
 Proof.
-  move=> wf wfΓ /red1_red1apps red.
+  move=> wf expΣ wfΓ /red1_red1apps red.
   induction red using Red1Apps.red1_ind_all in wfΓ, Γ' |- *;  intros exp.
   - eapply expanded_mkApps_inv in exp as [] => //.
     eapply expanded_tLambda_inv in H.
@@ -1784,14 +1974,53 @@ Proof.
     eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
   - eapply expanded_tLetIn_inv in exp as [].
     eapply (expanded_subst _ _ _ _ [] Γ') => //. now constructor.
-  - admit.
+  - rewrite -(firstn_skipn (S i) Γ').
+    eapply expanded_mkApps_inv' in exp; cbn in exp.
+    destruct exp as [_ [m []]]. eapply nth_error_Some_length in H0.
+    eapply (expanded_lift _ _ _ _ []) => //.
+    rewrite firstn_length_le; try lia.
+    now eapply wfΓ.
   - eapply expanded_tCase_inv in exp as [? []].
-    unfold iota_red. admit.
-  - admit.
-  - admit.
-  - eapply expanded_tProj_inv in exp. econstructor. admit.
-  - admit.
-  - admit.
+    unfold iota_red.
+    move/expanded_mkApps_inv': H3 => /=.
+    rewrite arguments_mkApps // head_mkApps //=.
+    intros [hargs [mind [idecl [cdecl [declc hargs']]]]].
+    eapply nth_error_forall in H2; tea.
+    destruct H2 as [[hbctx] hbod].
+    eapply (expanded_subst _ _ _ _ [] _) => //.
+    + eapply Forall_rev, Forall_skipn => //.
+    + len. replace #|skipn (ci_npar ci) args| with (context_assumptions (inst_case_branch_context p br)).
+      eapply expanded_let_expansion; len. red.
+      sq. rewrite /inst_case_branch_context /inst_case_context /subst_context.
+      eapply PCUICParallelReduction.All_fold_fold_context_k.
+      eapply All_fold_map_context, All_fold_impl; tea; cbn.
+      intros ? ? fo. len. destruct x as [? [] ?] => //; constructor.
+      cbn in fo. depelim fo. eapply (expanded_subst _ _ _ _ (repeat 0 #|Γ0|) _); len.
+      eapply Forall_rev; eauto.
+      eapply expanded_subst_instance. rewrite app_assoc. now eapply expanded_weakening.
+      rewrite skipn_length. len.
+  - move/expanded_mkApps_inv': exp. cbn.
+    rewrite arguments_mkApps // head_mkApps //=.
+    move=> [hargs [d [hf [hargs' []]]]] hnth hrarg.
+    eapply expanded_mkApps_expanded => //; solve_all.
+    eapply expanded_unfold_fix in H; tea.
+  - eapply expanded_tCase_inv in exp as [? []].
+    constructor => //.
+    eapply expanded_mkApps_inv' in H2. move: H2; rewrite arguments_mkApps // head_mkApps //=.
+    intros [hargs' hcof]. cbn in hcof. eapply expanded_tCoFix_inv in hcof.
+    eapply expanded_unfold_cofix in H; tea. eapply expanded_mkApps; tea => //. solve_all.
+  - eapply expanded_tProj_inv in exp. econstructor.
+    eapply expanded_mkApps_inv' in exp. move: exp; rewrite arguments_mkApps // head_mkApps //=.
+    intros [hargs' hcof]. cbn in hcof. eapply expanded_tCoFix_inv in hcof.
+    eapply expanded_mkApps => //.
+    eapply expanded_unfold_cofix in H; tea. solve_all.
+  - eapply expanded_subst_instance.
+    eapply expanded_global_env_constant in expΣ; tea.
+    eapply (expanded_weakening _ []). rewrite H0 in expΣ. now depelim expΣ.
+  - eapply expanded_tProj_inv in exp.
+    move/expanded_mkApps_inv': exp. rewrite arguments_mkApps // head_mkApps //=.
+    intros [].
+    eapply nth_error_forall in H0; tea.
   - constructor. now eapply expanded_tLambda_inv in exp.
   - constructor. eapply expanded_tLambda_inv in exp.
     eapply IHred => //.
@@ -1814,7 +2043,30 @@ Proof.
     econstructor; eauto. solve_all.
     eapply OnOne2_impl_All_r; tea.
     intros x y [? ?]. intros [[] ?]. rewrite -e0.
-    solve_all. eapply e => //. admit.
+    solve_all. eapply e => //.
+    intros n b.
+    clear -H H2 wfΓ.
+    destruct nth_error eqn:e' => //.
+    cbn. intros [=]. destruct c as [? [] ?]. cbn in *. noconf H1.
+    eapply nth_error_app_inv in e' as [[]|[]].
+    { rewrite inst_case_branch_context_length in H0. destruct H2.
+      rewrite /inst_case_branch_context /inst_case_context in H1.
+      destruct (nth_error (bcontext x) n) eqn:e.
+      2:{ eapply nth_error_None in e. rewrite skipn_app skipn_all2. len. cbn. len. }
+      rewrite /subst_context in H1.
+      erewrite nth_error_fold_context_k in H1. 4:{ rewrite nth_error_map e //. } 3:len. 2:exact [].
+      len in H1. noconf H1. destruct c as [? [] ?]; noconf H1.
+      rewrite skipn_app. len. eapply All_fold_nth_error in X; tea. cbn in X. depelim X.
+      rewrite skipn_length in H1.
+      eapply expanded_subst. rewrite skipn_length. len.
+      replace (S n - #|bcontext x|) with 0. 2:{ lia. } rewrite skipn_0. eapply Forall_rev. solve_all.
+      len. rewrite app_assoc. eapply expanded_weakening. eapply expanded_subst_instance.
+      now rewrite skipn_repeat. }
+    { rewrite inst_case_branch_context_length in H0, H1.
+      rewrite skipn_app skipn_all2 /=; len.
+      replace (S n - #|bcontext x|) with (S (n - #|bcontext x|)). 2:lia.
+      eapply wfΓ. rewrite H1 //. }
+    noconf H1.
   - eapply expanded_tProj_inv in exp. now econstructor.
   - eapply expanded_mkApps_inv' in exp.
     rewrite head_mkApps head_nApp in exp => //.
@@ -1866,7 +2118,18 @@ Proof.
       eapply Red1Apps.isLambda_red1 in r; tea. split => //.
       set(Γ'' := rev_map (fun d1 : def term => S (rarg d1)) mfix0).
       eapply e => //.
-      { intros n b hnth'. admit. } }
+      { intros n b hnth'.
+        destruct (nth_error (fix_context mfix0) n) eqn:e'.
+        rewrite nth_error_app_lt in hnth'. now eapply nth_error_Some_length in e'.
+        rewrite e' in hnth'. noconf hnth'.
+        pose proof (PCUICParallelReductionConfluence.fix_context_assumption_context mfix0).
+        eapply PCUICParallelReductionConfluence.nth_error_assumption_context in H6; tea. congruence.
+        rewrite /Γ''.
+        eapply nth_error_None in e'. len in e'.
+        rewrite nth_error_app_ge in hnth' => //. now len.
+        rewrite skipn_app skipn_all2. len.
+        cbn. len. replace (S n - #|mfix0|) with (S (n - #|mfix0|)). 2:{ lia. }
+        eapply wfΓ. now len in hnth'. } }
     { destruct hor; subst => //. destruct p as [? e]; noconf e. now congruence. }
   - eapply expanded_tProd.
   - constructor.
@@ -1881,5 +2144,15 @@ Proof.
     destruct X0. noconf e. now rewrite -H1.
   - eapply expanded_tCoFix_inv in exp. econstructor.
     rewrite -(OnOne2_length X). solve_all; eapply OnOne2_impl_All_r; tea; intuition eauto.
-    destruct X0. destruct p. noconf e. eapply e0 => //. admit.
+    destruct X0. destruct p. noconf e. eapply e0 => //.
+    intros n b.
+    destruct nth_error eqn:e' => //.
+    cbn. intros [=]. destruct c as [? [] ?]. cbn in *. noconf H4.
+    eapply nth_error_app_inv in e' as [[]|[]].
+    { pose proof (PCUICParallelReductionConfluence.fix_context_assumption_context mfix0).
+      eapply PCUICParallelReductionConfluence.nth_error_assumption_context in H5; tea. cbn in H5. congruence. }
+    len in H3. len in H4.
+    rewrite skipn_app skipn_all2; len.
+    replace (S n - #|mfix0|) with (S (n - #|mfix0|)) by lia. eapply wfΓ. rewrite H4 /= //.
+    noconf H4.
 Qed.

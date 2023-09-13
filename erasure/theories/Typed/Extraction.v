@@ -185,7 +185,7 @@ Definition get_projections (env : ExAst.global_env) : list (ident * ExAst.one_in
       | [oib] =>
         match oib.(ExAst.ind_ctors), oib.(ExAst.ind_projs) with
         (* case 1-ind with primitive projections *)
-        | [ctor],_::_ => map (fun '(na, _) => (na, oib)) oib.(ExAst.ind_projs)
+        | [_],_::_ => map (fun '(na, _) => (na, oib)) oib.(ExAst.ind_projs)
         (* case 1-ind without primitive projections *)
         | [(_,ctor_args,_)],[] =>
           (* let is_named '(nm,_) := match nm with nNamed _ => true | _ => false end in *)

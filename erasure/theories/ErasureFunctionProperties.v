@@ -1989,9 +1989,10 @@ From MetaCoq.PCUIC Require Import PCUICFirstorder.
 From Equations Require Import Equations.
 
 Inductive firstorder_evalue Σ : EAst.term -> Prop :=
-  | is_fo i n args npars :
-  EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars ->
+  | is_fo i n args npars nargs :
+  EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
   Forall (firstorder_evalue Σ) (skipn npars args) ->
+  #|args| = npars + nargs ->
   firstorder_evalue Σ (EAst.mkApps (EAst.tConstruct i n []) args).
 
 Lemma list_size_skipn {A} (l : list A) size n :
@@ -2006,14 +2007,15 @@ Qed.
 Section elim.
   Context (Σ : E.global_context).
   Context (P : EAst.term -> Prop).
-  Context (ih : (forall i n args npars,
-    EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars ->
+  Context (ih : (forall i n args npars nargs,
+    EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
     Forall (firstorder_evalue Σ) (skipn npars args) ->
     Forall P (skipn npars args) ->
+    #|args| = npars + nargs ->
     P (EAst.mkApps (EAst.tConstruct i n []) args))).
 
   Equations? firstorder_evalue_elim (t : EAst.term) (fo : firstorder_evalue Σ t) : P t by wf t (MR lt EInduction.size) :=
-  { | _, is_fo i n args npars hl hf => _ }.
+  { | _, is_fo i n args npars nargs hl hf hargs => _ }.
   Proof.
     eapply ih; tea.
     eapply In_Forall. intros x hin.
@@ -2101,10 +2103,10 @@ Lemma firstorder_evalue_extends Σ Σ' t :
   firstorder_evalue Σ' t.
 Proof.
   intros ext; move: t.
-  apply: firstorder_evalue_elim => i n args npars hl hf ih.
+  apply: firstorder_evalue_elim => i n args npars nargs hl hf hargs ih.
   econstructor; tea.
   red in ext.
-  move: hl; rewrite /lookup_inductive_pars /lookup_minductive.
+  move: hl; rewrite /lookup_constructor_pars_args /lookup_constructor /lookup_inductive /lookup_minductive.
   move: (ext (inductive_mind i)).
   now case: lookup_env => // a; move/(_ _ eq_refl) ->.
 Qed.
@@ -2167,6 +2169,7 @@ Proof.
   { destruct (wfext Σg Hg). eapply PCUICFirstorder.firstorder_value_spec; tea. apply X0. constructor.
     eapply PCUICClassification.subject_reduction_eval; tea.
     eapply PCUICWcbvEval.eval_to_value; tea. }
+  2:{ eapply subject_reduction; eauto. }
   { rewrite H1 in e. eapply erase_global_deps_eval in e.
     eapply firstorder_evalue_extends; tea. clear e.
     clear -Hrel H Hg Hwf. move: v H wt'.
@@ -2186,16 +2189,18 @@ Proof.
     move/is_erasableP: i0. intros hc.
     destruct (hc _ Hrel). eapply (isErasable_Propositional (args:=[])) in X0 => //. cbn in X0, isp => //.
     rewrite X0 in isp => //.
-    eapply PCUICInductiveInversion.Construct_Ind_ind_eq' in hty as [mdecl [idecl [cdecl [declc _]]]] => //=.
+    eapply PCUICInductiveInversion.Construct_Ind_ind_eq' in hty as [mdecl [idecl [cdecl [declc [hcstr _]]]]] => //=.
+    destruct hcstr as [_ hcstr].
     set (v := E.mkApps _ _).
-    eapply (erase_global_declared_constructor _ _ _ _ _ _ _ (term_global_deps v) decls normalization_in prf) in declc; tea.
+    pose proof declc as declc'.
+    eapply (erase_global_declared_constructor _ _ _ _ _ _ _ (term_global_deps v) decls normalization_in prf _ Hg) in declc; tea.
     destruct declc as [[hm hi] hc].
     2:{ rewrite /v /= term_global_deps_mkApps. destruct i => /=. eapply KernameSet.union_spec; left. now eapply KernameSet.singleton_spec. }
     2:{ eapply Hwf. }
     econstructor.
-    { rewrite /lookup_inductive_pars /lookup_minductive hm /= //. }
+    { rewrite /lookup_constructor_pars_args /lookup_constructor /lookup_inductive /lookup_minductive hm /= hi //= hc //. }
     eapply Forall_skipn.
-    clear -ih Hrel isp.
+    clear -ih Hwf Hrel isp hcstr declc'.
     { revert v. rewrite erase_terms_eq => v.
       eapply Forall_All in ih.
       assert (All
@@ -2216,8 +2221,10 @@ Proof.
         erewrite (erase_irrel _ _).1; tea. }
       eapply All_Forall, All_map_All.
       { intros. exact X0. }
-      cbn. intros x y rx h. apply h. exact Hrel. } }
-  { eapply subject_reduction; eauto. }
+      cbn. intros x y rx h. apply h. exact Hrel. }
+      rewrite erase_terms_eq map_All_length. cbn.
+      clear -wt' Hwf declc' Hrel hcstr. specialize (wt' _ Hrel).
+      now rewrite -(declared_constructor_arity declc'). }
   { eapply PCUICWcbvEval.value_final. eapply PCUICWcbvEval.eval_to_value. eauto. }
   all: eauto.
   Unshelve. eauto.

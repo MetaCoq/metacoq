@@ -581,6 +581,41 @@ Proof.
 Qed.
 Derive Signature for firstorder_evalue.
 
+Section PCUICenv.
+  Import PCUICAst.
+  Import PCUICEnvironment.
+
+  Lemma pres_inductives_lookup Σ Σ' i n mdecl idecl cdecl :
+    wf Σ ->
+    erase_preserves_inductives Σ Σ' ->
+    declared_constructor Σ (i, n) mdecl idecl cdecl ->
+    forall npars nargs, EGlobalEnv.lookup_constructor_pars_args Σ' i n = Some (npars, nargs) ->
+    npars = mdecl.(ind_npars) /\ nargs = cdecl.(cstr_arity).
+  Proof.
+    intros wf he.
+    rewrite /declared_constructor /declared_inductive.
+    intros [[declm decli] declc].
+    unshelve eapply declared_minductive_to_gen in declm. 3:exact wf. red in declm.
+    intros npars nargs. rewrite /EGlobalEnv.lookup_constructor_pars_args.
+    rewrite /EGlobalEnv.lookup_constructor /EGlobalEnv.lookup_inductive /EGlobalEnv.lookup_minductive.
+    destruct EGlobalEnv.lookup_env eqn:e => //=.
+    destruct g => //.
+    eapply he in declm; tea. subst m.
+    rewrite nth_error_map decli /=.
+    rewrite nth_error_map declc /=. intuition congruence.
+  Qed.
+End PCUICenv.
+
+Lemma lookup_constructor_pars_args_lookup_inductive_pars Σ i n npars nargs :
+  EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
+  EGlobalEnv.lookup_inductive_pars Σ (Kernames.inductive_mind i) = Some npars.
+Proof.
+  rewrite /EGlobalEnv.lookup_constructor_pars_args /EGlobalEnv.lookup_inductive_pars.
+  rewrite /EGlobalEnv.lookup_constructor /EGlobalEnv.lookup_inductive.
+  destruct EGlobalEnv.lookup_minductive => //=.
+  destruct nth_error => //. destruct nth_error => //. congruence.
+Qed.
+
 Lemma compile_evalue_erase (Σ : PCUICAst.PCUICEnvironment.global_env_ext) (Σ' : EEnvMap.GlobalContextMap.t) v :
   wf Σ.1 ->
   PCUICFirstorder.firstorder_value Σ [] v ->
@@ -593,16 +628,9 @@ Proof.
   intros i n ui u args pandi hty hargs ih isp.
   eapply PCUICInductiveInversion.Construct_Ind_ind_eq' in hty as [mdecl [idecl [cdecl [declc _]]]] => //.
   rewrite compile_value_erase_mkApps.
-  intros fo'. depelim fo'. EAstUtils.solve_discr. noconf H1.
+  intros fo'. depelim fo'. EAstUtils.solve_discr. noconf H1. noconf H2.
   assert (npars = PCUICAst.PCUICEnvironment.ind_npars mdecl).
-  { destruct declc as [[declm decli] declc].
-    unshelve eapply declared_minductive_to_gen in declm. 3:exact wf. red in declm.
-    rewrite /EGlobalEnv.lookup_inductive_pars /EGlobalEnv.lookup_minductive in H.
-    destruct (PCUICAst.PCUICEnvironment.lookup_env) eqn:hl => //.
-    noconf declm.
-    destruct (EGlobalEnv.lookup_env) eqn:hl' => //. destruct g => //.
-    red in hΣ.
-    eapply hΣ in hl'; tea. cbn in H. noconf H. subst m. reflexivity. }
+  { now eapply pres_inductives_lookup in declc; tea. }
   subst npars.
   rewrite (compile_value_box_mkApps (npars := PCUICAst.PCUICEnvironment.ind_npars mdecl)).
   { destruct declc as [[declm decli] declc].
@@ -611,12 +639,26 @@ Proof.
     rewrite /pcuic_lookup_inductive_pars // declm //. }
   rewrite (compile_evalue_box_strip_mkApps (npars := PCUICAst.PCUICEnvironment.ind_npars mdecl)) //.
   rewrite lookup_inductive_pars_spec //.
+  eapply lookup_constructor_pars_args_lookup_inductive_pars; tea.
   rewrite !app_nil_r. f_equal.
   rewrite app_nil_r skipn_map in H0.
   eapply Forall_map_inv in H0.
   eapply (Forall_skipn _ (PCUICAst.PCUICEnvironment.ind_npars mdecl)) in ih.
   rewrite !skipn_map /flip map_map.
   ELiftSubst.solve_all.
+Qed.
+
+
+Lemma lookup_constructor_pars_args_nopars {efl : EEnvFlags} Σ ind c npars nargs :
+  wf_glob Σ ->
+  has_cstr_params = false ->
+  EGlobalEnv.lookup_constructor_pars_args Σ ind c = Some (npars, nargs) -> npars = 0.
+Proof.
+  intros wf h.
+  rewrite /EGlobalEnv.lookup_constructor_pars_args.
+  destruct EGlobalEnv.lookup_constructor eqn:e => //=.
+  destruct p as [[m i] cb]. intros [= <- <-].
+  now eapply wellformed_lookup_constructor_pars in e.
 Qed.
 
 Lemma compile_evalue_box_firstorder {efl : EEnvFlags} {Σ : EEnvMap.GlobalContextMap.t} v :
@@ -628,10 +670,8 @@ Proof.
   move: v; apply: firstorder_evalue_elim.
   intros.
   rewrite /flip (compile_evalue_box_mkApps) // ?app_nil_r.
-  rewrite /EGlobalEnv.lookup_inductive_pars /= in H.
-  destruct EGlobalEnv.lookup_minductive eqn:e => //.
-  eapply wellformed_lookup_inductive_pars in hpars; tea => //.
-  noconf H. rewrite hpars in H1. rewrite skipn_0 in H1.
+  eapply lookup_constructor_pars_args_nopars in H; tea. subst npars.
+  rewrite skipn_0 in H1.
   constructor. ELiftSubst.solve_all.
 Qed.
 
@@ -667,11 +707,13 @@ Proof. split => //.
     clear wf; move: t1 fo. unfold fo_evalue, fo_evalue_map. cbn.
     apply: firstorder_evalue_elim; intros.
     econstructor.
-    rewrite EInlineProjections.lookup_inductive_pars_optimize in H => //; tea. auto.
+    move: H. rewrite /EGlobalEnv.lookup_constructor_pars_args.
+    rewrite EInlineProjections.lookup_constructor_optimize //. intros h; exact h. auto. auto.
   - rewrite /fo_evalue_map. intros [] pr fo. cbn in *. unfold EInlineProjections.optimize_program. cbn. f_equal.
     destruct pr as [[pr _] _]. cbn in *. move: t1 fo.
     apply: firstorder_evalue_elim; intros.
-    eapply wf_glob_lookup_inductive_pars in H => //. subst npars; rewrite skipn_0 in H0 H1.
+    eapply lookup_constructor_pars_args_nopars in H; tea => //. subst npars.
+    rewrite skipn_0 in H0 H1.
     rewrite EInlineProjections.optimize_mkApps /=. f_equal.
     ELiftSubst.solve_all.
 Qed.
@@ -688,15 +730,24 @@ Proof. split => //.
     clear wf; move: t1 fo.
     apply: firstorder_evalue_elim; intros.
     econstructor; tea.
-    rewrite EOptimizePropDiscr.lookup_inductive_pars_optimize in H0 => //; tea.
+    move: H0.
+    rewrite /EGlobalEnv.lookup_constructor_pars_args EOptimizePropDiscr.lookup_constructor_remove_match_on_box //.
   - intros [] pr fo.
     cbn in *.
     unfold EOptimizePropDiscr.remove_match_on_box_program; cbn. f_equal.
     destruct pr as [[pr _] _]; cbn in *; move: t1 fo.
     apply: firstorder_evalue_elim; intros.
-    eapply wf_glob_lookup_inductive_pars in H0 => //. subst npars; rewrite skipn_0 in H2.
-    rewrite EOptimizePropDiscr.remove_match_on_box_mkApps /=. f_equal.
+    eapply lookup_constructor_pars_args_nopars in H0; tea => //. subst npars.
+    rewrite skipn_0 in H2. rewrite EOptimizePropDiscr.remove_match_on_box_mkApps /=. f_equal.
     ELiftSubst.solve_all.
+Qed.
+
+Lemma lookup_constructor_pars_args_strip (Σ : t) i n npars nargs :
+  EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
+  EGlobalEnv.lookup_constructor_pars_args (ERemoveParams.strip_env Σ) i n = Some (0, nargs).
+Proof.
+  rewrite /EGlobalEnv.lookup_constructor_pars_args. rewrite ERemoveParams.lookup_constructor_strip //=.
+  destruct EGlobalEnv.lookup_constructor => //. destruct p as [[] ?] => //=. now intros [= <- <-].
 Qed.
 
 #[global] Instance remove_params_optimization_pres {fl : WcbvFlags} {wcon : with_constructor_as_block = false} :
@@ -708,12 +759,12 @@ Proof. split => //.
   cbn [transform remove_params_optimization] in *.
   destruct pr as [[pr _] _]; cbn -[ERemoveParams.strip] in *; move: t1 fo.
   apply: firstorder_evalue_elim; intros.
-  rewrite ERemoveParams.strip_mkApps //. cbn -[EGlobalEnv.lookup_inductive_pars]. rewrite H.
-  econstructor. cbn -[EGlobalEnv.lookup_inductive_pars].
-  now eapply ERemoveParams.lookup_inductive_pars_strip in H; tea.
-  rewrite skipn_0 /=.
-  rewrite skipn_map.
-  ELiftSubst.solve_all.
+  rewrite ERemoveParams.strip_mkApps //. cbn -[EGlobalEnv.lookup_inductive_pars].
+  rewrite (lookup_constructor_pars_args_lookup_inductive_pars _ _ _ _ _ H).
+  eapply lookup_constructor_pars_args_strip in H.
+  econstructor; tea. rewrite skipn_0 /= skipn_map.
+  ELiftSubst.solve_all. len.
+  rewrite skipn_map. len. rewrite skipn_length. lia.
 Qed.
 
 #[global] Instance constructors_as_blocks_transformation_pres {efl : EWellformed.EEnvFlags}
@@ -726,16 +777,18 @@ Proof.
   split.
   - intros v pr fo; eapply compile_evalue_box_firstorder; tea. apply pr.
   - move=> [Σ v] /= pr fo. rewrite /flip.
-    clear pr. move: v fo.
+    destruct pr as [[wf _] _]. cbn in wf.
+    move: v fo.
     apply: firstorder_evalue_elim; intros.
     rewrite /transform_blocks_program /=. f_equal.
     rewrite EConstructorsAsBlocks.transform_blocks_decompose.
     rewrite EAstUtils.decompose_app_mkApps // /=.
     rewrite compile_evalue_box_mkApps // ?app_nil_r.
-    (* rewrite lookup_inductive_pars_spec //. *)
-    admit.
-Admitted.
-
+    rewrite H.
+    eapply lookup_constructor_pars_args_nopars in H => //. subst npars.
+    rewrite chop_all. len. cbn. f_equal. rewrite skipn_0 in H1 H0.
+    ELiftSubst.solve_all. unfold transform_blocks_program in a. now noconf a.
+Qed.
 
 #[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}
   {has_guard : with_guarded_fix} {has_cstrblocks : with_constructor_as_block = false} :
@@ -783,9 +836,11 @@ Lemma compile_evalue_strip (Σer : EEnvMap.GlobalContextMap.t) p :
 Proof.
   move: p.
   apply: firstorder_evalue_elim; intros.
-  rewrite ERemoveParams.strip_mkApps //=. rewrite H.
+  rewrite ERemoveParams.strip_mkApps //=.
+  rewrite (lookup_constructor_pars_args_lookup_inductive_pars _ _ _ _ _ H).
   rewrite compile_evalue_box_mkApps.
   rewrite (compile_evalue_box_strip_mkApps (npars:=npars)).
+  pose proof (lookup_constructor_pars_args_lookup_inductive_pars _ _ _ _ _ H).
   rewrite lookup_inductive_pars_spec //.
   rewrite !app_nil_r !skipn_map. f_equal.
   rewrite map_map.
@@ -917,16 +972,18 @@ Section PCUICExpandLets.
       clear -he hd. move: hd. rewrite /firstorder_type.
       destruct (decompose_app decl_type) eqn:e. cbn.
       destruct t0 => //; apply decompose_app_inv in e; rewrite e.
-      { rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
-        decompose_app_mkApps //=. todo "foo".
+      { move/andP => [] /Nat.leb_le hn /Nat.ltb_lt hn'.
+        rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
+          decompose_app_mkApps //=.
+        { destruct nth_error eqn:hnth.
+          pose proof (nth_error_Some_length hnth).
+          move: hnth H.
+          destruct (Nat.leb_spec #|args| n). len. lia. len. lia. now cbn. }
         destruct nth_error eqn:hnth.
-         move/andP => [] /Nat.leb_le hn /Nat.ltb_lt hn'.
-         move/nth_error_Some_length: hnth. len. destruct (Nat.leb_spec #|args| n). lia. lia.
-         len.
-         move/andP => [] /Nat.leb_le hn /Nat.ltb_lt hn'.
-         destruct (Nat.leb_spec #|args| n). apply/andP. split.
-         eapply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
-         apply/andP; split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
+        move/nth_error_Some_length: hnth. len. destruct (Nat.leb_spec #|args| n). lia. lia. len.
+        destruct (Nat.leb_spec #|args| n). apply/andP. split.
+        eapply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
+        apply/andP; split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
       { rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
           decompose_app_mkApps //=.
           destruct ind. destruct plookup_env eqn:hp => //. destruct b => //. apply he in hp. rewrite hp //. }
@@ -1080,10 +1137,6 @@ Section pipeline_theorem.
     unshelve eapply Hcorr in Heval as Hev. eapply precond.
     destruct Hev as [v' [[H1] H2]].
     move: H2.
-
-    (* repeat match goal with
-      [ H : obseq _ _ _ _ _ |- _ ] => hnf in H ;  decompose [ex and prod] H ; subst
-    end. *)
     rewrite v_t_spec.
     subst v_t Σ_t t_t.
     revert H1.
@@ -1171,10 +1224,11 @@ Section pipeline_theorem.
       eapply trans_firstorder_mutind. eapply trans_firstorder_env. }
   Qed.
 
-  Lemma verified_erasure_pipeline_lambda :
+  (*Lemma verified_erasure_pipeline_lambda :
     PCUICAst.isLambda t -> EAst.isLambda t_t.
   Proof.
     unfold t_t. clear.
-  Admitted.
+  Qed.*)
 
 End pipeline_theorem.
+

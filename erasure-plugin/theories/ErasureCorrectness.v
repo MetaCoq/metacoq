@@ -9,8 +9,6 @@ From MetaCoq Require Import ETransform EConstructorsAsBlocks.
 From MetaCoq.Erasure Require Import EWcbvEvalNamed ErasureFunction ErasureFunctionProperties.
 From MetaCoq.ErasurePlugin Require Import Erasure.
 Import PCUICProgram.
-(* Import TemplateProgram (template_eta_expand).
- *)
 Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform).
 
 (* This is the total erasure function +
@@ -300,16 +298,6 @@ Import EWcbvEval.
 Arguments erase_global_deps _ _ _ _ _ : clear implicits.
 Arguments erase_global_deps_fast _ _ _ _ _ _ : clear implicits.
 
-(*Lemma erase_pcuic_program_spec {guard : abstract_guard_impl}
-  (p : pcuic_program)
-  (nin : (wf_ext p.1 -> PCUICSN.NormalizationIn p.1))
-  (nin' : (wf_ext p.1 -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p.1))
-  (wfext : ∥ wf_ext p.1 ∥)
-  (wt : ∥ ∑ T : PCUICAst.term, p.1;;; [] |- p.2 : T ∥) :
-  erase_pcuic_program p nin nin'wfext wt =
-  let et' := @erase optimized_abstract_env_impl
-  @erase_global_deps optimized_abstract_env_impl*)
-
 Section PCUICProof.
   Import PCUICAst.PCUICEnvironment.
 
@@ -441,15 +429,6 @@ Proof.
   change tr with (tr.1, tr.2). f_equal.
   eapply erase_transform_fo_gen; tea. reflexivity.
 Qed.
-
-
-(* Import PCUICAst.
-
-Lemma compile_fo_value (Σ : global_env_ext) Σ' t :
-  PCUICFirstorder.firstorder_value Σ [] t ->
-  erases_global
-  firstorder_evalue Σ (compile_value_erase t []).
-Proof. Admitted. *)
 
 Import MetaCoq.Common.Transform.
 From Coq Require Import Morphisms.
@@ -1027,14 +1006,13 @@ Section pipeline_theorem.
 
   Variable fo : @PCUICFirstorder.firstorder_ind Σ (PCUICFirstorder.firstorder_env Σ) i.
 
-  Variable Normalisation :  PCUICSN.NormalizationIn Σ.
+  Variable Normalisation :  (forall Σ, wf_ext Σ -> PCUICSN.NormalizationIn Σ).
 
   Lemma precond : pre verified_erasure_pipeline (Σ, t).
   Proof.
     hnf. repeat eapply conj; sq; cbn; eauto.
     - red. cbn. eauto.
-    - todo "normalization".
-    - todo "normalization".
+    - intros. red. intros. now eapply Normalisation.
   Qed.
 
   Variable Heval : ∥PCUICWcbvEval.eval Σ t v∥.
@@ -1048,8 +1026,7 @@ Section pipeline_theorem.
     - eapply (PCUICClassification.wcbveval_red (Σ := Σ)) in X; tea.
       eapply PCUICEtaExpand.expanded_red in X; tea. apply HΣ.
       intros ? ?; rewrite nth_error_nil => //.
-    - cbn. todo "normalization".
-    - todo "normalization".
+    - cbn. intros wf ? ? ? ? ? ?. now eapply Normalisation.
   Qed.
 
   Let Σ_t := (transform verified_erasure_pipeline (Σ, t) precond).1.

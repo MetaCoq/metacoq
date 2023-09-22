@@ -105,12 +105,12 @@ sig
 
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
-  val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
+  val quote_univ_instance : UVars.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraints.t -> quoted_univ_constraints
-  val quote_univ_context : Univ.UContext.t -> quoted_univ_context
+  val quote_univ_context : UVars.UContext.t -> quoted_univ_context
   val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
-  val quote_variance : Univ.Variance.t -> quoted_variance
-  val quote_abstract_univ_context : Univ.AbstractContext.t -> quoted_abstract_univ_context
+  val quote_variance : UVars.Variance.t -> quoted_variance
+  val quote_abstract_univ_context : UVars.AbstractContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
   val mkPolymorphic_entry : quoted_univ_context -> quoted_universes_entry
@@ -185,8 +185,8 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic -> Univ.UContext.empty
-    | Polymorphic ctx -> Univ.AbstractContext.repr ctx
+    | Declarations.Monomorphic -> UVars.UContext.empty
+    | Polymorphic ctx -> UVars.AbstractContext.repr ctx
 
   let quote_universes_entry = function
     | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
@@ -336,7 +336,7 @@ struct
 
       | Constr.Fix fp -> quote_fixpoint acc env sigma fp
       | Constr.CoFix fp -> quote_cofixpoint acc env sigma fp
-      | Constr.Proj (p,c) ->
+      | Constr.Proj (p,_,c) ->
          let ind = quote_inductive' (Projection.inductive p) in
          let pars = Q.quote_int (Projection.npars p) in
          let arg  = Q.quote_int (Projection.arg p)   in
@@ -368,7 +368,7 @@ struct
       (Q.mkCoFix (a',decl'), acc)
     and quote_minductive_type (acc : 'a) env sigma (t : MutInd.t) mib =
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
-      let inst = Univ.UContext.instance uctx in
+      let inst = UVars.UContext.instance uctx in
       let indtys =
         (CArray.map_to_list (fun oib ->
            let ty = Inductive.type_of_inductive ((mib,oib),inst) in
@@ -649,7 +649,7 @@ since  [absrt_info] is a private type *)
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
-      | Polymorphic auctx -> Polymorphic_entry (Univ.AbstractContext.repr auctx)
+      | Polymorphic auctx -> Polymorphic_entry (UVars.AbstractContext.repr auctx)
       | Monomorphic -> Monomorphic_entry
     in
     let univs = quote_universes_entry uctx in

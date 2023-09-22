@@ -1,4 +1,3 @@
-open Univ
 open Names
 open GlobRef
 open Pp
@@ -228,7 +227,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
       | Const (c, u) -> ConstRef c, u
       | Ind (i, u) -> IndRef i, u
       | Construct (c, u) -> ConstructRef c, u
-      | Var id -> VarRef id, Instance.empty
+      | Var id -> VarRef id, UVars.Instance.empty
       | _ -> raise Not_found
     with _ ->
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)

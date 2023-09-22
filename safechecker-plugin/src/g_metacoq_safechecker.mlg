@@ -23,7 +23,7 @@ let check env evm poly (c, ustate) =
   let uctx =
     if poly then
       let uctx = Evd.to_universe_context evm in
-      let inst, auctx = Univ.abstract_universes uctx in
+      let inst, auctx = UVars.abstract_universes uctx in
       Ast_quoter.mkPolymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
     else Ast_quoter.mkMonomorphic_ctx ()
   in
@@ -55,15 +55,18 @@ let retypecheck_term_dependencies env gr =
   let typecheck env c = ignore (Typeops.infer env c) in
   let typecheck_constant c =
     let auctx = Environ.constant_context env c in
-    let names = Univ.AbstractContext.names auctx in
+    let qnames, unames as names = UVars.AbstractContext.names auctx in
     let dp = Names.DirPath.make [Names.Id.of_string "MetaCoq"; Names.Id.of_string "Retypecheck"] in
+    let fake_quality i _ =
+      Sorts.Quality.QVar (Sorts.QVar.make_unif "" i)
+    in
     let fake_level i _ =
      Univ.Level.make (Univ.UGlobal.make dp "" i)
     in
-    let fake_inst = Univ.Instance.of_array (Array.mapi fake_level names) in
+    let fake_inst = UVars.Instance.of_array (Array.mapi fake_quality qnames, Array.mapi fake_level unames) in
     let cu = (c, fake_inst) in
     let cbody, ctype, cstrs = Environ.constant_value_and_type env cu in
-    let env' = Environ.push_context (Univ.UContext.make names (fake_inst, cstrs)) env in
+    let env' = Environ.push_context (UVars.UContext.make names (fake_inst, cstrs)) env in
     typecheck env' ctype;
     Option.iter (typecheck env') cbody
   in

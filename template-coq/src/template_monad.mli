@@ -62,4 +62,4 @@ val app_full
 
 
 val next_action
-  : Environ.env -> Evd.evar_map -> Constr.t -> (template_monad * Univ.Instance.t)
+  : Environ.env -> Evd.evar_map -> Constr.t -> (template_monad * UVars.Instance.t)

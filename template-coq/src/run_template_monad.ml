@@ -1,4 +1,5 @@
 open Univ
+open UVars
 open Entries
 open Names
 open Redops
@@ -152,23 +153,23 @@ let denote_names evm trm : _ * Name.t array =
   let l = unquote_list trm in
   evm, CArray.map_of_list unquote_name l
 
-let denote_ucontext env evm trm (* of type UContext.t *) : _ * UContext.t =
+let denote_ucontext env evm trm (* of type UContext.t *) : _ * UVars.UContext.t =
   let l, c = unquote_pair trm in
   let evm, names = denote_names evm l in
   let l, c = unquote_pair c in
   let l = unquote_list l in
   let evm, vars = map_evm unquote_level evm l in
   let evm, c = unquote_constraints env evm c in
-  let inst = Instance.of_array (Array.of_list vars) in
-  evm, (UContext.make names (inst, c))
+  let inst = Instance.of_array ([||], Array.of_list vars) in
+  evm, (UVars.UContext.make ([||], names) (inst, c))
 
-let denote_aucontext env evm trm (* of type AbstractContext.t *) : _ * AbstractContext.t =
+let denote_aucontext env evm trm (* of type AbstractContext.t *) : _ * UVars.AbstractContext.t =
   let i, c = unquote_pair trm in
   let l = unquote_list i in
   let vars = List.mapi (fun i l -> Level.var i) l in
-  let vars = Instance.of_array (Array.of_list vars) in
+  let vars = Instance.of_array ([||], Array.of_list vars) in
   let evm, c = unquote_constraints env evm c in
-  evm, snd (abstract_universes (UContext.make (CArray.map_of_list unquote_name l) (vars, c)))
+  evm, snd (abstract_universes (UContext.make ([||], CArray.map_of_list unquote_name l) (vars, c)))
 
 let denote_variance trm (* of type Variance *) : Variance.t =
   if constr_equall trm cIrrelevant then Variance.Irrelevant
@@ -189,12 +190,12 @@ let _denote_variances evm trm : _ * Variance.t array option =
 
 (* todo : stick to Coq implem *)
 type universe_context_type =
-  | Monomorphic_uctx of Univ.ContextSet.t
-  | Polymorphic_uctx of Univ.AbstractContext.t
+  | Monomorphic_uctx of ContextSet.t
+  | Polymorphic_uctx of AbstractContext.t
 
 let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> UState.Monomorphic_entry ctx
-  | Polymorphic_uctx ctx -> UState.Polymorphic_entry (Univ.AbstractContext.repr ctx)
+  | Polymorphic_uctx ctx -> UState.Polymorphic_entry (AbstractContext.repr ctx)
 
 let _denote_universes_decl env evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
@@ -300,16 +301,16 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
   let mind = reduce_all env evm mind in
   let evm' = Evd.from_env env in
   let evm', ctx, mind = unquote_mutual_inductive_entry env evm' mind in
-  let () = DeclareUctx.declare_universe_context ~poly:false ctx in
+  let () = Global.push_context_set ~strict:true ctx in
   let evm, mind = 
     if infer_univs then
       let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
       debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set (Level.pr) ctx));
-      DeclareUctx.declare_universe_context ~poly:false ctx;
+      Global.push_context_set ~strict:true ctx;
       Evd.merge_context_set Evd.UnivRigid evm ctx, mind
     else evm, mind
   in
-  let names = (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) in
+  let names = (UState.Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders) in
   let primitive_expected =
     match mind.mind_entry_record with
     | Some (Some _) -> true
@@ -322,7 +323,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
     let dflt_pf = { pf_coercion = false; pf_instance = false; pf_priority = None; pf_locality = OptDefault; pf_canonical = false; pf_reversible = false} in
     let decl_projs i oie =
       let ind = (ind_kn, i) in
-      let univs = (Entries.Monomorphic_entry, Names.Id.Map.empty) in
+      let univs = (Entries.Monomorphic_entry, UnivNames.empty_binders) in
       let inhabitant_id = List.hd oie.mind_entry_consnames in
       let fields, _ = Term.decompose_prod_assum (List.hd oie.mind_entry_lc) in
       let fieldimpls = List.map (fun _ -> []) fields in

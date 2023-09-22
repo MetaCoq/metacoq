@@ -156,10 +156,13 @@ struct
     try ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
     with e -> assert false
 
-  let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
-    let arr = Univ.Instance.to_array i in
+  let quote_univ_instance (i : UVars.Instance.t) : quoted_univ_instance =
+    let qarr, uarr = UVars.Instance.to_array i in
+    let () = if not (CArray.is_empty qarr) then
+        CErrors.user_err Pp.(str "Quoting sort polymorphic instances not yet supported.")
+    in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    try CArray.map_to_list quote_nonprop_level arr
+    try CArray.map_to_list quote_nonprop_level uarr
     with e -> assert false
 
    (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
@@ -173,16 +176,20 @@ struct
     let l = constraints_ (Univ.Constraints.elements c) in
     Universes0.ConstraintSet.(List.fold_right add l empty)
 
-  let quote_variance (v : Univ.Variance.t) =
+  let quote_variance (v : UVars.Variance.t) =
     match v with
-    | Univ.Variance.Irrelevant -> Universes0.Variance.Irrelevant
-    | Univ.Variance.Covariant -> Universes0.Variance.Covariant
-    | Univ.Variance.Invariant -> Universes0.Variance.Invariant
+    | Irrelevant -> Universes0.Variance.Irrelevant
+    | Covariant -> Universes0.Variance.Covariant
+    | Invariant -> Universes0.Variance.Invariant
 
-  let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
-    let names = CArray.map_to_list quote_name (Univ.UContext.names uctx)  in
-    let levels = Univ.UContext.instance uctx  in
-    let constraints = Univ.UContext.constraints uctx in
+  let quote_univ_context (uctx : UVars.UContext.t) : quoted_univ_context =
+    let qarr, uarr = (UVars.UContext.names uctx) in
+    let () = if not (CArray.is_empty qarr) then
+        CErrors.user_err Pp.(str "Quoting sort polymorphic ucontext not yet supported.")
+    in
+    let names = CArray.map_to_list quote_name uarr  in
+    let levels = UVars.UContext.instance uctx  in
+    let constraints = UVars.UContext.constraints uctx in
     (names, (quote_univ_instance levels, quote_univ_constraints constraints))
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
@@ -196,9 +203,12 @@ struct
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context uctx : quoted_abstract_univ_context =
-    let names = Univ.AbstractContext.names uctx in
-    let levels = CArray.map_to_list quote_name names in
-    let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in
+    let qnames, unames = UVars.AbstractContext.names uctx in
+    let () = if not (CArray.is_empty qnames) then
+        CErrors.user_err Pp.(str "Quoting sort polymorphic abstract universe context not yet supported.")
+    in
+    let levels = CArray.map_to_list quote_name unames in
+    let constraints = UVars.UContext.constraints (UVars.AbstractContext.repr uctx) in
     (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =

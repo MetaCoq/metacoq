@@ -3,7 +3,7 @@ From Coq Require String.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
-  PCUICTactics
+  PCUICTactics PCUICCumulativity
   PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed PCUICRenameDef PCUICInstConv PCUICClosedTyp PCUICWeakeningEnvTyp PCUICRenameTyp PCUICRenameConv PCUICGuardCondition PCUICWeakeningConv.
 
@@ -896,21 +896,6 @@ Qed.
 
 End BDRenaming.
 
-Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
-  renaming P Σ Γ Δ f ->
-  on_ctx_free_vars P Γ ->
-  on_free_vars P t ->
-  Σ ;;; Γ |- t : T ->
-  ∑ T', Σ ;;; Δ |- rename f t : T'.
-Proof.
-  move => [ur wfΔ] fvΓ fvt tyt.
-  move: (tyt) => /typing_wf_local wfΓ.
-  move: (tyt) => /typing_infering [T' [inf cum]].
-  exists (rename f T').
-  apply infering_typing => //.
-  eapply bidirectional_renaming ; eassumption.
-Qed.
-
 Lemma closedn_ctx_lift_inv n k k' Γ :
   k <= k' -> closedn_ctx (k' + n) (lift_context n k Γ) ->
   closedn_ctx k' Γ.
@@ -996,9 +981,29 @@ Proof.
       all: lia.
 Qed.
 
+
+Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
+  renaming P Σ Γ Δ f ->
+  on_ctx_free_vars P Γ ->
+  on_free_vars P t ->
+  on_free_vars P T ->
+  Σ ;;; Γ |- t : T ->
+  ∑ T', (Σ ;;; Δ |- rename f t : T') * (Σ ;;; Δ |- T' <= rename f T).
+Proof.
+  move => [ur wfΔ] fvΓ fvt fvT tyt.
+  move: (tyt) => /typing_wf_local wfΓ.
+  move: (tyt) => /typing_infering [T' [inf cum]].
+  exists (rename f T'). split; eauto. sq.  
+  apply infering_typing => //.
+  eapply bidirectional_renaming ; eassumption.
+  eapply cumul_renameP with (Γ := Γ); eauto.
+  2: { eapply ws_cumul_pb_forget_cumul; eauto. }
+  eapply infering_on_free_vars; try exact inf; eauto.
+Qed.
+
 Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :
-  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : T ->
-  ∑ T', Σ ;;; Γ ,,, Γ'' |- t : T'.
+  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : lift #|Γ'| #|Γ''| T ->
+  ∑ T', (Σ ;;; Γ ,,, Γ'' |- t : T') * (Σ ;;; Γ ,,, Γ'' |- T' <= T).
 Proof.
   intros Hty.
   assert (wf_local Σ Γ) by
@@ -1029,9 +1034,9 @@ Proof.
       eassumption.
   }
 
-  erewrite <- (lift_unlift_term t).
+  erewrite <- (lift_unlift_term t). erewrite <- (lift_unlift_term T).
   eapply typing_renaming_cond_P.
-  4: eassumption.
+  5: eassumption.
   - split => //.
     apply urenaming_strengthen.
   - move: wfΓ'' => /wf_local_closed_context.
@@ -1046,4 +1051,32 @@ Proof.
     2: lia.
     eapply closedn_on_free_vars.
     eassumption.
+  - rewrite on_free_vars_lift -shiftnP_xpredT.
+    move: Hty => /type_closed.
+    len.
+    rewrite -[X in _ + X]Nat.add_comm Nat.add_assoc => Ht.
+    eapply closedn_lift_inv in Ht.
+    2: lia.
+    eapply closedn_on_free_vars.
+    eassumption.
+Qed.
+
+
+Lemma strengthening_type `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : PCUICTyping.wf Σ} Γ Γ' Γ'' t s :
+  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : tSort s -> 
+  ∑ s', (Σ ;;; Γ ,,, Γ'' |- t : tSort s') * (compare_universe Cumul Σ s' s).
+Proof. 
+  assert (liftSort : lift #|Γ'| #|Γ''| (tSort s) = tSort s) by reflexivity. rewrite <- liftSort; clear liftSort.
+  intros H; eapply strengthening in H. destruct H as [T' [HT' Hcumul]].
+  pose proof (Hcumul' := Hcumul).
+  pose proof (type_closed HT').
+  eapply closedn_on_free_vars in H.
+  pose proof (wf_local_closed_context (typing_wf_local HT')).
+  eapply into_ws_cumul_pb in Hcumul; eauto. 
+  eapply PCUICConversion.ws_cumul_pb_Sort_r_inv in Hcumul as [s' [Hred Hcumul]].
+  eapply closed_red_red in Hred. pose proof (HT'':=HT'). eapply PCUICValidity.validity in HT' as [? ?]. 
+  exists s'; split; eauto.
+  eapply type_Cumul; eauto. eapply PCUICSR.subject_reduction; eauto.
+  eapply PCUICConversion.cumulAlgo_cumulSpec. eapply PCUICConversion.ws_cumul_pb_red_r_inv; eauto.
+  eapply ws_cumul_pb_refl; eauto.
 Qed.

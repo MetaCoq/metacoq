@@ -48,14 +48,6 @@ Section firstorder.
     | tRel i => (k <=? i) && (i <? n + k)
     | _ => false
     end.
-  (*
-  Definition firstorder_type (t : term) :=
-    match (PCUICAstUtils.decompose_app t).1 with
-    | tInd (mkInd nm i) _ => match (plookup_env Σb nm) with
-                             | Some l => nth i l false | None => false
-                             end
-    | _ => false
-    end. *)
 
   Definition firstorder_con mind (c : constructor_body) :=
     let inds := #|mind.(ind_bodies)| in

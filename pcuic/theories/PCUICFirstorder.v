@@ -41,12 +41,12 @@ Section firstorder.
     end. *)
 
   Definition firstorder_type (n k : nat) (t : term) :=
-    match (PCUICAstUtils.decompose_app t).1 with
-    | tInd (mkInd nm i) u => match (plookup_env Σb nm) with
+    match (PCUICAstUtils.decompose_app t).1, (PCUICAstUtils.decompose_app t).2 with
+    | tInd (mkInd nm i) u , [] => match (plookup_env Σb nm) with
                              | Some b => b | None => false
                              end
-    | tRel i => (k <=? i) && (i <? n + k)
-    | _ => false
+    | tRel i , [] => (k <=? i) && (i <? n + k)
+    | _ , _ => false
     end.
 
   Definition firstorder_con mind (c : constructor_body) :=
@@ -432,6 +432,7 @@ Proof using Type.
   destruct plookup_env eqn:hl => //. destruct b => //.
   eapply (plookup_env_extends (Σ:=Σ)) in hl. 2:split; eauto.
   rewrite eq in hl. rewrite hl //. apply wf.
+  all: destruct l; eauto. 
 Qed.
 
 Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui args u pandi oind} :
@@ -480,7 +481,7 @@ Proof using Type.
     { intros k t.
       rewrite /firstorder_type.
       rewrite -PCUICUnivSubstitutionConv.subst_instance_decompose_app /=.
-      destruct (decompose_app) => //=. destruct t0 => //. }
+      destruct (decompose_app) => //=. destruct t0 => //; destruct l; eauto. }
     replace (List.rev c)@[ui] with (List.rev c@[ui]).
     2:{ rewrite /subst_instance /subst_instance_context /map_context map_rev //. }
     revert args.
@@ -511,17 +512,15 @@ Proof using Type.
         unfold firstorder_type; cbn.
         destruct (decompose_app decl_type) eqn:da.
         rewrite (decompose_app_inv da) subst_mkApps /=.
-        destruct t0 => //=.
+        destruct t0 => //=; destruct l; eauto. 
         { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
           destruct (Nat.leb_spec n n0).
           destruct (n0 - n) eqn:E. lia.
-          cbn. rewrite nth_error_nil /=.
-          rewrite decompose_app_mkApps //=.
+          cbn. rewrite nth_error_nil /=. 
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
-          cbn.
           rewrite decompose_app_mkApps //=.
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
-        { destruct ind => //. rewrite decompose_app_mkApps //. }
+        { destruct ind => //. }
       + move=> /andP[] fot foΓ.
         rewrite subst_context_app /=.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
@@ -529,9 +528,10 @@ Proof using Type.
         destruct ((PCUICAstUtils.decompose_app t)) eqn:E.
         cbn in fot. destruct t0; try solve [inv fot].
         * rewrite (decompose_app_inv E) /= subst_mkApps.
-          rewrite Nat.add_0_r in fot. eapply Nat.ltb_lt in fot.
+          rewrite Nat.add_0_r in fot. destruct l; try solve [inversion fot].
+          eapply Nat.ltb_lt in fot.
           cbn. rewrite nth_error_inds. lia. cbn.
-          econstructor.
+          eapply instantiated_tProd with (args := []).
           unshelve epose proof (d1_ := declared_minductive_to_gen d1); eauto.
           { rewrite /firstorder_ind d1_ /= /firstorder_mutind indf H0 //. }
           intros x.
@@ -552,20 +552,19 @@ Proof using Type.
           unfold firstorder_type; cbn.
           destruct (decompose_app decl_type) eqn:da.
           rewrite (decompose_app_inv da) subst_mkApps /=.
-          destruct t0 => //=.
+          destruct t0 => //=; destruct l; eauto. 
           { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
             destruct (Nat.leb_spec n n0).
             destruct (n0 - n) eqn:E. lia.
             cbn. rewrite nth_error_nil /=.
-            rewrite decompose_app_mkApps //=.
             apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
-            cbn.
             rewrite decompose_app_mkApps //=.
             apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
-          { destruct ind => //. rewrite decompose_app_mkApps //. }
+          { destruct ind => //. }
         * rewrite (decompose_app_inv E) subst_mkApps //=.
           constructor. {
              unfold firstorder_ind. destruct ind. cbn in *.
+             destruct l; [|inversion fot].
              destruct plookup_env eqn:hp => //.
              eapply plookup_env_lookup_env in hp as [Σ' [decl [eq [ext he]]]].
              rewrite eq. destruct decl; subst b => //.
@@ -587,17 +586,15 @@ Proof using Type.
           unfold firstorder_type; cbn.
           destruct (decompose_app decl_type) eqn:da.
           rewrite (decompose_app_inv da) subst_mkApps /=.
-          destruct t0 => //=.
+          destruct t0 => //=; destruct l; eauto.
           { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
             destruct (Nat.leb_spec n n0).
             destruct (n0 - n) eqn:E. lia.
             cbn. rewrite nth_error_nil /=.
-            rewrite decompose_app_mkApps //=.
             apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
-            cbn.
             rewrite decompose_app_mkApps //=.
             apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
-          { destruct ind => //. rewrite decompose_app_mkApps //. }
+          { destruct ind => //. }
   }
   cbn in Hi |- *.
   revert Hi Hspine. cbn.

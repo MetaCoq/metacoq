@@ -47,7 +47,7 @@ Definition make_template_program_env {cf : checker_flags} (p : template_program)
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition build_template_program_env {cf : checker_flags} K :
-  Transform.t global_env GlobalEnvMap.t Ast.term Ast.term eval_template_program eval_template_program_env  :=
+  Transform.t global_env GlobalEnvMap.t Ast.term Ast.term Ast.term Ast.term eval_template_program eval_template_program_env  :=
   {| name := "rebuilding environment lookup table";
      pre p := ∥ wt_template_program p ∥ /\ forall pf, K (GlobalEnvMap.make p.1 (wt_template_program_fresh p pf)) : Prop ;
      transform p pre := make_template_program_env p (proj1 pre);

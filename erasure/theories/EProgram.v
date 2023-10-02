@@ -55,10 +55,11 @@ Module TransformExt.
   Section Opt.
     Context {env env' env'' : Type}.
     Context {term term' term'' : Type}.
-    Context {eval : program env term -> term -> Prop}.
-    Context {eval' : program env' term' -> term' -> Prop}.
-    Context {eval'' : program env'' term'' -> term'' -> Prop}.
-    Context (o : Transform.t env env' term term' eval eval').
+    Context {value value' value'' : Type}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
+    Context (o : Transform.t env env' term term' value value' eval eval').
     Context (extends : program env term -> program env term -> Prop).
     Context (extends' : program env' term' -> program env' term' -> Prop).
 
@@ -70,17 +71,18 @@ Module TransformExt.
   Section Comp.
     Context {env env' env'' : Type}.
     Context {term term' term'' : Type}.
-    Context {eval : program env term -> term -> Prop}.
-    Context {eval' : program env' term' -> term' -> Prop}.
-    Context {eval'' : program env'' term'' -> term'' -> Prop}.
+    Context {value value' value'' : Type}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
     Context {extends : program env term -> program env term -> Prop}.
     Context {extends' : program env' term' -> program env' term' -> Prop}.
     Context {extends'' : program env'' term'' -> program env'' term'' -> Prop}.
 
     Local Obligation Tactic := idtac.
     #[global]
-    Instance compose (o : Transform.t env env' term term' eval eval')
-      (o' : Transform.t env' env'' term' term'' eval' eval'')
+    Instance compose (o : Transform.t env env' term term' value value' eval eval')
+      (o' : Transform.t env' env'' term' term'' value' value'' eval' eval'')
       (oext : t o extends extends')
       (o'ext : t o' extends' extends'')
       (hpp : (forall p, o.(post) p -> o'.(pre) p))

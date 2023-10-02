@@ -195,7 +195,7 @@ Qed.
 
 Local Obligation Tactic := try solve [ eauto ].
 
-Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t _ _ PCUICAst.term EAst.term
+Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t _ _ PCUICAst.term EAst.term PCUICAst.term EAst.term
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
  {| name := "erasure";
     pre p :=
@@ -327,7 +327,7 @@ End PCUICEnv.
 Import EWcbvEval (WcbvFlags, with_prop_case, with_guarded_fix).
 
 Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix) :
-  Transform.t _ _ EAst.term EAst.term
+  Transform.t _ _ EAst.term EAst.term _ _
     (eval_eprogram_env fl) (eval_eprogram_env (EWcbvEval.switch_unguarded_fix fl)) :=
   {| name := "switching to unguarded fixpoints";
     transform p pre := p;
@@ -356,7 +356,7 @@ Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogr
   (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
 
 Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp : bool) :
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram fl) (eval_eprogram_env fl) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram fl) (eval_eprogram_env fl) :=
   {| name := "rebuilding environment lookup table";
      pre p := wf_eprogram efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_cstrs p);
      transform p pre := rebuild_wf_env p (proj1 pre);
@@ -378,7 +378,7 @@ Qed.
 
 Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags):
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "stripping constructor parameters";
     transform p pre := ERemoveParams.strip_program p;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
@@ -414,7 +414,7 @@ Qed.
 
 Program Definition remove_params_fast_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags) :
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "stripping constructor parameters (faster?)";
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
@@ -456,7 +456,7 @@ Qed.
 Import EOptimizePropDiscr EWcbvEval.
 
 Program Definition remove_match_on_box_trans {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
-  Transform.t _ _  EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram (disable_prop_cases fl)) :=
+  Transform.t _ _  EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram (disable_prop_cases fl)) :=
   {| name := "optimize_prop_discr";
     transform p _ := remove_match_on_box_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
@@ -492,7 +492,7 @@ From MetaCoq.Erasure Require Import EInlineProjections.
 
 Program Definition inline_projections_optimization {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
   {hastrel : has_tRel} {hastbox : has_tBox} :
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
   {| name := "primitive projection inlining";
     transform p _ := EInlineProjections.optimize_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
@@ -528,7 +528,7 @@ From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
 
 Program Definition constructors_as_blocks_transformation {efl : EEnvFlags}
   {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
@@ -568,7 +568,7 @@ From MetaCoq.Erasure Require Import EImplementBox.
 
 Program Definition implement_box_transformation {efl : EEnvFlags}
   {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
-  Transform.t _ _ EAst.term EAst.term (eval_eprogram block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
     transform p _ := EImplementBox.implement_box_program p ;
     pre p := wf_eprogram efl p ;

@@ -23,13 +23,14 @@ Module Transform.
   Section Opt.
      Context {env env' : Type}.
      Context {term term' : Type}.
+     Context {value value' : Type}.
      Notation program' := (program env' term').
      Notation program := (program env term).
-     Context {eval :  program -> term -> Prop}.
-     Context {eval' : program' -> term' -> Prop}.
+     Context {eval :  program -> value -> Prop}.
+     Context {eval' : program' -> value' -> Prop}.
 
      Definition preserves_eval pre (transform : forall p : program, pre p -> program')
-      (obseq : forall p : program, pre p -> program' -> term -> term' -> Prop) :=
+      (obseq : forall p : program, pre p -> program' -> value -> value' -> Prop) :=
       forall p v (pr : pre p),
         eval p v ->
         let p' := transform p pr in
@@ -41,7 +42,7 @@ Module Transform.
       transform : forall p : program, pre p -> program';
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
-      obseq : forall p : program, pre p -> program' -> term -> term' -> Prop;
+      obseq : forall p : program, pre p -> program' -> value -> value' -> Prop;
       preservation : preserves_eval pre transform obseq }.
 
     Definition run (x : t) (p : program) (pr : pre x p) : program' :=
@@ -50,19 +51,20 @@ Module Transform.
   End Opt.
   Arguments t : clear implicits.
 
-  Definition self_transform env term eval eval' := t env env term term eval eval'.
+  Definition self_transform env term eval eval' := t env env term term term term eval eval'.
 
   Section Comp.
     Context {env env' env'' : Type}.
     Context {term term' term'' : Type}.
-    Context {eval : program env term -> term -> Prop}.
-    Context {eval' : program env' term' -> term' -> Prop}.
-    Context {eval'' : program env'' term'' -> term'' -> Prop}.
+    Context {value value' value'' : Type}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
 
     Local Obligation Tactic := idtac.
-    Program Definition compose (o : t env env' term term' eval eval') (o' : t env' env'' term' term'' eval' eval'')
+    Program Definition compose (o : t env env' term term' _ _ eval eval') (o' : t env' env'' term' term'' _ _ eval' eval'')
       (hpp : (forall p, o.(post) p -> o'.(pre) p))
-      : t env env'' term term'' eval eval'' :=
+      : t env env'' term term'' _ _ eval eval'' :=
       {|
         name := (o.(name) ^ " -> " ^ o'.(name))%bs;
         transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));

@@ -34,7 +34,7 @@ Local Obligation Tactic := idtac.
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition template_to_pcuic_transform {cf : checker_flags} K :
-  Transform.t Ast.Env.global_env global_env_ext_map Ast.term term
+  Transform.t Ast.Env.global_env global_env_ext_map Ast.term term Ast.term term
   eval_template_program eval_pcuic_program :=
  {| name := "template to pcuic";
     pre p := ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K (trans_global (Ast.Env.empty_ext p.1)) ;

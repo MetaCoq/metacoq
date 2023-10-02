@@ -5,7 +5,7 @@ From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
   PCUICReduction PCUICProgram PCUICLiftSubst PCUICCSubst PCUICUnivSubst.
 
-(* todo move *)
+(* move *)
 Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
 Proof.
   intros a; now depelim a.

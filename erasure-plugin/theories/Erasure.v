@@ -42,7 +42,7 @@ Axiom assume_preservation_template_program_env_expansion :
 
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
-Program Definition eta_expand K : Transform.t _ _ Ast.term Ast.term
+Program Definition eta_expand K : Transform.t _ _ Ast.term Ast.term _ _
   eval_template_program_env eval_template_program :=
   {| name := "eta expand cstrs and fixpoints";
       pre := fun p => ∥ wt_template_program_env p ∥ /\ K (eta_expand_global_env p.1) ;
@@ -59,7 +59,7 @@ Next Obligation.
 Qed.
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t _ _ EAst.term EAst.term
+ Transform.t _ _ EAst.term EAst.term _ _
    (EProgram.eval_eprogram_env {| with_prop_case := true; with_guarded_fix := true; with_constructor_as_block := false |})
    (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   (* Simulation of the guarded fixpoint rules with a single unguarded one:
@@ -99,7 +99,7 @@ Qed.
 
 Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t _ _
-  PCUICAst.term EAst.term
+  PCUICAst.term EAst.term _ _
   PCUICTransform.eval_pcuic_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   (* a bunch of nonsense for normalization preconditions *)
@@ -117,10 +117,10 @@ Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl 
 Import EGlobalEnv EWellformed.
 
 Definition transform_compose
-  {env env' env'' term term' term'' : Type}
+  {env env' env'' term term' term'' value value' value'' : Type}
   {eval eval' eval''}
-  (o : t env env' term term' eval eval')
-  (o' : t env' env'' term' term'' eval' eval'')
+  (o : t env env' term term' value value' eval eval')
+  (o' : t env' env'' term' term'' value' value'' eval' eval'')
   (pre : forall p, post o p -> pre o' p) :
   forall x p1, exists p3,
     transform (compose o o' pre) x p1 = transform o' (transform o x p1) p3.
@@ -138,7 +138,7 @@ Qed.
 
 Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t _ _
-  Ast.term PCUICAst.term
+  Ast.term PCUICAst.term _ _
   TemplateProgram.eval_template_program
    PCUICTransform.eval_pcuic_program :=
   (* a bunch of nonsense for normalization preconditions *)
@@ -159,7 +159,7 @@ Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EW
 
 Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
  Transform.t _ _
-  Ast.term EAst.term
+  Ast.term EAst.term _ _
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
   pre_erasure_pipeline ▷

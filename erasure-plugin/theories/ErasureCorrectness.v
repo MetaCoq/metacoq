@@ -25,11 +25,11 @@ Import Transform.
 Import EWcbvEval.
 
 Lemma transform_compose_assoc
-  {env env' env'' env''' term term' term'' term''' : Type}
+  {env env' env'' env''' term term' term'' term''' value value' value'' value''' : Type}
   {eval eval' eval'' eval'''}
-  (o : t env env' term term' eval eval')
-  (o' : t env' env'' term' term'' eval' eval'')
-  (o'' : t env'' env''' term'' term''' eval'' eval''')
+  (o : t env env' term term' value value' eval eval')
+  (o' : t env' env'' term' term'' value' value'' eval' eval'')
+  (o'' : t env'' env''' term'' term''' value'' value''' eval'' eval''')
   (prec : forall p, post o p -> pre o' p)
   (prec' : forall p, post o' p -> pre o'' p) :
   forall x p1,
@@ -43,11 +43,11 @@ Proof.
 Qed.
 
 Lemma obseq_compose_assoc
-  {env env' env'' env''' term term' term'' term''' : Type}
+  {env env' env'' env''' term term' term'' term''' value value' value'' value''' : Type}
   {eval eval' eval'' eval'''}
-  (o : t env env' term term' eval eval')
-  (o' : t env' env'' term' term'' eval' eval'')
-  (o'' : t env'' env''' term'' term''' eval'' eval''')
+  (o : t env env' term term' value value' eval eval')
+  (o' : t env' env'' term' term'' value' value'' eval' eval'')
+  (o'' : t env'' env''' term'' term''' value'' value''' eval'' eval''')
   (prec : forall p, post o p -> pre o' p)
   (prec' : forall p, post o' p -> pre o'' p) :
   forall x p1 p2 v1 v2, obseq (compose o (compose o' o'' prec') prec) x p1 p2 v1 v2 <->
@@ -438,7 +438,7 @@ Module ETransformPresFO.
     Context {env env' : Type}.
     Context {eval : program env EAst.term -> EAst.term -> Prop}.
     Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
-    Context (o : Transform.t _ _ _ _ eval eval').
+    Context (o : Transform.t _ _ _ _ _ _ eval eval').
     Context (firstorder_value : program env EAst.term -> Prop).
     Context (firstorder_value' : program env' EAst.term -> Prop).
     Context (compile_fo_value : forall p : program env EAst.term, o.(pre) p ->
@@ -453,7 +453,7 @@ Module ETransformPresFO.
     Context {env env' : Type}.
     Context {eval : program env EAst.term -> EAst.term -> Prop}.
     Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
-    Context (o : Transform.t _ _ _ _ eval eval').
+    Context (o : Transform.t _ _ _ _ _ _ eval eval').
     Context (firstorder_value : program env EAst.term -> Prop).
     Context (firstorder_value' : program env' EAst.term -> Prop).
 
@@ -478,7 +478,7 @@ Module ETransformPresFO.
     Context (firstorder_value : program env EAst.term -> Prop).
     Context (firstorder_value' : program env' EAst.term -> Prop).
     Context (firstorder_value'' : program env'' EAst.term -> Prop).
-    Context (o : Transform.t _ _ _ _ eval eval') (o' : Transform.t _ _ _ _ eval' eval'').
+    Context (o : Transform.t _ _ _ _ _ _ eval eval') (o' : Transform.t _ _ _ _ _ _ eval' eval'').
     Context compile_fo_value compile_fo_value'
       (oext : t o firstorder_value firstorder_value' compile_fo_value)
       (o'ext : t o' firstorder_value' firstorder_value'' compile_fo_value')
@@ -909,9 +909,8 @@ Section PCUICExpandLets.
   Proof.
     rewrite /PCUICFirstorder.firstorder_type /PCUICFirstorder.firstorder_env.
     pose proof (trans_decompose_app t).
-    destruct decompose_app. rewrite H. cbn.
-    destruct t0 => //. intros hd => /=.
-    destruct ind.
+    destruct decompose_app. rewrite {}H. cbn.
+    case: t0 => //; case => /= kn _ _ hd.
     destruct plookup_env eqn:hp => //.
     destruct b => //.
     eapply hd in hp. rewrite hp //.

@@ -2,8 +2,7 @@
 
 ## Branches and compatibility
 
-**tl;dr** You should do your PRs against [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16).
-
+**tl;dr** You should do your PRs against [coq-8.18](https://github.com/MetaCoq/metacoq/tree/coq-8.16).
 
 Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's reified structures,
 so we do not ensure any compatibility from version to version. There is one branch for each Coq version.
@@ -22,8 +21,8 @@ stable release of Coq.
 <!-- gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated -->
 <!-- "alpha"-quality `opam` packages. -->
 
-The branches [coq-8.16](https://github.com/MetaCoq/metacoq/tree/coq-8.16) and [coq-8.17](https://github.com/MetaCoq/metacoq/tree/coq-8.17) are being kept in sync.
-The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6) to [coq-8.15](https://github.com/MetaCoq/metacoq/tree/coq-8.15) are frozen.
+The branches [coq-8.17](https://github.com/MetaCoq/metacoq/tree/coq-8.17) and [coq-8.18](https://github.com/MetaCoq/metacoq/tree/coq-8.18) are being kept in sync.
+The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6) to [coq-8.15](https://github.com/MetaCoq/metacoq/tree/coq-8.16) are frozen.
 
 
 ## Program and Equations

@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         coq_version:
-          - 'dev'
+          - '8.18'
         ocaml_version:
           - '4.14-flambda'
         target: [ local, opam, quick ]
@@ -50,6 +50,7 @@ jobs:
             startGroup "Workaround permission issue"
               sudo chown -R coq:coq .  # <--
               opam exec -- ocamlfind list
+              opam pin coq-equations.1.3 "https://github.com/mattam82/Coq-Equations.git#8.18"
             endGroup
           before_install: |
             startGroup "Print opam config"

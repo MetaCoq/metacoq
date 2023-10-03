@@ -910,10 +910,12 @@ Section PCUICExpandLets.
     rewrite /PCUICFirstorder.firstorder_type /PCUICFirstorder.firstorder_env.
     pose proof (trans_decompose_app t).
     destruct decompose_app. rewrite {}H. cbn.
-    case: t0 => //; case => /= kn _ _ hd.
-    destruct plookup_env eqn:hp => //.
-    destruct b => //.
-    eapply hd in hp. rewrite hp //.
+    case: t0 => //=.
+    - intros n' hn. destruct l => //.
+    - case => /= kn _ _ hd. destruct l => //.
+      destruct plookup_env eqn:hp => //.
+      destruct b => //.
+      eapply hd in hp. rewrite hp //.
   Qed.
 
   Lemma trans_firstorder_mutind Σ m :
@@ -950,6 +952,7 @@ Section PCUICExpandLets.
       clear -he hd. move: hd. rewrite /firstorder_type.
       destruct (decompose_app decl_type) eqn:e. cbn.
       destruct t0 => //; apply decompose_app_inv in e; rewrite e.
+      destruct l => //.
       { move/andP => [] /Nat.leb_le hn /Nat.ltb_lt hn'.
         rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
           decompose_app_mkApps //=.
@@ -964,7 +967,8 @@ Section PCUICExpandLets.
         apply/andP; split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
       { rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
           decompose_app_mkApps //=.
-          destruct ind. destruct plookup_env eqn:hp => //. destruct b => //. apply he in hp. rewrite hp //. }
+          destruct ind, l => //=. destruct plookup_env eqn:hp => //.
+          destruct b => //. apply he in hp. rewrite hp //. }
     Qed.
 
   Lemma trans_firstorder_env Σ :

@@ -16,6 +16,8 @@ Arguments red_ctx : clear implicits.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+Local Ltac intuition_solver ::= auto with *.
+
 Lemma lift0_open {cf:checker_flags} {Γ : closed_context} {Γ'' : open_context Γ}
   {M : open_term Γ} {n} :
   n = #|Γ''| -> is_open_term (Γ ,,, Γ'') (lift0 n M).

@@ -1117,7 +1117,6 @@ Section TypingWf.
     (decompose_app (mkApp f u)).2 <> [].
   Proof using Type.
     induction f; simpl; auto; try congruence.
-    destruct args; simpl; congruence.
   Qed.
 
   Lemma mkApps_tApp' f u f' u' :

@@ -13,7 +13,7 @@ Local Open Scope string_scope2.
 
 Import Transform.
 
-Obligation Tactic := program_simpl.
+Local Obligation Tactic := program_simpl.
 
 Import EGlobalEnv EWellformed.
 
@@ -51,3 +51,47 @@ Proof.
   intros wf; depelim wf. constructor; auto.
 Qed.
 
+Module TransformExt.
+  Section Opt.
+    Context {env env' env'' : Type}.
+    Context {term term' term'' : Type}.
+    Context {value value' value'' : Type}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
+    Context (o : Transform.t env env' term term' value value' eval eval').
+    Context (extends : program env term -> program env term -> Prop).
+    Context (extends' : program env' term' -> program env' term' -> Prop).
+
+    Class t := preserves_obs : forall p p' (pr : o.(pre) p) (pr' : o.(pre) p'),
+        extends p p' -> extends' (o.(transform) p pr) (o.(transform) p' pr').
+
+  End Opt.
+
+  Section Comp.
+    Context {env env' env'' : Type}.
+    Context {term term' term'' : Type}.
+    Context {value value' value'' : Type}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
+    Context {extends : program env term -> program env term -> Prop}.
+    Context {extends' : program env' term' -> program env' term' -> Prop}.
+    Context {extends'' : program env'' term'' -> program env'' term'' -> Prop}.
+
+    Local Obligation Tactic := idtac.
+    #[global]
+    Instance compose (o : Transform.t env env' term term' value value' eval eval')
+      (o' : Transform.t env' env'' term' term'' value' value'' eval' eval'')
+      (oext : t o extends extends')
+      (o'ext : t o' extends' extends'')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p))
+      : t (Transform.compose o o' hpp) extends extends''.
+    Proof. red.
+      intros p p' pr pr' ext.
+      eapply o'ext. now apply oext.
+    Qed.
+
+  End Comp.
+
+End TransformExt.

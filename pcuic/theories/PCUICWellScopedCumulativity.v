@@ -13,6 +13,8 @@ Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 From Equations Require Import Equations.
 
+Local Ltac intuition_solver ::= auto with *.
+
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
   We first use typing to decorate the reductions/comparisons with invariants
   showing that all the considered contexts/terms are well-scoped. In a second step

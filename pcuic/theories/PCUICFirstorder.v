@@ -98,18 +98,16 @@ Section cf.
 
 Context {cf : config.checker_flags}.
 
-Definition isPropositional Σ ind b :=
-  match lookup_env Σ (inductive_mind ind) with
-  | Some (InductiveDecl mdecl) =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl =>
-      match destArity [] idecl.(ind_type) with
-      | Some (_, s) => is_propositional s = b
-      | None => False
-      end
-    | None => False
-    end
-  | _ => False
+Definition isPropositionalArity ar :=
+  match destArity [] ar with
+  | Some (_, s) => is_propositional s
+  | None => false
+  end.
+
+Definition isPropositional Σ ind :=
+  match lookup_inductive Σ ind with
+  | Some (mdecl, idecl) => isPropositionalArity idecl.(ind_type)
+  | _ => false
   end.
 
 Inductive firstorder_value Σ Γ : term -> Prop :=
@@ -117,7 +115,7 @@ Inductive firstorder_value Σ Γ : term -> Prop :=
    Σ ;;; Γ |- mkApps (tConstruct i n ui) args :
    mkApps (tInd i u) pandi ->
    Forall (firstorder_value Σ Γ) args ->
-   isPropositional Σ i false ->
+   ~~ isPropositional Σ i ->
    firstorder_value Σ Γ (mkApps (tConstruct i n ui) args).
 
 Lemma firstorder_value_inds :
@@ -127,7 +125,7 @@ Lemma firstorder_value_inds :
  Σ;;; Γ |- mkApps (tConstruct i n ui) args : mkApps (tInd i u) pandi ->
  Forall (firstorder_value Σ Γ) args ->
  Forall P args ->
- isPropositional (PCUICEnvironment.fst_ctx Σ) i false ->
+ ~~ isPropositional (PCUICEnvironment.fst_ctx Σ) i ->
  P (mkApps (tConstruct i n ui) args)) ->
 forall t : term, firstorder_value Σ Γ t -> P t.
 Proof using Type.
@@ -139,21 +137,21 @@ Qed.
 Lemma firstorder_ind_propositional {Σ : global_env_ext} {wfΣ:wf Σ} i mind oind :
   declared_inductive Σ i mind oind ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
-  isPropositional Σ i false.
+  ~~ isPropositional Σ i.
 Proof using Type.
   intros d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
   pose proof d_ as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
-  red. sq.
+  unfold isPropositional.
   unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
-  solve_all.
   unfold firstorder_mutind in H.
-  rewrite d2. move/andP: H => [ind H0].
+  rewrite /lookup_inductive /lookup_inductive_gen /lookup_minductive_gen /= d1 d2.
+  move/andP: H => [ind H0].
   eapply forallb_nth_error in H0; tea.
   erewrite d2 in H0. cbn in H0.
   unfold firstorder_oneind in H0. solve_all.
   destruct (ind_sort oind) eqn:E2; inv H0.
   eapply PCUICInductives.declared_inductive_type in d.
-  rewrite d. rewrite E2.
+  rewrite d. rewrite E2. unfold isPropositionalArity.
   now rewrite destArity_it_mkProd_or_LetIn.
 Qed.
 
@@ -622,19 +620,18 @@ Proof using Type.
     * intros hl. now eapply invert_cumul_prod_ind in hl.
 Qed.
 
-Lemma firstorder_value_spec (Σ:global_env_ext) t i u args mind :
+Lemma firstorder_value_spec (Σ:global_env_ext) t i u args :
   wf Σ -> wf_local Σ [] ->
    Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
-  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
   @firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
 Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
-  revert mind i u args Hty.
+  revert i u args Hty.
 
   induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
-   intros mind i u args Hty Hlookup Hfo.
+   intros i u args Hty Hfo.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
@@ -667,9 +664,10 @@ Proof using Type.
       destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
     + exfalso. eapply (typing_cofix_coind (args := [])) in Hty. red in Hty.
       red in Hfo. unfold firstorder_ind in Hfo.
-      rewrite Hlookup in Hfo.
+      destruct lookup_env eqn:E; try congruence.
+      destruct g; try congruence.
       eapply andb_true_iff in Hfo as [Hfo _].
-      rewrite /check_recursivity_kind Hlookup in Hty.
+      rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
     + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
       now eapply invert_cumul_axiom_ind in cum; tea.
@@ -697,7 +695,6 @@ Proof using Type.
         econstructor. inv X.
         eapply H0. tea.
         unshelve eapply declared_inductive_to_gen in d0; eauto.
-        exact i3.
         inv X. eapply IHspine; eauto.
      + exfalso.
        destruct PCUICWcbvEval.cunfold_fix as [[] | ] eqn:E; inversion H.
@@ -708,9 +705,10 @@ Proof using Type.
        eapply nth_error_None. lia.
     + exfalso. eapply (typing_cofix_coind (args := args')) in Hty.
       red in Hfo. unfold firstorder_ind in Hfo.
-      rewrite Hlookup in Hfo.
+      destruct lookup_env eqn:E; try congruence.
+      destruct g; try congruence.
       eapply andb_true_iff in Hfo as [Hfo _].
-      rewrite /check_recursivity_kind Hlookup in Hty.
+      rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
 Qed.
 

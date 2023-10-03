@@ -572,8 +572,6 @@ Record type_flag {Σ Γ T} :=
 
 Global Arguments type_flag : clear implicits.
 
-Import PCUICSN.
-
 Hint Resolve abstract_env_wf : erase.
 
 Definition isTT Γ T :=

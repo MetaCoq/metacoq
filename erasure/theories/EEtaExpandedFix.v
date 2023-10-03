@@ -533,7 +533,7 @@ Section isEtaExp.
     funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
       try toAll; try solve_all; subst.
     - intros. simp isEtaExp ; cbn. destruct (Nat.compare_spec #|Γ0| i) => //; simp_eta.
-      + rewrite nth_error_app2 in H0; try lia; cbn in H0; try easy. subst. rewrite Nat.sub_diag in H0. cbn in H0. easy.
+      + rewrite nth_error_app2 in H0; try lia; cbn in H0; try easy. subst. rewrite Nat.sub_diag  in H0. cbn in H0. easy.
       + rewrite !nth_error_app2 in H0 |- *; cbn; try lia.
         erewrite option_default_ext; eauto. f_equal.
         destruct i; cbn; lia.

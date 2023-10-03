@@ -26,7 +26,7 @@ else
 endif
 endif
 
-install: all translations
+install: all
 	$(MAKE) -C utils install
 	$(MAKE) -C common install
 	$(MAKE) -C template-coq install

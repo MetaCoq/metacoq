@@ -55,7 +55,7 @@ jobs:
             startGroup "Print opam config"
               sudo chown -R coq:coq .
               opam config list; opam repo list; opam list
-              opam pin -y coq-equations.1.3 "https://github.com/mattam82/Coq-Equations.git#8.18"
+              opam pin -y coq-equations.1.3+8.18 "https://github.com/mattam82/Coq-Equations.git#8.18"
             endGroup
           script: |
             startGroup "Build project"

@@ -1030,3 +1030,24 @@ Proof.
   intros [Tty []] hred.
   exists Tty. split => //. eapply subject_reduction; tea.
 Qed.
+
+Lemma not_isErasable Σ Γ f A u : 
+  wf_ext Σ -> wf_local Σ Γ ->
+  ∥Σ;;; Γ |- f : A∥ ->
+  (forall B, ∥Σ;;; Γ ⊢ A ⇝ B∥ -> A = B) ->
+  (forall B, ∥Σ ;;; Γ |- f : B∥ -> ∥Σ ;;; Γ ⊢ A ≤ B∥) ->
+  ~ ∥ isArity A ∥ ->
+  ∥ Σ;;; Γ |- A : tSort u ∥ -> 
+  ~ is_propositional u ->
+  ~ ∥ Extract.isErasable Σ Γ f ∥.
+Proof.
+  intros wfΣ Hlocal Hf Hnf Hprinc Harity Hfu Hu  [[T [HT []]]]; sq.
+  - eapply Harity; sq. 
+    eapply EArities.arity_type_inv in i as [T' [? ?]]; eauto.
+    eapply Hnf in H. subst; eauto.
+  - destruct s as [s [? ?]]. eapply Hu. 
+    specialize (Hprinc _ (sq HT)).
+    pose proof (Hs := i). sq.  
+    eapply PCUICElimination.unique_sorting_equality_propositional in Hprinc; eauto.
+    rewrite Hprinc; eauto.   
+Qed. 

@@ -5,7 +5,7 @@
 From Coq Require Import Utf8 Program btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames EnvMap BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EExtends EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -372,7 +372,7 @@ Fixpoint isEtaExp_env (Σ : global_declarations) :=
 Lemma isEtaExp_lookup_ext {Σ} {kn d}:
   isEtaExp_env Σ ->
   lookup_env Σ kn = Some d ->
-  ∑ Σ', extends Σ' Σ × isEtaExp_decl Σ' d.
+  ∑ Σ', extends_prefix Σ' Σ × isEtaExp_decl Σ' d.
 Proof.
   induction Σ; cbn.
   - move=> _; rewrite /declared_constant /lookup_env /= //.
@@ -442,7 +442,8 @@ Lemma isEtaExp_lookup {efl : EEnvFlags} {Σ kn d}:
 Proof.
   move=> etaΣ wfΣ.
   move/(isEtaExp_lookup_ext etaΣ) => [Σ' []] ext hd.
-  now eapply isEtaExp_extends_decl.
+  eapply isEtaExp_extends_decl; eauto.
+  now eapply extends_prefix_extends.
 Qed.
 
 Section expanded.

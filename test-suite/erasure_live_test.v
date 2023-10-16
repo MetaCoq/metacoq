@@ -323,8 +323,10 @@ Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Arith.Peano_dec.
 Require Import Arith Init.Wf.
+Require Import Program.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
+
 Print Assumptions provedCopy.
 (* MetaCoq Quote Recursively Definition pCopy := provedCopy. program *)
 

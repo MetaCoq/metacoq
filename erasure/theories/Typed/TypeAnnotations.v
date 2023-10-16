@@ -699,7 +699,7 @@ Module AnnotOptimizePropDiscr.
       intros ? a'; exact (f _ _ a').
   Defined.
 
-  Definition annot_optimize Σ {t} (a : annots box_type t) : annots box_type (optimize Σ t).
+  Definition annot_remove_match_on_box Σ {t} (a : annots box_type t) : annots box_type (remove_match_on_box Σ t).
   Proof.
     revert t a.
     fix f 1.
@@ -708,7 +708,7 @@ Module AnnotOptimizePropDiscr.
     - exact (a.1, f _ a.2).
     - exact (a.1, (f _ a.2.1, f _ a.2.2)).
     - exact (a.1, (f _ a.2.1, f _ a.2.2)).
-    - assert (br_annots : bigprod (fun br => annots box_type br.2) (map (on_snd (optimize Σ)) l)).
+    - assert (br_annots : bigprod (fun br => annots box_type br.2) (map (on_snd (remove_match_on_box Σ)) l)).
       { refine (bigprod_map _ a.2.2).
         intros ? a'; apply (f _ a'). }
       unfold isprop_ind.
@@ -743,32 +743,32 @@ Module AnnotOptimizePropDiscr.
       intros ? a'; exact (f _ a').
   Defined.
 
-  Definition annot_optimize_constant_body Σ {cst} (a : constant_body_annots box_type cst) :
-    constant_body_annots box_type (optimize_constant_body Σ cst).
+  Definition annot_remove_match_on_box_constant_body Σ {cst} (a : constant_body_annots box_type cst) :
+    constant_body_annots box_type (remove_match_on_box_constant_body Σ cst).
   Proof.
-    unfold constant_body_annots, optimize_constant_body in *.
+    unfold constant_body_annots, remove_match_on_box_constant_body in *.
     cbn.
     destruct ExAst.cst_body; cbn; [|exact tt].
-    apply annot_optimize.
+    apply annot_remove_match_on_box.
     exact a.
   Defined.
 
-  Definition annot_optimize_decl Σ {decl} (a : global_decl_annots box_type decl) :
-    global_decl_annots box_type (optimize_decl Σ decl).
+  Definition annot_remove_match_on_box_decl Σ {decl} (a : global_decl_annots box_type decl) :
+    global_decl_annots box_type (remove_match_on_box_decl Σ decl).
   Proof.
-    unfold global_decl_annots, optimize_decl in *.
+    unfold global_decl_annots, remove_match_on_box_decl in *.
     destruct decl; [|exact tt|exact tt].
-    apply annot_optimize_constant_body.
+    apply annot_remove_match_on_box_constant_body.
     exact a.
   Defined.
 
-  Definition annot_optimize_env Σ fgΣ (a : env_annots box_type Σ) :
-    env_annots box_type (optimize_env Σ fgΣ).
+  Definition annot_remove_match_on_box_env Σ fgΣ (a : env_annots box_type Σ) :
+    env_annots box_type (remove_match_on_box_env Σ fgΣ).
   Proof.
-    unfold env_annots, optimize_env.
+    unfold env_annots, remove_match_on_box_env.
     apply bigprod_map.
     - intros.
-      apply annot_optimize_decl.
+      apply annot_remove_match_on_box_decl.
       exact X.
     - exact a.
   Defined.
@@ -803,7 +803,7 @@ Proof.
   unfold extract_pcuic_env.
   destruct optimize_prop_discr.
   + apply annot_compose_transforms; [|exact all].
-    apply AnnotOptimizePropDiscr.annot_optimize_env.
+    apply AnnotOptimizePropDiscr.annot_remove_match_on_box_env.
     apply annotate_types_erase_global_decls_deps_recursive.
   + apply annotate_types_erase_global_decls_deps_recursive.
 Defined.

@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool.
+From Coq Require Import ssreflect ssrbool Morphisms Setoid.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames EnvMap BasicAst.
@@ -14,6 +14,52 @@ Module GlobalContextMap.
     map : EnvMap.t global_decl;
     repr : EnvMap.repr global_decls map;
     wf : EnvMap.fresh_globals global_decls }.
+
+  Program Definition empty : t :=
+    {| global_decls := [];
+       map := EnvMap.empty |}.
+    Next Obligation.
+      constructor.
+    Qed.
+
+  Program Definition add (Σ : GlobalContextMap.t) kn d (hpre : fresh_global kn Σ) : GlobalContextMap.t :=
+    {| global_decls := (kn,d) :: Σ.(global_decls);
+        map := EnvMap.add kn d Σ.(map) |}.
+    Next Obligation.
+      simpl. unfold KernameMapFact.uncurry.
+      pose proof (Σ.(repr)). unfold EnvMap.repr in H.
+      now rewrite H.
+    Qed.
+    Next Obligation.
+      constructor => //. apply Σ.(wf).
+    Qed.
+
+  Definition global_context_map_equal Σ Σ' :=
+    Σ.(global_decls) = Σ'.(global_decls).
+
+  #[global] Instance gceq : DefaultRelation global_context_map_equal := {}.
+
+  Lemma global_context_map_ind (P : GlobalContextMap.t -> Prop)
+    (proper : Morphisms.Proper (global_context_map_equal ==> iff) P)
+    (Pnil : P empty)
+    (Pcons :
+      forall Σ kn d fr,
+        P Σ ->
+        P (add Σ kn d fr))
+      Σ : P Σ.
+  Proof.
+    destruct Σ as [Σ ? ? ?].
+    induction Σ in map0, repr0, wf0 |- *; set (Σ':= {| global_decls := _ |}).
+    - setoid_replace Σ' with empty => //.
+    - set (Σg := {| global_decls := Σ; map := EnvMap.of_global_env Σ; repr := EnvMap.repr_global_env _;
+           wf := fresh_globals_cons_inv wf0 |}).
+      destruct a as [kn d].
+      assert (fresh_global kn Σ). now depelim wf0.
+      setoid_replace Σ' with (add Σg kn d H).
+      apply Pcons. apply IHΣ.
+      red. unfold Σ', add.
+      cbn. reflexivity.
+  Qed.
 
   Definition lookup_env Σ kn := EnvMap.lookup kn Σ.(map).
 

@@ -269,7 +269,7 @@ Proof.
       depelim H2.
       eapply isErasable_Propositional in X0; eauto.
       rewrite -eq_npars.
-      eapply isPropositional_propositional; eauto.
+      erewrite isPropositional_propositional; eauto. now rewrite X0.
       apply declared_inductive_from_gen; eauto.
       invs e. cbn in *.
       rewrite map_length.
@@ -355,7 +355,8 @@ Proof.
             now rewrite closedn_mkApps /=. }
           solve_all. eapply (erases_closed _ []); tea. }
          rewrite -eq_npars.
-         eapply isPropositional_propositional_cstr; eauto.
+         erewrite isPropositional_propositional_cstr; eauto.
+         move/negbTE: H13 => ->. reflexivity.
          eapply declared_constructor_from_gen; eauto.
          rewrite  -(Forall2_length H3) /= e1 //.
          rewrite skipn_length -(Forall2_length H3) -e6 /= map_length.
@@ -369,9 +370,9 @@ Proof.
       -- eapply Is_type_app in X1 as []; auto.
          2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
          assert (ispind : inductive_isprop_and_pars Σ' ind = Some (true, ind_npars mdecl)).
-         { eapply isPropositional_propositional; eauto.
-           apply declared_inductive_from_gen; eauto.
-           eapply isErasable_Propositional; eauto. }
+         { erewrite isPropositional_propositional; eauto. f_equal. f_equal.
+           eapply isErasable_Propositional; eauto.
+          apply declared_inductive_from_gen; eauto. }
 
          eapply tConstruct_no_Type in X1; auto.
          eapply H6 in X1 as []; eauto.
@@ -492,9 +493,9 @@ Proof.
         unshelve eapply declared_projection_to_gen in decli; eauto.
         destruct (declared_inductive_inj decli.p1 d.p1) as [<- <-].
         assert (isprop : inductive_isprop_and_pars Σ' p.(proj_ind) = Some (true, ind_npars mdecl)).
-        { eapply isPropositional_propositional; eauto.
-          eapply declared_inductive_from_gen; exact d. all:eauto. apply decli'.
-          eapply isErasable_Propositional; eauto. }
+        { erewrite isPropositional_propositional; eauto. f_equal. f_equal.
+          eapply isErasable_Propositional; eauto.
+          eapply declared_inductive_from_gen; exact d. all:eauto. apply decli'. }
         split.
         eapply Is_type_app in X as []; eauto. 2:{ rewrite -mkApps_app. eapply subject_reduction_eval; eauto. }
         rewrite -mkApps_app in X.
@@ -532,15 +533,16 @@ Proof.
         invs H2.
         -- exists x9. split; eauto. constructor.
             eapply Ee.eval_proj; eauto. rewrite -eqpars.
-            eapply isPropositional_propositional_cstr; eauto.
+            erewrite isPropositional_propositional_cstr; eauto.
+            move/negbTE: H9 => ->. reflexivity.
             eapply declared_constructor_from_gen. apply d0. cbn. eapply decli'. cbn. rewrite -lenx5 //.
             move: eargs. unfold PCUICWcbvEval.cstr_arity; cbn.
             now rewrite -eqpars.
         -- exists EAst.tBox.
           assert (isprop : inductive_isprop_and_pars Σ' p.(proj_ind) = Some (true, ind_npars mdecl)).
-          { eapply isPropositional_propositional; eauto.
-            eapply declared_inductive_from_gen. apply d. apply decli'.
-            eapply (isErasable_Propositional (args:=[])); eauto. }
+          { erewrite isPropositional_propositional; eauto. do 2 f_equal.
+            eapply (isErasable_Propositional (args:=[])); eauto.
+            eapply declared_inductive_from_gen. apply d. apply decli'. }
           split.
           eapply Is_type_app in X as []; eauto. 2:{ eapply subject_reduction_eval; [|eauto]; eauto. }
 

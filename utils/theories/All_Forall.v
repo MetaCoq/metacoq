@@ -1,6 +1,7 @@
 From Coq Require Import List Bool Arith ssreflect Morphisms Lia Utf8.
 From MetaCoq.Utils Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
+
 Import ListNotations.
 
 Derive Signature for Forall Forall2.
@@ -3016,11 +3017,11 @@ Proof.
 Qed.
 
 Lemma Forall2_sym :
-  forall A (P : A -> A -> Prop) l l',
+  forall A B (P : A -> B -> Prop) l l',
     Forall2 P l l' ->
     Forall2 (fun x y => P y x) l' l.
 Proof.
-  intros A P l l' h.
+  intros A B P l l' h.
   induction h.
   - constructor.
   - constructor. all: auto.

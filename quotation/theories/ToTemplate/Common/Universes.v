@@ -63,8 +63,8 @@ Export (hints) QuoteUniverses1.
   UContext.t
   AUContext.t
   ContextSet.t
-  ContextSet.equal
-  ContextSet.subset
+  ContextSet.Equal
+  ContextSet.Subset
   : quotation.
 
 #[export] Typeclasses Transparent

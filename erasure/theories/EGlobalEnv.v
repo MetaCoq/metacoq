@@ -183,7 +183,10 @@ Definition closed_env (Σ : EAst.global_declarations) :=
 
 (** Environment extension and uniqueness of declarations in well-formed global environments *)
 
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
+Definition extends (Σ Σ' : global_declarations) :=
+  (forall kn decl, lookup_env Σ kn = Some decl -> lookup_env Σ' kn = Some decl).
+
+Definition extends_prefix (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = Σ'' ++ Σ.
 
 Definition fresh_global kn (Σ : global_declarations) :=
   Forall (fun x => x.1 <> kn) Σ.

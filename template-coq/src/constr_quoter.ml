@@ -134,7 +134,7 @@ struct
       match Constr.kind ty with
       | Constr.Ind (ind, u) -> ind
       | _ -> failwith "byte_ind : tByte is not bound to an inductive type")
-  
+
   let quote_char i =
     Constr.mkConstruct (Lazy.force byte_ind, (i+1))
 
@@ -288,7 +288,7 @@ struct
     | Some var ->
      let var' = quote_cuminfo_variance var in
       constr_mkApp (cSome, [| listvar; var' |]) *)
-  
+
  let quote_abstract_univ_context uctx =
     let arr = (AbstractContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
@@ -300,10 +300,10 @@ struct
   let mkPolymorphic_ctx t =
     constr_mkApp (cPolymorphic_ctx, [|t|])
 
-  let mkMonomorphic_entry ctx = 
+  let mkMonomorphic_entry ctx =
      constr_mkApp (cMonomorphic_entry, [| ctx |])
-  
-  let mkPolymorphic_entry ctx = 
+
+  let mkPolymorphic_entry ctx =
      constr_mkApp (cPolymorphic_entry, [| ctx |])
 
   let quote_inductive_universes uctx =
@@ -347,14 +347,14 @@ struct
 
   let quote_context ctx =
     to_coq_list (constr_mkAppl (tcontext_decl, [| tTerm |])) ctx
-  
+
   let mk_ctor_list ls =
-    let ctors = List.map (fun (a,b,c,d,e) -> 
+    let ctors = List.map (fun (a,b,c,d,e) ->
       constr_mkApp (tBuild_constructor_body, [| a ; b ; to_coq_listl tTerm c ; d ; e |])) ls in
     to_coq_listl tconstructor_body ctors
 
   let mk_proj_list ps =
-    let projs = List.map (fun (a,b,c) -> 
+    let projs = List.map (fun (a,b,c) ->
       constr_mkApp (tBuild_projection_body, [| a ; b ; c |])) ps in
     to_coq_listl tprojection_body projs
 
@@ -411,11 +411,11 @@ struct
     let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
 
-  type pre_quoted_retroknowledge = 
+  type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
       retro_float64 : quoted_kernel_name option }
 
-  let quote_retroknowledge r = 
+  let quote_retroknowledge r =
     let rint63 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_int63 in
     let rfloat64 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_float64 in
     constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64 |])
@@ -435,7 +435,7 @@ struct
     let consnames = to_coq_listl tident consnames in
     let constypes = to_coq_listl tTerm constypes in
     constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; consnames; constypes |])
-  
+
   let quote_mutual_inductive_entry (mf, mp, is, mpol, var) =
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in
     let mpr = constr_mkAppl (cNone, [|bool_type|]) in

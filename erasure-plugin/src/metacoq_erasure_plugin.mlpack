@@ -54,6 +54,7 @@ Extract
 EEtaExpanded
 ERemoveParams
 ErasureFunction
+ErasureFunctionProperties
 EOptimizePropDiscr
 EInlineProjections
 EConstructorsAsBlocks

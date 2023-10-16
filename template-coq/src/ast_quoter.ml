@@ -62,6 +62,7 @@ struct
   let quote_relevance = function
     | Sorts.Relevant -> BasicAst.Relevant
     | Sorts.Irrelevant -> BasicAst.Irrelevant
+    | Sorts.RelevanceVar x -> BasicAst.Irrelevant
 
   let quote_name : Names.Name.t -> BasicAst.name = function
     | Anonymous -> Coq_nAnon
@@ -104,6 +105,7 @@ struct
   | Sorts.SProp -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lSProp)
   | Sorts.Prop -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lProp)
   | Sorts.Type u -> quote_universe u
+  | _ -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lProp)
 
   let quote_sort_family s =
     match s with
@@ -111,6 +113,7 @@ struct
     | Sorts.InProp -> Universes0.IntoPropSProp
     | Sorts.InSet -> Universes0.IntoSetPropSProp
     | Sorts.InType -> Universes0.IntoAny
+    | _ -> Universes0.IntoAny
 
   let quote_cast_kind = function
     | Constr.DEFAULTcast -> Cast

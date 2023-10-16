@@ -55,8 +55,7 @@ To compile the library, you need:
 
 - The `Coq` version corrsponding to your branch (you can use the `coq.dev` package
   for the `main` branch).
-- `OCaml` (tested with `4.06.1`, `4.07.1`, and `4.10.0`, beware that `OCaml 4.06.0`
-  can produce linking errors on some platforms)
+- `OCaml` (tested with `4.14.0`)
 - [`Equations 1.3`](http://mattam82.github.io/Coq-Equations/)
 
 The recommended way to build a development environment for MetaCoq is
@@ -67,10 +66,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.17 origin/coq-8.17
+    # git checkout -b coq-8.18 origin/coq-8.18
     # git status
 
-This checks that you are indeed on the `coq-8.17` branch.
+This checks that you are indeed on the `coq-8.18` branch.
 
 ### Setting up an `opam` switch
 
@@ -79,10 +78,10 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.17 --packages=ocaml-variants.4.13.1+options,ocaml-option-flambda
+    # opam switch create coq.8.18 --packages="ocaml-variants.4.14.0+options,ocaml-option-flambda"
     # eval $(opam env)
 
-This creates the `coq.8.17` switch which initially contains only the
+This creates the `coq.8.18` switch which initially contains only the
 basic `OCaml` `4.13.1` compiler with the `flambda` option enabled,
 and puts you in the right environment (check with `ocamlc -v`).
 
@@ -96,7 +95,7 @@ If the commands are successful you should have `coq` available (check with `coqc
 **Remark:** You can create a [local switch](https://opam.ocaml.org/blog/opam-20-tips/#Local-switches) for
 developing using (in the root directory of the sources):
 
-    # opam switch create . 4.07.1
+    # opam switch create . --packages="ocaml-variants.4.14.0+options,ocaml-option-flambda"
 
 Or use `opam switch link foo` to link an existing opam switch `foo` with
 the sources directory.

@@ -14,12 +14,12 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v20
+      uses: cachix/install-nix-action@v23
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
@@ -54,12 +54,12 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v20
+      uses: cachix/install-nix-action@v23
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
@@ -99,12 +99,12 @@ jobs:
         \ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n  else\n    echo\
         \ \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
     - name: Git checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
-      uses: cachix/install-nix-action@v20
+      uses: cachix/install-nix-action@v23
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq

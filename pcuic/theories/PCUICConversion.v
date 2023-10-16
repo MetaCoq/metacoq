@@ -3268,8 +3268,8 @@ Proof.
   unfold R_global_instance, R_global_instance_gen.
   destruct global_variance_gen.
   { induction i in l, i' |- *; destruct l, i'; simpl; auto; try lia; try easy.
-    * specialize (IHi i' []). simpl in IHi. intuition.
-    * intros []. intuition.
+    * specialize (IHi i' []). simpl in IHi. intuition auto with all.
+    * intros []. intuition eauto with all.
     }
   { unfold R_universe_instance.
     intros H % Forall2_length. now rewrite !map_length in H. }

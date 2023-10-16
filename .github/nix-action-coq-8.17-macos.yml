@@ -1,9 +1,9 @@
 jobs:
   coq:
     needs: []
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     concurrency:
-      group: ${{ github.workflow }}-Ubuntu-coq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-MacOS-coq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
     - name: Determine which commit to test
@@ -19,7 +19,11 @@ jobs:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
+<<<<<<<< HEAD:.github/workflows/nix-action-coq-dev-macos.yml
       uses: cachix/install-nix-action@v22
+========
+      uses: cachix/install-nix-action@v23
+>>>>>>>> coq-8.17-updates-8.16:.github/nix-action-coq-8.17-macos.yml
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
@@ -41,9 +45,9 @@ jobs:
   equations:
     needs:
     - coq
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     concurrency:
-      group: ${{ github.workflow }}-Ubuntu-equations-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-MacOS-equations-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
     - name: Determine which commit to test
@@ -59,7 +63,11 @@ jobs:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
+<<<<<<<< HEAD:.github/workflows/nix-action-coq-dev-macos.yml
       uses: cachix/install-nix-action@v22
+========
+      uses: cachix/install-nix-action@v23
+>>>>>>>> coq-8.17-updates-8.16:.github/nix-action-coq-8.17-macos.yml
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq
@@ -86,9 +94,9 @@ jobs:
     needs:
     - coq
     - equations
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     concurrency:
-      group: ${{ github.workflow }}-Ubuntu-metacoq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-MacOS-metacoq-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
     steps:
     - name: Determine which commit to test
@@ -104,7 +112,11 @@ jobs:
         fetch-depth: 0
         ref: ${{ env.tested_commit }}
     - name: Cachix install
+<<<<<<<< HEAD:.github/workflows/nix-action-coq-dev-macos.yml
       uses: cachix/install-nix-action@v22
+========
+      uses: cachix/install-nix-action@v23
+>>>>>>>> coq-8.17-updates-8.16:.github/nix-action-coq-8.17-macos.yml
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
     - name: Cachix setup metacoq

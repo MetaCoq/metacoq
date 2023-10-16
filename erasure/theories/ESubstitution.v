@@ -5,7 +5,7 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution
-     PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
+     PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination PCUICFirstorder.
 From MetaCoq.Erasure Require Import EGlobalEnv Extract Prelim.
 
 Local Set Keyed Unification.
@@ -80,9 +80,11 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
-    red. red in H4. unfold PCUICAst.lookup_inductive in H4.
+    move: H4; apply contraNN.
+    unfold isPropositional.
+    unfold PCUICAst.lookup_inductive.
     unshelve eapply declared_constructor_to_gen in isdecl; eauto.
-    rewrite (PCUICAst.declared_inductive_lookup_gen isdecl.p1) in H4.
+    rewrite (PCUICAst.declared_inductive_lookup_gen isdecl.p1).
     destruct isdecl as [decli declc].
     eapply declared_inductive_from_gen in decli.
     eapply PCUICWeakeningEnv.weakening_env_declared_inductive in decli; tea; eauto; tc.

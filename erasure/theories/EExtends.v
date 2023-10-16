@@ -45,11 +45,27 @@ Section EEnvFlags.
     split; eauto. eapply weakening_env_declared_inductive; eauto.
   Qed.
 
-  Lemma extends_wf_glob {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
+  Lemma extends_wf_glob {Σ Σ'} : extends_prefix Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
   Proof using Type.
     intros [? ->].
     induction x; cbn; auto.
     intros wf; depelim wf. eauto.
+  Qed.
+
+  Lemma extends_prefix_extends Σ Σ' :
+    extends_prefix Σ Σ' -> wf_glob Σ' ->
+    extends Σ Σ'.
+  Proof.
+    intros [Σ'' ->].
+    induction Σ''; cbn; auto.
+    - unfold extends; tauto.
+    - intros wf; depelim wf.
+      specialize (IHΣ'' wf).
+      red in IHΣ''. intros ? ? H'; specialize (IHΣ'' _ _ H').
+      cbn.
+      case: (eqb_spec kn0 kn).
+      + intros <-. now eapply lookup_env_Some_fresh in IHΣ''.
+      + now intros _.
   Qed.
 
   Definition global_subset (Σ Σ' : global_declarations) :=

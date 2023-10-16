@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import config.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
-     PCUICClosedTyp. (* Due to reliance on wf Σ instead of closed_env Σ *)
+     PCUICClosedTyp PCUICEtaExpand. (* Due to reliance on wf Σ instead of closed_env Σ *)
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -24,14 +24,23 @@ From Equations Require Import Equations.
 
 Local Ltac inv H := inversion H; subst.
 
+Lemma nApp_mkApps t f args :
+  t = mkApps f args -> ~~ isApp t -> t = f /\ args = [].
+Proof.
+  intros -> napp.
+  destruct args using rev_case; cbn in *; solve_discr; try discriminate => //. split => //.
+  now rewrite mkApps_app /= in napp.
+Qed.
+
 Ltac solve_discr :=
   try progress (prepare_discr; finish_discr; cbn[mkApps] in * );
   try match goal with
     H : mkApps _ _ = mkApps ?f ?l |- _ =>
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
   | H : ?t = mkApps ?f ?l |- _ =>
-    change t with (mkApps t []) in H ;
-    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+    (change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H) ||
+    (eapply nApp_mkApps in H as [? ?]; [|easy]; subst)
   | H : mkApps ?f ?l = ?t |- _ =>
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
@@ -153,8 +162,6 @@ Proof.
   revert f; induction l using rev_ind. simpl. intuition auto.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
-
-Global Hint Resolve app_tip_nil : core.
 
 Definition cstr_arity mdecl cdecl :=
   (mdecl.(ind_npars) + context_assumptions cdecl.(cstr_args))%nat.

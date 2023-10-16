@@ -24,6 +24,8 @@ Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
+Local Ltac intuition_solver ::= auto with *.
+
 #[global]
 Instance red_Refl Σ Γ : Reflexive (red Σ Γ) := refl_red Σ Γ.
 

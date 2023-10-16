@@ -19,17 +19,22 @@ Extract Constant time =>
   "(fun c f x -> let s = Caml_bytestring.caml_string_of_bytestring c in Tm_util.time (Pp.str s) f x)".
 
 Module Transform.
+  Definition program env term := env * term.
   Section Opt.
-     Context {program program' : Type}.
+     Context {env env' : Type}.
+     Context {term term' : Type}.
      Context {value value' : Type}.
+     Notation program' := (program env' term').
+     Notation program := (program env term).
      Context {eval :  program -> value -> Prop}.
      Context {eval' : program' -> value' -> Prop}.
 
-     Definition preserves_eval pre (transform : forall p : program, pre p -> program') obseq :=
+     Definition preserves_eval pre (transform : forall p : program, pre p -> program')
+      (obseq : forall p : program, pre p -> program' -> value -> value' -> Prop) :=
       forall p v (pr : pre p),
         eval p v ->
         let p' := transform p pr in
-        exists v', eval' p' v' /\ obseq p p' v v'.
+        exists v', eval' p' v' /\ obseq p pr p' v v'.
 
     Record t :=
     { name : string;
@@ -37,8 +42,8 @@ Module Transform.
       transform : forall p : program, pre p -> program';
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
-      obseq : program -> program' -> value -> value' -> Prop;
-      preservation : preserves_eval pre transform obseq; }.
+      obseq : forall p : program, pre p -> program' -> value -> value' -> Prop;
+      preservation : preserves_eval pre transform obseq }.
 
     Definition run (x : t) (p : program) (pr : pre x p) : program' :=
       time x.(name) (fun _ => x.(transform) p pr) tt.
@@ -46,24 +51,28 @@ Module Transform.
   End Opt.
   Arguments t : clear implicits.
 
-  Definition self_transform program value eval eval' := t program program value value eval eval'.
+  Definition self_transform env term eval eval' := t env env term term term term eval eval'.
 
   Section Comp.
-    Context {program program' program'' : Type}.
+    Context {env env' env'' : Type}.
+    Context {term term' term'' : Type}.
     Context {value value' value'' : Type}.
-    Context {eval : program -> value -> Prop}.
-    Context {eval' : program' -> value' -> Prop}.
-    Context {eval'' : program'' -> value'' -> Prop}.
+    Context {eval : program env term -> value -> Prop}.
+    Context {eval' : program env' term' -> value' -> Prop}.
+    Context {eval'' : program env'' term'' -> value'' -> Prop}.
 
     Local Obligation Tactic := idtac.
-    Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'')
-      (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
+    Program Definition compose (o : t env env' term term' _ _ eval eval') (o' : t env' env'' term' term'' _ _ eval' eval'')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p))
+      : t env env'' term term'' _ _ eval eval'' :=
       {|
         name := (o.(name) ^ " -> " ^ o'.(name))%bs;
         transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
         pre := o.(pre);
         post := o'.(post);
-        obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
+        obseq g preg g' v v' :=
+        exists v'', o.(obseq) g preg (run o g preg) v v'' ×
+            o'.(obseq) (run o g preg) (hpp _ (o.(correctness) _ preg)) g' v'' v'
         |}.
     Next Obligation.
       intros o o' hpp inp pre.
@@ -76,10 +85,11 @@ Module Transform.
       cbn in ev. destruct ev as [v' [ev]].
       epose proof (o'.(preservation) (o.(transform) p pr) v').
       specialize (H0 (hpp _ (o.(correctness) _ pr)) ev).
-      destruct H0 as [v'' [ev' obs']].
+      destruct H0 as [v'' [ev' obs'']].
       exists v''. constructor => //.
-      exists (transform o p pr), v'. now split.
+      exists v'. now split.
     Qed.
+
   End Comp.
 
   Declare Scope transform_scope.

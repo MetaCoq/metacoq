@@ -3,13 +3,13 @@
 From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure Require Import EOptimizePropDiscr.
 
-Definition optimize_constant_body Σ cst :=
+Definition remove_match_on_box_constant_body Σ cst :=
   {| cst_type := cst_type cst;
-     cst_body := option_map (optimize Σ) (cst_body cst) |}.
+     cst_body := option_map (remove_match_on_box Σ) (cst_body cst) |}.
 
-Definition optimize_decl Σ d :=
+Definition remove_match_on_box_decl Σ d :=
   match d with
-  | ConstantDecl cst => ConstantDecl (optimize_constant_body Σ cst)
+  | ConstantDecl cst => ConstantDecl (remove_match_on_box_constant_body Σ cst)
   | _ => d
   end.
 
@@ -36,21 +36,21 @@ Proof.
     now apply trans_env_fresh_global.
 Qed.
 
-Program Definition optimize_env (Σ : global_env) (fgΣ : fresh_globals Σ) : global_env :=
-  List.map (MCProd.on_snd (optimize_decl (EEnvMap.GlobalContextMap.make (trans_env Σ) _))) Σ.
+Program Definition remove_match_on_box_env (Σ : global_env) (fgΣ : fresh_globals Σ) : global_env :=
+  List.map (MCProd.on_snd (remove_match_on_box_decl (EEnvMap.GlobalContextMap.make (trans_env Σ) _))) Σ.
 Next Obligation.
   now apply trans_env_fresh_globals.
 Qed.
 
 Module Ee := EWcbvEval.
 
-Lemma trans_env_optimize_env Σ fgΣ :
-  trans_env (optimize_env Σ fgΣ) =
-  EOptimizePropDiscr.optimize_env (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)).
+Lemma trans_env_remove_match_on_box_env Σ fgΣ :
+  trans_env (remove_match_on_box_env Σ fgΣ) =
+  EOptimizePropDiscr.remove_match_on_box_env (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)).
 Proof.
   unfold trans_env.
-  unfold EOptimizePropDiscr.optimize_env.
-  unfold optimize_env.
+  unfold EOptimizePropDiscr.remove_match_on_box_env.
+  unfold remove_match_on_box_env.
   unfold MCProd.on_snd. cbn.
   rewrite !List.map_map.
   apply List.map_ext.
@@ -62,7 +62,7 @@ Proof.
   now destruct o.
 Qed.
 
-Lemma optimize_correct `{EWellformed.EEnvFlags} `{Ee.WcbvFlags} Σ fgΣ t v :
+Lemma remove_match_on_box_correct `{EWellformed.EEnvFlags} `{Ee.WcbvFlags} Σ fgΣ t v :
   EWcbvEval.with_constructor_as_block = false ->
   ELiftSubst.closed t = true ->
   EGlobalEnv.closed_env (trans_env Σ) = true ->
@@ -70,12 +70,12 @@ Lemma optimize_correct `{EWellformed.EEnvFlags} `{Ee.WcbvFlags} Σ fgΣ t v :
   @Prelim.Ee.eval _ (trans_env Σ) t v ->
   @Prelim.Ee.eval
       (EWcbvEval.disable_prop_cases _)
-      (trans_env (optimize_env Σ fgΣ))
-      (optimize (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)) t)
-      (optimize (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)) v).
+      (trans_env (remove_match_on_box_env Σ fgΣ))
+      (remove_match_on_box (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)) t)
+      (remove_match_on_box (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)) v).
 Proof.
   intros ? cl_t cl_env wfg ev.
-  rewrite trans_env_optimize_env.
+  rewrite trans_env_remove_match_on_box_env.
   remember (EEnvMap.GlobalContextMap.make _ _) as Σ0.
-  unshelve eapply EOptimizePropDiscr.optimize_correct;subst;cbn;eauto.
+  unshelve eapply EOptimizePropDiscr.remove_match_on_box_correct;subst;cbn;eauto.
 Qed.

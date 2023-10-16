@@ -595,6 +595,30 @@ Qed.
 Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
 Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
+Lemma head_mkApps t args : head (mkApps t args) = head t.
+Proof.
+  induction args using rev_ind; simpl; auto.
+  now rewrite mkApps_app /= head_tapp.
+Qed.
+
+Lemma arguments_mkApps_nApp f args :
+  ~~ isApp f ->
+  arguments (mkApps f args) = args.
+Proof.
+  rewrite /arguments => isa.
+  rewrite decompose_app_mkApps //.
+Qed.
+
+Lemma arguments_mkApps f args :
+  arguments (mkApps f args) = arguments f ++ args.
+Proof.
+  rewrite /arguments.
+  rewrite /decompose_app decompose_app_rec_mkApps //.
+  rewrite app_nil_r.
+  induction f in args |- * => //=.
+  rewrite IHf1. now rewrite (IHf1 [f2]) -app_assoc.
+Qed.
+
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                         match decompose_app t with
                                         | (tFix mfix idx, args') => args' = args

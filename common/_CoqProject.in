@@ -11,5 +11,6 @@ theories/MonadBasicAst.v
 theories/Environment.v
 theories/Reflect.v
 theories/EnvironmentTyping.v
+theories/EnvironmentReflect.v
 theories/EnvMap.v
 theories/Transform.v

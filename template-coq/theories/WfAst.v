@@ -198,7 +198,7 @@ Lemma wf_mkApp Σ u a : wf Σ u -> wf Σ a -> wf Σ (mkApp u a).
 Proof.
   intros H H'.
   inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
-  intro. destruct u0; simpl in *; congruence. solve_all.
+  solve_all.
   apply All_app_inv; auto. all:econstructor; eauto.
 Qed.
 

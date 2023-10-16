@@ -18,9 +18,6 @@ Import Transform TemplateToPCUIC.
 Definition eval_pcuic_program (p : pcuic_program) (v : term) :=
   ∥ PCUICWcbvEval.eval p.1.(trans_env_env) p.2 v ∥.
 
-Definition template_to_pcuic_obseq (p : template_program) (p' : pcuic_program) (v : Ast.term) (v' : term) :=
-  let Σ := Ast.Env.empty_ext p.1 in v' = trans (trans_global Σ) v.
-
 Lemma trans_template_program_wt {cf : checker_flags} p (wtp : wt_template_program p) : wt_pcuic_program (trans_template_program p).
 Proof.
   move: p wtp.
@@ -37,13 +34,13 @@ Local Obligation Tactic := idtac.
 (** We kludge the normalization assumptions by parameterizing over a continuation of "what will be done to the program later" as well as what properties we'll need of it *)
 
 Program Definition template_to_pcuic_transform {cf : checker_flags} K :
-  Transform.t template_program pcuic_program Ast.term term
+  Transform.t Ast.Env.global_env global_env_ext_map Ast.term term Ast.term term
   eval_template_program eval_pcuic_program :=
  {| name := "template to pcuic";
     pre p := ∥ wt_template_program p ∥ /\ EtaExpand.expanded_program p /\ K (trans_global (Ast.Env.empty_ext p.1)) ;
     transform p _ := trans_template_program p ;
     post p := ∥ wt_pcuic_program p ∥ /\ PCUICEtaExpand.expanded_pcuic_program p /\ K p.1;
-    obseq := template_to_pcuic_obseq |}.
+    obseq p _ p' v v':= v' = trans p'.1 v |}.
 Next Obligation.
   cbn. intros cf K p [[wtp] [etap ?]].
   split; split.
@@ -68,16 +65,13 @@ From MetaCoq.PCUIC Require Import PCUICExpandLets PCUICExpandLetsCorrectness.
     expansion of the old one, which is the identiy on normal forms.
 *)
 
-Definition let_expansion_obseq (p : pcuic_program) (p' : pcuic_program) (v : term) (v' : term) :=
-  v' = PCUICExpandLets.trans v.
-
 Program Definition pcuic_expand_lets_transform {cf : checker_flags} K :
-  self_transform pcuic_program term eval_pcuic_program eval_pcuic_program :=
+  self_transform global_env_ext_map term eval_pcuic_program eval_pcuic_program :=
  {| name := "let expansion in branches/constructors";
     pre p := ∥ wt_pcuic_program p ∥ /\ PCUICEtaExpand.expanded_pcuic_program p /\ K (build_global_env_map (trans_global_env p.1.1), p.1.2) ;
     transform p hp := expand_lets_program p;
     post p := ∥ wt_pcuic_program (cf:=PCUICExpandLetsCorrectness.cf' cf) p ∥ /\ PCUICEtaExpand.expanded_pcuic_program p /\ K p.1;
-    obseq := let_expansion_obseq |}.
+    obseq p _ p' v v' := v' = PCUICExpandLets.trans v |}.
 Next Obligation.
   intros cf K [Σ t] [[[wfext ht]] etap].
   cbn. split. sq. unfold build_global_env_map. unfold global_env_ext_map_global_env_ext. simpl.

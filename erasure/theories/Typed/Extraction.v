@@ -89,7 +89,7 @@ Program Definition extract_pcuic_env
            (ignore : kername -> bool) : result ExAst.global_env _ :=
   let Σ := timed "Erasure" (fun _ => erase_global_decls_deps_recursive (declarations Σ) (universes Σ) (retroknowledge Σ) wfΣ seeds ignore) in
   if optimize_prop_discr params then
-    let Σ := timed "Removal of prop discrimination" (fun _ => OptimizePropDiscr.optimize_env Σ _) in
+    let Σ := timed "Removal of prop discrimination" (fun _ => OptimizePropDiscr.remove_match_on_box_env Σ _) in
     compose_transforms (extract_transforms params) Σ
   else
     Ok Σ.
@@ -185,7 +185,7 @@ Definition get_projections (env : ExAst.global_env) : list (ident * ExAst.one_in
       | [oib] =>
         match oib.(ExAst.ind_ctors), oib.(ExAst.ind_projs) with
         (* case 1-ind with primitive projections *)
-        | [ctor],_::_ => map (fun '(na, _) => (na, oib)) oib.(ExAst.ind_projs)
+        | [_],_::_ => map (fun '(na, _) => (na, oib)) oib.(ExAst.ind_projs)
         (* case 1-ind without primitive projections *)
         | [(_,ctor_args,_)],[] =>
           (* let is_named '(nm,_) := match nm with nNamed _ => true | _ => false end in *)

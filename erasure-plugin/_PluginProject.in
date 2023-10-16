@@ -79,6 +79,8 @@ src/eRemoveParams.ml
 
 src/erasureFunction.mli
 src/erasureFunction.ml
+src/erasureFunctionProperties.mli
+src/erasureFunctionProperties.ml
 src/ePretty.mli
 src/ePretty.ml
 src/eOptimizePropDiscr.mli

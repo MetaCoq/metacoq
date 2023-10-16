@@ -9,6 +9,7 @@ From MetaCoq.Erasure.Typed Require Import WcbvEvalAux.
 From Equations Require Import Equations.
 From MetaCoq.Erasure Require Import ErasureCorrectness.
 From MetaCoq.Erasure Require Import ErasureFunction.
+From MetaCoq.Erasure Require Import ErasureFunctionProperties.
 From MetaCoq.Erasure Require Import EWcbvEval.
 From MetaCoq.Erasure Require Import Extract.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.

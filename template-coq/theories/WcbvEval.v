@@ -645,10 +645,10 @@ Section Wcbv.
     cbn in vf'; destruct vf'.
     - eapply eval_construct; tea. apply app_tip_nil. now eapply All2_app.
     - rewrite -mkApps_tApp => //. rewrite is_empty_app /= andb_false_r //.
-      eapply eval_app_cong; auto. eapply app_tip_nil.
+      eapply eval_app_cong; auto.
       eapply All2_app; auto.
     - rewrite -mkApps_tApp => //. rewrite is_empty_app /= andb_false_r //.
-      eapply eval_app_cong; auto. eapply app_tip_nil.
+      eapply eval_app_cong; auto.
       eapply All2_app; auto.
     - eapply eval_fix_value with (fixargsv := []) (argsv := x0 ++ [y]). 4:tea.
       all: move=> //.

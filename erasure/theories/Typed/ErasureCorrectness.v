@@ -5,7 +5,7 @@ From Equations Require Import Equations.
 From MetaCoq.Erasure Require Import EDeps.
 From MetaCoq.Erasure Require Import ESubstitution.
 From MetaCoq.Erasure Require Import Extract.
-From MetaCoq.Erasure Require Import ErasureFunction.
+From MetaCoq.Erasure Require Import ErasureFunction ErasureFunctionProperties.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICSR.
 From MetaCoq.PCUIC Require Import PCUICTyping.
@@ -76,10 +76,6 @@ Proof.
     cbn.
     constructor; [easy|].
     apply IHl.
-  - destruct wf as [(i & [])].
-    unfold isPropositionalArity.
-    rewrite ind_arity_eq.
-    now rewrite !destArity_it_mkProd_or_LetIn.
 Qed.
 
 Lemma erase_ind_correct Σ wfΣ kn mib wf :
@@ -100,6 +96,7 @@ Qed.
 End ECorrect.
 
 Opaque erase_type flag_of_type ErasureFunction.wf_reduction.
+
 Lemma erase_global_decls_deps_recursive_correct decls univs retro wfΣ include ignore_deps :
   let Σ := mk_global_env univs decls retro in
   (forall k, ignore_deps k = false) ->
@@ -167,11 +164,12 @@ Proof.
     destruct decl; [left|right].
     all: unfold declared_constant, declared_minductive,
          P.declared_constant, P.declared_minductive; cbn.
+    unfold Erasure.erase_constant_decl.
     all: unfold eq_kername in *.
     all: try rewrite eq_kername_refl.
     + eexists; split; [left;reflexivity|].
-      unfold erase_constant_decl.
-      destruct flag_of_type; cbn in *.
+    unfold erase_constant_decl.
+    destruct flag_of_type; cbn in *.
       destruct conv_ar; cbn in *.
       destruct wfΣprev as [wfΣprev].
       * destruct c eqn:Hc; cbn in *.

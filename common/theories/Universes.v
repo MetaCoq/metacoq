@@ -172,6 +172,8 @@ Module LS := LevelSet.
 Ltac lsets := LevelSetDecide.fsetdec.
 Notation "(=_lset)" := LevelSet.Equal (at level 0).
 Infix "=_lset" := LevelSet.Equal (at level 30).
+Notation "(==_lset)" := LevelSet.equal (at level 0).
+Infix "==_lset" := LevelSet.equal (at level 30).
 
 Section LevelSetMoreFacts.
 
@@ -1496,6 +1498,8 @@ Ltac csets := ConstraintSetDecide.fsetdec.
 
 Notation "(=_cset)" := ConstraintSet.Equal (at level 0).
 Infix "=_cset" := ConstraintSet.Equal (at level 30).
+Notation "(==_cset)" := ConstraintSet.equal (at level 0).
+Infix "==_cset" := ConstraintSet.equal (at level 30).
 
 Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
@@ -1600,21 +1604,28 @@ Module ContextSet.
   Definition is_empty (uctx : t)
     := LevelSet.is_empty (fst uctx) && ConstraintSet.is_empty (snd uctx).
 
-  Definition equal (x y : t) : Prop :=
+  Definition Equal (x y : t) : Prop :=
     x.1 =_lset y.1 /\ x.2 =_cset y.2.
 
-  Definition subset (x y : t) : Prop :=
+  Definition equal (x y : t) : bool :=
+    x.1 ==_lset y.1 && x.2 ==_cset y.2.
+
+  Definition Subset (x y : t) : Prop :=
     LevelSet.Subset (levels x) (levels y) /\
     ConstraintSet.Subset (constraints x) (constraints y).
+
+  Definition subset (x y : t) : bool :=
+    LevelSet.subset (levels x) (levels y) &&
+    ConstraintSet.subset (constraints x) (constraints y).
 
   Definition inter (x y : t) : t :=
     (LevelSet.inter (levels x) (levels y),
       ConstraintSet.inter (constraints x) (constraints y)).
 
   Definition inter_spec (x y : t) :
-    subset (inter x y) x /\
-      subset (inter x y) y /\
-      forall z, subset z x -> subset z y -> subset z (inter x y).
+    Subset (inter x y) x /\
+      Subset (inter x y) y /\
+      forall z, Subset z x -> Subset z y -> Subset z (inter x y).
   Proof.
     split; last split.
     1,2: split=> ?; [move=> /LevelSet.inter_spec [//]|move=> /ConstraintSet.inter_spec [//]].
@@ -1626,21 +1637,45 @@ Module ContextSet.
     (LevelSet.union (levels x) (levels y), ConstraintSet.union (constraints x) (constraints y)).
 
   Definition union_spec (x y : t) :
-    subset x (union x y) /\
-      subset y (union x y) /\
-      forall z, subset x z -> subset y z -> subset (union x y) z.
+    Subset x (union x y) /\
+      Subset y (union x y) /\
+      forall z, Subset x z -> Subset y z -> Subset (union x y) z.
   Proof.
     split; last split.
     1,2: split=> ??; [apply/LevelSet.union_spec|apply/ConstraintSet.union_spec ]; by constructor.
     move=> ? [??] [??]; split=> ?;
     [move=>/LevelSet.union_spec|move=>/ConstraintSet.union_spec]=>-[]; auto.
   Qed.
+
+  Lemma equal_spec s s' : equal s s' <-> Equal s s'.
+  Proof.
+    rewrite /equal/Equal/is_true Bool.andb_true_iff LevelSet.equal_spec ConstraintSet.equal_spec.
+    reflexivity.
+  Qed.
+
+  Lemma subset_spec s s' : subset s s' <-> Subset s s'.
+  Proof.
+    rewrite /subset/Subset/is_true Bool.andb_true_iff LevelSet.subset_spec ConstraintSet.subset_spec.
+    reflexivity.
+  Qed.
+
+  Lemma subsetP s s' : reflect (Subset s s') (subset s s').
+  Proof.
+    generalize (subset_spec s s').
+    destruct subset; case; constructor; intuition.
+  Qed.
 End ContextSet.
 
-Notation "(=_cs)" := ContextSet.equal (at level 0).
-Notation "(⊂_cs)" := ContextSet.subset (at level 0).
-Infix "=_cs" := ContextSet.equal (at level 30).
-Infix "⊂_cs" := ContextSet.subset (at level 30).
+Export (hints) ContextSet.
+
+Notation "(=_cs)" := ContextSet.Equal (at level 0).
+Notation "(⊂_cs)" := ContextSet.Subset (at level 0).
+Infix "=_cs" := ContextSet.Equal (at level 30).
+Infix "⊂_cs" := ContextSet.Subset (at level 30).
+Notation "(==_cs)" := ContextSet.equal (at level 0).
+Notation "(⊂?_cs)" := ContextSet.subset (at level 0).
+Infix "==_cs" := ContextSet.equal (at level 30).
+Infix "⊂?_cs" := ContextSet.subset (at level 30).
 
 Lemma incl_cs_refl cs : cs ⊂_cs cs.
 Proof.

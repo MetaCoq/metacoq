@@ -126,12 +126,6 @@ Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
   All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
 Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
 
-Lemma head_mkApps t args : head (mkApps t args) = head t.
-Proof.
-  induction args using rev_ind; simpl; auto.
-  now rewrite mkApps_app /= head_tapp.
-Qed.
-
 Section Spines.
   Context {cf : checker_flags}.
   Context {Σ : global_env_ext}.

@@ -1,6 +1,6 @@
-From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
+From Coq Require Import List ssreflect ssrbool Arith Morphisms Relation_Definitions.
 
-From MetaCoq.Utils Require Import MCPrelude MCList MCProd MCReflect.
+From MetaCoq.Utils Require Import MCPrelude MCList MCProd MCReflect ReflectEq.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -201,6 +201,29 @@ Inductive option_extends {A} : relation (option A) :=
 | option_ext_keep t : option_extends (Some t) (Some t)
 | option_ext_non : option_extends None None.
 Derive Signature for option_extends.
+
+Definition option_extendsb {A} {Aeq:ReflectEq A} (x y : option A) : bool :=
+  match x, y with
+  | None, Some _ => true
+  | Some t1, Some t2 => t1 == t2
+  | None, None => true
+  | _, _ => false
+  end.
+
+Lemma option_extendsT {A} {Aeq : ReflectEq A} x y : reflect (@option_extends A x y) (option_extendsb x y).
+Proof.
+  destruct x as [x|], y as [y|]; cbn.
+  1: generalize (eqb_spec x y); case: eqb => H.
+  all: constructor.
+  1: replace y with x by now inversion H.
+  all: first [ constructor | inversion 1 ].
+  { inversion H; congruence. }
+Qed.
+
+Lemma option_extends_spec {A} {Aeq : ReflectEq A} x y : option_extendsb x y <-> @option_extends A x y.
+Proof.
+  case: option_extendsT; intuition congruence.
+Qed.
 
 #[export] Instance option_extends_refl {A} : RelationClasses.Reflexive (@option_extends A).
 Proof. intros []; constructor. Qed.

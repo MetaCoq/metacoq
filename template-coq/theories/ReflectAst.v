@@ -2,7 +2,7 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import BasicAst Reflect Environment.
+From MetaCoq.Common Require Import BasicAst Reflect Environment EnvironmentReflect.
 From MetaCoq.Template Require Import AstUtils Ast Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -248,6 +248,7 @@ Defined.
 
 Module TemplateTermDecide <: TermDecide TemplateTerm.
   #[export] Instance term_eq_dec : EqDec term := _.
+  Include TermDecideReflectInstances TemplateTerm.
 End TemplateTermDecide.
 
 Module EnvDecide <: EnvironmentDecide TemplateTerm Env.
@@ -258,4 +259,7 @@ Module EnvDecide <: EnvironmentDecide TemplateTerm Env.
   #[export] Instance mutual_inductive_body_eq_dec : EqDec mutual_inductive_body := _.
   #[export] Instance constant_body_eq_dec : EqDec constant_body := _.
   #[export] Instance global_decl_eq_dec : EqDec global_decl := _.
+  Include EnvironmentDecideReflectInstances TemplateTerm Env.
 End EnvDecide.
+
+Module EnvReflect := EnvironmentReflect TemplateTerm Env TemplateTermDecide EnvDecide.

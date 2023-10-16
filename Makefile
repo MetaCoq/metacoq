@@ -1,5 +1,5 @@
 
-all: printconf template-coq pcuic safechecker erasure erasure-plugin
+all: printconf template-coq pcuic safechecker erasure erasure-plugin 
 
 -include Makefile.conf
 
@@ -26,7 +26,7 @@ else
 endif
 endif
 
-install: all translations
+install: all 
 	$(MAKE) -C utils install
 	$(MAKE) -C common install
 	$(MAKE) -C template-coq install
@@ -176,7 +176,7 @@ cleanplugins:
 
 ci-local-noclean:
 	./configure.sh local
-	$(MAKE) all test-suite TIMED=pretty-timed
+	$(MAKE) all translations test-suite TIMED=pretty-timed
 
 ci-local: ci-local-noclean
 	$(MAKE) clean

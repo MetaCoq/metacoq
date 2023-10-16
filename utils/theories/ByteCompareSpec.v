@@ -1,4 +1,4 @@
-From Coq Require Import Strings.Byte NArith.
+From Coq Require Import Strings.Byte NArith Eqdep_dec.
 From MetaCoq.Utils Require Import ReflectEq ByteCompare.
 From Equations Require Import Equations.
 
@@ -6,19 +6,31 @@ Derive NoConfusion for comparison.
 
 Section ByteNoConf.
   Local Ltac solve_noconf ::= idtac.
+  (** The NoConfusion definition is quite large, so we define a much more compact version of it that is nevertheless convertible *)
+  Definition eta_byte {A} (f : forall b : byte, A b) (b : byte) : A b
+    := Eval cbv in
+      ltac:(pose (f b) as v; destruct b; let val := (eval cbv in v) in exact val).
+  Definition uneta_byte {A f b} : @eta_byte A f b = f b
+    := match b with x00 | _ => eq_refl end.
+  Definition NoConfusion_byte_alt : byte -> byte -> Prop
+    := eta_byte (fun b1 b2 => eta_byte (fun b2 => if Byte.eqb b1 b2 then True else False) b2).
   Derive NoConfusion for byte.
   Next Obligation.
-    destruct a; abstract (destruct b; try exact (False_ind _ H); exact eq_refl).
-  Defined.
+    change (NoConfusion_byte a b) with (NoConfusion_byte_alt a b) in *.
+    cbv [NoConfusion_byte_alt] in *; apply byte_dec_bl.
+    rewrite !uneta_byte in *.
+    destruct Byte.eqb; [ reflexivity | exfalso; assumption ].
+  Qed.
   Next Obligation.
     destruct b; cbn; exact I.
   Defined.
   Next Obligation.
-    destruct a; abstract (destruct b; try (exact (False_ind _ e)); destruct e; exact eq_refl).
-  Defined.
+    lazymatch goal with |- ?f _ _ ?g = ?e => generalize g; revert e end; intros e g; subst; revert e.
+    destruct b; vm_compute; intros []; reflexivity.
+  Qed.
   Next Obligation.
-    destruct b; cbn; exact eq_refl.
-  Defined.
+    apply UIP_dec, byte_eq_dec.
+  Qed.
 End ByteNoConf.
 
 Lemma reflect_equiv P Q b : P <-> Q -> Bool.reflect P b -> Bool.reflect Q b.

@@ -215,7 +215,7 @@ Proof.
     pose proof (wf' := wf.1).
     specialize (H1 kn). forward H1.
     now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
-    elimtype False. destruct H1 as [cst [declc _]].
+    exfalso. destruct H1 as [cst [declc _]].
     { destruct x1 as [d _].
       unshelve eapply declared_minductive_to_gen in d; eauto.
       unshelve eapply declared_constant_to_gen in declc; eauto.
@@ -246,7 +246,7 @@ Proof.
     pose proof (wf' := wf.1).
     specialize (H0 (inductive_mind p.(proj_ind))). forward H0.
     now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
-    elimtype False. destruct H0 as [cst [declc _]].
+    exfalso. destruct H0 as [cst [declc _]].
     {
       unshelve eapply declared_constant_to_gen in declc; eauto.
       red in declc. destruct d as [[[d _] _] _].
@@ -475,7 +475,7 @@ Lemma erase_global_includes X_type (X:X_type.π1) deps decls {normalization_in} 
   includes_deps Σ (fst Σ') deps'.
 Proof.
   intros ? sub Σ wfΣ; cbn. induction decls in X, H, sub, prf, deps, deps', Σ , wfΣ, normalization_in |- *.
-  - simpl. intros i hin. elimtype False.
+  - simpl. intros i hin. exfalso.
     edestruct (H i hin) as [[decl Hdecl]]; eauto.
     rewrite /lookup_env (prf _ wfΣ) in Hdecl. noconf Hdecl.
   - intros i hin.
@@ -950,7 +950,7 @@ Proof.
     ++ intros kn'deps kn'eg'.
       eapply in_erase_global_deps_acc in kn'eg'.
       destruct kn'eg'. eapply KernameSet.mem_spec in H. congruence.
-      elimtype False. clear -prf wfΣ H.
+      exfalso. clear -prf wfΣ H.
       specialize (prf _ wfΣ).
       pose proof (abstract_env_wf _ wfΣ) as []. eapply wf_fresh_globals in X0.
       rewrite prf in X0. depelim X0.
@@ -965,7 +965,7 @@ Proof.
       ++ intros kn'deps kn'eg'.
         eapply in_erase_global_deps_acc in kn'eg'.
         destruct kn'eg'. eapply KernameSet.mem_spec in H. congruence.
-        elimtype False. clear -prf wfΣ H.
+        exfalso. clear -prf wfΣ H.
         specialize (prf _ wfΣ).
         pose proof (abstract_env_wf _ wfΣ) as []. eapply wf_fresh_globals in X0.
         rewrite prf in X0. depelim X0.
@@ -1116,7 +1116,7 @@ Proof.
           now eapply in_global_deps.
       * intros hwf.
         case: (knset_mem_spec kn _); intros hin.
-        ** elimtype False.
+        ** exfalso.
             depelim hwf.
             eapply in_global_deps_fresh in hin => //.
         ** depelim hwf. rewrite -IHΣ => //.
@@ -1132,7 +1132,7 @@ Proof.
             now eapply in_global_deps.
       ** intros hwf.
         case: (knset_mem_spec kn _); intros hin.
-        *** elimtype False.
+        *** exfalso.
             eapply in_global_deps_fresh in hin => //.
         *** rewrite -IHΣ => //.
     + intros wf; depelim wf.
@@ -1150,7 +1150,7 @@ Proof.
             now eapply in_global_deps.
       ** intros hwf.
         case: (knset_mem_spec kn _); intros hin.
-        *** elimtype False.
+        *** exfalso.
             eapply in_global_deps_fresh in hin => //.
         *** rewrite -IHΣ => //.
 Qed.
@@ -1978,7 +1978,7 @@ Proof.
   destruct (inspect_bool (is_erasableb X_type Xext [] t wt)) eqn:heq.
   - simp erase. rewrite heq.
     simp erase => //.
-  - elimtype False.
+  - exfalso.
     pose proof (abstract_env_exists X) as [[? wf]].
     destruct (@is_erasableP X_type Xext _ [] t wt) => //. apply n.
     intros. sq. now rewrite (abstract_env_ext_irr _ H H2).

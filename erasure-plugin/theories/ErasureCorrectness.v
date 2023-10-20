@@ -506,6 +506,138 @@ Module ETransformPresFO.
 
 End ETransformPresFO.
 
+Inductive is_eta_fix_application Σ : EAst.term -> Prop :=
+| mk_is_eta_fix_application f a : EEtaExpandedFix.isEtaExp Σ [] f -> is_eta_fix_application Σ (EAst.tApp f a).
+Derive Signature for is_eta_fix_application.
+
+Inductive is_eta_application Σ : EAst.term -> Prop :=
+| mk_is_eta_application f a : EEtaExpanded.isEtaExp Σ f -> is_eta_application Σ (EAst.tApp f a).
+Derive Signature for is_eta_application.
+
+Definition compile_app f t :=
+  match t with
+  | EAst.tApp fn a => EAst.tApp (f fn) (f a)
+  | _ => f t
+  end.
+
+Module ETransformPresApp.
+  Section Opt.
+    Context {env env' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context (o : Transform.t _ _ _ _ _ _ eval eval').
+    Context (is_etaexp : program env EAst.term -> Prop).
+    Context (is_etaexp' : program env' EAst.term -> Prop).
+
+    Class t :=
+      { transform_pre_irrel : forall p pr pr', o.(transform) p pr = o.(transform) p pr';
+        transform_env_irrel : forall p p' pr pr', p.1 = p'.1 -> (o.(transform) p pr).1 = (o.(transform) p' pr').1;
+        transform_etaexp : forall Σ t pr, is_etaexp (Σ, t) -> is_etaexp' (o.(transform) (Σ, t) pr) ;
+        transform_app : forall Σ t u (pr : o.(pre) (Σ, EAst.tApp t u))
+          (fo : is_etaexp (Σ, t)),
+            exists prt pru,
+            o.(transform) (Σ, EAst.tApp t u) pr =
+            ((o.(transform) (Σ, EAst.tApp t u) pr).1,
+              EAst.tApp (o.(transform) (Σ, t) prt).2 (o.(transform) (Σ, u) pru).2) }.
+  End Opt.
+
+  Section Comp.
+    Context {env env' env'' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context {eval'' : program env'' EAst.term -> EAst.term -> Prop}.
+    Context (o : Transform.t _ _ _ _ _ _ eval eval') (o' : Transform.t _ _ _ _ _ _ eval' eval'').
+    Context (is_etaexp : program env EAst.term -> Prop).
+    Context (is_etaexp' : program env' EAst.term -> Prop).
+    Context (is_etaexp'' : program env'' EAst.term -> Prop).
+
+    Context (oext : t o is_etaexp is_etaexp')
+      (o'ext : t o' is_etaexp' is_etaexp'')
+      (hpp : (forall p, o.(post) p -> o'.(pre) p)).
+
+    Local Obligation Tactic := idtac.
+
+    (* Definition compose_compile_app (p : program env EAst.term) (pr : o.(pre) p) (fo : is_etaexp p) : program env'' EAst.term :=
+      compile_app' (compile_app p pr fo) (eq_rect_r (o'.(pre)) (hpp _ (correctness o p pr)) (eq_sym (oext.(transform_app _ _ _ _) _ _ _))) (oext.(preserves_app _ _ _ _) p pr fo). *)
+
+    #[global]
+    Instance compose
+      : t (Transform.compose o o' hpp) is_etaexp is_etaexp''.
+    Proof.
+      split.
+      - intros p pr pr'; cbn; unfold run, time.
+        cbn in pr, pr'. generalize (correctness o p pr).
+        rewrite oext.(transform_pre_irrel _ _ _). intros p0.
+        eapply o'ext.(transform_pre_irrel _ _ _).
+      - intros [] []; cbn. intros pr pr' <-; unfold run, time.
+        apply o'ext.(transform_env_irrel _ _ _). now apply oext.(transform_env_irrel _ _ _).
+      - intros. cbn. unfold run, time.
+        set (cr := correctness _ _ _).
+        set (tro := transform o _ _) in *.
+        clearbody cr. move: cr.
+        assert (tro = (tro.1, tro.2)) by (destruct tro; reflexivity).
+        rewrite H0. intros cr.
+        eapply o'ext.(transform_etaexp _ _ _).
+        rewrite -H0.
+        now eapply oext.(transform_etaexp _ _ _).
+      - intros Σ t u pr iseta.
+        pose proof (oext.(transform_app _ _ _) _ _ _ pr iseta).
+        destruct H as [pr' [pr'' heq]]. exists pr', pr''.
+        destruct_compose. rewrite heq. intros pro'.
+        cbn [fst snd].
+        pose proof (o'ext.(transform_app _ _ _) _ _ _ pro').
+        assert ((transform o (Σ, EAst.tApp t u) pr).1 = (transform o (Σ, t) pr').1) by
+          now apply oext.(transform_env_irrel _ _ _).
+        rewrite {1}H0 in H.
+        forward H.
+        { replace ((transform o (Σ, t) pr').1, (transform o (Σ, t) pr').2) with (transform o (Σ, t) pr').
+          now eapply transform_etaexp. now clear; destruct transform. }
+        destruct H as [prt [pru heq']].
+        rewrite heq'. f_equal. f_equal.
+        * destruct_compose.
+          intros H. f_equal.
+          clear heq'; revert prt.
+          destruct (transform o _ pr') => //. cbn.
+          rewrite H0.
+          intros prt. now eapply transform_pre_irrel.
+        * destruct_compose.
+          intros H. f_equal.
+          clear heq'; revert pru.
+          replace (transform o (Σ, EAst.tApp t u) pr).1 with (transform o (Σ, u) pr'').1 by
+            now apply oext.(transform_env_irrel _ _ _).
+          destruct (transform o _ pr'') => //. cbn.
+          intros pru. now eapply transform_pre_irrel.
+    Qed.
+  End Comp.
+
+  (*Section TransformProper.
+    Context {env env' : Type}.
+    Context {eval : program env EAst.term -> EAst.term -> Prop}.
+    Context {eval' : program env' EAst.term -> EAst.term -> Prop}.
+    Context (o o' : Transform.t _ _ _ _ _ _ eval eval').
+    Context (is_etaexp : program env EAst.term -> Prop).
+    Context (is_etaexp' : program env' EAst.term -> Prop).
+    Context (compile_app : forall p : program env EAst.term, o.(pre) p -> is_etaexp p -> program env' EAst.term).
+    Context (compile_app' : forall p : program env EAst.term, o'.(pre) p -> is_etaexp p -> program env' EAst.term).
+
+    Lemma transform_pres :
+      (forall x, pre o x <-> pre o' x) ->
+      (forall x p p', transform o x p = transform o' x p') ->
+      t o is_etaexp is_etaexp' <->
+      t o' is_etaexp is_etaexp'.
+    Proof.
+      intros Hpre Htr.
+      split; move=> []; split; eauto.
+      - intros ? ?; eauto. now apply Hpre.
+      - intros v pr ?; rewrite -Hfg; eauto. intros. rewrite -transform_app0. now rewrite Htr. now apply Hpre.
+      - intros ???; rewrite Hfg. intros. eapply preserves_app0. now apply Hpre.
+      - intros ???; rewrite Hfg; eauto. 2:now apply Hpre. intros. rewrite -transform_app0.
+        apply Htr.
+    Qed.
+  End TransformProper.*)
+
+End ETransformPresApp.
+
 Import EWellformed.
 
 Fixpoint compile_evalue_box_strip Σ (t : EAst.term) (acc : list EAst.term) :=
@@ -657,10 +789,70 @@ Qed.
 Definition fo_evalue (p : program E.global_context EAst.term) : Prop := firstorder_evalue p.1 p.2.
 Definition fo_evalue_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := firstorder_evalue p.1 p.2.
 
-#[global] Instance rebuild_wf_env_transform_pres {fl : WcbvFlags} {efl : EEnvFlags} we  :
+#[global] Instance rebuild_wf_env_transform_pres_fo {fl : WcbvFlags} {efl : EEnvFlags} we  :
   ETransformPresFO.t
     (rebuild_wf_env_transform we) fo_evalue fo_evalue_map (fun p pr fo => rebuild_wf_env p pr.p1).
 Proof. split => //. Qed.
+
+Section EtaExp.
+  Import EAst EAstUtils EEtaExpanded.
+
+  Lemma isEtaExp_tApp_arg Σ t u : isEtaExp Σ (tApp t u) -> isEtaExp Σ u.
+  Proof.
+    move/isEtaExp_tApp. destruct decompose_app eqn:da.
+    eapply decompose_app_inv in da. destruct l using rev_case.
+    - cbn in da. subst t0. cbn. now move/and3P => [].
+    - rewrite mkApps_app in da. noconf da.
+      destruct construct_viewc.
+      * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+        move=> /andP[] //=. now rewrite andb_true_r.
+      * now move/and4P => [].
+  Qed.
+End EtaExp.
+
+Section EtaExpFix.
+  Import EAst EAstUtils EEtaExpandedFix.
+
+  Lemma isEtaExpFix_tApp_arg Σ Γ t u : isEtaExp Σ Γ (tApp t u) -> isEtaExp Σ Γ u.
+  Proof.
+    move/isEtaExp_tApp'. destruct decompose_app eqn:da.
+    eapply decompose_app_inv in da. destruct l using rev_case.
+    - cbn in da. subst t0. cbn. now move/and3P => [].
+    - rewrite mkApps_app in da. noconf da.
+      destruct expanded_head_viewc.
+      * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+        move=> /andP[] //=. now rewrite andb_true_r.
+      * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _ _. rewrite forallb_app.
+        move=> /andP[] //=. now rewrite andb_true_r.
+      * intros [_ [_ [_ H]]]. move/andP: H => [] _. rewrite forallb_app.
+        move=> /andP[] //=. now rewrite andb_true_r.
+      * now move/and4P => [].
+  Qed.
+End EtaExpFix.
+
+Definition is_eta_app (p : program E.global_context EAst.term) : Prop := EEtaExpanded.isEtaExp p.1 p.2.
+Definition is_eta_app_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := EEtaExpanded.isEtaExp p.1 p.2.
+
+Definition is_eta_fix_app (p : program E.global_context EAst.term) : Prop := EEtaExpandedFix.isEtaExp p.1 [] p.2.
+Definition is_eta_fix_app_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := EEtaExpandedFix.isEtaExp p.1 [] p.2.
+
+#[global] Instance rebuild_wf_env_transform_pres_app {fl : WcbvFlags} {efl : EEnvFlags} we  :
+  ETransformPresApp.t
+    (rebuild_wf_env_transform we) is_eta_app is_eta_app_map.
+Proof. split => //.
+  - intros. unfold transform, rebuild_wf_env_transform.
+    f_equal. apply proof_irrelevance.
+  - move=> [ctx t] [ctx' t'] pr pr' /= eq. move: pr'. rewrite -eq. intros. f_equal.
+    eapply proof_irrelevance.
+  - intros.
+    unshelve eexists.
+    { destruct pr as [[? ?] ?]; split; [split|]; cbn in * => //. now move/andP: H0 => [] /andP[].
+      destruct we => //=. move/andP: H1 => [] ? ?. apply /andP. split => //. }
+    unshelve eexists.
+    { destruct pr as [[? ?] ?]; split; [split|]; cbn in * => //. now move/andP: H0 => [] /andP[].
+      destruct we => //=. move/andP: H1 => [] ?. cbn. move/isEtaExp_tApp_arg => etau. apply /andP. split => //. }
+    cbn. reflexivity.
+Qed.
 
 Lemma wf_glob_lookup_inductive_pars {efl : EEnvFlags} (Σ : E.global_context) (kn : Kernames.kername) :
   has_cstr_params = false ->
@@ -697,6 +889,40 @@ Proof. split => //.
     ELiftSubst.solve_all.
 Qed.
 
+Import EAstUtils.
+
+Lemma head_mkApps_nApp f a : ~~ EAst.isApp f -> head (EAst.mkApps f a) = f.
+Proof.
+  rewrite head_mkApps /head => appf.
+  rewrite (decompose_app_mkApps f []) //.
+Qed.
+
+#[global] Instance inline_projections_optimization_pres_app {fl : WcbvFlags}
+ (efl := EInlineProjections.switch_no_params all_env_flags) {wcon : with_constructor_as_block = false}
+  {has_rel : has_tRel} {has_box : has_tBox} :
+  ETransformPresApp.t
+    (inline_projections_optimization (wcon := wcon) (hastrel := has_rel) (hastbox := has_box))
+    is_eta_app_map is_eta_app.
+Proof.
+  split => //.
+  - intros [ctx t] [ctx' t'] pr pr' eq; move: pr'; cbn in *.
+    now subst ctx'.
+  - intros env p pr => /= eta.
+    unfold is_eta_app_map; cbn.
+    eapply EEtaExpanded.expanded_isEtaExp.
+    eapply EInlineProjections.optimize_expanded_irrel. apply pr.
+    eapply EInlineProjections.optimize_expanded.
+    now eapply EEtaExpanded.isEtaExp_expanded.
+  - intros ctx pr u pru => /=. unfold is_eta_app_map. cbn => etapr.
+    destruct pru as [[] ?].
+    eexists. split => //. split => //. cbn in *.
+    now move/andP: H0 => []. move/andP: H1 => [] etactx etaapp. apply/andP => //.
+    eexists. split => //. split => //. cbn in *.
+    now move/andP: H0 => []. move/andP: H1 => [] etactx etaapp. apply/andP => //. split => //.
+    now apply isEtaExp_tApp_arg in etaapp.
+    reflexivity.
+Qed.
+
 #[global] Instance remove_match_on_box_pres {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as_block = false}
   {has_rel : has_tRel} {has_box : has_tBox} :
   has_cstr_params = false ->
@@ -719,6 +945,39 @@ Proof. split => //.
     eapply lookup_constructor_pars_args_nopars in H0; tea => //. subst npars.
     rewrite skipn_0 in H2. rewrite EOptimizePropDiscr.remove_match_on_box_mkApps /=. f_equal.
     ELiftSubst.solve_all.
+Qed.
+
+Lemma decompose_app_head_spine t : decompose_app t = (head t, spine t).
+Proof.
+  unfold head, spine.
+  destruct decompose_app => //.
+Qed.
+
+#[global] Instance remove_match_on_box_pres_app {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as_block = false}
+  {has_rel : has_tRel} {has_box : has_tBox} :
+  has_cstr_params = false ->
+  ETransformPresApp.t
+    (remove_match_on_box_trans (wcon := wcon) (hastrel := has_rel) (hastbox := has_box))
+    is_eta_app_map is_eta_app.
+Proof.
+  intros hasp.
+  split => //.
+  - now intros [] [] pr pr'; cbn; intros <-.
+  - intros ctx t p => /=. rewrite /is_eta_app /is_eta_app_map /=.
+    move=> isapp.
+    eapply EEtaExpanded.expanded_isEtaExp.
+    eapply EOptimizePropDiscr.remove_match_on_box_expanded_irrel. apply p.
+    eapply EOptimizePropDiscr.remove_match_on_box_expanded.
+    now eapply EEtaExpanded.isEtaExp_expanded.
+  - intros ctx t u pr => /=.
+    rewrite /is_eta_app_map /is_eta_app /= => isapp.
+    eexists.
+    { destruct pr as [[] pr']; move/andP: pr' => [] etactx; split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP [].
+      apply/andP. split => //. }
+    eexists.
+    { destruct pr as [[] pr']; move/andP: pr' => [] etactx; split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP [].
+      apply/andP. split => //. now apply isEtaExp_tApp_arg in b. }
+    now rewrite /EOptimizePropDiscr.remove_match_on_box_program /=.
 Qed.
 
 Lemma lookup_constructor_pars_args_strip (Σ : t) i n npars nargs :
@@ -746,6 +1005,30 @@ Proof. split => //.
   rewrite skipn_map. len. rewrite skipn_length. lia.
 Qed.
 
+#[global] Instance remove_params_optimization_pres_app {fl : WcbvFlags} {wcon : with_constructor_as_block = false} :
+  ETransformPresApp.t
+    (remove_params_optimization (wcon := wcon))
+    is_eta_app_map is_eta_app.
+Proof.
+  split => //.
+  - now intros [] [] pr pr'; cbn; intros <-.
+  - intros ctx t p => /=.
+    rewrite /is_eta_app /is_eta_app_map /= /compile_app => etat.
+    eapply EEtaExpanded.expanded_isEtaExp.
+    eapply ERemoveParams.strip_expanded.
+    now eapply EEtaExpanded.isEtaExp_expanded.
+  - intros ctx t u pr.
+    rewrite /is_eta_app /is_eta_app_map /= /compile_app => etat.
+    eexists.
+    { destruct pr as [[] pr']; move/andP: pr' => [] etactx; split => //. split => //. cbn in H0. now move/andP: H0 => [].
+      apply/andP. split => //. }
+    eexists.
+    { destruct pr as [[] pr']; move/andP: pr' => [] etactx; split => //. split => //. cbn in H0. now move/andP: H0 => [].
+      apply/andP. split => //. now apply isEtaExp_tApp_arg in b. }
+    rewrite /ERemoveParams.strip_program /=. f_equal.
+    rewrite (ERemoveParams.strip_mkApps_etaexp _ [u]) //.
+Qed.
+
 #[global] Instance constructors_as_blocks_transformation_pres {efl : EWellformed.EEnvFlags}
   {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   ETransformPresFO.t
@@ -769,6 +1052,26 @@ Proof.
     ELiftSubst.solve_all. unfold transform_blocks_program in a. now noconf a.
 Qed.
 
+#[global] Instance constructors_as_blocks_transformation_pres_app {efl : EWellformed.EEnvFlags}
+  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  ETransformPresApp.t
+    (@constructors_as_blocks_transformation efl has_app has_rel hasbox has_pars has_cstrblocks)
+    is_eta_app_map (fun _ => True).
+Proof.
+  split => //.
+  - now intros [] [] pr pr'; cbn; intros <-.
+  - rewrite /is_eta_app /is_eta_app_map.
+    move=> ctx t u /= [] wf /andP[] exp exp' eta.
+    eexists.
+    { destruct wf. split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP[].
+      apply/andP. split => //. }
+    eexists.
+    { destruct wf. split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP[].
+      apply/andP. split => //. now apply isEtaExp_tApp_arg in exp'. }
+    simpl. rewrite /transform_blocks_program /=. f_equal.
+    rewrite (transform_blocks_mkApps_eta_fn _ _ [u]) //.
+Qed.
+
 #[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}
   {has_guard : with_guarded_fix} {has_cstrblocks : with_constructor_as_block = false} :
   ETransformPresFO.t
@@ -777,6 +1080,27 @@ Qed.
     (fun p pr fo => p).
 Proof.
   split => //.
+Qed.
+
+#[global] Instance guarded_to_unguarded_fix_pres_app {efl : EWellformed.EEnvFlags}
+  {has_guard : with_guarded_fix} {has_cstrblocks : with_constructor_as_block = false} :
+  ETransformPresApp.t
+    (@guarded_to_unguarded_fix default_wcbv_flags has_cstrblocks efl has_guard)
+    is_eta_fix_app_map is_eta_app_map.
+Proof.
+  split => //.
+  - intros ctx t; cbn in *.
+    rewrite /is_eta_fix_app_map /is_eta_app_map; cbn; intros ? H.
+    now eapply EEtaExpanded.isEtaExpFix_isEtaExp in H.
+  - intros ctx t u pr eta.
+    destruct pr as [[w i] [e e0]].
+    unshelve eexists.
+    { split => //. split => //. cbn in i. now move/andP: i => [] /andP[].
+      split => //. cbn. now eapply EEtaExpandedFix.isEtaExp_expanded. }
+    unshelve eexists.
+    { split => //. split => //. cbn in i. now move/andP: i => [] /andP[].
+      split => //. cbn. eapply EEtaExpandedFix.expanded_isEtaExp in e0. eapply isEtaExpFix_tApp_arg in e0. now eapply EEtaExpandedFix.isEtaExp_expanded. }
+    reflexivity.
 Qed.
 
 Lemma lambdabox_pres_fo :
@@ -799,6 +1123,16 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma lambdabox_pres_app :
+  ETransformPresApp.t verified_lambdabox_pipeline is_eta_fix_app_map (fun _ => True).
+Proof.
+  unfold verified_lambdabox_pipeline.
+  do 5 (unshelve eapply ETransformPresApp.compose; [shelve| |tc]).
+  2:{ eapply remove_match_on_box_pres_app => //. }
+  do 2 (unshelve eapply ETransformPresApp.compose; [shelve| |tc]).
+  tc.
+Qed.
+
 Lemma transform_lambda_box_firstorder (Σer : EEnvMap.GlobalContextMap.t) p pre :
   firstorder_evalue Σer p ->
   (transform verified_lambdabox_pipeline (Σer, p) pre).2 = (compile_evalue_box (ERemoveParams.strip Σer p) []).
@@ -807,6 +1141,20 @@ Proof.
   destruct lambdabox_pres_fo as [fn [tr hfn]].
   rewrite (ETransformPresFO.transform_fo _ _ _ _ (t:=tr)).
   now rewrite hfn.
+Qed.
+
+Lemma transform_lambda_box_eta_app (Σer : EEnvMap.GlobalContextMap.t) t u pre :
+  EEtaExpandedFix.isEtaExp Σer [] t ->
+  exists pre' pre'',
+  transform verified_lambdabox_pipeline (Σer, EAst.tApp t u) pre =
+  ((transform verified_lambdabox_pipeline (Σer, EAst.tApp t u) pre).1,
+    EAst.tApp (transform verified_lambdabox_pipeline (Σer, t) pre').2
+      (transform verified_lambdabox_pipeline (Σer, u) pre'').2).
+Proof.
+  intros etat.
+  epose proof (ETransformPresApp.transform_app verified_lambdabox_pipeline is_eta_fix_app_map (fun _ => True) Σer t u pre etat).
+  exact H.
+  Unshelve. exact lambdabox_pres_app.
 Qed.
 
 Lemma compile_evalue_strip (Σer : EEnvMap.GlobalContextMap.t) p :

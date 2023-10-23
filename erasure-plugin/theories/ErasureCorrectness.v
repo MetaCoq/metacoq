@@ -1157,6 +1157,167 @@ Proof.
   Unshelve. exact lambdabox_pres_app.
 Qed.
 
+Section PCUICEta.
+  Import PCUICAst PCUICAstUtils PCUICEtaExpand.
+
+  Lemma expanded_tApp_arg Σ Γ t u : expanded Σ Γ (tApp t u) -> expanded Σ Γ u.
+  Proof.
+    move/expanded_mkApps_inv' => [expa _].
+    move: expa; rewrite (arguments_mkApps t [u]).
+    move/Forall_app => [] _ hu; now depelim hu.
+  Qed.
+End PCUICEta.
+
+Section PCUICErase.
+  Import PCUICAst PCUICAstUtils PCUICEtaExpand PCUICWfEnv.
+
+  Definition lift_wfext (Σ : global_env_ext_map) (wfΣ : ∥ wf_ext Σ ∥) :
+    let wfe := build_wf_env_from_env Σ.1 (map_squash (wf_ext_wf Σ) wfΣ) in
+    (forall Σ' : global_env, Σ' ∼ wfe -> ∥ wf_ext (Σ', Σ.2) ∥).
+  Proof.
+    intros wfe; cbn; intros ? ->. apply wfΣ.
+  Qed.
+
+  (* (forall Σ : global_env, Σ ∼ X -> ∥ wf_ext (Σ, univs) ∥) *)
+  Lemma snd_erase_pcuic_program {no : PCUICSN.normalizing_flags} {guard_impl : abstract_guard_impl} (p : pcuic_program) (nin : wf_ext p.1 -> PCUICSN.NormalizationIn p.1)
+    (nin' : wf_ext p.1 -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p.1)
+    (wfΣ : ∥ wf_ext p.1 ∥) (wt : ∥ ∑ T : term, p.1;;; [] |- p.2 : T ∥) :
+    let wfe := build_wf_env_from_env p.1.1 (map_squash (wf_ext_wf p.1) wfΣ) in
+    let Xext := abstract_make_wf_env_ext (X_type := optimized_abstract_env_impl) wfe p.1.2 (lift_wfext p.1 wfΣ) in
+    exists wt' nin'', (@erase_pcuic_program guard_impl p nin nin' wfΣ wt).2 = erase optimized_abstract_env_impl (normalization_in := nin'') Xext [] p.2 wt'.
+  Proof.
+    unfold erase_pcuic_program.
+    cbn -[erase]. do 2 eexists. eapply ErasureFunction.erase_irrel_global_env.
+    red. cbn. intros. split => //.
+    Unshelve. intros ? ->. destruct wt as [[T wt]]. now econstructor.
+    destruct wfΣ.
+    intros ? ? ->. now eapply nin.
+  Qed.
+
+  Lemma erase_eta_app (Σ : global_env_ext_map) t u pre :
+    ~ ∥ isErasable Σ [] (tApp t u) ∥ ->
+    PCUICEtaExpand.expanded Σ [] t ->
+    exists pre' pre'',
+    transform erase_transform (Σ, PCUICAst.tApp t u) pre =
+    ((transform erase_transform (Σ, PCUICAst.tApp t u) pre).1,
+      EAst.tApp (transform erase_transform (Σ, t) pre').2
+        (transform erase_transform (Σ, u) pre'').2).
+  Proof.
+    intros er etat.
+    unshelve eexists.
+    { destruct pre as [[] []]. cbn in *. split => //. 2:split => //.
+      destruct X. split. split => //. destruct s as [appty tyapp].
+      eapply PCUICInversion.inversion_App in tyapp as [na [A [B [hp [hu hcum]]]]]. now eexists.
+      cbn. apply w.
+      destruct H; split => //. }
+    unshelve eexists.
+    { destruct pre as [[] []]. cbn in *. split => //. 2:split => //.
+      destruct X. split. split => //. destruct s as [appty tyapp].
+      eapply PCUICInversion.inversion_App in tyapp as [na [A [B [hp [hu hcum]]]]]. now eexists.
+      cbn. apply w.
+      destruct H; split => //. cbn. cbn in H1. now eapply expanded_tApp_arg in H1. }
+    unfold transform, erase_transform. cbn -[erase_program].
+    unfold erase_program.
+    set (prf := map_squash _ _); clearbody prf.
+    set (prf0 := map_squash _ _); clearbody prf0.
+    set (prf1 := map_squash _ _); clearbody prf1.
+    set (prf2 := map_squash _ _); clearbody prf2.
+    set (prf3 := map_squash _ _); clearbody prf3.
+    set (prf4 := map_squash _ _); clearbody prf4.
+    set (erp := erase_pcuic_program _ _ _).
+    destruct erp eqn:heq. f_equal. subst erp.
+    apply (f_equal snd) in heq. cbn -[erase_pcuic_program] in heq.
+    rewrite -{}heq.
+    match goal with
+    [ |- context [ @erase_pcuic_program ?guard ?p ?nin ?nin' ?prf ?prf' ] ] =>
+    destruct (snd_erase_pcuic_program p nin nin' prf prf') as [wt' [nin'' ->]]
+    end. cbn [fst snd].
+    rewrite (erase_mkApps _ _ [u]).
+    { cbn; intros ? ->. destruct prf4 as [[? hu]]. repeat constructor. now eexists. }
+    intros.
+    cbn [E.mkApps erase_terms]. f_equal.
+    match goal with
+    [ |- context [ @erase_pcuic_program ?guard ?p ?nin ?nin' ?prf ?prf' ] ] =>
+    destruct (snd_erase_pcuic_program p nin nin' prf prf') as [wt'' [nin''' ->]]
+    end. eapply ErasureFunction.erase_irrel_global_env. red. cbn. intros; split => //.
+    match goal with
+    [ |- context [ @erase_pcuic_program ?guard ?p ?nin ?nin' ?prf ?prf' ] ] =>
+    destruct (snd_erase_pcuic_program p nin nin' prf prf') as [wt'' [nin''' ->]]
+    end. eapply ErasureFunction.erase_irrel_global_env. red. cbn. intros; split => //.
+    - intros. constructor.
+    - now cbn; intros ? ->.
+    - cbn; intros ? ->. destruct prf2 as [[? wtt]]. now eexists.
+  Qed.
+
+
+  Lemma expand_lets_eta_app (Σ : global_env_ext_map) t u K pre :
+    ~ ∥ isErasable Σ [] (tApp t u) ∥ ->
+    PCUICEtaExpand.expanded Σ [] t ->
+    exists pre' pre'',
+    transform (pcuic_expand_lets_transform K) (Σ, PCUICAst.tApp t u) pre =
+    ((transform (pcuic_expand_lets_transform K) (Σ, PCUICAst.tApp t u) pre).1,
+      tApp (transform (pcuic_expand_lets_transform K) (Σ, t) pre').2
+        (transform (pcuic_expand_lets_transform K) (Σ, u) pre'').2).
+  Proof.
+    intros er etat.
+    unshelve eexists.
+    { destruct pre as [[] []]. cbn in *. split => //. 2:split => //.
+      destruct X. split. split => //. destruct s as [appty tyapp].
+      eapply PCUICInversion.inversion_App in tyapp as [na [A [B [hp [hu hcum]]]]]. now eexists.
+      cbn. apply w.
+      destruct H; split => //. }
+    unshelve eexists.
+    { destruct pre as [[] []]. cbn in *. split => //. 2:split => //.
+      destruct X. split. split => //. destruct s as [appty tyapp].
+      eapply PCUICInversion.inversion_App in tyapp as [na [A [B [hp [hu hcum]]]]]. now eexists.
+      cbn. apply w.
+      destruct H; split => //. cbn. cbn in H1. now eapply expanded_tApp_arg in H1. }
+    reflexivity.
+  Qed.
+
+  Lemma erasure_pipeline_eta_app (Σ : global_env_ext_map) t u pre :
+    ~ ∥ isErasable Σ [] (tApp t u) ∥ ->
+    PCUICEtaExpand.expanded Σ [] t ->
+    exists pre' pre'',
+    transform verified_erasure_pipeline (Σ, tApp t u) pre =
+    ((transform verified_erasure_pipeline (Σ, tApp t u) pre).1,
+      EAst.tApp (transform verified_erasure_pipeline (Σ, t) pre').2
+        (transform verified_erasure_pipeline (Σ, u) pre'').2).
+  Proof.
+    intros ner exp.
+    unfold verified_erasure_pipeline.
+    destruct_compose.
+    set (K:= (fun p : global_env_ext_map => (wf_ext p -> PCUICSN.NormalizationIn p) /\ (wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p))).
+    intros H.
+    destruct (expand_lets_eta_app _ _ _ K pre ner exp) as [pre' [pre'' eq]].
+    exists pre', pre''.
+    set (tr := transform _ _ _).
+    destruct tr eqn:heq. cbn -[transform]. f_equal.
+    replace t0 with tr.2. subst tr.
+    2:{ now rewrite heq. }
+    destruct_compose. intros pre3.
+    destruct_compose. intros pre4. clear heq.
+    revert H.
+    destruct_compose.
+    rewrite eq. intros pre5 H.
+    edestruct (erase_eta_app _ _). shelve. shelve.
+    destruct H0 as [pre6 eq']. erewrite eq'.
+
+
+    intros H.
+
+     cbn -[transform].
+    set (tr := transform _ _ _).
+
+    in *.
+    rewrite transform_compose
+
+
+Proof.
+
+
+End PCUICErase.
+
 Lemma compile_evalue_strip (Σer : EEnvMap.GlobalContextMap.t) p :
   firstorder_evalue Σer p ->
   compile_evalue_box (ERemoveParams.strip Σer p) [] = compile_evalue_box_strip Σer p [].

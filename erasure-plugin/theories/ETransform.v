@@ -569,7 +569,7 @@ Qed.
 From MetaCoq.Erasure Require Import EImplementBox.
 
 Program Definition implement_box_transformation {efl : EEnvFlags}
-  {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+  {has_app : has_tApp} {has_letin : has_tLetIn} {has_cofix : has_tCoFix = false} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
     transform p _ := EImplementBox.implement_box_program p ;
@@ -579,7 +579,7 @@ Program Definition implement_box_transformation {efl : EEnvFlags}
 
 Next Obligation.
   intros. cbn in *. destruct p. split.
-  - eapply implement_box_env_wf_glob; eauto.
+  - eapply implement_box_env_wf_glob; eauto.   
   - now eapply transform_wellformed'.
 Qed.
 Next Obligation.
@@ -590,11 +590,12 @@ Next Obligation.
 Qed.
 
 #[global]
-Instance implement_box_extends (efl : EEnvFlags) {has_app : has_tApp} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
-   TransformExt.t (implement_box_transformation (has_app := has_app) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks)) extends_eprogram extends_eprogram.
+Instance implement_box_extends (efl : EEnvFlags) {has_app : has_tApp} {has_letin : has_tLetIn} {has_cofix : has_tCoFix = false} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+   TransformExt.t (implement_box_transformation (has_app := has_app) (has_letin := has_letin) (has_cofix := has_cofix) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks)) extends_eprogram extends_eprogram.
 Proof.
   red. intros p p' pr pr' [ext eq]. rewrite /transform /= /implement_box_program /=.
   split => /=.
   eapply (implement_box_env_extends has_app ext). apply pr. apply pr'.
   now rewrite -eq.
 Qed.
+

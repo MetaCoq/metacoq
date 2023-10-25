@@ -160,6 +160,16 @@ erasure: safechecker template-pcuic
 erasure-plugin: erasure template-pcuic
 	$(MAKE) -C erasure-plugin
 
+install-plugins: erasure-plugin safechecker-plugin
+	$(MAKE) -C utils install
+	$(MAKE) -C common install
+	$(MAKE) -C template-coq install
+	$(MAKE) -C pcuic install
+	$(MAKE) -C template-pcuic install
+	$(MAKE) -C erasure install
+	$(MAKE) -C safechecker-plugin install
+	$(MAKE) -C erasure-plugin install
+
 examples: safechecker-plugin erasure-plugin
 	$(MAKE) -C examples
 

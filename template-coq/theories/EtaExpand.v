@@ -102,8 +102,7 @@ Section Eta.
         in
         match nth_error def' i with
         | Some d => eta_fixpoint def' i d (map (eta_expand Γ) args)
-        | None => tVar ("Error: lookup of a fixpoint failed for "
-                          ++ string_of_term t)
+        | None => tVar ("Error: lookup of a fixpoint failed")
         end
       | tRel n =>
         match nth_error Γ n with
@@ -126,8 +125,7 @@ Section Eta.
                                         {| dname := dname d ; dtype := dtype d ; dbody := eta_expand (ctx ++  Γ) d.(dbody) ; rarg := rarg d |}) def) in
                       match nth_error def' i with
                       | Some d => eta_fixpoint def' i d []
-                      | None => tVar ("Error: lookup of a fixpoint failed for "
-                                       ++ string_of_term t)
+                      | None => tVar ("Error: lookup of a fixpoint failed ")
                       end
     | tCoFix def i => tCoFix (map (map_def id (eta_expand (repeat None (#|def|) ++ Γ))) def) i
     (* NOTE: we know that constructors and constants are not applied at this point,

@@ -1123,7 +1123,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma lambdabox_pres_app :
+#[local] Instance lambdabox_pres_app :
   ETransformPresApp.t verified_lambdabox_pipeline is_eta_fix_app_map (fun _ => True).
 Proof.
   unfold verified_lambdabox_pipeline.
@@ -1154,7 +1154,27 @@ Proof.
   intros etat.
   epose proof (ETransformPresApp.transform_app verified_lambdabox_pipeline is_eta_fix_app_map (fun _ => True) Σer t u pre etat).
   exact H.
-  Unshelve. exact lambdabox_pres_app.
+Qed.
+
+Lemma transform_lambdabox_pres_term p p' pre pre' :
+  extends_eprogram_env p p' ->
+  (transform verified_lambdabox_pipeline p pre).2 =
+  (transform verified_lambdabox_pipeline p' pre').2.
+Proof.
+  intros hext. epose proof (verified_lambdabox_pipeline_extends p p' pre pre' hext).
+  apply H.
+Qed.
+
+Lemma transform_erase_pres_term (p p' : program global_env_ext_map PCUICAst.term) pre pre' :
+  extends_global_env p.1 p'.1 ->
+  p.2 = p'.2 ->
+  (transform erase_transform p pre).2 =
+  (transform erase_transform p' pre').2.
+Proof.
+  destruct p as [ctx t], p' as [ctx' t']. cbn.
+  intros hg heq; subst t'. eapply ErasureFunction.erase_irrel_global_env.
+  eapply equiv_env_inter_hlookup.
+  intros ? ?; cbn. intros -> ->. cbn. now eapply extends_global_env_equiv_env.
 Qed.
 
 Section PCUICEta.
@@ -1275,6 +1295,253 @@ Section PCUICErase.
     reflexivity.
   Qed.
 
+  Lemma isArity_trans T : isArity T = isArity (PCUICExpandLets.trans T).
+  Proof.
+    induction T => //.
+  Qed.
+
+  Lemma isErasable_lets (p : pcuic_program) :
+    wf p.1 ->
+    isErasable p.1 [] p.2 -> isErasable (PCUICExpandLets.expand_lets_program p).1 []
+      (PCUICExpandLets.expand_lets_program p).2.
+  Proof.
+    intros wfΣ. destruct p as [Σ t]. cbn.
+    unfold isErasable.
+    intros [T [tyT pr]].
+    eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in tyT.
+    exists (PCUICExpandLets.trans T). split => //.
+    destruct pr => //. left => //. now rewrite isArity_trans in i. right.
+    destruct s as [u []]; exists u; split => //.
+    eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in t0.
+    now cbn in t0.
+  Qed.
+
+  Lemma isErasable_dec {guard : abstract_guard_impl} (Σ : global_env_ext)  Γ T : wf_ext Σ ->
+    welltyped Σ Γ T ->
+    ∥ isErasable Σ Γ T ∥ + ~ ∥ isErasable Σ Γ T ∥.
+  Proof.
+    intros hwf hwt.
+    unshelve epose proof (is_erasable (X_type:=optimized_abstract_env_impl (guard:=guard)) (X := build_wf_env_ext _ (sq hwf)) Γ T _).
+    cbn. intros ? ? <-. admit.
+    now cbn; intros ? <-.
+    specialize (X Σ eq_refl). destruct X. now left. right. intros her. destruct s, her. eauto.
+  Admitted.
+
+  Import PCUICWellScopedCumulativity PCUICFirstorder PCUICNormalization PCUICReduction PCUIC.PCUICConversion PCUICPrincipality.
+
+  Fixpoint relevant_type Σ T :=
+    match T with
+    | tInd ind u => ~~ isPropositional Σ ind
+    | tProd na b t => relevant_type Σ b && relevant_type Σ t
+    | tSort _ => false
+    | _ => false
+    end.
+
+  Lemma relevant_type_red {Σ : global_env_ext} {Γ T U} {wfΣ : wf Σ} :
+    Σ ;;; Γ ⊢ T ⇝ U ->
+    relevant_type Σ T -> relevant_type Σ U.
+  Proof.
+    induction T in Γ, U |- * => //.
+    intros hp. eapply PCUICConversion.invert_red_prod in hp as [dom' [codom' []]].
+    cbn. subst U. move/andP=> [] rdom rcod.
+    cbn. rewrite (IHT1 Γ _ c rdom).
+    now rewrite (IHT2 _ _ c0 rcod).
+    cbn. move/(PCUICConversion.invert_red_mkApps_tInd []) => [args' []] -> clΓ hargs.
+    depelim hargs. now cbn.
+  Qed.
+
+  Lemma relevant_type_le (Σ : global_env_ext) Γ T U :
+    wf Σ ->
+    Σ ;;; Γ ⊢ T ≤ U ->
+    relevant_type Σ T <-> relevant_type Σ U.
+  Proof.
+    move=> wfΣ.
+    move/(ws_cumul_pb_alt_closed (wfΣ := wfΣ)).
+    intros [v [v' [rv rv' eq]]].
+    split. intros.
+    generalize (relevant_type_red rv H).
+  Admitted.
+
+
+  Lemma not_isErasable Σ Γ f A u :
+    wf_ext Σ -> wf_local Σ Γ ->
+    Σ;;; Γ |- f : A->
+    (forall B, Σ ;;; Γ |- f : B -> Σ ;;; Γ ⊢ A ≤ B) ->
+    ~ Is_conv_to_Arity Σ Γ A ->
+    Σ;;; Γ |- A : tSort u ->
+    ~ is_propositional u ->
+    ~ ∥ Extract.isErasable Σ Γ f ∥.
+  Proof.
+    intros wfΣ Hlocal Hf Hprinc Harity Hfu Hu [[T [HT []]]]; sq.
+    - eapply Harity.
+      eapply EArities.arity_type_inv in i; tea.
+    - destruct s as [s [? ?]]. eapply Hu.
+      specialize (Hprinc _ HT).
+      pose proof (Hs := i).
+      eapply PCUICElimination.unique_sorting_equality_propositional in Hprinc; eauto.
+      rewrite Hprinc; eauto.
+    Qed.
+
+  Definition nisErasable Σ Γ t :=
+    ∑ T u,
+     [× Σ;;; Γ |- t : T,
+      (forall B, Σ ;;; Γ |- T ⇝ B -> False),
+      (forall B, Σ ;;; Γ |- t : B -> Σ ;;; Γ ⊢ T ≤ B),
+      (* ~ Is_conv_to_Arity Σ Γ T, *)
+      ~ isArity T,
+      Σ;;; Γ |- T : tSort u &
+      ~ is_propositional u].
+
+  Lemma nisErasable_spec Σ Γ t :
+    wf_ext Σ -> wf_local Σ Γ ->
+    nisErasable Σ Γ t -> ~ ∥ isErasable Σ Γ t ∥.
+  Proof.
+    intros wf wf' [T [u []]]. eapply not_isErasable; tea.
+    intros [T' [[red] isa]]. eapply irred_equal in red; tea. subst T'. contradiction.
+  Qed.
+
+Lemma irred_equal {cf : checker_flags} Σ Γ t t' :
+Σ ;;; Γ ⊢ t ⇝ t' ->
+(forall v', PCUICReduction.red1 Σ Γ t v' -> False) ->
+t = t'.
+Proof.
+intros Hred Hirred. destruct Hred.
+clear clrel_ctx clrel_src.
+induction clrel_rel.
+- edestruct Hirred; eauto.
+- reflexivity.
+- assert (x = y) as <- by eauto. eauto.
+Qed.
+
+  Import PCUICExpandLets PCUICExpandLetsCorrectness.
+
+  Lemma OnOne2_map_inv {A} {P : A -> A -> Type} (l : list A) (l' : list A) (f : A -> A) :
+    (forall x y, P (f x) y -> ∑ y', y = f y') ->
+    OnOne2 P (List.map f l) l' ->
+    ∑ l'', OnOne2 (fun x y => P (f x) (f y)) l l''.
+  Proof.
+    intros hp.
+    induction l in l' |- *.
+    - intros o; depelim o; constructor.
+    - intros o; depelim o. specialize (IHl l).
+      destruct (hp _ _ p). subst hd'.
+      eexists. econstructor. exact p.
+      destruct (IHl _ o).
+      eexists. now econstructor 2.
+  Qed.
+
+  Lemma mkApps_trans_inv fn args T :
+    mkApps fn args = trans T ->
+    ∑ fn' args', T = mkApps fn' args' × fn = trans fn' × args = List.map trans args'.
+  Proof.
+    revert T; induction args using rev_ind; cbn; intros T.
+    - intros ->. exists T, []; split => //.
+    - rewrite mkApps_app /=. destruct T => //=.
+      intros [=]. subst x. eapply IHargs in H0 as [fn' [args' [? []]]]; subst.
+      exists fn', (args' ++ [T2])%list. rewrite mkApps_app. split => //.
+      split => //. now rewrite List.map_app.
+  Qed.
+
+  Lemma trans_red Σ Γ T U :
+    trans_global Σ ;;; trans_local Γ |- trans T ⇝ U ->
+    ∑ U', Σ ;;; Γ |- T ⇝ U'.
+  Proof.
+    remember (trans_global Σ) as Σ'.
+    remember (trans_local Γ) as Γ'.
+    remember (trans T) as T'.
+    intros hred. revert Σ Γ T HeqΣ' HeqΓ' HeqT'.
+    revert Σ' Γ' T' U hred. intros Σ' Γ' T' U hred.
+    induction hred using PCUICReduction.red1_ind_all; intros; subst.
+    all:try solve [destruct T; noconf HeqT'; eexists; constructor].
+    - destruct T; noconf HeqT'. destruct T1; noconf H. eexists; constructor.
+    - destruct T; noconf HeqT'. rewrite nth_error_map in H.
+      destruct nth_error eqn:heq => //. destruct c => //.
+      destruct decl_body => //.
+      eexists; econstructor. now rewrite heq /=.
+    - destruct T; noconf HeqT'. eapply mkApps_trans_inv in H1 as [fn' [args' [? []]]]; subst.
+      destruct fn'; noconf e0.
+      rewrite !nth_error_map in H. destruct nth_error eqn:hnth => //.
+      eexists; econstructor; tea. len in H0.
+      cbn in H. noconf H. rewrite trans_bcontext in H0.
+      rewrite context_assumptions_smash_context /= in H0.
+      now rewrite context_assumptions_map in H0.
+    - eapply mkApps_trans_inv in HeqT' as [fn' [args' [? []]]]; subst. destruct fn'; noconf e0.
+      eexists; econstructor; tea. admit. admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - destruct T; noconf HeqT'.
+      rewrite map_map_compose in X.
+      eapply OnOne2_map_inv in X as [l'' on].
+      eexists. eapply case_red_brs. eapply OnOne2_impl; tea.
+      cbn. intros.
+      eexists. eapply case_red_brs. tea.
+      2:{ intros. destruct x, y. cbn in *. destruct X0 as [[] ?].
+      epose proof (s _ (subst_context (List.rev (pparams p0)) 0 (smash_context [] bcontext0)@[puinst p0] ++ Γ0) _ eq_refl).
+      forward X0. rewrite trans_local_app /app_context. f_equal.
+      erewrite trans_subst_context. 2,3:admit. rewrite List.map_rev. f_equal.
+      unfold trans_branch. cbn. admit.
+
+      subst bcontext0. cbn. exists bcontext.
+      cbn in e. destruct y'. }
+      eexists. eapply case_red_brs. eapply OnOne2_impl; tea.
+      cbn. intros [] [] [[] ?]. cbn. cbn in e. split. 2:{ }
+
+
+
+
+
+
+
+
+
+
+  Lemma nisErasable_lets (p : pcuic_program) :
+    wf_ext p.1 ->
+    nisErasable p.1 [] p.2 ->
+    nisErasable (PCUICExpandLets.expand_lets_program p).1 []
+      (PCUICExpandLets.expand_lets_program p).2.
+  Proof.
+    intros wfΣ. destruct p as [Σ t]. cbn in *.
+    unfold nisErasable.
+    intros [T [u [Hty Hred Har Hsort Hprop]]].
+    pose proof (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags) Hty).
+    exists (PCUICExpandLets.trans T), u. split => //.
+    intros T' hb.
+    epose proof (irred_equal _ _ _ _).
+
+    now rewrite -isArity_trans.
+    now eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in Hsort.
+  Qed.
+
+  (*Lemma isErasable_lets_inv (p : pcuic_program) :
+    welltyped p.1 [] p.2 ->
+    wf_ext p.1 ->
+    ∥ isErasable (PCUICExpandLets.expand_lets_program p).1 []
+      (PCUICExpandLets.expand_lets_program p).2 ∥ ->
+    ∥ isErasable p.1 [] p.2 ∥.
+  Proof.
+    intros wt wfΣ. destruct p as [Σ t]. cbn in *.
+    intros [ise]. destruct wt. sq.
+    destruct ise as [T [tyT pr]].
+    unfold build_global_env_map, global_env_ext_map_global_env_ext in *. cbn in *.
+    red. exists T. split => //.
+    eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in X.
+
+    cbn in X_type'.π1
+    exists (PCUICExpandLets.trans T). split => //.
+    destruct pr => //. left => //. now apply isArity_trans in i. right.
+    destruct s as [u []]; exists u; split => //.
+    eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in t0.
+    now cbn in t0.
+  Qed.*)
+
   Lemma erasure_pipeline_eta_app (Σ : global_env_ext_map) t u pre :
     ~ ∥ isErasable Σ [] (tApp t u) ∥ ->
     PCUICEtaExpand.expanded Σ [] t ->
@@ -1295,26 +1562,41 @@ Section PCUICErase.
     destruct tr eqn:heq. cbn -[transform]. f_equal.
     replace t0 with tr.2. subst tr.
     2:{ now rewrite heq. }
-    destruct_compose. intros pre3.
-    destruct_compose. intros pre4. clear heq.
-    revert H.
-    destruct_compose.
-    rewrite eq. intros pre5 H.
-    edestruct (erase_eta_app _ _). shelve. shelve.
-    destruct H0 as [pre6 eq']. erewrite eq'.
+    clear heq. revert H.
+    destruct_compose_no_clear. rewrite eq. intros pre3 eq2 pre4.
+    epose proof (erase_eta_app _ _ _ pre3) as H0.
+    forward H0.
+    { clear -ner eq. apply (f_equal snd) in eq. cbn [snd] in eq. rewrite -eq.
+      intros ne. apply ner.
+      destruct pre. destruct s.
+      destruct (isErasable_dec Σ [] (tApp t u)). apply w. destruct w. destruct s as [T ?].
+      now exists T. exact s.
 
-
-    intros H.
-
-     cbn -[transform].
-    set (tr := transform _ _ _).
-
-    in *.
-    rewrite transform_compose
-
-
-Proof.
-
+      destruct ne.
+    forward H0. admit.
+    destruct H0 as [pre'0 [pre''0 heq]].
+    move: pre4.
+    rewrite heq. intros h.
+    epose proof (transform_lambda_box_eta_app _ _ _ h).
+    forward H. admit.
+    destruct H as [prelam [prelam' eqlam]]. rewrite eqlam.
+    cbn [snd]. clear eqlam.
+    destruct_compose_no_clear.
+    intros hlt heqlt. symmetry.
+    apply f_equal2.
+    eapply transform_lambdabox_pres_term.
+    split. cbn [fst]. admit.
+    cbn [snd].
+    destruct_compose_no_clear. intros ? ?.
+    eapply transform_erase_pres_term. cbn [fst].
+    { red. cbn. split => //. } reflexivity.
+    eapply transform_lambdabox_pres_term.
+    split. cbn [fst]. admit.
+    cbn [snd run]. unfold run, time.
+    destruct_compose_no_clear. intros ? ?.
+    eapply transform_erase_pres_term. cbn [fst].
+    { red. cbn. split => //. } reflexivity.
+Qed.
 
 End PCUICErase.
 

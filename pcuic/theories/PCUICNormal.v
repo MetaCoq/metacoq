@@ -1612,3 +1612,136 @@ Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :
 Proof.
   apply whnf_eq_term_upto_univ_napp.
 Qed.
+
+Section Normal.
+
+  Context (flags : RedFlags.t).
+  Context (Σ : global_env).
+
+  (* Relative to reduction flags *)
+  Inductive ne (Γ : context) : term -> Prop :=
+  | ne_rel i :
+      option_map decl_body (nth_error Γ i) = Some None ->
+      ne Γ (tRel i)
+
+  | ne_var v :
+      ne Γ (tVar v)
+
+  | ne_evar n l :
+    All (ne Γ) l ->
+    ne Γ (tEvar n l)
+
+  | ne_app f a :
+    ne Γ f ->
+    nf Γ a ->
+    ne Γ (tApp f a)
+
+  (* | nf_letin_nozeta na B b t :
+      RedFlags.zeta flags = false ->
+      whne Γ (tLetIn na B b t) *)
+
+  | ne_const c u decl :
+    lookup_env Σ c = Some (ConstantDecl decl) ->
+    decl.(cst_body) = None ->
+    ne Γ (tConst c u)
+
+  (* | whne_const_nodelta c u :
+      RedFlags.delta flags = false ->
+      whne Γ (tConst c u) *)
+
+  (* Stuck fixpoints are neutrals *)
+  | ne_fixapp mfix idx args d arg :
+     nth_error mfix idx = Some d ->
+     nth_error args (rarg d) = Some arg ->
+     All (nf Γ) args ->
+     ne Γ arg ->
+     ne Γ (mkApps (tFix mfix idx) args)
+
+  | ne_case i p c brs :
+    ne Γ c ->
+    All (fun br => nf (Γ ,,, inst_case_branch_context p br) br.(bbody)) brs ->
+    ne Γ (tCase i p c brs)
+
+  | ne_proj p c :
+    ne Γ c ->
+    ne Γ (tProj p c)
+
+  with nf (Γ : context) : term -> Prop :=
+  | ne_nf t : ne Γ t -> nf Γ t
+
+  | nf_lam na A b :
+    nf Γ A ->
+    nf (Γ ,, vass na A) b ->
+    nf Γ (tLambda na A b)
+
+  | nf_construct ind k u :
+    nf Γ (tConstruct ind k u)
+
+  | nf_tind ind u : nf Γ (tInd ind u).
+
+  Scheme nf_ne_ind := Minimality for ne Sort Prop
+  with ne_nf_ind := Minimality for nf Sort Prop.
+
+  Definition nf_ne_all_ind :
+    forall P P0 : context -> term -> Prop,
+    (forall (Γ : context) (i : nat),
+    option_map decl_body (nth_error Γ i) = Some None -> P Γ (tRel i)) ->
+    (forall (Γ : context) (v : ident), P Γ (tVar v)) ->
+    (forall (Γ : context) (n : nat) (l : list term),
+    All (fun x => ne Γ x × P Γ x) l -> P Γ (tEvar n l)) ->
+    (forall (Γ : context) (f2 a : term),
+    ne Γ f2 -> P Γ f2 -> nf Γ a -> P0 Γ a -> P Γ (tApp f2 a)) ->
+    (forall (Γ : context) (c : kername) (u : Instance.t) (decl : constant_body),
+    lookup_env Σ c = Some (ConstantDecl decl) ->
+    cst_body decl = None -> P Γ (tConst c u)) ->
+    (forall (Γ : context) (mfix : list (def term)) (idx : nat)
+      (args : list term) (d : def term) (arg : term),
+    nth_error mfix idx = Some d ->
+    nth_error args (rarg d) = Some arg ->
+    All (fun x => nf Γ x /\ P0 Γ x) args -> ne Γ arg -> P Γ arg -> P Γ (mkApps (tFix mfix idx) args)) ->
+    (forall (Γ : context) (i : case_info) (p : predicate term)
+      (c : term) (brs : list (branch term)),
+    ne Γ c ->
+    P Γ c ->
+    All
+      (fun br : branch term =>
+      nf (Γ,,, inst_case_branch_context p br) (bbody br)) brs ->
+    P Γ (tCase i p c brs)) ->
+    (forall (Γ : context) (p : projection) (c : term),
+    ne Γ c -> P Γ c -> P Γ (tProj p c)) ->
+    (forall (Γ : context) (t : term), ne Γ t -> P Γ t -> P0 Γ t) ->
+    (forall (Γ : context) (na : aname) (A b : term),
+    nf Γ A ->
+    P0 Γ A ->
+    nf (Γ,, vass na A) b -> P0 (Γ,, vass na A) b -> P0 Γ (tLambda na A b)) ->
+    (forall (Γ : context) (ind : inductive) (k : nat) (u : Instance.t),
+    P0 Γ (tConstruct ind k u)) ->
+    (forall (Γ : context) (ind : inductive) (u : Instance.t), P0 Γ (tInd ind u)) ->
+    forall (Γ : context) (t : term), ne Γ t -> P Γ t
+
+
+  Check nf_ne_ind.
+
+  Combined Scheme nf_ne_mutind from nf_ne_ind, ne_nf_ind.
+
+  Lemma nf_no_red Γ :
+    (forall t, ne Γ t -> (forall u, red1 Σ Γ t u -> False)) /\
+    (forall t, nf Γ t -> (forall u, red1 Σ Γ t u -> False)).
+  Proof. revert Γ.
+    apply: nf_ne_mutind; intros; try solve [depelim X; solve_discr].
+    - depelim X. congruence.
+      solve_discr.
+    - depelim X. solve_discr. admit.
+    - depelim X; solve_discr. depelim n; solve_discr.
+      admit.
+      eauto. eauto.
+    - depelim X; solve_discr.
+      eapply declared_constant_to_gen in isdecl. red in isdecl.
+      congruence.
+    - depelim X; solve_discr. admit. admit.
+      admit.
+
+
+
+
+

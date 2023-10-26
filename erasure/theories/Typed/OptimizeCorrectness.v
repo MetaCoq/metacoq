@@ -2601,7 +2601,7 @@ Proof.
   destruct f; try solve [now econstructor].
   - easy.
   - cbn in *.
-    destruct p.
+    destruct indn.
     eapply dearg_spec_case.
   - cbn in *.
     destruct p.
@@ -4335,15 +4335,15 @@ Proof.
     all : eauto.
   - eapply eval_atom.
     depelim t;auto.
-    destruct l;simpl in *;try congruence.
+    destruct args;simpl in *;try congruence.
     propify.
-    destruct i0.
+    destruct i.
     destruct (EGlobalEnv.lookup_constructor (trans_env Σ) _ _) as [p | ] eqn:He;simpl in *;try congruence.
     destruct p as [[??]?].
     apply lookup_ctor_trans_env in He as ee.
     destruct ee as (mib & oib & ctor & Hc & Hmib & Hoib & Hctor).
     subst.
-    destruct ctor as [[ind m] l0].
+    destruct ctor as [[? ?] ?].
     eapply lookup_constructor_debox_types in Hc.
     eapply lookup_ctor_trans_env_inv in Hc;eauto.
     now rewrite Hc.

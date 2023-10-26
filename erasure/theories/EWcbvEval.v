@@ -1426,7 +1426,7 @@ Section WcbvEnv.
     eauto using extends_lookup_constructor.
     clear -a iha. induction a; constructor; eauto. apply iha. apply IHa, iha.
     constructor.
-    destruct t => //. cbn [atom] in i. destruct l => //. destruct lookup_constructor eqn:hl => //.
+    destruct t => //. cbn [atom] in i. destruct args => //. destruct lookup_constructor eqn:hl => //.
     eapply (extends_lookup_constructor wf ex) in hl. now cbn [atom].
     cbn in i. now rewrite andb_false_r in i.
   Qed.

@@ -27,21 +27,20 @@ Definition test_def {term : Set} (f : term -> bool) (d : def term) :=
 Definition mfixpoint (term : Set) := list (def term).
 
 Inductive term : Set :=
-| tBox       : term (* Represents all proofs *)
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tEvar      : nat -> list term -> term
-| tLambda    : name -> term -> term
-| tLetIn     : name -> term (* the term *) -> term -> term
-| tApp       : term -> term -> term
-| tConst     : kername -> term
-| tConstruct : inductive -> nat -> list term -> term
-| tCase      : (inductive * nat) (* # of parameters *) ->
-               term (* discriminee *) -> list (list name * term) (* branches *) -> term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term
-| tPrim      : prim_val term -> term.
+| tBox (* Represents all proofs *)
+| tRel (n : nat)
+| tVar (i : ident) (* For free variables (e.g. in a goal) *)
+| tEvar (n : nat) (l : list term)
+| tLambda (na : name) (t : term)
+| tLetIn (na : name) (b t : term) (* let na := b : B in t *)
+| tApp (u v : term)
+| tConst (k : kername)
+| tConstruct (ind : inductive) (n : nat) (args : list term)
+| tCase (indn : inductive * nat (* # of parameters *)) (c : term  (* discriminee *)) (brs : list (list name * term) (* branches *))
+| tProj (p : projection) (c : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tPrim (prim : prim_val term).
 
 Derive NoConfusion for term.
 

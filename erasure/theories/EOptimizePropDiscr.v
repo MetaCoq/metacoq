@@ -726,7 +726,7 @@ Proof.
         destruct v => /= //.
   - destruct t => //.
     all:constructor; eauto. cbn [atom remove_match_on_box] in i |- *.
-    rewrite -lookup_constructor_remove_match_on_box //. destruct l => //.
+    rewrite -lookup_constructor_remove_match_on_box //. destruct args => //.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

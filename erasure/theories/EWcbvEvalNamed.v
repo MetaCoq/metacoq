@@ -1795,7 +1795,7 @@ Proof.
 
       edestruct s2 as (v'' & IH1'' & IH2'').
 
-      eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na0 :: List.rev (map fst vfix)); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
+      eapply represents_substl_rev with (vs := _ :: fix_env vfix E0) (nms := na1 :: List.rev (map fst vfix)); eauto. (* having represents_substl_rev with nms ++ Gamma created an order problem here. changing it there fixes the problem here. but is this correct? *)
       8:{ eexists. split. eauto.
           eapply eval_fix_unfold; eauto.
           solve_all.

@@ -557,7 +557,7 @@ Proof.
     exact (ta.1, f _ All_nil _ ta.2.2).
   - exact (annot_dearg_single _ ta argsa).
   - exact (annot_dearg_single _ ta argsa).
-  - destruct p.
+  - destruct indn.  
     refine (annot_mkApps _ argsa).
     cbn in *.
     refine (ta.1, _).
@@ -708,7 +708,7 @@ Module AnnotOptimizePropDiscr.
     - exact (a.1, f _ a.2).
     - exact (a.1, (f _ a.2.1, f _ a.2.2)).
     - exact (a.1, (f _ a.2.1, f _ a.2.2)).
-    - assert (br_annots : bigprod (fun br => annots box_type br.2) (map (on_snd (remove_match_on_box Σ)) l)).
+    - assert (br_annots : bigprod (fun br => annots box_type br.2) (map (on_snd (remove_match_on_box Σ)) brs)).
       { refine (bigprod_map _ a.2.2).
         intros ? a'; apply (f _ a'). }
       unfold isprop_ind.
@@ -724,7 +724,7 @@ Module AnnotOptimizePropDiscr.
          to a substitution of boxes into f
          (f[tBox/a1,..,tBox/an]) *)
       destruct br_annots as (fa&_).
-      revert l0 t0 fa.
+      revert l t fa.
       clear.
       fix f 1.
       intros [] hd hda.

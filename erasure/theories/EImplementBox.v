@@ -578,5 +578,5 @@ Proof.
     eapply All2_All2_Set.
     solve_all. now destruct b.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
-    cbn -[lookup_constructor] in H |- *. destruct l => //.
+    cbn -[lookup_constructor] in H |- *. destruct args => //.
 Qed.

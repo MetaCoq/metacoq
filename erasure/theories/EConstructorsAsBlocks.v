@@ -1172,7 +1172,7 @@ Proof.
     solve_all. clear -X0. eapply All2_All2_Set. solve_all.
     match goal with H : _ |- _ => apply H end.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
-    cbn -[lookup_constructor] in H |- *. destruct l => //.
+    cbn -[lookup_constructor] in H |- *. destruct args => //.
     destruct lookup_constructor eqn:hl => //.
     destruct p as [[mdecl idecl] cdecl].
     eapply eval_construct_block => //.

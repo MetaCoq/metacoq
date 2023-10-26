@@ -463,7 +463,7 @@ Proof.
     constructor => //; rtoProp; intuition auto.
     move/andP: H => [] /andP[] has isl hf => //.
     eapply on_cstr => //. destruct cstr_as_blocks.
-    rtoProp; intuition auto. solve_all. destruct l => //.
+    rtoProp; intuition auto. solve_all. destruct args => //.
     eapply on_case; rtoProp; intuition auto. solve_all.
     eapply on_proj; rtoProp; intuition auto.
     rtoProp; intuition auto.

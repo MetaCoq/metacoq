@@ -722,7 +722,7 @@ Proof.
     eapply on_letin; rtoProp; intuition auto.
     eapply on_app; rtoProp; intuition auto.
     constructor; cbn; auto. rewrite cstbl in H0.
-    destruct l => //. constructor => //.
+    destruct args => //. constructor => //.
     eapply on_case; rtoProp; intuition auto. ELiftSubst.solve_all.
     eapply on_proj; auto.
     eapply on_fix; eauto. move/andP: H0 => [] _ wf. solve_all.

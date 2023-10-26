@@ -720,7 +720,7 @@ Proof.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.
     rewrite -lookup_constructor_optimize //.
-    destruct l; cbn in *; eauto.
+    destruct args; cbn in *; eauto.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.

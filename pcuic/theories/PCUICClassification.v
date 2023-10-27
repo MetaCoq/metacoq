@@ -473,7 +473,7 @@ Qed.
     - eapply typing_spine_nth_error in sp; eauto; cycle 1.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * destruct (decompose_app (decl_type c)) as [hd tl] eqn:da.
@@ -486,7 +486,7 @@ Qed.
     - eapply typing_spine_nth_error_None_prod in sp; eauto.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
   Qed.
@@ -534,7 +534,7 @@ Qed.
       * len in sp.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * len; simpl. eapply nth_error_None in hargs => //.
@@ -702,7 +702,7 @@ Section classification.
     rewrite oib.(ind_arity_eq) in t0.
     rewrite !subst_instance_it_mkProd_or_LetIn in t0.
     eapply typing_spine_arity_mkApps_Ind in t0; eauto.
-    eapply typing_spine_isType_dom in t0 as [s Hs].
+    eapply typing_spine_isType_dom in t0 as (_ & s & Hs & _).
     eexists; split; [sq|]. now eapply wt_closed_red_refl.
     now do 2 eapply isArity_it_mkProd_or_LetIn.
     now eapply (declared_inductive_valid_type decl).
@@ -939,7 +939,7 @@ Section classification.
       rewrite (closed_subst a' 0 b); auto.
       rewrite /subst1 in t3. eapply t3.
       eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
-      eapply subject_reduction in IHHe2; eauto. now eexists.
+      eapply subject_reduction in IHHe2; eauto. now eapply has_sort_isType.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 

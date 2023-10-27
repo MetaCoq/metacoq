@@ -205,7 +205,7 @@ Proof.
             destruct hΣpop as [? []]. destruct Σpop; cbn in *. subst.
             depelim wf. depelim o0. depelim o1. cbn in on_global_decl_d.
             sq. exists ar. split; [|now left].
-            unshelve eapply PCUICSR.type_reduction. 4:apply X0. constructor; eauto. exact on_global_decl_d.
+            unshelve eapply PCUICSR.type_reduction. 4:apply X0. constructor; eauto. now eapply unlift_TermTyp.
             reflexivity. }
         { cbn [trans_global_decl]. unfold trans_cst, cst_body.
           unfold erase_constant_body; cbn -[erase]. do 3 f_equal.
@@ -701,7 +701,7 @@ Proof.
       2:{ cbn; congruence. } 2:exact deps. intros. eapply Erasure.fake_normalization; eauto.
   * eapply erase_global_erases_deps; tea.
     subst er. unfold erase_env.
-    set (obl := fun Σ' => _).
+    set (obl := fun (Σ' : global_env) => _).
     destruct Σ; cbn [declarations retroknowledge universes] in *.
     eapply (erase_global_decls_deps_recursive_correct _ _ _ obl); eauto.
     intros k hin.

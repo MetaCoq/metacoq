@@ -73,6 +73,7 @@ Require Import ssrbool.
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> strictly_extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
+           (fun Σ Γ j => True)
            (fun Σ Γ => wf_local Σ Γ).
 Proof.
   apply typing_ind_env; intros; rename_all_hyps; auto.
@@ -104,12 +105,12 @@ Proof.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.
-    intros ? ? [[?] [? []]].
+    intros ? ? [((? & ?) & _) [? []]].
     split; eauto.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.
-    intros ? ? [[] [? []]].
+    intros ? ? [((? & ?) & _) [? []]].
     split; eauto.
   - econstructor.
     induction H3; constructor.
@@ -195,6 +196,7 @@ Proof.
     forall t',
     Σ;;; Γ0 |- t ⇝ℇ t' ->
     _)
+    (fun Σ Γ j => True)
     (fun Σ Γ => wf_local Σ Γ)
     );
     intros Σ wfΣ Γ0; intros; try subst Γ0; auto.
@@ -208,17 +210,17 @@ Proof.
     pose proof (H0 Γ (vass n t :: Γ') Γ'').
     rewrite lift_context_snoc0 - plus_n_O in H1.
     eapply H1; eauto. cbn. econstructor.
-    eauto. cbn. exists s1. eapply (weakening_typing (T := tSort s1)); eauto.
+    eauto. cbn. eapply has_sort_isType. eapply (weakening_typing (T := tSort s1)); eauto.
     now apply All_local_env_app_inv in X2.
   - econstructor.
     + eapply H0; eauto.
     + pose proof (H1 Γ (vdef n b b_ty :: Γ') Γ'').
       rewrite lift_context_snoc0 -plus_n_O in H2.
       eapply H2; eauto. cbn. econstructor.
-      eauto. hnf. 2: cbn; eapply weakening_typing; eauto.
-      eapply weakening_typing in X0; eauto.
-      now apply All_local_env_app_inv in X3.
-      now apply All_local_env_app_inv in X3.
+      eauto.
+      repeat (eexists; tea); cbn.
+      eapply weakening_typing; eauto. now apply All_local_env_app_inv in X3.
+      eapply weakening_typing in X0; eauto. now apply All_local_env_app_inv in X3.
   - econstructor.
     + eauto.
     + eapply H4; eauto.
@@ -251,10 +253,10 @@ Proof.
       rewrite app_context_assoc. reflexivity.
       now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
-    econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; pcuicfo.
-    exists x0; auto.
-    eapply (All_impl X1). intros d [HT IH]. pcuicfo.
+    econstructor; eauto. eapply All_impl. eassumption. intros d Hd.
+    apply lift_typing_impl with (1 := Hd) => ?? [] //.
+    eapply (All_impl X1). intros d Hd.
+    apply lift_typing_impl with (1 := Hd) => ?? [] //.
 
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
@@ -266,7 +268,7 @@ Proof.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eapply X1. eassumption. simpl.
-    intros [] []. simpl. intros [[Hs IH] [<- <- IH']].
+    intros [] []. simpl. intros [[[Hs IH] _] [<- <- IH']].
     repeat split. unfold app_context in *.
     eapply isLambda_lift => //.
     eapply ELiftSubst.isLambda_lift => //.
@@ -285,10 +287,10 @@ Proof.
     apply IH. apply e.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
-    econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; pcuicfo.
-    now exists x0.
-    eapply (All_impl X1). intros d [HT IH]. pcuicfo.
+    econstructor; eauto. eapply All_impl. eassumption. intros d Hd.
+    apply lift_typing_impl with (1 := Hd) => ?? [] //.
+    eapply (All_impl X1). intros d Hd.
+    apply lift_typing_impl with (1 := Hd) => ?? [] //.
 
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
@@ -300,7 +302,7 @@ Proof.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eapply X1. eassumption. simpl.
-    intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
+    intros [] []. simpl. intros [[[Hs IH] _] [<- [<- IH']]].
     repeat split. unfold app_context in *.
     specialize (IH Γ (types ++ Γ') Γ'').
     subst types. rewrite app_length fix_context_length in IH.
@@ -416,6 +418,7 @@ Proof.
                               All2 (erases Σ Γ) s s' ->
                               Σ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t ⇝ℇ ELiftSubst.subst s' #|Δ| t'
          )
+         (fun Σ Γ j => True)
          (fun Σ Γ0 => wf_local Σ Γ0)
          );
     intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; auto; subst Γ0.
@@ -443,7 +446,7 @@ Proof.
       rewrite subst_context_snoc0 in H0.
       eapply H0; eauto.
       cbn. econstructor. eauto.
-      cbn. exists s1. eapply (substitution (T := tSort s1)); eauto.
+      cbn. eapply has_sort_isType. eapply (substitution (T := tSort s1)); eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H2.
@@ -453,9 +456,9 @@ Proof.
       rewrite subst_context_snoc0 in H1.
       eapply H1; eauto.
       cbn. econstructor. eauto.
-      hnf.
-      eapply substitution in X0; eauto.
+      repeat (eexists; tea); cbn.
       eapply substitution; eauto.
+      eapply substitution in X0; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H2.
@@ -540,7 +543,7 @@ Proof.
       now eapply ELiftSubst.isLambda_subst.
       eapply In_nth_error in H2 as [].
       eapply nth_error_all in X1; eauto.
-      destruct X1 as [Hs IH].
+      destruct X1 as [[Hs IH] _].
       specialize (IH Γ Γ' (Δ ,,, fix_context mfix)).
       rewrite app_context_assoc in IH |- *.
       eapply IH in e1; eauto.
@@ -567,10 +570,10 @@ Proof.
       repeat split; eauto.
       eapply In_nth_error in H2 as [].
       eapply nth_error_all in X1; eauto.
-      destruct X1.
-      specialize (e2 Γ Γ' (Δ ,,, fix_context mfix)).
-      rewrite app_context_assoc in e2.
-      eapply e2 in e1; eauto.
+      destruct X1 as [[Hs IH] _].
+      specialize (IH Γ Γ' (Δ ,,, fix_context mfix)).
+      rewrite app_context_assoc in IH.
+      eapply IH in e1; eauto.
 
       eapply erases_eq; eauto.
       * rewrite subst_context_app.
@@ -581,7 +584,7 @@ Proof.
       * cbn. now erewrite app_context_length, fix_context_length, (All2_length X5).
       * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
         rewrite app_context_assoc in X1.
-        eapply X1 in t; eauto.
+        eapply X1 in Hs; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.

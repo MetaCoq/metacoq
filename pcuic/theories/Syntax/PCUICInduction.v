@@ -450,12 +450,7 @@ Proof.
     rewrite !size_lift. rewrite list_size_map_hom; auto.
 Qed.
 
-Definition on_local_decl (P : context -> term -> Type)
-           (Γ : context) (t : term) (T : typ_or_sort) :=
-  match T with
-  | Typ T => (P Γ t * P Γ T)%type
-  | Sort => P Γ t
-  end.
+Definition on_local_decl (P : context -> term -> Type) := lift_on_term P.
 
 (* TODO: remove List.rev *)
 Lemma list_size_rev {A} size (l : list A)
@@ -534,12 +529,11 @@ Proof.
     - case: a => [na [b|] ty] /=;
       rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
       + eapply IHΔ => //. unfold context_size. lia.
-      + simpl. apply aux => //. red. lia.
-      + simpl. split.
+      + split.
         * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //. cbn. lia.
       + apply IHΔ => //; unfold context_size; lia.
-      + apply aux => //. red. lia. }
+      + split => //. apply aux => //. cbn. lia. }
   assert (forall m, list_size (fun x : def term => size (dtype x)) m < S (mfixpoint_size size m)).
   { clear. unfold mfixpoint_size, def_size. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_size (fun x : def term => size (dbody x)) m < S (mfixpoint_size size m)).

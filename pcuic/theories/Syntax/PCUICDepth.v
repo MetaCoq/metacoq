@@ -384,12 +384,11 @@ Proof.
     - case: a => [na [b|] ty] /=;
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
       + eapply IHΔ => //. unfold context_depth. lia.
-      + simpl. apply aux => //. red.  lia.
-      + simpl. split.
+      + split.
         * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //. cbn. lia.
       + apply IHΔ => //; unfold context_depth; lia.
-      + apply aux => //. red. lia. }
+      + split => //. apply aux => //. cbn. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dbody x)) m < S (mfixpoint_depth_gen depth m)).
@@ -511,10 +510,10 @@ Proof.
     - case: a h => [na [b|] ty] /=;
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
       + simpl. split.
-        * apply aux => //. red. cbn. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //. cbn. lia.
+        * apply aux => //. red; lia.
       + apply IHΓ => //; unfold context_depth; lia.
-      + red; cbn. split. apply aux => //. red. lia. exact tt.
+      + red; cbn. split => //. apply aux => //. red. lia.
       + apply IHΓ => //. unfold context_depth; lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }

@@ -213,20 +213,22 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-Variant typ_or_sort_ {term} := Typ (T : term) | Sort.
-Arguments typ_or_sort_ : clear implicits.
+Record judgment_ {universe Term} := Judge {
+  j_term : option Term;
+  j_typ : Term;
+  j_univ : option universe;
+  (* rel : option relevance; *)
+}.
+Arguments judgment_ : clear implicits.
+Arguments Judge {universe Term} _ _ _.
+Notation Typ typ := (Judge None typ None).
+Notation TermTyp tm ty := (Judge (Some tm) ty None).
+Notation TermoptTyp tm typ := (Judge tm typ None).
+Notation TypUniv ty u := (Judge None ty (Some u)).
+Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u)).
 
-Definition typ_or_sort_map {T T'} (f: T -> T') t :=
-  match t with
-  | Typ T => Typ (f T)
-  | Sort => Sort
-  end.
-
-Definition typ_or_sort_default {T A} (f: T -> A) t d :=
-  match t with
-  | Typ T => f T
-  | Sort => d
-  end.
+Definition judgment_map {univ T A} (f: T -> A) (j : judgment_ univ T) :=
+  Judge (option_map f (j_term j)) (f (j_typ j)) (j_univ j) (* rel *).
 
 Section Contexts.
   Context {term : Type}.

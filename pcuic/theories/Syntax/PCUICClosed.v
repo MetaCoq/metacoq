@@ -370,11 +370,6 @@ Proof.
       now rewrite app_length // plus_n_Sm.
 Qed.
 
-Definition Pclosed :=
-  (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
-           closedn #|Γ| t && closedn #|Γ| T).
-
-
 
 Lemma closed_subst_context n (Δ Δ' : context) t :
   closedn (n + #|Δ|) t ->

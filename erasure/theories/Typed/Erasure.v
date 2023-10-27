@@ -92,9 +92,10 @@ Lemma isType_red_sq Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ t t' :
   ∥red Σ0 Γ t t'∥ ->
   ∥isType Σ0 Γ t'∥.
 Proof.
-  intros [(s & typ)] [r].
+  intros [(_ & s & typ & _)] [r].
   sq.
-  exists s. eapply subject_reduction; eauto.
+  eapply has_sort_isType.
+  eapply subject_reduction; eauto.
 Qed.
 
 Hint Resolve isType_red_sq : erase.
@@ -103,10 +104,10 @@ Lemma isType_prod_dom Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ na A B :
   ∥isType Σ0 Γ (tProd na A B)∥ ->
   ∥isType Σ0 Γ A∥.
 Proof.
-  intros [(s & typ)].
+  intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now exists s'.
+  now eapply has_sort_isType.
 Qed.
 
 Hint Resolve isType_prod_dom : erase.
@@ -115,10 +116,10 @@ Lemma isType_prod_cod Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ na A B :
   ∥isType Σ0 Γ (tProd na A B)∥ ->
   ∥isType Σ0 (Γ,, vass na A) B∥.
 Proof.
-  intros [(s & typ)].
+  intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now exists x.
+  now eapply has_sort_isType.
 Qed.
 
 Hint Resolve isType_prod_cod : erase.
@@ -654,7 +655,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   specialize (isT Σ wfΣ) as isT'.
-  sq. destruct isT' as [u Htype].
+  sq. destruct isT' as (_ & u & Htype & _).
   now eapply typing_wf_local.
 Qed.
 Next Obligation.
@@ -680,7 +681,7 @@ Next Obligation.
   { sq. eapply isType_red;eauto.
     now apply PCUICWellScopedCumulativity.closed_red_red. }
   sq.
-  destruct tyT as [u tyT].
+  destruct tyT as (_ & u & tyT & _).
   apply typing_wf_local in tyT.
   apply BDToPCUIC.infering_typing in HH;sq;eauto.
   eapply isType_welltyped.
@@ -710,8 +711,8 @@ Next Obligation.
   assert (tyNf : ∥ isType rΣ Γ nf ∥).
   { sq. eapply isType_red;eauto. }
   sq.
-  destruct tyT as [u tyT].
-  destruct tyNf as [v tyNf].
+  destruct tyT as (_ & u & tyT & _).
+  destruct tyNf as (_ & v & tyNf & _).
   apply typing_wf_local in tyT.
   apply BDToPCUIC.infering_typing in HH;sq;eauto.
   specialize (PCUICPrincipality.common_typing _ _ HH tyNf) as [x[x_le_K[x_le_sort?]]].
@@ -886,7 +887,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   reduce_term_sound.
-  destruct (isT _ wfrΣ) as [(? & typ)].
+  destruct (isT _ wfrΣ) as [(_ & ? & typ & _)].
   assert (∥ wf rΣ ∥) by now apply HΣ. sq.
   destruct r.
   eapply subject_reduction with (u := tRel i) in typ; eauto.
@@ -894,7 +895,7 @@ Next Obligation.
   now apply nth_error_Some.
 Qed.
 Next Obligation.
-  destruct (isT _ wfrΣ) as [(? & typ)].
+  destruct (isT _ wfrΣ) as [(_ & ? & typ & _)].
   assert (∥ wf rΣ ∥) by eauto using HΣ;sq.
   reduce_term_sound;destruct r.
   eapply subject_reduction in typ; eauto.
@@ -910,11 +911,11 @@ Next Obligation.
 Qed.
 Next Obligation.
   specialize (isT _ wfΣ) as isT'.
-  sq. destruct isT' as [u Htype].
+  sq. destruct isT' as (_ & u & Htype & _).
   now eapply typing_wf_local.
 Qed.
 Next Obligation.
-  destruct (isT _ wfΣ) as [(? & typ)].
+  destruct (isT _ wfΣ) as [(_ & ? & typ & _)].
   assert (w : ∥ wf Σ ∥) by eauto using HΣ;sq.
   reduce_term_sound;destruct r.
   eapply subject_reduction in typ; eauto.
@@ -938,7 +939,7 @@ Next Obligation.
   destruct (princaT _ wfΣ) as [inf_aT].
   assert (HH : ∥ wf_ext Σ0 ∥) by now apply heΣ.
   destruct HH.
-  specialize (isT _ wfΣ) as [[? Hty]].
+  specialize (isT _ wfΣ) as [(_ & ? & Hty & _)].
   apply typing_wf_local in Hty.
   apply BDToPCUIC.infering_typing in inf_aT;eauto with erase.
   sq.
@@ -952,12 +953,12 @@ Next Obligation.
   destruct (princaT _ wfΣ) as [inf_aT].
   assert (HH : ∥ wf_ext Σ ∥) by now apply heΣ.
   destruct HH.
-  specialize (isT _ wfΣ) as [[? Hty]].
+  specialize (isT _ wfΣ) as [(_ & ? & Hty & _)].
   apply typing_wf_local in Hty.
   apply BDToPCUIC.infering_typing in inf_aT;eauto with erase.
   destruct conv_sort as (univ & reduniv).
   sq.
-  exists univ.
+  eapply has_sort_isType.
   eapply type_reduction;eauto.
 Qed.
 Next Obligation.
@@ -1029,7 +1030,7 @@ Next Obligation.
   destruct typ.
   assert (wf_local rΣ Γ) by (eapply typing_wf_local; eauto).
   assert (∥ wf rΣ ∥) by now apply HΣ .
-  constructor; eexists;eassumption.
+  constructor; eapply has_sort_isType;eassumption.
 Qed.
 Next Obligation.
   destruct typ as [typ].
@@ -1051,9 +1052,9 @@ Next Obligation.
     eapply isType_wf_local; eauto. }
   rewrite <- (subst_rel0_lift_id 0 (mkNormalArity ar_ctx univ)).
   eapply validity in typ as typ_valid;auto.
-  destruct typ_valid as [u Hty].
+  destruct typ_valid as (_ & u & Hty & _).
   eapply type_App.
-  + eapply validity in typ as typ;auto.
+  + eapply validity in typ as (_ & ? & typ & _);auto.
     eapply (PCUICWeakeningTyp.weakening _ _ [_] _ _ _ wflext Hty).
   + eapply (PCUICWeakeningTyp.weakening _ _ [_] _ _ _ wflext typ).
   + fold lift.
@@ -1089,7 +1090,7 @@ erase_type_scheme Γ erΓ t ((na', A') :: ar_ctx) univ typ next_tvar
   }.
 Proof.
   - destruct (typ _ wfΣ).
-    constructor; eexists; eauto.
+    constructor; eapply has_sort_isType; eauto.
   - destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
     assert (∥ wf Σ0 ∥) by now apply HΣ.
@@ -1097,7 +1098,7 @@ Proof.
     destruct r as [?? r].
     eapply subject_reduction in r; eauto.
     apply inversion_Lambda in r as (?&?&?&?&?); auto.
-    eexists; eassumption.
+    eapply has_sort_isType; eassumption.
   - clear inf.
     destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
@@ -1112,7 +1113,7 @@ Proof.
     assert (wf_local Σ0 Γ) by (eapply typing_wf_local; eauto).
     apply ws_cumul_pb_Prod_Prod_inv_l in c as [???]; auto.
     eapply validity in typ0 as typ0; auto.
-    apply isType_tProd in typ0 as (_ & (u&?)); auto.
+    apply isType_tProd in typ0 as (_ & (_&u&?&_)); auto.
     assert (PCUICCumulativity.conv_context cumulAlgo_gen Σ0 (Γ,, vass na' A') (Γ,, vass na A)).
     { constructor; [reflexivity|].
       constructor. now symmetry.
@@ -1147,6 +1148,7 @@ Proof.
   assert (∥ wf Σ0 ∥) by now apply HΣ.
   destruct car as [ctx univ r].
   sq.
+  apply unlift_TermTyp in wt.
   eapply type_reduction in wt; eauto;cbn.
   now destruct r.
 Qed.
@@ -1169,7 +1171,7 @@ Proof.
     assert (∥ wf Σ0 ∥) by now apply HΣ.
     unfold on_constant_decl in wt.
     destruct (PCUICEnvironment.cst_body cst); cbn in *.
-    + sq;eapply validity;eauto.
+    + sq;eapply validity;eauto. now eapply unlift_TermTyp.
     + destruct wt.
       eexists; eassumption.
   - assert (rΣ = Σ).
@@ -1182,11 +1184,8 @@ Proof.
     unfold on_constant_decl in wt.
     destruct (PCUICEnvironment.cst_body cst).
     + sq.
-      now eapply validity in wt.
-    + sq.
-      cbn in wt.
-      destruct wt as (s & ?).
-      now exists s.
+      now eapply unlift_TermTyp, validity in wt.
+    + assumption.
 Qed.
 
 Import P.
@@ -1356,10 +1355,10 @@ Proof.
       induction on_ctors; [easy|];
       destruct is_in as [->|later]; [|easy];
       constructor;
-      destruct (on_ctype r) as (s & typ);
+      destruct (on_ctype r) as (_ & s & typ & _);
       rewrite <- (arities_contexts_1 mind) in typ;
       cbn in *;
-      now exists s).
+      now eapply has_sort_isType).
 Defined.
 
 Program Definition erase_ind

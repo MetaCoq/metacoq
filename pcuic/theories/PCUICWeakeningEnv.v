@@ -259,7 +259,7 @@ Qed.
 Section ExtendsWf.
   Context {cf : checker_flags}.
   Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
-  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+  Context {P: global_env_ext -> context -> judgment -> Type}.
 
   Let wf := on_global_env Pcmp P.
 
@@ -433,8 +433,8 @@ Definition weaken_env_prop_full_gen
 
 Definition weaken_env_prop_gen
            (R : global_env_ext -> global_env_ext -> Type)
-           (P : global_env_ext -> context -> term -> typ_or_sort -> Type) :=
-  forall Σ Σ' φ, wf Σ -> wf Σ' -> R (Σ, φ) (Σ', φ) -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+           (P : global_env_ext -> context -> judgment -> Type) :=
+  forall Σ Σ' φ, wf Σ -> wf Σ' -> R (Σ, φ) (Σ', φ) -> forall Γ j, P (Σ, φ) Γ j -> P (Σ', φ) Γ j.
 
 Definition weaken_env_prop_full := weaken_env_prop_full_gen extends.
 Definition weaken_env_decls_prop_full := weaken_env_prop_full_gen extends_decls.
@@ -448,7 +448,7 @@ Definition weaken_env_strictly_on_decls_prop := weaken_env_prop_gen extends_stri
 
 Import CMorphisms CRelationClasses.
 #[global] Instance weaken_env_prop_gen_impl
-  : Proper (flip subrelation ==> (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ iffT)))) ==> arrow)%signatureT weaken_env_prop_gen | 10.
+  : Proper (flip subrelation ==> (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ iffT))) ==> arrow)%signatureT weaken_env_prop_gen | 10.
 Proof using Type.
   cbv -[weaken_env_prop_gen iffT]; cbv [weaken_env_prop_gen]; intros * H1 * H2 H3.
   unshelve
@@ -461,7 +461,7 @@ Proof using Type.
 Qed.
 
 #[global] Instance Proper_weaken_env_prop_gen_respectful
-  : Proper (flip subrelation ==> (eq ==> eq ==> eq ==> eq ==> iffT) ==> arrow)%signatureT weaken_env_prop_gen | 10.
+  : Proper (flip subrelation ==> (eq ==> eq ==> eq ==> iffT) ==> arrow)%signatureT weaken_env_prop_gen | 10.
 Proof using Type.
   generalize weaken_env_prop_gen_impl; cbv -[weaken_env_prop_gen]; eauto.
 Qed.

@@ -673,7 +673,7 @@ Proof.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
     revert a0 X H Σer.
-    generalize mfix at 1 2 4 6.
+    generalize mfix at 1 3 5.
     intros mfix_gen.
     revert mfix'.
     induction mfix; cbn in *; intros mfix' typ er all_deps deps.
@@ -682,12 +682,13 @@ Proof.
     depelim er.
     depelim all_deps.
     destruct a0 as [? ? ? ?].
+    apply unlift_TermTyp in o.
     now constructor; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
     revert a0 X H Σer.
-    generalize mfix at 1 2 4 6.
+    generalize mfix at 1 3 5.
     intros mfix_gen.
     revert mfix'.
     induction mfix; cbn in *; intros mfix' typ er all_deps deps.
@@ -696,6 +697,7 @@ Proof.
     depelim er.
     depelim all_deps.
     destruct p as (?&?&?).
+    apply unlift_TermTyp in o.
     now constructor; eauto.
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
     depelim H0; depelim p1; depelim X; cbn in *; try constructor; cbn; intuition eauto. solve_all.
@@ -743,7 +745,7 @@ Proof.
         depelim wf. depelim o0. destruct o1. cbn in *.
         eapply (erases_extends ({| universes := univs; declarations := Σ |}, cst_universes cst')); eauto.
         cbn. 4:{ split; eauto; cbn; try reflexivity. eexists [_]; cbn; reflexivity. }
-        constructor; auto. cbn. red in on_global_decl_d. rewrite E in on_global_decl_d. exact on_global_decl_d.
+        constructor; auto. cbn. red in on_global_decl_d. rewrite E in on_global_decl_d. apply unlift_TermTyp in on_global_decl_d. exact on_global_decl_d.
         split; auto.
       * intros.
         eapply (erases_deps_cons {| universes := univs; declarations := Σ |} _ kn (PCUICEnvironment.ConstantDecl cst')); auto.
@@ -755,7 +757,8 @@ Proof.
         eapply (erases_deps_single (_, _)). 3:eauto.
         depelim wf. depelim o0. destruct o1.
         now split; cbn; eauto.
-        depelim wf. depelim o0. destruct o1. do 2 red in on_global_decl_d. now rewrite E in on_global_decl_d.
+        depelim wf. depelim o0. destruct o1. do 2 red in on_global_decl_d. rewrite E in on_global_decl_d.
+        now apply unlift_TermTyp in on_global_decl_d.
         apply IH; eauto. depelim wf. now depelim o0.
     + set (Σu := {| universes := univs; declarations := Σ; retroknowledge := retro |}).
       assert (wfΣu : PCUICTyping.wf Σu).
@@ -781,6 +784,7 @@ Proof.
         unfold on_constant_decl, erases_constant_body in *.
         destruct ?; [|easy].
         destruct ?; [|easy].
+        apply unlift_TermTyp in decl_ext.
         eapply (erases_extends (Σu, cst_universes cst')).
         4:{ split; cbn; auto. eexists [_]; cbn; reflexivity. }
         all: cbn; eauto.

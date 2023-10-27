@@ -572,8 +572,9 @@ Qed.
     intros; to_wfu; now eapply weaken_wf_universe.
   Qed.
 
-  Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T =>
-      wf_universes Σ t && wf_universes Σ T).
+  Lemma wf_universes_weaken_full :
+    weaken_env_prop_full cumulSpec0 (lift_typing typing)
+      (fun Σ _ t T => wf_universes Σ t && wf_universes Σ T).
   Proof using Type.
     do 2 red. intros.
     to_prop; apply /andP; split; now apply weaken_wf_universes.
@@ -581,12 +582,11 @@ Qed.
 
   Lemma wf_universes_weaken :
     weaken_env_prop cumulSpec0 (lift_typing typing)
-      (lift_typing (fun Σ Γ (t T : term) =>
-        wf_universes Σ t && wf_universes Σ T)).
+      (fun Σ _ => lift_wf_term (fun (t : term) => wf_universes Σ t)).
   Proof using Type.
-    intros Σ Σ' φ wfΣ wfΣ' Hext Γ t T HT.
-    apply lift_typing_impl with (1 := HT); intros ? Hty.
-    now eapply (wf_universes_weaken_full (Σ, _)).
+    intros Σ Σ' φ wfΣ wfΣ' Hext _ j Hj.
+    apply lift_wf_term_impl with (1 := Hj); intros ? Hty.
+    now eapply (@weaken_wf_universes (Σ, φ) Σ').
   Qed.
 
   Lemma wf_universes_inds Σ mind u bodies :
@@ -610,20 +610,12 @@ Qed.
     now rewrite mkApps_app forallb_app /= andb_true_r andb_assoc -IHargs.
   Qed.
 
-  Lemma type_local_ctx_wf Σ Γ Δ s : type_local_ctx
-    (lift_typing
-     (fun (Σ : PCUICEnvironment.global_env_ext)
-        (_ : PCUICEnvironment.context) (t T : term) =>
-      wf_universes Σ t && wf_universes Σ T)) Σ Γ Δ s ->
+  Lemma type_local_ctx_wf Σ Γ Δ s : type_local_ctx (fun Σ _ => lift_wf_term (fun t => wf_universes Σ t)) Σ Γ Δ s ->
       All (fun d => option_default (wf_universes Σ) (decl_body d) true && wf_universes Σ (decl_type d)) Δ.
   Proof using Type.
-    induction Δ as [|[na [b|] ty] ?]; simpl; constructor; auto.
-    simpl.
-    destruct X as [? [? ?]]. now to_prop.
-    apply IHΔ. apply X.
-    simpl.
-    destruct X as [? ?]. now to_prop.
-    apply IHΔ. apply X.
+    induction Δ as [|[na [b|] ty] ?]; simpl.
+    1: constructor.
+    all: intros [X [Hb Ht]]; constructor; cbn; auto.
   Qed.
 
   Lemma consistent_instance_ext_wf Σ univs u : consistent_instance_ext Σ univs u ->
@@ -643,51 +635,42 @@ Qed.
     end.
 
   Local Lemma wf_sorts_local_ctx_smash (Σ : global_env_ext) mdecl args sorts :
-    sorts_local_ctx
-    (lift_typing
-       (fun (Σ : PCUICEnvironment.global_env_ext)
-          (_ : PCUICEnvironment.context) (t T : term) =>
-        wf_universes Σ t && wf_universes Σ T)) (Σ.1, ind_universes mdecl)
-    (arities_context (ind_bodies mdecl),,, ind_params mdecl)
-    args sorts ->
-    sorts_local_ctx
-    (lift_typing
-       (fun (Σ : PCUICEnvironment.global_env_ext)
-          (_ : PCUICEnvironment.context) (t T : term) =>
-        wf_universes Σ t && wf_universes Σ T)) (Σ.1, ind_universes mdecl)
-    (arities_context (ind_bodies mdecl),,, ind_params mdecl)
-    (smash_context [] args) sorts.
+    sorts_local_ctx (fun Σ _ => lift_wf_term (fun t => wf_universes Σ t))
+      (Σ.1, ind_universes mdecl) (arities_context (ind_bodies mdecl),,, ind_params mdecl) args sorts ->
+    sorts_local_ctx (fun Σ _ => lift_wf_term (fun t => wf_universes Σ t))
+      (Σ.1, ind_universes mdecl) (arities_context (ind_bodies mdecl),,, ind_params mdecl) (smash_context [] args) sorts.
   Proof using Type.
     induction args as [|[na [b|] ty] args] in sorts |- *; simpl; auto.
-    intros [].
+    intros [X [Hb Ht]].
     rewrite subst_context_nil. auto.
-    destruct sorts; auto.
-    intros [].
+    destruct sorts as [|u]; auto.
+    intros [X Hj].
     rewrite smash_context_acc /=. split. eauto.
+    apply lift_wf_term_f_impl with (f := fun t => _ (_ t)) (1 := Hj) => t Ht.
     rewrite wf_universes_subst.
-    clear -s. generalize 0.
-    induction args as [|[na [b|] ty] args] in sorts, s |- *; simpl in *; auto.
-    - destruct s as [? [[s' wf] [? ?]%andb_and]].
+    clear -X. generalize 0.
+    induction args as [|[na [b|] ty] args] in sorts, X |- *; simpl in *; auto.
+    - destruct X as [? [Hb Ht]].
       constructor; eauto.
       rewrite wf_universes_subst. eapply IHargs; eauto.
       now rewrite wf_universes_lift.
-    - destruct sorts => //. destruct s.
+    - destruct sorts => //. destruct X.
       constructor => //. eapply IHargs; eauto.
     - now rewrite wf_universes_lift.
   Qed.
 
   Lemma wf_sorts_local_ctx_nth_error Σ P Γ Δ s n d :
-    sorts_local_ctx P Σ Γ Δ s ->
+    sorts_local_ctx (fun Σ _ => lift_wf_term (P Σ)) Σ Γ Δ s ->
     nth_error Δ n = Some d ->
-    ∑ Γ' t, P Σ Γ' (decl_type d) t.
+    P Σ (decl_type d).
   Proof using Type.
     induction Δ as [|[na [b|] ty] Δ] in n, s |- *; simpl; auto.
     - now rewrite nth_error_nil.
     - intros [h [h' h'']].
-      destruct n. simpl. move=> [= <-] /=. do 2 eexists; eauto.
+      destruct n. simpl. move=> [= <-] //=.
       now simpl; eapply IHΔ.
-    - destruct s => //. intros [h h'].
-      destruct n. simpl. move=> [= <-] /=. eexists; eauto.
+    - destruct s => //. intros [h [_ h']].
+      destruct n. simpl. move=> [= <-] //=.
       now simpl; eapply IHΔ.
   Qed.
 
@@ -1063,68 +1046,48 @@ Qed.
   Qed.
 
   Theorem wf_types :
-    env_prop (fun Σ Γ t T =>
-      wf_universes Σ t && wf_universes Σ T)
-      (fun Σ Γ =>
-      All_local_env
-      (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-         wf_universes Σ t && wf_universes Σ T) Σ) Γ ×
-         test_context (wf_universes Σ) Γ).
+    env_prop (fun Σ Γ t T => wf_universes Σ t && wf_universes Σ T)
+      (fun Σ _ => lift_wf_term (wf_universes Σ))
+      (fun Σ Γ => wf_ctx_universes Σ Γ).
   Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps; cbn; rewrite -!/(wf_universes _ _) ;
     specIH; to_prop;
     cbn; auto.
 
-    - split.
-      * induction X; constructor; auto.
-        destruct tu as [s tu]; exists s; simpl.
-        now simpl in Hs.
-        destruct tu as [s tu]; exists s; simpl.
-        now simpl in Hs.
-      * induction X; simpl; auto.
-        rewrite IHX /= /test_decl /=. now move/andP: Hs.
+    - destruct X as (Hb & _ & (_ & (Ht & _)%andb_and) & _).
+      split; tas.
+      destruct j_term => //.
+      now destruct Hb as (_ & (? & _)%andb_and).
+
+    - induction X; simpl; auto.
+      rewrite IHX /= /wf_decl_universes /on_decl_universes /=. now move/andP: Hs.
 
     - rewrite wf_universes_lift.
-      destruct X as [X _].
-      pose proof (nth_error_Some_length heq_nth_error).
-      eapply nth_error_All_local_env in X; tea.
-      rewrite heq_nth_error /= in X. red in X.
-      destruct decl as [na [b|] ty]; cbn -[skipn] in *.
-      + now to_prop.
-      + destruct X as [s Hs]. now to_prop.
+      eapply forallb_nth_error with (n := n) in H0. rewrite heq_nth_error /= in H0.
+      now move/andP: H0.
 
     - apply/andP; split; to_wfu; cbn ; eauto with pcuic.
 
     - cbn in *; to_wfu ; eauto with pcuic.
     - rewrite wf_universes_subst. constructor. to_wfu; auto. constructor.
-      now move/andP: H4 => [].
+      now move/andP: H1 => [].
 
     - apply/andP; split.
       { rewrite wf_universeb_instance_forall.
         apply/wf_universe_instanceP.
         eapply consistent_instance_ext_wf; eauto. }
-      pose proof (declared_constant_inv _ _ _ _ wf_universes_weaken wf X H).
-      red in X1; cbn in X1.
-      unshelve eapply declared_constant_to_gen in H; eauto.
-      destruct (cst_body decl).
-      * to_prop.
-        epose proof (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
-        eapply wf_universes_inst. 2:eauto. all:eauto.
-        simpl in H2.
-        now eapply consistent_instance_ext_wf.
-      * move: X1 => [s /andP[Hc _]].
-        to_prop.
-        eapply wf_universes_inst; eauto.
-        exact (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
-        now eapply consistent_instance_ext_wf.
+      pose proof (declared_constant_inv _ _ _ _ wf_universes_weaken wf X H0) as [_ X0].
+      unshelve eapply declared_constant_to_gen in H0; eauto.
+      epose proof (weaken_lookup_on_global_env' Σ.1 _ _ wf H0).
+      eapply wf_universes_inst. 2:eauto. all:eauto.
+      now eapply consistent_instance_ext_wf.
 
     - apply/andP; split.
       { rewrite wf_universeb_instance_forall.
         apply/wf_universe_instanceP.
         eapply consistent_instance_ext_wf; eauto. }
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
-      cbn in X1. eapply onArity in X1. cbn in X1.
-      move: X1 => [s /andP[Hind ?]].
+      eapply onArity in X0 as [_ Hind].
       unshelve eapply declared_inductive_to_gen in isdecl; eauto.
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 isdecl)).
@@ -1139,23 +1102,21 @@ Qed.
       rewrite wf_universes_subst.
       { apply wf_universes_inds.
         now eapply consistent_instance_ext_wf. }
-      eapply on_ctype in onc. cbn in onc.
-      move: onc=> [_ /andP[onc _]].
+      eapply on_ctype in onc as [_ onc].
       clear nthe. unshelve eapply declared_constructor_to_gen in isdecl; eauto.
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
       now eapply consistent_instance_ext_wf.
 
-    - rewrite wf_universes_mkApps in H5.
-      move/andP: H5 => /= [] wfu; rewrite forallb_app.
+    - rewrite wf_universes_mkApps in H7.
+      move/andP: H7 => /= [] wfu; rewrite forallb_app.
       move/andP=> [] wfpars wfinds.
       cbn in wfu.
       rewrite wfu /= wfpars wf_universes_mkApps /=
-        forallb_app wfinds /= H /= !andb_true_r.
+        forallb_app wfinds /= H0 /= !andb_true_r.
       pose proof (declared_inductive_inv wf_universes_weaken wf X isdecl).
-      destruct X5. destruct onArity as [s Hs].
-      move/andP: Hs => [] /= hty hs.
-      rewrite ind_arity_eq in hty.
+      apply onArity in X3 as onArity. destruct onArity as [_ hty].
+      rewrite (ind_arity_eq X3) in hty.
       rewrite !wf_universes_it_mkProd_or_LetIn in hty.
       move/and3P: hty => [] wfp wfindis wfisort.
       have ond : on_udecl_prop Σ (ind_universes mdecl).
@@ -1164,7 +1125,7 @@ Qed.
       }
       eapply wf_ctx_universes_closed in wfp => //.
       eapply wf_ctx_universes_closed in wfindis => //.
-      rewrite (consistent_instance_length H1).
+      rewrite (consistent_instance_length H2).
       erewrite closedu_compare_decls; tea.
       rewrite closed_ind_predicate_context // /=.
       unfold test_branch.
@@ -1172,10 +1133,10 @@ Qed.
       * have wfbrctx : All (fun cdecl =>
           closedu_ctx #|polymorphic_instance (ind_universes mdecl)| (cstr_args cdecl))
           (ind_ctors idecl).
-        { clear -wf ond onConstructors.
+        { pose proof (onConstructors := onConstructors X3).
+          clear -wf ond onConstructors.
           red in onConstructors. solve_all. destruct X.
-          do 2 red in on_ctype. destruct on_ctype as [s Hs].
-          move/andP: Hs => [] wfty _.
+          do 2 red in on_ctype. destruct on_ctype as [_ wfty].
           rewrite cstr_eq in wfty.
           rewrite !wf_universes_it_mkProd_or_LetIn in wfty.
           move/and3P: wfty => [] _ clargs _.
@@ -1185,30 +1146,33 @@ Qed.
         rewrite /cstr_branch_context.
         eapply closedu_expand_lets_ctx.
         rewrite wfp. eapply closedu_subst_context.
-        rewrite a1.
+        rewrite a.
         now rewrite closedu_inds.
       * rewrite /ptm.
-        rewrite wf_universes_it_mkLambda_or_LetIn H4 andb_true_r.
-        rewrite /predctx.
-        destruct X3 as [_ hctx]. move: hctx.
-        now rewrite test_context_app => /andP[].
+        rewrite wf_universes_it_mkLambda_or_LetIn H6 andb_true_r.
+        move: H4.
+        rewrite /wf_ctx_universes forallb_app => /andP[hctx _].
+        apply (MCReflect.introT onctxP).
+        solve_all. unfold ondecl, wf_decl_universes, on_decl_universes in *.
+        move/andP:H3 => [Hb Ht] //; split; tas.
+        now destruct decl_body.
 
     - rewrite /subst1. rewrite wf_universes_subst.
       constructor => //. eapply All_rev.
-      rewrite wf_universes_mkApps in H1.
-      move/andP: H1 => [].
+      rewrite wf_universes_mkApps in H2.
+      move/andP: H2 => [].
       now intros _ hargs%forallb_All.
       pose proof (declared_projection_inv wf_universes_weaken wf X isdecl).
       destruct (declared_inductive_inv); simpl in *.
       destruct ind_ctors as [|cs []] => //.
       destruct ind_cunivs as [|cunivs []] => //;
-      destruct X1 as [[[? ?] ?] ?] => //.
+      destruct X0 as [[[? ?] ?] ?] => //.
       red in o0.
       destruct nth_error eqn:heq => //.
       destruct o0  as [_ ->].
       rewrite wf_universes_mkApps {1}/wf_universes /= -!/(wf_universes _ _)
-        wf_universeb_instance_forall in H1.
-      move/andP: H1 => [/wf_universe_instanceP wfu wfargs].
+        wf_universeb_instance_forall in H2.
+      move/andP: H2 => [/wf_universe_instanceP wfu wfargs].
       unshelve eapply declared_projection_to_gen in isdecl; eauto.
       eapply (wf_universes_inst (ind_universes mdecl)); eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
@@ -1223,38 +1187,34 @@ Qed.
       rewrite nth_error_subst_context in heq.
       autorewrite with len in heq. simpl in heq.
       epose proof (nth_error_lift_context_eq _ (smash_context [] (ind_params mdecl)) _ _).
-      autorewrite with len in H. simpl in H. rewrite -> H in heq. clear H.
+      autorewrite with len in H0. simpl in H0. rewrite -> H0 in heq. clear H0.
       autorewrite with len in heq.
       simpl in heq.
       destruct nth_error eqn:hnth; simpl in * => //.
       noconf heq. simpl.
       rewrite wf_universes_subst.
       apply wf_extended_subst.
-      rewrite ind_arity_eq in onArity. destruct onArity as [s' Hs].
-      rewrite wf_universes_it_mkProd_or_LetIn in Hs.
-      now move/andP: Hs => /andP /andP [] /andP [].
+      rewrite ind_arity_eq in onArity. destruct onArity as [_ Hs].
+      rewrite !wf_universes_it_mkProd_or_LetIn in Hs.
+      now move/andP: Hs => /andP /andP [].
       rewrite wf_universes_lift.
       eapply wf_sorts_local_ctx_smash in s.
-      eapply wf_sorts_local_ctx_nth_error in s as [? [? H]]; eauto.
-      red in H. destruct x0. now move/andP: H => [].
-      now destruct H as [s [Hs _]%andb_and].
+      eapply wf_sorts_local_ctx_nth_error in s; eauto.
 
     - apply/andP; split; auto.
-      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
-      eapply nth_error_all in X0; eauto.
-      simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
+      solve_all; destruct a as (_ & _ & (_ & (? & _)%andb_and) & _), b as ((_ & (? & _)%andb_and) & _); rtoProp; tas.
+      eapply nth_error_all in X as (_ & _ & (_ & (? & _)%andb_and) & _); eauto.
 
     - apply/andP; split; auto.
-      solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
-      eapply nth_error_all in X0; eauto.
-      simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
+      solve_all; destruct a as (_ & _ & (_ & (? & _)%andb_and) & _), b as ((_ & (? & _)%andb_and) & _); rtoProp; tas.
+      eapply nth_error_all in X as (_ & _ & (_ & (? & _)%andb_and) & _); eauto.
 
     - apply/andP; split; eauto.
-      destruct X1; cbn => //.
+      destruct X0; cbn => //.
       rtoProp; intuition eauto. solve_all.
-      destruct X1; cbn => //.
+      destruct X0; cbn => //.
       simp prim_type. cbn. rtoProp; intuition.
-  Qed.
+Qed.
 
   Lemma typing_wf_universes {Σ : global_env_ext} {Γ t T} :
     wf Σ ->
@@ -1275,7 +1235,7 @@ Qed.
 
   Lemma isType_wf_universes {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> wf_universes Σ T.
   Proof using Type.
-    intros wfΣ [s Hs]. now eapply typing_wf_universes in Hs as [HT _]%andb_and.
+    intros wfΣ (_ & s & Hs & _). now eapply typing_wf_universes in Hs as [HT _]%andb_and.
   Qed.
 
 End CheckerFlags.

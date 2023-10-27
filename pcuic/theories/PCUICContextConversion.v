@@ -1167,18 +1167,6 @@ Qed.
 
 #[global] Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
 
-(* Definition on_decl (P : context -> term -> term -> Type)
-             (Γ : context) (t : term) (t' : option term) :=
-    match t' with
-    | Some (b, b') => (P Γ b b' * P Γ Γ' t t')%type
-    | None => P Γ Γ' t t'
-    end. *)
-Definition on_local_decl (P : context -> term -> typ_or_sort -> Type) (Γ : context) (d : context_decl) :=
-  match decl_body d with
-  | Some b => P Γ b (Typ (decl_type d)) * P Γ (decl_type d) Sort
-  | None => P Γ (decl_type d) Sort
-  end.
-
 Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
   All_local_env P Γ ->
   on_some (on_local_decl P (skipn (S n) Γ)) (nth_error Γ n).
@@ -1188,29 +1176,26 @@ Proof.
   - destruct n. red; simpl. red. simpl. apply t0.
     simpl. apply IHX. simpl in isdecl. lia.
   - destruct n; simpl in *.
-    * rewrite skipn_S skipn_0. red; cbn.
-      split; auto.
+    * rewrite skipn_S skipn_0. apply t0.
     * rewrite !skipn_S. apply IHX. lia.
 Qed.
 
 Lemma context_cumulativity_wf_app {cf:checker_flags} Σ Γ Γ' Δ :
   cumul_context cumulAlgo_gen Σ Γ' Γ ->
   wf_local Σ Γ' ->
-    All_local_env
-       (lift_typing
-          (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-           forall Γ' : context,
-           cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
-       (Γ,,, Δ) ->
+    All_local_env (fun Γ j =>
+      forall Γ' : context,
+      cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' ->
+      (lift_typing0 (fun t T => Σ;;; Γ' |- t : T)) j)
+      (Γ,,, Δ) ->
   wf_local Σ (Γ' ,,, Δ).
 Proof.
   intros.
   eapply wf_local_app => //.
   eapply All_local_env_app_inv in X1 as [].
   eapply All_local_env_impl_ind; tea => /=.
-  intros Γ'' t' T H HT.
-  apply lift_typing_impl with (1 := HT); intros ? IH.
-  eapply IH. eapply All2_fold_app => //.
+  intros Γ'' j H HT.
+  eapply HT. eapply All2_fold_app => //.
   eapply All2_fold_refl. intros. eapply cumul_decls_refl.
   eapply All_local_env_app; split; auto.
 Qed.

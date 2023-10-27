@@ -2353,8 +2353,6 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_universe_props s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     match s1, s2 with
     | Universe.lProp, Universe.lProp => True
@@ -2371,47 +2369,36 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_universe_prop_r s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s2 -> Universe.is_prop s1.
   Proof using Type.
-    intros Hcf cu.
     destruct s2; cbn; [ | absurd | absurd].
     destruct s1; cbn; [ auto | absurd | absurd].
   Qed.
 
   Lemma leq_universe_sprop_r s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s2 -> Universe.is_sprop s1.
   Proof using Type.
-    intros Hcf cu.
     destruct s2; cbn; [ absurd | | absurd].
     destruct s1; cbn; [ absurd | auto | absurd].
   Qed.
 
   Lemma leq_universe_prop_no_prop_sub_type s1 s2 :
-    check_univs ->
     prop_sub_type = false ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_prop s1 -> Universe.is_prop s2.
   Proof using Type.
-    intros Hcf ps cu.
+    intros ps.
     destruct s1; cbn; [ | absurd | absurd].
     rewrite ps.
     destruct s2; cbn; [ auto | absurd | absurd].
   Qed.
 
   Lemma leq_universe_sprop_l s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     Universe.is_sprop s1 -> Universe.is_sprop s2.
   Proof using Type.
-    intros Hcf cu.
     destruct s1; cbn; [ absurd | | absurd].
     destruct s2; cbn; [ absurd | auto | absurd].
   Qed.
@@ -2436,33 +2423,27 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma leq_prop_is_prop_sprop {s1 s2} :
-    check_univs ->
     prop_sub_type = false ->
-    consistent ϕ ->
     leq_universe ϕ s1 s2 ->
     is_propositional s1 <-> is_propositional s2.
   Proof using Type.
-    intros Hcf ps cu.
+    intros ps.
     destruct s1, s2; cbn; try absurd; intros H; split; trivial.
     now rewrite ps in H.
   Qed.
 
   Lemma is_prop_gt s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_prop s2 -> False.
   Proof using Type.
-    intros Hcf cu Hleq Hprop.
+    intros Hleq Hprop.
     apply leq_universe_prop_r in Hleq; tas.
     now destruct s1.
   Qed.
 
   Lemma is_sprop_gt s1 s2 :
-    check_univs ->
-    consistent ϕ ->
     leq_universe ϕ (Universe.super s1) s2 -> Universe.is_sprop s2 -> False.
   Proof using Type.
-    intros Hcf cu Hleq Hprop.
+    intros Hleq Hprop.
     apply leq_universe_sprop_r in Hleq; tas.
     now destruct s1.
   Qed.

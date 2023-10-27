@@ -141,6 +141,7 @@ Proof.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
     destruct H as [[def [Hty Hdef]]].
+    apply unlift_TermTyp in Hty.
     eapply Hdef; eauto.
 
   - apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
@@ -151,6 +152,7 @@ Proof.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
     destruct H as [[def [Hty Hdef]]].
+    apply unlift_TermTyp in Hty.
     eapply Hdef; eauto.
 
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
@@ -292,14 +294,14 @@ Proof.
     eapply In_Forall in Σer.
     eapply Forall_All in Σer.
     eapply Forall2_All2 in H.
-    ELiftSubst.solve_all.
+    ELiftSubst.solve_all. apply unlift_TermTyp in b1; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
     eapply All_Forall. eapply includes_deps_fold in Σer as [_ Σer].
     eapply In_Forall in Σer.
     eapply Forall_All in Σer.
     eapply Forall2_All2 in H.
-    ELiftSubst.solve_all.
+    ELiftSubst.solve_all. apply unlift_TermTyp in b1; eauto.
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
     depelim H; depelim H0. depelim X; depelim X0; depelim p1; constructor;
     noconf H; cbn; simp prim_global_deps in Σer; simpl in *.
@@ -337,7 +339,7 @@ Proof.
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
     eapply on_declared_constant in H_; auto.
-    red in H_. rewrite cbe in H_. simpl in H_.
+    red in H_. rewrite cbe in H_. apply unlift_TermTyp in H_.
     eapply (erases_weakening_env (Σ := (Σ, cst_universes cb))
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl. econstructor; eauto. econstructor; eauto.

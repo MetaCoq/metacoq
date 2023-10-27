@@ -40,20 +40,12 @@ Lemma wf_local_rel_conv:
       All2_fold (conv_decls cumulAlgo_gen Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
-  intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
-  - econstructor.
-  - econstructor; eauto. cbn in *.
-    destruct t0. exists x. eapply context_conversion with (Γ ,,, Γ0); eauto.
-    * eapply wf_local_app; eauto.
-    * eapply conv_context_app_same; eauto.
-  - econstructor; eauto.
-    + cbn in *.
-      destruct t0. exists x. eapply context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply wf_local_app; eauto.
-      * eapply conv_context_app_same; eauto.
-    + cbn in *. eapply context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply wf_local_app; eauto.
-      * eapply conv_context_app_same; eauto.
+  intros Σ wfΣ Γ Γ' X1 Γ0 ? w0.
+  apply All_local_env_impl_ind with (1 := w0) => Δ j wfΓ' Hj.
+  apply lift_typing_impl with (1 := Hj) => t T HT.
+  eapply context_conversion with (Γ ,,, Δ); eauto.
+  - eapply wf_local_app; eauto.
+  - eapply conv_context_app_same; eauto.
 Qed.
 
 Lemma conv_context_wf_local_app {A B A'} {Σ : global_env_ext} {wfΣ : wf Σ} :
@@ -201,6 +193,7 @@ Lemma erases_context_conversion :
         conv_context cumulAlgo_gen Σ Γ Γ' ->
         wf_local Σ Γ' ->
         forall t', erases Σ Γ t t' -> erases Σ Γ' t t')
+  (fun _ _ _ => True)
   (fun Σ Γ => wf_local Σ Γ)
         .
 Proof.
@@ -210,11 +203,12 @@ Proof.
   - econstructor. eapply h_forall_Γ'0.
     econstructor. eauto. now constructor.
     constructor; auto.
-    exists s1.
+    eapply has_sort_isType.
     eapply context_conversion. 3:eauto. all:eauto.
   - econstructor. eauto. eapply h_forall_Γ'1.
     econstructor. eauto. now constructor.
-    constructor; auto. exists s1.
+    constructor; auto.
+    split; cbn. 2: eapply has_sort_isType.
     eapply context_conversion with Γ; eauto.
     eapply context_conversion with Γ; eauto.
     eassumption.
@@ -236,7 +230,7 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    destruct X5 as [[Ht IH] []].
+    destruct X5 as [[[Ht IH] _] []].
     split; intuition auto.
     eapply IH.
     + subst types.
@@ -247,8 +241,9 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X2. intuition auto.
-    eapply b0.
+    destruct X5 as [[[Ht IH] _] []].
+    split; intuition auto.
+    eapply IH.
     + subst types. eapply conv_context_app_same; auto.
     + subst types. eapply conv_context_wf_local_app; eauto.
     + assumption.
@@ -307,6 +302,7 @@ Lemma erases_subst_instance0
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (subst_instance u Γ) |- subst_instance u t ⇝ℇ t')
+    (fun _ _ _ => True)
     (fun Σ Γ => wf_local Σ Γ).
 Proof.
   apply typing_ind_env; intros; cbn -[subst_instance] in *; auto.
@@ -314,16 +310,17 @@ Proof.
   all: try now (econstructor; eauto 2 using isErasable_subst_instance).
   - cbn. econstructor.
     eapply H0 in X2; eauto. apply X2.
-    cbn. econstructor. eauto. cbn. econstructor.
+    cbn. econstructor. eauto. cbn.
     eapply typing_subst_instance in X0; eauto. apply snd in X0.
-    cbn in X0. destruct X0. refine (t0 _ _ _ _); eauto.
+    cbn in X0. destruct X0. eapply has_sort_isType. refine (t0 _ _ _ _); eauto.
   - cbn. econstructor.
     eapply H0 in X3; eauto.
     eapply H1 in X3; eauto. exact X3.
-    cbn. econstructor. eauto. cbn. econstructor.
+    cbn. econstructor. eauto. cbn.
     eapply typing_subst_instance in X0; eauto. apply snd in X0.
     cbn in X0.
-    eapply X0; eauto.
+    repeat (eexists; tea); cbn.
+    2: eapply X0; eauto.
     cbn. eapply typing_subst_instance in X1; eauto. apply snd in X1.
     cbn in X1. eapply X1; eauto.
   - unfold subst_instance.
@@ -344,32 +341,19 @@ Proof.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
     { (* rewrite subst_instance_app. *)
       assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-      eapply (All_impl X0); pcuicfo.
-      now destruct X5 as [s [Hs ?]]; exists s.
+      eapply (All_impl X0).
+      intros d Hd. apply lift_typing_impl with (1 := Hd) (2 := fun _ _ => fst).
       eapply All_mfix_wf in X5; auto. subst types.
-
-      revert X5. clear - wfΣ wfΓ H2 X2 X3.
-      induction 1.
-      - eauto.
-      - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ?). eexists.
-        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
-        eapply t0; eauto.
-      - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ?). eexists.
-        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
-        eapply t0; eauto.
-        cbn in *. eapply typing_subst_instance in t1; eauto.
-        apply snd in t1. eapply t1. all:eauto.
+      eapply typing_subst_instance_wf_local; eauto.
+      now destruct Σ.
     }
 
     cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left. eapply X1.
     exact X4.
-    intros; cbn in *. destruct X5.
-    destruct p as [p IH].
-    destruct a. split; auto.
+    intros d d' [[[Hb IH] _] []]; cbn in *.
+    split; auto.
     now eapply isLambda_subst_instance.
     eapply IH in e1.
     rewrite subst_instance_app in e1. subst types. 2:eauto.
@@ -380,32 +364,20 @@ Proof.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
   { (* rewrite subst_instance_app. *)
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    eapply (All_impl X0); pcuicfo.
-    destruct X5 as [s [Hs ?]]; now exists s.
+    eapply (All_impl X0).
+    intros d Hd. apply lift_typing_impl with (1 := Hd) (2 := fun _ _ => fst).
     eapply All_mfix_wf in X5; auto. subst types.
-
-    revert X5. clear - wfΣ wfΓ H2 X2 X3.
-    induction 1.
-    - eauto.
-    - cbn. econstructor; eauto. cbn in *.
-      destruct t0 as (? & ?). eexists.
-      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
-      eapply t0; eauto.
-    - cbn. econstructor; eauto. cbn in *.
-      destruct t0 as (? & ?). eexists.
-      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
-      eapply t0; eauto.
-      cbn in *. eapply typing_subst_instance in t1; eauto.
-      apply snd in t1. eapply t1. all:eauto.
+    eapply typing_subst_instance_wf_local; eauto.
+    now destruct Σ.
   }
 
   cbn. econstructor; eauto.
   eapply All2_map_left.
   eapply All2_impl. eapply All2_All_mix_left. eapply X1.
   exact X4.
-  intros; cbn in *. destruct X5. destruct p0. destruct p0.
-  destruct p. repeat split; eauto.
-  eapply e2 in e1.
+  intros d d' [[[Hb IH] _] (? & ? & ?)]; cbn in *.
+  repeat split; eauto.
+  eapply IH in e1.
   rewrite subst_instance_app in e1; eauto. subst types. 2:eauto.
   eapply erases_ctx_ext. eassumption. unfold app_context.
   f_equal.
@@ -541,6 +513,7 @@ Section wellscoped.
   Arguments lookup_projection : simpl never.
   Lemma typing_wellformed :
     env_prop (fun Σ Γ a A => wellformed Σ a)
+        (fun _ _ _ => True)
         (fun Σ Γ => True).
   Proof.
     eapply typing_ind_env; cbn; intros => //.
@@ -560,12 +533,12 @@ Section wellscoped.
       unfold lookup_projection. now rewrite (declared_projection_lookup_gen isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
-      solve_all. destruct a as [s []], a0.
-      unfold test_def. len in b0.
-      rewrite b0. now rewrite i i0.
+      solve_all. destruct a as (_ & s & (_ & Hs) & _), a0 as ((_ & Hb) & _).
+      unfold test_def.
+      rewrite b0. now rewrite Hb Hs.
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
-    - solve_all. destruct a as [s []], b.
-      unfold test_def. len in i0. now rewrite i i0.
+    - solve_all. destruct a as (_ & s & (_ & Hs) & _), b as ((_ & Hb) & _).
+      unfold test_def. now rewrite Hb Hs.
     - depelim X0; solve_all; constructor; eauto.
   Qed.
 

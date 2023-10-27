@@ -23,13 +23,13 @@ Module Type QuoteEnvironmentSig (T : Term) (Import E : EnvironmentSig T).
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   : quotation.
   #[export] Typeclasses Transparent
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   .
 
   #[export] Declare Instance quote_constructor_body : ground_quotable constructor_body.

@@ -67,13 +67,13 @@ Proof.
   induction Δ'; simpl; auto.
   destruct a as [na [b|] ty]; simpl; intuition auto.
   + simpl; rewrite PCUICLiftSubst.lift_context_snoc /= Nat.add_0_r;
-    repeat split; tas.
-    - apply infer_typing_sort_impl with id a0; intros Hs.
-      now eapply weakening_typing in Hs.
-    - now eapply weakening_typing in b1.
+    split; tas.
+    apply lift_typing_f_impl with (1 := b0) => // ?? Hs.
+    now eapply weakening_typing in Hs.
   + rewrite PCUICLiftSubst.lift_context_snoc /= Nat.add_0_r.
-      intuition auto.
-      eapply weakening_typing in b; eauto.
+    split; tas.
+    apply lift_typing_f_impl with (1 := b) => // ?? Hs.
+    now eapply weakening_typing in Hs.
 Qed.
 
 Lemma wf_local_expand_lets0 {cf : checker_flags} {Σ : global_env_ext} :
@@ -115,9 +115,9 @@ Section WithCheckerFlags.
     intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
     assert (n = #|firstn n Γ|).
     { rewrite firstn_length_le; auto with arith. }
-    apply infer_typing_sort_impl with id wfty; intros Hs.
-    rewrite {3 4}H.
-    eapply (weakening_typing (Γ := skipn n Γ) (Γ' := Δ) (Γ'' := firstn n Γ) (T := tSort _));
+    apply lift_typing_f_impl with (1 := wfty) => // ?? Hs.
+    rewrite {3 4 5}H.
+    eapply (weakening_typing (Γ := skipn n Γ) (Γ' := Δ) (Γ'' := firstn n Γ));
       eauto with wf.
   Qed.
 
@@ -353,7 +353,7 @@ Section CaseBranchTypeBeta.
     rewrite PCUICLiftSubst.lift_it_mkLambda_or_LetIn Nat.add_0_r.
     set cstr_ctx := (pre_case_branch_context_gen _ _ _ _ _).
     set Δ := (lift_context _ _ _).
-    move=> wfΣ [ps retWty] wfcstr_ctx ?.
+    move=> wfΣ retWty wfcstr_ctx ?. destruct retWty as (_ & ps & retWty & _).
     apply: red_betas_typed; first by rewrite /Δ /instantiate_cstr_indices; len; lia.
     rewrite /Δ; have -> : #|cstr_args cb| = #|cstr_ctx| by rewrite /cstr_ctx /pre_case_branch_context_gen; len.
     apply: weakening_typing; eassumption.
@@ -395,7 +395,7 @@ Section RandomLemmas.
     ∑ s, spine_subst Σ Γ (pparams ++ indices) s (ind_params mib,,, ind_indices oib)@[puinst].
   Proof using cf.
     move=> wfΣ inddecl pparamslen discrtypok.
-    have Γwf : wf_local Σ Γ by apply: (typing_wf_local discrtypok.π2).
+    have Γwf : wf_local Σ Γ by apply: (typing_wf_local discrtypok.2.π2.1).
     move: (inddecl)=> /(PCUICWeakeningEnvTyp.on_declared_inductive (Σ:=Σ.1)) [on_ind on_body].
     have wfΣ1 := (wfΣ : wf Σ.1).
     have wfΣwk := declared_inductive_wf_ext_wk _ _ _ wfΣ (proj1 inddecl).
@@ -421,7 +421,7 @@ Section RandomLemmas.
     * rewrite -app_context_assoc-subst_instance_app_ctx; apply: weaken_wf_local=> //.
       set (Δ := _ ,,, _). destruct Σ as [Σ1 Σ2].
       refine (PCUICUnivSubstitutionTyp.typing_subst_instance_wf_local Σ1 Σ2 Δ puinst (ind_universes mib) _ _ _)=> //.
-      move: (onArity on_body) => [lind].
+      destruct (onArity on_body) as (_ & s & lind & _). move: lind => /=.
       rewrite (PCUICGlobalMaps.ind_arity_eq on_body).
       move=> /PCUICSpine.type_it_mkProd_or_LetIn_inv [uparams [? [slparams + _ _]]].
       move=> /PCUICSpine.type_it_mkProd_or_LetIn_inv [uindxs [? [slindxs + _ _]]].
@@ -681,7 +681,7 @@ Proof.
   econstructor.
   1: exact: mk_caseWtyp.
   - apply: subject_reduction; last exact red_rettyp.
-    exact: (validity mk_caseWtyp).π2.
+    exact: (validity mk_caseWtyp).2.π2.1.
   - apply: convSpec_cumulSpec.
     apply: conv_betas=> //.
     rewrite forallb_app /= (PCUICClosedTyp.subject_closed discrtyp) !andb_true_r.

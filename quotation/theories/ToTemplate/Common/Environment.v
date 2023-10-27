@@ -81,13 +81,13 @@ Module QuoteEnvironment (T : Term) (Import E : EnvironmentSig T) (Import QEH : Q
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   : quotation.
   #[export] Typeclasses Transparent
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   .
 
   Import PolymorphicInstances.

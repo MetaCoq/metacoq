@@ -986,6 +986,7 @@ Proof.
       | Some (n, _) => n
       | None => 0
       end) Γ') (eta_expand Σg Γ' t))
+      (Pj := fun _ _ _ => True)
       (PΓ := fun _ _ _ => True);
     repeat match goal with
     | [ |- repr_decls _ _ -> _ ] => intros hrepr
@@ -1205,8 +1206,8 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (? & ? & ?).
-      destruct a0 as (? & ?).
+      destruct a as (_ & ? & (? & ?) & _).
+      destruct a0 as ((? & ?) & _).
       rewrite !firstn_length. rewrite -> !Nat.min_l; try lia.
       eapply expanded_lift'.
       5: eapply e0; eauto. 2: reflexivity. 2: now len.
@@ -1227,7 +1228,7 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((_ & ? & (? & ?) & _) & ((? & ?) & _)). cbn.
      specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
      rewrite map_app map_repeat in e0. len. eapply e0; auto.
      eapply Forall2_app; eauto. unfold types.
@@ -1435,8 +1436,9 @@ Proof.
   cbn. constructor.
   cbn. constructor.
   len. rewrite app_nil_r.
-  red in t1, t2.
-  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t2).
+  destruct t1 as (t1 & s & t2 & _).
+  cbn in t1, t2.
+  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t1).
   clear. induction Γ; cbn; constructor; auto.
   intros. specialize (H _ hrepr).
   move: H.
@@ -1455,8 +1457,8 @@ Proof.
   cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ?].
   specialize (IHctx' cunivs hs). constructor; auto.
   constructor. len. rewrite repeat_app.
-  destruct p as [[s Hs] ?].
-  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ t0).
+  destruct l as [Htm [s Hs]].
+  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ Htm).
   forward H.
   clear. rewrite -app_context_length.
   induction (_ ,,, _); cbn; constructor; auto.
@@ -1481,7 +1483,7 @@ Proof.
   - unfold on_constant_decl in ond.
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond). constructor.
+    apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond.1). constructor.
     apply hrepr.
     destruct ond as [s Hs]. constructor => //.
   - destruct ond as [onI onP onN onV].
@@ -1497,7 +1499,7 @@ Proof.
     pose proof onc.(on_cargs).
     eapply eta_expand_context_sorts in X0. now len in X0. exact hrepr.
     len. len.
-    pose proof onc.(on_ctype). destruct X0.
+    pose proof onc.(on_ctype). destruct X0 as (_ & s & t0 & _).
     epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None #|ind_bodies m|) _ _ wf t0).
     forward H. rewrite -arities_context_length.
     clear. induction (arities_context _); constructor; auto.

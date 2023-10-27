@@ -573,8 +573,14 @@ Let Pcheck Γ t T :=
   on_free_vars P T ->
   Σ ;;; Δ |- rename f t ◃ rename f T.
 
-Let PΓ :=
-  All_local_env (lift_sorting (fun _ => Pcheck) (fun _ => Psort) Σ).
+Let PΓ := All_local_env
+  (fun Γ j =>
+    forall P Δ f,
+    urenaming P Γ Δ f ->
+    on_ctx_free_vars P Γ ->
+    lift_sorting
+      (fun t T => on_free_vars P t -> on_free_vars P T -> Σ ;;; Δ |- rename f t ◃ rename f T)
+      (fun T u => on_free_vars P T -> Σ ;;; Δ |- rename f T ▹□ u) j).
 
 Let PΓ_rel Γ Γ' :=
   forall P Δ f,
@@ -623,23 +629,23 @@ Proof using wfΣ.
   apply bidir_ind_env.
 
   - intros Γ wfΓ hΓ. red.
-    induction hΓ.
-    + constructor.
-    + constructor ; tea.
-      eexists ; eauto.
-    + constructor ; tea.
-      eexists ; eauto.
+    eapply All_local_env_over_sorting_2 in hΓ; clear wfΓ.
+    apply All_local_env_impl with (1 := hΓ); clear Γ hΓ.
+    intros Γ j Hj P Δ f hf hΓ'.
+    apply lift_sorting_impl with (1 := Hj) => //; intros ?? [Ht IHt] **.
+    all: eapply IHt; eauto.
 
   - intros Γ Γ' wfΓ' allΓ'. red. move => P Δ f hf hΓ hΓ'.
+    eapply All_local_env_over_sorting_2 in allΓ'; clear wfΓ'.
     induction allΓ'.
     + constructor.
     + rewrite rename_context_snoc.
       rewrite on_free_vars_ctx_snoc in hΓ'.
-      move: hΓ' => /andP [] ? ?.
+      move: hΓ' => /andP [] hΓ' ht.
       constructor ; eauto.
       1: by eapply IHallΓ' ; eauto.
-      eexists.
-      eapply Hs.
+      eapply lift_sorting_f_it_impl with t0 => //; intros [Ht IHt].
+      eapply IHt; eauto.
       * eapply urenaming_context ; tea.
       * rewrite on_ctx_free_vars_concat.
         apply /andP ; split ; tea.
@@ -647,22 +653,15 @@ Proof using wfΣ.
       * eassumption.
     + rewrite rename_context_snoc.
       rewrite on_free_vars_ctx_snoc in hΓ'.
-      move: hΓ' => /andP [] ? /andP /= [] ? ?.
+      move: hΓ' => /andP [] hΓ' /andP /= [] hb ht.
       constructor ; eauto.
-      * by eapply IHallΓ' ; eauto.
-      * eexists.
-        eapply Hs.
-        1: eapply urenaming_context ; tea.
-        2: eauto.
-        rewrite on_ctx_free_vars_concat.
-        apply /andP ; split ; tea.
-        by rewrite on_free_vars_ctx_on_ctx_free_vars.
-      * eapply Hc.
-        1: eapply urenaming_context ; tea.
-        all: auto.
-        rewrite on_ctx_free_vars_concat.
-        apply /andP ; split ; tea.
-        by rewrite on_free_vars_ctx_on_ctx_free_vars.
+      1: by eapply IHallΓ' ; eauto.
+      eapply urenaming_context in hf; tea.
+      assert (on_ctx_free_vars (shiftnP #|Γ0| P) (Γ ,,, Γ0)).
+      { rewrite on_ctx_free_vars_concat. apply /andP ; split ; tea.
+        by rewrite on_free_vars_ctx_on_ctx_free_vars. }
+      eapply lift_sorting_f_it_impl with t0 => //; intros [Ht IHt].
+      all: eapply IHt; eauto.
 
   - intros Γ n decl isdecl P Δ f hf hΓ ht.
     eapply hf in isdecl as h => //.
@@ -826,21 +825,19 @@ Proof using wfΣ.
     + by rewrite nth_error_map H0 /=.
     + eapply All_mix in X ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? [] ? p.
-      rewrite -map_dtype.
-      eexists.
-      eapply p ; tea.
+      move => ? [] /andP [] ? ? p.
+      apply lift_sorting_f_it_impl with p => // [] [Hp IHp].
+      eapply IHp ; tea.
     + eapply All_mix in X0 ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? p.
-      rewrite -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
-      eapply p ; tea.
-      * rewrite -(fix_context_length mfix).
-        eapply urenaming_context ; tea.
-      * by apply on_ctx_free_vars_fix_context.
-      * rewrite -(Nat.add_0_r (#|mfix|)) fix_context_length.
-        apply on_free_vars_lift_impl.
-        by rewrite shiftnP0.
+      move => d [] /andP [] hT hb p.
+      rewrite /on_def_body !rename_fix_context !rename_context_length -!(fix_context_length mfix) -!rename_shiftn in hb |- *.
+      eapply urenaming_context in hf ; tea.
+      eapply on_ctx_free_vars_fix_context in hΓ; tea. rewrite -(fix_context_length mfix) in hΓ.
+      rewrite <-(shiftnP0 P) in hT. eapply on_free_vars_lift_impl in hT. rewrite Nat.add_0_r in hT.
+
+      apply lift_sorting_f_it_impl with p => //= [] [Hp IHp].
+      all: eapply IHp ; tea.
     + by apply rename_wf_fixpoint.
 
   - intros. red. move => P Δ f hf hΓ /= /forallb_All ht.
@@ -850,21 +847,19 @@ Proof using wfΣ.
     + by rewrite nth_error_map H0 /=.
     + eapply All_mix in X ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? [] ? p.
-      rewrite -map_dtype.
-      eexists.
-      eapply p ; tea.
+      move => ? [] /andP [] ? ? p.
+      apply lift_sorting_f_it_impl with p => // [] [Hp IHp].
+      eapply IHp ; tea.
     + eapply All_mix in X0 ; tea.
       eapply All_map, All_impl ; tea.
-      move => ? [] /andP [] ? ? [] ? p.
-      rewrite -map_dbody -map_dtype rename_fix_context rename_context_length -(fix_context_length mfix) -rename_shiftn.
-      eapply p ; tea.
-      * rewrite -(fix_context_length mfix).
-        eapply urenaming_context ; tea.
-      * by apply on_ctx_free_vars_fix_context.
-      * rewrite -(Nat.add_0_r (#|mfix|)) fix_context_length.
-        apply on_free_vars_lift_impl.
-        by rewrite shiftnP0.
+      move => d [] /andP [] hT hb p.
+      rewrite /on_def_body !rename_fix_context !rename_context_length -!(fix_context_length mfix) -!rename_shiftn in hb |- *.
+      eapply urenaming_context in hf ; tea.
+      eapply on_ctx_free_vars_fix_context in hΓ; tea. rewrite -(fix_context_length mfix) in hΓ.
+      rewrite <-(shiftnP0 P) in hT. eapply on_free_vars_lift_impl in hT. rewrite Nat.add_0_r in hT.
+
+      apply lift_sorting_f_it_impl with p => //= [] [Hp IHp].
+      all: eapply IHp ; tea.
     + by apply rename_wf_cofixpoint.
 
   - intros. red. intros P Δ f hf ht.
@@ -1075,7 +1070,7 @@ Proof.
   pose proof (wf_local_closed_context (typing_wf_local H')).
   eapply into_ws_cumul_pb in Hcumul; eauto.
   eapply PCUICConversion.ws_cumul_pb_Sort_r_inv in Hcumul as [s' [Hred Hcumul]].
-  eapply closed_red_red in Hred. pose proof (HT'':=HT'). eapply PCUICValidity.validity in HT' as [? ?].
+  eapply closed_red_red in Hred. pose proof (HT'':=HT'). eapply PCUICValidity.validity in HT' as (_ & ? & ? & _).
   exists s'; split; eauto.
   assert (PCUICReduction.red Σ (Γ,,, Γ'') (unlift #|Γ'| #|Γ''| T') (tSort s')).
   { assert (tSort s' = unlift #|Γ'| #|Γ''| (tSort s')) by reflexivity. rewrite H2; clear H2.

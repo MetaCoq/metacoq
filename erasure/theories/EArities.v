@@ -35,16 +35,17 @@ Qed.
 
 Lemma isType_isErasable Σ Γ T : isType Σ Γ T -> isErasable Σ Γ T.
 Proof.
-  intros [s Hs].
+  intros (_ & s & Hs & _).
   exists (tSort s). intuition auto.
 Qed.
 
 Lemma isType_red:
   forall (Σ : global_env_ext) (Γ : context) (T : term), wf Σ -> wf_local Σ Γ ->
-    isType Σ Γ T -> forall x5 : term, red Σ Γ T x5 -> isType Σ Γ x5.
+    isType Σ Γ T -> forall T' : term, red Σ Γ T T' -> isType Σ Γ T'.
 Proof.
-  intros. destruct X1 as [].
-  eexists. eapply subject_reduction ; eauto.
+  intros.
+  apply lift_sorting_it_impl_gen with X1 => // HT.
+  eapply subject_reduction ; eauto.
 Qed.
 
 Lemma it_mkProd_isArity:
@@ -262,7 +263,7 @@ Lemma nIs_conv_to_Arity_nArity {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} :
 Proof.
   intros isty nisc isa. apply nisc.
   exists T. split => //. sq.
-  destruct isty as [s Hs].
+  destruct isty as (_ & s & Hs & _).
   eapply wt_closed_red_refl; tea.
 Qed.
 
@@ -328,7 +329,6 @@ Section Elim'.
 Context `{cf : checker_flags}.
 Context {Σ : global_env_ext} {wfΣ : wf_ext Σ}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs.
 
 Lemma cumul_prop1 Γ A B u :
   Universe.is_prop u ->
@@ -336,7 +336,7 @@ Lemma cumul_prop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof using Hcf Hcf' wfΣ.
+Proof using Hcf wfΣ.
   intros; eapply cumul_prop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -347,7 +347,7 @@ Lemma cumul_prop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof using Hcf Hcf' wfΣ.
+Proof using Hcf wfΣ.
   intros. eapply cumul_prop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.
@@ -358,7 +358,7 @@ Lemma cumul_sprop1 Γ A B u :
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u.
-Proof using Hcf Hcf' wfΣ.
+Proof using Hcf wfΣ.
   intros. eapply cumul_sprop1; tea.
   now apply ws_cumul_pb_forget in X1.
 Qed.
@@ -369,7 +369,7 @@ Lemma cumul_sprop2 Γ A B u :
   Σ ;;; Γ ⊢ A ≤ B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Proof using Hcf Hcf' wfΣ.
+Proof using Hcf wfΣ.
   intros. eapply cumul_sprop2; tea.
   now apply ws_cumul_pb_forget in X0.
 Qed.
@@ -384,11 +384,10 @@ Lemma cumul_propositional (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- B : tSort u.
 Proof.
   intros wf.
+  intros pu isTy cum Ha.
   destruct u => //.
-  intros _ [s Hs] cum Ha.
-  eapply cumul_prop2; eauto. now exists s.
-  intros _ [s Hs] cum Ha.
-  eapply cumul_sprop2; eauto. now exists s.
+  eapply cumul_prop2; eauto.
+  eapply cumul_sprop2; eauto.
 Qed.
 
 Lemma sort_typing_spine:
@@ -428,12 +427,11 @@ Proof.
   eapply invert_cumul_arity_l_gen; tea.
   eapply invert_cumul_arity_r_gen. 2:exact e.
   exists T1. split; auto. sq.
-  eapply PCUICValidity.validity in X as [s Hs].
+  eapply PCUICValidity.validity in X as (_ & s & Hs & _).
   eapply wt_closed_red_refl; eauto.
 Qed.
 
 Lemma cumul_prop1' (Σ : global_env_ext) Γ A B u :
-  check_univs ->
   wf_ext Σ ->
   isType Σ Γ A ->
   is_propositional u ->
@@ -442,14 +440,12 @@ Lemma cumul_prop1' (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- A : tSort u.
 Proof.
   intros.
-  destruct X0 as [s Hs].
   destruct u => //.
-  eapply cumul_prop1 in X2; eauto. now exists s.
-  eapply cumul_sprop1 in X2; eauto. now exists s.
+  eapply cumul_prop1 in X2; eauto.
+  eapply cumul_sprop1 in X2; eauto.
 Qed.
 
 Lemma cumul_prop2' (Σ : global_env_ext) Γ A B u :
-  check_univs ->
   wf_ext Σ ->
   isType Σ Γ A ->
   is_propositional u ->
@@ -458,10 +454,9 @@ Lemma cumul_prop2' (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- A : tSort u.
 Proof.
   intros.
-  destruct X0 as [s Hs].
   destruct u => //.
-  eapply cumul_prop2 in X2; eauto. now exists s.
-  eapply cumul_sprop2 in X2; eauto. now exists s.
+  eapply cumul_prop2 in X2; eauto.
+  eapply cumul_sprop2 in X2; eauto.
 Qed.
 
 Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
@@ -529,11 +524,9 @@ Proof.
 Qed.
 
 Lemma leq_universe_propositional_r {cf : checker_flags} (ϕ : ConstraintSet.t) (u1 u2 : Universe.t_) :
-  check_univs ->
-  consistent ϕ ->
   leq_universe ϕ u1 u2 -> is_propositional u2 -> is_propositional u1.
 Proof.
-  intros cu cons leq; unfold is_propositional.
+  intros leq; unfold is_propositional.
   destruct u2 => //.
   apply leq_universe_prop_r in leq => //.
   now rewrite leq.
@@ -543,12 +536,10 @@ Proof.
 Qed.
 
 Lemma leq_universe_propositional_l {cf : checker_flags} (ϕ : ConstraintSet.t) (u1 u2 : Universe.t_) :
-  check_univs ->
   prop_sub_type = false ->
-  consistent ϕ ->
   leq_universe ϕ u1 u2 -> is_propositional u1 -> is_propositional u2.
 Proof.
-  intros cu ps cons leq; unfold is_propositional.
+  intros ps leq; unfold is_propositional.
   destruct u1 => //.
   eapply leq_universe_prop_no_prop_sub_type in leq => //.
   now rewrite leq.
@@ -644,7 +635,7 @@ Qed.
 Lemma isType_closed_red_refl {Σ} {wfΣ : wf Σ} {Γ T} :
   isType Σ Γ T -> Σ ;;; Γ ⊢ T ⇝ T.
 Proof.
-  intros [s hs]; eapply wt_closed_red_refl; tea.
+  intros (_ & s & hs & _); eapply wt_closed_red_refl; tea.
 Qed.
 
 Lemma nIs_conv_to_Arity_isWfArity_elim {Σ} {wfΣ : wf Σ} {Γ x} :
@@ -704,13 +695,12 @@ Qed.
 
 Lemma is_propositional_bottom {Σ Γ T s s'} :
   wf_ext Σ ->
-  check_univs ->
   prop_sub_type = false ->
   Σ ;;; Γ ⊢ T ≤ tSort s ->
   Σ ;;; Γ ⊢ T ≤ tSort s' ->
   PCUICCumulProp.eq_univ_prop s s'.
 Proof.
-  intros wf cu pst h h'; rewrite /PCUICCumulProp.eq_univ_prop.
+  intros wf pst h h'; rewrite /PCUICCumulProp.eq_univ_prop.
   split. split; eapply PCUICCumulProp.is_prop_bottom; tea.
   split; eapply PCUICCumulProp.is_sprop_bottom; tea.
 Qed.
@@ -721,25 +711,23 @@ Notation " Σ ;;; Γ |- t ~~ u " := (cumul_prop Σ Γ t u)  (at level 50, Γ, t,
 
 Lemma is_propositional_bottom' {Σ Γ T s s'} :
   wf_ext Σ ->
-  check_univs ->
   prop_sub_type = false ->
   Σ ;;; Γ |- T ~~ tSort s ->
   Σ ;;; Γ |- T ~~ tSort s' ->
   PCUICCumulProp.eq_univ_prop s s'.
 Proof.
-  intros wf cu pst h h'; rewrite /PCUICCumulProp.eq_univ_prop.
+  intros wf pst h h'; rewrite /PCUICCumulProp.eq_univ_prop.
   pose proof (cumul_prop_trans _ _ _ _ _ _ (cumul_prop_sym _ _ _ _ _ h') h).
   split. split; intros; eapply PCUICCumulProp.cumul_prop_props; tea. now symmetry.
   split; intros; eapply PCUICCumulProp.cumul_sprop_props; tea. now symmetry.
 Qed.
 
 Lemma is_propositional_lower {Σ s u u'} :
-  consistent Σ ->
   leq_universe Σ s u ->
   leq_universe Σ s u' ->
   PCUICCumulProp.eq_univ_prop u u'.
 Proof.
-  intros wf leu leu'.
+  intros leu leu'.
   unfold eq_univ_prop; split.
   - split. intros pu. eapply leq_universe_prop_r in leu; tea => //.
     eapply leq_universe_prop_no_prop_sub_type in leu'; trea => //.
@@ -753,17 +741,16 @@ Qed.
 
 Lemma typing_spine_inj {Σ Γ Δ s args args' u u'} :
   wf_ext Σ ->
-  check_univs ->
   prop_sub_type = false ->
   let T := it_mkProd_or_LetIn Δ (tSort s) in
   typing_spine Σ Γ T args (tSort u) ->
   typing_spine Σ Γ T args' (tSort u') ->
   PCUICCumulProp.eq_univ_prop u u'.
 Proof.
-  intros wf cu ips T.
+  intros wf ips T.
   move/typing_spine_it_mkProd_or_LetIn_full_inv => su.
   move/typing_spine_it_mkProd_or_LetIn_full_inv => su'.
-  eapply is_propositional_lower; tea. apply wf.
+  eapply is_propositional_lower; tea.
 Qed.
 
 Lemma Is_proof_ind Σ Γ t :
@@ -784,7 +771,7 @@ Proof.
   eapply cumul_prop2'; tea => //. now eapply validity.
   eapply inversion_mkApps in X0 as x1. destruct x1 as [? []].
   eapply inversion_Ind in t1 as [mdecl [idecl [wf [decli ?]]]]; eauto.
-  destruct (validity Hty'') as [u'' tyargs'].
+  destruct (validity Hty'') as (_ & u'' & tyargs' & _).
   eapply inversion_mkApps in X0 as x1. destruct x1 as [? []].
   eapply invert_type_mkApps_ind in X0 as [sp cum]; eauto.
   eapply invert_type_mkApps_ind in tyargs' as f; tea. destruct f as [sp' cum']; eauto.
@@ -792,7 +779,7 @@ Proof.
   split => //.
   rewrite (declared_inductive_type decli) in sp, sp'.
   rewrite subst_instance_it_mkProd_or_LetIn /= in sp, sp'.
-  eapply typing_spine_inj in sp. 5:exact sp'. all:eauto.
+  eapply typing_spine_inj in sp. 4:exact sp'. all:eauto.
   destruct sp as [H H0]. apply/orP. rewrite H H0. now apply/orP.
 Qed.
 
@@ -827,7 +814,7 @@ Proof.
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp. 3:tea.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
-  eapply cumul_prop1'. 5:tea. all:eauto.
+  eapply cumul_prop1'. 4:tea. all:eauto.
   eapply validity; eauto.
   exists ty, u'; split; auto.
   eapply PCUICSpine.type_mkApps; tea; eauto.
@@ -904,14 +891,14 @@ Proof.
   eapply cumul_propositional; eauto.
   rewrite is_propositional_subst_instance => //.
   eapply PCUICValidity.validity; eauto.
-  destruct X as [cty ty].
+  destruct X as (_ & cty & ty & _).
   eapply type_Cumul_alt; eauto.
   eapply isType_Sort. 2:eauto.
   destruct (ind_sort x0) => //.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
-  epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ eq_refl wfΣ ty).
-  forward H0 by constructor. eexists; eauto.
-  simpl. now exists cty. eapply PCUICConversion.ws_cumul_pb_eq_le_gen, PCUICSR.wt_cumul_pb_refl; eauto.
+  epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ wfΣ ty).
+  forward H0 by constructor. eapply has_sort_isType; eauto.
+  simpl. now eapply has_sort_isType. eapply PCUICConversion.ws_cumul_pb_eq_le_gen, PCUICSR.wt_cumul_pb_refl; eauto.
   destruct H0 as [_ sorts].
   specialize (sorts _ _ decli c) as [sorts sorts'].
   forward sorts' by constructor.

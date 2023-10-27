@@ -96,7 +96,7 @@ Lemma subslet_nth_error {cf:checker_flags} {Σ Γ s Δ decl n} :
 Proof.
   induction 1 in n |- *; simpl; auto; destruct n; simpl; try congruence.
   - intros [= <-]. exists t; split; auto.
-    simpl. split; auto. exact tt.
+    simpl. split; auto.
   - intros. destruct decl as [na' [b|] ty]; cbn in *.
     + specialize (IHX _ H) as [t' [hnth [hty heq]]]. exists t'; intuition auto.
     + now apply IHX.
@@ -150,21 +150,19 @@ Proof.
   rewrite commut_lift_subst_rec. 1: lia. f_equal; lia.
 Qed.
 
-Lemma All_local_env_subst {cf:checker_flags} (P Q : context -> term -> typ_or_sort -> Type) c n k :
+Lemma All_local_env_subst {cf:checker_flags} (P Q : context -> judgment -> Type) c n k :
   All_local_env Q c ->
-  (forall Γ t T,
-      Q Γ t T ->
-      P (subst_context n k Γ) (subst n (#|Γ| + k) t)
-        (typ_or_sort_map (subst n (#|Γ| + k)) T)
+  (forall Γ j,
+      Q Γ j ->
+      P (subst_context n k Γ) (judgment_map (subst n (#|Γ| + k)) j)
   ) ->
   All_local_env P (subst_context n k c).
 Proof.
   intros Hq Hf.
   induction Hq in |- *; try econstructor; eauto;
     simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  - simpl. eapply (Hf _ _ Sort). eauto.
-  - simpl. eapply (Hf _ _ Sort). eauto.
-  - simpl. eapply (Hf _ _ (Typ t)). eauto.
+  - simpl. eapply (Hf _ (Typ _)). eauto.
+  - simpl. eapply (Hf _ (TermTyp _ _)). eauto.
 Qed.
 
 Lemma subst_length {cf:checker_flags} Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
@@ -348,12 +346,13 @@ Proof.
   induction 1; auto; unfold subst_context, snoc; rewrite fold_context_k_snoc0;
     auto; unfold snoc;
     f_equal; auto; unfold map_decl; simpl.
-  - destruct t0 as [s Hs]. unfold vass. simpl. f_equal.
+  - destruct t0 as (_ & s & Ht & _). unfold vass. simpl. f_equal.
     eapply typed_subst; eauto. lia.
   - unfold vdef.
+    destruct t0 as (Hb & s & Ht & _). cbn in Hb.
     f_equal.
     + f_equal. eapply typed_subst; eauto. lia.
-    + eapply typed_subst in t1 as [Ht HT]; eauto. lia.
+    + eapply typed_subst; eauto. lia.
 Qed.
 
 Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
@@ -363,19 +362,14 @@ Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   map_constant_body (subst_instance u) decl.
 Proof.
   intros. unshelve eapply declared_constant_to_gen in H0; eauto.
-  eapply declared_decl_closed in H0; eauto.
-  unfold map_constant_body.
-  do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
-  - rewrite -> andb_and in H0. intuition auto.
-    rewrite <- (closedn_subst_instance 0 body u) in H1.
-    rewrite <- (closedn_subst_instance 0 ty u) in H2.
+  eapply declared_decl_closed in H0 as [Hb Ht]; eauto.
+  unfold map_constant_body. cbn in *.
+  f_equal.
+  - rewrite <- (closedn_subst_instance 0 _ u) in Ht.
+    apply subst_closedn; eauto using closed_upwards with arith wf.
+  - destruct cst_body; cbn in *; auto.
     f_equal.
-    + apply subst_closedn; eauto using closed_upwards with arith wf.
-    + f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
-  - red in H0. f_equal.
-    intuition. simpl in *.
-    rewrite <- (closedn_subst_instance 0 ty u) in H0.
-    rewrite andb_true_r in H0.
+    rewrite <- (closedn_subst_instance 0 _ u) in Hb.
     eapply subst_closedn; eauto using closed_upwards with arith wf.
 Qed.
 
@@ -585,17 +579,18 @@ Proof.
   rewrite rev_map_app.
   simpl. apply Alli_app in Ha as [Hl Hx].
   inv Hx. clear X0.
-  apply onArity in X as [s Hs].
+  apply onArity in X as (_ & s & Hs & _).
   specialize (IHl Hl).
   econstructor; eauto.
   fold (arities_context l) in *.
   unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
   1: now rewrite app_context_nil_l.
+  repeat (eexists; tea).
   simpl in X.
   eapply (env_prop_typing typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
   simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
-  rewrite -> Hs, app_context_nil_l in X. simpl. exists s.
+  rewrite -> Hs, app_context_nil_l in X.
   apply X.
 Qed.
 
@@ -611,7 +606,7 @@ Lemma on_constructor_closed_arities {cf:checker_flags} {Σ : global_env} {wfΣ :
   on_constructor cumulSpec0 (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   closedn #|arities_context (ind_bodies mdecl)| cdecl.(cstr_type).
 Proof.
-  intros [? ? [s Hs] _ _ _ _].
+  intros [? ? (_ & s & Hs & _) _ _ _ _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [id cty car].
   apply subject_closed in Hs; eauto.
@@ -623,7 +618,7 @@ Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} 
                     (subst_instance u cdecl.(cstr_type))
   in closed cty.
 Proof.
-  intros [? ? [s Hs] _ _ _ _].
+  intros [? ? (_ & s & Hs & _) _ _ _ _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [id cty car].
   apply subject_closed in Hs; eauto.
@@ -1331,7 +1326,7 @@ Notation " Σ ;;; Γ |-[ P ] t = u " := (cumulP Conv Σ P Γ t u) (at level 50, 
 
 Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.
 Proof.
-  move=> [s Hs].
+  intros (_ & s & Hs & _).
   now eapply typing_wf_local.
 Qed.
 
@@ -1752,11 +1747,10 @@ Qed.
   Qed.
 
   Lemma All_local_env_inst {Γ0 Γ' Δ s} :
-    All_local_env
-      (lift_typing
-        (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-          forall (Δ : PCUICEnvironment.context) (σ : nat -> term),
-          wf_local Σ Δ -> well_subst Σ Γ σ Δ -> Σ;;; Δ |- t.[σ] : T.[σ]) Σ)
+    All_local_env (fun Γ j =>
+      forall (Δ : PCUICEnvironment.context) (σ : nat -> term),
+      wf_local Σ Δ -> well_subst Σ Γ σ Δ ->
+      (lift_typing0 (fun t T => Σ;;; Δ |- t.[σ] : T.[σ])) j)
       (Γ0,,, Γ',,, Δ) ->
     wf_local Σ Γ0 ->
     subslet Σ Γ0 s Γ' ->
@@ -1779,6 +1773,11 @@ Theorem substitution_prop {cf} : env_prop
     (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
     wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
     Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T)
+  (fun Σ Γ0 j =>
+    forall (Γ Γ' Δ : context) (s : list term)
+    (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
+    wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+    lift_typing0 (fun t T => Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T) j)
   (fun Σ Γ0 =>
     forall (Γ Γ' Δ : context) (s : list term)
     (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
@@ -1798,9 +1797,9 @@ Proof.
       eapply All_local_env_inst; eauto. }
   unshelve eapply on_wf_global_env_impl ; tea.
   clear. intros * HΣ HP HQ Hty.
-  apply lift_typing_impl with (1 := Hty); clear -HΣ HP.
   intros. subst Γ.
-  rewrite !subst_inst. eapply X => //.
+  unshelve eapply lift_typing_impl with (1 := Hty _ _ X _) => t T HT.
+  3: rewrite !subst_inst; eapply HT => //.
   now unshelve eapply subslet_well_subst.
 Qed.
 
@@ -1820,8 +1819,9 @@ Corollary isType_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ T} :
   isType Σ (Γ ,,, Γ' ,,, Δ) T ->
   isType Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T).
 Proof.
-  intros Hs [s' Ht].
-  eapply substitution in Ht; tea. now eexists.
+  intros Hs HT.
+  apply lift_typing_f_impl with (1 := HT) => // ?? Ht.
+  eapply substitution in Ht; tea.
 Qed.
 
 Corollary substitution_wf_local {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
@@ -1851,7 +1851,7 @@ Proof.
   intros Ht.
   assert ((wf_local Σ Γ) * (Σ ;;; Γ |- u : U)%type) as [wfΓ tyu].
   { apply typing_wf_local in Ht; eauto with wf.
-    now depelim Ht; simpl in *.
+    depelim Ht; split; tas. now destruct l as (? & _).
   }
   eapply (substitution (Γ':=[vdef n u U]) (Δ := [])); tea.
   now eapply subslet_def_tip.

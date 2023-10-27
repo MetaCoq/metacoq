@@ -33,22 +33,15 @@ Proof.
   rewrite /lift_context.
   apply All_local_env_fold.
   eapply (All_local_env_impl_ind XΓ').
-  intros Δ t [T|] IH; simpl.
-  - intros Hf. rewrite -/(lift_context #|Γ''| 0 Δ).
-    rewrite Nat.add_0_r. rewrite !lift_rename.
-    eapply (Hf xpredT).
-    split.
-    + apply wf_local_app; auto.
-      apply (All_local_env_fold (fun Δ => lift_typing typing Σ (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
-    + apply weakening_renaming.
-  - intros Hty. simple apply (infer_typing_sort_impl (P := fun Σ Γ T s => forall P Δ f, renaming _ Σ Γ Δ _ -> Σ;;; Δ |- rename f T : rename f s)) with id Hty; intros Hs.
-    rewrite -/(lift_context #|Γ''| 0 Δ).
-    rewrite Nat.add_0_r !lift_rename.
-    eapply (Hs xpredT).
-    split.
-    + apply wf_local_app; auto.
-      apply (All_local_env_fold (fun Δ => lift_typing typing Σ (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
-    + apply weakening_renaming.
+  intros Δ j IH H; simpl.
+  apply lift_typing_f_impl with (1 := H) => // ??.
+  intros Hf; rewrite -/(lift_context #|Γ''| 0 Δ).
+  rewrite Nat.add_0_r; rewrite !lift_rename.
+  eapply (Hf xpredT).
+  split.
+  + apply wf_local_app; auto.
+    apply (All_local_env_fold (fun Δ => lift_typing1 (typing Σ) (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
+  + apply weakening_renaming.
 Qed.
 
 Lemma weakening_wf_local_eq {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' n} :
@@ -189,15 +182,15 @@ Proof.
   + constructor.
   + simpl.
     eapply All_local_env_app. split; auto.
-    * repeat constructor.
-      apply infer_typing_sort_impl with id p; intros Hs.
-      eapply (weakening Σ Γ Δ _ (tSort _)); auto.
+    * constructor. 1: constructor.
+      apply lift_typing_f_impl with (1 := p) => // ?? Hs.
+      eapply (weakening Σ Γ Δ); auto.
     * specialize (IHa (Δ ,,, [vass (dname x) (lift0 #|Δ| (dtype x))])).
       rewrite app_length in IHa. simpl in IHa.
       forward IHa.
       ** simpl; constructor; auto.
-         apply infer_typing_sort_impl with id p; intros Hs.
-         eapply (weakening Σ Γ Δ _ (tSort _)); auto.
+         apply lift_typing_f_impl with (1 := p) => // ?? Hs.
+         eapply (weakening Σ Γ Δ); auto.
       ** eapply All_local_env_impl; eauto.
         simpl; intros.
         rewrite app_context_assoc. apply X.
@@ -212,8 +205,8 @@ Proof.
   intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
   assert (n = #|firstn n Γ|).
   { rewrite firstn_length_le; auto with arith. }
-  apply infer_typing_sort_impl with id wfty; intros Hs.
-  rewrite {3}H.
-  eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ) (T := tSort _));
+  apply lift_typing_f_impl with (1 := wfty) => // ?? Hs.
+  rewrite {3 4}H.
+  eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ));
     eauto with wf.
 Qed.

@@ -310,9 +310,8 @@ Section Inversion.
         let types := fix_context mfix in
         fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) (fix_context mfix) Γ) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ ⊢ dtype decl ≤ T.
   Proof using wfΣ.
@@ -326,10 +325,8 @@ Section Inversion.
         cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
-        ) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) (fix_context mfix) Γ) mfix ×
         wf_cofixpoint Σ mfix ×
         Σ ;;; Γ ⊢ decl.(dtype) ≤ T.
   Proof using wfΣ.

@@ -296,12 +296,13 @@ Proof.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
     unfold map_decl. simpl. unfold vass. f_equal.
-    destruct t0 as [s ht]. eapply typed_inst. all: eauto.
+    destruct t0 as (_ & s & ht & _). eapply typed_inst. all: eauto.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
+    destruct t0 as (hb & s & ht & _). cbn in hb.
     unfold map_decl. simpl. unfold vdef. f_equal.
     + f_equal. eapply typed_inst. all: eauto.
-    + eapply typed_inst in t1 as [? _]. all: eauto.
+    + eapply typed_inst. all: eauto.
 Qed.
 
 Lemma inst_destArity :
@@ -1603,11 +1604,11 @@ Proof using Type.
 Qed.
 
 Lemma wf_local_app_inst (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
-  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
+  All_local_env (fun Γ' j =>
     forall Δ σ,
     wf_local Σ Δ ->
     Σ ;;; Δ ⊢ σ : (Γ ,,, Γ') ->
-    Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Δ ->
+    lift_typing0 (fun (t T : term) => Σ ;;; Δ |- t.[σ] : T.[σ]) j) Δ ->
   forall Δ' σ,
   Σ ;;; Δ' ⊢ σ : Γ ->
   wf_local Σ Δ' ->
@@ -1617,15 +1618,11 @@ Proof using Type.
   induction X.
   - now simpl.
   - rewrite inst_context_snoc /=. constructor; auto.
-    apply infer_typing_sort_impl with id t0; intros Hs.
-    eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
+    eapply t0; tas.
     eapply well_subst_app; auto.
   - rewrite inst_context_snoc /=. constructor; auto.
-    * apply infer_typing_sort_impl with id t0; intros Hs.
-      eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
-      eapply well_subst_app; auto.
-    * simpl. apply t1 => //.
-      eapply well_subst_app; eauto.
+    eapply t0; tas.
+    eapply well_subst_app; auto.
 Qed.
 
 Lemma usubst_up_vass {Γ Δ σ na A} :

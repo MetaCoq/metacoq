@@ -193,7 +193,9 @@ Lemma isType_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T}
   wf_local Σ Δ ->
   isType Σ Δ T.
 Proof using Type.
-  intros [s Hs]. exists s. eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
+  intros HT ??.
+  apply lift_typing_impl with (1 := HT); intros ?? H.
+  eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma typing_spine_arity_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ args T' i u pars :
@@ -332,7 +334,7 @@ Proof using Type.
     now eapply isType_tLetIn_red in isty; pcuic.
   - depelim hi. solve_discr.
     specialize (i1 hd). specialize (IHhsp i1).
-    destruct (validity t) as [s Hs]. eapply inversion_mkApps in Hs as [? [hi _]].
+    destruct (validity t) as (_ & s & Hs & _). eapply inversion_mkApps in Hs as [? [hi _]].
     eapply inversion_Ind in hi as [mdecl [idecl [decli [? ?]]]].
     econstructor; tea. 2:{ eapply IHhsp. eapply isType_apply in isty; tea. }
     now eapply isType_ws_cumul_pb_refl. eauto.

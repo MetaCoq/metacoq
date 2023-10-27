@@ -1728,9 +1728,8 @@ Section Rho.
       case e: lookup_env => [[decl|decl]|] //; simp rho.
       case eb: cst_body => [b|] //; simp rho.
       rewrite rename_inst inst_closed0 //.
-      apply declared_decl_closed in e => //.
-      hnf in e. rewrite eb in e. rewrite closedn_subst_instance; auto.
-      now move/andP: e => [-> _].
+      apply declared_decl_closed in e as [Hb Ht] => //.
+      hnf in Hb. rewrite eb /= in Hb. rewrite closedn_subst_instance; auto.
 
     - (* construct/cofix iota reduction *)
       simpl; simp rho.

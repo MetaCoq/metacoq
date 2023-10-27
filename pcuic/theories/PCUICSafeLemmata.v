@@ -215,8 +215,8 @@ Section Lemmata.
     ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
   Proof.
     intros [X].
-    intros. eapply validity in X; try assumption.
-    destruct X. now exists (tSort x).
+    eapply validity in X; tas.
+    now apply isType_welltyped.
   Defined.
 
   Lemma wat_welltyped {Γ T} :
@@ -345,7 +345,7 @@ Section Lemmata.
     apply wf_local_app_inv in wfl as (_&wf).
     apply wf_local_rel_app_inv in wf as (wf&_).
     destruct h; depelim wf; simpl in *.
-    all: destruct l; econstructor; eauto.
+    all: destruct l as (Hb & s & Hs & _); cbn in *; econstructor; eauto.
   Qed.
   (* TODO: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' :
@@ -395,7 +395,7 @@ Section Lemmata.
         depelim a.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
-        depelim a0.
+        depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
         rewrite map_app in t0.
         simpl in t0.
@@ -407,7 +407,7 @@ Section Lemmata.
         depelim a.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
-        depelim a0.
+        depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
         rewrite map_app in t0.
         simpl in t0.
@@ -416,7 +416,7 @@ Section Lemmata.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
       destruct p.
-      + apply validity in scrut_ty as (?&typ).
+      + apply validity in scrut_ty as (_ & ? & typ & _).
         clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
         clear -spine.

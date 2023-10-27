@@ -38,35 +38,30 @@ Proof.
   change (d :: Γ') with (Γ' ,, d).
   destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
   - rewrite subst_context_snoc0. simpl.
-    inversion HH; subst; cbn in *. destruct X0 as [s X0].
+    inversion HH; subst; cbn in *.
     change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
     assert (subslet Σ (Δ ,,, Γ) [b] [vdef na b t]). {
       pose proof (cons_let_def Σ (Δ ,,, Γ) [] [] na b t) as XX.
       rewrite !subst_empty in XX. apply XX. constructor.
-      apply All_local_env_app_l in X. inversion X; subst; cbn in * ; assumption.
+      apply All_local_env_app_l in X. inversion X; subst; cbn in * ; now eapply unlift_TermTyp.
     }
     constructor; cbn; auto.
     1: apply IHΓ' ; exact X.
-    1: exists s.
-    1: change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-    all: rewrite app_context_assoc.
-    all: eapply substitution; tea.
-    1: rewrite !app_context_assoc in X0 ; assumption.
-    rewrite !app_context_assoc in X1 ; assumption.
+    apply lift_typing_f_impl with (1 := X0) => // ?? Hs.
+    rewrite !app_context_assoc in Hs |- *.
+    eapply substitution; tea.
   - rewrite subst_context_snoc0. simpl.
-    inversion HH; subst; cbn in *. destruct X0 as [s X0].
+    inversion HH; subst; cbn in *.
     change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
     assert (subslet Σ (Δ ,,, Γ) [b] [vdef na b t]). {
       pose proof (cons_let_def Σ (Δ ,,, Γ) [] [] na b t) as XX.
       rewrite !subst_empty in XX. apply XX. constructor.
-      apply All_local_env_app_l in X. inversion X; subst; cbn in *; assumption. }
+      apply All_local_env_app_l in X. inversion X; subst; cbn in *; now eapply unlift_TermTyp. }
     constructor; cbn; auto.
     1: apply IHΓ' ; exact X.
-    exists s.
-    change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-    rewrite app_context_assoc.
-    all: eapply substitution; tea.
-    rewrite !app_context_assoc in X0. eassumption.
+    apply lift_typing_f_impl with (1 := X0) => // ?? Hs.
+    rewrite !app_context_assoc in Hs |- *.
+    eapply substitution; tea.
 Qed.
 
 Lemma wf_rel_weak `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) Γ' :
@@ -77,25 +72,19 @@ Proof.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + apply infer_typing_sort_impl with id X0; intros Hs.
+    + apply lift_typing_impl with (1 := X0) => // ?? Hs.
       apply weaken_ctx ; eauto.
-    + apply weaken_ctx ; auto.
   - intros wfl. inversion_clear wfl.
     constructor.
     + apply IHΓ'. assumption.
-    + apply infer_typing_sort_impl with id X0; intros Hs.
+    + apply lift_typing_impl with (1 := X0) => // ?? Hs.
       apply weaken_ctx ; eauto.
 Qed.
 
 Lemma wf_local_local_rel `{checker_flags} Σ Γ Γ' : wf_local Σ (Γ ,,, Γ') -> wf_local_rel Σ Γ Γ'.
 Proof.
-  induction Γ'.
-  1: constructor.
-  cbn.
-  intros wfΓ.
-  inversion_clear wfΓ.
-  all: constructor ; auto.
-  all: apply IHΓ' ; eassumption.
+  intro wfΓ.
+  apply All_local_env_app_inv in wfΓ as [_ wfr] => //.
 Qed.
 
 Section BDToPCUICTyping.
@@ -133,36 +122,34 @@ Section BDToPCUICTyping.
   (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
-    All_local_env_over_sorting checking infering_sort
-      (fun Σ Γ _ t T _ => Pcheck Γ t T)
-      (fun Σ Γ _ t s _ => Psort Γ t s)
-      Σ Γ all ->
+    All_local_env_over_sorting (checking Σ) (infering_sort Σ)
+      (fun Γ _ t T _ => Pcheck Γ t T)
+      (fun Γ _ t s _ => Psort Γ t s)
+      Γ all ->
     wf_local Σ Γ.
   Proof using Type.
     intros allo ; induction allo.
-    all: constructor.
-    1,3: assumption.
-    all: do 2 red.
-    3: apply Hc; auto.
-    all: apply infer_sort_impl with id tu; now intros Ht.
+    all: constructor; tas.
+    all: apply lift_sorting_it_impl with tu => //= Ht; eauto.
+    apply Hc; cbn; auto.
+    now eapply has_sort_isType, Hs.
   Qed.
 
   Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
     All_local_env_over_sorting
-      (fun Σ Δ => checking Σ (Γ,,,Δ))
-      (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
-      (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
-      (fun Σ Δ _ t s _ => Psort (Γ,,,Δ) t s)
-      Σ Γ' all ->
+      (fun Δ => checking Σ (Γ,,,Δ))
+      (fun Δ => infering_sort Σ (Γ,,,Δ))
+      (fun Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
+      (fun Δ _ t s _ => Psort (Γ,,,Δ) t s)
+      Γ' all ->
     wf_local_rel Σ Γ Γ'.
   Proof using Type.
     intros allo ; induction allo.
-    all: constructor.
-    1,3: assumption.
-    all: red.
-    3: apply Hc; [by apply wf_local_app|].
-    all: apply infer_sort_impl with id tu; intros Ht.
-    all: now apply Hs, wf_local_app.
+    all: constructor; tas.
+    all: apply wf_local_app in IHallo; tas.
+    all: apply lift_sorting_it_impl with tu => //= Ht; eauto.
+    apply Hc; cbn; auto.
+    now eapply has_sort_isType, Hs.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) :
@@ -199,7 +186,7 @@ Section BDToPCUICTyping.
       {
         eapply wf_local_rel_app_inv in wfΔ as [wfd _].
         inversion_clear wfd.
-        eassumption.
+        apply lift_sorting_it_impl_gen with X2 => //.
       }
       constructor ; auto.
       apply X ; auto.
@@ -227,30 +214,32 @@ Section BDToPCUICTyping.
     - red ; intros ; econstructor ; eauto.
       apply X2.
       constructor. 1: by auto.
-      eexists. eauto.
+      eapply has_sort_isType. eauto.
 
     - red ; intros ; econstructor ; eauto.
       apply X2.
       constructor. 1: by auto.
-      eexists. eauto.
+      eapply has_sort_isType. eauto.
 
     - red ; intros ; econstructor ; eauto.
       + apply X2 ; auto.
-        eexists. eauto.
+        eapply has_sort_isType. eauto.
 
       + apply X4.
         constructor ; auto.
-        * eexists. eauto.
-        * apply X2 ; auto. eexists. eauto.
+        repeat (eexists; tea); cbn.
+        * apply X2 ; auto. eapply has_sort_isType. eauto.
+        * eauto.
+
 
     - red ; intros.
       eapply type_App' ; auto.
       apply X2 ; auto.
       specialize (X0 X3).
-      apply validity in X0 as [? X0].
+      apply validity in X0 as (_ & s & X0 & _).
       apply inversion_Prod in X0 as (? & ? & ? & _).
       2: done.
-      eexists. eassumption.
+      eapply has_sort_isType; eassumption.
 
     - red ; intros ; econstructor ; eauto.
 
@@ -305,9 +294,9 @@ Section BDToPCUICTyping.
       }
 
       assert (isType Σ Γ (mkApps (tInd ci (puinst p))
-        (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
+        (pparams p ++ skipn (ci_npar ci) args))).
       {
-        eexists.
+        eapply has_sort_isType.
         eapply type_mkApps_arity.
         1: econstructor ; eauto.
         erewrite PCUICGlobalMaps.ind_arity_eq.
@@ -324,9 +313,8 @@ Section BDToPCUICTyping.
       assert (wf_local Σ (Γ,,,case_predicate_context ci mdecl idecl p)).
       {
         eapply wf_case_predicate_context ; tea.
-        eexists ; tea.
       }
-
+      pose proof X12 as (_ & ? & X12' & _).
       econstructor ; eauto.
       2-3: split ; eauto.
       1: now eapply type_Cumul ; eauto ; apply cumulAlgo_cumulSpec in cum.
@@ -334,8 +322,6 @@ Section BDToPCUICTyping.
       eapply All2i_impl.
       1:{ apply All2i_prod ; [eassumption|idtac].
           eapply wf_case_branches_types' ; eauto.
-          econstructor.
-          eauto.
       }
       intros * ((?&?&?&?&Hbody)&[]).
       split ; tea.
@@ -344,7 +330,7 @@ Section BDToPCUICTyping.
       fold ptm in brctxty.
       repeat split ; auto.
       apply Hbody ; auto.
-      eexists.
+      eapply has_sort_isType.
       eassumption.
 
     - red ; intros ; econstructor ; eauto.
@@ -352,75 +338,59 @@ Section BDToPCUICTyping.
     - red ; intros ; econstructor ; eauto.
 
       + clear H H0 H1 X0.
-        induction X.
-        all: constructor ; auto.
-        destruct p as (? & ? & ?).
-        eexists.
-        apply p.
+        apply All_impl with (1 := X) => d Hd.
+        apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
         auto.
 
       + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
-        { clear H H0 H1 X0.
-          induction X.
-          all: constructor ; auto.
-          destruct p as (? & ? & ?).
-          eexists.
-          apply p.
+        { apply All_impl with (1 := X) => d Hd.
+          apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
           auto.
         }
         have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
 
-        remember (fix_context mfix) as Γ'.
-        clear H H0 H1 HeqΓ'.
-        induction X0.
-        all: constructor ; auto.
-        2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
-        destruct p.
-        apply p ; auto.
-        inversion_clear Htypes as [| ? ? [u]].
-        exists u.
-        change (tSort u) with (lift0 #|Γ'| (tSort u)).
+        remember (fix_context mfix) as Γ' eqn:e.
+        clear H H0 H1 e.
+        apply All_mix with (1 := Htypes) in X0.
+        apply All_impl with (1 := X0) => d [] isTy Hd.
+        apply lift_sorting_it_impl with Hd => //= [] [Ht IHt]; eauto.
+        apply IHt; tas.
+        apply lift_typing_f_impl with (1 := isTy) => // ?? HT.
         apply weakening.
         all: auto.
 
     - red ; intros ; econstructor ; eauto.
       + clear H H0 H1 X0.
-        induction X.
-        all: constructor ; auto.
-        destruct p as (? & ? & ?).
-        eexists.
-        apply p.
+        apply All_impl with (1 := X) => d Hd.
+        apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
         auto.
 
       + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
         { clear H H0 H1 X0.
-          induction X.
-          all: constructor ; auto.
-          destruct p as (? & ? & ?).
-          eexists.
-          apply p.
+          apply All_impl with (1 := X) => d Hd.
+          apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
           auto.
         }
         have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf ; auto.
-        remember (fix_context mfix) as Γ'.
-        clear H H0 H1 HeqΓ'.
-        induction X0.
-        all: constructor ; auto.
-        2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
-        destruct p.
-        apply p ; auto.
-        inversion_clear Htypes as [| ? ? [u]].
-        exists u.
-        change (tSort u) with (lift0 #|Γ'| (tSort u)).
+
+        remember (fix_context mfix) as Γ' eqn:e.
+        clear H H0 H1 e.
+        apply All_mix with (1 := Htypes) in X0.
+        apply All_impl with (1 := X0) => d [] isTy Hd.
+        apply lift_sorting_it_impl with Hd => //= [] [Ht IHt]; eauto.
+        apply IHt; tas.
+        apply lift_typing_f_impl with (1 := isTy) => // ?? HT.
         apply weakening.
         all: auto.
 
     - red; intros.
       econstructor; eauto.
-      depelim X0; constructor; eauto.
-      eapply hty; eauto. eexists. econstructor; eauto.
-      eapply hdef; eauto. eexists; eauto. eapply hty; eauto. eexists; econstructor; eauto.
-      solve_all. eapply X6; eauto. eexists. eapply hty; eauto. eexists; econstructor; eauto.
+      depelim X0; try solve [ constructor; eauto ].
+      unfold Pcheck in hty, hdef.
+      do 2 forward hty; tas. 1: eapply has_sort_isType; now econstructor.
+      do 2 forward hdef; tas. 1: now eapply has_sort_isType.
+      constructor; eauto.
+      solve_all. eapply X6; eauto. now eapply has_sort_isType.
 
     - red ; intros.
       now eapply type_reduction.
@@ -432,7 +402,7 @@ Section BDToPCUICTyping.
       now eapply type_reduction.
 
     - red ; intros.
-      destruct X3.
+      destruct X3 as (_ & ? & ? & _).
       econstructor ; eauto.
       eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_ws_cumul_pb ; tea.
       + fvs.
@@ -472,7 +442,7 @@ Theorem infering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ
   wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> isType Σ Γ t.
 Proof.
   intros wfΓ Ht.
-  exists u.
+  repeat (eexists; tea).
   now apply infering_sort_typing.
 Qed.
 
@@ -549,5 +519,6 @@ Proof.
     1: constructor.
     rewrite !subst_empty.
     eapply wf_local_app_inv in wfΓ as [wfΓ _].
-    now inversion wfΓ ; subst.
+    inversion wfΓ ; subst.
+    now eapply unlift_TermTyp.
 Qed.

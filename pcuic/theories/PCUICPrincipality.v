@@ -280,11 +280,11 @@ Section Principality.
       assert (consistent_instance_ext Σ (ind_universes x6) u').
       { eapply type_reduction in t2. 2:eapply redr.
         eapply validity in t2; eauto.
-        destruct t2 as [s Hs].
+        destruct t2 as (_ & s & Hs & _).
         eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
       assert (consistent_instance_ext Σ (ind_universes x6) x5).
         { eapply validity in t1; eauto.
-          destruct t1 as [s Hs].
+          destruct t1 as (_ & s & Hs & _).
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
       set (p := {| proj_ind := ind; proj_npars := k; proj_arg := pars |}).
       transitivity (subst0 (u :: List.rev x0') (subst_instance x5 (proj_type x3))); cycle 1.
@@ -481,8 +481,14 @@ Proof.
   (fun Σ Γ t T =>
     forall (onu : on_udecl Σ.1 Σ.2),
     forall t' T' : term, Σ ;;; Γ |- t' : T' -> leq_term empty_global_env Σ t' t -> Σ;;; Γ |- t' : T)
-  (fun Σ Γ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
-    1-13:match goal with
+  (fun Σ Γ j => lift_typing typing Σ Γ j)
+  (fun Σ Γ => wf_local Σ Γ)).
+  { intros ???? H; apply lift_typing_impl with (1 := H) => ??[]//. }
+  1: now auto.
+
+  all: intros Σ wfΣ Γ wfΓ; intros.
+
+  1-13:match goal with
     [ H : leq_term _ _ _ _ |- _ ] => depelim H
     end.
   all:try solve [econstructor; eauto].
@@ -499,7 +505,7 @@ Proof.
     eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
       eassumption. constructor. eauto. }
     all:eauto.
-    2:{ constructor; eauto. now exists s1. }
+    2:{ pcuic. }
     specialize (X3 onu _ _ Hb X5_2).
     econstructor; eauto.
     apply leq_term_empty_leq_term in X5_2.
@@ -720,9 +726,10 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     econstructor. 3:eapply H0. all:eauto.
-    eapply (All_impl X0); pcuicfo.
-    apply infer_typing_sort_impl with id X2; now intros [].
-    eapply (All_impl X1); pcuicfo; now destruct X2.
+    eapply (All_impl X0); intros d Ht.
+    apply lift_typing_impl with (1 := Ht); now intros ?? [].
+    eapply (All_impl X1); intros d Ht.
+    apply lift_typing_impl with (1 := Ht); now intros ?? [].
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. eapply eq_term_empty_leq_term in eqty.
@@ -733,9 +740,10 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     eapply type_CoFix. 3:eapply H0. all:eauto.
-    eapply (All_impl X0); pcuicfo.
-    apply infer_typing_sort_impl with id X2; now intros [].
-    eapply (All_impl X1); pcuicfo; now destruct X2.
+    eapply (All_impl X0); intros d Ht.
+    apply lift_typing_impl with (1 := Ht); now intros ?? [].
+    eapply (All_impl X1); intros d Ht.
+    apply lift_typing_impl with (1 := Ht); now intros ?? [].
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
@@ -744,7 +752,7 @@ Proof.
   - epose proof (type_Prim _ _ _ _ _ X H H0 H1 X0). eapply validity in X4.
     depelim X1; depelim X3; depelim o.
     1-2:econstructor; tea.
-    depelim X0. destruct X4 as [s ?].
+    depelim X0. destruct X4 as (_ & s & ? & _).
     econstructor; tea.
     eapply inversion_Prim in X2 as [prim_ty' [cdecl' []]]; eauto.
     rewrite e2 in H. noconf H.
@@ -762,7 +770,7 @@ Proof.
       now eapply eq_term_empty_eq_term.
 
   - eapply type_Cumul'.
-    eapply X1; eauto. now exists s.
+    eapply X1; eauto. now eapply has_sort_isType.
     auto.
 Qed.
 

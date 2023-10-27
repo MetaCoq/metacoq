@@ -644,7 +644,7 @@ Definition wt {cf} Σ Γ t := ∑ T, Σ ;;; Γ |- t : T.
 
 Lemma isType_wt {cf} Σ Γ T : isType Σ Γ T -> wt Σ Γ T.
 Proof.
-  intros [s hs]; now exists (PCUICAst.tSort s).
+  intros (_ & s & hs & _); now exists (PCUICAst.tSort s).
 Qed.
 Coercion isType_wt : isType >-> wt.
 
@@ -744,12 +744,12 @@ Section wtsub.
       eexists; eauto.
     - eapply inversion_Fix in h as (?&?&?&?&?&?&?); tea.
       eapply All_prod.
-      eapply (All_impl a). intros ? h; exact h.
-      eapply (All_impl a0). intros ? h; eexists; tea.
+      eapply (All_impl a). intros ? (_ & ? & ? & _); now eexists.
+      eapply (All_impl a0). intros ? (h & _); cbn in h; eexists; tea.
     - eapply inversion_CoFix in h as (?&?&?&?&?&?&?); tea.
       eapply All_prod.
-      eapply (All_impl a). intros ? h; exact h.
-      eapply (All_impl a0). intros ? h; eexists; tea.
+      eapply (All_impl a). intros ? (_ & ? & ? & _); now eexists.
+      eapply (All_impl a0). intros ? (h & _); cbn in h; eexists; tea.
     - eapply inversion_Prim in h as (?&?&[]); eauto.
       destruct prim as [? []]; cbn in *; eauto; try exact tt.
       depelim p0. repeat split. now eexists. now eexists. solve_all. now eexists.
@@ -1511,10 +1511,10 @@ Proof.
     eapply trans_leq_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
-    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+    apply trans_red1 in r; eauto. 2:destruct ht as (_ & s & hs & _); now eexists.
     econstructor 2; tea.
   - destruct w as [r ht hv].
-    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+    apply trans_red1 in r; eauto. 2:destruct ht as (_ & s & hs & _); now eexists.
     econstructor 3; tea.
 Qed.
 
@@ -1523,25 +1523,25 @@ Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing �
 Lemma trans_wf_local' {cf} :
   forall (Σ : SE.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
-        (fun Σ0 Γ0 _ (t T : PCUICAst.term) _ =>
-           TT.typing (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
+        (fun Γ0 _ (t T : PCUICAst.term) _ =>
+           TT.typing (trans_global Σ) (trans_local Γ0) (trans t) (trans T))
     in
-    ST.All_local_env_over ST.typing P Σ Γ wfΓ ->
+    ST.All_local_env_over (ST.typing Σ) P Γ wfΓ ->
     TTwf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
   induction X.
   - simpl. constructor.
-  - simpl. econstructor.
-    + eapply IHX.
-    + simpl. destruct tu. exists x. eapply Hs.
-  - simpl. constructor; auto. red. destruct tu. exists x. auto.
+  - simpl. econstructor; auto.
+    simpl. destruct tu as (? & ? & ? & ?); cbn in *. repeat (eexists; tea).
+  - simpl. constructor; auto.
+    simpl. destruct tu as (? & ? & ? & ?); cbn in *. repeat (eexists; tea); cbn.
 Qed.
 
 Lemma trans_wf_local_env {cf} Σ Γ :
   ST.All_local_env
         (ST.lift_typing
-           (fun (Σ : SE.global_env_ext) Γ b ty =>
+           (fun Σ Γ b ty =>
               ST.typing Σ Γ b ty × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
         Γ ->
   TTwf_local (trans_global Σ) (trans_local Γ).
@@ -1549,11 +1549,10 @@ Proof.
   intros.
   induction X.
   - simpl. constructor.
-  - simpl. econstructor.
-    + eapply IHX.
-    + simpl. destruct t0. exists x. eapply p.
-  - simpl. constructor; auto. red. destruct t0. exists x. intuition auto.
-    red. red in t1. destruct t1. eapply t2.
+  - simpl. econstructor; auto.
+    simpl. destruct t0 as (_ & ? & (? & ?) & ?); cbn in *. repeat (eexists; tea).
+  - simpl. constructor; auto.
+    simpl. destruct t0 as ((? & ?) & ? & (? & ?) & ?); cbn in *. repeat (eexists; cbn; tea).
 Qed.
 
 Lemma trans_branches {cf} Σ Γ brs btys ps:
@@ -1603,55 +1602,39 @@ Proof.
   }
 
   induction X;cbn;constructor;auto;cbn in *.
-  - destruct t0 as (?&?&?).
-    exists x.
-    apply t1.
-  - destruct t0 as (?&?&?).
-    eexists;eassumption.
-  - destruct t1.
-    assumption.
+  - destruct t0 as (_&?&(?&?)&?).
+    repeat (eexists; tea); eauto.
+  - destruct t0 as ((?&?)&?&(?&?)&?).
+    repeat (eexists; tea); eauto.
 Qed.
 
 Lemma trans_mfix_All2 {cf} Σ Γ mfix xfix:
-  All
-  (fun d : def PCUICAst.term =>
-    (ST.typing Σ (SE.app_context Γ (SE.fix_context xfix))
-    (dbody d)
-    (S.lift0 #|SE.fix_context xfix| (dtype d)))
-    × TT.typing (trans_global Σ)
-      (trans_local (SE.app_context Γ (SE.fix_context xfix)))
-      (trans (dbody d))
-      (trans
-          (S.lift0 #|SE.fix_context xfix|
-            (dtype d)))) mfix ->
-  All
-    (fun d : def term =>
-    TT.typing (trans_global Σ)
-    (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) xfix))
-    (dbody d) (T.lift0 #|TT.fix_context (map (map_def trans trans) xfix)| (dtype d)))
-    (map (map_def trans trans) mfix).
+  All (on_def_body (lift_typing_conj
+      (typing Σ)
+      (fun Γ t T => TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)))
+    (SE.fix_context xfix) Γ) mfix ->
+  All (TT.on_def_body (fun Γ => TT.lift_typing0 (TT.typing (trans_global Σ) Γ))
+    (TT.fix_context (map (map_def trans trans) xfix)) (trans_local Γ)) (map (map_def trans trans) mfix).
 Proof.
   induction 1.
   - constructor.
-  - simpl; constructor.
-    + destruct p as [].
-      unfold app_context, SE.app_context in *.
-      unfold trans_local in t0.
-      rewrite map_app trans_fix_context in t0.
-      rewrite trans_dbody trans_lift trans_dtype in t0.
-      replace(#|SE.fix_context xfix|) with
-          (#|TT.fix_context (map(map_def trans trans) xfix)|) in t0.
-        2:now rewrite TT.fix_context_length map_length fix_context_length.
-        now destruct x.
-    + auto.
+  - simpl; constructor; auto.
+    destruct p as ((_ & Hb) & s & (_ & Ht) & _). cbn in Hb, Ht.
+    unfold app_context, SE.app_context in *.
+    rewrite /trans_local map_app trans_fix_context in Hb, Ht.
+    rewrite trans_lift in Hb, Ht.
+    replace(#|SE.fix_context xfix|) with
+        (#|TT.fix_context (map(map_def trans trans) xfix)|) in Hb, Ht.
+      2:now rewrite TT.fix_context_length map_length fix_context_length.
+    repeat (eexists; cbn; tea); eauto.
 Qed.
 
 Lemma All_over_All {cf} Σ Γ wfΓ :
-  ST.All_local_env_over ST.typing
-    (fun (Σ : SE.global_env_ext) (Γ : SE.context)
+  ST.All_local_env_over (ST.typing Σ)
+    (fun (Γ : SE.context)
       (_ : wf_local Σ Γ) (t T : PCUICAst.term)
       (_ : ST.typing Σ Γ t T) =>
-    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
+    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Γ wfΓ ->
   ST.All_local_env
     (ST.lift_typing
       (fun (Σ0 : SE.global_env_ext) (Γ0 : SE.context)
@@ -1661,19 +1644,8 @@ Lemma All_over_All {cf} Σ Γ wfΓ :
 Proof.
   intros H.
   induction H;cbn.
-  - constructor.
-  - constructor.
-    + apply IHAll_local_env_over_gen.
-    + cbn in *.
-      destruct tu.
-      eexists;split;eassumption.
-  - constructor.
-    + apply IHAll_local_env_over_gen.
-    + cbn in *.
-      destruct tu.
-      eexists;split;eassumption.
-    + cbn in *.
-      split;eassumption.
+  all: constructor; eauto.
+  all: apply lift_sorting_it_impl with tu => //.
 Qed.
 
 Lemma trans_decompose_prod_assum :
@@ -1894,9 +1866,9 @@ Section Typing_Spine_size.
   Fixpoint typing_spine_size {t T U} (s : typing_spine Σ Γ t T U) : size :=
   match s with
   | type_spine_eq ty => 0
-  | type_spine_nil ty ty' ist cum => typing_size ist.π2
+  | type_spine_nil ty ty' ist cum => typing_size ist.2.π2.1
   | type_spine_cons hd tl na A B T B' typrod cumul ty s' =>
-    (max (typing_size typrod.π2) (max (typing_size ty) (typing_spine_size s')))%nat
+    (max (typing_size typrod.2.π2.1) (max (typing_size ty) (typing_spine_size s')))%nat
   end.
 End Typing_Spine_size.
 
@@ -1925,11 +1897,11 @@ Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'}
   (Hs : Σ ;;; Γ ⊢ S ≤ S')
   (ist : isType Σ Γ S') :
   typing_spine_size (typing_spine_weaken_concl sp tyT Hs ist) <=
-  max (typing_spine_size sp) (typing_size ist.π2).
+  max (typing_spine_size sp) (typing_size ist.2.π2.1).
 Proof.
   induction sp; simpl; auto. lia.
   rewrite - !Nat.max_assoc.
-  specialize (IHsp (PCUICArities.isType_apply i t) Hs). lia.
+  specialize (IHsp (PCUICArities.isType_apply i t) Hs). cbn in *. lia.
 Qed.
 
 Ltac sig := unshelve eexists.
@@ -1944,7 +1916,7 @@ Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg
   (sp : typing_spine Σ Γ ty args (tProd na A B))
   (argd : Σ ;;; Γ |- arg : A) :
   ∑ sp' : typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}),
-    typing_spine_size sp' <= max (typing_size isty.π2) (max (typing_spine_size sp) (typing_size argd)).
+    typing_spine_size sp' <= max (typing_size isty.2.π2.1) (max (typing_spine_size sp) (typing_size argd)).
 Proof.
   revert arg argd.
   depind sp.
@@ -1961,7 +1933,7 @@ Proof.
     specialize (IHsp wf isty _ Harg) as [sp' Hsp'].
     sig.
     * econstructor. apply i. auto. auto. exact sp'.
-    * simpl. lia.
+    * simpl. cbn in *. lia.
 Qed.
 
 (** Likewise, in.Common-Coq, we can append without re-typing the result *)
@@ -2012,7 +1984,7 @@ Proof.
     exists fty, d'.
     split. lia.
     destruct hd' as [sp' Hsp].
-    destruct (typing_spine_app _ _ _ _ _ _ _ _ wfΣ (s; d1) sp' d3) as [appsp Happ].
+    destruct (typing_spine_app _ _ _ _ _ _ _ _ wfΣ (has_sort_isType s d1) sp' d3) as [appsp Happ].
     simpl in Happ.
     move: appsp Happ. rewrite equ firstn_skipn.
     intros app happ. exists app. lia.
@@ -2021,7 +1993,7 @@ Proof.
     rewrite PCUICAstUtils.atom_decompose_app. destruct t => /= //.
     eexists _, d2. split. lia.
     unshelve eexists.
-    econstructor. exists s; eauto. reflexivity. assumption. constructor.
+    econstructor. eapply has_sort_isType; eauto. reflexivity. assumption. constructor.
     simpl. lia.
 
   - destruct (isApp t) eqn:isapp => //.
@@ -2033,10 +2005,10 @@ Proof.
     destruct s0 as [sp Hsp].
     unshelve eexists. eapply typing_spine_weaken_concl; eauto. exact (PCUICValidity.validity d').
     eapply cumulSpec_cumulAlgo_curry in c; eauto; fvs.
-    exact (s; d2). cbn.
+    eapply (has_sort_isType s d2).
     epose proof (typing_spine_weaken_concl_size wfΣ sp (validity_term wfΣ d')
       (cumulSpec_cumulAlgo_curry Σ wfΣ Γ A B (typing_closed_context d') (type_is_open_term d1) (subject_is_open_term d2) c)
-      (s; d2)). simpl in H0. lia.
+      (has_sort_isType s d2)). simpl in H0. simpl. lia.
 Qed.
 
 (** Finally, for each typing spine built above, assuming we can apply the induction hypothesis
@@ -2066,7 +2038,8 @@ Proof.
     split.
     eapply cumul_decorate in c; tea.
     now eapply trans_cumul in c.
-    specialize (IH _ _ i.π2 H). now exists i.π1.
+    destruct i as (?&?&Hty&?); simpl in *.
+    specialize (IH _ _ Hty H). now eexists.
 
   - simpl; intros.
     forward IHsp.
@@ -2076,7 +2049,8 @@ Proof.
     forward IHt by lia.
     eapply cumul_decorate in c; tea.
     apply trans_cumul in c.
-    specialize (IH _ _ i.π2) as IHi.
+    destruct i as (?&?&Hty&?); simpl in *.
+    specialize (IH _ _ Hty) as IHi.
     forward IHi by lia.
     simpl in IHi.
     destruct IHsp as [T' [Hsp eq]].
@@ -2217,9 +2191,13 @@ Proof.
   apply (typing_ind_env_app_size (fun Σ Γ t T =>
     TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type
+    (fun Σ Γ j => TT.lift_typing TT.typing (trans_global Σ) (trans_local Γ) (judgment_map trans j))
     (fun Σ Γ =>
     TT.All_local_env (TT.lift_typing TT.typing (trans_global Σ)) (trans_local Γ))
   );intros.
+  - destruct X as (Hb & s & (_ & IHt) & e).
+    repeat (eexists; tea); cbn.
+    destruct j_term => //=. destruct Hb => //.
   - now eapply trans_wf_local_env, All_over_All.
   - rewrite trans_lift.
     rewrite trans_decl_type.
@@ -2303,7 +2281,7 @@ Proof.
       rewrite -[List.rev (trans_local _)]map_rev.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
-      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
+      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ Σ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
       now move: ctx; induction 1; cbn; constructor; auto;
         rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
@@ -2349,8 +2327,8 @@ Proof.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
     + eapply All_map, (All_impl X0).
-      intuition auto. destruct X2 as [s [? ?]].
-      exists s; intuition auto.
+      intros d (_ & s & (_ & IHt) & _).
+      repeat (eexists; tea); cbn.
     + fold trans.
       subst types.
       eapply trans_mfix_All2; eassumption.
@@ -2367,7 +2345,8 @@ Proof.
       now eapply TT.All_local_env_app_inv in X as [].
     + fold trans.
       eapply All_map, (All_impl X0).
-      intros x [s ?]; exists s; intuition auto.
+      intros d (_ & s & (_ & IHt) & _).
+      repeat (eexists; tea); cbn.
     + fold trans;subst types.
       now apply trans_mfix_All2.
     + now rewrite trans_wf_cofixpoint.
@@ -2386,7 +2365,7 @@ Proof.
       eapply ws_cumul_pb_forget in X4.
       eapply cumul_decorate in X4; tea.
       2:eapply validity; tea.
-      2:now exists s.
+      2:now eapply has_sort_isType.
       now eapply trans_cumul.
 Qed.
 

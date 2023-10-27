@@ -129,7 +129,7 @@ Module Environment (T : Term).
   Import T.
   #[global] Existing Instance subst_instance_constr.
 
-  Definition typ_or_sort := typ_or_sort_ term.
+  Definition judgment := judgment_ Universe.t term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).

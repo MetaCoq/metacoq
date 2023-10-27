@@ -1778,7 +1778,7 @@ Section Normal.
       * clear -X0 nf_ind_all; revert X0; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
       * clear -X nf_ind_all; revert X; induction 1; constructor; intuition eauto.
       * clear -X0 nf_ind_all. revert X0; induction 1; constructor; intuition eauto.
-      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; cbn in *; intuition eauto.
+      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; unfold on_local_decl, lift_wf_term in *; cbn in *; intuition eauto.
       * destruct 1; [eapply hne|eapply hlam|eapply hconstruct|eapply hcofix|eapply hind|eapply hprod]; eauto.
         clear -X nf_ind_all. revert X; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
         clear -X0 nf_ind_all. induction X0; constructor; eauto.

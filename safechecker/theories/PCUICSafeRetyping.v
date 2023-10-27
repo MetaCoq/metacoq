@@ -199,7 +199,7 @@ Qed.
     destruct (wf _ wfΣ) as [[]], (hΣ _ wfΣ) as [wΣ].
     specialize_Σ wfΣ.
     sq.
-    eapply infering_typing, validity in s as []; eauto.
+    eapply infering_typing, validity in s as (_ & s & Hs & _); eauto.
     now eexists.
   Defined.
   Next Obligation.
@@ -428,9 +428,10 @@ Qed.
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     constructor ; tea.
-    1: now eapply infering_sort_isType.
-    apply checking_typing ; eauto.
+    repeat (eexists; tea); cbn.
+    1: apply checking_typing ; eauto.
     now eapply infering_sort_isType.
+    now eapply infering_sort_typing.
   Defined.
   Next Obligation.
    cbn; intros; case b'_ty as []. cbn.
@@ -580,7 +581,7 @@ Qed.
     cbn in *. pose proof wt. specialize_Σ wfΣ.
     destruct infer.
     pose (hΣ _ wfΣ). cbn. specialize_Σ wfΣ. sq.
-    eapply infering_typing, validity in s as [] ; eauto.
+    eapply infering_typing, validity in s as (_ & ? & ? & _) ; eauto.
     now eexists.
   Defined.
 
@@ -659,7 +660,7 @@ Qed.
     specialize_Σ wfΣ.
     pose (hΣ _ wfΣ); sq.
     cbn.
-    eapply infering_typing, validity in s' as []; eauto.
+    eapply infering_typing, validity in s' as (_ & ? & ? & _); eauto.
     now eexists.
   Defined.
   Next Obligation.
@@ -856,7 +857,7 @@ Qed.
       cbn in ns. clear ns.
       specialize (wt _ wfΣ). destruct T as [T HT].
       cbn in *. destruct (HT _ wfΣ) as [[hty hp]].
-      eapply validity in hty. destruct wt as [[s Hs]].
+      eapply validity in hty. destruct wt as [(_ & s & Hs & _)].
       red in hp. specialize (hp _ Hs).
       eapply ws_cumul_pb_Sort_r_inv in hp as [s' [hs' _]].
       eapply (H s' hs').

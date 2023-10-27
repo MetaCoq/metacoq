@@ -510,9 +510,11 @@ Section WtContextConversion.
   Proof using Type.
     split.
     - induction 1; constructor; auto.
-      red in t0, t1. cbn. split; auto.
+      destruct t0 as (Hb & Ht). cbn in *.
+      split; tas. split; cbn; auto.
     - induction 1; [constructor|].
-      destruct d as [na [b|] ty]; cbn in p; constructor; intuition auto.
+      destruct d as [na [b|] ty]; cbn in p; constructor; auto.
+      destruct p; split; tas. apply i.
   Qed.
 
   Lemma wt_cumul_ctx_pb_forget {pb} {Γ Γ' : context} :

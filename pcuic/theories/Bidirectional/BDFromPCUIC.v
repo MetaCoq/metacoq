@@ -112,27 +112,30 @@ Section BDFromPCUIC.
 (** The big theorem*)
 Lemma bidirectional_from_pcuic `{checker_flags} :
       env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T})
+        (fun Σ Γ j => lift_sorting (fun t T => ∑ T', Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) (fun T u => ∑ u', Σ ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) j)
         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
 
+  { intros Σ wfΣ Γ j Hj.
+    apply lift_sorting_impl with (1 := Hj) => //.
+    - intros t T []. done.
+    - intros t u [HT0 HT1].
+      eapply conv_infer_sort. all: done. }
+
   all: intros Σ wfΣ Γ wfΓ.
 
   - intros bdwfΓ.
-    induction bdwfΓ.
-    all: constructor ; auto.
-    + apply conv_infer_sort in Hs ; auto.
-      2: by destruct tu.
-      destruct Hs as (?&?&?).
-      eexists.
-      eassumption.
-    + apply conv_check in Hc ; auto.
-      apply conv_infer_sort in Hs ; auto.
-      2: by destruct tu.
-      destruct Hs as (?&?&?).
-      1: eexists.
-      all: eassumption.
-    + by apply conv_check in Hc.
+    apply All_local_env_over_2 in bdwfΓ. clear wfΓ.
+    apply All_local_env_impl_gen with (1 := bdwfΓ). clear Γ bdwfΓ.
+    intros Γ bo ty Hj.
+    eapply lift_sorting_ex_it_impl_gen with (tu := Hj).
+    + destruct bo => //=.
+      intros [Hc Hc'].
+      apply conv_check in Hc'; done.
+    + intros [Hs Hs'].
+      apply conv_infer_sort in Hs' as (s' & Hs' & Hle); tea.
+      now eexists.
 
   - intros.
     eexists.
@@ -170,7 +173,7 @@ Proof.
     + econstructor. all: eassumption.
     + apply ws_cumul_pb_Prod ; auto.
       eapply isType_ws_cumul_pb_refl.
-      by eexists ; eauto.
+      by eapply has_sort_isType; eauto.
 
   - intros n t A u ? ? ? ? CumA ? Cumt ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
@@ -306,13 +309,13 @@ Proof.
         by (apply infering_ind_typing in i ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
-          apply validity in X1 as [].
+          apply validity in X1 as (_ & s1 & Hs1 & _).
           eapply invert_type_mkApps_ind ; eauto.
           apply H1.p1.
         }
       assert (consistent_instance_ext Σ (ind_universes mdecl) ui').
         { destruct isdecl.
-          apply validity in X2 as [] ; auto.
+          apply validity in X2 as (_ & s2 & Hs2 & _) ; auto.
           eapply invert_type_mkApps_ind ; eauto.
           eapply H2.p1.
         }
@@ -346,34 +349,38 @@ Proof.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as [? []] ; tea.
-      eexists ; tea.
+      eapply nth_error_all in Alltypes as Hj ; tea.
+      apply lift_typing_impl with (1 := Hj) => // ?? [] //.
     }
     constructor ; eauto.
-    + apply (All_impl Alltypes).
-      intros ? [? [? s]].
-      apply conv_infer_sort in s as [? []] ; auto.
+    + apply (All_impl Alltypes) => d Hj.
+      apply lift_sorting_ex_it_impl_gen with Hj => //. intros [Ht IHt].
+      apply conv_infer_sort in IHt as [? []] ; auto.
       eexists ; eauto.
-    + apply (All_impl Allbodies).
-      intros ? [? s].
-      by apply conv_check in s ; auto.
+    + apply (All_impl Allbodies) => d Hj.
+      apply lift_sorting_ex_it_impl_gen with Hj => //; intros [Ht IHt].
+      * by apply conv_check.
+      * apply conv_infer_sort in IHt as [? []] ; auto.
+        eexists ; eauto.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as [? []] ; tea.
-      eexists ; tea.
+      eapply nth_error_all in Alltypes as Hj ; tea.
+      apply lift_typing_impl with (1 := Hj) => // ?? [] //.
     }
     constructor ; eauto.
-    + apply (All_impl Alltypes).
-      intros ? [? [? s]].
-      apply conv_infer_sort in s as [? []] ; auto.
+    + apply (All_impl Alltypes) => d Hj.
+      apply lift_sorting_ex_it_impl_gen with Hj => //. intros [Ht IHt].
+      apply conv_infer_sort in IHt as [? []] ; auto.
       eexists ; eauto.
-    + apply (All_impl Allbodies).
-      intros ? [? s].
-      by apply conv_check in s ; auto.
+    + apply (All_impl Allbodies) => d Hj.
+      apply lift_sorting_ex_it_impl_gen with Hj => //; intros [Ht IHt].
+      * by apply conv_check.
+      * apply conv_infer_sort in IHt as [? []] ; auto.
+        eexists ; eauto.
 
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
     eexists. split; [econstructor; tea|].
@@ -425,7 +432,7 @@ Qed.
 Lemma isType_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t} :
   isType Σ Γ t -> ∑ u', Σ ;;; Γ |- t ▹□ u'.
 Proof.
-  intros [? ty].
+  intros (_ & s & ty & _).
   eapply typing_infering_sort in ty as [? []]; tea.
   now eexists.
 Qed.
@@ -465,12 +472,11 @@ Lemma wf_local_rel_wf_local_bd `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ Γ'} :
   wf_local_bd_rel Σ Γ Γ'.
 Proof.
   intros wfΓ'.
-  induction Γ' as [|[? [] ?]] in wfΓ' |- *.
-  all: constructor ; inversion wfΓ' ; subst ; cbn in *.
-  1,4: now apply IHΓ'.
-  - now apply isType_infering_sort.
-  - now apply typing_checking.
-  - now apply isType_infering_sort.
+  apply All_local_env_impl_gen with (1 := wfΓ'); clear Γ' wfΓ'.
+  intros Γ' ?? Hj.
+  apply lift_sorting_ex_it_impl_gen with Hj => //.
+  - destruct bo => //= Hb. now apply typing_checking.
+  - intro Hty. eapply typing_infering_sort in Hty as [? []]; tea. now eexists.
 Qed.
 
 Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :

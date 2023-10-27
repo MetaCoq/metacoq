@@ -459,9 +459,12 @@ Section CheckEnv.
       Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) : A ->
       isType Σ Γ (it_mkProd_or_LetIn Δ (tSort s)).
   Proof using Type.
-    unfold isType. unfold PCUICTypingDef.typing. intros Γ Δ s A h. revert Γ s A h.
+    intros Γ Δ s A h.
+    enough (∑ s', Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) : tSort s').
+    1: destruct X as (? & ?); now eapply has_sort_isType.
+    revert Γ s A h.
     induction Δ using rev_ind; intros.
-    - simpl in h. eapply inversion_Sort in h as (?&?&?).
+    - simpl in h |- *. eapply inversion_Sort in h as (?&?&?).
       eexists; constructor; eauto. apply wfΣ.
     - destruct x as [na [b|] ty]; simpl in *;
       rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in h *.
@@ -501,6 +504,7 @@ Section CheckEnv.
     Next Obligation.
       specialize_Σ H.
       sq. split; auto.
+      repeat (eexists; tea).
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
@@ -508,7 +512,7 @@ Section CheckEnv.
     Next Obligation.
       pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq.
       split; auto. split; auto.
-      eapply PCUICValidity.validity in checkty; auto.
+      eapply PCUICValidity.validity in checkty as (_ & ?); auto.
     Qed.
 
   Program Fixpoint infer_sorts_local_ctx X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} Γ Δ (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
@@ -529,14 +533,14 @@ Section CheckEnv.
       specialize_Σ H. sq. now eapply PCUICContexts.sorts_local_ctx_wf_local in Δinfer.
     Qed.
     Next Obligation.
-      specialize_Σ H. sq. split; auto.
+      specialize_Σ H. sq. split; auto. repeat (eexists; tea).
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now eapply PCUICContexts.sorts_local_ctx_wf_local in Δinfer.
     Qed.
     Next Obligation.
       pose proof (abstract_env_ext_wf _ H). specialize_Σ H. sq. split; auto. split; auto.
-      eapply PCUICValidity.validity in checkty; auto.
+      eapply PCUICValidity.validity in checkty as (_ & ?); auto.
     Qed.
 
   Definition cumul_decl Pcmp Σ Γ (d d' : context_decl) : Type := cumul_decls Pcmp Σ Γ Γ d d'.
@@ -796,12 +800,10 @@ Section CheckEnv.
     rewrite rev_map_cons /=.
     eapply All_local_env_app; split. constructor; pcuic.
     eapply All_local_env_impl; eauto.
-    move=> Γ t [] /=.
-    * move=> ty ht. eapply weaken_ctx; eauto.
-      constructor; pcuic.
-    * move=> [s Hs]; exists s.
-      eapply weaken_ctx; eauto.
-      constructor; pcuic.
+    intros Γ j Hj.
+    apply lift_typing_impl with (1 := Hj) => t T HT.
+    eapply weaken_ctx; eauto.
+    constructor; pcuic.
   Qed.
 
   Program Definition check_constructor X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (ind : nat) (mdecl : mutual_inductive_body)
@@ -858,7 +860,7 @@ Section CheckEnv.
       eapply eqb_eq in eqbindices.
       eapply eqb_eq in eqbpars.
       sq; red; cbn. intuition auto.
-      eexists; eauto.
+      now eapply has_sort_isType.
       symmetry in Heq_anonymous. eapply PCUICSubstitution.decompose_prod_assum_it_mkProd_or_LetIn in Heq_anonymous.
       simpl in Heq_anonymous. subst concl0.
       rewrite it_mkProd_or_LetIn_app.
@@ -900,8 +902,8 @@ Section CheckEnv.
     isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
     isType Σ (Γ ,,, Δ) T.
   Proof using Type.
-    move=> wfX [u Hu].
-    exists u. unfold PCUICTypingDef.typing in *.
+    move=> wfX H.
+    apply lift_sorting_it_impl_gen with H => // Hu.
     now eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hu.
   Qed.
 
@@ -910,7 +912,7 @@ Section CheckEnv.
     ∑ fty s, (Σ ;;; Γ |- f : fty) *
       typing_spine Σ Γ fty args (tSort s).
   Proof using Type.
-    intros [s Hs].
+    intros (_ & s & Hs & _).
     eapply inversion_mkApps in Hs as [fty [Hf Hargs]]; auto.
     now exists fty, s.
   Qed.
@@ -1028,8 +1030,8 @@ Section CheckEnv.
     apply on_free_vars_lift0. rewrite /app_context /snoc; len.
     replace (#|Δ| + S #|Γ|) with (S #|Δ| + #|Γ|). 2:lia. rewrite Nat.add_1_r.
     rewrite -shiftnP_add addnP_shiftnP. eapply on_free_vars_subst.
-    eapply isType_wf_local in isty. depelim isty. red in l0. cbn.
-    rewrite andb_true_r. red in l0. fvs.
+    eapply isType_wf_local in isty. depelim isty. apply unlift_TermTyp in l as l0. cbn.
+    rewrite andb_true_r. fvs.
     eapply isType_is_open_term in isty. cbn. now rewrite shiftnP_add.
   Qed.
 
@@ -1081,7 +1083,7 @@ Section CheckEnv.
       assert (wf_universe Σ s).
       { eapply typing_spine_isType_dom in sp.
         eapply isType_it_mkProd_or_LetIn_inv in sp; auto.
-        destruct sp as [? Hs]. now eapply inversion_Sort in Hs as [? []]. }
+        destruct sp as (_ & ? & Hs & _). now eapply inversion_Sort in Hs as [? []]. }
       destruct d as [na [b|] ty]. simpl in sp; unfold mkProd_or_LetIn in sp; simpl in *.
       - len in sp.
         rewrite lift_context_app /= it_mkProd_or_LetIn_app lift_context_app it_mkProd_or_LetIn_app /=
@@ -1381,11 +1383,12 @@ Section CheckEnv.
     Next Obligation.
       pose proof (abstract_env_ext_wf _ H); specialize_Σ H.
       sq. constructor; eauto.
-      eapply validity in wfty. apply wfty.
+      split; auto.
+      eapply validity in wfty as []; auto.
     Qed.
     Next Obligation.
       pose proof (abstract_env_ext_wf _ H); specialize_Σ H.
-      sq. constructor; auto. now exists wfty.
+      sq. constructor; auto. repeat (eexists; tea).
     Qed.
 
   Definition wt_indices Σ mdecl indices cs :=
@@ -1418,7 +1421,7 @@ Section CheckEnv.
       rewrite !subst_empty.
       eapply typing_wf_local in h.
       rewrite app_context_assoc in h. eapply All_local_env_app_inv in h as [h _].
-      now depelim h.
+      depelim h. now eapply unlift_TermTyp.
     - intros Γ t T h.
       rewrite !smash_context_app_ass !expand_lets_vass.
       rewrite app_context_assoc. eapply X. lia.
@@ -1588,7 +1591,7 @@ Section CheckEnv.
       destruct (variance_universes_spec _ _ _ _ _ _ _ _ eqvu).
       exists univs', i, i'; split => //;
       now eapply eqb_eq in check_leq.
-    - sq. red. destruct univs; auto. exact tt.
+    - sq. red. destruct univs; auto.
   Qed.
 
   Definition Build_on_inductive_sq {X_ext ind mdecl}
@@ -1677,9 +1680,9 @@ Section CheckEnv.
     wf_local Σ Γ -> wf_ctx_universes Σ Γ.
   Proof using Type.
     intros wfΣ. unfold wf_ctx_universes.
-    induction 1 => //. cbn. rewrite IHX andb_true_r.
-    destruct t0 as [s Hs]. move/typing_wf_universes: Hs => /andP[] //.
-    cbn. move/typing_wf_universes: t1 => /=; rewrite /wf_decl_universes /on_decl_universes /= => -> /= //.
+    induction 1 => //=; rewrite IHX andb_true_r.
+    destruct t0 as (_ & s & Hs & _). move/typing_wf_universes: Hs => /andP[] //.
+    destruct t0 as (Hb & s & Hs & _). cbn in Hb. move/typing_wf_universes: Hb => /andP[] //.
   Qed.
 
   Lemma wf_ctx_universes_app {Σ Γ Δ} :
@@ -1878,7 +1881,9 @@ Section CheckEnv.
     Qed.
     Next Obligation.
       epose proof (get_wt_indices X_ext wfar wfpars _ _ _ hnth heq Hcs).
+      destruct HX.
       specialize_Σ H.
+      pose proof (abstract_env_ext_wf _ (H1 _ H2)) as wfΣ.
       unfold check_constructor_spec in Hcs; simpl in *. sq.
       solve_all.
       eapply All2_impl; eauto. simpl.
@@ -1888,7 +1893,11 @@ Section CheckEnv.
       - rewrite eq.
         rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
         rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head. lia_f_equal.
-      - now destruct wtinds.
+      - destruct wtinds as (? & ci).
+        apply PCUICEnvTyping.ctx_inst_impl with (1 := ci) => t T HT.
+        split; auto.
+        unshelve eapply validity in HT as []; eauto.
+        apply wfΣ.
       - destruct lets_in_constructor_types; eauto.
     Qed.
 
@@ -2080,6 +2089,7 @@ End monad_Alli_nth_forall.
     destruct a as [na [b|] ty].
     - intros []. eauto.
     - intros []; eauto. constructor; eauto.
+      destruct l as (_ & ? & t0 & <-).
       now eapply typing_wf_universe in t0.
   Qed.
 
@@ -2176,7 +2186,7 @@ End monad_Alli_nth_forall.
       eapply All_sigma in indtys as [indus Hinds].
       eapply All2_sq in Hinds; eauto. sq.
       red.
-      solve_all. now exists y.
+      solve_all. now eapply has_sort_isType.
     Qed.
 
   Program Definition check_one_ind_body X X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ}
@@ -2242,7 +2252,7 @@ End monad_Alli_nth_forall.
   destruct pf as [pf ?]; eauto. specialize_Σ H. specialize_Σ wfΣ0.
   pose proof (abstract_env_ext_wf _ pf). sq.
   eapply nth_error_all in wfars; eauto; simpl in wfars.
-  destruct wfars as [s Hs].
+  destruct wfars as (_ & s & Hs & _).
   clear X0; rewrite p in Hs.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
   eapply inversion_Sort in Hs as [_ [? _]]; eauto.
@@ -2258,7 +2268,7 @@ End monad_Alli_nth_forall.
     sq.
     clear onprojs onsorts X0.
     red in wfars. eapply nth_error_all in wfars; eauto; simpl in wfars.
-    destruct wfars as [s Hs].
+    destruct wfars as (_ & s & Hs & _).
     apply eqb_eq in eqpars; apply eqb_eq in eqindices; subst.
     rewrite split_at_firstn_skipn in Heq_anonymous.
     noconf Heq_anonymous.
@@ -2284,9 +2294,7 @@ End monad_Alli_nth_forall.
       rewrite split_at_firstn_skipn in Heq_anonymous. cbn in *.
       noconf Heq_anonymous.
       now rewrite {1}H0 {1}H1 /app_context -it_mkProd_or_LetIn_app firstn_skipn.
-    - red. red.
-      eapply nth_error_all in wfars; eauto; simpl in wfars.
-      destruct wfars as [s Hs]. now exists s.
+    - eapply nth_error_all in wfars; eauto; simpl in wfars. assumption.
     - unfold check_projections_type in onprojs.
       destruct (ind_projs idecl) => //.
     - now apply eqb_eq in eqsort; subst.
@@ -2318,8 +2326,12 @@ End monad_Alli_nth_forall.
       ret (Build_on_inductive_sq  check_bodies check_pars check_npars _)
     end.
   Next Obligation.
-    specialize_Σ H. sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
-    eassumption.
+    destruct pf.
+    specialize_Σ H.
+    pose proof (abstract_env_ext_wf _ (H0 _ H1)) as wfΣ.
+    sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
+    unshelve eapply validity in y as HT. 1: apply wfΣ. destruct HT as (_ & ?).
+    now split.
   Qed.
   Next Obligation.
     specialize_Σ H. sq. unfold on_constant_decl. rewrite <- Heq_anonymous; tea.

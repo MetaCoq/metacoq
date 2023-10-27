@@ -44,12 +44,12 @@ Proof.
     eapply (proj2 (nf_red _ _ _ _)) in n. 2:eapply hr. subst. contradiction.
     eapply PCUICClassification.invert_cumul_arity_r_gen. 2:exact w.
     exists T'. split; auto. sq.
-    eapply PCUICValidity.validity in t2 as [s Hs].
+    eapply PCUICValidity.validity in t2 as (_ & s & Hs & _).
     eapply PCUICClassification.wt_closed_red_refl; eauto.
   * destruct (principal_type _ _ t0) as [princ hprinc].
     destruct s as [u' [hs isp]].
     pose proof (hprinc _ t2) as [].
-    destruct (PCUICValidity.validity t3).
+    destruct (PCUICValidity.validity t3) as (_ & s & Hs & _).
     eapply PCUICElimination.unique_sorting_equality_propositional in hs; tea; eauto.
     pose proof (hprinc _ t0) as [].
     eapply PCUICElimination.unique_sorting_equality_propositional in t1; tea; eauto.

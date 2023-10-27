@@ -34,37 +34,31 @@ End QuoteLookup.
 Module QuoteEnvTyping (Import T : Term) (Import E : EnvironmentSig T) (Import TU : TermUtils T E) (Import ET : EnvTypingSig T E TU) (Import qT : QuotationOfTerm T) (Import qE : QuotationOfEnvironment T E) (Import qET : QuotationOfEnvTyping T E TU ET) (Import QuoteT : QuoteTerm T)  (Import QuoteE : QuoteEnvironmentSig T E) <: QuoteEnvTypingSig T E TU ET.
 
   #[export] Hint Unfold
-    infer_sort
-    lift_typing
+    on_def_type
+    on_def_body
+    lift_typing0
   : quotation.
   #[export] Typeclasses Transparent
-    infer_sort
-    lift_typing
+    on_def_type
+    on_def_body
+    lift_typing0
   .
 
-  #[export] Instance quote_All_local_env {typing Γ} {qtyping : quotation_of typing} {quote_typing : forall Γ t T, ground_quotable (typing Γ t T)} : ground_quotable (@All_local_env typing Γ) := ltac:(induction 1; exact _).
+  #[export] Instance quote_All_local_env {typing Γ} {qtyping : quotation_of typing} {quote_typing : forall Γ j, ground_quotable (typing Γ j)} : ground_quotable (@All_local_env typing Γ) := ltac:(induction 1; exact _).
   Import StrongerInstances.
   #[local] Hint Extern 2 (_ = _) => reflexivity : typeclass_instances.
-  #[export] Instance quote_on_local_decl {P Γ d} {quoteP1 : forall b, d.(decl_body) = Some b -> ground_quotable (P Γ b (Typ d.(decl_type)))} {quoteP2 : d.(decl_body) = None -> ground_quotable (P Γ d.(decl_type) Sort)} : ground_quotable (@on_local_decl P Γ d) := ltac:(cbv [on_local_decl]; exact _).
-  #[export] Instance quote_lift_judgment {check infer_sort Σ Γ t T} {quote_check : forall T', T = Typ T' -> ground_quotable (check Σ Γ t T')} {quote_infer_sort : T = Sort -> ground_quotable (infer_sort Σ Γ t)} : ground_quotable (@lift_judgment check infer_sort Σ Γ t T) := ltac:(cbv [lift_judgment]; exact _).
-  #[local] Typeclasses Transparent lift_judgment.
-  #[export] Instance quote_All_local_env_over_gen
-   {checking sorting cproperty sproperty Σ Γ H}
-   {qchecking : quotation_of checking} {qsorting : quotation_of sorting} {qcproperty : quotation_of cproperty} {qsproperty : quotation_of sproperty}
-   {quote_checking : forall Γ t T, ground_quotable (checking Σ Γ t T)} {quote_sorting : forall Γ T, ground_quotable (sorting Σ Γ T)} {quote_sproperty : forall Γ all t tu, ground_quotable (sproperty Σ Γ all t tu)} {quote_cproperty : forall Γ all b t tb, ground_quotable (cproperty Σ Γ all b t tb)}
-    : ground_quotable (@All_local_env_over_gen checking sorting cproperty sproperty Σ Γ H)
-    := ltac:(induction 1; exact _).
-  #[export] Instance quote_All_local_env_over {typing property Σ Γ H}
-   {qtyping : quotation_of typing} {qproperty : quotation_of property}
-   {quote_typing : forall Γ t T, ground_quotable (typing Σ Γ t T)} {quote_property : forall Γ all b t tb, ground_quotable (property Σ Γ all b t tb)}
-    : ground_quotable (@All_local_env_over typing property Σ Γ H)
-    := ltac:(cbv [All_local_env_over]; exact _).
+  #[export] Instance quote_lift_sorting {checking sorting j} {qcheck : quotation_of checking} {qsorting : quotation_of sorting} {quote_check : forall tm, j_term j = Some tm -> ground_quotable (checking tm (j_typ j))} {quote_sorting : forall u, ground_quotable (sorting (j_typ j) u)} : ground_quotable (@lift_sorting checking sorting j) := ltac:(cbv [lift_sorting]; exact _).
+  #[local] Typeclasses Transparent lift_sorting.
   #[export] Instance quote_All_local_env_over_sorting
-   {checking sorting cproperty sproperty Σ Γ H}
+   {checking sorting cproperty sproperty Γ H}
    {qchecking : quotation_of checking} {qsorting : quotation_of sorting} {qcproperty : quotation_of cproperty} {qsproperty : quotation_of sproperty}
-   {quote_checking : forall Γ t T, ground_quotable (checking Σ Γ t T)} {quote_sorting : forall Γ T U, ground_quotable (sorting Σ Γ T U)} {quote_sproperty : forall Γ all t tu U, ground_quotable (sproperty Σ Γ all t tu U)} {quote_cproperty : forall Γ all b t tb, ground_quotable (cproperty Σ Γ all b t tb)}
-    : ground_quotable (@All_local_env_over_sorting checking sorting cproperty sproperty Σ Γ H)
-    := ltac:(cbv [All_local_env_over_sorting]; exact _).
+   {quote_checking : forall Γ t T, ground_quotable (checking Γ t T)} {quote_sorting : forall Γ T u, ground_quotable (sorting Γ T u)} {quote_sproperty : forall Γ all t u tu, ground_quotable (sproperty Γ all t u tu)} {quote_cproperty : forall Γ all b t tb, ground_quotable (cproperty Γ all b t tb)}
+    : ground_quotable (@All_local_env_over_sorting checking sorting cproperty sproperty Γ H) := ltac:(induction 1; cbv [lift_sorting j_term MCOption.option_default] in *; exact _).
+  #[export] Instance quote_All_local_env_over {typing property Γ H}
+   {qtyping : quotation_of typing} {qproperty : quotation_of property}
+   {quote_typing : forall Γ t T, ground_quotable (typing Γ t T)} {quote_property : forall Γ all b t tb, ground_quotable (property Γ all b t tb)}
+    : ground_quotable (@All_local_env_over typing property Γ H)
+    := ltac:(cbv [All_local_env_over]; exact _).
 
   #[export] Instance quote_ctx_inst {typing Σ Γ ctx inst}
    {qtyping : quotation_of typing}
@@ -115,10 +109,10 @@ Module QuoteGlobalMaps (Import T : Term) (Import E : EnvironmentSig T) (Import T
   Section GlobalMaps.
     Context {cf : config.checker_flags}
             {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}
-            {P : global_env_ext -> context -> term -> typ_or_sort -> Type}
+            {P : global_env_ext -> context -> judgment -> Type}
             {qPcmp : quotation_of Pcmp} {qP : quotation_of P}
             {quotePcmp : forall Σ Γ pb t T, ground_quotable (Pcmp Σ Γ pb t T)}
-            {quoteP : forall Σ Γ t T, ground_quotable (P Σ Γ t T)}.
+            {quoteP : forall Σ Γ j, ground_quotable (P Σ Γ j)}.
 
     #[export] Instance quote_on_context {Σ ctx} : ground_quotable (@on_context P Σ ctx)
       := ltac:(cbv [on_context]; exact _).

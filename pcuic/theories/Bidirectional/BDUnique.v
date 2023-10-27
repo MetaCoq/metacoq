@@ -82,7 +82,7 @@ Proof using wfΣ.
     all: now eapply closed_red_prod_codom.
 
   - apply X2 in X6 as [A' []].
-    2:{ constructor ; auto. 2: eapply checking_typing ; tea. all: now eapply infering_sort_isType. }
+    2:{ constructor ; auto. repeat (eexists; tea); cbn. eapply checking_typing ; tea. now eapply infering_sort_isType. now eapply infering_sort_typing. }
     exists (tLetIn n b B A').
     assert (Σ ;;; Γ |- b : B)
       by (eapply checking_typing ; tea ; now eapply infering_sort_isType).
@@ -237,11 +237,13 @@ Proof using wfΣ.
       * now eapply type_is_open_term, infering_typing.
 
   - depelim X; depelim X0.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
       all:simp prim_type; cbn. cbn in hty.
-      all:eapply type_is_open_term, checking_typing; tea; eexists; eapply checking_typing; tea; eexists; econstructor; tea.
+      all:eapply type_is_open_term, checking_typing; tea.
+      all:eapply has_sort_isType; eapply checking_typing; tea.
+      all:eapply has_sort_isType; econstructor; tea.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.

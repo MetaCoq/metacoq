@@ -1614,20 +1614,20 @@ Proof.
 Qed.
 
 Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
-  All_local_env_over typing
-                     (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
-       forall u univs, wf_ext_wk Σ0 ->
-                  consistent_instance_ext (Σ0.1, univs) Σ0.2 u ->
-                  (Σ0.1, univs) ;;; subst_instance u Γ0
+  All_local_env_over (typing Σ)
+                     (fun Γ0 (_ : wf_local Σ Γ0) t T (_ : Σ;;; Γ0 |- t : T) =>
+       forall u univs, wf_ext_wk Σ ->
+                  consistent_instance_ext (Σ.1, univs) Σ.2 u ->
+                  (Σ.1, univs) ;;; subst_instance u Γ0
                   |- subst_instance u t : subst_instance u T)
-                     Σ Γ wfΓ ->
+                     Γ wfΓ ->
   forall u univs,
     wf_ext_wk Σ ->
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: eapply infer_typing_sort_impl with _ tu; cbn in *; eauto.
+  all: eapply lift_sorting_fu_it_impl with (tu := tu); cbn in *; eauto.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
@@ -1969,12 +1969,18 @@ Section SubstIdentity.
         wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
         subst_instance u t = t × subst_instance u T = T)
+        (fun Σ _ j => wf_ext_wk Σ ->
+        let u := abstract_instance (snd Σ) in
+        lift_wf_term (fun t => subst_instance u t = t) j)
         (fun Σ Γ =>
         wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
         subst_instance u Γ = Γ).
   Proof using Type.
     eapply typing_ind_env; intros; simpl in *; auto; try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
+    { destruct X as (X & _). destruct j_term => //. destruct X as [_ X]. now forward X. }
+    { destruct X as (_ & s & [_ X] & _). now forward X. }
+
     1:{ induction X; simpl; auto; unfold snoc.
       * f_equal; auto.
         unfold map_decl. simpl. unfold vass. f_equal. intuition auto.
@@ -2037,10 +2043,14 @@ Section SubstIdentity.
         rewrite /subst_instance_list. now rewrite map_rev Hpars.
       * rewrite [subst_instance_constr _ _]subst_instance_two.
         noconf Hi. now rewrite [subst_instance _ u]H.
-    - solve_all. destruct a as [s [? ?]]; solve_all.
-    - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
-    - solve_all. destruct a as [s [? ?]]. solve_all.
-    - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
+    - solve_all.
+      + destruct a as (_ & s & [_ a] & _). now forward a.
+      + destruct b as ([_ b] & _). now forward b.
+    - clear X0. eapply nth_error_all in X as (_ & s & [_ IHs] & _); tea; now forward IHs.
+    - solve_all.
+      + destruct a as (_ & s & [_ a] & _). now forward a.
+      + destruct b as ([_ b] & _). now forward b.
+    - clear X0. eapply nth_error_all in X as (_ & s & [_ IHs] & _); tea; now forward IHs.
     - destruct p as [? []]; cbn => //. do 2 f_equal.
       depelim X0. specialize (hty X1); specialize (hdef X1).
       unfold mapu_array_model; destruct a; cbn -[Universe.make] in * => //=; f_equal; intuition eauto.

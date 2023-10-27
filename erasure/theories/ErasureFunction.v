@@ -945,7 +945,7 @@ Proof.
       { apply nisa. intros. rewrite (abstract_env_ext_irr _ H wfΣ).
         eapply invert_cumul_arity_r; tea. }
       { destruct s as [Hs].
-        unshelve epose proof (H := unique_sorting_equality_propositional _ _ wf Hs Hu' p) => //. reflexivity. reflexivity. congruence. }
+        unshelve epose proof (H := unique_sorting_equality_propositional _ wf Hs Hu' p) => //. reflexivity. congruence. }
   Qed.
 
 Equations? is_erasable {X_type X} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} (Γ : context) (t : PCUICAst.term)
@@ -1115,9 +1115,9 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.
       sq. destruct p. move/andP: i => [wffix _].
-      solve_all. now eexists.
+      solve_all. destruct a0 as (Hb & _). cbn in Hb. now eexists.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
-      sq. eapply All_impl; tea. cbn. intros d Ht; now eexists.
+      sq. eapply All_impl; tea. cbn. intros d (Hb & _); cbn in Hb; now eexists.
     - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
       depelim p0. now eexists.
     - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
@@ -1316,7 +1316,7 @@ Program Definition erase_constant_body X_type X {normalization_in : forall Σ, w
 Next Obligation.
 Proof.
   specialize_Σ H. sq. red in Hcb.
-  rewrite <-Heq_anonymous in Hcb. now eexists.
+  rewrite <-Heq_anonymous in Hcb. apply unlift_TermTyp in Hcb. now eexists.
 Qed.
 
 Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
@@ -1818,7 +1818,7 @@ Lemma erase_constant_body_correct X_type X {normalization_in : forall Σ, wf_ext
 Proof.
   red. destruct cb as [name [bod|] univs]; simpl; eauto. intros.
   set (ecbo := erase_constant_body_obligation_1 X_type X _ _ _ _). clearbody ecbo.
-  cbn in *. specialize_Σ H. sq.
+  cbn in *. specialize_Σ H. sq. apply unlift_TermTyp in onc.
   eapply (erases_weakening_env (Σ := Σ) (Σ' := (Σ', univs))); simpl; eauto.
   now eapply erases_erase.
 Qed.

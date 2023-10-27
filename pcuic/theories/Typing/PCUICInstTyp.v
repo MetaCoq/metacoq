@@ -365,20 +365,27 @@ Lemma type_inst {cf : checker_flags} : env_prop
     wf_local Σ Δ ->
     Σ ;;; Δ ⊢ σ : Γ ->
     Σ ;;; Δ |- t.[σ] : A.[σ])
-  (fun Σ Γ =>
-    All_local_env
-    (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
-    =>
+  (fun Σ Γ j =>
     forall Δ σ,
     wf_local Σ Δ ->
     Σ ;;; Δ ⊢ σ : Γ ->
-    Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Γ).
+    lift_typing0 (fun t T => Σ ;;; Δ |- t.[σ] : T.[σ]) j)
+  (fun Σ Γ =>
+    All_local_env (fun Γ j =>
+    forall Δ σ,
+    wf_local Σ Δ ->
+    Σ ;;; Δ ⊢ σ : Γ ->
+    (lift_typing0 (fun (t T : term) => Σ ;;; Δ |- t.[σ] : T.[σ])) j) Γ).
 Proof.
   apply typing_ind_env.
 
+  - intros Σ wfΣ Γ j H Δ σ wfΔ Hσ.
+    apply lift_typing_impl with (1 := H) => t T [_ IH].
+    now apply IH.
+
   - intros Σ wfΣ Γ wfΓ. auto.
     induction 1; constructor; tas.
-    all: apply infer_typing_sort_impl with id tu; auto.
+    all: intros; apply lift_sorting_it_impl with (tu := tu) => //=; auto.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.
     eapply hσ. assumption.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ σ hΔ hσ. simpl.
@@ -387,35 +394,32 @@ Proof.
     autorewrite with sigma. simpl.
     econstructor.
     + eapply ihA ; auto.
-    + eapply ihB.
+    + eassert (wf_local Σ (Δ ,, _)).
+      2: eapply ihB; tea.
       * econstructor ; auto.
-        eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. 2: assumption.
-        econstructor ; auto.
-        eexists. eapply ihA. all: auto.
+        repeat (eexists; tea). eapply ihA ; auto.
+      * eapply well_subst_Up ; assumption.
   - intros Σ wfΣ Γ wfΓ na A t s1 bty X hA ihA ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
     + eapply ihA ; auto.
-    + eapply iht.
+    + eassert (wf_local Σ (Δ ,, _)).
+      2: eapply iht; tea.
       * econstructor ; auto.
-        eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. 2: assumption.
-        constructor. 1: assumption.
-        eexists. eapply ihA. all: auto.
+        repeat (eexists; tea). eapply ihA ; auto.
+      * eapply well_subst_Up ; assumption.
   - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
     + eapply ihB. all: auto.
     + eapply ihb. all: auto.
-    + eapply iht.
-      * econstructor. all: auto.
-        -- eexists. eapply ihB. all: auto.
-        -- simpl. eapply ihb. all: auto.
+    + eassert (wf_local Σ (Δ ,, _)).
+      2: eapply iht; tea.
+      * econstructor; tas.
+        repeat (eexists; tea); cbn.
+        -- eapply ihb ; auto.
+        -- eapply ihB ; auto.
       * eapply well_subst_Up'; try assumption.
-        constructor; auto.
-        ** exists s1. apply ihB; auto.
-        ** apply ihb; auto.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
@@ -460,10 +464,9 @@ Proof.
         apply All_local_env_app_inv in IHpredctx as [].
         eapply IHpret.
         ++ eapply wf_local_app_inst; eauto.
-           apply a2.
         ++ relativize #|pcontext p|; [eapply well_subst_app_up|] => //; rewrite /predctx; len.
            2:{ rewrite case_predicate_context_length //. }
-           eapply wf_local_app_inst; eauto. apply a2.
+           eapply wf_local_app_inst; eauto.
       + simpl. unfold id.
         specialize (IHc _ _ HΔ Hf).
         now rewrite inst_mkApps map_app in IHc.
@@ -506,7 +509,7 @@ Proof.
         assert (wf_local Σ (Δ,,, brctx'.1)).
         { rewrite /brctx'. cbn.
           apply All_local_env_app_inv in Hbrctx as [].
-          eapply wf_local_app_inst; tea. apply a0. }
+          eapply wf_local_app_inst; tea. }
         split => //. split.
         ++ eapply IHbr => //.
           rewrite /brctx' /brctxty; cbn.
@@ -543,19 +546,21 @@ Proof.
     * now eapply fix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
+      apply lift_typing_f_impl with (1 := a) => // ?? [_ IH].
       now apply IH.
-    * solve_all. destruct b as [? b0].
-      len. rewrite /types in b0. len in b0.
+    * solve_all.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
-      eapply All_local_env_app_inv in htypes as [].
-      eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a1.
+      unfold on_def_body. relativize (lift0 _ _).
+      1: eenough (wf_local Σ _).
+      1: apply lift_typing_f_impl with (1 := b) => // ?? [_ IH]; eapply IH; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a1.
-      + rewrite lift0_inst. now sigma.
+      + eapply wf_local_app_inst; eauto.
+        eapply All_local_env_app_inv in htypes as [].
+        eapply a1.
+      + rewrite lift0_inst /types inst_context_length fix_context_length.
+        now sigma.
     * now apply inst_wf_fixpoint.
     * reflexivity.
 
@@ -564,19 +569,20 @@ Proof.
     * now eapply cofix_guard_inst.
     * now rewrite nth_error_map hnth.
     * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
+      apply lift_typing_f_impl with (1 := a) => // ?? [_ IH].
       now apply IH.
-    * solve_all. destruct b as [? b0].
-      len. rewrite /types in b0. len in b0.
+    * solve_all.
       pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
-      eapply All_local_env_app_inv in htypes as [].
-      eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a1.
+      unfold on_def_body. relativize (lift0 _ _).
+      1: eenough (wf_local Σ _).
+      1: apply lift_typing_f_impl with (1 := b) => // ?? [_ IH]; eapply IH; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a1.
-      + rewrite lift0_inst. now sigma.
+      + eapply wf_local_app_inst; eauto.
+        eapply All_local_env_app_inv in htypes as [].
+        eapply a1.
+      + rewrite lift0_inst /types inst_context_length fix_context_length; now sigma.
     * now apply inst_wf_cofixpoint.
     * reflexivity.
 

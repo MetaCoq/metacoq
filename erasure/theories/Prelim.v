@@ -211,7 +211,7 @@ Proof.
   eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
   eapply PCUICSpine.type_mkApps; eauto.
   pose proof a0 as a0'.
-  eapply nth_error_all in a0'; eauto. simpl in a0'.
+  eapply nth_error_all in a0'; eauto. apply unlift_TermTyp in a0'.
   eapply (substitution (Δ := [])) in a0'; eauto.
   2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
   rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.

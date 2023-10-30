@@ -525,7 +525,7 @@ Section isEtaExp.
     #|Γ| = k ->
     nth_error mfix idx = Some d ->
     closed (EAst.tFix mfix idx) ->
-    forallb (fun x => isLambda x.(dbody) &&  isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
+    forallb (fun x => isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp (Γ ++ [1 + d.(EAst.rarg)] ++ Δ) b -> isEtaExp (Γ ++ Δ) (ECSubst.csubst (EAst.tFix mfix idx) k b).
   Proof using Type*.
     intros Hk Hnth Hcl.
@@ -631,13 +631,14 @@ Section isEtaExp.
   Qed.
 
   Lemma isEtaExp_fixsubstl Δ mfix t :
-    forallb (fun x => isLambda x.(dbody) &&
+    forallb (fun x =>
+      (* isLambda x.(dbody) && *)
       isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp ((rev_map (S ∘ rarg) mfix) ++ Δ) t ->
     isEtaExp Δ (substl (fix_subst mfix) t).
   Proof using Type*.
     intros Hall Heta.
-    assert (Hcl : closed (EAst.tFix mfix 0) ). { cbn. solve_all. rtoProp; intuition auto. eapply isEtaExp_closed in H0. revert H0. now len. }
+    assert (Hcl : closed (EAst.tFix mfix 0) ). { cbn. solve_all. rtoProp; intuition auto. eapply isEtaExp_closed in H. revert H. now len. }
     revert Hcl Hall Heta.
     intros Hcl Hall Heta.
     cbn in Hcl. solve_all.

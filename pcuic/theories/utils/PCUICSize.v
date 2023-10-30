@@ -23,6 +23,13 @@ Definition predicate_size (size : term -> nat) (p : PCUICAst.predicate term) :=
   context_size size p.(pcontext) +
   size p.(preturn).
 
+Definition prim_size (size : term -> nat) (p : prim_val) : nat :=
+  match p.π2 return nat with
+  | primIntModel f => 0
+  | primFloatModel f => 0
+  | primArrayModel a => size a.(array_type) + size a.(array_default) + list_size size a.(array_value)
+  end.
+
 Fixpoint size t : nat :=
   match t with
   | tRel i => 1
@@ -36,6 +43,7 @@ Fixpoint size t : nat :=
   | tProj p c => S (size c)
   | tFix mfix idx => S (mfixpoint_size size mfix)
   | tCoFix mfix idx => S (mfixpoint_size size mfix)
+  | tPrim p => S (prim_size size p)
   | _ => 1
   end.
 

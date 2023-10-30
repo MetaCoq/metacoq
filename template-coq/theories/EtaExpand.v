@@ -137,6 +137,7 @@ Section Eta.
                        ++ string_of_kername ind.(inductive_mind))
         end
     | tCast t1 k t2 => tCast (eta_expand Γ t1) k (eta_expand Γ t2)
+    | tArray u arr def ty => tArray u (List.map (eta_expand Γ) arr) (eta_expand Γ def) (eta_expand Γ ty)
     | tInt _ | tFloat _ => t
     end.
 
@@ -292,7 +293,12 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     Forall (expanded Γ) args ->
     expanded Γ (tApp (tConstruct ind c u) args)
 | expanded_tInt i : expanded Γ (tInt i)
-| expanded_tFloat f : expanded Γ (tFloat f).
+| expanded_tFloat f : expanded Γ (tFloat f)
+| expanded_tArray u arr def ty :
+  Forall (expanded Γ) arr ->
+  expanded Γ def ->
+  expanded Γ ty ->
+  expanded Γ (tArray u arr def ty).
 
 End expanded.
 
@@ -357,9 +363,14 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  P Γ(tApp (tConstruct ind c u) args)) ->
 (forall Γ i, P Γ (tInt i)) ->
 (forall Γ f, P Γ (tFloat f)) ->
+(forall Γ u arr def ty,
+  Forall (P Γ) arr ->
+  P Γ def ->
+  P Γ ty ->
+  P Γ (tArray u arr def ty)) ->
  forall Γ, forall t : term, expanded Σ Γ t -> P Γ t.
 Proof.
-  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat.
+  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat Harr.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   all: match goal with [H : Forall _ _ |- _] => let all := fresh "all" in rename H into all end.
@@ -379,6 +390,7 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct_app; eauto.
     clear - all f. induction all; econstructor; eauto.
+  - eapply Harr; eauto. clear -all f. induction all; constructor; auto.
 Qed.
 
 Local Hint Constructors expanded : core.
@@ -625,6 +637,7 @@ Proof.
   - destruct t; invs H4.
     eapply expanded_tConstruct_app; eauto. revert H0.
     now len. solve_all.
+  - constructor; eauto. solve_all.
 Qed.
 
 Lemma expanded_lift {Σ : global_env} Γ' Γ'' Γ t :
@@ -670,6 +683,7 @@ Proof.
     shelve. autorewrite with len list in H |- *. eapply H.
   - eapply expanded_tConstruct_app; eauto.
     now len. solve_all.
+  - constructor; eauto. eapply Forall_map. solve_all.
 Qed.
 
 Lemma expanded_lift' {Σ : global_env} Γ' Γ'' Γ t Γassum Γgoal n m :
@@ -1220,6 +1234,7 @@ Proof.
      assert (#|Typing.fix_context mfix| = #|mfix|). { unfold Typing.fix_context. now len. }
      revert H4. generalize (Typing.fix_context mfix). clear.
      induction #|mfix|; intros []; cbn; intros; try congruence; econstructor; eauto.
+  - cbn. econstructor; eauto. solve_all. eapply b; tea. solve_all.
   - eapply typing_wf_local; eauto.
 Qed.
 

@@ -119,6 +119,13 @@ Proof.
   - eapply cumul_CoFix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
     cbn; intros; intuition.
     rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
+  - eapply cumul_Prim. depelim e0.
+    * depelim i; depelim X. cbn in H. cbn. constructor.
+    * depelim f; depelim X. cbn in H. constructor.
+    * depelim X. cbn in H. noconf H; cbn in H. constructor; cbn -[Universe.make]; eauto.
+      + rewrite -!subst_instance_univ_make.
+        eapply eq_universe_subst_instance; tea.
+      + solve_all.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
     * apply precompose_subst_instance_global.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
@@ -188,6 +195,18 @@ Proof using Type.
   intros valid.
   intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
   now eapply cumul_decls_subst_instance.
+Qed.
+
+Lemma subst_instance_prim_type p prim_ty u : (prim_type p prim_ty)@[u] = prim_type (mapu_prim (subst_instance_level u) (subst_instance u) p) prim_ty.
+Proof.
+  destruct p as [? []]; simp prim_type => //=.
+Qed.
+
+Lemma subst_instance_prim_val_tag (p : PCUICPrimitive.prim_val term) u :
+  prim_val_tag (mapu_prim (subst_instance_level u) (subst_instance u) p) =
+  prim_val_tag p.
+Proof.
+  destruct p as [? []]; simp prim_type => //=.
 Qed.
 
 Hint Resolve subst_instance_cstrs_two
@@ -374,7 +393,18 @@ Proof using Type.
         rewrite map_map_compose.
         now rewrite subst_instance_check_one_cofix.
 
-  - econstructor; eauto.
+  - intros.
+    rewrite subst_instance_prim_type.
+    econstructor.
+    + eauto.
+    + now rewrite subst_instance_prim_val_tag.
+    + exact H0.
+    + now rewrite subst_instance_prim_val_tag.
+    + destruct p as [? []]; depelim X2; constructor; eauto.
+      * rewrite -subst_instance_univ_make. eapply wf_universe_subst_instance => //.
+      * cbn -[Universe.make] in hty.
+        specialize (hty u univs). rewrite subst_instance_univ_make in hty. now eapply hty.
+      * cbn. solve_all.
 
   - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' H.
     econstructor.

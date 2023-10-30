@@ -800,7 +800,7 @@ Section Typecheck.
       | None => raise (IllFormedFix mfix n)
       end
 
-    | tInt _ | tFloat _ => raise (NotSupported "primitive types")
+    | tInt _ | tFloat _ | tArray _ _ _ _ => raise (NotSupported "primitive types")
     end.
 
   Definition check (Γ : context) (t : term) (ty : term) : typing_result unit :=

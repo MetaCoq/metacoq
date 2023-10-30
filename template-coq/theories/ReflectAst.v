@@ -158,6 +158,16 @@ Proof.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
     subst. left. reflexivity.
+  - destruct (IHx1 t1); subst; nodec.
+    destruct (IHx2 t2); subst; nodec.
+    destruct (eq_dec u u0); nodec; subst.
+    revert arr0.
+    induction X.
+    + intros []; auto. nodec.
+    + intros []; auto. nodec.
+      destruct (IHX l0). noconf e.
+      destruct (p t); nodec. subst. left; auto.
+      nodec.
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=

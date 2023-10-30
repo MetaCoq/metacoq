@@ -28,6 +28,7 @@ struct
   type quoted_constraint_type = Universes0.ConstraintType.t
   type quoted_univ_constraint = Universes0.UnivConstraint.t
   type quoted_univ_constraints = Universes0.ConstraintSet.t
+  type quoted_univ_level = Universes0.Level.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
   type quoted_univ_contextset = Universes0.ContextSet.t
@@ -105,7 +106,7 @@ struct
       aci_relevance = x.ci_relevance }
 
   let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
     match tt with
     | Coq_tRel n -> ACoq_tRel n
@@ -127,6 +128,7 @@ struct
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
     | Coq_tInt i -> ACoq_tInt i
     | Coq_tFloat f -> ACoq_tFloat f
+    | Coq_tArray (u, arr, def, ty) -> ACoq_tArray (u, Array.of_list arr, def, ty)
 
   let unquote_string = Caml_bytestring.caml_string_of_bytestring
 
@@ -223,6 +225,7 @@ struct
        let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
        evd, Sorts.sort_of_univ u
 
+  let unquote_universe_level evm l = evm, unquote_level l
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))
 

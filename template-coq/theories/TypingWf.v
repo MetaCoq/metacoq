@@ -1031,6 +1031,10 @@ Section TypingWf.
         solve_all; destruct a, b.
         all: intuition.
       + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition.
+
+    - split => //.
+      + constructor; intuition auto. solve_all.
+      + constructor => //. constructor => //. constructor; intuition auto.
   Qed.
 
   Lemma typing_all_wf_decl Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) :

@@ -239,7 +239,12 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
   eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2')
 
 | eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
-| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
+| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f)
+| eq_Array u u' arr arr' def def' ty ty' :
+  All2 (eq_term_upto_univ_napp Σ Re Rle 0) arr arr' ->
+  eq_term_upto_univ_napp Σ Re Rle 0 def def' ->
+  eq_term_upto_univ_napp Σ Re Rle 0 ty ty' ->
+  eq_term_upto_univ_napp Σ Re Rle napp (tArray u arr def ty) (tArray u' arr' def' ty').
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
@@ -313,6 +318,7 @@ Proof.
     intros x [? ?]. repeat split ; auto.
   - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
+  - eapply All_All2; tea. cbn. eauto.
 Qed.
 
 Lemma eq_term_refl `{checker_flags} Σ φ t : eq_term Σ φ t t.
@@ -477,6 +483,8 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - inversion 1; subst; constructor; eauto.
+    eapply All2_impl'; tea. eapply All_impl; eauto.
 Qed.
 
 

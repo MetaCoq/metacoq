@@ -116,6 +116,7 @@ Fixpoint rename (f : renamingT) t : term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
     tCoFix mfix' idx
+  | tPrim p => tPrim (map_prim (rename f) p)
   | x => x
   end.
 
@@ -583,6 +584,7 @@ Fixpoint inst s u :=
   | tCoFix mfix idx =>
     let mfix' := map (map_def (inst s) (inst (up (List.length mfix) s))) mfix in
     tCoFix mfix' idx
+  | tPrim p => tPrim (map_prim (inst s) p)
   | x => x
   end.
 

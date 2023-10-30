@@ -70,12 +70,12 @@ struct
     else not_supported_verb trm "from_bool"
 
   let unquote_int63 trm =
-    match Constr.kind trm with 
+    match Constr.kind trm with
     | Constr.Int i -> i
     | _ -> not_supported_verb trm "unquote_int63"
-  
+
   let unquote_float64 trm =
-    match Constr.kind trm with 
+    match Constr.kind trm with
     | Constr.Float f -> f
     | _ -> not_supported_verb trm "unquote_float64"
 
@@ -127,12 +127,12 @@ struct
     else
       not_supported_verb trm "unquote_name"
 
-  let unquote_evar env evm id args = 
+  let unquote_evar env evm id args =
     if constr_equall id tfresh_evar_id then
       let evm, (tyev, s) = Evarutil.new_type_evar env evm Evd.univ_flexible_alg in
       let evm, ev = Evarutil.new_evar env evm tyev in
       evm, EConstr.Unsafe.to_constr ev
-    else 
+    else
       let id = unquote_nat id in
       let ev = Evar.unsafe_of_int id in
       evm, Constr.mkEvar (ev, SList.of_full_list args)
@@ -185,7 +185,7 @@ struct
       | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
         let s = (unquote_string s) in
         s = "__metacoq_fresh_level__"
-      | _ -> bad_term_verb trm "unquote_level" 
+      | _ -> bad_term_verb trm "unquote_level"
     else false
 
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
@@ -239,7 +239,7 @@ struct
          let (h,args) = app_full x [] in
          if constr_equall h tBuild_Universe then
            (match args with
-           | x :: _ :: [] -> 
+           | x :: _ :: [] ->
              (let (h,args) = app_full x [] in
               if constr_equall h tMktLevelExprSet then
                 match args with
@@ -260,6 +260,8 @@ struct
       | _ -> bad_term_verb trm "unquote_universe 3"
     else bad_term_verb trm "unquote_universe 4"
 
+
+  let unquote_universe_level evm trm = unquote_level evm trm
 
   let unquote_universe_instance evm trm (* of type universe_instance *) =
     let l = unquote_list trm in
@@ -342,7 +344,7 @@ struct
     else
       not_supported_verb trm "unquote_global_reference"
 
-  let unquote_branch trm = 
+  let unquote_branch trm =
     let (h, args) = app_full trm [] in
     if constr_equall h tmk_branch then
       match args with
@@ -351,20 +353,20 @@ struct
       | _ -> bad_term_verb trm "unquote_branch"
     else not_supported_verb trm "unquote_branch"
 
-  let unquote_predicate trm = 
+  let unquote_predicate trm =
     let (h, args) = app_full trm [] in
     if constr_equall h tmk_predicate then
       match args with
-      | _ty :: auinst :: apars :: apcontext :: apreturn :: [] -> 
+      | _ty :: auinst :: apars :: apcontext :: apreturn :: [] ->
         let apars = unquote_list apars in
         let apcontext = unquote_list apcontext in
         { auinst; apars; apcontext; apreturn }
       | _ -> bad_term_verb trm "unquote_predicate"
     else not_supported_verb trm "unquote_predicate"
-  
+
   let inspect_term (t:Constr.t)
-  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, 
-    quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name,
+    quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
     (* debug (fun () -> Pp.(str "denote_term" ++ spc () ++ print_term t)) ; *)
     let (h,args) = app_full t [] in
@@ -459,14 +461,18 @@ struct
       match args with
         proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    (* else if constr_equall h tInt then
+    else if constr_equall h tInt then
       match args with
         t::_ -> ACoq_tInt t
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tFloat then
       match args with
         t::_ -> ACoq_tFloat t
-      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure")) *)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+    else if constr_equall h tArray then
+      match args with
+        u::v::def::ty::_ -> ACoq_tArray (u, Array.of_list (unquote_list v), def, ty)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else
       CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 

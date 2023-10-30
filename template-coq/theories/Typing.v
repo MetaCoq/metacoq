@@ -845,15 +845,26 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_local Σ Γ ->
     primitive_constant Σ primInt = Some prim_ty ->
     declared_constant Σ prim_ty cdecl ->
-    primitive_invariants cdecl ->
+    primitive_invariants primInt cdecl ->
     Σ ;;; Γ |- tInt p : tConst prim_ty []
 
 | type_Float p prim_ty cdecl :
     wf_local Σ Γ ->
     primitive_constant Σ primFloat = Some prim_ty ->
     declared_constant Σ prim_ty cdecl ->
-    primitive_invariants cdecl ->
+    primitive_invariants primFloat cdecl ->
     Σ ;;; Γ |- tFloat p : tConst prim_ty []
+
+| type_Array prim_ty cdecl u arr def ty :
+  wf_local Σ Γ ->
+  primitive_constant Σ primArray = Some prim_ty ->
+  declared_constant Σ prim_ty cdecl ->
+  primitive_invariants primArray cdecl ->
+  let s := Universe.make u in
+  Σ ;;; Γ |- ty : tSort s ->
+  Σ ;;; Γ |- def : ty ->
+  All (fun t => Σ ;;; Γ |- t : ty) arr ->
+  Σ ;;; Γ |- tArray u arr def ty : tApp (tConst prim_ty [u]) [ty]
 
 | type_Conv t A B s :
     Σ ;;; Γ |- t : A ->
@@ -969,6 +980,7 @@ Proof.
   - exact (S (Nat.max (Nat.max (All_local_env_size typing_size _ _ a) (all_size _ (fun x p => infer_sort_size (typing_sort_size typing_size) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (All_local_env_size typing_size _ _ a)).
   - exact (S (All_local_env_size typing_size _ _ a)).
+  - exact (S (Nat.max d2 (Nat.max d3 (all_size _ (fun t => typing_size Σ Γ t ty) a0)))).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -1245,15 +1257,28 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ wfΓ ->
         primitive_constant Σ primInt = Some prim_ty ->
         declared_constant Σ prim_ty cdecl ->
-        primitive_invariants cdecl ->
+        primitive_invariants primInt cdecl ->
         P Σ Γ (tInt p) (tConst prim_ty [])) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) p prim_ty cdecl,
         PΓ Σ Γ wfΓ ->
         primitive_constant Σ primFloat = Some prim_ty ->
         declared_constant Σ prim_ty cdecl ->
-        primitive_invariants cdecl ->
+        primitive_invariants primFloat cdecl ->
         P Σ Γ (tFloat p) (tConst prim_ty [])) ->
+
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) u arr def ty prim_ty cdecl,
+        PΓ Σ Γ wfΓ ->
+        primitive_constant Σ primArray = Some prim_ty ->
+        declared_constant Σ prim_ty cdecl ->
+        primitive_invariants primArray cdecl ->
+        let s := Universe.make u in
+        Σ ;;; Γ |- ty : tSort s ->
+        P Σ Γ ty (tSort s) ->
+        Σ ;;; Γ |- def : ty ->
+        P Σ Γ def ty ->
+        All (fun t => Σ ;;; Γ |- t : ty × P Σ Γ t ty) arr ->
+        P Σ Γ (tArray u arr def ty) (tApp (tConst prim_ty [u]) [ty])) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ wfΓ ->
@@ -1268,7 +1293,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 Proof.
   intros P Pdecl PΓ; unfold env_prop.
   intros XΓ.
-  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 Xint Xfloat X12 Σ wfΣ Γ wfΓ t T H.
+  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 Xint Xfloat Xarr X12 Σ wfΣ Γ wfΓ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : global_env_ext & { wfΣ : wf Σ & { Γ & { t & { T & Σ ;;; Γ |- t : T }}}}})) as p0.
@@ -1549,6 +1574,17 @@ Proof.
              eapply (X _ (typing_wf_local p) _ _ p). simpl. lia.
            ++ eapply IHa1. intros.
              eapply (X _ X0 _ _ Hty). simpl; lia.
+      -- eapply Xarr; tea.
+        * eapply (X14 _ _ _ H). simpl. subst s; lia.
+        * eapply (X14 _ _ _ H0). simpl. subst s; lia.
+        * clear -a0 X14.
+          assert (forall (Γ0 : context) (t T : term) (Hty : Σ;;; Γ0 |- t : T),
+          typing_size Hty < S (all_size _ (fun t p => typing_size p) a0) ->
+          on_global_env cumul_gen (lift_typing P) Σ.1 × P Σ Γ0 t T).
+          { intros ??? Hty ?; eapply (X14 _ _ _ Hty). simpl. lia. }
+          clear X14. clear -X a0. induction a0; constructor; eauto.
+          split => //. eapply (X _ _ _ p). cbn. lia.
+          eapply IHa0. intros. eapply (X _ _ _ Hty). simpl. lia.
 Qed.
 
 (** * Lemmas about All_local_env *)

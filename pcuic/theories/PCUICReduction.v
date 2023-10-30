@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import config.
+From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction PCUICPrimitive
      PCUICCases PCUICClosed PCUICTactics.
 
 Require Import ssreflect.
@@ -15,6 +15,25 @@ Set Default Goal Selector "!".
 Reserved Notation " Σ ;;; Γ |- t ⇝ u " (at level 50, Γ, t, u at next level).
 
 Local Open Scope type_scope.
+
+Definition set_array_default (ar : array_model term) (v : term) :=
+  {| array_level := ar.(array_level);
+     array_default := v;
+     array_type := ar.(array_type);
+     array_value := ar.(array_value) |}.
+
+Definition set_array_type (ar : array_model term) (v : term) :=
+  {| array_level := ar.(array_level);
+     array_default := ar.(array_default);
+     array_type := v;
+     array_value := ar.(array_value) |}.
+
+Definition set_array_value (ar : array_model term) (v : list term) :=
+  {| array_level := ar.(array_level);
+     array_default := ar.(array_default);
+     array_type := ar.(array_type);
+     array_value := v |}.
+
 
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
@@ -116,6 +135,22 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | cofix_red_body mfix0 mfix1 idx :
     OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
     Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+
+| array_red_val arr value :
+    OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) arr.(array_value) value ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+               tPrim (primArray; primArrayModel (set_array_value arr value))
+
+| array_red_def arr def :
+    Σ ;;; Γ |- arr.(array_default) ⇝ def ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+               tPrim (primArray; primArrayModel (set_array_default arr def))
+
+| array_red_type arr ty :
+    Σ ;;; Γ |- arr.(array_type) ⇝ ty ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+          tPrim (primArray; primArrayModel (set_array_type arr ty))
+
 where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
 Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
@@ -240,9 +275,28 @@ Lemma red1_ind_all :
                            (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
+
+        (forall (Γ : context) (arr : array_model term)
+          (value : list term),
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) (array_value arr) value ->
+          P Γ (tPrim (primArray; primArrayModel arr))
+            (tPrim (primArray; primArrayModel (set_array_value arr value)))) ->
+
+        (forall (Γ : context) (arr : array_model term)
+          (def : term), Σ;;; Γ |- array_default arr ⇝ def ->
+        P Γ (array_default arr) def ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_default arr def)))) ->
+
+       (forall (Γ : context) (arr : array_model term)
+          (ty : term), Σ;;; Γ |- array_type arr ⇝ ty ->
+        P Γ (array_type arr) ty ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_type arr ty)))) ->
+
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. rename X27 into Xlast. revert Γ t t0 Xlast.
+  intros. rename X30 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -296,6 +350,10 @@ Proof.
     revert o. generalize (fix_context mfix0). intros c new.
     revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
+
+  - revert value o. generalize (array_value arr).
+     fix auxl 3; intros l l' Hl; destruct Hl;
+    constructor; try split; auto; intuition.
 Defined.
 
 #[global]
@@ -639,7 +697,7 @@ Section ReductionCongruence.
     revert Γ y r.
     eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta.
     all:  intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-    Qed.
+  Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof using Type.

@@ -41,7 +41,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (forall p, P (tPrim p)) ->
+    (forall p, tPrimProp P p -> P (tPrim p)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -85,6 +85,12 @@ Proof.
     fix auxm 1.
     destruct mfix; constructor; [|apply auxm].
     split; apply auxt.
+
+  * destruct prim. destruct p; cbn; intuition auto.
+    destruct a. cbn.
+    revert array_value.
+    fix auxm 1; destruct array_value; constructor; [|apply auxm].
+    apply auxt.
 Defined.
 
 Lemma size_decompose_app_rec t L :
@@ -259,7 +265,7 @@ Lemma term_forall_mkApps_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
-    (forall i, P (tPrim i)) ->
+    (forall p, tPrimProp P p -> P (tPrim p)) ->
     forall t : term, P t.
 Proof.
   intros until t.
@@ -343,6 +349,15 @@ Proof.
     apply auxt. hnf; cbn. unfold def_size. lia.
     apply auxt'. intros. apply auxt.
     hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia.
+
+  - eapply Pprim.
+    destruct prim. destruct p; cbn; intuition auto.
+    * eapply auxt. red. cbn. lia.
+    * eapply auxt. red. cbn. lia.
+    * destruct a; cbn in *. unfold MR in auxt; cbn in auxt. clear -auxt array_value.
+      revert array_value auxt.
+      fix auxt' 1; destruct array_value; constructor => //.
+      eapply auxt. cbn. lia. eapply auxt'. intros ? ?; eapply auxt. cbn; lia.
 Defined.
 
 Lemma liftP_ctx (P : term -> Type) :
@@ -431,6 +446,8 @@ Proof.
     apply list_size_map_hom. intros.
     simpl. destruct x. simpl. unfold def_size. simpl.
     f_equal; symmetry; apply size_lift.
+  - destruct prim. destruct p; cbn => //. unfold prim_size. simp map_prim => /=.
+    rewrite !size_lift. rewrite list_size_map_hom; auto.
 Qed.
 
 Definition on_local_decl (P : context -> term -> Type)
@@ -485,7 +502,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (m : mfixpoint term) (n : nat),
         All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
-    (forall Γ p, P Γ (tPrim p)) ->
+    (forall Γ p, tPrimProp (P Γ) p -> P Γ (tPrim p)) ->
     forall Γ (t : term), P Γ t.
 Proof.
   intros ????????????????? Γ t.
@@ -563,6 +580,13 @@ Proof.
   - eapply X13; try (apply aux; red; simpl; lia).
     apply auxΓ => //. simpl. specialize (H mfix). lia.
     red. apply All_pair. split; apply auxl; simpl; auto.
+
+  - eapply X14.
+    destruct prim. destruct p; cbn; intuition auto; destruct a; cbn in *.
+    * eapply aux. cbn. lia.
+    * eapply aux. cbn. lia.
+    * eapply (auxl _ _ array_value id). unfold id.
+      change (fun x => size x) with size. lia.
 Defined.
 
 (** This induction principle gives a general induction hypothesis for applications,
@@ -592,7 +616,7 @@ Lemma term_ind_size_app :
         tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat),
         tFixProp (P) P m -> P (tCoFix m n)) ->
-    (forall p, P (tPrim p)) ->
+    (forall p, tPrimProp P p -> P (tPrim p)) ->
     forall (t : term), P t.
 Proof.
   intros.
@@ -644,4 +668,10 @@ Proof.
 
   * eapply X13; try (apply aux; red; simpl; lia).
     red. apply All_pair. split; apply auxl; simpl; auto.
+
+  * eapply X14.
+    destruct hh, p; cbn; intuition auto.
+    1-2:(eapply aux; cbn; lia).
+    eapply (auxl _ (array_value a) id).
+    change (fun x => size (id x)) with size. cbn; lia.
 Defined.

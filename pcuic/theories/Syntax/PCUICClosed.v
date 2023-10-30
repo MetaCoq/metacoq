@@ -121,6 +121,7 @@ Proof.
     autorewrite with map;
     simpl closed in *; solve_all;
     unfold test_def, test_snd, test_predicate_k, test_branch_k in *;
+    try eapply primProp_map;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.

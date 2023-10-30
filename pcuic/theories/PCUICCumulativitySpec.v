@@ -34,6 +34,21 @@ Proof.
   all: repeat first [ assumption | toAll ].
 Qed.
 
+Inductive eq_prim_dep (eq_term : term -> term -> Type) (Re : Universe.t -> Universe.t -> Prop) (eq_term_dep : forall x y, eq_term x y -> Type) (Re' : forall a b, Re a b -> Type) : forall x y : prim_val, eq_prim eq_term Re x y -> Type :=
+  | eqPrimInt_dep i : eq_prim_dep eq_term Re eq_term_dep Re' (primInt; i) (primInt; i) (eqPrimInt eq_term Re i)
+  | eqPrimFloat_dep f : eq_prim_dep eq_term Re eq_term_dep Re' (primFloat; f) (primFloat; f) (eqPrimFloat _ _ f)
+  | eqPrimArray_dep a a' :
+    forall (hre : Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)))
+    (eqdef : eq_term a.(array_default) a'.(array_default))
+    (eqty : eq_term a.(array_type) a'.(array_type))
+    (eqt : All2 eq_term a.(array_value) a'.(array_value)),
+    Re' _ _ hre ->
+    eq_term_dep _ _ eqdef ->
+    eq_term_dep _ _ eqty ->
+    All2_dep eq_term_dep eqt ->
+    eq_prim_dep eq_term Re eq_term_dep Re'
+      (primArray; primArrayModel a) (primArray; primArrayModel a') (eqPrimArray _ _ a a' hre eqdef eqty eqt).
+
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
 
@@ -146,6 +161,10 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
     Σ ;;; Γ ⊢ tCoFix mfix idx ≤s[pb] tCoFix mfix' idx
+
+| cumul_Prim p p' :
+  eq_prim (fun x y => Σ ;;; Γ ⊢ x ≤s[Conv] y) (compare_universe Conv Σ) p p' ->
+  Σ ;;; Γ ⊢ tPrim p ≤s[pb] tPrim p'
 
 (** Reductions *)
 
@@ -425,6 +444,10 @@ Lemma cumulSpec0_rect :
         P cf Σ Γ pb (tCoFix mfix idx) (tCoFix mfix' idx)
           (cumul_CoFix _ _ _ _ _ _ H)) ->
 
+    (forall Γ pb p p' (e : eq_prim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
+      eq_prim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
+      P cf Σ Γ pb (tPrim p) (tPrim p') (cumul_Prim _ _ _ _ _ e)) ->
+
     (* cumulativity rules *)
 
     (forall (Γ : context) (pb : conv_pb) (i : inductive) (u u' : list Level.t)
@@ -463,14 +486,14 @@ Proof.
   - eapply X8; eauto.
   - eapply X9; eauto.
   - eapply X10; eauto.
-  - eapply X20; eauto. clear -a aux.
-    revert args args' a.
-    fix aux' 3; destruct a; constructor; auto.
   - eapply X21; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct a; constructor; auto.
-  - eapply X22; eauto.
+  - eapply X22; eauto. clear -a aux.
+    revert args args' a.
+    fix aux' 3; destruct a; constructor; auto.
   - eapply X23; eauto.
+  - eapply X24; eauto.
   - eapply X11; eauto.
     revert args args' a.
     fix aux' 3; destruct a; constructor; auto.
@@ -503,6 +526,11 @@ Proof.
     fix aux' 3; destruct a; constructor.
     + intuition auto.
     + auto.
+  - eapply X20; eauto.
+    clear -e aux.
+    induction e; constructor; auto.
+    clear -a0 aux. revert a0.
+    induction a0; constructor; auto.
   - eapply X; eauto.
   - eapply X0; eauto.
   - eapply X1; eauto.
@@ -695,6 +723,10 @@ Lemma convSpec0_ind_all :
            P cf Σ Γ Conv (tCoFix mfix idx) (tCoFix mfix' idx)
              (cumul_CoFix _ _ _ _ _ _ H)) ->
 
+      (forall Γ p p' (e : eq_prim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
+        eq_prim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
+        P cf Σ Γ Conv (tPrim p) (tPrim p') (cumul_Prim _ _ _ _ _ e)) ->
+
       (* cumulativity rules *)
 
       (forall (Γ : context) (i : inductive) (u u' : list Level.t)
@@ -729,6 +761,7 @@ Proof.
   remember Conv as pb eqn:Hpb in Ht |- *.
   induction Ht; eauto; subst.
   all: exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end; eauto).
+  6:{ destruct X25; constructor; auto. eapply All2_dep_impl; tea; intuition auto. }
   all: cbv [cumul_predicate_dep] in *.
   all: repeat destruct ?; subst.
   all: destruct_head'_prod.

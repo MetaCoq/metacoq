@@ -20,11 +20,11 @@ Local Ltac constructor_per_goal _ :=
   unshelve constructor_per_goal' (); shelve_unifiable.
 
 Lemma weakening_config_wf_local_sized {cf1 cf2 : checker_flags} Σ Γ
-  (Hwf : match cf1 with _ => wf_local Σ Γ end)
+  (Hwf :  All_local_env (lift_typing (@typing cf1) Σ) Γ)
   (IH : forall Γ0 t0 T0 (H0 : @typing cf1 Σ Γ0 t0 T0),
       typing_size H0 < S (All_local_env_size (fun _ _ _ _ H => typing_size H) Σ Γ Hwf)
       -> @typing cf2 Σ Γ0 t0 T0)
-  : match cf2 with _ => wf_local Σ Γ end.
+  : wf_local Σ Γ.
 Proof.
   simpl in *.
   induction Hwf; [ constructor 1 | constructor 2 | constructor 3 ].
@@ -64,6 +64,7 @@ Proof.
   intros (Σ & Γ & t & T & H). simpl.
   intros IH. specialize (fun Σ Γ t T H => IH (Σ; Γ; t; T; H)). simpl in IH.
   destruct H; constructor_per_goal (); try eassumption.
+  5:destruct p1; constructor; eauto; solve_all.
   all: try (unshelve eapply IH; [ eassumption .. | ];
             try solve [ constructor; simpl; lia ]).
   all: try (eapply (@weakening_config_cumulSpec cf1 cf2); eassumption).
@@ -112,6 +113,7 @@ Proof.
        end.
   all: repeat match goal with H : Forall2 _ (_ :: _) (_ :: _) |- _ => depelim H end.
   all: try assumption.
+  2:{ eapply (All_map_size (fun x H => typing_size H) _ hvalue). intros. eapply (IH _ _ _ p). lia. }
   all: [ > unshelve eapply (@weakening_config_wf_local_sized cf1 cf2); [ eassumption | ] .. ].
   all: intros; unshelve eapply IH; [ eassumption | ].
   all: simpl in *; try lia.

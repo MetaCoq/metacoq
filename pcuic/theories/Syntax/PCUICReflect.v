@@ -115,7 +115,7 @@ Fixpoint eqb_term (u v : term) : bool :=
       eqb x.(rarg) y.(rarg) &&
       eqb x.(dname) y.(dname)) mfix mfix'
 
-  | tPrim p, tPrim p' => eqb p p'
+  | tPrim p, tPrim p' => @eqb_prim_val _ eqb_term p p'
   | _, _ => false
   end.
 
@@ -194,6 +194,8 @@ Proof.
   destruct (eqb_spec na na'); t'; destruct (r ty'); t'; destruct (o b'); t'.
 Qed.
 
+Transparent eqb_prim_model eqb_prim_val.
+
 #[program,global] Instance eqb_term_reflect : ReflectEq term :=
   {| eqb := eqb_term |}.
 Next Obligation.
@@ -243,6 +245,16 @@ Proof.
       destruct (r0 dbody0); t'.
       destruct (eqb_spec rarg rarg0); t'.
       destruct (eqb_spec dname dname0); t'. }
+  - destruct p, p; cbn in *; destruct prim, p; cbn; nodec.
+    case: eqb_spec; intros; subst; nodec. constructor; auto.
+    case: eqb_spec; intros; subst; nodec. constructor; auto.
+    destruct X as [eqty [eqd eqv]]. unfold eqb_array.
+    destruct (eqty (array_type a0)); t'.
+    destruct (eqd (array_default a0)); t'. 2:noconf H1; auto.
+    2:{ noconf H0; auto. }
+    case: eqb_spec; intros; subst; nodec; cbn.
+    case: (reflect_prop_list eqv) => //. constructor; auto. f_equal. f_equal.
+    destruct a, a0; cbn in *; congruence. nodec.
 Qed.
 
 #[global]

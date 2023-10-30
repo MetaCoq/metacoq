@@ -173,6 +173,25 @@ Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_i
                 (typing Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))))
              0 idecl.(ind_ctors) brs).
 
+Variant primitive_typing_hyps `{checker_flags}
+  (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type)
+  Σ Γ : prim_val term -> Type :=
+| prim_int_hyps i : primitive_typing_hyps typing Σ Γ (primInt; i)
+| prim_float_hyps f : primitive_typing_hyps typing Σ Γ (primFloat; f)
+| prim_array_hyps a
+  (wfl : wf_universe Σ (Universe.make a.(array_level)))
+  (hty : typing Σ Γ a.(array_type) (tSort (Universe.make a.(array_level))))
+  (hdef : typing Σ Γ a.(array_default) a.(array_type))
+  (hvalue : All (fun x => typing Σ Γ x a.(array_type)) a.(array_value)) :
+  primitive_typing_hyps typing Σ Γ (primArray; primArrayModel a).
+Derive Signature for primitive_typing_hyps.
+
+Equations prim_type (p : prim_val term) (cst : kername) : term :=
+prim_type (primInt; _) cst := tConst cst [];
+prim_type (primFloat; _) cst := tConst cst [];
+prim_type (primArray; primArrayModel a) cst := tApp (tConst cst [a.(array_level)]) a.(array_type).
+Transparent prim_type.
+
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel : forall n decl,
     wf_local Σ Γ ->
@@ -266,8 +285,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
    wf_local Σ Γ ->
    primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
    declared_constant Σ prim_ty cdecl ->
-   primitive_invariants cdecl ->
-   Σ ;;; Γ |- tPrim p : tConst prim_ty []
+   primitive_invariants (prim_val_tag p) cdecl ->
+   primitive_typing_hyps typing Σ Γ p ->
+   Σ ;;; Γ |- tPrim p : prim_type p prim_ty
 
 | type_Cumul : forall t A B s,
     Σ ;;; Γ |- t : A ->
@@ -375,6 +395,19 @@ Section CtxInstSize.
   end.
 End CtxInstSize.
 
+Section PrimitiveSize.
+  Context {cf} (typing : global_env_ext -> context -> term -> term -> Type)
+  (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
+
+  Definition primitive_typing_hyps_size Σ Γ p (h : primitive_typing_hyps typing Σ Γ p) : size.
+    destruct h.
+    - exact 0.
+    - exact 0.
+    - exact ((typing_size _ _ _ _ hty) + (typing_size _ _ _ _ hdef) +
+      all_size _ (fun x p => typing_size _ _ _ _ p) hvalue).
+  Defined.
+End PrimitiveSize.
+
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
   revert Σ Γ t T d.
@@ -406,7 +439,7 @@ Proof.
     (all_size _ (fun x p => (infer_sort_size (typing_sort_size typing_size)) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (All_local_env_size typing_size _ _ a)
     (all_size _ (fun x p => (infer_sort_size (typing_sort_size typing_size)) Σ _ _ p) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
-  - exact (S (All_local_env_size typing_size _ _ a)).
+  - exact (S (Nat.max (All_local_env_size typing_size _ _ a) (primitive_typing_hyps_size typing typing_size _ _ _ p1))).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -445,8 +478,8 @@ Definition wf_ext `{checker_flags} := on_global_env_ext cumulSpec0 (lift_typing 
 Existing Class wf_ext.
 #[global]
 Hint Mode wf_ext + + : typeclass_intances.
-
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
+
 Proof. intro H; apply H. Qed.
 #[global]
 Existing Instance wf_ext_wf.
@@ -583,6 +616,16 @@ Proof.
     pose (typing_size_pos l0).
     intuition eauto.
     all: try lia.
+Qed.
+
+Lemma All_map_size {A} {P Q : A -> Type} (sizep : forall x, P x -> size) l
+  (a : All P l) :
+  (forall x (p : P x), sizep _ p < S (all_size P sizep a) -> Q x) ->
+  All Q l.
+Proof.
+  induction a; constructor; auto.
+  - apply (X x p); simpl; lia.
+  - apply IHa. intros. eapply (X _ p0); simpl; lia.
 Qed.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
@@ -731,8 +774,10 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
       PΓ Σ Γ ->
       primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
       declared_constant Σ prim_ty cdecl ->
-      primitive_invariants cdecl ->
-      P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+      primitive_invariants (prim_val_tag p) cdecl ->
+      primitive_typing_hyps typing Σ Γ p ->
+      primitive_typing_hyps P Σ Γ p ->
+      P Σ Γ (tPrim p) (prim_type p prim_ty)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
        PΓ Σ Γ ->
@@ -1051,6 +1096,14 @@ Proof.
           eapply (X _ (typing_wf_local p) _ _ p). simpl. lia.
         ++ eapply IHa1. intros.
           eapply (X _ X0 _ _ Hty). simpl; lia.
+
+    -- eapply X12; tea.
+       clear -p2 X14.
+       simpl in X14. destruct p2; constructor; auto.
+       * eapply (X14 _ _ _ hty). simpl. lia.
+       * eapply (X14 _ _ _ hdef). simpl. lia.
+       * simpl in X14. eapply (All_map_size (fun t p => @typing_size cf Σ Γ t (array_type a0) p) _ hvalue); tea.
+         intros x p hs. apply (X14 _ _ _ p). simpl. lia.
 Qed.
 
 Lemma typing_ind_env `{cf : checker_flags} :
@@ -1185,8 +1238,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ ->
         primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
         declared_constant Σ prim_ty cdecl ->
-        primitive_invariants cdecl ->
-        P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+        primitive_invariants (prim_val_tag p) cdecl ->
+        primitive_typing_hyps typing Σ Γ p ->
+        primitive_typing_hyps P Σ Γ p ->
+        P Σ Γ (tPrim p) (prim_type p prim_ty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ ->

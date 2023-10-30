@@ -23,6 +23,7 @@ struct
   type quoted_constraint_type = Constr.t (* of type Universes.constraint_type *)
   type quoted_univ_constraint = Constr.t (* of type Universes.univ_constraint *)
   type quoted_univ_constraints = Constr.t (* of type Universes.constraints *)
+  type quoted_univ_level = Constr.t (* of type Universes.Level.t *)
   type quoted_univ_instance = Constr.t (* of type Universes.universe_instance *)
   type quoted_univ_context = Constr.t (* of type Universes.UContext.t *)
   type quoted_univ_contextset = Constr.t (* of type Universes.ContextSet.t *)
@@ -149,18 +150,19 @@ struct
   let tmk_branch = ast "mk_branch"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat,tArray) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
-     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat")
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat",
+     ast "tArray")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"
   let tMPbound = ast "MPbound"
   let tMPdot = ast "MPdot"
   let tfresh_evar_id = ast "fresh_evar_id"
-  
+
   let tproplevel = ast "level.prop_level_type"
   let tlevelSProp = ast "level.lsprop"
   let tlevelProp = ast "level.lprop"
@@ -211,7 +213,7 @@ struct
   let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
   let tconstructor_body = ast "constructor_body"
   let tBuild_constructor_body = ast "Build_constructor_body"
-  let tprojection_body = ast "projection_body" 
+  let tprojection_body = ast "projection_body"
   let tBuild_projection_body = ast "Build_projection_body"
   let tone_inductive_body = ast "one_inductive_body"
   let tBuild_one_inductive_body = ast "Build_one_inductive_body"

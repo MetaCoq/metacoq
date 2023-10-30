@@ -88,7 +88,7 @@ Fixpoint on_free_vars (p : nat -> bool) (t : term) : bool :=
   | tFix mfix idx | tCoFix mfix idx =>
     List.forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|mfix| p))) mfix
   | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => true
-  | tPrim _ => true
+  | tPrim pr => test_prim (on_free_vars p) pr
   end.
 
 Lemma on_free_vars_ext (p q : nat -> bool) t :
@@ -115,6 +115,7 @@ Proof.
     eapply b; rewrite H //.
   - simpl; intuition auto. f_equal; eauto 2.
     eapply b; rewrite H //.
+  - solve_all.
 Qed.
 
 #[global]
@@ -197,6 +198,7 @@ Proof.
   - unfold test_def; solve_all.
     rewrite shiftnP_closedP shiftnP_xpredT.
     now len in b.
+  - solve_all.
 Qed.
 
 Lemma closedn_on_free_vars {P n t} : closedn n t -> on_free_vars (shiftnP n P) t.
@@ -228,6 +230,7 @@ Proof.
   - repeat (solve_all; f_equal).
   - unfold test_def. solve_all.
   - unfold test_def; solve_all.
+  - solve_all.
 Qed.
 
 Definition on_free_vars_decl P d :=
@@ -373,6 +376,7 @@ Proof.
     len; rewrite shiftnP_strengthenP. f_equal; eauto.
   - unfold test_def in *. simpl; intros ? [].
     len; rewrite shiftnP_strengthenP. f_equal; eauto.
+  - solve_all.
 Qed.
 
 Definition on_free_vars_terms p s :=
@@ -403,7 +407,8 @@ Proof.
   revert t p k.
   induction t using PCUICInduction.term_forall_list_ind; simpl => //; intros;
     simpl.
-  all:try (rtoProp; rewrite ?shiftnP_substP; now rewrite ?IHt1 ?IHt2 ?IHt3).
+  all:try (rtoProp; rewrite ?shiftnP_substP; now rewrite ?IHt1 ?IHt2 ?IHt3);
+  try solve [solve_all].
   - intros. destruct (Nat.leb_spec k n).
     * destruct nth_error eqn:eq.
       + unfold on_free_vars_terms in *. toAll.
@@ -422,7 +427,6 @@ Proof.
         now rewrite H0.
     * simpl. rewrite /substP /strengthenP /=.
       rewrite H0. now nat_compare_specs.
-  - solve_all.
   - rtoProp. destruct X. solve_all.
     * len. rewrite shiftnP_substP. solve_all.
     * len. rewrite shiftnP_substP; solve_all.

@@ -22,7 +22,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["bash" "./configure.sh"]
-  [make "-j" "%{jobs}%" "common"]
+  [make "-j" "%{jobs}%" "-C" "common"]
 ]
 install: [
   [make "-C" "common" "install"]

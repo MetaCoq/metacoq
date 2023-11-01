@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq Require Import config utils BasicAst.
+From MetaCoq.Utils Require Import utils.
+From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed EWcbvEval.
@@ -671,7 +672,7 @@ Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
 Local Hint Constructors represents_value : core.
 
-From MetaCoq Require Import bytestring MCString.
+From MetaCoq.Utils Require Import bytestring MCString.
 Require Import BinaryString.
 Import String.
 

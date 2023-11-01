@@ -90,6 +90,7 @@ Proof.
     rewrite /test_def in Ht.
     solve_all ; eauto using shiftn_ext_cond.
   - admit.
+(* Qed. *)
 Admitted.
 
 Lemma rename_on_free_vars n t f :

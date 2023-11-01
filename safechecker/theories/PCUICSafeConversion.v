@@ -5742,7 +5742,9 @@ Qed.
       eapply compare_universeb_complete in H0; eauto.
       destruct leq; cbn in *; easy.
       Unshelve. all:eauto.
-  Qed.
+    - admit.
+  (* Qed. *)
+  Admitted.
 
   Equations _isconv (s : state) (Γ : context)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

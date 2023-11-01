@@ -1264,6 +1264,7 @@ Proof.
   - rewrite /test_def; solve_all. simpl. now len in b.
   - rewrite /test_def; solve_all. simpl. now len in b.
   - admit.
+(* Qed. *)
 Admitted.
 
 Lemma closed_nlctx n t : closedn_ctx n t -> closedn_ctx n (nlctx t).

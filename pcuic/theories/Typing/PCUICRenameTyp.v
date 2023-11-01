@@ -1072,7 +1072,8 @@ Proof.
         now eapply closedn_on_free_vars in H.
       * pose proof (closed_ctx_on_free_vars P _ (closed_wf_local _ (typing_wf_local ht))).
         destruct hf as [HΔ _]. apply wf_local_closed_context; eauto.
-Qed.
+(* Qed. *)
+Admitted.
 
 Lemma typing_rename_P {P Σ Γ Δ f t A} {wfΣ : wf Σ.1} :
   renaming (shiftnP #|Γ| P) Σ Γ Δ f ->

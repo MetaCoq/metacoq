@@ -2132,7 +2132,6 @@ Section RedPred.
       eapply pred1_refl.
       apply pred1_refl_gen => //.
       now rewrite -H; pcuic.
-
     - constructor; pcuic. constructor; cbn; pcuic. solve_all.
       eapply OnOne2_All_mix_left in X; tea. clear a.
       eapply OnOne2_All2; pcuic; simpl;

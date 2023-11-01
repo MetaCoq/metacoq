@@ -1014,7 +1014,6 @@ Section Alpha.
         eapply eq_term_upto_univ_cumulSpec.
         eapply upto_names_impl_leq_term.
         constructor. constructor. reflexivity. now symmetry.
-
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
       eapply (type_ws_cumul_pb (pb:=Cumul)).
       + eapply iht; tea.

@@ -20,10 +20,10 @@ sig
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
   val unquote_kn :  quoted_kernel_name -> KerName.t
   val unquote_inductive :  quoted_inductive -> Names.inductive
-  (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
+  (*val unquote_univ_instance :  quoted_univ_instance -> UVars.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Sorts.t
-  val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
+  val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * UVars.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
     quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
@@ -154,10 +154,14 @@ struct
          let ind' = D.unquote_inductive ind in
          let proj_arg = D.unquote_int arg in
          let mib = Environ.lookup_mind (fst ind') env in
-         let p' = Declareops.inductive_make_projection ind' mib ~proj_arg in
+         let p', r = Declareops.inductive_make_projection ind' mib ~proj_arg in
          let p' = Names.Projection.make p' false in
          let evm, t' = aux env evm t in
-         evm, Constr.mkProj (p', t')
+         let r = match r with
+           | Relevant | Irrelevant -> r
+           | RelevanceVar _ -> CErrors.user_err Pp.(str "Unquoting sort poly projections not yet supported.")
+         in
+         evm, Constr.mkProj (p', r, t')
       | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
       | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
 

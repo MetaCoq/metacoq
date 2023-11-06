@@ -264,10 +264,10 @@ struct
   let unquote_universe_instance evm trm (* of type universe_instance *) =
     let l = unquote_list trm in
     let evm, l = map_evm unquote_level evm l in
-    evm, Univ.Instance.of_array (Array.of_list l)
+    evm, UVars.Instance.of_array ([||], Array.of_list l)
 
   let unquote_variance v =
-    let open Univ.Variance in
+    let open UVars.Variance in
     if constr_equall v cIrrelevant then Irrelevant
     else if constr_equall v cCovariant then Covariant
     else if constr_equall v cInvariant then Invariant

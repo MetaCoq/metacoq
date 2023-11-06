@@ -188,7 +188,7 @@ struct
     let { inductive_mind = kn; inductive_ind = i } = q in
     (MutInd.make1 (unquote_kn kn), unquote_int i)
 
-  (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
+  (*val unquote_univ_instance :  quoted_univ_instance -> UVars.Instance.t *)
   let unquote_proj (q : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let { proj_ind = ind; proj_npars = ps; proj_arg = idx } = q in
     (ind, ps, idx)
@@ -223,8 +223,8 @@ struct
        let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
        evd, Sorts.sort_of_univ u
 
-  let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
-  = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))
+  let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * UVars.Instance.t
+  = (evm,  UVars.Instance.of_array ([||], Array.of_list (List0.map unquote_level l)))
 
 
   let unquote_global_reference (trm : Kernames.global_reference) : GlobRef.t =

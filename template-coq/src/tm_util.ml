@@ -139,7 +139,6 @@ module CaseCompat =
   open Context.Rel.Declaration
   open Vars
   open Util
-  open Univ
   open Declarations
 
   (** {6 Changes of representation of Case nodes} *)
@@ -170,7 +169,7 @@ module CaseCompat =
     let realdecls, _ = List.chop mip.mind_nrealdecls mip.mind_arity_ctxt in
     let self =
       let args = Context.Rel.instance mkRel 0 mip.mind_arity_ctxt in
-      let inst = Instance.of_array (Array.init (Instance.length u) Level.var) in
+      let inst = UVars.Instance.abstract_instance (UVars.Instance.length u) in
       mkApp (mkIndU (ci.ci_ind, inst), args)
     in
     let realdecls = LocalAssum (Context.anonR, self) :: realdecls in
@@ -298,8 +297,11 @@ module RetypeMindEntry =
       | Entries.Monomorphic_ind_entry -> evm
       | Entries.Template_ind_entry uctx -> evm
       | Entries.Polymorphic_ind_entry uctx ->
-        let uctx' = ContextSet.of_context uctx in
-        Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
+        let qs, (us, csts) = UVars.UContext.to_context_set uctx in
+        let qs = Sorts.Quality.Set.fold (fun q qs -> match q with
+            | QConstant _ -> assert false
+            | QVar q -> Sorts.QVar.Set.add q qs) qs Sorts.QVar.Set.empty in
+        Evd.merge_sort_context_set (UState.UnivFlexible false) evm ((qs,us),csts)
     in
     let evm, mind = infer_mentry_univs env evm mind in
     let evm = Evd.minimize_universes evm in

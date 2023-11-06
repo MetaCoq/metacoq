@@ -343,12 +343,14 @@ Section Inversion.
       [× wf_local Σ Γ,
         primitive_constant Σ (prim_val_tag p) = Some prim_ty,
         declared_constant Σ prim_ty cdecl,
-        primitive_invariants cdecl &
-        Σ ;;; Γ ⊢ tConst prim_ty [] ≤ T].
+        primitive_invariants (prim_val_tag p) cdecl,
+        primitive_typing_hyps typing Σ Γ p &
+        Σ ;;; Γ ⊢ prim_type p prim_ty ≤ T].
   Proof.
     intros Γ p T h. depind h.
     - exists prim_ty, cdecl; split => //.
       eapply ws_cumul_pb_refl; fvs.
+      depelim p1 => //=; simp prim_type => //=. fvs.
     - destruct IHh1 as [prim_ty [cdecl []]].
       exists prim_ty, cdecl. split => //.
       transitivity A; tea. eapply cumulSpec_cumulAlgo_curry; tea; fvs.

@@ -1578,6 +1578,8 @@ Proof.
     rewrite Nat.add_shuffle3.
     now rewrite app_context_assoc in b.
 
+  * cbn. destruct p as [? []]; cbn => //=.
+    eapply red_primArray_congr; cbn in *; intuition eauto. solve_all.
 - specialize (X (Γ ,,, Δ)  (Some t) wf). simpl in X.
   apply X. reflexivity.
 Qed.

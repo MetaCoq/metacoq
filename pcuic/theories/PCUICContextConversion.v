@@ -295,6 +295,19 @@ Section ContextReduction.
       forward b1. eapply red1_red_ctxP_app => //.
       destruct b1 as [t [? ?]].
       refine (existT _ {| dbody := t |} _); simpl; eauto.
+    - eapply forallb_All in a. eapply OnOne2_All_mix_left in X; tea.
+      eapply (OnOne2_exist _ (red Σ Γ')) in X. destruct X as [values' []].
+      eexists; split.
+      eapply red_primArray_value, OnOne2_All2; tea; intuition eauto.
+      change (set_array_value arr values') with (set_array_value (set_array_value arr value) values').
+      eapply red_primArray_value, OnOne2_All2; tea; intuition eauto.
+      intros; intuition eauto.
+    - eexists; split.
+      + eapply red_primArray_default; tea.
+      + now eapply (red_primArray_default (set_array_default arr def) x).
+    - eexists; split.
+      + eapply red_primArray_type; tea.
+      + now eapply (red_primArray_type (set_array_type arr ty) x).
   Qed.
 
   Hint Resolve red_ctx_on_free_vars : fvs.

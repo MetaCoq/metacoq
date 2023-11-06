@@ -14,6 +14,28 @@ Require Import ssreflect ssrbool.
 
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
+
+Lemma test_primu_mapu pu pt fu ft p :
+  test_primu pu pt (mapu_prim fu ft p) =
+  test_primu (pu ∘ fu) (pt ∘ ft) p.
+Proof.
+  destruct p as [? []] => //=. cbn.
+  now rewrite forallb_map.
+Qed.
+
+Lemma test_primu_primProp P pu pt pu' pt' p :
+  tPrimProp P p ->
+  (forall x, pu x = pu' x) ->
+  (forall x, P x -> pt x = pt' x) ->
+  test_primu pu pt p = test_primu pu' pt' p.
+Proof.
+  destruct p as [? []] => //=. cbn.
+  intuition eauto. do 3 f_equal; eauto.
+  solve_all.
+Qed.
+
+
+
 Section CheckerFlags.
   Context {cf:checker_flags}.
 
@@ -297,6 +319,7 @@ Section CheckerFlags.
       | tConst _ u | tInd _ u | tConstruct _ _ u =>
           forallb fu (map Universe.make u)
       | tEvar _ args => forallb (on_universes fu fc) args
+      | tPrim p => test_primu (fun x => fu (Universe.make x)) (on_universes fu fc) p
       | _ => true
       end.
 
@@ -355,6 +378,7 @@ Qed.
       - rewrite forallb_map.
         eapply All_forallb_eq_forallb; eauto. simpl; intros [].
         simpl. intros. cbn. now rewrite H.
+      - rewrite test_primu_mapu; eapply test_primu_primProp; tea; eauto.
     Qed.
 
     Corollary wf_universes_lift n k t : wf_universes (lift n k t) = wf_universes t.
@@ -389,6 +413,7 @@ Qed.
       - rewrite forallb_map.
         eapply All_forallb_eq_forallb; eauto. simpl; intros [].
         simpl. intros. cbn. now rewrite H.
+      - rewrite test_primu_mapu; eapply test_primu_primProp; tea; eauto.
     Qed.
 
     Corollary wf_universes_subst s k t :
@@ -424,7 +449,7 @@ Qed.
     induction t using term_forall_list_ind; simpl in *; auto; try to_prop;
       try apply /andP; to_wfu; intuition eauto 4.
 
-    all:cbn in * ; autorewrite with map; repeat (f_equal; solve_all).
+    all:cbn -[Universe.make] in * ; autorewrite with map; repeat (f_equal; solve_all).
 
     - to_wfu. destruct Σ as [Σ univs']. simpl in *.
       eapply (wf_universe_subst_instance_univ (Σ, univs)); auto.
@@ -468,6 +493,8 @@ Qed.
       move/andP: a => [] tctx wfu.
       split; auto. simpl.
       solve_all. now len.
+    - rewrite -subst_instance_univ_make. to_wfu.
+      eapply (wf_universe_subst_instance_univ (Σ.1, univs)) => //.
   Qed.
 
   Lemma weaken_wf_universe Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
@@ -507,6 +534,21 @@ Qed.
     intros. now eapply weaken_wf_universe_level.
   Qed.
 
+  Arguments Universe.make : simpl never.
+Lemma test_primu_test_primu_tPrimProp {P : term -> Type} {pu put} {pu' : Level.t -> bool} {put' : term -> bool} p :
+  tPrimProp P p -> test_primu pu put p ->
+  (forall u, pu u -> pu' u) ->
+  (forall t, P t -> put t -> put' t) ->
+  test_primu pu' put' p.
+Proof.
+  intros hp ht hf hg.
+  destruct p as [? []]; cbn => //.
+  destruct a; destruct hp; cbn in *.
+  rtoProp. destruct p0. intuition eauto.
+  eapply forallb_All in H2. eapply All_prod in a; tea.
+  eapply All_forallb, All_impl; tea. intuition eauto. apply hg; intuition auto.
+Qed.
+
   Lemma weaken_wf_universes {Σ : global_env_ext} Σ' t : wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
     wf_universes Σ t ->
     wf_universes (Σ', Σ.2) t.
@@ -532,6 +574,8 @@ Qed.
     intuition.
   - red in X; solve_all.
   - red in X. solve_all.
+  - eapply test_primu_test_primu_tPrimProp; tea; cbn; eauto.
+    intros; to_wfu; now eapply weaken_wf_universe.
   Qed.
 
   Lemma wf_universes_weaken_full : weaken_env_prop_full cumulSpec0 (lift_typing typing) (fun Σ Γ t T =>
@@ -782,6 +826,7 @@ Qed.
       now rewrite b.
     - rewrite /test_def /map_def /=. now rewrite a b.
     - rewrite /test_def /map_def /=. now rewrite a b.
+    - rewrite test_primu_mapu; eapply test_primu_primProp; tea; eauto.
   Qed.
 
   Ltac try_hyp :=
@@ -920,6 +965,12 @@ Qed.
     now eapply wf_universe_level_closed.
   Qed.
 
+  Lemma wf_universe_make Σ u : wf_universe Σ (Universe.make u) -> wf_universe_level Σ u.
+  Proof.
+    rewrite /wf_universe /= => hl; rewrite /wf_universe_level.
+    apply (hl (u, 0)). lsets.
+  Qed.
+
   Lemma wf_universes_closedu {Σ : global_env} {wfΣ : wf Σ} {univs t} :
     on_udecl_prop Σ univs ->
     wf_universes (Σ, univs) t -> closedu #|polymorphic_instance univs| t.
@@ -947,6 +998,9 @@ Qed.
     - unfold test_branch in *; solve_all.
     - unfold test_def in *; solve_all.
     - unfold test_def in *; solve_all.
+    - eapply test_primu_test_primu_tPrimProp; tea; cbn; eauto.
+      intros. to_wfu. eapply wf_universe_level_closed; tea.
+      now apply wf_universe_make.
   Qed.
 
   Lemma wf_ctx_universes_closed {Σ} {wfΣ : wf Σ} {univs ctx} :
@@ -1200,6 +1254,12 @@ Qed.
       solve_all; destruct a0 as (? & _ & ?), b0; rtoProp; tas.
       eapply nth_error_all in X0; eauto.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
+
+    - apply/andP; split; eauto.
+      destruct X2; cbn => //.
+      rtoProp; intuition eauto. solve_all.
+      destruct X2; cbn => //.
+      simp prim_type. cbn. rtoProp; intuition.
   Qed.
 
   Lemma typing_wf_universes {Σ : global_env_ext} {Γ t T} :

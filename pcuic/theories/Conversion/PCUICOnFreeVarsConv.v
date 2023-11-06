@@ -52,6 +52,7 @@ Proof.
     f_equal.
     1: auto.
     by rewrite map_length ebod shiftnP_shiftn.
+  - solve_all.
 Qed.
 
 Lemma shiftn_ext_cond (P : nat -> bool) f f' n :
@@ -75,7 +76,7 @@ Proof.
   revert P f f' H Ht.
   elim t using term_forall_list_ind; cbn in |- *; intros; try easy.
 
-  1-6,8:
+  1-6,8,11:
     try rewrite H; try rewrite H0 ; try rewrite H1 ; try easy;
     solve [f_equal; solve_all; eauto using shiftn_ext_cond].
 

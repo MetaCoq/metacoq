@@ -1923,6 +1923,93 @@ Section ReductionCongruence.
       - eapply red_cofix_ty. assumption.
     Qed.
 
+    Lemma red_primArray_one_value (arr : array_model term) (value : list term) :
+      OnOne2 (red Σ Γ) (array_value arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝* tPrim (primArray; primArrayModel (set_array_value arr value)).
+    Proof.
+      intros h.
+      apply OnOne2_on_Trel_eq_unit in h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (arr.(array_value) = value).
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. inversion e. eauto.
+        } subst.
+        destruct arr; reflexivity.
+      - set (f := fun x : term => (x, tt)) in *.
+        set (g := (fun '(x, _) => x) : term × unit -> term).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a, u. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. f_equal. assumption.
+        }
+        eapply trans_red.
+        + eapply IHh; tas. symmetry. apply el.
+        + change (set_array_value arr value) with
+          (set_array_value (set_array_value arr (map g l1)) value).
+          econstructor. rewrite (el' value).
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? []] [? []] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *.
+          unfold on_Trel. cbn. assumption.
+    Qed.
+
+    Lemma red_primArray_value (arr : array_model term) (value : list term) :
+      All2 (red Σ Γ) (array_value arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝* tPrim (primArray; primArrayModel (set_array_value arr value)).
+    Proof using Type.
+      intros h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - destruct arr; reflexivity.
+      - eapply red_trans.
+        + eapply IHh.
+        + assert (set_array_value arr z = set_array_value (set_array_value arr y) z) as ->.
+          { now destruct arr. }
+          eapply red_primArray_one_value; eassumption.
+    Qed.
+
+    Lemma red_primArray_default (arr : array_model term) (value : term) :
+      red Σ Γ (array_default arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel (set_array_default arr value)).
+    Proof using Type.
+      intros h.
+      destruct arr; cbn in *.
+      rst_induction h; eauto with pcuic.
+    Qed.
+
+    Lemma red_primArray_type (arr : array_model term) (value : term) :
+      red Σ Γ (array_type arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel (set_array_type arr value)).
+    Proof using Type.
+      intros h.
+      destruct arr; cbn in *.
+      rst_induction h; eauto with pcuic.
+    Qed.
+
+    Lemma red_primArray_congr (arr arr' : array_model term) :
+      array_level arr = array_level arr' ->
+      All2 (red Σ Γ) (array_value arr) (array_value arr') ->
+      red Σ Γ (array_default arr) (array_default arr') ->
+      red Σ Γ (array_type arr) (array_type arr') ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel arr').
+    Proof using Type.
+      destruct arr, arr'; cbn in *.
+      intros <- h h0 h1.
+      eapply red_trans; [eapply red_primArray_value; tea|].
+      eapply red_trans; [eapply red_primArray_default; tea|].
+      now eapply red_trans; [eapply red_primArray_type; tea|].
+    Qed.
+
     Lemma red_prod_l :
       forall na A B A',
         red Σ Γ A A' ->

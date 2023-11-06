@@ -95,14 +95,14 @@ Proof.
   - rewrite subst_instance_two. solve [econstructor; eauto].
   - rewrite !subst_instance_mkApps.
     eapply cumul_proj. now rewrite nth_error_map Hargs.
-  - eapply cumul_Trans; intuition.
+  - eapply cumul_Trans; intuition eauto.
     * rewrite on_free_vars_ctx_subst_instance; eauto.
     * rewrite on_free_vars_subst_instance. unfold is_open_term.
       replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
   - eapply cumul_Evar. eapply All2_map.
     repeat toAll.
     eapply All2_impl.  1: tea. cbn; intros. eapply X0.2; eauto.
-  - eapply cumul_Case; try solve [intuition; eauto].
+  - eapply cumul_Case; try solve [intuition eauto; eauto].
     * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; eauto; cbn.
       + apply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros. destruct_head'_prod; eauto.
       + apply precompose_subst_instance. eapply R_universe_instance_impl.
@@ -111,21 +111,18 @@ Proof.
       + rewrite -> subst_instance_app, inst_case_predicate_context_subst_instance in *.
         eauto.
     * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
-      repeat split; eauto; intuition.
+      repeat split; intuition eauto.
       rewrite -> subst_instance_app, inst_case_branch_context_subst_instance in *; eauto.
   - eapply cumul_Fix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
-    cbn; intros; intuition.
+    cbn; intros; intuition eauto.
     rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
   - eapply cumul_CoFix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
-    cbn; intros; intuition.
+    cbn; intros; intuition eauto.
     rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
-  - eapply cumul_Prim. depelim e0.
-    * depelim i; depelim X. cbn in H. cbn. constructor.
-    * depelim f; depelim X. cbn in H. constructor.
-    * depelim X. cbn in H. noconf H; cbn in H. constructor; cbn -[Universe.make]; eauto.
-      + rewrite -!subst_instance_univ_make.
-        eapply eq_universe_subst_instance; tea.
-      + solve_all.
+  - eapply cumul_Prim. depelim e0; depelim X; cbn in H; cbn; noconf H; cbn in H; constructor; cbn -[Universe.make]; eauto.
+    + rewrite -!subst_instance_univ_make.
+      eapply eq_universe_subst_instance; tea.
+    + solve_all.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
     * apply precompose_subst_instance_global.
       rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
@@ -206,7 +203,7 @@ Lemma subst_instance_prim_val_tag (p : PCUICPrimitive.prim_val term) u :
   prim_val_tag (mapu_prim (subst_instance_level u) (subst_instance u) p) =
   prim_val_tag p.
 Proof.
-  destruct p as [? []]; simp prim_type => //=.
+  destruct p as [? []] => //=.
 Qed.
 
 Hint Resolve subst_instance_cstrs_two

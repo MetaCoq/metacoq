@@ -605,6 +605,40 @@ Proof.
     eexists. split.
     + eapply cofix_red_body. eassumption.
     + constructor; assumption.
+  - assert (h : ∑ ll,
+      OnOne2 (red1 Σ Δ) (array_value arr) ll *
+      All2 (eq_term_upto_univ Σ' Re Re) value ll
+    ).
+    { induction X.
+      - destruct p as [p1 p2].
+        eapply p2 in e as hh. destruct hh as [? [? ?]].
+        eexists. split.
+        + constructor. eassumption.
+        + constructor.
+          * assumption.
+          * eapply All2_same.
+            intros.
+            eapply eq_term_upto_univ_refl ; eauto.
+      - destruct IHX as [ll [? ?]].
+        eexists. split.
+        + eapply OnOne2_tl. eassumption.
+        + constructor ; eauto.
+          eapply eq_term_upto_univ_refl ; eauto.
+    }
+    destruct h as [? [? ?]].
+    eexists. split.
+    + eapply array_red_val; tea.
+    + do 2 constructor; cbn; eauto; reflexivity.
+  - specialize (IHh _ e) as [v' []].
+    eexists; split.
+    + eapply array_red_def; eauto.
+    + do 2 constructor; cbn; eauto. reflexivity.
+      eapply All2_refl; reflexivity.
+  - specialize (IHh _ e) as [v' []].
+    eexists; split.
+    + eapply array_red_type; eauto.
+    + do 2 constructor; cbn; eauto. reflexivity.
+      eapply All2_refl; reflexivity.
 Qed.
 
 Lemma eq_context_gen_context_assumptions {eq leq Γ Δ} :
@@ -1478,8 +1512,41 @@ Proof.
     eexists. split.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.
+  - depelim e. depelim o.
+    assert (h : ∑ args,
+               OnOne2 (red1 Σ Γ) (array_value a') args *
+               All2 (eq_term_upto_univ Σ' Re Re) value args
+           ).
+    { revert X a0. clear r e e0.
+      generalize (array_value arr), (array_value a').
+      intros l l' X a. induction X in l', a |- *.
+      - destruct p as [p1 p2].
+        dependent destruction a.
+        eapply p2 in e as hh ; eauto.
+        destruct hh as [? [? ?]].
+        eexists. split.
+        + constructor. eassumption.
+        + constructor. all:eauto.
+        + tc.
+      - dependent destruction a.
+        destruct (IHX _ a) as [? [? ?]].
+        eexists. split.
+        + eapply OnOne2_tl. eassumption.
+        + constructor. all: eauto.
+    }
+    destruct h as [? [? ?]].
+    eexists. split.
+    + eapply array_red_val. eassumption.
+    + do 2 constructor. all: eauto.
+  - depelim e. depelim o. eapply IHh in e as [v' []]; tea; tc.
+    eexists; split.
+    + now eapply array_red_def.
+    + do 2 constructor; eauto.
+  - depelim e. depelim o. eapply IHh in e0 as [v' []]; tea; tc.
+    eexists; split.
+    + now eapply array_red_type.
+    + do 2 constructor; eauto.
 Qed.
-
 
 Lemma Forall2_flip {A} (R : A -> A -> Prop) (x y : list A) :
   Forall2 (flip R) y x -> Forall2 R x y.
@@ -2065,6 +2132,15 @@ Section RedPred.
       eapply pred1_refl.
       apply pred1_refl_gen => //.
       now rewrite -H; pcuic.
+
+    - constructor; pcuic. constructor; cbn; pcuic. solve_all.
+      eapply OnOne2_All_mix_left in X; tea. clear a.
+      eapply OnOne2_All2; pcuic; simpl;
+        unfold on_Trel; simpl; intros; intuition auto; noconf b0; repeat inv_on_free_vars_xpredT; eauto with fvs.
+
+
+    - constructor; pcuic. constructor; cbn; pcuic.
+    - constructor; pcuic. constructor; cbn; pcuic.
   Qed.
 
 End RedPred.
@@ -2234,6 +2310,11 @@ Section PredRed.
       eapply (All2_impl X3); unfold on_Trel; intuition auto; repeat inv_on_free_vars_xpredT; eauto with fvs.
     - eapply red_prod; eauto with fvs.
     - eapply red_evar; eauto with fvs. solve_all.
+    - depelim X1; try solve [repeat constructor]; eauto.
+      depelim X2; cbn in H0; rtoProp.
+      eapply red_primArray_congr; eauto.
+      + now eapply Universe.make_inj in e.
+      + solve_all.
   Qed.
 
   Lemma pred1_red_r_gen P Γ Γ' Δ Δ' : forall M N,
@@ -3801,6 +3882,7 @@ Proof.
   - rewrite -(All2_length a). solve_all.
     apply/andP; split; eauto.
     len in b2. eapply b2. eauto.
+  - depelim o; cbn in *; solve_all.
 Qed.
 
 Arguments red1_ctx _ _ _ : clear implicits.

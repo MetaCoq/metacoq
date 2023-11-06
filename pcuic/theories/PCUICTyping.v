@@ -176,8 +176,8 @@ Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_i
 Variant primitive_typing_hyps `{checker_flags}
   (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type)
   Σ Γ : prim_val term -> Type :=
-| prim_int_hyps i : primitive_typing_hyps typing Σ Γ (primInt; i)
-| prim_float_hyps f : primitive_typing_hyps typing Σ Γ (primFloat; f)
+| prim_int_hyps i : primitive_typing_hyps typing Σ Γ (primInt; primIntModel i)
+| prim_float_hyps f : primitive_typing_hyps typing Σ Γ (primFloat; primFloatModel f)
 | prim_array_hyps a
   (wfl : wf_universe Σ (Universe.make a.(array_level)))
   (hty : typing Σ Γ a.(array_type) (tSort (Universe.make a.(array_level))))

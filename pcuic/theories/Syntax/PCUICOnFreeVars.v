@@ -1384,7 +1384,7 @@ Lemma term_on_free_vars_ind :
     (forall p (m : mfixpoint term) (i : nat),
       tFixProp (on_free_vars p) (on_free_vars (shiftnP #|fix_context m| p)) m ->
       tFixProp (P p) (P (shiftnP #|fix_context m| p)) m -> P p (tCoFix m i)) ->
-    (forall p pr, P p (tPrim pr)) ->
+    (forall p pr, tPrimProp (on_free_vars p) pr -> tPrimProp (P p) pr -> P p (tPrim pr)) ->
     forall p (t : term), on_free_vars p t -> P p t.
 Proof.
   intros until t. revert p t.
@@ -1475,6 +1475,20 @@ Proof.
     move=> n /= /andP[] /andP[] clb clty clmfix; constructor.
     * split => //; apply auxt => //.
     * now apply auxm.
+
+  - destruct prim as [? []]; cbn => //. cbn in clt.
+    rtoProp. split => //. split => //.
+    revert H. generalize (array_value a).
+    fix auxm 1; destruct l; constructor.
+    * now move/andP: H.
+    * apply auxm. now move/andP: H.
+
+  - destruct prim as [? []]; cbn => //. cbn in clt.
+    rtoProp. split => //; eauto. split; eauto.
+    move: (array_value a) H.
+    fix auxm 1; destruct array_value; constructor; eauto.
+    * eapply auxt. now move/andP: H.
+    * eapply auxm; now move/andP: H.
 Defined.
 
 Lemma alpha_eq_on_free_vars P (Γ Δ : context) :

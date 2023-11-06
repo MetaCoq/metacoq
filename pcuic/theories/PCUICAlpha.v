@@ -995,8 +995,25 @@ Section Alpha.
         now apply infer_typing_sort_impl with id ihmfix; intros [].
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
-    - intros p prim_ty cdecl IH prim decl pinv Δ v e e'.
-      depelim e. econstructor; tea. now apply IH.
+    - intros p prim_ty cdecl IH prim decl pinv pty ptyIH Δ v e e'.
+      depelim e. depelim o. 1-2:econstructor; eauto; constructor.
+      pose proof (validity (type_Prim Σ Γ _ _ _ wfΓ prim decl pinv pty)) as [s Hs].
+      eapply type_Cumul. econstructor; eauto.
+      * depelim ptyIH. constructor; eauto. now rewrite -e. rewrite -e; eauto.
+        specialize (hty _ _ e1 e'); eauto. eapply type_Cumul; tea. eapply hdef; eauto.
+        eapply upto_names_impl_eq_term in e1.
+        eapply eq_term_upto_univ_cumulSpec.
+        eapply eq_term_leq_term. eapply e1.
+        solve_all.
+        specialize (hty _ _ e1 e'); eauto. eapply type_Cumul; tea. eapply a0; eauto.
+        eapply upto_names_impl_eq_term in e1.
+        eapply eq_term_upto_univ_cumulSpec.
+        eapply eq_term_leq_term. eapply e1.
+      * eapply eq_context_conversion in Hs; eauto.
+      * simp prim_type. eapply Universe.make_inj in e. rewrite e.
+        eapply eq_term_upto_univ_cumulSpec.
+        eapply upto_names_impl_leq_term.
+        constructor. constructor. reflexivity. now symmetry.
 
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
       eapply (type_ws_cumul_pb (pb:=Cumul)).

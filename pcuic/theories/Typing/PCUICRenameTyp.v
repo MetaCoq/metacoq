@@ -177,7 +177,7 @@ Proof.
   - rename Hren into hf. unfold urenaming in hf.
     destruct (nth_error Γ i) eqn:hnth; noconf pf.
     assert (hav : sP i).
-    { unfold sP, shiftnP in *. cbn in *. rewrite orb_false_r in HfreeB. intuition. }
+    { unfold sP, shiftnP in *. cbn in *. rewrite orb_false_r in HfreeB. intuition auto with *. }
     clear HfreeB.
     specialize hf with (1 := hav) (2 := hnth).
     destruct hf as [decl' [e' [eqann [hr hbo]]]].
@@ -419,6 +419,7 @@ Proof.
            rewrite <- fix_context_length.
            eapply urename_on_free_vars_shift; eauto.
            rewrite fix_context_length; eauto.
+  - eapply cumul_Prim. depelim X; cbn; cbn in HfreeB, HΓ; rtoProp; constructor; cbn; eauto. solve_all.
   - repeat rewrite rename_mkApps. eapply cumul_Ind.
     * repeat rewrite map_length; eauto.
     * inv_on_free_vars.
@@ -789,6 +790,11 @@ Qed.
 
 Hint Rewrite <- Upn_ren : sigma.
 
+Lemma rename_prim_type f p pty : rename f (prim_type p pty) = prim_type (map_prim (rename f) p) pty.
+Proof.
+  destruct p as [? []]; cbn; simp prim_type => //.
+Qed.
+
 (** For an unconditional renaming defined on all variables in the source context *)
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
@@ -1046,8 +1052,12 @@ Proof.
       * now eapply rename_wf_cofixpoint.
     + reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv P Δ f hf.
-    cbn. econstructor; tea. apply hf.
+  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv ptyp IH P Δ f hf.
+    cbn. rewrite rename_prim_type /=. econstructor; tea.
+    * apply hf.
+    * rewrite prim_val_tag_map //.
+    * rewrite prim_val_tag_map //.
+    * depelim IH; eauto; cbn; constructor; cbn; eauto. solve_all.
 
   - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht htB ihB cum P Δ f hf.
     eapply type_Cumul.

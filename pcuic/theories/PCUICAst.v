@@ -976,6 +976,12 @@ Proof. intros x. now rewrite (mapu_prim_compose _ _ _ _ x). Qed.
 
 #[global] Hint Rewrite @mapu_prim_compose_rew : map.
 
+Lemma prim_val_tag_map {term term'} (p : PCUICPrimitive.prim_val term) fu (ft : term -> term') :
+  prim_val_tag (mapu_prim fu ft p) = prim_val_tag p.
+Proof.
+  destruct p as [? []] => //.
+Qed.
+
 Definition tPrimProp {term} (P : term -> Type) (p : PCUICPrimitive.prim_val term) : Type :=
   match p.π2 return Type with
   | primIntModel f => unit

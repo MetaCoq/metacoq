@@ -130,6 +130,14 @@ Section CumulSpecIsCumulAlgo.
       repeat split; eauto ; try reflexivity.
     * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
     * repeat split; reflexivity.
+  - eapply cumul_Prim. constructor; eauto; try reflexivity.
+    eapply OnOne2_All2; tea; intuition eauto.
+    + apply X0.
+    + reflexivity.
+  - eapply cumul_Prim. constructor; eauto; trea.
+    eapply All2_reflexivity; intro; reflexivity.
+  - eapply cumul_Prim; constructor; eauto; trea.
+    eapply All2_reflexivity; intro; reflexivity.
   Defined.
 
   Proposition convSpec_cumulSpec (Γ : context) (M N : term) :
@@ -180,6 +188,8 @@ Section CumulSpecIsCumulAlgo.
       eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
     - apply cumul_mkApps; eauto. eapply cumul_CoFix. unfold tFixProp in *.
       eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
+    - eapply cumul_mkApps; eauto. eapply cumul_Prim. depelim o; cbn in X; constructor; intuition eauto; try try_with_nil.
+      solve_all; try_with_nil.
   Defined.
 
   Proposition eq_term_upto_univ_cumulSpec (Γ : context) {pb} M N :
@@ -3565,6 +3575,8 @@ Proof using Type.
     rewrite map_length. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
     enough (#|m| + i - #|m| = i) as ->; tas; lia.
+  - destruct p as [? []]; cbn in X; cbn; trea.
+    eapply red_primArray_congr; cbn; intuition eauto; solve_all.
 Qed.
 
 Lemma closed_red_rel_all {Γ i body t} :
@@ -3659,6 +3671,27 @@ Section MoreCongruenceLemmas.
     * symmetry. eassumption.
 Defined.
 
+Lemma ws_cumul_pb_Prim {pb Γ p p'} :
+  onPrim (ws_cumul_pb Conv Σ Γ) (eq_universe Σ) p p' -> is_closed_context Γ ->
+  Σ;;; Γ ⊢ tPrim p ≤[pb] tPrim p'.
+Proof.
+  intros Hp HΓ.
+  depelim Hp. 1-2:constructor; eauto; trea.
+  apply ws_cumul_pb_terms_alt in a0 as [args0 [args0'  [Hargs0 Hargs0' Hargs0args0']]].
+  pose proof (Hargs0_c :=  closed_red_terms_open_right Hargs0).
+  pose proof (Hargs0'_c :=  closed_red_terms_open_right Hargs0').
+  eapply ws_cumul_pb_alt_closed in w as [def [def' []]].
+  eapply ws_cumul_pb_alt_closed in w0 as [ty [ty' []]].
+  eapply ws_cumul_pb_alt.
+  exists (tPrim (primArray; primArrayModel {| array_level := array_level a; array_default := def; array_type := ty; array_value := args0 |})).
+  exists (tPrim (primArray; primArrayModel {| array_level := array_level a'; array_default := def'; array_type := ty'; array_value := args0' |})).
+  split; eauto; pcuic; cbn; rtoProp; intuition eauto; fvs.
+  + eapply closed_red_terms_open_left in Hargs0. solve_all.
+  + eapply closed_red_terms_open_left in Hargs0'. solve_all.
+  + eapply red_primArray_congr; cbn; solve_all; now eapply closed_red_red.
+  + eapply red_primArray_congr; cbn; solve_all; now eapply closed_red_red.
+  + do 2 constructor; cbn; eauto.
+Qed.
 
 End MoreCongruenceLemmas.
 
@@ -3772,6 +3805,10 @@ Proof.
     * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto; solve_all.
     * rewrite -> shiftnP_add, <- fix_context_length, <- app_length in *; tea.
     * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- app_length in *; tea.
+  - intros Γ p p' e h; cbn => H0 H1 H2.
+    eapply ws_cumul_pb_Prim; eauto.
+    depelim h; constructor; cbn in *; rtoProp; intuition eauto.
+    repeat toAll. solve_all.
   - intros Γ i u u' args args' H X X_dep H0 H1 H2. eapply ws_cumul_pb_Ind; eauto. split; eauto.
     rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2.
     repeat toProp; destruct_head'_and.

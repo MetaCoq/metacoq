@@ -98,7 +98,7 @@ Proof.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
   - intros h; depelim h; constructor; cbn in X; intuition eauto.
-    depelim e; cbn in X; constructor; intuition eauto. solve_all.
+    depelim o; cbn in X; constructor; intuition eauto. solve_all.
 Qed.
 
 Lemma weakening_config_cumul_gen {cf1 cf2} pb Σ Γ M N :

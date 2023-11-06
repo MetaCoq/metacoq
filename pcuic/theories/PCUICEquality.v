@@ -275,16 +275,16 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     eq_term p.(preturn) p'.(preturn))).
 
-Inductive eq_prim (eq_term : term -> term -> Type) Re : prim_val -> prim_val -> Type :=
-  | eqPrimInt i : eq_prim eq_term Re (primInt; i) (primInt; i)
-  | eqPrimFloat f : eq_prim eq_term Re (primFloat; f) (primFloat; f)
-  | eqPrimArray a a' :
+Inductive onPrim (eq_term : term -> term -> Type) Re : prim_val -> prim_val -> Type :=
+  | onPrimInt i : onPrim eq_term Re (primInt; primIntModel i) (primInt; primIntModel i)
+  | onPrimFloat f : onPrim eq_term Re (primFloat; primFloatModel f) (primFloat; primFloatModel f)
+  | onPrimArray a a' :
     Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)) ->
     eq_term a.(array_default) a'.(array_default) ->
     eq_term a.(array_type) a'.(array_type) ->
     All2 eq_term a.(array_value) a'.(array_value) ->
-    eq_prim eq_term Re (primArray; primArrayModel a) (primArray; primArrayModel a').
-Derive Signature for eq_prim.
+    onPrim eq_term Re (primArray; primArrayModel a) (primArray; primArrayModel a').
+Derive Signature for onPrim.
 
 (** ** Syntactic ws_cumul_pb up-to universes
   We don't look at printing annotations *)
@@ -379,7 +379,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
 
 | eq_Prim i i' :
-  eq_prim (eq_term_upto_univ_napp Σ Re Re 0) Re i i' ->
+  onPrim (eq_term_upto_univ_napp Σ Re Re 0) Re i i' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i')
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
@@ -508,6 +508,15 @@ Qed.
 Polymorphic Instance creflexive_eq A : CRelationClasses.Reflexive (@eq A).
 Proof. intro x. constructor. Qed.
 
+Lemma onPrim_map_prop R R' Re p p' P f : tPrimProp P p ->
+  onPrim R Re p p' ->
+  (forall x y, P x -> R x y -> R' (f x) (f y)) ->
+  onPrim R' Re (map_prim f p) (map_prim f p').
+Proof.
+  destruct p as [? []]; cbn; intros h e; depelim e; intros hf; constructor; cbn; intuition eauto.
+  solve_all.
+Qed.
+
 #[global]
 Polymorphic Instance eq_predicate_refl Re Ru :
   CRelationClasses.Reflexive Re ->
@@ -623,7 +632,7 @@ Proof.
     + destruct r as [[h1 h2] [[[h3 h4] h5] h6]]. eapply h1 in h3 ; auto.
     constructor; auto.
   - econstructor.
-    depelim e; cbn in X; constructor; intuition eauto.
+    depelim o; cbn in X; constructor; intuition eauto.
     eapply All2_All_mix_left in a0 as h; eauto. cbn in h.
     eapply All2_sym; solve_all.
 Qed.
@@ -758,7 +767,7 @@ Proof.
       intuition eauto.
       transitivity (rarg y); auto.
   - dependent destruction e2; constructor.
-    depelim e; intuition eauto. depelim e1; constructor; cbn in X; intuition eauto.
+    depelim o; intuition eauto. depelim o0; constructor; cbn in X; intuition eauto.
     eapply All2_All_mix_left in b0 as h; eauto.
     clear b0 a0. clear -he hle a2 h. revert h a2.
     generalize (array_value a) (array_value a') (array_value a'0). clear -he hle.
@@ -981,7 +990,7 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-  - intros h; depelim h. depelim e; constructor; cbn in X; constructor; intuition eauto.
+  - intros h; depelim h. depelim o; constructor; cbn in X; constructor; intuition eauto.
     solve_all.
 Qed.
 
@@ -1014,7 +1023,7 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-  - intros h; depelim h. constructor. depelim e; cbn in X; constructor; intuition eauto.
+  - intros h; depelim h. constructor. depelim o; cbn in X; constructor; intuition eauto.
     solve_all.
 Qed.
 
@@ -1071,11 +1080,8 @@ Proof.
   - cbn. constructor.
     pose proof (All2_length a).
     solve_all. rewrite H. eauto.
-  - cbn. constructor. depelim e; cbn in X; intuition eauto.
-    * depelim i; cbn in X; constructor; eauto.
-    * depelim f; cbn in X; constructor; eauto.
-    * constructor; cbn; eauto.
-      solve_all.
+  - cbn. constructor. depelim o; cbn in X; try constructor; cbn; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma lift_compare_term `{checker_flags} pb Σ ϕ n k t t' :
@@ -1154,11 +1160,8 @@ Proof.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length a).
     solve_all. now rewrite H.
-  - cbn; constructor. depelim e.
-    * cbn. depelim i; cbn in X; constructor; intuition eauto.
-    * cbn. depelim f; cbn in X; constructor; intuition eauto.
-    * cbn. depelim a; cbn in X |- *; constructor; cbn; intuition eauto.
-      solve_all.
+  - cbn; constructor. depelim o; cbn in X |- *; constructor; cbn; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma eq_term_upto_univ_subst Σ Re Rle :
@@ -1712,7 +1715,7 @@ Proof.
     now eapply eq_term_upto_univ_sym.
     now eapply eq_term_upto_univ_sym.
     now symmetry.
-  - depelim e; constructor; eauto.
+  - depelim o; constructor; eauto.
     now eapply eq_term_upto_univ_sym.
     now eapply eq_term_upto_univ_sym.
     eapply All2_sym; solve_all.

@@ -34,10 +34,10 @@ Proof.
   all: repeat first [ assumption | toAll ].
 Qed.
 
-Inductive eq_prim_dep (eq_term : term -> term -> Type) (Re : Universe.t -> Universe.t -> Prop) (eq_term_dep : forall x y, eq_term x y -> Type) (Re' : forall a b, Re a b -> Type) : forall x y : prim_val, eq_prim eq_term Re x y -> Type :=
-  | eqPrimInt_dep i : eq_prim_dep eq_term Re eq_term_dep Re' (primInt; i) (primInt; i) (eqPrimInt eq_term Re i)
-  | eqPrimFloat_dep f : eq_prim_dep eq_term Re eq_term_dep Re' (primFloat; f) (primFloat; f) (eqPrimFloat _ _ f)
-  | eqPrimArray_dep a a' :
+Inductive onPrim_dep (eq_term : term -> term -> Type) (Re : Universe.t -> Universe.t -> Prop) (eq_term_dep : forall x y, eq_term x y -> Type) (Re' : forall a b, Re a b -> Type) : forall x y : prim_val, onPrim eq_term Re x y -> Type :=
+  | onPrimInt_dep i : onPrim_dep eq_term Re eq_term_dep Re' (primInt; primIntModel i) (primInt; primIntModel i) (onPrimInt eq_term Re i)
+  | onPrimFloat_dep f : onPrim_dep eq_term Re eq_term_dep Re' (primFloat; primFloatModel f) (primFloat; primFloatModel f) (onPrimFloat _ _ f)
+  | onPrimArray_dep a a' :
     forall (hre : Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)))
     (eqdef : eq_term a.(array_default) a'.(array_default))
     (eqty : eq_term a.(array_type) a'.(array_type))
@@ -46,8 +46,9 @@ Inductive eq_prim_dep (eq_term : term -> term -> Type) (Re : Universe.t -> Unive
     eq_term_dep _ _ eqdef ->
     eq_term_dep _ _ eqty ->
     All2_dep eq_term_dep eqt ->
-    eq_prim_dep eq_term Re eq_term_dep Re'
-      (primArray; primArrayModel a) (primArray; primArrayModel a') (eqPrimArray _ _ a a' hre eqdef eqty eqt).
+    onPrim_dep eq_term Re eq_term_dep Re'
+      (primArray; primArrayModel a) (primArray; primArrayModel a') (onPrimArray _ _ a a' hre eqdef eqty eqt).
+Derive Signature for onPrim_dep.
 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
@@ -163,7 +164,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     Σ ;;; Γ ⊢ tCoFix mfix idx ≤s[pb] tCoFix mfix' idx
 
 | cumul_Prim p p' :
-  eq_prim (fun x y => Σ ;;; Γ ⊢ x ≤s[Conv] y) (compare_universe Conv Σ) p p' ->
+  onPrim (fun x y => Σ ;;; Γ ⊢ x ≤s[Conv] y) (compare_universe Conv Σ) p p' ->
   Σ ;;; Γ ⊢ tPrim p ≤s[pb] tPrim p'
 
 (** Reductions *)
@@ -444,8 +445,8 @@ Lemma cumulSpec0_rect :
         P cf Σ Γ pb (tCoFix mfix idx) (tCoFix mfix' idx)
           (cumul_CoFix _ _ _ _ _ _ H)) ->
 
-    (forall Γ pb p p' (e : eq_prim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
-      eq_prim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
+    (forall Γ pb p p' (e : onPrim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
+      onPrim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
       P cf Σ Γ pb (tPrim p) (tPrim p') (cumul_Prim _ _ _ _ _ e)) ->
 
     (* cumulativity rules *)
@@ -527,8 +528,8 @@ Proof.
     + intuition auto.
     + auto.
   - eapply X20; eauto.
-    clear -e aux.
-    induction e; constructor; auto.
+    clear -o aux.
+    induction o; constructor; auto.
     clear -a0 aux. revert a0.
     induction a0; constructor; auto.
   - eapply X; eauto.
@@ -723,8 +724,8 @@ Lemma convSpec0_ind_all :
            P cf Σ Γ Conv (tCoFix mfix idx) (tCoFix mfix' idx)
              (cumul_CoFix _ _ _ _ _ _ H)) ->
 
-      (forall Γ p p' (e : eq_prim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
-        eq_prim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
+      (forall Γ p p' (e : onPrim (cumulSpec0 Σ Γ Conv) (eq_universe Σ) p p'),
+        onPrim_dep (cumulSpec0 Σ Γ Conv) (eq_universe Σ) (P cf Σ Γ Conv) (fun _ _ _ => True) p p' e ->
         P cf Σ Γ Conv (tPrim p) (tPrim p') (cumul_Prim _ _ _ _ _ e)) ->
 
       (* cumulativity rules *)

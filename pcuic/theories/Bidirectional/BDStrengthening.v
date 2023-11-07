@@ -1,5 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
+From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
@@ -70,6 +71,7 @@ Proof.
     f_equal.
     1: auto.
     by rewrite map_length ebod shiftnP_shiftn.
+  - solve_all.
 Qed.
 
 Lemma Alli_impl_le {A P Q} {l : list A} {n} :
@@ -470,7 +472,8 @@ Section OnFreeVars.
       cbn in Hmfix.
       by move: Hmfix => /andP [].
 
-    - easy.
+    - intros. red. intros. destruct X1; cbn => //.
+      simp prim_type. cbn in *. solve_all.
     - easy.
 
     - intros ? ? ? ? ? ? _ HT Hred.
@@ -865,7 +868,11 @@ Proof using wfΣ.
     + by apply rename_wf_cofixpoint.
 
   - intros. red. intros P Δ f hf ht.
-    cbn. econstructor; tea.
+    cbn. rewrite rename_prim_type. econstructor; tea; rewrite ?prim_val_tag_map //.
+    destruct X1; cbn in *; constructor; cbn; eauto.
+    * eapply hty; tea; solve_all.
+    * eapply hdef; tea; solve_all.
+    * solve_all.
 
   - intros. red. intros P Δ f hf ht.
     econstructor ; eauto.
@@ -994,17 +1001,17 @@ Proof.
   move: (tyt) => /typing_wf_local wfΓ.
   move: (tyt) => /typing_infering [T' [inf cum]].
   unshelve epose proof (infering_on_free_vars _ _ _ _ _ _ _ _ inf); eauto.
-  pose proof (inf' := inf). apply infering_typing in inf; eauto. 
-  exists T'. split; eauto.  
+  pose proof (inf' := inf). apply infering_typing in inf; eauto.
+  exists T'. split; eauto.
   eapply ws_cumul_pb_forget_cumul; eauto.
   eapply bidirectional_renaming in inf'; eauto.  eapply infering_typing; eauto.
 Qed.
 
 Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :
   Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : T ->
-  ∑ T', [× on_free_vars (strengthenP #|Γ''| #|Γ'| xpredT) T', 
+  ∑ T', [× on_free_vars (strengthenP #|Γ''| #|Γ'| xpredT) T',
         (Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''|  t : T') ,
-        (Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- T' <= T) & 
+        (Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- T' <= T) &
         (Σ ;;;  Γ ,,, Γ'' |- t : unlift #|Γ'| #|Γ''| T')].
 Proof.
   intros Hty.
@@ -1037,9 +1044,9 @@ Proof.
   }
 
   eapply typing_renaming_cond_P in Hty as [T' [? ?]]; eauto.
-  exists T'. split; eauto. 
-  - erewrite <- (lift_unlift_term t); eauto. 
-  - split; eauto. eapply urenaming_strengthen. 
+  exists T'. split; eauto.
+  - erewrite <- (lift_unlift_term t); eauto.
+  - split; eauto. eapply urenaming_strengthen.
   - move: wfΓ'' => /wf_local_closed_context.
     rewrite on_free_vars_ctx_app => /andP [? ?].
     apply on_ctx_free_vars_strengthenP.
@@ -1056,9 +1063,9 @@ Qed.
 
 
 Lemma strengthening_type `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : PCUICTyping.wf Σ} Γ Γ' Γ'' t s :
-  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : tSort s -> 
+  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : tSort s ->
   ∑ s', (Σ ;;; Γ ,,, Γ'' |- t : tSort s') * (compare_universe Cumul Σ s' s).
-Proof. 
+Proof.
   intros H; pose proof (H' := H); eapply strengthening in H. destruct H as [T' [? HT Hcumul HT']].
   pose proof (Hcumul' := Hcumul).
   pose proof (type_closed HT).
@@ -1066,21 +1073,21 @@ Proof.
   pose proof (type_closed HT').
   eapply closedn_on_free_vars in H0.
   pose proof (wf_local_closed_context (typing_wf_local H')).
-  eapply into_ws_cumul_pb in Hcumul; eauto. 
+  eapply into_ws_cumul_pb in Hcumul; eauto.
   eapply PCUICConversion.ws_cumul_pb_Sort_r_inv in Hcumul as [s' [Hred Hcumul]].
-  eapply closed_red_red in Hred. pose proof (HT'':=HT'). eapply PCUICValidity.validity in HT' as [? ?]. 
+  eapply closed_red_red in Hred. pose proof (HT'':=HT'). eapply PCUICValidity.validity in HT' as [? ?].
   exists s'; split; eauto.
   assert (PCUICReduction.red Σ (Γ,,, Γ'') (unlift #|Γ'| #|Γ''| T') (tSort s')).
   { assert (tSort s' = unlift #|Γ'| #|Γ''| (tSort s')) by reflexivity. rewrite H2; clear H2.
     eapply red_rename. eauto. eapply (urenaming_strengthen _ _ _ _); eauto.
-    2-3: eauto. eapply typing_wf_local in HT''. 
+    2-3: eauto. eapply typing_wf_local in HT''.
     eapply wf_local_closed_context in HT''. revert HT''.
     rewrite on_free_vars_ctx_app => /andP [? ?].
     apply on_ctx_free_vars_strengthenP.
     all: eapply on_free_vars_ctx_on_ctx_free_vars_xpredT; eauto.
-  } 
+  }
   eapply type_Cumul; eauto. eapply PCUICSR.subject_reduction; eauto.
   assert (liftSort : unlift #|Γ'| #|Γ''| (tSort s') = tSort s') by reflexivity. rewrite <- liftSort; clear liftSort.
   eapply PCUICConversion.cumulAlgo_cumulSpec. eapply PCUICConversion.ws_cumul_pb_red_r_inv; eauto.
-  eapply ws_cumul_pb_refl; eauto. eapply PCUICInversion.typing_closed_ctx; eauto. 
+  eapply ws_cumul_pb_refl; eauto. eapply PCUICInversion.typing_closed_ctx; eauto.
 Qed.

@@ -401,7 +401,7 @@ Section ParallelReduction.
 
   | prim_pred p p' :
     pred1_ctx Γ Γ' ->
-    PCUICEquality.onPrim (pred1 Γ Γ') eq p p' -> pred1 Γ Γ' (tPrim p) (tPrim p')
+    onPrims (pred1 Γ Γ') eq p p' -> pred1 Γ Γ' (tPrim p) (tPrim p')
 
   | pred_atom_refl t :
     pred1_ctx Γ Γ' ->
@@ -615,8 +615,8 @@ Section ParallelReduction.
 
       (forall (Γ Γ' : context) (p p' : prim_val),
           pred1_ctx Γ Γ' -> Pctx Γ Γ' ->
-          PCUICEquality.onPrim (pred1 Γ Γ') eq p p' ->
-          PCUICEquality.onPrim (P Γ Γ') eq p p' ->
+          onPrims (pred1 Γ Γ') eq p p' ->
+          onPrims (P Γ Γ') eq p p' ->
           P Γ Γ' (tPrim p) (tPrim p')) ->
 
       (forall (Γ Γ' : context) (t : term),

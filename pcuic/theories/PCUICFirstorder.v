@@ -671,8 +671,8 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
-    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
-      now eapply invert_cumul_axiom_ind in cum; tea.
+    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl inv ty cum]]]; eauto.
+      now eapply invert_cumul_prim_type_ind in cum; tea.
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.
     + apply inversion_mkApps in Hty as Hcon; auto.

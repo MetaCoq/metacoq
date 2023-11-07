@@ -2,7 +2,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICPrimitive PCUICAst PCUICOnOne PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition
@@ -263,7 +263,7 @@ Proof using Type.
       * unfold map_def. intuition eauto.
       * eauto.
   - simpl. constructor.
-    eapply onPrim_map_prop; tea. cbn; intuition eauto.
+    eapply onPrims_map_prop; tea. cbn; intuition eauto.
 Qed.
 
 Lemma urenaming_impl :

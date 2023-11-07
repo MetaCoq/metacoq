@@ -1914,7 +1914,7 @@ Proof using Type.
     generalize #|m|. intro k.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
-    eapply onPrim_map_prop; tea. cbn; intuition eauto.
+    eapply onPrims_map_prop; tea. cbn; intuition eauto.
 Qed.
 
 Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :

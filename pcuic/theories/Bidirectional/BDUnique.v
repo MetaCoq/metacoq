@@ -236,12 +236,12 @@ Proof using wfΣ.
       * fvs.
       * now eapply type_is_open_term, infering_typing.
 
-  - inversion X1; subst.
-    rewrite H in H2; noconf H2.
-    unshelve eapply declared_constant_to_gen in H0, H3; eauto.
-    have eq := (declared_constant_inj _ _ H0 H3); subst cdecl0.
-    exists (tConst prim_ty []).
-    split; eapply closed_red_refl; fvs.
+  - depelim X1; depelim X0.
+    * depelim X3. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * depelim X3. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * depelim X3. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+      all:simp prim_type; cbn. cbn in hty.
+      all:eapply type_is_open_term, checking_typing; tea; eexists; eapply checking_typing; tea; eexists; econstructor; tea.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.

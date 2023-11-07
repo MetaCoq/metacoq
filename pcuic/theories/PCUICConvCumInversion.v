@@ -284,18 +284,19 @@ Section fixed.
     - apply whnf_red_isIndConstructApp in w as ?.
       destruct hd.
       all: cbn.
-      1-9, 12-15: apply conv_cum_alt; eauto.
+      1-9, 12-16: apply conv_cum_alt; eauto.
       1-13: constructor.
       1-13: exists x1, x.
       1-13: split; eauto with pcuic.
       1-13: (eapply eq_term_upto_univ_napp_nonind; [exact e|try exact H1]).
       1-13: cbn in *; congruence.
-      all: depelim w; subst.
-      all: depelim e.
-      all: depelim w0; subst.
-      all: apply All2_length in a.
-      all: try (constructor; constructor; rewrite a; auto).
-      all: destruct leq; cbn; repeat constructor => //.
+      1-3: depelim w; subst; depelim e; depelim w0; subst;
+       apply All2_length in a;
+       try (constructor; constructor; rewrite a; auto).
+
+      sq. exists (tPrim i'), (tPrim i'0). split => //. all:eauto with pcuic.
+      eapply (eq_term_upto_univ_napp_nonind _ _ 0); eauto. now constructor.
+
     - eapply alt_into_ws_cumul_pb_terms => //.
       clear -a1 a a0.
       induction a1 in args, args', x2, a, x3, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
@@ -574,5 +575,40 @@ Section fixed.
     exists c'0, c'1; split; eauto.
     all:eapply into_closed_red; eauto.
   Qed.
+(*
+  Lemma conv_cum_tPrim_inv leq Γ p p' :
+    conv_cum leq Σ Γ (tPrim p) (tPrim p') ->
+    whnf RedFlags.default Σ Γ (tPrim p) ->
+    whnf RedFlags.default Σ Γ (tPrim p') ->
+    ∥ onPrims (fun t t' => Σ ;;; Γ ⊢ t = t') (eq_universe Σ) p p' ∥.
+  Proof using wfΣ.
+    intros conv whl whr.
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 ?])]; auto. sq.
+    have clΓ := clrel_ctx r1.
+    have cll := clrel_src r1.
+    have clr := clrel_src r2.
+    eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r2; eauto.
+    depelim r1.
+    depelim r2.
+    depelim c.
+    depelim o; depelim o0; depelim o1; cbn in cll, clr; rtoProp; constructor; eauto.
+    * now rewrite e e0.
+    * eapply ws_cumul_pb_alt; do 2 eexists; split; tea.
+    * eapply ws_cumul_pb_alt; do 2 eexists; split; tea.
+    * solve_all.
+      2:{ intros x y h. epose proof (conv_cum_alt (leq:=Conv)). unfold conv_cum in H. cbn in H. }
+      eapply alt_into_ws_cumul_pb_terms; tea; solve_all.
+      eapply
+
+      eapply All2_trans.
+
+      2-3: eapply All2_impl; tea.
+    split; [easy|].
+    apply ws_cumul_pb_alt_closed; eauto.
+    exists c'0, c'1; split; eauto.
+    all:eapply into_closed_red; eauto.
+  Qed.
+ *)
 
 End fixed.

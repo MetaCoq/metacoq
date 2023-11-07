@@ -47,16 +47,6 @@ Definition isConstruct t :=
 Definition isRel t :=
     match t with tRel _ => true | _ => false end.
 
-Inductive onPrim (P : term -> Prop) : prim_val -> Prop :=
-  | onPrimInt i : onPrim P (primInt; primIntModel i)
-  | onPrimFloat f : onPrim P (primFloat; primFloatModel f)
-  | onPrimArray a :
-    P a.(array_default) ->
-    P a.(array_type) ->
-    All P a.(array_value) ->
-    onPrim P (primArray; primArrayModel a).
-Derive Signature for onPrim.
-
 Section map_All.
   Context (P P' : term -> Type).
   Context (ont : forall x, P x -> P' x).

@@ -14,8 +14,7 @@ Require Import ssreflect ssrbool.
 
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
-
-Lemma test_primu_mapu pu pt fu ft p :
+Lemma test_primu_mapu {term term'} pu pt fu (ft : term -> term') p :
   test_primu pu pt (mapu_prim fu ft p) =
   test_primu (pu ∘ fu) (pt ∘ ft) p.
 Proof.
@@ -23,7 +22,7 @@ Proof.
   now rewrite forallb_map.
 Qed.
 
-Lemma test_primu_primProp P pu pt pu' pt' p :
+Lemma test_primu_primProp {term} P pu (pt : term -> bool) pu' (pt' : term -> bool) p :
   tPrimProp P p ->
   (forall x, pu x = pu' x) ->
   (forall x, P x -> pt x = pt' x) ->
@@ -34,11 +33,8 @@ Proof.
   solve_all.
 Qed.
 
-
-
 Section CheckerFlags.
   Context {cf:checker_flags}.
-
 
   Lemma wf_universe_type0 Σ : wf_universe Σ Universe.type0.
   Proof using Type.
@@ -324,8 +320,6 @@ Section CheckerFlags.
       end.
 
     Definition wf_universes t := on_universes wf_universeb closedu t.
-
-
 
     Lemma wf_universeb_instance_forall u :
       forallb wf_universeb (map Universe.make u) = wf_universeb_instance Σ u.

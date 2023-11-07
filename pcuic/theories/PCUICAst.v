@@ -238,38 +238,6 @@ Definition isLambda t :=
 Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
 Proof. destruct t => //; eauto. Qed.
 
-Set Equations Transparent.
-
-Definition mapu_array_model {term term'} (fl : Level.t -> Level.t) (f : term -> term')
-  (ar : array_model term) : array_model term' :=
-  {| array_level := fl ar.(array_level);
-      array_value := map f ar.(array_value);
-      array_default := f ar.(array_default);
-      array_type := f ar.(array_type) |}.
-
-Equations mapu_prim {term term'} (f : Level.t -> Level.t) (g : term -> term')
-  (p : PCUICPrimitive.prim_val term) : PCUICPrimitive.prim_val term' :=
-| _, _, (primInt; primIntModel i) => (primInt; primIntModel i)
-| _, _, (primFloat; primFloatModel fl) => (primFloat; primFloatModel fl)
-| f, g, (primArray; primArrayModel ar) =>
-  (primArray; primArrayModel (mapu_array_model f g ar)).
-
-Notation map_array_model := (mapu_array_model id).
-Notation map_prim := (mapu_prim id).
-
-Equations test_prim (p : term -> bool) (p : prim_val) : bool :=
-| p, (primInt; _) => true
-| p, (primFloat; _) => true
-| p, (primArray; primArrayModel ar) =>
-  List.forallb p ar.(array_value) && p ar.(array_default) && p ar.(array_type).
-
-Equations test_primu (p : Level.t -> bool) (t : term -> bool) (p : prim_val) : bool :=
-| _, _, (primInt; _) => true
-| _, _, (primFloat; _) => true
-| p, pt, (primArray; primArrayModel ar) =>
-  p ar.(array_level) && forallb pt ar.(array_value) &&
-  pt ar.(array_default) && pt ar.(array_type).
-
 (** Basic operations on the AST: lifting, substitution and tests for variable occurrences. *)
 
 Fixpoint lift n k t : term :=
@@ -982,13 +950,6 @@ Proof.
   destruct p as [? []] => //.
 Qed.
 
-Definition tPrimProp {term} (P : term -> Type) (p : PCUICPrimitive.prim_val term) : Type :=
-  match p.π2 return Type with
-  | primIntModel f => unit
-  | primFloatModel f => unit
-  | primArrayModel a => P a.(array_type) × P a.(array_default) × All P a.(array_value)
-  end.
-
 Lemma mapu_array_model_proper {term term'} (l l' : Level.t -> Level.t) (f g : term -> term') a :
   l =1 l' -> f =1 g ->
   mapu_array_model l f a = mapu_array_model l' g a.
@@ -1027,7 +988,7 @@ Proof.
   destruct a => //=. rewrite /mapu_array_model /=. rewrite map_id //.
 Qed.
 
-Lemma test_prim_primProp {P p} : test_prim P p -> tPrimProp P p.
+Lemma test_prim_primProp {term} {P p} : @test_prim term P p -> tPrimProp P p.
 Proof.
   destruct p as [? []]; cbn => //.
   move/andP => [] /andP[]. intuition auto.
@@ -1095,7 +1056,7 @@ Proof.
   eapply All_forallb, All_map, All_impl; tea. intuition eauto. apply hg; intuition auto.
 Qed.
 
-Lemma test_prim_mapu {put l f p} :
+Lemma test_prim_mapu {term term'} {put : term' -> bool} {l} {f : term -> term'} {p} :
   test_prim put (mapu_prim l f p) = test_prim (fun x => put (f x)) p.
 Proof.
   destruct p as [? []]; cbn; eauto.

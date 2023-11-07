@@ -152,3 +152,92 @@ Definition string_of_prim {term} (soft : term -> string) (p : prim_val term) : s
   | primFloatModel f => "(float: " ^ string_of_float f ^ ")"
   | primArrayModel a => "(array:" ^ string_of_list soft a.(array_value) ^ ")"
   end.
+
+(** Predicates *)
+
+Inductive onPrim {term} (P : term -> Prop) : prim_val term -> Prop :=
+  | onPrimInt i : onPrim P (primInt; primIntModel i)
+  | onPrimFloat f : onPrim P (primFloat; primFloatModel f)
+  | onPrimArray a :
+    P a.(array_default) ->
+    P a.(array_type) ->
+    All P a.(array_value) ->
+    onPrim P (primArray; primArrayModel a).
+Derive Signature for onPrim.
+
+Inductive onPrims {term} (eq_term : term -> term -> Type) Re : prim_val term -> prim_val term -> Type :=
+  | onPrimsInt i : onPrims eq_term Re (primInt; primIntModel i) (primInt; primIntModel i)
+  | onPrimsFloat f : onPrims eq_term Re (primFloat; primFloatModel f) (primFloat; primFloatModel f)
+  | onPrimsArray a a' :
+    Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)) ->
+    eq_term a.(array_default) a'.(array_default) ->
+    eq_term a.(array_type) a'.(array_type) ->
+    All2 eq_term a.(array_value) a'.(array_value) ->
+    onPrims eq_term Re (primArray; primArrayModel a) (primArray; primArrayModel a').
+Derive Signature NoConfusion for onPrims.
+
+Definition tPrimProp {term} (P : term -> Type) (p : PCUICPrimitive.prim_val term) : Type :=
+  match p.π2 return Type with
+  | primIntModel f => unit
+  | primFloatModel f => unit
+  | primArrayModel a => P a.(array_type) × P a.(array_default) × All P a.(array_value)
+  end.
+
+
+Inductive onPrims_dep {term} (eq_term : term -> term -> Type) (Re : Universe.t -> Universe.t -> Prop) (eq_term_dep : forall x y, eq_term x y -> Type) (Re' : forall a b, Re a b -> Type) : forall x y : prim_val term, onPrims eq_term Re x y -> Type :=
+  | onPrimsInt_dep i : onPrims_dep eq_term Re eq_term_dep Re' (primInt; primIntModel i) (primInt; primIntModel i) (onPrimsInt eq_term Re i)
+  | onPrimsFloat_dep f : onPrims_dep eq_term Re eq_term_dep Re' (primFloat; primFloatModel f) (primFloat; primFloatModel f) (onPrimsFloat _ _ f)
+  | onPrimsArray_dep a a' :
+    forall (hre : Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)))
+    (eqdef : eq_term a.(array_default) a'.(array_default))
+    (eqty : eq_term a.(array_type) a'.(array_type))
+    (eqt : All2 eq_term a.(array_value) a'.(array_value)),
+    Re' _ _ hre ->
+    eq_term_dep _ _ eqdef ->
+    eq_term_dep _ _ eqty ->
+    All2_dep eq_term_dep eqt ->
+    onPrims_dep eq_term Re eq_term_dep Re'
+      (primArray; primArrayModel a) (primArray; primArrayModel a') (onPrimsArray _ _ a a' hre eqdef eqty eqt).
+Derive Signature for onPrims_dep.
+
+Set Equations Transparent.
+
+Definition mapu_array_model {term term'} (fl : Level.t -> Level.t) (f : term -> term')
+  (ar : array_model term) : array_model term' :=
+  {| array_level := fl ar.(array_level);
+      array_value := map f ar.(array_value);
+      array_default := f ar.(array_default);
+      array_type := f ar.(array_type) |}.
+
+Equations mapu_prim {term term'} (f : Level.t -> Level.t) (g : term -> term')
+  (p : PCUICPrimitive.prim_val term) : PCUICPrimitive.prim_val term' :=
+| _, _, (primInt; primIntModel i) => (primInt; primIntModel i)
+| _, _, (primFloat; primFloatModel fl) => (primFloat; primFloatModel fl)
+| f, g, (primArray; primArrayModel ar) =>
+  (primArray; primArrayModel (mapu_array_model f g ar)).
+
+Notation map_array_model := (mapu_array_model id).
+Notation map_prim := (mapu_prim id).
+
+Equations test_prim {term} (p : term -> bool) (p : prim_val term) : bool :=
+| p, (primInt; _) => true
+| p, (primFloat; _) => true
+| p, (primArray; primArrayModel ar) =>
+  List.forallb p ar.(array_value) && p ar.(array_default) && p ar.(array_type).
+
+Equations test_primu {term} (p : Level.t -> bool) (t : term -> bool) (p : prim_val term) : bool :=
+| _, _, (primInt; _) => true
+| _, _, (primFloat; _) => true
+| p, pt, (primArray; primArrayModel ar) =>
+  p ar.(array_level) && forallb pt ar.(array_value) &&
+  pt ar.(array_default) && pt ar.(array_type).
+
+Lemma onPrims_map_prop {term term'} R R' Re p p' P f : @tPrimProp term P p ->
+  onPrims R Re p p' ->
+  (forall x y, P x -> R x y -> R' (f x) (f y)) ->
+  onPrims (term:=term') R' Re (map_prim f p) (map_prim f p').
+Proof.
+  destruct p as [? []]; cbn; intros h e; depelim e; intros hf; constructor; cbn; intuition eauto.
+  eapply All2_All_mix_left in a1; tea.
+  eapply All2_map, All2_impl; tea; cbn; intuition eauto.
+Qed.

@@ -377,7 +377,15 @@ Proof.
 
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
     eexists. split; [econstructor; tea|].
+    destruct X0. 1-2:constructor; eauto.
+    eapply conv_check in hty; tea.
+    eapply conv_check in hdef; tea.
+    constructor; eauto. solve_all.
+    now eapply conv_check in X0.
     eapply ws_cumul_pb_refl; fvs.
+    depelim X; cbn => //.
+    simp prim_type. cbn.
+    now eapply subject_is_open_term.
 
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
     eexists.

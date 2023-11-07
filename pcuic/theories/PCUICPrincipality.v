@@ -343,10 +343,10 @@ Section Principality.
       repeat split; eauto.
       eapply type_CoFix; eauto.
     - apply inversion_Prim in hA as [prim_ty [cdecl []]] => //; pcuic.
-      exists (tConst prim_ty []).
+      exists (prim_type p prim_ty).
       intros B hB.
       apply inversion_Prim in hB as [prim_ty' [cdecl' []]] => //; pcuic.
-      econstructor; tea.
+      econstructor; tea; fvs.
   Qed.
 
   (** A weaker version that is often convenient to use. *)
@@ -462,6 +462,18 @@ Proof.
   eapply All2_rev. eapply All2_impl; tea.
   intros. now eapply eq_term_empty_eq_term.
 Qed.
+
+Lemma All2_tip_l {A B} {R : A -> B -> Type} x y : All2 R [x] y -> ∑ y', (y = [y']) * R x y'.
+Proof.
+  intros a; depelim a. depelim a. exists y0; split => //.
+Qed.
+
+Lemma Forall2_tip_l {A B} {R : A -> B -> Prop} x y : Forall2 R [x] y -> exists y', (y = [y']) * R x y'.
+Proof.
+  intros a; depelim a. depelim a. exists y0; split => //.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICClassification.
 
 Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf Σ.1 ->
@@ -739,8 +751,25 @@ Proof.
     constructor. apply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
 
-  - depelim X2.
+  - epose proof (type_Prim _ _ _ _ _ X H H0 X0 X1). eapply validity in X5.
+    depelim X2; depelim X4; depelim o.
+    1-2:econstructor; tea.
+    depelim X1. destruct X5 as [s ?].
     econstructor; tea.
+    eapply inversion_Prim in X3 as [prim_ty' [cdecl' []]]; eauto.
+    rewrite e2 in H. noconf H.
+    unshelve eapply declared_constant_to_gen in H0, d; tea.
+    pose proof (declared_constant_inj _ _ H0 d). subst cdecl'.
+    simp prim_type in w |- *.
+    eapply (ws_cumul_pb_Axiom_l_inv (args := [_])) in w as [u' [args' []]]; tea. 2:eapply declared_constant_from_gen, H0. 2:eapply p.
+    eapply cumulAlgo_cumulSpec. etransitivity. now eapply red_ws_cumul_pb.
+    eapply All2_tip_l in a3 as [y' [-> Heq]]. red in r. eapply Forall2_map_inv in r.
+    eapply Forall2_tip_l in r. cbn. eapply ws_cumul_pb_eq_le.
+    eapply (ws_cumul_pb_mkApps (args := [_]) (args' := [_])).
+    * constructor; fvs. constructor. red. eapply Forall2_map. destruct r as [? [-> eq]]. constructor. symmetry.
+      etransitivity; tea. now symmetry. constructor.
+    * constructor; [|constructor]. symmetry. etransitivity; tea. constructor; fvs. symmetry.
+      now eapply eq_term_empty_eq_term.
 
   - eapply type_Cumul'.
     eapply X1; eauto. now exists s.

@@ -41,7 +41,7 @@ Fixpoint trans (t : term) : term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | tPrim i => tPrim i
+  | tPrim i => tPrim (map_prim trans i)
   end.
 
 Notation trans_decl := (map_decl trans).

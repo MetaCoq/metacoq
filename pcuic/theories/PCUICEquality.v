@@ -275,17 +275,6 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     eq_term p.(preturn) p'.(preturn))).
 
-Inductive onPrim (eq_term : term -> term -> Type) Re : prim_val -> prim_val -> Type :=
-  | onPrimInt i : onPrim eq_term Re (primInt; primIntModel i) (primInt; primIntModel i)
-  | onPrimFloat f : onPrim eq_term Re (primFloat; primFloatModel f) (primFloat; primFloatModel f)
-  | onPrimArray a a' :
-    Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)) ->
-    eq_term a.(array_default) a'.(array_default) ->
-    eq_term a.(array_type) a'.(array_type) ->
-    All2 eq_term a.(array_value) a'.(array_value) ->
-    onPrim eq_term Re (primArray; primArrayModel a) (primArray; primArrayModel a').
-Derive Signature for onPrim.
-
 (** ** Syntactic ws_cumul_pb up-to universes
   We don't look at printing annotations *)
 
@@ -379,7 +368,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
 
 | eq_Prim i i' :
-  onPrim (eq_term_upto_univ_napp Σ Re Re 0) Re i i' ->
+  onPrims (eq_term_upto_univ_napp Σ Re Re 0) Re i i' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i')
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
@@ -507,15 +496,6 @@ Qed.
 #[global]
 Polymorphic Instance creflexive_eq A : CRelationClasses.Reflexive (@eq A).
 Proof. intro x. constructor. Qed.
-
-Lemma onPrim_map_prop R R' Re p p' P f : tPrimProp P p ->
-  onPrim R Re p p' ->
-  (forall x y, P x -> R x y -> R' (f x) (f y)) ->
-  onPrim R' Re (map_prim f p) (map_prim f p').
-Proof.
-  destruct p as [? []]; cbn; intros h e; depelim e; intros hf; constructor; cbn; intuition eauto.
-  solve_all.
-Qed.
 
 #[global]
 Polymorphic Instance eq_predicate_refl Re Ru :

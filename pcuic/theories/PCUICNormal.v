@@ -933,7 +933,7 @@ Proof.
       apply nth_error_None in H.
       lia.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
-  - depelim r. solve_discr.
+  - depelim r; solve_discr; eapply whnf_prim.
 Qed.
 
 Lemma whnf_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
@@ -1007,7 +1007,9 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
-| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
+| whnf_red_tPrim i i' :
+  onPrims (red Σ Γ) eq i i' ->
+  whnf_red Σ Γ (tPrim i) (tPrim i').
 
 Derive Signature for whnf_red.
 
@@ -1048,6 +1050,9 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
+  - depelim o. 1-2: reflexivity.
+    eapply red_primArray_congr; eauto.
+    now eapply Universe.make_inj in e.
 Qed.
 
 #[global]
@@ -1150,6 +1155,7 @@ Proof.
     2: apply All2_same; auto.
     constructor.
     apply All2_same; auto.
+  - constructor. destruct p as [? []]; constructor; eauto. eapply All2_same; auto.
 Qed.
 
 Ltac inv_on_free_vars :=
@@ -1403,6 +1409,12 @@ Proof.
     eapply context_pres_let_bodies_red; eauto.
     apply fix_context_pres_let_bodies.
     now apply All2_length in a.
+  - constructor. depelim o; depelim o0; constructor; eauto.
+    * rewrite -x //.
+    * etransitivity; tea.
+    * etransitivity; tea.
+    * eapply All2_trans; eauto.
+      tc.
 Qed.
 
 Lemma whne_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
@@ -1509,7 +1521,10 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-  - depelim r; solve_discr.
+  - depelim r; solve_discr; constructor; eauto.
+    * constructor; eauto. eapply OnOne2_All2; eauto.
+    * constructor; eauto. cbn. eapply All2_same; eauto.
+    * constructor; eauto. cbn. eapply All2_same; eauto.
 Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :

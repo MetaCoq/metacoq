@@ -3672,7 +3672,7 @@ Section MoreCongruenceLemmas.
 Defined.
 
 Lemma ws_cumul_pb_Prim {pb Γ p p'} :
-  onPrim (ws_cumul_pb Conv Σ Γ) (eq_universe Σ) p p' -> is_closed_context Γ ->
+  onPrims (ws_cumul_pb Conv Σ Γ) (eq_universe Σ) p p' -> is_closed_context Γ ->
   Σ;;; Γ ⊢ tPrim p ≤[pb] tPrim p'.
 Proof.
   intros Hp HΓ.

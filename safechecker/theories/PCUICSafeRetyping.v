@@ -778,6 +778,7 @@ Qed.
     cbn in eqp. rewrite (abstract_primitive_constant_correct _ _ Σ) // in eqp.
     rewrite /= -eqp in H0. noconf H0. split.
     intros; erewrite (abstract_env_ext_irr _ wfΣ0 wfΣ); eauto.
+    todo (String.of_string "array").
   Qed.
 
   Next Obligation.

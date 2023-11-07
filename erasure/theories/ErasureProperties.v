@@ -408,6 +408,7 @@ Proof.
   eapply erases_ctx_ext. eassumption. unfold app_context.
   f_equal.
   eapply fix_context_subst_instance. all: eauto.
+  - todo "array".
 Qed.
 
 Lemma erases_subst_instance :

@@ -103,6 +103,8 @@ Section Trans.
     tCoFix mfix' idx
   | Ast.tInt n => tPrim (primInt; primIntModel n)
   | Ast.tFloat n => tPrim (primFloat; primFloatModel n)
+  | Ast.tArray lev val def typ =>
+    tPrim (primArray; primArrayModel (Build_array_model term lev (trans typ) (trans def) (map trans val)))
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=

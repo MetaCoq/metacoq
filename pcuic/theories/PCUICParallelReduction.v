@@ -1961,9 +1961,8 @@ Section ParallelSubstitution.
   Lemma pred_atom_inst t σ : pred_atom t -> t.[σ] = t.
   Proof.
     destruct t; simpl; intros; try discriminate; auto.
-    admit.
-  (* Qed. *)
-  Admitted.
+    todo "array".
+    Qed.
 
   Lemma All_fold_fold_context_k P (f : nat -> term -> term) Γ :
     All_fold P (fold_context_k f Γ) <~>

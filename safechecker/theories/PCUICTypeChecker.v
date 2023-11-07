@@ -2561,6 +2561,7 @@ Section Typecheck.
     congruence.
   Qed.
 
+  (* tPrim *)
   Next Obligation.
     eapply eqb_eq in i. eapply eqb_eq in i0.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
@@ -2571,9 +2572,8 @@ Section Typecheck.
     (* unfold declared_constant_gen. now rewrite -HH. *)
     (* destruct (cst_type d) eqn:hty => //. *)
     (* exists u. split => //. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+    todo "array".
+    Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
@@ -2586,9 +2586,8 @@ Section Typecheck.
     destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
     rewrite d0 in HH; noconf HH.
     (* destruct p1 as [s' []]. rewrite H in absurd. now apply absurd. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+   todo "array".
+  Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
@@ -2600,9 +2599,8 @@ Section Typecheck.
     destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
     symmetry in HH. rewrite d0 in HH; noconf HH.
     (* destruct p1 as [s' []]. apply absurd. case: eqb_spec => //. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+    todo "array".
+  Qed.
 
 
   Next Obligation.
@@ -2615,9 +2613,8 @@ Section Typecheck.
     destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
     symmetry in HH. rewrite d0 in HH; noconf HH.
     (* destruct p1 as [s' []]. apply absurd. case: eqb_spec => //. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+    todo "array".
+  Qed.
 
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2643,14 +2640,12 @@ Section Typecheck.
   Qed.
 
   Next Obligation.
-    (* destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]. *)
-    (* cbn in *. specialize_Σ wfΣ ; sq. *)
-    (* depelim X1. *)
-    (* rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in e0. *)
-    (* unfold prim_val_tag in e1. congruence. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    cbn in *. specialize_Σ wfΣ ; sq.
+    depelim X1.
+    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in e0.
+    unfold prim_val_tag in e1. congruence.
+  Qed.
 
   Definition check_isType := infer_isType infer.
 

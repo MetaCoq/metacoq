@@ -672,7 +672,7 @@ Proof using Type.
     +
       (* eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto. *)
       (* now eapply invert_cumul_axiom_ind in cum; tea. *)
-      admit.
+      todo "array".
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.
     + apply inversion_mkApps in Hty as Hcon; auto.
@@ -712,8 +712,7 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma firstorder_value_alpha Σ t t' :
   t ≡α t' ->

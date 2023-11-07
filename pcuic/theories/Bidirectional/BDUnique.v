@@ -242,9 +242,9 @@ Proof using wfΣ.
     (* have eq := (declared_constant_inj _ _ H0 H3); subst cdecl0. *)
     (* exists (tConst prim_ty []). *)
     (* split; eapply closed_red_refl; fvs. *)
-    * admit.
-    * admit.
-    * admit.
+    * todo "array".
+    * todo "array".
+    * todo "array".
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.
@@ -294,8 +294,7 @@ Proof using wfΣ.
     exists args'' ; split ; auto.
     eapply All2_trans ; tea.
     eapply closed_red_trans.
-(* Qed. *)
-Admitted.
+Qed.
 
 End BDUnique.
 

@@ -307,7 +307,8 @@ Proof.
     rewrite lift_context_app -plus_n_O in IH.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
     rewrite (All2_length X3) in IH |- *.
-    apply IH. apply IH'.
+   apply IH. apply IH'.
+  - todo "array".
 Qed.
 
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : context) (t T : PCUICAst.term) t' :
@@ -572,9 +573,9 @@ Proof.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
-  - cbn. depelim H1.
-    * cbn; constructor.
-    * constructor. eapply is_type_subst in X3; tea.
+  - cbn. depelim H1; todo "array".
+    (* * cbn; constructor. *)
+    (* * constructor. eapply is_type_subst in X3; tea. *)
   - eapply H; eauto.
 Qed.
 

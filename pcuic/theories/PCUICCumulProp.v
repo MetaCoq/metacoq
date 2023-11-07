@@ -866,9 +866,8 @@ Proof using Type.
     eapply All2_map.
     eapply All_All2; tea. cbn.
     intuition auto. rewrite /id. reflexivity.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+Qed.
 
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' :
   wf Σ.1 ->
@@ -1327,12 +1326,11 @@ Proof using Hcf Hcf'.
     now symmetry in a.
 
   - depelim X2.
-    admit.
-    admit.
-    admit.
+    todo "array".
+    todo "array".
+    todo "array".
     (* eapply inversion_Prim in X1 as [prim_ty' [cdecl' []]]; tea. *)
     (* rewrite H in e. noconf e. eapply cumul_cumul_prop; eauto. pcuic. *)
-(* Qed. *)
-Admitted.
+Qed.
 
 End no_prop_leq_type.

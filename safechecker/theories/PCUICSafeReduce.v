@@ -1322,9 +1322,8 @@ Corollary R_Acc_aux :
     -
       (* eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? [? []]]); tea. *)
       (* now eapply invert_cumul_axiom_ind in w; tea. *)
-      admit.
-  (* Qed. *)
-  Admitted.
+      todo "array".
+  Qed.
 
   Definition isCoFix_app t :=
     match (decompose_app t).1 with
@@ -1359,9 +1358,8 @@ Corollary R_Acc_aux :
     -
       (* eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea. *)
       (* now eapply invert_cumul_axiom_ind in w; tea. *)
-      admit.
-  (* Qed. *)
-  Admitted.
+      todo "array".
+  Qed.
 
   Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
     wf Σ ->
@@ -1540,7 +1538,7 @@ Corollary R_Acc_aux :
             apply inversion_App in h as (?&?&?&?&?); auto.
             (* apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto. *)
             (* eapply PCUICClassification.invert_cumul_axiom_prod; eauto. *)
-            admit.
+            todo "array".
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1807,8 +1805,7 @@ Corollary R_Acc_aux :
       intros [t' π''] Ha eq''. cbn.
       rewrite eq'' in haux. cbn in haux.
       assumption.
-  (* Qed. *)
-  Admitted.
+  Qed.
 
   Theorem reduce_term_complete Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t h :
     ∥whnf flags Σ Γ (reduce_term Γ t h)∥.

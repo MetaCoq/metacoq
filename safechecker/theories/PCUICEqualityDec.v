@@ -756,10 +756,9 @@ Proof.
 
  - cbn - [eqb]. eqspecs.
  (* do 2 constructor. *)
-   * admit.
-   * admit.
-(* Qed. *)
-Admitted.
+   * todo "array".
+   * todo "array".
+Qed.
 
  Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool)
   (gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)
@@ -948,9 +947,8 @@ Proof.
   - eapply forallb_All in wt; eapply All_mix in X; try apply wt; clear wt.
     eapply All_All2; eauto; simpl; intuition eauto;
     apply andb_and in a as [? ?]; eauto.
-  - admit.
-(* Defined. *)
-Admitted.
+  - todo "array".
+Defined.
 
 Lemma eqb_term_upto_univ_refl Σ (eqb leqb : Universe.t -> Universe.t -> bool) (Re : Universe.t -> Universe.t -> Prop)
   (gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)

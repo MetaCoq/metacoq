@@ -348,9 +348,8 @@ Section Principality.
       (* intros B hB. *)
       (* apply inversion_Prim in hB as [prim_ty' [cdecl' []]] => //; pcuic. *)
       (* econstructor; tea. *)
-      admit.
-  (* Qed. *)
-  Admitted.
+      todo "array".
+    Qed.
 
   (** A weaker version that is often convenient to use. *)
   Lemma common_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
@@ -744,15 +743,15 @@ Proof.
 
   - depelim X2.
     econstructor; tea.
-    + admit.
-    + admit.
-    + admit.
-    + admit.
+    + todo "array".
+    + todo "array".
+    + todo "array".
+    + todo "array".
   - eapply type_Cumul'.
     eapply X1; eauto. now exists s.
     auto.
-(* Qed. *)
-Admitted.
+  Unshelve. all: todo "array".
+Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf_ext Σ ->

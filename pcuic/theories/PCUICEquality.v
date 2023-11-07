@@ -1353,7 +1353,6 @@ Qed.
 (* Proof. *)
 (*   intros t t'. eapply reflect_eq_term_upto_univ. *)
 (*   all: intros u u'; eapply reflect_reflectT, eqb_spec. *)
-(* Qed. *)
 
 Lemma upto_names_impl Σ Re Rle :
   RelationClasses.Reflexive Re ->

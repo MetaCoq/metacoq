@@ -80,7 +80,6 @@ Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
 (*     rewrite -> subst_app_simpl; auto. simpl. *)
 (*     pose proof(context_subst_length _ _ _ sa1) as Hs1. *)
 (*     rewrite subst_context_length in Hs1. rewrite -> Hs1. auto. *)
-(* Qed. *)
 
 
 

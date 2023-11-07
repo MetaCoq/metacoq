@@ -417,7 +417,7 @@ Section BDToPCUICTyping.
 
     - red; intros.
       (* now econstructor. *)
-      admit.
+      todo "array".
 
     - red ; intros.
       now eapply type_reduction.
@@ -435,8 +435,7 @@ Section BDToPCUICTyping.
       + fvs.
       + now eapply type_is_open_term.
       + now eapply subject_is_open_term.
-  (* Qed. *)
-  Admitted.
+    Qed.
 
 End BDToPCUICTyping.
 

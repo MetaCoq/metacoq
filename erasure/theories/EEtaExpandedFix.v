@@ -590,7 +590,9 @@ Section isEtaExp.
           rewrite minus_diag in H1. cbn in H1. eapply Nat.ltb_lt.
           eapply Nat.leb_le in H1. lia.
         * cbn in Hcl. solve_all. rtoProp; intuition auto.
-          now eapply expanded_weakening.
+          (* now eapply expanded_weakening. *)
+          todo "array".
+          todo "array".
         * eapply forallb_All in H2. eapply All_mix in H; tea.
           eapply All_forallb, All_map, All_impl; tea; cbv beta.
           intros x Hx. eapply Hx; eauto. apply Hx.

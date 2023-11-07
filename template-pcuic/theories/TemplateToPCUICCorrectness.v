@@ -239,6 +239,8 @@ Proof.
   red in X0.
   f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
   f_equal. solve_all.
+  rewrite IHwft IHwft0; do 4! f_equal.
+  by apply: All_map_eq.
 Qed.
 
 Lemma trans_decl_weakening {cf} Σ {Σ' : global_env_map} t :
@@ -379,6 +381,13 @@ Proof.
       rewrite e. now rewrite map_length.
   - f_equal; auto. maps. solve_all.
   - f_equal; auto; solve_all.
+  - eauto.
+  - eauto.
+  - f_equal; unfold apply_noConfusion => /=; do 2! f_equal.
+    unfold map_array_model => /=; f_equal => //.
+    rewrite !map_map; apply: All_map_eq.
+    apply/In_All => t tin.
+    by move: H => /Forall_forall/(_ t tin k).
 Qed.
 
 Lemma trans_mkApp u a : trans (Template.Ast.mkApp u a) = tApp (trans u) (trans a).
@@ -435,6 +444,13 @@ Proof.
       f_equal; auto; solve_all.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
+  - eauto.
+  - eauto.
+  - f_equal; unfold apply_noConfusion => /=; do 2! f_equal.
+    unfold map_array_model => /=; f_equal => //.
+    rewrite !map_map; apply: All_map_eq.
+    apply/In_All => x xin.
+    by move: H => /Forall_forall/(_ x xin k).
 Qed.
 
 Notation Tterm :=Template.Ast.term.
@@ -470,8 +486,14 @@ Proof.
     rewrite /map_branch /trans_branch /= /id.
     now intros; f_equal.
   - rewrite /id /map_predicate /=. f_equal; solve_all.
+  - eauto.
+  - eauto.
+  - f_equal; unfold apply_noConfusion => /=; do 2! f_equal.
+    unfold map_array_model => /=; f_equal => //.
+    rewrite !map_map; apply: All_map_eq.
+    apply/In_All => x xin.
+    by move: H => /Forall_forall/(_ x xin).
 Qed.
-
 
 Lemma trans_destArity {cf} {wfΣ : Typing.wf Σ} ctx t :
  Template.WfAst.wf Σ t ->
@@ -958,7 +980,8 @@ Section Trans_Global.
       intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
       simpl in *.
       intuition eauto. now eapply ih1. now eapply ih2.
-  Qed.
+    - todo "array".
+    Qed.
 
   Lemma trans_leq_term ϕ T U :
     WfAst.wf Σ T -> WfAst.wf Σ U -> SEq.leq_term Σ ϕ T U ->
@@ -2451,18 +2474,21 @@ Proof.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
-  - cbn. econstructor; cbn; eauto.
-    + rewrite trans_env_retroknowledge //.
-    + now apply forall_decls_declared_constant.
-    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
-      intros [s []]; exists s; split => //;
-      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
-  - cbn. econstructor; cbn; eauto.
-    + rewrite trans_env_retroknowledge //.
-    + now apply forall_decls_declared_constant.
-    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
-      intros [s []]; exists s; split => //;
-      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+  - todo "array".
+  - todo "array".
+  (* - cbn. econstructor; cbn; eauto. *)
+  (*   + rewrite trans_env_retroknowledge //. *)
+  (*   + now apply forall_decls_declared_constant. *)
+  (*   + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants. *)
+  (*     intros [s []]; exists s; split => //; *)
+  (*     destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //. *)
+  (* - cbn. econstructor; cbn; eauto. *)
+  (*   + rewrite trans_env_retroknowledge //. *)
+  (*   + now apply forall_decls_declared_constant. *)
+  (*   + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants. *)
+  (*     intros [s []]; exists s; split => //; *)
+  (*     destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //. *)
+  - todo "array".
   - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }
     eapply type_Cumul; eauto.
@@ -2594,6 +2620,12 @@ Proof.
       rewrite map2_length; len. eauto.
   - unfold test_def; red in X. solve_all.
   - unfold test_def; solve_all.
+  - move=> /andP[/andP[Harr] Hdef Hty]; rewrite IHwf// IHwf0// !andbT.
+    rewrite forallb_map.
+    apply/All_forallb; apply/In_All => t tin.
+    move: X => /All_Forall/PCUICWfUniverses.Forall_In.
+    move=> /(_ t tin k); move=> H; apply: H.
+    by move: Harr => /forallb_forall/(_ t tin).
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICOnFreeVars.

@@ -1,7 +1,7 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Reflect.
-From MetaCoq.Erasure Require Import EAst EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EInduction.
 From Equations Require Import Equations.
 
 Local Ltac finish :=
@@ -112,8 +112,11 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (eq_dec p p0); nodec.
-    left; subst. reflexivity.
+  - destruct p; destruct p0; destruct x.
+    + destruct x0. 2,3: by right => H; inversion H.
+      todo "array".
+    + todo "array".
+    + todo "array".
 Defined.
 
 #[global]

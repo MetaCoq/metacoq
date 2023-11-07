@@ -1024,7 +1024,7 @@ Section Alpha.
         specialize (wf _ e').
         apply wf_conv_context_closed => //.
         apply upto_names_conv_context. now symmetry. pcuic.
-  Qed.
+    Qed.
 
   Lemma typing_alpha {Σ : global_env_ext} {Γ u v A} {wfΣ : wf Σ.1} :
     Σ ;;; Γ |- u : A ->

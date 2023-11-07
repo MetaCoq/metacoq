@@ -158,6 +158,11 @@ Proof.
       f_equal; auto; solve_all.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
+  - f_equal; unfold Classes.apply_noConfusion => /=; do 2! f_equal.
+    unfold map_array_model => /=; f_equal; rewrite -?IHb2// -?IHb1//.
+    rewrite !map_map; apply: All_map_eq.
+    apply/In_All => x xin.
+    by move: H => /Forall_forall/(_ x xin wfa k).
 Qed.
 
 Lemma trans_substl {cf} Σ a b :

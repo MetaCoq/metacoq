@@ -305,7 +305,6 @@ Qed.
 (*      2: now eauto. eauto. *)
 (*      econstructor; eauto. econstructor; eauto. now eapply cumulAlgo_cumulSpec in X14. *)
 (*      eauto. *)
-(* Qed. *)
 
 (* WARNING LEMMA COMMENTED *)
 (* Lemma typing_ind_env `{cf : checker_flags} : *)
@@ -460,7 +459,6 @@ Qed.
 (*   intros P Pdecl PΓ; unfold env_prop. *)
 (*   intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 Σ wfΣ Γ t T H. *)
 (*   apply typing_ind_env_app_size; eauto. *)
-(* Qed. *)
 
 Local Hint Constructors value wcbv_red1 : wcbv.
 
@@ -626,9 +624,8 @@ Proof.
     (* eapply inversion_Prim in hfn as [prim_ty [cdecl [hwf hp hdecl [s []]]]]; tea. *)
     (* eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. now exists s. } *)
     (* now eapply typing_spine_axiom, app_tip_nil in hcum. *)
-    admit.
-(* Qed. *)
-Admitted.
+    todo "array".
+Qed.
 
 Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T :
   Σ ;;; [] |- mkApps fn (args ++ [hd]) : T ->
@@ -679,13 +676,13 @@ Proof with eauto with wcbv; try congruence.
     (*   forward X. now eapply subject_closed in H0. cbn in X. *)
     (*   specialize (X IH). exact X. *)
     (*   now cbn in H. *)
-    admit.
+    todo "array".
   -
     (* intros Σ wf Γ _ cst u decl Hdecls _ Hdecl Hcons Hax -> H. *)
     (* destruct (decl.(cst_body)) as [body | ] eqn:E. *)
     (* + eauto with wcbv. *)
     (* + red in Hax. eapply Hax in E; eauto. *)
-    admit.
+    todo "array".
   - intros Σ wfΣ Γ _ ci p c brs indices ps mdecl idecl Hidecl Hforall _ Heq Heq_context predctx Hwfpred Hcon Hreturn IHreturn Hwfl _.
     intros Helim Hctxinst Hc IHc Hcof ptm Hwfbranches Hall Hax -> H.
     specialize (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv.
@@ -741,8 +738,7 @@ Proof with eauto with wcbv; try congruence.
       eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?); eauto.
       eexists. eapply wcbv_red_cofix_proj. unfold cunfold_cofix. rewrite e0. reflexivity.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma progress `{cf : checker_flags}:
   forall (Σ:global_env_ext) t T,

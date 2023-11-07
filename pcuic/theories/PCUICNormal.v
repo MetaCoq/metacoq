@@ -934,11 +934,10 @@ Proof.
       lia.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
   - depelim r. solve_discr.
-    admit.
-    admit.
-    admit.
-(* Qed. *)
-Admitted.
+    todo "array".
+    todo "array".
+    todo "array".
+Qed.
 
 Lemma whnf_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
   red Σ Γ t t' ->
@@ -1514,11 +1513,10 @@ Proof.
       intros ? ? (?&[= -> -> ->]).
       auto.
   - depelim r; solve_discr.
-    admit.
-    admit.
-    admit.
-(* Qed. *)
-Admitted.
+    todo "array".
+    todo "array".
+    todo "array".
+Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
   wf Σ ->

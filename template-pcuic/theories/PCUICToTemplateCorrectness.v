@@ -107,6 +107,8 @@ Proof.
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
   - destruct p as [? []]; eauto.
+    todo "array".
+(* Qed *)
 Qed.
 
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
@@ -285,6 +287,7 @@ Proof.
       now rewrite e e0.
     + apply IHX.
   - destruct p as [? []]; eauto.
+    todo "array".
 Qed.
 
 Lemma trans_subst10 u B:
@@ -335,6 +338,7 @@ Proof.
       now rewrite e e0.
     + apply IHX.
   - destruct p as [? []]; eauto.
+    todo "array".
 Qed.
 
 Lemma trans_subst_instance_ctx Γ u :
@@ -1029,6 +1033,8 @@ Proof.
   - cbn. red in X. solve_all.
   - cbn. red in X. solve_all.
   - destruct p as [? []]; constructor.
+    todo "array".
+  Unshelve. all: todo "array".
 Qed.
 
 #[global] Hint Resolve trans_wf : wf.
@@ -1381,6 +1387,9 @@ Proof.
     intuition auto.
     rewrite /trans_local map_app in X.
     now rewrite -trans_fix_context.
+  - todo "array".
+  - todo "array".
+  - todo "array".
 Qed.
 
 Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
@@ -1449,7 +1458,8 @@ Proof.
     red in X0. solve_all_one.
     eapply trans_eq_context_gen_eq_binder_annot in a.
     now rewrite !map_context_trans.
-  - destruct p as [? []]; constructor.
+  (* - destruct p as [? []]; constructor. *)
+  - todo "array".
 Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
@@ -2365,9 +2375,10 @@ Proof.
     + now rewrite trans_wf_cofixpoint.
   - cbn. destruct p as [? []]; cbn; econstructor; eauto.
     1,3: eapply trans_declared_constant; tea.
-    all:move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants;
+    1,2:move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants;
     intros [s []]; exists s; split => //;
     destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+    all: todo "array".
   - eapply TT.type_Conv.
     + eassumption.
     + eassumption.
@@ -2377,6 +2388,7 @@ Proof.
       2:eapply validity; tea.
       2:now exists s.
       now eapply trans_cumul.
+  Unshelve. todo "array".
 Qed.
 
 (* Print Assumptions pcuic_to_template. *)

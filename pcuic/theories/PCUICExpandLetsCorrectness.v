@@ -178,9 +178,8 @@ Proof.
       rewrite !plengths. now apply ihb.
   - unfold test_def. solve_all. cbn. now len in b1.
   - unfold test_def. solve_all. cbn. now len in b1.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+Qed.
 
 Lemma on_free_vars_ctx_trans k ctx :
   on_free_vars_ctx (closedP k xpredT) ctx ->
@@ -448,9 +447,8 @@ Proof.
     cbn. rtoProp; intuition auto.
     unfold map_def; cbn. f_equal. rewrite a //. solve_all.
     rewrite b //. solve_all. now len.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+Qed.
 
 Lemma trans_subst_ctx (Γ : context) xs k t :
   on_free_vars (shiftnP (#|xs| + #|Γ|) xpred0) t ->
@@ -2199,11 +2197,10 @@ Proof.
     rewrite -(trans_fix_context (shiftnP #|Γ| xpred0) _ idx) //.
     now rewrite trans_local_app in X0. cbn; congruence.
     intros. repeat split; reflexivity.
-  - admit.
-  - admit.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+  - todo "array".
+  - todo "array".
+Qed.
 
 Lemma trans_R_global_instance {Σ : global_env} Re Rle gref napp u u' :
   R_global_instance Σ Re Rle gref napp u u' ->
@@ -2344,9 +2341,8 @@ Proof.
     cbn. eauto using subrelation_refl.
   - constructor. solve_all; eauto using subrelation_refl.
   - constructor; solve_all; eauto using subrelation_refl.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {pb ϕ T U} :
   compare_term pb Σ ϕ T U ->
@@ -3914,9 +3910,9 @@ Proof.
     (* destruct X0 as [s []]; exists s; split => //. *)
     (* * cbn. rewrite H1 => //. *)
     (* * cbn. now rewrite H2. *)
-    * admit.
-    * admit.
-    * admit.
+    * todo "array".
+    * todo "array".
+    * todo "array".
   - eapply (type_ws_cumul_pb (pb:=Cumul)).
     + eauto.
     + now exists s.
@@ -3931,8 +3927,8 @@ Proof.
       specialize (X1 X5).
       now eapply type_is_open_term in X1.
       now eapply subject_is_open_term in X3.
-(* Qed. *)
-Admitted.
+  Unshelve. all: todo "array".
+Qed.
 
 Lemma fresh_global_map {kn} {Σ : global_env} :
   fresh_global kn Σ.(declarations) -> fresh_global kn (trans_global_decls Σ.(declarations)).

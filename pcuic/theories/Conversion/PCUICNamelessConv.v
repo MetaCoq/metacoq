@@ -179,36 +179,34 @@ Proof.
         -- eapply Hbod ; eassumption.
         -- assumption.
       * eapply IHm ; assumption.
-<<<<<<< HEAD
   - f_equal.
     destruct o; auto.
     f_equal. f_equal. cbn in X, hu, hv. rtoProp.
     destruct a, a'; cbn in *. eapply Universe.make_inj in e. f_equal; intuition eauto.
     solve_all. induction a0 => //. f_equal; eauto.
     eapply r; intuition eauto.
-=======
-  - f_equal; inversion e => //. subst.
-    move: X => [/(_ (array_type a') 0) Xtyp []].
-    move=> /(_ (array_default a') 0) Xdef Xval.
-    f_equal; f_equal.
-    case: a hu e H X0 X1 X2 Xtyp Xdef Xval => al atyp adef aval /=.
-    move=> /andP[/andP[nontyp nondef] nonval].
-    case: a' hv => al' atyp' adef' aval'/= /andP[/andP[nontyp' nondef'] nonval'].
-    move=> eqi' leq defeq typeq valeq Xtyp Xdef Xval.
-    f_equal.
-    + by inversion leq.
-    + by apply: Xtyp.
-    + by apply: Xdef.
-    + move: aval' Xval nonval nonval' valeq {eqi'}.
-      elim: aval => [|x aval IH] aval' Xval nonval nonval' valeq.
-      * by inversion valeq.
-      * case: aval' nonval' IH valeq => [|x' aval'] nonval' IH valeq.
-        -- by inversion valeq.
-        -- move: nonval nonval' => /= /andP[nonx nonval] /andP[nonx' nonval'].
-           f_equal; inversion Xval; subst => //; inversion valeq; subst.
-           ++ apply: H0 => //; apply: X0.
-           ++ by apply: IH.
->>>>>>> Extension of nameless to arrays and some proofs
+  (* TODO review *)
+  (* - f_equal; inversion e => //. subst. *)
+  (*   move: X => [/(_ (array_type a') 0) Xtyp []]. *)
+  (*   move=> /(_ (array_default a') 0) Xdef Xval. *)
+  (*   f_equal; f_equal. *)
+  (*   case: a hu e H X0 X1 X2 Xtyp Xdef Xval => al atyp adef aval /=. *)
+  (*   move=> /andP[/andP[nontyp nondef] nonval]. *)
+  (*   case: a' hv => al' atyp' adef' aval'/= /andP[/andP[nontyp' nondef'] nonval']. *)
+  (*   move=> eqi' leq defeq typeq valeq Xtyp Xdef Xval. *)
+  (*   f_equal. *)
+  (*   + by inversion leq. *)
+  (*   + by apply: Xtyp. *)
+  (*   + by apply: Xdef. *)
+  (*   + move: aval' Xval nonval nonval' valeq {eqi'}. *)
+  (*     elim: aval => [|x aval IH] aval' Xval nonval nonval' valeq. *)
+  (*     * by inversion valeq. *)
+  (*     * case: aval' nonval' IH valeq => [|x' aval'] nonval' IH valeq. *)
+  (*       -- by inversion valeq. *)
+  (*       -- move: nonval nonval' => /= /andP[nonx nonval] /andP[nonx' nonval']. *)
+  (*          f_equal; inversion Xval; subst => //; inversion valeq; subst. *)
+  (*          ++ apply: H0 => //; apply: X0. *)
+  (*          ++ by apply: IH. *)
 Qed.
 
 Lemma banon_list l : forallb (banon ∘ anonymize) l.
@@ -259,15 +257,13 @@ Proof.
         repeat (eapply andb_true_intro ; split).
         all: try assumption.
         eapply IHm. assumption.
-<<<<<<< HEAD
   - cbn. solve_all.
-=======
-  - move: X; case p; case=> //= pa; destruct pa => //= X.
-    inversion X as [-> Xcomp]. inversion Xcomp as [-> Xval].
-    move=> /=; inversion Xval => //=; rewrite H0/=.
-    move: X0 => /All_Forall; rewrite forallb_map.
-    by have [+ _] := forallb_Forall (fun t => nameless (nl t)) l.
->>>>>>> Extension of nameless to arrays and some proofs
+  (* TODO review *)
+  (* - move: X; case p; case=> //= pa; destruct pa => //= X. *)
+  (*   inversion X as [-> Xcomp]. inversion Xcomp as [-> Xval]. *)
+  (*   move=> /=; inversion Xval => //=; rewrite H0/=. *)
+  (*   move: X0 => /All_Forall; rewrite forallb_map. *)
+  (*   by have [+ _] := forallb_Forall (fun t => nameless (nl t)) l. *)
 Qed.
 
 Lemma nl_lookup_env :
@@ -390,7 +386,6 @@ Proof.
     intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.
-<<<<<<< HEAD
   - constructor.
     destruct i as [? []], i' as [? []]; cbn in o; depelim o; cbn in *; constructor; eauto.
     + now eapply aux.
@@ -398,15 +393,14 @@ Proof.
     + cbn. induction a2.
     ++ constructor.
     ++ cbn; constructor; [now eapply aux|]. eapply IHa2.
-=======
-  - case: i e; case; case: i'; case => m' m e; inversion e; subst => //.
-    all: destruct H, H0 => /=; do 2! econstructor => //=.
-    + by apply: aux.
-    + by apply: aux.
-    + induction X1.
-      * constructor.
-      * simpl. econstructor. all: eauto.
->>>>>>> Extension of nameless to arrays and some proofs
+  (* TODO review *)
+  (* - case: i e; case; case: i'; case => m' m e; inversion e; subst => //. *)
+  (*   all: destruct H, H0 => /=; do 2! econstructor => //=. *)
+  (*   + by apply: aux. *)
+  (*   + by apply: aux. *)
+  (*   + induction X1. *)
+  (*     * constructor. *)
+  (*     * simpl. econstructor. all: eauto. *)
 Qed.
 
 Lemma eq_context_nl Σ Re Rle ctx ctx' :
@@ -669,17 +663,15 @@ Proof.
     destruct x. simpl in *.
     unfold map_def, map_def_anon. cbn.
     rewrite h1 h2. reflexivity.
-<<<<<<< HEAD
   - simpl. f_equal. solve_all.
-=======
-  - case: p X; case; case => //; case=> [al atyp adef aval] X.
-    all: inversion X as [Xtyp X']; inversion X' as [Xdef Xval].
-    all: simpl in *; f_equal; unfold Classes.apply_noConfusion => /=.
-    all: do 2! f_equal; unfold mapu_array_model => /=; f_equal => //=.
-    all: elim: aval {X X'} Xval => // a aval IH Xval /=.
-    all: f_equal; move: Xval => /All_Forall Xval; first by have := Forall_inv Xval.
-    all: by apply: IH; have /Forall_All := Forall_inv_tail Xval.
->>>>>>> Extension of nameless to arrays and some proofs
+  (* TODO review *)
+  (* - case: p X; case; case => //; case=> [al atyp adef aval] X. *)
+  (*   all: inversion X as [Xtyp X']; inversion X' as [Xdef Xval]. *)
+  (*   all: simpl in *; f_equal; unfold Classes.apply_noConfusion => /=. *)
+  (*   all: do 2! f_equal; unfold mapu_array_model => /=; f_equal => //=. *)
+  (*   all: elim: aval {X X'} Xval => // a aval IH Xval /=. *)
+  (*   all: f_equal; move: Xval => /All_Forall Xval; first by have := Forall_inv Xval. *)
+  (*   all: by apply: IH; have /Forall_All := Forall_inv_tail Xval. *)
 Qed.
 
 Lemma context_position_nlctx :
@@ -1321,8 +1313,8 @@ Proof.
     now apply closed_ctx_IH.
   - rewrite /test_def; solve_all. simpl. now len in b.
   - rewrite /test_def; solve_all. simpl. now len in b.
-  - case: p X; case => /= p X; admit.
-Admitted.
+  - case: p X; case => /= p X; todo "array".
+Qed.
 
 Lemma closed_nlctx n t : closedn_ctx n t -> closedn_ctx n (nlctx t).
 Proof.
@@ -1371,7 +1363,7 @@ Proof.
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
       cbn.
-      admit.
+      todo "array".
       (* replace (isLambda (nl (dbody d))) with (isLambda (dbody d)) *)
       (*   by (destruct (dbody d) ; reflexivity). *)
       (* inversion H. subst. rewrite nl_subst. *)
@@ -1446,15 +1438,9 @@ Proof.
     cbn. intros x y [[? ?] ?]. split.
     + rewrite nlctx_app_context nl_fix_context in r0. assumption.
     + cbn. congruence.
-    Unshelve. all:eauto.
-<<<<<<< HEAD
   - cbn. constructor. eapply OnOne2_map, OnOne2_impl; tea.
     unfold on_Trel; intuition auto.
 Qed.
-=======
-  - admit.
-Admitted.
->>>>>>> Extension of nameless to arrays and some proofs
 
 Lemma nl_conv {cf:checker_flags} :
   forall {cf} Σ {wfΣ : wf_ext Σ} Γ A B,
@@ -1568,7 +1554,6 @@ Qed.
 (*     rewrite bot. *)
 (*     apply eq_term_upto_univ_refl. *)
 (*     all: auto. *)
-(* Qed. *)
 
 (* Lemma nleq_term_it_mkLambda_or_LetIn : *)
 (*   forall Γ u v, *)
@@ -1592,7 +1577,6 @@ Qed.
 (*       eapply ssrbool.elimT. *)
 (*       * eapply reflect_nleq_term. *)
 (*       * assumption. *)
-(* Qed. *)
 
 Lemma anonymize_two na : anonymize (anonymize na) = anonymize na.
 Proof.
@@ -1621,13 +1605,8 @@ Proof.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.
-<<<<<<< HEAD
   - f_equal; solve_all.
 Qed.
-=======
-  - admit.
-Admitted.
->>>>>>> Extension of nameless to arrays and some proofs
 
 
 Local Ltac aa :=

@@ -50,6 +50,8 @@ src/pCUICSafeReduce.ml
 src/pCUICSafeRetyping.ml
 src/pCUICSafeRetyping.mli
 
+src/ePrimitive.ml
+src/ePrimitive.mli
 src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml

@@ -1,12 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import Universes BasicAst Primitive Reflect
+From MetaCoq.Common Require Import Universes Primitive Reflect
      Environment EnvironmentTyping.
+(* From MetaCoq.Erasure Require Import BasicAst. *)
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.
 From Coq Require Import Uint63 SpecFloat.
 
-Record array_model {term : Type} :=
+Implicit Type term : Set.
+
+Record array_model {term : Set} : Set :=
   { array_level : Level.t;
     array_type : term;
     array_default : term;
@@ -22,7 +25,7 @@ Proof. eqdec_proof. Qed.
   [prim_model_of] so that [prim_model] can be used in the inductive definition
   of terms, otherwise it results in a non-strictly positive definition.
   *)
-Inductive prim_model (term : Type) : prim_tag -> Type :=
+Inductive prim_model (term : Set) : prim_tag -> Set :=
 | primIntModel (i : PrimInt63.int) : prim_model term primInt
 | primFloatModel (f : PrimFloat.float) : prim_model term primFloat
 | primArrayModel (a : array_model term) : prim_model term primArray.
@@ -33,7 +36,7 @@ Arguments primArrayModel {term}.
 
 Derive Signature NoConfusion for prim_model.
 
-Definition prim_model_of (term : Type) (p : prim_tag) : Type :=
+Definition prim_model_of (term : Set) (p : prim_tag) : Set :=
   match p with
   | primInt => PrimInt63.int
   | primFloat => PrimFloat.float
@@ -51,7 +54,8 @@ Definition prim_model_val {term} (p : prim_val term) : prim_model_of term (prim_
   | primArrayModel a => a
   end.
 
-Lemma exist_irrel_eq {A} (P : A -> bool) (x y : sig P) : proj1_sig x = proj1_sig y -> x = y.
+Lemma exist_irrel_eq {A} (P : A -> bool) (x y : sig P) :
+  proj1_sig x = proj1_sig y -> x = y.
 Proof.
   destruct x as [x p], y as [y q]; simpl; intros ->.
   now destruct (uip p q).
@@ -61,20 +65,20 @@ Qed.
 Instance reflect_eq_Z : ReflectEq Z := EqDec_ReflectEq _.
 
 Local Obligation Tactic := idtac.
-#[program]
-#[global]
-Instance reflect_eq_uint63 : ReflectEq uint63_model :=
-  { eqb x y := Z.eqb (proj1_sig x) (proj1_sig y) }.
-Next Obligation.
-  cbn -[eqb].
-  intros x y.
-  elim: Z.eqb_spec. constructor.
-  now apply exist_irrel_eq.
-  intros neq; constructor => H'; apply neq; now subst x.
-Qed.
+(* #[program] *)
+(* #[global] *)
+(* Instance reflect_eq_uint63 : ReflectEq uint63_model := *)
+(*   { eqb x y := Z.eqb (proj1_sig x) (proj1_sig y) }. *)
+(* Next Obligation. *)
+(*   cbn -[eqb]. *)
+(*   intros x y. *)
+(*   elim: Z.eqb_spec. constructor. *)
+(*   now apply exist_irrel_eq. *)
+(*   intros neq; constructor => H'; apply neq; now subst x. *)
+(* Qed. *)
 
-#[global]
-Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _.
+(* #[global] *)
+(* Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _. *)
 
 Import ReflectEq.
 

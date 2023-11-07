@@ -70,9 +70,8 @@ Proof.
     f_equal.
     1: auto.
     by rewrite map_length ebod shiftnP_shiftn.
-  - admit.
-(* Qed. *)
-Admitted.
+  - todo "array".
+Qed.
 
 Lemma Alli_impl_le {A P Q} {l : list A} {n} :
   Alli P n l ->
@@ -474,7 +473,7 @@ Section OnFreeVars.
 
     -
       (* easy. *)
-      admit.
+      todo "array".
     - easy.
 
     - intros ? ? ? ? ? ? _ HT Hred.
@@ -491,8 +490,7 @@ Section OnFreeVars.
 
     - easy.
 
-  (* Qed. *)
-  Admitted.
+    Qed.
 
   Lemma infering_on_free_vars P Γ t T :
     on_ctx_free_vars P Γ ->
@@ -871,7 +869,7 @@ Proof using wfΣ.
 
   - intros. red. intros P Δ f hf ht.
     (* cbn. econstructor; tea. *)
-    admit.
+    todo "array".
 
   - intros. red. intros P Δ f hf ht.
     econstructor ; eauto.
@@ -898,8 +896,7 @@ Proof using wfΣ.
     4: eassumption.
     all: assumption.
 
-(* Qed. *)
-Admitted.
+Qed.
 
 End BDRenaming.
 

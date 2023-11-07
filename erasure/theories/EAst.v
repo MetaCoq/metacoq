@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Universes.
-From MetaCoq.PCUIC Require Import PCUICPrimitive.
+From MetaCoq.Erasure Require Import EPrimitive.
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
@@ -25,6 +25,9 @@ Definition test_def {term : Set} (f : term -> bool) (d : def term) :=
   f d.(dbody).
 
 Definition mfixpoint (term : Set) := list (def term).
+
+(* Definition prim_val (term : Set) : Set := *)
+(*   ∑ t : Primitive.prim_tag, prim_model term t. *)
 
 Inductive term : Set :=
 | tBox       : term (* Represents all proofs *)

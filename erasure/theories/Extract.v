@@ -2,9 +2,9 @@
 From Coq Require Import Program ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAstUtils PCUICTyping PCUICAst
      PCUICElimination PCUICWcbvEval PCUICFirstorder.
-From MetaCoq.Erasure Require EAst EGlobalEnv.
+From MetaCoq.Erasure Require EAst EGlobalEnv EPrimitive.
 
 Module E := EAst.
 
@@ -24,13 +24,18 @@ Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level
 Definition erase_context (Γ : context) : list name :=
   map (fun d => d.(decl_name).(binder_name)) Γ.
 
-Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @prim_model E.term t :=
-  match e in @prim_model _ x return prim_model E.term x with
-  | primIntModel i => primIntModel i
-  | primFloatModel f => primFloatModel f
+Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @EPrimitive.prim_model E.term t :=
+  match e in @prim_model _ x return EPrimitive.prim_model E.term x with
+  | primIntModel i => EPrimitive.primIntModel i
+  | primFloatModel f => EPrimitive.primFloatModel f
+  | primArrayModel a => match a with
+    | Build_array_model al atyp adef aval =>
+        EPrimitive.primArrayModel (EPrimitive.Build_array_model E.term al E.tBox E.tBox (cons E.tBox nil))
+   (* TODO the erasure for array model is obviously wrong, just making it compile. todo "array" *)
+    end
   end.
 
-Definition erase_prim_val (p : prim_val term) : prim_val E.term :=
+Definition erase_prim_val (p : prim_val) : EPrimitive.prim_val E.term :=
   (p.π1; erase_prim_model p.π2).
 
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=

@@ -378,8 +378,8 @@ Proof.
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
     eexists. split; [econstructor; tea|].
     (* eapply ws_cumul_pb_refl; fvs. *)
-    * admit.
-    * admit.
+    * todo "array".
+    * todo "array".
 
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
     eexists.
@@ -387,8 +387,7 @@ Proof.
     1: eassumption.
     etransitivity ; eauto.
     now eapply cumulSpec_typed_cumulAlgo.
-(* Qed. *)
-Admitted.
+Qed.
 
 End BDFromPCUIC.
 

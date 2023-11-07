@@ -189,7 +189,7 @@ Proof.
   - unshelve eapply declared_constant_to_gen in H0; tea.
     rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
-    destruct X0 as [Σ' [hext [onu HΣ'] [IHtm IHty]]].
+    destruct X0 as (Σ' & hext & [onu HΣ'] & [IHtm IHty]).
     simpl in *.
     eauto using closed_upwards with arith.
 
@@ -484,7 +484,7 @@ Proof.
   apply (env_prop_sigma typecheck_closed) in wfΣ.
   intros h. unshelve eapply declared_constant_to_gen in h; tea.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [ext wfΣ' [Htm Hty]]].
+  destruct h as (Σ' & ext & wfΣ' & [Htm Hty]).
   easy.
 Qed.
 
@@ -500,7 +500,7 @@ Proof.
   apply (env_prop_sigma typecheck_closed) in hΣ.
   unshelve eapply declared_constant_to_gen in h; tea.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [ext wfΣ' [Htm Hty]]].
+  destruct h as (Σ' & ext & wfΣ' & [Htm Hty]).
   simpl in Htm.
   rewrite e in Htm.
   easy.
@@ -519,7 +519,7 @@ Proof.
   destruct h as [h1 h2].
   unshelve eapply declared_minductive_to_gen in h1; tea.
   eapply lookup_on_global_env in h1. 2: eauto.
-  destruct h1 as [Σ' [ext wfΣ' decl']].
+  destruct h1 as (Σ' & ext & wfΣ' & decl').
   red in decl'. destruct decl' as [h ? ? ?].
   eapply Alli_nth_error in h. 2: eassumption.
   simpl in h. now destruct h as [? [? h] ? ? ?].

@@ -610,31 +610,25 @@ Lemma rename_predicate_preturn f p :
 Proof. reflexivity. Qed.
 
 Lemma wf_local_app_renaming P Σ Γ Δ :
-  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
-    forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
-    renaming (shiftnP #|Γ ,,, Γ'| P) Σ (Γ ,,, Γ') Δ f -> Σ ;;; Δ |- rename f t : rename f T) Σ)
-    Δ ->
+  All_local_rel (lift_typing (fun Σ (Γ : context) (t T : term) =>
+    forall P Δ (f : nat -> nat),
+    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
+    Σ ;;; Δ |- rename f t : rename f T) Σ)
+    Γ Δ ->
   forall Δ' f,
   renaming (shiftnP #|Γ| P) Σ Γ Δ' f ->
   wf_local Σ (Δ' ,,, rename_context f Δ).
 Proof.
   intros. destruct X0.
-  induction X.
-  - apply a.
-  - rewrite rename_context_snoc /=. constructor; auto.
-    eapply lift_typing_f_impl with (1 := t0) => // ?? Hs.
-    eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-    split => //.
-    eapply urenaming_ext.
-    { now rewrite app_length -shiftnP_add. }
-    { reflexivity. } now eapply urenaming_context.
-  - rewrite rename_context_snoc /=. constructor; auto.
-    eapply lift_typing_f_impl with (1 := t0) => // ?? Hs.
-    apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-    split => //.
-    eapply urenaming_ext.
-    { now rewrite app_length -shiftnP_add. }
-    { reflexivity. } now eapply urenaming_context.
+  induction X using All_local_rel_ind1.
+  1: now apply a.
+  rewrite rename_context_snoc /=. apply All_local_env_snoc; auto.
+  eapply lift_typing_f_impl with (1 := X) => // ?? Hs.
+  eapply (Hs P (Δ' ,,, rename_context f Δ) (shiftn #|Δ| f)).
+  split; auto.
+  eapply urenaming_ext.
+  { now rewrite app_length -shiftnP_add. }
+  { reflexivity. } now eapply urenaming_context.
 Qed.
 
 Lemma rename_decompose_prod_assum f Γ t :

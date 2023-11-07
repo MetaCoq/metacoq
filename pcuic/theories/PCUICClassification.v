@@ -368,7 +368,7 @@ Qed.
     * elimtype False; depelim ass.
     * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
       intros wf sp.
-      pose proof (wf_local_app_inv wf) as [_ wfty].
+      pose proof (All_local_env_app_inv wf) as [_ wfty].
       eapply All_local_env_app_inv in wfty as [wfty _]. depelim wfty.
       intros Hargs. eapply nth_error_None in Hargs.
       len in Hargs. len; simpl.

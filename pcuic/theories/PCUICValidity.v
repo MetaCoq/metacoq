@@ -86,17 +86,6 @@ Section Validity.
     now apply isType_weaken.
   Qed.
 
-  Lemma nth_error_All_local_env {P} {Γ n d} :
-    nth_error Γ n = Some d ->
-    All_local_env P Γ ->
-    on_local_decl P (skipn (S n) Γ) d.
-  Proof using Type.
-    intros heq hΓ.
-    epose proof (nth_error_Some_length heq).
-    eapply (nth_error_All_local_env) in H; tea.
-    now rewrite heq in H.
-  Qed.
-
   Notation type_ctx := (type_local_ctx (lift_typing typing)).
   Lemma type_ctx_wf_univ Σ Γ Δ s : type_ctx Σ Γ Δ s -> wf_universe Σ s.
   Proof using Type.
@@ -206,7 +195,7 @@ Section Validity.
     - assumption.
 
     - (* Rel *)
-      destruct (nth_error_All_local_env heq_nth_error X) as (_ & s & Hs & _).
+      destruct (All_local_env_nth_error X heq_nth_error) as (_ & s & Hs & _).
       eapply isType_lift; eauto.
       1: now apply nth_error_Some_length in heq_nth_error.
       now eapply has_sort_isType.
@@ -391,7 +380,7 @@ Lemma wf_local_validity `{cf : checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ :
 Proof.
   move=> wfΓΔ.
   apply: validity_wf_local.
-  now apply: (wf_local_app_inv _).2.
+  now apply: (All_local_env_app_inv _).2.
 Qed.
 
 

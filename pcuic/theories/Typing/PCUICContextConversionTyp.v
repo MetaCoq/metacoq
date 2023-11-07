@@ -180,8 +180,7 @@ Proof.
 
   - pose proof heq_nth_error.
     eapply (All2_fold_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
-    unshelve eapply nth_error_All_local_env in X; tea. 2:eapply nth_error_Some_length in heq_nth_error; lia.
-    rewrite heq_nth_error /= in X.
+    eapply All_local_env_nth_error in X; tea.
     red in X. specialize (X _ Hrel).
     forward X by now eapply All_local_env_skipn.
     destruct X as (_ & s & Hty & _).

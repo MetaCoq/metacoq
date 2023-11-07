@@ -796,9 +796,9 @@ Proof.
     now eapply closed_red1_red.
     repeat constructor.
     specialize (t0 _ c0).
-    eapply wf_local_app_inv, substitution_wf_local; tea.
+    eapply All_local_env_app_inv, substitution_wf_local; tea.
     now eapply subslet_ass_tip.
-    eapply wf_local_app_inv, substitution_wf_local; tea.
+    eapply All_local_env_app_inv, substitution_wf_local; tea.
     now eapply subslet_ass_tip.
     constructor; auto. eapply IHc.
     rewrite -subst_context_subst_telescope.
@@ -812,7 +812,7 @@ Proof.
     eapply substitution_wf_local; tea.
     repeat (constructor; tea). eapply subslet_def. constructor.
     all:rewrite !subst_empty //.
-    eapply wf_local_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
+    eapply All_local_env_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
 Qed.
 
 Lemma ctx_inst_merge' {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
@@ -1428,7 +1428,7 @@ Lemma wf_subslet_skipn {cf Σ Γ s Δ n} :
   wf_subslet Σ Γ s Δ → wf_subslet Σ Γ (skipn n s) (skipn n Δ).
 Proof.
   intros []; split; auto using subslet_skipn.
-  now eapply wf_local_app_skipn.
+  now eapply All_local_env_app_skipn.
 Qed.
 
 Lemma isType_subst_arities {cf} {Σ} {wfΣ : wf Σ} {ind mdecl idecl u} {Γ T} :
@@ -1548,11 +1548,13 @@ Proof.
     split; auto. intros Γ' Δ' Δ ->.
     induction 1.
     * depelim p. subst. depelim X. constructor.
-      now eapply wf_local_app_inv.
+      rewrite -/(All_local_rel (lift_typing1 (typing Σ)) Γ' Γ).
+      now eapply All_local_env_app_inv.
       eapply lift_sorting_it_impl_gen with (tu := tu) => // _.
       now eapply Hs.
-    * depelim X.
-      constructor. now eapply wf_local_app_inv.
+    * depelim X. constructor.
+      rewrite -/(All_local_rel (lift_typing1 (typing Σ)) Γ' Γ).
+      now eapply All_local_env_app_inv.
       depelim p. destruct s as [[red <-]|[red <-]]; subst.
       all: apply lift_sorting_it_impl_gen with tu => // Ht; eauto.
       specialize (Hs _ red). eapply type_ws_cumul_pb; tea.
@@ -1563,16 +1565,16 @@ Proof.
     * depelim X; specialize (IHX0 _ X); pose proof (wf_local_closed_context all).
       + constructor; auto. clear X.
         pose proof (wf_local_closed_context all).
-        eapply wf_local_app_inv in all as [].
-        eapply wf_local_app in IHX0; tea.
+        eapply All_local_env_app_inv in all as [].
+        eapply All_local_env_app in IHX0; tea.
         apply lift_sorting_it_impl with tu => // Hty.
         eapply closed_context_conversion; tea.
         eapply red_one_decl_ws_cumul_ctx_pb => //.
         eapply OnOne2_local_env_impl; tea.
         intros ???. eapply on_one_decl_impl => ???; firstorder.
       + constructor; auto. clear X.
-        eapply wf_local_app_inv in all as [].
-        eapply wf_local_app in IHX0; tea.
+        eapply All_local_env_app_inv in all as [].
+        eapply All_local_env_app in IHX0; tea.
         apply lift_sorting_it_impl with tu => // Hty.
         { eapply closed_context_conversion; tea.
           eapply red_one_decl_ws_cumul_ctx_pb => //.
@@ -1586,7 +1588,7 @@ Proof.
   - (* Rel delta reduction *)
     rewrite heq_nth_error in H. destruct decl as [na b ty]; noconf H.
     simpl.
-    pose proof (PCUICValidity.nth_error_All_local_env heq_nth_error wfΓ); eauto.
+    eapply All_local_env_nth_error in wfΓ as X0; tea.
     apply unlift_TermTyp in X0.
     cbn in *.
     rewrite <- (firstn_skipn (S n) Γ).
@@ -2488,7 +2490,7 @@ Proof.
           (subst_context (inds (inductive_mind p.(proj_ind)) u (ind_bodies mdecl))
           #|ind_params mdecl| (subst_instance u (cstr_args cdecl)))))))); auto.
       ** eapply wf_local_closed_context.
-          eapply wf_local_app_skipn.
+          eapply All_local_env_app_skipn.
           apply wf_subslet_ctx in projsubs.
           apply projsubs.
       ** elim: p.(proj_arg). simpl. constructor.
@@ -2698,7 +2700,7 @@ Proof.
     rewrite H5 in cum.
     set (idx := S (context_assumptions (cstr_args cdecl) - S parg)) in *.
     assert (wfpargctxu1 : wf_local Σ (Γ ,,, skipn idx (smash_context [] pargctxu1))).
-    { simpl. apply wf_local_app_skipn. apply wf_local_smash_end; auto.
+    { simpl. apply All_local_env_app_skipn. apply wf_local_smash_end; auto.
       apply idxsubst0. }
     destruct cum as [[cr mapd] cumdecls].
     destruct decl'' as [na [b|] ty]; simpl in mapd; try discriminate.
@@ -2788,7 +2790,7 @@ Proof.
       simpl. eapply ws_cumul_pb_refl.
       rewrite -skipn_lift_context.
       eapply wf_local_closed_context.
-      eapply wf_local_app_skipn.
+      eapply All_local_env_app_skipn.
       eapply weakening_wf_local => //.
       eapply wf_local_smash_end, idxsubst0.
       move: Hty.
@@ -3220,9 +3222,7 @@ Section SRContext.
     ∑ s, Σ ;;; Γ |- lift0 (S n) (decl_type decl) : tSort s.
   Proof using Type.
     intros wfΓ Hnth.
-    eapply nth_error_All_local_env in wfΓ as H.
-    2: now apply nth_error_Some_length in Hnth.
-    rewrite Hnth /= in H.
+    eapply All_local_env_nth_error in wfΓ as H; tea.
     apply nth_error_Some_length in Hnth.
     destruct H as (_ & s & Hs & _).
     eapply weakening with (Γ' := firstn (S n) Γ) in Hs; cbn in Hs; eauto.

@@ -36,8 +36,8 @@ Lemma wf_local_rel_alpha_eq_end {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ
   wf_local_rel Σ Γ Δ -> wf_local_rel Σ Γ Δ'.
 Proof.
   intros wfΓ eqctx wf.
-  apply wf_local_app_inv.
-  eapply wf_local_app in wf => //.
+  apply All_local_env_app_inv.
+  eapply All_local_env_app in wf => //.
   eapply PCUICSpine.wf_local_alpha; tea.
   eapply All2_app => //. reflexivity.
 Qed.

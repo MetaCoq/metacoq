@@ -1011,10 +1011,10 @@ Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ
 Proof.
   intros Hty.
   assert (wf_local Σ Γ) by
-    move: Hty => /typing_wf_local /wf_local_app_inv [] /wf_local_app_inv [] //.
+    move: Hty => /typing_wf_local /All_local_env_app_inv [] /All_local_env_app_inv [] //.
 
   assert (wfΓ'' : wf_local Σ (Γ ,,, Γ'')).
-  { apply wf_local_app => //.
+  { apply All_local_env_app => //.
     erewrite <- (lift_unlift_context Γ'').
     eapply bidirectional_to_pcuic ; tea.
     rewrite rename_context_lift_context.

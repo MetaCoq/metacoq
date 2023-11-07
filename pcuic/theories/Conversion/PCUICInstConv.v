@@ -1604,24 +1604,23 @@ Proof using Type.
 Qed.
 
 Lemma wf_local_app_inst (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
-  All_local_env (fun Γ' j =>
+  All_local_rel (fun Γ j =>
     forall Δ σ,
     wf_local Σ Δ ->
-    Σ ;;; Δ ⊢ σ : (Γ ,,, Γ') ->
-    lift_typing0 (fun (t T : term) => Σ ;;; Δ |- t.[σ] : T.[σ]) j) Δ ->
+    Σ ;;; Δ ⊢ σ : Γ ->
+    lift_typing0 (fun t T => Σ ;;; Δ |- t.[σ] : T.[σ]) j) Γ Δ ->
   forall Δ' σ,
   Σ ;;; Δ' ⊢ σ : Γ ->
   wf_local Σ Δ' ->
   wf_local Σ (Δ' ,,, inst_context σ Δ).
 Proof using Type.
   intros.
-  induction X.
+  induction X using All_local_rel_ind1.
   - now simpl.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    eapply t0; tas.
-    eapply well_subst_app; auto.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    eapply t0; tas.
+  - rewrite inst_context_snoc /=.
+    apply All_local_env_snoc; auto.
+    apply lift_typing_map with (j := judgment_of_decl _) => //.
+    eapply X; tas.
     eapply well_subst_app; auto.
 Qed.
 

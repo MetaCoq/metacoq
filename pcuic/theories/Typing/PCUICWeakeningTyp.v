@@ -29,7 +29,7 @@ Proof.
   intros wfΓ' wfΓ''.
   pose proof (env_prop_wf_local typing_rename_prop _ wfΣ _ wfΓ') as [_ X]. simpl in X.
   eapply All_local_env_app_inv in X as [XΓ XΓ'].
-  apply wf_local_app => //.
+  apply All_local_env_app => //.
   rewrite /lift_context.
   apply All_local_env_fold.
   eapply (All_local_env_impl_ind XΓ').
@@ -39,8 +39,8 @@ Proof.
   rewrite Nat.add_0_r; rewrite !lift_rename.
   eapply (Hf xpredT).
   split.
-  + apply wf_local_app; auto.
-    apply (All_local_env_fold (fun Δ => lift_typing1 (typing Σ) (Γ ,,, Γ'' ,,, Δ))) in IH. apply IH.
+  + apply All_local_env_app; auto.
+    apply All_local_env_fold, IH.
   + apply weakening_renaming.
 Qed.
 
@@ -177,11 +177,11 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.
-  eapply All_local_env_app. split; auto.
+  eapply All_local_env_app; auto.
   induction a in Δ, wfΔ |- *; simpl; auto.
   + constructor.
   + simpl.
-    eapply All_local_env_app. split; auto.
+    eapply All_local_env_app; auto.
     * constructor. 1: constructor.
       apply lift_typing_f_impl with (1 := p) => // ?? Hs.
       eapply (weakening Σ Γ Δ); auto.

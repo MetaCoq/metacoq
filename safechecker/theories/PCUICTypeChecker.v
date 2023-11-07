@@ -531,7 +531,7 @@ Section Typecheck.
     Lemma sq_wf_local_app {Γ Δ} : forall Σ (wfΣ : abstract_env_ext_rel X Σ),
       ∥ wf_local Σ Γ ∥ -> ∥ wf_local_rel Σ Γ Δ ∥ -> ∥ wf_local Σ (Γ ,,, Δ) ∥.
     Proof using Type.
-      intros. sq. now apply wf_local_app.
+      intros. sq. now apply All_local_env_app.
     Qed.
 
     Equations check_context_rel Γ (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (Δ : context) :
@@ -870,7 +870,7 @@ Section Typecheck.
       1: constructor.
       rewrite subst_empty.
       apply checking_typing ; auto.
-      apply wf_local_rel_app_inv in wfΔ as [wt _].
+      apply All_local_rel_app_inv in wfΔ as [wt _].
       now depelim wt.
     Qed.
     Next Obligation.
@@ -2081,7 +2081,7 @@ Section Typecheck.
     - econstructor ; tea.
       now apply closed_red_red.
     - now eapply All2_fold_All2 in check_wfpctx_conv.
-    - now eapply wf_local_rel_wf_local_bd, wf_local_app_inv, wf_case_predicate_context.
+    - now eapply wf_local_rel_wf_local_bd, All_local_env_app_inv, wf_case_predicate_context.
     - eapply ctx_inst_typing_bd ; eauto.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
@@ -2116,7 +2116,7 @@ Section Typecheck.
         - now eapply All2_fold_All2.
       }
       cbn ; intros ? ? ? [? []] ; intuition auto.
-      now eapply wf_local_rel_wf_local_bd, wf_local_app_inv.
+      now eapply wf_local_rel_wf_local_bd, All_local_env_app_inv.
   Qed.
 
   Next Obligation.

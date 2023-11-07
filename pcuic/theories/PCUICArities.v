@@ -676,15 +676,15 @@ Section WfEnv.
     + rewrite it_mkProd_or_LetIn_app.
       destruct x as [na [b|] ty]; cbn; move=> H.
       * apply inversion_LetIn in H as (s1 & A & H0 & H1 & H2 & H3); auto.
-        eapply All_local_env_app; split; pcuic.
-        eapply All_local_env_app. split. repeat constructor; eauto. repeat (eexists; eauto).
+        eapply All_local_env_app; pcuic.
+        eapply All_local_env_app. repeat constructor; eauto. repeat (eexists; eauto).
         auto. apply IHΔ in H2.
         eapply All_local_env_app_inv in H2. intuition auto.
         eapply All_local_env_impl; eauto. simpl. intros.
         now rewrite app_context_assoc.
       * apply inversion_Prod in H as (s1 & A & H0 & H1 & H2); auto.
-        eapply All_local_env_app; split; pcuic.
-        eapply All_local_env_app. split. repeat constructor; eauto. repeat (eexists; eauto).
+        eapply All_local_env_app; pcuic.
+        eapply All_local_env_app. repeat constructor; eauto. repeat (eexists; eauto).
         apply IHΔ in H1.
         eapply All_local_env_app_inv in H1. intuition auto.
         eapply All_local_env_impl; eauto. simpl. intros.

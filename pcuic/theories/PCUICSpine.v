@@ -1185,7 +1185,7 @@ Qed.*)
     pose proof (ctx_inst_sub_spec ci) as msub.
     eapply make_context_subst_spec in msub.
     rewrite List.rev_involutive in msub.
-    split; pcuic. now eapply wf_local_app_inv in wfΔ as [].
+    split; pcuic. now eapply All_local_env_app_inv in wfΔ as [].
     move: ci msub.
     induction Δ in wfΔ, args |- *.
     simpl. intros ci. depelim ci. constructor.
@@ -1484,9 +1484,8 @@ Proof.
           rewrite !on_free_vars_ctx_app => /andP[] onΓ. erewrite onΓ => /=.
           rewrite -{1}(firstn_skipn (S i) Δ) on_free_vars_ctx_app => /andP[] //.
         }
-        { clear X; eapply (nth_error_All_local_env (n:=i)) in wf. 2:len; lia.
-          rewrite nth_error_app_lt // in wf.
-          rewrite Hnth /= in wf.
+        { clear X; eapply (All_local_env_nth_error (n:=i)) in wf.
+          2: rewrite nth_error_app_lt; eassumption.
           rewrite skipn_app in wf.
           replace (S i - #|Δ|) with 0 in wf. 2:lia.
           rewrite skipn_0 in wf.
@@ -1495,8 +1494,8 @@ Proof.
           rewrite is_open_term_closed //. }
         rewrite skipn_length; simpl.
         apply All_local_env_over_2 in X.
-        unshelve eapply (nth_error_All_local_env (n:=i)) in X. 2: len.
-        rewrite nth_error_app_lt //= Hnth /on_local_decl /= in X.
+        eapply (All_local_env_nth_error (n:=i)) in X.
+        2: rewrite nth_error_app_lt; eassumption.
         destruct X as ((Hb & Xb) & s & (Ht & Xt) & _).
         specialize (Xb Γ (skipn (S i) Δ)).
         forward Xb. rewrite skipn_app. unfold app_context. f_equal.
@@ -1648,7 +1647,7 @@ Section WfEnv.
         rewrite -eql in l0. autorewrite with len in l0. simpl in l0. lia.
         eapply (substitution (Δ := []) IHc); auto.
         rewrite lift_context0_app !app_context_assoc in X. cbn in X.
-        eapply wf_local_app_inv in X as [].
+        eapply All_local_env_app_inv in X as [].
         rewrite lift_context_snoc0 Nat.add_0_r /= in a. cbn in a.
         depelim a. now apply unlift_TermTyp in l0.
       * rewrite app_length /= Nat.add_1_r in IHc.
@@ -1688,7 +1687,7 @@ Section WfEnv.
         forward X by auto.
         apply X; auto. all:eauto with fvs.
         rewrite -app_tip_assoc app_assoc -[(l ++ _) ++ _]app_assoc eql.
-        eapply wf_local_app_inv in Hwf as []. eauto with fvs.
+        eapply All_local_env_app_inv in Hwf as []. eauto with fvs.
   Qed.
 
   Lemma red_expand_let {Γ na b ty t} :
@@ -2153,7 +2152,7 @@ Section WfEnv.
       simpl. rewrite smash_context_acc. simpl. auto.
       auto. }
     split; auto.
-    - eapply All_local_env_app; split; auto.
+    - eapply All_local_env_app; auto.
       eapply wf_local_rel_smash_context; auto.
     - induction inst_subslet0 in inst, inst_ctx_subst0, spine_codom_wf0 |- *.
       depelim inst_ctx_subst0.
@@ -2690,7 +2689,7 @@ Section WfEnv.
     rewrite app_context_assoc in cum.
     eapply substitution_ws_cumul_pb in cum; tea.
     len in cum; tea.
-    destruct (wf_local_app_inv wf).
+    destruct (All_local_env_app_inv wf).
     simpl.
     len.
     now eapply PCUICContexts.subslet_extended_subst.
@@ -2706,7 +2705,7 @@ Section WfEnv.
     eapply (weakening_ws_cumul_pb (Γ'' := smash_context [] Δ)) in cum; tea.
     rewrite /expand_lets /expand_lets_k.
     eapply (PCUICConversion.substitution_ws_cumul_pb (Γ'' := [])) in cum; tea. len in cum; tea.
-    destruct (wf_local_app_inv wf).
+    destruct (All_local_env_app_inv wf).
     simpl.
     len.
     now eapply PCUICContexts.subslet_extended_subst.
@@ -2971,7 +2970,7 @@ Section WfEnv.
           simpl in Hs. eapply has_sort_isType. now rewrite subst_context_nil /= in Hs.
           exact X.
         + unshelve epose proof (ctx_inst_spine_subst _ dom); tea.
-          eapply wf_local_app; tea. now eapply typing_wf_local.
+          eapply All_local_env_app; tea. now eapply typing_wf_local.
           pose proof (spine_codom_wf _ _ _ _ _ X0).
           eapply spine_subst_smash in X0; tea.
           eapply (PCUICConversion.substitution_ws_cumul_pb (Γ := Γ) (Γ'' := []) X0).
@@ -2991,8 +2990,8 @@ Section WfEnv.
       destruct l as (Hb & s & Hs & _). simpl in *.
       destruct l0 as (Hb' & s' & Hs' & _). simpl in *.
       specialize (IHa _ dom).
-      forward IHa. apply wf_local_app_inv; pcuic.
-      forward IHa. apply wf_local_app_inv; pcuic.
+      forward IHa. apply All_local_env_app_inv; pcuic.
+      forward IHa. apply All_local_env_app_inv; pcuic.
       rewrite -(app_nil_r i).
       eapply (ctx_inst_app IHa).
       rewrite (ctx_inst_sub_subst IHa) /=.
@@ -3096,9 +3095,9 @@ Section WfEnv.
       eapply (HP _ _ _ [i] [hd']); tea.
       repeat constructor. now rewrite subst_empty. repeat constructor.
       now rewrite subst_empty. constructor. auto.
-      eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
       repeat (constructor; tea). rewrite subst_empty; tea.
-      eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
       repeat (constructor; tea). rewrite subst_empty; tea. now eapply t0.
       constructor; auto. eapply IHc.
       rewrite -subst_context_subst_telescope.
@@ -3111,7 +3110,7 @@ Section WfEnv.
       rewrite -subst_context_subst_telescope.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
-      eapply wf_local_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
+      eapply All_local_env_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
   Qed.
 
   Lemma All2_ctx_inst {pb} {P} {Γ inst inst' Δ} :
@@ -3147,16 +3146,16 @@ Section WfEnv.
       repeat constructor. now rewrite subst_empty.
       now apply subslet_ass_tip.
       now repeat constructor.
-      * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      * eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
         now apply subslet_ass_tip.
-      * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      * eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
         now apply subslet_ass_tip.
     - constructor. eapply IHc; eauto.
       simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
       rewrite -subst_context_subst_telescope.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
-      eapply wf_local_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
+      eapply All_local_env_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
   Qed.
 
   Lemma ctx_inst_open_terms Γ args Δ :
@@ -3190,7 +3189,7 @@ Section WfEnv.
     now eapply subslet_untyped_subslet.
     now eapply subslet_untyped_subslet.
     eapply All2_rev.
-    move/wf_local_app_inv: X => [] /wf_local_app_inv[] /wf_local_closed_context clΓ0 _ _.
+    move/All_local_env_app_inv: X => [] /All_local_env_app_inv[] /wf_local_closed_context clΓ0 _ _.
     eapply subslet_open_terms, All_rev_inv in X0.
     eapply subslet_open_terms, All_rev_inv in X1.
     solve_all. eapply into_ws_cumul_pb; tea.
@@ -3227,9 +3226,8 @@ Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
   isType Σ (skipn (S n) Γ) d.(decl_type).
 Proof.
   intros Hwf hnth.
-  epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
-  rewrite hnth /= in X. unfold on_local_decl in X.
-  destruct decl_body => //. destruct X => //.
+  eapply All_local_env_nth_error in Hwf; tea.
+  eapply lift_sorting_it_impl_gen with Hwf => //.
 Qed.
 
 

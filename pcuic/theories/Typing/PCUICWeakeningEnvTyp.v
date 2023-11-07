@@ -109,9 +109,9 @@ Proof.
     now apply IH.
 
   - apply All_local_env_over_2 in X. clear wfΓ.
-    induction X; constructor; eauto 2 with extends.
-    all: eapply lift_typing_impl; tea.
-    all: move => t' T' [] _ IH; now apply IH.
+    apply All_local_env_impl with (1 := X) => Γ' j Hj.
+    apply lift_typing_impl with (1 := Hj) => t' T' [] _ IH //.
+    now apply IH.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends. all: econstructor; eauto 2 with extends.
@@ -120,7 +120,7 @@ Proof.
     * close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + specialize (forall_Σ' _ wf0 wfΣ' extΣ).
-      now apply wf_local_app_inv in forall_Σ'.
+      now apply All_local_env_app_inv in forall_Σ'.
     + eapply fix_guard_extends; eauto.
     + eapply (All_impl X0); intros d X.
       apply (lift_typing_impl X); now intros ? [].
@@ -128,7 +128,7 @@ Proof.
       apply (lift_typing_impl X); now intros ? [].
   - econstructor; eauto with extends.
     + specialize (forall_Σ' _ wf0 wfΣ' extΣ).
-      now apply wf_local_app_inv in forall_Σ'.
+      now apply All_local_env_app_inv in forall_Σ'.
     + eapply cofix_guard_extends; eauto.
     + eapply (All_impl X0); intros d X.
       apply (lift_typing_impl X); now intros ? [].

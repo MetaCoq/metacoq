@@ -316,136 +316,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Import T E TU.
 
-  Section TypeLocal.
-    Context (typing : forall (Γ : context), judgment -> Type).
-
-    Inductive All_local_env : context -> Type :=
-    | localenv_nil :
-        All_local_env []
-
-    | localenv_cons_abs Γ na t :
-        All_local_env Γ ->
-        typing Γ (Typ t) ->
-        All_local_env (Γ ,, vass na t)
-
-    | localenv_cons_def Γ na b t :
-        All_local_env Γ ->
-        typing Γ (TermTyp b t) ->
-        All_local_env (Γ ,, vdef na b t).
-  Derive Signature NoConfusion for All_local_env.
-  End TypeLocal.
-
-  Arguments localenv_nil {_}.
-  Arguments localenv_cons_def {_ _ _ _ _} _ _.
-  Arguments localenv_cons_abs {_ _ _ _} _ _.
-
-  Lemma All_local_env_fold P f Γ :
-    All_local_env (fun Γ j => P (fold_context_k f Γ) (judgment_map (f #|Γ|) j)) Γ <~>
-    All_local_env P (fold_context_k f Γ).
-  Proof.
-    split.
-    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; try constructor; auto.
-    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; intros H.
-      * constructor.
-      * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; simpl; auto.
-  Qed.
-
-  Lemma All_local_env_impl_gen (P Q : context -> judgment -> Type) l :
-    All_local_env P l ->
-    (forall Γ bo ty, P Γ (TermoptTyp bo ty) -> Q Γ (TermoptTyp bo ty)) ->
-    All_local_env Q l.
-  Proof.
-    induction 1; intros; simpl; econstructor; eauto.
-  Qed.
-
-  Lemma All_local_env_impl (P Q : context -> judgment -> Type) l :
-    All_local_env P l ->
-    (forall Γ j, P Γ j -> Q Γ j) ->
-    All_local_env Q l.
-  Proof.
-    induction 1; intros; simpl; econstructor; eauto.
-  Qed.
-
-  Lemma All_local_env_impl_ind {P Q : context -> judgment -> Type} {l} :
-    All_local_env P l ->
-    (forall Γ j, All_local_env Q Γ -> P Γ j -> Q Γ j) ->
-    All_local_env Q l.
-  Proof.
-    induction 1; intros; simpl; econstructor; eauto.
-  Qed.
-
-  Lemma All_local_env_skipn P Γ : All_local_env P Γ -> forall n, All_local_env P (skipn n Γ).
-  Proof.
-    induction 1; simpl; intros; destruct n; simpl; try econstructor; eauto.
-  Qed.
-  #[global]
-  Hint Resolve All_local_env_skipn : wf.
-
-  Section All_local_env_rel.
-
-    Definition All_local_rel P Γ Γ'
-      := (All_local_env (fun Γ0 j => P (Γ ,,, Γ0) j) Γ').
-
-    Definition All_local_rel_nil {P Γ} : All_local_rel P Γ []
-      := localenv_nil.
-
-    Definition All_local_rel_abs {P Γ Γ' A na} :
-      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') (Typ A)
-      -> All_local_rel P Γ (Γ',, vass na A)
-      := localenv_cons_abs.
-
-    Definition All_local_rel_def {P Γ Γ' t A na} :
-      All_local_rel P Γ Γ' ->
-      P (Γ ,,, Γ') (TermTyp t A) ->
-      All_local_rel P Γ (Γ',, vdef na t A)
-      := localenv_cons_def.
-
-    Lemma All_local_rel_local :
-      forall P Γ,
-        All_local_env P Γ ->
-        All_local_rel P [] Γ.
-    Proof.
-      intros P Γ h. eapply All_local_env_impl.
-      - exact h.
-      - intros.
-        rewrite app_context_nil_l. assumption.
-    Defined.
-
-    Lemma All_local_local_rel P Γ :
-      All_local_rel P [] Γ -> All_local_env P Γ.
-    Proof.
-      intro X. eapply All_local_env_impl. exact X.
-      intros Γ0 j XX; cbn in XX; rewrite app_context_nil_l in XX; assumption.
-    Defined.
-
-    Lemma All_local_app_rel {P Γ Γ'} :
-      All_local_env P (Γ ,,, Γ') -> All_local_env P Γ × All_local_rel P Γ Γ'.
-    Proof.
-      induction Γ'.
-      - intros hΓ.
-        split.
-        1: exact hΓ.
-        constructor.
-      - inversion 1 ; subst.
-        all: edestruct IHΓ' ; auto.
-        all: split ; auto.
-        all: constructor ; auto.
-    Defined.
-
-    Lemma All_local_rel_app {P Γ Γ'} :
-      All_local_env P Γ -> All_local_rel P Γ Γ' -> All_local_env P (Γ ,,, Γ').
-    Proof.
-      intros ? hΓ'.
-      induction hΓ'.
-      - assumption.
-      - cbn.
-        constructor ; auto.
-      - cbn.
-        constructor ; auto.
-    Defined.
-
-  End All_local_env_rel.
-
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Definition on_local_decl (P : context -> judgment -> Type) Γ d :=
@@ -651,6 +521,15 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     intros; rewrite -Hf; now apply HPQ.
   Qed.
 
+  Lemma lift_typing_map {P} f j :
+    lift_typing0 (fun t T => P (f t) (f T)) j ->
+    (forall u, f (tSort u) = tSort u) ->
+    lift_typing0 P (judgment_map f j).
+  Proof.
+    intros HT Hf.
+    apply lift_typing_f_impl with (1 := HT) => //.
+  Qed.
+
   Lemma lift_sorting_impl {Pc Qc Ps Qs j} :
     lift_sorting Pc Ps j ->
     (forall t T, Pc t T -> Qc t T) ->
@@ -671,6 +550,237 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     apply lift_sorting_impl with (1 := HT); tas.
     intros; now apply HPQ.
   Qed.
+
+  Section TypeLocal.
+    Context (typing : forall (Γ : context), judgment -> Type).
+
+    Inductive All_local_env : context -> Type :=
+    | localenv_nil :
+        All_local_env []
+
+    | localenv_cons_abs Γ na t :
+        All_local_env Γ ->
+        typing Γ (Typ t) ->
+        All_local_env (Γ ,, vass na t)
+
+    | localenv_cons_def Γ na b t :
+        All_local_env Γ ->
+        typing Γ (TermTyp b t) ->
+        All_local_env (Γ ,, vdef na b t).
+
+  Derive Signature NoConfusion for All_local_env.
+  End TypeLocal.
+
+  Arguments localenv_nil {_}.
+  Arguments localenv_cons_def {_ _ _ _ _} _ _.
+  Arguments localenv_cons_abs {_ _ _ _} _ _.
+
+  Definition localenv_cons {typing Γ na bo t} :
+    All_local_env typing Γ -> typing Γ (TermoptTyp bo t) -> All_local_env typing (Γ ,, mkdecl na bo t)
+    := match bo with None => localenv_cons_abs | Some b => localenv_cons_def end.
+
+  Definition All_local_env_snoc {P Γ decl} : All_local_env P Γ -> on_local_decl P Γ decl -> All_local_env P (Γ ,, decl) :=
+    match decl with mkdecl na bo t => localenv_cons end.
+
+  Lemma All_local_env_tip {typing Γ decl} : All_local_env typing (Γ ,, decl) -> All_local_env typing Γ × on_local_decl typing Γ decl.
+  Proof.
+    intros wfΓ; depelim wfΓ.
+    all: split; assumption.
+  Defined.
+
+  Lemma All_local_env_ind1 typing P :
+    P [] ->
+    (forall Γ decl, P Γ -> on_local_decl typing Γ decl -> P (Γ ,, decl)) ->
+    forall Γ, All_local_env typing Γ -> P Γ.
+  Proof.
+    induction Γ => //.
+    move/All_local_env_tip => [] ??.
+    now apply X0.
+  Defined.
+
+  Lemma All_local_env_map (P : context -> judgment -> Type) f Γ :
+    All_local_env (fun Γ j => P (map (map_decl f) Γ) (judgment_map f j)) Γ ->
+    All_local_env P (map (map_decl f) Γ).
+  Proof using Type.
+    induction 1; econstructor; eauto.
+  Qed.
+
+  Lemma All_local_env_fold P f Γ :
+    All_local_env (fun Γ j => P (fold_context_k f Γ) (judgment_map (f #|Γ|) j)) Γ <~>
+    All_local_env P (fold_context_k f Γ).
+  Proof.
+    split.
+    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; try constructor; auto.
+    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; intros H.
+      * constructor.
+      * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; simpl; auto.
+  Qed.
+
+  Lemma All_local_env_impl_gen (P Q : context -> judgment -> Type) l :
+    All_local_env P l ->
+    (forall Γ bo ty, P Γ (TermoptTyp bo ty) -> Q Γ (TermoptTyp bo ty)) ->
+    All_local_env Q l.
+  Proof.
+    induction 1; intros; simpl; econstructor; eauto.
+  Qed.
+
+  Lemma All_local_env_impl (P Q : context -> judgment -> Type) l :
+    All_local_env P l ->
+    (forall Γ j, P Γ j -> Q Γ j) ->
+    All_local_env Q l.
+  Proof.
+    induction 1; intros; simpl; econstructor; eauto.
+  Qed.
+
+  Lemma All_local_env_impl_ind {P Q : context -> judgment -> Type} {l} :
+    All_local_env P l ->
+    (forall Γ j, All_local_env Q Γ -> P Γ j -> Q Γ j) ->
+    All_local_env Q l.
+  Proof.
+    induction 1; intros; simpl; econstructor; eauto.
+  Qed.
+
+  Lemma All_local_env_skipn {P Γ} n : All_local_env P Γ -> All_local_env P (skipn n Γ).
+  Proof.
+    intros hΓ.
+    induction n in Γ, hΓ |- * => //.
+    destruct Γ; cbn; eauto.
+    apply All_local_env_tip in hΓ as [].
+    eauto.
+  Defined.
+  #[global]
+  Hint Resolve All_local_env_skipn : wf.
+
+  Lemma All_local_env_app_skipn {P Γ Δ} n : All_local_env P (Γ ,,, Δ) ->
+    All_local_env P (Γ ,,, skipn n Δ).
+  Proof.
+    intros hΓ.
+    induction n in Δ, hΓ |- * => //.
+    destruct Δ; cbn; eauto.
+    apply All_local_env_tip in hΓ as [].
+    eauto.
+  Qed.
+
+  Lemma All_local_env_nth_error {P Γ n decl} : All_local_env P Γ -> nth_error Γ n = Some decl -> on_local_decl P (skipn (S n) Γ) decl.
+  Proof.
+    induction Γ in n |- *; destruct n => //= /All_local_env_tip [] wfΓ ondecl Hnth //=.
+    - injection Hnth as [= ->]. assumption.
+    - now eapply IHΓ.
+  Defined.
+
+  Section All_local_env_rel.
+
+    Definition All_local_rel P Γ Γ'
+      := (All_local_env (fun Δ j => P (Γ ,,, Δ) j) Γ').
+
+    Definition All_local_rel_nil {P Γ} : All_local_rel P Γ []
+      := localenv_nil.
+
+    Definition All_local_rel_snoc {P Γ Γ' decl} :
+      All_local_rel P Γ Γ' -> on_local_decl P (Γ ,,, Γ') decl ->
+      All_local_rel P Γ (Γ' ,, decl)
+      := All_local_env_snoc.
+
+    Definition All_local_rel_abs {P Γ Γ' A na} :
+      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') (Typ A)
+      -> All_local_rel P Γ (Γ',, vass na A)
+      := localenv_cons.
+
+    Definition All_local_rel_def {P Γ Γ' t A na} :
+      All_local_rel P Γ Γ' ->
+      P (Γ ,,, Γ') (TermTyp t A) ->
+      All_local_rel P Γ (Γ',, vdef na t A)
+      := localenv_cons.
+
+    Definition All_local_rel_tip {P Γ Γ' decl} :
+      All_local_rel P Γ (Γ' ,, decl) -> All_local_rel P Γ Γ' × on_local_decl P (Γ ,,, Γ') decl
+      := All_local_env_tip.
+
+    Definition All_local_rel_ind1 typing Γ P :
+      P [] ->
+      (forall Δ decl, P Δ -> on_local_decl typing (Γ ,,, Δ) decl -> P (Δ ,, decl)) ->
+      forall Δ, All_local_rel typing Γ Δ -> P Δ
+      := All_local_env_ind1 _ P.
+
+    Lemma All_local_rel_local :
+      forall P Γ,
+        All_local_env P Γ ->
+        All_local_rel P [] Γ.
+    Proof.
+      intros P Γ h. eapply All_local_env_impl.
+      - exact h.
+      - intros.
+        rewrite app_context_nil_l. assumption.
+    Defined.
+
+    Lemma All_local_local_rel P Γ :
+      All_local_rel P [] Γ -> All_local_env P Γ.
+    Proof.
+      intro X. eapply All_local_env_impl. exact X.
+      intros Γ0 j XX; cbn in XX; rewrite app_context_nil_l in XX; assumption.
+    Defined.
+
+    Lemma All_local_app_rel {P Γ Γ'} :
+      All_local_env P (Γ ,,, Γ') -> All_local_env P Γ × All_local_rel P Γ Γ'.
+    Proof.
+      induction Γ'.
+      - intros hΓ.
+        split.
+        1: exact hΓ.
+        constructor.
+      - move => /= /All_local_env_tip [] hΓ ona.
+        edestruct IHΓ' ; auto.
+        split ; auto.
+        apply All_local_rel_snoc; auto.
+    Defined.
+
+    Definition All_local_env_app_inv {P Γ Γ'} := @All_local_app_rel P Γ Γ'.
+
+    Lemma All_local_rel_app_inv {P Γ Γ' Γ''} :
+      All_local_rel P Γ (Γ' ,,, Γ'') -> All_local_rel P Γ Γ' × All_local_rel P (Γ ,,, Γ') Γ''.
+    Proof.
+      intro H.
+      eapply All_local_env_app_inv in H as [H H'].
+      split; tas.
+      apply All_local_env_impl with (1 := H').
+      intros; now rewrite -app_context_assoc.
+    Defined.
+
+    Lemma All_local_env_app {P Γ Γ'} :
+      All_local_env P Γ -> All_local_rel P Γ Γ' -> All_local_env P (Γ ,,, Γ').
+    Proof.
+      induction 2 using All_local_rel_ind1 => //=.
+      apply All_local_env_snoc; tas.
+    Defined.
+
+    Lemma All_local_rel_app {P Γ Γ' Γ''} :
+      All_local_rel P Γ Γ' -> All_local_rel P (Γ ,,, Γ') Γ'' -> All_local_rel P Γ (Γ' ,,, Γ'').
+    Proof.
+      induction 2 using All_local_rel_ind1 => //=.
+      apply All_local_rel_snoc; tas. now rewrite app_context_assoc.
+    Defined.
+
+    Lemma All_local_env_prod_inv :
+      forall P Q Γ,
+        All_local_env (fun Δ j => P Δ j × Q Δ j) Γ ->
+        All_local_env P Γ × All_local_env Q Γ.
+    Proof using Type.
+      intros P Q Γ h.
+      split; apply All_local_env_impl with (1 := h).
+      all: now intros ??[].
+    Qed.
+
+    Lemma All_local_env_lift_prod_inv :
+      forall P Q Δ,
+        All_local_env (lift_typing1 (Prop_local_conj P Q)) Δ ->
+        All_local_env (lift_typing1 P) Δ × All_local_env (lift_typing1 Q) Δ.
+    Proof using Type.
+      intros P Q Δ h.
+      split; apply All_local_env_impl with (1 := h); intros ?? H; apply lift_typing_impl with (1 := H).
+      all: move => ??[] //.
+    Qed.
+
+  End All_local_env_rel.
 
   Section TypeLocalOver.
     Context (checking : context -> term -> term -> Type).
@@ -719,6 +829,39 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       repeat (eexists; tea).
     - destruct tu as (Htm & u & Hty & e).
       repeat (eexists; tea).
+  Defined.
+
+  Definition on_wf_local_decl {typing Γ}
+    (P : forall Γ (wfΓ : All_local_env (lift_typing1 typing) Γ) t T, typing Γ t T -> Type)
+    (wfΓ : All_local_env (lift_typing1 typing) Γ) {d}
+    (H : on_local_decl (lift_typing1 typing) Γ d) :=
+  match d return (on_local_decl (lift_typing1 typing) Γ d) -> Type with
+  | {| decl_name := na; decl_body := Some b; decl_type := ty |}
+  => fun H => P Γ wfΓ b ty H.1 × P Γ wfΓ ty _ H.2.π2.1
+  | {| decl_name := na; decl_body := None; decl_type := ty |}
+  => fun H => P Γ wfΓ ty _ H.2.π2.1
+  end H.
+
+
+  Lemma nth_error_All_local_env_over {typing} {P Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing1 typing) Γ} :
+    All_local_env_over typing P Γ wfΓ ->
+    let Γ' := skipn (S n) Γ in
+    let wfΓ' := All_local_env_skipn _ wfΓ in
+    let p := All_local_env_nth_error wfΓ eq in
+    (All_local_env_over typing P Γ' wfΓ' * on_wf_local_decl P wfΓ' p)%type.
+  Proof.
+    induction 1 in n, decl, eq |- *.
+    - exfalso. destruct n => //.
+    - destruct n; simpl.
+    + simpl in *. split; tas. clear -Hs.
+      destruct f_equal; cbn.
+      assumption.
+    + apply IHX.
+    - destruct n; simpl.
+    + simpl in *. split; tas. clear -Hc Hs.
+      destruct f_equal; cbn.
+      split; assumption.
+    + apply IHX.
   Defined.
 
   Lemma All_local_env_over_2 typing P Γ (H : All_local_env (lift_typing1 typing) Γ) :
@@ -849,7 +992,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     All_local_env_size_gen (fun Δ => csize (Γ ,,, Δ)) (fun Δ => ssize (Γ ,,, Δ)) base Δ w).
 
   Lemma All_local_env_size_app c s csize ssize base Γ Γ' (wfΓ : All_local_env (lift_sorting1 c s) Γ) (wfΓ' : All_local_rel (lift_sorting1 c s) Γ Γ') :
-    All_local_env_size_gen csize ssize base _ (All_local_rel_app wfΓ wfΓ') + base = All_local_env_size_gen csize ssize base _ wfΓ + All_local_rel_size_gen c s csize ssize base _ _ wfΓ'.
+    All_local_env_size_gen csize ssize base _ (All_local_env_app wfΓ wfΓ') + base = All_local_env_size_gen csize ssize base _ wfΓ + All_local_rel_size_gen c s csize ssize base _ _ wfΓ'.
   Proof.
     induction Γ'.
     - dependent inversion wfΓ'.
@@ -1884,6 +2027,28 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         P Σ Γ j -> Q Σ Γ j) ->
     forall Σ, on_global_env Pcmp P Σ -> on_global_env Pcmp Q Σ.
   Proof. intros; eapply on_global_env_impl_config; eauto; reflexivity. Qed.
+
+  Lemma lookup_on_global_env `{checker_flags} {Pcmp P} {Σ : global_env} {c decl} :
+    on_global_env Pcmp P Σ ->
+    lookup_env Σ c = Some decl ->
+    ∑ Σ' : global_env_ext, on_global_env Pcmp P Σ' × strictly_extends_decls Σ' Σ × on_global_decl Pcmp P Σ' c decl.
+  Proof.
+    unfold on_global_env.
+    destruct Σ as [univs Σ retro]; cbn. intros [cu ond].
+    induction ond; cbn in * => //.
+    destruct o. rename udecl0 into udecl.
+    case: eqb_specT => [-> [= <-]| ne].
+    - exists ({| universes := univs; declarations := Σ; retroknowledge := retro |}, udecl); cbn.
+      split; try constructor; tas.
+      split => //=. now exists [(kn, d)].
+    - intros hl.
+      specialize (IHond hl) as [[Σ' udecl'] [ong [[equ ext extretro] ond']]].
+      exists (Σ', udecl'). cbn in equ |- *. subst univs. split; cbn; auto; try apply ong.
+      split; cbn; auto. split; cbn; auto.
+      cbn in ext. destruct ext as [Σ'' ->]. cbn in *.
+      now exists ((kn, d) :: Σ'').
+  Qed.
+
 
 End GlobalMaps.
 

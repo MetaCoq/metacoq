@@ -1229,7 +1229,7 @@ Proof.
     specialize (X Δ ltac:(len; lia) _ _ H).
     simpl; len.
     destruct X; split; auto. simpl.
-    eapply All_local_env_app; split.
+    eapply All_local_env_app.
     constructor; auto.
     eapply (All_local_env_impl _ _ _ a). intros; auto.
     now rewrite app_context_assoc. simpl.
@@ -2527,15 +2527,16 @@ Lemma ws_cumul_ctx_pb_wf_local {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ Γ' �
   wf_local Σ (Γ' ,,, Δ).
 Proof.
   intros wf wf' e.
-  eapply All_local_env_app; split => //.
-  eapply wf_local_app_inv in wf as [].
+  eapply All_local_env_app => //.
+  eapply All_local_env_app_inv in wf as [].
   eapply All_local_env_impl_ind; eauto.
   intros.
+  rewrite -/(All_local_rel (lift_typing1 (typing Σ)) Γ' Γ0) /= in X, X0.
   apply lift_typing_impl with (1 := X0); intros ?? Hs.
   eapply closed_context_cumulativity; tea.
-  eapply All_local_env_app; split=> //.
+  eapply All_local_env_app=> //.
   eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
-  eapply wf_local_app in X; tea.
+  eapply All_local_env_app in X; tea.
   eauto with fvs.
 Qed.
 
@@ -2811,7 +2812,7 @@ Proof.
         rewrite !subst_instance_app_ctx in wfargs.
         apply is_closed_context_weaken => //.
         rewrite -app_context_assoc in wfargs.
-        apply wf_local_app_inv in wfargs as []; eauto with fvs.
+        apply All_local_env_app_inv in wfargs as []; eauto with fvs.
         apply wf_local_closed_context in a; move: a.
         now rewrite !is_closed_subst_inst. }
       2:now eapply conv_inds.
@@ -3239,12 +3240,12 @@ Proof.
     eapply typing_spine_ctx_inst in ty_indices as [argsi sp]; tea.
     - eapply ctx_inst_cumul; tea.
       apply (ctx_inst_smash.1 argsi).
-      { apply wf_local_app_inv. apply wf_local_smash_end; tea.
+      { apply All_local_env_app_inv. apply wf_local_smash_end; tea.
         eapply substitution_wf_local; tea. eapply X1.
         rewrite -app_context_assoc -subst_instance_app_ctx.
         eapply weaken_wf_local; tea.
         eapply (on_minductive_wf_params_indices_inst isdecl _ c). }
-      { apply wf_local_app_inv. apply wf_local_smash_end; tea.
+      { apply All_local_env_app_inv. apply wf_local_smash_end; tea.
         eapply substitution_wf_local; tea. eapply X0.
         rewrite -app_context_assoc -subst_instance_app_ctx.
         eapply weaken_wf_local; tea.
@@ -3299,18 +3300,19 @@ Lemma wf_set_binder_name {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {nas Δ}
   wf_local Σ (Γ ,,, map2 set_binder_name nas Δ).
 Proof.
   intros ha wf.
-  apply wf_local_app_inv in wf as [].
-  eapply wf_local_app => //.
-  induction w in nas, ha |- *; depelim ha; cbn. constructor.
-  all: constructor; eauto; try apply IHw; auto.
-  all: apply lift_typing_impl with (1 := t0) => // ?? Hs.
-  all: eapply context_conversion; tea.
-  1,3: eapply wf_local_app, IHw; eauto.
-  all: eapply eq_binder_annots_eq_ctx in ha.
-  all: eapply eq_context_upto_univ_conv_context.
-  all: eapply eq_context_upto_cat.
-  1,3: reflexivity.
-  all: symmetry; apply ha.
+  apply All_local_env_app_inv in wf as [wfΓ wfΔ].
+  eapply All_local_env_app => //.
+  induction wfΔ using All_local_rel_ind1 in nas, ha |- *; depelim ha; cbn. constructor.
+  specialize (IHwfΔ _ ha).
+  apply All_local_rel_snoc; tas.
+  apply lift_typing_impl with (1 := X) => // ?? Hs.
+  eapply context_conversion; tea.
+  1: now eapply All_local_env_app.
+  eapply eq_binder_annots_eq_ctx in ha.
+  eapply eq_context_upto_univ_conv_context.
+  eapply eq_context_upto_cat.
+  1: reflexivity.
+  symmetry; apply ha.
 Qed.
 
 Lemma WfArity_build_case_predicate_type {cf:checker_flags} {Σ Γ ci args mdecl idecl p ps} :
@@ -3526,8 +3528,8 @@ Proof.
   rewrite -Nat.add_comm lift_context_add.
   eapply spine_subst_weakening;tea.
   eapply spine_subst_to_extended_list_k; tea.
-  now apply wf_local_app_inv in wf.
-  destruct (wf_local_app_inv wf) as [].
+  now apply All_local_env_app_inv in wf.
+  destruct (All_local_env_app_inv wf) as [].
   epose proof (@all_rels_subst_lift _ _ _ _ _ Δ' T a).
   eapply typing_spine_strengthen; tea; revgoals.
   eapply ws_cumul_pb_eq_le; symmetry.

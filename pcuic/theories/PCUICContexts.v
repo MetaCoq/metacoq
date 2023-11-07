@@ -347,7 +347,7 @@ Section WfEnv.
   Proof using wfΣ.
     induction Γ in Δ |- *; simpl; auto.
     intros wfΓ wfΔ. depelim wfΓ; simpl.
-    - apply IHΓ; auto. eapply All_local_env_app. split; auto.
+    - apply IHΓ; auto. eapply All_local_env_app; auto.
       + constructor; auto.
       + eapply All_local_env_impl; eauto. simpl; intros.
         now rewrite app_context_assoc.
@@ -372,7 +372,7 @@ Section WfEnv.
     wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
   Proof using wfΣ.
     intros wf.
-    apply All_local_env_app. split.
+    apply All_local_env_app.
     now apply All_local_env_app_inv in wf.
     eapply wf_local_rel_smash_context; auto.
   Qed.
@@ -641,7 +641,7 @@ Lemma subslet_extended_subst {cf} {Σ} {wfΣ : wf Σ} Γ Δ :
     (lift_context (context_assumptions Δ) 0 Δ).
 Proof.
   move=> wfΔ.
-  eapply wf_local_app_inv in wfΔ as [wfΓ wfΔ].
+  eapply All_local_env_app_inv in wfΔ as [wfΓ wfΔ].
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; try constructor.
   * depelim wfΔ. repeat red in l, l0.
     specialize (IHΔ wfΔ).
@@ -659,7 +659,7 @@ Proof.
     specialize (IHΔ wfΔ).
     rewrite lift_context_snoc /lift_decl /= /map_decl /=.
     assert (wf_local Σ (Γ ,,, smash_context [] Δ)).
-    { eapply wf_local_smash_end. eapply All_local_env_app. now split. }
+    { eapply wf_local_smash_end. now eapply All_local_env_app. }
     assert (wf_local Σ (Γ ,,, smash_context [] Δ ,, mkdecl na None
         (subst0 (extended_subst Δ 0) (lift (context_assumptions Δ) #|Δ| decl_type)))).
     { simpl. constructor; tas.

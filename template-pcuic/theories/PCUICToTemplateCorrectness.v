@@ -715,7 +715,7 @@ Section wtsub.
       split.
       eapply spine_subst_wt in s. now eapply All_rev_inv in s.
       exists mdecl, idecl. split; auto. now symmetry.
-      * eapply wf_local_app_inv. eapply wf_local_alpha.
+      * eapply All_local_env_app_inv. eapply wf_local_alpha.
         eapply All2_app; [|reflexivity].
         eapply alpha_eq_subst_instance. symmetry; tea.
         eapply wf_ind_predicate; tea. pcuic.
@@ -725,7 +725,7 @@ Section wtsub.
         eapply All2i_All2_mix_left in brs_ty; tea.
         eapply All2i_nth_hyp in brs_ty.
         solve_all. split; auto.
-        { eapply wf_local_app_inv. eapply wf_local_alpha.
+        { eapply All_local_env_app_inv. eapply wf_local_alpha.
           eapply All2_app; [|reflexivity].
           eapply alpha_eq_subst_instance in a2.
           symmetry; tea.

@@ -798,7 +798,7 @@ Section CheckEnv.
     unfold arities_context.
     induction 1; simpl; auto.
     rewrite rev_map_cons /=.
-    eapply All_local_env_app; split. constructor; pcuic.
+    eapply All_local_env_app. constructor; pcuic.
     eapply All_local_env_impl; eauto.
     intros Γ j Hj.
     apply lift_typing_impl with (1 := Hj) => t T HT.

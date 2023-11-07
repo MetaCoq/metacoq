@@ -46,7 +46,7 @@ Section Alpha.
       lift_typing typing Σ Γ (Typ (lift0 (S i) ty)).
   Proof using Type.
     intros Σ Γ i na ty hΣ hΓ e. simpl.
-    eapply nth_error_All_local_env in e as hj; tea.
+    eapply All_local_env_nth_error in e as hj; tea.
     apply nth_error_Some_length in e.
     rewrite -(firstn_skipn (S i) Γ) in hΓ |- *.
     apply lift_typing_f_impl with (1 := hj) => // ?? HT.
@@ -731,7 +731,7 @@ Section Alpha.
           destruct eqp.
           eapply PCUICSpine.ctx_inst_eq_context; tea.
           rewrite List.rev_involutive.
-          * eapply weaken_wf_local; tea. now eapply wf_local_app_inv in X4 as [].
+          * eapply weaken_wf_local; tea. now eapply All_local_env_app_inv in X4 as [].
             eapply (on_minductive_wf_params_indices_inst isdecl _ cup).
           * eapply ctx_inst_eq_context; tea. cbn; eauto.
           * eapply ctx_inst_eq_context; tea. cbn; intros; eauto.
@@ -751,7 +751,7 @@ Section Alpha.
           eapply All2_trans'; tea.
           2:{ eapply All2_symP; tea. tc. }
           intros ??? [[] ?]; try constructor; simpl; auto; now transitivity na'. }
-        destruct (wf_local_app_inv X4) as [wfΔ _].
+        destruct (All_local_env_app_inv X4) as [wfΔ _].
         assert (clΔ := (wf_local_closed_context wfΔ)).
         econstructor; tea; eauto. 2,3: constructor; tea ; eauto.
         * eapply (type_ws_cumul_pb (pb:=Cumul)).
@@ -872,7 +872,7 @@ Section Alpha.
       { apply eq_context_upto_cat; auto. reflexivity. }
       specialize (hwf (Γ ,,, types)).
       forward hwf. { apply eq_context_upto_cat; auto; reflexivity. }
-      eapply wf_local_app_inv in hwfΔ as [].
+      eapply All_local_env_app_inv in hwfΔ as [].
       eapply eq_context_conversion; tea.
       eapply type_Cumul'.
       + econstructor.
@@ -956,7 +956,7 @@ Section Alpha.
     { apply eq_context_upto_cat; auto. reflexivity. }
     specialize (hwf (Γ ,,, types)).
     forward hwf. { apply eq_context_upto_cat; auto; reflexivity. }
-    eapply wf_local_app_inv in hwfΔ as [].
+    eapply All_local_env_app_inv in hwfΔ as [].
     eapply eq_context_conversion; tea.
     eapply type_Cumul'.
     + econstructor.

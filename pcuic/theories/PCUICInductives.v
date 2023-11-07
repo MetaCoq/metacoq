@@ -540,7 +540,7 @@ Record wf_subslet {cf} Σ Γ s Δ :=
 Lemma wf_subslet_dom {cf} {Σ Γ s Δ} :
   wf_subslet Σ Γ s Δ -> wf_local Σ Γ.
 Proof.
-  intros [wf _]. now eapply wf_local_app_inv in wf.
+  intros [wf _]. now eapply All_local_env_app_inv in wf.
 Qed.
 
 Lemma subst_id s Γ t :
@@ -953,7 +953,7 @@ Proof.
   eapply (weakening_wf_local (Γ'' := [_])).
   2:eapply wf_projection_context_gen; tea. 2:apply decli.
   rewrite - !skipn_subst_context.
-  eapply wf_local_app_skipn.
+  eapply All_local_env_app_skipn.
   rewrite -(smash_context_subst []) /=.
   rewrite -(smash_context_subst []) /=.
   rewrite subst_context_nil.
@@ -1191,7 +1191,7 @@ Proof.
     destruct isdecl as [[[] ?] ?]; eauto. }
   destruct (ind_cunivs oib) as [|? []] eqn:hequ => //.
   eapply PCUICClosedConv.sorts_local_ctx_All_local_env in wfargs.
-  2:{ eapply All_local_env_app. split; auto.
+  2:{ eapply All_local_env_app; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
       intros. apply lift_typing_impl with (1 := X); intros ? Hs.
       eapply weaken_ctx; auto. }
@@ -1299,16 +1299,15 @@ Proof.
   rewrite nth_error_app_lt in Heq'.
   autorewrite with len. lia.
   set (idx := context_assumptions (cstr_args c) - S i) in *.
-  unshelve epose proof (nth_error_All_local_env (n:=idx) _ wfsargs).
-  autorewrite with len. simpl. lia.
-  rename X1 into onnth.
-  destruct (nth_error (subst_context _ 1 _) idx) as [c2|] eqn:hidx.
+  unshelve epose proof ((nth_error_Some' _ idx).2 _) as (c2 & hidx); cycle -1.
+  eapply @All_local_env_nth_error with (n := idx) (2 := hidx) in wfsargs as onnth.
+  2: autorewrite with len; simpl. 2: lia.
   simpl in onnth. red in onnth. cbn in onnth.
   assert(decl_body c2 = None).
   { apply nth_error_assumption_context in hidx; auto.
     rewrite /subst_context /lift_context.
     apply assumption_context_fold, smash_context_assumption_context. constructor. }
-  rewrite H in onnth. 2:{ simpl in onnth; contradiction. }
+  rewrite H in onnth.
   destruct onnth as (_ & s & Hs & _).
   Ltac havefst H :=
     match goal with
@@ -1349,7 +1348,7 @@ Proof.
   { assert(wfargs' : wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,,
       smash_context [] (cstr_args c))).
-    { apply All_local_env_app; split; auto.
+    { apply All_local_env_app; auto.
       now apply All_local_env_app_inv in wfargs as [wfindpars wfargs].
       apply wf_local_rel_smash_context; auto. }
     eapply closed_wf_local in wfargs'; auto.
@@ -1411,7 +1410,7 @@ Proof.
   exists arg. split; auto.
   2:{ apply wf_local_smash_end; auto. }
   eapply wf_local_smash_end in wfargs.
-  eapply (wf_local_app_skipn (n:=context_assumptions (cstr_args c) - S i)) in wfargs.
+  eapply All_local_env_app_skipn with (n:=context_assumptions (cstr_args c) - S i) in wfargs.
   epose proof (wf_local_nth_isType (d:=arg) (n:=0) wfargs).
   rewrite skipn_app in X1.
   rewrite skipn_length in X1. len.
@@ -2099,7 +2098,7 @@ Lemma wf_local_expand_lets {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ'} :
 Proof.
   intros hwf.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  destruct (wf_local_app_inv hwf) as [wfΓΔ _].
+  destruct (All_local_env_app_inv hwf) as [wfΓΔ _].
   rewrite -app_context_assoc in hwf.
   eapply (weakening_wf_local (Γ'' := smash_context [] Δ)) in hwf.
   len in hwf. simpl in hwf. simpl.
@@ -2121,10 +2120,10 @@ Proof.
   rewrite -app_context_assoc in Ht.
   eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Ht.
   len in Ht. simpl in Ht. simpl.
-  2:{ eapply wf_local_smash_end; pcuic. now apply wf_local_app_inv in X. }
+  2:{ eapply wf_local_smash_end; pcuic. now apply All_local_env_app_inv in X. }
   rewrite lift_context_app app_context_assoc Nat.add_0_r in Ht.
   eapply substitution in Ht; tea.
-  2:{ eapply PCUICContexts.subslet_extended_subst. now apply wf_local_app_inv in X. }
+  2:{ eapply PCUICContexts.subslet_extended_subst. now apply All_local_env_app_inv in X. }
   now len in Ht.
 Qed.
 
@@ -2302,17 +2301,17 @@ Proof.
   split.
   * rewrite -app_context_assoc.
     rewrite smash_context_app_expand_acc.
-    eapply wf_local_app_inv in spine_dom_wf as [wfΔ wfΓ'].
-    eapply wf_local_app. now apply wf_local_app_inv in wfΔ.
+    eapply All_local_env_app_inv in spine_dom_wf as [wfΔ wfΓ'].
+    eapply All_local_env_app. now apply All_local_env_app_inv in wfΔ.
     eapply wf_local_rel_smash_context_gen; tea.
-  * eapply wf_local_app_inv in spine_codom_wf as [wfΔ wfΓ'].
+  * eapply All_local_env_app_inv in spine_codom_wf as [wfΔ wfΓ'].
     rewrite - !app_context_assoc -expand_lets_ctx_app.
-    apply wf_local_app_inv in wfΔ as [].
-    eapply wf_local_app.
-    now apply wf_local_app_inv in a as [].
+    apply All_local_env_app_inv in wfΔ as [].
+    eapply All_local_env_app.
+    now apply All_local_env_app_inv in a as [].
     rewrite smash_context_app_expand_acc.
     apply wf_local_rel_smash_context_gen; tea.
-    eapply wf_local_rel_app; tea.
+    eapply All_local_rel_app; tea.
   * rewrite /expand_lets_k_ctx /expand_lets_k -map_map_compose -[map (fun t => _) s]map_map_compose.
     eapply subst_context_subst.
     now eapply lift_context_subst.

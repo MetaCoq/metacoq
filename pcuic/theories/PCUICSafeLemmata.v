@@ -38,8 +38,8 @@ Proof.
   * eapply sp.
   * unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
   rewrite PCUICUnivSubstitutionConv.subst_instance_app_ctx in X.
-  eapply wf_local_app_inv in X as [].
-  eapply wf_local_app => //.
+  eapply All_local_env_app_inv in X as [].
+  eapply All_local_env_app => //.
   eapply wf_local_smash_end.
   now eapply weaken_wf_local; tea.
 Qed.
@@ -342,8 +342,8 @@ Section Lemmata.
   Proof using Type.
     intros wfl.
     destruct pcontext as ((?&h)&?); simpl in *.
-    apply wf_local_app_inv in wfl as (_&wf).
-    apply wf_local_rel_app_inv in wf as (wf&_).
+    apply All_local_env_app_inv in wfl as (_&wf).
+    apply All_local_rel_app_inv in wf as (wf&_).
     destruct h; depelim wf; simpl in *.
     all: destruct l as (Hb & s & Hs & _); cbn in *; econstructor; eauto.
   Qed.
@@ -446,7 +446,7 @@ Section Lemmata.
                 eapply (declared_minductive_ind_npars x1). }
               now eapply spine_subst_smash in sp.
           ** cbn in conv_pctx.
-             eapply wf_local_app_inv. eapply wf_local_alpha.
+             eapply All_local_env_app_inv. eapply wf_local_alpha.
              ++ instantiate (1 := (Γ,,, stack_context π,,, smash_context [] (ind_params x)@[puinst],,, (ind_predicate_context ci x x0)@[puinst])).
                 eapply All2_app => //.
                 { eapply alpha_eq_subst_instance. now symmetry. }

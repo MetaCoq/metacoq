@@ -146,7 +146,7 @@ Section BDToPCUICTyping.
   Proof using Type.
     intros allo ; induction allo.
     all: constructor; tas.
-    all: apply wf_local_app in IHallo; tas.
+    all: apply All_local_env_app in IHallo; tas.
     all: apply lift_sorting_it_impl with tu => //= Ht; eauto.
     apply Hc; cbn; auto.
     now eapply has_sort_isType, Hs.
@@ -163,7 +163,7 @@ Section BDToPCUICTyping.
       subst.
       assert (isType Σ Γ t).
       {
-        eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+        eapply All_local_rel_app_inv in wfΔ as [wfd _].
         inversion_clear wfd.
         eassumption.
       }
@@ -172,19 +172,19 @@ Section BDToPCUICTyping.
       1: by rewrite subst_telescope_length ; reflexivity.
       rewrite -(rev_involutive Γ0) -subst_context_telescope.
       cbn in wfΔ.
-      apply wf_local_rel_app_inv in wfΔ as [].
+      apply All_local_rel_app_inv in wfΔ as [].
       apply wf_local_local_rel.
       eapply substitution_wf_local ; eauto.
       1: repeat constructor.
       1: rewrite subst_empty ; eauto.
-      apply wf_local_app.
+      apply All_local_env_app.
       1: constructor ; eauto.
       eassumption.
     - subst d.
       subst.
       assert (isType Σ Γ t).
       {
-        eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+        eapply All_local_rel_app_inv in wfΔ as [wfd _].
         inversion_clear wfd.
         apply lift_sorting_it_impl_gen with X2 => //.
       }
@@ -256,7 +256,7 @@ Section BDToPCUICTyping.
         move: (H) => [decl ?].
         unshelve epose proof (decl' := declared_minductive_to_gen decl); eauto.
         eapply wf_local_subst_instance_decl ; eauto.
-        eapply wf_local_app_inv.
+        eapply All_local_env_app_inv.
         now eapply on_minductive_wf_params_indices.
       }
 
@@ -497,7 +497,7 @@ Proof.
   - assert (Σ ;;; Γ |- i : t).
     {
       rewrite /= app_context_assoc in wfΓ.
-      eapply wf_local_app_inv in wfΓ as [wfΓ _].
+      eapply All_local_env_app_inv in wfΓ as [wfΓ _].
       inversion wfΓ ; subst.
       now apply checking_typing.
     }
@@ -518,7 +518,7 @@ Proof.
     constructor.
     1: constructor.
     rewrite !subst_empty.
-    eapply wf_local_app_inv in wfΓ as [wfΓ _].
+    eapply All_local_env_app_inv in wfΓ as [wfΓ _].
     inversion wfΓ ; subst.
     now eapply unlift_TermTyp.
 Qed.

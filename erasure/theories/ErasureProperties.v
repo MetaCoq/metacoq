@@ -44,7 +44,7 @@ Proof.
   apply All_local_env_impl_ind with (1 := w0) => Δ j wfΓ' Hj.
   apply lift_typing_impl with (1 := Hj) => t T HT.
   eapply context_conversion with (Γ ,,, Δ); eauto.
-  - eapply wf_local_app; eauto.
+  - eapply All_local_env_app; eauto.
   - eapply conv_context_app_same; eauto.
 Qed.
 
@@ -52,9 +52,9 @@ Lemma conv_context_wf_local_app {A B A'} {Σ : global_env_ext} {wfΣ : wf Σ} :
   wf_local Σ (A ,,, B) -> wf_local Σ A' -> conv_context cumulAlgo_gen Σ A A' -> wf_local Σ (A' ,,, B).
 Proof.
   intros wfab wfa' cv.
-  eapply wf_local_app => //.
+  eapply All_local_env_app => //.
   eapply wf_local_rel_conv; tea.
-  now eapply wf_local_app_inv.
+  now eapply All_local_env_app_inv.
 Qed.
 
 

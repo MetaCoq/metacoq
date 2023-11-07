@@ -249,7 +249,7 @@ Proof.
       eapply e.
       eapply weakening_wf_local => //.
       rewrite app_context_assoc //.
-      now eapply wf_local_app_inv in X7 as [].
+      now eapply All_local_env_app_inv in X7 as [].
       rewrite app_context_assoc. reflexivity.
       now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).

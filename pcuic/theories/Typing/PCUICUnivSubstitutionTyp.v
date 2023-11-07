@@ -346,7 +346,7 @@ Proof using Type.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
     + specialize (H1 u univs wfΣ' H2).
       rewrite subst_instance_app in H1.
-      now eapply wf_local_app_inv in H1 as [].
+      now eapply All_local_env_app_inv in H1 as [].
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl. intros d X1.
@@ -369,7 +369,7 @@ Proof using Type.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
     + specialize (H1 u univs wfΣ' H2).
       rewrite subst_instance_app in H1.
-      now eapply wf_local_app_inv in H1 as [].
+      now eapply All_local_env_app_inv in H1 as [].
     + now eapply cofix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl. intros d X1.

@@ -965,7 +965,7 @@ Section wtsub.
       split.
       eapply spine_subst_wt in s. now eapply All_rev_inv in s.
       exists mdecl, idecl. split; auto. now symmetry.
-      * eapply wf_local_app_inv. eapply wf_local_alpha.
+      * eapply All_local_env_app_inv. eapply wf_local_alpha.
         eapply All2_app; [|reflexivity].
         eapply alpha_eq_subst_instance. symmetry; tea.
         eapply wf_ind_predicate; tea. pcuic.
@@ -975,7 +975,7 @@ Section wtsub.
         eapply All2i_All2_mix_left in brs_ty; tea.
         eapply All2i_nth_hyp in brs_ty.
         solve_all. split; auto.
-        { eapply wf_local_app_inv. eapply wf_local_alpha.
+        { eapply All_local_env_app_inv. eapply wf_local_alpha.
           eapply All2_app; [|reflexivity].
           eapply alpha_eq_subst_instance in a2.
           symmetry; tea.
@@ -1902,7 +1902,7 @@ Proof.
   - destruct nth_error eqn:Heq => //. simpl in H. noconf H.
     simpl. destruct c; noconf H => //.
     rewrite (trans_lift _ (shiftnP #|skipn (S i) Γ| xpred0)); eauto.
-    eapply nth_error_All_local_env in wt0; tea. apply unlift_TermTyp in wt0.
+    eapply All_local_env_nth_error in wt0; tea. apply unlift_TermTyp in wt0.
     now eapply subject_is_open_term.
     do 2 constructor. now rewrite nth_error_map Heq.
 
@@ -3718,7 +3718,7 @@ Proof.
           exact X. }
         { intros c; depelim c.
           constructor.
-          destruct (wf_local_app_inv wfctx) as [w _]. depelim w.
+          destruct (All_local_env_app_inv wfctx) as [w _]. depelim w.
           apply unlift_TermTyp in l0 as Hb.
           unshelve epose proof (substitution_wf_local (Γ':=[vdef na b t]) _ wfctx). shelve.
           { now eapply subslet_def_tip. }
@@ -4055,13 +4055,13 @@ Proof.
   - cbn. constructor.
     cbn in wfctx. rewrite -app_assoc in wfctx.
     unshelve epose proof (substitution_wf_local (Σ := Σ) (Γ' := [vdef na b t]) _ wfctx). shelve.
-    { eapply subslet_def_tip. eapply wf_local_app_inv in wfctx as [wf' _]. eapply unlift_TermTyp.
+    { eapply subslet_def_tip. eapply All_local_env_app_inv in wfctx as [wf' _]. eapply unlift_TermTyp.
       now depelim wf'. }
     rewrite subst_context_subst_telescope in X. specialize (IHi X).
     rewrite (trans_local_subst_telescope (shiftnP (S #|Γ|) xpred0) (shiftnP #|Γ| xpred0)) in IHi.
     { apply wf_local_closed_context in wfctx.
       now move/onfvs_app: wfctx => /=. }
-    { eapply wf_local_app_inv in wfctx as [wf' _].
+    { eapply All_local_env_app_inv in wfctx as [wf' _].
       depelim wf'. apply unlift_TermTyp in l. cbn. now rewrite (subject_is_open_term l). }
     apply IHi.
 Qed.

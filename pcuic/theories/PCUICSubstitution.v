@@ -1792,8 +1792,8 @@ Proof.
     eapply subslet_well_subst; eauto. }
   2:{ subst Γ.
       eapply typing_wf_local in HT.
-      eapply wf_local_app_inv in HT as [HΓ0 _].
-      eapply wf_local_app_inv in HΓ0 as [HΓ0 _].
+      eapply All_local_env_app_inv in HT as [HΓ0 _].
+      eapply All_local_env_app_inv in HΓ0 as [HΓ0 _].
       eapply All_local_env_inst; eauto. }
   unshelve eapply on_wf_global_env_impl ; tea.
   clear. intros * HΣ HP HQ Hty.

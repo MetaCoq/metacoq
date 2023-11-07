@@ -244,6 +244,10 @@ End Contexts.
 
 Arguments context_decl : clear implicits.
 
+Definition judgment_of_decl {term universe} d : judgment_ term universe :=
+  TermoptTyp (decl_body d) (decl_type d).
+
+
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
   {| decl_name := d.(decl_name);
      decl_body := option_map f d.(decl_body);

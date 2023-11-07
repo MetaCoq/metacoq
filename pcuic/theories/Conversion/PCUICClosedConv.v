@@ -117,7 +117,7 @@ Proof.
   unshelve eapply declared_minductive_to_gen in h; tea.
   red in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [ext wfΣ' decl']].
+  destruct h as (Σ' & ext & wfΣ' & decl').
   red in decl'. destruct decl' as [h ? ? ?].
   rewrite inds_spec. rewrite forallb_rev.
   unfold mapi.

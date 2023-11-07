@@ -1167,37 +1167,24 @@ Qed.
 
 #[global] Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
 
-Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
-  All_local_env P Γ ->
-  on_some (on_local_decl P (skipn (S n) Γ)) (nth_error Γ n).
-Proof.
-  induction 1 in n, isdecl |- *. red; simpl.
-  - destruct n; simpl; inv isdecl.
-  - destruct n. red; simpl. red. simpl. apply t0.
-    simpl. apply IHX. simpl in isdecl. lia.
-  - destruct n; simpl in *.
-    * rewrite skipn_S skipn_0. apply t0.
-    * rewrite !skipn_S. apply IHX. lia.
-Qed.
-
 Lemma context_cumulativity_wf_app {cf:checker_flags} Σ Γ Γ' Δ :
   cumul_context cumulAlgo_gen Σ Γ' Γ ->
   wf_local Σ Γ' ->
-    All_local_env (fun Γ j =>
-      forall Γ' : context,
-      cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' ->
-      (lift_typing0 (fun t T => Σ;;; Γ' |- t : T)) j)
-      (Γ,,, Δ) ->
+  All_local_env (fun Γ j =>
+    forall Γ' : context,
+    cumul_context cumulAlgo_gen Σ Γ' Γ -> wf_local Σ Γ' ->
+    (lift_typing0 (fun t T => Σ;;; Γ' |- t : T)) j)
+    (Γ,,, Δ) ->
   wf_local Σ (Γ' ,,, Δ).
 Proof.
   intros.
-  eapply wf_local_app => //.
+  eapply All_local_env_app => //.
   eapply All_local_env_app_inv in X1 as [].
   eapply All_local_env_impl_ind; tea => /=.
   intros Γ'' j H HT.
   eapply HT. eapply All2_fold_app => //.
   eapply All2_fold_refl. intros. eapply cumul_decls_refl.
-  eapply All_local_env_app; split; auto.
+  eapply All_local_env_app; auto.
 Qed.
 
 Lemma is_closed_context_cumul_app Γ Δ Γ' :

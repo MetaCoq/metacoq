@@ -1012,10 +1012,28 @@ Lemma closed_red1_ind (Σ : global_env_ext) (P0 : context -> term -> term -> Typ
                       (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
   P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
+  (forall (Γ : context) (arr : array_model term)
+  (value : list term),
+  OnOne2 (Trel_conj (closed_red1 Σ Γ) (P Γ)) (array_value arr) value ->
+  P Γ (tPrim (primArray; primArrayModel arr))
+    (tPrim (primArray; primArrayModel (set_array_value arr value)))) ->
+
+(forall (Γ : context) (arr : array_model term)
+  (def : term), closed_red1 Σ Γ (array_default arr) def ->
+P Γ (array_default arr) def ->
+P Γ (tPrim (primArray; primArrayModel arr))
+  (tPrim (primArray; primArrayModel (set_array_default arr def)))) ->
+
+(forall (Γ : context) (arr : array_model term)
+  (ty : term), closed_red1 Σ Γ (array_type arr) ty ->
+P Γ (array_type arr) ty ->
+P Γ (tPrim (primArray; primArrayModel arr))
+  (tPrim (primArray; primArrayModel (set_array_type arr ty)))) ->
+
   forall (Γ : context) (t t0 : term), closed_red1 Σ Γ t t0 -> P0 Γ t t0.
 Proof.
   intros.
-  destruct X27 as [clΓ clt r].
+  destruct X30 as [clΓ clt r].
   move: clΓ clt.
   Ltac t :=
     eauto; try split; eauto;
@@ -1030,7 +1048,7 @@ Proof.
   - eapply X13. 2-3:t.
     inv_on_free_vars.
     eapply forallb_All in p0.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; repeat (intuition auto; t).
   - forward_keep IHr.
     { rewrite on_free_vars_ctx_app clΓ.
@@ -1042,7 +1060,7 @@ Proof.
   - eapply X16 => //.
     inv_on_free_vars.
     eapply forallb_All in p4.
-    eapply OnOne2_All_mix_left in X27; tea. cbn in X27.
+    eapply OnOne2_All_mix_left in X30; tea. cbn in X30.
     eapply OnOne2_impl; tea; cbn; intros ?? [[[]] ?].
     forward_keep p5.
     { rewrite on_free_vars_ctx_app clΓ /=.
@@ -1053,15 +1071,15 @@ Proof.
     intuition auto. split; auto.
   - eapply X22 => //.
     cbn in clt. eapply forallb_All in clt.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; cbn; intuition auto; t.
   - eapply X23 => //.
     cbn in clt. eapply forallb_All in clt.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; cbn; intuition auto; t.
   - eapply X24 => //.
     cbn in clt. eapply forallb_All in clt.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; cbn; intros ?? [[[]] ?].
     forward_keep p.
     { rewrite on_free_vars_ctx_app clΓ /=.
@@ -1072,11 +1090,11 @@ Proof.
     intuition auto. split; auto.
   - eapply X25 => //.
     cbn in clt. eapply forallb_All in clt.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; cbn; intuition auto; t.
   - eapply X26 => //.
     cbn in clt. eapply forallb_All in clt.
-    eapply OnOne2_All_mix_left in X27; tea.
+    eapply OnOne2_All_mix_left in X30; tea.
     eapply OnOne2_impl; tea; cbn; intros ?? [[[]] ?].
     forward_keep p.
     { rewrite on_free_vars_ctx_app clΓ /=.
@@ -1085,6 +1103,11 @@ Proof.
       rewrite app_length fix_context_length -shiftnP_add //.
       now inv_on_free_vars. }
     intuition auto. split; auto.
+  - eapply X27 => //.
+    cbn in clt; rtoProp. eapply forallb_All in H.
+    eapply OnOne2_All_mix_left in X30; tea.
+    eapply OnOne2_impl; tea; cbn; intros ?? [[]]. split; eauto.
+    split; eauto.
 Qed.
 
 Definition closed_red1_ind' :=
@@ -3080,6 +3103,33 @@ Proof.
     * eapply All_nth_error in X3; eauto.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[_ eq]].
       reflexivity. noconf eq. rewrite H4; reflexivity.
+
+  - eapply OnOne2_prod_inv in X3 as [X3 _].
+    destruct X. depelim X1. depelim X2.
+    Transparent prim_type.
+    eapply (type_Prim _ _ (primArray; primArrayModel (set_array_value arr value))); tea.
+    constructor; cbn; eauto.
+    solve_all.
+    eapply OnOne2_All_All; tea; cbn; intuition eauto.
+
+  - destruct X. depelim X1. depelim X2.
+    Transparent prim_type.
+    eapply (type_Prim _ _ (primArray; primArrayModel (set_array_default arr def))); tea.
+    constructor; cbn; eauto.
+
+  - pose proof (type_Prim _ _ _ _ _ wfΓ heq_primitive_constant H0 X0 X1). eapply validity in X4.
+    destruct X. depelim X1. depelim X2.
+    eapply (type_ws_cumul_pb (pb:=Conv)); tea.
+    eapply (type_Prim _ _ (primArray; primArrayModel (set_array_type arr ty))); tea.
+    constructor; cbn; eauto.
+    * eapply type_ws_cumul_pb; tea. eexists; eauto.
+      now eapply (red_ws_cumul_pb (pb:=Conv)), closed_red1_red.
+    * solve_all.
+      eapply type_ws_cumul_pb; tea. eexists; eauto.
+      now eapply (red_ws_cumul_pb (pb:=Conv)), closed_red1_red.
+    * simp prim_type. eapply ws_cumul_pb_App.
+      eapply ws_cumul_pb_refl; fvs. cbn.
+      now symmetry; eapply red_ws_cumul_pb, closed_red1_red.
 
   - (* Conversion *)
     specialize (forall_u _ Hu).

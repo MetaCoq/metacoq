@@ -154,5 +154,5 @@ Definition string_of_prim {term} (soft : term -> string) (p : prim_val term) : s
   match p.π2 return string with
   | primIntModel f => "(int: " ^ string_of_prim_int f ^ ")"
   | primFloatModel f => "(float: " ^ string_of_float f ^ ")"
-  | primArrayModel a => "(array:" ^ (* TODO string_of_list soft a.(array_value) ^ *) ")"
+  | primArrayModel a => "(array:" ^ string_of_list soft a.(array_value) ^ ")"
   end.

@@ -396,6 +396,7 @@ Proof.
     eapply All_impl ; tea.
     move => ? [? ?].
     now apply /andP.
+  - todo "array".
 Qed.
 
 Definition reflect_eq_predicate {Σ equ lequ}

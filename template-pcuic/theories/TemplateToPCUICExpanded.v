@@ -235,8 +235,10 @@ Proof with eauto using expanded.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
+  - todo "array".
+  - todo "array".
+  - todo "array".
 Qed.
-
 
 Lemma wf_cons_inv {cf} Σ' (Σ : global_declarations) d :
   wf (set_declarations Σ' (d :: Σ)) -> wf (set_declarations Σ' Σ).

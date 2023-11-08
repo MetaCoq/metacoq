@@ -1237,7 +1237,6 @@ Proof.
   - f_equal; solve_all.
     * eapply map_predicate_shift_eq_spec; solve_all; eauto using up_ext_cond.
     * apply map_branch_shift_eq_spec; solve_all; eauto using up_ext_cond.
-  - todo "array".
 Qed.
 
 Lemma inst_on_free_vars n t σ :

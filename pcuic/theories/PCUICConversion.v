@@ -3821,6 +3821,7 @@ Proof.
     solve_all.
   - intros. econstructor 1; eauto. destruct pb; subst; econstructor; eauto.
   - intros. econstructor 1; eauto. destruct pb; subst; econstructor; eauto.
+  Unshelve. all: todo "array".
 Defined.
 
 Proposition convSpec_convAlgo (Γ : closed_context) (M N : open_term Γ) :

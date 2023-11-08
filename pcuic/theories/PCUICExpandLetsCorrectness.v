@@ -178,7 +178,6 @@ Proof.
       rewrite !plengths. now apply ihb.
   - unfold test_def. solve_all. cbn. now len in b1.
   - unfold test_def. solve_all. cbn. now len in b1.
-  - todo "array".
 Qed.
 
 Lemma on_free_vars_ctx_trans k ctx :
@@ -5481,6 +5480,7 @@ Proof.
     4:eauto. len.
     cbn. now rewrite context_assumptions_smash_context context_assumptions_map /=.
     solve_all.
+  - todo "array".
 Qed.
 
 Lemma expanded_trans_local {cf:checker_flags}

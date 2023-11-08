@@ -1215,15 +1215,15 @@ From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Lemma erase_brs_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ p ts wt :
   erase_brs X_type X Γ p ts wt =
-  map_All (fun br wt => (erase_context (bcontext br), erase X_type X _ (bbody br) wt)) ts wt.
+  All_Forall.map_All (fun br wt => (erase_context (bcontext br), erase X_type X _ (bbody br) wt)) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //. apply erase_irrel.
   rewrite -H. eapply erase_irrel.
 Qed.
 
 Lemma erase_fix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_fix X_type X Γ ts wt = map_All (fun d wt =>
+  erase_fix X_type X Γ ts wt = All_Forall.map_All (fun d wt =>
     let dbody' := erase X_type X _ (dbody d) (fun Σ abs => proj2 (wt Σ abs)) in
     let dbody' := if isBox dbody' then
         match d.(dbody) with
@@ -1233,7 +1233,7 @@ Lemma erase_fix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_e
     in
     {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //.
   rewrite (fst (erase_irrel _ _) _ _ _ _ (fun (Σ : global_env_ext) (abs : abstract_env_ext_rel X Σ) =>
     (map_All_obligation_1 x xs h Σ abs).p2)).
@@ -1242,11 +1242,11 @@ Proof.
 Qed.
 
 Lemma erase_cofix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_cofix X_type X Γ ts wt = map_All (fun d wt =>
+  erase_cofix X_type X Γ ts wt = All_Forall.map_All (fun d wt =>
     let dbody' := erase X_type X _ (dbody d) wt in
     {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //.
   apply erase_irrel.
   rewrite -H. eapply erase_irrel.
@@ -2115,7 +2115,7 @@ Lemma In_map_All {A B C : Type} {Q : C -> Type} {P : C -> A -> Prop}
   (fn : forall x : A, (forall y : C, Q y -> P y x) -> B) (l : list A) (Hl : forall y : C, Q y -> ∥ All (P y) l ∥) :
   forall x, In x l ->
     exists D : forall y : C, Q y -> P y x,
-      In (fn x D) (map_All fn l Hl).
+      In (fn x D) (All_Forall.map_All fn l Hl).
 Proof.
   induction l; cbn => //.
   intros x [].

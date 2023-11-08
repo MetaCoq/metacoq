@@ -290,7 +290,6 @@ Proof.
   all: simpl in *. all:auto.
   - apply (IHA2 (Γ ,, vass na A1)).
   - apply (IHA3 (Γ ,, vdef na A1 A2)).
-  - by case: prim => /=; case => // p; destruct p.
 Qed.
 
 Lemma nl_context_assumptions ctx : context_assumptions (nlctx ctx) = context_assumptions ctx.
@@ -596,7 +595,6 @@ Proof.
   induction t in Γ |- *. all: try reflexivity.
   - apply (IHt2 (Γ ,, vass na t1)).
   - apply (IHt3 (Γ ,, vdef na t1 t2)).
-  - by case: prim; do 2! case.
 Qed.
 
 Lemma nl_it_mkLambda_or_LetIn :
@@ -887,7 +885,6 @@ Proof.
   induction t. all: try reflexivity.
   - intro l. cbn. change (nl t2 :: map nl l) with (map nl (t2 :: l)).
     apply IHt1.
-  - by intro l; case: prim; case; case.
 Qed.
 
 Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) =
@@ -1313,7 +1310,6 @@ Proof.
     now apply closed_ctx_IH.
   - rewrite /test_def; solve_all. simpl. now len in b.
   - rewrite /test_def; solve_all. simpl. now len in b.
-  - case: p X; case => /= p X; todo "array".
 Qed.
 
 Lemma closed_nlctx n t : closedn_ctx n t -> closedn_ctx n (nlctx t).
@@ -1363,15 +1359,14 @@ Proof.
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
       cbn.
-      todo "array".
-      (* replace (isLambda (nl (dbody d))) with (isLambda (dbody d)) *)
-      (*   by (destruct (dbody d) ; reflexivity). *)
-      (* inversion H. subst. rewrite nl_subst. *)
-      (* repeat f_equal. clear. *)
-      (* unfold fix_subst. rewrite map_length. *)
-      (* induction #|mfix|. *)
-      (* * reflexivity. *)
-      (* * cbn. rewrite IHn. reflexivity. *)
+      replace (isLambda (nl (dbody d))) with (isLambda (dbody d))
+        by (destruct (dbody d) ; reflexivity).
+      inversion H. subst. rewrite nl_subst.
+      repeat f_equal. clear.
+      unfold fix_subst. rewrite map_length.
+      induction #|mfix|.
+      * reflexivity.
+      * cbn. rewrite IHn. reflexivity.
     + unfold is_constructor in *.
       rewrite nth_error_map. destruct (nth_error args narg) ; [| discriminate ].
       cbn. unfold isConstruct_app in *. rewrite nl_decompose_app.
@@ -1440,6 +1435,7 @@ Proof.
     + cbn. congruence.
   - cbn. constructor. eapply OnOne2_map, OnOne2_impl; tea.
     unfold on_Trel; intuition auto.
+ Unshelve. all: todo "array".
 Qed.
 
 Lemma nl_conv {cf:checker_flags} :

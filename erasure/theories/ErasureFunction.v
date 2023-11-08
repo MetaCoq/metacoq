@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping PCUICRetypingEnvIrrelevance.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness.
+From MetaCoq.Erasure Require Import EPrimitive EAstUtils EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -1137,9 +1137,9 @@ Proof.
 Qed.
 
 Lemma erase_terms_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_terms X_type X Γ ts wt = map_All (erase X_type X Γ) ts wt.
+  erase_terms X_type X Γ ts wt = All_Forall.map_All (erase X_type X Γ) ts wt.
 Proof.
-  funelim (map_All (erase X_type X Γ) ts wt); cbn; auto.
+  funelim (All_Forall.map_All (erase X_type X Γ) ts wt); cbn; auto.
   f_equal => //. apply erase_irrel.
   rewrite -H. eapply erase_irrel.
 Qed.

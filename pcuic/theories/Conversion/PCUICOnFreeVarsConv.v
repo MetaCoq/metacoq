@@ -89,7 +89,6 @@ Proof.
   - f_equal.
     rewrite /test_def in Ht.
     solve_all ; eauto using shiftn_ext_cond.
-  - todo "array".
 Qed.
 
 Lemma rename_on_free_vars n t f :

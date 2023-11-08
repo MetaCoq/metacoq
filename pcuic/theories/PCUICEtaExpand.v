@@ -992,9 +992,6 @@ Proof.
     { now rewrite mkApps_app -hm1. }
     rewrite -{1}(firstn_skipn x args) -hm2. eapply Red1Apps.app_red_r => //.
     eapply OnOne2_app. now constructor.
-  - todo "array".
-  - todo "array".
-  - todo "array".
 Qed.
 
 Lemma head_nApp f :

@@ -58,17 +58,7 @@ Fixpoint nameless (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
-<<<<<<< HEAD
   | tPrim p => test_prim nameless p
-=======
-  | tPrim p =>
-    match p with
-    | (primArray; primArrayModel a) =>
-      nameless (array_type a) && nameless (array_default a)
-      && forallb nameless (array_value a)
-    | _ => true
-    end
->>>>>>> Extension of nameless to arrays and some proofs
   end.
 
 Notation nameless_ctx := (forallb (nameless_decl nameless)).

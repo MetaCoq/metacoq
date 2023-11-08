@@ -71,18 +71,6 @@ Section Alpha.
       eauto using nth_error_Some_length.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma nth_error_weak_context :
-    forall Γ Δ i d,
-      nth_error Δ i = Some d ->
-      nth_error (Γ ,,, Δ) i = Some d.
-  Proof using Type.
-    intros Γ Δ i d h.
-    rewrite -> nth_error_app_context_lt.
-    - assumption.
-    - apply nth_error_Some_length in h. assumption.
-  Qed.
-
   Lemma decompose_app_upto {Σ Re Rle x y hd tl} :
     eq_term_upto_univ Σ Re Rle x y ->
     decompose_app x = (hd, tl) ->
@@ -456,18 +444,10 @@ Section Alpha.
     now eapply eq_context_gen_eq_univ_subst_preserved.
   Qed.
 
-  Lemma ctx_inst_impl {Σ P Q Γ s Δ}:
-    (forall Σ Γ u U, P Σ Γ u U -> Q Σ Γ u U) ->
-    PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ s Δ.
-  Proof using Type.
-    intros HP.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma ctx_inst_eq_context {Σ P Q Γ Γ' s Δ}:
-    (forall Σ Γ Γ' u U, (Γ ≡Γ Γ') -> P Σ Γ u U -> Q Σ Γ' u U) ->
+  Lemma ctx_inst_eq_context {P Q Γ Γ' s Δ}:
+    (forall Γ Γ' u U, (Γ ≡Γ Γ') -> P Γ u U -> Q Γ' u U) ->
     Γ ≡Γ Γ' ->
-    PCUICTyping.ctx_inst P Σ Γ s Δ -> PCUICTyping.ctx_inst Q Σ Γ' s Δ.
+    PCUICTyping.ctx_inst P Γ s Δ -> PCUICTyping.ctx_inst Q Γ' s Δ.
   Proof using Type.
     intros HP e.
     induction 1; constructor; eauto.
@@ -685,9 +665,9 @@ Section Alpha.
         cup wfpctx Hret IHret
             wfcpc kelim HIHctxi Hc IHc iscof ptm wfbrs Hbrs Δ v e e'; invs e.
       have eqp := X1.
-      eassert (ctx_inst _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (2 := HIHctxi).
-      eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as IHctxi.
-      { eapply ctx_inst_impl with (2 := HIHctxi). intros ? ? ? ? [? r]; exact r. }
+      eassert (ctx_inst _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (1 := HIHctxi).
+      eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as IHctxi.
+      { eapply ctx_inst_impl with (1 := HIHctxi). intros ? ? [? r]. pattern Γ, t, T in r. exact r. }
       destruct X1 as [eqpars [eqinst [eqctx eqret]]].
       assert (wf_predicate mdecl idecl p').
       { destruct wfp. split; auto.

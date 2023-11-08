@@ -43,7 +43,7 @@ Proof.
   rewrite /=. rewrite Nat.add_comm. bool_congr.
 Qed.
 
-Lemma test_context_k_app p n Γ Γ' :
+Lemma test_context_k_app (p : nat -> term -> bool) n Γ Γ' :
   test_context_k p n (Γ ,,, Γ') =
   test_context_k p n Γ && test_context_k p (n + #|Γ|) Γ'.
 Proof.

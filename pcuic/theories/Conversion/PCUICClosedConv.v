@@ -36,59 +36,54 @@ Proof.
 Qed.
 
 Lemma type_local_ctx_Pclosed Σ Γ Δ s :
-  type_local_ctx (fun _ => lift_on_term (fun Γ t => closedn #|Γ| t)) Σ Γ Δ s ->
+  type_local_ctx (fun _ => lift_wfb_term1 (fun Γ t => closedn #|Γ| t)) Σ Γ Δ s ->
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
 Proof.
   induction Δ; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    destruct b as (Hb & Ht). cbn in Hb.
-    unfold closed_decl.
-    rewrite app_context_length in Hb, Ht. now rewrite Nat.add_comm.
+    rewrite app_context_length Nat.add_comm in b.
+    apply b.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    destruct b as (_ & Ht).
-    unfold closed_decl. simpl.
-    rewrite app_context_length in Ht. now rewrite Nat.add_comm.
+    rewrite app_context_length Nat.add_comm in b.
+    apply b.
 Qed.
 
 Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :
-  sorts_local_ctx (fun _ => lift_on_term (fun Γ t => closedn #|Γ| t)) Σ Γ Δ s ->
+  sorts_local_ctx (fun _ => lift_wfb_term1 (fun Γ t => closedn #|Γ| t)) Σ Γ Δ s ->
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
 Proof.
   induction Δ in s |- *; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    destruct b as (Hb & Ht). cbn in Hb.
-    unfold closed_decl.
-    rewrite app_context_length in Hb, Ht. now rewrite Nat.add_comm.
+    rewrite app_context_length Nat.add_comm in b.
+    apply b.
   - destruct s as [|u us]; auto. destruct X as [X b].
     apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    destruct b as (_ & Ht).
-    unfold closed_decl. simpl.
-    rewrite app_context_length in Ht. now rewrite Nat.add_comm.
+    rewrite app_context_length Nat.add_comm in b.
+    apply b.
 Qed.
 
 Lemma All_local_env_Pclosed Γ :
-  All_local_env (lift_on_term (fun Γ t => closedn #|Γ| t)) Γ ->
+  All_local_env (lift_wfb_term1 (fun Γ t => closedn #|Γ| t)) Γ ->
   Alli (fun i d => closed_decl i d) 0 (List.rev Γ).
 Proof.
   induction Γ; simpl; auto; try constructor.
   intros all; depelim all; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    unfold closed_decl. simpl. now destruct l as (_ & Ht).
+    assumption.
   - apply Alli_app_inv; auto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
-    destruct l as (Hb & Ht). cbn in Hb.
-    unfold closed_decl. now simpl.
+    assumption.
 Qed.
 
 Lemma weaken_env_prop_closed {cf} :
-  weaken_env_prop cumulSpec0 (lift_typing typing) (fun _ => lift_on_term (fun Γ t => closedn #|Γ| t)).
+  weaken_env_prop cumulSpec0 (lift_typing typing) (fun _ => lift_wfb_term1 (fun Γ t => closedn #|Γ| t)).
 Proof. intros ?. auto. Qed.
 
 
@@ -103,10 +98,11 @@ Proof.
 Qed.
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
-  All_local_env (lift_on_term (fun Γ t => closedn #|Γ| t)) ctx ->
+  All_local_env (lift_wfb_term1 (fun Γ t => closedn #|Γ| t)) ctx ->
     closedn_ctx 0 ctx.
 Proof.
-  induction 1; auto; rewrite closedn_ctx_cons /test_decl IHX /=; now move: t0 => [] /=.
+  induction 1 using All_local_env_ind1; auto.
+  rewrite closedn_ctx_cons IHX //=.
 Qed.
 
 Lemma declared_minductive_closed_inds {cf} {Σ ind mdecl u} {wfΣ : wf Σ} :

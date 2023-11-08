@@ -319,7 +319,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Definition on_local_decl (P : context -> judgment -> Type) Γ d :=
-    P Γ (TermoptTyp d.(decl_body) d.(decl_type)).
+    P Γ (j_decl d).
 
   Definition on_def_type (P : context -> judgment -> Type) Γ d :=
     P Γ (Typ d.(dtype)).
@@ -330,7 +330,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   (* Various kinds of lifts *)
 
   Definition lift_wf_term wf_term (j : judgment) := option_default wf_term (j_term j) (unit : Type) × wf_term (j_typ j).
-  Notation lift_on_term on_term := (fun (Γ : context) => lift_wf_term (on_term Γ)).
+  Notation lift_wf_term1 wf_term := (fun (Γ : context) => lift_wf_term (wf_term Γ)).
+
+  Definition lift_wfb_term wfb_term (j : judgment) := option_default wfb_term (j_term j) true && wfb_term (j_typ j).
+  Notation lift_wfb_term1 wfb_term := (fun (Γ : context) => lift_wfb_term (wfb_term Γ)).
 
   Definition lift_sorting checking sorting : judgment -> Type :=
     fun j => option_default (fun tm => checking tm (j_typ j)) (j_term j) (unit : Type) ×
@@ -872,28 +875,28 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Defined.
 
   Section TypeCtxInst.
-    Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
+    Context (typing : forall (Γ : context), term -> term -> Type).
 
     (* Γ |- s : Δ, where Δ is a telescope (reverse context) *)
-    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
-    | ctx_inst_nil : ctx_inst Σ Γ [] []
+    Inductive ctx_inst (Γ : context) : list term -> context -> Type :=
+    | ctx_inst_nil : ctx_inst Γ [] []
     | ctx_inst_ass na t i inst Δ :
-        typing Σ Γ i t ->
-        ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
-        ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
+        typing Γ i t ->
+        ctx_inst Γ inst (subst_telescope [i] 0 Δ) ->
+        ctx_inst Γ (i :: inst) (vass na t :: Δ)
     | ctx_inst_def na b t inst Δ :
-        ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
-        ctx_inst Σ Γ inst (vdef na b t :: Δ).
+        ctx_inst Γ inst (subst_telescope [b] 0 Δ) ->
+        ctx_inst Γ inst (vdef na b t :: Δ).
     Derive Signature NoConfusion for ctx_inst.
   End TypeCtxInst.
 
-  Lemma ctx_inst_impl_gen Σ Γ inst Δ args P :
-    { P' & ctx_inst P' Σ Γ inst Δ } ->
+  Lemma ctx_inst_impl_gen Γ inst Δ args P :
+    { P' & ctx_inst P' Γ inst Δ } ->
     (forall t T,
-        All (fun P' => P' Σ Γ t T) args ->
-        P Σ Γ t T) ->
-    All (fun P' => ctx_inst P' Σ Γ inst Δ) args ->
-    ctx_inst P Σ Γ inst Δ.
+        All (fun P' => P' Γ t T) args ->
+        P Γ t T) ->
+    All (fun P' => ctx_inst P' Γ inst Δ) args ->
+    ctx_inst P Γ inst Δ.
   Proof.
     intros [? Hexists] HPQ H.
     induction Hexists; constructor; tea.
@@ -902,10 +905,10 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     all: eapply All_impl; tea; cbn; intros *; inversion 1; subst; eauto.
   Qed.
 
-  Lemma ctx_inst_impl P Q Σ Σ' Γ inst Δ :
-    ctx_inst P Σ Γ inst Δ ->
-    (forall t T, P Σ Γ t T -> Q Σ' Γ t T) ->
-    ctx_inst Q Σ' Γ inst Δ.
+  Lemma ctx_inst_impl P Q Γ inst Δ :
+    ctx_inst P Γ inst Δ ->
+    (forall t T, P Γ t T -> Q Γ t T) ->
+    ctx_inst Q Γ inst Δ.
   Proof.
     intros H HPQ. induction H; econstructor; auto.
   Qed.
@@ -1369,7 +1372,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
                       cdecl.(cstr_args) cunivs;
       on_cindices :
-        ctx_inst (fun Σ Γ t T => P Σ Γ (TermTyp t T)) Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
+        ctx_inst (fun Γ t T => P Σ Γ (TermTyp t T)) (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
                       cdecl.(cstr_indices)
                       (List.rev (lift_context #|cdecl.(cstr_args)| 0 ind_indices));
 
@@ -1806,7 +1809,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       { eapply All_map, All_impl; tea; intros *; destr_prod; destruct 1; cbn; tea. } }
     { eapply ctx_inst_impl_gen; tea.
       { eexists; tea. }
-      { intros; eapply H1, All_eta3; cbn. apply All_map_inv with (P:=fun P => P _ _ t T1) (f:=fun P Σ Γ t T => snd P Σ Γ (TermTyp t T)); tea. }
+      { intros; eapply H1, All_eta3; cbn. apply All_map_inv with (P:=fun P => P _ t T1) (f:=fun P Γ t T => snd P Σ Γ (TermTyp t T)); tea. }
       { eapply All_map, All_impl; tea; intros *; destr_prod; destruct 1; cbn; tea. } }
     { move => ? H'.
       match goal with H : _ |- _ => specialize (H _ H'); revert H end => H''.

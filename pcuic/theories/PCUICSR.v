@@ -771,8 +771,8 @@ Qed. *)
 Lemma ctx_inst_merge {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
   wf_local Σ (Γ ,,, (List.rev Δ)) ->
   PCUICTyping.ctx_inst
-    (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-    forall u : term, closed_red1 Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+    (fun (Γ : context) (t T : term) =>
+    forall u : term, closed_red1 Σ Γ t u -> Σ;;; Γ |- u : T) Γ inst Δ ->
   ctx_inst Σ Γ inst Δ ->
   OnOne2 (closed_red1 Σ Γ) inst inst' ->
   ctx_inst Σ Γ inst' Δ.
@@ -818,8 +818,8 @@ Qed.
 Lemma ctx_inst_merge' {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
   wf_local Σ (Γ ,,, Δ) ->
   PCUICTyping.ctx_inst
-    (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-    forall u : term, closed_red1 Σ Γ t u → Σ;;; Γ |- u : T) Σ Γ inst (List.rev Δ) ->
+    (fun (Γ : context) (t T : term) =>
+    forall u : term, closed_red1 Σ Γ t u → Σ;;; Γ |- u : T) Γ inst (List.rev Δ) ->
   ctx_inst Σ Γ inst (List.rev Δ) ->
   OnOne2 (closed_red1 Σ Γ) inst inst' ->
   ctx_inst Σ Γ inst' (List.rev Δ).
@@ -1196,7 +1196,7 @@ Proof.
   intros.
   pose proof (on_declared_constructor H) as [[onmind oib] [cs [hnth onc]]].
   pose proof (onc.(on_cindices)).
-  eapply ctx_inst_impl in X. 2: intros ????; apply unlift_TermTyp.
+  eapply ctx_inst_impl in X. 2: intros ??; apply unlift_TermTyp.
   now eapply ctx_inst_open_terms in X.
 Qed.
 
@@ -1235,7 +1235,7 @@ Proof.
   unshelve epose proof (H' := declared_constructor_to_gen H); eauto.
   pose proof (on_declared_constructor H) as [[onmind oib] [cs [hnth onc]]].
   pose proof (onc.(on_cindices)).
-  eapply ctx_inst_impl in X. 2: intros ????; apply unlift_TermTyp.
+  eapply ctx_inst_impl in X. 2: intros ??; apply unlift_TermTyp.
   eapply ctx_inst_inst in X; tea.
   eapply ctx_inst_open_terms in X.
   eapply All_map, All_impl; tea.
@@ -1714,9 +1714,9 @@ Proof.
     clear forall_u forall_u0 X X0.
     unshelve epose proof (isdecl' := declared_inductive_to_gen isdecl); eauto.
     destruct X4 as [wfcpc IHcpc].
-    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
-    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as IHctxi.
-    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as IHctxi.
+    { eapply ctx_inst_impl with (1 := X5). intros t T [? r]; pattern Γ, t, T in r; exact r. }
     hide X8.
     pose proof typec as typec''.
     unfold iota_red.
@@ -2095,9 +2095,9 @@ Proof.
     discriminate.
 
   - (* Case congruence on a parameter *)
-    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
-    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
-    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (1 := X5). intros t T [? r]; pattern Γ, t, T in r; exact r. }
     clear X5; rename Hctxi into X5.
     destruct X0, X4.
     assert (isType Σ Γ (mkApps (it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p)) (indices ++ [c]))).
@@ -2329,9 +2329,9 @@ Proof.
 
   - (* Case congruence on the return clause context *)
     clear IHHu. destruct X0, X4 as [].
-    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
-    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
-    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (1 := X5). intros t T [? r]; pattern Γ, t, T in r; exact r. }
     clear X5; rename Hctxi into X5.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
@@ -2378,9 +2378,9 @@ Proof.
 
   - (* Case congruence on discriminee *)
     destruct X0, X4.
-    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
-    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
-    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (1 := X5). intros t T [? r]; pattern Γ, t, T in r; exact r. }
     clear X5; rename Hctxi into X5.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
@@ -2408,9 +2408,9 @@ Proof.
 
   - (* Case congruence on branches *)
     destruct X0, X4.
-    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (2 := X5); now intros ? []).
-    eassert (PCUICEnvTyping.ctx_inst _ _ _ _ _) as X6.
-    { eapply ctx_inst_impl with (2 := X5). intros ? ? ? ? [? r]; exact r. }
+    eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
+    eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as X6.
+    { eapply ctx_inst_impl with (1 := X5). intros t T [? r]; pattern Γ, t, T in r; exact r. }
     clear X5; rename Hctxi into X5.
     eapply type_Case; eauto. econstructor; eauto.
     econstructor; eauto.

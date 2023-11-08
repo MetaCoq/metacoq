@@ -182,11 +182,6 @@ Section Lemmata.
       eapply ws_cumul_pb_Lambda_r. assumption.
   Qed.
 
-  Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
-  Proof using Type.
-    reflexivity.
-  Qed.
-
   Lemma conv_alt_it_mkProd_or_LetIn :
     forall {wfΣ : wf Σ} Δ Γ B B',
       Σ ;;; (Δ ,,, Γ) ⊢ B = B' ->

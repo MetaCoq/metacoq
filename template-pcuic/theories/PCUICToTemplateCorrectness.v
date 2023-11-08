@@ -74,7 +74,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_local_app Γ Δ : trans_local (SE.app_context Γ Δ) = trans_local Γ ,,, trans_local Δ.
+Lemma trans_local_app Γ Δ : trans_local (Γ ,,, Δ) = trans_local Γ ,,, trans_local Δ.
 Proof.
   now rewrite /trans_local map_app.
 Qed.
@@ -1586,7 +1586,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix:
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
         × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
-    (SE.app_context Γ (SE.fix_context mfix)) ->
+    (Γ ,,, (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) mfix)).
 Proof.
@@ -1594,10 +1594,10 @@ Proof.
   rewrite <- trans_fix_context.
   match goal with
   |- TTwf_local _ ?A =>
-      replace A with (trans_local (SE.app_context Γ (SE.fix_context mfix)))
+      replace A with (trans_local (Γ ,,, (SE.fix_context mfix)))
   end.
   2: {
-    unfold trans_local, SE.app_context.
+    unfold trans_local, app_context.
     now rewrite map_app.
   }
 
@@ -1620,7 +1620,7 @@ Proof.
   - constructor.
   - simpl; constructor; auto.
     destruct p as ((_ & Hb) & s & (_ & Ht) & _). cbn in Hb, Ht.
-    unfold app_context, SE.app_context in *.
+    unfold app_context in *.
     rewrite /trans_local map_app trans_fix_context in Hb, Ht.
     rewrite trans_lift in Hb, Ht.
     replace(#|SE.fix_context xfix|) with
@@ -2281,7 +2281,7 @@ Proof.
       rewrite -[List.rev (trans_local _)]map_rev.
       clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
       rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
-      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ _ => TT.typing _ _ _ _ ) _ Σ _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
+      intro HH; pose proof (ctx_inst_impl _ (fun _ _ _ => TT.typing _ _ _ _ ) _ _ _ HH (fun _ _ H => H.2)); revert X; clear HH.
       now move: ctx; induction 1; cbn; constructor; auto;
         rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev
           -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.

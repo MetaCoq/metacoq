@@ -730,15 +730,6 @@ Qed.
 
   Qed.
 
-  Lemma test_context_app p Γ Δ :
-    test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
-  Proof using Type.
-    induction Δ; simpl; auto.
-    - now rewrite andb_true_r.
-    - now rewrite IHΔ andb_assoc.
-  Qed.
-
-
   Lemma wf_universes_it_mkLambda_or_LetIn {Σ Γ T} :
     wf_universes Σ (it_mkLambda_or_LetIn Γ T) = test_context (wf_universes Σ) Γ && wf_universes Σ T.
   Proof using Type.

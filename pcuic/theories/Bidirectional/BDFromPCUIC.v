@@ -24,20 +24,20 @@ Proof.
   lia.
 Qed.
 
-Lemma ctx_inst_length {ty Σ Γ args Δ} :
-PCUICTyping.ctx_inst ty Σ Γ args Δ ->
-#|args| = context_assumptions Δ.
+Lemma ctx_inst_length {ty Γ args Δ} :
+  PCUICTyping.ctx_inst ty Γ args Δ ->
+  #|args| = context_assumptions Δ.
 Proof.
-induction 1; simpl; auto.
-rewrite /subst_telescope in IHX.
-rewrite context_assumptions_mapi in IHX. congruence.
-rewrite context_assumptions_mapi in IHX. congruence.
+  induction 1; simpl; auto.
+  rewrite /subst_telescope in IHX.
+  rewrite context_assumptions_mapi in IHX. congruence.
+  rewrite context_assumptions_mapi in IHX. congruence.
 Qed.
 
 
-Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Σ Γ args (Δ ++ Δ')) :
-  (forall Γ' t T, P Σ Γ' t T -> Q Σ Γ' t T) ->
-  PCUICTyping.ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
+Lemma ctx_inst_app_impl {P Q Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Γ args (Δ ++ Δ')) :
+  (forall t T, P Γ t T -> Q Γ t T) ->
+  PCUICTyping.ctx_inst Q Γ (firstn (context_assumptions Δ) args) Δ.
 Proof.
   revert args Δ' c.
   induction Δ using ctx_length_ind; intros.
@@ -238,7 +238,7 @@ Proof.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; tea.
-        1: intros ??? [] ; by apply conv_check.
+        1: intros ?? [] ; by apply conv_check.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICGlobalMaps.onNpars.
         2: eapply on_declared_minductive ; eauto.
@@ -480,8 +480,8 @@ Proof.
 Qed.
 
 Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
-  PCUICTyping.ctx_inst typing Σ Γ l Δ ->
-  PCUICTyping.ctx_inst checking Σ Γ l Δ.
+  PCUICTyping.ctx_inst (typing Σ) Γ l Δ ->
+  PCUICTyping.ctx_inst (checking Σ) Γ l Δ.
 Proof.
   intros inl.
   induction inl.

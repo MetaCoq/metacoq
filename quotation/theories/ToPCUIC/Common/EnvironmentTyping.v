@@ -60,10 +60,10 @@ Module QuoteEnvTyping (Import T : Term) (Import E : EnvironmentSig T) (Import TU
     : ground_quotable (@All_local_env_over typing property Γ H)
     := ltac:(cbv [All_local_env_over]; exact _).
 
-  #[export] Instance quote_ctx_inst {typing Σ Γ ctx inst}
+  #[export] Instance quote_ctx_inst {typing Γ ctx inst}
    {qtyping : quotation_of typing}
-   {quote_typing : forall i t, ground_quotable (typing Σ Γ i t)}
-    : ground_quotable (@ctx_inst typing Σ Γ ctx inst)
+   {quote_typing : forall i t, ground_quotable (typing Γ i t)}
+    : ground_quotable (@ctx_inst typing Γ ctx inst)
     := ltac:(induction 1; exact _).
 End QuoteEnvTyping.
 

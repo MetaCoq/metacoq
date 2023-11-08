@@ -594,8 +594,8 @@ Lemma rename_telescope P f Γ Δ tel tys:
   on_ctx_free_vars P Γ ->
   forallb (on_free_vars P) tys ->
   on_free_vars_ctx P (List.rev tel) ->
-  PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ tys tel ->
-  PCUICTyping.ctx_inst checking Σ Δ (map (rename f) tys) (rename_telescope f tel).
+  PCUICTyping.ctx_inst Pcheck Γ tys tel ->
+  PCUICTyping.ctx_inst (checking Σ) Δ (map (rename f) tys) (rename_telescope f tel).
 Proof using Type.
   intros ur hΓ htys htel ins.
   induction ins in Δ, ur, hΓ, htys, htel |- *.

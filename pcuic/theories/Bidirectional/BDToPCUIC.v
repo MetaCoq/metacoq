@@ -153,7 +153,7 @@ Section BDToPCUICTyping.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) :
-    forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
+    forall args, PCUICTyping.ctx_inst Pcheck Γ args Δ -> ctx_inst Σ Γ args Δ.
   Proof using wfΣ.
     revert wfΔ.
     induction Δ using ctx_length_ind.
@@ -485,8 +485,8 @@ Qed.
 
 Theorem ctx_inst_bd_typing `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
   wf_local Σ (Γ,,,Δ) ->
-  PCUICTyping.ctx_inst checking Σ Γ l (List.rev Δ) ->
-  PCUICTyping.ctx_inst typing Σ Γ l (List.rev Δ).
+  PCUICTyping.ctx_inst (checking Σ) Γ l (List.rev Δ) ->
+  PCUICTyping.ctx_inst (typing Σ) Γ l (List.rev Δ).
 Proof.
   intros wfΓ inl.
   rewrite -(List.rev_involutive Δ) in wfΓ.

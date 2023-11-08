@@ -1619,7 +1619,7 @@ Proof using Type.
   - now simpl.
   - rewrite inst_context_snoc /=.
     apply All_local_env_snoc; auto.
-    apply lift_typing_map with (j := judgment_of_decl _) => //.
+    apply lift_typing_map with (j := j_decl _) => //.
     eapply X; tas.
     eapply well_subst_app; auto.
 Qed.

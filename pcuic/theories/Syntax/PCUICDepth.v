@@ -507,14 +507,13 @@ Proof.
   { move=> Γ h.
     induction Γ; cbn.
     - constructor.
-    - case: a h => [na [b|] ty] /=;
+    - move: a h => [na bo ty] /=.
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
-      + simpl. split.
-        * apply aux => //. cbn. lia.
-        * apply aux => //. red; lia.
-      + apply IHΓ => //; unfold context_depth; lia.
-      + red; cbn. split => //. apply aux => //. red. lia.
-      + apply IHΓ => //. unfold context_depth; lia. }
+      2: apply IHΓ => //; unfold context_depth; lia.
+      split.
+      + destruct bo => //. cbn in Hlt.
+        apply aux => //. cbn. lia.
+      + apply aux => //. cbn. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dbody x)) m < S (mfixpoint_depth_gen depth m)).

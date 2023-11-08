@@ -58,7 +58,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_local_app Γ Δ : trans_local (SE.app_context Γ Δ) = trans_local Γ ,,, trans_local Δ.
+Lemma trans_local_app Γ Δ : trans_local (Γ ,,, Δ) = trans_local Γ ,,, trans_local Δ.
 Proof.
   now rewrite /trans_local map_app.
 Qed.
@@ -2548,7 +2548,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix idx :
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
         × TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
-    (SE.app_context Γ (SE.fix_context mfix)) ->
+    (Γ ,,, (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, fix_context (map (map_def trans trans) mfix)).
 Proof.
@@ -2556,10 +2556,10 @@ Proof.
   rewrite -(trans_fix_context (shiftnP #|Γ| xpred0) _ idx) //.
   match goal with
   |- TTwf_local _ ?A =>
-      replace A with (trans_local (SE.app_context Γ (SE.fix_context mfix)))
+      replace A with (trans_local (Γ ,,, (SE.fix_context mfix)))
   end.
   2: {
-    unfold trans_local, SE.app_context.
+    unfold trans_local, app_context.
     now rewrite map_app.
   }
 
@@ -3680,7 +3680,7 @@ Proof.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
     + eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
-      eassert (PCUICEnvTyping.ctx_inst (fun Σ _ _ _ => wf_trans Σ -> @typing (cf' _) _ _ _ _) _ _ _ _) as IHctxi.
+      eassert (PCUICEnvTyping.ctx_inst (fun _ _ _ => wf_trans Σ -> @typing (cf' _) _ _ _ _) _ _ _) as IHctxi.
       { eapply ctx_inst_impl with (1 := X5). intros ? ? [? r]; exact r. }
       move: Hctxi IHctxi. cbn.
       have wfctx : wf_local Σ (Γ ,,, (ind_params mdecl,,, ind_indices idecl)@[puinst p]).
@@ -3693,7 +3693,7 @@ Proof.
       generalize (pparams p ++ indices).
       change T.PCUICEnvironment.subst_instance_context with subst_instance_context.
       rewrite -/context.
-      generalize (ind_params mdecl ,,, ind_indices idecl)@[puinst p] as Δ.
+      generalize (ind_params mdecl ,,, ind_indices idecl : context)@[puinst p] as Δ.
       intros c; revert Γ. induction c using ctx_length_rev_ind.
       * intros Γ l wf.
         intros c; depelim c. constructor.
@@ -3989,8 +3989,8 @@ Proof.
 Qed.
 
 Lemma ctx_inst_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {univs} {Γ Δ} {s ctx} :
-  PCUICTyping.ctx_inst (λ Σ Γ t T , lift_typing typing Σ Γ (TermTyp t T)) (Σ, univs) (Γ ,,, Δ) s ctx ->
-  PCUICTyping.ctx_inst (λ Σ Γ t T , lift_typing typing Σ Γ (TermTyp t T)) (Σ, univs) (Γ ,,, smash_context [] Δ) (map (expand_lets Δ) s) (List.rev (expand_lets_ctx Δ (List.rev ctx))).
+  PCUICTyping.ctx_inst (λ Γ t T , lift_typing typing (Σ, univs) Γ (TermTyp t T)) (Γ ,,, Δ) s ctx ->
+  PCUICTyping.ctx_inst (λ Γ t T , lift_typing typing (Σ, univs) Γ (TermTyp t T)) (Γ ,,, smash_context [] Δ) (map (expand_lets Δ) s) (List.rev (expand_lets_ctx Δ (List.rev ctx))).
 Proof.
   induction 1.
   - cbn. constructor.
@@ -4033,8 +4033,8 @@ Qed.
 Lemma trans_ctx_inst_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {s} :
   wf_trans Σ ->
   wf_local Σ (Γ ,,, List.rev Δ) ->
-  PCUICTyping.ctx_inst (fun Σ Γ t T => lift_typing typing Σ Γ (TermTyp t T)) Σ Γ s Δ ->
-  PCUICTyping.ctx_inst (fun Σ Γ t T => lift_typing (typing (H:=cf' cf)) Σ Γ (TermTyp t T)) (trans_global Σ) (trans_local Γ) (map trans s) (trans_local Δ).
+  PCUICTyping.ctx_inst (fun Γ t T => lift_typing typing Σ Γ (TermTyp t T)) Γ s Δ ->
+  PCUICTyping.ctx_inst (fun Γ t T => lift_typing (typing (H:=cf' cf)) (trans_global Σ) Γ (TermTyp t T)) (trans_local Γ) (map trans s) (trans_local Δ).
 Proof.
   intros wf wfctx i.
   induction i in wfctx |- *.

@@ -1067,7 +1067,7 @@ Section CheckEnv.
     This is a quite common operation in tactics. Making this work up-to unfolding of
     let-ins is the tricky part.
   *)
-  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} {wfX : wf Σ} {Γ Δ Δ' Δ'' s args s'} :
+  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} {wfX : wf Σ} {Γ Δ Δ' Δ'' : context} {s args s'} :
     wf_local Σ (Γ ,,, Δ ,,, Δ'') ->
     typing_spine Σ (Γ ,,, Δ ,,, Δ') (it_mkProd_or_LetIn (lift_context #|Δ ,,, Δ'| 0 (Δ ,,, Δ'')) (tSort s))
       (to_extended_list_k Δ #|Δ'| ++ args) (tSort s') ->
@@ -1405,7 +1405,7 @@ Section CheckEnv.
   Qed.
 
   (* Now in PCUIC *)
-  Lemma type_smash {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ t T} :
+  Lemma type_smash {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ : context} {t T} :
     Σ ;;; Γ ,,, Δ |- t : T ->
     Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ t : expand_lets Δ T.
   Proof using Type.

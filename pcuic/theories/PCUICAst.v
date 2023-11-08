@@ -1315,6 +1315,14 @@ Qed.
 #[global]
 Hint Rewrite test_context_map : map.
 
+Lemma test_context_app (p : term -> bool) Γ Δ :
+  test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
+Proof using Type.
+  induction Δ; simpl; auto.
+  - now rewrite andb_true_r.
+  - now rewrite IHΔ andb_assoc.
+Qed.
+
 Lemma onctx_test P (p q : term -> bool) ctx :
   onctx P ctx ->
   test_context p ctx ->

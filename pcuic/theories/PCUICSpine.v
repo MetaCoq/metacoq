@@ -25,7 +25,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Derive Signature for ctx_inst.
 
-Notation ctx_inst := (ctx_inst typing).
+Notation ctx_inst Σ := (ctx_inst (typing Σ)).
 
 Ltac splits := repeat split.
 
@@ -227,7 +227,7 @@ Proof.
     apply IHctxi.
 Qed.
 
-Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
+Record spine_subst {cf:checker_flags} Σ Γ inst s (Δ : context) := mkSpineSubst {
   spine_dom_wf : wf_local Σ Γ;
   spine_codom_wf : wf_local Σ (Γ ,,, Δ);
   inst_ctx_subst :> context_subst Δ inst s;
@@ -856,8 +856,8 @@ Qed.*)
     now apply subslet_lift.
   Qed.
 
-  Lemma ctx_inst_length {P Σ' Γ args Δ} :
-    PCUICTyping.ctx_inst P Σ' Γ args Δ ->
+  Lemma ctx_inst_length {P Γ args Δ} :
+    PCUICTyping.ctx_inst P Γ args Δ ->
     #|args| = context_assumptions Δ.
   Proof using Type.
     induction 1; simpl; auto.
@@ -1599,7 +1599,7 @@ Section WfEnv.
     now rewrite lift_context_app Nat.add_0_r.
   Qed.
 
-  Lemma spine_subst_to_extended_list_k {Δ Γ} :
+  Lemma spine_subst_to_extended_list_k {Δ Γ : context} :
     wf_local Σ (Γ ,,, Δ) ->
     spine_subst Σ (Γ ,,, Δ) (reln [] 0 Δ) (all_rels Δ 0 #|Δ|)
       (lift_context #|Δ| 0 Δ).
@@ -2026,9 +2026,9 @@ Section WfEnv.
           now autorewrite with len => <-.
   Qed.
 
-  Arguments ctx_inst_nil {typing} {Σ} {Γ}.
-  Arguments PCUICTyping.ctx_inst_ass {typing} {Σ} {Γ} {na t i inst Δ}.
-  Arguments PCUICTyping.ctx_inst_def {typing} {Σ} {Γ} {na b t inst Δ}.
+  Arguments ctx_inst_nil {typing} {Γ}.
+  Arguments PCUICTyping.ctx_inst_ass {typing} {Γ} {na t i inst Δ}.
+  Arguments PCUICTyping.ctx_inst_def {typing} {Γ} {na b t inst Δ}.
 
   Lemma spine_subst_ctx_inst_sub {Γ args argsub Δ} (sp : spine_subst Σ Γ args argsub Δ) :
     ctx_inst_sub (spine_subst_ctx_inst sp) = argsub.
@@ -3075,8 +3075,8 @@ Section WfEnv.
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
-      (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+      (fun (Γ : context) (t T : term) =>
+      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Γ inst Δ ->
     ctx_inst Σ Γ inst Δ ->
     OnOne2 (P Σ Γ) inst inst' ->
     ctx_inst Σ Γ inst' Δ.
@@ -3122,8 +3122,8 @@ Section WfEnv.
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
-      (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+      (fun (Γ : context) (t T : term) =>
+      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Γ inst Δ ->
     ctx_inst Σ Γ inst Δ ->
     All2 (P Σ Γ) inst inst' ->
     ctx_inst Σ Γ inst' Δ.
@@ -3175,8 +3175,8 @@ Section WfEnv.
   Lemma ctx_inst_eq_context {Γ Δ : context} {args args'} :
     wf_local Σ (Γ ,,, List.rev Δ) ->
     PCUICTyping.ctx_inst
-          (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
-          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->
+          (fun (Γ : context) (u A : term) =>
+          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Γ args Δ ->
     ctx_inst Σ Γ args Δ ->
     All2 upto_names' args args' ->
     ctx_inst Σ Γ args' Δ.

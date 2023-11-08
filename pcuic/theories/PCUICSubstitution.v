@@ -362,7 +362,7 @@ Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   map_constant_body (subst_instance u) decl.
 Proof.
   intros. unshelve eapply declared_constant_to_gen in H0; eauto.
-  eapply declared_decl_closed in H0 as [Hb Ht]; eauto.
+  eapply declared_decl_closed in H0 as [Hb Ht]%andb_and; eauto.
   unfold map_constant_body. cbn in *.
   f_equal.
   - rewrite <- (closedn_subst_instance 0 _ u) in Ht.

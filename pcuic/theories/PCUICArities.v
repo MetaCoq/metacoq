@@ -483,11 +483,6 @@ Section WfEnv.
     apply: type_it_mkProd_or_LetIn_sorts=> //.
   Qed.
 
-  Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
-  Proof using Type.
-    reflexivity.
-  Qed.
-
   Hint Extern 4 (_ ;;; _ |- _ <= _) => reflexivity : pcuic.
   Ltac pcuic := eauto 5 with pcuic.
 

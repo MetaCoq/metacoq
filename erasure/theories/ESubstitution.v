@@ -187,7 +187,7 @@ Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : ter
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- (lift #|Γ''| #|Γ'| t) ⇝ℇ (ELiftSubst.lift #|Γ''| #|Γ'| t').
 Proof.
   intros HΣ HΓ'' * H He.
-  generalize_eqs H. intros eqw. rewrite <- eqw in *.
+  remember (Γ ,,, Γ') as Γ0 eqn:eqw.
   revert Γ Γ' Γ'' HΓ'' eqw t' He.
   revert Σ HΣ Γ0 t T H .
   apply (typing_ind_env (fun Σ Γ0 t T =>  forall Γ Γ' Γ'',
@@ -406,7 +406,7 @@ Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   Σ ;;; (Γ ,,, subst_context s 0 Δ) |- (subst s #|Δ| t) ⇝ℇ ELiftSubst.subst s' #|Δ| t'.
 Proof.
   intros HΣ HΔ Hs Ht He.
-  generalize_eqs Ht. intros eqw.
+  remember (Γ ,,, Γ' ,,, Δ) as Γ0 eqn:eqw in Ht.
   revert Γ Γ' Δ t' s Hs HΔ He eqw.
   revert Σ HΣ Γ0 t T Ht.
   eapply (typing_ind_env (fun Σ Γ0 t T =>

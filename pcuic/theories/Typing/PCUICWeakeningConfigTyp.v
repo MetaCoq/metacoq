@@ -92,7 +92,7 @@ Proof.
   all: try now repeat destruct ?; subst; simpl in *; assumption.
   all: repeat destruct ?; subst.
   all: lazymatch goal with
-       | [ H : ctx_inst _ _ _ _ _ |- ctx_inst _ _ _ _ _ ]
+       | [ H : ctx_inst _ _ _ _ |- ctx_inst _ _ _ _ ]
          => revert dependent H;
             repeat match goal with
               | [ |- context[typing_size ?x] ]

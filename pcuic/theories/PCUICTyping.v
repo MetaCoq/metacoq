@@ -154,9 +154,9 @@ Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps 
       global environment *)
     (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
     (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
-    (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+    (ind_inst : ctx_inst (typing Σ) Γ (p.(pparams) ++ indices)
                          (List.rev (subst_instance p.(puinst)
-                                                   (ind_params mdecl ,,, ind_indices idecl))))
+                                                   (ind_params mdecl ,,, ind_indices idecl : context))))
     (not_cofinite : isCoFinite mdecl.(ind_finite) = false).
 
 Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_info) p ps mdecl idecl ptm  brs :=
@@ -394,7 +394,7 @@ Section CtxInstSize.
   Context {cf} (typing : global_env_ext -> context -> term -> term -> Type)
   (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
 
-  Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst typing Σ Γ args Δ) : size :=
+  Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst (typing Σ) Γ args Δ) : size :=
   match c with
   | ctx_inst_nil => 0
   | ctx_inst_ass na t i inst Δ ty ctxi => (typing_size _ _ _ _ ty) + (ctx_inst_size ctxi)
@@ -720,8 +720,8 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         wf_local Σ (Γ ,,, predctx) ->
         PΓ Σ (Γ ,,, predctx) ->
         is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-        ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+        ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
+          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
@@ -957,7 +957,7 @@ Proof.
             lia. }
           clear -X ind_inst.
           revert ind_inst X.
-          generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
+          generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl : context))).
           generalize (pparams p ++ indices).
           intros l c ctxi IH; induction ctxi; constructor; eauto.
           * split; tas. eapply (IH _ _ _ t0); simpl; auto. lia.
@@ -1175,8 +1175,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
       P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-      ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+      ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
+        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
       isCoFinite mdecl.(ind_finite) = false ->

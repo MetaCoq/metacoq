@@ -200,7 +200,7 @@ Proof.
     * eapply All_forallb, All_map; assumption.
     * rewrite forallb_map.
       eapply All_forallb. unfold ondecl in *. solve_all.
-      rewrite /nameless_decl /= a0.
+      rewrite /nameless_decl /= b.
       destruct (decl_body x); simpl in *; auto.
     * induction l.
       + reflexivity.
@@ -208,7 +208,7 @@ Proof.
         repeat (eapply andb_true_intro ; split) ; try assumption.
         ++ rewrite forallb_map.
            eapply All_forallb. unfold ondecl in *; solve_all.
-           rewrite /nameless_decl /= a2.
+           rewrite /nameless_decl /= b.
           destruct (decl_body x); simpl in *; auto.
         ++ eapply IHl. assumption.
   - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.

@@ -28,7 +28,7 @@ Proof.
 Qed.
 
 Lemma ctx_inst_on_universes Σ Γ ts Ts :
-  ctx_inst (fun Σ' _ t' _ => wf_universes Σ' t') Σ Γ ts Ts ->
+  ctx_inst (fun _ t _ => wf_universes Σ t) Γ ts Ts ->
   Forall (wf_universes Σ) ts.
 Proof.
   induction 1.
@@ -299,10 +299,10 @@ Proof.
     depelim X0; cbn in * => //;
     intuition auto.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe T') => //.
+      destruct (b equ Re 0 hRe T') => //.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (b0 equ Re 0 hRe b') => //.
-      destruct (a equ Re 0 hRe T') => //.
+      destruct (a equ Re 0 hRe b') => //.
+      destruct (b0 equ Re 0 hRe T') => //.
   - intros hcc'.
     eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
     eapply All2_fold_impl_onctx in onc; tea; simpl; intuition eauto.

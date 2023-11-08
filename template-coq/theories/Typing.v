@@ -827,8 +827,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
     consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-    ctx_inst typing Σ Γ (p.(pparams) ++ indices)
-      (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->
+    ctx_inst (typing Σ) Γ (p.(pparams) ++ indices)
+      (List.rev (ind_params mdecl ,,, ind_indices idecl : context)@[p.(puinst)]) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ idecl.(ind_kelim) ps ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
@@ -959,7 +959,7 @@ Section CtxInstSize.
   Context (typing : global_env_ext -> context -> term -> term -> Type)
   (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
 
-  Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst typing Σ Γ args Δ) : size :=
+  Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst (typing Σ) Γ args Δ) : size :=
   match c with
   | ctx_inst_nil => 0
   | ctx_inst_ass na t i inst Δ ty ctxi => ((typing_size _ _ _ _ ty) + (ctx_inst_size ctxi))%nat
@@ -1217,8 +1217,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
         context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-        ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-        (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->
+        ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
+        (List.rev (ind_params mdecl ,,, ind_indices idecl : context)@[p.(puinst)]) ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
@@ -1475,7 +1475,7 @@ Proof.
          lia. }
        clear -X c1.
        revert c1 X.
-       generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
+       generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl : context))).
        generalize (pparams p ++ indices).
        intros l c ctxi IH; induction ctxi; constructor; eauto.
        * split; tas. eapply (IH _ _ _ t0); simpl; auto. lia.

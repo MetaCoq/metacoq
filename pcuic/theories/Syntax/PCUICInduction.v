@@ -62,7 +62,7 @@ Proof.
     + generalize (pcontext p).
       fix auxc 1.
       destruct l; constructor; [|apply auxc].
-      destruct c. split. apply auxt.
+      destruct c. split. 2: apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
 
@@ -73,7 +73,7 @@ Proof.
     + generalize (bcontext b).
       fix auxc 1.
       destruct l; constructor; [|apply auxc].
-      destruct c. split. apply auxt.
+      destruct c. split. 2: apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
 
@@ -238,9 +238,9 @@ Lemma liftP_ctx_ind (P : term -> Type) (ctx : context) :
 Proof.
   induction ctx; simpl; constructor; auto.
   * split.
-    + apply X; cbn. unfold decl_size. simpl. lia.
     + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
       rewrite db; simpl; lia. exact tt.
+    + apply X; cbn. unfold decl_size. simpl. lia.
   * apply IHctx; intros; apply X. lia.
 Qed.
 
@@ -366,9 +366,9 @@ Lemma liftP_ctx (P : term -> Type) :
 Proof.
   induction ctx; simpl; constructor; auto.
   split.
-  + apply X; cbn.
   + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
     exact tt.
+  + apply X; cbn.
 Qed.
 
 Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
@@ -450,7 +450,7 @@ Proof.
     rewrite !size_lift. rewrite list_size_map_hom; auto.
 Qed.
 
-Definition on_local_decl (P : context -> term -> Type) := lift_on_term P.
+Definition on_local_decl (P : context -> term -> Type) := lift_wf_term1 P.
 
 (* TODO: remove List.rev *)
 Lemma list_size_rev {A} size (l : list A)

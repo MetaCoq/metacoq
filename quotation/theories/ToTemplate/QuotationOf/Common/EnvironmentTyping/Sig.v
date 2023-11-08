@@ -51,10 +51,10 @@ Module Type QuoteEnvTypingSig (Import T : Term) (Import E : EnvironmentSig T) (I
    {quote_typing : forall Γ t T, ground_quotable (typing Γ t T)} {quote_property : forall Γ all b t tb, ground_quotable (property Γ all b t tb)}
     : ground_quotable (@All_local_env_over typing property Γ H).
 
-  #[export] Declare Instance quote_ctx_inst {typing Σ Γ ctx inst}
+  #[export] Declare Instance quote_ctx_inst {typing Γ ctx inst}
    {qtyping : quotation_of typing}
-   {quote_typing : forall i t, ground_quotable (typing Σ Γ i t)}
-    : ground_quotable (@ctx_inst typing Σ Γ ctx inst).
+   {quote_typing : forall i t, ground_quotable (typing Γ i t)}
+    : ground_quotable (@ctx_inst typing Γ ctx inst).
 End QuoteEnvTypingSig.
 
 Module Type QuotationOfConversion (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E) (ET : EnvTypingSig T E TU) (C : ConversionSig T E TU ET).

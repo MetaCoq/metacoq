@@ -217,8 +217,8 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
        wf_local Σ (Γ ,,, predctx) ->
        PΓ Σ (Γ ,,, predctx) ->
        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-       PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+       PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
+         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
        isCoFinite mdecl.(ind_finite) = false ->
@@ -404,8 +404,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
       wf_local Σ (Γ ,,, predctx) ->
       PΓ Σ (Γ ,,, predctx) ->
       is_allowed_elimination Σ idecl.(ind_kelim) ps ->
-      PCUICTyping.ctx_inst (Prop_conj typing P) Σ Γ (p.(pparams) ++ indices)
-        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+      PCUICTyping.ctx_inst (Prop_conj typing P Σ) Γ (p.(pparams) ++ indices)
+        (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices) : context))) ->
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
       isCoFinite mdecl.(ind_finite) = false ->

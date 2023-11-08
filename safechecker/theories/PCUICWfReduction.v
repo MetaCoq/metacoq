@@ -144,7 +144,7 @@ Section fix_sigma.
   Qed.
 
   Lemma term_subterm_redp {Γ s s' t} {ts : term_subterm s t} :
-    redp Σ (Γ ,,, term_subterm_context ts) s s' ->
+    redp Σ (Γ ,,, term_subterm_context ts : context) s s' ->
     exists t', ∥ redp Σ Γ t t' × ∑ ts' : term_subterm s' t', term_subterm_context ts' = term_subterm_context ts ∥.
   Proof using Type.
     intros r.

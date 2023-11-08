@@ -217,18 +217,13 @@ Record judgment_ {universe Term} := Judge {
   j_term : option Term;
   j_typ : Term;
   j_univ : option universe;
-  (* rel : option relevance; *)
+  (* j_rel : option relevance; *)
 }.
 Arguments judgment_ : clear implicits.
 Arguments Judge {universe Term} _ _ _.
-Notation Typ typ := (Judge None typ None).
-Notation TermTyp tm ty := (Judge (Some tm) ty None).
-Notation TermoptTyp tm typ := (Judge tm typ None).
-Notation TypUniv ty u := (Judge None ty (Some u)).
-Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u)).
 
 Definition judgment_map {univ T A} (f: T -> A) (j : judgment_ univ T) :=
-  Judge (option_map f (j_term j)) (f (j_typ j)) (j_univ j) (* rel *).
+  Judge (option_map f (j_term j)) (f (j_typ j)) (j_univ j) (* (j_rel j) *).
 
 Section Contexts.
   Context {term : Type}.
@@ -244,8 +239,15 @@ End Contexts.
 
 Arguments context_decl : clear implicits.
 
-Definition judgment_of_decl {term universe} d : judgment_ term universe :=
-  TermoptTyp (decl_body d) (decl_type d).
+Notation Typ typ := (Judge None typ None).
+Notation TermTyp tm ty := (Judge (Some tm) ty None).
+Notation TermoptTyp tm typ := (Judge tm typ None).
+Notation TypUniv ty u := (Judge None ty (Some u)).
+Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u)).
+
+Notation j_vass na ty := (Typ ty (* na.(binder_relevance) *)).
+Notation j_vdef na b ty := (TermTyp b ty (* na.(binder_relevance) *)).
+Notation j_decl d := (TermoptTyp (decl_body d) (decl_type d) (* (decl_name d).(binder_relevance) *)).
 
 
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
@@ -314,8 +316,46 @@ Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
 Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
+Definition app_context {A} (Γ Γ': list A) := Γ' ++ Γ.
+
+Notation "Γ ,,, Γ'" := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+
+Lemma app_context_nil_l {T} Γ : [] ,,, Γ = Γ :> list T.
+Proof.
+  unfold app_context. rewrite app_nil_r. reflexivity.
+Qed.
+
+Lemma app_context_assoc {T} Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ'' :> list T.
+Proof. unfold app_context; now rewrite app_assoc. Qed.
+
+Lemma app_context_cons {T} Γ Γ' A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A :> list T.
+Proof. exact (app_context_assoc _ _ [A]). Qed.
+
+Lemma app_context_push {T} Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)) :> list T.
+Proof using Type.
+  reflexivity.
+Qed.
+
+Lemma snoc_app_context {T Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d] :> list T.
+Proof using Type.
+  reflexivity.
+Qed.
+
+Lemma app_context_length {T} (Γ Γ' : list T) : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
+Proof. unfold app_context. now rewrite app_length. Qed.
+#[global] Hint Rewrite @app_context_length : len.
+
+Lemma nth_error_app_context_ge {T} v Γ Γ' :
+  #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|) :> option T.
+Proof. apply nth_error_app_ge. Qed.
+
+Lemma nth_error_app_context_lt {T} v Γ Γ' :
+  v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v :> option T.
+Proof. apply nth_error_app_lt. Qed.
+
+
 Definition ondecl {A} (P : A -> Type) (d : context_decl A) :=
-  P d.(decl_type) × option_default P d.(decl_body) unit.
+  option_default P d.(decl_body) unit × P d.(decl_type).
 
 Notation onctx P := (All (ondecl P)).
 

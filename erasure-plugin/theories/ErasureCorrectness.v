@@ -1384,9 +1384,8 @@ Section PCUICErase.
 
   Definition nisErasable Σ Γ t :=
     ∑ T u,
-     [× Σ;;; Γ |- t : T,
-      (forall B, Σ ;;; Γ |- T ⇝ B -> False),
-      (forall B, Σ ;;; Γ |- t : B -> Σ ;;; Γ ⊢ T ≤ B),
+     [× Σ;;; Γ |- t : T, nf Σ Γ T,
+      (* (forall B, Σ ;;; Γ |- t : B -> Σ ;;; Γ ⊢ T ≤ B), *)
       (* ~ Is_conv_to_Arity Σ Γ T, *)
       ~ isArity T,
       Σ;;; Γ |- T : tSort u &

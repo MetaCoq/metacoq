@@ -314,11 +314,11 @@ struct
           let mib = Environ.lookup_mind (fst mind) (snd env) in
           add_inductive mind mib acc)
 
-      | Constr.Case (ci,u,pars, (predctx, pred), iv, discr, brs) ->
+      | Constr.Case (ci,u,pars, ((predctx, pred), relevance), iv, discr, brs) ->
         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Constr.ci_ind)),
                                       Q.quote_int (snd ci.Constr.ci_ind)) in
         let npar = Q.quote_int ci.Constr.ci_npar in
-        let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
+        let q_relevance = Q.quote_relevance relevance in
         let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env sigma par in acc, qt) acc pars in 
         let qu = Q.quote_univ_instance u in
         let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 

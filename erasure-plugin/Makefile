@@ -42,7 +42,7 @@ mrproper:
 	rm -f Makefile.erasureplugin _CoqProject
 
 .merlin: Makefile.plugin
-	[ -e "src/pCUICerasureplugin.ml" ] && make -f $< $@
+	make -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

@@ -23,7 +23,7 @@ mrproper:
 	rm -f metacoq-config
 	rm -f Makefile.templatepcuic _CoqProject
 
-.merlin:
+.merlin: Makefile.templatepcuic
 	make -f $< $@
 
 vos: Makefile.templatepcuic

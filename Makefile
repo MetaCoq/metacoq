@@ -128,7 +128,7 @@ mrproper:
 	$(MAKE) -C template-pcuic .merlin
 	$(MAKE) -C quotation .merlin
 	$(MAKE) -C erasure .merlin
-	$(MAKE) -C erasure-plugin .merin
+	$(MAKE) -C erasure-plugin .merlin
 
 utils:
 	$(MAKE) -C utils

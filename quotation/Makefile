@@ -23,7 +23,7 @@ mrproper:
 	rm -f metacoq-config
 	rm -f Makefile.quotation _CoqProject
 
-.merlin:
+.merlin: Makefile.quotation
 	make -f $< $@
 
 vos: Makefile.quotation

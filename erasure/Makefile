@@ -22,7 +22,7 @@ clean: Makefile.erasure
 mrproper:
 	rm -f Makefile.erasure
 
-.merlin:
+.merlin: Makefile.erasure
 	make -f $< $@
 
 vos: Makefile.erasure

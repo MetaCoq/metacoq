@@ -46,8 +46,8 @@ Module Hott_Notations.
 Notation "g ∘ f" := (compose g%function f%function) (at level 1): function_scope.
 
 Notation "{ x : A & P }" := (sigT (A:=A) (fun x => P)) : type_scope.
-Notation "x .1" := (projT1 x) (at level 3).
-Notation "x .2" := (projT2 x) (at level 3).
+Notation "x .1" := (projT1 x).
+Notation "x .2" := (projT2 x).
 Notation " ( x ; p ) " := (existT _ x p).
 
 Notation "f == g" := (forall x, f x = g x) (at level 70).

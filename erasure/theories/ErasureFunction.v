@@ -944,7 +944,7 @@ Proof.
       { apply nisa. intros. rewrite (abstract_env_ext_irr _ H wfΣ).
         eapply invert_cumul_arity_r; tea. }
       { destruct s as [Hs].
-        unshelve epose proof (H := unique_sorting_equality_propositional _ wf Hs Hu' p) => //. reflexivity. congruence. }
+        unshelve epose proof (H := unique_sorting_equality_propositional _ wf Hs Hu' p) => //. congruence. }
   Qed.
 
 Equations? is_erasable {X_type X} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} (Γ : context) (t : PCUICAst.term)

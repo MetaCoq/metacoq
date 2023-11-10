@@ -6,10 +6,8 @@ Local Coercion is_true : bool >-> Sortclass.
 
 Declare Scope pair_scope.
 
-Notation "p .1" := (fst p)
-  (at level 2, left associativity, format "p .1") : pair_scope.
-Notation "p .2" := (snd p)
-  (at level 2, left associativity, format "p .2") : pair_scope.
+Notation "p .1" := (fst p) : pair_scope.
+Notation "p .2" := (snd p) : pair_scope.
 Open Scope pair_scope.
 
 Notation "x × y" := (prod x y ) (at level 80, right associativity).

@@ -1322,7 +1322,6 @@ Proof.
   destruct Σ.
   move: ont. rewrite PCUICOnFreeVars.on_free_vars_mkApps /= => /andP[] // => onn onargs.
   unshelve eapply (red_mkApps_tRel (Γ := exist Γ onΓ) _ hnth db) in red as [args' [eq redargs]] => //.
-  now cbn.
   exists args'; split => //.
   cbn in redargs. solve_all.
   eapply into_closed_red; eauto.

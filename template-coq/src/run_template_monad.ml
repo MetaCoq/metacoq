@@ -422,7 +422,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmLemma (name,typ) ->
     let name = reduce_all env evm name in
     let kind = Decls.(IsDefinition Definition) in
-    let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous)) in
+    let hole = CAst.make (Constrexpr.CHole (None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
     RetrieveObl.check_evars env evm;

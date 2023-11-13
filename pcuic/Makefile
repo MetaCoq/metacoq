@@ -27,7 +27,7 @@ mrproper:
 vos: Makefile.coq
 	$(MAKE) -f Makefile.coq vos
 
-.merlin:
+.merlin: Makefile.coq
 	$(MAKE) -f $< $@
 
 quick: Makefile.coq

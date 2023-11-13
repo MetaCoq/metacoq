@@ -108,7 +108,7 @@ struct
       | ACoq_tCase (ci, p, c, brs) ->
         let ind = D.unquote_inductive ci.aci_ind in
         let relevance = D.unquote_relevance ci.aci_relevance in 
-        let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
+        let ci = Inductiveops.make_case_info (Global.env ()) ind Constr.RegularStyle in
         let evm, puinst = D.unquote_universe_instance evm p.auinst in
         let evm, pars = map_evm (aux env) evm p.apars in
         let pars = Array.of_list pars in
@@ -126,7 +126,7 @@ struct
         in
         let evm, brs = array_map_evm denote_br evm brs in
         (* todo: reify better case_info *)
-        let pcase = (ci, puinst, pars, (napctx, pret), Constr.NoInvert, c, brs) in
+        let pcase = (ci, puinst, pars, ((napctx, pret), relevance), Constr.NoInvert, c, brs) in
         evm, Constr.mkCase pcase
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,

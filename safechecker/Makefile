@@ -23,7 +23,7 @@ mrproper:
 	rm -f metacoq-config
 	rm -f Makefile.safechecker _CoqProject
 
-.merlin:
+.merlin: Makefile.safechecker
 	make -f $< $@
 
 vos: Makefile.safechecker

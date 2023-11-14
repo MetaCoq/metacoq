@@ -296,6 +296,8 @@ test-suite/plugin-demo/Makefile.plugin
 
 
 template-coq/Makefile.plugin-e
+template-coq/_PluginProject
+template-coq/_TemplateCoqProject
 template-coq/Makefile.template-e
 template-coq/src/g_template_coq.ml
 pcuic/Makefile.plugin-e
@@ -379,6 +381,7 @@ template-pcuic/Makefile.local
 template-pcuic/_CoqProject
 template-pcuic/Makefile.templatepcuic
 template-pcuic/Makefile.templatepcuic.conf
+template-pcuic/metacoq-config
 
 quotation/Makefile.local
 quotation/_CoqProject

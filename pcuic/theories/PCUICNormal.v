@@ -1662,7 +1662,9 @@ Section Normal.
   | ne_case i p c brs :
     ne Γ c ->
     All (fun br => nf (Γ ,,, inst_case_branch_context p br) br.(bbody)) brs ->
-    CasePredProp nf Γ p ->
+    All (nf Γ) (pparams p) ->
+    onctx_rel nf Γ (inst_case_predicate_context p) ->
+    nf (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
     ne Γ (tCase i p c brs)
 
   | ne_proj p c :
@@ -1720,7 +1722,12 @@ Section Normal.
     All
       (fun br : branch term =>
       nf (Γ,,, inst_case_branch_context p br) (bbody br) /\ P0 (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ->
-    CasePredProp (fun Γ t => nf Γ t /\ P0 Γ t) Γ p ->
+    All (nf Γ) (pparams p) ->
+    onctx_rel nf Γ (inst_case_predicate_context p) ->
+    nf (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
+    All (P0 Γ) (pparams p) ->
+    onctx_rel P0 Γ (inst_case_predicate_context p) ->
+    P0 (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
     P Γ (tCase i p c brs)))
 
     (hproj : (forall (Γ : context) (p : projection) (c : term),
@@ -1751,14 +1758,12 @@ Section Normal.
     with nf_ind_all : forall (Γ : context) (t : term), nf Γ t -> P0 Γ t.
     Proof.
       destruct 1; [eapply hrel|eapply hvar|eapply hevar|eapply happ|eapply hcst|eapply hfix|eapply hcase|eapply hproj]; eauto.
-      induction X; constructor; eauto.
-      clear -X nf_ind_all. induction X; constructor; eauto.
-      clear -X0 nf_ind_all; revert X0; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
-      clear -X nf_ind_all; revert X; induction 1; constructor; intuition eauto.
-      clear -X0 nf_ind_all. destruct X0 as [? []]. split; [|split].
-      * clear -a nf_ind_all; revert a; induction 1; constructor; intuition eauto.
-      * clear -o nf_ind_all; revert o; induction 1; constructor; cbn in *; intuition eauto.
-      * split; eauto.
+      * induction X; constructor; eauto.
+      * clear -X nf_ind_all. induction X; constructor; eauto.
+      * clear -X0 nf_ind_all; revert X0; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
+      * clear -X nf_ind_all; revert X; induction 1; constructor; intuition eauto.
+      * clear -X0 nf_ind_all. revert X0; induction 1; constructor; intuition eauto.
+      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; cbn in *; intuition eauto.
       * destruct 1; [eapply hne|eapply hlam|eapply hconstruct|eapply hcofix|eapply hind|eapply hprod]; eauto.
         clear -X nf_ind_all. revert X; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
         clear -X0 nf_ind_all. induction X0; constructor; eauto.
@@ -1870,18 +1875,17 @@ Section Normal.
         intuition eauto.
       * rewrite /unfold_fix H /is_constructor H0. eapply ne_nisConstruct_app in H1.
         now move/negPf: H1.
-    - destruct X0 as [? []].
-      depelim X1; solve_discr.
+    - depelim X4; solve_discr.
       * eapply isConstruct_app_ne in H => //.
         rewrite /isConstruct_app decompose_app_mkApps //.
       * now eapply ne_tCoFix_app in H.
-      * eapply OnOne2_All_mix_left in o0; tea.
-        eapply OnOne2_nth_error in o0 as [n [? [? []]]].
+      * eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
         intuition eauto.
-      * destruct a0. eauto.
       * eauto.
-      * eapply OnOne2_All_mix_left in o0; tea.
-        eapply OnOne2_nth_error in o0 as [n [? [? []]]].
+      * eauto.
+      * eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
         intuition eauto.
     - depelim X; solve_discr; eauto.
       * now eapply ne_tCoFix_app in H.

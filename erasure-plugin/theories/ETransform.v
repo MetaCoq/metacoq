@@ -347,9 +347,16 @@ Qed.
 
 #[global]
 Instance guarded_to_unguarded_fix_extends {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix) :
+  TransformExt.t (guarded_to_unguarded_fix (wcon:=wcon) wguard) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ?. now rewrite /transform /=.
+Qed.
+
+#[global]
+Instance guarded_to_unguarded_fix_extends' {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} {efl : EEnvFlags} (wguard : with_guarded_fix) :
   TransformExt.t (guarded_to_unguarded_fix (wcon:=wcon) wguard) extends_eprogram_env extends_eprogram_env.
 Proof.
-  red. intros p p' pr pr' [ext eq]. now rewrite /transform /=.
+  red. intros p p' pr pr' [? ?]. now rewrite /transform /=.
 Qed.
 
 Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
@@ -371,9 +378,16 @@ Qed.
 
 #[global]
 Instance rebuild_wf_env_extends {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp :
+  TransformExt.t (rebuild_wf_env_transform with_exp) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. red. now rewrite /transform /=. 
+Qed.
+
+#[global]
+Instance rebuild_wf_env_extends' {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp :
   TransformExt.t (rebuild_wf_env_transform with_exp) extends_eprogram extends_eprogram_env.
 Proof.
-  red. intros p p' pr pr' [ext eq]. now rewrite /transform /=.
+  red. intros p p' pr pr' [? ?]. now rewrite /transform /=. 
 Qed.
 
 Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
@@ -405,11 +419,20 @@ Qed.
 #[global]
 Instance remove_params_extends {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags):
+  TransformExt.t (remove_params_optimization (wcon:=wcon)) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /= /strip_program.
+  red. cbn -[strip_env strip]. eapply strip_extends_env => //. apply pr. apply pr'.
+Qed.
+
+#[global]
+Instance remove_params_extends' {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
+  (efl := all_env_flags):
   TransformExt.t (remove_params_optimization (wcon:=wcon)) extends_eprogram_env extends_eprogram.
 Proof.
   red. intros p p' pr pr' [ext eq]. rewrite /transform /= /strip_program. rewrite eq.
-  red. cbn -[strip_env strip]. split. eapply strip_extends_env => //. apply pr. apply pr'.
-  eapply strip_extends => //. apply pr'. rewrite -eq. apply pr.
+  red. cbn -[strip_env strip]. split. eapply strip_extends_env => //. apply pr. apply pr'.  
+  cbn -[strip_env strip]. eapply strip_extends => //. apply pr'. rewrite -eq. apply pr.
 Qed.
 
 Program Definition remove_params_fast_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
@@ -445,10 +468,20 @@ Qed.
 #[global]
 Instance remove_params_fast_extends {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags):
+  TransformExt.t (remove_params_fast_optimization (wcon:=wcon)) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /=. 
+  rewrite -!ERemoveParams.Fast.strip_env_fast.
+  eapply strip_extends_env => //. apply pr. apply pr'.
+Qed.
+
+#[global]
+Instance remove_params_fast_extends' {fl : EWcbvEval.WcbvFlags}  {wcon : EWcbvEval.with_constructor_as_block = false}
+  (efl := all_env_flags):
   TransformExt.t (remove_params_fast_optimization (wcon:=wcon)) extends_eprogram_env extends_eprogram.
 Proof.
   red. intros p p' pr pr' [ext eq]. rewrite /transform /=. rewrite eq.
-  rewrite -!ERemoveParams.Fast.strip_fast -!ERemoveParams.Fast.strip_env_fast.
+  rewrite -!ERemoveParams.Fast.strip_env_fast -!ERemoveParams.Fast.strip_fast.
   split => /=. eapply strip_extends_env => //. apply pr. apply pr'.
   eapply strip_extends => //. apply pr'. rewrite -eq. apply pr.
 Qed.
@@ -480,9 +513,17 @@ Qed.
 
 #[global]
 Instance remove_match_on_box_extends  {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+  TransformExt.t (remove_match_on_box_trans (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+  Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /= /remove_match_on_box_program.
+  eapply remove_match_on_box_extends_env => //. apply pr. apply pr'.
+Qed.
+
+#[global]
+Instance remove_match_on_box_extends'  {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
   TransformExt.t (remove_match_on_box_trans (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) extends_eprogram_env extends_eprogram.
 Proof.
-  red. intros p p' pr pr' [ext eq]. rewrite /transform /= /remove_match_on_box_program; split => /=.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /= /remove_match_on_box_program. split. 
   eapply remove_match_on_box_extends_env => //. apply pr. apply pr'.
   rewrite -eq.
   eapply wellformed_remove_match_on_box_extends; eauto. apply pr. apply pr'.
@@ -515,10 +556,18 @@ Qed.
 #[global]
 Instance inline_projections_optimization_extends {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
   {hastrel : has_tRel} {hastbox : has_tBox} :
+  TransformExt.t (inline_projections_optimization (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /= /optimize_program /=.
+  eapply optimize_extends_env => //. apply pr. apply pr'.
+Qed.
+
+#[global]
+Instance inline_projections_optimization_extends' {fl : WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false} (efl := switch_no_params all_env_flags)
+  {hastrel : has_tRel} {hastbox : has_tBox} :
   TransformExt.t (inline_projections_optimization (wcon:=wcon) (hastrel := hastrel) (hastbox := hastbox)) extends_eprogram_env extends_eprogram.
 Proof.
-  red. intros p p' pr pr' [ext eq]. rewrite /transform /= /optimize_program /=.
-  split => /=.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /= /optimize_program /=. split. 
   eapply optimize_extends_env => //. apply pr. apply pr'.
   rewrite -eq.
   eapply wellformed_optimize_extends; eauto. apply pr. apply pr'.
@@ -555,11 +604,22 @@ Qed.
 Instance constructors_as_blocks_extends (efl : EEnvFlags)
   {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (hasbox := hasbox) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
+  (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /=.
+  eapply transform_blocks_env_extends => //. apply pr. apply pr'.
+Qed.
+
+#[global]
+Instance constructors_as_blocks_extends' (efl : EEnvFlags)
+  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (hasbox := hasbox) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
   extends_eprogram_env extends_eprogram.
 Proof.
-  red. intros p p' pr pr' [ext eq]. rewrite /transform /=.
-  split => //. eapply transform_blocks_env_extends => //. apply pr. apply pr'.
+  red. intros p p' pr pr' [ext eq]. rewrite /transform /=. split. 
+  eapply transform_blocks_env_extends => //. apply pr. apply pr'.
   unfold transform_blocks_program => /=.
   rewrite -eq.
   eapply transform_blocks_extends; eauto. apply pr. apply pr'.
 Qed.
+

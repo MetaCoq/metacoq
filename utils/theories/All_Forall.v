@@ -1,4 +1,4 @@
-From Coq Require Import List Bool Arith ssreflect Morphisms Lia Utf8.
+From Coq Require Import List Bool Arith ssreflect ssrbool Morphisms Lia Utf8.
 From MetaCoq.Utils Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 
@@ -1079,8 +1079,6 @@ Proof.
     intros [= ->]. exists t'; intuition auto.
 Qed.
 
-
-
 Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' :
   (forall x y, Q x -> P x y -> Q y) ->
   OnOne2 P l l' -> All Q l -> All Q l'.
@@ -1120,6 +1118,21 @@ Proof.
   intros H; depelim H.
   intros Hf. specialize (IHo H Hf).
   constructor; auto.
+Qed.
+
+Lemma OnOne2_map_inv {A} {P : A -> A -> Type} (l : list A) (l' : list A) (f : A -> A) :
+  (forall x y, P (f x) y -> ∑ y', y = f y') ->
+  OnOne2 P (List.map f l) l' ->
+  ∑ l'', OnOne2 (fun x y => P (f x) (f y)) l l''.
+Proof.
+  intros hp.
+  induction l in l' |- *.
+  - intros o; depelim o; constructor.
+  - intros o; depelim o. specialize (IHl l).
+    destruct (hp _ _ p). subst hd'.
+    eexists. econstructor. exact p.
+    destruct (IHl _ o).
+    eexists. now econstructor 2.
 Qed.
 
 Inductive OnOne2i {A : Type} (P : nat -> A -> A -> Type) : nat -> list A -> list A -> Type :=
@@ -1870,6 +1883,43 @@ Lemma forallb_map {A B} (f : A -> B) (l : list A) p :
 Proof.
   induction l in p, f |- *; simpl; rewrite ?andb_and;
     intuition (f_equal; auto).
+Qed.
+
+Lemma forallb_mapi {A B} (f f' : nat -> A -> B) (g g' : B -> bool) l :
+  (forall n x, nth_error l n = Some x -> g (f n x) = g' (f' n x)) ->
+  forallb g (mapi f l) = forallb g' (mapi f' l).
+Proof.
+  unfold mapi.
+  intros.
+  assert
+    (forall (n : nat) (x : A), nth_error l n = Some x -> g (f (0 + n) x) = g' (f' (0 + n) x)).
+  { intros n x. now apply H. }
+  clear H.
+  revert H0.
+  generalize 0.
+  induction l; cbn; auto.
+  intros n hfg. f_equal. specialize (hfg 0). rewrite Nat.add_0_r in hfg. now apply hfg.
+  eapply IHl. intros. replace (S n + n0) with (n + S n0) by lia. eapply hfg.
+  now cbn.
+Qed.
+
+Lemma forallb_mapi_impl {A B} (f f' : nat -> A -> B) (g g' : B -> bool) l :
+  (forall n x, nth_error l n = Some x -> g (f n x) -> g' (f' n x)) ->
+  forallb g (mapi f l) -> forallb g' (mapi f' l).
+Proof.
+  unfold mapi.
+  intros hfg.
+  assert
+    (forall (n : nat) (x : A), nth_error l n = Some x -> g (f (0 + n) x) -> g' (f' (0 + n) x)).
+  { intros n x ?. now apply hfg. }
+  clear hfg.
+  revert H.
+  generalize 0.
+  induction l; cbn; auto.
+  intros n hfg. move/andP => [] hg hf.
+  pose proof (hfg 0). rewrite Nat.add_0_r in H. apply H in hg => //. rewrite hg /=.
+  eapply IHl. intros. replace (S n + n0) with (n + S n0) by lia. eapply hfg. now cbn.
+  now rewrite Nat.add_succ_r. assumption.
 Qed.
 
 Lemma All_forallb' {A} P (l : list A) (p : A -> bool) :

@@ -402,6 +402,14 @@ Proof.
   do 2 destruct nth_error => //.
 Qed.
 
+Lemma lookup_constructor_pars_args_strip (Σ : GlobalContextMap.t) i n npars nargs :
+  EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
+  EGlobalEnv.lookup_constructor_pars_args (strip_env Σ) i n = Some (0, nargs).
+Proof.
+  rewrite /EGlobalEnv.lookup_constructor_pars_args. rewrite lookup_constructor_strip //=.
+  destruct EGlobalEnv.lookup_constructor => //. destruct p as [[] ?] => //=. now intros [= <- <-].
+Qed.
+
 Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind :
   match inductive_isprop_and_pars Σ.(GlobalContextMap.global_decls) ind with
   | Some (prop, npars) =>

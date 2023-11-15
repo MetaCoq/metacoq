@@ -24,6 +24,9 @@ Import ExAst.
 Import Kernames.
 Import ListNotations.
 
+Local Set Firstorder Solver auto.
+Ltac Tauto.intuition_solver ::= auto with *.
+
 Lemma lookup_env_trans_env Σ kn :
   EGlobalEnv.lookup_env (trans_env Σ) kn =
   option_map trans_global_decl (lookup_env Σ kn).

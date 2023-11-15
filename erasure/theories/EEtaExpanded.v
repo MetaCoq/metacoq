@@ -670,6 +670,18 @@ Proof.
     eapply expanded_mkApps => //. now rewrite eqc. solve_all.
 Qed.
 
+Lemma isEtaExp_tApp_arg Σ t u : isEtaExp Σ (tApp t u) -> isEtaExp Σ u.
+Proof.
+  move/isEtaExp_tApp. destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. destruct l using rev_case.
+  - cbn in da. subst t0. cbn. now move/and3P => [].
+  - rewrite mkApps_app in da. noconf da.
+    destruct construct_viewc.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * now move/and4P => [].
+Qed.
+
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Local Ltac simp_eta ::= simp isEtaExp; rewrite -?isEtaExp_equation_1 -?EEtaExpanded.isEtaExp_equation_1.

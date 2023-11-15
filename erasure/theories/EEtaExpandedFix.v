@@ -1942,3 +1942,19 @@ Proof.
   destruct (cst_body c); cbn in * => //.
   now eapply expanded_isEtaExp.
 Qed.
+
+Lemma isEtaExpFix_tApp_arg Σ Γ t u : isEtaExp Σ Γ (tApp t u) -> isEtaExp Σ Γ u.
+Proof.
+  move/isEtaExp_tApp'. destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. destruct l using rev_case.
+  - cbn in da. subst t0. cbn. now move/and3P => [].
+  - rewrite mkApps_app in da. noconf da.
+    destruct expanded_head_viewc.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _ _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * now move/and4P => [].
+Qed.

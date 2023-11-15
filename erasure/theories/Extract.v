@@ -3,15 +3,59 @@ From Coq Require Import Program ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
-     PCUICElimination PCUICWcbvEval PCUICFirstorder.
+     PCUICElimination PCUICWcbvEval PCUICFirstorder
+     PCUICWellScopedCumulativity PCUICFirstorder PCUICNormalization PCUICReduction
+     PCUICConversion PCUICPrincipality PCUICNormal.
+
 From MetaCoq.Erasure Require EAst EGlobalEnv.
 
 Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) *
-  is_propositional u))%type.
+(* A term is erasable if it has _a_ type which either:
+  - is a syntactic arity
+  - is of propositional type *)
+Definition isErasable Σ Γ t :=
+  ∑ T, Σ ;;; Γ |- t : T ×
+  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_propositional u))%type.
+
+(* A more positive notion of relevant terms.
+  Showing that a term is not erasable requires quantification over all its possible typings.
+  We give a more positive characterization of relevant terms. A term is not erasable if
+  it has _a_ type in normal form which is not an arity and whose sort is not propositional.
+*)
+Definition nisErasable Σ Γ t :=
+  ∑ T u,
+    [× Σ;;; Γ |- t : T,
+      nf Σ Γ T,
+    ~ isArity T,
+    Σ;;; Γ |- T : tSort u &
+    ~ is_propositional u].
+
+Lemma nisErasable_spec Σ Γ t :
+  wf_ext Σ -> wf_local Σ Γ ->
+  nisErasable Σ Γ t -> ~ ∥ isErasable Σ Γ t ∥.
+Proof.
+  intros wf wf' [T [u []]].
+  intros []. destruct X as [T' []].
+  destruct s.
+  * destruct (common_typing _ _ t0 t2) as (? & e & ? & ?).
+    eapply PCUICClassification.invert_cumul_arity_l_gen in e. destruct e as [s [[hr] ha]].
+    eapply (proj2 (nf_red _ _ _ _)) in n. 2:eapply hr. subst. contradiction.
+    eapply PCUICClassification.invert_cumul_arity_r_gen. 2:exact w.
+    exists T'. split; auto. sq.
+    eapply PCUICValidity.validity in t2 as [s Hs].
+    eapply PCUICClassification.wt_closed_red_refl; eauto.
+  * destruct (principal_type _ _ t0) as [princ hprinc].
+    destruct s as [u' [hs isp]].
+    pose proof (hprinc _ t2) as [].
+    destruct (PCUICValidity.validity t3).
+    eapply PCUICElimination.unique_sorting_equality_propositional in hs; tea; eauto.
+    pose proof (hprinc _ t0) as [].
+    eapply PCUICElimination.unique_sorting_equality_propositional in t1; tea; eauto.
+    congruence.
+Qed.
 
 Fixpoint mkAppBox c n :=
   match n with

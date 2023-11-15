@@ -18,6 +18,12 @@ Definition decompose_app f := decompose_app_rec f [].
 Definition head t := fst (decompose_app t).
 Definition spine t := snd (decompose_app t).
 
+Lemma decompose_app_head_spine t : decompose_app t = (head t, spine t).
+Proof.
+  unfold head, spine.
+  destruct decompose_app => //.
+Qed.
+
 Lemma decompose_app_rec_mkApps f l l' :
   decompose_app_rec (mkApps f l) l' = decompose_app_rec f (l ++ l').
 Proof.
@@ -30,7 +36,6 @@ Proof.
   intros Hf. unfold decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
   destruct f; simpl in *; (discriminate || reflexivity).
 Qed.
-
 
 Lemma mkApps_app t l l' : mkApps t (l ++ l') = mkApps (mkApps t l) l'.
 Proof.
@@ -154,6 +159,12 @@ Qed.
 Lemma head_nApp_eq {t} : ~~ isApp t -> head t = t.
 Proof.
   intros napp. destruct t => //.
+Qed.
+
+Lemma head_mkApps_nApp f a : ~~ EAst.isApp f -> head (EAst.mkApps f a) = f.
+Proof.
+  rewrite head_mkApps /head => appf.
+  rewrite (decompose_app_mkApps f []) //.
 Qed.
 
 Lemma mkApps_eq_inj {t t' l l'} :

@@ -1935,11 +1935,12 @@ Proof.
   - depelim H. now eapply IHΓ.
 Qed.
 
-Lemma expand_lets_assumption_context Γ t :
+Lemma expand_lets_k_assumption_context Γ k t :
   assumption_context Γ ->
-  expand_lets Γ t = t.
+  expand_lets_k Γ k t = t.
 Proof.
-  induction Γ using rev_ind.
+  revert k.
+  induction Γ using rev_ind; intros k.
   - rewrite /expand_lets /expand_lets_k /=. intros _.
     rewrite lift0_id subst_empty //.
   - intros ass. eapply assumption_context_app in ass as [assl assx].
@@ -1949,11 +1950,19 @@ Proof.
     rewrite subst_app_simpl /=; len.
     rewrite subst_context_lift_id // lift0_context.
     rewrite (context_assumptions_context assl). simpl.
-    rewrite !Nat.add_1_r subst_reli_lift_id //.
+    rewrite !Nat.add_1_r. replace (k + S #|l|) with (S (k + #|l|)) by lia.
+    rewrite subst_reli_lift_id //; try lia.
     rewrite /expand_lets_ctx /expand_lets_k_ctx in IHΓ.
-    specialize (IHΓ assl).
+    specialize (IHΓ k assl).
     rewrite /expand_lets /expand_lets_k in IHΓ.
     now rewrite (context_assumptions_context assl) in IHΓ.
+Qed.
+
+Lemma expand_lets_assumption_context Γ t :
+  assumption_context Γ ->
+  expand_lets Γ t = t.
+Proof.
+  apply expand_lets_k_assumption_context.
 Qed.
 
 Lemma expand_lets_ctx_assumption_context Γ Δ :

@@ -72,6 +72,8 @@ Section firstorder.
 
 End firstorder.
 
+Arguments firstorder_ind : clear implicits.
+
 Fixpoint firstorder_env' (Σ : global_declarations) :=
   match Σ with
   | nil => []
@@ -87,7 +89,7 @@ Definition firstorder_env (Σ : global_env_ext) :=
   firstorder_env' Σ.1.(declarations).
 
 Lemma firstorder_lookup_inv {Σ i} :
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   {mind & lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind)}.
 Proof.
   unfold firstorder_ind. destruct lookup_env. 2:auto.
@@ -136,7 +138,7 @@ Qed.
 
 Lemma firstorder_ind_propositional {Σ : global_env_ext} {wfΣ:wf Σ} i mind oind :
   declared_inductive Σ i mind oind ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   ~~ isPropositional Σ i.
 Proof using Type.
   intros d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
@@ -168,7 +170,7 @@ Inductive firstorder_spine Σ (Γ : context) : term -> list term -> term -> Type
     Σ ;;; Γ ⊢ ty ≤ tProd na (mkApps (tInd i u) args) B ->
     declared_inductive Σ i mind oind ->
     Σ ;;; Γ |- hd : (mkApps (tInd i u) args) ->
-    @firstorder_ind Σ (@firstorder_env Σ) i ->
+    firstorder_ind Σ (@firstorder_env Σ) i ->
     firstorder_spine Σ Γ (subst10 hd B) tl B' ->
     firstorder_spine Σ Γ ty (hd :: tl) B'.
 
@@ -178,7 +180,7 @@ Inductive instantiated {Σ} (Γ : context) : term -> Type :=
   instantiated Γ (ty {0 := d}) ->
   instantiated Γ (tLetIn na d b ty)
 | instantiated_tProd na B i u args :
-  @firstorder_ind Σ (@firstorder_env Σ) i ->
+  firstorder_ind Σ (@firstorder_env Σ) i ->
     (forall x,
        (* Σ ;;; Γ |- x : mkApps (tInd i u) args ->  *)
       instantiated Γ (subst10 x B)) ->
@@ -430,13 +432,13 @@ Proof using Type.
   destruct plookup_env eqn:hl => //. destruct b => //.
   eapply (plookup_env_extends (Σ:=Σ)) in hl. 2:split; eauto.
   rewrite eq in hl. rewrite hl //. apply wf.
-  all: destruct l; eauto. 
+  all: destruct l; eauto.
 Qed.
 
 Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui args u pandi oind} :
   declared_constructor Σ (i, n) mind oind cbody ->
   PCUICArities.typing_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi) ->
-  @firstorder_ind Σ (@firstorder_env Σ) i ->
+  firstorder_ind Σ (@firstorder_env Σ) i ->
   firstorder_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi).
 Proof using Type.
   intros Hdecl Hspine Hind. revert Hspine.
@@ -510,11 +512,11 @@ Proof using Type.
         unfold firstorder_type; cbn.
         destruct (decompose_app decl_type) eqn:da.
         rewrite (decompose_app_inv da) subst_mkApps /=.
-        destruct t0 => //=; destruct l; eauto. 
+        destruct t0 => //=; destruct l; eauto.
         { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
           destruct (Nat.leb_spec n n0).
           destruct (n0 - n) eqn:E. lia.
-          cbn. rewrite nth_error_nil /=. 
+          cbn. rewrite nth_error_nil /=.
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
           rewrite decompose_app_mkApps //=.
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
@@ -550,7 +552,7 @@ Proof using Type.
           unfold firstorder_type; cbn.
           destruct (decompose_app decl_type) eqn:da.
           rewrite (decompose_app_inv da) subst_mkApps /=.
-          destruct t0 => //=; destruct l; eauto. 
+          destruct t0 => //=; destruct l; eauto.
           { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
             destruct (Nat.leb_spec n n0).
             destruct (n0 - n) eqn:E. lia.
@@ -624,7 +626,7 @@ Lemma firstorder_value_spec (Σ:global_env_ext) t i u args :
   wf Σ -> wf_local Σ [] ->
    Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
 Proof using Type.
   intros Hwf Hwfl Hty Hvalue.

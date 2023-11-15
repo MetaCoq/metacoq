@@ -1368,3 +1368,9 @@ Proof.
   eapply IHX0_2. now eapply IHX0_1.
 Qed.
 
+Lemma expanded_tApp_arg Σ Γ t u : expanded Σ Γ (tApp t u) -> expanded Σ Γ u.
+Proof.
+  move/expanded_mkApps_inv' => [expa _].
+  move: expa; rewrite (arguments_mkApps t [u]).
+  move/Forall_app => [] _ hu; now depelim hu.
+Qed.

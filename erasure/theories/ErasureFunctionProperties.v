@@ -8,7 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICReduction PCUICReflect PCUICWeakeningEnv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp PCUICContextConversionTyp PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
   PCUICConfluence PCUICConversion PCUICUnivSubstitutionTyp PCUICCumulativity PCUICSR PCUICSafeLemmata PCUICNormalization
-  PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
+  PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand
+  PCUICFirstorder.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping PCUICRetypingEnvIrrelevance.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness ErasureFunction.
@@ -1984,9 +1985,10 @@ Proof.
     intros. sq. now rewrite (abstract_env_ext_irr _ H H2).
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICFirstorder.
+(*Inductive is_abstraction : EAst.term -> Prop :=
+  | is_lam na b : is_abstraction (EAst.tLambda na b)
+  | is_fix mfix idx : is_abstraction (EAst.tFix mfix idx). *)
 
-From Equations Require Import Equations.
 
 Inductive firstorder_evalue Σ : EAst.term -> Prop :=
   | is_fo i n args npars nargs :

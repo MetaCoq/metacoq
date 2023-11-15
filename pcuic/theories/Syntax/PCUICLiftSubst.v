@@ -615,6 +615,37 @@ Proof.
   f_equal. rewrite List.skipn_length. lia.
 Qed.
 
+Lemma nth_error_extended_subst Γ k i :
+  nth_error (extended_subst Γ k) i =
+  match nth_error Γ i with
+  | Some decl =>
+    match decl_body decl with
+    | None => Some (tRel (k + context_assumptions (List.firstn i Γ)))
+    | Some body =>
+      let s := extended_subst (List.skipn (S i) Γ) (context_assumptions (List.firstn i Γ) + k) in
+      let b' := lift (context_assumptions (List.skipn (S i) Γ) +
+        (context_assumptions (List.firstn i Γ) + k)) #|s| body in
+      Some (subst0 s b')
+    end
+  | None => None
+  end.
+Proof.
+  induction Γ in k, i |- *.
+  - cbn. rewrite !nth_error_nil //.
+  - rewrite skipn_S. cbn. destruct a as [na [] ty].
+    cbn [decl_body].
+    destruct i.
+    + cbn => //.
+    + cbn. rewrite IHΓ //.
+    + cbn.
+      destruct i.
+      * cbn. lia_f_equal.
+      * cbn. rewrite IHΓ.
+        destruct nth_error => //.
+        destruct (decl_body c) => //; try lia_f_equal.
+        cbn. lia_f_equal.
+Qed.
+
 Lemma lift_extended_subst (Γ : context) k :
   extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
 Proof.

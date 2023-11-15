@@ -141,7 +141,7 @@ Proof.
   intros obs.
   decompose [ex and prod] obs. clear obs. subst.
   unfold run, time.
-  unfold transform_blocks_program. cbn [snd]. f_equal.
+  unfold EConstructorsAsBlocks.transform_blocks_program. cbn [snd]. f_equal.
   repeat destruct_compose.
   intros.
   cbn [transform rebuild_wf_env_transform] in *.
@@ -269,15 +269,15 @@ Proof.
   now apply aux. now apply aux'.
 Qed.
 
-Lemma firstorder_evalue_block_transform (Σ : EEnvMap.GlobalContextMap.t) t: firstorder_evalue_block Σ t <-> firstorder_evalue_block (transform_blocks_env Σ) t.
+Lemma firstorder_evalue_block_transform (Σ : EEnvMap.GlobalContextMap.t) t: firstorder_evalue_block Σ t <-> firstorder_evalue_block (EConstructorsAsBlocks.transform_blocks_env Σ) t.
 Proof.
   split.
   - apply firstorder_evalue_block_elim; intros.
     constructor; eauto. unfold EGlobalEnv.lookup_constructor_pars_args.
-    rewrite lookup_constructor_transform_blocks; eauto.
+    rewrite EConstructorsAsBlocks.lookup_constructor_transform_blocks; eauto.
   - apply firstorder_evalue_block_elim; intros.
     constructor; eauto. unfold EGlobalEnv.lookup_constructor_pars_args in H.
-    rewrite lookup_constructor_transform_blocks in H; eauto.
+    rewrite EConstructorsAsBlocks.lookup_constructor_transform_blocks in H; eauto.
 Qed.
 
 Import EWcbvEval.
@@ -729,7 +729,7 @@ Proof.
   rewrite /EGlobalEnv.lookup_constructor_pars_args.
   destruct EGlobalEnv.lookup_constructor eqn:e => //=.
   destruct p as [[m i] cb]. intros [= <- <-].
-  now eapply wellformed_lookup_constructor_pars in e.
+  now eapply EConstructorsAsBlocks.wellformed_lookup_constructor_pars in e.
 Qed.
 
 Lemma compile_evalue_box_firstorder {efl : EEnvFlags} {Σ : EEnvMap.GlobalContextMap.t} v :
@@ -790,7 +790,7 @@ Proof.
   intros hasp wf.
   rewrite /EGlobalEnv.lookup_inductive_pars.
   destruct EGlobalEnv.lookup_minductive eqn:e => //=.
-  eapply wellformed_lookup_inductive_pars in e => //. congruence.
+  eapply EConstructorsAsBlocks.wellformed_lookup_inductive_pars in e => //. congruence.
 Qed.
 
 #[global] Instance inline_projections_optimization_pres {fl : WcbvFlags}
@@ -942,7 +942,7 @@ Qed.
   ETransformPresFO.t
     (@constructors_as_blocks_transformation efl has_app has_rel hasbox has_pars has_cstrblocks)
     fo_evalue_map (fun p => firstorder_evalue_block p.1 p.2)
-    (fun p pr fo => (transform_blocks_env p.1, compile_evalue_box p.2 [])).
+    (fun p pr fo => (EConstructorsAsBlocks.transform_blocks_env p.1, compile_evalue_box p.2 [])).
 Proof.
   split.
   - intros v pr fo. cbn. eapply firstorder_evalue_block_transform. eapply compile_evalue_box_firstorder; tea. apply pr.
@@ -950,14 +950,14 @@ Proof.
     destruct pr as [[wf _] _]. cbn in wf.
     move: v fo.
     apply: firstorder_evalue_elim; intros.
-    rewrite /transform_blocks_program /=. f_equal.
+    rewrite /EConstructorsAsBlocks.transform_blocks_program /=. f_equal.
     rewrite EConstructorsAsBlocks.transform_blocks_decompose.
     rewrite EAstUtils.decompose_app_mkApps // /=.
     rewrite compile_evalue_box_mkApps // ?app_nil_r.
     rewrite H.
     eapply lookup_constructor_pars_args_nopars in H => //. subst npars.
-    rewrite chop_all. len. cbn. f_equal. rewrite skipn_0 in H1 H0.
-    ELiftSubst.solve_all. unfold transform_blocks_program in a. now noconf a.
+    rewrite EConstructorsAsBlocks.chop_all. len. cbn. f_equal. rewrite skipn_0 in H1 H0.
+    ELiftSubst.solve_all. unfold EConstructorsAsBlocks.transform_blocks_program in a. now noconf a.
 Qed.
 
 #[global] Instance constructors_as_blocks_transformation_pres_app {efl : EWellformed.EEnvFlags}
@@ -976,8 +976,8 @@ Proof.
     eexists.
     { destruct wf. split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP[].
       apply/andP. split => //. now apply EEtaExpanded.isEtaExp_tApp_arg in exp'. }
-    simpl. rewrite /transform_blocks_program /=. f_equal.
-    rewrite (transform_blocks_mkApps_eta_fn _ _ [u]) //.
+    simpl. rewrite /EConstructorsAsBlocks.transform_blocks_program /=. f_equal.
+    rewrite (EConstructorsAsBlocks.transform_blocks_mkApps_eta_fn _ _ [u]) //.
 Qed.
 
 #[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}
@@ -1071,7 +1071,7 @@ Lemma transform_lambdabox_pres_term p p' pre pre' :
   (transform verified_lambdabox_pipeline p pre).2 =
   (transform verified_lambdabox_pipeline p' pre').2.
 Proof.
-  intros hext. epose proof (verified_lambdabox_pipeline_extends p p' pre pre' hext).
+  intros hext. epose proof (verified_lambdabox_pipeline_extends' p p' pre pre' hext).
   apply H.
 Qed.
 
@@ -1677,7 +1677,7 @@ Section PCUICExpandLets.
 
 End PCUICExpandLets.
 
-Section pipeline_theorem.
+Section pipeline_cond.
 
   Instance cf : checker_flags := extraction_checker_flags.
   Instance nf : PCUICSN.normalizing_flags := PCUICSN.extraction_normalizing.
@@ -1838,8 +1838,8 @@ Section pipeline_theorem.
     repeat rewrite -transform_compose_assoc. 
     repeat (destruct_compose; intro). 
     unfold transform at 1. cbn -[transform].
-    rewrite lookup_env_transform_blocks.
-    set (transform_blocks_decl _). 
+    rewrite EConstructorsAsBlocks.lookup_env_transform_blocks.
+    set (EConstructorsAsBlocks.transform_blocks_decl _). 
     unfold transform at 1. cbn -[transform].
     unfold transform at 1. cbn -[transform].
     erewrite EInlineProjections.lookup_env_optimize.

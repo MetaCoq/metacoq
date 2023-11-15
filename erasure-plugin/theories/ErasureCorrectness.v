@@ -108,7 +108,7 @@ Lemma obseq_lambdabox (Σt Σ'v : EProgram.eprogram_env) pr pr' p' v' :
 Proof.
   intros ext obseq.
   destruct Σt as [Σ t], Σ'v as [Σ' v].
-  pose proof verified_lambdabox_pipeline_extends.
+  pose proof verified_lambdabox_pipeline_extends'.
   red in H.
   assert (pr'' : pre verified_lambdabox_pipeline (Σ, v)).
   { clear -pr pr' ext. destruct pr as [[] ?], pr' as [[] ?].
@@ -141,7 +141,7 @@ Proof.
   intros obs.
   decompose [ex and prod] obs. clear obs. subst.
   unfold run, time.
-  unfold transform_blocks_program. cbn [snd]. f_equal.
+  unfold EConstructorsAsBlocks.transform_blocks_program. cbn [snd]. f_equal.
   repeat destruct_compose.
   intros.
   cbn [transform rebuild_wf_env_transform] in *.
@@ -245,27 +245,39 @@ Fixpoint compile_value_box Σ (t : PCUICAst.term) (acc : list EAst.term) : EAst.
 
 From Equations Require Import Equations.
 
-
-Inductive firstorder_evalue_block : EAst.term -> Prop :=
+Inductive firstorder_evalue_block Σ : EAst.term -> Prop :=
   | is_fo_block i n args :
-    Forall (firstorder_evalue_block) args ->
-    firstorder_evalue_block (EAst.tConstruct i n args).
+    EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (0, #|args|) ->
+    Forall (firstorder_evalue_block Σ) args ->
+    firstorder_evalue_block Σ (EAst.tConstruct i n args).
 
-Lemma firstorder_evalue_block_elim {P : EAst.term -> Prop} :
+Lemma firstorder_evalue_block_elim Σ {P : EAst.term -> Prop} :
   (forall i n args,
-    Forall firstorder_evalue_block args ->
+    EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (0, #|args|) ->
+    Forall (firstorder_evalue_block Σ) args ->
     Forall P args ->
     P (EAst.tConstruct i n args)) ->
-  forall t, firstorder_evalue_block t -> P t.
+  forall t, firstorder_evalue_block Σ t -> P t.
 Proof.
   intros Hf.
   fix aux 2.
   intros t fo; destruct fo.
-  eapply Hf => //.
+  eapply Hf => //. clear H. rename H0 into H.  
   move: args H.
   fix aux' 2.
   intros args []; constructor.
   now apply aux. now apply aux'.
+Qed.
+
+Lemma firstorder_evalue_block_transform (Σ : EEnvMap.GlobalContextMap.t) t: firstorder_evalue_block Σ t <-> firstorder_evalue_block (EConstructorsAsBlocks.transform_blocks_env Σ) t.
+Proof.
+  split.
+  - apply firstorder_evalue_block_elim; intros.
+    constructor; eauto. unfold EGlobalEnv.lookup_constructor_pars_args.
+    rewrite EConstructorsAsBlocks.lookup_constructor_transform_blocks; eauto.
+  - apply firstorder_evalue_block_elim; intros.
+    constructor; eauto. unfold EGlobalEnv.lookup_constructor_pars_args in H.
+    rewrite EConstructorsAsBlocks.lookup_constructor_transform_blocks in H; eauto.
 Qed.
 
 Import EWcbvEval.
@@ -717,21 +729,24 @@ Proof.
   rewrite /EGlobalEnv.lookup_constructor_pars_args.
   destruct EGlobalEnv.lookup_constructor eqn:e => //=.
   destruct p as [[m i] cb]. intros [= <- <-].
-  now eapply wellformed_lookup_constructor_pars in e.
+  now eapply EConstructorsAsBlocks.wellformed_lookup_constructor_pars in e.
 Qed.
 
 Lemma compile_evalue_box_firstorder {efl : EEnvFlags} {Σ : EEnvMap.GlobalContextMap.t} v :
   has_cstr_params = false ->
   EWellformed.wf_glob Σ ->
-  firstorder_evalue Σ v -> firstorder_evalue_block (flip compile_evalue_box [] v).
+  firstorder_evalue Σ v -> firstorder_evalue_block Σ (flip compile_evalue_box [] v).
 Proof.
   intros hpars wf.
   move: v; apply: firstorder_evalue_elim.
   intros.
   rewrite /flip (compile_evalue_box_mkApps) // ?app_nil_r.
+  pose proof (H' := H). 
   eapply lookup_constructor_pars_args_nopars in H; tea. subst npars.
   rewrite skipn_0 in H1.
-  constructor. ELiftSubst.solve_all.
+  constructor.
+  - rewrite map_length. cbn in H2. congruence.
+  - ELiftSubst.solve_all.
 Qed.
 
 Definition fo_evalue (p : program E.global_context EAst.term) : Prop := firstorder_evalue p.1 p.2.
@@ -775,7 +790,7 @@ Proof.
   intros hasp wf.
   rewrite /EGlobalEnv.lookup_inductive_pars.
   destruct EGlobalEnv.lookup_minductive eqn:e => //=.
-  eapply wellformed_lookup_inductive_pars in e => //. congruence.
+  eapply EConstructorsAsBlocks.wellformed_lookup_inductive_pars in e => //. congruence.
 Qed.
 
 #[global] Instance inline_projections_optimization_pres {fl : WcbvFlags}
@@ -926,23 +941,23 @@ Qed.
   {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   ETransformPresFO.t
     (@constructors_as_blocks_transformation efl has_app has_rel hasbox has_pars has_cstrblocks)
-    fo_evalue_map (fun p => firstorder_evalue_block p.2)
-    (fun p pr fo => (transform_blocks_env p.1, compile_evalue_box p.2 [])).
+    fo_evalue_map (fun p => firstorder_evalue_block p.1 p.2)
+    (fun p pr fo => (EConstructorsAsBlocks.transform_blocks_env p.1, compile_evalue_box p.2 [])).
 Proof.
   split.
-  - intros v pr fo; eapply compile_evalue_box_firstorder; tea. apply pr.
+  - intros v pr fo. cbn. eapply firstorder_evalue_block_transform. eapply compile_evalue_box_firstorder; tea. apply pr.
   - move=> [Σ v] /= pr fo. rewrite /flip.
     destruct pr as [[wf _] _]. cbn in wf.
     move: v fo.
     apply: firstorder_evalue_elim; intros.
-    rewrite /transform_blocks_program /=. f_equal.
+    rewrite /EConstructorsAsBlocks.transform_blocks_program /=. f_equal.
     rewrite EConstructorsAsBlocks.transform_blocks_decompose.
     rewrite EAstUtils.decompose_app_mkApps // /=.
     rewrite compile_evalue_box_mkApps // ?app_nil_r.
     rewrite H.
     eapply lookup_constructor_pars_args_nopars in H => //. subst npars.
-    rewrite chop_all. len. cbn. f_equal. rewrite skipn_0 in H1 H0.
-    ELiftSubst.solve_all. unfold transform_blocks_program in a. now noconf a.
+    rewrite EConstructorsAsBlocks.chop_all. len. cbn. f_equal. rewrite skipn_0 in H1 H0.
+    ELiftSubst.solve_all. unfold EConstructorsAsBlocks.transform_blocks_program in a. now noconf a.
 Qed.
 
 #[global] Instance constructors_as_blocks_transformation_pres_app {efl : EWellformed.EEnvFlags}
@@ -961,8 +976,8 @@ Proof.
     eexists.
     { destruct wf. split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP[].
       apply/andP. split => //. now apply EEtaExpanded.isEtaExp_tApp_arg in exp'. }
-    simpl. rewrite /transform_blocks_program /=. f_equal.
-    rewrite (transform_blocks_mkApps_eta_fn _ _ [u]) //.
+    simpl. rewrite /EConstructorsAsBlocks.transform_blocks_program /=. f_equal.
+    rewrite (EConstructorsAsBlocks.transform_blocks_mkApps_eta_fn _ _ [u]) //.
 Qed.
 
 #[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}
@@ -999,7 +1014,7 @@ Proof.
 Qed.
 
 Lemma lambdabox_pres_fo :
-  exists compile_value, ETransformPresFO.t verified_lambdabox_pipeline fo_evalue_map (fun p => firstorder_evalue_block p.2) compile_value /\
+  exists compile_value, ETransformPresFO.t verified_lambdabox_pipeline fo_evalue_map (fun p => firstorder_evalue_block p.1 p.2) compile_value /\
     forall p pr fo, (compile_value p pr fo).2 = compile_evalue_box (ERemoveParams.strip p.1 p.2) [].
 Proof.
   eexists.
@@ -1056,7 +1071,7 @@ Lemma transform_lambdabox_pres_term p p' pre pre' :
   (transform verified_lambdabox_pipeline p pre).2 =
   (transform verified_lambdabox_pipeline p' pre').2.
 Proof.
-  intros hext. epose proof (verified_lambdabox_pipeline_extends p p' pre pre' hext).
+  intros hext. epose proof (verified_lambdabox_pipeline_extends' p p' pre pre' hext).
   apply H.
 Qed.
 
@@ -1504,10 +1519,210 @@ Qed.
 
 Arguments PCUICFirstorder.firstorder_ind _ _ : clear implicits.
 
-Section pipeline_theorem.
+Section PCUICExpandLets.
+  Import PCUICAst PCUICAstUtils PCUICFirstorder.
+  Import PCUICEnvironment.
+  Import PCUICExpandLets PCUICExpandLetsCorrectness.
+
+  Lemma trans_axiom_free Σ : axiom_free Σ -> axiom_free (trans_global_env Σ).
+  Proof.
+    intros ax kn decl.
+    rewrite /trans_global_env /= /PCUICAst.declared_constant /= /trans_global_decls.
+    intros h; apply PCUICElimination.In_map in h as [[kn' decl']  [hin heq]].
+    noconf heq. destruct decl'; noconf H.
+    apply ax in hin.
+    destruct c as [? [] ? ?] => //.
+  Qed.
+
+  Lemma expand_lets_preserves_fo (Σ : global_env_ext) Γ v :
+    wf Σ ->
+    firstorder_value Σ Γ v ->
+    firstorder_value (trans_global Σ) (trans_local Γ) (trans v).
+  Proof.
+    intros wfΣ; move: v; apply: firstorder_value_inds.
+    intros i n ui u args pandi hty hargs ihargs isp.
+    rewrite trans_mkApps. econstructor.
+    apply expand_lets_sound in hty.
+    rewrite !trans_mkApps in hty. cbn in hty. exact hty.
+    ELiftSubst.solve_all.
+    move/negbTE: isp.
+    rewrite /PCUICFirstorder.isPropositional.
+    rewrite /lookup_inductive /lookup_inductive_gen /lookup_minductive_gen trans_lookup.
+    destruct lookup_env => //. destruct g => //. cbn. rewrite nth_error_mapi.
+    destruct nth_error => //=.
+    rewrite /PCUICFirstorder.isPropositionalArity.
+    rewrite (trans_destArity []). destruct destArity => //.
+    destruct p => //. now intros ->.
+  Qed.
+
+  Lemma forallb_mapi {A B} (f f' : nat -> A -> B) (g g' : B -> bool) l :
+    (forall n x, nth_error l n = Some x -> g (f n x) = g' (f' n x)) ->
+    forallb g (mapi f l) = forallb g' (mapi f' l).
+  Proof.
+    unfold mapi.
+    intros.
+    assert
+      (forall (n : nat) (x : A), nth_error l n = Some x -> g (f (0 + n) x) = g' (f' (0 + n) x)).
+    { intros n x. now apply H. }
+    clear H.
+    revert H0.
+    generalize 0.
+    induction l; cbn; auto.
+    intros n hfg. f_equal. specialize (hfg 0). rewrite Nat.add_0_r in hfg. now apply hfg.
+    eapply IHl. intros. replace (S n + n0) with (n + S n0) by lia. eapply hfg.
+    now cbn.
+  Qed.
+
+  Lemma forallb_mapi_impl {A B} (f f' : nat -> A -> B) (g g' : B -> bool) l :
+    (forall n x, nth_error l n = Some x -> g (f n x) -> g' (f' n x)) ->
+    forallb g (mapi f l) -> forallb g' (mapi f' l).
+  Proof.
+    unfold mapi.
+    intros hfg.
+    assert
+      (forall (n : nat) (x : A), nth_error l n = Some x -> g (f (0 + n) x) -> g' (f' (0 + n) x)).
+    { intros n x ?. now apply hfg. }
+    clear hfg.
+    revert H.
+    generalize 0.
+    induction l; cbn; auto.
+    intros n hfg. move/andP => [] hg hf.
+    pose proof (hfg 0). rewrite Nat.add_0_r in H. apply H in hg => //. rewrite hg /=.
+    eapply IHl. intros. replace (S n + n0) with (n + S n0) by lia. eapply hfg. now cbn.
+    now rewrite Nat.add_succ_r. assumption.
+  Qed.
+
+  Lemma expand_firstorder_type Σ n k t :
+    (forall nm, plookup_env (firstorder_env' Σ) nm = Some true ->
+      plookup_env (firstorder_env' (trans_global_decls Σ)) nm = Some true) ->
+    @PCUICFirstorder.firstorder_type (firstorder_env' Σ) n k t ->
+    @PCUICFirstorder.firstorder_type (firstorder_env' (trans_global_decls Σ)) n k (trans t).
+  Proof.
+    rewrite /PCUICFirstorder.firstorder_type /PCUICFirstorder.firstorder_env.
+    pose proof (trans_decompose_app t).
+    destruct decompose_app. rewrite {}H. cbn.
+    case: t0 => //=.
+    - intros n' hn. destruct l => //.
+    - case => /= kn _ _ hd. destruct l => //.
+      destruct plookup_env eqn:hp => //.
+      destruct b => //.
+      eapply hd in hp. rewrite hp //.
+  Qed.
+
+  Lemma trans_firstorder_mutind Σ m :
+    (forall nm, plookup_env (firstorder_env' Σ) nm = Some true ->
+      plookup_env (firstorder_env' (trans_global_decls Σ)) nm = Some true) ->
+    @firstorder_mutind (firstorder_env' Σ) m ->
+    @firstorder_mutind (firstorder_env' (trans_global_decls Σ)) (trans_minductive_body m).
+  Proof.
+    intros he.
+    rewrite /firstorder_mutind. f_equal.
+    rewrite /trans_minductive_body /=.
+    rewrite -{1}[ind_bodies m]map_id. rewrite -mapi_cst_map.
+    move/andP => [] -> /=.
+    eapply forallb_mapi_impl.
+    intros n x hnth.
+    rewrite /firstorder_oneind. destruct x; cbn.
+    move/andP => [] hc ->; rewrite andb_true_r.
+    rewrite forallb_map. solve_all.
+    move: H; rewrite /firstorder_con /=.
+    rewrite !rev_app_distr !alli_app.
+    move/andP => [hp ha]. apply/andP; split.
+    - len. rewrite /trans_local -map_rev alli_map.
+      eapply alli_impl; tea. intros i []. cbn.
+      now eapply expand_firstorder_type.
+    - len. len in ha. clear -ha he.
+      move: ha; generalize (cstr_args x) as args.
+      induction args => ha; cbn => //.
+      destruct a as [na [] ?] => /=. eapply IHargs. cbn in ha.
+      rewrite alli_app in ha. move/andP: ha => [] //.
+      cbn. rewrite PCUICSigmaCalculus.smash_context_acc /=.
+      cbn in ha. rewrite alli_app in ha. move/andP: ha => [] // hc hd.
+      rewrite alli_app. apply/andP. split. apply IHargs => //.
+      len. cbn. rewrite andb_true_r. cbn in hd. rewrite andb_true_r in hd. len in hd.
+      clear -he hd. move: hd. rewrite /firstorder_type.
+      destruct (decompose_app decl_type) eqn:e. cbn.
+      destruct t0 => //; apply decompose_app_inv in e; rewrite e.
+      destruct l => //.
+      { move/andP => [] /Nat.leb_le hn /Nat.ltb_lt hn'.
+        rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
+          decompose_app_mkApps //=.
+        { destruct nth_error eqn:hnth.
+          pose proof (nth_error_Some_length hnth).
+          move: hnth H.
+          destruct (Nat.leb_spec #|args| n). len. lia. len. lia. now cbn. }
+        destruct nth_error eqn:hnth.
+        move/nth_error_Some_length: hnth. len. destruct (Nat.leb_spec #|args| n). lia. lia. len.
+        destruct (Nat.leb_spec #|args| n). apply/andP. split.
+        eapply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
+        apply/andP; split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
+      { rewrite trans_mkApps PCUICLiftSubst.lift_mkApps PCUICLiftSubst.subst_mkApps
+          decompose_app_mkApps //=.
+          destruct ind, l => //=. destruct plookup_env eqn:hp => //.
+          destruct b => //. apply he in hp. rewrite hp //. }
+    Qed.
+
+  Lemma trans_firstorder_env Σ :
+    (forall nm, plookup_env (firstorder_env' Σ) nm = Some true ->
+      plookup_env (firstorder_env' (trans_global_decls Σ)) nm = Some true).
+  Proof.
+    induction Σ; cbn => //.
+    destruct a. destruct g => //=.
+    intros nm.
+    destruct eqb => //. now apply IHΣ.
+    intros nm. destruct eqb => //.
+    intros [=]. f_equal.
+    now eapply trans_firstorder_mutind. apply IHΣ.
+  Qed.
+
+End PCUICExpandLets.
+
+Section pipeline_cond.
 
   Instance cf : checker_flags := extraction_checker_flags.
   Instance nf : PCUICSN.normalizing_flags := PCUICSN.extraction_normalizing.
+
+  Variable Σ : global_env_ext_map.
+  Variable t : PCUICAst.term.
+  Variable T : PCUICAst.term.
+
+  Variable HΣ : PCUICTyping.wf_ext Σ.
+  Variable expΣ : PCUICEtaExpand.expanded_global_env Σ.1.
+  Variable expt : PCUICEtaExpand.expanded Σ.1 [] t.
+
+  Variable typing : PCUICTyping.typing Σ [] t T.
+
+  Variable Normalisation : (forall Σ, wf_ext Σ -> PCUICSN.NormalizationIn Σ).
+
+  Lemma precond : pre verified_erasure_pipeline (Σ, t).
+  Proof.
+    hnf. repeat eapply conj; sq; cbn; eauto.
+    - red. cbn. eauto.
+    - intros. red. intros. now eapply Normalisation.
+  Qed.
+
+  Variable v : PCUICAst.term.
+
+  Variable Heval : ∥PCUICWcbvEval.eval Σ t v∥.
+
+  Lemma precond2 : pre verified_erasure_pipeline (Σ, v).
+  Proof.
+    cbn. destruct Heval. repeat eapply conj; sq; cbn; eauto.
+    - red. cbn. split; eauto.
+      eexists.
+      eapply PCUICClassification.subject_reduction_eval; eauto.
+    - eapply (PCUICClassification.wcbveval_red (Σ := Σ)) in X; tea.
+      eapply PCUICEtaExpand.expanded_red in X; tea. apply HΣ.
+      intros ? ?; rewrite nth_error_nil => //.
+    - cbn. intros wf ? ? ? ? ? ?. now eapply Normalisation.
+  Qed.
+
+End pipeline_cond. 
+
+Section pipeline_theorem.
+
+  Instance cf_ : checker_flags := extraction_checker_flags.
+  Instance nf_ : PCUICSN.normalizing_flags := PCUICSN.extraction_normalizing.
 
   Variable Σ : global_env_ext_map.
   Variable HΣ : PCUICTyping.wf_ext Σ.
@@ -1528,29 +1743,11 @@ Section pipeline_theorem.
 
   Variable Normalisation :  (forall Σ, wf_ext Σ -> PCUICSN.NormalizationIn Σ).
 
-  Lemma precond : pre verified_erasure_pipeline (Σ, t).
-  Proof.
-    hnf. repeat eapply conj; sq; cbn; eauto.
-    - red. cbn. eauto.
-    - intros. red. intros. now eapply Normalisation.
-  Qed.
-
   Variable Heval : ∥PCUICWcbvEval.eval Σ t v∥.
 
-  Lemma precond2 : pre verified_erasure_pipeline (Σ, v).
-  Proof.
-    cbn. destruct Heval. repeat eapply conj; sq; cbn; eauto.
-    - red. cbn. split; eauto.
-      eexists.
-      eapply PCUICClassification.subject_reduction_eval; eauto.
-    - eapply (PCUICClassification.wcbveval_red (Σ := Σ)) in X; tea.
-      eapply PCUICEtaExpand.expanded_red in X; tea. apply HΣ.
-      intros ? ?; rewrite nth_error_nil => //.
-    - cbn. intros wf ? ? ? ? ? ?. now eapply Normalisation.
-  Qed.
-
-  Let Σ_t := (transform verified_erasure_pipeline (Σ, t) precond).1.
-  Let t_t := (transform verified_erasure_pipeline (Σ, t) precond).2.
+  Let Σ_t := (transform verified_erasure_pipeline (Σ, t) (precond _ _ _ _ expΣ expt typing _)).1.
+  Let t_t := (transform verified_erasure_pipeline (Σ, t) (precond _ _ _ _ expΣ expt typing _)).2.
+  Let Σ_v := (transform verified_erasure_pipeline (Σ, v) (precond2 _ _ _ _ expΣ expt typing _ _ Heval)).1.
   Let v_t := compile_value_box (PCUICExpandLets.trans_global_env Σ) v [].
 
   Lemma fo_v : PCUICFirstorder.firstorder_value Σ [] v.
@@ -1561,10 +1758,10 @@ Section pipeline_theorem.
     - eapply PCUICWcbvEval.eval_to_value; eauto.
   Qed.
 
-  Lemma v_t_spec : v_t = (transform verified_erasure_pipeline (Σ, v) precond2).2.
+  Lemma v_t_spec : v_t = (transform verified_erasure_pipeline (Σ, v) (precond2 _ _ _ _ expΣ expt typing _ _ Heval)).2.
   Proof.
-    unfold v_t. generalize fo_v, precond2.
-    intros hv pre.
+    unfold v_t. generalize fo_v. set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre. 
+    intros hv.
     unfold verified_erasure_pipeline.
     rewrite -transform_compose_assoc.
     destruct_compose.
@@ -1590,7 +1787,7 @@ Section pipeline_theorem.
     set (p := transform erase_transform _ _).
     pose proof (@erase_tranform_firstorder _ h v i u (List.map PCUICExpandLets.trans args) Normalisation').
     forward H0.
-    { cbn. rewrite -eqtr.
+    { cbn. rewrite -eqtr.  
       eapply (PCUICClassification.subject_reduction_eval (Σ := Σ)) in X; tea.
       eapply PCUICExpandLetsCorrectness.expand_lets_sound in X.
       now rewrite PCUICExpandLetsCorrectness.trans_mkApps /= in X. }
@@ -1623,15 +1820,165 @@ Section pipeline_theorem.
 
   Import PCUICWfEnv.
 
+  Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)  {has_rel : has_tRel} {has_box : has_tBox}  :
+    EGlobalEnv.lookup_env Σ_v kn = Some (EAst.InductiveDecl decl) ->
+    exists decl', 
+      PCUICAst.PCUICEnvironment.lookup_global (PCUICExpandLets.trans_global_decls
+      (PCUICAst.PCUICEnvironment.declarations
+         Σ.1)) kn = Some (PCUICAst.PCUICEnvironment.InductiveDecl decl')
+       /\ decl = ERemoveParams.strip_inductive_decl (erase_mutual_inductive_body decl'). 
+  Proof. 
+    Opaque compose.
+    unfold Σ_v, verified_erasure_pipeline.
+    repeat rewrite -transform_compose_assoc. 
+    destruct_compose; intro. cbn. 
+    destruct_compose; intro. cbn.
+    set (erase_program _ _). 
+    unfold verified_lambdabox_pipeline.
+    repeat rewrite -transform_compose_assoc. 
+    repeat (destruct_compose; intro). 
+    unfold transform at 1. cbn -[transform].
+    rewrite EConstructorsAsBlocks.lookup_env_transform_blocks.
+    set (EConstructorsAsBlocks.transform_blocks_decl _). 
+    unfold transform at 1. cbn -[transform].
+    unfold transform at 1. cbn -[transform].
+    erewrite EInlineProjections.lookup_env_optimize.
+    2: {
+      eapply EOptimizePropDiscr.remove_match_on_box_env_wf; eauto.
+      apply ERemoveParams.strip_env_wf.
+      unfold transform at 1; cbn -[transform].
+      rewrite erase_global_deps_fast_spec.
+      eapply erase_global_deps_wf_glob.
+      intros ? He; now rewrite He. }
+    set (EInlineProjections.optimize_decl _). 
+    unfold transform at 1. cbn -[transform].
+    unfold transform at 1. cbn -[transform].
+    erewrite EOptimizePropDiscr.lookup_env_remove_match_on_box.
+    2: {
+      apply ERemoveParams.strip_env_wf.
+      unfold transform at 1. cbn -[transform].
+      rewrite erase_global_deps_fast_spec.
+      eapply erase_global_deps_wf_glob.
+      intros ? He; now rewrite He. }
+    set (EOptimizePropDiscr.remove_match_on_box_decl _).
+    unfold transform at 1. cbn -[transform].
+    unfold transform at 1. cbn -[transform].
+    erewrite ERemoveParams.lookup_env_strip.
+    set (ERemoveParams.strip_decl _).
+    unfold transform at 1. cbn -[transform].
+    rewrite erase_global_deps_fast_spec.
+    2: { cbn. intros ? He. rewrite He. eauto. }
+    intro. 
+    set (EAstUtils.term_global_deps _).
+    set (build_wf_env_from_env _ _).
+    epose proof 
+      (lookup_env_in_erase_global_deps optimized_abstract_env_impl w t0
+      _ kn _ Hyp0).
+    set (EGlobalEnv.lookup_env _ _).
+    case_eq o. 2: { intros ?. inversion 1. }
+    destruct g3; intro Ho; [inversion 1|].
+    cbn. inversion 1.  
+    specialize (H8 m). forward H8.
+    epose proof (wf_fresh_globals _ HΣ). clear - H10.
+    revert H10. cbn. set (Σ.1). induction 1; econstructor; eauto.
+    cbn. clear -H. induction H; econstructor; eauto.
+    unfold o in Ho; rewrite Ho in H8.   
+    specialize (H8 eq_refl). 
+    destruct H8 as [decl' [? ?]]. exists decl'; split ; eauto.
+    rewrite <- H10. now destruct decl, m.
+  Qed. 
+
+  Lemma verified_erasure_pipeline_firstorder_evalue_block :
+    firstorder_evalue_block Σ_v v_t.
+  Proof.
+    rewrite v_t_spec.
+    unfold Σ_v.
+    unfold verified_erasure_pipeline.
+    repeat rewrite -transform_compose_assoc.
+    destruct_compose.
+    generalize fo_v. intros hv.
+    cbn [transform pcuic_expand_lets_transform].
+    intros pre1. destruct_compose. intros pre2. 
+    destruct lambdabox_pres_fo as [fn [tr hfn]].  
+    destruct tr. pose proof (Heval' := Heval). sq. rewrite transform_fo. 
+    { intro. eapply preserves_fo. }
+    assert (eqtr : PCUICExpandLets.trans v = v).
+    { clear -hv.
+      move: v hv.
+      eapply PCUICFirstorder.firstorder_value_inds.
+      intros.
+      rewrite PCUICExpandLetsCorrectness.trans_mkApps /=.
+      f_equal. ELiftSubst.solve_all. }
+    assert (PCUICFirstorder.firstorder_value (PCUICExpandLets.trans_global_env Σ.1, Σ.2) [] v).
+    { eapply expand_lets_preserves_fo in hv; eauto. now rewrite eqtr in hv. }
+    assert (Normalisation': PCUICSN.NormalizationIn (PCUICExpandLets.trans_global Σ)).
+    { destruct pre1 as [[] ?]. apply a. cbn. apply w. }
+    set (Σ' := build_global_env_map (PCUICExpandLets.trans_global_env Σ.1)).
+    set (p := transform erase_transform _ _).
+    pose proof (@erase_tranform_firstorder _ pre1 v i u (List.map PCUICExpandLets.trans args) Normalisation').
+    forward H0.
+    { cbn. 
+      eapply (PCUICClassification.subject_reduction_eval (Σ := Σ)) in Heval'; tea.
+      eapply PCUICExpandLetsCorrectness.expand_lets_sound in Heval'.
+      now rewrite PCUICExpandLetsCorrectness.trans_mkApps /= in Heval'. }
+    forward H0. { cbn. now eapply trans_axiom_free. }
+    forward H0.
+    { cbn. clear -HΣ fo.
+      move: fo.
+      rewrite /PCUICFirstorder.firstorder_ind /= PCUICExpandLetsCorrectness.trans_lookup /=.
+      destruct PCUICAst.PCUICEnvironment.lookup_env => //. destruct g => //=.
+      eapply trans_firstorder_mutind. eapply trans_firstorder_env. }
+    forward H0. { cbn. rewrite -eqtr.
+      unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ := Σ)); tea. exact extraction_checker_flags.
+      apply HΣ. apply PCUICExpandLetsCorrectness.trans_wf, HΣ.
+      2:{ rewrite eqtr. eapply PCUICWcbvEval.value_final. now eapply PCUICWcbvEval.eval_to_value in Heval'. }
+      eapply PCUICWcbvEval.eval_closed; tea. apply HΣ.
+      unshelve apply (PCUICClosedTyp.subject_closed typing). now rewrite eqtr. }
+    specialize (H0 _ eq_refl).
+    rewrite /p.  
+    rewrite erase_transform_fo //. { cbn. rewrite eqtr. exact H. }
+    set (Σer := (transform erase_transform _ _).1).
+    assert (firstorder_evalue Σer (compile_value_erase v [])).
+    { apply H0. }
+    simpl. unfold fo_evalue_map. rewrite eqtr. exact H1. 
+  Qed.   
+
+  Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags)  {has_rel : has_tRel} {has_box : has_tBox} :
+   EGlobalEnv.extends Σ_v Σ_t.
+  Proof.
+    unfold Σ_v, Σ_t. unfold verified_erasure_pipeline.
+    repeat (destruct_compose; intro). destruct Heval. 
+    cbn [transform compose pcuic_expand_lets_transform] in *.
+    unfold run, time.
+    cbn [transform erase_transform] in *.
+    set (erase_program _ _). set (erase_program _ _).
+    eapply verified_lambdabox_pipeline_extends.
+    eapply extends_erase_pcuic_program; eauto; cbn. 
+      unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (cf := extraction_checker_flags) (Σ := (Σ.1, Σ.2))).
+      { now eapply PCUICExpandLetsCorrectness.trans_wf. }
+      { clear -HΣ typing. now eapply PCUICClosedTyp.subject_closed in typing. }
+      assumption. 
+      now eapply trans_axiom_free.
+      pose proof (PCUICExpandLetsCorrectness.expand_lets_sound typing).
+      rewrite PCUICExpandLetsCorrectness.trans_mkApps in X. eapply X.
+      move: fo. clear.
+      { rewrite /PCUICFirstorder.firstorder_ind /=.
+        rewrite PCUICExpandLetsCorrectness.trans_lookup.
+        destruct PCUICAst.PCUICEnvironment.lookup_env => //.
+        destruct g => //=.
+        eapply trans_firstorder_mutind. eapply trans_firstorder_env. }
+  Qed. 
+
   Lemma verified_erasure_pipeline_theorem :
     ∥ eval (wfl := extraction_wcbv_flags) Σ_t t_t v_t ∥.
   Proof.
     hnf.
     pose proof (preservation verified_erasure_pipeline (Σ, t)) as Hcorr.
-    unshelve eapply Hcorr in Heval as Hev. eapply precond.
+    unshelve eapply Hcorr in Heval as Hev. eapply precond; eauto.
     destruct Hev as [v' [[H1] H2]].
     move: H2.
     rewrite v_t_spec.
+    set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre. 
     subst v_t Σ_t t_t.
     revert H1.
     unfold verified_erasure_pipeline.
@@ -1687,7 +2034,13 @@ Section pipeline_theorem.
     2:{ eapply PCUICExpandLetsCorrectness.trans_wcbveval. eapply PCUICWcbvEval.eval_closed; tea. apply HΣ.
         clear -typing HΣ; now eapply PCUICClosedTyp.subject_closed in typing.
         eapply PCUICWcbvEval.value_final. now eapply PCUICWcbvEval.eval_to_value in X0. }
-    2:{ clear -fo. cbn. now eapply (PCUICExpandLetsCorrectness.trans_firstorder_ind Σ). }
+    (* 2:{ clear -fo. cbn. now eapply (PCUICExpandLetsCorrectness.trans_firstorder_ind Σ). }
+        eapply PCUICWcbvEval.value_final. now eapply PCUICWcbvEval.eval_to_value in X. } *)
+    2:{ clear -fo. revert fo. rewrite /PCUICFirstorder.firstorder_ind /=.
+        rewrite PCUICExpandLetsCorrectness.trans_lookup.
+        destruct PCUICAst.PCUICEnvironment.lookup_env => //.
+        destruct g => //=.
+        eapply trans_firstorder_mutind. eapply trans_firstorder_env. }
     2:{ apply HΣ. }
     2:{ apply PCUICExpandLetsCorrectness.trans_wf, HΣ. }
     rewrite b0. intros obs. constructor.
@@ -1707,12 +2060,6 @@ Section pipeline_theorem.
     rewrite PCUICExpandLetsCorrectness.trans_mkApps in X1. eapply X1.
     cbn. eapply (PCUICExpandLetsCorrectness.trans_firstorder_ind Σ); eauto.
   Qed.
-
-  (*Lemma verified_erasure_pipeline_lambda :
-    PCUICAst.isLambda t -> EAst.isLambda t_t.
-  Proof.
-    unfold t_t. clear.
-  Qed.*)
 
 End pipeline_theorem.
 

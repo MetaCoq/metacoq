@@ -153,8 +153,8 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
-Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
-Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ (Γ ,,, Δ) t t'))).
+Definition red1_ctx Σ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ Δ t t'))).
+Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ (Γ ,,, Δ) t t'))).
 
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
@@ -364,8 +364,8 @@ Definition red Σ Γ := clos_refl_trans (fun t u : term => Σ;;; Γ |- t ⇝ u).
 Notation " Σ ;;; Γ |- t ⇝* u " := (red Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
-  OnOne2_local_env
-    (on_one_decl (fun (Δ : context) (t t' : term) => red Σ (Γ,,, Δ) t t')).
+  OnOne2_local_env (fun Δ =>
+    on_one_decl (fun (t t' : term) => red Σ (Γ,,, Δ) t t')).
 
 Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
 
@@ -726,7 +726,7 @@ Section ReductionCongruence.
       (@OnOne2 (context × _) (Trel_conj (on_Trel (red1_ctx_rel Σ Γ) fst) (on_Trel eq snd))).
 
     Definition red_one_context_decl_rel Σ Γ :=
-      (OnOne2_local_env (on_one_decl (fun Δ t t' => red Σ (Γ ,,, Δ) t t'))).
+      (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red Σ (Γ ,,, Δ) t t'))).
 
     Notation red_one_context_decl Γ :=
       (@OnOne2 (context × _)
@@ -2165,7 +2165,7 @@ Section Stacks.
 
   Lemma red1_fill_context_hole Γ π pcontext u v :
     red1 Σ (Γ,,, stack_context π,,, context_hole_context pcontext) u v ->
-    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ,,, stack_context π,,, Γ')))
+    OnOne2_local_env (fun Γ' => on_one_decl (red1 Σ (Γ,,, stack_context π,,, Γ')))
                      (fill_context_hole pcontext u)
                      (fill_context_hole pcontext v).
   Proof using Type.

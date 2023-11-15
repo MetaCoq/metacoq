@@ -134,7 +134,7 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
     lift_typing_conj (typing Σ) (P Σ) Γ j -> Pj Σ Γ j) ->
 
   (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ),
-    All_local_env_over (typing Σ) (Pdecl Σ) Γ wfΓ -> PΓ Σ Γ) ->
+    All_local_env_over (typing Σ) (Pdecl Σ) Γ wfΓ -> All_local_env (Pj Σ) Γ -> PΓ Σ Γ) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
       nth_error Γ n = Some decl ->
@@ -146,29 +146,25 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       wf_universe Σ u ->
       P Σ Γ (tSort u) (tSort (Universe.super u))) ->
 
-  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
       PΓ Σ Γ ->
-      Σ ;;; Γ |- t : tSort s1 ->
-      P Σ Γ t (tSort s1) ->
-      Σ ;;; Γ,, vass n t |- b : tSort s2 ->
-      P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+      lift_typing typing Σ Γ (j_vass_s na t s1) ->
+      Pj Σ Γ (j_vass_s na t s1) ->
+      Σ ;;; Γ,, vass na t |- b : tSort s2 ->
+      P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
-  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term)
-          (s1 : Universe.t) (bty : term),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
       PΓ Σ Γ ->
-      Σ ;;; Γ |- t : tSort s1 ->
-      P Σ Γ t (tSort s1) ->
-      Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
+      lift_typing typing Σ Γ (j_vass na t) ->
+      Pj Σ Γ (j_vass na t) ->
+      Σ ;;; Γ,, vass na t |- b : bty -> P Σ (Γ,, vass na t) b bty -> P Σ Γ (tLambda na t b) (tProd na t bty)) ->
 
-  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b b_ty b' : term)
-          (s1 : Universe.t) (b'_ty : term),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (b b_ty b' b'_ty : term),
       PΓ Σ Γ ->
-      Σ ;;; Γ |- b_ty : tSort s1 ->
-      P Σ Γ b_ty (tSort s1) ->
-      Σ ;;; Γ |- b : b_ty ->
-      P Σ Γ b b_ty ->
-      Σ ;;; Γ,, vdef n b b_ty |- b' : b'_ty ->
-      P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
+      lift_typing typing Σ Γ (j_vdef na b b_ty) ->
+      Pj Σ Γ (j_vdef na b b_ty) ->
+      Σ ;;; Γ,, vdef na b b_ty |- b' : b'_ty ->
+      P Σ (Γ,, vdef na b b_ty) b' b'_ty -> P Σ Γ (tLetIn na b b_ty b') (tLetIn na b b_ty b'_ty)) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) T B L s,
       PΓ Σ Γ ->
@@ -245,8 +241,10 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       fix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
       PΓ Σ (Γ ,,, types) ->
-      All (on_def_type (lift_typing_conj (typing Σ) (P Σ)) Γ) mfix ->
-      All (on_def_body (lift_typing_conj (typing Σ) (P Σ)) types Γ) mfix ->
+      All (on_def_type (lift_typing typing Σ) Γ) mfix ->
+      All (on_def_type (Pj Σ) Γ) mfix ->
+      All (on_def_body (lift_typing typing Σ) types Γ) mfix ->
+      All (on_def_body (Pj Σ) types Γ) mfix ->
       wf_fixpoint Σ.1 mfix ->
       P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
@@ -255,8 +253,10 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       cofix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
       PΓ Σ (Γ ,,, types) ->
-      All (on_def_type (lift_typing_conj (typing Σ) (P Σ)) Γ) mfix ->
-      All (on_def_body (lift_typing_conj (typing Σ) (P Σ)) types Γ) mfix ->
+      All (on_def_type (lift_typing typing Σ) Γ) mfix ->
+      All (on_def_type (Pj Σ) Γ) mfix ->
+      All (on_def_body (lift_typing typing Σ) types Γ) mfix ->
+      All (on_def_body (Pj Σ) types Γ) mfix ->
       wf_cofixpoint Σ.1 mfix ->
       P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
@@ -322,7 +322,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         lift_typing_conj (typing Σ) (P Σ) Γ j -> Pj Σ Γ j) ->
 
     (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ),
-        All_local_env_over (typing Σ) (Pdecl Σ) Γ wfΓ -> PΓ Σ Γ) ->
+        All_local_env_over (typing Σ) (Pdecl Σ) Γ wfΓ -> All_local_env (Pj Σ) Γ -> PΓ Σ Γ) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
         nth_error Γ n = Some decl ->
@@ -334,29 +334,25 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_universe Σ u ->
         P Σ Γ (tSort u) (tSort (Universe.super u))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
         PΓ Σ Γ ->
-        Σ ;;; Γ |- t : tSort s1 ->
-        P Σ Γ t (tSort s1) ->
-        Σ ;;; Γ,, vass n t |- b : tSort s2 ->
-        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+        lift_typing typing Σ Γ (j_vass_s na t s1) ->
+        Pj Σ Γ (j_vass_s na t s1) ->
+        Σ ;;; Γ,, vass na t |- b : tSort s2 ->
+        P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term)
-            (s1 : Universe.t) (bty : term),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
         PΓ Σ Γ ->
-        Σ ;;; Γ |- t : tSort s1 ->
-        P Σ Γ t (tSort s1) ->
-        Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
+        lift_typing typing Σ Γ (j_vass na t) ->
+        Pj Σ Γ (j_vass na t) ->
+        Σ ;;; Γ,, vass na t |- b : bty -> P Σ (Γ,, vass na t) b bty -> P Σ Γ (tLambda na t b) (tProd na t bty)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b b_ty b' : term)
-            (s1 : Universe.t) (b'_ty : term),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (b b_ty b' b'_ty : term),
         PΓ Σ Γ ->
-        Σ ;;; Γ |- b_ty : tSort s1 ->
-        P Σ Γ b_ty (tSort s1) ->
-        Σ ;;; Γ |- b : b_ty ->
-        P Σ Γ b b_ty ->
-        Σ ;;; Γ,, vdef n b b_ty |- b' : b'_ty ->
-        P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
+        lift_typing typing Σ Γ (j_vdef na b b_ty) ->
+        Pj Σ Γ (j_vdef na b b_ty) ->
+        Σ ;;; Γ,, vdef na b b_ty |- b' : b'_ty ->
+        P Σ (Γ,, vdef na b b_ty) b' b'_ty -> P Σ Γ (tLetIn na b b_ty b') (tLetIn na b b_ty b'_ty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) T B L s,
         PΓ Σ Γ ->
@@ -432,8 +428,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         fix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         PΓ Σ (Γ ,,, types) ->
-        All (on_def_type (lift_typing_conj (typing Σ) (P Σ)) Γ) mfix ->
-        All (on_def_body (lift_typing_conj (typing Σ) (P Σ)) types Γ) mfix ->
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ->
+        All (on_def_type (Pj Σ) Γ) mfix ->
+        All (on_def_body (lift_typing typing Σ) types Γ) mfix ->
+        All (on_def_body (Pj Σ) types Γ) mfix ->
         wf_fixpoint Σ.1 mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
@@ -442,8 +440,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         cofix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         PΓ Σ (Γ ,,, types) ->
-        All (on_def_type (lift_typing_conj (typing Σ) (P Σ)) Γ) mfix ->
-        All (on_def_body (lift_typing_conj (typing Σ) (P Σ)) types Γ) mfix ->
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ->
+        All (on_def_type (Pj Σ) Γ) mfix ->
+        All (on_def_body (lift_typing typing Σ) types Γ) mfix ->
+        All (on_def_body (Pj Σ) types Γ) mfix ->
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
@@ -695,14 +695,17 @@ Qed.
 
 Lemma progress_env_prop `{cf : checker_flags}:
   env_prop (fun Σ Γ t T => axiom_free Σ -> Γ = [] -> Σ ;;; Γ |- t : T -> {t' & Σ ⊢ t ⇝ᵥ t'} + (value Σ t))
-           (fun _ _ _ => True)
+           (fun Σ Γ j => axiom_free Σ -> Γ = [] -> lift_typing0 (fun t T => Σ ;;; Γ |- t : T -> {t' & Σ ⊢ t ⇝ᵥ t'} + (value Σ t)) j)
            (fun _ _ => True).
 Proof with eauto with wcbv; try congruence.
   eapply typing_ind_env...
+  - intros Σ wfΣ Γ j Hj Hax eq.
+    apply lift_typing_impl with (1 := Hj) => ?? [] // H IH //. now apply IH.
   - intros Σ wfΣ Γ wfΓ n decl Hdecl _ Hax -> Hty.
     destruct n; inv Hdecl.
-  - intros Σ wfΣ Γ _ n b b_ty b' s1 b'_ty _ Hb_ty IHb_ty Hb IHb Hb' IHb' Hax -> H.
-    destruct (IHb Hax eq_refl) as [ [t' IH] | IH]; eauto with wcbv.
+  - intros Σ wfΣ Γ _ n b b_ty b' b'_ty _ Hb IHb Hb' IHb' Hax -> H.
+    specialize (IHb Hax eq_refl).
+    apply unlift_TermTyp in Hb, IHb as [ [t' IH] | IH]; eauto with wcbv.
   - intros Σ wfΣ Γ _ t T B L s _ HT IHT Ht IHt HL Hax -> H.
     clear HT IHT.
     induction HL in H, t, Ht, IHt |- *.

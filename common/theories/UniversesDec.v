@@ -795,12 +795,12 @@ Proof.
   cbv [eq_levelalg]; destruct ?; auto using eq0_levelalg_dec.
 Defined.
 
-Definition eq_universe__dec {CS eq_levelalg ϕ}
+Definition eq_universe__dec {CS pst eq_levelalg ϕ}
            (eq_levelalg_dec : forall u u', {@eq_levelalg ϕ u u'} + {~@eq_levelalg ϕ u u'})
            s s'
-  : {@eq_universe_ CS eq_levelalg ϕ s s'} + {~@eq_universe_ CS eq_levelalg ϕ s s'}.
+  : {@eq_universe_ CS pst eq_levelalg ϕ s s'} + {~@eq_universe_ CS pst eq_levelalg ϕ s s'}.
 Proof.
-  cbv [eq_universe_]; repeat destruct ?; auto.
+  cbv [eq_universe_]; repeat destruct ?; auto. all: destruct pst; auto.
 Defined.
 
 Definition eq_universe_dec {cf ϕ} s s' : {@eq_universe cf ϕ s s'} + {~@eq_universe cf ϕ s s'} := eq_universe__dec eq_levelalg_dec _ _.

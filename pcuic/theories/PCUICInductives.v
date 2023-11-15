@@ -1574,22 +1574,22 @@ Proof.
   rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=; rewrite smash_context_app; intros Γ u Hu.
   - simpl.
     assert (wfu := typing_wf_universe wfΣ Hu).
-    eapply inversion_LetIn in Hu as [? [? [? [? [? e]]]]]; auto.
-    eapply substitution_let in t1; auto.
-    rewrite /subst1 subst_it_mkProd_or_LetIn /= in t1.
+    eapply inversion_LetIn in Hu as (T & wfty & HT & hlt); auto.
+    eapply substitution_let in HT; auto.
+    rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
     specialize (X (subst_context [b] 0 Δ) ltac:(autorewrite with len; lia)).
-    eapply ws_cumul_pb_LetIn_l_inv in e; eauto.
-    eapply type_ws_cumul_pb in t1. 3:eauto.
+    eapply ws_cumul_pb_LetIn_l_inv in hlt; eauto.
+    eapply type_ws_cumul_pb in HT. 3:eauto.
     2:{ eapply isType_Sort. all: pcuic. }
-    specialize (X _ _ t1).
+    specialize (X _ _ HT).
     now rewrite -smash_context_subst /= subst_context_nil.
   - simpl. rewrite it_mkProd_or_LetIn_app. simpl.
     assert (wfu := typing_wf_universe wfΣ Hu).
-    eapply inversion_Prod in Hu as [? [? [? [? ?]]]]; auto.
+    eapply inversion_Prod in Hu as (s1 & s2 & wfty & Ht & hlt); auto.
     specialize (X Δ ltac:(reflexivity)).
-    specialize (X _ _ t0).
+    specialize (X _ _ Ht).
     eapply type_ws_cumul_pb; eauto.
-    econstructor; pcuic.
+    econstructor; tas. apply unlift_TypUniv in wfty.
     eapply isType_intro. econstructor; pcuic.
 Qed.
 

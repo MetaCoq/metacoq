@@ -145,7 +145,7 @@ Section Inversion.
     forall {Γ na A B T},
       Σ ;;; Γ |- tProd na A B : T ->
       ∑ s1 s2,
-        Σ ;;; Γ |- A : tSort s1 ×
+        lift_typing typing Σ Γ (j_vass_s na A s1) ×
         Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
@@ -155,19 +155,19 @@ Section Inversion.
   Lemma inversion_Prod_size :
     forall {Γ na A B T},
       forall H : Σ ;;; Γ |- tProd na A B : T,
-      ∑ s1 s2 (H1 : Σ ;;; Γ |- A : tSort s1) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
-        typing_size H1 < typing_size H × typing_size H2 < typing_size H ×
+      ∑ s1 s2 (H1 : lift_typing typing Σ Γ (j_vass_s na A s1)) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
+        lift_typing_size (@typing_size _ _ _) _ H1 < typing_size H × typing_size H2 < typing_size H ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
     intros Γ na A B T h. unshelve invtac h; eauto.
-    all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); lia.
+    all: try revert l; try revert l0; simpl; cbn; lia.
   Qed.
 
   Lemma inversion_Lambda :
     forall {Γ na A t T},
       Σ ;;; Γ |- tLambda na A t : T ->
-      ∑ s B,
-        Σ ;;; Γ |- A : tSort s ×
+      ∑ B,
+        lift_typing typing Σ Γ (j_vass na A) ×
         Σ ;;; Γ ,, vass na A |- t : B ×
         Σ ;;; Γ ⊢ tProd na A B ≤ T.
   Proof using wfΣ.
@@ -177,9 +177,8 @@ Section Inversion.
   Lemma inversion_LetIn :
     forall {Γ na b B t T},
       Σ ;;; Γ |- tLetIn na b B t : T ->
-      ∑ s1 A,
-        Σ ;;; Γ |- B : tSort s1 ×
-        Σ ;;; Γ |- b : B ×
+      ∑ A,
+        lift_typing typing Σ Γ (j_vdef na b B) ×
         Σ ;;; Γ ,, vdef na b B |- t : A ×
         Σ ;;; Γ ⊢ tLetIn na b B A ≤ T.
   Proof using wfΣ.
@@ -372,7 +371,7 @@ Section Inversion.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_LetIn in h as hh.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
+      destruct hh as (A' & wfA' & Ht & hlt).
       exists A'. split ; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
@@ -380,7 +379,7 @@ Section Inversion.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_Lambda in h as hh.
-      pose proof hh as [s1 [B' [? [? ?]]]].
+      pose proof hh as (B' & wfB' & Ht & hlt).
       exists B'. split ; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.

@@ -610,10 +610,10 @@ Lemma rename_predicate_preturn f p :
 Proof. reflexivity. Qed.
 
 Lemma wf_local_app_renaming P Σ Γ Δ :
-  All_local_rel (lift_typing (fun Σ (Γ : context) (t T : term) =>
+  All_local_rel (fun (Γ : context) j =>
     forall P Δ (f : nat -> nat),
     renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
-    Σ ;;; Δ |- rename f t : rename f T) Σ)
+    lift_typing0 (fun t T => Σ ;;; Δ |- rename f t : rename f T) j)
     Γ Δ ->
   forall Δ' f,
   renaming (shiftnP #|Γ| P) Σ Γ Δ' f ->
@@ -623,8 +623,8 @@ Proof.
   induction X using All_local_rel_ind1.
   1: now apply a.
   rewrite rename_context_snoc /=. apply All_local_env_snoc; auto.
-  eapply lift_typing_f_impl with (1 := X) => // ?? Hs.
-  eapply (Hs P (Δ' ,,, rename_context f Δ) (shiftn #|Δ| f)).
+  eapply lift_typing_map with (j := TermoptTyp _ _) => //.
+  eapply X.
   split; auto.
   eapply urenaming_ext.
   { now rewrite app_length -shiftnP_add. }
@@ -786,23 +786,19 @@ Proof.
 Qed.
 
 (** For an unconditional renaming defined on all variables in the source context *)
-Lemma typing_rename_prop : env_prop
+Lemma typing_rename_prop :
+  let Pj := (fun Σ Γ j =>
+    forall P Δ f,
+    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
+    lift_typing (fun Σ Γ t T => Σ ;;; Δ |- rename f t : rename f T) Σ Γ j)
+  in
+  env_prop
   (fun Σ Γ t A =>
     forall P Δ f,
     renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
     Σ ;;; Δ |- rename f t : rename f A)
-  (fun Σ Γ j =>
-    forall P Δ f,
-    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
-    lift_typing (fun Σ Γ t T => Σ ;;; Δ |- rename f t : rename f T) Σ Γ j)
-   (fun Σ Γ =>
-    wf_local Σ Γ ×
-   All_local_env
-   (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
-    =>
-    forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
-    renaming (shiftnP #|Γ| P) Σ Γ Δ f ->
-    Σ;;; Δ |- rename f t : rename f T) Σ) Γ).
+  Pj
+  (fun Σ Γ => All_local_env (Pj Σ) Γ).
 Proof.
   apply typing_ind_env.
 
@@ -810,10 +806,7 @@ Proof.
     apply lift_typing_impl with (1 := H) => t T [_ IH].
     now eapply IH.
 
-  - intros Σ wfΣ Γ wfΓ HΓ. split; auto.
-    induction HΓ; constructor; tas.
-    all: apply lift_sorting_it_impl with (tu := tu) => //; intros Hty.
-    all: eauto.
+  - intros Σ wfΣ Γ _ _ HΓ. assumption.
 
   - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ P Δ f hf.
     simpl in *.
@@ -827,36 +820,36 @@ Proof.
     simpl. constructor. all: auto.
 
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB P Δ f hf.
-    rewrite /=. econstructor.
-    + eapply ihA; eauto.
-    + eapply ihB; eauto.
+    assert (lift_typing0 (typing Σ Δ) (j_vass_s na (rename f A) s1)).
+    + eapply lift_typing_map with (j := TypUniv _ _) => //.
+      eapply ihA; eauto.
+    + rewrite /=. econstructor; tas.
+      eapply ihB; eauto.
       simpl.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vass. 2: eauto.
       constructor.
-      * destruct hf as [hΔ hf]. auto.
-      * split => //=; eauto.
-  - intros Σ wfΣ Γ wfΓ na A t s1 B X hA ihA ht iht P Δ f hf.
-    simpl.
-     (* /andP [_ havB]. *)
-    simpl. econstructor.
-    + eapply ihA; eauto.
-    + eapply iht; eauto; simpl.
+      * destruct hf as [hΔ hf]. assumption.
+      * eapply lift_sorting_forget_univ, X0.
+  - intros Σ wfΣ Γ wfΓ na A t B X hA ihA ht iht P Δ f hf.
+    assert (lift_typing0 (typing Σ Δ) (j_vass na (rename f A))).
+    + eapply lift_typing_map with (j := Typ _) => //.
+      eapply ihA; eauto.
+    + simpl. econstructor; tas.
+      eapply iht; eauto; simpl.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vass. 2: eauto.
-      constructor.
-      * destruct hf as [hΔ hf]. auto.
-      * split => //=; eauto.
-  - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht P Δ f hf.
-    simpl. econstructor.
-    + eapply ihB; tea.
-    + eapply ihb; tea.
-    + eapply iht; tea.
+      constructor; tas.
+      destruct hf as [hΔ hf]. assumption.
+  - intros Σ wfΣ Γ wfΓ na b B t A X hbB ihbB ht iht P Δ f hf.
+    assert (lift_typing0 (typing Σ Δ) (j_vdef na (rename f b) (rename f B))).
+    + eapply ihbB; tea.
+    + simpl. econstructor; tas.
+      eapply iht; tea.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
       eapply renaming_vdef. 2: eauto.
-      constructor.
-      * destruct hf. assumption.
-      * split => //=; eauto.
+      constructor; tas.
+      destruct hf as [hΔ hf]. assumption.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu P Δ f hf.
     simpl. eapply meta_conv.
     + eapply type_App.
@@ -888,7 +881,7 @@ Proof.
     + rewrite rename_closed. 2: reflexivity.
       eapply declared_constructor_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
-    intros [_ IHΔ] ci_npar eqpctx predctx wfp cup wfpctx Hpret IHpret [_ IHpredctx] isallowed.
+    intros IHΔ ci_npar eqpctx predctx wfp cup wfpctx Hpret IHpret IHpredctx isallowed.
     intros IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
     simpl.
     rewrite rename_mkApps.
@@ -940,7 +933,7 @@ Proof.
         eapply All2i_nth_hyp in Hbrs.
         eapply All2i_map_right, (All2i_impl Hbrs) => i cdecl br.
         set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
-        intros (Hnth & wfbr & eqbctx & (wfbctx & IHbctx) & (Hbod & IHbod) & Hbty & IHbty).
+        intros (Hnth & wfbr & eqbctx & IHbctx & (Hbod & IHbod) & Hbty & IHbty).
         rewrite -(rename_closed_constructor_body mdecl cdecl f).
         { eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))); eauto.
           split; eauto. }
@@ -997,7 +990,7 @@ Proof.
       eapply declared_projection_closed_type in isdecl.
       rewrite List.rev_length. rewrite e. assumption.
 
-  - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl [_ X] ihmfixt ihmfixb wffix P Δ f hf.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl X hmfixt ihmfixt hmfixb ihmfixb wffix P Δ f hf.
     apply All_local_env_app_inv in X as [_ X].
     eapply wf_local_app_renaming in X; tea.
     simpl. eapply meta_conv.
@@ -1006,13 +999,12 @@ Proof.
       * destruct hf; eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. eapply lift_typing_f_impl with (1 := t) => //=.
-        intros ?? [_ IHs]; now eapply IHs.
+        intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
         unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
-        1: eapply lift_typing_f_impl with (1 := t) => //= ?? [_ IH]; eapply IH; eauto.
+        1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
         2: len; now sigma.
         rewrite rename_fix_context.
         split; auto.
@@ -1024,7 +1016,7 @@ Proof.
       * now eapply rename_wf_fixpoint.
     + reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ mfix n decl types guard hdecl [_ X] ihmfixt ihmfixb wfcofix P Δ f hf.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types guard hdecl X hmfixt ihmfixt hmfixb ihmfixb wfcofix P Δ f hf.
     apply All_local_env_app_inv in X as [_ X].
     eapply wf_local_app_renaming in X; eauto.
     simpl. eapply meta_conv.
@@ -1033,13 +1025,12 @@ Proof.
       * destruct hf; eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. eapply lift_typing_f_impl with (1 := t) => //=.
-        intros ?? [_ IHs]; now eapply IHs.
+        intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
         unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
-        1: eapply lift_typing_f_impl with (1 := t) => //= ?? [_ IH]; eapply IH; eauto.
+        1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
         2: len; now sigma.
         rewrite rename_fix_context.
         split; auto.

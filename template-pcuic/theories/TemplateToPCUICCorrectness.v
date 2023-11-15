@@ -2264,9 +2264,11 @@ Proof.
     f_equal.
 
   - (* Casts *)
+    assert (lift_typing0 (typing Σ' (trans_local (trans_global_env Σ.1) Γ)) (TypUniv (trans (trans_global_env Σ.1) t) s)).
+    { repeat (eexists; eauto). }
     eapply refine_type; cbn.
     * eapply type_App.
-      2:{ eapply type_Lambda; eauto. eapply type_Rel. econstructor; eauto.
+      2:{ eapply type_Lambda; eauto. now eapply lift_sorting_forget_univ. eapply type_Rel. econstructor; eauto.
         eapply typing_wf_local; eauto. now eapply has_sort_isType. reflexivity. }
       eapply type_Prod. eauto.
       instantiate (1 := s). simpl.
@@ -2276,7 +2278,7 @@ Proof.
       now eapply X2.
     * unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
-  - cbn. econstructor; trans.
+  - cbn. econstructor; trans. 1: now eapply X1.
     cbn in *. trans. cbn in *; trans. now apply X3.
 
   - econstructor; eauto with trans.
@@ -2433,16 +2435,17 @@ Proof.
     cbn. econstructor; eauto.
     eapply fix_guard_trans. assumption.
     now rewrite nth_error_map H0.
-    -- eapply All_map, (All_impl X0).
-       intros x (_ & s & (Hs & Hts) & _).
-       repeat (eexists; tea). eauto.
-    -- apply All_map. eapply All_impl; eauto.
-       intros x ((Hb & Htb) & s & (Hs & Hts) & _). unfold on_def_body, types in *; cbn in *.
+    -- eapply All_map, (All_impl X1).
+       intros x (_ & s & Hts & _). assumption.
+       repeat (eexists; tea).
+    -- apply All_map. eapply (All_impl X3); eauto.
+       intros x (Htb & s & Hts & _). assumption.
+       unfold on_def_body, types in *; cbn in *.
        rewrite H2. rewrite /trans_local !map_length map_app in Htb, Hts |- *.
        rewrite <- trans_lift.
        repeat (eexists; tea); cbn; eauto.
-    -- eapply trans_wf_fixpoint => //.
-       solve_all; destruct a as (_ & s & (Hs & IH) & _), b as ((Hs' & IH') & _).
+    -- eapply trans_wf_fixpoint => //. clear X1 X3.
+       solve_all; destruct a as (_ & s & Hs & _), b as (Hs' & _).
        now eapply TypingWf.typing_wf in Hs.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
@@ -2457,16 +2460,17 @@ Proof.
     cbn; econstructor; eauto.
     -- now eapply cofix_guard_trans.
     -- now rewrite nth_error_map H0.
-    -- eapply All_map, (All_impl X0).
-       intros x (_ & s & (Hs & Hts) & _).
-       repeat (eexists; tea). eauto.
-    -- apply All_map. eapply All_impl; eauto.
-       intros x ((Hb & Htb) & s & (Hs & Hts) & _). unfold on_def_body, types in *; cbn in *.
+    -- eapply All_map, (All_impl X1).
+       intros x (_ & s & Hts & _). assumption.
+       repeat (eexists; tea).
+    -- apply All_map. eapply (All_impl X3); eauto.
+       intros x (Htb & s & Hts & _). assumption.
+       unfold on_def_body, types in *; cbn in *.
        rewrite H2. rewrite /trans_local !map_length map_app in Htb, Hts |- *.
        rewrite <- trans_lift.
        repeat (eexists; tea); cbn; eauto.
-    -- eapply trans_wf_cofixpoint => //.
-       solve_all; destruct a as (_ & s & (Hs & IH) & _), b as ((Hs' & IH') & _).
+    -- eapply trans_wf_cofixpoint => //. clear X1 X3.
+       solve_all; destruct a as (_ & s & Hs & _), b as (Hs' & _).
        now eapply TypingWf.typing_wf in Hs.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.

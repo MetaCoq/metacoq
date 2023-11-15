@@ -567,11 +567,11 @@ Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
   ∥isErasable Σ (vass na T1 :: Γ) t∥.
 Proof.
   intros ? ? (T & ? & ?).
-  eapply inversion_Lambda in t0 as (? & ? & ? & ? & e); auto.
+  eapply inversion_Lambda in t0 as (? & h1 & ? & e); auto.
   destruct s as [ | (u & ? & ?)].
   - eapply invert_cumul_arity_r in e; eauto. destruct e as (? & [] & ?).
     eapply invert_red_prod in X1 as (? & ? & []); eauto; subst. cbn in H.
-    econstructor. exists x3. econstructor.
+    econstructor. exists x2. econstructor.
     eapply type_reduction_closed; eauto. econstructor; eauto.
   - sq. eapply cumul_prop1' in e; eauto.
     eapply inversion_Prod in e as (? & ? & ? & ? & e) ; auto.
@@ -579,8 +579,8 @@ Proof.
     eapply leq_universe_propositional_r in e as H0; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
     eapply is_propositional_sort_prod in H0; eauto.
-    eapply type_Lambda in t1; eauto.
-    now apply PCUICValidity.validity in t1.
+    eapply type_Lambda in h1; eauto.
+    now apply PCUICValidity.validity in h1.
 Qed.
 
 Lemma Is_type_red (Σ : global_env_ext) Γ t v:

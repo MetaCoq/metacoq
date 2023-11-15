@@ -1971,25 +1971,30 @@ Section SubstIdentity.
         subst_instance u t = t × subst_instance u T = T)
         (fun Σ _ j => wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
-        lift_wf_term (fun t => subst_instance u t = t) j)
+        lift_wfu_term (fun t => subst_instance u t = t) (fun t => subst_instance u t = t) j)
         (fun Σ Γ =>
         wf_ext_wk Σ ->
         let u := abstract_instance (snd Σ) in
         subst_instance u Γ = Γ).
   Proof using Type.
-    eapply typing_ind_env; intros; simpl in *; auto; try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
-    { destruct X as (X & _). destruct j_term => //. destruct X as [_ X]. now forward X. }
-    { destruct X as (_ & s & [_ X] & _). now forward X. }
+    eapply typing_ind_env; intros; simpl in *; auto.
+    { destruct X as (X & s & (_ & (Hty & Hu)) & e); tas; repeat split; tas.
+      1: destruct j_term => //; destruct X as (_ & (X & _)); tas.
+      destruct j_univ => //; rewrite e; cbn in Hu; now depelim Hu. }
 
-    1:{ induction X; simpl; auto; unfold snoc.
-      * f_equal; auto.
-        unfold map_decl. simpl. unfold vass. f_equal. intuition auto.
-      * unfold map_decl. simpl. unfold vdef. repeat f_equal; intuition auto. }
+    { apply All_local_env_cst in X0. clear -X0 X1.
+      induction X0 => //=. cbn.
+      f_equal; tas. destruct x as [na bo t]; cbv [map_decl]; simpl in *.
+      specialize (p X1) as (ptm & pty & _); cbn in *. f_equal; tas.
+      destruct bo => //. cbn in *. f_equal. apply ptm. }
+
+    all: try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
 
     1:{ rewrite subst_instance_lift. f_equal.
       generalize H. rewrite -H1 /subst_instance /= nth_error_map H /= => [=].
       intros Hdecl. now rewrite -{2}Hdecl. }
 
+    all: try match goal with H : lift_wfu_term _ _ _ |- _ => destruct H as (Htm & Hty & Hs); cbn in Htm, Hty, Hs end.
     all:try (solve [f_equal; eauto; try congruence]).
     all:try (rewrite ?subst_instance_two; f_equal; eapply consistent_instance_ext_subst_abs; eauto).
 
@@ -1998,8 +2003,8 @@ Section SubstIdentity.
     - rewrite consistent_instance_ext_subst_abs_univ //.
       now apply wf_universe_super.
 
-    - rewrite product_subst_instance. f_equal;
-      intuition eauto; now noconf b0; noconf b1.
+    - rewrite product_subst_instance. do 2 f_equal; tas.
+      now noconf b0.
 
     - intuition auto. noconf a; noconf b; noconf b0.
       rewrite subst_instance_subst /= /subst1.
@@ -2044,13 +2049,13 @@ Section SubstIdentity.
       * rewrite [subst_instance_constr _ _]subst_instance_two.
         noconf Hi. now rewrite [subst_instance _ u]H.
     - solve_all.
-      + destruct a as (_ & s & [_ a] & _). now forward a.
-      + destruct b as ([_ b] & _). now forward b.
-    - clear X0. eapply nth_error_all in X as (_ & s & [_ IHs] & _); tea; now forward IHs.
+      + destruct a0 as (_ & X & _); tas.
+      + destruct b as (X & _); tas.
+    - eapply nth_error_all in X0 as (_ & X0 & _); tea.
     - solve_all.
-      + destruct a as (_ & s & [_ a] & _). now forward a.
-      + destruct b as ([_ b] & _). now forward b.
-    - clear X0. eapply nth_error_all in X as (_ & s & [_ IHs] & _); tea; now forward IHs.
+      + destruct a0 as (_ & X & _); tas.
+      + destruct b as (X & _); tas.
+    - eapply nth_error_all in X0 as (_ & X0 & _); tea.
     - destruct p as [? []]; cbn => //. do 2 f_equal.
       depelim X0. specialize (hty X1); specialize (hdef X1).
       unfold mapu_array_model; destruct a; cbn -[Universe.make] in * => //=; f_equal; intuition eauto.

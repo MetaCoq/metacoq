@@ -250,12 +250,12 @@ Proof using Type.
     apply lift_typing_impl with (1 := X) => t T [_ IH].
     now eapply IH.
   - rewrite /subst_instance /=.
-    induction 1.
-    + constructor.
-    + simpl. constructor; auto.
-      eapply lift_sorting_fu_it_impl with (tu := tu); cbn; eauto.
-    + simpl. constructor; auto.
-      eapply lift_sorting_fu_it_impl with (tu := tu); cbn; eauto.
+    intros _; clear wfΓ.
+    induction 1 using All_local_env_ind1. 1: constructor.
+    intros. simpl.
+    apply All_local_env_snoc. 1: now apply IHX.
+    eapply lift_typing_mapu with (u := None) => //.
+    now apply X.
 
   - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
     rewrite map_decl_type. econstructor; aa.
@@ -268,14 +268,16 @@ Proof using Type.
       * now apply wf_universe_subst_instance.
   - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' H.
     rewrite product_subst_instance; aa. econstructor.
-    + eapply X1; eauto.
+    + eapply lift_typing_mapu with (tm := None) (u := Some _) => //. apply X1; eauto.
     + eapply X3; eauto.
-  - intros n t0 b s1 bty X X0 X1 X2 X3 u univs wfΣ' H.
+  - intros n t0 b bty X X0 X1 X2 X3 u univs wfΣ' H.
     econstructor.
-    + eapply X1; aa.
+    + eapply lift_typing_mapu with (tm := None) (u := None) => //. eapply X1; aa.
     + eapply X3; aa.
-  - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' H.
-    econstructor; eauto. eapply X5; aa.
+  - intros n b b_ty b' b'_ty X X0 X1 X2 X3 u univs wfΣ' H.
+    econstructor; eauto.
+    + eapply lift_typing_mapu with (tm := Some _) (u := None) => //. eapply X1; aa.
+    + eapply X3; aa.
   - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' H.
     rewrite subst_instance_subst. cbn. econstructor.
     + eapply X1; eauto.
@@ -342,21 +344,20 @@ Proof using Type.
     eapply X2 in H0; tas. rewrite subst_instance_mkApps in H0.
     eassumption.
 
-  - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ'.
+  - intros mfix n decl H H0 H1 X IHX X0 IHX0 wffix u univs wfΣ'.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
     + specialize (H1 u univs wfΣ' H2).
       rewrite subst_instance_app in H1.
       now eapply All_local_env_app_inv in H1 as [].
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
-    + apply All_map, (All_impl X); simpl. intros d X1.
-      eapply lift_typing_fu_impl with (1 := X1); cbn; eauto.
-      intros ?? [_ Hs]; now apply Hs.
-    + eapply All_map, All_impl; tea. intros d X1. unfold map_def at 2, on_def_body. cbn.
+    + apply All_map, (All_impl IHX); simpl. intros d X1.
+      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto.
+    + eapply All_map, (All_impl IHX0); simpl. intros d X1.
+      unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
       rewrite -subst_instance_lift map_length.
-      eapply lift_typing_fu_impl with (1 := X1); cbn; eauto.
-      intros ?? [_ IH]; now eapply IH.
+      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
     + red; rewrite <- wffix.
       unfold wf_fixpoint, wf_fixpoint_gen.
       f_equal.
@@ -365,21 +366,20 @@ Proof using Type.
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
 
-  - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ'.
+  - intros mfix n decl H H0 H1 X IHX X0 IHX0 wffix u univs wfΣ'.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
     + specialize (H1 u univs wfΣ' H2).
       rewrite subst_instance_app in H1.
       now eapply All_local_env_app_inv in H1 as [].
     + now eapply cofix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
-    + apply All_map, (All_impl X); simpl. intros d X1.
-      eapply lift_typing_fu_impl with (1 := X1); cbn; eauto.
-      intros ?? [_ Hs]; now apply Hs.
-    + eapply All_map, All_impl; tea. intros d X1. unfold map_def at 2, on_def_body. cbn.
+    + apply All_map, (All_impl IHX); simpl. intros d X1.
+      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto.
+    + eapply All_map, (All_impl IHX0); simpl. intros d X1.
+      unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
       rewrite -subst_instance_lift map_length.
-      eapply lift_typing_fu_impl with (1 := X1); cbn; eauto.
-      intros ?? [_ IH]; now eapply IH.
+      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
     + red; rewrite <- wffix.
       unfold wf_cofixpoint, wf_cofixpoint_gen.
       rewrite map_map_compose.

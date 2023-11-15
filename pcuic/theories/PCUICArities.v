@@ -216,9 +216,11 @@ Section WfEnv.
     split; intro HH.
     - destruct HH as (_ & s & H & _).
       apply inversion_Prod in H; tas. destruct H as [s1 [s2 [HA [HB Hs]]]].
+      apply lift_sorting_forget_univ in HA.
       split; pcuic.
     - destruct HH as [HA HB].
-      destruct HA as (_ & sA & HA & _), HB as (_ & sB & HB & _).
+      pose proof (lift_sorting_extract HA).
+      destruct HB as (_ & sB & HB & _).
       eapply has_sort_isType.
       econstructor; eassumption.
   Defined.
@@ -264,7 +266,7 @@ Section WfEnv.
     intro HH.
     apply lift_sorting_it_impl_gen with HH => // H.
     assert (Hs := typing_wf_universe _ H).
-    apply inversion_LetIn in H; tas. destruct H as (s1 & A' & HA & Ht & HB & H).
+    apply inversion_LetIn in H; tas. destruct H as (A' & Ht & HB & H).
     eapply (type_ws_cumul_pb (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
     * pcuic.
     * eapply ws_cumul_pb_Sort_r_inv in H as [s' [H H']].
@@ -280,7 +282,7 @@ Section WfEnv.
     : isType Σ Γ (tLetIn na t A B) -> Σ ;;; Γ |- t : A.
   Proof using wfΣ.
     intros (_ & s & H & _).
-    apply inversion_LetIn in H; tas. now destruct H as (s1 & A' & HA & Ht & HB & H).
+    apply inversion_LetIn in H; tas. destruct H as (A' & Ht & HB & H). now eapply unlift_TermTyp.
   Qed.
 
   Lemma wf_local_ass {Γ na A} :
@@ -399,13 +401,14 @@ Section WfEnv.
   Proof using wfΣ.
     destruct d as [na [b|] dty] => [Hd Ht|Hd Ht]; rewrite /mkProd_or_LetIn /=.
     - have wf := typing_wf_local Ht.
-      depelim wf. apply unlift_TermTyp in l.
+      depelim wf.
       eapply type_Cumul. econstructor; eauto.
       econstructor; eauto. now eapply typing_wf_universe in Ht; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec. constructor.
     - have wf := typing_wf_local Ht.
       depelim wf; clear l.
       eapply type_Prod; eauto.
+      pcuic.
   Qed.
 
   Lemma type_it_mkProd_or_LetIn {Γ Γ' u t s} :
@@ -616,35 +619,35 @@ Section WfEnv.
 
       intros Hs.
       assert (wfs' := typing_wf_universe wfΣ Hs).
-      eapply inversion_LetIn in Hs as (? & ? & ? & ? & ? & ?); auto.
-      eapply substitution_let in t1; auto.
-      eapply ws_cumul_pb_LetIn_l_inv in w; auto.
+      eapply inversion_LetIn in Hs as (T' & wfT' & HT' & hlt); auto.
+      eapply substitution_let in HT'; auto.
+      eapply ws_cumul_pb_LetIn_l_inv in hlt; auto.
       pose proof (subslet_app_inv sub) as [subl subr].
       depelim subl. depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
       specialize (IHn (subst_context [b] 0 l) (subst [b] #|l| T) ltac:(rewrite subst_context_length; lia)).
       specialize (IHn _ _ subr).
-      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in t1.
-      rewrite !subst_empty in t3.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in HT'.
+      rewrite !subst_empty in t0.
       forward IHn.
-      eapply type_Cumul. eapply t1. econstructor; intuition eauto using typing_wf_local with pcuic.
-      eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)), w. rewrite {2}Hl in IHn.
+      eapply type_Cumul. eapply HT'. econstructor; intuition eauto using typing_wf_local with pcuic.
+      eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)), hlt. rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
 
       intros Hs.
       assert (wfs' := typing_wf_universe wfΣ Hs).
-      eapply inversion_Prod in Hs as (? & ? & ? & ? & ?); auto.
+      eapply inversion_Prod in Hs as (s1 & s2 & wfty & Hty & hlt); auto.
       pose proof (subslet_app_inv sub) as [subl subr].
-      depelim subl; depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
-      epose proof (substitution0 t0 t2).
-      specialize (IHn (subst_context [t1] 0 l) (subst [t1] #|l| T)).
+      depelim subl; depelim subl. rewrite subst_empty in t0. rewrite H0 in subr.
+      epose proof (substitution0 Hty t0).
+      specialize (IHn (subst_context [t] 0 l) (subst [t] #|l| T)).
       forward IHn. rewrite subst_context_length; lia.
       specialize (IHn _ _ subr).
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in X.
       forward IHn.
       eapply type_Cumul. simpl in X. eapply X.
       econstructor; eauto with pcuic.
-      eapply ws_cumul_pb_Sort_inv in w. eapply cumul_Sort.
-      transitivity (Universe.sort_of_product x x0).
+      eapply ws_cumul_pb_Sort_inv in hlt. eapply cumul_Sort.
+      transitivity (Universe.sort_of_product s1 s2).
       eapply leq_universe_product. auto.
       rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
@@ -670,18 +673,18 @@ Section WfEnv.
     + simpl. intros. now eapply typing_wf_local in X.
     + rewrite it_mkProd_or_LetIn_app.
       destruct x as [na [b|] ty]; cbn; move=> H.
-      * apply inversion_LetIn in H as (s1 & A & H0 & H1 & H2 & H3); auto.
-        eapply All_local_env_app; pcuic.
-        eapply All_local_env_app. repeat constructor; eauto. repeat (eexists; eauto).
-        auto. apply IHΔ in H2.
-        eapply All_local_env_app_inv in H2. intuition auto.
+      * apply inversion_LetIn in H as (A & wfty & HT & hlt); auto.
+        eapply All_local_env_app. 1: eapply unlift_TermTyp in wfty; pcuic.
+        eapply All_local_env_app. repeat (constructor; tea).
+        apply IHΔ in HT.
+        eapply All_local_env_app_inv in HT. intuition auto.
         eapply All_local_env_impl; eauto. simpl. intros.
         now rewrite app_context_assoc.
-      * apply inversion_Prod in H as (s1 & A & H0 & H1 & H2); auto.
-        eapply All_local_env_app; pcuic.
-        eapply All_local_env_app. repeat constructor; eauto. repeat (eexists; eauto).
-        apply IHΔ in H1.
-        eapply All_local_env_app_inv in H1. intuition auto.
+      * apply inversion_Prod in H as (s1 & s2 & wfty & HT & hlt); auto.
+        eapply All_local_env_app. 1: eapply unlift_TypUniv in wfty; cbn in wfty; pcuic.
+        eapply All_local_env_app. apply lift_sorting_forget_univ in wfty. repeat (constructor; tea).
+        apply IHΔ in HT.
+        eapply All_local_env_app_inv in HT. intuition auto.
         eapply All_local_env_impl; eauto. simpl. intros.
         now rewrite app_context_assoc.
   Qed.

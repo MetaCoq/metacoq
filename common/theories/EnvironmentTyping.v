@@ -318,8 +318,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
-  Definition on_local_decl (P : context -> judgment -> Type) Γ d :=
-    P Γ (j_decl d).
+  Notation on_local_decl P Γ d :=
+    (P Γ (j_decl d)).
 
   Definition on_def_type (P : context -> judgment -> Type) Γ d :=
     P Γ (Typ d.(dtype)).
@@ -332,8 +332,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Definition lift_wf_term wf_term (j : judgment) := option_default wf_term (j_term j) (unit : Type) × wf_term (j_typ j).
   Notation lift_wf_term1 wf_term := (fun (Γ : context) => lift_wf_term (wf_term Γ)).
 
+  Definition lift_wfu_term wf_term wf_univ (j : judgment) := option_default wf_term (j_term j) unit × wf_term (j_typ j) × option_default wf_univ (j_univ j) unit.
+
   Definition lift_wfb_term wfb_term (j : judgment) := option_default wfb_term (j_term j) true && wfb_term (j_typ j).
   Notation lift_wfb_term1 wfb_term := (fun (Γ : context) => lift_wfb_term (wfb_term Γ)).
+
+  Definition lift_wfbu_term wfb_term wfb_univ (j : judgment) := option_default wfb_term (j_term j) true && wfb_term (j_typ j) && option_default wfb_univ (j_univ j) true.
 
   Definition lift_sorting checking sorting : judgment -> Type :=
     fun j => option_default (fun tm => checking tm (j_typ j)) (j_term j) (unit : Type) ×
@@ -389,6 +393,20 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     destruct j_term; cbn in *; auto.
   Defined.
 
+  Lemma lift_wfbu_term_f_impl (P Q : term -> bool) tm t u :
+    forall f fu,
+    lift_wfbu_term P (P ∘ tSort) (Judge tm t u) ->
+    (forall u, f (tSort u) = tSort (fu u)) ->
+    (forall t, P t -> Q (f t)) ->
+    lift_wfbu_term Q (Q ∘ tSort) (Judge (option_map f tm) (f t) (option_map fu u)).
+  Proof.
+    unfold lift_wfbu_term; cbn.
+    intros. rtoProp.
+    repeat split; auto.
+    1: destruct tm; cbn in *; auto.
+    destruct u; rewrite //= -H0 //. auto.
+  Defined.
+
   Lemma unlift_TermTyp {Pc Ps tm ty u} :
     lift_sorting Pc Ps (Judge (Some tm) ty u) ->
     Pc tm ty.
@@ -396,13 +414,26 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     apply fst.
   Defined.
 
-  Definition lift_sorting_extract {c s tm ty} (w : lift_sorting c s (TermoptTyp tm ty)) :
+  Definition unlift_TypUniv {Pc Ps tm ty u} :
+    lift_sorting Pc Ps (Judge tm ty (Some u)) ->
+    Ps ty u
+    := fun H => eq_rect_r _ H.2.π2.1 H.2.π2.2.
+
+  Definition lift_sorting_extract {c s tm ty u} (w : lift_sorting c s (Judge tm ty u)) :
     lift_sorting c s (Judge tm ty (Some w.2.π1)) :=
     (w.1, existT _ w.2.π1 (w.2.π2.1, eq_refl)).
 
   Lemma lift_sorting_forget_univ {Pc Ps tm ty u} :
-    lift_sorting Pc Ps (Judge tm ty (Some u)) ->
+    lift_sorting Pc Ps (Judge tm ty u) ->
     lift_sorting Pc Ps (TermoptTyp tm ty).
+  Proof.
+    intros (? & ? & ? & ?).
+    repeat (eexists; tea).
+  Qed.
+
+  Lemma lift_sorting_forget_body {Pc Ps tm ty u} :
+    lift_sorting Pc Ps (Judge tm ty u) ->
+    lift_sorting Pc Ps (Judge None ty u).
   Proof.
     intros (? & ? & ? & ?).
     repeat (eexists; tea).
@@ -533,6 +564,15 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     apply lift_typing_f_impl with (1 := HT) => //.
   Qed.
 
+  Lemma lift_typing_mapu {P} f fu {tm ty u} :
+    lift_typing0 (fun t T => P (f t) (f T)) (Judge tm ty u) ->
+    (forall u, f (tSort u) = tSort (fu u)) ->
+    lift_typing0 P (Judge (option_map f tm) (f ty) (option_map fu u)).
+  Proof.
+    intros HT.
+    eapply lift_typing_fu_impl with (1 := HT) => //.
+  Qed.
+
   Lemma lift_sorting_impl {Pc Qc Ps Qs j} :
     lift_sorting Pc Ps j ->
     (forall t T, Pc t T -> Qc t T) ->
@@ -563,12 +603,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
     | localenv_cons_abs Γ na t :
         All_local_env Γ ->
-        typing Γ (Typ t) ->
+        typing Γ (j_vass na t) ->
         All_local_env (Γ ,, vass na t)
 
     | localenv_cons_def Γ na b t :
         All_local_env Γ ->
-        typing Γ (TermTyp b t) ->
+        typing Γ (j_vdef na b t) ->
         All_local_env (Γ ,, vdef na b t).
 
   Derive Signature NoConfusion for All_local_env.
@@ -621,10 +661,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Lemma All_local_env_impl_gen (P Q : context -> judgment -> Type) l :
     All_local_env P l ->
-    (forall Γ bo ty, P Γ (TermoptTyp bo ty) -> Q Γ (TermoptTyp bo ty)) ->
+    (forall Γ decl, P Γ (j_decl decl) -> Q Γ (j_decl decl)) ->
     All_local_env Q l.
   Proof.
-    induction 1; intros; simpl; econstructor; eauto.
+    intros H X.
+    induction H using All_local_env_ind1. 1: constructor.
+    apply All_local_env_snoc; auto.
   Qed.
 
   Lemma All_local_env_impl (P Q : context -> judgment -> Type) l :
@@ -671,6 +713,14 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     - now eapply IHΓ.
   Defined.
 
+  Lemma All_local_env_cst {P Γ} : All_local_env (fun _ => P) Γ <~> All (fun d => P (j_decl d)) Γ.
+  Proof.
+    split.
+    - induction 1 using All_local_env_ind1; constructor => //.
+    - induction 1. 1: constructor.
+      apply All_local_env_snoc => //.
+  Defined.
+
   Section All_local_env_rel.
 
     Definition All_local_rel P Γ Γ'
@@ -685,13 +735,13 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       := All_local_env_snoc.
 
     Definition All_local_rel_abs {P Γ Γ' A na} :
-      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') (Typ A)
+      All_local_rel P Γ Γ' -> P (Γ ,,, Γ') (j_vass na A)
       -> All_local_rel P Γ (Γ',, vass na A)
       := localenv_cons.
 
     Definition All_local_rel_def {P Γ Γ' t A na} :
       All_local_rel P Γ Γ' ->
-      P (Γ ,,, Γ') (TermTyp t A) ->
+      P (Γ ,,, Γ') (j_vdef na t A) ->
       All_local_rel P Γ (Γ',, vdef na t A)
       := localenv_cons.
 
@@ -803,7 +853,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | localenv_over_cons_abs Γ na t
         (all : All_local_env (lift_sorting1 checking sorting) Γ) :
         All_local_env_over_sorting Γ all ->
-        forall (tu : lift_sorting1 checking sorting Γ (Typ t))
+        forall (tu : lift_sorting1 checking sorting Γ (j_vass na t))
           (Hs: sproperty Γ all _ _ tu.2.π2.1),
           All_local_env_over_sorting (Γ ,, vass na t)
                               (localenv_cons_abs all tu)
@@ -811,7 +861,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | localenv_over_cons_def Γ na b t
         (all : All_local_env (lift_sorting1 checking sorting) Γ) :
         All_local_env_over_sorting Γ all ->
-        forall (tu : lift_sorting1 checking sorting Γ (TermTyp b t))
+        forall (tu : lift_sorting1 checking sorting Γ (j_vdef na b t))
           (Hc: cproperty Γ all _ _ tu.1)
           (Hs: sproperty Γ all _ _ tu.2.π2.1),
           All_local_env_over_sorting (Γ ,, vdef na b t)
@@ -919,24 +969,24 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     | None => fun w => 0
     end w.
 
-  Section lift_sorting_size.
+  Section lift_sorting_size_gen.
     Context {checking : term -> term -> Type}.
     Context {sorting : term -> Universe.t -> Type}.
     Context (csize : forall (t T : term), checking t T -> size).
     Context (ssize : forall (t : term) (u : Universe.t), sorting t u -> size).
 
-    Definition lift_sorting_size j (w : lift_sorting checking sorting j) : size :=
-      option_default_size (fun tm => csize tm _) (j_term j) w.1 + ssize _ _ w.2.π2.1.
+    Definition lift_sorting_size_gen base j (w : lift_sorting checking sorting j) : size :=
+      base + option_default_size (fun tm => csize tm _) (j_term j) w.1 + ssize _ _ w.2.π2.1.
 
 
-    Lemma lift_sorting_size_impl {Qc Qs j} :
+    Lemma lift_sorting_size_gen_impl {Qc Qs j} :
       forall tu: lift_sorting checking sorting j,
-      (forall t T, forall Hty: checking t T, csize _ _ Hty <= lift_sorting_size _ tu -> Qc t T) ->
-      (forall t u, forall Hty: sorting t u, ssize _ _ Hty <= lift_sorting_size _ tu -> Qs t u) ->
+      (forall t T, forall Hty: checking t T, csize _ _ Hty <= lift_sorting_size_gen 0 _ tu -> Qc t T) ->
+      (forall t u, forall Hty: sorting t u, ssize _ _ Hty <= lift_sorting_size_gen 0 _ tu -> Qs t u) ->
       lift_sorting Qc Qs j.
     Proof.
       intros (Htm & s & Hty & es) HPQc HPQs.
-      unfold lift_sorting_size in *; cbn in *.
+      unfold lift_sorting_size_gen in *; cbn in *.
       repeat (eexists; tea).
       - destruct (j_term j) => //=.
         eapply HPQc with (Hty := Htm); cbn.
@@ -945,29 +995,45 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
         lia.
     Qed.
 
-  End lift_sorting_size.
+  End lift_sorting_size_gen.
 
-  Definition on_def_type_sorting_size {c s} (ssize : forall Γ t u, s Γ t u -> size)
+  Definition on_def_type_size_gen {c s} (ssize : forall Γ t u, s Γ t u -> size) base
                                       Γ d (w : on_def_type (lift_sorting1 c s) Γ d) : size :=
-    ssize _ _ _ w.2.π2.1.
-  Definition on_def_body_sorting_size {c s} (csize : forall Γ t u, c Γ t u -> size) (ssize : forall Γ t u, s Γ t u -> size)
+    base + ssize _ _ _ w.2.π2.1.
+  Definition on_def_body_size_gen {c s} (csize : forall Γ t u, c Γ t u -> size) (ssize : forall Γ t u, s Γ t u -> size) base
                                       types Γ d (w : on_def_body (lift_sorting1 c s) types Γ d) : size :=
-    csize _ _ _ w.1 + ssize _ _ _ w.2.π2.1.
+    base + csize _ _ _ w.1 + ssize _ _ _ w.2.π2.1.
 
+  Notation lift_sorting_size csize ssize := (lift_sorting_size_gen csize ssize 1).
   Notation typing_sort_size typing_size := (fun t s (tu: typing_sort _ t s) => typing_size t (tSort s) tu).
-  Notation lift_typing_size typing_size := (lift_sorting_size typing_size (typing_sort_size typing_size)).
+  Notation lift_typing_size typing_size := (lift_sorting_size_gen typing_size (typing_sort_size typing_size) 0).
   Notation typing_sort_size1 typing_size := (fun Γ t s (tu: typing_sort1 _ Γ t s) => typing_size Γ t (tSort s) tu).
-  Notation on_def_type_size typing_size := (on_def_type_sorting_size (typing_sort_size1 typing_size)).
-  Notation on_def_body_size typing_size := (on_def_body_sorting_size typing_size (typing_sort_size1 typing_size)).
+  Notation on_def_type_sorting_size ssize := (on_def_type_size_gen ssize 1).
+  Notation on_def_type_size typing_size := (on_def_type_size_gen (typing_sort_size1 typing_size) 0).
+  Notation on_def_body_sorting_size csize ssize := (on_def_body_size_gen csize ssize 1).
+  Notation on_def_body_size typing_size := (on_def_body_size_gen typing_size (typing_sort_size1 typing_size) 0).
   (* Will probably not pass the guard checker if in a list, must be unrolled like in on_def_* *)
 
-  Lemma lift_typing_size_impl {P Q Psize j} :
+  Lemma lift_sorting_size_impl {checking sorting Qc Qs j} csize ssize :
+    forall tu: lift_sorting checking sorting j,
+    (forall t T, forall Hty: checking t T, csize _ _ Hty < lift_sorting_size csize ssize _ tu -> Qc t T) ->
+    (forall t u, forall Hty: sorting t u,  ssize _ _ Hty < lift_sorting_size csize ssize _ tu -> Qs t u) ->
+    lift_sorting Qc Qs j.
+  Proof.
+    intros tu Xc Xs.
+    eapply lift_sorting_size_gen_impl with (tu := tu).
+    all: intros.
+    1: eapply Xc. 2: eapply Xs.
+    all: apply le_n_S, H.
+  Qed.
+
+  Lemma lift_typing_size_impl {P Q j} Psize :
     forall tu: lift_typing0 P j,
     (forall t T, forall Hty: P t T, Psize _ _ Hty <= lift_typing_size Psize _ tu -> Q t T) ->
     lift_typing0 Q j.
   Proof.
     intros.
-    eapply lift_sorting_size_impl with (csize := Psize).
+    eapply lift_sorting_size_gen_impl with (csize := Psize).
     all: intros t T; apply X.
   Qed.
 
@@ -1109,17 +1175,19 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
       | [] => wf_universe Σ u
-      | {| decl_body := None;   decl_type := t |} :: Δ => type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TypUniv t u)
-      | {| decl_body := Some b; decl_type := t |} :: Δ => type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TermTyp b t)
+      | {| decl_name := na; decl_body := None; decl_type := t |} :: Δ =>
+          type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TypUniv t u (* na.(binder_relevance) *))
+      | {| decl_body := Some _; |} as d :: Δ =>
+          type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (j_decl d)
       end.
 
     Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list Universe.t) : Type :=
       match Δ, us with
       | [], [] => unit
-      | {| decl_body := None;   decl_type := t |} :: Δ, u :: us =>
-        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (TypUniv t u)
-      | {| decl_body := Some b; decl_type := t |} :: Δ, us =>
-        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (TermTyp b t)
+      | {| decl_name := na; decl_body := None;   decl_type := t |} :: Δ, u :: us =>
+        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (TypUniv t u (* na.(binder_relevance) *))
+      | {| decl_body := Some _ |} as d :: Δ, us =>
+        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (j_decl d)
       | _, _ => False
       end.
 
@@ -1639,6 +1707,23 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition on_global_env_ext (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.(universes) Σ.2.
+
+    Lemma on_global_env_ext_empty_ext g :
+      on_global_env g -> on_global_env_ext (empty_ext g).
+    Proof.
+      intro H; split => //.
+      unfold empty_ext, snd. repeat split.
+      - unfold levels_of_udecl. intros x e. lsets.
+      - unfold constraints_of_udecl. intros x e. csets.
+      - unfold satisfiable_udecl, univs_ext_constraints, constraints_of_udecl, fst_ctx, fst => //.
+        destruct H as ((cstrs & _ & consistent) & decls).
+        destruct consistent; eexists.
+        intros v e. specialize (H v e); tea.
+      - unfold valid_on_mono_udecl, constraints_of_udecl, consistent_extension_on.
+        intros v sat; exists v; split.
+        + intros x e. csets.
+        + intros x e => //.
+    Qed.
 
   End GlobalMaps.
 

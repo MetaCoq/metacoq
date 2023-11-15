@@ -641,7 +641,7 @@ Proof using Type.
       now eapply invert_cumul_sort_ind in Hcumul.
     + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
-    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul); eauto.
+    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_prod_ind in Hcumul.
     + exfalso. eapply inversion_Ind in Hty as (? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICInductives.declared_inductive_type in d.

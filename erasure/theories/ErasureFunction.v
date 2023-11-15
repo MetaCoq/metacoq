@@ -758,10 +758,9 @@ Section fix_sigma.
   - intros. destruct H' as [].
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.
     rewrite <- (abstract_env_ext_irr _ H2) in wf; eauto.
-    eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
+    eapply inversion_Prod in X0 as (? & ? & h1 & ? & ?) ; auto.
     eapply cored_red in H0 as [].
-    econstructor. econstructor. econstructor. eauto.
-    2:reflexivity. econstructor; pcuic.
+    econstructor. econstructor; tea.
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.
     eapply subject_reduction; eauto.
   - intros. rewrite <- (abstract_env_ext_irr _ H0) in wf; eauto.
@@ -800,8 +799,8 @@ Section fix_sigma.
       pose proof (abstract_env_ext_wf _ wfΣ') as [wf].
       sq.
       eapply subject_reduction_closed in HT; tea.
-      eapply inversion_Prod in HT as [? [? [? []]]].
-      now eapply typing_wf_local in t1. pcuic. pcuic.
+      eapply inversion_Prod in HT as [? [? [? [t0 ?]]]].
+      now eapply typing_wf_local in t0. pcuic. pcuic.
     - clear rprod is_arity rsort a0.
       intros Σ' wfΣ'; specialize (H Σ' wfΣ').
       repeat specialize_Σ wfΣ'.
@@ -1090,12 +1089,13 @@ Section Erase.
     - now eapply inversion_Evar in Ht.
     - discriminate.
     - discriminate.
-    - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Lambda in Ht as (? & ? & ? & ?); auto.
       eexists; eauto.
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & h1 & ? & ?); auto.
+      apply unlift_TermTyp in h1.
       eexists; eauto.
     - simpl in *.
-      eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+      eapply inversion_LetIn in Ht as (? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_App in Ht as (? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.

@@ -1308,7 +1308,7 @@ Corollary R_Acc_aux :
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.
@@ -1344,7 +1344,7 @@ Corollary R_Acc_aux :
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.

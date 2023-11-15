@@ -108,10 +108,8 @@ Proof.
   - apply lift_typing_impl with (1 := X) => t T [] _ IH //.
     now apply IH.
 
-  - apply All_local_env_over_2 in X. clear wfΓ.
-    apply All_local_env_impl with (1 := X) => Γ' j Hj.
-    apply lift_typing_impl with (1 := Hj) => t' T' [] _ IH //.
-    now apply IH.
+  - apply All_local_env_impl with (1 := X0) => Γ' j Hj.
+    now apply Hj.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends. all: econstructor; eauto 2 with extends.
@@ -122,18 +120,14 @@ Proof.
     + specialize (forall_Σ' _ wf0 wfΣ' extΣ).
       now apply All_local_env_app_inv in forall_Σ'.
     + eapply fix_guard_extends; eauto.
-    + eapply (All_impl X0); intros d X.
-      apply (lift_typing_impl X); now intros ? [].
-    + eapply (All_impl X1); intros d X.
-      apply (lift_typing_impl X); now intros ? [].
+    + eapply (All_impl X1); intros d X. now apply X.
+    + eapply (All_impl X3); intros d X. now apply X.
   - econstructor; eauto with extends.
     + specialize (forall_Σ' _ wf0 wfΣ' extΣ).
       now apply All_local_env_app_inv in forall_Σ'.
     + eapply cofix_guard_extends; eauto.
-    + eapply (All_impl X0); intros d X.
-      apply (lift_typing_impl X); now intros ? [].
-    + eapply (All_impl X1); intros d X.
-      apply (lift_typing_impl X); now intros ? [].
+    + eapply (All_impl X1); intros d X. now apply X.
+    + eapply (All_impl X3); intros d X. now apply X.
   - econstructor; eauto with extends.
     destruct X1; constructor; eauto with extends.
     * now eapply extends_wf_universe.

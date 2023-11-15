@@ -1085,11 +1085,16 @@ Lemma typing_leq_term_prop_gen :
       Σ ;;; Γ |- t' : T' ->
       forall n, leq_term_napp Σ n t' t ->
       Σ ;;; Γ |- T ~~ T')%type
-    (fun Σ Γ j => lift_typing typing Σ Γ j)
+    (fun Σ Γ j => on_udecl Σ.1 Σ.2 ->
+      lift_typing0 (fun t T =>
+      forall t' T' : term,
+      Σ ;;; Γ |- t' : T' ->
+      forall n, leq_term_napp Σ n t' t ->
+      Σ ;;; Γ |- T ~~ T') j)
     (fun Σ Γ => wf_local Σ Γ).
 Proof using Hcf.
   eapply typing_ind_env.
-  { intros ???? H. apply lift_typing_impl with (1 := H) => ?? [] //. }
+  { intros ???? H ?. apply lift_typing_impl with (1 := H) => ?? [] ?? ?? //. eauto. }
   1: now auto.
 
   all: intros Σ wfΣ Γ wfΓ; intros.
@@ -1134,8 +1139,6 @@ Proof using Hcf.
     1,2:now eapply is_sprop_superE in H'.
 
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
-    specialize (X1 _ _ H Ha).
-    specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
     eapply context_conversion in Hb.
     3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
       constructor. eauto. }
@@ -1150,24 +1153,21 @@ Proof using Hcf.
     * split; intros Hs'; apply is_sprop_sort_prod in Hs'; eapply is_sprop_prod; eapply cumul_sprop_props; eauto.
       now eapply cumul_prop_sym; eauto.
 
-  - eapply inversion_Lambda in X4 as (s & B & dom & bod & cum).
-    specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X5_1)).
+  - eapply inversion_Lambda in X4 as (B & dom & bod & cum).
     specialize (X3 t0 B H).
-    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vass na0 ty) (Γ ,, vass na t)).
     { repeat constructor; pcuic. }
     forward X3 by eapply context_conversion; eauto; pcuic.
     specialize (X3 _ X5_2). eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_tProd; eauto. now symmetry. now symmetry. auto.
 
-  - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
-    specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2)).
-    specialize (X3 _ _ H bod _  (eq_term_upto_univ_napp_leq X7_1)).
-    assert(conv_context cumulAlgo_gen Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
+  - eapply inversion_LetIn in X4 as (A & dombod & codom & cum); auto.
+    assert(conv_context cumulAlgo_gen Σ (Γ ,, vdef na0 t ty) (Γ ,, vdef na b b_ty)).
     { repeat constructor; pcuic. }
-    specialize (X5 u A H).
-    forward X5 by eapply context_conversion; eauto; pcuic.
-    specialize (X5 _ X7_3).
+    specialize (X3 u A H).
+    forward X3 by eapply context_conversion; eauto; pcuic.
+    specialize (X3 _ X5_3).
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_tLetIn; auto; now symmetry.
@@ -1300,26 +1300,26 @@ Proof using Hcf.
       rewrite (declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
 
-  - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
+  - eapply inversion_Fix in X4 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[a _] _] _].
     constructor; [fvs|..].
-    { eapply nth_error_all in X0 as (_ & ? & (dty & _) & _); tea.
-      now apply subject_is_open_term in dty. }
+    { eapply nth_error_all in X0; tea.
+      now apply isType_is_open_term in X0. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.
 
-  - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
+  - eapply inversion_CoFix in X4 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[a _] _] _].
     constructor; [fvs|..].
-    { eapply nth_error_all in X0 as (_ & ? & (dty & _) & _); tea.
-      now apply subject_is_open_term in dty. }
+    { eapply nth_error_all in X0; tea.
+      now apply isType_is_open_term in X0. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.

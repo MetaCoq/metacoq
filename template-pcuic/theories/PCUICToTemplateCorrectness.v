@@ -696,16 +696,26 @@ Section wtsub.
     eexists; tea. eexists; tea.
   Qed.
 
+  Lemma lift_wt_inv {Γ j} : lift_typing typing Σ Γ j -> lift_wf_term (wt Σ Γ) j.
+  Proof.
+    intros (? & ? & ? & _).
+    split. 1: destruct j_term => //.
+    all: eexists; eassumption.
+  Qed.
+
   Lemma wt_inv {Γ t} : wt Σ Γ t -> wt_subterm Γ t.
   Proof.
     destruct t; simpl; intros [T h]; try exact tt.
     - now eapply inversion_Evar in h.
-    - eapply inversion_Prod in h as (?&?&?&?&?); tea.
-      split; eexists; eauto.
-    - eapply inversion_Lambda in h as (?&?&?&?&?); tea.
-      split; eexists; eauto.
-    - eapply inversion_LetIn in h as (?&?&?&?&?&?); tea.
-      repeat split; eexists; eauto.
+    - eapply inversion_Prod in h as (?&?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      split; tas; eexists; eauto.
+    - eapply inversion_Lambda in h as (?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      split; tas; eexists; eauto.
+    - eapply inversion_LetIn in h as (?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      repeat split; tas; eexists; eauto.
     - eapply inversion_App in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
     - eapply inversion_Case in h as (mdecl&idecl&decli&indices&[]&?); tea.
@@ -1609,8 +1619,7 @@ Proof.
 Qed.
 
 Lemma trans_mfix_All2 {cf} Σ Γ mfix xfix:
-  All (on_def_body (lift_typing_conj
-      (typing Σ)
+  All (on_def_body (lift_typing1
       (fun Γ t T => TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)))
     (SE.fix_context xfix) Γ) mfix ->
   All (TT.on_def_body (fun Γ => TT.lift_typing0 (TT.typing (trans_global Σ) Γ))
@@ -1619,7 +1628,7 @@ Proof.
   induction 1.
   - constructor.
   - simpl; constructor; auto.
-    destruct p as ((_ & Hb) & s & (_ & Ht) & _). cbn in Hb, Ht.
+    destruct p as (Hb & s & Ht & _). cbn in Hb, Ht.
     unfold app_context in *.
     rewrite /trans_local map_app trans_fix_context in Hb, Ht.
     rewrite trans_lift in Hb, Ht.
@@ -2326,12 +2335,12 @@ Proof.
       reflexivity.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
-    + eapply All_map, (All_impl X0).
-      intros d (_ & s & (_ & IHt) & _).
-      repeat (eexists; tea); cbn.
+    + eapply All_map, (All_impl X1).
+      intros d (_ & ? & ? & _) => //.
+      repeat (eexists; tea).
     + fold trans.
       subst types.
-      eapply trans_mfix_All2; eassumption.
+      eapply trans_mfix_All2. eassumption.
     + now rewrite trans_wf_fixpoint.
   - rewrite trans_dtype. simpl.
     eapply TT.type_CoFix; auto.
@@ -2344,8 +2353,8 @@ Proof.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
     + fold trans.
-      eapply All_map, (All_impl X0).
-      intros d (_ & s & (_ & IHt) & _).
+      eapply All_map, (All_impl X1).
+      intros d (_ & s & IHt & _).
       repeat (eexists; tea); cbn.
     + fold trans;subst types.
       now apply trans_mfix_All2.

@@ -246,9 +246,10 @@ Notation TypUniv ty u := (Judge None ty (Some u)).
 Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u)).
 
 Notation j_vass na ty := (Typ ty (* na.(binder_relevance) *)).
+Notation j_vass_s na ty s := (TypUniv ty s (* na.(binder_relevance) *)).
 Notation j_vdef na b ty := (TermTyp b ty (* na.(binder_relevance) *)).
 Notation j_decl d := (TermoptTyp (decl_body d) (decl_type d) (* (decl_name d).(binder_relevance) *)).
-
+Notation j_decl_s d s := (Judge (decl_body d) (decl_type d) s (* (decl_name d).(binder_relevance) *)).
 
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
   {| decl_name := d.(decl_name);

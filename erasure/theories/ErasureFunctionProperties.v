@@ -87,9 +87,10 @@ Proof.
     | [ H : KernameSet.In _ (KernameSet.union _ _) |- _ ] =>
       apply KernameSet.union_spec in hin as [?|?]
     end.
-  - apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    now apply unlift_TermTyp in h1.
+  - apply inversion_LetIn in wt as (? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
@@ -184,8 +185,9 @@ Proof.
     end.
   - now apply inversion_Evar in wt.
   - constructor.
-    now apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+    now apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    apply unlift_TermTyp in h1.
     constructor; eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
     now constructor; eauto.

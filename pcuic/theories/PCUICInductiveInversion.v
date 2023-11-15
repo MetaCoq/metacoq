@@ -3278,19 +3278,18 @@ Proof.
     apply lift_sorting_it_impl_gen with Hty => // Hs.
     have wf := typing_wf_local Hs.
     depelim wf.
-    destruct l as (Hb & s1 & Hs1 & _). cbn in Hb.
     eapply type_Cumul'.
     econstructor; eauto. eapply isType_Sort; eauto.
     now eapply PCUICWfUniverses.typing_wf_universe in Hs.
     eapply convSpec_cumulSpec, red1_cumulSpec.
     repeat constructor.
-  - intros T (_ & s & Hs & y).
+  - intros T (_ & s & Hs & _).
     apply IHΔ.
     red.
     have wf := typing_wf_local Hs.
     depelim wf.
-    destruct l as (_ & s1 & Hs1 & _).
-    eapply has_sort_isType with (s := Universe.sort_of_product s1 s).
+    pose proof (lift_sorting_extract l).
+    eapply has_sort_isType with (s := Universe.sort_of_product _ s).
     econstructor; eauto.
 Qed.
 

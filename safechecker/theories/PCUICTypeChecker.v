@@ -1633,6 +1633,7 @@ Section Typecheck.
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s1 ?] [s2 ?]; *)
     cbn. specialize_Σ wfΣ. sq. econstructor; try eassumption.
+    repeat (eexists; tea).
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1643,8 +1644,8 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    eexists. intros. sq. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto.
+    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    now eapply unlift_TypUniv.
   Qed.
   (* tLambda *)
   Next Obligation.
@@ -1656,7 +1657,8 @@ Section Typecheck.
   Next Obligation.
     (* intros Γ HΓ t0 na A t Heq_t [s ?] [B ?]; *)
       cbn; pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ.
-      sq; econstructor; eassumption.
+      sq; econstructor; tas.
+      repeat (eexists; tea).
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1667,8 +1669,8 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    eexists. intros. sq. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto.
+    destruct X2 as (_ & u & Hu & _).
+    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
   (* tLetIn *)
   Next Obligation.
@@ -1686,7 +1688,8 @@ Section Typecheck.
     all: now eapply infering_sort_typing.
   Qed.
   Next Obligation.
-    cbn; specialize_Σ wfΣ; sq; econstructor; eauto.
+    cbn; specialize_Σ wfΣ; sq; econstructor; tas.
+    repeat (eexists; tea).
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1697,14 +1700,14 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    eexists. intros. sq. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto.
+    destruct X3 as (Ht & u & Hu & _).
+    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    eexists. intros. sq. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. all: eauto.
+    destruct X2 as (Ht & u & Hu & _).
+    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
   (* tApp *)
   Next Obligation.
@@ -1722,7 +1725,7 @@ Section Typecheck.
     destruct X3 as (_ & s & HH & _).
     eapply inversion_Prod in HH ; auto.
     destruct HH as [s1 [_ [HH _]]].
-    eapply has_sort_isType. eassumption.
+    eapply lift_sorting_forget_univ. eassumption.
   Qed.
   Next Obligation.
     cbn in *; specialize_Σ wfΣ ; sq.

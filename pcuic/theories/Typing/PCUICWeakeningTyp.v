@@ -27,17 +27,17 @@ Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
   intros wfΓ' wfΓ''.
-  pose proof (env_prop_wf_local typing_rename_prop _ wfΣ _ wfΓ') as [_ X]. simpl in X.
+  pose proof (env_prop_wf_local typing_rename_prop _ wfΣ _ wfΓ') as X. simpl in X.
   eapply All_local_env_app_inv in X as [XΓ XΓ'].
   apply All_local_env_app => //.
   rewrite /lift_context.
   apply All_local_env_fold.
   eapply (All_local_env_impl_ind XΓ').
   intros Δ j IH H; simpl.
-  apply lift_typing_f_impl with (1 := H) => // ??.
-  intros Hf; rewrite -/(lift_context #|Γ''| 0 Δ).
-  rewrite Nat.add_0_r; rewrite !lift_rename.
-  eapply (Hf xpredT).
+  eapply lift_typing_f_impl => //.
+  2: intros ?? Hf; rewrite -/(lift_context #|Γ''| 0 Δ).
+  2: rewrite Nat.add_0_r; rewrite !lift_rename; apply Hf.
+  eapply (H xpredT).
   split.
   + apply All_local_env_app; auto.
     apply All_local_env_fold, IH.

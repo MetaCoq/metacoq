@@ -130,7 +130,7 @@ Proof. intro H. revert n. induction H; constructor; eauto. Qed.
 
 Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).
 #[global]
-Hint Unfold wf_decl vass vdef : wf.
+Hint Unfold wf_decl wf_decl_pred vass vdef j_term j_typ : wf.
 #[global]
 Hint Extern 10 => progress simpl : wf.
 #[global]
@@ -507,16 +507,6 @@ Section WfAst.
   Proof using Type.
     apply on_global_env_impl; intros ??? _.
     apply lift_typing_wf_pred.
-  Qed.
-
-  Lemma wf_mfix typing Γ mfix :
-    All (on_def_type (lift_typing_conj typing (fun _ t T => WfAst.wf Σ t * WfAst.wf Σ T)) Γ) mfix ->
-    All (on_def_body (lift_typing_conj typing (fun _ t T => WfAst.wf Σ t * WfAst.wf Σ T)) (fix_context mfix) Γ) mfix ->
-    All (fun def => WfAst.wf Σ (dtype def) * WfAst.wf Σ (dbody def)) mfix.
-  Proof.
-    solve_all.
-    - now destruct a as (_ & ? & (_ & ? & _) & _).
-    - now destruct b as ((_ & ?) & _).
   Qed.
 
   (* Hint Resolve on_global_wf_Forall_decls : wf. *)
@@ -955,7 +945,7 @@ Section TypingWf.
       (fun Σ Γ wfΓ => All (wf_decl Σ) Γ).
   Proof using Type.
     apply typing_ind_env; intros; auto with wf;
-      specialize_goal;
+      specialize_goal; unfold wf_decl_pred in *;
       try solve [split; try constructor; intuition auto with wf].
 
     - now eapply lift_typing2_wf_pred.
@@ -1004,16 +994,14 @@ Section TypingWf.
       clear H.
       split.
       + constructor.
-        now eapply wf_mfix.
-      + eapply All_nth_error in X0; eauto.
-        now destruct X0 as (_ & _ & (_ & ? & _) & _).
+        solve_all; destruct a0, b; cbn in *; assumption.
+      + eapply All_nth_error in X1 as []; eauto.
 
     - subst types.
       split.
       + constructor.
-        now eapply wf_mfix.
-      + eapply All_nth_error in X0; eauto.
-        now destruct X0 as (_ & _ & (_ & ? & _) & _).
+        solve_all; destruct a0, b; cbn in *; assumption.
+      + eapply All_nth_error in X1 as []; eauto.
 
     - split => //.
       + constructor; intuition auto. solve_all.

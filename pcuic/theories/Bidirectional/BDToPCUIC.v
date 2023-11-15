@@ -119,6 +119,9 @@ Section BDToPCUICTyping.
   Let PΓ_rel Γ Γ' :=
     wf_local Σ Γ -> wf_local_rel Σ Γ Γ'.
 
+  Let Pj Γ j :=
+    wf_local Σ Γ -> lift_typing typing Σ Γ j.
+
   (** Preliminary lemmas to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
@@ -199,9 +202,18 @@ Section BDToPCUICTyping.
   Qed.
 
   (** The big theorem, proven by mutual induction using the custom induction principle *)
-  Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
+  Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind Pj PΓ PΓ_rel.
   Proof using wfΣ.
     apply bidir_ind_env.
+
+    - intros. intro.
+      apply lift_sorting_it_impl with X.
+      2: intros [_ IH]; now apply IH.
+      destruct j_term => //=.
+      intros [_ IH]; apply IH; tas.
+      apply lift_sorting_forget_univ in X.
+      apply lift_sorting_it_impl_gen with X => //.
+      intros [_ IH']; now apply IH'.
 
     - intros. eapply bd_wf_local. eassumption.
 
@@ -214,32 +226,20 @@ Section BDToPCUICTyping.
     - red ; intros ; econstructor ; eauto.
       apply X2.
       constructor. 1: by auto.
-      eapply has_sort_isType. eauto.
+      eapply lift_sorting_forget_univ. now eapply X0.
 
     - red ; intros ; econstructor ; eauto.
-      apply X2.
-      constructor. 1: by auto.
-      eapply has_sort_isType. eauto.
 
     - red ; intros ; econstructor ; eauto.
-      + apply X2 ; auto.
-        eapply has_sort_isType. eauto.
-
-      + apply X4.
-        constructor ; auto.
-        repeat (eexists; tea); cbn.
-        * apply X2 ; auto. eapply has_sort_isType. eauto.
-        * eauto.
-
 
     - red ; intros.
       eapply type_App' ; auto.
       apply X2 ; auto.
       specialize (X0 X3).
       apply validity in X0 as (_ & s & X0 & _).
-      apply inversion_Prod in X0 as (? & ? & ? & _).
+      apply inversion_Prod in X0 as (s1 & s2 & X0 & _).
       2: done.
-      eapply has_sort_isType; eassumption.
+      eapply lift_sorting_forget_univ; eassumption.
 
     - red ; intros ; econstructor ; eauto.
 
@@ -254,7 +254,7 @@ Section BDToPCUICTyping.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
         move: (H) => [decl ?].
-        unshelve epose proof (decl' := declared_minductive_to_gen decl); eauto.
+        pose proof (decl' := declared_minductive_to_gen (wfΣ := wfΣ) decl).
         eapply wf_local_subst_instance_decl ; eauto.
         eapply All_local_env_app_inv.
         now eapply on_minductive_wf_params_indices.
@@ -337,51 +337,44 @@ Section BDToPCUICTyping.
 
     - red ; intros ; econstructor ; eauto.
 
-      + clear H H0 H1 X0.
-        apply All_impl with (1 := X) => d Hd.
-        apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
-        auto.
+      + clear H H0 H1 X.
+        apply All_impl with (1 := X0) => d Hd.
+        specialize (Hd X3).
+        apply lift_sorting_it_impl with Hd => //.
 
       + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
-        { apply All_impl with (1 := X) => d Hd.
-          apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
-          auto.
+        { apply All_impl with (1 := X0) => d Hd.
+          specialize (Hd X3).
+          apply lift_sorting_it_impl with Hd => //.
         }
         have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
 
         remember (fix_context mfix) as Γ' eqn:e.
         clear H H0 H1 e.
-        apply All_mix with (1 := Htypes) in X0.
-        apply All_impl with (1 := X0) => d [] isTy Hd.
-        apply lift_sorting_it_impl with Hd => //= [] [Ht IHt]; eauto.
-        apply IHt; tas.
-        apply lift_typing_f_impl with (1 := isTy) => // ?? HT.
-        apply weakening.
-        all: auto.
+        apply All_mix with (1 := Htypes) in X2.
+        apply All_impl with (1 := X2) => d [] isTy Hd.
+        specialize (Hd wfΓ').
+        apply lift_sorting_it_impl with Hd => //=.
 
     - red ; intros ; econstructor ; eauto.
-      + clear H H0 H1 X0.
-        apply All_impl with (1 := X) => d Hd.
-        apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
-        auto.
+      + clear H H0 H1 X.
+        apply All_impl with (1 := X0) => d Hd.
+        specialize (Hd X3).
+        apply lift_sorting_it_impl with Hd => //.
 
       + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
-        { clear H H0 H1 X0.
-          apply All_impl with (1 := X) => d Hd.
-          apply lift_sorting_it_impl with Hd => // [] [Ht IHt].
-          auto.
+        { apply All_impl with (1 := X0) => d Hd.
+          specialize (Hd X3).
+          apply lift_sorting_it_impl with Hd => //.
         }
-        have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf ; auto.
+        have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
 
         remember (fix_context mfix) as Γ' eqn:e.
         clear H H0 H1 e.
-        apply All_mix with (1 := Htypes) in X0.
-        apply All_impl with (1 := X0) => d [] isTy Hd.
-        apply lift_sorting_it_impl with Hd => //= [] [Ht IHt]; eauto.
-        apply IHt; tas.
-        apply lift_typing_f_impl with (1 := isTy) => // ?? HT.
-        apply weakening.
-        all: auto.
+        apply All_mix with (1 := Htypes) in X2.
+        apply All_impl with (1 := X2) => d [] isTy Hd.
+        specialize (Hd wfΓ').
+        apply lift_sorting_it_impl with Hd => //=.
 
     - red; intros.
       econstructor; eauto.
@@ -451,6 +444,24 @@ Theorem einfering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t (wfΣ 
 Proof.
   intros wfΓ [u Ht].
   now eapply infering_sort_isType.
+Qed.
+
+Theorem isTypebd_isType `{checker_flags} (Σ : global_env_ext) Γ j (wfΣ : wf Σ) :
+  wf_local Σ Γ -> lift_sorting (checking Σ Γ) (infering_sort Σ Γ) j -> isType Σ Γ (j_typ j).
+Proof.
+  intros wfΓ (_ & s & Hs & _).
+  now eapply infering_sort_isType.
+Qed.
+
+Theorem lift_sorting_lift_typing `{cf : checker_flags} (Σ : global_env_ext) Γ j (wfΣ : wf Σ) :
+  wf_local Σ Γ -> lift_sorting (checking Σ Γ) (infering_sort Σ Γ) j -> lift_typing typing Σ Γ j.
+Proof.
+  intros wfΓ Hj.
+  apply lift_sorting_it_impl with Hj.
+  2: intros H; now apply infering_sort_typing, H.
+  destruct j_term => //=.
+  intros H; apply checking_typing; tas.
+  now apply isTypebd_isType in Hj.
 Qed.
 
 Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :

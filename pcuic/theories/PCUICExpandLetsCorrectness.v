@@ -945,17 +945,27 @@ Section wtsub.
     eexists; tea. eexists; tea.
   Qed.
 
+  Lemma lift_wt_inv {Γ j} : lift_typing typing Σ Γ j -> lift_wf_term (wt Σ Γ) j.
+  Proof.
+    intros (? & ? & ? & _).
+    split. 1: destruct j_term => //.
+    all: eexists; eassumption.
+  Qed.
+
   Lemma wt_inv {Γ t} : wt Σ Γ t -> wt_subterm Γ t.
   Proof.
     destruct t; simpl; intros [T h]; try exact tt.
     - now eapply typing_wf_local in h.
     - now eapply inversion_Evar in h.
-    - eapply inversion_Prod in h as (?&?&?&?&?); tea.
-      split; eexists; eauto.
-    - eapply inversion_Lambda in h as (?&?&?&?&?); tea.
-      split; eexists; eauto.
-    - eapply inversion_LetIn in h as (?&?&?&?&?&?); tea.
-      repeat split; eexists; eauto.
+    - eapply inversion_Prod in h as (?&?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      split; tas; eexists; eauto.
+    - eapply inversion_Lambda in h as (?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      split; tas; eexists; eauto.
+    - eapply inversion_LetIn in h as (?&h1&?&?); tea.
+      apply lift_wt_inv in h1 as [].
+      repeat split; tas; eexists; eauto.
     - eapply inversion_App in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
     - eapply inversion_Case in h as (mdecl&idecl&decli&indices&[]&?); tea.
@@ -3848,10 +3858,7 @@ Proof.
     + rewrite map_length H. now destruct mdecl.
   - rewrite trans_dtype /=.
     assert (is_open_term Γ (tFix mfix n)).
-    { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. solve_all.
-      apply lift_typing_impl with (1 := a) => // ?? [] //.
-      solve_all.
-      apply lift_typing_impl with (1 := b) => // ?? [] //. }
+    { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. }
     eapply TT.type_Fix; auto.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
@@ -3861,14 +3868,14 @@ Proof.
       destruct decl.
       unfold map_def.
       reflexivity.
-    + eapply All_map, (All_impl X0).
-      intros d (_ & ? & (_ & ?) & _).
-      repeat (eexists; tea). eauto.
+    + eapply All_map, (All_impl X1).
+      intros d (_ & ? & ? & _) => //.
+      repeat (eexists; tea).
     + fold trans.
       subst types.
       eapply All_map.
-      eapply All_prod in X0; tea. clear X1.
-      eapply All_impl; tea. intros d (((Hdb & IHdb) & ? & (_ & IHdt) & _) & (_ & ? & (? & ?) & _)); cbn in *.
+      eapply All_prod with (1 := X3) in X0; tea. clear X1 X2 X3.
+      eapply All_impl; tea. intros d ((IHdb & ? & IHdt & _) & (_ & ? & ? & _)); cbn in *; tas.
       repeat (eexists; tea); cbn.
       all: len; rewrite -(trans_fix_context _ _ 0 H2).
       all: rewrite -trans_local_app.
@@ -3879,10 +3886,7 @@ Proof.
 
   - rewrite trans_dtype. simpl.
     assert (is_open_term Γ (tCoFix mfix n)).
-    { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. solve_all.
-      apply lift_typing_impl with (1 := a) => // ?? [] //.
-      solve_all.
-      apply lift_typing_impl with (1 := b) => // ?? [] //. }
+    { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. }
     eapply TT.type_CoFix; auto.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
@@ -3892,13 +3896,14 @@ Proof.
       destruct decl.
       unfold map_def.
       reflexivity.
-    + eapply All_map, (All_impl X0).
-      intros d (_ & ? & (_ & ?) & _).
-      repeat (eexists; tea). eauto.
-    + fold trans;subst types.
+    + eapply All_map, (All_impl X1).
+      intros d (_ & ? & ? & _) => //.
+      repeat (eexists; tea).
+    + fold trans.
+      subst types.
       eapply All_map.
-      eapply All_prod in X0; tea. clear X1.
-      eapply All_impl; tea. intros d (((Hdb & IHdb) & ? & (_ & IHdt) & _) & (_ & ? & (? & ?) & _)); cbn in *.
+      eapply All_prod with (1 := X3) in X0; tea. clear X1 X2 X3.
+      eapply All_impl; tea. intros d ((IHdb & ? & IHdt & _) & (_ & ? & ? & _)); cbn in *; tas.
       repeat (eexists; tea); cbn.
       all: len; rewrite -(trans_fix_context _ _ 0 H2).
       all: rewrite -trans_local_app.

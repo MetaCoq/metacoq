@@ -468,14 +468,15 @@ Section CheckEnv.
       eexists; constructor; eauto. apply wfΣ.
     - destruct x as [na [b|] ty]; simpl in *;
       rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in h *.
-      * eapply inversion_LetIn in h as [s' [? [? [? [? ?]]]]]; auto.
-        specialize (IHΔ _ _ _ t1) as [s'' vdefty].
+      * eapply inversion_LetIn in h as [s' [? [? ?]]]; auto.
+        specialize (IHΔ _ _ _ t) as [s'' vdefty].
         exists s''.
         eapply type_Cumul_alt. econstructor; eauto. pcuic.
         eapply red_cumul. repeat constructor.
-      * eapply inversion_Prod in h as [? [? [? [? ]]]]; auto.
-        specialize (IHΔ _ _ _ t0) as [s'' Hs''].
-        eexists (Universe.sort_of_product x s'').
+      * eapply inversion_Prod in h as [? [? [h1 [? ?]]]]; auto.
+        specialize (IHΔ _ _ _ t) as [s'' Hs''].
+        exists (Universe.sort_of_product x s'').
+        apply unlift_TypUniv in h1.
         eapply type_Cumul'; eauto. econstructor; pcuic. pcuic.
         reflexivity.
   Qed.
@@ -1180,6 +1181,7 @@ Section CheckEnv.
     welltyped Σ Γ ty * welltyped Σ (Γ ,, vass na ty) ty'.
   Proof using Type.
     intros [s [s1 [s2 [hty [hty' hcum]]]]%inversion_Prod]; auto.
+    apply unlift_TypUniv in hty; cbn in hty.
     split; eexists; eauto.
   Qed.
 
@@ -1189,7 +1191,8 @@ Section CheckEnv.
     welltyped Σ Γ b *
     welltyped Σ (Γ ,, vdef na b ty) t.
   Proof using Type.
-    intros [s [s1 [s2 [hty [hdef [hty' hcum]]]]]%inversion_LetIn]; auto.
+    intros [s [s1 [hty [hty' hcum]]]%inversion_LetIn]; auto.
+    destruct hty as (hdef & s2 & hty & _); cbn in *.
     split; [split|]; eexists; eauto.
   Qed.
 
@@ -1197,8 +1200,8 @@ Section CheckEnv.
     welltyped Σ Γ (tLetIn na b ty t) ->
     welltyped Σ Γ (subst0 [b] t).
   Proof using Type.
-    intros [s [s1 [s2 [hty [hdef [hty' hcum]]]]]%inversion_LetIn]; auto.
-    exists (subst0 [b] s2).
+    intros [s [s1 [hdef [hty' hcum]]]%inversion_LetIn]; auto.
+    exists (subst0 [b] s1).
     now eapply substitution_let in hty'.
   Qed.
 

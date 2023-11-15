@@ -803,7 +803,7 @@ Section classification.
       now eapply invert_cumul_sort_ind in e.
     - eapply inversion_Prod in typed as (? & ? & ? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Lambda in typed as (? & ? & ? & ? & e); auto.
+    - eapply inversion_Lambda in typed as (? & ? & ? & e); auto.
       now eapply invert_cumul_prod_ind in e.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
@@ -933,36 +933,37 @@ Section classification.
       pose proof (subject_closed t1); auto.
       eapply eval_closed in H; eauto.
       eapply subject_reduction in IHHe1. 2-3:eauto.
-      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & e); eauto.
-      eapply (substitution0 (Γ := [])) in t3; eauto.
+      eapply inversion_Lambda in IHHe1 as (? & ? & ? & e); eauto.
+      eapply (substitution0 (Γ := [])) in t2; eauto.
       eapply IHHe3.
       rewrite (closed_subst a' 0 b); auto.
-      rewrite /subst1 in t3. eapply t3.
+      rewrite /subst1 in t2. eapply t2.
       eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
-      eapply subject_reduction in IHHe2; eauto. now eapply has_sort_isType.
+      eapply subject_reduction in IHHe2; eauto.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & ? & ? & ?); auto.
+      apply unlift_TermTyp in l as t0'.
       redt (tLetIn na b0' t b1); eauto.
       eapply red_letin; eauto.
       redt (b1 {0 := b0'}); auto.
       do 2 econstructor.
-      specialize (IHHe1 _ t1).
+      specialize (IHHe1 _ t0').
       rewrite /subst1.
       rewrite -(closed_subst b0' 0 b1).
-      eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
+      eapply subject_reduction in t0'; eauto. eapply subject_closed in t0'; eauto.
       eapply IHHe2.
       rewrite closed_subst.
-      eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
-      pose proof (subject_is_open_term t2).
-      eapply substitution_let in t2; eauto.
-      eapply subject_reduction in t2.
+      eapply subject_reduction in t0'; eauto. eapply subject_closed in t0'; eauto.
+      pose proof (subject_is_open_term t0).
+      eapply substitution_let in t0; eauto.
+      eapply subject_reduction in t0.
       3:{ eapply (red_red (Δ := [vass na t]) (Γ' := [])); eauto. 3:repeat constructor.
-          cbn. rewrite addnP_shiftnP. eapply type_is_open_term in t1. now erewrite t1.
+          cbn. rewrite addnP_shiftnP. eapply type_is_open_term in t0'. now erewrite t0'.
           repeat constructor. cbn. rewrite addnP_shiftnP.
-          eapply subject_is_open_term in t1. cbn in t1. now setoid_rewrite shiftnP0 in t1. }
-      apply t2. auto.
+          eapply subject_is_open_term in t0'. cbn in t0'. now setoid_rewrite shiftnP0 in t0'. }
+      apply t0. auto.
 
     - redt (subst_instance u body); auto.
       eapply red1_red. econstructor; eauto.

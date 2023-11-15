@@ -47,13 +47,11 @@ Section Generation.
     - assumption.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc.
-      destruct t0 as (Hb & ? & Ht & _). cbn in Hb.
+      apply All_local_env_tip in hc as [hc ona].
       econstructor; try eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc.
-      destruct t0 as (_ & ? & Ht & _).
+      apply All_local_env_tip in hc as [hc ona].
       econstructor; try eassumption.
   Qed.
 

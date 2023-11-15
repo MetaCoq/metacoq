@@ -883,6 +883,12 @@ Proof.
   induction 1; simpl; constructor; auto.
 Qed.
 
+Lemma Alli_refl {A} (P : nat -> A -> Type) n (l : list A) :
+  (forall n x, P n x) -> Alli P n l.
+Proof.
+  intros H. induction l in n |- *; constructor; auto.
+Defined.
+
 Lemma Alli_rev {A} {P : nat -> A -> Type} k l :
   Alli P k l ->
   Alli (fun k' => P (Nat.pred #|l| - k' + k)) 0 (List.rev l).
@@ -960,6 +966,12 @@ Lemma OnOne2_All_mix_left {A} {P : A -> A -> Type} {Q : A -> Type} {l l'} :
   All Q l -> OnOne2 P l l' -> OnOne2 (fun x y => (P x y * Q x)%type) l l'.
 Proof.
   intros H; induction 1; constructor; try inv H; intuition.
+Qed.
+
+Lemma OnOne2_All_mix_both {A} {P : A -> A -> Type} {Q R : A -> Type} {l l'} :
+  All Q l -> All R l' -> OnOne2 P l l' -> OnOne2 (fun x y => (P x y × Q x × R y)%type) l l'.
+Proof.
+  intros H H'; induction 1; constructor; try inv H; try inv H'; intuition.
 Qed.
 
 Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
@@ -3331,6 +3343,14 @@ Proof.
   apply All2i_length in a.
   apply All2i_length in a0.
   congruence.
+Qed.
+
+Lemma All2i_All2 {A B} {P : nat -> A -> B -> Type} {Q : A -> B -> Type} n l l' :
+  All2i P n l l' ->
+  (forall i x y, P i x y -> Q x y) ->
+  All2 Q l l'.
+Proof.
+  induction 1; constructor; eauto.
 Qed.
 
 Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}

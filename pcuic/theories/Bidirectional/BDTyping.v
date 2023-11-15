@@ -35,18 +35,17 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- tSort s ▹ tSort (Universe.super s)
 
 | infer_Prod na A B s1 s2 :
-  Σ ;;; Γ |- A ▹□ s1 ->
+  lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass_s na A s1) ->
   Σ ;;; Γ ,, vass na A |- B ▹□ s2 ->
   Σ ;;; Γ |- tProd na A B ▹ tSort (Universe.sort_of_product s1 s2)
 
-| infer_Lambda na A t s B :
-  Σ ;;; Γ |- A ▹□ s ->
+| infer_Lambda na A t B :
+  lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass na A) ->
   Σ ;;; Γ ,, vass na A |- t ▹ B ->
   Σ ;;; Γ |- tLambda na A t ▹ tProd na A B
 
-| infer_LetIn na b B t s A :
-  Σ ;;; Γ |- B ▹□ s ->
-  Σ ;;; Γ |- b ◃ B ->
+| infer_LetIn na b B t A :
+  lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vdef na b B) ->
   Σ ;;; Γ ,, vdef na b B |- t ▹ A ->
   Σ ;;; Γ |- tLetIn na b B t ▹ tLetIn na b B A
 
@@ -200,6 +199,7 @@ Proof.
           | H : primitive_typing_hyps _ _ _ _ |- _ => apply (primitive_typing_hyps_size _ (checking_size _)) in H
           end ;
     match goal with
+    | H : lift_sorting _ _ _, H' : size |- _ => exact (S (Nat.max H' (lift_sorting_size (checking_size _ _ _) (infering_sort_size _ _ _) _ H)))
     | H : All2i _ _ _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
     | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
@@ -246,11 +246,13 @@ Section BidirectionalInduction.
   Context (Psort : context -> term -> Universe.t -> Type).
   Context (Pprod : context -> term -> aname -> term -> term -> Type).
   Context (Pind : context -> inductive -> term -> Instance.t -> list term -> Type).
+  Context (Pj : context -> judgment -> Type).
   Context (PΓ : context -> Type).
   Context (PΓ_rel : context -> context -> Type).
 
 (** This is what we wish to prove mutually given the previous predicates *)
   Definition env_prop_bd :=
+    (forall Γ j, lift_sorting1 (checking Σ) (infering_sort Σ) Γ j -> Pj Γ j) ×
     (forall Γ , wf_local_bd Σ Γ -> PΓ Γ) ×
     (forall Γ Γ', wf_local_bd_rel Σ Γ Γ' -> PΓ_rel Γ Γ') ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Γ t T) ×
@@ -264,6 +266,7 @@ Section BidirectionalInduction.
   *)
 
   Inductive typing_sum : Type :=
+    | judgment_cons : forall (Γ : context) j, lift_sorting1 (checking Σ) (infering_sort Σ) Γ j -> typing_sum
     | context_cons : forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), typing_sum
     | context_rel_cons : forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'), typing_sum
     | check_cons : forall (Γ : context) T t, Σ ;;; Γ |- t ◃ T -> typing_sum
@@ -274,6 +277,7 @@ Section BidirectionalInduction.
 
   Definition typing_sum_size (d : typing_sum) :=
   match d with
+    | judgment_cons _ _ d => (lift_sorting_size (@checking_size _ _ _) (@infering_sort_size _ _ _) _ d)
     | context_cons Γ wfΓ => wfl_size wfΓ
     | context_rel_cons _ _ wfΓ' => wfl_size_rel wfΓ'
     | check_cons _ _ _ d => (checking_size d)
@@ -285,6 +289,7 @@ Section BidirectionalInduction.
 
   Definition Ptyping_sum (d : typing_sum) :=
   match d with
+    | judgment_cons Γ j _ => Pj Γ j
     | context_cons Γ _ => PΓ Γ
     | context_rel_cons Γ Γ' _ => PΓ_rel Γ Γ'
     | check_cons Γ T t _ => Pcheck Γ t T
@@ -295,6 +300,8 @@ Section BidirectionalInduction.
   end.
 
   Ltac applyIH := match goal with
+    | IH : forall d', _ -> Ptyping_sum d' |- Pj ?Γ ?j =>
+      unshelve eapply (IH (judgment_cons Γ j _))
     | IH : forall d', _ -> Ptyping_sum d' |- PΓ ?Γ =>
       unshelve eapply (IH (context_cons Γ _))
     | IH : forall d', _ -> Ptyping_sum d' |- PΓ_rel ?Γ ?Γ' =>
@@ -315,7 +322,8 @@ Section BidirectionalInduction.
     | |- dlexprod _ _ _ _ =>
             constructor 2 ; cbn ; try lia
     | _ => assumption
-    | _ => cbn ; lia
+    | wfΓ' : wf_local_bd_rel _ _ _ |- _ => fold (wfl_size_rel wfΓ'); cbn -[Nat.max] ; lia
+    | _ => cbn -[Nat.max] ; lia
     | _ => idtac
     end.
 
@@ -325,11 +333,18 @@ Section BidirectionalInduction.
     let Pdecl_check_rel Γ := fun Δ _ t T _ => Pcheck (Γ,,,Δ) t T in
     let Pdecl_sort_rel Γ := fun Δ _ t u _ => Psort (Γ,,,Δ) t u in
 
+    (forall (Γ : context) j,
+      lift_sorting1 (fun Γ t T => checking Σ Γ t T × Pcheck Γ t T) (fun Γ t u => infering_sort Σ Γ t u × Psort Γ t u) Γ j -> Pj Γ j) ->
+
     (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ),
-      All_local_env_over_sorting (checking Σ) (infering_sort Σ) Pdecl_check Pdecl_sort Γ wfΓ -> PΓ Γ) ->
+      All_local_env_over_sorting (checking Σ) (infering_sort Σ) Pdecl_check Pdecl_sort Γ wfΓ ->
+      All_local_env (lift_sorting1 Pcheck Psort) Γ ->
+      PΓ Γ) ->
 
     (forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'),
-      All_local_env_over_sorting (fun Δ => checking Σ (Γ,,,Δ)) (fun Δ => infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Γ' wfΓ' -> PΓ_rel Γ Γ') ->
+      All_local_env_over_sorting (fun Δ => checking Σ (Γ,,,Δ)) (fun Δ => infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Γ' wfΓ' ->
+      All_local_rel (lift_sorting1 Pcheck Psort) Γ Γ' ->
+      PΓ_rel Γ Γ') ->
 
     (forall (Γ : context) (n : nat) decl,
       nth_error Γ n = Some decl ->
@@ -339,28 +354,26 @@ Section BidirectionalInduction.
       wf_universe Σ s->
       Pinfer Γ (tSort s) (tSort (Universe.super s))) ->
 
-    (forall (Γ : context) (n : aname) (t b : term) (s1 s2 : Universe.t),
-      Σ ;;; Γ |- t ▹□ s1 ->
-      Psort Γ t s1 ->
-      Σ ;;; Γ,, vass n t |- b ▹□ s2 ->
-      Psort (Γ,, vass n t) b s2 ->
-      Pinfer Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+    (forall (Γ : context) (na : aname) (t b : term) (s1 s2 : Universe.t),
+      lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass_s na t s1) ->
+      Pj Γ (j_vass_s na t s1) ->
+      Σ ;;; Γ,, vass na t |- b ▹□ s2 ->
+      Psort (Γ,, vass na t) b s2 ->
+      Pinfer Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
-    (forall (Γ : context) (n : aname) (t b : term) (s : Universe.t) (bty : term),
-      Σ ;;; Γ |- t ▹□ s ->
-      Psort Γ t s ->
-      Σ ;;; Γ,, vass n t |- b ▹ bty ->
-      Pinfer (Γ,, vass n t) b bty ->
-      Pinfer Γ (tLambda n t b) (tProd n t bty)) ->
+    (forall (Γ : context) (na : aname) (t b bty : term),
+      lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass na t) ->
+      Pj Γ (j_vass na t) ->
+      Σ ;;; Γ,, vass na t |- b ▹ bty ->
+      Pinfer (Γ,, vass na t) b bty ->
+      Pinfer Γ (tLambda na t b) (tProd na t bty)) ->
 
-    (forall (Γ : context) (n : aname) (b B t : term) (s : Universe.t) (A : term),
-      Σ ;;; Γ |- B ▹□ s ->
-      Psort Γ B s ->
-      Σ ;;; Γ |- b ◃ B ->
-      Pcheck Γ b B ->
-      Σ ;;; Γ,, vdef n b B |- t ▹ A ->
-      Pinfer (Γ,, vdef n b B) t A ->
-      Pinfer Γ (tLetIn n b B t) (tLetIn n b B A)) ->
+    (forall (Γ : context) (na : aname) (b B t A : term),
+      lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vdef na b B) ->
+      Pj Γ (j_vdef na b B) ->
+      Σ ;;; Γ,, vdef na b B |- t ▹ A ->
+      Pinfer (Γ,, vdef na b B) t A ->
+      Pinfer Γ (tLetIn na b B t) (tLetIn na b B A)) ->
 
     (forall (Γ : context) (t : term) na A B u,
       Σ ;;; Γ |- t ▹Π (na, A, B) ->
@@ -434,17 +447,20 @@ Section BidirectionalInduction.
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       fix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
-      All (on_def_type (lift_sorting1 (fun Γ t T => checking Σ Γ t T × Pcheck Γ t T) (fun Γ t u => infering_sort Σ Γ t u × Psort Γ t u)) Γ) mfix ->
-      All (on_def_body (lift_sorting1 (fun Γ t T => checking Σ Γ t T × Pcheck Γ t T) (fun Γ t u => infering_sort Σ Γ t u × Psort Γ t u)) (fix_context mfix) Γ) mfix ->
+      All (on_def_type (lift_sorting1 (checking Σ) (infering_sort Σ)) Γ) mfix ->
+      All (on_def_type Pj Γ) mfix ->
+      All (on_def_body (lift_sorting1 (checking Σ) (infering_sort Σ)) (fix_context mfix) Γ) mfix ->
+      All (on_def_body Pj (fix_context mfix) Γ) mfix ->
       wf_fixpoint Σ mfix ->
       Pinfer Γ (tFix mfix n) (dtype decl)) ->
 
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       cofix_guard Σ Γ mfix ->
       nth_error mfix n = Some decl ->
-      All (on_def_type (lift_sorting1 (fun Γ t T => checking Σ Γ t T × Pcheck Γ t T) (fun Γ t u => infering_sort Σ Γ t u × Psort Γ t u)) Γ) mfix ->
-      All (on_def_body (lift_sorting1 (fun Γ t T => checking Σ Γ t T × Pcheck Γ t T) (fun Γ t u => infering_sort Σ Γ t u × Psort Γ t u)) (fix_context mfix) Γ) mfix ->
-      wf_cofixpoint Σ mfix ->
+      All (on_def_type (lift_sorting1 (checking Σ) (infering_sort Σ)) Γ) mfix ->
+      All (on_def_type Pj Γ) mfix ->
+      All (on_def_body (lift_sorting1 (checking Σ) (infering_sort Σ)) (fix_context mfix) Γ) mfix ->
+      All (on_def_body Pj (fix_context mfix) Γ) mfix ->      wf_cofixpoint Σ mfix ->
       Pinfer Γ (tCoFix mfix n) (dtype decl)) ->
 
     (forall (Γ : context) p prim_ty cdecl,
@@ -482,13 +498,14 @@ Section BidirectionalInduction.
 
     env_prop_bd.
   Proof using Type.
-    intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
+    intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel Hj HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
       HProj HFix HCoFix HPrim HiSort HiProd HiInd HCheck ; unfold env_prop_bd.
       pose (@Fix_F typing_sum (precompose lt typing_sum_size) Ptyping_sum) as p.
     forward p.
     2:{
     enough (HP : forall x : typing_sum, Ptyping_sum x).
     - repeat split ; intros.
+      + exact (HP (judgment_cons Γ j X)).
       + exact (HP (context_cons Γ X)).
       + exact (HP (context_rel_cons Γ Γ' X)).
       + exact (HP (check_cons Γ T t X)).
@@ -502,53 +519,67 @@ Section BidirectionalInduction.
     clear p.
     intros d IH.
     destruct d ; simpl.
-    4: destruct i.
+    5: destruct i.
+
+    - eapply Hj; tea.
+      eapply lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := l).
+      all: intros ?? Hty Hlt; split; tas.
+      all: applyIH.
 
     - eapply HΓ.
+      2: { clear -IH wfΣ. induction wfΓ; cbn in *; simpl in *; constructor.
+        1,3: apply IHwfΓ; intros; apply IH; lia.
+        all: assert (0 < wfl_size wfΓ) as Hpos by apply All_local_env_size_pos.
+        all: eapply lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := t0).
+        all: intros ?? Hty Hlt; unfold lift_sorting_size in Hlt; simpl in Hlt.
+        all: applyIH. }
       dependent induction wfΓ.
       + constructor.
       + constructor.
         * apply IHwfΓ.
-        intros ; apply IH.
-        cbn in H |- *. lia.
+          intros ; apply IH.
+          cbn in H |- *. lia.
         * destruct t0 as (? & s & Hty & ?); cbn in *.
+          assert (0 < wfl_size wfΓ) by apply All_local_env_size_pos.
           red.
           applyIH.
-          cbn.
-          assert (0 < wfl_size wfΓ) by apply All_local_env_size_pos.
-          lia.
       + destruct t0 as (Htm & s & Hty & _e); cbn in *.
+        assert (0 < wfl_size wfΓ) by apply All_local_env_size_pos.
         constructor.
         * apply IHwfΓ.
           intros ; apply IH.
           cbn in H |- *. lia.
-        * red. cbn. applyIH. pose proof (infering_sort_size_pos Hty). cbn in H |- *. lia.
-        * red. cbn. applyIH. pose proof (checking_size_pos Htm). cbn in H |- *. lia.
+        * red. cbn. applyIH.
+        * red. cbn. applyIH.
 
     - eapply HΓRel.
-      dependent induction wfΓ'.
+      2: { clear -IH wfΣ. induction wfΓ'; cbn in *; simpl in *; constructor; fold (wf_local_bd_rel Σ Γ Γ0) in wfΓ'.
+      1,3: apply IHwfΓ'; intros; apply IH; fold (wfl_size_rel wfΓ'); lia.
+      all: assert (0 < wfl_size_rel wfΓ') as Hpos by apply All_local_env_size_pos.
+      all: eapply lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := t0).
+      all: intros ?? Hty Hlt; unfold lift_sorting_size in Hlt; simpl in Hlt.
+      all: applyIH. }
+      dependent induction wfΓ'; try fold (wf_local_bd_rel Σ Γ Γ0) in wfΓ'.
       + constructor.
       + constructor.
         * apply IHwfΓ'.
           intros ; apply IH.
           cbn in H |- *.
-          unfold wfl_size_rel in H.
+          fold (wfl_size_rel wfΓ').
           lia.
         * destruct t0 as (? & s & Hty & ?); cbn in *. red.
-          applyIH.
-          cbn.
           assert (0 < wfl_size_rel wfΓ') by apply All_local_env_size_pos.
-          unfold wfl_size_rel in H.
-          lia.
+          applyIH.
       + destruct t0 as (Htm & s & Hty & _e); cbn in *.
+        assert (0 < wfl_size_rel wfΓ') by apply All_local_env_size_pos.
         constructor.
         * apply IHwfΓ'.
           intros ; apply IH.
           cbn in H |- *.
           fold (wfl_size_rel wfΓ').
           lia.
-        * red. cbn. applyIH. pose proof (infering_sort_size_pos Hty). cbn in H |- *. lia.
-        * red. cbn. applyIH. pose proof (checking_size_pos Htm). cbn in H |- *. lia.
+        * red. cbn. applyIH.
+        * red. cbn. applyIH.
 
 
     - destruct c.
@@ -633,69 +664,48 @@ Section BidirectionalInduction.
         dependent induction a.
         1: by constructor.
         constructor ; cbn.
-        * eapply @lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := p).
-          all: intros; split; tas.
-          all: applyIH.
-          all: cbn.
-          all: rewrite /on_def_type_sorting_size /lift_sorting_size /= in H |- *.
-          all: lia.
+        * unfold on_def_type. applyIH.
         * apply (IHa s).
           intros.
           apply IH.
-          cbn. lia.
+          cbn [all_size]. lia.
 
-      + remember (all_size _ _ a) as s.
+      + remember (all_size _ _ a) as size.
         clear -IH.
         induction a0.
         1: by constructor.
         constructor.
-        * eapply @lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := p).
-          all: intros; split; tas.
-          all: applyIH.
-          all: cbn.
-          all: rewrite /on_def_body_sorting_size /lift_sorting_size /= in H |- *.
-          all: lia.
+        * unfold on_def_body. applyIH.
         * apply IHa0.
           intros.
           apply IH.
-          cbn. lia.
+          cbn in H |- *. lia.
 
     - unshelve eapply HCoFix ; eauto.
 
-      all: simpl in IH.
+      all: cbn [typing_sum_size infering_size] in IH.
       all: remember (fix_context mfix) as mfixcontext.
-
       + remember (all_size _ _ a0) as s.
         clear -IH.
         dependent induction a.
         1: by constructor.
         constructor ; cbn.
-        * eapply @lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := p).
-          all: intros; split; tas.
-          all: applyIH.
-          all: cbn.
-          all: rewrite /on_def_type_sorting_size /lift_sorting_size /= in H |- *.
-          all: lia.
+        * unfold on_def_type. applyIH.
         * apply (IHa s).
           intros.
           apply IH.
-          cbn. lia.
+          cbn [all_size]. lia.
 
-      + remember (all_size _ _ a) as s.
+      + remember (all_size _ _ a) as size.
         clear -IH.
-        induction a0 as [| ? ? ?].
+        induction a0.
         1: by constructor.
         constructor.
-        * eapply @lift_sorting_size_impl with (csize := @checking_size _ _ _) (ssize := @infering_sort_size _ _ _) (tu := p).
-          all: intros; split; tas.
-          all: applyIH.
-          all: cbn.
-          all: rewrite /on_def_body_sorting_size /lift_sorting_size /= in H |- *.
-          all: lia.
+        * unfold on_def_body. applyIH.
         * apply IHa0.
           intros.
           apply IH.
-          cbn. lia.
+          cbn in H |- *. lia.
 
     - unshelve eapply HPrim; eauto.
       simpl in IH.

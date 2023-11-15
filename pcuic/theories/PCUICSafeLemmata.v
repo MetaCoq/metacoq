@@ -381,8 +381,8 @@ Section Lemmata.
     all: try apply inversion_App in typ as (?&?&?&?&?&?); auto.
     all: try apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
     all: try apply inversion_Prod in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_Lambda in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_LetIn in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_Lambda in typ as (?&?&?&?); auto.
+    all: try apply inversion_LetIn in typ as (?&?&?&?); auto.
     all: try solve [econstructor; eauto].
     - apply inversion_Fix in typ as (?&?&?&?&?&?&?); eauto.
       destruct mfix as ((?&[])&?); simpl in *.
@@ -485,6 +485,10 @@ Section Lemmata.
       cbn in *.
       eapply closed_context_conversion; tea.
       now symmetry.
+    - apply unlift_TypUniv in l. now econstructor.
+    - now eapply isType_welltyped.
+    - apply unlift_TermTyp in l. now econstructor.
+    - apply lift_sorting_forget_body in l. now eapply isType_welltyped.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.
       depelim p0. now eexists.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.
@@ -596,19 +600,9 @@ Section Lemmata.
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
       welltyped Σ (Γ ,,, Δ) t.
   Proof using hΣ.
-    intros Γ Δ t h.
-    induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
-    - assumption.
-    - simpl. apply ih in h. cbn in h.
-      destruct h as [T h].
-      apply inversion_LetIn in h as hh ; auto.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
-      exists A'. assumption.
-    - simpl. apply ih in h. cbn in h.
-      destruct h as [T h].
-      apply inversion_Lambda in h as hh ; auto.
-      pose proof hh as [s1 [B [? [? ?]]]].
-      exists B. assumption.
+    intros Γ Δ t (T & h).
+    apply inversion_it_mkLambda_or_LetIn in h as (T' & h & hle); tas.
+    now econstructor.
   Qed.
 
   Lemma it_mkLambda_or_LetIn_welltyped :

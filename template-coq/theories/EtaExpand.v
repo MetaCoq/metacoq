@@ -986,12 +986,23 @@ Proof.
       | Some (n, _) => n
       | None => 0
       end) Γ') (eta_expand Σg Γ' t))
-      (Pj := fun _ _ _ => True)
+    (Pj := fun (Σ : global_env_ext) Γ j => option_default (fun t => forall Γ',  Forall2 (fun (x : option (nat × term)) (y : context_decl) =>
+            match x with
+          | Some (_, t0) => decl_type y = t0 /\ _
+          | None => True
+          end) Γ' Γ ->
+      forall Σg, repr_decls Σg Σ.1 ->
+      expanded Σ (map (fun x : option (nat × term) =>
+        match x with
+        | Some (n, _) => n
+        | None => 0
+        end) Γ') (eta_expand Σg Γ' t)) (j_term j) True)
       (PΓ := fun _ _ _ => True);
     repeat match goal with
     | [ |- repr_decls _ _ -> _ ] => intros hrepr
     | _ => intro
     end; try now (cbn; eauto).
+  - apply fst in X. destruct j_term => //. apply snd in X. simpl. apply X.
   - cbn. eapply Forall2_nth_error_Some_r in H1 as (? & ? & ?); eauto.
     rewrite H1.
     destruct x as [[] | ].
@@ -1011,7 +1022,7 @@ Proof.
            all: econstructor; rewrite nth_error_app1; revgoals; [eapply nth_error_repeat; lia | rewrite repeat_length; lia].
     + econstructor. now rewrite nth_error_map H1.
   - cbn. econstructor. eapply (H1 (up Γ')); tea; econstructor; eauto.
-  - cbn. econstructor. eauto. eapply (H2 (up Γ')); tea; econstructor; eauto.
+  - cbn. econstructor. eauto. eapply (H1 (up Γ')); tea; econstructor; eauto.
   - specialize (H _ H2).
     assert (Forall(fun t : term => expanded Σ0 (map
     (fun x : option (nat × term) =>
@@ -1206,11 +1217,10 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (_ & ? & (? & ?) & _).
-      destruct a0 as ((? & ?) & _).
+      cbn in *.
       rewrite !firstn_length. rewrite -> !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply e0; eauto. 2: reflexivity. 2: now len.
+      5: eapply a2; eauto. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1228,7 +1238,7 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((_ & ? & (? & ?) & _) & ((? & ?) & _)). cbn.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl with (1 := X2). cbn. intros ? e0.
      specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
      rewrite map_app map_repeat in e0. len. eapply e0; auto.
      eapply Forall2_app; eauto. unfold types.

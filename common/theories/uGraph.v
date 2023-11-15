@@ -2090,7 +2090,7 @@ Section CheckLeq.
     leq_universe_n_ (fun n φ u u' => if check_univs then gc_leq0_levelalg_n n φ u u' else True) 0.
 
   Definition gc_eq_universe :=
-    eq_universe_ (fun φ u u' => if check_univs then gc_eq0_levelalg φ u u' else True).
+    eq_universe_ false (fun φ u u' => if check_univs then gc_eq0_levelalg φ u u' else True).
 
   Let levels_declared_univ (u : Universe.t) :=
     match u with

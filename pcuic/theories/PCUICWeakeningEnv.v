@@ -137,7 +137,7 @@ Lemma weakening_env_is_allowed_elimination {cf} Σ Σ' φ u allowed :
 Proof.
   destruct allowed; cbnr; trivial.
   intros ext [ | al]; auto.
-  destruct u; cbn in *; try elim al.
+  destruct u; cbn in *; try now right.
   right.
   unfold_univ_rel.
   apply al.

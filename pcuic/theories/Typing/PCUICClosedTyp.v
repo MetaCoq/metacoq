@@ -154,12 +154,11 @@ Lemma typecheck_closed `{cf : checker_flags} :
            (fun Σ Γ => closed_ctx Γ).
 Proof.
   assert (X := weaken_env_prop_closed).
-  apply typing_ind_env; intros * wfΣ Γ wfΓ *; intros; cbn in *;
+  apply typing_ind_env; intros * wfΣ Γ wfΓ *; intros; unfold lift_wfb_term in *; cbn in *;
   rewrite -> ?andb_and in *; try solve [intuition auto].
 
   - destruct X0 as (Htm & s & (_ & Hty) & _).
-    rewrite /= andb_true_r in Hty.
-    rewrite /lift_wfb_term Hty andb_true_r.
+    rewrite /= andb_true_r in Hty. split; tas.
     destruct j_term => //=.
     move:Htm => [] _ /andP [] //.
 
@@ -266,22 +265,20 @@ Proof.
 
   - clear H.
     split. solve_all.
-    destruct a as (_ & _ & [_ (Hty & _)%andb_and] & _).
-    destruct b as ([_ (Htm & _)%andb_and] & _).
+    rewrite /on_def_type /on_def_body ?andb_and in a0, b |- *. cbn in *.
     simpl in *. unfold test_def.
     rewrite -> app_context_length in *.
     subst types.
-    now rewrite fix_context_length in Htm.
-    eapply nth_error_all in X0 as (_ & _ & [_ (Hty & _)%andb_and] & _); eauto.
+    rewrite fix_context_length in b. intuition auto.
+    eapply nth_error_all in X1 as (_ & X1)%andb_and; eauto.
 
   - split. solve_all.
-    destruct a as (_ & _ & [_ (Hty & _)%andb_and] & _).
-    destruct b as ([_ (Htm & _)%andb_and] & _).
+    rewrite /on_def_type /on_def_body ?andb_and in a0, b |- *. cbn in *.
     simpl in *. unfold test_def.
     rewrite -> app_context_length in *.
     subst types.
-    now rewrite fix_context_length in Htm.
-    eapply nth_error_all in X0 as (_ & _ & [_ (Hty & _)%andb_and] & _); eauto.
+    rewrite fix_context_length in b. intuition auto.
+    eapply nth_error_all in X1 as (_ & X1)%andb_and; eauto.
 
   - destruct p as [[] pv]; cbn in X0 |- *; simp prim_type => //.
     depelim pv. simp prim_type. cbn. depelim X1.
@@ -418,6 +415,22 @@ Proof.
   move/type_closed. now rewrite is_open_term_closed.
 Qed.
 
+Lemma lift_typing_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ j} :
+  lift_typing typing Σ Γ j ->
+  lift_wf_term (is_open_term Γ) j.
+Proof.
+  intros (Htm & s & Hty & _).
+  split. 1: destruct j_term; cbn in *; auto.
+  all: rewrite -is_open_term_closed; now eapply subject_closed.
+Qed.
+
+Lemma isType_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T} :
+  isType Σ Γ T ->
+  is_open_term Γ T.
+Proof.
+  move/isType_closed. now rewrite is_open_term_closed.
+Qed.
+
 Lemma closed_wf_local `{checker_flags} {Σ Γ} :
   wf Σ.1 ->
   wf_local Σ Γ ->
@@ -435,6 +448,11 @@ Qed.
 #[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
   match goal with
   | [ H : _ ;;; Γ |- _ : A |- _ ] => exact (type_is_open_term H)
+  end : fvs.
+
+#[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
+  match goal with
+  | [ H : isType _ Γ A |- _ ] => exact (isType_is_open_term H)
   end : fvs.
 
 Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.

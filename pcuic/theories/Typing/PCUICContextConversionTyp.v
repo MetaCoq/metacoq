@@ -175,8 +175,7 @@ Proof.
   - apply lift_typing_impl with (1 := X) => ?? [_ IH].
     now apply IH.
 
-  - induction X; constructor; auto.
-    all: intros; apply lift_sorting_it_impl with (tu := tu); cbn; auto.
+  - assumption.
 
   - pose proof heq_nth_error.
     eapply (All2_fold_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
@@ -208,11 +207,11 @@ Proof.
       unshelve eapply (@cumulAlgo_cumulSpec _ _ Cumul). apply into_ws_cumul_pb; eauto.
       now intuition.
   - constructor; pcuic.
-    eapply forall_Γ'0; repeat (constructor; pcuic).
+    eapply forall_Γ'0; constructor; pcuic. eapply lift_sorting_forget_univ. now eapply forall_Γ'.
   - econstructor; pcuic.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
-    eapply forall_Γ'1; repeat (constructor; pcuic).
+    eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; eauto. 2,3: constructor; eauto.
     * eapply IHp0. rewrite /predctx.
       eapply All2_fold_app => //.
@@ -237,36 +236,28 @@ Proof.
       eapply cumul_context_Algo_Spec; eauto. eapply into_ws_cumul_ctx_pb; eauto.
       + apply wf_local_closed_context; eauto.
       + apply wf_local_closed_context; eauto.
-    * eapply (All_impl X0).
-      intros d Ht.
-      apply lift_typing_impl with (1 := Ht); now intros ?? [_ IH].
     * eapply (All_impl X1).
-      intros d Hb.
-      apply lift_typing_impl with (1 := Hb); intros ?? [_ IH].
-      eapply IH.
-      now apply cumul_context_app_same.
+      intros d Ht. now apply Ht.
+    * eapply (All_impl X3).
+      intros d Hb. apply Hb.
+      1: now apply cumul_context_app_same.
       eapply (All_mfix_wf); auto.
-      apply (All_impl X0); simpl.
-      intros d' Ht.
-      apply lift_typing_impl with (1 := Ht); now intros ?? [_ IHT].
+      apply (All_impl X1); simpl.
+      intros d' Ht. now apply Ht.
   - econstructor.
     all:pcuic.
     * eapply cofix_guard_context_cumulativity; eauto.
       eapply cumul_context_Algo_Spec; eauto. eapply into_ws_cumul_ctx_pb; eauto.
       + apply wf_local_closed_context; eauto.
       + apply wf_local_closed_context; eauto.
-    * eapply (All_impl X0).
-      intros d Ht.
-      apply lift_typing_impl with (1 := Ht); now intros ?? [_ IH].
-    * eapply (All_impl X1).
-      intros d Hb.
-      apply lift_typing_impl with (1 := Hb); intros ?? [_ IH].
-      eapply IH.
-      now apply cumul_context_app_same.
+      * eapply (All_impl X1).
+      intros d Ht. now apply Ht.
+    * eapply (All_impl X3).
+      intros d Hb. apply Hb.
+      1: now apply cumul_context_app_same.
       eapply (All_mfix_wf); auto.
-      apply (All_impl X0); simpl.
-      intros d' Ht.
-      apply lift_typing_impl with (1 := Ht); now intros ?? [_ IHT].
+      apply (All_impl X1); simpl.
+      intros d' Ht. now apply Ht.
   - econstructor; tea.
     depelim X1; constructor; eauto. solve_all.
   - econstructor; eauto. pose proof (wf_local_closed_context wfΓ).

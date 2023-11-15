@@ -70,6 +70,8 @@ Proof.
   all: simpl in IH.
   all: try (set (k := fix_context _) in *; clearbody k).
   all: match goal with
+       | [ H : lift_typing0 _ ?j |- lift_typing0 _ ?j ]
+         => eapply @lift_typing_size_impl with (Psize := @typing_size _ _ _) (tu := H); unfold lift_sorting_size, on_def_type_sorting_size in *; cbn; intros
        | [ H : All (on_def_type _ _) ?l |- All (on_def_type _ _) ?l ]
          => is_var l; clear -H IH; induction H as [|???? IH']; constructor;
             [eapply @lift_typing_size_impl with (Psize := @typing_size _ _ _) (tu := p); unfold lift_sorting_size, on_def_type_sorting_size in *; cbn; intros|]

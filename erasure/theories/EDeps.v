@@ -627,8 +627,9 @@ Proof.
     cbn in *; try solve [constructor].
   - now apply inversion_Evar in wt.
   - constructor.
-    now apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+    now apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    apply unlift_TermTyp in h1.
     now constructor; eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
     now constructor; eauto.

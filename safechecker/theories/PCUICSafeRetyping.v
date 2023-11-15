@@ -167,10 +167,10 @@ Lemma welltyped_subterm {Σ Γ t} :
   wellinferred Σ Γ t -> on_subterm (wellinferred Σ) (well_sorted Σ) Γ t.
 Proof using Type.
   destruct t; simpl; auto; intros [T HT]; sq.
-  now inversion HT ; auto; split; do 2 econstructor.
-  now inversion HT ; auto; split; econstructor ; [econstructor|..].
-  now inversion HT ; inversion X1 ; auto;
-    split; [split|]; econstructor ; [econstructor|..].
+  - inversion HT ; subst. apply unlift_TypUniv in X0. split; now do 2 econstructor.
+  - inversion HT ; subst. destruct X0 as (_ & ? & ? & _); cbn in *. split; econstructor ; [econstructor|..]; eassumption.
+  - inversion HT ; subst. destruct X0 as (X0' & ? & ? & _); cbn in *.
+    inversion X0'. split; [split|]; econstructor ; [econstructor|..]; eassumption.
 Qed.
 
   #[local] Notation ret t := (t; _).
@@ -402,19 +402,20 @@ Qed.
     sq.
     constructor ; tea.
     inversion X0.
-    eapply infering_sort_isType; eauto.
+    now eapply isTypebd_isType in X1.
   Defined.
   Next Obligation.
     cbn ; intros. destruct s1, s2.
     cbn. specialize_Σ wfΣ. sq.
-    now constructor.
+    constructor; eauto.
+    repeat (eexists; tea).
   Defined.
 
   Next Obligation.
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     constructor ; tea.
-    now eapply infering_sort_isType.
+    now eapply lift_sorting_lift_typing.
   Defined.
   Next Obligation.
     case t2 as []. intros; cbn.  specialize_Σ wfΣ.
@@ -428,10 +429,7 @@ Qed.
     pose (hΣ _ wfΣ). specialize_Σ wfΣ. inversion wt. sq.
     inversion X0 ; subst.
     constructor ; tea.
-    repeat (eexists; tea); cbn.
-    1: apply checking_typing ; eauto.
-    now eapply infering_sort_isType.
-    now eapply infering_sort_typing.
+    now eapply lift_sorting_lift_typing.
   Defined.
   Next Obligation.
    cbn; intros; case b'_ty as []. cbn.

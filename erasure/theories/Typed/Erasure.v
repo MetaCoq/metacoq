@@ -107,7 +107,7 @@ Proof.
   intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now eapply has_sort_isType.
+  now eapply lift_sorting_forget_univ.
 Qed.
 
 Hint Resolve isType_prod_dom : erase.
@@ -1097,8 +1097,7 @@ Proof.
     sq.
     destruct r as [?? r].
     eapply subject_reduction in r; eauto.
-    apply inversion_Lambda in r as (?&?&?&?&?); auto.
-    eapply has_sort_isType; eassumption.
+    apply inversion_Lambda in r as (?&?&?&?); auto.
   - clear inf.
     destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
@@ -1109,7 +1108,7 @@ Proof.
     { eapply abstract_env_ext_irr;eauto. }
     subst.
     eapply subject_reduction in r; eauto.
-    apply inversion_Lambda in r as (?&?&?&?&c); auto.
+    apply inversion_Lambda in r as (?&?&?&c); auto.
     assert (wf_local Σ0 Γ) by (eapply typing_wf_local; eauto).
     apply ws_cumul_pb_Prod_Prod_inv_l in c as [???]; auto.
     eapply validity in typ0 as typ0; auto.
@@ -1122,7 +1121,6 @@ Proof.
     eapply type_Cumul.
     + eassumption.
     + eapply PCUICContextConversionTyp.context_conversion; eauto.
-      eapply typing_wf_local; eassumption.
     + now apply cumulAlgo_cumulSpec.
 Qed.
 

@@ -1489,7 +1489,7 @@ Proof.
           rewrite skipn_app in wf.
           replace (S i - #|Δ|) with 0 in wf. 2:lia.
           rewrite skipn_0 in wf.
-          rewrite /on_local_decl /= in wf.
+          rewrite /= in wf.
           move: wf => [] /subject_closed //.
           rewrite is_open_term_closed //. }
         rewrite skipn_length; simpl.
@@ -1719,35 +1719,35 @@ Section WfEnv.
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
         exists Δs, ts.
         pose proof (PCUICWfUniverses.typing_wf_universe _ IHΔ) as wfts.
-        eapply inversion_LetIn in IHΔ as [s' [? [? [? [? e]]]]]; auto.
-        splits; eauto. eexists; split; cbn; eauto.
-        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply t2. apply isType_Sort; pcuic.
-        eapply ws_cumul_pb_LetIn_l_inv in e; auto.
-        eapply ws_cumul_pb_Sort_r_inv in e as [u' [redu' cumu']].
+        eapply inversion_LetIn in IHΔ as (T & wfty & HT & hlt); auto.
+        split; eauto.
+        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply HT. apply isType_Sort; pcuic.
+        eapply ws_cumul_pb_LetIn_l_inv in hlt; auto.
+        eapply ws_cumul_pb_Sort_r_inv in hlt as [u' [redu' cumu']].
         transitivity (tSort u').
         2:{ eapply ws_cumul_pb_compare; eauto with fvs.
-            eapply typing_wf_local in t2. eauto with fvs.
+            eapply typing_wf_local in HT. eauto with fvs.
             econstructor. eauto with fvs. }
         eapply ws_cumul_pb_red.
         exists (tSort u'), (tSort u'). split; auto.
         3:now constructor.
-        transitivity (lift0 1 (x {0 := b})).
+        transitivity (lift0 1 (T {0 := b})).
         eapply red_expand_let. pcuic.
-        eapply type_closed in t2.
+        eapply type_closed in HT.
         rewrite -is_open_term_closed //.
         change (tSort u') with (lift0 1 (tSort u')).
         eapply (weakening_closed_red (Γ := Γ ,,, Δ) (Γ' := []) (Γ'' := [_])); auto with fvs.
-        apply typing_wf_local in t2. eauto with fvs.
-        eapply closed_red_refl; eauto with fvs.
+        apply typing_wf_local in HT. eauto with fvs.
+        eapply closed_red_refl; eapply typing_wf_local in HT; eauto with fvs.
 
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
-        eapply inversion_Prod in IHΔ as [? [? [? [? e]]]]; tea.
-        exists (x :: Δs), x0. splits; tea. eexists; split; cbn; eauto.
-        eapply ws_cumul_pb_Sort_inv in e.
+        eapply inversion_Prod in IHΔ as (s1 & s2 & wfty & Ht & hlt); tea.
+        exists (s1 :: Δs), s2. split; tea. split; tas.
+        eapply ws_cumul_pb_Sort_inv in hlt.
         transitivity (sort_of_products Δs ts); auto using leq_universe_product.
         simpl. eapply leq_universe_sort_of_products_mon.
         eapply Forall2_same. reflexivity.
-        exact: e.
+        exact: hlt.
   Qed.
 
   Lemma leq_universe_sort_of_products {u v} :

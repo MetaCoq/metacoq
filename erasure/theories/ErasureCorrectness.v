@@ -60,11 +60,11 @@ Proof.
       eapply IHeval1 in H4 as (vf' & Hvf' & [He_vf']); eauto.
       eapply IHeval2 in H6 as (vu' & Hvu' & [He_vu']); eauto.
       pose proof (subject_reduction_eval t0 H).
-      eapply inversion_Lambda in X0 as (? & ? & ? & ? & e0).
+      eapply inversion_Lambda in X0 as (? & ? & ? & e0).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply PCUICConversion.ws_cumul_pb_Prod_Prod_inv in e0 as [? e1 e2].
-          eapply type_Cumul_alt. eassumption. now eapply has_sort_isType.
+          eapply type_Cumul_alt; tea.
           symmetry in e1.
           eapply ws_cumul_pb_forget in e1.
           now eapply conv_cumul. }
@@ -100,19 +100,22 @@ Proof.
     + auto.
   - assert (Hty' := Hty).
     assert (Σ |-p tLetIn na b0 t b1 ⇓ res) by eauto.
-    eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?); auto.
+    eapply inversion_LetIn in Hty' as (? & h1 & ? & ?); auto.
+    assert (wf_rel : lift_typing0 (typing Σ []) (j_vdef na b0' t)).
+    { apply lift_sorting_it_impl_gen with h1 => // HT. eapply subject_reduction_eval; eauto. }
+    apply unlift_TermTyp in h1 as h1'.
     invs He.
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
       assert (Hc : conv_context cumulAlgo_gen Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
-        now eapply wcbveval_red; eauto.
+        eapply wcbveval_red; eauto.
         reflexivity.
       }
-      assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
+      assert (Σ;;; [vdef na b0' t] |- b1 : x). {
         cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. constructor. repeat (eexists; tea); cbn. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. constructor. assumption.
       }
       assert (Σ;;; [] |- subst1 b0' 0 b1 ⇝ℇ ELiftSubst.subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -123,10 +126,9 @@ Proof.
         eapply subject_reduction_eval; eauto.
         eapply erases_context_conversion. 3:eassumption.
         all: cbn; eauto.
-        econstructor. constructor.
-        repeat (eexists; tea); cbn. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. constructor. assumption.
       }
-      pose proof (subject_reduction_eval t1 H).
+      pose proof (subject_reduction_eval h1' H).
       assert (eqs := type_closed_subst b1 _ X1).
       rewrite eqs in H1.
       eapply IHeval2 in H1 as (vres & Hvres & [Hty_vres]); [| |now eauto].
@@ -134,7 +136,7 @@ Proof.
       exists vres. split. eauto. constructor; econstructor; eauto.
       enough (ECSubst.csubst vt1' 0 t2' = ELiftSubst.subst10 vt1' t2') as ->; auto.
       eapply ECSubst.closed_subst. eapply erases_closed in Hvt2'; auto.
-      eapply eval_closed. eauto. 2:eauto. now eapply subject_closed in t1.
+      eapply eval_closed. eauto. 2:eauto. now eapply subject_closed in h1'.
     + exists EAst.tBox. split. 2:constructor; econstructor; eauto.
       econstructor. eapply Is_type_eval; eauto.
 

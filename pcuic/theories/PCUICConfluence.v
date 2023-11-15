@@ -93,8 +93,8 @@ Proof.
 Qed.
 
 Lemma clos_rt_OnOne2_local_env_incl R :
-inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
-          (clos_refl_trans (OnOne2_local_env (on_one_decl R))).
+inclusion (OnOne2_local_env (fun Δ => on_one_decl (clos_refl_trans (R Δ))))
+          (clos_refl_trans (OnOne2_local_env (fun Δ => on_one_decl1 R Δ))).
 Proof.
   intros x y H.
   induction H; firstorder; try subst na'.
@@ -168,8 +168,8 @@ Qed.
 
 Lemma OnOne2_local_env_apply {B} {P : B -> context -> term -> term -> Type} {l l'}
   (f : context -> term -> term -> B) :
-  OnOne2_local_env (on_one_decl (fun Γ x y => forall a : B, P a Γ x y)) l l' ->
-  OnOne2_local_env (on_one_decl (fun Γ x y => P (f Γ x y) Γ x y)) l l'.
+  OnOne2_local_env (fun Γ => on_one_decl (fun x y => forall a : B, P a Γ x y)) l l' ->
+  OnOne2_local_env (fun Γ => on_one_decl (fun x y => P (f Γ x y) Γ x y)) l l'.
 Proof.
   intros; eapply OnOne2_local_env_impl; tea.
   intros Δ x y. eapply on_one_decl_impl; intros Γ ? ?; eauto.
@@ -178,8 +178,8 @@ Qed.
 Lemma OnOne2_local_env_apply_dep {B : context -> term -> term -> Type}
   {P : context -> term -> term -> Type} {l l'} :
   (forall Γ' x y, B Γ' x y) ->
-  OnOne2_local_env (on_one_decl (fun Γ x y => B Γ x y -> P Γ x y)) l l' ->
-  OnOne2_local_env (on_one_decl (fun Γ x y => P Γ x y)) l l'.
+  OnOne2_local_env (fun Γ => on_one_decl (fun x y => B Γ x y -> P Γ x y)) l l' ->
+  OnOne2_local_env (fun Γ => on_one_decl (fun x y => P Γ x y)) l l'.
 Proof.
   intros; eapply OnOne2_local_env_impl; tea.
   intros Δ x y. eapply on_one_decl_impl; intros Γ ? ?; eauto.
@@ -197,9 +197,9 @@ Proof.
 Qed.
 
 Lemma OnOne2_local_env_exist' (P Q R : context -> term -> term -> Type) (l l' : context) :
-  OnOne2_local_env (on_one_decl P) l l' ->
+  OnOne2_local_env (fun Γ => on_one_decl1 P Γ) l l' ->
   (forall Γ x y, P Γ x y -> ∑ z : term, Q Γ x z × R Γ y z) ->
-  ∑ r : context, OnOne2_local_env (on_one_decl Q) l r × OnOne2_local_env (on_one_decl R) l' r.
+  ∑ r : context, OnOne2_local_env (fun Γ => on_one_decl1 Q Γ) l r × OnOne2_local_env (fun Γ => on_one_decl1 R Γ) l' r.
 Proof.
   intros o Hp. induction o.
   - destruct p; subst. specialize (Hp _ _ _ p) as [? []].
@@ -213,9 +213,9 @@ Qed.
 Lemma OnOne2_local_env_All2_fold (P : context -> term -> term -> Type)
   (Q : context -> context -> context_decl -> context_decl -> Type)
   (l l' : context) :
-  OnOne2_local_env (on_one_decl P) l l' ->
-  (forall Γ x y, on_one_decl P Γ x y -> Q Γ Γ x y) ->
-  (forall Γ Γ' d, OnOne2_local_env (on_one_decl P) Γ Γ' -> Q Γ Γ' d d) ->
+  OnOne2_local_env (fun Γ => on_one_decl1 P Γ) l l' ->
+  (forall Γ x y, on_one_decl1 P Γ x y -> Q Γ Γ x y) ->
+  (forall Γ Γ' d, OnOne2_local_env (fun Γ => on_one_decl1 P Γ) Γ Γ' -> Q Γ Γ' d d) ->
   (forall Γ x, Q Γ Γ x x) ->
   All2_fold Q l l'.
 Proof.
@@ -224,11 +224,11 @@ Proof.
   now eapply All2_fold_refl.
 Qed.
 
-Lemma on_one_decl_compare_decl Σ Re Rle Γ x y :
+Lemma on_one_decl_compare_decl Σ Re Rle x y :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   on_one_decl
-    (fun (_ : context) (y0 v' : term) => eq_term_upto_univ Σ Re Rle y0 v') Γ x y ->
+    (fun (y0 v' : term) => eq_term_upto_univ Σ Re Rle y0 v') x y ->
   compare_decls (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
 Proof.
   intros heq hle.
@@ -247,13 +247,13 @@ Qed.
 
 Notation red1_ctx_rel Σ Δ :=
   (OnOne2_local_env
-    (on_one_decl
-      (fun (Γ : context) (x0 y0 : term) => red1 Σ (Δ,,, Γ) x0 y0))).
+    (fun (Γ : context) => on_one_decl
+      (fun (x0 y0 : term) => red1 Σ (Δ,,, Γ) x0 y0))).
 
 Notation eq_one_decl Σ Re Rle :=
   (OnOne2_local_env
-    (on_one_decl
-      (fun _ (x0 y0 : term) =>
+    (fun _ => on_one_decl
+      (fun (x0 y0 : term) =>
         eq_term_upto_univ Σ Re Rle x0 y0))).
 
 Lemma red1_eq_context_upto_l {Σ Σ' Rle Re Γ Δ u v} :
@@ -687,8 +687,8 @@ Lemma red1_eq_context_upto_univ_l {Σ Σ' Re Rle Γ ctx ctx' ctx''} :
   RelationClasses.subrelation Re Rle ->
   eq_context_gen (eq_term_upto_univ Σ' Re Re)
    (eq_term_upto_univ Σ' Re Re) ctx ctx' ->
-  OnOne2_local_env (on_one_decl
-    (fun (Γ' : context) (u v : term) =>
+  OnOne2_local_env (fun (Γ' : context) => on_one_decl
+    (fun (u v : term) =>
     forall (Rle : Relation_Definitions.relation Universe.t)
       (napp : nat) (u' : term),
     RelationClasses.Reflexive Re ->
@@ -1991,7 +1991,7 @@ Section RedPred.
   Hint Extern 4 (All2_fold _ _ _) => constructor : pcuic.
 
   Lemma OnOne2_local_env_pred1_ctx_over Γ Δ Δ' :
-     OnOne2_local_env (on_one_decl (fun Δ M N => pred1 Σ (Γ ,,, Δ) (Γ ,,, Δ) M N)) Δ Δ' ->
+     OnOne2_local_env (fun Δ => on_one_decl (fun M N => pred1 Σ (Γ ,,, Δ) (Γ ,,, Δ) M N)) Δ Δ' ->
      pred1_ctx_over Σ Γ Γ Δ Δ'.
   Proof using Type.
     induction 1.
@@ -2888,7 +2888,7 @@ Section RedConfluence.
   Definition lift_ws (R : context -> context -> Type) : ws_context xpred0 -> ws_context xpred0 -> Type :=
     fun Γ Γ' => R Γ Γ'.
 
-  Definition ws_red1_ctx := (lift_ws (OnOne2_local_env (on_one_decl (red1 Σ)))).
+  Definition ws_red1_ctx := (lift_ws (OnOne2_local_env (fun Γ => on_one_decl (red1 Σ Γ)))).
   Definition ws_red_ctx := lift_ws (red_ctx Σ).
   Definition ws_pred1_ctx := (lift_ws (on_contexts (pred1 Σ))).
 
@@ -2947,8 +2947,8 @@ Section RedConfluence.
   Set Firstorder Solver eauto with pcuic core typeclass_instances.
 
   Lemma clos_rt_OnOne2_local_env_ctx_incl R :
-    inclusion (clos_refl_trans (OnOne2_local_env (on_one_decl R)))
-              (clos_refl_trans_ctx (OnOne2_local_env (on_one_decl R))).
+    inclusion (clos_refl_trans (OnOne2_local_env (fun Γ => on_one_decl1 R Γ)))
+              (clos_refl_trans_ctx (OnOne2_local_env (fun Γ => on_one_decl1 R Γ))).
   Proof using wfΣ.
     intros x y H.
     induction H; firstorder; try solve[econstructor; eauto].

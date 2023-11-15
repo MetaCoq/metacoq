@@ -986,6 +986,18 @@ Definition is_allowed_elimination_cuniv (allowed : allowed_eliminations) : concr
   | IntoAny => fun _ => True
   end.
 
+Inductive sort_family : Set :=
+  | fSProp
+  | fProp
+  | fType.
+Derive NoConfusion EqDec for sort_family.
+
+Definition family_of_cuniv u :=
+  match u with
+  | USProp => fSProp
+  | UProp => fProp
+  | UType _ => fType
+  end.
 
 Module Universe.
   Inductive t_ :=
@@ -1136,12 +1148,25 @@ Module Universe.
     | lType l => LevelAlgExpr.get_is_level l
     end.
 
+  Definition to_family u :=
+    match u with
+    | lSProp => fSProp
+    | lProp => fProp
+    | lType _ => fType
+    end.
+
   Definition to_cuniv v u :=
     match u with
     | lSProp => USProp
     | lProp => UProp
     | lType l => UType (val v l)
     end.
+
+  Lemma to_family_to_cuniv u v :
+    family_of_cuniv (to_cuniv v u) = to_family u.
+  Proof.
+    destruct u; cbnr.
+  Qed.
 
   Lemma val_make v l
     : to_cuniv v (make l) = UType (val v l).
@@ -1815,15 +1840,17 @@ Section Univ.
   Definition eq_levelalg φ (u u' : LevelAlgExpr.t) :=
     if check_univs then eq0_levelalg φ u u' else True.
 
-  Definition eq_universe_ {CS} eq_levelalg (φ: CS) s s' :=
+  Definition eq_universe_ {CS} (prop_conv_type : bool) eq_levelalg (φ: CS) s s' :=
     match s, s' with
     | Universe.lProp,   Universe.lProp
     | Universe.lSProp,  Universe.lSProp => True
     | Universe.lType u, Universe.lType u' => eq_levelalg φ u u'
+    | Universe.lType _, Universe.lProp
+    | Universe.lProp,   Universe.lType _ => prop_conv_type
     | _, _ => False
     end.
 
-  Definition eq_universe := eq_universe_ eq_levelalg.
+  Definition eq_universe := eq_universe_ false eq_levelalg.
 
   Definition lt_levelalg := leq_levelalg_n 1.
   Definition leq_levelalg := leq_levelalg_n 0.
@@ -2448,6 +2475,28 @@ Section no_prop_leq_type.
     now destruct s1.
   Qed.
 
+  Lemma is_prop_superE s : Universe.is_prop (Universe.super s) -> False.
+  Proof using Type.
+    destruct s => //.
+  Qed.
+
+  Lemma is_sprop_superE s : Universe.is_sprop (Universe.super s) -> False.
+  Proof using Type.
+    destruct s => //.
+  Qed.
+
+  Lemma is_prop_prod {s s'} : Universe.is_prop s' -> Universe.is_prop (Universe.sort_of_product s s').
+  Proof using Type.
+    intros isp.
+    unfold Universe.sort_of_product. rewrite isp. auto.
+  Qed.
+
+  Lemma is_sprop_prod {s s'} : Universe.is_sprop s' -> Universe.is_sprop (Universe.sort_of_product s s').
+  Proof using Type.
+    intros isp.
+    unfold Universe.sort_of_product. rewrite isp orb_true_r. auto.
+  Qed.
+
 End no_prop_leq_type.
 
 
@@ -2505,7 +2554,7 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 #[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
 
-(** Tests that the term is closed over [k] universe lvariables *)
+(** Tests that the term is closed over [k] universe variables *)
 Section Closedu.
   Context (k : nat).
 

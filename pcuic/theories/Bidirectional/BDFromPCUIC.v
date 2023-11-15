@@ -106,36 +106,49 @@ Proof.
   now apply closed_red_red.
 Qed.
 
+Lemma conv_lift_judgment `{checker_flags} Σ Γ na b ty :
+  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) (j_decl (mkdecl na b ty)) ->
+  lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl (mkdecl na b ty)).
+Proof.
+  intro Hj.
+  apply lift_sorting_ex_it_impl_gen with Hj => //=.
+  1: now destruct b.
+  intros (u' & ? & _); now eexists.
+Qed.
+
+Lemma conv_lift_judgment_univ `{checker_flags} Σ Γ na b ty u :
+  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) (j_decl_s (mkdecl na b ty) (Some u)) ->
+  ∑ u', lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl_s (mkdecl na b ty) (Some u')) × leq_universe Σ u' u.
+Proof.
+  intros (Htm & u0 & (u' & Hty & Hle) & <-); cbn in *.
+  exists u'; split; tas.
+  repeat (eexists; tea).
+Qed.
+
 Section BDFromPCUIC.
 
 
 (** The big theorem*)
 Lemma bidirectional_from_pcuic `{checker_flags} :
       env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T})
-        (fun Σ Γ j => lift_sorting (fun t T => ∑ T', Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) (fun T u => ∑ u', Σ ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) j)
+        (fun Σ Γ j => lift_sorting (fun t T => Σ ;;; Γ |- t ◃ T) (fun T u => ∑ u', Σ ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) j)
         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
 
   { intros Σ wfΣ Γ j Hj.
     apply lift_sorting_impl with (1 := Hj) => //.
-    - intros t T []. done.
+    - intros t T []. now apply conv_check.
     - intros t u [HT0 HT1].
       eapply conv_infer_sort. all: done. }
 
   all: intros Σ wfΣ Γ wfΓ.
 
-  - intros bdwfΓ.
-    apply All_local_env_over_2 in bdwfΓ. clear wfΓ.
+  - intros _ bdwfΓ.
+    clear wfΓ.
     apply All_local_env_impl_gen with (1 := bdwfΓ). clear Γ bdwfΓ.
-    intros Γ bo ty Hj.
-    eapply lift_sorting_ex_it_impl_gen with (tu := Hj).
-    + destruct bo => //=.
-      intros [Hc Hc'].
-      apply conv_check in Hc'; done.
-    + intros [Hs Hs'].
-      apply conv_infer_sort in Hs' as (s' & Hs' & Hle); tea.
-      now eexists.
+    intros ??.
+    apply conv_lift_judgment with (na := decl.(decl_name)).
 
   - intros.
     eexists.
@@ -151,9 +164,8 @@ Proof.
     constructor.
     assumption.
 
-  - intros n A B ? ? ? ? CumA ? CumB.
-    apply conv_infer_sort in CumA ; auto.
-    destruct CumA as (?&?&?).
+  - intros na A B ? ? ? ? CumA ? CumB.
+    apply conv_lift_judgment_univ with (na := na) in CumA as (?&?&?).
     apply conv_infer_sort in CumB ; auto.
     destruct CumB as (?&?&?).
     eexists.
@@ -165,20 +177,16 @@ Proof.
       apply leq_universe_product_mon.
       all: assumption.
 
-  - intros n A t ? ? ? ? CumA ? (?&?&?).
-    apply conv_infer_sort in CumA ; auto.
-    destruct CumA as (?&?&?).
+  - intros na A t ? ? ? CumA ? (?&?&?).
+    apply conv_lift_judgment with (na := na) in CumA.
     eexists.
     split.
     + econstructor. all: eassumption.
     + apply ws_cumul_pb_Prod ; auto.
-      eapply isType_ws_cumul_pb_refl.
-      by eapply has_sort_isType; eauto.
+      by eapply isType_ws_cumul_pb_refl.
 
-  - intros n t A u ? ? ? ? CumA ? Cumt ? (?&?&?).
-    apply conv_infer_sort in CumA ; auto.
-    destruct CumA as (?&?&?).
-    apply conv_check in Cumt ; auto.
+  - intros na t A ? ? ? ? CumtA ? (?&?&?).
+    apply conv_lift_judgment with (na := na) in CumtA.
     eexists.
     split.
     + econstructor.
@@ -344,43 +352,27 @@ Proof.
         unshelve eapply declared_projection_to_gen in isdecl; eauto.
         eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)); eauto.
         apply isdecl.
-  - intros mfix n decl types ? ? ? Alltypes Allbodies.
+  - intros mfix n decl types ? ? ? Htypes Alltypes Hbodies Allbodies.
     eexists.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as Hj ; tea.
-      apply lift_typing_impl with (1 := Hj) => // ?? [] //.
+      eapply nth_error_all in Htypes as Hj ; tea.
     }
     constructor ; eauto.
-    + apply (All_impl Alltypes) => d Hj.
-      apply lift_sorting_ex_it_impl_gen with Hj => //. intros [Ht IHt].
-      apply conv_infer_sort in IHt as [? []] ; auto.
-      eexists ; eauto.
-    + apply (All_impl Allbodies) => d Hj.
-      apply lift_sorting_ex_it_impl_gen with Hj => //; intros [Ht IHt].
-      * by apply conv_check.
-      * apply conv_infer_sort in IHt as [? []] ; auto.
-        eexists ; eauto.
+    + apply (All_impl Alltypes) => d. apply conv_lift_judgment with (na := d.(dname)).
+    + apply (All_impl Allbodies) => d. apply conv_lift_judgment with (na := d.(dname)).
 
-  - intros mfix n decl types ? ? ? Alltypes Allbodies.
+  - intros mfix n decl types ? ? ? Htypes Alltypes Hbodies Allbodies.
     eexists.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
-      eapply nth_error_all in Alltypes as Hj ; tea.
-      apply lift_typing_impl with (1 := Hj) => // ?? [] //.
+      eapply nth_error_all in Htypes as Hj ; tea.
     }
     constructor ; eauto.
-    + apply (All_impl Alltypes) => d Hj.
-      apply lift_sorting_ex_it_impl_gen with Hj => //. intros [Ht IHt].
-      apply conv_infer_sort in IHt as [? []] ; auto.
-      eexists ; eauto.
-    + apply (All_impl Allbodies) => d Hj.
-      apply lift_sorting_ex_it_impl_gen with Hj => //; intros [Ht IHt].
-      * by apply conv_check.
-      * apply conv_infer_sort in IHt as [? []] ; auto.
-        eexists ; eauto.
+    + apply (All_impl Alltypes) => d. apply conv_lift_judgment with (na := d.(dname)).
+    + apply (All_impl Allbodies) => d. apply conv_lift_judgment with (na := d.(dname)).
 
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
     eexists. split; [econstructor; tea|].
@@ -473,9 +465,9 @@ Lemma wf_local_rel_wf_local_bd `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ Γ'} :
 Proof.
   intros wfΓ'.
   apply All_local_env_impl_gen with (1 := wfΓ'); clear Γ' wfΓ'.
-  intros Γ' ?? Hj.
+  intros Γ' ? Hj.
   apply lift_sorting_ex_it_impl_gen with Hj => //.
-  - destruct bo => //= Hb. now apply typing_checking.
+  - destruct decl_body => //= Hb. now apply typing_checking.
   - intro Hty. eapply typing_infering_sort in Hty as [? []]; tea. now eexists.
 Qed.
 

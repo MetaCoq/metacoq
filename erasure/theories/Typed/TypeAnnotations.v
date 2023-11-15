@@ -291,15 +291,14 @@ Proof.
   all: try subst erΓ1.
   - depelim er0.
     now apply inversion_Evar in X.
-  - apply inversion_Lambda in X as (? & ? & ? & ? & ?); auto.
-    constructor; eapply has_sort_isType; eauto.
-  - apply inversion_Lambda in X as (? & ? & ? & ? & ?); auto.
+  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
+  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
     econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
-    constructor; eapply has_sort_isType; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
-    econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
+    constructor; eapply lift_sorting_forget_body; eauto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
+    econstructor; eapply unlift_TermTyp; eauto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
     econstructor; eauto.
   - apply inversion_App in X as (?&?&?&?&?&?); auto.
     econstructor; eauto.

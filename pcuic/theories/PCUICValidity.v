@@ -185,12 +185,13 @@ Section Validity.
 
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
-      (fun Σ Γ j => lift_typing typing Σ Γ j)
+      (fun Σ Γ j => lift_sorting (fun _ T => isType Σ Γ T) (fun _ s => wf_universe Σ s) j)
       (fun Σ Γ => wf_local Σ Γ).
   Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps.
 
-    - eapply lift_typing_impl with (1 := X) => ?? [] //.
+    - apply lift_sorting_impl with (1 := X) => ?? [] HT //.
+      apply/isType_Sort_inv.
 
     - assumption.
 
@@ -207,17 +208,17 @@ Section Validity.
 
     - (* Product *)
       eapply has_sort_isType.
-      eapply isType_Sort_inv in X1; eapply isType_Sort_inv in X3; auto.
+      apply unlift_TypUniv in X1; eapply isType_Sort_inv in X3; auto.
       econstructor; eauto.
       now apply wf_universe_product.
 
     - (* Lambda *)
       eapply lift_sorting_ex_it_impl_gen with X3 => // Hs.
-      eapply isType_Sort_inv in X1; auto.
+      pose proof (lift_sorting_extract X0).
       eexists; constructor; eauto.
 
     - (* Let *)
-      apply lift_sorting_it_impl_gen with X5 => // Hs.
+      apply lift_sorting_it_impl_gen with X3 => // Hs.
       eapply type_Cumul.
       eapply type_LetIn; eauto.  econstructor; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec; constructor.
@@ -237,8 +238,8 @@ Section Validity.
       apply leq_universe_product.
 
     - (* Constant *)
-      eapply declared_constant_inv in X as (_ & s & Hs & _); eauto.
-      simpl in Hs.
+      eapply declared_constant_inv in wf as Hc; eauto.
+      destruct Hc as (_ & s & Hs & _); simpl in Hs.
       eapply isType_weakening; eauto.
       unshelve eapply declared_constant_to_gen in H; eauto.
       eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
@@ -343,11 +344,10 @@ Section Validity.
       assumption.
 
     - (* Fix *)
-      eapply nth_error_all in X0 as (_ & s & (Hs & _) & _); eauto.
-      pcuic.
+      eapply nth_error_all in X0; eauto.
 
     - (* CoFix *)
-      eapply nth_error_all in X0 as (_ & s & (Hs & _) & _); pcuic.
+      eapply nth_error_all in X0; eauto.
 
     - (* Primitive *)
       depelim X0; depelim X1; simp prim_type; cbn in *.
@@ -360,7 +360,7 @@ Section Validity.
       + eapply (type_Const _ _ _ [array_level a]) in H0; tea. rewrite hty' in H0. cbn in H0. exact H0.
         red. rewrite huniv. simpl. rtoProp; intuition eauto. eapply LevelSet.mem_spec. eapply (wfl (array_level a, 0)). lsets.
         cbn. red. destruct check_univs => //. red. red. intros v H c. csets.
-      + econstructor. econstructor; eauto. econstructor; eauto.
+      + econstructor. 2: econstructor; eauto. repeat (eexists; tea). econstructor; eauto.
 
     - (* Conv *)
       now eapply has_sort_isType with (s := s).

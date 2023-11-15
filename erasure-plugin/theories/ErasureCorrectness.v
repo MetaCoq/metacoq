@@ -5,10 +5,9 @@ From MetaCoq.Utils Require Import bytestring utils.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.PCUIC Require Import PCUICNormal.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureCorrectness EPretty Extract.
-From MetaCoq Require Import ETransform EConstructorsAsBlocks.
+From MetaCoq.Erasure Require EAstUtils ErasureCorrectness EPretty Extract EConstructorsAsBlocks.
 From MetaCoq.Erasure Require Import EWcbvEvalNamed ErasureFunction ErasureFunctionProperties.
-From MetaCoq.ErasurePlugin Require Import Erasure.
+From MetaCoq.ErasurePlugin Require Import ETransform Erasure.
 Import PCUICProgram.
 Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform).
 

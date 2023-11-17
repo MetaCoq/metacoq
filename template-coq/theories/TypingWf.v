@@ -847,6 +847,7 @@ Section WfRed.
       cbn. unfold wf_decl. simpl.
       intros ? [? ? ? ?] ?. simpl in *.
       intuition eauto with wf.
+    - constructor; eauto. eapply (OnOne2_All_All X); tea; intuition eauto.
   Qed.
 
 
@@ -1143,7 +1144,7 @@ Section TypingWf.
   Proof using Type.
     intros wfx; revert y.
     induction wfx using term_wf_forall_list_ind; intros [] wfy;
-    eapply wf_inv in wfy; simpl in wfy; simpl;
+    eapply wf_inv in wfy; simpl in wfy; simpl; try
     intros [= ?]; try intuition congruence.
   Qed.
 

@@ -276,7 +276,19 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 | cofix_red_body mfix0 mfix1 idx :
     OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+
+| array_red_val l v v' d ty :
+    OnOne2 (fun t u => red1 Σ Γ t u) v v' ->
+    red1 Σ Γ (tArray l v d ty) (tArray l v' d ty)
+
+| array_red_def l v d d' ty :
+    red1 Σ Γ d d' ->
+    red1 Σ Γ (tArray l v d ty) (tArray l v d' ty)
+
+| array_red_type l v d ty ty' :
+    red1 Σ Γ ty ty' ->
+    red1 Σ Γ (tArray l v d ty) (tArray l v d ty').
 
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
@@ -398,9 +410,19 @@ Lemma red1_ind_all :
          (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
+      (forall Γ l v v' d ty,
+         OnOne2 (fun t u => Trel_conj (red1 Σ Γ) (P Γ) t u) v v' ->
+         P Γ (tArray l v d ty) (tArray l v' d ty)) ->
+
+      (forall Γ l v d d' ty,
+      red1 Σ Γ d d' -> P Γ d d' -> P Γ (tArray l v d ty) (tArray l v d' ty)) ->
+
+      (forall Γ l v d ty ty',
+        red1 Σ Γ ty ty' -> P Γ ty ty' -> P Γ (tArray l v d ty) (tArray l v d ty')) ->
+
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. rename X30 into Xlast. revert Γ t t0 Xlast.
+  intros. rename X33 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1;
@@ -458,8 +480,11 @@ Proof.
     revert o. generalize (fix_context mfix0). intros c H28.
     revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
-Defined.
 
+  - eapply X30.
+    revert v v' o. fix auxl 3; intros ? ? Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+Defined.
 
 (** *** Reduction
 

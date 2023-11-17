@@ -241,9 +241,10 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
 | eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
 | eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f)
 | eq_Array u u' arr arr' def def' ty ty' :
-  All2 (eq_term_upto_univ_napp Σ Re Rle 0) arr arr' ->
-  eq_term_upto_univ_napp Σ Re Rle 0 def def' ->
-  eq_term_upto_univ_napp Σ Re Rle 0 ty ty' ->
+  Re (Universe.make u) (Universe.make u') ->
+  All2 (eq_term_upto_univ_napp Σ Re Re 0) arr arr' ->
+  eq_term_upto_univ_napp Σ Re Re 0 def def' ->
+  eq_term_upto_univ_napp Σ Re Re 0 ty ty' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tArray u arr def ty) (tArray u' arr' def' ty').
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).

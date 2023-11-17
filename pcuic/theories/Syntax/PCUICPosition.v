@@ -47,7 +47,10 @@ Inductive choice :=
 | prod_r
 | let_bd
 | let_ty
-| let_in.
+| let_in
+| array_def
+| array_ty
+| array_val (n : nat).
 
 Derive NoConfusion NoConfusionHom EqDec for choice.
 
@@ -115,6 +118,13 @@ Fixpoint validpos t (p : position) {struct p} :=
     | let_bd, tLetIn na b B t => validpos b p
     | let_ty, tLetIn na b B t => validpos B p
     | let_in, tLetIn na b B t => validpos t p
+    | array_def, tPrim (primArray; primArrayModel a) => validpos (array_default a) p
+    | array_ty, tPrim (primArray; primArrayModel a) => validpos (array_type a) p
+    | array_val n, tPrim (primArray; primArrayModel a) =>
+      match nth_error (array_value a) n with
+      | Some d => validpos d p
+      | None => false
+      end
     | _, _ => false
     end
   end.
@@ -253,6 +263,11 @@ Proof.
       * simpl in *. apply some_inj in e. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
       * simpl in *. eapply IHa. all: eauto.
+    + depelim e. depelim o; eauto.
+    + depelim e; depelim o; eauto.
+    + depelim e. depelim o; eauto.
+      cbn in vp. destruct (nth_error (array_value a) n) eqn:e'; try discriminate.
+      cbn. eapply All2_nth_error_Some in a0 as [t' [-> ?]]; tea. eapply ih; tea.
 Qed.
 
 Lemma eq_term_valid_pos :
@@ -690,6 +705,34 @@ Proof.
         unshelve eapply Acc_cofix_mfix_bd with (1 := e1) (p := exist q _).
         -- simpl. rewrite e1 in e. assumption.
         -- eapply ihm.
+  - destruct q as [q e]. destruct q as [| c q].
+    + constructor. intros [p' e'] h.
+      unfold posR in h. cbn in h.
+      dependent destruction h.
+      destruct p as [? []];
+      destruct c. all: noconf e'.
+      * simpl in e'.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_ty with (1 := e1) (p := exist p _).
+        -- simpl. rewrite e1 in e'. assumption.
+        -- eapply ihm.
+      * simpl in e'.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_bd with (1 := e1) (p := exist p _).
+        -- simpl. rewrite e1 in e'. assumption.
+        -- eapply ihm.
+
+
+    destruct p as [? []]; cbn in X, e; intuition eauto; cbn in e.
+    + destruct x eqn:hp; try discriminate; cbn in e. constructor.
 Qed.
 
 Fixpoint atpos t (p : position) {struct p} : term :=
@@ -933,7 +976,11 @@ Variant stack_entry : Type :=
 | Lambda_bd (na : aname) (A : term)
 | LetIn_bd (na : aname) (B t : term)
 | LetIn_ty (na : aname) (b t : term)
-| LetIn_in (na : aname) (b B : term).
+| LetIn_in (na : aname) (b B : term)
+| PrimArray_ty (l : Level.t) (l : list term) (def : term)
+| PrimArray_def (l : Level.t) (l : list term) (ty : term)
+(* Hole in one of the values *)
+| PrimArray_val (l : Level.t) (bef : list term) (after : list term) (def : term) (ty : term).
 
 Definition stack := list stack_entry.
 
@@ -1029,6 +1076,9 @@ Definition fill_hole (t : term) (se : stack_entry) : term :=
   | LetIn_bd na B u => tLetIn na t B u
   | LetIn_ty na b u => tLetIn na b t u
   | LetIn_in na b B => tLetIn na b B t
+  | PrimArray_def l v ty => tPrim (primArray; primArrayModel {| array_level := l; array_value := v; array_default := t; array_type := ty |})
+  | PrimArray_ty l v def => tPrim (primArray; primArrayModel {| array_level := l; array_value := v; array_default := def; array_type := t |})
+  | PrimArray_val l bef after def ty => tPrim (primArray; primArrayModel {| array_level := l; array_value := bef ++ (t :: after); array_default := def; array_type := ty |})
   end.
 
 (* Not using fold_left here to get the right unfolding behavior *)
@@ -1307,6 +1357,9 @@ Definition closedn_stack_entry k se :=
   | LetIn_bd na B u => closedn k B && closedn (S k) u
   | LetIn_ty na b u => closedn k b && closedn (S k) u
   | LetIn_in na b B => closedn k b && closedn k B
+  | PrimArray_def l v ty => forallb (closedn k) v && closedn k ty
+  | PrimArray_ty l v def => forallb (closedn k) v && closedn k def
+  | PrimArray_val l bef after def ty => forallb (closedn k) bef && forallb (closedn k) after && closedn k def && closedn k ty
   end.
 
 Fixpoint closedn_stack k π :=

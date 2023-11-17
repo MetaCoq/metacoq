@@ -235,6 +235,9 @@ Proof with eauto using expanded.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
+  - repeat constructor.
+  - repeat constructor.
+  - wf_inv wf [[] ?]. repeat cbn; constructor. constructor; cbn; eauto. solve_all.
 Qed.
 
 

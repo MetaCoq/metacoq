@@ -732,6 +732,7 @@ Section Conversion.
     prog_discr (tProj _ _) (tProj _ _) := False ;
     prog_discr (tFix _ _) (tFix _ _) := False ;
     prog_discr (tCoFix _ _) (tCoFix _ _) := False ;
+    prog_discr (tPrim _) (tPrim _) := False ;
     prog_discr _ _ := True.
 
   (* Note that the arity of this should be the same for all s as otherwise
@@ -1298,6 +1299,9 @@ Section Conversion.
   | prog_view_CoFix mfix idx mfix' idx' :
       prog_view (tCoFix mfix idx) (tCoFix mfix' idx')
 
+  | prog_view_Prim p p' :
+      prog_view (tPrim p) (tPrim p')
+
   | prog_view_other :
       forall u v, prog_discr u v -> prog_view u v.
 
@@ -1325,6 +1329,9 @@ Section Conversion.
 
     prog_viewc (tCoFix mfix idx) (tCoFix mfix' idx') :=
       prog_view_CoFix mfix idx mfix' idx' ;
+
+    prog_viewc (tPrim p) (tPrim p') :=
+      prog_view_Prim p p' ;
 
     prog_viewc u v := prog_view_other u v I.
 
@@ -3475,6 +3482,26 @@ Qed.
             (Γ ,,, stack_context π2) mfix' idx'
         )
       } ;
+
+    | prog_view_Prim p p' with inspect (eqb (prim_val_tag p) (prim_val_tag p')) := {
+      | @exist false tag_uneq :=
+        no (DistinctPrimTag (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p')
+      | @exist true eqtag with p, p' := {
+        | (primInt; primIntModel i) | (primInt, primIntModel i') with inspect (eqb i i') :=
+          { | @exist true eqi := yes
+            | @exist false neqi := no (DistingPrimValues (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p') }
+        | (primFloat; primFloatModel f) | (primFloat; primFloatModel f') with inspect (eqb f f') :=
+          { | @exist true eqf := yes
+            | @exist false neqf := no (DistingPrimValues (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p') }
+        | (primArray; primArrayModel a) | (primArray; primArrayModel a') with
+            with isconv_red_raw Conv (array_type a) (Prod_l na B1 :: π1) (array_type a') (Prod_l na' B2 :: π2) aux :
+         inspect (eqb f f') :=
+          { | @exist true eqf := yes
+            | @exist false neqf := no (DistingPrimValues (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p') }
+
+
+      }
+    } ;
 
     | prog_view_other t1 t2 h :=
       isconv_fallback leq t1 π1 t2 π2 aux

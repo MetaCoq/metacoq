@@ -2,7 +2,7 @@
 From Coq Require Import ProofIrrelevance ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTactics
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICCumulativity PCUICEquality PCUICWfUniverses
      PCUICInduction.
@@ -158,7 +158,8 @@ Fixpoint eqb_term_upto_univ_napp
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-  | tPrim p, tPrim p' => eqb p p'
+  | tPrim p, tPrim p' => eqb_prim_val (equ := fun l l' => equ (Universe.make l) (Universe.make l'))
+    (req := eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) p p'
 
   | _, _ => false
   end.
@@ -396,6 +397,8 @@ Proof.
     eapply All_impl ; tea.
     move => ? [? ?].
     now apply /andP.
+  - destruct p as [? []]; cbn in *; rtoProp; intuition eauto.
+    solve_all.
 Qed.
 
 Definition reflect_eq_predicate {Σ equ lequ}
@@ -529,6 +532,8 @@ Proof.
   rewrite /global_variance_gen /lookup_constructor_gen /lookup_inductive_gen /lookup_minductive_gen.
   destruct gr; auto; now repeat rewrite hlookup.
 Qed.
+
+Transparent eqb_prim_val eqb_prim_model.
 
 Lemma reflect_eq_term_upto_univ Σ equ lequ
   (p : Universe.t -> bool) (q : nat -> term -> bool)
@@ -754,7 +759,34 @@ Proof.
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
- - cbn - [eqb]. eqspecs. do 2 constructor.
+ - destruct p0 as [? []], prim as [? []];
+    cbn in X, ht, ht';
+    rewrite /eqb_prim_val /eqb_prim_model; cbn -[eqb]; try eqspecs;
+    try repeat constructor.
+    1-8:intros e; depelim e; try depelim o; intuition eauto.
+    unfold eqb_array. eqspecs; rewrite ?andb_true_r ?andb_false_r.
+    rtoProp; intuition auto. specialize (a1 equ Re 0 he _ H4 H0).
+    specialize (a2 equ Re 0 he _ H5 H1).
+    case: a1; rewrite ?andb_true_r ?andb_false_r; [intros eq|constructor; intros e; depelim e; depelim o]; eauto.
+    case: a2; rewrite ?andb_true_r ?andb_false_r; [intros eq'|constructor; intros e; depelim e; depelim o]; eauto.
+    equspec equ he; eauto; cbn.
+    2:constructor; intros e; depelim e; depelim o; eauto.
+    repeat toAll.
+    revert b0 H2.
+    destruct a as [l d ty v], a0 as [l' d' ty' v']; cbn in *.
+    intros a.
+    induction a in v' |- *; intros.
+    * depelim H2; cbn; constructor; eauto; try repeat constructor; cbn; eauto.
+      intros heq; depelim heq; cbn in *; depelim o; eauto. depelim a0.
+    * intuition auto. depelim H2; cbn; try constructor; eauto.
+      ++ intros heq; depelim heq; depelim o; eauto. depelim a2.
+      ++ specialize (IHa _ H2). case: IHa; intros htl.
+        +++ rewrite andb_true_r. specialize (b equ Re 0 he _ a0 i).
+            case: b; repeat constructor; eauto; depelim htl; depelim o; eauto.
+            intros heq; depelim heq; depelim o; cbn in *; eauto. eapply f. now depelim a3.
+        +++ rewrite andb_false_r; constructor.
+            intros heq; depelim heq; depelim o; cbn in *; eauto. eapply htl.
+            repeat constructor; eauto. cbn. now depelim a2.
 Qed.
 
  Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool)
@@ -944,6 +976,9 @@ Proof.
   - eapply forallb_All in wt; eapply All_mix in X; try apply wt; clear wt.
     eapply All_All2; eauto; simpl; intuition eauto;
     apply andb_and in a as [? ?]; eauto.
+  - destruct p as [? []]; cbn -[Universe.make] in X, wt; rtoProp; intuition eauto; constructor; eauto.
+    + eapply hRe. now move/wf_universe_reflect: H.
+    + solve_all. eapply All_All2; eauto; simpl; intuition eauto.
 Defined.
 
 Lemma eqb_term_upto_univ_refl Σ (eqb leqb : Universe.t -> Universe.t -> bool) (Re : Universe.t -> Universe.t -> Prop)

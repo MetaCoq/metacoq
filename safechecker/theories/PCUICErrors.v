@@ -89,6 +89,26 @@ Inductive ConversionError :=
     (Γ : context) (mfix : mfixpoint term)
     (Γ' : context) (mfix' : mfixpoint term)
 
+| DistinctPrimTags
+  (Γ : context) (p : prim_val)
+  (Γ' : context) (p' : prim_val)
+
+| DistinctPrimValues
+  (Γ : context) (p : prim_val)
+  (Γ' : context) (p' : prim_val)
+
+| ArrayNotConvertibleValues
+  (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
+  (e : ConversionError)
+
+| ArrayNotConvertibleDefault
+  (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
+  (e : ConversionError)
+
+| ArrayNotConvertibleTypes
+  (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
+  (e : ConversionError)
+
 | StackHeadError
     (leq : conv_pb)
     (Γ1 : context)
@@ -271,6 +291,39 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       nl ^ "and" ^ nl ^
       print_term Σ Γ' (tCoFix mfix' idx) ^
       nl ^ "have a different number of mutually defined functions."
+  | ArrayNotConvertibleValues Γ a Γ' a' e =>
+      "The two arrays " ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
+      nl ^ " have non-convertible values: " ^
+      nl ^ string_of_conv_error Σ e
+  | ArrayNotConvertibleTypes Γ a Γ' a' e =>
+      "The two arrays " ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
+      nl ^ " have non-convertible types: " ^
+      nl ^ string_of_conv_error Σ e
+  | ArrayNotConvertibleDefault Γ a Γ' a' e =>
+      "The two arrays " ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
+      nl ^ " have non-convertible default values: " ^
+      nl ^ string_of_conv_error Σ e
+  | DistinctPrimTags Γ p Γ' p' =>
+      "The two primitive values " ^ nl ^
+      print_term Σ Γ (tPrim p) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim p') ^
+      nl ^ " have distinct tags"
+  | DistinctPrimValues Γ p Γ' p' =>
+      "The two primitive values " ^ nl ^
+      print_term Σ Γ (tPrim p) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim p') ^
+      nl ^ " have distinct values"
   | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
       "TODO stackheaderror" ^ nl ^
       string_of_conv_error Σ e

@@ -78,15 +78,15 @@ Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_Reflect
 
 Import ReflectEq.
 
-Definition eqb_array {term} {eqt : term -> term -> bool} (x y : array_model term) : bool :=
-   eqb x.(array_level) y.(array_level) &&
+Definition eqb_array {term} {equ : Level.t -> Level.t -> bool} {eqt : term -> term -> bool} (x y : array_model term) : bool :=
+   equ x.(array_level) y.(array_level) &&
    forallb2 eqt x.(array_value) y.(array_value) &&
    eqt x.(array_default) y.(array_default) &&
    eqt x.(array_type) y.(array_type).
 
 #[program,global]
 Instance reflect_eq_array {term} {req : ReflectEq term}: ReflectEq (array_model term) :=
-  { eqb := eqb_array (eqt := eqb) }.
+  { eqb := eqb_array (equ := eqb) (eqt := eqb) }.
 Next Obligation.
   intros term req [] []; cbn. unfold eqb_array. cbn.
   change (forallb2 eqb) with (eqb (A := list term)).
@@ -97,14 +97,14 @@ Next Obligation.
   all:constructor; congruence.
 Qed.
 
-Equations eqb_prim_model {term} {req : term -> term -> bool} {t : prim_tag} (x y : prim_model term t) : bool :=
+Equations eqb_prim_model {term} {equ : Level.t -> Level.t -> bool} {req : term -> term -> bool} {t : prim_tag} (x y : prim_model term t) : bool :=
   | primIntModel x, primIntModel y := ReflectEq.eqb x y
   | primFloatModel x, primFloatModel y := ReflectEq.eqb x y
-  | primArrayModel x, primArrayModel y := eqb_array (eqt:=req) x y.
+  | primArrayModel x, primArrayModel y := eqb_array (equ := equ) (eqt:=req) x y.
 
 #[global, program]
 Instance prim_model_reflecteq {term} {req : ReflectEq term} {p : prim_tag} : ReflectEq (prim_model term p) :=
-  {| ReflectEq.eqb := eqb_prim_model (req := eqb) |}.
+  {| ReflectEq.eqb := eqb_prim_model (equ := eqb) (req := eqb) |}.
 Next Obligation.
   intros. depelim x; depelim y; simp eqb_prim_model.
   case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
@@ -116,15 +116,15 @@ Qed.
 #[global]
 Instance prim_model_eqdec {term} {req : ReflectEq term} : forall p : prim_tag, EqDec (prim_model term p) := _.
 
-Equations eqb_prim_val {term} {req : term -> term -> bool} (x y : prim_val term) : bool :=
-  | (primInt; i), (primInt; i') := eqb_prim_model (req := req) i i'
-  | (primFloat; f), (primFloat; f') := eqb_prim_model (req := req) f f'
-  | (primArray; a), (primArray; a') := eqb_prim_model (req := req) a a'
+Equations eqb_prim_val {term} {equ : Level.t -> Level.t -> bool} {req : term -> term -> bool} (x y : prim_val term) : bool :=
+  | (primInt; i), (primInt; i') := eqb_prim_model (equ := equ) (req := req) i i'
+  | (primFloat; f), (primFloat; f') := eqb_prim_model (equ := equ) (req := req) f f'
+  | (primArray; a), (primArray; a') := eqb_prim_model (equ := equ) (req := req) a a'
   | x, y := false.
 
 #[global, program]
 Instance prim_val_reflect_eq {term} {req : ReflectEq term} : ReflectEq (prim_val term) :=
-  {| ReflectEq.eqb := eqb_prim_val (req := eqb) |}.
+  {| ReflectEq.eqb := eqb_prim_val (equ := eqb) (req := eqb) |}.
 Next Obligation.
   intros. funelim (eqb_prim_val x y); simp eqb_prim_val.
   change (eqb_prim_model i i') with (eqb i i').

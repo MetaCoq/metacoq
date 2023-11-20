@@ -2219,6 +2219,10 @@ Section Stacks.
         apply OnOne2_app.
         constructor; cbn.
         rewrite -app_assoc in h; auto.
+    - now apply array_red_type; cbn in *.
+    - now apply array_red_def; cbn in *.
+    - apply array_red_val; cbn in *.
+      eapply OnOne2_app. now constructor.
   Qed.
 
   Corollary red_context_zip :

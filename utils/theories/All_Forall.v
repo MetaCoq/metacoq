@@ -37,6 +37,10 @@ Derive Signature for All2.
 Derive NoConfusionHom for All2.
 #[global] Hint Constructors All2 : core.
 
+Lemma All2_tip {A} {P} (t u : A) : P t u -> All2 P [t] [u].
+Proof. now repeat constructor. Qed.
+#[global] Hint Resolve All2_tip : core.
+
 Inductive All2_dep {A B : Type} {R : A -> B -> Type} (R' : forall a b, R a b -> Type) : forall {xs ys}, All2 R xs ys -> Type :=
 | All2_dep_nil : All2_dep R' All2_nil
 | All2_dep_cons : forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (rs : All2 R l l'),
@@ -461,6 +465,34 @@ Lemma All2_map_inv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l l
   All2 R (map f l) (map g l') -> All2 (fun x y => R (f x) (g y)) l l'.
 Proof. apply All2_map_equiv. Qed.
 
+Lemma All2_tip_l {A B} {R : A -> B -> Type} x y : All2 R [x] y -> ∑ y', (y = [y']) * R x y'.
+Proof.
+  intros a; depelim a. depelim a. exists y0; split => //.
+Qed.
+
+Lemma All2i_All2i_mix {A B} {P Q : nat -> A -> B -> Type}
+      {n} {l : list A} {l' : list B} :
+  All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y * Q i x y)%type) n l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma All2i_nth_error {A B} {P : nat -> A -> B -> Type} {l l' n x c k} :
+  All2i P k l l' ->
+  nth_error l n = Some x ->
+  nth_error l' n = Some c ->
+  P (k + n)%nat x c.
+Proof.
+  induction 1 in n |- *.
+  * rewrite !nth_error_nil => //.
+  * destruct n.
+    + simpl. intros [= <-] [= <-]. now rewrite Nat.add_0_r.
+    + simpl. intros hnth hnth'. specialize (IHX _ hnth hnth').
+      now rewrite Nat.add_succ_r.
+Qed.
+
 (* Lemma All2_List_Forall_mix_left {A : Type} {P : A -> Prop} {Q : A -> A -> Prop} *)
 (*       {l l' : list A} : *)
 (*     Forall P l -> All2 Q l l' -> All2 (fun x y => P x /\ Q x y) l l'. *)
@@ -522,6 +554,14 @@ Proof.
   induction 2; simpl; intros; constructor.
   inv X; intuition auto.
   apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma All2_All2_All2 {A B C} {P Q R} (l : list A) (l' : list B) (l'' : list C) :
+  All2 P l l' -> All2 Q l' l'' ->
+  (forall x y z, P x y -> Q y z -> R x z) ->
+  All2 R l l''.
+Proof.
+  induction 1 in l'' |- *; intros a; depelim a; constructor; eauto.
 Qed.
 
 Lemma Forall_All {A : Type} (P : A -> Prop) l :
@@ -1550,6 +1590,10 @@ Lemma All2_map_left {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
   All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
 Proof. apply All2_map_left_equiv. Qed.
 
+Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
+Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
+
 Lemma All2_map_right {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
   All2 (fun x y => P x (f y)) l l' -> All2 P l (map f l').
 Proof. apply All2_map_right_equiv. Qed.
@@ -2070,6 +2114,11 @@ Proof.
   - constructor.
     + inversion h. subst. assumption.
     + eapply IHl. inversion h. assumption.
+Qed.
+
+Lemma Forall2_tip_l {A B} {R : A -> B -> Prop} x y : Forall2 R [x] y -> exists y', (y = [y']) /\ R x y'.
+Proof.
+  intros a; depelim a. depelim a. exists y0; split => //.
 Qed.
 
 Lemma All2_length {A B} {P : A -> B -> Type} {l l'} : All2 P l l' -> #|l| = #|l'|.
@@ -3311,6 +3360,12 @@ Inductive All_fold {A} (P : list A -> A -> Type) : list A -> Type :=
   | All_fold_cons {d Γ} : All_fold P Γ -> P Γ d -> All_fold P (d :: Γ).
 
 Derive Signature NoConfusionHom for All_fold.
+
+Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
+Proof.
+  intros a; now depelim a.
+Qed.
+
 Inductive All2_fold {A} (P : list A -> list A -> A -> A -> Type)
             : list A -> list A -> Type :=
 | All2_fold_nil : All2_fold P nil nil

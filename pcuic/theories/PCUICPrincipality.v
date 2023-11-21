@@ -463,16 +463,6 @@ Proof.
   intros. now eapply eq_term_empty_eq_term.
 Qed.
 
-Lemma All2_tip_l {A B} {R : A -> B -> Type} x y : All2 R [x] y -> ∑ y', (y = [y']) * R x y'.
-Proof.
-  intros a; depelim a. depelim a. exists y0; split => //.
-Qed.
-
-Lemma Forall2_tip_l {A B} {R : A -> B -> Prop} x y : Forall2 R [x] y -> exists y', (y = [y']) * R x y'.
-Proof.
-  intros a; depelim a. depelim a. exists y0; split => //.
-Qed.
-
 From MetaCoq.PCUIC Require Import PCUICClassification.
 
 Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :

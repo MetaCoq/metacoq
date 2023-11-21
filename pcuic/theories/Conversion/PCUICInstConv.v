@@ -1416,7 +1416,7 @@ Proof using Type.
         sigma in X. eapply X.
       * eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up; eauto; intuition.
+  - eapply usubst_Up; eauto; intuition auto with *.
 Qed.
 
 
@@ -1465,7 +1465,7 @@ Proof using Type.
       eapply on_free_vars_inst.
       2: now eapply h.
       now easy.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 Lemma well_subst_Up' {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na t A} :
@@ -1491,7 +1491,7 @@ Proof using Type.
         sigma in X0. eapply X0.
       + eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 

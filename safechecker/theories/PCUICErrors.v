@@ -97,6 +97,12 @@ Inductive ConversionError :=
   (Γ : context) (p : prim_val)
   (Γ' : context) (p' : prim_val)
 
+| ArrayNotConvertibleLevels
+  (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
+
+| ArrayValuesNotSameLength
+  (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
+
 | ArrayNotConvertibleValues
   (Γ : context) (a : array_model term) (Γ' : context) (a' : array_model term)
   (e : ConversionError)
@@ -291,6 +297,12 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       nl ^ "and" ^ nl ^
       print_term Σ Γ' (tCoFix mfix' idx) ^
       nl ^ "have a different number of mutually defined functions."
+  | ArrayValuesNotSameLength Γ a Γ' a' =>
+      "The two arrays " ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
+      nl ^ " have different length"
   | ArrayNotConvertibleValues Γ a Γ' a' e =>
       "The two arrays " ^ nl ^
       print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
@@ -298,6 +310,12 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
       nl ^ " have non-convertible values: " ^
       nl ^ string_of_conv_error Σ e
+  | ArrayNotConvertibleLevels Γ a Γ' a' =>
+      "The two arrays " ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^
+      nl ^ "and" ^ nl ^
+      print_term Σ Γ (tPrim (primArray; primArrayModel a')) ^
+      nl ^ " have non-convertible universe levels"
   | ArrayNotConvertibleTypes Γ a Γ' a' e =>
       "The two arrays " ^ nl ^
       print_term Σ Γ (tPrim (primArray; primArrayModel a)) ^

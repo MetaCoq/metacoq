@@ -201,20 +201,6 @@ Ltac hide H :=
   | ?ty => change ty with (@hidebody _ ty) in H
   end.
 
-Lemma All2i_nth_error {A B} {P : nat -> A -> B -> Type} {l l' n x c k} :
-  All2i P k l l' ->
-  nth_error l n = Some x ->
-  nth_error l' n = Some c ->
-  P (k + n)%nat x c.
-Proof.
-  induction 1 in n |- *.
-  * rewrite !nth_error_nil => //.
-  * destruct n.
-    + simpl. intros [= <-] [= <-]. now rewrite Nat.add_0_r.
-    + simpl. intros hnth hnth'. specialize (IHX _ hnth hnth').
-      now rewrite Nat.add_succ_r.
-Qed.
-
 Lemma conv_context_smash_end {cf Σ} {wfΣ : wf Σ} (Γ Δ Δ' : context) :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
@@ -841,17 +827,6 @@ Proof.
   intros. eapply ctx_inst_merge; try rewrite ?(List.rev_involutive Δ) //; tea.
 Qed.
 
-Lemma All2i_All2i_mix {A B} {P Q : nat -> A -> B -> Type}
-      {n} {l : list A} {l' : list B} :
-  All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y * Q i x y)%type) n l l'.
-Proof.
-  induction 2; simpl; intros; constructor.
-  inv X; intuition auto.
-  apply IHX0. inv X; intuition auto.
-Qed.
-
-Definition conj_impl {A B} : A -> (A -> B) -> A × B := fun x f => (x, f x).
-
 Lemma is_open_term_snoc (Γ : context) M d : on_free_vars (shiftnP 1 (shiftnP #|Γ| xpred0)) M -> is_open_term (Γ ,, d) M.
 Proof.
   rewrite /=.
@@ -1291,10 +1266,6 @@ Proof.
   intros. eapply into_ws_cumul_pb_terms => //.
   eapply All2_refl; reflexivity.
 Qed.
-
-Lemma All2_tip {A} {P} (t u : A) : P t u -> All2 P [t] [u].
-Proof. now repeat constructor. Qed.
-#[global] Hint Resolve All2_tip : core.
 
 Lemma map2_set_binder_name_expand_lets nas Γ Δ :
   #|nas| = #|Δ| ->
@@ -2248,8 +2219,8 @@ Proof.
       do 2 case. move=> hnth [] wfbr wfbctxargs wfbrctx wfcbc' wfcbcty'.
       case => eqbctx. case. case => wfbctx _.
       move=> [] [] Hbody IHbody [] brty IHbrty.
-      eapply conj_impl. solve_all. move=> cvcbc.
-      apply conj_impl; [|move=> wfcb'].
+      eapply and_assum. solve_all. move=> cvcbc.
+      apply and_assum; [|move=> wfcb'].
       { now eapply typing_wf_local in wfcbcty'. }
       split => //.
       have declc : declared_constructor Σ (ci, cstr) mdecl idecl cdecl.

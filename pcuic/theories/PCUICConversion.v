@@ -27,6 +27,9 @@ Require Import Equations.Prop.DepElim.
   *well-scoped* objects.
 *)
 
+Notation "Σ ;;; Γ ⊢ t ⇝1 u" := (closed_red1 Σ Γ t u) (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  ⊢  t  ⇝1  u").
+
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Set Default Goal Selector "!".
@@ -762,6 +765,148 @@ Section ConvCongruences.
       constructor. 2:cbn. all:eauto with fvs.
   Qed.
 
+  (* TODO move *)
+  Lemma invert_red_axiom {Γ cst u cdecl T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
+    T = tConst cst u.
+  Proof using wfΣ.
+    intros hdecl hb.
+    unshelve eapply declared_constant_to_gen in hdecl; eauto.
+    generalize_eq x (tConst cst u).
+    move=> e [clΓ clt] red.
+    revert cst u hdecl hb e.
+    eapply clos_rt_rt1n_iff in red.
+    induction red; simplify_dep_elim.
+    - reflexivity.
+    - depelim r; solve_discr.
+      unshelve eapply declared_constant_to_gen in isdecl; eauto.
+      congruence.
+  Qed.
+
+  Ltac bool := rtoProp; intuition eauto.
+
+  Lemma invert_red1_axiom_app {Γ cst u cdecl args T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ mkApps (tConst cst u) args ⇝1 T ->
+    ∑ args', (T = mkApps (tConst cst u) args') × All2 (fun arg arg' => Σ ;;; Γ ⊢ arg ⇝ arg') args args'.
+  Proof using wfΣ.
+    intros hdecl hbod. revert T.
+    induction args using rev_ind.
+    - simpl. intros; eapply invert_red_axiom in hbod; tea.
+      2:{ eapply closed_red1_red; tea. }
+      subst. exists []. split => //.
+    - rewrite mkApps_app /=; intros.
+      depelim X; solve_discr.
+      depind clrel_rel; solve_discr.
+      * destruct args using rev_case; solve_discr; noconf H.
+        rewrite mkApps_app in H; noconf H. solve_discr.
+      * specialize (IHargs N1); forward IHargs.
+        { constructor; fvs. cbn in clrel_src. rtoProp; intuition auto. }
+        destruct IHargs as [args' []]. exists (args' ++ [M2]). subst N1. rewrite mkApps_app /=; split => //.
+        eapply All2_app => //. constructor; eauto. eapply closed_red_refl; fvs. cbn in clrel_src; bool.
+      * exists (args ++ [N2]). rewrite mkApps_app /=. split => //.
+        cbn in clrel_src; bool. rewrite on_free_vars_mkApps in H; bool. toAll.
+        eapply All2_app => //.
+        + eapply All_All2; tea; cbn; bool. eapply closed_red_refl; fvs.
+        + constructor; [|constructor]. eapply into_closed_red; tea. now constructor.
+  Qed.
+
+  Lemma closed_red_ind (P : context -> term -> term -> Type) :
+    (forall Γ t, is_closed_context Γ -> is_open_term Γ t -> P Γ t t) ->
+    (forall Γ t u, Σ ;;; Γ ⊢ t ⇝1 u -> P Γ t u) ->
+    (forall Γ t u v, Σ ;;; Γ ⊢ t ⇝ u -> Σ ;;; Γ ⊢ u ⇝ v -> P Γ t u -> P Γ u v -> P Γ t v) ->
+    forall Γ t u, Σ ;;; Γ ⊢ t ⇝ u -> P Γ t u.
+  Proof.
+    intros prefl pred ptrans.
+    destruct 1 as [ctx src rel].
+    eapply clos_rt_rt1n_iff in rel.
+    induction rel.
+    - eapply prefl; tea.
+    - eapply ptrans; tea.
+      + eapply into_closed_red; tea. now eapply red1_red.
+      + split; fvs. now eapply clos_rt_rt1n_iff.
+      + eapply pred. split; fvs.
+      + eapply IHrel. fvs.
+  Qed.
+
+  Lemma invert_red_axiom_app {Γ cst u cdecl args T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ mkApps (tConst cst u) args ⇝ T ->
+    ∑ args', (T = mkApps (tConst cst u) args') × All2 (fun arg arg' => Σ ;;; Γ ⊢ arg ⇝ arg') args args'.
+  Proof using wfΣ.
+    intros hdecl hbod red.
+    remember (mkApps (tConst cst u) args) as U. revert red args HeqU.
+    revert Γ U T.
+    apply: closed_red_ind; intros; subst.
+    - exists args. split => //. rewrite on_free_vars_mkApps /= in H0. toAll. eapply All_All2; tea; bool. now eapply closed_red_refl.
+    - eapply invert_red1_axiom_app in X; tea.
+    - specialize (X1 _ eq_refl) as [args' []].
+      subst u0. specialize (X2 _ eq_refl) as [args'' []]. subst v.
+      exists args''. split => //. eapply All2_trans; tea.
+      intros x y z red1 red2. now etransitivity.
+  Qed.
+
+  Lemma invert_red_tPrim {Γ p T} :
+    Σ ;;; Γ ⊢ tPrim p ⇝ T ->
+    (∑ i, p = (primInt; primIntModel i) /\ T = tPrim p) +
+    (∑ f, p = (primFloat; primFloatModel f) /\ T = tPrim p) +
+    ∑ a a',
+      [× p = (primArray; primArrayModel a), T = tPrim (primArray; primArrayModel a'),
+        a.(array_level) = a'.(array_level),
+        Σ ;;; Γ ⊢ a.(array_default) ⇝ a'.(array_default),
+        Σ ;;; Γ ⊢ a.(array_type) ⇝ a'.(array_type) &
+        All2 (fun x y => Σ ;;; Γ ⊢ x ⇝ y) a.(array_value) a'.(array_value)].
+  Proof using wfΣ.
+    intros red; remember (tPrim p) as U. revert red p HeqU.
+    revert Γ U T.
+    apply: closed_red_ind; intros; subst.
+    - destruct p as [? []].
+      * now left.
+      * left. now right.
+      * right. exists a, a.
+        cbn in H0; rtoProp; intuition auto.
+        split => //. solve_all; eapply All_All2; tea; cbn; intuition eauto using into_closed_red.
+    - right. depelim X. depelim clrel_rel; solve_discr;
+      cbn in clrel_src; rtoProp; intuition auto.
+      + exists arr, (set_array_value arr value); split => //.
+        toAll. cbn.
+        { clear -clrel_ctx H o. induction H in value, o |- *.
+          * depelim o.
+          * depelim o.
+            ++ constructor; eauto.
+              +++ eapply into_closed_red; eauto.
+              +++ eapply All_All2; tea; cbn; intuition eauto.
+                  now eapply into_closed_red.
+            ++ constructor; eauto. now eapply into_closed_red. }
+      + exists arr, (set_array_default arr def); split => //.
+        * eapply into_closed_red; eauto.
+        * toAll; eapply All_All2; tea; cbn; intuition eauto using into_closed_red.
+      + exists arr, (set_array_type arr ty); split => //.
+        * eapply into_closed_red; eauto.
+        * toAll; eapply All_All2; tea; cbn; intuition eauto using into_closed_red.
+    - specialize (X1 _ eq_refl) as [].
+      * destruct s as [[? []]|[? []]]; subst;
+        specialize (X2 _ eq_refl) as [].
+        + left. destruct s; [left|right]; eauto.
+        + destruct s as [? [? []]]. subst. noconf e.
+        + left; destruct s; [left|right]; eauto.
+        + destruct s as [? [? []]]; subst; noconf e.
+      * right. destruct s as [a [a' []]].
+        subst. specialize (X2 _ eq_refl) as [[|]|].
+        + destruct s as [? []]; congruence.
+        + destruct s as [? []]; congruence.
+        + destruct s as [a2 [a2' []]]; subst.
+          noconf e.
+          exists a, a2'. split => //; try congruence.
+          ** etransitivity; tea.
+          ** etransitivity; tea.
+          ** eapply All2_trans; tea.
+            intros ?????. eapply closed_red_trans; tea.
+  Qed.
 End ConvCongruences.
 
 Notation red_terms Σ Γ := (All2 (closed_red Σ Γ)).
@@ -1253,6 +1398,124 @@ Section Inversions.
       transitivity l0 => //. transitivity l1 => //. now symmetry.
   Qed.
 
+  Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u args cdecl T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ mkApps (tConst cst u) args ≤[pb] T ->
+    ∑ u' args',
+      [× Σ ;;; Γ ⊢ T ⇝ mkApps (tConst cst u') args',
+         All2 (fun args args' => Σ ;;; Γ ⊢ args ≤[Conv] args') args args' &
+         PCUICEquality.R_universe_instance (eq_universe Σ) u u'].
+  Proof using wfΣ.
+    intros hdecl hb H.
+    eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
+    epose proof (invert_red_axiom_app hdecl hb tv) as [args' [-> ?]].
+    eapply compare_term_mkApps_l_inv in eqp as [t' [l' []]]; subst v'.
+    depelim e.
+    exists u', l'. split => //.
+    eapply closed_red_open_right in tv'. rewrite on_free_vars_mkApps /= in tv'.
+    solve_all.
+    eapply All2_All2_All2; tea. cbn.
+    intros x y z red [eq op].
+    eapply ws_cumul_pb_red. exists y, z; split => //. eapply closed_red_refl; fvs.
+  Qed.
+
+  Lemma ws_cumul_pb_Axiom_r_inv {pb Γ cst u args cdecl T} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ T ≤[pb] mkApps (tConst cst u) args ->
+    ∑ u' args',
+      [× Σ ;;; Γ ⊢ T ⇝ mkApps (tConst cst u') args',
+         All2 (fun args args' => Σ ;;; Γ ⊢ args ≤[Conv] args') args' args &
+         PCUICEquality.R_universe_instance (eq_universe Σ) u' u].
+  Proof using wfΣ.
+    intros hdecl hb H.
+    eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
+    epose proof (invert_red_axiom_app hdecl hb tv') as [args' [-> ?]].
+    eapply compare_term_mkApps_r_inv in eqp as [t' [l' []]]; subst v.
+    depelim e.
+    exists u0, l'. split => //.
+    eapply closed_red_open_right in tv. rewrite on_free_vars_mkApps /= in tv.
+    solve_all.
+    eapply All2_sym in a0. eapply All2_sym.
+    eapply All2_All2_All2; tea. cbn.
+    intros x y z red [eq op].
+    eapply ws_cumul_pb_red. exists z, y; split => //. eapply closed_red_refl; fvs.
+  Qed.
+
+  Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args args'} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ mkApps (tConst cst u) args ≤ mkApps (tInd ind u') args' -> False.
+  Proof using wfΣ.
+    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & args'' & [hred hcmp _]); eauto.
+    eapply invert_red_mkApps_tInd in hred as (? & []); auto. solve_discr.
+  Qed.
+
+  Lemma invert_cumul_axiom_prod {Γ cst cdecl u args na dom codom} :
+    declared_constant Σ cst cdecl ->
+    cst_body cdecl = None ->
+    Σ ;;; Γ ⊢ mkApps (tConst cst u) args ≤ tProd na dom codom -> False.
+  Proof using wfΣ.
+    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & args' & [hred hcmp _]); eauto.
+    eapply invert_red_prod in hred as (? & ? & []); auto. solve_discr.
+  Qed.
+
+  Lemma invert_cumul_prim_type_ind {Γ cst cdecl p ind u' args'} :
+    declared_constant Σ cst cdecl ->
+    primitive_invariants (prim_val_tag p) cdecl ->
+    Σ ;;; Γ ⊢ prim_type p cst ≤ mkApps (tInd ind u') args' -> False.
+  Proof using wfΣ.
+    intros hd hb ht.
+    destruct p as [? []]; simp prim_type in ht.
+    1-2:eapply (invert_cumul_axiom_ind (args := [])) in ht; tea; now destruct hb as [s []].
+    eapply (invert_cumul_axiom_ind (args := [_])) in ht; tea. apply hb.
+  Qed.
+
+  Lemma invert_cumul_prim_type_prod {Γ cst cdecl p na dom codom} :
+    declared_constant Σ cst cdecl ->
+    primitive_invariants (prim_val_tag p) cdecl ->
+    Σ ;;; Γ ⊢ prim_type p cst ≤ tProd na dom codom -> False.
+  Proof using wfΣ.
+    intros hd hb ht.
+    destruct p as [? []]; simp prim_type in ht.
+    1-2:eapply (invert_cumul_axiom_prod (args := [])) in ht; tea; now destruct hb as [s []].
+    eapply (invert_cumul_axiom_prod (args := [_])) in ht; tea. apply hb.
+  Qed.
+
+  Lemma invert_cumul_Prim {Γ pb p p'} :
+    Σ ;;; Γ ⊢ tPrim p ≤[pb] tPrim p' ->
+    onPrims (ws_cumul_pb Conv Σ Γ) (eq_universe Σ) p p'.
+  Proof using wfΣ.
+    intros hd.
+    generalize (ws_cumul_pb_is_open_term hd); move/and3P => [] cl cl' cl''.
+    move/ws_cumul_pb_alt_closed: hd => [v [v' []]].
+    move/invert_red_tPrim => hl.
+    move/invert_red_tPrim => hr.
+    destruct hl as [[[i []]|[f []]]|[a [a' []]]],
+       hr as [[[i' []]|[f' []]]|[a1 [a2' []]]]; subst; try congruence;
+     intros eq; depelim eq; depelim o; cbn in cl', cl'';
+      rtoProp; intuition eauto; constructor; eauto.
+    - rewrite e1 e4 //.
+    - etransitivity.
+      * eapply red_ws_cumul_pb; tea.
+      * symmetry. etransitivity; [eapply red_ws_cumul_pb; tea|].
+        symmetry. constructor; eauto; fvs.
+    - etransitivity.
+      * eapply red_ws_cumul_pb; tea.
+      * symmetry. etransitivity; [eapply red_ws_cumul_pb; tea|].
+        symmetry. constructor; eauto; fvs.
+    - etransitivity.
+      * eapply red_terms_ws_cumul_pb_terms; tea.
+      * symmetry. etransitivity; [eapply red_terms_ws_cumul_pb_terms; tea|].
+        symmetry.
+        assert (All (is_open_term Γ) (array_value a')).
+        { clear -cf wfΣ a0. solve_all; now eapply closed_red_open_right in X. }
+        assert (All (is_open_term Γ) (array_value a2')).
+        { clear -cf wfΣ a2. solve_all; now eapply closed_red_open_right in X. }
+         solve_all. constructor; eauto; fvs.
+  Qed.
+
 End Inversions.
 
 #[global] Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
@@ -1419,9 +1682,6 @@ Section Inversions.
     - eapply ws_cumul_pb_App_l; tea; eauto with fvs.
     - eapply ws_cumul_pb_App_r; eauto with fvs.
   Qed.
-
-  Notation "Σ ;;; Γ ⊢ t ⇝1 u" := (closed_red1 Σ Γ t u) (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  ⊢  t  ⇝1  u").
 
   Lemma closed_red1_mkApps_left  {Γ} {t u ts} :
     Σ ;;; Γ ⊢ t ⇝1 u ->

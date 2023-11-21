@@ -120,7 +120,7 @@ Proof.
     * unfold shiftnP in Hn. unfold sP , shiftnP.
       toProp. toProp Hn. destruct Hn.
       + intuition.
-      + right. toProp. toProp H. destruct H; intuition.
+      + right. toProp. toProp H. destruct H; intuition auto with *.
     * destruct (hf eq_refl) as [decl' [Hfn _]].
       clear hf Hn. unfold sP , shiftnP. rewrite orb_false_r.
       assert (shiftn #|Ξ| f n < #|Δ,,, rename_context f Ξ|).
@@ -131,8 +131,8 @@ Proof.
       repeat rewrite PeanoNat.Nat.ltb_lt. lia.
 - rewrite nth_error_None in Hnth. rewrite app_context_length in Hnth. unfold shiftnP in *. toProp Hn. toProp. unfold shiftn.
   clear -Hn Hnth. destruct Hn.
-  * toProp H. intuition.
-  * toProp H. destruct H; [toProp H |]; intuition.
+  * toProp H. intuition auto with *.
+  * toProp H. destruct H; [toProp H |]; intuition auto with *.
 Defined.
 
 Lemma urename_is_open_term P Γ Δ f u : let sP := shiftnP #|Γ| P in

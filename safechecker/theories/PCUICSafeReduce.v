@@ -1533,7 +1533,7 @@ Corollary R_Acc_aux :
             destruct h as [T h].
             apply inversion_App in h as (?&?&?&?&?); auto.
             apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? ?]); auto.
-            eapply PCUICClassification.invert_cumul_prim_type_prod; eauto.
+            eapply PCUICConversion.invert_cumul_prim_type_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.

@@ -6,14 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
   PCUICReduction PCUICProgram PCUICLiftSubst PCUICCSubst PCUICUnivSubst.
 
 (* move *)
-Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
-Proof.
-  intros a; now depelim a.
-Qed.
-
-Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
-Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
-
 Lemma nApp_mkApps t f args :
   t = mkApps f args -> ~~ isApp t -> t = f /\ args = [].
 Proof.

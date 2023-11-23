@@ -157,3 +157,158 @@ Definition test_prim {term} (f : term -> bool) (p : prim_val term) : bool :=
   | primFloatModel f => true
   | primArrayModel a => test_array_model f a
   end.
+
+Inductive primProp {term} P : prim_val term -> Type :=
+  | primPropInt i : primProp P (primInt; primIntModel i)
+  | primPropFloat f : primProp P (primFloat; primFloatModel f)
+  | primPropArray a : P a.(array_default) × All P a.(array_value) ->
+      primProp P (primArray; primArrayModel a).
+Derive Signature NoConfusion for primProp.
+
+Section primtheory.
+  Context {term term' term''} (g : term' -> term'') (f : term -> term') (p : prim_val term).
+
+  Lemma map_prim_compose  :
+    map_prim g (map_prim f p) = map_prim (g ∘ f) p.
+  Proof.
+    destruct p as [? []]; cbn; auto.
+    do 2 f_equal. destruct a; rewrite /map_array_model //= map_map_compose //.
+  Qed.
+End primtheory.
+#[global] Hint Rewrite @map_prim_compose : all.
+
+Lemma reflectT_forallb {A} {P : A -> Type} {p l} :
+  (forall x, reflectT (P x) (p x)) ->
+  reflectT (All P l) (forallb p l).
+Proof.
+  move=> hr; induction l; cbn; try constructor; eauto.
+  case: (hr a) => /= // pa.
+  - case: IHl; constructor; eauto.
+    intros ha; apply f. now depelim ha.
+  - constructor. intros ha; now depelim ha.
+Qed.
+
+Section primtheory.
+  Context {term} {p : prim_val term}.
+
+  Lemma map_prim_id f :
+    (forall x, f x = x) ->
+    map_prim f p = p.
+  Proof.
+    destruct p as [? []]; cbn; auto.
+    intros hf. do 2 f_equal. destruct a; rewrite /map_array_model //=; f_equal; eauto.
+    rewrite map_id_f //.
+  Qed.
+
+  Lemma map_prim_id_prop f P :
+    primProp P p ->
+    (forall x, P x -> f x = x) ->
+    map_prim f p = p.
+  Proof.
+    destruct p as [? []]; cbn; auto.
+    intros hp hf. do 2 f_equal. destruct a; rewrite /map_array_model //=; f_equal; eauto; depelim hp.
+    * eapply hf; intuition eauto.
+    * eapply All_map_id. destruct p0 as [_ hp].
+      eapply All_impl; tea.
+  Qed.
+
+  Lemma map_prim_eq {term'} {f g : term -> term'} :
+    (forall x, f x = g x) ->
+    map_prim f p = map_prim g p.
+  Proof.
+    destruct p as [? []]; cbn; auto.
+    intros hf. do 2 f_equal. destruct a; rewrite /map_array_model //=; f_equal; eauto.
+    now eapply map_ext.
+  Qed.
+
+  Lemma map_prim_eq_prop {term' P} {f g : term -> term'} :
+    primProp P p ->
+    (forall x, P x -> f x = g x) ->
+    map_prim f p = map_prim g p.
+  Proof.
+    intros hp; depelim hp; subst; cbn; auto. intros hf.
+    do 2 f_equal. destruct a; rewrite /map_array_model //=; f_equal; eauto.
+    * eapply hf; intuition eauto.
+    * destruct p0 as [_ hp].
+      eapply All_map_eq.
+      eapply All_impl; tea.
+  Qed.
+
+  Lemma test_prim_primProp P pr :
+    (forall t, reflectT (P t) (pr t)) ->
+    reflectT (primProp P p) (test_prim pr p).
+  Proof.
+    intros hr.
+    destruct p as [? []]; cbn; repeat constructor => //.
+    destruct a as []; cbn.
+    rewrite /test_array_model /=.
+    case: (hr array_default0) => //= hd.
+    - case: (reflectT_forallb hr) => hv; repeat constructor; eauto.
+      intros hp; depelim hp; intuition eauto.
+    - constructor. intros hp; depelim hp; intuition eauto.
+  Qed.
+
+  Lemma test_prim_impl_primProp pr :
+    test_prim pr p -> primProp pr p.
+  Proof.
+    case: (test_prim_primProp (fun x => pr x) pr) => //.
+    intros t; destruct (pr t); constructor; eauto.
+  Qed.
+
+  Lemma primProp_impl_test_prim (pr : term -> bool) :
+    primProp pr p -> test_prim pr p.
+  Proof.
+    case: (test_prim_primProp (fun x => pr x) pr) => //.
+    intros t; destruct (pr t); constructor; eauto.
+  Qed.
+
+  Lemma primProp_conj {P Q} : primProp P p -> primProp Q p -> primProp (fun x => P x × Q x) p.
+  Proof.
+    destruct p as [? []]; cbn; repeat constructor; intuition eauto.
+    now depelim X. now depelim X0.
+    depelim X; depelim X0.
+    now eapply All_mix.
+  Qed.
+
+  Lemma primProp_impl {P Q} : primProp P p -> (forall x, P x -> Q x) -> primProp Q p.
+  Proof.
+    intros hp hpq; destruct p as [? []]; cbn in *; intuition eauto; constructor.
+    depelim hp; intuition eauto.
+    eapply All_impl; tea.
+  Qed.
+
+  Lemma primProp_map {term' P} {f : term -> term'} :
+    primProp (P ∘ f) p ->
+    primProp P (map_prim f p).
+  Proof.
+    destruct p as [? []]; cbn in *; intuition eauto; constructor.
+    depelim X; intuition eauto.
+    eapply All_map, All_impl; tea. cbn; eauto.
+  Qed.
+
+  Lemma test_prim_map {term' pr} {f : term -> term'} :
+    test_prim pr (map_prim f p) = test_prim (pr ∘ f) p.
+  Proof.
+    destruct p as [? []]; cbn in *; intuition auto.
+    destruct a as []; rewrite /test_array_model //=. f_equal.
+    rewrite forallb_map //.
+  Qed.
+
+  Lemma test_prim_eq_prop P pr pr' :
+    primProp P p ->
+    (forall x, P x -> pr x = pr' x) ->
+    test_prim pr p = test_prim pr' p.
+  Proof.
+    destruct p as [? []]; cbn in *; intuition auto.
+    destruct a as []; rewrite /test_array_model //=.
+    depelim X; f_equal; intuition eauto.
+    eapply All_forallb_eq_forallb; tea.
+  Qed.
+
+End primtheory.
+
+#[global] Hint Rewrite @test_prim_map : map.
+#[global] Hint Resolve map_prim_id map_prim_id_prop : all.
+#[global] Hint Resolve map_prim_eq map_prim_eq_prop : all.
+#[global] Hint Resolve primProp_impl primProp_map : all.
+#[global] Hint Resolve test_prim_eq_prop : all.

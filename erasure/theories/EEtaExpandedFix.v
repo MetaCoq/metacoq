@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
+From MetaCoq.Erasure Require Import EPrimitive EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
 From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 From MetaCoq.Erasure Require Import EInduction ELiftSubst ESpineView ECSubst EProgram.
 
@@ -60,10 +60,27 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     #|args| >= ind_npars mind + cdecl.(cstr_nargs) ->
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
-| expanded_tPrim p : expanded Γ (tPrim p)
+| expanded_tPrim p : primProp (expanded Γ) p -> expanded Γ (tPrim p)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.
+
+Section make_All.
+  Context {A} {B : A -> Type} (f : forall x : A, B x).
+
+  Equations make_All (l : list A) : All B l :=
+  | [] := All_nil
+  | hd :: tl := All_cons (f hd) (make_All tl).
+End make_All.
+
+Section make_All_All.
+  Context {A} {B : A -> Type} {C : A -> Type} (f : forall x : A, B x -> C x).
+
+  Equations make_All_All {l : list A} (a : All B l) : All C l :=
+  | All_nil := All_nil
+  | All_cons bhd btl := All_cons (f _ bhd) (make_All_All btl).
+
+End make_All_All.
 
 Lemma expanded_ind :
   ∀ (Σ : global_declarations) (P : list nat → term → Prop),
@@ -138,7 +155,7 @@ Lemma expanded_ind :
         → Forall (expanded Σ Γ) args
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx []) args))
-    → (∀ Γ p, P Γ (tPrim p))
+    → (∀ Γ p, primProp (expanded Σ Γ) p -> primProp (P Γ) p -> P Γ (tPrim p))
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
@@ -158,6 +175,9 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct; eauto.
     clear - H1 f. induction H1; econstructor; eauto.
+  - eapply HPrim; eauto.
+    depelim X; constructor. intuition eauto.
+    eapply (make_All_All (f Γ) b).
 Qed.
 
 Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
@@ -267,6 +287,40 @@ Section isEtaExp.
     | None => false
     end.
 
+  Section PrimIn.
+    Context {term : Set}.
+
+    Equations InPrim (x : term) (p : prim_val term) : Prop :=
+      | x | (primInt; primIntModel i) := False
+      | x | (primFloat; primFloatModel _) := False
+      | x | (primArray; primArrayModel a) :=
+        x = a.(array_default) \/ In x a.(array_value).
+
+    Lemma InPrim_primProp p P : (forall x, InPrim x p -> P x) -> primProp P p.
+    Proof.
+      intros hin.
+      destruct p as [? []]; constructor.
+      split. eapply hin; eauto. now left.
+      cbn in hin.
+      induction (array_value a); constructor.
+      eapply hin. now right; left. eapply IHl.
+      intros. eapply hin. intuition eauto. now right; right.
+    Qed.
+
+    Equations test_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> bool) : bool :=
+      | (primInt; primIntModel i) | _ := true
+      | (primFloat; primFloatModel _) | _ := true
+      | (primArray; primArrayModel a) | f :=
+        f a.(array_default) (or_introl eq_refl) && forallb_InP a.(array_value) (fun x H => f x (or_intror H)).
+
+    Lemma test_primIn_spec p (f : term -> bool) :
+      test_primIn p (fun x H => f x) = test_prim f p.
+    Proof.
+      funelim (test_primIn p (fun x H => f x)); cbn => //.
+      rewrite forallb_InP_spec //.
+    Qed.
+  End PrimIn.
+
   Import TermSpineView.
 
   Definition is_nil {A} (l : list A) := match l with nil => true | _ => false end.
@@ -292,7 +346,7 @@ Section isEtaExp.
     | tBox => true
     | tVar _ => true
     | tConst _ => true
-    | tPrim _ => true
+    | tPrim p => test_primIn p (fun x H => isEtaExp Γ x)
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof using Σ.
     all:try lia.
@@ -317,6 +371,9 @@ Section isEtaExp.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - destruct p as [? []]; cbn in *; eauto. destruct H; subst; try lia.
+      eapply (In_size id size) in H. unfold id in H.
+      change (fun x => size x) with size in H. lia.
   Qed.
 
   Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app ind c i -> isEtaExp_app ind c i'.
@@ -328,6 +385,7 @@ Section isEtaExp.
   Qed.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
+  Hint Rewrite @test_primIn_spec : isEtaExp.
 
   Lemma isEtaExp_mkApps_nonnil Γ f v :
     ~~ isApp f -> v <> [] ->
@@ -431,6 +489,7 @@ Section isEtaExp.
     - destruct nth_error eqn:E; try easy. erewrite nth_error_app_left; eauto.
     - rewrite app_assoc. eapply a, b. reflexivity.
     - rewrite app_assoc. eapply a, b. reflexivity.
+    - eapply InPrim_primProp in H. solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
       rewrite app_assoc. rtoProp; intuition auto.
@@ -449,6 +508,7 @@ Section isEtaExp.
     - destruct block_args; cbn in *; eauto.
     - eapply a in b. 2: f_equal. revert b. now len.
     - eapply a in b. 2: f_equal. revert b. now len.
+    - eapply InPrim_primProp in H; solve_all.
     - cbn. destruct block_args; cbn in *; eauto.
     - cbn. solve_all. rtoProp; intuition auto. eapply a in H0. 2: reflexivity. revert H0. now len.
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
@@ -481,6 +541,8 @@ Section isEtaExp.
       solve_all. rewrite app_assoc. eapply a0; cbn; eauto. now len. cbn.
       now rewrite app_assoc.
     - rewrite app_assoc. eapply a0; len; eauto. now rewrite app_assoc.
+    - eapply InPrim_primProp in H. solve_all.
+      eapply primProp_map. solve_all.
     - fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
@@ -525,7 +587,7 @@ Section isEtaExp.
     #|Γ| = k ->
     nth_error mfix idx = Some d ->
     closed (EAst.tFix mfix idx) ->
-    forallb (fun x => isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
+    forallb (fun x => isLambda x.(dbody) && isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp (Γ ++ [1 + d.(EAst.rarg)] ++ Δ) b -> isEtaExp (Γ ++ Δ) (ECSubst.csubst (EAst.tFix mfix idx) k b).
   Proof using Type*.
     intros Hk Hnth Hcl.
@@ -555,6 +617,9 @@ Section isEtaExp.
       { cbn in Hcl. solve_all. rewrite Nat.add_0_r in a0. eauto. }
       now rewrite app_assoc.
       solve_all.
+    - eapply InPrim_primProp in H. solve_all.
+      eapply primProp_map. eapply primProp_impl; tea. intuition eauto.
+      destruct H. eapply i; eauto. solve_all.
     - solve_all. fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
@@ -632,13 +697,13 @@ Section isEtaExp.
 
   Lemma isEtaExp_fixsubstl Δ mfix t :
     forallb (fun x =>
-      (* isLambda x.(dbody) && *)
+      isLambda x.(dbody) &&
       isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp ((rev_map (S ∘ rarg) mfix) ++ Δ) t ->
     isEtaExp Δ (substl (fix_subst mfix) t).
   Proof using Type*.
     intros Hall Heta.
-    assert (Hcl : closed (EAst.tFix mfix 0) ). { cbn. solve_all. rtoProp; intuition auto. eapply isEtaExp_closed in H. revert H. now len. }
+    assert (Hcl : closed (EAst.tFix mfix 0) ). { cbn. solve_all. rtoProp; intuition auto. eapply isEtaExp_closed in H0. revert H0. now len. }
     revert Hcl Hall Heta.
     intros Hcl Hall Heta.
     cbn in Hcl. solve_all.
@@ -809,6 +874,8 @@ Proof.
     eapply In_All in H0. solve_all.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0.
     eapply In_All in H. solve_all.
+  - econstructor. eapply InPrim_primProp in H. rewrite test_primIn_spec in H0.
+    solve_all.
   - rtoProp. eapply In_All in H.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
@@ -848,6 +915,7 @@ Proof.
   - rewrite isEtaExp_Constructor. rtoProp. repeat split.
     2: eapply forallb_Forall; solve_all.
     eapply expanded_isEtaExp_app_; eauto.
+  - rewrite test_primIn_spec. solve_all.
 Qed.
 
 Definition isEtaExp_constant_decl Σ cb :=
@@ -987,6 +1055,8 @@ Proof.
   - eapply isEtaExp_app_extends; tea.
   - eapply In_All in H0. solve_all.
   - eapply In_All in H; solve_all.
+  - eapply InPrim_primProp in H.
+    rewrite !test_primIn_spec in H0 |- *. solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
     eapply isEtaExp_app_extends; tea.

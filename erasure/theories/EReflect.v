@@ -116,7 +116,7 @@ Proof.
     + destruct (eq_dec i i0); nodec; subst; eauto.
     + destruct (eq_dec f f0); nodec; subst; eauto.
     + destruct a as [? ?], a0 as [? ?]; cbn.
-      destruct X as [hd hv]. cbn in *.
+      depelim X. destruct p as [hd hv]. cbn in *.
       destruct (hd array_default0); nodec; subst; eauto.
       revert array_value0; induction hv; intros []; eauto; nodec.
       destruct (p t); subst; nodec.

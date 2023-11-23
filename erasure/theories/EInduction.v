@@ -15,13 +15,6 @@ Set Equations Transparent.
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
-Definition primProp P (p : prim_val term) : Type :=
-  match p.π2 with
-  | primIntModel _ => unit
-  | primFloatModel _ => unit
-  | primArrayModel a => P a.(array_default) × All P a.(array_value)
-  end.
-
 Lemma term_forall_list_ind :
   forall P : term -> Type,
     (P tBox) ->
@@ -74,7 +67,7 @@ Proof.
   destruct mfix; constructor; [|apply auxm].
   apply auxt.
 
-  destruct p as [? []]; cbn => //.
+  destruct p as [? []]; cbn => //; constructor.
   destruct a as [def v]; cbn.
   split. eapply auxt.
   revert v; fix auxv 1.
@@ -276,7 +269,7 @@ Section MkApps_rec.
       rewrite da in H0. cbn in H0. rewrite <- H0.
       unfold id in H. change (fun x => size x) with size in H. abstract lia.
     - clear -da. abstract (eapply decompose_app_inv in da; now symmetry).
-    - destruct p as [? []]; cbn => //.
+    - destruct p as [? []]; cbn => //; constructor.
       destruct a as [def v]; cbn.
       split.
       * eapply rec; red; cbn. lia.

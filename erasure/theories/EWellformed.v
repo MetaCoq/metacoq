@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
 From MetaCoq.PCUIC Require Import PCUICTactics.
 
 Local Open Scope string_scope.
@@ -119,7 +119,7 @@ Section wf.
         | _ => true end
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
-    | tPrim _ => has_tPrim
+    | tPrim p => has_tPrim && test_prim (wellformed k) p
     end.
 
 End wf.

@@ -112,13 +112,13 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct p as [? []]; destruct p0 as [? []]; cbn ; nodec.
+  - destruct prim as [? []]; destruct p as [? []]; cbn ; nodec.
     + destruct (eq_dec i i0); nodec; subst; eauto.
     + destruct (eq_dec f f0); nodec; subst; eauto.
     + destruct a as [? ?], a0 as [? ?]; cbn.
       depelim X. destruct p as [hd hv]. cbn in *.
-      destruct (hd array_default0); nodec; subst; eauto.
-      revert array_value0; induction hv; intros []; eauto; nodec.
+      destruct (hd array_default); nodec; subst; eauto.
+      revert array_value; induction hv; intros []; eauto; nodec.
       destruct (p t); subst; nodec.
       destruct (IHhv l0); nodec. noconf e; eauto.
 Defined.

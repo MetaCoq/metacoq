@@ -67,7 +67,7 @@ Proof.
   destruct mfix; constructor; [|apply auxm].
   apply auxt.
 
-  destruct p as [? []]; cbn => //; constructor.
+  destruct prim as [? []]; cbn => //; constructor.
   destruct a as [def v]; cbn.
   split. eapply auxt.
   revert v; fix auxv 1.

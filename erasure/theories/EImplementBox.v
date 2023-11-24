@@ -94,11 +94,11 @@ Section implement_box.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *;
-    (*try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
+    try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
     rtoProp. split. eauto.
     solve_all.
     replace (#|x.1| + S k) with (#|x.1| + k + 1) by lia.
-    eapply closedn_lift. eauto.*)
+    eapply closedn_lift. eauto.
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all_k 6]; try easy.
   Qed.
 
@@ -124,10 +124,9 @@ Section implement_box.
       f_equal. lia.
     - cbn. f_equal. rewrite !map_map. solve_all.
       eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto.
-      f_equal. now rewrite map_length.
     - cbn. f_equal. rewrite !map_map. solve_all.
       eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto.
-      f_equal. now rewrite map_length.
+    - solve_all_k 6.
   Qed.
 
   (* Lemma implement_box_subst a k b : *)
@@ -185,9 +184,9 @@ Section implement_box.
       f_equal.
       eapply H; eauto.
     - cbn. f_equal. rewrite !map_map. solve_all.
-      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. rewrite H; eauto.
+      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. solve_all.
     - cbn. f_equal. rewrite !map_map. solve_all.
-      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. rewrite H; eauto.
+      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. solve_all.
     - cbn. solve_all.
   Qed.
 

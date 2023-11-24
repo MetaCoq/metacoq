@@ -9,7 +9,7 @@ From Coq Require Import List.
 From Coq Require Import ssrbool.
 From Coq Require Import PeanoNat.
 From Equations Require Import Equations.
-From MetaCoq.Erasure Require Import EAstUtils.
+From MetaCoq.Erasure Require Import EPrimitive EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.
 From MetaCoq.Erasure Require Import EInduction.
 From MetaCoq.Erasure Require Import ELiftSubst.
@@ -220,6 +220,7 @@ Proof.
     split; [easy|].
     rewrite <- Nat.add_succ_r in *.
     now eapply IHX.
+  - solve_all.
 Qed.
 
 Lemma is_dead_csubst k t u k' :
@@ -285,6 +286,7 @@ Proof.
     + rewrite <- !Nat.add_succ_r in *.
       apply IHX; [easy|easy|].
       now eapply closed_upwards.
+  - solve_all_k 6.
 Qed.
 
 Lemma valid_dearg_mask_nil t : valid_dearg_mask [] t.
@@ -453,7 +455,7 @@ Proof.
       now f_equal.
     + rewrite <- !Nat.add_succ_r in *.
       now apply IHX.
-  - reflexivity.
+  - f_equal; solve_all.
 Qed.
 
 Lemma masked_nil {X} mask :
@@ -802,7 +804,7 @@ Proof.
     cbn.
     f_equal.
     now rewrite p.
-  - now rewrite lift_mkApps.
+  - rewrite lift_mkApps. f_equal. simpl lift. f_equal. solve_all.
 Qed.
 
 Lemma lift_dearg n k t :
@@ -853,7 +855,7 @@ Proof.
     f_equal.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
-  - reflexivity.
+  - solve_all.
 Qed.
 
 Lemma is_dead_lift_all k k' n t :
@@ -894,6 +896,7 @@ Proof.
     cbn.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
+  - solve_all.
 Qed.
 
 Lemma is_dead_subst_other k k' s t :
@@ -944,6 +947,7 @@ Proof.
     f_equal.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
+  - solve_all.
 Qed.
 
 Lemma valid_dearg_mask_lift mask n k t :
@@ -1128,6 +1132,7 @@ Proof.
     cbn.
     rewrite <- Nat.add_succ_r.
     now rewrite p, IHX.
+  - solve_all.
 Qed.
 
 Lemma is_expanded_lift n k t :
@@ -1190,6 +1195,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     rewrite IHX by easy.
     now replace (S (k - n)) with (S k - n) by lia.
+  - solve_all.
 Qed.
 
 Lemma is_dead_dearg_single k mask t args :
@@ -1288,6 +1294,19 @@ Proof.
      rewrite <- !Nat.add_succ_r.
      rewrite IHX.
      bia.
+    - solve_all. rtoProp; intuition eauto.
+      depelim X; cbn; eauto.
+      destruct a; unfold test_array_model; cbn.
+      destruct p. cbn in *. rewrite e; eauto.
+      rewrite <- !andb_assoc. f_equal.
+      rewrite andb_comm.
+      induction a; cbn. rewrite andb_true_r; auto.
+      rewrite <- !andb_assoc.
+      rewrite IHa. rewrite p;eauto.
+      rewrite <- !andb_assoc. f_equal.
+      rewrite andb_comm.
+      rewrite <- !andb_assoc. f_equal.
+      bia. now rewrite andb_true_r.
 Qed.
 
 Lemma is_dead_dearg_lambdas k mask t :
@@ -1400,7 +1419,7 @@ Proof.
     rewrite p by easy.
     split; [easy|].
     now apply IHX.
-  - now apply forallb_Forall.
+  - solve_all. rtoProp; intuition solve_all.
 Qed.
 
 Lemma valid_dearg_mask_dearg mask t :
@@ -1557,7 +1576,9 @@ Proof.
     unfold map_def; cbn.
     f_equal.
     now apply (p _ _ []).
-  - now rewrite subst_mkApps, map_map.
+  - rewrite subst_mkApps, map_map; cbn; f_equal. f_equal.
+    solve_all. eapply map_prim_eq_prop; tea; cbn; intuition eauto.
+    specialize (a s k []). eauto.
 Qed.
 
 Lemma dearg_subst s k t :
@@ -1673,7 +1694,7 @@ Proof.
     propify.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
-  - assumption.
+  - solve_all_k 6.
 Qed.
 
 Lemma is_expanded_aux_subst s n t k :
@@ -1717,7 +1738,7 @@ Proof.
     propify.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
-  - assumption.
+  - solve_all_k 6.
 Qed.
 
 Lemma is_expanded_substl s n t :
@@ -2001,6 +2022,7 @@ Proof.
     cbn in *.
     propify.
     now rewrite <- !Nat.add_succ_r.
+  - solve_all_k 6.
 Qed.
 
 Lemma valid_cases_subst s k t :
@@ -2036,6 +2058,7 @@ Proof.
   - induction X in X, k, valid_t |- *; [easy|].
     cbn in *; propify.
     now rewrite <- !Nat.add_succ_r.
+  - solve_all_k 6.
 Qed.
 
 Lemma closedn_dearg_single k t args mask :
@@ -2113,6 +2136,7 @@ Proof.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
     specialize (a (#|m| + k')). unfold is_true. rewrite <- a. f_equal. lia.
     unfold is_true. rewrite <- b. f_equal. lia.
+  - solve_all_k 6.
 Qed.
 
 Lemma closedn_dearg_case_branch_body_rec i k mask t :
@@ -2212,6 +2236,7 @@ Proof.
     split; [easy|].
     rewrite <- !Nat.add_succ_r in *.
     now apply IHX.
+  - rewrite closedn_mkApps; cbn; rtoProp; intuition solve_all. solve_all_k 6.
 Qed.
 
 Hint Resolve

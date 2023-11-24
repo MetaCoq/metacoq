@@ -39,6 +39,7 @@ PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeRetyping
 
+EPrimitive
 EAst
 EAstUtils
 ELiftSubst

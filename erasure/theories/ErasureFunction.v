@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICValidity PCUICPrincipality PCUICElimination PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping PCUICRetypingEnvIrrelevance.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness.
+From MetaCoq.Erasure Require Import EPrimitive EAstUtils ELiftSubst EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -112,6 +112,18 @@ Proof.
     eapply All_In in X as [X]; tea. specialize (X _ _ H0). intuition auto; try knset.
     cbn in H0. apply KernameSet.union_spec in X as []; [knset|].
     right; right. now exists cs.
+  - intros kn.
+    funelim (prim_global_deps term_global_deps p); cbn; simp prim_global_deps; try knset.
+    rewrite !knset_in_fold_left !KernameSet.union_spec; cbn.
+    dependent elimination X as [EPrimitive.primPropArray (pair s al)].
+    rewrite knset_in_fold_left.
+    intuition eauto.
+    * eapply s in H0. rewrite KernameSet.union_spec in H0. intuition eauto.
+    * destruct H0 as [a [ha hkn]].
+      eapply in_map_iff in ha as [x [heq hx]]. subst a.
+      eapply All_In in al as [al]; tea.
+      eapply al in hkn.
+      rewrite KernameSet.union_spec in hkn. destruct hkn; eauto.
 Qed.
 
 
@@ -178,6 +190,10 @@ Proof.
     unfold EWellformed.wf_fix_gen in H1. move/andP: H1 => [_ hm]. solve_all.
     eapply All_In in hm as [hm]; tea. intuition auto.
     eapply (a0 (#|m| + k)) => //.
+  - primProp.
+    move: H0; funelim (prim_global_deps term_global_deps p); try knset.
+    rewrite knset_in_fold_left. depelim H2. intuition eauto.
+    destruct H1 as [ar []]. eapply All_In in b as [[]]; tea. eauto.
 Qed.
 
 Lemma knset_mem_spec kn s : reflect (KernameSet.In kn s) (KernameSet.mem kn s).
@@ -998,8 +1014,15 @@ Section Erase.
         let Γ' := (fix_context mfix ++ Γ)%list in
         let mfix' := erase_cofix Γ' mfix _ in
         E.tCoFix mfix' n
-      | tPrim p := E.tPrim (erase_prim_val p) }
+      | tPrim (primInt; PCUICPrimitive.primIntModel i) := E.tPrim (primInt; EPrimitive.primIntModel i) ;
+      | tPrim (primFloat; PCUICPrimitive.primFloatModel f) := E.tPrim (primFloat; EPrimitive.primFloatModel f) ;
+      | tPrim (primArray; PCUICPrimitive.primArrayModel a) :=
+        E.tPrim (primArray; EPrimitive.primArrayModel
+          {| EPrimitive.array_default := erase Γ a.(PCUICPrimitive.array_default) _;
+             EPrimitive.array_value := erase_terms Γ a.(PCUICPrimitive.array_value) _ |})
+    }
     } }
+
   where erase_terms (Γ : context) (l : list term) (Hl : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ All (welltyped Σ Γ) l ∥) : list E.term :=
   { erase_terms Γ [] _ := [];
     erase_terms Γ (t :: ts) _ :=
@@ -1084,6 +1107,10 @@ Section Erase.
       solve_all. now eexists.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
       sq. eapply All_impl; tea. cbn. intros d Ht; now eexists.
+    - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
+      depelim p0. now eexists.
+    - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
+      depelim p0. sq. solve_all. now eexists.
     - sq. now depelim Hl.
     - sq. now depelim Hl.
     - sq. now depelim Hbrs.
@@ -1137,9 +1164,9 @@ Proof.
 Qed.
 
 Lemma erase_terms_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_terms X_type X Γ ts wt = map_All (erase X_type X Γ) ts wt.
+  erase_terms X_type X Γ ts wt = All_Forall.map_All (erase X_type X Γ) ts wt.
 Proof.
-  funelim (map_All (erase X_type X Γ) ts wt); cbn; auto.
+  funelim (All_Forall.map_All (erase X_type X Γ) ts wt); cbn; auto.
   f_equal => //. apply erase_irrel.
   rewrite -H. eapply erase_irrel.
 Qed.
@@ -1238,6 +1265,9 @@ Proof.
     intros isp. eapply isErasable_Proof in isp.
     eapply H'; intros. now rewrite (abstract_env_ext_irr _ H0 H).
 
+  - repeat constructor.
+  - repeat constructor.
+  - repeat constructor; eauto.
   - cbn. pose proof (abstract_env_ext_wf _ H) as [wf].
     pose proof Hmfix as Hmfix'.
     specialize (Hmfix' _ H). destruct Hmfix'.
@@ -1379,23 +1409,6 @@ Ltac iserasableb_irrel_env :=
   [ H : context [@is_erasableb ?X_type ?X ?normalization_in ?Γ ?t ?wt], Heq : inspect_bool _ = _ |- context [ @is_erasableb _ _ _ _ _ ?wt'] ] =>
     generalize dependent H; rewrite (@is_erasableb_irrel_global_env _ _ _ _ _ _ _ _ wt wt') //; intros; rewrite Heq
   end.
-
-  (*
-    (forall Σ Σ' : global_env_ext, abstract_env_ext_rel X Σ ->
-      abstract_env_ext_rel X' Σ' -> ∥ extends_decls Σ' Σ ∥ /\ (Σ.2 = Σ'.2)) ->
-
-  assert (hl : Hlookup X_type X X_type' X').
-  { red. intros Σ H Σ' H0. specialize (ext _ _ H H0) as [[X0] H1].
-    split. intros kn decl decl' H2 H3.
-    rewrite -(abstract_env_lookup_correct' _ _ H).
-    rewrite -(abstract_env_lookup_correct' _ _ H0).
-    rewrite H2 H3.
-    red in X0. specialize (proj1 X0 kn decl' H3). congruence.
-    destruct X0. intros tag.
-    rewrite (abstract_primitive_constant_correct _ _ _ H).
-    rewrite (abstract_primitive_constant_correct _ _ _ H0).
-    now symmetry. }
-*)
 
 Lemma erase_irrel_global_env {X_type X} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} {X_type' X'} {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext X' -> NormalizationIn Σ} {Γ t wt wt'} :
   forall (hl : Hlookup X_type X X_type' X'),

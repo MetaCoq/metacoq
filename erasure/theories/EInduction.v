@@ -124,6 +124,14 @@ Proof.
   rewrite IHl. simpl. lia.
 Qed.
 
+Lemma InPrim_size x p : InPrim x p -> size x < S (prim_size size p).
+Proof.
+  destruct p as [? []]; cbn => //.
+  intros [->|H]; try lia.
+  eapply (In_size id size) in H; unfold id in H.
+  change (fun x => size x) with size in H. lia.
+Qed.
+
 Lemma decompose_app_rec_size t l :
   let da := decompose_app_rec t l in
   size da.1 + list_size size da.2 = size t + list_size size l.

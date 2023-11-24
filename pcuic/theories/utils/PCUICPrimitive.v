@@ -31,7 +31,7 @@ Arguments primIntModel {term}.
 Arguments primFloatModel {term}.
 Arguments primArrayModel {term}.
 
-Derive Signature NoConfusion for prim_model.
+Derive Signature NoConfusion NoConfusionHom for prim_model.
 
 Definition prim_model_of (term : Type) (p : prim_tag) : Type :=
   match p with

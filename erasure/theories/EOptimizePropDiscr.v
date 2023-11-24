@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICInversion
      PCUICSafeLemmata. (* for welltyped *)
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
-From MetaCoq.Erasure Require Import EAst EAstUtils EDeps EExtends
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EDeps EExtends
     ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract Prelim
     EEnvMap EArities EProgram.
 
@@ -68,7 +68,7 @@ Section remove_match_on_box.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map remove_match_on_box args)
-    | tPrim _ => t
+    | tPrim p => tPrim (map_prim remove_match_on_box p)
     end.
 
   Lemma remove_match_on_box_mkApps f l : remove_match_on_box (mkApps f l) = mkApps (remove_match_on_box f) (map remove_match_on_box l).
@@ -103,7 +103,6 @@ Section remove_match_on_box.
     - move/andP => []. intros. f_equal; solve_all; eauto.
     - move/andP => []. intros. f_equal; solve_all; eauto.
     - move/andP => []. intros. f_equal; solve_all; eauto.
-      destruct x0; cbn in *. f_equal; auto.
   Qed.
 
   Lemma closed_remove_match_on_box t k : closedn k t -> closedn k (remove_match_on_box t).
@@ -128,6 +127,7 @@ Section remove_match_on_box.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
     - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - solve_all_k 6.
   Qed.
 
   Lemma subst_csubst_comm l t k b :
@@ -818,10 +818,9 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_remove_match_on_box. now len.
-    unfold test_def in *. len. eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
-    unfold test_def in *. len. eauto.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_remove_match_on_box.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all.
+  - cbn. rtoProp; intuition auto; solve_all_k 6.
 Qed.
 
 Import EWellformed.

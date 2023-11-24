@@ -1379,4 +1379,11 @@ Proof.
         + constructor => //.
           eapply erases_deps_mkApps_inv in etaΣ as [].
           solve_all.
+  - intros Γ0 v etaΣ er.
+    depelim er; eauto. depelim H1.
+    depelim H0. 1-2:depelim X; repeat constructor.
+    depelim X0. eapply expanded_tPrim. constructor; split => //; cbn.
+    eapply H0; tea. now depelim etaΣ; cbn in *.
+    eapply Forall_All. depelim etaΣ. cbn in *.
+    solve_all.
 Qed.

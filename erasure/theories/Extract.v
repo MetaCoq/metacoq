@@ -68,7 +68,7 @@ Definition erase_context (Γ : context) : list name :=
   map (fun d => d.(decl_name).(binder_name)) Γ.
 
 Inductive erase_prim_model (erase : term -> E.term -> Prop) : forall {t : prim_tag},
-  @PCUICPrimitive.prim_model term t -> @prim_model E.term t -> Prop :=
+  @PCUICPrimitive.prim_model term t -> @prim_model E.term t -> Type :=
 | erase_primInt i : @erase_prim_model erase primInt (PCUICPrimitive.primIntModel i) (primIntModel i)
 | erase_primFloat f : @erase_prim_model erase primFloat (PCUICPrimitive.primFloatModel f) (primFloatModel f)
 | erase_primArray a ed ev :
@@ -76,11 +76,13 @@ Inductive erase_prim_model (erase : term -> E.term -> Prop) : forall {t : prim_t
     All2 erase a.(PCUICPrimitive.array_value) ev ->
     @erase_prim_model erase primArray
       (PCUICPrimitive.primArrayModel a) (primArrayModel {| array_default := ed; array_value := ev |}).
+Derive Signature NoConfusion for erase_prim_model.
 
 Inductive erase_prim_val (erase : term -> E.term -> Prop) :
   PCUICPrimitive.prim_val term -> prim_val E.term -> Prop :=
 | erase_prim t m m' : @erase_prim_model erase t m m' ->
   erase_prim_val erase (t; m) (t; m').
+Derive Signature for erase_prim_val.
 
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
@@ -250,10 +252,10 @@ Proof.
     constructor; [now apply f|now apply f'].
   - eapply Hprim; tea.
     induction H. constructor.
-    induction H; constructor.
+    induction X; constructor.
     * now eapply f.
     * destruct a; cbn in *.
-      revert array_value ev X.
+      revert array_value ev a0.
       fix f' 3; intros mfix mfix' []; [now constructor|].
       constructor; [now apply f|now apply f'].
 Defined.

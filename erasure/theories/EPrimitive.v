@@ -32,7 +32,7 @@ Arguments primIntModel {term}.
 Arguments primFloatModel {term}.
 Arguments primArrayModel {term}.
 
-Derive Signature NoConfusion for prim_model.
+Derive Signature NoConfusion NoConfusionHom for prim_model.
 
 Definition prim_model_of (term : Set) (p : prim_tag) : Set :=
   match p with
@@ -165,6 +165,13 @@ Inductive primProp {term} P : prim_val term -> Type :=
       primProp P (primArray; primArrayModel a).
 Derive Signature NoConfusion for primProp.
 
+Definition fold_prim {A term} (f : A -> term -> A) (p : prim_val term) (acc : A) : A :=
+  match p.π2 return A with
+  | primIntModel f => acc
+  | primFloatModel f => acc
+  | primArrayModel a => fold_left f a.(array_value) (f acc a.(array_default))
+  end.
+
 Section primtheory.
   Context {term term' term''} (g : term' -> term'') (f : term -> term') (p : prim_val term).
 
@@ -175,7 +182,7 @@ Section primtheory.
     do 2 f_equal. destruct a; rewrite /map_array_model //= map_map_compose //.
   Qed.
 End primtheory.
-#[global] Hint Rewrite @map_prim_compose : all.
+#[global] Hint Rewrite @map_prim_compose : map all.
 
 Lemma reflectT_forallb {A} {P : A -> Type} {p l} :
   (forall x, reflectT (P x) (p x)) ->
@@ -312,3 +319,58 @@ End primtheory.
 #[global] Hint Resolve map_prim_eq map_prim_eq_prop : all.
 #[global] Hint Resolve primProp_impl primProp_map : all.
 #[global] Hint Resolve test_prim_eq_prop : all.
+
+Set Equations Transparent.
+
+Section PrimIn.
+  Context {term : Set}.
+
+  Equations InPrim (x : term) (p : prim_val term) : Prop :=
+    | x | (primInt; primIntModel i) := False
+    | x | (primFloat; primFloatModel _) := False
+    | x | (primArray; primArrayModel a) :=
+      x = a.(array_default) \/ In x a.(array_value).
+
+  Lemma InPrim_primProp p P : (forall x, InPrim x p -> P x) -> primProp P p.
+  Proof.
+    intros hin.
+    destruct p as [? []]; constructor.
+    split. eapply hin; eauto. now left.
+    cbn in hin.
+    induction (array_value a); constructor.
+    eapply hin. now right; left. eapply IHl.
+    intros. eapply hin. intuition eauto. now right; right.
+  Qed.
+
+  Equations test_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> bool) : bool :=
+    | (primInt; primIntModel i) | _ := true
+    | (primFloat; primFloatModel _) | _ := true
+    | (primArray; primArrayModel a) | f :=
+      f a.(array_default) (or_introl eq_refl) && forallb_InP a.(array_value) (fun x H => f x (or_intror H)).
+
+  Lemma test_primIn_spec p (f : term -> bool) :
+    test_primIn p (fun x H => f x) = test_prim f p.
+  Proof.
+    funelim (test_primIn p (fun x H => f x)); cbn => //.
+    rewrite forallb_InP_spec //.
+  Qed.
+
+  Equations map_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> term) : prim_val term :=
+    | (primInt; primIntModel i) | _ := (primInt; primIntModel i)
+    | (primFloat; primFloatModel f) | _ := (primFloat; primFloatModel f)
+    | (primArray; primArrayModel a) | f :=
+      (primArray; primArrayModel
+        {| array_default := f a.(array_default) (or_introl eq_refl);
+           array_value := map_InP a.(array_value) (fun x H => f x (or_intror H)) |}).
+
+  Lemma map_primIn_spec p f :
+    map_primIn p (fun x _ => f x) = map_prim f p.
+  Proof.
+    funelim (map_primIn p _); cbn => //.
+    do 2 f_equal. unfold map_array_model; destruct a => //.
+    rewrite map_InP_spec //.
+  Qed.
+
+End PrimIn.
+
+#[global] Hint Rewrite @map_primIn_spec : map.

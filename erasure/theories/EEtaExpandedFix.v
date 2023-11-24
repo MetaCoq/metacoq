@@ -65,23 +65,6 @@ Inductive expanded (Γ : list nat): term -> Prop :=
 
 End expanded.
 
-Section make_All.
-  Context {A} {B : A -> Type} (f : forall x : A, B x).
-
-  Equations make_All (l : list A) : All B l :=
-  | [] := All_nil
-  | hd :: tl := All_cons (f hd) (make_All tl).
-End make_All.
-
-Section make_All_All.
-  Context {A} {B : A -> Type} {C : A -> Type} (f : forall x : A, B x -> C x).
-
-  Equations make_All_All {l : list A} (a : All B l) : All C l :=
-  | All_nil := All_nil
-  | All_cons bhd btl := All_cons (f _ bhd) (make_All_All btl).
-
-End make_All_All.
-
 Lemma expanded_ind :
   ∀ (Σ : global_declarations) (P : list nat → term → Prop),
      (∀ (Γ : list nat) (n : nat) (args : list term) (m : nat),
@@ -287,40 +270,6 @@ Section isEtaExp.
     | None => false
     end.
 
-  Section PrimIn.
-    Context {term : Set}.
-
-    Equations InPrim (x : term) (p : prim_val term) : Prop :=
-      | x | (primInt; primIntModel i) := False
-      | x | (primFloat; primFloatModel _) := False
-      | x | (primArray; primArrayModel a) :=
-        x = a.(array_default) \/ In x a.(array_value).
-
-    Lemma InPrim_primProp p P : (forall x, InPrim x p -> P x) -> primProp P p.
-    Proof.
-      intros hin.
-      destruct p as [? []]; constructor.
-      split. eapply hin; eauto. now left.
-      cbn in hin.
-      induction (array_value a); constructor.
-      eapply hin. now right; left. eapply IHl.
-      intros. eapply hin. intuition eauto. now right; right.
-    Qed.
-
-    Equations test_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> bool) : bool :=
-      | (primInt; primIntModel i) | _ := true
-      | (primFloat; primFloatModel _) | _ := true
-      | (primArray; primArrayModel a) | f :=
-        f a.(array_default) (or_introl eq_refl) && forallb_InP a.(array_value) (fun x H => f x (or_intror H)).
-
-    Lemma test_primIn_spec p (f : term -> bool) :
-      test_primIn p (fun x H => f x) = test_prim f p.
-    Proof.
-      funelim (test_primIn p (fun x H => f x)); cbn => //.
-      rewrite forallb_InP_spec //.
-    Qed.
-  End PrimIn.
-
   Import TermSpineView.
 
   Definition is_nil {A} (l : list A) := match l with nil => true | _ => false end.
@@ -489,7 +438,6 @@ Section isEtaExp.
     - destruct nth_error eqn:E; try easy. erewrite nth_error_app_left; eauto.
     - rewrite app_assoc. eapply a, b. reflexivity.
     - rewrite app_assoc. eapply a, b. reflexivity.
-    - eapply InPrim_primProp in H. solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
       rewrite app_assoc. rtoProp; intuition auto.
@@ -508,7 +456,6 @@ Section isEtaExp.
     - destruct block_args; cbn in *; eauto.
     - eapply a in b. 2: f_equal. revert b. now len.
     - eapply a in b. 2: f_equal. revert b. now len.
-    - eapply InPrim_primProp in H; solve_all.
     - cbn. destruct block_args; cbn in *; eauto.
     - cbn. solve_all. rtoProp; intuition auto. eapply a in H0. 2: reflexivity. revert H0. now len.
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
@@ -541,12 +488,14 @@ Section isEtaExp.
       solve_all. rewrite app_assoc. eapply a0; cbn; eauto. now len. cbn.
       now rewrite app_assoc.
     - rewrite app_assoc. eapply a0; len; eauto. now rewrite app_assoc.
-    - eapply InPrim_primProp in H. solve_all.
-      eapply primProp_map. solve_all.
+    - solve_all_k 6.
     - fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
-      rewrite map_length. rtoProp; solve_all. solve_all. destruct block_args; cbn in *; eauto.
+      rtoProp; solve_all. destruct block_args.
+      2:{ cbn in *; eauto. }
+      solve_all.
+      destruct block_args; cbn in *; eauto.
     - rewrite csubst_mkApps /=.
       move/andP : H2 => [] /andP [] eu ef ev.
       rewrite isEtaExp_mkApps //.
@@ -600,9 +549,7 @@ Section isEtaExp.
         erewrite option_default_ext; eauto. f_equal.
         destruct i; cbn; lia.
       + now rewrite !nth_error_app1 in H0 |- *; try lia.
-    - intros. eapply forallb_All in H1; eapply All_mix in H; tea.
-      eapply All_forallb, All_map, All_impl; tea; cbv beta.
-      intros x Hx. eapply Hx; eauto. apply Hx.
+    - solve_all. eapply a; trea. solve_all.
     - eapply H with (Γ := 0 :: Γ0); cbn -[isEtaExp]; eauto.
     - solve_all. move/andP: H2 => [] etab etab'. simp_eta.
       apply/andP. split; eauto.
@@ -617,14 +564,11 @@ Section isEtaExp.
       { cbn in Hcl. solve_all. rewrite Nat.add_0_r in a0. eauto. }
       now rewrite app_assoc.
       solve_all.
-    - eapply InPrim_primProp in H. solve_all.
-      eapply primProp_map. eapply primProp_impl; tea. intuition eauto.
+    - solve_all. eapply primProp_impl; tea. intuition eauto.
       destruct H. eapply i; eauto. solve_all.
     - solve_all. fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
-      rewrite isEtaExp_Constructor. solve_all.
-      rewrite map_length. rtoProp; solve_all.
-      rewrite forallb_map.
+      rewrite isEtaExp_Constructor. solve_all. rtoProp; solve_all.
       eapply All_forallb. clear Heq0 Heq.
       eapply All_impl; tea; cbv beta.
       intros x Hx.
@@ -874,7 +818,7 @@ Proof.
     eapply In_All in H0. solve_all.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0.
     eapply In_All in H. solve_all.
-  - econstructor. eapply InPrim_primProp in H. rewrite test_primIn_spec in H0.
+  - econstructor. rewrite test_primIn_spec in H0.
     solve_all.
   - rtoProp. eapply In_All in H.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.

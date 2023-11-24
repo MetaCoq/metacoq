@@ -213,6 +213,7 @@ Ltac change_Sk :=
 
 Ltac primProp :=
   repeat match goal with
+    | [ H : (forall x, InPrim x _ -> _) |- _ ] => eapply InPrim_primProp in H
     | [ H : is_true (test_prim _ _) |- _ ] => eapply test_prim_impl_primProp in H
     | [ H : test_prim _ _ = true |- _ ] => eapply test_prim_impl_primProp in H
     | [ |- is_true (test_prim _ _) ] => eapply primProp_impl_test_prim
@@ -223,7 +224,7 @@ Ltac primProp :=
 
 Tactic Notation "solve_all_k" int(k) :=
   unfold tFixProp in *;
-  primProp;
+  primProp; autorewrite with map;
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto k with all.

@@ -221,11 +221,6 @@ Section EEnvFlags.
       apply Nat.ltb_lt in H1. lia.
     - destruct cstr_as_blocks; eauto. destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
       destruct args; firstorder.
-    - solve_all. rewrite Nat.add_assoc. eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
   Qed.
 
   Lemma wellformed_subst_eq {s k k' t} :
@@ -265,10 +260,8 @@ Section EEnvFlags.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
     - destruct (dbody x) => //.
-    - intros. now len.
     - specialize (a (#|m| + k')).
       len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b0 |- *.
-    - intros. now len.
     - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
   Qed.

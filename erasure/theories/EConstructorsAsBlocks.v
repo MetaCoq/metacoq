@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EArities
     ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
@@ -62,7 +62,7 @@ Section transform_blocks.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i []
-    | tPrim p => EAst.tPrim p }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => transform_blocks x)) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -82,6 +82,7 @@ Section transform_blocks.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in *. lia.
+    - now eapply InPrim_size in H.
   Qed.
 
   End Def.
@@ -116,6 +117,7 @@ Section transform_blocks.
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
+    - solve_all_k 6.
     - rewrite !closedn_mkApps in H1 *.
       rtoProp; intuition auto. solve_all.
     - destruct (chop nargs v) eqn:E.
@@ -714,6 +716,7 @@ Proof.
     cbn -[transform_blocks isEtaExp] in *. rtoProp. eauto.
   - unfold wf_fix in *. len. solve_all. rtoProp; intuition auto.
     solve_all.
+  - solve_all_k 7.
   - rewrite !wellformed_mkApps in Hw |- * => //. rtoProp.
     eapply isEtaExp_mkApps in H1. rewrite decompose_app_mkApps in H1; eauto.
     destruct construct_viewc; eauto. cbn in d. eauto.

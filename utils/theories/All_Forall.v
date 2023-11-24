@@ -3760,6 +3760,22 @@ Section map_All.
   Qed.
 End map_All.
 
+Section make_All.
+  Context {A} {B : A -> Type} (f : forall x : A, B x).
+
+  Equations make_All (l : list A) : All B l :=
+  | [] := All_nil
+  | hd :: tl := All_cons (f hd) (make_All tl).
+End make_All.
+
+Section make_All_All.
+  Context {A} {B : A -> Type} {C : A -> Type} (f : forall x : A, B x -> C x).
+
+  Equations make_All_All {l : list A} (a : All B l) : All C l :=
+  | All_nil := All_nil
+  | All_cons bhd btl := All_cons (f _ bhd) (make_All_All btl).
+End make_All_All.
+
 Lemma All_map_All {A B C} {Q : C -> Type} {P : C -> A -> Prop}
   {Q' : B -> Type} {R : C -> A -> Prop}
   f args (ha: forall y : C, Q y -> ∥ All (R y) args ∥) :

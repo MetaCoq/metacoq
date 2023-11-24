@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EArities
     ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
@@ -54,7 +54,7 @@ Section implement_box.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i (map_InP block_args (fun d H => implement_box d))
-    | tPrim p => EAst.tPrim p.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => implement_box x)).
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -62,6 +62,7 @@ Section implement_box.
     - now apply (In_size id size).
     - now eapply (In_size id size).
     - eapply (In_size snd size) in H. cbn in *. lia.
+    - now eapply InPrim_size in H.
   Qed.
 
   End Def.
@@ -93,11 +94,12 @@ Section implement_box.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *;
-    try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
+    (*try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
     rtoProp. split. eauto.
     solve_all.
     replace (#|x.1| + S k) with (#|x.1| + k + 1) by lia.
-    eapply closedn_lift. eauto.
+    eapply closedn_lift. eauto.*)
+    try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all_k 6]; try easy.
   Qed.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
@@ -175,7 +177,7 @@ Section implement_box.
     - cbn. do 2 f_equal. 1: eauto.
       rewrite !map_map. solve_all.
       eapply In_All. intros ? ?. unfold map_def. cbn. f_equal.
-      setoid_rewrite -> closed_subst at 2.  
+      setoid_rewrite -> closed_subst at 2.
       replace (#|x.1| + S k) with ((#|x.1| + k) + 1) by lia.
       rewrite <- commut_lift_subst_rec. 2: lia.
       rewrite <- closed_subst.
@@ -183,11 +185,10 @@ Section implement_box.
       f_equal.
       eapply H; eauto.
     - cbn. f_equal. rewrite !map_map. solve_all.
-      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto.
-      f_equal. now rewrite map_length.
+      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. rewrite H; eauto.
     - cbn. f_equal. rewrite !map_map. solve_all.
-      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto.
-      f_equal. now rewrite map_length.
+      eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. rewrite H; eauto.
+    - cbn. solve_all.
   Qed.
 
   Lemma implement_box_substl s t :
@@ -252,7 +253,7 @@ Section implement_box.
     unfold cunfold_cofix.
     rewrite nth_error_map.
     destruct nth_error eqn:heq.
-    intros [= <- <-] => /=. f_equal. 
+    intros [= <- <-] => /=. f_equal.
     rewrite implement_box_substl //. 2:congruence.
     f_equal. f_equal. apply implement_box_cofix_subst.
   Qed.
@@ -468,11 +469,10 @@ Proof.
     eapply wellformed_lift. eauto.
   - rewrite lookup_constructor_implement_box. intuition auto.
   - unfold wf_fix in *. rtoProp. solve_all. solve_all. now eapply isLambda_implement_box.
-  - unfold wf_fix in *. rtoProp. solve_all.
-    len. solve_all. len. destruct x.
-    cbn -[implement_box isEtaExp] in *. rtoProp. eauto.
+  - unfold wf_fix in *. rtoProp. solve_all. len. solve_all.
   - unfold wf_fix in *. len. solve_all. rtoProp; intuition auto.
     solve_all.
+  - solve_all_k 6.
 Qed.
 
 Lemma transform_wellformed_decl' {efl : EEnvFlags} {Σ : global_declarations} d :

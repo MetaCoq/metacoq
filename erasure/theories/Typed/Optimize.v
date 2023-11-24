@@ -4,7 +4,7 @@ From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.
-From MetaCoq.Erasure Require Import ELiftSubst.
+From MetaCoq.Erasure Require Import EPrimitive ELiftSubst.
 From MetaCoq.Utils Require Import utils.
 
 Import Kernames.
@@ -20,6 +20,7 @@ Definition map_subterms (f : term -> term) (t : term) : term :=
   | tProj p t => tProj p (f t)
   | tFix def i => tFix (map (map_def f) def) i
   | tCoFix def i => tCoFix (map (map_def f) def) i
+  | tPrim p => tPrim (map_prim f p)
   | t => t
   end.
 
@@ -309,6 +310,7 @@ Fixpoint is_dead (rel : nat) (t : term) : bool :=
   | tFix defs _
   | tCoFix defs _ => forallb (is_dead (#|defs| + rel) ∘ EAst.dbody) defs
   | tConstruct _ _ args => forallb (is_dead rel) args
+  | tPrim p => test_prim (is_dead rel) p
   | _ => true
   end.
 
@@ -366,6 +368,7 @@ Fixpoint valid_cases (t : term) : bool :=
   | tFix defs _
   | tCoFix defs _ => forallb (valid_cases ∘ EAst.dbody) defs
   | tConstruct _ _ (_ :: _) => false (* check whether constructors are not blocks*)
+  | tPrim p => test_prim valid_cases p
   | _ => true
   end.
 
@@ -407,7 +410,7 @@ Fixpoint is_expanded_aux (nargs : nat) (t : term) : bool :=
   | tProj _ t => is_expanded_aux 0 t
   | tFix defs _
   | tCoFix defs _ => forallb (is_expanded_aux 0 ∘ EAst.dbody) defs
-  | tPrim _ => true
+  | tPrim p => test_prim (is_expanded_aux 0) p
   end.
 
 (** Check if all applications are applied enough to be deboxed without eta expansion *)
@@ -644,7 +647,7 @@ Fixpoint analyze (state : analyze_state) (t : term) {struct t} : analyze_state :
     let state := new_vars state #|defs| in
     let state := fold_left (fun state d => analyze state (dbody d)) defs state in
     remove_vars state #|defs|
-  | tPrim _ => state
+  | tPrim p => fold_prim analyze p state
   end.
 
 Fixpoint decompose_TArr (bt : box_type) : list box_type × box_type :=

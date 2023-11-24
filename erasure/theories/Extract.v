@@ -6,9 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyp
      PCUICElimination PCUICWcbvEval PCUICFirstorder
      PCUICWellScopedCumulativity PCUICFirstorder PCUICNormalization PCUICReduction
      PCUICConversion PCUICPrincipality PCUICNormal.
-
-From MetaCoq.Erasure Require EAst EGlobalEnv.
-
+From MetaCoq.Erasure Require EPrimitive EAst EGlobalEnv.
+Import EPrimitive.
 Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
@@ -68,14 +67,20 @@ Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level
 Definition erase_context (Γ : context) : list name :=
   map (fun d => d.(decl_name).(binder_name)) Γ.
 
-Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @prim_model E.term t :=
-  match e in @prim_model _ x return prim_model E.term x with
-  | primIntModel i => primIntModel i
-  | primFloatModel f => primFloatModel f
-  end.
+Inductive erase_prim_model (erase : term -> E.term -> Prop) : forall {t : prim_tag},
+  @PCUICPrimitive.prim_model term t -> @prim_model E.term t -> Prop :=
+| erase_primInt i : @erase_prim_model erase primInt (PCUICPrimitive.primIntModel i) (primIntModel i)
+| erase_primFloat f : @erase_prim_model erase primFloat (PCUICPrimitive.primFloatModel f) (primFloatModel f)
+| erase_primArray a ed ev :
+    erase a.(PCUICPrimitive.array_default) ed ->
+    All2 erase a.(PCUICPrimitive.array_value) ev ->
+    @erase_prim_model erase primArray
+      (PCUICPrimitive.primArrayModel a) (primArrayModel {| array_default := ed; array_value := ev |}).
 
-Definition erase_prim_val (p : prim_val term) : prim_val E.term :=
-  (p.π1; erase_prim_model p.π2).
+Inductive erase_prim_val (erase : term -> E.term -> Prop) :
+  PCUICPrimitive.prim_val term -> prim_val E.term -> Prop :=
+| erase_prim t m m' : @erase_prim_model erase t m m' ->
+  erase_prim_val erase (t; m) (t; m').
 
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
@@ -126,7 +131,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                          × Σ;;; Γ ,,, fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
-  | erases_tPrim : forall p, Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim (erase_prim_val p)
+  | erases_tPrim : forall p p',
+    erase_prim_val (erases Σ Γ) p p' ->
+    Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim p'
   | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox
   where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
@@ -197,7 +204,10 @@ Lemma erases_forall_list_ind
                        (dbody d)
                        (EAst.dbody d') ) mfix mfix' ->
           P Γ (tCoFix mfix n) (E.tCoFix mfix' n))
-      (Hprim : forall Γ p, P Γ (tPrim p) (E.tPrim (erase_prim_val p)))
+      (Hprim : forall Γ p p',
+        erase_prim_val (erases Σ Γ) p p' ->
+        erase_prim_val (P Γ) p p' ->
+        P Γ (tPrim p) (E.tPrim p'))
       (Hbox : forall Γ t, isErasable Σ Γ t -> P Γ t E.tBox) :
   forall Γ t t0,
     Σ;;; Γ |- t ⇝ℇ t0 ->
@@ -238,6 +248,14 @@ Proof.
     fix f' 3.
     intros mfix mfix' []; [now constructor|].
     constructor; [now apply f|now apply f'].
+  - eapply Hprim; tea.
+    induction H. constructor.
+    induction H; constructor.
+    * now eapply f.
+    * destruct a; cbn in *.
+      revert array_value ev X.
+      fix f' 3; intros mfix mfix' []; [now constructor|].
+      constructor; [now apply f|now apply f'].
 Defined.
 
 Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' : E.constant_body) :=
@@ -333,7 +351,14 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tCoFix defs i :
     Forall (fun d => erases_deps Σ Σ' (E.dbody d)) defs ->
     erases_deps Σ Σ' (E.tCoFix defs i)
-| erases_deps_tPrim p : erases_deps Σ Σ' (E.tPrim p).
+| erases_deps_tPrimInt i :
+    erases_deps Σ Σ' (E.tPrim (primInt; primIntModel i))
+| erases_deps_tPrimFloat f :
+    erases_deps Σ Σ' (E.tPrim (primFloat; primFloatModel f))
+| erases_deps_tPrimArray a :
+    erases_deps Σ Σ' a.(array_default) ->
+    Forall (erases_deps Σ Σ') a.(array_value) ->
+    erases_deps Σ Σ' (E.tPrim (primArray; primArrayModel a)).
 
 Definition option_is_none {A} (o : option A) :=
   match o with

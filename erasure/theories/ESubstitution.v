@@ -111,6 +111,13 @@ Proof.
     eapply All2_impl. exact X1.
     intros ? ? [[] [? []]].
     split; eauto.
+  - econstructor.
+    induction H2; constructor.
+    induction H; constructor; depelim X2; eauto.
+    depelim X1.
+    eapply All2_All_mix_left in X3; eauto.
+    eapply All2_impl. exact X3.
+    cbn. intros ? ? [? ?]. eauto.
 Qed.
 
 Lemma erases_extends' (Σ:global_env_ext) Γ t T:
@@ -574,6 +581,9 @@ Proof.
       eapply is_type_subst; eauto.
   - cbn. depelim H1.
     * cbn; constructor.
+      depelim H1. depelim H1; repeat constructor.
+      depelim X2.
+      + eapply (@substitution _ Σ _ Γ Γ' s Δ) in H1.
     * constructor. eapply is_type_subst in X3; tea.
   - eapply H; eauto.
 Qed.

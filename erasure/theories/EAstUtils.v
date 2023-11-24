@@ -373,7 +373,7 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")"
+  | tPrim p => "Prim(" ^ EPrimitive.string_of_prim string_of_term p ^ ")"
   end.
 
 (** Compute all the global environment dependencies of the term *)

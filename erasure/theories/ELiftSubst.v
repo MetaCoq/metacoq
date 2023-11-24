@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction.
 Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
@@ -36,7 +36,7 @@ Fixpoint lift n k t : term :=
   | tVar _ => t
   | tConst _ => t
   | tConstruct ind i args => tConstruct ind i (map (lift n k) args)
-  | tPrim _ => t
+  | tPrim p => tPrim (map_prim (lift n k) p)
   end.
 
 Notation lift0 n := (lift n 0).
@@ -71,6 +71,7 @@ Fixpoint subst s k u :=
     let mfix' := List.map (map_def (subst s k')) mfix in
     tCoFix mfix' idx
   | tConstruct ind i args => tConstruct ind i (map (subst s k) args)
+  | tPrim p => tPrim (map_prim (subst s k) p)
   | x => x
   end.
 
@@ -98,6 +99,7 @@ Fixpoint closedn k (t : term) : bool :=
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k')) mfix
   | tConstruct ind i args => forallb (closedn k) args
+  | tPrim p => test_prim (closedn k) p
   | _ => true
   end.
 
@@ -230,6 +232,8 @@ Proof.
 
   - now elim (leb k n).
   - destruct x; cbn. now rewrite H0.
+  - destruct p as [? []]; cbn in X |- *; intuition eauto. do 2 f_equal.
+    rewrite /map_array_model; destruct a; cbn => //=. f_equal; eauto. solve_all.
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.

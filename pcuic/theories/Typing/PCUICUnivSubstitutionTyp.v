@@ -255,8 +255,7 @@ Proof using Type.
     induction 1 using All_local_env_ind1. 1: constructor.
     intros. simpl.
     apply All_local_env_snoc. 1: now apply IHX.
-    eapply lift_typing_mapu with (u := None) => //.
-    now apply X.
+    eapply lift_typing_mapu with (u := None) => //; auto using relevance_subst_opt.
 
   - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
     rewrite map_decl_type. econstructor; aa.
@@ -269,15 +268,18 @@ Proof using Type.
       * now apply wf_sort_subst_instance.
   - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' H.
     rewrite product_subst_instance; aa. econstructor.
-    + eapply lift_typing_mapu with (tm := None) (u := Some _) => //. apply X1; eauto.
+    + eapply lift_typing_mapu with (tm := None) (u := Some _) => //;
+      auto using relevance_subst_opt.
     + eapply X3; eauto.
   - intros n t0 b bty X X0 X1 X2 X3 u univs wfΣ' H.
     econstructor.
-    + eapply lift_typing_mapu with (tm := None) (u := None) => //. eapply X1; aa.
+    + eapply lift_typing_mapu with (tm := None) (u := None) => //;
+      auto using relevance_subst_opt.
     + eapply X3; aa.
   - intros n b b_ty b' b'_ty X X0 X1 X2 X3 u univs wfΣ' H.
     econstructor; eauto.
-    + eapply lift_typing_mapu with (tm := Some _) (u := None) => //. eapply X1; aa.
+    + eapply lift_typing_mapu with (tm := Some _) (u := None) => //;
+      auto using relevance_subst_opt.
     + eapply X3; aa.
   - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' H.
     rewrite subst_instance_subst. cbn. econstructor.
@@ -299,7 +301,7 @@ Proof using Type.
     + symmetry; apply subst_instance_two.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp eqpctx wfp cup
-      wfpctx pty Hpty Hcpc kelim
+      wfpctx pty Hpty Hcpc kelim hrel
       IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
@@ -318,6 +320,7 @@ Proof using Type.
     + now rewrite -subst_instance_case_predicate_context -subst_instance_app_ctx.
     + cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
+    + now apply relevance_subst.
     + move: IHctxi. simpl.
       rewrite -subst_instance_app.
       rewrite -subst_instance_two_context.
@@ -353,12 +356,12 @@ Proof using Type.
     + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl IHX); simpl. intros d X1.
-      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto.
+      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto using relevance_subst_opt.
     + eapply All_map, (All_impl IHX0); simpl. intros d X1.
       unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
       rewrite -subst_instance_lift map_length.
-      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
+      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto using relevance_subst_opt.
     + red; rewrite <- wffix.
       unfold wf_fixpoint, wf_fixpoint_gen.
       f_equal.
@@ -375,12 +378,12 @@ Proof using Type.
     + now eapply cofix_guard_subst_instance.
     + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl IHX); simpl. intros d X1.
-      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto.
+      eapply lift_typing_mapu with (tm := None) (u := None); cbn; eauto using relevance_subst_opt.
     + eapply All_map, (All_impl IHX0); simpl. intros d X1.
       unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
       rewrite -subst_instance_lift map_length.
-      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
+      eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto using relevance_subst_opt.
     + red; rewrite <- wffix.
       unfold wf_cofixpoint, wf_cofixpoint_gen.
       rewrite map_map_compose.
@@ -498,6 +501,19 @@ Proof using Type.
     cbn; eauto using typing_wf_local.
 Qed.
 
+Lemma lift_typing_subst_instance_decl Σ Γ j c decl u :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  lift_typing typing (Σ.1, universes_decl_of_decl decl) Γ j ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  lift_typing typing Σ (subst_instance u Γ) {| j_term := option_map (subst_instance u) (j_term j); j_typ := subst_instance u (j_typ j);
+                                               j_univ := option_map (subst_instance u) (j_univ j); j_rel := j_rel j |}.
+Proof.
+  intros wfΣ look Hj cu.
+  eapply lift_typing_fu_impl with (1 := Hj) => //; auto using relevance_subst_opt.
+  intros ?? Hs; now eapply typing_subst_instance_decl.
+Qed.
+
 Lemma isType_subst_instance_decl Σ Γ T c decl u :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
@@ -505,9 +521,17 @@ Lemma isType_subst_instance_decl Σ Γ T c decl u :
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   isType Σ (subst_instance u Γ) (subst_instance u T).
 Proof using Type.
-  intros wfΣ look isty cu.
-  eapply lift_typing_fu_impl with (1 := isty) => //.
-  intros ?? Hs; now eapply typing_subst_instance_decl.
+  apply lift_typing_subst_instance_decl.
+Qed.
+
+Lemma isTypeRel_subst_instance_decl Σ Γ T r c decl u :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  isTypeRel (Σ.1, universes_decl_of_decl decl) Γ T r ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  isTypeRel Σ (subst_instance u Γ) (subst_instance u T) r.
+Proof using Type.
+  apply lift_typing_subst_instance_decl.
 Qed.
 
 Lemma isArity_subst_instance u T :
@@ -525,7 +549,7 @@ Lemma wf_local_subst_instance Σ Γ ext u :
 Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1. simpl in *.
   induction X1; cbn; constructor; auto.
-  all: eapply lift_typing_fu_impl with (1 := t0) => //= ?? Hs.
+  all: eapply lift_typing_fu_impl with (1 := t0) => //= ?? Hs; auto using relevance_subst_opt.
   all: eapply typing_subst_instance'' in Hs; eauto; apply X.
 Qed.
 
@@ -538,9 +562,19 @@ Lemma wf_local_subst_instance_decl Σ Γ c decl u :
 Proof using Type.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   induction X1; cbn; constructor; auto.
-  all: eapply lift_typing_fu_impl with (1 := t0) => // ?? Hs.
+  all: eapply lift_typing_fu_impl with (1 := t0) => // ?? Hs; auto using relevance_subst_opt.
   all: eapply typing_subst_instance_decl in Hs; eauto; apply X.
 Qed.
+
+  Lemma isTypeRel_subst_instance_id Σ Γ T r :
+    wf_ext_wk Σ ->
+    let u := abstract_instance Σ.2 in
+    isTypeRel Σ Γ T r -> subst_instance u T = T.
+  Proof using Type.
+    intros wf_ext u isT.
+    destruct isT as (_ & s & Hs & _).
+    eapply typed_subst_abstract_instance in Hs; auto.
+  Qed.
 
   Lemma isType_subst_instance_id Σ Γ T :
     wf_ext_wk Σ ->
@@ -562,7 +596,7 @@ Qed.
     pose proof (on_declared_inductive decli) as [onmind oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona.
-    apply isType_subst_instance_id in ona.
+    apply isTypeRel_subst_instance_id in ona.
     2:split; simpl; auto.
     - rewrite !subst_instance_it_mkProd_or_LetIn in ona.
       eapply (f_equal (destArity [])) in ona.
@@ -583,7 +617,7 @@ Qed.
     pose proof (on_declared_inductive decli) as [_ oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona |- *.
-    apply isType_subst_instance_id in ona; eauto.
+    apply isTypeRel_subst_instance_id in ona; eauto.
     destruct decli as [declm _].
     eapply declared_inductive_wf_global_ext in declm; auto.
   Qed.

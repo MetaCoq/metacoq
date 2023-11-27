@@ -24,7 +24,7 @@ Section with_monad.
 
   Definition monad_typ_or_sort_map {univ T' T''} (f: T' -> T T'') (t : judgment_ univ T') :=
     match t with
-    | Judge tm ty u => ftm <- monad_option_map f tm;; fty <- f ty;; ret (Judge ftm fty u)
+    | Judge tm ty u rel => ftm <- monad_option_map f tm;; fty <- f ty;; ret (Judge ftm fty u rel)
     end.
 
   Definition monad_map_decl {term term'} (f : term -> T term') (d : context_decl term) : T (context_decl term') :=

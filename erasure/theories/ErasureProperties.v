@@ -321,13 +321,13 @@ Proof.
   - cbn. econstructor.
     eapply H in X3; eauto. apply X3.
     cbn. econstructor. eauto.
-    eapply lift_typing_fu_impl with (1 := X0) => // ?? HT.
+    eapply lift_typing_fu_impl with (1 := X0) => // ?? HT; eauto using relevance_subst_opt.
     now apply typing_subst_instance.
   - cbn. econstructor.
     now edestruct X1; tea; eauto.
     eapply H in X3; eauto. exact X3.
     cbn. econstructor. eauto.
-    eapply lift_typing_fu_impl with (1 := X0) => // ?? HT.
+    eapply lift_typing_fu_impl with (1 := X0) => // ?? HT; eauto using relevance_subst_opt.
     now apply typing_subst_instance.
   - unfold subst_instance.
     cbn [subst_instance_constr]. econstructor; eauto.
@@ -519,8 +519,8 @@ Section wellscoped.
       unfold lookup_constructor. rewrite (declared_constructor_lookup_gen isdecl) //.
     - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
       unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
-    - red in H8. eapply Forall2_All2 in H8.
-      eapply All2i_All2_mix_left in X4; tea. clear H8.
+    - red in H9. eapply Forall2_All2 in H9.
+      eapply All2i_All2_mix_left in X4; tea. clear H9.
       solve_all.
     - unshelve eapply declared_projection_to_gen in isdecl; eauto.
       unfold lookup_projection. now rewrite (declared_projection_lookup_gen isdecl).

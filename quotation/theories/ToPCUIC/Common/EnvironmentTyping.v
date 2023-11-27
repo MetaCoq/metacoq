@@ -127,6 +127,8 @@ Module QuoteGlobalMaps (Import T : Term) (Import E : EnvironmentSig T) (Import T
 
     #[export] Instance quote_on_type {Σ Γ T} : ground_quotable (@on_type P Σ Γ T)
       := ltac:(cbv [on_type]; exact _).
+    #[export] Instance quote_on_type_rel {Σ Γ T r} : ground_quotable (@on_type_rel P Σ Γ T r)
+      := ltac:(cbv [on_type_rel]; exact _).
 
     #[export] Instance quote_satisfiable_udecl {univs ϕ} : ground_quotable (@satisfiable_udecl univs ϕ)
       := ltac:(cbv [satisfiable_udecl]; exact _).
@@ -166,6 +168,7 @@ Module QuoteGlobalMaps (Import T : Term) (Import E : EnvironmentSig T) (Import T
     quote_type_local_ctx
     quote_sorts_local_ctx
     quote_on_type
+    quote_on_type_rel
     quote_on_udecl
     quote_satisfiable_udecl
     quote_valid_on_mono_udecl

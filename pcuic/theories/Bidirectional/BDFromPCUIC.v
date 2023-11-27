@@ -99,16 +99,17 @@ Proof.
   intro Hj.
   apply lift_sorting_ex_it_impl_gen with Hj => //=.
   1: now destruct b.
-  intros (u' & ? & _); now eexists.
+  intros (u' & ? & Hle) er; eexists; split; tea. eapply geq_relevance; tea.
 Qed.
 
 Lemma conv_lift_judgment_univ `{checker_flags} Σ Γ na b ty u :
   lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_sort Σ u' u) (j_decl_s (mkdecl na b ty) (Some u)) ->
   ∑ u', lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl_s (mkdecl na b ty) (Some u')) × leq_sort Σ u' u.
 Proof.
-  intros (Htm & u0 & (u' & Hty & Hle) & <-); cbn in *.
+  intros (Htm & u0 & (u' & Hty & Hle) & <- & Her); cbn in *.
   exists u'; split; tas.
   repeat (eexists; tea).
+  eapply geq_relevance; tea.
 Qed.
 
 Section BDFromPCUIC.
@@ -169,7 +170,8 @@ Proof.
     split.
     + econstructor. all: eassumption.
     + apply ws_cumul_pb_Prod ; auto.
-      by eapply isType_ws_cumul_pb_refl.
+      eapply isType_ws_cumul_pb_refl.
+      now eapply isTypeRel_isType.
 
   - intros na t A ? ? ? ? CumtA ? (?&?&?).
     apply conv_lift_judgment with (na := na) in CumtA.
@@ -218,7 +220,7 @@ Proof.
     1: fvs.
     now eapply closed_on_free_vars, declared_constructor_closed_type.
 
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Hinst ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? Her Hinst ty_c Cumc ? ? ? ty_br.
 
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
     apply conv_infer_ind in Cumc as (?&?&[]) ; auto.
@@ -229,6 +231,7 @@ Proof.
       * by eapply All_local_app_rel.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
+      * eapply geq_relevance; eassumption.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; tea.
@@ -343,6 +346,7 @@ Proof.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
+      eapply isTypeRel_isType.
       eapply nth_error_all in Htypes as Hj ; tea.
     }
     constructor ; eauto.
@@ -354,6 +358,7 @@ Proof.
     split.
     2:{
       apply isType_ws_cumul_pb_refl.
+      eapply isTypeRel_isType.
       eapply nth_error_all in Htypes as Hj ; tea.
     }
     constructor ; eauto.
@@ -407,12 +412,32 @@ Proof.
   now apply typing_infering.
 Qed.
 
+Lemma lift_typing_lift_sorting `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} {tm ty rel} :
+  lift_typing typing Σ Γ (Judge tm ty None rel) -> lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (Judge tm ty None rel).
+Proof.
+  intro Hj.
+  apply lift_sorting_ex_it_impl_gen with Hj.
+  - destruct tm => //. apply typing_checking.
+  - intros Hty Her.
+    eapply typing_infering_sort in Hty as [? []]; tea.
+    eexists; split; tea. destruct rel as [rel|] => //=.
+    now eapply geq_relevance; tea.
+Qed.
+
 Lemma isType_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t} :
   isType Σ Γ t -> ∑ u', Σ ;;; Γ |- t ▹□ u'.
 Proof.
+  move/lift_typing_lift_sorting.
   intros (_ & s & ty & _).
-  eapply typing_infering_sort in ty as [? []]; tea.
   now eexists.
+Qed.
+
+Theorem isTypeRel_infering_sort `{checker_flags} (Σ : global_env_ext) Γ t r (wfΣ : wf Σ) :
+  isTypeRel Σ Γ t r -> ∑ u, Σ ;;; Γ |- t ▹□ u × relevance_of_sort u = r.
+Proof.
+  move/lift_typing_lift_sorting.
+  intros (_ & s & ty & _ & Her).
+  now eexists; split; tea.
 Qed.
 
 Lemma typing_infer_prod `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B} :
@@ -454,7 +479,7 @@ Proof.
   intros Γ' ? Hj.
   apply lift_sorting_ex_it_impl_gen with Hj => //.
   - destruct decl_body => //= Hb. now apply typing_checking.
-  - intro Hty. eapply typing_infering_sort in Hty as [? []]; tea. now eexists.
+  - intros Hty Her. eapply typing_infering_sort in Hty as [? []]; tea. eexists; split; tea. eapply geq_relevance; tea.
 Qed.
 
 Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :

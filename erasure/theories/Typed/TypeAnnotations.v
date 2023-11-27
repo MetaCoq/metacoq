@@ -291,11 +291,13 @@ Proof.
   all: try subst erΓ1.
   - depelim er0.
     now apply inversion_Evar in X.
-  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
-  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
+  - apply inversion_Lambda in X as (? & h1 & ? & ?); auto.
+    now apply isTypeRel_isType in h1.
+  - apply inversion_Lambda in X as (? & h1 & ? & ?); auto.
+    apply isTypeRel_isType in h1.
     econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?); auto.
-    constructor; eapply lift_sorting_forget_body; eauto.
+  - apply inversion_LetIn in X as (?&h1&?&?); auto.
+    now apply lift_sorting_forget_body, isTypeRel_isType in h1.
   - apply inversion_LetIn in X as (?&?&?&?); auto.
     econstructor; eapply unlift_TermTyp; eauto.
   - apply inversion_LetIn in X as (?&?&?&?); auto.
@@ -331,7 +333,7 @@ Proof.
     apply rev_Forall.
     apply All_Forall.
     eapply All_impl. apply a.
-    intros. cbn in *;now constructor.
+    intros d X. cbn in *. apply isTypeRel_isType in X. now constructor.
   - apply inversion_Fix in t0 as (?&?&?&?&?&?&?); auto.
     depelim er0.
     clear -a0 X.
@@ -352,7 +354,7 @@ Proof.
     apply rev_Forall.
     apply All_Forall.
     eapply All_impl. apply a.
-    intros. cbn in *;now constructor.
+    intros d X. cbn in *. apply isTypeRel_isType in X. now constructor.
   - apply inversion_CoFix in t0 as (?&?&?&?&?&?&?); auto.
     depelim er0.
     clear -a0 X.

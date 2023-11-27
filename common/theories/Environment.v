@@ -149,6 +149,8 @@ Module Environment (T : Term).
   (** Local (de Bruijn) context *)
 
   Definition context := list context_decl.
+  Definition mark_context := list relevance.
+  Definition marks_of_context : context -> mark_context := fun l => List.map (fun d => d.(decl_name).(binder_relevance)) l.
 
   (** Last declaration first *)
 
@@ -850,7 +852,7 @@ Module Environment (T : Term).
     end.
 
   Definition tImpl (dom codom : term) : term :=
-    tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+    tProd {| binder_name := nAnon; binder_relevance := rel_of_Type |}
       dom (lift 1 0 codom).
 
   Definition array_uctx := ([nAnon], ConstraintSet.empty).
@@ -998,11 +1000,29 @@ Module Environment (T : Term).
 
   Definition arities_context (l : list one_inductive_body) :=
     rev_map (fun ind => vass (mkBindAnn (nNamed ind.(ind_name))
-                            (ind.(ind_relevance))) ind.(ind_type)) l.
+                            rel_of_Type) ind.(ind_type)) l.
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
   #[global] Hint Rewrite arities_context_length : len.
+
+  Lemma nth_error_arities_context idecls i idecl :
+    nth_error (List.rev idecls) i = Some idecl ->
+    nth_error (arities_context idecls) i =
+      Some {| decl_name := {| binder_name := nNamed idecl.(ind_name); binder_relevance := rel_of_Type |};
+              decl_body := None;
+              decl_type := idecl.(ind_type) |}.
+  Proof using Type.
+    intros hnth.
+    epose proof (nth_error_Some_length hnth). autorewrite with len in H.
+    rewrite nth_error_rev in hnth. now autorewrite with len.
+    rewrite List.rev_involutive in hnth. autorewrite with len in hnth.
+    unfold arities_context.
+    rewrite rev_map_spec.
+    rewrite nth_error_rev; autorewrite with len; auto.
+    rewrite List.rev_involutive nth_error_map.
+    rewrite hnth. simpl. reflexivity.
+  Qed.
 
   Definition map_mutual_inductive_body f m :=
     match m with

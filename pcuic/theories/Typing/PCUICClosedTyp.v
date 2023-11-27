@@ -110,7 +110,7 @@ Proof.
   - rewrite andb_and. split.
     * apply onArity in oib.
       now move/andP: oib => [] /=.
-    * pose proof (onArity oib) as X. unfold on_type in X.
+    * pose proof (onArity oib) as X. unfold on_type_rel in X.
       rewrite oib.(ind_arity_eq) in X.
       cbn in X.
       rewrite !closedn_it_mkProd_or_LetIn /= !andb_true_r in X.
@@ -118,7 +118,7 @@ Proof.
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
     intros cdecl cs X0;
-    move: (on_ctype X0) => /=. unfold on_type. cbn.
+    move: (on_ctype X0) => /=. unfold on_type_rel. cbn.
     simpl. unfold closed_constructor_body.
     intros Hty.
     rewrite arities_context_length in Hty.
@@ -198,7 +198,7 @@ Proof.
   - rewrite closedn_subst_instance.
     eapply declared_inductive_inv in X0; eauto with extends.
     apply onArity in X0.
-    rewrite /on_type /lift_wfb_term /= in X0.
+    rewrite /on_type_rel /lift_wfb_term /= in X0.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -212,16 +212,16 @@ Proof.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
       destruct o as [? ? HT _].
-      rewrite /on_type /lift_wfb_term /= in HT.
+      rewrite /on_type_rel /lift_wfb_term /= in HT.
       rewrite arities_context_length in HT.
       eauto using closed_upwards with arith.
 
   - destruct H3 as [clret _].
-    destruct H6 as [clc clty].
+    destruct H7 as [clc clty].
     rewrite closedn_mkApps in clty. simpl in clty.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
-    red in H8. eapply Forall2_All2 in H8.
+    red in H9. eapply Forall2_All2 in H9.
     eapply All2i_All2_mix_left in X5; eauto.
     eapply declared_minductive_closed_ind in X0; tea. 2:exact isdecl.
     pose proof (closed_ind_closed_cstrs X0 isdecl).
@@ -236,16 +236,16 @@ Proof.
       rewrite /predctx in clret.
       rewrite case_predicate_context_length_indices // in clret.
       { now rewrite ind_predicate_context_length. }
-    + clear H8. solve_all. unfold test_branch_k. clear H6. solve_all.
+    + clear H9. solve_all. unfold test_branch_k. clear H7. solve_all.
       * rewrite (closedn_ctx_alpha a1).
         eapply closed_cstr_branch_context_gen in X0; tea.
         rewrite (wf_predicate_length_pars H1).
         now rewrite (declared_minductive_ind_npars isdecl).
       * rewrite (All2_length a1).
-        len in H8.
-        (*unfold case_branch_context_gen in H8. simpl in H8.
+        len in H9.
+        (*unfold case_branch_context_gen in H8. simpl in H9.
         rewrite case_branch_type_fst in H8. *)
-        rewrite case_branch_context_length_args in H8 => //.
+        rewrite case_branch_context_length_args in H9 => //.
         now rewrite cstr_branch_context_length.
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
@@ -374,12 +374,24 @@ Qed.
 
 #[global] Hint Extern 10 => progress unfold PCUICTypingDef.typing in * : fvs.
 
+Lemma lift_typing_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ j} :
+  lift_typing typing Σ Γ j ->
+  lift_wf_term (closedn #|Γ|) j.
+Proof.
+  intro Hj. apply lift_typing_subject with (1 := Hj) => t T.
+  apply subject_closed.
+Qed.
+
+Lemma isTypeRel_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T r} : isTypeRel Σ Γ T r -> closedn #|Γ| T.
+Proof. move/lift_typing_closed => [] //. Qed.
+
 Lemma isType_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T} : isType Σ Γ T -> closedn #|Γ| T.
-Proof. intros (_ & s & Hs & _); cbn in Hs; fvs. Qed.
+Proof. move/lift_typing_closed => [] //. Qed.
 
 #[global] Hint Extern 4 (closedn #|?Γ| ?A = true) =>
   match goal with
   | [ H : isType _ Γ A |- _ ] => exact (isType_closed H)
+  | [ H : isTypeRel _ Γ A _ |- _ ] => exact (isTypeRel_closed H)
   end : fvs.
 
 Lemma is_open_term_closed (Γ : context) t :
@@ -419,9 +431,16 @@ Lemma lift_typing_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : 
   lift_typing typing Σ Γ j ->
   lift_wf_term (is_open_term Γ) j.
 Proof.
-  intros (Htm & s & Hty & _).
-  split. 1: destruct j_term; cbn in *; auto.
-  all: rewrite -is_open_term_closed; now eapply subject_closed.
+  move/lift_typing_closed => Hj.
+  apply lift_wf_term_impl with (1 := Hj) => t.
+  rewrite is_open_term_closed //.
+Qed.
+
+Lemma isTypeRel_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T r} :
+  isTypeRel Σ Γ T r ->
+  is_open_term Γ T.
+Proof.
+  move/isType_closed. now rewrite is_open_term_closed.
 Qed.
 
 Lemma isType_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T} :
@@ -453,6 +472,11 @@ Qed.
 #[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
   match goal with
   | [ H : isType _ Γ A |- _ ] => exact (isType_is_open_term H)
+  end : fvs.
+
+#[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
+  match goal with
+  | [ H : isTypeRel _ Γ A _ |- _ ] => exact (isTypeRel_is_open_term H)
   end : fvs.
 
 Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.

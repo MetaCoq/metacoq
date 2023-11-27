@@ -96,24 +96,35 @@ Qed.
 End ECorrect.
 
 Opaque erase_type flag_of_type ErasureFunction.wf_reduction.
+Import ssreflect.
+
+Section EEnvCorrect.
+
+Import PCUICWfEnv PCUICWfEnvImpl.
+
+Existing Instance config.extraction_checker_flags.
+Existing Instance PCUICSN.extraction_normalizing.
+Context {X_type : PCUICWfEnv.abstract_env_impl} {X : X_type.π1}.
+Context {normalising_in:
+  forall Σ : global_env_ext, wf_ext Σ -> PCUICWfEnv.abstract_env_rel X Σ -> PCUICSN.NormalizationIn Σ}.
 
 Lemma erase_global_decls_deps_recursive_correct decls univs retro wfΣ include ignore_deps :
   let Σ := mk_global_env univs decls retro in
   (forall k, ignore_deps k = false) ->
   (forall k, KernameSet.In k include -> P.lookup_env Σ k <> None) ->
-  includes_deps Σ (trans_env (erase_global_decls_deps_recursive decls univs retro wfΣ include ignore_deps)) include.
+  includes_deps Σ (trans_env (erase_global_decls_deps_recursive (X_type := X_type) (X := X) decls univs retro wfΣ include ignore_deps)) include.
 Proof.
   cbn.
   cut (is_true (KernameSet.subset include include)); [|now apply KernameSet.subset_spec].
   generalize include at 1 3 5 as include'.
   intros include' sub no_ignores all_in.
-  induction decls as [|(kn, decl) Σ0 IH] in univs, decls, retro, wfΣ, all_in, include, include', sub |- *.
+  induction decls as [|(kn, decl) Σ0 IH] in X_type, X, univs, decls, retro, wfΣ, all_in, include, include', sub |- *.
   { intros kn isin. cbn.
     now apply all_in in isin. }
   simpl in *.
   match goal with
-  | |- context[erase_global_decl _ ?wfΣarg _ _ ?wfdeclarg] =>
-      set (wfΣext := wfΣarg) in *; clearbody wfΣext;
+  | |- context[erase_global_decl _ ?wfΣarg _ ?wfdeclarg] =>
+      set (wfΣext := wfΣarg) in *;
         set (wfdecl := wfdeclarg) in *; clearbody wfdecl
   end.
   match goal with
@@ -121,13 +132,17 @@ Proof.
     set (wfΣprev := wfΣarg) in *; clearbody wfΣprev
   end.
 
-  destruct wfΣ as [wfΣ].
   rewrite no_ignores;cbn.
   destruct KernameSet.mem eqn:mem; cycle 1.
   - intros kn' isin.
-    change {| P.universes := univs; P.declarations := (kn, decl) :: Σ0; P.retroknowledge := retro |} with
-      (add_global_decl {| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro|} (kn, decl)).
+    change {| P.universes := univs; P.declarations := (kn, wfdecl) :: Σ0; P.retroknowledge := retro |} with
+      (add_global_decl {| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro|} (kn, wfdecl)).
+    pose proof (abstract_env_ext_wf _ wfΣext) as [].
+    pose proof (abstract_env_exists X) as [[Σfull hfull]].
+    pose proof (abstract_env_wf _ hfull) as [wffull].
     apply global_erases_with_deps_weaken; auto.
+    { pose proof (wfΣ _ hfull). now subst Σfull. }
+    set (prf := (fun (Σ : global_env) => _)).
     eapply IH; eauto.
     intros k kisin.
     specialize (all_in _ kisin).
@@ -140,10 +155,14 @@ Proof.
   - cbn in *.
     intros k isin.
     destruct (Kername.eq_dec k kn) as [->|]; cycle 1.
-    { change {| P.universes := univs; P.declarations := (kn, decl) :: Σ0; P.retroknowledge := retro |} with
-      (add_global_decl {| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro |} (kn, decl)).
+    { change {| P.universes := univs; P.declarations := (kn, wfdecl) :: Σ0; P.retroknowledge := retro |} with
+      (add_global_decl {| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro |} (kn, wfdecl)).
+      pose proof (abstract_env_ext_wf _ wfΣext) as [].
+      pose proof (abstract_env_exists X) as [[Σfull hfull]].
+      pose proof (abstract_env_wf _ hfull) as [wffull].
       apply global_erases_with_deps_cons; auto.
-      eapply (IH _ _ wfΣprev _ (KernameSet.singleton k)).
+      { pose proof (wfΣ _ hfull). now subst Σfull. }
+      eapply (IH _ _ _ _ wfΣprev _ (KernameSet.singleton k)).
       - apply KernameSet.subset_spec.
         intros ? ?.
         eapply KernameSet.singleton_spec in H; subst a.
@@ -161,7 +180,7 @@ Proof.
       - now apply KernameSet.singleton_spec. }
 
     cbn.
-    destruct decl; [left|right].
+    destruct wfdecl; [left|right].
     all: unfold declared_constant, declared_minductive,
          P.declared_constant, P.declared_minductive; cbn.
     unfold Erasure.erase_constant_decl.
@@ -169,9 +188,8 @@ Proof.
     all: try rewrite eq_kername_refl.
     + eexists; split; [left;reflexivity|].
     unfold erase_constant_decl.
-    destruct flag_of_type; cbn in *.
-      destruct conv_ar; cbn in *.
-      destruct wfΣprev as [wfΣprev].
+    destruct flag_of_type.
+      destruct conv_ar.
       * destruct c eqn:Hc; cbn in *.
         destruct cst_body0 eqn:Hcb; cbn in *; cycle 1.
         { eexists; split;cbn; unfold EGlobalEnv.declared_constant;cbn.
@@ -185,24 +203,32 @@ Proof.
           noconf H.
           constructor. }
 
-        destruct wfdecl as [wfdecl].
+        pose proof (abstract_env_ext_wf _ wfΣext) as [].
+        pose proof (abstract_env_exists X) as [[Σfull hfull]].
+        pose proof (abstract_env_wf _ hfull) as [wffull].
+        (* pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hpop]].
+        pose proof (abstract_env_wf _ hpop) as [wfpop].
+        eapply abstract_pop_decls_correct in hpop; tea. *)
+
+
         destruct c0 as [ctx univ [r]].
         destruct r.
-        apply @type_reduction with (B := mkNormalArity ctx univ) in wfdecl; eauto.
+        eapply @type_reduction with (B := mkNormalArity ctx univ) in clrel_rel; eauto.
         cbn in *.
         constructor.
         eapply (Is_type_extends (({| P.universes := univs; P.declarations := Σ0; P.retroknowledge := retro |}, _))).
-        constructor.
-        2: now eauto.
-        2:{ eapply extends_decls_extends_subrel, strictly_extends_decls_extends_decls.
+        constructor. eapply X0. clear wfΣext. specialize (wfΣ _ hfull). now subst Σfull.
+        { eapply extends_decls_extends_subrel, strictly_extends_decls_extends_decls.
            unfold strictly_extends_decls; trea. eexists. cbn; auto. eexists [_].
            cbn. reflexivity. reflexivity. } eauto.
         eexists.
         split; [eassumption|].
         left.
         apply isArity_mkNormalArity.
+        clear wfΣext. specialize (wfΣ _ hfull). subst Σfull.
+        depelim wffull; cbn in *. depelim o0. now depelim o1.
       * eexists; split;cbn; unfold EGlobalEnv.declared_constant;cbn.
-          now rewrite eq_kername_refl.
+        now rewrite eq_kername_refl.
         unfold trans_cst; cbn.
         destruct c; cbn in *.
         destruct cst_body0; cbn in *; cycle 1.
@@ -212,28 +238,51 @@ Proof.
         | |- context[erase _ _ _ _ ?p] =>
           set (twt := p) in *; clearbody twt
         end.
-        destruct wfdecl as [wfdecl].
+        set (wfext := abstract_make_wf_env_ext _ _ _).
+        (* destruct wfdecl as [wfdecl]. *)
         split.
-        -- apply @type_reduction with (B := cst_type0) in wfdecl as wfdecl1; eauto.
-           2: repeat invert_wf;split;auto;split;auto.
-           eapply (erases_extends (_, _)).
-           2: now eauto.
-           1: repeat invert_wf;split;auto;split;auto.
-           1: repeat invert_wf;split;auto.
-           2: { eexists. reflexivity. eexists [_]; reflexivity. reflexivity. }
-           1: constructor;auto.
+        -- set (decl' := ConstantDecl _) in *.
+          pose proof (abstract_env_ext_wf _ wfΣext) as [].
+          pose proof (abstract_env_exists X) as [[Σfull hfull]].
+          pose proof (abstract_env_wf _ hfull) as [wffull].
+          pose proof (wfΣ _ hfull).
+          pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hpop]].
+          pose proof (abstract_env_wf _ hpop) as [wfpop].
+          eapply abstract_pop_decls_correct in hpop; tea.
+          2:{ intros. pose proof (abstract_env_irr _ hfull H0). subst Σfull Σ. cbn. now eexists. }
+          subst Σfull. destruct hpop as [? []]. cbn in *. subst.
+          destruct Σpop as [univspop Σpop retropop]; cbn in *.
+          (* pose proof (abstract_make_wf_env_ext_correct _ wfext).
+           destruct wfdecl as [wfdecl onud].
+          eapply @type_reduction with (B := cst_type0) in wfdecl as wfdecl1; eauto.
+         2:{ depelim wfΣ. depelim o0. depelim o2. now cbn in on_global_decl_d. } *)
+
+           eapply (erases_extends (_, _)); eauto.
+           1:{ depelim wffull. depelim o0. depelim o1. now cbn in on_global_decl_d. }
+           1:{ eexists. reflexivity. eexists [_]; reflexivity. reflexivity. }
            now apply erases_erase.
         -- intros.
            noconf H.
-           destruct wfΣext.
            assert (unfold_add_gd : forall univs decls (decl : kername × global_decl),
                       add_global_decl (mk_global_env univs decls retro) decl = {| P.universes := univs; P.declarations := decl :: decls; P.retroknowledge := retro |}) by reflexivity.
-           rewrite <- unfold_add_gd.
+           rewrite -{1}unfold_add_gd.
            repeat invert_wf.
+           pose proof (abstract_env_ext_wf _ wfΣext) as [].
+           pose proof (abstract_env_exists X) as [[Σfull hfull]].
+           pose proof (abstract_env_wf _ hfull) as [wffull].
+           pose proof (wfΣ _ hfull).
+           pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hpop]].
+           pose proof (abstract_env_wf _ hpop) as [wfpop].
+           eapply abstract_pop_decls_correct in hpop; tea.
+           2:{ intros. pose proof (abstract_env_irr _ hfull H0). subst Σfull Σ. cbn. now eexists. }
+           subst Σfull. destruct hpop as [? []]. cbn in *. subst.
+           destruct Σpop as [univspop Σpop retropop]; cbn in *.
            apply erases_deps_cons;eauto;cbn in *.
-           constructor;eauto.
+           { now depelim wfpop. }
+           { now depelim wffull. }
+           depelim wffull. cbn in *. depelim o0. depelim o1. cbn in on_global_decl_d.
            eapply (@erase_global_erases_deps (_, _)); eauto.
-           { now apply erases_erase. }
+           now apply erases_erase.
            eapply IH.
            ++ apply KernameSet.subset_spec.
               intros ? isin'.
@@ -249,3 +298,5 @@ Proof.
       cbn in *.
       apply erase_ind_correct.
 Qed.
+
+End EEnvCorrect.

@@ -368,13 +368,12 @@ Proof.
     econstructor; eauto.
 Qed.
 
-#[program] Definition erase_constant_decl_impl :=
-  @erase_constant_decl canonical_abstract_env_impl (ltac:(now unshelve econstructor;eauto))
-    PCUICSN.extraction_normalizing _.
+#[program] Definition erase_constant_decl_impl X_type X :=
+  @erase_constant_decl X_type X PCUICSN.extraction_normalizing _.
 Next Obligation. apply Erasure.fake_normalization; eauto. Defined.
 
-Definition annotate_types_erase_constant_decl cst wt :
-  match erase_constant_decl_impl Σ eq_refl cst wt with
+Definition annotate_types_erase_constant_decl X_type X cst wt eq :
+  match erase_constant_decl_impl X_type X Σ eq cst wt with
   | inl cst => constant_body_annots box_type cst
   | _ => unit
   end.
@@ -392,48 +391,48 @@ Proof.
     cbn in *.
     destruct wt.
     econstructor; eauto.
-    reflexivity.
+    exact eq.
 Defined.
 
-
 (* Context (nin : forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> PCUICSN.NormalizationIn Σ). *)
-Definition annotate_types_erase_global_decl kn decl wt :
-  global_decl_annots box_type (erase_global_decl Σ wfextΣ kn decl wt).
+Definition annotate_types_erase_global_decl X_type X eq kn decl wt :
+  global_decl_annots box_type (@erase_global_decl X_type X Σ eq kn decl wt).
 Proof.
   unfold erase_global_decl.
   destruct decl; [|exact tt].
   cbn.
-  pose proof (annotate_types_erase_constant_decl c wt).
-  unfold erase_constant_decl_impl in *.
-  unfold Erasure.erase_global_decl_obligation_2; cbn.
-  unfold erase_constant_decl_impl_obligation_1 in X.
+  pose proof (annotate_types_erase_constant_decl X_type X c wt).
+  unfold erase_constant_decl_impl in *. cbn in X0.
+  specialize (X0 eq).
   cbn. destruct erase_constant_decl; [|exact tt].
-  cbn. exact X.
+  cbn. exact X0.
 Defined.
 
 End fix_env.
 
-Definition annotate_types_erase_global_decls_deps_recursive Σ universes retros wfΣ include ignore_deps :
-  env_annots box_type (erase_global_decls_deps_recursive Σ universes retros wfΣ include ignore_deps).
+Definition annotate_types_erase_global_decls_deps_recursive X_type X Σ universes retros wfΣ include ignore_deps :
+  env_annots box_type (@erase_global_decls_deps_recursive X_type X Σ universes retros wfΣ include ignore_deps).
 Proof.
   revert include.
-  induction Σ; intros include; [exact tt|].
+  induction Σ in X, X_type, wfΣ |- *; intros include; [exact tt|].
   cbn in *.
   destruct a.
   destruct KernameSet.mem.
   - cbn.
     match goal with
-    | |- context[erase_global_decl ?a ?b ?c ?d ?e] =>
-      pose proof (annotate_types_erase_global_decl a b c d e)
+    | |- context[ @erase_global_decl ?X_type ?X ?a ?b ?c ?d ?e] =>
+      unshelve epose proof (annotate_types_erase_global_decl a _ X_type X b c d e)
     end.
+    { eapply abstract_eq_wf in wfΣ as [equiv [wf]].
+      eapply (sq_wf_pop_decl _ _ _ _ (sq wf)); cbn; trea. }
     match goal with
     | |- context[erase_global_decls_deps_recursive _ _ _ ?prf ?incl _] =>
-      specialize (IHΣ prf incl )
+      specialize (IHΣ _ _ prf incl )
     end.
-    exact (X, IHΣ).
+    exact (X0, IHΣ).
   - match goal with
     | |- context[erase_global_decls_deps_recursive _ _ _ ?prf ?incl _] =>
-      specialize (IHΣ prf incl)
+      specialize (IHΣ _ _ prf incl)
     end.
     exact IHΣ.
 Defined.
@@ -557,7 +556,7 @@ Proof.
     exact (ta.1, f _ All_nil _ ta.2.2).
   - exact (annot_dearg_single _ ta argsa).
   - exact (annot_dearg_single _ ta argsa).
-  - destruct indn.  
+  - destruct indn.
     refine (annot_mkApps _ argsa).
     cbn in *.
     refine (ta.1, _).

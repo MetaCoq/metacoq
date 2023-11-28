@@ -120,6 +120,45 @@ Proof.
 Qed.
 Import EnvMap.
 
+Opaque Erasure.flag_of_type.
+
+Lemma erase_erasable {X_type X nin Γ t wt} :
+  (forall Σ, abstract_env_ext_rel X Σ -> ∥ isErasable Σ Γ t ∥) ->
+  @erase X_type X nin Γ t wt = EAst.tBox.
+Proof.
+  intros his.
+  rewrite erase_equation_1.
+  destruct inspect_bool. now cbn.
+  elimtype False.
+  move/negP: i => hi. apply hi.
+  now apply/is_erasableP.
+Qed.
+
+Lemma one_inductive_body_eq x y :
+  x.(E.ind_name) = y.(E.ind_name) ->
+  x.(E.ind_propositional) = y.(E.ind_propositional) ->
+  x.(E.ind_kelim) = y.(E.ind_kelim) ->
+  x.(E.ind_ctors) = y.(E.ind_ctors) ->
+  x.(E.ind_projs) = y.(E.ind_projs) ->
+  x = y.
+Proof.
+  destruct x, y; cbn in *; intros; f_equal; eauto.
+Qed.
+
+Lemma fresh_global_filter_deps {X_type X} {decls nin prf} {kn deps}:
+  EnvMap.fresh_global kn decls ->
+  EGlobalEnv.fresh_global kn (filter_deps deps (@erase_global X_type X decls nin prf)).
+Proof.
+  induction 1 in X_type, X, nin, prf, deps |- *; cbn.
+  - constructor.
+  - destruct x as [kn' []]; cbn in H |- *;
+    destruct (KernameSet.mem kn' deps).
+    + constructor. now cbn. eapply IHForall.
+    + eapply IHForall.
+    + constructor. now cbn. eapply IHForall.
+    + eapply IHForall.
+Qed.
+
 Lemma trans_env_erase_global_decls {X_type X} decls nin eq univs retro prf deps deps' ignored :
   (forall k, ignored k = false) ->
   KernameSet.Subset deps deps' ->
@@ -140,7 +179,46 @@ Proof.
       * assert (KernameSet.mem kn deps') as ->.
         { eapply KernameSet.mem_spec in e.
           now apply KernameSet.mem_spec. }
-        assert (trans_global_decl er = E.ConstantDecl er'.1) as H0. admit.
+        assert (trans_global_decl er = E.ConstantDecl er'.1) as H0.
+        { subst er er'. clear.
+          destruct c as [ty [] rel].
+          2:{ cbn.
+            unfold Erasure.erase_constant_decl, Erasure.erase_constant_decl_clause_1.
+            destruct (Erasure.flag_of_type), conv_ar; try congruence; reflexivity. }
+          unfold erase_constant_decl, erase_constant_body.
+          cbn -[erase Erasure.erase_constant_decl abstract_make_wf_env_ext].
+          unfold Erasure.erase_constant_decl, Erasure.erase_constant_decl_clause_1.
+          destruct (Erasure.flag_of_type), conv_ar; try congruence.
+          { cbn in c.
+            epose proof (Erasure.conv_arity_Is_conv_to_Arity c).
+            set (Σ := {| PEnv.universes := _ |}) in *.
+            set (Σ' := {| PEnv.universes := _ ; PEnv.declarations := decls |}) in *.
+            rewrite erase_erasable.
+            intros ? HΣ.
+            destruct H as [ar [[] isar]].
+            set (obl := fun (Σ : PCUICAst.PCUICEnvironment.global_env) _ => _) in HΣ.
+            eapply Erasure.abstract_eq_wf in prf as [HΣ' [wf]].
+            pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hΣpop]].
+            eapply abstract_make_wf_env_ext_correct in HΣ; tea. subst Σ0.
+            eapply abstract_pop_decls_correct in hΣpop; tea.
+            2:{ intros. pose proof (abstract_env_irr _ HΣ' H). subst Σ0. cbn. now eexists. }
+            destruct hΣpop as [? []]. destruct Σpop; cbn in *. subst.
+            depelim wf. depelim o0. depelim o1. cbn in on_global_decl_d.
+            sq. exists ar. split; [|now left].
+            unshelve eapply PCUICSR.type_reduction. 4:apply X0. constructor; eauto. exact on_global_decl_d.
+            reflexivity. }
+        { cbn [trans_global_decl]. unfold trans_cst, cst_body.
+          unfold erase_constant_body; cbn -[erase]. do 3 f_equal.
+          eapply erase_irrel_global_env.
+          clear; intros ?? h1 h2.
+          pose proof (abstract_env_exists (abstract_pop_decls X)) as [[[] hΣpop]].
+          split; intros.
+          do 2 (erewrite <- abstract_env_lookup_correct'; tea).
+          eapply abstract_make_wf_env_ext_correct in H; tea.
+          eapply abstract_make_wf_env_ext_correct in h2; tea. congruence.
+          do 2 (erewrite abstract_primitive_constant_correct; tea).
+          eapply abstract_make_wf_env_ext_correct in H; tea.
+          eapply abstract_make_wf_env_ext_correct in h2; tea. congruence. } }
         rewrite <- H0.
         eapply extends_cons.
         unfold trans_env in IHdecls.
@@ -154,7 +232,8 @@ Proof.
           intuition auto; knset.
       * destruct (KernameSet.mem kn deps') eqn:e'.
         rewrite hign. cbn [map].
-        eapply extends_cons_right. admit.
+        eapply extends_cons_right.
+        now eapply fresh_global_filter_deps.
         eapply IHdecls; eauto. cbn -[er]. intros kn'. rewrite !KernameSet.union_spec. intuition eauto.
         eapply IHdecls; eauto.
     + destruct (KernameSet.mem kn deps) eqn:e.
@@ -162,17 +241,35 @@ Proof.
         { eapply KernameSet.mem_spec in e.
           now apply KernameSet.mem_spec. }
         cbn [map]. cbn in er.
-        assert (trans_global_decl er = E.InductiveDecl (erase_mutual_inductive_body m)) as H0. admit.
+        assert (trans_global_decl er = E.InductiveDecl (erase_mutual_inductive_body m)) as H0.
+        { clear. subst er.
+          unfold trans_global_decl. f_equal.
+          unfold trans_mib, erase_mutual_inductive_body.
+          f_equal.
+          unfold Erasure.erase_ind. cbn.
+          rewrite map_map_In.
+          pose proof (Erasure.abstract_eq_wf _ _ _ prf) as [h [wf]].
+          eapply map_mapIn_eq. intros x hin.
+          destruct x. unfold erase_one_inductive_body. cbn -[Erasure.erase_ind_body].
+          eapply one_inductive_body_eq.
+          1-3:reflexivity.
+          { cbn [E.ind_ctors trans_oib]. rewrite /trans_ctors.
+            unfold Erasure.erase_ind_body.
+            cbn [ExAst.ind_ctors]. rewrite map_map_In.
+            eapply map_mapIn_eq.
+            intros [] hin'.
+            destruct decompose_arr; reflexivity. }
+          { cbn. rewrite map_In_spec map_map_compose //. } }
         rewrite -H0.
         eapply extends_cons.
         eapply IHdecls; eauto.
         intros kn'; knset.
       * destruct (KernameSet.mem kn deps') eqn:e'.
         rewrite hign. cbn [map].
-        eapply extends_cons_right. admit.
+        eapply extends_cons_right. now eapply fresh_global_filter_deps.
         eapply IHdecls; eauto. cbn -[er]. intros kn'. rewrite !KernameSet.union_spec. intuition eauto.
         eapply IHdecls; eauto.
-Admitted.
+Qed.
 
 Lemma wf_trans_inductives (m : PCUICAst.PCUICEnvironment.mutual_inductive_body) {X_type X no nin} Σ hΣ kn prf :
   forallb EWellformed.wf_inductive (map trans_oib (@Erasure.erase_ind X_type X no nin Σ hΣ kn m prf).(ind_bodies)).
@@ -215,7 +312,7 @@ Proof.
   destruct g.
   - destruct (Erasure.erase_constant_decl) eqn:Hdecl.
     * unfold Erasure.erase_constant_decl,Erasure.erase_constant_decl_clause_1 in *.
-      destruct (Erasure.flag_of_type), conv_ar;try congruence.
+      destruct (Erasure.flag_of_type), conv_ar; try congruence.
       inversion Hdecl;subst;clear Hdecl.
       unfold trans_global_decl,trans_cst.
       cbn [EWellformed.wf_global_decl].
@@ -225,7 +322,7 @@ Proof.
       unshelve eapply (erase_constant_body_correct'' (X_type := X_type) (decls := decls) seeds) in heq as [[t0 [T [[] ?]]]].
       shelve. 4:exact w. intros. eapply Erasure.fake_normalization; tea.
       { intros. now rewrite (prf' _ H0). }
-      intros ->.
+      intros ->. cbn.
       eapply EWellformed.extends_wellformed; tea.
       set (prf'' := fun _ => _). clearbody prf''. cbn in prf''.
       rewrite erase_global_deps_erase_global.
@@ -238,6 +335,7 @@ Proof.
   - intros he => /=.
     eapply wf_trans_inductives.
 Qed.
+Transparent Erasure.flag_of_type.
 
 Ltac invert_wf :=
   match goal with

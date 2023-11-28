@@ -29,28 +29,6 @@ Local Ltac invert_wf :=
   | [H : on_global_decls _ _ _ _ (_ :: _) |- _] => inversion H;subst;clear H;cbn in *
   end.
 
-
-Lemma map_map_In {X Y Z} xs (f : forall (x : X), In x xs -> Y) (g : Y -> Z) :
-  map g (map_In xs f) = map_In xs (fun x isin => g (f x isin)).
-Proof.
-  induction xs in xs, f |- *; [easy|].
-  cbn.
-  f_equal.
-  apply IHxs.
-Qed.
-
-Lemma map_In_ext {X Y : Type} {xs : list X} {f : forall x, In x xs -> Y} g :
-  (forall x isin, f x isin = g x isin) ->
-  map_In xs f = map_In xs g.
-Proof.
-  induction xs in xs, f, g |- *; intros all_eq; [easy|].
-  cbn.
-  f_equal.
-  - apply all_eq.
-  - apply IHxs.
-    intros; apply all_eq.
-Qed.
-
 Section ECorrect.
 
   Existing Instance config.extraction_checker_flags.

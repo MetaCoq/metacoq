@@ -1213,6 +1213,34 @@ Proof.
   funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
+Lemma map_map_In {X Y Z} xs (f : forall (x : X), In x xs -> Y) (g : Y -> Z) :
+  map g (map_In xs f) = map_In xs (fun x isin => g (f x isin)).
+Proof.
+  induction xs in xs, f |- *; [easy|].
+  cbn.
+  f_equal.
+  apply IHxs.
+Qed.
+
+Lemma map_In_ext {X Y : Type} {xs : list X} {f : forall x, In x xs -> Y} g :
+  (forall x isin, f x isin = g x isin) ->
+  map_In xs f = map_In xs g.
+Proof.
+  induction xs in xs, f, g |- *; intros all_eq; [easy|].
+  cbn.
+  f_equal.
+  - apply all_eq.
+  - apply IHxs.
+    intros; apply all_eq.
+Qed.
+
+Lemma map_mapIn_eq {A B} (l : list A) f (g : A -> B) :
+  (forall x hin, f x hin = g x) ->
+  map_In l f = map g l.
+Proof.
+  intros hin. rewrite <- map_In_spec. now apply map_In_ext.
+Qed.
+
 Lemma rev_repeat {A : Type} (n : nat) (a : A) :
   List.rev (repeat a n) = repeat a n.
 Proof.

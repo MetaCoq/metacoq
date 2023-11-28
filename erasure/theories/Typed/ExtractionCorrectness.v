@@ -107,33 +107,88 @@ Proof.
   now eapply IHdecls.
 Qed.
 
-Lemma trans_env_erase_global_decls {X_type X} decls univs retro prf deps deps' ignored :
+Lemma extends_cons_right Σ Σ' kn d :
+  EGlobalEnv.fresh_global kn Σ ->
+  EGlobalEnv.extends Σ Σ' ->
+  EGlobalEnv.extends Σ ((kn, d) :: Σ').
+Proof.
+  intros hf he kn' d' hl.
+  cbn.
+  destruct (eqb_spec kn' kn). subst.
+  now eapply EGlobalEnv.lookup_env_Some_fresh in hl.
+  now eapply he in hl.
+Qed.
+Import EnvMap.
+
+Lemma trans_env_erase_global_decls {X_type X} decls nin eq univs retro prf deps deps' ignored :
   (forall k, ignored k = false) ->
   KernameSet.Subset deps deps' ->
-  EGlobalEnv.extends (trans_env (@Erasure.erase_global_decls_deps_recursive X_type X decls univs retro prf deps ignored))
-    (filter_deps deps' (trans_env (@Erasure.erase_global_decls_recursive X_type X decls univs retro prf))).
+  EnvMap.fresh_globals decls ->
+  EGlobalEnv.extends
+    (filter_deps deps (@erase_global X_type X decls nin eq))
+    (trans_env (@Erasure.erase_global_decls_deps_recursive X_type X decls univs retro prf deps' ignored)).
 Proof.
-  induction decls in X_type, X, deps, deps', ignored, prf |- *.
+  induction decls in X_type, X, deps, deps', ignored, eq, nin, prf |- *.
   - now cbn.
-  - cbn. intros hign hsub.
-    destruct a. destruct g.
-    destruct (KernameSet.mem k deps) eqn:e; cbn [map filter_deps].
-    assert (KernameSet.mem k deps') as ->.
-    { eapply KernameSet.mem_spec in e.
-      now apply KernameSet.mem_spec. }
-    set (er := Erasure.erase_global_decl _ _ _ _ _).
-    set (er' := Erasure.erase_global_decl _ _ _ _ _).
-    set (prf' := fun (Σ : PCUICAst.PCUICEnvironment.global_env) => _).
-    assert (trans_global_decl er = trans_global_decl er'). admit.
-    rewrite <- H.
-    destruct (trans_global_decl er) eqn:eqr.
-    rewrite hign.
-    eapply extends_cons.
-    unfold trans_env in IHdecls.
-    eapply (IHdecls _ _ prf'); eauto. cbn [negb].
-    intros kn.
-    rewrite !KernameSet.union_spec.
+  - cbn. intros hign hsub hf. depelim hf.
+    destruct d; cbn [map filter_deps];
+      try set (er := Erasure.erase_global_decl _ _ _ _ _);
+      try set (er' := erase_constant_decl _ _ _ _);
+      try set (prf' := fun (Σ : PCUICAst.PCUICEnvironment.global_env) => _);
+      try set (prf'' := fun (Σ : PCUICAst.PCUICEnvironment.global_env) => _).
+    + destruct (KernameSet.mem kn deps) eqn:e.
+      * assert (KernameSet.mem kn deps') as ->.
+        { eapply KernameSet.mem_spec in e.
+          now apply KernameSet.mem_spec. }
+        assert (trans_global_decl er = E.ConstantDecl er'.1) as H0. admit.
+        rewrite <- H0.
+        eapply extends_cons.
+        unfold trans_env in IHdecls.
+        eapply (IHdecls _ _ _ _ prf''); eauto. cbn [negb].
+        rewrite hign /=.
+        intros kn'.
+        rewrite !KernameSet.union_spec.
+        intuition eauto.
+        change (constant_decls_deps er'.1) with (global_decl_deps (E.ConstantDecl er'.1)) in H2. rewrite -H0 in H2.
+        clear -H2. destruct er as [[ty []] | |[]]; cbn in *; rewrite ?KernameSet.union_spec in H2 *;
+          intuition auto; knset.
+      * destruct (KernameSet.mem kn deps') eqn:e'.
+        rewrite hign. cbn [map].
+        eapply extends_cons_right. admit.
+        eapply IHdecls; eauto. cbn -[er]. intros kn'. rewrite !KernameSet.union_spec. intuition eauto.
+        eapply IHdecls; eauto.
+    + destruct (KernameSet.mem kn deps) eqn:e.
+      * assert (KernameSet.mem kn deps') as ->.
+        { eapply KernameSet.mem_spec in e.
+          now apply KernameSet.mem_spec. }
+        cbn [map]. cbn in er.
+        assert (trans_global_decl er = E.InductiveDecl (erase_mutual_inductive_body m)) as H0. admit.
+        rewrite -H0.
+        eapply extends_cons.
+        eapply IHdecls; eauto.
+        intros kn'; knset.
+      * destruct (KernameSet.mem kn deps') eqn:e'.
+        rewrite hign. cbn [map].
+        eapply extends_cons_right. admit.
+        eapply IHdecls; eauto. cbn -[er]. intros kn'. rewrite !KernameSet.union_spec. intuition eauto.
+        eapply IHdecls; eauto.
 Admitted.
+
+Lemma wf_trans_inductives (m : PCUICAst.PCUICEnvironment.mutual_inductive_body) {X_type X no nin} Σ hΣ kn prf :
+  forallb EWellformed.wf_inductive (map trans_oib (@Erasure.erase_ind X_type X no nin Σ hΣ kn m prf).(ind_bodies)).
+Proof.
+  destruct m.
+  cbn.
+  set (prf' := Erasure.erase_ind_obligation_1 _ _ _ _). clearbody prf'.
+  rewrite forallb_map.
+  set (fn := fun oib _ => _).
+  assert (forall x y, EWellformed.wf_inductive (trans_oib (fn x y))).
+  { intros [] hin. unfold fn.
+    apply (@erase_ind_body_wellformed no X_type X nin Σ hΣ kn _ _ (prf' _ hin)). }
+  clear -H. clearbody fn. clear -H.
+  induction ind_bodies; cbn => //.
+  rewrite IHind_bodies; eauto. rewrite andb_true_r; eauto.
+Qed.
 
 Lemma wf_erase_global_decl :
   forall (H := EWellformed.all_env_flags)
@@ -165,32 +220,24 @@ Proof.
       unfold trans_global_decl,trans_cst.
       cbn [EWellformed.wf_global_decl].
       unfold MCOption.option_default.
-      destruct EAst.cst_body eqn:heq.
+      destruct EAst.cst_body eqn:heq => //.
       set (deps := KernameSet.union _ _).
       unshelve eapply (erase_constant_body_correct'' (X_type := X_type) (decls := decls) seeds) in heq as [[t0 [T [[] ?]]]].
-      shelve. intros. eapply Erasure.fake_normalization; tea.
+      shelve. 4:exact w. intros. eapply Erasure.fake_normalization; tea.
       { intros. now rewrite (prf' _ H0). }
-      2:exact w.
       intros ->.
       eapply EWellformed.extends_wellformed; tea.
       set (prf'' := fun _ => _). clearbody prf''. cbn in prf''.
       rewrite erase_global_deps_erase_global.
-      clear.
-      induction decls. red; auto.
-      cbn -[Erasure.erase_global_decls_deps_recursive].
-      destruct a as [kn []].
-      set (prf0 := (fun (pf : _) => _)).
-      set (prf1 := (fun (pf : _) => _)).
-      set (prf2 := (fun (pf : _) => _)).
-      clearbody prf2.
-      cbn -[erase_global Erasure.erase_global_decls_deps_recursive].
-      destruct (KernameSet.mem _ _) eqn:e.
-      set (prf3 := (fun (pf : _) => _)).
-      clearbody prf3.
-
-
-Admitted.
-
+      eapply trans_env_erase_global_decls; tea. subst deps. cbn [Erasure.decl_deps cst_body cst_type].
+      intros kn'. rewrite !KernameSet.union_spec. intuition eauto.
+      pose proof (abstract_env_ext_wf _ w) as [].
+      eapply (PCUICWfEnvImpl.wf_fresh_globals _ X0).
+    * intros ->. cbn.
+      destruct o => //=.
+  - intros he => /=.
+    eapply wf_trans_inductives.
+Qed.
 
 Ltac invert_wf :=
   match goal with

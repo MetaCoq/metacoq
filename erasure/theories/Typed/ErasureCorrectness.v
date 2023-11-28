@@ -54,7 +54,7 @@ Qed.
 Section ECorrect.
 
   Existing Instance config.extraction_checker_flags.
-  Existing Instance PCUICSN.extraction_normalizing.
+  Context {no: @PCUICSN.normalizing_flags config.extraction_checker_flags}.
   Context {X_type : PCUICWfEnv.abstract_env_impl} {X : projT1 (projT2 X_type)}.
   Context {normalising_in:
     forall Σ : global_env_ext, wf_ext Σ -> PCUICWfEnv.abstract_env_ext_rel X Σ -> PCUICSN.NormalizationIn Σ}.
@@ -76,6 +76,26 @@ Proof.
     cbn.
     constructor; [easy|].
     apply IHl.
+Qed.
+
+Lemma erase_ind_body_wellformed Σ wfΣ kn mib oib wf :
+  EWellformed.wf_inductive (trans_oib (@erase_ind_body X_type X _ _ Σ wfΣ kn mib oib wf)).
+Proof.
+  generalize (erase_ind_body_correct _ wfΣ _ _ _ wf).
+  set (oib' := trans_oib _). clearbody oib'.
+  induction 1.
+  unfold EWellformed.wf_inductive.
+  destruct H0.
+  unfold EWellformed.wf_projections.
+  destruct wf as [[i []]].
+  destruct oib, oib'; cbn in *.
+  destruct ind_projs1; eauto.
+  depelim H0. destruct ind_ctors1; eauto.
+  now depelim H.
+  destruct ind_ctors1; eauto. cbn. depelim H. depelim H0.
+  depelim onProjections; cbn in *. depelim onConstructors. depelim onConstructors. depelim o; cbn in *.
+  destruct H. rewrite <- H. eapply Forall2_length in H2. rewrite <- H2, on_projs_all. rewrite <- cstr_args_length.
+  apply eqb_refl. depelim H. now depelim H0.
 Qed.
 
 Lemma erase_ind_correct Σ wfΣ kn mib wf :

@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EWcbvEval EGlobalEnv
   EWellformed ECSubst EInduction EWcbvEvalInd EEtaExpanded.
 
 Set Asymmetric Patterns.
@@ -42,7 +42,8 @@ Section OnSubterm.
     All (fun br => Q (#|br.1| + n) br.2) brs -> on_subterms Q n (tCase ci discr brs)
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
-  | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx).
+  | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx)
+  | on_prim p : has_tPrim -> primProp (Q n) p -> on_subterms Q n (tPrim p).
   Derive Signature for on_subterms.
 End OnSubterm.
 
@@ -727,6 +728,7 @@ Proof.
     eapply on_proj; auto.
     eapply on_fix; eauto. move/andP: H0 => [] _ wf. solve_all.
     eapply on_cofix; eauto. move/andP: H0 => [] _ wf. solve_all.
+    eapply on_prim; eauto. solve_all.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.

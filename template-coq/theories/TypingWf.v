@@ -847,6 +847,7 @@ Section WfRed.
       cbn. unfold wf_decl. simpl.
       intros ? [? ? ? ?] ?. simpl in *.
       intuition eauto with wf.
+    - constructor; eauto. eapply (OnOne2_All_All X); tea; intuition eauto.
   Qed.
 
 
@@ -1031,6 +1032,10 @@ Section TypingWf.
         solve_all; destruct a, b.
         all: intuition.
       + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition.
+
+    - split => //.
+      + constructor; intuition auto. solve_all.
+      + constructor => //. constructor => //. constructor; intuition auto.
   Qed.
 
   Lemma typing_all_wf_decl Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) :
@@ -1139,7 +1144,7 @@ Section TypingWf.
   Proof using Type.
     intros wfx; revert y.
     induction wfx using term_wf_forall_list_ind; intros [] wfy;
-    eapply wf_inv in wfy; simpl in wfy; simpl;
+    eapply wf_inv in wfy; simpl in wfy; simpl; try
     intros [= ?]; try intuition congruence.
   Qed.
 

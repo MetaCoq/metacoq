@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction.
 Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
@@ -36,7 +36,7 @@ Fixpoint lift n k t : term :=
   | tVar _ => t
   | tConst _ => t
   | tConstruct ind i args => tConstruct ind i (map (lift n k) args)
-  | tPrim _ => t
+  | tPrim p => tPrim (map_prim (lift n k) p)
   end.
 
 Notation lift0 n := (lift n 0).
@@ -71,6 +71,7 @@ Fixpoint subst s k u :=
     let mfix' := List.map (map_def (subst s k')) mfix in
     tCoFix mfix' idx
   | tConstruct ind i args => tConstruct ind i (map (subst s k) args)
+  | tPrim p => tPrim (map_prim (subst s k) p)
   | x => x
   end.
 
@@ -98,6 +99,7 @@ Fixpoint closedn k (t : term) : bool :=
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k')) mfix
   | tConstruct ind i args => forallb (closedn k) args
+  | tPrim p => test_prim (closedn k) p
   | _ => true
   end.
 
@@ -158,6 +160,14 @@ Hint Extern 0 (_ = _) => progress f_equal : all.
 #[global]
 Hint Unfold on_snd snd : all.
 
+#[global] Hint Extern 10 =>
+  match goal with
+  | [ H : _ × _ |- _ ] => destruct H
+  end : all.
+
+#[global] Hint Extern 10 =>
+  progress cbn beta match fix cofix iota zeta in * : all.
+
 Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
   f (snd x) = snd x <->
   on_snd f x = x.
@@ -201,12 +211,25 @@ Ltac change_Sk :=
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
+Ltac primProp :=
+  repeat match goal with
+    | [ H : (forall x, InPrim x _ -> _) |- _ ] => eapply InPrim_primProp in H
+    | [ H : is_true (test_prim _ _) |- _ ] => eapply test_prim_impl_primProp in H
+    | [ H : test_prim _ _ = true |- _ ] => eapply test_prim_impl_primProp in H
+    | [ |- is_true (test_prim _ _) ] => eapply primProp_impl_test_prim
+    | [ |- test_prim _ _ = true ] => eapply primProp_impl_test_prim
+    | [ H : primProp ?P ?p, H' : primProp ?Q ?p |- _ ] =>
+      let H'' := fresh in pose proof (H'' := primProp_conj H H'); clear H H'
+    end.
 
-Ltac solve_all :=
+Tactic Notation "solve_all_k" int(k) :=
   unfold tFixProp in *;
+  primProp; autorewrite with map;
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
-  intuition eauto 4 with all.
+  intuition eauto k with all.
+
+Ltac solve_all := solve_all_k 5.
 
 Ltac nth_leb_simpl :=
   match goal with
@@ -229,7 +252,6 @@ Proof.
     try (f_equal; auto; solve_all).
 
   - now elim (leb k n).
-  - destruct x; cbn. now rewrite H0.
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
@@ -248,7 +270,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   - elim (leb_spec k n); intros.
@@ -268,7 +290,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
   f_equal; auto. solve_all.
   f_equal. rewrite Nat.add_assoc.
@@ -316,7 +338,7 @@ Lemma simpl_subst_rec :
 Proof.
   intros M. induction M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -338,7 +360,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - repeat nth_leb_simpl.
@@ -363,7 +385,7 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => cbn -[plus]
             end; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 1. unfold lift at 4.
@@ -419,7 +441,7 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 2.
@@ -446,22 +468,19 @@ Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
+
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
-  - cbn. f_equal; auto.
-    rtoProp; solve_all.
-    rtoProp; solve_all.
-    destruct x; f_equal; cbn in *. eauto.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     simpl closed in *; unfold test_snd, test_def in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
@@ -479,24 +498,18 @@ Proof.
     assert (n - k > 0) by lia.
     assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
-  - f_equal; eauto; solve_all. destruct x; cbn in *; eauto.
-    now rewrite H.
 Qed.
 
 Lemma subst_closed n k t : closedn k t -> subst n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - cbn.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
     elim (Nat.leb_spec k n0); intros; try easy.
-  - cbn. f_equal; auto.
-    rtoProp; solve_all.
-    rtoProp; solve_all.
-    destruct x; f_equal; cbn in *. now apply a0.
 Qed.
 
 (* Lemma lift_to_extended_list_k Γ k : forall k', *)
@@ -522,7 +535,7 @@ Lemma subst_app_decomp l l' k t :
 Proof.
   induction t in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
          eauto; solve_all).
 
   - repeat nth_leb_simpl.
@@ -538,7 +551,7 @@ Lemma subst_app_simpl l l' k t :
 Proof.
   induction t in k |- * using term_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
          eauto; solve_all; eauto).
 
   - repeat nth_leb_simpl.
@@ -579,13 +592,12 @@ Lemma closedn_subst_eq s k k' t :
   closedn (k + k' + #|s|) t =
   closedn (k + k') (subst s k' t).
 Proof.
-  intros Hs. solve_all. revert Hs.
+  intros Hs. toAll. revert Hs.
   induction t in k' |- * using EInduction.term_forall_list_ind; intros;
     simpl in *;
     autorewrite with map => //;
     simpl closed in *; try change_Sk;
-    unfold test_def in *; simpl in *;
-    solve_all.
+    unfold test_def in *; simpl in *.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     destruct nth_error eqn:Heq.
@@ -607,18 +619,21 @@ Proof.
   - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2.
     rewrite IHt1 // IHt2 //.
+  - solve_all.
   - eapply All_forallb_eq_forallb; eauto.
   - rewrite IHt //.
     f_equal. eapply All_forallb_eq_forallb; tea. cbn.
     intros. specialize (H (#|x.1| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k) in H.
     now rewrite !Nat.add_assoc.
+  - solve_all.
   - eapply All_forallb_eq_forallb; tea. cbn.
     intros. specialize (H (#|m| + k')).
     now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
   - eapply All_forallb_eq_forallb; tea. cbn.
     intros. specialize (H (#|m| + k')).
     now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
+  - solve_all.
 Qed.
 
 Lemma closedn_subst s k t :

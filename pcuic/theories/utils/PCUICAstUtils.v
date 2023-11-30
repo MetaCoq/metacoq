@@ -50,11 +50,36 @@ Ltac change_Sk :=
     | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
   end.
 
+#[global] Hint Rewrite mapu_prim_equation_1 mapu_prim_equation_2 mapu_prim_equation_3 : map.
+
+Ltac to_prop :=
+  match goal with
+  | H : is_true (test_prim ?P ?p) |- _ => apply test_prim_primProp in H
+  | |- is_true (test_prim _ _) => apply primProp_test_prim
+  | H : tPrimProp ?P (map_prim ?f ?p) |- _ => apply primProp_map_inv in H
+  | |- tPrimProp _ (map_prim _ _) => apply primProp_map
+  end.
+
+Ltac merge_prop :=
+  match goal with
+  | H : tPrimProp ?P ?p, H' : tPrimProp ?Q ?p |- _ =>
+  pose proof (tPrimProp_prod H H'); clear H H'
+  end.
+
+Ltac tPrimProp_impl :=
+  match goal with
+  | H : tPrimProp ?P ?p |- tPrimProp ?Q ?p => apply (tPrimProp_impl H); clear H
+  end.
+
+#[global] Hint Extern 4 (tPrimProp _ _) => tPrimProp_impl : all.
+
 Ltac solve_all_one :=
   try lazymatch goal with
   | H: tCasePredProp _ _ _ |- _ => destruct H as [? [? ?]]
+  (* | H: tPrimProp _ ?p |- _ => destruct p as [? []]; cbn in H *)
   end;
   unfold tCaseBrsProp, tFixProp in *;
+  repeat to_prop; repeat merge_prop;
   autorewrite with map;
   rtoProp;
   try (
@@ -75,12 +100,20 @@ Ltac solve_all_one :=
     (eapply onctx_test; [eassumption|eassumption|]) ||
     (eapply test_context_k_eqP_id_spec; [eassumption|eassumption|]) ||
     (eapply test_context_k_eqP_eq_spec; [eassumption|]) ||
-    (eapply map_context_eq_spec; [eassumption|]));
+    (eapply map_context_eq_spec; [eassumption|]) ||
+    (eapply test_prim_eq_spec; [eassumption|]) ||
+    (eapply primProp_map_eq; [eassumption|idtac..]; cbn) ||
+    (eapply primProp_map_id; [eassumption|]) ||
+    (eapply primProp_mapu_id; [eassumption|eassumption| | ]) ||
+    (eapply test_primu_test_primu_tPrimProp; [eassumption|eassumption| | ]));
   repeat toAll; try All_map; try close_Forall;
+  try tPrimProp_impl;
   change_Sk; auto with all;
   intuition eauto 4 with all.
 
 Ltac solve_all := repeat (progress solve_all_one).
+
+#[global] Hint Extern 4 (_ =1 _) => intro : all.
 #[global] Hint Extern 10 => rewrite !map_branch_map_branch : all.
 #[global] Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
 

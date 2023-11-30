@@ -11,7 +11,11 @@ From MetaCoq.Quotation.ToPCUIC.QuotationOf.PCUIC Require Import PCUICAst.Instanc
 #[export] Instance quote_branch {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (branch term) := ltac:(destruct 1; exact _).
 #[local] Hint Extern 1 => assumption : typeclass_instances.
 
-#[export] Instance quote_term : ground_quotable term := ltac:(induction 1 using term_forall_list_ind; exact _).
+#[export] Instance quote_term : ground_quotable term.
+ induction 1 using term_forall_list_ind; try exact _.
+ destruct p as [? []]; cbn in X. exact _. exact _. destruct X as [? []].
+ exact _.
+Defined.
 
 Module QuotePCUICTerm <: QuoteTerm PCUICTerm.
   #[export] Instance quote_term : ground_quotable PCUICTerm.term := ltac:(cbv [PCUICTerm.term]; exact _).

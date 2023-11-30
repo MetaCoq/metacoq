@@ -55,6 +55,7 @@ Fixpoint csubst t k u :=
     let mfix' := List.map (map_def (csubst t k) (csubst t k')) mfix in
     tCoFix mfix' idx
   | tCast c kd c' => tCast (csubst t k c) kd (csubst t k c')
+  | tArray l v d ty => tArray l (List.map (csubst t k) v) (csubst t k d) (csubst t k ty)
   | x => x
   end.
 

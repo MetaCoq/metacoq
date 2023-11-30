@@ -97,6 +97,8 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - intros h; depelim h; constructor; cbn in X; intuition eauto.
+    depelim o; cbn in X; constructor; intuition eauto. solve_all.
 Qed.
 
 Lemma weakening_config_cumul_gen {cf1 cf2} pb Σ Γ M N :
@@ -142,6 +144,10 @@ Proof.
     * solve_all.
   - eapply cumul_Fix. solve_all.
   - eapply cumul_CoFix; solve_all.
+  - eapply cumul_Prim; solve_all.
+    destruct X; constructor; eauto.
+    * now eapply (@cmp_universe_config_impl cf1 cf2).
+    * solve_all.
   - eapply cumul_Ind; eauto. 2:solve_all.
     eapply @R_global_instance_weaken_subrel; [ .. | eassumption ].
     all: repeat change (@eq_universe ?cf) with (@compare_universe cf Conv).

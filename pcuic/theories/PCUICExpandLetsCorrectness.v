@@ -245,6 +245,7 @@ Proof.
     intros i. eapply closedP_mon. lia.
   - f_equal. solve_all.
   - f_equal; red in X, X0; solve_all.
+  - f_equal; solve_all.
 Qed.
 
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
@@ -446,6 +447,7 @@ Proof.
     cbn. rtoProp; intuition auto.
     unfold map_def; cbn. f_equal. rewrite a //. solve_all.
     rewrite b //. solve_all. now len.
+  - f_equal. solve_all. eapply b. solve_all.
 Qed.
 
 Lemma trans_subst_ctx (Γ : context) xs k t :
@@ -498,6 +500,7 @@ Proof.
   - f_equal.
     unfold tFixProp in X.
     rewrite !map_map_compose. autorewrite with map. solve_all_one.
+  - f_equal. solve_all.
 Qed.
 
 Lemma trans_subst_instance_ctx Γ u :
@@ -929,6 +932,7 @@ Section wtsub.
       All (fun d => wt Γ d.(dtype) × wt (Γ ,,, fix_context mfix) d.(dbody)) mfix
     | tEvar _ l => False
     | tRel i => wf_local Σ Γ
+    | tPrim p => primitive_typing_hyps (fun Σ Γ t T => wt Γ t) Σ Γ p
     | _ => unit
     end.
   Import PCUICGeneration PCUICInversion.
@@ -997,6 +1001,8 @@ Section wtsub.
       eapply All_prod.
       eapply (All_impl a). intros ? h; exact h.
       eapply (All_impl a0). intros ? h; eexists; tea.
+    - eapply inversion_Prim in h as (?&?&[]).
+      depelim p0; constructor; eauto. 1-2:now eexists. solve_all. now eexists. eauto.
   Qed.
 End wtsub.
 
@@ -2195,6 +2201,13 @@ Proof.
     rewrite -(trans_fix_context (shiftnP #|Γ| xpred0) _ idx) //.
     now rewrite trans_local_app in X0. cbn; congruence.
     intros. repeat split; reflexivity.
+
+  - cbn. eapply red_primArray_value. cbn. eapply All2_map. depelim wt.
+    eapply OnOne2_All_mix_left in X; tea.
+    eapply OnOne2_All2; tea; cbn; intuition eauto.
+
+  - cbn; depelim wt. eapply red_primArray_default; cbn; eauto.
+  - cbn; depelim wt. eapply red_primArray_type; cbn; eauto.
 Qed.
 
 Lemma trans_R_global_instance {Σ : global_env} Re Rle gref napp u u' :
@@ -2336,6 +2349,10 @@ Proof.
     cbn. eauto using subrelation_refl.
   - constructor. solve_all; eauto using subrelation_refl.
   - constructor; solve_all; eauto using subrelation_refl.
+  - constructor; depelim X0; cbn in X; constructor; cbn; intuition eauto.
+    * eapply a2; eauto using subrelation_refl.
+    * eapply a1; eauto using subrelation_refl.
+    * solve_all. eauto using subrelation_refl.
 Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {pb ϕ T U} :
@@ -3580,6 +3597,11 @@ Proof.
       split;auto;eassumption.
 Qed.
 
+Lemma trans_prim_ty p prim_ty : trans (prim_type p prim_ty) = prim_type (map_prim trans p) prim_ty.
+Proof.
+  destruct p as [? []]; simp prim_type; cbn; reflexivity.
+Qed.
+
 Theorem pcuic_expand_lets {cf} (Σ : SE.global_env_ext) Γ t T :
   wf Σ ->
   typing Σ Γ t T ->
@@ -3899,11 +3921,12 @@ Proof.
       eapply (subject_is_open_term (Σ := Σ)); tea.
       len in IHdb. eauto.
     + rewrite trans_wf_cofixpoint //.
-  - cbn. econstructor.
-    3:eapply trans_declared_constant. all:eauto.
-    destruct X0 as [s []]; exists s; split => //.
-    * cbn. rewrite H1 => //.
-    * cbn. now rewrite H2.
+  - cbn. rewrite trans_prim_ty. econstructor; eauto. rewrite prim_val_tag_map //.
+    * now eapply trans_declared_constant in H0.
+    * destruct p as [? []]; cbn in X0 |- *.
+      1-2:destruct X0 as [s []]; exists s; split => //; rewrite ?H1 ?H2 //=.
+      destruct X0; split => //. rewrite H1 //. rewrite H2 //.
+    * depelim X1; depelim X2; constructor; intuition eauto. cbn. solve_all.
   - eapply (type_ws_cumul_pb (pb:=Cumul)).
     + eauto.
     + now exists s.
@@ -5471,6 +5494,7 @@ Proof.
     4:eauto. len.
     cbn. now rewrite context_assumptions_smash_context context_assumptions_map /=.
     solve_all.
+  - depelim H0; constructor; cbn; eauto. solve_all.
 Qed.
 
 Lemma expanded_trans_local {cf:checker_flags}

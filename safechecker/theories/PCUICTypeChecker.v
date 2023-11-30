@@ -1310,6 +1310,126 @@ Section Typecheck.
 
   End check_mfix.
 
+  Local Notation check_eq_true b e :=
+    (if b as b' return (typing_result_comp (is_true b')) then ret eq_refl else raise e).
+
+  Equations? check_primitive_invariants (p : prim_tag) (decl : constant_body) : typing_result_comp (primitive_invariants p decl) :=
+   | primInt | decl :=
+      check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
+      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
+      check_eq_true (isSort decl.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
+      ret _
+   | primFloat | decl :=
+      check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
+      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
+      check_eq_true (isSort decl.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
+      ret _
+   | primArray | decl :=
+      let s := Universe.make (Level.lvar 0) in
+      check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
+      check_eq_true (eqb decl.(cst_universes) (Polymorphic_ctx array_uctx)) (Msg "primitive type is registered to a polymorphic constant") ;;
+      check_eq_true (eqb decl.(cst_type) (tImpl (tSort s) (tSort s))) (Msg "primitive type for arrays is registered to an axiom whose type is not of shape Type -> Type") ;;
+      ret _.
+  Proof.
+    all:try eapply eqb_eq in i.
+    all:try apply eqb_eq in i0.
+    - destruct (cst_type decl) => //. now exists u.
+    - destruct X1 as []. rewrite H in absurd; eauto.
+    - destruct X1 as []. apply absurd. now rewrite H1; apply eqb_refl.
+    - destruct X1 as []. apply absurd; rewrite H0; apply eqb_refl.
+    - destruct (cst_type decl) => //. now exists u.
+    - destruct X1 as []. rewrite H in absurd; eauto.
+    - destruct X1 as []. apply absurd. now rewrite H1; apply eqb_refl.
+    - destruct X1 as []. apply absurd; rewrite H0; apply eqb_refl.
+    - destruct (cst_type decl) => //. split => //. now apply eqb_eq in i1.
+    - destruct H as []. rewrite H in absurd; eauto.
+    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
+    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
+  Qed.
+
+  Section make_All.
+    Context {A} {B : A -> Type} (f : forall x : A, typing_result_comp (B x)).
+
+    Equations? make_All (l : list A) : typing_result_comp (All B l) :=
+    | [] := ret (All_nil)
+    | hd :: tl :=
+      hd' <- f hd ;;
+      tl' <- make_All tl ;;
+      ret (All_cons hd' tl').
+    Proof.
+      all:depelim X0; eauto.
+    Qed.
+
+  End make_All.
+
+  Section check_primitive.
+    Context (infer : forall (Γ : context) (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ),  ∥ Σ ;;; Γ |- t ▹ A ∥ }))
+       (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥).
+
+    Local Obligation Tactic := idtac.
+    Equations? check_primitive_typing (p : prim_val) : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ primitive_typing_hyps checking Σ Γ p ∥) :=
+      | (primInt; primIntModel i) := ret _
+      | (primFloat; primFloatModel f) := ret _
+      | (primArray; primArrayModel a) :=
+        check_eq_true (abstract_env_ext_wf_universeb X (Universe.make a.(array_level))) (Msg "primitive array level is not well-formed") ;;
+        check_type <- bdcheck infer Γ wfΓ a.(array_type) (tSort (Universe.make a.(array_level))) _ ;;
+        check_default <- bdcheck infer Γ wfΓ a.(array_default) a.(array_type) _ ;;
+        check_values <- make_All (fun x => bdcheck infer Γ wfΓ x a.(array_type) _) a.(array_value) ;;
+        ret _.
+    Proof.
+      all:intros.
+      all:try pose proof (abstract_env_ext_wf _ wfΣ) as [wfΣ'].
+      all:try specialize (wfΓ _ wfΣ).
+      1-2:do 2 constructor.
+      - eauto.
+      - sq. erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
+        eexists; eapply type_Sort; eauto.
+        now move/@wf_universe_reflect: i.
+      - specialize (check_type _ wfΣ) as [].
+        sq; eapply checking_typing in X0; eauto. now eexists.
+        erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
+        eexists; eapply type_Sort; eauto.
+        now move/@wf_universe_reflect: i.
+      - specialize (check_type _ wfΣ) as [].
+        sq; eapply checking_typing in X0; eauto. now eexists.
+        erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
+        eexists; eapply type_Sort; eauto.
+        now move/@wf_universe_reflect: i.
+      - specialize (check_type _ wfΣ) as [].
+        specialize (check_default _ wfΣ) as [].
+        assert (∥ Σ;;; Γ |- array_type a : tSort (Universe.make (array_level a)) ∥) as [].
+        { sq. eapply checking_typing in X0; eauto.
+          erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
+          eexists; eapply type_Sort; eauto. now move/@wf_universe_reflect: i. }
+        assert (∥ All (fun x : term => Σ;;; Γ |- x ◃ array_type a) (array_value a) ∥).
+        { induction check_values.
+          - repeat constructor.
+          - destruct IHcheck_values. specialize (p _ wfΣ) as [].
+            destruct wfΓ as [].
+            constructor. constructor; eauto. }
+        sq; constructor; eauto.
+        erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
+        now move/@wf_universe_reflect: i.
+      - destruct (abstract_env_ext_exists X) as [[Σ hΣ]].
+        specialize (H _ hΣ) as [tyh].
+        depelim tyh. eapply absurd. solve_all.
+        pose proof (abstract_env_ext_irr _ wfΣ hΣ). now subst Σ0.
+      - destruct (abstract_env_ext_exists X) as [[Σ hΣ]].
+        specialize (H _ hΣ) as [tyh].
+        specialize (check_type _ hΣ) as [].
+        depelim tyh. eapply absurd. intros.
+        pose proof (abstract_env_ext_irr _ wfΣ hΣ). now subst Σ0.
+      - destruct (abstract_env_ext_exists X) as [[Σ hΣ]].
+        specialize (H _ hΣ) as [tyh].
+        depelim tyh. eapply absurd. intros.
+        pose proof (abstract_env_ext_irr _ wfΣ hΣ). now subst Σ0.
+      - destruct (abstract_env_ext_exists X) as [[Σ hΣ]].
+        specialize (H _ hΣ) as [tyh].
+        erewrite <- abstract_env_ext_wf_universeb_correct in absurd; tea.
+        eapply absurd. depelim tyh.
+        now move/wf_universe_reflect: wfl.
+    Qed.
+  End check_primitive.
 
   Lemma chop_firstn_skipn {A} n (l : list A) : chop n l = (firstn n l, skipn n l).
   Proof using Type.
@@ -1322,9 +1442,6 @@ Section Typecheck.
     induction 1; try constructor; auto.
     now exists t.
   Qed.
-
-  Local Notation check_eq_true b e :=
-    (if b as b' return (typing_result_comp (is_true b')) then ret eq_refl else raise e).
 
   Equations infer (Γ : context) (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term)
   : typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹ A ∥ }) by struct t :=
@@ -1472,10 +1589,9 @@ Section Typecheck.
       | exist (Some prim_ty) eqp with inspect (abstract_env_lookup X prim_ty) := {
         | exist (Some (ConstantDecl d)) HH =>
             let ty := d.(cst_type) in
-            check_eq_true (eqb d.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
-            check_eq_true (eqb d.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
-            check_eq_true (isSort d.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
-            ret (tConst prim_ty []; _)
+            inv <- check_primitive_invariants (prim_val_tag p) d ;;
+            ty <- check_primitive_typing infer Γ HΓ p ;;
+            ret (prim_type p prim_ty; _)
         | _ => raise (UndeclaredConstant prim_ty)
         }
     }.
@@ -2561,84 +2677,61 @@ Section Typecheck.
     congruence.
   Qed.
 
+  (* Primitives *)
   Next Obligation.
-    eapply eqb_eq in i. eapply eqb_eq in i0.
+    specialize (ty _ wfΣ) as []. sq. econstructor; eauto.
+    erewrite abstract_primitive_constant_correct in eqp; eauto.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
-    split. econstructor. rewrite eqp.
-    erewrite abstract_primitive_constant_correct; try reflexivity. eassumption.  red.
     apply declared_constant_from_gen.
     unfold declared_constant_gen. now rewrite -HH.
-    destruct (cst_type d) eqn:hty => //.
-    exists u. split => //.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
-    depelim X1.
-    eapply eqb_eq in i. eapply eqb_eq in i0.
+    cbn in *. specialize_Σ wfΣ.
+    eapply absurd. intros ? h.
+    pose proof (abstract_env_ext_irr _ wfΣ h). subst Σ0. sq.
+    now depelim X1.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof (heΣ _ wfΣ) as [heΣ].
+    cbn in *. specialize_Σ wfΣ. destruct X1 as [].
+    depelim X1. eapply absurd; eauto.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
+    erewrite abstract_primitive_constant_correct in eqp; eauto.
     rewrite e1 in eqp. noconf eqp.
-    symmetry in HH.
-    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
-    rewrite d0 in HH; noconf HH.
-    destruct p1 as [s' []]. rewrite H in absurd. now apply absurd.
+    unshelve eapply declared_constant_to_gen in d0; eauto. 3:eapply heΣ0.
+    unfold declared_constant_gen in d0. rewrite d0 in HH. now noconf HH.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
-    depelim X1.
-    eapply eqb_eq in i.
-    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
-    rewrite e1 in eqp. noconf eqp.
-    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
-    symmetry in HH. rewrite d0 in HH; noconf HH.
-    destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
-  Qed.
-
-
-  Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
-    depelim X1.
-    rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in HH.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
-    rewrite e1 in eqp. noconf eqp.
-    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d0; eauto.
-    symmetry in HH. rewrite d0 in HH; noconf HH.
-    destruct p1 as [s' []]. apply absurd. case: eqb_spec => //.
-  Qed.
-
-  Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
+    pose proof (heΣ _ wfΣ) as [heΣ].
+    cbn in *. specialize_Σ wfΣ. destruct X1 as [].
     depelim X1.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
+    erewrite abstract_primitive_constant_correct in eqp; eauto.
     rewrite e1 in eqp. noconf eqp.
-    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d; eauto.
-    symmetry in e0. rewrite d in e0; noconf e0.
+    unshelve eapply declared_constant_to_gen in d; eauto. 3:eapply heΣ0.
+    unfold declared_constant_gen in d. rewrite d in e0. now noconf e0.
   Qed.
-
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
+    pose proof (heΣ _ wfΣ) as [heΣ].
+    cbn in *. specialize_Σ wfΣ. destruct X1 as [].
     depelim X1.
     rewrite -(abstract_env_lookup_correct' _ (Σ := Σ)) // in e0.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in eqp.
+    erewrite abstract_primitive_constant_correct in eqp; eauto.
     rewrite e1 in eqp. noconf eqp.
-    destruct (hΣ _ wfΣ). unshelve eapply declared_constant_to_gen in d; eauto.
-    symmetry in e0. rewrite /declared_constant_gen in d.
-    rewrite e0 in d; noconf d.
+    unshelve eapply declared_constant_to_gen in d; eauto. 3:eapply heΣ0.
+    unfold declared_constant_gen in d. rewrite d in e0. now noconf e0.
   Qed.
-
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    cbn in *. specialize_Σ wfΣ ; sq.
+    pose proof (heΣ _ wfΣ) as [heΣ].
+    cbn in *. specialize_Σ wfΣ. destruct X1 as [].
     depelim X1.
-    rewrite (abstract_primitive_constant_correct _ _ _ wfΣ) in e0.
-    unfold prim_val_tag in e1. congruence.
+    erewrite abstract_primitive_constant_correct in e0; eauto.
+    rewrite e1 in e0. noconf e0.
   Qed.
 
   Definition check_isType := infer_isType infer.

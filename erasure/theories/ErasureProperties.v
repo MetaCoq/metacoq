@@ -2,7 +2,7 @@
 From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
-From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prelim
+From MetaCoq.Erasure Require Import EPrimitive ELiftSubst EGlobalEnv EWcbvEval Extract Prelim
      ESubstitution EArities EDeps.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICAstUtils PCUICConversion PCUICSigmaCalculus
@@ -252,6 +252,8 @@ Proof.
     + subst types. eapply conv_context_app_same; auto.
     + subst types. eapply conv_context_wf_local_app; eauto.
     + assumption.
+  - econstructor. depelim H2; constructor. depelim X5; depelim X2; constructor; eauto.
+    solve_all.
 Qed.
 
 
@@ -408,6 +410,10 @@ Proof.
   eapply erases_ctx_ext. eassumption. unfold app_context.
   f_equal.
   eapply fix_context_subst_instance. all: eauto.
+
+  - cbn; constructor. depelim H4.
+    depelim X2; depelim X5; repeat constructor; cbn; eauto.
+    solve_all.
 Qed.
 
 Lemma erases_subst_instance :
@@ -484,6 +490,9 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
     eapply b0. eauto. now rewrite app_length fix_context_length.
+  - depelim H. depelim X0; solve_all.
+    depelim X; solve_all. eapply primProp_impl_test_prim.
+    constructor; intuition eauto. solve_all.
 Qed.
 
 (** Auxilliary notion of wellformedness on PCUIC to prove that erased terms are wellformed *)
@@ -505,7 +514,7 @@ Section wellscoped.
   Fixpoint wellformed (t : term) : bool :=
   match t with
   | tRel i => true
-  | tPrim p => true
+  | tPrim p => test_prim wellformed p
   | tEvar ev args => List.forallb (wellformed) args
   | tLambda _ N M => wellformed N && wellformed M
   | tApp u v => wellformed u && wellformed v
@@ -557,6 +566,7 @@ Section wellscoped.
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - solve_all. destruct a as [s []], b.
       unfold test_def. len in i0. now rewrite i i0.
+    - depelim X1; solve_all; constructor; eauto.
   Qed.
 
   Lemma welltyped_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a} : welltyped Σ Γ a -> wellformed Σ a.
@@ -692,6 +702,8 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b.
     eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
+  - depelim H. solve_all. primProp.
+    depelim X0; depelim X1; repeat constructor; cbn; intuition eauto. solve_all.
 Qed.
 
 

@@ -583,7 +583,7 @@ Proof.
     apply bigprod_map; [|exact ta.2].
     intros.
     exact (f _ All_nil _ X).
-  - exact (annot_mkApps ta argsa).
+  - refine (annot_mkApps _ argsa). cbn. cbn in ta. exact ta.
 Defined.
 
 Definition annot_dearg im cm {t : term} (ta : annots box_type t) : annots box_type (dearg im cm t) :=

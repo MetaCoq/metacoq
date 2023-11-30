@@ -26,7 +26,7 @@ Definition well_subst_usubst {cf} (Σ:global_env_ext) (wfΣ : wf Σ) Γ σ Δ :
   Σ ;;; Δ ⊢ σ : Γ ->
   usubst Γ σ Δ.
 Proof.
-  intuition.
+  intuition eauto with *.
 Defined.
 
 Definition well_subst_closed_subst {cf} (Σ:global_env_ext) (wfΣ : wf Σ) Γ σ Δ :
@@ -326,6 +326,7 @@ Proof.
          rewrite <- shiftnP_add.
          rewrite fix_context_length.
          rewrite (All2_length X). eauto.
+   - cbn. eapply cumul_Prim. depelim X; cbn in HfreeA, HfreeB; rtoProp; constructor; cbn; eauto. solve_all.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Ind.
      * repeat rewrite map_length; eauto.
      * repeat toAll.
@@ -351,6 +352,11 @@ Lemma inst_convSpec {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {�
   Σ ;;; Δ |- A.[σ] =s B.[σ].
 Proof.
   apply inst_cumulSpec.
+Qed.
+
+Lemma inst_prim_type σ p pty : (prim_type p pty).[σ] = prim_type (map_prim (inst σ) p) pty.
+Proof.
+  destruct p as [? []] => //.
 Qed.
 
 Lemma type_inst {cf : checker_flags} : env_prop
@@ -574,8 +580,10 @@ Proof.
     * now apply inst_wf_cofixpoint.
     * reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv Δ σ hΔ hσ.
-    cbn. econstructor; tea.
+  - intros Σ wfΣ Γ wfΓ p pty cdecl _ hp hdecl pinv hty hind Δ σ hΔ hσ.
+    cbn. rewrite inst_prim_type. econstructor; tea.
+    1-2:now rewrite prim_val_tag_map.
+    depelim hind; constructor; cbn; eauto. solve_all.
 
   - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht hB ihB hcum Δ σ hΔ hσ.
     eapply type_Cumul.

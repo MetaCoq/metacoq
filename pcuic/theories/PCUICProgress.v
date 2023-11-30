@@ -256,12 +256,14 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       wf_cofixpoint Σ.1 mfix ->
       P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
-  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
-    PΓ Σ Γ ->
-    primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
-    declared_constant Σ.1 prim_ty cdecl ->
-    primitive_invariants cdecl ->
-    P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+  (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+      PΓ Σ Γ ->
+      primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+      declared_constant Σ prim_ty cdecl ->
+      primitive_invariants (prim_val_tag p) cdecl ->
+      primitive_typing_hyps typing Σ Γ p ->
+      primitive_typing_hyps P Σ Γ p ->
+      P Σ Γ (tPrim p) (prim_type p prim_ty)) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
       PΓ Σ Γ ->
@@ -437,12 +439,16 @@ Lemma typing_ind_env `{cf : checker_flags} :
         wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
-        PΓ Σ Γ ->
-        primitive_constant Σ.1 (prim_val_tag p) = Some prim_ty ->
-        declared_constant Σ.1 prim_ty cdecl ->
-        primitive_invariants cdecl ->
-        P Σ Γ (tPrim p) (tConst prim_ty [])) ->
+
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : prim_val) prim_ty cdecl,
+      PΓ Σ Γ ->
+      primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
+      declared_constant Σ prim_ty cdecl ->
+      primitive_invariants (prim_val_tag p) cdecl ->
+      primitive_typing_hyps typing Σ Γ p ->
+      primitive_typing_hyps P Σ Γ p ->
+      P Σ Γ (tPrim p) (prim_type p prim_ty)) ->
+
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
         PΓ Σ Γ ->
@@ -554,15 +560,27 @@ Proof.
   now eapply ws_cumul_pb_Sort_Prod_inv in w.
 Qed.
 
-Lemma typing_spine_axiom {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ cst u cdecl args T :
+Lemma typing_spine_axiom {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ cst u cdecl args args' T :
   declared_constant Σ cst cdecl ->
   cdecl.(cst_body) = None ->
-  typing_spine Σ Γ (tConst cst u) args T -> args = [].
+  typing_spine Σ Γ (mkApps (tConst cst u) args) args' T -> args' = [].
+Proof.
+  intros hdecl hb.
+  induction args' => //.
+  intros sp. depelim sp.
+  now eapply invert_cumul_axiom_prod in w.
+Qed.
+
+Lemma typing_spine_prim_type {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ prim prim_ty cdecl args T :
+  declared_constant Σ prim_ty cdecl ->
+  primitive_invariants (prim_val_tag prim) cdecl ->
+  typing_spine Σ Γ (prim_type prim prim_ty) args T -> args = [].
 Proof.
   intros hdecl hb.
   induction args => //.
-  intros sp. depelim sp.
-  now eapply invert_cumul_axiom_prod in w.
+  destruct prim as [? []]; cbn in *; intros sp; destruct hb; simp prim_type in *.
+  1-2:destruct a0; eapply (typing_spine_axiom _ _ _ _ []) in sp; tea.
+  eapply (typing_spine_axiom _ _ _ _ [array_type a0]) in sp; tea.
 Qed.
 
 Lemma typing_value_head_napp {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T :
@@ -621,9 +639,9 @@ Proof.
     now constructor.
   * (* primitive *)
     cbn.
-    eapply inversion_Prim in hfn as [prim_ty [cdecl [hwf hp hdecl [s []]]]]; tea.
-    eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. now exists s. }
-    now eapply typing_spine_axiom, app_tip_nil in hcum.
+    eapply inversion_Prim in hfn as [prim_ty [cdecl [hwf hp hdecl hinv hty hcum']]]; tea.
+    eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. }
+    now eapply typing_spine_prim_type, app_tip_nil in hcum.
 Qed.
 
 Lemma typing_value_head {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} fn args hd T :

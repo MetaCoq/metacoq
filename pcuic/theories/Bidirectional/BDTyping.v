@@ -124,8 +124,9 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 | infer_Prim p prim_ty cdecl :
    primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
    declared_constant Σ prim_ty cdecl ->
-   primitive_invariants cdecl ->
-   Σ ;;; Γ |- tPrim p ▹ tConst prim_ty []
+   primitive_invariants (prim_val_tag p) cdecl ->
+   primitive_typing_hyps checking Σ Γ p ->
+   Σ ;;; Γ |- tPrim p ▹ prim_type p prim_ty
 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
 | infer_sort_Sort t T u:
@@ -196,6 +197,7 @@ Proof.
           | H : checking _ _ _ _ |- _ => apply checking_size in H
           | H : wf_local_bd _ _ |- _ => apply (All_local_env_sorting_size _ _ (checking_size _) (infering_sort_size _) _ _) in H
           | H : wf_local_bd_rel _ _ _ |- _ => apply (All_local_rel_sorting_size (checking_size _) (infering_sort_size _) _ _) in H
+          | H : primitive_typing_hyps _ _ _ _ |- _ => apply (primitive_typing_hyps_size _ (checking_size _)) in H
           end ;
     match goal with
     | H : All2i _ _ _ _ |- _ => idtac
@@ -448,8 +450,10 @@ Section BidirectionalInduction.
     (forall (Γ : context) p prim_ty cdecl,
       primitive_constant Σ (prim_val_tag p) = Some prim_ty ->
       declared_constant Σ prim_ty cdecl ->
-      primitive_invariants cdecl ->
-      Pinfer Γ (tPrim p) (tConst prim_ty [])) ->
+      primitive_invariants (prim_val_tag p) cdecl ->
+      primitive_typing_hyps checking Σ Γ p ->
+      primitive_typing_hyps (fun _ => Pcheck) Σ Γ p ->
+      Pinfer Γ (tPrim p) (prim_type p prim_ty)) ->
 
     (forall (Γ : context) (t T : term) (u : Universe.t),
       Σ ;;; Γ |- t ▹ T ->
@@ -681,6 +685,12 @@ Section BidirectionalInduction.
           cbn. lia.
 
     - unshelve eapply HPrim; eauto.
+      simpl in IH.
+      destruct p1; constructor; eauto.
+      applyIH. applyIH. simpl in IH.
+      clear -IH. induction hvalue; constructor; eauto.
+      eapply (IH (check_cons _ _ _ p)). simpl; lia.
+      eapply IHhvalue. intros; simpl. eapply IH. simpl. lia.
 
     - destruct i.
       unshelve (eapply HiSort ; try eassumption) ; try eassumption.

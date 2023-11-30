@@ -34,6 +34,7 @@ Lemma term_forall_list_ind :
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
     (forall i, P (tInt i)) ->
     (forall f, P (tFloat f)) ->
+    (forall u arr def ty, Forall P arr -> P def -> P ty -> P (tArray u arr def ty)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -77,6 +78,7 @@ Lemma term_forall_list_rect :
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tCoFix m n)) ->
     (forall i, P (tInt i)) ->
     (forall f, P (tFloat f)) ->
+    (forall u arr def ty, All P arr -> P def -> P ty -> P (tArray u arr def ty)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.

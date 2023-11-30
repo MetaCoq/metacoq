@@ -820,6 +820,17 @@ Proof using Type.
   eauto.
 Qed.
 
+Lemma cumul_prop_subst_instance_level Σ univs u u' (l : Level.t) :
+  wf Σ.1 ->
+  consistent_instance_ext Σ univs u ->
+  consistent_instance_ext Σ univs u' ->
+  eq_univ_prop (subst_instance u (Universe.make l))
+    (subst_instance u' (Universe.make l)).
+Proof using Type.
+  intros wfΣ cu cu'. red.
+  unfold subst_instance; cbn. intuition.
+Qed.
+
 Lemma cumul_prop_subst_instance_instance Σ univs u u' (i : Instance.t) :
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
@@ -866,6 +877,10 @@ Proof using Type.
     eapply All2_map.
     eapply All_All2; tea. cbn.
     intuition auto. rewrite /id. reflexivity.
+  - cbn. constructor; splits; simpl.
+    destruct p as [? []]; constructor; cbn in *; intuition eauto.
+    unshelve eapply cumul_prop_subst_instance_level; tea. exact (array_level a).
+    solve_all.
 Qed.
 
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' :
@@ -885,7 +900,7 @@ Proof using Type.
     eapply All2_impl.
     eapply All_All_All2; eauto. lia.
     simpl; intros.
-    intuition.
+    intuition auto with *.
 Qed.
 
 Lemma untyped_subslet_inds Γ ind u u' mdecl :
@@ -1324,9 +1339,12 @@ Proof using Hcf Hcf'.
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.
 
-  - depelim X2.
-    eapply inversion_Prim in X1 as [prim_ty' [cdecl' []]]; tea.
-    rewrite H in e. noconf e. eapply cumul_cumul_prop; eauto. pcuic.
+  - depelim X4.
+    eapply inversion_Prim in X3 as [prim_ty' [cdecl' []]]; tea. depelim o.
+    1-2:rewrite H in e; noconf e; eapply cumul_cumul_prop; eauto; pcuic.
+    cbn in H, e2. rewrite H in e2. noconf e2. eapply cumul_cumul_prop; eauto; pcuic.
+    move: w; simp prim_type. intro. etransitivity; tea. constructor; fvs. cbn. fvs.
+    depelim X1. fvs. eapply eq_term_leq_term. symmetry; repeat constructor; eauto.
 Qed.
 
 End no_prop_leq_type.

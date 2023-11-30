@@ -12,7 +12,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICFirstorder.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping PCUICRetypingEnvIrrelevance.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness ErasureFunction.
+From MetaCoq.Erasure Require Import EPrimitive EAstUtils ELiftSubst EArities Extract Prelim EDeps ErasureProperties ErasureCorrectness ErasureFunction.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -152,6 +152,16 @@ Proof.
     eapply All2_In_right in H; eauto.
     destruct H as [[def [Hty Hdef]]].
     eapply Hdef; eauto.
+
+  - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
+    move: hin.
+    funelim (prim_global_deps _ _); try knset.
+    rewrite knset_in_fold_left. depelim H0; cbn in *.
+    depelim X. depelim p1. depelim H. depelim X.
+    intuition eauto.
+    destruct H as [a [hin inkn]]. cbn in hin.
+    eapply All2_All_mix_left in a2; tea.
+    eapply All2_In_right in a2 as [[x []]]; tea. eapply d1; tea.
 Qed.
 
 Global Remove Hints erases_deps_eval : core.
@@ -289,7 +299,18 @@ Proof.
     eapply In_Forall in Σer.
     eapply Forall_All in Σer.
     eapply Forall2_All2 in H.
-    ELiftSubst.solve_all. Unshelve.
+    ELiftSubst.solve_all.
+  - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
+    depelim H; depelim H0. depelim X; depelim X0; depelim p1; constructor;
+    noconf H; cbn; simp prim_global_deps in Σer; simpl in *.
+    eapply e0; eauto.
+    red in Σer. intros kn; specialize (Σer kn).
+    rewrite knset_in_fold_left in Σer. intuition eauto. cbn.
+    eapply All_Forall.
+    eapply includes_deps_fold in Σer as [? Σer].
+    eapply In_Forall in Σer.
+    eapply Forall_All in Σer.
+    solve_all.
 Qed.
 
 Lemma erases_deps_weaken kn d (Σ : global_env) (Σ' : EAst.global_declarations) t :
@@ -343,6 +364,8 @@ Proof.
     red in H |- *.
     rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.(proj_ind)) kn); try congruence.
     eapply lookup_env_Some_fresh in H. subst kn. destruct X1. contradiction.
+  - solve_all. depelim H; econstructor; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma lookup_env_ext {Σ kn kn' d d'} :
@@ -1216,15 +1239,15 @@ From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Lemma erase_brs_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ p ts wt :
   erase_brs X_type X Γ p ts wt =
-  map_All (fun br wt => (erase_context (bcontext br), erase X_type X _ (bbody br) wt)) ts wt.
+  All_Forall.map_All (fun br wt => (erase_context (bcontext br), erase X_type X _ (bbody br) wt)) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //. apply erase_irrel.
   rewrite -H. eapply erase_irrel.
 Qed.
 
 Lemma erase_fix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_fix X_type X Γ ts wt = map_All (fun d wt =>
+  erase_fix X_type X Γ ts wt = All_Forall.map_All (fun d wt =>
     let dbody' := erase X_type X _ (dbody d) (fun Σ abs => proj2 (wt Σ abs)) in
     let dbody' := if isBox dbody' then
         match d.(dbody) with
@@ -1234,7 +1257,7 @@ Lemma erase_fix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_e
     in
     {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //.
   rewrite (fst (erase_irrel _ _) _ _ _ _ (fun (Σ : global_env_ext) (abs : abstract_env_ext_rel X Σ) =>
     (map_All_obligation_1 x xs h Σ abs).p2)).
@@ -1243,11 +1266,11 @@ Proof.
 Qed.
 
 Lemma erase_cofix_eq X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ ts wt :
-  erase_cofix X_type X Γ ts wt = map_All (fun d wt =>
+  erase_cofix X_type X Γ ts wt = All_Forall.map_All (fun d wt =>
     let dbody' := erase X_type X _ (dbody d) wt in
     {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
 Proof.
-  funelim (map_All _ ts wt); cbn; auto.
+  funelim (All_Forall.map_All _ ts wt); cbn; auto.
   f_equal => //. f_equal => //.
   apply erase_irrel.
   rewrite -H. eapply erase_irrel.
@@ -1407,7 +1430,7 @@ Section wffix.
     | tConstruct ind c _ => true
     | tVar _ => true
     | tBox => true
-    | tPrim _ => true
+    | tPrim p => test_prim wf_fixpoints p
     end.
 
 End wffix.
@@ -1420,7 +1443,7 @@ Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) (efl := all
 Proof.
   intros ed.
   induction ed using erases_deps_forall_ind; intros => //;
-   try solve [cbn in *; unfold wf_fix in *; rtoProp; intuition eauto; solve_all].
+   try solve [cbn in *; unfold wf_fix in *; rtoProp; intuition eauto; PCUICAstUtils.solve_all].
   - cbn. red in H0. rewrite H0 //.
   - cbn -[lookup_constructor].
     cbn. now destruct H0 as [[-> ->] ->].
@@ -1428,21 +1451,24 @@ Proof.
     cbn. apply/andP; split. apply/andP; split.
     * now destruct H0 as [-> ->].
     * now move/andP: H6.
-    * move/andP: H6; solve_all.
+    * move/andP: H6; PCUICAstUtils.solve_all.
   - cbn -[lookup_projection] in *. apply/andP; split; eauto.
     now rewrite (declared_projection_lookup H0).
+  - cbn in H, H0 |- *. solve_all_k 7.
 Qed.
 
 Lemma erases_wf_fixpoints Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' ->
   ErasureProperties.wellformed Σ t -> wf_fixpoints t'.
 Proof.
-  induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat solve_all].
+  induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat PCUICAstUtils.solve_all].
   - move/andP => []. rewrite (All2_length X) => -> /=. unfold test_def in *.
     eapply Forall2_All2 in H.
-    eapply All2_All2_mix in X; tea. solve_all.
+    eapply All2_All2_mix in X; tea. PCUICAstUtils.solve_all.
     destruct b0; eapply erases_isLambda in H1; tea.
   - move/andP => []. rewrite (All2_length X) => -> /=.
-    unfold test_def in *. solve_all.
+    unfold test_def in *. PCUICAstUtils.solve_all.
+  - depelim H; depelim H0; depelim X; depelim X0; solve_all. noconf H.
+    solve_all_k 7. cbn in H0. constructor; cbn; rtoProp; intuition eauto. solve_all.
 Qed.
 
 Lemma erase_wf_fixpoints (efl := all_env_flags) {X_type X} univs wfΣ {Γ t} wt
@@ -2117,7 +2143,7 @@ Lemma In_map_All {A B C : Type} {Q : C -> Type} {P : C -> A -> Prop}
   (fn : forall x : A, (forall y : C, Q y -> P y x) -> B) (l : list A) (Hl : forall y : C, Q y -> ∥ All (P y) l ∥) :
   forall x, In x l ->
     exists D : forall y : C, Q y -> P y x,
-      In (fn x D) (map_All fn l Hl).
+      In (fn x D) (All_Forall.map_All fn l Hl).
 Proof.
   induction l; cbn => //.
   intros x [].
@@ -2849,8 +2875,7 @@ Proof.
   apply: (PCUICFirstorder.firstorder_value_inds Σ Γ).
   intros i n ui u args pandi hty hfo ih isp.
   assert (Forall2 (erases Σ Γ) args (map (flip compile_value_erase []) args)).
-  { solve_all. eapply All_All2; tea.
-    cbn. intros x [fo hx]. exact hx. }
+  { PCUICAstUtils.solve_all. }
   unshelve epose proof (erases_mkApps Σ Γ (tConstruct i n ui) (EAst.tConstruct i n []) args _ _ H).
   now constructor.
   now rewrite compile_value_erase_mkApps app_nil_r.

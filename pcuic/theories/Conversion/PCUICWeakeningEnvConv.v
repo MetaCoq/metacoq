@@ -125,6 +125,8 @@ Proof using P Pcmp cf.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - inversion 1; subst; constructor.
+    depelim X1; constructor; cbn in X; intuition eauto. solve_all.
 Qed.
 
 Lemma weakening_env_red1 Σ Σ' Γ M N :
@@ -198,6 +200,10 @@ Proof.
     * solve_all.
   - eapply cumul_Fix; solve_all.
   - eapply cumul_CoFix; solve_all.
+  - eapply cumul_Prim; solve_all.
+    destruct X; constructor; eauto.
+    * unfold compare_universe. eapply subrel_extends_eq; tea.
+    * solve_all.
   - eapply cumul_Ind; eauto. 2:solve_all.
     eapply @R_global_instance_weaken_env. 1,2,6:eauto. all: tc.
   - eapply cumul_Construct; eauto. 2:solve_all.

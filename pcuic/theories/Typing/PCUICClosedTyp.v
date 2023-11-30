@@ -295,6 +295,11 @@ Proof.
     destruct X0 as [s [Hs cl]].
     now rewrite andb_true_r in cl.
     Unshelve. all:eauto.
+
+  - destruct p as [[] pv]; cbn in X0 |- *; simp prim_type => //.
+    depelim pv. simp prim_type. cbn. depelim X2.
+    move/andP: hdef => [] -> ->; rewrite !andb_true_r. split => //.
+    solve_all.
 Qed.
 
 Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind} :
@@ -806,6 +811,8 @@ Proof.
     rewrite -(fix_context_length mfix0).
     rewrite on_ctx_free_vars_extend // hctx.
     now apply on_free_vars_fix_context.
+  - cbn. toAll. solve_all.
+    eapply OnOne2_impl_All_r; eauto; solve_all.
 Qed.
 
 Lemma red_on_free_vars {cf} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
@@ -839,7 +846,7 @@ Lemma term_closedn_list_ind :
     (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tFix m n)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tCoFix m n)) ->
-    (forall k p, P k (tPrim p)) ->
+    (forall k p, tPrimProp (P k) p -> P k (tPrim p)) ->
     forall k (t : term), closedn k t -> P k t.
 Proof.
   intros until t. revert k t.
@@ -928,6 +935,12 @@ Proof.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.
     move/andP: clt => [cd cmfix]. apply auxm; auto.
+
+  - destruct prim as [? []]; cbn in clt |- *; rtoProp; intuition eauto.
+    move: H. clear -auxt. generalize (array_value a).
+    fix auxl 1. destruct l; intro.
+    * constructor.
+    * cbn in H; move/andP: H => []; eauto.
 Defined.
 
 Lemma term_noccur_between_list_ind :
@@ -951,7 +964,7 @@ Lemma term_noccur_between_list_ind :
     (forall k n (s : projection) (t : term), P k n t -> P k n (tProj s t)) ->
     (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tFix m i)) ->
     (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tCoFix m i)) ->
-    (forall k n p, P k n (tPrim p)) ->
+    (forall k n p, tPrimProp (P k n) p -> P k n (tPrim p)) ->
     forall k n (t : term), noccur_between k n t -> P k n t.
 Proof.
   intros until t. revert k n t.
@@ -1034,4 +1047,11 @@ Proof.
     simpl in clt. move/andP: clt  => [clt cll].
     simpl in clt. move/andP: clt. intuition auto.
     move/andP: clt => [cd cmfix]. apply auxm; auto.
+
+
+  - destruct prim as [? []]; cbn in clt |- *; rtoProp; intuition eauto.
+    move: H. clear -auxt. generalize (array_value a).
+    fix auxl 1. destruct l; intro.
+    * constructor.
+    * cbn in H; move/andP: H => []; eauto.
 Defined.

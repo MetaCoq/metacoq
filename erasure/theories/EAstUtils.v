@@ -2,7 +2,7 @@
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Kernames.
-From MetaCoq.Erasure Require Import EAst.
+From MetaCoq.Erasure Require Import EPrimitive EAst.
 Require Import ssreflect ssrbool.
 
 Global Hint Resolve app_tip_nil : core.
@@ -373,29 +373,41 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tPrim p => "Prim(" ^ PCUICPrimitive.string_of_prim string_of_term p ^ ")"
+  | tPrim p => "Prim(" ^ EPrimitive.string_of_prim string_of_term p ^ ")"
   end.
 
 (** Compute all the global environment dependencies of the term *)
 
-Fixpoint term_global_deps (t : EAst.term) :=
+Section PrimDeps.
+  Context (deps : term -> KernameSet.t).
+
+  Equations prim_global_deps (p : prim_val term) : KernameSet.t :=
+   | (primInt; primIntModel i) => KernameSet.empty
+   | (primFloat; primFloatModel f) => KernameSet.empty
+   | (primArray; primArrayModel a) =>
+      List.fold_left (fun acc x => KernameSet.union (deps x) acc) a.(array_value) (deps a.(array_default)).
+
+End PrimDeps.
+
+Fixpoint term_global_deps (t : term) :=
   match t with
-  | EAst.tConst kn => KernameSet.singleton kn
-  | EAst.tConstruct {| inductive_mind := kn |} _ args =>
+  | tConst kn => KernameSet.singleton kn
+  | tConstruct {| inductive_mind := kn |} _ args =>
      List.fold_left (fun acc x => KernameSet.union (term_global_deps x) acc) args
           (KernameSet.singleton kn)
-  | EAst.tLambda _ x => term_global_deps x
-  | EAst.tApp x y
-  | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
-  | EAst.tCase (ind, _) x brs =>
+  | tLambda _ x => term_global_deps x
+  | tApp x y
+  | tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
+  | tCase (ind, _) x brs =>
     KernameSet.union (KernameSet.singleton (inductive_mind ind))
       (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs
         (term_global_deps x))
-   | EAst.tFix mfix _ | EAst.tCoFix mfix _ =>
-     List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
+   | tFix mfix _ | tCoFix mfix _ =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps (dbody x)) acc) mfix
       KernameSet.empty
-  | EAst.tProj p c =>
+  | tProj p c =>
     KernameSet.union (KernameSet.singleton (inductive_mind p.(proj_ind)))
       (term_global_deps c)
+  | tPrim p => prim_global_deps term_global_deps p
   | _ => KernameSet.empty
   end.

@@ -285,7 +285,6 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
 Reserved Notation " Σ ⊢ t <==[ Rle , napp ] u" (at level 50, t, u at next level,
   format "Σ  ⊢  t  <==[ Rle , napp ]  u").
 
-
 Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) (napp : nat) : term -> term -> Type :=
 | eq_Rel : forall n,
     Σ ⊢ tRel n <==[ Rle , napp ] tRel n
@@ -368,7 +367,9 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     ) mfix mfix' ->
     Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
 
-| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
+| eq_Prim i i' :
+  onPrims (eq_term_upto_univ_napp Σ Re Re 0) Re i i' ->
+  eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i')
 where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
@@ -530,6 +531,8 @@ Proof.
     eapply onctx_eq_ctx in a; eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
+  - destruct p as [? []]; constructor; cbn in X; intuition eauto.
+    eapply All_All2; eauto.
 Qed.
 
 #[global]
@@ -608,6 +611,10 @@ Proof.
     + constructor.
     + destruct r as [[h1 h2] [[[h3 h4] h5] h6]]. eapply h1 in h3 ; auto.
     constructor; auto.
+  - econstructor.
+    depelim o; cbn in X; constructor; intuition eauto.
+    eapply All2_All_mix_left in a0 as h; eauto. cbn in h.
+    eapply All2_sym; solve_all.
 Qed.
 
 #[global]
@@ -739,6 +746,16 @@ Proof.
     + dependent destruction a0. constructor ; eauto.
       intuition eauto.
       transitivity (rarg y); auto.
+  - dependent destruction e2; constructor.
+    depelim o; intuition eauto. depelim o0; constructor; cbn in X; intuition eauto.
+    eapply All2_All_mix_left in b0 as h; eauto.
+    clear b0 a0. clear -he hle a2 h. revert h a2.
+    generalize (array_value a) (array_value a') (array_value a'0). clear -he hle.
+    intros l l0 l1.
+    induction 1 in l1 |- *; intros.
+    + assumption.
+    + dependent destruction a2. constructor ; eauto.
+      destruct r as [h1 h2]. eauto.
 Qed.
 
 #[global]
@@ -823,7 +840,7 @@ Proof.
   induction u in v, n, h, h' |- * using term_forall_list_ind.
   all: simpl ; inversion h ; subst; inversion h' ;
        subst ; try constructor ; auto.
-  all: eapply RelationClasses.antisymmetry; eauto.
+  all: try eapply RelationClasses.antisymmetry; eauto.
 Qed.
 
 #[global]
@@ -953,6 +970,8 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - intros h; depelim h. depelim o; constructor; cbn in X; constructor; intuition eauto.
+    solve_all.
 Qed.
 
 #[global]
@@ -984,6 +1003,8 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - intros h; depelim h. constructor. depelim o; cbn in X; constructor; intuition eauto.
+    solve_all.
 Qed.
 
 #[global]
@@ -1039,6 +1060,8 @@ Proof.
   - cbn. constructor.
     pose proof (All2_length a).
     solve_all. rewrite H. eauto.
+  - cbn. constructor. depelim o; cbn in X; try constructor; cbn; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma lift_compare_term `{checker_flags} pb Σ ϕ n k t t' :
@@ -1117,6 +1140,8 @@ Proof.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length a).
     solve_all. now rewrite H.
+  - cbn; constructor. depelim o; cbn in X |- *; constructor; cbn; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma eq_term_upto_univ_subst Σ Re Rle :
@@ -1670,6 +1695,11 @@ Proof.
     now eapply eq_term_upto_univ_sym.
     now eapply eq_term_upto_univ_sym.
     now symmetry.
+  - depelim o; constructor; eauto.
+    now eapply eq_term_upto_univ_sym.
+    now eapply eq_term_upto_univ_sym.
+    eapply All2_sym; solve_all.
+    now eapply eq_term_upto_univ_sym.
 Qed.
 
 Lemma eq_univ_make :

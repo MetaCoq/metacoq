@@ -1608,6 +1608,12 @@ Qed.
           rewrite onΓ. apply on_free_vars_fix_context. rewrite /test_def. solve_all.
           now len in b2. }
         now rewrite -Nat.add_assoc addnP_shiftnP_k.
+    - destruct pr as [? []] => //.
+      eapply red_primArray_congr => //.
+      * cbn. solve_all. cbn in X1. destruct X1 as [? []].
+        eapply All_All2; tea; simpl; solve_all. eapply b1; tea; solve_all.
+      * cbn in X, X0. intuition eauto.
+      * cbn in X, X0; intuition eauto.
   Qed.
 
   Lemma untyped_substitution_red {Γ Δ Γ' s M N} :

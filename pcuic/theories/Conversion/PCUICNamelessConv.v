@@ -22,7 +22,6 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-
 Ltac destruct_one_andb :=
   lazymatch goal with
   | h : is_true (_ && _) |- _ =>
@@ -176,6 +175,12 @@ Proof.
         -- eapply Hbod ; eassumption.
         -- assumption.
       * eapply IHm ; assumption.
+  - f_equal.
+    destruct o; auto.
+    f_equal. f_equal. cbn in X, hu, hv. rtoProp.
+    destruct a, a'; cbn in *. eapply Universe.make_inj in e. f_equal; intuition eauto.
+    solve_all. induction a0 => //. f_equal; eauto.
+    eapply r; intuition eauto.
 Qed.
 
 Lemma banon_list l : forallb (banon ∘ anonymize) l.
@@ -226,6 +231,7 @@ Proof.
         repeat (eapply andb_true_intro ; split).
         all: try assumption.
         eapply IHm. assumption.
+  - cbn. solve_all.
 Qed.
 
 Lemma nl_lookup_env :
@@ -348,6 +354,13 @@ Proof.
     intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.
+  - constructor.
+    destruct i as [? []], i' as [? []]; cbn in o; depelim o; cbn in *; constructor; eauto.
+    + now eapply aux.
+    + now eapply aux.
+    + cbn. induction a2.
+    ++ constructor.
+    ++ cbn; constructor; [now eapply aux|]. eapply IHa2.
 Qed.
 
 Lemma eq_context_nl Σ Re Rle ctx ctx' :
@@ -609,6 +622,7 @@ Proof.
     destruct x. simpl in *.
     unfold map_def, map_def_anon. cbn.
     rewrite h1 h2. reflexivity.
+  - simpl. f_equal. solve_all.
 Qed.
 
 Lemma context_position_nlctx :
@@ -689,6 +703,7 @@ Proof.
       * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
+  - f_equal. solve_all.
 Qed.
 
 Lemma nlctx_fix_context_alt :
@@ -781,6 +796,7 @@ Proof.
       * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
+  - f_equal; solve_all.
 Qed.
 
 Lemma nl_eq_decl {cf:checker_flags} :
@@ -1371,6 +1387,8 @@ Proof.
     + rewrite nlctx_app_context nl_fix_context in r0. assumption.
     + cbn. congruence.
     Unshelve. all:eauto.
+  - cbn. constructor. eapply OnOne2_map, OnOne2_impl; tea.
+    unfold on_Trel; intuition auto.
 Qed.
 
 Lemma nl_conv {cf:checker_flags} :
@@ -1538,6 +1556,7 @@ Proof.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.
+  - f_equal; solve_all.
 Qed.
 
 

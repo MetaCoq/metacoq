@@ -86,11 +86,11 @@ Lemma extends_primitive_constant Σ Σ' p t :
 Proof.
   intros [_ _ ext].
   unfold primitive_constant.
-  case: ext.
-  destruct p; case => //.
-  - move=> _. case => //.
-  - move=> _; case => //.
-  - case => //.
+  case: ext => o [] o' o''.
+  destruct p => //.
+  - intros hr. now rewrite hr in o; depelim o.
+  - intros hr. now rewrite hr in o'; depelim o'.
+  - intros hr. now rewrite hr in o''; depelim o''.
 Qed.
 Local Hint Resolve extends_primitive_constant : extends.
 
@@ -129,6 +129,10 @@ Proof.
       apply (lift_typing_impl X); now intros ? [].
     + eapply (All_impl X1); intros d X.
       apply (lift_typing_impl X); now intros ? [].
+  - econstructor; eauto with extends.
+    destruct X2; constructor; eauto with extends.
+    * now eapply extends_wf_universe.
+    * solve_all.
   - econstructor. 1: eauto.
     + eapply forall_Σ'1; eauto.
     + destruct Σ as [Σ φ]. eapply weakening_env_cumulSpec in cumulA; eauto.

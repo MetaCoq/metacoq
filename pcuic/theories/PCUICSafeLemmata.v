@@ -490,6 +490,14 @@ Section Lemmata.
       cbn in *.
       eapply closed_context_conversion; tea.
       now symmetry.
+    - eapply inversion_Prim in typ as (?&?&[]); eauto.
+      depelim p0. now eexists.
+    - eapply inversion_Prim in typ as (?&?&[]); eauto.
+      depelim p0. now eexists.
+    - eapply inversion_Prim in typ as (?&?&[]); eauto.
+      depelim p0. cbn in *.
+      eapply All_app in hvalue as [_ hvalue]. depelim hvalue.
+      now eexists.
   Qed.
 
   Lemma cored_red :
@@ -777,6 +785,81 @@ Section Lemmata.
     apply isProdmkApps in hh. assumption.
   Qed.
 
+  Fixpoint isAppPrim (t : term) : bool :=
+    match t with
+    | tApp t l => isAppPrim t
+    | tPrim p => true
+    | _ => false
+    end.
+
+  Lemma isAppPrim_mkApps :
+    forall t l, isAppPrim (mkApps t l) = isAppPrim t.
+  Proof using Type.
+    intros t l. revert t.
+    induction l ; intros t.
+    - reflexivity.
+    - cbn. rewrite IHl. reflexivity.
+  Qed.
+
+  Definition isPrim t :=
+    match t with
+    | tPrim _ => true
+    | _ => false
+    end.
+
+  Lemma isPrimmkApps :
+    forall t l,
+      isPrim (mkApps t l) ->
+      l = [].
+  Proof using Type.
+    intros t l h.
+    revert t h.
+    induction l ; intros t h.
+    - reflexivity.
+    - cbn in h. specialize IHl with (1 := h). subst.
+      cbn in h. discriminate h.
+  Qed.
+
+  Lemma isAppPrim_isPrim :
+    forall Γ t,
+      isAppPrim t ->
+      welltyped Σ Γ t ->
+      isPrim t.
+  Proof using hΣ.
+    intros Γ t hp hw.
+    induction t in Γ, hp, hw |- *.
+    all: try discriminate hp.
+    2:reflexivity.
+    - simpl in hp.
+      specialize IHt1 with (1 := hp).
+      assert (welltyped Σ Γ t1) as h.
+      { destruct hw as [T h].
+        apply inversion_App in h as hh ; auto.
+        destruct hh as [na [A' [B' [? [? ?]]]]].
+        eexists. eassumption.
+      }
+      specialize IHt1 with (1 := h).
+      destruct t1.
+      all: try discriminate IHt1.
+      destruct hw as [T hw'].
+      apply inversion_App in hw' as ihw' ; auto.
+      destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
+      apply inversion_Prim in hP as [s1 [s2 [? htyp ? ? ? bot]]] ; auto.
+      now eapply invert_cumul_prim_type_prod in bot.
+  Qed.
+
+  Lemma mkApps_Prim_nil :
+    forall Γ p l,
+      welltyped Σ Γ (mkApps (tPrim p) l) ->
+      l = [].
+  Proof using hΣ.
+    intros Γ p l h.
+    pose proof (isAppPrim_isPrim) as hh.
+    specialize hh with (2 := h).
+    rewrite isAppPrim_mkApps in hh.
+    specialize hh with (1 := eq_refl).
+    apply isPrimmkApps in hh. assumption.
+  Qed.
 
   (* TODO MOVE or even replace old lemma *)
   Lemma decompose_stack_noStackApp :

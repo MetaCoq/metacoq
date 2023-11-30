@@ -498,6 +498,32 @@ Section Rho.
   Qed.
   Hint Rewrite @rho_predicate_map_predicate : rho.
 
+  Equations? map_prim_wf (p : PCUICPrimitive.prim_val term) (rho : context -> forall x, depth x < depth (tPrim p) -> term) (Γ : context) : prim_val :=
+  | (primInt; primIntModel i), _, _ := (primInt; primIntModel i);
+  | (primFloat; primFloatModel f), _, _ := (primFloat; primFloatModel f);
+  | (primArray; primArrayModel a), rho, Γ :=
+    let default := rho Γ a.(array_default) _ in
+    let ty := rho Γ a.(array_type) _ in
+    let value := map_terms rho Γ a.(array_value) _ in
+    let a' := {|
+        array_level := array_level a;
+        array_type := ty;
+        array_default := default;
+        array_value := value
+      |}
+    in (primArray; primArrayModel a').
+  Proof. all:cbn; clear; try lia. Qed.
+
+  Lemma rho_prim_wf_rho_prim p rho Γ :
+    map_prim_wf p (fun ctx x Hx => rho ctx x) Γ =
+    map_prim (rho Γ) p.
+  Proof.
+    funelim (map_prim_wf _ _ _); cbn => //.
+    do 3 f_equal. destruct a; unfold map_array_model; cbn; f_equal.
+    apply map_In_spec.
+  Qed.
+  Hint Rewrite @rho_prim_wf_rho_prim : rho.
+
   Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
 
   Arguments Nat.max : simpl never.
@@ -635,6 +661,7 @@ Section Rho.
   rho Γ (tCoFix mfix idx) =>
     let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in
     tCoFix (map_fix_rho (t:=tCoFix mfix idx) rho Γ mfixctx mfix _) idx;
+  rho Γ (tPrim p) => tPrim (map_prim_wf p rho Γ);
   rho Γ x => x.
   Proof.
     all:try abstract lia.
@@ -1906,6 +1933,9 @@ Section Rho.
       eapply shift_renaming; auto.
       clear. generalize #|m|. induction m using rev_ind. simpl. constructor.
       intros. rewrite map_app !fold_fix_context_app. simpl. constructor. simpl. reflexivity. apply IHm; eauto.
+
+    - (* Prim *)
+      simpl; simp rho. cbn. f_equal. cbn in ont. solve_all.
   Qed.
 
   Lemma rho_lift0 Γ Δ P t :
@@ -2388,6 +2418,7 @@ Section Rho.
     - eapply All2_prod_inv in X0 as [? X0].
       eapply (All2_apply P), (All2_apply_arrow H0) in X0.
       solve_all.
+    - depelim X1; cbn in H1 |- *; solve_all.
   Qed.
 
   Lemma pred1_on_free_vars {P Γ Γ' t u} :
@@ -3278,7 +3309,7 @@ Section Rho.
     set Pctx := fun (Γ Δ : context) =>
       on_ctx_free_vars xpredT Γ ->
       pred1_ctx Σ Δ (rho_ctx Γ).
-    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       subst Pctx; intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
@@ -4067,6 +4098,9 @@ Section Rho.
     - simpl in *. simp rho. constructor. eauto.
       eapply All2_All_mix_left in X1; tea.
       eapply All2_sym, All2_map_left, All2_impl; tea => /=; intuition auto.
+    - cbn in *. simp rho. constructor; eauto.
+      depelim X2; constructor; cbn in *; rtoProp; intuition eauto. solve_all.
+      eapply All2_sym. solve_all.
     - destruct t; noconf H; simpl; constructor; eauto.
   Qed.
 

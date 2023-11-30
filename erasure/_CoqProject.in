@@ -1,5 +1,6 @@
 -R theories MetaCoq.Erasure
 
+theories/EPrimitive.v
 theories/EAst.v
 theories/EAstUtils.v
 theories/EInduction.v

@@ -113,7 +113,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try (f_equal; auto; solve_all).
+    try solve [(f_equal; auto; solve_all)].
 
   now elim (leb k n).
 Qed.
@@ -134,7 +134,7 @@ Proof.
     intros; simpl; autorewrite with map;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
-  elim (leb_spec k n); intros.
+  - elim (leb_spec k n); intros.
   + elim (leb_spec i (n0 + n)); intros; lia.
   + elim (leb_spec i n); intros; lia.
 Qed.

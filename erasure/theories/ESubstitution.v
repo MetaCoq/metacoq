@@ -111,6 +111,13 @@ Proof.
     eapply All2_impl. exact X1.
     intros ? ? [[] [? []]].
     split; eauto.
+  - econstructor.
+    induction H2; constructor.
+    induction X3; constructor; depelim X2; eauto.
+    depelim X1.
+    eapply All2_All_mix_left in a0; eauto.
+    eapply All2_impl. exact a0.
+    cbn. intros ? ? [? ?]. eauto.
 Qed.
 
 Lemma erases_extends' (Σ:global_env_ext) Γ t T:
@@ -308,6 +315,12 @@ Proof.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
     rewrite (All2_length X3) in IH |- *.
     apply IH. apply IH'.
+
+  - econstructor. depelim H3.
+    depelim X4; repeat constructor.
+    depelim X2; cbn. now eapply hdef.
+    depelim X2. cbn. eapply All2_map.
+    ELiftSubst.solve_all.
 Qed.
 
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : context) (t T : PCUICAst.term) t' :
@@ -574,7 +587,10 @@ Proof.
       eapply is_type_subst; eauto.
   - cbn. depelim H1.
     * cbn; constructor.
+      depelim H1. depelim X5; depelim X2; repeat constructor; cbn; eauto.
+      ELiftSubst.solve_all.
     * constructor. eapply is_type_subst in X3; tea.
+      now cbn in X3.
   - eapply H; eauto.
 Qed.
 

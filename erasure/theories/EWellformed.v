@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
 From MetaCoq.PCUIC Require Import PCUICTactics.
 
 Local Open Scope string_scope.
@@ -119,7 +119,7 @@ Section wf.
         | _ => true end
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
-    | tPrim _ => has_tPrim
+    | tPrim p => has_tPrim && test_prim (wellformed k) p
     end.
 
 End wf.
@@ -221,11 +221,6 @@ Section EEnvFlags.
       apply Nat.ltb_lt in H1. lia.
     - destruct cstr_as_blocks; eauto. destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
       destruct args; firstorder.
-    - solve_all. rewrite Nat.add_assoc. eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
   Qed.
 
   Lemma wellformed_subst_eq {s k k' t} :
@@ -265,10 +260,8 @@ Section EEnvFlags.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
     - destruct (dbody x) => //.
-    - intros. now len.
     - specialize (a (#|m| + k')).
       len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b0 |- *.
-    - intros. now len.
     - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
   Qed.

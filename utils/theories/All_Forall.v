@@ -3813,6 +3813,14 @@ Proof.
     + now eapply H.
 Qed.
 
+Section map_All2.
+  Context {A B} {P Q : A -> B -> Type} (f : forall {x y}, P x y -> Q x y).
+
+  Equations map_All2 {l l'} (a : All2 P l l') : All2 Q l l' :=
+  | All2_nil := All2_nil
+  | All2_cons hd tl := All2_cons (f _ _ hd) (map_All2 tl).
+End map_All2.
+
 Lemma All2_map2_left {A B C D E} {P : E -> A -> Type} Q (R : B -> D -> Type) {f : B -> C -> E} {l l' l'' l'''} :
   All2 R l l''' ->
   All2 Q l' l'' ->

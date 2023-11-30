@@ -278,11 +278,10 @@ Section Wcbv.
   (*     Forall2 eval l l' -> *)
   (*     eval (tEvar n l) (tEvar n l') *)
 
-  | eval_tArray u v v' def def' ty ty' :
+  | eval_tArray u v v' def def' ty :
     eval def def' ->
-    eval ty ty' ->
     All2 eval v v' ->
-    eval (tArray u v def ty) (tArray u v' def' ty')
+    eval (tArray u v def ty) (tArray u v' def' ty)
 
   (** Atoms are values (includes abstractions, cofixpoints and constructors
       along with type constructors) *)
@@ -381,11 +380,10 @@ Section Wcbv.
           ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f' || isPrim f') ->
           All2 eval a a' -> All2 P a a' -> P (tApp f a) (mkApps f' a')) ->
 
-      (forall u v v' def def' ty ty',
+      (forall u v v' def def' ty,
           eval def def' -> P def def' ->
-          eval ty ty' -> P ty ty' ->
           All2 eval v v' -> All2 P v v' ->
-          P (tArray u v def ty) (tArray u v' def' ty')) ->
+          P (tArray u v def ty) (tArray u v' def' ty)) ->
       (forall t : term, atom t -> P t t) ->
 
       forall t t0 : term, eval t t0 -> P t t0.
@@ -438,7 +436,7 @@ Section Wcbv.
 
   Inductive atomic_value (value : term -> Type) : term -> Type :=
   | atomic_atom t : atom t -> atomic_value value t
-  | atomic_array u v def ty : All value v -> value def -> value ty -> atomic_value value (tArray u v def ty).
+  | atomic_array u v def ty : All value v -> value def -> atomic_value value (tArray u v def ty).
   Derive Signature NoConfusion for atomic_value.
 
   Inductive value : term -> Type :=
@@ -450,7 +448,7 @@ Section Wcbv.
 
   Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom t -> P t) ->
-      (forall u v def ty, All value v -> All P v -> value def -> P def -> value ty -> P ty -> P (tArray u v def ty)) ->
+      (forall u v def ty, All value v -> All P v -> value def -> P def -> P (tArray u v def ty)) ->
       (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.

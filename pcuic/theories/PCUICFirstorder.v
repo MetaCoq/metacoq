@@ -632,7 +632,7 @@ Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
   revert i u args Hty.
 
-  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
+  induction Hvalue as [ t Hvalue | p pv ih | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
    intros i u args Hty Hfo.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
@@ -671,7 +671,7 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
-    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl inv ty cum]]]; eauto.
+  - eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl inv ty cum]]]; eauto.
       now eapply invert_cumul_prim_type_ind in cum; tea.
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.

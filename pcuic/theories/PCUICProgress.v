@@ -535,7 +535,7 @@ Qed.
 Lemma value_mkApps_inv' Σ f args :
   negb (isApp f) ->
   value Σ (mkApps f args) ->
-  atom f × All (value Σ) args.
+  atomic_value (value Σ) f × All (value Σ) args.
 Proof.
   intros napp. move/value_mkApps_inv => [] => //.
   - intros [-> hf]. split => //.
@@ -596,7 +596,7 @@ Proof.
   destruct (value_mkApps_inv' _ _ _ napp vapp).
   eapply PCUICSpine.inversion_mkApps_direct in ht' as [A' [u [hfn [hhd hcum]]]]; tea.
   2:{ now eapply validity. }
-  destruct fn => //.
+  destruct fn => //; try depelim a; cbn in * => //.
   * eapply inversion_Sort in hfn as [? [? cu]]; tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity; econstructor; eauto. }
     now eapply typing_spine_sort, app_tip_nil in hcum.
@@ -606,7 +606,7 @@ Proof.
   * (* Lambda *) left. destruct args.
     - cbn. eexists. now eapply wcbv_red_beta.
     - eexists. rewrite mkApps_app. rewrite (mkApps_app _ [t] args). do 2 eapply wcbv_red1_mkApps_left.
-      cbn. eapply wcbv_red_beta. now depelim a.
+      cbn. eapply wcbv_red_beta. now depelim a0.
   * (* Inductive *)
     eapply inversion_Ind in hfn as [? [? [? [? [? cu]]]]]; tea.
     eapply typing_spine_strengthen in hcum. 3:tea. 2:{ eapply validity. econstructor; eauto. }
@@ -666,6 +666,23 @@ Proof.
   rewrite /cstr_branch_context /PCUICEnvironment.expand_lets_ctx
     /PCUICEnvironment.expand_lets_k_ctx.
   now do 2 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context.
+Qed.
+
+#[global] Hint Constructors atomic_value : wcbv.
+
+Lemma All_or_disj {A} (P Q : A -> Type) l : All (fun x => P x + Q x)%type l ->
+  (∑ n v, All Q (firstn n l) × (nth_error l n = Some v × P v)) + All Q l.
+Proof.
+  induction 1.
+  - right; auto.
+  - destruct IHX.
+    * destruct s as [n [v [? []]]].
+      destruct p.
+      + left. exists 0, x; intuition auto.
+      + left. exists (S n), v; intuition cbn; auto.
+    * destruct p.
+      + left. exists 0, x; intuition auto.
+      + right; eauto.
 Qed.
 
 Lemma progress_env_prop `{cf : checker_flags}:
@@ -751,6 +768,22 @@ Proof with eauto with wcbv; try congruence.
       eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?); eauto.
       eexists. eapply wcbv_red_cofix_proj. unfold cunfold_cofix. rewrite e0. reflexivity.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
+  - intros Σ wfΣ Γ _ p c u mdecl idecl cdecl pdecl Hcon args Hargs -> hp.
+    depelim args... 1-2:right; constructor; constructor 2; constructor.
+    depelim Hcon.
+    destruct hdef; eauto.
+    + left. destruct s as [t' hred]. exists (tPrim (prim_array (set_array_default a t'))). now constructor.
+    + destruct a as []; cbn in *.
+      clear hty.
+      solve_all. clear -hvalue0 Hargs v.
+      set (a := {| array_level := _ |}).
+      assert (All (fun x : term => ((∑ t' : term, Σ ⊢ x ⇝ᵥ t') + value Σ x))%type array_value).
+      { solve_all. } clear hvalue0 Hargs.
+      eapply All_or_disj in X as [].
+      * destruct s as [n [v' [? []]]]. destruct s as [t' ht'].
+        left. exists (tPrim (prim_array (set_array_value a (firstn n array_value ++ t' :: skipn (S n) array_value)))).
+        econstructor; eauto.
+      * right. constructor. constructor 2. constructor; eauto.
 Qed.
 
 Lemma progress `{cf : checker_flags}:

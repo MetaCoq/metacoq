@@ -44,6 +44,10 @@ Definition prim_val term := ∑ t : prim_tag, prim_model term t.
 Definition prim_val_tag {term} (s : prim_val term) := s.π1.
 Definition prim_val_model {term} (s : prim_val term) : prim_model term (prim_val_tag s) := s.π2.
 
+Definition prim_int {term} i : prim_val term := (primInt; primIntModel i).
+Definition prim_float {term} f : prim_val term := (primFloat; primFloatModel f).
+Definition prim_array {term} a : prim_val term := (primArray; primArrayModel a).
+
 Definition prim_model_val {term} (p : prim_val term) : prim_model_of term (prim_val_tag p) :=
   match prim_val_model p in prim_model _ t return prim_model_of term t with
   | primIntModel i => i

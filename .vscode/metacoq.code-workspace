@@ -12,6 +12,7 @@
 
 
 
+
 			"-R", "safechecker-plugin/theories","MetaCoq.SafeCheckerPlugin",
 
 			"-R", "utils/theories","MetaCoq.Utils",
@@ -32,7 +33,9 @@
 		"-R", "erasure-plugin/theories","MetaCoq.ErasurePlugin",
 		"-R", "translations","MetaCoq.Translations",
 		"-R", "test-suite/plugin-demo/theories","MetaCoq.ExtractedPluginDemo",
-		"-R", "test-suite","MetaCoq.TestSuite"
+		"-R", "test-suite","MetaCoq.TestSuite",
+		"-R", "quotation/theories", "MetaCoq.Quotation",
+
 	    ],
 
 	 // When enabled, will trim trailing whitespace when saving a file.

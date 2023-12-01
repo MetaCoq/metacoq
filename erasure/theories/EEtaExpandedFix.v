@@ -773,6 +773,7 @@ Section isEtaExp.
 
 End isEtaExp.
 Global Hint Rewrite @forallb_InP_spec : isEtaExp.
+Global Hint Rewrite @test_primIn_spec : isEtaExp.
 
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
@@ -859,7 +860,7 @@ Proof.
   - rewrite isEtaExp_Constructor. rtoProp. repeat split.
     2: eapply forallb_Forall; solve_all.
     eapply expanded_isEtaExp_app_; eauto.
-  - rewrite test_primIn_spec. solve_all.
+  - solve_all.
 Qed.
 
 Definition isEtaExp_constant_decl Σ cb :=
@@ -1000,7 +1001,7 @@ Proof.
   - eapply In_All in H0. solve_all.
   - eapply In_All in H; solve_all.
   - eapply InPrim_primProp in H.
-    rewrite !test_primIn_spec in H0 |- *. solve_all.
+    solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
     eapply isEtaExp_app_extends; tea.
@@ -1045,8 +1046,8 @@ Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as
 Proof.
   intros etaΣ wfΣ.
   induction 1 as [ | ? ? ? ? ? ? ? ? IHs | | | | | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? ? IHs
-    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
-  all:try simp isEtaExp; rewrite -!isEtaExp_equation_1 => //.
+    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
+  all:try simp isEtaExp; rewrite -?isEtaExp_equation_1 => //.
   6:{
     move/isEtaExp_tApp'.
     destruct decompose_app eqn:da.
@@ -1361,6 +1362,9 @@ Proof.
     destruct args => //. now rewrite nth_error_nil in e3.
     intros. rtoProp.
     eapply nth_error_forallb in e3; tea.
+  - solve_all.
+    depelim X; solve_all. eapply All2_over_undep in a. subst a0 a';
+      depelim H; constructor; solve_all. solve_all.
 Qed.
 
 Lemma isEtaExp_fixapp_mon {mfix idx n n'} : n <= n' -> isEtaExp_fixapp mfix idx n -> isEtaExp_fixapp mfix idx n'.
@@ -1944,6 +1948,9 @@ Proof.
       cbn. rewrite wguard in i.
       cbn. move: i. rewrite !negb_or; rtoProp; intuition auto.
       now eapply nisFixApp_nisFix.
+  - intros hexp. simp_eta in hexp. depelim X; repeat constructor; eauto.
+    eapply All2_over_undep in a. subst a0 a'. solve_all. depelim hexp; cbn in *. destruct p.
+    eapply All2_All2_Set. solve_all. solve_all. depelim hexp. destruct p. solve_all.
   - intros hexp. now eapply eval_atom.
     Unshelve. all: eauto.
 Qed.

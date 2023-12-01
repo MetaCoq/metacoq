@@ -130,7 +130,7 @@ Proof.
     + eapply (All_impl X1); intros d X.
       apply (lift_typing_impl X); now intros ? [].
   - econstructor; eauto with extends.
-    destruct X2; constructor; eauto with extends.
+    destruct X1; constructor; eauto with extends.
     * now eapply extends_wf_universe.
     * solve_all.
   - econstructor. 1: eauto.

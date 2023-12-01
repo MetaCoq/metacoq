@@ -262,7 +262,7 @@ Proof.
   intros Hf.
   fix aux 2.
   intros t fo; destruct fo.
-  eapply Hf => //. clear H. rename H0 into H.  
+  eapply Hf => //. clear H. rename H0 into H.
   move: args H.
   fix aux' 2.
   intros args []; constructor.
@@ -741,7 +741,7 @@ Proof.
   move: v; apply: firstorder_evalue_elim.
   intros.
   rewrite /flip (compile_evalue_box_mkApps) // ?app_nil_r.
-  pose proof (H' := H). 
+  pose proof (H' := H).
   eapply lookup_constructor_pars_args_nopars in H; tea. subst npars.
   rewrite skipn_0 in H1.
   constructor.
@@ -1717,7 +1717,7 @@ Section pipeline_cond.
     - cbn. intros wf ? ? ? ? ? ?. now eapply Normalisation.
   Qed.
 
-End pipeline_cond. 
+End pipeline_cond.
 
 Section pipeline_theorem.
 
@@ -1760,7 +1760,7 @@ Section pipeline_theorem.
 
   Lemma v_t_spec : v_t = (transform verified_erasure_pipeline (Σ, v) (precond2 _ _ _ _ expΣ expt typing _ _ Heval)).2.
   Proof.
-    unfold v_t. generalize fo_v. set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre. 
+    unfold v_t. generalize fo_v. set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre.
     intros hv.
     unfold verified_erasure_pipeline.
     rewrite -transform_compose_assoc.
@@ -1787,7 +1787,7 @@ Section pipeline_theorem.
     set (p := transform erase_transform _ _).
     pose proof (@erase_tranform_firstorder _ h v i u (List.map PCUICExpandLets.trans args) Normalisation').
     forward H0.
-    { cbn. rewrite -eqtr.  
+    { cbn. rewrite -eqtr.
       eapply (PCUICClassification.subject_reduction_eval (Σ := Σ)) in X; tea.
       eapply PCUICExpandLetsCorrectness.expand_lets_sound in X.
       now rewrite PCUICExpandLetsCorrectness.trans_mkApps /= in X. }
@@ -1822,24 +1822,24 @@ Section pipeline_theorem.
 
   Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)  {has_rel : has_tRel} {has_box : has_tBox}  :
     EGlobalEnv.lookup_env Σ_v kn = Some (EAst.InductiveDecl decl) ->
-    exists decl', 
+    exists decl',
       PCUICAst.PCUICEnvironment.lookup_global (PCUICExpandLets.trans_global_decls
       (PCUICAst.PCUICEnvironment.declarations
          Σ.1)) kn = Some (PCUICAst.PCUICEnvironment.InductiveDecl decl')
-       /\ decl = ERemoveParams.strip_inductive_decl (erase_mutual_inductive_body decl'). 
-  Proof. 
+       /\ decl = ERemoveParams.strip_inductive_decl (erase_mutual_inductive_body decl').
+  Proof.
     Opaque compose.
     unfold Σ_v, verified_erasure_pipeline.
-    repeat rewrite -transform_compose_assoc. 
-    destruct_compose; intro. cbn. 
+    repeat rewrite -transform_compose_assoc.
     destruct_compose; intro. cbn.
-    set (erase_program _ _). 
+    destruct_compose; intro. cbn.
+    set (erase_program _ _).
     unfold verified_lambdabox_pipeline.
-    repeat rewrite -transform_compose_assoc. 
-    repeat (destruct_compose; intro). 
+    repeat rewrite -transform_compose_assoc.
+    repeat (destruct_compose; intro).
     unfold transform at 1. cbn -[transform].
     rewrite EConstructorsAsBlocks.lookup_env_transform_blocks.
-    set (EConstructorsAsBlocks.transform_blocks_decl _). 
+    set (EConstructorsAsBlocks.transform_blocks_decl _).
     unfold transform at 1. cbn -[transform].
     unfold transform at 1. cbn -[transform].
     erewrite EInlineProjections.lookup_env_optimize.
@@ -1850,7 +1850,7 @@ Section pipeline_theorem.
       rewrite erase_global_deps_fast_spec.
       eapply erase_global_deps_wf_glob.
       intros ? He; now rewrite He. }
-    set (EInlineProjections.optimize_decl _). 
+    set (EInlineProjections.optimize_decl _).
     unfold transform at 1. cbn -[transform].
     unfold transform at 1. cbn -[transform].
     erewrite EOptimizePropDiscr.lookup_env_remove_match_on_box.
@@ -1868,25 +1868,25 @@ Section pipeline_theorem.
     unfold transform at 1. cbn -[transform].
     rewrite erase_global_deps_fast_spec.
     2: { cbn. intros ? He. rewrite He. eauto. }
-    intro. 
+    intro.
     set (EAstUtils.term_global_deps _).
     set (build_wf_env_from_env _ _).
-    epose proof 
+    epose proof
       (lookup_env_in_erase_global_deps optimized_abstract_env_impl w t0
       _ kn _ Hyp0).
     set (EGlobalEnv.lookup_env _ _).
     case_eq o. 2: { intros ?. inversion 1. }
     destruct g3; intro Ho; [inversion 1|].
-    cbn. inversion 1.  
+    cbn. inversion 1.
     specialize (H8 m). forward H8.
     epose proof (wf_fresh_globals _ HΣ). clear - H10.
     revert H10. cbn. set (Σ.1). induction 1; econstructor; eauto.
     cbn. clear -H. induction H; econstructor; eauto.
-    unfold o in Ho; rewrite Ho in H8.   
-    specialize (H8 eq_refl). 
+    unfold o in Ho; rewrite Ho in H8.
+    specialize (H8 eq_refl).
     destruct H8 as [decl' [? ?]]. exists decl'; split ; eauto.
     rewrite <- H10. now destruct decl, m.
-  Qed. 
+  Qed.
 
   Lemma verified_erasure_pipeline_firstorder_evalue_block :
     firstorder_evalue_block Σ_v v_t.
@@ -1898,9 +1898,9 @@ Section pipeline_theorem.
     destruct_compose.
     generalize fo_v. intros hv.
     cbn [transform pcuic_expand_lets_transform].
-    intros pre1. destruct_compose. intros pre2. 
-    destruct lambdabox_pres_fo as [fn [tr hfn]].  
-    destruct tr. pose proof (Heval' := Heval). sq. rewrite transform_fo. 
+    intros pre1. destruct_compose. intros pre2.
+    destruct lambdabox_pres_fo as [fn [tr hfn]].
+    destruct tr. pose proof (Heval' := Heval). sq. rewrite transform_fo.
     { intro. eapply preserves_fo. }
     assert (eqtr : PCUICExpandLets.trans v = v).
     { clear -hv.
@@ -1917,7 +1917,7 @@ Section pipeline_theorem.
     set (p := transform erase_transform _ _).
     pose proof (@erase_tranform_firstorder _ pre1 v i u (List.map PCUICExpandLets.trans args) Normalisation').
     forward H0.
-    { cbn. 
+    { cbn.
       eapply (PCUICClassification.subject_reduction_eval (Σ := Σ)) in Heval'; tea.
       eapply PCUICExpandLetsCorrectness.expand_lets_sound in Heval'.
       now rewrite PCUICExpandLetsCorrectness.trans_mkApps /= in Heval'. }
@@ -1935,29 +1935,29 @@ Section pipeline_theorem.
       eapply PCUICWcbvEval.eval_closed; tea. apply HΣ.
       unshelve apply (PCUICClosedTyp.subject_closed typing). now rewrite eqtr. }
     specialize (H0 _ eq_refl).
-    rewrite /p.  
+    rewrite /p.
     rewrite erase_transform_fo //. { cbn. rewrite eqtr. exact H. }
     set (Σer := (transform erase_transform _ _).1).
     assert (firstorder_evalue Σer (compile_value_erase v [])).
     { apply H0. }
-    simpl. unfold fo_evalue_map. rewrite eqtr. exact H1. 
-  Qed.   
+    simpl. unfold fo_evalue_map. rewrite eqtr. exact H1.
+  Qed.
 
   Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags)  {has_rel : has_tRel} {has_box : has_tBox} :
    EGlobalEnv.extends Σ_v Σ_t.
   Proof.
     unfold Σ_v, Σ_t. unfold verified_erasure_pipeline.
-    repeat (destruct_compose; intro). destruct Heval. 
+    repeat (destruct_compose; intro). destruct Heval.
     cbn [transform compose pcuic_expand_lets_transform] in *.
     unfold run, time.
     cbn [transform erase_transform] in *.
     set (erase_program _ _). set (erase_program _ _).
     eapply verified_lambdabox_pipeline_extends.
-    eapply extends_erase_pcuic_program; eauto; cbn. 
+    eapply extends_erase_pcuic_program; eauto; cbn.
       unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (cf := extraction_checker_flags) (Σ := (Σ.1, Σ.2))).
       { now eapply PCUICExpandLetsCorrectness.trans_wf. }
       { clear -HΣ typing. now eapply PCUICClosedTyp.subject_closed in typing. }
-      assumption. 
+      assumption.
       now eapply trans_axiom_free.
       pose proof (PCUICExpandLetsCorrectness.expand_lets_sound typing).
       rewrite PCUICExpandLetsCorrectness.trans_mkApps in X. eapply X.
@@ -1967,7 +1967,7 @@ Section pipeline_theorem.
         destruct PCUICAst.PCUICEnvironment.lookup_env => //.
         destruct g => //=.
         eapply trans_firstorder_mutind. eapply trans_firstorder_env. }
-  Qed. 
+  Qed.
 
   Lemma verified_erasure_pipeline_theorem :
     ∥ eval (wfl := extraction_wcbv_flags) Σ_t t_t v_t ∥.
@@ -1978,7 +1978,7 @@ Section pipeline_theorem.
     destruct Hev as [v' [[H1] H2]].
     move: H2.
     rewrite v_t_spec.
-    set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre. 
+    set (pre := precond2 _ _ _ _ _ _ _ _ _ _) in *. clearbody pre.
     subst v_t Σ_t t_t.
     revert H1.
     unfold verified_erasure_pipeline.

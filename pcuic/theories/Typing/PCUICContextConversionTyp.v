@@ -292,7 +292,7 @@ Proof.
       intros d' Ht.
       apply infer_typing_sort_impl with id Ht; now intros [_ IH'].
   - econstructor; tea.
-    depelim X2; constructor; eauto. solve_all.
+    depelim X1; constructor; eauto. solve_all.
   - econstructor; eauto. pose proof (wf_local_closed_context wfΓ).
     pose proof (type_closed (forall_Γ' _ X5 X6)). eapply (@closedn_on_free_vars xpred0) in H0.
     pose proof (subject_closed (forall_Γ'0 _ X5 X6)). eapply (@closedn_on_free_vars xpred0) in H1.

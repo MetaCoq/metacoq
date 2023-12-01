@@ -2473,16 +2473,16 @@ Proof.
     econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.
-    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
-      intros [s []]; exists s; split => //;
+    + move: H1; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros []; split => //;
       destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
     + constructor.
   - cbn. replace (tConst prim_ty []) with (prim_type (primFloat; primFloatModel p) prim_ty) by now simp prim_type.
     econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.
-    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
-      intros [s []]; exists s; split => //;
+    + move: H1; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros []; split => //;
       destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
     + constructor.
   - cbn. set (a := {| array_level := _ |}).
@@ -2490,17 +2490,17 @@ Proof.
     econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.
-    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+    + move: H1; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
       intros []; split => //; eauto.
       * apply forall_decls_declared_constant in H0; eauto.
         rewrite /trans_constant_body in H0 |- *.
         now rewrite H1 H2 H3 /= in H0 |- *.
       * rewrite /trans_constant_body in H0 |- *.
         now rewrite H1 H2 H3 /= in H0 |- *.
-    + constructor; eauto. cbn [array_level a]. eapply validity in X2; eauto.
-      eapply PCUICWfUniverses.isType_wf_universes in X2. cbn [trans PCUICWfUniverses.wf_universes] in X2.
-      unfold PCUICWfUniverses.wf_universes in X2. cbn [PCUICWfUniverses.on_universes] in X2.
-      move: X2. case: PCUICWfUniverses.wf_universe_reflect => //; eauto. eauto.
+    + constructor; eauto. cbn [array_level a]. eapply validity in X1; eauto.
+      eapply PCUICWfUniverses.isType_wf_universes in X1. cbn [trans PCUICWfUniverses.wf_universes] in X1.
+      unfold PCUICWfUniverses.wf_universes in X1. cbn [PCUICWfUniverses.on_universes] in X1.
+      move: X1. case: PCUICWfUniverses.wf_universe_reflect => //; eauto. eauto.
       cbn [a array_value]. solve_all.
   - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }

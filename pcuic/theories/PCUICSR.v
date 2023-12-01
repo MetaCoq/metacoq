@@ -3075,21 +3075,21 @@ Proof.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[_ eq]].
       reflexivity. noconf eq. rewrite H4; reflexivity.
 
-  - eapply OnOne2_prod_inv in X3 as [X3 _].
-    destruct X. depelim X1. depelim X2.
+  - eapply OnOne2_prod_inv in X2 as [X2 _].
+    destruct X. depelim X0. depelim X1.
     Transparent prim_type.
     eapply (type_Prim _ _ (primArray; primArrayModel (set_array_value arr value))); tea.
     constructor; cbn; eauto.
     solve_all.
     eapply OnOne2_All_All; tea; cbn; intuition eauto.
 
-  - destruct X. depelim X1. depelim X2.
+  - destruct X. depelim X0. depelim X1.
     Transparent prim_type.
     eapply (type_Prim _ _ (primArray; primArrayModel (set_array_default arr def))); tea.
     constructor; cbn; eauto.
 
-  - pose proof (type_Prim _ _ _ _ _ wfΓ heq_primitive_constant H0 X0 X1). eapply validity in X4.
-    destruct X. depelim X1. depelim X2.
+  - pose proof (type_Prim _ _ _ _ _ wfΓ heq_primitive_constant H0 H1 X0). eapply validity in X3.
+    destruct X. depelim X0. depelim X1.
     eapply (type_ws_cumul_pb (pb:=Conv)); tea.
     eapply (type_Prim _ _ (primArray; primArrayModel (set_array_type arr ty))); tea.
     constructor; cbn; eauto.

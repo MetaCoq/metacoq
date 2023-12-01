@@ -297,7 +297,7 @@ Proof.
     Unshelve. all:eauto.
 
   - destruct p as [[] pv]; cbn in X0 |- *; simp prim_type => //.
-    depelim pv. simp prim_type. cbn. depelim X2.
+    depelim pv. simp prim_type. cbn. depelim X1.
     move/andP: hdef => [] -> ->; rewrite !andb_true_r. split => //.
     solve_all.
 Qed.

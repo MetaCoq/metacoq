@@ -472,7 +472,7 @@ Section OnFreeVars.
       cbn in Hmfix.
       by move: Hmfix => /andP [].
 
-    - intros. red. intros. destruct X1; cbn => //.
+    - intros. red. intros. destruct X0; cbn => //.
       simp prim_type. cbn in *. solve_all.
     - easy.
 
@@ -869,7 +869,7 @@ Proof using wfΣ.
 
   - intros. red. intros P Δ f hf ht.
     cbn. rewrite rename_prim_type. econstructor; tea; rewrite ?prim_val_tag_map //.
-    destruct X1; cbn in *; constructor; cbn; eauto.
+    destruct X0; cbn in *; constructor; cbn; eauto.
     * eapply hty; tea; solve_all.
     * eapply hdef; tea; solve_all.
     * solve_all.

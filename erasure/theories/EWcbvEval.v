@@ -3,7 +3,7 @@ From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
   EWellformed.
 
 From Equations Require Import Equations.
@@ -38,8 +38,7 @@ Definition atom `{wfl : WcbvFlags} Σ t :=
   | tBox
   | tCoFix _ _
   | tLambda _ _
-  | tFix _ _
-  | tPrim _ => true
+  | tFix _ _ => true
   | tConstruct ind c [] => negb with_constructor_as_block && isSome (lookup_constructor Σ ind c)
   | _ => false
   end.
@@ -104,10 +103,47 @@ Proof.
 Qed.
 #[export] Hint Immediate All2_All2_Set : core.
 
+Set Equations Transparent.
+Equations All2_over {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} :
+  All2_Set P l l' → (∀ (x : A) (y : B), P x y → Type) → Type :=
+| All2_nil, _ := unit
+| All2_cons rxy rll', Q => Q _ _ rxy × All2_over rll' Q.
+
+Lemma All2_over_undep {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} (a : All2_Set P l l') (Q : A -> B → Type) :
+  All2_over a (fun x y _ => Q x y) <~> All2 Q l l'.
+Proof.
+  split.
+  - induction a; cbn; constructor; intuition eauto.
+  - induction a; cbn; intuition eauto; now depelim X.
+Qed.
+
 Section Wcbv.
   Context {wfl : WcbvFlags}.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
+
+  Variant eval_primitive (eval : term -> term -> Set) : prim_val term -> prim_val term -> Set :=
+    | evalPrimInt i : eval_primitive eval (prim_int i) (prim_int i)
+    | evalPrimFloat f : eval_primitive eval (prim_float f) (prim_float f)
+    | evalPrimArray v def v' def'
+      (ev : All2_Set eval v v')
+      (ed : eval def def') :
+      let a := {| array_default := def; array_value := v |} in
+      let a' := {| array_default := def'; array_value := v' |} in
+      eval_primitive eval (prim_array a) (prim_array a').
+  Derive Signature for eval_primitive.
+
+  Variant eval_primitive_ind (eval : term -> term -> Set) (P : forall x y, eval x y -> Type) : forall x y, eval_primitive eval x y -> Type :=
+  | evalPrimIntDep i : eval_primitive_ind eval P (prim_int i) (prim_int i) (evalPrimInt eval i)
+  | evalPrimFloatDep f : eval_primitive_ind eval P (prim_float f) (prim_float f) (evalPrimFloat eval f)
+  | evalPrimArrayDep v def v' def'
+    (ev : All2_Set eval v v')
+    (ed : eval def def') :
+    All2_over ev P -> P _ _ ed ->
+    let a := {| array_default := def; array_value := v |} in
+    let a' := {| array_default := def'; array_value := v' |} in
+    eval_primitive_ind eval P (prim_array a) (prim_array a') (evalPrimArray eval v def v' def' ev ed).
+  Derive Signature for eval_primitive_ind.
 
   Local Unset Elimination Schemes.
 
@@ -267,6 +303,9 @@ Section Wcbv.
   (*     Forall2 eval l l' -> *)
   (*     eval (tEvar n l) (tEvar n l') *)
 
+  | eval_prim p p' :
+    eval_primitive eval p p' ->
+    eval (tPrim p) (tPrim p')
 
   (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
   | eval_atom t : atom Σ t -> eval t t.
@@ -299,8 +338,24 @@ Section Wcbv.
      value_head nargs (tFix mfix idx).
    Derive Signature NoConfusion for value_head.
 
+
+   Variant primitive_value (value : term -> Type) : prim_val term -> Type :=
+    | primIntValue i : primitive_value value (prim_int i)
+    | primFloatValue f : primitive_value value (prim_float f)
+    | primArrayValue a :
+      All value a.(array_value) ->
+      value a.(array_default) ->
+      primitive_value value (prim_array a).
+   Derive Signature NoConfusion for primitive_value.
+
+  Variant atomic_value (value : term -> Type) : term -> Type :=
+  | atomic_atom t : atom Σ t -> atomic_value value t
+  | atomic_primitive p : primitive_value value p -> atomic_value value (tPrim p).
+  Derive Signature NoConfusion for atomic_value.
+  Hint Constructors atomic_value : core.
+
    Inductive value : term -> Type :=
-   | value_atom t : atom Σ t -> value t
+   | value_atom t : atomic_value value t -> value t
    | value_constructor ind c mdecl idecl cdecl args :
       with_constructor_as_block = true ->
       lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
@@ -310,6 +365,16 @@ Section Wcbv.
    Derive Signature for value.
 
 End Wcbv.
+
+Notation atomic Σ := (atomic_value Σ (value Σ)).
+
+Definition eval_primitive_depth {eval : term -> term -> Set} (size : forall x y, eval x y -> nat) {p p'} (e : eval_primitive eval p p') : nat :=
+  match e with
+  | evalPrimInt _ => 0
+  | evalPrimFloat _ => 0
+  | evalPrimArray v d v' d' aev ed =>
+    all2_size _ size aev + size _ _ ed
+  end.
 
 Fixpoint eval_depth {wfl : WcbvFlags} {Σ : EAst.global_declarations} {t1 t2 : EAst.term} (ev : eval Σ t1 t2) { struct ev } : nat.
 Proof.
@@ -323,6 +388,7 @@ Proof.
   | [ H : eval _ _ _ |- _ ] => apply aux in H; exact (S H)
   end.
   exact (S (all2_size _ (fun x y ev => aux wfl Σ x y ev) a)).
+  exact (S (eval_primitive_depth (aux wfl Σ) e)).
   exact 1.
 Defined.
 
@@ -330,11 +396,6 @@ Set Equations Transparent.
 Section eval_rect.
 
   Variables (wfl : WcbvFlags) (Σ : global_declarations) (P : forall x y, eval Σ x y → Type).
-
-  Equations All2_over {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} :
-    All2_Set P l l' → (∀ (x : A) (y : B), P x y → Type) → Type :=
-    | All2_nil, _ := unit
-    | All2_cons rxy rll', Q => Q _ _ rxy × All2_over rll' Q.
 
   Lemma eval_rect :
     (∀ (a t t' : term) (e : eval Σ a tBox),
@@ -589,13 +650,19 @@ Section eval_rect.
                                            → P (tApp f16 a)
                                                (tApp f' a')
                                                (eval_app_cong Σ f16 f' a a' e
-                                                 i e0))
-                                    → (∀ (t : term) (i : atom Σ t),
-                                         P t t (eval_atom Σ t i))
-                                      → ∀ (t t0 : term) (e : eval Σ t t0),
-                                         P t t0 e.
+                                                 i e0)) ->
+
+
+    (forall p p' (ev : eval_primitive (eval Σ) p p'),
+      eval_primitive_ind _ P _ _ ev ->
+      P (tPrim p) (tPrim p') (eval_prim _ _ _ ev))
+
+      → (∀ (t : term) (i : atom Σ t),
+          P t t (eval_atom Σ t i))
+      → ∀ (t t0 : term) (e : eval Σ t t0),
+          P t t0 e.
   Proof using Type.
-    intros ????????????????????? H.
+    intros ?????????????????????? H.
     revert t t0 H.
     fix aux 3.
     move aux at top.
@@ -607,6 +674,9 @@ Section eval_rect.
     end.
     clear -aux a. revert args args' a.
     fix aux' 3. destruct a. constructor. constructor. apply aux. apply aux'.
+    destruct e; constructor; eauto.
+    clear -aux ev. revert v v' ev.
+    fix aux' 3. destruct ev. constructor. constructor. apply aux. apply aux'.
   Qed.
 
   Definition eval_rec := eval_rect.
@@ -626,12 +696,13 @@ Section Wcbv.
   Lemma value_app f args : value_head #|args| f -> All value args -> value (mkApps f args).
   Proof.
     destruct args.
-    - intros [] hv; constructor; try easy. cbn [atom mkApps]. now rewrite e e0.
+    - intros [] hv; do 2 constructor; try easy. cbn [atom mkApps]. now rewrite e e0.
     - intros vh av. eapply value_app_nonnil => //.
   Qed.
 
   Lemma value_values_ind : forall P : term -> Type,
-      (forall t, atom Σ t -> P t) ->
+  (forall t, atom Σ t -> P t) ->
+  (forall p, primitive_value value p -> primitive_value P p -> P (tPrim p)) ->
        (forall (ind : inductive) (c : nat) (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body)
          (args : list term) (e : with_constructor_as_block = true) (e0 : lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl))
           (l : #|args| = cstr_arity mdecl cdecl) (a : All value args) , All P args ->
@@ -639,11 +710,13 @@ Section Wcbv.
       (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
-    intros P X X0 X1.
+    intros P X X0 X1 X2.
     fix value_values_ind 2. destruct 1.
-    - apply X; auto.
-    - eapply X0; auto; tea. clear -a value_values_ind. induction a; econstructor; auto.
-    - eapply X1; auto; tea.
+    - destruct a.
+      + apply X; auto.
+      + eapply X0; tea. destruct p0; constructor; eauto. exact (make_All_All value_values_ind a0).
+    - eapply X1; auto; tea. clear -a value_values_ind. induction a; econstructor; auto.
+    - eapply X2; auto; tea.
       clear v n. revert args a. fix aux 2. destruct 1. constructor; auto.
       constructor. now eapply value_values_ind. now apply aux.
   Defined.
@@ -663,14 +736,15 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) /\ atom Σ t)
+    ((l = []) × atomic Σ t)
     + (l = [] × ∑ ind c mdecl idecl cdecl args, [ × with_constructor_as_block , lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl),    t = tConstruct ind c args, #|args| = cstr_arity mdecl cdecl & All value args])
     + ([× l <> [], value_head #|l| t & All value l]).
   Proof.
     intros H H'. generalize_eq x (mkApps t l).
     revert x H' t H. apply: value_values_ind.
     - intros. subst.
-      now eapply atom_mkApps in H.
+      eapply atom_mkApps in H as []. do 2 left. intuition eauto. now constructor.
+    - intros. depelim X0; solve_discr; do 2 left; split => //; constructor 2; eauto.
     - intros * wcon lup len H IH t ht hcon.
       destruct l using rev_ind.
       + cbn in hcon. invs hcon. left. right.
@@ -734,16 +808,16 @@ Section Wcbv.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHev1 => //.
       destruct IHev1 as [?|[]]; intuition subst.
-      * rewrite H in i |- *. simpl in *.
+      * rewrite a1 in i |- *. simpl in *.
         apply (value_app f [a']).
-        destruct f; simpl in * |- *; try congruence.
-        + rewrite !negb_or /= in i; rtoProp; intuition auto.
-        + rewrite !negb_or /= in i; rtoProp; intuition auto.
+        depelim b. 2:{ cbn in i. rewrite !negb_or /= in i; rtoProp; intuition auto. }
+        destruct t; simpl in * |- *; try congruence.
+        + rewrite !negb_or /= in i1; rtoProp; intuition auto.
+        + rewrite !negb_or /= in i1; rtoProp; intuition auto.
         + destruct with_guarded_fix.
-          now cbn in i. now cbn in i.
+          now cbn in i1. now cbn in i1.
         + constructor.
         + cbn in i. destruct with_guarded_fix; cbn in i; rtoProp; intuition auto.
-        + econstructor; auto.
       * destruct b0 as (ind & c & mdecl & idecl & cdecl & args & [H1 H2 H3 H4]).
         rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         rewrite a0 in i |- *. simpl in *.
@@ -760,6 +834,11 @@ Section Wcbv.
         { destruct v; cbn in * => //. constructor. }
       { destruct v; cbn in * => //; try now constructor.
         now rewrite gfix in y. }
+    - depelim X; constructor; constructor 2; constructor; solve_all.
+      clear -ev a. induction ev. constructor.
+      destruct a as [va' ih].
+      constructor. exact va'. now apply IHev.
+    - now do 2 constructor.
   Qed.
 
   Lemma value_head_spec n t :
@@ -902,7 +981,7 @@ Section Wcbv.
     intro X. depelim X.
     - destruct L using rev_ind.
       reflexivity.
-      rewrite mkApps_app in i. inv i.
+      rewrite mkApps_app in a. now inv a.
     - EAstUtils.solve_discr.
     - EAstUtils.solve_discr. depelim v.
   Qed.
@@ -948,8 +1027,8 @@ Section Wcbv.
       unfold atom in isatom. destruct argsv using rev_case => //.
       split; auto. simpl. simpl in isatom. rewrite H //.
       rewrite mkApps_app /= // in isatom.
-    - intros. destruct argsv using rev_case => //.
-      rewrite mkApps_app in Heqtfix => //.
+    - intros; solve_discr.
+    - intros. solve_discr.
     - intros * vf hargs vargs ihargs eq. solve_discr => //. depelim vf. rewrite e.
       intros [= <- <-]. destruct with_guarded_fix => //. split => //.
       unfold isStuckFix. rewrite e. now apply Nat.leb_le.
@@ -1055,6 +1134,9 @@ Section Wcbv.
   Proof.
     move: e; eapply value_values_ind; simpl; intros; eauto with value.
     - now constructor.
+    - depelim X0; constructor; try constructor.
+      destruct a; constructor; cbn in *; eauto.
+      assert (All2 eval array_value array_value) by solve_all; eauto.
     - assert (All2 eval args args).
       { clear -X; induction X; constructor; auto. }
       econstructor; tea; auto.
@@ -1267,6 +1349,19 @@ Section Wcbv.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (i0 = i) as -> by now apply uip.
     - depelim ev'; try go.
+      depelim X; try depelim e; try constructor.
+      depelim e0.
+      subst a' a0 a1 a'0. cbn.
+      specialize (e _ ed0). noconf e.
+      assert (v' = v'0) as <-; auto.
+      clear -ev0 a.
+      induction ev in a, v'0, ev0 |- *; depelim ev0; eauto. f_equal; eauto. destruct a. specialize (e0 _ e). now noconf e0.
+      destruct a. specialize (IHev a). eauto.
+      assert (ev = ev0) as <-; auto.
+      induction ev in a, ev0 |- *; depelim ev0; eauto.
+      destruct a.
+      f_equal; eauto. specialize (e0 _ e). now noconf e0.
+    - depelim ev'; try go.
       2: now assert (i0 = i) as -> by now apply uip.
       exfalso. invs i. rewrite e in H0. destruct args; cbn in H0; invs H0.
   Qed.
@@ -1428,14 +1523,18 @@ Section WcbvEnv.
     intros wf ex t v ev.
     induction ev; try solve [econstructor;
       eauto using (extends_lookup_constructor wf ex), (extends_constructor_isprop_pars_decl wf ex), (extends_is_propositional wf ex)].
-    econstructor; eauto.
-    red in isdecl |- *. eauto using extends_lookup. econstructor; tea.
-    eauto using extends_lookup_constructor.
-    clear -a iha. induction a; constructor; eauto. apply iha. apply IHa, iha.
-    constructor.
-    destruct t => //. cbn [atom] in i. destruct args => //. destruct lookup_constructor eqn:hl => //.
-    eapply (extends_lookup_constructor wf ex) in hl. now cbn [atom].
-    cbn in i. now rewrite andb_false_r in i.
+    - econstructor; eauto.
+      red in isdecl |- *. eauto using extends_lookup.
+    - econstructor; tea.
+      eauto using extends_lookup_constructor.
+      clear -a iha. induction a; constructor; eauto. apply iha. apply IHa, iha.
+    - constructor.
+      depelim X; constructor; eauto.
+      eapply All2_over_undep in a. now eapply All2_All2_Set.
+    - constructor.
+      destruct t => //. cbn [atom] in i. destruct args => //. destruct lookup_constructor eqn:hl => //.
+      eapply (extends_lookup_constructor wf ex) in hl. now cbn [atom].
+      cbn in i. now rewrite andb_false_r in i.
   Qed.
 
 End WcbvEnv.
@@ -1603,6 +1702,8 @@ Proof.
   - eapply forallb_All in Hc. eapply All2_over_impl in iha; tea. solve_all.
     cbn; intros; intuition auto.
   - rtoProp; intuition auto.
+  - depelim X; solve_all. eapply All2_over_undep in a. subst a' a0; cbn.
+    depelim Hc; constructor; cbn in *; intuition eauto; solve_all.
 Qed.
 
 Ltac forward_keep H :=
@@ -1682,6 +1783,9 @@ Proof.
     eapply All2_over_impl in iha; tea.
     intuition auto.
     depelim a => //.
+  - depelim X; solve_all.
+    eapply All2_over_undep in a. subst a0 a'; depelim Hc'; constructor; cbn in *; solve_all.
+    solve_all.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} :
@@ -1760,6 +1864,14 @@ Proof.
     { induction a; cbn; try lia.
       destruct iha. destruct s. cbn. specialize (IHa a0). lia. }
   - unshelve eexists. eapply eval_app_cong; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
+  - depelim X. 1-2:unshelve eexists; cbn; repeat constructor.
+    destruct s as [hev evd].
+    unshelve eexists. do 2 econstructor.
+    clear -a. induction ev; constructor. apply a. apply IHev, a. tea.
+    cbn.
+    clear -a evd.
+    { induction ev; cbn; try lia. cbn in *.
+      destruct a. destruct s. cbn. specialize (IHev a). lia. }
 Qed.
 
 Lemma eval_mkApps_tFix_inv_size_unguarded {wfl : WcbvFlags} Σ mfix idx args v :

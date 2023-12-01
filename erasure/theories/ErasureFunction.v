@@ -642,6 +642,17 @@ Proof.
     rewrite fold_left_eq (fold_left_eq _ (KernameSet.union _ _)).
     rewrite !global_deps_union !KernameSet.union_spec.
     destruct iha as [sub ih]. specialize (IHa ih). intuition eauto.
+  - depelim X; cbn; simp prim_global_deps; try knset.
+    eapply EWcbvEval.All2_over_undep in a.
+    eapply EWcbvEval.All2_Set_All2 in ev. cbn. solve_all.
+    rewrite fold_left_eq.
+    intros hin h.
+    rewrite fold_left_eq.
+    rewrite !global_deps_union !KernameSet.union_spec in h *. intuition eauto. left.
+    clear -H a. induction a. cbn; knset. cbn in H |- *.
+    rewrite fold_left_eq global_deps_union !KernameSet.union_spec in H.
+    rewrite fold_left_eq !global_deps_union !KernameSet.union_spec. intuition eauto.
+    rewrite global_deps_union !KernameSet.union_spec in H0. intuition auto; try knset.
 Qed.
 
 Lemma in_global_deps_fresh {efl : EWellformed.EEnvFlags} kn Σ deps :

@@ -24,7 +24,7 @@ depends: [
   "coq-metacoq-safechecker-plugin" {= version}
   "coq-metacoq-erasure-plugin" {= version}
   "coq-metacoq-translations" {= version}
-#  "coq-metacoq-quotation" {= version}
+  "coq-metacoq-quotation" {= version}
 ]
 build: [
   ["bash" "./configure.sh" ] {with-test}

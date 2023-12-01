@@ -29,11 +29,6 @@ End with_R.
 #[export] Instance quote_compare_decls {eq_term leq_term u u'} {qeq_term : quotation_of eq_term} {qleq_term : quotation_of leq_term} {quote_eq_term : forall x y, ground_quotable (eq_term x y)} {quote_leq_term : forall x y, ground_quotable (leq_term x y)} : ground_quotable (@compare_decls eq_term leq_term u u')
   := ltac:(destruct 1; exact _).
 
-#[export] Instance quote_onPrims {eq_term leq_term u u'} {qeq_term : quotation_of eq_term} {qleq_term : quotation_of leq_term}
-  {quote_eq_term : forall x y, ground_quotable (eq_term x y)}
-  {quote_leq_term : forall x y, ground_quotable (leq_term x y)} : ground_quotable (@onPrims term eq_term leq_term u u') :=
-  ltac:(destruct 1; exact _).
-
 #[export] Hint Unfold
   eq_predicate
   : quotation.
@@ -54,7 +49,7 @@ Proof.
   | forall (x1 : ?X1) (x2 : ?X2) (x3 : ?X3) (x4 : ?X4) (x5 : ?X5) (x6 : ?X6) (x7 : ?X7) (x8 : ?X8) (x9 : ?X9) (x10 : ?X10) (t : ?X11), quotation_of t
     => change (forall (x1 : X1) (x2 : X2) (x3 : X3) (x4 : X4) (x5 : X5) (x6 : X6) (x7 : X7) (x8 : X8) (x9 : X9) (x10 : X10), ground_quotable X11) in quote_eq_term_upto_univ_napp
   end.
-  destruct t; try replace_quotation_of_goal ().
+  destruct t; replace_quotation_of_goal ().
 Defined.
 
 #[export] Instance quote_compare_term {cf pb Σ ϕ x y} : ground_quotable (@compare_term cf pb Σ ϕ x y) := ltac:(cbv [compare_term]; exact _).

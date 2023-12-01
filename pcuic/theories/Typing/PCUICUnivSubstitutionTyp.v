@@ -397,7 +397,7 @@ Proof using Type.
     + now rewrite subst_instance_prim_val_tag.
     + exact H0.
     + now rewrite subst_instance_prim_val_tag.
-    + destruct p as [? []]; depelim X2; constructor; eauto.
+    + destruct p as [? []]; depelim X1; constructor; eauto.
       * rewrite -subst_instance_univ_make. eapply wf_universe_subst_instance => //.
       * cbn -[Universe.make] in hty.
         specialize (hty u univs). rewrite subst_instance_univ_make in hty. now eapply hty.

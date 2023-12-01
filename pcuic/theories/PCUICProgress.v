@@ -579,7 +579,7 @@ Proof.
   intros hdecl hb.
   induction args => //.
   destruct prim as [? []]; cbn in *; intros sp; destruct hb; simp prim_type in *.
-  1-2:destruct a0; eapply (typing_spine_axiom _ _ _ _ []) in sp; tea.
+  1-2:eapply (typing_spine_axiom _ _ _ _ []) in sp; tea.
   eapply (typing_spine_axiom _ _ _ _ [array_type a0]) in sp; tea.
 Qed.
 

@@ -36,6 +36,7 @@ Inductive value : Set :=
 | vClos (na : ident) (b : term) (env : list (ident * value))
 | vConstruct (ind : inductive) (c : nat) (args : list (value))
 | vRecClos (b : list (ident * term)) (idx : nat) (env : list (ident * value)).
+(* | vPrim (p : EPrimitive.prim_val value). *)
 
 Definition environment := list (ident * value).
 Definition add : ident -> value -> environment -> environment := fun (x : ident) (v : value) env =>
@@ -1884,7 +1885,9 @@ Proof.
     + invs H2.
     + cbn in Hsunny. rtoProp.
       eapply eval_to_value in ev as Hval. invs Hval.
-      * destruct f'; cbn in *; try congruence.
+      * depelim X.
+        ** destruct t1; cbn in *; try congruence.
+        ** now rewrite /= in H.
       * invs H4; cbn in *; eauto.
       * invs H1; cbn in *; eauto; try congruence.
         rtoProp. edestruct s0 as (v & Hv1 & Hv2). 3: eauto. eauto. eauto.
@@ -1937,6 +1940,7 @@ Proof.
        destruct (nth_error (ind_ctors o) i) eqn:E2; cbn in *; try congruence.
        unfold cstr_arity in *.  invs H. lia.
        clear - Hvs; induction Hvs; econstructor; eauto. eapply r.
+  - todo "prim".
   - invs Hrep; cbn in *; try congruence; rtoProp.
     + econstructor. split; eauto. econstructor. eauto.
     + econstructor. split; eauto. econstructor.

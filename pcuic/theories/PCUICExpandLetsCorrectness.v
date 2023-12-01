@@ -3924,9 +3924,8 @@ Proof.
   - cbn. rewrite trans_prim_ty. econstructor; eauto. rewrite prim_val_tag_map //.
     * now eapply trans_declared_constant in H0.
     * destruct p as [? []]; cbn in X0 |- *.
-      1-2:destruct X0 as [s []]; exists s; split => //; rewrite ?H1 ?H2 //=.
-      destruct X0; split => //. rewrite H1 //. rewrite H2 //.
-    * depelim X1; depelim X2; constructor; intuition eauto. cbn. solve_all.
+      all:destruct H1 as []; split => //; rewrite ?H1 ?H2 //=.
+    * depelim X0; depelim X1; constructor; intuition eauto. cbn. solve_all.
   - eapply (type_ws_cumul_pb (pb:=Cumul)).
     + eauto.
     + now exists s.

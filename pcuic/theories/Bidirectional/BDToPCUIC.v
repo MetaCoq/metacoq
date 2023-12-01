@@ -417,10 +417,10 @@ Section BDToPCUICTyping.
 
     - red; intros.
       econstructor; eauto.
-      depelim X1; constructor; eauto.
+      depelim X0; constructor; eauto.
       eapply hty; eauto. eexists. econstructor; eauto.
       eapply hdef; eauto. eexists; eauto. eapply hty; eauto. eexists; econstructor; eauto.
-      solve_all. eapply X7; eauto. eexists. eapply hty; eauto. eexists; econstructor; eauto.
+      solve_all. eapply X6; eauto. eexists. eapply hty; eauto. eexists; econstructor; eauto.
 
     - red ; intros.
       now eapply type_reduction.

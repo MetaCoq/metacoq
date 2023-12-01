@@ -15,7 +15,7 @@ Hint Constructors eval : core.
 
 Definition atomic_term (t : term) :=
   match t with
-  | tBox | tConst _ | tRel _ | tVar _ | tPrim _ => true
+  | tBox | tConst _ | tRel _ | tVar _ => true
   | _ => false
   end.
 
@@ -25,7 +25,6 @@ Definition has_atom {etfl : ETermFlags} (t : term) :=
   | tConst _ => has_tConst
   | tRel _ => has_tRel
   | tVar _ => has_tVar
-  | tPrim _ => has_tPrim
   | _ => false
   end.
 
@@ -343,6 +342,11 @@ Lemma eval_preserve_mkApps_ind :
     All2 P args args' ->
     P' (tConstruct ind i args) (tConstruct ind i args')) →
 
+
+  (forall p p' (ev : eval_primitive (eval Σ) p p'),
+    eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
+    P' (tPrim p) (tPrim p')) ->
+
   (∀ t : term, atom Σ t → Q 0 t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> eval Σ t t0 → P' t t0.
 Proof.
@@ -353,7 +357,7 @@ Proof.
   intros.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X16 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X17 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   revert foo.
@@ -363,8 +367,8 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X16 into qt. rename X14 into Xcappexp.
-  rename X15 into Qatom.
+  rename X17 into qt. rename X14 into Xcappexp.
+  rename X15 into Qprim, X16 into Qatom.
   clear t t0 qt H.
   intros (t & t0 & qt & ev).
   intros IH.
@@ -547,12 +551,23 @@ Proof.
   - eapply (X13 _ _ _ _ ev1); tea.
     1,3:(apply and_assum; [ih|hp' P'Q]).
     intros. apply and_assum; [ih|hp' P'Q].
+  - unshelve eapply Qprim; tea. depelim e.
+    * constructor.
+    * constructor.
+    * eapply Qpres in qt. depelim qt. now cbn in i. constructor; eauto.
+      + apply All2_over_undep. cbn in IH.
+        depelim p0. destruct p.
+        clear -ev IH a0 P'Q and_assum. cbn in a0. subst a; cbn in *.
+        induction ev; constructor; eauto.
+        ** depelim a0.
+          eapply and_assum. unshelve eapply IH; tea. cbn. lia.
+          intros. split => //. eapply P'Q; tea.
+        ** depelim a0. intuition eauto. eapply X; intros.
+          unshelve eapply IH; tea. cbn; lia.
+      + depelim p0. destruct p.
+        eapply and_assum. unshelve eapply IH; tea. cbn; lia.
+        intros; split => //; eapply P'Q; tea.
   - eapply Qatom; tea.
-  - eapply Qatom; cbn; auto.
-  - eapply Qatom; cbn; auto.
-  - eapply Qatom; cbn; auto.
-  - eapply Qatom; cbn; auto.
-  - eapply Qatom; cbn; eauto.
 Qed.
 
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ : wf_glob Σ -> Qpreserves (fun n x => wellformed Σ n x) Σ.

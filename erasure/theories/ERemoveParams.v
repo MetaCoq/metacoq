@@ -358,7 +358,7 @@ Section strip.
 
 End strip.
 
-Global Hint Rewrite @map_InP_spec : strip.
+Global Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.
@@ -608,7 +608,7 @@ Module Fast.
         forward IHu. now rewrite -IHv. exact IHu.
       - intros Hl hargs args ->.
         rewrite strip_mkApps //=. simp_strip.
-        rewrite map_primIn_spec. f_equal. f_equal. cbn.
+        f_equal. f_equal. cbn.
         do 2 f_equal. rewrite /map_array_model.
         specialize (Hl [] eq_refl). f_equal; eauto.
       - intros Hl args ->.
@@ -849,6 +849,7 @@ Proof.
     eapply on_case; rtoProp; intuition auto. solve_all.
     eapply on_fix. solve_all. solve_all.
     eapply on_cofix; solve_all.
+    eapply on_prim; solve_all.
   - red. intros kn decl.
     move/(lookup_env_closed clΣ).
     unfold closed_decl. destruct EAst.cst_body => //.
@@ -1018,6 +1019,10 @@ Proof.
       eapply All2_impl; tea; cbn -[strip].
       intros x y []; auto.
 
+  - depelim X; simp strip; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all. now destruct b.
+    now destruct a0.
+
   - destruct t => //.
     all:constructor; eauto. simp strip.
     cbn [atom strip] in H |- *.
@@ -1086,7 +1091,7 @@ Proof.
     all: eapply H; auto.
   - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
     now rewrite -strip_isLambda. toAll; solve_all.
-  - rewrite map_primIn_spec. primProp. rtoProp; intuition eauto; solve_all_k 6.
+  - primProp. rtoProp; intuition eauto; solve_all_k 6.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     toAll; solve_all. toAll; solve_all.
   - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.

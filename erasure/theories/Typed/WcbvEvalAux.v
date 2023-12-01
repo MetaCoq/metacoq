@@ -277,6 +277,12 @@ Proof.
   now eapply closed_unfold_cofix.
 Qed.
 
+Definition eval_prim_length {wfl : WcbvFlags} {Σ p p'} (len : forall t v, Σ e⊢ t ⇓ v -> nat) (d : eval_primitive (eval Σ) p p') : nat :=
+  match d with
+  | evalPrimInt _ | evalPrimFloat _ => 0
+  | evalPrimArray v d v' d' av ev =>
+    len _ _ ev + EWcbvEval.all2_size _ len av
+  end.
 
 Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ⇓ v) : nat :=
   match ev with
@@ -300,6 +306,7 @@ Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ⇓ v) : nat :=
   | eval_fix _ _ _ _ _ _ _ _ _ ev1 ev2 _ ev3 =>
       S (deriv_length ev1 + deriv_length ev2 + deriv_length ev3)
   | eval_construct_block _ _ _ _ _ args _ _ _ _ _ => S #|args|
+  | eval_prim _ _ ev => S (eval_prim_length (@deriv_length _) ev)
   end.
 
 Lemma deriv_length_min {Σ t v} (ev : Σ e⊢ t ⇓ v) :

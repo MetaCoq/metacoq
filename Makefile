@@ -1,5 +1,5 @@
 
-all: printconf template-coq pcuic safechecker erasure erasure-plugin safechecker-plugin # quotation
+all: printconf template-coq pcuic safechecker erasure erasure-plugin safechecker-plugin quotation
 
 -include Makefile.conf
 
@@ -12,7 +12,7 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   export OCAMLPATH
 endif
 
-.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations # quotation
+.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations quotation
 
 printconf:
 ifeq '$(METACOQ_CONFIG)' 'local'
@@ -26,14 +26,14 @@ else
 endif
 endif
 
-install: all
+install: all 
 	$(MAKE) -C utils install
 	$(MAKE) -C common install
 	$(MAKE) -C template-coq install
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
 	$(MAKE) -C template-pcuic install
-# $(MAKE) -C quotation install
+	$(MAKE) -C quotation install
 	$(MAKE) -C safechecker-plugin install
 	$(MAKE) -C erasure install
 	$(MAKE) -C erasure-plugin install
@@ -45,7 +45,7 @@ uninstall:
 	$(MAKE) -C pcuic uninstall
 	$(MAKE) -C safechecker uninstall
 	$(MAKE) -C template-pcuic uninstall
-#	$(MAKE) -C quotation uninstall
+	$(MAKE) -C quotation uninstall
 	$(MAKE) -C safechecker-plugin uninstall
 	$(MAKE) -C erasure uninstall
 	$(MAKE) -C erasure-plugin uninstall
@@ -74,7 +74,7 @@ clean:
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C template-pcuic clean
-#	$(MAKE) -C quotation clean
+	$(MAKE) -C quotation clean
 	$(MAKE) -C erasure clean
 	$(MAKE) -C erasure-plugin clean
 	$(MAKE) -C examples clean
@@ -88,7 +88,7 @@ vos:
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
 	$(MAKE) -C template-pcuic vos
-#	$(MAKE) -C quotation vos
+	$(MAKE) -C quotation vos
 	$(MAKE) -C erasure vos
 	$(MAKE) -C erasure-plugin vos
 	$(MAKE) -C translations vos
@@ -100,7 +100,7 @@ quick:
 	$(MAKE) -C pcuic quick
 	$(MAKE) -C safechecker quick
 	$(MAKE) -C template-pcuic quick
-#	$(MAKE) -C quotation vos # quick # we cannot unset universe checking in 8.16 due to COQBUG(https://github.com/coq/coq/issues/17361), and quick does not buy much in quotation anyway, where almost everything is transparent
+	$(MAKE) -C quotation vos # quick # we cannot unset universe checking in 8.16 due to COQBUG(https://github.com/coq/coq/issues/17361), and quick does not buy much in quotation anyway, where almost everything is transparent
 	$(MAKE) -C erasure quick
 	$(MAKE) -C erasure-plugin quick
 	$(MAKE) -C translations quick
@@ -112,7 +112,7 @@ mrproper:
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C template-pcuic mrproper
-#	$(MAKE) -C quotation mrproper
+	$(MAKE) -C quotation mrproper
 	$(MAKE) -C erasure mrproper
 	$(MAKE) -C erasure-plugin mrproper
 	$(MAKE) -C examples mrproper
@@ -126,7 +126,7 @@ mrproper:
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
 	$(MAKE) -C template-pcuic .merlin
-#	$(MAKE) -C quotation .merlin
+	$(MAKE) -C quotation .merlin
 	$(MAKE) -C erasure .merlin
 	$(MAKE) -C erasure-plugin .merin
 
@@ -148,8 +148,8 @@ safechecker: pcuic
 template-pcuic: template-coq pcuic
 	$(MAKE) -C template-pcuic
 
-#quotation: template-coq pcuic template-pcuic
-#	$(MAKE) -C quotation
+quotation: template-coq pcuic template-pcuic
+	$(MAKE) -C quotation
 
 safechecker-plugin: safechecker template-pcuic
 	$(MAKE) -C safechecker-plugin

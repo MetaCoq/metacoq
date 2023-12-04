@@ -643,8 +643,8 @@ Proof.
     rewrite !global_deps_union !KernameSet.union_spec.
     destruct iha as [sub ih]. specialize (IHa ih). intuition eauto.
   - depelim X; cbn; simp prim_global_deps; try knset.
-    eapply EWcbvEval.All2_over_undep in a.
-    eapply EWcbvEval.All2_Set_All2 in ev. cbn. solve_all.
+    eapply All2_over_undep in a.
+    eapply All2_Set_All2 in ev. cbn. solve_all.
     rewrite fold_left_eq.
     intros hin h.
     rewrite fold_left_eq.

@@ -281,7 +281,7 @@ Definition eval_prim_length {wfl : WcbvFlags} {Σ p p'} (len : forall t v, Σ e�
   match d with
   | evalPrimInt _ | evalPrimFloat _ => 0
   | evalPrimArray v d v' d' av ev =>
-    len _ _ ev + EWcbvEval.all2_size _ len av
+    len _ _ ev + EPrimitive.all2_size _ len av
   end.
 
 Fixpoint deriv_length {Σ t v} (ev : Σ e⊢ t ⇓ v) : nat :=

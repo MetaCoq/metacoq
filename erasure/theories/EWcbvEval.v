@@ -69,60 +69,12 @@ Definition default_wcbv_flags := {| with_prop_case := true ; with_guarded_fix :=
 Definition opt_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := true ; with_constructor_as_block := false|}.
 Definition target_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := false ; with_constructor_as_block := false |}.
 
-
-Inductive All2_Set {A B : Set} (R : A -> B -> Set) : list A -> list B -> Set :=
-  All2_nil : All2_Set R [] []
-| All2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
-    R x y -> All2_Set R l l' -> All2_Set R (x :: l) (y :: l').
-Arguments All2_nil {_ _ _}.
-Arguments All2_cons {_ _ _ _ _ _ _}.
-Derive Signature for All2_Set.
-Derive NoConfusionHom for All2_Set.
-#[global] Hint Constructors All2_Set : core.
-
-Section All2_size.
-  Context {A B : Set} (P : A -> B -> Set) (fn : forall x1 x2, P x1 x2 -> size).
-  Fixpoint all2_size {l1 l2} (f : All2_Set P l1 l2) : size :=
-  match f with
-  | All2_nil => 0
-  | All2_cons _ _ _ _ rxy rll' => fn _ _ rxy + all2_size rll'
-  end.
-End All2_size.
-
-Lemma All2_Set_All2 {A B : Set} (R : A -> B -> Set) l l' : All2_Set R l l' -> All2 R l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-#[export] Hint Resolve All2_Set_All2 : core.
-
-Coercion All2_Set_All2 : All2_Set >-> All2.
-
-Lemma All2_All2_Set {A B : Set} (R : A -> B -> Set) l l' : All2 R l l' -> All2_Set R l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-#[export] Hint Immediate All2_All2_Set : core.
-
-Set Equations Transparent.
-Equations All2_over {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} :
-  All2_Set P l l' → (∀ (x : A) (y : B), P x y → Type) → Type :=
-| All2_nil, _ := unit
-| All2_cons rxy rll', Q => Q _ _ rxy × All2_over rll' Q.
-
-Lemma All2_over_undep {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} (a : All2_Set P l l') (Q : A -> B → Type) :
-  All2_over a (fun x y _ => Q x y) <~> All2 Q l l'.
-Proof.
-  split.
-  - induction a; cbn; constructor; intuition eauto.
-  - induction a; cbn; intuition eauto; now depelim X.
-Qed.
-
 Section Wcbv.
   Context {wfl : WcbvFlags}.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
 
-  Variant eval_primitive (eval : term -> term -> Set) : prim_val term -> prim_val term -> Set :=
+  Variant eval_primitive {term term' : Set} (eval : term -> term' -> Set) : prim_val term -> prim_val term' -> Set :=
     | evalPrimInt i : eval_primitive eval (prim_int i) (prim_int i)
     | evalPrimFloat f : eval_primitive eval (prim_float f) (prim_float f)
     | evalPrimArray v def v' def'
@@ -133,7 +85,7 @@ Section Wcbv.
       eval_primitive eval (prim_array a) (prim_array a').
   Derive Signature for eval_primitive.
 
-  Variant eval_primitive_ind (eval : term -> term -> Set) (P : forall x y, eval x y -> Type) : forall x y, eval_primitive eval x y -> Type :=
+  Variant eval_primitive_ind {term term' : Set} (eval : term -> term' -> Set) (P : forall x y, eval x y -> Type) : forall x y, eval_primitive eval x y -> Type :=
   | evalPrimIntDep i : eval_primitive_ind eval P (prim_int i) (prim_int i) (evalPrimInt eval i)
   | evalPrimFloatDep f : eval_primitive_ind eval P (prim_float f) (prim_float f) (evalPrimFloat eval f)
   | evalPrimArrayDep v def v' def'
@@ -144,6 +96,19 @@ Section Wcbv.
     let a' := {| array_default := def'; array_value := v' |} in
     eval_primitive_ind eval P (prim_array a) (prim_array a') (evalPrimArray eval v def v' def' ev ed).
   Derive Signature for eval_primitive_ind.
+
+  Section map_eval_prim.
+    Context {term term' : Set}.
+    Context {eval : term -> term' -> Set}.
+    Context {P : forall x y, eval x y -> Type}.
+    Context (F : forall x y (e : eval x y), P x y e).
+
+    Equations map_eval_primitive {p : prim_val term} {p' : prim_val term'} (ev : eval_primitive eval p p') : eval_primitive_ind eval P p p' ev :=
+    | @evalPrimInt _ _ _ _ := evalPrimIntDep _ _ i;
+    | @evalPrimFloat _ _ _ _ := evalPrimFloatDep _ _ f;
+    | @evalPrimArray v def v' def'  ev ed :=
+      evalPrimArrayDep _ _ v def v' def' ev ed (map_All2_dep _ F ev) (F _ _ ed).
+  End map_eval_prim.
 
   Local Unset Elimination Schemes.
 
@@ -672,11 +637,8 @@ Section eval_rect.
     | [ H : _ |- _ ] =>
       eapply H; (unshelve eapply aux || tea); tea; cbn; try lia
     end.
-    clear -aux a. revert args args' a.
-    fix aux' 3. destruct a. constructor. constructor. apply aux. apply aux'.
-    destruct e; constructor; eauto.
-    clear -aux ev. revert v v' ev.
-    fix aux' 3. destruct ev. constructor. constructor. apply aux. apply aux'.
+    exact (map_All2_dep _ aux a).
+    exact (map_eval_primitive aux e).
   Qed.
 
   Definition eval_rec := eval_rect.

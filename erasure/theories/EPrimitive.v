@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import Universes Primitive Reflect
      Environment EnvironmentTyping.
 (* From MetaCoq.Erasure Require Import BasicAst. *)
 From Equations Require Import Equations.
-From Coq Require Import ssreflect.
+From Coq Require Import ssreflect Utf8.
 From Coq Require Import Uint63 SpecFloat.
 
 Implicit Type term : Set.
@@ -378,3 +378,99 @@ Section PrimIn.
 End PrimIn.
 
 #[global] Hint Rewrite @map_primIn_spec : map.
+
+Inductive All2_Set {A B : Set} (R : A -> B -> Set) : list A -> list B -> Set :=
+  All2_nil : All2_Set R [] []
+| All2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+    R x y -> All2_Set R l l' -> All2_Set R (x :: l) (y :: l').
+Arguments All2_nil {_ _ _}.
+Arguments All2_cons {_ _ _ _ _ _ _}.
+Derive Signature for All2_Set.
+Derive NoConfusionHom for All2_Set.
+#[global] Hint Constructors All2_Set : core.
+
+Section All2_size.
+  Context {A B : Set} (P : A -> B -> Set) (fn : forall x1 x2, P x1 x2 -> nat).
+  Fixpoint all2_size {l1 l2} (f : All2_Set P l1 l2) : nat :=
+  match f with
+  | All2_nil => 0
+  | All2_cons _ _ _ _ rxy rll' => fn _ _ rxy + all2_size rll'
+  end.
+End All2_size.
+
+Lemma All2_Set_All2 {A B : Set} (R : A -> B -> Set) l l' : All2_Set R l l' -> All2 R l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+#[export] Hint Resolve All2_Set_All2 : core.
+
+Coercion All2_Set_All2 : All2_Set >-> All2.
+
+Lemma All2_All2_Set {A B : Set} (R : A -> B -> Set) l l' : All2 R l l' -> All2_Set R l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+#[export] Hint Immediate All2_All2_Set : core.
+
+Set Equations Transparent.
+Equations All2_over {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} :
+  All2_Set P l l' → (∀ (x : A) (y : B), P x y → Type) → Type :=
+| All2_nil, _ := unit
+| All2_cons rxy rll', Q => Q _ _ rxy × All2_over rll' Q.
+
+Lemma All2_over_undep {A B : Set} {P : A → B → Set} {l : list A} {l' : list B} (a : All2_Set P l l') (Q : A -> B → Type) :
+  All2_over a (fun x y _ => Q x y) <~> All2 Q l l'.
+Proof.
+  split.
+  - induction a; cbn; constructor; intuition eauto.
+  - induction a; cbn; intuition eauto; now depelim X.
+Qed.
+
+Section map_All2_dep.
+  Context {A B : Set}.
+  Context (P : A -> B -> Set).
+  Context {hP : forall x y, P x y -> Type}.
+  Context (F : forall x y (e : P x y), hP x y e).
+
+  Equations map_All2_dep {l : list A} {l' : list B} (ev : All2_Set P l l') : All2_over ev hP :=
+  | All2_nil := tt
+  | All2_cons hd tl := (F _ _ hd, map_All2_dep tl).
+
+End map_All2_dep.
+
+Inductive onPrims {term term' : Set} (R : term -> term' -> Set) : prim_val term -> prim_val term' -> Set :=
+  | onPrimsInt i : onPrims R (primInt; primIntModel i) (primInt; primIntModel i)
+  | onPrimsFloat f : onPrims R (primFloat; primFloatModel f) (primFloat; primFloatModel f)
+  | onPrimsArray v def v' def' :
+    R def def' ->
+    All2_Set R v v' ->
+    let a := {| array_default := def; array_value := v |} in
+    let a' := {| array_default := def'; array_value := v' |} in
+    onPrims R (primArray; primArrayModel a) (primArray; primArrayModel a').
+Derive Signature for onPrims.
+
+Variant onPrims_dep {term term' : Set} (R : term -> term' -> Set) (P : forall x y, R x y -> Type) : forall x y, onPrims R x y -> Type :=
+| onPrimsIntDep i : onPrims_dep R P (prim_int i) (prim_int i) (onPrimsInt R i)
+| onPrimsFloatDep f : onPrims_dep R P (prim_float f) (prim_float f) (onPrimsFloat R f)
+| onPrimsArrayDep v def v' def'
+  (ed : R def def')
+  (ev : All2_Set R v v') :
+  P _ _ ed ->
+  All2_over ev P ->
+  let a := {| array_default := def; array_value := v |} in
+  let a' := {| array_default := def'; array_value := v' |} in
+  onPrims_dep R P (prim_array a) (prim_array a') (onPrimsArray R v def v' def' ed ev).
+Derive Signature for onPrims_dep.
+
+Section map_onPrims.
+  Context {term term' : Set}.
+  Context {R : term -> term' -> Set}.
+  Context {P : forall x y, R x y -> Type}.
+  Context (F : forall x y (e : R x y), P x y e).
+
+  Equations map_onPrims {p : prim_val term} {p' : prim_val term'} (ev : onPrims R p p') : onPrims_dep R P p p' ev :=
+  | @onPrimsInt _ _ _ _ := onPrimsIntDep _ _ i;
+  | @onPrimsFloat _ _ _ _ := onPrimsFloatDep _ _ f;
+  | @onPrimsArray v def v' def' ed ev :=
+    onPrimsArrayDep _ _ v def v' def' ed ev (F _ _ ed) (map_All2_dep _ F ev).
+End map_onPrims.

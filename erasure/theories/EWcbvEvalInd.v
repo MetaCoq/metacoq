@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv ECSubst EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EWcbvEval EGlobalEnv ECSubst EInduction.
 
 Set Asymmetric Patterns.
 From Equations Require Import Equations.
@@ -280,7 +280,7 @@ Proof using Type.
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
   - eapply X15; tea; auto.
-    clear -a IH'. induction a; constructor.
+    clear -a IH'. induction a; constructor; eauto.
     eapply (IH' _ _ r). cbn. lia. apply IHa.
     intros. eapply (IH' _ _ H). cbn. lia.
   - unshelve eapply X17; tea.

@@ -741,12 +741,12 @@ Proof.
     constructor. apply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
 
-  - epose proof (type_Prim _ _ _ _ _ X H H0 X0 X1). eapply validity in X5.
-    depelim X2; depelim X4; depelim o.
+  - epose proof (type_Prim _ _ _ _ _ X H H0 H1 X0). eapply validity in X4.
+    depelim X1; depelim X3; depelim o.
     1-2:econstructor; tea.
-    depelim X1. destruct X5 as [s ?].
+    depelim X0. destruct X4 as [s ?].
     econstructor; tea.
-    eapply inversion_Prim in X3 as [prim_ty' [cdecl' []]]; eauto.
+    eapply inversion_Prim in X2 as [prim_ty' [cdecl' []]]; eauto.
     rewrite e2 in H. noconf H.
     unshelve eapply declared_constant_to_gen in H0, d; tea.
     pose proof (declared_constant_inj _ _ H0 d). subst cdecl'.

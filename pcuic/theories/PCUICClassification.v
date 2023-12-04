@@ -581,7 +581,7 @@ Proof.
   intros axfree.
   cut (Forall is_true []); [|constructor].
   generalize ([] : list bool).
-  induction t; intros axfree_args all_true; cbn; auto.
+  induction t using term_forall_list_ind; intros axfree_args all_true; cbn; auto.
   - destruct lookup_env eqn:find; auto.
     destruct g; auto.
     destruct c; auto.
@@ -615,6 +615,7 @@ Section classification.
       left ; eexists; split; eauto.
       now rewrite nth_error_nil.
     - eapply (whnf_cofixapp _ _ [] _ _ []).
+    - eapply whnf_prim.
     - destruct X => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
@@ -892,6 +893,7 @@ Section classification.
       cbn.
       destruct ?; auto.
       destruct ?; auto.
+    - cbn. constructor.
     - rewrite axiom_free_value_mkApps.
       rewrite app_nil_r.
       destruct X; try constructor.
@@ -982,7 +984,7 @@ Section classification.
         eapply All2_refl; split; reflexivity.
         eapply red1_red. destruct p => /= //.
         eapply red_iota; tea.
-        rewrite e0 /cstr_arity eq_npars e2 //. }
+        rewrite e1 /cstr_arity eq_npars e3 //. }
       specialize (X X0).
       redt _; eauto.
 
@@ -1002,18 +1004,18 @@ Section classification.
       specialize (IHHe2 _ t0).
       epose proof (subject_reduction Σ [] _ _ _ wfΣ t IHHe1) as Ht2.
       epose proof (subject_reduction Σ [] _ _ _ wfΣ t0 IHHe2) as Ha2.
-      assert (red Σ [] (tApp f a) (tApp (mkApps fn argsv) av)).
+      assert (red Σ [] (tApp f4 a) (tApp (mkApps fn argsv) av)).
       { redt _.
         eapply red_app; eauto.
         rewrite -![tApp _ _](mkApps_app _ _ [_]).
         eapply red1_red.
-        rewrite -closed_unfold_fix_cunfold_eq in e.
+        rewrite -closed_unfold_fix_cunfold_eq in e1.
         { eapply subject_closed in Ht2; auto.
           rewrite closedn_mkApps in Ht2. now move/andP: Ht2 => [clf _]. }
         eapply red_fix; eauto.
         assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
         { rewrite mkApps_app /=. eapply type_App'; eauto. }
-        epose proof (fix_app_is_constructor X0 e); eauto.
+        epose proof (fix_app_is_constructor X0 e1); eauto.
         rewrite /is_constructor.
         destruct nth_error eqn:hnth => //.
         2:{ eapply nth_error_None in hnth. len in hnth. }
@@ -1077,6 +1079,12 @@ Section classification.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
       now eapply red_app.
+
+    - eapply inversion_Prim in Ht as [prim_type [decl []]]; eauto.
+      depelim X. 1-2:reflexivity.
+      depelim p1. specialize (r _ hdef).
+      eapply red_primArray_congr; eauto.
+      eapply All2_undep in a. solve_all.
   Qed.
 
   Theorem subject_reduction_eval {t u T} :

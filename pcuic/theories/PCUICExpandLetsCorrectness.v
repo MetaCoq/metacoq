@@ -3924,9 +3924,8 @@ Proof.
   - cbn. rewrite trans_prim_ty. econstructor; eauto. rewrite prim_val_tag_map //.
     * now eapply trans_declared_constant in H0.
     * destruct p as [? []]; cbn in X0 |- *.
-      1-2:destruct X0 as [s []]; exists s; split => //; rewrite ?H1 ?H2 //=.
-      destruct X0; split => //. rewrite H1 //. rewrite H2 //.
-    * depelim X1; depelim X2; constructor; intuition eauto. cbn. solve_all.
+      all:destruct H1 as []; split => //; rewrite ?H1 ?H2 //=.
+    * depelim X0; depelim X1; constructor; intuition eauto. cbn. solve_all.
   - eapply (type_ws_cumul_pb (pb:=Cumul)).
     + eauto.
     + now exists s.
@@ -5275,13 +5274,13 @@ Proof.
     rewrite trans_mkApps in IHev1.
     econstructor.
     * eapply IHev1; eauto.
-    * rewrite !nth_error_map e //.
+    * rewrite !nth_error_map e0 //.
     * unshelve eapply @declared_constructor_to_gen with (cf :=cf' cf); eauto.
       eapply trans_declared_constructor; tea.
       apply declared_constructor_from_gen; eauto.
-    * len. rewrite e0 /cstr_arity.
+    * len. rewrite e1 /cstr_arity.
       cbn. rewrite context_assumptions_smash_context context_assumptions_map /= //.
-    * now rewrite e1.
+    * now rewrite e2.
     * cbn.
       rewrite trans_bcontext.
       rewrite !context_assumptions_smash_context !context_assumptions_map //.
@@ -5308,7 +5307,7 @@ Proof.
       { rewrite /iota_red.
         eapply closedn_subst0 => //.
         now rewrite forallb_rev; apply forallb_skipn.
-        cbn; len. rewrite skipn_length e0 /cstr_arity -e1 e2.
+        cbn; len. rewrite skipn_length e1 /cstr_arity -e2 e3.
         replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
           with (context_assumptions (bcontext br)) by lia.
         eauto.
@@ -5341,9 +5340,9 @@ Proof.
     eapply trans_declared_projection in d; tea.
     econstructor; tea.
     unshelve eapply @declared_projection_to_gen with (cf:=cf' cf); eauto.
-    { len. rewrite /cstr_arity e. cbn.
+    { len. rewrite /cstr_arity e0. cbn.
       rewrite context_assumptions_smash_context /= /cstr_arity context_assumptions_map //. }
-    rewrite nth_error_map e0 //.
+    rewrite nth_error_map e1 //.
     apply IHev2.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => onargs.
@@ -5353,12 +5352,12 @@ Proof.
     rewrite trans_mkApps /= in IHev1.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
-    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    rewrite -closed_unfold_fix_cunfold_eq in e1 => //.
     forward IHev3.
     { cbn. apply/andP; split.
       rewrite closedn_mkApps /= clargsv andb_true_r.
       eapply closed_unfold_fix; tea. now eapply eval_closed in ev2. }
-    eapply (trans_unfold_fix xpred0) in e; tea.
+    eapply (trans_unfold_fix xpred0) in e1; tea.
     2:now eapply (@closedn_on_free_vars xpred0 0).
     eapply eval_fix; eauto. len.
     rewrite -closed_unfold_fix_cunfold_eq; tea.
@@ -5369,10 +5368,10 @@ Proof.
     rewrite trans_mkApps /= in IHev1.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
-    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    rewrite -closed_unfold_fix_cunfold_eq in e1 => //.
     specialize (IHev1 clf).
     rewrite trans_mkApps /=.
-    eapply (trans_unfold_fix xpred0) in e; tea.
+    eapply (trans_unfold_fix xpred0) in e1; tea.
     2:now eapply (@closedn_on_free_vars xpred0 0).
     eapply eval_fix_value. eauto. eauto.
     rewrite -closed_unfold_fix_cunfold_eq; tea.
@@ -5432,6 +5431,8 @@ Proof.
     rewrite -isFixApp_trans -isConstructApp_trans -isPrimApp_trans.
     clear -i. induction f' => /= //.
 
+  - cbn. depelim X; do 2 constructor; eauto; cbn in *; rtoProp; intuition auto.
+    eapply All2_undep in a. solve_all.
   - move=> clt. eapply eval_atom.
     destruct t => //.
 Qed.

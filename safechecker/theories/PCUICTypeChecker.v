@@ -1316,32 +1316,30 @@ Section Typecheck.
   Equations? check_primitive_invariants (p : prim_tag) (decl : constant_body) : typing_result_comp (primitive_invariants p decl) :=
    | primInt | decl :=
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
-      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
-      check_eq_true (isSort decl.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
+      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a non-monomorphic constant") ;;
+      check_eq_true (eqb decl.(cst_type) (tSort Universe.type0)) (Msg "primitive type for integers is registered to an axiom whose type is not the sort Set") ;;
       ret _
    | primFloat | decl :=
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
-      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a polymorphic constant") ;;
-      check_eq_true (isSort decl.(cst_type)) (Msg "primitive type is registered to an axiom whose type is not a sort") ;;
+      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type for floats is registered to non-monomorphic constant") ;;
+      check_eq_true (eqb decl.(cst_type) (tSort Universe.type0)) (Msg "primitive type for floats is registered to an axiom whose type is not the sort Set") ;;
       ret _
    | primArray | decl :=
       let s := Universe.make (Level.lvar 0) in
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
-      check_eq_true (eqb decl.(cst_universes) (Polymorphic_ctx array_uctx)) (Msg "primitive type is registered to a polymorphic constant") ;;
+      check_eq_true (eqb decl.(cst_universes) (Polymorphic_ctx array_uctx)) (Msg "primitive type is registered to a monomorphic constant") ;;
       check_eq_true (eqb decl.(cst_type) (tImpl (tSort s) (tSort s))) (Msg "primitive type for arrays is registered to an axiom whose type is not of shape Type -> Type") ;;
       ret _.
   Proof.
     all:try eapply eqb_eq in i.
     all:try apply eqb_eq in i0.
-    - destruct (cst_type decl) => //. now exists u.
-    - destruct X1 as []. rewrite H in absurd; eauto.
-    - destruct X1 as []. apply absurd. now rewrite H1; apply eqb_refl.
-    - destruct X1 as []. apply absurd; rewrite H0; apply eqb_refl.
-    - destruct (cst_type decl) => //. now exists u.
-    - destruct X1 as []. rewrite H in absurd; eauto.
-    - destruct X1 as []. apply absurd. now rewrite H1; apply eqb_refl.
-    - destruct X1 as []. apply absurd; rewrite H0; apply eqb_refl.
-    - destruct (cst_type decl) => //. split => //. now apply eqb_eq in i1.
+    all:try apply eqb_eq in i1 => //.
+    - destruct H as []. rewrite H in absurd; eauto.
+    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
+    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
+    - destruct H as []. rewrite H in absurd; eauto.
+    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
+    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
     - destruct H as []. rewrite H in absurd; eauto.
     - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
     - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.

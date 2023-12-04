@@ -2042,12 +2042,12 @@ Section SubstIdentity.
     - solve_all. destruct a as [s [? ?]]. solve_all.
     - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
     - destruct p as [? []]; cbn => //. do 2 f_equal.
-      depelim X1. specialize (hty X2); specialize (hdef X2).
+      depelim X0. specialize (hty X1); specialize (hdef X1).
       unfold mapu_array_model; destruct a; cbn -[Universe.make] in * => //=; f_equal; intuition eauto.
       * destruct array_level => //.
         rewrite subst_instance_univ_make in b. now injection b.
       * solve_all.
-    - depelim X1; cbn => //=. destruct X. simp prim_type. cbn. f_equal; intuition eauto.
+    - depelim X0; cbn => //=. depelim X. simp prim_type. cbn. f_equal; intuition eauto.
       do 2 f_equal. cbn -[Universe.make] in b. rewrite subst_instance_univ_make in b.
       now injection b.
   Qed.

@@ -1929,6 +1929,9 @@ Proof.
     now apply (is_expanded_aux_upwards 0).
   - easy.
   - easy.
+  - depelim X; auto.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. solve_all. subst a0 a'; cbn in *.
+    depelim exp_t; constructor; cbn in *; intuition eauto. solve_all.
 Qed.
 
 Lemma valid_case_masks_lift ind c brs n k :
@@ -2559,6 +2562,9 @@ Proof with auto with dearg.
     easy.
   - easy.
   - easy.
+  - depelim X; auto.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. subst a0 a'; cbn -[test_prim] in *.
+    solve_all. depelim H0; constructor; cbn; intuition eauto. solve_all.
 Qed.
 
 Lemma lookup_env_dearg_env Σ kn :
@@ -4258,6 +4264,16 @@ Proof.
         -- now apply is_expanded_aux_subst.
         -- lia.
         -- eapply closedn_dearg_aux;eauto.
+    + depelim e; repeat constructor.
+      cbn in deriv_len. eapply All2_All2_Set, All2_map.
+      solve_all. subst a' a; cbn in *.
+      depelim H0; depelim H1. intuition auto; cbn in *.
+      clear -b0 deriv_len IH.
+      induction b0 in v', ev, deriv_len |- *; depelim ev; constructor; eauto.
+      specialize (IHb0 _ ev). unshelve eapply IH; intuition eauto. cbn. cbn in deriv_len. lia.
+      unshelve eapply IHb0; tea. cbn in deriv_len. lia.
+      cbn in *; unfold test_array_model in *; subst a a'; cbn in *.
+      unshelve eapply IH; tea; rtoProp; intuition eauto. lia.
     + destruct t; cbn in *; try destruct y; try congruence; now constructor.
 Qed.
 End dearg_correct.
@@ -4360,6 +4376,8 @@ Proof.
     assumption.
     eapply lookup_ctor_trans_env_inv;eauto.
     all : eauto.
+  - depelim X; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_All2_Set. eapply All2_Set_All2 in ev; solve_all. eauto.
   - eapply eval_atom.
     depelim t;auto.
     destruct args;simpl in *;try congruence.

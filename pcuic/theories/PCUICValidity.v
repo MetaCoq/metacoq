@@ -399,11 +399,11 @@ Section Validity.
       eapply nth_error_all in X0 as [s Hs]; pcuic.
 
     - (* Primitive *)
-      depelim X1; depelim X2; simp prim_type; cbn in *.
-      1-2:destruct X0 as [s [hty hbod huniv]]; exists s@[[]]; change (tSort s@[[]]) with (tSort s)@[[]];
+      depelim X0; depelim X1; simp prim_type; cbn in *.
+      1-2:destruct H1 as [hty hbod huniv]; exists (Universe.type0)@[[]]; change (tSort (Universe.type0)@[[]]) with (tSort Universe.type0)@[[]];
           rewrite -hty; refine (type_Const _ _ _ [] _ wfΓ H0 _); rewrite huniv //.
       set (s := (Universe.make (array_level a))).
-      destruct X0 as [hty' hbod huniv].
+      destruct H1 as [hty' hbod huniv].
       exists s.
       eapply (type_App _ _ _ _ _ (tSort s)); tea; cycle 1.
       + eapply (type_Const _ _ _ [array_level a]) in H0; tea. rewrite hty' in H0. cbn in H0. exact H0.

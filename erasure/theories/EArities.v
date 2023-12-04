@@ -1051,3 +1051,70 @@ Proof.
     eapply PCUICElimination.unique_sorting_equality_propositional in Hprinc; eauto.
     rewrite Hprinc; eauto.
 Qed.
+
+(** Inhabitants of primitive types are not erasable: they must live in a relevant universe.
+
+  This currently relies on int and float being in Set, while arrays are universe polymorphic,
+  hence always relevant, and the primitive types are axioms, so not convertible to arities. *)
+
+Lemma prim_type_inv p prim_ty :
+  ∑ u args, prim_type p prim_ty = mkApps (tConst prim_ty u) args.
+Proof.
+  destruct p as [? []]; simp prim_type.
+  - eexists [], []. reflexivity.
+  - eexists [], []; reflexivity.
+  - eexists [_], [_]; reflexivity.
+Qed.
+
+Lemma primitive_invariants_axiom t decl : primitive_invariants t decl -> cst_body decl = None.
+Proof.
+  destruct t; cbn => //.
+  1-2:now intros [? []].
+  now intros [].
+Qed.
+
+Lemma nisErasable_tPrim Σ p :
+  wf_ext Σ ->
+  isErasable Σ [] (tPrim p) -> False.
+Proof.
+  intros wfΣ [T [Ht h]].
+  eapply inversion_Prim in Ht as [prim_ty [cdecl []]]; eauto.
+  pose proof (type_Prim _ _ _ _ _ a e d p0 p1). eapply validity in X.
+  destruct h.
+  - eapply invert_cumul_arity_r in w; tea.
+    destruct w as [ar [[H] r]].
+    destruct (prim_type_inv p prim_ty) as [u [args eq]].
+    rewrite eq in H.
+    eapply invert_red_axiom_app in H as [args' []]; tea.
+    2:now eapply primitive_invariants_axiom.
+    subst ar. now eapply isArity_mkApps in r as [].
+  - destruct s as [s [hs isp]].
+    eapply cumul_prop1' in hs; tea; eauto.
+    depelim p1; simp prim_type in hs.
+    * destruct p0 as [hd hb hu].
+      eapply inversion_Const in hs as [decl' [wf [decl'' [cu hs']]]]; eauto.
+      unshelve eapply declared_constant_to_gen in d, decl''. 3,6:eapply wfΣ.
+      eapply declared_constant_inj in d; tea. subst decl'.
+      rewrite hd in hs'. cbn in hs'.
+      eapply ws_cumul_pb_Sort_inv in hs'. red in hs'.
+      destruct s => //.
+    * destruct p0 as [hd hb hu].
+      eapply inversion_Const in hs as [decl' [wf [decl'' [cu hs']]]]; eauto.
+      unshelve eapply declared_constant_to_gen in d, decl''. 3,6:eapply wfΣ.
+      eapply declared_constant_inj in d; tea. subst decl'.
+      rewrite hd in hs'. cbn in hs'.
+      eapply ws_cumul_pb_Sort_inv in hs'. red in hs'.
+      destruct s => //.
+    * destruct p0 as [hd hb hu].
+      eapply inversion_App in hs as [na [A [B [hp [harg hres]]]]]; eauto.
+      eapply inversion_Const in hp as [decl' [wf [decl'' [cu hs']]]]; eauto.
+      unshelve eapply declared_constant_to_gen in d, decl''. 3,6:eapply wfΣ.
+      eapply declared_constant_inj in d; tea. subst decl'.
+      rewrite hd in hs'. cbn in hs'.
+      eapply ws_cumul_pb_Prod_Prod_inv in hs' as [].
+      eapply substitution_ws_cumul_pb_vass in w1; tea.
+      cbn in w1.
+      pose proof (ws_cumul_pb_trans _ _ _ w1 hres) as X0.
+      eapply ws_cumul_pb_Sort_inv in X0.
+      destruct s => //.
+Qed.

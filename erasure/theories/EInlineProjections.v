@@ -701,22 +701,26 @@ Proof.
     eapply eval_app_cong; eauto.
     eapply eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
-    * destruct t => //; rewrite optimize_mkApps /=.
+    * depelim a0.
+      + destruct t => //; rewrite optimize_mkApps /=.
+      + now rewrite /= !orb_false_r orb_true_r in i.
     * destruct with_guarded_fix.
       + move: i.
         rewrite !negb_or.
         rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
-        rtoProp; intuition auto.
-        destruct v => /= //.
-        destruct v => /= //.
-        destruct v => /= //.
+        rtoProp; intuition auto;  destruct v => /= //.
       + move: i.
         rewrite !negb_or.
         rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
+  - depelim X; repeat constructor.
+    eapply All2_over_undep in a.
+    eapply All2_Set_All2 in ev. eapply All2_All2_Set. primProp.
+    subst a0 a'; cbn in *. depelim H; cbn in *. intuition auto; solve_all.
+    primProp; depelim H; intuition eauto.
   - destruct t => //.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.

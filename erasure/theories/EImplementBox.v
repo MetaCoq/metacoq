@@ -67,7 +67,7 @@ Section implement_box.
 
   End Def.
 
-  Hint Rewrite @map_InP_spec : implement_box.
+  Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
   Arguments eqb : simpl never.
 
@@ -264,6 +264,8 @@ Section implement_box.
   Qed.
 
 End implement_box.
+
+Global Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
 Definition implement_box_constant_decl cb :=
   {| cst_body := option_map implement_box cb.(cst_body) |}.
@@ -600,13 +602,12 @@ Proof.
       rewrite lookup_constructor_implement_box. cbn [fst].
       rewrite eqc //= H7 //. rewrite H8.
       reflexivity.
-    + rewrite !map_InP_spec.
-      rewrite map_map.
+    + rewrite map_map.
       rewrite nth_error_map H2; eauto.
       reflexivity.
-    + rewrite map_InP_spec. len.
-    + rewrite map_InP_spec. len.
-    + rewrite map_InP_spec.
+    + len.
+    + len.
+    +
       cbn [csubst].
       cbn [fst snd].
       rewrite closed_subst.
@@ -623,7 +624,7 @@ Proof.
       solve_all.
   - intros; repeat match goal with [H : MCProd.and3 _ _ _ |- _] => destruct H end.
     simp implement_box in *.
-    eapply eval_fix' => //; eauto. rewrite map_InP_spec.
+    eapply eval_fix' => //; eauto.
     eapply implement_box_cunfold_fix.
     eapply forallb_All. eapply closed_fix_subst.
     eapply wellformed_closed in i4.
@@ -641,7 +642,7 @@ Proof.
     destruct decl. cbn in *. now rewrite H0.
     eauto.
   - intros; repeat match goal with [H : MCProd.and3 _ _ _ |- _] => destruct H end.
-    simp implement_box in *. rewrite map_InP_spec in e0.
+    simp implement_box in *.
     unfold constructor_isprop_pars_decl in *.
     destruct lookup_constructor as [[[mdecl idecl] cdecl']|] eqn:hc => //.
     noconf H2.
@@ -663,12 +664,15 @@ Proof.
     rewrite implement_box_isConstructApp; eauto.
     rewrite implement_box_isPrimApp; eauto.
   - intros; repeat match goal with [H : MCProd.and3 _ _ _ |- _] => destruct H end.
-    simp implement_box in *. rewrite !map_InP_spec.
+    simp implement_box in *.
     eapply eval_construct_block; tea. eauto.
     2: len; eassumption.
     rewrite lookup_constructor_implement_box; eauto.
     eapply All2_All2_Set.
     solve_all. now destruct b.
+  - intros H; depelim H; simp implement_box; repeat constructor.
+    destruct a0. eapply All2_over_undep in a. eapply All2_All2_Set, All2_map.
+    cbn -[implement_box]. solve_all. now destruct H. now destruct a0.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct args => //.
 Qed.

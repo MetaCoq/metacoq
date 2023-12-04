@@ -1339,12 +1339,13 @@ Proof using Hcf Hcf'.
     eapply eq_term_eq_term_prop_impl; eauto.
     now symmetry in a.
 
-  - depelim X4.
-    eapply inversion_Prim in X3 as [prim_ty' [cdecl' []]]; tea. depelim o.
+  - depelim X3.
+    eapply inversion_Prim in X2 as [prim_ty' [cdecl' []]]; tea. depelim o.
     1-2:rewrite H in e; noconf e; eapply cumul_cumul_prop; eauto; pcuic.
+    depelim X1.
     cbn in H, e2. rewrite H in e2. noconf e2. eapply cumul_cumul_prop; eauto; pcuic.
-    move: w; simp prim_type. intro. etransitivity; tea. constructor; fvs. cbn. fvs.
-    depelim X1. fvs. eapply eq_term_leq_term. symmetry; repeat constructor; eauto.
+    move: w; simp prim_type. intro. etransitivity; tea. constructor; fvs. cbn.
+    depelim X0. fvs. eapply eq_term_leq_term. symmetry; repeat constructor; eauto.
 Qed.
 
 End no_prop_leq_type.

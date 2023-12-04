@@ -1250,9 +1250,9 @@ Qed.
       simpl in X0. now move: X0 => [s [Hty /andP[wfty _]]].
 
     - apply/andP; split; eauto.
-      destruct X2; cbn => //.
+      destruct X1; cbn => //.
       rtoProp; intuition eauto. solve_all.
-      destruct X2; cbn => //.
+      destruct X1; cbn => //.
       simp prim_type. cbn. rtoProp; intuition.
   Qed.
 

@@ -708,7 +708,8 @@ Proof.
     eapply Ee.eval_app_cong; eauto.
     eapply Ee.eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
-    * destruct t => //; rewrite remove_match_on_box_mkApps /=.
+    * depelim a0. destruct t => //; rewrite ?remove_match_on_box_mkApps /=.
+      cbn in i. now rewrite !orb_false_r orb_true_r in i.
     * destruct with_guarded_fix.
       + move: i.
         rewrite !negb_or.
@@ -724,6 +725,10 @@ Proof.
         rewrite remove_match_on_box_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
+  - depelim X; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_All2_Set. eapply All2_Set_All2 in ev. subst a0 a'; cbn in *.
+    rewrite /test_array_model /= in H. rtoProp; intuition auto; solve_all. eapply e.
+    cbn in H. rewrite /test_array_model /= in H. now move/andP: H => [].
   - destruct t => //.
     all:constructor; eauto. cbn [atom remove_match_on_box] in i |- *.
     rewrite -lookup_constructor_remove_match_on_box //. destruct args => //.

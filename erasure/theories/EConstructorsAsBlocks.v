@@ -87,7 +87,7 @@ Section transform_blocks.
 
   End Def.
 
-  Hint Rewrite @map_InP_spec : transform_blocks.
+  Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
 
   Arguments eqb : simpl never.
 
@@ -427,6 +427,8 @@ Section transform_blocks.
     EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) fl.(@with_guarded_fix) true.
 
 End transform_blocks.
+
+Global Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
 
 Definition transform_blocks_constant_decl Σ cb :=
   {| cst_body := option_map (transform_blocks Σ) cb.(cst_body) |}.
@@ -985,7 +987,7 @@ Proof.
     + unfold constructor_isprop_pars_decl.
       rewrite lookup_constructor_transform_blocks. cbn [fst].
       rewrite eqc //= H8 //.
-    + now rewrite map_InP_spec nth_error_map H3; eauto.
+    + now rewrite nth_error_map H3; eauto.
     + len.
     + rewrite H9. len.
     + rewrite wellformed_mkApps in i4 => //.
@@ -1014,8 +1016,7 @@ Proof.
       * eauto.
       * revert e1.  set (x := transform_blocks Σ f5).
         simp transform_blocks.
-      * rewrite map_InP_spec.
-        cbn in i8. unfold wf_fix in i8. rtoProp.
+      * cbn in i8. unfold wf_fix in i8. rtoProp.
         erewrite <- transform_blocks_cunfold_fix => //.
         all: eauto.
         eapply closed_fix_subst. solve_all. destruct x; cbn in H5 |- *. eauto.
@@ -1049,7 +1050,7 @@ Proof.
   - simp transform_blocks. rewrite -!transform_blocks_equation_1.
     rewrite transform_blocks_mkApps //=.
     simp transform_blocks. rewrite -!transform_blocks_equation_1.
-    rewrite !map_InP_spec. cbn [plus].
+    cbn [plus].
     intros.
     destruct H3 as [ev wf eta etad].
     destruct H6.
@@ -1062,7 +1063,7 @@ Proof.
     now rewrite transform_blocks_mkApps_eta_fn in e.
   - intros; repeat match goal with [H : MCProd.and5 _ _ _ _ _ |- _] => destruct H end.
     rewrite transform_blocks_mkApps //= in e0.
-    simp transform_blocks in e0. rewrite -!transform_blocks_equation_1 map_InP_spec in e0. simpl in e0.
+    simp transform_blocks in e0. rewrite -!transform_blocks_equation_1 in e0. simpl in e0.
     simp transform_blocks. rewrite -!transform_blocks_equation_1.
     move: i; rewrite /= wellformed_mkApps //. move/and3P => [] hasp wffn wfargs.
     move: i4; rewrite /= wellformed_mkApps //. move/andP => [] wfcof _.
@@ -1174,6 +1175,11 @@ Proof.
     unfold cstr_arity. cbn. rewrite H4; len.
     solve_all. clear -X0. eapply All2_All2_Set. solve_all.
     match goal with H : _ |- _ => apply H end.
+  - intros X; depelim X; simp transform_blocks; repeat constructor.
+    destruct a0.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all.
+    now destruct b.
+    now destruct a0.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct args => //.
     destruct lookup_constructor eqn:hl => //.

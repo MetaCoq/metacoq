@@ -1475,3 +1475,8 @@ Proof.
   { move => [->|[n H]]; [ exists 0 | exists (S n) ];
             rewrite ?skipn_0 ?skipn_S => //=. }
 Qed.
+  
+Lemma nth_error_firstn A n m (l:list A) x : nth_error (firstn n l) m = Some x -> nth_error l m = Some x.
+Proof.
+  revert n l. induction m; intros n l H; destruct n, l; cbn in *; try solve [inversion H]; eauto.
+Qed. 

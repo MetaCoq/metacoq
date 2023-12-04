@@ -68,6 +68,8 @@ Module string_of_term_tree.
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  | tArray u arr def ty => "Array(" ^ string_of_level u ^ "," ^
+    string_of_list string_of_term arr ^ "," ^ string_of_term def ^ "," ^ string_of_term ty ^ ")"
   end.
 End string_of_term_tree.
 
@@ -252,6 +254,8 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
+  | tArray u arr def ty =>
+    tArray u (List.map strip_casts arr) (strip_casts def) (strip_casts ty)
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
   | tInt _ | tFloat _ => t
   end.

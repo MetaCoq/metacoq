@@ -117,11 +117,11 @@ Module PrintTermTree.
     Import bytestring.Tree.
     Infix "^" := append.
 
-    Definition print_prim {term} (soft : term -> Tree.t) (p : prim_val) : Tree.t :=
+    Definition print_prim (soft : term -> Tree.t) (p : prim_val) : Tree.t :=
       match p.π2 return Tree.t with
       | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
       | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
-      (* | primArrayModel a => "(array:" ^ ")" *)
+      | primArrayModel a => "(array:" ^ string_of_list soft a.(array_value) ^ ")"
       end.
 
     Section Aux.

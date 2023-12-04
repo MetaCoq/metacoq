@@ -1290,6 +1290,13 @@ Section Wcbv.
     now noconf H.
   Qed.
 
+  Lemma eval_value v v' :
+    value v -> eval v v' -> v = v'.
+  Proof.
+    intros isv ev.
+    now pose proof (eval_deterministic ev (value_final _ isv)).
+  Qed.
+
   Lemma eval_deterministic_all {t v v'} :
     All2 eval t v ->
     All2 eval t v' ->

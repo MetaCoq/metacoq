@@ -108,6 +108,7 @@ Proof.
      | tSort _
      | tInt _
      | tFloat _
+     | tArray _ _ _ _
      | tConst _ _
        => if head_term_is_bound cur_modpath qt
           then tmMaybeInferQuotation tt
@@ -212,6 +213,7 @@ Proof.
        | tConstruct _ _ _
        | tInt _
        | tFloat _
+       | tArray _ _ _ _
        | tInd _ _
          => ret qt
        | tCast t kind v

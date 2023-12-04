@@ -190,6 +190,11 @@ Proof.
     * solve_all. reflexivity.
     * eapply X => //.
   - solve_all. reflexivity.
+  - destruct p as [? []]; cbn in X; constructor; cbn; intuition eauto; cbn.
+    * rewrite -!subst_instance_univ_make. now eapply hRe.
+    * now eapply a1.
+    * now eapply a0.
+    * solve_all. eapply All_All2; tea. intuition eauto. now apply X.
 Qed.
 
 #[global]
@@ -355,6 +360,8 @@ Proof.
     rewrite map_def_map_def; solve_all.
   - rewrite map_map. apply All_map_eq. solve_all.
     rewrite map_def_map_def; solve_all.
+  - rewrite !mapu_prim_compose_rew. solve_all.
+    intro. eapply subst_instance_level_two.
 Qed.
 
 Lemma subst_instance_two_context u1 u2 (Γ : context) :
@@ -880,6 +887,11 @@ Proof.
     repeat split; simpl; eauto; solve_all.
     * eapply precompose_subst_instance.
       eapply R_universe_instance_impl; eauto.
+  - destruct p as [? []]; depelim X1; cbn in X; try constructor; intuition eauto.
+    * cbn. rewrite -!subst_instance_univ_make. now eapply he.
+    * now eapply a2.
+    * now eapply a0.
+    * cbn. solve_all.
 Qed.
 
 Lemma leq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (leq_term Σ).
@@ -1442,6 +1454,7 @@ Proof.
     red. split; cbn; eauto.
     rewrite subst_instance_app in r0.
     now rewrite <- (fix_context_subst_instance u mfix0).
+  - cbn. eapply array_red_val. eapply OnOne2_map. cbn. solve_all.
 Qed.
 
 Lemma subst_instance_ws_cumul_pb {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
@@ -1819,6 +1832,30 @@ Section SubstIdentity.
     simpl in lin, onu. lsets.
   Qed.
 
+
+  Lemma consistent_instance_ext_subst_abs_level Σ decl u :
+    wf_ext_wk Σ ->
+    consistent_instance_ext Σ decl [u] ->
+    subst_instance_level (abstract_instance Σ.2) u = u.
+  Proof using Type.
+    intros [wfΣ onu] cu.
+    destruct decl.
+    - simpl in cu. destruct u; simpl in *; try discriminate; auto.
+    - destruct cu as [decl' [sizeu vc]].
+      clear sizeu vc.
+      destruct u; simpl; auto. cbn -[global_ext_levels] in decl'.
+      rewrite andb_true_r in decl'.
+      eapply LevelSet.mem_spec in decl'.
+      eapply in_var_global_ext in decl'; auto.
+      destruct (udecl_prop_in_var_poly onu decl') as [[univs csts] eq].
+      rewrite eq in decl' |- *. simpl in *.
+      rewrite mapi_unfold in decl' |- *.
+      eapply LevelSet_In_fold_right_add in decl'.
+      eapply In_unfold_inj in decl'; try congruence.
+      eapply (nth_error_unfold Level.lvar) in decl'.
+      now rewrite (nth_error_nth _ _ _ decl').
+  Qed.
+
   Lemma consistent_instance_ext_subst_abs Σ decl u :
     wf_ext_wk Σ ->
     consistent_instance_ext Σ decl u ->
@@ -2004,6 +2041,15 @@ Section SubstIdentity.
     - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
     - solve_all. destruct a as [s [? ?]]. solve_all.
     - clear X0. eapply nth_error_all in X as [s [Hs [IHs _]]]; eauto.
+    - destruct p as [? []]; cbn => //. do 2 f_equal.
+      depelim X1. specialize (hty X2); specialize (hdef X2).
+      unfold mapu_array_model; destruct a; cbn -[Universe.make] in * => //=; f_equal; intuition eauto.
+      * destruct array_level => //.
+        rewrite subst_instance_univ_make in b. now injection b.
+      * solve_all.
+    - depelim X1; cbn => //=. destruct X. simp prim_type. cbn. f_equal; intuition eauto.
+      do 2 f_equal. cbn -[Universe.make] in b. rewrite subst_instance_univ_make in b.
+      now injection b.
   Qed.
 
   Lemma typed_subst_abstract_instance Σ Γ t T :

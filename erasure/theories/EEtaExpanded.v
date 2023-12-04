@@ -5,7 +5,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames EnvMap BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EExtends EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EGlobalEnv EExtends EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -75,7 +75,7 @@ Section isEtaExp.
     | tBox => true
     | tVar _ => true
     | tConst _ => true
-    | tPrim _ => true
+    | tPrim p => test_primIn p (fun x H => isEtaExp x)
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof.
     all:try lia.
@@ -92,11 +92,15 @@ Section isEtaExp.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - destruct p as [? []]; cbn in *; intuition eauto.
+      subst. lia.
+      eapply (In_size id size) in H0. unfold id in H0.
+      change (fun x => size x) with size in H0. lia.
   Qed.
 
 End isEtaExp.
 
-Global Hint Rewrite @forallb_InP_spec : isEtaExp.
+Global Hint Rewrite @test_primIn_spec @forallb_InP_spec : isEtaExp.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 
@@ -276,8 +280,8 @@ Section WeakEtaExp.
       eapply a0 => //.
     - move/andP: H0 => [] etaexp h.
       rewrite csubst_mkApps /=.
-      rewrite isEtaExp_Constructor. solve_all.
-      rewrite map_length. rtoProp; solve_all. solve_all.
+      rewrite isEtaExp_Constructor; solve_all.
+      rtoProp; solve_all. solve_all.
       now destruct block_args.
     - rewrite csubst_mkApps /=.
       move/andP: H1 => [] eu ev.
@@ -417,6 +421,7 @@ Proof.
   - eapply In_All in H; solve_all.
     move/andP: b => [] -> /=. eauto.
   - eapply In_All in H; solve_all.
+  - solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
     eapply isEtaExp_app_extends; tea.
@@ -471,7 +476,7 @@ Inductive expanded : term -> Prop :=
     #|args| >= cstr_arity mind cdecl ->
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx []) args)
-| expanded_tPrim p : expanded (tPrim p)
+| expanded_tPrim p : primProp expanded p -> expanded (tPrim p)
 | expanded_tBox : expanded tBox.
 
 End expanded.
@@ -510,7 +515,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
    (args : list term),
  declared_constructor Σ (ind, idx) mind idecl cdecl ->
  #|args| >= cstr_arity mind cdecl -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx []) args)) ->
-(forall p, P (tPrim p)) ->
+(forall p, primProp (expanded Σ) p -> primProp P p -> P (tPrim p)) ->
 (P tBox) ->
 forall t : term, expanded Σ t -> P t.
 Proof.
@@ -523,6 +528,9 @@ Proof.
   - eapply H8; eauto. induction H13; econstructor; cbn in *; intuition eauto.
   - eapply H9; eauto. induction H13; econstructor; cbn in *; eauto.
   - eapply H10; eauto. clear - H15 f. induction H15; econstructor; cbn in *; eauto.
+  - eapply H11; eauto.
+    depelim X; constructor. destruct p; split; eauto.
+    eapply (make_All_All f a0).
 Qed.
 
 Local Hint Constructors expanded : core.
@@ -595,6 +603,7 @@ Proof.
     intuition auto.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0.
     eapply In_All in H. solve_all.
+  - econstructor. rewrite test_primIn_spec in H0. solve_all.
   - rtoProp. eapply In_All in H.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
@@ -621,6 +630,7 @@ Proof.
   - rewrite isEtaExp_Constructor. rtoProp; repeat split.
     2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.
+  - solve_all.
 Qed.
 
 Lemma expanded_global_env_isEtaExp_env {Σ} : expanded_global_env Σ -> isEtaExp_env Σ.
@@ -670,6 +680,18 @@ Proof.
     eapply expanded_mkApps => //. now rewrite eqc. solve_all.
 Qed.
 
+Lemma isEtaExp_tApp_arg Σ t u : isEtaExp Σ (tApp t u) -> isEtaExp Σ u.
+Proof.
+  move/isEtaExp_tApp. destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. destruct l using rev_case.
+  - cbn in da. subst t0. cbn. now move/and3P => [].
+  - rewrite mkApps_app in da. noconf da.
+    destruct construct_viewc.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * now move/and4P => [].
+Qed.
+
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Local Ltac simp_eta ::= simp isEtaExp; rewrite -?isEtaExp_equation_1 -?EEtaExpanded.isEtaExp_equation_1.
@@ -683,6 +705,7 @@ Proof.
   - simp_eta. rtoProp; intuition auto.
     eapply In_All in H0; solve_all.
   - eapply In_All in H. simp_eta; rtoProp; intuition auto. solve_all.
+  - simp_eta. solve_all_k 7. primProp. solve_all.
   - eapply In_All in H. simp_eta; rtoProp; intuition auto.
     rewrite EEtaExpanded.isEtaExp_Constructor. rtoProp; repeat split. eauto.
     solve_all. destruct block_args; cbn in *; eauto.

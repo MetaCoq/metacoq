@@ -399,12 +399,17 @@ Section Validity.
       eapply nth_error_all in X0 as [s Hs]; pcuic.
 
     - (* Primitive *)
-      destruct X0 as [s [hty hbod huniv]].
-      exists s@[[]].
-      change (tSort s@[[]]) with (tSort s)@[[]].
-      rewrite -hty.
-      refine (type_Const _ _ _ [] _ wfΓ H0 _).
-      rewrite huniv //.
+      depelim X1; depelim X2; simp prim_type; cbn in *.
+      1-2:destruct X0 as [s [hty hbod huniv]]; exists s@[[]]; change (tSort s@[[]]) with (tSort s)@[[]];
+          rewrite -hty; refine (type_Const _ _ _ [] _ wfΓ H0 _); rewrite huniv //.
+      set (s := (Universe.make (array_level a))).
+      destruct X0 as [hty' hbod huniv].
+      exists s.
+      eapply (type_App _ _ _ _ _ (tSort s)); tea; cycle 1.
+      + eapply (type_Const _ _ _ [array_level a]) in H0; tea. rewrite hty' in H0. cbn in H0. exact H0.
+        red. rewrite huniv. simpl. rtoProp; intuition eauto. eapply LevelSet.mem_spec. eapply (wfl (array_level a, 0)). lsets.
+        cbn. red. destruct check_univs => //. red. red. intros v H c. csets.
+      + econstructor. econstructor; eauto. econstructor; eauto.
 
     - (* Conv *)
       now exists s.

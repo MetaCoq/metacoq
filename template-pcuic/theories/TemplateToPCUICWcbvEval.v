@@ -158,6 +158,7 @@ Proof.
       f_equal; auto; solve_all.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
+  - cbn; f_equal; auto. do 3 f_equal. rewrite /map_array_model /=; f_equal; eauto; solve_all.
 Qed.
 
 Lemma trans_substl {cf} Σ a b :

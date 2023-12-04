@@ -366,7 +366,7 @@ Qed.
         | exist None _ => ! };
 
     infer Γ wfΓ (tPrim p) wt with inspect (abstract_primitive_constant X p.π1) :=
-      { | exist (Some prim_ty) eqp => ret (tConst prim_ty [])
+      { | exist (Some prim_ty) eqp => ret (prim_type p prim_ty)
         | exist None _ => ! }.
 
   Next Obligation.

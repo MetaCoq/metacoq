@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
-
+From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common
@@ -7,7 +7,7 @@ Require Import config Universes BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases
      PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnvConv
      PCUICWeakeningEnvTyp PCUICReduction PCUICClosedTyp
-     PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
+     PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICEtaExpand.
 Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 
@@ -933,7 +933,7 @@ Proof.
       apply nth_error_None in H.
       lia.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
-  - depelim r. solve_discr.
+  - depelim r; solve_discr; eapply whnf_prim.
 Qed.
 
 Lemma whnf_pres {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
@@ -1007,7 +1007,9 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
-| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
+| whnf_red_tPrim i i' :
+  onPrims (red Σ Γ) eq i i' ->
+  whnf_red Σ Γ (tPrim i) (tPrim i').
 
 Derive Signature for whnf_red.
 
@@ -1048,6 +1050,9 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
+  - depelim o. 1-2: reflexivity.
+    eapply red_primArray_congr; eauto.
+    now eapply Universe.make_inj in e.
 Qed.
 
 #[global]
@@ -1150,6 +1155,7 @@ Proof.
     2: apply All2_same; auto.
     constructor.
     apply All2_same; auto.
+  - constructor. destruct p as [? []]; constructor; eauto. eapply All2_same; auto.
 Qed.
 
 Ltac inv_on_free_vars :=
@@ -1403,6 +1409,12 @@ Proof.
     eapply context_pres_let_bodies_red; eauto.
     apply fix_context_pres_let_bodies.
     now apply All2_length in a.
+  - constructor. depelim o; depelim o0; constructor; eauto.
+    * rewrite -x //.
+    * etransitivity; tea.
+    * etransitivity; tea.
+    * eapply All2_trans; eauto.
+      tc.
 Qed.
 
 Lemma whne_red1_inv {cf:checker_flags} Σ {wfΣ : wf Σ} Γ t t' :
@@ -1509,7 +1521,10 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-  - depelim r; solve_discr.
+  - depelim r; solve_discr; constructor; eauto.
+    * constructor; eauto. eapply OnOne2_All2; eauto.
+    * constructor; eauto. cbn. eapply All2_same; eauto.
+    * constructor; eauto. cbn. eapply All2_same; eauto.
 Qed.
 
 Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
@@ -1612,3 +1627,315 @@ Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :
 Proof.
   apply whnf_eq_term_upto_univ_napp.
 Qed.
+
+
+Section Normal.
+
+  Context (flags : RedFlags.t).
+  Context (Σ : global_env).
+
+  (* Relative to reduction flags *)
+  Inductive ne (Γ : context) : term -> Prop :=
+  | ne_rel i :
+      option_map decl_body (nth_error Γ i) = Some None ->
+      ne Γ (tRel i)
+
+  | ne_var v :
+      ne Γ (tVar v)
+
+  | ne_evar n l :
+    All (ne Γ) l ->
+    ne Γ (tEvar n l)
+
+  | ne_app f a :
+    ne Γ f ->
+    nf Γ a ->
+    ne Γ (tApp f a)
+
+  (* | nf_letin_nozeta na B b t :
+      RedFlags.zeta flags = false ->
+      whne Γ (tLetIn na B b t) *)
+
+  | ne_const c u decl :
+    lookup_env Σ c = Some (ConstantDecl decl) ->
+    decl.(cst_body) = None ->
+    ne Γ (tConst c u)
+
+  (* | whne_const_nodelta c u :
+      RedFlags.delta flags = false ->
+      whne Γ (tConst c u) *)
+
+  (* Stuck fixpoints are neutrals *)
+  | ne_fixapp mfix idx args d arg :
+     nth_error mfix idx = Some d ->
+     nth_error args (rarg d) = Some arg ->
+     All (nf Γ) args ->
+     ne Γ arg ->
+     All (fun d => nf (Γ ,,, fix_context mfix) d.(dbody) /\ nf Γ d.(dtype)) mfix ->
+     ne Γ (mkApps (tFix mfix idx) args)
+
+  | ne_case i p c brs :
+    ne Γ c ->
+    All (fun br => nf (Γ ,,, inst_case_branch_context p br) br.(bbody)) brs ->
+    All (nf Γ) (pparams p) ->
+    onctx_rel nf Γ (inst_case_predicate_context p) ->
+    nf (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
+    ne Γ (tCase i p c brs)
+
+  | ne_proj p c :
+    ne Γ c ->
+    ne Γ (tProj p c)
+
+  with nf (Γ : context) : term -> Prop :=
+  | ne_nf t : ne Γ t -> nf Γ t
+
+  | nf_lam na A b :
+    nf Γ A ->
+    nf (Γ ,, vass na A) b ->
+    nf Γ (tLambda na A b)
+
+  | nf_construct ind k u :
+    nf Γ (tConstruct ind k u)
+
+  | nf_cofix mfix idx args :
+    All (fun d => nf (Γ ,,, fix_context mfix) d.(dbody) /\ nf Γ d.(dtype)) mfix ->
+    All (nf Γ) args ->
+    nf Γ (mkApps (tCoFix mfix idx) args)
+
+  | nf_tind ind u : nf Γ (tInd ind u)
+  | nf_tProd na dom codom : nf Γ dom -> nf (Γ ,, vass na dom) codom -> nf Γ (tProd na dom codom).
+
+  Scheme nf_ne_ind := Minimality for ne Sort Prop
+  with ne_nf_ind := Minimality for nf Sort Prop.
+
+  Section nf_ne_ind.
+    Context (P P0 : context -> term -> Prop).
+    Context (hrel : (forall (Γ : context) (i : nat),
+    option_map decl_body (nth_error Γ i) = Some None -> P Γ (tRel i)))
+    (hvar : (forall (Γ : context) (v : ident), P Γ (tVar v)))
+    (hevar : (forall (Γ : context) (n : nat) (l : list term),
+    All (fun x => ne Γ x × P Γ x) l -> P Γ (tEvar n l)))
+    (happ : (forall (Γ : context) (f2 a : term),
+    ne Γ f2 -> P Γ f2 -> nf Γ a -> P0 Γ a -> P Γ (tApp f2 a)))
+    (hcst : (forall (Γ : context) (c : kername) (u : Instance.t) (decl : constant_body),
+    lookup_env Σ c = Some (ConstantDecl decl) ->
+    cst_body decl = None -> P Γ (tConst c u)))
+    (hfix :
+    (forall (Γ : context) (mfix : list (def term)) (idx : nat)
+      (args : list term) (d : def term) (arg : term),
+    nth_error mfix idx = Some d ->
+    nth_error args (rarg d) = Some arg ->
+    All (fun x => nf Γ x /\ P0 Γ x) args -> ne Γ arg -> P Γ arg ->
+    All (fun d => nf (Γ ,,, fix_context mfix) d.(dbody) /\ P0 (Γ ,,, fix_context mfix) d.(dbody) /\ nf Γ d.(dtype) /\ P0 Γ d.(dtype)) mfix ->
+
+    P Γ (mkApps (tFix mfix idx) args)))
+
+    (hcase : (forall (Γ : context) (i : case_info) (p : predicate term)
+      (c : term) (brs : list (branch term)),
+    ne Γ c ->
+    P Γ c ->
+    All
+      (fun br : branch term =>
+      nf (Γ,,, inst_case_branch_context p br) (bbody br) /\ P0 (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ->
+    All (nf Γ) (pparams p) ->
+    onctx_rel nf Γ (inst_case_predicate_context p) ->
+    nf (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
+    All (P0 Γ) (pparams p) ->
+    onctx_rel P0 Γ (inst_case_predicate_context p) ->
+    P0 (Γ,,, inst_case_context (pparams p) (puinst p) (pcontext p)) (preturn p) ->
+    P Γ (tCase i p c brs)))
+
+    (hproj : (forall (Γ : context) (p : projection) (c : term),
+    ne Γ c -> P Γ c -> P Γ (tProj p c)))
+    (hne : (forall (Γ : context) (t : term), ne Γ t -> P Γ t -> P0 Γ t))
+    (hlam : (forall (Γ : context) (na : aname) (A b : term),
+    nf Γ A ->
+    P0 Γ A ->
+    nf (Γ,, vass na A) b -> P0 (Γ,, vass na A) b -> P0 Γ (tLambda na A b)))
+    (hconstruct : (forall (Γ : context) (ind : inductive) (k : nat) (u : Instance.t),
+    P0 Γ (tConstruct ind k u)))
+
+    (hcofix : (forall (Γ : context) mfix idx args,
+
+    All (fun d => nf (Γ ,,, fix_context mfix) d.(dbody) /\ P0 (Γ ,,, fix_context mfix) d.(dbody) /\ nf Γ d.(dtype) /\ P0 Γ d.(dtype)) mfix ->
+    All (fun t => nf Γ t /\ P0 Γ t) args ->
+    P0 Γ (mkApps (tCoFix mfix idx) args)))
+
+    (hind : (forall (Γ : context) (ind : inductive) (u : Instance.t), P0 Γ (tInd ind u)))
+
+    (hprod : forall Γ na dom codom,
+      nf Γ dom -> P0 Γ dom ->
+      nf (Γ ,, vass na dom) codom ->
+      P0 (Γ ,, vass na dom) codom ->
+      P0 Γ (tProd na dom codom)).
+
+    Lemma ne_ind_all : forall (Γ : context) (t : term), ne Γ t -> P Γ t
+    with nf_ind_all : forall (Γ : context) (t : term), nf Γ t -> P0 Γ t.
+    Proof.
+      destruct 1; [eapply hrel|eapply hvar|eapply hevar|eapply happ|eapply hcst|eapply hfix|eapply hcase|eapply hproj]; eauto.
+      * induction X; constructor; eauto.
+      * clear -X nf_ind_all. induction X; constructor; eauto.
+      * clear -X0 nf_ind_all; revert X0; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
+      * clear -X nf_ind_all; revert X; induction 1; constructor; intuition eauto.
+      * clear -X0 nf_ind_all. revert X0; induction 1; constructor; intuition eauto.
+      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; cbn in *; intuition eauto.
+      * destruct 1; [eapply hne|eapply hlam|eapply hconstruct|eapply hcofix|eapply hind|eapply hprod]; eauto.
+        clear -X nf_ind_all. revert X; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
+        clear -X0 nf_ind_all. induction X0; constructor; eauto.
+    Qed.
+
+    Lemma ne_nf_ind_all : forall Γ t, (ne Γ t -> P Γ t) /\ (nf Γ t -> P0 Γ t).
+    Proof.
+      split; apply ne_ind_all || apply nf_ind_all.
+    Qed.
+
+  End nf_ne_ind.
+
+  Lemma ne_mkApps_inv Γ f args :
+    ~~ isApp f ->
+    ne Γ (mkApps f args) ->
+    (~~ isFix f /\ ne Γ f /\ Forall (nf Γ) args) \/
+    (exists c u decl, f = tConst c u /\ lookup_env Σ c = Some (ConstantDecl decl) /\
+      decl.(cst_body) = None) \/
+    (exists mfix idx d arg, f = tFix mfix idx /\
+      nth_error mfix idx = Some d /\
+      nth_error args (rarg d) = Some arg /\
+      Forall (nf Γ) args /\
+      Forall (fun d => nf (Γ ,,, fix_context mfix) d.(dbody) /\ nf Γ d.(dtype)) mfix /\
+      ne Γ arg).
+  Proof.
+    revert f. induction args using rev_ind; cbn.
+    - intros f napp. intros ne; depelim ne; try solve [left; split; [|split]; constructor; eauto; constructor].
+      right. left. do 2 eexists; eauto.
+      right; right. do 4 eexists. eapply nisApp_mkApps in napp as [? ->]. intuition eauto.
+
+      - intros. specialize (IHargs f H).
+        rewrite mkApps_app /= in H0.
+        depelim H0. specialize (IHargs H0). intuition eauto.
+        * left. intuition auto. eapply app_Forall; eauto.
+        * right; right. destruct H3 as [mfix [idx [d [arg []]]]]. exists mfix, idx, d, arg. intuition eauto. erewrite nth_error_app_left; tea. reflexivity.
+          eapply app_Forall; eauto.
+        * destruct args0 using rev_case. cbn in x. noconf x. rewrite mkApps_app in x; noconf x.
+          eapply mkApps_eq_inj in H3 => //. destruct H3; subst.
+          right; right. exists mfix, idx, d, arg. intuition auto.
+  Qed.
+
+  Lemma OnOne2_nth_error {A} (l l' : list A) P :
+    OnOne2 P l l' ->
+    ∑ n t t', [× nth_error l n = Some t, nth_error l' n = Some t' & P t t'].
+  Proof.
+    induction 1 in |- *.
+    - exists 0, hd, hd'; intuition auto.
+    - destruct IHX as [n [t [t' []]]]. exists (S n), t, t'; intuition auto.
+  Qed.
+
+  Lemma ne_tConstruct_app Γ c k u args : ne Γ (mkApps (tConstruct c k u) args) -> False.
+  Proof.
+    induction args using rev_ind; cbn; intros hne; depelim hne; solve_discr.
+    rewrite mkApps_app /= in x; noconf x; eauto.
+  Qed.
+
+  Lemma ne_tCoFix_app Γ mfix idx args : ne Γ (mkApps (tCoFix mfix idx) args) -> False.
+  Proof.
+    induction args using rev_ind; cbn; intros hne; depelim hne; solve_discr.
+    rewrite mkApps_app /= in x; noconf x; eauto.
+  Qed.
+
+  Lemma isConstruct_app_ne Γ t : isConstruct_app t -> ne Γ t -> False.
+  Proof.
+    rewrite /isConstruct_app.
+    destruct decompose_app eqn:ht. cbn.
+    destruct t0 => //. eapply decompose_app_inv in ht; subst.
+    intros _ hne. now apply ne_tConstruct_app in hne.
+  Qed.
+
+  Lemma ne_nisConstruct_app Γ t : ne Γ t -> ~~ isConstruct_app t.
+  Proof.
+    rewrite /isConstruct_app.
+    destruct decompose_app eqn:ht. cbn.
+    destruct t0 => //. eapply decompose_app_inv in ht; subst.
+    intros hne. now apply ne_tConstruct_app in hne.
+  Qed.
+
+  Lemma nf_no_red {cf : checker_flags} Γ t : wf Σ ->
+    (ne Γ t -> (forall u, red1 Σ Γ t u -> False)) /\
+    (nf Γ t -> (forall u, red1 Σ Γ t u -> False)).
+  Proof.
+    intros wfΣ.
+    refine (ne_nf_ind_all (fun Γ t => forall u, red1 Σ Γ t u -> False) (fun Γ t => forall u, red1 Σ Γ t u -> False) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros; try solve [depelim X; solve_discr; eauto].
+    - depelim X. congruence.
+      solve_discr.
+    - depelim X0. solve_discr. induction o. depelim X. intuition eauto. apply IHo. now depelim X.
+    - depelim X; solve_discr. depelim H; solve_discr.
+      destruct args using rev_case; solve_discr. noconf x.
+      rewrite mkApps_app in x; noconf x.
+      eapply ne_mkApps_inv in H as [H|[H|H]]; intuition eauto.
+      now destruct H as [? [? []]].
+      destruct H as [mfix' [idx' [d [arg []]]]]. noconf H. intuition eauto.
+      rewrite /unfold_fix in e. rewrite H in e. noconf e. rewrite /is_constructor in e0. erewrite nth_error_app_left in e0; tea.
+      now eapply isConstruct_app_ne in e0.
+      eauto. eauto.
+    - depelim X; solve_discr. unshelve eapply declared_constant_to_gen in isdecl; tea. rewrite /declared_constant_gen H in isdecl.
+      noconf isdecl. congruence.
+    - eapply red1_mkApps_tFix_inv in X1 as [[Hr|Hr]|Hr].
+      * destruct Hr as [v' [-> a]]. eapply OnOne2_nth_error in a as [n [? [? []]]].
+        eapply nth_error_all in X; tea. cbn in X. intuition eauto.
+      * destruct Hr as [mfix' []]. subst u.
+        eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
+        intuition eauto.
+      * destruct Hr as [mfix' []]. subst.
+        eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
+        intuition eauto.
+      * rewrite /unfold_fix H /is_constructor H0. eapply ne_nisConstruct_app in H1.
+        now move/negPf: H1.
+    - depelim X4; solve_discr.
+      * eapply isConstruct_app_ne in H => //.
+        rewrite /isConstruct_app decompose_app_mkApps //.
+      * now eapply ne_tCoFix_app in H.
+      * eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
+        intuition eauto.
+      * eauto.
+      * eauto.
+      * eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]].
+        intuition eauto.
+    - depelim X; solve_discr; eauto.
+      * now eapply ne_tCoFix_app in H.
+      * eapply isConstruct_app_ne in H => //.
+        rewrite /isConstruct_app decompose_app_mkApps //.
+    - eauto.
+    - eapply red1_mkApps_tCoFix_inv in X1 as [[]|].
+      * destruct s as [v' [-> ?]].
+        eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]]. intuition eauto.
+      * destruct s as [mfix' [-> o]].
+        eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]]. intuition eauto.
+      * destruct s as [mfix' [-> o]].
+        eapply OnOne2_All_mix_left in o; tea.
+        eapply OnOne2_nth_error in o as [n [? [? []]]]. intuition eauto.
+  Qed.
+
+  Lemma nf_red {cf : checker_flags} Γ t : wf Σ ->
+    (ne Γ t -> (forall u, red Σ Γ t u -> u = t))
+   /\ (nf Γ t -> (forall u, red Σ Γ t u -> u = t)).
+  Proof.
+    intros wfΣ. split.
+    - intros ne u hu.
+      induction hu. eapply (proj1 (nf_no_red _ _ _)) in r; eauto. reflexivity.
+      specialize (IHhu1 ne). subst.
+      specialize (IHhu2 ne). subst. reflexivity.
+    - intros ne u hu.
+      induction hu.
+      eapply (proj2 (nf_no_red _ _ _)) in r; eauto. reflexivity.
+      specialize (IHhu1 ne). subst.
+      specialize (IHhu2 ne). subst. reflexivity.
+  Qed.
+
+End Normal.
+
+
+

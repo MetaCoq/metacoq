@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EExtends
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EExtends
     ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract
     EEnvMap EArities EProgram.
 
@@ -123,7 +123,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind n args => tConstruct ind n (map optimize args)
-    | tPrim _ => t
+    | tPrim p => tPrim (map_prim optimize p)
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
@@ -163,9 +163,10 @@ Section optimize.
       rewrite hl /= andb_true_r.
       rewrite IHt //=; len. apply Nat.ltb_lt.
       lia.
-    - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+    - len. rtoProp; solve_all. solve_all.
       now eapply isLambda_optimize. solve_all.
-    - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+    - len. rtoProp; repeat solve_all.
+    - rewrite test_prim_map. solve_all.
   Qed.
 
   Lemma optimize_csubst {a k b} n :
@@ -787,10 +788,9 @@ Proof.
     rewrite hrel IHt //= andb_true_r.
     have hargs' := wellformed_projection_args wfΣ hl'.
     apply Nat.ltb_lt. len.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize. now len.
-    unfold test_def in *. len. eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
-    unfold test_def in *. len. eauto.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all.
+  - cbn. rtoProp; intuition eauto; solve_all_k 6.
 Qed.
 
 Import EWellformed.

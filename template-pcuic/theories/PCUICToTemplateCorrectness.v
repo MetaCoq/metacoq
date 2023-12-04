@@ -106,7 +106,7 @@ Proof.
     rewrite b. now rewrite forget_types_length map_context_length.
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
-  - destruct p as [? []]; eauto.
+  - destruct p as [? []]; cbn in X; cbn; f_equal; intuition eauto; solve_all.
 Qed.
 
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
@@ -284,7 +284,7 @@ Proof.
       cbn in *.
       now rewrite e e0.
     + apply IHX.
-  - destruct p as [? []]; eauto.
+  - destruct p as [? []]; cbn in X |- *; f_equal; intuition eauto; solve_all.
 Qed.
 
 Lemma trans_subst10 u B:
@@ -334,7 +334,7 @@ Proof.
       destruct p.
       now rewrite e e0.
     + apply IHX.
-  - destruct p as [? []]; eauto.
+  - destruct p as [? []]; cbn in X |- *; f_equal; intuition eauto; solve_all.
 Qed.
 
 Lemma trans_subst_instance_ctx Γ u :
@@ -683,6 +683,7 @@ Section wtsub.
     | tFix mfix idx | tCoFix mfix idx =>
       All (fun d => wt Γ d.(dtype) × wt (Γ ,,, fix_context mfix) d.(dbody)) mfix
     | tEvar _ l => False
+    | tPrim p => tPrimProp (wt Γ) p
     | _ => unit
     end.
   Import PCUICGeneration PCUICInversion.
@@ -749,6 +750,9 @@ Section wtsub.
       eapply All_prod.
       eapply (All_impl a). intros ? h; exact h.
       eapply (All_impl a0). intros ? h; eexists; tea.
+    - eapply inversion_Prim in h as (?&?&[]); eauto.
+      destruct prim as [? []]; cbn in *; eauto; try exact tt.
+      depelim p0. repeat split. now eexists. now eexists. solve_all. now eexists.
   Qed.
 End wtsub.
 
@@ -1028,7 +1032,7 @@ Proof.
     cbn; eauto. cbn in p0. destruct p0. eauto.
   - cbn. red in X. solve_all.
   - cbn. red in X. solve_all.
-  - destruct p as [? []]; constructor.
+  - destruct p as [? []]; cbn in X, H |- *; constructor; solve_all; eauto.
 Qed.
 
 #[global] Hint Resolve trans_wf : wf.
@@ -1058,6 +1062,7 @@ Proof.
   - constructor; solve_all.
   - eapply Typing.cofix_red_body; solve_all.
     eapply b0, All2_app => //. reflexivity.
+  - eapply Typing.array_red_val. solve_all.
 Qed.
 
 Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' :
@@ -1381,6 +1386,9 @@ Proof.
     intuition auto.
     rewrite /trans_local map_app in X.
     now rewrite -trans_fix_context.
+  - cbn. apply TT.array_red_val.
+    eapply OnOne2_All_mix_left in X; tea.
+    eapply OnOne2_map. solve_all.
 Qed.
 
 Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
@@ -1449,7 +1457,7 @@ Proof.
     red in X0. solve_all_one.
     eapply trans_eq_context_gen_eq_binder_annot in a.
     now rewrite !map_context_trans.
-  - destruct p as [? []]; constructor.
+  - depelim X0; cbn in X |- *; try econstructor; intuition eauto; solve_all.
 Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
@@ -2363,11 +2371,14 @@ Proof.
     + fold trans;subst types.
       now apply trans_mfix_All2.
     + now rewrite trans_wf_cofixpoint.
-  - cbn. destruct p as [? []]; cbn; econstructor; eauto.
-    1,3: eapply trans_declared_constant; tea.
-    all:move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants;
-    intros [s []]; exists s; split => //;
+  - cbn. destruct p as [? []]; simp prim_type; cbn; econstructor; eauto.
+    1,3,5: eapply trans_declared_constant; tea.
+    all:cbn in *.
+    all:move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+    1-2:intros [s []]; exists s; split => //;
     destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+    intros []; split => //. rewrite H1 //. rewrite H2 //.
+    all:depelim X2; eauto. intros _. solve_all.
   - eapply TT.type_Conv.
     + eassumption.
     + eassumption.

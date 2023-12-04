@@ -75,6 +75,12 @@ Proof.
   inversion 1; reflexivity.
 Qed.
 
+Lemma fst_pair {A B} {t : A} (u : B) : (t, u).1 = t.
+Proof. reflexivity. Qed.
+
+Lemma snd_pair {A B} {t : A} (u : B) : (t, u).2 = u.
+Proof. reflexivity. Qed.
+
 Definition swap {A B : Type} (x : A * B) : B * A :=
   (snd x, fst x).
 

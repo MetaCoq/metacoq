@@ -40,51 +40,58 @@ Module Retroknowledge.
   Record t := mk_retroknowledge {
     retro_int63 : option kername;
     retro_float64 : option kername;
+    retro_array : option kername;
   }.
 
-  Definition empty := {| retro_int63 := None; retro_float64 := None |}.
+  Definition empty := {| retro_int63 := None; retro_float64 := None; retro_array := None |}.
 
   Definition extends (x y : t) :=
     option_extends x.(retro_int63) y.(retro_int63) /\
-    option_extends x.(retro_float64) y.(retro_float64).
+    option_extends x.(retro_float64) y.(retro_float64) /\
+    option_extends x.(retro_array) y.(retro_array).
   Existing Class extends.
 
   Definition extendsb (x y : t) :=
     option_extendsb x.(retro_int63) y.(retro_int63) &&
-    option_extendsb x.(retro_float64) y.(retro_float64).
+    option_extendsb x.(retro_float64) y.(retro_float64) &&
+    option_extendsb x.(retro_array) y.(retro_array).
 
   Lemma extendsT x y : reflect (extends x y) (extendsb x y).
   Proof.
-    rewrite /extends/extendsb; do 2 case: option_extendsT; cbn; constructor; intuition.
+    rewrite /extends/extendsb; do 3 case: option_extendsT; cbn; constructor; intuition.
   Qed.
 
   Lemma extends_spec x y : extendsb x y <-> extends x y.
   Proof.
     rewrite /extends/extendsb -!option_extends_spec /is_true !Bool.andb_true_iff //=.
+    intuition auto.
   Qed.
 
   #[global] Instance extends_refl x : extends x x.
   Proof.
-    split; apply option_extends_refl.
+    repeat split; apply option_extends_refl.
   Qed.
 
   #[global] Instance extends_trans : RelationClasses.Transitive Retroknowledge.extends.
   Proof.
-    intros x y z [] []; split; cbn; now etransitivity; tea.
+    intros x y z [? []] [? []]; repeat split; cbn; now etransitivity; tea.
   Qed.
 
   #[export,program] Instance reflect_t : ReflectEq t := {
       eqb x y := (x.(retro_int63) == y.(retro_int63)) &&
-                   (x.(retro_float64) == y.(retro_float64))
+                 (x.(retro_float64) == y.(retro_float64)) &&
+                 (x.(retro_array) == y.(retro_array))
     }.
   Next Obligation.
-    do 2 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
+    do 3 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
   Qed.
 
   (** This operation is asymmetric; it perfers the first argument when the arguments are incompatible, but otherwise takes the join *)
   Definition merge (r1 r2 : t) : t
     := {| retro_int63 := match r1.(retro_int63) with Some v => Some v | None => r2.(retro_int63) end
-       ; retro_float64 := match r1.(retro_float64) with Some v => Some v | None => r2.(retro_float64) end |}.
+       ; retro_float64 := match r1.(retro_float64) with Some v => Some v | None => r2.(retro_float64) end
+       ; retro_array := match r1.(retro_array) with Some v => Some v | None => r2.(retro_array) end
+        |}.
 
   Lemma extends_l_merge r1 r2
     : extends r1 (merge r1 r2).
@@ -102,7 +109,8 @@ Module Retroknowledge.
 
   Definition compatible (x y : t) : bool
     := match x.(retro_int63), y.(retro_int63) with Some x, Some y => x == y | _, _ => true end
-       && match x.(retro_float64), y.(retro_float64) with Some x, Some y => x == y | _, _ => true end.
+       && match x.(retro_float64), y.(retro_float64) with Some x, Some y => x == y | _, _ => true end
+       && match x.(retro_array), y.(retro_array) with Some x, Some y => x == y | _, _ => true end.
 
   Lemma extends_r_merge r1 r2
     : compatible r1 r2 -> extends r2 (merge r1 r2).
@@ -836,12 +844,25 @@ Module Environment (T : Term).
     match p with
     | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
     | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
+    | primArray => Σ.(retroknowledge).(Retroknowledge.retro_array)
     end.
 
-  Definition primitive_invariants (cdecl : constant_body) :=
-    ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
-             cdecl.(cst_universes) = Monomorphic_ctx].
+  Definition tImpl (dom codom : term) : term :=
+    tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+      dom (lift 1 0 codom).
 
+  Definition array_uctx := ([nAnon], ConstraintSet.empty).
+
+  Definition primitive_invariants (p : prim_tag) (cdecl : constant_body) :=
+    match p with
+    | primInt | primFloat =>
+     ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
+             cdecl.(cst_universes) = Monomorphic_ctx]
+    | primArray =>
+      let s := Universe.make (Level.lvar 0) in
+      [/\ cdecl.(cst_type) = tImpl (tSort s) (tSort s), cdecl.(cst_body) = None &
+        cdecl.(cst_universes) = Polymorphic_ctx array_uctx]
+    end.
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)

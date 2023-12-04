@@ -131,6 +131,13 @@ Proof.
 Qed.
 
 Lemma verified_lambdabox_pipeline_extends {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+  TransformExt.t verified_lambdabox_pipeline (fun p p' => extends (EEnvMap.GlobalContextMap.global_decls p.1)
+  (EEnvMap.GlobalContextMap.global_decls p'.1)) (fun p p' => extends p.1 p'.1).
+Proof.
+  unfold verified_lambdabox_pipeline. tc.
+Qed.
+
+Lemma verified_lambdabox_pipeline_extends' {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
   TransformExt.t verified_lambdabox_pipeline extends_eprogram_env extends_eprogram.
 Proof.
   unfold verified_lambdabox_pipeline. tc.

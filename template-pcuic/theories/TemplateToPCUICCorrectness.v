@@ -239,6 +239,7 @@ Proof.
   red in X0.
   f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
   f_equal. solve_all.
+  do 4 f_equal; solve_all.
 Qed.
 
 Lemma trans_decl_weakening {cf} Σ {Σ' : global_env_map} t :
@@ -379,6 +380,10 @@ Proof.
       rewrite e. now rewrite map_length.
   - f_equal; auto. maps. solve_all.
   - f_equal; auto; solve_all.
+  - f_equal; auto.
+  - f_equal; auto.
+  - cbn; do 4 f_equal; auto.
+    rewrite /map_array_model. f_equal; eauto. cbn. solve_all.
 Qed.
 
 Lemma trans_mkApp u a : trans (Template.Ast.mkApp u a) = tApp (trans u) (trans a).
@@ -435,6 +440,10 @@ Proof.
       f_equal; auto; solve_all.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
+  - f_equal; auto.
+  - f_equal; auto.
+  - cbn; f_equal; auto. rewrite /map_array_model; cbn; do 3 f_equal; eauto.
+    solve_all.
 Qed.
 
 Notation Tterm :=Template.Ast.term.
@@ -470,6 +479,9 @@ Proof.
     rewrite /map_branch /trans_branch /= /id.
     now intros; f_equal.
   - rewrite /id /map_predicate /=. f_equal; solve_all.
+  - f_equal; auto.
+  - f_equal; auto.
+  - cbn. rewrite /mapu_array_model; cbn; do 4 f_equal; auto; solve_all.
 Qed.
 
 
@@ -958,6 +970,10 @@ Section Trans_Global.
       intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
       simpl in *.
       intuition eauto. now eapply ih1. now eapply ih2.
+    - constructor; eauto. intuition auto; constructor; cbn; eauto.
+      eapply (IHt1 Re); eauto. reflexivity.
+      eapply (IHt2 Re); eauto. reflexivity.
+      solve_all. eapply a; eauto. reflexivity.
   Qed.
 
   Lemma trans_leq_term ϕ T U :
@@ -1698,6 +1714,8 @@ Section Trans_Global.
         cbn. rewrite /trans_decl /vass /=.
         now rewrite trans_lift.
       + simpl; congruence.
+    - simpl. eapply array_red_val. eapply (OnOne2_All_mix_left a) in X.
+      apply OnOne2_map; solve_all.
   Qed.
 End Trans_Global.
 
@@ -2451,18 +2469,39 @@ Proof.
        now eapply TypingWf.typing_wf in Hs'.
     -- destruct decl; reflexivity.
 
-  - cbn. econstructor; cbn; eauto.
+  - cbn. replace (tConst prim_ty []) with (prim_type (primInt; primIntModel p) prim_ty) by now simp prim_type.
+    econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.
     + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
       intros [s []]; exists s; split => //;
       destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
-  - cbn. econstructor; cbn; eauto.
+    + constructor.
+  - cbn. replace (tConst prim_ty []) with (prim_type (primFloat; primFloatModel p) prim_ty) by now simp prim_type.
+    econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.
     + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
       intros [s []]; exists s; split => //;
       destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+    + constructor.
+  - cbn. set (a := {| array_level := _ |}).
+    replace (tApp (tConst prim_ty [u]) (trans (trans_global_env Σ.1) ty)) with (prim_type (primArray; primArrayModel a) prim_ty) by now simp prim_type.
+    econstructor; cbn; eauto.
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: X0; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros []; split => //; eauto.
+      * apply forall_decls_declared_constant in H0; eauto.
+        rewrite /trans_constant_body in H0 |- *.
+        now rewrite H1 H2 H3 /= in H0 |- *.
+      * rewrite /trans_constant_body in H0 |- *.
+        now rewrite H1 H2 H3 /= in H0 |- *.
+    + constructor; eauto. cbn [array_level a]. eapply validity in X2; eauto.
+      eapply PCUICWfUniverses.isType_wf_universes in X2. cbn [trans PCUICWfUniverses.wf_universes] in X2.
+      unfold PCUICWfUniverses.wf_universes in X2. cbn [PCUICWfUniverses.on_universes] in X2.
+      move: X2. case: PCUICWfUniverses.wf_universe_reflect => //; eauto. eauto.
+      cbn [a array_value]. solve_all.
   - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }
     eapply type_Cumul; eauto.
@@ -2594,6 +2633,7 @@ Proof.
       rewrite map2_length; len. eauto.
   - unfold test_def; red in X. solve_all.
   - unfold test_def; solve_all.
+  - solve_all.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICOnFreeVars.

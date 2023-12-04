@@ -29,6 +29,7 @@ struct
   type quoted_constraint_type = Universes0.ConstraintType.t
   type quoted_univ_constraint = Universes0.UnivConstraint.t
   type quoted_univ_constraints = Universes0.ConstraintSet.t
+  type quoted_univ_level = Universes0.Level.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
   type quoted_univ_contextset = Universes0.ContextSet.t
@@ -156,6 +157,7 @@ struct
     try ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
     with e -> assert false
 
+  let quote_univ_level = quote_nonprop_level
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
     let arr = Univ.Instance.to_array i in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
@@ -235,6 +237,7 @@ struct
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
   let mkInt i = Coq_tInt i
   let mkFloat f = Coq_tFloat f
+  let mkArray u arr ~default ~ty = Coq_tArray (u, Array.to_list arr, default, ty)
 
   let rec seq f t =
     if f < t then
@@ -313,11 +316,13 @@ struct
 
   type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
-      retro_float64 : quoted_kernel_name option }
+      retro_float64 : quoted_kernel_name option;
+      retro_array : quoted_kernel_name option }
 
   let quote_retroknowledge r =
     { Environment.Retroknowledge.retro_int63 = r.retro_int63;
-      Environment.Retroknowledge.retro_float64 = r.retro_float64 }
+      Environment.Retroknowledge.retro_float64 = r.retro_float64;
+      Environment.Retroknowledge.retro_array = r.retro_array }
 
   let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
   let mk_program decls tm = (decls, tm)
@@ -366,7 +371,8 @@ struct
     | None -> None *)
 
   let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind,
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level,
+    quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n

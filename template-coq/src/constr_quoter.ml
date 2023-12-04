@@ -96,6 +96,9 @@ struct
   let mkInt i = i
   let mkFloat f = f
 
+  let mkArray u arr ~default ~ty =
+    constr_mkApp (tArray, [| u; to_coq_listl tTerm (Array.to_list arr); default; ty |])
+
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])
     | None -> constr_mkApp (cNone, [|ty|])
@@ -195,7 +198,7 @@ struct
     if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
-         | None -> constr_mkApp (tLevel, [| string_of_level l|])
+         | None -> constr_mkApp (tLevel, [| string_of_level l |])
 
   let quote_level l =
     Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
@@ -226,6 +229,7 @@ struct
     let ct = quote_constraint_type ct in
     constr_mkApp (tmake_univ_constraint, [| l1; ct; l2 |])
 
+  let quote_univ_level u = quote_nonprop_level u
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
   let quote_univ_instance u =
     let arr = Univ.Instance.to_array u in
@@ -410,12 +414,14 @@ struct
 
   type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
-      retro_float64 : quoted_kernel_name option }
+      retro_float64 : quoted_kernel_name option;
+      retro_array : quoted_kernel_name option }
 
   let quote_retroknowledge r =
     let rint63 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_int63 in
     let rfloat64 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_float64 in
-    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64 |])
+    let rarray = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_array in
+    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64; rarray |])
 
   let mk_global_env univs decls retro =
     constr_mkApp (tBuild_global_env, [| univs; decls; retro |])

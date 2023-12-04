@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool Morphisms Setoid.
+From Coq Require Import ssreflect ssrbool Morphisms Setoid ProofIrrelevance.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames EnvMap BasicAst.
@@ -172,6 +172,12 @@ Module GlobalContextMap.
   Program Definition make (g : global_declarations) (Hg : EnvMap.fresh_globals g): t :=
     {| global_decls := g;
        map := EnvMap.of_global_env g |}.
+
+  Lemma make_irrel Σ fr fr' : EEnvMap.GlobalContextMap.make Σ fr = EEnvMap.GlobalContextMap.make Σ fr'.
+  Proof.
+    unfold make. f_equal.
+    apply proof_irrelevance.
+  Qed.
 
 End GlobalContextMap.
 

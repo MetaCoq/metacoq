@@ -65,6 +65,8 @@ Section CtxReduction.
 
   Ltac inv_on_free_vars ::=
     match goal with
+    | [ H : is_true (on_free_vars ?P (tPrim ?p)) |- _ ] =>
+      cbn in H; move/andP: H => [] /andP[]; intros ???
     | [ H : is_true (on_free_vars ?P ?t) |- _ ] =>
       progress cbn in H;
       (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] ||
@@ -179,6 +181,9 @@ Section CtxReduction.
       * relativize #|mfix0|; [erewrite on_ctx_free_vars_extend, onΓ, on_free_vars_fix_context|now len] => //.
       * relativize #|mfix0|; [erewrite on_ctx_free_vars_extend, onΔ, on_free_vars_fix_context|now len] => //.
       * now eapply red_context_app_same.
+    - eapply red_primArray_one_value. toAll. eapply OnOne2_All_mix_left in X; tea. solve_all.
+    - eapply red_primArray_default; eauto.
+    - eapply red_primArray_type; eauto.
   Qed.
 
   Lemma red_red_ctx P Γ Δ t u :

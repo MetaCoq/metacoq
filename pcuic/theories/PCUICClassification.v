@@ -122,10 +122,6 @@ Section Arities.
 
 End Arities.
 
-Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
-  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
-Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
-
 Section Spines.
   Context {cf : checker_flags}.
   Context {Σ : global_env_ext}.
@@ -792,57 +788,6 @@ Section classification.
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
 
-  (* TODO move *)
-  Lemma invert_red_axiom {Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
-    T = tConst cst u.
-  Proof using wfΣ.
-    intros hdecl hb.
-    unshelve eapply declared_constant_to_gen in hdecl; eauto.
-    generalize_eq x (tConst cst u).
-    move=> e [clΓ clt] red.
-    revert cst u hdecl hb e.
-    eapply clos_rt_rt1n_iff in red.
-    induction red; simplify_dep_elim.
-    - reflexivity.
-    - depelim r; solve_discr.
-      unshelve eapply declared_constant_to_gen in isdecl; eauto.
-      congruence.
-  Qed.
-
-  Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤[pb] T ->
-    ∑ u', Σ ;;; Γ ⊢ T ⇝ tConst cst u' × PCUICEquality.R_universe_instance (eq_universe Σ) u u'.
-  Proof using wfΣ.
-    intros hdecl hb H.
-    eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
-    epose proof (invert_red_axiom hdecl hb tv). subst v.
-    depelim eqp.
-    exists u'. split => //.
-  Qed.
-
-  Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤ mkApps (tInd ind u') args -> False.
-  Proof using wfΣ.
-    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
-    eapply invert_red_mkApps_tInd in hred as (? & []); auto. solve_discr.
-  Qed.
-
-  Lemma invert_cumul_axiom_prod {Γ cst cdecl u na dom codom} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤ tProd na dom codom -> False.
-  Proof using wfΣ.
-    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
-    eapply invert_red_prod in hred as (? & ? & []); auto. discriminate.
-  Qed.
-
   Lemma whnf_classification' t i u args :
     axiom_free_value Σ [] t ->
     wh_normal Σ [] t ->
@@ -865,9 +810,10 @@ Section classification.
       unfold unfold_fix. destruct nth_error; [|easy].
       destruct o as [[? [? ?]]|]; [|easy]. inversion H; eauto.
     - now rewrite head_mkApps /head /=.
-    - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
-      eapply invert_cumul_axiom_ind in w; eauto.
-      apply hp.
+    - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? ? hp]]]; eauto.
+      destruct p as [? []]; simp prim_type in w.
+      1-2:eapply (invert_cumul_axiom_ind (args := [])) in w; eauto; destruct p0 as [s []]; eauto.
+      eapply (invert_cumul_axiom_ind (args := [array_type a0])) in w; eauto. destruct p0 as [s []]; eauto.
   Qed.
 
   Lemma whnf_classification t i u args :

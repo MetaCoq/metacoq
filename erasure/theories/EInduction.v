@@ -2,8 +2,8 @@
 Require Import List ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils.
 From MetaCoq.PCUIC Require Import PCUICSize.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
@@ -34,7 +34,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
-    (forall p, P (tPrim p)) ->
+    (forall p, primProp P p -> P (tPrim p)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -66,6 +66,12 @@ Proof.
   fix auxm 1.
   destruct mfix; constructor; [|apply auxm].
   apply auxt.
+
+  destruct prim as [? []]; cbn => //; constructor.
+  destruct a as [def v]; cbn.
+  split. eapply auxt.
+  revert v; fix auxv 1.
+  destruct v; constructor; [apply auxt|apply auxv].
 Defined.
 
 Ltac applyhyp :=
@@ -89,7 +95,14 @@ Ltac inv H :=
   | @ahyp _ ?X => inversion_clear X
   end.
 
-Fixpoint size t : nat :=
+Definition prim_size (f : term -> nat) (p : prim_val term) : nat :=
+  match p.π2 with
+  | primIntModel _ => 0
+  | primFloatModel _ => 0
+  | primArrayModel a => f a.(array_default) + list_size f a.(array_value)
+  end.
+
+Fixpoint size (t : term) : nat :=
   match t with
   | tRel i => 1
   | tEvar ev args => S (list_size size args)
@@ -101,6 +114,7 @@ Fixpoint size t : nat :=
   | tFix mfix idx => S (list_size (fun x => size (dbody x)) mfix)
   | tCoFix mfix idx => S (list_size (fun x => size (dbody x)) mfix)
   | tConstruct _ _ ignore_args => S (list_size size ignore_args)
+  | tPrim p => S (prim_size size p)
   | _ => 1
   end.
 
@@ -108,6 +122,14 @@ Lemma size_mkApps f l : size (mkApps f l) = size f + list_size size l.
 Proof.
   induction l in f |- *; simpl; try lia.
   rewrite IHl. simpl. lia.
+Qed.
+
+Lemma InPrim_size x p : InPrim x p -> size x < S (prim_size size p).
+Proof.
+  destruct p as [? []]; cbn => //.
+  intros [->|H]; try lia.
+  eapply (In_size id size) in H; unfold id in H.
+  change (fun x => size x) with size in H. lia.
 Qed.
 
 Lemma decompose_app_rec_size t l :
@@ -217,7 +239,7 @@ Section MkApps_rec.
     (pproj : forall (s : projection) (t : term), P t -> P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n))
     (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n))
-    (pprim : forall p, P (tPrim p)).
+    (pprim : forall p, primProp P p -> P (tPrim p)).
 
   Definition inspect {A} (x : A) : { y : A | x = y } := exist _ x eq_refl.
 
@@ -243,7 +265,7 @@ Section MkApps_rec.
     | tProj p c => pproj p c (rec c)
     | tFix mfix idx => pfix mfix idx (All_rec P dbody mfix (fun x H => rec x))
     | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x))
-    | tPrim p => pprim p.
+    | tPrim p => pprim p _.
   Proof.
     all:unfold MR; cbn; auto with arith. 4:lia.
     - clear -napp nonnil da rec.
@@ -255,6 +277,12 @@ Section MkApps_rec.
       rewrite da in H0. cbn in H0. rewrite <- H0.
       unfold id in H. change (fun x => size x) with size in H. abstract lia.
     - clear -da. abstract (eapply decompose_app_inv in da; now symmetry).
+    - destruct p as [? []]; cbn => //; constructor.
+      destruct a as [def v]; cbn.
+      split.
+      * eapply rec; red; cbn. lia.
+      * refine (All_rec P id v (fun x H => rec x _)); red; cbn.
+        unfold id in H. change (fun x => size x) with size in H. lia.
   Qed.
 
   End MkApps_rec.

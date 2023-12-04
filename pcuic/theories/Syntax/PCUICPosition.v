@@ -47,7 +47,10 @@ Inductive choice :=
 | prod_r
 | let_bd
 | let_ty
-| let_in.
+| let_in
+| array_def
+| array_ty
+| array_val (n : nat).
 
 Derive NoConfusion NoConfusionHom EqDec for choice.
 
@@ -115,6 +118,13 @@ Fixpoint validpos t (p : position) {struct p} :=
     | let_bd, tLetIn na b B t => validpos b p
     | let_ty, tLetIn na b B t => validpos B p
     | let_in, tLetIn na b B t => validpos t p
+    | array_def, tPrim (primArray; primArrayModel a) => validpos (array_default a) p
+    | array_ty, tPrim (primArray; primArrayModel a) => validpos (array_type a) p
+    | array_val n, tPrim (primArray; primArrayModel a) =>
+      match nth_error (array_value a) n with
+      | Some d => validpos d p
+      | None => false
+      end
     | _, _ => false
     end
   end.
@@ -253,6 +263,11 @@ Proof.
       * simpl in *. apply some_inj in e. subst.
         destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
       * simpl in *. eapply IHa. all: eauto.
+    + depelim e. depelim o; eauto.
+    + depelim e; depelim o; eauto.
+    + depelim e. depelim o; eauto.
+      cbn in vp. destruct (nth_error (array_value a) n) eqn:e'; try discriminate.
+      cbn. eapply All2_nth_error_Some in a0 as [t' [-> ?]]; tea. eapply ih; tea.
 Qed.
 
 Lemma eq_term_valid_pos :
@@ -475,6 +490,49 @@ Proof.
     - simpl. cbn in e2. rewrite e in e2. assumption.
     - specialize (ih2 q). eapply ih2. all: assumption.
   }
+  assert (
+    forall a (p : pos a.(array_default))
+      (e : validpos (tPrim (primArray; primArrayModel a)) (array_def :: proj1_sig p)),
+      Acc posR p ->
+      Acc posR (exist (array_def :: proj1_sig p) e)
+  ) as Acc_array_def.
+  { intros a p e h.
+    induction h as [p ih1 ih2] in e |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos a.(array_default) in _).
+    - simpl. cbn in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
+  assert (
+    forall a (p : pos a.(array_type))
+      (e : validpos (tPrim (primArray; primArrayModel a)) (array_ty :: proj1_sig p)),
+      Acc posR p ->
+      Acc posR (exist (array_ty :: proj1_sig p) e)
+  ) as Acc_array_ty.
+  { intros a p e h.
+    induction h as [p ih1 ih2] in e |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos a.(array_type) in _).
+    - simpl. cbn in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
+  assert (
+    forall a n v (p : pos v)
+      (e : nth_error a.(array_value) n = Some v)
+      (e1 : validpos (tPrim (primArray; primArrayModel a)) (array_val n :: proj1_sig p)),
+      Acc posR p ->
+      Acc posR (exist (array_val n :: proj1_sig p) e1)
+  ) as Acc_array_val.
+  { intros a n v p e e1 h.
+    induction h as [p ih1 ih2] in e, e1 |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos v in _).
+    - simpl. cbn in e2. rewrite e in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
   intro t. induction t using term_forall_list_ind ; intros q.
   all: try solve [
              destruct q as [q e] ; destruct q as [| c q] ; [
@@ -690,6 +748,35 @@ Proof.
         unshelve eapply Acc_cofix_mfix_bd with (1 := e1) (p := exist q _).
         -- simpl. rewrite e1 in e. assumption.
         -- eapply ihm.
+  - destruct q as [q e]. destruct q as [| c q].
+    + constructor. intros [p' e'] h.
+      unfold posR in h. cbn in h.
+      dependent destruction h.
+      destruct p as [? []];
+      destruct c. all: noconf e'.
+      * eapply Acc_array_def with (p := exist p0 e'), X.
+      * eapply Acc_array_ty with (p := exist p0 e'), X.
+      * simpl in e'.
+        case_eq (nth_error (array_value a) n).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros v e1. destruct X as [_ [_ X]].
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_array_val with (1 := e1) (p := exist p0 _).
+        -- simpl. rewrite e1 in e'. assumption.
+        -- eapply ihm.
+    + destruct p as [? []]; destruct c; noconf e.
+      * eapply Acc_array_def with (p := exist q e), X.
+      * eapply Acc_array_ty with (p := exist q e), X.
+      * simpl in e.
+        case_eq (nth_error (array_value a) n).
+        2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
+        intros v e1. destruct X as [_ [_ X]].
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_array_val with (1 := e1) (p := exist q _).
+        -- simpl. rewrite e1 in e. assumption.
+        -- eapply ihm.
 Qed.
 
 Fixpoint atpos t (p : position) {struct p} : term :=
@@ -739,6 +826,13 @@ Fixpoint atpos t (p : position) {struct p} : term :=
     | let_bd, tLetIn na b B t => atpos b p
     | let_ty, tLetIn na b B t => atpos B p
     | let_in, tLetIn na b B t => atpos t p
+    | array_def, tPrim (primArray; primArrayModel a) => atpos a.(array_default) p
+    | array_ty, tPrim (primArray; primArrayModel a) => atpos a.(array_type) p
+    | array_val n, tPrim (primArray; primArrayModel a) =>
+      match nth_error a.(array_value) n with
+      | Some v => atpos v p
+      | None => tRel 0
+      end
     | _, _ => tRel 0
     end
   end.
@@ -775,6 +869,14 @@ Proof.
     + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
       * apply IHp.
       * rewrite hh. reflexivity.
+    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+      now rewrite IHp.
+    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+      now rewrite IHp.
+    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+      destruct nth_error eqn:e.
+      * now rewrite IHp.
+      * now rewrite hh.
 Qed.
 
 Lemma poscat_valid :
@@ -793,6 +895,7 @@ Proof.
     all: simpl in *;
       repeat
         match goal with
+        | [prim: prim_val |- _] => destruct prim as [? []]
         | [H: context[nth_error ?a ?b] |- _] =>
           destruct (nth_error a b); [|discriminate]
         | [H: context[context_choice_term ?a ?b] |- _] =>
@@ -826,6 +929,7 @@ Proof.
     all:
       repeat
         match goal with
+        | [prim: prim_val |- _] => destruct prim as [? []]
         | |- context[nth_error ?a ?b] =>
           destruct (nth_error a b); auto
         | |- context[context_choice_term ?a ?b] =>
@@ -933,7 +1037,11 @@ Variant stack_entry : Type :=
 | Lambda_bd (na : aname) (A : term)
 | LetIn_bd (na : aname) (B t : term)
 | LetIn_ty (na : aname) (b t : term)
-| LetIn_in (na : aname) (b B : term).
+| LetIn_in (na : aname) (b B : term)
+| PrimArray_ty (l : Level.t) (l : list term) (def : term)
+| PrimArray_def (l : Level.t) (l : list term) (ty : term)
+(* Hole in one of the values *)
+| PrimArray_val (l : Level.t) (bef : list term) (after : list term) (def : term) (ty : term).
 
 Definition stack := list stack_entry.
 
@@ -1029,6 +1137,9 @@ Definition fill_hole (t : term) (se : stack_entry) : term :=
   | LetIn_bd na B u => tLetIn na t B u
   | LetIn_ty na b u => tLetIn na b t u
   | LetIn_in na b B => tLetIn na b B t
+  | PrimArray_def l v ty => tPrim (primArray; primArrayModel {| array_level := l; array_value := v; array_default := t; array_type := ty |})
+  | PrimArray_ty l v def => tPrim (primArray; primArrayModel {| array_level := l; array_value := v; array_default := def; array_type := t |})
+  | PrimArray_val l bef after def ty => tPrim (primArray; primArrayModel {| array_level := l; array_value := bef ++ (t :: after); array_default := def; array_type := ty |})
   end.
 
 (* Not using fold_left here to get the right unfolding behavior *)
@@ -1307,6 +1418,9 @@ Definition closedn_stack_entry k se :=
   | LetIn_bd na B u => closedn k B && closedn (S k) u
   | LetIn_ty na b u => closedn k b && closedn (S k) u
   | LetIn_in na b B => closedn k b && closedn k B
+  | PrimArray_def l v ty => forallb (closedn k) v && closedn k ty
+  | PrimArray_ty l v def => forallb (closedn k) v && closedn k def
+  | PrimArray_val l bef after def ty => forallb (closedn k) bef && forallb (closedn k) after && closedn k def && closedn k ty
   end.
 
 Fixpoint closedn_stack k π :=
@@ -1347,6 +1461,9 @@ Definition stack_entry_choice (se : stack_entry) : choice :=
   | LetIn_bd na B t => let_bd
   | LetIn_ty na b t => let_ty
   | LetIn_in na b B => let_in
+  | PrimArray_def u v ty => array_def
+  | PrimArray_ty u v def => array_ty
+  | PrimArray_val l bef aft def ty => array_val #|bef|
   end.
 
 Definition stack_position : stack -> position :=
@@ -1379,6 +1496,7 @@ Proof.
     + rewrite nth_error_snoc; auto.
   - destruct brs as ((?&[])&?); cbn.
     all: rewrite nth_error_snoc; auto.
+  - rewrite nth_error_snoc; auto.
 Qed.
 
 Lemma stack_position_valid :
@@ -1398,6 +1516,7 @@ Proof.
     + rewrite nth_error_snoc; auto.
   - destruct brs as ((?&[])&?); cbn.
     all: rewrite nth_error_snoc; auto.
+  - rewrite nth_error_snoc; auto.
 Qed.
 
 Definition stack_pos (t : term) (π : stack) : pos (zipc t π) :=
@@ -1475,6 +1594,8 @@ Section Stacks.
     - destruct brs as ((?&[])&?); cbn in *.
       + apply app_inj_length_l in H0 as (_&H0); auto; noconf H0.
         reflexivity.
+    - eapply app_inj_length_l in H0 as (_&H0); auto.
+      now noconf H0.
   Qed.
 
   Definition isStackApp (π : stack) : bool :=
@@ -1711,6 +1832,9 @@ Proof.
   - destruct brs as [[brs []] brs']; cbn.
     rewrite -app_tip_assoc !forallb_app; cbn.
     len; ring_simplify; rewrite - !andb_assoc; repeat bool_congr.
+  - cbn. bool_congr.
+  - cbn; rewrite -!andb_assoc; bool_congr.
+  - cbn. rewrite !forallb_app -!andb_assoc; repeat bool_congr.
 Qed.
 
 Lemma closedn_zip k t π : closedn k (zipc t π) = closedn_stack k π && closedn (#|stack_context π| + k) t.

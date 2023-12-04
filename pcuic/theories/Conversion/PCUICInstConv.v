@@ -1230,7 +1230,7 @@ Proof.
   intros Hs t Ht. revert P s s' Hs Ht.
   elim t using term_forall_list_ind; cbn in |- *; intros; try easy.
   8-9: rewrite /test_def in Ht.
-  1-5,7-9:
+  1-5,7-9,10:
     try rewrite H; try rewrite H0 ; try rewrite H1 ; try easy ;
     solve [f_equal; solve_all; eauto using up_ext_cond].
 
@@ -1258,15 +1258,15 @@ Proof.
   intros H i.
   rewrite /up.
   destruct (Nat.leb_spec0 n i) as [Hi|Hi].
-    + rewrite on_free_vars_rename.
-      erewrite on_free_vars_ext.
-      2: now eapply addnP_shiftnP.
-      rewrite /shiftnP => /orP [].
-      1: move => /Nat.ltb_spec0 ? ; lia.
-      intros.
-      now eapply H.
-    + rewrite /= /shiftnP.
-      now move: Hi => /Nat.nle_gt /Nat.ltb_spec0 ->.
+  + rewrite on_free_vars_rename.
+    erewrite on_free_vars_ext.
+    2: now eapply addnP_shiftnP.
+    rewrite /shiftnP => /orP [].
+    1: move => /Nat.ltb_spec0 ? ; lia.
+    intros.
+    now eapply H.
+  + rewrite /= /shiftnP.
+    now move: Hi => /Nat.nle_gt /Nat.ltb_spec0 ->.
 Qed.
 
 Lemma on_free_vars_inst (P Q : nat -> bool) s t :
@@ -1416,7 +1416,7 @@ Proof using Type.
         sigma in X. eapply X.
       * eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up; eauto; intuition.
+  - eapply usubst_Up; eauto; intuition auto with *.
 Qed.
 
 
@@ -1465,7 +1465,7 @@ Proof using Type.
       eapply on_free_vars_inst.
       2: now eapply h.
       now easy.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 Lemma well_subst_Up' {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na t A} :
@@ -1491,7 +1491,7 @@ Proof using Type.
         sigma in X0. eapply X0.
       + eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 
@@ -1698,6 +1698,27 @@ Proof.
   rewrite on_free_vars_ctx_app in H1. solve_all. cbn in *. rewrite shiftnP0 in H2. tea.
 Defined.
 
+Lemma map_array_model_set_value f arr value :
+  map_array_model f (set_array_value arr value) =
+  set_array_value (map_array_model f arr) (List.map f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
+
+Lemma map_array_model_set_default f arr value :
+  map_array_model f (set_array_default arr value) =
+  set_array_default (map_array_model f arr) (f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
+
+Lemma map_array_model_set_type f arr value :
+  map_array_model f (set_array_type arr value) =
+  set_array_type (map_array_model f arr) (f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
+
 Lemma red1_inst {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ u v σ} :
   usubst Γ σ Δ ->
   is_open_term Γ u ->
@@ -1842,6 +1863,14 @@ Proof.
       + rewrite inst_fix_context_up. eapply usubst_app_up; eauto.
       + now len.
     *  rewrite shiftnP_add in clb. rewrite <- fix_context_length in clb. rewrite <- app_length in clb. tea.
+  - cbn. toAll. eapply OnOne2_All_mix_left in X; tea.
+    rewrite map_array_model_set_value.
+    eapply red_primArray_one_value. cbn.
+    eapply OnOne2_map; solve_all. red; simpl; eauto.
+  - cbn. rewrite map_array_model_set_default.
+    eapply red_primArray_default; cbn; eauto.
+  - cbn. rewrite map_array_model_set_type.
+    eapply red_primArray_type; cbn; eauto.
 Defined.
 
 Lemma eq_term_upto_univ_inst Σ :
@@ -1884,6 +1913,8 @@ Proof using Type.
     apply All2_length in a as e. rewrite <- e.
     generalize #|m|. intro k.
     eapply All2_map. simpl. solve_all.
+  - simpl. constructor.
+    eapply onPrims_map_prop; tea. cbn; intuition eauto.
 Qed.
 
 Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :

@@ -4418,6 +4418,48 @@ Proof.
     + depelim ev.
 Qed.
 
+Import MCMonadNotation ResultMonad.
+From Coq Require Import String.
+Definition compute_masks overridden_masks (do_trim_const_masks do_trim_ctor_masks : bool) Σ : result dearg_set bytestring.string :=
+  let (const_masks, ind_masks) := Utils.timed "Dearg analysis" (fun _ => analyze_env overridden_masks Σ) in
+  let const_masks := (if do_trim_const_masks then trim_const_masks else id) const_masks in
+  let ind_masks := (if do_trim_ctor_masks then trim_ind_masks else id) ind_masks in
+  throwIf (negb (is_expanded_env ind_masks const_masks Σ))
+    "Erased environment is not expanded enough for dearging to be provably correct"%bs ;;
+  throwIf (negb (valid_masks_env ind_masks const_masks Σ))
+    "Analysis produced masks that ask to remove live arguments"%bs ;;
+  Ok (Build_dearg_set const_masks ind_masks).
+
+Definition dearg_env masks Σ :=
+  debox_env_types (dearg_env masks.(ind_masks) masks.(const_masks) Σ).
+
+Import PCUICWfEnvImpl PCUICWfEnv PCUICTyping.
+
+Definition dearg_term masks t :=
+  dearg masks.(ind_masks) masks.(const_masks) t.
+
+Lemma dearg_transform_gen_correct {wfl : WcbvFlags} overridden_masks do_trim_const_masks do_trim_ctor_masks :
+  forall (Σ Σopt : global_env) t v masks,
+  with_constructor_as_block = false ->
+  env_closed (trans_env Σ) ->
+  compute_masks overridden_masks do_trim_const_masks do_trim_ctor_masks Σ = ResultMonad.Ok masks ->
+  closed t ->
+  valid_cases masks.(ind_masks) t ->
+  is_expanded masks.(ind_masks) masks.(const_masks) t ->
+  trans_env Σ e⊢ t ⇓ v -> trans_env (dearg_env masks Σ) e⊢ dearg_term masks t ⇓ dearg_term masks v.
+Proof.
+  intros Σ Σopt t v masks block cl opt clt vc expc ev.
+  unfold compute_masks in opt. cbn in opt.
+  destruct analyze_env; cbn in *.
+  destruct is_expanded_env eqn:exp; cbn in *; [|congruence].
+  destruct valid_masks_env eqn:valid; cbn in *; [|congruence].
+  injection opt as <-.
+  set (im := (if do_trim_ctor_masks then trim_ind_masks else id) ind_masks) in *; clearbody im.
+  set (cm := (if do_trim_const_masks then trim_const_masks else id) const_masks) in *; clearbody cm.
+  apply eval_debox_env_types;eauto.
+  apply dearg_correct; eauto.
+Qed.
+
 Lemma dearg_transform_correct {wfl : WcbvFlags} overridden_masks do_trim_const_masks do_trim_ctor_masks :
   ExtractTransformCorrect (dearg_transform overridden_masks do_trim_const_masks do_trim_ctor_masks true true true).
 Proof.

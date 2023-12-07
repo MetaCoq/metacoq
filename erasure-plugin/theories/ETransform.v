@@ -204,9 +204,7 @@ Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t _
      /\ NormalizationIn_erase_pcuic_program_1 p.1
      /\ NormalizationIn_erase_pcuic_program_2 p.1 ;
    transform p hp := let nhs := proj2 (proj2 hp) in
-                     @erase_
-
-                     program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
+                     @erase_program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
     post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
    obseq p hp p' v v' := let Σ := p.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
 
@@ -258,6 +256,285 @@ Next Obligation.
     repeat match goal with H : _ |- _ => rewrite reference_impl_env_iter_pop_eq in H end;
     assumption. }
   cbn; intros. sq. now subst.
+Qed.
+
+(** Typed erasure variant, using erasure but also keeping type information useful for later optimizations,
+    e.g., de-arging. *)
+
+Definition typed_erasure_pre (p : pcuic_program) :=
+  ∥ wt_pcuic_program (cf := config.extraction_checker_flags) p ∥
+  /\ PCUICEtaExpand.expanded_pcuic_program p
+  /\ NormalizationIn_erase_pcuic_program_1 p.1
+  /\ NormalizationIn_erase_pcuic_program_2 p.1.
+
+From MetaCoq.Erasure.Typed Require Import Erasure ExAst Optimize ExtractionCorrectness OptimizeCorrectness.
+From MetaCoq.Erasure Require Import EWellformed.
+From MetaCoq.PCUIC Require Import PCUICTyping.
+From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
+Set Equations Transparent.
+Equations? erase_program_typed guard (p : pcuic_program) (pre : typed_erasure_pre p) : ExAst.global_env * EAst.term :=
+ erase_program_typed guard p pre :=
+  let wfΣ : ∥ wf_ext p.1 ∥ := _ in
+  let X := PCUICWfEnvImpl.build_wf_env_from_env p.1 (map_squash fst wfΣ) in
+  let t' := erase_term wfΣ p.2 _ in
+  (erase_global_decls_deps_recursive
+    (X_type := PCUICWfEnvImpl.optimized_abstract_env_impl (guard := guard))
+    (X := X) (PEnv.declarations p.1) (PEnv.universes p.1) (PEnv.retroknowledge p.1)
+    (fun Σ' eq => _)
+    (EAstUtils.term_global_deps t') (fun _ => false), t').
+Proof.
+  - destruct pre0. destruct H. destruct X. now sq.
+  - destruct pre0 as [[[wf []]] _]. now eexists.
+  - cbn in eq. rewrite eq. clear; destruct p.1; cbn in *.
+    set(x := eval_eprogram_env).
+    destruct g; cbn in *.
+    now destruct trans_env_env; cbn.
+Qed.
+
+Definition trans_ex_prog (p : ExAst.global_env * EAst.term) : EAst.global_context * EAst.term :=
+  (ExAst.trans_env p.1, p.2).
+
+Definition eval_typed_eprogram fl :=
+  (fun p v => ∥ @EWcbvEval.eval fl (ExAst.trans_env p.1) p.2 v ∥).
+
+Program Definition typed_erase_transform (guard := fake_guard_impl_instance) :
+  Transform.t _ _ PCUICAst.term EAst.term PCUICAst.term EAst.term
+  eval_pcuic_program (eval_typed_eprogram EWcbvEval.default_wcbv_flags) :=
+ {| name := "typed erasure";
+    pre p :=
+     ∥ wt_pcuic_program (cf := config.extraction_checker_flags) p ∥
+     /\ PCUICEtaExpand.expanded_pcuic_program p
+     /\ NormalizationIn_erase_pcuic_program_1 p.1
+     /\ NormalizationIn_erase_pcuic_program_2 p.1 ;
+   transform p hp := erase_program_typed guard p hp ;
+   post p := [/\ wf_eprogram all_env_flags (trans_ex_prog p) &
+     EEtaExpandedFix.expanded_eprogram (trans_ex_prog p)];
+   obseq p hp p' v v' := let Σ := p.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
+
+Next Obligation.
+  cbn -[erase_program].
+  intros p (wtp&etap&?&?).
+  destruct erase_program_typed eqn:e.
+  split.
+  - unfold erase_program_typed, erase_pcuic_program in e.
+    set (egf := erase_global_decls_deps_recursive _ _ _ _ _ _) in e.
+    unfold erase_term in e.
+    set (ef := erase _ _ _ _ _) in e.
+    cbn -[egf ef] in e. injection e. intros <- <-. clear e.
+    unfold trans_ex_prog in *.
+    split.
+    now eapply wf_erase_global_decls_recursive.
+    cbn [fst snd].
+    eapply extends_wellformed.
+    now eapply wf_erase_global_decls_recursive.
+    2:unshelve eapply (erase_wellformed_weaken (PEnv.declarations p.1) _ _ _ (Γ:=[])); tea.
+    4:exact KernameSet.empty.
+    2:{ intros. now eapply Erasure.fake_normalization. }
+    2:{ abstract (cbn; destruct p; destruct g; cbn; congruence). }
+    rewrite erase_global_deps_erase_global.
+    eapply trans_env_erase_global_decls; eauto.
+    intros kn hin. rewrite KernameSet.union_spec in hin. destruct hin; [knset|].
+    unfold erase_term.
+    match goal with
+    | [ H : context [@erase ?X_type ?X ?nin ?G ?t ?wt ] |- context [ @erase ?X_type' ?X' ?nin' ?G' ?t' ?wt' ] ] =>
+      rewrite -(@erase_irrel_global_env X_type X nin X_type' X' nin' G t wt wt'); eauto
+    end.
+    red. cbn. intros; subst; intuition eauto.
+    destruct wtp. eapply wf_fresh_globals, w.
+  - todo "expanded".
+Qed.
+
+Next Obligation.
+  intros guard.
+  set (cf := extraction_checker_flags).
+  cbn. red.
+  move=> p v [[wf [T [HT1 HT2]]]]. unfold eval_pcuic_program, eval_typed_eprogram.
+  unfold erase_program_typed.
+  set (er := erase_global_decls_deps_recursive _ _ _ _ _ _).
+  set (et := erase_term _ _ _).
+  unshelve edestruct (erase_pcuic_program_normalization_helper); cbn in *; try now destruct wf; eauto.
+  destruct p as [Σ t].
+  intros [ev].
+  cbn in ev. clear H0.
+  unfold erase_term, make_env in et.
+  set (e := abstract_make_wf_env_ext _ _ _) in *.
+  cbn [fst snd] in et.
+  pose proof (abstract_env_ext_exists e) as [[Σe he]].
+  match goal with
+  [H := context [ @erase ?X_type ?X ?nin ?Γ t ?wt ] |- _ ] =>
+   pose proof (@erases_erase X_type X nin Γ t wt _ he)
+  end.
+  cbn in he. subst Σe. destruct Σ as [Σ univs]; cbn [fst snd] in *.
+  assert (wv : welltyped (Σ, univs) [] v).
+  { destruct wf. destruct s. eexists. eapply PCUICClassification.subject_reduction_eval; tea. }
+  eapply ErasureCorrectness.erases_correct with (Σ := (trans_env_env Σ, univs)) (Σ' := trans_env er) in ev as (erv&erase_to&[erev]);eauto.
+  - apply wf.
+  - destruct wf. destruct s; now eexists.
+  - destruct wf as [wf []]. eapply erase_global_erases_deps; tea.
+    subst er.
+    set (obl := fun Σ' => _).
+    set (obl' := fun Σ' => _).
+    destruct Σ. destruct trans_env_env. cbn -[build_wf_env_from_env e] in *.
+    eapply (ErasureCorrectness.erase_global_decls_deps_recursive_correct _ _ _ _); eauto.
+    intros k hin.
+    eapply term_global_deps_spec in hin; tea. red in hin. destruct hin as [[decl eq]].
+    cbn in eq. cbn. now rewrite eq. cbn. eapply wf.
+Qed.
+
+(** De-arging requires first the removal of match-on-box which allows getting rid of all
+  dependencies on propositional inductive types. *)
+Import EOptimizePropDiscr OptimizePropDiscr EWcbvEval.
+
+Definition remove_match_on_box_typed_env m (Σ : global_env) :=
+  map (on_snd (remove_match_on_box_decl m)) Σ.
+
+Definition map_of_typed_global_env (p : global_env) (fr : fresh_globals p) :=
+  GlobalContextMap.make (trans_env p) (OptimizePropDiscr.remove_match_on_box_env_obligation_1 p fr).
+
+Definition pre_remove_match_on_box_typed efl (p : global_env * term) : Prop :=
+  wf_eprogram efl (trans_ex_prog p) /\ EEtaExpandedFix.expanded_eprogram (trans_ex_prog p).
+
+Lemma pre_remove_match_on_box_typed_fresh efl p : pre_remove_match_on_box_typed efl p -> fresh_globals p.1.
+Proof.
+  intros []. destruct H. eapply wf_glob_fresh in H.
+Admitted.
+
+Lemma map_trans_env Σ m : map (on_snd (EOptimizePropDiscr.remove_match_on_box_decl m)) (trans_env Σ) = trans_env (map (on_snd (OptimizePropDiscr.remove_match_on_box_decl m)) Σ).
+Proof.
+  induction Σ; cbn => //=.
+  destruct a as [[kn b] d]; cbn. f_equal.
+  unfold on_snd. cbn. f_equal. destruct d => //. destruct o => //.
+  now apply IHΣ.
+Qed.
+
+Definition remove_match_on_box_program_typed efl (p : global_env * term) (pre : pre_remove_match_on_box_typed efl p) : global_env * term :=
+  let m := map_of_typed_global_env p.1 (pre_remove_match_on_box_typed_fresh efl p pre) in
+  (remove_match_on_box_typed_env m p.1, EOptimizePropDiscr.remove_match_on_box m p.2).
+Import EOptimizePropDiscr.
+
+Program Definition remove_match_on_box_typed_transform {fl : WcbvFlags} {wcon : with_constructor_as_block = false} {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram fl) (eval_typed_eprogram (disable_prop_cases fl)) :=
+  {| name := "optimize_prop_discr";
+    transform p pr := remove_match_on_box_program_typed efl p pr ;
+    pre p := pre_remove_match_on_box_typed efl p;
+    post p := pre_remove_match_on_box_typed efl p;
+    obseq p hp p' v v' := v' = EOptimizePropDiscr.remove_match_on_box (map_of_typed_global_env p.1 (pre_remove_match_on_box_typed_fresh efl p hp)) v |}.
+
+Next Obligation.
+  move=> fl wcon efl hastrel hastbox [Σ t] [wfp etap].
+  cbn in *. split.
+  - cbn in *. unfold trans_ex_prog in *. cbn [fst snd] in *.
+    unfold remove_match_on_box_program_typed; cbn [fst snd].
+    cbn.
+    rewrite trans_env_remove_match_on_box_env.
+    split.
+    + eapply remove_match_on_box_env_wf => //.
+      cbn. eapply wfp.
+    + cbn -[remove_match_on_box_env].
+      rewrite /map_of_typed_global_env.
+      set (obl := trans_env_fresh_globals _ _).
+      set (obl' := OptimizePropDiscr.remove_match_on_box_env_obligation_1 _ _).
+      assert (obl = obl') by apply proof_irrelevance. clearbody obl obl'; subst obl'.
+      eapply remove_match_on_box_wellformed_irrel. cbn. eapply wfp.
+      eapply remove_match_on_box_wellformed => //=. apply wfp. apply wfp.
+  - todo "excpanded". (* eapply remove_match_on_box_program_expanded.*)
+Qed.
+Next Obligation.
+  red. move=> fl wcon efl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  cbn -[trans_env] in ev.
+  unfold eval_typed_eprogram, remove_match_on_box_program_typed. cbn -[trans_env].
+  set (obl := pre_remove_match_on_box_typed_fresh _ _ _).
+  eapply (EOptimizePropDiscr.remove_match_on_box_correct (Σ := map_of_typed_global_env _ obl) t v) in ev; cbn -[trans_env]; eauto.
+  eexists; split => //. rewrite -map_trans_env. now sq.
+  apply wfe.
+  eapply wellformed_closed_env, wfe.
+  eapply wellformed_closed, wfe.
+  Unshelve. eauto.
+Qed.
+
+Definition check_dearging_precond Σ t :=
+  if closed_env (trans_env Σ) then
+    match ExtractionCorrectness.compute_masks (fun _ : kername => None) true true Σ with
+    | ResultMonad.Ok masks =>
+      if valid_cases (ind_masks masks) t && is_expanded (ind_masks masks) (const_masks masks) t then Some masks else None
+    | _ => None
+    end
+  else None.
+
+Definition check_dearging_trans p :=
+  ((check_dearging_precond p.1 p.2, p.1), p.2).
+
+Definition eval_typed_eprogram_masks fl :=
+  (fun (p : (option dearg_set * global_env) * term) v => ∥ @EWcbvEval.eval fl (ExAst.trans_env p.1.2) p.2 v ∥).
+
+Definition post_dearging_checks efl (p : (option dearg_set × global_env) × term) :=
+  (p.1.1 = check_dearging_precond p.1.2 p.2) /\
+  wf_eprogram efl (trans_env p.1.2, p.2) /\ EEtaExpandedFix.expanded_eprogram (trans_env p.1.2, p.2).
+
+Program Definition dearging_checks_transform {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_typed_eprogram opt_wcbv_flags) (eval_typed_eprogram_masks opt_wcbv_flags) :=
+  {| name := "dearging";
+    transform p _ := check_dearging_trans p ;
+    pre p := pre_remove_match_on_box_typed efl p;
+    post := post_dearging_checks efl;
+    obseq p hp p' v v' := v' = v |}.
+Next Obligation.
+  cbn. intros. split => //.
+Qed.
+Next Obligation.
+  cbn. intros. red. cbn. intros. exists v; split => //.
+Qed.
+
+Definition dearg (p : (option dearg_set × global_env) * term) : global_context * term :=
+  match p.1.1 with
+  | Some masks => (trans_env (dearg_env masks p.1.2), dearg_term masks p.2)
+  | None => (trans_env p.1.2, p.2)
+  end.
+
+Program Definition dearging_transform {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram_masks opt_wcbv_flags) (eval_eprogram opt_wcbv_flags) :=
+  {| name := "dearging";
+    transform p _ := dearg p ;
+    pre p := post_dearging_checks efl p;
+    post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p ;
+    obseq p hp p' v v' := v' = (dearg (p.1, v)).2 |}.
+
+Next Obligation.
+Proof.
+  cbn. intros.
+  unfold dearg.
+  destruct p. rewrite H.
+  destruct check_dearging_precond eqn:eqp; cbn => //.
+  split.
+  - split; cbn. clear H. unfold dearg_env.
+    all:todo "wf".
+  - todo "expanded".
+Qed.
+
+Next Obligation.
+  cbn. intros. red.
+  intros p v [he [wfe exp]]. unfold eval_typed_eprogram_masks.
+  intros [ev].
+  unfold dearg. rewrite he.
+  destruct (check_dearging_precond) as [masks|] eqn:cpre.
+  * eapply (extract_correct_gen' _ _ _ masks) in ev as ev'. destruct ev' as [ev'].
+    eexists. split. red. sq. cbn. exact ev'. auto.
+    - destruct wfe. now eapply wellformed_closed_env.
+    - destruct wfe. now eapply wellformed_closed.
+    - move: cpre. unfold check_dearging_precond. destruct closed_env => //.
+      destruct ExtractionCorrectness.compute_masks => //.
+      destruct (_ && _) => //. congruence.
+    - move: cpre. rewrite /check_dearging_precond.
+      destruct closed_env => //.
+      destruct ExtractionCorrectness.compute_masks => //.
+      destruct valid_cases eqn:vc => //. cbn.
+      destruct is_expanded => //. now intros [= ->].
+    - move: cpre. rewrite /check_dearging_precond.
+      destruct closed_env => //.
+      destruct ExtractionCorrectness.compute_masks => //.
+      destruct valid_cases eqn:vc => //. cbn.
+      destruct is_expanded eqn:ise => //. now intros [= ->].
+  * exists v. cbn. split => //.
 Qed.
 
 Definition extends_eprogram (p p' : eprogram) :=
@@ -364,30 +641,39 @@ Qed.
 Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
   (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
 
-Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp : bool) :
+Definition preserves_expansion with_fix p :=
+  if with_fix then EEtaExpandedFix.expanded_eprogram p
+  else EEtaExpanded.expanded_eprogram_cstrs p.
+
+Definition preserves_expansion_env with_fix p :=
+  if with_fix then EEtaExpandedFix.expanded_eprogram_env p
+  else EEtaExpanded.expanded_eprogram_env_cstrs p.
+
+Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp with_fix : bool) :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram fl) (eval_eprogram_env fl) :=
   {| name := "rebuilding environment lookup table";
-     pre p := wf_eprogram efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_cstrs p);
+     pre p := wf_eprogram efl p /\ (with_exp -> preserves_expansion with_fix p);
      transform p pre := rebuild_wf_env p (proj1 pre);
-     post p := wf_eprogram_env efl p /\ (with_exp ==> EEtaExpanded.expanded_eprogram_env_cstrs p);
+     post p := wf_eprogram_env efl p /\ (with_exp -> preserves_expansion_env with_fix p);
      obseq p hp p' v v' := v = v' |}.
 Next Obligation.
-  cbn. intros fl efl [] input [wf exp]; cbn; split => //.
+  cbn. unfold preserves_expansion, preserves_expansion_env.
+  intros fl efl [] [] input [wf exp]; cbn; split => //.
 Qed.
 Next Obligation.
-  cbn. intros fl efl [] input v [] ev p'; exists v; split => //.
+  cbn. intros fl efl [] [] input v [] ev p'; exists v; split => //.
 Qed.
 
 #[global]
-Instance rebuild_wf_env_extends {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp :
-  TransformExt.t (rebuild_wf_env_transform with_exp) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Instance rebuild_wf_env_extends {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp with_fix :
+  TransformExt.t (rebuild_wf_env_transform with_exp with_fix) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
 Proof.
   red. intros p p' pr pr' ext. red. now rewrite /transform /=.
 Qed.
 
 #[global]
-Instance rebuild_wf_env_extends' {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp :
-  TransformExt.t (rebuild_wf_env_transform with_exp) extends_eprogram extends_eprogram_env.
+Instance rebuild_wf_env_extends' {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp with_fix :
+  TransformExt.t (rebuild_wf_env_transform with_exp with_fix) extends_eprogram extends_eprogram_env.
 Proof.
   red. intros p p' pr pr' [? ?]. now rewrite /transform /=.
 Qed.

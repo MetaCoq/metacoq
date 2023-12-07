@@ -25,12 +25,15 @@ let pr_char_list l =
   (* We allow utf8 encoding *)
   str (Caml_bytestring.caml_string_of_bytestring l)
 
-let check ~bypass ~fast env evm c =
+let check ~bypass ~fast ?(with_types=false) env evm c =
   debug (fun () -> str"Quoting");
   let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass env evm) (EConstr.to_constr evm c) in
   let erase = time (str"Erasure")
-      (if fast then Erasure.erase_fast_and_print_template_program
-       else Erasure.erase_and_print_template_program)
+      (if fast then Erasure0.erase_fast_and_print_template_program
+       else
+       if with_types then
+        Erasure0.typed_erase_and_print_template_program
+       else Erasure0.erase_and_print_template_program)
       term
   in
   Feedback.msg_info (pr_char_list erase)
@@ -42,6 +45,12 @@ VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
     check ~bypass:true ~fast:false env evm c
+  }
+| [ "MetaCoq" "Typed" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:true ~fast:false ~with_types:true env evm c
   }
 | [ "MetaCoq" "Erase" constr(c) ] -> {
     let env = Global.env () in

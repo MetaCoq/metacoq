@@ -473,14 +473,22 @@ Definition compute_masks overridden_masks do_trim_const_masks do_trim_ctor_masks
     "Analysis produced masks that ask to remove live arguments"%bs ;;
   Ok (Build_dearg_set const_masks ind_masks).
 
-Definition dearg_env masks Σ :=
-  debox_env_types (dearg_env masks.(ind_masks) masks.(const_masks) Σ).
+Import PCUICWfEnvImpl PCUICAst.PCUICEnvironment.
 
-Import PCUICWfEnvImpl.
+Program Definition make_env {Σ} (wfΣ : ∥wf_ext Σ∥) :=
+  @abstract_make_wf_env_ext _ (optimized_abstract_env_impl (guard := Erasure.fake_guard_impl_instance)) (PCUICWfEnvImpl.build_wf_env_from_env Σ (map_squash fst wfΣ)) Σ.2 _.
 
-Program Definition dearg_term {Σ} (wfΣ : ∥wf_ext Σ∥) (masks : dearg_set) (t : PCUICAst.term) (w : welltyped Σ [] t) : term :=
-  let wfext := @abstract_make_wf_env_ext _ (optimized_abstract_env_impl (guard := Erasure.fake_guard_impl_instance)) (PCUICWfEnvImpl.build_wf_env_from_env Σ (map_squash fst wfΣ)) Σ.2 _ in
-  dearg masks.(ind_masks) masks.(const_masks) (erase _ wfext (normalization_in := _) [] t _).
+Program Definition erase_env {Σ} wfΣ seeds ignore :=
+  Erasure.erase_global_decls_deps_recursive (X_type := PCUICWfEnvImpl.optimized_abstract_env_impl (guard := Erasure.fake_guard_impl_instance))
+    (X := PCUICWfEnvImpl.build_wf_env_from_env Σ wfΣ)
+    (declarations Σ) (universes Σ) (retroknowledge Σ) _ seeds ignore.
+  Next Obligation.
+    destruct Σ => //.
+  Qed.
+
+Program Definition erase_term {Σ} (wfΣ : ∥wf_ext Σ∥) (t : PCUICAst.term) (w : welltyped Σ [] t) : term :=
+  let wfext := make_env wfΣ in
+  (erase _ wfext (normalization_in := _) [] t _).
   Next Obligation.
     refine (let 'sq wfΣ := wfΣ in let nin := Erasure.fake_normalization Σ wfΣ in _).
     eapply nin. destruct Σ. apply H.
@@ -490,77 +498,111 @@ Program Definition dearg_term {Σ} (wfΣ : ∥wf_ext Σ∥) (masks : dearg_set) 
     destruct Σ. apply w.
   Qed.
 
+Lemma remove_match_on_box_env_lemma {Σ} (wfΣ : ∥ wf Σ ∥) seeds ignore :
+  fresh_globals (erase_env wfΣ seeds ignore).
+Proof.
+  destruct wfΣ.
+  unfold erase_env.
+  now eapply fresh_globals_erase_global_decl_rec, wf_fresh_globals.
+Qed.
+
+Lemma remove_match_on_box_trans_env {Σ} (wfΣ : ∥ wf Σ ∥) seeds ignore :
+  EnvMap.fresh_globals (trans_env (erase_env wfΣ seeds ignore)).
+Proof.
+  destruct wfΣ.
+  unfold erase_env.
+  eapply OptimizePropDiscr.remove_match_on_box_env_obligation_1.
+  now eapply fresh_globals_erase_global_decl_rec, wf_fresh_globals.
+Qed.
+
+Import EWellformed.
 Theorem extract_correct_gen
         (H := EWellformed.all_env_flags)
-        (wfl := opt_wcbv_flags)
+        (wfl := default_wcbv_flags)
         (Σ : P.global_env_ext) (wfΣ : ∥wf_ext Σ∥)
-        t v ignored exΣ masks :
+        t v ignored masks :
   axiom_free Σ ->
   forall wt : welltyped Σ [] t,
-  forall wv : welltyped Σ [] v,
   Σ p⊢ t ⇓ v ->
   (isErasable Σ [] t -> False) ->
   (forall k, ignored k = false) ->
-  let t' := dearg_term wfΣ masks t wt in
-  extract_pcuic_env
-    (pcuic_args extract_within_coq)
-    Σ (wf_squash wfΣ) (EAstUtils.term_global_deps t') ignored = Ok exΣ ->
-  compute_masks (fun _ => None) true true exΣ = Ok masks ->
-  ∥trans_env exΣ e⊢ t' ⇓ dearg_term wfΣ masks v wv ∥.
+  let t' := erase_term wfΣ t wt in
+  let deps := (EAstUtils.term_global_deps t') in
+  let erΣ := erase_env (map_squash fst wfΣ) deps ignored in
+  let gerΣ := EEnvMap.GlobalContextMap.make (trans_env erΣ)
+  (trans_env_fresh_globals erΣ (remove_match_on_box_env_lemma (map_squash fst wfΣ) deps ignored)) in
+  let erΣ := remove_match_on_box_env erΣ (remove_match_on_box_env_lemma _ deps ignored) in
+  compute_masks (fun _ => None) true true erΣ = Ok masks ->
+  let t'' := EOptimizePropDiscr.remove_match_on_box gerΣ t' in
+  valid_cases (ind_masks masks) t'' ->
+  is_expanded (ind_masks masks) (const_masks masks) t'' ->
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\
+  ∥ EWcbvEval.eval (wfl := opt_wcbv_flags) (trans_env (dearg_env masks erΣ)) (dearg_term masks t'') (dearg_term masks (EOptimizePropDiscr.remove_match_on_box gerΣ v')) ∥.
 Proof.
-  intros ax [T wt] wv ev not_erasable no_ignores ex.
+  intros ax [T wt] ev not_erasable no_ignores t' deps er ger er' hmas t'' vcs isexp.
   cbn -[dearg_transform] in *.
-  destruct dearg_transform eqn:dt; cbn -[dearg_transform] in *; [|congruence].
-  intros [=->].
   destruct wfΣ.
-  unfold dearg_term.
-  set (e := abstract_make_wf_env_ext _ _ _).
+  unfold erase_term, make_env in t'.
+  set (e := abstract_make_wf_env_ext _ _ _) in *.
   pose proof (abstract_env_ext_exists e) as [[Σe he]].
-  unfold dearg_term in ex.
   match goal with
   [H := context [ @erase ?X_type ?X ?nin ?Γ t ?wt ] |- _ ] =>
    pose proof (@erases_erase X_type X nin Γ t wt _ he)
   end.
   cbn in he. subst Σe. destruct Σ as [Σ univs]; cbn [fst snd] in *.
-  eapply erases_correct with
-    (Σ' := trans_env (Erasure.erase_global_decls_deps_recursive (PCUICAst.PCUICEnvironment.declarations Σ)
-               (PCUICAst.PCUICEnvironment.universes Σ) _ _
-               _ ignored)) in ev as (erv&erase_to&[erev]);eauto.
+  assert (wv : welltyped (Σ, univs) [] v).
+  { eexists. eapply PCUICClassification.subject_reduction_eval; tea. }
+  eapply erases_correct with (Σ' := trans_env er) in ev as (erv&erase_to&[erev]);eauto.
   2:{ now eexists. }
-  intros Σex.
-  * move: dt. unfold dearg_transform. eapply dearg_correct.
-  2:{ unshelve eapply (erases_erase (X_type := (optimized_abstract_env_impl (guard := Erasure.fake_guard_impl_instance)))). exact e. 3:now destruct Σ.
-    * intros. pose proof (abstract_env_ext_irr _ he H0). subst Σ0. now apply Erasure.fake_normalization.
-    * intros Σ0 he'; pose proof (abstract_env_ext_irr _ he he'); subst Σ0. cbn in he, he'. subst Σe. now destruct Σ. }
-  3:{ intros hm.
-
-  eapply dearg_correct.
-  + depelim erase_to;[|easy].
-    constructor.
-    eapply dearg_transform_correct; eauto.
-    clear dt.
-    eapply (@optimize_correct _ _ _ (tConst kn) (tConstruct ind c []));eauto.
-    * remember (Erasure.erase_global_decls_deps_recursive _ _ _ _ _ _) as eΣ.
-      assert (EWellformed.wf_glob (trans_env eΣ)).
-      { subst eΣ. now eapply wf_erase_global_decls_recursive. }
+  * exists erv. split => //.
+    sq.
+    eapply dearg_transform_gen_correct; eauto.
+    + assert (EWellformed.wf_glob (trans_env er')).
+      { subst er'. rewrite trans_env_remove_match_on_box_env.
+        eapply EOptimizePropDiscr.remove_match_on_box_env_wf => //.
+        now eapply wf_erase_global_decls_recursive. }
       now apply EWellformed.wellformed_closed_env.
-    * eapply wf_erase_global_decls_recursive; auto.
-  + now eexists.
-  + eapply inversion_Const in wt as (?&?&?&?&?); auto.
-    clear dt.
-    eapply global_erased_with_deps_erases_deps_tConst; eauto.
-    destruct Σ as [Σ0 univ_decls].
-    destruct Σ0 as [univs Σ1].
-    apply wf_ext_wf in w as w1. cbn.
-    eapply erase_global_decls_deps_recursive_correct;eauto.
-    * unfold PCUICAst.declared_constant in *.
-      cbn.
-      intros ? ->%KernameSet.singleton_spec;cbn in *.
-      intros eq. set (env := {| PEnv.declarations := Σ1 |}) in *.
-      eapply (lookup_global_In_wf _ env) in d; eauto.
-    * now apply KernameSet.singleton_spec.
-    Unshelve. eapply fresh_globals_erase_global_decl_rec.
-      now eapply PCUICWfEnvImpl.wf_fresh_globals.
+    + subst t''.
+      eapply EOptimizePropDiscr.closed_remove_match_on_box.
+      eapply EWellformed.wellformed_closed.
+      unshelve eapply (erase_wellformed_weaken (declarations Σ) _ _ _ (Γ:=[])).
+      2:{ cbn; congruence. } 2:exact deps. intros.
+      now eapply Erasure.fake_normalization.
+    + subst t'' t'.
+      rewrite trans_env_remove_match_on_box_env.
+      unshelve eapply (EOptimizePropDiscr.remove_match_on_box_correct (fl := default_wcbv_flags)) => //=.
+      { reflexivity. }
+      { cbn. now eapply wf_erase_global_decls_recursive. }
+      { simpl. eapply EWellformed.wellformed_closed_env.
+        now eapply wf_erase_global_decls_recursive. }
+      eapply wellformed_closed.
+      unshelve eapply (erase_wellformed_weaken (declarations Σ) _ _ _ (Γ := [])).
+      2:{ cbn; congruence. } 2:exact deps. intros. eapply Erasure.fake_normalization; eauto.
+  * eapply erase_global_erases_deps; tea.
+    subst er. unfold erase_env.
+    set (obl := fun Σ' => _).
+    destruct Σ; cbn [declarations retroknowledge universes] in *.
+    eapply (erase_global_decls_deps_recursive_correct _ _ _ obl); eauto.
+    intros k hin.
+    eapply term_global_deps_spec in hin; tea. red in hin. destruct hin as [[decl eq]].
+    cbn in eq. cbn. now rewrite eq. cbn. eapply w.
+Qed.
+
+Theorem extract_correct_gen'
+        (H := EWellformed.all_env_flags)
+        (wfl := opt_wcbv_flags)
+        (Σ : ExAst.global_env) t v masks :
+  EGlobalEnv.closed_env (trans_env Σ) ->
+  ELiftSubst.closedn 0 t ->
+  trans_env Σ e⊢ t ⇓ v ->
+  compute_masks (fun _ => None) true true Σ = Ok masks ->
+  valid_cases (ind_masks masks) t ->
+  is_expanded (ind_masks masks) (const_masks masks) t ->
+  ∥ EWcbvEval.eval (trans_env (dearg_env masks Σ)) (dearg_term masks t) (dearg_term masks v) ∥.
+Proof.
+  intros cle clt ev hmas vcs isexp.
+  sq.
+  eapply dearg_transform_gen_correct; eauto.
 Qed.
 
 (* Print Assumptions extract_correct. *)

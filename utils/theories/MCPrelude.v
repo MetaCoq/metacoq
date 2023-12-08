@@ -37,9 +37,9 @@ Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
 (** Shorthand for pointwise equality relation in Proper signatures *)
 Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
-Infix "=1" := (pointwise_relation _ Logic.eq) (at level 70).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 70) : type_scope.
 Notation "`=2`" := (pointwise_relation _ (pointwise_relation _ Logic.eq)) (at level 80).
-Infix "=2" := (pointwise_relation _ (pointwise_relation _ Logic.eq)) (at level 70).
+Infix "=2" := (pointwise_relation _ (pointwise_relation _ Logic.eq)) (at level 70) : type_scope.
 
 (** Higher-order lemma to simplify Proper proofs. *)
 #[global] Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).

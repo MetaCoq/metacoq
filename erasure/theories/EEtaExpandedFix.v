@@ -946,6 +946,7 @@ Proof.
     eapply isEtaExp_mkApps_intro; auto; solve_all.
 Qed.
 
+
 Lemma decompose_app_tApp_split f a hd args :
   decompose_app (tApp f a) = (hd, args) -> f = mkApps hd (remove_last args) /\ a = last args a.
 Proof.
@@ -1456,11 +1457,11 @@ Proof.
     unfold isStuckFix', cunfold_fix. destruct nth_error => //.
 Qed.
 
-Lemma isEtaExp_FixApp {Σ mfix idx l} :
+Lemma isEtaExp_FixApp {Σ mfix idx Γ l} :
   isEtaExp_fixapp mfix idx #|l| ->
-  forallb (λ d : def EAst.term, isLambda d.(dbody) && isEtaExp Σ (rev_map (λ d0 : def term, 1 + rarg d0) mfix ++ []) (dbody d)) mfix ->
-  forallb (isEtaExp Σ []) l ->
-  isEtaExp Σ [] (mkApps (tFix mfix idx) l).
+  forallb (λ d : def EAst.term, isLambda d.(dbody) && isEtaExp Σ (rev_map (λ d0 : def term, 1 + rarg d0) mfix ++ Γ) (dbody d)) mfix ->
+  forallb (isEtaExp Σ Γ) l ->
+  isEtaExp Σ Γ (mkApps (tFix mfix idx) l).
 Proof.
   intros hmfix hm hl.
   funelim (isEtaExp Σ _ _) => //; solve_discr. noconf H.

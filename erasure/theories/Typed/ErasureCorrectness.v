@@ -106,16 +106,15 @@ Context {X_type : PCUICWfEnv.abstract_env_impl} {X : X_type.π1}.
 Context {normalising_in:
   forall Σ : global_env_ext, wf_ext Σ -> PCUICWfEnv.abstract_env_rel X Σ -> PCUICSN.NormalizationIn Σ}.
 
-Lemma erase_global_decls_deps_recursive_correct decls univs retro wfΣ include ignore_deps :
+Lemma erase_global_decls_deps_recursive_correct_gen decls univs retro wfΣ include ignore_deps :
   let Σ := mk_global_env univs decls retro in
   (forall k, ignore_deps k = false) ->
-  (forall k, KernameSet.In k include -> P.lookup_env Σ k <> None) ->
-  includes_deps Σ (trans_env (erase_global_decls_deps_recursive (X_type := X_type) (X := X) decls univs retro wfΣ include ignore_deps)) include.
+  forall include', KernameSet.Subset include' include ->
+  (forall k, KernameSet.In k include' -> P.lookup_env Σ k <> None) ->
+  includes_deps Σ (trans_env (erase_global_decls_deps_recursive (X_type := X_type) (X := X) decls univs retro wfΣ include ignore_deps)) include'.
 Proof.
   cbn.
-  cut (is_true (KernameSet.subset include include)); [|now apply KernameSet.subset_spec].
-  generalize include at 1 3 5 as include'.
-  intros include' sub no_ignores all_in.
+  intros no_ignores include' sub all_in.
   induction decls as [|(kn, decl) Σ0 IH] in X_type, X, univs, decls, retro, wfΣ, all_in, include, include', sub |- *.
   { intros kn isin. cbn.
     now apply all_in in isin. }
@@ -145,7 +144,6 @@ Proof.
     intros k kisin.
     specialize (all_in _ kisin).
     unfold eq_kername in *.
-    apply KernameSet.subset_spec in sub.
     apply sub in kisin.
     apply KernameSet.mem_spec in kisin.
     destruct (Kername.reflect_kername) as [k_eq H].
@@ -161,13 +159,10 @@ Proof.
       apply global_erases_with_deps_cons; auto.
       { pose proof (wfΣ _ hfull). now subst Σfull. }
       eapply (IH _ _ _ _ wfΣprev _ (KernameSet.singleton k)).
-      - apply KernameSet.subset_spec.
-        intros ? ?.
+      - intros ? ?.
         eapply KernameSet.singleton_spec in H; subst a.
         apply KernameSet.union_spec.
-        right.
-        apply KernameSet.subset_spec in sub.
-        now apply sub.
+        right. now apply sub.
       - specialize (all_in _ isin).
         intros isink <-%KernameSet.singleton_spec.
         apply KernameSet.mem_spec in isin.
@@ -282,8 +277,7 @@ Proof.
            eapply (@erase_global_erases_deps (_, _)); eauto.
            now apply erases_erase.
            eapply IH.
-           ++ apply KernameSet.subset_spec.
-              intros ? isin'.
+           ++ intros ? isin'.
               apply KernameSet.union_spec; left.
               now apply KernameSet.union_spec; right.
            ++ intros ? isin'.
@@ -295,6 +289,15 @@ Proof.
       now rewrite eq_kername_refl.
       cbn in *.
       apply erase_ind_correct.
+Qed.
+
+Lemma erase_global_decls_deps_recursive_correct decls univs retro wfΣ include ignore_deps :
+  let Σ := mk_global_env univs decls retro in
+  (forall k, ignore_deps k = false) ->
+  (forall k, KernameSet.In k include -> P.lookup_env Σ k <> None) ->
+  includes_deps Σ (trans_env (erase_global_decls_deps_recursive (X_type := X_type) (X := X) decls univs retro wfΣ include ignore_deps)) include.
+Proof.
+  intros; eapply erase_global_decls_deps_recursive_correct_gen; eauto. reflexivity.
 Qed.
 
 End EEnvCorrect.

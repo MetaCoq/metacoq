@@ -163,9 +163,8 @@ Program Definition pre_erasure_pipeline {guard : abstract_guard_impl} (efl := EW
   eta_expand (K _ T3) ▷
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
   template_to_pcuic_transform (K _ T2).
-  Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
 
- Transform.t _ _
+Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) : Transform.t _ _
   Ast.term EAst.term _ _
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=

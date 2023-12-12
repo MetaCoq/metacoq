@@ -341,7 +341,11 @@ Next Obligation.
     end.
     red. cbn. intros; subst; intuition eauto.
     destruct wtp. eapply wf_fresh_globals, w.
-  - todo "expanded".
+  - move: e. rewrite /erase_program_typed.
+    intros [= <- <-]. unfold trans_ex_prog; cbn -[trans_env].
+    red. split; cbn -[trans_env].
+    eapply expanded_erase_global_decls_recursive; eauto. eapply etap.
+    eapply expanded_erase => //; eauto. eapply etap.
 Qed.
 
 Next Obligation.
@@ -394,10 +398,23 @@ Definition map_of_typed_global_env (p : global_env) (fr : fresh_globals p) :=
 Definition pre_remove_match_on_box_typed efl (p : global_env * term) : Prop :=
   wf_eprogram efl (trans_ex_prog p) /\ EEtaExpandedFix.expanded_eprogram (trans_ex_prog p).
 
+Lemma fresh_global_trans kn g : EnvMap.EnvMap.fresh_global kn (trans_env g) -> fresh_global kn g.
+Proof.
+  induction g as [ | [[kn' b] d] tl]; cbn; auto; constructor; eauto.
+  - now depelim H.
+  - depelim H. eapply Forall_map_inv in H0. ELiftSubst.solve_all.
+Qed.
+
 Lemma pre_remove_match_on_box_typed_fresh efl p : pre_remove_match_on_box_typed efl p -> fresh_globals p.1.
 Proof.
   intros []. destruct H. eapply wf_glob_fresh in H.
-Admitted.
+  revert H. clear.
+   destruct p; cbn. clear.
+  intros h; depind h.
+  - destruct g; noconf H. constructor.
+  - destruct g0; noconf H0. destruct p as [[kn' b] d']. noconf H0.
+    constructor; eauto. now eapply fresh_global_trans.
+Qed.
 
 Lemma map_trans_env Σ m : map (on_snd (EOptimizePropDiscr.remove_match_on_box_decl m)) (trans_env Σ) = trans_env (map (on_snd (OptimizePropDiscr.remove_match_on_box_decl m)) Σ).
 Proof.
@@ -437,8 +454,13 @@ Next Obligation.
       assert (obl = obl') by apply proof_irrelevance. clearbody obl obl'; subst obl'.
       eapply remove_match_on_box_wellformed_irrel. cbn. eapply wfp.
       eapply remove_match_on_box_wellformed => //=. apply wfp. apply wfp.
-  - todo "excpanded". (* eapply remove_match_on_box_program_expanded.*)
+  - rewrite /trans_ex_prog /= /remove_match_on_box_typed_env. cbn.
+    rewrite -map_trans_env. unfold trans_ex_prog in *. cbn -[trans_env] in *.
+    set (e' := map_of_typed_global_env _ _).
+    eapply (remove_match_on_box_program_expanded_fix (e', t) wfp).
+    unfold e'. unfold map_of_typed_global_env. red. cbn. eapply etap.
 Qed.
+
 Next Obligation.
   red. move=> fl wcon efl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
   cbn -[trans_env] in ev.
@@ -460,6 +482,25 @@ Definition check_dearging_precond Σ t :=
     | _ => None
     end
   else None.
+
+Lemma check_dearging_precond_spec env t d :
+  check_dearging_precond env t = Some d ->
+  closed_env (trans_env env) /\
+  valid_masks_env (ind_masks d) (const_masks d) env /\
+  is_expanded_env (ind_masks d) (const_masks d) env /\
+  valid_cases (ind_masks d) t
+  /\ is_expanded (ind_masks d) (const_masks d) t.
+Proof.
+  unfold check_dearging_precond.
+  destruct closed_env => //.
+  unfold ExtractionCorrectness.compute_masks, Utils.timed.
+  destruct analyze_env eqn:eqm => //.
+  destruct is_expanded_env eqn:isex => //.
+  destruct valid_masks_env eqn:vm => //=.
+  destruct valid_cases eqn:vc => //=.
+  destruct is_expanded eqn:ise => //=.
+  intros [= <-]; cbn; intuition.
+Qed.
 
 Definition check_dearging_trans p :=
   ((check_dearging_precond p.1 p.2, p.1), p.2).
@@ -485,57 +526,69 @@ Next Obligation.
   cbn. intros. red. cbn. intros. exists v; split => //.
 Qed.
 
-Definition dearg (p : (option dearg_set × global_env) * term) : global_context * term :=
-  match p.1.1 with
-  | Some masks => (trans_env (dearg_env masks p.1.2), dearg_term masks p.2)
-  | None => (trans_env p.1.2, p.2)
-  end.
+Section Dearging.
+  Import Optimize OptimizeCorrectness.
 
-Program Definition dearging_transform {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
-  Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram_masks opt_wcbv_flags) (eval_eprogram opt_wcbv_flags) :=
-  {| name := "dearging";
-    transform p _ := dearg p ;
-    pre p := post_dearging_checks efl p;
-    post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p ;
-    obseq p hp p' v v' := v' = (dearg (p.1, v)).2 |}.
+  Definition dearg (p : (option dearg_set × global_env) * term) : global_context * term :=
+    match p.1.1 with
+    | Some masks => (trans_env (dearg_env masks p.1.2), dearg_term masks p.2)
+    | None => (trans_env p.1.2, p.2)
+    end.
 
-Next Obligation.
-Proof.
-  cbn. intros.
-  unfold dearg.
-  destruct p. rewrite H.
-  destruct check_dearging_precond eqn:eqp; cbn => //.
-  split.
-  - split; cbn. clear H. unfold dearg_env.
-    all:todo "wf".
-  - todo "expanded".
-Qed.
+  Program Definition dearging_transform (efl := all_env_flags) {hastrel : has_tRel} {hastbox : has_tBox} :
+    Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram_masks opt_wcbv_flags) (eval_eprogram opt_wcbv_flags) :=
+    {| name := "dearging";
+      transform p _ := dearg p ;
+      pre p := post_dearging_checks efl p;
+      post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p ;
+      obseq p hp p' v v' := v' = (dearg (p.1, v)).2 |}.
 
-Next Obligation.
-  cbn. intros. red.
-  intros p v [he [wfe exp]]. unfold eval_typed_eprogram_masks.
-  intros [ev].
-  unfold dearg. rewrite he.
-  destruct (check_dearging_precond) as [masks|] eqn:cpre.
-  * eapply (extract_correct_gen' _ _ _ masks) in ev as ev'. destruct ev' as [ev'].
-    eexists. split. red. sq. cbn. exact ev'. auto.
-    - destruct wfe. now eapply wellformed_closed_env.
-    - destruct wfe. now eapply wellformed_closed.
-    - move: cpre. unfold check_dearging_precond. destruct closed_env => //.
-      destruct ExtractionCorrectness.compute_masks => //.
-      destruct (_ && _) => //. congruence.
-    - move: cpre. rewrite /check_dearging_precond.
-      destruct closed_env => //.
-      destruct ExtractionCorrectness.compute_masks => //.
-      destruct valid_cases eqn:vc => //. cbn.
-      destruct is_expanded => //. now intros [= ->].
-    - move: cpre. rewrite /check_dearging_precond.
-      destruct closed_env => //.
-      destruct ExtractionCorrectness.compute_masks => //.
-      destruct valid_cases eqn:vc => //. cbn.
-      destruct is_expanded eqn:ise => //. now intros [= ->].
-  * exists v. cbn. split => //.
-Qed.
+  Next Obligation.
+  Proof.
+    cbn. intros.
+    unfold dearg.
+    destruct p. rewrite H.
+    destruct check_dearging_precond eqn:eqp; cbn => //.
+    destruct input as [[masks env] t]. cbn -[trans_env Optimize.dearg_env] in *.
+    subst masks. destruct H0 as [wf exp].
+    eapply check_dearging_precond_spec in eqp. intuition.
+    - split; cbn.
+      unfold dearg_env.
+      eapply wf_glob_debox.
+      eapply wf_glob_dearg; eauto.
+      eapply wf.
+      rewrite /dearg_env. rewrite -trans_env_debox.
+      eapply wellformed_dearg; eauto.
+      eapply wf.
+    - rewrite /dearg_env -trans_env_debox. split; cbn.
+    todo "expanded".
+  Qed.
+
+  Next Obligation.
+    cbn. intros. red.
+    intros p v [he [wfe exp]]. unfold eval_typed_eprogram_masks.
+    intros [ev].
+    unfold dearg. rewrite he.
+    destruct (check_dearging_precond) as [masks|] eqn:cpre.
+    * eapply (extract_correct_gen' _ _ _ masks) in ev as ev'. destruct ev' as [ev'].
+      eexists. split. red. sq. cbn. exact ev'. auto.
+      - destruct wfe. now eapply wellformed_closed_env.
+      - destruct wfe. now eapply wellformed_closed.
+      - move: cpre. unfold check_dearging_precond. destruct closed_env => //.
+        destruct ExtractionCorrectness.compute_masks => //.
+        destruct (_ && _) => //. congruence.
+      - move: cpre. rewrite /check_dearging_precond.
+        destruct closed_env => //.
+        destruct ExtractionCorrectness.compute_masks => //.
+        destruct valid_cases eqn:vc => //. cbn.
+        destruct is_expanded => //. now intros [= ->].
+      - move: cpre. rewrite /check_dearging_precond.
+        destruct closed_env => //.
+        destruct ExtractionCorrectness.compute_masks => //.
+        destruct valid_cases eqn:vc => //. cbn.
+        destruct is_expanded eqn:ise => //. now intros [= ->].
+    * exists v. cbn. split => //.
+  Qed.
 
 Definition extends_eprogram (p p' : eprogram) :=
   extends p.1 p'.1 /\ p.2 = p'.2.

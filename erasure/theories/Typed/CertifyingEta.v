@@ -167,6 +167,20 @@ Definition restrict_env (Σ : global_declarations) (kns : list kername) : global
                        | None => false
                        end) Σ.
 
+Import PCUICWfEnv PCUICWfEnvImpl.
+
+Lemma eq_eta_global_env (cf := config.extraction_checker_flags) Σ' Σ :
+  abstract_env_rel (abstract_env_impl := (@optimized_abstract_env_impl config.extraction_checker_flags fake_guard_impl_instance).π1) (build_wf_env_from_env (cf := config.extraction_checker_flags) Σ' (assume_env_wellformed Σ')) Σ ->
+  Σ =
+  {|
+    PEnv.universes := PEnv.universes Σ';
+    PEnv.declarations := PEnv.declarations Σ';
+    PEnv.retroknowledge := PEnv.retroknowledge Σ'
+  |}.
+Proof.
+  cbn. intros ->. now destruct Σ'.
+Qed.
+
 Definition eta_global_env
            (overridden_masks : kername -> option bitmask)
            (trim_consts trim_inds : bool)
@@ -176,7 +190,9 @@ Definition eta_global_env
   let Σp := PCUICProgram.trans_env_env (TemplateToPCUIC.trans_global_env Σ) in
   let Σe :=
       erase_global_decls_deps_recursive
-        (PEnv.declarations Σp) (PEnv.universes Σp) (PEnv.retroknowledge Σp) (assume_env_wellformed _)
+        (X_type := optimized_abstract_env_impl (guard := fake_guard_impl_instance))
+        (X := build_wf_env_from_env Σp (assume_env_wellformed _))
+        (PEnv.declarations Σp) (PEnv.universes Σp) (PEnv.retroknowledge Σp) (eq_eta_global_env _)
         seeds erasure_ignore in
   let (const_masks, ind_masks) := analyze_env overridden_masks Σe in
   let const_masks := (if trim_consts then trim_const_masks else id) const_masks in

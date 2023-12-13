@@ -20,6 +20,9 @@ Unset MetaCoq Debug.
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
+Definition testty (p : Ast.Env.program) : string :=
+  typed_erase_and_print_template_program p.
+
 Definition test_fast (p : Ast.Env.program) : string :=
   erase_fast_and_print_template_program p.
 
@@ -32,6 +35,8 @@ Definition exprooftest := Eval lazy in test exproof.
 
 MetaCoq Quote Recursively Definition exintro := (@exist _ _ 0 (@eq_refl _ 0) : {x : nat | x = 0}).
 Definition exintrotest := Eval lazy in test exintro.
+
+Definition ex_type_introtest := Eval lazy in testty exintro.
 
 Definition idnat := ((fun (X : Set) (x : X) => x) nat).
 
@@ -136,7 +141,7 @@ MetaCoq Quote Recursively Definition p_arden_size := arden_size.
 Definition P_arden_size := Eval lazy in test p_arden_size.
 
 (** SASL tautology function: variable arity **)
-Require Import Bool.
+From Coq Require Import Bool.
 Fixpoint tautArg (n:nat) : Type :=
   match n with
     | 0 => bool
@@ -345,6 +350,7 @@ Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
 From MetaCoq.ErasurePlugin Require Import Loader.
 
 MetaCoq Erase provedCopyx.
+MetaCoq Typed Erase provedCopyx.
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
 (* Goal

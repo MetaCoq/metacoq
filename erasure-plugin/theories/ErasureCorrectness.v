@@ -16,7 +16,7 @@ Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform)
   shrinking of the global environment dependencies +
   the optimization that removes all pattern-matches on propositions. *)
 
-Import Transform.
+Import Common.Transform.Transform.
 
 #[local] Obligation Tactic := program_simpl.
 
@@ -671,7 +671,7 @@ Section PCUICenv.
     rewrite /EGlobalEnv.lookup_constructor /EGlobalEnv.lookup_inductive /EGlobalEnv.lookup_minductive.
     destruct EGlobalEnv.lookup_env eqn:e => //=.
     destruct g => //.
-    eapply he in declm; tea. subst m.
+    eapply he in declm; tea. subst m. cbn.
     rewrite nth_error_map decli /=.
     rewrite nth_error_map declc /=. intuition congruence.
   Qed.
@@ -684,7 +684,7 @@ Proof.
   rewrite /EGlobalEnv.lookup_constructor_pars_args /EGlobalEnv.lookup_inductive_pars.
   rewrite /EGlobalEnv.lookup_constructor /EGlobalEnv.lookup_inductive.
   destruct EGlobalEnv.lookup_minductive => //=.
-  destruct nth_error => //. destruct nth_error => //. congruence.
+  destruct nth_error => //=. destruct nth_error => //=. congruence.
 Qed.
 
 Lemma compile_evalue_erase (Σ : PCUICAst.PCUICEnvironment.global_env_ext) (Σ' : EEnvMap.GlobalContextMap.t) v :
@@ -752,9 +752,9 @@ Qed.
 Definition fo_evalue (p : program E.global_context EAst.term) : Prop := firstorder_evalue p.1 p.2.
 Definition fo_evalue_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := firstorder_evalue p.1 p.2.
 
-#[global] Instance rebuild_wf_env_transform_pres_fo {fl : WcbvFlags} {efl : EEnvFlags} we  :
+#[global] Instance rebuild_wf_env_transform_pres_fo {fl : WcbvFlags} {efl : EEnvFlags} we wf :
   ETransformPresFO.t
-    (rebuild_wf_env_transform we) fo_evalue fo_evalue_map (fun p pr fo => rebuild_wf_env p pr.p1).
+    (rebuild_wf_env_transform we wf) fo_evalue fo_evalue_map (fun p pr fo => rebuild_wf_env p pr.p1).
 Proof. split => //. Qed.
 
 Definition is_eta_app (p : program E.global_context EAst.term) : Prop := EEtaExpanded.isEtaExp p.1 p.2.
@@ -763,9 +763,9 @@ Definition is_eta_app_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : P
 Definition is_eta_fix_app (p : program E.global_context EAst.term) : Prop := EEtaExpandedFix.isEtaExp p.1 [] p.2.
 Definition is_eta_fix_app_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := EEtaExpandedFix.isEtaExp p.1 [] p.2.
 
-#[global] Instance rebuild_wf_env_transform_pres_app {fl : WcbvFlags} {efl : EEnvFlags} we  :
+#[global] Instance rebuild_wf_env_transform_pres_app {fl : WcbvFlags} {efl : EEnvFlags} we :
   ETransformPresApp.t
-    (rebuild_wf_env_transform we) is_eta_app is_eta_app_map.
+    (rebuild_wf_env_transform we false) is_eta_app is_eta_app_map.
 Proof. split => //.
   - intros. unfold transform, rebuild_wf_env_transform.
     f_equal. apply proof_irrelevance.
@@ -774,10 +774,10 @@ Proof. split => //.
   - intros.
     unshelve eexists.
     { destruct pr as [[? ?] ?]; split; [split|]; cbn in * => //. now move/andP: H0 => [] /andP[].
-      destruct we => //=. move/andP: H1 => [] ? ?. apply /andP. split => //. }
+      destruct we => //=. intros. specialize (H1 H2). move/andP: H1 => [] ? ?. apply /andP. split => //. }
     unshelve eexists.
     { destruct pr as [[? ?] ?]; split; [split|]; cbn in * => //. now move/andP: H0 => [] /andP[].
-      destruct we => //=. move/andP: H1 => [] ?. cbn. move/EEtaExpanded.isEtaExp_tApp_arg => etau.
+      destruct we => //=. intros h; specialize (H1 h). move/andP: H1 => [] ?. cbn. move/EEtaExpanded.isEtaExp_tApp_arg => etau.
       apply /andP. split => //. }
     cbn. reflexivity.
 Qed.

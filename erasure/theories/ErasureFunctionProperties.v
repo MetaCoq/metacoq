@@ -1590,7 +1590,7 @@ Lemma erase_constant_body_correct'' {X_type X} {cb} {decls normalization_in prf}
 {onc : forall Σ' : global_env_ext, abstract_env_ext_rel X' Σ' -> ∥ on_constant_decl (lift_typing typing) Σ' cb ∥} {body} deps :
   EAst.cst_body (fst (erase_constant_body X_type X' cb onc)) = Some body ->
   forall Σ' : global_env_ext, abstract_env_ext_rel X' Σ' ->
-  ∥ ∑ t T, (Σ' ;;; [] |- t : T) * (Σ' ;;; [] |- t ⇝ℇ body) *
+  ∥ ∑ t T, (cst_body cb = Some t) * (Σ' ;;; [] |- t : T) * (Σ' ;;; [] |- t ⇝ℇ body) *
       (term_global_deps body = snd (erase_constant_body X_type X'  cb onc)) *
       wellformed (efl:=all_env_flags) (erase_global_deps X_type (KernameSet.union deps (term_global_deps body)) X decls normalization_in prf).1 0 body ∥.
 Proof.

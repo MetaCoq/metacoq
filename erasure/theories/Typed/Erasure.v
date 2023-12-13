@@ -210,7 +210,7 @@ Context (rΣ : global_env_ext)
 
 Definition erase_rel : Relation_Definitions.relation (∑ Γ t, welltyped rΣ Γ t) :=
   fun '(Γs; ts; wfs) '(Γl; tl; wfl) =>
-    ∥∑m, red rΣ Γl tl m × term_sub_ctx (Γs, ts) (Γl, m)∥.
+  ∥∑m, red rΣ Γl tl m × term_sub_ctx (Γs, ts) (Γl, m)∥.
 
 Lemma cored_prod_l (Σ : global_env_ext) Γ na A A' B :
   cored Σ Γ A A' ->
@@ -1413,26 +1413,23 @@ Instance fake_guard_impl_instance : abstract_guard_impl :=
 Axiom fake_normalization : PCUICSN.Normalization.
 Global Existing Instance fake_normalization.
 (* Definition norm := forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ. *)
-Program Definition erase_global_decl
-        (Σext : global_env_ext)
-        (wfΣext : ∥ wf_ext Σext ∥)
-        (kn : kername)
-        (decl : PCUICEnvironment.global_decl)
-        (wt : ∥on_global_decl cumulSpec0 (lift_typing typing) Σext kn decl∥)
-        : global_decl :=
+Program Definition erase_global_decl {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  (Σext : global_env_ext)
+  (hr : Σext ∼_ext X)
+  (kn : kername)
+  (decl : PCUICEnvironment.global_decl)
+  (wt : ∥on_global_decl cumulSpec0 (lift_typing typing) Σext kn decl∥)
+  : global_decl :=
   match decl with
   | PCUICEnvironment.ConstantDecl cst =>
-    match @erase_constant_decl canonical_abstract_env_impl _ _ _ Σext _ cst _ with
+    match @erase_constant_decl X_type X _ _ Σext hr cst _ with
     | inl cst => ConstantDecl cst
     | inr ta => TypeAliasDecl ta
     end
-  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind canonical_abstract_env_impl _ _ _ Σext _ kn mib _)
+  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind X_type X _ _ Σext hr kn mib _)
   end.
-Next Obligation. unshelve econstructor; eauto. Defined.
-
 Next Obligation. now eapply fake_normalization. Defined.
-Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. eapply (fake_normalization _ X _ _ H). Defined.
+Next Obligation. eapply fake_normalization; auto. Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with
@@ -1468,34 +1465,75 @@ Definition decl_deps (decl : global_decl) : KernameSet.t :=
   | _ => KernameSet.empty
   end.
 
+Import PCUICWfEnv.
+
+Lemma abstract_eq_wf (X_type : abstract_env_impl) (X : X_type.π1) Σ :
+  (forall Σ', Σ' ∼ X -> Σ' = Σ) -> Σ ∼ X × ∥ wf Σ ∥.
+Proof.
+  intros heq.
+  pose proof (abstract_env_exists X) as [[Σ' hΣ']].
+  pose proof (abstract_env_wf _ hΣ').
+  rewrite <- (heq _ hΣ'). split; auto.
+Qed.
+
+Lemma wf_pop_decl Σ kn decl decls :
+  wf Σ ->
+  Σ.(declarations) = (kn, decl) :: decls ->
+  wf_ext ({| universes := Σ.(universes); retroknowledge := Σ.(retroknowledge);
+             declarations := decls |}, universes_decl_of_decl decl).
+Proof.
+  intros [] h. rewrite h in o0.
+  depelim o0.
+  split. cbn.
+  split; cbn; eauto. cbn.
+  now depelim o1.
+Qed.
+
+Lemma sq_wf_pop_decl Σ kn decl decls :
+  ∥ wf Σ ∥ ->
+  Σ.(declarations) = (kn, decl) :: decls ->
+  ∥ wf_ext ({| universes := Σ.(universes); retroknowledge := Σ.(retroknowledge);
+             declarations := decls |}, universes_decl_of_decl decl) ∥.
+Proof.
+  intros [[]] h; sq. rewrite h in o0.
+  depelim o0.
+  split. cbn.
+  split; cbn; eauto. cbn.
+  now depelim o1.
+Qed.
+
 (** Erase the global declarations by the specified names and their
     non-erased dependencies recursively. Ignore dependencies for which
     [ignore_deps] returnes [true] *)
 Program Fixpoint erase_global_decls_deps_recursive
-        (Σ : PCUICEnvironment.global_declarations)
-        (universes : ContextSet.t)
-        (retroknowledge : Retroknowledge.t)
-        (wfΣ : ∥wf (mk_global_env universes Σ retroknowledge)∥)
-        (include : KernameSet.t)
-        (ignore_deps : kername -> bool) : global_env :=
-  match Σ with
+  {X_type : abstract_env_impl} {X : X_type.π1}
+  (decls : PCUICEnvironment.global_declarations)
+  (univs : ContextSet.t)
+  (retro : Retroknowledge.t)
+  (prop : forall Σ', abstract_env_rel X Σ' -> Σ' = {| declarations := decls; universes := univs; retroknowledge := retro |})
+  (include : KernameSet.t)
+  (ignore_deps : kername -> bool) : global_env :=
+  match decls with
   | [] => []
   | (kn, decl) :: Σ =>
     let Σext := (Σ, universes_decl_of_decl decl) in
+    let X' := abstract_pop_decls X in
+    let Xext := abstract_make_wf_env_ext (X_type := X_type) X' (universes_decl_of_decl decl) _ in
+    let env := (mk_global_env univs Σ retro, universes_decl_of_decl decl) in
     if KernameSet.mem kn include then
       (** We still erase ignored inductives and constants for two reasons:
           - For inductives, we want to allow pattern matches on them and we need
             information about them to print names.
           - For constants, we use their type to do deboxing. *)
-      let decl := erase_global_decl ((mk_global_env universes Σ retroknowledge), PCUICLookup.universes_decl_of_decl decl) _ kn decl _ in
+      let decl := @erase_global_decl X_type Xext env _ kn decl _ in
       let with_deps := negb (ignore_deps kn) in
       let new_deps := if with_deps then decl_deps decl else KernameSet.empty in
-      let Σer := erase_global_decls_deps_recursive
-                   Σ universes retroknowledge _
+      let Σer := erase_global_decls_deps_recursive (X:=X')
+                   Σ univs retro _
                    (KernameSet.union new_deps include) ignore_deps in
       (kn, with_deps, decl) :: Σer
     else
-      erase_global_decls_deps_recursive Σ universes retroknowledge _ include ignore_deps
+      erase_global_decls_deps_recursive (X:=X') Σ univs retro _ include ignore_deps
   end.
 Ltac invert_wf :=
   match goal with
@@ -1504,18 +1542,89 @@ Ltac invert_wf :=
   | [H : on_global_decls_data _ _ _ _ _ _ _ |- _] => inversion H; subst; clear H; cbn in *
   end.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [hΣ [wf]].
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ hΣ hΣ0'). subst Σ0'.
+      exists (kn, decl). reflexivity. }
+  destruct Σ0. cbn in *.
+  destruct H as [? []]. subst.
+  eapply wf_pop_decl in wf; cbn; eauto.
 Qed.
 Next Obligation.
-  repeat invert_wf.
-  destruct decl;cbn in *;auto.
+  pose proof (abstract_env_exists X) as [[Σr hΣr]].
+  pose proof (abstract_env_wf _ hΣr) as [wf].
+  set (X' := abstract_make_wf_env_ext _ _ _).
+  set (prf := fun (Σ0 : PCUICEnvironment.global_env) (_ : _) => _) in X'.
+  clearbody prf.
+  specialize (prop _ hΣr). subst.
+  pose proof (abstract_env_ext_exists (abstract_make_wf_env_ext (abstract_pop_decls X)
+  (universes_decl_of_decl decl) prf)).
+  pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hΣpop]].
+  eapply (abstract_pop_decls_correct X Σ) in hΣr; tea.
+  2:{ intros. pose proof (abstract_env_irr _ H0 hΣr). subst. now eexists. }
+  destruct hΣr as [? []]. subst.
+  destruct H as [[Σext hΣext]].
+  epose proof (abstract_make_wf_env_ext_correct (abstract_pop_decls X) (universes_decl_of_decl decl) prf _ _ hΣpop hΣext).
+  subst Σext. destruct Σpop. cbn in *. now subst.
 Qed.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [equiv [wf]].
+  sq.
+  depelim wf; cbn in *. depelim o0. now depelim o1.
 Qed.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [equiv [wf]].
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ equiv hΣ0'). subst Σ0'.
+      exists (kn, decl0). reflexivity. }
+  destruct Σ', H as [? []]. subst. cbn.
+  noconf H0. cbn in H1. subst retro. reflexivity.
 Qed.
+Next Obligation.
+  pose proof (abstract_env_exists X) as [[Σr hΣr]].
+  pose proof (abstract_env_wf _ hΣr) as [wf].
+  sq. specialize (prop _ hΣr). subst Σr.
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ hΣr hΣ0'). subst Σ0'.
+      exists (kn, decl). reflexivity. }
+  destruct Σ', H as [? []]. subst. cbn.
+  noconf H0. cbn in H1. subst retro. reflexivity.
+Qed.
+
+Program Fixpoint erase_global_decls_recursive
+  {X_type : abstract_env_impl} {X : X_type.π1}
+  (decls : PCUICEnvironment.global_declarations)
+  (univs : ContextSet.t)
+  (retro : Retroknowledge.t)
+  (prop : forall Σ', abstract_env_rel X Σ' -> Σ' = {| declarations := decls; universes := univs; retroknowledge := retro |})
+  : global_env :=
+  match decls with
+  | [] => []
+  | (kn, decl) :: Σ =>
+    let Σext := (Σ, universes_decl_of_decl decl) in
+    let X' := abstract_pop_decls X in
+    let Xext := abstract_make_wf_env_ext (X_type := X_type) X' (universes_decl_of_decl decl) _ in
+    let env := (mk_global_env univs Σ retro, universes_decl_of_decl decl) in
+    (** We still erase ignored inductives and constants for two reasons:
+      - For inductives, we want to allow pattern matches on them and we need
+        information about them to print names.
+      - For constants, we use their type to do deboxing. *)
+    let decl := @erase_global_decl X_type Xext env _ kn decl _ in
+    let Σer := erase_global_decls_recursive (X:=X') Σ univs retro _ in
+    (kn, true, decl) :: Σer
+  end.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_1; trea.
+Defined.
+Next Obligation.
+  eapply (erase_global_decls_deps_recursive_obligation_2 X_type X); trea.
+Defined.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_3; trea.
+Qed.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_4; trea.
+Defined.
 
 End EraseEnv.
 

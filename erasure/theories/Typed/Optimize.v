@@ -276,7 +276,9 @@ Definition dearg_oib
                let ctor_mask := get_branch_mask mib_masks oib_index c in
                dearg_ctor (param_mask mib_masks) ctor_mask ctor)
             (ind_ctors oib);
-     ind_projs := ind_projs oib |}.
+     ind_projs :=
+      let ctor_mask := get_branch_mask mib_masks oib_index 0 in
+      masked ctor_mask (ind_projs oib) |}.
 
 Definition dearg_mib (kn : kername) (mib : mutual_inductive_body) : mutual_inductive_body :=
   match get_mib_masks kn with
@@ -372,6 +374,21 @@ Fixpoint valid_cases (t : term) : bool :=
   | _ => true
   end.
 
+Fixpoint forallbi {A} (f : nat -> A -> bool) n l :=
+  match l with
+  | [] => true
+  | hd :: tl => f n hd && forallbi f (S n) tl
+  end.
+
+Definition check_oib_masks masks i oib :=
+  forallbi (fun c cb => #|get_branch_mask masks i c| == cb.2) 0 oib.(ind_ctors) &&
+  match oib.(ind_projs) with
+  | [] => true
+  | _ :: _ =>
+    let mask := get_branch_mask masks i 0 in
+    #|mask| == #|oib.(ind_projs)|
+  end.
+
 Definition valid_masks_decl (p : kername * bool * global_decl) : bool :=
   match p with
   | (kn, _, ConstantDecl {| cst_body := Some body |}) =>
@@ -379,7 +396,8 @@ Definition valid_masks_decl (p : kername * bool * global_decl) : bool :=
   | (kn, _, TypeAliasDecl typ) => #|get_const_mask kn| =? 0
   | (kn, _, InductiveDecl mib) =>
       match get_mib_masks kn with
-      | Some mask => #|mask.(param_mask)| =? mib.(ind_npars)
+      | Some mask => (#|mask.(param_mask)| =? mib.(ind_npars)) &&
+        forallbi (check_oib_masks mask) 0 mib.(ind_bodies)
       | _ => false
       end
   | _ => true

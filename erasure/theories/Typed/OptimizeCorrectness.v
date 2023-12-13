@@ -2877,6 +2877,21 @@ Proof.
   now apply valid_cases_subst.
 Qed.
 
+Lemma isEtaExp_dearg_lambdas Σ Γ mask t :
+  isEtaExp Σ Γ t ->
+  isEtaExp Σ Γ (dearg_lambdas mask t).
+Proof.
+  intros valid.
+  induction t in Γ, mask, valid |- * using term_forall_list_ind; cbn in *; try easy.
+  - simp_eta in valid.
+    destruct mask as [|[] mask]; try easy.
+    + now simp_eta.
+    + cbn. unfold subst1. rewrite <- closed_subst; try easy.
+      eapply (isEtaExp_substl _ [0] _ [_]); easy.
+    + simp_eta. now eapply IHt.
+  - simp_eta. simp_eta in valid. rtoProp; intuition eauto.
+Qed.
+
 Lemma dearg_dearg_lambdas mask t :
   valid_dearg_mask mask t ->
   valid_cases t ->
@@ -3083,8 +3098,6 @@ Ltac facts :=
        assert (is_expanded v) by (unshelve eapply (eval_is_expanded_aux _ _ _ 0 _ H); trivial)
      end).
 
-Ltac bool := rtoProp; intuition eauto.
-
 Lemma count_zeros_le : forall mask, count_zeros mask <= #|mask|.
 Proof.
   induction mask;cbn;auto. destruct a;cbn; unfold count_zeros in *; lia.
@@ -3146,11 +3159,6 @@ Import EEtaExpandedFix.
 
 Hint Resolve dearg_elim : core.
 
-Lemma isEtaExp_lift Σ Γ Γ' t : isEtaExp Σ Γ t -> isEtaExp Σ (Γ' ++ Γ) (lift0 #|Γ'| t).
-Proof using.
-  todo "lift".
-Qed.
-
 Lemma isEtaExp_dearg_single Σ Γ t m l :
   isEtaExp Σ Γ t ->
   forallb (isEtaExp Σ Γ) l ->
@@ -3159,14 +3167,15 @@ Proof.
   induction m in Γ, l, t |- *; intros etat etal.
   - cbn. eapply isEtaExp_mkApps_intro; solve_all.
   - cbn. destruct a; destruct l; simp_eta; eauto. eapply IHm; eauto.
-    now eapply (isEtaExp_lift _ _ [_]).
+    now eapply (isEtaExp_lift _ _ [_] []).
     eapply IHm; eauto. now move/andP: etal.
     eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]).
-    now eapply (isEtaExp_lift _ _ [_]). constructor; eauto. simp_eta.
+    now eapply (isEtaExp_lift _ _ [_] []). constructor; eauto. simp_eta.
     eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]); eauto. constructor; eauto.
     all:now move/andP: etal.
 Qed.
 
+Unset Strict Universe Declaration.
 Section dearg.
   Context {wfl : WcbvFlags}.
   Context (n : nat).
@@ -3296,7 +3305,7 @@ Section dearg.
         clear IHev1 IHev2 IHev3.
         revert ev3 ev_len.
         cbn in *.
-        rewrite !closed_subst; [|now apply closedn_dearg_aux|easy].
+        rewrite !closed_subst; eauto. 2:now apply closedn_dearg_aux.
         intros.
         rewrite <- (dearg_subst [a']) by easy.
         unshelve eapply (IH _ _ _ _ _ ev3)...
@@ -3910,12 +3919,13 @@ Proof.
     intros n []; rewrite /trans_oib /dearg_oib //= /wf_inductive /wf_projections /=.
     rewrite /check_oib_masks /=.
     destruct ind_projs => //=; rewrite ?masked_nil //=.
-    move=> [] hl; apply eqb_eq in hl.
+    move=> [] /andP[] hcs /Nat.eqb_eq hps.
     destruct ind_ctors => //=. destruct ind_ctors => //=. len.
+    intros h % eqb_eq.
     destruct map eqn:hm; destruct p0 as [[pn pars] k] => //=.
-    intros h % eqb_eq. subst k.
+    cbn in h. subst k.
     rewrite masked_length. now (cbn; lia).
-    cbn. rewrite hl.
+    cbn. rewrite hps.
     apply/Nat.eqb_spec.
     pose proof (count_ones_zeros (get_branch_mask m0 n 0)). lia.
   - now destruct o; cbn.
@@ -3955,19 +3965,25 @@ Qed.
 Section EtaFix.
   Import EEtaExpandedFix.
   Lemma expanded_dearg_env (efl := all_env_flags) Σ :
-    (* valid_masks_env Σ -> *)
+    valid_masks_env Σ ->
     expanded_global_env (trans_env Σ) ->
     expanded_global_env (trans_env (dearg_env Σ)).
   Proof.
-    induction Σ; intros exp; depelim exp.
+    induction Σ; intros vm exp; depelim exp.
     - constructor.
-    - cbn. constructor; eauto. now apply IHΣ.
+    - cbn in *. constructor; eauto. move/andP: vm => [] va vΣ. now apply IHΣ.
       destruct a as [[kn ?] []]; cbn => //.
       + destruct c as [? []]; cbn => //.
         cbn in H.
+        move/andP: vm => [] /andP[] vdm vc vΣ.
+        eapply expanded_isEtaExp in H.
+        eapply isEtaExp_expanded.
+        eapply expanded_dearg; eauto.
+        now eapply valid_cases_dearg_lambdas.
+        now eapply isEtaExp_dearg_lambdas.
       + destruct o; cbn; constructor.
-
-
+  Qed.
+End EtaFix.
 
 Unset SsrRewrite.
 
@@ -4007,21 +4023,6 @@ Proof.
     apply IH.
   - destruct xs; cbn in *; [easy|].
     f_equal; apply IH.
-Qed.
-
-Lemma filter_length {X} (f : X -> bool) (xs : list X) :
-  #|filter f xs| <= #|xs|.
-Proof.
-  induction xs; [easy|].
-  cbn.
-  destruct (f a); cbn; lia.
-Qed.
-
-Lemma map_repeat {X Y} (f : X -> Y) x n :
-  map f (repeat x n) = repeat (f x) n.
-Proof.
-  induction n; [easy|].
-  now cbn; rewrite IHn.
 Qed.
 
 Lemma nth_error_masked {X} m (xs : list X) n :

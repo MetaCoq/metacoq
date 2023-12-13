@@ -46,11 +46,17 @@ VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
     let (c, _) = Constrintern.interp_constr env evm c in
     check ~bypass:true ~fast:false env evm c
   }
-| [ "MetaCoq" "Typed" "Erase" constr(c) ] -> {
+| [ "MetaCoq" "Bypass" "Typed" "Erase" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
     check ~bypass:true ~fast:false ~with_types:true env evm c
+  }
+| [ "MetaCoq" "Typed" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:false ~fast:false ~with_types:true env evm c
   }
 | [ "MetaCoq" "Erase" constr(c) ] -> {
     let env = Global.env () in

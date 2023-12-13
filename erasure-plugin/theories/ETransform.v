@@ -412,7 +412,7 @@ Proof.
    destruct p; cbn. clear.
   intros h; depind h.
   - destruct g; noconf H. constructor.
-  - destruct g0; noconf H0. destruct p as [[kn' b] d']. noconf H0.
+  - destruct g0; noconf H0. destruct p as [[kn' b] d'].
     constructor; eauto. now eapply fresh_global_trans.
 Qed.
 
@@ -535,7 +535,7 @@ Section Dearging.
     | None => (trans_env p.1.2, p.2)
     end.
 
-  Program Definition dearging_transform (efl := all_env_flags) {hastrel : has_tRel} {hastbox : has_tBox} :
+  Program Definition dearging_transform (efl := all_env_flags) :
     Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram_masks opt_wcbv_flags) (eval_eprogram opt_wcbv_flags) :=
     {| name := "dearging";
       transform p _ := dearg p ;
@@ -561,7 +561,9 @@ Section Dearging.
       eapply wellformed_dearg; eauto.
       eapply wf.
     - rewrite /dearg_env -trans_env_debox. split; cbn.
-    todo "expanded".
+      eapply expanded_dearg_env; tea. apply exp.
+      eapply EEtaExpandedFix.isEtaExp_expanded, expanded_dearg; eauto.
+      apply EEtaExpandedFix.expanded_isEtaExp, exp.
   Qed.
 
   Next Obligation.
@@ -589,6 +591,8 @@ Section Dearging.
         destruct is_expanded eqn:ise => //. now intros [= ->].
     * exists v. cbn. split => //.
   Qed.
+
+End Dearging.
 
 Definition extends_eprogram (p p' : eprogram) :=
   extends p.1 p'.1 /\ p.2 = p'.2.

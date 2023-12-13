@@ -233,6 +233,7 @@ Inductive expanded_global_declarations (univs : ContextSet.t) retro : forall (Σ
 | expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ ->
   expanded_decl {| universes := univs; declarations := Σ; retroknowledge := retro |} decl.2 ->
   expanded_global_declarations univs retro (decl :: Σ).
+Derive Signature for expanded_global_declarations.
 
 Definition expanded_global_env (g : global_env) :=
   expanded_global_declarations g.(universes) g.(retroknowledge) g.(declarations).

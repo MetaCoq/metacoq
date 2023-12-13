@@ -227,7 +227,7 @@ Program Definition verified_typed_erasure_pipeline {guard : abstract_guard_impl}
    remove_match_on_box_typed_transform (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
    (* Check if the preconditions for dearging are valid, otherwise dearging will be the identity *)
    dearging_checks_transform (hastrel := eq_refl) (hastbox := eq_refl) ▷
-   dearging_transform (hastrel := eq_refl) (hastbox := eq_refl) ▷
+   dearging_transform ▷
    rebuild_wf_env_transform true true ▷
    verified_lambdabox_typed_pipeline.
 

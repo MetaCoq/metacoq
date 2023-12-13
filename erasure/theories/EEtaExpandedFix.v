@@ -1981,3 +1981,63 @@ Proof.
       move=> /andP[] //=. now rewrite andb_true_r.
     * now move/and4P => [].
 Qed.
+
+Lemma isEtaExp_lift Σ Γ Γ' Γ'' t : isEtaExp Σ (Γ'' ++ Γ) t -> isEtaExp Σ (Γ'' ++ Γ' ++ Γ) (lift #|Γ'| #|Γ''| t).
+Proof using.
+  funelim (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
+  all:cbn; simp_eta; toAll; bool; try rewrite -> forallb_InP_spec in *.
+  all:try solve [solve_all].
+
+  - destruct nth_error eqn:hnth => //=. move: hnth.
+    destruct (PCUICLiftSubst.nth_error_appP Γ'' Γ0 i) => h; noconf h; destruct (Nat.leb_spec #|Γ''| i); try lia; simp_eta.
+    * rewrite nth_error_app_lt //= e //=.
+    * rewrite nth_error_app_ge; try lia.
+      rewrite nth_error_app_ge; try lia.
+      replace (#|Γ'| + i - #|Γ''| - #|Γ'|) with (i - #|Γ''|) by lia.
+      now rewrite e.
+  - simp_eta. eapply (H Γ0 Γ' (0 :: Γ'')); trea.
+  - eapply (H0 Γ0 Γ' (0 :: Γ'')); trea.
+  - destruct block_args => //.
+  - solve_all.
+    specialize (a Γ0 Γ' (repeat 0 #|x.1| ++ Γ'') x.2).
+    rewrite -!app_assoc in a. len in a. now apply a.
+  - solve_all.
+    specialize (a Γ0 Γ' (repeat 0 #|mfix| ++ Γ'') (dbody x)).
+    rewrite -!app_assoc in a. len in a. now apply a.
+  - eapply InPrim_primProp in H.
+    solve_all. eapply primProp_map, primProp_impl; tea; cbn.
+    intros x [a exp].
+    specialize (a Γ0 Γ' Γ'' x).
+    now apply a.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=. bool.
+    + now len.
+    + solve_all.
+    + destruct block_args => //.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=. bool.
+    + len.
+      move: H1. rewrite /isEtaExp_fixapp nth_error_map.
+      destruct nth_error => //.
+    + solve_all. bool.
+      * destruct (dbody x) => //.
+      * set (rm := rev_map _ _).
+        specialize (a Γ0 Γ' (rm ++ Γ'') (dbody x)).
+        rewrite -!app_assoc in a. len in a.
+        rewrite /rm !rev_map_spec in H0 a *; len in a. len. eapply a; trea; rewrite map_map_compose //=.
+    + solve_all.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=; case: Nat.leb_spec => //= hn; bool; solve_all.
+    + move: H1.
+      destruct (PCUICLiftSubst.nth_error_appP Γ'' Γ0 n) => //= /Nat.leb_le hx.
+      * do 2 (rewrite nth_error_app_ge; [lia|]). lia.
+      * do 2 (rewrite nth_error_app_ge; [lia|]).
+      replace (#|Γ'| + n - #|Γ''| - #|Γ'|) with (n - #|Γ''|) by lia.
+      rewrite e //=. now apply Nat.leb_le.
+    + move: H1.
+      rewrite !nth_error_app_lt //=.
+  - rewrite lift_mkApps.
+    destruct (expanded_head_viewc u) => //.
+    bool.
+    eapply isEtaExp_mkApps_intro; eauto. solve_all.
+Qed.

@@ -447,7 +447,7 @@ Lemma type_Case_helper
   (rettyp : term)
   (brs : list term)
   (indices : list term)
-  (ps : Universe.t) (Σ : global_env_ext) Γ :
+  (ps : sort) (Σ : global_env_ext) Γ :
   wf_ext Σ ->
 
   declared_inductive Σ ind mib oib ->
@@ -497,7 +497,7 @@ Proof.
   {
     do 2 constructor=> //=.
     rewrite /expand_lets_ctx /expand_lets_k_ctx /subst_context /lift_context !forget_types_fold_context_k.
-    apply: PCUICEquality.eq_context_gen_binder_annot; reflexivity.
+    apply PCUICEquality.eq_context_upto_names_binder_annot; reflexivity.
   }
 
   pose proof (discrtypok := validity discrtyp).
@@ -526,8 +526,7 @@ Proof.
       hnf=>/=.
       rewrite /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
       rewrite /subst_context /lift_context !forget_types_fold_context_k.
-      apply: PCUICEquality.eq_context_gen_binder_annot.
-      apply: All2_fold_refl; reflexivity.
+      apply PCUICEquality.eq_context_upto_names_binder_annot. reflexivity.
     }
 
     constructor=> //.
@@ -566,7 +565,7 @@ Lemma type_Case_subst_helper
   (rettyp : term)
   (brs : list term)
   (indices : list term)
-  (ps : Universe.t) (Σ : global_env_ext) Γ :
+  (ps : sort) (Σ : global_env_ext) Γ :
   wf_ext Σ ->
 
   declared_inductive Σ ind mib oib ->
@@ -614,7 +613,7 @@ Proof.
   {
     do 2 constructor=> //=.
     rewrite /expand_lets_ctx /expand_lets_k_ctx /subst_context /lift_context !forget_types_fold_context_k.
-    apply: PCUICEquality.eq_context_gen_binder_annot; reflexivity.
+    apply PCUICEquality.eq_context_upto_names_binder_annot; reflexivity.
   }
 
 
@@ -699,7 +698,7 @@ Lemma type_Case_simple_subst_helper
   (rettyp : term)
   (brs : list term)
   (indices : list term)
-  (ps : Universe.t) (Σ : global_env_ext) Γ :
+  (ps : sort) (Σ : global_env_ext) Γ :
   wf_ext Σ ->
 
   declared_inductive Σ ind mib oib ->
@@ -748,7 +747,7 @@ Proof.
   {
     do 2 constructor=> //=.
     rewrite /expand_lets_ctx /expand_lets_k_ctx /subst_context /lift_context !forget_types_fold_context_k.
-    apply: PCUICEquality.eq_context_gen_binder_annot; reflexivity.
+    apply PCUICEquality.eq_context_upto_names_binder_annot; reflexivity.
   }
 
 

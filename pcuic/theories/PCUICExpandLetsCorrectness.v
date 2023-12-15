@@ -913,7 +913,7 @@ Section wtsub.
       [× declared_inductive Σ ci mdecl idecl,
          consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p),
          wf_predicate mdecl idecl p,
-         All2 (PCUICEquality.compare_decls eq eq) (PCUICCases.ind_predicate_context ci mdecl idecl) (PCUICAst.pcontext p),
+         eq_context_upto_names (PCUICCases.ind_predicate_context ci mdecl idecl) (PCUICAst.pcontext p),
          wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) p.(pcontext)@[p.(puinst)],
          PCUICSpine.spine_subst Σ Γ (PCUICAst.pparams p) (List.rev (PCUICAst.pparams p))
           (PCUICEnvironment.smash_context [] (PCUICEnvironment.ind_params mdecl)@[PCUICAst.puinst p]),
@@ -921,9 +921,9 @@ Section wtsub.
           wt Γ c &
           All2i (fun i cdecl br =>
             [× wf_branch cdecl br,
-               All2 (PCUICEquality.compare_decls eq eq) (bcontext br) (PCUICCases.cstr_branch_context ci mdecl cdecl),
+              eq_context_upto_names (bcontext br) (PCUICCases.cstr_branch_context ci mdecl cdecl),
                wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) br.(bcontext)@[p.(puinst)],
-               All2 (PCUICEquality.compare_decls eq eq)
+               eq_context_upto_names
                 (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl)
                 (Γ ,,, inst_case_branch_context p br) &
               wt (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl) br.(bbody)]) 0 idecl.(ind_ctors) brs]
@@ -1347,14 +1347,12 @@ Proof.
 Qed.
 
 Lemma trans_local_set_binder_name_eq nas Γ Δ :
-  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   trans_local (map2 PCUICEnvironment.set_binder_name nas Γ) =
   trans_local (map2 PCUICEnvironment.set_binder_name nas Δ).
 Proof.
-  induction 1 in nas |- *; cbn; auto.
-  destruct nas; cbn; auto.
-  f_equal. destruct r; subst; f_equal.
-  apply IHX.
+  intro H.
+  f_equal. now apply eq_context_upto_names_map2_set_binder_name_eq.
 Qed.
 
 Lemma map2_trans l l' :
@@ -2220,11 +2218,11 @@ Proof.
   - cbn; depelim wt. eapply red_primArray_type; cbn; eauto.
 Qed.
 
-Lemma trans_R_global_instance {Σ : global_env} Re Rle gref napp u u' :
-  R_global_instance Σ Re Rle gref napp u u' ->
-  R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
+Lemma trans_cmp_global_instance {Σ : global_env} Re Rle gref napp u u' :
+  cmp_global_instance Σ Re Rle gref napp u u' ->
+  cmp_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
 Proof.
-  unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
+  unfold PCUICEquality.cmp_global_instance, PCUICEquality.global_variance.
   destruct gref; simpl; auto.
   - unfold S.lookup_inductive, S.lookup_minductive.
     unfold S.lookup_inductive_gen, S.lookup_minductive_gen.
@@ -2245,83 +2243,45 @@ Proof.
     destruct nth_error => /= //.
 Qed.
 
-Lemma trans_eq_context_gen_eq_binder_annot Γ Δ :
-  eq_context_gen eq eq Γ Δ ->
+Lemma trans_eq_context_upto_names_eq_binder_annot Γ Δ :
+  eq_context_upto_names Γ Δ ->
   All2 eq_binder_annot (map decl_name (trans_local Γ)) (map decl_name (trans_local Δ)).
 Proof.
-  move/All2_fold_All2.
   intros; do 2 eapply All2_map. solve_all.
   destruct X; cbn; auto.
 Qed.
 
-Lemma trans_eq_context_gen Γ Δ :
-  eq_context_gen eq eq Γ Δ ->
-  eq_context_gen eq eq (trans_local Γ) (trans_local Δ).
+Lemma trans_eq_context_upto_names Γ Δ :
+  eq_context_upto_names Γ Δ ->
+  eq_context_upto_names (trans_local Γ) (trans_local Δ).
 Proof.
-  move/All2_fold_All2 => e. apply All2_fold_All2.
-  eapply All2_map. solve_all.
-  destruct X; cbn; subst; constructor; auto.
+  apply PCUICEquality.trans_eq_context_upto_names.
 Qed.
 
-Lemma eq_context_gen_extended_subst {Γ Δ n} :
-  eq_context_gen eq eq Γ Δ ->
-  extended_subst Γ n = extended_subst Δ n.
+Lemma eq_term_upto_univ_expand_lets {cf} {Σ : global_env} {cmp_universe cmp_sort pb Γ Δ t u napp} :
+  subrelation (cmp_universe Conv) (cmp_universe pb) ->
+  subrelation (cmp_sort Conv) (cmp_sort pb) ->
+  eq_context_upto Σ cmp_universe cmp_sort pb Γ Δ ->
+  eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t u ->
+  eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (expand_lets Γ t) (expand_lets Δ u).
 Proof.
-  induction 1 in n |- *; cbn; auto.
-  destruct p; subst; cbn. f_equal; auto.
-  rewrite IHX.
-  now rewrite (PCUICConfluence.eq_context_gen_context_assumptions X).
-Qed.
-
-Lemma eq_context_gen_smash_context {Γ Δ} :
-  eq_context_gen eq eq Γ Δ ->
-  eq_context_gen eq eq (smash_context [] Γ) (smash_context [] Δ).
-Proof.
-  induction 1; try constructor.
-  rewrite (smash_context_app [] [d]) smash_context_acc.
-  rewrite (smash_context_app [] [d']) (smash_context_acc Γ').
-  cbn. destruct p; subst; cbn. eapply All2_fold_All2.
-  eapply All2_app. 2:now eapply All2_fold_All2.
-  rewrite !lift_context_snoc /=.
-  rewrite (All2_fold_length X). repeat constructor; cbn; auto.
-  rewrite (eq_context_gen_extended_subst X).
-  now rewrite (PCUICConfluence.eq_context_gen_context_assumptions X).
-  eapply All2_fold_app => //.
-  constructor.
-Qed.
-
-Lemma eq_context_upto_context_assumptions {Σ : global_env} {Re Rle} {Γ Δ} :
-  eq_context_upto Σ Re Rle Γ Δ ->
-  context_assumptions Γ = context_assumptions Δ.
-Proof.
-  induction 1; cbn; auto.
-  destruct p; subst; cbn; auto. f_equal; auto.
-Qed.
-
-Lemma eq_term_upto_univ_expand_lets {cf} {Σ : global_env} {Re Rle Γ Δ t u napp} :
-  subrelation Re Rle ->
-  eq_context_upto Σ Re Rle Γ Δ ->
-  eq_term_upto_univ_napp Σ Re Rle napp t u ->
-  eq_term_upto_univ_napp Σ Re Rle napp (expand_lets Γ t) (expand_lets Δ u).
-Proof.
-  intros subr eqctx eqt.
+  intros subr subr' eqctx eqt.
   rewrite /expand_lets /expand_lets_k.
   eapply eq_term_upto_univ_substs => //.
-  rewrite (eq_context_upto_length eqctx).
-  rewrite (eq_context_upto_context_assumptions eqctx).
+  rewrite -(eq_context_upto_length eqctx).
+  rewrite (eq_context_gen_context_assumptions eqctx).
   now eapply eq_term_upto_univ_lift.
   apply (PCUICConfluence.eq_context_extended_subst eqctx).
 Qed.
 
-Lemma trans_eq_term_upto_univ {cf} {Σ : global_env} {Re Rle t u napp} :
-  Reflexive Re -> Reflexive Rle ->
-  Transitive Re -> SubstUnivPreserving Re ->
-  subrelation Re Rle ->
-  PCUICEquality.eq_term_upto_univ_napp Σ Re Rle napp t u ->
-  eq_term_upto_univ_napp (trans_global_env Σ) Re Rle napp (trans t) (trans u).
+Lemma trans_eq_term_upto_univ {cf} {Σ : global_env} {cmp_universe cmp_sort pb t u napp} :
+  SubstUnivPreserving (cmp_universe Conv) (cmp_universe Conv) ->
+  SubstUnivPreserving (cmp_universe Conv) (cmp_sort Conv) ->
+  eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t u ->
+  eq_term_upto_univ_napp (trans_global_env Σ) cmp_universe cmp_sort pb napp (trans t) (trans u).
 Proof.
-  intros hre hrle hret hres hsub e.
-  induction t using term_forall_list_ind in Rle, hrle, hsub, napp, u, e |- *.
+  intros substu substu' e.
+  induction t using term_forall_list_ind in pb, napp, u, e |- *.
   all: invs e; cbn.
   all: try solve [ constructor ; auto ].
   all: try solve [
@@ -2331,50 +2291,40 @@ Proof.
       eapply ih ; eauto using subrelation_refl
     end
   ].
-  1,2,3,4,5,6: try solve [ constructor; solve_all; eauto using subrelation_refl ].
-  all: try solve [ constructor; now eapply trans_R_global_instance ].
+  1,2,3,4,5,6: try solve [ constructor; unfold eq_mfixpoint in *; solve_all; eauto using subrelation_refl ].
+  all: try solve [ constructor; now eapply trans_cmp_global_instance ].
   - destruct X1 as [Hpars [Huinst [Hctx Hret]]].
     destruct X as [IHpars [IHctx IHret]].
-    constructor; cbn; auto. solve_all.
-    constructor; cbn. solve_all.
-    1,3:eauto using subrelation_refl.
-    repeat split; eauto using subrelation_refl.
-    rewrite !map_context_trans.
-    now eapply trans_eq_context_gen.
-    red in X0. do 2 apply All2_map.
-    eapply All2_All_mix_left in X3; tea.
-    eapply All2_impl; tea; cbv beta.
-    intuition auto.
-    rewrite !trans_bcontext.
-    eapply eq_context_gen_smash_context.
-    now eapply trans_eq_context_gen in a.
-    rewrite !trans_bbody.
-    apply eq_term_upto_univ_expand_lets; eauto; tc.
-    apply eq_context_upto_subst_context; eauto; tc.
-    rewrite /id.
-    eapply PCUICConfluence.eq_context_upto_univ_subst_instance'; tc; auto.
-    cbn.
-    now eapply trans_eq_context_gen.
-    cbn. eapply All2_rev. solve_all. eauto using subrelation_refl.
-    cbn. eauto using subrelation_refl.
-  - constructor. solve_all; eauto using subrelation_refl.
-  - constructor; solve_all; eauto using subrelation_refl.
-  - constructor; depelim X0; cbn in X; constructor; cbn; intuition eauto.
-    * eapply a2; eauto using subrelation_refl.
-    * eapply a1; eauto using subrelation_refl.
-    * solve_all. eauto using subrelation_refl.
+    constructor; cbn; auto.
+    all: unfold eq_predicate, eq_branches in *.
+    1: repeat split; cbn; auto.
+    + cbn. apply All2_map. solve_all.
+    + now apply trans_eq_context_upto_names.
+    + cbn. apply All2_map. solve_all.
+      destruct b; split.
+      * rewrite !trans_bcontext.
+        now apply eq_context_upto_names_smash_context, trans_eq_context_upto_names.
+      * rewrite !trans_bbody.
+        apply eq_term_upto_univ_expand_lets; eauto; tc.
+        apply eq_context_upto_subst_context; eauto; tc.
+        1: apply eq_context_upto_names_subst_instance; eauto; tc.
+        1: now eapply trans_eq_context_upto_names.
+        eapply All2_rev, All2_map. solve_all.
+  - constructor; depelim X0; cbn in X; try now constructor.
+    constructor; cbn; intuition eauto.
+    solve_all.
 Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {pb ϕ T U} :
-  compare_term pb Σ ϕ T U ->
-  compare_term (H:=cf' cf) pb (trans_global_env Σ) ϕ (trans T) (trans U).
+  compare_term Σ ϕ pb T U ->
+  compare_term (H:=cf' cf) (trans_global_env Σ) ϕ pb (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto; tc.
 Qed.
 
 Lemma trans_leq_term {cf} {Σ : global_env} ϕ T U :
   PCUICEquality.leq_term Σ ϕ T U ->
-  @compare_term (cf' cf) Cumul (trans_global_env Σ) ϕ (trans T) (trans U).
+  @compare_term (cf' cf) (trans_global_env Σ) ϕ Cumul (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ; eauto; tc.
 Qed.
@@ -2399,7 +2349,7 @@ Section wtcumul.
   Reserved Notation " Σ ;;; Γ |-- t <=[ le ] u " (at level 50, Γ, le, t, u at next level).
 
   Inductive wt_cumul_pb (pb : conv_pb) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  | wt_cumul_refl t u : compare_term pb Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-- t <=[pb] u
+  | wt_cumul_refl t u : compare_term Σ.1 (global_ext_constraints Σ) pb t u -> Σ ;;; Γ |-- t <=[pb] u
   | wt_cumul_red_l t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ |-- v <=[pb] u -> Σ ;;; Γ |-- t <=[pb] u
   | wt_cumul_red_r t u v : Σ ;;; Γ |-- t <=[pb] v -> wt_red1 Σ Γ u v -> Σ ;;; Γ |-- t <=[pb] u
   where " Σ ;;; Γ |-- t <=[ pb ] u " := (wt_cumul_pb pb Σ Γ t u) : type_scope.
@@ -3752,10 +3702,9 @@ Proof.
       have declc : declared_constructor Σ (ci, i) mdecl idecl cdecl.
       { split; tea. }
       move: wfbr; rewrite /wf_branch /wf_branch_gen. cbn.
-      apply compare_decls_eq_context in cd.
       rewrite /cstr_branch_context in cd.
-      eapply trans_eq_context_gen in cd.
-      eapply eq_context_gen_smash_context in cd.
+      eapply trans_eq_context_upto_names in cd.
+      eapply eq_context_upto_names_smash_context in cd.
       intros eqann.
       eapply (eq_annots_subst_context _ (map trans (inds (inductive_mind ci) (abstract_instance (ind_universes mdecl)) (ind_bodies mdecl))) #|ind_params mdecl|).
       eapply (eq_annots_expand_lets_ctx _ (trans_local (ind_params mdecl))).
@@ -3773,7 +3722,7 @@ Proof.
         apply (declared_constructor_closed_args declc). }
       apply (inds_is_open_terms []).
       rewrite !trans_bcontext.
-      now eapply eq_context_gen_binder_annot in cd.
+      now eapply eq_context_upto_names_binder_annot in cd.
     + eapply All2i_map. eapply All2i_map_right.
       eapply Forall2_All2 in H4.
       eapply All2i_nth_hyp in X8.
@@ -4400,7 +4349,7 @@ Section wtcumul'.
 
   Inductive wt_cumul_pb_hetero (pb : conv_pb) (Σ : global_env_ext) (Γ Γ' : context) : term -> term -> Type :=
   | wt_cumul_refl' t u : wt Σ Γ t -> wt Σ Γ' u ->
-    compare_term pb Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ | Γ' |-- t <=[pb] u
+    compare_term Σ.1 (global_ext_constraints Σ) pb t u -> Σ ;;; Γ | Γ' |-- t <=[pb] u
   | wt_cumul_red_l' t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ | Γ' |-- v <=[pb] u -> Σ ;;; Γ | Γ' |-- t <=[pb] u
   | wt_cumul_red_r' t u v : Σ ;;; Γ | Γ' |-- t <=[pb] v -> wt_red1 Σ Γ' u v -> Σ ;;; Γ | Γ' |-- t <=[pb] u
   where " Σ ;;; Γ | Γ' |-- t <=[ le ] u " := (wt_cumul_pb_hetero le Σ Γ Γ' t u) : type_scope.
@@ -4616,7 +4565,7 @@ Lemma trans_type_local_ctx {cf} {Σ Γ Δ s} :
 Proof.
   intros wf wf'.
   induction Δ; cbn.
-  unfold PCUICLookup.wf_universe, wf_universe.
+  unfold PCUICLookup.wf_sort, wf_sort.
   destruct s => //.
   destruct a as [? [?|] ?] => /= //; intuition auto.
   all: apply lift_typing_f_impl with (1 := b) => //; intros.
@@ -5083,8 +5032,7 @@ Proof.
     }
     { cbn. move: ind_sorts.
       rewrite /check_ind_sorts.
-      destruct Universe.is_prop => //.
-      destruct Universe.is_sprop => //.
+      destruct Sort.to_family => //.
       intuition auto.
       rewrite /PCUICLookup.global_ext_constraints.
       destruct indices_matter => //.

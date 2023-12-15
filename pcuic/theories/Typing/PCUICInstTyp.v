@@ -187,9 +187,9 @@ Proof.
       + eapply All2_map. repeat toAll.
         eapply All2_impl. 1: tea. cbn; intros. destruct_head'_prod; eauto.
       + unfold preturn. cbn.
-        unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+        unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
         exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
-        ++ unshelve erewrite <- (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+        ++ unshelve erewrite <- (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
            rewrite <- inst_case_predicate_context_length.
             rewrite inst_case_predicate_context_inst; eauto.
             eapply closed_subst_ext. 2: symmetry; apply up_Upn.
@@ -209,17 +209,17 @@ Proof.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
-            unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+            unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
     * eauto.
-    * rename Hbody into Hbrsbrs'.
+    * rename Hbody into Hbrsbrs'. unfold cumul_branches, cumul_branch in *.
       repeat toAll.
       eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
-      unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+      unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
       split; eauto.
       repeat match goal with H : is_true (andb _ _) |- _ => apply andb_and in H; destruct H end.
       rewrite -> test_context_k_closed_on_free_vars_ctx in *.
       exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
-      + unshelve erewrite <- (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+      + unshelve erewrite <- (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
       rewrite <- (inst_case_branch_context_length p).
       rewrite inst_case_branch_context_inst; eauto.
       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
@@ -242,9 +242,9 @@ Proof.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
-        unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+        unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
    - eapply cumul_Proj; try apply X0; eauto.
-   - cbn. eapply cumul_Fix. cbn in HfreeA, HfreeB.
+   - cbn. eapply cumul_Fix. cbn in HfreeA, HfreeB. unfold cumul_mfixpoint in *.
      repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
      destruct_head'_prod.
      repeat split; eauto.
@@ -285,7 +285,7 @@ Proof.
          rewrite fix_context_length.
          rewrite (All2_length X). eauto.
    - cbn. rewrite (All2_length X).
-     eapply cumul_CoFix. cbn in HfreeA, HfreeB.
+     eapply cumul_CoFix. cbn in HfreeA, HfreeB. unfold cumul_mfixpoint in *.
      repeat toAll.
      eapply All2_impl. 1: tea. cbn; intros.
      destruct_head'_prod.

@@ -21,17 +21,17 @@ Local Ltac aa := rdest; eauto with univ_subst.
 Section SubstIdentity.
   Context `{cf:checker_flags}.
 
-Lemma compare_universe_subst_instance pb {Σ : global_env_ext} univs u :
+Lemma compare_sort_subst_instance pb {Σ : global_env_ext} univs u :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-  RelationClasses.subrelation (compare_universe pb Σ)
-    (fun x y : Universe.t =>
-    compare_universe pb (global_ext_constraints (Σ.1, univs)) (subst_instance_univ u x)
-      (subst_instance_univ u y)).
+  RelationClasses.subrelation (compare_sort Σ pb)
+    (fun x y : sort =>
+    compare_sort (global_ext_constraints (Σ.1, univs)) pb (subst_instance_sort u x)
+      (subst_instance_sort u y)).
 Proof using Type.
   intros v.
   destruct pb; cbn.
-  - now apply eq_universe_subst_instance.
-  - now apply leq_universe_subst_instance.
+  - now apply eq_sort_subst_instance.
+  - now apply leq_sort_subst_instance.
 Qed.
 
 Lemma cumulSpec_subst_instance (Σ : global_env_ext) Γ u A B pb univs :
@@ -105,12 +105,13 @@ Proof.
   - eapply cumul_Case; try solve [intuition eauto; eauto].
     * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; eauto; cbn.
       + apply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros. destruct_head'_prod; eauto.
-      + apply precompose_subst_instance. eapply R_universe_instance_impl.
+      + apply precompose_subst_instance. eapply cmp_universe_instance_impl.
         1:now apply eq_universe_subst_instance.
         eauto.
       + rewrite -> subst_instance_app, inst_case_predicate_context_subst_instance in *.
         eauto.
-    * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
+    * unfold cumul_branches, cumul_branch in *.
+      eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       repeat split; intuition eauto.
       rewrite -> subst_instance_app, inst_case_branch_context_subst_instance in *; eauto.
   - eapply cumul_Fix. apply All2_map. repeat toAll. eapply All2_impl. 1: tea.
@@ -120,26 +121,26 @@ Proof.
     cbn; intros; intuition eauto.
     rewrite -> subst_instance_app, fix_context_subst_instance in *; eauto.
   - eapply cumul_Prim. depelim e0; depelim X; cbn in H; cbn; noconf H; cbn in H; constructor; cbn -[Universe.make]; eauto.
-    + rewrite -!subst_instance_univ_make.
+    + rewrite -!subst_instance_universe_make.
       eapply eq_universe_subst_instance; tea.
     + solve_all.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
     * apply precompose_subst_instance_global.
-      rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
+      rewrite map_length. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
     * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
     * apply precompose_subst_instance_global. cbn.
-      rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
+      rewrite map_length. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
     * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
-  - eapply cumul_Sort. now apply compare_universe_subst_instance.
+  - eapply cumul_Sort. now apply compare_sort_subst_instance.
   - eapply cumul_Const. apply precompose_subst_instance.
-    eapply R_universe_instance_impl; eauto.
+    eapply cmp_universe_instance_impl; eauto.
     now apply compare_universe_subst_instance.
 Defined.
 
@@ -265,7 +266,7 @@ Proof using Type.
     rewrite subst_instance_univ_super.
     + econstructor.
       * aa.
-      * now apply wf_universe_subst_instance.
+      * now apply wf_sort_subst_instance.
   - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' H.
     rewrite product_subst_instance; aa. econstructor.
     + eapply lift_typing_mapu with (tm := None) (u := Some _) => //. apply X1; eauto.
@@ -307,7 +308,7 @@ Proof using Type.
     change (map_predicate _ _ _ _ _) with (subst_instance i p).
     rewrite subst_instance_case_predicate_context.
     eapply type_Case with (p:=subst_instance i p)
-                          (ps:=subst_instance_univ i u); eauto with pcuic.
+                          (ps:=subst_instance_sort i u); eauto with pcuic.
     3,4: constructor; eauto with pcuic.
     + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
       eapply Hpty; eauto.
@@ -393,9 +394,10 @@ Proof using Type.
     + exact H0.
     + now rewrite subst_instance_prim_val_tag.
     + destruct p as [? []]; depelim X1; constructor; eauto.
-      * rewrite -subst_instance_univ_make. eapply wf_universe_subst_instance => //.
-      * cbn -[Universe.make] in hty.
-        specialize (hty u univs). rewrite subst_instance_univ_make in hty. now eapply hty.
+      * rewrite -subst_instance_universe_make. eapply wf_universe_subst_instance => //.
+      * cbn -[Universe.make'] in hty.
+        specialize (hty u univs).
+        rewrite /subst_instance subst_instance_universe_make in hty. now eapply hty.
       * cbn. solve_all.
 
   - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' H.
@@ -474,7 +476,7 @@ Lemma wf_local_instantiate_poly {Σ ctx Γ u} :
   wf_local Σ (subst_instance u Γ).
 Proof using Type.
   intros wfΣ Huniv wf.
-  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  epose proof (type_Sort _ _ sProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_ctx in ty;
     cbn; eauto using typing_wf_local.
@@ -490,7 +492,7 @@ Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} :
   wf_local Σ (subst_instance u Γ).
 Proof using Type.
   intros wfΣ Hdecl Huniv wf.
-  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  epose proof (type_Sort _ _ sProp wf) as ty. forward ty.
   - now simpl.
   - eapply typing_subst_instance_decl in ty;
     cbn; eauto using typing_wf_local.
@@ -554,7 +556,7 @@ Qed.
     wf Σ ->
     declared_inductive Σ ind mdecl idecl ->
     let u := abstract_instance (ind_universes mdecl) in
-    subst_instance_univ u (ind_sort idecl) = ind_sort idecl.
+    subst_instance_sort u (ind_sort idecl) = ind_sort idecl.
   Proof using Type.
     intros wfΣ decli u.
     pose proof (on_declared_inductive decli) as [onmind oib].

@@ -146,16 +146,37 @@ Proof.
   eapply All2_fold_refl. intros ? ?; reflexivity.
 Qed.
 
-Lemma cumul_context_Algo_Spec {cf:checker_flags} Σ Γ' Γ :
-  Σ ⊢ Γ' ≤ Γ -> PCUICCumulativitySpec.cumul_context cumulSpec0 Σ Γ' Γ.
+Lemma eq_context_cumul_Spec {cf:checker_flags} Σ pb Γ Δ :
+  compare_context Σ pb Γ Δ -> PCUICCumulativitySpec.cumul_pb_context cumulSpec0 pb Σ Γ Δ.
 Proof.
   intros e.
   eapply All2_fold_impl. 1: tea. cbn; intros.
   destruct X.
-  - econstructor 1; eauto. eapply (@cumulAlgo_cumulSpec _ _ Cumul); eauto.
+  - econstructor 1; eauto. eapply eq_term_upto_univ_cumulSpec; eauto.
   - econstructor 2; eauto.
-    + eapply (@cumulAlgo_cumulSpec _ _ Conv); eauto.
-    + eapply (@cumulAlgo_cumulSpec _ _ Cumul); eauto.
+    all: eapply eq_term_upto_univ_cumulSpec; eauto.
+Defined.
+
+Lemma eq_context_cumul_Spec_rel {cf:checker_flags} Σ Ξ0 Γ Δ :
+  compare_context Σ Cumul Γ Δ -> cumul_ctx_rel cumulSpec0 Σ Ξ0 Γ Δ.
+Proof.
+  intros e.
+  eapply All2_fold_impl. 1: tea. cbn; intros.
+  destruct X.
+  - econstructor 1; eauto. eapply eq_term_upto_univ_cumulSpec; eauto.
+  - econstructor 2; eauto.
+    all: eapply eq_term_upto_univ_cumulSpec; eauto.
+Defined.
+
+Lemma cumul_context_Algo_Spec {cf:checker_flags} Σ pb Γ' Γ :
+  Σ ⊢ Γ' ≤[pb] Γ -> PCUICCumulativitySpec.cumul_pb_context cumulSpec0 pb Σ Γ' Γ.
+Proof.
+  intros e.
+  eapply All2_fold_impl. 1: tea. cbn; intros.
+  destruct X.
+  - econstructor 1; eauto. eapply cumulAlgo_cumulSpec; eauto.
+  - econstructor 2; eauto.
+    all: eapply cumulAlgo_cumulSpec; eauto.
 Defined.
 
 Lemma context_cumulativity_prop {cf:checker_flags} :
@@ -297,7 +318,8 @@ Lemma closed_context_cumulativity {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {p
 Proof.
   intros h hΓ' e.
   pose proof (ws_cumul_ctx_pb_forget e).
-  destruct pb; eapply context_cumulativity_prop; eauto.
+  eapply context_cumulativity_prop; eauto.
+  destruct pb; tas.
   eapply conv_cumul_context in e; tea.
   eapply (ws_cumul_ctx_pb_forget e).
 Qed.

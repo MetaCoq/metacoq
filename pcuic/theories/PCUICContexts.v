@@ -159,11 +159,11 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   declared_minductive Σ.1 ind mdecl ->
   type_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  type_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) (subst_instance_univ u s).
+  type_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) (subst_instance_sort u s).
 Proof.
   intros Hctx Hu.
   induction Δ; simpl in *; intuition auto.
-  { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto. }
+  { destruct Σ as [Σ univs]. eapply (wf_sort_subst_instance (Σ, ind_universes mdecl)); eauto. }
   destruct a as [na [b|] ty]; simpl; destruct X as (Hwfctx & Hj); split; eauto.
   - eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs.
     eapply instantiate_minductive in Hs; eauto.
@@ -179,7 +179,7 @@ Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   sorts_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   sorts_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ)
-    (List.map (subst_instance_univ u) s).
+    (List.map (subst_instance_sort u) s).
 Proof.
   intros Hctx Hu.
   induction Δ in s |- *; simpl in *; intuition auto.

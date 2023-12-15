@@ -67,66 +67,76 @@ Proof.
   apply global_ext_constraints_app, sub.
 Qed.
 
-#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
+#[global] Instance subrel_extends_cmp_universe {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ, ϕ)))
-    (compare_universe pb (global_ext_constraints (Σ', ϕ))).
+  RelationClasses.subrelation (compare_universe (global_ext_constraints (Σ, ϕ)) pb)
+    (compare_universe (global_ext_constraints (Σ', ϕ)) pb).
 Proof.
   intros ext u u'.
   apply cmp_universe_subset.
   apply weakening_env_global_ext_constraints, ext.
 Qed.
 
+#[global] Instance subrel_extends_cmp {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
+  extends Σ Σ' ->
+  RelationClasses.subrelation (compare_sort (global_ext_constraints (Σ, ϕ)) pb)
+    (compare_sort (global_ext_constraints (Σ', ϕ)) pb).
+Proof.
+  intros ext u u'.
+  apply cmp_sort_subset.
+  apply weakening_env_global_ext_constraints, ext.
+Qed.
+
 #[global] Instance subrel_extends_eq_pb {cf} pb (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
-    (compare_universe pb (global_ext_constraints (Σ', ϕ))).
+  RelationClasses.subrelation (eq_sort (global_ext_constraints (Σ, ϕ)))
+    (compare_sort (global_ext_constraints (Σ', ϕ)) pb).
 Proof.
-  change eq_universe with (compare_universe Conv).
+  change (eq_sort ?φ) with (compare_sort φ Conv).
   intros ext.
   destruct pb.
   - tc.
-  - transitivity (compare_universe Conv (global_ext_constraints (Σ', ϕ))); tc.
+  - transitivity (compare_sort (global_ext_constraints (Σ', ϕ)) Conv); tc.
 Qed.
 
 #[global] Instance subrel_extends_eq {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
-    (eq_universe (global_ext_constraints (Σ', ϕ))).
-Proof. change eq_universe with (compare_universe Conv). tc. Qed.
+  RelationClasses.subrelation (eq_sort (global_ext_constraints (Σ, ϕ)))
+    (eq_sort (global_ext_constraints (Σ', ϕ))).
+Proof. change (eq_sort ?φ) with (compare_sort φ Conv). tc. Qed.
 
 #[global] Instance subrel_extends_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ, ϕ)))
-    (leq_universe (global_ext_constraints (Σ', ϕ))).
-Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
+  RelationClasses.subrelation (leq_sort (global_ext_constraints (Σ, ϕ)))
+    (leq_sort (global_ext_constraints (Σ', ϕ))).
+Proof. change (leq_sort ?φ) with (compare_sort φ Cumul). tc. Qed.
 
 #[global] Instance subrel_extends_eq_le {cf} (Σ Σ' : global_env) (ϕ : universes_decl) :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ, ϕ)))
-    (leq_universe (global_ext_constraints (Σ', ϕ))).
-Proof. change leq_universe with (compare_universe Cumul). tc. Qed.
+  RelationClasses.subrelation (eq_sort (global_ext_constraints (Σ, ϕ)))
+    (leq_sort (global_ext_constraints (Σ', ϕ))).
+Proof. change (leq_sort ?φ) with (compare_sort φ Cumul). tc. Qed.
 
 Lemma subrelations_extends {cf} Σ Σ' φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) (eq_universe (global_ext_constraints (Σ',φ))).
+  RelationClasses.subrelation (eq_sort (global_ext_constraints (Σ,φ))) (eq_sort (global_ext_constraints (Σ',φ))).
 Proof. typeclasses eauto. Qed.
 
 Lemma subrelations_leq_extends {cf} Σ Σ' φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ,φ))) (leq_universe (global_ext_constraints (Σ',φ))).
+  RelationClasses.subrelation (leq_sort (global_ext_constraints (Σ,φ))) (leq_sort (global_ext_constraints (Σ',φ))).
 Proof. typeclasses eauto. Qed.
 
 Lemma subrelations_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (compare_universe pb (global_ext_constraints (Σ,φ)))
-    (compare_universe pb (global_ext_constraints (Σ',φ))).
+  RelationClasses.subrelation (compare_sort (global_ext_constraints (Σ,φ)) pb)
+    (compare_sort (global_ext_constraints (Σ',φ)) pb).
 Proof. destruct pb; typeclasses eauto. Qed.
 
 Lemma subrelations_eq_compare_extends {cf} Σ Σ' pb φ :
   extends Σ Σ' ->
-  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ)))
-    (compare_universe pb (global_ext_constraints (Σ',φ))).
+  RelationClasses.subrelation (eq_sort (global_ext_constraints (Σ,φ)))
+    (compare_sort (global_ext_constraints (Σ',φ)) pb).
 Proof. destruct pb; typeclasses eauto. Qed.
 
 
@@ -184,7 +194,6 @@ Lemma extends_wf_universe {Σ : global_env_ext} Σ' u : extends Σ Σ' ->
 Proof.
   destruct Σ as [Σ univ]; cbn.
   intros [sub _].
-  destruct u; simpl; auto.
   intros Hl.
   intros l inl; specialize (Hl l inl).
   cbn.
@@ -193,6 +202,13 @@ Proof.
   apply LevelSet.union_spec in Hl as [Hl|Hl]; cbn in Hl.
   - simpl. simpl in Hl. now left.
   - right. eapply global_levels_sub; tea.
+Qed.
+
+Lemma extends_wf_sort {Σ : global_env_ext} Σ' s : extends Σ Σ' ->
+  wf_sort Σ s -> wf_sort (Σ', Σ.2) s.
+Proof.
+  destruct s => //=.
+  apply extends_wf_universe.
 Qed.
 
 

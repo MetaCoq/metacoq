@@ -420,7 +420,7 @@ Proof. destruct isT. now apply isType_welltyped. Qed.
 (** Definition of normalized arities *)
 Definition arity_ass := aname * term.
 
-Fixpoint mkNormalArity (l : list arity_ass) (s : Universe.t) : term :=
+Fixpoint mkNormalArity (l : list arity_ass) (s : sort) : term :=
   match l with
   | []%list => tSort s
   | ((na, A) :: l)%list => tProd na A (mkNormalArity l s)
@@ -434,7 +434,7 @@ Qed.
 
 Record conv_arity {Σ Γ T} : Type := build_conv_arity {
   conv_ar_context : list arity_ass;
-  conv_ar_univ : Universe.t;
+  conv_ar_univ : sort;
   conv_ar_red : ∥closed_red Σ Γ T (mkNormalArity conv_ar_context conv_ar_univ)∥
 }.
 
@@ -594,7 +594,7 @@ flag_of_type Γ T isT with inspect (hnf (X_type := X_type) Γ T (fun Σ h => (ty
                                   end
                     |}
       };
-    | fot_view_sort univ := {| is_logical := Universe.is_prop univ;
+    | fot_view_sort univ := {| is_logical := Sort.is_prop univ;
                                conv_ar := inl {| conv_ar_context := [];
                                                  conv_ar_univ := univ; |} |} ;
     | fot_view_other T0 discr
@@ -602,7 +602,7 @@ flag_of_type Γ T isT with inspect (hnf (X_type := X_type) Γ T (fun Σ h => (ty
         {
       | @existT K princK with inspect (reduce_to_sort Γ K _) := {
         | exist (Checked_comp (existT _ univ red_univ)) eq :=
-          {| is_logical := Universe.is_prop univ;
+          {| is_logical := Sort.is_prop univ;
              conv_ar := inr _ |};
         | exist (TypeError_comp t) eq := !
         };
@@ -1005,7 +1005,7 @@ Equations (noeqns) erase_type_scheme_eta
           (erΓ : Vector.t tRel_kind #|Γ|)
           (t : term)
           (ar_ctx : list arity_ass)
-          (ar_univ : Universe.t)
+          (ar_univ : sort)
           (typ : ∥rΣ;;; Γ |- t : mkNormalArity ar_ctx ar_univ∥)
           (next_tvar : nat) : list type_var_info × box_type :=
 erase_type_scheme_eta Γ erΓ t [] univ typ next_tvar => ([], (erase_type_aux Γ erΓ t _ None).2);
@@ -1066,7 +1066,7 @@ Equations? (noeqns) erase_type_scheme
           (erΓ : Vector.t tRel_kind #|Γ|)
           (t : term)
           (ar_ctx : list arity_ass)
-          (ar_univ : Universe.t)
+          (ar_univ : sort)
           (typ : forall Σ0 (wfΣ : PCUICWfEnv.abstract_env_ext_rel X Σ0), ∥Σ0;;; Γ |- t : mkNormalArity ar_ctx ar_univ∥)
           (next_tvar : nat) : list type_var_info × box_type :=
 erase_type_scheme Γ erΓ t [] univ typ next_tvar => ([], (erase_type_aux Γ erΓ t _ None).2);
@@ -1308,7 +1308,7 @@ Proof.
   unshelve refine (
   let is_propositional :=
       match destArity [] (ind_type oib) with
-      | Some (_, u) => is_propositional u
+      | Some (_, u) => Sort.is_propositional u
       | None => false
       end in
   let oib_tvars := erase_ind_arity [] (PCUICEnvironment.ind_type oib) _ in

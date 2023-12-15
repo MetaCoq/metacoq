@@ -358,7 +358,7 @@ Section OnFreeVars.
     on_free_vars P t ->
     on_free_vars P T.
 
-  Let Psort (Γ : context) (t : term) (u : Universe.t) := True.
+  Let Psort (Γ : context) (t : term) (u : sort) := True.
 
   Let Pprod Γ t (na : aname) A B :=
     forall P,
@@ -1058,7 +1058,7 @@ Qed.
 
 Lemma strengthening_type `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : PCUICTyping.wf Σ} Γ Γ' Γ'' t s :
   Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : tSort s ->
-  ∑ s', (Σ ;;; Γ ,,, Γ'' |- t : tSort s') * (compare_universe Cumul Σ s' s).
+  ∑ s', Σ ;;; Γ ,,, Γ'' |- t : tSort s' × leq_sort Σ s' s.
 Proof.
   intros H; pose proof (H' := H); eapply strengthening in H. destruct H as [T' [? HT Hcumul HT']].
   pose proof (Hcumul' := Hcumul).

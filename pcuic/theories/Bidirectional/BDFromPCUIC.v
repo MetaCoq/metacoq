@@ -10,20 +10,6 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(** Preliminary lemmas missing from MetaCoq *)
-Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
-  leq_universe Σ s1 s2 -> is_allowed_elimination Σ allowed s2 -> is_allowed_elimination Σ allowed s1.
-Proof.
-  destruct allowed, s2; cbnr; trivial;
-  destruct s1; cbnr; intros H1 H2; trivial; try now destruct H1.
-  { now left. }
-  destruct H2 as [|H2]; [now left|right].
-  unfold_univ_rel.
-  specialize (H1 v Hv); specialize (H2 v Hv).
-  cbn in H2.
-  lia.
-Qed.
-
 Lemma ctx_inst_length {ty Γ args Δ} :
   PCUICTyping.ctx_inst ty Γ args Δ ->
   #|args| = context_assumptions Δ.
@@ -69,7 +55,7 @@ Qed.
 Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
   Σ ;;; Γ |- t : tSort s ->
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ tSort s) ->
-  {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
+  {s' & Σ ;;; Γ |- t ▹□ s' × leq_sort Σ s' s}.
 Proof.
   intros tyt (T'&?&Cumt).
   apply ws_cumul_pb_Sort_r_inv in Cumt as (?&?&?) ; auto.
@@ -96,7 +82,7 @@ Lemma conv_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
   Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ mkApps (tInd ind ui) args)) ->
   ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
-      R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
+      cmp_ind_universes Σ ind #|args| ui' ui
       & ws_cumul_pb_terms Σ Γ args' args].
 Proof.
   intros tyt (T'&?&Cumt).
@@ -107,7 +93,7 @@ Proof.
 Qed.
 
 Lemma conv_lift_judgment `{checker_flags} Σ Γ na b ty :
-  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) (j_decl (mkdecl na b ty)) ->
+  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_sort Σ u' u) (j_decl (mkdecl na b ty)) ->
   lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl (mkdecl na b ty)).
 Proof.
   intro Hj.
@@ -117,8 +103,8 @@ Proof.
 Qed.
 
 Lemma conv_lift_judgment_univ `{checker_flags} Σ Γ na b ty u :
-  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) (j_decl_s (mkdecl na b ty) (Some u)) ->
-  ∑ u', lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl_s (mkdecl na b ty) (Some u')) × leq_universe Σ u' u.
+  lift_sorting (checking Σ Γ) (fun T u => ∑ u', Σ;;; Γ |- T ▹□ u' × leq_sort Σ u' u) (j_decl_s (mkdecl na b ty) (Some u)) ->
+  ∑ u', lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_decl_s (mkdecl na b ty) (Some u')) × leq_sort Σ u' u.
 Proof.
   intros (Htm & u0 & (u' & Hty & Hle) & <-); cbn in *.
   exists u'; split; tas.
@@ -131,7 +117,7 @@ Section BDFromPCUIC.
 (** The big theorem*)
 Lemma bidirectional_from_pcuic `{checker_flags} :
       env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T})
-        (fun Σ Γ j => lift_sorting (fun t T => Σ ;;; Γ |- t ◃ T) (fun T u => ∑ u', Σ ;;; Γ |- T ▹□ u' × leq_universe Σ u' u) j)
+        (fun Σ Γ j => lift_sorting (fun t T => Σ ;;; Γ |- t ◃ T) (fun T u => ∑ u', Σ ;;; Γ |- T ▹□ u' × leq_sort Σ u' u) j)
         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
@@ -174,7 +160,7 @@ Proof.
     + constructor ; cbn ; auto.
       1: by apply wf_local_closed_context.
       constructor.
-      apply leq_universe_product_mon.
+      apply leq_sort_product_mon.
       all: assumption.
 
   - intros na A t ? ? ? CumA ? (?&?&?).
@@ -414,7 +400,7 @@ Proof.
 Qed.
 
 Lemma typing_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :
-  Σ ;;; Γ |- t : tSort u -> ∑ u', Σ ;;; Γ |- t ▹□ u' × leq_universe Σ u' u.
+  Σ ;;; Γ |- t : tSort u -> ∑ u', Σ ;;; Γ |- t ▹□ u' × leq_sort Σ u' u.
 Proof.
   intros.
   apply conv_infer_sort ; tea.
@@ -442,7 +428,7 @@ Qed.
 Lemma typing_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
   Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
   ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
-      R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
+      cmp_ind_universes Σ ind #|args| ui' ui
       & ws_cumul_pb_terms Σ Γ args' args].
 Proof.
   intros.

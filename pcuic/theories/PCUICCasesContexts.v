@@ -81,10 +81,11 @@ Lemma alpha_eq_smash_context Δ Δ' :
 Proof.
   induction 1.
   * constructor.
-  * destruct x; depelim r; simpl; auto.
+  * destruct r; simpl; auto.
     rewrite !(smash_context_acc _ [_]).
     eapply All2_app; auto; repeat constructor; subst; simpl; auto.
     rewrite (All2_length X) -(alpha_eq_extended_subst l l' 0) // (alpha_eq_context_assumptions l l') //.
+    now constructor.
 Qed.
 
 Lemma alpha_eq_lift_context n k Δ Δ' :
@@ -95,7 +96,7 @@ Proof.
   * constructor.
   * rewrite !lift_context_snoc; destruct x; depelim r; simpl; subst; auto;
     constructor; auto; repeat constructor; subst; simpl; auto;
-    now rewrite (All2_length X).
+    rewrite (All2_length X); now constructor.
 Qed.
 
 Lemma alpha_eq_subst_context s k Δ Δ' :
@@ -106,7 +107,7 @@ Proof.
   * constructor.
   * rewrite !subst_context_snoc; destruct x; depelim r; simpl; subst; auto;
     constructor; auto; repeat constructor; subst; simpl; auto;
-    now rewrite (All2_length X).
+    rewrite (All2_length X); now constructor.
 Qed.
 
 Lemma inst_case_predicate_context_eq {mdecl idecl ind p} :

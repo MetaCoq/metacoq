@@ -669,7 +669,7 @@ Section classification.
       now eapply invert_cumul_prod_ind in cum.
     - move=> [hargs ccum'].
       rewrite expand_lets_mkApps subst_mkApps /= in ccum'.
-      eapply invert_cumul_ind_ind in ccum' as ((? & ?) & ?).
+      eapply invert_cumul_ind_ind in ccum' as ((? & r) & ?).
       len in r. eapply ReflectEq.eqb_eq in i0. now subst ind'.
   Qed.
 

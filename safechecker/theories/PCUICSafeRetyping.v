@@ -99,7 +99,7 @@ Lemma inductive_cumulative_indices_smash {cf : checker_flags} {Σ : global_env_e
   on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
+  PCUICEquality.cmp_ind_universes Σ ind napp u u' ->
   forall Γ pars pars',
   spine_subst Σ Γ pars (List.rev pars) (smash_context [] (subst_instance u (ind_params mdecl))) ->
   spine_subst Σ Γ pars' (List.rev pars') (smash_context [] (subst_instance u' (ind_params mdecl))) ->
@@ -181,10 +181,10 @@ Qed.
     ∑ u, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- T ▹□ u ∥.
   #[local] Definition principal_type_type {Γ t} (wt : principal_type Γ t) : term
     := projT1 wt.
-  #[local] Definition principal_sort_sort {Γ T} (ps : principal_sort Γ T) : Universe.t
+  #[local] Definition principal_sort_sort {Γ T} (ps : principal_sort Γ T) : sort
     := projT1 ps.
   #[local] Coercion principal_type_type : principal_type >-> term.
-  #[local] Coercion principal_sort_sort : principal_sort >-> Universe.t.
+  #[local] Coercion principal_sort_sort : principal_sort >-> sort.
 
   Program Definition infer_as_sort {Γ T}
     (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
@@ -303,7 +303,7 @@ Qed.
     infer Γ wfΓ (tVar n) wt := !;
     infer Γ wfΓ (tEvar ev args) wt := !;
 
-    infer Γ wfΓ (tSort s) wt := ret (tSort (Universe.super s));
+    infer Γ wfΓ (tSort s) wt := ret (tSort (Sort.super s));
 
     infer Γ wfΓ (tProd n ty b) wt :=
       let wfΓ' : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ (Γ ,, vass n ty) ∥ := _ in
@@ -311,7 +311,7 @@ Qed.
       let s1 := infer_as_sort wfΓ (fun a b => (welltyped_subterm (wt a b)).1) ty1 in
       let ty2 := infer (Γ ,, vass n ty) wfΓ' b (fun a b => (welltyped_subterm (wt a b)).2) in
       let s2 := infer_as_sort wfΓ' (fun a b => (welltyped_subterm (wt a b)).2) ty2 in
-      ret (tSort (Universe.sort_of_product s1 s2));
+      ret (tSort (Sort.sort_of_product s1 s2));
 
     infer Γ wfΓ (tLambda n t b) wt :=
       let t2 := infer (Γ ,, vass n t) _ b (fun a b => (welltyped_subterm (wt a b)).2) in
@@ -828,7 +828,7 @@ Qed.
   Opaque type_of_typing.
   Equations? sort_of_type (Γ : context) (t : PCUICAst.term)
     (wt : forall Σ : global_env_ext, abstract_env_ext_rel X Σ -> ∥ isType Σ Γ t ∥) :
-    (∑ u : Universe.t, forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
+    (∑ u : sort, forall Σ : global_env_ext, abstract_env_ext_rel X Σ ->
       ∥ Σ ;;; Γ |- t : tSort u ∥) :=
     sort_of_type Γ t wt with (@type_of_typing Γ t _) :=
       { | T with inspect (reduce_to_sort (X:=X) Γ T.π1 _) :=

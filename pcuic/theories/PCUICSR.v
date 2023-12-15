@@ -26,7 +26,7 @@ Derive Signature for OnOne2_local_env.
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 Arguments Nat.sub : simpl nomatch.
-Arguments Universe.sort_of_product : simpl nomatch.
+Arguments Sort.sort_of_product : simpl nomatch.
 
 (* Preservation of wf_*fixpoint *)
 
@@ -170,13 +170,8 @@ Qed.
 #[global] Hint Extern 0 (conv_context _ _ _) => constructor : pcuic.
 #[global] Hint Extern 0 (cumul_context _ _ _) => constructor : pcuic.
 
-#[global] Hint Extern 4 (∑ s : Universe.t, typing _ _ ?T (tSort s)) =>
-  match goal with
-  | [ H : isType _ _ T |- _ ] => exact H
-  end : pcuic.
-
 Ltac unfold_pcuic :=
-  progress (unfold PCUICTypingDef.typing, PCUICLookup.wf_universe in * ).
+  progress (unfold PCUICTypingDef.typing, PCUICLookup.wf_sort in * ).
 #[global] Hint Extern 10 => unfold_pcuic : pcuic.
 
 #[global] Hint Resolve red_conv red1_red red_cumul : pcuic.
@@ -410,22 +405,21 @@ Qed.
 
 (** The crucial property on constructors of cumulative inductive types for type preservation:
     we don't need to compare their instances when fully applied. *)
-Lemma R_global_instance_cstr_irrelevant {cf} {Σ} {wfΣ  : wf Σ} {ci c} {mdecl idecl cdecl u u'} :
+Lemma cmp_global_instance_cstr_irrelevant {cf} {Σ} {wfΣ  : wf Σ} {ci c} {mdecl idecl cdecl u u'} :
   declared_constructor Σ (ci, c) mdecl idecl cdecl ->
-  R_ind_universes Σ ci (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' ->
-  R_global_instance Σ.1 (eq_universe Σ) (eq_universe Σ) (ConstructRef ci c)
+  cmp_ind_universes Σ ci (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' ->
+  cmp_global_instance Σ.1 (compare_universe Σ) Conv (ConstructRef ci c)
     (ind_npars mdecl + context_assumptions (cstr_args cdecl)) u u'.
 Proof.
   intros declc.
   pose proof (on_declared_constructor declc).
   pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
-  intros Hu. pose proof (R_global_instance_length _ _ _ _ _ _ _ Hu).
-  rewrite /R_global_instance_gen /R_opt_variance /= /lookup_constructor /lookup_constructor_gen.
+  intros Hu. pose proof (cmp_global_instance_length _ _ _ _ _ _ _ Hu).
+  rewrite /cmp_global_instance_gen /cmp_opt_variance /= /lookup_constructor /lookup_constructor_gen.
   unshelve epose proof (declc' := declared_constructor_to_gen declc); eauto.
   rewrite (declared_inductive_lookup_gen declc'.p1) (proj2 declc').
   rewrite -(cstr_args_length onc).
-  case: leb_spec_Set; try lia. move=> _ /=; cbn.
-  now apply R_universe_instance_variance_irrelevant.
+  case: leb_spec_Set; try lia.
 Qed.
 
 Lemma wf_pre_case_branch_context {cf} {Σ} {wfΣ : wf Σ} {Γ ci mdecl idecl p} {br : branch term} {cdecl} :
@@ -565,8 +559,8 @@ Proof.
   { eapply eq_context_upto_ws_cumul_ctx_pb => //.
     rewrite is_closed_context_set_binder_name //.
     apply eq_context_upto_cat. reflexivity.
-    apply eq_context_gen_eq_context_upto; tc.
-    apply eq_binder_annots_eq_context_gen_ctx => //. }
+    apply eq_context_upto_names_eq_context_upto; tc.
+    apply eq_binder_annots_eq => //. }
   depelim a; cbn in *; constructor; auto;
   eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)); tea.
 Qed.
@@ -1750,9 +1744,9 @@ Proof.
     assert(wfparu : wf_local Σ (subst_instance (puinst p) (ind_params mdecl))).
     { eapply on_minductive_wf_params; eauto.
       destruct isdecl; eauto.  }
-    assert (wfps : wf_universe Σ ps).
+    assert (wfps : wf_sort Σ ps).
     { eapply validity in IHp; auto. eapply PCUICWfUniverses.isType_wf_universes in IHp; tea.
-      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in IHp. }
+      move: IHp => /= /PCUICWfUniverses.wf_sort_reflect //. }
     have lenpars := (wf_predicate_length_pars H0).
     unfold hidebody in X8.
     set (ptm := it_mkLambda_or_LetIn _ _).
@@ -2081,9 +2075,9 @@ Proof.
       { rewrite on_free_vars_mkApps /= //. }
       eapply eq_term_upto_univ_mkApps.
       2:reflexivity.
-      constructor. eapply R_global_instance_sym; tc.
+      constructor. eapply cmp_global_instance_sym; tc.
       rewrite eqargs.
-      now eapply (R_global_instance_cstr_irrelevant declc).
+      now eapply (cmp_global_instance_cstr_irrelevant declc).
 
   - (* Case congruence: on a cofix, impossible *)
     eapply inversion_mkApps in typec as [? [tcof ?]] =>  //.
@@ -2192,14 +2186,12 @@ Proof.
       eapply ws_cumul_pb_eq_le. eapply ws_cumul_pb_mkApps; pcuic.
       eapply All2_app => //. now apply: red_terms_ws_cumul_pb_terms. }
     set (pctx := (inst_case_predicate_context (set_pparams p params'))) in *.
-    pose proof (snd (All2_fold_All2 _) X1). symmetry in X9. move:X9.
+    pose proof X1 as X9. symmetry in X9. move:X9.
     change (pcontext p) with (pcontext (set_pparams p params')).
     move/(PCUICAlpha.inst_case_predicate_context_eq wfp') => eqctx.
     have wfpctx : wf_local Σ (Γ,,, inst_case_predicate_context (set_pparams p params')).
     { eapply wf_local_alpha; tea; auto.
-      eapply All2_app => //.
-      now eapply All2_fold_All2 in eqctx.
-      eapply All2_refl; reflexivity. }
+      eapply All2_app => //. reflexivity. }
     have eqpctx : Σ ⊢ Γ ,,, pctx = Γ ,,, case_predicate_context ci mdecl idecl (set_pparams p params').
     { symmetry.
       rewrite /pctx.
@@ -2208,7 +2200,7 @@ Proof.
       now eapply wf_local_closed_context.
       eapply upto_names_conv_context.
       eapply eq_context_upto_cat. apply eq_context_upto_refl; tc.
-      now apply eq_context_gen_upto. }
+      now apply eq_context_upto_names_eq_context_alpha. }
     epose proof (wf_case_branches_types' (p:=set_pparams p params') ps _ brs isdecl isty' wfp').
     cbv zeta in X9; forward_keep X9.
     { eapply closed_context_conversion; tea. }

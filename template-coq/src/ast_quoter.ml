@@ -18,7 +18,7 @@ struct
   type quoted_name = BasicAst.name
   type quoted_aname = BasicAst.aname
   type quoted_relevance = BasicAst.relevance
-  type quoted_sort = Universes0.Universe.t
+  type quoted_sort = Universes0.Sort.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = Kernames.kername
   type quoted_inductive = inductive
@@ -79,32 +79,26 @@ struct
 
   let quote_float64 x = x
 
-  (* NOTE: fails if it hits Prop or SProp *)
-  let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
+  let quote_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Coq_lvar (quote_int x)
          | None -> Universes0.Level.Coq_level (quote_string (Univ.Level.to_string l))
 
-  let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
-    try Coq_inr (quote_nonprop_level l)
-    with e -> assert false
+  let quote_level_expr (lvl, shft) : Universes0.LevelExpr.t = quote_level lvl, quote_int shft
 
-  let quote_universe s : Universes0.Universe.t =
-    match Univ.Universe.level s with
-      Some l -> Universes0.Universe.of_levels (quote_level l)
+  let quote_universe u : Universes0.Universe.t =
+    match Univ.Universe.level u with
+      Some l -> Universes0.Universe.make' (quote_level l)
     | _ ->
-      let univs = List.map (fun (l,i) ->
-          match quote_level l with
-          | Coq_inl lprop -> assert false
-          | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
-      Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
+      let levels = Univ.Universe.repr u |> List.map quote_level_expr in
+      Universes0.Universe.from_kernel_repr (List.hd levels) (List.tl levels)
 
   let quote_sort s = match s with
-  | Sorts.Set -> quote_universe Univ.Universe.type0
-  | Sorts.SProp -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lSProp)
-  | Sorts.Prop -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lProp)
-  | Sorts.Type u -> quote_universe u
+  | Sorts.Set -> Universes0.Sort.type0
+  | Sorts.SProp -> Universes0.Sort.Coq_sSProp
+  | Sorts.Prop -> Universes0.Sort.Coq_sProp
+  | Sorts.Type u -> Universes0.Sort.Coq_sType (quote_universe u)
 
   let quote_sort_family s =
     match s with
@@ -154,14 +148,13 @@ struct
     | _ -> false
 
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
-    try ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
+    try ((quote_level l, quote_constraint_type ct), quote_level l')
     with e -> assert false
 
-  let quote_univ_level = quote_nonprop_level
+  let quote_univ_level = quote_level
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
     let arr = Univ.Instance.to_array i in
-    (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    try CArray.map_to_list quote_nonprop_level arr
+    try CArray.map_to_list quote_level arr
     with e -> assert false
 
    (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
@@ -188,12 +181,7 @@ struct
     (names, (quote_univ_instance levels, quote_univ_constraints constraints))
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
-    (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = filter_map
-      (fun l -> match quote_level l with
-        | Coq_inl _ -> None
-        | Coq_inr l -> Some l)
-      (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
+    let levels = List.map quote_level (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 

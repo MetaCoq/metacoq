@@ -141,17 +141,17 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
       PΓ Σ Γ ->
       P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
-  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
+  (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : sort),
       PΓ Σ Γ ->
-      wf_universe Σ u ->
-      P Σ Γ (tSort u) (tSort (Universe.super u))) ->
+      wf_sort Σ u ->
+      P Σ Γ (tSort u) (tSort (Sort.super u))) ->
 
-   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : sort),
       PΓ Σ Γ ->
       lift_typing typing Σ Γ (j_vass_s na t s1) ->
       Pj Σ Γ (j_vass_s na t s1) ->
       Σ ;;; Γ,, vass na t |- b : tSort s2 ->
-      P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
+      P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Sort.sort_of_product s1 s2))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
       PΓ Σ Γ ->
@@ -329,17 +329,17 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : sort),
         PΓ Σ Γ ->
-        wf_universe Σ u ->
-        P Σ Γ (tSort u) (tSort (Universe.super u))) ->
+        wf_sort Σ u ->
+        P Σ Γ (tSort u) (tSort (Sort.super u))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : sort),
         PΓ Σ Γ ->
         lift_typing typing Σ Γ (j_vass_s na t s1) ->
         Pj Σ Γ (j_vass_s na t s1) ->
         Σ ;;; Γ,, vass na t |- b : tSort s2 ->
-        P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
+        P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Sort.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
         PΓ Σ Γ ->

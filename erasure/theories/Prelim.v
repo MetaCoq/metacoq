@@ -261,7 +261,7 @@ Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c br
   declared_constructor Σ c mdecl idecl cdecl ->
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
-   All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
+  PCUICEquality.eq_context_upto_names (bcontext br)
       (cstr_branch_context c.1 mdecl cdecl)) 0 idecl.(ind_ctors) brs ->
   All (fun br =>
     expand_lets (inst_case_branch_context p br) (bbody br) = bbody br) brs.
@@ -312,7 +312,7 @@ Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wf
   declared_constructor Σ (ind, n) mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
-  PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u (puinst p) ->
+  PCUICEquality.cmp_ind_universes Σ ind napp u (puinst p) ->
   spine_subst Σ Γ pars parsubst (ind_params mdecl)@[u] ->
   spine_subst Σ Γ (pparams p) parsubst' (ind_params mdecl)@[puinst p] ->
   assumption_context cdecl.(cstr_args) ->

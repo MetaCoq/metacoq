@@ -384,7 +384,7 @@ Qed.
 Lemma subst_case_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} ind (n : nat) mdecl idecl p br cdecl s k :
   PCUICAst.declared_constructor Σ (ind, n) mdecl idecl cdecl ->
   wf_predicate mdecl idecl p ->
-  All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
+  PCUICEquality.eq_context_upto_names (bcontext br)
     (cstr_branch_context ind mdecl cdecl) ->
   subst_context s k (case_branch_context ind mdecl p (forget_types (bcontext br)) cdecl) =
   case_branch_context ind mdecl (map_predicate_k id (subst s) k p) (forget_types (bcontext br)) cdecl.

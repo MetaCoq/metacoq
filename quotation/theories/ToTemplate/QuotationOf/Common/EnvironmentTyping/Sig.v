@@ -14,7 +14,7 @@ Module Type QuoteLookupSig (Import T : Term) (Import E : EnvironmentSig T) (Impo
   .
 
   #[export] Declare Instance quote_consistent_instance {cf lvs ϕ uctx u} : ground_quotable (@consistent_instance cf lvs ϕ uctx u).
-  #[export] Declare Instance quote_wf_universe {Σ s} : ground_quotable (@wf_universe Σ s).
+  #[export] Declare Instance quote_wf_sort {Σ s} : ground_quotable (@wf_sort Σ s).
   #[export] Declare Instance quote_declared_constant {Σ id decl} : ground_quotable (@declared_constant Σ id decl).
   #[export] Declare Instance quote_declared_minductive {Σ mind decl} : ground_quotable (@declared_minductive Σ mind decl).
   #[export] Declare Instance quote_declared_inductive {Σ ind mdecl decl} : ground_quotable (@declared_inductive Σ ind mdecl decl).

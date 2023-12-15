@@ -3198,7 +3198,7 @@ Section Rho.
   Definition fake_params n : context :=
     unfold n (fun x => {| decl_name := {| binder_name := nAnon; binder_relevance := Relevant |};
                           decl_body := None;
-                          decl_type := tSort Universe.type0 |}).
+                          decl_type := tSort Sort.type0 |}).
 
   Lemma context_assumptions_fake_params n :
     context_assumptions (fake_params n) = n.

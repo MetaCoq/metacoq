@@ -9,7 +9,7 @@ Module Type Term.
   Parameter Inline term : Type.
 
   Parameter Inline tRel : nat -> term.
-  Parameter Inline tSort : Universe.t -> term.
+  Parameter Inline tSort : Sort.t -> term.
   Parameter Inline tProd : aname -> term -> term -> term.
   Parameter Inline tLambda : aname -> term -> term -> term.
   Parameter Inline tLetIn : aname -> term -> term -> term -> term.
@@ -129,7 +129,7 @@ Module Environment (T : Term).
   Import T.
   #[global] Existing Instance subst_instance_constr.
 
-  Definition judgment := judgment_ Universe.t term.
+  Definition judgment := judgment_ Sort.t term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -344,7 +344,7 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     ind_name : ident;
     ind_indices : context; (* Indices of the inductive types, under params *)
-    ind_sort : Universe.t; (* Sort of the inductive. *)
+    ind_sort : Sort.t; (* Sort of the inductive. *)
     ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
     ind_ctors : list constructor_body;
@@ -856,10 +856,10 @@ Module Environment (T : Term).
   Definition primitive_invariants (p : prim_tag) (cdecl : constant_body) :=
     match p with
     | primInt | primFloat =>
-     [/\ cdecl.(cst_type) = tSort Universe.type0, cdecl.(cst_body) = None &
+     [/\ cdecl.(cst_type) = tSort Sort.type0, cdecl.(cst_body) = None &
           cdecl.(cst_universes) = Monomorphic_ctx]
     | primArray =>
-      let s := Universe.make (Level.lvar 0) in
+      let s := sType (Universe.make' (Level.lvar 0)) in
       [/\ cdecl.(cst_type) = tImpl (tSort s) (tSort s), cdecl.(cst_body) = None &
         cdecl.(cst_universes) = Polymorphic_ctx array_uctx]
     end.
@@ -1239,7 +1239,7 @@ End EnvironmentDecideReflectInstances.
 Module Type TermUtils (T: Term) (E: EnvironmentSig T).
   Import T E.
 
-  Parameter Inline destArity : context -> term -> option (context × Universe.t).
+  Parameter Inline destArity : context -> term -> option (context × Sort.t).
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
 
 End TermUtils.

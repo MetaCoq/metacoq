@@ -45,7 +45,7 @@ Section Validity.
     eapply weaken_env_prop_typing; cbn; tas. 3: eassumption. all: assumption.
   Qed.
 
-  Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_universe Σ s.
+  Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_sort Σ s.
   Proof using Type.
     intros wfΣ (_ & u & Hu & _).
     now eapply inversion_Sort in Hu as [? [? ?]].
@@ -72,7 +72,7 @@ Section Validity.
   Proof using Type.
     destruct Σ as [Σ φ]. intros X X0 [isTy [ctx [s eq]]] X1.
     split. eapply isType_subst_instance_decl; eauto.
-    exists (subst_instance u ctx), (subst_instance_univ u s).
+    exists (subst_instance u ctx), (subst_instance_sort u s).
     rewrite (subst_instance_destArity []) eq. intuition auto.
   Qed.
 
@@ -87,7 +87,7 @@ Section Validity.
   Qed.
 
   Notation type_ctx := (type_local_ctx (lift_typing typing)).
-  Lemma type_ctx_wf_univ Σ Γ Δ s : type_ctx Σ Γ Δ s -> wf_universe Σ s.
+  Lemma type_ctx_wf_univ Σ Γ Δ s : type_ctx Σ Γ Δ s -> wf_sort Σ s.
   Proof using Type.
     induction Δ as [|[na [b|] ty]]; simpl; auto with pcuic.
   Qed.
@@ -95,23 +95,12 @@ Section Validity.
 
   Notation liat := ltac:(lia) (only parsing).
 
-  Lemma eq_binder_annots_eq_ctx (Σ : global_env_ext) (Δ : context) (nas : list aname) :
+  Lemma eq_binder_annots_eq_ctx (Δ : context) (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ)
-      (map2 set_binder_name nas Δ) Δ.
+    PCUICEquality.eq_context_upto_names (map2 set_binder_name nas Δ) Δ.
   Proof using Type.
-    induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
-    - depelim hlen. simpl. reflexivity.
-    - destruct nas as [|nas na] using rev_case => //;
-      pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
-      eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
-      depelim allna. depelim allna.
-      rewrite map2_app => /= //; try lia. unfold aname.
-      eapply app_inj_tail in heq as [<- <-].
-      simpl. eapply All2_fold_app; auto.
-      constructor. constructor.
-      destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
-      try reflexivity.
+    induction 1; cbn; constructor; auto.
+    destruct y as [na [b|] t]; now constructor.
   Qed.
 
   Lemma eq_term_set_binder_name (Σ : global_env_ext) (Δ : context) T U (nas : list aname) :
@@ -120,12 +109,12 @@ Section Validity.
     PCUICEquality.eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ U) .
   Proof using Type.
     intros a; unshelve eapply eq_binder_annots_eq_ctx in a; tea.
-    eapply All2_fold_All2 in a.
     induction a in T, U |- *.
     - auto.
     - rewrite /= /mkProd_or_LetIn.
       destruct r => /=; intros; eapply IHa;
       constructor; auto.
+      all: reflexivity.
   Qed.
 
   Lemma All2_eq_binder_subst_context_inst l s k i Δ Γ :
@@ -185,7 +174,7 @@ Section Validity.
 
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
-      (fun Σ Γ j => lift_sorting (fun _ T => isType Σ Γ T) (fun _ s => wf_universe Σ s) j)
+      (fun Σ Γ j => lift_sorting (fun _ T => isType Σ Γ T) (fun _ s => wf_sort Σ s) j)
       (fun Σ Γ => wf_local Σ Γ).
   Proof using Type.
     apply typing_ind_env; intros; rename_all_hyps.
@@ -202,15 +191,15 @@ Section Validity.
       now eapply has_sort_isType.
 
     - (* Universe *)
-      eapply has_sort_isType with (s := Universe.super (Universe.super u)).
+      eapply has_sort_isType with (s := Sort.super (Sort.super u)).
       constructor; auto.
-      now apply wf_universe_super.
+      now apply wf_sort_super.
 
     - (* Product *)
       eapply has_sort_isType.
       apply unlift_TypUniv in X1; eapply isType_Sort_inv in X3; auto.
       econstructor; eauto.
-      now apply wf_universe_product.
+      now apply wf_sort_product.
 
     - (* Lambda *)
       eapply lift_sorting_ex_it_impl_gen with X3 => // Hs.
@@ -225,7 +214,7 @@ Section Validity.
 
     - (* Application *)
       apply lift_sorting_it_impl_gen with X3 => // Hs'.
-      move: (typing_wf_universe wf Hs') => wfs.
+      move: (typing_wf_sort wf Hs') => wfs.
       eapply (substitution0 (n := na) (T := tSort _)); eauto.
       apply inversion_Prod in Hs' as [na' [s1 [s2 [Hs Hle]]]]; tas.
       eapply (weakening_ws_cumul_pb (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in Hle; pcuic.
@@ -235,7 +224,7 @@ Section Validity.
       eapply into_ws_cumul_pb => //.
       all:eauto with fvs.
       do 2 constructor.
-      apply leq_universe_product.
+      apply leq_sort_product.
 
     - (* Constant *)
       eapply declared_constant_inv in wf as Hc; eauto.
@@ -287,7 +276,7 @@ Section Validity.
         eapply has_sort_isType.
         eapply type_it_mkProd_or_LetIn_sorts; tea.
         exact X3.2.π2.1. }
-      have wfps : wf_universe Σ ps.
+      have wfps : wf_sort Σ ps.
       { pcuic. }
       eapply typing_spine_strengthen; tea.
       2:{ rewrite /predctx /case_predicate_context /case_predicate_context_gen.
@@ -353,12 +342,12 @@ Section Validity.
       depelim X0; depelim X1; simp prim_type; cbn in *.
       1-2:destruct H1 as [hty hbod huniv]; eapply has_sort_isType with (s := _@[[]]); change (tSort ?s@[[]]) with (tSort s)@[[]];
           rewrite <- hty; refine (type_Const _ _ _ [] _ wfΓ H0 _); rewrite huniv //.
-      set (s := (Universe.make (array_level a))).
+      set (s := sType (Universe.make' (array_level a))).
       destruct H1 as [hty' hbod huniv].
       eapply has_sort_isType with s.
       eapply (type_App _ _ _ _ _ (tSort s)); tea; cycle 1.
       + eapply (type_Const _ _ _ [array_level a]) in H0; tea. rewrite hty' in H0. cbn in H0. exact H0.
-        red. rewrite huniv. simpl. rtoProp; intuition eauto. eapply LevelSet.mem_spec. eapply (wfl (array_level a, 0)). lsets.
+        red. rewrite huniv. simpl. rtoProp; intuition eauto. eapply LevelSet.mem_spec. eapply (wfl (array_level a, 0)). cbn. lsets.
         cbn. red. destruct check_univs => //. red. red. intros v H c. csets.
       + econstructor. 2: econstructor; eauto. repeat (eexists; tea). econstructor; eauto.
 

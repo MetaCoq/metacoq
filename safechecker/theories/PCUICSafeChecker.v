@@ -475,7 +475,7 @@ Section CheckEnv.
         eapply red_cumul. repeat constructor.
       * eapply inversion_Prod in h as [? [? [h1 [? ?]]]]; auto.
         specialize (IHΔ _ _ _ t) as [s'' Hs''].
-        exists (Universe.sort_of_product x s'').
+        exists (Sort.sort_of_product x s'').
         apply unlift_TypUniv in h1.
         eapply type_Cumul'; eauto. econstructor; pcuic. pcuic.
         reflexivity.
@@ -485,7 +485,7 @@ Section CheckEnv.
      Γ Δ s (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ wf_local Σ Γ ∥) :
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) :=
     match Δ with
-    | [] => match abstract_env_ext_wf_universeb X_ext s with true => ret _ | false => raise (Msg "Ill-formed universe") end
+    | [] => match abstract_env_ext_wf_sortb X_ext s with true => ret _ | false => raise (Msg "Ill-formed universe") end
     | {| decl_body := None; decl_type := ty |} :: Δ =>
       checkΔ <- check_type_local_ctx X_ext Γ Δ s wfΓ ;;
       checkty <- check_type_wf_env X_ext (Γ ,,, Δ) _ ty (tSort s) ;;
@@ -496,8 +496,8 @@ Section CheckEnv.
       ret _
     end.
     Next Obligation.
-      erewrite <- abstract_env_ext_wf_universeb_correct in Heq_anonymous; eauto.
-      now sq; apply/PCUICWfUniverses.wf_universe_reflect.
+      erewrite <- abstract_env_ext_wf_sortb_correct in Heq_anonymous; eauto.
+      now sq; apply/PCUICWfUniverses.wf_sort_reflect.
     Qed.
     Next Obligation.
       specialize_Σ H. sq. now  eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
@@ -561,33 +561,23 @@ Section CheckEnv.
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
     check_ws_cumul_ctx X_impl X_ext le Γ Δ Δ' wfΔ wfΔ'.
 
-  Notation eqb_term_conv X conv_pb := (eqb_term_upto_univ (abstract_env_eq X) (abstract_env_conv_pb_relb X conv_pb) (abstract_env_compare_global_instance _ X)).
+  Notation eqb_term_conv X conv_pb := (eqb_term_upto_univ (abstract_env_compare_universe X) (abstract_env_compare_sort X) (abstract_env_compare_global_instance _ X) conv_pb).
 
   Program Definition check_eq_term pb X_ext t u
      (wft : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universes Σ t)
      (wfu : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universes Σ u) :
-      typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ compare_term pb Σ Σ t u ∥) :=
+      typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ compare_term Σ Σ pb t u ∥) :=
      check <- check_eq_true (eqb_term_conv X_ext pb t u) (Msg "Terms are not equal") ;;
     ret _.
     Next Obligation.
       simpl in *; sq.
-      eapply eqb_term_upto_univ_impl in check; sq; eauto.
-      - intros u0 u'. repeat erewrite <- abstract_env_ext_wf_universeb_correct; eauto.
-        move => / wf_universe_reflect ? => /wf_universe_reflect ?.
-        apply iff_reflect. eapply (abstract_env_compare_universe_correct _ _ Conv); eauto.
-      - intros u0 u'. repeat erewrite <- abstract_env_ext_wf_universeb_correct; eauto.
-        move => /wf_universe_reflect ? => /wf_universe_reflect ?.
-        apply iff_reflect. eapply (abstract_env_compare_universe_correct _ _ pb); eauto.
-      - intros. apply compare_global_instance_correct; eauto.
-        + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
-        + apply wf_universe_instance_iff. rewrite <- wf_universeb_instance_forall; eauto.
-      Unshelve. all: eauto.
+      eapply cmpb_term_correct in check; sq; eauto.
     Qed.
 
   Program Definition check_eq_decl pb X_ext d d'
      (wfd : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_decl_universes Σ d)
      (wfd' : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_decl_universes Σ d') :
-     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ compare_decl pb Σ Σ d d' ∥) :=
+     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ compare_decl Σ Σ pb d d' ∥) :=
     match d, d' return (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_decl_universes Σ d) ->
                        (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_decl_universes Σ d') ->
                        typing_result _ with
@@ -630,7 +620,7 @@ Section CheckEnv.
   Program Fixpoint check_compare_context (pb : conv_pb) X_ext Γ Δ
      (wfΓ : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_ctx_universes Σ Γ)
      (wfΔ : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_ctx_universes Σ Δ) :
-    typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ PCUICEquality.compare_context pb Σ Σ Γ Δ ∥) :=
+    typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ PCUICEquality.compare_context Σ Σ pb Γ Δ ∥) :=
     match Γ, Δ return  (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_ctx_universes Σ Γ) ->
                        (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_ctx_universes Σ Δ) -> typing_result _
     with
@@ -661,7 +651,7 @@ Section CheckEnv.
   Program Fixpoint check_leq_terms (pb : conv_pb) X_ext l l'
     (wfl : forall Σ, abstract_env_ext_rel X_ext Σ -> forallb (wf_universes Σ) l)
     (wfl' : forall Σ, abstract_env_ext_rel X_ext Σ -> forallb (wf_universes Σ) l') :
-    typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All2 (compare_term pb Σ Σ) l l' ∥) :=
+    typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All2 (compare_term Σ Σ pb) l l' ∥) :=
     match l, l' return (forall Σ, abstract_env_ext_rel X_ext Σ -> forallb (wf_universes Σ) l) ->
                        (forall Σ, abstract_env_ext_rel X_ext Σ -> forallb (wf_universes Σ) l') -> _ with
     | [], [] => fun  _ _ => ret (fun Σ wfΣ => sq _)
@@ -1081,7 +1071,7 @@ Section CheckEnv.
     * len in sp.
       now rewrite app_context_nil_l in sp.
     * set (decl := d) in *.
-      assert (wf_universe Σ s).
+      assert (wf_sort Σ s).
       { eapply typing_spine_isType_dom in sp.
         eapply isType_it_mkProd_or_LetIn_inv in sp; auto.
         destruct sp as (_ & ? & Hs & _). now eapply inversion_Sort in Hs as [? []]. }
@@ -1447,65 +1437,6 @@ Section CheckEnv.
     eapply All2_fold_length in H. len in H.
   Qed.
 
-  Lemma eq_decl_eq_decl_upto (Σ : global_env_ext) x y :
-    compare_decl Cumul Σ Σ x y ->
-    eq_decl_upto_gen Σ (eq_universe Σ) (leq_universe Σ) x y.
-  Proof using Type.
-    intros []; constructor; intuition auto. cbn. constructor.
-    cbn. constructor; auto.
-  Qed.
-
-  Lemma eq_decl_upto_refl (Σ : global_env_ext) x : eq_decl_upto_gen Σ (eq_universe Σ) (leq_universe Σ) x x.
-  Proof using Type.
-    destruct x as [na [b|] ty]; constructor; simpl; auto.
-    split; constructor; reflexivity. reflexivity.
-    split; constructor; reflexivity. reflexivity.
-  Qed.
-
-
-  Lemma eq_context_upto_cumul_context (Σ : global_env_ext) Re Rle :
-    RelationClasses.subrelation Re (eq_universe Σ) ->
-    RelationClasses.subrelation Rle (leq_universe Σ) ->
-    RelationClasses.subrelation Re Rle ->
-    CRelationClasses.subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => cumul_context cumulSpec0 Σ Γ Γ').
-  Proof using Type.
-    intros HRe HRle hR Γ Δ h. induction h.
-    - constructor.
-    - constructor; tas.
-      depelim p; constructor; auto.
-      eapply eq_term_upto_univ_cumulSpec.
-      eapply eq_term_upto_univ_impl. 5:eauto. all:tea.
-      now transitivity Rle. auto.
-      eapply eq_term_upto_univ_cumulSpec.
-      eapply eq_term_upto_univ_impl; eauto.
-      eapply eq_term_upto_univ_cumulSpec.
-      eapply eq_term_upto_univ_impl. 5:eauto. all:tea.
-      now transitivity Rle. auto.
-  Qed.
-
-  Lemma eq_context_upto_univ_cumul_context {Σ : global_env_ext} Γ Δ :
-      eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
-      cumul_context cumulSpec0 Σ Γ Δ.
-  Proof using Type.
-    intros h. eapply eq_context_upto_cumul_context; tea.
-    reflexivity. tc. tc.
-  Qed.
-
-  Lemma leq_context_cumul_context (Σ : global_env_ext) Γ Δ Δ' :
-    PCUICEquality.compare_context Cumul Σ Σ Δ Δ' ->
-    cumul_ctx_rel cumulSpec0 Σ Γ Δ Δ'.
-  Proof using Type.
-    intros eqc.
-    apply cumul_ctx_rel_close'.
-    apply eq_context_upto_univ_cumul_context.
-    apply All2_eq_context_upto.
-    eapply All2_app. red in eqc.
-    eapply All2_fold_All2; eauto.
-    eapply All2_fold_impl; eauto.
-    intros; now eapply eq_decl_eq_decl_upto.
-    eapply All2_refl. intros. simpl. eapply (eq_decl_upto_refl Σ).
-  Qed.
-
   Lemma wt_cstrs {n mdecl cstrs cs} X_ext :
     (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ All2
       (fun (cstr : constructor_body) (cs0 : constructor_univs) =>
@@ -1653,7 +1584,7 @@ Section CheckEnv.
 
   Lemma wf_decl_universes_subst_instance Σ udecl udecl' d u :
     wf_ext (Σ, udecl) ->
-    wf_universe_instance (Σ, udecl') u ->
+    wf_instance (Σ, udecl') u ->
     wf_decl_universes (Σ, udecl) d ->
     wf_decl_universes (Σ, udecl') d@[u].
   Proof using Type.
@@ -1668,7 +1599,7 @@ Section CheckEnv.
 
   Lemma wf_ctx_universes_subst_instance Σ udecl udecl' Γ u :
     wf_ext (Σ, udecl) ->
-    wf_universe_instance (Σ, udecl') u ->
+    wf_instance (Σ, udecl') u ->
     wf_ctx_universes (Σ, udecl) Γ ->
     wf_ctx_universes (Σ, udecl') Γ@[u].
   Proof using Type.
@@ -1780,7 +1711,7 @@ Section CheckEnv.
       intros v0 [= <-].
       red. rewrite -Heq_anonymous.
       split; auto. erewrite (abstract_env_irr _ _ wfΣ0); eauto.
-      now apply leq_context_cumul_context.
+      now eapply PCUICContextConversionTyp.eq_context_cumul_Spec_rel.
       clear check_args.
       eapply All2_impl. eauto. simpl; intros. erewrite (abstract_env_irr _ _ wfΣ0); eauto.
       now eapply eq_term_upto_univ_cumulSpec.
@@ -2021,15 +1952,15 @@ End monad_Alli_nth_forall.
     destruct ind_projs => //.
   Qed.
 
-  Definition checkb_constructors_smaller X_ext (cs : list constructor_univs) (ind_sort : Universe.t) :=
-    List.forallb (List.forallb (fun argsort => abstract_env_leq X_ext argsort ind_sort)) cs.
+  Definition checkb_constructors_smaller X_ext (cs : list constructor_univs) (ind_sort : sort) :=
+    List.forallb (List.forallb (fun argsort => abstract_env_compare_sort X_ext Cumul argsort ind_sort)) cs.
 
   Definition wf_cs_sorts X_ext cs :=
-    forall Σ, abstract_env_ext_rel X_ext Σ -> Forall (Forall (wf_universe Σ)) cs.
+    forall Σ, abstract_env_ext_rel X_ext Σ -> Forall (Forall (wf_sort Σ)) cs.
 
   Lemma check_constructors_smallerP X_ext cs ind_sort :
     wf_cs_sorts X_ext cs ->
-    (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universe Σ ind_sort) ->
+    (forall Σ, abstract_env_ext_rel X_ext Σ -> wf_sort Σ ind_sort) ->
     forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ reflect (check_constructors_smaller Σ cs ind_sort) (checkb_constructors_smaller X_ext cs ind_sort) ∥.
   Proof using Type.
     unfold check_constructors_smaller, checkb_constructors_smaller.
@@ -2038,7 +1969,7 @@ End monad_Alli_nth_forall.
     eapply forallbP_cond; eauto. clear wfcs.
     simpl; intros c wfc.
     eapply forallbP_cond; eauto. simpl. intros x wfx. specialize_Σ H.
-    apply iff_reflect. apply (abstract_env_compare_universe_correct _ H Cumul); eauto.
+    apply iff_reflect. apply (abstract_env_compare_sort_correct _ H Cumul); eauto.
   Qed.
 
   Program Definition do_check_ind_sorts X_ext {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X_ext -> NormalizationIn Σ} (params : context)
@@ -2046,18 +1977,18 @@ End monad_Alli_nth_forall.
     (kelim : allowed_eliminations) (indices : context)
     (cs : list constructor_univs)
     (wfcs : wf_cs_sorts X_ext cs)
-    (ind_sort : Universe.t)
-    (wfi : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_universe Σ ind_sort):
+    (ind_sort : sort)
+    (wfi : forall Σ, abstract_env_ext_rel X_ext Σ -> wf_sort Σ ind_sort):
     typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ check_ind_sorts (lift_typing typing) Σ params kelim indices cs ind_sort ∥) :=
     match ind_sort with
-    | Universe.lSProp =>
+    | sSProp =>
       check_eq_true (allowed_eliminations_subset kelim (elim_sort_sprop_ind cs))
         (Msg "Incorrect allowed_elimination for inductive") ;;
       ret _
-    | Universe.lProp =>
+    | sProp =>
       check_eq_true (allowed_eliminations_subset kelim (elim_sort_prop_ind cs))
         (Msg "Incorrect allowed_elimination for inductive") ;; ret _
-    | Universe.lType u =>
+    | sType u =>
       check_eq_true (checkb_constructors_smaller X_ext cs ind_sort)
         (Msg ("Incorrect inductive sort: The constructor arguments universes are not smaller than the declared inductive sort")) ;;
       match indices_matter with
@@ -2072,13 +2003,13 @@ End monad_Alli_nth_forall.
 
     Next Obligation.
       unfold check_ind_sorts. simpl.
-      pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
+      pose proof (check_constructors_smallerP X_ext cs (sType u) wfcs wfi).
       rewrite -Heq_anonymous. specialize_Σ H.  sq. split => //.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. simpl.
-      pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
+      pose proof (check_constructors_smallerP X_ext cs (sType u) wfcs wfi).
       specialize_Σ H. sq. split.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
       rewrite -Heq_anonymous; auto.
@@ -2086,14 +2017,14 @@ End monad_Alli_nth_forall.
 
   Lemma sorts_local_ctx_wf_sorts (Σ : global_env_ext) {wfX : wf Σ} Γ Δ s :
     sorts_local_ctx (lift_typing typing) Σ Γ Δ s ->
-    Forall (wf_universe Σ) s.
+    Forall (wf_sort Σ) s.
   Proof using Type.
     induction Δ in s |- *; destruct s; simpl; auto.
     destruct a as [na [b|] ty].
     - intros []. eauto.
     - intros []; eauto. constructor; eauto.
       destruct l as (_ & ? & t0 & <-).
-      now eapply typing_wf_universe in t0.
+      now eapply typing_wf_sort in t0.
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify.
@@ -2168,7 +2099,7 @@ End monad_Alli_nth_forall.
     unfold check_variance in mdeclvar.
     rewrite -eqvar in mdeclvar.
     destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
-    now eapply leq_context_cumul_context.
+    now eapply PCUICContextConversionTyp.eq_context_cumul_Spec_rel.
   Qed.
 
   Next Obligation.

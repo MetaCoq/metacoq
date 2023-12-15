@@ -280,22 +280,28 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     now rewrite H; cbn; autorewrite with len.
   Qed.
 
-  Definition wf_universe Σ s : Prop :=
-    Universe.on_sort
-      (fun u => forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ))
-      True s.
+  Definition wf_universe Σ (u : Universe.t) : Prop :=
+    forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ).
 
-  Definition wf_universe_dec Σ s : {@wf_universe Σ s} + {~@wf_universe Σ s}.
+  Definition wf_sort Σ (s : sort) : Prop :=
+    Sort.on_sort (wf_universe Σ) True s.
+
+  Definition wf_universe_dec Σ u : {wf_universe Σ u} + {~wf_universe Σ u}.
   Proof.
-    destruct s; try (left; exact I).
-    cbv [wf_universe Universe.on_sort LevelExprSet.In LevelExprSet.this t_set].
-    destruct t as [[t _] _].
+    cbv [wf_universe LevelExprSet.In LevelExprSet.this t_set].
+    destruct u as [[t _] _].
     induction t as [|t ts [IHt|IHt]]; [ left | | right ].
     { inversion 1. }
     { destruct (LevelSetProp.In_dec (LevelExpr.get_level t) (global_ext_levels Σ)) as [H|H]; [ left | right ].
       { inversion 1; subst; auto. }
       { intro H'; apply H, H'; now constructor. } }
     { intro H; apply IHt; intros; apply H; now constructor. }
+  Defined.
+
+  Definition wf_sort_dec Σ s : {@wf_sort Σ s} + {~@wf_sort Σ s}.
+  Proof.
+    destruct s; try (left; exact I).
+    apply wf_universe_dec.
   Defined.
 
   Lemma declared_ind_declared_constructors `{cf : checker_flags} {Σ ind mib oib} :
@@ -837,13 +843,13 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Section TypeLocalOver.
     Context (checking : context -> term -> term -> Type).
-    Context (sorting : context -> term -> Universe.t -> Type).
+    Context (sorting : context -> term -> sort -> Type).
     Context (cproperty : forall (Γ : context),
                 All_local_env (lift_sorting1 checking sorting) Γ ->
                 forall (t T : term), checking Γ t T -> Type).
     Context (sproperty : forall (Γ : context),
                 All_local_env (lift_sorting1 checking sorting) Γ ->
-                forall (t : term) (u : Universe.t), sorting Γ t u -> Type).
+                forall (t : term) (u : sort), sorting Γ t u -> Type).
 
     Inductive All_local_env_over_sorting :
         forall (Γ : context), All_local_env (lift_sorting1 checking sorting) Γ -> Type :=
@@ -971,9 +977,9 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Section lift_sorting_size_gen.
     Context {checking : term -> term -> Type}.
-    Context {sorting : term -> Universe.t -> Type}.
+    Context {sorting : term -> sort -> Type}.
     Context (csize : forall (t T : term), checking t T -> size).
-    Context (ssize : forall (t : term) (u : Universe.t), sorting t u -> size).
+    Context (ssize : forall (t : term) (u : sort), sorting t u -> size).
 
     Definition lift_sorting_size_gen base j (w : lift_sorting checking sorting j) : size :=
       base + option_default_size (fun tm => csize tm _) (j_term j) w.1 + ssize _ _ w.2.π2.1.
@@ -1039,7 +1045,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Section All_local_env_size.
     Context {checking : forall (Γ : context), term -> term -> Type}.
-    Context {sorting : forall (Γ : context), term -> Universe.t -> Type}.
+    Context {sorting : forall (Γ : context), term -> sort -> Type}.
     Context (csize : forall Γ t T, checking Γ t T -> size).
     Context (ssize : forall Γ t u, sorting Γ t u -> size).
 
@@ -1089,7 +1095,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   End Regular.
 
   Section Bidirectional.
-    Context {checking : context -> term -> term -> Type} {sorting : context -> term -> Universe.t -> Type}.
+    Context {checking : context -> term -> term -> Type} {sorting : context -> term -> sort -> Type}.
     Context (checking_size : forall Γ t T, checking Γ t T -> size).
     Context (sorting_size : forall Γ t s, sorting Γ t s -> size).
 
@@ -1172,16 +1178,16 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     (** For well-formedness of inductive declarations we need a way to check that a assumptions
       of a given context is typable in a sort [u]. We also force well-typing of the let-ins
       in any universe to imply wf_local. *)
-    Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
+    Fixpoint type_local_ctx Σ (Γ Δ : context) (u : sort) : Type :=
       match Δ with
-      | [] => wf_universe Σ u
+      | [] => wf_sort Σ u
       | {| decl_name := na; decl_body := None; decl_type := t |} :: Δ =>
           type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TypUniv t u (* na.(binder_relevance) *))
       | {| decl_body := Some _; |} as d :: Δ =>
           type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (j_decl d)
       end.
 
-    Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list Universe.t) : Type :=
+    Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list sort) : Type :=
       match Δ, us with
       | [], [] => unit
       | {| decl_name := na; decl_body := None;   decl_type := t |} :: Δ, u :: us =>
@@ -1516,20 +1522,20 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition check_constructors_smaller φ cunivss ind_sort :=
       Forall (fun cunivs =>
-        Forall (fun argsort => leq_universe φ argsort ind_sort) cunivs) cunivss.
+        Forall (fun argsort => leq_sort φ argsort ind_sort) cunivs) cunivss.
 
     (** This ensures that all sorts in kelim are lower
         or equal to the top elimination sort, if set.
         For inductives in Type we do not check [kelim] currently. *)
 
-    Definition constructor_univs := list Universe.t.
+    Definition constructor_univs := list sort.
     (* The sorts of the arguments context (without lets) *)
 
     Definition elim_sort_prop_ind (ind_ctors_sort : list constructor_univs) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) IntoAny
       | [ s ] =>
-        if forallb Universes.is_propositional s then
+        if forallb Sort.is_propositional s then
           IntoAny (* Singleton elimination *)
         else
           IntoPropSProp (* Squashed: some arguments are higher than Prop, restrict to Prop *)
@@ -1544,23 +1550,25 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
     Definition check_ind_sorts (Σ : global_env_ext)
               params kelim ind_indices cdecls ind_sort : Type :=
-      if Universe.is_prop ind_sort then
+      match Sort.to_family ind_sort with
+      | Sort.fProp =>
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
         (allowed_eliminations_subset kelim (elim_sort_prop_ind cdecls) : Type)
-      else if Universe.is_sprop ind_sort then
+      | Sort.fSProp =>
         (** The inductive is declared in the impredicative sort SProp *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
         (allowed_eliminations_subset kelim (elim_sort_sprop_ind cdecls) : Type)
-      else
+      | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)
         check_constructors_smaller Σ cdecls ind_sort
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
-          else True.
+          else True
+      end.
 
     Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params
@@ -1776,7 +1784,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
 
   Lemma type_local_ctx_impl (P Q : global_env_ext -> context -> judgment -> Type) Σ Σ' Γ Δ u :
     type_local_ctx P Σ Γ Δ u ->
-    (forall u, wf_universe Σ u -> wf_universe Σ' u) ->
+    (forall u, wf_sort Σ u -> wf_sort Σ' u) ->
     (forall Γ j, P Σ Γ j -> Q Σ' Γ j) ->
     type_local_ctx Q Σ' Γ Δ u.
   Proof.
@@ -1993,14 +2001,14 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     unfold check_constructors_smaller.
     intro H; apply Forall_impl with (1 := H).
     intros l Hl; apply Forall_impl with (1 := Hl).
-    intro u. now apply leq_universe_config_impl.
+    intro u. now apply leq_sort_config_impl.
   Qed.
 
   Lemma on_global_decl_impl_full {cf1 cf2 : checker_flags} Pcmp1 Pcmp2 P1 P2 Σ Σ' kn d :
     config.impl cf1 cf2 ->
     (forall Γ j, P1 Σ Γ j -> P2 Σ' Γ j) ->
     (forall u Γ pb t t', Pcmp1 (Σ.1, u) Γ pb t t' -> Pcmp2 (Σ'.1, u) Γ pb t t') ->
-    (forall u, wf_universe Σ u -> wf_universe Σ' u) ->
+    (forall u, wf_sort Σ u -> wf_sort Σ' u) ->
     (forall l s, @check_constructors_smaller cf1 (global_ext_constraints Σ) l s ->
       @check_constructors_smaller cf2 (global_ext_constraints Σ') l s) ->
     (forall u l, @on_variance cf1 Σ.1 u l -> @on_variance cf2 Σ'.1 u l) ->
@@ -2037,8 +2045,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           all: rewrite ?andb_false_r //=.
       + exact (onProjections X).
       + pose proof (ind_sorts X) as X1. unfold check_ind_sorts in *.
-        destruct Universe.is_prop; auto.
-        destruct Universe.is_sprop; auto.
+        destruct Sort.to_family; auto.
         destruct X1 as [constr_smaller type_local_ctx].
         split.
         * apply Xc, constr_smaller.

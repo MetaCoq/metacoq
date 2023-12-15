@@ -282,7 +282,7 @@ Section OnInductives.
     wf_local Σ Γ ->
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     isType Σ Γ (it_mkProd_or_LetIn (subst_instance u (ind_params mdecl ,,, idecl.(ind_indices)))
-          (tSort (subst_instance_univ u idecl.(ind_sort)))).
+          (tSort (subst_instance_sort u idecl.(ind_sort)))).
   Proof using decli wfΣ.
     move=> wfΓ cext.
     destruct (on_declared_inductive decli) as [onmind oib].
@@ -315,7 +315,7 @@ Section OnInductives.
   Local Definition oi := (on_declared_inductive decli).1.
   Local Definition oib := (on_declared_inductive decli).2.
 
-  Lemma on_inductive_sort : wf_universe (Σ.1, ind_universes mdecl) (ind_sort idecl).
+  Lemma on_inductive_sort : wf_sort (Σ.1, ind_universes mdecl) (ind_sort idecl).
   Proof using decli wfΣ.
     pose proof (oib.(onArity)) as ar.
     rewrite oib.(ind_arity_eq) in ar.
@@ -323,16 +323,16 @@ Section OnInductives.
     eapply typing_wf_universes in ar; auto.
     move/andP: ar => [].
     rewrite wf_universes_it_mkProd_or_LetIn => /andP [] _.
-    now rewrite wf_universes_it_mkProd_or_LetIn => /andP [] _ /= /wf_universe_reflect.
+    now rewrite wf_universes_it_mkProd_or_LetIn => /andP [] _ /= /wf_sort_reflect.
   Qed.
 
   Lemma on_inductive_sort_inst u :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
-    wf_universe Σ (subst_instance u (ind_sort idecl)).
+    wf_sort Σ (subst_instance u (ind_sort idecl)).
   Proof using decli wfΣ.
     generalize on_inductive_sort => wf.
     destruct Σ. intros cu.
-    eapply wf_universe_instantiate; eauto.
+    eapply wf_sort_instantiate; eauto.
     now eapply consistent_instance_ext_wf.
   Qed.
 
@@ -1247,7 +1247,7 @@ Proof.
     simpl in oib.
     pose proof (onProjs.(on_projs_noidx _ _ _ _ _ _)).
     destruct (ind_indices idecl); simpl in H; try discriminate.
-    simpl. rewrite [subst_instance_univ _ _]sortu.
+    simpl. rewrite [subst_instance_sort _ _]sortu.
     eapply ws_cumul_pb_compare => //.
     now eapply wf_local_closed_context in X0.
     constructor. reflexivity.
@@ -1524,8 +1524,8 @@ Proof.
 Qed.
 
 Lemma type_local_ctx_cum {cf:checker_flags} {Σ Γ Δ s s'} :
-  wf Σ.1 -> wf_universe Σ s' ->
-  leq_universe (global_ext_constraints Σ) s s' ->
+  wf Σ.1 -> wf_sort Σ s' ->
+  leq_sort (global_ext_constraints Σ) s s' ->
   type_local_ctx (lift_typing typing) Σ Γ Δ s ->
   type_local_ctx (lift_typing typing) Σ Γ Δ s'.
 Proof.
@@ -1541,7 +1541,7 @@ Qed.
 Lemma type_local_ctx_wf {cf:checker_flags} {Σ Γ Δ s} :
   wf Σ.1 ->
   type_local_ctx (lift_typing typing) Σ Γ Δ s ->
-  wf_universe Σ s.
+  wf_sort Σ s.
 Proof.
   intros wfΣ.
   induction Δ as [|[na [b|] ty] Δ]; simpl; intuition auto.
@@ -1551,7 +1551,7 @@ Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ s s':
   wf Σ.1 ->
   wf_local Σ Γ ->
   type_local_ctx (lift_typing typing) Σ Γ Δ s ->
-  wf_universe Σ s' ->
+  wf_sort Σ s' ->
   isType Σ Γ (it_mkProd_or_LetIn Δ (tSort s')).
 Proof.
   move=> wfΣ wfΓ wfΔ wfs.
@@ -1573,7 +1573,7 @@ Proof.
   induction Δ as [|[na [b|] ty] Δ] using ctx_length_rev_ind; simpl in *; auto;
   rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=; rewrite smash_context_app; intros Γ u Hu.
   - simpl.
-    assert (wfu := typing_wf_universe wfΣ Hu).
+    assert (wfu := typing_wf_sort wfΣ Hu).
     eapply inversion_LetIn in Hu as (T & wfty & HT & hlt); auto.
     eapply substitution_let in HT; auto.
     rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
@@ -1584,7 +1584,7 @@ Proof.
     specialize (X _ _ HT).
     now rewrite -smash_context_subst /= subst_context_nil.
   - simpl. rewrite it_mkProd_or_LetIn_app. simpl.
-    assert (wfu := typing_wf_universe wfΣ Hu).
+    assert (wfu := typing_wf_sort wfΣ Hu).
     eapply inversion_Prod in Hu as (s1 & s2 & wfty & Ht & hlt); auto.
     specialize (X Δ ltac:(reflexivity)).
     specialize (X _ _ Ht).
@@ -1600,7 +1600,7 @@ Lemma typing_spine_to_extended_list {cf:checker_flags} Σ Δ u s :
   typing_spine Σ (smash_context [] (subst_instance u Δ))
     (subst_instance u (it_mkProd_or_LetIn Δ (tSort s)))
     (to_extended_list (smash_context [] (subst_instance u Δ)))
-    (tSort (subst_instance_univ u s)).
+    (tSort (subst_instance_sort u s)).
 Proof.
   move=> wfΣ wfΔ.
   apply wf_arity_spine_typing_spine; auto.
@@ -1635,7 +1635,7 @@ Proof.
   assert(wfsmash : wf_local Σ (smash_context [] (subst_instance u (ind_params mdecl)))).
   { eapply wf_local_smash_context; auto. }
   constructor; auto. red.
-  eapply @has_sort_isType with (s := subst_instance_univ u (ind_sort idecl)).
+  eapply @has_sort_isType with (s := subst_instance_sort u (ind_sort idecl)).
   eapply type_mkApps. econstructor; eauto. eapply decli.p1.
   rewrite (ind_arity_eq oib0).
   pose proof (on_projs_noidx _ _ _ _ _ _ onps).
@@ -2427,7 +2427,7 @@ Lemma isType_case_predicate {cf : checker_flags} {Σ : global_env_ext} {wfΣ : w
   wf_local Σ Γ ->
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  wf_universe Σ ps ->
+  wf_sort Σ ps ->
   spine_subst Σ Γ params (List.rev params) (smash_context [] (subst_instance u (ind_params mdecl))) ->
   isType Σ Γ
     (it_mkProd_or_LetIn
@@ -2449,7 +2449,7 @@ Proof.
   rewrite subst_let_expand_it_mkProd_or_LetIn in Hs.
   eapply type_it_mkProd_or_LetIn_inv in Hs as (idxs & inds & [sortsidx sortind leq]).
   eapply has_sort_isType with (s := sort_of_products (subst_instance u (ind_sort idecl) :: idxs)
-    (Universe.super ps)).
+    (Sort.super ps)).
   set (idxctx := subst_context_let_expand _ _ _) in *.
   have tyass : Σ ;;; Γ ,,, idxctx |-
     subst (List.rev params) #|ind_indices idecl| (decl_type iass)@[u] : tSort (ind_sort idecl)@[u].
@@ -2527,7 +2527,7 @@ Lemma arity_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wfΣ
   wf_local Σ Γ ->
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  wf_universe Σ ps ->
+  wf_sort Σ ps ->
   spine_subst Σ Γ params (List.rev params)
     (smash_context [] (subst_instance u (ind_params mdecl))) ->
   spine_subst Σ Γ indices (List.rev indices)

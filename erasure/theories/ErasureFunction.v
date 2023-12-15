@@ -23,7 +23,7 @@ Implicit Types (cf : checker_flags).
 
 #[local] Existing Instance extraction_normalizing.
 
-Notation alpha_eq := (All2 (PCUICEquality.compare_decls eq eq)).
+Notation alpha_eq := PCUICEquality.eq_context_upto_names.
 
 Ltac sq :=
   repeat match goal with
@@ -896,7 +896,7 @@ Equations? is_erasableb X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ 
     { | T with is_arity X_type X Γ _ T.π1 _ :=
       { | true => true
         | false => let s := @sort_of_type extraction_checker_flags _ X_type X _ Γ T.π1 _ in
-          is_propositional s.π1 } }.
+          Sort.is_propositional s.π1 } }.
   Proof.
     - intros. specialize_Σ H. destruct wt; sq.
       pcuic.
@@ -925,7 +925,7 @@ Proof.
     2: eassumption. eauto.
   - destruct type_of_typing as [x Hx]. cbn -[sort_of_type is_arity] in *.
     destruct (sort_of_type _ _ _ _). cbn.
-    destruct (is_propositional x0) eqn:isp; constructor.
+    destruct (Sort.is_propositional x0) eqn:isp; constructor.
     * clear Heq. intros.
       pose proof (abstract_env_ext_wf _ H) as [wf].
       specialize_Σ H.
@@ -1325,7 +1325,7 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   let projs := map (fun pdecl => EAst.mkProjection pdecl.(proj_name)) oib.(ind_projs) in
   let is_propositional :=
     match destArity [] oib.(ind_type) with
-    | Some (_, u) => is_propositional u
+    | Some (_, u) => Sort.is_propositional u
     | None => false (* dummy, impossible case *)
     end
   in

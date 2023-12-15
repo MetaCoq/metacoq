@@ -21,7 +21,7 @@ Implicit Types cf : checker_flags.
 Notation isWAT := (isWfArity typing).
 
 Lemma isType_Sort {cf:checker_flags} {Σ Γ s} :
-  wf_universe Σ s ->
+  wf_sort Σ s ->
   wf_local Σ Γ ->
   isType Σ Γ (tSort s).
 Proof.
@@ -143,7 +143,7 @@ Section WfEnv.
       ∑ T' ctx' s',
         [× Σ ;;; Γ ⊢ T ⇝ T', (destArity [] T' = Some (ctx', s')),
           Σ ⊢ Γ ,,, smash_context [] ctx = Γ ,,, ctx' &
-          leq_universe (global_ext_constraints Σ) s s']
+          leq_sort (global_ext_constraints Σ) s s']
     | None => unit
     end.
   Proof using wfΣ.
@@ -265,7 +265,7 @@ Section WfEnv.
   Proof using wfΣ.
     intro HH.
     apply lift_sorting_it_impl_gen with HH => // H.
-    assert (Hs := typing_wf_universe _ H).
+    assert (Hs := typing_wf_sort _ H).
     apply inversion_LetIn in H; tas. destruct H as (A' & Ht & HB & H).
     eapply (type_ws_cumul_pb (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
     * pcuic.
@@ -396,14 +396,14 @@ Section WfEnv.
     Σ ;;; Γ ,, d |- t : tSort s ->
     match decl_body d return Type with
     | Some b => Σ ;;; Γ |- mkProd_or_LetIn d t : tSort s
-    | None => Σ ;;; Γ |- mkProd_or_LetIn d t : tSort (Universe.sort_of_product u s)
+    | None => Σ ;;; Γ |- mkProd_or_LetIn d t : tSort (Sort.sort_of_product u s)
     end.
   Proof using wfΣ.
     destruct d as [na [b|] dty] => [Hd Ht|Hd Ht]; rewrite /mkProd_or_LetIn /=.
     - have wf := typing_wf_local Ht.
       depelim wf.
       eapply type_Cumul. econstructor; eauto.
-      econstructor; eauto. now eapply typing_wf_universe in Ht; pcuic.
+      econstructor; eauto. now eapply typing_wf_sort in Ht; pcuic.
       eapply convSpec_cumulSpec, red1_cumulSpec. constructor.
     - have wf := typing_wf_local Ht.
       depelim wf; clear l.
@@ -412,18 +412,18 @@ Section WfEnv.
   Qed.
 
   Lemma type_it_mkProd_or_LetIn {Γ Γ' u t s} :
-    wf_universe Σ u ->
+    wf_sort Σ u ->
     type_local_ctx (lift_typing typing) Σ Γ Γ' u ->
     Σ ;;; Γ ,,, Γ' |- t : tSort s ->
-    Σ ;;; Γ |- it_mkProd_or_LetIn Γ' t : tSort (Universe.sort_of_product u s).
+    Σ ;;; Γ |- it_mkProd_or_LetIn Γ' t : tSort (Sort.sort_of_product u s).
   Proof using wfΣ.
     revert Γ u s t.
     induction Γ'; simpl; auto; move=> Γ u s t wfu equ Ht.
     - eapply type_Cumul; eauto.
       econstructor; eauto using typing_wf_local with pcuic.
-      eapply typing_wf_universe in Ht; auto with pcuic.
-      eapply cumul_Sort. eapply leq_universe_product.
-    - specialize (IHΓ' Γ  u (Universe.sort_of_product u s)); auto.
+      eapply typing_wf_sort in Ht; auto with pcuic.
+      eapply cumul_Sort. eapply leq_sort_product.
+    - specialize (IHΓ' Γ  u (Sort.sort_of_product u s)); auto.
       unfold app_context in Ht.
       eapply type_Cumul.
       eapply IHΓ'; auto.
@@ -434,7 +434,7 @@ Section WfEnv.
         + simpl. exact X0.2.π2.1.
         + eapply type_Cumul; eauto.
           econstructor; eauto with pcuic.
-          eapply cumul_Sort. eapply leq_universe_product. }
+          eapply cumul_Sort. eapply leq_sort_product. }
       eapply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
       econstructor; eauto with pcuic.
       eapply typing_wf_local in Ht.
@@ -445,17 +445,17 @@ Section WfEnv.
   Fixpoint sort_of_products us s :=
     match us with
     | [] => s
-    | u :: us => sort_of_products us (Universe.sort_of_product u s)
+    | u :: us => sort_of_products us (Sort.sort_of_product u s)
     end.
 
-  Lemma leq_universe_sort_of_products_mon {u u' v v'} :
-    Forall2 (leq_universe Σ) u u' ->
-    leq_universe Σ v v' ->
-    leq_universe Σ (sort_of_products u v) (sort_of_products u' v').
+  Lemma leq_sort_sort_of_products_mon {u u' v v'} :
+    Forall2 (leq_sort Σ) u u' ->
+    leq_sort Σ v v' ->
+    leq_sort Σ (sort_of_products u v) (sort_of_products u' v').
   Proof using Type.
     intros hu; induction hu in v, v' |- *; simpl; auto with pcuic.
     intros lev. eapply IHhu.
-    eapply leq_universe_product_mon => //.
+    eapply leq_sort_product_mon => //.
   Qed.
 
   Lemma type_it_mkProd_or_LetIn_sorts {Γ Γ' us t s} :
@@ -618,7 +618,7 @@ Section WfEnv.
       rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
 
       intros Hs.
-      assert (wfs' := typing_wf_universe wfΣ Hs).
+      assert (wfs' := typing_wf_sort wfΣ Hs).
       eapply inversion_LetIn in Hs as (T' & wfT' & HT' & hlt); auto.
       eapply substitution_let in HT'; auto.
       eapply ws_cumul_pb_LetIn_l_inv in hlt; auto.
@@ -634,7 +634,7 @@ Section WfEnv.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
 
       intros Hs.
-      assert (wfs' := typing_wf_universe wfΣ Hs).
+      assert (wfs' := typing_wf_sort wfΣ Hs).
       eapply inversion_Prod in Hs as (s1 & s2 & wfty & Hty & hlt); auto.
       pose proof (subslet_app_inv sub) as [subl subr].
       depelim subl; depelim subl. rewrite subst_empty in t0. rewrite H0 in subr.
@@ -647,8 +647,8 @@ Section WfEnv.
       eapply type_Cumul. simpl in X. eapply X.
       econstructor; eauto with pcuic.
       eapply ws_cumul_pb_Sort_inv in hlt. eapply cumul_Sort.
-      transitivity (Universe.sort_of_product s1 s2).
-      eapply leq_universe_product. auto.
+      transitivity (Sort.sort_of_product s1 s2).
+      eapply leq_sort_product. auto.
       rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
   Qed.

@@ -58,7 +58,7 @@ End QuoteUniverses1.
 Export (hints) QuoteUniverses1.
 
 #[export] Hint Unfold
-  LevelAlgExpr.t
+  Universe.t
   Instance.t
   UContext.t
   AUContext.t
@@ -68,34 +68,20 @@ Export (hints) QuoteUniverses1.
   : quotation.
 
 #[export] Typeclasses Transparent
-  LevelAlgExpr.t
+  Universe.t
   Instance.t
   UContext.t
   AUContext.t
   ContextSet.t
 .
 
-#[export] Instance quote_nonEmptyLevelExprSet : ground_quotable nonEmptyLevelExprSet := ltac:(destruct 1; exact _).
-
-#[export] Instance quote_concreteUniverses : ground_quotable concreteUniverses := ltac:(destruct 1; exact _).
-Import StrongerInstances.
-#[export] Instance quote_leq_cuniverse_n {cf n u u'} : ground_quotable (@leq_cuniverse_n cf n u u') := ltac:(cbv [leq_cuniverse_n]; exact _).
-#[export] Instance quote_is_uprop {u} : ground_quotable (@is_uprop u) := ltac:(cbv [is_uprop]; exact _).
-#[export] Instance quote_is_usprop {u} : ground_quotable (@is_usprop u) := ltac:(cbv [is_usprop]; exact _).
-#[export] Instance quote_is_uproplevel {u} : ground_quotable (@is_uproplevel u) := ltac:(cbv [is_uproplevel]; exact _).
-#[export] Instance quote_is_uproplevel_or_set {u} : ground_quotable (@is_uproplevel_or_set u) := ltac:(cbv [is_uproplevel_or_set]; exact _).
-#[export] Instance quote_is_utype {u} : ground_quotable (@is_utype u) := ltac:(cbv [is_utype]; exact _).
-
-#[export] Instance quote_allowed_eliminations : ground_quotable allowed_eliminations := ltac:(destruct 1; exact _).
-#[export] Instance quote_is_allowed_elimination_cuniv {allowed u} : ground_quotable (is_allowed_elimination_cuniv allowed u) := ltac:(destruct allowed; cbv [is_allowed_elimination_cuniv]; exact _).
-
 Module QuoteUniverses2.
   Module Import Universe.
-    #[export] Instance quote_t_ : ground_quotable Universe.t_ := ltac:(destruct 1; exact _).
-    #[export] Hint Unfold Universe.t : quotation.
-    #[export] Typeclasses Transparent Universe.t.
+    #[export] Instance quote_t_ {univ} {quniv : quotation_of univ} {quote_univ : ground_quotable univ} : ground_quotable (Sort.t_ univ) := ltac:(destruct 1; exact _).
+    #[export] Hint Unfold sort : quotation.
+    #[export] Typeclasses Transparent sort.
     #[local] Hint Constructors or eq : typeclass_instances.
-    #[export] Instance quote_on_sort {P def s} {quoteP : forall l, s = Universe.lType l -> ground_quotable (P l:Prop)} {quote_def : s = Universe.lProp \/ s = Universe.lSProp -> ground_quotable (def:Prop)} : ground_quotable (@Universe.on_sort P def s) := ltac:(cbv [Universe.on_sort]; exact _).
+    #[export] Instance quote_on_sort {univ P def s} {quniv : quotation_of univ} {quote_univ : ground_quotable univ} {quoteP : forall l, s = sType l -> ground_quotable (P l : Prop)} {quote_def : s = sProp \/ s = sSProp -> ground_quotable (def : Prop)} : ground_quotable (@Sort.on_sort univ Prop P def s) := ltac:(cbv [Sort.on_sort]; exact _).
   End Universe.
   Export (hints) Universe.
 
@@ -129,6 +115,14 @@ Module QuoteUniverses2.
 End QuoteUniverses2.
 Export (hints) QuoteUniverses2.
 
+#[export] Instance quote_nonEmptyLevelExprSet : ground_quotable nonEmptyLevelExprSet := ltac:(destruct 1; exact _).
+#[export] Instance quote_Universe : ground_quotable Universe.t := ltac:(destruct 1; exact _).
+
+#[export] Instance quote_concrete_sort : ground_quotable concrete_sort := ltac:(destruct 1; exact _).
+Import StrongerInstances.
+
+#[export] Instance quote_allowed_eliminations : ground_quotable allowed_eliminations := ltac:(destruct 1; exact _).
+
 #[export] Instance quote_declared_cstr_levels {levels cstr} : ground_quotable (declared_cstr_levels levels cstr) := ltac:(cbv [declared_cstr_levels]; exact _).
 #[export] Instance quote_universes_decl : ground_quotable universes_decl := ltac:(destruct 1; exact _).
 #[export] Instance quote_satisfies0 {v s} {qv : quotation_of v} : ground_quotable (@satisfies0 v s)
@@ -139,16 +133,19 @@ Export (hints) QuoteUniverses2.
   := ground_quotable_of_dec (@consistent_dec ctrs).
 #[export] Instance quote_consistent_extension_on {cs cstr} : ground_quotable (@consistent_extension_on cs cstr)
   := ground_quotable_of_dec (@consistent_extension_on_dec cs cstr).
-#[export] Instance quote_leq_levelalg_n {cf n ϕ u u'} : ground_quotable (@leq_levelalg_n cf (uGraph.Z_of_bool n) ϕ u u')
-  := ground_quotable_of_dec (@leq_levelalg_n_dec cf _ ϕ u u').
-#[export] Instance quote_leq_universe_n_ {cf CS leq_levelalg_n n ϕ s s'} {quote_leq_levelalg_n : forall u u', ground_quotable (leq_levelalg_n n ϕ u u':Prop)} : ground_quotable (@leq_universe_n_ cf CS leq_levelalg_n n ϕ s s') := ltac:(cbv [leq_universe_n_]; exact _).
-#[export] Instance quote_leq_universe_n {cf n ϕ s s'} : ground_quotable (@leq_universe_n cf (uGraph.Z_of_bool n) ϕ s s') := ltac:(cbv [leq_universe_n]; exact _).
+#[export] Instance quote_leq_universe_n {cf n ϕ u u'} : ground_quotable (@leq_universe_n cf (uGraph.Z_of_bool n) ϕ u u')
+  := ground_quotable_of_dec (@leq_universe_n_dec cf _ ϕ u u').
 #[export] Instance quote_leq_universe {cf ϕ s s'} : ground_quotable (@leq_universe cf ϕ s s') := @quote_leq_universe_n cf false ϕ s s'.
-#[export] Instance quote_eq_levelalg {cf ϕ u u'} : ground_quotable (@eq_levelalg cf ϕ u u')
-  := ground_quotable_of_dec (@eq_levelalg_dec cf ϕ u u').
-#[export] Instance quote_eq_universe_ {CS pst eq_levelalg ϕ s s'} {quote_eq_levelalg : forall u u', ground_quotable (eq_levelalg ϕ u u':Prop)} : ground_quotable (@eq_universe_ pst CS eq_levelalg ϕ s s') := ltac:(cbv [eq_universe_]; exact _).
-#[export] Instance quote_eq_universe {cf ϕ s s'} : ground_quotable (@eq_universe cf ϕ s s') := ltac:(cbv [eq_universe]; exact _).
-#[export] Instance quote_compare_universe {cf pb ϕ u u'} : ground_quotable (@compare_universe cf pb ϕ u u') := ltac:(destruct pb; cbv [compare_universe]; exact _).
+#[export] Instance quote_leq_sort_n_ {cf univ leq_universe_n n s s'} {quote_leq_universe_n : forall u u', ground_quotable (leq_universe_n n u u':Prop)} : ground_quotable (@leq_sort_n_ cf univ leq_universe_n n s s') := ltac:(cbv [leq_sort_n_]; exact _).
+#[export] Instance quote_leq_csort_n {cf n s s'} : ground_quotable (@leq_csort_n cf n s s') := @quote_leq_sort_n_ cf nat _ n s s' _.
+#[export] Instance quote_leq_sort_n {cf n ϕ s s'} : ground_quotable (@leq_sort_n cf (uGraph.Z_of_bool n) ϕ s s') := ltac:(cbv [leq_sort_n]; exact _).
+#[export] Instance quote_leq_sort {cf ϕ s s'} : ground_quotable (@leq_sort cf ϕ s s') := @quote_leq_sort_n cf false ϕ s s'.
+#[export] Instance quote_eq_universe {cf ϕ u u'} : ground_quotable (@eq_universe cf ϕ u u')
+  := ground_quotable_of_dec (@eq_universe_dec cf ϕ u u').
+#[export] Instance quote_eq_sort_ {univ eq_universe s s'} {quote_eq_universe : forall u u', ground_quotable (eq_universe u u':Prop)} : ground_quotable (@eq_sort_ univ eq_universe s s') := ltac:(cbv [eq_sort_]; exact _).
+#[export] Instance quote_eq_sort {cf ϕ s s'} : ground_quotable (@eq_sort cf ϕ s s') := ltac:(cbv [eq_sort]; exact _).
+#[export] Instance quote_compare_universe {cf univ pb u u'} : ground_quotable (@compare_universe cf univ pb u u') := ltac:(destruct pb; cbv [compare_universe]; exact _).
+#[export] Instance quote_compare_sort {cf univ pb u u'} : ground_quotable (@compare_sort cf univ pb u u') := ltac:(destruct pb; cbv [compare_sort]; exact _).
 #[export] Instance quote_valid_constraints0 {ϕ ctrs} : ground_quotable (@valid_constraints0 ϕ ctrs)
   := ground_quotable_of_dec (@valid_constraints0_dec ϕ ctrs).
 #[export] Instance quote_valid_constraints {cf ϕ ctrs} : ground_quotable (@valid_constraints cf ϕ ctrs)

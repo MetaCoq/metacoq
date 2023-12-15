@@ -60,7 +60,7 @@ Section Principality.
 
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
-    wf_universe Σ u ->
+    wf_sort Σ u ->
     isWfArity Σ Γ (tSort u).
   Proof using Type.
     move=> wfΓ wfu.
@@ -86,7 +86,7 @@ Section Principality.
     - apply inversion_Evar in hA. destruct hA.
     - apply inversion_Sort in hA as iA. 2: auto.
       repeat outsum. repeat outtimes. subst.
-      exists (tSort (Universe.super s)).
+      exists (tSort (Sort.super s)).
       int inversion_Sort.
       repeat outsum. repeat outtimes. now subst.
     - apply inversion_Prod in hA as (dom1 & codom1 & t & t0 & w); auto.
@@ -97,7 +97,7 @@ Section Principality.
       eapply ws_cumul_pb_Sort_r_inv in e as [domu [red leq]].
       destruct (Hcodom _ t0) as [e e''].
       eapply ws_cumul_pb_Sort_r_inv in e as [codomu [cored coleq]].
-      exists (tSort (Universe.sort_of_product domu codomu)).
+      exists (tSort (Sort.sort_of_product domu codomu)).
       int inversion_Prod.
       destruct hB as (x & x0 & t1 & t2 & w0).
       apply unlift_TypUniv in t1.
@@ -107,7 +107,7 @@ Section Principality.
         destruct (Hcodom _ t2) as [le'' u2'].
         eapply ws_cumul_pb_Sort_r_inv in le'' as [u'' [redu'' leu'']].
         constructor => //. fvs. constructor.
-        apply leq_universe_product_mon; auto.
+        apply leq_sort_product_mon; auto.
         pose proof (closed_red_confluence red redu') as [v' [redl redr]].
         eapply invert_red_sort in redl.
         eapply invert_red_sort in redr. subst. now noconf redr.
@@ -362,10 +362,8 @@ Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ:
   Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
   Σ ;;; Γ |- c : mkApps (tInd ind u') args' ->
   (∑ ui',
-    PCUICEquality.R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ))
-     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args| ui' u *
-    PCUICEquality.R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ))
-     (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args'| ui' u') *
+    cmp_ind_universes Σ ind #|args| ui' u *
+    cmp_ind_universes Σ ind #|args'| ui' u') *
   ws_cumul_pb_terms Σ Γ args args'.
 Proof.
   intros h h'.
@@ -415,46 +413,25 @@ Proof.
   eapply eq_term_upto_univ_empty_impl; auto; typeclasses eauto.
 Qed.
 
-Lemma eq_context_empty_eq_context {cf:checker_flags} {Σ : global_env_ext} {x y} :
-  eq_context_upto empty_global_env (eq_universe Σ) (eq_universe Σ) x y ->
-  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) x y.
+Lemma eq_context_empty_eq_context {cf:checker_flags} {Σ : global_env_ext} {cmp_universe cmp_sort pb} {x y} :
+  eq_context_upto empty_global_env cmp_universe cmp_sort pb x y ->
+  eq_context_upto Σ cmp_universe cmp_sort pb x y.
 Proof.
   intros.
   eapply All2_fold_impl; tea.
-  intros ???? []; constructor; eauto using eq_term_empty_eq_term.
-  all:now apply eq_term_empty_eq_term.
-Qed.
-
-Notation eq_term_napp Σ n x y :=
-  (eq_term_upto_univ_napp Σ (eq_universe Σ) (eq_universe Σ) n x y).
-
-Notation leq_term_napp Σ n x y :=
-    (eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n x y).
-
-Lemma eq_term_upto_univ_napp_leq {cf:checker_flags} {Σ : global_env_ext} {n x y} :
-  eq_term_napp Σ n x y ->
-  leq_term_napp Σ n x y.
-Proof.
-  eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
-Qed.
-
-Lemma R_global_instance_empty_universe_instance Re Rle ref napp u u' :
-  R_global_instance empty_global_env Re Rle ref napp u u' ->
-  R_universe_instance Re u u'.
-Proof.
-  rewrite /R_global_instance_gen.
-  now rewrite global_variance_empty.
+  intros ???? []; constructor; eauto.
+  all: eapply eq_term_upto_univ_empty_impl; tea; tc.
 Qed.
 
 Lemma eq_context_upto_inst_case_context {cf : checker_flags} {Σ : global_env_ext} pars pars' puinst puinst' ctx :
-  All2 (eq_term_upto_univ empty_global_env (eq_universe Σ) (eq_universe Σ)) pars pars' ->
-  R_universe_instance (eq_universe Σ) puinst puinst' ->
-  eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) (inst_case_context pars puinst ctx)
+  All2 (eq_term_upto_univ empty_global_env (compare_universe Σ) (compare_sort Σ) Conv) pars pars' ->
+  cmp_universe_instance (eq_universe Σ) puinst puinst' ->
+  eq_context_upto Σ.1 (compare_universe Σ) (compare_sort Σ) Conv (inst_case_context pars puinst ctx)
     (inst_case_context pars' puinst' ctx).
 Proof.
   intros onps oninst.
   rewrite /inst_case_context.
-  eapply eq_context_upto_subst_context. tc.
+  eapply eq_context_upto_subst_context. 1,2: tc.
   eapply eq_context_upto_univ_subst_instance; tc; auto.
   eapply All2_rev. eapply All2_impl; tea.
   intros. now eapply eq_term_empty_eq_term.
@@ -495,9 +472,9 @@ Proof.
   all:try solve [econstructor; eauto].
 
   - eapply inversion_Sort in X0 as [wf [wfs cum]]; auto.
-    eapply type_Cumul' with (tSort (Universe.super s)).
+    eapply type_Cumul' with (tSort (Sort.super s)).
     constructor; auto. eapply PCUICArities.isType_Sort; pcuic.
-    apply cumul_Sort. now apply leq_universe_super.
+    apply cumul_Sort. now apply leq_sort_super.
 
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
     apply eq_term_empty_leq_term in X5_1 as X5_1'.
@@ -665,7 +642,7 @@ Proof.
       eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn; tea. tc.
       rewrite /predctx.
       rewrite /case_predicate_context /case_predicate_context_gen.
-      eapply eq_context_upto_map2_set_binder_name. tea.
+      eapply eq_context_upto_names_map2_set_binder_name. tea.
       rewrite /pre_case_predicate_context_gen.
       eapply eq_context_upto_inst_case_context => //.
       eapply All2_app. 2:constructor; pcuic.
@@ -724,8 +701,8 @@ Proof.
     eapply type_Cumul_alt.
     econstructor; eauto.
     now eapply All_nth_error in X0.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[eqty _] _] _].
+    eapply All2_nth_error in e; eauto.
+    destruct e as (eqty & _).
     constructor. eapply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
 
@@ -733,8 +710,8 @@ Proof.
     eapply type_Cumul_alt.
     econstructor; eauto.
     now eapply All_nth_error in X0.
-    eapply All2_nth_error in a; eauto.
-    destruct a as [[[eqty _] _] _].
+    eapply All2_nth_error in e; eauto.
+    destruct e as (eqty & _).
     constructor. apply eq_term_empty_leq_term in eqty.
     now eapply leq_term_empty_leq_term.
 
@@ -750,10 +727,10 @@ Proof.
     simp prim_type in w |- *.
     eapply (ws_cumul_pb_Axiom_l_inv (args := [_])) in w as [u' [args' []]]; tea. 2:eapply declared_constant_from_gen, H0. 2:eapply p.
     eapply cumulAlgo_cumulSpec. etransitivity. now eapply red_ws_cumul_pb.
-    eapply All2_tip_l in a3 as [y' [-> Heq]]. red in r. eapply Forall2_map_inv in r.
-    eapply Forall2_tip_l in r. cbn. eapply ws_cumul_pb_eq_le.
+    eapply All2_tip_l in a3 as [y' [-> Heq]]. red in c0.
+    eapply Forall2_tip_l in c0. cbn. eapply ws_cumul_pb_eq_le.
     eapply (ws_cumul_pb_mkApps (args := [_]) (args' := [_])).
-    * constructor; fvs. constructor. red. eapply Forall2_map. destruct r as [? [-> eq]]. constructor. symmetry.
+    * constructor; fvs. constructor. red. destruct c0 as [? [-> eq]]. constructor. symmetry.
       etransitivity; tea. now symmetry. constructor.
     * constructor; [|constructor]. symmetry. etransitivity; tea. constructor; fvs. symmetry.
       now eapply eq_term_empty_eq_term.

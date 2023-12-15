@@ -56,7 +56,7 @@ Section firstorder.
       (List.rev (c.(cstr_args) ++ mind.(ind_params)))%list.
 
   Definition firstorder_oneind mind (ind : one_inductive_body) :=
-    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Universe.is_level (ind_sort ind)).
+    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Sort.is_level (ind_sort ind)).
 
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
@@ -102,7 +102,7 @@ Context {cf : config.checker_flags}.
 
 Definition isPropositionalArity ar :=
   match destArity [] ar with
-  | Some (_, s) => is_propositional s
+  | Some (_, s) => Sort.is_propositional s
   | None => false
   end.
 
@@ -724,7 +724,7 @@ Proof.
   intros Ha H. induction H in t', Ha |- using firstorder_value_inds.
   eapply eq_term_upto_univ_napp_mkApps_l_inv in Ha as (? & ? & [] & ->).
   invs e. repeat f_equal.
-  - now eapply eq_univ_make.
+  - now eapply cmp_universe_instance_eq.
   - revert x0 a. clear - H0. induction H0; intros; invs a; f_equal; eauto.
 Qed.
 

@@ -17,7 +17,7 @@ Local Existing Instance extraction_checker_flags.
   - is of propositional type *)
 Definition isErasable Σ Γ t :=
   ∑ T, Σ ;;; Γ |- t : T ×
-  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_propositional u))%type.
+  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Sort.is_propositional u))%type.
 
 (* A more positive notion of relevant terms.
   Showing that a term is not erasable requires quantification over all its possible typings.
@@ -30,7 +30,7 @@ Definition nisErasable Σ Γ t :=
       nf Σ Γ T,
     ~ isArity T,
     Σ;;; Γ |- T : tSort u &
-    ~ is_propositional u].
+    ~ Sort.is_propositional u].
 
 Lemma nisErasable_spec Σ Γ t :
   wf_ext Σ -> wf_local Σ Γ ->
@@ -386,7 +386,7 @@ Definition computational_ind Σ ind :=
     match List.nth_error decl.(ind_bodies) n with
     | Some body =>
       match destArity [] body.(ind_type) with
-      | Some arity => negb (Universe.is_prop (snd arity))
+      | Some arity => negb (Sort.is_prop (snd arity))
       | None => false
       end
     | None => false

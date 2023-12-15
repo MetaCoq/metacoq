@@ -297,7 +297,7 @@ Proof.
   - destruct t => //.
 Qed.
 
-Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
+Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ s A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort s : A -> isType Σ Γ (tSort s).
 Proof.
   intros HT.
   eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.

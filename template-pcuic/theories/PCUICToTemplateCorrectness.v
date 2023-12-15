@@ -633,7 +633,7 @@ Qed.
 
 Lemma alpha_eq_trans {Γ Δ} :
   eq_context_upto_names Γ Δ ->
-  All2 (TermEquality.compare_decls eq eq) (trans_local Γ) (trans_local Δ).
+  TermEquality.eq_context_upto_names (trans_local Γ) (trans_local Δ).
 Proof.
   intros.
   eapply All2_map, All2_impl; tea.
@@ -665,7 +665,7 @@ Section wtsub.
          ci.(ci_npar) = mdecl.(ind_npars),
          consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p),
          wf_predicate mdecl idecl p,
-         All2 (PCUICEquality.compare_decls eq eq) (PCUICCases.ind_predicate_context ci mdecl idecl) (PCUICAst.pcontext p),
+         eq_context_upto_names (PCUICCases.ind_predicate_context ci mdecl idecl) (PCUICAst.pcontext p),
          wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) p.(pcontext)@[p.(puinst)],
          PCUICSpine.spine_subst Σ Γ (PCUICAst.pparams p) (List.rev (PCUICAst.pparams p))
           (PCUICEnvironment.smash_context [] (PCUICEnvironment.ind_params mdecl)@[PCUICAst.puinst p]),
@@ -673,9 +673,9 @@ Section wtsub.
           wt Γ c &
           All2i (fun i cdecl br =>
             [× wf_branch cdecl br,
-               All2 (PCUICEquality.compare_decls eq eq) (bcontext br) (PCUICCases.cstr_branch_context ci mdecl cdecl),
+               eq_context_upto_names (bcontext br) (PCUICCases.cstr_branch_context ci mdecl cdecl),
                wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) br.(bcontext)@[p.(puinst)],
-               All2 (PCUICEquality.compare_decls eq eq)
+               eq_context_upto_names
                 (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl)
                 (Γ ,,, inst_case_branch_context p br) &
               wt (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl) br.(bbody)]) 0 idecl.(ind_ctors) brs]
@@ -834,8 +834,8 @@ Qed.
 
 Lemma map2_set_binder_name_alpha (nas : list aname) (Δ Δ' : context) :
   All2 (fun x y => eq_binder_annot x (decl_name y)) nas Δ ->
-  All2 (TermEquality.compare_decls eq eq) Δ Δ' ->
-  All2 (TermEquality.compare_decls eq eq) (map2 set_binder_name nas Δ) Δ'.
+  TermEquality.eq_context_upto_names Δ Δ' ->
+  TermEquality.eq_context_upto_names (map2 set_binder_name nas Δ) Δ'.
 Proof.
   intros hl. induction 1 in nas, hl |- *; cbn; auto.
   destruct nas; cbn; auto.
@@ -866,7 +866,7 @@ Qed.
 
 Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : context) :
   All2 (fun x y => x = (decl_name y)) nas Δ' ->
-  All2 (TermEquality.compare_decls eq eq) Δ Δ' ->
+  TermEquality.eq_context_upto_names Δ Δ' ->
   (map2 set_binder_name nas Δ) = Δ'.
 Proof.
   intros hl. induction 1 in nas, hl |- *; cbn; auto.
@@ -935,26 +935,26 @@ Proof.
 Qed.
 
 #[global]
-Instance compare_decls_refl : Reflexive (TermEquality.compare_decls eq eq).
+Instance compare_decls_refl : Reflexive (TermEquality.eq_decl_upto_names).
 Proof.
   intros [na [b|] ty]; constructor; auto.
 Qed.
 
 #[global]
-Instance All2_compare_decls_refl : Reflexive (All2 (TermEquality.compare_decls eq eq)).
+Instance All2_compare_decls_refl : Reflexive (TermEquality.eq_context_upto_names).
 Proof.
   intros x; apply All2_refl; reflexivity.
 Qed.
 
 #[global]
-Instance All2_compare_decls_sym : Symmetric (All2 (TermEquality.compare_decls eq eq)).
+Instance All2_compare_decls_sym : Symmetric (TermEquality.eq_context_upto_names).
 Proof.
   intros x y. eapply All2_symP. clear.
   intros d d' []; subst; constructor; auto; now symmetry.
 Qed.
 
 #[global]
-Instance All2_compare_decls_trans : Transitive (All2 (TermEquality.compare_decls eq eq)).
+Instance All2_compare_decls_trans : Transitive (TermEquality.eq_context_upto_names).
 Proof.
   intros x y z. eapply All2_trans. clear.
   intros d d' d'' [] H; depelim H; subst; constructor; auto; now etransitivity.
@@ -1049,7 +1049,7 @@ Qed.
 
 Lemma red1_alpha_eq Σ Γ Δ T U :
   TT.red1 Σ Γ T U ->
-  All2 (TermEquality.compare_decls eq eq) Γ Δ ->
+  TermEquality.eq_context_upto_names Γ Δ ->
   TT.red1 Σ Δ T U.
 Proof.
   intros r; revert Δ.
@@ -1104,7 +1104,7 @@ Proof.
 Qed.
 
 Lemma map2_set_binder_name_eq nas Δ Δ' :
-  All2 (TermEquality.compare_decls eq eq) Δ Δ' ->
+  TermEquality.eq_context_upto_names Δ Δ' ->
   map2 set_binder_name nas Δ = map2 set_binder_name nas Δ'.
 Proof.
   induction 1 in nas |- *; cbn; auto.
@@ -1145,7 +1145,7 @@ Proof.
 Qed.
 
 Lemma trans_local_set_binder_name_eq nas Γ Δ :
-  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   trans_local (map2 PCUICEnvironment.set_binder_name nas Γ) =
   trans_local (map2 PCUICEnvironment.set_binder_name nas Δ).
 Proof.
@@ -1327,19 +1327,17 @@ Proof.
       eapply PCUICSafeLemmata.wf_inst_case_context; tea.
       destruct w2. pcuic.
       rewrite /inst_case_context.
-      apply compare_decls_conv.
+      apply PCUICContextConversion.eq_context_upto_names_conv_context.
       eapply All2_app. 2:{ reflexivity. }
-      eapply compare_decls_eq_context.
       apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) w).
-      cbn. apply compare_decls_eq_context. now symmetry. }
+      cbn. now symmetry. }
     rewrite [trans_local _]map_app.
     eapply All2_app; [|reflexivity].
     symmetry. etransitivity.
     rewrite (trans_case_predicate_context _ _ _ _ p d c0 s w).
     reflexivity.
     eapply alpha_eq_trans.
-    eapply All2_fold_All2, PCUICAlpha.inst_case_predicate_context_eq => //.
-    symmetry. now eapply All2_fold_All2.
+    eapply PCUICAlpha.inst_case_predicate_context_eq => //.
 
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
     econstructor; eauto.
@@ -1360,7 +1358,7 @@ Proof.
     destruct w4 as [s' Hs]. exists s'.
     eapply PCUICContextConversionTyp.context_conversion; tea.
     eapply wf_local_alpha; tea. pcuic.
-    now eapply compare_decls_conv.
+    now eapply PCUICContextConversion.eq_context_upto_names_conv_context.
 
   - eapply red1_mkApp; auto. eapply trans_wf; tea.
   - eapply (red1_mkApps_r _ _ _ [_] [_]); auto.
@@ -1401,12 +1399,12 @@ Proof.
     eapply OnOne2_map. solve_all.
 Qed.
 
-Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
-  PCUICEquality.R_global_instance Σ Re Rle gref napp u u' ->
-  TermEquality.R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
+Lemma trans_cmp_global_instance Σ cmp_universe pb gref napp u u' :
+  PCUICEquality.cmp_global_instance Σ cmp_universe pb gref napp u u' ->
+  TermEquality.cmp_global_instance (trans_global_env Σ) cmp_universe pb gref napp u u'.
 Proof.
-  unfold PCUICEquality.R_global_instance, PCUICEquality.R_global_instance_gen, PCUICEquality.global_variance.
-  unfold TermEquality.R_global_instance, TermEquality.global_variance.
+  unfold PCUICEquality.cmp_global_instance, PCUICEquality.cmp_global_instance_gen, PCUICEquality.global_variance.
+  unfold TermEquality.cmp_global_instance, TermEquality.global_variance.
   destruct gref; simpl; auto.
   - unfold S.lookup_inductive, S.lookup_minductive.
     unfold S.lookup_inductive_gen, S.lookup_minductive_gen.
@@ -1431,21 +1429,19 @@ Proof.
 Qed.
 
 Lemma trans_eq_context_gen_eq_binder_annot Γ Δ :
-  eq_context_gen eq eq Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   All2 eq_binder_annot (map decl_name (trans_local Γ)) (map decl_name (trans_local Δ)).
 Proof.
-  move/All2_fold_All2.
   intros; do 2 eapply All2_map. solve_all.
   destruct X; cbn; auto.
 Qed.
 
-Lemma trans_eq_term_upto_univ {cf} :
-  forall Σ Re Rle t u napp,
-    PCUICEquality.eq_term_upto_univ_napp Σ Re Rle napp t u ->
-    TermEquality.eq_term_upto_univ_napp (trans_global_env Σ) Re Rle napp (trans t) (trans u).
+Lemma trans_eq_term_upto_univ {cf} Σ cmp_universe cmp_sort pb napp t u :
+    PCUICEquality.eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t u ->
+    TermEquality.eq_term_upto_univ_napp (trans_global_env Σ) cmp_universe cmp_sort pb napp (trans t) (trans u).
 Proof.
-  intros Σ Re Rle t u napp e.
-  induction t using term_forall_list_ind in Rle, napp, u, e |- *.
+  intros e.
+  induction t using term_forall_list_ind in pb, napp, u, e |- *.
   all: invs e; cbn.
   all: try solve [ constructor ; auto ].
   all: try solve [
@@ -1455,11 +1451,12 @@ Proof.
       eapply ih ; auto
     end
   ].
-  1,6,7: try solve [ constructor; solve_all ].
-  all: try solve [ constructor; now eapply trans_R_global_instance ].
-  - eapply (TermEquality.eq_term_upto_univ_mkApps _ _ _ _ _ [_] _ [_]); simpl; eauto.
+  1,6,7: try solve [ constructor; unfold eq_mfixpoint in *; solve_all ].
+  all: try solve [ constructor; now eapply trans_cmp_global_instance ].
+  - eapply (TermEquality.eq_term_upto_univ_mkApps _ _ _ _ _ _ [_] _ [_]); simpl; eauto.
   - destruct X1 as [Hpars [Huinst [Hctx Hret]]].
     destruct X as [IHpars [IHctx IHret]].
+    unfold eq_branches, eq_branch in *.
     constructor; cbn; auto. solve_all.
     red in X0.
     eapply trans_eq_context_gen_eq_binder_annot in Hctx.
@@ -1468,6 +1465,7 @@ Proof.
     eapply trans_eq_context_gen_eq_binder_annot in a.
     now rewrite !map_context_trans.
   - depelim X0; cbn in X |- *; try econstructor; intuition eauto; solve_all.
+    repeat (constructor; tas).
 Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :

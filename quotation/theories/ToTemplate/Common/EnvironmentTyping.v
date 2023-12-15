@@ -21,8 +21,10 @@ Module QuoteLookup (Import T : Term) (Import E : EnvironmentSig T) (Import L : L
   End with_refl.
 
   #[export] Instance quote_consistent_instance {cf lvs ϕ uctx u} : ground_quotable (@consistent_instance cf lvs ϕ uctx u) := ltac:(cbv [consistent_instance]; exact _).
-  #[export] Instance quote_wf_universe {Σ s} : ground_quotable (@wf_universe Σ s)
-    := ground_quotable_of_dec (@wf_universe_dec Σ s).
+  #[export] Instance quote_wf_universe {Σ u} : ground_quotable (@wf_universe Σ u)
+    := ground_quotable_of_dec (@wf_universe_dec Σ u).
+  #[export] Instance quote_wf_sort {Σ s} : ground_quotable (@wf_sort Σ s)
+    := ground_quotable_of_dec (@wf_sort_dec Σ s).
 
   #[export] Instance quote_declared_constant {Σ id decl} : ground_quotable (@declared_constant Σ id decl) := ltac:(cbv [declared_constant]; exact _).
   #[export] Instance quote_declared_minductive {Σ mind decl} : ground_quotable (@declared_minductive Σ mind decl) := ltac:(cbv [declared_minductive]; exact _).

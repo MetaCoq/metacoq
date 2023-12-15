@@ -264,6 +264,21 @@ Proof.
   solve_all. eapply wf_decl_extends; tea; typeclasses eauto.
 Qed.
 
+Lemma sorts_local_ctx_All_wf_decl {cf:checker_flags} {Σ} {mdecl} {u: list sort} {args} :
+  sorts_local_ctx (fun Σ : global_env_ext => wf_decl_pred Σ) Σ
+    (arities_context (ind_bodies mdecl),,, ind_params mdecl)
+    args u ->
+  All (wf_decl Σ) args.
+Proof.
+  induction args as [|[na [b|] ty] args] in u |- * ;
+  constructor.
+  - constructor; now destruct X as (?&?&?).
+  - eapply IHargs; now apply X.
+  - destruct u => //; constructor; cbnr; now destruct X as (?&?&?).
+  - destruct u => //; eapply IHargs; now apply X.
+Qed.
+
+
 Lemma declared_inductive_wf_ctors {cf:checker_flags} {Σ} {ind} {mdecl idecl} :
   on_global_env cumul_gen wf_decl_pred Σ ->
   declared_inductive Σ ind mdecl idecl ->
@@ -277,14 +292,10 @@ Proof.
   apply onInductives in prf.
   eapply nth_error_alli in Hidecl; eauto.
   pose proof (onConstructors Hidecl). red in X0.
-  solve_all. destruct X0.
-  clear -X ext on_cargs.
-  induction (cstr_args x) as [|[na [b|] ty] args] in on_cargs, y |- * ;
-    [| |destruct y => //];
-    try destruct on_cargs;
-   constructor; eauto.
-  - destruct w; split; cbn in *; eauto using wf_extends with typeclass_instances.
-  - destruct w; split; cbn in *; eauto using wf_extends with typeclass_instances.
+  solve_all.
+  apply on_cargs in X0.
+  eapply sorts_local_ctx_All_wf_decl in X0.
+  solve_all. eapply wf_decl_extends; tea; typeclasses eauto.
 Qed.
 
 Lemma All_local_env_wf_decls Σ ctx :
@@ -651,13 +662,8 @@ Section WfLookup.
     { unfold on_constructors in onConstructors.
       clear -onConstructors.
       induction onConstructors; constructor; auto.
-      destruct r.
-      clear -on_cargs.
-      revert on_cargs. revert y. generalize (cstr_args x).
-      induction c as [|[? [] ?] ?]; simpl;
-        destruct y; intuition auto;
-        constructor;
-        try red; simpl; try red in a, b; intuition eauto. }
+      apply on_cargs in r.
+      eapply sorts_local_ctx_All_wf_decl; tea. }
     split => //.
     - now destruct onArity.
     - rewrite ind_arity_eq in onArity .

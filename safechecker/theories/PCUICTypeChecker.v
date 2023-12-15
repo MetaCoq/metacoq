@@ -215,13 +215,13 @@ Qed.
 (* Lemma compare_global_instance_sound {cf Σ} (wfΣ : wf_ext Σ) gr napp
   (Hφ : on_udecl Σ.1 Σ.2)
   (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) :
-  subrelation (compare_global_instance Σ (check_eqb_universe G) (check_leqb_universe G) gr napp)
-    (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) gr napp).
-Proof. eapply reflect_R_global_instance. compare_global_instance_impl; tc; intros x y.
-  - eapply (check_eqb_universe_spec' _ (global_ext_uctx Σ)) => //.
+  subrelation (compare_global_instance Σ (check_eqb_sort G) (check_leqb_sort G) gr napp)
+    (cmp_global_instance Σ (eq_sort Σ) (leq_sort Σ) gr napp).
+Proof. eapply reflect_cmp_global_instance. compare_global_instance_impl; tc; intros x y.
+  - eapply (check_eqb_sort_spec' _ (global_ext_uctx Σ)) => //.
     now eapply wf_ext_global_uctx_invariants.
     cbn. eapply wfΣ.
-  - eapply (check_leqb_universe_spec' _ (global_ext_uctx Σ)) => //.
+  - eapply (check_leqb_sort_spec' _ (global_ext_uctx Σ)) => //.
     now eapply wf_ext_global_uctx_invariants.
     cbn. eapply wfΣ.
 Qed. *)
@@ -291,12 +291,12 @@ Section Typecheck.
 
   Notation hnf := (hnf (X := X)).
 
-  Definition conv_pb_relb_gen_proper pb equ equ' eqlu eqlu' :
+  Definition conv_pb_relb_gen_proper {T} pb equ equ' eqlu eqlu' :
   (forall u u', equ u u' = equ' u u') ->
   (forall u u', eqlu u u' = eqlu' u u') ->
-  forall u u',
-    conv_pb_relb_gen pb equ eqlu u u' =
-    conv_pb_relb_gen pb equ' eqlu' u u'.
+  forall (u u' : T),
+    conv_pb_relb_gen equ eqlu pb u u' =
+    conv_pb_relb_gen equ' eqlu' pb u u'.
   Proof using Type.
    now destruct pb.
   Qed.
@@ -315,7 +315,7 @@ Section Typecheck.
           (hu : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ u)
     : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
     convert le Γ t u ht hu
-      with inspect (eqb_termp_napp_gen le (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance _ X) 0 t u) := {
+      with inspect (eqb_term_upto_univ (abstract_env_compare_universe X) (abstract_env_compare_sort X) (abstract_env_compare_global_instance _ X) le t u) := {
         | @exist true He := ret _ ;
         | @exist false He with
           inspect (isconv_term _ X Γ le t ht u hu) := {
@@ -326,19 +326,9 @@ Section Typecheck.
             raise (NotCumulSmaller false X Γ t u t' u' e)
       }}.
   Next Obligation.
-    unfold eqb_termp_napp_gen in He. pose (heΣ _ wfΣ) as heΣ; sq.
+    unfold eqb_term_upto_univ_napp in He. pose (heΣ _ wfΣ) as heΣ; sq.
     constructor; fvs. specialize_Σ wfΣ.
-    eapply eqb_term_upto_univ_impl; eauto.
-    - intros. eapply iff_reflect.
-      eapply (abstract_env_compare_universe_correct _ wfΣ Conv);
-      try eassumption; apply wf_universe_iff; eauto.
-    - intros. eapply iff_reflect. destruct le;
-      eapply (abstract_env_compare_universe_correct _ wfΣ _);
-      try eassumption; apply wf_universe_iff; eauto.
-    - intros. rewrite wf_universeb_instance_forall in H. rewrite wf_universeb_instance_forall in H0.
-      apply wf_universe_instance_iff in H.
-      apply wf_universe_instance_iff in H0.
-      eapply (compare_global_instance_correct _ X wfΣ); eauto.
+    eapply cmpb_term_correct; eauto.
     - destruct ht as [? ht]. eapply typing_wf_universes in ht; eauto.
       pose proof ht as [? ?]%andb_and; eassumption.
     - destruct hu as [? hu]. eapply typing_wf_universes in hu; eauto.
@@ -368,7 +358,7 @@ Section Typecheck.
                  typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹ A ∥ })).
 
     Equations infer_type Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) t
-      : typing_result_comp ({u : Universe.t & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹□ u ∥}) :=
+      : typing_result_comp ({u : sort & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹□ u ∥}) :=
       infer_type Γ HΓ t :=
         tx <- infer Γ HΓ t ;;
         s <- reduce_to_sort (X := X) Γ tx.π1 _ ;;
@@ -785,20 +775,20 @@ Section Typecheck.
       Qed.
 
     Equations check_alpha_ws_cumul_ctx Δ Δ'
-      : typing_result_comp (∥ eq_context_gen eq eq Δ Δ' ∥) :=
+      : typing_result_comp (∥ eq_context_upto_names Δ Δ' ∥) :=
       check_alpha_ws_cumul_ctx Δ Δ' with
-        inspect (forallb2 (bcompare_decls eqb eqb) Δ Δ') :=  {
+        inspect (eqb_context_upto_names Δ Δ') :=  {
       | @exist true e := ret _ ;
       | @exist false e' := raise (Msg "While checking alpha-conversion of contexts: contexts differ")
       }.
     Next Obligation.
       move: e.
-      elim: reflect_eq_ctx => //.
+      elim: reflect_eq_context_upto_names => //.
     Qed.
     Next Obligation.
       sq.
       move: e'.
-      elim: reflect_eq_ctx => //.
+      elim: reflect_eq_context_upto_names => //.
     Qed.
 
     (* Equations infer_terms Γ (wfΓ : ∥ wf_local Σ Γ ∥) ts
@@ -1049,22 +1039,22 @@ Section Typecheck.
   Qed.
 
   Equations check_is_allowed_elimination
-    (u : Universe.t) (wfu : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wf_universe Σ u)
+    (u : sort) (wfu : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wf_sort Σ u)
     (al : allowed_eliminations) :
     typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), is_allowed_elimination Σ al u) :=
 
   check_is_allowed_elimination u wfu IntoSProp
-    with inspect (Universe.is_sprop u) := {
+    with inspect (Sort.is_sprop u) := {
       | @exist true e := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     } ;
   check_is_allowed_elimination u wfu IntoPropSProp
-    with inspect (is_propositional u) := {
+    with inspect (Sort.is_propositional u) := {
       | @exist true _ := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     };
   check_is_allowed_elimination u wfu IntoSetPropSProp
-    with inspect (is_propositional u || abstract_env_eq X u Universe.type0) := {
+    with inspect (Sort.is_propositional u || abstract_env_compare_sort X Conv u Sort.type0) := {
       | @exist true _ := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     } ;
@@ -1080,7 +1070,7 @@ Section Typecheck.
   Next Obligation.
     symmetry in e; toProp e; destruct e as [-> | e]; [auto|right].
     specialize_Σ wfΣ; pose proof (heΣ _ wfΣ) as [heΣ].
-    eapply abstract_env_compare_universe_correct with (conv_pb := Conv) in e; eauto using wf_universe_type0.
+    eapply abstract_env_compare_sort_correct with (conv_pb := Conv) in e; eauto using wf_sort_type0.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ;
@@ -1089,7 +1079,7 @@ Section Typecheck.
     symmetry in e0; toProp e0; destruct e0 as [e1 e0].
     destruct H as [H|H]; [rewrite H in e1; discriminate e1 | clear e1].
     apply diff_false_true. rewrite -e0.
-    eapply abstract_env_compare_universe_correct with (conv_pb := Conv); eauto using wf_universe_type0.
+    eapply abstract_env_compare_sort_correct with (conv_pb := Conv); eauto using wf_sort_type0.
   Qed.
 
   Notation wt_brs Γ ci mdecl idecl p ptm ctors brs n :=
@@ -1101,7 +1091,7 @@ Section Typecheck.
 
   Section check_brs.
     Context (infer : forall (Γ : context) (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ▹ A ∥ }))
-     (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (ps : Universe.t)
+     (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (ps : sort)
      (ci : case_info) (mdecl : mutual_inductive_body)
      (idecl : one_inductive_body) (p : predicate term) (args : list term).
 
@@ -1116,7 +1106,7 @@ Section Typecheck.
 
     Lemma branch_helper n cdecl ctors br
       (isdecl' : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Alli (fun i cdecl => declared_constructor Σ (ci, i) mdecl idecl cdecl) n (cdecl :: ctors) ∥) :
-      ∥ eq_context_gen eq eq (bcontext br) (cstr_branch_context ci mdecl cdecl) ∥ ->
+      ∥ eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ∥ ->
       forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_branch cdecl br ×
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm n cdecl in
       wf_local Σ (Γ,,, brctxty.1) × Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps ∥.
@@ -1125,7 +1115,7 @@ Section Typecheck.
       have wfbr : wf_branch cdecl br.
       { sq.  specialize_Σ wfΣ. do 2 red.
         unfold cstr_branch_context, expand_lets_ctx, expand_lets_k_ctx in H.
-        move/eq_context_gen_binder_annot: H.
+        move/eq_context_upto_names_binder_annot: H.
         now do 3 move/eq_annots_fold. }
       assert (wfpret' : ∥Σ ;;; Γ ,,, predctx |- preturn p : tSort ps∥).
         { specialize_Σ wfΣ. sq. eapply infering_sort_typing ; eauto.
@@ -1191,7 +1181,7 @@ Section Typecheck.
       eapply branch_helper in i; tea.
       specialize_Σ wfΣ; sq. constructor ; tea.
       split.
-      * now eapply All2_fold_All2 in check_eq_bcontext.
+      * assumption.
       * now destruct i as [? []].
     Qed.
     Next Obligation.
@@ -1207,19 +1197,18 @@ Section Typecheck.
       destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ;
       sq.
       depelim H.
-      apply All2_fold_All2.
-      now inversion p0.
+      apply p0.
     Qed.
     End check_brs.
 
   Lemma eq_context_gen_wf_predicate p ci mdecl idecl :
     #|pparams p| = ind_npars mdecl ->
-    eq_context_gen eq eq (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+    eq_context_upto_names (pcontext p) (ind_predicate_context ci mdecl idecl) ->
     wf_predicate mdecl idecl p.
   Proof using Type.
     intros eqp e.
     do 2 red. split => //.
-    eapply eq_context_gen_binder_annot in e.
+    eapply eq_context_upto_names_binder_annot in e.
     rewrite /ind_predicate_context in e.
     rewrite /idecl_binder.
     destruct (forget_types (pcontext p)); depelim e; cbn in *.
@@ -1228,12 +1217,12 @@ Section Typecheck.
   Qed.
 
   Lemma eq_context_gen_wf_branch ci mdecl cdecl br :
-    eq_context_gen eq eq (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+    eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
     wf_branch cdecl br.
   Proof using Type.
     intros e.
     do 2 red.
-    eapply eq_context_gen_binder_annot in e.
+    eapply eq_context_upto_names_binder_annot in e.
     rewrite /cstr_branch_context in e.
     now do 3 eapply (proj1 (eq_annots_fold _ _ _)) in e.
   Qed.
@@ -1322,15 +1311,15 @@ Section Typecheck.
    | primInt | decl :=
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
       check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type is registered to a non-monomorphic constant") ;;
-      check_eq_true (eqb decl.(cst_type) (tSort Universe.type0)) (Msg "primitive type for integers is registered to an axiom whose type is not the sort Set") ;;
+      check_eq_true (eqb decl.(cst_type) (tSort Sort.type0)) (Msg "primitive type for integers is registered to an axiom whose type is not the sort Set") ;;
       ret _
    | primFloat | decl :=
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
       check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type for floats is registered to non-monomorphic constant") ;;
-      check_eq_true (eqb decl.(cst_type) (tSort Universe.type0)) (Msg "primitive type for floats is registered to an axiom whose type is not the sort Set") ;;
+      check_eq_true (eqb decl.(cst_type) (tSort Sort.type0)) (Msg "primitive type for floats is registered to an axiom whose type is not the sort Set") ;;
       ret _
    | primArray | decl :=
-      let s := Universe.make (Level.lvar 0) in
+      let s := sType (Universe.make' (Level.lvar 0)) in
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
       check_eq_true (eqb decl.(cst_universes) (Polymorphic_ctx array_uctx)) (Msg "primitive type is registered to a monomorphic constant") ;;
       check_eq_true (eqb decl.(cst_type) (tImpl (tSort s) (tSort s))) (Msg "primitive type for arrays is registered to an axiom whose type is not of shape Type -> Type") ;;
@@ -1374,8 +1363,8 @@ Section Typecheck.
       | (primInt; primIntModel i) := ret _
       | (primFloat; primFloatModel f) := ret _
       | (primArray; primArrayModel a) :=
-        check_eq_true (abstract_env_ext_wf_universeb X (Universe.make a.(array_level))) (Msg "primitive array level is not well-formed") ;;
-        check_type <- bdcheck infer Γ wfΓ a.(array_type) (tSort (Universe.make a.(array_level))) _ ;;
+        check_eq_true (abstract_env_ext_wf_universeb X (Universe.make' a.(array_level))) (Msg "primitive array level is not well-formed") ;;
+        check_type <- bdcheck infer Γ wfΓ a.(array_type) (tSort (sType (Universe.make' a.(array_level)))) _ ;;
         check_default <- bdcheck infer Γ wfΓ a.(array_default) a.(array_type) _ ;;
         check_values <- make_All (fun x => bdcheck infer Γ wfΓ x a.(array_type) _) a.(array_value) ;;
         ret _.
@@ -1400,7 +1389,7 @@ Section Typecheck.
         now move/@wf_universe_reflect: i.
       - specialize (check_type _ wfΣ) as [].
         specialize (check_default _ wfΣ) as [].
-        assert (∥ Σ;;; Γ |- array_type a : tSort (Universe.make (array_level a)) ∥) as [].
+        assert (∥ Σ;;; Γ |- array_type a : tSort (sType (Universe.make' (array_level a))) ∥) as [].
         { sq. eapply checking_typing in X0; eauto.
           erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
           eapply has_sort_isType; eapply type_Sort; eauto. now move/@wf_universe_reflect: i. }
@@ -1459,15 +1448,15 @@ Section Typecheck.
 
   infer Γ HΓ (tEvar ev _) := raise (UnboundEvar ev) ;
 
-  infer Γ HΓ (tSort u) with inspect (@abstract_env_ext_wf_universeb _ _ _ _ X u) := {
-    | exist true _ := ret (tSort (Universe.super u);_) ;
-    | exist false _ := raise (Msg ("Sort contains an undeclared level " ^ string_of_sort u))
+  infer Γ HΓ (tSort s) with inspect (@abstract_env_ext_wf_sortb _ _ _ _ X s) := {
+    | exist true _ := ret (tSort (Sort.super s);_) ;
+    | exist false _ := raise (Msg ("Sort contains an undeclared level " ^ string_of_sort s))
   } ;
 
   infer Γ HΓ (tProd na A B) :=
-    s1 <- infer_type  infer Γ HΓ A ;;
+    s1 <- infer_type infer Γ HΓ A ;;
     s2 <- infer_type infer (Γ,,vass na A) _ B ;;
-    Checked_comp (tSort (Universe.sort_of_product s1.π1 s2.π1);_) ;
+    Checked_comp (tSort (Sort.sort_of_product s1.π1 s2.π1);_) ;
 
   infer Γ HΓ (tLambda na A t) :=
     infer_type infer Γ HΓ A ;;
@@ -1532,8 +1521,7 @@ Section Typecheck.
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
     cu <- check_consistent_instance (ind_universes mdecl) _ p.(puinst) ;;
-    check_eq_true (abstract_env_compare_global_instance _ X (abstract_env_leq X) (IndRef ind')
-      #|args| u p.(puinst))
+    check_eq_true (abstract_env_compare_global_instance _ X Cumul (IndRef ind') #|args| u p.(puinst))
       (Msg "invalid universe annotation on case, not larger than the discriminee's universes") ;;
     wt_params <- check_inst infer Γ HΓ (List.rev (smash_context [] (ind_params mdecl))@[p.(puinst)]) _ _ p.(pparams) ;;
     eq_params <- check_ws_cumul_pb_terms Γ params p.(pparams) _ _ ;;
@@ -1613,15 +1601,15 @@ Section Typecheck.
   Next Obligation.
     specialize_Σ wfΣ; sq.
     symmetry in e.
-    erewrite <- abstract_env_ext_wf_universeb_correct in e; eauto.
-    eapply (elimT wf_universe_reflect) in e.
+    erewrite <- abstract_env_ext_wf_sortb_correct in e; eauto.
+    move: e => /wf_sort_reflect e.
     sq; econstructor; tas.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq.
-    inversion X1 ; subst. erewrite <- abstract_env_ext_wf_universeb_correct in e0; eauto.
-    move: H0 e0 => /wf_universe_reflect -> //.
+    inversion X1 ; subst. erewrite <- abstract_env_ext_wf_sortb_correct in e0; eauto.
+    move: H0 e0 => /wf_sort_reflect -> //.
   Qed.
   (* tProd *)
   Next Obligation.
@@ -1984,9 +1972,6 @@ Section Typecheck.
       rewrite -(spine_subst_inst_subst X4).
       rewrite - !smash_context_subst /= !subst_context_nil.
       erewrite <- compare_global_instance_correct in i1; eauto.
-      2: intros; eapply iff_reflect;
-        eapply abstract_env_compare_universe_correct  with (conv_pb := Cumul);
-        try eassumption; apply wf_universe_iff; eauto.
       2: { eapply consistent_instance_ext_wf; eauto. }
       2: { eapply consistent_instance_ext_wf; eauto. }
       eapply (inductive_cumulative_indices X1); tea.
@@ -2043,10 +2028,7 @@ Section Typecheck.
 
   Next Obligation.
     intros. cbn in *.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    pose proof (heΣ _ wfΣ) as [heΣ].
-    cbn in *. specialize_Σ wfΣ ; sq.
-    now eapply All2_fold_All2 in check_wfpctx_conv.
+    assumption.
   Qed.
 
   Next Obligation.
@@ -2077,23 +2059,18 @@ Section Typecheck.
       induction check_brs; constructor; auto.
       destruct r0.
       solve_all.
-      eapply eq_context_gen_wf_branch.
-      now eapply All2_fold_All2.
+      now eapply eq_context_gen_wf_branch.
     }
     econstructor ; eauto.
     - econstructor ; tea.
       now apply closed_red_red.
-    - now eapply All2_fold_All2 in check_wfpctx_conv.
     - now eapply wf_local_rel_wf_local_bd, All_local_env_app_inv, wf_case_predicate_context.
     - eapply ctx_inst_typing_bd ; eauto.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
       - now eapply negbTE.
     - erewrite <- compare_global_instance_correct in i1; eauto.
-      1: intros; eapply iff_reflect;
-        eapply abstract_env_compare_universe_correct  with (conv_pb := Cumul);
-        try eassumption; apply wf_universe_iff; eauto.
-      1: { apply/wf_universe_instanceP.
+      1: { apply/wf_instanceP.
         rewrite -wf_universeb_instance_forall.
         assert (tyu : isType Σ Γ (mkApps (tInd ci u) args)).
         {
@@ -2116,7 +2093,6 @@ Section Typecheck.
         eapply wf_case_branches_types' ; tea.
         - apply infering_sort_typing ; eauto.
           now eapply wf_case_predicate_context.
-        - now eapply All2_fold_All2.
       }
       cbn ; intros ? ? ? [? []] ; intuition auto.
       now eapply wf_local_rel_wf_local_bd, All_local_env_app_inv.
@@ -2202,7 +2178,7 @@ Section Typecheck.
     subst.
     apply absurd.
     sq.
-    now eapply All2_fold_All2.
+    assumption.
   Qed.
 
   Next Obligation.
@@ -2283,10 +2259,7 @@ Section Typecheck.
       erewrite All2_length.
       2: eassumption.
       erewrite <- All2_length ; tea.
-    - intros. eapply iff_reflect.
-      eapply abstract_env_compare_universe_correct with (conv_pb := Cumul);
-      try eassumption; apply wf_universe_iff; eauto.
-    - apply/wf_universe_instanceP.
+    - apply/wf_instanceP.
       rewrite -wf_universeb_instance_forall.
       assert (tyu : isType Σ Γ (mkApps (tInd ind' u) args)).
       {
@@ -2300,7 +2273,7 @@ Section Typecheck.
     - apply infering_typing, typing_wf_universes in ty ; auto.
       move: ty => /andP [].
       rewrite {1}/wf_universes /= wf_universeb_instance_forall =>
-        /andP [] /wf_universe_instanceP; eauto.
+        /andP [] /wf_instanceP; eauto.
   Qed.
 
   Next Obligation.

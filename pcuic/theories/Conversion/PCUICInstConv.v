@@ -1869,14 +1869,16 @@ Proof.
     eapply red_primArray_type; cbn; eauto.
 Defined.
 
-Lemma eq_term_upto_univ_inst Σ :
-  forall Re Rle napp u v σ,
-    Reflexive Re -> Reflexive Rle ->
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
+Lemma eq_term_upto_univ_inst Σ cmp_universe cmp_sort pb napp u v σ :
+    RelationClasses.Reflexive (cmp_universe Conv) ->
+    RelationClasses.Reflexive (cmp_universe pb) ->
+    RelationClasses.Reflexive (cmp_sort Conv) ->
+    RelationClasses.Reflexive (cmp_sort pb) ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u v ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u.[σ] v.[σ].
 Proof using Type.
-  intros Re Rle napp u v σ hRe hRle h.
-  induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
+  intros refl_univ_conv refl_univ_pb refl_sort_conv refl_sort_pb h.
+  induction u in v, pb, napp, σ, refl_univ_pb, refl_sort_pb, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -1890,24 +1892,18 @@ Proof using Type.
   - simpl. constructor. all: eauto.
   * rewrite /inst_predicate.
     destruct X; destruct e as [? [? [ectx ?]]].
-    rewrite (All2_fold_length ectx). red.
+    rewrite (All2_length ectx). red.
     intuition auto; simpl; solve_all.
-  * induction X0 in a, brs' |- *.
-    + inversion a. constructor.
-    + inversion a. subst. simpl.
-      destruct X1 as [a0 e0], p0.
-      constructor; eauto.
-      split; eauto.
-      simpl.
-      rewrite (All2_fold_length a0).
-      now eapply e1.
+  * unfold eq_branches, eq_branch in *; solve_all.
+    rewrite (All2_length a1).
+    now eapply b0.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
     eapply onPrims_map_prop; tea. cbn; intuition eauto.

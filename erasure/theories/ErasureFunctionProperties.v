@@ -723,13 +723,11 @@ Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
    wf_ext Σ ->
    PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
    Σ;;; Γ |- v : tSort u ->
-   Σ;;; Γ |- v' : tSort u' -> is_propositional u ->
-   leq_universe (global_ext_constraints Σ) u' u.
+   Σ;;; Γ |- v' : tSort u' -> Sort.is_propositional u ->
+   leq_sort (global_ext_constraints Σ) u' u.
 Proof.
   intros wfΣ leq hv hv' isp.
-  eapply orb_true_iff in isp as [isp | isp].
-  - eapply leq_term_prop_sorted_l; eauto.
-  - eapply leq_term_sprop_sorted_l; eauto.
+  eapply leq_term_prop_sorted_l; eauto.
 Qed.
 
 Lemma map_erase_irrel X_type X {normalization_in1 normalization_in2 : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ t H1 H2 :

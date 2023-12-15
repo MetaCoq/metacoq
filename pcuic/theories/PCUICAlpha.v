@@ -18,8 +18,8 @@ Implicit Types cf : checker_flags.
 
 Notation "`≡α`" := upto_names.
 Infix "≡α" := upto_names (at level 60).
-Notation "`≡Γ`" := (eq_context_upto empty_global_env eq eq).
-Infix "≡Γ" := (eq_context_upto empty_global_env eq eq) (at level 20, no associativity).
+Notation "`≡Γ`" := (eq_context_upto empty_global_env (fun _ => eq) (fun _ => eq) Conv).
+Infix "≡Γ" := (eq_context_upto empty_global_env (fun _ => eq) (fun _ => eq) Conv) (at level 20, no associativity).
 
 #[global]
 Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
@@ -27,11 +27,11 @@ Proof. intro; apply All2_refl; reflexivity. Qed.
 
 Lemma eq_context_upto_empty_impl {cf} {Σ : global_env_ext} ctx ctx' :
   ctx ≡Γ ctx' ->
-  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) ctx ctx'.
+  eq_context Σ Σ ctx ctx'.
 Proof.
   intros; eapply All2_fold_impl; tea.
   intros ???? []; constructor; subst; auto;
-  eapply eq_term_upto_univ_empty_impl; tea; tc.
+  eapply upto_names_impl; tea; tc.
 Qed.
 
 Section Alpha.
@@ -71,13 +71,13 @@ Section Alpha.
       eauto using nth_error_Some_length.
   Qed.
 
-  Lemma decompose_app_upto {Σ Re Rle x y hd tl} :
-    eq_term_upto_univ Σ Re Rle x y ->
+  Lemma decompose_app_upto {Σ cmp_universe cmp_sort pb x y hd tl} :
+    eq_term_upto_univ Σ cmp_universe cmp_sort pb x y ->
     decompose_app x = (hd, tl) ->
-    ∑ hd' tl', (y = mkApps hd' tl') *
-    eq_term_upto_univ_napp Σ Re Rle #|tl| hd hd' *
-    negb (isApp hd') *
-    All2 (eq_term_upto_univ Σ Re Re) tl tl'.
+    ∑ hd' tl', y = mkApps hd' tl' ×
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb #|tl| hd hd' ×
+    negb (isApp hd') ×
+    All2 (eq_term_upto_univ Σ cmp_universe cmp_sort Conv) tl tl'.
   Proof using Type.
     intros eq dapp.
     pose proof (decompose_app_notApp _ _ _ dapp).
@@ -111,9 +111,9 @@ Section Alpha.
     destruct t; congruence.
   Qed.
 
-  Lemma upto_names_destInd Re Rle t u :
-    eq_term_upto_univ empty_global_env Re Rle t u ->
-    rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * R_universe_instance Re u u')%type (destInd t) (destInd u).
+  Lemma upto_names_destInd cmp_universe cmp_sort pb napp t u :
+    eq_term_upto_univ_napp empty_global_env cmp_universe cmp_sort pb napp t u ->
+    rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * cmp_universe_instance (cmp_universe Conv) u u')%type (destInd t) (destInd u).
   Proof using Type.
     induction 1; simpl; constructor; try congruence.
     split; auto.
@@ -137,20 +137,17 @@ Section Alpha.
     destruct X0 as [eqctx eqt].
     apply (eq_context_upto_smash_context empty_global_env [] []) in eqctx; try constructor.
     apply eq_context_upto_rev' in eqctx.
-    eapply (eq_context_upto_nth_error empty_global_env _ _ _ _ rarg) in eqctx.
+    eapply (eq_context_upto_nth_error empty_global_env _ _ _ _ _ rarg) in eqctx.
     subst rarg'.
     destruct (nth_error (List.rev (smash_context [] c)) rarg).
-    inv eqctx. destruct X0.
+    all: inv eqctx => //. destruct X0.
     destruct (decompose_app) eqn:eqdec.
-    destruct (decompose_app_upto e eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
+    destruct (decompose_app_upto e eqdec) as (hd' & tl' & eq & eqhd & napp & eqtl).
     rewrite eq. rewrite decompose_app_mkApps; auto.
-    eapply (eq_term_upto_univ_empty_impl _ Logic.eq Logic.eq Logic.eq Logic.eq #|l0| 0) in eqhd.
-    all:try typeclasses eauto.
     apply upto_names_destInd in eqhd.
     inv eqhd; auto.
     destruct a as [ind u], b0 as [ind' u']; simpl in *; auto.
     destruct X0 as [-> _]; auto.
-    now inv eqctx.
   Qed.
 
   Lemma upto_names_check_cofix mfix mfix' :
@@ -169,10 +166,8 @@ Section Alpha.
     do 2 destruct decompose_prod_assum.
     destruct X as [_ eqt].
     destruct (decompose_app) eqn:eqdec.
-    destruct (decompose_app_upto eqt eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
+    destruct (decompose_app_upto eqt eqdec) as (hd' & tl' & eq & eqhd & napp & eqtl).
     rewrite eq. rewrite decompose_app_mkApps; auto.
-    eapply (eq_term_upto_univ_empty_impl _ Logic.eq Logic.eq Logic.eq Logic.eq #|l0| 0) in eqhd.
-    all:try typeclasses eauto.
     apply upto_names_destInd in eqhd.
     inv eqhd; auto.
     destruct a as [ind u], b as [ind' u']; simpl in *; auto.
@@ -231,7 +226,7 @@ Section Alpha.
 
   Lemma All_decls_alpha_pb_ws_decl {le P} {Γ : context} {d d'} :
     (forall le t t', is_open_term Γ t -> is_open_term Γ t' -> upto_names' t t' -> P le t t') ->
-    compare_decls upto_names' upto_names' d d' ->
+    compare_decls (fun pb => eq_term_upto_univ empty_global_env (fun _ => eq) (fun _ => eq) pb) Conv d d' ->
     ws_decl Γ d ->
     ws_decl Γ d' ->
     All_decls_alpha_pb le P d d'.
@@ -275,82 +270,36 @@ Section Alpha.
 
   Qed.
 
-  Lemma eq_context_upto_map2_set_binder_name Σ pctx pctx' Γ Δ :
-    pctx ≡Γ pctx' ->
-    eq_context_upto Σ eq eq Γ Δ ->
-    eq_context_upto Σ eq eq
-      (map2 set_binder_name (forget_types pctx) Γ)
-      (map2 set_binder_name (forget_types pctx') Δ).
-  Proof using Type.
-    intros eqp.
-    induction 1 in pctx, pctx', eqp |- *.
-    - induction eqp; cbn; constructor.
-    - depelim eqp. simpl. constructor.
-      simpl. constructor; auto.
-      destruct c, p; constructor; auto.
-  Qed.
-
-  Lemma eq_context_upto_lift_context Σ Re Rle :
-    RelationClasses.subrelation Re Rle ->
-    forall u v n k,
-      eq_context_upto Σ Re Rle u v ->
-      eq_context_upto Σ Re Rle (lift_context n k u) (lift_context n k v).
-  Proof using Type.
-    intros re u v n k.
-    induction 1.
-    - constructor.
-    - rewrite !lift_context_snoc; constructor; eauto.
-      depelim p; constructor; simpl; intuition auto;
-      rewrite -(length_of X);
-      apply eq_term_upto_univ_lift; auto.
-  Qed.
-
   Lemma eq_context_upto_subst_instance Σ :
-    forall u v i,
+    forall pb u v i,
     valid_constraints (global_ext_constraints Σ)
                       (subst_instance_cstrs i Σ) ->
-    eq_context_upto Σ eq eq u v ->
-    eq_context_upto Σ eq eq (subst_instance i u) (subst_instance i v).
+    eq_context_upto Σ (fun _ => eq) (fun _ => eq) pb u v ->
+    eq_context_upto Σ (fun _ => eq) (fun _ => eq) pb (subst_instance i u) (subst_instance i v).
   Proof using Type.
-    intros u v i vc.
-    induction 1.
-    - constructor.
-    - rewrite !PCUICUnivSubst.subst_instance_cons. constructor; eauto.
-      depelim p; constructor; simpl; intuition auto.
-      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-      intros x y u v ? ? ->; reflexivity.
-      intros x y u v ? ? ->; reflexivity. exact vc.
-      assumption.
-      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-      intros x y u v ? ? ->; reflexivity.
-      intros x y u v ? ? ->; reflexivity. exact vc.
-      assumption.
-      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-      intros x y u v ? ? ->; reflexivity.
-      intros x y u v ? ? ->; reflexivity. exact vc.
-      assumption.
+    intros pb u v i vc.
+    eapply PCUICUnivSubstitutionConv.eq_context_upto_subst_preserved with (cmp_universe := fun _ _ => eq) (cmp_sort := fun _ _ => eq).
+    5: eassumption.
+    all: intros ??????[]; reflexivity.
   Qed.
 
-  Lemma eq_context_gen_upto ctx ctx' :
-    eq_context_gen eq eq ctx ctx' ->
-    eq_context_upto empty_global_env eq eq ctx ctx'.
+  Lemma eq_context_upto_names_eq_context_alpha ctx ctx' :
+    eq_context_upto_names ctx ctx' ->
+    ctx ≡Γ ctx'.
   Proof using Type.
-    intros a; eapply All2_fold_impl; tea.
-    intros. destruct X; subst; constructor; auto; try reflexivity.
+    apply eq_context_upto_names_eq_context_upto; tc.
   Qed.
 
   Lemma case_predicate_context_equiv {ind mdecl idecl p p'} :
     eq_predicate upto_names' eq p p' ->
-    eq_context_upto empty_global_env eq eq
-      (case_predicate_context ind mdecl idecl p)
-      (case_predicate_context ind mdecl idecl p').
+    case_predicate_context ind mdecl idecl p ≡Γ case_predicate_context ind mdecl idecl p'.
   Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]].
     rewrite /case_predicate_context /case_predicate_context_gen.
-    apply eq_context_upto_map2_set_binder_name => //.
-    now eapply eq_context_gen_upto.
+    eapply eq_context_gen_map2_set_binder_name => //.
+    now eapply eq_context_upto_names_eq_context_alpha.
     rewrite /pre_case_predicate_context_gen.
-    eapply R_universe_instance_eq in eqinst. rewrite -eqinst.
+    eapply cmp_universe_instance_eq in eqinst. rewrite -eqinst.
     apply eq_context_upto_subst_context; tea; tc.
     reflexivity.
     now apply All2_rev.
@@ -363,9 +312,9 @@ Section Alpha.
     (case_branch_context ind mdecl p' (forget_types bctx') cdecl).
   Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
-    eapply R_universe_instance_eq in eqinst.
+    eapply cmp_universe_instance_eq in eqinst.
     rewrite /case_branch_context /case_branch_context_gen -eqinst.
-    apply eq_context_upto_map2_set_binder_name => //.
+    eapply eq_context_gen_map2_set_binder_name => //; tea.
     rewrite /pre_case_branch_context_gen.
     apply eq_context_upto_subst_context; tea; tc.
     reflexivity.
@@ -383,7 +332,7 @@ Section Alpha.
       (case_branch_type ind mdecl idecl p' br' ptm' c cdecl).2.
   Proof using Type.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
-    eapply R_universe_instance_eq in eqinst.
+    eapply cmp_universe_instance_eq in eqinst.
     intros ptm ptm'.
     rewrite /case_branch_type /case_branch_type_gen -eqinst. cbn.
     eapply eq_term_mkApps.
@@ -395,53 +344,40 @@ Section Alpha.
     - eapply All2_app.
       * eapply All2_map, All2_refl.
         intros.
-        eapply eq_term_upto_univ_empty_impl; tea; tc.
-        eapply eq_term_upto_univ_substs. tc.
+        eapply eq_term_upto_univ_empty_impl; cycle -1.
+        eapply eq_term_upto_univ_substs; tc.
         reflexivity.
         now eapply All2_rev.
+        all: tc.
       * constructor. 2:constructor.
-        eapply eq_term_upto_univ_empty_impl; tea; tc.
-        eapply eq_term_upto_univ_mkApps. len.
-        reflexivity.
+        eapply eq_term_upto_univ_empty_impl with (pb := Conv); cycle -1.
+        eapply eq_term_upto_univ_mkApps; cycle -1.
         eapply All2_app.
-        + eapply All2_map. eapply (All2_impl eqpars).
-          intros. now eapply eq_term_upto_univ_lift.
-        + eapply All2_refl. reflexivity.
-  Qed.
+        eapply All2_map. eapply (All2_impl eqpars).
+        intros. now eapply eq_term_upto_univ_lift.
 
-  Lemma eq_binder_annots_eq_context_gen_ctx {Δ : context} {nas} :
-    All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    eq_context_gen eq eq (map2 set_binder_name nas Δ) Δ.
-  Proof using Type.
-  induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
-  - depelim hlen. simpl. reflexivity.
-  - destruct nas as [|nas na] using rev_case => //;
-    pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
-    eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
-    depelim allna. depelim allna.
-    rewrite map2_app => /= //; try lia. unfold aname. lia.
-    eapply app_inj_tail in heq as [<- <-].
-    simpl. eapply All2_fold_app; auto.
-    constructor. constructor.
-    destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
-    try reflexivity.
+        eapply All2_refl. reflexivity.
+
+        len. reflexivity.
+
+        all: tc.
   Qed.
 
   Import PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp.
   Lemma inst_case_predicate_context_eq {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl p} :
     wf_predicate mdecl idecl p ->
-    eq_context_gen eq eq (ind_predicate_context ind mdecl idecl) (pcontext p) ->
-    eq_context_gen eq eq (case_predicate_context ind mdecl idecl p) (inst_case_predicate_context p).
+    eq_context_upto_names (ind_predicate_context ind mdecl idecl) (pcontext p) ->
+    eq_context_upto_names (case_predicate_context ind mdecl idecl p) (inst_case_predicate_context p).
   Proof using Type.
     intros wfp eq.
     rewrite /case_predicate_context /case_predicate_context_gen.
     epose proof (wf_pre_case_predicate_context_gen wfp).
     etransitivity.
-    now apply eq_binder_annots_eq_context_gen_ctx.
+    now apply eq_binder_annots_eq_ctx.
     rewrite /pre_case_predicate_context_gen /inst_case_predicate_context.
     rewrite /inst_case_context.
-    eapply eq_context_gen_subst_context.
-    now eapply eq_context_gen_eq_univ_subst_preserved.
+    eapply eq_context_upto_names_subst_context.
+    now eapply eq_context_upto_names_univ_subst_preserved.
   Qed.
 
   Lemma ctx_inst_eq_context {P Q Γ Γ' s Δ}:
@@ -455,19 +391,17 @@ Section Alpha.
 
   Lemma wf_local_eq_context_upto_names {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
     wf_local Σ (Γ,,, Δ) ->
-    eq_context_gen eq eq Δ' Δ ->
+    eq_context_upto_names Δ' Δ ->
     wf_local Σ (Γ ,,, Δ').
   Proof using Type.
     intros a eq.
-    eapply All2_fold_All2 in eq.
     induction eq; depelim a; cbn; try solve [constructor; auto];
     depelim r; subst; constructor; auto.
     all: apply lift_typing_impl with (1 := l) => ?? Hs.
     all: eapply (closed_context_cumulativity _ (pb:=Conv)); tea; [apply IHeq; pcuic|].
     all: eapply ws_cumul_ctx_pb_rel_app.
     all: eapply eq_context_upto_conv_context_rel; fvs.
-    all: eapply eq_context_gen_upto.
-    all: now eapply All2_fold_All2 in eq.
+    all: now eapply eq_context_upto_names_eq_context_alpha.
   Qed.
 
   Lemma case_branch_type_eq_context_gen_1 {ind mdecl idecl cdecl p n br} {ctx ctx' ret} :
@@ -492,7 +426,7 @@ Section Alpha.
     len. eapply eq_term_upto_univ_lift.
     eapply eq_term_upto_univ_impl; revgoals.
     eapply eq_term_upto_univ_it_mkLambda_or_LetIn; tea.
-    2:reflexivity. 2:lia. all:tc.
+    reflexivity. lia. all:tc.
   Qed.
 
   Lemma eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {t T} :
@@ -513,7 +447,9 @@ Section Alpha.
   Lemma upto_names_conv_context (Σ : global_env_ext) Γ Δ :
     Γ ≡Γ Δ -> conv_context cumulAlgo_gen Σ Γ Δ.
   Proof using Type.
-    eapply eq_context_upto_empty_conv_context.
+    intro H.
+    apply compare_context_cumul_pb_context.
+    now eapply eq_context_upto_empty_impl.
   Qed.
 
   Lemma isType_eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T} :
@@ -549,14 +485,14 @@ Section Alpha.
   Lemma typing_alpha_prop :
     env_prop (fun Σ Γ u A =>
       forall Δ v,
-        eq_term_upto_univ empty_global_env eq eq u v ->
+        u ≡α v ->
         Γ ≡Γ Δ ->
         Σ ;;; Δ |- v : A)
     (fun Σ Γ j =>
       forall Δ,
       Γ ≡Γ Δ ->
       lift_typing0 (fun t T =>
-        forall u, eq_term_upto_univ empty_global_env eq eq t u ->
+        forall u, t ≡α u ->
         Σ ;;; Δ |- u : T) j)
     (fun Σ Γ => forall Δ, Γ ≡Γ Δ -> wf_local Σ Δ).
   Proof using Type*.
@@ -577,7 +513,7 @@ Section Alpha.
       assert (isType Σ Γ (lift0 (S n) (decl_type decl))).
       { eapply validity. econstructor; eauto. }
       specialize (ih _ eqctx).
-      epose proof (eq_context_upto_nth_error _ _ _ _ _ _ eqctx).
+      epose proof (eq_context_upto_nth_error _ _ _ _ _ _ _ eqctx).
       erewrite hnth in X0. depelim X0.
       eapply type_Cumul.
       eapply type_Rel ; tea.
@@ -598,7 +534,7 @@ Section Alpha.
           eapply lift_sorting_forget_univ.
           eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
         * constructor.
-          -- now eapply eq_context_upto_empty_conv_context.
+          -- now eapply upto_names_conv_context.
           -- constructor. assumption. constructor.
              eapply upto_names_impl_eq_term. assumption.
     - intros na A t B ih hA ihA hB ihB Δ v e eqctx; invs e.
@@ -655,13 +591,13 @@ Section Alpha.
         eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons Δ v e e'; invs e.
-      eapply R_universe_instance_eq in H2. subst.
+      eapply cmp_universe_instance_eq in H2. subst.
       constructor; eauto.
     - intros ind u mdecl idecl isdecl ? ? hcons Δ v e e'; invs e.
-      eapply R_universe_instance_eq in H2. subst.
+      eapply cmp_universe_instance_eq in H2. subst.
       econstructor ; eauto.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? Δ v e e'; invs e.
-      eapply R_universe_instance_eq in H4. subst.
+      eapply cmp_universe_instance_eq in H4. subst.
       econstructor ; eauto.
     - intros ind p c brs args ps mdecl idecl isdecl X X0 H Hpctx cpc wfp
         cup wfpctx Hret IHret
@@ -675,7 +611,7 @@ Section Alpha.
       { destruct wfp. split; auto.
         { now rewrite <-(All2_length eqpars). }
         eapply Forall2_All2 in H1. eapply All2_Forall2.
-        eapply All2_fold_All2 in eqctx. eapply All2_sym in eqctx.
+        eapply All2_sym in eqctx.
         eapply (All2_trans' (@eq_binder_annot name name)); tea.
         2:{ eapply All2_map; tea. eapply All2_impl; tea.
             simpl; intros. destruct X1; simpl; now symmetry. }
@@ -683,7 +619,7 @@ Section Alpha.
       have wfcpc' := wfcpc (Δ ,,, case_predicate_context ind mdecl idecl p').
       forward wfcpc'. { eapply eq_context_upto_cat; auto.
       apply (case_predicate_context_equiv eqp). }
-      eapply R_universe_instance_eq in eqinst.
+      eapply cmp_universe_instance_eq in eqinst.
       assert (isType Σ Δ (mkApps ptm (args ++ [c]))).
       { eapply isType_eq_context_conversion. eapply validity. econstructor; eauto.
         constructor; eauto. constructor; eauto.
@@ -692,13 +628,12 @@ Section Alpha.
       + have cu' : consistent_instance_ext Σ (ind_universes mdecl) (puinst p').
         { now rewrite -eqinst. }
         have convctx' : eq_context_upto_names (pcontext p') (ind_predicate_context ind mdecl idecl).
-        { etransitivity; tea. symmetry. now eapply All2_fold_All2 in eqctx. }
-        assert (eqp' : eq_context_gen eq eq (inst_case_predicate_context p')
+        { etransitivity; tea. now symmetry. }
+        assert (eqp' : eq_context_upto_names (inst_case_predicate_context p')
           (case_predicate_context ind mdecl idecl p')).
         { rewrite /inst_case_predicate_context.
           rewrite /case_predicate_context /case_predicate_context_gen in wfcpc.
-          symmetry. apply inst_case_predicate_context_eq; tea.
-          eapply All2_fold_All2. now symmetry. }
+          symmetry. apply inst_case_predicate_context_eq; tea. now symmetry. }
         assert (wf_local Σ (Δ,,, inst_case_predicate_context p')).
         { eapply wf_local_eq_context_upto_names.
           exact wfcpc'. assumption. }
@@ -728,7 +663,6 @@ Section Alpha.
           red. do 2 red in wfbr.
           eapply Forall2_All2 in wfbr. eapply All2_Forall2.
           eapply All2_map_left.
-          eapply All2_fold_All2 in eqbrctx.
           eapply All2_map_left_inv in wfbr.
           eapply All2_trans'; tea.
           2:{ eapply All2_symP; tea. tc. }
@@ -772,15 +706,15 @@ Section Alpha.
           forward a.
           { eapply eq_context_conversion; tea.
             eapply eq_context_upto_cat; auto. reflexivity.
-            eapply eq_context_gen_upto. now symmetry. }
+            eapply eq_context_upto_names_eq_context_alpha. now symmetry. }
           do 2 forward a by auto.
           eapply (All2i_All2_All2i_All2i Hbrs X3 a).
           intros n cdecl br br' [wfbr [wfbrctx wfbrty]].
           destruct wfbrty as (IHbrctx & (Hbbody & IHbbody) & (Hbty & IHbty)).
           intros [eqbctx eqbodies] [wfbr' wfcpars wfcparsn wfcbctx Hbr'ty].
           split; intuition auto.
-          etransitivity. symmetry. eapply All2_fold_All2. exact eqbctx. assumption.
-          eapply eq_context_gen_upto in eqbctx.
+          etransitivity. symmetry. exact eqbctx. assumption.
+          eapply eq_context_upto_names_eq_context_alpha in eqbctx.
           assert (cbreq := case_branch_context_equiv (ind:=ind) (mdecl:=mdecl) (cdecl:=cdecl) eqp eqbctx).
           rewrite case_branch_type_fst.
           intuition auto.
@@ -819,33 +753,30 @@ Section Alpha.
     - intros mfix n decl types hguard hnth hwf hmfix ihmfix hmfixb ihmfixb wffix Δ v e e'; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
-      destruct hh as [[[ety eqann] ebo] era].
+      destruct hh as (ety & eqann & ebo & era).
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { apply PCUICWeakeningTyp.All_mfix_wf; auto.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
+        destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
         eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //. }
       assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
-        eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
-        1-2:typeclasses eauto.
+        eapply eq_context_upto_cat. 1: reflexivity.
+        eapply eq_context_upto_empty_impl.
         change (fix_context mfix) with (fix_context_gen 0 mfix).
         change (fix_context mfix') with (fix_context_gen 0 mfix').
+        generalize 0 at 2 3.
+        unfold fix_context_gen.
+        eapply (All2_All_mix_left ihmfix) in X.
+        clear -X.
+        induction X; try constructor; simpl; intros n; auto.
+        destruct r as [Hty (eqty & eqbod & eqrarg & eqann)].
         eapply eq_context_upto_cat.
-        * apply eq_context_upto_refl; typeclasses eauto.
-        * generalize 0 at 3 4.
-          unfold fix_context_gen.
-          eapply (All2_All_mix_left ihmfix) in X.
-          clear -X.
-          induction X; try constructor; simpl; intros n; auto.
-          destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
-          eapply eq_context_upto_cat.
-          + constructor; constructor; auto.
-            eapply eq_term_upto_univ_empty_impl; eauto.
-            4:now eapply eq_term_upto_univ_lift. all:tc.
-          + apply IHX. }
+        + constructor; constructor; auto.
+          now eapply eq_term_upto_univ_lift.
+        + apply IHX. }
       assert(#|fix_context mfix| = #|fix_context mfix'|).
       { now rewrite !fix_context_length (All2_length X). }
       specialize (hwf (Δ ,,, types)) as hwfΔ.
@@ -864,10 +795,10 @@ Section Alpha.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
-          destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
+          destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
           eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //.
-        * solve_all.
-          specialize (b2 (Γ ,,, types)) as IHb.
+        * unfold eq_mfixpoint in *. solve_all.
+          specialize (b1 (Γ ,,, types)) as IHb.
           forward IHb by eapply eq_context_upto_cat; reflexivity.
           eapply @lift_judgment_alpha with (tm' := Some _) in IHb; tea.
           1: apply lift_typing_impl with (1 := IHb) => t T HT.
@@ -877,12 +808,12 @@ Section Alpha.
           unfold wf_fixpoint, wf_fixpoint_gen.
           move/andP => [] hm ho.
           apply/andP; split.
-          { solve_all. move: b3 b.
+          { unfold eq_mfixpoint in *. solve_all. move: b0 a4.
             generalize (dbody x) (dbody y).
             clear=> t t' isL eq.
             destruct t => //. now depelim eq. }
           move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
-          apply upto_names_check_fix. solve_all.
+          apply upto_names_check_fix. unfold eq_mfixpoint in *. solve_all.
         + eapply All_nth_error in hmfix; tea.
         + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
           now symmetry.
@@ -890,32 +821,29 @@ Section Alpha.
   - intros mfix n decl types hguard hnth hwf hmfix ihmfix hmfixb ihmfixb wffix Δ v e e'; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
-    destruct hh as [[[ety eqann] ebo] era].
+    destruct hh as (ety & eqann & ebo & era).
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
     { apply PCUICWeakeningTyp.All_mfix_wf; auto.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
-      destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
+      destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
       eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //. }
     assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
-      eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
-      1-2:typeclasses eauto.
-      change (fix_context mfix) with (fix_context_gen 0 mfix).
-      change (fix_context mfix') with (fix_context_gen 0 mfix').
-      eapply eq_context_upto_cat.
-      * apply eq_context_upto_refl; typeclasses eauto.
-      * generalize 0 at 3 4.
+        eapply eq_context_upto_cat. 1: reflexivity.
+        eapply eq_context_upto_empty_impl.
+        change (fix_context mfix) with (fix_context_gen 0 mfix).
+        change (fix_context mfix') with (fix_context_gen 0 mfix').
+        generalize 0 at 2 3.
         unfold fix_context_gen.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; try constructor; simpl; intros n; auto.
-        destruct r as [Hty [[[eqty eqbod] eqrarg] eqann]].
+        destruct r as [Hty (eqty & eqbod & eqrarg & eqann)].
         eapply eq_context_upto_cat.
         + constructor; constructor; auto.
-          eapply eq_term_upto_univ_empty_impl; eauto.
-          4:now eapply eq_term_upto_univ_lift. all:tc.
+          now eapply eq_term_upto_univ_lift.
         + apply IHX. }
     assert(#|fix_context mfix| = #|fix_context mfix'|).
     { now rewrite !fix_context_length (All2_length X). }
@@ -935,10 +863,10 @@ Section Alpha.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty [[[eqty eqann] eqbod] eqrarg]].
+        destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
         eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //.
-      * solve_all.
-        specialize (b2 (Γ ,,, types)) as IHb.
+      * unfold eq_mfixpoint in *. solve_all.
+        specialize (b1 (Γ ,,, types)) as IHb.
         forward IHb by eapply eq_context_upto_cat; reflexivity.
         eapply @lift_judgment_alpha with (tm' := Some _) in IHb; tea.
         1: apply lift_typing_impl with (1 := IHb) => t T HT.
@@ -947,7 +875,7 @@ Section Alpha.
       * revert wffix.
         unfold wf_cofixpoint, wf_cofixpoint_gen.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
-        apply upto_names_check_cofix. solve_all.
+        apply upto_names_check_cofix. unfold eq_mfixpoint in *. solve_all.
       + eapply All_nth_error in hmfix; tea.
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
@@ -966,7 +894,7 @@ Section Alpha.
         eapply eq_term_upto_univ_cumulSpec.
         eapply eq_term_leq_term. eapply e1.
       * eapply eq_context_conversion in Hs; eauto.
-      * simp prim_type. eapply Universe.make_inj in e. rewrite e.
+      * simp prim_type. eapply Universe.make'_inj in e. rewrite e.
         eapply eq_term_upto_univ_cumulSpec.
         eapply upto_names_impl_leq_term.
         constructor. constructor. reflexivity. now symmetry.
@@ -993,42 +921,29 @@ Section Alpha.
 
   Local Ltac inv H := inversion H; subst; clear H.
 
-  Lemma eq_term_upto_univ_napp_0 n t t' :
-    eq_term_upto_univ_napp empty_global_env eq eq n t t' ->
+  Lemma eq_term_upto_univ_napp_0 pb n t t' :
+    eq_term_upto_univ_napp empty_global_env (fun _ => eq) (fun _ => eq) pb n t t' ->
     t ≡α t'.
   Proof using Type.
     apply eq_term_upto_univ_empty_impl; typeclasses eauto.
   Qed.
 
-  Lemma upto_names_eq_term_refl Σ Re n t t' :
-    RelationClasses.Reflexive Re ->
-    t ≡α t' ->
-    eq_term_upto_univ_napp Σ Re Re n t t'.
-  Proof using Type.
-    intros.
-    eapply eq_term_upto_univ_empty_impl; tea; tc.
-    all:intros x y ->; reflexivity.
-  Qed.
-
-  Lemma upto_names_eq_term_upto_univ Σ Re Rle napp t u :
-    RelationClasses.Reflexive Re ->
-    RelationClasses.Reflexive Rle ->
-    RelationClasses.Symmetric Re ->
-    RelationClasses.Transitive Re ->
-    RelationClasses.Transitive Rle ->
-    RelationClasses.subrelation Re Rle ->
-    eq_term_upto_univ_napp Σ Re Rle napp t u ->
+  Lemma upto_names_eq_term_upto_univ Σ cmp_universe cmp_sort pb napp t u :
+    RelationClasses.subrelation (cmp_universe Conv) (cmp_universe pb) ->
+    RelationClasses.PreOrder (cmp_universe Conv) ->
+    RelationClasses.PreOrder (cmp_universe pb) ->
+    RelationClasses.PreOrder (cmp_sort Conv) ->
+    RelationClasses.PreOrder (cmp_sort pb) ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t u ->
     forall t' u', t ≡α t' -> u ≡α u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp t' u'.
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t' u'.
   Proof using Type.
     intros.
-    eapply (upto_names_eq_term_refl Σ Re) in X0; tea.
-    eapply (upto_names_eq_term_refl Σ Re) in X1; tea.
-    symmetry in X0.
-    eapply eq_term_upto_univ_trans; tea.
-    eapply eq_term_upto_univ_impl; tea. reflexivity. reflexivity.
-    eapply eq_term_upto_univ_trans; tea.
-    eapply eq_term_upto_univ_impl; tea. reflexivity. reflexivity.
+    eapply symmetry, upto_names_impl in X0; tea.
+    eapply upto_names_impl in X1; tea.
+    eapply eq_term_upto_univ_trans; cycle -1.
+    eapply eq_term_upto_univ_trans; cycle -1.
+    all: tea; tc.
   Qed.
 
   Lemma upto_names_leq_term Σ φ t u t' u'

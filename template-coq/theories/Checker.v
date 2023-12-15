@@ -368,7 +368,7 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tRel n, tRel n' => Nat.eqb n n'
   | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eqb id id'
-  | tSort s, tSort s' => check_eqb_universe φ s s'
+  | tSort s, tSort s' => check_eqb_sort φ s s'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
@@ -400,7 +400,7 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tRel n, tRel n' => Nat.eqb n n'
   | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eqb id id'
-  | tSort s, tSort s' => check_leqb_universe φ s s'
+  | tSort s, tSort s' => check_leqb_sort φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
@@ -631,7 +631,7 @@ Section Typecheck.
     | None => raise (NotEnoughFuel fuel)
     end.
 
-  Definition reduce_to_sort Γ (t : term) : typing_result Universe.t :=
+  Definition reduce_to_sort Γ (t : term) : typing_result sort :=
     match t with
     | tSort s => ret s
     | _ =>
@@ -723,7 +723,7 @@ Section Typecheck.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (Universe.super s))
+    | tSort s => ret (tSort (Sort.super s))
 
     | tCast c k t =>
       infer_type infer Γ t ;;
@@ -733,7 +733,7 @@ Section Typecheck.
     | tProd n t b =>
       s1 <- infer_type infer Γ t ;;
       s2 <- infer_type infer (Γ ,, vass n t) b ;;
-      ret (tSort (Universe.sort_of_product s1 s2))
+      ret (tSort (Sort.sort_of_product s1 s2))
 
     | tLambda n t b =>
       infer_type infer Γ t ;;

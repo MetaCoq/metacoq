@@ -255,7 +255,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
 | expanded_tRel_app (n : nat) args m : nth_error Γ n = Some m -> m <= #|args| -> Forall (expanded Γ) args -> expanded Γ (tApp (tRel n) args)
 | expanded_tVar (id : ident) : expanded Γ (tVar id)
 | expanded_tEvar (ev : nat) (args : list term) : Forall (expanded Γ) args -> expanded Γ (tEvar ev args)
-| expanded_tSort (s : Universe.t) : expanded Γ (tSort s)
+| expanded_tSort (s : sort) : expanded Γ (tSort s)
 | expanded_tCast (t : term) (kind : cast_kind) (v : term) : expanded Γ t -> expanded Γ v -> expanded Γ (tCast t kind v)
 | expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded Γ ty -> expanded Γ body -> *) expanded Γ (tProd na ty body)
 | expanded_tLambda (na : aname) (ty : term) (body : term) : (* expanded Γ ty -> *) expanded (0 :: Γ) body -> expanded Γ (tLambda na ty body)
@@ -308,7 +308,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
 (forall Γ, forall n : nat, forall args, forall m, nth_error Γ n = Some m -> forall Heq :  m <= #|args|, Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tApp (tRel n) args)) ->
 (forall Γ, forall id : ident, P Γ (tVar id)) ->
 (forall Γ, forall (ev : nat) (args : list term), Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
-(forall Γ, forall s : Universe.t, P Γ (tSort s)) ->
+(forall Γ, forall s : sort, P Γ (tSort s)) ->
 (forall Γ, forall (t : term) (kind : cast_kind) (v : term),
  expanded Σ Γ t -> P Γ t -> expanded Σ Γ v -> P Γ v -> P Γ (tCast t kind v)) ->
 (forall Γ, forall (na : aname) (ty body : term), P Γ (tProd na ty body)) ->

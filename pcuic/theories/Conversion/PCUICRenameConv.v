@@ -220,13 +220,12 @@ Section Renaming.
 
 Context `{cf : checker_flags}.
 
-Lemma eq_term_upto_univ_rename Σ :
-  forall Re Rle napp u v f,
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp (rename f u) (rename f v).
+Lemma eq_term_upto_univ_rename Σ cmp_universe cmp_sort pb napp u v f :
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u v ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (rename f u) (rename f v).
 Proof using Type.
-  intros Re Rle napp u v f h.
-  induction u in v, napp, Rle, f, h |- * using term_forall_list_ind.
+  intros h.
+  induction u in v, napp, pb, f, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -239,29 +238,19 @@ Proof using Type.
   - simpl. constructor. all: eauto.
     * rewrite /rename_predicate.
       destruct X; destruct e as [? [? [ectx ?]]].
-      rewrite (All2_fold_length ectx). red.
+      rewrite (All2_length ectx). red.
       intuition auto; simpl; solve_all.
-    * red in X0. solve_all.
-      rewrite -(All2_fold_length a).
+    * red in X0. unfold eq_branches, eq_branch in *. solve_all.
+      rewrite -(All2_length a1).
       now eapply b0.
-  - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
+  - simpl. constructor. unfold eq_mfixpoint in *.
+    apply All2_length in e as eq. rewrite <- eq.
     generalize #|m|. intro k.
-    induction X in mfix', a, f, k |- *.
-    + inversion a. constructor.
-    + inversion a. subst.
-      simpl. constructor.
-      * unfold map_def. intuition eauto.
-      * eauto.
-  - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
+    solve_all.
+  - simpl. constructor. unfold eq_mfixpoint in *.
+    apply All2_length in e as eq. rewrite <- eq.
     generalize #|m|. intro k.
-    induction X in mfix', a, f, k |- *.
-    + inversion a. constructor.
-    + inversion a. subst.
-      simpl. constructor.
-      * unfold map_def. intuition eauto.
-      * eauto.
+    solve_all.
   - simpl. constructor.
     eapply onPrims_map_prop; tea. cbn; intuition eauto.
 Qed.

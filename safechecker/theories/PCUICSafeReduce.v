@@ -2025,7 +2025,7 @@ Section ReduceFns.
   (* Definition of assumption-only arities (without lets) *)
   Definition arity_ass := aname * term.
 
-  Fixpoint mkAssumArity (l : list arity_ass) (s : Universe.t) : term :=
+  Fixpoint mkAssumArity (l : list arity_ass) (s : sort) : term :=
     match l with
     | [] => tSort s
     | (na, A) :: l => tProd na A (mkAssumArity l s)
@@ -2046,7 +2046,7 @@ Section ReduceFns.
       constructor; auto.
   Qed.
 
-  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : Universe.t) :
+  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : sort) :
     mkAssumArity l s = it_mkProd_or_LetIn (arity_ass_context l) (tSort s).
   Proof using Type.
     unfold arity_ass_context.
@@ -2066,7 +2066,7 @@ Section ReduceFns.
   Record conv_arity {Γ T} : Type :=
     build_conv_arity {
         conv_ar_context : list arity_ass;
-        conv_ar_univ : Universe.t;
+        conv_ar_univ : sort;
         conv_ar_red : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
       }.
 

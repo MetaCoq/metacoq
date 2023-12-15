@@ -73,7 +73,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
 | expanded_tRel (n : nat) m args : nth_error Γ n = Some m -> forall Hle : m <= #|args|, Forall (expanded Γ) args -> expanded Γ (mkApps (tRel n) args)
 | expanded_tVar (id : ident) : expanded Γ (tVar id)
 | expanded_tEvar (ev : nat) (args : list term) : Forall (expanded Γ) args -> expanded Γ (tEvar ev args)
-| expanded_tSort (s : Universe.t) : expanded Γ (tSort s)
+| expanded_tSort (s : sort) : expanded Γ (tSort s)
 | expanded_tProd (na : aname) (ty : term) (body : term) : expanded Γ (tProd na ty body)
 | expanded_tLambda (na : aname) (ty : term) (body : term) : expanded (0 :: Γ) body -> expanded Γ (tLambda na ty body)
 | expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded Γ def -> expanded (0 :: Γ) body -> expanded Γ (tLetIn na def def_ty body)
@@ -117,7 +117,7 @@ Lemma expanded_ind :
   (forall (Γ : list nat) (id : ident), P Γ (tVar id)) ->
   (forall (Γ : list nat) (ev : nat) (args : list term),
   Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
-  (forall (Γ : list nat) (s : Universe.t), P Γ (tSort s)) ->
+  (forall (Γ : list nat) (s : sort), P Γ (tSort s)) ->
   (forall (Γ : list nat) (na : aname) (ty body : term), P Γ (tProd na ty body)) ->
   (forall (Γ : list nat) (na : aname) (ty body : term),
   expanded Σ (0 :: Γ) body -> P (0 :: Γ) body -> P Γ (tLambda na ty body)) ->

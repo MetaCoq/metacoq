@@ -37,7 +37,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 Inductive ws_cumul_pb {cf} (pb : conv_pb) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | ws_cumul_pb_compare (t u : term) :
   is_closed_context Γ -> is_open_term Γ t -> is_open_term Γ u ->
-  compare_term pb Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ ⊢ t ≤[pb] u
+  compare_term Σ.1 (global_ext_constraints Σ) pb t u -> Σ ;;; Γ ⊢ t ≤[pb] u
 | ws_cumul_pb_red_l (t u v : term) :
   is_closed_context Γ ->
   is_open_term Γ t -> is_open_term Γ u -> is_open_term Γ v ->
@@ -125,7 +125,7 @@ Lemma ws_cumul_pb_alt `{cf : checker_flags} {pb} {Σ : global_env_ext} {wfΣ : w
   Σ ;;; Γ ⊢ t ≤[pb] u <~>
   ∑ v v',
     [× is_closed_context Γ, is_open_term Γ t, is_open_term Γ u,
-      red Σ Γ t v, red Σ Γ u v' & compare_term pb Σ (global_ext_constraints Σ) v v'].
+      red Σ Γ t v, red Σ Γ u v' & compare_term Σ (global_ext_constraints Σ) pb v v'].
 Proof.
   split.
   - induction 1.
@@ -188,9 +188,9 @@ Proof.
     - now transitivity u'nf. }
 Qed.
 
-Arguments wt_cumul_pb_dom {cf c Σ Γ T U}.
-Arguments wt_cumul_pb_codom {cf c Σ Γ T U}.
-Arguments wt_cumul_pb_eq {cf c Σ Γ T U}.
+Arguments wt_cumul_pb_dom {cf pb Σ Γ T U}.
+Arguments wt_cumul_pb_codom {cf pb Σ Γ T U}.
+Arguments wt_cumul_pb_eq {cf pb Σ Γ T U}.
 
 Section EqualityLemmas.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -299,7 +299,7 @@ Lemma ws_cumul_pb_alt_closed {cf} {pb} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t
   Σ ;;; Γ ⊢ t ≤[pb] u <~>
   ∑ v v',
     [× closed_red Σ Γ t v, closed_red Σ Γ u v' &
-       compare_term pb Σ (global_ext_constraints Σ) v v'].
+       compare_term Σ (global_ext_constraints Σ) pb v v'].
 Proof.
   etransitivity. apply ws_cumul_pb_alt.
   split; intros (v & v' & cl); exists v, v'; intuition.

@@ -102,24 +102,6 @@ Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
-  Instance All2_eq_refl Σ Re :
-    RelationClasses.Reflexive Re ->
-    CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
-  Proof using Type.
-    intros h x. apply All2_same. reflexivity.
-  Qed.
-
-  Instance All2_br_eq_refl Σ Re :
-    RelationClasses.Reflexive Re ->
-    CRelationClasses.Reflexive (All2
-      (fun x y : branch term =>
-        eq_context_upto Σ Re Re (bcontext x) (bcontext y) *
-        eq_term_upto_univ Σ Re Re (bbody x) (bbody y))).
-  Proof using Type.
-    intros h x.
-    apply All2_same; split; reflexivity.
-  Qed.
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -223,7 +205,7 @@ Section Lemmata.
 
   Lemma welltyped_alpha Γ u v :
     welltyped Σ Γ u ->
-    eq_term_upto_univ empty_global_env eq eq u v ->
+    u ≡α v ->
     welltyped Σ Γ v.
   Proof using hΣ.
     intros [A h] e.
@@ -342,30 +324,6 @@ Section Lemmata.
     destruct h; depelim wf; simpl in *.
     all: destruct l as (Hb & s & Hs & _); cbn in *; econstructor; eauto.
   Qed.
-  (* TODO: rename alpha_eq *)
-  Lemma compare_decls_conv Γ Γ' :
-    eq_context_upto_names Γ Γ' ->
-    conv_context cumulAlgo_gen Σ Γ Γ'.
-  Proof using Type.
-    intros.
-    induction X; constructor; auto.
-    destruct r; constructor; subst; auto; reflexivity.
-  Qed.
-
-  Lemma compare_decls_eq_context Γ Γ' :
-    eq_context_upto_names Γ Γ' <~>
-    eq_context_gen eq eq Γ Γ'.
-  Proof using Type.
-    split; induction 1; constructor; auto.
-  Qed.
-
-  Lemma alpha_eq_inst_case_context Γ Δ pars puinst :
-    eq_context_upto_names Γ Δ ->
-    eq_context_upto_names (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
-  Proof using Type.
-    intros. rewrite /inst_case_context.
-    now eapply alpha_eq_subst_context, alpha_eq_subst_instance.
-  Qed.
 
   Lemma welltyped_context :
     forall Γ t,
@@ -453,11 +411,10 @@ Section Lemmata.
           rewrite /case_predicate_context /= /case_predicate_context_gen.
           rewrite /pre_case_predicate_context_gen.
           rewrite /inst_case_context.
-          apply compare_decls_conv.
+          apply eq_context_upto_names_conv_context.
           eapply All2_app. 2:{ reflexivity. }
-          eapply compare_decls_eq_context.
           apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) wf_pred).
-          cbn. apply compare_decls_eq_context. now symmetry.
+          cbn. now symmetry.
 
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
@@ -954,7 +911,7 @@ Section Lemmata.
       inversion e. reflexivity.
   Qed.
 
-  Hint Resolve cumul_refl conv_alt_red : core.
+  Hint Resolve cumul_refl cumul_alt : core.
   Hint Resolve cumul_refl : core.
 
   Lemma cored_red_cored :

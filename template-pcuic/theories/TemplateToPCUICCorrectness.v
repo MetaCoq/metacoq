@@ -794,13 +794,13 @@ Section Trans_Global.
   Context (wfΣ : Typing.wf Σ).
   Context (wfΣ' : wf Σ').
 
-  Lemma trans_R_global_instance {Re Rle gref napp u u'} :
-    SEq.R_global_instance Σ Re Rle gref napp u u' ->
-    R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
+  Lemma trans_cmp_global_instance {cmp_universe pb gref napp u u'} :
+    SEq.cmp_global_instance Σ cmp_universe pb gref napp u u' ->
+    cmp_global_instance (trans_global_env Σ) cmp_universe pb gref napp u u'.
   Proof.
-    unfold SEq.R_global_instance, SEq.global_variance.
+    unfold SEq.cmp_global_instance, SEq.global_variance.
     destruct gref; simpl; auto.
-    - unfold R_global_instance_gen, R_opt_variance; cbn.
+    - unfold cmp_global_instance_gen, cmp_opt_variance; cbn.
       unfold Ast.lookup_inductive_gen, lookup_inductive_gen,
         Ast.lookup_minductive_gen, lookup_minductive_gen.
       rewrite trans_lookup. destruct Ast.Env.lookup_env eqn:look => //; simpl.
@@ -813,7 +813,7 @@ Section Trans_Global.
       generalize (trans_destArity Σ [] (Ast.Env.ind_type o) wfty wfΣ').
       destruct Ast.destArity as [[ctx ps]|] eqn:eq' => /= // -> //.
       now rewrite context_assumptions_map.
-    - unfold R_global_instance_gen, R_opt_variance; cbn.
+    - unfold cmp_global_instance_gen, cmp_opt_variance; cbn.
       unfold lookup_constructor, lookup_inductive, lookup_minductive.
       unfold Ast.lookup_constructor, Ast.lookup_inductive, Ast.lookup_minductive.
       unfold lookup_constructor_gen, lookup_inductive_gen, lookup_minductive_gen.
@@ -827,7 +827,7 @@ Section Trans_Global.
 
   Lemma eq_binder_annot_eq_context_gen_set_binder_name Γ Γ' Δ :
     All2 eq_binder_annot Γ Γ' ->
-    eq_context_gen eq eq (map2 set_binder_name Γ Δ) (map2 set_binder_name Γ' Δ).
+    eq_context_upto_names (map2 set_binder_name Γ Δ) (map2 set_binder_name Γ' Δ).
   Proof.
     induction 1 in Δ |- *.
     - constructor.
@@ -858,16 +858,14 @@ Section Trans_Global.
     induction 1 in l' |- *; intros H; depelim H; intros H'; depelim H'; cbn; constructor; auto.
   Qed.
 
-  (* TODO updateTemplate Coq's eq_term to reflect PCUIC's cumulativity *)
-  Lemma trans_eq_term_upto_univ {Re Rle t u napp} :
-    RelationClasses.subrelation Re Rle ->
+  Lemma trans_eq_term_upto_univ {cmp_universe cmp_sort pb napp t u} :
     WfAst.wf Σ t ->
     WfAst.wf Σ u ->
-    SEq.eq_term_upto_univ_napp Σ Re Rle napp t u ->
-    eq_term_upto_univ_napp (trans_global_env Σ) Re Rle napp (trans (trans_global_env Σ) t) (trans (trans_global_env Σ) u).
+    SEq.eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t u ->
+    eq_term_upto_univ_napp (trans_global_env Σ) cmp_universe cmp_sort pb napp (trans (trans_global_env Σ) t) (trans (trans_global_env Σ) u).
   Proof.
-    intros sub wt wu e.
-    induction t using Induction.term_forall_list_rect in sub, Rle, napp, wt, u, wu, e |- *.
+    intros wt wu e.
+    induction t using Induction.term_forall_list_rect in pb, napp, wt, u, wu, e |- *.
     all: invs e; cbn.
     all: try solve [ constructor ; auto ].
     all: repeat (match goal with
@@ -877,17 +875,17 @@ Section Trans_Global.
     all: try solve [
       repeat constructor ; auto ;
       match goal with
-      | ih : forall Rle (u : Ast.term) (napp : nat), _ |- _ =>
+      | ih : forall pb napp (u : Ast.term), _ |- _ =>
         now eapply ih
       end
     ].
     - constructor.
-      solve_all. eapply a; auto. tc.
+      solve_all.
     - eapply eq_term_upto_univ_napp_mkApps.
       + rewrite map_length. now eapply IHt.
-      + destruct wt, wu. solve_all. eapply a0; auto; tc.
-    - constructor. apply trans_R_global_instance; auto.
-    - constructor. apply trans_R_global_instance; auto.
+      + destruct wt, wu. solve_all.
+    - constructor. apply trans_cmp_global_instance; auto.
+    - constructor. apply trans_cmp_global_instance; auto.
     - red in X, X0.
       destruct wt as [mdecl' [idecl' [decli hci hpctx lenpar eqpars eqret eqc eqbrs]]].
       destruct wu as [mdecl'' [idecl'' [decli' hci' hpctx' lenpars' eqpars' eqret' eqc' eqbrs']]].
@@ -902,7 +900,7 @@ Section Trans_Global.
       destruct X.
       constructor. all: try solve [
         match goal with
-        | ih : forall Rle u, _ |- _ =>
+        | ih : forall pb napp u, _ |- _ =>
           now eapply ih
         end
       ].
@@ -919,7 +917,8 @@ Section Trans_Global.
         eapply All2_All2_All2_All3; tea.
         cbn. intros cdecl br br' [[eq wfb] IH] [eq' wfb'] [eqbs eqbods].
         split.
-        { rewrite map2_map2_bias_left; len.
+        { unfold trans_branch; cbn.
+          rewrite map2_map2_bias_left; len.
           eapply All2_length in eq. now len in eq.
           rewrite map2_map2_bias_left; len.
           eapply All2_length in eq'. now len in eq'.
@@ -951,7 +950,7 @@ Section Trans_Global.
       simpl.
       intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
       simpl in *.
-      intuition eauto. now eapply ih1. now eapply ih2.
+      intuition eauto.
     - constructor.
       assert (
         w1 :
@@ -972,11 +971,10 @@ Section Trans_Global.
       simpl.
       intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
       simpl in *.
-      intuition eauto. now eapply ih1. now eapply ih2.
+      intuition eauto.
     - constructor; eauto. intuition auto; constructor; cbn; eauto.
-      eapply (IHt1 Re); eauto. reflexivity.
-      eapply (IHt2 Re); eauto. reflexivity.
-      solve_all. eapply a; eauto. reflexivity.
+      + inv H4. auto.
+      + solve_all.
   Qed.
 
   Lemma trans_leq_term ϕ T U :
@@ -984,7 +982,7 @@ Section Trans_Global.
     leq_term (trans_global_env Σ) ϕ (trans Σ' T) (trans Σ' U).
   Proof.
     intros HT HU H.
-    eapply trans_eq_term_upto_univ ; eauto. tc.
+    eapply trans_eq_term_upto_univ ; eauto.
   Qed.
 
   Lemma trans_eq_term φ t u :
@@ -992,7 +990,7 @@ Section Trans_Global.
     eq_term (trans_global_env Σ) φ (trans Σ' t) (trans Σ' u).
   Proof.
     intros HT HU H.
-    eapply trans_eq_term_upto_univ ; eauto. tc.
+    eapply trans_eq_term_upto_univ ; eauto.
   Qed.
 
   Lemma trans_eq_term_list {φ l l'} :
@@ -2206,10 +2204,10 @@ Proof.
     rewrite trans_reln //.
 Qed.
 
-Lemma trans_wf_universe Σ u : S.wf_universe Σ u ->
-  wf_universe (trans_global Σ) u.
+Lemma trans_wf_sort Σ u : S.wf_sort Σ u ->
+  wf_sort (trans_global Σ) u.
 Proof.
-  unfold S.wf_universe, wf_universe.
+  unfold S.wf_sort, wf_sort, S.wf_universe, wf_universe.
   now rewrite global_ext_levels_trans.
 Qed.
 
@@ -2220,9 +2218,9 @@ Proof.
   induction decls; cbn; auto.
 Qed.
 
-Local Hint Resolve trans_wf_universe : trans.
+Local Hint Resolve trans_wf_sort : trans.
 Local Hint Transparent Ast.Env.global_env_ext : trans.
-Local Hint Transparent Universe.t : trans.
+Local Hint Transparent sort : trans.
 Local Hint Variables Transparent : trans.
 Ltac trans := try typeclasses eauto with trans.
 (* bug in Coq, typeclasses eauto tries exact with a quantified hypothesis starting with a let-in *)
@@ -2505,7 +2503,7 @@ Proof.
         now rewrite H1 H2 H3 /= in H0 |- *.
     + constructor; eauto. cbn [array_level a]. eapply validity in X1; eauto.
       eapply PCUICWfUniverses.isType_wf_universes in X1. cbn [trans PCUICWfUniverses.wf_universes] in X1.
-      unfold PCUICWfUniverses.wf_universes in X1. cbn [PCUICWfUniverses.on_universes] in X1.
+      unfold PCUICWfUniverses.wf_universes in X1. cbn [PCUICWfUniverses.on_universes Sort.on_sort s] in X1.
       move: X1. case: PCUICWfUniverses.wf_universe_reflect => //; eauto. eauto.
       cbn [a array_value]. solve_all.
   - assert (WfAst.wf Σ B).
@@ -2909,7 +2907,7 @@ Lemma trans_type_local_ctx {cf} {Σ : Ast.Env.global_env_ext} Γ cs s (Σ' := tr
   (trans_local Σ' cs) s.
 Proof.
   intros IH wfΣ wfΣ'. induction cs; simpl; auto.
-  { now intros; eapply trans_wf_universe. }
+  { now intros; eapply trans_wf_sort. }
   destruct a as [na [b|] ty] => //;
   intros [? ?]; cbn.
   all: split; auto.
@@ -2950,8 +2948,7 @@ Lemma trans_check_ind_sorts {cf} Σ udecl kn mdecl n idecl
 Proof.
   intros wfΣ wfΣ' IH oni.
   unfold ST.check_ind_sorts, check_ind_sorts. cbn.
-  destruct Universe.is_prop => //.
-  destruct Universe.is_sprop => //.
+  destruct Sort.to_family => //.
   intros []. split => //.
   now rewrite -global_ext_constraints_trans in c.
   destruct indices_matter => //.

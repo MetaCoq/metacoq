@@ -173,7 +173,7 @@ Inductive onPrims {term} (eq_term : term -> term -> Type) Re : prim_val term -> 
   | onPrimsInt i : onPrims eq_term Re (primInt; primIntModel i) (primInt; primIntModel i)
   | onPrimsFloat f : onPrims eq_term Re (primFloat; primFloatModel f) (primFloat; primFloatModel f)
   | onPrimsArray a a' :
-    Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)) ->
+    Re (Universe.make' a.(array_level)) (Universe.make' a'.(array_level)) ->
     eq_term a.(array_default) a'.(array_default) ->
     eq_term a.(array_type) a'.(array_type) ->
     All2 eq_term a.(array_value) a'.(array_value) ->
@@ -192,7 +192,7 @@ Inductive onPrims_dep {term} (eq_term : term -> term -> Type) (Re : Universe.t -
   | onPrimsInt_dep i : onPrims_dep eq_term Re eq_term_dep Re' (primInt; primIntModel i) (primInt; primIntModel i) (onPrimsInt eq_term Re i)
   | onPrimsFloat_dep f : onPrims_dep eq_term Re eq_term_dep Re' (primFloat; primFloatModel f) (primFloat; primFloatModel f) (onPrimsFloat _ _ f)
   | onPrimsArray_dep a a' :
-    forall (hre : Re (Universe.make a.(array_level)) (Universe.make a'.(array_level)))
+    forall (hre : Re (Universe.make' a.(array_level)) (Universe.make' a'.(array_level)))
     (eqdef : eq_term a.(array_default) a'.(array_default))
     (eqty : eq_term a.(array_type) a'.(array_type))
     (eqt : All2 eq_term a.(array_value) a'.(array_value)),

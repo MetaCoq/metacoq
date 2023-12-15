@@ -260,11 +260,11 @@ Proof.
        repeat split; eauto.
        + eapply All2_map. apply forallb_All in Hp, Hp'. repeat toAll.
          eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
-       + unfold preturn. cbn. unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+       + unfold preturn. cbn. unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
          exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
          ++ rewrite app_context_length.
             eapply urenaming_ext; try apply shiftnP_add; try reflexivity.
-            unshelve erewrite <- (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+            unshelve erewrite <- (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
             rewrite <- inst_case_predicate_context_length.
             rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
             rewrite inst_case_predicate_context_rename; eauto.
@@ -281,25 +281,26 @@ Proof.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
-            unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+            unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
             unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
             +++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
                 cbn; intros. eapply urename_is_open_term; eauto.
             +++ unfold pparams. cbn. rewrite map_length. exact Hcontext.
      * eauto.
-     * let X2 := match goal with H : All2 _ brs brs' |- _ => H end in
+     * unfold cumul_branches, cumul_branch in *.
+       let X2 := match goal with H : All2 _ brs brs' |- _ => H end in
        rename X2 into Hbrsbrs'.
        apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.
        apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'.
        apply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
-       unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+       unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
        split; eauto.
        repeat match goal with H : is_true (andb _ _) |- _ => apply andb_and in H; destruct H end.
        exactly_once (idtac; multimatch goal with H : _ |- _ => apply H end); eauto.
        + rewrite app_context_length.
        eapply urenaming_ext; try apply shiftnP_add; try reflexivity.
-       unshelve erewrite <- (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+       unshelve erewrite <- (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
        rewrite <- (inst_case_branch_context_length p).
        rewrite -> test_context_k_closed_on_free_vars_ctx in *.
        rewrite inst_case_branch_context_rename; eauto.
@@ -317,7 +318,7 @@ Proof.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
-       unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+       unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
       + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
         unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
        ++ eapply All_forallb. apply All_map. repeat toAll. eapply All_impl. 1: tea.

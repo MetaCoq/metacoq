@@ -179,8 +179,8 @@ Variant primitive_typing_hyps `{checker_flags}
 | prim_int_hyps i : primitive_typing_hyps typing Σ Γ (primInt; primIntModel i)
 | prim_float_hyps f : primitive_typing_hyps typing Σ Γ (primFloat; primFloatModel f)
 | prim_array_hyps a
-  (wfl : wf_universe Σ (Universe.make a.(array_level)))
-  (hty : typing Σ Γ a.(array_type) (tSort (Universe.make a.(array_level))))
+  (wfl : wf_universe Σ (Universe.make' a.(array_level)))
+  (hty : typing Σ Γ a.(array_type) (tSort (sType (Universe.make' a.(array_level)))))
   (hdef : typing Σ Γ a.(array_default) a.(array_type))
   (hvalue : All (fun x => typing Σ Γ x a.(array_type)) a.(array_value)) :
   primitive_typing_hyps typing Σ Γ (primArray; primArrayModel a).
@@ -200,13 +200,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 | type_Sort : forall s,
     wf_local Σ Γ ->
-    wf_universe Σ s ->
-    Σ ;;; Γ |- tSort s : tSort (Universe.super s)
+    wf_sort Σ s ->
+    Σ ;;; Γ |- tSort s : tSort (Sort.super s)
 
 | type_Prod : forall na A B s1 s2,
     lift_typing typing Σ Γ (j_vass_s na A s1) ->
     Σ ;;; Γ ,, vass na A |- B : tSort s2 ->
-    Σ ;;; Γ |- tProd na A B : tSort (Universe.sort_of_product s1 s2)
+    Σ ;;; Γ |- tProd na A B : tSort (Sort.sort_of_product s1 s2)
 
 | type_Lambda : forall na A t B,
     lift_typing typing Σ Γ (j_vass na A) ->
@@ -552,7 +552,7 @@ Lemma env_prop_typing `{checker_flags} {P Pj PΓ} : env_prop P Pj PΓ ->
     Σ ;;; Γ |- t : T -> P Σ Γ t T.
 Proof. intros. now apply X. Qed.
 
-Lemma type_Prop_wf `{checker_flags} Σ Γ : wf_local Σ Γ -> Σ ;;; Γ |- tSort Universe.lProp : tSort Universe.type1.
+Lemma type_Prop_wf `{checker_flags} Σ Γ : wf_local Σ Γ -> Σ ;;; Γ |- tSort sProp : tSort Sort.type1.
 Proof.
   repeat constructor; auto.
 Defined.
@@ -564,7 +564,7 @@ Proof. intros.
   now destruct (X _ wfΣ _ _ _ t) as [? [? ?]].
 Qed.
 
-Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
+Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort sProp : tSort Sort.type1.
   repeat constructor.
 Defined.
 
@@ -662,17 +662,17 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        PΓ Σ Γ ->
        P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
-   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : sort),
        PΓ Σ Γ ->
-       wf_universe Σ u ->
-       P Σ Γ (tSort u) (tSort (Universe.super u))) ->
+       wf_sort Σ u ->
+       P Σ Γ (tSort u) (tSort (Sort.super u))) ->
 
-   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
+   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : sort),
        PΓ Σ Γ ->
        lift_typing typing Σ Γ (j_vass_s na t s1) ->
        Pj Σ Γ (j_vass_s na t s1) ->
        Σ ;;; Γ,, vass na t |- b : tSort s2 ->
-       P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
+       P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Sort.sort_of_product s1 s2))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
        PΓ Σ Γ ->
@@ -839,7 +839,7 @@ Proof.
     destruct Xg.
     rename on_global_decl_d into Xg.
     constructor; auto; try constructor; auto.
-    * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort Universe.lProp); _; _))).
+    * unshelve eset (IH' := IH ((Σ', udecl); (wfΣ; []; (tSort sProp); _; _))).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
       apply IH'; auto.
@@ -877,8 +877,7 @@ Proof.
               apply (IH (_; _; _; Hs)). }
           - pose proof (onProjections Xg); auto.
           - pose proof (ind_sorts Xg) as Xg'. unfold check_ind_sorts in *.
-            destruct Universe.is_prop; auto.
-            destruct Universe.is_sprop; auto.
+            destruct Sort.to_family; auto.
             split. apply Xg'. destruct indices_matter; auto.
             eapply type_local_ctx_impl. eapply Xg'. auto. intros ?? Hj. apply Xj; tas.
             apply lift_typing_impl with (1 := Hj); intros ?? HT. split; tas.
@@ -1122,17 +1121,17 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : sort),
         PΓ Σ Γ ->
-        wf_universe Σ u ->
-        P Σ Γ (tSort u) (tSort (Universe.super u))) ->
+        wf_sort Σ u ->
+        P Σ Γ (tSort u) (tSort (Sort.super u))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : Universe.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : sort),
         PΓ Σ Γ ->
         lift_typing typing Σ Γ (j_vass_s na t s1) ->
         Pj Σ Γ (j_vass_s na t s1) ->
         Σ ;;; Γ,, vass na t |- b : tSort s2 ->
-        P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
+        P Σ (Γ,, vass na t) b (tSort s2) -> P Σ Γ (tProd na t b) (tSort (Sort.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b bty : term),
         PΓ Σ Γ ->

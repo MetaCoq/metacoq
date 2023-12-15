@@ -31,13 +31,13 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- tRel n ▹ lift0 (S n) (decl_type decl)
 
 | infer_Sort s :
-  wf_universe Σ s ->
-  Σ ;;; Γ |- tSort s ▹ tSort (Universe.super s)
+  wf_sort Σ s ->
+  Σ ;;; Γ |- tSort s ▹ tSort (Sort.super s)
 
 | infer_Prod na A B s1 s2 :
   lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass_s na A s1) ->
   Σ ;;; Γ ,, vass na A |- B ▹□ s2 ->
-  Σ ;;; Γ |- tProd na A B ▹ tSort (Universe.sort_of_product s1 s2)
+  Σ ;;; Γ |- tProd na A B ▹ tSort (Sort.sort_of_product s1 s2)
 
 | infer_Lambda na A t B :
   lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass na A) ->
@@ -85,8 +85,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   ctx_inst (checking Σ) Γ (pparams p)
       (List.rev mdecl.(ind_params)@[p.(puinst)]) ->
   isCoFinite mdecl.(ind_finite) = false ->
-  R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
-      (IndRef ci) #|args| u (puinst p) ->
+  cmp_ind_universes Σ ci #|args| u (puinst p) ->
   All2 (convAlgo Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
   (* case_branch_typing *)
   wf_branches idecl brs ->
@@ -127,7 +126,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
    primitive_typing_hyps checking Σ Γ p ->
    Σ ;;; Γ |- tPrim p ▹ prim_type p prim_ty
 
-with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
+with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> sort -> Type :=
 | infer_sort_Sort t T u:
   Σ ;;; Γ |- t ▹ T ->
   red Σ Γ T (tSort u) ->
@@ -243,7 +242,7 @@ Section BidirectionalInduction.
   Context (wfΣ : wf Σ).
   Context (Pcheck : context -> term -> term -> Type).
   Context (Pinfer : context -> term -> term -> Type).
-  Context (Psort : context -> term -> Universe.t -> Type).
+  Context (Psort : context -> term -> sort -> Type).
   Context (Pprod : context -> term -> aname -> term -> term -> Type).
   Context (Pind : context -> inductive -> term -> Instance.t -> list term -> Type).
   Context (Pj : context -> judgment -> Type).
@@ -350,16 +349,16 @@ Section BidirectionalInduction.
       nth_error Γ n = Some decl ->
       Pinfer Γ (tRel n) (lift0 (S n) (decl_type decl))) ->
 
-    (forall (Γ : context) (s : Universe.t),
-      wf_universe Σ s->
-      Pinfer Γ (tSort s) (tSort (Universe.super s))) ->
+    (forall (Γ : context) (s : sort),
+      wf_sort Σ s->
+      Pinfer Γ (tSort s) (tSort (Sort.super s))) ->
 
-    (forall (Γ : context) (na : aname) (t b : term) (s1 s2 : Universe.t),
+    (forall (Γ : context) (na : aname) (t b : term) (s1 s2 : sort),
       lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass_s na t s1) ->
       Pj Γ (j_vass_s na t s1) ->
       Σ ;;; Γ,, vass na t |- b ▹□ s2 ->
       Psort (Γ,, vass na t) b s2 ->
-      Pinfer Γ (tProd na t b) (tSort (Universe.sort_of_product s1 s2))) ->
+      Pinfer Γ (tProd na t b) (tSort (Sort.sort_of_product s1 s2))) ->
 
     (forall (Γ : context) (na : aname) (t b bty : term),
       lift_sorting (checking Σ Γ) (infering_sort Σ Γ) (j_vass na t) ->
@@ -421,8 +420,7 @@ Section BidirectionalInduction.
       ctx_inst Pcheck Γ p.(pparams)
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
-          (IndRef ci) #|args| u (puinst p) ->
+      cmp_ind_universes Σ ci #|args| u (puinst p) ->
       All2 (convAlgo Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
       (* case_branch_typing *)
       wf_branches idecl brs ->
@@ -471,7 +469,7 @@ Section BidirectionalInduction.
       primitive_typing_hyps (fun _ => Pcheck) Σ Γ p ->
       Pinfer Γ (tPrim p) (prim_type p prim_ty)) ->
 
-    (forall (Γ : context) (t T : term) (u : Universe.t),
+    (forall (Γ : context) (t T : term) (u : sort),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
       red Σ Γ T (tSort u) ->

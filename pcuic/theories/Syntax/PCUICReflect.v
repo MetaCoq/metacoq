@@ -25,7 +25,7 @@ Local Ltac fcase c :=
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
+         | u : sort, u' : sort |- _ => fcase (eq_dec u u')
          | x : Instance.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
          | x : list Level.t, y : Instance.t |- _ =>

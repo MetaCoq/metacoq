@@ -111,7 +111,7 @@ Proof.
   - apply All_local_env_impl with (1 := X0) => Γ' j Hj.
     now apply Hj.
   - econstructor; eauto 2 with extends.
-    now apply extends_wf_universe.
+    now apply extends_wf_sort.
   - econstructor; eauto 2 with extends. all: econstructor; eauto 2 with extends.
     * revert X5. clear -Σ' wf0 wfΣ' extΣ.
       induction 1; constructor; try destruct t0; eauto with extends.
@@ -149,11 +149,11 @@ Proof.
   apply on_global_decl_impl_full; eauto.
   - reflexivity.
   - intros ?????. eapply weakening_env_cumulSpec0; eauto.
-  - intro. eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+  - intro. eapply (extends_wf_sort (Σ:=(Σ,φ)) Σ'); auto.
   - unfold check_constructors_smaller. intros ???.
     eapply Forall_impl; tea; cbn. intros.
     eapply Forall_impl; tea; simpl; intros.
-    eapply leq_universe_subset; tea.
+    eapply leq_sort_subset; tea.
     apply weakening_env_global_ext_constraints; tea; eauto.
   - rewrite /on_variance. intros u l. destruct u => //.
     destruct l => //.

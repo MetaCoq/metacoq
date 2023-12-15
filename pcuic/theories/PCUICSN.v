@@ -7,6 +7,7 @@ From MetaCoq.PCUIC Require Import
   PCUICUnivSubstitutionTyp.
 
 Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** We assume normalization of the reduction.
     We state is as well-foundedness of the reduction.
@@ -61,7 +62,7 @@ Section Alpha.
   Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext) {normalization : NormalizationIn Σ}.
 
-  Notation eqt u v := (∥ upto_names u v ∥).
+  Notation eqt u v := (∥ eq u v ∥). (* Can be made into alpha-equality, but not using PCUICEquality.eq_term_upto_univ_napp *)
 
   Definition cored' Γ u v :=
     exists u' v', cored Σ Γ u' v' /\ eqt u u' /\ eqt v v'.
@@ -83,15 +84,9 @@ Section Alpha.
       + eapply cored_trans'. all: eassumption.
   Qed.
 
-  Local Instance substu_pres_eq : SubstUnivPreserving eq.
+  Local Instance substu_pres_eq {T} `{UnivSubst T} : SubstUnivPreserving eq (@eq T).
   Proof using Type.
-    red. intros s u u'.
-    unfold R_universe_instance.
-    intros f. eapply Forall2_map_inv in f.
-    assert (u = u') as ->.
-    { induction f; cbn; auto. f_equal; auto.
-      now eapply Universe.make_inj in H. }
-    reflexivity.
+    move => s u u' /cmp_universe_instance_eq -> //.
   Qed.
 
   Lemma cored'_postpone :
@@ -103,17 +98,16 @@ Section Alpha.
     apply cored_alt in r.
     destruct r as [r].
     induction r in u, v, hu, hv.
-    - eapply red1_eq_term_upto_univ_r in r. 10: eassumption.
-      all:tc.
-      destruct r as [u' [r e]].
+    - (* eapply red1_eq_alpha in r as [u' [r e]]. *)
+      subst x. rename y into u'.
       exists u'. split.
       * constructor. assumption.
       * constructor. etransitivity. 1: eauto.
         now symmetry.
     - specialize (IHr1 y v).
-      destruct IHr1 as [y' [h1 [e1]]]; auto. reflexivity.
+      destruct IHr1 as [y' [h1 [e1]]]; auto.
       specialize (IHr2 u y').
-      destruct IHr2 as [u' [h2 ?]]; auto. now symmetry.
+      destruct IHr2 as [u' [h2 ?]]; auto.
       exists u'. split.
       + eapply cored_trans'. all: eauto.
       + assumption.
@@ -171,7 +165,6 @@ Section Alpha.
     - constructor; reflexivity.
   Qed.
 
-  (* TODO Maybe switch to eq_context *)
   Lemma cored_eq_context_upto_names :
     forall Γ Δ u v,
       eq_context_upto_names Γ Δ ->
@@ -186,102 +179,6 @@ Section Alpha.
       + eapply IHh2. assumption.
       + eapply IHh1. assumption.
   Qed.
-
-  Lemma cored_eq_term_upto :
-    forall Σ' Re Rle Γ u v u',
-      RelationClasses.Reflexive Re ->
-      SubstUnivPreserving Re ->
-      RelationClasses.Reflexive Rle ->
-      SubstUnivPreserving Rle ->
-      RelationClasses.Symmetric Re ->
-      RelationClasses.Transitive Re ->
-      RelationClasses.Transitive Rle ->
-      RelationClasses.subrelation Re Rle ->
-      eq_term_upto_univ Σ' Re Rle u u' ->
-      cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ' Re Rle v v' ∥.
-  Proof using Type.
-    intros Σ' Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 X6 e h.
-    apply cored_alt in h as [h].
-    induction h in u', e |- *.
-    - eapply red1_eq_term_upto_univ_l in r. 9: eauto. all: auto.
-      destruct r as [? [? ?]].
-      eexists. split.
-      + constructor. eassumption.
-      + constructor. assumption.
-    - specialize (IHh1 _ e). destruct IHh1 as [y' [r1 [e1]]].
-      specialize (IHh2 _ e1). destruct IHh2 as [z' [r2 [e2]]].
-      exists z'. split.
-      + eapply cored_trans'. all: eassumption.
-      + constructor. assumption.
-  Qed.
-
-  Lemma cored_eq_context_upto :
-    forall Σ' Re Γ Δ u v,
-      RelationClasses.Reflexive Re ->
-      RelationClasses.Symmetric Re ->
-      RelationClasses.Transitive Re ->
-      SubstUnivPreserving Re ->
-      eq_context_upto Σ' Re Re Γ Δ ->
-      cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ' Re Re u u' ∥.
-  Proof using Type.
-    intros Σ' Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
-    apply cored_alt in h as [h].
-    induction h.
-    - eapply red1_eq_context_upto_l in r. all: eauto. 2:tc.
-      destruct r as [? [? ?]].
-      eexists. split.
-      + constructor. eassumption.
-      + constructor. assumption.
-    - destruct IHh1 as [x' [r1 [e1]]].
-      destruct IHh2 as [y' [r2 [e2]]].
-      eapply cored_eq_term_upto in r2. 10: exact e1. all: auto.
-      2:tc.
-      destruct r2 as [y'' [r2' [e2']]].
-      exists y''. split.
-      * eapply cored_trans'. all: eassumption.
-      * constructor. eapply eq_term_upto_univ_trans. all: eauto.
-  Qed.
-
-  (* Lemma eq_context_upto_nlctx :
-    forall Γ,
-      eq_context_upto Σ eq eq Γ (nlctx Γ).
-  Proof.
-    intros Γ.
-    induction Γ as [| [na [b|] A] Γ ih ].
-    - constructor.
-    - simpl. constructor; simpl; try apply binder_anonymize; tas.
-      + constructor; tas; auto. eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-        eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-    - simpl. constructor; auto. constructor.
-      + apply binder_anonymize.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-  Qed.
-
-  Lemma cored_cored'_nl :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored' (nlctx Γ) (nl u) (nl v).
-  Proof.
-    intros Γ u v h.
-    eapply cored_eq_context_upto in h.
-    6: eapply eq_context_upto_nlctx.
-    all: auto.
-    - destruct h as [u' [r [e]]].
-      eexists _, _. intuition eauto.
-      + constructor. eapply eq_term_trans.
-        * eapply eq_term_sym. eapply eq_term_tm_nl.
-        * eapply eq_term_upto_univ_impl; eauto. all:typeclasses eauto.
-      + constructor. eapply eq_term_sym. eapply eq_term_tm_nl.
-    - intros ? ? ? []. auto.
-    - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.
-      + subst. reflexivity.
-      + apply Universe.make_inj.
-  Qed. *)
 
   Lemma cored_cored' :
     forall Γ u v,

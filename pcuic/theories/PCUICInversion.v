@@ -135,8 +135,8 @@ Section Inversion.
     forall {Γ s T},
       Σ ;;; Γ |- tSort s : T ->
       wf_local Σ Γ ×
-      wf_universe Σ s ×
-      Σ ;;; Γ ⊢ tSort (Universe.super s) ≤ T.
+      wf_sort Σ s ×
+      Σ ;;; Γ ⊢ tSort (Sort.super s) ≤ T.
   Proof using wfΣ.
     intros Γ s T h. invtac h.
   Qed.
@@ -147,7 +147,7 @@ Section Inversion.
       ∑ s1 s2,
         lift_typing typing Σ Γ (j_vass_s na A s1) ×
         Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
-        Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
+        Σ ;;; Γ ⊢ tSort (Sort.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
     intros Γ na A B T h. invtac h.
   Qed.
@@ -157,7 +157,7 @@ Section Inversion.
       forall H : Σ ;;; Γ |- tProd na A B : T,
       ∑ s1 s2 (H1 : lift_typing typing Σ Γ (j_vass_s na A s1)) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
         lift_typing_size (@typing_size _ _ _) _ H1 < typing_size H × typing_size H2 < typing_size H ×
-        Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
+        Σ ;;; Γ ⊢ tSort (Sort.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
     intros Γ na A B T h. unshelve invtac h; eauto.
     all: try revert l; try revert l0; simpl; cbn; lia.
@@ -246,7 +246,7 @@ Section Inversion.
   Import PCUICEquality.
   Variant case_inversion_data Γ ci p c brs mdecl idecl indices :=
    | case_inv
-       (ps : Universe.t)
+       (ps : sort)
        (eq_npars : mdecl.(ind_npars) = ci.(ci_npar))
        (predctx := case_predicate_context ci.(ci_ind) mdecl idecl p)
        (wf_pred : wf_predicate mdecl idecl p)

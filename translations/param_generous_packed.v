@@ -28,10 +28,14 @@ Definition proj2 (t : term) : term
 Definition proj (b : bool) (t : term) : term
   := tProj (mkProjection sigma_ind 2 (if b then 0 else S 0)) t.
 
+Definition refresh_universe u :=
+  if Universe.is_level u then u else fresh_universe.
+
+Definition refresh_sort_universe := Sort.map refresh_universe.
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
+  | tSort s => tSort (refresh_sort_universe s)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | _ => t
@@ -108,8 +112,8 @@ with tsl_term  (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context)
   | tRel n => ret (tRel n)
 
   | tSort s =>
-    ret (pair (tSort fresh_universe)
-              (tLambda (nNamed "A") (tSort fresh_universe) (tProd nAnon (tRel 0) (tSort fresh_universe)))
+    ret (pair (tSort (sType fresh_universe))
+              (tLambda (nNamed "A") (tSort (sType fresh_universe)) (tProd nAnon (tRel 0) (tSort (sType fresh_universe))))
               (tSort s)
               (tLambda (nNamed "A") (tSort s) (tProd nAnon (tRel 0) (tSort s))))
 

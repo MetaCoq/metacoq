@@ -145,9 +145,9 @@ Ltac fill_inh t :=
   | [ |- inh _ ?Γ _ ] => fail "Missing local wellformedness assumption for" Γ
   end.
 
-(* Lemma identity_typing (u := Universe.make univ): inh gctx_wf_env [] (tImpl (tSort u) (tSort u)).
+(* Lemma identity_typing (s := sType (Universe.make' univ)): inh gctx_wf_env [] (tImpl (tSort s) (tSort s)).
 Proof.
-  set (impl := tLambda (bNamed "s") (tSort u) (tRel 0)).
+  set (impl := tLambda (bNamed "s") (tSort s) (tRel 0)).
   assert (wfΓ : forall Σ0 : global_env_ext,
   abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
 
@@ -156,7 +156,7 @@ Proof.
 Time Qed. *)
 
 
-Lemma identity_typing (u := Universe.make univ):
+Lemma identity_typing (s := sType (Universe.make' univ)):
      (∑ t : term,
         forall Σ0 : global_env_ext,
         Σ0 =
@@ -168,13 +168,13 @@ Lemma identity_typing (u := Universe.make univ):
            retroknowledge := Retroknowledge.empty
          |}, Monomorphic_ctx) ->
         ∥ Σ0;;; [] |- t
-          : tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0)) ∥).
+          : tProd (bNamed "s") (tSort s) (tImpl (tRel 0) (tRel 0)) ∥).
 (* inh gctx_wf_env [] (tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))). *)
 Proof.
-  set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
+  set (impl := tLambda (bNamed "s") (tSort s) (tLambda bAnon (tRel 0) (tRel 0))).
   assert (wfΓ : forall Σ0 : global_env_ext,
   abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
-  pose (T := tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
+  pose (T := tProd (bNamed "s") (tSort s) (tImpl (tRel 0) (tRel 0))).
   pose (Σ := gctx_wf_env).
   let t := uconstr:(check_inh Σ [] wfΓ impl (T:=T)) in
   let proof := eval hnf in t in

@@ -1486,6 +1486,13 @@ Module Sort.
 
   #[global] Instance eq_dec_sort {univ} `{EqDec univ} : EqDec (t_ univ) := ltac:(intros s s'; decide equality).
 
+  Definition map {u u'} (f : u -> u') s :=
+    match s with
+    | sType u => sType (f u)
+    | sProp => sProp
+    | sSProp => sSProp
+    end.
+
   Definition on_sort {univ} {T} (P: univ -> T) (def: T) (s : t_ univ) :=
     match s with
     | sProp | sSProp => def

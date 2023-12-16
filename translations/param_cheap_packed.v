@@ -8,9 +8,14 @@ Local Existing Instance config.default_checker_flags.
 Local Existing Instance default_fuel.
 
 
+Definition refresh_universe u :=
+  if Universe.is_level u then u else fresh_universe.
+
+Definition refresh_sort_universe := Sort.map refresh_universe.
+
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
+  | tSort s => tSort (refresh_sort_universe s)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | _ => t

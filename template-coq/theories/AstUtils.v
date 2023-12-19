@@ -380,13 +380,15 @@ Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (
       tt oib.(ind_ctors) brs ;;
   ret (tCase ci p' c brs').
 
-Definition default_sort_family (u : Universe.t) : allowed_eliminations :=
-  if Universe.is_sprop u then IntoAny
-  else if Universe.is_prop u then IntoPropSProp
-  else IntoAny.
+Definition default_sort_family (s : sort) : allowed_eliminations :=
+  match s with
+  | sSProp => IntoSProp
+  | sProp => IntoPropSProp
+  | _ => IntoAny
+  end.
 
-Definition default_relevance (u : Universe.t) : relevance :=
-  if Universe.is_sprop u then Irrelevant
+Definition default_relevance (s : sort) : relevance :=
+  if Sort.is_sprop s then Irrelevant
   else Relevant.
 
 (** Convenience functions for building constructors and inductive declarations *)
@@ -411,15 +413,15 @@ Definition make_constructor_body (id : ident) (indrel : nat)
   derived from the universe (i.e. does not handle inductives with singleton elimination, or impredicate set
   eliminations). *)
 Definition make_inductive_body (id : ident) (params : context) (indices : context)
-   (u : Universe.t) (ind_ctors : list constructor_body) : one_inductive_body :=
+   (s : sort) (ind_ctors : list constructor_body) : one_inductive_body :=
   {| ind_name := id;
      ind_indices := indices;
-     ind_sort := u;
-     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort u);
-     ind_kelim := default_sort_family u;
+     ind_sort := s;
+     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort s);
+     ind_kelim := default_sort_family s;
      ind_ctors := ind_ctors;
      ind_projs := [];
-     ind_relevance := default_relevance u |}.
+     ind_relevance := default_relevance s |}.
 
 Ltac change_Sk :=
   repeat match goal with

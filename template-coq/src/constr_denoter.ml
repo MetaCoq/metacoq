@@ -213,55 +213,66 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
+  let unquote_universe_level = unquote_level
+
+  let iter_int f a n =
+    if n < 0 then failwith "Negative number of iterations"
+    else
+      let rec loop f a = function 0 -> a | n -> loop f (f a) (n-1)
+      in
+      loop f a n
+
+
   let unquote_univ_expr evm trm (* of type LevelExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
     if constr_equall h c_pair then
       let l, b = unquote_pair trm in
       let evm, l' = unquote_level evm l in
       let u = Univ.Universe.make l' in
-      evm, if unquote_nat b > 0 then Univ.Universe.super u else u
+      evm, iter_int Univ.Universe.super u (unquote_nat b)
     else
       not_supported_verb trm "unquote_univ_expr"
 
-  let unquote_universe evm trm (* of type universe *)  =
+  let unquote_universe evm trm (* of type universe *) =
     let (h,args) = app_full trm [] in
-    if constr_equall h lSProp then
-      match args with
-         | [] -> evm, Sorts.sprop
-         | _ -> bad_term_verb trm "unquote_univ_expr"
-    else if constr_equall h lProp then
-      match args with
-         | [] -> evm, Sorts.prop
-         | _ -> bad_term_verb trm "unquote_univ_expr"
-    else if constr_equall h lnpe then
-      match args with
-      | [x] ->
-         let (h,args) = app_full x [] in
-         if constr_equall h tBuild_Universe then
-           (match args with
-           | x :: _ :: [] ->
-             (let (h,args) = app_full x [] in
-              if constr_equall h tMktLevelExprSet then
-                match args with
-                | x :: _ :: [] ->
-                    (match unquote_list x with
-                    | [] -> assert false
-                    | e::q ->
-                      let evm, u = List.fold_left (fun (evm,u) e ->
-                                  let evm, u' = unquote_univ_expr evm e
-                                  in evm, Univ.Universe.sup u u')
-                                (unquote_univ_expr evm e) q
-                      in evm, Sorts.sort_of_univ u)
-                | _ -> bad_term_verb trm "unquote_universe 0"
-              else
-                not_supported_verb trm "unquote_universe 0")
-           | _ -> bad_term_verb trm "unquote_universe 1")
-         else not_supported_verb trm "unquote_universe 2"
-      | _ -> bad_term_verb trm "unquote_universe 3"
-    else bad_term_verb trm "unquote_universe 4"
+    if constr_equall h tBuild_Universe then
+      (match args with
+      | x :: _ :: [] ->
+        (let (h,args) = app_full x [] in
+        if constr_equall h tMktLevelExprSet then
+          match args with
+          | x :: _ :: [] ->
+              (match unquote_list x with
+              | [] -> assert false
+              | e::q ->
+                let evm, u = List.fold_left (fun (evm,u) e ->
+                            let evm, u' = unquote_univ_expr evm e
+                            in evm, Univ.Universe.sup u u')
+                          (unquote_univ_expr evm e) q
+                in evm, u)
+          | _ -> bad_term_verb trm "unquote_universe 0"
+        else
+          not_supported_verb trm "unquote_universe 0")
+      | _ -> bad_term_verb trm "unquote_universe 1")
+    else not_supported_verb trm "unquote_universe 2"
 
-
-  let unquote_universe_level evm trm = unquote_level evm trm
+  let unquote_sort evm trm (* of type sort *) =
+    let (h,args) = app_full trm [] in
+    if constr_equall h sSProp then
+      match args with
+         | [_univ] -> evm, Sorts.sprop
+         | _ -> bad_term_verb trm "unquote_sort_sprop_args"
+    else if constr_equall h sProp then
+      match args with
+         | [_univ] -> evm, Sorts.prop
+         | _ -> bad_term_verb trm "unquote_sort_prop_args"
+    else if constr_equall h sType then
+      match args with
+      | [_univ; x] ->
+          let evm, u = unquote_universe evm x in
+          evm, Sorts.sort_of_univ u
+      | _ -> bad_term_verb trm "unquote_sort_type_too_many_args"
+    else bad_term_verb trm "unquote_sort_type_no_args"
 
   let unquote_universe_instance evm trm (* of type universe_instance *) =
     let l = unquote_list trm in

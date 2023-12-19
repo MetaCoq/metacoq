@@ -23,7 +23,7 @@ Implicit Types (cf : checker_flags).
 
 #[local] Existing Instance extraction_normalizing.
 
-Notation alpha_eq := (All2 (PCUICEquality.compare_decls eq eq)).
+Notation alpha_eq := PCUICEquality.eq_context_upto_names.
 
 Ltac sq :=
   repeat match goal with
@@ -36,8 +36,8 @@ Lemma wf_local_rel_alpha_eq_end {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ
   wf_local_rel Σ Γ Δ -> wf_local_rel Σ Γ Δ'.
 Proof.
   intros wfΓ eqctx wf.
-  apply wf_local_app_inv.
-  eapply wf_local_app in wf => //.
+  apply All_local_env_app_inv.
+  eapply All_local_env_app in wf => //.
   eapply PCUICSpine.wf_local_alpha; tea.
   eapply All2_app => //. reflexivity.
 Qed.
@@ -758,10 +758,9 @@ Section fix_sigma.
   - intros. destruct H' as [].
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.
     rewrite <- (abstract_env_ext_irr _ H2) in wf; eauto.
-    eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
+    eapply inversion_Prod in X0 as (? & ? & h1 & ? & ?) ; auto.
     eapply cored_red in H0 as [].
-    econstructor. econstructor. econstructor. eauto.
-    2:reflexivity. econstructor; pcuic.
+    econstructor. econstructor; tea.
     rewrite <- (abstract_env_ext_irr _ H2) in X0; eauto.
     eapply subject_reduction; eauto.
   - intros. rewrite <- (abstract_env_ext_irr _ H0) in wf; eauto.
@@ -800,8 +799,8 @@ Section fix_sigma.
       pose proof (abstract_env_ext_wf _ wfΣ') as [wf].
       sq.
       eapply subject_reduction_closed in HT; tea.
-      eapply inversion_Prod in HT as [? [? [? []]]].
-      now eapply typing_wf_local in t1. pcuic. pcuic.
+      eapply inversion_Prod in HT as [? [? [? [t0 ?]]]].
+      now eapply typing_wf_local in t0. pcuic. pcuic.
     - clear rprod is_arity rsort a0.
       intros Σ' wfΣ'; specialize (H Σ' wfΣ').
       repeat specialize_Σ wfΣ'.
@@ -897,7 +896,7 @@ Equations? is_erasableb X_type X {normalization_in : forall Σ, wf_ext Σ -> Σ 
     { | T with is_arity X_type X Γ _ T.π1 _ :=
       { | true => true
         | false => let s := @sort_of_type extraction_checker_flags _ X_type X _ Γ T.π1 _ in
-          is_propositional s.π1 } }.
+          Sort.is_propositional s.π1 } }.
   Proof.
     - intros. specialize_Σ H. destruct wt; sq.
       pcuic.
@@ -926,7 +925,7 @@ Proof.
     2: eassumption. eauto.
   - destruct type_of_typing as [x Hx]. cbn -[sort_of_type is_arity] in *.
     destruct (sort_of_type _ _ _ _). cbn.
-    destruct (is_propositional x0) eqn:isp; constructor.
+    destruct (Sort.is_propositional x0) eqn:isp; constructor.
     * clear Heq. intros.
       pose proof (abstract_env_ext_wf _ H) as [wf].
       specialize_Σ H.
@@ -945,7 +944,7 @@ Proof.
       { apply nisa. intros. rewrite (abstract_env_ext_irr _ H wfΣ).
         eapply invert_cumul_arity_r; tea. }
       { destruct s as [Hs].
-        unshelve epose proof (H := unique_sorting_equality_propositional _ _ wf Hs Hu' p) => //. reflexivity. reflexivity. congruence. }
+        unshelve epose proof (H := unique_sorting_equality_propositional _ wf Hs Hu' p) => //. reflexivity. congruence. }
   Qed.
 
 Equations? is_erasable {X_type X} {normalization_in : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} (Γ : context) (t : PCUICAst.term)
@@ -1090,12 +1089,13 @@ Section Erase.
     - now eapply inversion_Evar in Ht.
     - discriminate.
     - discriminate.
-    - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Lambda in Ht as (? & ? & ? & ?); auto.
       eexists; eauto.
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & h1 & ? & ?); auto.
+      apply unlift_TermTyp in h1.
       eexists; eauto.
     - simpl in *.
-      eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+      eapply inversion_LetIn in Ht as (? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_App in Ht as (? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
@@ -1115,9 +1115,9 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.
       sq. destruct p. move/andP: i => [wffix _].
-      solve_all. now eexists.
+      solve_all. destruct a0 as (Hb & _). cbn in Hb. now eexists.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
-      sq. eapply All_impl; tea. cbn. intros d Ht; now eexists.
+      sq. eapply All_impl; tea. cbn. intros d (Hb & _); cbn in Hb; now eexists.
     - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
       depelim p0. now eexists.
     - eapply inversion_Prim in Ht as [prim_ty [decl []]]; eauto.
@@ -1316,7 +1316,7 @@ Program Definition erase_constant_body X_type X {normalization_in : forall Σ, w
 Next Obligation.
 Proof.
   specialize_Σ H. sq. red in Hcb.
-  rewrite <-Heq_anonymous in Hcb. now eexists.
+  rewrite <-Heq_anonymous in Hcb. apply unlift_TermTyp in Hcb. now eexists.
 Qed.
 
 Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
@@ -1325,7 +1325,7 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   let projs := map (fun pdecl => EAst.mkProjection pdecl.(proj_name)) oib.(ind_projs) in
   let is_propositional :=
     match destArity [] oib.(ind_type) with
-    | Some (_, u) => is_propositional u
+    | Some (_, u) => Sort.is_propositional u
     | None => false (* dummy, impossible case *)
     end
   in
@@ -1818,7 +1818,7 @@ Lemma erase_constant_body_correct X_type X {normalization_in : forall Σ, wf_ext
 Proof.
   red. destruct cb as [name [bod|] univs]; simpl; eauto. intros.
   set (ecbo := erase_constant_body_obligation_1 X_type X _ _ _ _). clearbody ecbo.
-  cbn in *. specialize_Σ H. sq.
+  cbn in *. specialize_Σ H. sq. apply unlift_TermTyp in onc.
   eapply (erases_weakening_env (Σ := Σ) (Σ' := (Σ', univs))); simpl; eauto.
   now eapply erases_erase.
 Qed.

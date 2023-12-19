@@ -1052,7 +1052,7 @@ Proof.
     eauto.
   - depelim o. 1-2: reflexivity.
     eapply red_primArray_congr; eauto.
-    now eapply Universe.make_inj in e.
+    now eapply Universe.make'_inj in e.
 Qed.
 
 #[global]
@@ -1211,7 +1211,7 @@ Qed.
 Definition fake_params n : context :=
     unfold n (fun x => {| decl_name := {| binder_name := nAnon; binder_relevance := Relevant |};
                           decl_body := None;
-                          decl_type := tSort Universe.type0 |}).
+                          decl_type := tSort Sort.type0 |}).
 
 Lemma fake_params_length n : #|fake_params n| = n.
 Proof.
@@ -1549,20 +1549,20 @@ Proof.
   now depelim r.
 Qed.
 
-Lemma whne_eq_term_upto_univ_napp f Σ Γ t Re Rle napp t' :
+Lemma whne_eq_term_upto_univ_napp f Σ Γ t cmp_universe cmp_sort pb napp t' :
   whne f Σ Γ t ->
-  eq_term_upto_univ_napp Σ Re Rle napp t t' ->
+  eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t t' ->
   whne f Σ Γ t'.
 Proof.
   intros wh eq.
-  induction wh in Re, Rle, napp, t, t', eq, wh |- *; depelim eq;
+  induction wh in pb, napp, t, t', eq, wh |- *; depelim eq;
     try solve [eauto using whne; depelim wh; solve_discr; eauto using whne].
   - destruct args as [|? ? _] using MCList.rev_ind; [discriminate x|].
     rewrite mkApps_app in x; cbn in x; inv x.
     apply eq_term_upto_univ_napp_mkApps_l_inv in eq1 as (?&?&(eq_hds&?)&->).
     depelim eq_hds.
     rewrite <- mkApps_snoc.
-    assert (All2 (eq_term_upto_univ Σ Re Re) (args ++ [x0]) (x1 ++ [u']))
+    assert (All2 (eq_term_upto_univ Σ cmp_universe cmp_sort Conv) (args ++ [x0]) (x1 ++ [u']))
            by (now apply All2_app).
     unfold unfold_fix in *.
     destruct (nth_error mfix idx) eqn:nth; [|easy].
@@ -1573,18 +1573,18 @@ Proof.
     destruct e0 as (?&?&?).
     eapply whne_fixapp.
     + unfold unfold_fix.
-      rewrite e1.
+      rewrite e2.
       reflexivity.
     + rewrite <- e.
-      destruct p. rewrite e3. reflexivity.
+      destruct p as (?& eqrarg &?). rewrite eqrarg. reflexivity.
     + eapply IHwh; eauto.
   - destruct args using MCList.rev_ind; [|rewrite mkApps_app in x; discriminate x].
     now rewrite nth_error_nil in e0.
 Qed.
 
-Lemma whnf_eq_term_upto_univ_napp f Σ Γ t Re Rle napp t' :
+Lemma whnf_eq_term_upto_univ_napp f Σ Γ t cmp_universe cmp_sort pb napp t' :
   whnf f Σ Γ t ->
-  eq_term_upto_univ_napp Σ Re Rle napp t t' ->
+  eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp t t' ->
   whnf f Σ Γ t'.
 Proof.
   intros wh eq.
@@ -1606,11 +1606,11 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_fixapp. destruct o as [[? [? ?]] |].
-    eapply All2_nth_error_Some in a; eauto.
-    destruct a as (?&?&((? & ?)&?)&?).
+    eapply All2_nth_error_Some in e; eauto.
+    destruct e as (? & e & ? & ? & e2 & ?).
     rewrite e. left; eexists; split; eauto. rewrite <- e2.
     eapply All2_nth_error_None; eauto.
-    apply All2_length in a.
+    apply All2_length in e.
     right. apply nth_error_None.
     apply nth_error_None in H.
     lia.
@@ -1778,7 +1778,7 @@ Section Normal.
       * clear -X0 nf_ind_all; revert X0; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
       * clear -X nf_ind_all; revert X; induction 1; constructor; intuition eauto.
       * clear -X0 nf_ind_all. revert X0; induction 1; constructor; intuition eauto.
-      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; cbn in *; intuition eauto.
+      * clear -X1 nf_ind_all; revert X1; induction 1; constructor; unfold on_local_decl, lift_wf_term in *; cbn in *; intuition eauto.
       * destruct 1; [eapply hne|eapply hlam|eapply hconstruct|eapply hcofix|eapply hind|eapply hprod]; eauto.
         clear -X nf_ind_all. revert X; generalize (fix_context mfix); induction 1; constructor; intuition eauto.
         clear -X0 nf_ind_all. induction X0; constructor; eauto.

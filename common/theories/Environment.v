@@ -9,7 +9,7 @@ Module Type Term.
   Parameter Inline term : Type.
 
   Parameter Inline tRel : nat -> term.
-  Parameter Inline tSort : Universe.t -> term.
+  Parameter Inline tSort : Sort.t -> term.
   Parameter Inline tProd : aname -> term -> term -> term.
   Parameter Inline tLambda : aname -> term -> term -> term.
   Parameter Inline tLetIn : aname -> term -> term -> term -> term.
@@ -129,7 +129,7 @@ Module Environment (T : Term).
   Import T.
   #[global] Existing Instance subst_instance_constr.
 
-  Definition typ_or_sort := typ_or_sort_ term.
+  Definition judgment := judgment_ Sort.t term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -344,7 +344,7 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     ind_name : ident;
     ind_indices : context; (* Indices of the inductive types, under params *)
-    ind_sort : Universe.t; (* Sort of the inductive. *)
+    ind_sort : Sort.t; (* Sort of the inductive. *)
     ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
     ind_ctors : list constructor_body;
@@ -856,10 +856,10 @@ Module Environment (T : Term).
   Definition primitive_invariants (p : prim_tag) (cdecl : constant_body) :=
     match p with
     | primInt | primFloat =>
-     [/\ cdecl.(cst_type) = tSort Universe.type0, cdecl.(cst_body) = None &
+     [/\ cdecl.(cst_type) = tSort Sort.type0, cdecl.(cst_body) = None &
           cdecl.(cst_universes) = Monomorphic_ctx]
     | primArray =>
-      let s := Universe.make (Level.lvar 0) in
+      let s := sType (Universe.make' (Level.lvar 0)) in
       [/\ cdecl.(cst_type) = tImpl (tSort s) (tSort s), cdecl.(cst_body) = None &
         cdecl.(cst_universes) = Polymorphic_ctx array_uctx]
     end.
@@ -881,12 +881,6 @@ Module Environment (T : Term).
     A set of declarations and a term, as produced by [MetaCoq Quote Recursively]. *)
 
   Definition program : Type := global_env * term.
-
-  (* TODO MOVE AstUtils factorisation *)
-
-  Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-  Notation "Γ ,,, Γ'" :=
-    (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
@@ -1007,30 +1001,6 @@ Module Environment (T : Term).
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
   #[global] Hint Rewrite arities_context_length : len.
-
-  Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
-  Proof.
-    unfold app_context. rewrite app_nil_r. reflexivity.
-  Qed.
-
-  Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
-  Proof. unfold app_context; now rewrite app_assoc. Qed.
-
-  Lemma app_context_cons Γ Γ' A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A.
-  Proof. exact (app_context_assoc _ _ [A]). Qed.
-
-  Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
-  Proof. unfold app_context. now rewrite app_length. Qed.
-  #[global] Hint Rewrite app_context_length : len.
-
-  Lemma nth_error_app_context_ge v Γ Γ' :
-    #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
-  Proof. apply nth_error_app_ge. Qed.
-
-  Lemma nth_error_app_context_lt v Γ Γ' :
-    v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
-  Proof. apply nth_error_app_lt. Qed.
-
 
   Definition map_mutual_inductive_body f m :=
     match m with
@@ -1269,7 +1239,7 @@ End EnvironmentDecideReflectInstances.
 Module Type TermUtils (T: Term) (E: EnvironmentSig T).
   Import T E.
 
-  Parameter Inline destArity : context -> term -> option (context × Universe.t).
+  Parameter Inline destArity : context -> term -> option (context × Sort.t).
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
 
 End TermUtils.

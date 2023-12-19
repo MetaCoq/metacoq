@@ -211,7 +211,7 @@ Proof.
   eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
   eapply PCUICSpine.type_mkApps; eauto.
   pose proof a0 as a0'.
-  eapply nth_error_all in a0'; eauto. simpl in a0'.
+  eapply nth_error_all in a0'; eauto. apply unlift_TermTyp in a0'.
   eapply (substitution (Δ := [])) in a0'; eauto.
   2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
   rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
@@ -261,7 +261,7 @@ Lemma expand_lets_erasure (wfl := default_wcbv_flags) {Σ mdecl idecl cdecl c br
   declared_constructor Σ c mdecl idecl cdecl ->
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
-   All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
+  PCUICEquality.eq_context_upto_names (bcontext br)
       (cstr_branch_context c.1 mdecl cdecl)) 0 idecl.(ind_ctors) brs ->
   All (fun br =>
     expand_lets (inst_case_branch_context p br) (bbody br) = bbody br) brs.
@@ -312,7 +312,7 @@ Lemma subslet_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wf
   declared_constructor Σ (ind, n) mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
-  PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u (puinst p) ->
+  PCUICEquality.cmp_ind_universes Σ ind napp u (puinst p) ->
   spine_subst Σ Γ pars parsubst (ind_params mdecl)@[u] ->
   spine_subst Σ Γ (pparams p) parsubst' (ind_params mdecl)@[puinst p] ->
   assumption_context cdecl.(cstr_args) ->

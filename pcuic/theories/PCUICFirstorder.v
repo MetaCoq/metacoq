@@ -56,7 +56,7 @@ Section firstorder.
       (List.rev (c.(cstr_args) ++ mind.(ind_params)))%list.
 
   Definition firstorder_oneind mind (ind : one_inductive_body) :=
-    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Universe.is_level (ind_sort ind)).
+    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Sort.is_level (ind_sort ind)).
 
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
@@ -102,7 +102,7 @@ Context {cf : config.checker_flags}.
 
 Definition isPropositionalArity ar :=
   match destArity [] ar with
-  | Some (_, s) => is_propositional s
+  | Some (_, s) => Sort.is_propositional s
   | None => false
   end.
 
@@ -193,7 +193,9 @@ Lemma isType_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T}
   wf_local Σ Δ ->
   isType Σ Δ T.
 Proof using Type.
-  intros [s Hs]. exists s. eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
+  intros HT ??.
+  apply lift_typing_impl with (1 := HT); intros ?? H.
+  eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma typing_spine_arity_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ args T' i u pars :
@@ -332,7 +334,7 @@ Proof using Type.
     now eapply isType_tLetIn_red in isty; pcuic.
   - depelim hi. solve_discr.
     specialize (i1 hd). specialize (IHhsp i1).
-    destruct (validity t) as [s Hs]. eapply inversion_mkApps in Hs as [? [hi _]].
+    destruct (validity t) as (_ & s & Hs & _). eapply inversion_mkApps in Hs as [? [hi _]].
     eapply inversion_Ind in hi as [mdecl [idecl [decli [? ?]]]].
     econstructor; tea. 2:{ eapply IHhsp. eapply isType_apply in isty; tea. }
     now eapply isType_ws_cumul_pb_refl. eauto.
@@ -639,7 +641,7 @@ Proof using Type.
       now eapply invert_cumul_sort_ind in Hcumul.
     + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
-    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul); eauto.
+    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_prod_ind in Hcumul.
     + exfalso. eapply inversion_Ind in Hty as (? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICInductives.declared_inductive_type in d.
@@ -722,7 +724,7 @@ Proof.
   intros Ha H. induction H in t', Ha |- using firstorder_value_inds.
   eapply eq_term_upto_univ_napp_mkApps_l_inv in Ha as (? & ? & [] & ->).
   invs e. repeat f_equal.
-  - now eapply eq_univ_make.
+  - now eapply cmp_universe_instance_eq.
   - revert x0 a. clear - H0. induction H0; intros; invs a; f_equal; eauto.
 Qed.
 

@@ -135,8 +135,8 @@ Section Inversion.
     forall {Γ s T},
       Σ ;;; Γ |- tSort s : T ->
       wf_local Σ Γ ×
-      wf_universe Σ s ×
-      Σ ;;; Γ ⊢ tSort (Universe.super s) ≤ T.
+      wf_sort Σ s ×
+      Σ ;;; Γ ⊢ tSort (Sort.super s) ≤ T.
   Proof using wfΣ.
     intros Γ s T h. invtac h.
   Qed.
@@ -145,9 +145,9 @@ Section Inversion.
     forall {Γ na A B T},
       Σ ;;; Γ |- tProd na A B : T ->
       ∑ s1 s2,
-        Σ ;;; Γ |- A : tSort s1 ×
+        lift_typing typing Σ Γ (j_vass_s na A s1) ×
         Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
-        Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
+        Σ ;;; Γ ⊢ tSort (Sort.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
     intros Γ na A B T h. invtac h.
   Qed.
@@ -155,19 +155,19 @@ Section Inversion.
   Lemma inversion_Prod_size :
     forall {Γ na A B T},
       forall H : Σ ;;; Γ |- tProd na A B : T,
-      ∑ s1 s2 (H1 : Σ ;;; Γ |- A : tSort s1) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
-        typing_size H1 < typing_size H × typing_size H2 < typing_size H ×
-        Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
+      ∑ s1 s2 (H1 : lift_typing typing Σ Γ (j_vass_s na A s1)) (H2 : Σ ;;; Γ ,, vass na A |- B : tSort s2),
+        lift_typing_size (@typing_size _ _ _) _ H1 < typing_size H × typing_size H2 < typing_size H ×
+        Σ ;;; Γ ⊢ tSort (Sort.sort_of_product s1 s2) ≤ T.
   Proof using wfΣ.
     intros Γ na A B T h. unshelve invtac h; eauto.
-    all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); lia.
+    all: try revert l; try revert l0; simpl; cbn; lia.
   Qed.
 
   Lemma inversion_Lambda :
     forall {Γ na A t T},
       Σ ;;; Γ |- tLambda na A t : T ->
-      ∑ s B,
-        Σ ;;; Γ |- A : tSort s ×
+      ∑ B,
+        lift_typing typing Σ Γ (j_vass na A) ×
         Σ ;;; Γ ,, vass na A |- t : B ×
         Σ ;;; Γ ⊢ tProd na A B ≤ T.
   Proof using wfΣ.
@@ -177,9 +177,8 @@ Section Inversion.
   Lemma inversion_LetIn :
     forall {Γ na b B t T},
       Σ ;;; Γ |- tLetIn na b B t : T ->
-      ∑ s1 A,
-        Σ ;;; Γ |- B : tSort s1 ×
-        Σ ;;; Γ |- b : B ×
+      ∑ A,
+        lift_typing typing Σ Γ (j_vdef na b B) ×
         Σ ;;; Γ ,, vdef na b B |- t : A ×
         Σ ;;; Γ ⊢ tLetIn na b B A ≤ T.
   Proof using wfΣ.
@@ -247,7 +246,7 @@ Section Inversion.
   Import PCUICEquality.
   Variant case_inversion_data Γ ci p c brs mdecl idecl indices :=
    | case_inv
-       (ps : Universe.t)
+       (ps : sort)
        (eq_npars : mdecl.(ind_npars) = ci.(ci_npar))
        (predctx := case_predicate_context ci.(ci_ind) mdecl idecl p)
        (wf_pred : wf_predicate mdecl idecl p)
@@ -256,9 +255,9 @@ Section Inversion.
        (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
        (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
        (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
-       (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+       (ind_inst : ctx_inst (typing Σ) Γ (p.(pparams) ++ indices)
                             (List.rev (subst_instance p.(puinst)
-                                                      (ind_params mdecl ,,, ind_indices idecl))))
+                                                      (ind_params mdecl ,,, ind_indices idecl : context))))
        (scrut_ty : Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices))
        (not_cofinite : isCoFinite mdecl.(ind_finite) = false)
        (ptm := it_mkLambda_or_LetIn predctx p.(preturn))
@@ -310,9 +309,8 @@ Section Inversion.
         let types := fix_context mfix in
         fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) (fix_context mfix) Γ) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ ⊢ dtype decl ≤ T.
   Proof using wfΣ.
@@ -326,10 +324,8 @@ Section Inversion.
         cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
-        All (fun d => isType Σ Γ (dtype d)) mfix ×
-        All (fun d =>
-          Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
-        ) mfix ×
+        All (on_def_type (lift_typing typing Σ) Γ) mfix ×
+        All (on_def_body (lift_typing typing Σ) (fix_context mfix) Γ) mfix ×
         wf_cofixpoint Σ mfix ×
         Σ ;;; Γ ⊢ decl.(dtype) ≤ T.
   Proof using wfΣ.
@@ -375,7 +371,7 @@ Section Inversion.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_LetIn in h as hh.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
+      destruct hh as (A' & wfA' & Ht & hlt).
       exists A'. split ; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
@@ -383,7 +379,7 @@ Section Inversion.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_Lambda in h as hh.
-      pose proof hh as [s1 [B' [? [? ?]]]].
+      pose proof hh as (B' & wfB' & Ht & hlt).
       exists B'. split ; eauto.
       cbn. etransitivity; tea.
       eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.

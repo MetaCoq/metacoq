@@ -296,12 +296,13 @@ Proof.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
     unfold map_decl. simpl. unfold vass. f_equal.
-    destruct t0 as [s ht]. eapply typed_inst. all: eauto.
+    destruct t0 as (_ & s & ht & _). eapply typed_inst. all: eauto.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
+    destruct t0 as (hb & s & ht & _). cbn in hb.
     unfold map_decl. simpl. unfold vdef. f_equal.
     + f_equal. eapply typed_inst. all: eauto.
-    + eapply typed_inst in t1 as [? _]. all: eauto.
+    + eapply typed_inst. all: eauto.
 Qed.
 
 Lemma inst_destArity :
@@ -1603,29 +1604,24 @@ Proof using Type.
 Qed.
 
 Lemma wf_local_app_inst (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
-  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
+  All_local_rel (fun Γ j =>
     forall Δ σ,
     wf_local Σ Δ ->
-    Σ ;;; Δ ⊢ σ : (Γ ,,, Γ') ->
-    Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Δ ->
+    Σ ;;; Δ ⊢ σ : Γ ->
+    lift_typing0 (fun t T => Σ ;;; Δ |- t.[σ] : T.[σ]) j) Γ Δ ->
   forall Δ' σ,
   Σ ;;; Δ' ⊢ σ : Γ ->
   wf_local Σ Δ' ->
   wf_local Σ (Δ' ,,, inst_context σ Δ).
 Proof using Type.
   intros.
-  induction X.
+  induction X using All_local_rel_ind1.
   - now simpl.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    apply infer_typing_sort_impl with id t0; intros Hs.
-    eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
+  - rewrite inst_context_snoc /=.
+    apply All_local_env_snoc; auto.
+    apply lift_typing_map with (j := j_decl _) => //.
+    eapply X; tas.
     eapply well_subst_app; auto.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    * apply infer_typing_sort_impl with id t0; intros Hs.
-      eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
-      eapply well_subst_app; auto.
-    * simpl. apply t1 => //.
-      eapply well_subst_app; eauto.
 Qed.
 
 Lemma usubst_up_vass {Γ Δ σ na A} :
@@ -1873,14 +1869,16 @@ Proof.
     eapply red_primArray_type; cbn; eauto.
 Defined.
 
-Lemma eq_term_upto_univ_inst Σ :
-  forall Re Rle napp u v σ,
-    Reflexive Re -> Reflexive Rle ->
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
+Lemma eq_term_upto_univ_inst Σ cmp_universe cmp_sort pb napp u v σ :
+    RelationClasses.Reflexive (cmp_universe Conv) ->
+    RelationClasses.Reflexive (cmp_universe pb) ->
+    RelationClasses.Reflexive (cmp_sort Conv) ->
+    RelationClasses.Reflexive (cmp_sort pb) ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u v ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u.[σ] v.[σ].
 Proof using Type.
-  intros Re Rle napp u v σ hRe hRle h.
-  induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
+  intros refl_univ_conv refl_univ_pb refl_sort_conv refl_sort_pb h.
+  induction u in v, pb, napp, σ, refl_univ_pb, refl_sort_pb, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -1894,24 +1892,18 @@ Proof using Type.
   - simpl. constructor. all: eauto.
   * rewrite /inst_predicate.
     destruct X; destruct e as [? [? [ectx ?]]].
-    rewrite (All2_fold_length ectx). red.
+    rewrite (All2_length ectx). red.
     intuition auto; simpl; solve_all.
-  * induction X0 in a, brs' |- *.
-    + inversion a. constructor.
-    + inversion a. subst. simpl.
-      destruct X1 as [a0 e0], p0.
-      constructor; eauto.
-      split; eauto.
-      simpl.
-      rewrite (All2_fold_length a0).
-      now eapply e1.
+  * unfold eq_branches, eq_branch in *; solve_all.
+    rewrite (All2_length a1).
+    now eapply b0.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
     eapply onPrims_map_prop; tea. cbn; intuition eauto.

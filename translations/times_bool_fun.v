@@ -207,10 +207,14 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
     exact (fun A Γ' => Γ' ,, vass (decl_name A) (tsl Γ' (decl_type A))).
 Defined.
 
+Definition refresh_universe u :=
+  if Universe.is_level u then u else fresh_universe.
+
+Definition refresh_sort_universe := Sort.map refresh_universe.
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
+  | tSort s => tSort (refresh_sort_universe s)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | tCast x x0 x1 => tCast (refresh_universes x) x0 (refresh_universes x1)

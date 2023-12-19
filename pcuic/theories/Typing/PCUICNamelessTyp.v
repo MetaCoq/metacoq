@@ -102,7 +102,7 @@ Proof.
     now setoid_rewrite <- nl_check_one_cofix.
 Qed.
 
-Lemma wf_universe_nl Σ u : wf_universe Σ u -> wf_universe (nlg Σ) u.
+Lemma wf_sort_nl Σ u : wf_sort Σ u -> wf_sort (nlg Σ) u.
 Proof.
   destruct u; simpl; auto.
   intros.
@@ -150,7 +150,7 @@ Proof.
     constructor. 1: eauto using nlg_wf_local.
     unfold nlctx. rewrite nth_error_map. now rewrite H.
   - constructor; eauto using nlg_wf_local.
-    now apply wf_universe_nl.
+    now apply wf_sort_nl.
   - replace (nl (cst_type decl)) with (cst_type (map_constant_body nl decl));
       [|destruct decl; reflexivity].
     constructor; eauto using nlg_wf_local.
@@ -258,7 +258,7 @@ Proof.
     constructor.
     + now eapply fix_guard_nl.
     + now rewrite nth_error_map H0.
-    + rewrite nlctx_app_context in X. now eapply wf_local_app_inv in X.
+    + rewrite nlctx_app_context in X. now eapply All_local_env_app_inv in X.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
       simpl. intros x [s Hs]. now exists s.
@@ -277,7 +277,7 @@ Proof.
     constructor; auto.
     + now apply cofix_guard_nl.
     + now rewrite nth_error_map H0.
-    + now rewrite nlctx_app_context in X; apply wf_local_app_inv in X.
+    + now rewrite nlctx_app_context in X; apply All_local_env_app_inv in X.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
       simpl. intros x [s Hs]. now exists s.

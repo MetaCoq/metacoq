@@ -87,9 +87,10 @@ Proof.
     | [ H : KernameSet.In _ (KernameSet.union _ _) |- _ ] =>
       apply KernameSet.union_spec in hin as [?|?]
     end.
-  - apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    now apply unlift_TermTyp in h1.
+  - apply inversion_LetIn in wt as (? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
@@ -141,6 +142,7 @@ Proof.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
     destruct H as [[def [Hty Hdef]]].
+    apply unlift_TermTyp in Hty.
     eapply Hdef; eauto.
 
   - apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
@@ -151,6 +153,7 @@ Proof.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
     destruct H as [[def [Hty Hdef]]].
+    apply unlift_TermTyp in Hty.
     eapply Hdef; eauto.
 
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
@@ -182,8 +185,9 @@ Proof.
     end.
   - now apply inversion_Evar in wt.
   - constructor.
-    now apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+    now apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    apply unlift_TermTyp in h1.
     constructor; eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
     now constructor; eauto.
@@ -292,14 +296,14 @@ Proof.
     eapply In_Forall in Σer.
     eapply Forall_All in Σer.
     eapply Forall2_All2 in H.
-    ELiftSubst.solve_all.
+    ELiftSubst.solve_all. apply unlift_TermTyp in b1; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
     eapply All_Forall. eapply includes_deps_fold in Σer as [_ Σer].
     eapply In_Forall in Σer.
     eapply Forall_All in Σer.
     eapply Forall2_All2 in H.
-    ELiftSubst.solve_all.
+    ELiftSubst.solve_all. apply unlift_TermTyp in b1; eauto.
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
     depelim H; depelim H0. depelim X; depelim X0; depelim p1; constructor;
     noconf H; cbn; simp prim_global_deps in Σer; simpl in *.
@@ -337,7 +341,7 @@ Proof.
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
     eapply on_declared_constant in H_; auto.
-    red in H_. rewrite cbe in H_. simpl in H_.
+    red in H_. rewrite cbe in H_. apply unlift_TermTyp in H_.
     eapply (erases_weakening_env (Σ := (Σ, cst_universes cb))
        (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
     simpl. econstructor; eauto. econstructor; eauto.
@@ -719,13 +723,11 @@ Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
    wf_ext Σ ->
    PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
    Σ;;; Γ |- v : tSort u ->
-   Σ;;; Γ |- v' : tSort u' -> is_propositional u ->
-   leq_universe (global_ext_constraints Σ) u' u.
+   Σ;;; Γ |- v' : tSort u' -> Sort.is_propositional u ->
+   leq_sort (global_ext_constraints Σ) u' u.
 Proof.
   intros wfΣ leq hv hv' isp.
-  eapply orb_true_iff in isp as [isp | isp].
-  - eapply leq_term_prop_sorted_l; eauto.
-  - eapply leq_term_sprop_sorted_l; eauto.
+  eapply leq_term_prop_sorted_l; eauto.
 Qed.
 
 Lemma map_erase_irrel X_type X {normalization_in1 normalization_in2 : forall Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} Γ t H1 H2 :

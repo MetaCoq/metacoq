@@ -125,9 +125,9 @@ struct
   let kVmCast = ast "VmCast"
   let kNative = ast "NativeCast"
   let kCast = ast "Cast"
-  let lSProp = ast "universe.lsprop"
-  let lProp = ast "universe.lprop"
-  let lnpe = ast "universe.lnpe"
+  let sSProp = ast "sort.sprop"
+  let sProp = ast "sort.prop"
+  let sType = ast "sort.type"
   let lzero = ast "level.lzero"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
@@ -163,6 +163,7 @@ struct
   let tMPdot = ast "MPdot"
   let tfresh_evar_id = ast "fresh_evar_id"
 
+  let tuniverse = ast "universe.t"
   let tproplevel = ast "level.prop_level_type"
   let tlevelSProp = ast "level.lsprop"
   let tlevelProp = ast "level.lprop"
@@ -177,13 +178,12 @@ struct
   let tBuild_Universe = ast "universe.build0"
   let tfrom_kernel_repr = ast "universe.from_kernel_repr"
   (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
-  let tof_levels = ast "universe.of_levels"
+  let tof_level = ast "universe.make_of_level"
   let tLevelSet_of_list = ast "universe.of_list"
   let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
   let univexpr_lProp = ast "levelexpr.prop"
-  let univexpr_npe = ast "levelexpr.npe"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = ast "variance.t"

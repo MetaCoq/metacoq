@@ -187,9 +187,9 @@ Proof.
       + eapply All2_map. repeat toAll.
         eapply All2_impl. 1: tea. cbn; intros. destruct_head'_prod; eauto.
       + unfold preturn. cbn.
-        unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+        unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
         exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
-        ++ unshelve erewrite <- (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+        ++ unshelve erewrite <- (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
            rewrite <- inst_case_predicate_context_length.
             rewrite inst_case_predicate_context_inst; eauto.
             eapply closed_subst_ext. 2: symmetry; apply up_Upn.
@@ -209,17 +209,17 @@ Proof.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
-            unshelve erewrite (All2_fold_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
+            unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
     * eauto.
-    * rename Hbody into Hbrsbrs'.
+    * rename Hbody into Hbrsbrs'. unfold cumul_branches, cumul_branch in *.
       repeat toAll.
       eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
-      unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+      unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
       split; eauto.
       repeat match goal with H : is_true (andb _ _) |- _ => apply andb_and in H; destruct H end.
       rewrite -> test_context_k_closed_on_free_vars_ctx in *.
       exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
-      + unshelve erewrite <- (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+      + unshelve erewrite <- (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
       rewrite <- (inst_case_branch_context_length p).
       rewrite inst_case_branch_context_inst; eauto.
       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
@@ -242,9 +242,9 @@ Proof.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
-        unshelve erewrite (All2_fold_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
+        unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
    - eapply cumul_Proj; try apply X0; eauto.
-   - cbn. eapply cumul_Fix. cbn in HfreeA, HfreeB.
+   - cbn. eapply cumul_Fix. cbn in HfreeA, HfreeB. unfold cumul_mfixpoint in *.
      repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
      destruct_head'_prod.
      repeat split; eauto.
@@ -285,7 +285,7 @@ Proof.
          rewrite fix_context_length.
          rewrite (All2_length X). eauto.
    - cbn. rewrite (All2_length X).
-     eapply cumul_CoFix. cbn in HfreeA, HfreeB.
+     eapply cumul_CoFix. cbn in HfreeA, HfreeB. unfold cumul_mfixpoint in *.
      repeat toAll.
      eapply All2_impl. 1: tea. cbn; intros.
      destruct_head'_prod.
@@ -365,57 +365,51 @@ Lemma type_inst {cf : checker_flags} : env_prop
     wf_local Σ Δ ->
     Σ ;;; Δ ⊢ σ : Γ ->
     Σ ;;; Δ |- t.[σ] : A.[σ])
-  (fun Σ Γ =>
-    All_local_env
-    (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
-    =>
+  (fun Σ Γ j =>
     forall Δ σ,
     wf_local Σ Δ ->
     Σ ;;; Δ ⊢ σ : Γ ->
-    Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Γ).
+    lift_typing0 (fun t T => Σ ;;; Δ |- t.[σ] : T.[σ]) j)
+  (fun Σ Γ =>
+    All_local_env (fun Γ j =>
+    forall Δ σ,
+    wf_local Σ Δ ->
+    Σ ;;; Δ ⊢ σ : Γ ->
+    (lift_typing0 (fun (t T : term) => Σ ;;; Δ |- t.[σ] : T.[σ])) j) Γ).
 Proof.
   apply typing_ind_env.
 
-  - intros Σ wfΣ Γ wfΓ. auto.
-    induction 1; constructor; tas.
-    all: apply infer_typing_sort_impl with id tu; auto.
+  - intros Σ wfΣ Γ j H Δ σ wfΔ Hσ.
+    apply lift_typing_impl with (1 := H) => t T [_ IH].
+    now apply IH.
+
+  - intros Σ wfΣ Γ wfΓ _ X. assumption.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.
     eapply hσ. assumption.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ σ hΔ hσ. simpl.
     econstructor. all: assumption.
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
-    econstructor.
-    + eapply ihA ; auto.
-    + eapply ihB.
-      * econstructor ; auto.
-        eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. 2: assumption.
-        econstructor ; auto.
-        eexists. eapply ihA. all: auto.
-  - intros Σ wfΣ Γ wfΓ na A t s1 bty X hA ihA ht iht Δ σ hΔ hσ.
+    assert (ihA' : lift_typing0 (typing Σ Δ) (j_vass_s na A.[σ] s1)) by now eapply ihA.
+    econstructor; tas.
+    apply lift_sorting_forget_univ in ihA'.
+    eassert (wf_local Σ (Δ ,, _)) by (constructor; eassumption).
+    eapply ihB; tea.
+    eapply well_subst_Up ; assumption.
+  - intros Σ wfΣ Γ wfΓ na A t bty X hA ihA ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
-    econstructor.
-    + eapply ihA ; auto.
-    + eapply iht.
-      * econstructor ; auto.
-        eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. 2: assumption.
-        constructor. 1: assumption.
-        eexists. eapply ihA. all: auto.
-  - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht Δ σ hΔ hσ.
+    assert (ihA' : lift_typing0 (typing Σ Δ) (j_vass na A.[σ])) by now eapply ihA.
+    econstructor; tas.
+    eassert (wf_local Σ (Δ ,, _)) by (constructor; eassumption).
+    eapply iht; tea.
+    eapply well_subst_Up ; assumption.
+  - intros Σ wfΣ Γ wfΓ na b B t A X hbB ihbB ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
-    econstructor.
-    + eapply ihB. all: auto.
-    + eapply ihb. all: auto.
-    + eapply iht.
-      * econstructor. all: auto.
-        -- eexists. eapply ihB. all: auto.
-        -- simpl. eapply ihb. all: auto.
-      * eapply well_subst_Up'; try assumption.
-        constructor; auto.
-        ** exists s1. apply ihB; auto.
-        ** apply ihb; auto.
+    assert (ihbB' : lift_typing0 (typing Σ Δ) (j_vdef na b.[σ] B.[σ])) by now eapply ihbB.
+    econstructor; tas.
+    eassert (wf_local Σ (Δ ,, _)) by (constructor; eassumption).
+    eapply iht; tea.
+    eapply well_subst_Up'; try assumption.
   - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
@@ -460,10 +454,9 @@ Proof.
         apply All_local_env_app_inv in IHpredctx as [].
         eapply IHpret.
         ++ eapply wf_local_app_inst; eauto.
-           apply a2.
         ++ relativize #|pcontext p|; [eapply well_subst_app_up|] => //; rewrite /predctx; len.
            2:{ rewrite case_predicate_context_length //. }
-           eapply wf_local_app_inst; eauto. apply a2.
+           eapply wf_local_app_inst; eauto.
       + simpl. unfold id.
         specialize (IHc _ _ HΔ Hf).
         now rewrite inst_mkApps map_app in IHc.
@@ -506,7 +499,7 @@ Proof.
         assert (wf_local Σ (Δ,,, brctx'.1)).
         { rewrite /brctx'. cbn.
           apply All_local_env_app_inv in Hbrctx as [].
-          eapply wf_local_app_inst; tea. apply a0. }
+          eapply wf_local_app_inst; tea. }
         split => //. split.
         ++ eapply IHbr => //.
           rewrite /brctx' /brctxty; cbn.
@@ -538,45 +531,47 @@ Proof.
       rewrite Upn_comp; cbn; try now repeat len.
       rewrite subst_consn_lt /=; cbn; len; try lia.
       now rewrite map_rev.
-  - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfix ihmfix wffix Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfixt ihmfixt hmfixb ihmfixb wffix Δ σ hΔ hσ.
     simpl. eapply meta_conv; [econstructor;eauto|].
     * now eapply fix_guard_inst.
     * now rewrite nth_error_map hnth.
-    * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
-      now apply IH.
-    * solve_all. destruct b as [? b0].
-      len. rewrite /types in b0. len in b0.
-      pose proof (inst_fix_context mfix σ).
+    * apply All_map, (All_impl ihmfixt).
+      intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t; eauto.
+    * pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
-      eapply All_local_env_app_inv in htypes as [].
-      eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a1.
+      apply All_map, (All_impl ihmfixb).
+      unfold on_def_body.
+      intros x t. relativize (lift0 _ _).
+      1: eenough (wf_local Σ (Δ ,,, _)).
+      1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a1.
-      + rewrite lift0_inst. now sigma.
+      + eapply wf_local_app_inst; eauto.
+        now eapply All_local_env_app_inv in htypes as [].
+      + rewrite lift0_inst /types inst_context_length fix_context_length.
+        now sigma.
     * now apply inst_wf_fixpoint.
     * reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfix ihmfix wffix Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfixt ihmfixt hmfixb ihmfixb wffix Δ σ hΔ hσ.
     simpl. eapply meta_conv; [econstructor;eauto|].
     * now eapply cofix_guard_inst.
     * now rewrite nth_error_map hnth.
-    * solve_all.
-      apply infer_typing_sort_impl with id a; intros [_ IH].
-      now apply IH.
-    * solve_all. destruct b as [? b0].
-      len. rewrite /types in b0. len in b0.
-      pose proof (inst_fix_context mfix σ).
+    * apply All_map, (All_impl ihmfixt).
+      intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t; eauto.
+    * pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
-      eapply All_local_env_app_inv in htypes as [].
-      eapply meta_conv; [eapply b0; eauto|].
-      + eapply wf_local_app_inst; eauto. eapply a1.
+      apply All_map, (All_impl ihmfixb).
+      unfold on_def_body.
+      intros x t. relativize (lift0 _ _).
+      1: eenough (wf_local Σ (Δ ,,, _)).
+      1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
-        eapply wf_local_app_inst; eauto. apply a1.
-      + rewrite lift0_inst. now sigma.
+      + eapply wf_local_app_inst; eauto.
+        now eapply All_local_env_app_inv in htypes as [].
+      + rewrite lift0_inst /types inst_context_length fix_context_length.
+        now sigma.
     * now apply inst_wf_cofixpoint.
     * reflexivity.
 

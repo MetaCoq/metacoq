@@ -196,7 +196,7 @@ Inductive term :=
 | tRel (n : nat)
 | tVar (i : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (n : nat) (l : list term)
-| tSort (u : Universe.t)
+| tSort (u : sort)
 | tProd (na : aname) (A B : term)
 | tLambda (na : aname) (A t : term)
 | tLetIn (na : aname) (b B t : term) (* let na := b : B in t *)
@@ -405,7 +405,7 @@ Instance subst_instance_constr : UnivSubst term :=
   match c with
   | tRel _ | tVar _ => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
+  | tSort s => tSort (subst_instance_sort u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
   | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
@@ -431,7 +431,7 @@ Instance subst_instance_constr : UnivSubst term :=
 (** Tests that the term is closed over [k] universe variables *)
 Fixpoint closedu (k : nat) (t : term) : bool :=
   match t with
-  | tSort univ => closedu_universe k univ
+  | tSort s => closedu_sort k s
   | tInd _ u => closedu_instance k u
   | tConstruct _ _ u => closedu_instance k u
   | tConst _ u => closedu_instance k u
@@ -1314,6 +1314,14 @@ Proof.
 Qed.
 #[global]
 Hint Rewrite test_context_map : map.
+
+Lemma test_context_app (p : term -> bool) Γ Δ :
+  test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
+Proof using Type.
+  induction Δ; simpl; auto.
+  - now rewrite andb_true_r.
+  - now rewrite IHΔ andb_assoc.
+Qed.
 
 Lemma onctx_test P (p q : term -> bool) ctx :
   onctx P ctx ->

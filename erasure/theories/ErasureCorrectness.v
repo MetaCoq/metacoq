@@ -60,11 +60,11 @@ Proof.
       eapply IHeval1 in H4 as (vf' & Hvf' & [He_vf']); eauto.
       eapply IHeval2 in H6 as (vu' & Hvu' & [He_vu']); eauto.
       pose proof (subject_reduction_eval t0 H).
-      eapply inversion_Lambda in X0 as (? & ? & ? & ? & e0).
+      eapply inversion_Lambda in X0 as (? & ? & ? & e0).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply PCUICConversion.ws_cumul_pb_Prod_Prod_inv in e0 as [? e1 e2].
-          eapply type_Cumul_alt. eassumption. now exists x2.
+          eapply type_Cumul_alt; tea.
           symmetry in e1.
           eapply ws_cumul_pb_forget in e1.
           now eapply conv_cumul. }
@@ -100,19 +100,22 @@ Proof.
     + auto.
   - assert (Hty' := Hty).
     assert (Σ |-p tLetIn na b0 t b1 ⇓ res) by eauto.
-    eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?); auto.
+    eapply inversion_LetIn in Hty' as (? & h1 & ? & ?); auto.
+    assert (wf_rel : lift_typing0 (typing Σ []) (j_vdef na b0' t)).
+    { apply lift_sorting_it_impl_gen with h1 => // HT. eapply subject_reduction_eval; eauto. }
+    apply unlift_TermTyp in h1 as h1'.
     invs He.
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
       assert (Hc : conv_context cumulAlgo_gen Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
-        now eapply wcbveval_red; eauto.
+        eapply wcbveval_red; eauto.
         reflexivity.
       }
-      assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
+      assert (Σ;;; [vdef na b0' t] |- b1 : x). {
         cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. all: hnf; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. constructor. assumption.
       }
       assert (Σ;;; [] |- subst1 b0' 0 b1 ⇝ℇ ELiftSubst.subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -123,10 +126,9 @@ Proof.
         eapply subject_reduction_eval; eauto.
         eapply erases_context_conversion. 3:eassumption.
         all: cbn; eauto.
-        econstructor. all: hnf; eauto.
-        eapply subject_reduction_eval; eauto.
+        econstructor. constructor. assumption.
       }
-      pose proof (subject_reduction_eval t1 H).
+      pose proof (subject_reduction_eval h1' H).
       assert (eqs := type_closed_subst b1 _ X1).
       rewrite eqs in H1.
       eapply IHeval2 in H1 as (vres & Hvres & [Hty_vres]); [| |now eauto].
@@ -134,7 +136,7 @@ Proof.
       exists vres. split. eauto. constructor; econstructor; eauto.
       enough (ECSubst.csubst vt1' 0 t2' = ELiftSubst.subst10 vt1' t2') as ->; auto.
       eapply ECSubst.closed_subst. eapply erases_closed in Hvt2'; auto.
-      eapply eval_closed. eauto. 2:eauto. now eapply subject_closed in t1.
+      eapply eval_closed. eauto. 2:eauto. now eapply subject_closed in h1'.
     + exists EAst.tBox. split. 2:constructor; econstructor; eauto.
       econstructor. eapply Is_type_eval; eauto.
 
@@ -154,13 +156,13 @@ Proof.
         apply declared_constant_from_gen in isdecl', isdecl''.
         eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
         2:exact weaken_env_prop_typing.
-        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. red in isdecl'.
+        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. eapply unlift_TermTyp in isdecl'.
         unfold declared_constant in isdecl''.
         now eapply @typing_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * assert (isdecl'' := isdecl').
         apply declared_constant_from_gen in isdecl', isdecl''.
         eapply declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
-        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. cbn in *.
+        unfold on_constant_decl in isdecl'. rewrite e in isdecl'. eapply unlift_TermTyp in isdecl'.
         2:exact weaken_env_prop_typing.
         now eapply erases_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * now eauto.
@@ -872,7 +874,7 @@ Proof.
           move: e0 e. rewrite -closed_unfold_cofix_cunfold_eq //.
           unfold unfold_cofix. intros hnth; rewrite hnth. intros [=].
           subst fn narg.
-          eapply All_nth_error in a0 as a'; tea.
+          eapply All_nth_error in a0 as a'; tea. apply unlift_TermTyp in a'.
           eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
@@ -992,7 +994,7 @@ Proof.
           move: hnth e. rewrite -closed_unfold_cofix_cunfold_eq //.
           unfold unfold_cofix. intros hnth'; rewrite hnth'. intros [=].
           subst fn narg. rewrite hnth' in e2. noconf e2.
-          eapply All_nth_error in a0 as a'; tea.
+          eapply All_nth_error in a0 as a'; tea. eapply unlift_TermTyp in a'.
           eapply erases_subst0. eauto. 2:eauto. pcuic. all:tea.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
@@ -1223,7 +1225,7 @@ Proof.
   - cbn. destruct cb' as [[]].
     cbn in *. depelim wf. destruct o.
     rewrite [forallb _ _](IHer wf) andb_true_r.
-    red in H. destruct cb as [ty []]; cbn in *.
+    red in H. destruct cb as [ty []]; cbn in *. apply unlift_TermTyp in on_global_decl_d.
     unshelve eapply PCUICClosedTyp.subject_closed in on_global_decl_d. cbn. split; auto.
     eapply erases_closed in H; tea. elim H.
     cbn. apply IHer. now depelim wf.
@@ -1286,6 +1288,7 @@ Proof.
     cbn. red in H.
     do 2 red in on_global_decl_d.
     destruct (cst_body cb).
+    eapply unlift_TermTyp in on_global_decl_d.
     destruct (E.cst_body cb') => //. cbn.
     set (Σ'' := ({| universes := _ |}, _)) in *.
     assert (PCUICTyping.wf_ext Σ'').

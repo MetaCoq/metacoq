@@ -46,16 +46,19 @@ Let Pind Γ ind t u args :=
 
 Let Pcheck (Γ : context) (t T : term) := True.
 
+Let Pj (Γ : context) (j : judgment) := lift_sorting (Pcheck Γ) (Psort Γ) j.
+
 Let PΓ (Γ : context) := True.
 
 Let PΓ_rel (Γ Γ' : context) := True.
 
-Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
+Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind Pj PΓ PΓ_rel.
 Proof using wfΣ.
 
   apply bidir_ind_env.
 
   all: intros ; red ; auto.
+  { apply lift_sorting_impl with (1 := X) => ?? [] //. }
   1-9,11-13: intros ? T' ty_T' ; inversion_clear ty_T'.
   14-17: intros.
 
@@ -69,29 +72,28 @@ Proof using wfΣ.
   - eexists ; split.
     all: eapply closed_red_refl ; fvs.
 
-  - apply H in X2 => //.
-    apply H0 in X3.
-    2:{ constructor ; auto. now eapply infering_sort_isType. }
+  - apply unlift_TypUniv in X0, X3.
+    apply X0 in X3 => //.
+    apply H in X4.
+    2:{ constructor ; auto. now eapply lift_sorting_forget_univ, lift_sorting_lift_typing. }
     subst.
     eexists ; split.
     all: eapply closed_red_refl ; fvs.
 
-  - apply X1 in X4 as [bty' []].
-    2:{ constructor ; auto. now eapply infering_sort_isType. }
-    exists (tProd n t bty') ; split.
+  - apply X2 in X5 as [bty' []].
+    2:{ constructor ; auto. now apply lift_sorting_lift_typing. }
+    exists (tProd na t bty') ; split.
     all: now eapply closed_red_prod_codom.
 
-  - apply X2 in X6 as [A' []].
-    2:{ constructor ; auto. 2: eapply checking_typing ; tea. all: now eapply infering_sort_isType. }
-    exists (tLetIn n b B A').
-    assert (Σ ;;; Γ |- b : B)
-      by (eapply checking_typing ; tea ; now eapply infering_sort_isType).
+  - apply lift_sorting_lift_typing in X, X4; tas.
+    apply lift_typing_is_open_term in X4 as [X4_1 X4_2]; tas; cbn in *.
+    apply X2 in X5 as [A' []].
+    2: now constructor.
+    apply wf_local_closed_context in X3.
+    exists (tLetIn na b B A').
     split.
     all: eapply closed_red_letin ; tea.
-    all: apply closed_red_refl.
-    all: try now apply wf_local_closed_context.
-    1,3: now eapply subject_is_open_term.
-    all: now eapply type_is_open_term.
+    all: now apply closed_red_refl.
 
   - unshelve epose proof (X0 _ _ _ _ X3) as (A''&B''&[]) ; tea.
     subst.
@@ -109,8 +111,8 @@ Proof using wfΣ.
       eapply checking_typing ; tea.
       now eapply isType_tProd, validity, infering_prod_typing.
 
-  - unshelve epose proof (declared_constant_to_gen isdecl); eauto.
-    unshelve epose proof (declared_constant_to_gen H); eauto.
+  - pose proof (declared_constant_to_gen (wfΣ := wfΣ) isdecl).
+    pose proof (declared_constant_to_gen (wfΣ := wfΣ) H).
     replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
@@ -118,8 +120,8 @@ Proof using wfΣ.
     all: rewrite on_free_vars_subst_instance.
     all: now eapply closed_on_free_vars, declared_constant_closed_type.
 
-  - unshelve epose proof (declared_inductive_to_gen isdecl); eauto.
-    unshelve epose proof (declared_inductive_to_gen H); eauto.
+  - pose proof (declared_inductive_to_gen (wfΣ := wfΣ) isdecl).
+    pose proof (declared_inductive_to_gen (wfΣ := wfΣ) H).
     replace idecl0 with idecl by (eapply declared_inductive_inj ; eassumption).
     eexists ; split.
     all: eapply closed_red_refl.
@@ -127,8 +129,8 @@ Proof using wfΣ.
     all: rewrite on_free_vars_subst_instance.
     all: now eapply closed_on_free_vars, declared_inductive_closed_type.
 
-  - unshelve epose proof (declared_constructor_to_gen isdecl); eauto.
-    unshelve epose proof (declared_constructor_to_gen H); eauto.
+  - pose proof (declared_constructor_to_gen (wfΣ := wfΣ) isdecl).
+    pose proof (declared_constructor_to_gen (wfΣ := wfΣ) H).
     replace cdecl0 with cdecl by (eapply declared_constructor_inj ; eassumption).
     replace mdecl0 with mdecl by (eapply declared_constructor_inj ; eassumption).
     eexists ; split.
@@ -136,8 +138,8 @@ Proof using wfΣ.
     1,3: fvs.
     all: now eapply closed_on_free_vars, declared_constructor_closed_type.
 
-  - unshelve epose proof (declared_projection_to_gen H1); eauto.
-    unshelve eapply declared_projection_to_gen in H; eauto.
+  - pose proof (declared_projection_to_gen (wfΣ := wfΣ) H1).
+    apply (declared_projection_to_gen (wfΣ := wfΣ)) in H.
     eapply declared_projection_inj in H as (?&?&?&?); tea.
     subst.
     move: (X2) => tyc'.
@@ -202,8 +204,8 @@ Proof using wfΣ.
 
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
-    unshelve eapply declared_inductive_to_gen in H13; eauto.
-    unshelve eapply declared_inductive_to_gen in H; eauto.
+    unshelve eapply declared_inductive_to_gen in H13; cycle -2; eauto.
+    unshelve eapply declared_inductive_to_gen in H; cycle -2; eauto.
     move: (H) => /declared_inductive_inj /(_ H13) [? ?].
     subst.
     assert (op' : is_open_term Γ (mkApps ptm0 (skipn (ci_npar ci) args0 ++ [c]))).
@@ -237,11 +239,13 @@ Proof using wfΣ.
       * now eapply type_is_open_term, infering_typing.
 
   - depelim X; depelim X0.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
-    * depelim X2. rewrite e in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
       all:simp prim_type; cbn. cbn in hty.
-      all:eapply type_is_open_term, checking_typing; tea; eexists; eapply checking_typing; tea; eexists; econstructor; tea.
+      all:eapply type_is_open_term, checking_typing; tea.
+      all:eapply has_sort_isType; eapply checking_typing; tea.
+      all:eapply has_sort_isType; econstructor; tea.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.

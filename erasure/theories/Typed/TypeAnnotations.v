@@ -291,15 +291,14 @@ Proof.
   all: try subst erΓ1.
   - depelim er0.
     now apply inversion_Evar in X.
-  - apply inversion_Lambda in X as (? & ? & ? & ? & ?); auto.
-    constructor;econstructor; eauto.
-  - apply inversion_Lambda in X as (? & ? & ? & ? & ?); auto.
+  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
+  - apply inversion_Lambda in X as (? & ? & ? & ?); auto.
     econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
-    constructor;econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
-    econstructor; eauto.
-  - apply inversion_LetIn in X as (?&?&?&?&?&?); auto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
+    constructor; eapply lift_sorting_forget_body; eauto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
+    econstructor; eapply unlift_TermTyp; eauto.
+  - apply inversion_LetIn in X as (?&?&?&?); auto.
     econstructor; eauto.
   - apply inversion_App in X as (?&?&?&?&?&?); auto.
     econstructor; eauto.
@@ -339,12 +338,14 @@ Proof.
     eapply All2_All_mix_left in X; eauto.
     clear -X.
     revert X.
+    unfold on_def_body.
     generalize (Γ,,, fix_context defs).
     clear Γ.
     intros Γ a.
     induction a; [now constructor|].
     constructor; [|now eauto].
     destruct r as [?[??]].
+    apply unlift_TermTyp in l0.
     split; [|now auto].
     econstructor; eauto.
   - apply inversion_CoFix in X as (?&?&?&?&?&?&?); auto.
@@ -358,12 +359,14 @@ Proof.
     eapply All2_All_mix_left in X; eauto.
     clear -X.
     revert X.
+    unfold on_def_body.
     generalize (Γ,,, fix_context defs).
     clear Γ.
     intros Γ1 a.
     induction a; [now constructor|].
     constructor; [|now eauto].
     destruct r as (? & ? & ? & ?).
+    apply unlift_TermTyp in l0.
     split; [|now auto].
     econstructor; eauto.
 Qed.
@@ -389,7 +392,7 @@ Proof.
     cbn.
     apply (annotate_types [] []%vector t); [|apply ErasureFunction.erases_erase].
     cbn in *.
-    destruct wt.
+    destruct wt. apply unlift_TermTyp in X0.
     econstructor; eauto.
     exact eq.
 Defined.

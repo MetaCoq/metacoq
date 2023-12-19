@@ -297,11 +297,11 @@ Proof.
   - destruct t => //.
 Qed.
 
-Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
+Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ s A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort s : A -> isType Σ Γ (tSort s).
 Proof.
   intros HT.
   eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.
-  eexists; econstructor; eauto.
+  eapply has_sort_isType. econstructor; eauto.
 Qed.
 
 Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :
@@ -310,7 +310,7 @@ Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom
 Proof.
   intros HT.
   eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto.
-  eexists; econstructor; eauto.
+  eapply has_sort_isType. econstructor; eauto.
 Qed.
 
 Definition remove_match_on_box_constant_decl Σ cb :=

@@ -62,7 +62,7 @@ Proof.
     + generalize (pcontext p).
       fix auxc 1.
       destruct l; constructor; [|apply auxc].
-      destruct c. split. apply auxt.
+      destruct c. split. 2: apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
 
@@ -73,7 +73,7 @@ Proof.
     + generalize (bcontext b).
       fix auxc 1.
       destruct l; constructor; [|apply auxc].
-      destruct c. split. apply auxt.
+      destruct c. split. 2: apply auxt.
       simpl. destruct decl_body; simpl. apply auxt. constructor.
     + apply auxt.
 
@@ -238,9 +238,9 @@ Lemma liftP_ctx_ind (P : term -> Type) (ctx : context) :
 Proof.
   induction ctx; simpl; constructor; auto.
   * split.
-    + apply X; cbn. unfold decl_size. simpl. lia.
     + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
       rewrite db; simpl; lia. exact tt.
+    + apply X; cbn. unfold decl_size. simpl. lia.
   * apply IHctx; intros; apply X. lia.
 Qed.
 
@@ -366,9 +366,9 @@ Lemma liftP_ctx (P : term -> Type) :
 Proof.
   induction ctx; simpl; constructor; auto.
   split.
-  + apply X; cbn.
   + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
     exact tt.
+  + apply X; cbn.
 Qed.
 
 Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
@@ -450,12 +450,7 @@ Proof.
     rewrite !size_lift. rewrite list_size_map_hom; auto.
 Qed.
 
-Definition on_local_decl (P : context -> term -> Type)
-           (Γ : context) (t : term) (T : typ_or_sort) :=
-  match T with
-  | Typ T => (P Γ t * P Γ T)%type
-  | Sort => P Γ t
-  end.
+Definition on_local_decl (P : context -> term -> Type) := lift_wf_term1 P.
 
 (* TODO: remove List.rev *)
 Lemma list_size_rev {A} size (l : list A)
@@ -534,12 +529,11 @@ Proof.
     - case: a => [na [b|] ty] /=;
       rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
       + eapply IHΔ => //. unfold context_size. lia.
-      + simpl. apply aux => //. red. lia.
-      + simpl. split.
+      + split.
         * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //. cbn. lia.
       + apply IHΔ => //; unfold context_size; lia.
-      + apply aux => //. red. lia. }
+      + split => //. apply aux => //. cbn. lia. }
   assert (forall m, list_size (fun x : def term => size (dtype x)) m < S (mfixpoint_size size m)).
   { clear. unfold mfixpoint_size, def_size. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_size (fun x : def term => size (dbody x)) m < S (mfixpoint_size size m)).

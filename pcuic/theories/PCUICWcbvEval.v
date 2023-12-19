@@ -782,7 +782,7 @@ Section Wcbv.
     move=> wfΣ Hc Hb. unshelve eapply declared_constant_to_gen in Hc; eauto.
     rewrite PCUICClosed.closedn_subst_instance.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
-    rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
+    rewrite Hb in Hc. simpl in Hc. now move/andP: Hc => [].
   Qed.
 
   Lemma closed_iota ci ind p c u args brs br :

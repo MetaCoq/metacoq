@@ -1049,13 +1049,13 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
    rewrite alli_app; len; rewrite andb_true_r.
    apply andb_true_iff. split.
    - rewrite -/(on_free_vars_ctx P _).
-     rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+     rewrite (on_free_vars_ctx_all_term _ _ Sort.type0).
      rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
      apply on_free_vars_subst.
      { rewrite forallb_rev => //. }
      rewrite -on_free_vars_ctx_all_term.
      rewrite on_free_vars_ctx_subst_instance.
-     rewrite (on_free_vars_ctx_all_term _ _ (Universe.type0)).
+     rewrite (on_free_vars_ctx_all_term _ _ Sort.type0).
      rewrite -(expand_lets_it_mkProd_or_LetIn _ _ 0 (tSort _)).
      eapply on_free_vars_expand_lets_k; len.
      * rewrite (wf_predicate_length_pars wfp).
@@ -1090,7 +1090,7 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
  Proof.
    intros brctx decli wfp wfb havp.
    rewrite /brctx /case_branch_context /case_branch_context_gen.
-   rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+   rewrite (on_free_vars_ctx_all_term _ _ Sort.type0).
    rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
    apply on_free_vars_subst => //.
    { rewrite forallb_rev //. }
@@ -1127,7 +1127,7 @@ Proof.
   intros hpars hn.
   rewrite /inst_case_context.
   rewrite test_context_k_eq.
-  rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite (on_free_vars_ctx_all_term _ _ Sort.type0).
   rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
   intros a.
   apply on_free_vars_subst => //.
@@ -1234,7 +1234,7 @@ Lemma on_free_vars_ctx_subst_context P s k ctx :
   on_free_vars_ctx (shiftnP k P) (subst_context s k ctx).
 Proof.
   intros onctx ons.
-  rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite (on_free_vars_ctx_all_term _ _ Sort.type0).
   rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
   eapply on_free_vars_impl; revgoals.
   - eapply on_free_vars_subst_gen => //; tea.
@@ -1255,7 +1255,7 @@ Lemma on_free_vars_ctx_lift_context p k n ctx :
   on_free_vars_ctx p ctx =
   on_free_vars_ctx (strengthenP k n p) (lift_context n k ctx).
 Proof.
-  rewrite !(on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite !(on_free_vars_ctx_all_term _ _ Sort.type0).
   rewrite -(lift_it_mkProd_or_LetIn _ _ _ (tSort _)).
   rewrite on_free_vars_lift => //.
 Qed.
@@ -1492,7 +1492,7 @@ Proof.
 Defined.
 
 Lemma alpha_eq_on_free_vars P (Γ Δ : context) :
-  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+  PCUICEquality.eq_context_upto_names Γ Δ ->
   on_free_vars_ctx P Γ -> on_free_vars_ctx P Δ.
 Proof.
   induction 1; cbn; auto.

@@ -788,8 +788,8 @@ Section ParallelReduction.
     constructor.
     eapply t0.
     apply on_contexts_app => //.
-    destruct t1.
-    constructor; [eapply p|eapply p0];
+    destruct t0.
+    constructor; [eapply o|eapply p];
     apply on_contexts_app => //.
   Qed.
 
@@ -806,8 +806,8 @@ Section ParallelReduction.
     constructor.
     eapply t0.
     apply on_contexts_app => //.
-    destruct t1.
-    constructor; [eapply p|eapply p0];
+    destruct t0.
+    constructor; [eapply o|eapply p];
     apply on_contexts_app => //.
   Qed.
 

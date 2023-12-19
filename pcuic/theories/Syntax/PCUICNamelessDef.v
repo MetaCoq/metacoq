@@ -30,8 +30,7 @@ Definition anon (na : name) : bool :=
 Definition banon (na : binder_annot name) : bool := anon na.(binder_name).
 
 Definition nameless_decl nameless (d : context_decl) :=
-  banon (decl_name d) && nameless d.(decl_type) &&
-  option_default nameless d.(decl_body) true.
+  banon (decl_name d) && option_default nameless d.(decl_body) true && nameless d.(decl_type).
 
 Fixpoint nameless (t : term) : bool :=
   match t with

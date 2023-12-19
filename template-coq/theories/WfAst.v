@@ -186,17 +186,10 @@ Proof.
   - inv X2; auto. eapply Harr; eauto using lift_to_wf_list.
 Qed.
 
-Definition wf_decl Σ d :=
-  match decl_body d with
-  | Some b => wf Σ b
-  | None => True
-  end * wf Σ (decl_type d).
+Definition wf_decl Σ d := option_default (wf Σ) (decl_body d) unit × wf Σ (decl_type d).
 
-Definition wf_decl_pred Σ : context -> term -> typ_or_sort -> Type :=
-  (fun _ t T => wf Σ t * match T with
-                        | Typ T => wf Σ T
-                        | Sort => True
-                        end).
+Definition wf_decl_pred Σ : context -> judgment -> Type :=
+  (fun _ j => option_default (wf Σ) (j_term j) unit × wf Σ (j_typ j)).
 
 Lemma wf_mkApp Σ u a : wf Σ u -> wf Σ a -> wf Σ (mkApp u a).
 Proof.

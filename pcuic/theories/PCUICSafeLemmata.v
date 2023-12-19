@@ -38,8 +38,8 @@ Proof.
   * eapply sp.
   * unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
   rewrite PCUICUnivSubstitutionConv.subst_instance_app_ctx in X.
-  eapply wf_local_app_inv in X as [].
-  eapply wf_local_app => //.
+  eapply All_local_env_app_inv in X as [].
+  eapply All_local_env_app => //.
   eapply wf_local_smash_end.
   now eapply weaken_wf_local; tea.
 Qed.
@@ -101,24 +101,6 @@ Qed.
 Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
-
-  Instance All2_eq_refl Σ Re :
-    RelationClasses.Reflexive Re ->
-    CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
-  Proof using Type.
-    intros h x. apply All2_same. reflexivity.
-  Qed.
-
-  Instance All2_br_eq_refl Σ Re :
-    RelationClasses.Reflexive Re ->
-    CRelationClasses.Reflexive (All2
-      (fun x y : branch term =>
-        eq_context_upto Σ Re Re (bcontext x) (bcontext y) *
-        eq_term_upto_univ Σ Re Re (bbody x) (bbody y))).
-  Proof using Type.
-    intros h x.
-    apply All2_same; split; reflexivity.
-  Qed.
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -182,11 +164,6 @@ Section Lemmata.
       eapply ws_cumul_pb_Lambda_r. assumption.
   Qed.
 
-  Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
-  Proof using Type.
-    reflexivity.
-  Qed.
-
   Lemma conv_alt_it_mkProd_or_LetIn :
     forall {wfΣ : wf Σ} Δ Γ B B',
       Σ ;;; (Δ ,,, Γ) ⊢ B = B' ->
@@ -215,8 +192,8 @@ Section Lemmata.
     ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
   Proof.
     intros [X].
-    intros. eapply validity in X; try assumption.
-    destruct X. now exists (tSort x).
+    eapply validity in X; tas.
+    now apply isType_welltyped.
   Defined.
 
   Lemma wat_welltyped {Γ T} :
@@ -228,7 +205,7 @@ Section Lemmata.
 
   Lemma welltyped_alpha Γ u v :
     welltyped Σ Γ u ->
-    eq_term_upto_univ empty_global_env eq eq u v ->
+    u ≡α v ->
     welltyped Σ Γ v.
   Proof using hΣ.
     intros [A h] e.
@@ -342,34 +319,10 @@ Section Lemmata.
   Proof using Type.
     intros wfl.
     destruct pcontext as ((?&h)&?); simpl in *.
-    apply wf_local_app_inv in wfl as (_&wf).
-    apply wf_local_rel_app_inv in wf as (wf&_).
+    apply All_local_env_app_inv in wfl as (_&wf).
+    apply All_local_rel_app_inv in wf as (wf&_).
     destruct h; depelim wf; simpl in *.
-    all: destruct l; econstructor; eauto.
-  Qed.
-  (* TODO: rename alpha_eq *)
-  Lemma compare_decls_conv Γ Γ' :
-    eq_context_upto_names Γ Γ' ->
-    conv_context cumulAlgo_gen Σ Γ Γ'.
-  Proof using Type.
-    intros.
-    induction X; constructor; auto.
-    destruct r; constructor; subst; auto; reflexivity.
-  Qed.
-
-  Lemma compare_decls_eq_context Γ Γ' :
-    eq_context_upto_names Γ Γ' <~>
-    eq_context_gen eq eq Γ Γ'.
-  Proof using Type.
-    split; induction 1; constructor; auto.
-  Qed.
-
-  Lemma alpha_eq_inst_case_context Γ Δ pars puinst :
-    eq_context_upto_names Γ Δ ->
-    eq_context_upto_names (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
-  Proof using Type.
-    intros. rewrite /inst_case_context.
-    now eapply alpha_eq_subst_context, alpha_eq_subst_instance.
+    all: destruct l as (Hb & s & Hs & _); cbn in *; econstructor; eauto.
   Qed.
 
   Lemma welltyped_context :
@@ -386,8 +339,8 @@ Section Lemmata.
     all: try apply inversion_App in typ as (?&?&?&?&?&?); auto.
     all: try apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
     all: try apply inversion_Prod in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_Lambda in typ as (?&?&?&?&?); auto.
-    all: try apply inversion_LetIn in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_Lambda in typ as (?&?&?&?); auto.
+    all: try apply inversion_LetIn in typ as (?&?&?&?); auto.
     all: try solve [econstructor; eauto].
     - apply inversion_Fix in typ as (?&?&?&?&?&?&?); eauto.
       destruct mfix as ((?&[])&?); simpl in *.
@@ -395,7 +348,7 @@ Section Lemmata.
         depelim a.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
-        depelim a0.
+        depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
         rewrite map_app in t0.
         simpl in t0.
@@ -407,7 +360,7 @@ Section Lemmata.
         depelim a.
         eauto using isType_welltyped.
       + eapply All_app in a0 as (_&a0).
-        depelim a0.
+        depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
         rewrite map_app in t0.
         simpl in t0.
@@ -416,7 +369,7 @@ Section Lemmata.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
       destruct p.
-      + apply validity in scrut_ty as (?&typ).
+      + apply validity in scrut_ty as (_ & ? & typ & _).
         clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
         clear -spine.
@@ -446,7 +399,7 @@ Section Lemmata.
                 eapply (declared_minductive_ind_npars x1). }
               now eapply spine_subst_smash in sp.
           ** cbn in conv_pctx.
-             eapply wf_local_app_inv. eapply wf_local_alpha.
+             eapply All_local_env_app_inv. eapply wf_local_alpha.
              ++ instantiate (1 := (Γ,,, stack_context π,,, smash_context [] (ind_params x)@[puinst],,, (ind_predicate_context ci x x0)@[puinst])).
                 eapply All2_app => //.
                 { eapply alpha_eq_subst_instance. now symmetry. }
@@ -458,11 +411,10 @@ Section Lemmata.
           rewrite /case_predicate_context /= /case_predicate_context_gen.
           rewrite /pre_case_predicate_context_gen.
           rewrite /inst_case_context.
-          apply compare_decls_conv.
+          apply eq_context_upto_names_conv_context.
           eapply All2_app. 2:{ reflexivity. }
-          eapply compare_decls_eq_context.
           apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) wf_pred).
-          cbn. apply compare_decls_eq_context. now symmetry.
+          cbn. now symmetry.
 
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
@@ -490,6 +442,10 @@ Section Lemmata.
       cbn in *.
       eapply closed_context_conversion; tea.
       now symmetry.
+    - apply unlift_TypUniv in l. now econstructor.
+    - now eapply isType_welltyped.
+    - apply unlift_TermTyp in l. now econstructor.
+    - apply lift_sorting_forget_body in l. now eapply isType_welltyped.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.
       depelim p0. now eexists.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.
@@ -601,19 +557,9 @@ Section Lemmata.
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
       welltyped Σ (Γ ,,, Δ) t.
   Proof using hΣ.
-    intros Γ Δ t h.
-    induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
-    - assumption.
-    - simpl. apply ih in h. cbn in h.
-      destruct h as [T h].
-      apply inversion_LetIn in h as hh ; auto.
-      destruct hh as [s1 [A' [? [? [? ?]]]]].
-      exists A'. assumption.
-    - simpl. apply ih in h. cbn in h.
-      destruct h as [T h].
-      apply inversion_Lambda in h as hh ; auto.
-      pose proof hh as [s1 [B [? [? ?]]]].
-      exists B. assumption.
+    intros Γ Δ t (T & h).
+    apply inversion_it_mkLambda_or_LetIn in h as (T' & h & hle); tas.
+    now econstructor.
   Qed.
 
   Lemma it_mkLambda_or_LetIn_welltyped :
@@ -965,7 +911,7 @@ Section Lemmata.
       inversion e. reflexivity.
   Qed.
 
-  Hint Resolve cumul_refl conv_alt_red : core.
+  Hint Resolve cumul_refl cumul_alt : core.
   Hint Resolve cumul_refl : core.
 
   Lemma cored_red_cored :

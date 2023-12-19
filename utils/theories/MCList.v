@@ -198,6 +198,11 @@ Lemma map_map_compose :
     map g (map f l) = map (fun x => g (f x)) l.
 Proof. apply map_map. Qed.
 
+Lemma map_cst_repeat {A B} (f : B) (l: list A) : map (fun _ => f) l = repeat f #|l|.
+Proof.
+  unfold map. induction l; cbn; auto. now rewrite IHl.
+Qed.
+
 Lemma map_id_f {A} (l : list A) (f : A -> A) :
   (forall x, f x = x) ->
   map f l = l.

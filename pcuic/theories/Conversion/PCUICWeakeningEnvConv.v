@@ -14,15 +14,11 @@ Implicit Types (cf : checker_flags).
 
 Lemma compare_term_subset {cf} pb Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> compare_term pb Σ φ t t' -> compare_term pb Σ φ' t t'.
+    -> compare_term Σ φ pb t t' -> compare_term Σ φ' pb t t'.
 Proof.
   intro H. apply eq_term_upto_univ_impl; auto.
-  all: change eq_universe with (compare_universe Conv).
-  all: change leq_universe with (compare_universe Cumul).
-  3: destruct pb.
-  4: transitivity (compare_universe Cumul φ).
-  4: tc.
-  all: intros ??; now eapply cmp_universe_subset.
+  1,2: intros ??; now eapply cmp_universe_subset.
+  1,2: intros ??; now eapply cmp_sort_subset.
 Qed.
 
 Lemma eq_term_subset {cf} Σ φ φ' t t'
@@ -35,14 +31,14 @@ Proof. apply compare_term_subset with (pb := Cumul). Qed.
 
 Lemma compare_decl_subset {cf} pb Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
-    -> compare_decl pb Σ φ d d' -> compare_decl pb Σ φ' d d'.
+    -> compare_decl Σ φ pb d d' -> compare_decl Σ φ' pb d d'.
 Proof.
   intros Hφ []; constructor; eauto using compare_term_subset.
 Qed.
 
 Lemma compare_context_subset {cf} pb Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
-    -> compare_context pb Σ φ Γ Γ' ->  compare_context pb Σ φ' Γ Γ'.
+    -> compare_context Σ φ pb Γ Γ' ->  compare_context Σ φ' pb Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor; auto; eapply compare_decl_subset; eassumption.
 Qed.
@@ -50,81 +46,89 @@ Qed.
 Section ExtendsWf.
   Context {cf : checker_flags}.
   Context {Pcmp: global_env_ext -> context -> conv_pb -> term -> term -> Type}.
-  Context {P: global_env_ext -> context -> term -> typ_or_sort -> Type}.
+  Context {P: global_env_ext -> context -> judgment -> Type}.
 
   Let wf := on_global_env Pcmp P.
 
-Lemma global_variance_sigma_mon {Σ Σ' gr napp v} :
+Lemma global_variance_sigma_mon {Σ Σ'} gr napp :
   wf Σ' -> extends Σ Σ' ->
-  global_variance Σ gr napp = Some v ->
-  global_variance Σ' gr napp = Some v.
+  match global_variance Σ gr napp with
+  | Variance v => global_variance Σ' gr napp = Variance v
+  | AllEqual => True
+  | AllIrrelevant => global_variance Σ' gr napp = AllIrrelevant
+  end.
 Proof using P Pcmp cf.
   intros wfΣ' ext.
   rewrite /global_variance_gen /lookup_constructor /lookup_constructor_gen
     /lookup_inductive /lookup_inductive_gen /lookup_minductive /lookup_minductive_gen.
-  destruct gr as [|ind|[ind i]|] => /= //.
+  destruct gr as [|ind|[ind i]|] => //=.
   - destruct (lookup_env Σ ind) eqn:look => //.
     eapply extends_lookup in look; eauto. rewrite look //.
+    destruct g => //=; destruct nth_error => //=.
+    destruct destArity as [[ctx s]|] => //=.
+    destruct Nat.leb => //=.
+    destruct ind_variance => //=.
   - destruct (lookup_env Σ (inductive_mind i)) eqn:look => //.
     eapply extends_lookup in look; eauto. rewrite look //.
+    destruct g => //=; destruct nth_error => //=; destruct nth_error => //=.
+    destruct Nat.leb => //=.
 Qed.
 
-(** The definition of [R_global_instance] is defined so that it is weakenable. *)
-Lemma R_global_instance_weaken_env Σ Σ' Re Re' Rle Rle' gr napp :
+(** The definition of [cmp_global_instance] is defined so that it is weakenable. *)
+Lemma cmp_global_instance_weaken_env Σ Σ' cmp_universe cmp_universe' pb pb' gr napp :
   wf Σ' -> extends Σ Σ' ->
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
+  RelationClasses.subrelation (cmp_universe Conv) (cmp_universe' Conv) ->
+  RelationClasses.subrelation (cmp_universe pb) (cmp_universe' pb') ->
+  subrelation (cmp_global_instance Σ cmp_universe pb gr napp) (cmp_global_instance Σ' cmp_universe' pb' gr napp).
 Proof using P Pcmp cf.
-  intros wfΣ ext he hle hele t t'.
-  rewrite /R_global_instance_gen /R_opt_variance.
-  destruct global_variance_gen as [v|] eqn:look.
-  - rewrite (global_variance_sigma_mon wfΣ ext look).
-    induction t in v, t' |- *; destruct v, t'; simpl; auto.
-    intros []; split; auto.
-    destruct t0; simpl; auto.
-  - destruct (global_variance Σ' gr napp) => //.
-    * induction t in l, t' |- *; destruct l,  t'; simpl; intros H; inv H; auto.
-      split; auto. destruct t0; simpl; auto.
-    * eauto using R_universe_instance_impl'.
+  intros wfΣ ext sub_conv sub_pb t t'.
+  unfold cmp_global_instance_gen.
+  move: (global_variance_sigma_mon gr napp wfΣ ext).
+  destruct global_variance_gen as [| |v] => //.
+  all: [> intros _ | intros ->; cbn ..]; auto.
+  1: intro H; apply: cmp_instance_opt_variance; move: H => /=.
+  - now apply cmp_universe_instance_impl.
+  - intros [H | H]; [left | right].
+    1: eapply cmp_universe_instance_impl; tea.
+    eapply cmp_universe_instance_variance_impl; eassumption.
 Qed.
 
 #[global]
-Instance eq_term_upto_univ_weaken_env Σ Σ' Re Re' Rle Rle' napp :
+Instance eq_term_upto_univ_weaken_env Σ Σ' cmp_universe cmp_universe' cmp_sort cmp_sort' pb pb' napp :
   wf Σ' -> extends Σ Σ' ->
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ Re Rle napp)
-    (eq_term_upto_univ_napp Σ' Re' Rle' napp).
+  RelationClasses.subrelation (cmp_universe Conv) (cmp_universe' Conv) ->
+  RelationClasses.subrelation (cmp_universe pb) (cmp_universe' pb') ->
+  RelationClasses.subrelation (cmp_sort Conv) (cmp_sort' Conv) ->
+  RelationClasses.subrelation (cmp_sort pb) (cmp_sort' pb') ->
+  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp)
+    (eq_term_upto_univ_napp Σ' cmp_universe' cmp_sort' pb' napp).
 Proof using P Pcmp cf.
-  intros wfΣ ext he hele hle t t'.
-  induction t in napp, t', Rle, Rle', hle, hele |- * using PCUICInduction.term_forall_list_ind;
+  intros wfΣ ext univ_sub_conv univ_sub_pb sort_sub_conv sort_sub_pb t t'.
+  induction t in napp, t', pb, pb', univ_sub_pb, sort_sub_pb, t' |- * using PCUICInduction.term_forall_list_ind;
     try (inversion 1; subst; constructor;
-         eauto using R_universe_instance_impl'; fail).
+         eauto using cmp_universe_instance_impl'; fail).
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
   - inversion 1; subst; constructor.
-    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+    eapply cmp_global_instance_weaken_env. 5:eauto. all:eauto.
   - inversion 1; subst; constructor.
-    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+    eapply cmp_global_instance_weaken_env. 5:eauto. all:eauto.
   - inversion 1; subst; destruct X as [? [? ?]]; constructor; eauto.
     * destruct X2 as [? [? ?]].
       constructor; intuition auto; solve_all.
-      + eauto using R_universe_instance_impl'.
+      + eauto using cmp_universe_instance_impl'.
     * eapply All2_impl'; tea.
       eapply All_impl; eauto.
       cbn. intros x [? ?] y [? ?]. split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (?&?&?&?). repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y (?&?&?&?). repeat split; eauto.
   - inversion 1; subst; constructor.
     depelim X1; constructor; cbn in X; intuition eauto. solve_all.
 Qed.
@@ -148,7 +152,7 @@ Proof using P Pcmp.
   intros wfΣ ext.
   induction 1; simpl.
   - econstructor. eapply compare_term_subset.
-    + now eapply global_ext_constraints_app.
+    + eapply global_ext_constraints_app. apply ext.
     + simpl in *. eapply eq_term_upto_univ_weaken_env in c; simpl; eauto.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto.
@@ -177,13 +181,7 @@ Lemma weakening_env_cumulSpec0 Σ Σ' φ Γ pb M N :
   cumulSpec0 (Σ', φ) Γ pb M N.
 Proof.
   intros HΣ' Hextends Ind.
-  pose proof (subrelations_leq_extends _ _  φ Hextends). revert H.
-  assert (RelationClasses.subrelation
-          (eq_universe (global_ext_constraints (Σ,φ)))
-          (leq_universe (global_ext_constraints (Σ',φ)))).
-  { typeclasses eauto. } revert H.
-  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle .
-  revert pb Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends.
+  revert pb Γ M N Ind Σ' HΣ' Hextends.
   induction 1.
   all:intros; try solve [econstructor; eauto with extends; intuition auto].
   all: lazymatch goal with
@@ -192,24 +190,24 @@ Proof.
        end.
   - eapply cumul_Evar. solve_all.
   - eapply cumul_Case.
-    * cbv [cumul_predicate] in *; destruct_head'_prod. repeat split; tas.
+    * cbv [cumul_predicate] in *; destruct_head'_prod. clear c0. repeat split; tas.
       + solve_all.
-      + eapply R_universe_instance_impl'; try apply subrelations_extends; eassumption.
+      + eapply cmp_universe_instance_impl'; tea. tc.
       + eauto.
-    * solve_all.
-    * solve_all.
-  - eapply cumul_Fix; solve_all.
-  - eapply cumul_CoFix; solve_all.
+    * eauto.
+    * unfold cumul_branches, cumul_branch in *. solve_all.
+  - eapply cumul_Fix; unfold cumul_mfixpoint in *; solve_all.
+  - eapply cumul_CoFix; unfold cumul_mfixpoint in *; solve_all.
   - eapply cumul_Prim; solve_all.
     destruct X; constructor; eauto.
-    * unfold compare_universe. eapply subrel_extends_eq; tea.
+    * eapply subrel_extends_cmp_universe; tea.
     * solve_all.
   - eapply cumul_Ind; eauto. 2:solve_all.
-    eapply @R_global_instance_weaken_env. 1,2,6:eauto. all: tc.
+    eapply @cmp_global_instance_weaken_env. 1,2,5:eauto. all: tc.
   - eapply cumul_Construct; eauto. 2:solve_all.
-    eapply @R_global_instance_weaken_env. 1,2,6:eauto. all: tc.
+    eapply @cmp_global_instance_weaken_env. 1,2,5:eauto. all: tc.
   - eapply cumul_Sort. eapply subrelations_compare_extends; tea.
-  - eapply cumul_Const. eapply R_universe_instance_impl'; eauto; tc.
+  - eapply cumul_Const. eapply cmp_universe_instance_impl'; eauto; tc.
 Defined.
 
 

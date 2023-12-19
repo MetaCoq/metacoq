@@ -400,7 +400,7 @@ Inductive term : Type :=
 | tRel (n : nat)
 | tVar (id : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (ev : nat) (args : list term)
-| tSort (s : Universe.t)
+| tSort (s : sort)
 | tCast (t : term) (kind : cast_kind) (v : term)
 | tProd (na : aname) (ty : term) (body : term)
 | tLambda (na : aname) (ty : term) (body : term)
@@ -569,7 +569,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tArray u' arr def ty => tArray (subst_instance_level u u') (List.map (subst_instance_constr u) arr)
     (subst_instance_constr u def) (subst_instance_constr u ty)
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
+  | tSort s => tSort (subst_instance_sort u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
   | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
@@ -595,7 +595,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
 (** Tests that the term is closed over [k] universe variables *)
 Fixpoint closedu (k : nat) (t : term) : bool :=
   match t with
-  | tSort univ => closedu_universe k univ
+  | tSort univ => closedu_sort k univ
   | tInd _ u => closedu_instance k u
   | tConstruct _ _ u => closedu_instance k u
   | tConst _ u => closedu_instance k u

@@ -219,7 +219,7 @@ Proof.
         left.
         apply isArity_mkNormalArity.
         clear wfΣext. specialize (wfΣ _ hfull). subst Σfull.
-        depelim wffull; cbn in *. depelim o0. now depelim o1.
+        depelim wffull; cbn in *. depelim o0. depelim o1. now eapply unlift_TermTyp.
       * eexists; split;cbn; unfold EGlobalEnv.declared_constant;cbn.
         now rewrite eq_kername_refl.
         unfold trans_cst; cbn.
@@ -251,7 +251,7 @@ Proof.
          2:{ depelim wfΣ. depelim o0. depelim o2. now cbn in on_global_decl_d. } *)
 
            eapply (erases_extends (_, _)); eauto.
-           1:{ depelim wffull. depelim o0. depelim o1. now cbn in on_global_decl_d. }
+           1:{ depelim wffull. depelim o0. depelim o1. eapply unlift_TermTyp. now cbn in on_global_decl_d. }
            1:{ eexists. reflexivity. eexists [_]; reflexivity. reflexivity. }
            now apply erases_erase.
         -- intros.
@@ -275,6 +275,7 @@ Proof.
            { now depelim wffull. }
            depelim wffull. cbn in *. depelim o0. depelim o1. cbn in on_global_decl_d.
            eapply (@erase_global_erases_deps (_, _)); eauto.
+           now eapply unlift_TermTyp.
            now apply erases_erase.
            eapply IH.
            ++ intros ? isin'.
@@ -283,6 +284,7 @@ Proof.
            ++ intros ? isin'.
               eapply term_global_deps_spec in isin' as [(? & ?)]; eauto.
               ** cbn in *. congruence.
+              ** now eapply unlift_TermTyp.
               ** now apply erases_erase.
     + eexists _, _; split; [left; reflexivity|]; split.
       unfold EGlobalEnv.declared_minductive;cbn.

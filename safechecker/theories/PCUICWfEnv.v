@@ -48,17 +48,13 @@ Definition abstract_env_fixguard  {cf:checker_flags} {abstract_env_impl abstract
 Definition abstract_env_cofixguard  {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
 (X:abstract_env_ext_impl) := abstract_env_guard X CoFix.
 
-Definition abstract_env_conv_pb_relb {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+Definition abstract_env_compare_universe {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
 (X:abstract_env_ext_impl) : conv_pb -> Universe.t -> Universe.t -> bool :=
-  fun conv_pb => conv_pb_relb_gen conv_pb
-        (check_eqb_universe_gen (abstract_env_leqb_level_n X))
-        (check_leqb_universe_gen (abstract_env_leqb_level_n X)).
+  check_cmpb_universe_gen (abstract_env_leqb_level_n X).
 
-Definition abstract_env_eq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
-  (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Conv.
-
-Definition abstract_env_leq {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
-  (X:abstract_env_ext_impl) := abstract_env_conv_pb_relb X Cumul.
+Definition abstract_env_compare_sort {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+  (X:abstract_env_ext_impl) : conv_pb -> sort -> sort -> bool :=
+    check_cmpb_sort_gen (abstract_env_leqb_level_n X).
 
 Definition abstract_env_check_constraints {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
   (X:abstract_env_ext_impl) : ConstraintSet.t -> bool :=
@@ -66,11 +62,11 @@ Definition abstract_env_check_constraints {cf:checker_flags} {abstract_env_impl 
 
 Definition abstract_env_ext_wf_universeb {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
 (X:abstract_env_ext_impl) : Universe.t -> bool :=
-    fun (s : Universe.t) =>
-      match s with
-      | Universe.lType l => LevelExprSet.for_all (fun l => abstract_env_level_mem X (LevelExpr.get_level l)) l
-      | _ => true
-      end.
+    fun (u : Universe.t) => LevelExprSet.for_all (fun l => abstract_env_level_mem X (LevelExpr.get_level l)) u.
+
+Definition abstract_env_ext_wf_sortb {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
+(X:abstract_env_ext_impl) : sort -> bool :=
+    Sort.on_sort (abstract_env_ext_wf_universeb X) true.
 
 Definition abstract_env_level_mem' {cf:checker_flags} {abstract_env_impl abstract_env_ext_impl : Type} `{!abstract_env_struct abstract_env_impl abstract_env_ext_impl}
 (X:abstract_env_ext_impl) : LevelSet.t -> Level.t -> bool :=
@@ -221,25 +217,35 @@ Definition abstract_env_is_consistent_empty {cf:checker_flags} {X_type : abstrac
 Lemma abstract_env_compare_universe_correct {cf:checker_flags} {X_type : abstract_env_impl}
   (X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) conv_pb u u' :
         wf_universe Σ u -> wf_universe Σ u' ->
-        compare_universe conv_pb Σ u u' <->
-        abstract_env_conv_pb_relb X conv_pb u u'.
+        compare_universe Σ conv_pb u u' <->
+        abstract_env_compare_universe X conv_pb u u'.
 Proof.
   intros wfu wfu'. pose proof (abstract_env_ext_wf X wfΣ). sq.
   pose (Hleq := abstract_env_leqb_level_n_correct X wfΣ).
   erewrite uctx'_eq in Hleq.
-  destruct conv_pb; split; cbn; intro.
-  - eapply (check_eqb_universe_complete_gen _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - eapply (check_eqb_universe_spec_gen' _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - eapply (check_leqb_universe_complete_gen _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
-  - eapply (check_leqb_universe_spec_gen' _ (global_ext_levels Σ, global_ext_constraints Σ)); eauto.
-      + eapply wf_ext_global_uctx_invariants; eauto.
-      + eapply wf_ext_consistent; eauto.
+  eapply compare_universeP_gen with (pb := conv_pb) in Hleq.
+  apply reflect_reflectT in Hleq.
+  split.
+  1: now eapply introT.
+  1: now eapply elimT.
+  all: tea.
+Qed.
+
+Lemma abstract_env_compare_sort_correct {cf:checker_flags} {X_type : abstract_env_impl}
+  (X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) conv_pb s s' :
+        wf_sort Σ s -> wf_sort Σ s' ->
+        compare_sort Σ conv_pb s s' <->
+        abstract_env_compare_sort X conv_pb s s'.
+Proof.
+  intros wfu wfu'. pose proof (abstract_env_ext_wf X wfΣ). sq.
+  pose (Hleq := abstract_env_leqb_level_n_correct X wfΣ).
+  erewrite uctx'_eq in Hleq.
+  eapply compare_sortP_gen with (pb := conv_pb) in Hleq.
+  apply reflect_reflectT in Hleq.
+  split.
+  1: now eapply introT.
+  1: now eapply elimT.
+  all: tea.
 Qed.
 
 Lemma check_constraints_spec {cf:checker_flags} {X_type : abstract_env_impl}
@@ -286,12 +292,20 @@ Lemma abstract_env_ext_wf_universeb_correct {cf:checker_flags} {X_type : abstrac
 ( X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) u :
   wf_universeb Σ u = abstract_env_ext_wf_universeb X u.
 Proof.
-  destruct u => //; destruct t as [ [] ?]; cbn. clear is_ok t_ne.
+  destruct u as [ [] ?]; cbn. clear is_ok t_ne.
   induction this => //; cbn. set (b := LevelSet.Raw.mem _ _). set (b' := abstract_env_level_mem _ _).
   assert (Hbb' : b = b').
   { unfold b'. apply eq_true_iff_eq. rewrite <- (abstract_env_level_mem_correct X wfΣ (LevelExpr.get_level a)).
     now erewrite <- (LevelSet.Raw.mem_spec (LevelSet.this (global_ext_levels Σ)) (LevelExpr.get_level a)). }
   destruct Hbb', b => //.
+Qed.
+
+Lemma abstract_env_ext_wf_sortb_correct {cf:checker_flags} {X_type : abstract_env_impl}
+( X:X_type.π2.π1) {Σ} (wfΣ : abstract_env_ext_rel X Σ) s :
+  wf_sortb Σ s = abstract_env_ext_wf_sortb X s.
+Proof.
+  destruct s as [| |u]; cbnr.
+  now apply abstract_env_ext_wf_universeb_correct.
 Qed.
 
 Lemma abstract_env_level_mem_correct' {cf:checker_flags} {X_type : abstract_env_impl}

@@ -72,7 +72,6 @@ End quote_typing.
 Definition quote_wf_local {cf : config.checker_flags} {Σ Γ} : ground_quotable (wf_local Σ Γ) := _.
 
 #[export] Instance quote_has_nparams {npars ty} : ground_quotable (@has_nparams npars ty) := ltac:(cbv [has_nparams]; exact _).
-#[export] Instance quote_infer_sorting {cf Σ Γ T} : ground_quotable (@infer_sorting cf Σ Γ T) := ltac:(cbv [infer_sorting]; exact _).
 
 Module QuoteTemplateTyping <: QuoteTyping TemplateTerm Env TemplateTermUtils TemplateEnvTyping
                                 TemplateConversion TemplateConversionPar TemplateTyping.

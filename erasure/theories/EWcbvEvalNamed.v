@@ -917,7 +917,7 @@ Definition extraction_term_flags :=
   ; has_tProj := false
   ; has_tFix := true
   ; has_tCoFix := false
-  ; has_tPrim := true
+  ; has_tPrim := all_primitive_flags
   |}.
 
 Definition extraction_env_flags :=
@@ -962,7 +962,7 @@ Definition named_extraction_term_flags :=
   ; has_tProj := false
   ; has_tFix := true
   ; has_tCoFix := false
-  ; has_tPrim := true
+  ; has_tPrim := all_primitive_flags
   |}.
 
 Definition named_extraction_env_flags :=
@@ -1041,7 +1041,7 @@ Proof.
       - econstructor.
       - invs H1. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
     }
-  - solve_all. eapply primProp_map. solve_all.
+  - repeat solve_all.
 Qed.
 
 Lemma wellformed_annotate Σ Γ s :
@@ -1093,7 +1093,7 @@ Proof.
       - econstructor.
       - cbn. destruct x; cbn. destruct dname; cbn; econstructor; eauto.
     }
-  - constructor; solve_all. depelim H; cbn; solve_all; try econstructor.
+  - constructor; solve_all. depelim H1; cbn; solve_all; try econstructor.
     destruct a; constructor; solve_all. eapply All2_All2_Set. solve_all.
 Qed.
 

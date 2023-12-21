@@ -1746,6 +1746,7 @@ Proof.
     intuition auto.
     depelim a => //.
   - depelim X; solve_all.
+  - depelim X; solve_all.
     eapply All2_over_undep in a. subst a0 a'; depelim Hc'; constructor; cbn in *; solve_all.
     solve_all.
 Qed.

@@ -166,7 +166,7 @@ Section optimize.
     - len. rtoProp; solve_all. solve_all.
       now eapply isLambda_optimize. solve_all.
     - len. rtoProp; repeat solve_all.
-    - rewrite test_prim_map. solve_all.
+    - rewrite test_prim_map. rtoProp; intuition eauto; solve_all.
   Qed.
 
   Lemma optimize_csubst {a k b} n :
@@ -716,11 +716,12 @@ Proof.
         rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
-  - depelim X; repeat constructor.
+  - intros; rtoProp; intuition eauto.
+    depelim X; repeat constructor.
     eapply All2_over_undep in a.
     eapply All2_Set_All2 in ev. eapply All2_All2_Set. primProp.
-    subst a0 a'; cbn in *. depelim H; cbn in *. intuition auto; solve_all.
-    primProp; depelim H; intuition eauto.
+    subst a0 a'; cbn in *. depelim H0; cbn in *. intuition auto; solve_all.
+    primProp; depelim H0; intuition eauto.
   - destruct t => //.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.

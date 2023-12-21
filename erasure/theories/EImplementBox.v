@@ -67,6 +67,7 @@ Section implement_box.
 
   End Def.
 
+  #[universes(polymorphic)]
   Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
   Arguments eqb : simpl never.
@@ -265,6 +266,7 @@ Section implement_box.
 
 End implement_box.
 
+#[universes(polymorphic)]
 Global Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
 Definition implement_box_constant_decl cb :=

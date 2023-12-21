@@ -87,6 +87,7 @@ Section transform_blocks.
 
   End Def.
 
+  #[universes(polymorphic)]
   Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
 
   Arguments eqb : simpl never.
@@ -428,6 +429,7 @@ Section transform_blocks.
 
 End transform_blocks.
 
+#[universes(polymorphic)]
 Global Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
 
 Definition transform_blocks_constant_decl Σ cb :=

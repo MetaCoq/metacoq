@@ -334,7 +334,7 @@ Section isEtaExp.
   Qed.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
-  Hint Rewrite @test_primIn_spec : isEtaExp.
+  #[universes(polymorphic)] Hint Rewrite @test_primIn_spec : isEtaExp.
 
   Lemma isEtaExp_mkApps_nonnil Γ f v :
     ~~ isApp f -> v <> [] ->
@@ -773,7 +773,7 @@ Section isEtaExp.
 
 End isEtaExp.
 Global Hint Rewrite @forallb_InP_spec : isEtaExp.
-Global Hint Rewrite @test_primIn_spec : isEtaExp.
+#[universes(polymorphic)] Global Hint Rewrite @test_primIn_spec : isEtaExp.
 
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.

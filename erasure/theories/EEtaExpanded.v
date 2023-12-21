@@ -100,6 +100,7 @@ Section isEtaExp.
 
 End isEtaExp.
 
+#[universes(polymorphic)]
 Global Hint Rewrite @test_primIn_spec @forallb_InP_spec : isEtaExp.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.

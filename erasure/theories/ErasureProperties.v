@@ -671,8 +671,6 @@ Proof.
     depelim X0; depelim X1; repeat constructor; cbn; intuition eauto. solve_all.
 Qed.
 
-
-
 Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ⇓ e -> False.
 Proof.
   intros He.

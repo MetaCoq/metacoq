@@ -79,7 +79,7 @@ Section strip.
   Qed.
   End Def.
 
-  Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
+  #[universes(polymorphic)] Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
 
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
   Proof using Type.
@@ -358,7 +358,7 @@ Section strip.
 
 End strip.
 
-Global Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
+#[universes(polymorphic)] Global Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.

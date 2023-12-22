@@ -42,7 +42,7 @@ Section OnSubterm.
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
   | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx)
-  | on_prim p : has_tPrim -> primProp (Q n) p -> on_subterms Q n (tPrim p).
+  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p).
   Derive Signature for on_subterms.
 End OnSubterm.
 

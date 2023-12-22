@@ -67,6 +67,7 @@ Section implement_box.
 
   End Def.
 
+  #[universes(polymorphic)]
   Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
   Arguments eqb : simpl never.
@@ -265,6 +266,7 @@ Section implement_box.
 
 End implement_box.
 
+#[universes(polymorphic)]
 Global Hint Rewrite @map_primIn_spec @map_InP_spec : implement_box.
 
 Definition implement_box_constant_decl cb :=
@@ -670,7 +672,7 @@ Proof.
     rewrite lookup_constructor_implement_box; eauto.
     eapply All2_All2_Set.
     solve_all. now destruct b.
-  - intros H; depelim H; simp implement_box; repeat constructor.
+  - intros wf H; depelim H; simp implement_box; repeat constructor.
     destruct a0. eapply All2_over_undep in a. eapply All2_All2_Set, All2_map.
     cbn -[implement_box]. solve_all. now destruct H. now destruct a0.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].

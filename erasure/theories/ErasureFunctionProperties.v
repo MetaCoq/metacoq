@@ -1456,7 +1456,7 @@ Proof.
     * move/andP: H6; PCUICAstUtils.solve_all.
   - cbn -[lookup_projection] in *. apply/andP; split; eauto.
     now rewrite (declared_projection_lookup H0).
-  - cbn in H, H0 |- *. solve_all_k 7.
+  - cbn in H, H0 |- *. rtoProp; intuition eauto. solve_all_k 7.
 Qed.
 
 Lemma erases_wf_fixpoints Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' ->

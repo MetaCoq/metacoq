@@ -103,3 +103,705 @@ Almost all other strucucture is mirrored between the `ToTemplate/` and `ToPCUIC/
 - [`ToTemplate/QuotationOf/`](./ToTemplate/QuotationOf/), [`ToPCUIC/QuotationOf/`](./ToPCUIC/QuotationOf/) - These directories develop `quotation_of` instances for various `Module Type`s and functors.  The various `Sig.v` files contain `Module Type`s declaring the instances, while the various `Instances.v` files contain the definitions of `Module`s having these `Module Type`s defining the `quotation_of` instances.  The `Module`s in `Instances.v` files *do not* export `Instance`s, while the `Module Type`s in `Sig.v` files *do*; if the concrete constant needs to be quoted, it can be quoted with `<% ... %>` directly and does not need an instance; when functors take in a `Module Type` argument, by contrast, they do need access to the instances declared.  When `Module`s are nested inside `Module Type`s, the top-level `Module Type` exports all declared instances in the submodules.  Nearly all declarations and definitions in files under `QuotationOf` are fully automated; when well-typedness is eventually proven, that should be fully automated as well for these directories, likely by invoking the Safe Checker.
 
 - Under `ToTemplate/` / `ToPCUIC/`, folders `Coq/`, `Equations/`, `Utils/`, `Common/`, and `Template/` or `PCUIC/` develop the `ground_quotable` instances for `Coq.*`, `Equations.*`, `MetaCoq.Utils.*`, `MetaCoq.Common.*`, and `MetaCoq.Template.*` or `MetaCoq.PCUIC.*`, respectively.  In `Coq/` and `Equations/`, generally one file is given to each folder of the underlying development; in `Utils/`, `Common/`, `Template/`, and `PCUIC/`, files generally correspond one-to-one with the underlying development.
+
+## Debugging Suggestions
+
+Since the quotation development is highly systematically automated, changing definitions in the rest of MetaCoq might break quotation files.
+The general pattern is to add quotation instances for anything that is missing.
+
+### `debug_opt`
+
+If some `Instance quote_* : ground_quotable _` starts failing, you can add
+```coq
+#[local] Instance:debug_opt := true.
+```
+before the failing `#[export] Instance quote_* ...`.
+The printout will look something like
+```coq
+(Ast.tVar "check"%bs)
+(Ast.tVar "check"%bs)
+(quotation_of check)
+```
+Look for `quotation_of` lines, which indicate which that the machinery is having trouble finding an instance for `quotation_of check`.
+You can sometimes just add arguments such as `{qcheck : quotation_of check}` to the hypotheses of the failing instance to fix the problem.
+
+### Further Proof Debugging
+If the instance proof is not a one-liner, you can look at why the proof is failing in more detail.
+
+For example, if setting `debug_opt` gives an output starting with
+```
+(Ast.tVar "Hc"%bs)
+(Ast.tVar "Hc"%bs)
+(quotation_of Hc)
+```
+We can write
+```coq
+Set Typeclasses Debug Verbosity 2.
+try pose proof (_ : quotation_of Hc).
+```
+The result might look like
+<details><summary>this log</summary>
+
+```
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2211 : (quotation_of Hc)
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2211 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for (quotation_of Hc) without backtracking
+Debug: 1.1: (*external*) (is_var t; destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: 1.1: (*external*) (progress repeat autounfold with quotation in *) on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals: ?X2234 : (quotation_of Hc)
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2234 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.1-1 : (quotation_of Hc)
+Debug: calling eauto recursively at depth 2 on 1 subgoals
+Debug: 1.1-1: looking for (quotation_of Hc) without backtracking
+Debug: 1.1-1.1: (*external*) (is_var t; destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: 1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(quotation_of Hc) failed with: Failed to progress.
+Debug: 1.1-1.1: (*external*) (progress intros) on (quotation_of Hc) failed with: Failed to progress.
+Debug: 1.1-1.1: (*external*) (destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2282 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2282 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+Debug: 1.1-1.1: (*external*) (replace_quotation_of_goal ltac:(())) on
+(quotation_of Hc) failed with: In nested Ltac calls to "replace_quotation_of_goal" and
+                               "run_template_program (constr) (tactic)", last call failed.
+                               Avoiding loops
+Debug: 1.1-1.1: simple apply @quote_ground on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2283 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2283 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.1-1.1-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 3 on 1 subgoals
+Debug: 1.1-1.1-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) without backtracking
+Debug: 1.1-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.1-1.1-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.1-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.1-1.1-1.1: (*external*) (progress intros) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.1-1.1-1.1: (*external*) (destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.1-1.1-1: no match for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 5 possibilities
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.1-1.1: simple apply @quote_ground failed with: Proof-search failed.
+Debug:
+1.1-1.2: simple apply @BasicAst.quotation_of_mfixpoint failed with: Cannot unify (quotation_of ?M20949) and
+(quotation_of Hc)
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2308 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2308 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+(Ast.tVar "Hc"%bs)
+Debug:
+1.1-1.2: (*external*) (make_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to
+                                                                      "make_quotation_of_goal" and
+                                                                      "run_template_program (constr) (tactic)", last call
+                                                                      failed.
+                                                                      bound argument is not ground
+Debug: 1.1-1.2: simple apply @qquotation on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals: ?X2309 : (inductive_quotation_of Hc)
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2309 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.1-1.2-1 : (inductive_quotation_of Hc)
+Debug: calling eauto recursively at depth 3 on 1 subgoals
+Debug: 1.1-1.2-1: looking for (inductive_quotation_of Hc) without backtracking
+Debug: 1.1-1.2-1.1: (*external*) (progress intros) on (inductive_quotation_of Hc) failed with: Failed to progress.
+Debug: 1.1-1.2-1.1: (*external*) simple notypeclasses refine (default_inductive_quotation_of _ _) on
+(inductive_quotation_of Hc), 2 subgoal(s)
+Debug: Launching resolution fixpoint on 2 goals:
+?X2311 : (quotation_of Hc)
+?X2313 : (cls_is_true match ?qt with
+                      | Ast.tInd _ _ => true
+                      | _ => false
+                      end)
+Debug:
+Calling fixpoint on : 2 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2311 status: initial
+Goal 2 evar: ?X2313 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.1-1.2-1.1-1 : (quotation_of Hc)
+Debug: calling eauto recursively at depth 4 on 1 subgoals
+Debug: 1.1-1.2-1.1-1: looking for (quotation_of Hc) with backtracking
+Debug: 1.1-1.2-1.1-1.1: (*external*) (is_var t; destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: 1.1-1.2-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(quotation_of Hc) failed with: Failed to progress.
+Debug: 1.1-1.2-1.1-1.1: (*external*) (progress intros) on (quotation_of Hc) failed with: Failed to progress.
+Debug: 1.1-1.2-1.1-1.1: (*external*) (destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2338 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2338 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+Debug: 1.1-1.2-1.1-1.1: (*external*) (replace_quotation_of_goal ltac:(())) on
+(quotation_of Hc) failed with: In nested Ltac calls to "replace_quotation_of_goal" and
+                               "run_template_program (constr) (tactic)", last call failed.
+                               Avoiding loops
+Debug: 1.1-1.2-1.1-1.1: simple apply @quote_ground on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2339 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2339 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.1-1.2-1.1-1.1-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 5 on 1 subgoals
+Debug:
+1.1-1.2-1.1-1.1-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) with backtracking
+Debug: 1.1-1.2-1.1-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.1-1.2-1.1-1.1-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.1-1.2-1.1-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.1-1.2-1.1-1.1-1.1: (*external*) (progress intros) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.1-1.2-1.1-1.1-1.1: (*external*) (destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug:
+1.1-1.2-1.1-1.1-1: no match for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 5 possibilities
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.1-1.2-1.1-1.1: simple apply @quote_ground failed with: Proof-search failed.
+Debug:
+1.1-1.2-1.1-1.2: simple apply @BasicAst.quotation_of_mfixpoint failed with: Cannot unify (quotation_of ?M20949) and
+(quotation_of Hc)
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2364 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2364 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+(Ast.tVar "Hc"%bs)
+Debug:
+1.1-1.2-1.1-1.2: (*external*) (make_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to
+                                                                              "make_quotation_of_goal" and
+                                                                              "run_template_program (constr) (tactic)",
+                                                                              last call failed.
+                                                                              bound argument is not ground
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.1-1.2-1.1: (*external*) simple notypeclasses refine
+(default_inductive_quotation_of _ _) failed with: Proof-search failed.
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.1-1.2: simple apply @qquotation failed with: Proof-search failed.
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.1: (*external*) (progress repeat autounfold with quotation in *) failed with: Proof-search failed.
+Debug: 1.2: (*external*) (progress intros) failed with: Failed to progress.
+Debug: 1.2: (*external*) (destruct t) failed with: pattern-matching failed
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2366 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2366 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+Debug:
+1.2: (*external*) (replace_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to "replace_quotation_of_goal" and
+                                                                     "run_template_program (constr) (tactic)", last call
+                                                                     failed.
+                                                                     Avoiding loops
+Debug: 1.2: simple apply @quote_ground on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2367 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2367 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.2-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 2 on 1 subgoals
+Debug: 1.2-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) without backtracking
+Debug: 1.2-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.2-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.2-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2390 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2390 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.2-1.1-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 3 on 1 subgoals
+Debug: 1.2-1.1-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) without backtracking
+Debug: 1.2-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.2-1.1-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.2-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.2-1.1-1.1: (*external*) (progress intros) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.2-1.1-1.1: (*external*) (destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.2-1.1-1: no match for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 5 possibilities
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.2-1.1: (*external*) (progress repeat autounfold with quotation in *) failed with: Proof-search failed.
+Debug: 1.2-1.2: (*external*) (progress intros) failed with: Failed to progress.
+Debug: 1.2-1.2: (*external*) (destruct t) failed with: pattern-matching failed
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.2: simple apply @quote_ground failed with: Proof-search failed.
+Debug:
+1.3: simple apply @BasicAst.quotation_of_mfixpoint failed with: Cannot unify (quotation_of ?M20949) and
+(quotation_of Hc)
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2438 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2438 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+(Ast.tVar "Hc"%bs)
+Debug:
+1.3: (*external*) (make_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to "make_quotation_of_goal" and
+                                                                  "run_template_program (constr) (tactic)", last call
+                                                                  failed.
+                                                                  bound argument is not ground
+Debug: 1.3: simple apply @qquotation on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals: ?X2439 : (inductive_quotation_of Hc)
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2439 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1 : (inductive_quotation_of Hc)
+Debug: calling eauto recursively at depth 2 on 1 subgoals
+Debug: 1.3-1: looking for (inductive_quotation_of Hc) without backtracking
+Debug: 1.3-1.1: (*external*) (progress intros) on (inductive_quotation_of Hc) failed with: Failed to progress.
+Debug: 1.3-1.1: (*external*) simple notypeclasses refine (default_inductive_quotation_of _ _) on
+(inductive_quotation_of Hc), 2 subgoal(s)
+Debug: Launching resolution fixpoint on 2 goals:
+?X2441 : (quotation_of Hc)
+?X2443 : (cls_is_true match ?qt with
+                      | Ast.tInd _ _ => true
+                      | _ => false
+                      end)
+Debug:
+Calling fixpoint on : 2 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2441 status: initial
+Goal 2 evar: ?X2443 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1.1-1 : (quotation_of Hc)
+Debug: calling eauto recursively at depth 3 on 1 subgoals
+Debug: 1.3-1.1-1: looking for (quotation_of Hc) with backtracking
+Debug: 1.3-1.1-1.1: (*external*) (is_var t; destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: 1.3-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals: ?X2466 : (quotation_of Hc)
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2466 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1.1-1.1-1 : (quotation_of Hc)
+Debug: calling eauto recursively at depth 4 on 1 subgoals
+Debug: 1.3-1.1-1.1-1: looking for (quotation_of Hc) with backtracking
+Debug: 1.3-1.1-1.1-1.1: (*external*) (is_var t; destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: 1.3-1.1-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(quotation_of Hc) failed with: Failed to progress.
+Debug: 1.3-1.1-1.1-1.1: (*external*) (progress intros) on (quotation_of Hc) failed with: Failed to progress.
+Debug: 1.3-1.1-1.1-1.1: (*external*) (destruct t) on (quotation_of Hc) failed with: pattern-matching failed
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2514 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2514 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+Debug: 1.3-1.1-1.1-1.1: (*external*) (replace_quotation_of_goal ltac:(())) on
+(quotation_of Hc) failed with: In nested Ltac calls to "replace_quotation_of_goal" and
+                               "run_template_program (constr) (tactic)", last call failed.
+                               Avoiding loops
+Debug: 1.3-1.1-1.1-1.1: simple apply @quote_ground on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2515 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2515 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1.1-1.1-1.1-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 5 on 1 subgoals
+Debug:
+1.3-1.1-1.1-1.1-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) with backtracking
+Debug: 1.3-1.1-1.1-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.3-1.1-1.1-1.1-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.3-1.1-1.1-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.3-1.1-1.1-1.1-1.1: (*external*) (progress intros) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.3-1.1-1.1-1.1-1.1: (*external*) (destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug:
+1.3-1.1-1.1-1.1-1: no match for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 5 possibilities
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3-1.1-1.1-1.1: simple apply @quote_ground failed with: Proof-search failed.
+Debug:
+1.3-1.1-1.1-1.2: simple apply @BasicAst.quotation_of_mfixpoint failed with: Cannot unify (quotation_of ?M20949) and
+(quotation_of Hc)
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2540 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2540 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+(Ast.tVar "Hc"%bs)
+Debug:
+1.3-1.1-1.1-1.2: (*external*) (make_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to
+                                                                              "make_quotation_of_goal" and
+                                                                              "run_template_program (constr) (tactic)",
+                                                                              last call failed.
+                                                                              bound argument is not ground
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) failed with: Proof-search failed.
+Debug: 1.3-1.1-1.2: (*external*) (progress intros) failed with: Failed to progress.
+Debug: 1.3-1.1-1.2: (*external*) (destruct t) failed with: pattern-matching failed
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2542 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2542 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+Debug:
+1.3-1.1-1.2: (*external*) (replace_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to
+                                                                             "replace_quotation_of_goal" and
+                                                                             "run_template_program (constr) (tactic)",
+                                                                             last call failed.
+                                                                             Avoiding loops
+Debug: 1.3-1.1-1.2: simple apply @quote_ground on (quotation_of Hc), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2543 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2543 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1.1-1.2-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 4 on 1 subgoals
+Debug: 1.3-1.1-1.2-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) with backtracking
+Debug: 1.3-1.1-1.2-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.3-1.1-1.2-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.3-1.1-1.2-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 1 subgoal(s)
+Debug: Launching resolution fixpoint on 1 goals:
+?X2566 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2566 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1.3-1.1-1.2-1.1-1 : (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu)))
+Debug: calling eauto recursively at depth 5 on 1 subgoals
+Debug:
+1.3-1.1-1.2-1.1-1: looking for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) with backtracking
+Debug: 1.3-1.1-1.2-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Σ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Σ b (j_typ (TermTyp b t)))
+Debug: 1.3-1.1-1.2-1.1-1.1: (*external*) (is_var t; destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug: 1.3-1.1-1.2-1.1-1.1: (*external*) (progress repeat autounfold with quotation in *) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.3-1.1-1.2-1.1-1.1: (*external*) (progress intros) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Failed to progress.
+Debug: 1.3-1.1-1.2-1.1-1.1: (*external*) (destruct t) on
+(ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))) failed with: pattern-matching failed
+Debug:
+1.3-1.1-1.2-1.1-1: no match for (ground_quotable (cproperty Σ all b (j_typ (TermTyp b t)) (fst tu))), 5 possibilities
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3-1.1-1.2-1.1: (*external*) (progress repeat autounfold with quotation in *) failed with: Proof-search failed.
+Debug: 1.3-1.1-1.2-1.2: (*external*) (progress intros) failed with: Failed to progress.
+Debug: 1.3-1.1-1.2-1.2: (*external*) (destruct t) failed with: pattern-matching failed
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3-1.1-1.2: simple apply @quote_ground failed with: Proof-search failed.
+Debug:
+1.3-1.1-1.3: simple apply @BasicAst.quotation_of_mfixpoint failed with: Cannot unify (quotation_of ?M20949) and
+(quotation_of Hc)
+Debug: Calling typeclass resolution with flags: depth = ∞,unique = false,do_split = true,fail = false
+Debug: Starting resolution with 1 goal(s) under focus and 0 shelved goal(s) in only_classes mode, unbounded
+Debug: Launching resolution fixpoint on 1 goals: ?X2614 : debug_opt
+Debug:
+Calling fixpoint on : 1 initial goals, 0 stuck goals and 0 non-stuck failures kept with no progress made in this run.
+Stuck:
+Failed:
+Initial: Goal 1 evar: ?X2614 status: initial
+Debug: considering goal 1 of status initial
+Debug: 1: looking for debug_opt without backtracking
+Debug: 1.1: exact debug_opt_instance_0 on debug_opt, 0 subgoal(s)
+Debug: 1.1: after exact debug_opt_instance_0 finished, 0 goals are shelved and unsolved ( )
+Debug: Goal 1 has a success, continuing resolution
+Debug:
+Calling fixpoint on : 0 initial goals, 0 stuck goals and 0 non-stuck failures kept with progress made in this run.
+Stuck:
+Failed:
+Initial:
+Debug: Result goals after fixpoint: 0 goals:
+Debug: after eauto_tac_stuck: 0 goals:
+Debug: The tactic trace is: simple refine debug_opt_instance_0;shelve_goals
+Debug: Finished resolution with a complete solution.
+Old typeclass evars not concerned by this resolution =
+Shelf =
+Debug: New typeclass evars are:
+(Ast.tVar "Hc"%bs)
+Debug:
+1.3-1.1-1.3: (*external*) (make_quotation_of_goal ltac:(())) failed with: In nested Ltac calls to
+                                                                          "make_quotation_of_goal" and
+                                                                          "run_template_program (constr) (tactic)", last
+                                                                          call failed.
+                                                                          bound argument is not ground
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3-1.1: (*external*) simple notypeclasses refine
+(default_inductive_quotation_of _ _) failed with: Proof-search failed.
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+Debug: 1.3: simple apply @qquotation failed with: Proof-search failed.
+Debug: Goal 1 has no more solutions, returning exception: NoApplicableHint
+```
+</details>
+
+The important lines are
+```
+Debug: 1.1-1.1-1: looking for (ground_quotable (cproperty Γ all b (j_typ (TermTyp b t)) (fst tu))) without backtracking
+Debug: 1.1-1.1-1.1: simple apply quote_cproperty on
+(ground_quotable (cproperty Γ all b (j_typ (TermTyp b t)) (fst tu))) failed with: Cannot unify
+(MCOption.option_default (fun tm : term => checking Γ tm (j_typ (TermTyp b t))) (j_term (TermTyp b t)) unit) and
+(checking Γ b (j_typ (TermTyp b t)))
+```
+The problem is that, for performance, we have told typeclass resolution to not unfold any constants, and so we fail to reduce `MCOption.option_default` and `j_term`.
+Adding something like `cbn [MCOption.option_default j_term] in *` to manually unfold these constants can resolve the issue.
+
+Note that if it is not clear what's going wrong, you can also
+```coq
+Set Debug "tactic-unification".
+```
+This setting will add, between the above lines, a unification trace ending in
+```
+Debug:
+[tactic-unification] Starting unification: MCOption.option_default (fun tm : term => checking Γ tm (j_typ (TermTyp b t)))
+                                             (j_term (TermTyp b t)) unit ~= checking Γ b (j_typ (TermTyp b t))
+Debug: [tactic-unification] Leaving unification with failure
+```

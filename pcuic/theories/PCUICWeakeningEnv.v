@@ -517,16 +517,16 @@ Qed.
 
 End ExtendsWf.
 
-Arguments weaken_env_prop_full_gen {cf} (Pcmp P R)%function_scope _%function_scope.
-Arguments weaken_env_prop_gen {cf} (Pcmp P R)%function_scope _%function_scope.
-Arguments weaken_env_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_strictly_on_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_strictly_decls_prop_full {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_prop {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_strictly_on_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
-Arguments weaken_env_strictly_decls_prop {cf} (Pcmp P)%function_scope _%function_scope.
+Arguments weaken_env_prop_full_gen {cf} (Pcmp P R)%_function_scope _%_function_scope.
+Arguments weaken_env_prop_gen {cf} (Pcmp P R)%_function_scope _%_function_scope.
+Arguments weaken_env_prop_full {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_decls_prop_full {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_strictly_on_decls_prop_full {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_strictly_decls_prop_full {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_prop {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_decls_prop {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_strictly_on_decls_prop {cf} (Pcmp P)%_function_scope _%_function_scope.
+Arguments weaken_env_strictly_decls_prop {cf} (Pcmp P)%_function_scope _%_function_scope.
 
 #[global] Hint Resolve extends_lookup : extends.
 #[global] Hint Resolve weakening_env_declared_constant : extends.

@@ -234,7 +234,7 @@ struct
         CErrors.user_err Pp.(str "Quoting sort polymorphic instances not yet supported.")
     in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    to_coq_listl tlevel (CArray.map_to_list quote_nonprop_level uarr)
+    to_coq_listl tlevel (CArray.map_to_list quote_level uarr)
 
   let is_Lt = function
     | Univ.Lt -> true

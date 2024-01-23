@@ -159,7 +159,7 @@ Qed.
 *)
 
 Local Open Scope type_scope.
-Arguments OnOne2 {A} P%type l l'.
+Arguments OnOne2 {A} P%_type l l'.
 
 (* NOTE: SPROP: we ignore relevance in the reduction  for now *)
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
@@ -1460,7 +1460,7 @@ Proof.
        simpl in X14.
        assert(X: forall Γ0, wf_local Σ Γ0 ->
               forall t1 T (Hty : Σ;;; Γ0 |- t1 : T),
-                typing_size Hty < S ((typing_spine_size (fun _ _ _ _ H => typing_size H) Σ Γ t_ty l t' t0)) ->
+                typing_size Hty < S ((typing_spine_size (@typing_size cf) Σ Γ t_ty l t' t0)) ->
                 on_global_env cumul_gen Pj Σ.1 * P Σ Γ0 t1 T). {
        intros. unshelve eapply X14; eauto. lia. }
        clear X14. simpl in pΓ. clear n e H pΓ.
@@ -1541,7 +1541,7 @@ Proof.
       * simpl in X14.
         assert (forall Γ, wf_local Σ Γ ->
                 forall j Hj, lift_typing_size (fun t T H => @typing_size cf Σ Γ t T H) j Hj <
-                S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (fun Γ t T H => @typing_size cf Σ Γ t T H) _ _ _ p) a1) ->
+                S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (@typing_size cf Σ) _ _ _ p) a1) ->
                 Pj Σ Γ j).
         { intros. eapply Xj with (Hj := Hj); eauto. simpl. lia. }
         clear -a1 X.
@@ -1567,7 +1567,7 @@ Proof.
       * simpl in X14.
         assert (forall Γ, wf_local Σ Γ ->
                 forall j Hj, lift_typing_size (fun t T H => @typing_size cf Σ Γ t T H) j Hj <
-                S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (fun Γ t T H => @typing_size cf Σ Γ t T H) _ _ _ p) a1) ->
+                S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (@typing_size cf _) _ _ _ p) a1) ->
                 Pj Σ Γ j).
         { intros. eapply Xj with (Hj := Hj); eauto. simpl. lia. }
         clear -a1 X.

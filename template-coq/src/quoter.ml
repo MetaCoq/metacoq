@@ -351,7 +351,7 @@ struct
       | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       | Constr.Array (u, ar, def, ty) ->
-        let u = match Univ.Instance.to_array u with [| u |] -> u | _ -> assert false in
+        let u = match UVars.Instance.to_array u with (_, [| u |]) -> u | _ -> assert false in
         let def', acc = quote_term acc env sigma def in
         let ty', acc = quote_term acc env sigma ty in
         let acc, arr' = Array.fold_left_map (fun acc t -> let t', acc = quote_term acc env sigma t in acc, t') acc ar in

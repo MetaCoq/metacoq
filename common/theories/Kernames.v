@@ -380,7 +380,7 @@ Qed.
 (** Designation of a (particular) inductive type. *)
 Record inductive : Set := mkInd { inductive_mind : kername ;
                                   inductive_ind : nat }.
-Arguments mkInd _%bs _%nat.
+Arguments mkInd _%_bs _%_nat.
 
 Derive NoConfusion for inductive.
 

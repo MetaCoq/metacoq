@@ -1252,7 +1252,7 @@ Proof.
   unshelve eapply declared_minductive_from_gen; eauto.
 Qed.
 
-Arguments pair {A B}%type_scope &.
+Arguments pair {A B}%_type_scope &.
 
 Lemma ws_cumul_pb_terms_refl {cf} {Σ} {wfΣ : wf Σ} {Γ u} :
   is_closed_context Γ ->

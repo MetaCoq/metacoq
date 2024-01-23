@@ -474,7 +474,7 @@ Section Contexts.
   Definition fold_context_k (f : nat -> term -> term') Γ :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
 
-  Arguments fold_context_k f Γ%list_scope.
+  Arguments fold_context_k f Γ%_list_scope.
 
   Lemma fold_context_k_alt f Γ :
     fold_context_k f Γ =

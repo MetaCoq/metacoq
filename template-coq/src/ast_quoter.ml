@@ -162,7 +162,7 @@ struct
         CErrors.user_err Pp.(str "Quoting sort polymorphic instances not yet supported.")
     in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    try CArray.map_to_list quote_nonprop_level uarr
+    try CArray.map_to_list quote_level uarr
     with e -> assert false
 
    (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)

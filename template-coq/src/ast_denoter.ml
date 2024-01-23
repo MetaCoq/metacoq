@@ -213,18 +213,20 @@ struct
     let u = Univ.Universe.make l in
     Caml_nat.iter_nat Univ.Universe.super u (snd trm)
 
-  let unquote_universe (trm : Universes0.Universe.t) =
+  let unquote_universe evm (trm : Universes0.Universe.t) =
     let u = Universes0.t_set trm in
     let ux_list = Universes0.LevelExprSet.elements u in
     let l = List.map unquote_level_expr ux_list in
     let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
-    u
+    evm, u
 
-  let unquote_sort evd trm =
+  let unquote_sort evm trm =
     match trm with
-    | Universes0.Sort.Coq_sSProp -> evd, Sorts.sprop
-    | Universes0.Sort.Coq_sProp -> evd, Sorts.prop
-    | Universes0.Sort.Coq_sType u -> evd, Sorts.sort_of_univ (unquote_universe u)
+    | Universes0.Sort.Coq_sSProp -> evm, Sorts.sprop
+    | Universes0.Sort.Coq_sProp -> evm, Sorts.prop
+    | Universes0.Sort.Coq_sType u ->
+      let evm, u = unquote_universe evm u in
+      evm, Sorts.sort_of_univ u
 
   let unquote_universe_level evm l = evm, unquote_level l
 

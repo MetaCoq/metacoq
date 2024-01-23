@@ -13,7 +13,7 @@ Inductive All {A} (P : A -> Type) : list A -> Type :=
     All_nil : All P []
   | All_cons : forall (x : A) (l : list A),
                   P x -> All P l -> All P (x :: l).
-Arguments All {A} P%type _.
+Arguments All {A} P%_type _.
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
 Derive Signature NoConfusion for All.
@@ -1739,7 +1739,7 @@ Qed.
 Lemma Forall3_All3 {A B C} {P : A -> B -> C -> Prop} l l' l'' : Forall3 P l l' l'' -> All3 P l l' l''.
 Proof.
   intros f; induction l in l', l'', f |- *; destruct l', l''; try constructor; auto.
-  1-6: elimtype False; inv f.
+  1-6: exfalso; inv f.
   inv f; auto.
   apply IHl. inv f; auto.
 Qed.
@@ -2748,7 +2748,7 @@ Lemma All2_dep_nth_error {A B} {P : A -> B -> Type} {P' : forall a b, P a b -> T
   (H2 : nth_error l' n = Some t') :
   P' t t' (All2_nth_error n t t' H H1 H2).
 Proof.
-  revert dependent n; induction H'; destruct n; cbn; try congruence.
+  generalize dependent n; induction H'; destruct n; cbn; try congruence.
   { intros H1 H2.
     set (k := f_equal _ H1); clearbody k; cbn in k; clear H1; subst.
     set (k := f_equal _ H2); clearbody k; cbn in k; clear H2; subst.
@@ -2804,7 +2804,7 @@ Lemma Forall2_dep_nth_error {A B} {P : A -> B -> Prop} {P' : forall a b, P a b -
   (H2 : nth_error l' n = Some t') :
   P' t t' (Forall2_nth_error n t t' H H1 H2).
 Proof.
-  revert dependent n; induction H'; destruct n; cbn; try congruence.
+  generalize dependent n; induction H'; destruct n; cbn; try congruence.
   { intros H1 H2.
     set (k := f_equal _ H1); clearbody k; cbn in k; clear H1; subst.
     set (k := f_equal _ H2); clearbody k; cbn in k; clear H2; subst.

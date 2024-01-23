@@ -1249,7 +1249,7 @@ Proof.
   - eapply typing_wf_local; eauto.
 Qed.
 
-Arguments tVar _%bs.
+Arguments tVar _%_bs.
 
 Require Import ssreflect.
 Open Scope bs_scope.

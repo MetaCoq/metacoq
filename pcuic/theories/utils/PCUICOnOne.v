@@ -40,7 +40,7 @@ Definition dummy_branch : branch term := mk_branch [] tDummy.
   Inspired by the reduction relation from Coq in Coq [Barras'99].
 *)
 
-Arguments OnOne2 {A} P%type l l'.
+Arguments OnOne2 {A} P%_type l l'.
 
 Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term :=
   {| pparams := p.(pparams);

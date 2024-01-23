@@ -58,7 +58,7 @@ Section with_monad.
     Definition monad_fold_context_k (f : nat -> term -> T term') Γ :=
       Γ <- monad_map_i (fun k' decl => monad_map_decl (f k') decl) (rev Γ);; ret (rev Γ).
 
-    Arguments monad_fold_context_k f Γ%list_scope.
+    Arguments monad_fold_context_k f Γ%_list_scope.
 
     Local Set Keyed Unification.
 

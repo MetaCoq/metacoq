@@ -60,7 +60,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     #|args| >= ind_npars mind + cdecl.(cstr_nargs) ->
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
-| expanded_tPrim p : primProp (expanded Γ) p -> expanded Γ (tPrim p)
+| expanded_tPrim p : primProp@{Set Set} (expanded Γ) p -> expanded Γ (tPrim p)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.

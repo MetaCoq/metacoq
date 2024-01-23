@@ -317,7 +317,7 @@ Proof.
   - inv whn; solve_discr; easy.
 Qed.
 
-Set Firstorder Solver auto with core.
+#[local] Set Firstorder Solver auto with core.
 
 Definition whnf_whne_dec flags Σ Γ t :
   ({∥whnf flags Σ Γ t∥} + {~∥whnf flags Σ  Γ t∥}) *

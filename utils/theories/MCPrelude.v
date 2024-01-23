@@ -114,6 +114,11 @@ Hint Extern 10 (@eq nat _ _) => lia : terms.
 
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
+From Coq Require btauto.Algebra.
+
+#[global]
+Hint Extern 5 => progress Algebra.bool : core.
+
 Ltac inv H := inversion_clear H.
 
 (** Turns a subterm of the goal into an evar + equality subgoal

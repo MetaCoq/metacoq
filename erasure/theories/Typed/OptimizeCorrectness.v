@@ -3874,6 +3874,8 @@ Section dearg.
 
 End dearg.
 
+Set SsrRewrite.
+
 Lemma env_closed_dearg Σ :
   env_closed (trans_env Σ) ->
   env_closed (trans_env (dearg_env Σ)).

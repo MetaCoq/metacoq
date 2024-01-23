@@ -110,13 +110,13 @@ Proof.
   - econstructor.
     eapply All2_All_mix_left in X3; eauto.
     eapply All2_impl. exact X3.
-    intros ? ? [(? & _) [? []]]; tea.
-    split; eauto.
+    intros ? ? [? [? []]]; tea.
+    split; eauto. eapply o; eauto.
   - econstructor.
     eapply All2_All_mix_left in X3; eauto.
     eapply All2_impl. exact X3.
-    intros ? ? [(? & _) [? []]]; tea.
-    split; eauto.
+    intros ? ? [? [? []]]; tea.
+    repeat split; eauto. now eapply o.
   - econstructor.
     induction H3; constructor.
     induction X2; constructor; depelim X1; eauto.

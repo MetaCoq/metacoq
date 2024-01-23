@@ -100,6 +100,7 @@ struct
   | Sorts.SProp -> Universes0.Sort.Coq_sSProp
   | Sorts.Prop -> Universes0.Sort.Coq_sProp
   | Sorts.Type u -> Universes0.Sort.Coq_sType (quote_universe u)
+  | Sorts.QSort (_, u) -> Universes0.Sort.Coq_sType (quote_universe u) (* FIXME *)
 
   let quote_sort_family s =
     match s with

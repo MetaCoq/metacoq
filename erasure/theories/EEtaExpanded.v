@@ -458,6 +458,7 @@ Variable Σ : global_declarations.
 
 Local Unset Elimination Schemes.
 
+#[universes(template=no)]
 Inductive expanded : term -> Prop :=
 | expanded_tRel (n : nat) : expanded (tRel n)
 | expanded_tVar (id : ident) : expanded (tVar id)
@@ -477,7 +478,7 @@ Inductive expanded : term -> Prop :=
     #|args| >= cstr_arity mind cdecl ->
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx []) args)
-| expanded_tPrim p : primProp expanded p -> expanded (tPrim p)
+| expanded_tPrim p : primProp@{Set Set} expanded p -> expanded (tPrim p)
 | expanded_tBox : expanded tBox.
 
 End expanded.

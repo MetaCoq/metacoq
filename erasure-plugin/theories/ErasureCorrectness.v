@@ -1153,7 +1153,7 @@ Section PCUICErase.
     set(prf := fun (n : nat) => _).
     set(prf' := fun (Σ : global_env) => _).
     unshelve eexists. intros ? ->; reflexivity.
-    epose proof (@erase_global_deps_fast_erase_global_deps (term_global_deps er') optimized_abstract_env_impl wfe (declarations p.1)) as [nin2 eq].
+    epose proof (@erase_global_deps_fast_erase_global_deps (term_global_deps er') optimized_abstract_env_impl wfe (declarations p.1) _ _ _) as [nin2 eq].
     exists nin2.
     set(prf'' := fun (Σ : global_env) => _).
     set(prf''' := ETransform.erase_pcuic_program_obligation_6 _ _ _ _ _ _).

@@ -1443,7 +1443,6 @@ Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} :
 Proof.
   intros pa.
   induction n; cbn; auto.
-  now rewrite pa IHn.
 Qed.
 
 Lemma map_repeat {A B} (f : A -> B) a n :

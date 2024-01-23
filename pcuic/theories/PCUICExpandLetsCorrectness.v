@@ -18,7 +18,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases P
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
 From MetaCoq.PCUIC Require Import PCUICExpandLets.
-Set Warnings "+notation_overridden".
+Set Warnings "+notation-overridden".
 
 Import MCMonadNotation.
 

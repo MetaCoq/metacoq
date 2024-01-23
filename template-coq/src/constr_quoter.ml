@@ -139,7 +139,7 @@ struct
       | _ -> failwith "byte_ind : tByte is not bound to an inductive type")
 
   let quote_char i =
-    Constr.mkConstruct (Lazy.force byte_ind, (i+1))
+    Constr.UnsafeMonomorphic.mkConstruct (Lazy.force byte_ind, (i+1))
 
   let chars = lazy (Array.init 255 quote_char)
 
@@ -333,6 +333,7 @@ struct
   | Sorts.Prop -> Lazy.force prop
   | Sorts.SProp -> Lazy.force sprop
   | Sorts.Type u -> constr_mkApp (sType, [| Lazy.force tuniverse; quote_universe u |])
+  | Sorts.QSort (_, u) -> constr_mkApp (sType, [| Lazy.force tuniverse; quote_universe u |]) (* FIXME *)
 
   let quote_sort_family = function
     | Sorts.InProp -> Lazy.force sfProp

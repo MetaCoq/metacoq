@@ -1,4 +1,5 @@
 From Coq Require Import List.
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Erasure Require Export EAst.
@@ -173,9 +174,8 @@ Inductive fresh_globals : global_env -> Prop :=
                          fresh_global kn g ->
                          fresh_globals ((kn,b,d) :: g).
 
-
 Definition trans_env (Σ : global_env) : EAst.global_context :=
-  map (fun '(kn, _, decl) => (kn, trans_global_decl decl)) Σ.
+  map (fun d => (d.1.1, trans_global_decl d.2)) Σ.
 
 Definition print_term (Σ : global_env) (t : term) : bytestring.String.t :=
   EPretty.print_program (trans_env Σ,t).

@@ -163,7 +163,12 @@ Section with_tc.
              ret (tCoFix mfix' idx)
          | Ast.tInt n => ret (tPrim (primInt; primIntModel n))
          | Ast.tFloat n => ret (tPrim (primFloat; primFloatModel n))
-         end.
+         | Ast.tArray l v d ty =>
+            v' <- monad_map@{t u t t} monad_trans' v ;;
+            d' <- monad_trans' d ;;
+            ty' <- monad_trans' ty ;;
+            ret (tPrim ((primArray; primArrayModel {| array_level := l; array_value := v'; array_default := d'; array_type := ty' |})))
+      end.
   End with_helper.
 End with_tc.
 

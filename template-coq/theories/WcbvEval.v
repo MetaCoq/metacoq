@@ -55,6 +55,7 @@ Fixpoint csubst t k u :=
     let mfix' := List.map (map_def (csubst t k) (csubst t k')) mfix in
     tCoFix mfix' idx
   | tCast c kd c' => tCast (csubst t k c) kd (csubst t k c')
+  | tArray l v d ty => tArray l (List.map (csubst t k) v) (csubst t k d) (csubst t k ty)
   | x => x
   end.
 
@@ -83,7 +84,9 @@ Definition atom t :=
   | tCoFix _ _
   | tLambda _ _ _
   | tSort _
-  | tProd _ _ _ => true
+  | tProd _ _ _
+  | tInt _
+  | tFloat _ => true
   | _ => false
   end.
 
@@ -121,6 +124,12 @@ Definition isCoFix t :=
 Definition isConstruct t :=
   match t with
   | tConstruct _ _ _ => true
+  | _ => false
+  end.
+
+Definition isPrim t :=
+  match t with
+  | tInt _ | tFloat _ | tArray _ _ _ _ => true
   | _ => false
   end.
 
@@ -259,7 +268,7 @@ Section Wcbv.
   | eval_app_cong f f' a a' :
       ~~ isApp f -> a <> [] -> (* This ensures eval only applies to well-formed terms *)
       eval f f' ->
-      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
+      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f' || isPrim f') ->
       All2 eval a a' ->
       eval (tApp f a) (mkApps f' a')
 
@@ -269,6 +278,10 @@ Section Wcbv.
   (*     Forall2 eval l l' -> *)
   (*     eval (tEvar n l) (tEvar n l') *)
 
+  | eval_tArray u v v' def def' ty :
+    eval def def' ->
+    All2 eval v v' ->
+    eval (tArray u v def ty) (tArray u v' def' ty)
 
   (** Atoms are values (includes abstractions, cofixpoints and constructors
       along with type constructors) *)
@@ -364,11 +377,18 @@ Section Wcbv.
       (forall f f' a a',
           ~~ isApp f -> a <> [] ->
           eval f f' -> P f f' ->
-          ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
+          ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f' || isPrim f') ->
           All2 eval a a' -> All2 P a a' -> P (tApp f a) (mkApps f' a')) ->
-      (forall t : term, atom t -> P t t) -> forall t t0 : term, eval t t0 -> P t t0.
+
+      (forall u v v' def def' ty,
+          eval def def' -> P def def' ->
+          All2 eval v v' -> All2 P v v' ->
+          P (tArray u v def ty) (tArray u v' def' ty)) ->
+      (forall t : term, atom t -> P t t) ->
+
+      forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcstr Happcong Hatom.
+    intros P Hbeta Hlet Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcstr Happcong Harr Hatom.
     fix eval_evals_ind 3. destruct 1;
              try solve [match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -389,6 +409,8 @@ Section Wcbv.
       revert args args' a. fix aux 3; destruct 1; constructor; auto.
     - eapply Happcong; auto. clear i0 n.
       revert a a' a0. fix aux 3; destruct 1; constructor; auto.
+    - eapply Harr; eauto.
+      exact (map_All2 eval_evals_ind a).
   Defined.
 
   (** Characterization of values for this reduction relation.
@@ -398,7 +420,6 @@ Section Wcbv.
       This ensures that constructors cannot be overapplied.
 
    *)
-
 
   Variant value_head (nargs : nat) : term -> Type :=
   | value_head_cstr ind c u mdecl idecl cdecl :
@@ -413,22 +434,30 @@ Section Wcbv.
     value_head nargs (tFix mfix idx).
   Derive Signature NoConfusion for value_head.
 
+  Inductive atomic_value (value : term -> Type) : term -> Type :=
+  | atomic_atom t : atom t -> atomic_value value t
+  | atomic_array u v def ty : All value v -> value def -> atomic_value value (tArray u v def ty).
+  Derive Signature NoConfusion for atomic_value.
+
   Inductive value : term -> Type :=
-  | value_atom t : atom t -> value t
+  | value_atom t : atomic_value value t -> value t
   | value_app f args : value_head #|args| f -> args <> [] -> All value args -> value (mkApps f args).
   Derive Signature for value.
 
+  Notation atomic := (atomic_value value).
+
   Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom t -> P t) ->
+      (forall u v def ty, All value v -> All P v -> value def -> P def -> P (tArray u v def ty)) ->
       (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
-    intros P ??.
+    intros P ???.
     fix value_values_ind 2. destruct 1.
-    - apply X; auto.
-    - eapply X0; auto; tea.
-      clear v n. revert args a. fix aux 2. destruct 1. constructor; auto.
-      constructor. now eapply value_values_ind. now apply aux.
+    - destruct a.
+      * apply X; auto.
+      * apply X0; eauto. eapply make_All_All; tea.
+    - eapply X1; auto; tea. eapply make_All_All; tea.
   Defined.
 
   Lemma value_head_nApp {nargs t} : value_head nargs t -> ~~ isApp t.
@@ -446,12 +475,16 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
+    ((l = []) × atomic t) +
+    ([× l <> [], value_head #|l| t & All value l]).
   Proof using Type.
     intros H H'. generalize_eq x (mkApps t l).
     revert t H. induction H' using value_values_ind.
     intros. subst.
-    - now eapply atom_mkApps in H.
+    - eapply atom_mkApps in H.
+      left. intuition auto. now constructor.
+    - intros. left. destruct l using rev_case; cbn in H0. subst t.
+      split => //. constructor 2; auto. solve_discr'. elim (app_tip_nil l x). congruence.
     - intros * isapp appeq. move: (value_head_nApp X) => Ht.
       right.
       apply mkApps_eq_inj in appeq => //. intuition subst; auto => //.
@@ -506,7 +539,7 @@ Section Wcbv.
 
     - apply All2_right in X0.
       destruct (is_nil (fixargsv ++ argsv)).
-      { rewrite e /=. now apply value_atom. }
+      { rewrite e /=. now apply value_atom; constructor. }
       eapply value_app => //.
       + econstructor; tea.
       + apply All_app_inv => //.
@@ -519,9 +552,8 @@ Section Wcbv.
 
     - eapply All2_right in X0.
       depelim IHeve.
-      destruct t; simpl in * |- *; try congruence.
-      eapply value_app => //. now constructor. now eapply All2_nil.
-      eapply value_app => //. now constructor. now eapply All2_nil.
+      destruct t; simpl in * |- *; try depelim a0; cbn in *; try congruence;
+        try solve [eapply value_app => //; [now constructor|now eapply All2_nil]].
       rewrite -mkApps_app. eapply value_app.
       rewrite !negb_or in H1.
       pose proof (value_head_nApp v).
@@ -533,6 +565,8 @@ Section Wcbv.
       * rewrite /isFixApp /= in H1. rtoProp; intuition auto.
       * eapply All2_nil in X; tea. destruct args; cbn; congruence.
       * eapply All_app_inv; tea.
+    - eapply All2_right in X0. constructor. constructor 2; auto.
+    - now do 2 constructor.
   Qed.
 
   Lemma value_head_spec n t :
@@ -555,6 +589,7 @@ Section Wcbv.
   Proof using Type.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
+    - constructor; eauto. eapply All_All2; tea; eauto.
     - assert (All2 eval args args).
       { clear -X1; induction X1; constructor; auto. }
       destruct X.

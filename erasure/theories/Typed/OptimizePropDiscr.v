@@ -1,5 +1,7 @@
 (** Pass that removes discrimination (matches and projections) on things in Prop.
     This uses MetaCoq's optimization but adapted to run on our environments. *)
+
+From MetaCoq.Utils Require Import utils.
 From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure Require Import EOptimizePropDiscr.
 
@@ -17,7 +19,7 @@ Lemma trans_env_fresh_global :
       forall (kn : Kernames.kername) (g : global_env),
         fresh_globals g ->
         fresh_global kn g ->
-        EnvMap.EnvMap.fresh_global kn (List.map (fun '(kn0, _, decl) => (kn0, trans_global_decl decl)) g).
+        EnvMap.EnvMap.fresh_global kn (List.map (fun d => (d.1.1, trans_global_decl d.2)) g).
 Proof.
   intros kn g fg H.
   induction H.

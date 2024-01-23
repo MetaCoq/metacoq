@@ -122,10 +122,6 @@ Section Arities.
 
 End Arities.
 
-Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
-  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
-Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
-
 Section Spines.
   Context {cf : checker_flags}.
   Context {Σ : global_env_ext}.
@@ -372,7 +368,7 @@ Qed.
     * exfalso; depelim ass.
     * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
       intros wf sp.
-      pose proof (wf_local_app_inv wf) as [_ wfty].
+      pose proof (All_local_env_app_inv wf) as [_ wfty].
       eapply All_local_env_app_inv in wfty as [wfty _]. depelim wfty.
       intros Hargs. eapply nth_error_None in Hargs.
       len in Hargs. len; simpl.
@@ -477,7 +473,7 @@ Qed.
     - eapply typing_spine_nth_error in sp; eauto; cycle 1.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * destruct (decompose_app (decl_type c)) as [hd tl] eqn:da.
@@ -490,7 +486,7 @@ Qed.
     - eapply typing_spine_nth_error_None_prod in sp; eauto.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
   Qed.
@@ -538,7 +534,7 @@ Qed.
       * len in sp.
       * eapply smash_context_assumption_context; constructor.
       * eapply wf_local_smash_end; eauto.
-        destruct isty as [s Hs].
+        destruct isty as (_ & s & Hs & _).
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
       * len; simpl. eapply nth_error_None in hargs => //.
@@ -585,7 +581,7 @@ Proof.
   intros axfree.
   cut (Forall is_true []); [|constructor].
   generalize ([] : list bool).
-  induction t; intros axfree_args all_true; cbn; auto.
+  induction t using term_forall_list_ind; intros axfree_args all_true; cbn; auto.
   - destruct lookup_env eqn:find; auto.
     destruct g; auto.
     destruct c; auto.
@@ -619,6 +615,7 @@ Section classification.
       left ; eexists; split; eauto.
       now rewrite nth_error_nil.
     - eapply (whnf_cofixapp _ _ [] _ _ []).
+    - eapply whnf_prim.
     - destruct X => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
@@ -672,7 +669,7 @@ Section classification.
       now eapply invert_cumul_prod_ind in cum.
     - move=> [hargs ccum'].
       rewrite expand_lets_mkApps subst_mkApps /= in ccum'.
-      eapply invert_cumul_ind_ind in ccum' as ((? & ?) & ?).
+      eapply invert_cumul_ind_ind in ccum' as ((? & r) & ?).
       len in r. eapply ReflectEq.eqb_eq in i0. now subst ind'.
   Qed.
 
@@ -705,7 +702,7 @@ Section classification.
     rewrite oib.(ind_arity_eq) in t0.
     rewrite !subst_instance_it_mkProd_or_LetIn in t0.
     eapply typing_spine_arity_mkApps_Ind in t0; eauto.
-    eapply typing_spine_isType_dom in t0 as [s Hs].
+    eapply typing_spine_isType_dom in t0 as (_ & s & Hs & _).
     eexists; split; [sq|]. now eapply wt_closed_red_refl.
     now do 2 eapply isArity_it_mkProd_or_LetIn.
     now eapply (declared_inductive_valid_type decl).
@@ -792,57 +789,6 @@ Section classification.
     False.
   Proof. eauto using wh_neutral_empty_gen. Qed.
 
-  (* TODO move *)
-  Lemma invert_red_axiom {Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ⇝ T ->
-    T = tConst cst u.
-  Proof using wfΣ.
-    intros hdecl hb.
-    unshelve eapply declared_constant_to_gen in hdecl; eauto.
-    generalize_eq x (tConst cst u).
-    move=> e [clΓ clt] red.
-    revert cst u hdecl hb e.
-    eapply clos_rt_rt1n_iff in red.
-    induction red; simplify_dep_elim.
-    - reflexivity.
-    - depelim r; solve_discr.
-      unshelve eapply declared_constant_to_gen in isdecl; eauto.
-      congruence.
-  Qed.
-
-  Lemma ws_cumul_pb_Axiom_l_inv {pb Γ cst u cdecl T} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤[pb] T ->
-    ∑ u', Σ ;;; Γ ⊢ T ⇝ tConst cst u' × PCUICEquality.R_universe_instance (eq_universe Σ) u u'.
-  Proof using wfΣ.
-    intros hdecl hb H.
-    eapply ws_cumul_pb_red in H as (v & v' & [tv tv' eqp]).
-    epose proof (invert_red_axiom hdecl hb tv). subst v.
-    depelim eqp.
-    exists u'. split => //.
-  Qed.
-
-  Lemma invert_cumul_axiom_ind {Γ cst cdecl u ind u' args} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤ mkApps (tInd ind u') args -> False.
-  Proof using wfΣ.
-    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
-    eapply invert_red_mkApps_tInd in hred as (? & []); auto. solve_discr.
-  Qed.
-
-  Lemma invert_cumul_axiom_prod {Γ cst cdecl u na dom codom} :
-    declared_constant Σ cst cdecl ->
-    cst_body cdecl = None ->
-    Σ ;;; Γ ⊢ tConst cst u ≤ tProd na dom codom -> False.
-  Proof using wfΣ.
-    intros hd hb ht; eapply ws_cumul_pb_Axiom_l_inv in ht as (u'' & hred & hcmp); eauto.
-    eapply invert_red_prod in hred as (? & ? & []); auto. discriminate.
-  Qed.
-
   Lemma whnf_classification' t i u args :
     axiom_free_value Σ [] t ->
     wh_normal Σ [] t ->
@@ -857,7 +803,7 @@ Section classification.
       now eapply invert_cumul_sort_ind in e.
     - eapply inversion_Prod in typed as (? & ? & ? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Lambda in typed as (? & ? & ? & ? & e); auto.
+    - eapply inversion_Lambda in typed as (? & ? & ? & e); auto.
       now eapply invert_cumul_prod_ind in e.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
@@ -865,9 +811,10 @@ Section classification.
       unfold unfold_fix. destruct nth_error; [|easy].
       destruct o as [[? [? ?]]|]; [|easy]. inversion H; eauto.
     - now rewrite head_mkApps /head /=.
-    - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? [? hp]]]]; eauto.
-      eapply invert_cumul_axiom_ind in w; eauto.
-      apply hp.
+    - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? ? hp]]]; eauto.
+      destruct p as [? []]; simp prim_type in w.
+      1-2:eapply (invert_cumul_axiom_ind (args := [])) in w; eauto; destruct p0 as [s []]; eauto.
+      eapply (invert_cumul_axiom_ind (args := [array_type a0])) in w; eauto. destruct p0 as [s []]; eauto.
   Qed.
 
   Lemma whnf_classification t i u args :
@@ -946,6 +893,7 @@ Section classification.
       cbn.
       destruct ?; auto.
       destruct ?; auto.
+    - cbn. constructor.
     - rewrite axiom_free_value_mkApps.
       rewrite app_nil_r.
       destruct X; try constructor.
@@ -985,36 +933,37 @@ Section classification.
       pose proof (subject_closed t1); auto.
       eapply eval_closed in H; eauto.
       eapply subject_reduction in IHHe1. 2-3:eauto.
-      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & e); eauto.
-      eapply (substitution0 (Γ := [])) in t3; eauto.
+      eapply inversion_Lambda in IHHe1 as (? & ? & ? & e); eauto.
+      eapply (substitution0 (Γ := [])) in t2; eauto.
       eapply IHHe3.
       rewrite (closed_subst a' 0 b); auto.
-      rewrite /subst1 in t3. eapply t3.
+      rewrite /subst1 in t2. eapply t2.
       eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
-      eapply subject_reduction in IHHe2; eauto. now eexists.
+      eapply subject_reduction in IHHe2; eauto.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 
-    - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_LetIn in Ht as (? & ? & ? & ?); auto.
+      apply unlift_TermTyp in l as t0'.
       redt (tLetIn na b0' t b1); eauto.
       eapply red_letin; eauto.
       redt (b1 {0 := b0'}); auto.
       do 2 econstructor.
-      specialize (IHHe1 _ t1).
+      specialize (IHHe1 _ t0').
       rewrite /subst1.
       rewrite -(closed_subst b0' 0 b1).
-      eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
+      eapply subject_reduction in t0'; eauto. eapply subject_closed in t0'; eauto.
       eapply IHHe2.
       rewrite closed_subst.
-      eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
-      pose proof (subject_is_open_term t2).
-      eapply substitution_let in t2; eauto.
-      eapply subject_reduction in t2.
+      eapply subject_reduction in t0'; eauto. eapply subject_closed in t0'; eauto.
+      pose proof (subject_is_open_term t0).
+      eapply substitution_let in t0; eauto.
+      eapply subject_reduction in t0.
       3:{ eapply (red_red (Δ := [vass na t]) (Γ' := [])); eauto. 3:repeat constructor.
-          cbn. rewrite addnP_shiftnP. eapply type_is_open_term in t1. now erewrite t1.
+          cbn. rewrite addnP_shiftnP. eapply type_is_open_term in t0'. now erewrite t0'.
           repeat constructor. cbn. rewrite addnP_shiftnP.
-          eapply subject_is_open_term in t1. cbn in t1. now setoid_rewrite shiftnP0 in t1. }
-      apply t2. auto.
+          eapply subject_is_open_term in t0'. cbn in t0'. now setoid_rewrite shiftnP0 in t0'. }
+      apply t0. auto.
 
     - redt (subst_instance u body); auto.
       eapply red1_red. econstructor; eauto.
@@ -1036,7 +985,7 @@ Section classification.
         eapply All2_refl; split; reflexivity.
         eapply red1_red. destruct p => /= //.
         eapply red_iota; tea.
-        rewrite e0 /cstr_arity eq_npars e2 //. }
+        rewrite e1 /cstr_arity eq_npars e3 //. }
       specialize (X X0).
       redt _; eauto.
 
@@ -1056,18 +1005,18 @@ Section classification.
       specialize (IHHe2 _ t0).
       epose proof (subject_reduction Σ [] _ _ _ wfΣ t IHHe1) as Ht2.
       epose proof (subject_reduction Σ [] _ _ _ wfΣ t0 IHHe2) as Ha2.
-      assert (red Σ [] (tApp f a) (tApp (mkApps fn argsv) av)).
+      assert (red Σ [] (tApp f4 a) (tApp (mkApps fn argsv) av)).
       { redt _.
         eapply red_app; eauto.
         rewrite -![tApp _ _](mkApps_app _ _ [_]).
         eapply red1_red.
-        rewrite -closed_unfold_fix_cunfold_eq in e.
+        rewrite -closed_unfold_fix_cunfold_eq in e1.
         { eapply subject_closed in Ht2; auto.
           rewrite closedn_mkApps in Ht2. now move/andP: Ht2 => [clf _]. }
         eapply red_fix; eauto.
         assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
         { rewrite mkApps_app /=. eapply type_App'; eauto. }
-        epose proof (fix_app_is_constructor X0 e); eauto.
+        epose proof (fix_app_is_constructor X0 e1); eauto.
         rewrite /is_constructor.
         destruct nth_error eqn:hnth => //.
         2:{ eapply nth_error_None in hnth. len in hnth. }
@@ -1131,6 +1080,12 @@ Section classification.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
       now eapply red_app.
+
+    - eapply inversion_Prim in Ht as [prim_type [decl []]]; eauto.
+      depelim X. 1-2:reflexivity.
+      depelim p1. specialize (r _ hdef).
+      eapply red_primArray_congr; eauto.
+      eapply All2_undep in a. solve_all.
   Qed.
 
   Theorem subject_reduction_eval {t u T} :

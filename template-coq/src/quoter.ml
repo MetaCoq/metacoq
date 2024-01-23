@@ -27,13 +27,13 @@ let make_warning_if_not_exist w =
   | OtherType -> assert false (* used as category *)
   | NotThere -> CWarnings.create_warning ~name:w ~from:[metacoq_cat] ()
 
-let warn_primitive_turned_into_axiom = 
+let warn_primitive_turned_into_axiom =
   CWarnings.create_in (make_warning_if_not_exist "primitive-turned-into-axiom")
           Pp.(fun prim -> str "Quoting primitive " ++ str prim ++ str " into an axiom.")
 let warn_ignoring_private_polymorphic_universes =
   CWarnings.create_in (make_warning_if_not_exist "private-polymorphic-universes-ignored")
           Pp.(fun () -> str "Ignoring private polymorphic universes.")
-          
+
 let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (name,value,typ) = old in
   match value with
@@ -81,6 +81,7 @@ sig
   val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
   val mkInt : quoted_int63 -> t
   val mkFloat : quoted_float64 -> t
+  val mkArray : quoted_univ_level -> t array -> default:t -> ty:t -> t
 
   val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
   val mkName : quoted_ident -> quoted_name
@@ -105,6 +106,7 @@ sig
 
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
+  val quote_univ_level : Univ.Level.t -> quoted_univ_level
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraints.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
@@ -134,17 +136,17 @@ sig
   val quote_context : quoted_context_decl list -> quoted_context
 
   val mk_one_inductive_body :
-    quoted_ident * 
+    quoted_ident *
     quoted_context (* ind indices context *) *
     quoted_sort (* ind sort *) *
     t (* ind type *) *
-    quoted_sort_family * 
+    quoted_sort_family *
     (quoted_ident * quoted_context (* arguments context *) *
       t list (* indices in the conclusion *) *
-      t (* constr type *) * 
+      t (* constr type *) *
       quoted_int (* arity (w/o lets) *)) list *
     (quoted_ident * quoted_relevance *  t (* projection type *)) list *
-    quoted_relevance -> 
+    quoted_relevance ->
     quoted_one_inductive_body
 
   val mk_mutual_inductive_body :
@@ -164,10 +166,11 @@ sig
 
   val empty_global_declarations : unit -> quoted_global_declarations
   val add_global_decl : quoted_kernel_name -> quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
-  
-  type pre_quoted_retroknowledge = 
+
+  type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
-      retro_float64 : quoted_kernel_name option }
+      retro_float64 : quoted_kernel_name option;
+      retro_array : quoted_kernel_name option }
 
   val quote_retroknowledge : pre_quoted_retroknowledge -> quoted_retroknowledge
 
@@ -199,12 +202,12 @@ struct
 
   let quote_ugraph ?kept (g : UGraph.t) =
     debug Pp.(fun () -> str"Quoting ugraph");
-    let levels, cstrs, eqs = 
+    let levels, cstrs, eqs =
       match kept with
       | None ->
         let cstrs, eqs = UGraph.constraints_of_universes g in
         UGraph.domain g, cstrs, eqs
-      | Some l -> 
+      | Some l ->
         debug Pp.(fun () -> str"Quoting graph restricted to: " ++ Univ.Level.Set.pr Univ.Level.pr l);
         (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
         let dom = UGraph.domain g in
@@ -213,7 +216,7 @@ struct
         let cstrs = time Pp.(str"Computing graph restriction") (UGraph.constraints_for ~kept) g in
         l, cstrs, []
     in
-    let levels, cstrs = 
+    let levels, cstrs =
       List.fold_right (fun eqs acc ->
         match Univ.Level.Set.elements eqs with
         | [] -> acc
@@ -225,7 +228,7 @@ struct
     in
     let levels = Univ.Level.Set.add Univ.Level.set levels in
     debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
-    time (Pp.str"Quoting universe context") 
+    time (Pp.str"Quoting universe context")
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
@@ -239,7 +242,7 @@ struct
         let b', acc = quote_term acc env sigma b in
         let t', acc = quote_term acc env sigma t in
         (Q.quote_context_decl (Q.quote_aname na) (Some b') t', acc)
-  
+
   let quote_rel_context quote_term acc env sigma ctx =
       let decls, env, acc =
         List.fold_right (fun decl (ds, env, acc) ->
@@ -248,14 +251,14 @@ struct
           ctx ([],env,acc) in
       Q.quote_context decls, acc
 
-  let quote_binder b = 
+  let quote_binder b =
     Q.quote_aname b
 
   let quote_name_annots nas =
     Array.map quote_binder nas
 
   let quote_terms quote_term acc env sigma ts =
-    let acc, ts = 
+    let acc, ts =
       CArray.fold_left_map (fun acc t -> let (x, acc) = quote_term acc env sigma t in acc, x) acc ts
     in ts, acc
 
@@ -319,13 +322,13 @@ struct
                                       Q.quote_int (snd ci.Constr.ci_ind)) in
         let npar = Q.quote_int ci.Constr.ci_npar in
         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
-        let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env sigma par in acc, qt) acc pars in 
+        let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env sigma par in acc, qt) acc pars in
         let qu = Q.quote_univ_instance u in
-        let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 
+        let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in
         let qpctx = quote_name_annots predctx in
         let (qpred,acc) = quote_term acc (push_rel_context pctx env) sigma pred in
         let (qdiscr,acc) = quote_term acc env sigma discr in
-        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in  
+        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in
         let (branches,acc) =
           CArray.fold_left2 (fun (bodies,acc) (brnas, brctx, bbody) narg ->
             let (qbody,acc) = quote_term acc (push_rel_context brctx env) sigma bbody in
@@ -347,7 +350,12 @@ struct
       | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
       | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
-      | Constr.Array _ -> failwith "Primitive arrays not supported by TemplateCoq"
+      | Constr.Array (u, ar, def, ty) ->
+        let u = match Univ.Instance.to_array u with [| u |] -> u | _ -> assert false in
+        let def', acc = quote_term acc env sigma def in
+        let ty', acc = quote_term acc env sigma ty in
+        let acc, arr' = Array.fold_left_map (fun acc t -> let t', acc = quote_term acc env sigma t in acc, t') acc ar in
+        Q.mkArray (Q.quote_univ_level u) arr' ~default:def' ~ty:ty', acc
       in
       aux acc env trm
     and quote_recdecl (acc : 'a) env sigma b (ns,ts,ds) =
@@ -390,7 +398,7 @@ struct
             let ctx = oib.mind_arity_ctxt in
             CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx
           in
-          let indices, acc = quote_rel_context quote_term acc (push_rel_context pars env) sigma indices in 
+          let indices, acc = quote_rel_context quote_term acc (push_rel_context pars env) sigma indices in
           let indty, acc = quote_term acc env sigma indty in
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
@@ -399,11 +407,11 @@ struct
               let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
               let ctx, concl = Term.decompose_prod_assum ty in
               let argctx, parsctx =
-                CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
+                CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx
               in
               let envcstr = push_rel_context parsctx envind in
               let qargctx, acc = quote_rel_context quote_term acc envcstr sigma argctx in
-              let qindices, acc = 
+              let qindices, acc =
                 let hd, args = Constr.decompose_app concl in
                 let pars, args = CArray.chop mib.mind_nparams args in
                 let envconcl = push_rel_context argctx envcstr in
@@ -444,7 +452,7 @@ struct
       let mind = Q.mk_mutual_inductive_body finite nparams paramsctx bodies uctx var in
       ref_name, Q.mk_inductive_decl mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
-        (fun acc env t mib -> 
+        (fun acc env t mib ->
         quote_minductive_type acc (false, env) t mib))
 
   let quote_term env sigma trm =
@@ -459,17 +467,17 @@ struct
     Ind of Names.inductive * mutual_inductive_body
   | Const of KerName.t
 
-  let universes_of_ctx ctx = 
+  let universes_of_ctx ctx =
     Context.Rel.fold_inside (fun univs d -> Univ.Level.Set.union univs
       (Context.Rel.Declaration.fold_constr (fun c univs -> Univ.Level.Set.union univs (Vars.universes_of_constr c)) d univs))
       ~init:Univ.Level.Set.empty ctx
-  
-  let universes_of_mib mib = 
+
+  let universes_of_mib mib =
     let pars = mib.mind_params_ctxt in
     let univs = universes_of_ctx pars in
       Array.fold_left (fun univs oib ->
         let univsty = universes_of_ctx oib.mind_arity_ctxt in
-        Array.fold_left (fun univs cty -> 
+        Array.fold_left (fun univs cty ->
           let univscty = Vars.universes_of_constr cty in
           Univ.Level.Set.union univs univscty)
           univsty oib.mind_user_lc)
@@ -507,7 +515,7 @@ struct
             let cd = Environ.lookup_constant c env in
             let body = match cd.const_body with
               | Undef _ -> None
-              | Primitive t -> 
+              | Primitive t ->
                   warn_primitive_turned_into_axiom (CPrimitives.to_string t);
                   None
               | Def cs -> Some cs
@@ -516,9 +524,9 @@ struct
                   let c, univs = Global.force_proof Library.indirect_accessor lc in
                   match univs with
                   | Opaqueproof.PrivateMonomorphic () -> Some c
-                  | Opaqueproof.PrivatePolymorphic csts -> 
-                    let () = 
-                      if not (Univ.ContextSet.is_empty csts) then 
+                  | Opaqueproof.PrivatePolymorphic csts ->
+                    let () =
+                      if not (Univ.ContextSet.is_empty csts) then
                         warn_ignoring_private_polymorphic_universes ()
                     in Some c
                 else None
@@ -526,7 +534,7 @@ struct
             let tm, acc =
               match body with
               | None -> None, acc
-              | Some tm -> 
+              | Some tm ->
                 let univs = Vars.universes_of_constr tm in
                 let () = universes := Univ.Level.Set.union univs !universes in
                 try let (tm, acc) = quote_term acc (Global.env ()) (Evd.from_env @@ Global.env ()) tm in
@@ -547,7 +555,7 @@ struct
             in
             let rel = Q.quote_relevance cd.const_relevance in
             let cst_bdy = Q.mk_constant_body ty tm uctx rel in
-            let decl = Q.mk_constant_decl cst_bdy in            
+            let decl = Q.mk_constant_decl cst_bdy in
             constants := (Q.quote_kn kn, decl) :: !constants
           end
     in
@@ -564,22 +572,23 @@ struct
     in
     let (tm, _) = quote_rem () env sigma trm in
     let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc) !constants (Q.empty_global_declarations ()) in
-    let univs = 
-      if with_universes then 
+    let univs =
+      if with_universes then
         let univs = Univ.Level.Set.union (Vars.universes_of_constr trm) !universes in
         let univs = Univ.Level.Set.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
         quote_ugraph ~kept:univs (Environ.universes env)
-      else 
+      else
         (debug Pp.(fun () -> str"Skipping universes: ");
-         time (Pp.str"Quoting empty universe context") 
+         time (Pp.str"Quoting empty universe context")
            (fun uctx -> Q.quote_univ_contextset uctx) Univ.ContextSet.empty)
     in
     let retro =
       let retro = env.Environ.retroknowledge in
       let quote_retro = Option.map (fun c -> Q.quote_kn (Names.Constant.canonical c)) in
-      let pre = 
+      let pre =
         { Q.retro_int63 = quote_retro retro.Retroknowledge.retro_int63 ;
-          Q.retro_float64 = quote_retro retro.Retroknowledge.retro_float64 }
+          Q.retro_float64 = quote_retro retro.Retroknowledge.retro_float64 ;
+          Q.retro_array = quote_retro retro.Retroknowledge.retro_array }
       in Q.quote_retroknowledge pre
     in
     let env = Q.mk_global_env univs decls retro in

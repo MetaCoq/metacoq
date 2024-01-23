@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICInversion
      PCUICSafeLemmata. (* for welltyped *)
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
-From MetaCoq.Erasure Require Import EAst EAstUtils EDeps EExtends
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EDeps EExtends
     ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract Prelim
     EEnvMap EArities EProgram.
 
@@ -68,7 +68,7 @@ Section remove_match_on_box.
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map remove_match_on_box args)
-    | tPrim _ => t
+    | tPrim p => tPrim (map_prim remove_match_on_box p)
     end.
 
   Lemma remove_match_on_box_mkApps f l : remove_match_on_box (mkApps f l) = mkApps (remove_match_on_box f) (map remove_match_on_box l).
@@ -103,7 +103,6 @@ Section remove_match_on_box.
     - move/andP => []. intros. f_equal; solve_all; eauto.
     - move/andP => []. intros. f_equal; solve_all; eauto.
     - move/andP => []. intros. f_equal; solve_all; eauto.
-      destruct x0; cbn in *. f_equal; auto.
   Qed.
 
   Lemma closed_remove_match_on_box t k : closedn k t -> closedn k (remove_match_on_box t).
@@ -128,6 +127,7 @@ Section remove_match_on_box.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
     - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - solve_all_k 6.
   Qed.
 
   Lemma subst_csubst_comm l t k b :
@@ -297,11 +297,11 @@ Proof.
   - destruct t => //.
 Qed.
 
-Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
+Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ s A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort s : A -> isType Σ Γ (tSort s).
 Proof.
   intros HT.
   eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.
-  eexists; econstructor; eauto.
+  eapply has_sort_isType. econstructor; eauto.
 Qed.
 
 Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :
@@ -310,7 +310,7 @@ Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom
 Proof.
   intros HT.
   eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto.
-  eexists; econstructor; eauto.
+  eapply has_sort_isType. econstructor; eauto.
 Qed.
 
 Definition remove_match_on_box_constant_decl Σ cb :=
@@ -708,7 +708,8 @@ Proof.
     eapply Ee.eval_app_cong; eauto.
     eapply Ee.eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
-    * destruct t => //; rewrite remove_match_on_box_mkApps /=.
+    * depelim a0. destruct t => //; rewrite ?remove_match_on_box_mkApps /=.
+      cbn in i. now rewrite !orb_false_r orb_true_r in i.
     * destruct with_guarded_fix.
       + move: i.
         rewrite !negb_or.
@@ -724,6 +725,10 @@ Proof.
         rewrite remove_match_on_box_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
+  - depelim X; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_All2_Set. eapply All2_Set_All2 in ev. subst a0 a'; cbn in *.
+    rewrite /test_array_model /= in H. rtoProp; intuition auto; solve_all. eapply e.
+    cbn in H. rewrite /test_array_model /= in H. now move/andP: H => [].
   - destruct t => //.
     all:constructor; eauto. cbn [atom remove_match_on_box] in i |- *.
     rewrite -lookup_constructor_remove_match_on_box //. destruct args => //.
@@ -790,6 +795,7 @@ Proof.
   unfold expanded_constant_decl => /=.
   apply remove_match_on_box_expanded_irrel.
 Qed.
+
 Lemma remove_match_on_box_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
   wf_glob Σ -> EWellformed.wellformed Σ n t -> EWellformed.wellformed Σ n (remove_match_on_box Σ t).
@@ -818,10 +824,9 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_remove_match_on_box. now len.
-    unfold test_def in *. len. eauto.
-  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
-    unfold test_def in *. len. eauto.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_remove_match_on_box.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all.
+  - cbn. rtoProp; intuition auto; solve_all_k 6.
 Qed.
 
 Import EWellformed.
@@ -997,3 +1002,103 @@ Proof.
   eapply remove_match_on_box_expanded_irrel => //.
   now apply remove_match_on_box_expanded, isEtaExp_expanded.
 Qed.
+
+
+Section ExpandedFix.
+  Import EEtaExpandedFix.
+
+  Lemma expanded_mkApps_expanded Σ Γ t l : expanded Σ Γ t -> All (expanded Σ Γ) l -> expanded Σ Γ (mkApps t l).
+  Proof.
+    move/expanded_isEtaExp => ht ha. apply isEtaExp_expanded.
+    eapply isEtaExp_mkApps_intro; eauto; solve_all. now eapply expanded_isEtaExp.
+  Qed.
+
+  Lemma remove_match_on_box_expanded_fix {Σ : GlobalContextMap.t} t : expanded Σ [] t -> expanded Σ [] (remove_match_on_box Σ t).
+  Proof.
+    induction 1 using expanded_ind.
+    all:try solve[constructor; eauto; solve_all].
+    all:rewrite ?remove_match_on_box_mkApps.
+    - cbn. eapply expanded_tRel_app; tea. now len. solve_all.
+    - eapply expanded_mkApps_expanded; eauto; solve_all.
+    - cbn -[GlobalContextMap.inductive_isprop_and_pars]. unfold isprop_ind.
+      rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
+      destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
+      2-3:constructor; eauto; solve_all.
+      destruct branches eqn:heq.
+      constructor; eauto; solve_all. cbn.
+      destruct l => /=.
+      depelim H0. depelim H2. subst branches.
+      eapply isEtaExp_expanded.
+      eapply expanded_isEtaExp in H2.
+      eapply isEtaExp_substl; tea. len. eapply forallb_repeat => //.
+      destruct branches as [|[]]; cbn in heq; noconf heq.
+      cbn -[isEtaExp] in *. depelim H1. cbn in H1.
+      constructor; eauto; solve_all.
+      depelim H0. depelim H0. depelim H2. do 2 (constructor; intuition auto).
+      solve_all.
+    - cbn -[GlobalContextMap.inductive_isprop_and_pars].
+      rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
+      destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
+      constructor. all:constructor; auto.
+    - cbn. eapply expanded_tFix. 4:{ rewrite nth_error_map H4 //. }
+      all:eauto; solve_all.
+      rewrite isLambda_remove_match_on_box //.
+      rewrite !rev_map_spec in b *; rewrite map_map /= //.
+    - eapply expanded_tConstruct_app; tea.
+      now len. solve_all.
+  Qed.
+
+  Lemma remove_match_on_box_expanded_fix_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} Γ t : wf_glob Σ -> expanded Σ Γ t -> expanded (remove_match_on_box_env Σ) Γ t.
+  Proof.
+    intros wf; induction 1 using expanded_ind.
+    all:try solve[constructor; eauto; solve_all].
+    eapply expanded_tRel_app; tea.
+    eapply expanded_tFix; eauto. solve_all.
+    eapply expanded_tConstruct_app.
+    destruct H as [[H ?] ?].
+    split => //. split => //. red.
+    red in H. rewrite lookup_env_remove_match_on_box // /= H //. 1-2:eauto. auto. solve_all.
+  Qed.
+
+  Lemma remove_match_on_box_expanded_fix_decl {Σ : GlobalContextMap.t} t : expanded_decl Σ t -> expanded_decl Σ (remove_match_on_box_decl Σ t).
+  Proof.
+    destruct t as [[[]]|] => /= //.
+    unfold expanded_constant_decl => /=.
+    apply remove_match_on_box_expanded_fix.
+  Qed.
+
+  Lemma remove_match_on_box_expanded_fix_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t : wf_glob Σ -> expanded_decl Σ t -> expanded_decl (remove_match_on_box_env Σ) t.
+  Proof.
+    destruct t as [[[]]|] => /= //.
+    unfold expanded_constant_decl => /=.
+    apply remove_match_on_box_expanded_fix_irrel.
+  Qed.
+
+  Lemma remove_match_on_box_env_expanded_fix {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
+    wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (remove_match_on_box_env Σ).
+  Proof.
+    unfold expanded_global_env; move=> wfg.
+    rewrite remove_match_on_box_env_eq //.
+    destruct Σ as [Σ map repr wf]. cbn in *.
+    clear map repr.
+    induction 1; cbn; constructor; auto.
+    cbn in IHexpanded_global_declarations.
+    unshelve eapply IHexpanded_global_declarations. now depelim wfg. cbn.
+    set (Σ' := GlobalContextMap.make _ _).
+    rewrite -(remove_match_on_box_env_eq Σ'). cbn. now depelim wfg.
+    eapply (remove_match_on_box_expanded_fix_decl_irrel (Σ := Σ')). now depelim wfg.
+    now unshelve eapply (remove_match_on_box_expanded_fix_decl (Σ:=Σ')).
+  Qed.
+
+  Definition remove_match_on_box_program_expanded_fix {efl} (p : eprogram_env) :
+    wf_eprogram_env efl p ->
+    expanded_eprogram_env p -> expanded_eprogram (remove_match_on_box_program p).
+  Proof.
+    unfold expanded_eprogram_env.
+    move=> [wfe wft] [etae etat]. split.
+    cbn. eapply remove_match_on_box_env_expanded_fix => //.
+    eapply remove_match_on_box_expanded_fix_irrel => //.
+    now apply remove_match_on_box_expanded_fix.
+  Qed.
+
+End ExpandedFix.

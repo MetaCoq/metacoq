@@ -25,7 +25,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Derive Signature for ctx_inst.
 
-Notation ctx_inst := (ctx_inst typing).
+Notation ctx_inst Σ := (ctx_inst (typing Σ)).
 
 Ltac splits := repeat split.
 
@@ -71,29 +71,23 @@ Lemma subslet_eq_context_alpha {cf} {Σ Γ s Δ Δ'} :
 Proof.
   intros eq subs.
   induction subs in Δ', eq |- *; depelim eq; try constructor.
-  * depelim c; constructor; auto. now subst.
-  * depelim c; subst; constructor; auto.
-Qed.
-
-Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} :
-  eq_context_upto_names Γ Γ' -> conv_context cumulAlgo_gen Σ Γ Γ'.
-Proof.
-  intros a.
-  eapply eq_context_upto_empty_conv_context.
-  eapply All2_fold_All2.
-  eapply (All2_impl a).
-  intros ?? []; constructor; subst; auto; reflexivity.
+  * depelim e; constructor; auto.
+  * depelim e; subst; constructor; auto.
 Qed.
 
 Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : eq_context_upto_names Γ Γ' ->
   wf_local Σ Γ ->
   wf_local Σ Γ'.
 Proof.
-  induction 1; intros h; depelim h; try constructor; auto.
-  all:depelim r; constructor; subst; auto.
-  all: eapply lift_typing_impl; tea; intros T Hty.
-  all: eapply context_conversion; eauto.
-  all: now apply eq_context_alpha_conv.
+  induction 1; intros h.
+  1: constructor.
+  apply All_local_env_tip in h as (h & hd).
+  apply All_local_env_snoc; auto.
+  replace (j_decl y) with (j_decl x : judgment).
+  2: now destruct r.
+  eapply lift_typing_impl; tea; intros t T Hty.
+  eapply context_conversion; eauto.
+  now apply eq_context_upto_names_conv_context.
 Qed.
 
 Lemma subslet_eq_context_alpha_dom {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
@@ -106,11 +100,11 @@ Proof.
   * now apply IHsubs.
   * eapply context_conversion; tea.
     eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
-    now eapply eq_context_alpha_conv.
+    now eapply eq_context_upto_names_conv_context.
   * now eapply IHsubs.
   * eapply context_conversion; tea.
     eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
-    now eapply eq_context_alpha_conv.
+    now eapply eq_context_upto_names_conv_context.
 Qed.
 
 
@@ -227,7 +221,7 @@ Proof.
     apply IHctxi.
 Qed.
 
-Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
+Record spine_subst {cf:checker_flags} Σ Γ inst s (Δ : context) := mkSpineSubst {
   spine_dom_wf : wf_local Σ Γ;
   spine_codom_wf : wf_local Σ (Γ ,,, Δ);
   inst_ctx_subst :> context_subst Δ inst s;
@@ -356,24 +350,24 @@ Section WfEnv.
     ∑ A s', Σ ;;; Γ |- f : A × Σ ;;; Γ |- A : tSort s' × typing_spine Σ Γ A u T.
   Proof using wfΣ.
     induction u in f, T |- *. simpl. intros.
-    { destruct X as [s X]. exists T, s. intuition pcuic. eapply typing_spine_refl. eexists; eauto. }
+    { destruct X as (_ & s & X & _). exists T, s. intuition pcuic. eapply typing_spine_refl. eapply has_sort_isType; eauto. }
     intros HT Hf. simpl in Hf.
     destruct u. simpl in Hf, IHu.
     - edestruct @inversion_App_size with (H := Hf) as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
       eexists _, _; intuition eauto.
       econstructor; eauto with pcuic.
-      eapply isType_ws_cumul_pb_refl; eexists; eauto.
+      eapply isType_ws_cumul_pb_refl; eapply has_sort_isType; eauto.
       econstructor. all:eauto with pcuic.
 
       eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
       eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
       econstructor; cbn; eauto.
     - specialize (IHu (tApp f a) T).
-      epose proof (IHu _ Hf) as [T' [s' [H' [H''' H'']]]].
+      unshelve epose proof (IHu _ Hf) as [T' [s' [H' [H''' H'']]]]; tea.
       edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
       exists (tProd na' A' B'). exists s. intuition; eauto.
       econstructor; eauto with wf.
-      1,2: eexists; eauto. 1:eapply isType_ws_cumul_pb_refl; eexists; eauto.
+      1,2: pcuic. 1:eapply isType_ws_cumul_pb_refl; pcuic.
 
 
       eapply typing_spine_strengthen; tea.
@@ -381,7 +375,6 @@ Section WfEnv.
       eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
       eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
       econstructor; cbn; eauto.
-      Unshelve. eauto.
   Qed.
 
   Lemma subst_type_local_ctx {Γ Γ' Δ Δ' s ctxs} :
@@ -394,10 +387,8 @@ Section WfEnv.
     destruct a as [na [b|] ty];
       rewrite subst_context_snoc /= /subst_decl /map_decl /=;
       simpl; intuition auto.
-    1: apply infer_typing_sort_impl with id a0; intros Hs.
-    1: destruct a0 as (? & t); cbn in Hs |- *; clear t.
-    2: rename b1 into Hs.
-    3: rename b into Hs.
+    2: rename b into b0.
+    all: apply lift_typing_f_impl with (1 := b0) => // ?? Hs.
     all: rewrite -app_context_assoc in Hs.
     all: eapply substitution in Hs; eauto.
     all: rewrite subst_context_app app_context_assoc in Hs.
@@ -414,24 +405,13 @@ Section WfEnv.
     induction Δ' in Γ', ctxs |- *; simpl; auto.
     destruct a as [na [b|] ty]; rewrite subst_context_snoc /= /subst_decl /map_decl /=;
       intuition auto.
-    + eapply infer_typing_sort_impl with id a0; intros Hs.
-      destruct a0 as (? & t); cbn in Hs |- *; clear t.
-      rewrite -app_context_assoc in Hs.
-      eapply substitution in Hs; eauto.
-      rewrite subst_context_app app_context_assoc in Hs.
-      simpl in Hs. rewrite Nat.add_0_r in Hs.
-      now rewrite app_context_length in Hs.
-    + rewrite -app_context_assoc in b1.
-      eapply substitution in b1; eauto.
-      rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
-      now rewrite app_context_length in b1.
-    + destruct ctxs => //.
-      intuition auto.
-      rewrite -app_context_assoc in b.
-      eapply substitution in b; eauto.
-      rewrite subst_context_app app_context_assoc in b.
-      rewrite Nat.add_0_r in b.
-      now rewrite app_context_length in b.
+    2: destruct ctxs => //=; destruct X0 as (a & b0); split; eauto.
+    all: apply lift_typing_f_impl with (1 := b0) => // ?? Hs.
+    all: rewrite -app_context_assoc in Hs.
+    all: eapply substitution in Hs; eauto.
+    all: rewrite subst_context_app app_context_assoc in Hs.
+    all: simpl in Hs; rewrite Nat.add_0_r in Hs.
+    all: now rewrite app_context_length in Hs.
   Qed.
 
   Lemma wf_arity_spine_typing_spine {Γ T args T'} :
@@ -455,7 +435,7 @@ Section WfEnv.
 
   Lemma arity_typing_spine {Γ Γ' s inst s'} :
     typing_spine Σ Γ (it_mkProd_or_LetIn Γ' (tSort s)) inst (tSort s') ->
-    [× (#|inst| = context_assumptions Γ'), leq_universe (global_ext_constraints Σ) s s' &
+    [× (#|inst| = context_assumptions Γ'), leq_sort (global_ext_constraints Σ) s s' &
       ∑ instsubst, spine_subst Σ Γ inst instsubst Γ'].
   Proof using wfΣ.
     revert s inst s'.
@@ -507,7 +487,7 @@ Section WfEnv.
           * apply subslet_app; rewrite !subst_empty //.
             eapply subslet_def_tip.
             rewrite app_context_assoc /= in Hsp.
-            apply wf_local_app_l in Hsp. now depelim Hsp.
+            apply wf_local_app_l in Hsp. depelim Hsp. now eapply unlift_TermTyp.
         + rewrite context_assumptions_app /=.
           assert (Hsp' := Hsp).
           rewrite it_mkProd_or_LetIn_app in Hsp'.
@@ -870,8 +850,8 @@ Qed.*)
     now apply subslet_lift.
   Qed.
 
-  Lemma ctx_inst_length {Γ args Δ} :
-    ctx_inst Σ Γ args Δ ->
+  Lemma ctx_inst_length {P Γ args Δ} :
+    PCUICTyping.ctx_inst P Γ args Δ ->
     #|args| = context_assumptions Δ.
   Proof using Type.
     induction 1; simpl; auto.
@@ -1058,8 +1038,8 @@ Qed.*)
   Hint Resolve spine_subst_is_closed_context spine_subst_is_closed_context_codom : fvs.
 
   Lemma arity_spine_it_mkProd_or_LetIn_Sort {Γ ctx s s' args inst} :
-    wf_universe Σ s' ->
-    leq_universe Σ s s' ->
+    wf_sort Σ s' ->
+    leq_sort Σ s s' ->
     spine_subst Σ Γ args inst ctx ->
     arity_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s').
   Proof using wfΣ.
@@ -1184,7 +1164,7 @@ Qed.*)
   Qed.
 
   Lemma ctx_inst_ass {Γ args na t} (c : ctx_inst Σ Γ args [vass na t]) :
-    ∑ i, ((args = [i]) * (lift_typing typing Σ Γ i (Typ t)) * (ctx_inst_sub c = [i]))%type.
+    ∑ i, ((args = [i]) * (typing Σ Γ i t) * (ctx_inst_sub c = [i]))%type.
   Proof using Type.
     depelim c; simpl in *.
     depelim c. exists i; constructor; auto.
@@ -1199,7 +1179,7 @@ Qed.*)
     pose proof (ctx_inst_sub_spec ci) as msub.
     eapply make_context_subst_spec in msub.
     rewrite List.rev_involutive in msub.
-    split; pcuic. now eapply wf_local_app_inv in wfΔ as [].
+    split; pcuic. now eapply All_local_env_app_inv in wfΔ as [].
     move: ci msub.
     induction Δ in wfΔ, args |- *.
     simpl. intros ci. depelim ci. constructor.
@@ -1219,7 +1199,8 @@ Qed.*)
       intros.
       depelim wfΔ.
       specialize (IHΔ _ wfΔ _ subr). constructor; auto.
-      red in l0. eapply (substitution (Δ := [])); eauto.
+      apply unlift_TermTyp in l.
+      eapply (substitution (Δ := [])); eauto.
     - pose proof (ctx_inst_ass c) as [i [[Hargs Hty] Hinst]].
       rewrite Hinst in msub |- *. simpl in *.
       destruct msub as [subl subr].
@@ -1390,11 +1371,11 @@ Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
 Proof.
   intros wfΣ wf.
   assert(forall Γ' t (wf : wf_local Σ Γ'),
-    ((All_local_env_over typing
-      (fun Σ Γ' wfΓ' t T _ =>
+    ((All_local_env_over (typing Σ)
+      (fun Γ' wfΓ' t T _ =>
         forall Γ Δ, Γ' = Γ ,,, Δ ->
         red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)))
-        Σ Γ' wf) *
+        Γ' wf) *
         (match t with
         | Some t => forall Γ Δ, Γ' = Γ ,,, Δ ->
             red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t))
@@ -1427,14 +1408,13 @@ Proof.
     intros Γ0 Δ ->.
     rename Γ0 into Γ.
     specialize (IH cf Σ).
-    assert (All_local_env_over typing
-    (fun (Σ : PCUICEnvironment.global_env_ext)
-       (Γ'0 : PCUICEnvironment.context) (_ : wf_local Σ Γ'0)
+    assert (All_local_env_over (typing Σ)
+    (fun (Γ'0 : PCUICEnvironment.context) (_ : wf_local Σ Γ'0)
        (t T : term) (_ : Σ;;; Γ'0 |- t : T) =>
      forall Γ Δ : context,
      Γ'0 = Γ ,,, Δ ->
      red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)))
-    Σ _ wf).
+    _ wf).
     { specialize (IH wfΣ (Γ ,,, Δ) None).
       forward IH. simpl. right. lia.
       apply (IH wf). }
@@ -1498,19 +1478,19 @@ Proof.
           rewrite !on_free_vars_ctx_app => /andP[] onΓ. erewrite onΓ => /=.
           rewrite -{1}(firstn_skipn (S i) Δ) on_free_vars_ctx_app => /andP[] //.
         }
-        { clear X; eapply (nth_error_All_local_env (n:=i)) in wf. 2:len; lia.
-          rewrite nth_error_app_lt // in wf.
-          rewrite Hnth /= in wf.
+        { clear X; eapply (All_local_env_nth_error (n:=i)) in wf.
+          2: rewrite nth_error_app_lt; eassumption.
           rewrite skipn_app in wf.
           replace (S i - #|Δ|) with 0 in wf. 2:lia.
           rewrite skipn_0 in wf.
-          rewrite /on_local_decl /= in wf.
+          rewrite /= in wf.
           move: wf => [] /subject_closed //.
           rewrite is_open_term_closed //. }
         rewrite skipn_length; simpl.
-        unshelve eapply (nth_error_All_local_env_over (n:=i)) in X.
-        2:{ rewrite nth_error_app_lt //. apply Hnth. }
-        destruct X as [_ [Xb Xt]].
+        apply All_local_env_over_2 in X.
+        eapply (All_local_env_nth_error (n:=i)) in X.
+        2: rewrite nth_error_app_lt; eassumption.
+        destruct X as ((Hb & Xb) & s & (Ht & Xt) & _).
         specialize (Xb Γ (skipn (S i) Δ)).
         forward Xb. rewrite skipn_app. unfold app_context. f_equal.
         assert(S i - #|Δ| = 0) by lia. rewrite H. apply skipn_0.
@@ -1578,6 +1558,8 @@ Proof.
     rewrite Nat.add_shuffle3.
     now rewrite app_context_assoc in b.
 
+  * cbn. destruct p as [? []]; cbn => //=.
+    eapply red_primArray_congr; cbn in *; intuition eauto. solve_all.
 - specialize (X (Γ ,,, Δ)  (Some t) wf). simpl in X.
   apply X. reflexivity.
 Qed.
@@ -1611,7 +1593,7 @@ Section WfEnv.
     now rewrite lift_context_app Nat.add_0_r.
   Qed.
 
-  Lemma spine_subst_to_extended_list_k {Δ Γ} :
+  Lemma spine_subst_to_extended_list_k {Δ Γ : context} :
     wf_local Σ (Γ ,,, Δ) ->
     spine_subst Σ (Γ ,,, Δ) (reln [] 0 Δ) (all_rels Δ 0 #|Δ|)
       (lift_context #|Δ| 0 Δ).
@@ -1659,9 +1641,9 @@ Section WfEnv.
         rewrite -eql in l0. autorewrite with len in l0. simpl in l0. lia.
         eapply (substitution (Δ := []) IHc); auto.
         rewrite lift_context0_app !app_context_assoc in X. cbn in X.
-        eapply wf_local_app_inv in X as [].
+        eapply All_local_env_app_inv in X as [].
         rewrite lift_context_snoc0 Nat.add_0_r /= in a. cbn in a.
-        depelim a. now cbn in l1.
+        depelim a. now apply unlift_TermTyp in l0.
       * rewrite app_length /= Nat.add_1_r in IHc.
         intros Hwf. specialize (IHc Hwf).
         constructor; auto.
@@ -1675,12 +1657,12 @@ Section WfEnv.
         constructor. auto.
         rewrite -eql nth_error_app_lt ?app_length /=; try lia.
         rewrite nth_error_app_ge // ?Nat.sub_diag //.
-        destruct l0.
-        exists x.
-        change (tSort x) with
-          (subst0 (all_rels c (S #|l|) #|Δ|) (lift #|Δ| #|c| (tSort x))).
+        apply lift_sorting_f_it_impl with (f := fun t => _ (_ t)) (tu := l0) => // Hs.
+        set (s := l0.2.π1).
+        change (tSort s) with
+          (subst0 (all_rels c (S #|l|) #|Δ|) (lift #|Δ| #|c| (tSort s))).
         { eapply (substitution (Γ' := lift_context #|Δ| 0 c) (Δ := [])); cbn; auto.
-          change (tSort x) with (lift #|Δ| #|c| (tSort x)).
+          change (tSort s) with (lift #|Δ| #|c| (tSort s)).
           eapply (weakening_typing); eauto. }
         eapply ws_cumul_pb_eq_le. simpl.
         rewrite -{1}eql. simpl.
@@ -1699,7 +1681,7 @@ Section WfEnv.
         forward X by auto.
         apply X; auto. all:eauto with fvs.
         rewrite -app_tip_assoc app_assoc -[(l ++ _) ++ _]app_assoc eql.
-        eapply wf_local_app_inv in Hwf as []. eauto with fvs.
+        eapply All_local_env_app_inv in Hwf as []. eauto with fvs.
   Qed.
 
   Lemma red_expand_let {Γ na b ty t} :
@@ -1720,57 +1702,57 @@ Section WfEnv.
     ∑ Δs ts,
       [× sorts_local_ctx (lift_typing typing) Σ Γ Δ Δs,
           Σ ;;; Γ ,,, Δ |- t : tSort ts,
-          wf_universe Σ s &
-          leq_universe Σ (sort_of_products Δs ts) s].
+          wf_sort Σ s &
+          leq_sort Σ (sort_of_products Δs ts) s].
   Proof using wfΣ.
     intros h. revert Γ t s h.
     induction Δ; intros.
-    - exists [], s; splits. apply h. eauto with pcuic. apply leq_universe_refl.
+    - exists [], s; splits. apply h. eauto with pcuic. apply leq_sort_refl.
     - destruct a as [na [b|] ty]; simpl in *;
       rewrite /mkProd_or_LetIn /= in h.
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
         exists Δs, ts.
-        pose proof (PCUICWfUniverses.typing_wf_universe _ IHΔ) as wfts.
-        eapply inversion_LetIn in IHΔ as [s' [? [? [? [? e]]]]]; auto.
-        splits; eauto. now eexists.
-        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply t2. apply isType_Sort; pcuic.
-        eapply ws_cumul_pb_LetIn_l_inv in e; auto.
-        eapply ws_cumul_pb_Sort_r_inv in e as [u' [redu' cumu']].
+        pose proof (PCUICWfUniverses.typing_wf_sort _ IHΔ) as wfts.
+        eapply inversion_LetIn in IHΔ as (T & wfty & HT & hlt); auto.
+        split; eauto.
+        eapply (type_ws_cumul_pb (pb:=Cumul)). eapply HT. apply isType_Sort; pcuic.
+        eapply ws_cumul_pb_LetIn_l_inv in hlt; auto.
+        eapply ws_cumul_pb_Sort_r_inv in hlt as [u' [redu' cumu']].
         transitivity (tSort u').
         2:{ eapply ws_cumul_pb_compare; eauto with fvs.
-            eapply typing_wf_local in t2. eauto with fvs.
+            eapply typing_wf_local in HT. eauto with fvs.
             econstructor. eauto with fvs. }
         eapply ws_cumul_pb_red.
         exists (tSort u'), (tSort u'). split; auto.
         3:now constructor.
-        transitivity (lift0 1 (x {0 := b})).
+        transitivity (lift0 1 (T {0 := b})).
         eapply red_expand_let. pcuic.
-        eapply type_closed in t2.
+        eapply type_closed in HT.
         rewrite -is_open_term_closed //.
         change (tSort u') with (lift0 1 (tSort u')).
         eapply (weakening_closed_red (Γ := Γ ,,, Δ) (Γ' := []) (Γ'' := [_])); auto with fvs.
-        apply typing_wf_local in t2. eauto with fvs.
-        eapply closed_red_refl; eauto with fvs.
+        apply typing_wf_local in HT. eauto with fvs.
+        eapply closed_red_refl; eapply typing_wf_local in HT; eauto with fvs.
 
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
-        eapply inversion_Prod in IHΔ as [? [? [? [? e]]]]; tea.
-        exists (x :: Δs), x0. splits; tea.
-        eapply ws_cumul_pb_Sort_inv in e.
-        transitivity (sort_of_products Δs ts); auto using leq_universe_product.
-        simpl. eapply leq_universe_sort_of_products_mon.
+        eapply inversion_Prod in IHΔ as (s1 & s2 & wfty & Ht & hlt); tea.
+        exists (s1 :: Δs), s2. split; tea. split; tas.
+        eapply ws_cumul_pb_Sort_inv in hlt.
+        transitivity (sort_of_products Δs ts); auto using leq_sort_product.
+        simpl. eapply leq_sort_sort_of_products_mon.
         eapply Forall2_same. reflexivity.
-        exact: e.
+        exact: hlt.
   Qed.
 
-  Lemma leq_universe_sort_of_products {u v} :
-    leq_universe Σ v (sort_of_products u v).
+  Lemma leq_sort_sort_of_products {u v} :
+    leq_sort Σ v (sort_of_products u v).
   Proof using Type.
     induction u; simpl; auto.
     - reflexivity.
     - etransitivity; tea.
-      eapply leq_universe_sort_of_products_mon => //.
+      eapply leq_sort_sort_of_products_mon => //.
       eapply Forall2_same. reflexivity.
-      eapply leq_universe_product.
+      eapply leq_sort_product.
   Qed.
 
   Lemma inversion_it_mkProd_or_LetIn {Γ Δ t s} :
@@ -1780,8 +1762,8 @@ Section WfEnv.
     move/type_it_mkProd_or_LetIn_inv => [Δs [ts [hΔ ht hs leq]]].
     eapply type_Cumul; tea. eapply type_Sort; pcuic.
     eapply cumul_Sort.
-    transitivity (sort_of_products Δs ts); auto using leq_universe_product.
-    apply leq_universe_sort_of_products.
+    transitivity (sort_of_products Δs ts); auto using leq_sort_product.
+    apply leq_sort_sort_of_products.
   Qed.
 
   Lemma isType_it_mkProd_or_LetIn_app {Γ Δ Δ' args T s} :
@@ -1953,7 +1935,7 @@ Section WfEnv.
   Proof using wfΣ.
     intros ha hm.
     eapply (PCUICConversion.substitution_ws_cumul_pb (Γ' := [vdef na a ty]) (s := [a]) (Γ'':=[])); eauto with pcuic.
-    eapply subslet_def_tip. now depelim ha.
+    eapply subslet_def_tip. depelim ha. now apply unlift_TermTyp in l.
   Qed.
 
   Lemma subst0_it_mkProd_or_LetIn s Γ T : subst s 0 (it_mkProd_or_LetIn Γ T) =
@@ -2001,7 +1983,7 @@ Section WfEnv.
           repeat constructor. rewrite !subst_empty.
           eapply All_local_env_app_inv in wfΓΔ as [_ wf].
           eapply All_local_env_app_inv in wf as [wfd _].
-          depelim wfd. apply l0.
+          depelim wfd. now eapply unlift_TermTyp.
         * rewrite subst_app_simpl.
           move: (context_subst_length sps).
           now  autorewrite with len => <-.
@@ -2038,9 +2020,9 @@ Section WfEnv.
           now autorewrite with len => <-.
   Qed.
 
-  Arguments ctx_inst_nil {typing} {Σ} {Γ}.
-  Arguments PCUICTyping.ctx_inst_ass {typing} {Σ} {Γ} {na t i inst Δ}.
-  Arguments PCUICTyping.ctx_inst_def {typing} {Σ} {Γ} {na b t inst Δ}.
+  Arguments ctx_inst_nil {typing} {Γ}.
+  Arguments PCUICTyping.ctx_inst_ass {typing} {Γ} {na t i inst Δ}.
+  Arguments PCUICTyping.ctx_inst_def {typing} {Γ} {na b t inst Δ}.
 
   Lemma spine_subst_ctx_inst_sub {Γ args argsub Δ} (sp : spine_subst Σ Γ args argsub Δ) :
     ctx_inst_sub (spine_subst_ctx_inst sp) = argsub.
@@ -2164,7 +2146,7 @@ Section WfEnv.
       simpl. rewrite smash_context_acc. simpl. auto.
       auto. }
     split; auto.
-    - eapply All_local_env_app; split; auto.
+    - eapply All_local_env_app; auto.
       eapply wf_local_rel_smash_context; auto.
     - induction inst_subslet0 in inst, inst_ctx_subst0, spine_codom_wf0 |- *.
       depelim inst_ctx_subst0.
@@ -2423,8 +2405,8 @@ Section WfEnv.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as [s Hs].
-    eapply type_App; eauto. eapply i0.π2.
+    destruct i as (_ & s & Hs & _).
+    eapply type_App; eauto. eapply i0.2.π2.1.
     eapply type_ws_cumul_pb; eauto.
   Qed.
 
@@ -2701,7 +2683,7 @@ Section WfEnv.
     rewrite app_context_assoc in cum.
     eapply substitution_ws_cumul_pb in cum; tea.
     len in cum; tea.
-    destruct (wf_local_app_inv wf).
+    destruct (All_local_env_app_inv wf).
     simpl.
     len.
     now eapply PCUICContexts.subslet_extended_subst.
@@ -2717,7 +2699,7 @@ Section WfEnv.
     eapply (weakening_ws_cumul_pb (Γ'' := smash_context [] Δ)) in cum; tea.
     rewrite /expand_lets /expand_lets_k.
     eapply (PCUICConversion.substitution_ws_cumul_pb (Γ'' := [])) in cum; tea. len in cum; tea.
-    destruct (wf_local_app_inv wf).
+    destruct (All_local_env_app_inv wf).
     simpl.
     len.
     now eapply PCUICContexts.subslet_extended_subst.
@@ -2832,7 +2814,7 @@ Section WfEnv.
           rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
           relativize #|Γ0|.
           eapply is_open_term_lift.
-          destruct l0 as [s Hs]. eapply subject_closed in Hs.
+          destruct l0 as (_ & s & Hs & _). eapply subject_closed in Hs.
           rewrite is_open_term_closed in Hs. move: Hs.
           now rewrite !app_length -(All2_fold_length cum). reflexivity.
       * split; auto.
@@ -2864,8 +2846,8 @@ Section WfEnv.
         rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
         relativize #|Γ0|.
         eapply is_open_term_lift.
-        eapply subject_closed in l2.
-        rewrite is_open_term_closed in l2. move: l2.
+        eapply unlift_TermTyp, subject_closed in l0.
+        rewrite is_open_term_closed in l0. move: l0.
         now rewrite !app_length -(All2_fold_length cum). reflexivity.
   Qed.
 
@@ -2960,7 +2942,7 @@ Section WfEnv.
         rewrite skipn_all_app_eq // in H. noconf H.
         intros HΔ; depelim HΔ.
         intros HΔ'; depelim HΔ'.
-        destruct l0 as [s Hs]. simpl.
+        destruct l0 as (_ & s & Hs & _). simpl.
         rewrite (ctx_inst_sub_subst dom) in t1.
         rewrite firstn_app_left // in dom.
         specialize (IHa _ dom HΔ HΔ').
@@ -2979,10 +2961,10 @@ Section WfEnv.
         eapply type_ws_cumul_pb; tea.
         + eapply typing_expand_lets in Hs.
           eapply (substitution (s := List.rev i) (Δ := [])) in Hs; tea.
-          simpl in Hs. now exists s; rewrite subst_context_nil /= in Hs.
+          simpl in Hs. eapply has_sort_isType. now rewrite subst_context_nil /= in Hs.
           exact X.
         + unshelve epose proof (ctx_inst_spine_subst _ dom); tea.
-          eapply wf_local_app; tea. now eapply typing_wf_local.
+          eapply All_local_env_app; tea. now eapply typing_wf_local.
           pose proof (spine_codom_wf _ _ _ _ _ X0).
           eapply spine_subst_smash in X0; tea.
           eapply (PCUICConversion.substitution_ws_cumul_pb (Γ := Γ) (Γ'' := []) X0).
@@ -2999,10 +2981,11 @@ Section WfEnv.
       rewrite H0 in H, dom. rewrite firstn_all in dom.
       intros HΔ; depelim HΔ.
       intros HΔ'; depelim HΔ'.
-      destruct l as [s Hs]. simpl in *.
+      destruct l as (Hb & s & Hs & _). simpl in *.
+      destruct l0 as (Hb' & s' & Hs' & _). simpl in *.
       specialize (IHa _ dom).
-      forward IHa. apply wf_local_app_inv; pcuic.
-      forward IHa. apply wf_local_app_inv; pcuic.
+      forward IHa. apply All_local_env_app_inv; pcuic.
+      forward IHa. apply All_local_env_app_inv; pcuic.
       rewrite -(app_nil_r i).
       eapply (ctx_inst_app IHa).
       rewrite (ctx_inst_sub_subst IHa) /=.
@@ -3086,8 +3069,8 @@ Section WfEnv.
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
-      (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+      (fun (Γ : context) (t T : term) =>
+      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Γ inst Δ ->
     ctx_inst Σ Γ inst Δ ->
     OnOne2 (P Σ Γ) inst inst' ->
     ctx_inst Σ Γ inst' Δ.
@@ -3106,9 +3089,9 @@ Section WfEnv.
       eapply (HP _ _ _ [i] [hd']); tea.
       repeat constructor. now rewrite subst_empty. repeat constructor.
       now rewrite subst_empty. constructor. auto.
-      eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
       repeat (constructor; tea). rewrite subst_empty; tea.
-      eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
       repeat (constructor; tea). rewrite subst_empty; tea. now eapply t0.
       constructor; auto. eapply IHc.
       rewrite -subst_context_subst_telescope.
@@ -3121,7 +3104,7 @@ Section WfEnv.
       rewrite -subst_context_subst_telescope.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
-      eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
+      eapply All_local_env_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
   Qed.
 
   Lemma All2_ctx_inst {pb} {P} {Γ inst inst' Δ} :
@@ -3133,8 +3116,8 @@ Section WfEnv.
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
-      (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+      (fun (Γ : context) (t T : term) =>
+      forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Γ inst Δ ->
     ctx_inst Σ Γ inst Δ ->
     All2 (P Σ Γ) inst inst' ->
     ctx_inst Σ Γ inst' Δ.
@@ -3157,16 +3140,16 @@ Section WfEnv.
       repeat constructor. now rewrite subst_empty.
       now apply subslet_ass_tip.
       now repeat constructor.
-      * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      * eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
         now apply subslet_ass_tip.
-      * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      * eapply All_local_env_app_inv. eapply substitution_wf_local; tea.
         now apply subslet_ass_tip.
     - constructor. eapply IHc; eauto.
       simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
       rewrite -subst_context_subst_telescope.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
-      eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
+      eapply All_local_env_app_inv in wf as [wf _]. depelim wf. now eapply unlift_TermTyp.
   Qed.
 
   Lemma ctx_inst_open_terms Γ args Δ :
@@ -3186,8 +3169,8 @@ Section WfEnv.
   Lemma ctx_inst_eq_context {Γ Δ : context} {args args'} :
     wf_local Σ (Γ ,,, List.rev Δ) ->
     PCUICTyping.ctx_inst
-          (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
-          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->
+          (fun (Γ : context) (u A : term) =>
+          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Γ args Δ ->
     ctx_inst Σ Γ args Δ ->
     All2 upto_names' args args' ->
     ctx_inst Σ Γ args' Δ.
@@ -3200,7 +3183,7 @@ Section WfEnv.
     now eapply subslet_untyped_subslet.
     now eapply subslet_untyped_subslet.
     eapply All2_rev.
-    move/wf_local_app_inv: X => [] /wf_local_app_inv[] /wf_local_closed_context clΓ0 _ _.
+    move/All_local_env_app_inv: X => [] /All_local_env_app_inv[] /wf_local_closed_context clΓ0 _ _.
     eapply subslet_open_terms, All_rev_inv in X0.
     eapply subslet_open_terms, All_rev_inv in X1.
     solve_all. eapply into_ws_cumul_pb; tea.
@@ -3237,9 +3220,8 @@ Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
   isType Σ (skipn (S n) Γ) d.(decl_type).
 Proof.
   intros Hwf hnth.
-  epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
-  rewrite hnth /= in X. unfold on_local_decl in X.
-  destruct decl_body => //. destruct X => //.
+  eapply All_local_env_nth_error in Hwf; tea.
+  eapply lift_sorting_it_impl_gen with Hwf => //.
 Qed.
 
 

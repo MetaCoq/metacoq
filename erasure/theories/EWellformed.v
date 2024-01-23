@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import config Kernames.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
+From MetaCoq.Common Require Import config Kernames Primitive.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
 From MetaCoq.PCUIC Require Import PCUICTactics.
 
 Local Open Scope string_scope.
@@ -20,6 +20,18 @@ Definition isSome {A} (o : option A) :=
   | Some _ => true
   end.
 
+Class EPrimitiveFlags :=
+  { has_primint : bool;
+    has_primfloat : bool;
+    has_primarray : bool }.
+
+Definition has_prim {epfl : EPrimitiveFlags} (p : prim_val term) :=
+  match p.π1 with
+  | primInt => has_primint
+  | primFloat => has_primfloat
+  | primArray => has_primarray
+  end.
+
 Class ETermFlags :=
   { has_tBox : bool
   ; has_tRel : bool
@@ -34,17 +46,24 @@ Class ETermFlags :=
   ; has_tProj : bool
   ; has_tFix : bool
   ; has_tCoFix : bool
-  ; has_tPrim : bool
+  ; has_tPrim :: EPrimitiveFlags
   }.
 
-Set Warnings "-future-coercion-class-field".
 Class EEnvFlags := {
   has_axioms : bool;
   has_cstr_params : bool;
-  term_switches :> ETermFlags ;
+  term_switches :: ETermFlags ;
   cstr_as_blocks : bool ;
   }.
-Set Warnings "+future-coercion-class-field".
+
+Definition all_primitive_flags :=
+  {| has_primint := true;
+     has_primfloat := true;
+     has_primarray := true |}.
+
+Lemma has_prim_all_primitive_flags p : @has_prim all_primitive_flags p.
+Proof. destruct p as [? []]; auto. Qed.
+#[global] Hint Resolve has_prim_all_primitive_flags : core.
 
 Definition all_term_flags :=
   {| has_tBox := true
@@ -60,7 +79,7 @@ Definition all_term_flags :=
     ; has_tProj := true
     ; has_tFix := true
     ; has_tCoFix := true
-    ; has_tPrim := true
+    ; has_tPrim := all_primitive_flags
   |}.
 
 Definition all_env_flags :=
@@ -119,10 +138,16 @@ Section wf.
         | _ => true end
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
-    | tPrim _ => has_tPrim
+    | tPrim p => has_prim p && test_prim (wellformed k) p
     end.
 
 End wf.
+
+Lemma has_prim_map_prim {efl : EEnvFlags} f p : has_prim (map_prim f p) = has_prim p.
+Proof.
+  destruct p as [? []]; cbn; auto.
+Qed.
+#[global] Hint Rewrite @has_prim_map_prim : map.
 
 Notation wf_fix Σ := (wf_fix_gen (wellformed Σ)).
 
@@ -221,11 +246,6 @@ Section EEnvFlags.
       apply Nat.ltb_lt in H1. lia.
     - destruct cstr_as_blocks; eauto. destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
       destruct args; firstorder.
-    - solve_all. rewrite Nat.add_assoc. eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
-    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
-      rewrite Nat.add_assoc; eauto.
   Qed.
 
   Lemma wellformed_subst_eq {s k k' t} :
@@ -265,10 +285,8 @@ Section EEnvFlags.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
     - destruct (dbody x) => //.
-    - intros. now len.
     - specialize (a (#|m| + k')).
       len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b0 |- *.
-    - intros. now len.
     - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
   Qed.

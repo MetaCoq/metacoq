@@ -235,6 +235,9 @@ Proof with eauto using expanded.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
+  - repeat constructor.
+  - repeat constructor.
+  - wf_inv wf [[] ?]. repeat cbn; constructor. constructor; cbn; eauto. solve_all.
 Qed.
 
 
@@ -256,9 +259,6 @@ Proof.
   destruct wf. split => //. now depelim o0.
   eapply typing_wf_wf in wf. depelim wf.
   cbn in o0. depelim o0. cbn. destruct o1. split => //.
-  eapply TypingWf.on_global_decl_impl; tea. cbn.
-  intros. destruct T => //. red. red in X0. destruct X0. intuition auto.
-  cbn. split => //.
 Qed.
 
 Lemma trans_global_env_cons univs retro (Σ : Ast.Env.global_declarations) decl :
@@ -308,9 +308,9 @@ Lemma wf_context_sorts {cf} {Σ ctx ctx' cunivs} {wfΣ : Typing.wf_ext Σ} :
 Proof.
   induction ctx' in cunivs |- *; cbn; auto.
   destruct a as [na [b|] ty].
-  intros [? []]. constructor; auto. eauto.
+  intros [? ?]. constructor; auto. eauto.
   destruct cunivs => //.
-  intros [? []]. constructor; eauto. constructor; cbn; eauto.
+  intros [? ?]. constructor; auto. eauto.
 Qed.
 
 Lemma expanded_trans_global_env {cf} Σ {wfΣ : Typing.wf_ext Σ} :

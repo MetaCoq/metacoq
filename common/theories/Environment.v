@@ -9,7 +9,7 @@ Module Type Term.
   Parameter Inline term : Type.
 
   Parameter Inline tRel : nat -> term.
-  Parameter Inline tSort : Universe.t -> term.
+  Parameter Inline tSort : Sort.t -> term.
   Parameter Inline tProd : aname -> term -> term -> term.
   Parameter Inline tLambda : aname -> term -> term -> term.
   Parameter Inline tLetIn : aname -> term -> term -> term -> term.
@@ -40,51 +40,58 @@ Module Retroknowledge.
   Record t := mk_retroknowledge {
     retro_int63 : option kername;
     retro_float64 : option kername;
+    retro_array : option kername;
   }.
 
-  Definition empty := {| retro_int63 := None; retro_float64 := None |}.
+  Definition empty := {| retro_int63 := None; retro_float64 := None; retro_array := None |}.
 
   Definition extends (x y : t) :=
     option_extends x.(retro_int63) y.(retro_int63) /\
-    option_extends x.(retro_float64) y.(retro_float64).
+    option_extends x.(retro_float64) y.(retro_float64) /\
+    option_extends x.(retro_array) y.(retro_array).
   Existing Class extends.
 
   Definition extendsb (x y : t) :=
     option_extendsb x.(retro_int63) y.(retro_int63) &&
-    option_extendsb x.(retro_float64) y.(retro_float64).
+    option_extendsb x.(retro_float64) y.(retro_float64) &&
+    option_extendsb x.(retro_array) y.(retro_array).
 
   Lemma extendsT x y : reflect (extends x y) (extendsb x y).
   Proof.
-    rewrite /extends/extendsb; do 2 case: option_extendsT; cbn; constructor; intuition.
+    rewrite /extends/extendsb; do 3 case: option_extendsT; cbn; constructor; intuition.
   Qed.
 
   Lemma extends_spec x y : extendsb x y <-> extends x y.
   Proof.
     rewrite /extends/extendsb -!option_extends_spec /is_true !Bool.andb_true_iff //=.
+    intuition auto.
   Qed.
 
   #[global] Instance extends_refl x : extends x x.
   Proof.
-    split; apply option_extends_refl.
+    repeat split; apply option_extends_refl.
   Qed.
 
   #[global] Instance extends_trans : RelationClasses.Transitive Retroknowledge.extends.
   Proof.
-    intros x y z [] []; split; cbn; now etransitivity; tea.
+    intros x y z [? []] [? []]; repeat split; cbn; now etransitivity; tea.
   Qed.
 
   #[export,program] Instance reflect_t : ReflectEq t := {
       eqb x y := (x.(retro_int63) == y.(retro_int63)) &&
-                   (x.(retro_float64) == y.(retro_float64))
+                 (x.(retro_float64) == y.(retro_float64)) &&
+                 (x.(retro_array) == y.(retro_array))
     }.
   Next Obligation.
-    do 2 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
+    do 3 case: eqb_spec; destruct x, y; cbn; intros; subst; constructor; congruence.
   Qed.
 
   (** This operation is asymmetric; it perfers the first argument when the arguments are incompatible, but otherwise takes the join *)
   Definition merge (r1 r2 : t) : t
     := {| retro_int63 := match r1.(retro_int63) with Some v => Some v | None => r2.(retro_int63) end
-       ; retro_float64 := match r1.(retro_float64) with Some v => Some v | None => r2.(retro_float64) end |}.
+       ; retro_float64 := match r1.(retro_float64) with Some v => Some v | None => r2.(retro_float64) end
+       ; retro_array := match r1.(retro_array) with Some v => Some v | None => r2.(retro_array) end
+        |}.
 
   Lemma extends_l_merge r1 r2
     : extends r1 (merge r1 r2).
@@ -102,7 +109,8 @@ Module Retroknowledge.
 
   Definition compatible (x y : t) : bool
     := match x.(retro_int63), y.(retro_int63) with Some x, Some y => x == y | _, _ => true end
-       && match x.(retro_float64), y.(retro_float64) with Some x, Some y => x == y | _, _ => true end.
+       && match x.(retro_float64), y.(retro_float64) with Some x, Some y => x == y | _, _ => true end
+       && match x.(retro_array), y.(retro_array) with Some x, Some y => x == y | _, _ => true end.
 
   Lemma extends_r_merge r1 r2
     : compatible r1 r2 -> extends r2 (merge r1 r2).
@@ -121,7 +129,7 @@ Module Environment (T : Term).
   Import T.
   #[global] Existing Instance subst_instance_constr.
 
-  Definition typ_or_sort := typ_or_sort_ term.
+  Definition judgment := judgment_ Sort.t term.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -336,7 +344,7 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     ind_name : ident;
     ind_indices : context; (* Indices of the inductive types, under params *)
-    ind_sort : Universe.t; (* Sort of the inductive. *)
+    ind_sort : Sort.t; (* Sort of the inductive. *)
     ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
     ind_ctors : list constructor_body;
@@ -836,12 +844,25 @@ Module Environment (T : Term).
     match p with
     | primInt => Σ.(retroknowledge).(Retroknowledge.retro_int63)
     | primFloat => Σ.(retroknowledge).(Retroknowledge.retro_float64)
+    | primArray => Σ.(retroknowledge).(Retroknowledge.retro_array)
     end.
 
-  Definition primitive_invariants (cdecl : constant_body) :=
-    ∑ s, [/\ cdecl.(cst_type) = tSort s, cdecl.(cst_body) = None &
-             cdecl.(cst_universes) = Monomorphic_ctx].
+  Definition tImpl (dom codom : term) : term :=
+    tProd {| binder_name := nAnon; binder_relevance := Relevant |}
+      dom (lift 1 0 codom).
 
+  Definition array_uctx := ([nAnon], ConstraintSet.empty).
+
+  Definition primitive_invariants (p : prim_tag) (cdecl : constant_body) :=
+    match p with
+    | primInt | primFloat =>
+     [/\ cdecl.(cst_type) = tSort Sort.type0, cdecl.(cst_body) = None &
+          cdecl.(cst_universes) = Monomorphic_ctx]
+    | primArray =>
+      let s := sType (Universe.make' (Level.lvar 0)) in
+      [/\ cdecl.(cst_type) = tImpl (tSort s) (tSort s), cdecl.(cst_body) = None &
+        cdecl.(cst_universes) = Polymorphic_ctx array_uctx]
+    end.
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
@@ -860,12 +881,6 @@ Module Environment (T : Term).
     A set of declarations and a term, as produced by [MetaCoq Quote Recursively]. *)
 
   Definition program : Type := global_env * term.
-
-  (* TODO MOVE AstUtils factorisation *)
-
-  Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-  Notation "Γ ,,, Γ'" :=
-    (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
@@ -986,30 +1001,6 @@ Module Environment (T : Term).
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
   #[global] Hint Rewrite arities_context_length : len.
-
-  Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
-  Proof.
-    unfold app_context. rewrite app_nil_r. reflexivity.
-  Qed.
-
-  Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
-  Proof. unfold app_context; now rewrite app_assoc. Qed.
-
-  Lemma app_context_cons Γ Γ' A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A.
-  Proof. exact (app_context_assoc _ _ [A]). Qed.
-
-  Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
-  Proof. unfold app_context. now rewrite app_length. Qed.
-  #[global] Hint Rewrite app_context_length : len.
-
-  Lemma nth_error_app_context_ge v Γ Γ' :
-    #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
-  Proof. apply nth_error_app_ge. Qed.
-
-  Lemma nth_error_app_context_lt v Γ Γ' :
-    v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
-  Proof. apply nth_error_app_lt. Qed.
-
 
   Definition map_mutual_inductive_body f m :=
     match m with
@@ -1248,7 +1239,7 @@ End EnvironmentDecideReflectInstances.
 Module Type TermUtils (T: Term) (E: EnvironmentSig T).
   Import T E.
 
-  Parameter Inline destArity : context -> term -> option (context × Universe.t).
+  Parameter Inline destArity : context -> term -> option (context × Sort.t).
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
 
 End TermUtils.

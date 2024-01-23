@@ -23,13 +23,13 @@ Module Type QuoteEnvironmentSig (T : Term) (Import E : EnvironmentSig T).
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   : quotation.
   #[export] Typeclasses Transparent
     context
     global_declarations
     global_env_ext
-    typ_or_sort
+    judgment
   .
 
   #[export] Declare Instance quote_constructor_body : ground_quotable constructor_body.
@@ -43,7 +43,7 @@ Module Type QuoteEnvironmentSig (T : Term) (Import E : EnvironmentSig T).
 
   #[export] Declare Instance quote_extends {Σ Σ'} : ground_quotable (@extends Σ Σ').
   #[export] Declare Instance quote_extends_decls {Σ Σ'} : ground_quotable (@extends_decls Σ Σ').
-  #[export] Declare Instance quote_primitive_invariants {cdecl} : ground_quotable (primitive_invariants cdecl).
+  #[export] Declare Instance quote_primitive_invariants {cdecl ty} : ground_quotable (primitive_invariants cdecl ty).
 
   #[export] Declare Instance quote_All_decls {P t t'} {qP : quotation_of P} {quoteP : forall t t', ground_quotable (P t t')} : ground_quotable (All_decls P t t').
   #[export] Declare Instance quote_All_decls_alpha {P t t'} {qP : quotation_of P} {quoteP : forall t t', ground_quotable (P t t')} : ground_quotable (All_decls_alpha P t t').

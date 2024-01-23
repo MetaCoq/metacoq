@@ -1308,7 +1308,7 @@ Corollary R_Acc_aux :
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.
@@ -1319,8 +1319,8 @@ Corollary R_Acc_aux :
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
-    - eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? [? []]]); tea.
-      now eapply invert_cumul_axiom_ind in w; tea.
+    - eapply inversion_Prim in typ as (prim_ty & cdecl & [? ? ? ?]); tea.
+      now eapply (invert_cumul_prim_type_ind) in w; tea.
   Qed.
 
   Definition isCoFix_app t :=
@@ -1344,7 +1344,7 @@ Corollary R_Acc_aux :
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
-    - apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    - apply inversion_Lambda in typ as (?&?&?&?); auto.
       exfalso; eapply invert_cumul_prod_ind; eauto.
     - unfold isConstruct_app in ctor.
       now rewrite decompose_app_mkApps in ctor.
@@ -1353,8 +1353,8 @@ Corollary R_Acc_aux :
       unfold unfold_fix. destruct o as [[? [-> ?]] | ->]; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
-    - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? [? []]]]]; tea.
-      now eapply invert_cumul_axiom_ind in w; tea.
+    - eapply inversion_Prim in typ as [prim_ty [cdecl [? ? ? ?]]]; tea.
+      now eapply invert_cumul_prim_type_ind in w; tea.
   Qed.
 
   Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
@@ -1532,8 +1532,8 @@ Corollary R_Acc_aux :
             simpl in h. rewrite stack_context_appstack in h.
             destruct h as [T h].
             apply inversion_App in h as (?&?&?&?&?); auto.
-            apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? [s []]]); auto.
-            eapply PCUICClassification.invert_cumul_axiom_prod; eauto.
+            apply inversion_Prim in t0 as (prim_ty & cdecl & [? ? ? ?]); auto.
+            eapply PCUICConversion.invert_cumul_prim_type_prod; eauto.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -2025,7 +2025,7 @@ Section ReduceFns.
   (* Definition of assumption-only arities (without lets) *)
   Definition arity_ass := aname * term.
 
-  Fixpoint mkAssumArity (l : list arity_ass) (s : Universe.t) : term :=
+  Fixpoint mkAssumArity (l : list arity_ass) (s : sort) : term :=
     match l with
     | [] => tSort s
     | (na, A) :: l => tProd na A (mkAssumArity l s)
@@ -2046,7 +2046,7 @@ Section ReduceFns.
       constructor; auto.
   Qed.
 
-  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : Universe.t) :
+  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : sort) :
     mkAssumArity l s = it_mkProd_or_LetIn (arity_ass_context l) (tSort s).
   Proof using Type.
     unfold arity_ass_context.
@@ -2066,7 +2066,7 @@ Section ReduceFns.
   Record conv_arity {Γ T} : Type :=
     build_conv_arity {
         conv_ar_context : list arity_ass;
-        conv_ar_univ : Universe.t;
+        conv_ar_univ : sort;
         conv_ar_red : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
       }.
 

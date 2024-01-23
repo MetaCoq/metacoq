@@ -17,7 +17,7 @@ struct
   type quoted_name = name
   type quoted_aname = name binder_annot
   type quoted_relevance = relevance
-  type quoted_sort = Universes0.Universe.t
+  type quoted_sort = Universes0.Sort.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = kername
   type quoted_inductive = inductive
@@ -28,6 +28,7 @@ struct
   type quoted_constraint_type = Universes0.ConstraintType.t
   type quoted_univ_constraint = Universes0.UnivConstraint.t
   type quoted_univ_constraints = Universes0.ConstraintSet.t
+  type quoted_univ_level = Universes0.Level.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
   type quoted_univ_contextset = Universes0.ContextSet.t
@@ -105,7 +106,7 @@ struct
       aci_relevance = x.ci_relevance }
 
   let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term =
     match tt with
     | Coq_tRel n -> ACoq_tRel n
@@ -127,6 +128,7 @@ struct
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
     | Coq_tInt i -> ACoq_tInt i
     | Coq_tFloat f -> ACoq_tFloat f
+    | Coq_tArray (u, arr, def, ty) -> ACoq_tArray (u, Array.of_list arr, def, ty)
 
   let unquote_string = Caml_bytestring.caml_string_of_bytestring
 
@@ -209,20 +211,22 @@ struct
   let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
-    let n = unquote_int (snd trm) in
-    if n > 0 then Univ.Universe.super u else u
+    Caml_nat.iter_nat Univ.Universe.super u (snd trm)
 
-  let unquote_universe evd (trm : Universes0.Universe.t) =
+  let unquote_universe (trm : Universes0.Universe.t) =
+    let u = Universes0.t_set trm in
+    let ux_list = Universes0.LevelExprSet.elements u in
+    let l = List.map unquote_level_expr ux_list in
+    let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
+    u
+
+  let unquote_sort evd trm =
     match trm with
-    | Universes0.Universe.Coq_lSProp -> evd, Sorts.sprop
-    | Universes0.Universe.Coq_lProp -> evd, Sorts.prop
-    | Universes0.Universe.Coq_lType u ->
-       let u = Universes0.t_set u in
-       let ux_list = Universes0.LevelExprSet.elements u in
-       let l = List.map unquote_level_expr ux_list in
-       let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
-       evd, Sorts.sort_of_univ u
+    | Universes0.Sort.Coq_sSProp -> evd, Sorts.sprop
+    | Universes0.Sort.Coq_sProp -> evd, Sorts.prop
+    | Universes0.Sort.Coq_sType u -> evd, Sorts.sort_of_univ (unquote_universe u)
 
+  let unquote_universe_level evm l = evm, unquote_level l
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))
 

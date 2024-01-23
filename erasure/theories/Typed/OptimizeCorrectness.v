@@ -7,15 +7,15 @@ From MetaCoq.Erasure.Typed Require Import WcbvEvalAux.
 From Coq Require Import Btauto.
 From Coq Require Import btauto.Algebra.
 From Coq Require Import List.
-From Coq Require Import ssrbool.
+From Coq Require Import ssreflect ssrbool.
 From Coq Require Import PeanoNat.
 From Equations Require Import Equations.
-From MetaCoq.Erasure Require Import EAstUtils.
+From MetaCoq.Erasure Require Import EPrimitive EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.
 From MetaCoq.Erasure Require Import EInduction.
 From MetaCoq.Erasure Require Import ELiftSubst.
 From MetaCoq.Erasure Require Import EWcbvEval.
-From MetaCoq.Erasure Require Import EGlobalEnv.
+From MetaCoq.Erasure Require Import EGlobalEnv EWellformed.
 From MetaCoq.Utils Require Import MCList.
 From MetaCoq.Utils Require Import MCPrelude.
 From MetaCoq.Utils Require Import utils.
@@ -24,6 +24,11 @@ From MetaCoq.Utils Require Import All_Forall.
 Import ExAst.
 Import Kernames.
 Import ListNotations.
+
+Unset SsrRewrite.
+
+Local Set Firstorder Solver auto.
+Ltac Tauto.intuition_solver ::= auto with *.
 
 Lemma lookup_env_trans_env Σ kn :
   EGlobalEnv.lookup_env (trans_env Σ) kn =
@@ -109,6 +114,69 @@ Ltac refold :=
     | [H : context[filter _ ?Γ] |- _] => progress (fold (vasses Γ) in * )
     | [ |- context[filter _ ?Γ]] => progress (fold (vasses Γ) in * )
     end.
+
+(*
+From Equations Require Import Equations.
+Import EEtaExpandedFix EOptimizePropDiscr ESpineView.
+Import TermSpineView EInduction.
+
+Lemma list_size_pos {A} (l : list A) (h : l <> []) (size : A -> nat) : list_size size l > 0.
+Proof.
+  induction l; cbn; try lia. now elim h.
+Qed.
+Section DeargAuxDecomp.
+
+Context (ind_masks : list (kername * mib_masks)).
+Context (const_masks : list (kername * bitmask)).
+Notation get_ctor_mask := (get_ctor_mask ind_masks).
+Notation get_mib_masks := (get_mib_masks ind_masks).
+Notation get_const_mask := (get_const_mask const_masks).
+
+Set Equations Debug.
+Equations? dearg_aux_decomp (t : term) : term by wf t (fun x y : EAst.term => size x < size y) :=
+  dearg_aux_decomp t with TermSpineView.view t := {
+  | tRel i => EAst.tRel i
+  | tVar v => EAst.tVar v
+  | tBox => EAst.tBox
+  | tEvar ev l => EAst.tEvar ev (map_In l (fun x H => dearg_aux_decomp x))
+  | tLambda na t => EAst.tLambda na (dearg_aux_decomp t)
+  | tLetIn na b t => EAst.tLetIn na (dearg_aux_decomp b) (dearg_aux_decomp t)
+  | tApp f args napp nempty with f := {
+      | EAst.tConstruct ind c cargs => dearg_single (get_ctor_mask ind c) (EAst.tConstruct ind c cargs) (map_In args (fun x H => dearg_aux_decomp x))
+      | EAst.tConst kn => dearg_single (get_const_mask kn) (EAst.tConst kn) (map_In args (fun x H => dearg_aux_decomp x))
+      | EAst.tCase (ind, npars) discr brs :=
+        let discr := dearg_aux_decomp discr in
+        let brs := map_In brs (fun br hin => (br.1, dearg_aux_decomp br.2)) in
+        EAst.mkApps (dearg_case ind_masks ind npars discr brs) (map_In args (fun x H => dearg_aux_decomp x))
+      | EAst.tProj (mkProjection ind npars arg) t =>
+        mkApps (dearg_proj ind_masks ind npars arg (dearg_aux_decomp t)) (map_In args (fun x H => dearg_aux_decomp x))
+      | hd => mkApps (dearg_aux_decomp hd) (map_In args (fun x H => dearg_aux_decomp x)) }
+  | tConstruct ind c cargs => dearg_single (get_ctor_mask ind c) (EAst.tConstruct ind c cargs) []
+  | tConst kn => dearg_single (get_const_mask kn) (EAst.tConst kn) []
+  | tCase (ind, npars) discr brs :=
+    let discr := dearg_aux_decomp discr in
+    let brs := map_In brs (fun br hin => (br.1, dearg_aux_decomp br.2)) in
+    dearg_case ind_masks ind npars discr brs
+  | tProj (mkProjection ind npars arg) t =>
+    dearg_proj ind_masks ind npars arg (dearg_aux_decomp t)
+  | tFix mfix idx =>
+    EAst.tFix (map_In mfix (fun d hin => {| dname := d.(dname); dbody := dearg_aux_decomp d.(dbody); rarg := d.(rarg) |})) idx
+  | tCoFix mfix idx =>
+    EAst.tCoFix (map_In mfix (fun d hin => {| dname := d.(dname); dbody := dearg_aux_decomp d.(dbody); rarg := d.(rarg) |})) idx
+  | tPrim p => EAst.tPrim (map_primIn p (fun x H => dearg_aux_decomp x)) }.
+Proof.
+  all:try subst discr; try subst brs; clear dearg_aux_decomp.
+  all: cbn.
+  all: try lia.
+  all:rewrite ?size_mkApps; cbn [size].
+  all:(try match goal with H : In ?x ?l |- _ => try (let H' := fresh in assert (H' := In_size id size H); unfold id in H'; change (fun x => size x) with size in H') end); eauto.
+  all:(try match goal with H : ?l <> [] |- context [ list_size ?size ?l ] => try (let H' := fresh in assert (H' := list_size_pos l H size)) end); eauto; try lia.
+  pose proof (H0 := In_size snd size hin); cbn in H0. lia.
+  pose proof (H0 := In_size snd size hin); cbn in H0. lia.
+  pose proof (H0 := In_size dbody size hin); cbn in H0. lia.
+  pose proof (H0 := In_size dbody size hin); cbn in H0. lia.
+  now apply InPrim_size.
+Qed. *)
 
 Lemma decompose_body_masked_spec mask Γ t t' :
   valid_dearg_mask mask t ->
@@ -218,6 +286,7 @@ Proof.
     split; [easy|].
     rewrite <- Nat.add_succ_r in *.
     now eapply IHX.
+  - solve_all.
 Qed.
 
 Lemma is_dead_csubst k t u k' :
@@ -283,6 +352,7 @@ Proof.
     + rewrite <- !Nat.add_succ_r in *.
       apply IHX; [easy|easy|].
       now eapply closed_upwards.
+  - solve_all_k 6.
 Qed.
 
 Lemma valid_dearg_mask_nil t : valid_dearg_mask [] t.
@@ -451,7 +521,7 @@ Proof.
       now f_equal.
     + rewrite <- !Nat.add_succ_r in *.
       now apply IHX.
-  - reflexivity.
+  - f_equal; solve_all.
 Qed.
 
 Lemma masked_nil {X} mask :
@@ -800,7 +870,7 @@ Proof.
     cbn.
     f_equal.
     now rewrite p.
-  - now rewrite lift_mkApps.
+  - rewrite lift_mkApps. f_equal. simpl lift. f_equal. solve_all.
 Qed.
 
 Lemma lift_dearg n k t :
@@ -817,7 +887,7 @@ Proof.
   - repeat
       (try destruct (_ <=? _) eqn:?; propify;
        try destruct (_ =? _) eqn:?; propify;
-       cbn in *);
+       cbn in * );
        lia.
   - easy.
   - induction X; [easy|].
@@ -851,7 +921,7 @@ Proof.
     f_equal.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
-  - reflexivity.
+  - solve_all.
 Qed.
 
 Lemma is_dead_lift_all k k' n t :
@@ -892,6 +962,7 @@ Proof.
     cbn.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
+  - solve_all.
 Qed.
 
 Lemma is_dead_subst_other k k' s t :
@@ -942,6 +1013,7 @@ Proof.
     f_equal.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
+  - solve_all.
 Qed.
 
 Lemma valid_dearg_mask_lift mask n k t :
@@ -1126,6 +1198,7 @@ Proof.
     cbn.
     rewrite <- Nat.add_succ_r.
     now rewrite p, IHX.
+  - solve_all.
 Qed.
 
 Lemma is_expanded_lift n k t :
@@ -1153,7 +1226,7 @@ Proof.
   - repeat
       (try destruct (_ <=? _) eqn:?; propify;
        try destruct (_ =? _) eqn:?; propify;
-       cbn in *);
+       cbn in * );
        lia.
   - induction X; [easy|].
     cbn in *.
@@ -1188,6 +1261,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     rewrite IHX by easy.
     now replace (S (k - n)) with (S k - n) by lia.
+  - solve_all.
 Qed.
 
 Lemma is_dead_dearg_single k mask t args :
@@ -1286,6 +1360,19 @@ Proof.
      rewrite <- !Nat.add_succ_r.
      rewrite IHX.
      bia.
+    - solve_all. rtoProp; intuition eauto.
+      depelim X; cbn; eauto.
+      destruct a; unfold test_array_model; cbn.
+      destruct p. cbn in *. rewrite e; eauto.
+      rewrite <- !andb_assoc. f_equal.
+      rewrite andb_comm.
+      induction a; cbn. rewrite andb_true_r; auto.
+      rewrite <- !andb_assoc.
+      rewrite IHa. rewrite p;eauto.
+      rewrite <- !andb_assoc. f_equal.
+      rewrite andb_comm.
+      rewrite <- !andb_assoc. f_equal.
+      bia. now rewrite andb_true_r.
 Qed.
 
 Lemma is_dead_dearg_lambdas k mask t :
@@ -1398,7 +1485,7 @@ Proof.
     rewrite p by easy.
     split; [easy|].
     now apply IHX.
-  - now apply forallb_Forall.
+  - solve_all. rtoProp; intuition solve_all.
 Qed.
 
 Lemma valid_dearg_mask_dearg mask t :
@@ -1555,7 +1642,9 @@ Proof.
     unfold map_def; cbn.
     f_equal.
     now apply (p _ _ []).
-  - now rewrite subst_mkApps, map_map.
+  - rewrite subst_mkApps, map_map; cbn; f_equal. f_equal.
+    solve_all. eapply map_prim_eq_prop; tea; cbn; intuition eauto.
+    specialize (a s k []). eauto.
 Qed.
 
 Lemma dearg_subst s k t :
@@ -1671,7 +1760,7 @@ Proof.
     propify.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
-  - assumption.
+  - solve_all_k 6.
 Qed.
 
 Lemma is_expanded_aux_subst s n t k :
@@ -1715,7 +1804,7 @@ Proof.
     propify.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
-  - assumption.
+  - solve_all_k 6.
 Qed.
 
 Lemma is_expanded_substl s n t :
@@ -1906,6 +1995,9 @@ Proof.
     now apply (is_expanded_aux_upwards 0).
   - easy.
   - easy.
+  - depelim X; auto.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. solve_all. subst a0 a'; cbn in *.
+    depelim exp_t; constructor; cbn in *; intuition eauto. solve_all.
 Qed.
 
 Lemma valid_case_masks_lift ind c brs n k :
@@ -1999,6 +2091,7 @@ Proof.
     cbn in *.
     propify.
     now rewrite <- !Nat.add_succ_r.
+  - solve_all_k 6.
 Qed.
 
 Lemma valid_cases_subst s k t :
@@ -2034,6 +2127,7 @@ Proof.
   - induction X in X, k, valid_t |- *; [easy|].
     cbn in *; propify.
     now rewrite <- !Nat.add_succ_r.
+  - solve_all_k 6.
 Qed.
 
 Lemma closedn_dearg_single k t args mask :
@@ -2062,6 +2156,60 @@ Proof.
       now propify.
 Qed.
 
+Import EWellformed.
+
+Lemma wellformed_dearg_single (efl := all_env_flags) Σ k t args mask :
+  wellformed Σ k t ->
+  Forall (wellformed Σ k) args ->
+  wellformed Σ k (dearg_single mask t args).
+Proof.
+  intros clos_t clos_args.
+  induction mask as [|[] mask IH] in k, t, args, mask, clos_t, clos_args |- *; cbn in *.
+  - apply forallb_Forall in clos_args.
+    now rewrite wellformed_mkApps.
+  - depelim clos_args; [|easy].
+    cbn in *. cbn.
+    apply IH; [|easy].
+    pose proof (wellformed_lift 1 k 0 _ clos_t).
+    now rewrite Nat.add_1_r in H.
+  - depelim clos_args.
+    + cbn.
+      apply IH; [|easy].
+      cbn.
+      rewrite Bool.andb_true_r.
+      pose proof (wellformed_lift 1 k 0 _ clos_t).
+      now rewrite Nat.add_1_r in H.
+    + apply IH; [|easy].
+      cbn.
+      now propify.
+Qed.
+(* From Coq Require Import ssreflect.
+Lemma wellformed_dearg_single' (efl := all_env_flags) Σ k t args mask :
+  wellformed (trans_env (dearg_env Σ)) k t ->
+  Forall (wellformed (trans_env (dearg_env Σ)) k) args ->
+  wellformed (trans_env (dearg_env Σ)) k (dearg_single mask t args).
+Proof.
+  intros clos_t clos_args.
+  induction mask as [|[] mask IH] in k, t, args, mask, clos_t, clos_args |- *; cbn in *.
+  - eapply forallb_Forall in clos_args.
+    now rewrite wellformed_mkApps //.
+  - depelim clos_args; [|easy].
+    cbn in *. cbn.
+    apply IH; [|easy].
+    pose proof (wellformed_lift 1 k 0 _ clos_t).
+    now rewrite Nat.add_1_r in H.
+  - depelim clos_args.
+    + cbn.
+      apply IH; [|easy].
+      cbn.
+      rewrite Bool.andb_true_r.
+      pose proof (wellformed_lift 1 k 0 _ clos_t).
+      now rewrite Nat.add_1_r in H.
+    + apply IH; [|easy].
+      cbn.
+      now propify.
+Qed. *)
+
 Lemma closedn_dearg_lambdas k mask t :
   closedn k t ->
   closedn k (dearg_lambdas mask t).
@@ -2075,6 +2223,19 @@ Proof.
   - now propify.
 Qed.
 
+Lemma wellformed_dearg_lambdas {efl : EEnvFlags} Σ k mask t :
+  has_tBox ->
+  wellformed Σ k t ->
+  wellformed Σ k (dearg_lambdas mask t).
+Proof.
+  intros clos.
+  induction t in k, mask, t, clos |- *; auto; cbn in *.
+  - destruct mask; [easy|]. rtoProp; intuition auto.
+    destruct b; eauto.
+    apply wellformed_subst; eauto;
+    cbn; rewrite ?Nat.add_1_r; eauto. cbn. rewrite H0. eauto.
+  - now propify.
+Qed.
 
 (* NOTE: borrowed from MetaCoq (where it's commented out) and fixed *)
 Lemma closedn_subst s k k' t :
@@ -2111,6 +2272,7 @@ Proof.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
     specialize (a (#|m| + k')). unfold is_true. rewrite <- a. f_equal. lia.
     unfold is_true. rewrite <- b. f_equal. lia.
+  - solve_all_k 6.
 Qed.
 
 Lemma closedn_dearg_case_branch_body_rec i k mask t :
@@ -2131,6 +2293,49 @@ Proof.
       replace (i + S #|filter negb mask| + k) with (S i + #|filter negb mask| + k) by lia.
       replace (i + S #|mask| + k) with (S i + #|mask| + k) in * by lia.
       easy.
+Qed.
+
+Lemma wellformed_dearg_case_branch_body_rec (efl := all_env_flags) Σ i k mask t :
+  wellformed Σ (i + #|mask| + k) t ->
+  wellformed Σ (i + count_zeros mask + k) (dearg_branch_body_rec i mask t).2.
+Proof.
+  intros clos.
+  induction mask in mask, i, k, t, clos |- *; cbn in *.
+  - eauto.
+  - destruct a.
+    * cbn in *.
+      eapply IHmask.
+      unfold subst1.
+      replace (i + #|mask| + k) with (k + #|mask| + i) by lia.
+      eapply wellformed_subst_eq;eauto. cbn.
+      now replace (k + #|mask| + i + 1) with (i + S #|mask| + k).
+    * cbn.
+      replace (i + S #|filter negb mask| + k) with (S i + #|filter negb mask| + k) by lia.
+      replace (i + S #|mask| + k) with (S i + #|mask| + k) in * by lia.
+      easy.
+Qed.
+
+Import EEtaExpandedFix.
+
+Lemma isEtaExp_dearg_case_branch_body_rec (efl := all_env_flags) Σ i k mask t :
+  isEtaExp Σ (repeat 0 i ++ repeat 0 #|mask| ++ k) t ->
+  isEtaExp Σ (repeat 0 i ++ repeat 0 (count_zeros mask) ++ k) (dearg_branch_body_rec i mask t).2.
+Proof.
+  intros clos.
+  induction mask in mask, i, k, t, clos |- *; cbn in *.
+  - eauto.
+  - destruct a.
+    * cbn in *.
+      eapply IHmask.
+      unfold subst1.
+      rewrite <- closed_subst; auto.
+      eapply etaExp_csubst'. now len. now simp_eta. exact clos.
+    * cbn. fold (dearg_branch_body_rec (S i) mask t).
+      pose proof (repeat_app 0 i 1). cbn in H.
+      replace (repeat 0 i ++ 0 :: repeat 0 #|filter negb mask| ++ k) with
+        (repeat 0 (S i) ++ repeat 0 #|filter negb mask| ++ k).
+        2:{ rewrite Nat.add_1_r in H. now rewrite H; cbn; rewrite <- app_assoc; cbn. }
+        eapply IHmask. now rewrite <- Nat.add_1_r, repeat_app, <- app_assoc; cbn.
 Qed.
 
 Lemma closedn_dearg_aux k args t :
@@ -2210,6 +2415,26 @@ Proof.
     split; [easy|].
     rewrite <- !Nat.add_succ_r in *.
     now apply IHX.
+  - rewrite closedn_mkApps; cbn; rtoProp; intuition solve_all. solve_all_k 6.
+Qed.
+
+Lemma Alli_map {A B P n} {f : A -> B} l :
+  Alli (fun n x => P n (f x)) n l ->
+  Alli P n (map f l).
+Proof.
+  induction 1; constructor; eauto.
+Qed.
+
+
+Lemma lookup_env_dearg_env Σ kn :
+  lookup_env (dearg_env Σ) kn = option_map (dearg_decl kn) (lookup_env Σ kn).
+Proof.
+  unfold lookup_env.
+  induction Σ as [|((kn', has_deps), decl) Σ IH]; [easy|].
+  cbn.
+  unfold eq_kername.
+  destruct Kername.reflect_kername as [eq Heq].
+  destruct (Heq kn kn');subst;[easy| apply IH].
 Qed.
 
 Hint Resolve
@@ -2396,11 +2621,44 @@ Proof.
     now destruct get_const_mask.
 Qed.
 
+Definition check_oib_masks_trans masks i oib :=
+  forallbi (fun c cb => #|get_branch_mask masks i c| == cb.(cstr_nargs)) 0 oib.(EAst.ind_ctors) &&
+  match oib.(EAst.ind_projs) with
+  | [] => true
+  | _ :: _ =>
+    let mask := get_branch_mask masks i 0 in
+    #|mask| == #|oib.(EAst.ind_projs)|
+  end.
+
+Lemma forallbi_nth_error {A} n k {l : list A} p x : nth_error l n = Some x -> forallbi p k l -> p (n + k) x.
+Proof.
+  induction l in x, n, k |- *; cbn => //.
+  - now rewrite nth_error_nil.
+  - destruct n; cbn.
+    + intros [= <-]. move/andP=> [ha hf]. exact ha.
+    + intros hn. move/andP=> [hp hf].
+      eapply IHl in hn; tea. now rewrite Nat.add_succ_r in hn.
+Qed.
+
+
+Require Import ssreflect.
+
+Lemma forallbi_Alli {A} (f : nat -> A -> bool) n l :
+  Alli f n l <~> forallbi f n l.
+Proof.
+  split.
+  - induction 1; cbn; auto.
+  - induction l in n |- *; cbn; auto.
+    * constructor.
+    * move/andP => [] hf hl. constructor; eauto.
+Qed.
+
+
 Lemma valid_ind_mask_inductive Σ ind mib oib :
   valid_masks_env Σ ->
   EGlobalEnv.declared_inductive (trans_env Σ) ind mib oib ->
   ∑ mask, get_mib_masks (inductive_mind ind) = Some mask /\
-                 #|mask.(param_mask)| =? mib.(EAst.ind_npars).
+  (#|mask.(param_mask)| =? mib.(EAst.ind_npars)) /\ check_oib_masks_trans mask (inductive_ind ind) oib.
 Proof.
   intros valid_env decl_ind.
   apply forallb_Forall in valid_env.
@@ -2414,7 +2672,17 @@ Proof.
   destruct cst;cbn in *;try congruence.
   inversion H0;subst;clear H0;cbn in *.
   destruct get_mib_masks;try congruence.
-  eexists;eauto.
+  eexists;eauto. split; eauto.
+  move/andP: Hb => [] -> hf.
+  rewrite nth_error_map in nth.
+  destruct nth_error eqn:hnth => //. eapply forallbi_nth_error in hf; tea.
+  rewrite Nat.add_0_r in hf. cbn in nth. noconf nth.
+  destruct o; cbn. split => //. unfold check_oib_masks in hf; cbn in hf.
+  move/andP: hf => [] oncs onps. apply/andP. split.
+  - cbn. move/forallbi_Alli: oncs => oncs. eapply forallbi_Alli, Alli_map, Alli_impl; tea; cbn.
+    now intros n [[kn tys] nargs]; cbn.
+  - unfold check_oib_masks_trans. cbn in *. destruct ind_projs; cbn in * => //.
+    now rewrite map_length.
 Qed.
 
 Ltac invert_facts :=
@@ -2532,17 +2800,9 @@ Proof with auto with dearg.
     easy.
   - easy.
   - easy.
-Qed.
-
-Lemma lookup_env_dearg_env Σ kn :
-  lookup_env (dearg_env Σ) kn = option_map (dearg_decl kn) (lookup_env Σ kn).
-Proof.
-  unfold lookup_env.
-  induction Σ as [|((kn', has_deps), decl) Σ IH]; [easy|].
-  cbn.
-  unfold eq_kername.
-  destruct Kername.reflect_kername as [eq Heq].
-  destruct (Heq kn kn');subst;[easy| apply IH].
+  - depelim X; auto.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. subst a0 a'; cbn -[test_prim] in *.
+    solve_all. depelim H0; constructor; cbn; intuition eauto. solve_all.
 Qed.
 
 Lemma declared_constant_dearg Σ k cst :
@@ -2616,6 +2876,21 @@ Proof.
   induction t in mask, valid |- * using term_forall_list_ind; cbn in *; propify; try easy.
   destruct mask as [|[] mask]; try easy.
   now apply valid_cases_subst.
+Qed.
+
+Lemma isEtaExp_dearg_lambdas Σ Γ mask t :
+  isEtaExp Σ Γ t ->
+  isEtaExp Σ Γ (dearg_lambdas mask t).
+Proof.
+  intros valid.
+  induction t in Γ, mask, valid |- * using term_forall_list_ind; cbn in *; try easy.
+  - simp_eta in valid.
+    destruct mask as [|[] mask]; try easy.
+    + now simp_eta.
+    + cbn. unfold subst1. rewrite <- closed_subst; try easy.
+      eapply (isEtaExp_substl _ [0] _ [_]); easy.
+    + simp_eta. now eapply IHt.
+  - simp_eta. simp_eta in valid. rtoProp; intuition eauto.
 Qed.
 
 Lemma dearg_dearg_lambdas mask t :
@@ -2863,6 +3138,45 @@ Proof.
         destruct b;rewrite app_length;cbn; lia.
 Qed.
 
+
+Lemma masked_length {X} m (xs : list X) :
+  #|m| <= #|xs| ->
+  #|masked m xs| = count_zeros m + #|xs| - #|m|.
+Proof.
+  intros len.
+  induction m in xs, len |- *; cbn in *.
+  - now destruct xs.
+  - destruct xs; cbn in *; [easy|].
+    destruct a; cbn in *.
+    + rewrite IHm by easy.
+      now unfold count_zeros.
+    + rewrite IHm by easy.
+      now unfold count_zeros.
+Qed.
+
+
+
+Import EEtaExpandedFix.
+
+Hint Resolve dearg_elim : core.
+
+Lemma isEtaExp_dearg_single Σ Γ t m l :
+  isEtaExp Σ Γ t ->
+  forallb (isEtaExp Σ Γ) l ->
+  isEtaExp Σ Γ (dearg_single m t l).
+Proof.
+  induction m in Γ, l, t |- *; intros etat etal.
+  - cbn. eapply isEtaExp_mkApps_intro; solve_all.
+  - cbn. destruct a; destruct l; simp_eta; eauto. eapply IHm; eauto.
+    now eapply (isEtaExp_lift _ _ [_] []).
+    eapply IHm; eauto. now move/andP: etal.
+    eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]).
+    now eapply (isEtaExp_lift _ _ [_] []). constructor; eauto. simp_eta.
+    eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]); eauto. constructor; eauto.
+    all:now move/andP: etal.
+Qed.
+
+Unset Strict Universe Declaration.
 Section dearg.
   Context {wfl : WcbvFlags}.
   Context (n : nat).
@@ -2992,7 +3306,7 @@ Section dearg.
         clear IHev1 IHev2 IHev3.
         revert ev3 ev_len.
         cbn in *.
-        rewrite !closed_subst; [|now apply closedn_dearg_aux|easy].
+        rewrite !closed_subst; eauto. 2:now apply closedn_dearg_aux.
         intros.
         rewrite <- (dearg_subst [a']) by easy.
         unshelve eapply (IH _ _ _ _ _ ev3)...
@@ -3073,7 +3387,7 @@ Section dearg.
           eapply lookup_ctor_lookup_env;eauto. apply e0.
           eapply lookup_ctor_lookup_env;eauto. subst; apply e0.
         }
-      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask Hparams]].
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask [Hparams _]]].
       set (trans_mib (dearg_mib ind_masks (inductive_mind ind) mib)) as mib_dearg.
       set (trans_oib (dearg_oib mask (inductive_ind ind) oib)) as oib_dearg.
       set (dearg_ctor (param_mask mask) (get_branch_mask mask (inductive_ind ind) c) ctor) as ctor_dearg.
@@ -3230,6 +3544,334 @@ Section dearg.
     - now apply Forall_snoc in valid_args.
     - now apply Forall_snoc in exp_args.
   Qed.
+
+  Set SsrRewrite.
+  Lemma count_zeros_nth_error l :
+    count_zeros l = 0 ->
+    (forall n x, nth_error l n = Some x -> x = true).
+  Proof using.
+    clear.
+    unfold count_zeros.
+    induction l; cbn => //.
+    - intros _ n x; rewrite nth_error_nil //.
+    - destruct a => //=. intros hl n x.
+      destruct n => //=.
+      + intros [= <-] => //.
+      + intros hnth. eapply IHl; eauto.
+  Qed.
+
+  Lemma wellformed_dearg_aux (efl := all_env_flags) k args t :
+    valid_cases t ->
+    wellformed (trans_env Σ) k t ->
+    Forall (wellformed (trans_env (dearg_env Σ)) k) args ->
+    wellformed (trans_env (dearg_env Σ)) k (dearg_aux args t).
+  Proof.
+    clear IH.
+    intros valid_t clos_t clos_args.
+    induction t in k, args, valid_t, clos_t, clos_args |- * using term_forall_list_ind;
+      cbn -[EGlobalEnv.lookup_projection EGlobalEnv.lookup_inductive EGlobalEnv.lookup_constructor] in *; intros;
+      try solve [intros; rewrite ?wellformed_mkApps; try easy; intros; repeat (rtoProp; cbn; intuition eauto; solve_all)];
+      repeat (rtoProp; cbn; intuition eauto; solve_all).
+    - intros. eapply wellformed_dearg_single; eauto. cbn.
+      rewrite !lookup_env_trans_env in clos_t |- *.
+      rewrite lookup_env_dearg_env. destruct lookup_env => //=. cbn in clos_t.
+      destruct g => //.
+    - intros. eapply wellformed_dearg_single; eauto.
+      cbn -[EGlobalEnv.lookup_constructor]; eauto. move: H.
+      destruct EGlobalEnv.lookup_constructor as [[[mib oib] cb]|] eqn:hc => //= _.
+      eapply lookup_ctor_trans_env in hc as hc'; destruct hc' as [mib' [oib' [ctor' []]]]. intuition subst.
+      assert (decl_ind :declared_inductive (trans_env Σ) i (trans_mib mib') (trans_oib oib')).
+      { unfold declared_inductive,declared_minductive.
+        eapply lookup_ctor_lookup_env;eauto. }
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask Hparams]].
+      eapply lookup_ctor_dearg in H; tea.
+      erewrite lookup_ctor_trans_env_inv; tea.
+    - destruct p. rewrite wellformed_mkApps; try easy.
+      unfold dearg_case.
+      destruct (EGlobalEnv.lookup_inductive _ _) as [[mib oib]|] eqn:hl => //.
+      assert (decl_ind :declared_inductive (trans_env Σ) i mib oib).
+      { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
+        unfold declared_inductive,declared_minductive. destruct EGlobalEnv.lookup_env => //.
+        destruct g => //. destruct nth_error eqn:hnth => //. intros [= <- <-]. split; eauto. }
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask Hparams]].
+      rewrite Hmask.
+      rtoProp; intuition eauto; solve_all.
+      cbn [wellformed]. rtoProp; intuition eauto.
+      { unfold EGlobalEnv.lookup_inductive. cbn.
+        move: hl. cbn.
+        rewrite !lookup_env_trans_env lookup_env_dearg_env.
+        destruct lookup_env => //=. destruct g => //=.
+        rewrite !nth_error_map. unfold dearg_mib. rewrite Hmask. cbn.
+        rewrite nth_error_mapi. destruct nth_error => //. }
+      cbn.
+      unfold mapi. clear clos_args IHt.
+      unfold valid_case_masks in H3. rewrite Hmask in H3.
+      move/andP: H3 => [] _ hbrs.
+      eapply alli_Alli in hbrs.
+      eapply Alli_All_mix in hbrs; tea. clear H0.
+      generalize 0.
+      induction hbrs; [easy|]; intros n'.
+      cbn in p.
+      cbn [map mapi_rec forallb]. rtoProp.
+      split.
+      * unfold dearg_case_branch,dearg_branch_body.
+        destruct (_ <=? _) eqn:Hmask';[|cbn;easy].
+        remember (complete_ctx_mask _ _) as mm. cbn.
+        assert (#|mm| = #|hd.1|) by now subst;propify;apply complete_ctx_mask_length.
+        rewrite masked_count_zeros. lia.
+        specialize (wellformed_dearg_case_branch_body_rec (trans_env (dearg_env Σ)) 0 ((#|hd.1| - #|mm|) + k) mm ((dearg_aux [] hd.2))) as b.
+        cbn in b.
+        replace (#|mm| + (#|hd.1| - #|mm| + k)) with (#|hd.1| + k) in * by lia.
+        rewrite <- Nat.add_assoc.
+        apply b.
+        now apply p.
+      * destruct p. eapply IHhbrs.
+    - destruct s. rewrite wellformed_mkApps; rtoProp; intuition auto; solve_all.
+      destruct lookup_projection as [[[[mib oib] cb] pb]|] eqn:hl => //.
+      assert (decl_ind :declared_inductive (trans_env Σ) proj_ind mib oib).
+      { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
+        unfold declared_inductive,declared_minductive. destruct EGlobalEnv.lookup_env => //.
+        destruct g => //. destruct nth_error eqn:hnth => //.
+        destruct EAst.ind_ctors => //. destruct (nth_error _ proj_arg) => //. now intros [= <- <- <- <-]. }
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask [Hparams Hprojs]]].
+      unfold dearg_proj. cbn -[lookup_projection] in *.
+      rtoProp; intuition auto.
+      revert hl; cbn.
+      rewrite !lookup_env_trans_env !lookup_env_dearg_env.
+      destruct lookup_env => //=.
+      destruct g => //=. rewrite !nth_error_map /dearg_mib //=.
+      destruct nth_error eqn:hi => //=; eauto.
+      destruct o; cbn. destruct ind_ctors eqn:hcs => //=.
+      rewrite nth_error_map. destruct (nth_error _ proj_arg) eqn:hp => //=.
+      intros [= <- <- <- <-]. rewrite Hmask /=.
+      rewrite nth_error_mapi hi //= /= nth_error_map.
+      rewrite /check_oib_masks_trans /= in Hprojs.
+      destruct ind_projs; [now rewrite nth_error_nil in hp|];
+      rewrite /= map_length in Hprojs.
+      move: H2. rewrite /valid_proj. rewrite Hmask.
+      set (cm := get_branch_mask _ _ _) in *.
+      move/andP=> [] _. rewrite nth_nth_error.
+      eapply nth_error_Some_length in hp. clearbody cm.
+      destruct (nth_error (masked _ _) _) eqn:h' => //=.
+      eapply nth_error_None in h'.
+      move: h'. move/andP: Hprojs => [] _ Hprojs.
+      apply eqb_eq in Hprojs.
+      destruct (nth_error cm proj_arg) eqn:hmp.
+      2:{ cbn. eapply nth_error_None in hmp. cbn in hp. lia. }
+      destruct b => //. intros hm _.
+      move: hm.
+      rewrite masked_count_zeros. cbn; lia. cbn.
+      intros. assert (count_zeros cm + (S #|ind_projs| - #|cm|) = count_zeros cm) by lia.
+      rewrite {}H2 in hm. cbn in hp. rewrite -Hprojs in hp.
+      pose proof (count_ones_zeros (firstn proj_arg cm)).
+      assert (count_ones (firstn proj_arg cm) = #|firstn proj_arg cm| - count_zeros (firstn proj_arg cm)). lia.
+      rewrite {}H3 in hm.
+      rewrite -{1}(firstn_skipn proj_arg cm) in hm.
+      rewrite count_zeros_distr_app in hm.
+      assert (#|firstn proj_arg cm| = proj_arg). rewrite firstn_length. lia.
+      rewrite H3 in hm. move: hm.
+      assert (proj_arg - (proj_arg - count_zeros (firstn proj_arg cm)) = proj_arg - proj_arg + count_zeros (firstn proj_arg cm)) as ->. lia.
+      rewrite Nat.sub_diag /=. intros.
+      assert (count_zeros (skipn proj_arg cm) = 0) by lia.
+      have hc:= (count_zeros_nth_error _ H4 0 false) => //.
+      forward hc.
+      rewrite nth_error_skipn Nat.add_0_r //.
+      by noconf hc.
+    - rewrite wellformed_mkApps; cbn; rtoProp; intuition eauto; solve_all.
+      destruct (dbody x); cbn in *; eauto; try congruence.
+      revert H0. unfold wf_fix.
+      rewrite map_length.
+      rtoProp; intuition eauto. unfold test_def in *; solve_all.
+    - rewrite wellformed_mkApps; cbn; rtoProp; intuition eauto; solve_all.
+      revert clos_t. unfold wf_fix.
+      rewrite map_length.
+      rtoProp; intuition eauto. unfold test_def in *; solve_all.
+    - rewrite wellformed_mkApps; cbn; rtoProp; intuition solve_all. solve_all_k 7.
+  Qed.
+
+  Lemma wellformed_dearg (efl := all_env_flags) k t :
+    valid_cases t ->
+    wellformed (trans_env Σ) k t ->
+    wellformed (trans_env (dearg_env Σ)) k (dearg t).
+  Proof.
+    intros vt wf.
+    eapply wellformed_dearg_aux; tea; constructor.
+  Qed.
+
+  Lemma All_masked {A} {P : A -> Type} m l : All P l -> All P (masked m l).
+  Proof.
+    induction 1 in m |- *; cbn; destruct m; try constructor; eauto.
+    cbn. destruct b; eauto.
+  Qed.
+
+  Lemma isEtaExp_dearg_single_construct Γ ind i block_args l mib oib :
+    is_nil block_args ->
+    forall mask, get_mib_masks (inductive_mind ind) = Some mask ->
+    declared_inductive (trans_env Σ) ind mib oib ->
+    #|param_mask mask| = mib.(EAst.ind_npars) ->
+    isEtaExp_app (trans_env Σ) ind i #|l| ->
+    forallb (isEtaExp (trans_env (dearg_env Σ)) Γ) l ->
+    #|get_ctor_mask ind i| <= #|l| ->
+    isEtaExp (trans_env (dearg_env Σ)) Γ (dearg_single (get_ctor_mask ind i) (tConstruct ind i block_args) l).
+  Proof.
+    destruct block_args => //. intros _ mask getm decli hpars.
+    intros etsal etak hml.
+    rewrite dearg_single_masked; auto.
+    rewrite isEtaExp_Constructor. rewrite masked_length; auto. bool.
+    2:solve_all.
+    move: etsal hml.
+    unfold isEtaExp_app. rewrite /get_ctor_mask getm app_length.
+    unfold lookup_constructor_pars_args.
+    destruct EGlobalEnv.lookup_constructor as [[[mib' oib'] cb]|]eqn:hl => //=.
+    assert (decl_ind :declared_inductive (trans_env Σ) ind mib' oib').
+    { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
+      unfold declared_inductive,declared_minductive. destruct EGlobalEnv.lookup_env => //.
+      destruct g => //. destruct nth_error eqn:hnth => //.
+      destruct (nth_error _ i) eqn:hnth' => //. now intros [= <- <- <-]. }
+    specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask' [Hmask [Hparams Hprojs]]].
+    rewrite Hmask in getm. noconf getm.
+    assert (oib = oib' /\ mib = mib').
+    {move: decli decl_ind. rewrite /declared_inductive /declared_minductive. intuition congruence. }
+    destruct H; subst oib' mib'.
+    pose proof hl as hl'.
+    eapply lookup_ctor_trans_env in hl as [mib' [oib' [ctor' []]]]. intuition subst.
+    eapply lookup_ctor_dearg in H; tea. cbn in etsal.
+    eapply lookup_ctor_trans_env_inv in H as ->. cbn.
+    move/andP: Hprojs => [] Hcs _.
+    destruct decli.
+    destruct mib'; unfold dearg_mib. rewrite Hmask. cbn in *.
+    apply Nat.leb_le in etsal. apply Nat.leb_le.
+    unfold dearg_ctor. destruct ctor' as [[cna ctys] cnargs]. cbn in *.
+    rewrite count_zeros_distr_app.
+    move: hml.
+    intros hl.
+    assert (cnargs = #|get_branch_mask mask (inductive_ind ind) i|).
+    { destruct decl_ind. red in H1. rewrite H1 H0 in hl'. destruct (nth_error _ i) eqn:hnth. noconf hl'.
+      unfold trans_ctors in Hcs. destruct oib'; cbn in *.
+      eapply forallbi_nth_error in hnth; tea. cbn in hnth. rewrite Nat.add_0_r in hnth. now apply eqb_eq in hnth. noconf hl'. }
+    clear hl'. subst cnargs.
+    set (bm := get_branch_mask _ _ _) in *.
+    rewrite -{1}(count_ones_zeros bm).
+    replace (count_zeros bm + count_ones bm - count_ones bm) with (count_zeros bm) by lia. lia.
+    now eapply All_masked.
+  Qed.
+
+  Lemma expanded_dearg_aux (efl := all_env_flags) Γ t :
+    valid_cases t ->
+    isEtaExp (trans_env Σ) Γ t ->
+    forall args, forallb (isEtaExp (trans_env (dearg_env Σ)) Γ) args ->
+    isEtaExp (trans_env (dearg_env Σ)) Γ (dearg_aux args t).
+  Proof.
+    clear IH.
+    apply_funelim (isEtaExp (trans_env Σ) Γ t); intros.
+    all:match goal with H : is_true (valid_cases _) |- _ => cbn in H; bool end; intros; simp_eta.
+    all:cbn; simp_eta; toAll; bool; try rewrite -> forallb_InP_spec in *.
+    all:try solve [solve_all].
+    all:try solve [eapply isEtaExp_mkApps_intro; simp_eta; eauto; bool; solve_all].
+    - eapply isEtaExp_dearg_single; simp_eta.
+    - eapply isEtaExp_dearg_single; simp_eta => //.
+      unfold is_nil.
+      rewrite H andb_true_r.
+      move: H0. rewrite /isEtaExp_app.
+      unfold lookup_constructor_pars_args.
+      destruct EGlobalEnv.lookup_constructor as [[[mib oib] cb]|]eqn:hl => //=.
+      assert (decl_ind :declared_inductive (trans_env Σ) ind mib oib).
+      { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
+        unfold declared_inductive,declared_minductive. destruct EGlobalEnv.lookup_env => //.
+        destruct g => //. destruct nth_error eqn:hnth => //.
+        destruct (nth_error _ i) eqn:hnth' => //. now intros [= <- <- <-]. }
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask [Hparams Hprojs]]].
+      eapply lookup_ctor_trans_env in hl as [mib' [oib' [ctor' []]]]. intuition subst.
+      eapply lookup_ctor_dearg in H0; tea.
+      eapply lookup_ctor_trans_env_inv in H0; rewrite H0. clear H0. cbn in *.
+      destruct mib'; cbn in *. unfold dearg_mib. rewrite Hmask /=.
+      eapply Nat.leb_le in H4. assert (ind_npars = 0) by lia. subst ind_npars.
+      apply Nat.eqb_eq in Hparams. destruct (param_mask) => //. cbn.
+      unfold dearg_ctor. destruct ctor'; cbn in *. destruct p. cbn. assert (n0 = 0) by lia. apply Nat.leb_le. lia.
+    - destruct ind. bool. eapply isEtaExp_mkApps_intro; simp_eta; eauto; bool; solve_all.
+      unfold dearg_case. cbn. simp_eta. bool. solve_all.
+      unfold valid_case_masks in H5. destruct get_mib_masks eqn:cm => //.
+      unfold dearg_case_branches. simp_eta. eapply All_mapi, Alli_map.
+      bool. eapply alli_Alli in H5. eapply Alli_All_mix in H5; tea.
+      eapply Alli_impl; tea; cbn. intuition eauto. destruct x. bool. cbn in *.
+      unfold dearg_case_branch. cbn. rewrite H6.
+      unfold dearg_branch_body. cbn. apply Nat.leb_le in H6.
+      rewrite masked_length. rewrite complete_ctx_mask_length //.
+      replace (count_zeros (complete_ctx_mask (get_branch_mask m (inductive_ind i) n1) l) + #|l| - #|complete_ctx_mask (get_branch_mask m (inductive_ind i) n1) l|) with
+        (count_zeros (complete_ctx_mask (get_branch_mask m (inductive_ind i) n1) l) + (#|l| - #|complete_ctx_mask (get_branch_mask m (inductive_ind i) n1) l|)).
+      2:{ rewrite complete_ctx_mask_length; lia. }
+      rewrite complete_ctx_mask_length //. rewrite Nat.sub_diag Nat.add_0_r.
+      eapply (isEtaExp_dearg_case_branch_body_rec _ 0).
+      rewrite complete_ctx_mask_length //.
+      unfold dearg_case_branches. solve_all.
+      unfold dearg_case_branches. solve_all.
+    - destruct p. eapply isEtaExp_mkApps_intro; simp_eta; eauto; bool; solve_all.
+      bool. unfold dearg_proj. now simp_eta.
+    - rewrite test_primIn_spec in H1. eapply InPrim_primProp in H.
+      eapply isEtaExp_mkApps_intro; simp_eta; eauto; bool; solve_all.
+      solve_all.
+      eapply primProp_map, primProp_impl; solve_all.
+    - rewrite dearg_aux_mkApps. cbn.
+      eapply valid_cases_mkApps_inv in H0 as [].
+      move: H1. rewrite /isEtaExp_app /lookup_constructor_pars_args.
+      destruct EGlobalEnv.lookup_constructor as [[[mib oib] cb]|]eqn:hl => //=.
+      assert (decl_ind :declared_inductive (trans_env Σ) ind mib oib).
+      { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
+        unfold declared_inductive,declared_minductive. destruct EGlobalEnv.lookup_env => //.
+        destruct g => //. destruct nth_error eqn:hnth => //.
+        destruct (nth_error _ i) eqn:hnth' => //. now intros [= <- <- <-]. }
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask [Hparams Hprojs]]].
+      pose proof hl as hl'.
+      eapply lookup_ctor_trans_env in hl as [mib' [oib' [ctor' []]]]. intuition subst.
+      eapply lookup_ctor_dearg in H1; tea.
+      cbn.
+      eapply Nat.eqb_eq in Hparams.
+      eapply isEtaExp_dearg_single_construct; tea.
+      + len. unfold isEtaExp_app.
+        rewrite /lookup_constructor_pars_args hl' //=. eapply Nat.leb_le in H7. cbn in H7. apply Nat.leb_le. lia.
+      + rewrite forallb_app; bool; solve_all.
+      + len. rewrite /get_ctor_mask Hmask. len. rewrite Hparams.
+        move/andP: Hprojs => [] hc _.
+        destruct decl_ind. red in H6.
+        unfold EGlobalEnv.lookup_constructor in hl'.
+        rewrite /EGlobalEnv.lookup_inductive /EGlobalEnv.lookup_minductive H6 //= H8 in hl'.
+        destruct (nth_error _ i) eqn:nthc => //. noconf hl'.
+        eapply forallbi_nth_error in hc; tea. rewrite Nat.add_0_r /= in hc. cbn in H7.
+        apply Nat.eqb_eq in hc. apply Nat.leb_le in H7. rewrite -hc in H7. cbn. lia.
+    - rewrite dearg_aux_mkApps. eapply valid_cases_mkApps_inv in H1 as[].
+      cbn in H1. cbn.
+      rewrite mkApps_app. eapply isEtaExp_mkApps_intro; solve_all.
+      eapply isEtaExp_FixApp.
+      + move: H2. unfold isEtaExp_fixapp. rewrite nth_error_map.
+        destruct nth_error eqn:hnth => //=; now len.
+      + rewrite forallb_InP_spec in H5.
+        cbn. clear H6.
+        replace (rev_map (fun d0 : def term => S (rarg d0)) (map (map_def (dearg_aux [])) mfix) ++ Γ0) with
+          (rev_map (fun d0 : def term => S (rarg d0)) mfix ++ Γ0).
+        2:{ f_equal. rewrite !rev_map_spec. f_equal. now rewrite map_map_compose /=. }
+        set (rargs := rev_map _ _) in *. clearbody rargs. solve_all. bool. destruct (dbody x) => //.
+      + solve_all.
+    - rewrite dearg_aux_mkApps /=.
+      destruct nth_error eqn:hnth => //=. cbn in H1.
+      eapply expanded_isEtaExp. eapply expanded_tRel_app; tea. len. apply Nat.leb_le in H1. lia.
+      eapply valid_cases_mkApps_inv in H0 as [].
+      eapply All_Forall, All_app_inv. solve_all. eapply isEtaExp_expanded. eauto.
+      solve_all. now eapply isEtaExp_expanded.
+
+    - apply valid_cases_mkApps_inv in H1 as [].
+      specialize (H H1 H2).
+      rewrite dearg_aux_mkApps. eapply H. rewrite forallb_app. bool.
+      solve_all.
+  Qed.
+
+  Lemma expanded_dearg (efl := all_env_flags) Γ t :
+    valid_cases t ->
+    isEtaExp (trans_env Σ) Γ t ->
+    isEtaExp (trans_env (dearg_env Σ)) Γ (dearg t).
+  Proof.
+    intros vc ise. eapply expanded_dearg_aux; eauto.
+  Qed.
+
 End dearg.
 
 Lemma env_closed_dearg Σ :
@@ -3250,6 +3892,102 @@ Proof.
     now destruct o.
 Qed.
 
+Lemma wf_glob_dearg (efl := all_env_flags) Σ :
+  valid_masks_env Σ ->
+  wf_glob (trans_env Σ) ->
+  wf_glob (trans_env (dearg_env Σ)).
+Proof.
+  intros val clos. revert val.
+  induction Σ as [|((kn & has_deps) & decl) Σ IH]; [easy|].
+  rewrite /valid_masks_env /=;  move/andP => [] hd he.
+  depelim clos. cbn.
+  constructor; eauto.
+  destruct decl; cbn in *.
+  - destruct c as [ty []]; [|easy].
+    cbn in *. unfold dearg.
+    move/andP: hd => [] vm vc.
+    eapply wellformed_dearg_aux; auto.
+    now eapply valid_cases_dearg_lambdas.
+    eapply wellformed_dearg_lambdas; auto.
+  - cbn in *.
+    unfold dearg_mib.
+    destruct get_mib_masks => //=.
+    solve_all. eapply All_mapi.
+    move/andP: hd => [] _ hf.
+    eapply forallbi_Alli in hf.
+    eapply Alli_All_mix in hf; tea. clear H.
+    eapply Alli_impl; tea; cbn.
+    intros n []; rewrite /trans_oib /dearg_oib //= /wf_inductive /wf_projections /=.
+    rewrite /check_oib_masks /=.
+    destruct ind_projs => //=; rewrite ?masked_nil //=.
+    move=> [] /andP[] hcs /Nat.eqb_eq hps.
+    destruct ind_ctors => //=. destruct ind_ctors => //=. len.
+    intros h % eqb_eq.
+    destruct map eqn:hm; destruct p0 as [[pn pars] k] => //=.
+    cbn in h. subst k.
+    rewrite masked_length. now (cbn; lia).
+    cbn. rewrite hps.
+    apply/Nat.eqb_spec.
+    pose proof (count_ones_zeros (get_branch_mask m0 n 0)). lia.
+  - now destruct o; cbn.
+  - clear hd. clear -H0.
+    move: H0; induction Σ; cbn; auto.
+    intros h; depelim h; constructor; cbn; eauto.
+    now destruct a as [[kn' b] d]; cbn in *.
+    solve_all.
+Qed.
+
+Lemma trans_env_debox Σ : trans_env Σ = trans_env (debox_env_types Σ).
+Proof.
+  unfold debox_env_types.
+  generalize Σ at 2.
+  induction Σ; cbn; auto. intros Σ0.
+  f_equal. f_equal.
+  - destruct a as [[kn d] []]; cbn.
+    * destruct c as [? []]; cbn => //.
+    * destruct m. unfold trans_mib, debox_type_mib; cbn.
+      f_equal. f_equal.
+      rewrite map_map_compose. eapply map_ext.
+      intros []; unfold trans_oib; cbn. f_equal.
+      rewrite map_map_compose. eapply map_ext => //.
+      intros [[] ?] => //.
+      now rewrite map_map_compose.
+    * destruct o => //=. destruct p => //.
+  - apply IHΣ.
+Qed.
+
+Lemma wf_glob_debox (efl := all_env_flags) Σ :
+  wf_glob (trans_env Σ) ->
+  wf_glob (trans_env (debox_env_types Σ)).
+Proof.
+  now rewrite trans_env_debox.
+Qed.
+
+Section EtaFix.
+  Import EEtaExpandedFix.
+  Lemma expanded_dearg_env (efl := all_env_flags) Σ :
+    valid_masks_env Σ ->
+    expanded_global_env (trans_env Σ) ->
+    expanded_global_env (trans_env (dearg_env Σ)).
+  Proof.
+    induction Σ; intros vm exp; depelim exp.
+    - constructor.
+    - cbn in *. constructor; eauto. move/andP: vm => [] va vΣ. now apply IHΣ.
+      destruct a as [[kn ?] []]; cbn => //.
+      + destruct c as [? []]; cbn => //.
+        cbn in H.
+        move/andP: vm => [] /andP[] vdm vc vΣ.
+        eapply expanded_isEtaExp in H.
+        eapply isEtaExp_expanded.
+        eapply expanded_dearg; eauto.
+        now eapply valid_cases_dearg_lambdas.
+        now eapply isEtaExp_dearg_lambdas.
+      + destruct o; cbn; constructor.
+  Qed.
+End EtaFix.
+
+Unset SsrRewrite.
+
 Lemma valid_dearg_mask_dearg_aux mask t :
   valid_dearg_mask mask t ->
   valid_dearg_mask mask (dearg t).
@@ -3262,21 +4000,6 @@ Proof.
   destruct b; [|easy].
   propify.
   now rewrite is_dead_dearg_aux.
-Qed.
-
-Lemma masked_length {X} m (xs : list X) :
-  #|m| <= #|xs| ->
-  #|masked m xs| = count_zeros m + #|xs| - #|m|.
-Proof.
-  intros len.
-  induction m in xs, len |- *; cbn in *.
-  - now destruct xs.
-  - destruct xs; cbn in *; [easy|].
-    destruct a; cbn in *.
-    + rewrite IHm by easy.
-      now unfold count_zeros.
-    + rewrite IHm by easy.
-      now unfold count_zeros.
 Qed.
 
 Lemma masked_app {X} m m' (xs : list X) :
@@ -3301,21 +4024,6 @@ Proof.
     apply IH.
   - destruct xs; cbn in *; [easy|].
     f_equal; apply IH.
-Qed.
-
-Lemma filter_length {X} (f : X -> bool) (xs : list X) :
-  #|filter f xs| <= #|xs|.
-Proof.
-  induction xs; [easy|].
-  cbn.
-  destruct (f a); cbn; lia.
-Qed.
-
-Lemma map_repeat {X Y} (f : X -> Y) x n :
-  map f (repeat x n) = repeat (f x) n.
-Proof.
-  induction n; [easy|].
-  now cbn; rewrite IHn.
 Qed.
 
 Lemma nth_error_masked {X} m (xs : list X) n :
@@ -3770,7 +4478,7 @@ Proof.
       split. subst.
       eapply lookup_ctor_lookup_env;eauto.
       eapply lookup_ctor_lookup_env;eauto. subst; apply ctor_look. }
-    specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask Hparams]].
+    specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask [Hparams Hprojs]]].
     set (trans_mib (dearg_mib ind_masks (inductive_mind ind) mib)) as mib_dearg.
     set (trans_oib (dearg_oib mask (inductive_ind ind) oib)) as oib_dearg.
     set (dearg_ctor (param_mask mask) (get_branch_mask mask (inductive_ind ind) c) ctor) as ctor_dearg.
@@ -3828,7 +4536,7 @@ Proof.
         { unfold declared_inductive,declared_minductive.
           split. rewrite lookup_env_trans_env. now rewrite Hg.
           unfold trans_mib;cbn. rewrite nth_error_map. now rewrite Hoib. }
-      specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask Hparams]].
+      specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask [Hparams Hprojs]]].
 
       set (dearg_case_branch mask ind c (on_snd dearg br)) as br_dearg.
       eapply (eval_iota _ _ _ _ _ c (masked (get_ctor_mask ind c) (map dearg args)) _ br_dearg);eauto.
@@ -4144,7 +4852,7 @@ Proof.
         { unfold declared_inductive,declared_minductive.
           split. rewrite lookup_env_trans_env. now rewrite Hg.
           unfold trans_mib;cbn. rewrite nth_error_map. now rewrite Hoib. }
-        specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask Hparams]].
+        specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask [Hparams Hprojs]]].
         unfold get_ctor_mask,valid_proj in *.
         rewrite Hmask in *; cbn in *;propify.
         rewrite masked_count_zeros by (rewrite map_length;lia).
@@ -4167,7 +4875,7 @@ Proof.
         { unfold declared_inductive,declared_minductive.
           split. rewrite lookup_env_trans_env. now rewrite Hg.
           unfold trans_mib;cbn. rewrite nth_error_map. now rewrite Hoib. }
-        specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask Hparams]].
+        specialize (valid_ind_mask_inductive _ _ _ _ valid_env decl_ind) as [mask [Hmask [Hparams Hprojs]]].
         unfold get_ctor_mask, valid_proj in *.
         rewrite Hmask in *;cbn in *;propify.
         destruct (nth_error args _) eqn:nth; [|now depelim ev2].
@@ -4231,6 +4939,16 @@ Proof.
         -- now apply is_expanded_aux_subst.
         -- lia.
         -- eapply closedn_dearg_aux;eauto.
+    + depelim e; repeat constructor.
+      cbn in deriv_len. eapply All2_All2_Set, All2_map.
+      solve_all. subst a' a; cbn in *.
+      depelim H0; depelim H1. intuition auto; cbn in *.
+      clear -b0 deriv_len IH.
+      induction b0 in v', ev, deriv_len |- *; depelim ev; constructor; eauto.
+      specialize (IHb0 _ ev). unshelve eapply IH; intuition eauto. cbn. cbn in deriv_len. lia.
+      unshelve eapply IHb0; tea. cbn in deriv_len. lia.
+      cbn in *; unfold test_array_model in *; subst a a'; cbn in *.
+      unshelve eapply IH; tea; rtoProp; intuition eauto. lia.
     + destruct t; cbn in *; try destruct y; try congruence; now constructor.
 Qed.
 End dearg_correct.
@@ -4333,6 +5051,8 @@ Proof.
     assumption.
     eapply lookup_ctor_trans_env_inv;eauto.
     all : eauto.
+  - depelim X; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_All2_Set. eapply All2_Set_All2 in ev; solve_all. eauto.
   - eapply eval_atom.
     depelim t;auto.
     destruct args;simpl in *;try congruence.
@@ -4371,6 +5091,48 @@ Proof.
       eapply IH; [eassumption|].
       now rewrite length_subst_context.
     + depelim ev.
+Qed.
+
+Import MCMonadNotation ResultMonad.
+From Coq Require Import String.
+Definition compute_masks overridden_masks (do_trim_const_masks do_trim_ctor_masks : bool) Σ : result dearg_set bytestring.string :=
+  let (const_masks, ind_masks) := Utils.timed "Dearg analysis" (fun _ => analyze_env overridden_masks Σ) in
+  let const_masks := (if do_trim_const_masks then trim_const_masks else id) const_masks in
+  let ind_masks := (if do_trim_ctor_masks then trim_ind_masks else id) ind_masks in
+  throwIf (negb (is_expanded_env ind_masks const_masks Σ))
+    "Erased environment is not expanded enough for dearging to be provably correct"%bs ;;
+  throwIf (negb (valid_masks_env ind_masks const_masks Σ))
+    "Analysis produced masks that ask to remove live arguments"%bs ;;
+  Ok (Build_dearg_set const_masks ind_masks).
+
+Definition dearg_env masks Σ :=
+  debox_env_types (dearg_env masks.(ind_masks) masks.(const_masks) Σ).
+
+Import PCUICWfEnvImpl PCUICWfEnv PCUICTyping.
+
+Definition dearg_term masks t :=
+  dearg masks.(ind_masks) masks.(const_masks) t.
+
+Lemma dearg_transform_gen_correct {wfl : WcbvFlags} overridden_masks do_trim_const_masks do_trim_ctor_masks :
+  forall (Σ Σopt : global_env) t v masks,
+  with_constructor_as_block = false ->
+  env_closed (trans_env Σ) ->
+  compute_masks overridden_masks do_trim_const_masks do_trim_ctor_masks Σ = ResultMonad.Ok masks ->
+  closed t ->
+  valid_cases masks.(ind_masks) t ->
+  is_expanded masks.(ind_masks) masks.(const_masks) t ->
+  trans_env Σ e⊢ t ⇓ v -> trans_env (dearg_env masks Σ) e⊢ dearg_term masks t ⇓ dearg_term masks v.
+Proof.
+  intros Σ Σopt t v masks block cl opt clt vc expc ev.
+  unfold compute_masks in opt. cbn in opt.
+  destruct analyze_env; cbn in *.
+  destruct is_expanded_env eqn:exp; cbn in *; [|congruence].
+  destruct valid_masks_env eqn:valid; cbn in *; [|congruence].
+  injection opt as <-.
+  set (im := (if do_trim_ctor_masks then trim_ind_masks else id) ind_masks) in *; clearbody im.
+  set (cm := (if do_trim_const_masks then trim_const_masks else id) const_masks) in *; clearbody cm.
+  apply eval_debox_env_types;eauto.
+  apply dearg_correct; eauto.
 Qed.
 
 Lemma dearg_transform_correct {wfl : WcbvFlags} overridden_masks do_trim_const_masks do_trim_ctor_masks :

@@ -13,10 +13,11 @@ Definition uint63_from_model (i : uint63_model) : Uint63.int :=
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
 
-Definition trans_prim (t : prim_val) : Ast.term :=
+Definition trans_prim (trans : PCUICAst.term -> Ast.term) (t : prim_val) : Ast.term :=
   match t.π2 with
   | primIntModel i => Ast.tInt i
   | primFloatModel f => Ast.tFloat f
+  | primArrayModel a => Ast.tArray (array_level a) (map trans (array_value a)) (trans (array_default a)) (trans (array_type a))
   end.
 
 Definition trans_predicate (t : PCUICAst.predicate Ast.term) : predicate Ast.term :=
@@ -53,7 +54,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | PCUICAst.tPrim i => trans_prim i
+  | PCUICAst.tPrim i => trans_prim trans i
   end.
 
 Notation trans_decl := (map_decl trans).

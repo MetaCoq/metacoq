@@ -71,12 +71,18 @@ Module Unquote.
   Local Unset Universe Minimization ToSet.
   (* idk why this is needed... *)
   #[local] Hint Extern 1 (Monad _) => refine TemplateMonad_Monad : typeclass_instances.
+  Definition tmQuoteSort@{U t u} : TemplateMonad@{t u} sort
+    := p <- @tmQuote Prop (Type@{U} -> True);;
+      match p with
+      | tProd _ (tSort s) _ => ret s
+      | _ => tmFail "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
+      end.
   Definition tmQuoteUniverse@{U t u} : TemplateMonad@{t u} Universe.t
-    := bind@{t u} (@tmQuote@{t u} Prop (Type@{U} -> True))
-       (fun u => match u with
-       | tProd _ (tSort u) _ => ret@{t u} u
-       | _ => tmFail@{t u} "Anomaly: tmQuote (Type -> True) should be (tProd _ (tSort _) _)!"%bs
-       end).
+    := s <- @tmQuoteSort@{U t u};;
+      match s with
+      | sType u => ret u
+      | _ => tmFail "Sort does not carry a universe (is not Type)"%bs
+      end.
   Definition tmQuoteLevel@{U t u} : TemplateMonad@{t u} Level.t
     := bind@{t u} tmQuoteUniverse@{U t u}
        (fun u =>

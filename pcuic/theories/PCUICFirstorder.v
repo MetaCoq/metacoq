@@ -56,7 +56,7 @@ Section firstorder.
       (List.rev (c.(cstr_args) ++ mind.(ind_params)))%list.
 
   Definition firstorder_oneind mind (ind : one_inductive_body) :=
-    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Universe.is_level (ind_sort ind)).
+    forallb (firstorder_con mind) ind.(ind_ctors) && negb (Sort.is_level (ind_sort ind)).
 
   Definition firstorder_mutind (mind : mutual_inductive_body) :=
     (* if forallb (fun decl => firstorder_type decl.(decl_type)) mind.(ind_params) then *)
@@ -71,6 +71,8 @@ Section firstorder.
     end.
 
 End firstorder.
+
+Arguments firstorder_ind : clear implicits.
 
 Fixpoint firstorder_env' (Σ : global_declarations) :=
   match Σ with
@@ -87,7 +89,7 @@ Definition firstorder_env (Σ : global_env_ext) :=
   firstorder_env' Σ.1.(declarations).
 
 Lemma firstorder_lookup_inv {Σ i} :
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   {mind & lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind)}.
 Proof.
   unfold firstorder_ind. destruct lookup_env. 2:auto.
@@ -100,7 +102,7 @@ Context {cf : config.checker_flags}.
 
 Definition isPropositionalArity ar :=
   match destArity [] ar with
-  | Some (_, s) => is_propositional s
+  | Some (_, s) => Sort.is_propositional s
   | None => false
   end.
 
@@ -136,7 +138,7 @@ Qed.
 
 Lemma firstorder_ind_propositional {Σ : global_env_ext} {wfΣ:wf Σ} i mind oind :
   declared_inductive Σ i mind oind ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   ~~ isPropositional Σ i.
 Proof using Type.
   intros d. unshelve epose proof (d_ := declared_inductive_to_gen d); eauto.
@@ -168,7 +170,7 @@ Inductive firstorder_spine Σ (Γ : context) : term -> list term -> term -> Type
     Σ ;;; Γ ⊢ ty ≤ tProd na (mkApps (tInd i u) args) B ->
     declared_inductive Σ i mind oind ->
     Σ ;;; Γ |- hd : (mkApps (tInd i u) args) ->
-    @firstorder_ind Σ (@firstorder_env Σ) i ->
+    firstorder_ind Σ (@firstorder_env Σ) i ->
     firstorder_spine Σ Γ (subst10 hd B) tl B' ->
     firstorder_spine Σ Γ ty (hd :: tl) B'.
 
@@ -178,7 +180,7 @@ Inductive instantiated {Σ} (Γ : context) : term -> Type :=
   instantiated Γ (ty {0 := d}) ->
   instantiated Γ (tLetIn na d b ty)
 | instantiated_tProd na B i u args :
-  @firstorder_ind Σ (@firstorder_env Σ) i ->
+  firstorder_ind Σ (@firstorder_env Σ) i ->
     (forall x,
        (* Σ ;;; Γ |- x : mkApps (tInd i u) args ->  *)
       instantiated Γ (subst10 x B)) ->
@@ -191,7 +193,9 @@ Lemma isType_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T}
   wf_local Σ Δ ->
   isType Σ Δ T.
 Proof using Type.
-  intros [s Hs]. exists s. eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
+  intros HT ??.
+  apply lift_typing_impl with (1 := HT); intros ?? H.
+  eapply context_conversion; tea. now eapply ws_cumul_ctx_pb_forget.
 Qed.
 
 Lemma typing_spine_arity_spine {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ args T' i u pars :
@@ -330,7 +334,7 @@ Proof using Type.
     now eapply isType_tLetIn_red in isty; pcuic.
   - depelim hi. solve_discr.
     specialize (i1 hd). specialize (IHhsp i1).
-    destruct (validity t) as [s Hs]. eapply inversion_mkApps in Hs as [? [hi _]].
+    destruct (validity t) as (_ & s & Hs & _). eapply inversion_mkApps in Hs as [? [hi _]].
     eapply inversion_Ind in hi as [mdecl [idecl [decli [? ?]]]].
     econstructor; tea. 2:{ eapply IHhsp. eapply isType_apply in isty; tea. }
     now eapply isType_ws_cumul_pb_refl. eauto.
@@ -430,13 +434,13 @@ Proof using Type.
   destruct plookup_env eqn:hl => //. destruct b => //.
   eapply (plookup_env_extends (Σ:=Σ)) in hl. 2:split; eauto.
   rewrite eq in hl. rewrite hl //. apply wf.
-  all: destruct l; eauto. 
+  all: destruct l; eauto.
 Qed.
 
 Lemma firstorder_args {Σ : global_env_ext} {wfΣ : wf Σ} { mind cbody i n ui args u pandi oind} :
   declared_constructor Σ (i, n) mind oind cbody ->
   PCUICArities.typing_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi) ->
-  @firstorder_ind Σ (@firstorder_env Σ) i ->
+  firstorder_ind Σ (@firstorder_env Σ) i ->
   firstorder_spine Σ [] (type_of_constructor mind cbody (i, n) ui) args (mkApps (tInd i u) pandi).
 Proof using Type.
   intros Hdecl Hspine Hind. revert Hspine.
@@ -510,11 +514,11 @@ Proof using Type.
         unfold firstorder_type; cbn.
         destruct (decompose_app decl_type) eqn:da.
         rewrite (decompose_app_inv da) subst_mkApps /=.
-        destruct t0 => //=; destruct l; eauto. 
+        destruct t0 => //=; destruct l; eauto.
         { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
           destruct (Nat.leb_spec n n0).
           destruct (n0 - n) eqn:E. lia.
-          cbn. rewrite nth_error_nil /=. 
+          cbn. rewrite nth_error_nil /=.
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia.
           rewrite decompose_app_mkApps //=.
           apply/andP. split. apply Nat.leb_le. lia. apply Nat.ltb_lt. lia. }
@@ -550,7 +554,7 @@ Proof using Type.
           unfold firstorder_type; cbn.
           destruct (decompose_app decl_type) eqn:da.
           rewrite (decompose_app_inv da) subst_mkApps /=.
-          destruct t0 => //=; destruct l; eauto. 
+          destruct t0 => //=; destruct l; eauto.
           { move/andP => [/Nat.leb_le hn /Nat.ltb_lt hn'].
             destruct (Nat.leb_spec n n0).
             destruct (n0 - n) eqn:E. lia.
@@ -624,20 +628,20 @@ Lemma firstorder_value_spec (Σ:global_env_ext) t i u args :
   wf Σ -> wf_local Σ [] ->
    Σ ;;; [] |- t : mkApps (tInd i u) args ->
   PCUICWcbvEval.value Σ t ->
-  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_ind Σ (firstorder_env Σ) i ->
   firstorder_value Σ [] t.
 Proof using Type.
   intros Hwf Hwfl Hty Hvalue.
   revert i u args Hty.
 
-  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
+  induction Hvalue as [ t Hvalue | p pv ih | t args' Hhead Hargs IH ] using PCUICWcbvEval.value_values_ind;
    intros i u args Hty Hfo.
   - destruct t; inversion_clear Hvalue.
     + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
     + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_sort_ind in Hcumul.
-    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul); eauto.
+    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & Hcumul); eauto.
       now eapply invert_cumul_prod_ind in Hcumul.
     + exfalso. eapply inversion_Ind in Hty as (? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICInductives.declared_inductive_type in d.
@@ -669,8 +673,8 @@ Proof using Type.
       eapply andb_true_iff in Hfo as [Hfo _].
       rewrite /check_recursivity_kind E in Hty.
       now eapply (negb_False _ Hfo).
-    + eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl [s []] cum]]]; eauto.
-      now eapply invert_cumul_axiom_ind in cum; tea.
+  - eapply inversion_Prim in Hty as [prim_ty [cdecl [wf hp hdecl inv ty cum]]]; eauto.
+      now eapply invert_cumul_prim_type_ind in cum; tea.
   - destruct t; inv Hhead.
     + exfalso. now eapply invert_ind_ind in Hty.
     + apply inversion_mkApps in Hty as Hcon; auto.
@@ -720,7 +724,7 @@ Proof.
   intros Ha H. induction H in t', Ha |- using firstorder_value_inds.
   eapply eq_term_upto_univ_napp_mkApps_l_inv in Ha as (? & ? & [] & ->).
   invs e. repeat f_equal.
-  - now eapply eq_univ_make.
+  - now eapply cmp_universe_instance_eq.
   - revert x0 a. clear - H0. induction H0; intros; invs a; f_equal; eauto.
 Qed.
 

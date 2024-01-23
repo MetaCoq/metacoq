@@ -27,7 +27,7 @@ jobs:
           - 'dev'
         ocaml_version:
           - '4.14-flambda'
-        target: [ local, opam, quick ]
+        target: [ local, opam ]
       fail-fast: true
 
     concurrency:

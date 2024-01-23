@@ -102,8 +102,7 @@ Section Eta.
         in
         match nth_error def' i with
         | Some d => eta_fixpoint def' i d (map (eta_expand Γ) args)
-        | None => tVar ("Error: lookup of a fixpoint failed for "
-                          ++ string_of_term t)
+        | None => tVar ("Error: lookup of a fixpoint failed")
         end
       | tRel n =>
         match nth_error Γ n with
@@ -126,8 +125,7 @@ Section Eta.
                                         {| dname := dname d ; dtype := dtype d ; dbody := eta_expand (ctx ++  Γ) d.(dbody) ; rarg := rarg d |}) def) in
                       match nth_error def' i with
                       | Some d => eta_fixpoint def' i d []
-                      | None => tVar ("Error: lookup of a fixpoint failed for "
-                                       ++ string_of_term t)
+                      | None => tVar ("Error: lookup of a fixpoint failed ")
                       end
     | tCoFix def i => tCoFix (map (map_def id (eta_expand (repeat None (#|def|) ++ Γ))) def) i
     (* NOTE: we know that constructors and constants are not applied at this point,
@@ -139,6 +137,7 @@ Section Eta.
                        ++ string_of_kername ind.(inductive_mind))
         end
     | tCast t1 k t2 => tCast (eta_expand Γ t1) k (eta_expand Γ t2)
+    | tArray u arr def ty => tArray u (List.map (eta_expand Γ) arr) (eta_expand Γ def) (eta_expand Γ ty)
     | tInt _ | tFloat _ => t
     end.
 
@@ -256,7 +255,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
 | expanded_tRel_app (n : nat) args m : nth_error Γ n = Some m -> m <= #|args| -> Forall (expanded Γ) args -> expanded Γ (tApp (tRel n) args)
 | expanded_tVar (id : ident) : expanded Γ (tVar id)
 | expanded_tEvar (ev : nat) (args : list term) : Forall (expanded Γ) args -> expanded Γ (tEvar ev args)
-| expanded_tSort (s : Universe.t) : expanded Γ (tSort s)
+| expanded_tSort (s : sort) : expanded Γ (tSort s)
 | expanded_tCast (t : term) (kind : cast_kind) (v : term) : expanded Γ t -> expanded Γ v -> expanded Γ (tCast t kind v)
 | expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded Γ ty -> expanded Γ body -> *) expanded Γ (tProd na ty body)
 | expanded_tLambda (na : aname) (ty : term) (body : term) : (* expanded Γ ty -> *) expanded (0 :: Γ) body -> expanded Γ (tLambda na ty body)
@@ -294,7 +293,12 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     Forall (expanded Γ) args ->
     expanded Γ (tApp (tConstruct ind c u) args)
 | expanded_tInt i : expanded Γ (tInt i)
-| expanded_tFloat f : expanded Γ (tFloat f).
+| expanded_tFloat f : expanded Γ (tFloat f)
+| expanded_tArray u arr def ty :
+  Forall (expanded Γ) arr ->
+  expanded Γ def ->
+  expanded Γ ty ->
+  expanded Γ (tArray u arr def ty).
 
 End expanded.
 
@@ -304,7 +308,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
 (forall Γ, forall n : nat, forall args, forall m, nth_error Γ n = Some m -> forall Heq :  m <= #|args|, Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tApp (tRel n) args)) ->
 (forall Γ, forall id : ident, P Γ (tVar id)) ->
 (forall Γ, forall (ev : nat) (args : list term), Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
-(forall Γ, forall s : Universe.t, P Γ (tSort s)) ->
+(forall Γ, forall s : sort, P Γ (tSort s)) ->
 (forall Γ, forall (t : term) (kind : cast_kind) (v : term),
  expanded Σ Γ t -> P Γ t -> expanded Σ Γ v -> P Γ v -> P Γ (tCast t kind v)) ->
 (forall Γ, forall (na : aname) (ty body : term), P Γ (tProd na ty body)) ->
@@ -359,9 +363,14 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  P Γ(tApp (tConstruct ind c u) args)) ->
 (forall Γ i, P Γ (tInt i)) ->
 (forall Γ f, P Γ (tFloat f)) ->
+(forall Γ u arr def ty,
+  Forall (P Γ) arr ->
+  P Γ def ->
+  P Γ ty ->
+  P Γ (tArray u arr def ty)) ->
  forall Γ, forall t : term, expanded Σ Γ t -> P Γ t.
 Proof.
-  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat.
+  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat Harr.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   all: match goal with [H : Forall _ _ |- _] => let all := fresh "all" in rename H into all end.
@@ -381,6 +390,7 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct_app; eauto.
     clear - all f. induction all; econstructor; eauto.
+  - eapply Harr; eauto. clear -all f. induction all; constructor; auto.
 Qed.
 
 Local Hint Constructors expanded : core.
@@ -627,6 +637,7 @@ Proof.
   - destruct t; invs H4.
     eapply expanded_tConstruct_app; eauto. revert H0.
     now len. solve_all.
+  - constructor; eauto. solve_all.
 Qed.
 
 Lemma expanded_lift {Σ : global_env} Γ' Γ'' Γ t :
@@ -672,6 +683,7 @@ Proof.
     shelve. autorewrite with len list in H |- *. eapply H.
   - eapply expanded_tConstruct_app; eauto.
     now len. solve_all.
+  - constructor; eauto. eapply Forall_map. solve_all.
 Qed.
 
 Lemma expanded_lift' {Σ : global_env} Γ' Γ'' Γ t Γassum Γgoal n m :
@@ -974,11 +986,23 @@ Proof.
       | Some (n, _) => n
       | None => 0
       end) Γ') (eta_expand Σg Γ' t))
+    (Pj := fun (Σ : global_env_ext) Γ j => option_default (fun t => forall Γ',  Forall2 (fun (x : option (nat × term)) (y : context_decl) =>
+            match x with
+          | Some (_, t0) => decl_type y = t0 /\ _
+          | None => True
+          end) Γ' Γ ->
+      forall Σg, repr_decls Σg Σ.1 ->
+      expanded Σ (map (fun x : option (nat × term) =>
+        match x with
+        | Some (n, _) => n
+        | None => 0
+        end) Γ') (eta_expand Σg Γ' t)) (j_term j) True)
       (PΓ := fun _ _ _ => True);
     repeat match goal with
     | [ |- repr_decls _ _ -> _ ] => intros hrepr
     | _ => intro
     end; try now (cbn; eauto).
+  - apply fst in X. destruct j_term => //. apply snd in X. simpl. apply X.
   - cbn. eapply Forall2_nth_error_Some_r in H1 as (? & ? & ?); eauto.
     rewrite H1.
     destruct x as [[] | ].
@@ -998,7 +1022,7 @@ Proof.
            all: econstructor; rewrite nth_error_app1; revgoals; [eapply nth_error_repeat; lia | rewrite repeat_length; lia].
     + econstructor. now rewrite nth_error_map H1.
   - cbn. econstructor. eapply (H1 (up Γ')); tea; econstructor; eauto.
-  - cbn. econstructor. eauto. eapply (H2 (up Γ')); tea; econstructor; eauto.
+  - cbn. econstructor. eauto. eapply (H1 (up Γ')); tea; econstructor; eauto.
   - specialize (H _ H2).
     assert (Forall(fun t : term => expanded Σ0 (map
     (fun x : option (nat × term) =>
@@ -1193,11 +1217,10 @@ Proof.
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
-      destruct a as (? & ? & ?).
-      destruct a0 as (? & ?).
+      cbn in *.
       rewrite !firstn_length. rewrite -> !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply e0; eauto. 2: reflexivity. 2: now len.
+      5: eapply a2; eauto. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1215,13 +1238,14 @@ Proof.
       len; lia.
       rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
-  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl with (1 := X2). cbn. intros ? e0.
      specialize (e0 (repeat None #|mfix| ++ Γ'))%list.
      rewrite map_app map_repeat in e0. len. eapply e0; auto.
      eapply Forall2_app; eauto. unfold types.
      assert (#|Typing.fix_context mfix| = #|mfix|). { unfold Typing.fix_context. now len. }
      revert H4. generalize (Typing.fix_context mfix). clear.
      induction #|mfix|; intros []; cbn; intros; try congruence; econstructor; eauto.
+  - cbn. econstructor; eauto. solve_all. eapply b; tea. solve_all.
   - eapply typing_wf_local; eauto.
 Qed.
 
@@ -1422,8 +1446,9 @@ Proof.
   cbn. constructor.
   cbn. constructor.
   len. rewrite app_nil_r.
-  red in t1, t2.
-  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t2).
+  destruct t1 as (t1 & s & t2 & _).
+  cbn in t1, t2.
+  forward (eta_expand_expanded (Σ := Σ) Γ (repeat None #|Γ|) _ _ wfΣ t1).
   clear. induction Γ; cbn; constructor; auto.
   intros. specialize (H _ hrepr).
   move: H.
@@ -1442,8 +1467,8 @@ Proof.
   cbn in hs. destruct a as [na [b|] ty]; try destruct hs as [hs ?].
   specialize (IHctx' cunivs hs). constructor; auto.
   constructor. len. rewrite repeat_app.
-  destruct p as [[s Hs] ?].
-  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ t0).
+  destruct l as [Htm [s Hs]].
+  epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None (#|ctx'| + #|ctx|)) _ _ wfΣ Htm).
   forward H.
   clear. rewrite -app_context_length.
   induction (_ ,,, _); cbn; constructor; auto.
@@ -1468,7 +1493,7 @@ Proof.
   - unfold on_constant_decl in ond.
     destruct c as [na body ty rel]; cbn in *.
     destruct body. constructor => //; cbn.
-    apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond). constructor.
+    apply (eta_expand_expanded (Σ := Σ) [] [] t0 na wf ond.1). constructor.
     apply hrepr.
     destruct ond as [s Hs]. constructor => //.
   - destruct ond as [onI onP onN onV].
@@ -1484,7 +1509,7 @@ Proof.
     pose proof onc.(on_cargs).
     eapply eta_expand_context_sorts in X0. now len in X0. exact hrepr.
     len. len.
-    pose proof onc.(on_ctype). destruct X0.
+    pose proof onc.(on_ctype). destruct X0 as (_ & s & t0 & _).
     epose proof (eta_expand_expanded (Σ := Σ) _ (repeat None #|ind_bodies m|) _ _ wf t0).
     forward H. rewrite -arities_context_length.
     clear. induction (arities_context _); constructor; auto.

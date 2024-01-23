@@ -15,6 +15,7 @@ Local Open Scope bs.
 Import MCMonadNotation.
 
 Class quotation_of {T} (t : T) := quoted_term_of : PCUICAst.term.
+#[global] Arguments quoted_term_of {T} t {_}.
 Class ground_quotable T := quote_ground : forall t : T, quotation_of t.
 Class inductive_quotation_of {T} (t : T) : Set
   := { qinductive : inductive

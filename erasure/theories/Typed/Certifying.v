@@ -51,6 +51,7 @@ Definition change_modpath (mpath : modpath) (suffix : string) (to_rename : kerna
     | tCoFix mfix idx => tCoFix (map (map_def go go) mfix) idx
     | tInt n => tInt n
     | tFloat n => tFloat n
+    | tArray l v def ty => tArray l (map go v) (go def) (go ty)
   end.
 
 Fixpoint map_constants_global_decls (k : kername -> kername) (f : constant_body -> constant_body) (Σ : global_declarations) : global_declarations :=

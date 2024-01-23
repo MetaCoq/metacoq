@@ -43,7 +43,7 @@ Proof.
   rewrite /=. rewrite Nat.add_comm. bool_congr.
 Qed.
 
-Lemma test_context_k_app p n Γ Γ' :
+Lemma test_context_k_app (p : nat -> term -> bool) n Γ Γ' :
   test_context_k p n (Γ ,,, Γ') =
   test_context_k p n Γ && test_context_k p (n + #|Γ|) Γ'.
 Proof.
@@ -121,6 +121,7 @@ Proof.
     autorewrite with map;
     simpl closed in *; solve_all;
     unfold test_def, test_snd, test_predicate_k, test_branch_k in *;
+    try eapply primProp_map;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
@@ -368,11 +369,6 @@ Proof.
     eapply closedn_mkLambda_or_LetIn;
       now rewrite app_length // plus_n_Sm.
 Qed.
-
-Definition Pclosed :=
-  (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
-           closedn #|Γ| t && closedn #|Γ| T).
-
 
 
 Lemma closed_subst_context n (Δ Δ' : context) t :

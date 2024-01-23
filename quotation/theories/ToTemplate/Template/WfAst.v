@@ -1,7 +1,7 @@
 From MetaCoq.Template Require Import Ast WfAst.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
-From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) utils All_Forall MCProd.
+From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) utils All_Forall MCProd MCOption.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) config BasicAst Universes Kernames.
 From MetaCoq.Quotation.ToTemplate.Template Require Import (hints) Ast AstUtils Induction UnivSubst.
 
@@ -13,6 +13,5 @@ Proof.
 Defined.
 
 #[export] Instance quote_wf_Inv {Σ t} : ground_quotable (@wf_Inv Σ t) := ltac:(cbv [wf_Inv]; exact _).
-Import StrongerInstances.
-#[export] Instance quote_wf_decl {Σ d} : ground_quotable (@wf_decl Σ d) := ltac:(cbv [wf_decl]; destruct decl_body; exact _).
-#[export] Instance quote_wf_decl_pred {Σ Γ t T} : ground_quotable (@wf_decl_pred Σ Γ t T) := ltac:(cbv [wf_decl_pred]; exact _).
+#[export] Instance quote_wf_decl {Σ d} : ground_quotable (@wf_decl Σ d) := ltac:(cbv [wf_decl]; exact _).
+#[export] Instance quote_wf_decl_pred {Σ Γ j} : ground_quotable (@wf_decl_pred Σ Γ j) := ltac:(cbv [wf_decl_pred]; exact _).

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
+From MetaCoq.Common Require Import config Kernames Primitive BasicAst EnvMap.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EArities
     ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
@@ -59,7 +59,7 @@ Section strip.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i block_args
-    | tPrim p => EAst.tPrim p }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => strip x)) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -72,10 +72,14 @@ Section strip.
     - pose proof (size_mkApps_l napp nnil).
       eapply (In_size id size) in H. change (fun x => size (id x)) with size in H. unfold id in H. lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - destruct p as [? []]; cbn in H; eauto.
+      intuition auto; subst; cbn; try lia.
+      eapply (In_size id size) in H0. unfold id in H0.
+      change (fun x => size x) with size in H0. lia.
   Qed.
   End Def.
 
-  Hint Rewrite @map_InP_spec : strip.
+  #[universes(polymorphic)] Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
 
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
   Proof using Type.
@@ -107,6 +111,7 @@ Section strip.
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
+    - solve_all_k 6.
     - rewrite !closedn_mkApps in H1 *.
       rtoProp; intuition auto.
       solve_all.
@@ -353,7 +358,7 @@ Section strip.
 
 End strip.
 
-Global Hint Rewrite @map_InP_spec : strip.
+#[universes(polymorphic)] Global Hint Rewrite @map_primIn_spec @map_InP_spec : strip.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.
@@ -400,6 +405,14 @@ Proof.
   rewrite lookup_env_strip.
   destruct lookup_env as [[]|] => /= //.
   do 2 destruct nth_error => //.
+Qed.
+
+Lemma lookup_constructor_pars_args_strip (Σ : GlobalContextMap.t) i n npars nargs :
+  EGlobalEnv.lookup_constructor_pars_args Σ i n = Some (npars, nargs) ->
+  EGlobalEnv.lookup_constructor_pars_args (strip_env Σ) i n = Some (0, nargs).
+Proof.
+  rewrite /EGlobalEnv.lookup_constructor_pars_args. rewrite lookup_constructor_strip //=.
+  destruct EGlobalEnv.lookup_constructor => //. destruct p as [[] ?] => //=. now intros [= <- <-].
 Qed.
 
 Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind :
@@ -549,6 +562,10 @@ Module Fast.
     | app, tConstruct kn c block_args with GlobalContextMap.lookup_inductive_pars Σ (inductive_mind kn) := {
         | Some npars => mkApps (EAst.tConstruct kn c block_args) (List.skipn npars app)
         | None => mkApps (EAst.tConstruct kn c block_args) app }
+    | app, tPrim (primInt; primIntModel i) => mkApps (tPrim (primInt; primIntModel i)) app
+    | app, tPrim (primFloat; primFloatModel f) => mkApps (tPrim (primFloat; primFloatModel f)) app
+    | app, tPrim (primArray; primArrayModel a) =>
+      mkApps (tPrim (primArray; primArrayModel {| array_default := strip [] a.(array_default); array_value := strip_args a.(array_value) |})) app
     | app, x => mkApps x app }
 
     where strip_args (t : list term) : list term :=
@@ -589,6 +606,11 @@ Module Fast.
         specialize (IHv [] eq_refl). simpl in IHv.
         intros args ->. specialize (IHu (v :: args)).
         forward IHu. now rewrite -IHv. exact IHu.
+      - intros Hl hargs args ->.
+        rewrite strip_mkApps //=. simp_strip.
+        f_equal. f_equal. cbn.
+        do 2 f_equal. rewrite /map_array_model.
+        specialize (Hl [] eq_refl). f_equal; eauto.
       - intros Hl args ->.
         rewrite strip_mkApps // /=.
         rewrite GlobalContextMap.lookup_inductive_pars_spec in Hl. now rewrite Hl.
@@ -827,6 +849,7 @@ Proof.
     eapply on_case; rtoProp; intuition auto. solve_all.
     eapply on_fix. solve_all. solve_all.
     eapply on_cofix; solve_all.
+    eapply on_prim; solve_all.
   - red. intros kn decl.
     move/(lookup_env_closed clΣ).
     unfold closed_decl. destruct EAst.cst_body => //.
@@ -996,6 +1019,10 @@ Proof.
       eapply All2_impl; tea; cbn -[strip].
       intros x y []; auto.
 
+  - depelim X; simp strip; repeat constructor.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all. now destruct b.
+    now destruct a0.
+
   - destruct t => //.
     all:constructor; eauto. simp strip.
     cbn [atom strip] in H |- *.
@@ -1064,7 +1091,7 @@ Proof.
     all: eapply H; auto.
   - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
     now rewrite -strip_isLambda. toAll; solve_all.
-  - unfold wf_fix in *. rewrite map_length; rtoProp; intuition auto. toAll; solve_all.
+  - primProp. rtoProp; intuition eauto; solve_all_k 6.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     toAll; solve_all. toAll; solve_all.
   - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.

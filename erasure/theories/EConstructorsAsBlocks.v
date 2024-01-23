@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EArities
     ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap
     EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
@@ -62,7 +62,7 @@ Section transform_blocks.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i []
-    | tPrim p => EAst.tPrim p }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => transform_blocks x)) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -82,11 +82,13 @@ Section transform_blocks.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in *. lia.
+    - now eapply InPrim_size in H.
   Qed.
 
   End Def.
 
-  Hint Rewrite @map_InP_spec : transform_blocks.
+  #[universes(polymorphic)]
+  Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
 
   Arguments eqb : simpl never.
 
@@ -116,6 +118,7 @@ Section transform_blocks.
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
+    - solve_all_k 6.
     - rewrite !closedn_mkApps in H1 *.
       rtoProp; intuition auto. solve_all.
     - destruct (chop nargs v) eqn:E.
@@ -426,6 +429,9 @@ Section transform_blocks.
 
 End transform_blocks.
 
+#[universes(polymorphic)]
+Global Hint Rewrite @map_primIn_spec @map_InP_spec : transform_blocks.
+
 Definition transform_blocks_constant_decl Σ cb :=
   {| cst_body := option_map (transform_blocks Σ) cb.(cst_body) |}.
 
@@ -714,6 +720,7 @@ Proof.
     cbn -[transform_blocks isEtaExp] in *. rtoProp. eauto.
   - unfold wf_fix in *. len. solve_all. rtoProp; intuition auto.
     solve_all.
+  - solve_all_k 7.
   - rewrite !wellformed_mkApps in Hw |- * => //. rtoProp.
     eapply isEtaExp_mkApps in H1. rewrite decompose_app_mkApps in H1; eauto.
     destruct construct_viewc; eauto. cbn in d. eauto.
@@ -982,7 +989,7 @@ Proof.
     + unfold constructor_isprop_pars_decl.
       rewrite lookup_constructor_transform_blocks. cbn [fst].
       rewrite eqc //= H8 //.
-    + now rewrite map_InP_spec nth_error_map H3; eauto.
+    + now rewrite nth_error_map H3; eauto.
     + len.
     + rewrite H9. len.
     + rewrite wellformed_mkApps in i4 => //.
@@ -1011,8 +1018,7 @@ Proof.
       * eauto.
       * revert e1.  set (x := transform_blocks Σ f5).
         simp transform_blocks.
-      * rewrite map_InP_spec.
-        cbn in i8. unfold wf_fix in i8. rtoProp.
+      * cbn in i8. unfold wf_fix in i8. rtoProp.
         erewrite <- transform_blocks_cunfold_fix => //.
         all: eauto.
         eapply closed_fix_subst. solve_all. destruct x; cbn in H5 |- *. eauto.
@@ -1046,7 +1052,7 @@ Proof.
   - simp transform_blocks. rewrite -!transform_blocks_equation_1.
     rewrite transform_blocks_mkApps //=.
     simp transform_blocks. rewrite -!transform_blocks_equation_1.
-    rewrite !map_InP_spec. cbn [plus].
+    cbn [plus].
     intros.
     destruct H3 as [ev wf eta etad].
     destruct H6.
@@ -1059,7 +1065,7 @@ Proof.
     now rewrite transform_blocks_mkApps_eta_fn in e.
   - intros; repeat match goal with [H : MCProd.and5 _ _ _ _ _ |- _] => destruct H end.
     rewrite transform_blocks_mkApps //= in e0.
-    simp transform_blocks in e0. rewrite -!transform_blocks_equation_1 map_InP_spec in e0. simpl in e0.
+    simp transform_blocks in e0. rewrite -!transform_blocks_equation_1 in e0. simpl in e0.
     simp transform_blocks. rewrite -!transform_blocks_equation_1.
     move: i; rewrite /= wellformed_mkApps //. move/and3P => [] hasp wffn wfargs.
     move: i4; rewrite /= wellformed_mkApps //. move/andP => [] wfcof _.
@@ -1171,8 +1177,13 @@ Proof.
     unfold cstr_arity. cbn. rewrite H4; len.
     solve_all. clear -X0. eapply All2_All2_Set. solve_all.
     match goal with H : _ |- _ => apply H end.
+  - intros X; depelim X; simp transform_blocks; repeat constructor.
+    destruct a0.
+    eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all.
+    now destruct b.
+    now destruct a0.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
-    cbn -[lookup_constructor] in H |- *. destruct l => //.
+    cbn -[lookup_constructor] in H |- *. destruct args => //.
     destruct lookup_constructor eqn:hl => //.
     destruct p as [[mdecl idecl] cdecl].
     eapply eval_construct_block => //.

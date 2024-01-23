@@ -1,7 +1,7 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Reflect.
-From MetaCoq.Erasure Require Import EAst EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EInduction.
 From Equations Require Import Equations.
 
 Local Ltac finish :=
@@ -61,7 +61,7 @@ Proof.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     subst. left. reflexivity.
-  - revert l. induction X ; intro l0.
+  - revert args0. induction X ; intro l0.
     + destruct l0.
       * left. reflexivity.
       * right. discriminate.
@@ -71,7 +71,7 @@ Proof.
         destruct (p t) ; nodec.
         inversion e. subst; left; reflexivity.
   - destruct (IHx t) ; nodec.
-    subst. revert l0. clear IHx.
+    subst. revert brs. clear IHx.
     induction X ; intro l0.
     + destruct l0.
       * left. reflexivity.
@@ -79,14 +79,14 @@ Proof.
     + destruct l0.
       * right. discriminate.
       * destruct (IHX l0) ; nodec.
-        destruct (p (snd p1)) ; nodec.
-        destruct (eq_dec (fst x) (fst p1)) ; nodec.
-        destruct x, p1.
+        destruct (p (snd p0)) ; nodec.
+        destruct (eq_dec (fst x) (fst p0)) ; nodec.
+        destruct x, p0.
         left.
         cbn in *. subst. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.
     left. subst. reflexivity.
-  - revert m0. induction X ; intro m0.
+  - revert mfix. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.
@@ -99,7 +99,7 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - revert m0. induction X ; intro m0.
+  - revert mfix. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.
@@ -112,8 +112,15 @@ Proof.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (eq_dec p p0); nodec.
-    left; subst. reflexivity.
+  - destruct prim as [? []]; destruct p as [? []]; cbn ; nodec.
+    + destruct (eq_dec i i0); nodec; subst; eauto.
+    + destruct (eq_dec f f0); nodec; subst; eauto.
+    + destruct a as [? ?], a0 as [? ?]; cbn.
+      depelim X. destruct p as [hd hv]. cbn in *.
+      destruct (hd array_default); nodec; subst; eauto.
+      revert array_value; induction hv; intros []; eauto; nodec.
+      destruct (p t); subst; nodec.
+      destruct (IHhv l0); nodec. noconf e; eauto.
 Defined.
 
 #[global]

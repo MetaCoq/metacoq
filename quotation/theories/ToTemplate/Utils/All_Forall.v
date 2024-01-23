@@ -31,3 +31,9 @@ Definition quote_All2_via_dep {A B R lsA lsB} {a : @All2 A B R lsA lsB} (qa : Al
 #[export] Instance quote_All2i_len {A B R lsA lsB} {qA : quotation_of A} {qB : quotation_of B} {qR : quotation_of R} {quoteA : ground_quotable A} {quoteB : ground_quotable B} {quoteR : forall n x y, ground_quotable (R n x y)} : ground_quotable (@All2i_len A B R lsA lsB) := ltac:(induction 1; exact _).
 #[export] Instance quote_All_fold {A P ls} {qA : quotation_of A} {qP : quotation_of P} {quoteA : ground_quotable A} {quoteP : forall x y, ground_quotable (P x y)} : ground_quotable (@All_fold A P ls) := ltac:(induction 1; exact _).
 #[export] Instance quote_All2_fold {A P ls1 ls2} {qA : quotation_of A} {qP : quotation_of P} {quoteA : ground_quotable A} {quoteP : forall x y z w, ground_quotable (P x y z w)} : ground_quotable (@All2_fold A P ls1 ls2) := ltac:(induction 1; exact _).
+#[export] Instance quote_Forall3 {A B C R lsA lsB lsC} {qA : quotation_of A} {qB : quotation_of B} {qC : quotation_of C} {qR : quotation_of R} {quoteA : ground_quotable A} {quoteB : ground_quotable B} {quoteC : ground_quotable C} {quoteR : forall x y z, ground_quotable (R x y z:Prop)} : ground_quotable (@Forall3 A B C R lsA lsB lsC).
+Proof.
+  revert lsB lsC; induction lsA as [|a lsA IH], lsB as [|b lsB], lsC as [|c lsC].
+  all: try solve [ intro pf; exfalso; inversion pf ].
+  all: adjust_ground_quotable_by_econstructor_inversion ().
+Defined.

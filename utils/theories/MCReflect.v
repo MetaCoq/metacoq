@@ -35,6 +35,12 @@ Proof. intros [] => //. Qed.
 
 Hint View for move/ introT|2.
 
+Lemma reflectT_change_left P Q p :
+  CRelationClasses.iffT P Q -> reflectT P p -> reflectT Q p.
+Proof.
+  intros [] []; constructor; auto.
+Qed.
+
 Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation R r.
 Proof.
   intros. intros x y h. destruct (X x y); auto.

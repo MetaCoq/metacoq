@@ -3,15 +3,58 @@ From Coq Require Import Program ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping
-     PCUICElimination PCUICWcbvEval PCUICFirstorder.
-From MetaCoq.Erasure Require EAst EGlobalEnv.
-
+     PCUICElimination PCUICWcbvEval PCUICFirstorder
+     PCUICWellScopedCumulativity PCUICFirstorder PCUICNormalization PCUICReduction
+     PCUICConversion PCUICPrincipality PCUICNormal.
+From MetaCoq.Erasure Require EPrimitive EAst EGlobalEnv.
+Import EPrimitive.
 Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) *
-  is_propositional u))%type.
+(* A term is erasable if it has _a_ type which either:
+  - is a syntactic arity
+  - is of propositional type *)
+Definition isErasable Σ Γ t :=
+  ∑ T, Σ ;;; Γ |- t : T ×
+  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Sort.is_propositional u))%type.
+
+(* A more positive notion of relevant terms.
+  Showing that a term is not erasable requires quantification over all its possible typings.
+  We give a more positive characterization of relevant terms. A term is not erasable if
+  it has _a_ type in normal form which is not an arity and whose sort is not propositional.
+*)
+Definition nisErasable Σ Γ t :=
+  ∑ T u,
+    [× Σ;;; Γ |- t : T,
+      nf Σ Γ T,
+    ~ isArity T,
+    Σ;;; Γ |- T : tSort u &
+    ~ Sort.is_propositional u].
+
+Lemma nisErasable_spec Σ Γ t :
+  wf_ext Σ -> wf_local Σ Γ ->
+  nisErasable Σ Γ t -> ~ ∥ isErasable Σ Γ t ∥.
+Proof.
+  intros wf wf' [T [u []]].
+  intros []. destruct X as [T' []].
+  destruct s.
+  * destruct (common_typing _ _ t0 t2) as (? & e & ? & ?).
+    eapply PCUICClassification.invert_cumul_arity_l_gen in e. destruct e as [s [[hr] ha]].
+    eapply (proj2 (nf_red _ _ _ _)) in n. 2:eapply hr. subst. contradiction.
+    eapply PCUICClassification.invert_cumul_arity_r_gen. 2:exact w.
+    exists T'. split; auto. sq.
+    eapply PCUICValidity.validity in t2 as (_ & s & Hs & _).
+    eapply PCUICClassification.wt_closed_red_refl; eauto.
+  * destruct (principal_type _ _ t0) as [princ hprinc].
+    destruct s as [u' [hs isp]].
+    pose proof (hprinc _ t2) as [].
+    destruct (PCUICValidity.validity t3) as (_ & s & Hs & _).
+    eapply PCUICElimination.unique_sorting_equality_propositional in hs; tea; eauto.
+    pose proof (hprinc _ t0) as [].
+    eapply PCUICElimination.unique_sorting_equality_propositional in t1; tea; eauto.
+    congruence.
+Qed.
 
 Fixpoint mkAppBox c n :=
   match n with
@@ -24,14 +67,22 @@ Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level
 Definition erase_context (Γ : context) : list name :=
   map (fun d => d.(decl_name).(binder_name)) Γ.
 
-Definition erase_prim_model {t : prim_tag} (e : @prim_model term t) : @prim_model E.term t :=
-  match e in @prim_model _ x return prim_model E.term x with
-  | primIntModel i => primIntModel i
-  | primFloatModel f => primFloatModel f
-  end.
+Inductive erase_prim_model (erase : term -> E.term -> Prop) : forall {t : prim_tag},
+  @PCUICPrimitive.prim_model term t -> @prim_model E.term t -> Type :=
+| erase_primInt i : @erase_prim_model erase primInt (PCUICPrimitive.primIntModel i) (primIntModel i)
+| erase_primFloat f : @erase_prim_model erase primFloat (PCUICPrimitive.primFloatModel f) (primFloatModel f)
+| erase_primArray a ed ev :
+    erase a.(PCUICPrimitive.array_default) ed ->
+    All2 erase a.(PCUICPrimitive.array_value) ev ->
+    @erase_prim_model erase primArray
+      (PCUICPrimitive.primArrayModel a) (primArrayModel {| array_default := ed; array_value := ev |}).
+Derive Signature NoConfusion for erase_prim_model.
 
-Definition erase_prim_val (p : prim_val term) : prim_val E.term :=
-  (p.π1; erase_prim_model p.π2).
+Inductive erase_prim_val (erase : term -> E.term -> Prop) :
+  PCUICPrimitive.prim_val term -> prim_val E.term -> Prop :=
+| erase_prim t m m' : @erase_prim_model erase t m m' ->
+  erase_prim_val erase (t; m) (t; m').
+Derive Signature for erase_prim_val.
 
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
@@ -82,7 +133,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                          × Σ;;; Γ ,,, fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
-  | erases_tPrim : forall p, Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim (erase_prim_val p)
+  | erases_tPrim : forall p p',
+    erase_prim_val (erases Σ Γ) p p' ->
+    Σ;;; Γ |- tPrim p ⇝ℇ E.tPrim p'
   | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox
   where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
@@ -153,7 +206,10 @@ Lemma erases_forall_list_ind
                        (dbody d)
                        (EAst.dbody d') ) mfix mfix' ->
           P Γ (tCoFix mfix n) (E.tCoFix mfix' n))
-      (Hprim : forall Γ p, P Γ (tPrim p) (E.tPrim (erase_prim_val p)))
+      (Hprim : forall Γ p p',
+        erase_prim_val (erases Σ Γ) p p' ->
+        erase_prim_val (P Γ) p p' ->
+        P Γ (tPrim p) (E.tPrim p'))
       (Hbox : forall Γ t, isErasable Σ Γ t -> P Γ t E.tBox) :
   forall Γ t t0,
     Σ;;; Γ |- t ⇝ℇ t0 ->
@@ -194,6 +250,14 @@ Proof.
     fix f' 3.
     intros mfix mfix' []; [now constructor|].
     constructor; [now apply f|now apply f'].
+  - eapply Hprim; tea.
+    induction H. constructor.
+    induction X; constructor.
+    * now eapply f.
+    * destruct a; cbn in *.
+      revert array_value ev a0.
+      fix f' 3; intros mfix mfix' []; [now constructor|].
+      constructor; [now apply f|now apply f'].
 Defined.
 
 Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' : E.constant_body) :=
@@ -289,7 +353,14 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tCoFix defs i :
     Forall (fun d => erases_deps Σ Σ' (E.dbody d)) defs ->
     erases_deps Σ Σ' (E.tCoFix defs i)
-| erases_deps_tPrim p : erases_deps Σ Σ' (E.tPrim p).
+| erases_deps_tPrimInt i :
+    erases_deps Σ Σ' (E.tPrim (primInt; primIntModel i))
+| erases_deps_tPrimFloat f :
+    erases_deps Σ Σ' (E.tPrim (primFloat; primFloatModel f))
+| erases_deps_tPrimArray a :
+    erases_deps Σ Σ' a.(array_default) ->
+    Forall (erases_deps Σ Σ') a.(array_value) ->
+    erases_deps Σ Σ' (E.tPrim (primArray; primArrayModel a)).
 
 Definition option_is_none {A} (o : option A) :=
   match o with
@@ -315,7 +386,7 @@ Definition computational_ind Σ ind :=
     match List.nth_error decl.(ind_bodies) n with
     | Some body =>
       match destArity [] body.(ind_type) with
-      | Some arity => negb (Universe.is_prop (snd arity))
+      | Some arity => negb (Sort.is_prop (snd arity))
       | None => false
       end
     | None => false

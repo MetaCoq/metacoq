@@ -94,13 +94,12 @@ Section DeclaredInv.
     ind_npars mdecl = context_assumptions mdecl.(ind_params).
   Proof using wfΣ.
     intros h.
-    eapply declared_minductive_to_gen in h.
+    unshelve eapply declared_minductive_to_gen in h; tea.
     unfold declared_minductive in h.
     eapply lookup_on_global_env in h; tea.
-    destruct h as [Σ' [ext wfΣ' decl']].
+    destruct h as (Σ' & ext & wfΣ' & decl').
     red in decl'. destruct decl' as [h ? ? ?].
     now rewrite onNpars.
-    Unshelve. all: eauto.
   Qed.
 
 End DeclaredInv.

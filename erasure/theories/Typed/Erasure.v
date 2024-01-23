@@ -92,9 +92,10 @@ Lemma isType_red_sq Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ t t' :
   ∥red Σ0 Γ t t'∥ ->
   ∥isType Σ0 Γ t'∥.
 Proof.
-  intros [(s & typ)] [r].
+  intros [(_ & s & typ & _)] [r].
   sq.
-  exists s. eapply subject_reduction; eauto.
+  eapply has_sort_isType.
+  eapply subject_reduction; eauto.
 Qed.
 
 Hint Resolve isType_red_sq : erase.
@@ -103,10 +104,10 @@ Lemma isType_prod_dom Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ na A B :
   ∥isType Σ0 Γ (tProd na A B)∥ ->
   ∥isType Σ0 Γ A∥.
 Proof.
-  intros [(s & typ)].
+  intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now exists s'.
+  now eapply lift_sorting_forget_univ.
 Qed.
 
 Hint Resolve isType_prod_dom : erase.
@@ -115,10 +116,10 @@ Lemma isType_prod_cod Σ0 (wf : ∥ wf_ext Σ0 ∥) Γ na A B :
   ∥isType Σ0 Γ (tProd na A B)∥ ->
   ∥isType Σ0 (Γ,, vass na A) B∥.
 Proof.
-  intros [(s & typ)].
+  intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now exists x.
+  now eapply has_sort_isType.
 Qed.
 
 Hint Resolve isType_prod_cod : erase.
@@ -210,7 +211,7 @@ Context (rΣ : global_env_ext)
 
 Definition erase_rel : Relation_Definitions.relation (∑ Γ t, welltyped rΣ Γ t) :=
   fun '(Γs; ts; wfs) '(Γl; tl; wfl) =>
-    ∥∑m, red rΣ Γl tl m × term_sub_ctx (Γs, ts) (Γl, m)∥.
+  ∥∑m, red rΣ Γl tl m × term_sub_ctx (Γs, ts) (Γl, m)∥.
 
 Lemma cored_prod_l (Σ : global_env_ext) Γ na A A' B :
   cored Σ Γ A A' ->
@@ -419,7 +420,7 @@ Proof. destruct isT. now apply isType_welltyped. Qed.
 (** Definition of normalized arities *)
 Definition arity_ass := aname * term.
 
-Fixpoint mkNormalArity (l : list arity_ass) (s : Universe.t) : term :=
+Fixpoint mkNormalArity (l : list arity_ass) (s : sort) : term :=
   match l with
   | []%list => tSort s
   | ((na, A) :: l)%list => tProd na A (mkNormalArity l s)
@@ -433,7 +434,7 @@ Qed.
 
 Record conv_arity {Σ Γ T} : Type := build_conv_arity {
   conv_ar_context : list arity_ass;
-  conv_ar_univ : Universe.t;
+  conv_ar_univ : sort;
   conv_ar_red : ∥closed_red Σ Γ T (mkNormalArity conv_ar_context conv_ar_univ)∥
 }.
 
@@ -593,7 +594,7 @@ flag_of_type Γ T isT with inspect (hnf (X_type := X_type) Γ T (fun Σ h => (ty
                                   end
                     |}
       };
-    | fot_view_sort univ := {| is_logical := Universe.is_prop univ;
+    | fot_view_sort univ := {| is_logical := Sort.is_prop univ;
                                conv_ar := inl {| conv_ar_context := [];
                                                  conv_ar_univ := univ; |} |} ;
     | fot_view_other T0 discr
@@ -601,7 +602,7 @@ flag_of_type Γ T isT with inspect (hnf (X_type := X_type) Γ T (fun Σ h => (ty
         {
       | @existT K princK with inspect (reduce_to_sort Γ K _) := {
         | exist (Checked_comp (existT _ univ red_univ)) eq :=
-          {| is_logical := Universe.is_prop univ;
+          {| is_logical := Sort.is_prop univ;
              conv_ar := inr _ |};
         | exist (TypeError_comp t) eq := !
         };
@@ -654,7 +655,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   specialize (isT Σ wfΣ) as isT'.
-  sq. destruct isT' as [u Htype].
+  sq. destruct isT' as (_ & u & Htype & _).
   now eapply typing_wf_local.
 Qed.
 Next Obligation.
@@ -680,7 +681,7 @@ Next Obligation.
   { sq. eapply isType_red;eauto.
     now apply PCUICWellScopedCumulativity.closed_red_red. }
   sq.
-  destruct tyT as [u tyT].
+  destruct tyT as (_ & u & tyT & _).
   apply typing_wf_local in tyT.
   apply BDToPCUIC.infering_typing in HH;sq;eauto.
   eapply isType_welltyped.
@@ -710,8 +711,8 @@ Next Obligation.
   assert (tyNf : ∥ isType rΣ Γ nf ∥).
   { sq. eapply isType_red;eauto. }
   sq.
-  destruct tyT as [u tyT].
-  destruct tyNf as [v tyNf].
+  destruct tyT as (_ & u & tyT & _).
+  destruct tyNf as (_ & v & tyNf & _).
   apply typing_wf_local in tyT.
   apply BDToPCUIC.infering_typing in HH;sq;eauto.
   specialize (PCUICPrincipality.common_typing _ _ HH tyNf) as [x[x_le_K[x_le_sort?]]].
@@ -886,7 +887,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   reduce_term_sound.
-  destruct (isT _ wfrΣ) as [(? & typ)].
+  destruct (isT _ wfrΣ) as [(_ & ? & typ & _)].
   assert (∥ wf rΣ ∥) by now apply HΣ. sq.
   destruct r.
   eapply subject_reduction with (u := tRel i) in typ; eauto.
@@ -894,7 +895,7 @@ Next Obligation.
   now apply nth_error_Some.
 Qed.
 Next Obligation.
-  destruct (isT _ wfrΣ) as [(? & typ)].
+  destruct (isT _ wfrΣ) as [(_ & ? & typ & _)].
   assert (∥ wf rΣ ∥) by eauto using HΣ;sq.
   reduce_term_sound;destruct r.
   eapply subject_reduction in typ; eauto.
@@ -910,11 +911,11 @@ Next Obligation.
 Qed.
 Next Obligation.
   specialize (isT _ wfΣ) as isT'.
-  sq. destruct isT' as [u Htype].
+  sq. destruct isT' as (_ & u & Htype & _).
   now eapply typing_wf_local.
 Qed.
 Next Obligation.
-  destruct (isT _ wfΣ) as [(? & typ)].
+  destruct (isT _ wfΣ) as [(_ & ? & typ & _)].
   assert (w : ∥ wf Σ ∥) by eauto using HΣ;sq.
   reduce_term_sound;destruct r.
   eapply subject_reduction in typ; eauto.
@@ -938,7 +939,7 @@ Next Obligation.
   destruct (princaT _ wfΣ) as [inf_aT].
   assert (HH : ∥ wf_ext Σ0 ∥) by now apply heΣ.
   destruct HH.
-  specialize (isT _ wfΣ) as [[? Hty]].
+  specialize (isT _ wfΣ) as [(_ & ? & Hty & _)].
   apply typing_wf_local in Hty.
   apply BDToPCUIC.infering_typing in inf_aT;eauto with erase.
   sq.
@@ -952,12 +953,12 @@ Next Obligation.
   destruct (princaT _ wfΣ) as [inf_aT].
   assert (HH : ∥ wf_ext Σ ∥) by now apply heΣ.
   destruct HH.
-  specialize (isT _ wfΣ) as [[? Hty]].
+  specialize (isT _ wfΣ) as [(_ & ? & Hty & _)].
   apply typing_wf_local in Hty.
   apply BDToPCUIC.infering_typing in inf_aT;eauto with erase.
   destruct conv_sort as (univ & reduniv).
   sq.
-  exists univ.
+  eapply has_sort_isType.
   eapply type_reduction;eauto.
 Qed.
 Next Obligation.
@@ -1004,7 +1005,7 @@ Equations (noeqns) erase_type_scheme_eta
           (erΓ : Vector.t tRel_kind #|Γ|)
           (t : term)
           (ar_ctx : list arity_ass)
-          (ar_univ : Universe.t)
+          (ar_univ : sort)
           (typ : ∥rΣ;;; Γ |- t : mkNormalArity ar_ctx ar_univ∥)
           (next_tvar : nat) : list type_var_info × box_type :=
 erase_type_scheme_eta Γ erΓ t [] univ typ next_tvar => ([], (erase_type_aux Γ erΓ t _ None).2);
@@ -1029,7 +1030,7 @@ Next Obligation.
   destruct typ.
   assert (wf_local rΣ Γ) by (eapply typing_wf_local; eauto).
   assert (∥ wf rΣ ∥) by now apply HΣ .
-  constructor; eexists;eassumption.
+  constructor; eapply has_sort_isType;eassumption.
 Qed.
 Next Obligation.
   destruct typ as [typ].
@@ -1051,9 +1052,9 @@ Next Obligation.
     eapply isType_wf_local; eauto. }
   rewrite <- (subst_rel0_lift_id 0 (mkNormalArity ar_ctx univ)).
   eapply validity in typ as typ_valid;auto.
-  destruct typ_valid as [u Hty].
+  destruct typ_valid as (_ & u & Hty & _).
   eapply type_App.
-  + eapply validity in typ as typ;auto.
+  + eapply validity in typ as (_ & ? & typ & _);auto.
     eapply (PCUICWeakeningTyp.weakening _ _ [_] _ _ _ wflext Hty).
   + eapply (PCUICWeakeningTyp.weakening _ _ [_] _ _ _ wflext typ).
   + fold lift.
@@ -1065,7 +1066,7 @@ Equations? (noeqns) erase_type_scheme
           (erΓ : Vector.t tRel_kind #|Γ|)
           (t : term)
           (ar_ctx : list arity_ass)
-          (ar_univ : Universe.t)
+          (ar_univ : sort)
           (typ : forall Σ0 (wfΣ : PCUICWfEnv.abstract_env_ext_rel X Σ0), ∥Σ0;;; Γ |- t : mkNormalArity ar_ctx ar_univ∥)
           (next_tvar : nat) : list type_var_info × box_type :=
 erase_type_scheme Γ erΓ t [] univ typ next_tvar => ([], (erase_type_aux Γ erΓ t _ None).2);
@@ -1089,15 +1090,14 @@ erase_type_scheme Γ erΓ t ((na', A') :: ar_ctx) univ typ next_tvar
   }.
 Proof.
   - destruct (typ _ wfΣ).
-    constructor; eexists; eauto.
+    constructor; eapply has_sort_isType; eauto.
   - destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
     assert (∥ wf Σ0 ∥) by now apply HΣ.
     sq.
     destruct r as [?? r].
     eapply subject_reduction in r; eauto.
-    apply inversion_Lambda in r as (?&?&?&?&?); auto.
-    eexists; eassumption.
+    apply inversion_Lambda in r as (?&?&?&?); auto.
   - clear inf.
     destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
@@ -1108,11 +1108,11 @@ Proof.
     { eapply abstract_env_ext_irr;eauto. }
     subst.
     eapply subject_reduction in r; eauto.
-    apply inversion_Lambda in r as (?&?&?&?&c); auto.
+    apply inversion_Lambda in r as (?&?&?&c); auto.
     assert (wf_local Σ0 Γ) by (eapply typing_wf_local; eauto).
     apply ws_cumul_pb_Prod_Prod_inv_l in c as [???]; auto.
     eapply validity in typ0 as typ0; auto.
-    apply isType_tProd in typ0 as (_ & (u&?)); auto.
+    apply isType_tProd in typ0 as (_ & (_&u&?&_)); auto.
     assert (PCUICCumulativity.conv_context cumulAlgo_gen Σ0 (Γ,, vass na' A') (Γ,, vass na A)).
     { constructor; [reflexivity|].
       constructor. now symmetry.
@@ -1121,7 +1121,6 @@ Proof.
     eapply type_Cumul.
     + eassumption.
     + eapply PCUICContextConversionTyp.context_conversion; eauto.
-      eapply typing_wf_local; eassumption.
     + now apply cumulAlgo_cumulSpec.
 Qed.
 
@@ -1147,6 +1146,7 @@ Proof.
   assert (∥ wf Σ0 ∥) by now apply HΣ.
   destruct car as [ctx univ r].
   sq.
+  apply unlift_TermTyp in wt.
   eapply type_reduction in wt; eauto;cbn.
   now destruct r.
 Qed.
@@ -1169,7 +1169,7 @@ Proof.
     assert (∥ wf Σ0 ∥) by now apply HΣ.
     unfold on_constant_decl in wt.
     destruct (PCUICEnvironment.cst_body cst); cbn in *.
-    + sq;eapply validity;eauto.
+    + sq;eapply validity;eauto. now eapply unlift_TermTyp.
     + destruct wt.
       eexists; eassumption.
   - assert (rΣ = Σ).
@@ -1182,11 +1182,8 @@ Proof.
     unfold on_constant_decl in wt.
     destruct (PCUICEnvironment.cst_body cst).
     + sq.
-      now eapply validity in wt.
-    + sq.
-      cbn in wt.
-      destruct wt as (s & ?).
-      now exists s.
+      now eapply unlift_TermTyp, validity in wt.
+    + assumption.
 Qed.
 
 Import P.
@@ -1311,7 +1308,7 @@ Proof.
   unshelve refine (
   let is_propositional :=
       match destArity [] (ind_type oib) with
-      | Some (_, u) => is_propositional u
+      | Some (_, u) => Sort.is_propositional u
       | None => false
       end in
   let oib_tvars := erase_ind_arity [] (PCUICEnvironment.ind_type oib) _ in
@@ -1356,10 +1353,10 @@ Proof.
       induction on_ctors; [easy|];
       destruct is_in as [->|later]; [|easy];
       constructor;
-      destruct (on_ctype r) as (s & typ);
+      destruct (on_ctype r) as (_ & s & typ & _);
       rewrite <- (arities_contexts_1 mind) in typ;
       cbn in *;
-      now exists s).
+      now eapply has_sort_isType).
 Defined.
 
 Program Definition erase_ind
@@ -1413,26 +1410,23 @@ Instance fake_guard_impl_instance : abstract_guard_impl :=
 Axiom fake_normalization : PCUICSN.Normalization.
 Global Existing Instance fake_normalization.
 (* Definition norm := forall Σ : global_env_ext, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ. *)
-Program Definition erase_global_decl
-        (Σext : global_env_ext)
-        (wfΣext : ∥ wf_ext Σext ∥)
-        (kn : kername)
-        (decl : PCUICEnvironment.global_decl)
-        (wt : ∥on_global_decl cumulSpec0 (lift_typing typing) Σext kn decl∥)
-        : global_decl :=
+Program Definition erase_global_decl {X_type : abstract_env_impl} {X : X_type.π2.π1}
+  (Σext : global_env_ext)
+  (hr : Σext ∼_ext X)
+  (kn : kername)
+  (decl : PCUICEnvironment.global_decl)
+  (wt : ∥on_global_decl cumulSpec0 (lift_typing typing) Σext kn decl∥)
+  : global_decl :=
   match decl with
   | PCUICEnvironment.ConstantDecl cst =>
-    match @erase_constant_decl canonical_abstract_env_impl _ _ _ Σext _ cst _ with
+    match @erase_constant_decl X_type X _ _ Σext hr cst _ with
     | inl cst => ConstantDecl cst
     | inr ta => TypeAliasDecl ta
     end
-  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind canonical_abstract_env_impl _ _ _ Σext _ kn mib _)
+  | PCUICEnvironment.InductiveDecl mib => InductiveDecl (@erase_ind X_type X _ _ Σext hr kn mib _)
   end.
-Next Obligation. unshelve econstructor; eauto. Defined.
-
 Next Obligation. now eapply fake_normalization. Defined.
-Next Obligation. now unshelve econstructor;eauto. Defined.
-Next Obligation. eapply (fake_normalization _ X _ _ H). Defined.
+Next Obligation. eapply fake_normalization; auto. Defined.
 
 Fixpoint box_type_deps (t : box_type) : KernameSet.t :=
   match t with
@@ -1468,34 +1462,75 @@ Definition decl_deps (decl : global_decl) : KernameSet.t :=
   | _ => KernameSet.empty
   end.
 
+Import PCUICWfEnv.
+
+Lemma abstract_eq_wf (X_type : abstract_env_impl) (X : X_type.π1) Σ :
+  (forall Σ', Σ' ∼ X -> Σ' = Σ) -> Σ ∼ X × ∥ wf Σ ∥.
+Proof.
+  intros heq.
+  pose proof (abstract_env_exists X) as [[Σ' hΣ']].
+  pose proof (abstract_env_wf _ hΣ').
+  rewrite <- (heq _ hΣ'). split; auto.
+Qed.
+
+Lemma wf_pop_decl Σ kn decl decls :
+  wf Σ ->
+  Σ.(declarations) = (kn, decl) :: decls ->
+  wf_ext ({| universes := Σ.(universes); retroknowledge := Σ.(retroknowledge);
+             declarations := decls |}, universes_decl_of_decl decl).
+Proof.
+  intros [] h. rewrite h in o0.
+  depelim o0.
+  split. cbn.
+  split; cbn; eauto. cbn.
+  now depelim o1.
+Qed.
+
+Lemma sq_wf_pop_decl Σ kn decl decls :
+  ∥ wf Σ ∥ ->
+  Σ.(declarations) = (kn, decl) :: decls ->
+  ∥ wf_ext ({| universes := Σ.(universes); retroknowledge := Σ.(retroknowledge);
+             declarations := decls |}, universes_decl_of_decl decl) ∥.
+Proof.
+  intros [[]] h; sq. rewrite h in o0.
+  depelim o0.
+  split. cbn.
+  split; cbn; eauto. cbn.
+  now depelim o1.
+Qed.
+
 (** Erase the global declarations by the specified names and their
     non-erased dependencies recursively. Ignore dependencies for which
     [ignore_deps] returnes [true] *)
 Program Fixpoint erase_global_decls_deps_recursive
-        (Σ : PCUICEnvironment.global_declarations)
-        (universes : ContextSet.t)
-        (retroknowledge : Retroknowledge.t)
-        (wfΣ : ∥wf (mk_global_env universes Σ retroknowledge)∥)
-        (include : KernameSet.t)
-        (ignore_deps : kername -> bool) : global_env :=
-  match Σ with
+  {X_type : abstract_env_impl} {X : X_type.π1}
+  (decls : PCUICEnvironment.global_declarations)
+  (univs : ContextSet.t)
+  (retro : Retroknowledge.t)
+  (prop : forall Σ', abstract_env_rel X Σ' -> Σ' = {| declarations := decls; universes := univs; retroknowledge := retro |})
+  (include : KernameSet.t)
+  (ignore_deps : kername -> bool) : global_env :=
+  match decls with
   | [] => []
   | (kn, decl) :: Σ =>
     let Σext := (Σ, universes_decl_of_decl decl) in
+    let X' := abstract_pop_decls X in
+    let Xext := abstract_make_wf_env_ext (X_type := X_type) X' (universes_decl_of_decl decl) _ in
+    let env := (mk_global_env univs Σ retro, universes_decl_of_decl decl) in
     if KernameSet.mem kn include then
       (** We still erase ignored inductives and constants for two reasons:
           - For inductives, we want to allow pattern matches on them and we need
             information about them to print names.
           - For constants, we use their type to do deboxing. *)
-      let decl := erase_global_decl ((mk_global_env universes Σ retroknowledge), PCUICLookup.universes_decl_of_decl decl) _ kn decl _ in
+      let decl := @erase_global_decl X_type Xext env _ kn decl _ in
       let with_deps := negb (ignore_deps kn) in
       let new_deps := if with_deps then decl_deps decl else KernameSet.empty in
-      let Σer := erase_global_decls_deps_recursive
-                   Σ universes retroknowledge _
+      let Σer := erase_global_decls_deps_recursive (X:=X')
+                   Σ univs retro _
                    (KernameSet.union new_deps include) ignore_deps in
       (kn, with_deps, decl) :: Σer
     else
-      erase_global_decls_deps_recursive Σ universes retroknowledge _ include ignore_deps
+      erase_global_decls_deps_recursive (X:=X') Σ univs retro _ include ignore_deps
   end.
 Ltac invert_wf :=
   match goal with
@@ -1504,18 +1539,89 @@ Ltac invert_wf :=
   | [H : on_global_decls_data _ _ _ _ _ _ _ |- _] => inversion H; subst; clear H; cbn in *
   end.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [hΣ [wf]].
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ hΣ hΣ0'). subst Σ0'.
+      exists (kn, decl). reflexivity. }
+  destruct Σ0. cbn in *.
+  destruct H as [? []]. subst.
+  eapply wf_pop_decl in wf; cbn; eauto.
 Qed.
 Next Obligation.
-  repeat invert_wf.
-  destruct decl;cbn in *;auto.
+  pose proof (abstract_env_exists X) as [[Σr hΣr]].
+  pose proof (abstract_env_wf _ hΣr) as [wf].
+  set (X' := abstract_make_wf_env_ext _ _ _).
+  set (prf := fun (Σ0 : PCUICEnvironment.global_env) (_ : _) => _) in X'.
+  clearbody prf.
+  specialize (prop _ hΣr). subst.
+  pose proof (abstract_env_ext_exists (abstract_make_wf_env_ext (abstract_pop_decls X)
+  (universes_decl_of_decl decl) prf)).
+  pose proof (abstract_env_exists (abstract_pop_decls X)) as [[Σpop hΣpop]].
+  eapply (abstract_pop_decls_correct X Σ) in hΣr; tea.
+  2:{ intros. pose proof (abstract_env_irr _ H0 hΣr). subst. now eexists. }
+  destruct hΣr as [? []]. subst.
+  destruct H as [[Σext hΣext]].
+  epose proof (abstract_make_wf_env_ext_correct (abstract_pop_decls X) (universes_decl_of_decl decl) prf _ _ hΣpop hΣext).
+  subst Σext. destruct Σpop. cbn in *. now subst.
 Qed.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [equiv [wf]].
+  sq.
+  depelim wf; cbn in *. depelim o0. now depelim o1.
 Qed.
 Next Obligation.
-  repeat invert_wf;split;auto;split;auto.
+  eapply abstract_eq_wf in prop as [equiv [wf]].
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ equiv hΣ0'). subst Σ0'.
+      exists (kn, decl0). reflexivity. }
+  destruct Σ', H as [? []]. subst. cbn.
+  noconf H0. cbn in H1. subst retro. reflexivity.
 Qed.
+Next Obligation.
+  pose proof (abstract_env_exists X) as [[Σr hΣr]].
+  pose proof (abstract_env_wf _ hΣr) as [wf].
+  sq. specialize (prop _ hΣr). subst Σr.
+  eapply abstract_pop_decls_correct in H; tea.
+  2:{ cbn. intros Σ0' hΣ0'. pose proof (abstract_env_irr _ hΣr hΣ0'). subst Σ0'.
+      exists (kn, decl). reflexivity. }
+  destruct Σ', H as [? []]. subst. cbn.
+  noconf H0. cbn in H1. subst retro. reflexivity.
+Qed.
+
+Program Fixpoint erase_global_decls_recursive
+  {X_type : abstract_env_impl} {X : X_type.π1}
+  (decls : PCUICEnvironment.global_declarations)
+  (univs : ContextSet.t)
+  (retro : Retroknowledge.t)
+  (prop : forall Σ', abstract_env_rel X Σ' -> Σ' = {| declarations := decls; universes := univs; retroknowledge := retro |})
+  : global_env :=
+  match decls with
+  | [] => []
+  | (kn, decl) :: Σ =>
+    let Σext := (Σ, universes_decl_of_decl decl) in
+    let X' := abstract_pop_decls X in
+    let Xext := abstract_make_wf_env_ext (X_type := X_type) X' (universes_decl_of_decl decl) _ in
+    let env := (mk_global_env univs Σ retro, universes_decl_of_decl decl) in
+    (** We still erase ignored inductives and constants for two reasons:
+      - For inductives, we want to allow pattern matches on them and we need
+        information about them to print names.
+      - For constants, we use their type to do deboxing. *)
+    let decl := @erase_global_decl X_type Xext env _ kn decl _ in
+    let Σer := erase_global_decls_recursive (X:=X') Σ univs retro _ in
+    (kn, true, decl) :: Σer
+  end.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_1; trea.
+Defined.
+Next Obligation.
+  eapply (erase_global_decls_deps_recursive_obligation_2 X_type X); trea.
+Defined.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_3; trea.
+Qed.
+Next Obligation.
+  eapply erase_global_decls_deps_recursive_obligation_4; trea.
+Defined.
 
 End EraseEnv.
 

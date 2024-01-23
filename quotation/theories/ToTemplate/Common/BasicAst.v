@@ -16,7 +16,7 @@ From MetaCoq.Template Require Import AstUtils (* for tFixType *).
 #[export] Hint Unfold aname : quotation.
 #[export] Typeclasses Transparent aname.
 #[export] Instance quote_def {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (def term) := ltac:(destruct 1; exact _).
-#[export] Instance quote_typ_or_sort_ {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (typ_or_sort_ term) := ltac:(destruct 1; exact _).
+#[export] Instance quote_judgment_ {term univ} {qterm : quotation_of term} {uterm : quotation_of univ} {quote_term : ground_quotable term} {quote_univ : ground_quotable univ} : ground_quotable (judgment_ term univ) := ltac:(destruct 1; exact _).
 #[export] Instance quote_context_decl {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (context_decl term) := ltac:(destruct 1; exact _).
 #[export] Hint Unfold mfixpoint : quotation.
 #[export] Typeclasses Transparent mfixpoint.

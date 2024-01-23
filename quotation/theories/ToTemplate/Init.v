@@ -14,6 +14,7 @@ Local Open Scope bs.
 Import MCMonadNotation.
 
 Class quotation_of {T} (t : T) := quoted_term_of : Ast.term.
+#[global] Arguments quoted_term_of {T} t {_}.
 Class ground_quotable T := quote_ground : forall t : T, quotation_of t.
 Class inductive_quotation_of {T} (t : T) : Set
   := { qinductive : inductive
@@ -108,6 +109,7 @@ Proof.
      | tSort _
      | tInt _
      | tFloat _
+     | tArray _ _ _ _
      | tConst _ _
        => if head_term_is_bound cur_modpath qt
           then tmMaybeInferQuotation tt
@@ -212,6 +214,7 @@ Proof.
        | tConstruct _ _ _
        | tInt _
        | tFloat _
+       | tArray _ _ _ _
        | tInd _ _
          => ret qt
        | tCast t kind v

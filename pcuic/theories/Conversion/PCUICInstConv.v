@@ -296,12 +296,13 @@ Proof.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
     unfold map_decl. simpl. unfold vass. f_equal.
-    destruct t0 as [s ht]. eapply typed_inst. all: eauto.
+    destruct t0 as (_ & s & ht & _). eapply typed_inst. all: eauto.
   - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
+    destruct t0 as (hb & s & ht & _). cbn in hb.
     unfold map_decl. simpl. unfold vdef. f_equal.
     + f_equal. eapply typed_inst. all: eauto.
-    + eapply typed_inst in t1 as [? _]. all: eauto.
+    + eapply typed_inst. all: eauto.
 Qed.
 
 Lemma inst_destArity :
@@ -1230,7 +1231,7 @@ Proof.
   intros Hs t Ht. revert P s s' Hs Ht.
   elim t using term_forall_list_ind; cbn in |- *; intros; try easy.
   8-9: rewrite /test_def in Ht.
-  1-5,7-9:
+  1-5,7-9,10:
     try rewrite H; try rewrite H0 ; try rewrite H1 ; try easy ;
     solve [f_equal; solve_all; eauto using up_ext_cond].
 
@@ -1258,15 +1259,15 @@ Proof.
   intros H i.
   rewrite /up.
   destruct (Nat.leb_spec0 n i) as [Hi|Hi].
-    + rewrite on_free_vars_rename.
-      erewrite on_free_vars_ext.
-      2: now eapply addnP_shiftnP.
-      rewrite /shiftnP => /orP [].
-      1: move => /Nat.ltb_spec0 ? ; lia.
-      intros.
-      now eapply H.
-    + rewrite /= /shiftnP.
-      now move: Hi => /Nat.nle_gt /Nat.ltb_spec0 ->.
+  + rewrite on_free_vars_rename.
+    erewrite on_free_vars_ext.
+    2: now eapply addnP_shiftnP.
+    rewrite /shiftnP => /orP [].
+    1: move => /Nat.ltb_spec0 ? ; lia.
+    intros.
+    now eapply H.
+  + rewrite /= /shiftnP.
+    now move: Hi => /Nat.nle_gt /Nat.ltb_spec0 ->.
 Qed.
 
 Lemma on_free_vars_inst (P Q : nat -> bool) s t :
@@ -1416,7 +1417,7 @@ Proof using Type.
         sigma in X. eapply X.
       * eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up; eauto; intuition.
+  - eapply usubst_Up; eauto; intuition auto with *.
 Qed.
 
 
@@ -1465,7 +1466,7 @@ Proof using Type.
       eapply on_free_vars_inst.
       2: now eapply h.
       now easy.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 Lemma well_subst_Up' {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na t A} :
@@ -1491,7 +1492,7 @@ Proof using Type.
         sigma in X0. eapply X0.
       + eapply inst_ext. rewrite ren_lift_renaming.
         now sigma.
-  - eapply usubst_Up'; eauto; intuition.
+  - eapply usubst_Up'; eauto; intuition auto with *.
 Qed.
 
 
@@ -1603,29 +1604,24 @@ Proof using Type.
 Qed.
 
 Lemma wf_local_app_inst (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
-  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
+  All_local_rel (fun Γ j =>
     forall Δ σ,
     wf_local Σ Δ ->
-    Σ ;;; Δ ⊢ σ : (Γ ,,, Γ') ->
-    Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Δ ->
+    Σ ;;; Δ ⊢ σ : Γ ->
+    lift_typing0 (fun t T => Σ ;;; Δ |- t.[σ] : T.[σ]) j) Γ Δ ->
   forall Δ' σ,
   Σ ;;; Δ' ⊢ σ : Γ ->
   wf_local Σ Δ' ->
   wf_local Σ (Δ' ,,, inst_context σ Δ).
 Proof using Type.
   intros.
-  induction X.
+  induction X using All_local_rel_ind1.
   - now simpl.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    apply infer_typing_sort_impl with id t0; intros Hs.
-    eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
+  - rewrite inst_context_snoc /=.
+    apply All_local_env_snoc; auto.
+    apply lift_typing_map with (j := j_decl _) => //.
+    eapply X; tas.
     eapply well_subst_app; auto.
-  - rewrite inst_context_snoc /=. constructor; auto.
-    * apply infer_typing_sort_impl with id t0; intros Hs.
-      eapply (Hs (Δ' ,,, inst_context σ Γ0) (⇑^#|Γ0| σ)) => //.
-      eapply well_subst_app; auto.
-    * simpl. apply t1 => //.
-      eapply well_subst_app; eauto.
 Qed.
 
 Lemma usubst_up_vass {Γ Δ σ na A} :
@@ -1697,6 +1693,27 @@ Proof.
   }
   rewrite on_free_vars_ctx_app in H1. solve_all. cbn in *. rewrite shiftnP0 in H2. tea.
 Defined.
+
+Lemma map_array_model_set_value f arr value :
+  map_array_model f (set_array_value arr value) =
+  set_array_value (map_array_model f arr) (List.map f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
+
+Lemma map_array_model_set_default f arr value :
+  map_array_model f (set_array_default arr value) =
+  set_array_default (map_array_model f arr) (f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
+
+Lemma map_array_model_set_type f arr value :
+  map_array_model f (set_array_type arr value) =
+  set_array_type (map_array_model f arr) (f value).
+Proof.
+  destruct arr; cbn => //.
+Qed.
 
 Lemma red1_inst {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ u v σ} :
   usubst Γ σ Δ ->
@@ -1842,16 +1859,26 @@ Proof.
       + rewrite inst_fix_context_up. eapply usubst_app_up; eauto.
       + now len.
     *  rewrite shiftnP_add in clb. rewrite <- fix_context_length in clb. rewrite <- app_length in clb. tea.
+  - cbn. toAll. eapply OnOne2_All_mix_left in X; tea.
+    rewrite map_array_model_set_value.
+    eapply red_primArray_one_value. cbn.
+    eapply OnOne2_map; solve_all. red; simpl; eauto.
+  - cbn. rewrite map_array_model_set_default.
+    eapply red_primArray_default; cbn; eauto.
+  - cbn. rewrite map_array_model_set_type.
+    eapply red_primArray_type; cbn; eauto.
 Defined.
 
-Lemma eq_term_upto_univ_inst Σ :
-  forall Re Rle napp u v σ,
-    Reflexive Re -> Reflexive Rle ->
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
+Lemma eq_term_upto_univ_inst Σ cmp_universe cmp_sort pb napp u v σ :
+    RelationClasses.Reflexive (cmp_universe Conv) ->
+    RelationClasses.Reflexive (cmp_universe pb) ->
+    RelationClasses.Reflexive (cmp_sort Conv) ->
+    RelationClasses.Reflexive (cmp_sort pb) ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u v ->
+    eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp u.[σ] v.[σ].
 Proof using Type.
-  intros Re Rle napp u v σ hRe hRle h.
-  induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
+  intros refl_univ_conv refl_univ_pb refl_sort_conv refl_sort_pb h.
+  induction u in v, pb, napp, σ, refl_univ_pb, refl_sort_pb, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -1865,25 +1892,21 @@ Proof using Type.
   - simpl. constructor. all: eauto.
   * rewrite /inst_predicate.
     destruct X; destruct e as [? [? [ectx ?]]].
-    rewrite (All2_fold_length ectx). red.
+    rewrite (All2_length ectx). red.
     intuition auto; simpl; solve_all.
-  * induction X0 in a, brs' |- *.
-    + inversion a. constructor.
-    + inversion a. subst. simpl.
-      destruct X1 as [a0 e0], p0.
-      constructor; eauto.
-      split; eauto.
-      simpl.
-      rewrite (All2_fold_length a0).
-      now eapply e1.
+  * unfold eq_branches, eq_branch in *; solve_all.
+    rewrite (All2_length a1).
+    now eapply b0.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
   - simpl. constructor.
-    apply All2_length in a as e. rewrite <- e.
-    generalize #|m|. intro k.
+    apply All2_length in e as eq. rewrite <- eq.
+    generalize #|m|. intro k. unfold eq_mfixpoint in *.
     eapply All2_map. simpl. solve_all.
+  - simpl. constructor.
+    eapply onPrims_map_prop; tea. cbn; intuition eauto.
 Qed.
 
 Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :

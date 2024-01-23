@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Import config.
+From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction PCUICPrimitive
      PCUICCases PCUICClosed PCUICTactics.
 
 Require Import ssreflect.
@@ -15,6 +15,25 @@ Set Default Goal Selector "!".
 Reserved Notation " Σ ;;; Γ |- t ⇝ u " (at level 50, Γ, t, u at next level).
 
 Local Open Scope type_scope.
+
+Definition set_array_default (ar : array_model term) (v : term) :=
+  {| array_level := ar.(array_level);
+     array_default := v;
+     array_type := ar.(array_type);
+     array_value := ar.(array_value) |}.
+
+Definition set_array_type (ar : array_model term) (v : term) :=
+  {| array_level := ar.(array_level);
+     array_default := ar.(array_default);
+     array_type := v;
+     array_value := ar.(array_value) |}.
+
+Definition set_array_value (ar : array_model term) (v : list term) :=
+  {| array_level := ar.(array_level);
+     array_default := ar.(array_default);
+     array_type := ar.(array_type);
+     array_value := v |}.
+
 
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
@@ -116,10 +135,26 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | cofix_red_body mfix0 mfix1 idx :
     OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
     Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+
+| array_red_val arr value :
+    OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) arr.(array_value) value ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+               tPrim (primArray; primArrayModel (set_array_value arr value))
+
+| array_red_def arr def :
+    Σ ;;; Γ |- arr.(array_default) ⇝ def ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+               tPrim (primArray; primArrayModel (set_array_default arr def))
+
+| array_red_type arr ty :
+    Σ ;;; Γ |- arr.(array_type) ⇝ ty ->
+    Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+          tPrim (primArray; primArrayModel (set_array_type arr ty))
+
 where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
-Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
-Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ (Γ ,,, Δ) t t'))).
+Definition red1_ctx Σ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ Δ t t'))).
+Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ (Γ ,,, Δ) t t'))).
 
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
@@ -240,9 +275,28 @@ Lemma red1_ind_all :
                            (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
+
+        (forall (Γ : context) (arr : array_model term)
+          (value : list term),
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) (array_value arr) value ->
+          P Γ (tPrim (primArray; primArrayModel arr))
+            (tPrim (primArray; primArrayModel (set_array_value arr value)))) ->
+
+        (forall (Γ : context) (arr : array_model term)
+          (def : term), Σ;;; Γ |- array_default arr ⇝ def ->
+        P Γ (array_default arr) def ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_default arr def)))) ->
+
+       (forall (Γ : context) (arr : array_model term)
+          (ty : term), Σ;;; Γ |- array_type arr ⇝ ty ->
+        P Γ (array_type arr) ty ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_type arr ty)))) ->
+
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. rename X27 into Xlast. revert Γ t t0 Xlast.
+  intros. rename X30 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -296,6 +350,10 @@ Proof.
     revert o. generalize (fix_context mfix0). intros c new.
     revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
+
+  - revert value o. generalize (array_value arr).
+     fix auxl 3; intros l l' Hl; destruct Hl;
+    constructor; try split; auto; intuition.
 Defined.
 
 #[global]
@@ -306,8 +364,8 @@ Definition red Σ Γ := clos_refl_trans (fun t u : term => Σ;;; Γ |- t ⇝ u).
 Notation " Σ ;;; Γ |- t ⇝* u " := (red Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
-  OnOne2_local_env
-    (on_one_decl (fun (Δ : context) (t t' : term) => red Σ (Γ,,, Δ) t t')).
+  OnOne2_local_env (fun Δ =>
+    on_one_decl (fun (t t' : term) => red Σ (Γ,,, Δ) t t')).
 
 Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
 
@@ -639,7 +697,7 @@ Section ReductionCongruence.
     revert Γ y r.
     eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta.
     all:  intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-    Qed.
+  Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof using Type.
@@ -668,7 +726,7 @@ Section ReductionCongruence.
       (@OnOne2 (context × _) (Trel_conj (on_Trel (red1_ctx_rel Σ Γ) fst) (on_Trel eq snd))).
 
     Definition red_one_context_decl_rel Σ Γ :=
-      (OnOne2_local_env (on_one_decl (fun Δ t t' => red Σ (Γ ,,, Δ) t t'))).
+      (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red Σ (Γ ,,, Δ) t t'))).
 
     Notation red_one_context_decl Γ :=
       (@OnOne2 (context × _)
@@ -1865,6 +1923,93 @@ Section ReductionCongruence.
       - eapply red_cofix_ty. assumption.
     Qed.
 
+    Lemma red_primArray_one_value (arr : array_model term) (value : list term) :
+      OnOne2 (red Σ Γ) (array_value arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝* tPrim (primArray; primArrayModel (set_array_value arr value)).
+    Proof.
+      intros h.
+      apply OnOne2_on_Trel_eq_unit in h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (arr.(array_value) = value).
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. inversion e. eauto.
+        } subst.
+        destruct arr; reflexivity.
+      - set (f := fun x : term => (x, tt)) in *.
+        set (g := (fun '(x, _) => x) : term × unit -> term).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a, u. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. f_equal. assumption.
+        }
+        eapply trans_red.
+        + eapply IHh; tas. symmetry. apply el.
+        + change (set_array_value arr value) with
+          (set_array_value (set_array_value arr (map g l1)) value).
+          econstructor. rewrite (el' value).
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? []] [? []] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *.
+          unfold on_Trel. cbn. assumption.
+    Qed.
+
+    Lemma red_primArray_value (arr : array_model term) (value : list term) :
+      All2 (red Σ Γ) (array_value arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝* tPrim (primArray; primArrayModel (set_array_value arr value)).
+    Proof using Type.
+      intros h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - destruct arr; reflexivity.
+      - eapply red_trans.
+        + eapply IHh.
+        + assert (set_array_value arr z = set_array_value (set_array_value arr y) z) as ->.
+          { now destruct arr. }
+          eapply red_primArray_one_value; eassumption.
+    Qed.
+
+    Lemma red_primArray_default (arr : array_model term) (value : term) :
+      red Σ Γ (array_default arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel (set_array_default arr value)).
+    Proof using Type.
+      intros h.
+      destruct arr; cbn in *.
+      rst_induction h; eauto with pcuic.
+    Qed.
+
+    Lemma red_primArray_type (arr : array_model term) (value : term) :
+      red Σ Γ (array_type arr) value ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel (set_array_type arr value)).
+    Proof using Type.
+      intros h.
+      destruct arr; cbn in *.
+      rst_induction h; eauto with pcuic.
+    Qed.
+
+    Lemma red_primArray_congr (arr arr' : array_model term) :
+      array_level arr = array_level arr' ->
+      All2 (red Σ Γ) (array_value arr) (array_value arr') ->
+      red Σ Γ (array_default arr) (array_default arr') ->
+      red Σ Γ (array_type arr) (array_type arr') ->
+      Σ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝*
+                tPrim (primArray; primArrayModel arr').
+    Proof using Type.
+      destruct arr, arr'; cbn in *.
+      intros <- h h0 h1.
+      eapply red_trans; [eapply red_primArray_value; tea|].
+      eapply red_trans; [eapply red_primArray_default; tea|].
+      now eapply red_trans; [eapply red_primArray_type; tea|].
+    Qed.
+
     Lemma red_prod_l :
       forall na A B A',
         red Σ Γ A A' ->
@@ -2020,7 +2165,7 @@ Section Stacks.
 
   Lemma red1_fill_context_hole Γ π pcontext u v :
     red1 Σ (Γ,,, stack_context π,,, context_hole_context pcontext) u v ->
-    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ,,, stack_context π,,, Γ')))
+    OnOne2_local_env (fun Γ' => on_one_decl (red1 Σ (Γ,,, stack_context π,,, Γ')))
                      (fill_context_hole pcontext u)
                      (fill_context_hole pcontext v).
   Proof using Type.
@@ -2074,6 +2219,10 @@ Section Stacks.
         apply OnOne2_app.
         constructor; cbn.
         rewrite -app_assoc in h; auto.
+    - now apply array_red_type; cbn in *.
+    - now apply array_red_def; cbn in *.
+    - apply array_red_val; cbn in *.
+      eapply OnOne2_app. now constructor.
   Qed.
 
   Corollary red_context_zip :

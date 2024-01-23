@@ -19,13 +19,11 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
 
 From Equations Require Import Equations.
 
-Definition Prop_univ := Universe.of_levels (inl PropLevel.lProp).
-
 Definition False_oib : one_inductive_body :=
   {| ind_name := "False";
      ind_indices := [];
-     ind_sort := Prop_univ;
-     ind_type := tSort Prop_univ;
+     ind_sort := sProp;
+     ind_type := tSort sProp;
      ind_kelim := IntoAny;
      ind_ctors := [];
      ind_projs := [];

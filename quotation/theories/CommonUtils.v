@@ -178,7 +178,7 @@ Module WithTemplate.
        end.
 
   Section with_monad.
-    Context {M} {M_monad : Monad M} (in_domain : bool) (U : Universe.t -> M term).
+    Context {M} {M_monad : Monad M} (in_domain : bool) (U : sort -> M term).
 
     #[local]
       Fixpoint tmRelaxSortsM (t : term) {struct t} : M term
@@ -188,6 +188,7 @@ Module WithTemplate.
          | tVar _
          | tInt _
          | tFloat _
+         | tArray _ _ _ _
          | tConst _ _
          | tInd _ _
          | tConstruct _ _ _
@@ -234,20 +235,20 @@ Module WithTemplate.
          end.
   End with_monad.
 
-  #[local] Definition is_set (s : Universe.t) : bool
-    := match option_map Level.is_set (Universe.get_is_level s) with
+  #[local] Definition is_set (s : sort) : bool
+    := match option_map Level.is_set (Sort.get_is_level s) with
        | Some true => true
        | _ => false
        end.
 
-  #[local] Definition is_type (s : Universe.t) : bool
-    := match Universe.get_is_level s with
+  #[local] Definition is_type (s : sort) : bool
+    := match Sort.get_is_level s with
        | Some _ => true
        | _ => false
        end.
 
-  #[local] Definition is_only_type (s : Universe.t) : bool
-    := match option_map Level.is_set (Universe.get_is_level s) with
+  #[local] Definition is_only_type (s : sort) : bool
+    := match option_map Level.is_set (Sort.get_is_level s) with
        | Some false => true
        | _ => false
        end.
@@ -255,7 +256,7 @@ Module WithTemplate.
   Definition tmRelaxSet (in_domain : bool) (prefix : string) (t : term) : term
     := tmRelaxSortsM
          (M:=fun T => T) in_domain
-         (fun u => tSort (if is_set u then Universe.of_levels (inr (Level.level (prefix ++ "._Set.0")%bs)) else u))
+         (fun u => tSort (if is_set u then Sort.of_levels (inr (Level.level (prefix ++ "._Set.0")%bs)) else u))
          t.
 
   Module Import PrefixUniverse.
@@ -301,21 +302,21 @@ Module WithTemplate.
            ; t_ne := eq_trans LevelExprSet.is_empty_prefix_with l.(t_ne) |}.
     End nonEmptyLevelExprSet.
 
-    Module LevelAlgExpr := nonEmptyLevelExprSet.
+    Module Universe := nonEmptyLevelExprSet.
 
-    Module Universe.
-      Definition prefix_with (prefix : string) (u : Universe.t) : Universe.t
+    Module Sort.
+      Definition prefix_with (prefix : string) (u : sort) : sort
         := match u with
-           | Universe.lProp | Universe.lSProp => u
-           | Universe.lType u => Universe.lType (LevelAlgExpr.prefix_with prefix u)
+           | sProp | sSProp => u
+           | sType u => sType (Universe.prefix_with prefix u)
            end.
-    End Universe.
+    End Sort.
   End PrefixUniverse.
 
   Definition tmRelaxOnlyType (in_domain : bool) (prefix : string) (t : term) : term
     := tmRelaxSortsM
          (M:=fun T => T) in_domain
-         (fun u => tSort (PrefixUniverse.Universe.prefix_with prefix u))
+         (fun u => tSort (PrefixUniverse.Sort.prefix_with prefix u))
          t.
 
   Polymorphic Definition tmRetypeMagicRelaxSetInCodomain@{a b t u} (prefix : string) {A : Type@{a}} (B : Type@{b}) (x : A) : TemplateMonad@{t u} B

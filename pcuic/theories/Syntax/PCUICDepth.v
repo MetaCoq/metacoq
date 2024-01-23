@@ -38,6 +38,14 @@ Definition predicate_depth_gen (depth : term -> nat) (p : PCUICAst.predicate ter
   let pctxd := context_depth_gen depth p.(pcontext) in
     max (pard + pctxd) (depth p.(preturn)).
 
+Definition prim_depth_gen (depth : term -> nat) (p : prim_val) :=
+  match p.π2 with
+  | primArrayModel arr =>
+    let vald := list_depth_gen depth arr.(array_value) in
+    max (depth arr.(array_default)) (max (depth arr.(array_type)) vald)
+  | _ => 1
+  end.
+
 Fixpoint depth t : nat :=
   match t with
   | tRel i => 1
@@ -51,12 +59,14 @@ Fixpoint depth t : nat :=
   | tProj p c => S (depth c)
   | tFix mfix idx => S (mfixpoint_depth_gen depth mfix)
   | tCoFix mfix idx => S (mfixpoint_depth_gen depth mfix)
+  | tPrim p => S (prim_depth_gen depth p)
   | _ => 1
   end.
 
 Notation context_depth := (context_depth_gen depth).
 Notation list_depth := (list_depth_gen depth).
 Notation mfixpoint_depth := (mfixpoint_depth_gen depth).
+Notation prim_depth := (prim_depth_gen depth).
 
 Lemma depth_mkApps f l : max (depth f) (list_depth l) <= depth (mkApps f l).
 Proof.
@@ -134,6 +144,8 @@ Proof.
     apply map_depth_hom. intros.
     simpl. destruct x. simpl. unfold def_depth_gen. simpl.
     f_equal; apply aux.
+  - f_equal. destruct prim as [? []]; cbn; auto.
+    rewrite !aux map_depth_hom //.
 Qed.
 
 Lemma All_depth {s l} k :
@@ -187,6 +199,9 @@ Proof.
     specialize (l0 k).
     specialize (l1 (n' + k)). simpl in l1.
     specialize (IHX k n'). lia.
+  - destruct p as [? []]; cbn in X; cbn; eauto; try lia.
+    destruct X as [? []]. specialize (l k); specialize (l0 k).
+    eapply (All_depth k) in a0. lia.
 Qed.
 
 Lemma depth_subst_instance u t : depth (subst_instance u t) = depth t.
@@ -215,6 +230,8 @@ Proof.
     apply map_depth_hom. intros.
     simpl. destruct x. simpl. unfold def_depth_gen. simpl.
     f_equal; apply aux.
+  - f_equal. destruct prim as [? []]; cbn; auto.
+    rewrite !map_depth_hom // !aux //.
 Qed.
 
 Lemma depth_subst_decl s k d :
@@ -334,7 +351,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (m : mfixpoint term) (n : nat),
         All_local_env (PCUICInduction.on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
-    (forall Γ p, P Γ (tPrim p)) ->
+    (forall Γ p, tPrimProp (P Γ) p -> P Γ (tPrim p)) ->
     forall Γ (t : term), P Γ t.
 Proof.
   intros ????????????????? Γ t.
@@ -367,12 +384,11 @@ Proof.
     - case: a => [na [b|] ty] /=;
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
       + eapply IHΔ => //. unfold context_depth. lia.
-      + simpl. apply aux => //. red.  lia.
-      + simpl. split.
+      + split.
         * apply aux => //. red. lia.
-        * apply aux=> //; red; lia.
+        * apply aux => //. cbn. lia.
       + apply IHΔ => //; unfold context_depth; lia.
-      + apply aux => //. red. lia. }
+      + split => //. apply aux => //. cbn. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dbody x)) m < S (mfixpoint_depth_gen depth m)).
@@ -417,6 +433,12 @@ Proof.
   - eapply X13; try (apply aux; red; simpl; lia).
     apply auxΓ => //. simpl. specialize (H mfix). lia.
     red. apply All_pair. split; apply auxl; simpl; auto.
+
+  - eapply X14.
+    destruct prim as [? []]; cbn => //.
+    split; [apply aux; red; cbn; lia|].
+    split; [apply aux; red; cbn; lia|].
+    apply auxl; cbn. change (fun x => depth x) with depth; lia.
 Defined.
 
 Definition CasePredProp_depth (P : term -> Type) (p : predicate term) :=
@@ -455,7 +477,7 @@ Lemma term_ind_depth_app :
     (forall (m : mfixpoint term) (n : nat),
         onctx P (fix_context m) ->
         tFixProp P P m -> P (tCoFix m n)) ->
-    (forall p, P (tPrim p)) ->
+    (forall p, tPrimProp P p -> P (tPrim p)) ->
     forall (t : term), P t.
 Proof.
   intros ????????????????? t.
@@ -485,14 +507,13 @@ Proof.
   { move=> Γ h.
     induction Γ; cbn.
     - constructor.
-    - case: a h => [na [b|] ty] /=;
+    - move: a h => [na bo ty] /=.
       rewrite {1}/decl_depth_gen /context_depth_gen /= => Hlt; constructor; auto.
-      + simpl. split.
-        * apply aux => //. red. cbn. lia.
-        * apply aux=> //; red; lia.
-      + apply IHΓ => //; unfold context_depth; lia.
-      + red; cbn. split. apply aux => //. red. lia. exact tt.
-      + apply IHΓ => //. unfold context_depth; lia. }
+      2: apply IHΓ => //; unfold context_depth; lia.
+      split.
+      + destruct bo => //. cbn in Hlt.
+        apply aux => //. cbn. lia.
+      + apply aux => //. cbn. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dtype x)) m < S (mfixpoint_depth_gen depth m)).
   { clear. unfold mfixpoint_depth_gen, def_depth_gen. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_depth_gen (fun x : def term => depth (dbody x)) m < S (mfixpoint_depth_gen depth m)).
@@ -537,4 +558,8 @@ Proof.
   - eapply X13; try (apply aux; red; simpl; lia).
     apply auxΓ => //. simpl. specialize (H mfix). lia.
     red. apply All_pair. split; apply auxl; simpl; auto.
+
+  - eapply X14; cbn. destruct prim as [? []]; cbn => //.
+    do 2 (split; [eapply aux; cbn; lia|]).
+    eapply auxl. change (fun x => depth x) with depth. cbn. lia.
 Defined.

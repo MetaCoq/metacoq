@@ -342,7 +342,7 @@ struct
         let u = match Univ.Instance.to_array u with [| u |] -> u | _ -> assert false in
         let def', acc = quote_term acc env sigma def in
         let ty', acc = quote_term acc env sigma ty in
-        let acc, arr' = Array.fold_left_map (fun acc t -> let t', acc = quote_term acc env sigma t in acc, t') acc ar in
+        let acc, arr' = ArrayCompat.fold_left_map (fun acc t -> let t', acc = quote_term acc env sigma t in acc, t') acc ar in
         Q.mkArray (Q.quote_univ_level u) arr' ~default:def' ~ty:ty', acc
       in
       aux acc env trm

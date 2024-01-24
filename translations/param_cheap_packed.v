@@ -246,14 +246,13 @@ Definition to := Type.
 MetaCoq Run (Translate emptyTC "nat" >>= tmDebug).
 
 Require Vector.
-Require Even.
+
 Unset Universe Checking.
 MetaCoq Run (Translate emptyTC "list" >>= tmDebug).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
           listᵗ A (x.1 :: lH.1)).
-
 
 (* Fixpoint recompose_prod (ns : list name) (As : list term) (B : term) : term := *)
 (*   match (ns, As) with *)

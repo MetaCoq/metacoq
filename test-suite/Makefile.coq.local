@@ -1,4 +1,5 @@
 TIMING=true
+# PROFILING=true
 
 -include ../Makefile.conf
 

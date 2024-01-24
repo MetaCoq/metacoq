@@ -26,7 +26,7 @@ else
 endif
 endif
 
-install: all 
+install: all
 	$(MAKE) -C utils install
 	$(MAKE) -C common install
 	$(MAKE) -C template-coq install
@@ -73,6 +73,7 @@ clean:
 	$(MAKE) -C template-coq clean
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
+	$(MAKE) -C safechecker-plugin clean
 	$(MAKE) -C template-pcuic clean
 	$(MAKE) -C quotation clean
 	$(MAKE) -C erasure clean
@@ -87,6 +88,7 @@ vos:
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic vos
 	$(MAKE) -C safechecker vos
+	$(MAKE) -C safechecker-plugin vos
 	$(MAKE) -C template-pcuic vos
 	$(MAKE) -C quotation vos
 	$(MAKE) -C erasure vos
@@ -99,6 +101,7 @@ quick:
 	$(MAKE) -C template-coq
 	$(MAKE) -C pcuic quick
 	$(MAKE) -C safechecker quick
+	$(MAKE) -C safechecker-plugin quick
 	$(MAKE) -C template-pcuic quick
 	$(MAKE) -C quotation vos # quick # we cannot unset universe checking in 8.16 due to COQBUG(https://github.com/coq/coq/issues/17361), and quick does not buy much in quotation anyway, where almost everything is transparent
 	$(MAKE) -C erasure quick
@@ -111,6 +114,7 @@ mrproper:
 	$(MAKE) -C template-coq mrproper
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
+	$(MAKE) -C safechecker-plugin mrproper
 	$(MAKE) -C template-pcuic mrproper
 	$(MAKE) -C quotation mrproper
 	$(MAKE) -C erasure mrproper
@@ -125,6 +129,7 @@ mrproper:
 	$(MAKE) -C template-coq .merlin
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
+	$(MAKE) -C safechecker-plugin .merlin
 	$(MAKE) -C template-pcuic .merlin
 	$(MAKE) -C quotation .merlin
 	$(MAKE) -C erasure .merlin

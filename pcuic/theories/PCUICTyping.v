@@ -1029,7 +1029,7 @@ Proof.
                   typing_size Hty <
                   S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (@typing_size _ Σ) _ _ _ p) a1) ->
                   PΓ Σ Γ0).
-          {intros. eapply (Htywf _ _ _ Hty); eauto. change (fun _ _ _ H => typing_size H) with (@typing_size _ Σ) at 1 3. lia. }
+          {intros. eapply (Htywf _ _ _ Hty); eauto. lia. }
           destruct mfix. now rewrite nth_error_nil in e.
           depelim a1. destruct o as (t & ?).
           eapply (X _ _ _ t). unfold on_def_body_sorting_size at 1. simpl. lia.
@@ -1051,7 +1051,10 @@ Proof.
                   lift_typing_size (fun t T H => @typing_size _ Σ Γ t T H) j Hj <
                   S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (fun Γ t T H => @typing_size cf Σ Γ t T H) _ _ _ p) a1) ->
                   Pj Σ Γ j).
-          { intros. eapply Hjudg with (Hj := Hj); eauto. simpl. change (typing Σ Γ0) with (fun t T => typing Σ Γ0 t T). lia. }
+          { intros. eapply Hjudg with (Hj := Hj); eauto. simpl.
+            change (@typing_size cf Σ) with (fun Γ t T tu => @typing_size cf Σ Γ t T tu) at 5.
+            change (@typing cf Σ Γ0) with (fun t T => @typing cf Σ Γ0 t T) at 1.
+            lia. }
           clear -a1 X.
           remember (fix_context mfix) as mfixcontext eqn:e. clear e.
           induction a1; constructor.
@@ -1065,7 +1068,7 @@ Proof.
                   typing_size Hty <
                   S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (@typing_size _ Σ) _ _ _ p) a1) ->
                   PΓ Σ Γ0).
-          {intros. eapply (Htywf _ _ _ Hty); eauto. change (fun _ _ _ H => typing_size H) with (@typing_size _ Σ) at 1 3. lia. }
+          {intros. eapply (Htywf _ _ _ Hty); eauto. lia. }
           destruct mfix. now rewrite nth_error_nil in e.
           depelim a1. destruct o as (t & ?).
           eapply (X _ _ _ t). unfold on_def_body_sorting_size at 1. simpl. lia.
@@ -1087,7 +1090,10 @@ Proof.
                   lift_typing_size (fun t T H => @typing_size _ Σ Γ t T H) j Hj <
                   S (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (fun Γ t T H => @typing_size cf Σ Γ t T H) _ _ _ p) a1) ->
                   Pj Σ Γ j).
-          { intros. eapply Hjudg with (Hj := Hj); eauto. simpl. change (typing Σ Γ0) with (fun t T => typing Σ Γ0 t T). lia. }
+          { intros. eapply Hjudg with (Hj := Hj); eauto. simpl.
+            change (typing Σ Γ0) with (fun t T => typing Σ Γ0 t T) at 1.
+            change (@typing_size cf Σ) with (fun Γ t T tu => @typing_size cf Σ Γ t T tu) at 5.
+            lia. }
           clear -a1 X.
           remember (fix_context mfix) as mfixcontext eqn:e. clear e.
           induction a1; constructor.

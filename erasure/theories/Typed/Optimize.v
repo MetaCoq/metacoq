@@ -54,7 +54,7 @@ Definition trim_start (b : bool) : bitmask -> bitmask :=
   fix f bs :=
     match bs with
     | b' :: bs =>
-      if Bool.eqb b' b then
+      if eqb b' b then
         f bs
       else
         b' :: bs

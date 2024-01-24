@@ -59,9 +59,11 @@ Section implement_box.
     all:try lia.
     all:try apply (In_size); tea.
     all:try lia.
-    - now apply (In_size id size).
-    - now eapply (In_size id size).
-    - eapply (In_size snd size) in H. cbn in *. lia.
+    - setoid_rewrite <- (In_size id size H); unfold id; lia.
+    - setoid_rewrite <- (In_size id size H); unfold id; lia.
+    - setoid_rewrite <- (In_size snd size H); cbn; lia.
+    - setoid_rewrite <- (In_size dbody size H); cbn; lia.
+    - setoid_rewrite <- (In_size dbody size H); cbn; lia.
     - now eapply InPrim_size in H.
   Qed.
 

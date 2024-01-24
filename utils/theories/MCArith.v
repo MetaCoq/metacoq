@@ -58,3 +58,26 @@ Proof.
   rewrite Pos2Nat.inj_1. reflexivity.
   rewrite Pos2Nat.inj_succ. cbn. f_equal. lia.
 Qed.
+
+(* Missing rewriting theory on natural number orders *)
+
+Require Import Morphisms Morphisms_Prop.
+#[export] Instance proper_S_lt : Morphisms.Proper (lt ==> lt)%signature S.
+Proof. red. intros x y h. lia. Qed.
+#[export] Instance proper_add_lt_r : Morphisms.Proper (eq ==> lt ==> lt)%signature Nat.add.
+Proof. red. intros ??????. lia. Qed.
+#[export] Instance proper_add_lt_l : Morphisms.Proper (lt ==> eq ==> lt)%signature Nat.add.
+Proof. red. intros ??????. lia. Qed.
+
+#[export] Instance proper_S_le : Morphisms.Proper (le ==> le)%signature S.
+Proof. red. intros x y h. lia. Qed.
+#[export] Instance proper_add_le_r : Morphisms.Proper (eq ==> le ==> le)%signature Nat.add.
+Proof. red. intros ??????. lia. Qed.
+#[export] Instance proper_add_le_l : Morphisms.Proper (le ==> eq ==> le)%signature Nat.add.
+Proof. red. intros ??????. lia. Qed.
+
+#[export] Instance subrel_eq_le : subrelation eq le.
+Proof. red. now intros ?? ->. Qed.
+
+#[export] Instance subrel_lt_le : subrelation lt le.
+Proof. red. intros ???. lia. Qed.

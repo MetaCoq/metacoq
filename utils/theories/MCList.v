@@ -1406,7 +1406,7 @@ Proof.
 Qed.
 
 Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) :
-  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
+  In x l -> size (proj x) < (list_size (size ∘ proj) l).
 Proof.
   induction l; cbn => //.
   intros [->|hin]. lia. specialize (IHl hin); lia.

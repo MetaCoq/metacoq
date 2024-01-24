@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "dev"
+version: "8.19.dev"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
 dev-repo: "git+https://github.com/MetaCoq/metacoq.git#main"
@@ -29,8 +29,8 @@ install: [
 ]
 depends: [
   "stdlib-shims"
-  "coq" { = "dev" }
-  "coq-equations" { = "dev" }
+  "coq" { >= "8.19" & < "8.20~" }
+  "coq-equations" { = "1.3+8.19" }
 ]
 synopsis: "The utility library of Template Coq and PCUIC"
 description: """

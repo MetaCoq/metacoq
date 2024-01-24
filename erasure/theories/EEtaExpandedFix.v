@@ -301,7 +301,8 @@ Section isEtaExp.
     all:try lia.
     all:try apply (In_size); tea.
     all:try lia.
-    - now apply (In_size id size).
+    - setoid_rewrite (In_size id size); tea. unfold id.
+      now change (fun x => size x) with size.
     - rewrite size_mkApps. cbn.
       apply (In_size id size) in H.
       unfold id in H. change (fun x => size x) with size in H. lia.
@@ -320,6 +321,7 @@ Section isEtaExp.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - eapply (In_size dbody size) in H. cbn in H; lia.
     - destruct p as [? []]; cbn in *; eauto. destruct H; subst; try lia.
       eapply (In_size id size) in H. unfold id in H.
       change (fun x => size x) with size in H. lia.

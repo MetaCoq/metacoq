@@ -79,23 +79,18 @@ Section isEtaExp.
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof.
     all:try lia.
-    all:try apply (In_size); tea.
-    all:try lia.
-    - now apply (In_size id size).
-    - rewrite size_mkApps.
-      eapply (In_size id size) in H.
-      change (fun x => size (id x)) with size in H. unfold id in *; cbn.
-      lia.
-    - now eapply size_mkApps_f.
-    - change (fun x => size (id x)) with size in H.
-      eapply (In_size id size) in H. unfold id in H.
-      change (fun x => size x) with size in H.
-      pose proof (size_mkApps_l napp nnil). lia.
+    3:now eapply size_mkApps_f.
+    3:{ pose proof (size_mkApps_l napp nnil).
+        setoid_rewrite <- (In_size id size H) in H0. unfold id in H0. lia. }
+    all:try rewrite size_mkApps.
+    all:try setoid_rewrite <- (In_size id size H); unfold id.
+    all: try (cbn; lia).
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - eapply (In_size dbody size) in H. cbn in H; lia.
+    - eapply (In_size dbody size) in H. cbn in H; lia.
     - destruct p as [? []]; cbn in *; intuition eauto.
       subst. lia.
-      eapply (In_size id size) in H0. unfold id in H0.
-      change (fun x => size x) with size in H0. lia.
+      setoid_rewrite <- (In_size id size H0); unfold id. lia.
   Qed.
 
 End isEtaExp.

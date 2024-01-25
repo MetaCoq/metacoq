@@ -176,6 +176,7 @@ Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop
 | expanded_global_nil : expanded_global_declarations []
 | expanded_global_cons decl Σ : expanded_global_declarations Σ ->
   expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
+Derive Signature for expanded_global_declarations.
 
 Definition expanded_global_env := expanded_global_declarations.
 

@@ -317,8 +317,6 @@ Proof.
   - inv whn; solve_discr; easy.
 Qed.
 
-Set Firstorder Solver auto with core.
-
 Definition whnf_whne_dec flags Σ Γ t :
   ({∥whnf flags Σ Γ t∥} + {~∥whnf flags Σ  Γ t∥}) *
   ({∥whne flags Σ Γ t∥} + {~∥whne flags Σ Γ t∥}).
@@ -1936,6 +1934,3 @@ Section Normal.
   Qed.
 
 End Normal.
-
-
-

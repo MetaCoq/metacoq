@@ -14,9 +14,7 @@ Set Default Goal Selector "!".
 Reserved Notation " Σ ;;; Γ |- t <=[ pb ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  |-  t  <=[ pb ] u").
 
-Definition leq_term_ext `{checker_flags} (Σ : global_env_ext) Rle t u := eq_term_upto_univ Σ (eq_universe Σ) Rle t u.
-
-Notation " Σ ⊢ t <===[ pb ] u" := (compare_term pb Σ Σ t u) (at level 50, t, u at next level).
+Notation " Σ ⊢ t <===[ pb ] u" := (compare_term Σ Σ pb t u) (at level 50, t, u at next level).
 
 (** ** Cumulativity *)
 
@@ -53,18 +51,17 @@ Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls cu
 #[global]
 Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls cumulAlgo_gen Σ Γ Γ') := _.
 
-Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' *
-  leq_term_ext Σ (leq_universe Σ) v v')%type } }.
+Lemma cumul_alt `{cf : checker_flags} Σ Γ pb t u :
+  Σ ;;; Γ |- t <=[pb] u <~> ∑ v v', red Σ Γ t v × red Σ Γ u v' × Σ ⊢ v <===[ pb ] v'.
 Proof.
   split.
   - induction 1.
     + exists t, u. intuition auto.
-    + destruct IHX as (v' & v'' & (redv & redv') & leqv).
+    + destruct IHX as (v' & v'' & redv & redv' & leqv).
       exists v', v''. intuition auto. now eapply red_step.
-    + destruct IHX as (v' & v'' & (redv & redv') & leqv).
+    + destruct IHX as (v' & v'' & redv & redv' & leqv).
       exists v', v''. intuition auto. now eapply red_step.
-  - intros [v [v' [[redv redv'] Hleq]]].
+  - intros (v & v' & redv & redv' & Hleq).
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
     induction redv.
@@ -83,7 +80,7 @@ Qed.
 #[global]
 Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (convAlgo Σ Γ).
 Proof.
-  intro; constructor. unfold leq_term_ext. reflexivity.
+  intro; constructor. reflexivity.
 Qed.
 
 Lemma red_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
@@ -170,18 +167,18 @@ Qed.
 
 Lemma eq_term_eq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
   eq_term Σ ϕ t t' ->
-  eq_term_upto_univ_napp Σ (eq_universe ϕ) (eq_universe ϕ) napp t t'.
+  eq_term_upto_univ_napp Σ (compare_universe ϕ) (compare_sort ϕ) Conv napp t t'.
 Proof.
-  intros. eapply eq_term_upto_univ_impl. 5:eauto.
-  4:auto with arith. all:typeclasses eauto.
+  intros. eapply eq_term_upto_univ_impl. 6:eauto.
+  5:auto with arith. all:typeclasses eauto.
 Qed.
 
 Lemma leq_term_leq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
   leq_term Σ ϕ t t' ->
-  eq_term_upto_univ_napp Σ (eq_universe ϕ) (leq_universe ϕ) napp t t'.
+  eq_term_upto_univ_napp Σ (compare_universe ϕ) (compare_sort ϕ) Cumul napp t t'.
 Proof.
-  intros. eapply eq_term_upto_univ_impl. 5:eauto.
-  4:auto with arith. all:typeclasses eauto.
+  intros. eapply eq_term_upto_univ_impl. 6:eauto.
+  5:auto with arith. all:typeclasses eauto.
 Qed.
 
 Lemma eq_term_mkApps `{checker_flags} Σ φ f l f' l' :
@@ -249,35 +246,19 @@ Proof.
     + eauto.
 Qed.
 
-Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
-  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') ×
-    eq_term Σ (global_ext_constraints Σ) v v').
-Proof.
-  split.
-  - induction 1.
-    * exists t, u; intuition auto.
-    * destruct IHX as [? [? [? ?]]].
-      exists x, x0; intuition auto. eapply red_step; eauto.
-    * destruct IHX as [? [? [? ?]]].
-      exists x, x0; intuition auto. eapply red_step; eauto.
-  - destruct 1 as [? [? [[? ?] ?]]].
-    eapply red_conv_conv; eauto.
-    eapply red_conv_conv_inv; eauto. now constructor.
-Qed.
+Definition eq_termp_napp {cf:checker_flags} (Σ : global_env_ext) (pb: conv_pb) napp :=
+  compare_term_napp Σ Σ pb napp.
 
-Definition eq_termp_napp {cf:checker_flags} (pb: conv_pb) (Σ : global_env_ext) napp :=
-  compare_term_napp pb Σ Σ napp.
-
-Notation eq_termp pb Σ := (compare_term pb Σ Σ).
+Notation eq_termp Σ pb := (compare_term Σ Σ pb).
 
 Lemma eq_term_eq_termp {cf:checker_flags} pb (Σ : global_env_ext) x y :
   eq_term Σ Σ x y ->
-  eq_termp pb Σ x y.
+  eq_termp Σ pb x y.
 Proof.
   destruct pb; [easy|].
   cbn.
   apply eq_term_upto_univ_leq; auto.
-  typeclasses eauto.
+  all: typeclasses eauto.
 Qed.
 
 Lemma cumul_App_l {cf:checker_flags} :

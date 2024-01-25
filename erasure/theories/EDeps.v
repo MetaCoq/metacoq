@@ -1,9 +1,9 @@
 From Coq Require Import Arith List.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
-     PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnv PCUICWeakeningEnvTyp.
+     PCUICPrimitive PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnv PCUICWeakeningEnvTyp.
 Set Warnings "-notation-overridden".
-From MetaCoq.Erasure Require Import EAst EAstUtils ECSubst EInduction
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ECSubst EInduction
   ELiftSubst EGlobalEnv EWcbvEval Extract ESubstitution.
 From MetaCoq.Erasure Require EExtends.
 Set Warnings "+notation-overridden".
@@ -84,6 +84,8 @@ Proof.
     depelim X.
     constructor; [|easy].
     now apply e.
+  - depelim X; depelim er; constructor; cbn. solve_all.
+    destruct p. solve_all.
 Qed.
 
 Lemma erases_deps_subst Σ Σ' s k t :
@@ -134,6 +136,7 @@ Proof.
     depelim X.
     constructor; [|easy].
     now apply e.
+  - depelim X; depelim er; constructor; cbn; intuition auto; solve_all.
 Qed.
 
 Lemma erases_deps_subst1 Σ Σ' t k u :
@@ -191,6 +194,7 @@ Proof.
     depelim X.
     constructor; [|easy].
     now apply e.
+  - depelim X; depelim er; constructor; cbn; intuition auto; solve_all.
 Qed.
 
 Lemma erases_deps_substl Σ Σ' s t :
@@ -341,6 +345,8 @@ Proof.
     now constructor.
   - congruence.
   - depelim er. now constructor.
+  - depelim er; depelim X; constructor; eauto.
+    eapply All2_over_undep in a0. solve_all.
   - easy.
 Qed.
 
@@ -402,7 +408,7 @@ Lemma erases_deps_forall_ind Σ Σ'
          Forall (fun d : Extract.E.def Extract.E.term => erases_deps Σ Σ' (Extract.E.dbody d)) defs ->
          Forall (fun d => P (E.dbody d)) defs ->
          P (Extract.E.tCoFix defs i))
-  (Hprim : forall p, P (Extract.E.tPrim p)):
+  (Hprim : forall p, primProp (erases_deps Σ Σ') p -> primProp P p -> P (Extract.E.tPrim p)):
   forall t, erases_deps Σ Σ' t -> P t.
 Proof.
   fix f 2.
@@ -441,6 +447,15 @@ Proof.
     fix f' 2.
     intros defs []; [now constructor|].
     constructor; [now apply f|now apply f'].
+  - eapply Hprim; tea; constructor.
+  - eapply Hprim; tea; constructor.
+  - eapply Hprim; tea; constructor.
+    intuition auto; solve_all.
+    split. auto. destruct a as [d v]. cbn in *.
+    eapply Forall_All.
+    revert v H.
+    fix aux 2.
+    intros ? [];constructor; auto.
 Defined.
 
 (* Lemma fresh_global_erase {cf : checker_flags} Σ Σ' kn :
@@ -559,6 +574,7 @@ Proof.
     rewrite H in declm.
     eapply PCUICWeakeningEnv.lookup_env_Some_fresh in kn_fresh.
     eauto. eauto.
+  - depelim X0; intuition auto; constructor; auto.
 Qed.
 
 Derive Signature for erases_global_decls.
@@ -611,8 +627,9 @@ Proof.
     cbn in *; try solve [constructor].
   - now apply inversion_Evar in wt.
   - constructor.
-    now apply inversion_Lambda in wt as (? & ? & ? & ? & ?); eauto.
-  - apply inversion_LetIn in wt as (? & ? & ? & ? & ? & ?); eauto.
+    now apply inversion_Lambda in wt as (? & ? & ? & ?); eauto.
+  - apply inversion_LetIn in wt as (? & h1 & ? & ?); eauto.
+    apply unlift_TermTyp in h1.
     now constructor; eauto.
   - apply inversion_App in wt as (? & ? & ? & ? & ? & ?); eauto.
     now constructor; eauto.
@@ -657,7 +674,7 @@ Proof.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
     revert a0 X H Σer.
-    generalize mfix at 1 2 4 6.
+    generalize mfix at 1 3 5.
     intros mfix_gen.
     revert mfix'.
     induction mfix; cbn in *; intros mfix' typ er all_deps deps.
@@ -666,12 +683,13 @@ Proof.
     depelim er.
     depelim all_deps.
     destruct a0 as [? ? ? ?].
+    apply unlift_TermTyp in o.
     now constructor; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
     revert a0 X H Σer.
-    generalize mfix at 1 2 4 6.
+    generalize mfix at 1 3 5.
     intros mfix_gen.
     revert mfix'.
     induction mfix; cbn in *; intros mfix' typ er all_deps deps.
@@ -680,7 +698,10 @@ Proof.
     depelim er.
     depelim all_deps.
     destruct p as (?&?&?).
+    apply unlift_TermTyp in o.
     now constructor; eauto.
+  - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
+    depelim H0; depelim p1; depelim X; cbn in *; try constructor; cbn; intuition eauto. solve_all.
 Qed.
 
 Lemma Forall2_nth_error_left {A B} {P} {l : list A} {l' : list B} : Forall2 P l l' ->
@@ -725,7 +746,7 @@ Proof.
         depelim wf. depelim o0. destruct o1. cbn in *.
         eapply (erases_extends ({| universes := univs; declarations := Σ |}, cst_universes cst')); eauto.
         cbn. 4:{ split; eauto; cbn; try reflexivity. eexists [_]; cbn; reflexivity. }
-        constructor; auto. cbn. red in on_global_decl_d. rewrite E in on_global_decl_d. exact on_global_decl_d.
+        constructor; auto. cbn. red in on_global_decl_d. rewrite E in on_global_decl_d. apply unlift_TermTyp in on_global_decl_d. exact on_global_decl_d.
         split; auto.
       * intros.
         eapply (erases_deps_cons {| universes := univs; declarations := Σ |} _ kn (PCUICEnvironment.ConstantDecl cst')); auto.
@@ -737,7 +758,8 @@ Proof.
         eapply (erases_deps_single (_, _)). 3:eauto.
         depelim wf. depelim o0. destruct o1.
         now split; cbn; eauto.
-        depelim wf. depelim o0. destruct o1. do 2 red in on_global_decl_d. now rewrite E in on_global_decl_d.
+        depelim wf. depelim o0. destruct o1. do 2 red in on_global_decl_d. rewrite E in on_global_decl_d.
+        now apply unlift_TermTyp in on_global_decl_d.
         apply IH; eauto. depelim wf. now depelim o0.
     + set (Σu := {| universes := univs; declarations := Σ; retroknowledge := retro |}).
       assert (wfΣu : PCUICTyping.wf Σu).
@@ -763,6 +785,7 @@ Proof.
         unfold on_constant_decl, erases_constant_body in *.
         destruct ?; [|easy].
         destruct ?; [|easy].
+        apply unlift_TermTyp in decl_ext.
         eapply (erases_extends (Σu, cst_universes cst')).
         4:{ split; cbn; auto. eexists [_]; cbn; reflexivity. }
         all: cbn; eauto.

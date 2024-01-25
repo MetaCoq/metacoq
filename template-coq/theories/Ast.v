@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
+From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Export Environment EnvironmentTyping Universes BasicAst.
 (* For primitive integers and floats  *)
-From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat.
+From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat PArray.
 From Coq Require Import ssreflect Morphisms.
-From Equations Require Import Equations.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -400,7 +400,7 @@ Inductive term : Type :=
 | tRel (n : nat)
 | tVar (id : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (ev : nat) (args : list term)
-| tSort (s : Universe.t)
+| tSort (s : sort)
 | tCast (t : term) (kind : cast_kind) (v : term)
 | tProd (na : aname) (ty : term) (body : term)
 | tLambda (na : aname) (ty : term) (body : term)
@@ -415,7 +415,8 @@ Inductive term : Type :=
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
 | tInt (i : PrimInt63.int)
-| tFloat (f : PrimFloat.float).
+| tFloat (f : PrimFloat.float)
+| tArray (u : Level.t) (arr : list term) (default : term) (type : term).
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables.
     The fresh evar will depend on the whole context at this point in the term, despite the empty instance.
@@ -457,6 +458,8 @@ Fixpoint lift n k t : term :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
     tCoFix mfix' idx
+  | tArray u arr def ty =>
+    tArray u (List.map (lift n k) arr) (lift n k def) (lift n k ty)
   | x => x
   end.
 
@@ -494,6 +497,8 @@ Fixpoint subst s k u :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
     tCoFix mfix' idx
+  | tArray u arr def ty =>
+    tArray u (List.map (subst s k) arr) (subst s k def) (subst s k ty)
   | x => x
   end.
 
@@ -523,6 +528,8 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k) (closedn k')) mfix
+  | tArray u arr def ty =>
+    List.forallb (closedn k) arr && closedn k def && closedn k ty
   | _ => true
   end.
 
@@ -548,6 +555,9 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tArray u arr def ty =>
+    List.forallb (noccur_between k n) arr &&
+    noccur_between k n def && noccur_between k n ty
   | _ => true
   end.
 
@@ -556,8 +566,10 @@ Fixpoint noccur_between k n (t : term) : bool :=
   match c with
   | tRel _ | tVar _ => c
   | tInt _ | tFloat _ => c
+  | tArray u' arr def ty => tArray (subst_instance_level u u') (List.map (subst_instance_constr u) arr)
+    (subst_instance_constr u def) (subst_instance_constr u ty)
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
+  | tSort s => tSort (subst_instance_sort u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
   | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
@@ -583,7 +595,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
 (** Tests that the term is closed over [k] universe variables *)
 Fixpoint closedu (k : nat) (t : term) : bool :=
   match t with
-  | tSort univ => closedu_universe k univ
+  | tSort univ => closedu_sort k univ
   | tInd _ u => closedu_instance k u
   | tConstruct _ _ u => closedu_instance k u
   | tConst _ u => closedu_instance k u
@@ -602,6 +614,8 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
     forallb (test_def (closedu k) (closedu k)) mfix
   | tCoFix mfix idx =>
     forallb (test_def (closedu k) (closedu k)) mfix
+  | tArray u arr def ty =>
+    closedu_level k u && forallb (closedu k) arr && closedu k def && closedu k ty
   | _ => true
   end.
 
@@ -821,4 +835,3 @@ Definition case_branch_type_gen ind mdecl params puinst ptm i cdecl (br : branch
 
 Definition case_branch_type ind mdecl p ptm i cdecl br : context * term :=
   case_branch_type_gen ind mdecl p.(pparams) p.(puinst) ptm i cdecl br.
-

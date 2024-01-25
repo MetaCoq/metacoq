@@ -22,10 +22,9 @@ Section with_monad.
     dbody <- bodyf dbody;;
     ret {| dname := dname; dtype := dtype; dbody := dbody; rarg := rarg |}.
 
-  Definition monad_typ_or_sort_map {T' T''} (f: T' -> T T'') t :=
+  Definition monad_typ_or_sort_map {univ T' T''} (f: T' -> T T'') (t : judgment_ univ T') :=
     match t with
-    | Typ ty => fty <- f ty;; ret (Typ fty)
-    | Sort => ret Sort
+    | Judge tm ty u => ftm <- monad_option_map f tm;; fty <- f ty;; ret (Judge ftm fty u)
     end.
 
   Definition monad_map_decl {term term'} (f : term -> T term') (d : context_decl term) : T (context_decl term') :=
@@ -59,7 +58,7 @@ Section with_monad.
     Definition monad_fold_context_k (f : nat -> term -> T term') Γ :=
       Γ <- monad_map_i (fun k' decl => monad_map_decl (f k') decl) (rev Γ);; ret (rev Γ).
 
-    Arguments monad_fold_context_k f Γ%list_scope.
+    Arguments monad_fold_context_k f Γ%_list_scope.
 
     Local Set Keyed Unification.
 

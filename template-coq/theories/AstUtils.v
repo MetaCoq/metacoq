@@ -68,6 +68,8 @@ Module string_of_term_tree.
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  | tArray u arr def ty => "Array(" ^ string_of_level u ^ "," ^
+    string_of_list string_of_term arr ^ "," ^ string_of_term def ^ "," ^ string_of_term ty ^ ")"
   end.
 End string_of_term_tree.
 
@@ -252,6 +254,8 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
+  | tArray u arr def ty =>
+    tArray u (List.map strip_casts arr) (strip_casts def) (strip_casts ty)
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
   | tInt _ | tFloat _ => t
   end.
@@ -376,13 +380,15 @@ Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (
       tt oib.(ind_ctors) brs ;;
   ret (tCase ci p' c brs').
 
-Definition default_sort_family (u : Universe.t) : allowed_eliminations :=
-  if Universe.is_sprop u then IntoAny
-  else if Universe.is_prop u then IntoPropSProp
-  else IntoAny.
+Definition default_sort_family (s : sort) : allowed_eliminations :=
+  match s with
+  | sSProp => IntoSProp
+  | sProp => IntoPropSProp
+  | _ => IntoAny
+  end.
 
-Definition default_relevance (u : Universe.t) : relevance :=
-  if Universe.is_sprop u then Irrelevant
+Definition default_relevance (s : sort) : relevance :=
+  if Sort.is_sprop s then Irrelevant
   else Relevant.
 
 (** Convenience functions for building constructors and inductive declarations *)
@@ -407,15 +413,15 @@ Definition make_constructor_body (id : ident) (indrel : nat)
   derived from the universe (i.e. does not handle inductives with singleton elimination, or impredicate set
   eliminations). *)
 Definition make_inductive_body (id : ident) (params : context) (indices : context)
-   (u : Universe.t) (ind_ctors : list constructor_body) : one_inductive_body :=
+   (s : sort) (ind_ctors : list constructor_body) : one_inductive_body :=
   {| ind_name := id;
      ind_indices := indices;
-     ind_sort := u;
-     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort u);
-     ind_kelim := default_sort_family u;
+     ind_sort := s;
+     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort s);
+     ind_kelim := default_sort_family s;
      ind_ctors := ind_ctors;
      ind_projs := [];
-     ind_relevance := default_relevance u |}.
+     ind_relevance := default_relevance s |}.
 
 Ltac change_Sk :=
   repeat match goal with

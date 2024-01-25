@@ -397,7 +397,7 @@ Ltac finish_reflect :=
     end);
   constructor; trivial; congruence.
 
-Definition eqb_universes_decl x y :=
+Definition eqb_sorts_decl x y :=
   match x, y with
   | Monomorphic_ctx, Monomorphic_ctx => true
   | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
@@ -405,9 +405,9 @@ Definition eqb_universes_decl x y :=
   end.
 
 #[global,program] Instance reflect_universes_decl : ReflectEq universes_decl :=
- {| eqb := eqb_universes_decl |}.
+ {| eqb := eqb_sorts_decl |}.
  Next Obligation.
-   unfold eqb_universes_decl.
+   unfold eqb_sorts_decl.
    intros [] []; finish_reflect.
 Qed.
 

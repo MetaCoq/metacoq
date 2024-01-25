@@ -15,18 +15,19 @@ sig
   val unquote_bool : quoted_bool -> bool
   val unquote_int63 : quoted_int63 -> Uint63.t
   val unquote_float64 : quoted_float64 -> Float64.t
-  (* val unquote_sort : quoted_sort -> Sorts.t *)
-  (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
   val unquote_kn :  quoted_kernel_name -> KerName.t
   val unquote_inductive :  quoted_inductive -> Names.inductive
   (*val unquote_univ_instance :  quoted_univ_instance -> UVars.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
-  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Sorts.t
+  (* val unquote_universe : Evd.evar_map -> quoted_universe -> Evd.evar_map * Univ.Universe.t *)
+  val unquote_universe_level : Evd.evar_map -> quoted_univ_level -> Evd.evar_map * Univ.Level.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * UVars.Instance.t
+  val unquote_sort : Evd.evar_map -> quoted_sort -> Evd.evar_map * Sorts.t
+  (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
-  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
-    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
     quoted_int63, quoted_float64) structure_of_term
 
 end
@@ -68,10 +69,10 @@ struct
       match D.inspect_term trm with
       | ACoq_tRel x -> evm, Constr.mkRel (D.unquote_int x + 1)
       | ACoq_tVar x -> evm, Constr.mkVar (D.unquote_ident x)
-      | ACoq_tEvar (n, l) -> 
+      | ACoq_tEvar (n, l) ->
         let evm, l' = map_evm (aux env) evm l in
         D.unquote_evar env evm n l'
-      | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkSort u
+      | ACoq_tSort x -> let evm, s = D.unquote_sort evm x in evm, Constr.mkSort s
       | ACoq_tCast (t,c,ty) -> let evm, t = aux env evm t in
         let evm, ty = aux env evm ty in
         evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)
@@ -84,7 +85,7 @@ struct
         let evm, t = aux env evm t in
         let evm, b = aux (Environ.push_rel (LocalAssum (n, t)) env) evm b in
         evm, Constr.mkLambda (n, t, b)
-      | ACoq_tLetIn (n,e,t,b) -> 
+      | ACoq_tLetIn (n,e,t,b) ->
         let n = D.unquote_aname n in
         let evm, e = aux env evm e in
         let evm, t = aux env evm t in
@@ -107,20 +108,20 @@ struct
         evm, Constr.mkIndU (i, u)
       | ACoq_tCase (ci, p, c, brs) ->
         let ind = D.unquote_inductive ci.aci_ind in
-        let relevance = D.unquote_relevance ci.aci_relevance in 
+        let relevance = D.unquote_relevance ci.aci_relevance in
         let ci = Inductiveops.make_case_info (Global.env ()) ind Constr.RegularStyle in
         let evm, puinst = D.unquote_universe_instance evm p.auinst in
         let evm, pars = map_evm (aux env) evm p.apars in
         let pars = Array.of_list pars in
         let napctx = CArray.map_of_list D.unquote_aname (List.rev p.apcontext) in
-        let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in 
+        let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in
         let evm, pret = aux (Environ.push_rel_context pctx env) evm p.apreturn in
         let evm, c = aux env evm c in
         let brs = List.map (fun { abcontext = bctx; abbody = bbody } ->
           let nabctx = CArray.map_of_list D.unquote_aname (List.rev bctx) in
           (nabctx, bbody)) brs in
         let brs = CaseCompat.case_branches_contexts env ci puinst pars (Array.of_list brs) in
-        let denote_br evm (nas, bctx, bbody) = 
+        let denote_br evm (nas, bctx, bbody) =
           let evm, bbody = aux (Environ.push_rel_context bctx env) evm bbody in
           evm, (nas, bbody)
         in
@@ -164,6 +165,12 @@ struct
          evm, Constr.mkProj (p', r, t')
       | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
       | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
+      | ACoq_tArray (u, arr, def, ty) ->
+          let evm, u = D.unquote_universe_level evm u in
+          let evm, arr = Array.fold_left_map (fun evm a -> aux env evm a) evm arr in
+          let evm, def = aux env evm def in
+          let evm, ty = aux env evm ty in
+          evm, Constr.mkArray (UVars.Instance.of_array ([||], [|u|]), arr, def, ty)
 
     in aux env evm trm
 

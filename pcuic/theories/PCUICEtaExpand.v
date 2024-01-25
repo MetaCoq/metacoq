@@ -6,14 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
   PCUICReduction PCUICProgram PCUICLiftSubst PCUICCSubst PCUICUnivSubst.
 
 (* move *)
-Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
-Proof.
-  intros a; now depelim a.
-Qed.
-
-Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
-Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
-
 Lemma nApp_mkApps t f args :
   t = mkApps f args -> ~~ isApp t -> t = f /\ args = [].
 Proof.
@@ -47,6 +39,30 @@ Definition isConstruct t :=
 Definition isRel t :=
     match t with tRel _ => true | _ => false end.
 
+Section map_All.
+  Context (P P' : term -> Type).
+  Context (ont : forall x, P x -> P' x).
+
+  Fixpoint map_All {x} (a : All P x) : All P' x :=
+    match a with
+    | All_nil => All_nil
+    | All_cons _ _ p a => All_cons (ont _ p) (map_All a)
+    end.
+End map_All.
+
+Section map_onPrim.
+  Context (P P' : term -> Prop).
+  Context (ont : forall x, P x -> P' x).
+
+  Definition map_onPrim {x} (o : onPrim P x) : onPrim P' x :=
+    match o with
+    | onPrimInt i => onPrimInt _ i
+    | onPrimFloat f => onPrimFloat _ f
+    | onPrimArray a def ty v =>
+      onPrimArray _ _ (ont _ def) (ont _ ty) (map_All _ _ ont v)
+    end.
+End map_onPrim.
+
 Section expanded.
 
 Variable Σ : global_env.
@@ -57,7 +73,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
 | expanded_tRel (n : nat) m args : nth_error Γ n = Some m -> forall Hle : m <= #|args|, Forall (expanded Γ) args -> expanded Γ (mkApps (tRel n) args)
 | expanded_tVar (id : ident) : expanded Γ (tVar id)
 | expanded_tEvar (ev : nat) (args : list term) : Forall (expanded Γ) args -> expanded Γ (tEvar ev args)
-| expanded_tSort (s : Universe.t) : expanded Γ (tSort s)
+| expanded_tSort (s : sort) : expanded Γ (tSort s)
 | expanded_tProd (na : aname) (ty : term) (body : term) : expanded Γ (tProd na ty body)
 | expanded_tLambda (na : aname) (ty : term) (body : term) : expanded (0 :: Γ) body -> expanded Γ (tLambda na ty body)
 | expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded Γ def -> expanded (0 :: Γ) body -> expanded Γ (tLetIn na def def_ty body)
@@ -85,7 +101,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
     #|args| >= (ind_npars mind + context_assumptions (cstr_args cdecl)) ->
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind c u) args)
-| expanded_tPrim p : expanded Γ (tPrim p).
+| expanded_tPrim p : onPrim (expanded Γ) p -> expanded Γ (tPrim p).
 
 End expanded.
 Derive Signature for expanded.
@@ -101,7 +117,7 @@ Lemma expanded_ind :
   (forall (Γ : list nat) (id : ident), P Γ (tVar id)) ->
   (forall (Γ : list nat) (ev : nat) (args : list term),
   Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
-  (forall (Γ : list nat) (s : Universe.t), P Γ (tSort s)) ->
+  (forall (Γ : list nat) (s : sort), P Γ (tSort s)) ->
   (forall (Γ : list nat) (na : aname) (ty body : term), P Γ (tProd na ty body)) ->
   (forall (Γ : list nat) (na : aname) (ty body : term),
   expanded Σ (0 :: Γ) body -> P (0 :: Γ) body -> P Γ (tLambda na ty body)) ->
@@ -158,7 +174,7 @@ Lemma expanded_ind :
   declared_constructor Σ (ind, c) mind idecl cdecl ->
   #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
   Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tConstruct ind c u) args)) ->
-  (forall Γ p, P Γ (tPrim p)) ->
+  (forall Γ p, onPrim (expanded Σ Γ) p -> onPrim (P Γ) p -> P Γ (tPrim p)) ->
   forall (Γ : list nat) (t : term), expanded Σ Γ t -> P Γ t.
 Proof.
   intros Σ P HRel HVar HEvar HSort HProd HLamdba HLetIn HApp HConst HInd HCase HProj HFix HCoFix HConstruct HPrim.
@@ -184,6 +200,7 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct; eauto.
     clear - H1 f. induction H1; econstructor; eauto.
+  - eapply HPrim; eauto. now eapply (map_onPrim _ _ (f Γ)).
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICLiftSubst PCUICSigmaCalculus.
@@ -216,6 +233,7 @@ Inductive expanded_global_declarations (univs : ContextSet.t) retro : forall (Σ
 | expanded_global_cons decl Σ : expanded_global_declarations univs retro Σ ->
   expanded_decl {| universes := univs; declarations := Σ; retroknowledge := retro |} decl.2 ->
   expanded_global_declarations univs retro (decl :: Σ).
+Derive Signature for expanded_global_declarations.
 
 Definition expanded_global_env (g : global_env) :=
   expanded_global_declarations g.(universes) g.(retroknowledge) g.(declarations).
@@ -299,6 +317,7 @@ Proof.
   - rewrite lift_mkApps. cbn.
     eapply expanded_tConstruct_app; tea. now len.
     solve_all.
+  - cbn; constructor. depelim H0; constructor; cbn; eauto. solve_all.
 Qed.
 
 Lemma expanded_subst Σ a k b Γ Δ :
@@ -366,6 +385,8 @@ Proof.
   - rewrite subst_mkApps. cbn.
     eapply expanded_tConstruct_app; tea. now len.
     solve_all.
+  - cbn; constructor; eauto.
+    depelim H1; constructor; cbn; eauto; solve_all.
 Qed.
 
 Lemma expanded_let_expansion Σ (Δ : context) Γ t :
@@ -435,6 +456,7 @@ Proof.
     now len.
   - econstructor; eauto. solve_all.
   - eapply expanded_tConstruct_app; tea. now len. solve_all.
+  - constructor. depelim H0; constructor; cbn; eauto; solve_all.
 Qed.
 
 Lemma expanded_weakening Σ Γ t : expanded Σ Γ t -> forall Γ', expanded Σ (Γ ++ Γ') t.
@@ -443,7 +465,8 @@ Proof.
   1:{ intros. eapply expanded_tRel; tea. rewrite nth_error_app_lt.
      now eapply nth_error_Some_length in H. assumption.
     solve_all. }
-  all:intros; try solve [econstructor; eauto 1; solve_all; try now rewrite app_assoc].
+  all:intros; try solve [econstructor; cbn; eauto 1; solve_all; try now rewrite app_assoc].
+  constructor. depelim H0; constructor; cbn; eauto; solve_all.
 Qed.
 
 
@@ -543,6 +566,11 @@ Proof.
   intros exp; depind exp; solve_discr => //; eauto.
 Qed.
 
+Lemma expanded_tPrim_inv Σ Γ p :
+  expanded Σ Γ (tPrim p) -> onPrim (expanded Σ Γ) p.
+Proof.
+  intros exp; depind exp; solve_discr => //; eauto.
+Qed.
 Import PCUICOnOne.
 
 Module Red1Apps.
@@ -659,6 +687,22 @@ Module Red1Apps.
   | cofix_red_body mfix0 mfix1 idx :
       OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
       Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+
+  | array_red_val arr value :
+      OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) arr.(array_value) value ->
+      Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+                 tPrim (primArray; primArrayModel (set_array_value arr value))
+
+  | array_red_def arr def :
+      Σ ;;; Γ |- arr.(array_default) ⇝ def ->
+      Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+                 tPrim (primArray; primArrayModel (set_array_default arr def))
+
+  | array_red_type arr ty :
+      Σ ;;; Γ |- arr.(array_type) ⇝ ty ->
+      Σ ;;; Γ |- tPrim (primArray; primArrayModel arr) ⇝
+            tPrim (primArray; primArrayModel (set_array_type arr ty))
+
   where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
   Lemma red1_ind_all :
@@ -784,9 +828,28 @@ Module Red1Apps.
                            (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
+        (forall (Γ : context) (arr : array_model term)
+          (value : list term),
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) (array_value arr) value ->
+          P Γ (tPrim (primArray; primArrayModel arr))
+            (tPrim (primArray; primArrayModel (set_array_value arr value)))) ->
+
+        (forall (Γ : context) (arr : array_model term)
+          (def : term), Σ;;; Γ |- array_default arr ⇝ def ->
+        P Γ (array_default arr) def ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_default arr def)))) ->
+
+       (forall (Γ : context) (arr : array_model term)
+          (ty : term), Σ;;; Γ |- array_type arr ⇝ ty ->
+        P Γ (array_type arr) ty ->
+        P Γ (tPrim (primArray; primArrayModel arr))
+          (tPrim (primArray; primArrayModel (set_array_type arr ty)))) ->
+
+
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
   Proof.
-    intros. rename X29 into Xlast. revert Γ t t0 Xlast.
+    intros. rename X32 into Xlast. revert Γ t t0 Xlast.
     fix aux 4. intros Γ t T.
     move aux at top.
     destruct 1; match goal with
@@ -861,6 +924,10 @@ Module Red1Apps.
       revert o. generalize (fix_context mfix0). intros c new.
       revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
         constructor; try split; auto; intuition.
+
+    - revert value o. generalize (array_value arr).
+        fix auxl 3; intros l l' Hl; destruct Hl;
+       constructor; try split; auto; intuition.
   Defined.
 
   Lemma red_tApp Σ Γ t v u :
@@ -1049,6 +1116,8 @@ Proof.
   - rewrite subst_mkApps. cbn.
     eapply expanded_tConstruct_app; tea. now len.
     solve_all.
+  - cbn; econstructor; eauto.
+    depelim H0; constructor; cbn; eauto; solve_all.
 Qed.
 
 Lemma expanded_unfold_fix Σ Γ' mfix idx narg fn :
@@ -1354,6 +1423,13 @@ Proof.
     rewrite skipn_app skipn_all2; len.
     replace (S n - #|mfix0|) with (S (n - #|mfix0|)) by lia. eapply wfΓ. rewrite H4 /= //.
     noconf H4.
+  - constructor. eapply expanded_tPrim_inv in exp.
+    depelim exp; eauto. constructor; cbn; eauto.
+    eapply OnOne2_impl_All_r; tea; cbn; intuition eauto.
+  - constructor. eapply expanded_tPrim_inv in exp.
+    depelim exp; eauto. constructor; cbn; eauto.
+  - constructor. eapply expanded_tPrim_inv in exp.
+    depelim exp; eauto. constructor; cbn; eauto.
 Qed.
 
 Lemma expanded_red {cf : checker_flags} {Σ : global_env_ext} Γ Γ' t v : wf Σ ->
@@ -1368,3 +1444,9 @@ Proof.
   eapply IHX0_2. now eapply IHX0_1.
 Qed.
 
+Lemma expanded_tApp_arg Σ Γ t u : expanded Σ Γ (tApp t u) -> expanded Σ Γ u.
+Proof.
+  move/expanded_mkApps_inv' => [expa _].
+  move: expa; rewrite (arguments_mkApps t [u]).
+  move/Forall_app => [] _ hu; now depelim hu.
+Qed.

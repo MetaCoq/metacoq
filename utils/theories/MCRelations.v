@@ -2,6 +2,7 @@
 Require Import ssreflect.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import CRelationClasses.
+Require RelationClasses.
 
 #[global] Hint Mode Reflexive ! ! : typeclass_instances.
 
@@ -33,6 +34,60 @@ Notation Trel_sig R S :=
 
 Notation on_Trel_eq R f g :=
   (fun x y => (R (f x) (f y) * (g x = g y)))%type.
+
+#[global]
+Instance on_rel_refl {A B} (P : B -> B -> Prop) (f : A -> B) :
+  RelationClasses.Reflexive P ->
+  RelationClasses.Reflexive (on_rel P f).
+Proof.
+  intros refl u.
+  apply refl.
+Qed.
+
+#[global]
+Instance on_rel_sym {A B} (P : B -> B -> Prop) (f : A -> B) :
+  RelationClasses.Symmetric P ->
+  RelationClasses.Symmetric (on_rel P f).
+Proof.
+  intros sym u u'.
+  apply sym.
+Qed.
+
+#[global]
+Instance on_rel_trans {A B} (P : B -> B -> Prop) (f : A -> B) :
+  RelationClasses.Transitive P ->
+  RelationClasses.Transitive (on_rel P f).
+Proof.
+  intros trans u u' u''.
+  apply trans.
+Qed.
+
+#[global]
+Instance on_Trel_refl {A B} (P : B -> B -> Type) (f : A -> B) :
+  Reflexive P ->
+  Reflexive (on_Trel P f).
+Proof.
+  intros refl u.
+  apply refl.
+Qed.
+
+#[global]
+Instance on_Trel_sym {A B} (P : B -> B -> Type) (f : A -> B) :
+  Symmetric P ->
+  Symmetric (on_Trel P f).
+Proof.
+  intros sym u u'.
+  apply sym.
+Qed.
+
+#[global]
+Instance on_Trel_trans {A B} (P : B -> B -> Type) (f : A -> B) :
+  Transitive P ->
+  Transitive (on_Trel P f).
+Proof.
+  intros trans u u' u''.
+  apply trans.
+Qed.
 
 Section Flip.
   Local Set Universe Polymorphism.

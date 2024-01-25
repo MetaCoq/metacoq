@@ -6,10 +6,16 @@ From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) config BasicAst Uni
 From MetaCoq.Quotation.ToPCUIC.PCUIC Require Import (hints) PCUICAst PCUICEquality utils.PCUICPrimitive.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Common Require Import EnvironmentTyping.Sig.
 
-#[export] Instance quote_cumul_predicate {cumul Γ Re p p'} {qcumul : quotation_of cumul} {qRe : quotation_of Re} {quote_cumul : forall x y Γ, ground_quotable (cumul Γ x y)} {quote_Re : forall x y, ground_quotable (Re x y:Prop)} : ground_quotable (@cumul_predicate cumul Γ Re p p')
+#[export] Instance quote_cumul_predicate {cumul Γ Re p p'} {qcumul : quotation_of cumul} {qRe : quotation_of Re} {quote_cumul : forall x y Γ, ground_quotable (cumul Γ x y)} {quote_Re : forall x y, ground_quotable (Re x y:Prop)} : ground_quotable (@cumul_predicate cumul Re Γ p p')
 := ltac:(cbv [cumul_predicate]; exact _).
 
-Definition quote_cumul_predicate_via_dep {cumul Γ Re Re' p p'} {c : @cumul_predicate cumul Γ Re p p'} (qc : cumul_predicate_dep c (fun _ _ _ c => quotation_of c) Re') {qcumul : quotation_of cumul} {qRe : quotation_of Re} {quote_Re : forall x y, ground_quotable (Re x y:Prop)} : quotation_of c.
+#[export] Instance quote_cumul_branch {cumul Γ p br br'} {qcumul : quotation_of cumul} {quote_cumul : forall x y Γ, ground_quotable (cumul Γ x y)} : ground_quotable (@cumul_branch cumul Γ p br br')
+:= ltac:(cbv [cumul_branch]; exact _).
+
+#[export] Instance quote_cumul_mfixpoint {cumul Γ mfix mfix'} {qcumul : quotation_of cumul} {quote_cumul : forall x y Γ, ground_quotable (cumul Γ x y)} : ground_quotable (@cumul_mfixpoint cumul Γ mfix mfix')
+:= ltac:(cbv [cumul_mfixpoint]; exact _).
+
+Definition quote_cumul_predicate_via_dep {cumul Γ Re Re' p p'} {c : @cumul_predicate cumul Re Γ p p'} (qc : cumul_predicate_dep c (fun _ _ _ c => quotation_of c) Re') {qcumul : quotation_of cumul} {qRe : quotation_of Re} {quote_Re : forall x y, ground_quotable (Re x y:Prop)} : quotation_of c.
 Proof.
   cbv [cumul_predicate cumul_predicate_dep] in *.
   repeat match goal with H : _ * _ |- _ => destruct H end.
@@ -17,7 +23,7 @@ Proof.
 Defined.
 #[export] Hint Extern 0 (cumul_predicate_dep _ (fun _ _ _ r => quotation_of r) _) => eassumption : typeclass_instances.
 
-#[export] Hint Extern 0 (@quotation_of (@cumul_predicate ?cumul ?Γ ?Re ?p ?p') ?x)
+#[export] Hint Extern 0 (@quotation_of (@cumul_predicate ?cumul ?Re ?Γ ?p ?p') ?x)
 => lazymatch goal with
    | [ H : cumul_predicate_dep x (fun _ _ _ r => quotation_of r) ?Re' |- _ ]
      => simple eapply (@quote_cumul_predicate_via_dep cumul Γ Re Re' p p' x H)
@@ -42,7 +48,9 @@ Defined.
 
 #[export] Instance quote_cumulSpec0 {cf Σ Γ pb t u} : ground_quotable (@cumulSpec0 cf Σ Γ pb t u).
 Proof.
+  pose proof (compare_universe_subrel Σ : forall pb, RelationClasses.subrelation (compare_universe Σ Conv) (compare_universe Σ pb)).
   induction 1.
+  all: unfold cumul_branches, cumul_branch, cumul_mfixpoint in *.
   all: lazymatch goal with
        | [ H : All_Forall.All2_dep ?T ?x |- _ ]
          => lazymatch T with

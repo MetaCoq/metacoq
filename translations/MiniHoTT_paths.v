@@ -33,8 +33,8 @@ Defined.
 
 (* *********************************************** *)
 
-Arguments sigT {A}%type P%type.
-Arguments existT {A}%type P%type _ _.
+Arguments sigT {A}%_type P%_type.
+Arguments existT {A}%_type P%_type _ _.
 Arguments projT1 {A P} _ / .
 Arguments projT2 {A P} _ / .
 
@@ -140,7 +140,7 @@ Notation "g 'o' f" := (compose g%function f%function) (at level 40, left associa
 (*   := fun A => (idmap , idmap). *)
 
 Definition composeD {A B C} (g : forall b, C b) (f : A -> B) := fun x : A => g (f x).
-Global Arguments composeD {A B C}%type_scope (g f)%function_scope x.
+Global Arguments composeD {A B C}%_type_scope (g f)%_function_scope x.
 #[global]
 Hint Unfold composeD : core.
 Notation "g 'oD' f" := (composeD g f) (at level 40, left associativity) : function_scope.
@@ -161,7 +161,7 @@ Notation "1" := (idpath _) : path_scope.
 
 Definition transport {A : Type} (P : A -> Type) {x y : A} (p : x = y) (u : P x) : P y := paths_ind x (fun y _ => P y) u y p.
 
-Arguments transport {A}%type_scope P%function_scope {x y} p%path_scope u : simpl nomatch.
+Arguments transport {A}%_type_scope P%_function_scope {x y} p%_path_scope u : simpl nomatch.
 
 Definition transport_beta {A} (P : A -> Type) {x : A} (u : P x)
   : transport P 1 u = u
@@ -191,12 +191,12 @@ Notation "p ^" := (inverse p%path) (at level 3, format "p '^'") : path_scope.
 Definition ap {A B:Type} (f:A -> B) {x y:A} (p:x = y) : f x = f y
   := transport (fun y => f x = f y) p 1.
 
-Global Arguments ap {A B}%type_scope f%function_scope {x y} p%path_scope.
+Global Arguments ap {A B}%_type_scope f%_function_scope {x y} p%_path_scope.
 
 Definition pointwise_paths {A} {P:A->Type} (f g:forall x:A, P x)
   := forall x:A, f x = g x.
 
-Global Arguments pointwise_paths {A}%type_scope {P} (f g)%function_scope.
+Global Arguments pointwise_paths {A}%_type_scope {P} (f g)%_function_scope.
 
 #[global]
 Hint Unfold pointwise_paths : typeclass_instances.
@@ -207,17 +207,17 @@ Definition apD10 {A} {B:A->Type} {f g : forall x, B x} (h:f=g)
   : f == g
   := fun x => transport (fun g => f x = g x) h 1.
 
-Global Arguments apD10 {A%type_scope B} {f g}%function_scope h%path_scope _.
+Global Arguments apD10 {A%_type_scope B} {f g}%_function_scope h%_path_scope _.
 
 Definition ap10 {A B} {f g:A->B} (h:f=g) : f == g
   := apD10 h.
 
-Global Arguments ap10 {A B}%type_scope {f g}%function_scope h%path_scope _.
+Global Arguments ap10 {A B}%_type_scope {f g}%_function_scope h%_path_scope _.
 
 Definition ap11 {A B} {f g:A->B} (h:f=g) {x y:A} (p:x=y) : f x = g y
   := ap10 h x @ ap g p.
 
-Global Arguments ap11 {A B}%type_scope {f g}%function_scope h%path_scope {x y} p%path_scope.
+Global Arguments ap11 {A B}%_type_scope {f g}%_function_scope h%_path_scope {x y} p%_path_scope.
 
 Arguments ap {A B} f {x y} p : simpl nomatch.
 
@@ -225,12 +225,12 @@ Definition apD {A:Type} {B:A->Type} (f:forall a:A, B a) {x y:A} (p:x=y):
   p # (f x) = f y
   := paths_ind x (fun y p => p # (f x) = f y) (transport_beta _ _) y p.
 
-Arguments apD {A%type_scope B} f%function_scope {x y} p%path_scope : simpl nomatch.
+Arguments apD {A%_type_scope B} f%_function_scope {x y} p%_path_scope : simpl nomatch.
 
 Definition Sect {A B : Type} (s : A -> B) (r : B -> A) :=
   forall x : A, r (s x) = x.
 
-Global Arguments Sect {A B}%type_scope (s r)%function_scope.
+Global Arguments Sect {A B}%_type_scope (s r)%_function_scope.
 
 Class IsEquiv {A B : Type} (f : A -> B) := BuildIsEquiv {
                                                equiv_inv : B -> A ;
@@ -239,10 +239,10 @@ Class IsEquiv {A B : Type} (f : A -> B) := BuildIsEquiv {
                                                eisadj : forall x : A, eisretr (f x) = ap f (eissect x)
                                              }.
 
-Arguments eisretr {A B}%type_scope f%function_scope {_} _.
-Arguments eissect {A B}%type_scope f%function_scope {_} _.
-Arguments eisadj {A B}%type_scope f%function_scope {_} _.
-Arguments IsEquiv {A B}%type_scope f%function_scope.
+Arguments eisretr {A B}%_type_scope f%_function_scope {_} _.
+Arguments eissect {A B}%_type_scope f%_function_scope {_} _.
+Arguments eisadj {A B}%_type_scope f%_function_scope {_} _.
+Arguments IsEquiv {A B}%_type_scope f%_function_scope.
 
 Record Equiv A B := BuildEquiv {
                         equiv_fun : A -> B ;
@@ -279,14 +279,14 @@ Class Funext := { isequiv_apD10 : forall (A : Type) (P : A -> Type) f g, IsEquiv
 Definition path_forall `{Funext} {A : Type} {P : A -> Type} (f g : forall x : A, P x) : f == g -> f = g
   := (@apD10 A P f g)^-1.
 
-Global Arguments path_forall {_ A%type_scope P} (f g)%function_scope _.
+Global Arguments path_forall {_ A%_type_scope P} (f g)%_function_scope _.
 
 Definition path_forall2 `{Funext} {A B : Type} {P : A -> B -> Type} (f g : forall x y, P x y) :
   (forall x y, f x y = g x y) -> f = g
   :=
     (fun E => path_forall f g (fun x => path_forall (f x) (g x) (E x))).
 
-Global Arguments path_forall2 {_} {A B}%type_scope {P} (f g)%function_scope _.
+Global Arguments path_forall2 {_} {A B}%_type_scope {P} (f g)%_function_scope _.
 
 
 
@@ -1680,8 +1680,8 @@ Section Adjointify.
 
 End Adjointify.
 
-Arguments isequiv_adjointify {A B}%type_scope (f g)%function_scope isretr issect.
-Arguments equiv_adjointify {A B}%type_scope (f g)%function_scope isretr issect.
+Arguments isequiv_adjointify {A B}%_type_scope (f g)%_function_scope isretr issect.
+Arguments equiv_adjointify {A B}%_type_scope (f g)%_function_scope isretr issect.
 
 (** An involution is an endomap that is its own inverse. *)
 Definition isequiv_involution {X : Type} (f : X -> X) (isinvol : Sect f f)
@@ -1971,7 +1971,7 @@ Definition equiv_ap `(f : A -> B) `{IsEquiv A B f} (x y : A)
   : (x = y) <~> (f x = f y)
   := BuildEquiv _ _ (ap f) _.
 
-Global Arguments equiv_ap (A B)%type_scope f%function_scope _ _ _.
+Global Arguments equiv_ap (A B)%_type_scope f%_function_scope _ _ _.
 
 Definition equiv_ap' `(f : A <~> B) (x y : A)
   : (x = y) <~> (f x = f y)
@@ -2551,7 +2551,7 @@ Definition equiv_path_forall `{P : A -> Type} (f g : forall x, P x)
   : (f == g)  <~>  (f = g)
   := BuildEquiv _ _ (path_forall f g) _.
 
-Global Arguments equiv_path_forall {A%type_scope P} (f g)%function_scope.
+Global Arguments equiv_path_forall {A%_type_scope P} (f g)%_function_scope.
 
 (** ** Path algebra *)
 

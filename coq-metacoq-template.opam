@@ -22,7 +22,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["bash" "./configure.sh"]
-  [make "-j" "%{jobs}%" "template-coq"]
+  [make "-j" "%{jobs}%" "-C" "template-coq"]
 ]
 install: [
   [make "-C" "template-coq" "install"]

@@ -14,6 +14,7 @@ Local Open Scope bs.
 Import MCMonadNotation.
 
 Class quotation_of {T} (t : T) := quoted_term_of : Ast.term.
+#[global] Arguments quoted_term_of {T} t {_}.
 Class ground_quotable T := quote_ground : forall t : T, quotation_of t.
 Class inductive_quotation_of {T} (t : T) : Set
   := { qinductive : inductive
@@ -108,6 +109,7 @@ Proof.
      | tSort _
      | tInt _
      | tFloat _
+     | tArray _ _ _ _
      | tConst _ _
        => if head_term_is_bound cur_modpath qt
           then tmMaybeInferQuotation tt
@@ -212,6 +214,7 @@ Proof.
        | tConstruct _ _ _
        | tInt _
        | tFloat _
+       | tArray _ _ _ _
        | tInd _ _
          => ret qt
        | tCast t kind v
@@ -586,7 +589,7 @@ Definition tmMakeQuotationOfModule {debug:debug_opt} (include_submodule : submod
      let include_supermodule := include_supermodule_of_submodule_inclusion include_submodule in
      let include_submodule := include_submodule_of_submodule_inclusion include_submodule in
      tmMakeQuotationOfConstants include_submodule include_supermodule existing_instance base cs.
-Global Arguments tmMakeQuotationOfModule {_%bool} _ _ _%bs.
+Global Arguments tmMakeQuotationOfModule {_%_bool} _ _ _%_bs.
 
 Definition tmMakeQuotationOfModuleWorkAroundCoqBug17303 {debug:debug_opt} (include_submodule : submodule_inclusion) (m : qualid) : TemplateMonad _
   := cs <- tmQuoteModule m;;
@@ -594,7 +597,7 @@ Definition tmMakeQuotationOfModuleWorkAroundCoqBug17303 {debug:debug_opt} (inclu
      let include_supermodule := include_supermodule_of_submodule_inclusion include_submodule in
      let include_submodule := include_submodule_of_submodule_inclusion include_submodule in
      tmMakeQuotationOfConstantsWorkAroundCoqBug17303 include_submodule include_supermodule base cs.
-Global Arguments tmMakeQuotationOfModuleWorkAroundCoqBug17303 {_%bool} _ _%bs.
+Global Arguments tmMakeQuotationOfModuleWorkAroundCoqBug17303 {_%_bool} _ _%_bs.
 
 Definition tmDeclareQuotationOfModule {debug:debug_opt} (include_submodule : submodule_inclusion) (existing_instance : option hint_locality) (m : qualid) : TemplateMonad _
   := cs <- tmQuoteModule m;;
@@ -602,7 +605,7 @@ Definition tmDeclareQuotationOfModule {debug:debug_opt} (include_submodule : sub
      let include_supermodule := include_supermodule_of_submodule_inclusion include_submodule in
      let include_submodule := include_submodule_of_submodule_inclusion include_submodule in
      tmDeclareQuotationOfConstants include_submodule include_supermodule existing_instance base cs.
-Global Arguments tmDeclareQuotationOfModule {_%bool} _ _ _%bs.
+Global Arguments tmDeclareQuotationOfModule {_%_bool} _ _ _%_bs.
 
 (*
 Require Import MSetPositive.

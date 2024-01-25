@@ -29,13 +29,12 @@ Section Generation.
   Proof using Type.
     intros Ht Hsp.
     revert t Ht. induction Hsp; simpl; auto.
-    intros t Ht. eapply type_Cumul; eauto. eapply i.π2.
+    intros t Ht. eapply type_Cumul; eauto. eapply i.2.π2.1.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as [s Hs].
-    eapply type_App; eauto.
-    eapply type_Cumul; eauto.
+    eapply type_App; eauto. eapply i.2.π2.1.
+    eapply type_Cumul; eauto. eapply i.2.π2.1.
   Qed.
 
   Lemma type_it_mkLambda_or_LetIn :
@@ -48,12 +47,12 @@ Section Generation.
     - assumption.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc.
-      econstructor; try eassumption. exact t0.π2.
+      apply All_local_env_tip in hc as [hc ona].
+      econstructor; try eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc;
-      econstructor; try eassumption. exact t0.π2.
+      apply All_local_env_tip in hc as [hc ona].
+      econstructor; try eassumption.
   Qed.
 
 End Generation.

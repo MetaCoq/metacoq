@@ -106,8 +106,9 @@ Register MetaCoq.Common.Universes.ConstraintType.Lt as metacoq.ast.constraints.L
 Register MetaCoq.Common.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le0.
 Register MetaCoq.Common.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
 Register MetaCoq.Common.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
+Register MetaCoq.Common.Universes.Universe.t as metacoq.ast.universe.t.
+Register MetaCoq.Common.Universes.Universe.make' as metacoq.ast.universe.make_of_level.
 Register MetaCoq.Common.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
-Register MetaCoq.Common.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
 Register MetaCoq.Common.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
 Register MetaCoq.Common.Universes.Level.t as metacoq.ast.level.t.
 Register MetaCoq.Common.Universes.Level.level as metacoq.ast.level.Level.
@@ -116,13 +117,12 @@ Register MetaCoq.Common.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
 Register MetaCoq.Common.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
 Register MetaCoq.Common.Universes.Level.lzero as metacoq.ast.level.lzero.
 Register MetaCoq.Common.Universes.Level.lvar as metacoq.ast.level.Var.
-Register MetaCoq.Common.Universes.Universe.lType as metacoq.ast.levelexpr.npe.
 
 Register MetaCoq.Common.Universes.LevelExprSet.Mkt as metacoq.ast.levelexprset.mkt.
 Register MetaCoq.Common.Universes.Build_nonEmptyLevelExprSet as metacoq.ast.universe.build0.
-Register MetaCoq.Common.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
-Register MetaCoq.Common.Universes.Universe.lProp as metacoq.ast.universe.lprop.
-Register MetaCoq.Common.Universes.Universe.lType as metacoq.ast.universe.lnpe.
+Register MetaCoq.Common.Universes.Sort.sSProp as metacoq.ast.sort.sprop.
+Register MetaCoq.Common.Universes.Sort.sProp as metacoq.ast.sort.prop.
+Register MetaCoq.Common.Universes.Sort.sType as metacoq.ast.sort.type.
 
 
 Register MetaCoq.Common.Universes.Variance.t as metacoq.ast.variance.t.
@@ -178,6 +178,7 @@ Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
 Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
 Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat.
+Register MetaCoq.Template.Ast.tArray as metacoq.ast.tArray.
 
 (* Local and global declarations *)
 Register MetaCoq.Template.Ast.parameter_entry as metacoq.ast.parameter_entry.

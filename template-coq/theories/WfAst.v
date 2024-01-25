@@ -57,7 +57,8 @@ Inductive wf {Σ} : term -> Type :=
                    wf (tFix mfix k)
 | wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k)
 | wf_tInt i : wf (tInt i)
-| wf_tFloat f : wf (tFloat f).
+| wf_tFloat f : wf (tFloat f)
+| wf_tArray u arr def ty : All wf arr -> wf def -> wf ty -> wf (tArray u arr def ty).
 Arguments wf : clear implicits.
 Derive Signature for wf.
 
@@ -67,6 +68,7 @@ Definition wf_Inv Σ (t : term) : Type :=
   match t with
   | tRel _ | tVar _ | tSort _ => unit
   | tInt _ | tFloat _ => unit
+  | tArray u arr def ty => All (wf Σ) arr * wf Σ def * wf Σ ty
   | tEvar n l => All (wf Σ) l
   | tCast t k t' => wf Σ t * wf Σ t'
   | tProd na t b => wf Σ t * wf Σ b
@@ -150,9 +152,10 @@ Lemma term_wf_forall_list_ind Σ :
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
     (forall i, P (tInt i)) ->
     (forall f, P (tFloat f)) ->
+    (forall u arr def ty, All P arr -> P def -> P ty ->  P (tArray u arr def ty)) ->
     forall t : term, wf Σ t -> P t.
 Proof.
-  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19.
+  intros P H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 Harr.
   intros until t. revert t.
   apply (term_forall_list_rect (fun t => wf Σ t -> P t));
     intros; try solve [match goal with
@@ -180,19 +183,13 @@ Proof.
     apply H16. red. red in X. solve_all.
   - inv X0; auto.
     apply H17. red. red in X. solve_all.
+  - inv X2; auto. eapply Harr; eauto using lift_to_wf_list.
 Qed.
 
-Definition wf_decl Σ d :=
-  match decl_body d with
-  | Some b => wf Σ b
-  | None => True
-  end * wf Σ (decl_type d).
+Definition wf_decl Σ d := option_default (wf Σ) (decl_body d) unit × wf Σ (decl_type d).
 
-Definition wf_decl_pred Σ : context -> term -> typ_or_sort -> Type :=
-  (fun _ t T => wf Σ t * match T with
-                        | Typ T => wf Σ T
-                        | Sort => True
-                        end).
+Definition wf_decl_pred Σ : context -> judgment -> Type :=
+  (fun _ j => option_default (wf Σ) (j_term j) unit × wf Σ (j_typ j)).
 
 Lemma wf_mkApp Σ u a : wf Σ u -> wf Σ a -> wf Σ (mkApp u a).
 Proof.

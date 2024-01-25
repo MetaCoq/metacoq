@@ -40,7 +40,7 @@ Definition dummy_branch : branch term := mk_branch [] tDummy.
   Inspired by the reduction relation from Coq in Coq [Barras'99].
 *)
 
-Arguments OnOne2 {A} P%type l l'.
+Arguments OnOne2 {A} P%_type l l'.
 
 Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term :=
   {| pparams := p.(pparams);
@@ -77,32 +77,34 @@ Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
 
 (** We do not allow alpha-conversion and P applies to only one of the
   fields in the context declaration. Used to define one-step context reduction. *)
-Definition on_one_decl (P : context -> term -> term -> Type)
-  Γ (d : context_decl) (d' : context_decl) : Type :=
+Definition on_one_decl (P : term -> term -> Type)
+  (d : context_decl) (d' : context_decl) : Type :=
   match d, d' with
   | {| decl_name := na; decl_body := None; decl_type := ty |},
     {| decl_name := na'; decl_body := None; decl_type := ty' |} =>
-      na = na' × P Γ ty ty'
+      na = na' × P ty ty'
   | {| decl_name := na; decl_body := Some b; decl_type := ty |},
     {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} =>
       na = na' ×
-      ((P Γ ty ty' × b = b') +
-        (P Γ b b' × ty = ty'))
+      ((P ty ty' × b = b') +
+        (P b b' × ty = ty'))
   | _, _ => False
   end.
 
-Lemma on_one_decl_impl (P Q : context -> term -> term -> Type) :
-  (forall Γ, inclusion (P Γ) (Q Γ)) ->
-  forall Γ, inclusion (on_one_decl P Γ) (on_one_decl Q Γ).
+Notation on_one_decl1 P Γ := (on_one_decl (P Γ)).
+
+Lemma on_one_decl_impl (P Q : term -> term -> Type) :
+  (inclusion P Q) ->
+  inclusion (on_one_decl P) (on_one_decl Q).
 Proof.
-  intros HP Γ x y.
+  intros HP x y.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl; firstorder auto.
 Qed.
 
 Lemma on_one_decl_map_na (P : context -> term -> term -> Type) f g :
   forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl_na f g) Γ)) g) Γ)
-    (on_Trel (on_one_decl P (map (map_decl_na f g) Γ)) (map_decl_na f g)).
+    inclusion (on_one_decl (on_Trel (P (map (map_decl_na f g) Γ)) g))
+    (on_Trel (on_one_decl (P (map (map_decl_na f g) Γ))) (map_decl_na f g)).
 Proof.
   intros Γ x y.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
@@ -111,8 +113,8 @@ Qed.
 
 Lemma on_one_decl_map (P : context -> term -> term -> Type) f :
   forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl f) Γ)) f) Γ)
-    (on_Trel (on_one_decl P (map (map_decl f) Γ)) (map_decl f)).
+    inclusion (on_one_decl (on_Trel (P (map (map_decl f) Γ)) f))
+    (on_Trel (on_one_decl (P (map (map_decl f) Γ))) (map_decl f)).
 Proof.
   intros Γ x y.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
@@ -121,22 +123,22 @@ Qed.
 
 Lemma on_one_decl_mapi_context (P : context -> term -> term -> Type) f :
   forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (mapi_context f Γ)) (f #|Γ|)) Γ)
-    (on_Trel (on_one_decl P (mapi_context f Γ)) (map_decl (f #|Γ|))).
+    inclusion (on_one_decl (on_Trel (P (mapi_context f Γ)) (f #|Γ|)))
+    (on_Trel (on_one_decl (P (mapi_context f Γ))) (map_decl (f #|Γ|))).
 Proof.
   intros Γ x y.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
     auto.
 Qed.
 
-Lemma on_one_decl_test_impl (P Q : context -> term -> term -> Type) (p : term -> bool) :
-  forall Γ d d',
-    on_one_decl P Γ d d' ->
+Lemma on_one_decl_test_impl (P Q : term -> term -> Type) (p : term -> bool) :
+  forall d d',
+    on_one_decl P d d' ->
     test_decl p d ->
-    (forall x y, p x -> P Γ x y -> Q Γ x y) ->
-    on_one_decl Q Γ d d'.
+    (forall x y, p x -> P x y -> Q x y) ->
+    on_one_decl Q d d'.
 Proof.
-  intros Γ [na [b|] ty] [na' [b'|] ty'] ond []%andb_and; simpl; firstorder auto.
+  intros [na [b|] ty] [na' [b'|] ty'] ond []%andb_and; simpl; firstorder auto.
 Qed.
 
 Section OnOne_local_2.
@@ -172,9 +174,9 @@ Qed.
 
 Lemma OnOne2_local_env_ondecl_impl P Q :
   (forall Γ, inclusion (P Γ) (Q Γ)) ->
-  inclusion (OnOne2_local_env (on_one_decl P)) (OnOne2_local_env (on_one_decl P)).
+  inclusion (OnOne2_local_env (fun Γ => on_one_decl1 P Γ)) (OnOne2_local_env (fun Γ => on_one_decl1 Q Γ)).
 Proof.
-  intros HP. now apply OnOne2_local_env_impl, on_one_decl_impl.
+  intros HP. apply OnOne2_local_env_impl => Γ. apply on_one_decl_impl. easy.
 Qed.
 
 Lemma OnOne2_local_env_map R Γ Δ (f : aname -> aname) (g : term -> term) :
@@ -236,11 +238,11 @@ Proof.
     now rewrite -(length_of onenv).
 Qed.
 
-Lemma on_one_decl_test_decl (P : context -> term -> term -> Type) Γ
+Lemma on_one_decl_test_decl (P : term -> term -> Type)
   (p q : term -> bool) d d' :
   (forall t, p t -> q t) ->
-  (forall t t', P Γ t t' -> p t -> q t') ->
-  on_one_decl P Γ d d' ->
+  (forall t t', P t t' -> p t -> q t') ->
+  on_one_decl P d d' ->
   test_decl p d ->
   test_decl q d'.
 Proof.

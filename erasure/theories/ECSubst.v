@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction ELiftSubst.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -37,6 +37,7 @@ Fixpoint csubst t k u :=
     let mfix' := List.map (map_def (csubst t k')) mfix in
     tCoFix mfix' idx
   | tConstruct ind n args => tConstruct ind n (map (csubst t k) args)
+  | tPrim p => tPrim (map_prim (csubst t k) p)
   | x => x
   end.
 
@@ -168,7 +169,6 @@ Proof.
   - move/andP => []. intros. f_equal; solve_all; eauto.
   - move/andP => []. intros. f_equal; solve_all; eauto.
   - move/andP => []. intros. f_equal; solve_all; eauto.
-    destruct x0; cbn in *. f_equal; auto.
 Qed.
 
 Lemma subst_csubst_comm l t k b :

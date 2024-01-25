@@ -6,6 +6,8 @@ From Equations Require Import Equations.
 
 Local Open Scope Z_scope.
 
+Ltac Tauto.intuition_solver ::= auto with core arith zarith bool datatypes crelations relations.
+
 Lemma fold_max_In n m l (H : fold_left Z.max l n = m)
   : n = m \/ In m l.
 Proof.
@@ -656,10 +658,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
         apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
         assumption.
     Defined.
-    Next Obligation.
-      apply andb_andI in Hp0 as [? ?]. auto.
-    Defined.
-
 
     Lemma weight_concat {x y z} (p : PathOf x y) (q : PathOf y z)
       : weight (concat p q) = weight p + weight q.
@@ -2219,7 +2217,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       is_simple _ p -> ~~ VSet.mem y (nodes G p) -> is_simple _ (PathOf_add_end p e).
     Proof using HI.
       induction p; simpl; auto.
-      now rewrite andb_true_r.
       move/andP => [nmen iss].
       specialize (IHp e iss). intros Hm%negbe.
       rewrite andb_and. split; auto.

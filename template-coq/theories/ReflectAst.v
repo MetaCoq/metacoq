@@ -24,7 +24,7 @@ Local Ltac fcase c :=
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
+         | u : sort, u' : sort |- _ => fcase (eq_dec u u')
          | x : Instance.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
          | x : list Level.t, y : Instance.t |- _ =>
@@ -158,6 +158,16 @@ Proof.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
     subst. left. reflexivity.
+  - destruct (IHx1 t1); subst; nodec.
+    destruct (IHx2 t2); subst; nodec.
+    destruct (eq_dec u u0); nodec; subst.
+    revert arr0.
+    induction X.
+    + intros []; auto. nodec.
+    + intros []; auto. nodec.
+      destruct (IHX l0). noconf e.
+      destruct (p t); nodec. subst. left; auto.
+      nodec.
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=

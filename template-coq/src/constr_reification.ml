@@ -23,6 +23,7 @@ struct
   type quoted_constraint_type = Constr.t (* of type Universes.constraint_type *)
   type quoted_univ_constraint = Constr.t (* of type Universes.univ_constraint *)
   type quoted_univ_constraints = Constr.t (* of type Universes.constraints *)
+  type quoted_univ_level = Constr.t (* of type Universes.Level.t *)
   type quoted_univ_instance = Constr.t (* of type Universes.universe_instance *)
   type quoted_univ_context = Constr.t (* of type Universes.UContext.t *)
   type quoted_univ_contextset = Constr.t (* of type Universes.ContextSet.t *)
@@ -124,9 +125,9 @@ struct
   let kVmCast = ast "VmCast"
   let kNative = ast "NativeCast"
   let kCast = ast "Cast"
-  let lSProp = ast "universe.lsprop"
-  let lProp = ast "universe.lprop"
-  let lnpe = ast "universe.lnpe"
+  let sSProp = ast "sort.sprop"
+  let sProp = ast "sort.prop"
+  let sType = ast "sort.type"
   let lzero = ast "level.lzero"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
@@ -149,18 +150,20 @@ struct
   let tmk_branch = ast "mk_branch"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat,tArray) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
-     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat")
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat",
+     ast "tArray")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"
   let tMPbound = ast "MPbound"
   let tMPdot = ast "MPdot"
   let tfresh_evar_id = ast "fresh_evar_id"
-  
+
+  let tuniverse = ast "universe.t"
   let tproplevel = ast "level.prop_level_type"
   let tlevelSProp = ast "level.lsprop"
   let tlevelProp = ast "level.lprop"
@@ -175,13 +178,12 @@ struct
   let tBuild_Universe = ast "universe.build0"
   let tfrom_kernel_repr = ast "universe.from_kernel_repr"
   (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
-  let tof_levels = ast "universe.of_levels"
+  let tof_level = ast "universe.make_of_level"
   let tLevelSet_of_list = ast "universe.of_list"
   let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
   let univexpr_lProp = ast "levelexpr.prop"
-  let univexpr_npe = ast "levelexpr.npe"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = ast "variance.t"
@@ -211,7 +213,7 @@ struct
   let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
   let tconstructor_body = ast "constructor_body"
   let tBuild_constructor_body = ast "Build_constructor_body"
-  let tprojection_body = ast "projection_body" 
+  let tprojection_body = ast "projection_body"
   let tBuild_projection_body = ast "Build_projection_body"
   let tone_inductive_body = ast "one_inductive_body"
   let tBuild_one_inductive_body = ast "Build_one_inductive_body"

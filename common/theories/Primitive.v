@@ -6,8 +6,8 @@ Local Open Scope bs.
 
 Variant prim_tag :=
   | primInt
-  | primFloat.
-  (* | primArray. *)
+  | primFloat
+  | primArray.
 Derive NoConfusion EqDec for prim_tag.
 
 Definition string_of_prim_int (i:Uint63.int) : string :=

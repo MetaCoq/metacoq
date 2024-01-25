@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
+From MetaCoq.Erasure Require Import EPrimitive EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
 From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 From MetaCoq.Erasure Require Import EInduction ELiftSubst ESpineView ECSubst EProgram.
 
@@ -60,7 +60,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     #|args| >= ind_npars mind + cdecl.(cstr_nargs) ->
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
-| expanded_tPrim p : expanded Γ (tPrim p)
+| expanded_tPrim p : primProp@{Set Set} (expanded Γ) p -> expanded Γ (tPrim p)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.
@@ -138,7 +138,7 @@ Lemma expanded_ind :
         → Forall (expanded Σ Γ) args
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx []) args))
-    → (∀ Γ p, P Γ (tPrim p))
+    → (∀ Γ p, primProp (expanded Σ Γ) p -> primProp (P Γ) p -> P Γ (tPrim p))
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
@@ -158,6 +158,9 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct; eauto.
     clear - H1 f. induction H1; econstructor; eauto.
+  - eapply HPrim; eauto.
+    depelim X; constructor. intuition eauto.
+    eapply (make_All_All (f Γ) b).
 Qed.
 
 Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
@@ -292,7 +295,7 @@ Section isEtaExp.
     | tBox => true
     | tVar _ => true
     | tConst _ => true
-    | tPrim _ => true
+    | tPrim p => test_primIn p (fun x H => isEtaExp Γ x)
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof using Σ.
     all:try lia.
@@ -317,6 +320,9 @@ Section isEtaExp.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - destruct p as [? []]; cbn in *; eauto. destruct H; subst; try lia.
+      eapply (In_size id size) in H. unfold id in H.
+      change (fun x => size x) with size in H. lia.
   Qed.
 
   Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app ind c i -> isEtaExp_app ind c i'.
@@ -328,6 +334,7 @@ Section isEtaExp.
   Qed.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
+  #[universes(polymorphic)] Hint Rewrite @test_primIn_spec : isEtaExp.
 
   Lemma isEtaExp_mkApps_nonnil Γ f v :
     ~~ isApp f -> v <> [] ->
@@ -481,10 +488,14 @@ Section isEtaExp.
       solve_all. rewrite app_assoc. eapply a0; cbn; eauto. now len. cbn.
       now rewrite app_assoc.
     - rewrite app_assoc. eapply a0; len; eauto. now rewrite app_assoc.
+    - solve_all_k 6.
     - fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
-      rewrite map_length. rtoProp; solve_all. solve_all. destruct block_args; cbn in *; eauto.
+      rtoProp; solve_all. destruct block_args.
+      2:{ cbn in *; eauto. }
+      solve_all.
+      destruct block_args; cbn in *; eauto.
     - rewrite csubst_mkApps /=.
       move/andP : H2 => [] /andP [] eu ef ev.
       rewrite isEtaExp_mkApps //.
@@ -525,7 +536,7 @@ Section isEtaExp.
     #|Γ| = k ->
     nth_error mfix idx = Some d ->
     closed (EAst.tFix mfix idx) ->
-    forallb (fun x => isLambda x.(dbody) &&  isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
+    forallb (fun x => isLambda x.(dbody) && isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp (Γ ++ [1 + d.(EAst.rarg)] ++ Δ) b -> isEtaExp (Γ ++ Δ) (ECSubst.csubst (EAst.tFix mfix idx) k b).
   Proof using Type*.
     intros Hk Hnth Hcl.
@@ -538,9 +549,7 @@ Section isEtaExp.
         erewrite option_default_ext; eauto. f_equal.
         destruct i; cbn; lia.
       + now rewrite !nth_error_app1 in H0 |- *; try lia.
-    - intros. eapply forallb_All in H1; eapply All_mix in H; tea.
-      eapply All_forallb, All_map, All_impl; tea; cbv beta.
-      intros x Hx. eapply Hx; eauto. apply Hx.
+    - solve_all. eapply a; trea. solve_all.
     - eapply H with (Γ := 0 :: Γ0); cbn -[isEtaExp]; eauto.
     - solve_all. move/andP: H2 => [] etab etab'. simp_eta.
       apply/andP. split; eauto.
@@ -555,11 +564,11 @@ Section isEtaExp.
       { cbn in Hcl. solve_all. rewrite Nat.add_0_r in a0. eauto. }
       now rewrite app_assoc.
       solve_all.
+    - solve_all. eapply primProp_impl; tea. intuition eauto.
+      destruct H. eapply i; eauto. solve_all.
     - solve_all. fold csubst. move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
-      rewrite isEtaExp_Constructor. solve_all.
-      rewrite map_length. rtoProp; solve_all.
-      rewrite forallb_map.
+      rewrite isEtaExp_Constructor. solve_all. rtoProp; solve_all.
       eapply All_forallb. clear Heq0 Heq.
       eapply All_impl; tea; cbv beta.
       intros x Hx.
@@ -631,7 +640,8 @@ Section isEtaExp.
   Qed.
 
   Lemma isEtaExp_fixsubstl Δ mfix t :
-    forallb (fun x => isLambda x.(dbody) &&
+    forallb (fun x =>
+      isLambda x.(dbody) &&
       isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp ((rev_map (S ∘ rarg) mfix) ++ Δ) t ->
     isEtaExp Δ (substl (fix_subst mfix) t).
@@ -763,6 +773,7 @@ Section isEtaExp.
 
 End isEtaExp.
 Global Hint Rewrite @forallb_InP_spec : isEtaExp.
+#[universes(polymorphic)] Global Hint Rewrite @test_primIn_spec : isEtaExp.
 
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
@@ -808,6 +819,8 @@ Proof.
     eapply In_All in H0. solve_all.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0.
     eapply In_All in H. solve_all.
+  - econstructor. rewrite test_primIn_spec in H0.
+    solve_all.
   - rtoProp. eapply In_All in H.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
@@ -847,6 +860,7 @@ Proof.
   - rewrite isEtaExp_Constructor. rtoProp. repeat split.
     2: eapply forallb_Forall; solve_all.
     eapply expanded_isEtaExp_app_; eauto.
+  - solve_all.
 Qed.
 
 Definition isEtaExp_constant_decl Σ cb :=
@@ -932,6 +946,7 @@ Proof.
     eapply isEtaExp_mkApps_intro; auto; solve_all.
 Qed.
 
+
 Lemma decompose_app_tApp_split f a hd args :
   decompose_app (tApp f a) = (hd, args) -> f = mkApps hd (remove_last args) /\ a = last args a.
 Proof.
@@ -986,6 +1001,8 @@ Proof.
   - eapply isEtaExp_app_extends; tea.
   - eapply In_All in H0. solve_all.
   - eapply In_All in H; solve_all.
+  - eapply InPrim_primProp in H.
+    solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
     eapply isEtaExp_app_extends; tea.
@@ -1030,8 +1047,8 @@ Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as
 Proof.
   intros etaΣ wfΣ.
   induction 1 as [ | ? ? ? ? ? ? ? ? IHs | | | | | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? ? IHs
-    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
-  all:try simp isEtaExp; rewrite -!isEtaExp_equation_1 => //.
+    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
+  all:try simp isEtaExp; rewrite -?isEtaExp_equation_1 => //.
   6:{
     move/isEtaExp_tApp'.
     destruct decompose_app eqn:da.
@@ -1346,6 +1363,9 @@ Proof.
     destruct args => //. now rewrite nth_error_nil in e3.
     intros. rtoProp.
     eapply nth_error_forallb in e3; tea.
+  - solve_all.
+    depelim X; solve_all. eapply All2_over_undep in a. subst a0 a';
+      depelim H; constructor; solve_all. solve_all.
 Qed.
 
 Lemma isEtaExp_fixapp_mon {mfix idx n n'} : n <= n' -> isEtaExp_fixapp mfix idx n -> isEtaExp_fixapp mfix idx n'.
@@ -1437,11 +1457,11 @@ Proof.
     unfold isStuckFix', cunfold_fix. destruct nth_error => //.
 Qed.
 
-Lemma isEtaExp_FixApp {Σ mfix idx l} :
+Lemma isEtaExp_FixApp {Σ mfix idx Γ l} :
   isEtaExp_fixapp mfix idx #|l| ->
-  forallb (λ d : def EAst.term, isLambda d.(dbody) && isEtaExp Σ (rev_map (λ d0 : def term, 1 + rarg d0) mfix ++ []) (dbody d)) mfix ->
-  forallb (isEtaExp Σ []) l ->
-  isEtaExp Σ [] (mkApps (tFix mfix idx) l).
+  forallb (λ d : def EAst.term, isLambda d.(dbody) && isEtaExp Σ (rev_map (λ d0 : def term, 1 + rarg d0) mfix ++ Γ) (dbody d)) mfix ->
+  forallb (isEtaExp Σ Γ) l ->
+  isEtaExp Σ Γ (mkApps (tFix mfix idx) l).
 Proof.
   intros hmfix hm hl.
   funelim (isEtaExp Σ _ _) => //; solve_discr. noconf H.
@@ -1929,6 +1949,9 @@ Proof.
       cbn. rewrite wguard in i.
       cbn. move: i. rewrite !negb_or; rtoProp; intuition auto.
       now eapply nisFixApp_nisFix.
+  - intros hexp. simp_eta in hexp. depelim X; repeat constructor; eauto.
+    eapply All2_over_undep in a. subst a0 a'. solve_all. depelim hexp; cbn in *. destruct p.
+    eapply All2_All2_Set. solve_all. solve_all. depelim hexp. destruct p. solve_all.
   - intros hexp. now eapply eval_atom.
     Unshelve. all: eauto.
 Qed.
@@ -1941,4 +1964,80 @@ Proof.
   cbn in H. red in H. unfold isEtaExp_constant_decl.
   destruct (cst_body c); cbn in * => //.
   now eapply expanded_isEtaExp.
+Qed.
+
+Lemma isEtaExpFix_tApp_arg Σ Γ t u : isEtaExp Σ Γ (tApp t u) -> isEtaExp Σ Γ u.
+Proof.
+  move/isEtaExp_tApp'. destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. destruct l using rev_case.
+  - cbn in da. subst t0. cbn. now move/and3P => [].
+  - rewrite mkApps_app in da. noconf da.
+    destruct expanded_head_viewc.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] /andP[] _ _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * intros [_ [_ [_ H]]]. move/andP: H => [] _. rewrite forallb_app.
+      move=> /andP[] //=. now rewrite andb_true_r.
+    * now move/and4P => [].
+Qed.
+
+Lemma isEtaExp_lift Σ Γ Γ' Γ'' t : isEtaExp Σ (Γ'' ++ Γ) t -> isEtaExp Σ (Γ'' ++ Γ' ++ Γ) (lift #|Γ'| #|Γ''| t).
+Proof using.
+  funelim (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
+  all:cbn; simp_eta; toAll; bool; try rewrite -> forallb_InP_spec in *.
+  all:try solve [solve_all].
+
+  - destruct nth_error eqn:hnth => //=. move: hnth.
+    destruct (PCUICLiftSubst.nth_error_appP Γ'' Γ0 i) => h; noconf h; destruct (Nat.leb_spec #|Γ''| i); try lia; simp_eta.
+    * rewrite nth_error_app_lt //= e //=.
+    * rewrite nth_error_app_ge; try lia.
+      rewrite nth_error_app_ge; try lia.
+      replace (#|Γ'| + i - #|Γ''| - #|Γ'|) with (i - #|Γ''|) by lia.
+      now rewrite e.
+  - simp_eta. eapply (H Γ0 Γ' (0 :: Γ'')); trea.
+  - eapply (H0 Γ0 Γ' (0 :: Γ'')); trea.
+  - destruct block_args => //.
+  - solve_all.
+    specialize (a Γ0 Γ' (repeat 0 #|x.1| ++ Γ'') x.2).
+    rewrite -!app_assoc in a. len in a. now apply a.
+  - solve_all.
+    specialize (a Γ0 Γ' (repeat 0 #|mfix| ++ Γ'') (dbody x)).
+    rewrite -!app_assoc in a. len in a. now apply a.
+  - eapply InPrim_primProp in H.
+    solve_all. eapply primProp_map, primProp_impl; tea; cbn.
+    intros x [a exp].
+    specialize (a Γ0 Γ' Γ'' x).
+    now apply a.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=. bool.
+    + now len.
+    + solve_all.
+    + destruct block_args => //.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=. bool.
+    + len.
+      move: H1. rewrite /isEtaExp_fixapp nth_error_map.
+      destruct nth_error => //.
+    + solve_all. bool.
+      * destruct (dbody x) => //.
+      * set (rm := rev_map _ _).
+        specialize (a Γ0 Γ' (rm ++ Γ'') (dbody x)).
+        rewrite -!app_assoc in a. len in a.
+        rewrite /rm !rev_map_spec in H0 a *; len in a. len. eapply a; trea; rewrite map_map_compose //=.
+    + solve_all.
+  - rewrite lift_mkApps /=.
+    rewrite isEtaExp_mkApps //=; case: Nat.leb_spec => //= hn; bool; solve_all.
+    + move: H1.
+      destruct (PCUICLiftSubst.nth_error_appP Γ'' Γ0 n) => //= /Nat.leb_le hx.
+      * do 2 (rewrite nth_error_app_ge; [lia|]). lia.
+      * do 2 (rewrite nth_error_app_ge; [lia|]).
+      replace (#|Γ'| + n - #|Γ''| - #|Γ'|) with (n - #|Γ''|) by lia.
+      rewrite e //=. now apply Nat.leb_le.
+    + move: H1.
+      rewrite !nth_error_app_lt //=.
+  - rewrite lift_mkApps.
+    destruct (expanded_head_viewc u) => //.
+    bool.
+    eapply isEtaExp_mkApps_intro; eauto. solve_all.
 Qed.

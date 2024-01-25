@@ -2,7 +2,7 @@ From Coq Require Import List.
 From Coq Require Import ssrbool.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Erasure Require Import EAst.
+From MetaCoq.Erasure Require Import EPrimitive EAst.
 From MetaCoq.Erasure Require Import EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.
 From MetaCoq.Erasure Require Import EInduction.
@@ -123,6 +123,7 @@ Proof.
         repeat (f_equal; try lia).
       rewrite <- (proj2 clos);
         repeat (f_equal; try lia).
+  - solve_all_k 6.
 Qed.
 
 Lemma closedn_subst s k k' t :
@@ -192,6 +193,8 @@ Proof.
       * repeat (f_equal; try lia).
       * rewrite <- (proj2 all').
         repeat (f_equal; try lia).
+  - solve_all. eapply primProp_map.
+    eapply primProp_impl; tea. cbn. intuition eauto. eapply a; tea. solve_all.
 Qed.
 
 Lemma closedn_subst0 s k t :

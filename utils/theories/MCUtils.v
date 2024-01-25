@@ -147,6 +147,7 @@ Ltac rtoProp :=
   | |- context [is_true (_ && _)] => rewrite andb_and
   end.
 
+Ltac bool := rtoProp; intuition eauto.
 
 Class Fuel := fuel : nat.
 

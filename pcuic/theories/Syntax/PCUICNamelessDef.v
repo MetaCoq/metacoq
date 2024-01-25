@@ -30,8 +30,7 @@ Definition anon (na : name) : bool :=
 Definition banon (na : binder_annot name) : bool := anon na.(binder_name).
 
 Definition nameless_decl nameless (d : context_decl) :=
-  banon (decl_name d) && nameless d.(decl_type) &&
-  option_default nameless d.(decl_body) true.
+  banon (decl_name d) && option_default nameless d.(decl_body) true && nameless d.(decl_type).
 
 Fixpoint nameless (t : term) : bool :=
   match t with
@@ -58,7 +57,7 @@ Fixpoint nameless (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
-  | tPrim _ => true
+  | tPrim p => test_prim nameless p
   end.
 
 Notation nameless_ctx := (forallb (nameless_decl nameless)).
@@ -106,7 +105,7 @@ Fixpoint nl (t : term) : term :=
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
-  | tPrim p => tPrim p
+  | tPrim p => tPrim (map_prim nl p)
   end.
 
 Definition nlctx (Γ : context) : context :=

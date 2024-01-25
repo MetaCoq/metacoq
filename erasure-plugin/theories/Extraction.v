@@ -37,10 +37,9 @@ Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 (* Extract Constant PCUICWfEnvImpl.guard_impl => "(fun _ _ _ _ -> true)".
 Extract Constant PCUICTyping.guard_checking => "(fun _ _ _ _ -> true)". *)
 
-Cd "src".
+Set Extraction Output Directory "src".
 
 Separate Extraction ErasureFunction.erase Erasure
          (* The following directives ensure separate extraction does not produce name clashes *)
          Coq.Strings.String utils Template.UnivSubst ELiftSubst EGlobalEnv.
 
-Cd "..".

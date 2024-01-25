@@ -46,7 +46,7 @@ Section Trans.
   Context (Σ : global_env_map).
 
   Definition dummy_decl : context_decl :=
-    vass {| binder_name := nAnon; binder_relevance := Relevant |} (tSort Universe.type0).
+    vass {| binder_name := nAnon; binder_relevance := Relevant |} (tSort Sort.type0).
 
   Definition trans_predicate ind mdecl idecl pparams puinst pcontext preturn :=
     let pctx := map2_bias_left set_binder_name dummy_decl pcontext (ind_predicate_context ind mdecl idecl) in
@@ -90,7 +90,7 @@ Section Trans.
           still work. *)
       tCase ci {| pparams := p'.(Ast.pparams);
                   puinst := p'.(Ast.puinst);
-                  pcontext := map (fun na => vass na (tSort Universe.type0)) p'.(Ast.pcontext);
+                  pcontext := map (fun na => vass na (tSort Sort.type0)) p'.(Ast.pcontext);
                   preturn := p'.(Ast.preturn) |}
           (trans c) []
     end
@@ -103,6 +103,11 @@ Section Trans.
     tCoFix mfix' idx
   | Ast.tInt n => tPrim (primInt; primIntModel n)
   | Ast.tFloat n => tPrim (primFloat; primFloatModel n)
+  | Ast.tArray l v d ty => tPrim (primArray; primArrayModel
+    {| array_level := l;
+       array_value := List.map trans v;
+       array_default := trans d;
+       array_type := trans ty |})
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=

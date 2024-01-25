@@ -18,4 +18,4 @@ Definition setprop : { x : nat | x = 0 } := exist _ 0 eq_refl.
 MetaCoq Quote Recursively Definition q_setprop := setprop.
 
 Notation proof t :=
-  (Ast.tCast t BasicAst.Cast (Ast.tCast _ BasicAst.Cast (Ast.tSort ((Universes.Universe.lProp :: nil)%list; _)))).
+  (Ast.tCast t BasicAst.Cast (Ast.tCast _ BasicAst.Cast (Ast.tSort ((Universes.sProp :: nil)%list; _)))).

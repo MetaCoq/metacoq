@@ -11,6 +11,11 @@ src/wGraph.ml
 src/wGraph.mli
 src/etaExpand.mli
 src/etaExpand.ml
+src/utils.mli
+src/utils.ml
+
+src/resultMonad.mli
+src/resultMonad.ml
 
 # From PCUIC
 src/pCUICPrimitive.mli
@@ -50,6 +55,8 @@ src/pCUICSafeReduce.ml
 src/pCUICSafeRetyping.ml
 src/pCUICSafeRetyping.mli
 
+src/ePrimitive.mli
+src/ePrimitive.ml
 src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
@@ -77,6 +84,24 @@ src/eSpineView.ml
 src/eRemoveParams.mli
 src/eRemoveParams.ml
 
+# Typed erasure
+src/exAst.mli
+src/exAst.ml
+src/optimize.mli
+src/optimize.ml
+src/vectorDef.mli
+src/vectorDef.ml
+src/vector.mli
+src/vector.ml
+src/fin.mli
+src/fin.ml
+src/extractionCorrectness.mli
+src/extractionCorrectness.ml
+src/optimizeCorrectness.mli
+src/optimizeCorrectness.ml
+src/erasure.mli
+src/erasure.ml
+
 src/erasureFunction.mli
 src/erasureFunction.ml
 src/erasureFunctionProperties.mli
@@ -85,6 +110,8 @@ src/ePretty.mli
 src/ePretty.ml
 src/eOptimizePropDiscr.mli
 src/eOptimizePropDiscr.ml
+src/optimizePropDiscr.mli
+src/optimizePropDiscr.ml
 src/eProgram.mli
 src/eProgram.ml
 src/eInlineProjections.mli
@@ -93,8 +120,8 @@ src/eConstructorsAsBlocks.mli
 src/eConstructorsAsBlocks.ml
 src/eTransform.mli
 src/eTransform.ml
-src/erasure.mli
-src/erasure.ml
+src/erasure0.mli
+src/erasure0.ml
 
 src/g_metacoq_erasure.mlg
 src/metacoq_erasure_plugin.mlpack

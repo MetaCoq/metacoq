@@ -2,8 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils EGlobalEnv.
-From MetaCoq.PCUIC Require Import PCUICPrimitive.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EGlobalEnv.
 
 (** * Pretty printing *)
 
@@ -85,11 +84,11 @@ Module PrintTermTree.
       let ctx' := List.map (fun d => {| decl_name := dname d; decl_body := None |}) defs in
       print_list (print_def (print_term (ctx' ++ Γ)%list true false)) (nl ^ " with ") defs.
 
-    Definition print_prim {term} (soft : term -> Tree.t) (p : @prim_val EAst.term) : Tree.t :=
+    Definition print_prim (soft : EAst.term -> Tree.t) (p : @prim_val EAst.term) : Tree.t :=
       match p.π2 return Tree.t with
       | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
       | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
-      (* | primArrayModel a => "(array:" ^ ")" *)
+      | primArrayModel a => "(array:" ^ soft a.(array_default) ^ " , " ^ string_of_list soft a.(array_value) ^ ")"
       end.
 
     Fixpoint print_term (Γ : context) (top : bool) (inapp : bool) (t : term) {struct t} : Tree.t :=

@@ -2,11 +2,16 @@ MSetWeakList
 EqdepFacts
 Ssrbool
 
-Utils
+Fin
+Vector
+VectorDef
 
+Utils
+ResultMonad
 WGraph
 UGraph0
 EtaExpand
+
 
 WcbvEval
 Classes0
@@ -39,6 +44,7 @@ PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeRetyping
 
+EPrimitive
 EAst
 EAstUtils
 ELiftSubst
@@ -59,7 +65,15 @@ EOptimizePropDiscr
 EInlineProjections
 EConstructorsAsBlocks
 EProgram
-ETransform
+OptimizePropDiscr
+
+ExAst
+Optimize
+OptimizeCorrectness
 Erasure
+ExtractionCorrectness
+
+ETransform
+Erasure0
 
 G_metacoq_erasure

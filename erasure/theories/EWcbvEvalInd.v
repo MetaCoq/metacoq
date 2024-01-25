@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv ECSubst EInduction.
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EWcbvEval EGlobalEnv ECSubst EInduction.
 
 Set Asymmetric Patterns.
 From Equations Require Import Equations.
@@ -242,12 +242,16 @@ Section eval_mkApps_rect.
           (e0 : eval Σ a a'),
           P a a'
           → P (tApp f15 a)
-              (tApp f' a')
-              )
+              (tApp f' a')) ->
+
+   (forall p p' (ev : eval_primitive (eval Σ) p p'),
+      eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
+      P (tPrim p) (tPrim p'))
+
     → (∀ t : term, atom Σ t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof using Type.
-  intros ????????????????????? H.
+  intros ?????????????????????? H.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).
   set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & eval Σ t t0 }}).
@@ -276,9 +280,17 @@ Proof using Type.
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
   - eapply X15; tea; auto.
-    clear -a IH'. induction a; constructor.
+    clear -a IH'. induction a; constructor; eauto.
     eapply (IH' _ _ r). cbn. lia. apply IHa.
     intros. eapply (IH' _ _ H). cbn. lia.
+  - unshelve eapply X17; tea.
+    clear -e IH'.
+    induction e; constructor; eauto. subst a a'.
+    2:{ unshelve eapply IH'; tea; cbn; lia. }
+      eapply All2_over_undep.
+      induction ev; constructor; eauto.
+      unshelve eapply IH'; tea; cbn; lia.
+      eapply IHev. cbn. intros. unshelve eapply IH'; tea; cbn; lia.
 Qed.
 
 End eval_mkApps_rect.

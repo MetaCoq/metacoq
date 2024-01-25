@@ -20,6 +20,9 @@ From MetaCoq.Quotation.ToPCUIC.QuotationOf.PCUIC Require Import PCUICAst.Instanc
 #[export] Instance quote_case_branch_typing {cf wf_local_fun typing Σ Γ ci p ps mdecl idecl ptm brs} {qwf_local_fun : quotation_of wf_local_fun} {qtyping : quotation_of typing} {quote_wf_local_fun : forall Γ, ground_quotable (@wf_local_fun Σ Γ)} {quote_typing : forall Γ i t, ground_quotable (typing Σ Γ i t)} : ground_quotable (@case_branch_typing cf wf_local_fun typing Σ Γ ci p ps mdecl idecl ptm brs)
   := ltac:(destruct 1; exact _).
 
+#[export] Instance quote_primitive_typing_hyps {cf typing Σ Γ p} {qtyping : quotation_of typing} {quote_typing : forall x y, ground_quotable (typing Σ Γ x y)} : ground_quotable (@primitive_typing_hyps cf typing Σ Γ p)
+  := ltac:(destruct 1; exact _).
+
 (* So long as pcuic does axiomatic guard checking, we can't do better than axiomatizing it here *)
 #[export] Instance quote_guard_checking {k Σ Γ t} : ground_quotable (@guard guard_checking k Σ Γ t).
 Proof.

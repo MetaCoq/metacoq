@@ -17,7 +17,7 @@ MetaCoq Quote Definition a_random_univ := Type.
 
 Example a_random_univ_ex :
   exists l, a_random_univ =
-            tSort (Universe.from_kernel_repr (Level.level l, false) []).
+            tSort (sType (Universe.make' (Level.level l))).
 Proof. eexists. reflexivity. Qed.
 
 (* Back and forth *)
@@ -30,18 +30,18 @@ Check eq_refl : univ_foo = univ_foo_back.
 
 Print univ_foo_back.
 
-Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.level "Top.400"))).
+Fail MetaCoq Unquote Definition t1 := (tSort (sType (Universe.make' (Level.level "Top.400")))).
 (* Fails with "Level Top.<something> not a declared level and you are in Strict Unquote Universe Mode." *)
 
 Unset MetaCoq Strict Unquote Universe Mode.
-MetaCoq Unquote Definition t2 := (tSort fresh_universe).
-MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.level "Top.400"))).
+MetaCoq Unquote Definition t2 := (tSort (sType fresh_universe)).
+MetaCoq Unquote Definition t3 := (tSort (sType (Universe.make' (Level.level "Top.400")))).
 
 Monomorphic Universe i j.
 
 Set MetaCoq Strict Unquote Universe Mode.
 MetaCoq Test Quote (Type@{j} -> Type@{i}).
-MetaCoq Unquote Definition T'' := (tSort (Universe.make (Level.level "j"))).
+MetaCoq Unquote Definition T'' := (tSort (sType (Universe.make' (Level.level "j")))).
 Unset MetaCoq Strict Unquote Universe Mode.
 
 
@@ -196,7 +196,7 @@ Definition nNamedR (s : string) := mkBindAnn (nNamed s) Relevant.
 Definition nAnonR := mkBindAnn nAnon Relevant.
 
 Unset MetaCoq Strict Unquote Universe Mode.
-MetaCoq Unquote Definition bla' := (tLambda (nNamedR "T") (tSort (Universe.make (Level.level "Top.46"))) (tLambda (nNamedR "T2") (tSort (Universe.make (Level.level "Top.477"))) (tProd nAnonR (tRel 1) (tRel 1)))).
+MetaCoq Unquote Definition bla' := (tLambda (nNamedR "T") (tSort (sType (Universe.make' (Level.level "Top.46")))) (tLambda (nNamedR "T2") (tSort (sType (Universe.make' (Level.level "Top.477")))) (tProd nAnonR (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.

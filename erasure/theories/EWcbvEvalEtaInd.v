@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program ssreflect ssrbool btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv
+From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EWcbvEval EGlobalEnv
   EWellformed ECSubst EInduction EWcbvEvalInd EEtaExpanded.
 
 Set Asymmetric Patterns.
@@ -26,7 +26,6 @@ Definition has_atom {etfl : ETermFlags} (t : term) :=
   | tConst _ => has_tConst
   | tRel _ => has_tRel
   | tVar _ => has_tVar
-  | tPrim _ => has_tPrim
   | _ => false
   end.
 
@@ -42,7 +41,8 @@ Section OnSubterm.
     All (fun br => Q (#|br.1| + n) br.2) brs -> on_subterms Q n (tCase ci discr brs)
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
-  | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx).
+  | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx)
+  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p).
   Derive Signature for on_subterms.
 End OnSubterm.
 
@@ -320,6 +320,10 @@ Lemma eval_preserve_mkApps_ind :
     All2 P args args' ->
     P' (mkApps (tConstruct ind i []) args) (mkApps (tConstruct ind i []) args')) →
 
+  (forall p p' (ev : eval_primitive (eval Σ) p p'),
+    eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
+    P' (tPrim p) (tPrim p')) ->
+
   (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
 Proof.
@@ -327,10 +331,10 @@ Proof.
   assert (qfixs: Qfixs Q) by tc.
   assert (qcofixs: Qcofixs Q) by tc.
   intros.
-  enough (P' t t0 × isEtaExp Σ t0). apply X16.
+  enough (P' t t0 × isEtaExp Σ t0). apply X17.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X15 H0)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X16 H0)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   move: H.
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
@@ -342,8 +346,8 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X15 into qt. rename X13 into Xcappexp.
-  rename X14 into Qatom.
+  rename X16 into qt. rename X13 into Xcappexp.
+  rename X14 into Qprim. rename X15 into Qatom.
   clear t t0 qt H0.
   intros (t & t0 & qt & ev).
   intros IH.
@@ -678,7 +682,34 @@ Proof.
       eapply All_tip.1. iheta q0.
       eapply (isEtaExp_mkApps_intro _ _ [a']) => //. iheta q.
       eapply All_tip.1. iheta q0.
-  - intros ise. split => //. eapply Qatom; tea.
+  - intros ise. simp_eta in ise.
+    depelim e.
+    * split; simp_eta. unshelve eapply Qprim. constructor. constructor.
+    * split; simp_eta. unshelve eapply Qprim. constructor. constructor.
+    * eapply Qpres in qt. depelim qt. now cbn in i.
+      split; simp_eta. unshelve eapply Qprim. constructor; eauto. constructor.
+      + apply All2_over_undep. cbn in IH.
+        ELiftSubst.solve_all.
+        depelim H. destruct p as [[] ?].
+        clear -ev IH a0 P'Q and_assum. cbn in a0. subst a; cbn in *.
+        induction ev; constructor; eauto.
+        ** depelim a0. destruct p as [].
+           eapply and_assum. unshelve eapply IH; tea. cbn. lia.
+           intros []. split => //. split => //. eapply P'Q; tea.
+        ** depelim a0. intuition eauto. eapply IHev; intros. 2:eauto.
+           unshelve eapply IH; tea. cbn; lia.
+      + ELiftSubst.solve_all. depelim H; destruct p as [[] ?].
+        eapply and_assum. unshelve eapply IH; tea. cbn; lia.
+        intros []; split => //; split => //. eapply P'Q; tea.
+      + ELiftSubst.solve_all. subst a a'; cbn in *.
+        depelim H; constructor; cbn in *; intuition eauto.
+        unshelve eapply IH. 2:tea. all:eauto. cbn; lia.
+        clear -ev IH b P'Q and_assum. cbn in b.
+        induction ev; constructor; eauto.
+        ** depelim b. destruct p. unshelve eapply IH. 2:tea. all:eauto. cbn. lia.
+        ** depelim b. intuition eauto. eapply IHev; intros. 2:eauto.
+           unshelve eapply IH; tea. cbn; lia.
+ - intros ise. split => //. eapply Qatom; tea.
 Qed.
 
 Definition term_flags :=
@@ -696,7 +727,7 @@ Definition term_flags :=
     has_tProj := false;
     has_tFix := true;
     has_tCoFix := false;
-    has_tPrim := true
+    has_tPrim := all_primitive_flags;
   |}.
 
 Definition env_flags :=
@@ -722,11 +753,12 @@ Proof.
     eapply on_letin; rtoProp; intuition auto.
     eapply on_app; rtoProp; intuition auto.
     constructor; cbn; auto. rewrite cstbl in H0.
-    destruct l => //. constructor => //.
+    destruct args => //. constructor => //.
     eapply on_case; rtoProp; intuition auto. ELiftSubst.solve_all.
     eapply on_proj; auto.
     eapply on_fix; eauto. move/andP: H0 => [] _ wf. solve_all.
     eapply on_cofix; eauto. move/andP: H0 => [] _ wf. solve_all.
+    eapply on_prim; eauto. solve_all.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.
@@ -771,4 +803,7 @@ Proof.
     match goal with H : ?f ?n |- ?f ?n' => replace n' with n by congruence; exact H end.
     cbn; eapply All_forallb. eapply All2_All_right; tea.
     cbn. intros x y []; auto.
+  - depelim X;try constructor. destruct a0. simp_eta. subst a'. cbn.
+    apply All2_over_undep in a.
+    rewrite /test_array_model /=. rtoProp; intuition eauto. solve_all; now destruct H.
 Qed.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Morphisms.
+From Coq Require Import ssreflect ssrbool Morphisms.
 From MetaCoq.Utils Require Import utils.
-From MetaCoq.Common Require Export Universes BasicAst Environment Reflect.
+From MetaCoq.Common Require Export Primitive Universes BasicAst Environment Reflect.
 From MetaCoq.Common Require EnvironmentTyping.
 From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
@@ -196,7 +196,7 @@ Inductive term :=
 | tRel (n : nat)
 | tVar (i : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (n : nat) (l : list term)
-| tSort (u : Universe.t)
+| tSort (u : sort)
 | tProd (na : aname) (A B : term)
 | tLambda (na : aname) (A t : term)
 | tLetIn (na : aname) (b B t : term) (* let na := b : B in t *)
@@ -261,6 +261,7 @@ Fixpoint lift n k t : term :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
     tCoFix mfix' idx
+  | tPrim p => tPrim (map_prim (lift n k) p)
   | x => x
   end.
 
@@ -296,6 +297,7 @@ Fixpoint subst s k u :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
     tCoFix mfix' idx
+  | tPrim p => tPrim (map_prim (subst s k) p)
   | x => x
   end.
 
@@ -323,6 +325,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k) (closedn k')) mfix
+  | tPrim p => test_prim (closedn k) p
   | _ => true
   end.
 
@@ -360,6 +363,7 @@ Fixpoint nlict (t : term) : bool :=
     List.forallb (test_def nlict nlict) mfix
   | tCoFix mfix idx =>
     List.forallb (test_def nlict nlict) mfix
+  | tPrim p => test_prim nlict p
   | _ => true
   end.
 
@@ -386,6 +390,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tPrim p => test_prim (noccur_between k n) p
   | _ => true
   end.
 
@@ -400,7 +405,7 @@ Instance subst_instance_constr : UnivSubst term :=
   match c with
   | tRel _ | tVar _ => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
+  | tSort s => tSort (subst_instance_sort u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
   | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
@@ -420,13 +425,13 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
-  | tPrim _ => c
+  | tPrim p => tPrim (mapu_prim (subst_instance_level u) (subst_instance_constr u) p)
   end.
 
 (** Tests that the term is closed over [k] universe variables *)
 Fixpoint closedu (k : nat) (t : term) : bool :=
   match t with
-  | tSort univ => closedu_universe k univ
+  | tSort s => closedu_sort k s
   | tInd _ u => closedu_instance k u
   | tConstruct _ _ u => closedu_instance k u
   | tConst _ u => closedu_instance k u
@@ -444,6 +449,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
     forallb (test_def (closedu k) (closedu k)) mfix
   | tCoFix mfix idx =>
     forallb (test_def (closedu k) (closedu k)) mfix
+  | tPrim p => test_primu (closedu_level k) (closedu k) p
   | _ => true
   end.
 
@@ -924,6 +930,150 @@ Proof.
   eapply map_ext => b. apply map_branch_map_branch.
 Qed.
 
+Lemma mapu_prim_compose {term term' term''}
+  f (g : term' -> term'') f' (g' : term -> term') : mapu_prim f g ∘ mapu_prim f' g' =1 mapu_prim (f ∘ f') (g ∘ g').
+Proof.
+  intros [? []]; cbn => //. do 3 f_equal.
+  unfold mapu_array_model; destruct a => //=. now rewrite map_map_compose.
+Qed.
+
+Lemma mapu_prim_compose_rew {term term' term''}
+  f (g : term' -> term'') f' (g' : term -> term') :
+  forall x, mapu_prim f g (mapu_prim f' g' x) = mapu_prim (f ∘ f') (g ∘ g') x.
+Proof. intros x. now rewrite (mapu_prim_compose _ _ _ _ x). Qed.
+
+#[global] Hint Rewrite @mapu_prim_compose_rew : map.
+
+Lemma prim_val_tag_map {term term'} (p : PCUICPrimitive.prim_val term) fu (ft : term -> term') :
+  prim_val_tag (mapu_prim fu ft p) = prim_val_tag p.
+Proof.
+  destruct p as [? []] => //.
+Qed.
+
+Lemma mapu_array_model_proper {term term'} (l l' : Level.t -> Level.t) (f g : term -> term') a :
+  l =1 l' -> f =1 g ->
+  mapu_array_model l f a = mapu_array_model l' g a.
+Proof.
+  destruct a; cbn ; rewrite /mapu_array_model /=. intros; f_equal; eauto. now eapply map_ext.
+Qed.
+
+Lemma mapu_array_model_proper_cond {term term'} (P : term -> Type) (l l' : Level.t -> Level.t) (f g : term -> term') a :
+  l =1 l' -> (forall x, P x -> f x = g x) ->
+  P a.(array_type) × P a.(array_default) × All P a.(array_value) ->
+  mapu_array_model l f a = mapu_array_model l' g a.
+Proof.
+  destruct a; cbn ; rewrite /mapu_array_model /=. intros hl hf [? []]; f_equal; eauto.
+  induction a; cbn => //. rewrite IHa. rewrite hf //.
+Qed.
+
+Lemma primProp_map_eq {term term'} P p l l' (f g : term -> term') :
+  tPrimProp P p ->
+  l =1 l' ->
+  (forall x, P x -> f x = g x) ->
+  mapu_prim l f p = mapu_prim l' g p.
+Proof.
+  destruct p as [? []]; cbn => //.
+  intros [? []] hl hp. do 2 f_equal.
+  eapply mapu_array_model_proper_cond; tea. intuition auto.
+Qed.
+
+Lemma primProp_map_id {term} P p (f : term -> term) :
+  tPrimProp P p ->
+  (forall x, P x -> f x = x) ->
+  map_prim f p = p.
+Proof.
+  intros hp hf.
+  rewrite (primProp_map_eq P p id id f id) //.
+  destruct p as [? []]; cbn => //.
+  destruct a => //=. rewrite /mapu_array_model /=. rewrite map_id //.
+Qed.
+
+Lemma test_prim_primProp {term} {P p} : @test_prim term P p -> tPrimProp P p.
+Proof.
+  destruct p as [? []]; cbn => //.
+  move/andP => [] /andP[]. intuition auto.
+  now eapply forallb_All in a0.
+Qed.
+
+Lemma primProp_test_prim {P : term -> bool} {p} : tPrimProp P p -> test_prim P p.
+Proof.
+  destruct p as [? []]; cbn => //. intros. rtoProp.
+  intuition auto.
+  now eapply All_forallb.
+Qed.
+
+Lemma tPrimProp_impl {term} {P Q : term -> Type} {p} : tPrimProp P p -> (forall x, P x -> Q x) -> tPrimProp Q p.
+Proof.
+  intros hp hpq; destruct p as [? []]; cbn in * => //. intuition auto.
+  eapply All_impl; tea.
+Qed.
+
+Lemma tPrimProp_prod {term} {P Q : term -> Type} {p} : tPrimProp P p -> tPrimProp Q p -> tPrimProp (fun x => P x × Q x) p.
+Proof.
+  destruct p as [? []]; cbn => //. intuition auto.
+  now eapply All_prod.
+Qed.
+
+Lemma primProp_map {term} (P : term -> Type) f (p : PCUICPrimitive.prim_val term) :
+  tPrimProp (fun x => P (f x)) p ->
+  tPrimProp P (map_prim f p).
+Proof.
+  destruct p as [? []]; cbn => //. intuition eauto. now eapply All_map.
+Qed.
+
+Lemma primProp_map_inv {term} (P : term -> Type) f (p : PCUICPrimitive.prim_val term) :
+  tPrimProp P (map_prim f p) ->
+  tPrimProp (fun x => P (f x)) p.
+Proof.
+  destruct p as [? []]; cbn => //. intuition eauto; now eapply All_map_inv.
+Qed.
+
+Lemma primProp_mapu_id {P : term -> Type} {pu put} p f g :
+  tPrimProp P p -> test_primu pu put p ->
+  (forall u, pu u -> f u = u) ->
+  (forall t, P t -> put t -> g t = t) ->
+  mapu_prim f g p = p.
+Proof.
+  intros hp ht hf hg.
+  destruct p as [? []]; cbn => //. f_equal. f_equal.
+  destruct a; destruct hp; cbn in *. unfold mapu_array_model; cbn.
+  rtoProp. destruct p0. f_equal; intuition eauto.
+  eapply forallb_All in H2. eapply All_prod in a; tea.
+  eapply All_map_id, All_impl; tea. intuition eauto. apply hg; intuition auto.
+Qed.
+
+Lemma test_primu_test_primu_tPrimProp {P : term -> Type} {pu put} {pu' : Level.t -> bool} {put' : term -> bool} p f g :
+  tPrimProp P p -> test_primu pu put p ->
+  (forall u, pu u -> pu' (f u)) ->
+  (forall t, P t -> put t -> put' (g t)) ->
+  test_primu pu' put' (mapu_prim f g p).
+Proof.
+  intros hp ht hf hg.
+  destruct p as [? []]; cbn => //.
+  destruct a; destruct hp; cbn in *.
+  rtoProp. destruct p0. intuition eauto.
+  eapply forallb_All in H2. eapply All_prod in a; tea.
+  eapply All_forallb, All_map, All_impl; tea. intuition eauto. apply hg; intuition auto.
+Qed.
+
+Lemma test_prim_mapu {term term'} {put : term' -> bool} {l} {f : term -> term'} {p} :
+  test_prim put (mapu_prim l f p) = test_prim (fun x => put (f x)) p.
+Proof.
+  destruct p as [? []]; cbn; eauto.
+  now rewrite forallb_map.
+Qed.
+#[global] Hint Rewrite @test_prim_mapu : map.
+
+Lemma test_prim_eq_spec {P : term -> Type} {put} {put' : term -> bool} p :
+  tPrimProp P p ->
+  (forall t, P t -> put t = put' t) ->
+  test_prim put p = test_prim put' p.
+Proof.
+  destruct p as [? []]; cbn => //. intuition eauto.
+  f_equal; eauto. f_equal; eauto.
+  eapply All_forallb_eq_forallb; tea.
+Qed.
+
 Definition tCaseBrsProp {A} (P : A -> Type) (l : list (branch A)) :=
   All (fun x => onctx P (bcontext x) × P (bbody x)) l.
 
@@ -1164,6 +1314,14 @@ Proof.
 Qed.
 #[global]
 Hint Rewrite test_context_map : map.
+
+Lemma test_context_app (p : term -> bool) Γ Δ :
+  test_context p (Γ ,,, Δ) = test_context p Γ && test_context p Δ.
+Proof using Type.
+  induction Δ; simpl; auto.
+  - now rewrite andb_true_r.
+  - now rewrite IHΔ andb_assoc.
+Qed.
 
 Lemma onctx_test P (p q : term -> bool) ctx :
   onctx P ctx ->

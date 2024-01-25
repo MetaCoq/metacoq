@@ -1,4 +1,4 @@
-From MetaCoq Require Import Template.All.
+From MetaCoq.Template Require Import All.
 Import MCMonadNotation.
 
 #[local] Existing Instance TemplateMonad_OptimizedMonad.

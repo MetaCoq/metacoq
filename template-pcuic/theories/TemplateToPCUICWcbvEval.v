@@ -158,6 +158,7 @@ Proof.
       f_equal; auto; solve_all.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
+  - cbn; f_equal; auto. do 3 f_equal. rewrite /map_array_model /=; f_equal; eauto; solve_all.
 Qed.
 
 Lemma trans_substl {cf} Σ a b :
@@ -564,6 +565,7 @@ Proof.
     eapply All2_All_mix_left in X0; tea.
     eapply All2_All_right; tea; cbv beta; intuition auto.
 
+  - wf_inv wf [[] ?]. constructor; eauto. solve_all.
   - auto.
 Qed.
 
@@ -575,7 +577,7 @@ Lemma value_mkApps_tFix Σ mfix idx args rarg fn :
 Proof.
   intros hc hargs vargs.
   destruct (WcbvEval.is_nil args).
-  - subst args. constructor => //.
+  - subst args. do 2 constructor => //.
   - eapply value_app => //. econstructor; tea.
 Qed.
 
@@ -781,7 +783,8 @@ Proof.
     { eapply All_map, All2_All_right; tea; cbv beta; intuition auto. now eapply eval_to_value. }
     move: H1. rewrite !negb_or.
     eapply WcbvEval.eval_to_value in ev.
-    destruct ev. destruct t => //.
+    destruct ev.
+    depelim a1. destruct t => //. now cbn.
     pose proof (WcbvEval.value_head_nApp _ v).
     rewrite trans_mkApps isFixApp_mkApps WcbvEval.isFixApp_mkApps // WcbvEval.isConstructApp_mkApps //.
     pose proof (WcbvEval.value_head_spec _ _ _ v).
@@ -795,6 +798,10 @@ Proof.
     rewrite isConstructApp_mkApps //.
     rewrite isPrimApp_mkApps //.
 
-  - eapply eval_atom.
-    destruct t => //.
+  - eapply eval_prim. wf_inv wf [[] ?].
+    constructor; eauto. solve_all.
+  - destruct t; cbn in H => //=;
+    try solve [eapply eval_atom; eauto].
+    eapply eval_prim; repeat constructor.
+    eapply eval_prim; repeat constructor.
 Qed.

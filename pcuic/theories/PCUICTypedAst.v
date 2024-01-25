@@ -82,7 +82,7 @@ Inductive term {k : nat} : Type :=
 | tRel (f : Fin.t k)
 | tVar (i : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (n : nat) (l : list term)
-| tSort (u : Universe.t)
+| tSort (u : sort)
 | tProd (na : aname) (A : term) (B : @term Σ (S k))
 | tLambda (na : aname) (A : term) (B : @term Σ (S k))
 | tLetIn (na : aname) (b B : term) (t : @term Σ (S k))

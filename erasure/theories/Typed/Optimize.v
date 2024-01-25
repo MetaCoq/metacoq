@@ -4,7 +4,7 @@ From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.
-From MetaCoq.Erasure Require Import ELiftSubst.
+From MetaCoq.Erasure Require Import EPrimitive ELiftSubst.
 From MetaCoq.Utils Require Import utils.
 
 Import Kernames.
@@ -20,6 +20,7 @@ Definition map_subterms (f : term -> term) (t : term) : term :=
   | tProj p t => tProj p (f t)
   | tFix def i => tFix (map (map_def f) def) i
   | tCoFix def i => tCoFix (map (map_def f) def) i
+  | tPrim p => tPrim (map_prim f p)
   | t => t
   end.
 
@@ -53,7 +54,7 @@ Definition trim_start (b : bool) : bitmask -> bitmask :=
   fix f bs :=
     match bs with
     | b' :: bs =>
-      if Bool.eqb b' b then
+      if eqb b' b then
         f bs
       else
         b' :: bs
@@ -275,7 +276,9 @@ Definition dearg_oib
                let ctor_mask := get_branch_mask mib_masks oib_index c in
                dearg_ctor (param_mask mib_masks) ctor_mask ctor)
             (ind_ctors oib);
-     ind_projs := ind_projs oib |}.
+     ind_projs :=
+      let ctor_mask := get_branch_mask mib_masks oib_index 0 in
+      masked ctor_mask (ind_projs oib) |}.
 
 Definition dearg_mib (kn : kername) (mib : mutual_inductive_body) : mutual_inductive_body :=
   match get_mib_masks kn with
@@ -309,6 +312,7 @@ Fixpoint is_dead (rel : nat) (t : term) : bool :=
   | tFix defs _
   | tCoFix defs _ => forallb (is_dead (#|defs| + rel) ∘ EAst.dbody) defs
   | tConstruct _ _ args => forallb (is_dead rel) args
+  | tPrim p => test_prim (is_dead rel) p
   | _ => true
   end.
 
@@ -366,7 +370,23 @@ Fixpoint valid_cases (t : term) : bool :=
   | tFix defs _
   | tCoFix defs _ => forallb (valid_cases ∘ EAst.dbody) defs
   | tConstruct _ _ (_ :: _) => false (* check whether constructors are not blocks*)
+  | tPrim p => test_prim valid_cases p
   | _ => true
+  end.
+
+Fixpoint forallbi {A} (f : nat -> A -> bool) n l :=
+  match l with
+  | [] => true
+  | hd :: tl => f n hd && forallbi f (S n) tl
+  end.
+
+Definition check_oib_masks masks i oib :=
+  forallbi (fun c cb => #|get_branch_mask masks i c| == cb.2) 0 oib.(ind_ctors) &&
+  match oib.(ind_projs) with
+  | [] => true
+  | _ :: _ =>
+    let mask := get_branch_mask masks i 0 in
+    #|mask| == #|oib.(ind_projs)|
   end.
 
 Definition valid_masks_decl (p : kername * bool * global_decl) : bool :=
@@ -376,7 +396,8 @@ Definition valid_masks_decl (p : kername * bool * global_decl) : bool :=
   | (kn, _, TypeAliasDecl typ) => #|get_const_mask kn| =? 0
   | (kn, _, InductiveDecl mib) =>
       match get_mib_masks kn with
-      | Some mask => #|mask.(param_mask)| =? mib.(ind_npars)
+      | Some mask => (#|mask.(param_mask)| =? mib.(ind_npars)) &&
+        forallbi (check_oib_masks mask) 0 mib.(ind_bodies)
       | _ => false
       end
   | _ => true
@@ -407,7 +428,7 @@ Fixpoint is_expanded_aux (nargs : nat) (t : term) : bool :=
   | tProj _ t => is_expanded_aux 0 t
   | tFix defs _
   | tCoFix defs _ => forallb (is_expanded_aux 0 ∘ EAst.dbody) defs
-  | tPrim _ => true
+  | tPrim p => test_prim (is_expanded_aux 0) p
   end.
 
 (** Check if all applications are applied enough to be deboxed without eta expansion *)
@@ -644,7 +665,7 @@ Fixpoint analyze (state : analyze_state) (t : term) {struct t} : analyze_state :
     let state := new_vars state #|defs| in
     let state := fold_left (fun state d => analyze state (dbody d)) defs state in
     remove_vars state #|defs|
-  | tPrim _ => state
+  | tPrim p => fold_prim analyze p state
   end.
 
 Fixpoint decompose_TArr (bt : box_type) : list box_type × box_type :=

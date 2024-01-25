@@ -131,11 +131,11 @@ Module PrintTermTree.
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true) (print_term (fresh_names Σ Γ ctx') true))
                (nl ^ " with ") defs.
-  Definition print_universe u :=
-    match u with
-    | Universe.lProp => "Prop"
-    | Universe.lSProp => "SProp"
-    | Universe.lType l =>
+  Definition print_sort (s : sort) :=
+    match s with
+    | sProp => "Prop"
+    | sSProp => "SProp"
+    | sType l =>
       if with_universes then
         ("Type(" ++
            MCString.string_of_list string_of_level_expr (LevelExprSet.elements l) ++
@@ -153,7 +153,7 @@ Module PrintTermTree.
     end
   | tVar n => "Var(" ^ n ^ ")"
   | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
-  | tSort s => print_universe s
+  | tSort s => print_sort s
   | tCast c k t => parens top (print_term Γ true c ^ ":"  ^ print_term Γ true t)
   | tProd na dom codom =>
     let na' := (fresh_name Σ Γ na.(binder_name) (Some dom)) in
@@ -252,6 +252,8 @@ Module PrintTermTree.
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
   | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  | tArray u arr def ty => "Array(" ^ string_of_level u ^ "," ^
+    string_of_list string_of_term arr ^ "," ^ string_of_term def ^ "," ^ string_of_term ty ^ ")"
   end.
 
   Definition pr_context_decl Γ (c : context_decl) : ident * t :=

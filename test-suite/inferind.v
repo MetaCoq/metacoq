@@ -12,12 +12,7 @@ Definition qlist := Eval compute in match <% list %> with
 
 Definition refresh_sort t :=
   match t with
-  | tSort s =>
-      match s with
-      | Universe.lProp => tSort Universe.lProp
-      | Universe.lSProp => tSort Universe.lSProp
-      | Universe.lType _ => tSort Universes.fresh_universe
-      end
+  | tSort s => tSort (Sort.map (fun _ => fresh_universe) s)
   | _ => t
   end.
 

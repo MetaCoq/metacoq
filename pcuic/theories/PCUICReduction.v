@@ -153,6 +153,8 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
+Derive Signature for red1.
+
 Definition red1_ctx Σ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ Δ t t'))).
 Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (fun Δ => on_one_decl (fun t t' => red1 Σ (Γ ,,, Δ) t t'))).
 

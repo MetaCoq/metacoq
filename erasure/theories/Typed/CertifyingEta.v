@@ -253,7 +253,7 @@ Definition template_eta
                                               Σ
                                               seeds
                                               erasure_ignore)).
-
+(*
 Module Examples.
 
   Module Ex1.
@@ -366,3 +366,4 @@ Module Examples.
   End Ex5.
 
 End Examples.
+*)

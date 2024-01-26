@@ -1,6 +1,8 @@
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Equations.
+Set Warnings "-notation-overridden".
 From Equations.Type Require Import Logic Relation.
+Set Warnings "notation-overridden".
 
 Local Set Universe Polymorphism.
 Local Unset Universe Minimization ToSet.

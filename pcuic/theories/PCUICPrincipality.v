@@ -358,13 +358,14 @@ Section Principality.
 
 End Principality.
 
-Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ: wf_ext Σ} :
+Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind ind' u u' args args'} {wfΣ: wf_ext Σ} :
   Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-  Σ ;;; Γ |- c : mkApps (tInd ind u') args' ->
+  Σ ;;; Γ |- c : mkApps (tInd ind' u') args' ->
   (∑ ui',
     cmp_ind_universes Σ ind #|args| ui' u *
-    cmp_ind_universes Σ ind #|args'| ui' u') *
-  ws_cumul_pb_terms Σ Γ args args'.
+    cmp_ind_universes Σ ind' #|args'| ui' u') *
+  ws_cumul_pb_terms Σ Γ args args' * 
+  (ind = ind').
 Proof.
   intros h h'.
   destruct (common_typing _ wfΣ h h') as [C [l [r ty]]].
@@ -374,11 +375,9 @@ Proof.
   eapply invert_red_mkApps_tInd in redl as [args'' [-> eq0]]; auto.
   eapply invert_red_mkApps_tInd in redr as [args''' [eqnf eq1]]; auto.
   solve_discr.
-  split.
+  repeat split; eauto. 
   assert (#|args| = #|args'|).
   now rewrite -(All2_length eqargs) -(All2_length eqargs') (All2_length a) (All2_length a0).
-  exists ui'. split; auto.
-
   transitivity l'. now symmetry.
   transitivity args'' => //. now apply red_terms_ws_cumul_pb_terms.
   transitivity l''. symmetry. auto using red_terms_ws_cumul_pb_terms.
@@ -647,7 +646,7 @@ Proof.
       eapply eq_context_upto_inst_case_context => //.
       eapply All2_app. 2:constructor; pcuic.
       specialize (X3 _ _ scrut_ty (eq_term_empty_leq_term X10)).
-      unshelve epose proof (principal_type_ind scrut_ty X3) as [_ indconv]; tea.
+      unshelve epose proof (principal_type_ind scrut_ty X3) as [[_ indconv] _]; tea.
       split; auto.
       eapply All2_app_inv in indconv as [convpars convinds] => //.
       exact (All2_length eqpars).
@@ -658,7 +657,7 @@ Proof.
     specialize (X3 _ _ a0 (eq_term_empty_leq_term X4)).
     eapply eq_term_empty_eq_term in X4.
     assert (wf_ext Σ) by (split; assumption).
-    pose proof (principal_type_ind X3 a0) as [Ruu' X3'].
+    pose proof (principal_type_ind X3 a0) as [[Ruu' X3'] _].
     eapply (type_ws_cumul_pb (pb:=Conv)).
     * clear a0.
       econstructor; eauto.

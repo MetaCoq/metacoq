@@ -10,7 +10,7 @@ From MetaCoq.Utils Require Import utils.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
-           Uint63.
+           Uint63 Induction.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 

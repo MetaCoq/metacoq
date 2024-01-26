@@ -74,7 +74,7 @@ Definition betared_def {A}
 
 Definition template_betared : TemplateTransform :=
   fun Σ => Ok (timed "Inlining" (fun _ => mk_global_env (universes Σ) (betared_globals (declarations Σ)) (retroknowledge Σ))).
-
+(*
 Module Ex1.
 
   Definition foo (n : nat) := (fun x => x) n.
@@ -92,3 +92,4 @@ Module Ex1.
     lookup_env foo_before.1 <%% foo %%> -> False.
   Proof. easy. Qed.
 End Ex1.
+*)

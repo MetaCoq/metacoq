@@ -4,6 +4,8 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes.
 From Equations.Prop Require Import Classes EqDecInstances.
 
+Ltac Tauto.intuition_solver ::= auto with *.
+
 Module Type Term.
 
   Parameter Inline term : Type.

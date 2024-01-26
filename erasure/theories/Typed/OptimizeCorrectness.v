@@ -4244,8 +4244,8 @@ Lemma dearg_branch_body_rec_substl_correct : forall mm args0 t ctx0,
     = substl (List.rev args0) t.
 Proof.
   intros mm args0 t ctx0 Hc Hlen Hctx Hv.
-  revert dependent args0.
-  revert dependent t.
+  generalize dependent args0.
+  generalize dependent t.
   revert ctx0.
   induction mm;simpl;intros ctx0 t Hv args0 Hc Hlen Hctx.
   - unfold complete_ctx_mask;cbn.

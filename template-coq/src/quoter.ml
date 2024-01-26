@@ -208,8 +208,8 @@ struct
         let cstrs, eqs = UGraph.constraints_of_universes g in
         UGraph.domain g, cstrs, eqs
       | Some l ->
-        debug Pp.(fun () -> str"Quoting graph restricted to: " ++ Univ.Level.Set.pr Univ.Level.pr l);
-        (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
+        debug Pp.(fun () -> str"Quoting graph restricted to: " ++ Univ.Level.Set.pr Univ.Level.raw_pr l);
+        (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.raw_pr (UGraph.repr g)); *)
         let dom = UGraph.domain g in
         let kept = Univ.Level.Set.inter dom l in
         let kept = Univ.Level.Set.remove Univ.Level.set kept in
@@ -227,7 +227,7 @@ struct
         eqs (levels, cstrs)
     in
     let levels = Univ.Level.Set.add Univ.Level.set levels in
-    debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
+    debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.raw_pr (levels, cstrs));
     time (Pp.str"Quoting universe context")
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
@@ -405,7 +405,7 @@ struct
             List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
               let ty = Term.it_mkProd_or_LetIn ty ctx in
               let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
-              let ctx, concl = Term.decompose_prod_assum ty in
+              let ctx, concl = Term.decompose_prod_decls ty in
               let argctx, parsctx =
                 CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx
               in

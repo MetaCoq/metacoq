@@ -2144,28 +2144,30 @@ Section CheckLeq2.
     contradiction HG.
   Defined.
 
-  Let Huctx': global_gc_uctx_invariants uctx'.
+  #[clearbody] Let Huctx' : global_gc_uctx_invariants uctx'.
     unfold uctx'; cbn.
     eapply gc_of_uctx_invariants; tea.
     unfold is_graph_of_uctx, gc_of_uctx in *. cbn.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
     reflexivity. contradiction HG.
-  Qed.
+  Defined.
 
+  #[clearbody]
   Let HC' : gc_consistent uctx'.2.
     unfold uctx'; cbn. clear Huctx'.
     apply gc_consistent_iff in HC.
     unfold is_graph_of_uctx, gc_of_uctx in *.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
     exact HC. contradiction HG.
-  Qed.
+  Defined.
 
+  #[clearbody]
   Let HG' : Equal_graph G (make_graph uctx').
     unfold uctx' in *; cbn. clear Huctx'.
     unfold is_graph_of_uctx, gc_of_uctx in *.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
     symmetry; exact HG. contradiction HG.
-  Qed.
+  Defined.
 
   Let level_declared (l : Level.t) := LevelSet.In l uctx.1.
 

@@ -338,7 +338,7 @@ Proof.
 
     + intros hl.
       case: (knset_mem_spec kn0 _) => hin.
-      * elimtype False.
+      * exfalso.
         eapply lookup_global_deps in hl; tea.
         now eapply fresh_global_In in H1.
       * case: (knset_mem_spec kn0 _).
@@ -668,7 +668,7 @@ Proof.
     * rewrite global_deps_union KernameSet.union_spec.
       intros [] fr.
     ** depelim fr. now eapply IHΣ.
-    ** depelim fr. elimtype False. eapply IHΣ in H1; eauto.
+    ** depelim fr. exfalso. eapply IHΣ in H1; eauto.
       destruct d as [[[]]|] eqn:eqd; cbn in H.
       + cbn in H1. eapply (term_global_deps_fresh Σ) in H1; tea. cbn in H2.
         eapply (Forall_map (fun x => x <> kn) fst) in fr.

@@ -195,7 +195,7 @@ struct
         CErrors.user_err (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
-        debug (fun () -> str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
+        debug (fun () -> str"Fresh level " ++ Univ.Level.raw_pr l ++ str" was added to the context.");
         evm, l
     else if constr_equall h lzero then
       match args with

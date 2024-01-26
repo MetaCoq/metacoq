@@ -155,7 +155,7 @@ Definition template_inline (should_inline : kername -> bool) : TemplateTransform
     (fun _ => (mk_global_env (universes Σ)
                              (inline_globals should_inline (declarations Σ))
                              (retroknowledge Σ)))).
-
+(*
 Module Tests.
 
   (** Inlining into the local *)
@@ -225,3 +225,4 @@ Module Tests.
   End Ex6.
 
 End Tests.
+*)

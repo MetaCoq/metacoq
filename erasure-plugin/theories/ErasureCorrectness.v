@@ -292,17 +292,27 @@ Section PCUICProof.
     lookup_env Σ kn = Some (PCUICAst.PCUICEnvironment.InductiveDecl decl') ->
     decl = erase_mutual_inductive_body decl').
 
+  Definition erase_decl_equal cmp decl decl' :=
+    match decl, decl' with 
+        EAst.InductiveDecl decl , InductiveDecl decl' => decl = cmp decl'
+      | EAst.ConstantDecl _ , ConstantDecl _ => True
+      | _ , _ => False 
+    end. 
+
   Lemma lookup_env_in_erase_global_deps X_type X deps decls kn normalization_in prf decl :
     EnvMap.EnvMap.fresh_globals decls ->
-    EGlobalEnv.lookup_env (erase_global_deps X_type deps X decls normalization_in prf).1 kn = Some (EAst.InductiveDecl decl) ->
-    exists decl', lookup_global decls kn = Some (InductiveDecl decl') /\ decl = erase_mutual_inductive_body decl'.
+    EGlobalEnv.lookup_env (erase_global_deps X_type deps X decls normalization_in prf).1 kn = Some decl ->
+    exists decl', lookup_global decls kn = Some decl' /\ 
+                  erase_decl_equal erase_mutual_inductive_body decl decl'.
   Proof.
     induction decls in deps, X, normalization_in, prf |- *; cbn [erase_global_deps] => //.
     destruct a => //. destruct g => //.
     - case: (knset_mem_spec k deps) => // hdeps.
       cbn [EGlobalEnv.lookup_env fst lookup_env lookup_global].
       { destruct (eqb_spec kn k) => //.
-        intros hl. eapply IHdecls. now depelim hl. }
+        intro hl; depelim hl; cbn. intro e; noconf e.  
+        eexists; split; eauto. cbn; eauto.    
+        intros hl. cbn. eapply IHdecls. now depelim hl. }
       { intros hl. depelim hl.
         intros hl'.
         eapply IHdecls in hl. destruct hl.
@@ -311,12 +321,12 @@ Section PCUICProof.
         destruct (eqb_spec kn k) => //. subst k.
         destruct H0.
         now eapply PCUICWeakeningEnv.lookup_global_Some_fresh in H0.
-        exact hl'. }
+        exact hl'. } 
     - intros hf; depelim hf.
       case: (knset_mem_spec k deps) => // hdeps.
       cbn [EGlobalEnv.lookup_env fst lookup_env lookup_global].
-      { destruct (eqb_spec kn k) => //.
-        intros hl. noconf hl. subst k. eexists; split; cbn; eauto.
+      { destruct (eqb_spec kn k) => //; cbn.
+        intros hl. noconf hl. subst k. eexists; split; cbn; eauto. cbn; eauto.  
         intros hl'. eapply IHdecls => //. tea. }
       { intros hl'. eapply IHdecls in hf; tea. destruct hf.
         exists x.
@@ -1663,15 +1673,15 @@ Section pipeline_theorem.
   Import PCUICWfEnv.
 
   Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)  {has_rel : has_tRel} {has_box : has_tBox}  :
-    EGlobalEnv.lookup_env Σ_v kn = Some (EAst.InductiveDecl decl) ->
+    EGlobalEnv.lookup_env Σ_t kn = Some decl ->
     exists decl',
       PCUICAst.PCUICEnvironment.lookup_global (PCUICExpandLets.trans_global_decls
-      (PCUICAst.PCUICEnvironment.declarations
-         Σ.1)) kn = Some (PCUICAst.PCUICEnvironment.InductiveDecl decl')
-       /\ decl = ERemoveParams.strip_inductive_decl (erase_mutual_inductive_body decl').
+      (PCUICAst.PCUICEnvironment.declarations Σ.1)) kn = Some decl'
+      /\  erase_decl_equal (fun decl => ERemoveParams.strip_inductive_decl (erase_mutual_inductive_body decl))
+             decl decl'.
   Proof.
     Opaque compose.
-    unfold Σ_v, verified_erasure_pipeline.
+    unfold Σ_t, verified_erasure_pipeline.
     repeat rewrite -transform_compose_assoc.
     destruct_compose; intro. cbn.
     destruct_compose; intro. cbn.
@@ -1713,21 +1723,18 @@ Section pipeline_theorem.
     intro.
     set (EAstUtils.term_global_deps _).
     set (build_wf_env_from_env _ _).
-    epose proof
-      (lookup_env_in_erase_global_deps optimized_abstract_env_impl w t0
-      _ kn _ Hyp0).
     set (EGlobalEnv.lookup_env _ _).
     case_eq o. 2: { intros ?. inversion 1. }
-    destruct g3; intro Ho; [inversion 1|].
-    cbn. inversion 1.
-    specialize (H8 m). forward H8.
-    epose proof (wf_fresh_globals _ HΣ). clear - H10.
-    revert H10. cbn. set (Σ.1). induction 1; econstructor; eauto.
-    cbn. clear -H. induction H; econstructor; eauto.
-    unfold o in Ho; rewrite Ho in H8.
-    specialize (H8 eq_refl).
-    destruct H8 as [decl' [? ?]]. exists decl'; split ; eauto.
-    rewrite <- H10. now destruct decl, m.
+    intros decl' Heq.
+    unshelve epose proof
+      (Hlookup := lookup_env_in_erase_global_deps optimized_abstract_env_impl w t0
+      _ kn _ Hyp0 decl' _ Heq).
+    { epose proof (wf_fresh_globals _ HΣ). clear - H8.
+      revert H8. cbn. set (Σ.1). induction 1; econstructor; eauto.
+      cbn. clear -H. induction H; econstructor; eauto. }
+    destruct Hlookup as [decl'' [? ?]]. exists decl''; split ; eauto.
+    cbn in H10. inversion H10. 
+    now destruct decl' , decl''.
   Qed.
 
   Lemma verified_erasure_pipeline_firstorder_evalue_block :

@@ -705,6 +705,8 @@ Module Red1Apps.
 
   where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
+  Derive Signature for red1.
+
   Lemma red1_ind_all :
     forall (Σ : global_env) (P : context -> term -> term -> Type),
 

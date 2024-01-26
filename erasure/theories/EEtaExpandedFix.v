@@ -176,6 +176,7 @@ Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop
 | expanded_global_nil : expanded_global_declarations []
 | expanded_global_cons decl Σ : expanded_global_declarations Σ ->
   expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
+Derive Signature for expanded_global_declarations.
 
 Definition expanded_global_env := expanded_global_declarations.
 
@@ -301,7 +302,8 @@ Section isEtaExp.
     all:try lia.
     all:try apply (In_size); tea.
     all:try lia.
-    - now apply (In_size id size).
+    - setoid_rewrite (In_size id size); tea. unfold id.
+      now change (fun x => size x) with size.
     - rewrite size_mkApps. cbn.
       apply (In_size id size) in H.
       unfold id in H. change (fun x => size x) with size in H. lia.
@@ -320,6 +322,7 @@ Section isEtaExp.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - eapply (In_size dbody size) in H. cbn in H; lia.
     - destruct p as [? []]; cbn in *; eauto. destruct H; subst; try lia.
       eapply (In_size id size) in H. unfold id in H.
       change (fun x => size x) with size in H. lia.

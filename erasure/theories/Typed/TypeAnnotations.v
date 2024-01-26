@@ -233,7 +233,7 @@ Lemma Forall_mapi :
   Forall P (mapi_rec f l n).
 Proof.
   intros A B n P f l H.
-  revert dependent n.
+  generalize dependent n.
   induction l; intros n.
   - constructor.
   - cbn. inversion H;subst. constructor;auto.

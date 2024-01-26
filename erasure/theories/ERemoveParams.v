@@ -63,7 +63,8 @@ Section strip.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
-    - now eapply (In_size id size).
+    - eapply (In_size id size) in H. unfold id in H.
+      change (fun x => size x) with size in *. lia.
     - rewrite size_mkApps.
       eapply (In_size id size) in H. change (fun x => size (id x)) with size in H. unfold id in H.  cbn. lia.
     - rewrite size_mkApps.
@@ -72,6 +73,8 @@ Section strip.
     - pose proof (size_mkApps_l napp nnil).
       eapply (In_size id size) in H. change (fun x => size (id x)) with size in H. unfold id in H. lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
+    - eapply (In_size dbody size) in H; cbn in H; lia.
+    - eapply (In_size dbody size) in H; cbn in H; lia.
     - destruct p as [? []]; cbn in H; eauto.
       intuition auto; subst; cbn; try lia.
       eapply (In_size id size) in H0. unfold id in H0.

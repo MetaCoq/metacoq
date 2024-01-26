@@ -6,6 +6,8 @@ From Equations Require Import Equations.
 
 Local Open Scope Z_scope.
 
+Ltac Tauto.intuition_solver ::= auto with *.
+
 Lemma fold_max_In n m l (H : fold_left Z.max l n = m)
   : n = m \/ In m l.
 Proof.

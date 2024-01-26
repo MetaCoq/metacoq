@@ -20,6 +20,7 @@ From MetaCoq.Utils Require Import MCList.
 From MetaCoq.Utils Require Import MCPrelude.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Utils Require Import All_Forall.
+Require ssreflect.
 
 Import ExAst.
 Import Kernames.
@@ -2640,8 +2641,7 @@ Proof.
       eapply IHl in hn; tea. now rewrite Nat.add_succ_r in hn.
 Qed.
 
-
-Require Import ssreflect.
+Import ssreflect.
 
 Lemma forallbi_Alli {A} (f : nat -> A -> bool) n l :
   Alli f n l <~> forallbi f n l.

@@ -12,7 +12,7 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   export OCAMLPATH
 endif
 
-.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations quotation
+.PHONY: printconf all utils template-coq pcuic erasure safechecker-plugin install uninstall html clean mrproper .merlin test-suite translations quotation
 
 printconf:
 ifeq '$(METACOQ_CONFIG)' 'local'

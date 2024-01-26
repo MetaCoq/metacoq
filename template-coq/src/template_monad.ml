@@ -233,7 +233,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     with _ ->
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
-  let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
+  let eq_gr t = Environ.QGlobRef.equal env glob_ref (Lazy.force t) in
   if eq_gr ptmBind || eq_gr ttmBind then
     let () = ppdebug 1 (fun () -> Pp.(str "MetaCoq: TemplateProgram: processing tmBind")) in
     match args with

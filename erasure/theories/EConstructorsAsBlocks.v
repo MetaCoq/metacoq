@@ -67,7 +67,7 @@ Section transform_blocks.
     all:try lia.
     all:try apply (In_size); tea.
     all:try lia.
-    - now apply (In_size id size).
+    - setoid_rewrite <- (In_size id size H); unfold id; lia.
     - change (fun x => size (id x)) with size in H.
       eapply (In_size id size) in H. unfold id in H.
       change (fun x => size x) with size in H.
@@ -82,6 +82,8 @@ Section transform_blocks.
       change (fun x => size x) with size in H.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in *. lia.
+    - eapply (In_size dbody size) in H; lia.
+    - eapply (In_size dbody size) in H; lia.
     - now eapply InPrim_size in H.
   Qed.
 

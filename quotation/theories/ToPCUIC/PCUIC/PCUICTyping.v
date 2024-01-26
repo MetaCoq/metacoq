@@ -51,7 +51,7 @@ Section quote_typing.
   Proof.
     change (forall Γ t T, ground_quotable (@typing cf Σ Γ t T)) in quote_typing'.
     destruct pf.
-    Time all: [ > try time replace_quotation_of_goal () .. ].
+    all: [ > try replace_quotation_of_goal () .. ].
   Defined.
 End quote_typing.
 #[export] Instance quote_typing {cf Σ Γ t T} : ground_quotable (@typing cf Σ Γ t T) := quote_typing'.

@@ -129,7 +129,7 @@ Proof.
   intros his.
   rewrite erase_equation_1.
   destruct inspect_bool. now cbn.
-  elimtype False.
+  exfalso.
   move/negP: i => hi. apply hi.
   now apply/is_erasableP.
 Qed.

@@ -58,7 +58,7 @@ Module Retroknowledge.
 
   Lemma extendsT x y : reflect (extends x y) (extendsb x y).
   Proof.
-    rewrite /extends/extendsb; do 3 case: option_extendsT; cbn; constructor; intuition.
+    rewrite /extends/extendsb; do 3 case: option_extendsT; cbn; constructor; intuition auto.
   Qed.
 
   Lemma extends_spec x y : extendsb x y <-> extends x y.
@@ -796,7 +796,7 @@ Module Environment (T : Term).
     elim => //=; try setoid_rewrite KernameSetFact.empty_iff => //=.
     move => [? ?] ? IH c //=.
     rewrite KernameSet.add_spec.
-    intuition.
+    intuition auto with *.
   Qed.
 
   Lemma declared_kername_set_mem_iff Σ c
@@ -824,7 +824,7 @@ Module Environment (T : Term).
     rewrite <- !lookup_globals_nil in H2.
     rewrite <- (declared_kername_set_mem_iff Σ) in *.
     destruct KernameSet.mem; cbn in *.
-    { intuition. }
+    { intuition auto. }
     { destruct Hc as [Hc _].
       rewrite Hc ?app_nil_r //=. }
   Qed.

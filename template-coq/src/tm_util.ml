@@ -358,20 +358,3 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tFloat of 'float64
   | ACoq_tArray of 'universe_level * 'term array * 'term * 'term
 
-module ArrayCompat = struct
-  (** For compat with OCaml < 4.13, copied from https://github.com/ocaml/ocaml/blob/d5b5c34971ed4291c385852f820554ad57adba84/stdlib/array.ml#L195-L207 *)
-  let fold_left_map f acc input_array =
-    let open Array in
-    let len = length input_array in
-    if len = 0 then (acc, [||]) else begin
-      let acc, elt = f acc (unsafe_get input_array 0) in
-      let output_array = make len elt in
-      let acc = ref acc in
-      for i = 1 to len - 1 do
-        let acc', elt = f !acc (unsafe_get input_array i) in
-        acc := acc';
-        unsafe_set output_array i elt;
-      done;
-      !acc, output_array
-    end
-end

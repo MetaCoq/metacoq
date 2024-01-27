@@ -95,7 +95,7 @@ Proof.
   all: repeat destruct ?; subst.
   all: lazymatch goal with
        | [ H : ctx_inst _ _ _ _ |- ctx_inst _ _ _ _ ]
-         => revert dependent H;
+         => generalize dependent H;
             repeat match goal with
               | [ |- context[typing_size ?x] ]
                 => generalize (typing_size x); clear x; intro

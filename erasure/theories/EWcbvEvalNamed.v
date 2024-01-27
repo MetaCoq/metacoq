@@ -1976,7 +1976,7 @@ Proof.
                        lazymatch B with context[x] => idtac | context[z] => idtac end;
                        pose proof (pair H H'); clear H H'
                   end.
-           revert dependent x; intros x H'; exact H'. }
+           generalize dependent x; intros x H'; exact H'. }
        assert ({ vs & All3 (fun v x z => ⊩ v ~ z × eval Σ' E x v) vs args0 args'}) as [vs Hvs]. { let X := match goal with H : All2 _ ?x ?y |- context[All3 _ _ ?x ?y] => H end in
          clear - X; induction X. eexists; econstructor. repeat (destruct_head'_sigT; destruct_head'_prod).
          eexists (_ :: _). econstructor; eauto.

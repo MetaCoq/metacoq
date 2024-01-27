@@ -64,7 +64,7 @@ Section quote_typing.
     all: change (forall Γ t T, ground_quotable (@typing cf Σ Γ t T)) in quote_typing'.
     all: change (forall Γ t s T, ground_quotable (@typing_spine cf Σ Γ t s T)) in quote_typing_spine'.
     all: destruct pf.
-    Time all: [ > time replace_quotation_of_goal () .. ].
+    all: [ > replace_quotation_of_goal () .. ].
   Defined.
 End quote_typing.
 #[export] Instance quote_typing {cf Σ Γ t T} : ground_quotable (@typing cf Σ Γ t T) := quote_typing'.

@@ -14,7 +14,7 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.Template Require Import Ast TypingWf UnivSubst
      TermEquality LiftSubst Reduction.
-Set Warnings "+notation_overridden".
+Set Warnings "notation-overridden".
 
 From MetaCoq.PCUIC Require Import PCUICEquality.
 From MetaCoq.TemplatePCUIC Require Import PCUICToTemplate.
@@ -650,7 +650,10 @@ Coercion isType_wt : isType >-> wt.
 
 Section wtsub.
   Context {cf} {Σ : PCUICEnvironment.global_env_ext} {wfΣ : PCUICTyping.wf Σ}.
+  Set Warnings "-notation-overridden".
   Import PCUICAst.
+  Set Warnings "notation-overridden".
+
   Definition wt_subterm Γ (t : term) : Type :=
     let wt := wt Σ in
     match t with
@@ -1478,7 +1481,9 @@ Qed.
 From MetaCoq.PCUIC Require Import PCUICCumulativity.
 
 Section wtcumul.
+  Set Warnings "-notation-overridden".
   Import PCUICAst PCUICTyping PCUICEquality.
+  Set Warnings "notation-overridden".
   Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U :=
   { wt_red1_red1 : PCUICReduction.red1 Σ Γ T U;
     wt_red1_dom : isType Σ Γ T;
@@ -1847,8 +1852,10 @@ Axiom cofix_guard_trans :
 
   typing_spine fty [u; v] T'
 *)
-
+Set Warnings "-notation-overridden".
 Import PCUICAst PCUICLiftSubst PCUICTyping.
+Set Warnings "notation-overridden".
+
 Inductive typing_spine {cf} (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_eq ty : typing_spine Σ Γ ty [] ty
 

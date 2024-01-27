@@ -163,7 +163,7 @@ struct
       | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
       | ACoq_tArray (u, arr, def, ty) ->
           let evm, u = D.unquote_universe_level evm u in
-          let evm, arr = ArrayCompat.fold_left_map (fun evm a -> aux env evm a) evm arr in
+          let evm, arr = CArray.fold_left_map (fun evm a -> aux env evm a) evm arr in
           let evm, def = aux env evm def in
           let evm, ty = aux env evm ty in
           evm, Constr.mkArray (Univ.Instance.of_array [|u|], arr, def, ty)

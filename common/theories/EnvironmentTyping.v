@@ -1012,12 +1012,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Notation lift_sorting_size csize ssize := (lift_sorting_size_gen csize ssize 1).
   Notation typing_sort_size typing_size := (fun t s (tu: typing_sort _ t s) => typing_size t (tSort s) tu).
-  Notation lift_typing_size typing_size := (lift_sorting_size_gen typing_size (typing_sort_size typing_size) 0).
+  Notation lift_typing_size typing_size := (lift_sorting_size_gen typing_size%function (typing_sort_size typing_size%function) 0).
   Notation typing_sort_size1 typing_size := (fun Γ t s (tu: typing_sort1 _ Γ t s) => typing_size Γ t (tSort s) tu).
   Notation on_def_type_sorting_size ssize := (on_def_type_size_gen ssize 1).
   Notation on_def_type_size typing_size := (on_def_type_size_gen (typing_sort_size1 typing_size) 0).
   Notation on_def_body_sorting_size csize ssize := (on_def_body_size_gen csize ssize 1).
-  Notation on_def_body_size typing_size := (on_def_body_size_gen typing_size (typing_sort_size1 typing_size) 0).
+  Notation on_def_body_size typing_size := (on_def_body_size_gen typing_size%function (typing_sort_size1 typing_size%function) 0).
   (* Will probably not pass the guard checker if in a list, must be unrolled like in on_def_* *)
 
   Lemma lift_sorting_size_impl {checking sorting Qc Qs j} csize ssize :

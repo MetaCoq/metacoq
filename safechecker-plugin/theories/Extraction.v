@@ -14,7 +14,7 @@ From MetaCoq.SafeCheckerPlugin Require Import SafeTemplateChecker.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes
-           Uint63.
+           Uint63 Induction.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
@@ -30,7 +30,7 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Cd "src".
+Set Extraction Output Directory "src".
 Axiom fake_abstract_guard_impl_properties:
   forall (fix_cofix : PCUICTyping.FixCoFix)
     (Σ : PCUICAst.PCUICEnvironment.global_env_ext)
@@ -52,5 +52,3 @@ Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
          infer_and_print_template_program_with_guard
          (* The following directives ensure separate extraction does not produce name clashes *)
          Coq.Strings.String UnivSubst PCUICPretty.
-
-Cd "..".

@@ -1,6 +1,6 @@
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Equations.
-From Equations.Type Require Import Logic Relation.
+From Equations.Type Require Import -(notations) Logic Relation.
 
 Local Set Universe Polymorphism.
 Local Unset Universe Minimization ToSet.

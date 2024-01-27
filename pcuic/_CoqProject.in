@@ -115,7 +115,3 @@ theories/PCUICWeakeningConfig.v
 theories/PCUICCasesHelper.v
 
 # theories/All.v
-
-# To do separate extraction of the files, not working currently
-# due to ssreflect's definition of [over].
-# theories/Extraction.v

@@ -13,7 +13,7 @@ Proof.
   fix quote_red1 4.
   change (forall Γ t u, ground_quotable (@red1 Σ Γ t u)) in quote_red1.
   destruct 1.
-  Time all: [ > replace_quotation_of_goal () .. ].
+  all: [ > replace_quotation_of_goal () .. ].
 Defined.
 
 (*#[export] Instance quote_red1_ctx {Σ Γ Δ} : ground_quotable (@red1_ctx Σ Γ Δ) := ltac:(cbv [red1_ctx]; exact _).*)

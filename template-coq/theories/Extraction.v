@@ -19,7 +19,7 @@ Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Numeral
-           Uint63.
+           Uint63 Induction.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
@@ -30,7 +30,7 @@ Import Init.Nat.
 Extract Inductive Common.hint_locality => "Hints.hint_locality" ["Hints.Local" "Hints.Export" "Hints.SuperGlobal"].
 Extract Constant Typing.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 
-Cd "gen-src".
+Set Extraction Output Directory "gen-src".
 
 (* Silence the warnings for specifications axioms of int63 *)
 Set Warnings "-extraction-logical-axiom".
@@ -59,6 +59,3 @@ Extraction Library Pretty.
 Extraction Library config.
 
 Recursive Extraction Library TemplateProgram.
-
-
-Cd "..".

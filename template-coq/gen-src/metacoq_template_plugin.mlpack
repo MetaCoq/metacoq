@@ -93,7 +93,7 @@ Ast0
 AstUtils
 LiftSubst
 UnivSubst0
-Induction
+Induction0
 Reflect
 Pretty
 Common0

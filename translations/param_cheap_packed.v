@@ -254,7 +254,6 @@ Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
           listᵗ A (x.1 :: lH.1)).
 
-
 (* Fixpoint recompose_prod (ns : list name) (As : list term) (B : term) : term := *)
 (*   match (ns, As) with *)
 (*   | (n :: ns, A :: As)  => tProd n A (recompose_prod ns As B) *)

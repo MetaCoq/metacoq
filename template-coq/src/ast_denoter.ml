@@ -65,16 +65,13 @@ struct
   let mkEvar = mkEvar
   let mkSort = mkSort
   let mkCast = mkCast
-  let mkConst = mkConst
   let mkProd = mkProd
 
   let mkLambda = mkLambda
   let mkApp = mkApp
   let mkLetIn = mkLetIn
   let mkFix = mkFix
-  let mkConstruct = mkConstruct
   let mkCoFix = mkCoFix
-  let mkInd = mkInd
   let mkCase = mkCase
   let mkProj = mkProj
   let mkInt = mkInt

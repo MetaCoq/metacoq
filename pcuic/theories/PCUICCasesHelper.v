@@ -1,5 +1,7 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
+Set Warnings "-notation-overridden".
 From MetaCoq.Utils Require Import utils monad_utils.
+Set Warnings "notation-overridden".
 From MetaCoq.Common Require Import config.
 
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICArities PCUICInductives PCUICSpine

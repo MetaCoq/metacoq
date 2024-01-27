@@ -4,6 +4,8 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Primitive Universes Environment Reflect.
 From Equations.Prop Require Import Classes EqDecInstances.
 
+Ltac Tauto.intuition_solver ::= auto with *.
+
 Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec : TermDecide T) (Import EDec : EnvironmentDecide T E).
 
   Local Notation extendsb_decls_part Σ Σ'

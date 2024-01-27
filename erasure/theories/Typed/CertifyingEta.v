@@ -253,8 +253,8 @@ Definition template_eta
                                               Σ
                                               seeds
                                               erasure_ignore)).
-(*
-Module Examples.
+
+(*Module Examples.
 
   Module Ex1.
   Definition partial_app_pair :=

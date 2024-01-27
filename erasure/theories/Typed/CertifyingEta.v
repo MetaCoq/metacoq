@@ -254,7 +254,7 @@ Definition template_eta
                                               seeds
                                               erasure_ignore)).
 
-Module Examples.
+(*Module Examples.
 
   Module Ex1.
   Definition partial_app_pair :=
@@ -366,3 +366,4 @@ Module Examples.
   End Ex5.
 
 End Examples.
+*)

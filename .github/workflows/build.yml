@@ -27,11 +27,12 @@ jobs:
           - '8.17'
         ocaml_version:
           - '4.14-flambda'
+          - '4.09-flambda'
         target: [ local, opam ]
       fail-fast: true
 
     concurrency:
-      group: ${{ github.workflow }}-${{ matrix.target }}-Ubuntu-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+      group: ${{ github.workflow }}-${{ matrix.ocaml_version }}-${{ matrix.target }}-Ubuntu-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
       cancel-in-progress: true
 
     steps:

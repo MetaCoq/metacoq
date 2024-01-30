@@ -763,7 +763,7 @@ Definition fo_evalue (p : program E.global_context EAst.term) : Prop := firstord
 Definition fo_evalue_map (p : program EEnvMap.GlobalContextMap.t EAst.term) : Prop := firstorder_evalue p.1 p.2.
 
 #[global] Instance rebuild_wf_env_transform_pres_fo {fl : WcbvFlags} {efl : EEnvFlags} we wf :
-  ETransformPresFO.t
+  ETransformPresFO.t 
     (rebuild_wf_env_transform we wf) fo_evalue fo_evalue_map (fun p pr fo => rebuild_wf_env p pr.p1).
 Proof. split => //. Qed.
 
@@ -1432,16 +1432,17 @@ Section PCUICErase.
   Lemma extends_eq Σ Σ0 Σ' : EGlobalEnv.extends Σ Σ' -> Σ = Σ0 -> EGlobalEnv.extends Σ0 Σ'.
   Proof. now intros ext ->. Qed.
 
-  Lemma erasure_pipeline_eta_app (Σ : global_env_ext_map) t u pre :
+  Lemma erasure_pipeline_extends_app (Σ : global_env_ext_map) t u pre :
     ∥ nisErasable Σ [] (tApp t u) ∥ ->
     PCUICEtaExpand.expanded Σ [] t ->
     exists pre' pre'',
-    transform verified_erasure_pipeline (Σ, tApp t u) pre =
-    ((transform verified_erasure_pipeline (Σ, tApp t u) pre).1,
-      EAst.tApp (transform verified_erasure_pipeline (Σ, t) pre').2
-        (transform verified_erasure_pipeline (Σ, u) pre'').2).
+    let trapp := transform verified_erasure_pipeline (Σ, PCUICAst.tApp t u) pre in
+    let trt := transform verified_erasure_pipeline (Σ, t) pre' in
+    let tru := transform verified_erasure_pipeline (Σ, u) pre'' in
+    (EGlobalEnv.extends trt.1 trapp.1 /\ EGlobalEnv.extends tru.1 trapp.1) /\ 
+    trapp = (trapp.1, EAst.tApp trt.2 tru.2).
   Proof.
-    intros ner exp.
+    intros ner exp.  
     unfold verified_erasure_pipeline.
     destruct_compose.
     set (K:= (fun p : global_env_ext_map => (wf_ext p -> PCUICSN.NormalizationIn p) /\ (wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p))).
@@ -1450,6 +1451,56 @@ Section PCUICErase.
     { destruct ner as [ner]. destruct pre, s. eapply nisErasable_spec in ner => //. eapply w. }
     destruct (expand_lets_eta_app _ _ _ K pre ner' exp) as [pre' [pre'' eq]].
     exists pre', pre''.
+    split. 
+    set (tr := transform _ _ _). 
+    destruct tr eqn:heq. cbn -[transform]. 
+    replace t0 with tr.2. assert (heq_env:tr.1=g) by now rewrite heq. subst tr.
+    2:{ now rewrite heq. }
+    clear heq. revert H.
+    destruct_compose_no_clear. rewrite eq. intros pre3 eq2 pre4.
+    epose proof (erase_eta_app _ _ _ pre3) as H0.
+    pose proof (correctness (pcuic_expand_lets_transform K) (Σ, tApp t u) pre).
+    destruct H as [[wtapp] [expapp Kapp]].
+    pose proof (correctness (pcuic_expand_lets_transform K) (Σ, t) pre').
+    destruct H as [[wtt] [expt Kt]].
+    forward H0.
+    { clear -wtapp ner eq. apply (f_equal snd) in eq. cbn [snd] in eq. rewrite -eq.
+      destruct pre as [[wtp] rest].
+      destruct ner as [ner]. eapply (nisErasable_lets (Σ, tApp t u)) in ner.
+      eapply nisErasable_spec in ner => //. cbn.
+      apply wtapp. apply wtp. }
+    forward H0 by apply expt.
+    destruct H0 as [pre'0 [pre''0 [eta [extapp [extapp' heq]]]]].
+    split.
+    { rewrite <- heq_env. cbn -[transform]. unfold verified_lambdabox_pipeline.
+      repeat (destruct_compose; intros). eapply constructors_as_blocks_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply inline_projections_optimization_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply remove_match_on_box_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply remove_params_extends.
+      repeat (destruct_compose; intros). eapply guarded_to_unguarded_fix_extends.
+      repeat (destruct_compose; intros). cbn - [transform].
+      generalize dependent pre3. rewrite <- eq; intros. revert extapp. intro. 
+      cbn; cbn in extapp. unfold expand_lets_program; cbn.
+      revert H14; intro. cbn in H14. red in H14. cbn in H14.   
+      todo "irrel".
+    }
+    { cbn -[transform]. unfold verified_lambdabox_pipeline.
+      repeat (destruct_compose; intros). eapply constructors_as_blocks_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply inline_projections_optimization_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply remove_match_on_box_extends.
+      repeat (destruct_compose; intros). eapply rebuild_wf_env_extends.
+      repeat (destruct_compose; intros). eapply remove_params_extends.
+      repeat (destruct_compose; intros). eapply guarded_to_unguarded_fix_extends.
+      repeat (destruct_compose; intros). cbn - [transform].
+      generalize dependent pre3. rewrite <- eq; intros. revert extapp'. intro. 
+      cbn; cbn in extapp'. unfold expand_lets_program; cbn.
+      todo "irrel".
+    }
     set (tr := transform _ _ _).
     destruct tr eqn:heq. cbn -[transform]. f_equal.
     replace t0 with tr.2. subst tr.

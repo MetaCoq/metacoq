@@ -293,16 +293,16 @@ Section PCUICProof.
     decl = erase_mutual_inductive_body decl').
 
   Definition erase_decl_equal cmp decl decl' :=
-    match decl, decl' with 
+    match decl, decl' with
         EAst.InductiveDecl decl , InductiveDecl decl' => decl = cmp decl'
       | EAst.ConstantDecl _ , ConstantDecl _ => True
-      | _ , _ => False 
-    end. 
+      | _ , _ => False
+    end.
 
   Lemma lookup_env_in_erase_global_deps X_type X deps decls kn normalization_in prf decl :
     EnvMap.EnvMap.fresh_globals decls ->
     EGlobalEnv.lookup_env (erase_global_deps X_type deps X decls normalization_in prf).1 kn = Some decl ->
-    exists decl', lookup_global decls kn = Some decl' /\ 
+    exists decl', lookup_global decls kn = Some decl' /\
                   erase_decl_equal erase_mutual_inductive_body decl decl'.
   Proof.
     induction decls in deps, X, normalization_in, prf |- *; cbn [erase_global_deps] => //.
@@ -310,8 +310,8 @@ Section PCUICProof.
     - case: (knset_mem_spec k deps) => // hdeps.
       cbn [EGlobalEnv.lookup_env fst lookup_env lookup_global].
       { destruct (eqb_spec kn k) => //.
-        intro hl; depelim hl; cbn. intro e; noconf e.  
-        eexists; split; eauto. cbn; eauto.    
+        intro hl; depelim hl; cbn. intro e; noconf e.
+        eexists; split; eauto. cbn; eauto.
         intros hl. cbn. eapply IHdecls. now depelim hl. }
       { intros hl. depelim hl.
         intros hl'.
@@ -321,12 +321,12 @@ Section PCUICProof.
         destruct (eqb_spec kn k) => //. subst k.
         destruct H0.
         now eapply PCUICWeakeningEnv.lookup_global_Some_fresh in H0.
-        exact hl'. } 
+        exact hl'. }
     - intros hf; depelim hf.
       case: (knset_mem_spec k deps) => // hdeps.
       cbn [EGlobalEnv.lookup_env fst lookup_env lookup_global].
       { destruct (eqb_spec kn k) => //; cbn.
-        intros hl. noconf hl. subst k. eexists; split; cbn; eauto. cbn; eauto.  
+        intros hl. noconf hl. subst k. eexists; split; cbn; eauto. cbn; eauto.
         intros hl'. eapply IHdecls => //. tea. }
       { intros hl'. eapply IHdecls in hf; tea. destruct hf.
         exists x.
@@ -1432,14 +1432,15 @@ Section PCUICErase.
   Lemma extends_eq Σ Σ0 Σ' : EGlobalEnv.extends Σ Σ' -> Σ = Σ0 -> EGlobalEnv.extends Σ0 Σ'.
   Proof. now intros ext ->. Qed.
 
-  Lemma erasure_pipeline_eta_app (Σ : global_env_ext_map) t u pre :
+  Lemma erasure_pipeline_extends_app (Σ : global_env_ext_map) t u pre :
     ∥ nisErasable Σ [] (tApp t u) ∥ ->
     PCUICEtaExpand.expanded Σ [] t ->
     exists pre' pre'',
-    transform verified_erasure_pipeline (Σ, tApp t u) pre =
-    ((transform verified_erasure_pipeline (Σ, tApp t u) pre).1,
-      EAst.tApp (transform verified_erasure_pipeline (Σ, t) pre').2
-        (transform verified_erasure_pipeline (Σ, u) pre'').2).
+    let trapp := transform verified_erasure_pipeline (Σ, PCUICAst.tApp t u) pre in
+    let trt := transform verified_erasure_pipeline (Σ, t) pre' in
+    let tru := transform verified_erasure_pipeline (Σ, u) pre'' in
+    (EGlobalEnv.extends trt.1 trapp.1 /\ EGlobalEnv.extends tru.1 trapp.1) /\
+    trapp = (trapp.1, EAst.tApp trt.2 tru.2).
   Proof.
     intros ner exp.
     unfold verified_erasure_pipeline.
@@ -1451,8 +1452,8 @@ Section PCUICErase.
     destruct (expand_lets_eta_app _ _ _ K pre ner' exp) as [pre' [pre'' eq]].
     exists pre', pre''.
     set (tr := transform _ _ _).
-    destruct tr eqn:heq. cbn -[transform]. f_equal.
-    replace t0 with tr.2. subst tr.
+    destruct tr eqn:heq. cbn -[transform].
+    replace t0 with tr.2. assert (heq_env:tr.1=g) by now rewrite heq. subst tr.
     2:{ now rewrite heq. }
     clear heq. revert H.
     destruct_compose_no_clear. rewrite eq. intros pre3 eq2 pre4.
@@ -1469,6 +1470,32 @@ Section PCUICErase.
       apply wtapp. apply wtp. }
     forward H0 by apply expt.
     destruct H0 as [pre'0 [pre''0 [eta [extapp [extapp' heq]]]]].
+    split.
+    { rewrite <- heq_env. cbn -[transform].
+      pose proof (EProgram.TransformExt.preserves_obs _ _ _ (t:=verified_lambdabox_pipeline_extends')).
+      unfold extends_eprogram in H.
+      split.
+      { repeat (destruct_compose; intros). eapply verified_lambdabox_pipeline_extends.
+        repeat (destruct_compose; intros). cbn - [transform].
+        generalize dependent pre3. rewrite <- eq.
+        cbn [transform pcuic_expand_lets_transform expand_lets_program].
+        unfold expand_lets_program. cbn [fst snd].
+        intros pre3. cbn in pre3. intros <-. intros.
+        assert (pre'0 = H1). apply proof_irrelevance. subst H1.
+        exact extapp. }
+      { repeat (destruct_compose; intros). eapply verified_lambdabox_pipeline_extends.
+        repeat (destruct_compose; intros). cbn - [transform].
+        generalize dependent pre3. rewrite <- eq.
+        cbn [transform pcuic_expand_lets_transform expand_lets_program].
+        unfold expand_lets_program. cbn [fst snd].
+        intros pre3. cbn in pre3. intros <-. intros.
+        assert (pre''0 = H1). apply proof_irrelevance. subst H1.
+        exact extapp'. } }
+    set (tr := transform _ _ _).
+    destruct tr eqn:heqtr. cbn -[transform]. f_equal.
+    replace t1 with tr.2. subst tr.
+    2:{ now rewrite heqtr; cbn. }
+    clear heqtr.
     move: pre4.
     rewrite heq. intros h.
     epose proof (transform_lambda_box_eta_app _ _ _ h).
@@ -1507,6 +1534,8 @@ Section PCUICErase.
     eapply transform_erase_pres_term. cbn [fst].
     { red. cbn. split => //. } reflexivity.
   Qed.
+
+  Transparent erase_transform.
 
 End PCUICErase.
 
@@ -1570,6 +1599,7 @@ Section pipeline_cond.
   Qed.
 
 End pipeline_cond.
+
 
 Section pipeline_theorem.
 
@@ -1733,7 +1763,7 @@ Section pipeline_theorem.
       revert H8. cbn. set (Σ.1). induction 1; econstructor; eauto.
       cbn. clear -H. induction H; econstructor; eauto. }
     destruct Hlookup as [decl'' [? ?]]. exists decl''; split ; eauto.
-    cbn in H10. inversion H10. 
+    cbn in H10. inversion H10.
     now destruct decl' , decl''.
   Qed.
 
@@ -1912,4 +1942,3 @@ Section pipeline_theorem.
   Qed.
 
 End pipeline_theorem.
-

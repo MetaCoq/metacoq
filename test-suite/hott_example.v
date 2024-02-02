@@ -1,4 +1,3 @@
-Set Warnings "-future-coercion-class-field".
 Set Universe Polymorphism.
 
 (* Basic notations *)
@@ -402,7 +401,7 @@ Coercion e_inv : IsEquiv >-> Funclass.
 (** A class that includes all the data of an adjoint equivalence. *)
 Class Equiv A B := BuildEquiv {
   e_fun : A -> B ;
-  e_isequiv :> IsEquiv e_fun
+  e_isequiv :: IsEquiv e_fun
 }.
 
 Coercion e_fun : Equiv >-> Funclass.

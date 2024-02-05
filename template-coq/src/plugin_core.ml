@@ -195,6 +195,7 @@ let quote_module ~(include_functor : bool) ~(include_submodule : bool) ~(include
           match field with
           | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
           | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
+          | SFBrules _ -> failwith "Rewrite rules are not supported by TemplateCoq"
           | SFBmodule mb -> if include_submodule then aux mb.mod_type mb.mod_mp else []
           | SFBmodtype mtb -> if include_submodtype then aux mtb.mod_type mtb.mod_mp else []
         in

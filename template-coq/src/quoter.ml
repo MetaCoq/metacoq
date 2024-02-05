@@ -30,6 +30,10 @@ let make_warning_if_not_exist w =
 let warn_primitive_turned_into_axiom =
   CWarnings.create_in (make_warning_if_not_exist "primitive-turned-into-axiom")
           Pp.(fun prim -> str "Quoting primitive " ++ str prim ++ str " into an axiom.")
+
+let warn_symbol_turned_into_axiom =
+  CWarnings.create_in (make_warning_if_not_exist "symbol-turned-into-axiom")
+          Pp.(fun prim -> str "Quoting symbol " ++ str prim ++ str " into an axiom.")
 let warn_ignoring_private_polymorphic_universes =
   CWarnings.create_in (make_warning_if_not_exist "private-polymorphic-universes-ignored")
           Pp.(fun () -> str "Ignoring private polymorphic universes.")
@@ -522,6 +526,9 @@ struct
               | Primitive t ->
                   warn_primitive_turned_into_axiom (CPrimitives.to_string t);
                   None
+              | Symbol _ ->
+                  warn_symbol_turned_into_axiom (Constant.debug_to_string c);
+                  None
               | Def cs -> Some cs
               | OpaqueDef lc ->
                 if bypass then
@@ -651,6 +658,7 @@ since  [absrt_info] is a private type *)
         then Some (quote_term env evm (fst (Global.force_proof Library.indirect_accessor cs)))
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
+      | Symbol _ -> failwith "Symbols are not supported by TemplateCoq"
     in
     (ty, body)
 

@@ -18,6 +18,12 @@ Construct(Coq.Init.Datatypes.bool,0,0)
 *)
 
 MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
+
+Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
+
+MetaCoq Typed Erase test.
+
+
 (* (* *)
 (* Environment is well-formed and exist nat (fun x : nat => eq nat x O) O (eq_refl nat O):sig nat (fun x : nat => eq nat x O) erases to: *)
 (* (fun f => f) (exist ∎ ∎ O ∎) *)

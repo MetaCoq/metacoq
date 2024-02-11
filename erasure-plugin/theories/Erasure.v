@@ -208,7 +208,9 @@ Program Definition verified_lambdabox_typed_pipeline {guard : abstract_guard_imp
 
 Local Obligation Tactic := intros; eauto.
 
-Program Definition verified_typed_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+Program Definition verified_typed_erasure_pipeline {guard : abstract_guard_impl}
+  (efl := EWellformed.all_env_flags)
+  (cf : dearging_config) :
   Transform.t _ _
    PCUICAst.term EAst.term _ _
    PCUICTransform.eval_pcuic_program
@@ -226,8 +228,8 @@ Program Definition verified_typed_erasure_pipeline {guard : abstract_guard_impl}
    (* Remove match on box early for dearging *)
    remove_match_on_box_typed_transform (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl) ▷
    (* Check if the preconditions for dearging are valid, otherwise dearging will be the identity *)
-   dearging_checks_transform (hastrel := eq_refl) (hastbox := eq_refl) ▷
-   dearging_transform ▷
+   dearging_checks_transform cf (hastrel := eq_refl) (hastbox := eq_refl) ▷
+   dearging_transform cf ▷
    rebuild_wf_env_transform true true ▷
    verified_lambdabox_typed_pipeline.
 
@@ -238,13 +240,15 @@ Program Definition verified_typed_erasure_pipeline {guard : abstract_guard_impl}
     cbn in H |- *; intuition eauto.
   Qed.
 
-Program Definition typed_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
+Program Definition typed_erasure_pipeline {guard : abstract_guard_impl}
+  (efl := EWellformed.all_env_flags)
+  cf :
   Transform.t _ _
    Ast.term EAst.term _ _
    TemplateProgram.eval_template_program
    (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false; with_constructor_as_block := true |}) :=
    pre_erasure_pipeline ▷
-   verified_typed_erasure_pipeline.
+   verified_typed_erasure_pipeline cf.
 
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
    parameters in inductive declarations. The constructor applications are also transformed to a first-order
@@ -355,9 +359,10 @@ Next Obligation.
   split; typeclasses eauto.
 Qed.
 
-Program Definition typed_erase_and_print_template_program (p : Ast.Env.program)
+(* Parameterized by a configuration for dearging, allowing to, e.g., override masks. *)
+Program Definition typed_erase_and_print_template_program_gen (p : Ast.Env.program) cf
   : string :=
-  let p' := run typed_erasure_pipeline p _ in
+  let p' := run (typed_erasure_pipeline cf) p _ in
   time "Pretty printing" EPretty.print_program p'.
 Next Obligation.
   split.
@@ -366,4 +371,13 @@ Next Obligation.
   pose proof @PCUICSN.normalization.
   split; typeclasses eauto.
 Qed.
+
+Definition default_dearging_config :=
+  {| overridden_masks := fun _ => None;
+     do_trim_const_masks := true;
+     do_trim_ctor_masks := false |}.
+
+Definition typed_erase_and_print_template_program (p : Ast.Env.program)
+  : string :=
+  typed_erase_and_print_template_program_gen p default_dearging_config.
 

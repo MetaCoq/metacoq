@@ -558,7 +558,7 @@ Qed.
 
 Section PCUICInv.
   Import PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWcbvEval PCUICWellScopedCumulativity PCUICEtaExpand.
-  From MetaCoq.PCUIC Require Import PCUICConversion PCUICSigmaCalculus PCUICExpandLetsCorrectness.
+  Import PCUIC.PCUICConversion PCUICSigmaCalculus PCUICExpandLetsCorrectness.
 
   Definition is_vdef (d : context_decl) := match d with {| decl_body := None |} => false | _ => true end.
 
@@ -1806,7 +1806,7 @@ Section PCUICErase.
 Transparent erase_transform.
 
 
-  Lemma erase_transform_extends_app_construct {X_type} {X} {normalization_in} ind i u args wt :
+  (* Lemma erase_transform_extends_app_construct {X_type} {X} {normalization_in} ind i u args wt :
   let t := (mkApps (tConstruct ind i u) args) in
   let trt := @erase_global_fast X_type X normalization_in [] t wt in
   Forall (fun arg => exists wtarg,
@@ -1816,10 +1816,10 @@ Transparent erase_transform.
     intros t.
     cbn. rewrite /erase_transform /=.
     set (deps := term_global_deps _).
-    subst t.
+    subst t. *)
 
 
-  Lemma erase_transform_extends_app_construct (Σ : global_env_ext_map) ind i u args pre :
+  (* Lemma erase_transform_extends_app_construct (Σ : global_env_ext_map) ind i u args pre :
   let t := (mkApps (tConstruct ind i u) args) in
   let trt := transform erase_transform (Σ, t) pre in
   Forall (fun arg => exists pre',
@@ -1936,7 +1936,7 @@ Transparent erase_transform.
     destruct_compose_no_clear. intros ? ?.
     eapply transform_erase_pres_term. cbn [fst].
     { red. cbn. split => //. } reflexivity.
-  Qed.
+  Qed.*)
 
   Transparent erase_transform.
 

@@ -731,13 +731,33 @@ Section PCUICInv.
 
 End PCUICInv.
 
-(*
 Section ErasureFunction.
-  Import EAst EAstUtils EWcbvEval.
+  Import PCUICAst PCUICAst.PCUICEnvironment PCUIC.PCUICConversion PCUICArities PCUICSpine PCUICOnFreeVars PCUICWellScopedCumulativity.
+  Import EAst EAstUtils EWcbvEval EArities.
 
-  Definition isFunction (t : EAst.term) := EAst.isLambda t || isFix t.
+  Definition isFunction (t : EAst.term) := EAst.isLambda t || isFixApp t || isCoFix (head t).
 
-  Lemma erase_function`{WcbvFlags} (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map) f v v' na A B
+  Lemma typing_spine_isArity {Σ : global_env_ext} {Γ T args T'} {wfΣ :  wf Σ} :
+    wf_local Σ Γ ->
+    typing_spine Σ Γ T args T' ->
+    isArity T ->
+    exists ar, ∥ typing_spine Σ Γ T args ar ∥ /\ isArity ar.
+  Proof.
+    intros wfΓ sp isa.
+    unshelve epose proof (PCUICClassification.isArity_typing_spine _ sp); eauto.
+    forward H.
+    { exists T. split; eauto. sq.
+      pose proof (typing_spine_isType_dom sp).
+      eapply PCUICContextConversion.closed_red_refl; fvs. }
+    destruct H as [ar [[redar] isa']]. exists ar; split => //. sq.
+    eapply typing_spine_weaken_concl; tea. now eapply red_ws_cumul_pb.
+    eapply typing_spine_isType_codom in sp. eapply isType_red; tea.
+    eapply redar.
+  Qed.
+
+  Lemma erase_function (wfl := default_wcbv_flags)
+    {guard_impl : abstract_guard_impl}
+    (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map) f v v' na A B
     (wf : ∥ Σ ;;; [] |- f : PCUICAst.tProd na A B ∥) pr :
     ∥ nisErasable Σ [] f ∥ ->
     PCUICWcbvEval.eval Σ f v ->
@@ -749,37 +769,98 @@ Section ErasureFunction.
     unfold transform, erase_transform.
     destruct pr as [pre [[expΣ expt] [norm norm']]]. destruct pre as [[wfΣ wft]].
     eapply nisErasable_eval in ne; tea.
-    eapply nisErasable_spec in ne.
+    eapply nisErasable_spec in ne; eauto.
     eapply PCUICClassification.subject_reduction_eval in hty as hty'; tea.
     unfold erase_program, erase_pcuic_program.
     set (Σ' := build_wf_env_from_env _ _).
-    set (env := make _ _). set (obl := (fun Σ (wfΣ : _) => _)) at 4. clearbody obl.
-    set (obl' := (fun Σ => _)) at 1. clearbody obl'.
     set (env' := PCUICWfEnv.abstract_make_wf_env_ext _ _ _).
-    cbn -[env']. set (deps := term_global_deps _). clearbody deps.
-    set (eg := erase_global_fast _ _ _ _ _).
+    set (obl := (fun Σ (wfΣ : _) => _)) at 5.
+    set (obl' := (fun Σ => _)) at 12.
+    cbn -[env'].
+    set (wtf := (fun Σ => _)) at 13. change obl' with wtf. clear obl'. clearbody wtf.
+    set (eqdecls := (fun Σ => _)) at 9. clearbody eqdecls.
+    set (deps := term_global_deps _).
+    set (nin := (fun (n : nat) => _)). clearbody nin.
+    epose proof (@erase_global_deps_fast_erase_global_deps deps optimized_abstract_env_impl Σ' (PCUICAst.PCUICEnvironment.declarations Σ) nin) as [nin2 eq].
+    rewrite /erase_global_fast. erewrite eq. clear eq nin.
+    set (eg := erase_global_deps _ _ _ _ _ _).
 
-    unshelve epose proof (erase_correct optimized_abstract_env_impl Σ' Σ.2 _ _ _ _ _ deps _ _ _ eq_refl _ eq_refl _ Σ eq_refl).
-    1-10:shelve. cbn. intros ? ->. exact evf.
-    destruct H0 as [v'' [ervv'' [ev]]].
+    unshelve epose proof (erase_correct optimized_abstract_env_impl Σ' Σ.2 _ f v _ _ deps _ _ _ eq_refl _ eq_refl _ Σ eq_refl); eauto.
+    { eapply Kernames.KernameSet.subset_spec. rewrite /deps -/env'. cbn [fst snd]. apply Kernames.KernameSetProp.subset_refl. }
+    { cbn => ? -> //. }
+    destruct H as [v'' [ervv'' [ev]]].
+    eset (eg' := erase_global_deps _ _ _ _ _ _) in ev.
+    replace eg with eg'. 2:{ rewrite /eg /eg'. eapply reflexivity. }
     intros ev'.
-    assert (v' = v''). { epose proof (eval_deterministic ev).  }
-    subst v''.
+    assert (v' = v''). { epose proof (eval_deterministic ev). symmetry. eapply H.
+      set(er := erase _ _ _ _ _) in ev'.
+      set(er' := erase _ _ _ _ _).
+      replace er' with er. exact ev'.
+      rewrite /er /er' /env'. apply reflexivity. }
+    subst v''. cbn in ev.
     eapply pcuic_eval_function in evf; tea.
     destruct (PCUICAstUtils.decompose_app v) eqn:da.
     eapply PCUICAstUtils.decompose_app_inv in da. cbn in da.
     move: evf. destruct t0 => //; cbn in da; subst v. 1:destruct l => //. 1-4:intros _.
     - clear -ne ervv''. depelim ervv''. cbn => //. elim ne. sq. exact X.
-    - clear -wfΣ hty' ne. elim ne. sq.
-      red. eexists; split; tea. left.
-    - clear -ne ervv''.
-    -
-    - exact wfΣ.
-    - constructor.
-    Unshelve.
+    - clear -wfΣ hty' ne. elim ne.
+      assert (exists mdecl idecl, PCUICAst.declared_inductive Σ ind mdecl idecl) as [mdecl [idecl decli]].
+      { eapply PCUICValidity.inversion_mkApps in hty' as [? [hty _]]. clear -hty.
+        depind hty; eauto. }
+      eapply PCUICInductives.invert_type_mkApps_ind in hty' as [sp cu]; eauto.
+      pose proof (typing_spine_isArity ltac:(constructor) sp).
+      forward H.
+      { apply (PCUICUnivSubstitutionTyp.isArity_subst_instance ui).
+        now eapply isArity_ind_type. }
+      destruct H as [ar [[spar] isa']].
+      sq.
+      eexists; cbn. split.
+      eapply PCUICSpine.type_mkApps. econstructor; eauto with pcuic. exact spar.
+      now left.
+    - clear -wfΣ hty' ne ervv''.
+      assert (exists mfix' l', v' = EAst.mkApps (EAst.tFix mfix' idx) l') as [mfix' [l' ->]].
+      { eapply ErasureProperties.erases_mkApps_inv in ervv'' as [[L1 [L2 [L2' [? [? [? []]]]]]]|[f'[L'[eq [erf erargs]]]]].
+        - subst l v'. elim ne. destruct H0. rewrite PCUICAstUtils.mkApps_app. eapply Is_type_app; [eauto|eauto| |eauto].
+          now rewrite -PCUICAstUtils.mkApps_app.
+        - depelim erf. do 2 eexists; trea. subst v'.
+          elim ne. eapply Is_type_app; eauto. }
+      now rewrite /isFunction /isFixApp !head_mkApps //= orb_true_r.
+    - clear -wfΣ hty' ne ervv''.
+      assert (exists mfix' l', v' = EAst.mkApps (EAst.tCoFix mfix' idx) l') as [mfix' [l' ->]].
+      { eapply ErasureProperties.erases_mkApps_inv in ervv'' as [[L1 [L2 [L2' [? [? [? []]]]]]]|[f'[L'[eq [erf erargs]]]]].
+        - subst l v'. elim ne. destruct H0. rewrite PCUICAstUtils.mkApps_app. eapply Is_type_app; [eauto|eauto| |eauto].
+          now rewrite -PCUICAstUtils.mkApps_app.
+        - depelim erf. do 2 eexists; trea. subst v'.
+          elim ne. eapply Is_type_app; eauto. }
+      now rewrite /isFunction /isFixApp !head_mkApps //= orb_true_r.
   Qed.
+
+  Lemma pcuic_function_value (wfl := default_wcbv_flags)
+    {guard_impl : abstract_guard_impl}
+    (cf:=config.extraction_checker_flags) (Σ:global_env_ext) f na A B
+    (wfΣ : wf_ext Σ) (axfree : axiom_free Σ) (wf : Σ ;;; [] |- f : PCUICAst.tProd na A B) : { v & PCUICWcbvEval.eval Σ f v }.
+  Proof.
+    eapply (PCUICNormalization.wcbv_normalization wfΣ axfree wf). Unshelve.
+    exact PCUICSN.extraction_normalizing.
+    now eapply PCUICSN.normalization.
+  Qed.
+
+  Lemma erase_function_to_function (wfl := default_wcbv_flags)
+    {guard_impl : abstract_guard_impl}
+    (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map) f v' na A B
+    (wf : ∥ Σ ;;; [] |- f : PCUICAst.tProd na A B ∥) pr :
+    axiom_free Σ ->
+    ∥ nisErasable Σ [] f ∥ ->
+    let (Σ', f') := transform erase_transform (Σ, f) pr in
+    eval Σ' f' v' -> isFunction v' = true.
+  Proof.
+    intros axfree nise.
+    destruct pr as [[]]. destruct wf.
+    epose proof (pcuic_function_value Σ f na A B w.1 axfree X) as [v hv].
+    eapply erase_function; tea. now sq.
+  Qed.
+
 End ErasureFunction.
-*)
 
 Module ETransformPresAppLam.
   Section Opt.
@@ -1120,7 +1201,14 @@ Proof.
     now move/andP: H0 => []. move/andP: H1 => [] etactx etaapp. apply/andP => //. split => //.
     now apply EEtaExpanded.isEtaExp_tApp_arg in etaapp.
     reflexivity.
-  - intros [Σ t] pr; cbn. destruct t => //.
+  - intros [Σ t] pr; cbn. clear pr. move: t.
+    apply: EInduction.MkAppsInd.rec => //= t u.
+    rewrite /isFunction /isFixApp head_mkApps EInlineProjections.optimize_mkApps !head_mkApps; rtoProp; intuition auto.
+    destruct u using rev_case => //. rewrite ?map_app !mkApps_app /= in H2 *.
+    rewrite -!orb_assoc in H1.
+    forward H1. apply/or3P. move/orP in H2; intuition auto. now constructor 2.
+    now constructor 3.
+    apply/orP. move/or3P: H1 => []; intuition auto. destruct t => //.
 Qed.
 
 #[global] Instance remove_match_on_box_pres {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as_block = false}
@@ -1172,7 +1260,15 @@ Proof.
     { destruct pr as [[] pr']; move/andP: pr' => [] etactx; split => //. split => //. cbn in H0. now move/andP: H0 => [] /andP [].
       apply/andP. split => //. now apply EEtaExpanded.isEtaExp_tApp_arg in b. }
     now rewrite /EOptimizePropDiscr.remove_match_on_box_program /=.
-  - intros [Σ t] pr; cbn. destruct t => //.
+  - intros [Σ t] pr; cbn.
+     clear -t. revert t.
+     apply: EInduction.MkAppsInd.rec => //= t u.
+     rewrite /isFunction /isFixApp head_mkApps EOptimizePropDiscr.remove_match_on_box_mkApps !head_mkApps; rtoProp; intuition auto.
+     destruct u using rev_case => //. rewrite ?map_app !mkApps_app /= in H2 *.
+     rewrite -!orb_assoc in H1.
+     forward H1. apply/or3P. move/orP in H2; intuition auto. now constructor 2.
+     now constructor 3.
+     apply/orP. move/or3P: H1 => []; intuition auto. destruct t => //.
 Qed.
 
 #[global] Instance remove_params_optimization_pres {fl : WcbvFlags} {wcon : with_constructor_as_block = false} :
@@ -1214,7 +1310,18 @@ Proof.
       apply/andP. split => //. now apply EEtaExpanded.isEtaExp_tApp_arg in b. }
     rewrite /ERemoveParams.strip_program /=. f_equal.
     rewrite (ERemoveParams.strip_mkApps_etaexp _ [u]) //.
-  - intros [Σ t] pr; cbn. destruct t => //.
+  - intros [Σ t] pr. cbn [fst snd transform remove_params_optimization].
+    clear -t. revert t.
+    apply: EInduction.MkAppsInd.rec => //= t u.
+    rewrite /isFunction /isFixApp !head_mkApps.
+    intros napp nnil.
+    intros IH IHargs isl.
+    rewrite ERemoveParams.strip_mkApps //.
+    destruct EEtaExpanded.construct_viewc => //=; cbn in isl;
+     rewrite OptimizeCorrectness.isLambda_mkApps //= in isl *.
+    rewrite OptimizeCorrectness.isLambda_mkApps. len.
+    rewrite !head_mkApps.
+    destruct t0 => //=.
 Qed.
 
 #[global] Instance constructors_as_blocks_transformation_pres {efl : EWellformed.EEnvFlags}
@@ -1258,7 +1365,20 @@ Proof.
       apply/andP. split => //. now apply EEtaExpanded.isEtaExp_tApp_arg in exp'. }
     simpl. rewrite /EConstructorsAsBlocks.transform_blocks_program /=. f_equal.
     rewrite (EConstructorsAsBlocks.transform_blocks_mkApps_eta_fn _ _ [u]) //.
-  - intros [Σ t] pr; cbn. destruct t => //.
+  - intros [Σ t] pr; cbn [fst snd transform constructors_as_blocks_transformation].
+    destruct pr as [_ h]. move/andP: h => [] _ /=.
+    clear -t.
+    destruct (decompose_app t) as [f l] eqn:da.
+    pose proof (decompose_app_notApp _ _ _ da).
+    eapply decompose_app_inv in da. subst t.
+    rewrite /isFunction /isFixApp !head_mkApps.
+    rewrite OptimizeCorrectness.isLambda_mkApps //=.
+    rewrite EEtaExpanded.isEtaExp_mkApps_napp //=.
+    destruct EEtaExpanded.construct_viewc => //.
+    move/andP => [etat etal].
+    rewrite !(EConstructorsAsBlocks.transform_blocks_mkApps_eta_fn _ _ l) // !head_mkApps /=.
+    destruct t0 => //=. rewrite !orb_false_r. move/Nat.eqb_eq.
+    destruct l => //=. all:now rewrite !orb_false_r !orb_true_r.
 Qed.
 
 #[global] Instance guarded_to_unguarded_fix_pres {efl : EWellformed.EEnvFlags}

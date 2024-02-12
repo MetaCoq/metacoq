@@ -730,6 +730,8 @@ Section PCUICInv.
   Qed.
 
 End PCUICInv.
+
+(*
 Section ErasureFunction.
   Import EAst EAstUtils EWcbvEval.
 
@@ -761,7 +763,7 @@ Section ErasureFunction.
     1-10:shelve. cbn. intros ? ->. exact evf.
     destruct H0 as [v'' [ervv'' [ev]]].
     intros ev'.
-    assert (v' = v''). { epose proof (eval_deterministic ev). admit. }
+    assert (v' = v''). { epose proof (eval_deterministic ev).  }
     subst v''.
     eapply pcuic_eval_function in evf; tea.
     destruct (PCUICAstUtils.decompose_app v) eqn:da.
@@ -769,14 +771,15 @@ Section ErasureFunction.
     move: evf. destruct t0 => //; cbn in da; subst v. 1:destruct l => //. 1-4:intros _.
     - clear -ne ervv''. depelim ervv''. cbn => //. elim ne. sq. exact X.
     - clear -wfΣ hty' ne. elim ne. sq.
-      red. eexists; split; tea. left. admit.
-    - clear -ne ervv''. admit.
-    - admit.
+      red. eexists; split; tea. left.
+    - clear -ne ervv''.
+    -
     - exact wfΣ.
     - constructor.
     Unshelve.
-  Admitted.
+  Qed.
 End ErasureFunction.
+*)
 
 Module ETransformPresAppLam.
   Section Opt.

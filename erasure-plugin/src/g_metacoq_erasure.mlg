@@ -9,6 +9,23 @@ open PeanoNat.Nat
 open Datatypes
 open Vernacextend
 open Tm_util
+open Erasure0
+
+open Stdarg
+open Pcoq.Prim
+open Ltac_plugin
+open Tacexpr
+open Tacinterp
+open Stdarg
+open Tacarg
+open Genredexpr
+
+type erasure_command_args =
+  | Unsafe
+  | Time
+  | Typed
+  | BypassQeds
+  | Fast
 
 let pr_char c = str (Char.escaped c)
 
@@ -25,49 +42,101 @@ let pr_char_list l =
   (* We allow utf8 encoding *)
   str (Caml_bytestring.caml_string_of_bytestring l)
 
-let check ~bypass ~fast ?(with_types=false) env evm c =
+type erasure_config =
+  { unsafe : bool;
+    time : bool;
+    typed : bool;
+    bypass_qeds : bool;
+    fast : bool;
+    }
+
+let default_config =
+  { unsafe = false;
+    time = false;
+    typed = false;
+    bypass_qeds = false;
+    fast = false }
+
+let make_erasure_config config =
+  let open Erasure0 in
+  { enable_cofix_to_fix = config.unsafe;
+    dearging_config = default_dearging_config }
+
+let time_opt config str fn arg =
+  if config.time then
+    time str fn arg
+  else fn arg
+
+let check config env evm c =
   debug (fun () -> str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass env evm) (EConstr.to_constr evm c) in
-  let erase = time (str"Erasure")
-      (if fast then Erasure0.erase_fast_and_print_template_program
-       else
-       if with_types then
-        Erasure0.typed_erase_and_print_template_program
-       else Erasure0.erase_and_print_template_program)
-      term
+  let time str f arg = time_opt config str f arg in
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec ~bypass:config.bypass_qeds env evm) (EConstr.to_constr evm c) in
+  let erasure_config = make_erasure_config config in
+  let erasure_fn =
+    if config.fast then
+      Erasure0.erase_fast_and_print_template_program
+    else if config.typed then
+      Erasure0.typed_erase_and_print_template_program_gen
+    else Erasure0.erase_and_print_template_program
   in
-  Feedback.msg_info (pr_char_list erase)
+  let erase =
+    time (str"Erasure") (erasure_fn erasure_config) term
+  in
+  Feedback.msg_notice (pr_char_list erase)
+
+let interp_erase args env evm c =
+  let open Erasure0 in
+  let config =
+    let rec aux config = function
+      | [] -> config
+      | arg :: args ->
+        match arg with
+        | Unsafe -> aux {config with unsafe = true} args
+        | Time -> aux {config with time = true} args
+        | Typed -> aux {config with typed = true} args
+        | BypassQeds -> aux {config with bypass_qeds = true} args
+        | Fast -> aux {config with fast = true} args
+    in aux default_config args
+  in
+  check config env evm c
+
+let help_msg : string =
+  "Usage:\n\
+To erase a Gallina definition named <gid> type:\n\
+   MetaCoq Erase <options> <gid>.\n\n\
+To show this help message type:\n\
+   MetaCoq Erase -help.\n\n\
+Valid options:\n\
+-typed       :  Run the typed erasure pipeline including a dearging phase. By default we run the pipeline without this phase.\n\
+-unsafe      :  Run also partially verified passes of the pipeline. This includes the cofix to fix translation.\n\
+-time        :  Time each compilation phase\n\
+-bypass-qeds :  Bypass the use of Qed and quote opaque proofs as defined terms. Beware, this can result in large memory\n\
+                consumption due to reification of large proof terms.\n\
+                By default, we use the (trusted) Template-Coq quoting optimization that quotes every opaque term as an axiom.\n\
+                All these axioms should live in Prop so that erasure is not affected by the absence of their bodies.\n\
+-fast        : Enables an alternative implementation of the parameter stripping phase that uses accumulators\n\
+               instead of a view (see Erasure.ERemoveParams).\n\
+\n\n\
+See https://metacoq.github.io for more detailed information."
+
 }
 
+ARGUMENT EXTEND erase_args
+| [ "-unsafe" ] -> { Unsafe }
+| [ "-time" ] -> { Time }
+| [ "-typed" ] -> { Typed }
+| [ "-bypass-qeds" ] -> { BypassQeds }
+| [ "-fast" ] -> { Fast }
+END
+
 VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
-| [ "MetaCoq" "Bypass" "Erase" constr(c) ] -> {
+| [ "MetaCoq" "Erase" erase_args_list(l) constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
-    check ~bypass:true ~fast:false env evm c
+    interp_erase l env evm c
   }
-| [ "MetaCoq" "Bypass" "Typed" "Erase" constr(c) ] -> {
-    let env = Global.env () in
-    let evm = Evd.from_env env in
-    let (c, _) = Constrintern.interp_constr env evm c in
-    check ~bypass:true ~fast:false ~with_types:true env evm c
-  }
-| [ "MetaCoq" "Typed" "Erase" constr(c) ] -> {
-    let env = Global.env () in
-    let evm = Evd.from_env env in
-    let (c, _) = Constrintern.interp_constr env evm c in
-    check ~bypass:false ~fast:false ~with_types:true env evm c
-  }
-| [ "MetaCoq" "Erase" constr(c) ] -> {
-    let env = Global.env () in
-    let evm = Evd.from_env env in
-    let (c, _) = Constrintern.interp_constr env evm c in
-    check ~bypass:false ~fast:false env evm c
-  }
-| [ "MetaCoq" "Fast" "Erase" constr(c) ] -> {
-    let env = Global.env () in
-    let evm = Evd.from_env env in
-    let (c, _) = Constrintern.interp_constr env evm c in
-    check ~bypass:false ~fast:true env evm c
+| [ "MetaCoq" "Erase" "-help" ] -> {
+    Feedback.msg_notice (str help_msg)
   }
 END

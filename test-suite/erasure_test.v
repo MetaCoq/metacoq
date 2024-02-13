@@ -3,6 +3,8 @@ From MetaCoq.Template Require Import Loader.
 Set MetaCoq Timing.
 Local Open Scope string_scope.
 
+MetaCoq Erase -help.
+
 MetaCoq Erase nat.
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: ⧆
@@ -21,7 +23,7 @@ MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
 
 Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
 
-MetaCoq Typed Erase test.
+MetaCoq Erase -typed test.
 
 
 (* (* *)
@@ -31,10 +33,10 @@ MetaCoq Typed Erase test.
 MetaCoq Erase (3 + 1).
 
 Universe i.
-MetaCoq Fast Erase ((fun (X : Set) (x : X) => x) nat).
+MetaCoq Erase ((fun (X : Set) (x : X) => x) nat).
 
 (** Check that optimization of singleton pattern-matchings work *)
-MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
+MetaCoq Erase  ((fun (X : Set) (x : X) (e : x = x) =>
                   match e in eq _ x' return bool with
                   | eq_refl => true
                   end)).

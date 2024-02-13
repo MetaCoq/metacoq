@@ -744,7 +744,7 @@ Qed.
 Program Definition remove_params_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags):
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "stripping constructor parameters";
+  {| name := "stripping constructor parameters (using a view)";
     transform p pre := ERemoveParams.strip_program p;
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
@@ -789,7 +789,7 @@ Qed.
 Program Definition remove_params_fast_optimization {fl : EWcbvEval.WcbvFlags} {wcon : EWcbvEval.with_constructor_as_block = false}
   (efl := all_env_flags) :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "stripping constructor parameters (faster?)";
+  {| name := "stripping constructor parameters (using accumulators)";
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
     post p := wf_eprogram (switch_no_params efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
@@ -927,7 +927,7 @@ Qed.
 From MetaCoq.Erasure Require Import EConstructorsAsBlocks.
 
 Program Definition constructors_as_blocks_transformation {efl : EEnvFlags}
-  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env target_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
   {| name := "transforming to constuctors as blocks";
     transform p _ := EConstructorsAsBlocks.transform_blocks_program p ;
@@ -953,8 +953,8 @@ Qed.
 
 #[global]
 Instance constructors_as_blocks_extends (efl : EEnvFlags)
-  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
-  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (hasbox := hasbox) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
+  {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (has_box := has_box) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
   (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
 Proof.
   red. intros p p' pr pr' ext. rewrite /transform /=.
@@ -963,8 +963,8 @@ Qed.
 
 #[global]
 Instance constructors_as_blocks_extends' (efl : EEnvFlags)
-  {has_app : has_tApp} {has_rel : has_tRel} {hasbox : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
-  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (hasbox := hasbox) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
+  {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = false} :
+  TransformExt.t (constructors_as_blocks_transformation (has_app := has_app) (has_rel := has_rel) (has_box := has_box) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
   extends_eprogram_env extends_eprogram.
 Proof.
   red. intros p p' pr pr' [ext eq]. rewrite /transform /=. split.
@@ -974,3 +974,97 @@ Proof.
   eapply transform_blocks_extends; eauto. apply pr. apply pr'.
 Qed.
 
+From MetaCoq.Erasure Require ECoInductiveToInductive.
+
+Program Definition coinductive_to_inductive_transformation (efl : EEnvFlags)
+  {has_app : has_tApp} {has_box : has_tBox} {has_rel : has_tRel} {has_pars : has_cstr_params = false}
+  {has_cstrblocks : cstr_as_blocks = true} :
+  Transform.t _ _ EAst.term EAst.term _ _
+    (eval_eprogram_env block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
+  {| name := "transforming co-inductive to inductive types";
+    transform p _ := ECoInductiveToInductive.trans_program p ;
+    pre p := wf_eprogram_env efl p ;
+    post p := wf_eprogram efl p ;
+    obseq p hp p' v v' := v' = ECoInductiveToInductive.trans p.1 v |}.
+
+Next Obligation.
+  move=> efl hasapp hasbox hasrel haspars hascstrs [Σ t] [wftp wft].
+  cbn in *. eapply ECoInductiveToInductive.trans_program_wf; eauto. split => //.
+Qed.
+Next Obligation.
+  red. move=> efl hasapp hasbox hasrel haspars hascstrs [Σ t] /= v [wfe1 wfe2] [ev].
+  eexists. split; [ | eauto].
+  econstructor.
+  cbn -[transform_blocks].
+  eapply ECoInductiveToInductive.trans_correct; cbn; eauto.
+  eapply wellformed_closed_env, wfe1.
+  Unshelve. all:eauto.
+Qed.
+
+#[global]
+Instance coinductive_to_inductive_transformation_ext (efl : EEnvFlags)
+  {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+  TransformExt.t (coinductive_to_inductive_transformation efl (has_app := has_app) (has_rel := has_rel)
+    (has_box := has_box) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
+    (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /=.
+  eapply ECoInductiveToInductive.trust_cofix.
+Qed.
+
+#[global]
+Instance coinductive_to_inductive_transformation_ext' (efl : EEnvFlags)
+  {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
+  TransformExt.t (coinductive_to_inductive_transformation efl (has_app := has_app) (has_rel := has_rel)
+    (has_box := has_box) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
+    extends_eprogram_env extends_eprogram.
+Proof.
+  red. intros p p' pr pr' ext. rewrite /transform /=.
+  eapply ECoInductiveToInductive.trust_cofix.
+Qed.
+
+Program Definition optional_transform {env env' term term' value value' eval eval'} (activate : bool)
+  (tr : Transform.t env env' term term' value value' eval eval') :
+  if activate then Transform.t env env' term term' value value' eval eval'
+  else Transform.t env env term term value value eval eval :=
+  if activate return if activate then Transform.t env env' term term' value value' eval eval'
+  else Transform.t env env term term value value eval eval
+  then tr
+  else
+  {| name := ("skipped " ^ tr.(name));
+     transform p pr := p;
+     pre := tr.(pre) ;
+     post := tr.(pre) ;
+     obseq p hp p' v v' := v' = v |}.
+Next Obligation.
+  intros. cbn. exact p.
+Defined.
+Next Obligation.
+ cbn. intros. red. intros. exists v. split => //.
+Defined.
+
+Program Definition optional_self_transform {env term eval} (activate : bool)
+  (tr : Transform.self_transform env term eval eval) :
+  Transform.self_transform env term eval eval :=
+  if activate return Transform.self_transform env term eval eval
+  then tr
+  else
+  {| name := ("skipped " ^ tr.(name));
+     transform p pr := p;
+     pre := tr.(pre) ;
+     post := tr.(pre) ;
+     obseq p hp p' v v' := v' = v |}.
+Next Obligation.
+  intros. cbn. exact p.
+Defined.
+Next Obligation.
+ cbn. intros. red. intros. exists v. split => //.
+Defined.
+
+#[global]
+Instance optional_self_transformation_ext {env term eval} activate tr extends :
+  TransformExt.t tr extends extends ->
+  TransformExt.t (@optional_self_transform env term eval activate tr) extends extends.
+Proof.
+  red; intros. destruct activate; cbn in * => //. now apply H.
+Qed.

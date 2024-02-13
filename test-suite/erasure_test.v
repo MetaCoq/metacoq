@@ -25,11 +25,13 @@ Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
 
 MetaCoq Erase -typed test.
 
+(** Cofix *)
+From Coq Require Import StreamMemo.
 
-(* (* *)
-(* Environment is well-formed and exist nat (fun x : nat => eq nat x O) O (eq_refl nat O):sig nat (fun x : nat => eq nat x O) erases to: *)
-(* (fun f => f) (exist ∎ ∎ O ∎) *)
-(* *) *)
+MetaCoq Quote Recursively Definition memo := memo_make.
+
+MetaCoq Erase -typed -unsafe memo_make.
+
 MetaCoq Erase (3 + 1).
 
 Universe i.

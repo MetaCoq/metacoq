@@ -32,6 +32,8 @@ Local Obligation Tactic := program_simpl.
 
 Record erasure_configuration := {
   enable_cofix_to_fix : bool;
+  enable_typed_erasure : bool;
+  enable_fast_remove_params : bool;
   dearging_config : dearging_config
   }.
 
@@ -42,11 +44,17 @@ Definition default_dearging_config :=
 
 (* This runs the cofix -> fix translation which is not entirely verified yet *)
 Definition default_erasure_config :=
-  {| enable_cofix_to_fix := true; dearging_config := default_dearging_config |}.
+  {| enable_cofix_to_fix := true;
+     dearging_config := default_dearging_config;
+     enable_typed_erasure := true;
+     enable_fast_remove_params := true |}.
 
-(* This runs only the verified phases *)
+(* This runs only the verified phases without the typed erasure and "fast" remove params *)
 Definition safe_erasure_config :=
-  {| enable_cofix_to_fix := false; dearging_config := default_dearging_config |}.
+  {| enable_cofix_to_fix := false;
+     enable_typed_erasure := false;
+     enable_fast_remove_params := false;
+     dearging_config := default_dearging_config |}.
 
 Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
@@ -208,15 +216,6 @@ Program Definition erasure_pipeline {guard : abstract_guard_impl} (efl := EWellf
   (EProgram.eval_eprogram final_wcbv_flags) :=
   pre_erasure_pipeline ▷
   verified_erasure_pipeline.
-
-(* This also optionally runs the cofix to fix translation *)
-Program Definition run_erase_program {guard : abstract_guard_impl} econf :=
-  run (erasure_pipeline ▷ (optional_cofix_to_fix_transform econf)).
-Next Obligation.
-Proof.
-  unfold optional_cofix_to_fix_transform.
-  destruct enable_cofix_to_fix => //.
-Qed.
 
 Program Definition verified_lambdabox_typed_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) econf :
   Transform.t _ _ EAst.term EAst.term _ _
@@ -397,6 +396,18 @@ Global Existing Instance fake_normalization.
 Axiom assume_that_we_only_erase_on_welltyped_programs : forall {cf : checker_flags},
   forall (p : Ast.Env.program), squash (TemplateProgram.wt_template_program p).
 
+(* This also optionally runs the cofix to fix translation *)
+Program Definition run_erase_program {guard : abstract_guard_impl} econf :=
+  if econf.(enable_typed_erasure) then run (typed_erasure_pipeline econf)
+  else if econf.(enable_fast_remove_params) then
+    run (erasure_pipeline_fast econf)
+  else run (erasure_pipeline ▷ (optional_cofix_to_fix_transform econf)).
+Next Obligation.
+Proof.
+  unfold optional_cofix_to_fix_transform.
+  destruct enable_cofix_to_fix => //.
+Qed.
+
 Program Definition erase_and_print_template_program econf (p : Ast.Env.program) : string :=
   let p' := run_erase_program econf p _ in
   time "Pretty printing" EPretty.print_program p'.
@@ -408,31 +419,22 @@ Next Obligation.
   split; typeclasses eauto.
 Qed.
 
-Program Definition erase_fast_and_print_template_program econf (p : Ast.Env.program) : string :=
-  let p' := run_erase_program_fast econf p _ in
-  time "pretty-printing" EPretty.print_program p'.
-Next Obligation.
-  split.
-  now eapply assume_that_we_only_erase_on_welltyped_programs.
-  cbv [PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn].
-  pose proof @PCUICSN.normalization.
-  split; typeclasses eauto.
-Qed.
+Definition erasure_fast_config :=
+  {| enable_cofix_to_fix := false;
+     dearging_config := default_dearging_config;
+     enable_typed_erasure := false;
+     enable_fast_remove_params := true |}.
+
+Program Definition erase_fast_and_print_template_program (p : Ast.Env.program) : string :=
+  erase_and_print_template_program erasure_fast_config p.
+
+Definition typed_erasure_config :=
+  {| enable_cofix_to_fix := false;
+      dearging_config := default_dearging_config;
+      enable_typed_erasure := true;
+      enable_fast_remove_params := true |}.
 
 (* Parameterized by a configuration for dearging, allowing to, e.g., override masks. *)
-Program Definition typed_erase_and_print_template_program_gen econf (p : Ast.Env.program)
+Program Definition typed_erase_and_print_template_program (p : Ast.Env.program)
   : string :=
-  let p' := run (typed_erasure_pipeline econf) p _ in
-  time "Pretty printing" EPretty.print_program p'.
-Next Obligation.
-  split.
-  now eapply assume_that_we_only_erase_on_welltyped_programs.
-  cbv [PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn].
-  pose proof @PCUICSN.normalization.
-  split; typeclasses eauto.
-Qed.
-
-Definition typed_erase_and_print_template_program (p : Ast.Env.program)
-  : string :=
-  typed_erase_and_print_template_program_gen default_erasure_config p.
-
+  erase_and_print_template_program typed_erasure_config p.

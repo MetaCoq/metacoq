@@ -93,8 +93,9 @@ Section trans.
       let mfix' := List.map (map_def trans) mfix in
       tFix mfix' idx
     | tCoFix mfix idx =>
-      let mfix' := List.map trans_cofix mfix in
-      match nth_error mfix idx with
+      let mfix' := List.map (map_def trans) mfix in
+      let mfix' := List.map trans_cofix mfix' in
+      match nth_error mfix' idx with
       | Some d => Thunk.make_n d.(rarg) (tFix mfix' idx)
       | None => tCoFix mfix' idx
       end
@@ -449,6 +450,7 @@ Proof.
     unfold lookup_inductive in hl.
     destruct lookup_minductive => //.
     rewrite (IHt _ H2 _ H0 H1) //.
+  - apply trust_cofix.
 Qed.
 
 Lemma wellformed_trans_decl_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
@@ -629,7 +631,8 @@ Proof.
     move=> _ /andP [] hascof /andP[] /Nat.ltb_lt /nth_error_Some hnth hm.
     destruct nth_error => //.
     pose proof (isLambda_make_n (rarg d) (tFix (map trans_cofix mfix) idx)).
-    destruct Thunk.make_n => //. do 3 constructor.
+    destruct Thunk.make_n => //. apply trust_cofix.
+    (* do 3 constructor. *)
   - intros p pv IH wf. cbn. constructor. constructor 2.
     cbn in wf. move/andP: wf => [hasp tp].
     primProp. depelim tp; depelim pv; depelim IH; constructor; cbn in *; rtoProp; intuition auto; solve_all.

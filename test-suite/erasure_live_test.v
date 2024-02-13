@@ -24,7 +24,7 @@ Definition testty (p : Ast.Env.program) : string :=
   typed_erase_and_print_template_program p.
 
 Definition test_fast (p : Ast.Env.program) : string :=
-  erase_fast_and_print_template_program default_erasure_config p.
+  erase_fast_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.
 
@@ -56,7 +56,7 @@ Definition erase {A} (a : A) : TemplateMonad unit :=
 
 Definition erase_fast {A} (a : A) : TemplateMonad unit :=
   aq <- tmQuoteRec a ;;
-  s <- tmEval lazy (erase_fast_and_print_template_program default_erasure_config aq) ;;
+  s <- tmEval lazy (erase_fast_and_print_template_program aq) ;;
   tmMsg s.
 
 MetaCoq Run (erase 0).
@@ -79,6 +79,13 @@ Set MetaCoq Timing.
 
 Time MetaCoq Run (tmEval hnf vplus0123 >>= erase).
 Time MetaCoq Run (tmEval hnf vplus0123 >>= erase_fast).
+
+(** Cofix *)
+From Coq Require Import StreamMemo.
+
+MetaCoq Quote Recursively Definition memo := memo_make.
+
+Definition testmemo := Eval lazy in test memo.
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=

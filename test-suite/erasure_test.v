@@ -19,7 +19,7 @@ Environment is well-formed and Construct(Coq.Init.Datatypes.bool,0,0,[]) erases 
 Construct(Coq.Init.Datatypes.bool,0,0)
 *)
 
-MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
+MetaCoq Erase (exist (fun x => x = 0) 0 (eq_refl)).
 
 Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
 

@@ -110,13 +110,13 @@ Valid options:\n\
 -typed       :  Run the typed erasure pipeline including a dearging phase. By default we run the pipeline without this phase.\n\
 -unsafe      :  Run also partially verified passes of the pipeline. This includes the cofix to fix translation.\n\
 -time        :  Time each compilation phase\n\
--bypass-qeds :  Bypass the use of Qed and quote opaque proofs as defined terms. Beware, this can result in large memory\n\
+-bypass-qeds :  Bypass the use of Qed and quote opaque proofs. Beware, this can result in large memory\n\
                 consumption due to reification of large proof terms.\n\
                 By default, we use the (trusted) Template-Coq quoting optimization that quotes every opaque term as an axiom.\n\
                 All these axioms should live in Prop so that erasure is not affected by the absence of their bodies.\n\
 -fast        : Enables an alternative implementation of the parameter stripping phase that uses accumulators\n\
                instead of a view (see Erasure.ERemoveParams).\n\
-\n\n\
+\n\
 See https://metacoq.github.io for more detailed information."
 
 }

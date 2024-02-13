@@ -367,7 +367,7 @@ CoFixpoint ones : Stream nat := Cons 1 ones.
 MetaCoq Erase ones.
 MetaCoq Erase -unsafe ones.
 
-MetaCoq Erase -typed -unsafe (map S ones).
+MetaCoq Erase -typed -time -unsafe (map S ones).
 
 
 (* 0.2s purely in the bytecode VM *)

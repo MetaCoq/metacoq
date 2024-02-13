@@ -205,7 +205,7 @@ Program Definition erase_transform {guard : abstract_guard_impl} : Transform.t _
      /\ NormalizationIn_erase_pcuic_program_2 p.1 ;
    transform p hp := let nhs := proj2 (proj2 hp) in
                      @erase_program guard p (proj1 nhs) (proj2 nhs) (proj1 hp) ;
-    post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
+   post p := [/\ wf_eprogram_env all_env_flags p & EEtaExpandedFix.expanded_eprogram_env p];
    obseq p hp p' v v' := let Σ := p.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
 
 Next Obligation.
@@ -474,17 +474,22 @@ Next Obligation.
   Unshelve. eauto.
 Qed.
 
-Definition check_dearging_precond Σ t :=
+Record dearging_config :=
+  { overridden_masks : kername -> option bitmask;
+    do_trim_const_masks : bool;
+    do_trim_ctor_masks : bool }.
+
+Definition check_dearging_precond (cf : dearging_config) Σ t :=
   if closed_env (trans_env Σ) then
-    match ExtractionCorrectness.compute_masks (fun _ : kername => None) true true Σ with
+    match ExtractionCorrectness.compute_masks cf.(overridden_masks) cf.(do_trim_const_masks) cf.(do_trim_ctor_masks) Σ with
     | ResultMonad.Ok masks =>
       if valid_cases (ind_masks masks) t && is_expanded (ind_masks masks) (const_masks masks) t then Some masks else None
     | _ => None
     end
   else None.
 
-Lemma check_dearging_precond_spec env t d :
-  check_dearging_precond env t = Some d ->
+Lemma check_dearging_precond_spec cf env t d :
+  check_dearging_precond cf env t = Some d ->
   closed_env (trans_env env) /\
   valid_masks_env (ind_masks d) (const_masks d) env /\
   is_expanded_env (ind_masks d) (const_masks d) env /\
@@ -502,22 +507,22 @@ Proof.
   intros [= <-]; cbn; intuition.
 Qed.
 
-Definition check_dearging_trans p :=
-  ((check_dearging_precond p.1 p.2, p.1), p.2).
+Definition check_dearging_trans cf p :=
+  ((check_dearging_precond cf p.1 p.2, p.1), p.2).
 
 Definition eval_typed_eprogram_masks fl :=
   (fun (p : (option dearg_set * global_env) * term) v => ∥ @EWcbvEval.eval fl (ExAst.trans_env p.1.2) p.2 v ∥).
 
-Definition post_dearging_checks efl (p : (option dearg_set × global_env) × term) :=
-  (p.1.1 = check_dearging_precond p.1.2 p.2) /\
+Definition post_dearging_checks efl cf (p : (option dearg_set × global_env) × term) :=
+  (p.1.1 = check_dearging_precond cf p.1.2 p.2) /\
   wf_eprogram efl (trans_env p.1.2, p.2) /\ EEtaExpandedFix.expanded_eprogram (trans_env p.1.2, p.2).
 
-Program Definition dearging_checks_transform {efl : EEnvFlags} {hastrel : has_tRel} {hastbox : has_tBox} :
+Program Definition dearging_checks_transform {efl : EEnvFlags} cf {hastrel : has_tRel} {hastbox : has_tBox} :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_typed_eprogram opt_wcbv_flags) (eval_typed_eprogram_masks opt_wcbv_flags) :=
   {| name := "dearging";
-    transform p _ := check_dearging_trans p ;
+    transform p _ := check_dearging_trans cf p ;
     pre p := pre_remove_match_on_box_typed efl p;
-    post := post_dearging_checks efl;
+    post := post_dearging_checks efl cf;
     obseq p hp p' v v' := v' = v |}.
 Next Obligation.
   cbn. intros. split => //.
@@ -535,11 +540,11 @@ Section Dearging.
     | None => (trans_env p.1.2, p.2)
     end.
 
-  Program Definition dearging_transform (efl := all_env_flags) :
+  Program Definition dearging_transform (efl := all_env_flags) cf :
     Transform.t _ _  EAst.term EAst.term _ _ (eval_typed_eprogram_masks opt_wcbv_flags) (eval_eprogram opt_wcbv_flags) :=
     {| name := "dearging";
       transform p _ := dearg p ;
-      pre p := post_dearging_checks efl p;
+      pre p := post_dearging_checks efl cf p;
       post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p ;
       obseq p hp p' v v' := v' = (dearg (p.1, v)).2 |}.
 
@@ -572,7 +577,8 @@ Section Dearging.
     intros [ev].
     unfold dearg. rewrite he.
     destruct (check_dearging_precond) as [masks|] eqn:cpre.
-    * eapply (extract_correct_gen' _ _ _ masks) in ev as ev'. destruct ev' as [ev'].
+    * eapply (extract_correct_gen' _ _ _ masks cf.(overridden_masks) cf.(do_trim_const_masks) cf.(do_trim_ctor_masks)) in ev as ev'.
+      destruct ev' as [ev'].
       eexists. split. red. sq. cbn. exact ev'. auto.
       - destruct wfe. now eapply wellformed_closed_env.
       - destruct wfe. now eapply wellformed_closed.

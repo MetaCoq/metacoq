@@ -351,6 +351,15 @@ From MetaCoq.ErasurePlugin Require Import Loader.
 
 MetaCoq Erase provedCopyx.
 MetaCoq Typed Erase provedCopyx.
+
+(* From MetaCoq.Erasure.Typed Require Import CertifyingEta.
+MetaCoq Run (eta_expand_def
+(fun _ => None)
+true true
+provedCopy). *)
+
+Print P_provedCopyx.
+
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
 (* Goal
@@ -422,3 +431,127 @@ Proof.
   show_match.
 
 *)
+
+
+From MetaCoq.Common Require Import Transform.
+From MetaCoq.Erasure.Typed Require Import ExtractionCorrectness.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICProgram.
+From MetaCoq.ErasurePlugin Require Import Erasure.
+Import Transform.
+
+Program Definition verified_typed_erasure_pipeline
+  (cf : checker_flags := extraction_checker_flags)
+  {guard : PCUICWfEnvImpl.abstract_guard_impl}
+  (efl := EWellformed.all_env_flags) :
+  Transform.t _ _
+   PCUICAst.term EAst.term _ _
+   PCUICTransform.eval_pcuic_program _ :=
+   (* a bunch of nonsense for normalization preconditions *)
+   let K ty (T : ty -> global_env_ext) p
+     := let p := T p in
+        (PCUICTyping.wf_ext p -> @PCUICSN.NormalizationIn _ _ p) /\
+          (PCUICTyping.wf_ext p -> @PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn _ _ p) in
+   let T1 (p:PCUICProgram.global_env_ext_map) := p in
+   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
+   PCUICTransform.pcuic_expand_lets_transform (K _ T1) ▷
+   (* Erasure of proofs terms in Prop and types *)
+   ETransform.typed_erase_transform ▷
+   (* Remove match on box early for dearging *)
+   ETransform.remove_match_on_box_typed_transform (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
+
+   (* ▷
+   (* Check if the preconditions for dearging are valid, otherwise dearging will be the identity *)
+   ETransform.dearging_checks_transform (hastrel := eq_refl) (hastbox := eq_refl). *)
+
+#[local] Existing Instance extraction_checker_flags.
+Next Obligation. exact extraction_checker_flags. Defined.
+Next Obligation. exact extraction_normalizing. Defined.
+
+Next Obligation. exact extraction_checker_flags. Defined.
+Next Obligation. exact extraction_normalizing. Defined.
+Next Obligation. now split. Qed.
+
+Program Definition pipeline_upto (cf : checker_flags := extraction_checker_flags)
+  (guard := fake_guard_impl)
+  (efl := EWellformed.all_env_flags) :=
+  Transform.compose pre_erasure_pipeline
+  verified_typed_erasure_pipeline _.
+
+Program Definition exintro_typed_er p := Transform.Transform.run pipeline_upto p _.
+Next Obligation. cbn. todo "assum wt". Qed.
+
+MetaCoq Quote Recursively Definition exintro_proj :=
+  (proj1_sig (@exist _ (fun x => x = 0) 0 (@eq_refl _ 0))).
+
+Eval lazy in testty cbv_provedCopyx.
+
+Definition exintro_before_checks := Eval compute in exintro_typed_er exintro_proj.
+
+MetaCoq Quote Recursively Definition quoted_provedCopyx := (provedCopy x).
+
+Definition provedCop_before_checks' := Eval lazy in exintro_typed_er cbv_provedCopyx.
+
+Definition provedCop_before_checks := Eval lazy in exintro_typed_er quoted_provedCopyx.
+
+Import ETransform Optimize.
+
+Definition masks :=
+Eval compute in Optimize.analyze_env (fun _ : kername => None) exintro_before_checks.1.
+
+Eval compute in (masks).(Optimize.ind_masks).
+
+Eval compute in Optimize.trim_ind_masks (masks).(Optimize.ind_masks).
+Eval compute in Optimize.valid_masks_env ( Optimize.trim_ind_masks masks.(ind_masks)) masks.(const_masks) (exintro_before_checks.1).
+
+
+Eval compute in compute_masks (fun _ : kername => None) false false exintro_before_checks.1.
+
+Definition masksprovd := analyze_env (fun _ : kername => None) provedCop_before_checks.1.
+
+Lemma forallb_cons {A} (p : A -> bool) hd tl : p hd -> forallb p tl -> forallb p (cons hd tl) .
+Proof. Admitted.
+Lemma and_andb (b b' : bool) : b -> b' -> b && b'.
+Admitted.
+Goal is_expanded_env (Optimize.trim_ind_masks masksprovd.(ind_masks)) (Optimize.trim_const_masks masksprovd.(const_masks)) provedCop_before_checks.1 = true.
+Proof. now lazy. Qed.
+
+Goal valid_masks_env masksprovd.(ind_masks) (Optimize.trim_const_masks masksprovd.(const_masks)) provedCop_before_checks.1 = true.
+Proof.
+  unfold valid_masks_env. lazy.
+  eapply forallb_cons. now lazy.
+  eapply forallb_cons. now lazy.
+  eapply forallb_cons.
+  set (trm := Optimize.trim_ind_masks (ind_masks masksprovd)). lazy in trm.
+  unfold valid_masks_decl.
+  lazy -[check_oib_masks].
+  unfold check_oib_masks.
+  cbn -[]
+
+  unfold is_expanded at 1.
+  cbn [is_expanded_aux].
+  cbn [andb].
+  eapply and_andb.
+  2:{ lazy. }
+
+  unfold get_ctor_mask. cbn.
+
+   lazy.
+  eapply forallb_cons. now lazy.
+  eapply forallb_cons. now lazy.
+  eapply forallb_cons. now lazy.
+
+  unfold provedCop_before_checks.
+
+  cbn.
+  lazy.
+
+
+Eval compute in compute_masks (fun _ : kername => None) false false provedCop_before_checks.1.
+
+Eval compute in check_dearging_precond default_dearging_config provedCop_before_checks.1 provedCop_before_checks.2.
+
+Eval compute in check_dearging_precond default_dearging_config provedCop_before_checks.1 provedCop_before_checks.2.
+
+MetaCoq Typed Erase provedCopyx.
+Eval lazy in testty cbv_provedCopyx.
+

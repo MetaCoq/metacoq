@@ -225,7 +225,9 @@ Module PrintTermTree.
   Notation print_env := print_global_context.
 
   Definition print_program (p : program) : t :=
-    pr p.1 p.2 ^ nl ^ "in" ^ print_env p.1.
+    "Environment: " ^ nl ^
+    print_env p.1 ^ nl ^
+    "Program: " ^ pr p.1 p.2.
 
 End PrintTermTree.
 

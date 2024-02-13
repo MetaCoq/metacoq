@@ -351,6 +351,15 @@ From MetaCoq.ErasurePlugin Require Import Loader.
 
 MetaCoq Erase provedCopyx.
 MetaCoq Typed Erase provedCopyx.
+
+(* From MetaCoq.Erasure.Typed Require Import CertifyingEta.
+MetaCoq Run (eta_expand_def
+(fun _ => None)
+true true
+provedCopy). *)
+
+Print P_provedCopyx.
+
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
 (* Goal
@@ -422,3 +431,69 @@ Proof.
   show_match.
 
 *)
+
+
+From MetaCoq.Common Require Import Transform.
+From MetaCoq.Erasure.Typed Require Import ExtractionCorrectness.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICProgram.
+From MetaCoq.ErasurePlugin Require Import Erasure.
+Import Transform.
+
+Program Definition verified_typed_erasure_pipeline
+  (cf : checker_flags := extraction_checker_flags)
+  {guard : PCUICWfEnvImpl.abstract_guard_impl}
+  (efl := EWellformed.all_env_flags) :
+  Transform.t _ _
+   PCUICAst.term EAst.term _ _
+   PCUICTransform.eval_pcuic_program _ :=
+   (* a bunch of nonsense for normalization preconditions *)
+   let K ty (T : ty -> global_env_ext) p
+     := let p := T p in
+        (PCUICTyping.wf_ext p -> @PCUICSN.NormalizationIn _ _ p) /\
+          (PCUICTyping.wf_ext p -> @PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn _ _ p) in
+   let T1 (p:PCUICProgram.global_env_ext_map) := p in
+   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
+   PCUICTransform.pcuic_expand_lets_transform (K _ T1) ▷
+   (* Erasure of proofs terms in Prop and types *)
+   ETransform.typed_erase_transform ▷
+   (* Remove match on box early for dearging *)
+   ETransform.remove_match_on_box_typed_transform (wcon := eq_refl) (hastrel := eq_refl) (hastbox := eq_refl).
+
+   (* ▷
+   (* Check if the preconditions for dearging are valid, otherwise dearging will be the identity *)
+   ETransform.dearging_checks_transform (hastrel := eq_refl) (hastbox := eq_refl). *)
+
+#[local] Existing Instance extraction_checker_flags.
+Next Obligation. exact extraction_checker_flags. Defined.
+Next Obligation. exact extraction_normalizing. Defined.
+
+Next Obligation. exact extraction_checker_flags. Defined.
+Next Obligation. exact extraction_normalizing. Defined.
+Next Obligation. now split. Qed.
+
+Program Definition pipeline_upto (cf : checker_flags := extraction_checker_flags)
+  (guard := fake_guard_impl)
+  (efl := EWellformed.all_env_flags) :=
+  Transform.compose pre_erasure_pipeline
+  verified_typed_erasure_pipeline _.
+
+Program Definition exintro_typed_er p := Transform.Transform.run pipeline_upto p _.
+Next Obligation. cbn. todo "assum wt". Qed.
+
+MetaCoq Quote Recursively Definition exintro_proj :=
+  (proj1_sig (@exist _ (fun x => x = 0) 0 (@eq_refl _ 0))).
+
+Eval lazy in testty cbv_provedCopyx.
+
+Definition exintro_before_checks := Eval compute in exintro_typed_er exintro_proj.
+
+MetaCoq Quote Recursively Definition quoted_provedCopyx := (provedCopy x).
+
+Definition provedCop_before_checks' := Eval lazy in exintro_typed_er cbv_provedCopyx.
+
+Definition provedCop_before_checks := Eval lazy in exintro_typed_er quoted_provedCopyx.
+
+Import ETransform Optimize.
+
+MetaCoq Typed Erase provedCopyx.
+Eval lazy in testty cbv_provedCopyx.

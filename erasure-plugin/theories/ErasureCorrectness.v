@@ -837,7 +837,7 @@ Section ErasureFunction.
 
   Lemma pcuic_function_value (wfl := default_wcbv_flags)
     {guard_impl : abstract_guard_impl}
-    (cf:=config.extraction_checker_flags) (Σ:global_env_ext) f na A B
+    (cf:=config.extraction_checker_flags) {Σ : global_env_ext} {f na A B}
     (wfΣ : wf_ext Σ) (axfree : axiom_free Σ) (wf : Σ ;;; [] |- f : PCUICAst.tProd na A B) : { v & PCUICWcbvEval.eval Σ f v }.
   Proof.
     eapply (PCUICNormalization.wcbv_normalization wfΣ axfree wf). Unshelve.
@@ -856,7 +856,7 @@ Section ErasureFunction.
   Proof.
     intros axfree nise.
     destruct pr as [[]]. destruct wf.
-    epose proof (pcuic_function_value Σ f na A B w.1 axfree X) as [v hv].
+    epose proof (pcuic_function_value w.1 axfree X) as [v hv].
     eapply erase_function; tea. now sq.
   Qed.
 
@@ -1444,6 +1444,21 @@ Proof.
   tc.
 Qed.
 
+
+Lemma expand_lets_function (wfl := default_wcbv_flags)
+  {guard_impl : abstract_guard_impl}
+  (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map) K f na A B
+  (wf : ∥ Σ ;;; [] |- f : PCUICAst.tProd na A B ∥) pr :
+  let (Σ', f') := transform (pcuic_expand_lets_transform K) (Σ, f) pr in
+  ∥ Σ' ;;; [] |- f' : PCUICExpandLets.trans (PCUICAst.tProd na A B) ∥.
+Proof.
+  unfold transform, pcuic_expand_lets_transform. cbn.
+  destruct pr as [[[]] ?].
+  sq.
+  eapply PCUICExpandLetsCorrectness.pcuic_expand_lets in wf; eauto.
+  now eapply PCUICExpandLetsCorrectness.trans_wf.
+Qed.
+
 Lemma transform_lambda_box_firstorder (Σer : EEnvMap.GlobalContextMap.t) p pre :
   firstorder_evalue Σer p ->
   (transform verified_lambdabox_pipeline (Σer, p) pre).2 = (compile_evalue_box (ERemoveParams.strip Σer p) []).
@@ -1808,6 +1823,119 @@ Section PCUICErase.
     cbn. eapply (proj2 (trans_ne_nf Σ [] _) Hnf). eapply PCUICClosedTyp.subject_is_open_term; tea.
     now rewrite -isArity_trans.
     now eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)) in Hsort.
+  Qed.
+
+  #[local] Existing Instance PCUICSN.extraction_normalizing.
+
+  (* Beware, this internally uses preservation of observations and determinism of evaluation
+     from the canonical evaluation of [f] in the source to the evaluation in the target.
+    *)
+  Lemma transform_erasure_pipeline_function
+    (wfl := default_wcbv_flags)
+    {guard_impl : abstract_guard_impl}
+    (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map)
+    {f v' na A B}
+    (wf : ∥ Σ ;;; [] |- f : PCUICAst.tProd na A B ∥) pr :
+    axiom_free Σ ->
+    ∥ nisErasable Σ [] f ∥ ->
+    let tr := transform verified_erasure_pipeline (Σ, f) pr in
+    eval (wfl := extraction_wcbv_flags) tr.1 tr.2 v' -> isFunction v' = true.
+  Proof.
+    intros axfree nise.
+    unfold verified_erasure_pipeline.
+    rewrite -!transform_compose_assoc.
+    pose proof (expand_lets_function Σ (fun p : global_env_ext_map =>
+    (wf_ext p -> PCUICSN.NormalizationIn p) /\
+    (wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p)) f na A B wf pr).
+    destruct_compose. intros pre.
+    set (trexp := transform (pcuic_expand_lets_transform _) _ _) in *.
+    eapply (PCUICExpandLetsCorrectness.trans_axiom_free Σ) in axfree.
+    have nise' : ∥ nisErasable trexp.1 [] trexp.2 ∥.
+    destruct pr as [[[]] ?], nise. sq; now eapply nisErasable_lets.
+    change (trans_global_env _) with (global_env_ext_map_global_env_ext trexp.1).1 in axfree.
+    clearbody trexp. clear nise pr wf Σ f. destruct trexp as [Σ f].
+    pose proof pre as pre'; destruct pre' as [[[wf _]] _].
+    pose proof (map_squash (pcuic_function_value wf axfree) H) as [[v ev]].
+    epose proof (Transform.preservation erase_transform).
+    specialize (H0 _ v pre (sq ev)).
+    revert H0.
+    destruct_compose. intros pre' htr.
+    destruct htr as [v'' [ev' _]].
+    epose proof (erase_function_to_function _ f v'' _ _ _ H pre axfree nise').
+    set (tre := transform erase_transform _ _) in *. clearbody tre.
+    cbn -[transform obseq].
+    intros ev2. red in ev'. destruct ev'.
+    epose proof (Transform.preservation verified_lambdabox_pipeline).
+    destruct tre as [Σ' f'].
+    specialize (H2 _ v'' pre' (sq H1)) as [finalv [[evfinal] obseq]].
+    pose proof (eval_deterministic evfinal ev2). subst v'.
+    have prev : Transform.pre verified_lambdabox_pipeline (Σ', v'').
+    { clear -wfl pre' H1. cbn in H1.
+      destruct pre' as [[] []]. split; split => //=.
+      eapply Prelim.Ee.eval_wellformed; eauto.
+      eapply EEtaExpandedFix.isEtaExp_expanded.
+      eapply (@EEtaExpandedFix.eval_etaexp wfl); eauto.
+      now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
+      now eapply EEtaExpandedFix.expanded_isEtaExp. }
+    specialize (H0 H1).
+    eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
+    rewrite -obseq. exact H2. cbn. red; tauto.
+  Qed.
+
+  (* This version provides the evaluation proof. *)
+  Lemma transform_erasure_pipeline_function'
+    (wfl := default_wcbv_flags)
+    {guard_impl : abstract_guard_impl}
+    (cf:=config.extraction_checker_flags) (Σ:global_env_ext_map)
+    {f na A B}
+    (wf : ∥ Σ ;;; [] |- f : PCUICAst.tProd na A B ∥) pr :
+    axiom_free Σ ->
+    ∥ nisErasable Σ [] f ∥ ->
+    let tr := transform verified_erasure_pipeline (Σ, f) pr in
+    exists v, ∥ eval (wfl := extraction_wcbv_flags) tr.1 tr.2 v ∥ /\ isFunction v = true.
+  Proof.
+    intros axfree nise.
+    unfold verified_erasure_pipeline.
+    rewrite -!transform_compose_assoc.
+    pose proof (expand_lets_function Σ (fun p : global_env_ext_map =>
+    (wf_ext p -> PCUICSN.NormalizationIn p) /\
+    (wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p)) f na A B wf pr).
+    destruct_compose. intros pre.
+    set (trexp := transform (pcuic_expand_lets_transform _) _ _) in *.
+    eapply (PCUICExpandLetsCorrectness.trans_axiom_free Σ) in axfree.
+    have nise' : ∥ nisErasable trexp.1 [] trexp.2 ∥.
+    destruct pr as [[[]] ?], nise. sq; now eapply nisErasable_lets.
+    change (trans_global_env _) with (global_env_ext_map_global_env_ext trexp.1).1 in axfree.
+    clearbody trexp. clear nise pr wf Σ f. destruct trexp as [Σ f].
+    pose proof pre as pre'; destruct pre' as [[[wf _]] _].
+    pose proof (map_squash (pcuic_function_value wf axfree) H) as [[v ev]].
+    epose proof (Transform.preservation erase_transform).
+    specialize (H0 _ v pre (sq ev)).
+    revert H0.
+    destruct_compose. intros pre' htr.
+    destruct htr as [v'' [ev' _]].
+    epose proof (erase_function_to_function _ f v'' _ _ _ H pre axfree nise').
+    set (tre := transform erase_transform _ _) in *. clearbody tre.
+    cbn -[transform obseq].
+    red in ev'. destruct ev'.
+    epose proof (Transform.preservation verified_lambdabox_pipeline).
+    destruct tre as [Σ' f'].
+    specialize (H2 _ v'' pre' (sq H1)) as [finalv [[evfinal] obseq]].
+    exists finalv.
+    split. now sq.
+    have prev : Transform.pre verified_lambdabox_pipeline (Σ', v'').
+    { clear -wfl pre' H1. cbn in H1.
+      destruct pre' as [[] []]. split; split => //=.
+      eapply Prelim.Ee.eval_wellformed; eauto.
+      eapply EEtaExpandedFix.isEtaExp_expanded.
+      eapply (@EEtaExpandedFix.eval_etaexp wfl); eauto.
+      now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
+      now eapply EEtaExpandedFix.expanded_isEtaExp. }
+    specialize (H0 H1).
+    eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
+    rewrite -obseq. exact H2. cbn. red; tauto.
   Qed.
 
   Lemma expand_lets_transform_env K p p' pre pre' :

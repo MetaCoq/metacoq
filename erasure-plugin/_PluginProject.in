@@ -118,6 +118,8 @@ src/eInlineProjections.mli
 src/eInlineProjections.ml
 src/eConstructorsAsBlocks.mli
 src/eConstructorsAsBlocks.ml
+src/eCoInductiveToInductive.mli
+src/eCoInductiveToInductive.ml
 src/eTransform.mli
 src/eTransform.ml
 src/erasure0.mli

@@ -18,7 +18,7 @@ Unset MetaCoq Debug.
 #[local] Existing Instance config.extraction_checker_flags.
 
 Definition test (p : Ast.Env.program) : string :=
-  erase_and_print_template_program p.
+  erase_and_print_template_program default_erasure_config p.
 
 Definition testty (p : Ast.Env.program) : string :=
   typed_erase_and_print_template_program p.
@@ -51,7 +51,7 @@ Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
 
 Definition erase {A} (a : A) : TemplateMonad unit :=
   aq <- tmQuoteRec a ;;
-  s <- tmEval lazy (erase_and_print_template_program aq) ;;
+  s <- tmEval lazy (erase_and_print_template_program default_erasure_config aq) ;;
   tmMsg s.
 
 Definition erase_fast {A} (a : A) : TemplateMonad unit :=
@@ -79,6 +79,13 @@ Set MetaCoq Timing.
 
 Time MetaCoq Run (tmEval hnf vplus0123 >>= erase).
 Time MetaCoq Run (tmEval hnf vplus0123 >>= erase_fast).
+
+(** Cofix *)
+From Coq Require Import StreamMemo.
+
+MetaCoq Quote Recursively Definition memo := memo_make.
+
+Definition testmemo := Eval lazy in test memo.
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=
@@ -350,7 +357,7 @@ Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
 From MetaCoq.ErasurePlugin Require Import Loader.
 
 MetaCoq Erase provedCopyx.
-MetaCoq Typed Erase provedCopyx.
+MetaCoq Erase -time -typed -unsafe provedCopyx.
 
 (* From MetaCoq.Erasure.Typed Require Import CertifyingEta.
 MetaCoq Run (eta_expand_def
@@ -359,6 +366,16 @@ true true
 provedCopy). *)
 
 Print P_provedCopyx.
+
+From Coq Require Import Streams.
+
+CoFixpoint ones : Stream nat := Cons 1 ones.
+
+MetaCoq Erase ones.
+MetaCoq Erase -unsafe ones.
+
+MetaCoq Erase -typed -time -unsafe (map S ones).
+
 
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
@@ -431,7 +448,7 @@ Proof.
   show_match.
 
 *)
-
+(* Debuggging
 
 From MetaCoq.Common Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ExtractionCorrectness.
@@ -497,3 +514,4 @@ Import ETransform Optimize.
 
 MetaCoq Typed Erase provedCopyx.
 Eval lazy in testty cbv_provedCopyx.
+*)

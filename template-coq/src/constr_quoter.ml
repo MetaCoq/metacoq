@@ -59,14 +59,14 @@ struct
   let mkConstruct (ind, i) u =
     constr_mkApp (tConstructor, [| ind ; i ; u |])
 
-  let mkCoFix (a,(ns,ts,ds)) =
+  let mkCoFix ((a,b),(ns,ts,ds)) =
     let mk_fun xs i =
       constr_mkApp (tmkdef, [| Lazy.force tTerm ; Array.get ns i ;
-                             Array.get ts i ; Array.get ds i ; Lazy.force tO |]) :: xs
+                             Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = to_coq_list (constr_mkAppl (tdef, [| tTerm |])) (List.rev defs) in
-    constr_mkApp (tCoFix, [| block ; a |])
+    constr_mkApp (tCoFix, [| block ; b |])
 
   let mkInd i u = constr_mkApp (tInd, [| i ; u |])
 

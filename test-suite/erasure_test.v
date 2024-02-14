@@ -3,6 +3,8 @@ From MetaCoq.Template Require Import Loader.
 Set MetaCoq Timing.
 Local Open Scope string_scope.
 
+MetaCoq Erase -help.
+
 MetaCoq Erase nat.
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: ⧆
@@ -17,24 +19,26 @@ Environment is well-formed and Construct(Coq.Init.Datatypes.bool,0,0,[]) erases 
 Construct(Coq.Init.Datatypes.bool,0,0)
 *)
 
-MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
+MetaCoq Erase (exist (fun x => x = 0) 0 (eq_refl)).
 
 Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
 
-MetaCoq Typed Erase test.
+MetaCoq Erase -typed test.
 
+(** Cofix *)
+From Coq Require Import StreamMemo.
 
-(* (* *)
-(* Environment is well-formed and exist nat (fun x : nat => eq nat x O) O (eq_refl nat O):sig nat (fun x : nat => eq nat x O) erases to: *)
-(* (fun f => f) (exist ∎ ∎ O ∎) *)
-(* *) *)
+MetaCoq Quote Recursively Definition memo := memo_make.
+
+MetaCoq Erase -typed -unsafe memo_make.
+
 MetaCoq Erase (3 + 1).
 
 Universe i.
-MetaCoq Fast Erase ((fun (X : Set) (x : X) => x) nat).
+MetaCoq Erase ((fun (X : Set) (x : X) => x) nat).
 
 (** Check that optimization of singleton pattern-matchings work *)
-MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
+MetaCoq Erase  ((fun (X : Set) (x : X) (e : x = x) =>
                   match e in eq _ x' return bool with
                   | eq_refl => true
                   end)).

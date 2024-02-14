@@ -99,7 +99,7 @@ From MetaCoq.ErasurePlugin Require Import Erasure Loader.
 
 (** Running erasure live in Coq *)
 Definition test (p : Ast.Env.program) : string :=
-  erase_and_print_template_program p.
+  erase_and_print_template_program default_erasure_config p.
 
 MetaCoq Quote Recursively Definition zero := 0.
 

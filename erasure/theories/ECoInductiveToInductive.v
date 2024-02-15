@@ -623,7 +623,7 @@ Lemma value_trans {efl : EEnvFlags} {fl : WcbvFlags} {hasc : cstr_as_blocks = tr
   value (trans_env Σ) (trans Σ c).
 Proof.
   intros hasapp wfg wf h.
-  revert c h wf. apply: Ee.value_values_ind.
+  revert c h wf. apply: EWcbvEval.value_values_ind.
   - intros t; destruct t => //; cbn -[lookup_constructor GlobalContextMap.lookup_inductive_kind].
     all:try solve [intros; repeat constructor => //].
     destruct args => //.
@@ -673,9 +673,9 @@ Lemma trans_correct {efl : EEnvFlags} {fl} {wcon : with_constructor_as_block = t
   has_tApp ->
   wf_glob Σ ->
   closed_env Σ ->
-  @Ee.eval fl Σ t v ->
+  @EWcbvEval.eval fl Σ t v ->
   wellformed Σ 0 t ->
-  @Ee.eval fl (trans_env Σ) (trans Σ t) (trans Σ v).
+  @EWcbvEval.eval fl (trans_env Σ) (trans Σ t) (trans Σ v).
 Proof.
   intros hasapp wfΣ clΣ ev wf.
   revert t v wf ev.
@@ -715,7 +715,7 @@ Proof.
     + eapply eval_beta. eapply e0; eauto.
       constructor; eauto.
       rewrite closed_subst // simpl_subst_k //.
-      eapply Ee.eval_to_value in H.
+      eapply EWcbvEval.eval_to_value in H.
       eapply value_constructor_as_block in H.
       eapply constructor_isprop_pars_decl_constructor in H1 as [mdecl [idecl [hl' hp]]].
       econstructor; eauto.
@@ -763,7 +763,7 @@ Qed.
     eapply eval_closed in ev1 => //.
     rewrite closedn_mkApps in ev1.
     move: ev1 => /andP [] clfix clargs.
-    eapply Ee.eval_fix; eauto.
+    eapply EWcbvEval.eval_fix; eauto.
     rewrite map_length.
     eapply trans_cunfold_fix; tea.
     eapply closed_fix_subst. tea.
@@ -778,7 +778,7 @@ Qed.
     move: ev1 => /andP [] clfix clargs.
     eapply eval_closed in ev2; tas.
     rewrite trans_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto. auto.
+    simpl in *. eapply EWcbvEval.eval_fix_value. auto. auto. auto.
     eapply trans_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
     now rewrite map_length.
@@ -786,7 +786,7 @@ Qed.
   - move/andP => [] clf cla.
     eapply eval_closed in ev1 => //.
     eapply eval_closed in ev2; tas.
-    simpl in *. eapply Ee.eval_fix'. auto. auto.
+    simpl in *. eapply EWcbvEval.eval_fix'. auto. auto.
     eapply trans_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
     eapply IHev2; tea. eapply IHev3.
@@ -805,15 +805,15 @@ Qed.
     rewrite GlobalContextMap.lookup_inductive_kind_spec in IHev2 |- *.
     destruct EGlobalEnv.lookup_inductive_kind as [[]|] eqn:isp => //.
     simpl in IHev1.
-    eapply Ee.eval_cofix_case. tea.
+    eapply EWcbvEval.eval_cofix_case. tea.
     apply trans_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     apply IHev2.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply trans_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     simpl in *.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply trans_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply trans_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
 
   - intros cd. specialize (IHev1 cd).
@@ -845,7 +845,7 @@ Qed.
     rewrite (constructor_isprop_pars_decl_inductive e1).
     rewrite trans_mkApps in IHev1.
     specialize (IHev1 cld).
-    eapply Ee.eval_proj; tea.
+    eapply EWcbvEval.eval_proj; tea.
     now rewrite -is_propositional_cstr_trans.
     now len. rewrite nth_error_map e3 //.
     eapply IHev2.
@@ -868,8 +868,8 @@ Qed.
 
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
-    eapply Ee.eval_app_cong; eauto.
-    eapply Ee.eval_to_value in ev1.
+    eapply EWcbvEval.eval_app_cong; eauto.
+    eapply EWcbvEval.eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite trans_mkApps /=.
     * destruct with_guarded_fix.

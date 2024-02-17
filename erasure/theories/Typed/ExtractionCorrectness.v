@@ -507,8 +507,8 @@ Lemma optimize_correct `{EWellformed.EEnvFlags} Σ fgΣ t v :
   ELiftSubst.closed t = true ->
   EGlobalEnv.closed_env (trans_env Σ) = true ->
   EWellformed.wf_glob (trans_env Σ) ->
-  @Prelim.Ee.eval default_wcbv_flags (trans_env Σ) t v ->
-  @Prelim.Ee.eval
+  @EWcbvEval.eval default_wcbv_flags (trans_env Σ) t v ->
+  @EWcbvEval.eval
       (EWcbvEval.disable_prop_cases opt_wcbv_flags)
       (trans_env (map (on_snd (remove_match_on_box_decl (EEnvMap.GlobalContextMap.make (trans_env Σ) (OptimizePropDiscr.trans_env_fresh_globals _ fgΣ)))) Σ))
       (EOptimizePropDiscr.remove_match_on_box (EEnvMap.GlobalContextMap.make (trans_env Σ) (OptimizePropDiscr.trans_env_fresh_globals _ fgΣ)) t)

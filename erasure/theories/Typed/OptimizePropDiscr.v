@@ -44,8 +44,6 @@ Next Obligation.
   now apply trans_env_fresh_globals.
 Qed.
 
-Module Ee := EWcbvEval.
-
 Lemma trans_env_remove_match_on_box_env Σ fgΣ :
   trans_env (remove_match_on_box_env Σ fgΣ) =
   EOptimizePropDiscr.remove_match_on_box_env (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)).
@@ -64,13 +62,13 @@ Proof.
   now destruct o.
 Qed.
 
-Lemma remove_match_on_box_correct `{EWellformed.EEnvFlags} `{Ee.WcbvFlags} Σ fgΣ t v :
+Lemma remove_match_on_box_correct `{EWellformed.EEnvFlags} `{EWcbvEval.WcbvFlags} Σ fgΣ t v :
   EWcbvEval.with_constructor_as_block = false ->
   ELiftSubst.closed t = true ->
   EGlobalEnv.closed_env (trans_env Σ) = true ->
   EWellformed.wf_glob (trans_env Σ) ->
-  @Prelim.Ee.eval _ (trans_env Σ) t v ->
-  @Prelim.Ee.eval
+  @EWcbvEval.eval _ (trans_env Σ) t v ->
+  @EWcbvEval.eval
       (EWcbvEval.disable_prop_cases _)
       (trans_env (remove_match_on_box_env Σ fgΣ))
       (remove_match_on_box (EEnvMap.GlobalContextMap.make (trans_env Σ) (trans_env_fresh_globals _ fgΣ)) t)

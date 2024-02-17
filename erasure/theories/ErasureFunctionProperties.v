@@ -650,7 +650,7 @@ Proof.
           intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst. }
 Qed.
 
-Lemma erase_correct (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
+Lemma erase_correct (wfl := EWcbvEval.default_wcbv_flags) X_type (X : X_type.π1)
   univs wfext t v Σ' t' deps decls {normalization_in} prf
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
@@ -1951,7 +1951,7 @@ Proof.
 Qed.
 
 (* Sanity checks: the [erase] function maximally erases terms *)
-Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
+Lemma erasable_tBox_value (wfl := EWcbvEval.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
   forall wt : Σ ;;; [] |- t : T,
   Σ |-p t ⇓ v -> erases Σ [] v E.tBox -> ∥ isErasable Σ [] t ∥.
 Proof.
@@ -1960,7 +1960,7 @@ Proof.
   eapply Is_type_eval_inv; eauto. eexists; eauto.
 Qed.
 
-Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags)
+Lemma erase_eval_to_box (wfl := EWcbvEval.default_wcbv_flags)
   {X_type X} {univs wfext t v Σ' t' deps decls normalization_in prf}
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
@@ -1972,12 +1972,12 @@ Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags)
   forall Σext : global_env_ext, abstract_env_ext_rel Xext Σext ->
   (forall Σ : global_env, abstract_env_rel X Σ ->
     PCUICWcbvEval.eval Σ t v) ->
-    @Ee.eval Ee.default_wcbv_flags Σ'.1 t' E.tBox -> ∥ isErasable Σext [] t ∥.
+    @EWcbvEval.eval EWcbvEval.default_wcbv_flags Σ'.1 t' E.tBox -> ∥ isErasable Σext [] t ∥.
 Proof.
   intros wt.
   intros.
   destruct (erase_correct X_type X univs wfext _ _ Σ' _ _ decls prf wt H H0 H1 X0 _ H2) as [ev [eg [eg']]].
-  pose proof (Ee.eval_deterministic H3 eg'). subst.
+  pose proof (EWcbvEval.eval_deterministic H3 eg'). subst.
   pose proof (abstract_env_exists X) as [[? wf]].
   destruct (wfext _ wf). destruct (wt _ H2) as [T wt'].
   pose proof (abstract_env_ext_wf _ H2) as [?].
@@ -1986,7 +1986,7 @@ Proof.
   apply X0; eauto.
 Qed.
 
-Lemma erase_eval_to_box_eager (wfl := Ee.default_wcbv_flags)
+Lemma erase_eval_to_box_eager (wfl := EWcbvEval.default_wcbv_flags)
   {X_type X} {univs wfext t v Σ' t' deps decls normalization_in prf}
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
@@ -1998,7 +1998,7 @@ Lemma erase_eval_to_box_eager (wfl := Ee.default_wcbv_flags)
   forall Σext : global_env_ext, abstract_env_ext_rel Xext Σext ->
   (forall Σ : global_env, abstract_env_rel X Σ ->
     PCUICWcbvEval.eval Σ t v) ->
-  @Ee.eval Ee.default_wcbv_flags Σ'.1 t' E.tBox -> t' = E.tBox.
+  @EWcbvEval.eval EWcbvEval.default_wcbv_flags Σ'.1 t' E.tBox -> t' = E.tBox.
 Proof.
   intros wt.
   intros.
@@ -2166,7 +2166,7 @@ Proof.
     rewrite knset_in_fold_left. right. now exists t.
 Qed.
 
-Lemma erase_correct_strong' (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
+Lemma erase_correct_strong' (wfl := EWcbvEval.default_wcbv_flags) X_type (X : X_type.π1)
   univs wfext {t v Σ' t' i u args} decls normalization_in prf
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
@@ -2260,7 +2260,7 @@ Proof.
   Unshelve. eauto.
 Qed.
 
-Lemma erase_correct_strong (wfl := Ee.default_wcbv_flags) X_type (X : X_type.π1)
+Lemma erase_correct_strong (wfl := EWcbvEval.default_wcbv_flags) X_type (X : X_type.π1)
   univs wfext {t v i u args} decls normalization_in prf
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in' : forall Σ, wf_ext Σ -> Σ ∼_ext Xext -> NormalizationIn Σ}
@@ -2301,7 +2301,7 @@ Proof.
   now exists T.
 Qed.
 
-Definition erase_correct_firstorder (wfl := Ee.default_wcbv_flags)
+Definition erase_correct_firstorder (wfl := EWcbvEval.default_wcbv_flags)
   X_type (X : X_type.π1) univs wfext {t v i u args}
   (Xext :=  abstract_make_wf_env_ext X univs wfext)
   {normalization_in : forall X Σ, wf_ext Σ -> Σ ∼_ext X -> NormalizationIn Σ} :

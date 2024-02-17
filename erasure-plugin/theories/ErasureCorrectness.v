@@ -1872,7 +1872,7 @@ Section PCUICErase.
     have prev : Transform.pre verified_lambdabox_pipeline (Σ', v'').
     { clear -wfl pre' H1. cbn in H1.
       destruct pre' as [[] []]. split; split => //=.
-      eapply Prelim.Ee.eval_wellformed; eauto.
+      eapply EWcbvEval.eval_wellformed; eauto.
       eapply EEtaExpandedFix.isEtaExp_expanded.
       eapply (@EEtaExpandedFix.eval_etaexp wfl); eauto.
       now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
@@ -1927,7 +1927,7 @@ Section PCUICErase.
     have prev : Transform.pre verified_lambdabox_pipeline (Σ', v'').
     { clear -wfl pre' H1. cbn in H1.
       destruct pre' as [[] []]. split; split => //=.
-      eapply Prelim.Ee.eval_wellformed; eauto.
+      eapply EWcbvEval.eval_wellformed; eauto.
       eapply EEtaExpandedFix.isEtaExp_expanded.
       eapply (@EEtaExpandedFix.eval_etaexp wfl); eauto.
       now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
@@ -2275,8 +2275,8 @@ Section pipeline_theorem.
 
   Variable Normalisation :  (forall Σ, wf_ext Σ -> PCUICSN.NormalizationIn Σ).
 
-  Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)  
-    {has_rel : has_tRel} {has_box : has_tBox} 
+  Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)
+    {has_rel : has_tRel} {has_box : has_tBox}
     T (typing: ∥PCUICTyping.typing Σ [] t T∥):
   let Σ_t := (transform verified_erasure_pipeline (Σ, t) (precond _ _ _ _ expΣ expt typing _)).1 in
     EGlobalEnv.lookup_env Σ_t kn = Some decl ->
@@ -2356,7 +2356,7 @@ Section pipeline_theorem.
   Let v_t := compile_value_box (PCUICExpandLets.trans_global_env Σ) v [].
 
 
-  Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags) 
+  Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags)
     {has_rel : has_tRel} {has_box : has_tBox} :
    EGlobalEnv.extends Σ_v Σ_t.
   Proof.

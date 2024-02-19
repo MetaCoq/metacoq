@@ -138,18 +138,15 @@ Class Qconst Σ (Q : nat -> term -> Type) := qconst :
     end.
 #[export] Hint Mode Qconst - ! : typeclass_instances.
 
-Set Warnings "-future-coercion-class-field".
 Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
-  { qpres_qpres :> Qpres Q;
-    qpres_qcons :> Qconst Σ Q;
-    qpres_qapp :> Qapp Q;
-    qpres_qcase :> Qcase Q;
-    qpres_qproj :> Qproj Q;
-    qpres_qsubst :> Qsubst Q;
-    qpres_qfix :> Qfix Q;
-    qpres_qcofix :> Qcofix Q }.
-Set Warnings "+future-coercion-class-field".
-
+  { qpres_qpres :: Qpres Q;
+    qpres_qcons :: Qconst Σ Q;
+    qpres_qapp :: Qapp Q;
+    qpres_qcase :: Qcase Q;
+    qpres_qproj :: Qproj Q;
+    qpres_qsubst :: Qsubst Q;
+    qpres_qfix :: Qfix Q;
+    qpres_qcofix :: Qcofix Q }.
 
 Lemma eval_beta_inv {wfl : WcbvFlags} Σ t a v :
   isLambda t ->

@@ -1,0 +1,1 @@
+FINDLIBFILESTOINSTALL += gen-src/metacoq_template_plugin.a

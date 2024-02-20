@@ -272,6 +272,12 @@ Section Wcbv.
     eval_primitive eval p p' ->
     eval (tPrim p) (tPrim p')
 
+  (*
+  | eval_lazy : eval (tLazy t) (tLazy t)
+  | eval_force t v v' : eval t (tLazy v) ->
+    eval v v' ->
+    eval (tForce t) v' *)
+
   (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
   | eval_atom t : atom Σ t -> eval t t.
 

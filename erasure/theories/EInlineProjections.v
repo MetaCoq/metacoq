@@ -49,6 +49,7 @@ Definition disable_projections_term_flags (et : ETermFlags) :=
     ; has_tFix := has_tFix
     ; has_tCoFix := has_tCoFix
     ; has_tPrim := has_tPrim
+    ; has_tLazy_Force := has_tLazy_Force
   |}.
 
 Definition disable_projections_env_flag (efl : EEnvFlags) :=
@@ -124,6 +125,8 @@ Section optimize.
     | tConst _ => t
     | tConstruct ind n args => tConstruct ind n (map optimize args)
     | tPrim p => tPrim (map_prim optimize p)
+    | tLazy t => tLazy (optimize t)
+    | tForce t => tForce (optimize t)
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).

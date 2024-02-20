@@ -294,6 +294,13 @@ Inductive represents : list ident -> environment -> term -> term -> Set :=
 | represents_tPrim Γ E p p' :
   onPrims (represents Γ E) p p' ->
   Γ ;;; E ⊩ tPrim p ~ tPrim p'
+| represents_tLazy Γ E t t' :
+  Γ ;;; E ⊩ t ~ t' ->
+  Γ ;;; E ⊩ tLazy t ~ tLazy t'
+| represents_tForce Γ E t t' :
+  Γ ;;; E ⊩ t ~ t' ->
+  Γ ;;; E ⊩ tForce t ~ tForce t'
+
 with represents_value : value -> term -> Set :=
 | represents_value_tClos na E s t na' : [na] ;;; E ⊩ s ~ t -> represents_value (vClos na s E) (tLambda na' t)
 | represents_value_tConstruct vs ts ind c : All2_Set represents_value vs ts -> represents_value (vConstruct ind c vs) (tConstruct ind c ts)
@@ -371,6 +378,17 @@ Program Definition represents_ind :=
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
      (f9 : forall Γ E p p' (o : onPrims (represents Γ E) p p'), onPrims_dep _ (P Γ E) _ _ o ->
         P Γ E  (tPrim p) (tPrim p') (represents_tPrim Γ E p p' o))
+
+     (flazy : forall Γ E t t'
+      (he : Γ ;;; E ⊩ t ~ t'),
+      P Γ E t t' he ->
+      P Γ E _ _ (represents_tLazy Γ E t t' he))
+
+    (fforce : forall Γ E t t'
+      (he : Γ ;;; E ⊩ t ~ t'),
+      P Γ E t t' he ->
+      P Γ E _ _ (represents_tForce Γ E t t' he))
+
      (f10 :
        ∀ (na : ident)
          (E : environment)
@@ -419,7 +437,11 @@ Program Definition represents_ind :=
          f8 Γ E mfix mfix' idx nms Hbodies Hnodup a a0 _
      | represents_tPrim Γ E p p' r =>
          f9 Γ E p p' r (map_onPrims (F Γ E) r)
-     end
+     | represents_tLazy Γ E t t' e =>
+         flazy _ _ _ _ e (F Γ E _ _ e)
+     | represents_tForce Γ E t t' e =>
+         fforce _ _ _ _ e (F Γ E _ _ e)
+      end
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
      P0 v t r :=
           match r as r0 in (represents_value v0 t0) return (P0 v0 t0 r0) with
@@ -520,6 +542,16 @@ Program Definition represents_value_ind :=
     (f9 : forall Γ E p p' (o : onPrims (represents Γ E) p p'), onPrims_dep _ (P Γ E) _ _ o ->
         P Γ E  (tPrim p) (tPrim p') (represents_tPrim Γ E p p' o))
 
+    (flazy : forall Γ E t t'
+    (he : Γ ;;; E ⊩ t ~ t'),
+    P Γ E t t' he ->
+    P Γ E _ _ (represents_tLazy Γ E t t' he))
+
+  (fforce : forall Γ E t t'
+    (he : Γ ;;; E ⊩ t ~ t'),
+    P Γ E t t' he ->
+    P Γ E _ _ (represents_tForce Γ E t t' he))
+
      (f10 :
        ∀ (na : ident)
          (E : environment)
@@ -571,6 +603,10 @@ Program Definition represents_value_ind :=
          f8 Γ E mfix mfix' idx nms Hbodies Hnodup a a0 _
     | represents_tPrim Γ E p p' r =>
          f9 Γ E p p' r (map_onPrims (F Γ E) r)
+    | represents_tLazy Γ E t t' e =>
+         flazy _ _ _ _ e (F Γ E _ _ e)
+     | represents_tForce Γ E t t' e =>
+         fforce _ _ _ _ e (F Γ E _ _ e)
 
      end
    with F0 (v : value) (t : term) (r : represents_value v t) {struct r} :
@@ -672,8 +708,16 @@ Definition rep_ind :=
            (represents_tFix Γ E mfix mfix' idx nms Hbodies Hnodup a a0))
       (f9 : forall Γ E p p' (o : onPrims (represents Γ E) p p'), onPrims_dep _ (P Γ E) _ _ o ->
            P Γ E  (tPrim p) (tPrim p') (represents_tPrim Γ E p p' o))
+      (flazy : forall Γ E t t'
+        (he : Γ ;;; E ⊩ t ~ t'),
+        P Γ E t t' he ->
+        P Γ E _ _ (represents_tLazy Γ E t t' he))
 
-   (f10 :
+      (fforce : forall Γ E t t'
+        (he : Γ ;;; E ⊩ t ~ t'),
+        P Γ E t t' he ->
+        P Γ E _ _ (represents_tForce Γ E t t' he))
+      (f10 :
        ∀ (na : ident)
          (E : environment)
          (s t : term)
@@ -703,8 +747,8 @@ Definition rep_ind :=
       (f13 : forall p p' (o : onPrims represents_value p p'), onPrims_dep _ P0 _ _ o ->
            P0 (vPrim p) (tPrim p') (represents_value_tPrim p p' o))
            ,
-    (represents_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13,
-      represents_value_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 f13)).
+    (represents_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 flazy fforce f10 f11 f12 f13,
+      represents_value_ind P P0 f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 flazy fforce f10 f11 f12 f13)).
 
 Local Notation "'⊩' v ~ s" := (represents_value v s) (at level 50).
 Local Hint Constructors represents : core.
@@ -893,6 +937,8 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
       let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (List.rev (gen_many_fresh s ((map dname mfix))) ++ s)) d) mfix nms in
       tFix mfix' idx
   | tPrim p => tPrim (map_prim (annotate s) p)
+  | tLazy t => tLazy (annotate s t)
+  | tForce t => tForce (annotate s t)
   | _ => u
   end.
 
@@ -918,6 +964,7 @@ Definition extraction_term_flags :=
   ; has_tFix := true
   ; has_tCoFix := false
   ; has_tPrim := all_primitive_flags
+  ; has_tLazy_Force := true
   |}.
 
 Definition extraction_env_flags :=
@@ -963,6 +1010,7 @@ Definition named_extraction_term_flags :=
   ; has_tFix := true
   ; has_tCoFix := false
   ; has_tPrim := all_primitive_flags
+  ; has_tLazy_Force := true
   |}.
 
 Definition named_extraction_env_flags :=
@@ -1101,7 +1149,7 @@ Lemma unfolds_bound :
   (forall Γ E s t, Γ ;;; E ⊩ s ~ t -> closedn #|Γ| t) ×
     (forall v s, ⊩ v ~ s -> closedn 0 s).
 Proof.
-  refine (rep_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros; cbn; rtoProp; eauto.
+  refine (rep_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros; cbn; rtoProp; eauto.
   - eapply Nat.ltb_lt, nth_error_Some. congruence.
   - eapply closed_upwards; eauto. lia.
   - solve_all. induction a; cbn in *; econstructor; firstorder.
@@ -1376,6 +1424,8 @@ Fixpoint sunny Γ (t : term) : bool :=
            forallb (test_def (sunny (names ++ Γ))) mfix
   | tConstruct _ _ args => forallb (sunny Γ) args
   | tPrim p => test_prim (sunny Γ) p
+  | tLazy t => sunny Γ t
+  | tForce t => sunny Γ t
   | _ => true
   end.
 

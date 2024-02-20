@@ -33,42 +33,8 @@ Axiom trust_cofix : forall {A}, A.
 #[global]
 Hint Constructors eval : core.
 
-Module Thunk.
-  Definition make (t : term) : term :=
-    tLambda (nNamed "thunk") (lift 1 0 t).
-
-  Definition force (t : term) :=
-    tApp t tBox.
-
-  Definition make_name (x : string) (n : nat) : string :=
-    (x ++ string_of_nat n)%bs.
-
-  (* Thunk an n-ary function:
-     [t] is supposed to be of type T0 -> ... -> Tn -> C here
-     and we want to produce an expansion:
-     λ x0 .. xn (), t x0 xn () *)
-  Equations make_n_aux (n : nat) (t : term) (acc : list term) : term :=
-  make_n_aux 0 t acc => tLambda
-    (nNamed "thunk")
-    (mkApps (lift0 1 t) (rev (tRel 0 :: map (lift0 1) acc)));
-  make_n_aux (S n) t acc =>
-    tLambda
-      (nNamed (make_name "x" (S n)))
-      (make_n_aux n (lift0 1 t) (tRel 0 :: map (lift0 1) acc)).
-
-  Definition make_n (n : nat) (t : term) := make_n_aux n t [].
-
-  (* Eval compute in make_n 2 (tRel 0). *)
-
-End Thunk.
-
 Section trans.
   Context (Σ : GlobalContextMap.t).
-
-  Definition trans_cofix (d : def term) :=
-    {| dname := d.(dname);
-       dbody := Thunk.make_n d.(rarg) d.(dbody);
-       rarg := d.(rarg) |}.
 
   Fixpoint trans (t : term) : term :=
     match t with
@@ -81,12 +47,12 @@ Section trans.
       let brs' := List.map (on_snd trans) brs in
       match GlobalContextMap.lookup_inductive_kind Σ (fst ind).(inductive_mind) with
       | Some CoFinite =>
-        tCase ind (Thunk.force (trans c)) brs'
+        tCase ind (tForce (trans c)) brs'
       | _ => tCase ind (trans c) brs'
       end
     | tProj p c =>
       match GlobalContextMap.lookup_inductive_kind Σ p.(proj_ind).(inductive_mind) with
-      | Some CoFinite => tProj p (Thunk.force (trans c))
+      | Some CoFinite => tProj p (tForce (trans c))
       | _ => tProj p (trans c)
       end
     | tFix mfix idx =>
@@ -94,20 +60,18 @@ Section trans.
       tFix mfix' idx
     | tCoFix mfix idx =>
       let mfix' := List.map (map_def trans) mfix in
-      let mfix' := List.map trans_cofix mfix' in
-      match nth_error mfix' idx with
-      | Some d => Thunk.make_n d.(rarg) (tFix mfix' idx)
-      | None => tCoFix mfix' idx
-      end
+      tFix mfix' idx
     | tBox => t
     | tVar _ => t
     | tConst _ => t
     | tConstruct ind i args =>
       match GlobalContextMap.lookup_inductive_kind Σ ind.(inductive_mind) with
-      | Some CoFinite => Thunk.make (tConstruct ind i (map trans args))
+      | Some CoFinite => tLazy (tConstruct ind i (map trans args))
       | _ => tConstruct ind i (map trans args)
       end
     | tPrim p => tPrim (map_prim trans p)
+    | tLazy t => tLazy (trans t)
+    | tForce t => tForce (trans t)
     end.
 
   (* cofix succ x := match x with Stream x xs => Stream (x + 1) (succ xs) ->
@@ -160,14 +124,9 @@ Section trans.
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; solve_all.
-      rewrite -Nat.add_1_r. now eapply closedn_lift.
     - move/andP: H => [] clt clargs.
       destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; rtoProp; solve_all; solve_all.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; rtoProp; solve_all; solve_all.
-    - solve_all. destruct nth_error eqn:hnth.
-      * apply trust_cofix.
-      * cbn. unfold trans_cofix. len. solve_all.
-        unfold test_def. cbn. apply trust_cofix.
     - primProp. solve_all_k 6.
   Qed.
 
@@ -219,25 +178,13 @@ Section trans.
     - destruct (k ?= n)%nat; auto.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //.
       1,3,4:f_equal; rewrite map_map_compose; solve_all.
-      unfold Thunk.make. f_equal. cbn.
-      rewrite !map_map_compose. f_equal; solve_all.
-      specialize (H k cl). rewrite H.
-      rewrite closed_subst. now apply closed_trans.
-      rewrite closed_subst. now apply closed_trans.
-      now rewrite commut_lift_subst_rec.
+      do 2 f_equal; solve_all.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //.
       all:f_equal; eauto; try (rewrite /on_snd map_map_compose; solve_all).
-      unfold Thunk.force. f_equal; eauto.
+      f_equal. eauto.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //.
       all:f_equal; eauto; try (rewrite /on_snd map_map_compose; solve_all).
-      unfold Thunk.force. f_equal; eauto.
-    - f_equal. solve_all.
-      rewrite !nth_error_map. destruct nth_error eqn:hnth => //=.
-      2:{ f_equal. rewrite map_map_compose. eapply map_ext_in => x hin.
-          rewrite /trans_cofix /map_def //=. f_equal. len.
-          rewrite /Thunk.make_n. apply trust_cofix.
-      }
-      apply trust_cofix.
+      f_equal; eauto.
   Qed.
 
   Lemma trans_substl s t :
@@ -284,11 +231,11 @@ Section trans.
     discriminate.
   Qed.
 
-  Lemma trans_cunfold_cofix mfix idx n f :
+  (* Lemma trans_cunfold_cofix mfix idx n f :
     forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     exists d, nth_error mfix idx = Some d /\
-      cunfold_fix (map trans_cofix mfix) idx = Some (n, substl (fix_subst (map trans_cofix mfix)) (Thunk.make_n (rarg d) (dbody d))).
+      cunfold_fix mfix idx = Some (n, substl (fix_subst mfix) (dbody d)).
   Proof using Type.
     intros hcofix.
     unfold cunfold_cofix, cunfold_fix.
@@ -296,7 +243,7 @@ Section trans.
     destruct nth_error.
     intros [= <- <-] => /=. f_equal. exists d. split => //.
     discriminate.
-  Qed.
+  Qed. *)
 
   Lemma trans_nth {n l d} :
     trans (nth n l d) = nth n (map trans l) (trans d).
@@ -450,7 +397,6 @@ Proof.
     unfold lookup_inductive in hl.
     destruct lookup_minductive => //.
     rewrite (IHt _ H2 _ H0 H1) //.
-  - apply trust_cofix.
 Qed.
 
 Lemma wellformed_trans_decl_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
@@ -611,11 +557,6 @@ Proof.
   exists mdecl, idecl; split => //.
 Qed.
 
-Lemma isLambda_make_n n t : isLambda (Thunk.make_n n t).
-Proof.
-  induction n; cbn => //.
-Qed.
-
 Lemma value_trans {efl : EEnvFlags} {fl : WcbvFlags} {hasc : cstr_as_blocks = true} {wcon : with_constructor_as_block = true} {Σ : GlobalContextMap.t} {c} :
   has_tApp -> wf_glob Σ ->
   wellformed Σ 0 c ->
@@ -628,11 +569,6 @@ Proof.
     all:try solve [intros; repeat constructor => //].
     destruct args => //.
     move=> /andP[] wc. now rewrite wcon in wc.
-    move=> _ /andP [] hascof /andP[] /Nat.ltb_lt /nth_error_Some hnth hm.
-    destruct nth_error => //.
-    pose proof (isLambda_make_n (rarg d) (tFix (map trans_cofix mfix) idx)).
-    destruct Thunk.make_n => //. apply trust_cofix.
-    (* do 3 constructor. *)
   - intros p pv IH wf. cbn. constructor. constructor 2.
     cbn in wf. move/andP: wf => [hasp tp].
     primProp. depelim tp; depelim pv; depelim IH; constructor; cbn in *; rtoProp; intuition auto; solve_all.
@@ -641,7 +577,8 @@ Proof.
     cbn -[GlobalContextMap.lookup_inductive_kind].
     destruct GlobalContextMap.lookup_inductive_kind as [[]|] eqn:hl' => //.
     1,3,4:eapply value_constructor; tea; [erewrite <-lookup_constructor_trans; tea|now len|solve_all].
-    now do 2 constructor.
+    apply trust_cofix.
+    (* now do 2 constructor. *)
   - intros f args vh harglen hargs ihargs.
     rewrite wellformed_mkApps // => /andP[] wff wfargs.
     rewrite trans_mkApps.
@@ -669,6 +606,7 @@ Ltac destruct_times :=
 From MetaCoq.Erasure Require Import EWcbvEvalCstrsAsBlocksInd.
 Lemma trans_correct {efl : EEnvFlags} {fl} {wcon : with_constructor_as_block = true}
   {wcb : cstr_as_blocks = true}
+  {wpc : with_prop_case = false} (* Avoid tLazy tBox values *)
   {Σ : GlobalContextMap.t} t v :
   has_tApp ->
   wf_glob Σ ->
@@ -712,7 +650,8 @@ Proof.
     1,3,4: eauto.
     + now rewrite -is_propositional_cstr_trans.
     + rewrite nth_error_map H2 //.
-    + eapply eval_beta. eapply e0; eauto.
+    + eapply trust_cofix.
+      (* eapply eval_beta. eapply e0; eauto.
       constructor; eauto.
       rewrite closed_subst // simpl_subst_k //.
       eapply EWcbvEval.eval_to_value in H.
@@ -724,27 +663,19 @@ Proof.
       instantiate (1 := map (trans Σ) args).
       eapply All2_All2_Set.
       eapply values_final. solve_all.
-      unshelve eapply value_trans; tea.
+      unshelve eapply value_trans; tea.*)
     + now len.
     + now len.
-    + exact e.
+    + apply trust_cofix.
 
-  - subst brs.
-    cbn -[lookup_constructor lookup_constructor_pars_args
-      GlobalContextMap.lookup_inductive_kind] in e0 |- *.
-    rewrite GlobalContextMap.lookup_inductive_kind_spec.
-    rewrite trans_substl ?map_repeat /= in e.
-    { now apply forallb_repeat. }
-    destruct lookup_inductive_kind as [[]|] eqn:hl => //.
-    1,3,4:eapply eval_iota_sing; [eauto|eauto|
-        now rewrite -is_propositional_trans|reflexivity|
-        rewrite /= ?trans_substl //; simpl; eauto].
-    eapply eval_iota_sing; eauto.
-    eapply eval_box; eauto.
-    rewrite -is_propositional_trans //.
-    reflexivity.
+  - now rewrite H in wpc.
 
   - apply trust_cofix.
+    (*rewrite trans_mkApps /= in e1.
+    cbn; eapply eval_fix => //; tea.
+    len. apply trust_cofix*)
+
+
   - apply trust_cofix.
   - apply trust_cofix.
   - apply trust_cofix.
@@ -910,13 +841,22 @@ Proof.
     destruct lookup_inductive_kind as [[]|] => /= //.
     2-3:constructor; eauto; solve_all.
     constructor; eauto; solve_all. cbn.
-    unfold Thunk.force.
-    eapply isEtaExp_expanded.
-    all:apply trust_cofix.
-  - apply trust_cofix.
-  - apply trust_cofix.
-  - apply trust_cofix.
-  - apply trust_cofix.
+    now constructor.
+    constructor; eauto; solve_all.
+  - cbn -[GlobalContextMap.lookup_inductive_kind].
+    rewrite GlobalContextMap.lookup_inductive_kind_spec.
+    destruct lookup_inductive_kind as [[]|] => /= //.
+    2-3:constructor; eauto; solve_all.
+    constructor; eauto; solve_all. cbn.
+    now constructor.
+    constructor; eauto; solve_all.
+  - cbn. econstructor; eauto. solve_all. now eapply isLambda_trans.
+  - cbn. econstructor; eauto; solve_all. apply trust_cofix.
+  - cbn -[GlobalContextMap.lookup_inductive_kind].
+    rewrite GlobalContextMap.lookup_inductive_kind_spec.
+    destruct lookup_inductive_kind as [[]|] => /= //.
+    1,3,4:eapply expanded_tConstruct_app; eauto; solve_all.
+    apply trust_cofix. (* Needs constructor_as_blocks = true invariant *)
 Qed.
     (*cbn.
     eapply isEtaExp_substl. eapply forallb_repeat => //.

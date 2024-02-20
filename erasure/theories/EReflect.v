@@ -121,6 +121,8 @@ Proof.
       revert array_value; induction hv; intros []; eauto; nodec.
       destruct (p t); subst; nodec.
       destruct (IHhv l0); nodec. noconf e; eauto.
+  - destruct (IHx t); subst; nodec. now left.
+  - destruct (IHx t); subst; nodec. now left.
 Defined.
 
 #[global]

@@ -62,7 +62,9 @@ Section transform_blocks.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i []
-    | tPrim p => EAst.tPrim (map_primIn p (fun x H => transform_blocks x)) }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => transform_blocks x))
+    | tLazy t => EAst.tLazy (transform_blocks t)
+    | tForce t => EAst.tForce (transform_blocks t) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.

@@ -356,7 +356,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let kind = Decls.IsAssumption Decls.Definitional in
       (* FIXME: better handling of evm *)
       let empty_mono_univ_entry = UState.Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders in
-      Declare.declare_variable ~typing_flags:None ~name ~kind ~typ ~impl:Glob_term.Explicit ~univs:empty_mono_univ_entry;
+      Declare.declare_variable ~typing_flags:None ~name ~kind (SectionLocalAssum { typ; impl=Glob_term.Explicit; univs=empty_mono_univ_entry });
       let env = Global.env () in
       k ~st env evm (Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->

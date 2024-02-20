@@ -69,6 +69,8 @@ Section remove_match_on_box.
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map remove_match_on_box args)
     | tPrim p => tPrim (map_prim remove_match_on_box p)
+    | tLazy t => tLazy (remove_match_on_box t)
+    | tForce t => tForce (remove_match_on_box t)
     end.
 
   Lemma remove_match_on_box_mkApps f l : remove_match_on_box (mkApps f l) = mkApps (remove_match_on_box f) (map remove_match_on_box l).

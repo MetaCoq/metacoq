@@ -287,6 +287,8 @@ Proof.
     rewrite <- Nat.add_succ_r in *.
     now eapply IHX.
   - solve_all.
+  - solve_all.
+  - solve_all.
 Qed.
 
 Lemma is_dead_csubst k t u k' :
@@ -521,6 +523,8 @@ Proof.
       now f_equal.
     + rewrite <- !Nat.add_succ_r in *.
       now apply IHX.
+  - f_equal; solve_all.
+  - f_equal; solve_all.
   - f_equal; solve_all.
 Qed.
 
@@ -871,6 +875,8 @@ Proof.
     f_equal.
     now rewrite p.
   - rewrite lift_mkApps. f_equal. simpl lift. f_equal. solve_all.
+  - rewrite lift_mkApps. f_equal. simpl lift. f_equal. solve_all.
+  - rewrite lift_mkApps. f_equal. simpl lift. f_equal. solve_all.
 Qed.
 
 Lemma lift_dearg n k t :
@@ -921,6 +927,8 @@ Proof.
     f_equal.
     rewrite <- !Nat.add_succ_r.
     now apply IHX.
+  - solve_all.
+  - solve_all.
   - solve_all.
 Qed.
 
@@ -1486,6 +1494,8 @@ Proof.
     split; [easy|].
     now apply IHX.
   - solve_all. rtoProp; intuition solve_all.
+  - solve_all. rtoProp; intuition solve_all.
+  - solve_all. rtoProp; intuition solve_all.
 Qed.
 
 Lemma valid_dearg_mask_dearg mask t :
@@ -1645,6 +1655,10 @@ Proof.
   - rewrite subst_mkApps, map_map; cbn; f_equal. f_equal.
     solve_all. eapply map_prim_eq_prop; tea; cbn; intuition eauto.
     specialize (a s k []). eauto.
+  - rewrite subst_mkApps, map_map; cbn; f_equal.
+    f_equal. specialize (IHt s k []); cbn in IHt. eauto.
+  - rewrite subst_mkApps, map_map; cbn; f_equal.
+    f_equal. specialize (IHt s k []); cbn in IHt. eauto.
 Qed.
 
 Lemma dearg_subst s k t :
@@ -1761,6 +1775,8 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
   - solve_all_k 6.
+  - solve_all.
+  - solve_all.
 Qed.
 
 Lemma is_expanded_aux_subst s n t k :
@@ -1805,6 +1821,8 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     now rewrite p, IHX.
   - solve_all_k 6.
+  - solve_all.
+  - solve_all.
 Qed.
 
 Lemma is_expanded_substl s n t :
@@ -2416,6 +2434,8 @@ Proof.
     rewrite <- !Nat.add_succ_r in *.
     now apply IHX.
   - rewrite closedn_mkApps; cbn; rtoProp; intuition solve_all. solve_all_k 6.
+  - rewrite closedn_mkApps; cbn; rtoProp; intuition solve_all.
+  - rewrite closedn_mkApps; cbn; rtoProp; intuition solve_all.
 Qed.
 
 Lemma Alli_map {A B P n} {f : A -> B} l :

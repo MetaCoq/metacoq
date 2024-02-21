@@ -125,6 +125,7 @@ let get_constant_body b =
     (* FIXME delayed univs skipped *)
     Some proof
   | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
+  | Symbol _ -> failwith "Symbols are not supported by TemplateCoq"
 
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
 let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.Env.constant_body =

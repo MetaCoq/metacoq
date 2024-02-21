@@ -36,7 +36,8 @@ Record erasure_configuration := {
   enable_cofix_to_fix : bool;
   enable_typed_erasure : bool;
   enable_fast_remove_params : bool;
-  dearging_config : dearging_config
+  dearging_config : dearging_config;
+  inductives_mapping : EReorderCstrs.inductives_mapping
   }.
 
 Definition default_dearging_config :=
@@ -49,14 +50,16 @@ Definition default_erasure_config :=
   {| enable_cofix_to_fix := true;
      dearging_config := default_dearging_config;
      enable_typed_erasure := true;
-     enable_fast_remove_params := true |}.
+     enable_fast_remove_params := true;
+     inductives_mapping := [] |}.
 
 (* This runs only the verified phases without the typed erasure and "fast" remove params *)
 Definition safe_erasure_config :=
   {| enable_cofix_to_fix := false;
      enable_typed_erasure := false;
      enable_fast_remove_params := false;
-     dearging_config := default_dearging_config |}.
+     dearging_config := default_dearging_config;
+     inductives_mapping := [] |}.
 
 Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
@@ -91,7 +94,7 @@ Definition final_wcbv_flags := {|
   with_guarded_fix := false;
   with_constructor_as_block := true |}.
 
-Program Definition optional_cofix_to_fix_transform econf :=
+Program Definition optional_unsafe_transforms econf :=
   ETransform.optional_self_transform econf.(enable_cofix_to_fix)
     ((* Rebuild the efficient lookup table *)
     rebuild_wf_env_transform (efl := EConstructorsAsBlocks.switch_cstr_as_blocks
@@ -100,8 +103,8 @@ Program Definition optional_cofix_to_fix_transform econf :=
     let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
       (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
     coinductive_to_inductive_transformation efl
-      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl))
-    .
+      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl) ▷
+    reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping)).
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}
   (efl := EWellformed.all_env_flags)
@@ -239,16 +242,7 @@ Program Definition verified_lambdabox_typed_pipeline {guard : abstract_guard_imp
    constructors_as_blocks_transformation
      (efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags))
      (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (has_box := eq_refl) (has_cstrblocks := eq_refl) ▷
-   ETransform.optional_self_transform econf.(enable_cofix_to_fix)
-    ((* Rebuild the efficient lookup table *)
-    rebuild_wf_env_transform (efl := EConstructorsAsBlocks.switch_cstr_as_blocks
-      (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags))) false false ▷
-    (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
-    let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
-      (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
-    coinductive_to_inductive_transformation efl
-      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl))
-.
+   optional_unsafe_transforms econf.
 
  (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without
     parameters in inductive declarations. The constructor applications are also transformed to a first-order
@@ -256,15 +250,18 @@ Program Definition verified_lambdabox_typed_pipeline {guard : abstract_guard_imp
     fixpoints or case analyses on propositional content. All fixpoint bodies start with a lambda as well.
     Finally, projections are inlined to cases, so no `tProj` remains. *)
 
- Import EGlobalEnv EWellformed.
+Import EGlobalEnv EWellformed.
 
- Next Obligation.
-   destruct H. split => //. sq.
-   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
- Qed.
- Next Obligation.
-  destruct H. destruct enable_cofix_to_fix => //.
-  Qed.
+Next Obligation.
+  destruct H. split => //. sq.
+  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
+Qed.
+
+Next Obligation.
+  unfold optional_unsafe_transforms. cbn.
+  unfold optional_self_transform. cbn.
+  destruct enable_cofix_to_fix => //.
+Qed.
 
 Local Obligation Tactic := intros; eauto.
 
@@ -342,7 +339,7 @@ Program Definition erasure_pipeline_fast {guard : abstract_guard_impl} (efl := E
   let efl := EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags) in
   rebuild_wf_env_transform (efl :=  efl) true false ▷
   constructors_as_blocks_transformation (efl := efl) (has_app := eq_refl) (has_pars := eq_refl) (has_rel := eq_refl) (has_box := eq_refl) (has_cstrblocks := eq_refl) ▷
-  optional_cofix_to_fix_transform econf.
+  optional_unsafe_transforms econf.
 Next Obligation.
   destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
@@ -362,7 +359,7 @@ Next Obligation.
   cbn in H. split; cbn; intuition eauto.
 Qed.
 Next Obligation.
-  cbn in H. unfold optional_cofix_to_fix_transform. destruct enable_cofix_to_fix => //.
+  cbn in H. unfold optional_unsafe_transforms. destruct enable_cofix_to_fix => //.
 Qed.
 Next Obligation.
   cbn in H. split; cbn; intuition eauto.
@@ -403,10 +400,10 @@ Program Definition run_erase_program {guard : abstract_guard_impl} econf :=
   if econf.(enable_typed_erasure) then run (typed_erasure_pipeline econf)
   else if econf.(enable_fast_remove_params) then
     run (erasure_pipeline_fast econf)
-  else run (erasure_pipeline ▷ (optional_cofix_to_fix_transform econf)).
+  else run (erasure_pipeline ▷ (optional_unsafe_transforms econf)).
 Next Obligation.
 Proof.
-  unfold optional_cofix_to_fix_transform.
+  unfold optional_unsafe_transforms.
   destruct enable_cofix_to_fix => //.
 Qed.
 
@@ -425,7 +422,8 @@ Definition erasure_fast_config :=
   {| enable_cofix_to_fix := false;
      dearging_config := default_dearging_config;
      enable_typed_erasure := false;
-     enable_fast_remove_params := true |}.
+     enable_fast_remove_params := true;
+     inductives_mapping := [] |}.
 
 Program Definition erase_fast_and_print_template_program (p : Ast.Env.program) : string :=
   erase_and_print_template_program erasure_fast_config p.
@@ -434,7 +432,8 @@ Definition typed_erasure_config :=
   {| enable_cofix_to_fix := false;
       dearging_config := default_dearging_config;
       enable_typed_erasure := true;
-      enable_fast_remove_params := true |}.
+      enable_fast_remove_params := true;
+      inductives_mapping := [] |}.
 
 (* Parameterized by a configuration for dearging, allowing to, e.g., override masks. *)
 Program Definition typed_erase_and_print_template_program (p : Ast.Env.program)

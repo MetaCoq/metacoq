@@ -63,7 +63,7 @@ let make_erasure_config config =
     enable_typed_erasure = config.typed;
     enable_fast_remove_params = config.fast;
     dearging_config = default_dearging_config;
-     }
+    inductives_mapping = [] }
 
 let time_opt config str fn arg =
   if config.time then

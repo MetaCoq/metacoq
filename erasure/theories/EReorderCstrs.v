@@ -1,6 +1,7 @@
 From Coq Require Import List String Arith Lia.
 Import ListNotations.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Utils Require Import MCList bytestring utils monad_utils.

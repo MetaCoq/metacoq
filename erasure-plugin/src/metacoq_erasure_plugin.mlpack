@@ -66,6 +66,7 @@ EInlineProjections
 EConstructorsAsBlocks
 ECoInductiveToInductive
 EReorderCstrs
+EUnboxing
 EProgram
 OptimizePropDiscr
 

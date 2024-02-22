@@ -1063,6 +1063,47 @@ Axiom trust_reorder_cstrs_transformation_ext' : forall (efl : EEnvFlags) (wfl : 
   TransformExt.t (reorder_cstrs_transformation efl wfl m)
     extends_eprogram extends_eprogram.
 
+From MetaCoq.Erasure Require Import EUnboxing.
+
+Axiom trust_unboxing_wf :
+  forall efl : EEnvFlags,
+  WcbvFlags ->
+  forall (input : Transform.program _ term),
+  wf_eprogram_env efl input -> wf_eprogram efl (unbox_program input).
+Axiom trust_unboxing_pres :
+  forall (efl : EEnvFlags) (wfl : WcbvFlags) (p : Transform.program _ term)
+  (v : term),
+  wf_eprogram_env efl p ->
+  eval_eprogram_env wfl p v -> exists v' : term, eval_eprogram wfl (unbox_program p) v' /\ v' = unbox p.1 v.
+
+Program Definition unbox_transformation (efl : EEnvFlags) (wfl : WcbvFlags)  :
+  Transform.t _ _ EAst.term EAst.term _ _
+    (eval_eprogram_env wfl) (eval_eprogram wfl) :=
+  {| name := "unbox singleton constructors ";
+    transform p _ := EUnboxing.unbox_program p ;
+    pre p := wf_eprogram_env efl p ;
+    post p := wf_eprogram efl p ;
+    obseq p hp p' v v' := v' = unbox p.1 v |}.
+
+Next Obligation.
+  move=> efl wfl m. cbn. now apply trust_unboxing_wf.
+Qed.
+Next Obligation.
+  red. eapply trust_unboxing_pres.
+Qed.
+
+#[global]
+Axiom trust_unbox_transformation_ext :
+  forall (efl : EEnvFlags) (wfl : WcbvFlags),
+  TransformExt.t (unbox_transformation efl wfl)
+    (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+
+#[global]
+Axiom trust_unbox_transformation_ext' :
+  forall (efl : EEnvFlags) (wfl : WcbvFlags),
+  TransformExt.t (unbox_transformation efl wfl)
+    extends_eprogram_env extends_eprogram.
+
 Program Definition optional_transform {env env' term term' value value' eval eval'} (activate : bool)
   (tr : Transform.t env env' term term' value value' eval eval') :
   if activate then Transform.t env env' term term' value value' eval eval'

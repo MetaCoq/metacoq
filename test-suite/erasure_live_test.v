@@ -38,10 +38,12 @@ Definition exintrotest := Eval lazy in test exintro.
 
 Definition ex_type_introtest := Eval lazy in testty exintro.
 
-Definition idnat := ((fun (X : Set) (x : X) => x) nat).
+Definition id := fun (X : Set) (x : X) => x.
+Definition idnat := (id nat).
 
 MetaCoq Quote Recursively Definition idnatc := idnat.
 Time Definition test_idnat := Eval lazy in test idnatc.
+Time Definition testty_idnat := Eval lazy in testty idnatc.
 
 (** Check that optimization of singleton pattern-matchings work *)
 Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>

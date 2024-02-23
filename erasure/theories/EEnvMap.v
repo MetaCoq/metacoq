@@ -69,6 +69,19 @@ Module GlobalContextMap.
     rewrite (EnvMap.lookup_spec Σ.(global_decls)) //; apply Σ.
   Qed.
 
+  Definition lookup_constant Σ kn : option constant_body :=
+    decl <- lookup_env Σ kn;;
+    match decl with
+    | ConstantDecl cb => ret cb
+    | InductiveDecl _ => None
+    end.
+
+  Lemma lookup_constant_spec Σ kn : lookup_constant Σ kn = EGlobalEnv.lookup_constant Σ kn.
+  Proof.
+    rewrite /lookup_constant /EGlobalEnv.lookup_constant.
+    rewrite lookup_env_spec //.
+  Qed.
+
   Definition lookup_minductive Σ kn : option mutual_inductive_body :=
     decl <- lookup_env Σ kn;;
     match decl with

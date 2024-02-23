@@ -146,7 +146,6 @@ Section unbox.
       | view_other u nconstr => mkApps (unbox f) (map unbox v)
     end.
   Proof using Type.
-  Admitted.
     intros napp. rewrite unbox_equation_1.
     destruct (TermSpineView.view_mkApps (TermSpineView.view (mkApps f v)) napp nnil) as [hna [hv' ->]].
     simp unbox; rewrite -unbox_equation_1.

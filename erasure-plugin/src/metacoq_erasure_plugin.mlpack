@@ -58,6 +58,8 @@ ESpineView
 EPretty
 Extract
 EEtaExpanded
+EInlining
+EBeta
 ERemoveParams
 ErasureFunction
 ErasureFunctionProperties

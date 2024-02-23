@@ -5,10 +5,10 @@ From MetaCoq.Utils Require Import bytestring utils.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.PCUIC Require Import PCUICNormal.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils ErasureCorrectness EPretty Extract EConstructorsAsBlocks.
+From MetaCoq.Erasure Require EAstUtils ErasureCorrectness EPretty Extract EProgram EConstructorsAsBlocks.
 From MetaCoq.Erasure Require Import EWcbvEvalNamed ErasureFunction ErasureFunctionProperties.
 From MetaCoq.ErasurePlugin Require Import ETransform Erasure.
-Import PCUICProgram.
+Import EProgram PCUICProgram.
 Import PCUICTransform (template_to_pcuic_transform, pcuic_expand_lets_transform).
 
 (* This is the total erasure function +
@@ -1742,7 +1742,7 @@ Section PCUICErase.
       match goal with
       [ |- context [ @erase ?X_type ?X ?nin ?G (tApp _ _) ?wt ] ] =>
         unshelve epose proof (@erase_mkApps X_type X nin G t [u] wt (wt'_erase_pcuic_program (Σ, t) prf3 prf0))
-      end. 
+      end.
       assert (hargs : forall Σ : global_env_ext, Σ ∼_ext env -> ∥ All (welltyped Σ []) [u] ∥).
       { cbn; intros ? ->. do 2 constructor; auto. destruct prf4 as [[T HT]]. eexists; eapply HT. }
       specialize (H hargs).
@@ -2120,7 +2120,7 @@ Section pipeline_cond.
 
   Opaque compose.
 
-  Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)  
+  Lemma verified_erasure_pipeline_lookup_env_in kn decl (efl := EInlineProjections.switch_no_params all_env_flags)
     {has_rel : has_tRel} {has_box : has_tBox} :
     EGlobalEnv.lookup_env Σ_t kn = Some decl ->
    exists decl',
@@ -2216,7 +2216,7 @@ Section pipeline_theorem.
   Let Σ_v := (transform verified_erasure_pipeline (Σ, v) (precond2 _ _ _ _ expΣ expt typing _ _ Heval)).1.
   Let v_t := compile_value_box (PCUICExpandLets.trans_global_env Σ) v [].
 
-  Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags) 
+  Lemma verified_erasure_pipeline_extends (efl := EInlineProjections.switch_no_params all_env_flags)
    {has_rel : has_tRel} {has_box : has_tBox} :
    EGlobalEnv.extends Σ_v Σ_t.
   Proof.

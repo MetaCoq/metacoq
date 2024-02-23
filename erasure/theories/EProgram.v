@@ -5,7 +5,8 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Transform config BasicAst.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 (* From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl. *)
-From MetaCoq.Erasure Require EAstUtils EWellformed EEnvMap EWcbvEval.
+From MetaCoq.Erasure Require EAstUtils EWellformed EEnvMap EGlobalEnv EWcbvEval.
+Import EEnvMap.
 
 Import bytestring.
 Local Open Scope bs.
@@ -95,3 +96,9 @@ Module TransformExt.
   End Comp.
 
 End TransformExt.
+
+Definition extends_eprogram (p p' : eprogram) :=
+  extends p.1 p'.1 /\ p.2 = p'.2.
+
+Definition extends_eprogram_env (p p' : eprogram_env) :=
+  extends p.1 p'.1 /\ p.2 = p'.2.

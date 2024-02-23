@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
-From MetaCoq.Erasure Require Import EProgram.
+From MetaCoq.Erasure Require Import EProgram EInlining EBeta.
 From MetaCoq.ErasurePlugin Require Import ETransform.
 
 Import PCUICProgram.
@@ -33,11 +33,12 @@ Import EWcbvEval.
 Local Obligation Tactic := program_simpl.
 
 Record erasure_configuration := {
-  enable_cofix_to_fix : bool;
+  enable_unsafe : bool;
   enable_typed_erasure : bool;
   enable_fast_remove_params : bool;
   dearging_config : dearging_config;
-  inductives_mapping : EReorderCstrs.inductives_mapping
+  inductives_mapping : EReorderCstrs.inductives_mapping;
+  inlining : KernameSet.t
   }.
 
 Definition default_dearging_config :=
@@ -47,19 +48,21 @@ Definition default_dearging_config :=
 
 (* This runs the cofix -> fix translation which is not entirely verified yet *)
 Definition default_erasure_config :=
-  {| enable_cofix_to_fix := true;
+  {| enable_unsafe := true;
      dearging_config := default_dearging_config;
      enable_typed_erasure := true;
      enable_fast_remove_params := true;
-     inductives_mapping := [] |}.
+     inductives_mapping := [];
+     inlining := KernameSet.empty |}.
 
 (* This runs only the verified phases without the typed erasure and "fast" remove params *)
 Definition safe_erasure_config :=
-  {| enable_cofix_to_fix := false;
+  {| enable_unsafe := false;
      enable_typed_erasure := false;
      enable_fast_remove_params := false;
      dearging_config := default_dearging_config;
-     inductives_mapping := [] |}.
+     inductives_mapping := [];
+     inlining := KernameSet.empty |}.
 
 Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
@@ -97,7 +100,7 @@ Definition final_wcbv_flags := {|
 Program Definition optional_unsafe_transforms econf :=
   let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
   (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
-  ETransform.optional_self_transform econf.(enable_cofix_to_fix)
+  ETransform.optional_self_transform econf.(enable_unsafe)
     ((* Rebuild the efficient lookup table *)
     rebuild_wf_env_transform (efl := efl) false false ▷
     (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
@@ -105,7 +108,10 @@ Program Definition optional_unsafe_transforms econf :=
       (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl) ▷
     reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping) ▷
     rebuild_wf_env_transform (efl := efl) false false ▷
-    unbox_transformation efl final_wcbv_flags).
+    unbox_transformation efl final_wcbv_flags ▷
+    inline_transformation efl final_wcbv_flags econf.(inlining) ▷
+    forget_inlining_info_transformation efl final_wcbv_flags ▷
+    betared_transformation efl final_wcbv_flags).
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}
   (efl := EWellformed.all_env_flags)
@@ -260,8 +266,7 @@ Qed.
 
 Next Obligation.
   unfold optional_unsafe_transforms. cbn.
-  unfold optional_self_transform. cbn.
-  destruct enable_cofix_to_fix => //.
+  destruct enable_unsafe => //.
 Qed.
 
 Local Obligation Tactic := intros; eauto.
@@ -360,7 +365,7 @@ Next Obligation.
   cbn in H. split; cbn; intuition eauto.
 Qed.
 Next Obligation.
-  cbn in H. unfold optional_unsafe_transforms. destruct enable_cofix_to_fix => //.
+  cbn in H. unfold optional_unsafe_transforms. destruct enable_unsafe => //.
 Qed.
 Next Obligation.
   cbn in H. split; cbn; intuition eauto.
@@ -405,7 +410,7 @@ Program Definition run_erase_program {guard : abstract_guard_impl} econf :=
 Next Obligation.
 Proof.
   unfold optional_unsafe_transforms.
-  destruct enable_cofix_to_fix => //.
+  destruct enable_unsafe => //.
 Qed.
 
 Program Definition erase_and_print_template_program econf (p : Ast.Env.program) : string :=
@@ -420,21 +425,23 @@ Next Obligation.
 Qed.
 
 Definition erasure_fast_config :=
-  {| enable_cofix_to_fix := false;
+  {| enable_unsafe := false;
      dearging_config := default_dearging_config;
      enable_typed_erasure := false;
      enable_fast_remove_params := true;
-     inductives_mapping := [] |}.
+     inductives_mapping := [];
+     inlining := KernameSet.empty |}.
 
 Program Definition erase_fast_and_print_template_program (p : Ast.Env.program) : string :=
   erase_and_print_template_program erasure_fast_config p.
 
 Definition typed_erasure_config :=
-  {| enable_cofix_to_fix := false;
+  {| enable_unsafe := false;
       dearging_config := default_dearging_config;
       enable_typed_erasure := true;
       enable_fast_remove_params := true;
-      inductives_mapping := [] |}.
+      inductives_mapping := [];
+      inlining := KernameSet.empty |}.
 
 (* Parameterized by a configuration for dearging, allowing to, e.g., override masks. *)
 Program Definition typed_erase_and_print_template_program (p : Ast.Env.program)

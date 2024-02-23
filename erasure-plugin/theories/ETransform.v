@@ -23,7 +23,6 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
      wf_env_map_repr := Σ.(trans_env_repr);
  |}.
 
-
 Notation NormalizationIn_erase_pcuic_program_1 p
   := (@PCUICTyping.wf_ext config.extraction_checker_flags p -> PCUICSN.NormalizationIn (cf:=config.extraction_checker_flags) (no:=PCUICSN.extraction_normalizing) p)
        (only parsing).
@@ -601,11 +600,6 @@ Section Dearging.
 
 End Dearging.
 
-Definition extends_eprogram (p p' : eprogram) :=
-  extends p.1 p'.1 /\ p.2 = p'.2.
-
-Definition extends_eprogram_env (p p' : eprogram_env) :=
-  extends p.1 p'.1 /\ p.2 = p'.2.
 
 Section PCUICEnv. (* Locally reuse the short names for PCUIC environment handling *)
 Import PCUICAst.PCUICEnvironment.

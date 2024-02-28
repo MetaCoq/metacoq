@@ -68,8 +68,6 @@ gen-src/decidableType.ml
 gen-src/decidableType.mli
 gen-src/decimal.ml
 gen-src/decimal.mli
-gen-src/decimalString.ml
-gen-src/decimalString.mli
 gen-src/denoter.ml
 # gen-src/depElim.ml
 # gen-src/depElim.mli
@@ -103,8 +101,8 @@ gen-src/floatOps.ml
 gen-src/floatOps.mli
 gen-src/hexadecimal.ml
 gen-src/hexadecimal.mli
-gen-src/hexadecimalString.ml
-gen-src/hexadecimalString.mli
+# gen-src/hexadecimalString.ml
+# gen-src/hexadecimalString.mli
 gen-src/induction.ml
 gen-src/induction.mli
 # gen-src/init.ml

@@ -30,6 +30,8 @@ theories/ErasureFunction.v
 theories/ErasureFunctionProperties.v
 theories/EExtends.v
 theories/EOptimizePropDiscr.v
+theories/EInlining.v
+theories/EBeta.v
 theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
 theories/EProgram.v
@@ -39,6 +41,7 @@ theories/EConstructorsAsBlocks.v
 theories/EWcbvEvalCstrsAsBlocksInd.v
 theories/EWcbvEvalCstrsAsBlocksFixLambdaInd.v
 theories/ECoInductiveToInductive.v
+theories/EUnboxing.v
 theories/EReorderCstrs.v
 theories/EImplementBox.v
 

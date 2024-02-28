@@ -76,6 +76,8 @@ PrimFloat
 FloatOps
 DecimalString
 MCString
+Sint63
+Show
 MCUtils
 Signature
 All_Forall

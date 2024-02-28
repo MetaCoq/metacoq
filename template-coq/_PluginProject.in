@@ -141,6 +141,10 @@ gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
+gen-src/sint63.mli
+gen-src/sint63.ml
+gen-src/show.mli
+gen-src/show.ml
 # gen-src/mCUint63.ml
 # gen-src/mCUint63.mli
 gen-src/mCUtils.ml

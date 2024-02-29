@@ -31,6 +31,7 @@ theories/MC_ExtrOCamlInt63.v
 theories/MC_ExtrOCamlZPosInt.v
 theories/ReflectEq.v
 theories/monad_utils.v
+theories/Show.v
 theories/utils.v
 
 # extra tactics

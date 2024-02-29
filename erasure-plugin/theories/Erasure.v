@@ -111,6 +111,8 @@ Program Definition optional_unsafe_transforms econf :=
     unbox_transformation efl final_wcbv_flags ▷
     inline_transformation efl final_wcbv_flags econf.(inlining) ▷
     forget_inlining_info_transformation efl final_wcbv_flags ▷
+    (* Heuristically do it twice for more beta-normal terms *)
+    betared_transformation efl final_wcbv_flags ▷
     betared_transformation efl final_wcbv_flags).
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}

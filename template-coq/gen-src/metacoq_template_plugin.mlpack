@@ -26,7 +26,6 @@ Caml_byte
 ByteCompare
 ByteCompareSpec
 String0
-HexadecimalString
 Orders
 OrdersAlt
 OrdersTac
@@ -75,8 +74,9 @@ Zpower
 SpecFloat
 PrimFloat
 FloatOps
-DecimalString
 MCString
+Sint63
+Show
 MCUtils
 Signature
 All_Forall

@@ -19,17 +19,13 @@ Definition map_subterms (f : term -> term) (t : term) : term :=
   | tLazy t => tLazy (f t)
   | tForce t => tForce (f t)
   | tConstruct ind n args => tConstruct ind n (map f args)
-  | t => t
+  | tRel n => tRel n
+  | tVar na => tVar na
+  | tConst kn => tConst kn
+  | tBox => tBox
   end.
 
 Section betared.
-  Fixpoint decompose_lam (t : term) {struct t} : list name × term :=
-    match t with
-    | tLambda na B =>
-      let (ns, B0) := decompose_lam B in
-      (na :: ns, B0)
-    | _ => ([], t)
-    end.
 
   Fixpoint beta_body (body : term) (args : list term) {struct args} : term :=
     match args with

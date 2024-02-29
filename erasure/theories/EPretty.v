@@ -86,8 +86,8 @@ Module PrintTermTree.
 
     Definition print_prim (soft : EAst.term -> Tree.t) (p : @prim_val EAst.term) : Tree.t :=
       match p.π2 return Tree.t with
-      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
-      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      | primIntModel f => "(int: " ^ show f ^ ")"
+      | primFloatModel f => "(float: " ^ show f ^ ")"
       | primArrayModel a => "(array:" ^ soft a.(array_default) ^ " , " ^ string_of_list soft a.(array_value) ^ ")"
       end.
 

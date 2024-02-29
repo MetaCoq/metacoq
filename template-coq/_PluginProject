@@ -70,8 +70,6 @@ gen-src/decidableType.ml
 gen-src/decidableType.mli
 gen-src/decimal.ml
 gen-src/decimal.mli
-gen-src/decimalString.ml
-gen-src/decimalString.mli
 gen-src/denoter.ml
 gen-src/depElim.ml
 gen-src/depElim.mli
@@ -105,12 +103,12 @@ gen-src/floatOps.ml
 gen-src/floatOps.mli
 gen-src/hexadecimal.ml
 gen-src/hexadecimal.mli
-gen-src/hexadecimalString.ml
-gen-src/hexadecimalString.mli
-gen-src/induction0.ml
-gen-src/induction0.mli
-gen-src/init.ml
-gen-src/init.mli
+# gen-src/hexadecimalString.ml
+# gen-src/hexadecimalString.mli
+gen-src/induction.ml
+gen-src/induction.mli
+# gen-src/init.ml
+# gen-src/init.mli
 gen-src/int0.ml
 gen-src/int0.mli
 gen-src/kernames.ml
@@ -145,8 +143,12 @@ gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
-gen-src/mCUint63.ml
-gen-src/mCUint63.mli
+gen-src/sint63.mli
+gen-src/sint63.ml
+gen-src/show.mli
+gen-src/show.ml
+# gen-src/mCUint63.ml
+# gen-src/mCUint63.mli
 gen-src/mCUtils.ml
 gen-src/mCUtils.mli
 gen-src/mSetAVL.ml

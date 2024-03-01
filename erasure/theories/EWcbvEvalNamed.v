@@ -936,6 +936,10 @@ Fixpoint annotate (s : list ident) (u : term) {struct u} : term :=
       let nms := gen_many_fresh s (map dname mfix) in
       let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (List.rev (gen_many_fresh s ((map dname mfix))) ++ s)) d) mfix nms in
       tFix mfix' idx
+  | tCoFix mfix idx =>
+    let nms := gen_many_fresh s (map dname mfix) in
+    let mfix' := map2 (fun d na => map_def_name _ (fun _ => nNamed na) (annotate (List.rev (gen_many_fresh s ((map dname mfix))) ++ s)) d) mfix nms in
+      tFix mfix' idx
   | tPrim p => tPrim (map_prim (annotate s) p)
   | tLazy t => tLazy (annotate s t)
   | tForce t => tForce (annotate s t)
@@ -1038,58 +1042,102 @@ Qed.
 
 Local Hint Resolve incl_tl incl_appr incl_appl : core.
 
-Lemma wellformed_annotate' Σ Γ Γ' s :
+Definition switch_term_flags_to_named (efl : ETermFlags) :=
+  {|
+    has_tBox := has_tBox;
+    has_tRel := false;
+    has_tVar := true;
+    has_tEvar := has_tEvar;
+    has_tLambda := has_tLambda;
+    has_tLetIn := has_tLetIn;
+    has_tApp := has_tApp;
+    has_tConst := has_tConst;
+    has_tConstruct := has_tConstruct;
+    has_tCase := has_tCase;
+    has_tProj := has_tProj;
+    has_tFix := has_tFix;
+    has_tCoFix := has_tCoFix;
+    has_tPrim := has_tPrim;
+    has_tLazy_Force := has_tLazy_Force
+  |}.
+
+Definition switch_env_flags_to_named (efl : EEnvFlags) :=
+  {|
+    has_axioms := has_axioms;
+    has_cstr_params := has_cstr_params;
+    term_switches := switch_term_flags_to_named efl.(term_switches);
+    cstr_as_blocks := efl.(cstr_as_blocks) |}.
+
+Lemma wellformed_annotate' efl Σ Γ Γ' s :
   incl Γ' Γ ->
-  wellformed (efl := extraction_env_flags) Σ #|Γ| s -> wellformed (efl := named_extraction_env_flags) (annotate_env Γ' Σ) #|Γ| (annotate Γ s).
+  @wellformed efl Σ #|Γ| s ->
+  @wellformed (switch_env_flags_to_named efl) (annotate_env Γ' Σ) #|Γ| (annotate Γ s).
 Proof.
   intros Hincl Hwf.
-  induction s in Γ, Hwf, Γ', Hincl |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve eauto.
-  - eapply Nat.ltb_lt in Hwf. destruct nth_error eqn:Eq; eauto.
+  induction s in Γ, Hwf, Γ', Hincl |- * using EInduction.term_forall_list_ind; cbn in *; rtoProp; unshelve intuition eauto.
+  - eapply Nat.ltb_lt in H0. destruct nth_error eqn:Eq; eauto.
     eapply nth_error_None in Eq. lia.
+  - solve_all.
   - destruct n; cbn. 2: destruct in_dec.
     all: eapply (IHs (_ :: Γ)); cbn; eauto.
-  - split; eauto. destruct n; cbn. 2: destruct in_dec; cbn.
+  - destruct n; cbn. 2: destruct in_dec; cbn.
     all: eapply (IHs2 (_ :: Γ)); cbn; eauto.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     destruct c, cst_body; cbn in *; try congruence.
     erewrite lookup_annotate_env; eauto. cbn; eauto.
+    now erewrite lookup_annotate_env; eauto.
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    erewrite lookup_annotate_env; eauto. cbn.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     erewrite lookup_annotate_env; eauto. cbn.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     repeat split. len. solve_all.
+    destruct cstr_as_blocks; eauto.
+    rtoProp; intuition eauto. solve_all. destruct args => //.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     erewrite lookup_annotate_env; eauto. cbn.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     repeat split. eauto.
     solve_all. rewrite map_length. rewrite <- app_length.
     eapply a; eauto. len. rewrite gen_many_fresh_length. eauto.
-  - split.
-    { clear - H.  generalize ((List.rev (gen_many_fresh Γ ( (map dname m))) ++ Γ)).
-      induction m in Γ, H |- *; cbn.
-      - econstructor.
-      - intros. destruct a; cbn in *. destruct dname; cbn; rtoProp; repeat split; eauto.
-        all: destruct dbody; cbn in *; eauto.
-    }
-    { solve_all. unfold wf_fix in *. rtoProp. split.
-      rewrite map2_length gen_many_fresh_length map_length.
-      { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
-      solve_all. clear H0. unfold test_def in *. cbn in *.
-      eapply All_impl in H1. 2:{ intros ? [[] ].
+  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    erewrite lookup_annotate_env; eauto. cbn.
+    destruct nth_error as [ [] | ]; cbn in *; eauto.
+
+  - clear - H1. solve_all.
+    generalize (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ).
+    generalize (gen_many_fresh Γ (map dname m)).
+    induction H1.
+    + econstructor.
+    + destruct x; cbn in *. destruct l0 => //=. cbn.
+      constructor; cbn.
+      destruct dbody; cbn in *; eauto.
+      eapply IHAll.
+  - solve_all. unfold wf_fix in *. rtoProp. split.
+    rewrite map2_length gen_many_fresh_length map_length.
+    { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
+    solve_all. clear H0. unfold test_def in *. cbn in *.
+    eapply All_impl in H2. 2:{ intros ? [[] ].
       specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
       revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i1. exact i1.
       eapply incl_appr. eauto.
       }
-      revert H1.
+      revert H2.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
       intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
-      revert H1. generalize (#|m| + #|Γ|).
+      revert H2. generalize (#|m| + #|Γ|).
       intros.
-      induction m in Γ, n, n0, l, H1 |- *.
-      - econstructor.
-      - invs H1. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
-    }
+      induction m in Γ, n, n0, l, H2 |- *.
+      + econstructor.
+      + invs H2. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
+  - unfold wf_fix in *. rtoProp; intuition auto. solve_all. destruct x; cbn in *.
+    eapply (a #|fix_context.
   - repeat solve_all.
+
 Qed.
 
 Lemma wellformed_annotate Σ Γ s :

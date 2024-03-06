@@ -30,13 +30,20 @@ Import EWcbvEval.
 
 Local Obligation Tactic := program_simpl.
 
+Record unsafe_passes :=
+  { fix_to_lazy : bool;
+    reorder_constructors : bool;
+    inlining : bool;
+    unboxing : bool;
+    betared : bool }.
+
 Record erasure_configuration := {
-  enable_unsafe : bool;
+  enable_unsafe : unsafe_passes;
   enable_typed_erasure : bool;
   enable_fast_remove_params : bool;
   dearging_config : dearging_config;
   inductives_mapping : EReorderCstrs.inductives_mapping;
-  inlining : KernameSet.t
+  inlined_constants : KernameSet.t
   }.
 
 Definition default_dearging_config :=
@@ -44,23 +51,44 @@ Definition default_dearging_config :=
       do_trim_const_masks := true;
       do_trim_ctor_masks := false |}.
 
-(* This runs the cofix -> fix translation which is not entirely verified yet *)
+
+Definition make_unsafe_passes b :=
+  {| fix_to_lazy := b;
+     reorder_constructors := b;
+     inlining := b;
+     unboxing := b;
+     betared := b |}.
+
+Definition no_unsafe_passes := make_unsafe_passes false.
+Definition all_unsafe_passes := make_unsafe_passes true.
+
+(* This runs the cofix -> fix/lazy translation as well as inlining and
+  beta-redex simplification,  which are not verified. It does not change
+  representation by reordering constructors or unboxing. *)
+
+Definition default_unsafe_passes :=
+  {| fix_to_lazy := true;
+      reorder_constructors := false;
+      inlining := true;
+      unboxing := false;
+      betared := true |}.
+
 Definition default_erasure_config :=
-  {| enable_unsafe := true;
+  {| enable_unsafe := default_unsafe_passes;
      dearging_config := default_dearging_config;
      enable_typed_erasure := true;
      enable_fast_remove_params := true;
      inductives_mapping := [];
-     inlining := KernameSet.empty |}.
+     inlined_constants := KernameSet.empty |}.
 
 (* This runs only the verified phases without the typed erasure and "fast" remove params *)
 Definition safe_erasure_config :=
-  {| enable_unsafe := false;
+  {| enable_unsafe := no_unsafe_passes;
      enable_typed_erasure := false;
      enable_fast_remove_params := false;
      dearging_config := default_dearging_config;
      inductives_mapping := [];
-     inlining := KernameSet.empty |}.
+     inlined_constants := KernameSet.empty |}.
 
 Axiom assume_welltyped_template_program_expansion :
   forall p (wtp : ∥ wt_template_program_env p ∥),
@@ -96,22 +124,40 @@ Definition final_wcbv_flags := {|
   with_constructor_as_block := true |}.
 
 Program Definition optional_unsafe_transforms econf :=
+  let passes := econf.(enable_unsafe) in
   let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
   (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
-  ETransform.optional_self_transform econf.(enable_unsafe)
+  ETransform.optional_self_transform passes.(fix_to_lazy)
     ((* Rebuild the efficient lookup table *)
     rebuild_wf_env_transform (efl := efl) false false ▷
     (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
     coinductive_to_inductive_transformation efl
-      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl) ▷
-    reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping) ▷
-    rebuild_wf_env_transform (efl := efl) false false ▷
-    unbox_transformation efl final_wcbv_flags ▷
-    inline_transformation efl final_wcbv_flags econf.(inlining) ▷
-    forget_inlining_info_transformation efl final_wcbv_flags ▷
-    (* Heuristically do it twice for more beta-normal terms *)
-    betared_transformation efl final_wcbv_flags ▷
-    betared_transformation efl final_wcbv_flags).
+      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl)) ▷
+  ETransform.optional_self_transform passes.(reorder_constructors)
+    (reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping)) ▷
+  ETransform.optional_self_transform passes.(unboxing)
+    (rebuild_wf_env_transform (efl := efl) false false ▷
+      unbox_transformation efl final_wcbv_flags) ▷
+  ETransform.optional_self_transform passes.(inlining)
+      (inline_transformation efl final_wcbv_flags econf.(inlined_constants) ▷
+       forget_inlining_info_transformation efl final_wcbv_flags) ▷
+  (* Heuristically do it twice for more beta-normal terms *)
+  ETransform.optional_self_transform passes.(betared)
+    (betared_transformation efl final_wcbv_flags ▷
+     betared_transformation efl final_wcbv_flags).
+
+Next Obligation.
+  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+Qed.
+Next Obligation.
+  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+Qed.
+Next Obligation.
+  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+Qed.
+Next Obligation.
+  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+Qed.
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}
   (efl := EWellformed.all_env_flags)
@@ -266,7 +312,7 @@ Qed.
 
 Next Obligation.
   unfold optional_unsafe_transforms. cbn.
-  destruct enable_unsafe => //.
+  destruct enable_unsafe as [[] ? ? ? ?]=> //.
 Qed.
 
 Local Obligation Tactic := intros; eauto.
@@ -365,7 +411,9 @@ Next Obligation.
   cbn in H. split; cbn; intuition eauto.
 Qed.
 Next Obligation.
-  cbn in H. unfold optional_unsafe_transforms. destruct enable_unsafe => //.
+  cbn in H. unfold optional_unsafe_transforms.
+  cbn.
+  destruct enable_unsafe as [[] ? ? ? ?]=> //.
 Qed.
 Next Obligation.
   cbn in H. split; cbn; intuition eauto.
@@ -409,8 +457,8 @@ Program Definition run_erase_program {guard : abstract_guard_impl} econf :=
   else run (erasure_pipeline ▷ (optional_unsafe_transforms econf)).
 Next Obligation.
 Proof.
-  unfold optional_unsafe_transforms.
-  destruct enable_unsafe => //.
+  unfold optional_unsafe_transforms; cbn.
+  destruct enable_unsafe as [[] ? ? ? ?]=> //.
 Qed.
 
 Program Definition erase_and_print_template_program econf (p : Ast.Env.program) : string :=
@@ -425,23 +473,23 @@ Next Obligation.
 Qed.
 
 Definition erasure_fast_config :=
-  {| enable_unsafe := false;
+  {| enable_unsafe := no_unsafe_passes;
      dearging_config := default_dearging_config;
      enable_typed_erasure := false;
      enable_fast_remove_params := true;
      inductives_mapping := [];
-     inlining := KernameSet.empty |}.
+     inlined_constants := KernameSet.empty |}.
 
 Program Definition erase_fast_and_print_template_program (p : Ast.Env.program) : string :=
   erase_and_print_template_program erasure_fast_config p.
 
 Definition typed_erasure_config :=
-  {| enable_unsafe := false;
+  {| enable_unsafe := no_unsafe_passes;
       dearging_config := default_dearging_config;
       enable_typed_erasure := true;
       enable_fast_remove_params := true;
       inductives_mapping := [];
-      inlining := KernameSet.empty |}.
+      inlined_constants := KernameSet.empty |}.
 
 (* Parameterized by a configuration for dearging, allowing to, e.g., override masks. *)
 Program Definition typed_erase_and_print_template_program (p : Ast.Env.program)

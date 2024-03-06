@@ -12,7 +12,7 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   export OCAMLPATH
 endif
 
-.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper .merlin test-suite translations quotation
+.PHONY: printconf all utils template-coq pcuic erasure install uninstall html clean mrproper safechecker-plugin .merlin test-suite translations quotation
 
 printconf:
 ifeq '$(METACOQ_CONFIG)' 'local'
@@ -26,7 +26,7 @@ else
 endif
 endif
 
-install: all 
+install: all
 	$(MAKE) -C utils install
 	$(MAKE) -C common install
 	$(MAKE) -C template-coq install

@@ -31,7 +31,7 @@ Import EWcbvEval.
 Local Obligation Tactic := program_simpl.
 
 Record unsafe_passes :=
-  { fix_to_lazy : bool;
+  { cofix_to_lazy : bool;
     reorder_constructors : bool;
     inlining : bool;
     unboxing : bool;
@@ -53,7 +53,7 @@ Definition default_dearging_config :=
 
 
 Definition make_unsafe_passes b :=
-  {| fix_to_lazy := b;
+  {| cofix_to_lazy := b;
      reorder_constructors := b;
      inlining := b;
      unboxing := b;
@@ -67,7 +67,7 @@ Definition all_unsafe_passes := make_unsafe_passes true.
   representation by reordering constructors or unboxing. *)
 
 Definition default_unsafe_passes :=
-  {| fix_to_lazy := true;
+  {| cofix_to_lazy := true;
       reorder_constructors := false;
       inlining := true;
       unboxing := false;
@@ -127,7 +127,7 @@ Program Definition optional_unsafe_transforms econf :=
   let passes := econf.(enable_unsafe) in
   let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
   (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
-  ETransform.optional_self_transform passes.(fix_to_lazy)
+  ETransform.optional_self_transform passes.(cofix_to_lazy)
     ((* Rebuild the efficient lookup table *)
     rebuild_wf_env_transform (efl := efl) false false ▷
     (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)

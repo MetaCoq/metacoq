@@ -105,7 +105,7 @@ To show this help message type:\n\
    MetaCoq Erase -help.\n\n\
 Valid options:\n\
 -typed       :  Run the typed erasure pipeline including a dearging phase. By default we run the pipeline without this phase.\n\
--unsafe      :  Run also partially verified passes of the pipeline. This includes the cofix to fix translation.\n\
+-unsafe      :  Run also partially verified passes of the pipeline. This includes the cofix to lazy translation.\n\
 -time        :  Time each compilation phase\n\
 -bypass-qeds :  Bypass the use of Qed and quote opaque proofs. Beware, this can result in large memory\n\
                 consumption due to reification of large proof terms.\n\

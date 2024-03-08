@@ -48,7 +48,7 @@ Section Reorder.
   Equations reorder (t : term) : term :=
     | tVar na => tVar na
     | tLambda nm bod => tLambda nm (reorder bod)
-    | tLetIn nm dfn bod => tLetIn nm dfn bod
+    | tLetIn nm dfn bod => tLetIn nm (reorder dfn) (reorder bod)
     | tApp fn arg => tApp (reorder fn) (reorder arg)
     | tConst nm => tConst nm
     | tConstruct i m args => tConstruct i (lookup_constructor_ordinal i m) (map reorder args)

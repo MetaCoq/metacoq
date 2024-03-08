@@ -59,7 +59,9 @@ Section strip.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i block_args
-    | tPrim p => EAst.tPrim (map_primIn p (fun x H => strip x)) }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => strip x))
+    | tLazy t => EAst.tLazy (strip t)
+    | tForce t => EAst.tForce (strip t) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -569,6 +571,8 @@ Module Fast.
     | app, tPrim (primFloat; primFloatModel f) => mkApps (tPrim (primFloat; primFloatModel f)) app
     | app, tPrim (primArray; primArrayModel a) =>
       mkApps (tPrim (primArray; primArrayModel {| array_default := strip [] a.(array_default); array_value := strip_args a.(array_value) |})) app
+    | app, tLazy t => mkApps (tLazy (strip [] t)) app
+    | app, tForce t => mkApps (tForce (strip [] t)) app
     | app, x => mkApps x app }
 
     where strip_args (t : list term) : list term :=

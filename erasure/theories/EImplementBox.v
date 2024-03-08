@@ -54,7 +54,9 @@ Section implement_box.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i (map_InP block_args (fun d H => implement_box d))
-    | tPrim p => EAst.tPrim (map_primIn p (fun x H => implement_box x)).
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => implement_box x))
+    | tLazy t => EAst.tLazy (implement_box t)
+    | tForce t => EAst.tForce (implement_box t).
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -445,6 +447,7 @@ Definition disable_box_term_flags (et : ETermFlags) :=
     ; has_tFix := true
     ; has_tCoFix := has_tCoFix
     ; has_tPrim := has_tPrim
+    ; has_tLazy_Force := has_tLazy_Force
   |}.
 
 Definition switch_off_box (efl : EEnvFlags) :=

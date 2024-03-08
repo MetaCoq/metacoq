@@ -38,6 +38,8 @@ Fixpoint csubst t k u :=
     tCoFix mfix' idx
   | tConstruct ind n args => tConstruct ind n (map (csubst t k) args)
   | tPrim p => tPrim (map_prim (csubst t k) p)
+  | tLazy u => tLazy (csubst t k u)
+  | tForce u => tForce (csubst t k u)
   | x => x
   end.
 

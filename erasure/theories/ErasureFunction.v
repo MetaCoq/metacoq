@@ -1799,6 +1799,73 @@ Proof.
     destruct KernameSet.mem; cbn. f_equal. f_equal. 1-2:f_equal. all:now eapply IHdecls.
 Qed.
 
+
+Lemma erase_global_irr X_type (X X':X_type.π1) decls {normalization_in normalization_in'}
+prf prf' :
+(forall Σ Σ', Σ ∼ X -> Σ' ∼ X' -> forall tag, primitive_constant Σ tag = primitive_constant Σ' tag) ->
+erase_global X decls (normalization_in:=normalization_in) prf =
+erase_global X' decls (normalization_in:=normalization_in') prf'.
+Proof.
+revert X X' normalization_in normalization_in' prf prf'.
+induction decls; eauto. intros. destruct a as [kn []].
+- cbn.
+  set (ec := erase_constant_decl _ _ _ _).
+  set (ec' := erase_constant_decl _ _ _ _).
+  pose proof (abstract_env_exists X) as [[envX wfX]].
+  pose proof (abstract_env_exists X') as [[envX' wfX']].
+  pose proof (abstract_env_exists (abstract_pop_decls X)) as [[env wf]].
+  pose proof (abstract_env_exists (abstract_pop_decls X')) as [[env' wf']].
+  unshelve epose proof (abstract_pop_decls_correct _ _ _ _ _ wfX wf) as [Hd [Hu Hr]]. shelve.
+  { intros ? h. rewrite (prf _ h). now eexists. }
+  unshelve epose proof (abstract_pop_decls_correct _ _ _ _ _ wfX' wf') as [Hd' [Hu' Hr']]. shelve.
+  { intros ? h. rewrite (prf' _ h). now eexists. }
+  assert (ec = ec') as <-.
+  { subst ec ec'.
+    unfold erase_constant_decl.
+    erewrite erase_constant_body_irrel. reflexivity.
+    red. intros.
+    pose proof (abstract_make_wf_env_ext_correct (abstract_pop_decls X) (cst_universes c) _ _ _ wf H0).
+    pose proof (abstract_make_wf_env_ext_correct (abstract_pop_decls X') (cst_universes c) _ _ _ wf' H1).
+    split => //.
+    { intros.
+      rewrite -(abstract_env_lookup_correct' _ _ H0).
+      rewrite -(abstract_env_lookup_correct' _ _ H1).
+      move: H4 H5. rewrite /lookup_env H2 H3 /= Hd Hd'. congruence. }
+    intros.
+    { rewrite (abstract_primitive_constant_correct _ _ _ H0).
+      rewrite (abstract_primitive_constant_correct _ _ _ H1).
+      specialize (H _ _ wfX wfX').
+      rewrite H2 H3 /primitive_constant /= -Hr -Hr'. apply H. } }
+  assert ((forall Σ Σ' : global_env,
+    Σ ∼ abstract_pop_decls X -> Σ' ∼ abstract_pop_decls X' ->
+    forall tag : Primitive.prim_tag, primitive_constant Σ tag = primitive_constant Σ' tag))        .
+  { intros Σ Σ' h h' tag.
+    pose proof (abstract_env_irr _ wf h). subst env.
+    pose proof (abstract_env_irr _ wf' h'). subst env'.
+    specialize (H _ _ wfX wfX').
+    rewrite /primitive_constant -Hr -Hr'. apply H. }
+  specialize (IHdecls (abstract_pop_decls X) (abstract_pop_decls X')).
+  f_equal; f_equal. f_equal; now eapply IHdecls.
+- cbn.
+  pose proof (abstract_env_exists X) as [[envX wfX]].
+  pose proof (abstract_env_exists X') as [[envX' wfX']].
+  pose proof (abstract_env_exists (abstract_pop_decls X)) as [[env wf]].
+  pose proof (abstract_env_exists (abstract_pop_decls X')) as [[env' wf']].
+  unshelve epose proof (abstract_pop_decls_correct _ _ _ _ _ wfX wf) as [Hd [Hu Hr]]. shelve.
+  { intros ? h. rewrite (prf _ h). now eexists. }
+  unshelve epose proof (abstract_pop_decls_correct _ _ _ _ _ wfX' wf') as [Hd' [Hu' Hr']]. shelve.
+  { intros ? h. rewrite (prf' _ h). now eexists. }
+  assert ((forall Σ Σ' : global_env,
+  Σ ∼ abstract_pop_decls X -> Σ' ∼ abstract_pop_decls X' ->
+  forall tag : Primitive.prim_tag, primitive_constant Σ tag = primitive_constant Σ' tag))        .
+  { intros Σ Σ' h h' tag.
+    pose proof (abstract_env_irr _ wf h). subst env.
+    pose proof (abstract_env_irr _ wf' h'). subst env'.
+    specialize (H _ _ wfX wfX').
+    rewrite /primitive_constant -Hr -Hr'. apply H. }
+  f_equal. f_equal. all:now eapply IHdecls.
+Qed.
+
 (* TODO: Figure out if this (and [erases]) should use [strictly_extends_decls] or [extends] -Jason Gross *)
 Lemma erases_weakening_env {Σ Σ' : global_env_ext} {Γ t t' T} :
   wf Σ -> wf Σ' -> strictly_extends_decls Σ Σ' ->

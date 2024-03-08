@@ -507,8 +507,8 @@ Lemma optimize_correct `{EWellformed.EEnvFlags} Σ fgΣ t v :
   ELiftSubst.closed t = true ->
   EGlobalEnv.closed_env (trans_env Σ) = true ->
   EWellformed.wf_glob (trans_env Σ) ->
-  @Prelim.Ee.eval default_wcbv_flags (trans_env Σ) t v ->
-  @Prelim.Ee.eval
+  @EWcbvEval.eval default_wcbv_flags (trans_env Σ) t v ->
+  @EWcbvEval.eval
       (EWcbvEval.disable_prop_cases opt_wcbv_flags)
       (trans_env (map (on_snd (remove_match_on_box_decl (EEnvMap.GlobalContextMap.make (trans_env Σ) (OptimizePropDiscr.trans_env_fresh_globals _ fgΣ)))) Σ))
       (EOptimizePropDiscr.remove_match_on_box (EEnvMap.GlobalContextMap.make (trans_env Σ) (OptimizePropDiscr.trans_env_fresh_globals _ fgΣ)) t)
@@ -641,7 +641,10 @@ Theorem extract_correct_gen
         (H := EWellformed.all_env_flags)
         (wfl := default_wcbv_flags)
         (Σ : P.global_env_ext) (wfΣ : ∥wf_ext Σ∥)
-        t v ignored masks :
+        t v ignored masks
+        overridden_masks
+        do_trim_const_masks do_trim_ctor_masks
+        :
   axiom_free Σ ->
   forall wt : welltyped Σ [] t,
   Σ p⊢ t ⇓ v ->
@@ -653,7 +656,7 @@ Theorem extract_correct_gen
   let gerΣ := EEnvMap.GlobalContextMap.make (trans_env erΣ)
   (trans_env_fresh_globals erΣ (remove_match_on_box_env_lemma (map_squash fst wfΣ) deps ignored)) in
   let erΣ := remove_match_on_box_env erΣ (remove_match_on_box_env_lemma _ deps ignored) in
-  compute_masks (fun _ => None) true true erΣ = Ok masks ->
+  compute_masks overridden_masks do_trim_const_masks do_trim_ctor_masks erΣ = Ok masks ->
   let t'' := EOptimizePropDiscr.remove_match_on_box gerΣ t' in
   valid_cases (ind_masks masks) t'' ->
   is_expanded (ind_masks masks) (const_masks masks) t'' ->
@@ -712,11 +715,12 @@ Qed.
 Theorem extract_correct_gen'
         (H := EWellformed.all_env_flags)
         (wfl := opt_wcbv_flags)
-        (Σ : ExAst.global_env) t v masks :
+        (Σ : ExAst.global_env) t v masks
+        overridden_masks do_trim_const_masks do_trim_ctor_masks :
   EGlobalEnv.closed_env (trans_env Σ) ->
   ELiftSubst.closedn 0 t ->
   trans_env Σ e⊢ t ⇓ v ->
-  compute_masks (fun _ => None) true true Σ = Ok masks ->
+  compute_masks overridden_masks do_trim_const_masks do_trim_ctor_masks Σ = Ok masks ->
   valid_cases (ind_masks masks) t ->
   is_expanded (ind_masks masks) (const_masks masks) t ->
   ∥ EWcbvEval.eval (trans_env (dearg_env masks Σ)) (dearg_term masks t) (dearg_term masks v) ∥.

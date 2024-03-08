@@ -78,7 +78,7 @@ sig
      t -> (quoted_aname array * t) list (* branches *) -> t
   val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
-  val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
+  val mkCoFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
   val mkInt : quoted_int63 -> t
   val mkFloat : quoted_float64 -> t
   val mkArray : quoted_univ_level -> t array -> default:t -> ty:t -> t
@@ -262,6 +262,12 @@ struct
       CArray.fold_left_map (fun acc t -> let (x, acc) = quote_term acc env sigma t in acc, x) acc ts
     in ts, acc
 
+  let cofixpoint_arities ts =
+    let cofix_arity t =
+      let ctx, _concl = Term.decompose_prod_assum t in
+      Context.Rel.nhyps ctx
+    in Array.map cofix_arity ts
+
   let quote_term_remember
       (add_constant : KerName.t -> 'a -> 'a)
       (add_inductive : Names.inductive -> Declarations.mutual_inductive_body -> 'a -> 'a) =
@@ -371,9 +377,11 @@ struct
       let a' = Array.map Q.quote_int a in
       let (b',decl'),acc = quote_recdecl acc env sigma b decl in
       (Q.mkFix ((a',b'),decl'), acc)
-    and quote_cofixpoint acc env sigma (a,decl) =
+    and quote_cofixpoint acc env sigma (a,(_, ts, _ as decl)) =
+      let arities = cofixpoint_arities ts in
+      let qarities = Array.map Q.quote_int arities in
       let (a',decl'),acc = quote_recdecl acc env sigma a decl in
-      (Q.mkCoFix (a',decl'), acc)
+      (Q.mkCoFix ((qarities,a'),decl'), acc)
     and quote_minductive_type (acc : 'a) env sigma (t : MutInd.t) mib =
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
       let inst = Univ.UContext.instance uctx in

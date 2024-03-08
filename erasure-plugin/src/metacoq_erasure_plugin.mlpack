@@ -58,12 +58,17 @@ ESpineView
 EPretty
 Extract
 EEtaExpanded
+EInlining
+EBeta
 ERemoveParams
 ErasureFunction
 ErasureFunctionProperties
 EOptimizePropDiscr
 EInlineProjections
 EConstructorsAsBlocks
+ECoInductiveToInductive
+EReorderCstrs
+EUnboxing
 EProgram
 OptimizePropDiscr
 

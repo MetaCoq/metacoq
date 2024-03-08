@@ -1,6 +1,6 @@
 From Coq Require Import Nat ZArith Bool.
 
-Require Export MCPrelude
+From MetaCoq.Utils Require Export MCPrelude
         MCReflect
         All_Forall
         MCArith
@@ -23,6 +23,7 @@ Require Export MCPrelude
         MCTactics.UniquePose
         ReflectEq
         bytestring
+        Show
 .
 
 Tactic Notation "destruct" "?" :=

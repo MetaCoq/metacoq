@@ -21,7 +21,7 @@ Section Inline.
   Equations inline (t : term) : term :=
     | tVar na => tVar na
     | tLambda nm bod => tLambda nm (inline bod)
-    | tLetIn nm dfn bod => tLetIn nm dfn bod
+    | tLetIn nm dfn bod => tLetIn nm (inline dfn) (inline bod)
     | tApp fn arg => tApp (inline fn) (inline arg)
     | tConst nm with KernameMap.find nm inlining :=
       { | Some body := (* Already inlined body *) body

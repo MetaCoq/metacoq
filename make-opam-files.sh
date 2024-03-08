@@ -21,7 +21,7 @@ do
     opamf=${f/.opam/};
     target=$1/$opamf/$opamf.$2/opam;
     echo $opamf;
-    mkdir $1/$opamf/$opamf.$2
+    mkdir -p $1/$opamf/$opamf.$2
     gsed -e "/^version:.*/d" $f > $target
     echo url { >> $target
     echo "  src:" \"$3\" >> $target

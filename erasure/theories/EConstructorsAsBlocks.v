@@ -900,7 +900,7 @@ Lemma transform_wf_global {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   wf_glob (efl := efl) Σ -> wf_glob (efl := switch_cstr_as_blocks efl) (transform_blocks_env Σ).
 Proof.
   intros hasp cstrbl hasapp hasb hasr etag wfg.
-  unshelve eapply (gen_transform_env_wf (gt := GTExt efl _)) => //. exact hasapp.
+  unshelve eapply (gen_transform_env_wf (gt := GTExt efl _)) => //.
   eapply Pre_glob => //.
 Qed.
 

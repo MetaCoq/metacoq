@@ -692,7 +692,6 @@ Proof.
     + subst t'' t'.
       rewrite trans_env_remove_match_on_box_env.
       unshelve eapply (EOptimizePropDiscr.remove_match_on_box_correct (fl := default_wcbv_flags)) => //=.
-      { reflexivity. }
       { cbn. now eapply wf_erase_global_decls_recursive. }
       { simpl. eapply EWellformed.wellformed_closed_env.
         now eapply wf_erase_global_decls_recursive. }

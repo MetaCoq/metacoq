@@ -1787,7 +1787,7 @@ Proof.
   unshelve eapply on_wf_global_env_impl ; tea.
   clear. intros * HΣ HP HQ Hty.
   intros. subst Γ.
-  unshelve eapply lift_typing_impl with (1 := Hty _ _ X _) => t T HT.
+  unshelve eapply lift_typing_impl with (1 := Hty _ _ X _) => [||t T HT].
   3: rewrite !subst_inst; eapply HT => //.
   now unshelve eapply subslet_well_subst.
 Qed.

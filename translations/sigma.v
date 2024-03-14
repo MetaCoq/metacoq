@@ -19,8 +19,8 @@ Open Scope sigma_scope.
 Notation "{ x  &&  P }" := (sigma (fun x => P)) : type_scope.
 Notation "{ t : A && P }" := (sigma A (fun t => P)) : type_scope.
 Notation "( x ; y )" := (mk_sig x y) : sigma_scope.
-Notation "x .1" := (π1 x) (at level 2, left associativity, format "x .1") : sigma_scope.
-Notation "x .2" := (π2 x) (at level 2, left associativity, format "x .2") : sigma_scope.
+Notation "x .1" := (π1 x) : sigma_scope.
+Notation "x .2" := (π2 x) : sigma_scope.
 Notation "'∃' x .. y , p" := (sigma _ (fun x => .. (sigma _ (fun y => p)) ..))
   (at level 200, x binder, right associativity,
    format "'[' '∃'  '/  ' x  ..  y ,  '/  ' p ']'")

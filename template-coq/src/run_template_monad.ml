@@ -70,12 +70,12 @@ let rec unquote_pos trm : int =
   let (h,args) = app_full trm [] in
   match args with
     [x] ->
-    if constr_equall h cposI then 
+    if constr_equall h cposI then
       (2 * unquote_pos x + 1)
     else if constr_equall h cposO then
       (2 * unquote_pos x)
     else not_supported_verb trm "unquote_pos"
-  | [] -> 
+  | [] ->
     if constr_equall h cposzero then 1
     else not_supported_verb trm "unquote_pos"
   | _ -> bad_term_verb trm "unquote_pos"
@@ -87,7 +87,7 @@ let unquote_Z trm : int =
      if constr_equall h cZpos then unquote_pos x
      else if constr_equall h cZneg then - unquote_pos x
      else not_supported_verb trm "unquote_pos"
-  | [] -> 
+  | [] ->
     if constr_equall h cZ0 then 0
     else not_supported_verb trm "unquote_pos"
   | _ -> bad_term_verb trm "unquote_pos"
@@ -96,12 +96,12 @@ let unquote_constraint_type trm (* of type constraint_type *) : constraint_type 
   let (h,args) = app_full trm [] in
   match args with
     [x] ->
-    if constr_equall h tunivLe then 
+    if constr_equall h tunivLe then
       let n = unquote_Z x in
       if n = 0 then Univ.Le
       else Univ.Lt
     else not_supported_verb trm "unquote_constraint_type"
-  | [] -> 
+  | [] ->
     if constr_equall h tunivEq then Univ.Eq
     else not_supported_verb trm "unquote_constraint_type"
   | _ -> bad_term_verb trm "unquote_constraint_type"
@@ -176,7 +176,7 @@ let denote_variance trm (* of type Variance *) : Variance.t =
   else if constr_equall trm cInvariant then Variance.Invariant
   else not_supported_verb trm "denote_variance"
 
-  
+
 let denote_variance evm trm (* of type Variance.t list *) : _ * Variance.t array =
   let variances = List.map denote_variance (unquote_list trm) in
   evm, Array.of_list variances
@@ -243,9 +243,9 @@ let unquote_one_inductive_entry env evm trm (* of type one_inductive_entry *) : 
 let map_option f o =
   match o with
   | Some x -> Some (f x)
-  | None -> None          
+  | None -> None
 
-let denote_decl env evm d = 
+let denote_decl env evm d =
   let (h, args) = app_full d [] in
   if constr_equall h tmkdecl then
     match args with
@@ -262,7 +262,7 @@ let denote_decl env evm d =
 
 let denote_context env evm ctx =
   fold_env_evm_right denote_decl env evm (unquote_list ctx)
-  
+
 let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry *) : _ * _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
@@ -301,7 +301,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
   let evm' = Evd.from_env env in
   let evm', ctx, mind = unquote_mutual_inductive_entry env evm' mind in
   let () = DeclareUctx.declare_universe_context ~poly:false ctx in
-  let evm, mind = 
+  let evm, mind =
     if infer_univs then
       let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
       debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set (Level.pr) ctx));

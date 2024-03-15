@@ -12,11 +12,13 @@ Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 { ret : forall {t : Type@{d}}, t -> m t
 ; bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
 }.
+Global Arguments Build_Monad _ & _ _. (* for better type inference and error messages *)
 
 Class MonadExc E (m : Type -> Type) : Type :=
 { raise : forall {T}, E -> m T
 ; catch : forall {T}, m T -> (E -> m T) -> m T
 }.
+Global Arguments Build_MonadExc _ _ & _ _. (* for better type inference and error messages *)
 
 
 Module MCMonadNotation.

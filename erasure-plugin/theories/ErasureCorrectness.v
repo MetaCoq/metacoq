@@ -782,11 +782,11 @@ Section ErasureFunction.
     set (eqdecls := (fun Σ => _)) at 9. clearbody eqdecls.
     set (deps := term_global_deps _).
     set (nin := (fun (n : nat) => _)). clearbody nin.
-    epose proof (@erase_global_deps_fast_erase_global_deps deps optimized_abstract_env_impl Σ' (PCUICAst.PCUICEnvironment.declarations Σ) nin) as [nin2 eq].
+    epose proof (@erase_global_deps_fast_erase_global_deps deps optimized_abstract_env_impl Σ' (PCUICAst.PCUICEnvironment.declarations Σ) nin _ _) as [nin2 eq].
     rewrite /erase_global_fast. erewrite eq. clear eq nin.
     set (eg := erase_global_deps _ _ _ _ _ _).
 
-    unshelve epose proof (erase_correct optimized_abstract_env_impl Σ' Σ.2 _ f v _ _ deps _ _ _ eq_refl _ eq_refl _ Σ eq_refl); eauto.
+    unshelve epose proof (erase_correct optimized_abstract_env_impl Σ' Σ.2 _ f v _ _ deps _ eqdecls _ eq_refl _ eq_refl _ Σ eq_refl); eauto.
     { eapply Kernames.KernameSet.subset_spec. rewrite /deps -/env'. cbn [fst snd]. apply Kernames.KernameSetProp.subset_refl. }
     { cbn => ? -> //. }
     destruct H as [v'' [ervv'' [ev]]].

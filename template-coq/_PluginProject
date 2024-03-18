@@ -105,10 +105,10 @@ gen-src/hexadecimal.ml
 gen-src/hexadecimal.mli
 # gen-src/hexadecimalString.ml
 # gen-src/hexadecimalString.mli
-gen-src/induction.ml
-gen-src/induction.mli
-# gen-src/init.ml
-# gen-src/init.mli
+gen-src/induction0.ml
+gen-src/induction0.mli
+gen-src/init.ml
+gen-src/init.mli
 gen-src/int0.ml
 gen-src/int0.mli
 gen-src/kernames.ml

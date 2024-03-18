@@ -37,6 +37,8 @@ Fixpoint lift n k t : term :=
   | tConst _ => t
   | tConstruct ind i args => tConstruct ind i (map (lift n k) args)
   | tPrim p => tPrim (map_prim (lift n k) p)
+  | tLazy t => tLazy (lift n k t)
+  | tForce t => tForce (lift n k t)
   end.
 
 Notation lift0 n := (lift n 0).
@@ -72,7 +74,11 @@ Fixpoint subst s k u :=
     tCoFix mfix' idx
   | tConstruct ind i args => tConstruct ind i (map (subst s k) args)
   | tPrim p => tPrim (map_prim (subst s k) p)
-  | x => x
+  | tLazy t => tLazy (subst s k t)
+  | tForce t => tForce (subst s k t)
+  | tBox => tBox
+  | tVar n => tVar n
+  | tConst c => tConst c
   end.
 
 (** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
@@ -100,6 +106,8 @@ Fixpoint closedn k (t : term) : bool :=
     List.forallb (test_def (closedn k')) mfix
   | tConstruct ind i args => forallb (closedn k) args
   | tPrim p => test_prim (closedn k) p
+  | tLazy t => closedn k t
+  | tForce t => closedn k t
   | _ => true
   end.
 
@@ -633,6 +641,8 @@ Proof.
   - eapply All_forallb_eq_forallb; tea. cbn.
     intros. specialize (H (#|m| + k')).
     now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
+  - solve_all.
+  - solve_all.
   - solve_all.
 Qed.
 

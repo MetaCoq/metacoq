@@ -86,6 +86,8 @@ Proof.
     now apply e.
   - depelim X; depelim er; constructor; cbn. solve_all.
     destruct p. solve_all.
+  - depelim er.
+  - depelim er.
 Qed.
 
 Lemma erases_deps_subst Σ Σ' s k t :
@@ -137,6 +139,8 @@ Proof.
     constructor; [|easy].
     now apply e.
   - depelim X; depelim er; constructor; cbn; intuition auto; solve_all.
+  - depelim er.
+  - depelim er.
 Qed.
 
 Lemma erases_deps_subst1 Σ Σ' t k u :
@@ -195,6 +199,8 @@ Proof.
     constructor; [|easy].
     now apply e.
   - depelim X; depelim er; constructor; cbn; intuition auto; solve_all.
+  - depelim er.
+  - depelim er.
 Qed.
 
 Lemma erases_deps_substl Σ Σ' s t :

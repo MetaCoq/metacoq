@@ -93,8 +93,6 @@ Proof.
   simpl. apply IHt1.
 Qed.
 
-Module Ee := EWcbvEval.
-
 Lemma fst_decompose_app_rec t l : fst (EAstUtils.decompose_app_rec t l) = fst (EAstUtils.decompose_app t).
 Proof.
   induction t in l |- *; simpl; auto. rewrite IHt1.

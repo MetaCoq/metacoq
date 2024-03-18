@@ -119,8 +119,8 @@ Module PrintTermTree.
 
     Definition print_prim (soft : term -> Tree.t) (p : prim_val) : Tree.t :=
       match p.π2 return Tree.t with
-      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
-      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      | primIntModel f => "(int: " ^ show f ^ ")"
+      | primFloatModel f => "(float: " ^ show f ^ ")"
       | primArrayModel a => "(array:" ^ string_of_list soft a.(array_value) ^ ")"
       end.
 
@@ -128,7 +128,7 @@ Module PrintTermTree.
       Context (print_term : list ident -> bool -> bool -> term -> t).
 
       Definition print_def {A} (f : A -> t) (g : A -> t) (def : def A) :=
-        string_of_name (binder_name (dname def)) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
+        string_of_name (binder_name (dname def)) ^ " { struct " ^ show (rarg def) ^ " }" ^
                     " : " ^ f (dtype def) ^ " := " ^ nl ^ g (dbody def).
 
       Definition print_defs Γ (defs : mfixpoint term) :=
@@ -344,5 +344,11 @@ Definition print_context Σ Γ Δ : string :=
 Definition print_env (short : bool) (prefix : nat) Σ :=
   Tree.to_string (PrintTermTree.print_env short prefix Σ).
 
+#[export] Instance show_env : Show global_env :=
+  fun Σ => print_env false (List.length Σ.(declarations)) Σ.
+
 Definition print_program (short : bool) (prefix : nat) (p : program) : string :=
   Tree.to_string (PrintTermTree.print_program short prefix p).
+
+#[export] Instance show_program : Show program :=
+  fun p => print_program false (List.length p.1.(declarations)) p.

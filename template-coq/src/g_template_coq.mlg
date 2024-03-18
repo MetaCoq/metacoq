@@ -138,8 +138,9 @@ END
 VERNAC COMMAND EXTEND TemplateCoq_Run_Template_Program CLASSIFIED AS SIDEFF STATE program
   | #[ poly = polymorphic ] [ "MetaCoq" "Run" constr(def) ] ->
       { fun ~pm -> let (env, evm) = fresh_env () in
-        let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let pgm = to_constr_evars evm def in
+        let (pgm, ctx) = Constrintern.interp_constr env evm def in
+        let evm = Evd.from_ctx ctx in
+        let pgm = EConstr.to_constr ~abort_on_undefined_evars:true evm pgm in
         run_template_program ~pm env evm ~poly pgm }
 END
 

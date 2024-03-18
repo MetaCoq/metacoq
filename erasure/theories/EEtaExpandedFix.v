@@ -61,6 +61,8 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
 | expanded_tPrim p : primProp@{Set Set} (expanded Γ) p -> expanded Γ (tPrim p)
+| expanded_tLazy t : expanded Γ t -> expanded Γ (tLazy t)
+| expanded_tForce t : expanded Γ t -> expanded Γ (tForce t)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.
@@ -139,10 +141,12 @@ Lemma expanded_ind :
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx []) args))
     → (∀ Γ p, primProp (expanded Σ Γ) p -> primProp (P Γ) p -> P Γ (tPrim p))
+    → (∀ Γ t, expanded Σ Γ t -> P Γ t -> P Γ (tLazy t))
+    → (∀ Γ t, expanded Σ Γ t -> P Γ t -> P Γ (tForce t))
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
-  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HPrim HBox.
+  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HPrim HLazy HForce HBox.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   - eapply HRel_app; eauto. clear - f H0. induction H0; econstructor; eauto.
@@ -297,6 +301,8 @@ Section isEtaExp.
     | tVar _ => true
     | tConst _ => true
     | tPrim p => test_primIn p (fun x H => isEtaExp Γ x)
+    | tLazy t => isEtaExp Γ t
+    | tForce t => isEtaExp Γ t
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof using Σ.
     all:try lia.

@@ -40,7 +40,9 @@ Inductive term : Set :=
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
-| tPrim (prim : prim_val term).
+| tPrim (prim : prim_val term)
+| tLazy (t : term)
+| tForce (t : term).
 
 Derive NoConfusion for term.
 

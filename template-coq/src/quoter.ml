@@ -264,7 +264,7 @@ struct
 
   let cofixpoint_arities ts =
     let cofix_arity t =
-      let ctx, _concl = Term.decompose_prod_assum t in
+      let ctx, _concl = Term.decompose_prod_decls t in
       Context.Rel.nhyps ctx
     in Array.map cofix_arity ts
 

@@ -6,15 +6,32 @@ then
     exit 0
 fi
 
+archive=`basename $3`
+tag=${archive/.tar.gz/}
+
 echo "Target directory: " $1
 echo "Target version: " $2
 echo "Releases package: " $3
+echo "Archive:" $archive
+echo "Tag:" $tag
+
+if [ -f $archive ]
+then
+    echo "Removing existing archive!"
+    rm $archive
+fi
 
 wget $3
-archive=`basename $3`
+
 hash=`shasum -a 512 $archive | cut -f 1 -d " "`
 
 echo "Shasum = " $hash
+
+echo "Uploading to release assets"
+
+gh release upload $tag $archive
+
+release=https://github.com/MetaCoq/metacoq/releases/download/$tag/$archive
 
 for f in *.opam;
 do
@@ -24,7 +41,7 @@ do
     mkdir -p $1/$opamf/$opamf.$2
     gsed -e "/^version:.*/d" $f > $target
     echo url { >> $target
-    echo "  src:" \"$3\" >> $target
+    echo "  src:" \"$release\" >> $target
     echo "  checksum:" \"sha512=$hash\" >> $target
     echo } >> $target
 done

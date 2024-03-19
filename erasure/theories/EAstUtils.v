@@ -374,6 +374,8 @@ Fixpoint string_of_term (t : term) : string :=
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tPrim p => "Prim(" ^ EPrimitive.string_of_prim string_of_term p ^ ")"
+  | tLazy t => "Lazy(" ^ string_of_term t ^ ")"
+  | tForce t => "Force(" ^ string_of_term t ^ ")"
   end.
 
 (** Compute all the global environment dependencies of the term *)
@@ -409,5 +411,7 @@ Fixpoint term_global_deps (t : term) :=
     KernameSet.union (KernameSet.singleton (inductive_mind p.(proj_ind)))
       (term_global_deps c)
   | tPrim p => prim_global_deps term_global_deps p
+  | tLazy t => term_global_deps t
+  | tForce t => term_global_deps t
   | _ => KernameSet.empty
   end.

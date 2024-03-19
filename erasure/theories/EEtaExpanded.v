@@ -76,6 +76,8 @@ Section isEtaExp.
     | tVar _ => true
     | tConst _ => true
     | tPrim p => test_primIn p (fun x H => isEtaExp x)
+    | tLazy t => isEtaExp t
+    | tForce t => isEtaExp t
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof.
     all:try lia.
@@ -474,6 +476,8 @@ Inductive expanded : term -> Prop :=
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx []) args)
 | expanded_tPrim p : primProp@{Set Set} expanded p -> expanded (tPrim p)
+| expanded_tLazy t : expanded t -> expanded (tLazy t)
+| expanded_tForce t : expanded t -> expanded (tForce t)
 | expanded_tBox : expanded tBox.
 
 End expanded.
@@ -513,19 +517,21 @@ forall (Σ : global_declarations) (P : term -> Prop),
  declared_constructor Σ (ind, idx) mind idecl cdecl ->
  #|args| >= cstr_arity mind cdecl -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx []) args)) ->
 (forall p, primProp (expanded Σ) p -> primProp P p -> P (tPrim p)) ->
+(forall t, expanded Σ t -> P t -> P (tLazy t)) ->
+(forall t, expanded Σ t -> P t -> P (tForce t)) ->
 (P tBox) ->
 forall t : term, expanded Σ t -> P t.
 Proof.
-  intros. revert t H13.
+  intros Σ P. intros hrel hvar hevar hlam hletin happ hconst hcase hproj hfix hcofix hcapp hprim hlazy hforce hbox.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
-  - eapply H1; eauto. induction H13; econstructor; cbn in *; eauto.
-  - eapply H4; eauto. clear H14. induction H15; econstructor; cbn in *; eauto.
-  - eapply H6; eauto. induction H13; econstructor; cbn in *; eauto.
-  - eapply H8; eauto. induction H13; econstructor; cbn in *; intuition eauto.
-  - eapply H9; eauto. induction H13; econstructor; cbn in *; eauto.
-  - eapply H10; eauto. clear - H15 f. induction H15; econstructor; cbn in *; eauto.
-  - eapply H11; eauto.
+  - eapply hevar; eauto. induction H; econstructor; cbn in *; eauto.
+  - eapply happ; eauto. clear H0. induction H1; econstructor; cbn in *; eauto.
+  - eapply hcase; eauto. induction H; econstructor; cbn in *; eauto.
+  - eapply hfix; eauto. induction H; econstructor; cbn in *; intuition eauto.
+  - eapply hcofix; eauto. induction H; econstructor; cbn in *; eauto.
+  - eapply hcapp; eauto. clear - H1 f. induction H1; econstructor; cbn in *; eauto.
+  - eapply hprim; eauto.
     depelim X; constructor. destruct p; split; eauto.
     eapply (make_All_All f a0).
 Qed.

@@ -1433,6 +1433,8 @@ Section wffix.
     | tVar _ => true
     | tBox => true
     | tPrim p => test_prim wf_fixpoints p
+    | tLazy t => wf_fixpoints t
+    | tForce t => wf_fixpoints t
     end.
 
 End wffix.

@@ -36,6 +36,29 @@ Hint Constructors eval : core.
 Section trans.
   Context (Σ : GlobalContextMap.t).
 
+  Fixpoint remove_head_lazy (t : term) : term :=
+    match t with
+    | tRel _ => t
+    | tEvar _ _ => t
+    | tLambda na M => tLambda na (remove_head_lazy M)
+    | tApp u v => tApp (remove_head_lazy u) v
+    | tLetIn na b b' => tLetIn na b (remove_head_lazy b')
+    | tCase ind c brs => tCase ind c (List.map (on_snd remove_head_lazy) brs)
+    | tProj _ _ => t
+    | tFix _ _  => t
+    | tCoFix _ _ => t
+    | tBox => t
+    | tVar _ => t
+    | tConst _ => t
+    | tConstruct _ _ _ => t
+    | tPrim _ => t
+    | tLazy t => t
+    | tForce _ => t
+    end.
+
+  Definition hoist_head_lazy (t : term) :=
+    tLazy (remove_head_lazy t).
+
   Fixpoint trans (t : term) : term :=
     match t with
     | tRel i => tRel i
@@ -60,6 +83,7 @@ Section trans.
       tFix mfix' idx
     | tCoFix mfix idx =>
       let mfix' := List.map (map_def trans) mfix in
+      let mfix' := List.map (map_def hoist_head_lazy) mfix' in
       tFix mfix' idx
     | tBox => t
     | tVar _ => t
@@ -127,6 +151,7 @@ Section trans.
     - move/andP: H => [] clt clargs.
       destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; rtoProp; solve_all; solve_all.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; rtoProp; solve_all; solve_all.
+    - apply trust_cofix.
     - primProp. solve_all_k 6.
   Qed.
 
@@ -185,6 +210,9 @@ Section trans.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //.
       all:f_equal; eauto; try (rewrite /on_snd map_map_compose; solve_all).
       f_equal; eauto.
+    - f_equal; eauto. solve_all_k 6.
+      unfold map_def; f_equal; cbn. unfold hoist_head_lazy. f_equal.
+      apply trust_cofix.
   Qed.
 
   Lemma trans_substl s t :
@@ -851,7 +879,7 @@ Proof.
     now constructor.
     constructor; eauto; solve_all.
   - cbn. econstructor; eauto. solve_all. now eapply isLambda_trans.
-  - cbn. econstructor; eauto; solve_all. apply trust_cofix.
+  - cbn. rewrite map_map_compose. apply trust_cofix.
   - cbn -[GlobalContextMap.lookup_inductive_kind].
     rewrite GlobalContextMap.lookup_inductive_kind_spec.
     destruct lookup_inductive_kind as [[]|] => /= //.

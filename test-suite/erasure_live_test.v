@@ -372,12 +372,13 @@ Print P_provedCopyx.
 From Coq Require Import Streams.
 
 CoFixpoint ones : Stream nat := Cons 1 ones.
-
 MetaCoq Erase ones.
 MetaCoq Erase -unsafe ones.
-
 MetaCoq Erase -typed -time -unsafe (map S ones).
 
+CoFixpoint ones_broken : Stream nat := let t := ones_broken in Cons 1 t.
+MetaCoq Erase ones_broken.
+MetaCoq Erase -unsafe ones_broken.
 
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)

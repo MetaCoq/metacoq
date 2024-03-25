@@ -144,13 +144,13 @@ Section trans.
       end
     end.
 
-  Fixpoint remove_head_lazy (t : term) : option term :=
+  Fixpoint force_cofix_body (t : term) : term :=
     match t with
-    | tLazy t => Some t
+    | tLazy t => t
     | tCase ind c brs =>
-      brs' <- map_option_out (List.map (fun '(n, br) => br' <- remove_head_lazy br ;; ret (n, br')) brs) ;;
-      ret (tCase ind c brs')
-    | _ => None
+      let brs' := List.map (fun '(n, br) => (n, force_cofix_body br)) brs in
+      tCase ind c brs'
+    | _ => tForce t
     end.
 
   Definition mkLambdas nas t :=
@@ -163,7 +163,7 @@ Section trans.
 
   Definition hoist_head_lazy_def (t : def term) :=
     '(nas, body') <- decompose_n_lambdas Σ t.(rarg) t.(dbody) ;;
-    body'' <- remove_head_lazy (whnf Σ body');;
+    let body'' := force_cofix_body (whnf Σ body') in
     ret {| dname := t.(dname);
            rarg := t.(rarg);
            dbody := mkLambdas nas (tLazy body'') |}.

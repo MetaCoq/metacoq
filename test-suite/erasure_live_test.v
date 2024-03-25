@@ -428,7 +428,7 @@ Import MCMonadNotation MCOption.
 Definition whnf : option EAst.term :=
   match decomp with
   | None => None
-  | Some deco => remove_head_lazy (whnf Σrepeat (snd deco))
+  | Some deco => Some (force_cofix_body (whnf Σrepeat (snd deco)))
   end.
 
 Eval lazy in whnf.
@@ -442,10 +442,7 @@ Module maybe_ones.
   MetaCoq Quote Recursively Definition maybe_onesq := maybe_ones.
   Eval lazy in (EPretty.print_program (testp_eprogram maybe_onesq)).
 
-
-
-EAst.program
-
+End maybe_ones.
 
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)

@@ -380,6 +380,73 @@ CoFixpoint ones_broken : Stream nat := let t := ones_broken in Cons 1 t.
 MetaCoq Erase ones_broken.
 MetaCoq Erase -unsafe ones_broken.
 
+MetaCoq Erase -unsafe MetaCoq.Erasure.ECoInductiveToInductive.Horror.repeat.
+
+MetaCoq Quote Recursively Definition horror_repeat :=
+  MetaCoq.Erasure.ECoInductiveToInductive.Horror.repeat.
+
+Obligation Tactic := idtac.
+Program Definition testp_eprogram (p : Ast.Env.program)  := run_erase_program default_erasure_config p _.
+  Next Obligation.
+    todo "".
+  Qed.
+
+Definition program_of_program_env (p : Transform.Transform.program EEnvMap.GlobalContextMap.t EAst.term) : EAst.program :=
+  let '(Σ, t) := p in (Σ.(EEnvMap.GlobalContextMap.global_decls), t).
+
+Program Definition program_env_of_program (p : EAst.program) : Transform.Transform.program EEnvMap.GlobalContextMap.t EAst.term :=
+  let '(Σ, t) := p in
+  (EEnvMap.GlobalContextMap.make Σ _, t).
+  Next Obligation.
+    todo "".
+  Qed.
+
+Definition Σrepeat := (program_env_of_program (testp_eprogram horror_repeat)).1.
+
+Eval lazy in
+  let p' := testp_eprogram horror_repeat in
+  EPretty.print_program (program_of_program_env (ECoInductiveToInductive.trans_program p')).
+
+Definition repeat_def :=
+                          EAst.tLambda (nNamed "n")
+                            (EAst.tApp
+                               (EAst.tApp
+                                  (EAst.tConst
+                                     (MPdot
+                                        (MPfile
+                                           ["ECoInductiveToInductive";
+                                            "Erasure"; "MetaCoq"]) "Horror",
+                                      "mk")) (EAst.tRel 0))
+                               (EAst.tApp (EAst.tRel 1) (EAst.tRel 0))).
+Import ECoInductiveToInductive.
+
+Definition decomp :=
+Eval lazy in decompose_n_lambdas Σrepeat 1 repeat_def.
+
+Import MCMonadNotation MCOption.
+#[local] Remove Hints PCUICErrors.envcheck_monad : typeclass_instances.
+Definition whnf : option EAst.term :=
+  match decomp with
+  | None => None
+  | Some deco => remove_head_lazy (whnf Σrepeat (snd deco))
+  end.
+
+Eval lazy in whnf.
+
+Module maybe_ones.
+  CoInductive stream := Cons { head : nat; tail : stream }.
+
+  CoFixpoint ones := {| head := 1; tail := ones |}.
+  CoFixpoint maybe_ones (b : bool) := if b then ones else {| head := 2; tail := maybe_ones b |}.
+
+  MetaCoq Quote Recursively Definition maybe_onesq := maybe_ones.
+  Eval lazy in (EPretty.print_program (testp_eprogram maybe_onesq)).
+
+
+
+EAst.program
+
+
 (* 0.2s purely in the bytecode VM *)
 (*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
 (* Goal

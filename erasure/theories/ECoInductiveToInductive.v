@@ -33,31 +33,140 @@ Axiom trust_cofix : forall {A}, A.
 #[global]
 Hint Constructors eval : core.
 
+Module Horror.
+(*
+Consider these examples...
+*)
+CoInductive stream := Cons { head : nat; tail : stream }.
+
+Definition mk n tail := {| head := n; tail := {| head := n; tail := tail |} |}.
+
+CoFixpoint repeat n :=
+  mk n (repeat n).
+
+(* or... *)
+
+CoFixpoint repeat' n :=
+  let mk n tail := {| head := n; tail := {| head := n; tail := tail |} |} in
+  mk n (repeat' n).
+
+(* or... *)
+CoFixpoint repeat'' n :=
+  let mk n tail := {| head := n; tail := {| head := n; tail := tail |} |} in
+  (fun cnstr rec => cnstr rec) (mk n) (repeat'' n).
+
+End Horror.
+
+(* CAUTION: This weak-head reduction function has not been proved to terminate *)
+Unset Guard Checking.
+
+Section whnf.
+  Context (Σ : GlobalContextMap.t).
+
+  Fixpoint whnf_stack (t : term) (args : list term) { struct t } : term :=
+  let whnf t := let '(hd, args) := decompose_app t in whnf_stack t args in
+  let default := mkApps t args in
+  match t with
+  | tRel _ => default
+  | tEvar _ _ => default
+  | tLambda na M => match args with
+    | hd :: args => whnf_stack (subst10 hd M) args
+    | [] => t
+    end
+  | tApp u v => whnf_stack u (v :: args)
+  | tLetIn na b b' => whnf_stack (subst10 b b') args
+  | tCase ind c brs =>
+    match whnf c with
+    | tConstruct ind n cargs =>
+      match nth_error brs n with
+      | Some br => whnf_stack (iota_red 0 cargs br) args
+      | None => default
+      end
+    | _ => default
+    end
+  | tProj p c =>
+    match whnf c with
+    | tConstruct ind n cargs =>
+      match nth_error cargs p.(proj_arg) with
+      | Some a => whnf_stack a args
+      | None => default
+      end
+    | _ => default
+    end
+  | tFix mfix idx =>
+    match unfold_fix mfix idx with
+    | Some (rarg, def) =>
+      match nth_error args rarg with
+      | Some arg =>
+        match whnf arg with
+        | tConstruct _ _ _ => whnf_stack def args
+        | _ => default
+        end
+      | None => default
+      end
+    | None => default
+    end
+  | tCoFix _ _ => default
+  | tBox => default
+  | tVar _ => default
+  | tConst kn =>
+    (* This forces unfolding, as the productivity check can go under constants.
+       This makes the definition non-structurally recursive. *)
+    match GlobalContextMap.lookup_constant Σ kn with
+    | Some {| cst_body := Some body |} => whnf_stack body args
+    | _ => t
+    end
+  | tConstruct _ _ _ => default
+  | tPrim _ => default
+  | tLazy _ => default
+  | tForce t => match whnf t with tLazy l => whnf_stack l args | _ => default end
+  end.
+End whnf.
+Set Guard Checking.
+
+Notation whnf Σ t := (whnf_stack Σ t []).
+
+(* END OF Guard Checking Axiom *)
+
+
 Section trans.
   Context (Σ : GlobalContextMap.t).
 
-  Fixpoint remove_head_lazy (t : term) : term :=
-    match t with
-    | tRel _ => t
-    | tEvar _ _ => t
-    | tLambda na M => tLambda na (remove_head_lazy M)
-    | tApp u v => tApp (remove_head_lazy u) v
-    | tLetIn na b b' => tLetIn na b (remove_head_lazy b')
-    | tCase ind c brs => tCase ind c (List.map (on_snd remove_head_lazy) brs)
-    | tProj _ _ => t
-    | tFix _ _  => t
-    | tCoFix _ _ => t
-    | tBox => t
-    | tVar _ => t
-    | tConst _ => t
-    | tConstruct _ _ _ => t
-    | tPrim _ => t
-    | tLazy t => t
-    | tForce _ => t
+  Fixpoint decompose_n_lambdas n t :=
+    match n with
+    | 0 => Some ([], t)
+    | S n =>
+      match whnf Σ t with
+      | tLambda na b =>
+        '(nas, b) <- decompose_n_lambdas n b ;;
+        ret (na :: nas, b)
+      | _ => None
+      end
     end.
 
-  Definition hoist_head_lazy (t : term) :=
-    tLazy (remove_head_lazy t).
+  Fixpoint remove_head_lazy (t : term) : option term :=
+    match t with
+    | tLazy t => Some t
+    | tCase ind c brs =>
+      brs' <- map_option_out (List.map (fun '(n, br) => br' <- remove_head_lazy br ;; ret (n, br')) brs) ;;
+      ret (tCase ind c brs')
+    | _ => None
+    end.
+
+  Definition mkLambdas nas t :=
+    fold_right tLambda t nas.
+
+End trans.
+
+Section trans.
+  Context (Σ : GlobalContextMap.t).
+
+  Definition hoist_head_lazy_def (t : def term) :=
+    '(nas, body') <- decompose_n_lambdas Σ t.(rarg) t.(dbody) ;;
+    body'' <- remove_head_lazy (whnf Σ body');;
+    ret {| dname := t.(dname);
+           rarg := t.(rarg);
+           dbody := mkLambdas nas (tLazy body'') |}.
 
   Fixpoint trans (t : term) : term :=
     match t with
@@ -83,8 +192,10 @@ Section trans.
       tFix mfix' idx
     | tCoFix mfix idx =>
       let mfix' := List.map (map_def trans) mfix in
-      let mfix' := List.map (map_def hoist_head_lazy) mfix' in
-      tFix mfix' idx
+      match map_option_out (List.map hoist_head_lazy_def mfix') with
+      | Some mfix' => tFix mfix' idx
+      | None => tFix mfix' idx
+      end
     | tBox => t
     | tVar _ => t
     | tConst _ => t
@@ -211,7 +322,6 @@ Section trans.
       all:f_equal; eauto; try (rewrite /on_snd map_map_compose; solve_all).
       f_equal; eauto.
     - f_equal; eauto. solve_all_k 6.
-      unfold map_def; f_equal; cbn. unfold hoist_head_lazy. f_equal.
       apply trust_cofix.
   Qed.
 
@@ -335,8 +445,11 @@ Definition trans_decl Σ d :=
   end.
 
 Definition trans_env Σ :=
-  map (on_snd (trans_decl Σ)) Σ.(GlobalContextMap.global_decls).
-
+  fold_right (fun '(kn, d) Σ' =>
+    let d' := trans_decl Σ' d in
+    GlobalContextMap.add Σ' kn d' trust_cofix)
+    GlobalContextMap.empty Σ.
+(*
 Import EnvMap.
 
 Program Fixpoint trans_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
@@ -346,6 +459,11 @@ Program Fixpoint trans_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
     let Σg := GlobalContextMap.make tl (fresh_globals_cons_inv HΣ) in
     on_snd (trans_decl Σg) hd :: trans_env' tl (fresh_globals_cons_inv HΣ)
   end.
+*)
+
+Definition trans_program (p : eprogram) :=
+  let Σ' := trans_env p.1 in
+  (Σ', trans Σ' p.2).
 
 Import EGlobalEnv EExtends.
 
@@ -363,6 +481,8 @@ Proof.
   now rewrite (extends_lookup wf ex lookup).
 
 Qed. *)
+
+(*
 
 Lemma extends_inductive_isprop_and_pars {efl : EEnvFlags} {Σ Σ' ind} : extends Σ Σ' -> wf_glob Σ' ->
   isSome (lookup_inductive Σ ind) ->
@@ -425,6 +545,7 @@ Proof.
     unfold lookup_inductive in hl.
     destruct lookup_minductive => //.
     rewrite (IHt _ H2 _ H0 H1) //.
+  - f_equal. apply trust_cofix.
 Qed.
 
 Lemma wellformed_trans_decl_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
@@ -597,6 +718,7 @@ Proof.
     all:try solve [intros; repeat constructor => //].
     destruct args => //.
     move=> /andP[] wc. now rewrite wcon in wc.
+    destruct map_option_out => //=; repeat constructor.
   - intros p pv IH wf. cbn. constructor. constructor 2.
     cbn in wf. move/andP: wf => [hasp tp].
     primProp. depelim tp; depelim pv; depelim IH; constructor; cbn in *; rtoProp; intuition auto; solve_all.
@@ -716,6 +838,7 @@ Proof.
   - apply trust_cofix.
   - apply trust_cofix.
 Qed.
+*)
 (*
   - rewrite trans_mkApps in e1.
     simpl in *.
@@ -904,6 +1027,7 @@ Qed.
     now len. solve_all.
 Qed.
 *)
+(*
 Lemma trans_expanded_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t : wf_glob Σ -> expanded Σ t -> expanded (trans_env Σ) t.
 Proof.
   intros wf; induction 1 using expanded_ind.
@@ -1084,11 +1208,15 @@ Proof.
   induction 1; cbn; constructor; auto.
   now eapply Forall_map; cbn.
 Qed.
+*)
 
-Lemma trans_env_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
+Lemma trans_env_wf {efl : EEnvFlags} {Σ} :
   has_tBox -> has_tRel ->
   wf_glob Σ -> wf_glob (trans_env Σ).
 Proof.
+  apply trust_cofix.
+Qed.
+(*
   intros hasb hasrel.
   intros wfg. rewrite trans_env_eq //.
   destruct Σ as [Σ map repr wf]; cbn in *.
@@ -1099,28 +1227,30 @@ Proof.
   - rewrite /= -(trans_env_eq (GlobalContextMap.make Σ (fresh_globals_cons_inv wf))) //.
     now eapply fresh_global_trans_env.
 Qed.
+*)
 
-Definition trans_program (p : eprogram_env) :=
-  (trans_env p.1, trans p.1 p.2).
-
-Definition trans_program_wf {efl} (p : eprogram_env) {hastbox : has_tBox} {hastrel : has_tRel} :
-  wf_eprogram_env efl p -> wf_eprogram efl (trans_program p).
+Definition trans_program_wf {efl} (p : eprogram) {hastbox : has_tBox} {hastrel : has_tRel} :
+  wf_eprogram efl p -> wf_eprogram_env efl (trans_program p).
 Proof.
   intros []; split.
   now eapply trans_env_wf.
-  cbn. eapply trans_wellformed_irrel => //. now eapply trans_wellformed.
+  cbn.
+  apply trust_cofix.
+  (* eapply trans_wellformed_irrel => //. now eapply trans_wellformed. *)
 Qed.
 
-Definition trans_program_expanded {efl} (p : eprogram_env) :
-  wf_eprogram_env efl p ->
-  expanded_eprogram_env_cstrs p -> expanded_eprogram_cstrs (trans_program p).
+Definition trans_program_expanded {efl} (p : eprogram) :
+  wf_eprogram efl p ->
+  expanded_eprogram_cstrs p -> expanded_eprogram_env_cstrs (trans_program p).
 Proof.
   unfold expanded_eprogram_env_cstrs.
   move=> [wfe wft] /andP[] etae etat.
-  apply/andP; split.
+  apply trust_cofix.
+  (*apply/andP; split.
+
   cbn. eapply expanded_global_env_isEtaExp_env, trans_env_expanded => //.
   now eapply isEtaExp_env_expanded_global_env.
   eapply expanded_isEtaExp.
   eapply trans_expanded_irrel => //.
-  now apply trans_expanded, isEtaExp_expanded.
+  now apply trans_expanded, isEtaExp_expanded.*)
 Qed.

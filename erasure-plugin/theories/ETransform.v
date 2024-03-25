@@ -696,9 +696,6 @@ Proof.
   red. intros p p' pr pr' [? ?]. now rewrite /transform /=.
 Qed.
 
-Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
-  (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
-
 Definition preserves_expansion with_fix p :=
   if with_fix then EEtaExpandedFix.expanded_eprogram p
   else EEtaExpanded.expanded_eprogram_cstrs p.
@@ -706,6 +703,9 @@ Definition preserves_expansion with_fix p :=
 Definition preserves_expansion_env with_fix p :=
   if with_fix then EEtaExpandedFix.expanded_eprogram_env p
   else EEtaExpanded.expanded_eprogram_env_cstrs p.
+
+Definition rebuild_wf_env {efl} (p : eprogram) (hwf : wf_eprogram efl p): eprogram_env :=
+  (GlobalContextMap.make p.1 (wf_glob_fresh p.1 (proj1 hwf)), p.2).
 
 Program Definition rebuild_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp with_fix : bool) :
   Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram fl) (eval_eprogram_env fl) :=
@@ -732,6 +732,39 @@ Qed.
 #[global]
 Instance rebuild_wf_env_extends' {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp with_fix :
   TransformExt.t (rebuild_wf_env_transform with_exp with_fix) extends_eprogram extends_eprogram_env.
+Proof.
+  red. intros p p' pr pr' [? ?]. now rewrite /transform /=.
+Qed.
+
+
+Definition project_wf_env {efl} (p : eprogram_env) (hwf : wf_eprogram_env efl p): eprogram :=
+  (GlobalContextMap.global_decls p.1, p.2).
+
+Program Definition project_wf_env_transform {fl : EWcbvEval.WcbvFlags} {efl} (with_exp with_fix : bool) :
+  Transform.t _ _ EAst.term EAst.term _ _ (eval_eprogram_env fl) (eval_eprogram fl) :=
+  {| name := "projecting environment declarations list";
+     pre p := wf_eprogram_env efl p /\ (with_exp -> preserves_expansion_env with_fix p);
+     transform p pre := project_wf_env p (proj1 pre);
+     post p := wf_eprogram efl p /\ (with_exp -> preserves_expansion with_fix p);
+     obseq p hp p' v v' := v = v' |}.
+Next Obligation.
+  cbn. unfold preserves_expansion, preserves_expansion_env.
+  intros fl efl [] [] input [wf exp]; cbn; split => //.
+Qed.
+Next Obligation.
+  cbn. intros fl efl [] [] input v [] ev p'; exists v; split => //.
+Qed.
+
+#[global]
+Instance project_wf_env_extends {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp with_fix :
+  TransformExt.t (project_wf_env_transform with_exp with_fix) (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' ext. red. now rewrite /transform /=.
+Qed.
+
+#[global]
+Instance project_wf_env_extends' {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} with_exp with_fix :
+  TransformExt.t (project_wf_env_transform with_exp with_fix) extends_eprogram_env extends_eprogram.
 Proof.
   red. intros p p' pr pr' [? ?]. now rewrite /transform /=.
 Qed.
@@ -975,12 +1008,12 @@ Program Definition coinductive_to_inductive_transformation (efl : EEnvFlags)
   {has_app : has_tApp} {has_box : has_tBox} {has_rel : has_tRel} {has_pars : has_cstr_params = false}
   {has_cstrblocks : cstr_as_blocks = true} :
   Transform.t _ _ EAst.term EAst.term _ _
-    (eval_eprogram_env block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
+    (eval_eprogram block_wcbv_flags) (eval_eprogram_env block_wcbv_flags) :=
   {| name := "transforming co-inductive to inductive types";
     transform p _ := ECoInductiveToInductive.trans_program p ;
-    pre p := wf_eprogram_env efl p ;
-    post p := wf_eprogram efl p ;
-    obseq p hp p' v v' := v' = ECoInductiveToInductive.trans p.1 v |}.
+    pre p := wf_eprogram efl p ;
+    post p := wf_eprogram_env efl p ;
+    obseq p hp p' v v' := v' = ECoInductiveToInductive.trans p'.1 v |}.
 
 Next Obligation.
   move=> efl hasapp hasbox hasrel haspars hascstrs [Σ t] [wftp wft].
@@ -991,9 +1024,10 @@ Next Obligation.
   eexists. split; [ | eauto].
   econstructor.
   cbn -[transform_blocks].
-  eapply ECoInductiveToInductive.trans_correct; cbn; eauto.
+  apply ECoInductiveToInductive.trust_cofix.
+  (* eapply ECoInductiveToInductive.trans_correct; cbn; eauto.
   eapply wellformed_closed_env, wfe1.
-  Unshelve. all:eauto.
+  Unshelve. all:eauto. *)
 Qed.
 
 #[global]
@@ -1012,7 +1046,7 @@ Instance coinductive_to_inductive_transformation_ext' (efl : EEnvFlags)
   {has_app : has_tApp} {has_rel : has_tRel} {has_box : has_tBox} {has_pars : has_cstr_params = false} {has_cstrblocks : cstr_as_blocks = true} :
   TransformExt.t (coinductive_to_inductive_transformation efl (has_app := has_app) (has_rel := has_rel)
     (has_box := has_box) (has_pars := has_pars) (has_cstrblocks := has_cstrblocks))
-    extends_eprogram_env extends_eprogram.
+    extends_eprogram extends_eprogram_env.
 Proof.
   red. intros p p' pr pr' ext. rewrite /transform /=.
   eapply ECoInductiveToInductive.trust_cofix.

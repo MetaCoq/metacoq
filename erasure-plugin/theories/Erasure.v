@@ -128,11 +128,10 @@ Program Definition optional_unsafe_transforms econf :=
   let efl := EConstructorsAsBlocks.switch_cstr_as_blocks
   (EInlineProjections.disable_projections_env_flag (ERemoveParams.switch_no_params EWellformed.all_env_flags)) in
   ETransform.optional_self_transform passes.(cofix_to_lazy)
-    ((* Rebuild the efficient lookup table *)
-    rebuild_wf_env_transform (efl := efl) false false ▷
-    (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
+    ((* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
     coinductive_to_inductive_transformation efl
-      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl)) ▷
+      (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl) ▷
+    project_wf_env_transform false false) ▷
   ETransform.optional_self_transform passes.(reorder_constructors)
     (reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping)) ▷
   ETransform.optional_self_transform passes.(unboxing)

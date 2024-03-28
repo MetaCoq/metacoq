@@ -87,7 +87,7 @@ VERNAC COMMAND EXTEND TemplateCoq_Quote_Definition_Eval CLASSIFIED AS SIDEFF STA
       { fun ~pm -> let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         (* TODO : implem quoting of tactic reductions so that we can use ptmQuoteDefinitionRed *)
-        let (evm, rd) = Tacinterp.interp_redexp env evm rd in
+        let (evm, rd) = Redexpr.interp_redexp_no_ltac env evm rd in
 	      let (evm, def) = Plugin_core.reduce env evm rd (to_constr_evars evm def) in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.quote_ident name; Constr.mkRel 0; def|]) in

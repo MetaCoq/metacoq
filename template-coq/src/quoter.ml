@@ -441,9 +441,12 @@ struct
                 in ps, acc
             | _ -> [], acc
           in
+          (* TODO quote the real squash data instead of approximating with a sort family *)
           let kelim = match oib.Declarations.mind_squashed with
             | None -> Sorts.InType
-            | Some _ -> Inductive.inductive_sort_family oib
+            | Some _ -> match oib.mind_arity with
+              | TemplateArity _ -> InType
+              | RegularArity s -> Sorts.family s.mind_sort
           in
           let sf = Q.quote_sort_family kelim in
             (Q.quote_ident oib.mind_typename, indices, indsort, indty, sf,

@@ -457,6 +457,8 @@ Section Typecheck.
       apply eqb_refl.
     Qed.
 
+    #[global] Transparent relevance_of_family. (* We need to compute it really now *)
+
     Equations infer_judgment0 Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) tm ty s (Hs : forall Σ (wfΣ : abstract_env_ext_rel X Σ), option_default (fun s => ∥ wf_sort Σ s ∥) s True) rel
     : typing_result_comp (∑ s', option_default (fun s => s = s') s True /\ forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ lift_typing typing Σ Γ (Judge tm ty (Some s') rel) ∥) :=
       infer_judgment0 Γ HΓ tm ty s Hs rel :=
@@ -478,7 +480,7 @@ Section Typecheck.
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
       eapply checking_typing; tea.
       now eapply isType_Sort.
-    Qed.
+    Defined.
     Next Obligation.
       eapply absurd. intros.
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
@@ -488,7 +490,7 @@ Section Typecheck.
       exists s0. split; auto. intros.
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
       now eapply infering_sort_typing.
-    Qed.
+    Defined.
     Next Obligation.
       destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
@@ -515,7 +517,7 @@ Section Typecheck.
       exists s. split; tas. intros.
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
       repeat (eexists; tea).
-    Qed.
+    Defined.
     Next Obligation.
       eapply absurd. intros.
       pose (hΣ _ wfΣ).

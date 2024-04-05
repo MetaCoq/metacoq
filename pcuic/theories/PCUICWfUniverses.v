@@ -1067,23 +1067,18 @@ Qed.
 
   Theorem wf_types :
     env_prop (fun Σ Γ t T => wf_universes Σ t && wf_universes Σ T)
-      (fun Σ _ j => option_default (wf_universes Σ) (j_term j) true && wf_universes Σ (j_typ j) && option_default (wf_sortb Σ) (j_univ j) true)
+      (fun Σ _ j => lift_wfbu_term (wf_universes Σ) (wf_sortb Σ) j)
       (fun Σ Γ => wf_ctx_universes Σ Γ).
   Proof using Type.
-    apply typing_ind_env; unfold lift_wfb_term; intros; rename_all_hyps; cbn; rewrite -!/(wf_universes _ _) ;
+    apply typing_ind_env; unfold lift_wfbu_term; intros; rename_all_hyps; cbn; rewrite -!/(wf_universes _ _) ;
     specIH; to_prop;
     cbn; auto.
 
-    - destruct X as (Hb & s & (_ & (Ht & Hs)%andb_and) & e).
-      rewrite Ht andb_true_r.
-      rtoProp; split.
-      + destruct j_term => //.
-        now destruct Hb as (_ & (? & _)%andb_and).
-      + destruct j_univ => //. rewrite e //.
+    - eapply MCReflect.introT. 1: apply lift_wfu_wfbu_term.
+      apply lift_typing_subjtyp with (1 := X) => //= t T [] _ /andP[] //.
 
     - apply All_local_env_cst, All_forallb in X0.
-      apply forallb_impl with (2 := X0) => [] [na bo ty] _ //=.
-      rewrite andb_true_r //.
+      apply forallb_impl with (2 := X0) => [] [na bo ty] _ //= /andP[] //=.
 
     - rewrite wf_universes_lift.
       eapply forallb_nth_error with (n := n) in H0. rewrite heq_nth_error /= in H0.
@@ -1131,8 +1126,8 @@ Qed.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
       now eapply consistent_instance_ext_wf.
 
-    - rewrite wf_universes_mkApps in H7.
-      move/andP: H7 => /= [] wfu; rewrite forallb_app.
+    - rewrite wf_universes_mkApps in H6.
+      move/andP: H6 => /= [] wfu; rewrite forallb_app.
       move/andP=> [] wfpars wfinds.
       cbn in wfu.
       rewrite wfu /= wfpars wf_universes_mkApps /=
@@ -1171,7 +1166,7 @@ Qed.
         rewrite wfp. eapply closedu_subst_context.
         rewrite a.
         now rewrite closedu_inds.
-      * rewrite wf_universes_it_mkLambda_or_LetIn H6 andb_true_r.
+      * rewrite wf_universes_it_mkLambda_or_LetIn H7 andb_true_r.
         move: H4.
         rewrite /wf_ctx_universes forallb_app => /andP[hctx _].
         apply (MCReflect.introT onctxP).

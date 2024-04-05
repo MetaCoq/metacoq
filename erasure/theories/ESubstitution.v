@@ -233,9 +233,9 @@ Proof.
       now apply All_local_env_app_inv in X3.
   - econstructor.
     + eauto.
-    + eapply H4; eauto.
-    + red in H6.
-      eapply Forall2_All2 in H6.
+    + eapply H5; eauto.
+    + red in H7.
+      eapply Forall2_All2 in H7.
       eapply All2i_All2_mix_left in X6; tea.
       clear H6.
       eapply All2i_nth_hyp in X6.
@@ -489,15 +489,15 @@ Proof.
     + cbn. econstructor; auto.
     + econstructor.
       eapply is_type_subst; eauto.
-  - depelim H7.
+  - depelim H8.
     + cbn. econstructor.
       * eauto.
-      * eapply H4; eauto.
+      * eapply H5; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H11, x, y. cbn in e0. subst. split; eauto.
-        eapply In_nth_error in H9 as [].
-        move: H6. rewrite /wf_branches.
+        intros. destruct H12, x, y. cbn in e0. subst. split; eauto.
+        eapply In_nth_error in H10 as [].
+        move: H7. rewrite /wf_branches.
         move/Forall2_All2 => hbrs.
         eapply All2_nth_error_Some_r in hbrs; tea.
         set (br := {| bcontext := _ |}).
@@ -514,10 +514,10 @@ Proof.
         move/(substitution_wf_local X8) => hwf.
         specialize (e0 _ _ _ t _ hwf X8).
         len in e0. cbn in e0.
-        have := PCUICCasesContexts.inst_case_branch_context_eq (p:=p) eqctx => H6.
-        rewrite /inst_case_branch_context /= in H6.
+        have := PCUICCasesContexts.inst_case_branch_context_eq (p:=p) eqctx => H7.
+        rewrite /inst_case_branch_context /= in H7.
         forward e0.
-        { move: e. cbn. rewrite /inst_case_branch_context /= -H6.
+        { move: e. cbn. rewrite /inst_case_branch_context /= -H7.
           now rewrite app_context_assoc. }
         forward e0.
         { now rewrite app_context_assoc. }

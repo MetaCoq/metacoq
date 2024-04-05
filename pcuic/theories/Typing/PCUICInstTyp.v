@@ -437,7 +437,7 @@ Proof.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros IHΔ ci_npar eqpctx predctx wfp cup Hpctx Hpret
-      IHpret IHpredctx isallowed.
+      IHpret IHpredctx isallowed Her.
     intros IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
@@ -536,14 +536,14 @@ Proof.
     * now eapply fix_guard_inst.
     * now rewrite nth_error_map hnth.
     * apply All_map, (All_impl ihmfixt).
-      intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t; eauto.
+      intros x t. eapply t; eauto.
     * pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
       apply All_map, (All_impl ihmfixb).
       unfold on_def_body.
       intros x t. relativize (lift0 _ _).
       1: eenough (wf_local Σ (Δ ,,, _)).
-      1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
+      1: eapply t; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
       + eapply wf_local_app_inst; eauto.
@@ -558,14 +558,14 @@ Proof.
     * now eapply cofix_guard_inst.
     * now rewrite nth_error_map hnth.
     * apply All_map, (All_impl ihmfixt).
-      intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t; eauto.
+      intros x t. eapply t; eauto.
     * pose proof (inst_fix_context mfix σ).
       setoid_rewrite <-up_Upn at 1 in H. rewrite H.
       apply All_map, (All_impl ihmfixb).
       unfold on_def_body.
       intros x t. relativize (lift0 _ _).
       1: eenough (wf_local Σ (Δ ,,, _)).
-      1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
+      1: eapply t; eauto.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
       + eapply wf_local_app_inst; eauto.

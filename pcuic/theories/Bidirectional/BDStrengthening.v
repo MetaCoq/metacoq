@@ -750,7 +750,7 @@ Proof using wfΣ.
       solve_all.
       now eapply conv_renameP.
     + by apply rename_wf_branches.
-    + eapply Forall2_All2 in H6.
+    + eapply Forall2_All2 in H7.
       eapply All2i_All2_mix_left in X9; eauto.
       eapply All2i_All_mix_right in X9 ; eauto.
       eapply All2i_nth_hyp in X9.

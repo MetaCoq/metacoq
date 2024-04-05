@@ -72,7 +72,7 @@ Section Trans.
   | Ast.tLambda na T M => tLambda na (trans T) (trans M)
   | Ast.tApp u v => mkApps (trans u) (List.map trans v)
   | Ast.tProd na A B => tProd na (trans A) (trans B)
-  | Ast.tCast c kind t => tApp (tLambda (mkBindAnn nAnon Relevant) (trans t) (tRel 0)) (trans c)
+  | Ast.tCast c kind t => tApp (tLambda (mkBindAnn nAnon rel_of_Type) (trans t) (tRel 0)) (trans c)
   | Ast.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | Ast.tCase ci p c brs =>
     let p' := Ast.map_predicate id trans trans p in

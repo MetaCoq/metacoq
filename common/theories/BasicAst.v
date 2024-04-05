@@ -138,6 +138,10 @@ Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
+Lemma map_dname {A B} (f : A -> B) (g : A -> B) (d : def A) :
+  dname d = dname (map_def f g d).
+Proof. destruct d; reflexivity. Qed.
+
 Definition mfixpoint term := list (def term).
 
 Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=
@@ -217,13 +221,13 @@ Record judgment_ {universe Term} := Judge {
   j_term : option Term;
   j_typ : Term;
   j_univ : option universe;
-  (* j_rel : option relevance; *)
+  j_rel : option relevance;
 }.
 Arguments judgment_ : clear implicits.
 Arguments Judge {universe Term} _ _ _.
 
 Definition judgment_map {univ T A} (f: T -> A) (j : judgment_ univ T) :=
-  Judge (option_map f (j_term j)) (f (j_typ j)) (j_univ j) (* (j_rel j) *).
+  Judge (option_map f (j_term j)) (f (j_typ j)) (j_univ j) (j_rel j).
 
 Section Contexts.
   Context {term : Type}.
@@ -239,17 +243,21 @@ End Contexts.
 
 Arguments context_decl : clear implicits.
 
-Notation Typ typ := (Judge None typ None).
-Notation TermTyp tm ty := (Judge (Some tm) ty None).
-Notation TermoptTyp tm typ := (Judge tm typ None).
-Notation TypUniv ty u := (Judge None ty (Some u)).
-Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u)).
+Notation Typ typ := (Judge None typ None None).
+Notation TypRel typ rel := (Judge None typ None (Some rel)).
+Notation TermTyp tm ty := (Judge (Some tm) ty None None).
+Notation TermTypRel tm ty rel := (Judge (Some tm) ty None (Some rel)).
+Notation TermoptTyp tm typ := (Judge tm typ None None).
+Notation TermoptTypRel tm typ rel := (Judge tm typ None (Some rel)).
+Notation TypUniv ty u := (Judge None ty (Some u) None).
+Notation TypUnivRel ty u rel := (Judge None ty (Some u) (Some rel)).
+Notation TermTypUniv tm ty u := (Judge (Some tm) ty (Some u) None).
 
-Notation j_vass na ty := (Typ ty (* na.(binder_relevance) *)) (only parsing).
-Notation j_vass_s na ty s := (TypUniv ty s (* na.(binder_relevance) *)) (only parsing).
-Notation j_vdef na b ty := (TermTyp b ty (* na.(binder_relevance) *)) (only parsing).
-Notation j_decl d := (TermoptTyp (decl_body d) (decl_type d) (* (decl_name d).(binder_relevance) *)).
-Notation j_decl_s d s := (Judge (decl_body d) (decl_type d) s (* (decl_name d).(binder_relevance) *)).
+Notation j_vass na ty := (TypRel ty na.(binder_relevance)).
+Notation j_vass_s na ty s := (TypUnivRel ty s na.(binder_relevance)).
+Notation j_vdef na b ty := (TermTypRel b ty na.(binder_relevance)).
+Notation j_decl d := (TermoptTypRel (decl_body d) (decl_type d) (decl_name d).(binder_relevance)).
+Notation j_decl_s d s := (Judge (decl_body d) (decl_type d) s (Some (decl_name d).(binder_relevance))).
 
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
   {| decl_name := d.(decl_name);

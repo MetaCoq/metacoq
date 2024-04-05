@@ -77,6 +77,7 @@ Lemma isWfArity_prod_inv (Σ : global_env_ext) (Γ : context) (x : aname) (x0 x1
 Proof.
   intros wfΣ (? & ? & ? & ?). cbn in e.
   eapply isType_tProd in i as [dom codom]; auto.
+  apply isTypeRel_isType in dom.
   split; auto.
   split; auto.
   clear dom codom.
@@ -214,6 +215,7 @@ Proof.
       apply (X (subst_context [hd0] 0 Γ0) ltac:(len; reflexivity) _ _ sp).
       eapply isType_apply in i; tea.
       eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
+      eapply isTypeRel_isType.
       now eapply isType_tProd in i as [].
 Qed.
 
@@ -300,7 +302,7 @@ Proof.
     eapply invert_cumul_arity_r in c0; eauto.
     eapply typing_spine_strengthen in t0. 3:eauto.
     eapply wf_cofixpoint_spine in i0; eauto.
-    2-3:eapply nth_error_all in a; eauto; simpl in a; eauto.
+    2-3:eapply nth_error_all, isTypeRel_isType in a; eauto; simpl in a; eauto.
     destruct i0 as (Γ' & T & DA & ind & u & indargs & (eqT & ck) & cum).
     destruct (Nat.ltb #|x1| (context_assumptions Γ')).
     eapply invert_cumul_arity_r_gen in c0; eauto.

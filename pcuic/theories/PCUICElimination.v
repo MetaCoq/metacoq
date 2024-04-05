@@ -228,9 +228,9 @@ Proof.
       eapply (substitution0_ws_cumul_pb (t:=hd0)) in cum; auto.
       simpl in cum.
       now rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in cum.
-      unshelve eapply (isType_subst (Δ := [vass _ _]) [hd0]) in i0; pcuic.
+      unshelve eapply (isType_subst (Δ := [vass _ _]) (s := [hd0])) in i0.
       now rewrite subst_it_mkProd_or_LetIn in i0.
-      eapply subslet_ass_tip. eapply (type_ws_cumul_pb (pb:=Conv)); tea. now symmetry.
+      eapply subslet_ass_tip. eapply (type_ws_cumul_pb (pb:=Conv)); tea. 1: now eapply isTypeRel_isType. now symmetry.
 Qed.
 
 Inductive All_local_assum (P : context -> term -> Type) : context -> Type :=
@@ -341,7 +341,7 @@ Proof.
       apply leq_sort_propositional_l in sp; eauto. subst s.
       now destruct (ind_sort idecl).
       now destruct (ind_sort idecl).
-      now eapply declared_inductive_valid_type.
+      now eapply isTypeRel_isType, declared_inductive_valid_type.
 
     * now eapply invert_cumul_ind_prod in e.
 
@@ -399,7 +399,7 @@ Proof.
         eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna conv cum]; auto. cbn in *.
         eapply isType_tProd in isty as [].
         have tyt : Σ ;;; Γ |- hd0 : ty.
-        { eapply (type_ws_cumul_pb _ (U:=ty)) in tyhd => //. now symmetry. }
+        { eapply (type_ws_cumul_pb _ (U:=ty)) in tyhd => //. 1: now eapply isTypeRel_isType. now symmetry. }
         eapply (isType_subst (Δ := [_])) in i0; revgoals.
         { now eapply subslet_ass_tip. }
         eapply typing_spine_strengthen in sp; eauto.
@@ -467,7 +467,7 @@ Proof.
   destruct cs => //; eauto. destruct X.
   eapply IHΔ. intros. apply (H Γ' t0 s0). right; eauto. all:auto.
   destruct cs => //. destruct X.
-  eapply H. left; eauto. now destruct l as (_ & ? & ? & <-).
+  eapply H. left; eauto. now apply unlift_TypUniv in l.
 Qed.
 
 Lemma In_map {A B} (f : A -> B) (l : list A) x :

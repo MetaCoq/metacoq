@@ -51,7 +51,7 @@ END
 
 {
 
-let retypecheck_term_dependencies env gr =
+let retypecheck_term_dependencies ~opaque_access env gr =
   let typecheck env c = ignore (Typeops.infer env c) in
   let typecheck_constant c =
     let auctx = Environ.constant_context env c in
@@ -71,7 +71,7 @@ let retypecheck_term_dependencies env gr =
     Option.iter (typecheck env') cbody
   in
   let st = Conv_oracle.get_transp_state (Environ.oracle (Global.env())) in
-  let deps = Assumptions.assumptions ~add_opaque:true ~add_transparent:true
+  let deps = Assumptions.assumptions ~add_opaque:true ~add_transparent:true opaque_access
       st gr (fst (UnivGen.fresh_global_instance env gr)) in
   let process_object k _ty =
     let open Printer in
@@ -89,14 +89,14 @@ let retypecheck_term_dependencies env gr =
     | Opaque c | Transparent c -> typecheck_constant c
   in Printer.ContextObjectMap.iter process_object deps
 
-let kern_check env evm gr =
+let kern_check ~opaque_access env evm gr =
   try
-    let () = time (str"Coq kernel checking") (retypecheck_term_dependencies env) gr in
+    let () = time (str"Coq kernel checking") (retypecheck_term_dependencies ~opaque_access env) gr in
     Feedback.msg_info (Printer.pr_global gr ++ str " and all its dependencies are well-typed.")
   with e -> raise e
 }
 
-VERNAC COMMAND EXTEND MetaCoqCoqCheck CLASSIFIED AS QUERY
+VERNAC COMMAND EXTEND MetaCoqCoqCheck CLASSIFIED AS QUERY STATE opaque_access
 | [ "MetaCoq" "CoqCheck" global(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in

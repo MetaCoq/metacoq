@@ -1398,7 +1398,7 @@ Proof.
   destruct (@red1_eq_context_upto_l Σ Σ' (fun pb => flip (cmp_universe pb)) (fun pb => flip (cmp_sort pb)) pb Γ Δ u v) as (v' & r & e); tas.
   - intro x. red. reflexivity.
   - intro x. red. reflexivity.
-  - eapply eq_context_upto_flip; [..|eassumption]; tc.
+  - eapply eq_context_upto_flip; [..|eassumption]; unfold flip; tc.
   - exists v'; split; tas.
     eapply eq_term_upto_univ_napp_flip; [..|eassumption]; tc.
 Qed.

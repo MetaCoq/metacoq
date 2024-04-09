@@ -883,7 +883,7 @@ Solve All Obligations with
   CoreTactics.equations_simpl; try (reduce_term_sound; destruct r); wfAbstractEnv; eauto with erase.
 Next Obligation.
   remember (reduce_term _ _ _ _ _ _) as _b;symmetry in Heq_b.
-  reduce_term_sound; destruct r; eauto using abstract_env_ext_wf with erase.
+  reduce_term_sound; destruct r; epose abstract_env_ext_wf; eauto with erase.
 Qed.
 Next Obligation.
   reduce_term_sound.

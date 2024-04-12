@@ -2317,13 +2317,11 @@ Definition example_myent := Entailment
   (Assertion nil nil)
   (Assertion [Equ a a] nil).
 Definition ce_example_myent := check_entailment example_myent.
-Eval vm_compute in ce_example_myent.
 
 Definition example1_myent := Entailment
   (Assertion [Equ a b] nil)
   (Assertion [Equ b a] nil).
 Definition ce_example1_myent := check_entailment example1_myent.
-Eval vm_compute in ce_example1_myent.
 
 Definition example2_myent := Entailment
   (Assertion [Equ a b; Equ b c] nil)

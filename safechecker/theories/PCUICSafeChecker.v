@@ -1946,7 +1946,9 @@ End monad_Alli_nth_forall.
     rename Heq_anonymous into eqp.
     sq. red. rewrite -eqp. exact I.
   Qed.
-  Next Obligation.  specialize_Σ H. sq. rewrite Heq_x. eauto. Qed.
+  (* Obligation automatically solved in the presence of Coq PR #18921
+  Next Obligation. specialize_Σ H. Show. sq. Show. rewrite Heq_x. eauto. Qed.
+  *)
   Next Obligation.
     specialize_Σ H. sq. red. intros. rewrite -Heq_x //.
     destruct ind_projs => //.

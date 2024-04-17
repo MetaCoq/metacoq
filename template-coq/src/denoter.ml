@@ -8,7 +8,7 @@ sig
 
   val unquote_ident : quoted_ident -> Id.t
   val unquote_name : quoted_name -> Name.t
-  val unquote_aname : quoted_aname -> Name.t Context.binder_annot
+  val unquote_aname : quoted_aname -> Name.t Constr.binder_annot
   val unquote_relevance : quoted_relevance -> Sorts.relevance
   val unquote_evar : Environ.env -> Evd.evar_map -> quoted_int -> Constr.t list -> Evd.evar_map * Constr.t
   val unquote_int : quoted_int -> int

@@ -143,7 +143,7 @@ struct
     | Coq_nAnon -> Anonymous
     | Coq_nNamed n -> Name (unquote_ident n)
 
-  let unquote_aname (q: quoted_aname) : Name.t Context.binder_annot =
+  let unquote_aname (q: quoted_aname) : Name.t Constr.binder_annot =
     {Context.binder_name = unquote_name q.binder_name;
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 

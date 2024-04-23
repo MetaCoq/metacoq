@@ -216,13 +216,14 @@ module RetypeMindEntry =
     Typing.type_of env evm (EConstr.of_constr c)
 
   let retype_decl env evm decl =
+    let decl = EConstr.of_rel_decl decl in
     match decl with
     | Context.Rel.Declaration.LocalAssum (na, ty) ->
-      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      let evm, ty = Typing.solve_evars env evm ty in
       evm, Context.Rel.Declaration.LocalAssum (na, ty)
     | Context.Rel.Declaration.LocalDef (na, b, ty) ->
-      let evm, b = Typing.solve_evars env evm (EConstr.of_constr b) in
-      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      let evm, b = Typing.solve_evars env evm b in
+      let evm, ty = Typing.solve_evars env evm ty in
       let evm = Typing.check env evm b ty in
       evm, Context.Rel.Declaration.LocalDef (na, b, ty)
 

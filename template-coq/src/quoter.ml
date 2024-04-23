@@ -38,7 +38,7 @@ let warn_ignoring_private_polymorphic_universes =
   CWarnings.create_in (make_warning_if_not_exist "private-polymorphic-universes-ignored")
           Pp.(fun () -> str "Ignoring private polymorphic universes.")
 
-let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
+let toDecl (old: Name.t Constr.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (name,value,typ) = old in
   match value with
   | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
@@ -93,7 +93,7 @@ sig
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
-  val quote_aname : Name.t Context.binder_annot -> quoted_aname
+  val quote_aname : Name.t Constr.binder_annot -> quoted_aname
   val quote_relevance : Sorts.relevance -> quoted_relevance
   val quote_int : int -> quoted_int
   val quote_bool : bool -> quoted_bool

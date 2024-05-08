@@ -1626,7 +1626,7 @@ Proof.
 
   - (* LetIn value *)
     assert (X1' : lift_typing typing Σ Γ (j_vdef na r b_ty)).
-    { unshelve eapply lift_judgment_SR with (1 := X1); tea. firstorder. }
+    { unshelve eapply lift_judgment_SR with (1 := X1); tea. now constructor; [|right]. }
     eapply type_Cumul_alt.
     econstructor; eauto.
     unshelve eapply (closed_context_conversion _ typeb'). pcuic.
@@ -1639,7 +1639,7 @@ Proof.
 
   - (* LetIn type annotation *)
     assert (X1' : lift_typing typing Σ Γ (j_vdef na b r)).
-    { unshelve eapply lift_judgment_SR with (1 := X1); tea. firstorder. }
+    { unshelve eapply lift_judgment_SR with (1 := X1); tea. now constructor; [|left]. }
     eapply type_Cumul_alt.
     econstructor; eauto.
     unshelve eapply (closed_context_conversion _ typeb'). pcuic.

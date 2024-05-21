@@ -1278,7 +1278,7 @@ Section SplitPrefix.
   Proof using Type.
     funelim (split_prefix l1 l2).
     1,2: simp split_prefix; now split.
-    1,2: rewrite -Heqcall; split; try easy.
+    1,2: rewrite -?Heqcall; split; try easy.
     1,2: rewrite Heq in Hind; destruct Hind.
     1: now subst.
     now rewrite (eqb_eq _ _ Heq0); subst.
@@ -1322,7 +1322,7 @@ Section SplitPrefix.
       rewrite eqa eqb_refl in Heq; discriminate.
     - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
       move=> [? [-> pr1]] /is_prefix_cons_inv [eqa pr2].
-      rewrite -Heqcall; apply cons_prefix.
+      rewrite -?Heqcall; apply cons_prefix.
       move: Heqcall (Hind _ pr1 pr2)=> /Simp.
       rewrite eqa eqb_refl=> /Simp.
       move: (split_prefix l1 l2)=> -[[??]?] /Simp [= ->] //.

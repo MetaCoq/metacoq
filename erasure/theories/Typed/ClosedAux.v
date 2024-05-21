@@ -99,7 +99,7 @@ Proof.
     induction X; cbn in *; propify;auto.
     replace (#|x.1| + (k + n')) with ((#|x.1| + k) + n') by lia.
     intuition;eauto.
-  - rewrite map_length.
+  - rewrite length_map.
     revert n' k k' clos.
     induction X; intros n' k k' clos; cbn in *; propify; [easy|].
     destruct x; cbn in *.
@@ -111,7 +111,7 @@ Proof.
         repeat (f_equal; try lia).
       rewrite <- (proj2 clos);
         repeat (f_equal; try lia).
-  - rewrite map_length.
+  - rewrite length_map.
     revert n' k k' clos.
     induction X; intros n' k k' clos; cbn in *; propify; [easy|].
     destruct x; cbn in *.
@@ -167,7 +167,7 @@ Proof.
     replace (#|x.1| + (k + k' + #|s|)) with (k + (#|x.1| + k') + #|s|) in * by lia.
     replace (#|x.1| + (k + k')) with ( k + (#|x.1| + k')) by lia.
     easy.
-  - rewrite map_length.
+  - rewrite length_map.
     revert k k' all clos.
     induction X; intros k k' all all'; cbn in *; propify; [easy|].
     destruct x; cbn in *.
@@ -180,7 +180,7 @@ Proof.
       * repeat (f_equal; try lia).
       * rewrite <- (proj2 all').
         repeat (f_equal; try lia).
-  - rewrite map_length.
+  - rewrite length_map.
     revert k k' all clos.
     induction X; intros k k' all all'; cbn in *; propify; [easy|].
     destruct x; cbn in *.

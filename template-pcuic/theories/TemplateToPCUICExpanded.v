@@ -214,7 +214,7 @@ Proof with eauto using expanded.
       eapply Forall_All in H2. eapply All2_All_mix_right in a1; tea.
       eapply All2_impl; tea. intros x y. cbv beta. intros [[i [Hi []]] ?].
       split.
-      { rewrite map_length. relativize #|Ast.pparams type_info|.
+      { rewrite length_map. relativize #|Ast.pparams type_info|.
         eapply expanded_bcontext => //.
         - now eapply template_to_pcuic_env.
         - len. eapply All2_length in a2. len in a2.
@@ -234,7 +234,7 @@ Proof with eauto using expanded.
     + now simpl_list.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
-    eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
+    eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite length_map context_assumptions_map. solve_all.
   - repeat constructor.
   - repeat constructor.
   - wf_inv wf [[] ?]. repeat cbn; constructor. constructor; cbn; eauto. solve_all.

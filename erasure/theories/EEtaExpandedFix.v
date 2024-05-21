@@ -671,7 +671,7 @@ Section isEtaExp.
     intros mfix0. revert mfix Δ t.
     induction mfix0  using rev_ind; intros.
     - cbn -[isEtaExp] in *. eauto.
-    - cbn -[isEtaExp] in *. rewrite app_length Nat.add_comm. cbn -[substl isEtaExp].
+    - cbn -[isEtaExp] in *. rewrite length_app Nat.add_comm. cbn -[substl isEtaExp].
       eapply IHmfix0.
       + subst. now rewrite <- app_assoc.
       + solve_all.
@@ -696,7 +696,7 @@ Section isEtaExp.
     - shelve.
     - solve_all. eapply All_skipn. solve_all.
     - rewrite app_nil_r. eauto.
-    Unshelve. len. now rewrite List.skipn_length.
+    Unshelve. len. now rewrite List.length_skipn.
   Qed.
 
 (*
@@ -1211,7 +1211,7 @@ Proof.
       apply/andP; split => //.
       + len.
         rewrite (remove_last_last l0 a) // in hl'.
-        rewrite app_length in hl'.
+        rewrite length_app in hl'.
         cbn in hl'.
         now rewrite -(All2_length a0).
       + solve_all.
@@ -1741,7 +1741,7 @@ Proof.
     forward_keep IHeval2 => //.
     eapply isEtaExp_iota_red'; eauto.
     eapply forallb_nth_error in etabrs; tea. erewrite e2 in etabrs.
-    cbn in etabrs. now rewrite -e4 app_nil_r skipn_length in etabrs.
+    cbn in etabrs. now rewrite -e4 app_nil_r length_skipn in etabrs.
     econstructor; tea.
   - congruence.
   - simp_eta. move=> /andP[] etad etabrs.

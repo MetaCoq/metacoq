@@ -111,7 +111,7 @@ Section remove_match_on_box.
   Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - move/andP: H => [] clt cll. unfold isprop_ind.
@@ -174,7 +174,7 @@ Section remove_match_on_box.
   Proof using Type.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros cl; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def,isprop_ind in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
@@ -225,7 +225,7 @@ Section remove_match_on_box.
   Lemma remove_match_on_box_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def remove_match_on_box) mfix) = map remove_match_on_box (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -234,7 +234,7 @@ Section remove_match_on_box.
   Lemma remove_match_on_box_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def remove_match_on_box) mfix) = map remove_match_on_box (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -515,7 +515,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.rev_length hskip Nat.add_0_r.
+  now rewrite List.length_rev hskip Nat.add_0_r.
 Qed.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
@@ -576,7 +576,7 @@ Proof.
     eapply eval_iota; eauto.
     now rewrite -is_propositional_cstr_remove_match_on_box.
     rewrite nth_error_map e2 //. now len. cbn.
-    rewrite -e4. rewrite !skipn_length map_length //.
+    rewrite -e4. rewrite !length_skipn length_map //.
     eapply IHev2.
     eapply closed_iota_red => //; tea.
     eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
@@ -602,7 +602,7 @@ Proof.
     rewrite closedn_mkApps in ev1.
     move: ev1 => /andP [] clfix clargs.
     eapply EWcbvEval.eval_fix; eauto.
-    rewrite map_length.
+    rewrite length_map.
     eapply remove_match_on_box_cunfold_fix; tea.
     eapply closed_fix_subst. tea.
     rewrite remove_match_on_box_mkApps in IHev3. apply IHev3.
@@ -619,7 +619,7 @@ Proof.
     simpl in *. eapply EWcbvEval.eval_fix_value. auto. auto. auto.
     eapply remove_match_on_box_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
-    now rewrite map_length.
+    now rewrite length_map.
 
   - move/andP => [] clf cla.
     eapply eval_closed in ev1 => //.

@@ -397,7 +397,7 @@ Section EEnvFlags.
     rewrite /iota_red.
     eapply wellformed_substl => //.
     now rewrite forallb_rev forallb_skipn.
-    now rewrite List.rev_length hskip Nat.add_0_r.
+    now rewrite List.length_rev hskip Nat.add_0_r.
   Qed.
 
   Lemma wellformed_iota_red_brs pars c args brs br :

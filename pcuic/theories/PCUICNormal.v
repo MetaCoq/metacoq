@@ -227,14 +227,14 @@ Proof.
         rewrite e. left.
         apply nth_error_Some_length in e0. eexists.
         split; try reflexivity. apply nth_error_None.
-        rewrite firstn_length.
+        rewrite length_firstn.
         lia.
       * apply whnf_ne.
         eapply whne_fixapp; eauto.
         assert (rarg x1 < #|l|) by (now apply nth_error_Some_length in e0).
         rewrite <- (firstn_skipn n l) in e0.
         rewrite nth_error_app1 in e0; auto.
-        rewrite firstn_length.
+        rewrite length_firstn.
         lia.
   - destruct l using MCList.rev_ind; [|now rewrite mkApps_app in eq].
     cbn in *; subst; auto.
@@ -253,7 +253,7 @@ Proof.
     destruct H. split; eauto. destruct nth_error as [?|]; [|easy].
     apply nth_error_None.
     apply nth_error_None in e0.
-    rewrite firstn_length.
+    rewrite length_firstn.
     lia.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
@@ -302,7 +302,7 @@ Proof.
       eexists; split; eauto.
       apply nth_error_None.
       apply nth_error_None in H0.
-      rewrite app_length in H0; cbn in *.
+      rewrite length_app in H0; cbn in *.
       lia.
     + destruct v0 as [|? ? _] using MCList.rev_ind; [discriminate|].
       rewrite mkApps_app in H0 *.
@@ -505,7 +505,7 @@ Proof.
     intros; congruence.
   - apply nth_error_None in nth.
     rewrite (proj2 (nth_error_None _ _)); [|easy].
-    rewrite app_length in nth.
+    rewrite length_app in nth.
     lia.
 Qed.
 
@@ -1214,7 +1214,7 @@ Definition fake_params n : context :=
 Lemma fake_params_length n : #|fake_params n| = n.
 Proof.
   induction n; simpl; auto. cbn.
-  now rewrite app_length IHn /= Nat.add_1_r.
+  now rewrite length_app IHn /= Nat.add_1_r.
 Qed.
 
 Lemma params_subslet {cf:checker_flags} Γ pars :
@@ -1315,7 +1315,7 @@ Proof.
         eapply All2_rev => //.
         eapply All_rev. solve_all.
         instantiate (1 := List.rev (fake_params #|pparams motive|)).
-        rewrite -(List.rev_length (pparams motive)).
+        rewrite -(List.length_rev (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
         rewrite on_free_vars_ctx_subst_instance.
@@ -1361,7 +1361,7 @@ Proof.
         eapply All2_rev => //.
         eapply All_rev. solve_all.
         instantiate (1 := List.rev (fake_params #|pparams motive|)).
-        rewrite -(List.rev_length (pparams motive)).
+        rewrite -(List.length_rev (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
         rewrite on_free_vars_ctx_subst_instance.

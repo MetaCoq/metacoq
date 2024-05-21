@@ -498,7 +498,7 @@ Proof using Type.
   intros. now eapply All2_Forall2, monad_map_All2.
 Qed.
 
-Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
+Lemma monad_length_map X Y (f : X -> typing_result Y) (l1  : list X) a :
   monad_map f l1 = Checked a -> #|l1| = #|a|.
 Proof using Type.
   revert a; induction l1; cbn; intros.

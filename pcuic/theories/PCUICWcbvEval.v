@@ -799,9 +799,9 @@ Section Wcbv.
     move/andP: cargs => [Hcons Hargs].
     eapply (closedn_subst _ 0 0).
     now rewrite forallb_rev forallb_skipn //.
-    simpl. rewrite List.rev_length /expand_lets /expand_lets_k.
+    simpl. rewrite List.length_rev /expand_lets /expand_lets_k.
     rewrite -(Nat.add_0_r #|skipn (ci_npar ci) args|).
-    rewrite skipn_length hass.
+    rewrite length_skipn hass.
     replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
     with (context_assumptions (bcontext br)) by lia.
     move/andP: e => [cltx clb].

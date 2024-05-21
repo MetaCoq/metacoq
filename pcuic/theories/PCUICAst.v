@@ -569,7 +569,7 @@ Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term)
 (* The [map] rewrite database gathers all the map composition rewrite lemmas
   on these types. *)
 #[global]
-Hint Rewrite map_map_compose @compose_map_def map_length : map.
+Hint Rewrite map_map_compose @compose_map_def length_map : map.
 
 #[global]
 Hint Rewrite @forallb_map : map.

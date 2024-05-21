@@ -2064,7 +2064,7 @@ Section ConvRedConv.
   Proof using Type.
     move=> onpret' /and5P[] onpars onpret onpctx onc onbrs.
     rewrite /is_open_case onc onbrs !andb_true_r onpctx /= onpars /= andb_true_r.
-    rewrite app_length inst_case_predicate_context_length in onpret'.
+    rewrite length_app inst_case_predicate_context_length in onpret'.
     now rewrite shiftnP_add.
   Qed.
 
@@ -2143,7 +2143,7 @@ Section ConvRedConv.
           { eapply All_forallb in az.
             eapply is_open_case_set_pparams => //.
             apply rtrans_clos_length in cpars.
-            now rewrite !app_length /= in cpars *. }
+            now rewrite !length_app /= in cpars *. }
           rewrite -[set_pparams _ (x1 ++ v' :: _)](set_pparams_two (x1 ++ x0 :: x2)).
           eapply red_case; try reflexivity.
           { cbn. eapply All2_app; try reflexivity.
@@ -2227,11 +2227,11 @@ Section ConvRedConv.
       + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
         move: onbrs i0.
         rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
-        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+        now rewrite andb_true_r shiftnP_add length_app inst_case_branch_context_length /=.
       + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
         move: onbrs' i1.
         rewrite !forallb_app => /andP[] -> /= /andP[] =>  /andP[] => -> /= _ ->.
-        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /= -(All2_length a).
+        now rewrite andb_true_r shiftnP_add length_app inst_case_branch_context_length /= -(All2_length a).
       + constructor; try reflexivity.
         eapply All2_app; try reflexivity.
         constructor; try split; try reflexivity; cbn => //.
@@ -2243,12 +2243,12 @@ Section ConvRedConv.
       rewrite [is_open_term _ _]is_open_case_split onp onc /=.
       move: onbrs i0.
       rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
-      now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+      now rewrite andb_true_r shiftnP_add length_app inst_case_branch_context_length /=.
     * eapply red_ws_cumul_pb_right; tea.
       2:{ eapply IHh => //.
           move: onbrs' i2.
           rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
-          now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /= (All2_length a). }
+          now rewrite andb_true_r shiftnP_add length_app inst_case_branch_context_length /= (All2_length a). }
       eapply into_closed_red; eauto => //.
       { constructor. constructor.
         eapply OnOne2_app. constructor; auto. cbn. split; auto.
@@ -2272,7 +2272,7 @@ Section ConvRedConv.
       move: op => /= /andP[] /andP[] cl clb ->.
       rewrite andb_true_r /=. apply/andP; split.
       2:{ eapply ws_cumul_pb_is_open_term_left in e0.
-        rewrite app_length inst_case_branch_context_length in e0.
+        rewrite length_app inst_case_branch_context_length in e0.
         now rewrite shiftnP_add. }
       rewrite !test_context_k_closed_on_free_vars_ctx in cl *.
       eapply eq_context_upto_names_on_free_vars; tea.
@@ -2515,7 +2515,7 @@ Section ConvRedConv.
     rewrite e. f_equal.
     destruct p as [e0 w]. apply ws_cumul_pb_is_open_term in e0.
     move/and3P: e0 => [].
-    now rewrite !app_length hlen !app_length /= shiftnP_add => _ -> ->.
+    now rewrite !length_app hlen !length_app /= shiftnP_add => _ -> ->.
   Qed.
 
   Lemma ws_cumul_pb_fix_bodies {b Γ mfix mfix' idx} :
@@ -2591,11 +2591,11 @@ Section ConvRedConv.
     { cbn. rewrite -(All2_length h). solve_all.
       - move: a a0 => /ws_cumul_pb_is_open_term /and3P[] _ onty onty'.
         move/ws_cumul_pb_is_open_term => /and3P[] _.
-        rewrite !app_length !fix_context_length => onbody onbody'.
+        rewrite !length_app !fix_context_length => onbody onbody'.
         rewrite /test_def /= onty /= shiftnP_add //.
       - move: a a0 => /ws_cumul_pb_is_open_term/and3P[] _ onty onty'.
         move/ws_cumul_pb_is_open_term => /and3P[] _.
-        rewrite !app_length !fix_context_length => onbody onbody'.
+        rewrite !length_app !fix_context_length => onbody onbody'.
         rewrite /test_def /= onty' /= shiftnP_add //. }
     assert (h' : ∑ mfix'',
       All2 (fun u v =>
@@ -2649,7 +2649,7 @@ Section ConvRedConv.
       cbn. rewrite -(All2_length h2). solve_all.
       move: a => /andP[].
       move: a2 => /ws_cumul_pb_is_open_term/and3P[] _.
-      rewrite !app_length !fix_context_length => onbody onbody'.
+      rewrite !length_app !fix_context_length => onbody onbody'.
       rewrite /test_def /= a1 => -> /= _.
       rewrite shiftnP_add //. }
     etransitivity.
@@ -2867,9 +2867,9 @@ Section ConvRedConv.
     induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
     - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
-      rewrite app_length in X; lia.
+      rewrite length_app in X; lia.
     - apply All2_fold_length in X as X'.
-      destruct Δ2 as [|c Δ2]; simpl in *; [rewrite app_length in X'; lia|].
+      destruct Δ2 as [|c Δ2]; simpl in *; [rewrite length_app in X'; lia|].
       dependent destruction X.
       + eapply IHΔ1; tas; cbn.
         depelim w.
@@ -3147,7 +3147,7 @@ Section ConvSubst.
     eapply red_red; tea.
     { erewrite on_free_vars_ctx_on_ctx_free_vars; tea. }
     { solve_all; pcuic. exact X1. }
-    { solve_all. rewrite !app_length Nat.add_assoc -shiftnP_add addnP_shiftnP.
+    { solve_all. rewrite !length_app Nat.add_assoc -shiftnP_add addnP_shiftnP.
       eauto with fvs. }
   Qed.
 
@@ -3211,8 +3211,8 @@ Section ConvSubst.
     * symmetry; etransitivity.
     ** eapply ws_cumul_pb_ws_cumul_ctx; revgoals.
       + apply red_conv. eapply (closed_red_red_subst (Δ := Δ') (s' := s'0)); tea.
-        rewrite !app_length -(untyped_subslet_length subs') -(All2_length eqsub).
-        rewrite (untyped_subslet_length subs) - !app_length //.
+        rewrite !length_app -(untyped_subslet_length subs') -(All2_length eqsub).
+        rewrite (untyped_subslet_length subs) - !length_app //.
       + eapply substitution_ws_cumul_ctx_pb; tea.
     ** assert (All (is_open_term Γ) s0) by (eapply (All2_All_right redl); eauto with fvs).
       assert (All (is_open_term Γ) s'0) by (eapply (All2_All_right redr); eauto with fvs).
@@ -3274,7 +3274,7 @@ Section ConvSubst.
     move=> cl cl'.
     rewrite on_free_vars_ctx_app cl' /=.
     rewrite on_free_vars_ctx_lift_context0 //.
-    rewrite app_length -shiftnP_add addnP_shiftnP //.
+    rewrite length_app -shiftnP_add addnP_shiftnP //.
     move: cl. rewrite on_free_vars_ctx_app => /andP[] //.
   Qed.
   Hint Resolve is_closed_context_lift : fvs.
@@ -3287,7 +3287,7 @@ Section ConvSubst.
     eapply on_free_vars_impl.
     2:erewrite on_free_vars_lift; tea.
     intros i.
-    rewrite /strengthenP /shiftnP /= !orb_false_r !app_length lift_context_length.
+    rewrite /strengthenP /shiftnP /= !orb_false_r !length_app lift_context_length.
     repeat nat_compare_specs => //.
   Qed.
   Hint Resolve is_open_term_lift : fvs.
@@ -3707,7 +3707,7 @@ Section CumulSubst.
     intros pb' x y; cbn => leq.
     rewrite -/(subst_context _ _ _).
     rewrite -app_context_assoc (subst_context_app0 s Γ'' Δ0).
-    rewrite - !app_length.
+    rewrite - !length_app.
     relativize #|Δ'0 ++ Γ''|; [apply (substitution_ws_cumul_pb_subst_conv (pb:=pb') hs hs' eqs)|] => //.
     1:rewrite app_context_assoc //.
     len.
@@ -3794,12 +3794,12 @@ Proof using Type.
       * cbn. auto.
   - eapply red_fix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
-    rewrite map_length. eapply r0.
+    rewrite length_map. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
     enough (#|m| + i - #|m| = i) as ->; tas; lia.
   - eapply red_cofix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
-    rewrite map_length. eapply r0.
+    rewrite length_map. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
     enough (#|m| + i - #|m| = i) as ->; tas; lia.
   - destruct p as [? []]; cbn in X; cbn; trea.
@@ -3997,10 +3997,10 @@ Proof.
         ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
            unfold inst_case_predicate_context. apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto.
         ++ rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn.
-          rewrite <- app_length in Hreturn. eassumption.
+          rewrite <- length_app in Hreturn. eassumption.
         ++ rewrite shiftnP_add in Hreturn'. rewrite <- (All2_length Hpcon) in Hreturn'.
            rewrite <- inst_case_predicate_context_length in Hreturn'.
-           rewrite <- app_length in Hreturn'. eassumption.
+           rewrite <- length_app in Hreturn'. eassumption.
     * unfold cumul_branches, cumul_branch, ws_cumul_pb_brs in *.
       repeat toAll. eapply All2_impl. 1: tea. cbn; intros; destruct_head'_prod.
       split; eauto. rewrite -> test_context_k_closed_on_free_vars_ctx in *.
@@ -4008,9 +4008,9 @@ Proof.
       exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
       + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; repeat toAll; eauto.
       + let H := multimatch goal with H : _ |- _ => H end in
-        erewrite -> shiftnP_add, <- inst_case_branch_context_length, <- app_length in H; exact H.
+        erewrite -> shiftnP_add, <- inst_case_branch_context_length, <- length_app in H; exact H.
       + rewrite -> shiftnP_add in *. rewrite <- (All2_length ltac:(eassumption)) in *. erewrite <- inst_case_branch_context_length in *.
-        rewrite <- app_length in *. tea.
+        rewrite <- length_app in *. tea.
   - intros; eapply ws_cumul_pb_Proj_c; eauto.
   - intros Γ mfix mfix' idx Hmfixmfix' Hmfixmfix'_dep HΓ H H'. cbn in *.
     eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_Fix; eauto. repeat toAll.
@@ -4020,8 +4020,8 @@ Proof.
     repeat split; eauto.
     exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
     * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto; solve_all.
-    * rewrite -> shiftnP_add, <- fix_context_length, <- app_length in *; tea.
-    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- app_length in *; tea.
+    * rewrite -> shiftnP_add, <- fix_context_length, <- length_app in *; tea.
+    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- length_app in *; tea.
   - intros Γ mfix mfix' idx Hmfixmfix' Hmfixmfix'_dep HΓ H H'. cbn in *.
     eapply ws_cumul_pb_eq_le_gen. eapply ws_cumul_pb_CoFix; eauto. repeat toAll.
     eapply All2_impl. 1: tea. pose proof (Hfix := All2_length ltac:(eassumption)); cbn; intros. destruct_head'_prod.
@@ -4030,8 +4030,8 @@ Proof.
     repeat split; eauto.
     exactly_once (idtac; multimatch goal with H : _ |- _ => eapply H end); eauto.
     * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto; solve_all.
-    * rewrite -> shiftnP_add, <- fix_context_length, <- app_length in *; tea.
-    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- app_length in *; tea.
+    * rewrite -> shiftnP_add, <- fix_context_length, <- length_app in *; tea.
+    * rewrite -> shiftnP_add, <- Hfix, <- fix_context_length, <- length_app in *; tea.
   - intros Γ p p' e h; cbn => H0 H1 H2.
     eapply ws_cumul_pb_Prim; eauto.
     depelim h; constructor; cbn in *; rtoProp; intuition eauto.
@@ -4154,7 +4154,7 @@ Section IteratedBetaReduction.
       + rewrite -PCUICClosedTyp.is_open_term_closed //.
       + rewrite on_free_vars_ctx_on_ctx_free_vars -PCUICClosedTyp.is_closed_ctx_closed //.
     - move: l=> /snocP [//|/=l x].
-      rewrite app_length /= Nat.add_comm PCUICAstUtils.mkApps_app /= => [=] eq.
+      rewrite length_app /= Nat.add_comm PCUICAstUtils.mkApps_app /= => [=] eq.
       move: (eq)=> /ih ih0 clt clctx red.
       move: (clctx); rewrite Nat.add_0_r => /andP [clctx0 cld].
       etransitivity.
@@ -4214,7 +4214,7 @@ Section IteratedBetaReduction.
       * by rewrite  -PCUICClosedTyp.is_closed_ctx_closed.
       * rewrite /u -PCUICClosedTyp.is_open_term_closed PCUICClosed.closedn_mkApps lcl andb_true_r.
         apply: PCUICClosed.closedn_it_mkLambda_or_LetIn => //.
-        by rewrite Nat.add_comm -app_length.
+        by rewrite Nat.add_comm -length_app.
       * apply: red_betas=> //.
     + constructor.
       * by rewrite  -PCUICClosedTyp.is_closed_ctx_closed.
@@ -4222,7 +4222,7 @@ Section IteratedBetaReduction.
         move: (eqlen)=> /mk_ctx_subst_spec /closedn_ctx_subst_forall h.
         apply: PCUICClosed.closedn_subst0; first by apply: h.
         rewrite mk_ctx_subst_length //.
-        by rewrite Nat.add_comm -app_length.
+        by rewrite Nat.add_comm -length_app.
       * reflexivity.
   Qed.
 

@@ -297,7 +297,7 @@ Proof. move=> -> onctx ont; eapply (weakening_red (Γ':=[])); tea. Qed.
 Proof.
   intro l.
   unfold fix_context_alt.
-  rewrite List.rev_length.
+  rewrite List.length_rev.
   rewrite mapi_length. reflexivity.
 Qed. *)
 

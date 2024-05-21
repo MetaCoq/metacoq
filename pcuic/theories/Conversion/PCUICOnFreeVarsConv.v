@@ -29,14 +29,14 @@ Proof.
     f_equal.
     1: by rewrite IHret shiftnP_shiftn.
     f_equal.
-    1: by rewrite map_length.
+    1: by rewrite length_map.
     f_equal.
     1: auto.
     erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
     intros b [].
     f_equal.
-    1: by rewrite map_length.
+    1: by rewrite length_map.
     by rewrite /PCUICSigmaCalculus.rename_branch /= e shiftnP_shiftn.
   - erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
@@ -44,14 +44,14 @@ Proof.
     rewrite /test_def /=.
     f_equal.
     1: auto.
-    by rewrite map_length ebod shiftnP_shiftn.
+    by rewrite length_map ebod shiftnP_shiftn.
   - erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
     intros ? [? ebod].
     rewrite /test_def /=.
     f_equal.
     1: auto.
-    by rewrite map_length ebod shiftnP_shiftn.
+    by rewrite length_map ebod shiftnP_shiftn.
   - solve_all.
 Qed.
 

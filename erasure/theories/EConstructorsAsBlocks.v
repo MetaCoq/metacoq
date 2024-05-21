@@ -118,7 +118,7 @@ Section transform_blocks.
   Proof using Type.
     funelim (transform_blocks t); simp transform_blocks; rewrite <-?transform_blocks_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
@@ -281,7 +281,7 @@ Section transform_blocks.
     intros cla etaa. move b at bottom.
     funelim (transform_blocks b); cbn; simp transform_blocks isEtaExp; rewrite -?isEtaExp_equation_1 -?transform_blocks_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
 
@@ -310,7 +310,7 @@ Section transform_blocks.
       { destruct v; cbn; congruence. }
       rewrite transform_blocks_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
-      move: H1 => /andP[] /andP[]. rewrite map_length. move=> etaapp etav bargs.
+      move: H1 => /andP[] /andP[]. rewrite length_map. move=> etaapp etav bargs.
       destruct block_args; invs bargs.
       cbn -[lookup_constructor_pars_args].
       rewrite GlobalContextMap.lookup_constructor_pars_args_spec in Heq.
@@ -334,7 +334,7 @@ Section transform_blocks.
       rewrite GlobalContextMap.lookup_constructor_pars_args_spec in Heq.
       rewrite transform_blocks_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
-      move/andP : H1 => [] /andP[]. rewrite map_length. move=> etaapp etav bargs.
+      move/andP : H1 => [] /andP[]. rewrite length_map. move=> etaapp etav bargs.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
@@ -369,7 +369,7 @@ Section transform_blocks.
   Lemma transform_blocks_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def transform_blocks) mfix) = map transform_blocks (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp transform_blocks.
@@ -378,7 +378,7 @@ Section transform_blocks.
   Lemma transform_blocks_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def transform_blocks) mfix) = map transform_blocks (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp transform_blocks.
@@ -739,7 +739,7 @@ Proof.
         rewrite ?lookup_constructor_transform_blocks; eauto.
       * destruct lookup_constructor as [ [[]] | ] eqn:E; cbn -[transform_blocks] in *; eauto.
         invs Heq. rewrite chop_firstn_skipn in Ec. invs Ec.
-        rewrite firstn_length. len. eapply Nat.leb_le in H0.
+        rewrite length_firstn. len. eapply Nat.leb_le in H0.
         apply/eqb_spec.
         assert (ind_npars m0 = 0).
         { destruct lookup_env as [ [] | ] eqn:E'; try congruence.

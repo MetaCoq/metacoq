@@ -30,7 +30,7 @@ Lemma inds_spec ind u l :
 Proof.
   unfold inds, mapi. induction l using rev_ind.
   - simpl. reflexivity.
-  - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
+  - now rewrite length_app /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
 Definition ind_predicate_context ind mdecl idecl : context :=
@@ -409,7 +409,7 @@ Proof.
 Qed.
 
 Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+Proof. unfold fix_context. now rewrite List.length_rev mapi_length. Qed.
 
 #[global]
 Hint Rewrite subst_instance_length
@@ -433,11 +433,11 @@ Lemma is_constructor_prefix n args args' :
 Proof.
   rewrite /is_constructor.
   elim: nth_error_spec.
-  - rewrite app_length.
+  - rewrite length_app.
     move=> i hi harg. elim: nth_error_spec => //.
     move=> i' hi' hrarg'.
     rewrite nth_error_app_lt in hi; eauto. congruence.
-  - rewrite app_length. move=> ge _.
+  - rewrite length_app. move=> ge _.
     elim: nth_error_spec; intros; try lia. auto.
 Qed.
 

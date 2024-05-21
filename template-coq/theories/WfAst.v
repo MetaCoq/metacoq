@@ -221,7 +221,7 @@ Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind Σ (fun t => forall k, wf Σ (lift n k t)));
     intros; try cbn; econstructor; simpl; eauto; try solve [solve_all].
-    destruct l; cbn in *. auto. discriminate. now rewrite map_length.
+    destruct l; cbn in *. auto. discriminate. now rewrite length_map.
 Qed.
 Require Import PeanoNat.
 Import Nat.
@@ -236,7 +236,7 @@ Proof.
     destruct nth_error eqn:Heq. apply (nth_error_all Heq) in wfts.
     apply wf_lift; auto. constructor. constructor.
   - apply wf_mkApps; auto. solve_all.
-  - now rewrite map_length.
+  - now rewrite length_map.
 Qed.
 
 Lemma wf_subst1 Σ t k u : wf Σ t -> wf Σ u -> wf Σ (subst1 t k u).
@@ -291,7 +291,7 @@ Proof.
     destruct l; simpl in *; congruence.
     now apply All_map.
   - cbn; econstructor; eauto; simpl; solve_all.
-    now rewrite map_length.
+    now rewrite length_map.
 Qed.
 
 Lemma wf_nth Σ:

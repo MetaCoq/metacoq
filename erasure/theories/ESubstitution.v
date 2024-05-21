@@ -253,8 +253,8 @@ Proof.
       rewrite -app_context_assoc -{1}(Nat.add_0_r #|Γ'|) -(lift_context_app _ 0).
       assert (#|inst_case_branch_context p br| = #|bcontext br|).
       { rewrite /inst_case_branch_context. now len. }
-      rewrite /map_branch_k /= -H6 -app_length.
-      rewrite -e2 map_length -H6 -app_length.
+      rewrite /map_branch_k /= -H6 -length_app.
+      rewrite -e2 length_map -H6 -length_app.
       rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
       eapply e.
       eapply weakening_wf_local => //.
@@ -280,7 +280,7 @@ Proof.
     eapply isLambda_lift => //.
     eapply ELiftSubst.isLambda_lift => //.
     specialize (IH Γ (types ++ Γ') Γ'').
-    subst types. rewrite app_length fix_context_length in IH.
+    subst types. rewrite length_app fix_context_length in IH.
     forward IH.
     { rewrite lift_context_app -plus_n_O. unfold app_context.
       eapply All_mfix_wf in a; auto.
@@ -309,7 +309,7 @@ Proof.
     intros [] []. simpl. intros [IH [<- [<- IH']]].
     repeat split. unfold app_context in *.
     specialize (IH Γ (types ++ Γ') Γ'').
-    subst types. rewrite app_length fix_context_length in IH.
+    subst types. rewrite length_app fix_context_length in IH.
     forward IH.
     { rewrite lift_context_app -plus_n_O. unfold app_context.
       eapply All_mfix_wf in a; auto.
@@ -530,10 +530,10 @@ Proof.
         rewrite /case_branch_context /case_branch_context_gen /=.
         rewrite map2_length. len.
         eapply Forall2_length in wfbr. now cbn in wfbr; len in wfbr.
-        rewrite map_length Nat.add_0_r.
+        rewrite length_map Nat.add_0_r.
         rewrite -/(case_branch_context_gen ci mdecl (pparams p) (puinst p) (map decl_name bcontext) cdecl').
         rewrite -/(case_branch_context ci mdecl p (forget_types bcontext) cdecl').
-        rewrite (subst_case_branch_context _ x _ idecl _ br) // map_length.
+        rewrite (subst_case_branch_context _ x _ idecl _ br) // length_map.
         rewrite app_context_assoc //.
     + econstructor.
       eapply is_type_subst; tea.

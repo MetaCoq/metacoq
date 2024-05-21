@@ -96,7 +96,7 @@ Section implement_box.
   Proof using Type.
     funelim (implement_box t); simp implement_box; rewrite <-?implement_box_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
@@ -159,10 +159,10 @@ Section implement_box.
   (*     eapply H; eauto. *)
   (*   - cbn. f_equal. rewrite !map_map. solve_all. *)
   (*     eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto. *)
-  (*     f_equal. now rewrite map_length. *)
+  (*     f_equal. now rewrite length_map. *)
   (*   - cbn. f_equal. rewrite !map_map. solve_all. *)
   (*     eapply In_All. intros ? ?. unfold map_def. cbn. f_equal. erewrite H; eauto. *)
-  (*     f_equal. now rewrite map_length. *)
+  (*     f_equal. now rewrite length_map. *)
   (* Qed. *)
 
   Lemma implement_box_csubst a k b :
@@ -219,7 +219,7 @@ Section implement_box.
   Lemma implement_box_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def implement_box) mfix) = map implement_box (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp implement_box.
@@ -228,7 +228,7 @@ Section implement_box.
   Lemma implement_box_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def implement_box) mfix) = map implement_box (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp implement_box.

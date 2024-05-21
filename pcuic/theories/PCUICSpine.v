@@ -170,10 +170,10 @@ Proof.
   assert (lenctx' : context_assumptions ctx' + context_assumptions ctx = #|args|).
   { assert (lenctx'' : context_assumptions ctx' <= #|args|).
     move: (context_subst_assumptions_length Hr).
-    rewrite firstn_length; lia.
+    rewrite length_firstn; lia.
     move: (context_subst_assumptions_length Hr).
     move: (context_subst_assumptions_length Hl).
-    rewrite firstn_length skipn_length; try lia.
+    rewrite length_firstn length_skipn; try lia.
     intros H1 H2. rewrite context_assumptions_subst in H1. lia. }
   move: args s ctx' lenctx' Hl Hr.
   induction ctx => args s ctx' lenctx' Hl Hr.
@@ -186,7 +186,7 @@ Proof.
       apply (f_equal (@length _)) in H0. simpl in H0. autorewrite with len in H0.
       simpl in H0; lia. rewrite H0.
       rewrite skipn_app in H0.
-      rewrite app_length /= in lenctx'.
+      rewrite length_app /= in lenctx'.
       specialize (IHctx args s ctx'). forward IHctx by lia.
       assert (context_assumptions ctx' - #|args| = 0) by lia.
       rewrite H skipn_0 in H0. apply app_inj_tail in H0 as [Ha xu]. subst x.
@@ -451,7 +451,7 @@ Section WfEnv.
           exists []. split; try constructor; eauto with pcuic.
           all:now eapply isType_wf_local.
         ++ now eapply ws_cumul_pb_Sort_Prod_inv in cum.
-      + rewrite app_length /= in len; exfalso; lia.
+      + rewrite length_app /= in len; exfalso; lia.
     - intros len s inst s' Hsp.
       destruct Γ' using rev_ind; try clear IHΓ'.
       -- dependent elimination Hsp as [spnil _ _ cum|spcons isty isty' cum tyhd sp].
@@ -460,7 +460,7 @@ Section WfEnv.
         --- exists []; split; try constructor; auto.
             all:now eapply isType_wf_local.
         --- now eapply ws_cumul_pb_Sort_Prod_inv in cum.
-      -- rewrite app_length /= in len.
+      -- rewrite length_app /= in len.
         destruct x as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
         + rewrite context_assumptions_app /= Nat.add_0_r.
           assert (Hsp' := Hsp).
@@ -563,7 +563,7 @@ Proof.
       eapply subslet_app_inv in subs as [subsl subsr].
       depelim subsl.
       have Hskip := make_context_subst_skipn Hsub.
-      rewrite List.rev_length in Hskip. rewrite Hskip in H0; noconf H0.
+      rewrite List.length_rev in Hskip. rewrite Hskip in H0; noconf H0.
       simpl; eapply typing_spine_prod; auto; first
       now rewrite /subst1 -subst_app_simpl.
       eapply isType_substitution_it_mkProd_or_LetIn in Har; eauto.
@@ -585,12 +585,12 @@ Qed.*)
       + intros le Hsub Hsp.
         destruct args; simpl; try discriminate.
         simpl in Hsub. now depelim Hsub.
-      + rewrite app_length /=; intros; exfalso; lia.
+      + rewrite length_app /=; intros; exfalso; lia.
     - destruct Δ using rev_ind.
       1:intros le Hsub Hsp; destruct args; simpl; try discriminate;
       simpl in Hsub; now depelim Hsub.
       clear IHΔ.
-      rewrite app_length /=; intros Hlen Hsub Hsp Hargs.
+      rewrite length_app /=; intros Hlen Hsub Hsp Hargs.
       rewrite context_assumptions_app in Hargs.
       destruct x as [na [b|] ty]; simpl in *.
       * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
@@ -614,7 +614,7 @@ Qed.*)
         eapply subslet_app_inv in subs as [subsl subsr].
         depelim subsl.
         have Hskip := make_context_subst_skipn Hsub.
-        rewrite List.rev_length in Hskip. rewrite Hskip in H0; noconf H0.
+        rewrite List.length_rev in Hskip. rewrite Hskip in H0; noconf H0.
         forward IHn.
         { eapply isType_apply in Har; tea.
           now move: Har; rewrite /subst1 -subst_app_simpl. }
@@ -799,11 +799,11 @@ Qed.*)
     assert (firstn (context_assumptions Δ')
           (List.rev (δ ++ δ')) = List.rev δ').
     { rewrite List.rev_app_distr.
-      now rewrite firstn_app_left // List.rev_length. }
+      now rewrite firstn_app_left // List.length_rev. }
     assert (skipn (context_assumptions Δ')
       (List.rev (δ ++ δ')) = List.rev δ).
     { rewrite List.rev_app_distr.
-      erewrite (skipn_all_app_eq) => //; rewrite List.rev_length //. }
+      erewrite (skipn_all_app_eq) => //; rewrite List.length_rev //. }
     rewrite H H0 in spidx, sppars.
     split => //.
   Qed.
@@ -1055,7 +1055,7 @@ Qed.*)
     #|ctx_inst_sub c| = #|Δ|.
   Proof using Type.
     induction c; simpl; auto; try lia;
-    rewrite app_length IHc subst_telescope_length /=; lia.
+    rewrite length_app IHc subst_telescope_length /=; lia.
   Qed.
 
   Lemma ctx_inst_app {Γ} {Δ : context} {Δ' args args'}
@@ -1247,7 +1247,7 @@ Proof.
   rewrite /subst_telescope subst_context_alt.
   rewrite rev_mapi. apply mapi_rec_ext.
   intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=;
-  rewrite List.rev_length Nat.add_0_r in le';
+  rewrite List.length_rev Nat.add_0_r in le';
   f_equal. f_equal. f_equal. lia. f_equal; lia.
   f_equal; lia.
 Qed.
@@ -1449,7 +1449,7 @@ Proof.
       { erewrite on_free_vars_ctx_on_ctx_free_vars; tea.
         clear X.
         now eapply wf_local_closed_context in wf. }
-      { cbn. rewrite /PCUICOnFreeVars.shiftnP app_length. nat_compare_specs => //. }
+      { cbn. rewrite /PCUICOnFreeVars.shiftnP length_app. nat_compare_specs => //. }
       simpl.
       set (i := n - #|Δ'|) in *. clearbody i.
       clear l Hle H.
@@ -1461,7 +1461,7 @@ Proof.
       + rewrite -{1 3 4}(firstn_skipn (S i) Δ).
         rewrite app_context_assoc.
         assert (Hf:#|firstn (S i) Δ| = S i) by now rewrite firstn_length_le; lia.
-        rewrite app_length Hf.
+        rewrite length_app Hf.
         rewrite all_rels_lift.
         erewrite <-(simpl_lift _ _ _ _ #|skipn (S i) Δ|); try lia.
 
@@ -1486,7 +1486,7 @@ Proof.
           rewrite /= in wf.
           move: wf => [] /subject_closed //.
           rewrite is_open_term_closed //. }
-        rewrite skipn_length; simpl.
+        rewrite length_skipn; simpl.
         apply All_local_env_over_2 in X.
         eapply (All_local_env_nth_error (n:=i)) in X.
         2: rewrite nth_error_app_lt; eassumption.
@@ -1494,8 +1494,8 @@ Proof.
         specialize (Xb Γ (skipn (S i) Δ)).
         forward Xb. rewrite skipn_app. unfold app_context. f_equal.
         assert(S i - #|Δ| = 0) by lia. rewrite H. apply skipn_0.
-        now rewrite skipn_length in Xb; try lia.
-        now rewrite skipn_length.
+        now rewrite length_skipn in Xb; try lia.
+        now rewrite length_skipn.
       + simpl. assert(#|Δ'| + (n - #|Δ'|) = n) as -> by lia.
         reflexivity.
       + reflexivity.
@@ -1543,7 +1543,7 @@ Proof.
   * simpl; eapply red_fix_congr.
     do 2 eapply All2_map_right.
     eapply (All_All2 X0); simpl; intuition auto.
-    rewrite map_length.
+    rewrite length_map.
     specialize (b (Δ' ,,, fix_context m)).
     autorewrite with len in b.
     rewrite Nat.add_shuffle3.
@@ -1552,7 +1552,7 @@ Proof.
   * simpl. eapply red_cofix_congr.
     do 2 eapply All2_map_right.
     eapply (All_All2 X0); simpl; intuition auto.
-    rewrite map_length.
+    rewrite length_map.
     specialize (b (Δ' ,,, fix_context m)).
     autorewrite with len in b.
     rewrite Nat.add_shuffle3.
@@ -1629,7 +1629,7 @@ Section WfEnv.
       rewrite -app_assoc in IHc. specialize (IHc eql).
       destruct a as [na [?|] ?]  => /=;
       rewrite lift_context_snoc /lift_decl /map_decl /=.
-      * rewrite app_length /= Nat.add_1_r in IHc.
+      * rewrite length_app /= Nat.add_1_r in IHc.
         rewrite all_rels_length Nat.add_0_r.
         intros X. specialize (IHc X).
         constructor; auto.
@@ -1644,7 +1644,7 @@ Section WfEnv.
         eapply All_local_env_app_inv in X as [].
         rewrite lift_context_snoc0 Nat.add_0_r /= in a. cbn in a.
         depelim a. now apply unlift_TermTyp in l0.
-      * rewrite app_length /= Nat.add_1_r in IHc.
+      * rewrite length_app /= Nat.add_1_r in IHc.
         intros Hwf. specialize (IHc Hwf).
         constructor; auto.
 
@@ -1655,7 +1655,7 @@ Section WfEnv.
         rewrite Nat.add_0_r.
         eapply type_ws_cumul_pb.
         constructor. auto.
-        rewrite -eql nth_error_app_lt ?app_length /=; try lia.
+        rewrite -eql nth_error_app_lt ?length_app /=; try lia.
         rewrite nth_error_app_ge // ?Nat.sub_diag //.
         apply lift_sorting_f_it_impl with (f := fun t => _ (_ t)) (tu := l0) => // Hs.
         set (s := l0.2.π1).
@@ -1673,7 +1673,7 @@ Section WfEnv.
         (l ++ [{|decl_name := na; decl_body := None; decl_type := decl_type|}]) decl_type).
         assert (#|Δ| = #|c| + S #|l|).
         { rewrite -eql. autorewrite with len. simpl. lia. }
-        rewrite H. rewrite app_length /= in X.
+        rewrite H. rewrite length_app /= in X.
         rewrite Nat.add_1_r in X.
         unfold app_context in X.
         rewrite !app_tip_assoc /= in X.
@@ -1831,7 +1831,7 @@ Section WfEnv.
     rewrite reln_app. simpl.
     have len := ctx_inst_subst_length inst0.
     rewrite subst_telescope_length in len.
-    rewrite List.rev_length.
+    rewrite List.length_rev.
     f_equal.
     rewrite nth_error_app_ge. lia.
     assert(#|Δ| + 0 - 0 - #|ctx_inst_sub inst0| = 0) as -> by lia.
@@ -1843,7 +1843,7 @@ Section WfEnv.
     epose proof (reln_subst [] [i] (List.rev Δ) 0). simpl in H.
     rewrite subst_context_telescope in H.
     rewrite List.rev_involutive in H. rewrite H.
-    now rewrite List.rev_length len.
+    now rewrite List.length_rev len.
 
     rewrite reln_app. simpl.
     have len := ctx_inst_subst_length inst0.
@@ -1855,7 +1855,7 @@ Section WfEnv.
     epose proof (reln_subst [] [b] (List.rev Δ) 0). simpl in H.
     rewrite subst_context_telescope in H.
     rewrite List.rev_involutive in H. rewrite H.
-    now rewrite List.rev_length len.
+    now rewrite List.length_rev len.
   Qed.
 
   Lemma spine_subst_subst_to_extended_list_k {Γ args s Δ} :
@@ -2123,7 +2123,7 @@ Section WfEnv.
           rewrite /= smash_context_length /= in Hty.
           replace ((context_assumptions Γ0 - S (context_assumptions Γ0 - S n') + 0))
             with n' in Hty by lia.
-          rewrite subst_app_simpl /= List.rev_length firstn_length_le.
+          rewrite subst_app_simpl /= List.length_rev firstn_length_le.
           now eapply nth_error_Some_length in Hnth.
           assumption.
   Qed.
@@ -2166,7 +2166,7 @@ Section WfEnv.
         2:{ (rewrite subst_consn_shiftn; try now autorewrite with len); [].
             autorewrite with sigma.
             rewrite subst_consn_shiftn //.
-            rewrite List.rev_length.
+            rewrite List.length_rev.
             now apply context_subst_length2 in inst_ctx_subst0. }
         clear -inst_ctx_subst0.
         rewrite map_inst_idsn. now autorewrite with len.
@@ -2284,7 +2284,7 @@ Section WfEnv.
     - simpl in subsl. simpl in asp. rewrite subst_empty lift0_id in asp. depelim subsl.
       rewrite /= H !subst_empty in asp. destruct args => //.
       simpl in H. apply (f_equal (@List.length _)) in H. simpl in H.
-      rewrite app_length /= in H. lia.
+      rewrite length_app /= in H. lia.
     - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
       destruct d as [na [b|] ty]; simpl in *.
       * constructor. rewrite /subst1 subst_it_mkProd_or_LetIn.
@@ -2315,8 +2315,8 @@ Section WfEnv.
         destruct args; simpl in * => //.
         noconf len.
         len in subsl; len in subsr. simpl in *.
-        rewrite -H in subsl subsr. rewrite skipn_all_app_eq ?List.rev_length in subsl subsr => //.
-        rewrite (firstn_app_left) ?firstn_0 ?app_nil_r ?List.rev_length in subsr => //.
+        rewrite -H in subsl subsr. rewrite skipn_all_app_eq ?List.length_rev in subsl subsr => //.
+        rewrite (firstn_app_left) ?firstn_0 ?app_nil_r ?List.length_rev in subsr => //.
         depelim subsl.
         constructor. now rewrite subst_empty in t1.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r.
@@ -2816,7 +2816,7 @@ Section WfEnv.
           eapply is_open_term_lift.
           destruct l0 as (_ & s & Hs & _). eapply subject_closed in Hs.
           rewrite is_open_term_closed in Hs. move: Hs.
-          now rewrite !app_length -(All2_fold_length cum). reflexivity.
+          now rewrite !length_app -(All2_fold_length cum). reflexivity.
       * split; auto.
         constructor; auto.
         len.
@@ -2848,7 +2848,7 @@ Section WfEnv.
         eapply is_open_term_lift.
         eapply unlift_TermTyp, subject_closed in l0.
         rewrite is_open_term_closed in l0. move: l0.
-        now rewrite !app_length -(All2_fold_length cum). reflexivity.
+        now rewrite !length_app -(All2_fold_length cum). reflexivity.
   Qed.
 
 
@@ -2938,7 +2938,7 @@ Section WfEnv.
         { rewrite skipn_nil in H => //. }
         assert (context_assumptions (List.rev Γ0) = #|i|).
         apply (f_equal (@length _)) in H. simpl in H.
-        rewrite List.skipn_length app_length /= in H. lia.
+        rewrite List.length_skipn length_app /= in H. lia.
         rewrite skipn_all_app_eq // in H. noconf H.
         intros HΔ; depelim HΔ.
         intros HΔ'; depelim HΔ'.
@@ -2976,7 +2976,7 @@ Section WfEnv.
       assert (context_assumptions (List.rev Γ0) = #|i|).
       pose proof (ctx_inst_length dom).
       apply (f_equal (@length _)) in H. simpl in H.
-      rewrite List.skipn_length /= in H.
+      rewrite List.length_skipn /= in H.
       apply firstn_length_le_inv in H0. lia.
       rewrite H0 in H, dom. rewrite firstn_all in dom.
       intros HΔ; depelim HΔ.
@@ -3047,7 +3047,7 @@ Section WfEnv.
     rewrite /subst_telescope subst_context_alt.
     rewrite rev_mapi. apply mapi_rec_ext.
     intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=;
-    rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
+    rewrite List.length_rev Nat.add_0_r in le'; len; lia_f_equal.
   Qed.
 
   Lemma ws_cumul_ctx_pb_rel_trans {pb Γ Δ Δ' Δ''} :

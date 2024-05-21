@@ -152,7 +152,7 @@ Section optimize.
     intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - rtoProp. split; eauto. destruct args; eauto.
@@ -180,7 +180,7 @@ Section optimize.
     intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros wft; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold wf_fix, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n0)%nat; auto.
@@ -225,14 +225,14 @@ Section optimize.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
     rewrite forallb_rev forallb_skipn //.
-    now rewrite List.rev_length.
+    now rewrite List.length_rev.
     now rewrite map_rev map_skipn.
   Qed.
 
   Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -241,7 +241,7 @@ Section optimize.
   Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -461,7 +461,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.rev_length hskip Nat.add_0_r.
+  now rewrite List.length_rev hskip Nat.add_0_r.
 Qed.
 
 Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) ; with_constructor_as_block := false |}.
@@ -584,7 +584,7 @@ Proof.
     eapply eval_wellformed in ev1 => //.
     move/wf_mkApps: ev1 => [] wff wfargs.
     eapply eval_fix; eauto.
-    rewrite map_length.
+    rewrite length_map.
     eapply optimize_cunfold_fix; tea.
     rewrite optimize_mkApps in IHev3. apply IHev3.
     rewrite wellformed_mkApps // wfargs.
@@ -598,7 +598,7 @@ Proof.
     rewrite optimize_mkApps in IHev1 |- *.
     simpl in *. eapply eval_fix_value. auto. auto. auto.
     eapply optimize_cunfold_fix; eauto.
-    now rewrite map_length.
+    now rewrite length_map.
 
   - move/andP => [] clf cla.
     eapply eval_wellformed in ev1 => //.
@@ -655,15 +655,15 @@ Proof.
     eapply eval_iota; tea.
     rewrite /constructor_isprop_pars_decl -lookup_constructor_optimize // H //= //.
     rewrite H0 H1; reflexivity. cbn. reflexivity. len. len.
-    rewrite skipn_length. lia.
+    rewrite length_skipn. lia.
     unfold iota_red. cbn.
     rewrite (substl_rel _ _ (optimize Σ a)) => //.
     { eapply nth_error_forallb in wfargs; tea.
       eapply wf_optimize in wfargs => //.
       now eapply wellformed_closed in wfargs. }
     pose proof (wellformed_projection_args wfΣ hl'). cbn in H1.
-    rewrite nth_error_rev. len. rewrite skipn_length. lia.
-    rewrite List.rev_involutive. len. rewrite skipn_length.
+    rewrite nth_error_rev. len. rewrite length_skipn. lia.
+    rewrite List.rev_involutive. len. rewrite length_skipn.
     rewrite nth_error_skipn nth_error_map.
     rewrite e2 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.

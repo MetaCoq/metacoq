@@ -75,14 +75,14 @@ Proof.
         rename i into hguard. clear -f a a0 a1 hguard.
         pose proof a1 as a1'. apply All_rev in a1'.
         unfold fix_subst, fix_context. simpl.
-        revert a1'. rewrite <- (@List.rev_length _ mfix).
+        revert a1'. rewrite <- (@List.length_rev _ mfix).
         rewrite rev_mapi. unfold mapi.
-        assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
-        assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
+        assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.length_rev; lia).
+        assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.length_rev; auto with arith).
         rewrite {2}He. clear He. revert H.
         assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
         { intros. rewrite nth_error_rev. 1: auto.
-          now rewrite List.rev_length List.rev_involutive. }
+          now rewrite List.length_rev List.rev_involutive. }
         revert H.
         generalize (List.rev mfix).
         intros l Hi Hlen H.
@@ -123,14 +123,14 @@ Proof.
   intros wfΓ hguard types bodies wfcofix.
   pose proof bodies as X1. apply All_rev in X1.
   unfold cofix_subst, fix_context. simpl.
-  revert X1. rewrite <- (@List.rev_length _ mfix).
+  revert X1. rewrite <- (@List.length_rev _ mfix).
   rewrite rev_mapi. unfold mapi.
-  assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
-  assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
+  assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.length_rev; lia).
+  assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.length_rev; auto with arith).
   rewrite {2}He. clear He. revert H.
   assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
   { intros. rewrite nth_error_rev. 1: auto.
-    now rewrite List.rev_length List.rev_involutive. }
+    now rewrite List.length_rev List.rev_involutive. }
   revert H.
   generalize (List.rev mfix).
   intros l Hi Hlen H.
@@ -430,7 +430,7 @@ Proof.
   len in spr.
   rewrite {4}(spine_subst_extended_subst sp) in spr.
   rewrite subst_context_map_subst_expand_lets_k in spr; try now len.
-  rewrite List.rev_length. now rewrite -(context_subst_length2 sp).
+  rewrite List.length_rev. now rewrite -(context_subst_length2 sp).
   rewrite expand_lets_k_ctx_subst_id' in spr. now len. now len.
   rewrite -subst_context_map_subst_expand_lets_k in spr; try len.
   rewrite subst_subst_context in spr. len in spr.
@@ -744,7 +744,7 @@ Proof.
       rewrite !map_map_compose !map_app.
       rewrite -map_map_compose.
       rewrite (firstn_app_left).
-      { rewrite !map_length to_extended_list_k_length. lia. }
+      { rewrite !length_map to_extended_list_k_length. lia. }
       rewrite skipn_all_app_eq ?lengths //.
       rewrite !map_map_compose.
       assert (#|cdecl.(cstr_args)| <= #|isubst|).
@@ -847,7 +847,7 @@ Proof.
     (vass (dname y) (lift0 #|Γ''| (dtype y)))).
   { constructor; tas.
     pose proof (All2_fold_length convctx).
-    rewrite !app_length in H. assert(#|Γ'|  = #|Γ''|) by lia.
+    rewrite !length_app in H. assert(#|Γ'|  = #|Γ''|) by lia.
     rewrite -H0.
     apply (weakening_ws_cumul_pb (Γ' := [])); eauto with fvs. }
 
@@ -1184,7 +1184,7 @@ Proof.
   move: (on_projections_indices onp) => heq. rewrite heq in e0.
   cbn in e0.
   assert (#|args| = ind_npars mdecl).
-  rewrite -(firstn_skipn (ind_npars mdecl) args) app_length e0 e //.
+  rewrite -(firstn_skipn (ind_npars mdecl) args) length_app e0 e //.
   rewrite firstn_all2 //. lia.
   move/(substitution_subslet (Γ := Γ) (Δ := [_]) (Γ' := []) (subslet_ass_tip Ht)).
   cbn.
@@ -1516,7 +1516,7 @@ Proof.
       destruct (nth_error (inds _ _ _) _) eqn:hnth.
       eapply inds_nth_error in hnth as [n ->]. now cbn.
       eapply nth_error_None in hnth. len in hnth; lia.
-    * rewrite !map_length.
+    * rewrite !length_map.
       simpl. destruct (Nat.leb #|Γ| k) eqn:eqle.
       eapply Nat.leb_le in eqle.
       rewrite /ind_subst !inds_spec !rev_mapi !nth_error_mapi.
@@ -1574,7 +1574,7 @@ Proof.
       rewrite !subst_closedn ?closedn_subst_instance // in dom; len; auto.
       now rewrite !subst_closedn ?closedn_subst_instance.
     * cbn -[closedn_ctx] in IHpos. rewrite subst_context_snoc in IHpos.
-      rewrite map_length Nat.add_0_r in IHpos. eapply IHpos; eauto.
+      rewrite length_map Nat.add_0_r in IHpos. eapply IHpos; eauto.
       cbn. rewrite cl /=. len.
       rewrite closedn_subst_instance.
       eapply closed_upwards; eauto; lia.
@@ -1606,7 +1606,7 @@ Proof.
   now apply closedn_smash_context.
   revert cum.
   induction cpos; simpl; rewrite ?subst_context_nil ?subst_context_snoc; try solve [constructor; auto].
-  all:rewrite ?map_length; intros cv; depelim cv; depelim wf.
+  all:rewrite ?length_map; intros cv; depelim cv; depelim wf.
   assert (isType Σ
   (subst_instance u (ind_arities mdecl) ,,,
    subst_instance u (smash_context [] (ind_params mdecl) ,,, Γ))
@@ -3105,7 +3105,7 @@ Proof.
       rewrite /ind_decl. cbn. rewrite closedn_mkApps /= //.
       relativize (context_assumptions _); [eapply closedn_to_extended_list|]. len. }
   move: Hty; rewrite subst_context_nil /=.
-  rewrite skipn_length. len. simpl. len.
+  rewrite length_skipn. len. simpl. len.
   rewrite /projection_type /=.
   fold (expand_lets_k (ind_params mdecl) p.(proj_arg) ty).
   rewrite projs_inst_skipn.
@@ -3213,7 +3213,7 @@ Proof.
     eapply All2_app_inv in conv as [convpars _].
     2:{ apply ctx_inst_length in cparams.
         rewrite context_assumptions_rev in cparams. len in cparams.
-        rewrite List.firstn_length. lia. }
+        rewrite List.length_firstn. lia. }
     unshelve epose proof (inductive_cumulative_indices isdecl c H0 Ruv Γ).
     specialize (X (firstn (ind_npars mdecl) args) params).
     unshelve epose proof (ctx_inst_spine_subst _ cparams); tea.
@@ -3239,7 +3239,7 @@ Proof.
         rewrite -app_context_assoc -subst_instance_app_ctx.
         eapply weaken_wf_local; tea.
         eapply (on_minductive_wf_params_indices_inst isdecl _ H0). }
-    - len. rewrite List.skipn_length. lia.
+    - len. rewrite List.length_skipn. lia.
   }
 
   rewrite subst_instance_app_ctx List.rev_app_distr.
@@ -3535,7 +3535,7 @@ Proof.
   rewrite simpl_lift in Hs; try lia.
   now rewrite Nat.add_comm.
   rewrite -(Nat.add_0_r #|Δ|) -lift_it_mkProd_or_LetIn Nat.add_0_r.
-  rewrite -app_length.
+  rewrite -length_app.
   replace #|Δ ++ Δ'| with (#|Δ ,,, Δ'|).
   2:now len.
   eapply isType_lift; tea. now len.
@@ -3806,7 +3806,7 @@ Proof.
   now rewrite -(wf_branch_length wfbr).
   eapply wf_arity_spine_typing_spine; tea.
   split.
-  { apply isType_lift => //. rewrite app_length; lia.
+  { apply isType_lift => //. rewrite length_app; lia.
     rewrite skipn_all_app //. }
   rewrite /bc.
   rewrite lift_it_mkProd_or_LetIn /=.
@@ -3938,7 +3938,7 @@ Proof.
         rewrite -map_rev.
         relativize #|subst_instance (puinst p) (ind_params mdecl)|.
         erewrite subst_let_expand_closed_ctx_lift.
-        2:{ now rewrite List.rev_length context_assumptions_subst_context. }
+        2:{ now rewrite List.length_rev context_assumptions_subst_context. }
         3:now rewrite subst_context_length.
         2:{ rewrite closed_ctx_subst => //. }
         rewrite subst_let_expand_it_mkProd_or_LetIn.
@@ -4166,7 +4166,7 @@ Proof.
   now rewrite -(wf_branch_length wfbr).
   eapply wf_arity_spine_typing_spine; tea.
   split.
-  { apply isType_lift => //. rewrite app_length; lia.
+  { apply isType_lift => //. rewrite length_app; lia.
     rewrite skipn_all_app //.
     eapply isType_it_mkProd_or_LetIn; tea.
     rewrite /bc. pcuic. }
@@ -4300,7 +4300,7 @@ Proof.
         rewrite -map_rev.
         relativize #|subst_instance (puinst p) (ind_params mdecl)|.
         erewrite subst_let_expand_closed_ctx_lift.
-        2:{ now rewrite List.rev_length context_assumptions_subst_context. }
+        2:{ now rewrite List.length_rev context_assumptions_subst_context. }
         3:now rewrite subst_context_length.
         2:{ rewrite closed_ctx_subst => //. }
         rewrite subst_let_expand_it_mkProd_or_LetIn.

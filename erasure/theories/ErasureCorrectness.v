@@ -274,8 +274,8 @@ Proof.
       erewrite isPropositional_propositional; eauto. now rewrite X0.
       apply declared_inductive_from_gen; eauto.
       invs e. cbn in *.
-      rewrite map_length.
-      rewrite skipn_length H13 e3 in H11.
+      rewrite length_map.
+      rewrite length_skipn H13 e3 in H11.
       rewrite (@assumption_context_assumptions (bcontext br)) // ?rev_repeat in H11 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
         rewrite /cstr_branch_context. eapply assumption_context_expand_lets_ctx.
@@ -361,7 +361,7 @@ Proof.
          move/negbTE: H13 => ->. reflexivity.
          eapply declared_constructor_from_gen; eauto.
          rewrite  -(Forall2_length H3) /= e2 //.
-         rewrite skipn_length -(Forall2_length H3) -e6 /= map_length.
+         rewrite length_skipn -(Forall2_length H3) -e6 /= length_map.
          rewrite (All2_length a).
          replace #|cstr_branch_context ind mdecl cdecl|
           with (context_assumptions (cstr_branch_context ind mdecl cdecl)).
@@ -464,10 +464,10 @@ Proof.
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbveval_red; eauto. }
 
-        rewrite eq_npars. rewrite List.skipn_length e1 /cstr_arity -e2 e3.
+        rewrite eq_npars. rewrite List.length_skipn e1 /cstr_arity -e2 e3.
         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.
-        subst n. rewrite map_length.
+        subst n. rewrite length_map.
         rewrite assumption_context_assumptions //.
         eapply assumption_context_compare_decls. symmetry; tea.
         eapply declared_constructor_from_gen in d.

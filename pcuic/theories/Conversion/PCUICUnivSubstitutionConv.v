@@ -1039,7 +1039,7 @@ Lemma fix_subst_instance_subst u mfix :
   subst_instance u (fix_subst mfix) = fix_subst (subst_instance u mfix).
 Proof.
   rewrite /subst_instance /subst_instance_list.
-  unfold fix_subst. rewrite map_length.
+  unfold fix_subst. rewrite length_map.
   generalize #|mfix|. induction n. 1: reflexivity.
   simpl. rewrite IHn; reflexivity.
 Qed.
@@ -1048,7 +1048,7 @@ Lemma cofix_subst_instance_subst u mfix :
   subst_instance u (cofix_subst mfix) = cofix_subst (subst_instance u mfix).
 Proof.
   rewrite /subst_instance /subst_instance_list.
-  unfold cofix_subst. rewrite map_length.
+  unfold cofix_subst. rewrite length_map.
   generalize #|mfix|. induction n. 1: reflexivity.
   simpl. rewrite IHn; reflexivity.
 Qed.

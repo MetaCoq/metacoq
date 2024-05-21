@@ -33,7 +33,7 @@ Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec 
     { intro H'; apply H; clear H; intros [c ?]; specialize (H' c).
       destruct H' as [decls H'].
       cbn [fst].
-      rewrite H' app_length Nat.add_sub skipn_all_app //. }
+      rewrite H' length_app Nat.add_sub skipn_all_app //. }
   Qed.
 
   Lemma strictly_extends_decls_partT (Σ Σ' : global_env)
@@ -43,7 +43,7 @@ Module EnvironmentReflect (T : Term) (Import E : EnvironmentSig T) (Import TDec 
     { rewrite -H.
       eexists; symmetry; apply firstn_skipn. }
     { move => [Σ'' H'].
-      move: H. rewrite H' app_length Nat.add_sub skipn_all_app //. }
+      move: H. rewrite H' length_app Nat.add_sub skipn_all_app //. }
   Qed.
 
   Definition extendsb (Σ Σ' : global_env) : bool

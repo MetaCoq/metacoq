@@ -469,9 +469,9 @@ Proof using Type.
     revert H. cbn.
     unfold cstr_concl.
     rewrite PCUICUnivSubst.subst_instance_mkApps subst_mkApps.
-    rewrite subst_instance_length app_length.
+    rewrite subst_instance_length length_app.
     unfold cstr_concl_head. rewrite PCUICInductives.subst_inds_concl_head. now eapply nth_error_Some_length in Hdecl.
-    rewrite -app_length.
+    rewrite -length_app.
     generalize (cstr_args cbody ++ ind_params mind)%list.
     clear -wfΣ d1 indf H1 H0 Hdecl.
     (* generalize conclusion to mkApps tInd args *)
@@ -602,7 +602,7 @@ Proof using Type.
   revert Hi Hspine. cbn.
   unfold cstr_concl, cstr_concl_head.
   autorewrite with substu subst.
-  rewrite subst_instance_length app_length.
+  rewrite subst_instance_length length_app.
   rewrite PCUICInductives.subst_inds_concl_head. { cbn. destruct Hdecl as [[d1 d2] d3]. eapply nth_error_Some. rewrite d2. congruence. }
   match goal with [ |- context[mkApps _ ?args]] => generalize args end.
   intros args' Hi Spine.

@@ -98,7 +98,7 @@ Proof.
   - eapply cumul_Trans; intuition eauto.
     * rewrite on_free_vars_ctx_subst_instance; eauto.
     * rewrite on_free_vars_subst_instance. unfold is_open_term.
-      replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
+      replace #|Γ@[u]| with #|Γ|; eauto. rewrite length_map; eauto.
   - eapply cumul_Evar. eapply All2_map.
     repeat toAll.
     eapply All2_impl.  1: tea. cbn; intros. eapply X0.2; eauto.
@@ -126,14 +126,14 @@ Proof.
     + solve_all.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
     * apply precompose_subst_instance_global.
-      rewrite map_length. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
+      rewrite length_map. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
     * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
       eapply X0.2; eauto.
  - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
     * apply precompose_subst_instance_global. cbn.
-      rewrite map_length. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
+      rewrite length_map. eapply cmp_global_instance_impl_same_napp; try eapply H; eauto.
       { now apply eq_universe_subst_instance. }
       { now apply compare_universe_subst_instance. }
     * eapply All2_map. repeat toAll. eapply All2_impl. 1: tea. cbn; intros.
@@ -341,7 +341,7 @@ Proof using Type.
     rewrite !subst_instance_two.
     rewrite {4}/subst_instance /subst_instance_list /=.
     rewrite map_rev.
-    econstructor; eauto. 2:now rewrite map_length.
+    econstructor; eauto. 2:now rewrite length_map.
     eapply X2 in H0; tas. rewrite subst_instance_mkApps in H0.
     eassumption.
 
@@ -357,7 +357,7 @@ Proof using Type.
     + eapply All_map, (All_impl IHX0); simpl. intros d X1.
       unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
-      rewrite -subst_instance_lift map_length.
+      rewrite -subst_instance_lift length_map.
       eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
     + red; rewrite <- wffix.
       unfold wf_fixpoint, wf_fixpoint_gen.
@@ -379,7 +379,7 @@ Proof using Type.
     + eapply All_map, (All_impl IHX0); simpl. intros d X1.
       unfold map_def at 2, on_def_body. cbn.
       rewrite -fix_context_subst_instance /app_context -(subst_instance_app u (fix_context mfix) Γ) -/(app_context Γ _).
-      rewrite -subst_instance_lift map_length.
+      rewrite -subst_instance_lift length_map.
       eapply lift_typing_mapu with (tm := Some _) (u := None); cbn; eauto.
     + red; rewrite <- wffix.
       unfold wf_cofixpoint, wf_cofixpoint_gen.

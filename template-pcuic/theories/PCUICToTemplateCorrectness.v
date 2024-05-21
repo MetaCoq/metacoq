@@ -65,7 +65,7 @@ Module TL := Template.LiftSubst.
 
 Ltac solve_list :=
   rewrite !map_map_compose ?compose_on_snd ?compose_map_def;
-  try rewrite !map_length;
+  try rewrite !length_map;
   try solve_all; try typeclasses eauto with core.
 
 Lemma mapOne {X Y} (f:X->Y) x:
@@ -237,7 +237,7 @@ Proof.
   - destruct Nat.leb;trivial.
     rewrite nth_error_map.
     destruct nth_error;cbn.
-    2: now rewrite map_length.
+    2: now rewrite length_map.
     rewrite trans_lift.
     reflexivity.
   - f_equal.
@@ -261,7 +261,7 @@ Proof.
       rewrite /T.map_branch /=. f_equal; auto.
       rewrite b. now rewrite forget_types_length map_context_length.
   - f_equal.
-    rewrite map_length.
+    rewrite length_map.
     remember (#|m|+k) as l.
     clear Heql.
     induction X in k |- *;trivial.
@@ -273,7 +273,7 @@ Proof.
       now rewrite e e0.
     + apply IHX.
   - f_equal.
-    rewrite map_length.
+    rewrite length_map.
     remember (#|m|+k) as l.
     clear Heql.
     induction X in k |- *;trivial.
@@ -497,7 +497,7 @@ Proof.
   repeat f_equal.
   rewrite trans_subst.
   f_equal. clear Hdef. simpl.
-  unfold fix_subst, TT.fix_subst. rewrite map_length.
+  unfold fix_subst, TT.fix_subst. rewrite length_map.
   generalize mfix at 1 3.
   induction mfix; trivial.
   simpl; intros mfix'. f_equal.
@@ -513,7 +513,7 @@ Proof.
   intros [= <- <-]. simpl. repeat f_equal.
   rewrite trans_subst.
   f_equal. clear Hdef.
-  unfold cofix_subst, TT.cofix_subst. rewrite map_length.
+  unfold cofix_subst, TT.cofix_subst. rewrite length_map.
   generalize mfix at 1 3.
   induction mfix; trivial.
   simpl; intros mfix'. f_equal.
@@ -577,10 +577,10 @@ Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
   - rewrite SE.subst_context_snoc /=. rewrite [T.Env.subst_context _ _ _ ]subst_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_subst map_length.
+    now rewrite !trans_subst length_map.
   - rewrite SE.subst_context_snoc /=. rewrite [T.Env.subst_context _ _ _ ]subst_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_subst map_length.
+    now rewrite !trans_subst length_map.
 Qed.
 
 Lemma trans_lift_context n k Γ :
@@ -589,10 +589,10 @@ Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
   - rewrite PCUICLiftSubst.lift_context_snoc /= lift_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_lift map_length.
+    now rewrite !trans_lift length_map.
   - rewrite PCUICLiftSubst.lift_context_snoc /= lift_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_lift map_length.
+    now rewrite !trans_lift length_map.
 Qed.
 
 Lemma trans_smash_context Γ Δ : trans_local (SE.smash_context Γ Δ) = T.Env.smash_context (trans_local Γ) (trans_local Δ).
@@ -614,7 +614,7 @@ Proof.
   induction Γ in n |- *; simpl; auto.
   destruct a as [na [b|] ty]; simpl; auto.
   rewrite trans_subst trans_lift IHΓ. f_equal. f_equal. len.
-  now rewrite context_assumptions_map map_length.
+  now rewrite context_assumptions_map length_map.
   f_equal; auto.
 Qed.
 
@@ -623,7 +623,7 @@ Proof.
   rewrite /SE.expand_lets_k.
   rewrite trans_subst trans_lift trans_extended_subst.
   rewrite /T.Env.expand_lets /T.Env.expand_lets_k.
-  now rewrite (context_assumptions_map Γ) map_length.
+  now rewrite (context_assumptions_map Γ) length_map.
 Qed.
 
 Lemma trans_expand_lets Γ T : trans (SE.expand_lets Γ T) = T.Env.expand_lets (trans_local Γ) (trans T).
@@ -807,7 +807,7 @@ Lemma trans_expand_lets_ctx Γ Δ :
 Proof.
   rewrite /SE.expand_lets_ctx /SE.expand_lets_k_ctx /expand_lets_ctx /expand_lets_k_ctx.
   now rewrite !trans_subst_context trans_extended_subst trans_lift_context
-    context_assumptions_map map_length.
+    context_assumptions_map length_map.
 Qed.
 
 Lemma trans_inds ind u mdecl :
@@ -825,7 +825,7 @@ Lemma trans_cstr_branch_context ci mdecl cdecl :
 Proof.
   rewrite /PCUICCases.cstr_branch_context /cstr_branch_context.
   rewrite trans_expand_lets_ctx trans_subst_context trans_inds.
-  repeat f_equal. now cbn; rewrite map_length.
+  repeat f_equal. now cbn; rewrite length_map.
 Qed.
 
 Lemma trans_cstr_branch_context_inst ci mdecl cdecl i :
@@ -1035,7 +1035,7 @@ Proof.
     destruct X as [? []]. red in X0. econstructor; cbn; eauto; tea.
     eapply trans_declared_inductive in d; tea. now cbn. cbn.
     eapply trans_ind_predicate_context_eq => //. now symmetry.
-    rewrite map_length. cbn. rewrite context_assumptions_map //.
+    rewrite length_map. cbn. rewrite context_assumptions_map //.
     destruct w. now rewrite -(declared_minductive_ind_npars (proj1 d)).
     cbn. solve_all. eapply All2_map, All2_map_right. solve_all.
     eapply All2i_All2; tea. cbv beta.
@@ -1229,7 +1229,7 @@ Lemma OnOne2All_map2_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : B 
   OnOne2All (fun i x y => P (g (f x) i) (f x) (f y)) i l l' -> OnOne2All P (map2 g (map f l) i) (map f l) (map f l').
 Proof.
   induction 1; simpl; constructor; try congruence; try assumption. len.
-  now rewrite map2_length !map_length.
+  now rewrite map2_length !length_map.
 Qed.
 
 Lemma trans_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) {wfΣ : PCUICTyping.wf Σ} Γ T U :
@@ -1265,7 +1265,7 @@ Proof.
     eapply TT.red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
     * eapply trans_declared_constructor; tea.
-    * rewrite map_length H0.
+    * rewrite length_map H0.
       eapply Forall2_All2 in wf_brs.
       eapply All2_nth_error in wf_brs; tea.
       2:eapply declc.
@@ -1637,7 +1637,7 @@ Proof.
     rewrite trans_lift in Hb, Ht.
     replace(#|SE.fix_context xfix|) with
         (#|TT.fix_context (map(map_def trans trans) xfix)|) in Hb, Ht.
-      2:now rewrite TT.fix_context_length map_length fix_context_length.
+      2:now rewrite TT.fix_context_length length_map fix_context_length.
     repeat (eexists; cbn; tea); eauto.
 Qed.
 
@@ -2188,7 +2188,7 @@ Proof.
   rewrite /Env.subst_telescope Env.subst_context_alt.
   rewrite rev_mapi. apply mapi_rec_ext.
   intros n [na [b|] ty] le le'; rewrite /= /Env.subst_decl /map_decl /=;
-  rewrite List.rev_length Nat.add_0_r in le';
+  rewrite List.length_rev Nat.add_0_r in le';
   f_equal. f_equal. f_equal. lia. f_equal; lia.
   f_equal; lia.
 Qed.
@@ -2283,7 +2283,7 @@ Proof.
     eapply TT.type_Case; auto.
     + now apply trans_declared_inductive.
     + cbn. now apply trans_ind_predicate_context_eq.
-    + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
+    + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map length_map.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
     + move: X5.
@@ -2329,7 +2329,7 @@ Proof.
     + apply trans_declared_projection; eauto.
     + rewrite trans_mkApps in X2.
       assumption.
-    + rewrite map_length H. now destruct mdecl.
+    + rewrite length_map H. now destruct mdecl.
   - rewrite trans_dtype. simpl.
     eapply TT.type_Fix; auto.
     + now rewrite fix_guard_trans.

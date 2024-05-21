@@ -95,13 +95,13 @@ Proof.
         destruct x. unfold rename_branch, map_branch. simpl in *.
         f_equal; solve_all.
   - simpl. f_equal.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|m|. intro k.
     induction X. 1: reflexivity.
     destruct p, x. unfold map_def in *.
     simpl in *. f_equal. all: easy.
   - simpl. f_equal.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|m|. intro k.
     induction X. 1: reflexivity.
     destruct p, x. unfold map_def in *.
@@ -273,7 +273,7 @@ Proof using Type.
   induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_branch_map_branch,
-      ?map_length, ?Nat.add_assoc in *;
+      ?length_map, ?Nat.add_assoc in *;
       unfold test_def, map_branch, test_branch_k, test_predicate_k in *; simpl in *; eauto with all;
     simpl closed in *; repeat (rtoProp; f_equal; solve_all); try change_Sk.
 
@@ -501,7 +501,7 @@ Proof using Type.
   f_equal. f_equal.
   rewrite rename_subst0. rewrite fix_subst_length.
   f_equal.
-  unfold fix_subst. rewrite map_length.
+  unfold fix_subst. rewrite length_map.
   generalize #|mfix| at 2 3. intro n.
   induction n.
   - reflexivity.
@@ -525,7 +525,7 @@ Proof using Type.
   simpl. f_equal. f_equal.
   rewrite rename_subst0. rewrite cofix_subst_length.
   f_equal.
-  unfold cofix_subst. rewrite map_length.
+  unfold cofix_subst. rewrite length_map.
   generalize #|mfix| at 2 3. intro n.
   induction n.
   - reflexivity.
@@ -912,7 +912,7 @@ Proof using Type.
   intros f p pars args br hlen hlen'.
   unfold iota_red.
   rewrite rename_subst0 map_rev map_skipn. f_equal.
-  rewrite List.rev_length /expand_lets /expand_lets_k.
+  rewrite List.length_rev /expand_lets /expand_lets_k.
   rewrite rename_subst0. len.
   rewrite shiftn_add -hlen Nat.add_comm rename_shiftnk.
   rewrite hlen.
@@ -957,7 +957,7 @@ Proof using cf.
     constructor. now rewrite e' /= hdecl.
   - rewrite rename_mkApps. simpl.
     rewrite rename_iota_red //.
-    * rewrite skipn_length; lia.
+    * rewrite length_skipn; lia.
     * change (bcontext br) with (bcontext (rename_branch f br)).
       move/and5P: hav => [_ _ _ _ hbrs].
       eapply nth_error_forallb in hbrs; tea. simpl in hbrs.

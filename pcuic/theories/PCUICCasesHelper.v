@@ -267,9 +267,9 @@ Section CaseBranchTypeBeta.
     move=> wfΣ clret clpred clcstr indxseq.
     apply: red_betas; first (rewrite /instantiate_cstr_indices /Δ; by len).
     - have -> : #|Γ ,,, cstr_ctx ,,, Δ| = #|Γ ,,, predctx| + #|cstr_args cb|
-      by rewrite /Δ !app_length /cstr_ctx /pre_case_branch_context_gen; len; lia.
+      by rewrite /Δ !length_app /cstr_ctx /pre_case_branch_context_gen; len; lia.
       by apply: PCUICClosed.closedn_lift.
-    - rewrite PCUICClosed.closedn_ctx_app clcstr /= /Δ app_length.
+    - rewrite PCUICClosed.closedn_ctx_app clcstr /= /Δ length_app.
       have -> : #|cstr_args cb| = #|cstr_ctx| by rewrite /cstr_ctx /pre_case_branch_context_gen; len; lia.
       apply: PCUICClosed.closedn_ctx_lift.
       by apply: closed_ctx_app.
@@ -300,9 +300,9 @@ Section CaseBranchTypeBeta.
     have eqcstrctx : #|cstr_args cb| = #|cstr_ctx| by rewrite /cstr_ctx /pre_case_branch_context_gen; len; lia.
     apply: conv_betas.
     - have -> : #|Γ ,,, cstr_ctx ,,, Δ| = #|Γ ,,, predctx| + #|cstr_args cb|
-      by rewrite /Δ !app_length eqcstrctx; len; lia.
+      by rewrite /Δ !length_app eqcstrctx; len; lia.
       by apply: PCUICClosed.closedn_lift.
-    - rewrite PCUICClosed.closedn_ctx_app clcstr /= /Δ app_length eqcstrctx.
+    - rewrite PCUICClosed.closedn_ctx_app clcstr /= /Δ length_app eqcstrctx.
       apply: PCUICClosed.closedn_ctx_lift.
       by apply: closed_ctx_app.
     - rewrite forallb_app; apply/andP; split.
@@ -310,11 +310,11 @@ Section CaseBranchTypeBeta.
         apply: All_forallb.
         apply: All_impl; first (apply: on_constructor_closed_indices; eassumption).
         move=> x /=.
-        rewrite -PCUICClosedTyp.is_open_term_closed eqcstrctx !app_length=> clx.
+        rewrite -PCUICClosedTyp.is_open_term_closed eqcstrctx !length_app=> clx.
         rewrite Nat.add_comm.
         apply: PCUICClosed.closedn_subst; first by rewrite forallb_rev.
         set G := (_ @[_]). have -> : #|List.rev params| = context_assumptions G.
-        1: by rewrite /G context_assumptions_subst_instance -(PCUICGlobalEnv.declared_minductive_ind_npars declmind) List.rev_length.
+        1: by rewrite /G context_assumptions_subst_instance -(PCUICGlobalEnv.declared_minductive_ind_npars declmind) List.length_rev.
         rewrite PCUICClosed.closedn_expand_lets_eq {}/G.
         1:{
           rewrite PCUICClosed.closedn_subst_instance_context.
@@ -332,11 +332,11 @@ Section CaseBranchTypeBeta.
         rewrite arities_context_length eqcstrctx; lia.
       + rewrite /= andb_true_r PCUICClosed.closedn_mkApps /= forallb_app ; apply/andP; split.
         * rewrite forallb_map. apply: forallb_impl; last eassumption.
-          move=> x _ clx; rewrite app_length eqcstrctx Nat.add_comm.
+          move=> x _ clx; rewrite length_app eqcstrctx Nat.add_comm.
           by apply: PCUICClosed.closedn_lift.
         * apply: forallb_impl; last apply: PCUICClosed.closedn_to_extended_list.
           move=> ? _ ?; apply: PCUICLiftSubst.closed_upwards; first eassumption.
-          rewrite app_length eqcstrctx ; lia.
+          rewrite length_app eqcstrctx ; lia.
     - rewrite /Δ /instantiate_cstr_indices; by len.
   Qed.
 

@@ -392,9 +392,9 @@ Proof.
   generalize (le_n #|Γ|).
   generalize #|Γ| at 2.
   induction n in Γ |- *.
-  destruct Γ using MCList.rev_ind; [|simpl; rewrite app_length; simpl; intros; exfalso; try lia].
+  destruct Γ using MCList.rev_ind; [|simpl; rewrite length_app; simpl; intros; exfalso; try lia].
   intros. apply p0.
-  destruct Γ using MCList.rev_ind; simpl in *; rewrite ?app_length; simpl; intros Hlen.
+  destruct Γ using MCList.rev_ind; simpl in *; rewrite ?length_app; simpl; intros Hlen.
   intros. apply p0.
   apply pS. intros. apply IHn. simpl. lia.
 Qed.

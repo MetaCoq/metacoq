@@ -54,7 +54,7 @@ Proof.
   rewrite Nat.add_0_r in args.
   eapply (Alli_impl (Q:=fun i d => closed_decl (i + #|arities_context (ind_bodies mdecl)|) d)) in onpars.
   2:{ intros n x d. eapply closed_decl_upwards; eauto; lia. }
-  epose proof (Alli_app_inv onpars). rewrite List.rev_length /= in X.
+  epose proof (Alli_app_inv onpars). rewrite List.length_rev /= in X.
   specialize (X args). rewrite -List.rev_app_distr in X.
   clear onpars args.
   eapply (Alli_impl (Q:=fun i d => closed_decl (#|arities_context (ind_bodies mdecl)| + i) d)) in X.
@@ -260,7 +260,7 @@ Proof.
       rewrite forallb_rev H2. apply H3.
     + rewrite closedn_subst_instance.
       eapply declared_projection_closed_ind in X0; eauto.
-      simpl; rewrite List.rev_length H1.
+      simpl; rewrite List.length_rev H1.
       eapply closed_upwards; eauto. lia.
 
   - clear H.
@@ -732,7 +732,7 @@ Proof.
     apply on_free_vars_subst.
     { rewrite forallb_rev forallb_skipn //. }
     len.
-    rewrite skipn_length; try lia; rewrite H0.
+    rewrite length_skipn; try lia; rewrite H0.
     replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
     with (context_assumptions (bcontext br)) by lia.
     rewrite /expand_lets /expand_lets_k /=.

@@ -2777,7 +2777,7 @@ Proof using Type.
   pose proof (abstract_make_wf_env_ext_correct _ _ _ _ _ a H1). noconf H2.
   epose proof (iter_abstract_pop_decls_correct _ X (skipn (S n) (Σ'' ++ decls)) (S n)).
   forward H2. { intros ? h. rewrite (abstract_env_irr _ h H'). exists (firstn (S n) (Σ'' ++ decls)).
-  rewrite firstn_skipn. split => //. rewrite firstn_length_le //. rewrite app_length. lia. }
+  rewrite firstn_skipn. split => //. rewrite firstn_length_le //. rewrite length_app. lia. }
   specialize (H2 _ _ H' a) as [? []].
   eapply normalization_in_extends. exact X1. exact X0.
   { eapply extends_decls_extends, strictly_extends_decls_extends_decls.

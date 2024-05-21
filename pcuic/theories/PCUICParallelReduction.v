@@ -964,7 +964,7 @@ Section ParallelWeakening.
     map (f 0) (cofix_subst mfix).
   Proof.
     unfold cofix_subst. intros.
-    rewrite map_length. generalize (#|mfix|) at 2 3. induction n. simpl. reflexivity.
+    rewrite length_map. generalize (#|mfix|) at 2 3. induction n. simpl. reflexivity.
     simpl. rewrite - IHn. f_equal. apply H.
   Qed.
 
@@ -974,7 +974,7 @@ Section ParallelWeakening.
     map (f 0) (fix_subst mfix).
   Proof.
     unfold fix_subst. intros.
-    rewrite map_length. generalize (#|mfix|) at 2 3. induction n. simpl. reflexivity.
+    rewrite length_map. generalize (#|mfix|) at 2 3. induction n. simpl. reflexivity.
     simpl. rewrite - IHn. f_equal. apply H.
   Qed.
 
@@ -988,7 +988,7 @@ Section ParallelWeakening.
     iota_red pars (map_predicate_k id (lift n) k p) (List.map (lift n k) args) (map_branch_k (lift n) id k br).
   Proof.
     intros hctx hctx'. rewrite !lift_rename'.
-    rewrite rename_iota_red //; try (rewrite skipn_length; lia).
+    rewrite rename_iota_red //; try (rewrite length_skipn; lia).
     f_equal; try setoid_rewrite <-lift_rename => //.
     unfold map_branch_k, rename_branch, map_branch_shift.
     f_equal.
@@ -1204,7 +1204,7 @@ Qed.
       eapply forallb_All in p4.
       eapply All2_All_mix_left in X3; tea.
       rewrite rename_iota_red //.
-      * rewrite skipn_length; lia.
+      * rewrite length_skipn; lia.
       * eapply All2_nth_error_Some_right in X3 as [br' [nthbr [? []]]]; tea.
         move/andP: i => [] clbctx onfvs.
         destruct p5.
@@ -2084,7 +2084,7 @@ Section ParallelSubstitution.
     - simpl. now apply Hrel.
 
     - simpl. rewrite inst_mkApps inst_iota_red /= //.
-      * rewrite skipn_length; lia.
+      * rewrite length_skipn; lia.
       * change (bcontext br) with (bcontext (inst_branch σ br)).
         eapply All2_nth_error_Some_right in X3; tea. destruct X3 as [br0 [hnthbr0 [pred [? eq]]]].
         cbn [bcontext inst_branch]. rewrite -eq.
@@ -2173,7 +2173,7 @@ Section ParallelSubstitution.
         rewrite (map_fix_subst (fun k => inst (⇑^k τ))). simpl. intros.
         f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
-        now rewrite Upn_comp ?map_length ?fix_subst_length // Upn_0.
+        now rewrite Upn_comp ?length_map ?fix_subst_length // Upn_0.
       + solve_all.
 
     - (* CoFix Case *)
@@ -2202,7 +2202,7 @@ Section ParallelSubstitution.
         move/andP: a => [] /= onity onibody.
         move/andP: a0 => [] onty onbody.
         eapply b; tea. now rewrite -up_Upn ?fix_context_length.
-        rewrite map_length -(fix_context_length mfix0); auto with pcuic.
+        rewrite length_map -(fix_context_length mfix0); auto with pcuic.
         relativize #|fix_context mfix1|.
         eapply pred1_subst_Upn; rewrite ?inst_context_length;
           auto with pcuic.
@@ -2213,7 +2213,7 @@ Section ParallelSubstitution.
         rewrite (map_cofix_subst (fun k => inst (⇑^k τ))). simpl. intros.
         f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
-        now rewrite Upn_comp ?map_length ?cofix_subst_length // Upn_0.
+        now rewrite Upn_comp ?length_map ?cofix_subst_length // Upn_0.
       + solve_all. (* args *)
       + simpl. solve_all.
       + eauto.
@@ -2302,7 +2302,7 @@ Section ParallelSubstitution.
         eapply b; tea.
         rewrite -up_Upn. now len.
         relativize #|fix_context mfix1|.
-        rewrite map_length.
+        rewrite length_map.
         rewrite -(fix_context_length mfix0).
         eapply pred1_subst_Upn; rewrite ?inst_context_length ?fix_context_length;
           auto with pcuic. now len.
@@ -2312,7 +2312,7 @@ Section ParallelSubstitution.
         rewrite (map_cofix_subst (fun k => inst (⇑^k τ))). simpl. intros.
         f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
-        now rewrite Upn_comp ?map_length ?cofix_subst_length // Upn_0.
+        now rewrite Upn_comp ?length_map ?cofix_subst_length // Upn_0.
       + solve_all. (* args *)
 
     - simpl. rewrite inst_closed0.
@@ -2429,7 +2429,7 @@ Section ParallelSubstitution.
       move/andP: b0 => [] onity onid.
       eapply b1; tea.
       cbn in onid. now rewrite -up_Upn fix_context_length //.
-      rewrite map_length -(fix_context_length mfix0).
+      rewrite length_map -(fix_context_length mfix0).
       relativize #|fix_context mfix1|.
       eapply pred1_subst_Upn; rewrite ?inst_context_length ?fix_context_length //. now len.
 
@@ -2459,7 +2459,7 @@ Section ParallelSubstitution.
       move/andP: a0 => [] onty ond.
       eapply b; tea.
       cbn in onid. now rewrite -up_Upn fix_context_length //.
-      rewrite map_length -(fix_context_length mfix0).
+      rewrite length_map -(fix_context_length mfix0).
       relativize #|fix_context mfix1|.
       eapply pred1_subst_Upn; rewrite ?inst_context_length ?fix_context_length //. now len.
 

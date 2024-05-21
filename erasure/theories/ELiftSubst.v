@@ -242,7 +242,7 @@ Ltac solve_all := solve_all_k 5.
 Ltac nth_leb_simpl :=
   match goal with
     |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; intros; simpl
-  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?length_app, ?length_map;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
     (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
@@ -278,7 +278,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   - elim (leb_spec k n); intros.
@@ -298,7 +298,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
   f_equal; auto. solve_all.
   f_equal. rewrite Nat.add_assoc.
@@ -346,7 +346,7 @@ Lemma simpl_subst_rec :
 Proof.
   intros M. induction M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -368,7 +368,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - repeat nth_leb_simpl.
@@ -393,7 +393,7 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => cbn -[plus]
             end; try easy;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 1. unfold lift at 4.
@@ -449,12 +449,12 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 2.
     repeat nth_leb_simpl.
-    erewrite <- simpl_subst. f_equal. rewrite map_length. arith_congr. lia.
+    erewrite <- simpl_subst. f_equal. rewrite length_map. arith_congr. lia.
     rewrite nth_error_map in e0. rewrite e in e0.
     simpl in e0. injection e0 as <-.
     rewrite commut_lift_subst_rec. arith_congr. lia.
@@ -476,7 +476,7 @@ Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
 
@@ -488,7 +488,7 @@ Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     simpl closed in *; unfold test_snd, test_def in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
@@ -512,7 +512,7 @@ Lemma subst_closed n k t : closedn k t -> subst n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - cbn.
@@ -543,7 +543,7 @@ Lemma subst_app_decomp l l' k t :
 Proof.
   induction t in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
          eauto; solve_all).
 
   - repeat nth_leb_simpl.
@@ -559,7 +559,7 @@ Lemma subst_app_simpl l l' k t :
 Proof.
   induction t in k |- * using term_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+    try (f_equal; rewrite -> ?map_map_compose, ?map_prim_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?Nat.add_assoc;
          eauto; solve_all; eauto).
 
   - repeat nth_leb_simpl.

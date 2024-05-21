@@ -137,7 +137,7 @@ Proof.
   induction mfix0 using rev_ind.
   - econstructor.
   - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
-    rewrite app_length. cbn. rewrite Nat.add_comm /=; econstructor.
+    rewrite length_app. cbn. rewrite Nat.add_comm /=; econstructor.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
@@ -183,7 +183,7 @@ Proof.
   induction mfix0 using rev_ind.
   - econstructor.
   - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
-    rewrite app_length /= Nat.add_comm /=. econstructor.
+    rewrite length_app /= Nat.add_comm /=. econstructor.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.

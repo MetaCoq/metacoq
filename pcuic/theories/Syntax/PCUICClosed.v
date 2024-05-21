@@ -48,7 +48,7 @@ Lemma test_context_k_app (p : nat -> term -> bool) n Γ Γ' :
   test_context_k p n Γ && test_context_k p (n + #|Γ|) Γ'.
 Proof.
   rewrite /app_context /= !test_context_k_eq List.rev_app_distr alli_app /=. f_equal.
-  rewrite List.rev_length.
+  rewrite List.length_rev.
   rewrite Nat.add_0_r alli_shift.
   now setoid_rewrite Nat.add_assoc.
 Qed.
@@ -139,7 +139,7 @@ Proof.
     autorewrite with map;
     simpl closed in *; repeat (rtoProp; simpl in *; solve_all); try change_Sk;
     unfold test_def, test_predicate_k, test_branch_k, shiftf in *;
-    rewrite -> ?map_length, ?Nat.add_assoc in *;
+    rewrite -> ?length_map, ?Nat.add_assoc in *;
     simpl in *; eauto 2 with all.
 
   - revert H0.
@@ -365,9 +365,9 @@ Proof.
   - now rewrite Nat.add_0_r.
   - rewrite closedn_ctx_cons; move/andP => [] cctx ca cT.
     apply (IHctx Γ (mkLambda_or_LetIn a T) cctx).
-    simpl in cT. rewrite <- app_length.
+    simpl in cT. rewrite <- length_app.
     eapply closedn_mkLambda_or_LetIn;
-      now rewrite app_length // plus_n_Sm.
+      now rewrite length_app // plus_n_Sm.
 Qed.
 
 
@@ -383,18 +383,18 @@ Proof.
     rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
     eapply IHΔ'; eauto. constructor; [|constructor].
     simpl.
-    rewrite /test_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    rewrite /test_decl /map_decl /= Nat.add_0_r List.length_rev subst_context_length.
     inv X'. unfold test_decl in H0. simpl in H0.
-    rewrite List.rev_length Nat.add_0_r in H0.
+    rewrite List.length_rev Nat.add_0_r in H0.
     move/andP: H0 => [Hl Hr];
     rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
   - intros. eapply Alli_app in X as [X X'].
     rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
     eapply IHΔ'; eauto. constructor; [|constructor].
     simpl.
-    rewrite /test_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    rewrite /test_decl /map_decl /= Nat.add_0_r List.length_rev subst_context_length.
     inv X'. unfold test_decl in H0. simpl in H0.
-    rewrite List.rev_length Nat.add_0_r in H0.
+    rewrite List.length_rev Nat.add_0_r in H0.
     rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
 Qed.
 
@@ -410,17 +410,17 @@ Proof.
   - intros. eapply Alli_app in X as [X X'].
     eapply IHΔ; eauto.
     inv X'. unfold closed_decl in H. simpl in H.
-    rewrite List.rev_length Nat.add_0_r in H.
+    rewrite List.length_rev Nat.add_0_r in H.
     clear X1. eapply closed_subst_context; auto.
     now move/andP: H => [].
   - intros. eapply Alli_app in X as [X X'].
     eapply IHΔ; eauto.
     inv X'. unfold closed_decl in H. simpl in H.
-    rewrite List.rev_length Nat.add_0_r in H.
+    rewrite List.length_rev Nat.add_0_r in H.
     clear X1. rewrite List.rev_app_distr.
     eapply Alli_app_inv; repeat constructor.
     now rewrite Nat.add_0_r /=.
-    rewrite List.rev_length /=. clear -X0.
+    rewrite List.length_rev /=. clear -X0.
     apply Alli_shift, (Alli_impl _ X0). intros.
     eapply closed_decl_upwards; eauto; lia.
 Qed.
@@ -449,10 +449,10 @@ Proof.
     + constructor.
     + rewrite closedn_ctx_cons => /andP [clΓ cld].
       simpl in *. eapply Alli_app_inv; simpl; eauto.
-      repeat constructor. now rewrite List.rev_length.
+      repeat constructor. now rewrite List.length_rev.
   - induction Γ in k |- * => //.
     simpl. move/Alli_app => [clΓ cld].
-    simpl. depelim cld. rewrite List.rev_length in i.
+    simpl. depelim cld. rewrite List.length_rev in i.
     now rewrite i IHΓ.
 Qed.
 

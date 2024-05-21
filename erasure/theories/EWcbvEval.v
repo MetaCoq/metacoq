@@ -1760,7 +1760,7 @@ Qed.
 Lemma remove_last_length {X} {l : list X} :
   #|remove_last l| = match l with nil => 0 | _ => #|l| - 1 end.
 Proof.
-  unfold remove_last. rewrite firstn_length.
+  unfold remove_last. rewrite length_firstn.
   destruct l; cbn; lia.
 Qed.
 

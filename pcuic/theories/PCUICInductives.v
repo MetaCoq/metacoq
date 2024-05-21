@@ -31,7 +31,7 @@ Lemma nth_error_rev_map {A B} (f : A -> B) l i :
   option_map f (nth_error l i).
 Proof.
   move=> Hi.
-  rewrite rev_map_spec. rewrite -(map_length f l) -nth_error_rev ?map_length //.
+  rewrite rev_map_spec. rewrite -(length_map f l) -nth_error_rev ?length_map //.
   now rewrite nth_error_map.
 Qed.
 
@@ -154,8 +154,8 @@ Proof.
   rewrite /head. simpl subst_instance.
   erewrite (subst_rel_eq _ _ (#|ind_bodies mdecl| -  S (inductive_ind ind))); try lia.
   2:{ rewrite inds_spec nth_error_rev.
-      rewrite List.rev_length mapi_length; try lia.
-      rewrite List.rev_involutive List.rev_length mapi_length; try lia.
+      rewrite List.length_rev mapi_length; try lia.
+      rewrite List.rev_involutive List.length_rev mapi_length; try lia.
       rewrite nth_error_mapi. simpl.
       elim: (nth_error_spec _ _). simpl. reflexivity.
       lia. }
@@ -167,7 +167,7 @@ Proof.
   move=> Heq; simpl in Heq; move: Heq.
   rewrite !map_map_compose map_app.
   rewrite chop_n_app.
-  rewrite map_length to_extended_list_k_length.
+  rewrite length_map to_extended_list_k_length.
   by rewrite (onmib.(onNpars)).
 
   move=> [=] Hargs Hbty. subst nargs. split;auto. rewrite -Hbty.
@@ -228,7 +228,7 @@ Proof.
   elim nth_error_spec.
   + intros. simpl.
     f_equal. destruct ind; simpl. f_equal. f_equal. simpl in H. lia.
-  + rewrite List.rev_length. lia.
+  + rewrite List.length_rev. lia.
 Qed.
 
 Section OnInductives.
@@ -558,7 +558,7 @@ Proof.
   destruct (snd (nth_error_Some' s x) H). rewrite e.
   subst s.
   rewrite /to_extended_list /to_extended_list_k in e.
-  rewrite List.rev_length in cl, H. autorewrite with len in *.
+  rewrite List.length_rev in cl, H. autorewrite with len in *.
   rewrite reln_alt_eq in e.
   rewrite app_nil_r List.rev_involutive in e.
   clear -ass e. revert e.
@@ -887,7 +887,7 @@ Proof.
   rewrite !lift_context_alt.
   rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
   apply mapi_rec_ext. intros.
-  f_equal. rewrite List.skipn_length. lia.
+  f_equal. rewrite List.length_skipn. lia.
 Qed.
 
 Lemma skipn_subst_instance {n u Γ} :
@@ -1040,7 +1040,7 @@ Proof.
       (smash_context [] (cstr_args c))) eqn:eqargs.
     apply (f_equal (@length _)) in eqargs.
     autorewrite with len in eqargs.
-    rewrite skipn_length in eqargs.
+    rewrite length_skipn in eqargs.
     autorewrite with len in eqargs. simpl in eqargs. lia.
     rewrite subst_context_snoc lift_context_snoc subst_context_snoc.
     simpl.
@@ -1060,7 +1060,7 @@ Proof.
         specialize (IH i).
         forward IH by lia; len.
         eapply (f_equal (@length _)) in eqargs.
-        rewrite skipn_length in eqargs.
+        rewrite length_skipn in eqargs.
         autorewrite with len in eqargs. simpl in eqargs.
         eapply nth_error_alli in X; eauto. simpl in X.
         destruct X as [pdecl Hnth'].
@@ -1413,8 +1413,8 @@ Proof.
   eapply All_local_env_app_skipn with (n:=context_assumptions (cstr_args c) - S i) in wfargs.
   epose proof (wf_local_nth_isType (d:=arg) (n:=0) wfargs).
   rewrite skipn_app in X1.
-  rewrite skipn_length in X1. len.
-  rewrite nth_error_app_lt // in X1. rewrite skipn_length. len. len.
+  rewrite length_skipn in X1. len.
+  rewrite nth_error_app_lt // in X1. rewrite length_skipn. len. len.
   rewrite nth_error_skipn Nat.add_0_r nthidx in X1.
   forward X1 by reflexivity.
   len in X1. rewrite /idx in X1.
@@ -1787,7 +1787,7 @@ Proof.
   rewrite context_assumptions_fold in H1.
   autorewrite with len in H1.
   destruct (ind_indices idecl); try discriminate.
-  simpl in H1. rewrite List.skipn_length in H1.
+  simpl in H1. rewrite List.length_skipn in H1.
   assert(#|args| = ind_npars mdecl).
   { pose proof (context_subst_length2 sppars).
     autorewrite with len in H2.
@@ -1987,14 +1987,14 @@ Proof.
     forward X. cbn. rewrite andb_true_r. eapply redb.
     forward X. eapply hred.
     rewrite skipn_subst_context.
-    rewrite !skipn_length in X.
+    rewrite !length_skipn in X.
     len in X. simpl in X.
     assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
     rewrite H1 in X. apply X.
     epose proof (@closed_red_red_subst _ _ _ Δ [vdef na b ty]
        (skipn (context_assumptions Γ - n) (smash_context [] Γ)) _ _ _).
     rewrite subst_empty lift0_id lift0_context.
-    rewrite !skipn_length in X; autorewrite with len.
+    rewrite !length_skipn in X; autorewrite with len.
     autorewrite with len in X. simpl in X.
     assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
     rewrite H1 in X. rewrite skipn_subst_context.
@@ -2035,7 +2035,7 @@ Proof.
       destruct X as [ctx' [t' [decomp [d hnth' red]]]].
       rewrite d. simpl. eexists _, _, _; split; eauto.
       unfold snoc; simpl. rewrite smash_context_app /= List.rev_app_distr /= hnth' //.
-      rewrite app_length. simpl. len.
+      rewrite length_app. simpl. len.
       assert (context_assumptions Γ + 1 - S n = context_assumptions Γ - n) by lia.
       rewrite H. rewrite skipn_app. len.
       rewrite [skipn _ [_]]skipn_0_eq. lia.

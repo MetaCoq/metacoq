@@ -17,7 +17,7 @@ Lemma subst_instance_lift u c n k :
 Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map,
             ?map_predicate_map_predicate, ?map_predicate_subst_instance_predicate,
             ?map_branch_map_branch;
     f_equal; eauto; solve_all; eauto.
@@ -46,7 +46,7 @@ Lemma subst_instance_length u ctx
   : #|subst_instance u ctx| = #|ctx|.
 Proof.
   unfold subst_instance, subst_instance_context, map_context; simpl.
-  now rewrite map_length.
+  now rewrite length_map.
 Qed.
 
 Lemma subst_instance_subst u c N k :
@@ -55,7 +55,7 @@ Lemma subst_instance_subst u c N k :
 Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map,
             ?map_predicate_map_predicate,
             ?map_branch_map_branch; simpl;
     try solve [f_equal; eauto; solve_all; eauto].
@@ -81,7 +81,7 @@ Lemma closedu_subst_instance u t
 Proof.
   unfold subst_instance; cbn.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map,
                ?map_predicate_map_predicate, ?map_branch_map_branch;
     try f_equal; eauto with substu; unfold test_def, test_predicate in *;
       try solve [f_equal; eauto; repeat (rtoProp; solve_all; eauto with substu)].
@@ -91,7 +91,7 @@ Lemma subst_instance_closedu (u : Instance.t) (Hcl : closedu_instance 0 u) t :
   closedu #|u| t -> closedu 0 (subst_instance u t).
 Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map,
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map, ?forallb_map,
                ?map_predicate_map_predicate;
     try f_equal; auto with substu;
       unfold test_def, test_predicate in *; simpl;

@@ -46,7 +46,7 @@ Program Definition flag_of_type_impl := @flag_of_type canonical_abstract_env_imp
   PCUICSN.extraction_normalizing _.
 Next Obligation. apply fake_normalization; eauto. Qed.
 
-Definition app_length_transparent {A} (l1 l2 : list A) :
+Definition length_app_transparent {A} (l1 l2 : list A) :
   #|l1| + #|l2| = #|l1 ++ l2|.
 induction l1.
 - reflexivity.
@@ -63,20 +63,20 @@ Definition Sn_plus_one_transparent {n} : S n = n + 1.
 now induction n. Defined.
 
 (* NOTE: borrowed from metacoq's MCList. There it's defined for some other [rev] *)
-Definition rev_length_transparent {A} (l : list A) :
+Definition length_rev_transparent {A} (l : list A) :
   #|List.rev l| = #|l|.
 induction l.
   - reflexivity.
-  - cbn. rewrite <- app_length_transparent.
+  - cbn. rewrite <- length_app_transparent.
     cbn. rewrite IHl. symmetry. apply Sn_plus_one_transparent.
 Defined.
 
-Definition rev_mapi_app_length {A B} {f : nat -> A -> B} (l1 : list A) (l2 : list B) :
+Definition rev_mapi_length_app {A B} {f : nat -> A -> B} (l1 : list A) (l2 : list B) :
   #|List.rev l1| + #|l2| = #|List.rev (mapi f l1) ++ l2|.
 transitivity (#|List.rev (mapi f l1)| + #|l2|).
-repeat rewrite rev_length_transparent.
+repeat rewrite length_rev_transparent.
 unfold mapi. rewrite mapi_length_transparent;reflexivity.
-apply app_length_transparent.
+apply length_app_transparent.
 Defined.
 
 Section annotate.
@@ -98,7 +98,7 @@ Section annotate.
     annotate_branches Γ erΓ ((mk_branch Γ0 t) :: brs) ((_, et) :: ebrs) _ wf :=
       let Γ0 := inst_case_context (pparams pr) (puinst pr) Γ0 in
       let erΓ1 := Vector.append (Vector.const RelOther #|Γ0|) erΓ in
-      (annotate_types (Γ,,,Γ0) (Vector.cast erΓ1 (app_length_transparent _ _)) t _ et _, annotate_branches Γ _ brs ebrs pr _);
+      (annotate_types (Γ,,,Γ0) (Vector.cast erΓ1 (length_app_transparent _ _)) t _ et _, annotate_branches Γ _ brs ebrs pr _);
     annotate_branches _ _ _ _ _ _ := !.
   Proof. all: try now depelim wf. Defined.
 
@@ -276,11 +276,11 @@ annot bt (E.tProj _ et0) (tProj _ t0) wt0 er0 => (bt, annotate_types Γ erΓ t0 
 annot bt (E.tFix edefs _) (tFix defs _) wt0 er0 =>
   let last_vl := get_last_type_var erΓ in
   let erΓ1 := Vector.append (context_to_erased Γ last_vl (List.rev defs) _) erΓ in
-  (bt, annotate_defs annotate_types (Γ,,, fix_context defs) (VectorEq.cast erΓ1 (rev_mapi_app_length _ _)) defs edefs _);
+  (bt, annotate_defs annotate_types (Γ,,, fix_context defs) (VectorEq.cast erΓ1 (rev_mapi_length_app _ _)) defs edefs _);
 annot bt (E.tCoFix edefs _) (tCoFix defs _) wt0 er0 =>
   let last_vl := get_last_type_var erΓ in
   let erΓ1 := Vector.append (context_to_erased Γ last_vl (List.rev defs) _) erΓ in
-  (bt, annotate_defs annotate_types (Γ,,, fix_context defs) (VectorEq.cast erΓ1 (rev_mapi_app_length _ _)) defs edefs _);
+  (bt, annotate_defs annotate_types (Γ,,, fix_context defs) (VectorEq.cast erΓ1 (rev_mapi_length_app _ _)) defs edefs _);
 annot bt (E.tPrim _) _ _ _ => bt; (* TODO *)
 annot bt _ _ wt0 er0 => !
 }.

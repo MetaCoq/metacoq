@@ -429,7 +429,7 @@ Proof.
     { unfold iota_red.
       eapply nth_error_all in a; tea. cbn in a.
       rewrite -e3 in a.
-      rewrite -(List.rev_length (skipn pars args)) in a.
+      rewrite -(List.length_rev (skipn pars args)) in a.
       rewrite Nat.add_0_r in a.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
       2:{ eapply All_rev, All_skipn.

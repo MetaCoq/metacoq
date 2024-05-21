@@ -547,7 +547,7 @@ Proof.
   eapply expanded_mkApps_inv with (args := []); cbn; eauto. lia.
 Qed.
 
-Local Hint Rewrite repeat_length combine_length : len.
+Local Hint Rewrite repeat_length length_combine : len.
 Local Hint Rewrite <- app_assoc : list.
 
 Lemma apply_expanded Σ Γ Γ' t t' :
@@ -761,14 +761,14 @@ Proof.
       rewrite seq_app, map_app, rev_app_distr. cbn. congruence. }
     invs H; cbn - [rev_map seq] in H2; try congruence.
     autorewrite with len list in H2 |- *.
-    rewrite !firstn_length in H2 |- *.
-    rewrite !List.skipn_length.
+    rewrite !length_firstn in H2 |- *.
+    rewrite !List.length_skipn.
     (* rewrite nth_error_app2 in H2. 2: { len. destruct context_assumptions; lia. } *)
     autorewrite with len in H2 |- *.
     replace ((Init.Nat.min (S n0)
     (#|[]| + context_assumptions (decompose_prod_assum [] T).1))) with (S n0) in H2. 2:{
         len. rewrite rev_map_spec in H3. autorewrite with len in H3. cbn in H3.
-        rewrite seq_length in H3. destruct context_assumptions; try lia.
+        rewrite length_seq in H3. destruct context_assumptions; try lia.
     } cbn in H2.
     unfold lift0 at 1.
     rewrite mkApps_tRel. 2:{ destruct l; cbn - [rev_map]; try congruence. rewrite rev_map_spec. cbn. clear. destruct List.rev; cbn; try congruence. }
@@ -781,7 +781,7 @@ Proof.
     rewrite !nth_error_app2. 2,3: rewrite repeat_length; lia.
     f_equal. rewrite !repeat_length. lia.
     }
-    revert H3. len. rewrite !seq_length. destruct l; cbn; lia.
+    revert H3. len. rewrite !length_seq. destruct l; cbn; lia.
     eapply app_Forall.
     + Opaque minus. solve_all. eapply @expanded_lift' with (Γ' := []). cbn; reflexivity.
       cbn; reflexivity. 2: reflexivity. len. lia. eauto.
@@ -793,7 +793,7 @@ Proof.
       rewrite seq_app, rev_map_spec, map_app, rev_app_distr in H4.
       eapply Forall_app in H4 as []. rewrite Nat.min_l. 2: len; lia.
       rewrite <- EE in H0.
-    revert H0. len. rewrite !firstn_length, Nat.min_l. 2:len;lia.
+    revert H0. len. rewrite !length_firstn, Nat.min_l. 2:len;lia.
     rewrite rev_map_spec. intros.
     rewrite Forall_forall in H0 |- *. intros.
     specialize (H0 _ H1). rewrite <- in_rev in H1.
@@ -835,7 +835,7 @@ Proof.
    elim nth_error_spec.
    + intros. simpl.
      f_equal. destruct ind; simpl. f_equal. f_equal. simpl in H. lia.
-   + rewrite List.rev_length. lia.
+   + rewrite List.length_rev. lia.
  - rewrite !map_app. f_equal.
    rewrite map_subst_instance_to_extended_list_k.
    erewrite to_extended_list_k_map_subst at 2.
@@ -1008,7 +1008,7 @@ Proof.
     destruct x as [[] | ].
     + destruct H2. unfold eta_single. cbn.
       eapply expanded_fold_lambda.
-      rewrite !Nat.sub_0_r. len. rewrite firstn_length. len.
+      rewrite !Nat.sub_0_r. len. rewrite length_firstn. len.
       destruct n0.
       * cbn. econstructor. now rewrite nth_error_map H1.
       * rewrite seq_S rev_map_spec map_app rev_app_distr. subst.
@@ -1017,7 +1017,7 @@ Proof.
         -- rewrite nth_error_app2 repeat_length; try lia.
            replace (S n0 + n - S n0) with n by lia.
            now rewrite nth_error_map  H1.
-        -- len. now rewrite seq_length.
+        -- len. now rewrite length_seq.
         -- eapply Forall_forall. intros x [ | (? & <- & [_ ?] % in_seq) % in_rev % in_map_iff]; subst.
            all: econstructor; rewrite nth_error_app1; revgoals; [eapply nth_error_repeat; lia | rewrite repeat_length; lia].
     + econstructor. now rewrite nth_error_map H1.
@@ -1072,7 +1072,7 @@ Proof.
         eapply app_Forall.
         -- Opaque minus. solve_all. eapply @expanded_lift' with (Γ' := []). 2: reflexivity. reflexivity.
            2: reflexivity. len.
-           { rewrite !firstn_length !List.skipn_length. len.
+           { rewrite !length_firstn !List.length_skipn. len.
              rewrite E EE. lia.
            }
            cbn. eauto.
@@ -1080,11 +1080,11 @@ Proof.
            eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
            eapply in_seq in H4 as [_ H4].
            len. rewrite nth_error_app1; len.
-           rewrite !firstn_length !List.skipn_length. len. rewrite E EE.
-           rewrite map_length in H4. lia.
+           rewrite !length_firstn !List.length_skipn. len. rewrite E EE.
+           rewrite length_map in H4. lia.
            eapply nth_error_repeat. cbn in *.
-           rewrite !firstn_length !List.skipn_length. len. rewrite E EE.
-           rewrite map_length in H4. lia.
+           rewrite !length_firstn !List.length_skipn. len. rewrite E EE.
+           rewrite length_map in H4. lia.
     + specialize (H _ hrepr).
       cbn in H. unfold eta_fixpoint in *.
       rewrite nth_error_map in H |- *.
@@ -1097,7 +1097,7 @@ Proof.
       ++ cbn. rewrite <- context_assumptions_lift.
         eapply wf_fixpoint_rarg; eauto. 2: eapply nth_error_In; eauto.
         clear - X. depind X; eauto.
-      ++ len. rewrite seq_length. lia.
+      ++ len. rewrite length_seq. lia.
       ++ unfold eta_single in H.
          rewrite expanded_fold_lambda in H. cbn. simpl_list.
          cbn-[lift] in H. rewrite Nat.sub_0_r in H.
@@ -1120,18 +1120,18 @@ Proof.
           eapply expanded_unlift. 2: reflexivity.
           eapply apply_expanded; eauto; len. 2:{ f_equal. instantiate (1 := repeat 0 (S (rarg d))). now len. }
           simpl_list. rewrite !app_assoc. f_equal. f_equal.
-          2:{ f_equal. rewrite !firstn_length. len.
+          2:{ f_equal. rewrite !length_firstn. len.
               destruct context_assumptions; lia.
            }
           f_equal.  rewrite !mapi_map. now eapply mapi_ext. }
 
          eapply expanded_unlift with (Γ'' :=  repeat 0 #|l|). 2: now rewrite <- app_assoc.
-         rewrite -> simpl_lift. 2:{ len. rewrite !firstn_length !List.skipn_length. lia. }
+         rewrite -> simpl_lift. 2:{ len. rewrite !length_firstn !List.length_skipn. lia. }
          2:{ len. lia. }
          eapply apply_expanded. eauto.
          simpl_list. f_equal. f_equal.
          ** rewrite !mapi_map. now eapply mapi_ext.
-         ** rewrite !firstn_length !List.skipn_length.
+         ** rewrite !length_firstn !List.length_skipn.
             rewrite app_assoc. f_equal.
             rewrite <- repeat_app. f_equal. len.
             destruct context_assumptions;
@@ -1139,14 +1139,14 @@ Proof.
          ** f_equal. len. lia.
       ++ eapply Forall_typing_spine_Forall in X0. eapply app_Forall.
          ** solve_all. eapply @expanded_lift' with (Γ' := []). all: try now reflexivity. 2: eauto.
-            len. rewrite !firstn_length !List.skipn_length.
+            len. rewrite !length_firstn !List.length_skipn.
             eapply typing_wf_fixpoint in X.
             eapply wf_fixpoint_rarg in X. 2: eauto. 2: eapply nth_error_In; eauto.
             len. lia.
          ** rewrite rev_map_spec. eapply Forall_rev.
             eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
             eapply in_seq in H4 as [_ H4]. autorewrite with len in H4 |- *.
-            rewrite !firstn_length !List.skipn_length.
+            rewrite !length_firstn !List.length_skipn.
             rewrite -> nth_error_app1. eapply nth_error_repeat.
             -- len.
                eapply Nat.lt_le_trans. eauto. cbn.
@@ -1170,7 +1170,7 @@ Proof.
     rewrite rev_map_spec. now simpl_list. rewrite rev_map_spec -!List.map_rev.
     eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
     eapply in_rev, in_seq in H2 as [_ ?]. cbn in *. len.
-    rewrite !firstn_length. len.
+    rewrite !length_firstn. len.
     assert ((context_assumptions
     (decompose_prod_assum []
        (type_of_constructor mdecl cdecl (ind, i) u)).1) = ind_npars mdecl + context_assumptions (cstr_args cdecl)) as ->. {
@@ -1200,7 +1200,7 @@ Proof.
         rewrite Nat.min_l; try lia. eapply All2_length in a0.
         unfold inst_case_context. unfold subst_context.
         unfold subst_instance, subst_instance_context, map_context.
-        rewrite fold_context_k_length map_length. unfold aname. lia.
+        rewrite fold_context_k_length length_map. unfold aname. lia.
       } revert H9. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p)
       (puinst p) (bcontext y) x)). clear -hrepr.
       induction #|bcontext y|; intros []; cbn; intros; try congruence; econstructor; eauto.
@@ -1211,14 +1211,14 @@ Proof.
     eapply expanded_mkApps_tFix.
     + shelve.
     + fold lift. rewrite !nth_error_map H0. cbn. len. reflexivity.
-    + len. rewrite seq_length. lia.
+    + len. rewrite length_seq. lia.
     + fold lift. len.
       assert (Forall (fun x => isLambda (dbody x)) mfix).
       { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
       solve_all.
       { now eapply isLambda_lift, isLambda_eta_expand. }
       cbn in *.
-      rewrite !firstn_length. rewrite -> !Nat.min_l; try lia.
+      rewrite !length_firstn. rewrite -> !Nat.min_l; try lia.
       eapply expanded_lift'.
       5: eapply a2; eauto. 2: reflexivity. 2: now len.
       2: now len.
@@ -1233,7 +1233,7 @@ Proof.
     + cbn - [rev_map seq]. rewrite rev_map_spec. eapply Forall_rev.
       eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
       eapply in_seq in H4 as [_ ?]. cbn in *. len.
-      rewrite !firstn_length.
+      rewrite !length_firstn.
       rewrite -> nth_error_app1. eapply nth_error_repeat.
       len; lia.
       rewrite repeat_length. len; lia.

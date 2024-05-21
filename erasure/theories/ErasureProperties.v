@@ -441,19 +441,19 @@ Proof.
     eapply All_forallb. unfold tCaseBrsProp_k in X0.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b0. eauto.
+    solve_all. subst. rewrite length_map. eapply b0. eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - epose proof (All2_length X0).
     solve_all. destruct b. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
-    eapply b0. eauto. now rewrite app_length fix_context_length.
+    eapply b0. eauto. now rewrite length_app fix_context_length.
   - epose proof (All2_length X0).
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
-    eapply b0. eauto. now rewrite app_length fix_context_length.
+    eapply b0. eauto. now rewrite length_app fix_context_length.
   - depelim H. depelim X0; solve_all.
     depelim X; solve_all. eapply primProp_impl_test_prim.
     constructor; intuition eauto. solve_all.
@@ -642,7 +642,7 @@ Proof.
     eapply forallb_All in wfbrs.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []; move=> [] wf. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b; eauto.
+    solve_all. subst. rewrite length_map. eapply b; eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - move/andP: wfa => [] hl hc.
@@ -658,7 +658,7 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
-    eapply b1; tea. eapply b. now rewrite app_length fix_context_length.
+    eapply b1; tea. eapply b. now rewrite length_app fix_context_length.
   - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
@@ -666,7 +666,7 @@ Proof.
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b.
-    eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
+    eapply b. now move: b0 => /andP[]. eauto. now rewrite length_app fix_context_length. tea.
   - depelim H. solve_all. primProp.
     depelim X0; depelim X1; repeat constructor; cbn; intuition eauto. solve_all.
 Qed.

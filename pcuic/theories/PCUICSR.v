@@ -1024,7 +1024,7 @@ Proof.
       eapply on_free_vars_ctx_inst_case_context; trea; t. }
     forward_keep IHr.
     { repeat inv_on_free_vars.
-      rewrite app_length inst_case_predicate_context_length -shiftnP_add //. }
+      rewrite length_app inst_case_predicate_context_length -shiftnP_add //. }
     apply X14 => //.
   - eapply X16 => //.
     inv_on_free_vars.
@@ -1036,7 +1036,7 @@ Proof.
       eapply on_free_vars_ctx_inst_case_context; trea; t. }
     forward_keep p5.
     { repeat inv_on_free_vars.
-      rewrite app_length inst_case_branch_context_length -shiftnP_add //. }
+      rewrite length_app inst_case_branch_context_length -shiftnP_add //. }
     intuition auto. split; auto.
   - eapply X22 => //.
     cbn in clt. eapply forallb_All in clt.
@@ -1054,7 +1054,7 @@ Proof.
     { rewrite on_free_vars_ctx_app clΓ /=.
       eapply on_free_vars_fix_context; trea; t. }
     forward_keep p. {
-      rewrite app_length fix_context_length -shiftnP_add //.
+      rewrite length_app fix_context_length -shiftnP_add //.
       now inv_on_free_vars. }
     intuition auto. split; auto.
   - eapply X25 => //.
@@ -1069,7 +1069,7 @@ Proof.
     { rewrite on_free_vars_ctx_app clΓ /=.
       eapply on_free_vars_fix_context; trea; t. }
     forward_keep p. {
-      rewrite app_length fix_context_length -shiftnP_add //.
+      rewrite length_app fix_context_length -shiftnP_add //.
       now inv_on_free_vars. }
     intuition auto. split; auto.
   - eapply X27 => //.
@@ -1316,7 +1316,7 @@ Proof.
   - rewrite on_free_vars_ctx_app in clΓΔ. now move/andP: clΓΔ.
   - rewrite on_free_vars_it_mkLambda_or_LetIn.
     rewrite on_free_vars_ctx_app in clΓΔ. move/andP: clΓΔ => [].
-    rewrite shiftnP_add -app_length opt andb_true_r //.
+    rewrite shiftnP_add -length_app opt andb_true_r //.
   - now eapply red1_it_mkLambda_or_LetIn.
 Qed.
 
@@ -1854,7 +1854,7 @@ Proof.
     rewrite lift_mkApps !subst_mkApps.
     pose proof (wf_branch_length wfbr).
     have lenskip: #|skipn (ind_npars mdecl) args| = (context_assumptions (cstr_args cdecl)).
-    { rewrite List.skipn_length eqargs; lia. }
+    { rewrite List.length_skipn eqargs; lia. }
     have lenfirst: #|firstn (ind_npars mdecl) args| = (context_assumptions (ind_params mdecl)).
     { rewrite firstn_length_le; try lia. now rewrite -(declared_minductive_ind_npars isdecl). }
     have brctxlen : #|prebrctx| = #|cstr_args cdecl|.
@@ -1972,7 +1972,7 @@ Proof.
           rewrite /ind_subst inds_length.
           now rewrite closedn_subst_instance_context.
           eapply (declared_minductive_closed_inds isdecl).
-          rewrite /= app_length subst_context_length !subst_instance_length.
+          rewrite /= length_app subst_context_length !subst_instance_length.
           rewrite Nat.add_comm in cl.
           eapply (PCUICClosed.closedn_expand_lets) in cl.
           rewrite closedn_subst_instance.
@@ -2039,7 +2039,7 @@ Proof.
       change (ind_subst _ _ _) with indsub.
       relativize (context_assumptions _).
       erewrite <-subst_app_simpl. 2:now len.
-      rewrite List.rev_length lenskip /=.
+      rewrite List.length_rev lenskip /=.
       relativize (context_assumptions _).
       erewrite <- expand_lets_app => //.
       now rewrite !lengths.
@@ -2523,12 +2523,12 @@ Proof.
         rewrite -(subst_context_smash_context _ _ []).
         rewrite subst_instance_smash /=.
         len.
-        rewrite skipn_length; len.
+        rewrite length_skipn; len.
         assert (context_assumptions (cstr_args cdecl) -
             (context_assumptions (cstr_args cdecl) - p.(proj_arg)) = p.(proj_arg)) by lia.
         rewrite H.
         move/isType_open. len.
-        rewrite !skipn_length; len. rewrite H //.
+        rewrite !length_skipn; len. rewrite H //.
         rewrite subst_instance_subst // /indsubst.
         rewrite subst_instance_inds.
         rewrite (subst_instance_id_mdecl _ _ _ cu) //.
@@ -2593,7 +2593,7 @@ Proof.
     eapply typing_spine_nth_error in sp; eauto.
     2:{ rewrite !context_assumptions_fold. rewrite context_assumptions_subst_instance.
         clear sp. eapply nth_error_Some_length in H.
-        rewrite List.skipn_length in H. lia. }
+        rewrite List.length_skipn in H. lia. }
     destruct sp as [decl [Hnth Hu0]].
     simpl in on_projs. red in on_projs. len in Hnth.
     eapply (type_ws_cumul_pb (pb:=Cumul)); eauto.
@@ -2671,7 +2671,7 @@ Proof.
     epose proof (subst_app_simpl (List.rev (firstn parg (skipn (ind_npars mdecl) args0))) _ 0) as hs.
     rewrite !lengths /= in hs.
     assert(#|firstn parg (skipn (ind_npars mdecl) args0)| = parg) as hnarg.
-    { rewrite firstn_length_le // skipn_length; lia. }
+    { rewrite firstn_length_le // length_skipn; lia. }
     rewrite hnarg in hs. rewrite <- hs. clear hs. rewrite subst_app_decomp.
     epose proof (subst_app_simpl
       (map (subst0 [mkApps (tConstruct pind 0 u0) (map (lift0 (ind_npars mdecl)) args0)])
@@ -2707,9 +2707,9 @@ Proof.
     2:{ eapply spine_subst_smash in idxsubst0; eauto.
         eapply subslet_skipn, idxsubst0. }
     assert (skipn idx (List.rev (skipn (ind_npars mdecl) args0)) = (List.rev (firstn parg (skipn (ind_npars mdecl) args0)))) as eq.
-    { rewrite /idx skipn_rev. lia_f_equal. rewrite skipn_length; lia. }
+    { rewrite /idx skipn_rev. lia_f_equal. rewrite length_skipn; lia. }
     assert (parg = #|List.rev (firstn parg (skipn (ind_npars mdecl) args0))|) as hnarg'.
-    { rewrite !lengths firstn_length_le ?skipn_length; lia. }
+    { rewrite !lengths firstn_length_le ?length_skipn; lia. }
     rewrite eq in cum.
     rewrite subst_context_nil in cum. simpl in cum.
     rewrite -(subst_app_simpl' _ _ 0) in cum => //.
@@ -2798,11 +2798,11 @@ Proof.
       move:i. clear foo.
       intro foo. pose (fun x y z => isType_open (foo x y z)).
       move:i. clear foo. len.
-      rewrite skipn_length; len.
+      rewrite length_skipn; len.
       assert (context_assumptions (cstr_args cdecl) -
           (context_assumptions (cstr_args cdecl) - parg) = parg) by lia.
       cbn. rewrite H6.
-      rewrite skipn_length; len. rewrite H5. intro foo.
+      rewrite length_skipn; len. rewrite H5. intro foo.
       eapply on_free_vars_impl; [| eapply foo]; eauto.
       move=> i'. rewrite /shiftnP !orb_false_r.
       move/Nat.ltb_lt => lt. apply/Nat.ltb_lt. lia. }

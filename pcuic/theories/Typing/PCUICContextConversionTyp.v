@@ -22,7 +22,7 @@ Lemma lift0_open {cf:checker_flags} {Γ : closed_context} {Γ'' : open_context �
   {M : open_term Γ} {n} :
   n = #|Γ''| -> is_open_term (Γ ,,, Γ'') (lift0 n M).
 Proof.
-  intro e. rewrite on_free_vars_lift0; eauto. rewrite app_length. rewrite <- shiftnP_add.
+  intro e. rewrite on_free_vars_lift0; eauto. rewrite length_app. rewrite <- shiftnP_add.
   subst. rewrite addnP_shiftnP; intuition.
 Defined.
 
@@ -51,7 +51,7 @@ Proof.
   exists (exist (skipn n Γ) sk).
   exists (exist (firstn n Γ) fi). split; auto.
   cbn. now rewrite firstn_skipn. cbn.
-  rewrite List.firstn_length. lia.
+  rewrite List.length_firstn. lia.
 Qed.
 
 Lemma nth_error_closed_context {Γ n d} :
@@ -62,7 +62,7 @@ Proof.
   rewrite -on_free_vars_ctx_on_ctx_free_vars -[shiftnP _ _]addnP0 => hΔ' hnth.
   eapply nth_error_on_free_vars_ctx in hΔ'; tea.
   2:{ rewrite /shiftnP /= orb_false_r. apply Nat.ltb_lt. now apply nth_error_Some_length in hnth. }
-  rewrite List.skipn_length.
+  rewrite List.length_skipn.
   eapply on_free_vars_decl_impl; tea.
   intros i.
   rewrite /= /addnP /shiftnP /= !orb_false_r => /Nat.ltb_lt hl.
@@ -106,7 +106,7 @@ Proof.
   move=> cl /nth_error_Some_add[] hn /(nth_error_closed_context cl).
   rewrite -(on_free_vars_decl_lift _ (S n) 0 d).
   apply: on_free_vars_decl_impl => i.
-  rewrite /strengthenP /= /shiftnP !orb_false_r List.skipn_length.
+  rewrite /strengthenP /= /shiftnP !orb_false_r List.length_skipn.
   repeat PCUICSigmaCalculus.nat_compare_specs => //.
 Qed.
 

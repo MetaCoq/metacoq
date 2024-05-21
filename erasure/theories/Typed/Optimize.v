@@ -168,7 +168,7 @@ Lemma complete_ctx_mask_length mask ctx :
 Proof.
   intros Hlen.
   unfold complete_ctx_mask.
-  rewrite app_length,repeat_length, List.rev_length.
+  rewrite length_app,repeat_length, List.length_rev.
   lia.
 Qed.
 

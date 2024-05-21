@@ -85,7 +85,7 @@ Proof.
   intros Hs. solve_all. revert H.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
     unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 

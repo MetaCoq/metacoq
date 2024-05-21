@@ -178,7 +178,7 @@ Proof.
   - intros H. specialize (Hex a.1). destruct Hex as [decls Hdecls].
     pose proof (NoDup_length_lookup_globals _ Hl a.1).
     rewrite eqb_refl in Hdecls. apply In_lookup_globals in H.
-    rewrite Hdecls in H0. rewrite app_length in H0. cbn in H0.
+    rewrite Hdecls in H0. rewrite length_app in H0. cbn in H0.
     destruct lookup_global; lia.
   - eapply IHdeclarations0. intros. specialize (Hex c).
     destruct Hex as [decls Hdecls]. case_eq (c == a.1).
@@ -842,7 +842,7 @@ Section WfRed.
     - destruct t; try reflexivity. discriminate.
     - destruct l; simpl in *; congruence.
     - eapply All2_map_right_inv in X5. econstructor; eauto; solve_all.
-      now rewrite map_length in H1.
+      now rewrite length_map in H1.
   Qed.
 
   Lemma declared_projection_wf (p : projection)
@@ -1132,7 +1132,7 @@ Section TypingWf.
     intros wf.
     induction wf using term_wf_forall_list_ind; simpl; intros; auto; noconf H;
     try noconf H0;
-      rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+      rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?length_map;
         f_equal; solve_all; eauto.
     - now noconf H1.
     - now noconf H1.

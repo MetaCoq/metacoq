@@ -1104,7 +1104,7 @@ Proof.
   eapply lookup_constructor_pars_args_nopars in H; tea. subst npars.
   rewrite skipn_0 in H1.
   constructor.
-  - rewrite map_length. cbn in H2. congruence.
+  - rewrite length_map. cbn in H2. congruence.
   - ELiftSubst.solve_all.
 Qed.
 
@@ -1286,7 +1286,7 @@ Proof. split => //.
   eapply ERemoveParams.lookup_constructor_pars_args_strip in H.
   econstructor; tea. rewrite skipn_0 /= skipn_map.
   ELiftSubst.solve_all. len.
-  rewrite skipn_map. len. rewrite skipn_length. lia.
+  rewrite skipn_map. len. rewrite length_skipn. lia.
 Qed.
 
 #[global] Instance remove_params_optimization_pres_app {fl : WcbvFlags} {wcon : with_constructor_as_block = false} :

@@ -865,7 +865,7 @@ Proof.
         lia.
     }
     eapply NoDup_incl_length with (l' := Γ) in HN.
-    { cbn in HN. rewrite map_length seq_length in HN. lia. }
+    { cbn in HN. rewrite length_map length_seq in HN. lia. }
     intros ? [ -> | (? & <- & [_ ? % Hl] % in_seq) % in_map_iff ]; eauto.
 Qed.
 
@@ -1102,7 +1102,7 @@ Proof.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     destruct nth_error as [ [] | ]; cbn in *; eauto.
     repeat split. eauto.
-    solve_all. rewrite map_length. rewrite <- app_length.
+    solve_all. rewrite length_map. rewrite <- length_app.
     eapply a; eauto. len. rewrite gen_many_fresh_length. eauto.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     erewrite lookup_annotate_env; eauto. cbn.
@@ -1118,35 +1118,35 @@ Proof.
       destruct dbody; cbn in *; eauto.
       eapply IHAll.
   - solve_all. unfold wf_fix in *. rtoProp. split.
-    rewrite map2_length gen_many_fresh_length map_length.
+    rewrite map2_length gen_many_fresh_length length_map.
     { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
     solve_all. clear H0. unfold test_def in *. cbn in *.
     eapply All_impl in H2. 2:{ intros ? [[] ].
       specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i1. exact i1.
+      revert i. rewrite ?List.length_rev length_app ?List.length_rev gen_many_fresh_length ?List.length_rev length_map. intros r. eapply r in i1. exact i1.
       eapply incl_appr. eauto.
       }
       revert H2.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
+      intros. rewrite map2_length gen_many_fresh_length length_map Nat.min_id.
       revert H2. generalize (#|m| + #|Γ|).
       intros.
       induction m in Γ, n, n0, l, H2 |- *.
       + econstructor.
       + invs H2. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
   - solve_all. unfold wf_fix in *. rtoProp. split.
-    rewrite map2_length gen_many_fresh_length map_length.
+    rewrite map2_length gen_many_fresh_length length_map.
     { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
     solve_all. clear H0. unfold test_def in *. cbn in *.
     eapply All_impl in H1. 2:{ intros ? [i].
     specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r.
+      revert i. rewrite ?List.length_rev length_app ?List.length_rev gen_many_fresh_length ?List.length_rev length_map. intros r.
       eapply r in i0. exact i0.
       eapply incl_appr. eauto.
       }
     revert H1.
     generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-    intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
+    intros. rewrite map2_length gen_many_fresh_length length_map Nat.min_id.
     revert H1. generalize (#|m| + #|Γ|).
     intros.
     induction m in Γ, n, n0, l, H1 |- *.
@@ -1189,7 +1189,7 @@ Proof.
     rename x into br. exists (gen_many_fresh Γ br.1). cbn. split.
     + eapply All2_All2_Set. solve_all. now eapply All2_refl.
     + split.
-      * eapply p. rewrite app_length gen_many_fresh_length. eapply p.
+      * eapply p. rewrite length_app gen_many_fresh_length. eapply p.
       * eapply NoDup_gen_many_fresh.
   - now rewrite H in nproj.
   - eapply represents_tFix with (nms := gen_many_fresh Γ (map dname m)).
@@ -1209,7 +1209,7 @@ Proof.
     { solve_all. unfold wf_fix in *. rtoProp. solve_all. clear H0. unfold test_def in *. cbn in *.
       eapply All_impl in H2. 2:{ intros ? [[] ].
       specialize (r (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      revert r. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r. eapply r in i0. exact i0.
+      revert r. rewrite ?List.length_rev length_app ?List.length_rev gen_many_fresh_length ?List.length_rev length_map. intros r. eapply r in i0. exact i0.
       }
       revert H2.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
@@ -1240,13 +1240,13 @@ Proof.
     2:{ eapply All2_length in a. clear IH. eapply All2_Set_All2, All2_length in a0.
         len. }
     clear Hbodies a. induction a0; cbn in *; econstructor.
-    rewrite app_length List.rev_length in IH. eapply IH.
+    rewrite length_app List.length_rev in IH. eapply IH.
     eapply IHa0. eapply IH.
   - depelim X; solve_all; try constructor; cbn; solve_all.
     eapply All2_over_undep in a. solve_all.
   - solve_all. induction a; cbn in *; rtoProp; eauto.
     econstructor. cbn in *. eapply IH. eapply IHa. eapply IH.
-  - rewrite List.rev_length map_length in IH.
+  - rewrite List.length_rev length_map in IH.
     assert (Hlen : #|vfix| = #|mfix|). { clear IH. eapply All2_Set_All2, All2_length in a. lia. }
     rewrite Hlen in IH. revert IH. generalize (#|mfix|).
     induction a; intros n H; cbn in *; rtoProp; split.
@@ -1317,7 +1317,7 @@ Proof.
       2:{ now invs Heq. }
       exists nms. split. eauto.
       specialize (IH1 (nms ++ Γ1)).
-      rewrite app_length in IH1.
+      rewrite length_app in IH1.
       assert (#|y.1| = #|x.1|) as -> by now invs Heq.
       eapply All2_Set_All2 in H1 as HH. eapply All2_length in HH as ->.
       rewrite app_assoc. split.
@@ -1335,8 +1335,8 @@ Proof.
     + cbn. depelim a0. cbn. invs IH. econstructor.
       * cbn.
         specialize (H (List.rev nms ++ Γ1) Γ2).
-        rewrite app_length in H.
-        rewrite <- !app_assoc in *. rewrite List.rev_length in H. eapply H; eauto.
+        rewrite length_app in H.
+        rewrite <- !app_assoc in *. rewrite List.length_rev in H. eapply H; eauto.
       * eapply IHmfix; eauto.
   - econstructor; eauto.
     depelim X; solve_all; constructor; solve_all.
@@ -1380,7 +1380,7 @@ Proof.
   revert ts vs s s' E Γ.
   induction nms using rev_ind; intros ts vs s s' E Γ Hna Hdup Hlen Hall Hrep.
   - destruct vs; cbn in *; try lia. invs Hall. eauto.
-  - destruct vs using rev_ind; repeat rewrite app_length in Hlen; cbn in *; try lia.
+  - destruct vs using rev_ind; repeat rewrite length_app in Hlen; cbn in *; try lia.
     clear IHvs.
     eapply All2_app_inv_l in Hall as (vs' & ? & -> & H1 & H2). invs H2. invs X.
     unfold substl. rewrite fold_left_app. cbn.
@@ -1420,7 +1420,7 @@ Proof.
   revert ts vs s s' E Γ.
   induction nms using rev_ind; intros ts vs s s' E Γ Hna Hdup Hlen Hall Hrep.
   - destruct vs; cbn in *; try lia. invs Hall. eauto.
-  - destruct vs using rev_ind; repeat rewrite app_length in Hlen; cbn in *; try lia.
+  - destruct vs using rev_ind; repeat rewrite length_app in Hlen; cbn in *; try lia.
     clear IHvs.
     eapply All2_app_inv_l in Hall as (vs' & ? & -> & H1 & H2). invs H2. invs X.
     unfold substl. rewrite fold_left_app. cbn.
@@ -1656,11 +1656,11 @@ Proof.
     eapply X0.
     + econstructor; cbn; eauto.
       eapply wf_add_multiple; eauto.
-      now rewrite List.rev_length map_length fix_env_length.
+      now rewrite List.length_rev length_map fix_env_length.
       eapply wf_fix_env; eauto.
     + let X2 := multimatch goal with H : All _ _ |- _ => H end in
       eapply All_nth_error in X2; eauto; cbn in X2; rtoProp;
-      rewrite map_fst_add_multiple; first [ now rewrite List.rev_length map_length fix_env_length | eauto ].
+      rewrite map_fst_add_multiple; first [ now rewrite List.length_rev length_map fix_env_length | eauto ].
       eapply sunny_subset. eauto.
       intros ?. cbn. rewrite !in_app_iff. now rewrite <- in_rev.
   - assert (map fst (MCList.map2 (λ (n : ident) (d0 : def term), (n, EAst.dbody d0)) nms mfix) = nms) as EE. {
@@ -1736,7 +1736,7 @@ Proof.
   - eapply All2_app_inv_l in Hvs as (vs' & r2 & -> & H1 & H2).
     invs H2. invs X. revert Hlen; len; intros Hlen. econstructor.
     + eauto.
-    + rewrite app_length; cbn. lia.
+    + rewrite length_app; cbn. lia.
     + eapply All2_All2_Set, All2_app. eapply H1; eauto. econstructor; eauto.
 Qed.
 
@@ -1919,7 +1919,7 @@ Proof.
             eapply All2_Set_All2, All2_nth_error in H13; eauto.
             eapply All2_Set_All2, All2_length in H10; eauto.
             eapply All2_Set_All2, All2_length in Hbrs; eauto.
-            rewrite -> !skipn_length in *. lia.
+            rewrite -> !length_skipn in *. lia.
       }
       3: eexists; split; [ eauto | econstructor; eauto].
       * rewrite map_fst_add_multiple.
@@ -1927,7 +1927,7 @@ Proof.
            eapply All2_Set_All2, All2_nth_error in H13; eauto.
            eapply All2_Set_All2, All2_length in H10; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
-           rewrite -> !skipn_length in *. lia.
+           rewrite -> !length_skipn in *. lia.
         -- eapply forallb_nth_error in H6. setoid_rewrite Hnth in H6. cbn in H6. rtoProp.
            enough (nms = flat_map (λ x : name, match x with
            | nAnon => []
@@ -1940,14 +1940,14 @@ Proof.
         -- len. eapply All2_Set_All2, All2_nth_error in H13; eauto.
            eapply All2_Set_All2, All2_length in H10; eauto.
            eapply All2_Set_All2, All2_length in Hbrs; eauto.
-           rewrite -> !skipn_length in *. lia.
+           rewrite -> !length_skipn in *. lia.
         -- eauto.
       * erewrite <- constructor_isprop_pars_decl_in_env. eauto. solve_all.
       * eapply All2_Set_All2, All2_length in H10. lia.
       * eapply All2_Set_All2, All2_length in H10.
         eapply All2_Set_All2, All2_nth_error in H13; eauto.
         eapply All2_Set_All2, All2_length in Hbrs; eauto.
-        rewrite -> !skipn_length in *. lia.
+        rewrite -> !length_skipn in *. lia.
       * solve_all.
       * now rewrite rev_involutive in Hv2_.
   - eapply X; eauto. (* artifact of the induction being weird and having a trivial assumption to not mess up proof script. FIXME! *)
@@ -2005,7 +2005,7 @@ Proof.
           rewrite in_app_iff in n. rewrite <- in_rev. eauto.
         - eapply NoDup_rev. eauto.
       }
-      { cbn. now rewrite List.rev_length map_length fix_env_length. }
+      { cbn. now rewrite List.length_rev length_map fix_env_length. }
       econstructor; eauto.
       { clear - H14. unfold fix_env, fix_subst.
         eapply All2_length in H14 as Hlen. rewrite Hlen. clear Hlen.
@@ -2014,7 +2014,7 @@ Proof.
       }
       now rewrite app_nil_r.
       { cbn. rewrite map_fst_add_multiple.
-        now rewrite List.rev_length map_length fix_env_length.
+        now rewrite List.length_rev length_map fix_env_length.
         eapply All_nth_error in sunny_in_vfix; eauto. cbn in sunny_in_vfix.
         rtoProp.
         eapply sunny_subset; eauto.
@@ -2024,7 +2024,7 @@ Proof.
         - cbn. eapply eval_wf. 4: eauto. all:eauto.
         - eapply wf_add_multiple.
           + eauto.
-          + now rewrite List.rev_length map_length fix_env_length.
+          + now rewrite List.length_rev length_map fix_env_length.
           + eapply eval_wf in IH2; eauto.
             eapply wf_fix_env; eauto.
       }
@@ -2250,7 +2250,7 @@ Proof.
       | nNamed i => [i]
       end)
 (map2 (λ (d : def term) (na : ident), {| dname := nNamed na; dbody := t0 (dbody d); rarg := rarg d |}) m (gen_many_fresh Γ (map dname m)))) = (gen_many_fresh Γ (map dname m))) as ->.
-      { pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+      { pose proof (gen_many_fresh_length Γ (map dname m)). rewrite length_map in H. revert H.
         generalize (gen_many_fresh Γ (map dname m)). clear. induction m; destruct l; cbn; try congruence.
         intros. f_equal. eapply IHm. lia. }
 
@@ -2266,7 +2266,7 @@ Proof.
       end)
 (map2 (λ (d : def term) (na : ident), {| dname := nNamed na; dbody := annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ) (dbody d); rarg := rarg d |}) m (gen_many_fresh Γ (map dname m)))) = (gen_many_fresh Γ (map dname m))) as ->.
       { generalize (annotate (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-         pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+         pose proof (gen_many_fresh_length Γ (map dname m)). rewrite length_map in H. revert H.
         generalize (gen_many_fresh Γ (map dname m)). clear. induction m; destruct l; cbn; try congruence.
         intros. f_equal. eapply IHm. lia. }
 
@@ -2276,7 +2276,7 @@ Proof.
           intros ? ? % in_app_iff. eapply in_app_iff. rewrite <- in_rev. eauto. }
 
       generalize (List.rev (gen_many_fresh Γ (map dname m))).
-      pose proof (gen_many_fresh_length Γ (map dname m)). rewrite map_length in H. revert H.
+      pose proof (gen_many_fresh_length Γ (map dname m)). rewrite length_map in H. revert H.
       generalize (gen_many_fresh Γ (map dname m)). clear - X. induction X.
       + intros l. destruct l; cbn in *; try congruence. econstructor.
       + intros []; cbn in *; try congruence. intros. econstructor; eauto.

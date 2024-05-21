@@ -150,7 +150,7 @@ Section ContextReduction.
       specialize (X _ _ _ H1 e). forward X. eapply All2_fold_app_inv.
       instantiate (1 := firstn (S i) Γ').
       instantiate (1 := firstn (S i) Γ).
-      rewrite !firstn_length. lia.
+      rewrite !length_firstn. lia.
       now rewrite !(firstn_skipn (S i) _).
       destruct X as [x' [bt b't]]. exists (lift0 (S i) x').
       split; eauto with pcuic.

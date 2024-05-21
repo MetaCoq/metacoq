@@ -346,7 +346,7 @@ Qed.
     destruct n.
     rewrite Nat.sub_0_r.
     rewrite !firstn_all2;
-     rewrite ?app_length ?app_context_length ?subst_context_length ?Nat.add_0_r /=; simpl; try lia.
+     rewrite ?length_app ?app_context_length ?subst_context_length ?Nat.add_0_r /=; simpl; try lia.
     now rewrite subst_context_app.
     replace (#|Γ| + 1 - S n) with (#|Γ| - n) by lia.
     rewrite /app_context !firstn_app ?subst_context_length /= Nat.sub_0_r.
@@ -772,7 +772,7 @@ Section classification.
       rewrite axiom_free_value_mkApps in axfree.
       cbn in axfree.
       rewrite e1 nth_nth_error nth_error_app1 in axfree.
-      1: { rewrite map_length.
+      1: { rewrite length_map.
            apply nth_error_Some_length in e0; auto. }
       rewrite nth_error_map e0 in axfree.
       cbn in axfree.

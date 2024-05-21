@@ -254,7 +254,7 @@ Proof.
     apply Forall_rev.
     now apply Forall_skipn.
   - rewrite Nat.add_0_r.
-    rewrite List.rev_length;auto.
+    rewrite List.length_rev;auto.
 Qed.
 
 Lemma closed_cunfold_fix defs n narg f :
@@ -389,11 +389,11 @@ Proof.
   - now depelim a.
   - destruct ys as [|y ys _] using MCList.rev_ind.
     + apply All2_length in a as ?.
-      rewrite app_length in *.
+      rewrite length_app in *.
       now cbn in *.
     + unshelve epose proof (All2_split_eq a _) as (? & ? & ->).
       * apply All2_length in a.
-        rewrite !app_length in a.
+        rewrite !length_app in a.
         now cbn in *.
       * depelim x1.
         depelim x3.
@@ -421,7 +421,7 @@ Lemma All2_eval_snoc_elim
 Proof.
   unshelve epose proof (All2_split_eq a _) as (? & ev & ->).
   - apply All2_length in a.
-    rewrite !app_length in a.
+    rewrite !length_app in a.
     now cbn in *.
   - depelim ev.
     depelim ev.

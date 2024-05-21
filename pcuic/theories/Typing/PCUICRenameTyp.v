@@ -132,7 +132,7 @@ Proof.
       rewrite -rename_subst_instance. len.
       rewrite -shiftn_add -shiftn_add.
       rewrite rename_subst map_rev. f_equal.
-      rewrite List.rev_length rename_subst.
+      rewrite List.length_rev rename_subst.
       rewrite (wf_predicate_length_pars wfp).
       rewrite (declared_minductive_ind_npars decli).
       rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
@@ -192,7 +192,7 @@ Proof.
      eapply cumul_rel. now rewrite e' /= hdecl.
    - rewrite rename_mkApps. simpl.
      rewrite rename_iota_red //.
-    * rewrite skipn_length; lia.
+    * rewrite length_skipn; lia.
     * change (bcontext br) with (bcontext (rename_branch f br)).
      move/and5P: HfreeB => [_ _ _ _ hbrs].
      eapply nth_error_forallb in hbrs; tea. simpl in hbrs.
@@ -273,12 +273,12 @@ Proof.
             unfold inst_case_predicate_context.
             apply on_free_vars_ctx_inst_case_context; eauto.
          ++ unfold inst_case_predicate_context.
-            unfold is_open_term. rewrite app_length.
+            unfold is_open_term. rewrite length_app.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
             eassumption.
          ++ unfold inst_case_predicate_context.
-            unfold is_open_term. rewrite app_length.
+            unfold is_open_term. rewrite length_app.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
             unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
@@ -286,7 +286,7 @@ Proof.
             unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
             +++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
                 cbn; intros. eapply urename_is_open_term; eauto.
-            +++ unfold pparams. cbn. rewrite map_length. exact Hcontext.
+            +++ unfold pparams. cbn. rewrite length_map. exact Hcontext.
      * eauto.
      * unfold cumul_branches, cumul_branch in *.
        let X2 := match goal with H : All2 _ brs brs' |- _ => H end in
@@ -310,12 +310,12 @@ Proof.
          apply on_free_vars_ctx_inst_case_context; eauto.
          repeat toAll; eauto.
       + unfold inst_case_predicate_context.
-         unfold is_open_term. rewrite app_length.
+         unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
         eassumption.
       + unfold inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
+        unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
        unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
@@ -324,7 +324,7 @@ Proof.
        ++ eapply All_forallb. apply All_map. repeat toAll. eapply All_impl. 1: tea.
            cbn; intros. eapply urename_is_open_term; eauto.
        ++ unfold pparams. rewrite -> test_context_k_closed_on_free_vars_ctx in *.
-        cbn. rewrite map_length. eassumption.
+        cbn. rewrite length_map. eassumption.
   - cbn in *. eapply cumul_Proj; try apply X0; eauto.
   - rewrite (All2_length X).
     eapply cumul_Fix. cbn in *.
@@ -352,10 +352,10 @@ Proof.
         apply on_free_vars_fix_context.
         eapply All2_All_left. 1: tea. cbn; intros.
         destruct_head'_prod; eauto.
-      + unfold is_open_term. rewrite app_length.
+      + unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite fix_context_length. eauto.
-      + unfold is_open_term. rewrite app_length.
+      + unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite fix_context_length.
         rewrite (All2_length X). eauto.
@@ -369,7 +369,7 @@ Proof.
         repeat match goal with H : is_true (andb _ _) |- _ => apply andb_and in H; destruct H end.
         apply andb_and. cbn. split.
         ++ eapply urename_is_open_term; eauto.
-        ++ rewrite map_length. rewrite <-(All2_length X).
+        ++ rewrite length_map. rewrite <-(All2_length X).
            rewrite <- fix_context_length.
            eapply urename_on_free_vars_shift; eauto.
            rewrite fix_context_length; eauto.
@@ -399,10 +399,10 @@ Proof.
         apply on_free_vars_fix_context.
         eapply All2_All_left. 1: tea. cbn; intros.
         destruct_head'_prod; eauto.
-      + unfold is_open_term. rewrite app_length.
+      + unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite fix_context_length. eauto.
-      + unfold is_open_term. rewrite app_length.
+      + unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite fix_context_length.
         rewrite (All2_length X). eauto.
@@ -416,13 +416,13 @@ Proof.
         repeat match goal with H : is_true (andb _ _) |- _ => apply andb_and in H; destruct H end.
         apply andb_and. cbn. split.
         ++ eapply urename_is_open_term; eauto.
-        ++ rewrite map_length. rewrite <-(All2_length X).
+        ++ rewrite length_map. rewrite <-(All2_length X).
            rewrite <- fix_context_length.
            eapply urename_on_free_vars_shift; eauto.
            rewrite fix_context_length; eauto.
   - eapply cumul_Prim. depelim X; cbn; cbn in HfreeB, HΓ; rtoProp; constructor; cbn; eauto. solve_all.
   - repeat rewrite rename_mkApps. eapply cumul_Ind.
-    * repeat rewrite map_length; eauto.
+    * repeat rewrite length_map; eauto.
     * inv_on_free_vars.
       eapply forallb_All in b, b0.
       apply (All2_All_mix_left b0) in X. clear b0.
@@ -431,7 +431,7 @@ Proof.
       destruct_head'_prod.
       eauto.
   - repeat rewrite rename_mkApps. eapply cumul_Construct.
-    * repeat rewrite map_length; eauto.
+    * repeat rewrite length_map; eauto.
     * inv_on_free_vars. repeat toAll.
       eapply All2_impl. 1: tea. cbn; intros.
       destruct_head'_prod; eauto.
@@ -628,7 +628,7 @@ Proof.
   eapply X.
   split; auto.
   eapply urenaming_ext.
-  { now rewrite app_length -shiftnP_add. }
+  { now rewrite length_app -shiftnP_add. }
   { reflexivity. } now eapply urenaming_context.
 Qed.
 
@@ -898,7 +898,7 @@ Proof.
         split.
         ++ apply All_local_env_app_inv in IHpredctx as [].
           eapply wf_local_app_renaming; eauto.
-        ++ rewrite /predctx app_length.
+        ++ rewrite /predctx length_app.
            eapply urenaming_ext.
            { now rewrite -shiftnP_add. }
            { reflexivity. }
@@ -984,12 +984,12 @@ Proof.
       * eapply meta_conv.
         -- eapply ihc; tea.
         -- rewrite rename_mkApps. simpl. reflexivity.
-      * rewrite map_length. assumption.
+      * rewrite length_map. assumption.
     + rewrite rename_subst0. simpl. rewrite map_rev. f_equal.
       rewrite rename_subst_instance. f_equal.
       rewrite rename_closedn. 2: reflexivity.
       eapply declared_projection_closed_type in isdecl.
-      rewrite List.rev_length. rewrite e. assumption.
+      rewrite List.length_rev. rewrite e. assumption.
 
   - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl X hmfixt ihmfixt hmfixb ihmfixb wffix P Δ f hf.
     apply All_local_env_app_inv in X as [_ X].
@@ -1002,7 +1002,7 @@ Proof.
       * apply All_map, (All_impl ihmfixt).
         intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
-        unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
+        unfold on_def_body. rewrite fix_context_length length_map {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
         1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
@@ -1028,7 +1028,7 @@ Proof.
       * apply All_map, (All_impl ihmfixt).
         intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
-        unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
+        unfold on_def_body. rewrite fix_context_length length_map {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
         1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.

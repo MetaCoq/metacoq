@@ -204,7 +204,7 @@ Qed.
 Lemma removelast_length {A} (args : list A) : #|removelast args| = Nat.pred #|args|.
 Proof.
   induction args => //. destruct args => //.
-  now rewrite (removelast_app [_]) // app_length IHargs /=.
+  now rewrite (removelast_app [_]) // length_app IHargs /=.
 Qed.
 
 Lemma nth_error_removelast {A} {args : list A} {n arg} :
@@ -323,7 +323,7 @@ Lemma decompose_prod_n_assum_it_mkProd ctx ctx' ty :
   decompose_prod_n_assum ctx #|ctx'| (it_mkProd_or_LetIn ctx' ty) = Some (ctx' ++ ctx, ty).
 Proof.
   revert ctx ty. induction ctx' using rev_ind; move=> // ctx ty.
-  rewrite app_length /= it_mkProd_or_LetIn_app /=.
+  rewrite length_app /= it_mkProd_or_LetIn_app /=.
   destruct x as [na [body|] ty'] => /=;
   now rewrite !Nat.add_1_r /= IHctx' -app_assoc.
 Qed.

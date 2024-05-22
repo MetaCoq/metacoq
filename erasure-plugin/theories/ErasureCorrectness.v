@@ -1878,7 +1878,7 @@ Section PCUICErase.
       now eapply EEtaExpandedFix.expanded_isEtaExp. }
     specialize (H0 H1).
     eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
-    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t0 := lambdabox_pres_app) (Σ', v'') prev H0).
     rewrite -obseq. exact H2. cbn. red; tauto.
   Qed.
 
@@ -1933,7 +1933,7 @@ Section PCUICErase.
       now eapply EEtaExpandedFix.expanded_isEtaExp. }
     specialize (H0 H1).
     eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
-    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t0 := lambdabox_pres_app) (Σ', v'') prev H0).
     rewrite -obseq. exact H2. cbn. red; tauto.
   Qed.
 
@@ -2455,7 +2455,7 @@ Section pipeline_theorem.
     unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (cf := extraction_checker_flags) (Σ := (Σ.1, Σ.2))).
     { now eapply PCUICExpandLetsCorrectness.trans_wf. }
     { clear -HΣ typing''. now eapply PCUICClosedTyp.subject_closed in typing''. }
-    cbn. 2:cbn. 3:cbn. exact X0.
+    cbn. 2:cbn. exact X0.
     now eapply (PCUICExpandLetsCorrectness.trans_axiom_free Σ).
     pose proof (PCUICExpandLetsCorrectness.expand_lets_sound typing'').
     rewrite PCUICExpandLetsCorrectness.trans_mkApps in X1. eapply X1.

@@ -926,14 +926,14 @@ Proof.
   - destruct type_of_typing as [x Hx]. cbn -[sort_of_type is_arity] in *.
     destruct (sort_of_type _ _ _ _). cbn.
     destruct (Sort.is_propositional x0) eqn:isp; constructor.
-    * clear Heq. intros.
+    * clear Heq; try clear Heqcall. intros.
       pose proof (abstract_env_ext_wf _ H) as [wf].
       specialize_Σ H.
       destruct Hx as [[HT ?]].
       destruct s as [Hs]. sq.
       exists x; split => //. right.
       exists x0. now split.
-    * pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    * try clear Heqcall; pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
       move => / (_ _ wfΣ) [[T' [HT' er]]].
       pose proof (abstract_env_ext_wf _ wfΣ) as [wf].
       move/is_arityP: Heq => nisa.

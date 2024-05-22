@@ -1087,8 +1087,7 @@ Proof.
     rewrite lookup_env_strip. cbn in H1. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. rtoProp; intuition auto.
-    simp_strip. toAll; solve_all.
-    toAll. solve_all.
+    simp_strip. all:toAll; solve_all.
   - cbn -[strip] in H0 |- *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g. cbn in H0. now rtoProp.
@@ -1100,7 +1099,7 @@ Proof.
     now rewrite -strip_isLambda. toAll; solve_all.
   - primProp. rtoProp; intuition eauto; solve_all_k 6.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
-    toAll; solve_all. toAll; solve_all.
+    all:toAll; solve_all.
   - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     move: H1. cbn. rewrite cab.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.

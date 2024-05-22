@@ -1223,7 +1223,7 @@ Section Conversion.
       apply decompose_stack_at_appstack_None in e; eauto.
       destruct nth_error ; [|now right].
       left. eexists; split; eauto; cbn. now inversion eq1.
-    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    - try clear Heqcall. destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       match type of eq3 with
       | _ = reduce_stack ?a ?b ?c ?d ?e ?f ?g =>
         pose proof (reduce_stack_sound a b c Σ wfΣ d e f g) as [r];
@@ -5578,7 +5578,7 @@ Qed.
       split; [eauto with pcuic|].
       apply whnf_mkApps.
       eapply whne_const; eauto.
-    - zip fold in h.
+    - zip fold in h. try clear Heqcall.
       destruct (hΣ _ wfΣ).
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.
@@ -5586,7 +5586,7 @@ Qed.
       unshelve eapply declared_constant_to_gen in d; eauto.
       clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
-    - zip fold in h.
+    - zip fold in h. try clear Heqcall.
       destruct (hΣ _ wfΣ).
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.

@@ -729,7 +729,8 @@ Proof.
     eapply isEtaExp_mkApps in H1. rewrite decompose_app_mkApps in H1; eauto.
     destruct construct_viewc; eauto. cbn in d. eauto.
     split; rtoProp; intuition eauto. solve_all; intuition eauto.
-  - Opaque isEtaExp. destruct chop eqn:Ec. rewrite !wellformed_mkApps in Hw |- * => //. rtoProp.
+  - Opaque isEtaExp. try clear Heqcall. destruct chop eqn:Ec.
+    rewrite !wellformed_mkApps in Hw |- * => //. rtoProp.
     rewrite GlobalContextMap.lookup_constructor_pars_args_spec in Heq.
     cbn -[lookup_constructor transform_blocks ] in *. rewrite cstrbl in H1.
     rewrite lookup_constructor_transform_blocks. intros. rtoProp.
@@ -807,7 +808,7 @@ Proof.
   - f_equal. eauto. rewrite wellformed_mkApps in H1 => //. rtoProp.
     rewrite transform_blocks_mkApps; eauto. destruct construct_viewc; cbn in d; eauto.
     f_equal. eapply H; eauto. solve_all.
-  - destruct chop eqn:E.
+  - try clear Heqcall. destruct chop eqn:E.
     rewrite GlobalContextMap.lookup_constructor_pars_args_spec in Heq.
     rewrite wellformed_mkApps in H0 => //. rewrite transform_blocks_mkApps => //.
     rtoProp. cbn [construct_viewc]. unfold lookup_constructor_pars_args in *.

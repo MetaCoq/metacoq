@@ -445,8 +445,8 @@ Section isEtaExp.
   Proof.
     funelim (isEtaExp Γ t); simp_eta; eauto; intros Hexp; toAll; solve_all; rtoProp; repeat solve_all; eauto.
     - destruct nth_error eqn:E; try easy. erewrite nth_error_app_left; eauto.
-    - rewrite app_assoc. eapply a, b. reflexivity.
-    - rewrite app_assoc. eapply a, b. reflexivity.
+    - rewrite app_assoc. eapply a, b; reflexivity.
+    - rewrite app_assoc. eapply a, b; reflexivity.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
       rewrite app_assoc. rtoProp; intuition auto.
@@ -463,10 +463,12 @@ Section isEtaExp.
     - destruct nth_error eqn:Hn; cbn in H; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
     - destruct block_args; cbn in *; eauto.
-    - eapply a in b. 2: f_equal. revert b. now len.
-    - eapply a in b. 2: f_equal. revert b. now len.
+    - (eapply a in b; [|f_equal]; revert b; now len) || (revert H; now len).
+    - (eapply a in b; [|f_equal]; revert b; now len) || (destruct x; cbn; revert H; now len).
     - cbn. destruct block_args; cbn in *; eauto.
-    - cbn. solve_all. rtoProp; intuition auto. eapply a in H0. 2: reflexivity. revert H0. now len.
+    - cbn. solve_all. rtoProp; intuition auto.
+      (eapply a in H0; [|reflexivity]; revert H0; now len) ||
+      (destruct x; cbn; revert H2; now len).
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
   Qed.
@@ -1993,7 +1995,7 @@ Qed.
 
 Lemma isEtaExp_lift Σ Γ Γ' Γ'' t : isEtaExp Σ (Γ'' ++ Γ) t -> isEtaExp Σ (Γ'' ++ Γ' ++ Γ) (lift #|Γ'| #|Γ''| t).
 Proof using.
-  funelim (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
+  funelim_nosimp (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
   all:cbn; simp_eta; toAll; bool; try rewrite -> forallb_InP_spec in *.
   all:try solve [solve_all].
 

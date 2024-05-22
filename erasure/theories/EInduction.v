@@ -35,6 +35,8 @@ Lemma term_forall_list_ind :
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
     (forall p, primProp P p -> P (tPrim p)) ->
+    (forall t, P t -> P (tLazy t)) ->
+    (forall t, P t -> P (tForce t)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -115,6 +117,8 @@ Fixpoint size (t : term) : nat :=
   | tCoFix mfix idx => S (list_size (fun x => size (dbody x)) mfix)
   | tConstruct _ _ ignore_args => S (list_size size ignore_args)
   | tPrim p => S (prim_size size p)
+  | tLazy t => S (size t)
+  | tForce t => S (size t)
   | _ => 1
   end.
 
@@ -239,7 +243,9 @@ Section MkApps_rec.
     (pproj : forall (s : projection) (t : term), P t -> P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n))
     (pcofix : forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n))
-    (pprim : forall p, primProp P p -> P (tPrim p)).
+    (pprim : forall p, primProp P p -> P (tPrim p))
+    (plazy : forall t, P t -> P (tLazy t))
+    (pforce : forall t, P t -> P (tForce t)).
 
   Definition inspect {A} (x : A) : { y : A | x = y } := exist _ x eq_refl.
 
@@ -265,7 +271,9 @@ Section MkApps_rec.
     | tProj p c => pproj p c (rec c)
     | tFix mfix idx => pfix mfix idx (All_rec P dbody mfix (fun x H => rec x))
     | tCoFix mfix idx => pcofix mfix idx (All_rec P dbody mfix (fun x H => rec x))
-    | tPrim p => pprim p _.
+    | tPrim p => pprim p _
+    | tLazy t => plazy t (rec t)
+    | tForce t => pforce t (rec t).
   Proof.
     all:unfold MR; cbn; auto with arith. 4:lia.
     - clear -napp nonnil da rec.
@@ -303,7 +311,9 @@ Section MkApps_rec.
     (pproj : forall (s : projection) (t : term), P (tProj s t))
     (pfix : forall (m : mfixpoint term) (n : nat), P (tFix m n))
     (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n))
-    (pprim : forall p, P (tPrim p)).
+    (pprim : forall p, P (tPrim p))
+    (plazy : forall t, P (tLazy t))
+    (pforce : forall t, P (tForce t)).
 
   Import EqNotations.
 
@@ -325,7 +335,9 @@ Section MkApps_rec.
     | tProj p c => pproj p c
     | tFix mfix idx => pfix mfix idx
     | tCoFix mfix idx => pcofix mfix idx
-    | tPrim p => pprim p.
+    | tPrim p => pprim p
+    | tLazy t => plazy t
+    | tForce t => pforce t.
 
   End MkApps_case.
 

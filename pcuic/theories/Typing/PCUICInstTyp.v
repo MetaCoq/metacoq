@@ -131,7 +131,7 @@ Proof.
     * rewrite /= eqr. sigma. reflexivity.
   - cbn. rewrite inst_mkApps. simpl.
     rewrite inst_iota_red //.
-    * rewrite skipn_length; lia.
+    * rewrite length_skipn; lia.
     * change (bcontext br) with (bcontext (inst_branch σ br)).
       rewrite closedn_ctx_on_free_vars.
       eapply nth_error_forallb in p4; tea. simpl in p4.
@@ -197,16 +197,16 @@ Proof.
             rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
             +++ rewrite forallb_map. eapply forallb_impl. 2:tea. cbn; intros.
                 eapply inst_is_open_term; eauto.
-            +++ rewrite map_length. rewrite inst_context_on_free_vars ; eauto.
+            +++ rewrite length_map. rewrite inst_context_on_free_vars ; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context.
             apply on_free_vars_ctx_inst_case_context; eauto.
         ++ unfold PCUICCases.inst_case_predicate_context.
-            unfold is_open_term. rewrite app_length.
+            unfold is_open_term. rewrite length_app.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
             eassumption.
         ++ unfold PCUICCases.inst_case_predicate_context.
-            unfold is_open_term. rewrite app_length.
+            unfold is_open_term. rewrite length_app.
             rewrite <- shiftnP_add.
             rewrite inst_case_predicate_context_length.
             unshelve erewrite (All2_length _ : #|pcontext _| = #|pcontext _|); shelve_unifiable; tea.
@@ -229,17 +229,17 @@ Proof.
         ++  rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
           +++ repeat toAll. eapply All_impl; tea. simpl; intros.
               eapply inst_is_open_term; eauto.
-          +++ rewrite map_length. tea.
+          +++ rewrite length_map. tea.
       + unfold PCUICCases.inst_case_predicate_context.
         apply on_free_vars_ctx_inst_case_context; eauto.
         repeat toAll; eauto.
       + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
+        unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
         eassumption.
       + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
+        unfold is_open_term. rewrite length_app.
         rewrite <- shiftnP_add.
         rewrite inst_case_branch_context_length.
         unshelve erewrite (All2_length _ : #|bcontext _| = #|bcontext _|); shelve_unifiable; tea.
@@ -268,7 +268,7 @@ Proof.
          apply andb_and in Hx0. destruct Hx0 as [Hx0type Hx0body].
          apply andb_and. cbn. split.
          ++ eapply inst_is_open_term; eauto.
-         ++ rewrite map_length.
+         ++ rewrite length_map.
             rewrite <- fix_context_length. rewrite <- up_Upn.
             eapply usubst_on_free_vars_shift; eauto.
             rewrite fix_context_length; eauto.
@@ -277,10 +277,10 @@ Proof.
          apply on_free_vars_fix_context.
          eapply All2_All_left. 1: tea. cbn; intros.
          apply X0.1.
-         + unfold is_open_term. rewrite app_length.
+         + unfold is_open_term. rewrite length_app.
          rewrite <- shiftnP_add.
          rewrite fix_context_length. eauto.
-         + unfold is_open_term. rewrite app_length.
+         + unfold is_open_term. rewrite length_app.
          rewrite <- shiftnP_add.
          rewrite fix_context_length.
          rewrite (All2_length X). eauto.
@@ -310,7 +310,7 @@ Proof.
          apply andb_and in Hx0. destruct Hx0 as [Hx0type Hx0body].
          apply andb_and. cbn. split.
          ++ eapply inst_is_open_term; eauto.
-         ++ rewrite map_length.
+         ++ rewrite length_map.
             rewrite <- fix_context_length. rewrite <- up_Upn.
             eapply usubst_on_free_vars_shift; eauto.
             rewrite fix_context_length; eauto.
@@ -319,22 +319,22 @@ Proof.
          apply on_free_vars_fix_context.
          eapply All2_All_left. 1: tea. cbn; intros.
          apply X0.1.
-         + unfold is_open_term. rewrite app_length.
+         + unfold is_open_term. rewrite length_app.
          rewrite <- shiftnP_add.
          rewrite fix_context_length. eauto.
-         + unfold is_open_term. rewrite app_length.
+         + unfold is_open_term. rewrite length_app.
          rewrite <- shiftnP_add.
          rewrite fix_context_length.
          rewrite (All2_length X). eauto.
    - cbn. eapply cumul_Prim. depelim X; cbn in HfreeA, HfreeB; rtoProp; constructor; cbn; eauto. solve_all.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Ind.
-     * repeat rewrite map_length; eauto.
+     * repeat rewrite length_map; eauto.
      * repeat toAll.
        eapply All2_impl. 1: tea. cbn; intros.
        destruct_head'_prod.
        eauto.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Construct.
-     * repeat rewrite map_length; eauto.
+     * repeat rewrite length_map; eauto.
      * repeat toAll.
        eapply All2_impl. 1: tea. cbn; intros.
        destruct_head'_prod.
@@ -520,7 +520,7 @@ Proof.
     * eauto.
     * specialize (ihc _ _ hΔ hσ).
       rewrite inst_mkApps in ihc. eapply ihc.
-    * now rewrite map_length.
+    * now rewrite length_map.
     * autorewrite with sigma.
       eapply declared_projection_closed in isdecl; auto.
       move: isdecl.

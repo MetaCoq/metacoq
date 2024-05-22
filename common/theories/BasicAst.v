@@ -301,7 +301,7 @@ Proof.
 Qed.
 
 Lemma map_context_length {term term'} (f : term -> term') l : #|map_context f l| = #|l|.
-Proof. now unfold map_context; rewrite map_length. Qed.
+Proof. now unfold map_context; rewrite length_map. Qed.
 #[global] Hint Rewrite @map_context_length : len.
 
 Definition test_decl {term} (f : term -> bool) (d : context_decl term) : bool :=
@@ -343,7 +343,7 @@ Proof using Type.
 Qed.
 
 Lemma app_context_length {T} (Γ Γ' : list T) : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
-Proof. unfold app_context. now rewrite app_length. Qed.
+Proof. unfold app_context. now rewrite length_app. Qed.
 #[global] Hint Rewrite @app_context_length : len.
 
 Lemma nth_error_app_context_ge {T} v Γ Γ' :
@@ -481,7 +481,7 @@ Section Contexts.
     mapi (fun k' d => map_decl (f (Nat.pred (length Γ) - k')) d) Γ.
   Proof using Type.
     unfold fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
-    apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+    apply mapi_ext. intros. f_equal. now rewrite List.length_rev.
   Qed.
 
   Lemma mapi_context_fold f Γ :
@@ -503,7 +503,7 @@ Section Contexts.
 
   Lemma fold_context_k_length f Γ : length (fold_context_k f Γ) = length Γ.
   Proof using Type.
-    unfold fold_context_k. now rewrite !List.rev_length mapi_length List.rev_length.
+    unfold fold_context_k. now rewrite !List.length_rev mapi_length List.length_rev.
   Qed.
 
   Lemma fold_context_k_snoc0 f Γ d :
@@ -511,9 +511,9 @@ Section Contexts.
   Proof using Type.
     unfold fold_context_k.
     rewrite !rev_mapi !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
-    unfold snoc. f_equal. now rewrite Nat.sub_0_r List.rev_length.
+    unfold snoc. f_equal. now rewrite Nat.sub_0_r List.length_rev.
     rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-    rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
+    rewrite length_app !List.length_rev. simpl. f_equal. f_equal. lia.
   Qed.
 
   Lemma fold_context_k_app f Γ Δ :
@@ -523,7 +523,7 @@ Section Contexts.
     unfold fold_context_k.
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
-    apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
+    apply mapi_ext. intros. f_equal. rewrite List.length_rev. f_equal.
   Qed.
 
   Local Set Keyed Unification.
@@ -714,7 +714,7 @@ Section Contexts.
   Lemma forget_types_length (ctx : list (context_decl term)) :
     #|forget_types ctx| = #|ctx|.
   Proof using Type.
-    now rewrite /forget_types map_length.
+    now rewrite /forget_types length_map.
   Qed.
 
   Lemma map_decl_name_fold_context_k (f : nat -> term' -> term) ctx :

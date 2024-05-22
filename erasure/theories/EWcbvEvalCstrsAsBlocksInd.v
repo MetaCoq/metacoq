@@ -42,7 +42,9 @@ Section OnSubterm.
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
   | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx)
-  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p).
+  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p)
+  | on_lazy t : has_tLazy_Force -> Q n t -> on_subterms Q n (tLazy t)
+  | on_force t : has_tLazy_Force -> Q n t -> on_subterms Q n (tForce t).
   Derive Signature for on_subterms.
 End OnSubterm.
 
@@ -372,7 +374,7 @@ Proof.
     { unfold iota_red.
       eapply nth_error_all in a; tea. cbn in a.
       rewrite -e3 in a.
-      rewrite -(List.rev_length (skipn pars args)) in a.
+      rewrite -(List.length_rev (skipn pars args)) in a.
       rewrite Nat.add_0_r in a.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
       2:{ eapply All_rev, All_skipn.
@@ -490,6 +492,8 @@ Proof.
     rtoProp; intuition auto.
     eapply on_cofix => //. move/andP: H0 => [] _ ha. solve_all.
     move/andP: H => [] hasp ht. eapply on_prim => //. solve_all.
+    eapply on_lazy; rtoProp; intuition auto.
+    eapply on_force; rtoProp; intuition auto.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.

@@ -256,7 +256,7 @@ Proof.
   solve_all.
   erewrite (distr_subst_rec _ _ _ k 0).
   rewrite fix_subst_length. simpl. f_equal.
-  unfold fix_subst. rewrite !map_length.
+  unfold fix_subst. rewrite !length_map.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
@@ -272,7 +272,7 @@ Proof.
   intros [= <- <-]. simpl. do 2 f_equal. solve_all.
   erewrite (distr_subst_rec _ _ _ k 0).
   rewrite cofix_subst_length. simpl. f_equal.
-  unfold cofix_subst. rewrite !map_length.
+  unfold cofix_subst. rewrite !length_map.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
@@ -452,7 +452,7 @@ Lemma subst0_inds_subst ind u mdecl n k t :
 Proof.
   pose proof (distr_subst_rec t (inds (inductive_mind ind) u (ind_bodies mdecl)) n k 0).
   simpl in H. rewrite H.
-  unfold arities_context. rewrite rev_map_length inds_length.
+  unfold arities_context. rewrite length_rev_map inds_length.
   f_equal. generalize (ind_bodies mdecl).
   clear. intros.
   induction l; unfold inds; simpl; auto. f_equal. auto.
@@ -648,7 +648,7 @@ Proof.
     elim nth_error_spec.
     + intros. simpl.
       f_equal. destruct ind; simpl. f_equal. f_equal. simpl in H. lia.
-    + rewrite List.rev_length. lia.
+    + rewrite List.length_rev. lia.
   - rewrite !map_app. f_equal.
     rewrite map_subst_instance_to_extended_list_k.
     erewrite to_extended_list_k_map_subst at 2.
@@ -811,7 +811,7 @@ Proof.
   case E: chop => [l l'].
   have chopm := (chop_map _ _ _ _ _ E).
   move: E chopm.
-  rewrite chop_n_app ?map_length. {
+  rewrite chop_n_app ?length_map. {
     rewrite <- H1. apply onNpars in onmind.
     now rewrite context_assumptions_subst_instance. }
   move=> [= <- <-] chopm.

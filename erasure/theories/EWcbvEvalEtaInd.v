@@ -42,7 +42,9 @@ Section OnSubterm.
   | on_proj p c : has_tProj -> Q n c -> on_subterms Q n (tProj p c)
   | on_fix mfix idx : has_tFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tFix mfix idx)
   | on_cofix mfix idx : has_tCoFix -> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx)
-  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p).
+  | on_prim p : has_prim p -> primProp (Q n) p -> on_subterms Q n (tPrim p)
+  | on_lazy t : has_tLazy_Force -> Q n t -> on_subterms Q n (tLazy t)
+  | on_force t : has_tLazy_Force -> Q n t -> on_subterms Q n (tForce t).
   Derive Signature for on_subterms.
 End OnSubterm.
 
@@ -322,6 +324,12 @@ Lemma eval_preserve_mkApps_ind :
     eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
     P' (tPrim p) (tPrim p')) ->
 
+  (* (forall t t', eval Σ t t' -> Q 0 t -> Q 0 t' -> P t t' ->
+    P' (tLazy t) (tLazy t')) ->
+
+  (forall t t', eval Σ t t' -> Q 0 t -> Q 0 t' -> P t t' ->
+    P' (tForce t) (tForce t')) -> *)
+
   (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
 Proof.
@@ -421,7 +429,7 @@ Proof.
     { unfold iota_red.
       eapply nth_error_all in a; tea. cbn in a.
       rewrite -e3 in a.
-      rewrite -(List.rev_length (skipn pars args)) in a.
+      rewrite -(List.length_rev (skipn pars args)) in a.
       rewrite Nat.add_0_r in a.
       eapply (qsubst _ (List.rev (skipn pars args))) in a.
       2:{ eapply All_rev, All_skipn.
@@ -710,30 +718,6 @@ Proof.
  - intros ise. split => //. eapply Qatom; tea.
 Qed.
 
-Definition term_flags :=
-  {|
-    has_tBox := true;
-    has_tRel := true;
-    has_tVar := false;
-    has_tEvar := false;
-    has_tLambda := true;
-    has_tLetIn := true;
-    has_tApp := true;
-    has_tConst := true;
-    has_tConstruct := true;
-    has_tCase := true;
-    has_tProj := false;
-    has_tFix := true;
-    has_tCoFix := false;
-    has_tPrim := all_primitive_flags;
-  |}.
-
-Definition env_flags :=
-    {| has_axioms := false;
-       has_cstr_params := false;
-       term_switches := term_flags ;
-       cstr_as_blocks := false
-    |}.
 
 From MetaCoq.Erasure Require Import ELiftSubst.
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ :
@@ -757,6 +741,8 @@ Proof.
     eapply on_fix; eauto. move/andP: H0 => [] _ wf. solve_all.
     eapply on_cofix; eauto. move/andP: H0 => [] _ wf. solve_all.
     eapply on_prim; eauto. solve_all.
+    eapply on_lazy; eauto.
+    eapply on_force; eauto.
   - red. intros kn decl.
     move/(lookup_env_wellformed clΣ).
     unfold wf_global_decl. destruct cst_body => //.
@@ -779,6 +765,32 @@ Ltac destruct_nary_times :=
   | [ H : [× _, _, _ & _] |- _ ] => destruct H
   | [ H : [× _, _, _, _ & _] |- _ ] => destruct H
   end.
+
+Definition term_flags :=
+  {|
+    has_tBox := true;
+    has_tRel := true;
+    has_tVar := false;
+    has_tEvar := false;
+    has_tLambda := true;
+    has_tLetIn := true;
+    has_tApp := true;
+    has_tConst := true;
+    has_tConstruct := true;
+    has_tCase := true;
+    has_tProj := false;
+    has_tFix := true;
+    has_tCoFix := false;
+    has_tPrim := all_primitive_flags;
+    has_tLazy_Force := false;
+  |}.
+
+Definition env_flags :=
+    {| has_axioms := false;
+        has_cstr_params := false;
+        term_switches := term_flags ;
+        cstr_as_blocks := false
+  |}.
 
 Lemma eval_etaexp {fl : WcbvFlags} (efl := env_flags) {Σ a a'} :
   with_constructor_as_block = false ->

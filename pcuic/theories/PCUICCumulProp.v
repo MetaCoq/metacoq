@@ -824,7 +824,7 @@ Proof using Type.
   generalize (ind_bodies mdecl) at 1 3 4.
   unfold inds.
   induction l using rev_ind; simpl; first constructor.
-  simpl. rewrite app_length /= => Hlen.
+  simpl. rewrite length_app /= => Hlen.
   unfold arities_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=.

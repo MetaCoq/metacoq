@@ -1799,14 +1799,14 @@ Proof.
       rewrite !andb_assoc andb_true_r /=. ring.
     * rewrite -app_tip_assoc !forallb_app.
       replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
-      rewrite !andb_assoc andb_true_r /= map_length. ring.
+      rewrite !andb_assoc andb_true_r /= length_map. ring.
   - destruct mfix as ((mfix1&[])&mfix2); cbn; len.
     * rewrite -app_tip_assoc !forallb_app.
       replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
       rewrite !andb_assoc andb_true_r /=. ring.
     * rewrite -app_tip_assoc !forallb_app.
       replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
-      rewrite !andb_assoc andb_true_r /= map_length. ring.
+      rewrite !andb_assoc andb_true_r /= length_map. ring.
   - destruct p; cbn.
     * unfold test_predicate_k; cbn.
       rewrite !forallb_app /=. len. ring_simplify.

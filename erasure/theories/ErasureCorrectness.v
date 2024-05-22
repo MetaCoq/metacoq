@@ -265,8 +265,8 @@ Proof.
         now eapply isErasable_Proof. }
       2:{
       exists x2. split; eauto. constructor. eapply eval_iota_sing => //.
-      pose proof (Ee.eval_to_value _ _ He_v').
-      let X0 := match goal with H : Ee.value _ (EAst.mkApps _ _) |- _ => H end in
+      pose proof (EWcbvEval.eval_to_value _ _ He_v').
+      let X0 := match goal with H : EWcbvEval.value _ (EAst.mkApps _ _) |- _ => H end in
       eapply value_app_inv in X0. subst. eassumption.
       depelim H2.
       eapply isErasable_Propositional in X0; eauto.
@@ -274,8 +274,8 @@ Proof.
       erewrite isPropositional_propositional; eauto. now rewrite X0.
       apply declared_inductive_from_gen; eauto.
       invs e. cbn in *.
-      rewrite map_length.
-      rewrite skipn_length H13 e3 in H11.
+      rewrite length_map.
+      rewrite length_skipn H13 e3 in H11.
       rewrite (@assumption_context_assumptions (bcontext br)) // ?rev_repeat in H11 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
         rewrite /cstr_branch_context. eapply assumption_context_expand_lets_ctx.
@@ -361,7 +361,7 @@ Proof.
          move/negbTE: H13 => ->. reflexivity.
          eapply declared_constructor_from_gen; eauto.
          rewrite  -(Forall2_length H3) /= e2 //.
-         rewrite skipn_length -(Forall2_length H3) -e6 /= map_length.
+         rewrite length_skipn -(Forall2_length H3) -e6 /= length_map.
          rewrite (All2_length a).
          replace #|cstr_branch_context ind mdecl cdecl|
           with (context_assumptions (cstr_branch_context ind mdecl cdecl)).
@@ -446,7 +446,7 @@ Proof.
          constructor.
          destruct x1 as [n br'].
          eapply eval_iota_sing => //.
-         pose proof (Ee.eval_to_value _ _ He_v') as X0.
+         pose proof (EWcbvEval.eval_to_value _ _ He_v') as X0.
          apply value_app_inv in X0; subst x0.
          apply He_v'.
          now rewrite -eq_npars.
@@ -464,10 +464,10 @@ Proof.
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbveval_red; eauto. }
 
-        rewrite eq_npars. rewrite List.skipn_length e1 /cstr_arity -e2 e3.
+        rewrite eq_npars. rewrite List.length_skipn e1 /cstr_arity -e2 e3.
         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.
-        subst n. rewrite map_length.
+        subst n. rewrite length_map.
         rewrite assumption_context_assumptions //.
         eapply assumption_context_compare_decls. symmetry; tea.
         eapply declared_constructor_from_gen in d.
@@ -517,7 +517,7 @@ Proof.
         eapply isErasable_Proof. constructor. eauto.
 
         eapply eval_proj_prop => //.
-        pose proof (Ee.eval_to_value _ _ Hty_vc') as X0.
+        pose proof (EWcbvEval.eval_to_value _ _ Hty_vc') as X0.
         eapply value_app_inv in X0. subst. eassumption.
         now rewrite -eqpars.
       * rename H3 into Hinf.
@@ -534,7 +534,7 @@ Proof.
         destruct (declared_projection_inj d d0) as [? [? []]]; subst mdecl0 idecl0 pdecl0 cdecl.
         invs H2.
         -- exists x9. split; eauto. constructor.
-            eapply Ee.eval_proj; eauto. rewrite -eqpars.
+            eapply EWcbvEval.eval_proj; eauto. rewrite -eqpars.
             erewrite isPropositional_propositional_cstr; eauto.
             move/negbTE: H9 => ->. reflexivity.
             eapply declared_constructor_from_gen. apply d0. cbn. eapply decli'. cbn. rewrite -lenx5 //.
@@ -558,7 +558,7 @@ Proof.
           eassumption.
           eapply isErasable_Proof.
           constructor. eapply eval_proj_prop => //.
-          pose proof (Ee.eval_to_value _ _ Hty_vc') as X0.
+          pose proof (EWcbvEval.eval_to_value _ _ Hty_vc') as X0.
           eapply value_app_inv in X0. subst. eassumption.
           now rewrite -eqpars.
         -- eapply erases_deps_eval in Hty_vc'; [|now eauto].
@@ -675,11 +675,11 @@ Proof.
              - now eapply erases_deps_eval in ev_arg; eauto. }
 
            exists x3. split. eauto.
-           constructor. eapply Ee.eval_fix.
+           constructor. eapply EWcbvEval.eval_fix.
            ++ eauto.
            ++ eauto.
            ++ eauto.
-           ++ rewrite <- Ee.closed_unfold_fix_cunfold_eq.
+           ++ rewrite <- EWcbvEval.closed_unfold_fix_cunfold_eq.
               { unfold EGlobalEnv.unfold_fix. rewrite e.
                 eapply All2_nth_error in Hmfix' as []; tea. cbn in *.
                 rewrite -eargsv -(Forall2_length H4); trea. }
@@ -727,7 +727,7 @@ Proof.
               eapply eval_fix; eauto.
               1-2:eapply value_final, eval_to_value; eauto.
               rewrite /cunfold_fix e0 //. congruence.
-           ++ constructor. eapply Ee.eval_box; [|now eauto].
+           ++ constructor. eapply EWcbvEval.eval_box; [|now eauto].
               apply eval_to_mkApps_tBox_inv in ev_stuck as ?; subst.
               eauto.
         -- eauto.
@@ -744,7 +744,7 @@ Proof.
 
     eapply erases_App in He as [(-> & [])|(? & ? & -> & ? & ?)].
     + exists E.tBox.
-      split; [|now constructor; eauto using @Ee.eval].
+      split; [|now constructor; eauto using @EWcbvEval.eval].
       constructor.
       eapply Is_type_red.
       * eauto.
@@ -765,7 +765,7 @@ Proof.
         rewrite -> !app_nil_r in *.
         cbn in *.
         exists E.tBox.
-        split; [|now constructor; eauto using @Ee.eval].
+        split; [|now constructor; eauto using @EWcbvEval.eval].
         eapply (Is_type_app _ _ _ [av]) in X as [].
         -- constructor.
            apply X.
@@ -779,7 +779,7 @@ Proof.
            unfold cunfold_fix in *.
            destruct (nth_error _ _) eqn:nth; [|congruence].
            eapply All2_nth_error_Some in X as (?&?&[? ? ? ? ?]); [|eauto].
-           constructor. eapply Ee.eval_fix_value.
+           constructor. eapply EWcbvEval.eval_fix_value.
            ++ eauto.
            ++ eauto.
            ++ eauto.
@@ -788,7 +788,7 @@ Proof.
 
         -- exists E.tBox.
            apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
-           split; [|now constructor; eauto using @Ee.eval].
+           split; [|now constructor; eauto using @EWcbvEval.eval].
            eapply Is_type_app in X as [].
            ++ constructor.
               rewrite <- mkApps_snoc.
@@ -897,13 +897,13 @@ Proof.
             - now apply Forall_All, Forall_erases_deps_cofix_subst; eauto.
             - now eapply nth_error_forall in H2; eauto. }
           exists v'. split => //. split.
-          eapply Ee.eval_cofix_case; tea.
+          eapply EWcbvEval.eval_cofix_case; tea.
           rewrite /EGlobalEnv.cunfold_cofix nth' //. f_equal.
           f_equal.
-          rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }
+          rewrite -(EWcbvEval.closed_cofix_substl_subst_eq (idx:=idx)) //. }
         { eapply eval_to_mkApps_tBox_inv in H1 as H'; subst L'; cbn in *. depelim hl'.
           edestruct IHeval1 as (? & ? & [?]); tea.
-          pose proof (Ee.eval_deterministic H1 H3). subst x0.
+          pose proof (EWcbvEval.eval_deterministic H1 H3). subst x0.
           eapply erases_deps_eval in Hed; tea.
           specialize (IHeval2 (E.tCase (ip, ci_npar ip) E.tBox brs')).
           forward IHeval2.
@@ -1017,13 +1017,13 @@ Proof.
             - now apply Forall_All, Forall_erases_deps_cofix_subst; eauto.
             - now eapply nth_error_forall in H1; eauto. }
           exists v'. split => //. split.
-          eapply Ee.eval_cofix_proj; tea.
+          eapply EWcbvEval.eval_cofix_proj; tea.
           rewrite /EGlobalEnv.cunfold_cofix nth' //. f_equal.
           f_equal.
-          rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }
+          rewrite -(EWcbvEval.closed_cofix_substl_subst_eq (idx:=idx)) //. }
         { eapply eval_to_mkApps_tBox_inv in H2 as H'; subst L'; cbn in *. depelim hl'.
           edestruct IHeval1 as (? & ? & [?]); tea.
-          pose proof (Ee.eval_deterministic H3 H2). subst x0.
+          pose proof (EWcbvEval.eval_deterministic H3 H2). subst x0.
           eapply erases_deps_eval in Hed; tea.
           specialize (IHeval2 (E.tProj p E.tBox)).
           forward IHeval2.
@@ -1083,7 +1083,7 @@ Proof.
         eapply erases_deps_eval in Hed1; tea.
         eapply erases_deps_mkApps_inv in Hed1 as [].
         depelim H8.
-        constructor. eapply Ee.eval_construct; tea. eauto.
+        constructor. eapply EWcbvEval.eval_construct; tea. eauto.
         eapply (EGlobalEnv.declared_constructor_lookup H9).
         rewrite -(Forall2_length H7).
         rewrite /EAst.cstr_arity.
@@ -1129,7 +1129,7 @@ Proof.
         eapply wcbveval_red; eauto.
       * exists (E.tApp x2 x3).
         split; [econstructor; eauto|].
-        constructor; eapply Ee.eval_app_cong; eauto.
+        constructor; eapply EWcbvEval.eval_app_cong; eauto.
         eapply ssrbool.negbT.
         repeat eapply orb_false_intro.
         -- destruct x2; try reflexivity.

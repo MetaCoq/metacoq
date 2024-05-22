@@ -33,9 +33,9 @@ Definition lengths :=
    @inst_case_context_assumptions,
     @expand_lets_ctx_length, @subst_context_length,
     @subst_instance_length, @expand_lets_k_ctx_length, @inds_length, @lift_context_length,
-    @app_length, @repeat_length, @List.rev_length, @extended_subst_length, @reln_length,
-    Nat.add_0_r, @app_nil_r, @rev_map_length, @rev_length, @unfold_length,
-    @map_length, @mapi_length, @mapi_rec_length, @map_InP_length,
+    @length_app, @repeat_length, @List.length_rev, @extended_subst_length, @reln_length,
+    Nat.add_0_r, @app_nil_r, @length_rev_map, @length_rev, @unfold_length,
+    @length_map, @mapi_length, @mapi_rec_length, @map_InP_length,
     @fold_context_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     fix_context_length,
@@ -48,7 +48,7 @@ Definition lengths :=
     @PCUICCases.inst_case_predicate_context_length,
     @inst_case_context_length,
     @ind_predicate_context_length,
-    @map_context_length, @skipn_map_length,
+    @map_context_length, @length_skipn_map,
     @mapi_context_length, idsn_length,
     @projs_length, ren_ids_length).
 

@@ -28,9 +28,9 @@ Definition lengths :=
   @Ast.Env.subst_instance_length,
   @Ast.Env.expand_lets_k_ctx_length,
   @Ast.inds_length, @Ast.Env.lift_context_length,
-  @app_length, @List.rev_length, @Ast.Env.extended_subst_length, @reln_length,
+  @length_app, @List.length_rev, @Ast.Env.extended_subst_length, @reln_length,
   Nat.add_0_r, @app_nil_r,
-  @map_length, @mapi_length, @mapi_rec_length,
+  @length_map, @mapi_length, @mapi_rec_length,
   @fold_context_k_length, @Typing.cofix_subst_length, @Typing.fix_subst_length,
   @Ast.Env.smash_context_length, @Ast.Env.arities_context_length).
 
@@ -40,9 +40,9 @@ Definition plengths :=
     @context_assumptions_subst_instance, @context_assumptions_lift_context,
      @expand_lets_ctx_length, @subst_context_length,
     @subst_instance_length, @expand_lets_k_ctx_length, @inds_length, @lift_context_length,
-    @app_length, @List.rev_length, @extended_subst_length, @reln_length,
+    @length_app, @List.length_rev, @extended_subst_length, @reln_length,
     Nat.add_0_r, @app_nil_r,
-    @map_length, @mapi_length, @mapi_rec_length,
+    @length_map, @mapi_length, @mapi_rec_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     @smash_context_length, @context_assumptions_smash_context,
     @arities_context_length).
@@ -119,7 +119,7 @@ Qed.
 
 Ltac solve_list :=
   rewrite !map_map_compose ?compose_on_snd ?compose_map_def;
-  try rewrite !map_length;
+  try rewrite !length_map;
   try solve_all; try typeclasses eauto with core.
 
 Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
@@ -253,7 +253,7 @@ Proof.
 Qed.
 
 Lemma trans_local_length {Σ : global_env_map} Γ : #|trans_local Σ Γ| = #|Γ|.
-Proof. now rewrite map_length. Qed.
+Proof. now rewrite length_map. Qed.
 
 #[global]
 Hint Rewrite @trans_local_length : len.
@@ -378,7 +378,7 @@ Proof.
         now rewrite map2_bias_left_length.
     * simpl. rewrite /id /map_predicate_k /=. f_equal; eauto.
       f_equal; auto. rewrite !map_map_compose. solve_all.
-      rewrite e. now rewrite map_length.
+      rewrite e. now rewrite length_map.
   - f_equal; auto. maps. solve_all.
   - f_equal; auto; solve_all.
   - f_equal; auto.
@@ -558,7 +558,7 @@ Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
 Lemma trans_inds kn u bodies : map trans (Ast.inds kn u bodies) =
   inds kn u (map (trans_one_ind_body (trans_global_env Σ)) bodies).
 Proof.
-  unfold inds, Ast.inds. rewrite map_length.
+  unfold inds, Ast.inds. rewrite length_map.
   induction bodies. simpl. reflexivity. simpl; f_equal. auto.
 Qed.
 
@@ -628,14 +628,14 @@ Proof.
   pose proof (PCUICContexts.context_subst_length2 dp).
   rewrite decompose_prod_n_assum_it_mkProd app_nil_r in da. noconf da.
   apply context_subst_subst_extended_subst in dp as ->.
-  rewrite map_subst_expand_lets ?List.rev_length //.
+  rewrite map_subst_expand_lets ?List.length_rev //.
 Qed. *)
 
 Lemma trans_ind_bodies_length mdecl : #|Ast.Env.ind_bodies mdecl| = #|ind_bodies (trans_minductive_body trΣ mdecl)|.
-Proof. simpl. now rewrite map_length. Qed.
+Proof. simpl. now rewrite length_map. Qed.
 
 Lemma trans_ind_params_length mdecl : #|Ast.Env.ind_params mdecl| = #|ind_params (trans_minductive_body trΣ mdecl)|.
-Proof. simpl. now rewrite map_length. Qed.
+Proof. simpl. now rewrite length_map. Qed.
 
 Lemma trans_ind_npars mdecl : Ast.Env.ind_npars mdecl = ind_npars (trans_minductive_body trΣ mdecl).
 Proof. simpl. reflexivity. Qed.
@@ -882,7 +882,7 @@ Section Trans_Global.
     - constructor.
       solve_all.
     - eapply eq_term_upto_univ_napp_mkApps.
-      + rewrite map_length. now eapply IHt.
+      + rewrite length_map. now eapply IHt.
       + destruct wt, wu. solve_all.
     - constructor. apply trans_cmp_global_instance; auto.
     - constructor. apply trans_cmp_global_instance; auto.
@@ -1203,7 +1203,7 @@ Section Trans_Global.
     repeat f_equal.
     rewrite trans_subst.
     f_equal. clear Hdef.
-    unfold fix_subst, ST.fix_subst. rewrite map_length.
+    unfold fix_subst, ST.fix_subst. rewrite length_map.
     generalize mfix at 1 3.
     induction wffix; trivial.
     simpl; intros mfix. f_equal.
@@ -1220,7 +1220,7 @@ Section Trans_Global.
     intros [= <- <-]. simpl. repeat f_equal.
     rewrite trans_subst.
     f_equal. clear Hdef.
-    unfold cofix_subst, ST.cofix_subst. rewrite map_length.
+    unfold cofix_subst, ST.cofix_subst. rewrite length_map.
     generalize mfix at 1 3.
     induction wffix; trivial.
     simpl; intros mfix. f_equal.
@@ -2419,7 +2419,7 @@ Proof.
     rewrite trans_subst; auto with wf.
     simpl. rewrite map_rev trans_subst_instance.
     eapply (type_Proj _ _ _ _ _ _ _ _ (Build_projection_body arity relevance (trans Σ' ty'))). eauto.
-    rewrite trans_mkApps in X2; auto. rewrite map_length.
+    rewrite trans_mkApps in X2; auto. rewrite length_map.
     destruct mdecl; auto.
 
   - eapply refine_type.
@@ -2439,7 +2439,7 @@ Proof.
     -- apply All_map. eapply (All_impl X3); eauto.
        intros x (Htb & s & Hts & _). assumption.
        unfold on_def_body, types in *; cbn in *.
-       rewrite H2. rewrite /trans_local !map_length map_app in Htb, Hts |- *.
+       rewrite H2. rewrite /trans_local !length_map map_app in Htb, Hts |- *.
        rewrite <- trans_lift.
        repeat (eexists; tea); cbn; eauto.
     -- eapply trans_wf_fixpoint => //. clear X1 X3.
@@ -2464,7 +2464,7 @@ Proof.
     -- apply All_map. eapply (All_impl X3); eauto.
        intros x (Htb & s & Hts & _). assumption.
        unfold on_def_body, types in *; cbn in *.
-       rewrite H2. rewrite /trans_local !map_length map_app in Htb, Hts |- *.
+       rewrite H2. rewrite /trans_local !length_map map_app in Htb, Hts |- *.
        rewrite <- trans_lift.
        repeat (eexists; tea); cbn; eauto.
     -- eapply trans_wf_cofixpoint => //. clear X1 X3.
@@ -3119,9 +3119,9 @@ Proof.
               autorewrite with len. f_equal. f_equal.
               rewrite !trans_mkApps /cstr_concl /cstr_concl_head /= //.
               f_equal; auto. simpl.
-              now rewrite /trans_local !map_length.
+              now rewrite /trans_local !length_map.
               rewrite map_app /=. f_equal.
-              rewrite /trans_local !map_length.
+              rewrite /trans_local !length_map.
               unfold to_extended_list_k.
               now rewrite trans_reln. }
             unshelve econstructor; eauto.
@@ -3143,7 +3143,7 @@ Proof.
             + clear -X0 onu wfΣg IHond X on_cindices.
               revert on_cindices.
               rewrite -trans_lift_context /trans_local -map_rev.
-              simpl. rewrite {2}/trans_local map_length.
+              simpl. rewrite {2}/trans_local length_map.
               generalize (List.rev (Ast.Env.lift_context #|Ast.Env.cstr_args x| 0 (Ast.Env.ind_indices idecl))).
               rewrite -trans_arities_context.
               induction 1; simpl; constructor; auto;
@@ -3163,11 +3163,11 @@ Proof.
               rewrite trans_mkApps. simpl.
               subst headrel.
               assert (#|PCUICEnvironment.ind_bodies (trans_minductive_body Σ' m)| = #|Ast.Env.ind_bodies m|) as <-.
-              now rewrite /trans_minductive_body /= map_length.
-              assert (#|Γ| = #|map (trans_decl Σ') Γ|) as ->. now rewrite map_length.
+              now rewrite /trans_minductive_body /= length_map.
+              assert (#|Γ| = #|map (trans_decl Σ') Γ|) as ->. now rewrite length_map.
               move/WfAst.wf_mkApps_inv => wfindices.
               eapply pos_concl.
-              rewrite map_length.
+              rewrite length_map.
               eapply All_map. solve_all. now eapply trans_closedn.
               move/WfAst.wf_inv => /= [[wfb wfty] wft].
               simpl; intros.
@@ -3176,10 +3176,10 @@ Proof.
               move/WfAst.wf_inv => /= [wfty wft].
               constructor. clear -onI X0 wfΣg onu IHond p wfty.
               induction p.
-              { constructor; rewrite map_length; eapply trans_closedn => //. }
+              { constructor; rewrite length_map; eapply trans_closedn => //. }
               { destruct m0 as [? [? ?]]. rewrite trans_mkApps /=.
                 move/WfAst.wf_mkApps_inv: wfty => wfl.
-                econstructor 2; tea; repeat econstructor; rewrite ?map_length //.
+                econstructor 2; tea; repeat econstructor; rewrite ?length_map //.
                 2: solve_all; eapply trans_closedn => //.
                 2: rewrite -map_rev nth_error_map H2//.
                 rewrite e.

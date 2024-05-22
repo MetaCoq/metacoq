@@ -42,11 +42,11 @@ Proof.
   induction Δ; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     rewrite app_context_length Nat.add_comm in b.
     apply b.
   - apply Alli_app_inv; auto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     rewrite app_context_length Nat.add_comm in b.
     apply b.
 Qed.
@@ -58,12 +58,12 @@ Proof.
   induction Δ in s |- *; simpl; auto; try constructor.
   destruct a as [? [] ?]; intuition auto.
   - apply Alli_app_inv; eauto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     rewrite app_context_length Nat.add_comm in b.
     apply b.
   - destruct s as [|u us]; auto. destruct X as [X b].
     apply Alli_app_inv; eauto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     rewrite app_context_length Nat.add_comm in b.
     apply b.
 Qed.
@@ -75,10 +75,10 @@ Proof.
   induction Γ; simpl; auto; try constructor.
   intros all; depelim all; intuition auto.
   - apply Alli_app_inv; auto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     assumption.
   - apply Alli_app_inv; auto. constructor. simpl.
-    rewrite List.rev_length. 2:constructor.
+    rewrite List.length_rev. 2:constructor.
     assumption.
 Qed.
 

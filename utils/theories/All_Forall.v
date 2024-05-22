@@ -948,7 +948,7 @@ Proof.
   revert k.
   induction l using rev_ind; simpl; intros; try constructor.
   eapply Alli_app in X. intuition.
-  rewrite rev_app_distr. rewrite app_length.
+  rewrite rev_app_distr. rewrite length_app.
   simpl. constructor.
   replace (Nat.pred (#|l| + 1) - 0) with #|l| by lia.
   inversion b. eauto. specialize (IHl _ a).
@@ -983,7 +983,7 @@ Proof.
   { rewrite nth_error_nil; discriminate. }
   move/Alli_app => [Alll Alla]. inv Alla. clear X0.
   destruct n as [|n'].
-  - move=> [=] <-. rewrite List.rev_length Nat.add_0_r in X.
+  - move=> [=] <-. rewrite List.length_rev Nat.add_0_r in X.
     now rewrite Nat.sub_0_r.
   - simpl. eauto.
 Qed.
@@ -1443,7 +1443,7 @@ Qed.
 Lemma OnOne2All_app_r {A} (P : nat -> A -> A -> Type) i l l' tl :
   OnOne2All P i l l' ->
   OnOne2All P i (l ++ tl) (l' ++ tl).
-Proof. induction 1; simpl; constructor; auto. rewrite app_length. Qed.
+Proof. induction 1; simpl; constructor; auto. rewrite length_app. Qed.
 *)
 Lemma OnOne2All_length {A B} {P} {i : list B} {l l' : list A} : OnOne2All P i l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; congruence. Qed.
@@ -1453,15 +1453,15 @@ Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2All_mapP {A B I} {P} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_rel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite length_map. Qed.
 
 Lemma OnOne2All_map {A I B} {P : I -> B -> B -> Type} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_Trel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite length_map. Qed.
 
 Lemma OnOne2All_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : I -> I') (f : A -> B) :
   OnOne2All (fun i => on_Trel (P (g i)) f) i l l' -> OnOne2All P (map g i) (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite !map_length. Qed.
+Proof. induction 1; simpl; constructor; try congruence; try assumption. now rewrite !length_map. Qed.
 
 
 Lemma OnOne2All_sym {A B} (P : B -> A -> A -> Type) i l l' : OnOne2All (fun i x y => P i y x) i l' l -> OnOne2All P i l l'.
@@ -3112,7 +3112,7 @@ Proof.
     replace (n + S #|l| - S i) with (n + #|l| - i) by lia.
     assumption.
   - simpl. constructor. 2: constructor.
-    rewrite List.rev_length.
+    rewrite List.length_rev.
     replace (n + S #|l| - S #|l|) with n by lia.
     assumption.
 Qed.
@@ -3135,7 +3135,7 @@ Section All2i_len.
     All2i_len P (l0 ++ l0') (l1 ++ l1').
   Proof.
     intros H. induction 1; simpl. apply H.
-    constructor. now rewrite app_length. apply IHX.
+    constructor. now rewrite length_app. apply IHX.
   Qed.
 
   Lemma All2i_len_length {A B} (P : nat -> A -> B -> Type) l l' :
@@ -3159,7 +3159,7 @@ Section All2i_len.
     All2i_len R l l' -> All2i R 0 (List.rev l) (List.rev l').
   Proof.
     induction 1. simpl. constructor.
-    simpl. apply All2i_app => //. simpl. rewrite List.rev_length. constructor; auto. constructor.
+    simpl. apply All2i_app => //. simpl. rewrite List.length_rev. constructor; auto. constructor.
   Qed.
 
   Lemma All2i_rev_ctx_gen {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
@@ -3654,7 +3654,7 @@ Section Alli_All_fold.
         2:constructor. 2:now rewrite Nat.add_0_r.
         eapply All_fold_impl; tea.
         simpl; intros.
-        cbn. rewrite app_length /= Nat.add_1_r Nat.add_succ_r //.
+        cbn. rewrite length_app /= Nat.add_1_r Nat.add_succ_r //.
     - induction Γ using rev_ind; simpl.
       + constructor.
       + rewrite List.rev_app_distr /=.

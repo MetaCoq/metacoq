@@ -86,8 +86,8 @@ Module PrintTermTree.
 
     Definition print_prim (soft : EAst.term -> Tree.t) (p : @prim_val EAst.term) : Tree.t :=
       match p.π2 return Tree.t with
-      | primIntModel f => "(int: " ^ Primitive.string_of_prim_int f ^ ")"
-      | primFloatModel f => "(float: " ^ Primitive.string_of_float f ^ ")"
+      | primIntModel f => "(int: " ^ show f ^ ")"
+      | primFloatModel f => "(float: " ^ show f ^ ")"
       | primArrayModel a => "(array:" ^ soft a.(array_default) ^ " , " ^ string_of_list soft a.(array_value) ^ ")"
       end.
 
@@ -170,6 +170,8 @@ Module PrintTermTree.
       parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                                 " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
     | tPrim p => parens top (print_prim (print_term Γ false false) p)
+    | tLazy t => parens top ("lazy " ^ print_term Γ false false t)
+    | tForce t => parens top ("force " ^ print_term Γ false false t)
     end.
   End print_term.
 
@@ -225,7 +227,9 @@ Module PrintTermTree.
   Notation print_env := print_global_context.
 
   Definition print_program (p : program) : t :=
-    pr p.1 p.2 ^ nl ^ "in" ^ print_env p.1.
+    "Environment: " ^ nl ^
+    print_env p.1 ^ nl ^
+    "Program: " ^ pr p.1 p.2.
 
 End PrintTermTree.
 

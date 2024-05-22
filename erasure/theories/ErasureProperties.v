@@ -441,19 +441,19 @@ Proof.
     eapply All_forallb. unfold tCaseBrsProp_k in X0.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b0. eauto.
+    solve_all. subst. rewrite length_map. eapply b0. eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - epose proof (All2_length X0).
     solve_all. destruct b. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
-    eapply b0. eauto. now rewrite app_length fix_context_length.
+    eapply b0. eauto. now rewrite length_app fix_context_length.
   - epose proof (All2_length X0).
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
-    eapply b0. eauto. now rewrite app_length fix_context_length.
+    eapply b0. eauto. now rewrite length_app fix_context_length.
   - depelim H. depelim X0; solve_all.
     depelim X; solve_all. eapply primProp_impl_test_prim.
     constructor; intuition eauto. solve_all.
@@ -642,7 +642,7 @@ Proof.
     eapply forallb_All in wfbrs.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []; move=> [] wf. cbn in *. intros.
-    solve_all. subst. rewrite map_length. eapply b; eauto.
+    solve_all. subst. rewrite length_map. eapply b; eauto.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - move/andP: wfa => [] hl hc.
@@ -658,7 +658,7 @@ Proof.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
-    eapply b1; tea. eapply b. now rewrite app_length fix_context_length.
+    eapply b1; tea. eapply b. now rewrite length_app fix_context_length.
   - epose proof (All2_length X0).
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
@@ -666,12 +666,12 @@ Proof.
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite fix_context_length in b.
-    eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
+    eapply b. now move: b0 => /andP[]. eauto. now rewrite length_app fix_context_length. tea.
   - depelim H. solve_all. primProp.
     depelim X0; depelim X1; repeat constructor; cbn; intuition eauto. solve_all.
 Qed.
 
-Lemma eval_empty_brs {wfl : Ee.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ⇓ e -> False.
+Lemma eval_empty_brs {wfl : EWcbvEval.WcbvFlags} Σ ci p e : Σ ⊢ E.tCase ci p [] ⇓ e -> False.
 Proof.
   intros He.
   depind He.
@@ -682,7 +682,7 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_tBox_inv {wfl : Ee.WcbvFlags} {Σ ci e brs} :
+Lemma eval_case_tBox_inv {wfl : EWcbvEval.WcbvFlags} {Σ ci e brs} :
   Σ ⊢ E.tCase ci EAst.tBox brs ⇓ e ->
   ∑ n br, brs = [(n, br)] × inductive_isprop_and_pars Σ ci.1 = Some (true, ci.2) ×
   Σ ⊢ ECSubst.substl (repeat EAst.tBox #|n|) br ⇓ e.
@@ -700,26 +700,26 @@ Proof.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_eval_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
+Lemma eval_case_eval_discr {wfl : EWcbvEval.WcbvFlags} {Σ ci c c' e brs} :
   Σ ⊢ E.tCase ci c brs ⇓ e ->
   Σ ⊢ c ⇓ c' ->
   Σ ⊢ E.tCase ci c' brs ⇓ e.
 Proof.
   intros He Hc.
   depind He.
-  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    econstructor; eauto. now eapply Ee.value_final, Ee.eval_to_value.
-  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    eapply Ee.eval_iota_block; eauto. now eapply Ee.value_final, Ee.eval_to_value.
-  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    eapply Ee.eval_iota_sing; tea. now constructor.
-  - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    eapply Ee.eval_cofix_case; tea.
-    now eapply Ee.value_final, Ee.eval_to_value.
+  - pose proof (EWcbvEval.eval_deterministic He1 Hc). subst c'.
+    econstructor; eauto. now eapply EWcbvEval.value_final, EWcbvEval.eval_to_value.
+  - pose proof (EWcbvEval.eval_deterministic He1 Hc). subst c'.
+    eapply EWcbvEval.eval_iota_block; eauto. now eapply EWcbvEval.value_final, EWcbvEval.eval_to_value.
+  - pose proof (EWcbvEval.eval_deterministic He1 Hc). subst c'.
+    eapply EWcbvEval.eval_iota_sing; tea. now constructor.
+  - pose proof (EWcbvEval.eval_deterministic He1 Hc). subst c'.
+    eapply EWcbvEval.eval_cofix_case; tea.
+    now eapply EWcbvEval.value_final, EWcbvEval.eval_to_value.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_case_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ ci c c' e brs} :
+Lemma eval_case_eval_inv_discr {wfl : EWcbvEval.WcbvFlags} {Σ ci c c' e brs} :
   Σ ⊢ E.tCase ci c brs ⇓ e ->
   Σ ⊢ c' ⇓ c ->
   Σ ⊢ E.tCase ci c' brs ⇓ e.
@@ -731,13 +731,13 @@ Proof.
   - pose proof (eval_trans' Hc He1); subst discr.
     now econstructor; eauto.
   - pose proof (eval_trans' Hc He1); subst discr.
-    eapply Ee.eval_iota_sing; tea.
+    eapply EWcbvEval.eval_iota_sing; tea.
   - pose proof (eval_trans' Hc He1); subst discr.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
   - cbn in i. discriminate.
 Qed.
 
-Lemma eval_proj_eval_inv_discr {wfl : Ee.WcbvFlags} {Σ p c c' e} :
+Lemma eval_proj_eval_inv_discr {wfl : EWcbvEval.WcbvFlags} {Σ p c c' e} :
   Σ ⊢ E.tProj p c ⇓ e ->
   Σ ⊢ c' ⇓ c ->
   Σ ⊢ E.tProj p c' ⇓ e.

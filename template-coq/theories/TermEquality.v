@@ -577,7 +577,7 @@ Proof.
       destruct f; try discriminate.
       destruct f'; try discriminate.
       cbn. inversion_clear e. constructor.
-      rewrite app_length /= -Nat.add_assoc //.
+      rewrite length_app /= -Nat.add_assoc //.
       apply All2_app. assumption.
       now constructor.
     + intro X; rewrite X in H0.

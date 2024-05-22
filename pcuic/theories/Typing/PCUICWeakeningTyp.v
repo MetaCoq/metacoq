@@ -186,7 +186,7 @@ Proof.
       apply lift_typing_f_impl with (1 := p) => // ?? Hs.
       eapply (weakening Σ Γ Δ); auto.
     * specialize (IHa (Δ ,,, [vass (dname x) (lift0 #|Δ| (dtype x))])).
-      rewrite app_length in IHa. simpl in IHa.
+      rewrite length_app in IHa. simpl in IHa.
       forward IHa.
       ** simpl; constructor; auto.
          apply lift_typing_f_impl with (1 := p) => // ?? Hs.

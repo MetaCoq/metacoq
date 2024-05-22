@@ -11,7 +11,7 @@ Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
-#[global] Hint Rewrite map_length app_length List.rev_length : len.
+#[global] Hint Rewrite length_map length_app List.length_rev : len.
 
 Arguments nil {_}, _.
 
@@ -145,7 +145,7 @@ Proof.
   apply h.
 Defined.
 
-Fact rev_length :
+Fact length_rev :
   forall {A} {l : list A},
     List.length (rev l) = List.length l.
 Proof.
@@ -161,9 +161,9 @@ Proof.
   }
   intro l. apply h.
 Defined.
-#[global] Hint Rewrite @rev_length : len.
+#[global] Hint Rewrite @length_rev : len.
 
-Fact rev_map_length :
+Fact length_rev_map :
   forall {A B} {f : A -> B} {l : list A},
     List.length (rev_map f l) = List.length l.
 Proof.
@@ -180,7 +180,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
-#[global] Hint Rewrite @rev_map_length : len.
+#[global] Hint Rewrite @length_rev_map : len.
 
 Fact rev_map_app :
   forall {A B} {f : A -> B} {l1 l2},
@@ -475,8 +475,8 @@ Proof.
   induction l using rev_ind; simpl; try congruence.
   intros. rewrite rev_unit. simpl.
   rewrite mapi_rec_app rev_app_distr; simpl. rewrite IHl; auto. simpl.
-  rewrite app_length. simpl. f_equal. f_equal. lia. rewrite mapi_rec_Sk.
-  apply mapi_rec_ext. intros. f_equal. rewrite List.rev_length in H1.
+  rewrite length_app. simpl. f_equal. f_equal. lia. rewrite mapi_rec_Sk.
+  apply mapi_rec_ext. intros. f_equal. rewrite List.length_rev in H1.
   rewrite Nat.add_1_r. simpl; lia.
 Qed.
 
@@ -495,8 +495,8 @@ Proof.
   intros. rewrite rev_unit. simpl.
   rewrite IHl mapi_rec_app.
   simpl. rewrite rev_unit. f_equal.
-  rewrite app_length. simpl. f_equal. lia.
-  rewrite app_length. simpl.
+  rewrite length_app. simpl. f_equal. lia.
+  rewrite length_app. simpl.
   f_equal. eapply mapi_rec_ext. intros.
   f_equal. lia.
 Qed.
@@ -528,7 +528,7 @@ Proof.
   simpl. intros [= Hl]. cbn. f_equal. now rewrite mapi_rec_Sk.
 Qed.
 
-Lemma skipn_length {A} n (l : list A) : length (skipn n l) = length l - n.
+Lemma length_skipn {A} n (l : list A) : length (skipn n l) = length l - n.
 Proof.
   induction l in n |- *; destruct n; simpl; auto.
 Qed.
@@ -640,12 +640,12 @@ Proof.
       now rewrite Nat.add_succ_r.
 Qed.
 
-Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) :
+Lemma length_skipn_map {A B} n (f : A -> B) (l : list A) :
   #|skipn n (map f l)| = #|skipn n l|.
 Proof.
-  now rewrite !List.skipn_length; len.
+  now rewrite !List.length_skipn; len.
 Qed.
-#[global] Hint Rewrite @skipn_map_length : len.
+#[global] Hint Rewrite @length_skipn_map : len.
 
 Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
 Proof.
@@ -839,13 +839,13 @@ Proof.
   revert l. induction i. destruct l; simpl; auto.
   induction l using rev_ind; simpl. auto.
   rewrite rev_app_distr. simpl.
-  rewrite app_length. simpl.
+  rewrite length_app. simpl.
   replace (#|l| + 1 - 0) with (S #|l|) by lia. simpl.
   rewrite Nat.sub_0_r in IHl. auto with arith.
 
   destruct l. simpl; auto. simpl. intros. rewrite IHi. lia.
   assert (#|l| - S i < #|l|) by lia.
-  rewrite nth_error_app_lt. rewrite List.rev_length; auto.
+  rewrite nth_error_app_lt. rewrite List.length_rev; auto.
   reflexivity.
 Qed.
 
@@ -854,7 +854,7 @@ Lemma nth_error_rev_inv {A} (l : list A) i :
   nth_error (List.rev l) i = nth_error l (#|l| - S i).
 Proof.
   intros Hi.
-  rewrite nth_error_rev ?List.rev_length; auto.
+  rewrite nth_error_rev ?List.length_rev; auto.
   now rewrite List.rev_involutive.
 Qed.
 
@@ -1018,12 +1018,12 @@ Proof.
   change [f #|l|] with (mapi_rec (fun i x => f i) [a] #|l|).
   rewrite -(Nat.add_0_r #|l|). rewrite -mapi_rec_app.
   change (f 0 :: _) with (mapi (fun i x => f i) (a :: l)).
-  apply mapi_irrel_list. simpl. rewrite app_length /=; lia.
+  apply mapi_irrel_list. simpl. rewrite length_app /=; lia.
 Qed.
 
 Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
 Proof.
-  induction m; simpl; rewrite ?app_length /=; auto. lia.
+  induction m; simpl; rewrite ?length_app /=; auto. lia.
 Qed.
 #[global] Hint Rewrite @unfold_length : len.
 
@@ -1036,7 +1036,7 @@ Proof.
     * simpl. rewrite nth_error_app_lt ?unfold_length //; try lia.
       apply IHm; lia.
   - simpl in Hn. eapply nth_error_Some_length in Hn.
-    rewrite app_length /= unfold_length in Hn. lia.
+    rewrite length_app /= unfold_length in Hn. lia.
 Qed.
 
 Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
@@ -1045,7 +1045,7 @@ Proof.
   - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
   - simpl in Hn.
     pose proof (nth_error_Some_length Hn).
-    rewrite app_length /= unfold_length in H.
+    rewrite length_app /= unfold_length in H.
     destruct (Classes.eq_dec n m); [subst|].
     * simpl. revert Hn. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //; congruence.
     * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
@@ -1278,7 +1278,7 @@ Section SplitPrefix.
   Proof using Type.
     funelim (split_prefix l1 l2).
     1,2: simp split_prefix; now split.
-    1,2: rewrite -Heqcall; split; try easy.
+    1,2: rewrite -?Heqcall; split; try easy.
     1,2: rewrite Heq in Hind; destruct Hind.
     1: now subst.
     now rewrite (eqb_eq _ _ Heq0); subst.
@@ -1322,7 +1322,7 @@ Section SplitPrefix.
       rewrite eqa eqb_refl in Heq; discriminate.
     - move=> /is_prefix_cons [-> ?|]; first apply nil_prefix.
       move=> [? [-> pr1]] /is_prefix_cons_inv [eqa pr2].
-      rewrite -Heqcall; apply cons_prefix.
+      rewrite -?Heqcall; apply cons_prefix.
       move: Heqcall (Hind _ pr1 pr2)=> /Simp.
       rewrite eqa eqb_refl=> /Simp.
       move: (split_prefix l1 l2)=> -[[??]?] /Simp [= ->] //.

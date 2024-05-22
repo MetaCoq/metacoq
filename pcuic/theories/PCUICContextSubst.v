@@ -55,7 +55,7 @@ Lemma context_subst_length {Γ a s} : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
 Lemma context_subst_assumptions_length {Γ a s} : context_subst Γ a s -> context_assumptions Γ = #|a|.
-Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
+Proof. induction 1; simpl; try congruence. rewrite length_app /=. lia. Qed.
 
 (* Lemma context_subst_app {cf:checker_flags} Γ Γ' a s : *)
 (*   context_subst (Γ' ++ Γ) a s -> *)
@@ -160,7 +160,7 @@ Qed.
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
 Proof.
   induction 1; simpl; auto.
-  rewrite app_length; simpl; lia.
+  rewrite length_app; simpl; lia.
 Qed.
 
 Lemma context_subst_fun {ctx args s s'} : context_subst ctx args s -> context_subst ctx args s' -> s = s'.
@@ -174,7 +174,7 @@ Qed.
 Lemma context_subst_fun' {ctx args args' s s'} : context_subst ctx args s -> context_subst ctx args' s' -> #|args| = #|args'|.
 Proof.
   induction 1 as [ | ? ? ? ? ? ? ? IHX | ? ? ? ? ? ? ? IHX ] in args', s' |- *; intros H'; depelim H'; auto.
-  - now rewrite !app_length; specialize (IHX _ _ H').
+  - now rewrite !length_app; specialize (IHX _ _ H').
   - now specialize (IHX _ _ H').
 Qed.
 
@@ -233,7 +233,7 @@ Proof.
         move/context_subst_fun => Hs. now specialize (Hs _ Hc).
     * intros. split; try discriminate.
       intros H2. pose proof (context_subst_fun' Hc H2).
-      rewrite app_length /= in H. now lia.
+      rewrite length_app /= in H. now lia.
   - move=> Hc /=. case: a => [na [body|] ty] /=.
     * specialize (IHtele (vdef na body ty :: ctx) args (subst0 s body :: s) args' s').
       move=> /=. rewrite <- app_assoc.
@@ -241,7 +241,7 @@ Proof.
     * destruct args' as [|a args'].
       + split; [congruence | ]. intros Hc'.
         pose proof (context_subst_length2 Hc').
-        rewrite !context_assumptions_app ?app_length ?List.rev_length /= Nat.add_0_r in H.
+        rewrite !context_assumptions_app ?length_app ?List.length_rev /= Nat.add_0_r in H.
         pose proof (context_subst_length2 Hc). lia.
 
       + specialize (IHtele (vass na ty :: ctx) (args ++ [a]) (a :: s) args' s').
@@ -278,7 +278,7 @@ Proof using Type.
     rewrite distr_subst. f_equal.
     simpl; len.
     pose proof (context_subst_length2 sp).
-    rewrite -H. rewrite -(List.rev_length args).
+    rewrite -H. rewrite -(List.length_rev args).
     rewrite -(Nat.add_0_r #|List.rev args|).
     rewrite simpl_subst_rec; try lia.
     now rewrite lift0_id.
@@ -297,7 +297,7 @@ Lemma context_subst_subst_expand_lets inst s Δ t k :
 Proof.
   move=> /[dup] H /context_subst_subst_extended_subst ->.
   apply: map_subst_expand_lets_k.
-  rewrite List.rev_length.
+  rewrite List.length_rev.
   apply: context_subst_assumptions_length; eassumption.
 Qed.
 

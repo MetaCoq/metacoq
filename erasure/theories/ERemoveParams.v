@@ -59,7 +59,9 @@ Section strip.
     | tVar n => EAst.tVar n
     | tConst n => EAst.tConst n
     | tConstruct ind i block_args => EAst.tConstruct ind i block_args
-    | tPrim p => EAst.tPrim (map_primIn p (fun x H => strip x)) }.
+    | tPrim p => EAst.tPrim (map_primIn p (fun x H => strip x))
+    | tLazy t => EAst.tLazy (strip t)
+    | tForce t => EAst.tForce (strip t) }.
   Proof.
     all:try lia.
     all:try apply (In_size); tea.
@@ -110,7 +112,7 @@ Section strip.
   Proof using Type.
     funelim (strip t); simp strip; rewrite -?strip_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
@@ -183,7 +185,7 @@ Section strip.
     intros cla etaa; move cla before a. move etaa before a.
     funelim (strip b); cbn; simp strip isEtaExp; rewrite -?isEtaExp_equation_1 -?strip_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
 
@@ -247,7 +249,7 @@ Section strip.
       { destruct v; cbn; congruence. }
       rewrite strip_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
-      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
+      move/andP: H1. rewrite length_map. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
@@ -264,7 +266,7 @@ Section strip.
       rewrite strip_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
-      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
+      move/andP: H1. rewrite length_map. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
@@ -300,7 +302,7 @@ Section strip.
   Lemma strip_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def strip) mfix) = map strip (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp strip.
@@ -309,7 +311,7 @@ Section strip.
   Lemma strip_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def strip) mfix) = map strip (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp strip.
@@ -569,6 +571,8 @@ Module Fast.
     | app, tPrim (primFloat; primFloatModel f) => mkApps (tPrim (primFloat; primFloatModel f)) app
     | app, tPrim (primArray; primArrayModel a) =>
       mkApps (tPrim (primArray; primArrayModel {| array_default := strip [] a.(array_default); array_value := strip_args a.(array_value) |})) app
+    | app, tLazy t => mkApps (tLazy (strip [] t)) app
+    | app, tForce t => mkApps (tForce (strip [] t)) app
     | app, x => mkApps x app }
 
     where strip_args (t : list term) : list term :=
@@ -908,7 +912,7 @@ Proof.
     rewrite H2 in H1.
     econstructor; eauto.
     * rewrite nth_error_map H3 //.
-    * len. cbn in H4, H5. rewrite skipn_length. lia.
+    * len. cbn in H4, H5. rewrite length_skipn. lia.
     * cbn -[strip]. rewrite skipn_0. len.
     * cbn -[strip].
       have etaargs : forallb (isEtaExp Σ) args.
@@ -932,7 +936,7 @@ Proof.
     rewrite strip_mkApps // /= in e1.
     simp_strip in e1.
     eapply eval_fix; tea.
-    * rewrite map_length.
+    * rewrite length_map.
       eapply strip_cunfold_fix; tea.
       eapply closed_fix_subst. tea.
       move: i8; rewrite closedn_mkApps => /andP[] //.
@@ -953,7 +957,7 @@ Proof.
     { move: i4.
       rewrite closedn_mkApps. now move/andP => []. }
     { move: i6. rewrite isEtaExp_mkApps_napp // /= => /andP[] //. now simp isEtaExp. }
-    now rewrite map_length.
+    now rewrite length_map.
 
   - rewrite strip_tApp //. simp_strip in e0.
     simp_strip in e1.
@@ -998,7 +1002,7 @@ Proof.
     rewrite (constructor_isprop_pars_decl_lookup H2) in e0.
     eapply eval_proj; eauto.
     move: (@is_propositional_cstr_strip Σ p.(proj_ind) 0). now rewrite H2. simpl.
-    len. rewrite skipn_length. cbn in H3. lia.
+    len. rewrite length_skipn. cbn in H3. lia.
     rewrite nth_error_skipn nth_error_map /= H4 //.
 
   - simp_strip. eapply eval_proj_prop => //.
@@ -1017,7 +1021,7 @@ Proof.
     + constructor. cbn [atom]. rewrite wcon lookup_constructor_strip H //.
     + rewrite /cstr_arity /=.
       move: H0; rewrite /cstr_arity /=.
-      rewrite skipn_length map_length => ->. lia.
+      rewrite length_skipn length_map => ->. lia.
     + cbn in H0. eapply All2_skipn, All2_map.
       eapply All2_impl; tea; cbn -[strip].
       intros x y []; auto.
@@ -1083,8 +1087,7 @@ Proof.
     rewrite lookup_env_strip. cbn in H1. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. rtoProp; intuition auto.
-    simp_strip. toAll; solve_all.
-    toAll. solve_all.
+    simp_strip. all:toAll; solve_all.
   - cbn -[strip] in H0 |- *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g. cbn in H0. now rtoProp.
@@ -1092,11 +1095,11 @@ Proof.
     destruct EAst.ind_ctors => //.
     destruct nth_error => //.
     all: eapply H; auto.
-  - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
+  - unfold wf_fix_gen in *. rewrite length_map. rtoProp; intuition auto. toAll; solve_all.
     now rewrite -strip_isLambda. toAll; solve_all.
   - primProp. rtoProp; intuition eauto; solve_all_k 6.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
-    toAll; solve_all. toAll; solve_all.
+    all:toAll; solve_all.
   - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     move: H1. cbn. rewrite cab.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
@@ -1357,7 +1360,7 @@ Proof.
     rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
     eapply expanded_tConstruct_app.
     eapply strip_declared_constructor; tea.
-    len. rewrite skipn_length /= /EAst.cstr_arity /=.
+    len. rewrite length_skipn /= /EAst.cstr_arity /=.
     rewrite /EAst.cstr_arity in H0. lia.
     solve_all. eapply All_skipn. solve_all.
 Qed.

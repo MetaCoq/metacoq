@@ -195,7 +195,7 @@ Proof.
   destruct (snd (nth_error_Some' s x) H). rewrite e.
   subst s.
   rewrite /to_extended_list /to_extended_list_k in e.
-  rewrite List.rev_length in cl, H. autorewrite with len in *.
+  rewrite List.length_rev in cl, H. autorewrite with len in *.
   rewrite reln_alt_eq in e.
   rewrite app_nil_r List.rev_involutive in e.
   clear -ass e. revert e.
@@ -216,14 +216,14 @@ Proof.
   induction n in l, l' |- *.
   - destruct l => //.
   - destruct l as [|l a] using rev_case => // /=.
-    rewrite app_length /= Nat.add_1_r => [=].
+    rewrite length_app /= Nat.add_1_r => [=].
     intros; subst n.
     simpl. rewrite map_app.
     f_equal; auto.
     + rewrite subst_consn_app.
       now apply IHn.
     + simpl.
-      rewrite subst_consn_lt /= ?List.app_length /= //; try lia.
+      rewrite subst_consn_lt /= ?List.length_app /= //; try lia.
       now rewrite /subst_fn nth_error_app_ge /= // Nat.sub_diag /=.
 Qed.
 
@@ -734,7 +734,7 @@ Lemma inst_inst_case_context f pars puinst ctx :
     (inst_context (⇑^#|pars| f) ctx).
 Proof.
   intros clctx. rewrite /inst_case_context.
-  rewrite inst_context_subst map_rev List.rev_length.
+  rewrite inst_context_subst map_rev List.length_rev.
   rewrite !inst_closedn_ctx //.
   - now rewrite closedn_subst_instance_context closedn_ctx_on_free_vars.
   - now rewrite closedn_ctx_on_free_vars.
@@ -864,7 +864,7 @@ Proof.
         rewrite !up_Upn.
         rewrite /expand_lets /expand_lets_k.
         rewrite -inst_subst_instance. len.
-        rewrite inst_subst map_rev List.rev_length. f_equal.
+        rewrite inst_subst map_rev List.length_rev. f_equal.
         rewrite inst_subst. rewrite (wf_predicate_length_pars wfp).
         rewrite (declared_minductive_ind_npars decli).
         rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
@@ -1068,7 +1068,7 @@ Proof.
   intros f p pars args br hlen hlen'.
   unfold iota_red.
   rewrite inst_subst0 map_rev map_skipn. f_equal.
-  rewrite List.rev_length /expand_lets /expand_lets_k.
+  rewrite List.length_rev /expand_lets /expand_lets_k.
   rewrite inst_subst0. len.
   rewrite -Upn_Upn -hlen Nat.add_comm up_Upn inst_lift.
   rewrite hlen -up_Upn.
@@ -1096,7 +1096,7 @@ Proof.
   f_equal. f_equal.
   rewrite inst_subst0. rewrite fix_subst_length.
   f_equal.
-  * unfold fix_subst. rewrite map_length.
+  * unfold fix_subst. rewrite length_map.
     generalize #|mfix| at 2 3. intro n.
     induction n.
     - reflexivity.
@@ -1120,7 +1120,7 @@ Proof.
   rewrite inst_subst0. rewrite cofix_subst_length.
   rewrite up_Upn.
   f_equal.
-  unfold cofix_subst. rewrite map_length.
+  unfold cofix_subst. rewrite length_map.
   generalize #|mfix| at 2 3. intro n.
   induction n.
   - reflexivity.
@@ -1530,10 +1530,10 @@ Proof.
     apply closed_subst_Up'.
     + intuition.
     + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
-      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- length_app in H0.
       destruct H0; tea.
     + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
-      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- length_app in H0.
       destruct H0; tea.
   - rewrite inst_context_snoc. rewrite inst_context_snoc in hΔ'.
     rewrite on_free_vars_ctx_snoc in hΔ'. toProp hΔ'.
@@ -1542,7 +1542,7 @@ Proof.
     apply closed_subst_Up.
     + intuition.
     + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
-      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- length_app in H0.
       destruct H0; tea.
 Defined.
 
@@ -1743,7 +1743,7 @@ Proof.
     * rewrite /= eqr. sigma. reflexivity.
   - cbn. rewrite inst_mkApps. simpl.
     rewrite inst_iota_red //.
-    * rewrite skipn_length; lia.
+    * rewrite length_skipn; lia.
     * change (bcontext br) with (bcontext (inst_branch σ br)).
       eapply nth_error_forallb in p4; tea. simpl in p4.
       move/andP: p4 => [] clbctx clbod.
@@ -1773,7 +1773,7 @@ Proof.
   - simpl; eapply red_abs; eauto.
     eapply IHh; tea.
     + eapply usubst_up_vass; eauto.
-    + rewrite shiftnP_add in b. change 1 with #|[vass na N]| in b. rewrite  <- app_length in b. apply b.
+    + rewrite shiftnP_add in b. change 1 with #|[vass na N]| in b. rewrite  <- length_app in b. apply b.
   - simpl; eapply red_letin; eauto.
   - simpl; eapply red_letin; eauto.
   - simpl; pcuicfo. eapply red_letin; eauto.
@@ -1793,7 +1793,7 @@ Proof.
       { now rewrite test_context_k_closed_on_free_vars_ctx. }
       relativize #|pcontext p|; [eapply usubst_app_up|now len]; eauto.
     + rewrite shiftnP_add in p1. rewrite <- inst_case_predicate_context_length in p1.
-      rewrite <- app_length in p1. tea.
+      rewrite <- length_app in p1. tea.
   - simpl. eapply red_case_c; eauto.
   - simpl. eapply red_case_brs; eauto.
     red.
@@ -1808,7 +1808,7 @@ Proof.
       rewrite -inst_inst_case_context_wf //; simpl.
       relativize #|bcontext x|; [eapply usubst_app_up|now len]; eauto.
       + rewrite shiftnP_add in clb. erewrite <- inst_case_branch_context_length in clb.
-        rewrite <- app_length in clb. tea.
+        rewrite <- length_app in clb. tea.
     * intros x. unfold on_Trel; split; auto.
   - simpl. now eapply red_proj_c.
   - simpl. now eapply red_app.
@@ -1817,7 +1817,7 @@ Proof.
   - simpl. eapply red_prod_r, IHh; tea.
     * eapply usubst_up_vass; eauto.
     * rewrite shiftnP_add in b. change 1 with #|[vass na M1]| in b.
-    rewrite <- app_length in b. tea.
+    rewrite <- length_app in b. tea.
   - simpl. cbn in Hu. solve_all.
     eapply OnOne2_All_mix_left in X; tea.
     eapply red_evar.
@@ -1841,7 +1841,7 @@ Proof.
     * eapply usubst_ext.
       + rewrite inst_fix_context_up. eapply usubst_app_up; eauto.
       + now len.
-    *  rewrite shiftnP_add in onb. rewrite <- fix_context_length in onb. rewrite <- app_length in onb. tea.
+    *  rewrite shiftnP_add in onb. rewrite <- fix_context_length in onb. rewrite <- length_app in onb. tea.
   - simpl. cbn in Hu; solve_all. eapply OnOne2_All_mix_left in X; tea.
     eapply red_cofix_one_ty.
     rewrite (OnOne2_length X).
@@ -1858,7 +1858,7 @@ Proof.
     * eapply usubst_ext.
       + rewrite inst_fix_context_up. eapply usubst_app_up; eauto.
       + now len.
-    *  rewrite shiftnP_add in clb. rewrite <- fix_context_length in clb. rewrite <- app_length in clb. tea.
+    *  rewrite shiftnP_add in clb. rewrite <- fix_context_length in clb. rewrite <- length_app in clb. tea.
   - cbn. toAll. eapply OnOne2_All_mix_left in X; tea.
     rewrite map_array_model_set_value.
     eapply red_primArray_one_value. cbn.

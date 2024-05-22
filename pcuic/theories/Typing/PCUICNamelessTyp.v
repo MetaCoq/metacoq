@@ -199,7 +199,7 @@ Proof.
       * rewrite -nl_expand_lets_ctx. eapply All2_map, (All2_impl a).
         intros ?? []; constructor; subst; auto.
     + destruct H0 as [wfpars wfpctx].
-      split; simpl; rewrite ?map_length //.
+      split; simpl; rewrite ?length_map //.
       clear -wfpctx. depelim wfpctx.
       rewrite nl_forget_types H0 /=.
       simpl. constructor => //.
@@ -249,7 +249,7 @@ Proof.
       * rewrite nth_error_map H4. reflexivity.
       * assumption.
     + now rewrite nl_mkApps in X2.
-    + now rewrite map_length.
+    + now rewrite length_map.
   - replace (nl (dtype decl)) with (dtype (map_def_anon nl nl decl));
       [|destruct decl; reflexivity].
     assert (XX: nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix)
@@ -265,7 +265,7 @@ Proof.
     + apply All_map. eapply All_impl; tea.
       simpl. intros [] [s Hs].
       simpl in *; intuition auto.
-      * rewrite fix_context_length map_length.
+      * rewrite fix_context_length length_map.
         rewrite fix_context_length in Hs.
         now rewrite -> XX, <- nl_lift.
     + now rewrite <-nl_wf_fixpoint.
@@ -284,7 +284,7 @@ Proof.
     + apply All_map. eapply All_impl; tea.
       simpl. intros [] [s Hs].
       simpl in *; intuition auto.
-      * rewrite fix_context_length map_length.
+      * rewrite fix_context_length length_map.
         rewrite fix_context_length in Hs.
         now rewrite -> XX, <- nl_lift.
     + now rewrite <-nl_wf_cofixpoint.

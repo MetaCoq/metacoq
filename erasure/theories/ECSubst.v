@@ -38,6 +38,8 @@ Fixpoint csubst t k u :=
     tCoFix mfix' idx
   | tConstruct ind n args => tConstruct ind n (map (csubst t k) args)
   | tPrim p => tPrim (map_prim (csubst t k) p)
+  | tLazy u => tLazy (csubst t k u)
+  | tForce u => tForce (csubst t k u)
   | x => x
   end.
 
@@ -83,7 +85,7 @@ Proof.
   intros Hs. solve_all. revert H.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
     unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 

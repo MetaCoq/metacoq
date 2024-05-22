@@ -317,7 +317,7 @@ Proof.
   apply map_ext. intros x; simpl.
   rewrite subst_app_decomp.
   f_equal. rewrite -{1}(Nat.add_0_r #|s|) simpl_subst' ?lift0_id //.
-  now rewrite map_length.
+  now rewrite length_map.
 Qed.
 
 Lemma subst_context_smash_context s k Γ Δ :

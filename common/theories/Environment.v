@@ -185,7 +185,7 @@ Module Environment (T : Term).
     mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
   Proof.
     unfold subst_context, fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
-    apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+    apply mapi_ext. intros. f_equal. now rewrite List.length_rev.
   Qed.
 
   Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
@@ -204,7 +204,7 @@ Module Environment (T : Term).
 
   Lemma subst_instance_length u (ctx : context)
     : #|subst_instance u ctx| = #|ctx|.
-  Proof. unfold subst_instance, subst_instance_context, map_context. now rewrite map_length. Qed.
+  Proof. unfold subst_instance, subst_instance_context, map_context. now rewrite length_map. Qed.
   #[global] Hint Rewrite subst_instance_length : len.
 
   Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
@@ -245,7 +245,7 @@ Module Environment (T : Term).
   Proof.
     induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
     - now rewrite IHtl subst_context_length.
-    - rewrite IHtl app_length. simpl. lia.
+    - rewrite IHtl length_app. simpl. lia.
   Qed.
   #[global] Hint Rewrite smash_context_length : len.
 
@@ -1001,7 +1001,7 @@ Module Environment (T : Term).
                             (ind.(ind_relevance))) ind.(ind_type)) l.
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
-  Proof. unfold arities_context. now rewrite rev_map_length. Qed.
+  Proof. unfold arities_context. now rewrite length_rev_map. Qed.
   #[global] Hint Rewrite arities_context_length : len.
 
   Definition map_mutual_inductive_body f m :=

@@ -443,7 +443,7 @@ Proof.
   induction 1 using PCUICEtaExpand.expanded_ind; cbn.
   all:intros; rewrite ?subst_instance_mkApps.
   all:try solve [econstructor; eauto 1].
-  - econstructor; eauto. now rewrite map_length. solve_all.
+  - econstructor; eauto. now rewrite length_map. solve_all.
   - econstructor; eauto. solve_all.
   - econstructor; eauto. 2:solve_all.
     rewrite subst_instance_isConstruct subst_instance_isFix subst_instance_isRel //.
@@ -478,10 +478,10 @@ Proof.
   all:rewrite -?[tApp _ a](mkApps_app _ _ [a]).
   all:try (eapply (expanded_mkApps _ _ _ [a]) => //; econstructor; eauto).
 
-  - econstructor; tea. rewrite app_length. lia. eapply app_Forall;eauto.
+  - econstructor; tea. rewrite length_app. lia. eapply app_Forall;eauto.
   - econstructor; tea. eapply app_Forall; eauto.
-  - eapply expanded_tFix; tea. eapply app_Forall; eauto. eauto. rewrite app_length; cbn; eauto. lia.
-  - eapply expanded_tConstruct_app; tea. rewrite app_length ; lia. eapply app_Forall; eauto.
+  - eapply expanded_tFix; tea. eapply app_Forall; eauto. eauto. rewrite length_app; cbn; eauto. lia.
+  - eapply expanded_tConstruct_app; tea. rewrite length_app ; lia. eapply app_Forall; eauto.
 Qed.
 
 Lemma expanded_tApp_inv Σ Γ f a :
@@ -1028,7 +1028,7 @@ Proof.
   - rewrite arguments_mkApps_nApp //. split => //. now exists m.
   - destruct IHexpanded. rewrite arguments_mkApps. split.
     eapply app_Forall => //.
-    rewrite app_length.
+    rewrite length_app.
     destruct (head f6) => //; firstorder (eauto; try lia).
     exists x. split => //. firstorder (eauto; try lia).
     intros heq; apply H5. now eapply app_eq_nil in heq.
@@ -1268,7 +1268,7 @@ Proof.
       cbn in fo. depelim fo. eapply (expanded_subst _ _ _ _ (repeat 0 #|Γ0|) _); len.
       eapply Forall_rev; eauto.
       eapply expanded_subst_instance. rewrite app_assoc. now eapply expanded_weakening.
-      rewrite skipn_length. len.
+      rewrite length_skipn. len.
   - move/expanded_mkApps_inv': exp. cbn.
     rewrite arguments_mkApps_nApp // head_mkApps //=.
     move=> [hargs [d [hf [hargs' []]]]] hnth hrarg.
@@ -1327,8 +1327,8 @@ Proof.
       erewrite nth_error_fold_context_k in H1. 4:{ rewrite nth_error_map e //. } 3:len. 2:exact [].
       len in H1. noconf H1. destruct c as [? [] ?]; noconf H1.
       rewrite skipn_app. len. eapply All_fold_nth_error in X; tea. cbn in X. depelim X.
-      rewrite skipn_length in H1.
-      eapply expanded_subst. rewrite skipn_length. len.
+      rewrite length_skipn in H1.
+      eapply expanded_subst. rewrite length_skipn. len.
       replace (S n - #|bcontext x|) with 0. 2:{ lia. } rewrite skipn_0. eapply Forall_rev. solve_all.
       len. rewrite app_assoc. eapply expanded_weakening. eapply expanded_subst_instance.
       now rewrite skipn_repeat. }

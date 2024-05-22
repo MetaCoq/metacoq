@@ -1223,7 +1223,7 @@ Section Conversion.
       apply decompose_stack_at_appstack_None in e; eauto.
       destruct nth_error ; [|now right].
       left. eexists; split; eauto; cbn. now inversion eq1.
-    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    - try clear Heqcall. destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       match type of eq3 with
       | _ = reduce_stack ?a ?b ?c ?d ?e ?f ?g =>
         pose proof (reduce_stack_sound a b c Σ wfΣ d e f g) as [r];
@@ -2009,7 +2009,7 @@ Qed.
     apply welltyped_zipc_tCase_brs_length in h' as (?&?&?&?); eauto.
     unshelve eapply declared_inductive_to_gen in H, H1; eauto.
     pose proof (PCUICInductiveInversion.declared_inductive_unique_sig H H1) as u; noconf u.
-    rewrite !app_length in H0, H2.
+    rewrite !length_app in H0, H2.
     cbn in *.
     lia.
   Qed.
@@ -2023,7 +2023,7 @@ Qed.
     apply welltyped_zipc_tCase_brs_length in h' as (?&?&?&?); eauto.
     unshelve eapply declared_inductive_to_gen in H, H1; eauto.
     pose proof (PCUICInductiveInversion.declared_inductive_unique_sig H H1) as u; noconf u.
-    rewrite !app_length in H0, H2.
+    rewrite !length_app in H0, H2.
     cbn in *.
     lia.
   Qed.
@@ -2390,13 +2390,13 @@ Qed.
     destruct h1 as [h1], ha as [ha].
     apply All2_length in h1 as e1.
     apply All2_length in ha as ea.
-    rewrite !app_length in ea. simpl in ea. lia.
+    rewrite !length_app in ea. simpl in ea. lia.
   Qed.
   Next Obligation.
     destruct h1 as [h1], ha as [ha].
     apply All2_length in h1 as e1.
     apply All2_length in ha as ea.
-    rewrite !app_length in ea. simpl in ea. lia.
+    rewrite !length_app in ea. simpl in ea. lia.
   Qed.
   Next Obligation.
     destruct u. destruct fk. all: eauto.
@@ -2479,7 +2479,7 @@ Qed.
     clear Δ Δ'. intros Δ Δ' h.
     apply All2i_rev in h. simpl in h.
     revert h.
-    rewrite <- (List.rev_length Δ).
+    rewrite <- (List.length_rev Δ).
     generalize (List.rev Δ). clear Δ. intro Δ.
     generalize (List.rev Δ'). clear Δ'. intro Δ'.
     intro h.
@@ -5014,10 +5014,10 @@ Qed.
     rewrite mkApps_app. eauto.
   Qed.
   Next Obligation.
-    rewrite app_length in h. cbn in h. lia.
+    rewrite length_app in h. cbn in h. lia.
   Qed.
   Next Obligation.
-    rewrite app_length in h. cbn in h.
+    rewrite length_app in h. cbn in h.
       simpl. split.
       + rewrite mkApps_app in H. assumption.
       + rewrite !stack_position_cons !stack_position_appstack.
@@ -5578,7 +5578,7 @@ Qed.
       split; [eauto with pcuic|].
       apply whnf_mkApps.
       eapply whne_const; eauto.
-    - zip fold in h.
+    - zip fold in h. try clear Heqcall.
       destruct (hΣ _ wfΣ).
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.
@@ -5586,7 +5586,7 @@ Qed.
       unshelve eapply declared_constant_to_gen in d; eauto.
       clear H. erewrite <- abstract_env_lookup_correct' in e; eauto.
       congruence.
-    - zip fold in h.
+    - zip fold in h. try clear Heqcall.
       destruct (hΣ _ wfΣ).
       eapply welltyped_context in h; eauto.
       destruct h as (?&typ); auto.

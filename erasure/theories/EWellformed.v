@@ -47,6 +47,7 @@ Class ETermFlags :=
   ; has_tFix : bool
   ; has_tCoFix : bool
   ; has_tPrim :: EPrimitiveFlags
+  ; has_tLazy_Force : bool
   }.
 
 Class EEnvFlags := {
@@ -80,6 +81,7 @@ Definition all_term_flags :=
     ; has_tFix := true
     ; has_tCoFix := true
     ; has_tPrim := all_primitive_flags
+    ; has_tLazy_Force := true
   |}.
 
 Definition all_env_flags :=
@@ -139,6 +141,8 @@ Section wf.
         && forallb (wellformed k) block_args else is_nil block_args
     | tVar _ => has_tVar
     | tPrim p => has_prim p && test_prim (wellformed k) p
+    | tLazy t => has_tLazy_Force && wellformed k t
+    | tForce t => has_tLazy_Force && wellformed k t
     end.
 
 End wf.
@@ -393,7 +397,7 @@ Section EEnvFlags.
     rewrite /iota_red.
     eapply wellformed_substl => //.
     now rewrite forallb_rev forallb_skipn.
-    now rewrite List.rev_length hskip Nat.add_0_r.
+    now rewrite List.length_rev hskip Nat.add_0_r.
   Qed.
 
   Lemma wellformed_iota_red_brs pars c args brs br :

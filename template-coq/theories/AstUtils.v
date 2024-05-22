@@ -299,7 +299,7 @@ Lemma decompose_prod_n_assum_it_mkProd ctx ctx' ty :
   decompose_prod_n_assum ctx #|ctx'| (it_mkProd_or_LetIn ctx' ty) = Some (ctx' ++ ctx, ty).
 Proof.
   revert ctx ty. induction ctx' using rev_ind; move=> // ctx ty.
-  rewrite app_length /= it_mkProd_or_LetIn_app /=.
+  rewrite length_app /= it_mkProd_or_LetIn_app /=.
   destruct x as [na [body|] ty'] => /=;
   now rewrite !Nat.add_1_r /= IHctx' -app_assoc.
 Qed.
@@ -454,7 +454,7 @@ Ltac solve_all := repeat (progress solve_all_one).
 Ltac nth_leb_simpl :=
   match goal with
     |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
-  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?length_app, ?length_map;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
     (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||

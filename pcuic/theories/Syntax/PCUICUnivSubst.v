@@ -11,7 +11,7 @@ Lemma subst_instance_instance_length (u1 : Instance.t) u2 :
   #|subst_instance u2 u1| = #|u1|.
 Proof.
   unfold subst_instance.
-  now rewrite map_length.
+  now rewrite length_map.
 Qed.
 #[global]
 Hint Rewrite subst_instance_instance_length : len.

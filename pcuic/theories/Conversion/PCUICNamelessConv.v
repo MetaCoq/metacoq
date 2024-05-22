@@ -616,13 +616,13 @@ Proof.
     + simpl. f_equal.
       * eapply p.
       * eapply IHAll.
-  - rewrite /map_predicate_k /= map_length.
+  - rewrite /map_predicate_k /= length_map.
     f_equal; auto.
     * unfold nl_predicate, map_predicate; simpl; f_equal; solve_all.
     * induction X0. 1: reflexivity.
       simpl. f_equal. 2: assumption.
       unfold nl_branch, map_branch_k. cbn. f_equal; auto; solve_all.
-  - f_equal. rewrite map_length.
+  - f_equal. rewrite length_map.
     generalize (#|m| + k). intro l.
     induction X.
     + reflexivity.
@@ -630,7 +630,7 @@ Proof.
       * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
-  - f_equal. rewrite map_length.
+  - f_equal. rewrite length_map.
     generalize (#|m| + k). intro l.
     induction X.
     + reflexivity.
@@ -702,7 +702,7 @@ Proof.
   - destruct (_ <=? _). 2: reflexivity.
     rewrite nth_error_map. destruct (nth_error _ _).
     + simpl. apply nl_lift.
-    + rewrite map_length. reflexivity.
+    + rewrite length_map. reflexivity.
   - f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. f_equal.
@@ -710,12 +710,12 @@ Proof.
       * eapply IHAll.
   - f_equal; auto.
     * unfold nl_predicate, map_predicate_k; simpl; f_equal;
-      rewrite ?map_map_compose ?map_length; solve_all.
+      rewrite ?map_map_compose ?length_map; solve_all.
     * induction X0. 1: reflexivity.
       simpl. f_equal. 2: assumption.
       unfold nl_branch, map_branch_k. cbn.
-      rewrite map_length. f_equal; solve_all.
-  - f_equal. rewrite map_length.
+      rewrite length_map. f_equal; solve_all.
+  - f_equal. rewrite length_map.
     generalize (#|m| + k). intro l.
     induction X.
     + reflexivity.
@@ -723,7 +723,7 @@ Proof.
       * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
-  - f_equal. rewrite map_length.
+  - f_equal. rewrite length_map.
     generalize (#|m| + k). intro l.
     induction X.
     + reflexivity.
@@ -1011,7 +1011,7 @@ Proof.
 Qed.
 
 Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
-Proof. now rewrite map_length. Qed.
+Proof. now rewrite length_map. Qed.
 #[global]
 Hint Rewrite nlctx_length : len.
 
@@ -1251,7 +1251,7 @@ Proof.
         by (destruct (dbody d) ; reflexivity).
       inversion H. subst. rewrite nl_subst.
       repeat f_equal. clear.
-      unfold fix_subst. rewrite map_length.
+      unfold fix_subst. rewrite length_map.
       induction #|mfix|.
       * reflexivity.
       * cbn. rewrite IHn. reflexivity.
@@ -1267,7 +1267,7 @@ Proof.
     cbn.
     inversion H. subst. rewrite nl_subst.
     repeat f_equal. clear.
-    unfold cofix_subst. rewrite map_length.
+    unfold cofix_subst. rewrite length_map.
     induction #|mfix|.
     * reflexivity.
     * cbn. rewrite IHn. reflexivity.
@@ -1277,7 +1277,7 @@ Proof.
     cbn.
     inversion H. subst. rewrite nl_subst.
     repeat f_equal. clear.
-    unfold cofix_subst. rewrite map_length.
+    unfold cofix_subst. rewrite length_map.
     induction #|mfix|.
     * reflexivity.
     * cbn. rewrite IHn. reflexivity.

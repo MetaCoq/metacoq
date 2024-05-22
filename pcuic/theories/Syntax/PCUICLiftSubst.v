@@ -98,7 +98,7 @@ Qed.
 Ltac nth_leb_simpl :=
   match goal with
     |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
-  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?length_app, ?length_map;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
     (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
@@ -272,7 +272,7 @@ Proof.
     | |- _ => simpl
     end; try reflexivity;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-      ?map_length, ?Nat.add_assoc, ?map_predicate_map_predicate;
+      ?length_map, ?Nat.add_assoc, ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 2.
@@ -287,11 +287,11 @@ Proof.
          destruct (nth_error_spec P (n - (p + length N + n0))).
          +++ erewrite subst_rel_eq. 2:eauto. 2:lia.
              assert (p + length N + n0 = length (map (subst P n0) N) + (p + n0))
-               by (rewrite map_length; lia).
+               by (rewrite length_map; lia).
              rewrite H1. rewrite simpl_subst_rec; eauto; try lia.
-         +++ rewrite !subst_rel_gt; rewrite ?map_length; try lia. f_equal; lia.
+         +++ rewrite !subst_rel_gt; rewrite ?length_map; try lia. f_equal; lia.
          +++ rewrite subst_rel_lt; try easy.
-             rewrite -> subst_rel_gt; rewrite map_length. trivial. lia.
+             rewrite -> subst_rel_gt; rewrite length_map. trivial. lia.
     + rewrite !subst_rel_lt; try easy.
 Qed.
 
@@ -308,7 +308,7 @@ Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map,
       ?map_predicate_map_predicate, ?map_branch_map_branch;
     simpl closed in *;
     unfold test_predicate_k, test_def, test_branch_k in *;
@@ -368,7 +368,7 @@ Proof.
   induction t in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-                  ?map_length, ?map_predicate_map_predicate; eauto; solve_all).
+                  ?length_map, ?map_predicate_map_predicate; eauto; solve_all).
 
   - repeat nth_leb_simpl.
     rewrite nth_error_map in e0. rewrite e in e0.
@@ -384,7 +384,7 @@ Proof.
   induction t in k |- * using term_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-                  ?map_length, ?Nat.add_assoc, ?map_predicate_map_predicate; solve_all).
+                  ?length_map, ?Nat.add_assoc, ?map_predicate_map_predicate; solve_all).
 
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
@@ -460,7 +460,7 @@ Proof.
   unfold lift_context, fold_context_k, app_context.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
-  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+  apply mapi_ext. intros. f_equal. rewrite List.length_rev. f_equal. lia.
 Qed.
 
 Lemma lift_it_mkProd_or_LetIn n k ctx t :
@@ -590,7 +590,7 @@ Proof.
   unfold subst_context, fold_context_k, app_context.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
-  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+  apply mapi_ext. intros. f_equal. rewrite List.length_rev. f_equal. lia.
 Qed.
 
 Lemma distr_lift_subst_context n k s Γ : lift_context n k (subst_context s 0 Γ) =
@@ -612,7 +612,7 @@ Proof.
   rewrite !subst_context_alt.
   rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
   apply mapi_rec_ext. intros.
-  f_equal. rewrite List.skipn_length. lia.
+  f_equal. rewrite List.length_skipn. lia.
 Qed.
 
 Lemma nth_error_extended_subst Γ k i :
@@ -731,17 +731,17 @@ Proof.
     + rewrite !mapi_length. f_equal. rewrite {2}Nat.add_0_r.
       rewrite subst_app_simpl.
       rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
-      rewrite map_length. f_equal; lia.
+      rewrite length_map. f_equal; lia.
     + rewrite mapi_length.
       rewrite subst_app_simpl.
       rewrite {2}Nat.add_0_r.
       rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
-      rewrite map_length. f_equal; lia.
+      rewrite length_map. f_equal; lia.
   - rewrite /subst_decl /map_decl /=; f_equal.
     rewrite !mapi_length. rewrite {2}Nat.add_0_r.
     rewrite subst_app_simpl.
     rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
-    rewrite map_length. f_equal. lia.
+    rewrite length_map. f_equal. lia.
 Qed.
 
 Lemma context_assumptions_subst s n Γ :

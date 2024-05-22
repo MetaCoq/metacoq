@@ -48,14 +48,14 @@ Proof.
     f_equal.
     1: by rewrite IHret shiftnP_shiftn.
     f_equal.
-    1: by rewrite map_length.
+    1: by rewrite length_map.
     f_equal.
     1: auto.
     erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
     intros b [].
     f_equal.
-    1: by rewrite map_length.
+    1: by rewrite length_map.
     by rewrite /PCUICSigmaCalculus.rename_branch /= e shiftnP_shiftn.
   - erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
@@ -63,14 +63,14 @@ Proof.
     rewrite /test_def /=.
     f_equal.
     1: auto.
-    by rewrite map_length ebod shiftnP_shiftn.
+    by rewrite length_map ebod shiftnP_shiftn.
   - erewrite forallb_map, All_forallb_eq_forallb ; tea.
     1: reflexivity.
     intros ? [? ebod].
     rewrite /test_def /=.
     f_equal.
     1: auto.
-    by rewrite map_length ebod shiftnP_shiftn.
+    by rewrite length_map ebod shiftnP_shiftn.
   - solve_all.
 Qed.
 
@@ -173,10 +173,10 @@ Proof.
   intros.
   rewrite /case_predicate_context /case_predicate_context_gen /pre_case_predicate_context_gen /inst_case_context.
   erewrite <- on_free_vars_map2_cstr_args.
-  2: rewrite fold_context_k_length !map_length ; eapply All2_length ; tea.
+  2: rewrite fold_context_k_length !length_map ; eapply All2_length ; tea.
   apply on_free_vars_ctx_subst_context0.
   2: by rewrite forallb_rev.
-  rewrite on_free_vars_ctx_subst_instance List.rev_length.
+  rewrite on_free_vars_ctx_subst_instance List.length_rev.
   apply closedn_ctx_on_free_vars_shift.
   replace #|pparams p| with (context_assumptions (ind_params mdecl)).
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
@@ -275,7 +275,7 @@ Proof.
     rewrite (wf_branch_length wfb).
     apply on_free_vars_subst.
     1: by rewrite forallb_rev.
-    rewrite List.rev_length /expand_lets_k -shiftnP_add.
+    rewrite List.length_rev /expand_lets_k -shiftnP_add.
     assert (#|pparams p| = (context_assumptions (subst_instance (puinst p) (ind_params mdecl)))) as ->.
     { erewrite context_assumptions_subst_instance, onNpars, wf_predicate_length_pars ; eauto.
       eapply PCUICInductives.oi ; eauto.
@@ -459,7 +459,7 @@ Section OnFreeVars.
         apply All_forallb.
         auto.
       + eapply closedn_on_free_vars.
-        rewrite closedn_subst_instance /= List.rev_length largs.
+        rewrite closedn_subst_instance /= List.length_rev largs.
         eapply declared_projection_closed_type ; tea.
 
     - intros until decl.
@@ -743,7 +743,7 @@ Proof using wfΣ.
       eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
       eassumption.
 
-    + now rewrite map_length.
+    + now rewrite length_map.
 
     + rewrite /= firstn_map.
       eapply bidirectional_on_free_vars, (All_firstn (n := ci.(ci_npar))) in X ; tea.
@@ -809,11 +809,11 @@ Proof using wfΣ.
         all: assumption.
 
   - intros. red. move => P Δ f hf hΓ /= ?.
-    rewrite rename_subst0 /= rename_subst_instance map_rev List.rev_length.
+    rewrite rename_subst0 /= rename_subst_instance map_rev List.length_rev.
     erewrite rename_closedn.
     2: rewrite H0 ; eapply declared_projection_closed_type ; tea.
     econstructor ; eauto.
-    by rewrite map_length.
+    by rewrite length_map.
 
   - intros. red. move => P Δ f hf hΓ /= /forallb_All ht.
     erewrite map_dtype.
@@ -955,7 +955,7 @@ Proof.
   - rewrite -app_context_assoc /= in nthi.
     destruct (Nat.ltb_spec0 i (#|Γ''| + #|Γ'|)) as [iΓ'|iΓ'] ; cbn in * ; [congruence|..].
     apply Nat.nlt_ge in iΓ'.
-    rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
+    rewrite nth_error_app_context_ge length_app /= rename_context_length // in nthi.
     eexists ; repeat split.
     + rewrite /unlift_renaming.
       case_inequalities.

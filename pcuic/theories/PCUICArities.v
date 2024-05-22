@@ -98,7 +98,7 @@ Proof.
   rewrite /subst_instance /= /map_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=.
-  rewrite /= app_length /= Nat.add_1_r.
+  rewrite /= length_app /= Nat.add_1_r.
   constructor.
   - rewrite -rev_map_spec. apply IHl; try lia.
     eapply Alli_app in X; intuition auto.
@@ -166,7 +166,7 @@ Section WfEnv.
         destruct x as [na [b|] ty]; unfold mkProd_or_LetIn in HT; simpl in *.
         + eapply ws_cumul_pb_LetIn_l_inv in HT; auto.
           unfold subst1 in HT; rewrite subst_it_mkProd_or_LetIn in HT.
-          rewrite app_length /= Nat.add_1_r in Hlen.
+          rewrite length_app /= Nat.add_1_r in Hlen.
           simpl in HT. specialize (IHn (subst_context [b] 0 ctx) ltac:(rewrite
           subst_context_length; lia) Γ T HT).
           destruct IHn as [T' [ctx' [s' [redT destT convctx leq]]]].
@@ -175,7 +175,7 @@ Section WfEnv.
           rewrite smash_context_app. simpl.
           now rewrite -smash_context_subst_empty.
         + eapply ws_cumul_pb_Prod_l_inv in HT; auto.
-          rewrite -> app_length in Hlen.
+          rewrite -> length_app in Hlen.
           rewrite Nat.add_1_r in Hlen.
           destruct HT as [na' [A' [B' [redT convT HT]]]].
           specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
@@ -570,7 +570,7 @@ Section WfEnv.
     rewrite /subst_instance /= /map_context.
     simpl. rewrite /arities_context rev_map_spec /=.
     rewrite map_app /= rev_app_distr /=.
-    rewrite {1}/map_decl /= app_length /= Nat.add_1_r.
+    rewrite {1}/map_decl /= length_app /= Nat.add_1_r.
     constructor.
     - rewrite -rev_map_spec. apply IHl; try lia.
       eapply Alli_app in X; intuition auto.
@@ -610,8 +610,8 @@ Section WfEnv.
       rewrite subst_empty; auto.
     - destruct Δ using rev_ind; try clear IHΔ.
       + intros Hn Γ s sub; now depelim sub; rewrite subst_empty.
-      + rewrite app_length Nat.add_1_r /= => Hn Γ s sub.
-      pose proof (subslet_length sub). rewrite app_length /= Nat.add_1_r in H.
+      + rewrite length_app Nat.add_1_r /= => Hn Γ s sub.
+      pose proof (subslet_length sub). rewrite length_app /= Nat.add_1_r in H.
       have Hl : #|l| = #|firstn #|l| s|.
       { rewrite firstn_length_le; lia. }
       destruct x as [na [b|] ty] => /=;

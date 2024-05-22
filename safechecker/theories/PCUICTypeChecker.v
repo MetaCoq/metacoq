@@ -2442,8 +2442,8 @@ Section Typecheck.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
-      rewrite List.skipn_length in e.
-      rewrite List.firstn_length. lia.
+      rewrite List.length_skipn in e.
+      rewrite List.length_firstn. lia.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

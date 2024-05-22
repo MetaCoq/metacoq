@@ -69,6 +69,8 @@ Section remove_match_on_box.
     | tConst _ => t
     | tConstruct ind i args => tConstruct ind i (map remove_match_on_box args)
     | tPrim p => tPrim (map_prim remove_match_on_box p)
+    | tLazy t => tLazy (remove_match_on_box t)
+    | tForce t => tForce (remove_match_on_box t)
     end.
 
   Lemma remove_match_on_box_mkApps f l : remove_match_on_box (mkApps f l) = mkApps (remove_match_on_box f) (map remove_match_on_box l).
@@ -109,7 +111,7 @@ Section remove_match_on_box.
   Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - move/andP: H => [] clt cll. unfold isprop_ind.
@@ -172,7 +174,7 @@ Section remove_match_on_box.
   Proof using Type.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros cl; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold test_def,isprop_ind in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
@@ -223,7 +225,7 @@ Section remove_match_on_box.
   Lemma remove_match_on_box_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def remove_match_on_box) mfix) = map remove_match_on_box (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -232,7 +234,7 @@ Section remove_match_on_box.
   Lemma remove_match_on_box_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def remove_match_on_box) mfix) = map remove_match_on_box (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -513,7 +515,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.rev_length hskip Nat.add_0_r.
+  now rewrite List.length_rev hskip Nat.add_0_r.
 Qed.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
@@ -544,9 +546,9 @@ Qed.
 Lemma remove_match_on_box_correct {efl : EEnvFlags} {fl}{wcon : with_constructor_as_block = false} {Σ : GlobalContextMap.t} t v :
   wf_glob Σ ->
   closed_env Σ ->
-  @Ee.eval fl Σ t v ->
+  @EWcbvEval.eval fl Σ t v ->
   closed t ->
-  @Ee.eval (disable_prop_cases fl) (remove_match_on_box_env Σ) (remove_match_on_box Σ t) (remove_match_on_box Σ v).
+  @EWcbvEval.eval (disable_prop_cases fl) (remove_match_on_box_env Σ) (remove_match_on_box Σ t) (remove_match_on_box Σ v).
 Proof.
   intros wfΣ clΣ ev.
   induction ev; simpl in *.
@@ -574,7 +576,7 @@ Proof.
     eapply eval_iota; eauto.
     now rewrite -is_propositional_cstr_remove_match_on_box.
     rewrite nth_error_map e2 //. now len. cbn.
-    rewrite -e4. rewrite !skipn_length map_length //.
+    rewrite -e4. rewrite !length_skipn length_map //.
     eapply IHev2.
     eapply closed_iota_red => //; tea.
     eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
@@ -599,8 +601,8 @@ Proof.
     eapply eval_closed in ev1 => //.
     rewrite closedn_mkApps in ev1.
     move: ev1 => /andP [] clfix clargs.
-    eapply Ee.eval_fix; eauto.
-    rewrite map_length.
+    eapply EWcbvEval.eval_fix; eauto.
+    rewrite length_map.
     eapply remove_match_on_box_cunfold_fix; tea.
     eapply closed_fix_subst. tea.
     rewrite remove_match_on_box_mkApps in IHev3. apply IHev3.
@@ -614,15 +616,15 @@ Proof.
     move: ev1 => /andP [] clfix clargs.
     eapply eval_closed in ev2; tas.
     rewrite remove_match_on_box_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto. auto.
+    simpl in *. eapply EWcbvEval.eval_fix_value. auto. auto. auto.
     eapply remove_match_on_box_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
-    now rewrite map_length.
+    now rewrite length_map.
 
   - move/andP => [] clf cla.
     eapply eval_closed in ev1 => //.
     eapply eval_closed in ev2; tas.
-    simpl in *. eapply Ee.eval_fix'. auto. auto.
+    simpl in *. eapply EWcbvEval.eval_fix'. auto. auto.
     eapply remove_match_on_box_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
     eapply IHev2; tea. eapply IHev3.
@@ -642,15 +644,15 @@ Proof.
     destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     simpl in IHev1.
-    eapply Ee.eval_cofix_case. tea.
+    eapply EWcbvEval.eval_cofix_case. tea.
     apply remove_match_on_box_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     apply IHev2.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply remove_match_on_box_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     simpl in *.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply remove_match_on_box_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    eapply Ee.eval_cofix_case; tea.
+    eapply EWcbvEval.eval_cofix_case; tea.
     apply remove_match_on_box_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
 
   - intros cd. specialize (IHev1 cd).
@@ -682,7 +684,7 @@ Proof.
     rewrite (constructor_isprop_pars_decl_inductive e1).
     rewrite remove_match_on_box_mkApps in IHev1.
     specialize (IHev1 cld).
-    eapply Ee.eval_proj; tea.
+    eapply EWcbvEval.eval_proj; tea.
     now rewrite -is_propositional_cstr_remove_match_on_box.
     now len. rewrite nth_error_map e3 //.
     eapply IHev2.
@@ -705,8 +707,8 @@ Proof.
 
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
-    eapply Ee.eval_app_cong; eauto.
-    eapply Ee.eval_to_value in ev1.
+    eapply EWcbvEval.eval_app_cong; eauto.
+    eapply EWcbvEval.eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
     * depelim a0. destruct t => //; rewrite ?remove_match_on_box_mkApps /=.
       cbn in i. now rewrite !orb_false_r orb_true_r in i.

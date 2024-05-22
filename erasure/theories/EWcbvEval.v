@@ -272,6 +272,12 @@ Section Wcbv.
     eval_primitive eval p p' ->
     eval (tPrim p) (tPrim p')
 
+  (*
+  | eval_lazy : eval (tLazy t) (tLazy t)
+  | eval_force t v v' : eval t (tLazy v) ->
+    eval v v' ->
+    eval (tForce t) v' *)
+
   (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
   | eval_atom t : atom Σ t -> eval t t.
 
@@ -1754,7 +1760,7 @@ Qed.
 Lemma remove_last_length {X} {l : list X} :
   #|remove_last l| = match l with nil => 0 | _ => #|l| - 1 end.
 Proof.
-  unfold remove_last. rewrite firstn_length.
+  unfold remove_last. rewrite length_firstn.
   destruct l; cbn; lia.
 Qed.
 

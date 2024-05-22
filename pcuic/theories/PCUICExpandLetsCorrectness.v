@@ -49,7 +49,7 @@ Module TL := SL.
 
 Ltac solve_list :=
   rewrite !map_map_compose ?compose_on_snd ?compose_map_def;
-  try rewrite !map_length;
+  try rewrite !length_map;
   try solve_all; try typeclasses eauto with core.
 
 Lemma mapOne {X Y} (f:X->Y) x:
@@ -108,9 +108,9 @@ Definition plengths :=
     @context_assumptions_subst_instance, @context_assumptions_lift_context,
      @expand_lets_ctx_length, @subst_context_length,
     @subst_instance_length, @expand_lets_k_ctx_length, @inds_length, @lift_context_length,
-    @app_length, @List.rev_length, @extended_subst_length, @reln_length,
+    @length_app, @List.length_rev, @extended_subst_length, @reln_length,
     Nat.add_0_r, @app_nil_r,
-    @map_length, @mapi_length, @mapi_rec_length,
+    @length_map, @mapi_length, @mapi_rec_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     @smash_context_length, @arities_context_length, @context_assumptions_map).
 
@@ -150,7 +150,7 @@ Proof.
   - intros; rtoProp; intuition auto.
     * solve_all.
     * now rewrite map_context_length.
-    * rewrite map_length.
+    * rewrite length_map.
       rewrite test_context_k_closed_on_free_vars_ctx.
       now eapply All_fold_closed_on_free_vars_ctx.
     * eapply All_forallb, All_map, All_map, All_impl; tea; cbv beta.
@@ -394,7 +394,7 @@ Proof.
   - destruct Nat.leb;trivial.
     rewrite nth_error_map.
     destruct nth_error eqn:hnth;cbn.
-    2:now rewrite map_length.
+    2:now rewrite length_map.
     rewrite (trans_lift _ q) //.
     eapply nth_error_forallb in H0; tea.
   - f_equal.
@@ -640,7 +640,7 @@ Proof.
   unshelve eapply nth_error_forallb in onfvs; tea. now move/andP: onfvs => //.
   eapply (on_free_vars_fix_subst _ _ idx). tea.
   f_equal. clear Hdef. simpl.
-  unfold fix_subst. rewrite map_length.
+  unfold fix_subst. rewrite length_map.
   revert onfvs.
   generalize mfix at 1 2 3 5.
   induction mfix; trivial.
@@ -662,7 +662,7 @@ Proof.
   unshelve eapply nth_error_forallb in onfvs; tea. now move/andP: onfvs => //.
   eapply (on_free_vars_cofix_subst _ _ idx). tea.
   f_equal. clear Hdef. simpl.
-  unfold cofix_subst. rewrite map_length.
+  unfold cofix_subst. rewrite length_map.
   revert onfvs.
   generalize mfix at 1 2 3 5.
   induction mfix; trivial.
@@ -1053,7 +1053,7 @@ Proof.
   erewrite trans_subst_context.
   erewrite trans_extended_subst; tea.
   erewrite trans_lift_context; tea.
-  rewrite context_assumptions_map map_length //.
+  rewrite context_assumptions_map length_map //.
   erewrite <- on_free_vars_ctx_lift_context; tea.
   eapply on_free_vars_extended_subst. rewrite on_free_vars_ctx_k_eq shiftnP0; tea.
 Qed.
@@ -1072,7 +1072,7 @@ Proof.
   rewrite -(PCUICContexts.expand_lets_smash_context _ []).
   f_equal.
   rewrite PCUICContexts.smash_context_subst_empty.
-  f_equal => //. now cbn; rewrite map_length.
+  f_equal => //. now cbn; rewrite length_map.
   eapply (inds_is_open_terms []).
   eapply on_free_vars_ctx_subst_context. len. exact onargs.
   eapply (inds_is_open_terms []).
@@ -1483,7 +1483,7 @@ Lemma OnOne2All_map2_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : B 
   OnOne2All (fun i x y => P (g (f x) i) (f x) (f y)) i l l' -> OnOne2All P (map2 g (map f l) i) (map f l) (map f l').
 Proof.
   induction 1; simpl; constructor; try congruence; try assumption. len.
-  now rewrite map2_length !map_length.
+  now rewrite map2_length !length_map.
 Qed.
 
 Lemma wt_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t} : wt Σ Γ t -> on_free_vars (shiftnP #|Γ| xpred0) t.
@@ -1502,9 +1502,9 @@ Ltac tofvs := repeat match goal with [ H : wt _ _ _ |- _ ] => apply wt_on_free_v
 
 #[local] Hint Extern 3 (is_true (_ && true)) => rewrite andb_true_r : pcuic.
 
-Lemma skipn_map_length {A B} {n} {f : A -> B} {l} : #|skipn n (map f l)| = #|skipn n l|.
+Lemma length_skipn_map {A B} {n} {f : A -> B} {l} : #|skipn n (map f l)| = #|skipn n l|.
 Proof.
-  now rewrite !List.skipn_length map_length.
+  now rewrite !List.length_skipn length_map.
 Qed.
 
 Lemma on_free_vars_ctx_cstr_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {c mdecl idecl cdecl} :
@@ -1926,7 +1926,7 @@ Proof.
     have lenskip : #|skipn (ci_npar ci) (map trans args)| =
       context_assumptions (cstr_args cdecl).
     { destruct (Construct_Ind_ind_eq _ scrut_ty declc) as [[? e'] _].
-      rewrite skipn_length; len; lia. }
+      rewrite length_skipn; len; lia. }
     eapply All2i_nth_error_r in brs_ty; tea.
     destruct brs_ty as [cdecl' [Hcdecl' [bctxeq [wfbrctx [hbody hbodyty]]]]].
     rewrite (proj2 declc) in Hcdecl'. noconf Hcdecl'.
@@ -1938,7 +1938,7 @@ Proof.
     * rewrite !nth_error_map H; reflexivity.
     * rewrite trans_bcontext (context_assumptions_smash_context []) /= context_assumptions_map.
       len. eauto.
-    * rewrite /iota_red. rewrite skipn_map_length in lenskip.
+    * rewrite /iota_red. rewrite length_skipn_map in lenskip.
       have oninst : on_free_vars_ctx (shiftnP #|Γ| xpred0) (inst_case_branch_context p br).
       { rewrite -(PCUICCasesContexts.inst_case_branch_context_eq bctxeq).
         eapply typing_wf_local in hbody. eapply wf_local_closed_context in hbody.
@@ -3092,7 +3092,7 @@ Proof.
   generalize (ind_bodies mdecl) at 1 3 4.
   unfold inds.
   induction l using rev_ind; simpl; first constructor.
-  simpl. rewrite app_length /= => Hlen.
+  simpl. rewrite length_app /= => Hlen.
   unfold arities_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=.
@@ -3297,7 +3297,7 @@ Lemma trans_wf_predicate ci mdecl idecl p :
 Proof.
   move=> [] eqps eqanns.
   split. cbn.
-  now rewrite map_length //.
+  now rewrite length_map //.
   rewrite forget_types_map_context.
   move: eqanns; rewrite /idecl_binder /= => eqanns.
   depelim eqanns. rewrite H0.
@@ -3562,7 +3562,7 @@ Proof.
     eapply closed_wf_local in wfΓ; tea.
     eapply closedn_ctx_decl in wfΓ; tea.
     move/andP: wfΓ=> /= [] _ cl.
-    rewrite skipn_length. eapply nth_error_Some_length in H.
+    rewrite length_skipn. eapply nth_error_Some_length in H.
     now apply closedn_on_free_vars.
     rewrite trans_decl_type.
     eapply type_Rel; eauto.
@@ -3803,7 +3803,7 @@ Proof.
     eapply type_Proj.
     + now apply trans_declared_projection.
     + rewrite trans_mkApps in X2; eauto.
-    + rewrite map_length H. now destruct mdecl.
+    + rewrite length_map H. now destruct mdecl.
   - rewrite trans_dtype /=.
     assert (is_open_term Γ (tFix mfix n)).
     { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. }
@@ -4495,8 +4495,8 @@ Proof.
   eapply (cumulAlgo_cumulSpec _ (pb:=Conv)).
   eapply into_ws_cumul_pb; [eapply trans_conv'; tea|eapply wt_cumul_pb_hetero_inv in cv as [[] []]..].
   eapply trans_is_closed_context; fvs.
-  eapply trans_on_free_vars; rewrite map_length; fvs.
-  eapply trans_on_free_vars; rewrite map_length len; fvs.
+  eapply trans_on_free_vars; rewrite length_map; fvs.
+  eapply trans_on_free_vars; rewrite length_map len; fvs.
 Qed.
 
 Lemma trans_cumul_ctx_rel' {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} :
@@ -4525,12 +4525,12 @@ Proof.
     now apply ws_cumul_pb_forget in eqt. fvs. fvs.
     len.
     rewrite (All2_fold_length X) eqlen.
-    rewrite -app_length; fvs. len. eapply All2_fold_length in X. lia.
+    rewrite -length_app; fvs. len. eapply All2_fold_length in X. lia.
     now depelim ass. now depelim ass'.
     eapply trans_is_closed_context; fvs.
-    eapply trans_on_free_vars; rewrite map_length /app_context; fvs.
+    eapply trans_on_free_vars; rewrite length_map /app_context; fvs.
     eapply trans_on_free_vars; len.
-    rewrite (All2_fold_length X) eqlen -app_length; fvs.
+    rewrite (All2_fold_length X) eqlen -length_app; fvs.
   - exfalso. depelim ass.
   - exfalso; depelim ass.
 Qed.
@@ -5244,7 +5244,7 @@ Proof.
       { rewrite /iota_red.
         eapply closedn_subst0 => //.
         now rewrite forallb_rev; apply forallb_skipn.
-        cbn; len. rewrite skipn_length e1 /cstr_arity -e2 e3.
+        cbn; len. rewrite length_skipn e1 /cstr_arity -e2 e3.
         replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
           with (context_assumptions (bcontext br)) by lia.
         eauto.
@@ -5359,7 +5359,7 @@ Proof.
     eapply eval_construct; tea.
     + unshelve eapply @declared_constructor_to_gen with (cf:=cf' cf); eauto.
     + move: (IHev1 clf). rewrite trans_mkApps //.
-    + move: l; rewrite map_length /cstr_arity /= context_assumptions_smash_context
+    + move: l; rewrite length_map /cstr_arity /= context_assumptions_smash_context
        context_assumptions_map //.
     + now eapply IHev2.
 

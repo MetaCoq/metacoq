@@ -933,13 +933,13 @@ Fixpoint ren_ids (n : nat) :=
   end.
 
 Lemma ren_ids_length n : #|ren_ids n| = n.
-Proof. induction n; simpl; auto. rewrite app_length IHn; simpl; lia. Qed.
+Proof. induction n; simpl; auto. rewrite length_app IHn; simpl; lia. Qed.
 #[global]
 Hint Rewrite ren_ids_length : len.
 
 Lemma idsn_length n : #|idsn n| = n.
 Proof.
-  induction n; simpl; auto. rewrite app_length IHn; simpl; lia.
+  induction n; simpl; auto. rewrite length_app IHn; simpl; lia.
 Qed.
 #[global]
 Hint Rewrite idsn_length : len.
@@ -1595,7 +1595,7 @@ Lemma id_nth_spec {A} (l : list A) :
                           end) #|l|.
 Proof.
   induction l using rev_ind; simpl; try reflexivity.
-  rewrite app_length. simpl. rewrite Nat.add_1_r. simpl.
+  rewrite length_app. simpl. rewrite Nat.add_1_r. simpl.
   rewrite nth_error_app_ge; try lia. rewrite Nat.sub_diag. simpl.
   f_equal. rewrite {1}IHl. eapply nat_recursion_ext. intros.
   now rewrite nth_error_app_lt.
@@ -1605,7 +1605,7 @@ Lemma Upn_comp n l σ : n = #|l| -> ⇑^n σ ∘s (l ⋅n ids) =1 l ⋅n σ.
 Proof.
   intros ->. rewrite Upn_eq; simpl.
   rewrite !subst_consn_compose. sigma.
-  rewrite subst_consn_shiftn ?map_length //. sigma.
+  rewrite subst_consn_shiftn ?length_map //. sigma.
   eapply subst_consn_proper; try reflexivity.
   rewrite map_idsn_spec.
   rewrite {3}(id_nth_spec l).
@@ -1888,12 +1888,12 @@ Proof.
   - now rewrite /expand_lets_k_ctx /= Nat.add_0_r.
   - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
     rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
-    simpl. f_equal. rewrite app_length /=.
+    simpl. f_equal. rewrite length_app /=.
     simpl. rewrite Nat.add_1_r Nat.add_succ_r.
     now rewrite -(H Δ ltac:(lia) (S k)).
   - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
     rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
-    simpl. f_equal. rewrite app_length /=.
+    simpl. f_equal. rewrite length_app /=.
     simpl. rewrite Nat.add_1_r Nat.add_succ_r.
     now rewrite -(H Δ ltac:(lia) (S k)).
 Qed.
@@ -2196,7 +2196,7 @@ Proof.
   rewrite /subst_consn /shiftk /subst_compose /=.
   rewrite nth_error_skipn.
   destruct nth_error => //.
-  rewrite List.skipn_length. lia_f_equal.
+  rewrite List.length_skipn. lia_f_equal.
 Qed.
 
 Lemma subst_shift_comm k n s : ⇑^k s ∘s ↑^n =1 ↑^n ∘s ⇑^(k+n) s.

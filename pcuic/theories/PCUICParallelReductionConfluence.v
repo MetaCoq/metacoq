@@ -270,12 +270,12 @@ Section Pred1_inversion.
       clear IHpred2.
       assert (is_constructor (rarg d) args0 = false).
       { move: Hisc. rewrite /is_constructor.
-        elim: nth_error_spec. rewrite app_length.
+        elim: nth_error_spec. rewrite length_app.
         move=> i hi harg. elim: nth_error_spec.
         move=> i' hi' hrarg'.
         rewrite nth_error_app_lt in hi; eauto. congruence.
         auto.
-        rewrite app_length. move=> ge _.
+        rewrite length_app. move=> ge _.
         elim: nth_error_spec; intros; try lia; auto.
       }
       specialize (IHpred1 _ _ _ _ _ Hnth H _ _ eq_refl eq_refl).
@@ -806,7 +806,7 @@ Section Rho.
     map (f Γ) (cofix_subst mfix).
   Proof using Type.
     unfold cofix_subst. intros.
-    rewrite map_length. generalize (#|mfix|). induction n. simpl. reflexivity.
+    rewrite length_map. generalize (#|mfix|). induction n. simpl. reflexivity.
     simpl. rewrite - IHn. f_equal. apply H.
   Qed.
 
@@ -816,7 +816,7 @@ Section Rho.
     map f (cofix_subst mfix).
   Proof using Type.
     unfold cofix_subst. intros.
-    rewrite map_length. generalize (#|mfix|) at 1 2. induction n. simpl. reflexivity.
+    rewrite length_map. generalize (#|mfix|) at 1 2. induction n. simpl. reflexivity.
     simpl. rewrite - IHn. f_equal. apply H.
   Qed.
 
@@ -826,7 +826,7 @@ Section Rho.
     map f (fix_subst mfix).
   Proof using Type.
     unfold fix_subst. intros.
-    rewrite map_length. generalize (#|mfix|) at 1 2. induction n. simpl. reflexivity.
+    rewrite length_map. generalize (#|mfix|) at 1 2. induction n. simpl. reflexivity.
     simpl. rewrite - IHn. f_equal. apply H.
   Qed.
 
@@ -991,10 +991,10 @@ Section Rho.
     induction m in l |- *. simpl. auto.
     intros. simpl. rewrite mapi_app. simpl.
     rewrite IHm. cbn.
-    rewrite - app_assoc. simpl. rewrite List.rev_length.
+    rewrite - app_assoc. simpl. rewrite List.length_rev.
     rewrite Nat.add_0_r. rewrite Nat.sub_diag Nat.add_0_r. simpl.
     f_equal. apply mapi_ext_size. simpl; intros.
-    rewrite List.rev_length in H. lia_f_equal.
+    rewrite List.length_rev in H. lia_f_equal.
   Qed.
 
   Lemma fold_fix_context_rev {Γ m} :
@@ -1229,7 +1229,7 @@ Section Rho.
     eapply shift_renaming; auto.
     rewrite /rho_fix_context !fold_fix_context_rev.
     apply All2i_rev_ctx_inv, All2i_mapi.
-    simpl. apply All2i_trivial; auto. now rewrite map_length.
+    simpl. apply All2i_trivial; auto. now rewrite length_map.
   Qed.
 
   Lemma map_fix_rho_rename:
@@ -1529,9 +1529,9 @@ Section Rho.
     intros Hr hlen hpars hlen' hbod hbr hpred hbrs hnth.
     unfold rho_iota_red.
     rewrite rename_subst0 map_rev map_skipn. f_equal.
-    rewrite List.rev_length /expand_lets /expand_lets_k.
+    rewrite List.length_rev /expand_lets /expand_lets_k.
     rewrite rename_subst0. len.
-    rewrite skipn_length; try lia.
+    rewrite length_skipn; try lia.
     rewrite hlen.
     replace (pars + context_assumptions (bcontext br) - pars)
       with (context_assumptions (bcontext br)) by lia.
@@ -1635,7 +1635,7 @@ Section Rho.
         { sigma. eapply inst_ext.
           rewrite -{1}(rename_inst r).
           rewrite -ren_shiftn. sigma.
-          rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
+          rewrite Upn_comp ?length_map ?fix_subst_length ?length_map //.
           apply subst_consn_proper => //.
           rewrite map_fix_subst //.
           intros n. simp rho. simpl. simp rho.
@@ -1813,7 +1813,7 @@ Section Rho.
           rewrite -H1. sigma.
           apply inst_ext.
           rewrite -ren_shiftn. sigma.
-          (rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //;
+          (rewrite Upn_comp ?length_map ?fix_subst_length ?length_map //;
             try now autorewrite with len); [].
           apply subst_consn_proper => //.
           rewrite map_cofix_subst' //.
@@ -1889,7 +1889,7 @@ Section Rho.
         sigma. autorewrite with len.
         apply inst_ext.
         rewrite -ren_shiftn. sigma.
-        (rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //;
+        (rewrite Upn_comp ?length_map ?fix_subst_length ?length_map //;
           try now autorewrite with len); [].
         apply subst_consn_proper => //.
         rewrite map_cofix_subst' //.
@@ -1907,7 +1907,7 @@ Section Rho.
 
     - (* Fix *)
       simpl; simp rho; simpl; simp rho.
-      f_equal. rewrite /map_fix !map_length !map_map_compose.
+      f_equal. rewrite /map_fix !length_map !map_map_compose.
       red in X0. solve_all.
       move/andP: b => [] onty onbody.
       erewrite a0; tea; auto.
@@ -1921,7 +1921,7 @@ Section Rho.
 
     - (* CoFix *)
       simpl; simp rho; simpl; simp rho.
-      f_equal. rewrite /map_fix !map_length !map_map_compose.
+      f_equal. rewrite /map_fix !length_map !map_map_compose.
       red in X0. solve_all.
       move/andP: b => [] onty onbody.
       erewrite a0; tea; auto.
@@ -2033,7 +2033,7 @@ Section Rho.
     = (map (rho Γ) (cofix_subst mfix)).
   Proof using wfΣ.
     intros hm.
-    unfold cofix_subst. unfold map_fix at 2. rewrite !map_length.
+    unfold cofix_subst. unfold map_fix at 2. rewrite !length_map.
     induction #|mfix| at 1 2. reflexivity. simpl. simp rho. simpl.
     simp rho. rewrite - (fold_fix_context_rho_ctx p) //. f_equal. apply IHn.
   Qed.
@@ -2043,7 +2043,7 @@ Section Rho.
     fix_subst (map_fix rho Γ (rho_ctx_over Γ (fix_context mfix)) mfix)
     = (map (rho Γ) (fix_subst mfix)).
   Proof using wfΣ.
-    intros hm. unfold fix_subst. unfold map_fix at 2. rewrite !map_length.
+    intros hm. unfold fix_subst. unfold map_fix at 2. rewrite !length_map.
     induction #|mfix| at 1 2. reflexivity. simpl. simp rho; simpl; simp rho.
     rewrite -(fold_fix_context_rho_ctx p) //. f_equal. apply IHn.
   Qed.
@@ -2340,7 +2340,7 @@ Section Rho.
       eapply All2_nth_error_Some_right in X2 as [t' [hnth [? [[? ?] ?]]]]; tea.
       eapply nth_error_forallb in hbrs; tea. cbn in hbrs.
       move/andP: hbrs => [] hctx' hbody.
-      rewrite skipn_length; try lia. rewrite H1.
+      rewrite length_skipn; try lia. rewrite H1.
       replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
       with (context_assumptions (bcontext br)) by lia.
       eapply on_free_vars_expand_lets_k.
@@ -3440,7 +3440,7 @@ Section Rho.
       + rewrite -subst_inst.
         eapply on_free_vars_subst. rewrite forallb_rev forallb_skipn //; tea.
         eapply on_free_vars_expand_lets_k => //. len.
-        rewrite skipn_length; lia.
+        rewrite length_skipn; lia.
         rewrite /inst_case_branch_context.
         eapply on_free_vars_ctx_inst_case_context; trea; len; solve_all. eauto with fvs.
         rewrite -breq -(All2_length X2) //.
@@ -3452,8 +3452,8 @@ Section Rho.
         eapply All2_skipn in X1.
         eapply All2_rev in X1.
         eapply pred1_subst_consn; tea. eauto with fvs.
-        rewrite forallb_rev forallb_skipn //. len. rewrite !List.skipn_length; lia.
-        len. rewrite breq List.skipn_length H heq_length. lia.
+        rewrite forallb_rev forallb_skipn //. len. rewrite !List.length_skipn; lia.
+        len. rewrite breq List.length_skipn H heq_length. lia.
         len. congruence.
 
     - (* Fix reduction *)
@@ -3720,7 +3720,7 @@ Section Rho.
                 unfold is_constructor in i1.
                 move: i1 i0.
                 elim: nth_error_spec => //.
-                rewrite app_length; intros x hnth. simpl.
+                rewrite length_app; intros x hnth. simpl.
                 unfold is_constructor.
                 elim: nth_error_spec => // x' hnth' rargl rargsl.
                 destruct (eq_dec (rarg d) #|l|). lia.

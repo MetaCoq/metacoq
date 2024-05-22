@@ -61,6 +61,8 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx []) args)
 | expanded_tPrim p : primProp@{Set Set} (expanded Γ) p -> expanded Γ (tPrim p)
+| expanded_tLazy t : expanded Γ t -> expanded Γ (tLazy t)
+| expanded_tForce t : expanded Γ t -> expanded Γ (tForce t)
 | expanded_tBox : expanded Γ tBox.
 
 End expanded.
@@ -139,10 +141,12 @@ Lemma expanded_ind :
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx []) args))
     → (∀ Γ p, primProp (expanded Σ Γ) p -> primProp (P Γ) p -> P Γ (tPrim p))
+    → (∀ Γ t, expanded Σ Γ t -> P Γ t -> P Γ (tLazy t))
+    → (∀ Γ t, expanded Σ Γ t -> P Γ t -> P Γ (tForce t))
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
-  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HPrim HBox.
+  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HPrim HLazy HForce HBox.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   - eapply HRel_app; eauto. clear - f H0. induction H0; econstructor; eauto.
@@ -297,6 +301,8 @@ Section isEtaExp.
     | tVar _ => true
     | tConst _ => true
     | tPrim p => test_primIn p (fun x H => isEtaExp Γ x)
+    | tLazy t => isEtaExp Γ t
+    | tForce t => isEtaExp Γ t
     | tConstruct ind i block_args => isEtaExp_app ind i 0 && is_nil block_args }.
   Proof using Σ.
     all:try lia.
@@ -439,8 +445,8 @@ Section isEtaExp.
   Proof.
     funelim (isEtaExp Γ t); simp_eta; eauto; intros Hexp; toAll; solve_all; rtoProp; repeat solve_all; eauto.
     - destruct nth_error eqn:E; try easy. erewrite nth_error_app_left; eauto.
-    - rewrite app_assoc. eapply a, b. reflexivity.
-    - rewrite app_assoc. eapply a, b. reflexivity.
+    - rewrite app_assoc. eapply a, b; reflexivity.
+    - rewrite app_assoc. eapply a, b; reflexivity.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
     - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
       rewrite app_assoc. rtoProp; intuition auto.
@@ -457,10 +463,12 @@ Section isEtaExp.
     - destruct nth_error eqn:Hn; cbn in H; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
     - destruct block_args; cbn in *; eauto.
-    - eapply a in b. 2: f_equal. revert b. now len.
-    - eapply a in b. 2: f_equal. revert b. now len.
+    - (eapply a in b; [|f_equal]; revert b; now len) || (revert H; now len).
+    - (eapply a in b; [|f_equal]; revert b; now len) || (destruct x; cbn; revert H; now len).
     - cbn. destruct block_args; cbn in *; eauto.
-    - cbn. solve_all. rtoProp; intuition auto. eapply a in H0. 2: reflexivity. revert H0. now len.
+    - cbn. solve_all. rtoProp; intuition auto.
+      (eapply a in H0; [|reflexivity]; revert H0; now len) ||
+      (destruct x; cbn; revert H2; now len).
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
   Qed.
@@ -665,7 +673,7 @@ Section isEtaExp.
     intros mfix0. revert mfix Δ t.
     induction mfix0  using rev_ind; intros.
     - cbn -[isEtaExp] in *. eauto.
-    - cbn -[isEtaExp] in *. rewrite app_length Nat.add_comm. cbn -[substl isEtaExp].
+    - cbn -[isEtaExp] in *. rewrite length_app Nat.add_comm. cbn -[substl isEtaExp].
       eapply IHmfix0.
       + subst. now rewrite <- app_assoc.
       + solve_all.
@@ -690,7 +698,7 @@ Section isEtaExp.
     - shelve.
     - solve_all. eapply All_skipn. solve_all.
     - rewrite app_nil_r. eauto.
-    Unshelve. len. now rewrite List.skipn_length.
+    Unshelve. len. now rewrite List.length_skipn.
   Qed.
 
 (*
@@ -1205,7 +1213,7 @@ Proof.
       apply/andP; split => //.
       + len.
         rewrite (remove_last_last l0 a) // in hl'.
-        rewrite app_length in hl'.
+        rewrite length_app in hl'.
         cbn in hl'.
         now rewrite -(All2_length a0).
       + solve_all.
@@ -1735,7 +1743,7 @@ Proof.
     forward_keep IHeval2 => //.
     eapply isEtaExp_iota_red'; eauto.
     eapply forallb_nth_error in etabrs; tea. erewrite e2 in etabrs.
-    cbn in etabrs. now rewrite -e4 app_nil_r skipn_length in etabrs.
+    cbn in etabrs. now rewrite -e4 app_nil_r length_skipn in etabrs.
     econstructor; tea.
   - congruence.
   - simp_eta. move=> /andP[] etad etabrs.
@@ -1987,7 +1995,7 @@ Qed.
 
 Lemma isEtaExp_lift Σ Γ Γ' Γ'' t : isEtaExp Σ (Γ'' ++ Γ) t -> isEtaExp Σ (Γ'' ++ Γ' ++ Γ) (lift #|Γ'| #|Γ''| t).
 Proof using.
-  funelim (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
+  funelim_nosimp (isEtaExp Σ _ t); cbn; simp_eta; try now easy; intros; solve_all.
   all:cbn; simp_eta; toAll; bool; try rewrite -> forallb_InP_spec in *.
   all:try solve [solve_all].
 

@@ -267,7 +267,7 @@ Proof.
       eapply All2_app_inv_l in X0 as [r1 [r2 [? []]]].
       depelim a0. depelim a0. subst argsv'.
       eapply (eval_fix _ _ _ _ (argsv ++ r1)); tea.
-      2:{ erewrite H. rewrite (All2_length a). rewrite -app_length. reflexivity. }
+      2:{ erewrite H. rewrite (All2_length a). rewrite -length_app. reflexivity. }
       eapply eval_mkApps; tea.
       rewrite -mkApps_app.
       eapply eval_stuck_fix. eapply All2_app; tea.

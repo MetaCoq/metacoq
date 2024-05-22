@@ -64,7 +64,7 @@ Section Alpha.
   Proof using Type.
     intros m i d e.
     rewrite <- fix_context_length.
-    unfold fix_context. rewrite List.rev_length.
+    unfold fix_context. rewrite List.length_rev.
     rewrite <- nth_error_rev.
     - rewrite nth_error_mapi. rewrite e. simpl. reflexivity.
     - rewrite mapi_length.
@@ -200,13 +200,13 @@ Section Alpha.
     split.
     - move/alli_Alli/Alli_rev_All_fold.
       intros a; eapply All_fold_impl; tea. cbn.
-      intros Γ' x; now rewrite shiftnP_add app_length.
+      intros Γ' x; now rewrite shiftnP_add length_app.
     - intros a'.
       apply alli_Alli.
       eapply (All_fold_impl (fun Δ d => on_free_vars_decl (shiftnP #|Δ| (shiftnP #|Γ| P)) d)) in a'.
       now apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k (shiftnP #|Γ| P))) 0) in a'.
       intros.
-      now rewrite shiftnP_add -app_length.
+      now rewrite shiftnP_add -length_app.
   Qed.
 
   Lemma All2_fold_All_fold_mix_right A P Q Γ Γ' :
@@ -266,7 +266,7 @@ Section Alpha.
     rewrite onΓ a /= => iscl'.
     eapply All_decls_alpha_pb_ws_decl; tea.
     intros. apply ws_cumul_pb_compare => //. now apply eq_term_compare_term, upto_names_impl_eq_term.
-    rewrite app_length (All2_fold_length IH') -app_length //.
+    rewrite length_app (All2_fold_length IH') -length_app //.
 
   Qed.
 

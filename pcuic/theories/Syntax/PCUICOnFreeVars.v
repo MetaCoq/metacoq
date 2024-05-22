@@ -1530,7 +1530,7 @@ Lemma on_free_vars_ctx_app P Γ Δ :
   on_free_vars_ctx P Γ && on_free_vars_ctx (shiftnP #|Γ| P) Δ.
 Proof.
   rewrite /on_free_vars_ctx List.rev_app_distr alli_app. f_equal.
-  rewrite List.rev_length alli_shift.
+  rewrite List.length_rev alli_shift.
   setoid_rewrite shiftnP_add.
   setoid_rewrite Nat.add_comm at 1.
   now setoid_rewrite Nat.add_0_r.

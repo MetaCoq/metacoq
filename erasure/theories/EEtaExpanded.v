@@ -719,7 +719,7 @@ Proof.
     solve_all.
   - eapply In_All in H. simp_eta.
     move=> /andP[] etarel etav.
-    eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta. solve_all.
+    eapply EEtaExpanded.isEtaExp_mkApps_intro. now simp_eta. solve_all.
   - eapply In_All in H0. simp_eta.
     move=> /andP[] etau etav.
     eapply EEtaExpanded.isEtaExp_mkApps_intro; auto. solve_all.

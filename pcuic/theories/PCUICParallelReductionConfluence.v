@@ -1785,7 +1785,7 @@ Section Rho.
           erewrite H; trea.
         + simp rho. simpl. f_equal; eauto.
           erewrite -> rho_rename_pred; tea => //.
-          simp rho.
+          now simp rho.
         + simp rho. simpl. simp rho. f_equal; eauto.
           erewrite -> rho_rename_pred; tea => //.
 
@@ -1850,7 +1850,8 @@ Section Rho.
         simp rho. simpl.
         f_equal; auto.
         erewrite rho_rename_pred; tea=> //.
-        now rewrite !map_map_compose in H0. simp rho.
+        now rewrite !map_map_compose in H0.
+        now simp rho.
 
     - (* Proj construct/cofix reduction *)
       simpl.

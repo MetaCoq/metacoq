@@ -3191,7 +3191,7 @@ Proof.
     now eapply (isEtaExp_lift _ _ [_] []).
     eapply IHm; eauto. now move/andP: etal.
     eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]).
-    now eapply (isEtaExp_lift _ _ [_] []). constructor; eauto. simp_eta.
+    now eapply (isEtaExp_lift _ _ [_] []). constructor; eauto. now simp_eta.
     eapply IHm. eapply (isEtaExp_mkApps_intro _ _ _ [_]); eauto. constructor; eauto.
     all:now move/andP: etal.
 Qed.

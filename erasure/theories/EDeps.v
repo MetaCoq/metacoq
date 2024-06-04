@@ -456,6 +456,7 @@ Proof.
   - eapply Hprim; tea; constructor.
   - eapply Hprim; tea; constructor.
   - eapply Hprim; tea; constructor.
+  - eapply Hprim; tea; constructor.
     intuition auto; solve_all.
     split. auto. destruct a as [d v]. cbn in *.
     eapply Forall_All.

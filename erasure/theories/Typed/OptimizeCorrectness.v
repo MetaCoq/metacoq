@@ -4688,7 +4688,6 @@ Proof.
              apply valid_cases_substl; auto;now apply Forall_rev, Forall_skipn.
           ** eapply nth_error_forallb in exp_brs;eauto;cbn in *.
              apply is_expanded_substl;auto. now apply Forall_rev, Forall_skipn.
-          ** rewrite length_skipn in *. propify. lia.
     + clear IHev1 IHev2.
       (* Singleton pattern match *)
       subst brs; cbn in *; propify.

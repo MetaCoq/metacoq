@@ -101,6 +101,7 @@ Definition prim_size (f : term -> nat) (p : prim_val term) : nat :=
   match p.π2 with
   | primIntModel _ => 0
   | primFloatModel _ => 0
+  | primStringModel _ => 0
   | primArrayModel a => f a.(array_default) + list_size f a.(array_value)
   end.
 

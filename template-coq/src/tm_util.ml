@@ -338,7 +338,7 @@ type ('nat, 'inductive, 'relevance) acase_info =
     aci_npar : 'nat;
     aci_relevance : 'relevance }
 
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'relevance, 'universe_level, 'universe_instance, 'projection, 'int63, 'float64) structure_of_term =
+type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'relevance, 'universe_level, 'universe_instance, 'projection, 'int63, 'float64, 'pstring) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
   | ACoq_tEvar of 'nat * 'term list
@@ -359,5 +359,6 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tInt of 'int63
   | ACoq_tFloat of 'float64
+  | ACoq_tString of 'pstring
   | ACoq_tArray of 'universe_level * 'term array * 'term * 'term
 

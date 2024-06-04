@@ -95,6 +95,7 @@ struct
 
   let mkInt i = i
   let mkFloat f = f
+  let mkString s = s
 
   let mkArray u arr ~default ~ty =
     constr_mkApp (tArray, [| u; to_coq_listl tTerm (Array.to_list arr); default; ty |])
@@ -129,6 +130,9 @@ struct
   let quote_int63 i = constr_mkApp (tInt, [| Constr.mkInt i |])
 
   let quote_float64 f = constr_mkApp (tFloat, [| Constr.mkFloat f |])
+
+  let quote_pstring s = constr_mkApp (tString, [| Constr.mkString s |])
+
   let quote_inductive (kn, i) =
     constr_mkApp (tmkInd, [| kn; i |])
 
@@ -423,13 +427,15 @@ struct
   type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
       retro_float64 : quoted_kernel_name option;
+      retro_string : quoted_kernel_name option;
       retro_array : quoted_kernel_name option }
 
   let quote_retroknowledge r =
     let rint63 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_int63 in
     let rfloat64 = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_float64 in
+    let rstring = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_string in
     let rarray = to_coq_option (Lazy.force tkername) (fun x -> x) r.retro_array in
-    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64; rarray |])
+    constr_mkApp (tmk_retroknowledge, [| rint63; rfloat64; rstring; rarray |])
 
   let mk_global_env univs decls retro =
     constr_mkApp (tBuild_global_env, [| univs; decls; retro |])

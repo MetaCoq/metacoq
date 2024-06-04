@@ -1318,6 +1318,11 @@ Section Typecheck.
       check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type for floats is registered to non-monomorphic constant") ;;
       check_eq_true (eqb decl.(cst_type) (tSort Sort.type0)) (Msg "primitive type for floats is registered to an axiom whose type is not the sort Set") ;;
       ret _
+   | primString | decl :=
+      check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
+      check_eq_true (eqb decl.(cst_universes) Monomorphic_ctx) (Msg "primitive type for strings is registered to non-monomorphic constant") ;;
+      check_eq_true (eqb decl.(cst_type) (tSort Sort.type0)) (Msg "primitive type for strings is registered to an axiom whose type is not the sort Set") ;;
+      ret _
    | primArray | decl :=
       let s := sType (Universe.make' (Level.lvar 0)) in
       check_eq_true (eqb decl.(cst_body) None) (Msg "primitive type is registered to a defined constant") ;;
@@ -1328,15 +1333,7 @@ Section Typecheck.
     all:try eapply eqb_eq in i.
     all:try apply eqb_eq in i0.
     all:try apply eqb_eq in i1 => //.
-    - destruct H as []. rewrite H in absurd; eauto.
-    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
-    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
-    - destruct H as []. rewrite H in absurd; eauto.
-    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
-    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
-    - destruct H as []. rewrite H in absurd; eauto.
-    - destruct H as []. apply absurd. now rewrite H1; apply eqb_refl.
-    - destruct H as []. apply absurd; rewrite H0; apply eqb_refl.
+    all:destruct H as []; apply absurd; rewrite ?H ?H0 ?H1; eauto.
   Qed.
 
   Section make_All.
@@ -1362,6 +1359,7 @@ Section Typecheck.
     Equations? check_primitive_typing (p : prim_val) : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ primitive_typing_hyps checking Σ Γ p ∥) :=
       | (primInt; primIntModel i) := ret _
       | (primFloat; primFloatModel f) := ret _
+      | (primString; primStringModel f) := ret _
       | (primArray; primArrayModel a) :=
         check_eq_true (abstract_env_ext_wf_universeb X (Universe.make' a.(array_level))) (Msg "primitive array level is not well-formed") ;;
         check_type <- bdcheck infer Γ wfΓ a.(array_type) (tSort (sType (Universe.make' a.(array_level)))) _ ;;
@@ -1372,7 +1370,7 @@ Section Typecheck.
       all:intros.
       all:try pose proof (abstract_env_ext_wf _ wfΣ) as [wfΣ'].
       all:try specialize (wfΓ _ wfΣ).
-      1-2:do 2 constructor.
+      1-3:do 2 constructor.
       - eauto.
       - sq. erewrite <- abstract_env_ext_wf_universeb_correct in i; tea.
         eapply has_sort_isType; eapply type_Sort; eauto.

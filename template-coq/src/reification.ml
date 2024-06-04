@@ -16,6 +16,7 @@ sig
   type quoted_proj
   type quoted_int63
   type quoted_float64
+  type quoted_pstring
 
   type quoted_global_reference
 

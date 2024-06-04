@@ -587,7 +587,7 @@ Proof.
   intros hdecl hb.
   induction args => //.
   destruct prim as [? []]; cbn in *; intros sp; destruct hb; simp prim_type in *.
-  1-2:eapply (typing_spine_axiom _ _ _ _ []) in sp; tea.
+  1-3:eapply (typing_spine_axiom _ _ _ _ []) in sp; tea.
   eapply (typing_spine_axiom _ _ _ _ [array_type a0]) in sp; tea.
 Qed.
 
@@ -782,6 +782,7 @@ Proof with eauto with wcbv; try congruence.
       eapply value_mkApps_inv in Hval as [[-> ]|[]]; eauto.
   - intros Σ wfΣ Γ _ p c u mdecl idecl cdecl pdecl Hcon args Hargs -> hp.
     depelim args... 1-2:right; constructor; constructor 2; constructor.
+    right. constructor. constructor 2. constructor.
     depelim Hcon.
     destruct hdef; eauto.
     + left. destruct s as [t' hred]. exists (tPrim (prim_array (set_array_default a t'))). now constructor.

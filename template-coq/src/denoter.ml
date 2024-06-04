@@ -15,6 +15,7 @@ sig
   val unquote_bool : quoted_bool -> bool
   val unquote_int63 : quoted_int63 -> Uint63.t
   val unquote_float64 : quoted_float64 -> Float64.t
+  val unquote_pstring : quoted_pstring -> Pstring.t
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
   val unquote_kn :  quoted_kernel_name -> KerName.t
   val unquote_inductive :  quoted_inductive -> Names.inductive
@@ -28,7 +29,7 @@ sig
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
     quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
-    quoted_int63, quoted_float64) structure_of_term
+    quoted_int63, quoted_float64, quoted_pstring) structure_of_term
 
 end
 
@@ -165,6 +166,7 @@ struct
          evm, Constr.mkProj (p', r, t')
       | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
       | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
+      | ACoq_tString x -> evm, Constr.mkString (D.unquote_pstring x)
       | ACoq_tArray (u, arr, def, ty) ->
           let evm, u = D.unquote_universe_level evm u in
           let evm, arr = CArray.fold_left_map (fun evm a -> aux env evm a) evm arr in

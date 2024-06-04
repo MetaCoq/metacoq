@@ -813,7 +813,7 @@ Section classification.
     - now rewrite head_mkApps /head /=.
     - eapply inversion_Prim in typed as [prim_ty [cdecl [? ? ? ? hp]]]; eauto.
       destruct p as [? []]; simp prim_type in w.
-      1-2:eapply (invert_cumul_axiom_ind (args := [])) in w; eauto; destruct p0 as [s []]; eauto.
+      1-3:eapply (invert_cumul_axiom_ind (args := [])) in w; eauto; destruct p0 as [? []]; eauto.
       eapply (invert_cumul_axiom_ind (args := [array_type a0])) in w; eauto. destruct p0 as [s []]; eauto.
   Qed.
 
@@ -1082,7 +1082,7 @@ Section classification.
       now eapply red_app.
 
     - eapply inversion_Prim in Ht as [prim_type [decl []]]; eauto.
-      depelim X. 1-2:reflexivity.
+      depelim X. 1-3:reflexivity.
       depelim p1. specialize (r _ hdef).
       eapply red_primArray_congr; eauto.
       eapply All2_undep in a. solve_all.

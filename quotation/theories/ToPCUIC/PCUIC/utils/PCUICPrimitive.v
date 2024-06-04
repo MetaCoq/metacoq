@@ -17,6 +17,8 @@ From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) All_Forall.
 
 #[export] Instance quote_prim_model {term tag} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (prim_model term tag) := ltac:(destruct 1; eauto).
 
+#[export] Instance quote_pstring : ground_quotable PrimString.string := fun s => PCUICAst.tString s.
+
 #[export] Instance quote_prim_model_of {term tag} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (prim_model_of term tag) := ltac:(cbv [prim_model_of]; destruct tag; exact _).
 
 #[export] Instance quote_prim_val {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (prim_val term) := ltac:(cbv [prim_val]; exact _).

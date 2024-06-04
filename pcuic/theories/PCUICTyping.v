@@ -178,6 +178,7 @@ Variant primitive_typing_hyps `{checker_flags}
   Σ Γ : prim_val term -> Type :=
 | prim_int_hyps i : primitive_typing_hyps typing Σ Γ (primInt; primIntModel i)
 | prim_float_hyps f : primitive_typing_hyps typing Σ Γ (primFloat; primFloatModel f)
+| prim_string_hyps s : primitive_typing_hyps typing Σ Γ (primString; primStringModel s)
 | prim_array_hyps a
   (wfl : wf_universe Σ (Universe.make' a.(array_level)))
   (hty : typing Σ Γ a.(array_type) (tSort (sType (Universe.make' a.(array_level)))))
@@ -189,6 +190,7 @@ Derive Signature for primitive_typing_hyps.
 Equations prim_type (p : prim_val term) (cst : kername) : term :=
 prim_type (primInt; _) cst := tConst cst [];
 prim_type (primFloat; _) cst := tConst cst [];
+prim_type (primString; _) cst := tConst cst [];
 prim_type (primArray; primArrayModel a) cst := tApp (tConst cst [a.(array_level)]) a.(array_type).
 Transparent prim_type.
 
@@ -407,6 +409,7 @@ Section PrimitiveSize.
 
   Definition primitive_typing_hyps_size Σ Γ p (h : primitive_typing_hyps typing Σ Γ p) : size.
     destruct h.
+    - exact 0.
     - exact 0.
     - exact 0.
     - exact (Nat.max (typing_size _ _ _ _ hty) (Nat.max (typing_size _ _ _ _ hdef)

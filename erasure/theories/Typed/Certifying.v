@@ -51,6 +51,7 @@ Definition change_modpath (mpath : modpath) (suffix : string) (to_rename : kerna
     | tCoFix mfix idx => tCoFix (map (map_def go go) mfix) idx
     | tInt n => tInt n
     | tFloat n => tFloat n
+    | tString n => tString n
     | tArray l v def ty => tArray l (map go v) (go def) (go ty)
   end.
 

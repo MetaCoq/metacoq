@@ -188,6 +188,7 @@ Module WithTemplate.
          | tVar _
          | tInt _
          | tFloat _
+         | tString _
          | tArray _ _ _ _
          | tConst _ _
          | tInd _ _

@@ -716,7 +716,7 @@ Proof.
 
   - epose proof (type_Prim _ _ _ _ _ X H H0 H1 X0). eapply validity in X4.
     depelim X1; depelim X3; depelim o.
-    1-2:econstructor; tea.
+    1-3:econstructor; tea.
     depelim X0. destruct X4 as (_ & s & ? & _).
     econstructor; tea.
     eapply inversion_Prim in X2 as [prim_ty' [cdecl' []]]; eauto.

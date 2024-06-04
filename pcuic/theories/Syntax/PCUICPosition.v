@@ -857,11 +857,11 @@ Proof.
     + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
       * apply IHp.
       * rewrite hh. reflexivity.
-    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+    + destruct prim as [? []]; simpl. 1-3:now rewrite hh.
       now rewrite IHp.
-    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+    + destruct prim as [? []]; simpl. 1-3:now rewrite hh.
       now rewrite IHp.
-    + destruct prim as [? []]; simpl. 1-2:now rewrite hh.
+    + destruct prim as [? []]; simpl. 1-3:now rewrite hh.
       destruct nth_error eqn:e.
       * now rewrite IHp.
       * now rewrite hh.

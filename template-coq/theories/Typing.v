@@ -879,6 +879,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     primitive_invariants primFloat cdecl ->
     Σ ;;; Γ |- tFloat p : tConst prim_ty []
 
+| type_String p prim_ty cdecl :
+    wf_local Σ Γ ->
+    primitive_constant Σ primString = Some prim_ty ->
+    declared_constant Σ prim_ty cdecl ->
+    primitive_invariants primString cdecl ->
+    Σ ;;; Γ |- tString p : tConst prim_ty []
+
 | type_Array prim_ty cdecl u arr def ty :
     wf_local Σ Γ ->
     primitive_constant Σ primArray = Some prim_ty ->
@@ -1007,6 +1014,7 @@ Proof.
   - exact (S (Nat.max
       (Nat.max (All_local_env_size (typing_size _) _ a) (all_size _ (fun x p => on_def_type_size (typing_size Σ) _ _ p) a0))
       (all_size (on_def_body (lift_typing typing _) _ _) (fun x p => on_def_body_size (typing_size Σ) _ _ _ p) a1))).
+  - exact (S (All_local_env_size (typing_size _) _ a)).
   - exact (S (All_local_env_size (typing_size _) _ a)).
   - exact (S (All_local_env_size (typing_size _) _ a)).
   - exact (S (Nat.max (All_local_env_size (typing_size _) _ a) (Nat.max d2 (Nat.max d3 (all_size _ (fun t p => typing_size Σ Γ t ty p) a0))))).
@@ -1285,6 +1293,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
         primitive_invariants primFloat cdecl ->
         P Σ Γ (tFloat p) (tConst prim_ty [])) ->
 
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) p prim_ty cdecl,
+        PΓ Σ Γ wfΓ ->
+        primitive_constant Σ primString = Some prim_ty ->
+        declared_constant Σ prim_ty cdecl ->
+        primitive_invariants primString cdecl ->
+        P Σ Γ (tString p) (tConst prim_ty [])) ->
+
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) u arr def ty prim_ty cdecl,
         PΓ Σ Γ wfΓ ->
         primitive_constant Σ primArray = Some prim_ty ->
@@ -1311,7 +1326,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 Proof.
   intros P Pj Pdecl PΓ; unfold env_prop.
   intros Xj XΓ.
-  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 Xint Xfloat Xarr X12 Σ wfΣ Γ wfΓ t T H.
+  intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 Xint Xfloat Xstring Xarr X12 Σ wfΣ Γ wfΓ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : global_env_ext & { wfΣ : wf Σ & { Γ & { t & { T & Σ ;;; Γ |- t : T }}}}})) as p0.

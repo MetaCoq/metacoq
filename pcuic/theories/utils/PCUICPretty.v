@@ -121,6 +121,7 @@ Module PrintTermTree.
       match p.π2 return Tree.t with
       | primIntModel f => "(int: " ^ show f ^ ")"
       | primFloatModel f => "(float: " ^ show f ^ ")"
+      | primStringModel s => "(string: " ^ show s ^ ")"
       | primArrayModel a => "(array:" ^ string_of_list soft a.(array_value) ^ ")"
       end.
 

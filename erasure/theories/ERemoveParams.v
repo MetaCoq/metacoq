@@ -569,6 +569,7 @@ Module Fast.
         | None => mkApps (EAst.tConstruct kn c block_args) app }
     | app, tPrim (primInt; primIntModel i) => mkApps (tPrim (primInt; primIntModel i)) app
     | app, tPrim (primFloat; primFloatModel f) => mkApps (tPrim (primFloat; primFloatModel f)) app
+    | app, tPrim (primString; primStringModel f) => mkApps (tPrim (primString; primStringModel f)) app
     | app, tPrim (primArray; primArrayModel a) =>
       mkApps (tPrim (primArray; primArrayModel {| array_default := strip [] a.(array_default); array_value := strip_args a.(array_value) |})) app
     | app, tLazy t => mkApps (tLazy (strip [] t)) app

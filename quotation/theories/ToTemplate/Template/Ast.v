@@ -6,6 +6,8 @@ From MetaCoq.Quotation.ToTemplate.Common Require Import Environment EnvironmentT
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Environment.Sig EnvironmentTyping.Sig.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Template Require Import Ast.Instances ReflectAst.Instances.
 
+#[export] Instance quote_pstring : ground_quotable PrimString.string := fun s => Ast.tString s.
+
 #[export] Instance quote_predicate {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (predicate term) := ltac:(destruct 1; exact _).
 #[export] Instance quote_branch {term} {qterm : quotation_of term} {quote_term : ground_quotable term} : ground_quotable (branch term) := ltac:(destruct 1; exact _).
 #[local] Hint Extern 1 => assumption : typeclass_instances.

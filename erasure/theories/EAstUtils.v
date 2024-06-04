@@ -386,6 +386,7 @@ Section PrimDeps.
   Equations prim_global_deps (p : prim_val term) : KernameSet.t :=
    | (primInt; primIntModel i) => KernameSet.empty
    | (primFloat; primFloatModel f) => KernameSet.empty
+   | (primString; primStringModel s) => KernameSet.empty
    | (primArray; primArrayModel a) =>
       List.fold_left (fun acc x => KernameSet.union (deps x) acc) a.(array_value) (deps a.(array_default)).
 

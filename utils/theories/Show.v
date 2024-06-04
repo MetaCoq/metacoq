@@ -1,5 +1,8 @@
-From Coq Require Import PArith Sint63 String Uint63 PrimFloat SpecFloat FloatOps.
+From Coq Require Import PArith Sint63 String Uint63 PrimFloat SpecFloat FloatOps PString.
 From MetaCoq.Utils Require Import bytestring MCString.
+
+(* Circumventing https://github.com/coq/coq/issues/19150 (via PString). *)
+Ltac Zify.zify_post_hook ::= idtac.
 
 Local Open Scope bs_scope.
 
@@ -56,9 +59,22 @@ Definition string_of_prim_int (i:Uint63.int) : string :=
 Definition string_of_float (f : PrimFloat.float) : string :=
   string_of_specfloat (FloatOps.Prim2SF f).
 
+Definition char63_to_string (c : PrimString.char63) : string :=
+  let b :=
+    match Byte.of_N (BinInt.Z.to_N (Uint63.to_Z c)) with
+    | None => Byte.x00
+    | Some b => b
+    end
+  in
+  String.String b String.EmptyString.
+
+Definition string_of_pstring (s : PrimString.string) : string :=
+  string_of_list char63_to_string (PrimStringAxioms.to_list s).
+
 #[export] Instance show_uint : Show PrimInt63.int := string_of_prim_int.
 #[export] Instance show_sint : Show int_wrapper := { show x := string_of_Z (Sint63.to_Z (x.(int_wrap))) }.
 #[export] Instance show_specfloat : Show SpecFloat.spec_float := string_of_specfloat.
 #[export] Instance show_float : Show PrimFloat.float := string_of_float.
 #[export] Instance show_positive : Show positive := string_of_positive.
 #[export] Instance show_Z : Show Z := string_of_Z.
+#[export] Instance show_pstring : Show PrimString.string := string_of_pstring.

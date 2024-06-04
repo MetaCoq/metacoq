@@ -692,6 +692,7 @@ Proof.
     depelim e.
     * split; simp_eta. unshelve eapply Qprim. constructor. constructor.
     * split; simp_eta. unshelve eapply Qprim. constructor. constructor.
+    * split; simp_eta. unshelve eapply Qprim. constructor. constructor.
     * eapply Qpres in qt. depelim qt. now cbn in i.
       split; simp_eta. unshelve eapply Qprim. constructor; eauto. constructor.
       + apply All2_over_undep. cbn in IH.

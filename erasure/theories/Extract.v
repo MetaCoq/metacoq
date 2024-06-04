@@ -71,6 +71,7 @@ Inductive erase_prim_model (erase : term -> E.term -> Prop) : forall {t : prim_t
   @PCUICPrimitive.prim_model term t -> @prim_model E.term t -> Type :=
 | erase_primInt i : @erase_prim_model erase primInt (PCUICPrimitive.primIntModel i) (primIntModel i)
 | erase_primFloat f : @erase_prim_model erase primFloat (PCUICPrimitive.primFloatModel f) (primFloatModel f)
+| erase_primString s : @erase_prim_model erase primString (PCUICPrimitive.primStringModel s) (primStringModel s)
 | erase_primArray a ed ev :
     erase a.(PCUICPrimitive.array_default) ed ->
     All2 erase a.(PCUICPrimitive.array_value) ev ->
@@ -357,6 +358,8 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tPrim (primInt; primIntModel i))
 | erases_deps_tPrimFloat f :
     erases_deps Σ Σ' (E.tPrim (primFloat; primFloatModel f))
+| erases_deps_tPrimString s :
+    erases_deps Σ Σ' (E.tPrim (primString; primStringModel s))
 | erases_deps_tPrimArray a :
     erases_deps Σ Σ' a.(array_default) ->
     Forall (erases_deps Σ Σ') a.(array_value) ->

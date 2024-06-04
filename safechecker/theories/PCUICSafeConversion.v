@@ -3586,6 +3586,9 @@ Equations (noeqns) isconv_array_values_aux
         | (primFloat; primFloatModel f) | (primFloat; primFloatModel f') with inspect (eqb f f') :=
           { | @exist true eqf := yes
             | @exist false neqf := no (DistinctPrimValues (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p') }
+        | (primString; primStringModel f) | (primString; primStringModel f') with inspect (eqb f f') :=
+          { | @exist true eqf := yes
+            | @exist false neqf := no (DistinctPrimValues (Γ ,,, stack_context π1) p (Γ ,,, stack_context π2) p') }
         | (primArray; primArrayModel a) | (primArray; primArrayModel a')
           with inspect (abstract_env_compare_universe X Conv (Universe.make' (array_level a)) (Universe.make' (array_level a'))) :=
           { | @exist false neql := no (ArrayNotConvertibleLevels (Γ ,,, stack_context π1) a (Γ ,,, stack_context π2) a')
@@ -4725,6 +4728,44 @@ Qed.
     destruct H as [H]. cbn in H.
     eapply invert_cumul_Prim in H; depelim H.
     now rewrite eqb_refl in neqi.
+  Qed.
+
+  Next Obligation.
+  Proof.
+    symmetry in eqf.
+    apply eqb_eq in eqf; subst f'.
+    rename H into wfΣ. pose proof (hΣ _ wfΣ) as [hΣ].
+    clear aux.
+    specialize (hx Σ wfΣ).
+    specialize (h1 Σ wfΣ).
+    specialize (h2 Σ wfΣ).
+    apply welltyped_zipc_zipp in h1; eauto.
+    eapply welltyped_zipc_zipp in h2; eauto.
+    rewrite !zipp_as_mkApps in h1, h2 |- *.
+    apply mkApps_Prim_nil in h1; auto.
+    apply mkApps_Prim_nil in h2; auto.
+    rewrite h1 h2; cbn.
+    red. sq. eapply ws_cumul_pb_Prim; eauto; fvs.
+    constructor.
+  Qed.
+
+  Next Obligation.
+  Proof.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof (hΣ _ wfΣ) as [hΣ].
+    specialize (H _ wfΣ).
+    specialize (hx Σ wfΣ).
+    specialize (h1 Σ wfΣ).
+    apply welltyped_zipc_zipp in h1; eauto.
+    clear aux.
+    eapply welltyped_zipc_zipp in h2; eauto.
+    rewrite !zipp_as_mkApps in h1, h2, H |- *.
+    apply mkApps_Prim_nil in h1; auto.
+    apply mkApps_Prim_nil in h2; auto.
+    rewrite h1 h2 in H.
+    destruct H as [H]. cbn in H.
+    eapply invert_cumul_Prim in H; depelim H.
+    now rewrite eqb_refl in neqf.
   Qed.
 
   Next Obligation.

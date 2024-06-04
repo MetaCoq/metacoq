@@ -86,11 +86,12 @@ Lemma extends_primitive_constant Σ Σ' p t :
 Proof.
   intros [_ _ ext].
   unfold primitive_constant.
-  case: ext => o [] o' o''.
+  case: ext => o [] o' [] o'' o'''.
   destruct p => //.
   - intros hr. now rewrite hr in o; depelim o.
   - intros hr. now rewrite hr in o'; depelim o'.
   - intros hr. now rewrite hr in o''; depelim o''.
+  - intros hr. now rewrite hr in o'''; depelim o'''.
 Qed.
 Local Hint Resolve extends_primitive_constant : extends.
 

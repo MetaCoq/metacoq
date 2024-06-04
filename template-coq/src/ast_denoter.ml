@@ -13,6 +13,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
+  type quoted_pstring = Pstring.t
   type quoted_bool = bool
   type quoted_name = name
   type quoted_aname = name binder_annot
@@ -104,7 +105,7 @@ struct
 
   let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind,
     quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level, quoted_univ_instance, quoted_proj,
-    quoted_int63, quoted_float64) structure_of_term =
+    quoted_int63, quoted_float64, quoted_pstring) structure_of_term =
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
@@ -125,6 +126,7 @@ struct
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
     | Coq_tInt i -> ACoq_tInt i
     | Coq_tFloat f -> ACoq_tFloat f
+    | Coq_tString s -> ACoq_tString s
     | Coq_tArray (u, arr, def, ty) -> ACoq_tArray (u, Array.of_list arr, def, ty)
 
   let unquote_string = Caml_bytestring.caml_string_of_bytestring
@@ -160,6 +162,8 @@ struct
   let unquote_int63 i = i
 
   let unquote_float64 i = i
+
+  let unquote_pstring s = s
 
   (* val unquote_sort : quoted_sort -> Sorts.t *)
   (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)

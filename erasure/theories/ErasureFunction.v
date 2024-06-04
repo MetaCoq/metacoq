@@ -1026,6 +1026,7 @@ Section Erase.
         E.tCoFix mfix' n
       | tPrim (primInt; PCUICPrimitive.primIntModel i) := E.tPrim (primInt; EPrimitive.primIntModel i) ;
       | tPrim (primFloat; PCUICPrimitive.primFloatModel f) := E.tPrim (primFloat; EPrimitive.primFloatModel f) ;
+      | tPrim (primString; PCUICPrimitive.primStringModel s) := E.tPrim (primString; EPrimitive.primStringModel s) ;
       | tPrim (primArray; PCUICPrimitive.primArrayModel a) :=
         E.tPrim (primArray; EPrimitive.primArrayModel
           {| EPrimitive.array_default := erase Γ a.(PCUICPrimitive.array_default) _;
@@ -1276,6 +1277,7 @@ Proof.
     intros isp. eapply isErasable_Proof in isp.
     eapply H'; intros. now rewrite (abstract_env_ext_irr _ H0 H).
 
+  - repeat constructor.
   - repeat constructor.
   - repeat constructor.
   - repeat constructor; eauto.

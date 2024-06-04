@@ -57,6 +57,14 @@ Defined.
 
 Derive NoConfusion NoConfusionHom for term.
 
+#[global] Instance EqDec_pstring : EqDec PrimString.string.
+Proof.
+  intros s1 s2. destruct (PrimString.compare s1 s2) eqn:Hcmp; [left|right|right].
+  - by apply PString.compare_eq.
+  - intros Heq%PString.compare_eq. rewrite Heq in Hcmp. discriminate Hcmp.
+  - intros Heq%PString.compare_eq. rewrite Heq in Hcmp. discriminate Hcmp.
+Qed.
+
 #[global] Instance EqDec_term : EqDec term.
 Proof.
   intro x; induction x using term_forall_list_rect ; intro t ;
@@ -157,6 +165,8 @@ Proof.
   - destruct (eq_dec i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
+    subst. left. reflexivity.
+  - destruct (eq_dec s s0) ; nodec.
     subst. left. reflexivity.
   - destruct (IHx1 t1); subst; nodec.
     destruct (IHx2 t2); subst; nodec.

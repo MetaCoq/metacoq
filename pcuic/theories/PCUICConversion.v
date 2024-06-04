@@ -847,6 +847,7 @@ Section ConvCongruences.
     Σ ;;; Γ ⊢ tPrim p ⇝ T ->
     (∑ i, p = (primInt; primIntModel i) /\ T = tPrim p) +
     (∑ f, p = (primFloat; primFloatModel f) /\ T = tPrim p) +
+    (∑ s, p = (primString; primStringModel s) /\ T = tPrim p) +
     ∑ a a',
       [× p = (primArray; primArrayModel a), T = tPrim (primArray; primArrayModel a'),
         a.(array_level) = a'.(array_level),
@@ -859,6 +860,7 @@ Section ConvCongruences.
     apply: closed_red_ind; intros; subst.
     - destruct p as [? []].
       * now left.
+      * left. left. now right.
       * left. now right.
       * right. exists a, a.
         cbn in H0; rtoProp; intuition auto.
@@ -882,14 +884,17 @@ Section ConvCongruences.
         * eapply into_closed_red; eauto.
         * toAll; eapply All_All2; tea; cbn; intuition eauto using into_closed_red.
     - specialize (X1 _ eq_refl) as [].
-      * destruct s as [[? []]|[? []]]; subst;
+      * destruct s as [[[? []]|[? []]]|[? []]]; subst;
         specialize (X2 _ eq_refl) as [].
         + left. destruct s; [left|right]; eauto.
         + destruct s as [? [? []]]. subst. noconf e.
         + left; destruct s; [left|right]; eauto.
         + destruct s as [? [? []]]; subst; noconf e.
+        + left; destruct s; [left|right]; eauto.
+        + destruct s as [? [? []]]; subst; noconf e.
       * right. destruct s as [a [a' []]].
-        subst. specialize (X2 _ eq_refl) as [[|]|].
+        subst. specialize (X2 _ eq_refl) as [[[|]|]|].
+        + destruct s as [? []]; congruence.
         + destruct s as [? []]; congruence.
         + destruct s as [? []]; congruence.
         + destruct s as [a2 [a2' []]]; subst.
@@ -1461,7 +1466,7 @@ Section Inversions.
   Proof using wfΣ.
     intros hd hb ht.
     destruct p as [? []]; simp prim_type in ht.
-    1-2:eapply (invert_cumul_axiom_ind (args := [])) in ht; tea; now destruct hb as [s []].
+    1-3:eapply (invert_cumul_axiom_ind (args := [])) in ht; tea; now destruct hb as [? []].
     eapply (invert_cumul_axiom_ind (args := [_])) in ht; tea. apply hb.
   Qed.
 
@@ -1472,7 +1477,7 @@ Section Inversions.
   Proof using wfΣ.
     intros hd hb ht.
     destruct p as [? []]; simp prim_type in ht.
-    1-2:eapply (invert_cumul_axiom_prod (args := [])) in ht; tea; now destruct hb as [s []].
+    1-3:eapply (invert_cumul_axiom_prod (args := [])) in ht; tea; now destruct hb as [? []].
     eapply (invert_cumul_axiom_prod (args := [_])) in ht; tea. apply hb.
   Qed.
 
@@ -1485,8 +1490,8 @@ Section Inversions.
     move/ws_cumul_pb_alt_closed: hd => [v [v' []]].
     move/invert_red_tPrim => hl.
     move/invert_red_tPrim => hr.
-    destruct hl as [[[i []]|[f []]]|[a [a' []]]],
-       hr as [[[i' []]|[f' []]]|[a1 [a2' []]]]; subst; try congruence;
+    destruct hl as [[[[i []]|[f []]]|[s []]]|[a [a' []]]],
+      hr as [[[[i' []]|[f' []]]|[s' []]]|[a1 [a2' []]]]; subst; try congruence;
      intros eq; depelim eq; depelim o; cbn in cl', cl'';
       rtoProp; intuition eauto; constructor; eauto.
     - rewrite e1 e4 //.
@@ -3903,7 +3908,7 @@ Lemma ws_cumul_pb_Prim {pb Γ p p'} :
   Σ;;; Γ ⊢ tPrim p ≤[pb] tPrim p'.
 Proof.
   intros Hp HΓ.
-  depelim Hp. 1-2:constructor; eauto; trea.
+  depelim Hp. 1-3:constructor; eauto; trea.
   apply ws_cumul_pb_terms_alt in a0 as [args0 [args0'  [Hargs0 Hargs0' Hargs0args0']]].
   pose proof (Hargs0_c :=  closed_red_terms_open_right Hargs0).
   pose proof (Hargs0'_c :=  closed_red_terms_open_right Hargs0').

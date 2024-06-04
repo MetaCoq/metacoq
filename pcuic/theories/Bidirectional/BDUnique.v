@@ -242,6 +242,7 @@ Proof using wfΣ.
     * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
     * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
     * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
+    * inversion X2 ; subst. rewrite H3 in H; noconf H. eexists. split; eapply closed_red_refl; fvs.
       all:simp prim_type; cbn. cbn in hty.
       all:eapply type_is_open_term, checking_typing; tea.
       all:eapply has_sort_isType; eapply checking_typing; tea.

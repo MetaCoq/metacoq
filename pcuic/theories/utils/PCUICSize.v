@@ -27,6 +27,7 @@ Definition prim_size (size : term -> nat) (p : prim_val) : nat :=
   match p.π2 return nat with
   | primIntModel f => 0
   | primFloatModel f => 0
+  | primStringModel s => 0
   | primArrayModel a => size a.(array_type) + size a.(array_default) + list_size size a.(array_value)
   end.
 

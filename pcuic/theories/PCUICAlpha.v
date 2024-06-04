@@ -880,7 +880,7 @@ Section Alpha.
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
     - intros p prim_ty cdecl IH prim decl pinv pty ptyIH Δ v e e'.
-      depelim e. depelim o. 1-2:econstructor; eauto; constructor.
+      depelim e. depelim o. 1-3:econstructor; eauto; constructor.
       pose proof (validity (type_Prim Σ Γ _ _ _ wfΓ prim decl pinv pty)) as (_ & s & Hs & _).
       eapply type_Cumul. econstructor; eauto.
       * depelim ptyIH. constructor; eauto. now rewrite -e. rewrite -e; eauto.

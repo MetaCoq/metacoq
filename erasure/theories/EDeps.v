@@ -354,6 +354,7 @@ Proof.
   - depelim er; depelim X; constructor; eauto.
     eapply All2_over_undep in a0. solve_all.
   - easy.
+  - easy.
 Qed.
 
 #[global]

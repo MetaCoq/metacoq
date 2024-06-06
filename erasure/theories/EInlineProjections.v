@@ -710,13 +710,14 @@ Proof.
     * destruct with_guarded_fix.
       + move: i.
         rewrite !negb_or.
-        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
+        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps
+          !isLazyApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
         rtoProp; intuition auto;  destruct v => /= //.
       + move: i.
         rewrite !negb_or.
-        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
+        rewrite optimize_mkApps !isConstructApp_mkApps !isPrimApp_mkApps !isLazyApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
   - intros; rtoProp; intuition eauto.
@@ -725,6 +726,8 @@ Proof.
     eapply All2_Set_All2 in ev. eapply All2_All2_Set. primProp.
     subst a0 a'; cbn in *. depelim H0; cbn in *. intuition auto; solve_all.
     primProp; depelim H0; intuition eauto.
+  - intros wf; econstructor; eauto. eapply IHev2.
+    eapply eval_wellformed in ev1; tea => //.
   - destruct t => //.
     all:constructor; eauto.
     cbn [atom optimize] in i |- *.

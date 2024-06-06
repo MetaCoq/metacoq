@@ -649,6 +649,28 @@ Proof.
     eapply IHt1. cbn in Hwf'. rtoProp. intuition.
 Qed.
 
+Lemma transform_blocks_isLazyApp {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
+  has_cstr_params = false ->
+  wf_glob Σ -> wellformed Σ 0 t ->
+  isLazyApp (transform_blocks Σ t) = isLazyApp t.
+Proof.
+  intros haspars Hwf Hwf'.
+  induction t; try now cbn; eauto.
+  eapply transform_blocks_tApp; eauto.
+  destruct decompose_app.
+  destruct construct_viewc.
+  - rewrite GlobalContextMap.lookup_constructor_pars_args_spec.
+    destruct lookup_constructor_pars_args as [ [[]] | ]; eauto.
+    cbn. destruct chop. intros (? & ? & ?). subst.
+    rewrite -[tApp _ _](mkApps_app _ _ [t2]).
+    rewrite !isLazyApp_mkApps. cbn. reflexivity.
+  - change (tApp t1 t2) with (mkApps t1 [t2]).
+    change (tApp (transform_blocks Σ t1) (transform_blocks Σ t2)) with
+    (mkApps (transform_blocks Σ t1) [transform_blocks Σ t2]).
+    rewrite !isLazyApp_mkApps.
+    eapply IHt1. cbn in Hwf'. rtoProp. intuition.
+Qed.
+
 Lemma lookup_env_transform_blocks {Σ : GlobalContextMap.t} kn :
   lookup_env (transform_blocks_env Σ) kn =
   option_map (transform_blocks_decl Σ) (lookup_env Σ kn).
@@ -1125,17 +1147,20 @@ Proof.
       * rewrite GlobalContextMap.lookup_constructor_pars_args_spec;
           destruct lookup_constructor_pars_args as [ [[]] | ] eqn:hpa; eauto.
         cbn [plus]. destruct chop eqn:heqch.
-        intros [hl [ht ha]]. rewrite ht in H1. rewrite isConstructApp_mkApps isPrimApp_mkApps orb_true_r in H1 => //.
+        intros [hl [ht ha]]. rewrite ht in H1. rewrite isConstructApp_mkApps
+          isPrimApp_mkApps isLazyApp_mkApps orb_true_r in H1 => //.
       * eapply eval_app_cong; eauto.
         revert H1.
         destruct f'; try now cbn; tauto.
         intros H. cbn in H.
         rewrite transform_blocks_isConstructApp; eauto.
         rewrite transform_blocks_isPrimApp; eauto.
-        rewrite negb_or in H. move/andP: H => [] ncstr nprim.
+        rewrite transform_blocks_isLazyApp; eauto.
+        rewrite !negb_or in H. move/andP: H => [] /andP [] ncstr nprim nlazy.
         destruct (isConstructApp (tApp f'1 f'2)) eqn:heq'.
         -- cbn in ncstr. congruence.
-        -- eapply transform_blocks_tApp; eauto. clear -nprim.
+        -- eapply transform_blocks_tApp; eauto. clear -nprim nlazy.
+          move/negbTE: nlazy ->. move/negbTE: nprim -> => /=.
            destruct decompose_app.
            destruct construct_viewc; try now cbn; eauto.
            rewrite GlobalContextMap.lookup_constructor_pars_args_spec;
@@ -1186,6 +1211,11 @@ Proof.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all.
     now destruct b.
     now destruct a0.
+  - intros evl evt' [evt wft wflt etat etalt].
+    intros [evt'' wft' wfv etat' etav].
+    simp transform_blocks; rewrite -!transform_blocks_equation_1.
+    econstructor; eauto.
+    now simp transform_blocks in evt; rewrite -!transform_blocks_equation_1 in evt.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct args => //.
     destruct lookup_constructor eqn:hl => //.

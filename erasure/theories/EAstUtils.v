@@ -318,9 +318,16 @@ Definition is_box c :=
   | _ => false
   end.
 
+Definition isLazy c :=
+  match c with
+  | tLazy _ => true
+  | _ => false
+  end.
+
 Definition isFixApp t := isFix (head t).
 Definition isConstructApp t := isConstruct (head t).
 Definition isPrimApp t := isPrim (head t).
+Definition isLazyApp t := isLazy (head t).
 
 Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
 Proof. rewrite /isFixApp head_mkApps //. Qed.
@@ -328,6 +335,8 @@ Lemma isConstructApp_mkApps f l : isConstructApp (mkApps f l) = isConstructApp f
 Proof. rewrite /isConstructApp head_mkApps //. Qed.
 Lemma isPrimApp_mkApps f l : isPrimApp (mkApps f l) = isPrimApp f.
 Proof. rewrite /isPrimApp head_mkApps //. Qed.
+Lemma isLazyApp_mkApps f l : isLazyApp (mkApps f l) = isLazyApp f.
+Proof. rewrite /isLazyApp head_mkApps //. Qed.
 
 Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
 Proof.
@@ -346,6 +355,8 @@ Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisBox_mkApps f args : ~~ isBox f -> ~~ isBox (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 Lemma nisPrim_mkApps f args : ~~ isPrim f -> ~~ isPrim (mkApps f args).
+Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
+Lemma nisLazy_mkApps f args : ~~ isLazy f -> ~~ isLazy (mkApps f args).
 Proof. destruct args using rev_case => //. rewrite mkApps_app /= //. Qed.
 
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=

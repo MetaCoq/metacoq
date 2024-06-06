@@ -40,6 +40,14 @@ Notation "Σ ⊢ s ⇓ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next 
 
 Import ssrbool.
 
+Lemma erases_lazy Σ Γ t t' : Σ ;;; Γ |- t ⇝ℇ t' -> EAstUtils.isLazyApp t' -> False.
+Proof.
+  rewrite /EAstUtils.isLazyApp /EAstUtils.head /EAstUtils.decompose_app.
+  generalize (@nil EAst.term) as l; intros l.
+  induction 1 in l |- *; cbn => //=.
+  eapply IHerases1.
+Qed.
+
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t t' v Σ' :
   wf_ext Σ ->
   welltyped Σ [] t ->
@@ -1150,6 +1158,10 @@ Proof.
         -- rewrite !negb_or in i. rtoProp; intuition auto.
            eapply is_PrimApp_erases in H8; tea.
            now move/negbTE: H8.
+        -- rewrite !negb_or in i.
+           rtoProp; intuition auto.
+           apply/negbTE. apply PCUICNormal.negb_is_true => isl.
+           eapply erases_lazy in H1; tea.
     + exists EAst.tBox. split. 2: now constructor; econstructor.
       econstructor.
       eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; auto.

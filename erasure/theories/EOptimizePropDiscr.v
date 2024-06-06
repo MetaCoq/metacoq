@@ -715,22 +715,24 @@ Proof.
     * destruct with_guarded_fix.
       + move: i.
         rewrite !negb_or.
-        rewrite remove_match_on_box_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
+        rewrite remove_match_on_box_mkApps !isFixApp_mkApps !isConstructApp_mkApps !isPrimApp_mkApps !isLazyApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         rewrite !andb_true_r.
         rtoProp; intuition auto.
         destruct v => /= //.
         destruct v => /= //.
         destruct v => /= //.
+        destruct v => /= //.
       + move: i.
         rewrite !negb_or.
-        rewrite remove_match_on_box_mkApps !isConstructApp_mkApps !isPrimApp_mkApps.
+        rewrite remove_match_on_box_mkApps !isConstructApp_mkApps !isPrimApp_mkApps !isLazyApp_mkApps.
         destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
         destruct v => /= //.
   - depelim X; repeat constructor.
     eapply All2_over_undep in a. eapply All2_All2_Set. eapply All2_Set_All2 in ev. subst a0 a'; cbn in *.
     rewrite /test_array_model /= in H. rtoProp; intuition auto; solve_all. eapply e.
     cbn in H. rewrite /test_array_model /= in H. now move/andP: H => [].
+  - intros. econstructor; eauto. eapply IHev2. eapply eval_closed in ev1; tea.
   - destruct t => //.
     all:constructor; eauto. cbn [atom remove_match_on_box] in i |- *.
     rewrite -lookup_constructor_remove_match_on_box //. destruct args => //.

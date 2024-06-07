@@ -779,6 +779,14 @@ Proof.
   all:rewrite !isPrimApp_mkApps //.
 Qed.
 
+Lemma strip_isLazyApp Σ f :
+  isLazyApp f = isLazyApp (strip Σ f).
+Proof.
+  funelim (strip Σ f); cbn -[strip] => //.
+  all:rewrite map_InP_spec.
+  all:rewrite !isLazyApp_mkApps //.
+Qed.
+
 Lemma lookup_inductive_pars_is_prop_and_pars {Σ ind b pars} :
   inductive_isprop_and_pars Σ ind = Some (b, pars) ->
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
@@ -1011,8 +1019,8 @@ Proof.
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
     move: H1. eapply contraNN.
-    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
-    rewrite -strip_isFix //.
+    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp
+      -strip_isLazyApp // -strip_isFix //.
 
   - rewrite !strip_mkApps // /=.
     rewrite (lookup_constructor_lookup_inductive_pars H).
@@ -1029,6 +1037,8 @@ Proof.
   - depelim X; simp strip; repeat constructor.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all. now destruct b.
     now destruct a0.
+
+  - simp_strip. simp_strip in e0. econstructor; tea.
 
   - destruct t => //.
     all:constructor; eauto. simp strip.

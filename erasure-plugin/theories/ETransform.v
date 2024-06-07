@@ -976,7 +976,7 @@ Program Definition coinductive_to_inductive_transformation (efl : EEnvFlags)
   {has_cstrblocks : cstr_as_blocks = true} :
   Transform.t _ _ EAst.term EAst.term _ _
     (eval_eprogram_env block_wcbv_flags) (eval_eprogram block_wcbv_flags) :=
-  {| name := "transforming co-inductive to inductive types";
+  {| name := "transforming co-inductive to lazy inductive types";
     transform p _ := ECoInductiveToInductive.trans_program p ;
     pre p := wf_eprogram_env efl p ;
     post p := wf_eprogram efl p ;

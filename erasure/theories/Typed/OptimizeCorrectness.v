@@ -2017,6 +2017,8 @@ Proof.
   - depelim X; auto.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. solve_all. subst a0 a'; cbn in *.
     depelim exp_t; constructor; cbn in *; intuition eauto. solve_all.
+  - eapply IHev1 in exp_t. eapply IHev2 in exp_t.
+    eapply is_expanded_aux_upwards; tea. lia.
 Qed.
 
 Lemma valid_case_masks_lift ind c brs n k :
@@ -2823,6 +2825,7 @@ Proof with auto with dearg.
   - depelim X; auto.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. subst a0 a'; cbn -[test_prim] in *.
     solve_all. depelim H0; constructor; cbn; intuition eauto. solve_all.
+  - eapply IHev2. eapply eval_closed in ev1; tea. eapply IHev1; eauto.
 Qed.
 
 Lemma declared_constant_dearg Σ k cst :
@@ -3452,22 +3455,22 @@ Section dearg.
           cbn in *; propify.
           rewrite dearg_single_masked by (now rewrite map_length).
           rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps;cbn in *.
-          rewrite isPrimApp_mkApps.
-          destruct with_guarded_fix;cbn;auto.
+          rewrite isPrimApp_mkApps, isLazyApp_mkApps in *.
+          destruct with_guarded_fix;cbn;intuition auto.
           now rewrite EOptimizePropDiscr.isFix_mkApps;cbn.
         * rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps in *;cbn in *.
           propify.
           destruct with_guarded_fix;cbn in *; intuition.
         * unfold dearg_case.
           destruct with_guarded_fix;cbn.
-          now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps;cbn.
-          now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps;cbn.
+          now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+          now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
         * unfold dearg_proj.
           unfold dearg_case.
           destruct with_guarded_fix;cbn.
-          ** now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps;cbn.
-          ** now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps;cbn.
-        * rewrite !isLambda_mkApps, !isFixApp_mkApps, !EOptimizePropDiscr.isFix_mkApps, !isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps in *
+          ** now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+          ** now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+        * rewrite !isLambda_mkApps, !isFixApp_mkApps, !EOptimizePropDiscr.isFix_mkApps, !isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps in *
             by now destruct hd.
           rewrite map_length.
           destruct with_guarded_fix;cbn;auto;
@@ -4971,6 +4974,9 @@ Proof.
       unshelve eapply IHb0; tea. cbn in deriv_len. lia.
       cbn in *; unfold test_array_model in *; subst a a'; cbn in *.
       unshelve eapply IH; tea; rtoProp; intuition eauto. lia.
+    + facts. econstructor. specialize (IH _ _ clos_t valid_t exp_t ev1).
+      cbn in IH. apply IH. lia.
+      now forward (IH v _ H2 H4 H6 ev2).
     + destruct t; cbn in *; try destruct y; try congruence; now constructor.
 Qed.
 End dearg_correct.

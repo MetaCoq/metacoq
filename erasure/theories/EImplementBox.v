@@ -388,6 +388,15 @@ Proof.
   rewrite (isPrimApp_mkApps _ [_]). eauto.
 Qed.
 
+Lemma implement_box_isLazyApp {efl : EEnvFlags} {Σ : global_declarations} t :
+  isLazyApp (implement_box t) = isLazyApp t.
+Proof.
+  induction t; try now cbn; eauto.
+  simp implement_box.
+  rewrite (isLazyApp_mkApps _ [t2]).
+  rewrite (isLazyApp_mkApps _ [_]). eauto.
+Qed.
+
 Lemma lookup_env_implement_box {Σ : global_declarations} kn :
   lookup_env (implement_box_env Σ) kn =
   option_map (implement_box_decl) (lookup_env Σ kn).
@@ -670,6 +679,7 @@ Proof.
     intros H. cbn in H.
     rewrite implement_box_isConstructApp; eauto.
     rewrite implement_box_isPrimApp; eauto.
+    rewrite implement_box_isLazyApp; eauto.
   - intros; repeat match goal with [H : MCProd.and3 _ _ _ |- _] => destruct H end.
     simp implement_box in *.
     eapply eval_construct_block; tea. eauto.
@@ -680,6 +690,9 @@ Proof.
   - intros wf H; depelim H; simp implement_box; repeat constructor.
     destruct a0. eapply All2_over_undep in a. eapply All2_All2_Set, All2_map.
     cbn -[implement_box]. solve_all. now destruct H. now destruct a0.
+  - intros evt evt' [] [].
+    simp implement_box. simp implement_box in e.
+    econstructor; eauto.
   - intros. destruct t; try solve [constructor; cbn in H, H0 |- *; try congruence].
     cbn -[lookup_constructor] in H |- *. destruct args => //.
 Qed.

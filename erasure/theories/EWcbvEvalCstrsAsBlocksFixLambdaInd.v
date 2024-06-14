@@ -553,6 +553,7 @@ Proof.
   - unshelve eapply Qprim; tea. depelim e.
     * constructor.
     * constructor.
+    * constructor.
     * eapply Qpres in qt. depelim qt. now cbn in i. constructor; eauto.
       + apply All2_over_undep. cbn in IH.
         depelim p0. destruct p.

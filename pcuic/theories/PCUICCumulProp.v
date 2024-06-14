@@ -819,7 +819,7 @@ Qed.
 Lemma untyped_subslet_inds Γ ind u u' mdecl :
   untyped_subslet Γ (inds (inductive_mind ind) u (ind_bodies mdecl))
     (subst_instance u' (arities_context (ind_bodies mdecl))).
-Proof using Type.
+Proof using Type Hcf cf.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4.
   unfold inds.
@@ -894,7 +894,7 @@ Lemma cumul_prop_mkApps {Σ Γ f args f' args'} {wfΣ : wf_ext Σ} :
   eq_term Σ.1 Σ f f' ->
   All2 (cumul_prop Σ Γ) args args' ->
   Σ ;;; Γ |- mkApps f args ~~ mkApps f' args'.
-Proof using Type.
+Proof using Type Hcf cf.
   intros clΓ clf clf' eq eq'.
   eapply cumul_prop_alt.
   eapply cumul_prop_args in eq' as (nf & nf' & [redl redr eq']).
@@ -997,7 +997,7 @@ Lemma typing_leq_term_prop_gen :
       forall pb n, compare_term_napp Σ Σ pb n t' t ->
       Σ ;;; Γ |- T ~~ T') j)
     (fun Σ Γ => wf_local Σ Γ).
-Proof using Type.
+Proof using Type Hcf cf.
   eapply typing_ind_env.
   { intros ???? H ?. apply lift_typing_impl with (1 := H) => ?? [] ?? ?? //. eauto. }
   1: now auto.
@@ -1227,7 +1227,7 @@ Proof using Type.
 
   - depelim X3.
     eapply inversion_Prim in X2 as [prim_ty' [cdecl' []]]; tea. depelim o.
-    1-2:rewrite H in e; noconf e; eapply cumul_pb_cumul_prop; eauto; pcuic.
+    1-3:rewrite H in e; noconf e; eapply cumul_pb_cumul_prop; eauto; pcuic.
     depelim X1.
     cbn in H, e2. rewrite H in e2. noconf e2. eapply cumul_pb_cumul_prop; eauto; pcuic.
     move: w; simp prim_type. intro. etransitivity; tea. constructor; fvs. cbn.
@@ -1241,7 +1241,7 @@ Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
   Σ ;;; Γ |- t' : T' ->
   forall pb n, compare_term_napp Σ Σ pb n t' t ->
   Σ ;;; Γ |- T ~~ T'.
-Proof using Type.
+Proof using Type Hcf cf.
   intros.
   now eapply (env_prop_typing typing_leq_term_prop_gen).
 Qed.
@@ -1251,7 +1251,7 @@ Lemma typing_cumul_term_prop {Σ : global_env_ext} {wfΣ : wf_ext Σ} pb Γ t t'
   Σ ;;; Γ |- t' : T' ->
   Σ ;;; Γ |- t' <=[pb] t ->
   Σ ;;; Γ |- T ~~ T'.
-Proof using Type.
+Proof using Type Hcf cf.
   intros.
   apply cumul_alt in X1 as (v & v' & r & r' & leq).
   eapply typing_leq_term_prop. 5: eassumption. 1,3: apply wfΣ.

@@ -17,6 +17,7 @@ Definition trans_prim (trans : PCUICAst.term -> Ast.term) (t : prim_val) : Ast.t
   match t.π2 with
   | primIntModel i => Ast.tInt i
   | primFloatModel f => Ast.tFloat f
+  | primStringModel s => Ast.tString s
   | primArrayModel a => Ast.tArray (array_level a) (map trans (array_value a)) (trans (array_default a)) (trans (array_type a))
   end.
 

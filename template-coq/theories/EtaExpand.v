@@ -138,7 +138,7 @@ Section Eta.
         end
     | tCast t1 k t2 => tCast (eta_expand Γ t1) k (eta_expand Γ t2)
     | tArray u arr def ty => tArray u (List.map (eta_expand Γ) arr) (eta_expand Γ def) (eta_expand Γ ty)
-    | tInt _ | tFloat _ => t
+    | tInt _ | tFloat _ | tString _ => t
     end.
 
 End Eta.
@@ -294,6 +294,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     expanded Γ (tApp (tConstruct ind c u) args)
 | expanded_tInt i : expanded Γ (tInt i)
 | expanded_tFloat f : expanded Γ (tFloat f)
+| expanded_tString s : expanded Γ (tString s)
 | expanded_tArray u arr def ty :
   Forall (expanded Γ) arr ->
   expanded Γ def ->
@@ -363,6 +364,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  P Γ(tApp (tConstruct ind c u) args)) ->
 (forall Γ i, P Γ (tInt i)) ->
 (forall Γ f, P Γ (tFloat f)) ->
+(forall Γ s, P Γ (tString s)) ->
 (forall Γ u arr def ty,
   Forall (P Γ) arr ->
   P Γ def ->
@@ -370,7 +372,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
   P Γ (tArray u arr def ty)) ->
  forall Γ, forall t : term, expanded Σ Γ t -> P Γ t.
 Proof.
-  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat Harr.
+  intros Σ P HRel HRel_app HVar HEvar HSort HCast HProd HLamdba HLetIn HApp HConst HInd HConstruct HCase HProj HFix HCoFix HConstruct_app Hint Hfloat Hstring Harr.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   all: match goal with [H : Forall _ _ |- _] => let all := fresh "all" in rename H into all end.

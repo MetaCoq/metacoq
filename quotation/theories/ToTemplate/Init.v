@@ -109,6 +109,7 @@ Proof.
      | tSort _
      | tInt _
      | tFloat _
+     | tString _
      | tArray _ _ _ _
      | tConst _ _
        => if head_term_is_bound cur_modpath qt
@@ -214,6 +215,7 @@ Proof.
        | tConstruct _ _ _
        | tInt _
        | tFloat _
+       | tString _
        | tArray _ _ _ _
        | tInd _ _
          => ret qt

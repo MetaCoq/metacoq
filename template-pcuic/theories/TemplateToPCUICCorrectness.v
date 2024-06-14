@@ -383,6 +383,7 @@ Proof.
   - f_equal; auto; solve_all.
   - f_equal; auto.
   - f_equal; auto.
+  - f_equal; auto.
   - cbn; do 4 f_equal; auto.
     rewrite /map_array_model. f_equal; eauto. cbn. solve_all.
 Qed.
@@ -443,6 +444,7 @@ Proof.
   - f_equal; auto; solve_list.
   - f_equal; auto.
   - f_equal; auto.
+  - f_equal; auto.
   - cbn; f_equal; auto. rewrite /map_array_model; cbn; do 3 f_equal; eauto.
     solve_all.
 Qed.
@@ -480,6 +482,7 @@ Proof.
     rewrite /map_branch /trans_branch /= /id.
     now intros; f_equal.
   - rewrite /id /map_predicate /=. f_equal; solve_all.
+  - f_equal; auto.
   - f_equal; auto.
   - f_equal; auto.
   - cbn. rewrite /mapu_array_model; cbn; do 4 f_equal; auto; solve_all.
@@ -2482,6 +2485,14 @@ Proof.
       destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
     + constructor.
   - cbn. replace (tConst prim_ty []) with (prim_type (primFloat; primFloatModel p) prim_ty) by now simp prim_type.
+    econstructor; cbn; eauto.
+    + rewrite trans_env_retroknowledge //.
+    + now apply forall_decls_declared_constant.
+    + move: H1; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
+      intros []; split => //;
+      destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
+    + constructor.
+  - cbn. replace (tConst prim_ty []) with (prim_type (primString; primStringModel p) prim_ty) by now simp prim_type.
     econstructor; cbn; eauto.
     + rewrite trans_env_retroknowledge //.
     + now apply forall_decls_declared_constant.

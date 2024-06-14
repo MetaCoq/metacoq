@@ -30,6 +30,7 @@ Section PrimModel.
   Inductive prim_model : prim_tag -> Type@{i} :=
   | primIntModel (i : PrimInt63.int) : prim_model primInt
   | primFloatModel (f : PrimFloat.float) : prim_model primFloat
+  | primStringModel (s : PrimString.string) : prim_model primString
   | primArrayModel (a : array_model) : prim_model primArray.
 
   Derive Signature NoConfusion NoConfusionHom for prim_model.
@@ -38,6 +39,7 @@ Section PrimModel.
     match p with
     | primInt => PrimInt63.int
     | primFloat => PrimFloat.float
+    | primString => PrimString.string
     | primArray => array_model
     end.
 
@@ -47,12 +49,14 @@ Section PrimModel.
 
   Definition prim_int i : prim_val := (primInt; primIntModel i).
   Definition prim_float f : prim_val := (primFloat; primFloatModel f).
+  Definition prim_string s : prim_val := (primString; primStringModel s).
   Definition prim_array a : prim_val := (primArray; primArrayModel a).
 
   Definition prim_model_val (p : prim_val) : prim_model_of (prim_val_tag p) :=
     match prim_val_model p in prim_model t return prim_model_of t with
     | primIntModel i => i
     | primFloatModel f => f
+    | primStringModel s => s
     | primArrayModel a => a
     end.
 
@@ -85,9 +89,23 @@ Section PrimModel.
     all:constructor; congruence.
   Qed.
 
+  #[program,global]
+  Instance reflect_eq_pstring : ReflectEq PrimString.string :=
+    { eqb := (fun s1 s2 => match PrimString.compare s1 s2 with Eq => true | _ => false end) }.
+  Next Obligation. discriminate. Qed.
+  Next Obligation. discriminate. Qed.
+  Next Obligation.
+    intros s1 s2. simpl.
+    destruct (PrimString.compare s1 s2) eqn:Hcmp; constructor.
+    - by apply PString.compare_eq in Hcmp.
+    - intros Heq%PString.compare_eq. rewrite Heq in Hcmp. inversion Hcmp.
+    - intros Heq%PString.compare_eq. rewrite Heq in Hcmp. inversion Hcmp.
+  Qed.
+
   Equations eqb_prim_model {req : term -> term -> bool} {t : prim_tag} (x y : prim_model t) : bool :=
     | primIntModel x, primIntModel y := ReflectEq.eqb x y
     | primFloatModel x, primFloatModel y := ReflectEq.eqb x y
+    | primStringModel x, primStringModel y := ReflectEq.eqb x y
     | primArrayModel x, primArrayModel y := eqb_array (eqt:=req) x y.
 
   #[global, program]
@@ -95,6 +113,7 @@ Section PrimModel.
     {| ReflectEq.eqb := eqb_prim_model (req := eqb) |}.
   Next Obligation.
     intros. depelim x; depelim y; simp eqb_prim_model.
+    case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
     case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
     case: ReflectEq.eqb_spec; constructor; subst; auto. congruence.
     change (eqb_array a a0) with (eqb a a0).
@@ -107,6 +126,7 @@ Section PrimModel.
   Equations eqb_prim_val {req : term -> term -> bool} (x y : prim_val) : bool :=
     | (primInt; i), (primInt; i') := eqb_prim_model (req := req) i i'
     | (primFloat; f), (primFloat; f') := eqb_prim_model (req := req) f f'
+    | (primString; s), (primString; s') := eqb_prim_model (req := req) s s'
     | (primArray; a), (primArray; a') := eqb_prim_model (req := req) a a'
     | x, y := false.
 
@@ -115,18 +135,15 @@ Section PrimModel.
     {| ReflectEq.eqb := eqb_prim_val (req := eqb) |}.
   Next Obligation.
     intros. funelim (eqb_prim_val x y); simp eqb_prim_val.
-    change (eqb_prim_model i i') with (eqb i i').
-    case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H. cbn in n. auto.
-    constructor. intros H; noconf H; auto.
-    constructor. intros H; noconf H; auto.
-    constructor. intros H; noconf H; auto.
-    change (eqb_prim_model f f') with (eqb f f').
-    case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
-    constructor. intros H; noconf H; auto.
-    constructor. intros H; noconf H; auto.
-    constructor. intros H; noconf H; auto.
-    change (eqb_prim_model a a') with (eqb a a').
-    case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
+    all: try by constructor; intros H; noconf H; auto.
+    - change (eqb_prim_model i i') with (eqb i i').
+      case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H. cbn in n. auto.
+    - change (eqb_prim_model f f') with (eqb f f').
+      case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
+    - change (eqb_prim_model s s') with (eqb s s').
+      case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
+    - change (eqb_prim_model a a') with (eqb a a').
+      case: ReflectEq.eqb_spec; constructor; subst; auto. intros H; noconf H; auto.
   Qed.
 
   #[global]
@@ -138,6 +155,7 @@ Section PrimModel.
     match p.π2 return string with
     | primIntModel f => "(int: " ^ string_of_prim_int f ^ ")"
     | primFloatModel f => "(float: " ^ string_of_float f ^ ")"
+    | primStringModel s => "(string: " ^ string_of_pstring s ^ ")"
     | primArrayModel a => "(array:" ^ soft a.(array_default) ^ " , " ^ string_of_list soft a.(array_value) ^ ")"
     end.
 
@@ -148,12 +166,14 @@ Section PrimModel.
     match p.π2 return bool with
     | primIntModel f => true
     | primFloatModel f => true
+    | primStringModel f => true
     | primArrayModel a => test_array_model f a
     end.
 
   Inductive primProp P : prim_val -> Type :=
     | primPropInt i : primProp P (primInt; primIntModel i)
     | primPropFloat f : primProp P (primFloat; primFloatModel f)
+    | primPropString s : primProp P (primString; primStringModel s)
     | primPropArray a : P a.(array_default) × All P a.(array_value) ->
         primProp P (primArray; primArrayModel a).
   Derive Signature NoConfusion for primProp.
@@ -162,6 +182,7 @@ Section PrimModel.
     match p.π2 return A with
     | primIntModel f => acc
     | primFloatModel f => acc
+    | primStringModel f => acc
     | primArrayModel a => fold_left f a.(array_value) (f acc a.(array_default))
     end.
 End PrimModel.
@@ -181,6 +202,7 @@ Section PrimOps.
     match p.π2 return prim_val term' with
     | primIntModel f => (primInt; primIntModel f)
     | primFloatModel f => (primFloat; primFloatModel f)
+    | primStringModel f => (primString; primStringModel f)
     | primArrayModel a => (primArray; primArrayModel (map_array_model f a))
     end.
 End PrimOps.
@@ -343,6 +365,7 @@ Section PrimIn.
   Equations InPrim (x : term) (p : prim_val term) : Prop :=
     | x | (primInt; primIntModel i) := False
     | x | (primFloat; primFloatModel _) := False
+    | x | (primString; primStringModel _) := False
     | x | (primArray; primArrayModel a) :=
       x = a.(array_default) \/ In x a.(array_value).
 
@@ -360,6 +383,7 @@ Section PrimIn.
   Equations test_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> bool) : bool :=
     | (primInt; primIntModel i) | _ := true
     | (primFloat; primFloatModel _) | _ := true
+    | (primString; primStringModel _) | _ := true
     | (primArray; primArrayModel a) | f :=
       f a.(array_default) (or_introl eq_refl) && forallb_InP a.(array_value) (fun x H => f x (or_intror H)).
 
@@ -373,6 +397,7 @@ Section PrimIn.
   Equations map_primIn (p : prim_val term) (f : forall x : term, InPrim x p -> term) : prim_val term :=
     | (primInt; primIntModel i) | _ := (primInt; primIntModel i)
     | (primFloat; primFloatModel f) | _ := (primFloat; primFloatModel f)
+    | (primString; primStringModel f) | _ := (primString; primStringModel f)
     | (primArray; primArrayModel a) | f :=
       (primArray; primArrayModel
         {| array_default := f a.(array_default) (or_introl eq_refl);
@@ -455,6 +480,7 @@ Section onPrims.
   Inductive onPrims {term term' : Set} (R : term -> term' -> Set) : prim_val term -> prim_val term' -> Type :=
     | onPrimsInt i : onPrims R (primInt; primIntModel i) (primInt; primIntModel i)
     | onPrimsFloat f : onPrims R (primFloat; primFloatModel f) (primFloat; primFloatModel f)
+    | onPrimsString s : onPrims R (primString; primStringModel s) (primString; primStringModel s)
     | onPrimsArray v def v' def' :
       R def def' ->
       All2_Set R v v' ->
@@ -466,6 +492,7 @@ Section onPrims.
   Variant onPrims_dep {term term' : Set} (R : term -> term' -> Set) (P : forall x y, R x y -> Type) : forall x y, onPrims R x y -> Type :=
   | onPrimsIntDep i : onPrims_dep R P (prim_int i) (prim_int i) (onPrimsInt R i)
   | onPrimsFloatDep f : onPrims_dep R P (prim_float f) (prim_float f) (onPrimsFloat R f)
+  | onPrimsStringDep s : onPrims_dep R P (prim_string s) (prim_string s) (onPrimsString R s)
   | onPrimsArrayDep v def v' def'
     (ed : R def def')
     (ev : All2_Set R v v') :
@@ -485,6 +512,7 @@ Section onPrims.
     Equations map_onPrims {p : prim_val term} {p' : prim_val term'} (ev : onPrims R p p') : onPrims_dep R P p p' ev :=
     | @onPrimsInt _ _ _ _ := onPrimsIntDep _ _ i;
     | @onPrimsFloat _ _ _ _ := onPrimsFloatDep _ _ f;
+    | @onPrimsString _ _ _ _ := onPrimsStringDep _ _ s;
     | @onPrimsArray v def v' def' ed ev :=
       onPrimsArrayDep _ _ v def v' def' ed ev (F _ _ ed) (map_All2_dep _ F ev).
   End map_onPrims.

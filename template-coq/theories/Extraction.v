@@ -10,7 +10,7 @@ From Coq Require Ascii Extraction ZArith NArith.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Reflect config.
 From MetaCoq.Template Require Import Ast Induction.
-From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63.
+From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63 ExtrOCamlPString.
 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".

@@ -115,6 +115,7 @@ Proof.
   - destruct prim as [? []]; destruct p as [? []]; cbn ; nodec.
     + destruct (eq_dec i i0); nodec; subst; eauto.
     + destruct (eq_dec f f0); nodec; subst; eauto.
+    + destruct (eq_dec s s0); nodec; subst; eauto.
     + destruct a as [? ?], a0 as [? ?]; cbn.
       depelim X. destruct p as [hd hv]. cbn in *.
       destruct (hd array_default); nodec; subst; eauto.

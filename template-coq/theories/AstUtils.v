@@ -68,6 +68,7 @@ Module string_of_term_tree.
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  | tString s => "String(" ^ string_of_pstring s ^ ")"
   | tArray u arr def ty => "Array(" ^ string_of_level u ^ "," ^
     string_of_list string_of_term arr ^ "," ^ string_of_term def ^ "," ^ string_of_term ty ^ ")"
   end.
@@ -257,7 +258,7 @@ Fixpoint strip_casts t :=
   | tArray u arr def ty =>
     tArray u (List.map strip_casts arr) (strip_casts def) (strip_casts ty)
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
-  | tInt _ | tFloat _ => t
+  | tInt _ | tFloat _ | tString _ => t
   end.
 
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

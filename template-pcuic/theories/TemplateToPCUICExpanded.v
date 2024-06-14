@@ -237,6 +237,7 @@ Proof with eauto using expanded.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite length_map context_assumptions_map. solve_all.
   - repeat constructor.
   - repeat constructor.
+  - repeat constructor.
   - wf_inv wf [[] ?]. repeat cbn; constructor. constructor; cbn; eauto. solve_all.
 Qed.
 

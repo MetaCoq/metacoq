@@ -340,7 +340,7 @@ Section Validity.
 
     - (* Primitive *)
       depelim X0; depelim X1; simp prim_type; cbn in *.
-      1-2:destruct H1 as [hty hbod huniv]; eapply has_sort_isType with (s := _@[[]]); change (tSort ?s@[[]]) with (tSort s)@[[]];
+      1-3:destruct H1 as [hty hbod huniv]; eapply has_sort_isType with (s := _@[[]]); change (tSort ?s@[[]]) with (tSort s)@[[]];
           rewrite <- hty; refine (type_Const _ _ _ [] _ wfΓ H0 _); rewrite huniv //.
       set (s := sType (Universe.make' (array_level a))).
       destruct H1 as [hty' hbod huniv].

@@ -14,6 +14,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
+  type quoted_pstring = Pstring.t
   type quoted_bool = bool
   type quoted_name = BasicAst.name
   type quoted_aname = BasicAst.aname
@@ -79,6 +80,8 @@ struct
   let quote_int63 x = x
 
   let quote_float64 x = x
+
+  let quote_pstring x = x
 
   let quote_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_set l then Universes0.Level.Coq_lzero
@@ -240,6 +243,7 @@ struct
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
   let mkInt i = Coq_tInt i
   let mkFloat f = Coq_tFloat f
+  let mkString s = Coq_tString s
   let mkArray u arr ~default ~ty = Coq_tArray (u, Array.to_list arr, default, ty)
 
   let rec seq f t =
@@ -320,11 +324,13 @@ struct
   type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
       retro_float64 : quoted_kernel_name option;
+      retro_string : quoted_kernel_name option;
       retro_array : quoted_kernel_name option }
 
   let quote_retroknowledge r =
     { Environment.Retroknowledge.retro_int63 = r.retro_int63;
       Environment.Retroknowledge.retro_float64 = r.retro_float64;
+      Environment.Retroknowledge.retro_string = r.retro_string;
       Environment.Retroknowledge.retro_array = r.retro_array }
 
   let mk_global_env universes declarations retroknowledge = { universes; declarations; retroknowledge }
@@ -376,7 +382,7 @@ struct
   let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind,
     quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_level,
     quoted_univ_instance, quoted_proj,
-    quoted_int63, quoted_float64) structure_of_term =
+    quoted_int63, quoted_float64, quoted_pstring) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n
   (* todo ! *)

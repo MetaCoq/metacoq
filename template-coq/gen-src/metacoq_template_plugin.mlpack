@@ -74,6 +74,8 @@ Zpower
 SpecFloat
 PrimFloat
 FloatOps
+PrimString
+PrimStringAxioms
 MCString
 Sint63
 Show

@@ -85,6 +85,7 @@ sig
   val mkCoFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
   val mkInt : quoted_int63 -> t
   val mkFloat : quoted_float64 -> t
+  val mkString : quoted_pstring -> t
   val mkArray : quoted_univ_level -> t array -> default:t -> ty:t -> t
 
   val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
@@ -107,6 +108,7 @@ sig
   (* Primitive objects *)
   val quote_int63 : Uint63.t -> quoted_int63
   val quote_float64 : Float64.t -> quoted_float64
+  val quote_pstring : Pstring.t -> quoted_pstring
 
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
@@ -174,6 +176,7 @@ sig
   type pre_quoted_retroknowledge =
     { retro_int63 : quoted_kernel_name option;
       retro_float64 : quoted_kernel_name option;
+      retro_string : quoted_kernel_name option;
       retro_array : quoted_kernel_name option }
 
   val quote_retroknowledge : pre_quoted_retroknowledge -> quoted_retroknowledge
@@ -359,6 +362,7 @@ struct
          (Q.mkProj p' t', add_inductive (Projection.inductive p) mib acc)
       | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
       | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
+      | Constr.String s -> (Q.mkString (Q.quote_pstring s), acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       | Constr.Array (u, ar, def, ty) ->
         let u = match UVars.Instance.to_array u with (_, [| u |]) -> u | _ -> assert false in
@@ -610,6 +614,7 @@ struct
       let pre =
         { Q.retro_int63 = quote_retro retro.Retroknowledge.retro_int63 ;
           Q.retro_float64 = quote_retro retro.Retroknowledge.retro_float64 ;
+          Q.retro_string = quote_retro retro.Retroknowledge.retro_string ;
           Q.retro_array = quote_retro retro.Retroknowledge.retro_array }
       in Q.quote_retroknowledge pre
     in

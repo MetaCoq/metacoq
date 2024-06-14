@@ -58,6 +58,7 @@ Section map_onPrim.
     match o with
     | onPrimInt i => onPrimInt _ i
     | onPrimFloat f => onPrimFloat _ f
+    | onPrimString s => onPrimString _ s
     | onPrimArray a def ty v =>
       onPrimArray _ _ (ont _ def) (ont _ ty) (map_All _ _ ont v)
     end.

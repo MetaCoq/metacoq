@@ -23,12 +23,14 @@ Definition isSome {A} (o : option A) :=
 Class EPrimitiveFlags :=
   { has_primint : bool;
     has_primfloat : bool;
+    has_primstring : bool;
     has_primarray : bool }.
 
 Definition has_prim {epfl : EPrimitiveFlags} (p : prim_val term) :=
   match p.π1 with
   | primInt => has_primint
   | primFloat => has_primfloat
+  | primString => has_primstring
   | primArray => has_primarray
   end.
 
@@ -60,6 +62,7 @@ Class EEnvFlags := {
 Definition all_primitive_flags :=
   {| has_primint := true;
      has_primfloat := true;
+     has_primstring := true;
      has_primarray := true |}.
 
 Lemma has_prim_all_primitive_flags p : @has_prim all_primitive_flags p.

@@ -2364,13 +2364,12 @@ Proof.
     + fold trans;subst types.
       now apply trans_mfix_All2.
     + now rewrite trans_wf_cofixpoint.
-  - cbn. destruct p as [? []]; simp prim_type; cbn; econstructor; eauto.
-    1,3,5: eapply trans_declared_constant; tea.
+  - destruct p as [? []]; simp prim_type; cbn; econstructor; eauto.
+    1,3,5,7: eapply trans_declared_constant; tea.
     all:cbn in *.
     all:move: H1; rewrite /Ast.Env.primitive_invariants /primitive_invariants.
-    1-2:intros []; split => //;
+    all: try by intros []; split => //;
     destruct cdecl as [ty [?|] ?]; cbn in *; subst; auto => //.
-    intros []; split => //. rewrite H1 //. rewrite H2 //.
     all:depelim X1; eauto. intros _. solve_all.
   - eapply TT.type_Conv.
     + eassumption.

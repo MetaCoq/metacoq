@@ -77,6 +77,7 @@ Section Wcbv.
   Variant eval_primitive {term term' : Set} (eval : term -> term' -> Set) : prim_val term -> prim_val term' -> Set :=
     | evalPrimInt i : eval_primitive eval (prim_int i) (prim_int i)
     | evalPrimFloat f : eval_primitive eval (prim_float f) (prim_float f)
+    | evalPrimString s : eval_primitive eval (prim_string s) (prim_string s)
     | evalPrimArray v def v' def'
       (ev : All2_Set eval v v')
       (ed : eval def def') :
@@ -88,6 +89,7 @@ Section Wcbv.
   Variant eval_primitive_ind {term term' : Set} (eval : term -> term' -> Set) (P : forall x y, eval x y -> Type) : forall x y, eval_primitive eval x y -> Type :=
   | evalPrimIntDep i : eval_primitive_ind eval P (prim_int i) (prim_int i) (evalPrimInt eval i)
   | evalPrimFloatDep f : eval_primitive_ind eval P (prim_float f) (prim_float f) (evalPrimFloat eval f)
+  | evalPrimStringDep s : eval_primitive_ind eval P (prim_string s) (prim_string s) (evalPrimString eval s)
   | evalPrimArrayDep v def v' def'
     (ev : All2_Set eval v v')
     (ed : eval def def') :
@@ -106,6 +108,7 @@ Section Wcbv.
     Equations map_eval_primitive {p : prim_val term} {p' : prim_val term'} (ev : eval_primitive eval p p') : eval_primitive_ind eval P p p' ev :=
     | @evalPrimInt _ _ _ _ := evalPrimIntDep _ _ i;
     | @evalPrimFloat _ _ _ _ := evalPrimFloatDep _ _ f;
+    | @evalPrimString _ _ _ _ := evalPrimStringDep _ _ s;
     | @evalPrimArray v def v' def'  ev ed :=
       evalPrimArrayDep _ _ v def v' def' ev ed (map_All2_dep _ F ev) (F _ _ ed).
   End map_eval_prim.
@@ -313,6 +316,7 @@ Section Wcbv.
    Variant primitive_value (value : term -> Type) : prim_val term -> Type :=
     | primIntValue i : primitive_value value (prim_int i)
     | primFloatValue f : primitive_value value (prim_float f)
+    | primStringValue s : primitive_value value (prim_string s)
     | primArrayValue a :
       All value a.(array_value) ->
       value a.(array_default) ->
@@ -343,6 +347,7 @@ Definition eval_primitive_depth {eval : term -> term -> Set} (size : forall x y,
   match e with
   | evalPrimInt _ => 0
   | evalPrimFloat _ => 0
+  | evalPrimString _ => 0
   | evalPrimArray v d v' d' aev ed =>
     all2_size _ size aev + size _ _ ed
   end.
@@ -1833,7 +1838,7 @@ Proof.
     { induction a; cbn; try lia.
       destruct iha. destruct s. cbn. specialize (IHa a0). lia. }
   - unshelve eexists. eapply eval_app_cong; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
-  - depelim X. 1-2:unshelve eexists; cbn; repeat constructor.
+  - depelim X. 1-3:unshelve eexists; cbn; repeat constructor.
     destruct s as [hev evd].
     unshelve eexists. do 2 econstructor.
     clear -a. induction ev; constructor. apply a. apply IHev, a. tea.

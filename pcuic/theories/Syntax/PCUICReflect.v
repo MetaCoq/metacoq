@@ -248,6 +248,7 @@ Proof.
   - destruct p, p; cbn in *; destruct prim, p; cbn; nodec.
     case: eqb_spec; intros; subst; nodec. constructor; auto.
     case: eqb_spec; intros; subst; nodec. constructor; auto.
+    case: eqb_spec; intros; subst; nodec. constructor; auto.
     destruct X as [eqty [eqd eqv]]. unfold eqb_array.
     destruct (eqty (array_type a0)); t'.
     destruct (eqd (array_default a0)); t'. 2:noconf H1; auto.

@@ -362,7 +362,7 @@ Proof.
 
   - intros p prim_ty cdecl wfΓ' hp hdecl pinv.
     eexists. split; [econstructor; tea|].
-    destruct X0. 1-2:constructor; eauto.
+    destruct X0. 1-3:constructor; eauto.
     eapply conv_check in hty; tea.
     eapply conv_check in hdef; tea.
     constructor; eauto. solve_all.

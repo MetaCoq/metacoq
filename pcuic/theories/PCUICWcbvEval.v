@@ -205,6 +205,7 @@ Section Wcbv.
   Variant eval_primitive (eval : term -> term -> Type) : prim_val -> prim_val -> Type :=
     | evalPrimInt i : eval_primitive eval (prim_int i) (prim_int i)
     | evalPrimFloat f : eval_primitive eval (prim_float f) (prim_float f)
+    | evalPrimString s : eval_primitive eval (prim_string s) (prim_string s)
     | evalPrimArray  u v def ty v' def'
       (ev : All2 eval v v')
       (ed : eval def def') :
@@ -216,6 +217,7 @@ Section Wcbv.
   Variant eval_primitive_ind (eval : term -> term -> Type) (P : forall x y, eval x y -> Type) : forall x y, eval_primitive eval x y -> Type :=
   | evalPrimIntDep i : eval_primitive_ind eval P (prim_int i) (prim_int i) (evalPrimInt eval i)
   | evalPrimFloatDep f : eval_primitive_ind eval P (prim_float f) (prim_float f) (evalPrimFloat eval f)
+  | evalPrimStringDep s : eval_primitive_ind eval P (prim_string s) (prim_string s) (evalPrimString eval s)
   | evalPrimArrayDep u v def ty v' def'
     (ev : All2 eval v v')
     (ed : eval def def') :
@@ -482,6 +484,7 @@ Section Wcbv.
    Variant primitive_value (value : term -> Type) : prim_val -> Type :=
     | primIntValue i : primitive_value value (prim_int i)
     | primFloatValue f : primitive_value value (prim_float f)
+    | primStringValue s : primitive_value value (prim_string s)
     | primArrayValue a :
       All value a.(array_value) ->
       value a.(array_default) ->

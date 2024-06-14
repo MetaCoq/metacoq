@@ -279,7 +279,7 @@ Qed.
 
 Definition eval_prim_length {wfl : WcbvFlags} {Σ p p'} (len : forall t v, Σ e⊢ t ⇓ v -> nat) (d : eval_primitive (eval Σ) p p') : nat :=
   match d with
-  | evalPrimInt _ | evalPrimFloat _ => 0
+  | evalPrimInt _ | evalPrimFloat _ | evalPrimString _ => 0
   | evalPrimArray v d v' d' av ev =>
     len _ _ ev + EPrimitive.all2_size _ len av
   end.

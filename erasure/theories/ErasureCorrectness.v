@@ -1165,6 +1165,8 @@ Proof.
       depelim X. constructor.
     + exists (EAst.tPrim (EPrimitive.prim_float f)); split => //; repeat constructor.
       depelim X. constructor.
+    + exists (EAst.tPrim (EPrimitive.prim_string s)); split => //; repeat constructor.
+      depelim X. constructor.
     + depelim X. subst a0 a'; cbn in *.
       depelim Hed; cbn in *.
       eapply inversion_Prim in Hty as [prim_ty [cdecl []]]; cbn in *; eauto.
@@ -1409,7 +1411,7 @@ Proof.
           solve_all.
   - intros Γ0 v etaΣ er.
     depelim er; eauto. depelim H1.
-    depelim H0. 1-2:depelim X; repeat constructor.
+    depelim H0. 1-3:depelim X; repeat constructor.
     depelim X0. eapply expanded_tPrim. constructor; split => //; cbn.
     eapply H0; tea. now depelim etaΣ; cbn in *.
     eapply Forall_All. depelim etaΣ. cbn in *.

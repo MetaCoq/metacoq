@@ -17,6 +17,7 @@ struct
   type quoted_proj = Constr.t (* of type Ast.projection *)
   type quoted_int63 = Constr.t (* of type UInt63.t *)
   type quoted_float64 = Constr.t (* of type Float64.t *)
+  type quoted_pstring = Constr.t (* of type Float64.t *)
   type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
 
   type quoted_sort_family = Constr.t (* of type Ast.sort_family *)

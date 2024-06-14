@@ -296,6 +296,7 @@ Inductive eq_term_upto_univ_napp Σ
 
 | eq_Int i : eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (tInt i) (tInt i)
 | eq_Float f : eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (tFloat f) (tFloat f)
+| eq_String s : eq_term_upto_univ_napp Σ cmp_universe cmp_sort pb napp (tString s) (tString s)
 | eq_Array u u' arr arr' def def' ty ty' :
   cmp_universe_instance (cmp_universe Conv) [u] [u'] ->
   All2 (eq_term_upto_univ_napp Σ cmp_universe cmp_sort Conv 0) arr arr' ->

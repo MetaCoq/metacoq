@@ -193,8 +193,12 @@ gen-src/primFloat.ml
 gen-src/primFloat.mli
 gen-src/primInt63.ml
 gen-src/primInt63.mli
+gen-src/primString.ml
+gen-src/primString.mli
 gen-src/primitive.ml
 gen-src/primitive.mli
+gen-src/primStringAxioms.ml
+gen-src/primStringAxioms.mli
 gen-src/quoter.ml
 gen-src/reflect.ml
 gen-src/reflect.mli

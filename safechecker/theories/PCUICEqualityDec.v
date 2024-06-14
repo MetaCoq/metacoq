@@ -520,7 +520,7 @@ Proof.
     cbn in X, ht, ht';
     rewrite /eqb_prim_val /eqb_prim_model; cbn -[eqb]; try eqspecs;
     try repeat constructor.
-    1-8:intros e; depelim e; try depelim o; intuition eauto.
+    1-15:intros e; depelim e; try depelim o; intuition eauto.
     rtoProp. destruct X as (hty & hdef & harr).
     eapply reflectT_change_left. { split; intros XE. 1: constructor; now apply XE. now depelim XE. }
     eapply reflectT_change_left4. { split; intros XE. 1: destruct XE as [XE1 XE2 XE3 XE4]; constructor; [apply XE1|apply XE3|apply XE4|apply XE2]. now depelim XE. }

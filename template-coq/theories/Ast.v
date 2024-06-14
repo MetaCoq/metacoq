@@ -3,7 +3,7 @@ From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Export Environment EnvironmentTyping Universes BasicAst.
 (* For primitive integers and floats  *)
-From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat PArray.
+From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat PArray PrimString.
 From Coq Require Import ssreflect Morphisms.
 
 (** * AST of Coq kernel terms and kernel data structures
@@ -416,6 +416,7 @@ Inductive term : Type :=
 | tCoFix (mfix : mfixpoint term) (idx : nat)
 | tInt (i : PrimInt63.int)
 | tFloat (f : PrimFloat.float)
+| tString (s : PrimString.string)
 | tArray (u : Level.t) (arr : list term) (default : term) (type : term).
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables.
@@ -565,7 +566,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
   | tRel _ | tVar _ => c
-  | tInt _ | tFloat _ => c
+  | tInt _ | tFloat _ | tString _ => c
   | tArray u' arr def ty => tArray (subst_instance_level u u') (List.map (subst_instance_constr u) arr)
     (subst_instance_constr u def) (subst_instance_constr u ty)
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)

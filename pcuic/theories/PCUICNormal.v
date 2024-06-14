@@ -1048,7 +1048,7 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
-  - depelim o. 1-2: reflexivity.
+  - depelim o. 1-3: reflexivity.
     eapply red_primArray_congr; eauto.
     now eapply Universe.make'_inj in e.
 Qed.

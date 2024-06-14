@@ -1010,13 +1010,14 @@ Proof.
   destruct p as [? []]; simp prim_type.
   - eexists [], []. reflexivity.
   - eexists [], []; reflexivity.
+  - eexists [], []; reflexivity.
   - eexists [_], [_]; reflexivity.
 Qed.
 
 Lemma primitive_invariants_axiom t decl : primitive_invariants t decl -> cst_body decl = None.
 Proof.
   destruct t; cbn => //.
-  1-2:now intros [? []].
+  1-3:now intros [? []].
   now intros [].
 Qed.
 
@@ -1038,6 +1039,13 @@ Proof.
   - destruct s as [s [hs isp]].
     eapply cumul_prop1' in hs; tea; eauto.
     depelim p1; simp prim_type in hs.
+    * destruct p0 as [hd hb hu].
+      eapply inversion_Const in hs as [decl' [wf [decl'' [cu hs']]]]; eauto.
+      unshelve eapply declared_constant_to_gen in d, decl''. 3,6:eapply wfΣ.
+      eapply declared_constant_inj in d; tea. subst decl'.
+      rewrite hd in hs'. cbn in hs'.
+      eapply ws_cumul_pb_Sort_inv in hs'. red in hs'.
+      destruct s => //.
     * destruct p0 as [hd hb hu].
       eapply inversion_Const in hs as [decl' [wf [decl'' [cu hs']]]]; eauto.
       unshelve eapply declared_constant_to_gen in d, decl''. 3,6:eapply wfΣ.

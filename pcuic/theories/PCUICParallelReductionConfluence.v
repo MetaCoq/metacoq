@@ -501,6 +501,7 @@ Section Rho.
   Equations? map_prim_wf (p : PCUICPrimitive.prim_val term) (rho : context -> forall x, depth x < depth (tPrim p) -> term) (Γ : context) : prim_val :=
   | (primInt; primIntModel i), _, _ := (primInt; primIntModel i);
   | (primFloat; primFloatModel f), _, _ := (primFloat; primFloatModel f);
+  | (primString; primStringModel s), _, _ := (primString; primStringModel s);
   | (primArray; primArrayModel a), rho, Γ :=
     let default := rho Γ a.(array_default) _ in
     let ty := rho Γ a.(array_type) _ in

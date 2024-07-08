@@ -249,6 +249,8 @@ checker/src/wf.mli
 /safechecker/_PluginProject
 /safechecker/_CoqProject
 /template-coq/_CoqProject
+/template-coq/_PluginProject
+/template-coq/_TemplateCoqProject
 /common/_CoqProject
 /safechecker/Makefile.safechecker.conf
 /safechecker/Makefile.safechecker

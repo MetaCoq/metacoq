@@ -106,7 +106,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tFix _ _ | tCoFix _ _ => todo "tsl"
   | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
-  | tInt _ | tFloat _ | tArray _ _ _ _ => todo "tsl"
+  | tInt _ | tFloat _ | tArray _ _ _ _ | tString _ => todo "tsl"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
                | None => t1 end

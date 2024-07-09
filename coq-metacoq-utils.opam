@@ -28,7 +28,6 @@ install: [
   [make "-C" "utils" "install"]
 ]
 depends: [
-  "stdlib-shims"
   "coq" { = "dev" }
   "coq-equations" { = "dev" }
 ]

@@ -46,7 +46,7 @@ MetaCoq uses three types convertible to `string` which have a different intended
   E.g. `Datatypes.nat`
 
 - `kername` is a structured type of fully qualified names.
-  E.g. `Coq.Init.Datatypes.nat`
+  E.g. `Stdlib.Init.Datatypes.nat`
 
 Quoting always produce fully qualified names. On the converse, unquoting allow to
 have only partially qualified names and rely on Coq to resolve them. The commands

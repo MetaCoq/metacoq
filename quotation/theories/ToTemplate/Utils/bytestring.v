@@ -1,4 +1,4 @@
-From MetaCoq.Quotation.ToTemplate Require Import Coq.Init.
+From MetaCoq.Quotation.ToTemplate Require Import Stdlib.Init.
 From MetaCoq.Utils Require Import bytestring.
 
 Module String.

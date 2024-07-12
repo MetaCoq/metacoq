@@ -4,7 +4,7 @@ From MetaCoq.Common Require Import MonadBasicAst.
 From MetaCoq.Template Require Import MonadAst TemplateMonad Ast Loader.
 From MetaCoq.Quotation Require Export CommonUtils.
 Require Import Equations.Prop.Classes.
-Require Import Coq.Lists.List.
+Require Import Stdlib.Lists.List.
 Export TemplateMonad.Common (export, local, global).
 Import ListNotations.
 
@@ -612,5 +612,5 @@ Global Arguments tmDeclareQuotationOfModule {_%_bool} _ _ _%_bs.
 (*
 Require Import MSetPositive.
 Instance: debug_opt := true.
-MetaCoq Run (tmMakeQuotationOfModule None "Coq.MSets.MSetPositive.PositiveSet"%bs).
+MetaCoq Run (tmMakeQuotationOfModule None "Stdlib.MSets.MSetPositive.PositiveSet"%bs).
 *)

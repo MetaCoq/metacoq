@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Ast ReflectAst Induction.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) Universes BasicAst Kernames.
 From MetaCoq.Quotation.ToTemplate.Common Require Import Environment EnvironmentTyping.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Environment.Sig EnvironmentTyping.Sig.

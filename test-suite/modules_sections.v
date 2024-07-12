@@ -79,9 +79,9 @@ MetaCoq Run (bc <- tmQuote S.b ;;
 
 MetaCoq Test Quote my_projT2.
 MetaCoq Test Unquote
-     (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
+     (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0) 0 []).
 MetaCoq Unquote Definition zero_from_syntax
-  := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
+  := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0) 0 []).
 
 Existing Class nat.
 
@@ -111,5 +111,5 @@ MetaCoq Run (tmLocateModule1 "B" >>= tmPrint).
 MetaCoq Run (tmLocateModule1 "S" >>= tmPrint).
 MetaCoq Run (tmLocateModType1 "X" >>= tmPrint).
 Fail MetaCoq Run (tmLocateModType1 "B" >>= tmPrint).
-Fail MetaCoq Run (tmLocateModType1 "modules_sections.S" >>= tmPrint). (* finds (MPdot (MPfile ["FMapInterface"; "FSets"; "Coq"]) "S") if unqualified *)
+Fail MetaCoq Run (tmLocateModType1 "modules_sections.S" >>= tmPrint). (* finds (MPdot (MPfile ["FMapInterface"; "FSets"; "Stdlib"]) "S") if unqualified *)
 Fail MetaCoq Run (tmLocateModule1 "X" >>= tmPrint).

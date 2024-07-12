@@ -1,4 +1,4 @@
-From MetaCoq.Quotation.ToPCUIC Require Import Coq.Init Coq.Lists.
+From MetaCoq.Quotation.ToPCUIC Require Import Stdlib.Init Stdlib.Lists.
 From MetaCoq.Utils Require Import All_Forall.
 
 #[export] Instance quote_All {A R ls} {qA : quotation_of A} {qR : quotation_of R} {quoteA : ground_quotable A} {quoteR : forall x, ground_quotable (R x)} : ground_quotable (@All A R ls) := ltac:(induction 1; exact _).

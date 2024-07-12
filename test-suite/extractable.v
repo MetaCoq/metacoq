@@ -50,7 +50,7 @@ Print blah0.
 
 MetaCoq Test Quote nat.
 MetaCoq Run
-    (tmBind (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat"))
+    (tmBind (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat"))
             (fun mi => tmMsg (string_of_nat (length mi.(ind_bodies))))).
 
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
@@ -77,6 +77,6 @@ MetaCoq Run
             (fun s => tmMsg (string_of_modpath s))).
 
 MetaCoq Test Quote plus.
-MetaCoq Run (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat")).
+MetaCoq Run (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat")).
 
-MetaCoq Run (tmQuoteConstant (MPfile ["Nat"; "Init"; "Coq"], "add") true).
+MetaCoq Run (tmQuoteConstant (MPfile ["Nat"; "Init"; "Stdlib"], "add") true).

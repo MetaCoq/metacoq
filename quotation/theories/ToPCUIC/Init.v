@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICMonadAst.
 From MetaCoq.TemplatePCUIC Require Import PCUICTemplateMonad Loader.
 From MetaCoq.Quotation Require Export CommonUtils.
 Require Import Equations.Prop.Classes.
-Require Import Coq.Lists.List.
+Require Import Stdlib.Lists.List.
 Export TemplateMonad.Common (export, local, global).
 Import ListNotations.
 
@@ -596,5 +596,5 @@ Global Arguments tmDeclareQuotationOfModule {_%_bool} _ _ _%_bs.
 (*
 Require Import MSetPositive.
 Instance: debug_opt := true.
-MetaCoq Run (tmMakeQuotationOfModule None "Coq.MSets.MSetPositive.PositiveSet"%bs).
+MetaCoq Run (tmMakeQuotationOfModule None "Stdlib.MSets.MSetPositive.PositiveSet"%bs).
 *)

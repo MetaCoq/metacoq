@@ -43,8 +43,8 @@ Import ListNotations.
 
 
 Definition qprod' := mkInd (MPfile ["proj"; "TestSuite"; "MetaCoq"], "prod'") 0.
-Definition qnat := mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0.
-Definition qbool := mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "bool") 0.
+Definition qnat := mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0.
+Definition qbool := mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "bool") 0.
 
 MetaCoq Unquote Definition x := (tProj (mkProjection qprod' 2 1)
    (tApp (tConstruct qprod' 0 nil)

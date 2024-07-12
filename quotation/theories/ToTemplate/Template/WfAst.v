@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Ast WfAst.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) utils All_Forall MCProd MCOption.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) config BasicAst Universes Kernames.
 From MetaCoq.Quotation.ToTemplate.Template Require Import (hints) Ast AstUtils Induction UnivSubst.

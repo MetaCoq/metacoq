@@ -29,13 +29,13 @@ Section Tags.
       else find_tag tags (S idx) tag
     end.
   (* e.g. for bool: [ 1 0 ], i.e true (0 in Coq) is mapped to 1 and false (1 in Coq) is mapped to 0 *)
-  Definition old_tag tags tag := find_tag tags 0 tag.
-  Definition new_tag (tags : list nat) tag := nth_error tags tag.
+  Definition new_tag tags tag := find_tag tags 0 tag.
+  Definition old_tag (tags : list nat) tag := nth_error tags tag.
 
   Lemma old_of_new tags oldidx :
-    new_tag tags oldidx >>= old_tag tags = Some oldidx.
+    old_tag tags oldidx >>= new_tag tags = Some oldidx.
   Proof.
-    rewrite /new_tag /old_tag.
+    rewrite /old_tag /new_tag.
     destruct nth_error eqn:hnth => //=. 2:admit.
     revert hnth.
     rewrite -{2}[oldidx]Nat.add_0_r. generalize 0.
@@ -49,23 +49,11 @@ Section Tags.
       * cbn in hnth. rewrite (IHtags oldidx) //. f_equal. lia.
   Admitted.
 
-  Record wf_mapping n := {
-    map_fn : nat -> nat;
-    map_fn_inv : nat -> nat;
-    map_bounded : forall x, x < n -> map_fn x < n;
-    map_fn_inv_bounded : forall x, x < n -> map_fn_inv x < n;
-    map_fn_inj x y : map_fn x = map_fn y -> x = y;
-    map_fn_inv_inj x y : map_fn_inv x = map_fn_inv y -> x = y;
-    map_fns : forall x, map_fn_inv (map_fn x) = x;
-    map_fns' : forall x, map_fn (map_fn_inv x) = x;
-  }.
-
-
-  Lemma old_tag_spec tags newidx oldidx :
-    old_tag tags newidx = Some oldidx ->
-    new_tag tags oldidx = Some newidx.
+  Lemma new_tag_spec tags newidx oldidx :
+    new_tag tags newidx = Some oldidx ->
+    old_tag tags oldidx = Some newidx.
   Proof.
-    rewrite /new_tag /old_tag.
+    rewrite /old_tag /new_tag.
     rewrite -{2}[oldidx]Nat.sub_0_r. generalize 0.
     induction tags in oldidx |- *.
     - intros n0. now rewrite nth_error_nil.
@@ -86,8 +74,54 @@ Section Tags.
   Definition reorder_list {A} tags (l : list A) :=
     option_get l (reorder_list_opt tags l).
 
+  Fixpoint one_to_one_map n l :=
+      match n with
+      | 0 => l == nil
+      | S n =>
+        existsb (fun x => x == n) l && one_to_one_map n (remove Nat.eq_dec n l)
+      end.
+
   Definition wf_tags (l : list nat) :=
-    forallb (fun n => n <? #|l|) l.
+    forallb (fun n => n <? #|l|) l && one_to_one_map #|l| l.
+
+  Lemma find_tag_None tags n idx :
+    find_tag tags n idx = None ->
+    Forall (fun tag => tag <> idx) tags.
+  Proof.
+    induction tags in n |- *; cbn; auto.
+    case: eqb_spec => [->|neq] // h.
+    specialize (IHtags _ h). constructor; auto.
+  Qed.
+
+  Lemma one_to_one_map_spec l : one_to_one_map #|l| l ->
+    forall i, i < #|l| <-> In i l.
+  Proof.
+    move: (Nat.le_refl #|l|).
+    generalize #|l| at 2 3 4 as n. induction n in l |- *; cbn.
+    - move=> hl _ i; split => //. lia. move: l hl; case => //=; try lia.
+    - move=> hl /andP[] /existsb_exists => [[x [inx xeqn]]] hone i.
+      specialize (IHn (remove Nat.eq_dec n l)).
+      apply eqb_eq in xeqn. subst x.
+      forward IHn.
+      have hlt := remove_length_lt Nat.eq_dec l n inx. lia.
+      specialize (IHn hone).
+      case: (eqb_spec i n) => [->|neq]. intuition auto.
+      split => hi. assert (i < n) by lia.
+      now have := proj1 (IHn _) H => /(in_remove Nat.eq_dec).
+      suff: i < n by lia. apply <- IHn.
+      apply (in_in_remove Nat.eq_dec) => //.
+  Qed.
+
+  Lemma find_tag_wf tags idx :
+    wf_tags tags ->
+    new_tag tags idx = None ->
+    #|tags| <= idx.
+  Proof.
+    rewrite /wf_tags => /andP[] /forallb_All hwf.
+    move => /one_to_one_map_spec hone /find_tag_None /Forall_forall hdiff.
+    case: (Nat.leb_spec #|tags| idx) => // hlt.
+    elim (hdiff idx). apply hone, hlt. reflexivity.
+  Qed.
 
   Lemma mapopt_spec {A B} (f : A -> option B) (l : list A) :
     (forall i x, nth_error l i = Some x -> exists x', f x = Some x') ->
@@ -148,11 +182,12 @@ Section Tags.
   Lemma reorder_list_opt_spec {A} (l : list A) (tags : list nat) (htags : wf_tags tags) :
     #|l| = #|tags| ->
     exists l', reorder_list_opt tags l = Some l' /\
-    (forall i k, new_tag tags i = Some k -> exists x, nth_error l k = Some x /\ nth_error l' i = nth_error l k).
+    (forall i k, old_tag tags i = Some k -> exists x, nth_error l k = Some x /\ nth_error l' i = nth_error l k).
   Proof.
     rewrite /reorder_list_opt.
     rewrite /wf_tags in htags.
     intros hlen.
+    move/andP: htags => [] htags _.
     have optH := mapopt_spec (nth_error l) tags.
     forward optH.
     { intros i x hnth. solve_all. eapply All_nth_error in htags; tea. apply Nat.ltb_lt in htags.
@@ -165,7 +200,7 @@ Section Tags.
   (* Lemma reorder_list_opt_spec_inv {A} (l : list A) (tags : list nat) (htags : wf_tags tags) :
     #|l| = #|tags| ->
     exists l', reorder_list_opt tags l = Some l' /\
-    (forall oldidx newidx, old_tag tags newidx = Some oldidx ->
+    (forall oldidx newidx, new_tag tags newidx = Some oldidx ->
     (* oldidx = 0 -> newidx = 1 *)
     exists x, nth_error l oldidx = Some x (* 0 -> x *) /\ nth_error l' newidx (* l'[1] = x ?*) = nth_error l oldidx).
   Proof.
@@ -181,7 +216,7 @@ Section Tags.
     setoid_rewrite heq. eexists; split => //.
     destruct hl' as [hlen' hl'].
     intros newidx oldidx H.
-    eapply old_tag_spec in H.
+    eapply new_tag_spec in H.
     specialize (hl' oldidx).
     destruct (nth_error l' oldidx) eqn:hl'idx. specialize (hl' _ eq_refl) as [x' []].
     rewrite H0 in H. noconf H.
@@ -218,10 +253,11 @@ Section Tags.
     (* inj_tags tags -> *)
     exists l', reorder_list_opt tags l = Some l' /\
     (forall oldidx a, nth_error l' oldidx = Some a ->
-      exists newidx, new_tag tags oldidx = Some newidx /\ nth_error l newidx = Some a).
+      exists newidx, old_tag tags oldidx = Some newidx /\ nth_error l newidx = Some a).
   Proof.
     rewrite /reorder_list_opt.
     rewrite /wf_tags in htags.
+    move: htags => /andP[] htags hone.
     intros hlen.
     have optH := mapopt_inv_spec (nth_error l) tags.
     forward optH.
@@ -260,39 +296,41 @@ Section Tags.
   Qed.
 
 
-  Lemma reorder_list_new_tag {A} (tags : list nat) (l : list A) oldidx newidx :
+  Lemma reorder_list_old_tag {A} (tags : list nat) (l : list A) oldidx newidx :
     wf_tags tags -> #|l| = #|tags| ->
-    new_tag tags newidx = Some oldidx ->
+    old_tag tags newidx = Some oldidx ->
     nth_error (reorder_list tags l) newidx = nth_error l oldidx.
   Proof.
-    rewrite /new_tag.
+    rewrite /old_tag.
     intros wft hlen ht.
     destruct (nth_error l) eqn:hl => //=.
     eapply (reorder_list_spec' tags l) in ht; tea.
-    unfold wf_tags in wft. solve_all. eapply All_nth_error in wft; tea.
+    move: wft => /andP[] wft hone.
+    solve_all. eapply All_nth_error in wft; tea.
     apply Nat.ltb_lt in wft. rewrite -hlen in wft. apply nth_error_None in hl. lia.
   Qed.
 
-  Lemma reorder_list_new_tag' {A} (tags : list nat) (l : list A) oldidx newidx :
+(* Lemma reorder_list_old_tag' {A} (tags : list nat) (l : list A) oldidx newidx :
     wf_tags tags -> #|l| = #|tags| ->
-    new_tag tags oldidx = Some newidx ->
+    old_tag tags oldidx = Some newidx ->
     nth_error (reorder_list tags l) oldidx = nth_error l newidx.
   Proof.
-    rewrite /new_tag.
+    rewrite /old_tag.
     intros wft hlen ht.
     destruct (nth_error l) eqn:hl => //=.
     eapply (reorder_list_spec' tags l) in ht; tea.
+    move/andP: wft => [] wft hone.
     unfold wf_tags in wft. solve_all. eapply All_nth_error in wft; tea.
     apply Nat.ltb_lt in wft. rewrite -hlen in wft. apply nth_error_None in hl. lia.
   Qed.
+*)
 
-
-  (* Lemma reorder_list_new_tag_inv {A} (tags : list nat) (l : list A) oldidx newidx :
+  (* Lemma reorder_list_old_tag_inv {A} (tags : list nat) (l : list A) oldidx newidx :
     wf_tags tags -> #|l| = #|tags| ->
-    new_tag tags oldidx = Some newidx ->
+    old_tag tags oldidx = Some newidx ->
     nth_error (reorder_list tags l) newidx = nth_error l oldidx.
   Proof.
-    rewrite /new_tag.
+    rewrite /old_tag.
     intros wft hlen ht.
     destruct (nth_error l) eqn:hl => //=.
     eapply (reorder_list_spec tags l) in ht; tea.
@@ -309,7 +347,7 @@ Section Reorder.
 
   Definition lookup_constructor_mapping i c :=
     '(tyna, tags) <- lookup_inductive_assoc mapping i ;;
-    old_tag tags c.
+    new_tag tags c.
 
   Definition lookup_constructor_ordinal i c :=
     match lookup_constructor_mapping i c with
@@ -357,7 +395,7 @@ Section Reorder.
       end.
 
     Definition reorder_inductive_decl kn idecl :=
-      {| ind_finite := idecl.(ind_finite); ind_npars := 0;
+      {| ind_finite := idecl.(ind_finite); ind_npars := idecl.(ind_npars);
          ind_bodies := mapi (reorder_one_ind kn) idecl.(ind_bodies) |}.
 
     Definition reorder_decl d :=
@@ -381,20 +419,13 @@ Definition wf_tags_list {A} (tags : list nat) (l : list A) :=
 
 Lemma nth_error_reorder {A} {l : list A} {tags n newidx} :
   wf_tags_list tags l ->
-  new_tag tags newidx = Some n ->
+  old_tag tags newidx = Some n ->
   nth_error (reorder_list tags l) newidx = nth_error l n.
 Proof.
   move=> /andP [] h. apply eqb_eq in h. move=> wft hnw.
-  pose proof (reorder_list_new_tag tags l n newidx wft).
+  pose proof (reorder_list_old_tag tags l n newidx wft).
   now apply H.
 Qed.
-
-Fixpoint one_to_one_map n l :=
-  match n with
-  | 0 => true
-  | S n =>
-    existsb (fun x => x == n) l && one_to_one_map n l
-  end.
 
 Definition wf_reordering ncstrs cstrs :=
   (List.length cstrs == ncstrs) &&
@@ -471,7 +502,7 @@ Section reorder_proofs.
     - move=> /andP[] wfa wfi. intros hl. now apply IHi.
   Qed.
 
-  Lemma lookup_inductive_assoc_wf_tags ind mib oib p :
+  Lemma lookup_inductive_assoc_wf_tags {ind mib oib p} :
     lookup_inductive Σ ind = Some (mib, oib) ->
     lookup_inductive_assoc m ind = Some p ->
     wf_tags_list (snd p) oib.(ind_ctors).
@@ -504,51 +535,103 @@ Section reorder_proofs.
     now destruct ind; rewrite hia.
   Qed.
 
-  Lemma wf_cstrs_tag_list {i n mib oib na tags} :
+  Lemma nth_reorder_list_ctors {i mib oib na tags} :
     lookup_inductive Σ i = Some (mib, oib) ->
     lookup_inductive_assoc m i = Some (na, tags) ->
-    forall newidx, new_tag tags newidx = Some n ->
+    forall newidx n, old_tag tags newidx = Some n ->
     nth_error (reorder_list tags oib.(ind_ctors)) newidx = nth_error oib.(ind_ctors) n.
   Proof.
     move=> hli hia idx hnew.
     apply nth_error_reorder => //.
-    eapply (lookup_inductive_assoc_wf_tags _ _ _ (na, tags)); tea.
+    eapply (lookup_inductive_assoc_wf_tags (p:=(na, tags))); tea.
   Qed.
 
+  Lemma map_opt_length {A B} (f : A -> option B) l :
+    match mapopt f l with
+    | None => True
+    | Some l' => #|l'| = #|l|
+    end.
+  Proof.
+    induction l; cbn; auto.
+    destruct (f a) => //.
+    destruct (mapopt f l) => //=. now f_equal.
+  Qed.
+
+  Lemma reorder_list_length {A} tags (l : list A): #|tags| = #|l| -> #|reorder_list tags l| = #|l|.
+  Proof.
+    move=> hl. rewrite /reorder_list.
+    case hr: reorder_list_opt => [l'|] //=.
+    move: hr; rewrite /reorder_list_opt.
+    have := map_opt_length (nth_error l) tags.
+    destruct mapopt => //. congruence.
+  Qed.
+
+  Lemma lookup_inductive_assoc_None_reorder_one_ind i oib :
+    lookup_inductive_assoc m i = None ->
+    reorder_one_ind m (inductive_mind i) (inductive_ind i) oib = oib.
+  Proof.
+    rewrite /reorder_one_ind. destruct i; move => -> //.
+  Qed.
+(*
+  Lemma lookup_inductive_assoc_None_reorder_inductive_decl i mib :
+    lookup_inductive_assoc m i = None ->
+    reorder_inductive_decl m (inductive_mind i) mib = mib.
+  Proof.
+    rewrite /reorder_inductive_decl.
+    intros hl. destruct mib; f_equal.
+    cbn; induction ind_bodies => //=. f_equal; eauto.
+    rewrite (lookup_inductive_assoc_None_reorder_one_ind {| inductive_mind := inductive_mind i; inductive_ind := 0 |}). //.
+
+  Qed. *)
+  Arguments eqb_eq {A H x y}.
   Lemma issome_lookup_ordinal i n :
     option_map (fun '(mib, oib, c) => (reorder_inductive_decl m (inductive_mind i) mib, reorder_one_ind m (inductive_mind i) (inductive_ind i) oib, c)) (lookup_constructor Σ i n) =
     lookup_constructor (reorder_env m Σ) i (lookup_constructor_ordinal m i n).
   Proof.
     rewrite /lookup_constructor lookup_inductive_reorder.
     destruct lookup_inductive as [[mib oib]|] eqn:hind => //=.
-    destruct nth_error eqn:hnth => //.
+    destruct nth_error eqn:hnth => //=.
     destruct (lookup_inductive_assoc m i) as [(na, tags)|] eqn:hl.
+    have /andP[]  := lookup_inductive_assoc_wf_tags hind hl => //= /eqb_eq => hlen wft.
     rewrite (ind_ctors_reorder hind hl). cbn.
     destruct (nth_error _ (lookup_constructor_ordinal _ _ _)) eqn:hnth'.
     rewrite /lookup_constructor_ordinal /lookup_constructor_mapping in hnth'.
     rewrite hl /= in hnth'.
-    destruct (old_tag tags n) as [newidx|] eqn:ht.
-    eapply old_tag_spec in ht.
-
-
-    forward H by admit.
-    forward H by admit.
-    specialize (H ht). rewrite hnth' in H. rewrite -H in hnth. now noconf hnth.
-    red in wfm.
-
-    pose proof (reorder_list_spec_inv tags (ind_ctors oib) (lookup_constructor_ordinal m i n) c0).
-    specialize (H hnth') as [oldidx []].
-
-
-
-    rewrite hnth in H.
-
-
-     (lookup_constructor_ordinal m i n)).
-    erewrite H => //. admit. admit.
-    rewrite /lookup_constructor_ordinal /lookup_constructor_mapping. rewrite hl /=.
-    destruct (nth_error tags n) eqn:hnth'.
-  Admitted.
+    destruct (new_tag tags n) as [newidx|] eqn:ht.
+    - eapply new_tag_spec in ht.
+      now rewrite (nth_reorder_list_ctors hind hl _ n) in hnth'.
+    - move/nth_error_Some_length: hnth.
+      rewrite /new_tag in ht => hn.
+      eapply find_tag_wf in ht => //. lia.
+    - eapply nth_error_None in hnth'.
+      apply nth_error_Some_length in hnth.
+      rewrite reorder_list_length in hnth' => //.
+      move: hnth'.
+      rewrite /lookup_constructor_ordinal /lookup_constructor_mapping hl /=.
+      destruct (new_tag tags n) as [newidx|] eqn:ht.
+      eapply new_tag_spec in ht.
+      apply nth_error_Some_length in ht. lia.
+      rewrite /new_tag in ht => hn.
+      eapply find_tag_wf in ht => //. lia.
+    - rewrite /lookup_constructor_ordinal /lookup_constructor_mapping hl //=.
+      destruct i.
+      rewrite /reorder_one_ind hl //=. now rewrite hnth.
+    - apply nth_error_None in hnth.
+      rewrite /lookup_constructor_ordinal /lookup_constructor_mapping /=.
+      destruct lookup_inductive_assoc eqn:hl => //=.
+      have /andP[]  := lookup_inductive_assoc_wf_tags hind hl => //= /(eqb_eq (A:=nat)) => hlen wft.
+      destruct p as [na tags].
+      destruct (new_tag tags n) as [newidx|] eqn:ht.
+      + eapply new_tag_spec in ht.
+        move/andP: wft => [] ht' _.
+        eapply forallb_All in ht'. eapply All_nth_error in ht'; tea. apply Nat.ltb_lt in ht'. lia.
+      + rewrite /reorder_one_ind. destruct i; rewrite hl //=.
+        destruct nth_error eqn:hnth' => //.
+        apply nth_error_Some_length in hnth'. rewrite reorder_list_length in hnth'. cbn in hlen; lia. lia.
+      + rewrite lookup_inductive_assoc_None_reorder_one_ind //=.
+        destruct nth_error eqn:hnth' => //.
+        apply nth_error_Some_length in hnth'. lia.
+  Qed.
 
   Lemma wf_optimize t k :
     wf_glob Σ ->

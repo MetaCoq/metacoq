@@ -776,6 +776,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tSort s : tSort (Sort.super s)
 
 | type_Cast c k t s :
+    isSortRel s rel_of_Type ->
     Σ ;;; Γ |- t : tSort s ->
     Σ ;;; Γ |- c : t ->
     Σ ;;; Γ |- tCast c k t : t
@@ -830,6 +831,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       (List.rev (ind_params mdecl ,,, ind_indices idecl : context)@[p.(puinst)]) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+    isSortRel ps ci.(ci_relevance) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
@@ -1103,7 +1105,7 @@ Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
   forall d Γ,
     Γ' = d :: Γ ->
     ∑ (w' : wf_local Σ Γ) u,
-      { ty : lift_typing1 (typing Σ) Γ (Judge d.(decl_body) d.(decl_type) (Some u)) |
+      { ty : lift_typing1 (typing Σ) Γ (j_decl_s d (Some u)) |
             All_local_env_size (@typing_size _ Σ) _ w' <
             All_local_env_size (@typing_size _ _) _ w /\
             lift_typing_size (@typing_size _ _ _) _ ty <= All_local_env_size (@typing_size _ _) _ w }.
@@ -1160,6 +1162,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (c : term) (k : cast_kind)
             (t : term) (s : sort),
+        isSortRel s rel_of_Type ->
         Σ ;;; Γ |- t : tSort s -> P Σ Γ t (tSort s) -> Σ ;;; Γ |- c : t -> P Σ Γ c t -> P Σ Γ (tCast c k t) t) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (na : aname) (t b : term) (s1 s2 : sort),
@@ -1226,6 +1229,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
         is_allowed_elimination Σ idecl.(ind_kelim) ps ->
+        isSortRel ps ci.(ci_relevance) ->
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
@@ -1389,6 +1393,7 @@ Proof.
            eapply type_local_ctx_impl. eapply Xg'. auto. intros ?? Hj. apply Xj; tas.
            apply lift_typing_impl with (1 := Hj); intros ?? Hs. split; tas.
            apply (IH (_; _; _; Hs)).
+        -- apply (ind_relevance_compat Xg).
         -- apply (onIndices Xg).
       * apply All_local_env_impl with (1 := onP); intros ?? Hj. apply Xj; tas.
         apply lift_typing_impl with (1 := Hj); intros ?? Hs. split; tas.

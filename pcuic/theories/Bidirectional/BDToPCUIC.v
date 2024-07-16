@@ -164,12 +164,13 @@ Section BDToPCUICTyping.
     intros wfΔ args ctxi ; inversion ctxi.
     - subst d.
       subst.
-      assert (isType Σ Γ t).
+      assert (isTypeRel Σ Γ t na.(binder_relevance)).
       {
         eapply All_local_rel_app_inv in wfΔ as [wfd _].
         inversion_clear wfd.
         eassumption.
       }
+      apply isTypeRel_isType in X2 as X2'.
       constructor ; auto.
       apply X ; auto.
       1: by rewrite subst_telescope_length ; reflexivity.
@@ -189,7 +190,7 @@ Section BDToPCUICTyping.
       {
         eapply All_local_rel_app_inv in wfΔ as [wfd _].
         inversion_clear wfd.
-        apply lift_sorting_it_impl_gen with X2 => //.
+        now eapply lift_sorting_forget_body, lift_sorting_forget_rel.
       }
       constructor ; auto.
       apply X ; auto.
@@ -211,7 +212,7 @@ Section BDToPCUICTyping.
       2: intros [_ IH]; now apply IH.
       destruct j_term => //=.
       intros [_ IH]; apply IH; tas.
-      apply lift_sorting_forget_univ in X.
+      apply lift_sorting_forget_univ, lift_sorting_forget_rel, lift_sorting_forget_body in X.
       apply lift_sorting_it_impl_gen with X => //.
       intros [_ IH']; now apply IH'.
 
@@ -239,7 +240,7 @@ Section BDToPCUICTyping.
       apply validity in X0 as (_ & s & X0 & _).
       apply inversion_Prod in X0 as (s1 & s2 & X0 & _).
       2: done.
-      eapply lift_sorting_forget_univ; eassumption.
+      eapply lift_sorting_forget_rel, lift_sorting_forget_univ; eassumption.
 
     - red ; intros ; econstructor ; eauto.
 
@@ -342,7 +343,7 @@ Section BDToPCUICTyping.
         specialize (Hd X3).
         apply lift_sorting_it_impl with Hd => //.
 
-      + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
+      + have Htypes : All (fun d => isTypeRel Σ Γ (dtype d) (dname d).(binder_relevance)) mfix.
         { apply All_impl with (1 := X0) => d Hd.
           specialize (Hd X3).
           apply lift_sorting_it_impl with Hd => //.
@@ -362,7 +363,7 @@ Section BDToPCUICTyping.
         specialize (Hd X3).
         apply lift_sorting_it_impl with Hd => //.
 
-      + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
+      + have Htypes : All (fun d => isTypeRel Σ Γ (dtype d) (dname d).(binder_relevance)) mfix.
         { apply All_impl with (1 := X0) => d Hd.
           specialize (Hd X3).
           apply lift_sorting_it_impl with Hd => //.
@@ -433,6 +434,14 @@ Qed.
 
 Theorem infering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
   wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> isType Σ Γ t.
+Proof.
+  intros wfΓ Ht.
+  repeat (eexists; tea).
+  now apply infering_sort_typing.
+Qed.
+
+Theorem infering_sort_isTypeRel `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> isTypeRel Σ Γ t (relevance_of_sort u).
 Proof.
   intros wfΓ Ht.
   repeat (eexists; tea).
@@ -510,6 +519,7 @@ Proof.
       rewrite /= app_context_assoc in wfΓ.
       eapply All_local_env_app_inv in wfΓ as [wfΓ _].
       inversion wfΓ ; subst.
+      apply isTypeRel_isType in X0.
       now apply checking_typing.
     }
     constructor ; tea.

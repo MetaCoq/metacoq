@@ -38,24 +38,6 @@ Section Alpha.
   Context {cf:checker_flags}.
 
   (* TODO MOVE *)
-  Lemma wf_local_nth_error_vass :
-    forall Σ Γ i na ty,
-      wf Σ.1 ->
-      wf_local Σ Γ ->
-      nth_error Γ i = Some (vass na ty) ->
-      lift_typing typing Σ Γ (Typ (lift0 (S i) ty)).
-  Proof using Type.
-    intros Σ Γ i na ty hΣ hΓ e. simpl.
-    eapply All_local_env_nth_error in e as hj; tea.
-    apply nth_error_Some_length in e.
-    rewrite -(firstn_skipn (S i) Γ) in hΓ |- *.
-    apply lift_typing_f_impl with (1 := hj) => // ?? HT.
-    eapply weakening with (Γ' := firstn (S i) Γ) in HT.
-    all: tas.
-    rewrite firstn_length_le // in HT.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma fix_context_nth_error :
     forall m i d,
       nth_error m i = Some d ->
@@ -397,6 +379,7 @@ Section Alpha.
     intros a eq.
     induction eq; depelim a; cbn; try solve [constructor; auto];
     depelim r; subst; constructor; auto.
+    all: rewrite e.
     all: apply lift_typing_impl with (1 := l) => ?? Hs.
     all: eapply (closed_context_cumulativity _ (pb:=Conv)); tea; [apply IHeq; pcuic|].
     all: eapply ws_cumul_ctx_pb_rel_app.
@@ -462,13 +445,13 @@ Section Alpha.
     now eapply eq_context_conversion.
   Qed.
 
-  Lemma lift_judgment_alpha {Σ : global_env_ext} {Γ tm tm' t t' u} :
+  Lemma lift_judgment_alpha {Σ : global_env_ext} {Γ tm tm' t t' u r} :
     lift_typing0 (fun t T : term =>
       forall u : term, upto_names' t u -> Σ;;; Γ |- u : T)
-      (Judge tm t u) ->
+      (Judge tm t u r) ->
     match tm', tm with None, _ => unit | Some tm', Some tm => upto_names' tm tm' | _, _ => False end ->
     upto_names' t t' ->
-    lift_typing typing Σ Γ (Judge tm' t' u).
+    lift_typing typing Σ Γ (Judge tm' t' u r).
   Proof.
     intros tu Htm Hty.
     apply lift_sorting_it_impl_gen with tu => //.
@@ -476,7 +459,7 @@ Section Alpha.
     destruct tm' as [tm'|], tm as [tm|] => // HT.
     specialize (HT _ Htm).
     eapply type_Cumul'; tea.
-    { eapply lift_sorting_forget_univ, lift_sorting_it_impl_gen with tu => // Ht. now apply Ht. }
+    { eapply lift_sorting_forget_rel, lift_sorting_forget_univ, lift_sorting_it_impl_gen with tu => // Ht. now apply Ht. }
     eapply eq_term_upto_univ_cumulSpec.
     eapply eq_term_leq_term.
     now eapply upto_names_impl_eq_term.
@@ -507,6 +490,7 @@ Section Alpha.
       * intros Δ eq; destruct Δ; depelim eq; constructor.
       * intros Δ eq; depelim eq. depelim c.
         all: constructor; auto.
+        all: rewrite -eqna.
         all: eapply lift_judgment_alpha with (1 := X _ eq) => //.
 
     - intros n decl hnth ih Δ v e eqctx; invs e.
@@ -526,27 +510,29 @@ Section Alpha.
       eapply eq_context_conversion; tea.
       eapply type_Sort; assumption.
     - intros na A B s1 s2 ih hA ihA hB ihB Δ v e eqctx; invs e.
-      econstructor.
-      + eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
-      + eapply context_conversion.
+      assert (lift_typing typing Σ Δ (j_vass_s na' a' s1)).
+      + rewrite -H3.
+        eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
+      + econstructor; tas.
+        eapply context_conversion.
         * eapply ihB. assumption. reflexivity.
         * constructor; eauto.
-          eapply lift_sorting_forget_univ.
-          eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
+          now eapply lift_sorting_forget_univ.
         * constructor.
           -- now eapply upto_names_conv_context.
           -- constructor. assumption. constructor.
              eapply upto_names_impl_eq_term. assumption.
     - intros na A t B ih hA ihA hB ihB Δ v e eqctx; invs e.
       eapply type_Cumul'.
-      + econstructor.
-        * eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
-        * eapply eq_context_conversion.
+      + assert (lift_typing typing Σ Δ (j_vass na' ty')).
+        * rewrite -H3.
+          eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
+        * econstructor; eauto.
+          eapply eq_context_conversion.
           -- eapply ihB. assumption. reflexivity.
           -- constructor. 1: assumption.
              simpl. constructor; auto.
           -- constructor; eauto.
-             eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //.
       + eapply validity in hB;tea.
         eapply isType_tProd; eauto. split; eauto with pcuic.
         eapply lift_judgment_alpha with (1 := ihA _ eqctx) => //. reflexivity.
@@ -560,15 +546,16 @@ Section Alpha.
       assert (isType Σ Γ (tLetIn na b B A)).
       { eapply validity. econstructor; eauto. }
       eapply type_Cumul'.
-      + econstructor.
-        * eapply lift_judgment_alpha with (1 := ihbB _ eqctx) => //.
-        * eapply eq_context_conversion.
+      + assert (lift_typing typing Σ Δ (j_vdef na' t' ty')).
+        * rewrite -H4.
+          eapply lift_judgment_alpha with (1 := ihbB _ eqctx) => //.
+        * econstructor; auto.
+          eapply eq_context_conversion.
           -- eapply ihA; trea.
           -- constructor.
             ++ assumption.
             ++ constructor; auto.
           -- constructor; auto.
-             eapply lift_judgment_alpha with (1 := ihbB _ eqctx) => //.
       + apply lift_typing_impl with (1 := X2) => ?? Hs.
         eapply eq_context_conversion; tea. eauto.
       + eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
@@ -601,7 +588,7 @@ Section Alpha.
       econstructor ; eauto.
     - intros ind p c brs args ps mdecl idecl isdecl X X0 H Hpctx cpc wfp
         cup wfpctx Hret IHret
-            wfcpc kelim HIHctxi Hc IHc iscof ptm wfbrs Hbrs Δ v e e'; invs e.
+            wfcpc kelim Her HIHctxi Hc IHc iscof ptm wfbrs Hbrs Δ v e e'; invs e.
       have eqp := X1.
       eassert (ctx_inst _ _ _ _) as Hctxi by now eapply ctx_inst_impl with (1 := HIHctxi).
       eassert (PCUICEnvTyping.ctx_inst _ _ _ _) as IHctxi.
@@ -680,7 +667,7 @@ Section Alpha.
           eapply ws_cumul_pb_mkApps; trea.
           eapply ws_cumul_pb_refl => //. eauto with fvs.
           eapply wf_local_closed_context in wfΓ.
-          eapply isType_open in X1.
+          eapply isType_is_open_term in X1.
           rewrite on_free_vars_mkApps in X1. move/andP: X1 => [] _.
           rewrite forallb_app => /andP[] hargs hc.
           eapply All2_app.
@@ -759,7 +746,7 @@ Section Alpha.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
+        destruct r as (Hty & eqty & eqbod & eqrarg & eqann). rewrite -eqann.
         eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //. }
       assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
@@ -795,9 +782,10 @@ Section Alpha.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
-          destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
+          destruct r as (Hty & eqty & eqbod & eqrarg & eqann). rewrite /on_def_type -eqann.
           eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //.
         * unfold eq_mfixpoint in *. solve_all.
+          rewrite /on_def_body -b.
           specialize (b1 (Γ ,,, types)) as IHb.
           forward IHb by eapply eq_context_upto_cat; reflexivity.
           eapply @lift_judgment_alpha with (tm' := Some _) in IHb; tea.
@@ -814,7 +802,7 @@ Section Alpha.
             destruct t => //. now depelim eq. }
           move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. unfold eq_mfixpoint in *. solve_all.
-        + eapply All_nth_error in hmfix; tea.
+        + eapply isTypeRel_isType. eapply All_nth_error in hmfix; tea.
         + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
           now symmetry.
 
@@ -827,7 +815,7 @@ Section Alpha.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
-      destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
+      destruct r as (Hty & eqty & eqbod & eqrarg & eqann). rewrite -eqann.
       eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //. }
     assert (convctx : conv_context cumulAlgo_gen Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
@@ -863,9 +851,10 @@ Section Alpha.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [Hty (eqty & eqann & eqbod & eqrarg)].
+        destruct r as (Hty & eqty & eqbod & eqrarg & eqann). rewrite /on_def_type -eqann.
         eapply lift_judgment_alpha with (1 := Hty _ ltac:(reflexivity)) => //.
       * unfold eq_mfixpoint in *. solve_all.
+        rewrite /on_def_body -b.
         specialize (b1 (Γ ,,, types)) as IHb.
         forward IHb by eapply eq_context_upto_cat; reflexivity.
         eapply @lift_judgment_alpha with (tm' := Some _) in IHb; tea.
@@ -876,7 +865,7 @@ Section Alpha.
         unfold wf_cofixpoint, wf_cofixpoint_gen.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
         apply upto_names_check_cofix. unfold eq_mfixpoint in *. solve_all.
-      + eapply All_nth_error in hmfix; tea.
+      + eapply isTypeRel_isType. eapply All_nth_error in hmfix; tea.
       + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
     - intros p prim_ty cdecl IH prim decl pinv pty ptyIH Δ v e e'.

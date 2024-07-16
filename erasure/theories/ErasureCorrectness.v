@@ -60,7 +60,8 @@ Proof.
       eapply IHeval1 in H4 as (vf' & Hvf' & [He_vf']); eauto.
       eapply IHeval2 in H6 as (vu' & Hvu' & [He_vu']); eauto.
       pose proof (subject_reduction_eval t0 H).
-      eapply inversion_Lambda in X0 as (? & ? & ? & e0).
+      eapply inversion_Lambda in X0 as (? & h1 & ? & e0).
+      apply isTypeRel_isType in h1.
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply PCUICConversion.ws_cumul_pb_Prod_Prod_inv in e0 as [? e1 e2].
@@ -827,7 +828,7 @@ Proof.
     eapply inversion_CoFix in t; destruct_sigma t; auto.
     pose proof (wfΣ' := wfΣ.1).
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-    2:{ now eapply nth_error_all in a; tea. }
+    2:{ now eapply nth_error_all, isTypeRel_isType in a; tea. }
     invs He.
     * edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
       depelim Hed.

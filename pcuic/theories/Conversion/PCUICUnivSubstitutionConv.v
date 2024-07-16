@@ -1656,7 +1656,7 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
   induction 1; simpl; rewrite /subst_instance /=; constructor; cbn in *; auto.
-  all: eapply lift_sorting_fu_it_impl with (tu := tu); cbn in *; eauto.
+  all: eapply lift_sorting_fu_it_impl with (tu := tu); cbn in *; eauto using relevance_subst.
 Qed.
 
 #[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
@@ -2016,15 +2016,13 @@ Section SubstIdentity.
         subst_instance u Γ = Γ).
   Proof using Type.
     eapply typing_ind_env; intros; simpl in *; auto.
-    { destruct X as (X & s & (_ & (Hty & Hu)) & e); tas; repeat split; tas.
-      1: destruct j_term => //; destruct X as (_ & (X & _)); tas.
-      destruct j_univ => //; rewrite e; cbn in Hu; now depelim Hu. }
+    { apply lift_typing_subjtyp with (1 := X). 2: intros s Hs; now depelim Hs.
+      intros ?? []; auto. }
 
     { apply All_local_env_cst in X0. clear -X0 X1.
-      induction X0 => //=. cbn.
-      f_equal; tas. destruct x as [na bo t]; cbv [map_decl]; simpl in *.
-      specialize (p X1) as (ptm & pty & _); cbn in *. f_equal; tas.
-      destruct bo => //. cbn in *. f_equal. apply ptm. }
+      eapply All2_eq, All2_map_left. apply All_All2 with (1 := X0) => decl IH.
+      destruct IH as (? & ? & ?), decl as [na bo ty]; tas; unfold map_decl; cbn in *.
+      f_equal; tas. destruct bo => //. cbn in *. now f_equal. }
 
     all: try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
 

@@ -465,6 +465,7 @@ Lemma type_Case_helper
   (* consistent_instance_ext Σ (ind_universes mib) puinst -> *)
 
   is_allowed_elimination Σ (ind_kelim oib) ps ->
+  isSortRel ps oib.(ind_relevance) ->
 
   isCoFinite (ind_finite mib) = false ->
 
@@ -487,7 +488,7 @@ Lemma type_Case_helper
 
   Σ ;;; Γ |- make_case ind mib oib pparams puinst discr rettyp brs : subst_rettyp.
 Proof.
-  move=> wfΣ inddecl pparamslen discrtyp p predctx ptyp (* puinstok *) pselimok isfinite brslen ptm brstyp srettyp.
+  move=> wfΣ inddecl pparamslen discrtyp p predctx ptyp (* puinstok *) pselimok Her isfinite brslen ptm brstyp srettyp.
   set ci := {| ci_ind := ind ; ci_npar := ind_npars mib ; ci_relevance := ind_relevance oib |}.
 
   have wfΣ1 := (wfΣ : wf Σ.1).
@@ -581,6 +582,7 @@ Lemma type_Case_subst_helper
   (wf_local Σ (Γ,,, predctx) -> Σ ;;; Γ,,, predctx |- preturn p : tSort ps) ->
 
   is_allowed_elimination Σ (ind_kelim oib) ps ->
+  isSortRel ps oib.(ind_relevance) ->
 
   isCoFinite (ind_finite mib) = false ->
 
@@ -602,7 +604,7 @@ Lemma type_Case_subst_helper
 
   Σ ;;; Γ |- make_case ind mib oib pparams puinst discr rettyp brs : subst_rettyp.
 Proof.
-  move=> wfΣ inddecl pparamslen discrtyp p predctx predWty elimok finok brslen brsok substrettyp.
+  move=> wfΣ inddecl pparamslen discrtyp p predctx predWty elimok Her finok brslen brsok substrettyp.
 
   set ci := {| ci_ind := ind ; ci_npar := ind_npars mib ; ci_relevance := ind_relevance oib |}.
 
@@ -716,6 +718,7 @@ Lemma type_Case_simple_subst_helper
   Σ ;;; Γ |- rettyp : tSort ps ->
 
   is_allowed_elimination Σ (ind_kelim oib) ps ->
+  isSortRel ps oib.(ind_relevance) ->
 
   isCoFinite (ind_finite mib) = false ->
 
@@ -736,7 +739,7 @@ Lemma type_Case_simple_subst_helper
 
   Σ ;;; Γ |- make_case ind mib oib pparams puinst discr rettyp' brs : rettyp.
 Proof.
-  move=> wfΣ inddecl pparamslen discrtyp rettyp' p predctx predWty elimok finok brslen brsok.
+  move=> wfΣ inddecl pparamslen discrtyp rettyp' p predctx predWty elimok Her finok brslen brsok.
 
   set ci := {| ci_ind := ind ; ci_npar := ind_npars mib ; ci_relevance := ind_relevance oib |}.
 

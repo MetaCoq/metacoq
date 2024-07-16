@@ -104,11 +104,13 @@ Proof using wfΣ.
       1: constructor.
       rewrite subst_empty.
       eapply checking_typing ; tea.
+      eapply isTypeRel_isType.
       now eapply isType_tProd, validity, infering_prod_typing.
     + constructor.
       1: constructor.
       rewrite subst_empty.
       eapply checking_typing ; tea.
+      eapply isTypeRel_isType.
       now eapply isType_tProd, validity, infering_prod_typing.
 
   - pose proof (declared_constant_to_gen (wfΣ := wfΣ) isdecl).
@@ -204,9 +206,9 @@ Proof using wfΣ.
 
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
-    unshelve eapply declared_inductive_to_gen in H13; cycle -2; eauto.
+    unshelve eapply declared_inductive_to_gen in H14; cycle -2; eauto.
     unshelve eapply declared_inductive_to_gen in H; cycle -2; eauto.
-    move: (H) => /declared_inductive_inj /(_ H13) [? ?].
+    move: (H) => /declared_inductive_inj /(_ H14) [? ?].
     subst.
     assert (op' : is_open_term Γ (mkApps ptm0 (skipn (ci_npar ci) args0 ++ [c]))).
       by now eapply type_is_open_term, infering_typing.
@@ -475,9 +477,14 @@ Proof.
 Qed.
 
 
-
-
-
-
-
+Corollary isTypeRel_unique `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ T rel rel'} :
+  isTypeRel Σ Γ T rel -> isTypeRel Σ Γ T rel' -> rel = rel'.
+Proof.
+  intros (_ & s1 & H1 & _ & <-) (_ & s2 & H2 & _ & <-). cbn in H1, H2.
+  apply typing_wf_local in H1 as wfΓ.
+  apply typing_infering_sort in H1 as (u1 & H1 & Hle), H2 as (u2 & H2 & Hle').
+  apply leq_relevance_eq in Hle as <-, Hle' as <-.
+  eapply infering_sort_sort in H2 as ->; tea.
+  reflexivity.
+Qed.
 

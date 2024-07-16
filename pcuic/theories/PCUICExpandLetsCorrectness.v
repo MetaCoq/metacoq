@@ -2437,6 +2437,21 @@ Qed.
 
 Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing (TT.typing (H:=cf' cf)) Σ) Γ.
 
+Lemma trans_lift_typing_it {P Q} {tm tm' : option term} {t t' : term} {u r} :
+  forall tu: ST.lift_typing0 P (Judge tm t u r),
+  let s := tu.2.π1 in
+  match tm', tm with None, _ => unit | Some tm', Some tm => P tm t -> Q tm' t' | _, _ => False end ->
+  (P t (tSort s) -> Q t' (tSort s)) ->
+  TT.lift_typing0 Q (Judge tm' t' u r).
+Proof.
+  intros (? & ? & Hs & e) s HPQc HPQs.
+  split.
+  - destruct tm, tm' => //=. now apply HPQc.
+  - eexists. split; [now apply HPQs|].
+    destruct u => //.
+Qed.
+
+
 Lemma trans_wf_local' {cf} :
   forall (Σ : SE.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
@@ -2451,8 +2466,8 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct tu. repeat (eexists; tea).
-  - simpl. constructor; auto. destruct tu. repeat (eexists; tea).
+    + eapply trans_lift_typing_it with tu => //.
+  - simpl. constructor; auto. eapply trans_lift_typing_it with tu => //.
 Qed.
 
 Lemma trans_wf_local_env {cf} Σ Γ :
@@ -2471,8 +2486,8 @@ Proof.
   - simpl. constructor.
   - simpl. econstructor.
     + eapply IHX.
-    + simpl. destruct t0 as (_ & ? & ? & _). repeat (eexists; cbn; tea). now eapply p.
-  - simpl. constructor; auto. red. destruct t0 as (? & ? & ? & _); cbn in *. repeat (eexists; cbn; tea). all: intuition eauto.
+    + simpl. eapply trans_lift_typing_it with t0 => // HT. now apply HT.
+  - simpl. constructor; auto. red. eapply trans_lift_typing_it with t0 => // HT. all: now apply HT.
 Qed.
 
 Lemma trans_branches {cf} Σ Γ brs btys ps:
@@ -2523,10 +2538,8 @@ Proof.
   }
 
   induction X;cbn;constructor;auto;cbn in *.
-  - destruct t0 as (_ & ? & (? & ?) & _).
-    repeat (eexists; tea).
-  - destruct t0 as ((? & ?) & ? & (? & ?) & _).
-    repeat (eexists; tea).
+  - eapply trans_lift_typing_it with t0 => // HT. now apply HT.
+  - eapply trans_lift_typing_it with t0 => // HT. all: now apply HT.
 Qed.
 
 
@@ -3591,13 +3604,13 @@ Proof.
     + now apply trans_consistent_instance_ext.
     + red in X. epose proof (declared_constructor_inv weaken_prop _ X isdecl) as [cs [hnth onc]].
       destruct onc. red in on_ctype.
-      unshelve eapply lift_sorting_ex_it_impl_gen with (on_ctype _) => //= Hs.
+      unshelve eapply lift_sorting_ex_it_impl_gen with (on_ctype _) => //= Hs _.
       rewrite /type_of_constructor.
       rewrite (trans_subst (shiftnP #|ind_bodies mdecl| xpred0) (shiftnP 0 xpred0)).
       pose proof (declared_constructor_closed_gen_type isdecl).
       eapply closedn_on_free_vars. len in H0. now rewrite closedn_subst_instance.
       eapply (inds_is_open_terms []).
-      eexists.
+      eexists; split => //.
       eapply (substitution (Γ := trans_local Γ) (Δ := []) (T:=tSort _@[u])).
       rewrite trans_inds. eapply (weaken_subslet (Γ := trans_local Γ) (Γ' := [])); eauto with pcuic.
       eapply subslet_inds. eapply (trans_declared_inductive _ _ _ _ isdecl).
@@ -3638,6 +3651,7 @@ Proof.
       now eapply alpha_eq_trans.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
+    + assumption.
     + eassert (ctx_inst _ _ _ _) as Hctxi by (eapply ctx_inst_impl with (1 := X5); now intros ? []).
       eassert (PCUICEnvTyping.ctx_inst (fun _ _ _ => wf_trans Σ -> @typing (cf' _) _ _ _ _) _ _ _) as IHctxi.
       { eapply ctx_inst_impl with (1 := X5). intros ? ? [? r]; exact r. }
@@ -3693,7 +3707,7 @@ Proof.
           now move: wfctx; rewrite on_free_vars_ctx_app /= => /andP[].
           exact X. }
     + red. eapply Forall2_map_right, Forall2_map.
-      eapply Forall2_All2 in H4.
+      eapply Forall2_All2 in H5.
       eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_nth_hyp in X8.
       eapply All2_Forall2. eapply All2i_All2; tea; cbv beta.
@@ -3723,7 +3737,7 @@ Proof.
       rewrite !trans_bcontext.
       now eapply eq_context_upto_names_binder_annot in cd.
     + eapply All2i_map. eapply All2i_map_right.
-      eapply Forall2_All2 in H4.
+      eapply Forall2_All2 in H5.
       eapply All2i_nth_hyp in X8.
       eapply All2i_All2_mix_left in X8; tea.
       eapply All2i_impl ; tea.
@@ -3817,19 +3831,19 @@ Proof.
       unfold map_def.
       reflexivity.
     + eapply All_map, (All_impl X1).
-      intros d (_ & ? & ? & _) => //.
-      repeat (eexists; tea).
+      intros d tu.
+      eapply trans_lift_typing_it with (tu _) => //.
     + fold trans.
       subst types.
       eapply All_map.
       eapply All_prod with (1 := X3) in X0; tea. clear X1 X2 X3.
-      eapply All_impl; tea. intros d ((IHdb & ? & IHdt & _) & (_ & ? & ? & _)); cbn in *; tas.
-      repeat (eexists; tea); cbn.
-      all: len; rewrite -(trans_fix_context _ _ 0 H2).
-      all: rewrite -trans_local_app.
-      all: rewrite (trans_lift _ (shiftnP #|Γ| xpred0)) in IHdb, IHdt.
-      all: try eapply (subject_is_open_term (Σ := Σ)); tea.
-      all: len in IHdb; len in IHdt; eauto.
+      eapply All_impl; tea. intros d (onb & ont); cbn in *; tas.
+      eapply trans_lift_typing_it with (onb _) => // HT.
+      all: len in HT; len; rewrite -(trans_fix_context _ _ 0 H2).
+      all: rewrite -trans_local_app /=.
+      all: rewrite -(trans_lift _ (shiftnP #|Γ| xpred0)) /=.
+      all: try eapply (isTypeRel_is_open_term (Σ := Σ)); tea.
+      all: rewrite -(fix_context_length mfix); eapply HT.
     + rewrite (trans_wf_fixpoint _ (shiftnP #|Γ| xpred0) #|mfix|) //.
 
   - rewrite trans_dtype. simpl.
@@ -3845,19 +3859,19 @@ Proof.
       unfold map_def.
       reflexivity.
     + eapply All_map, (All_impl X1).
-      intros d (_ & ? & ? & _) => //.
-      repeat (eexists; tea).
+      intros d tu.
+      eapply trans_lift_typing_it with (tu _) => //.
     + fold trans.
       subst types.
       eapply All_map.
       eapply All_prod with (1 := X3) in X0; tea. clear X1 X2 X3.
-      eapply All_impl; tea. intros d ((IHdb & ? & IHdt & _) & (_ & ? & ? & _)); cbn in *; tas.
-      repeat (eexists; tea); cbn.
-      all: len; rewrite -(trans_fix_context _ _ 0 H2).
-      all: rewrite -trans_local_app.
-      all: rewrite (trans_lift _ (shiftnP #|Γ| xpred0)) in IHdb, IHdt.
-      all: try eapply (subject_is_open_term (Σ := Σ)); tea.
-      all: len in IHdb; len in IHdt; eauto.
+      eapply All_impl; tea. intros d (onb & ont); cbn in *; tas.
+      eapply trans_lift_typing_it with (onb _) => // HT.
+      all: len in HT; len; rewrite -(trans_fix_context _ _ 0 H2).
+      all: rewrite -trans_local_app /=.
+      all: rewrite -(trans_lift _ (shiftnP #|Γ| xpred0)) /=.
+      all: try eapply (isTypeRel_is_open_term (Σ := Σ)); tea.
+      all: rewrite -(fix_context_length mfix); eapply HT.
     + rewrite trans_wf_cofixpoint //.
   - cbn. rewrite trans_prim_ty. econstructor; eauto. rewrite prim_val_tag_map //.
     * now eapply trans_declared_constant in H0.
@@ -4518,7 +4532,7 @@ Proof.
     eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)).
     apply into_ws_cumul_pb.
     eapply (trans_cumul' (Σ := Σ) (Γ' := Γ' ,,, Γ'0)) => //.
-    eapply cumul_decorate_hetero; tea.
+    eapply cumul_decorate_hetero; eauto using has_sort_isType.
     len. now rewrite (All2_fold_length X) eqlen.
     now depelim ass. now depelim ass'.
     eapply cumulSpec_cumulAlgo_curry in eqt; eauto.
@@ -4747,8 +4761,7 @@ Proof.
         { cbn; rewrite -cstr_args_length.
           rewrite context_assumptions_smash_context context_assumptions_map //. }
         { cbn; rewrite /trans_cstr_concl /trans_cstr_concl_head /cstr_concl_head. now len. }
-        { destruct on_ctype as (_ & s & Hty & _).
-          repeat (eexists; tea).
+        { eapply trans_lift_typing_it with on_ctype => // Hty. set (s := _.2.π1) in *; clearbody s.
           epose proof (pcuic_expand_lets (Σ0, ind_universes m) _ _ _ X Hty IHX).
           rewrite trans_arities_context. cbn.
           rewrite cstr_eq in X0. rewrite !trans_it_mkProd_or_LetIn in X0.
@@ -5871,7 +5884,7 @@ Proof.
       2:{ eapply All_forallb. solve_all. }
       eapply All_local_env_on_free_vars_ctx in X3; tea.
       eapply All_local_env_impl; tea. cbn. intros.
-      apply lift_wf_term_f_impl with (u := j_univ j) (1 := X); intros t (Ht & ont).
+      apply lift_wf_term_f_impl with (r := j_rel j) (u := j_univ j) (1 := X); intros t (Ht & ont).
       rewrite shiftnP_add in ont. len in Ht. now rewrite trans_local_app in Ht.
     * rewrite -(trans_local_case_context Γ0 p) //. solve_all. cbn; eauto.
       rewrite trans_local_app in H2. eapply H2. len. now rewrite shiftnP_add in H4.

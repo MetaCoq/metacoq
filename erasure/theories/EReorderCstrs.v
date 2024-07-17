@@ -197,31 +197,19 @@ Section Tags.
     setoid_rewrite heq. eexists; split => //.
   Qed.
 
-  (* Lemma reorder_list_opt_spec_inv {A} (l : list A) (tags : list nat) (htags : wf_tags tags) :
-    #|l| = #|tags| ->
-    exists l', reorder_list_opt tags l = Some l' /\
-    (forall oldidx newidx, new_tag tags newidx = Some oldidx ->
-    (* oldidx = 0 -> newidx = 1 *)
-    exists x, nth_error l oldidx = Some x (* 0 -> x *) /\ nth_error l' newidx (* l'[1] = x ?*) = nth_error l oldidx).
+  Lemma reorder_list_opt_In {A} (l : list A) (tags : list nat) l' :
+    reorder_list_opt tags l = Some l' ->
+    (forall x, In x l' -> In x l).
   Proof.
     rewrite /reorder_list_opt.
-    rewrite /wf_tags in htags.
-    intros hlen.
-    have optH := mapopt_inv_spec (nth_error l) tags.
-    forward optH.
-    { intros i x hnth. solve_all. eapply All_nth_error in htags; tea. apply Nat.ltb_lt in htags.
-      rewrite -hlen in htags.
-      apply nth_error_Some in htags. destruct (nth_error l x) eqn:hnth'; try congruence. now eexists. }
-    destruct optH as [l' [heq hl']].
-    setoid_rewrite heq. eexists; split => //.
-    destruct hl' as [hlen' hl'].
-    intros newidx oldidx H.
-    eapply new_tag_spec in H.
-    specialize (hl' oldidx).
-    destruct (nth_error l' oldidx) eqn:hl'idx. specialize (hl' _ eq_refl) as [x' []].
-    rewrite H0 in H. noconf H.
-    exists a.
-  Qed. *)
+    induction tags in l, l' |- *; cbn.
+    - intros [= <-] x [].
+    - destruct nth_error eqn:hnth => //.
+      destruct mapopt eqn:hmap => //.
+      intros [= <-] x [->|].
+      now eapply nth_error_In in hnth.
+      eapply IHtags; tea.
+  Qed.
 
   (* Lemma reorder_list_spec {A} (tags : list nat) (l : list A) n i :
     wf_tags tags -> #|l| = #|tags| ->
@@ -368,7 +356,7 @@ Section Reorder.
     | tApp fn arg => tApp (reorder fn) (reorder arg)
     | tConst nm => tConst nm
     | tConstruct i m args => tConstruct i (lookup_constructor_ordinal i m) (map reorder args)
-    | tCase i mch brs => tCase i mch (reorder_branches i.1 (map (on_snd reorder) brs))
+    | tCase i mch brs => tCase i (reorder mch) (reorder_branches i.1 (map (on_snd reorder) brs))
     | tFix mfix idx => tFix (map (map_def reorder) mfix) idx
     | tCoFix mfix idx => tCoFix (map (map_def reorder) mfix) idx
     | tProj p bod =>
@@ -391,7 +379,7 @@ Section Reorder.
            ind_propositional := oib.(ind_propositional);
            ind_kelim := oib.(ind_kelim);
            ind_ctors := reorder_list tags oib.(ind_ctors);
-           ind_projs := reorder_list tags oib.(ind_projs) |}
+           ind_projs := oib.(ind_projs) |}
       end.
 
     Definition reorder_inductive_decl kn idecl :=
@@ -488,7 +476,6 @@ Section reorder_proofs.
     destruct nth_error => //=.
   Qed.
 
-
   Lemma lookup_inductive_assoc_spec {ind p} :
     wf_inductives_mapping Σ m ->
     lookup_inductive_assoc m ind = Some p ->
@@ -584,7 +571,7 @@ Section reorder_proofs.
 
   Qed. *)
   Arguments eqb_eq {A H x y}.
-  Lemma issome_lookup_ordinal i n :
+  Lemma lookup_constructor_reorder i n :
     option_map (fun '(mib, oib, c) => (reorder_inductive_decl m (inductive_mind i) mib, reorder_one_ind m (inductive_mind i) (inductive_ind i) oib, c)) (lookup_constructor Σ i n) =
     lookup_constructor (reorder_env m Σ) i (lookup_constructor_ordinal m i n).
   Proof.
@@ -633,10 +620,85 @@ Section reorder_proofs.
         apply nth_error_Some_length in hnth'. lia.
   Qed.
 
+  Lemma ind_projs_reorder mind ind oib :
+    ind_projs (reorder_one_ind m mind ind oib) = ind_projs oib.
+  Proof.
+    rewrite /reorder_one_ind. destruct lookup_inductive_assoc as [[na tags]|]=> //.
+  Qed.
+
+  Lemma wf_glob_ind_projs {p pinfo} :
+    wf_glob Σ ->
+    lookup_projection Σ p = Some pinfo ->
+    #|(ind_ctors pinfo.1.1.2)| = 1.
+  Proof.
+    intros wf.
+    rewrite /lookup_projection /lookup_constructor /lookup_inductive /lookup_minductive.
+    destruct lookup_env eqn:hl => //.
+    have := lookup_env_wellformed wf hl.
+    destruct g as [|mib] => //=.
+    destruct nth_error eqn:hind => //=.
+    destruct ind_ctors eqn:hctors => //=.
+    destruct (nth_error (ind_projs o) _) eqn:hprojs => //=.
+    intros wfmind [= <-]. cbn.
+    move: wfmind; rewrite /wf_minductive.
+    move/andP=> [] _ /forallb_All ha.
+    eapply All_nth_error in ha; tea.
+    move: ha; rewrite /wf_inductive /wf_projections.
+    destruct ind_projs => //. now rewrite nth_error_nil in hprojs.
+    rewrite hctors. destruct l => //.
+  Qed.
+
+  Lemma lookup_projection_reorder p :
+    wf_glob Σ ->
+    isSome (lookup_projection Σ p) ->
+    lookup_projection (reorder_env m Σ) p = option_map (fun '(((mib, oib), c), pb) =>
+      (reorder_inductive_decl m p.(proj_ind).(inductive_mind) mib,
+        reorder_one_ind m p.(proj_ind).(inductive_mind) p.(proj_ind).(inductive_ind) oib,
+        c, pb))
+       (lookup_projection Σ p).
+  Proof.
+    intros wf iss.
+    assert (lookup_constructor_ordinal m (proj_ind p) 0 = 0).
+    { move: iss.
+      case hl: lookup_projection => [pro|] //= _.
+      have wfpro := wf_glob_ind_projs wf hl. move: hl.
+      rewrite /lookup_projection /lookup_constructor_ordinal.
+      destruct lookup_constructor as [[[mib oib] cb]|] eqn:hlc => //=.
+      destruct nth_error eqn:nthp => //=. intros [= <-]. cbn in wfpro.
+      rewrite /lookup_constructor_mapping.
+      destruct lookup_inductive_assoc as [[na tags]|] eqn:hla => //=.
+      destruct new_tag eqn:hnt => //=.
+      eapply new_tag_spec in hnt.
+      eapply lookup_inductive_assoc_spec in hla; tea.
+      rewrite /wf_inductive_mapping in hla.
+      eapply lookup_constructor_lookup_inductive in hlc. rewrite hlc in hla.
+      move/andP: hla. rewrite wfpro. rewrite /wf_tags => [] [] taglen /andP[] /forallb_All ht.
+      destruct tags as [|] => //. destruct tags as [|] => //.
+      destruct n => //. cbn in hnt. now rewrite nth_error_nil in hnt. }
+    unfold lookup_projection.
+    rewrite -{1}H -lookup_constructor_reorder.
+    destruct lookup_constructor eqn:hlc => //=.
+    destruct p0 as [[mib oib] cb] => //=.
+    rewrite ind_projs_reorder //=.
+    destruct nth_error eqn:nthp => //=.
+  Qed.
+
+  Lemma All_reorder_list {A tags} {P : A -> Prop} {l} :
+    All P l ->
+    All P (reorder_list tags l).
+  Proof.
+    rewrite /reorder_list.
+    destruct reorder_list_opt as [l'|] eqn:hre => //=.
+    have hin := reorder_list_opt_In _ _ _ hre.
+    move/(All_Forall).
+    move/(Forall_forall _ _) => hl.
+    apply Forall_All, Forall_forall. intuition eauto.
+  Qed.
+
   Lemma wf_optimize t k :
     wf_glob Σ ->
     wellformed Σ k t -> wellformed (reorder_env m Σ) k (optimize t).
-  Proof using Type.
+  Proof using Type wfm.
     intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
@@ -645,12 +707,18 @@ Section reorder_proofs.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - rtoProp. now rewrite -lookup_constant_reorder.
     - move/andP: H => [] iss isnil.
-      rewrite -issome_lookup_ordinal.
+      rewrite -lookup_constructor_reorder.
       destruct lookup_constructor eqn:hl => //=.
       destruct args => //.
-    - admit.
+    - rtoProp; intuition auto; solve_all.
+      * rewrite lookup_inductive_reorder; destruct lookup_inductive => //.
+      * rewrite /reorder_branches.
+        destruct lookup_inductive_assoc as [[nas tags]|].
+        eapply All_reorder_list.
+        all:solve_all.
     - rtoProp; intuition auto.
-      admit.
+      rewrite lookup_projection_reorder //.
+      destruct lookup_projection => //.
     - rtoProp; intuition auto; solve_all.
       destruct (dbody x) => //.
     - rtoProp; intuition auto; solve_all.

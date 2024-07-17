@@ -32,7 +32,7 @@ Section Tags.
   Definition new_tag tags tag := find_tag tags 0 tag.
   Definition old_tag (tags : list nat) tag := nth_error tags tag.
 
-  Lemma old_of_new tags oldidx :
+  (*Lemma old_of_new tags oldidx :
     old_tag tags oldidx >>= new_tag tags = Some oldidx.
   Proof.
     rewrite /old_tag /new_tag.
@@ -47,7 +47,7 @@ Section Tags.
       destruct oldidx.
       * cbn in hnth. now noconf hnth.
       * cbn in hnth. rewrite (IHtags oldidx) //. f_equal. lia.
-  Admitted.
+  Qed.*)
 
   Lemma new_tag_spec tags newidx oldidx :
     new_tag tags newidx = Some oldidx ->
@@ -454,13 +454,17 @@ Section reorder_proofs.
   Lemma isBox_optimize t : isBox t -> isBox (optimize t).
   Proof. destruct t => //. Qed.
 
-  Lemma lookup_constant_reorder c : lookup_constant Σ c = lookup_constant (reorder_env m Σ) c.
-  Proof. Admitted.
-
   Lemma lookup_env_reorder kn : lookup_env (reorder_env m Σ) kn = option_map (fun decl => snd (reorder_decl m (kn, decl))) (lookup_env Σ kn).
   Proof.
     clear wfm. induction Σ; cbn; auto.
     case: eqb_spec => [->|hneq] //=.
+  Qed.
+
+  Lemma lookup_constant_reorder c : option_map (reorder_constant_decl m) (lookup_constant Σ c) = lookup_constant (reorder_env m Σ) c.
+  Proof.
+    rewrite /lookup_constant lookup_env_reorder.
+    destruct lookup_env => //=.
+    destruct g => //.
   Qed.
 
   Lemma lookup_inductive_reorder i :
@@ -705,7 +709,7 @@ Section reorder_proofs.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - rtoProp. now rewrite -lookup_constant_reorder.
+    - rtoProp. rewrite -lookup_constant_reorder. now destruct lookup_constant.
     - move/andP: H => [] iss isnil.
       rewrite -lookup_constructor_reorder.
       destruct lookup_constructor eqn:hl => //=.
@@ -836,3 +840,5 @@ Section reorder_proofs.
     induction n; simpl; auto.
     f_equal; auto.
   Qed.
+
+

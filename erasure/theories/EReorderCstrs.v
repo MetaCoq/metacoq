@@ -1,4 +1,4 @@
-From Coq Require Import List String Arith Lia ssreflect ssrbool.
+From Coq Require Import List String Arith Lia ssreflect ssrbool Morphisms.
 Import ListNotations.
 From Equations Require Import Equations.
 Set Equations Transparent.
@@ -6,7 +6,7 @@ Set Equations Transparent.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Utils Require Import MCList bytestring utils monad_utils.
 From MetaCoq.Erasure Require Import EPrimitive EAst ESpineView EEtaExpanded EInduction ERemoveParams Erasure EGlobalEnv
-  EAstUtils ELiftSubst EWellformed.
+  EAstUtils ELiftSubst EWellformed ECSubst.
 
 Import Kernames.
 Import MCMonadNotation.
@@ -727,11 +727,48 @@ Section reorder_proofs.
       cbn; solve_all.
   Qed.
 
+  Instance mapopt_ext {A B} :
+    Proper (pointwise_relation A eq ==> eq ==> eq) (@mapopt A B).
+  Proof.
+    intros f g eqfg l ? <-.
+    induction l; cbn; auto.
+    rewrite (eqfg a). destruct (g a) => //.
+    now rewrite IHl.
+  Qed.
+
+  Lemma mapopt_option_map {A B C} (f : A -> option B) (g : B -> C) l :
+    mapopt (fun x => option_map g (f x)) l = option_map (map g) (mapopt f l).
+  Proof.
+    induction l; cbn; auto.
+    destruct (f a) => //=.
+    rewrite IHl. destruct (mapopt f l) => //.
+  Qed.
+
+  Lemma reorder_list_opt_map {A B} tags (f : A -> B) (l : list A) :
+    reorder_list_opt tags (map f l) = option_map (map f) (reorder_list_opt tags l).
+  Proof.
+    rewrite /reorder_list_opt.
+    have req : pointwise_relation nat eq (nth_error (map f l)) (fun x => option_map f (nth_error l x)).
+    { intros x. now rewrite nth_error_map. }
+    setoid_rewrite req. now rewrite mapopt_option_map.
+  Qed.
+
+  Lemma reorder_branches_map i f brs :
+    reorder_branches m i (map f brs) =
+    map f (reorder_branches m i brs).
+  Proof.
+    rewrite /reorder_branches.
+    destruct lookup_inductive_assoc as [[na tags]|] eqn:hl => //.
+    rewrite /reorder_list.
+    rewrite reorder_list_opt_map.
+    destruct (reorder_list_opt tags brs) => //=.
+  Qed.
+
   Lemma optimize_csubst {a k b} n :
     wf_glob Σ ->
     wellformed Σ (k + n) b ->
     optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
-  Proof using Type.
+  Proof using Type wfm.
     intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros wft; try easy;
@@ -741,21 +778,19 @@ Section reorder_proofs.
     - destruct (k ?= n0)%nat; auto.
     - f_equal. rtoProp. now destruct args; inv H0.
     - move/andP: wft => [] /andP[] hi hb hl. rewrite IHb. f_equal. unfold on_snd; solve_all.
-      repeat toAll. f_equal. solve_all. unfold on_snd; cbn. f_equal.
-      rewrite a0 //. now rewrite -Nat.add_assoc.
+      repeat toAll. f_equal. solve_all.
+      rewrite -!reorder_branches_map map_map_compose. cbn. f_equal.
+      unfold on_snd; cbn.
+      solve_all. f_equal. unfold optimize in *.
+      rewrite a0 //. red; rewrite -b0. lia_f_equal.
+    - move/andP: wft => [] hp /andP[] hb hwfm.
+      f_equal. solve_all.
+      rewrite /map_def; destruct x => //=. f_equal.
+      apply a0; cbn in *. red; rewrite -b0. lia_f_equal.
     - move/andP: wft => [] hp hb.
-      rewrite GlobalContextMap.lookup_projection_spec.
-      destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl => /= //.
-      f_equal; eauto. f_equal. len. f_equal.
-      have arglen := wellformed_projection_args wfΣ hl.
-      case: Nat.compare_spec. lia. lia.
-      auto.
-    - f_equal. move/andP: wft => [hlam /andP[] hidx hb].
-      solve_all. unfold map_def. f_equal.
-      eapply a0. now rewrite -Nat.add_assoc.
-    - f_equal. move/andP: wft => [hidx hb].
-      solve_all. unfold map_def. f_equal.
-      eapply a0. now rewrite -Nat.add_assoc.
+      f_equal. solve_all.
+      rewrite /map_def; destruct x => //=. f_equal.
+      apply a0; cbn in *. red; rewrite -b. lia_f_equal.
   Qed.
 
   Lemma optimize_substl s t :
@@ -763,7 +798,7 @@ Section reorder_proofs.
     forallb (wellformed Σ 0) s ->
     wellformed Σ #|s| t ->
     optimize (substl s t) = substl (map optimize s) (optimize t).
-  Proof using Type.
+  Proof using Type wfm.
     intros wfΣ. induction s in t |- *; simpl; auto.
     move/andP => [] cla cls wft.
     rewrite IHs //. eapply wellformed_csubst => //.
@@ -775,7 +810,7 @@ Section reorder_proofs.
     forallb (wellformed Σ 0) args ->
     wellformed Σ #|skipn pars args| br.2 ->
     optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
-  Proof using Type.
+  Proof using Type wfm.
     intros wfΣ wfa wfbr.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.

@@ -245,6 +245,9 @@ Proof.
     eapply erases_deps_tCase; eauto.
     apply declared_inductive_from_gen; auto.
     split; eauto. split; eauto.
+    apply All2_length in X. rewrite -X.
+    destruct H5. apply Forall2_length in H5. rewrite -H5.
+    now apply Forall2_length in wf_brs.
     destruct H1.
     eapply In_Forall in H3.
     eapply All_Forall. eapply Forall_All in H3.
@@ -350,6 +353,7 @@ Proof.
     eapply extends_decls_extends, strictly_extends_decls_extends_decls. econstructor; try reflexivity. eexists [(_, _)]; reflexivity.
   - econstructor; eauto.
     eapply declared_inductive_from_gen.
+    rename H3 into Hlen, H4 into H3, H5 into H4.
     inv wfΣ. inv X.
     assert (wf Σ) by (inversion H5;econstructor; eauto).
     unshelve eapply declared_inductive_to_gen in H; eauto.
@@ -1451,11 +1455,11 @@ Proof.
   - cbn. red in H0. rewrite H0 //.
   - cbn -[lookup_constructor].
     cbn. now destruct H0 as [[-> ->] ->].
-  - cbn in *. move/andP: H5 => [] cld clbrs.
+  - cbn in *. move/andP: H6 => [] cld clbrs.
     cbn. apply/andP; split. apply/andP; split.
-    * now destruct H0 as [-> ->].
-    * now move/andP: H6.
-    * move/andP: H6; PCUICAstUtils.solve_all.
+    * rewrite /wf_brs. cbn. destruct H0 as [-> ->]. now apply Nat.eqb_eq.
+    * now move/andP: H7.
+    * move/andP: H7; PCUICAstUtils.solve_all.
   - cbn -[lookup_projection] in *. apply/andP; split; eauto.
     now rewrite (declared_projection_lookup H0).
   - cbn in H, H0 |- *. rtoProp; intuition eauto. solve_all_k 7.

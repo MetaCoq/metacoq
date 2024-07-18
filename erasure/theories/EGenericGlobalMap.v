@@ -324,7 +324,7 @@ Proof.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     rewrite gen_transform_inductive_decl_id.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; eauto. solve_all.
-  - rewrite lookup_env_gen_transform //.
+  - rewrite /wf_brs. cbn. rewrite lookup_env_gen_transform //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     rewrite gen_transform_inductive_decl_id.

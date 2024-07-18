@@ -1020,42 +1020,56 @@ Qed.
 
 From MetaCoq.Erasure Require Import EReorderCstrs.
 
-Axiom trust_reorder_cstrs_wf :
-  forall efl : EEnvFlags,
-  WcbvFlags ->
-  forall (m : inductives_mapping) (input : Transform.program E.global_context term),
-  wf_eprogram efl input -> wf_eprogram efl (reorder_program m input).
-Axiom trust_reorder_cstrs_pres :
-  forall (efl : EEnvFlags) (wfl : WcbvFlags) (m : inductives_mapping) (p : Transform.program E.global_context term)
-  (v : term),
-  wf_eprogram efl p ->
-  eval_eprogram wfl p v -> exists v' : term, eval_eprogram wfl (reorder_program m p) v' /\ v' = reorder m v.
+Definition eval_eprogram_mapping (wfl : WcbvFlags) (p : inductives_mapping * eprogram) t :=
+  eval_eprogram wfl p.2 t.
 
-Program Definition reorder_cstrs_transformation (efl : EEnvFlags) (wfl : WcbvFlags) (m : inductives_mapping) :
-  Transform.t _ _ EAst.term EAst.term _ _
-    (eval_eprogram wfl) (eval_eprogram wfl) :=
-  {| name := "reoder inductive constructors ";
-    transform p _ := EReorderCstrs.reorder_program m p ;
-    pre p := wf_eprogram efl p ;
-    post p := wf_eprogram efl p ;
-    obseq p hp p' v v' := v' = EReorderCstrs.reorder m v |}.
+Program Definition reorder_cstrs_transformation {efl : EEnvFlags} {wca : cstr_as_blocks = false} {has_app : has_tApp}
+  (wfl : WcbvFlags) {wcon : with_constructor_as_block = false} :
+  Transform.t _ _ _ EAst.term _ _
+    (eval_eprogram_mapping wfl) (eval_eprogram wfl) :=
+  {| name := "reorder inductive constructors ";
+    transform p _ := EReorderCstrs.reorder_program p.1 p.2 ;
+    pre p := [/\ wf_eprogram efl p.2, EEtaExpandedFix.expanded_eprogram p.2 & wf_inductives_mapping p.2.1 p.1] ;
+    post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p;
+    obseq p hp p' v v' := v' = EReorderCstrs.reorder p.1 v |}.
 
 Next Obligation.
-  move=> efl wfl m. cbn. now apply trust_reorder_cstrs_wf.
+  move=> efl wca hasapp wfl wcb [m p] [wfp exp wfm]. split => //.
+  now unshelve eapply reorder_program_wf. cbn.
+  now eapply reorder_program_expanded_fix.
 Qed.
 Next Obligation.
-  red. eapply trust_reorder_cstrs_pres.
+  red. intros efl wca hasapp wfl wcb [m p] v [wfp wfm] evp.
+  destruct evp as [ev].
+  unshelve eapply EReorderCstrs.optimize_correct in ev; trea.
+  2,3:apply wfp.
+  exists (reorder m v). split => //.
 Qed.
 
 #[global]
-Axiom trust_reorder_cstrs_transformation_ext : forall (efl : EEnvFlags) (wfl : WcbvFlags) (m : inductives_mapping),
-  TransformExt.t (reorder_cstrs_transformation efl wfl m)
-    (fun p p' => extends p.1 p'.1) (fun p p' => extends p.1 p'.1).
+Instance reorder_cstrs_transformation_ext {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags) (m : inductives_mapping)
+  {wcon : with_constructor_as_block = false} :
+  TransformExt.t (reorder_cstrs_transformation (wca := wca) (has_app := has_app) wfl (wcon:=wcon))
+    (fun p p' => p.1 = p'.1 /\ extends p.2.1 p'.2.1) (fun p p' => extends p.1 p'.1).
+Proof.
+  red. intros p p' pr pr' [eq ext].
+  cbn. rewrite -eq. eapply EReorderCstrs.optimize_extends_env; eauto.
+  move: pr'; cbn. now intros []. apply pr. apply pr'.
+Qed.
 
 #[global]
-Axiom trust_reorder_cstrs_transformation_ext' : forall (efl : EEnvFlags) (wfl : WcbvFlags) (m : inductives_mapping),
-  TransformExt.t (reorder_cstrs_transformation efl wfl m)
-    extends_eprogram extends_eprogram.
+Instance reorder_cstrs_transformation_ext' {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags) (m : inductives_mapping)
+  {wcon : with_constructor_as_block = false}
+  {wpc : with_prop_case = false} :
+  TransformExt.t (reorder_cstrs_transformation (wca := wca) (has_app := has_app) wfl (wcon:=wcon))
+    (fun p p' => p.1 = p'.1 /\ extends_eprogram p.2 p'.2) extends_eprogram.
+Proof.
+  red. intros p p' pr pr' [eq ext]. cbn.
+  red. split.
+  cbn. rewrite -eq. eapply EReorderCstrs.optimize_extends_env; eauto.
+  move: pr'; cbn. now intros []. apply ext. apply pr. apply pr'. cbn.
+  destruct ext. now rewrite H0.
+Qed.
 
 From MetaCoq.Erasure Require Import EUnboxing.
 

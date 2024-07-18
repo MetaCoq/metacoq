@@ -378,7 +378,9 @@ Proof.
   - destruct cstr_as_blocks; rtoProp; eauto. f_equal. solve_all. destruct args; inv H2. reflexivity.
   - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
     assert (map (on_snd (remove_match_on_box Σ)) l = map (on_snd (remove_match_on_box Σ')) l) as -> by solve_all.
-    rewrite (extends_inductive_isprop_and_pars H0 H1 H2).
+    assert (iss : isSome (lookup_inductive Σ p.1)).
+    { move: H2; rewrite /wf_brs; destruct lookup_inductive => //. }
+    rewrite (extends_inductive_isprop_and_pars H0 H1 iss).
     destruct inductive_isprop_and_pars as [[[]]|].
     destruct map => //. f_equal; eauto.
     destruct l0 => //. destruct p0 => //. f_equal; eauto.
@@ -849,7 +851,7 @@ Proof.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; len; eauto. 1: solve_all.
-  - rewrite lookup_env_remove_match_on_box //.
+  - rewrite /wf_brs; cbn. rewrite lookup_env_remove_match_on_box //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

@@ -135,8 +135,6 @@ Program Definition optional_unsafe_transforms econf :=
     (* Coinductives & cofixpoints are translated to inductive types and thunked fixpoints *)
     coinductive_to_inductive_transformation efl
       (has_app := eq_refl) (has_box := eq_refl) (has_rel := eq_refl) (has_pars := eq_refl) (has_cstrblocks := eq_refl)) ▷
-  ETransform.optional_self_transform passes.(reorder_constructors)
-    (reorder_cstrs_transformation efl final_wcbv_flags econf.(inductives_mapping)) ▷
   ETransform.optional_self_transform passes.(unboxing)
     (rebuild_wf_env_transform (efl := efl) false false ▷
       unbox_transformation efl final_wcbv_flags) ▷
@@ -157,18 +155,18 @@ Qed.
 Next Obligation.
   destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
 Qed.
-Next Obligation.
-  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
-Qed.
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}
   (efl := EWellformed.all_env_flags)
-  : Transform.t _ _ EAst.term EAst.term _ _
+  : Transform.t _ _ _ EAst.term _ _
    (* Standard evaluation, with cases on prop, guarded fixpoints, applied constructors *)
-   (EProgram.eval_eprogram_env default_wcbv_flags)
+   (eval_eprogram_mapping default_wcbv_flags)
    (* Target evaluation, with no more cases on prop, unguarded fixpoints, constructors as block *)
    (EProgram.eval_eprogram final_wcbv_flags) :=
-
+  (* Reorder constructors according to the mapping *)
+  reorder_cstrs_transformation (wca := eq_refl) (has_app := eq_refl) default_wcbv_flags (wcon := eq_refl) ▷
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (efl := efl) true true ▷
   (* Simulation of the guarded fixpoint rules with a single unguarded one:
     the only "stuck" fixpoints remaining are unapplied.
     This translation is a noop on terms and environments.  *)
@@ -203,10 +201,255 @@ Next Obligation.
   now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs.
 Qed.
 
+Definition eval_pcuic_program_mapping (p : EReorderCstrs.inductives_mapping * pcuic_program) t :=
+  PCUICTransform.eval_pcuic_program p.2 t.
+
+Definition eval_eprogram_env_mapping wfl (ep : EReorderCstrs.inductives_mapping * eprogram_env) t :=
+  eval_eprogram_env wfl ep.2 t.
+
+Import EReorderCstrs (inductives_mapping, wf_tags_list).
+
+Definition wf_pcuic_inductive_mapping (Σ : PCUICAst.PCUICEnvironment.global_env) (m : EReorderCstrs.inductive_mapping) : bool :=
+  let '(ind, (_, cstrs)) := m in
+  match PCUICAst.PCUICLookup.lookup_inductive Σ ind with
+  | Some (mib, oib) => wf_tags_list cstrs #|oib.(PCUICAst.PCUICEnvironment.ind_ctors)|
+  | None => true
+  end.
+
+Definition wf_pcuic_inductives_mapping Σ m := forallb (wf_pcuic_inductive_mapping Σ) m.
+
+Import ErasureFunction ErasureFunctionProperties.
+
+Program Definition erase_transform_mapping {guard : abstract_guard_impl} : Transform.t _ _ _ _ PCUICAst.term EAst.term
+  eval_pcuic_program_mapping (eval_eprogram_env_mapping EWcbvEval.default_wcbv_flags) :=
+ {| name := "erasure";
+    pre p := wf_pcuic_inductives_mapping p.2.1 p.1 /\ pre erase_transform p.2 ;
+    transform p hp := let nhs := proj2 hp in
+      (p.1, transform erase_transform p.2 nhs) ;
+   post p := EReorderCstrs.wf_inductives_mapping p.2.1.(EEnvMap.GlobalContextMap.global_decls) p.1 /\ post erase_transform p.2;
+   obseq p hp p' := obseq erase_transform p.2 (proj2 hp) p'.2 |}.
+
+Local Obligation Tactic := idtac.
+Import PCUICAst.PCUICEnvironment Extract EReorderCstrs EDeps EGlobalEnv.
+
+Lemma lookup_env_filter Σ f kn :
+  fresh_global kn Σ ->
+  lookup_env (filter f Σ) kn = None.
+Proof.
+  induction 1; cbn => //.
+  destruct f. cbn. case: eqb_spec. intros ->. contradiction.
+  eauto. eauto.
+Qed.
+
+Lemma lookup_env_filter_deps {efl : EEnvFlags} {Σ f i p} :
+  wf_glob Σ ->
+  lookup_env Σ i = Some p ->
+  lookup_env (filter f Σ) i = Some p \/
+  lookup_env (filter f Σ) i = None.
+Proof.
+  move=> wfΣ.
+  induction Σ in wfΣ |- *; cbn => //.
+  case: eqb_spec.
+  - intros -> [= <-]. destruct f. left. cbn. now rewrite eqb_refl.
+    right. depelim wfΣ. cbn. now apply lookup_env_filter.
+  - intros diff hl.
+    destruct f. cbn. case: eqb_spec.
+    intros ->. contradiction. intros _. depelim wfΣ.
+    now specialize (IHΣ wfΣ hl).
+    depelim wfΣ.
+    now specialize (IHΣ wfΣ hl).
+Qed.
+
+Lemma lookup_env_filter_deps_None {efl : EEnvFlags} {Σ f i} :
+  wf_glob Σ ->
+  lookup_env Σ i = None ->
+  lookup_env (filter f Σ) i = None.
+Proof.
+  move=> wfΣ.
+  induction Σ in wfΣ |- *; cbn => //.
+  case: eqb_spec.
+  - intros -> [= <-].
+  - intros diff hl.
+    destruct f. cbn. case: eqb_spec.
+    intros ->. contradiction. intros _. depelim wfΣ.
+    now specialize (IHΣ wfΣ hl).
+    depelim wfΣ.
+    now specialize (IHΣ wfΣ hl).
+Qed.
+
+Lemma lookup_inductive_filter_deps_Some {efl : EEnvFlags} {Σ f i p} :
+  wf_glob Σ ->
+  lookup_inductive Σ i = Some p ->
+  lookup_inductive (filter f Σ) i = Some p \/
+  lookup_inductive (filter f Σ) i = None.
+Proof.
+  move => wfΣ.
+  rewrite /lookup_inductive /lookup_minductive.
+  destruct lookup_env eqn:hle => //=.
+  eapply lookup_env_filter_deps in hle as [-> | ->] => //; destruct g => //=. now left.
+  now right.
+Qed.
+
+Lemma lookup_inductive_filter_deps_None {efl : EEnvFlags} {Σ f i} :
+  wf_glob Σ ->
+  lookup_inductive Σ i = None ->
+  lookup_inductive (filter f Σ) i = None.
+Proof.
+  move => wfΣ.
+  rewrite /lookup_inductive /lookup_minductive.
+  destruct lookup_env eqn:hle => //=; try destruct g => //=.
+  eapply (lookup_env_filter_deps) in hle as [-> | ->] => //; destruct g => //=.
+  eapply (lookup_env_filter_deps) in hle as [-> | ->] => //; destruct g => //=.
+  eapply (lookup_env_filter_deps_None) in hle as -> => //; destruct g => //=.
+Qed.
+
+Lemma erases_global_lookup_env_constant Σ Σ' kn :
+  erases_global Σ Σ' ->
+  forall d, PCUICAst.PCUICEnvironment.lookup_env Σ kn = Some (ConstantDecl d) ->
+  exists d', lookup_env Σ' kn = Some (EAst.ConstantDecl d').
+Proof.
+  destruct Σ as [? ? ?]. rewrite /erases_global //=.
+  induction 1; cbn => //.
+  - intros d. case: eqb_spec.
+    + intros ->. intros [=]; subst. now eexists.
+    + intros diff. cbn in *. eauto.
+  - intros d. case: eqb_spec.
+    + intros ->. intros [=]; subst.
+    + intros diff. cbn in *. eauto.
+Qed.
+
+Lemma erases_global_lookup_env_inductive Σ Σ' kn :
+  erases_global Σ Σ' ->
+  forall d, PCUICAst.PCUICEnvironment.lookup_env Σ kn = Some (InductiveDecl d) ->
+  exists d', lookup_env Σ' kn = Some (EAst.InductiveDecl d') /\ erases_mutual_inductive_body d d'.
+Proof.
+  destruct Σ as [? ? ?]. rewrite /erases_global //=.
+  induction 1; cbn => //.
+  - intros d. case: eqb_spec.
+    + intros ->. intros [=]; subst.
+    + intros diff. cbn in *. eauto.
+  - intros d. case: eqb_spec.
+    + intros ->. intros [=]; subst. now eexists.
+    + intros diff. cbn in *. eauto.
+Qed.
+
+Lemma erases_global_lookup_env_none Σ Σ' kn :
+  erases_global Σ Σ' ->
+  PCUICAst.PCUICEnvironment.lookup_env Σ kn = None ->
+  lookup_env Σ' kn = None.
+Proof.
+  destruct Σ as [? ? ?]. rewrite /erases_global //=.
+  induction 1; cbn => //.
+  - case: eqb_spec.
+    + intros ->. intros [=]; subst.
+    + intros diff. cbn in *. eauto.
+  - case: eqb_spec.
+    + intros ->. intros [=]; subst.
+    + intros diff. cbn in *. eauto.
+Qed.
+
+Lemma erases_wf_inductives_mapping {Σ : global_env_ext} {Σ' deps m} :
+  PCUICTyping.wf_ext Σ ->
+  erases_global Σ Σ' ->
+  wf_pcuic_inductives_mapping Σ m ->
+  EReorderCstrs.wf_inductives_mapping (filter_deps deps Σ') m.
+Proof.
+  move=> wfΣ  er.
+  have wfΣ' := ErasureCorrectness.erases_global_wf_glob _ (fst wfΣ) er.
+  rewrite /wf_pcuic_inductives_mapping /wf_inductives_mapping.
+  solve_all. move: H.
+  rewrite /wf_pcuic_inductive_mapping /wf_inductive_mapping.
+  destruct x as [ind [na tags]].
+  have eral := EDeps.erases_global_all_deps _ _ (PCUICElimination.wf_ext_wf _ wfΣ) er.
+  have trind := ErasureProperties.trans_lookup_inductive eral ind.
+  destruct PCUICAst.PCUICLookup.lookup_inductive as [[mib oib]|] eqn:li.
+  specialize (trind _ _ eq_refl).
+  - intros wftags.
+    destruct trind as [mib' [oib' [hli' hctors]]].
+    rewrite (filter_deps_filter (efl := all_env_flags)) //.
+    set (f := fun x => _).
+    eapply (lookup_inductive_filter_deps_Some (efl := all_env_flags) (f:=f)) in hli' as [H|H] => //; rewrite H //.
+    congruence.
+  - intros _. clear trind.
+    destruct (lookup_inductive (filter_deps deps Σ') ind) eqn:li' => //.
+    apply False_rect. move: li'.
+    rewrite (filter_deps_filter (efl:=all_env_flags)) //.
+    generalize (fun x : KernameSet.elt × EAst.global_decl => flip KernameSet.mem (global_deps Σ' deps) x.1).
+    intros f li'.
+    have nli : lookup_inductive Σ' ind = None.
+    { clear -wfΣ wfΣ' er li.
+      move: li. rewrite /PCUICAst.PCUICLookup.lookup_inductive /lookup_inductive.
+      rewrite /PCUICAst.PCUICLookup.lookup_inductive_gen /lookup_minductive.
+      rewrite /PCUICAst.PCUICLookup.lookup_minductive_gen /lookup_minductive.
+      destruct PCUICAst.PCUICEnvironment.lookup_env eqn:hle => //=. destruct g => //.
+      eapply erases_global_lookup_env_constant in hle as [? ->]; tea => //.
+      eapply erases_global_lookup_env_inductive in hle as [? [-> ?]]; tea => //=.
+      depelim H.
+      destruct nth_error eqn:hnth => // _.
+      destruct (nth_error (EAst.ind_bodies _) _) eqn:hnth' => //=.
+      eapply nth_error_Some_length in hnth'. eapply nth_error_None in hnth. eapply Forall2_length in H. lia.
+      intros _.
+      eapply erases_global_lookup_env_none in hle as ->; tea => //. }
+    now rewrite (lookup_inductive_filter_deps_None wfΣ' nli) in li'.
+Qed.
+
+Next Obligation.
+  cbn -[erase_transform]. intros.
+  split. 2:eapply (correctness erase_transform).
+  destruct input as [m prog]; cbn [fst snd] in *.
+  destruct p.
+  unfold erase_transform; cbn [transform].
+  unfold erase_program, erase_pcuic_program.
+  set (egf := erase_global_fast _ _ _ _ _).
+  set (ef := ErasureFunction.erase _ _ _ _ _).
+  cbn -[egf ef].
+  unfold erase_global_fast in egf.
+  rewrite /egf.
+  set (deps := EAstUtils.term_global_deps _); clearbody deps.
+  clear egf ef.
+  match goal with
+  |- context [erase_global_deps_fast ?deps ?X_type ?X ?decls (normalization_in:=?normalization_in) ?hprefix ] =>
+    have heq := @erase_global_deps_fast_erase_global_deps deps X_type X decls normalization_in hprefix
+  end.
+  cbn in heq. specialize (heq (fun Σ eq => f_equal declarations eq)).
+  destruct heq as [nin' eq]. rewrite eq. clear eq.
+  rewrite erase_global_deps_erase_global.
+  cbn -[ErasureFunction.erase_global].
+  match goal with
+  |- context [@erase_global ?X_type ?X ?decls ?SN ?eq] =>
+  have erg := @erases_global_erase_global X_type X _ _ SN eq
+  end.
+  cbn in erg. specialize (erg _ eq_refl).
+  cbn in p. destruct p as [[wt] ?].
+  set (eg := erase_global _ _ _) in erg |- *. clearbody eg.
+  have := erases_wf_inductives_mapping (Σ' := eg) (fst wt) erg i.
+  intros h. eauto.
+Qed.
+
+Next Obligation.
+  intros g p v pr ev. cbn.
+  now apply (preservation erase_transform).
+Qed.
+
+Program Definition pcuic_expand_lets_transform_mapping {cf : checker_flags} K : Transform.t _ _ _ _ PCUICAst.term PCUICAst.term
+  eval_pcuic_program_mapping eval_pcuic_program_mapping :=
+ {| name := "let expansion in constructors";
+    pre p := wf_pcuic_inductives_mapping p.2.1 p.1 /\ pre (pcuic_expand_lets_transform K) p.2 ;
+    transform p hp := let nhs := proj2 hp in
+      (p.1, transform (pcuic_expand_lets_transform K) p.2 nhs) ;
+   post p := wf_pcuic_inductives_mapping p.2.1 p.1 /\ post (pcuic_expand_lets_transform K) p.2;
+   obseq p hp p' := obseq (pcuic_expand_lets_transform K) p.2 (proj2 hp) p'.2 |}.
+Next Obligation.
+  cbn. intros cf K input []. split => //. todo "let exp".
+  unshelve eapply (correctness (pcuic_expand_lets_transform K)). apply H0.
+Qed.
+Next Obligation.
+  intros cf K p v pr ev. now eapply (preservation (pcuic_expand_lets_transform K)).
+Qed.
+
 Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl := EWellformed.all_env_flags) :
- Transform.t _ _
-  PCUICAst.term EAst.term _ _
-  PCUICTransform.eval_pcuic_program
+ Transform.t _ _ _ EAst.term _ _
+  eval_pcuic_program_mapping
   (EProgram.eval_eprogram final_wcbv_flags) :=
   (* a bunch of nonsense for normalization preconditions *)
   let K ty (T : ty -> _) p
@@ -215,9 +458,9 @@ Program Definition verified_erasure_pipeline {guard : abstract_guard_impl} (efl 
          (PCUICTyping.wf_ext p -> PCUICWeakeningEnvSN.normalizationInAdjustUniversesIn p) in
   let T1 (p:global_env_ext_map) := p in
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
-  pcuic_expand_lets_transform (K _ T1) ▷
+  pcuic_expand_lets_transform_mapping (K _ T1) ▷
   (* Erasure of proofs terms in Prop and types *)
-  erase_transform ▷
+  erase_transform_mapping ▷
   verified_lambdabox_pipeline.
 
 Import EGlobalEnv EWellformed.

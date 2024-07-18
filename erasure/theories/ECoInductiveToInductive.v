@@ -383,6 +383,7 @@ Proof.
       unfold lookup_inductive in hl.
       destruct lookup_minductive => //. }
   - rewrite !GlobalContextMap.lookup_inductive_kind_spec.
+    move: H2; rewrite /wf_brs.
     destruct lookup_inductive as [[mdecl idecl]|] eqn:hl => //.
     assert (map (on_snd (trans Σ)) l = map (on_snd (trans Σ')) l) as -> by solve_all.
     rewrite (extends_lookup_inductive_kind H0 H1) //.
@@ -1013,7 +1014,7 @@ Proof.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; len; eauto. 1: solve_all.
-  - rewrite lookup_env_trans //.
+  - rewrite /wf_brs; cbn; rewrite lookup_env_trans //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

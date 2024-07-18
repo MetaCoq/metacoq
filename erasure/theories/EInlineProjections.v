@@ -74,7 +74,7 @@ Qed.
 Lemma wellformed_projection_args {efl : EEnvFlags} {Σ p mdecl idecl cdecl pdecl} :
   wf_glob Σ ->
   lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
-  p.(proj_arg) < cdecl.(cstr_nargs).
+  #|idecl.(ind_ctors)| = 1 /\ p.(proj_arg) < cdecl.(cstr_nargs).
 Proof.
   intros wfΣ.
   rewrite /lookup_projection /lookup_constructor /lookup_inductive.
@@ -161,10 +161,10 @@ Section optimize.
     - rewrite GlobalContextMap.lookup_projection_spec.
       destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl; auto => //.
       simpl.
-      have arglen := wellformed_projection_args wfΣ hl.
+      have [ncstrs arglen] := wellformed_projection_args wfΣ hl.
       apply lookup_projection_lookup_constructor, lookup_constructor_lookup_inductive in hl.
-      rewrite hl /= andb_true_r.
-      rewrite IHt //=; len. apply Nat.ltb_lt.
+      rewrite /wf_brs hl /= andb_true_r.
+      rewrite IHt //=; len. rewrite ncstrs. apply Nat.ltb_lt.
       lia.
     - len. rtoProp; solve_all. solve_all.
       now eapply isLambda_optimize. solve_all.
@@ -795,9 +795,11 @@ Proof.
     rewrite GlobalContextMap.lookup_projection_spec.
     destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl'; auto => //.
     simpl.
+    rewrite /wf_brs.
     rewrite (lookup_constructor_lookup_inductive (lookup_projection_lookup_constructor hl')) /=.
     rewrite hrel IHt //= andb_true_r.
-    have hargs' := wellformed_projection_args wfΣ hl'.
+    have [-> hargs'] := wellformed_projection_args wfΣ hl'.
+    rtoProp; intuition auto.
     apply Nat.ltb_lt. len.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now eapply isLambda_optimize.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all.
@@ -823,7 +825,7 @@ Proof.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; eauto. solve_all.
-  - rewrite lookup_env_optimize //.
+  - rewrite /wf_brs; cbn; rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

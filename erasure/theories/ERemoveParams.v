@@ -1094,9 +1094,10 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. destruct nth_error => //.
   - cbn -[strip].
+    rtoProp. move: H2. rewrite /wf_brs; cbn -[strip].
     rewrite lookup_env_strip. cbn in H1. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
-    destruct nth_error => //. rtoProp; intuition auto.
+    destruct nth_error => //. rtoProp; intuition auto. len.
     simp_strip. toAll; solve_all.
     toAll. solve_all.
   - cbn -[strip] in H0 |- *.
@@ -1142,7 +1143,7 @@ Proof.
     destruct cstr_as_blocks => //; repeat split; eauto.
     destruct nth_error => /= //.
     destruct nth_error => /= //.
-  - rewrite lookup_env_strip //.
+  - rewrite /wf_brs; cbn; rewrite lookup_env_strip //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

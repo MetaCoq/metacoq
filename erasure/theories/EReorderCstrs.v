@@ -5,7 +5,7 @@ Set Equations Transparent.
 
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Utils Require Import MCList bytestring utils monad_utils.
-From MetaCoq.Erasure Require Import EPrimitive EAst ESpineView EEtaExpanded EInduction ERemoveParams Erasure EGlobalEnv
+From MetaCoq.Erasure Require Import EProgram EPrimitive EAst ESpineView EEtaExpanded EInduction ERemoveParams Erasure EGlobalEnv
   EAstUtils ELiftSubst EWellformed ECSubst EWcbvEval.
 
 Import Kernames.
@@ -22,9 +22,6 @@ Proof.
   destruct nth_error eqn:hn => //. destruct (nth_error _ id.2) eqn:hn' => //.
   intros [= <- <- <-]. intuition auto.
 Qed.
-
-Definition inductive_mapping : Set := Kernames.inductive * (bytestring.string * list nat).
-Definition inductives_mapping := list inductive_mapping.
 
 Fixpoint lookup_inductive_assoc {A} (Σ : list (inductive × A)) (kn : inductive) {struct Σ} : option A :=
     match Σ with

@@ -1023,13 +1023,19 @@ From MetaCoq.Erasure Require Import EReorderCstrs.
 Definition eval_eprogram_mapping (wfl : WcbvFlags) (p : inductives_mapping * eprogram) t :=
   eval_eprogram wfl p.2 t.
 
+Definition eval_eprogram_env_mapping (wfl : WcbvFlags) (p : inductives_mapping * eprogram_env) t :=
+  eval_eprogram_env wfl p.2 t.
+
+Definition to_program (e : eprogram_env) : eprogram :=
+  (e.1, e.2).
+
 Program Definition reorder_cstrs_transformation {efl : EEnvFlags} {wca : cstr_as_blocks = false} {has_app : has_tApp}
   (wfl : WcbvFlags) {wcon : with_constructor_as_block = false} :
   Transform.t _ _ _ EAst.term _ _
-    (eval_eprogram_mapping wfl) (eval_eprogram wfl) :=
+    (eval_eprogram_env_mapping wfl) (eval_eprogram wfl) :=
   {| name := "reorder inductive constructors ";
-    transform p _ := EReorderCstrs.reorder_program p.1 p.2 ;
-    pre p := [/\ wf_eprogram efl p.2, EEtaExpandedFix.expanded_eprogram p.2 & wf_inductives_mapping p.2.1 p.1] ;
+    transform p _ := EReorderCstrs.reorder_program p.1 (to_program p.2) ;
+    pre p := [/\ wf_eprogram_env efl p.2, EEtaExpandedFix.expanded_eprogram_env p.2 & wf_inductives_mapping p.2.1 p.1] ;
     post p := wf_eprogram efl p /\ EEtaExpandedFix.expanded_eprogram p;
     obseq p hp p' v v' := v' = EReorderCstrs.reorder p.1 v |}.
 
@@ -1047,28 +1053,25 @@ Next Obligation.
 Qed.
 
 #[global]
-Instance reorder_cstrs_transformation_ext {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags) (m : inductives_mapping)
+Instance reorder_cstrs_transformation_ext {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags)
   {wcon : with_constructor_as_block = false} :
   TransformExt.t (reorder_cstrs_transformation (wca := wca) (has_app := has_app) wfl (wcon:=wcon))
     (fun p p' => p.1 = p'.1 /\ extends p.2.1 p'.2.1) (fun p p' => extends p.1 p'.1).
 Proof.
   red. intros p p' pr pr' [eq ext].
-  cbn. rewrite -eq. eapply EReorderCstrs.optimize_extends_env; eauto.
+  red; cbn. rewrite -eq. eapply EReorderCstrs.optimize_extends_env; eauto.
   move: pr'; cbn. now intros []. apply pr. apply pr'.
 Qed.
 
 #[global]
-Instance reorder_cstrs_transformation_ext' {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags) (m : inductives_mapping)
-  {wcon : with_constructor_as_block = false}
-  {wpc : with_prop_case = false} :
+Instance reorder_cstrs_transformation_ext' {efl : EEnvFlags} (wca : cstr_as_blocks = false) (has_app : has_tApp) (wfl : WcbvFlags)
+  {wcon : with_constructor_as_block = false} :
   TransformExt.t (reorder_cstrs_transformation (wca := wca) (has_app := has_app) wfl (wcon:=wcon))
-    (fun p p' => p.1 = p'.1 /\ extends_eprogram p.2 p'.2) extends_eprogram.
+    (fun p p' => p.1 = p'.1 /\ extends_eprogram_env p.2 p'.2) extends_eprogram.
 Proof.
-  red. intros p p' pr pr' [eq ext]. cbn.
-  red. split.
-  cbn. rewrite -eq. eapply EReorderCstrs.optimize_extends_env; eauto.
-  move: pr'; cbn. now intros []. apply ext. apply pr. apply pr'. cbn.
-  destruct ext. now rewrite H0.
+  red. intros p p' pr pr' [eq [ext eq']]. cbn.
+  red. cbn. rewrite -eq -eq'. split => //. eapply EReorderCstrs.optimize_extends_env; eauto.
+  move: pr'; cbn. now intros []. apply pr. apply pr'.
 Qed.
 
 From MetaCoq.Erasure Require Import EUnboxing.

@@ -18,6 +18,9 @@ Local Obligation Tactic := program_simpl.
 
 Import EGlobalEnv EWellformed.
 
+Definition inductive_mapping : Set := Kernames.inductive * (bytestring.string * list nat).
+Definition inductives_mapping := list inductive_mapping.
+
 Definition eprogram := (EAst.global_context * EAst.term).
 Definition eprogram_env := (EEnvMap.GlobalContextMap.t * EAst.term).
 

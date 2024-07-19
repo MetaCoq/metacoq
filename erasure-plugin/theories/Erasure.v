@@ -34,7 +34,6 @@ Local Obligation Tactic := program_simpl.
 
 Record unsafe_passes :=
   { cofix_to_lazy : bool;
-    reorder_constructors : bool;
     inlining : bool;
     unboxing : bool;
     betared : bool }.
@@ -54,7 +53,6 @@ Definition default_dearging_config :=
 
 Definition make_unsafe_passes b :=
   {| cofix_to_lazy := b;
-     reorder_constructors := b;
      inlining := b;
      unboxing := b;
      betared := b |}.
@@ -63,12 +61,10 @@ Definition no_unsafe_passes := make_unsafe_passes false.
 Definition all_unsafe_passes := make_unsafe_passes true.
 
 (* This runs the cofix -> fix/lazy translation as well as inlining and
-  beta-redex simplification,  which are not verified. It does not change
-  representation by reordering constructors or unboxing. *)
+  beta-redex simplification,  which are not verified. It does do unboxing. *)
 
 Definition default_unsafe_passes :=
   {| cofix_to_lazy := true;
-      reorder_constructors := false;
       inlining := true;
       unboxing := false;
       betared := true |}.
@@ -141,13 +137,13 @@ Program Definition optional_unsafe_transforms econf :=
      betared_transformation efl final_wcbv_flags).
 
 Next Obligation.
-  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+  destruct (enable_unsafe econf) as [[] [] [] []]; cbn in * => //; intuition auto.
 Qed.
 Next Obligation.
-  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+  destruct (enable_unsafe econf) as [[] [] [] []]; cbn in * => //; intuition auto.
 Qed.
 Next Obligation.
-  destruct (enable_unsafe econf) as [[] [] [] [] []]; cbn in * => //; intuition auto.
+  destruct (enable_unsafe econf) as [[] [] [] []]; cbn in * => //; intuition auto.
 Qed.
 
 Program Definition verified_lambdabox_pipeline {guard : abstract_guard_impl}

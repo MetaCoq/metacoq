@@ -9,7 +9,7 @@
 Require Coq.Strings.String ssrbool.
 Require Import ssreflect.
 Require Import Coq.NArith.NArith.
-Require Import Coq.micromega.Lia.
+From Coq Require Import Lia.
 From Equations Require Import Equations.
 Set Primitive Projections.
 Set Default Proof Using "Type".
@@ -196,7 +196,7 @@ Notation "x ++ y" := (String.append x y) : bs_scope.
 Import String.
 
 (** comparison *)
-Require Import Orders Coq.Structures.OrderedType Coq.Structures.OrdersAlt.
+From Coq Require Import Orders OrderedType OrdersAlt.
 
 Lemma to_N_inj : forall x y, Byte.to_N x = Byte.to_N y <-> x = y.
 Proof.

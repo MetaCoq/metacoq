@@ -7,6 +7,7 @@ Hexadecimal
 Numeral0
 Nat0
 Caml_nat
+ListDef
 List0
 PeanoNat
 Specif
@@ -14,9 +15,13 @@ Basics
 BinPosDef
 BinNums
 BinPos
+PosDef
 BinNat
+NatDef
 BinInt
+IntDef
 PrimInt63
+Uint63Axioms
 Uint0
 Int63
 Byte
@@ -77,6 +82,7 @@ FloatOps
 PrimString
 PrimStringAxioms
 MCString
+Sint63Axioms
 Sint63
 Show
 MCUtils

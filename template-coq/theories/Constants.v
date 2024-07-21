@@ -9,49 +9,49 @@ Register bytestring.String.t as metacoq.string.type.
 Register bytestring.String.EmptyString as metacoq.string.nil.
 Register bytestring.String.String as metacoq.string.cons.
 
-Register Stdlib.Init.Byte.byte as metacoq.byte.type.
+Register Corelib.Init.Byte.byte as metacoq.byte.type.
 
-Register Stdlib.Init.Datatypes.nat as metacoq.nat.type.
-Register Stdlib.Init.Datatypes.O as metacoq.nat.zero.
-Register Stdlib.Init.Datatypes.S as metacoq.nat.succ.
+Register Corelib.Init.Datatypes.nat as metacoq.nat.type.
+Register Corelib.Init.Datatypes.O as metacoq.nat.zero.
+Register Corelib.Init.Datatypes.S as metacoq.nat.succ.
 
-Register Stdlib.Init.Datatypes.bool as metacoq.bool.type.
-Register Stdlib.Init.Datatypes.true as metacoq.bool.true.
-Register Stdlib.Init.Datatypes.false as metacoq.bool.false.
+Register Corelib.Init.Datatypes.bool as metacoq.bool.type.
+Register Corelib.Init.Datatypes.true as metacoq.bool.true.
+Register Corelib.Init.Datatypes.false as metacoq.bool.false.
 
-Register Stdlib.Init.Datatypes.option as metacoq.option.type.
-Register Stdlib.Init.Datatypes.None as metacoq.option.none.
-Register Stdlib.Init.Datatypes.Some as metacoq.option.some.
+Register Corelib.Init.Datatypes.option as metacoq.option.type.
+Register Corelib.Init.Datatypes.None as metacoq.option.none.
+Register Corelib.Init.Datatypes.Some as metacoq.option.some.
 Register MetaCoq.Template.TemplateMonad.Common.my_None as metacoq.option_instance.none.
 Register MetaCoq.Template.TemplateMonad.Common.my_Some as metacoq.option_instance.some.
 
-Register Stdlib.Init.Datatypes.list as metacoq.list.type.
-Register Stdlib.Init.Datatypes.nil as metacoq.list.nil.
-Register Stdlib.Init.Datatypes.cons as metacoq.list.cons.
+Register Corelib.Init.Datatypes.list as metacoq.list.type.
+Register Corelib.Init.Datatypes.nil as metacoq.list.nil.
+Register Corelib.Init.Datatypes.cons as metacoq.list.cons.
 
-Register Stdlib.Init.Datatypes.prod as metacoq.prod.type.
-Register Stdlib.Init.Datatypes.pair as metacoq.prod.intro.
+Register Corelib.Init.Datatypes.prod as metacoq.prod.type.
+Register Corelib.Init.Datatypes.pair as metacoq.prod.intro.
 
-Register Stdlib.Init.Datatypes.sum as metacoq.sum.type.
-Register Stdlib.Init.Datatypes.inl as metacoq.sum.inl.
-Register Stdlib.Init.Datatypes.inr as metacoq.sum.inr.
+Register Corelib.Init.Datatypes.sum as metacoq.sum.type.
+Register Corelib.Init.Datatypes.inl as metacoq.sum.inl.
+Register Corelib.Init.Datatypes.inr as metacoq.sum.inr.
 
-Register Stdlib.Init.Datatypes.unit as metacoq.unit.type.
-Register Stdlib.Init.Datatypes.tt as metacoq.unit.intro.
+Register Corelib.Init.Datatypes.unit as metacoq.unit.type.
+Register Corelib.Init.Datatypes.tt as metacoq.unit.intro.
 
-Register Stdlib.Init.Specif.sigT as metacoq.sigma.type.
-Register Stdlib.Init.Specif.existT as metacoq.sigma.intro.
+Register Corelib.Init.Specif.sigT as metacoq.sigma.type.
+Register Corelib.Init.Specif.existT as metacoq.sigma.intro.
 Register MetaCoq.Template.TemplateMonad.Common.existT_typed_term as metacoq.sigma.typed_term.
 
-Register Stdlib.Numbers.BinNums.positive as metacoq.pos.type.
-Register Stdlib.Numbers.BinNums.xI as metacoq.pos.xI.
-Register Stdlib.Numbers.BinNums.xO as metacoq.pos.xO.
-Register Stdlib.Numbers.BinNums.xH as metacoq.pos.xH.
+Register BinNums.positive as metacoq.pos.type.
+Register BinNums.xI as metacoq.pos.xI.
+Register BinNums.xO as metacoq.pos.xO.
+Register BinNums.xH as metacoq.pos.xH.
 
-Register Stdlib.Numbers.BinNums.Z as metacoq.Z.type.
-Register Stdlib.Numbers.BinNums.Zpos as metacoq.Z.pos.
-Register Stdlib.Numbers.BinNums.Zneg as metacoq.Z.neg.
-Register Stdlib.Numbers.BinNums.Z0 as metacoq.Z.zero.
+Register BinNums.Z as metacoq.Z.type.
+Register BinNums.Zpos as metacoq.Z.pos.
+Register BinNums.Zneg as metacoq.Z.neg.
+Register BinNums.Z0 as metacoq.Z.zero.
 
 (* Ast *)
 Register MetaCoq.Common.BasicAst.relevance as metacoq.ast.relevance.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool.
+From Coq Require Import ssreflect Program Lia BinPos Compare_dec Bool.
 From MetaCoq.Utils Require Import utils LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICSize PCUICInduction.
 From Coq Require Import List.

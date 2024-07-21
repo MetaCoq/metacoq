@@ -13,6 +13,8 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/wf0.ml
+src/wf0.mli
 
 # From PCUIC
 src/pCUICPrimitive.mli

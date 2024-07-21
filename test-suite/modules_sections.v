@@ -79,9 +79,9 @@ MetaCoq Run (bc <- tmQuote S.b ;;
 
 MetaCoq Test Quote my_projT2.
 MetaCoq Test Unquote
-     (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0) 0 []).
+     (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Corelib"], "nat") 0) 0 []).
 MetaCoq Unquote Definition zero_from_syntax
-  := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0) 0 []).
+  := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Corelib"], "nat") 0) 0 []).
 
 Existing Class nat.
 

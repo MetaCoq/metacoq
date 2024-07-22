@@ -442,8 +442,14 @@ Program Definition pcuic_expand_lets_transform_mapping {cf : checker_flags} K : 
    post p := wf_pcuic_inductives_mapping p.2.1 p.1 /\ post (pcuic_expand_lets_transform K) p.2;
    obseq p hp p' := obseq (pcuic_expand_lets_transform K) p.2 (proj2 hp) p'.2 |}.
 Next Obligation.
-  cbn. intros cf K input []. split => //. todo "let exp".
-  unshelve eapply (correctness (pcuic_expand_lets_transform K)). apply H0.
+  cbn. intros cf K input []. split => //.
+  - move: H; rewrite /wf_pcuic_inductives_mapping.
+    solve_all. move: H; rewrite /wf_pcuic_inductive_mapping.
+    destruct x as [ind [na tags]].
+    rewrite /PCUICAst.PCUICLookup.lookup_inductive /PCUICAst.PCUICLookup.lookup_inductive_gen /PCUICAst.PCUICLookup.lookup_minductive_gen.
+    rewrite PCUICExpandLetsCorrectness.trans_lookup. destruct PCUICAst.PCUICEnvironment.lookup_env => //. destruct g => //=.
+    rewrite nth_error_mapi. destruct nth_error => //=. now len.
+  - unshelve eapply (correctness (pcuic_expand_lets_transform K)). apply H0.
 Qed.
 Next Obligation.
   intros cf K p v pr ev. now eapply (preservation (pcuic_expand_lets_transform K)).

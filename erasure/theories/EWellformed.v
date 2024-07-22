@@ -107,13 +107,20 @@ Section wf.
     - all occuring constructors are defined,
     - all occuring constants are defined, and
     - all occuring fixpoints have lambdas as bodies
-    - if has_axioms is false, all occuring constants have bodies *)
+    - if has_axioms is false, all occuring constants have bodies
+    - all cases are exhaustive w.r.t the global declaration *)
 
   Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx :=
     let k' := List.length mfix + k in
     (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
 
   Definition is_nil {A} (l : list A) := match l with [] => true | _ => false end.
+
+  Definition wf_brs ind brsl :=
+    match lookup_inductive Σ ind with
+    | Some (mib, oib) => #|oib.(ind_ctors)| == brsl
+    | None => false
+    end.
 
   Fixpoint wellformed k (t : term) : bool :=
     match t with
@@ -124,7 +131,7 @@ Section wf.
     | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
     | tCase ind c brs => has_tCase &&
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
-      isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
+      wf_brs ind.1 #|brs| && wellformed k c && brs'
     | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
     | tFix mfix idx => has_tFix && List.forallb (isLambda ∘ dbody) mfix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
@@ -440,6 +447,19 @@ Proof.
   intros wfΣ' Hl; apply Hl.
 Qed.
 
+
+Lemma extends_lookup_inductive {efl} {Σ Σ'} :
+  wf_glob Σ' -> extends Σ Σ' ->
+  forall ind b, lookup_inductive Σ ind = Some b ->
+    lookup_inductive Σ' ind = Some b.
+Proof.
+  intros wf ex ind b.
+  rewrite /lookup_inductive /lookup_minductive.
+  destruct lookup_env eqn:lookup => //=.
+  now rewrite (extends_lookup wf ex lookup).
+Qed.
+
+
 Lemma extends_lookup_constructor {efl} {Σ Σ'} :
   wf_glob Σ' -> extends Σ Σ' ->
   forall ind c b, lookup_constructor Σ ind c = Some b ->
@@ -482,6 +502,8 @@ Proof.
   all:try destruct g => //.
   - destruct cstr_as_blocks; eauto; solve_all.
     destruct lookup_constructor_pars_args as [ [] | ]; rtoProp; repeat solve_all.
+  - move: H0. rewrite /wf_brs. destruct lookup_inductive eqn:hl => //.
+    now rewrite (extends_lookup_inductive wf ex _ _ hl).
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
   - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
 Qed.

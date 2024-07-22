@@ -169,6 +169,7 @@ Proof.
   - destruct p. rewrite KernameSet.union_spec knset_in_fold_left in H0.
     destruct H0.
     apply KernameSet.singleton_spec in H0. subst kn. cbn in *.
+    move: H1; rewrite /EWellformed.wf_brs; cbn.
     destruct (EGlobalEnv.lookup_env Σ _) eqn:E.
     destruct g => //.
     now eapply lookup_env_In in E. easy. clear H1.

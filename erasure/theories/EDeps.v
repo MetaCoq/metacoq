@@ -61,9 +61,10 @@ Proof.
   - depelim er.
     econstructor; eauto.
   - depelim er.
-    econstructor; eauto.
+    econstructor; eauto. now len.
+    clear H3.
     induction X; [easy|].
-    depelim H3.
+    depelim H4.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -115,9 +116,9 @@ Proof.
   - depelim er.
     econstructor; eauto.
   - depelim er.
-    econstructor; eauto.
+    econstructor; eauto. now len. clear H3.
     induction X; [easy|].
-    depelim H3.
+    depelim H4.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -175,9 +176,10 @@ Proof.
   - depelim er.
     cbn. econstructor; eauto.
   - depelim er.
-    econstructor; [easy|easy|easy|easy|easy|].
+    econstructor; [easy|easy|easy|easy|easy| | ].
+    now len. clear H3.
     induction X; [easy|].
-    depelim H3.
+    depelim H4.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -290,14 +292,14 @@ Proof.
     unfold EGlobalEnv.iota_red.
     apply erases_deps_substl.
     + intuition auto.
-      apply erases_deps_mkApps_inv in H4.
+      apply erases_deps_mkApps_inv in H5.
       now apply Forall_rev, Forall_skipn.
     + eapply nth_error_forall in e2; [|now eauto].
       assumption.
   - congruence.
   - depelim er.
     subst brs; cbn in *.
-    depelim H3.
+    depelim H4.
     cbn in *.
     apply IHev2.
     apply erases_deps_substl; [|easy].
@@ -325,9 +327,9 @@ Proof.
   - depelim er.
     specialize (IHev1 er).
     apply erases_deps_mkApps_inv in IHev1 as (? & ?).
-    depelim H4.
+    depelim H5.
     apply IHev2.
-    econstructor; [easy|easy|easy|easy| |easy].
+    econstructor; [easy|easy|easy|easy| |easy|easy ].
     apply erases_deps_mkApps; [|easy].
     now eapply erases_deps_cunfold_cofix; eauto.
   - depelim er.
@@ -398,6 +400,7 @@ Lemma erases_deps_forall_ind Σ Σ'
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' discr ->
         P discr ->
+        #|idecl'.(ind_ctors)| = #|brs| ->
         Forall (fun br : _ × Extract.E.term => erases_deps Σ Σ' br.2) brs ->
         Forall (fun br => P br.2) brs ->
         P (Extract.E.tCase p discr brs))
@@ -438,7 +441,7 @@ Proof.
   - eauto.
   - eapply Hcase; try eassumption.
     + now apply f.
-    + revert brs H3.
+    + clear H3; revert brs H4.
       fix f' 2.
       intros brs []; [now constructor|].
       constructor; [now apply f|now apply f'].
@@ -622,6 +625,14 @@ Proof.
   repeat eapply conj; try eassumption. cbn in *. now rewrite H8, H9.
 Qed.
 
+Lemma Forall2_nth_error_left {A B} {P} {l : list A} {l' : list B} : Forall2 P l l' ->
+  forall n x, nth_error l n = Some x ->
+  exists x', nth_error l' n = Some x' /\ P x x'.
+Proof.
+  induction 1; destruct n; simpl; auto; try discriminate.
+  intros x' [= ->]. eexists; eauto.
+Qed.
+
 Lemma erases_deps_single Σ Σ' Γ t T et :
   wf_ext Σ ->
   Σ;;; Γ |- t : T ->
@@ -653,6 +664,11 @@ Proof.
     econstructor; eauto.
     destruct H2. destruct x1; eauto. destruct H1.
     eapply Forall2_All2 in H2. eapply All2_nth_error in H2; eauto.
+    { eapply Forall2_length in H0. eapply All2i_length in brs_ty.
+      eapply All2_length in X. rewrite <- H0.
+      depelim H2. destruct H1 as [].
+      destruct x1 as []. eapply Forall2_nth_error_left in H2 as [x' []]; tea.
+      rewrite H4 in H2; noconf H2. depelim H7. eapply Forall2_length in H2. lia. }
     clear -wf brs_ty X H0 Σer.
     subst predctx ptm.
     clear X.
@@ -709,14 +725,6 @@ Proof.
     now constructor; eauto.
   - eapply inversion_Prim in wt as [prim_ty [decl []]]; eauto.
     depelim H0; depelim p1; depelim X; cbn in *; try constructor; cbn; intuition eauto. solve_all.
-Qed.
-
-Lemma Forall2_nth_error_left {A B} {P} {l : list A} {l' : list B} : Forall2 P l l' ->
-  forall n x, nth_error l n = Some x ->
-  exists x', nth_error l' n = Some x' /\ P x x'.
-Proof.
-  induction 1; destruct n; simpl; auto; try discriminate.
-  intros x' [= ->]. eexists; eauto.
 Qed.
 
 Lemma erases_global_all_deps Σ Σ' :

@@ -1118,12 +1118,11 @@ Proof.
     repeat split. len. solve_all.
     destruct cstr_as_blocks; eauto.
     rtoProp; intuition eauto. solve_all. destruct args => //.
-  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+  - move: H0; rewrite /wf_brs; cbn; destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     erewrite lookup_annotate_env; eauto. cbn.
-    destruct nth_error as [ [] | ]; cbn in *; eauto.
-  - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
-    destruct nth_error as [ [] | ]; cbn in *; eauto.
-    repeat split. eauto.
+    destruct nth_error as [ [] | ]; cbn in *; eauto. len.
+  - move: H0; rewrite /wf_brs; cbn; destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
+    destruct nth_error as [ [] | ]; cbn in *; eauto. intros eq.
     solve_all. rewrite map_length. rewrite <- app_length.
     eapply a; eauto. len. rewrite gen_many_fresh_length. eauto.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.

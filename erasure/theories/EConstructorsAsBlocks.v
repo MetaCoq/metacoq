@@ -738,7 +738,7 @@ Proof.
     rewrite /lookup_constructor_pars_args in H3.
     destruct lookup_constructor as [[[] ?]|]=> //. cbn in H3.
     eapply Nat.leb_le in H3. intuition auto. apply/eqb_spec. lia.
-  - now rewrite lookup_inductive_transform_blocks.
+  - len. move: H2. rewrite /wf_brs. now rewrite lookup_inductive_transform_blocks.
   - now rewrite lookup_constructor_transform_blocks.
   - unfold wf_fix in *. rtoProp. solve_all. solve_all. now eapply isLambda_transform_blocks.
   - unfold wf_fix in *. rtoProp. solve_all.

@@ -618,7 +618,6 @@ Proof.
     split; intros; rtoProp; intuition auto; solve_all.
   - red.
     move=> hascase n ci discr brs. simpl.
-    destruct lookup_inductive eqn:hl => /= //.
     intros; rtoProp; intuition auto; solve_all.
   - red. simpl. move=> hasproj n p discr wf discr' wf'.
     simpl. rtoProp; intuition auto.

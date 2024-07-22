@@ -481,7 +481,8 @@ Proof.
     all: destruct cstr_as_blocks; rtoProp; try split; eauto.
     + solve_all.
     + destruct block_args; cbn in *; eauto.
-  - rewrite lookup_inductive_implement_box. intuition auto. solve_all.
+  - rewrite /wf_brs; cbn -[lookup_inductive implement_box].
+    rewrite lookup_inductive_implement_box. intuition auto. solve_all. solve_all.
     replace (#|x.1| + S m) with ((#|x.1| + m) + 1) by lia.
     eapply wellformed_lift. eauto.
   - rewrite lookup_constructor_implement_box. intuition auto.

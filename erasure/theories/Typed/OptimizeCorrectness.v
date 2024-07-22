@@ -3611,6 +3611,7 @@ Section dearg.
       erewrite lookup_ctor_trans_env_inv; tea.
     - destruct p. rewrite wellformed_mkApps; try easy.
       unfold dearg_case.
+      rewrite /wf_brs in H.
       destruct (EGlobalEnv.lookup_inductive _ _) as [[mib oib]|] eqn:hl => //.
       assert (decl_ind :declared_inductive (trans_env Σ) i mib oib).
       { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
@@ -3619,15 +3620,18 @@ Section dearg.
       specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask Hparams]].
       rewrite Hmask.
       rtoProp; intuition eauto; solve_all.
-      cbn [wellformed]. rtoProp; intuition eauto.
+      cbn [wellformed]. rtoProp; intuition eauto. len.
+      rewrite mapi_length map_length. rewrite /wf_brs.
       { unfold EGlobalEnv.lookup_inductive. cbn.
         move: hl. cbn.
         rewrite !lookup_env_trans_env lookup_env_dearg_env.
         destruct lookup_env => //=. destruct g => //=.
         rewrite !nth_error_map. unfold dearg_mib. rewrite Hmask. cbn.
-        rewrite nth_error_mapi. destruct nth_error => //. }
+        rewrite nth_error_mapi. destruct nth_error => //=.
+        intros [= <- <-].
+        move: H; cbn. now rewrite /trans_ctors !map_length !mapi_length. }
       cbn.
-      unfold mapi. clear clos_args IHt.
+      unfold mapi. clear clos_args IHt H.
       unfold valid_case_masks in H3. rewrite Hmask in H3.
       move/andP: H3 => [] _ hbrs.
       eapply alli_Alli in hbrs.

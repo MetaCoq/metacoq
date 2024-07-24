@@ -168,7 +168,7 @@ struct
         (* TODO handle univs created in workers *)
         let l = Univ.Level.make (Univ.UGlobal.make dp "" num) in
         try
-          let evm = Evd.add_global_univ evm l in
+          let evm = Evd.add_forgotten_univ evm l in
           if !strict_unquote_universe_mode then
             CErrors.user_err (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
           else (evm, l)

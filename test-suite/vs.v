@@ -3,12 +3,12 @@
 Require Import BinPos.
 Require Import Lia.
 Require Import Recdef.
-Require Import Coq.Lists.List.
+Require Import Stdlib.Lists.List.
 Require Import ZArith.
 Require Import NArith.
 Require Import List Orders POrderedType.
 Require Import Sorted.
-Require Import Coq.Sorting.Mergesort.
+Require Import Stdlib.Sorting.Mergesort.
 Require Import Permutation.
 
 Set Implicit Arguments.
@@ -406,8 +406,8 @@ Qed.
 (* clauses.v *)
 Unset Implicit Arguments.
 
-Require Import ZArith List Recdef Coq.MSets.MSetInterface Coq.Sorting.Mergesort
-               Permutation Coq.MSets.MSetAVL Coq.MSets.MSetRBT.
+Require Import ZArith List Recdef Stdlib.MSets.MSetInterface Stdlib.Sorting.Mergesort
+               Permutation Stdlib.MSets.MSetAVL Stdlib.MSets.MSetRBT.
 
 (** The clause datatype and related definitions and lemmas *)
 
@@ -967,7 +967,7 @@ Require Import Finite_sets_facts.
   the axioms used by MSL and by the CompCert project.
  *)
 
-Require Coq.Logic.ClassicalFacts.
+Require Stdlib.Logic.ClassicalFacts.
 
 (** * Extensionality axioms *)
 
@@ -983,7 +983,7 @@ Lemma functional_extensionality {A B} (f g : A -> B) :
   (forall x, f x = g x) -> f = g.
 >>
 *)
-Require Export Coq.Logic.FunctionalExtensionality.
+Require Export Stdlib.Logic.FunctionalExtensionality.
 
 (** For compatibility with earlier developments, [extensionality]
   is an alias for [functional_extensionality]. *)

@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate.Coq Require Import (hints) Init MSets Numbers.
+From MetaCoq.Quotation.ToTemplate.Stdlib Require Import (hints) Init MSets Numbers.
 From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) MCOption bytestring.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) BasicAst config.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Universes.Instances.

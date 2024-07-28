@@ -7,16 +7,16 @@ MetaCoq Erase -help.
 
 MetaCoq Erase nat.
 (*
-Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: ⧆
+Environment is well-formed and Ind(Stdlib.Init.Datatypes.nat,0,[]) has type: ⧆
 *)
 
 MetaCoq Erase I.
 MetaCoq Erase true.
 (*
-Environment is well-formed and Construct(Coq.Init.Logic.True,0,0,[]) erases to:
+Environment is well-formed and Construct(Stdlib.Init.Logic.True,0,0,[]) erases to:
 ⧆
-Environment is well-formed and Construct(Coq.Init.Datatypes.bool,0,0,[]) erases to:
-Construct(Coq.Init.Datatypes.bool,0,0)
+Environment is well-formed and Construct(Stdlib.Init.Datatypes.bool,0,0,[]) erases to:
+Construct(Stdlib.Init.Datatypes.bool,0,0)
 *)
 
 MetaCoq Erase (exist (fun x => x = 0) 0 (eq_refl)).
@@ -26,7 +26,7 @@ Definition test := (proj1_sig (exist (fun x => x = 0) 0 (eq_refl))).
 MetaCoq Erase -typed test.
 
 (** Cofix *)
-From Coq Require Import StreamMemo.
+From Stdlib Require Import StreamMemo.
 
 MetaCoq Quote Recursively Definition memo := memo_make.
 

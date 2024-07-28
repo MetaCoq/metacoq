@@ -120,30 +120,30 @@ MetaCoq Unquote Definition uqf := qf.
 Inductive foo (A : Type) : Type :=
 | fooc : list A -> foo A.
 (* Print Universes.*)
-(* Top.1 <= Coq.Init.Datatypes.44 *)
+(* Top.1 <= Stdlib.Init.Datatypes.44 *)
 
 MetaCoq Quote Recursively Definition qfoo := foo.
 (* Compute qfoo. *)
 
 Polymorphic Inductive foo2 (A : Type) : Type :=
 | fooc2 : list A -> foo2 A.
-(* Top.4 |= Top.4 <= Coq.Init.Datatypes.44 *)
+(* Top.4 |= Top.4 <= Stdlib.Init.Datatypes.44 *)
 (* Print Universes.*)
 
 Definition foo2_instance := foo2.
 (* Print Universes.*)
-(* Top.9 <= Coq.Init.Datatypes.44 *)
+(* Top.9 <= Stdlib.Init.Datatypes.44 *)
 
 MetaCoq Quote Recursively Definition qfoo2 := foo2.
 (* Compute qfoo2. *)
-(* (Level.lvar 0, Le, Level.level "Coq.Init.Datatypes.44") *)
+(* (Level.lvar 0, Le, Level.level "Stdlib.Init.Datatypes.44") *)
 
 Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 | fooc3 : @eq Type@{l} (list A) B-> foo3 A B.
-(* i j k l |= l < Coq.Init.Logic.8
+(* i j k l |= l < Stdlib.Init.Logic.8
               Set <= l
               i <= l
-              i <= Coq.Init.Datatypes.44
+              i <= Stdlib.Init.Datatypes.44
               j <= l *)
 MetaCoq Quote Recursively Definition qfoo3 := foo3.
 (* Compute qfoo3. *)

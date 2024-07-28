@@ -1,7 +1,7 @@
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC.QuotationOf.Coq.Structures Require Import Orders.Sig OrdersAlt.Sig OrdersFacts.Sig.
-From MetaCoq.Quotation.ToPCUIC.QuotationOf.Coq.FSets Require Import FMapAVL.Sig FMapList.Sig.
+From MetaCoq.Quotation.ToPCUIC.QuotationOf.Stdlib.Structures Require Import Orders.Sig OrdersAlt.Sig OrdersFacts.Sig.
+From MetaCoq.Quotation.ToPCUIC.QuotationOf.Stdlib.FSets Require Import FMapAVL.Sig FMapList.Sig.
 Import List.ListNotations.
 Local Open Scope list_scope.
 

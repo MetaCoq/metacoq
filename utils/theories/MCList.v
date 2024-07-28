@@ -1,5 +1,5 @@
 From Equations Require Import Equations.
-From Coq Require Import Bool Arith Lia SetoidList Utf8.
+From Stdlib Require Import Bool Arith Lia SetoidList Utf8.
 From MetaCoq.Utils Require Import MCPrelude MCRelations.
 
 Set Equations Transparent.
@@ -217,7 +217,7 @@ Section Reverse_Induction.
     forall P:list A-> Type,
       P [] ->
         (forall (a:A) (l:list A), P (List.rev l) -> P (List.rev (a :: l))) ->
-        forall l:list A, P (Coq.Lists.List.rev l).
+        forall l:list A, P (Stdlib.Lists.List.rev l).
   Proof using Type.
     induction l; auto.
   Qed.

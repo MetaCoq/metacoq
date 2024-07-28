@@ -1,6 +1,6 @@
 From MetaCoq.Common Require Import BasicAst Environment EnvironmentTyping Universes.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Lists Coq.ssr.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.ssr.
 From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) All_Forall MCOption.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) config BasicAst Kernames Universes Environment.
 From MetaCoq.Quotation.ToTemplate.QuotationOf.Common Require Import Environment.Sig EnvironmentTyping.Sig.

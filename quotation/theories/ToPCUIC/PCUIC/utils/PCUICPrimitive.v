@@ -1,7 +1,7 @@
 From MetaCoq.Utils.MCTactics Require Import DestructHead UniquePose.
 From MetaCoq.PCUIC Require Import utils.PCUICPrimitive.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) Universes Primitive.
 From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) All_Forall.
 

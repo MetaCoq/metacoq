@@ -1,6 +1,6 @@
 From MetaCoq.Common Require Import Universes.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate.QuotationOf.Coq.Structures Require Import Orders.Sig OrdersAlt.Sig.
+From MetaCoq.Quotation.ToTemplate.QuotationOf.Stdlib.Structures Require Import Orders.Sig OrdersAlt.Sig.
 Import List.ListNotations.
 Local Open Scope list_scope.
 

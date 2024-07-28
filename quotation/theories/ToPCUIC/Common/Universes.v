@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC.Coq Require Import (hints) Init MSets Numbers.
+From MetaCoq.Quotation.ToPCUIC.Stdlib Require Import (hints) Init MSets Numbers.
 From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) MCOption bytestring.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) BasicAst config.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Common Require Import Universes.Instances.

@@ -1,6 +1,6 @@
 From MetaCoq.PCUIC Require Import PCUICAst Syntax.PCUICReflect Syntax.PCUICInduction.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) Universes BasicAst Kernames.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import Environment EnvironmentTyping.
 From MetaCoq.Quotation.ToPCUIC.PCUIC Require Import (hints) utils.PCUICPrimitive.

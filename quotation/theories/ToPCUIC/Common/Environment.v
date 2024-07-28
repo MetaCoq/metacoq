@@ -2,7 +2,7 @@ From Coq Require Import Structures.Equalities Lists.List Lists.ListDec.
 From MetaCoq.Utils Require Import MCProd All_Forall ReflectEq MCRelations MCReflect.
 From MetaCoq.Common Require Import Environment Universes.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.ssr utils BasicAst Primitive Universes Kernames.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.ssr utils BasicAst Primitive Universes Kernames.
 From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) MCOption MCProd All_Forall.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Common Require Import Environment.Sig.
 

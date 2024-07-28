@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Ast TermEquality.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) utils All_Forall.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) config Reflect Environment Universes BasicAst Kernames.
 From MetaCoq.Quotation.ToTemplate.Template Require Import (hints) Ast AstUtils Induction.
@@ -20,7 +20,7 @@ Section with_R.
   #[export] Instance quote_cmp_opt_variance {pb v u u'} (subr : RelationClasses.subrelation (cmp_universe Conv) (cmp_universe pb)) : ground_quotable (@cmp_opt_variance cmp_universe pb v u u').
   Proof using cmp_universe qRe quoteRe.
     destruct v; cbv [cmp_opt_variance]; try exact _.
-    eapply Coq.Init.quote_or_dec; try exact _.
+    eapply Stdlib.Init.quote_or_dec; try exact _.
     now apply cmp_opt_variance_var_dec.
   Defined.
 

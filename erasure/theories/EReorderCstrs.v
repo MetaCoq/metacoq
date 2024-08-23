@@ -438,8 +438,6 @@ Definition wf_inductives_mapping Σ (m : inductives_mapping) : bool :=
   forallb (wf_inductive_mapping Σ) m.
 
 Section reorder_proofs.
-  Context {efl : EEnvFlags}.
-  Context {wca : cstr_as_blocks = false}.
   Context (Σ : global_declarations) (m : inductives_mapping).
   Context (wfm : wf_inductives_mapping Σ m).
 
@@ -585,7 +583,7 @@ Section reorder_proofs.
   Lemma lookup_constructor_reorder i n :
     option_map (fun '(mib, oib, c) => (reorder_inductive_decl m (inductive_mind i) mib, reorder_one_ind m (inductive_mind i) (inductive_ind i) oib, c)) (lookup_constructor Σ i n) =
     lookup_constructor (reorder_env m Σ) i (lookup_constructor_ordinal m i n).
-  Proof.
+  Proof using Type wfm.
     rewrite /lookup_constructor lookup_inductive_reorder.
     destruct lookup_inductive as [[mib oib]|] eqn:hind => //=.
     destruct nth_error eqn:hnth => //=.
@@ -636,6 +634,9 @@ Section reorder_proofs.
   Proof.
     rewrite /reorder_one_ind. destruct lookup_inductive_assoc as [[na tags]|]=> //.
   Qed.
+
+  Context {efl : EEnvFlags}.
+  Context {wca : cstr_as_blocks = false}.
 
   Lemma wf_glob_ind_projs {p pinfo} :
     wf_glob Σ ->
@@ -740,7 +741,7 @@ Section reorder_proofs.
     intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; bool; solve_all]; try easy.
     - bool. rewrite -lookup_constant_reorder. destruct lookup_constant => //=; bool.
@@ -820,7 +821,7 @@ Section reorder_proofs.
     intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros wft; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
     unfold wf_fix, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n0)%nat; auto.
@@ -863,14 +864,14 @@ Section reorder_proofs.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
     rewrite forallb_rev forallb_skipn //.
-    now rewrite List.rev_length.
+    now rewrite List.length_rev.
     now rewrite map_rev map_skipn.
   Qed.
 
   Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -879,7 +880,7 @@ Section reorder_proofs.
   Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite map_length.
+    rewrite length_map.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -1073,7 +1074,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.rev_length hskip Nat.add_0_r.
+  now rewrite List.length_rev hskip Nat.add_0_r.
 Qed.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
@@ -1214,7 +1215,7 @@ Proof.
     eapply eval_wellformed in ev1 => //.
     move/(@wf_mkApps hastapp): ev1 => [] wff wfargs.
     eapply eval_fix; eauto.
-    rewrite map_length.
+    rewrite length_map.
     unshelve (eapply optimize_cunfold_fix; tea); tea.
     rewrite optimize_mkApps in IHev3. apply IHev3.
     rewrite wellformed_mkApps // wfargs.
@@ -1229,7 +1230,7 @@ Proof.
     rewrite optimize_mkApps in IHev1 |- *.
     simpl in *. eapply eval_fix_value. auto. auto. auto.
     unshelve (eapply optimize_cunfold_fix; eauto); tea.
-    now rewrite map_length.
+    now rewrite length_map.
 
   - move/andP => [] /andP[] hasapp clf cla.
     eapply eval_wellformed in ev1 => //.
@@ -1555,7 +1556,7 @@ Definition reorder_program_wf {efl : EEnvFlags} {wca : cstr_as_blocks = false} (
 Proof.
   intros []; split.
   now unshelve eapply reorder_env_wf.
-  cbn. now eapply (@wf_optimize _ wca).
+  cbn. now eapply (@wf_optimize _ _ wfm efl wca).
 Qed.
 
 Definition reorder_program_expanded {efl : EEnvFlags} (p : eprogram) m (wfm : wf_inductives_mapping p.1 m) :

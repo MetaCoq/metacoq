@@ -796,7 +796,7 @@ Proof.
   eapply hkn in hl' as [decl' [hl''hct]].
   rewrite hl''hct. destruct decl'; cbn in *. destruct decl. cbn in *. subst o0.
   rewrite H. rewrite /ExAst.trans_oib /=.
-  rewrite /ExAst.trans_ctors. now rewrite map_length.
+  rewrite /ExAst.trans_ctors. now rewrite length_map.
 Qed.
 
 From Equations Require Import Equations.

@@ -1123,7 +1123,7 @@ Proof.
     destruct nth_error as [ [] | ]; cbn in *; eauto. len.
   - move: H0; rewrite /wf_brs; cbn; destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     destruct nth_error as [ [] | ]; cbn in *; eauto. intros eq.
-    solve_all. rewrite map_length. rewrite <- app_length.
+    solve_all. rewrite length_map. rewrite <- length_app.
     eapply a; eauto. len. rewrite gen_many_fresh_length. eauto.
   - destruct lookup_env as [ [] | ] eqn:E; cbn in *; eauto.
     erewrite lookup_annotate_env; eauto. cbn.
@@ -1139,7 +1139,7 @@ Proof.
       destruct dbody; cbn in *; eauto.
       eapply IHAll.
   - solve_all. unfold wf_fix in *. rtoProp. split.
-    rewrite map2_length gen_many_fresh_length map_length.
+    rewrite map2_length gen_many_fresh_length length_map.
     { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
     solve_all. clear H0. unfold test_def in *. cbn in *.
     eapply All_impl in H2. 2:{ intros ? [[] ].
@@ -1149,25 +1149,25 @@ Proof.
       }
       revert H2.
       generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
+      intros. rewrite map2_length gen_many_fresh_length length_map Nat.min_id.
       revert H2. generalize (#|m| + #|Γ|).
       intros.
       induction m in Γ, n, n0, l, H2 |- *.
       + econstructor.
       + invs H2. cbn. destruct a; cbn. destruct dname; cbn; econstructor; eauto.
   - solve_all. unfold wf_fix in *. rtoProp. split.
-    rewrite map2_length gen_many_fresh_length map_length.
+    rewrite map2_length gen_many_fresh_length length_map.
     { eapply Nat.ltb_lt in H0. eapply Nat.ltb_lt. lia. }
     solve_all. clear H0. unfold test_def in *. cbn in *.
     eapply All_impl in H1. 2:{ intros ? [i].
     specialize (i (List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-      revert i. rewrite ?List.rev_length app_length ?List.rev_length gen_many_fresh_length ?List.rev_length map_length. intros r.
+      revert i. rewrite ?List.length_rev length_app ?List.length_rev gen_many_fresh_length ?List.length_rev length_map. intros r.
       eapply r in i0. exact i0.
       eapply incl_appr. eauto.
       }
     revert H1.
     generalize ((List.rev (gen_many_fresh Γ (map dname m)) ++ Γ)).
-    intros. rewrite map2_length gen_many_fresh_length map_length Nat.min_id.
+    intros. rewrite map2_length gen_many_fresh_length length_map Nat.min_id.
     revert H1. generalize (#|m| + #|Γ|).
     intros.
     induction m in Γ, n, n0, l, H1 |- *.

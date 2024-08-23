@@ -1100,7 +1100,6 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. rtoProp; intuition auto. len.
     simp_strip. toAll; solve_all.
-    toAll. solve_all.
   - cbn -[strip] in H0 |- *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g. cbn in H0. now rtoProp.

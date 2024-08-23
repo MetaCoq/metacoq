@@ -604,7 +604,7 @@ Proof.
     rewrite closedn_mkApps in ev1.
     move: ev1 => /andP [] clfix clargs.
     eapply EWcbvEval.eval_fix; eauto.
-    rewrite map_length.
+    rewrite length_map.
     eapply remove_match_on_box_cunfold_fix; tea.
     eapply closed_fix_subst. tea.
     rewrite remove_match_on_box_mkApps in IHev3. apply IHev3.

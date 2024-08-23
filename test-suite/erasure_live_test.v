@@ -83,10 +83,6 @@ Definition testmemo := Eval lazy in test memo.
 (** Cofix *)
 From Coq Require Import StreamMemo.
 
-MetaCoq Quote Recursively Definition memo := memo_make.
-
-Definition testmemo := Eval lazy in test memo.
-
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=
   match n with

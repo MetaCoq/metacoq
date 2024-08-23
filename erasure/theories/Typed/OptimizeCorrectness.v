@@ -3621,7 +3621,7 @@ Section dearg.
       rewrite Hmask.
       rtoProp; intuition eauto; solve_all.
       cbn [wellformed]. rtoProp; intuition eauto. len.
-      rewrite mapi_length map_length. rewrite /wf_brs.
+      rewrite mapi_length length_map. rewrite /wf_brs.
       { unfold EGlobalEnv.lookup_inductive. cbn.
         move: hl. cbn.
         rewrite !lookup_env_trans_env lookup_env_dearg_env.
@@ -3629,7 +3629,7 @@ Section dearg.
         rewrite !nth_error_map. unfold dearg_mib. rewrite Hmask. cbn.
         rewrite nth_error_mapi. destruct nth_error => //=.
         intros [= <- <-].
-        move: H; cbn. now rewrite /trans_ctors !map_length !mapi_length. }
+        move: H; cbn. now rewrite /trans_ctors !length_map !mapi_length. }
       cbn.
       unfold mapi. clear clos_args IHt H.
       unfold valid_case_masks in H3. rewrite Hmask in H3.

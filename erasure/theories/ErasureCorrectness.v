@@ -40,6 +40,14 @@ Notation "Σ ⊢ s ⇓ t" := (EWcbvEval.eval Σ s t) (at level 50, s, t at next 
 
 Import ssrbool.
 
+Lemma erases_lazy Σ Γ t t' : Σ ;;; Γ |- t ⇝ℇ t' -> EAstUtils.isLazyApp t' -> False.
+Proof.
+  rewrite /EAstUtils.isLazyApp /EAstUtils.head /EAstUtils.decompose_app.
+  generalize (@nil EAst.term) as l; intros l.
+  induction 1 in l |- *; cbn => //=.
+  eapply IHerases1.
+Qed.
+
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t t' v Σ' :
   wf_ext Σ ->
   welltyped Σ [] t ->
@@ -187,9 +195,10 @@ Proof.
   eapply Construct_Ind_ind_eq in X0; tea. 2:{ eapply declared_constructor_from_gen; tea. }
   destruct X0 as (((([_ Ru] & cu) & cpu) & ?) & (parsubst & argsubst & parsubst' & argsubst' & [])).
   invs He.
-  + depelim Hed.
+  + depelim Hed. rename H5 into Hlen.
     rename H1 into decli. rename H2 into decli'.
     rename H3 into em. rename Hed into er.
+    rename H6 into H5. rename H7 into H6. rename H8 into H7.
     edestruct (IHeval1 _ scrut_ty) as (v' & Hv' & [He_v']); eauto.
     pose proof e0 as Hnth.
     assert (lenppars : ind_npars mdecl = #|pparams p|).
@@ -830,7 +839,9 @@ Proof.
     2:{ now eapply nth_error_all in a; tea. }
     invs He.
     * edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
-      depelim Hed.
+      depelim Hed. rename H5 into Hlen.
+      rename H6 into H5. rename H7 into H6. rename H8 into H7.
+      rename H9 into H8. rename H10 into H9.
       unshelve eapply declared_inductive_to_gen in H1, decli; eauto.
       destruct (declared_inductive_inj H1 decli). subst mdecl0 idecl0.
       rename H0 into decli'. rename H1 into decli''. rename H2 into er. rename H3 into H0.
@@ -1150,6 +1161,10 @@ Proof.
         -- rewrite !negb_or in i. rtoProp; intuition auto.
            eapply is_PrimApp_erases in H8; tea.
            now move/negbTE: H8.
+        -- rewrite !negb_or in i.
+           rtoProp; intuition auto.
+           apply/negbTE. apply PCUICNormal.negb_is_true => isl.
+           eapply erases_lazy in H1; tea.
     + exists EAst.tBox. split. 2: now constructor; econstructor.
       econstructor.
       eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; auto.
@@ -1358,7 +1373,7 @@ Proof.
     depelim etaΣ.
     eauto.
     depelim etaΣ.
-    solve_all. rewrite -b2. len. eapply H7 => //.
+    solve_all. rewrite -b2. len. eapply H8 => //.
     exact a0.
   - intros Γ0 v etaΣ.
     move=> /erases_mkApps_inv; intros [(?&?&?&?&_&?&?&?)|(?&?&?&?&?)]; subst.

@@ -2017,6 +2017,8 @@ Proof.
   - depelim X; auto.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. solve_all. subst a0 a'; cbn in *.
     depelim exp_t; constructor; cbn in *; intuition eauto. solve_all.
+  - eapply IHev1 in exp_t. eapply IHev2 in exp_t.
+    eapply is_expanded_aux_upwards; tea. lia.
 Qed.
 
 Lemma valid_case_masks_lift ind c brs n k :
@@ -2823,6 +2825,7 @@ Proof with auto with dearg.
   - depelim X; auto.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. subst a0 a'; cbn -[test_prim] in *.
     solve_all. depelim H0; constructor; cbn; intuition eauto. solve_all.
+  - eapply IHev2. eapply eval_closed in ev1; tea. eapply IHev1; eauto.
 Qed.
 
 Lemma declared_constant_dearg Σ k cst :
@@ -3452,22 +3455,22 @@ Section dearg.
           cbn in *; propify.
           rewrite dearg_single_masked by (now rewrite length_map).
           rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps;cbn in *.
-          rewrite isPrimApp_mkApps.
-          destruct with_guarded_fix;cbn;auto.
+          rewrite isPrimApp_mkApps, isLazyApp_mkApps in *.
+          destruct with_guarded_fix;cbn;intuition auto.
           now rewrite EOptimizePropDiscr.isFix_mkApps;cbn.
         * rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps in *;cbn in *.
           propify.
           destruct with_guarded_fix;cbn in *; intuition.
         * unfold dearg_case.
           destruct with_guarded_fix;cbn.
-          now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps;cbn.
-          now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps;cbn.
+          now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+          now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
         * unfold dearg_proj.
           unfold dearg_case.
           destruct with_guarded_fix;cbn.
-          ** now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps;cbn.
-          ** now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps;cbn.
-        * rewrite !isLambda_mkApps, !isFixApp_mkApps, !EOptimizePropDiscr.isFix_mkApps, !isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps in *
+          ** now rewrite isLambda_mkApps, isFixApp_mkApps, isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+          ** now rewrite isLambda_mkApps, isBox_mkApps, isConstructApp_mkApps, EOptimizePropDiscr.isFix_mkApps, isPrimApp_mkApps, isLazyApp_mkApps;cbn.
+        * rewrite !isLambda_mkApps, !isFixApp_mkApps, !EOptimizePropDiscr.isFix_mkApps, !isBox_mkApps, isConstructApp_mkApps, isPrimApp_mkApps, isLazyApp_mkApps in *
             by now destruct hd.
           rewrite length_map.
           destruct with_guarded_fix;cbn;auto;
@@ -3608,6 +3611,7 @@ Section dearg.
       erewrite lookup_ctor_trans_env_inv; tea.
     - destruct p. rewrite wellformed_mkApps; try easy.
       unfold dearg_case.
+      rewrite /wf_brs in H.
       destruct (EGlobalEnv.lookup_inductive _ _) as [[mib oib]|] eqn:hl => //.
       assert (decl_ind :declared_inductive (trans_env Σ) i mib oib).
       { move: hl. unfold EGlobalEnv.lookup_inductive. cbn.
@@ -3616,15 +3620,18 @@ Section dearg.
       specialize (valid_ind_mask_inductive _ _ _ _ valid_Σ decl_ind) as [mask [Hmask Hparams]].
       rewrite Hmask.
       rtoProp; intuition eauto; solve_all.
-      cbn [wellformed]. rtoProp; intuition eauto.
+      cbn [wellformed]. rtoProp; intuition eauto. len.
+      rewrite mapi_length map_length. rewrite /wf_brs.
       { unfold EGlobalEnv.lookup_inductive. cbn.
         move: hl. cbn.
         rewrite !lookup_env_trans_env lookup_env_dearg_env.
         destruct lookup_env => //=. destruct g => //=.
         rewrite !nth_error_map. unfold dearg_mib. rewrite Hmask. cbn.
-        rewrite nth_error_mapi. destruct nth_error => //. }
+        rewrite nth_error_mapi. destruct nth_error => //=.
+        intros [= <- <-].
+        move: H; cbn. now rewrite /trans_ctors !map_length !mapi_length. }
       cbn.
-      unfold mapi. clear clos_args IHt.
+      unfold mapi. clear clos_args IHt H.
       unfold valid_case_masks in H3. rewrite Hmask in H3.
       move/andP: H3 => [] _ hbrs.
       eapply alli_Alli in hbrs.
@@ -4970,6 +4977,9 @@ Proof.
       unshelve eapply IHb0; tea. cbn in deriv_len. lia.
       cbn in *; unfold test_array_model in *; subst a a'; cbn in *.
       unshelve eapply IH; tea; rtoProp; intuition eauto. lia.
+    + facts. econstructor. specialize (IH _ _ clos_t valid_t exp_t ev1).
+      cbn in IH. apply IH. lia.
+      now forward (IH v _ H2 H4 H6 ev2).
     + destruct t; cbn in *; try destruct y; try congruence; now constructor.
 Qed.
 End dearg_correct.

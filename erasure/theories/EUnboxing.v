@@ -118,7 +118,7 @@ Section unbox.
   Proof using Type Σ.
     revert k. induction t using EInduction.term_forall_list_ind; simp unbox; rewrite -?unbox_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *;
     try solve [simpl; subst; simpl closed; f_equal; auto; rtoProp; solve_all; solve_all]; try easy.
@@ -198,7 +198,7 @@ Section unbox.
     intros cla etaa; move cla before a. move etaa before a.
     funelim (unbox b); cbn; simp unbox isEtaExp; rewrite -?isEtaExp_equation_1 -?unbox_equation_1; toAll; simpl;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
 
@@ -263,7 +263,7 @@ Section unbox.
       { destruct v; cbn; congruence. }
       rewrite unbox_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
-      move/andP: H1. rewrite length_map. move=> [] etaapp etav.
+      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
@@ -280,7 +280,7 @@ Section unbox.
       rewrite unbox_mkApps //.
       rewrite isEtaExp_Constructor // in H1.
       rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
-      move/andP: H1. rewrite length_map. move=> [] etaapp etav.
+      move/andP: H1. rewrite map_length. move=> [] etaapp etav.
       cbn -[lookup_inductive_pars].
       unfold isEtaExp_app in etaapp.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
@@ -316,7 +316,7 @@ Section unbox.
   Lemma unbox_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def unbox) mfix) = map unbox (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite length_map.
+    rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp unbox.
@@ -325,7 +325,7 @@ Section unbox.
   Lemma unbox_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def unbox) mfix) = map unbox (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite length_map.
+    rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto. now simp unbox.
@@ -926,7 +926,7 @@ Proof.
     rewrite H2 in H1.
     econstructor; eauto.
     * rewrite nth_error_map H3 //.
-    * len. cbn in H4, H5. rewrite length_skipn. lia.
+    * len. cbn in H4, H5. rewrite skipn_length. lia.
     * cbn -[unbox]. rewrite skipn_0. len.
     * cbn -[unbox].
       have etaargs : forallb (isEtaExp Σ) args.
@@ -950,7 +950,7 @@ Proof.
     rewrite unbox_mkApps // /= in e1.
     simp_unbox in e1.
     eapply eval_fix; tea.
-    * rewrite length_map.
+    * rewrite map_length.
       eapply unbox_cunfold_fix; tea.
       eapply closed_fix_subst. tea.
       move: i8; rewrite closedn_mkApps => /andP[] //.
@@ -971,7 +971,7 @@ Proof.
     { move: i4.
       rewrite closedn_mkApps. now move/andP => []. }
     { move: i6. rewrite isEtaExp_mkApps_napp // /= => /andP[] //. now simp isEtaExp. }
-    now rewrite length_map.
+    now rewrite map_length.
 
   - rewrite unbox_tApp //. simp_unbox in e0.
     simp_unbox in e1.
@@ -1016,7 +1016,7 @@ Proof.
     rewrite (constructor_isprop_pars_decl_lookup H2) in e0.
     eapply eval_proj; eauto.
     move: (@is_propositional_cstr_unbox Σ p.(proj_ind) 0). now rewrite H2. simpl.
-    len. rewrite length_skipn. cbn in H3. lia.
+    len. rewrite skipn_length. cbn in H3. lia.
     rewrite nth_error_skipn nth_error_map /= H4 //.
 
   - simp_unbox. eapply eval_proj_prop => //.
@@ -1035,7 +1035,7 @@ Proof.
     + constructor. cbn [atom]. rewrite wcon lookup_constructor_unbox H //.
     + rewrite /cstr_arity /=.
       move: H0; rewrite /cstr_arity /=.
-      rewrite length_skipn length_map => ->. lia.
+      rewrite skipn_length map_length => ->. lia.
     + cbn in H0. eapply All2_skipn, All2_map.
       eapply All2_impl; tea; cbn -[unbox].
       intros x y []; auto.
@@ -1110,7 +1110,7 @@ Proof.
     destruct EAst.ind_ctors => //.
     destruct nth_error => //.
     all: eapply H; auto.
-  - unfold wf_fix_gen in *. rewrite length_map. rtoProp; intuition auto. toAll; solve_all.
+  - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
     now rewrite -unbox_isLambda. toAll; solve_all.
   - primProp. rtoProp; intuition eauto; solve_all_k 6.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
@@ -1375,7 +1375,7 @@ Proof.
     rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
     eapply expanded_tConstruct_app.
     eapply unbox_declared_constructor; tea.
-    len. rewrite length_skipn /= /EAst.cstr_arity /=.
+    len. rewrite skipn_length /= /EAst.cstr_arity /=.
     rewrite /EAst.cstr_arity in H0. lia.
     solve_all. eapply All_skipn. solve_all.
 Qed.
@@ -1457,7 +1457,7 @@ Qed.
     intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - rtoProp. split; eauto. destruct args; eauto.
@@ -1485,7 +1485,7 @@ Qed.
     intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros wft; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold wf_fix, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n0)%nat; auto.
@@ -1530,14 +1530,14 @@ Qed.
     unfold EGlobalEnv.iota_red.
     rewrite unbox_substl //.
     rewrite forallb_rev forallb_skipn //.
-    now rewrite List.length_rev.
+    now rewrite List.rev_length.
     now rewrite map_rev map_skipn.
   Qed.
 
   Lemma unbox_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def unbox) mfix) = map unbox (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite length_map.
+    rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -1546,7 +1546,7 @@ Qed.
   Lemma unbox_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def unbox) mfix) = map unbox (EGlobalEnv.cofix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.cofix_subst.
-    rewrite length_map.
+    rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -1766,7 +1766,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.length_rev hskip Nat.add_0_r.
+  now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
 Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) ; with_constructor_as_block := false |}.
@@ -1889,7 +1889,7 @@ Proof.
     eapply eval_wellformed in ev1 => //.
     move/wf_mkApps: ev1 => [] wff wfargs.
     eapply eval_fix; eauto.
-    rewrite length_map.
+    rewrite map_length.
     eapply unbox_cunfold_fix; tea.
     rewrite unbox_mkApps in IHev3. apply IHev3.
     rewrite wellformed_mkApps // wfargs.
@@ -1903,7 +1903,7 @@ Proof.
     rewrite unbox_mkApps in IHev1 |- *.
     simpl in *. eapply eval_fix_value. auto. auto. auto.
     eapply unbox_cunfold_fix; eauto.
-    now rewrite length_map.
+    now rewrite map_length.
 
   - move/andP => [] clf cla.
     eapply eval_wellformed in ev1 => //.
@@ -1960,15 +1960,15 @@ Proof.
     eapply eval_iota; tea.
     rewrite /constructor_isprop_pars_decl -lookup_constructor_unbox // H //= //.
     rewrite H0 H1; reflexivity. cbn. reflexivity. len. len.
-    rewrite length_skipn. lia.
+    rewrite skipn_length. lia.
     unfold iota_red. cbn.
     rewrite (substl_rel _ _ (unbox Σ a)) => //.
     { eapply nth_error_forallb in wfargs; tea.
       eapply wf_unbox in wfargs => //.
       now eapply wellformed_closed in wfargs. }
     pose proof (wellformed_projection_args wfΣ hl'). cbn in H1.
-    rewrite nth_error_rev. len. rewrite length_skipn. lia.
-    rewrite List.rev_involutive. len. rewrite length_skipn.
+    rewrite nth_error_rev. len. rewrite skipn_length. lia.
+    rewrite List.rev_involutive. len. rewrite skipn_length.
     rewrite nth_error_skipn nth_error_map.
     rewrite e2 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.

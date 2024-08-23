@@ -2,9 +2,8 @@
 
 package "plugin" (
     description = "The MetaCoq Template Library"
-    version = "8.8"
+    version = "8.20"
     directory = "gen-src"
-    requires = "stdlib-shims"
     archive(byte) = "metacoq_template_plugin.cma"
     archive(native) = "metacoq_template_plugin.cmxa"
     plugin(byte) = "metacoq_template_plugin.cma"

@@ -120,7 +120,7 @@ Section trans.
   Proof using Type.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct GlobalContextMap.lookup_inductive_kind as [[]|] => /= //; solve_all.
@@ -172,7 +172,7 @@ Section trans.
   Proof using Type.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros cl; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?length_map;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
@@ -211,7 +211,7 @@ Section trans.
   Lemma trans_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def trans) mfix) = map trans (EGlobalEnv.fix_subst mfix).
   Proof using Type.
     unfold EGlobalEnv.fix_subst.
-    rewrite length_map.
+    rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
@@ -383,6 +383,7 @@ Proof.
       unfold lookup_inductive in hl.
       destruct lookup_minductive => //. }
   - rewrite !GlobalContextMap.lookup_inductive_kind_spec.
+    move: H2; rewrite /wf_brs.
     destruct lookup_inductive as [[mdecl idecl]|] eqn:hl => //.
     assert (map (on_snd (trans Σ)) l = map (on_snd (trans Σ')) l) as -> by solve_all.
     rewrite (extends_lookup_inductive_kind H0 H1) //.
@@ -510,7 +511,7 @@ Proof.
   rewrite /iota_red.
   eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
-  now rewrite List.length_rev hskip Nat.add_0_r.
+  now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
@@ -645,7 +646,7 @@ Proof.
     1,3,4:eapply eval_iota_block; eauto;
       [now rewrite -is_propositional_cstr_trans|
         rewrite nth_error_map H2 //|now len|
-        try (cbn; rewrite -H4 !length_skipn length_map //)].
+        try (cbn; rewrite -H4 !skipn_length map_length //)].
     eapply eval_iota_block.
     1,3,4: eauto.
     + now rewrite -is_propositional_cstr_trans.
@@ -695,7 +696,7 @@ Qed.
     rewrite closedn_mkApps in ev1.
     move: ev1 => /andP [] clfix clargs.
     eapply EWcbvEval.eval_fix; eauto.
-    rewrite length_map.
+    rewrite map_length.
     eapply trans_cunfold_fix; tea.
     eapply closed_fix_subst. tea.
     rewrite trans_mkApps in IHev3. apply IHev3.
@@ -712,7 +713,7 @@ Qed.
     simpl in *. eapply EWcbvEval.eval_fix_value. auto. auto. auto.
     eapply trans_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
-    now rewrite length_map.
+    now rewrite map_length.
 
   - move/andP => [] clf cla.
     eapply eval_closed in ev1 => //.
@@ -1013,7 +1014,7 @@ Proof.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; len; eauto. 1: solve_all.
-  - rewrite lookup_env_trans //.
+  - rewrite /wf_brs; cbn; rewrite lookup_env_trans //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

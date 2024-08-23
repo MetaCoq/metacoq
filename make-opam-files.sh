@@ -33,15 +33,20 @@ gh release upload $tag $archive
 
 release=https://github.com/MetaCoq/metacoq/releases/download/$tag/$archive
 
+skipline=""
+
 for f in *.opam;
 do
     opamf=${f/.opam/};
     target=$1/$opamf/$opamf.$2/opam;
     echo $opamf;
     mkdir -p $1/$opamf/$opamf.$2
+    skipline="$skipline $opamf.$2"
     gsed -e "/^version:.*/d" $f > $target
     echo url { >> $target
     echo "  src:" \"$release\" >> $target
     echo "  checksum:" \"sha512=$hash\" >> $target
     echo } >> $target
 done
+
+echo "ci-skip:" $skipline

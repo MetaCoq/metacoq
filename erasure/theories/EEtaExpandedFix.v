@@ -1058,7 +1058,7 @@ Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {wcon : with_constructor_as
 Proof.
   intros etaΣ wfΣ.
   induction 1 as [ | ? ? ? ? ? ? ? ? IHs | | | | | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? ? IHs
-    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
+    | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | | | | | | | ] using eval_mkApps_rect; try now congruence.
   all:try simp isEtaExp; rewrite -?isEtaExp_equation_1 => //.
   6:{
     move/isEtaExp_tApp'.
@@ -1377,6 +1377,7 @@ Proof.
   - solve_all.
     depelim X; solve_all. eapply All2_over_undep in a. subst a0 a';
       depelim H; constructor; solve_all. solve_all.
+  - simp_eta in IHeval1. eauto.
 Qed.
 
 Lemma isEtaExp_fixapp_mon {mfix idx n n'} : n <= n' -> isEtaExp_fixapp mfix idx n -> isEtaExp_fixapp mfix idx n'.
@@ -1963,6 +1964,8 @@ Proof.
   - intros hexp. simp_eta in hexp. depelim X; repeat constructor; eauto.
     eapply All2_over_undep in a. subst a0 a'. solve_all. depelim hexp; cbn in *. destruct p.
     eapply All2_All2_Set. solve_all. solve_all. depelim hexp. destruct p. solve_all.
+  - intros hexp. simp_eta in hexp. econstructor; eauto. apply IHeval2.
+    specialize (IHeval1 hexp). eapply eval_etaexp in IHeval1. now simp_eta in IHeval1. all:eauto.
   - intros hexp. now eapply eval_atom.
     Unshelve. all: eauto.
 Qed.

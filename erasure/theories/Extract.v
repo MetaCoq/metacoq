@@ -339,6 +339,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
+    #|EAst.ind_ctors idecl'| = #|brs| ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
 | erases_deps_tProj p mdecl idecl cdecl pdecl mdecl' idecl' cdecl' pdecl' t :

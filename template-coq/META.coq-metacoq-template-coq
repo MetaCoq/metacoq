@@ -2,9 +2,9 @@
 
 package "plugin" (
     description = "The MetaCoq Coq Template Plugin"
-    version = "8.8"
+    version = "8.20"
     directory = "src"
-    requires = "coq-core.plugins.ltac stdlib-shims"
+    requires = "coq-core.plugins.ltac"
     archive(byte) = "template_coq.cma"
     archive(native) = "template_coq.cmxa"
     plugin(byte) = "template_coq.cma"

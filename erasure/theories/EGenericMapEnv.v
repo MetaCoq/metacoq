@@ -279,7 +279,7 @@ Proof.
     destruct lookup_env eqn:hl => // /=; intros; rtoProp; eauto.
     destruct g eqn:hg => /= //; intros; rtoProp; eauto.
     repeat split; eauto. destruct cstr_as_blocks; rtoProp; repeat split; eauto. solve_all.
-  - rewrite lookup_env_gen_transform //.
+  - rewrite /wf_brs; cbn. rewrite lookup_env_gen_transform //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

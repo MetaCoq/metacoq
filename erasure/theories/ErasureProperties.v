@@ -475,6 +475,12 @@ Section wellscoped.
   Context (Σ : global_env).
   Import ssrbool.
 
+  Definition wf_brs ind brsl :=
+    match lookup_inductive Σ ind with
+    | Some (mib, oib) => #|oib.(ind_ctors)| == brsl
+    | None => false
+    end.
+
   Fixpoint wellformed (t : term) : bool :=
   match t with
   | tRel i => true
@@ -485,7 +491,7 @@ Section wellscoped.
   | tLetIn na b ty b' => wellformed b && wellformed ty && wellformed b'
   | tCase ind p c brs =>
     let brs' := forallb (wellformed ∘ bbody) brs in
-    isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
+    wf_brs ind.(ci_ind) #|brs| && wellformed c && brs'
   | tProj p c => isSome (lookup_projection Σ p) && wellformed c
   | tFix mfix idx =>
     (idx <? #|mfix|) &&
@@ -518,7 +524,9 @@ Section wellscoped.
     - unshelve eapply declared_constructor_to_gen in isdecl; eauto.
       unfold lookup_constructor. rewrite (declared_constructor_lookup_gen isdecl) //.
     - unshelve eapply declared_inductive_to_gen in isdecl; eauto.
-      unfold lookup_inductive. now rewrite (declared_inductive_lookup_gen isdecl).
+      rewrite /wf_brs.
+      unfold lookup_inductive. rewrite (declared_inductive_lookup_gen isdecl).
+      red in H8. apply Forall2_length in H8. now apply Nat.eqb_eq.
     - red in H8. eapply Forall2_All2 in H8.
       eapply All2i_All2_mix_left in X4; tea. clear H8.
       solve_all.
@@ -557,14 +565,19 @@ Section trans_lookups.
     erewrite EGlobalEnv.declared_constant_lookup; eauto.
   Qed.
 
-  Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
-  Proof using g.
-    destruct g.
-    destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // _.
+  Lemma trans_lookup_inductive kn mib oib :
+    lookup_inductive Σ kn = Some (mib, oib) ->
+    exists mib' oib', EGlobalEnv.lookup_inductive Σ' kn = Some (mib', oib') /\ #|oib.(ind_ctors)| = #|oib'.(EAst.ind_ctors)|.
+  Proof. destruct g.
+    destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= // [=]. intros -> ->.
     eapply lookup_inductive_declared in hl.
     eapply declared_inductive_from_gen in hl.
-    specialize (H0 kn m o hl) as [? [? [d _]]].
-    now rewrite (EGlobalEnv.declared_inductive_lookup d).
+    specialize (H0 kn mib oib hl) as [? [? [d er]]].
+    exists x, x0.
+    split. now rewrite (EGlobalEnv.declared_inductive_lookup d).
+    depelim er. depelim hl. depelim d.
+    eapply Forall2_nth_error_left in H4 as [x' []]; tea.
+    rewrite H3 in H4. noconf H4. depelim H6. now apply Forall2_length in H4.
   Qed.
 
   Lemma trans_lookup_constructor kn c : isSome (lookup_constructor Σ kn c) -> isSome (EGlobalEnv.lookup_constructor Σ' kn c).
@@ -636,7 +649,11 @@ Proof.
   - eapply trans_lookup_constructor in wfa; tea. now rewrite wfa.
   - move/andP: wfa => [] /andP[] lookup wfc wfbrs.
     apply/andP. split. apply/andP. split; eauto.
-    eapply trans_lookup_inductive; tea.
+    { rewrite /wf_brs.
+      move: lookup. rewrite /ErasureProperties.wf_brs.
+      destruct lookup_inductive as [[mib oib]|] eqn:hli => //.
+      eapply trans_lookup_inductive in hli as [mib' [oib' [-> <-]]]; tea.
+      move/Nat.eqb_eq ->. apply All2_length in X1. now apply Nat.eqb_eq. }
     eapply All_forallb. unfold tCaseBrsProp_k in X0.
     eapply All2_All_mix_left in X1; eauto.
     eapply forallb_All in wfbrs.

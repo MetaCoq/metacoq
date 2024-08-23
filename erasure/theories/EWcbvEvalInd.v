@@ -238,7 +238,7 @@ Section eval_mkApps_rect.
                  then isFixApp f'
                  else isFix f') ||
                 isBox f' ||
-                isConstructApp f' || isPrimApp f'))
+                isConstructApp f' || isPrimApp f' || isLazyApp f'))
           (e0 : eval Σ a a'),
           P a a'
           → P (tApp f15 a)
@@ -246,12 +246,15 @@ Section eval_mkApps_rect.
 
    (forall p p' (ev : eval_primitive (eval Σ) p p'),
       eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
-      P (tPrim p) (tPrim p'))
+      P (tPrim p) (tPrim p')) ->
 
+   (forall t t' v (ev1 : eval Σ t (tLazy t')) (ev2 : eval Σ t' v),
+      P t (tLazy t') -> P t' v ->
+      P (tForce t) v)
     → (∀ t : term, atom Σ t → P t t)
     → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof using Type.
-  intros ?????????????????????? H.
+  intros ??????????????????????? H.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).
   set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & eval Σ t t0 }}).

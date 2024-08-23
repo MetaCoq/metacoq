@@ -38,6 +38,7 @@ Definition atom `{wfl : WcbvFlags} Σ t :=
   | tBox
   | tCoFix _ _
   | tLambda _ _
+  | tLazy _
   | tFix _ _ => true
   | tConstruct ind c [] => negb with_constructor_as_block && isSome (lookup_constructor Σ ind c)
   | _ => false
@@ -261,7 +262,7 @@ Section Wcbv.
   | eval_app_cong f f' a a' :
       eval f f' ->
       ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f'
-        || isPrimApp f')  ->
+        || isPrimApp f' || isLazyApp f')  ->
       eval a a' ->
       eval (tApp f a) (tApp f' a')
 
@@ -275,13 +276,12 @@ Section Wcbv.
     eval_primitive eval p p' ->
     eval (tPrim p) (tPrim p')
 
-  (*
-  | eval_lazy : eval (tLazy t) (tLazy t)
-  | eval_force t v v' : eval t (tLazy v) ->
+  | eval_force t v v' :
+    eval t (tLazy v) ->
     eval v v' ->
-    eval (tForce t) v' *)
+    eval (tForce t) v'
 
-  (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
+  (** Atoms are values (includes abstractions, cofixpoints, constructors and lazy) *)
   | eval_atom t : atom Σ t -> eval t t.
 
   Hint Constructors eval : core.
@@ -620,7 +620,7 @@ Section eval_rect.
                                                  isBox f'
                                                  ||
                                                  isConstructApp f'
-                                                 || isPrimApp f'))
+                                                 || isPrimApp f' || isLazyApp f'))
                                            (e0 : eval Σ a a'),
                                            P a a' e0
                                            → P (tApp f16 a)
@@ -631,14 +631,17 @@ Section eval_rect.
 
     (forall p p' (ev : eval_primitive (eval Σ) p p'),
       eval_primitive_ind _ P _ _ ev ->
-      P (tPrim p) (tPrim p') (eval_prim _ _ _ ev))
+      P (tPrim p) (tPrim p') (eval_prim _ _ _ ev)) ->
+    (forall t t' v (ev1 : eval Σ t (tLazy t')) (ev2 : eval Σ t' v),
+      P _ _ ev1 -> P _ _ ev2 ->
+      P (tForce t) v (eval_force _ t t' v ev1 ev2))
 
-      → (∀ (t : term) (i : atom Σ t),
+    → (∀ (t : term) (i : atom Σ t),
           P t t (eval_atom Σ t i))
       → ∀ (t t0 : term) (e : eval Σ t t0),
           P t t0 e.
   Proof using Type.
-    intros ?????????????????????? H.
+    intros ??????????????????????? H.
     revert t t0 H.
     fix aux 3.
     move aux at top.
@@ -790,6 +793,7 @@ Section Wcbv.
         + destruct with_guarded_fix.
           now cbn in i1. now cbn in i1.
         + constructor.
+        + now destruct with_guarded_fix; cbn in i1.
         + cbn in i. destruct with_guarded_fix; cbn in i; rtoProp; intuition auto.
       * destruct b0 as (ind & c & mdecl & idecl & cdecl & args & [H1 H2 H3 H4]).
         rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
@@ -1063,7 +1067,7 @@ Section Wcbv.
       rewrite !mkApps_app /=.
       eapply eval_app_cong; tea.
       eapply IHargs => //.
-      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps.
+      rewrite isFixApp_mkApps // /= isConstructApp_mkApps // !negb_or isPrimApp_mkApps isLazyApp_mkApps.
       rtoProp; intuition auto.
       apply nisLambda_mkApps => //.
       destruct with_guarded_fix => //; eapply nisFix_mkApps => //.
@@ -1309,15 +1313,15 @@ Section Wcbv.
         cbn in i. rtoProp; intuition auto.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite guarded in i. rtoProp; intuition auto.
-        rewrite isFixApp_mkApps in H3 => //.
+        rewrite isFixApp_mkApps in H4 => //.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite guarded in i. rtoProp; intuition auto.
-        rewrite isFixApp_mkApps in H3 => //.
+        rewrite isFixApp_mkApps in H4 => //.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rewrite unguarded in i. now cbn in i.
       + exfalso. rewrite !negb_or in i. specialize (IHev1 _ ev'1); noconf IHev1.
         cbn in i. rtoProp; intuition auto.
-        now rewrite isConstructApp_mkApps in H1.
+        now rewrite isConstructApp_mkApps in H2.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (i0 = i) as -> by now apply uip.
@@ -1334,6 +1338,7 @@ Section Wcbv.
       induction ev in a, ev0 |- *; depelim ev0; eauto.
       destruct a.
       f_equal; eauto. specialize (e0 _ e). now noconf e0.
+    - depelim ev'; go.
     - depelim ev'; try go.
       2: now assert (i0 = i) as -> by now apply uip.
       exfalso. invs i. rewrite e in H0. destruct args; cbn in H0; invs H0.

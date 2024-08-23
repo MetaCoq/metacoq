@@ -1878,7 +1878,7 @@ Section PCUICErase.
       now eapply EEtaExpandedFix.expanded_isEtaExp. }
     specialize (H0 H1).
     eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
-    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t0 := lambdabox_pres_app) (Σ', v'') prev H0).
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
     rewrite -obseq. exact H2. cbn. red; tauto.
   Qed.
 
@@ -1933,7 +1933,7 @@ Section PCUICErase.
       now eapply EEtaExpandedFix.expanded_isEtaExp. }
     specialize (H0 H1).
     eapply (obseq_lambdabox (Σ', f') (Σ', v'')) in obseq.
-    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t0 := lambdabox_pres_app) (Σ', v'') prev H0).
+    epose proof (ETransformPresAppLam.transform_lam _ _ _ (t := lambdabox_pres_app) (Σ', v'') prev H0).
     rewrite -obseq. exact H2. cbn. red; tauto.
   Qed.
 

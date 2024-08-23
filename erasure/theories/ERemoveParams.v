@@ -780,6 +780,14 @@ Proof.
   all:rewrite !isPrimApp_mkApps //.
 Qed.
 
+Lemma strip_isLazyApp Σ f :
+  isLazyApp f = isLazyApp (strip Σ f).
+Proof.
+  funelim (strip Σ f); cbn -[strip] => //.
+  all:rewrite map_InP_spec.
+  all:rewrite !isLazyApp_mkApps //.
+Qed.
+
 Lemma lookup_inductive_pars_is_prop_and_pars {Σ ind b pars} :
   inductive_isprop_and_pars Σ ind = Some (b, pars) ->
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
@@ -1012,8 +1020,8 @@ Proof.
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
     move: H1. eapply contraNN.
-    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp //.
-    rewrite -strip_isFix //.
+    rewrite -strip_isLambda -strip_isConstructApp -strip_isFixApp -strip_isBox -strip_isPrimApp
+      -strip_isLazyApp // -strip_isFix //.
 
   - rewrite !strip_mkApps // /=.
     rewrite (lookup_constructor_lookup_inductive_pars H).
@@ -1030,6 +1038,8 @@ Proof.
   - depelim X; simp strip; repeat constructor.
     eapply All2_over_undep in a. eapply All2_Set_All2 in ev. eapply All2_All2_Set. solve_all. now destruct b.
     now destruct a0.
+
+  - simp_strip. simp_strip in e0. econstructor; tea.
 
   - destruct t => //.
     all:constructor; eauto. simp strip.
@@ -1085,10 +1095,12 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. destruct nth_error => //.
   - cbn -[strip].
+    rtoProp. move: H2. rewrite /wf_brs; cbn -[strip].
     rewrite lookup_env_strip. cbn in H1. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
-    destruct nth_error => //. rtoProp; intuition auto.
-    simp_strip. all:toAll; solve_all.
+    destruct nth_error => //. rtoProp; intuition auto. len.
+    simp_strip. toAll; solve_all.
+    toAll. solve_all.
   - cbn -[strip] in H0 |- *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g. cbn in H0. now rtoProp.
@@ -1132,7 +1144,7 @@ Proof.
     destruct cstr_as_blocks => //; repeat split; eauto.
     destruct nth_error => /= //.
     destruct nth_error => /= //.
-  - rewrite lookup_env_strip //.
+  - rewrite /wf_brs; cbn; rewrite lookup_env_strip //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.

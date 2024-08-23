@@ -296,7 +296,7 @@ Lemma eval_preserve_mkApps_ind :
      P f11 f' ->
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u) →
      ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f'
-      || isConstructApp f' || isPrimApp f') →
+      || isConstructApp f' || isPrimApp f' || isLazyApp f') →
      eval Σ a a' → P a a' →
      P' (tApp f11 a) (tApp f' a')) →
   (∀ ind i mdecl idecl cdecl args args',
@@ -311,6 +311,11 @@ Lemma eval_preserve_mkApps_ind :
     eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
     P' (tPrim p) (tPrim p')) ->
 
+  (forall t t' v, eval Σ t (tLazy t') -> eval Σ t' v ->
+    P t (tLazy t') ->
+    P t' v ->
+    P' (tForce t) v) ->
+
   (∀ t : term, atom Σ t → Q 0 t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> eval Σ t t0 → P' t t0.
 Proof.
@@ -320,7 +325,7 @@ Proof.
   intros.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X16 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X17 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   revert foo.
@@ -330,8 +335,8 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X16 into qt. rename X13 into Xcappexp.
-  rename X14 into Qprim, X15 into Qatom.
+  rename X17 into qt. rename X13 into Xcappexp.
+  rename X14 into Qprim, X15 into Qforce, X16 into Qatom.
   clear t t0 qt H.
   intros (t & t0 & qt & ev).
   intros IH.
@@ -354,7 +359,7 @@ Proof.
   Ltac myt hyp anda P'Q := eapply hyp; tea; (apply and_assum; [ih|hp' P'Q]).
 
   destruct ev.
-  1-18:eapply qpres in qt as qt'; depelim qt' => //.
+  1-19:eapply qpres in qt as qt'; depelim qt' => //.
   all:try congruence.
   - eapply X; tea; (apply and_assum; [ih|hp' P'Q]).
   - assert (ql : Q 0 (tLambda na b)).
@@ -467,6 +472,15 @@ Proof.
       + depelim p0. destruct p.
         eapply and_assum. unshelve eapply IH; tea. cbn; lia.
         intros; split => //; eapply P'Q; tea.
+  - eapply qpres in qt; depelim qt => //.
+    assert (Q 0 (tLazy v)).
+    { eapply P'Q; tea. eapply (IH _ _ q ev1); tea. now cbn; lia. }
+    eapply qpres in X13. depelim X13 => //.
+    eapply Qforce; tea.
+    + eapply and_assum. eapply (IH _ _ q ev1); eauto; cbn; lia.
+      intros hp'. split => //. eapply P'Q; tea.
+    + eapply and_assum. eapply (IH _ _ q0 ev2); eauto; cbn; lia.
+      intros hp'. split => //. eapply P'Q; tea.
   - eapply Qatom; tea.
 Qed.
 
@@ -502,6 +516,7 @@ Proof.
     split; intros; rtoProp; intuition auto; solve_all.
   - red.
     move=> hascase n ci discr brs. simpl.
+    rewrite /wf_brs.
     destruct lookup_inductive eqn:hl => /= //.
     intros; rtoProp; intuition auto; solve_all.
   - red. simpl. move=> hasproj n p discr wf discr' wf'.

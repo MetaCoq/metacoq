@@ -306,7 +306,7 @@ Lemma eval_preserve_mkApps_ind :
      P f11 f' ->
      (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> isEtaExp Σ t -> P t u) →
      ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' || isConstructApp f' ||
-      isPrimApp f') →
+      isPrimApp f' || isLazyApp f') →
      eval Σ a a' → P a a' →
      isEtaExp Σ (tApp f' a') ->
      P' (tApp f11 a) (tApp f' a')) →
@@ -324,11 +324,10 @@ Lemma eval_preserve_mkApps_ind :
     eval_primitive_ind _ (fun x y _ => P x y) _ _ ev ->
     P' (tPrim p) (tPrim p')) ->
 
-  (* (forall t t', eval Σ t t' -> Q 0 t -> Q 0 t' -> P t t' ->
-    P' (tLazy t) (tLazy t')) ->
-
-  (forall t t', eval Σ t t' -> Q 0 t -> Q 0 t' -> P t t' ->
-    P' (tForce t) (tForce t')) -> *)
+  (forall t t' v, eval Σ t (tLazy t') -> eval Σ t' v ->
+    P t (tLazy t') ->
+    P t' v ->
+    P' (tForce t) v) ->
 
   (∀ t : term, atom Σ t → Q 0 t -> isEtaExp Σ t -> P' t t) ->
   ∀ (t t0 : term), Q 0 t -> isEtaExp Σ t -> eval Σ t t0 → P' t t0.
@@ -337,10 +336,10 @@ Proof.
   assert (qfixs: Qfixs Q) by tc.
   assert (qcofixs: Qcofixs Q) by tc.
   intros.
-  enough (P' t t0 × isEtaExp Σ t0). apply X17.
+  enough (P' t t0 × isEtaExp Σ t0). apply X18.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X16 H0)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X17 H0)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   move: H.
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
@@ -352,8 +351,9 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X16 into qt. rename X13 into Xcappexp.
-  rename X14 into Qprim. rename X15 into Qatom.
+  rename X17 into qt. rename X13 into Xcappexp.
+  rename X14 into Qprim. rename X15 into Qforce.
+  rename X16 into Qatom.
   clear t t0 qt H0.
   intros (t & t0 & qt & ev).
   intros IH.
@@ -379,7 +379,7 @@ Proof.
       eapply H; tea; (apply and_assum; [ih|hp' P'Q])
     end.
   destruct ev.
-  1-18:eapply qpres in qt as qt'; depelim qt' => //.
+  1-19:eapply qpres in qt as qt'; depelim qt' => //.
   - move/isEtaExp_tApp.
     destruct decompose_app as [hd args] eqn:da.
     destruct (construct_viewc hd) eqn:cv.
@@ -697,28 +697,43 @@ Proof.
       split; simp_eta. unshelve eapply Qprim. constructor; eauto. constructor.
       + apply All2_over_undep. cbn in IH.
         ELiftSubst.solve_all.
-        depelim H. destruct p as [[] ?].
+        depelim H0. destruct p as [[] a0].
         clear -ev IH a0 P'Q and_assum. cbn in a0. subst a; cbn in *.
         induction ev; constructor; eauto.
-        ** depelim a0. destruct p as [].
+        ** depelim a0. destruct p as [? []].
            eapply and_assum. unshelve eapply IH; tea. cbn. lia.
            intros []. split => //. split => //. eapply P'Q; tea.
         ** depelim a0. intuition eauto. eapply IHev; intros. 2:eauto.
            unshelve eapply IH; tea. cbn; lia.
-      + ELiftSubst.solve_all. depelim H; destruct p as [[] ?].
+      + ELiftSubst.solve_all. depelim H0. destruct p as [[? []] ?].
         eapply and_assum. unshelve eapply IH; tea. cbn; lia.
         intros []; split => //; split => //. eapply P'Q; tea.
       + ELiftSubst.solve_all. subst a a'; cbn in *.
-        depelim H; constructor; cbn in *; intuition eauto.
+        depelim H0; constructor; cbn in *; intuition eauto.
         unshelve eapply IH. 2:tea. all:eauto. cbn; lia.
         clear -ev IH b P'Q and_assum. cbn in b.
         induction ev; constructor; eauto.
-        ** depelim b. destruct p. unshelve eapply IH. 2:tea. all:eauto. cbn. lia.
+        ** depelim b. destruct p as [? []]. unshelve eapply IH. 2:tea. all:eauto. cbn. lia.
         ** depelim b. intuition eauto. eapply IHev; intros. 2:eauto.
            unshelve eapply IH; tea. cbn; lia.
- - intros ise. split => //. eapply Qatom; tea.
+  - simp_eta => ise.
+    eapply Qpres in qt. depelim qt => //.
+    assert (Q 0 (tLazy v)).
+    { eapply P'Q; tea. eapply (IH _ _ q ev1); tea. now cbn; lia. }
+    eapply qpres in X13. depelim X13 => //.
+    assert (isEtaExp Σ (tLazy v)) as etav.
+    { eapply (IH _ _ q ev1); tea. now cbn; lia. }
+    simp_eta in etav.
+    split.
+    + unshelve eapply Qforce. 2:tea. auto.
+      eapply and_assum. eapply (IH _ _ q ev1); tea. now cbn; lia.
+      intros []. split => //. split => //. eapply P'Q; tea.
+      pose proof (IH _ _ q ev1). forward X13. cbn; lia. specialize (X13 ise) as [].
+      eapply and_assum. eapply (IH _ _ q0 ev2); tea. now cbn; lia.
+      now simp_eta in i1.
+    + eapply (IH _ _ q0 ev2) => //. now cbn; lia.
+  - intros ise. split => //. eapply Qatom; tea.
 Qed.
-
 
 From MetaCoq.Erasure Require Import ELiftSubst.
 Lemma Qpreserves_wellformed (efl : EEnvFlags) Σ :

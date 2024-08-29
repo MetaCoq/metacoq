@@ -100,7 +100,7 @@ Lemma ws_wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {no
   Σ ;;; [] |- t : T ->
   closed_red Σ [] t v ->
   ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
-  {v' & eval Σ t v' * (Σ ;;; [] ⊢ v' ⇝ v)}.
+  {v' & eval Σ t v' * (Σ ;;; [] |- v' ⇝* v)}.
 Proof.
   intros Hwf Hax Hty Hred Hirred.
   destruct (@wcbv_normalization _ no Σ normalization T t) as (v' & Hv'); eauto.
@@ -109,7 +109,8 @@ Proof.
   2:{ econstructor; eauto. eapply subject_is_open_term. eauto. }
   destruct v as [v Hv].
   assert (v = v'') as <- by (eapply irred_equal; eauto).
-  exists v'; split; eauto.
+  exists v'; split; eauto. cbn.
+  apply closed_red_red. assumption.
 Qed.
 
 Lemma ws_wcbv_standardization_fst {cf:checker_flags} {no:normalizing_flags} {Σ} {normalization:NormalizationIn Σ} {i u args mind} {t v : ws_term (fun _ => false)} : wf Σ -> axiom_free Σ ->
@@ -128,16 +129,17 @@ Proof.
     eapply eval_to_value. eauto.
   }
   enough (v' = v) as -> by eauto.
-  eapply irred_equal. eauto.
-  intros. eapply firstorder_value_irred; eauto.
-  Unshelve.
+  eapply irred_equal.
+  - eapply typing_closed_red. 2: eassumption.
+    eapply subject_reduction_eval; eauto.
+  - intros. eapply firstorder_value_irred; eauto.
 Qed.
 
 Lemma wcbv_standardization {cf:checker_flags} {no:normalizing_flags} {Σ} {normalization:NormalizationIn Σ} {T t v : term} : wf Σ -> axiom_free Σ ->
   Σ ;;; [] |- t : T ->
-  Σ ;;; [] |- t ⇝ v ->
-  ¬ { t' & Σ ;;; [] |- v ⇝ t'} ->
-  {v' & eval Σ t v' * (Σ ;;; [] ⊢ v' ⇝ v)}.
+  Σ ;;; [] |- t ⇝* v ->
+  ¬ { t' &  Σ ;;; [] |- v ⇝ t'} ->
+  {v' & eval Σ t v' * (Σ ;;; [] |- v' ⇝* v)}.
 Proof.
   intros Hwf Hax Hty Hred Hirred.
   unshelve eapply @ws_wcbv_standardization with (T := T) (t := (exist t _)) (v := (exist v _)).

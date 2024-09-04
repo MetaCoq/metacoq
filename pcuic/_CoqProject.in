@@ -114,4 +114,6 @@ theories/PCUICWeakeningConfig.v
 
 theories/PCUICCasesHelper.v
 
+theories/PCUICESubst.v
+
 # theories/All.v

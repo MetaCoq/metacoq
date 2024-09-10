@@ -1,6 +1,6 @@
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCumulativitySpec.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.Lists.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.Lists.
 From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) All_Forall.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) config BasicAst Universes Kernames.
 From MetaCoq.Quotation.ToPCUIC.PCUIC Require Import (hints) PCUICAst PCUICEquality utils.PCUICPrimitive.

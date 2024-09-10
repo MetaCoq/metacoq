@@ -1,6 +1,6 @@
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init.
 From MetaCoq.Quotation.ToPCUIC.PCUIC Require Import (hints) PCUICAst.
 
 #[export] Instance quote_mkApps_spec {f args fargs1 args2 fargs} : ground_quotable (@mkApps_spec f args fargs1 args2 fargs) := ltac:(destruct 1; exact _).

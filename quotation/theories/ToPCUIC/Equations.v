@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init.
 From Equations Require Import Init.
 
 Local Set Universe Polymorphism.

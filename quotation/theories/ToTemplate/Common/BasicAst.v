@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Coq.Floats Coq.Numbers.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Floats Stdlib.Numbers.
 From MetaCoq.Quotation.ToTemplate.Utils Require Import (hints) utils.
 From MetaCoq.Quotation.ToTemplate.Common Require Import (hints) Kernames.
 From MetaCoq.Common Require Import BasicAst.

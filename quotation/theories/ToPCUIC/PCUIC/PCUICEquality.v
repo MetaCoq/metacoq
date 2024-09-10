@@ -1,6 +1,6 @@
 From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.Lists Coq.Numbers Coq.Floats.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.Lists Stdlib.Numbers Stdlib.Floats.
 From MetaCoq.Quotation.ToPCUIC.Utils Require Import (hints) utils All_Forall.
 From MetaCoq.Quotation.ToPCUIC.Common Require Import (hints) config Reflect Environment Universes BasicAst Kernames.
 From MetaCoq.Quotation.ToPCUIC.PCUIC Require Import (hints) PCUICAst utils.PCUICPrimitive (*PCUICAstUtils*) (*Induction*).
@@ -20,7 +20,7 @@ Section with_R.
   #[export] Instance quote_cmp_opt_variance {pb v u u'} (subr : RelationClasses.subrelation (cmp_universe Conv) (cmp_universe pb)) : ground_quotable (@cmp_opt_variance cmp_universe pb v u u').
   Proof using cmp_universe qRe quoteRe.
     destruct v; cbv [cmp_opt_variance]; try exact _.
-    eapply Coq.Init.quote_or_dec; try exact _.
+    eapply Stdlib.Init.quote_or_dec; try exact _.
     now apply cmp_opt_variance_var_dec.
   Defined.
 

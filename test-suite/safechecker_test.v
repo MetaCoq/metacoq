@@ -6,7 +6,7 @@ Local Open Scope string_scope.
 
 MetaCoq SafeCheck nat.
 (*
-Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
+Environment is well-formed and Ind(Stdlib.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)
 
 MetaCoq SafeCheck (3 + 1).
@@ -18,13 +18,13 @@ MetaCoq CoqCheck bool_list.
 (* Time MetaCoq SafeCheck @infer_and_print_template_program. *)
 (* Uses template polymorphism:
 Error:
-Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
+Type error: Terms are not <= for cumulativity: Sort([Stdlib.Init.Datatypes.23,Stdlib.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Stdlib.Init.Datatypes.23,Stdlib.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
 *)
 
 (* Unset Universe Minimization ToSet. *)
 
-(* From Coq Require Import Decimal. *)
-From Coq Require Import Decimal.
+(* From Stdlib Require Import Decimal. *)
+From Stdlib Require Import Decimal.
 Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.

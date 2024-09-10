@@ -1,4 +1,4 @@
-From MetaCoq.Quotation.ToTemplate Require Import Coq.Init.
+From MetaCoq.Quotation.ToTemplate Require Import Stdlib.Init.
 From MetaCoq.Utils Require Import ReflectEq.
 
 #[export] Instance quote_reflectProp {A:Prop} {qA : quotation_of A} {quoteA : ground_quotable A} {quote_negA : ground_quotable (~A)} {b} : ground_quotable (@reflectProp A b).

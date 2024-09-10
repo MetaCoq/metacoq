@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require CRelationClasses.
-From Coq Require Import Bool RelationClasses Btauto.
-From Coq.ssr Require Import ssreflect ssrbool.
+From Stdlib Require CRelationClasses.
+From Stdlib Require Import Bool RelationClasses Btauto.
+From Stdlib.ssr Require Import ssreflect ssrbool.
 
 Class checker_flags := {
   (* check_guard : bool ; *)

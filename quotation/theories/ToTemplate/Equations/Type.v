@@ -1,5 +1,5 @@
 From MetaCoq.Quotation.ToTemplate Require Import Init.
-From MetaCoq.Quotation.ToTemplate Require Import (hints) Coq.Init Equations.
+From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Equations.
 Set Warnings "-notation-overridden".
 From Equations.Type Require Import Logic Relation.
 Set Warnings "notation-overridden".

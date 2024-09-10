@@ -64,7 +64,7 @@ Arguments symmetry {A R _} / _ _ _.
 Arguments transitivity {A R _} / {_ _ _} _ _.
 
 Ltac reflexivity :=
-  Coq.Init.Ltac.reflexivity
+  Stdlib.Init.Ltac.reflexivity
   || (intros;
       let R := match goal with |- ?R ?x ?y => constr:(R) end in
       let pre_proof_term_head := constr:(@reflexivity _ R _) in

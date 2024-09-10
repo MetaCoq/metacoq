@@ -1,6 +1,6 @@
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
-From MetaCoq.Quotation.ToPCUIC Require Import (hints) Coq.Init Coq.MSets Coq.FSets bytestring.
+From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init Stdlib.MSets Stdlib.FSets bytestring.
 From MetaCoq.Quotation.ToPCUIC.QuotationOf.Common Require Import Kernames.Instances.
 
 #[local] Hint Unfold ident qualid dirpath kername : quotation.

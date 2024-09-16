@@ -1020,6 +1020,23 @@ Proof.
   rewrite idsn_length. auto.
 Qed.
 
+Lemma idsn_plus m n : idsn (m + n) = idsn m ++ map (inst (↑^m)) (idsn n).
+Proof.
+  apply nth_error_ext => k.
+  case: (nth_error_appP (idsn m) (map (inst (↑^m)) (idsn n)) k).
+  - len.
+    intros t hnth hlt.
+    rewrite nth_error_idsn_Some // in hnth.
+    rewrite nth_error_idsn_Some //. 1: by lia.
+  - len.
+    intros t hnth hgelt.
+    rewrite nth_error_map nth_error_idsn_Some in hnth. 1: by lia.
+    rewrite nth_error_idsn_Some //. 1: by lia.
+    rewrite -hnth /shiftk /=. do 2 f_equal. lia.
+  - len. intros hge.
+    rewrite nth_error_idsn_None //.
+Qed.
+
 
 Lemma subst_cons_0 t σ : (tRel 0).[t ⋅ σ] = t. Proof. reflexivity. Qed.
 Lemma subst_cons_shift t σ : ↑ ∘s (t ⋅ σ) = σ. Proof. reflexivity. Qed.
@@ -1043,6 +1060,16 @@ Qed.
 
 #[global]
 Hint Rewrite subst_subst_consn : sigma.
+
+Lemma idsn_shift_ids n : idsn n ⋅n ↑^n =1 ids.
+Proof.
+  intro k.
+  unfold subst_consn, shiftk, ids.
+  destruct (Nat.ltb_spec k n) as [hn|hn].
+  - rewrite nth_error_idsn_Some //.
+  - rewrite nth_error_idsn_None //= idsn_length.
+    f_equal. lia.
+Qed.
 
 Definition Upn n σ := idsn n ⋅n (σ ∘s ↑^n).
 Notation "⇑^ n σ" := (Upn n σ) (at level 30, n at level 2, format "⇑^ n  σ") : sigma_scope.
@@ -1070,6 +1097,11 @@ Hint Rewrite Upn_1_Up : sigma.
 
 Lemma Upn_eq n σ : Upn n σ = idsn n ⋅n (σ ∘s ↑^n).
 Proof. reflexivity. Qed.
+
+Lemma Upn_ids n : Upn n ids =1 ids.
+Proof.
+  rewrite Upn_eq compose_ids_l idsn_shift_ids //.
+Qed.
 
 Lemma Upn_proper : Proper (Logic.eq ==> `=1` ==> `=1`) Upn.
 Proof. intros ? ? -> f g Hfg. unfold Upn. now rewrite Hfg. Qed.

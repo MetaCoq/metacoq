@@ -160,22 +160,18 @@ Lemma type_tCoFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : w
     (Σ ;;; Γ |- subst0 (cofix_subst mfix) (dbody d) : (dtype d)) *
     (Σ ;;; Γ ⊢ dtype d ≤ T).
 Proof.
-  intros wfΣ H. depind H.
-  - exists decl.
-    specialize (nth_error_all e a1) as (Hty & _). cbn in Hty.
-    destruct decl as [name ty body rarg]; simpl in *.
-    intuition auto.
-    * eapply (substitution (s := cofix_subst mfix) (Δ := [])) in Hty. simpl; eauto with wf.
-      simpl in Hty.
-      rewrite subst_context_nil /= in Hty.
-      eapply refine_type; eauto.
-      rewrite simpl_subst_k //. len.
-      apply subslet_cofix; auto.
-    * eapply nth_error_all in a0; tea. cbn in a0. now eapply isType_ws_cumul_pb_refl.
-  - destruct (IHtyping1 wfΣ) as [d [[[Hnth wfcofix] ?] ?]].
-    exists d. intuition auto.
-    etransitivity; eauto.
-    now eapply PCUICConversion.cumulSpec_cumulAlgo_curry in c; tea; fvs.
+  intros wfΣ H.
+  apply typing_wf_local in H as wfΓ.
+  apply inversion_CoFix in H as (decl & Hguard & Hnth & Htys & Hbods & Hwf & Hty); tas.
+  exists decl. repeat (split; tea).
+  eapply All_nth_error in Hbods as Hbod; tea.
+  apply unlift_TermTyp in Hbod.
+  eapply (substitution (s := cofix_subst mfix) (Δ := [])) in Hbod.
+  2: now apply subslet_cofix; auto.
+  simpl in Hbod.
+  rewrite subst_context_nil /= in Hbod.
+  eapply refine_type; eauto.
+  rewrite simpl_subst_k //. len.
 Qed.
 
 Lemma wf_cofixpoint_all {cf:checker_flags} (Σ : global_env_ext) mfix :
@@ -314,8 +310,9 @@ Section OnConstructor.
     clear Hlen'.
     rewrite [_ ,,, _]app_context_assoc in Hinst.
     now exists inst.
-    apply lift_typing_impl with (1 := oib.(onArity)); intros ?? Hs.
-    now eapply weaken_ctx in Hs.
+    apply lift_typing_weaken_ctx with (Γ := []); tas.
+    eapply isTypeRel_isType.
+    apply oib.(onArity).
   Qed.
 End OnConstructor.
 
@@ -544,7 +541,8 @@ Proof.
           (mkApps (tInd ind i) (map (subst [hd] #|Γ'|) args))). {
         move: wat; rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= => wat.
         eapply isType_tProd in wat as [isty wat].
-        eapply (isType_subst (Δ := [_]) [hd]) in wat.
+        apply isTypeRel_isType in isty.
+        eapply (isType_subst (Δ := [_]) (s := [hd])) in wat.
         now rewrite subst_it_mkProd_or_LetIn Nat.add_0_r subst_mkApps in wat.
         eapply subslet_ass_tip. eapply type_ws_cumul_pb; tea. now symmetry. }
       rewrite subst_mkApps Nat.add_0_r in cumulB. simpl in *.
@@ -574,6 +572,7 @@ Proof.
         constructor. constructor. rewrite subst_empty.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in wat.
         eapply isType_tProd in wat as [Hty _]; auto.
+        apply isTypeRel_isType in Hty.
         eapply type_ws_cumul_pb; eauto. now eapply ws_cumul_pb_eq_le.
       * pcuic.
 Qed.
@@ -1608,11 +1607,11 @@ Proof.
   revert cum.
   induction cpos; simpl; rewrite ?subst_context_nil ?subst_context_snoc; try solve [constructor; auto].
   all:rewrite ?map_length; intros cv; depelim cv; depelim wf.
-  assert (isType Σ
+  eassert (isTypeRel Σ
   (subst_instance u (ind_arities mdecl) ,,,
    subst_instance u (smash_context [] (ind_params mdecl) ,,, Γ))
-  (subst_instance u t)).
-  { rewrite -subst_instance_app_ctx app_context_assoc //. }
+  (subst_instance u t) _).
+  { rewrite -subst_instance_app_ctx app_context_assoc //. eassumption. }
   depelim a.
   all:constructor.
   - eapply IHcpos. auto. now depelim ass. apply cv.
@@ -3141,6 +3140,7 @@ Proof.
   eapply inversion_mkApps in wat as [ty [Hind Hargs]]; auto.
   eapply inversion_Ind in Hind as [mdecl [idecl [wfΓ [decli [cu cum]]]]]; auto.
   eapply typing_spine_strengthen in Hargs; eauto. clear cum.
+  2: now eapply isTypeRel_isType, (declared_inductive_valid_type decli).
   exists (mdecl, idecl).
   assert (lookup_inductive Σ ind = Some (mdecl, idecl)).
   { destruct decli as [decli declmi].
@@ -3159,8 +3159,6 @@ Proof.
   eapply arity_typing_spine in Hargs; auto.
   destruct Hargs as [Hl Hleq ?]. rewrite Hl.
   len. now rewrite Nat.leb_refl.
-  eauto with pcuic.
-  now eapply (declared_inductive_valid_type decli).
 Qed.
 
 Lemma ctx_inst_app_weak `{checker_flags} Σ (wfΣ : wf Σ.1) ind mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl)Γ (wfΓ : wf_local Σ Γ) params args u v:
@@ -3247,13 +3245,6 @@ Proof.
   now eapply (ctx_inst_app cparams).
 Qed.
 
-Lemma wf_local_vass {cf:checker_flags} Σ {Γ na A} s :
-  Σ ;;; Γ |- A : tSort s -> wf_local Σ (Γ ,, vass na A).
-Proof.
-  intro X; apply typing_wf_local in X as Y.
-  constructor; tea. repeat (eexists; tea).
-Qed.
-
 Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} {Σ Γ Δ T} :
   wf Σ.1 ->
   isType Σ (Γ ,,, Δ) T ->
@@ -3294,6 +3285,7 @@ Proof.
   induction wfΔ using All_local_rel_ind1 in nas, ha |- *; depelim ha; cbn. constructor.
   specialize (IHwfΔ _ ha).
   apply All_local_rel_snoc; tas.
+  unfold set_binder_name at 2. cbn. rewrite e.
   apply lift_typing_impl with (1 := X) => // ?? Hs.
   eapply context_conversion; tea.
   1: now eapply All_local_env_app.
@@ -4523,4 +4515,84 @@ Proof.
   + apply: PCUICCumulativity.red_conv.
     rewrite -eqsubst. apply: red_betas_typed; last eassumption.
     rewrite (ctx_inst_length instl) context_assumptions_rev //.
+Qed.
+
+Lemma ind_arity_relevant {cf : checker_flags} (Σ : global_env_ext) mdecl idecl :
+  wf Σ.1 ->
+  let ind_type := it_mkProd_or_LetIn (ind_params mdecl) (it_mkProd_or_LetIn (ind_indices idecl) (tSort (ind_sort idecl))) in
+  isType Σ [] ind_type ->
+  isTypeRel Σ [] ind_type rel_of_Type.
+Proof.
+  intros wfΣ ind_type (_ & s & Hs & _ & _).
+  repeat (eexists; tea). cbn in Hs |- *.
+  rewrite /ind_type in Hs.
+  rewrite -it_mkProd_or_LetIn_app in Hs.
+  eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs.
+  apply inversion_Sort in Hs as (_ & _ & le); tea.
+  apply ws_cumul_pb_Sort_inv in le.
+  eapply leq_relevance; tea.
+  eapply relevance_super.
+Qed.
+
+
+Lemma isTypeRel_cstr_type {cf : checker_flags} Σ mdecl idecl cdecl n :
+  wf Σ.1 ->
+  nth_error (ind_bodies mdecl) n = Some idecl ->
+  (cstr_type cdecl =
+        it_mkProd_or_LetIn
+          (mdecl.(ind_params) ,,, cdecl.(cstr_args))
+          (mkApps (tRel (#|mdecl.(ind_params) ,,, cdecl.(cstr_args)| + (#|ind_bodies mdecl| - S n)))
+            (to_extended_list_k mdecl.(ind_params) #|cdecl.(cstr_args)| ++
+            cdecl.(cstr_indices)))) ->
+    idecl.(ind_type)
+      = it_mkProd_or_LetIn mdecl.(ind_params)
+          (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort))) ->
+    isSortRel idecl.(ind_sort) idecl.(ind_relevance) ->
+    ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
+      cdecl.(cstr_indices)
+      (List.rev (lift_context #|cdecl.(cstr_args)| 0 idecl.(ind_indices))) ->
+  isType Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) ->
+  isTypeRel Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) idecl.(ind_relevance).
+Proof.
+  intros wfΣ H -> e1 <- c (_ & s & Hs & _ & _).
+  repeat (eexists; tea). cbn in Hs |- *.
+  eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs.
+  eapply PCUICValidity.inversion_mkApps in Hs as [tyapp [Happ Hsp]].
+  apply inversion_Rel in Happ as (decl & wfΓ & hnth & cum); tas.
+  eapply PCUICWeakeningTyp.All_local_env_nth_error_weaken in wfΓ as Hty; tea.
+  rewrite nth_error_app_ge in hnth. lia.
+  replace (#|ind_params mdecl,,, cstr_args cdecl| + (#|ind_bodies mdecl| - S n) - #|ind_params mdecl,,, cstr_args cdecl|) with (#|ind_bodies mdecl| - S n) in hnth by lia.
+  pose proof (nth_error_Some_length H) as hlen. rewrite nth_error_rev // in H.
+  eapply nth_error_arities_context in H. rewrite hnth in H.
+  eapply PCUICSpine.typing_spine_strengthen in Hsp; tea. noconf H. clear cum hnth.
+  cbn in Hsp.
+  rewrite e1 !PCUICLiftSubst.lift_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app /= in Hsp.
+  eapply PCUICSpine.arity_typing_spine in Hsp as [_ leqs _]. now eapply leq_relevance; tea.
+  noconf H. cbn in Hty |- *. now apply isTypeRel_isType in Hty.
+Qed.
+
+Lemma isType_of_constructor {cf : checker_flags} Σ mdecl idecl cdecl cstr u Γ :
+  wf Σ.1 -> wf_local Σ Γ -> declared_constructor Σ.1 cstr mdecl idecl cdecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  isTypeRel Σ Γ (type_of_constructor mdecl cdecl cstr u) idecl.(ind_relevance).
+Proof.
+  intros wfΣ wfΓ isdecl h_cuu.
+  pose proof (PCUICWeakeningEnvTyp.on_declared_constructor isdecl) as ((? & []) & ? & _ & []).
+  unshelve eapply declared_constructor_to_gen in isdecl as isdeclgen; tea.
+  eapply @lift_sorting_fu_it_impl with (f := fun x => _ (_ x)) (fu := fun x => x@[u]) (tu := on_ctype) => //=.
+  1: apply relevance_subst.
+  intro Hty.
+  replace Γ with ([] ,,, Γ) by apply app_context_nil_l.
+  replace (subst0 _ _) with (lift0 #|Γ| (type_of_constructor mdecl cdecl cstr u)).
+  2: { rewrite PCUICLiftSubst.lift_closed //. eapply (PCUICClosedTyp.declared_constructor_closed_type isdecl). }
+  change (tSort _@[u]) with (lift0 #|Γ| (tSort on_ctype.2.π1)@[u]).
+  eapply @weakening with (Γ := []) => //.
+  rewrite app_context_nil_l => //.
+  destruct Σ as (Σ & φ).
+  eapply typing_subst_instance' in Hty => //=; tea.
+  change ((tSort _)@[u]) with (subst0 (inds (inductive_mind cstr.1) u (ind_bodies mdecl)) (tSort on_ctype.2.π1)@[u]).
+  eapply @PCUICSubstitution.substitution with (Δ := []); tea.
+  2: rewrite app_context_nil_l; apply Hty.
+  2: { epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ _); eauto. now split. Unshelve. 2: apply isdeclgen.p1.p1. }
+  eapply subslet_inds; tea. exact isdecl.
 Qed.

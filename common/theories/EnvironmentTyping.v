@@ -325,20 +325,20 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Notation on_local_decl P Γ d :=
-    (P Γ (j_decl d)).
+    (P Γ (j_decl d)) (only parsing).
 
   Definition on_def_type (P : context -> judgment -> Type) Γ d :=
-    P Γ (Typ d.(dtype)).
+    P Γ (TypRel d.(dtype) d.(dname).(binder_relevance)).
 
   Definition on_def_body (P : context -> judgment -> Type) types Γ d :=
-    P (Γ ,,, types) (TermTyp d.(dbody) (lift0 #|types| d.(dtype))).
+    P (Γ ,,, types) (TermTypRel d.(dbody) (lift0 #|types| d.(dtype)) d.(dname).(binder_relevance)).
 
   (* Various kinds of lifts *)
 
   Definition lift_wf_term wf_term (j : judgment) := option_default wf_term (j_term j) (unit : Type) × wf_term (j_typ j).
   Notation lift_wf_term1 wf_term := (fun (Γ : context) => lift_wf_term (wf_term Γ)).
 
-  Definition lift_wfu_term wf_term wf_univ (j : judgment) := option_default wf_term (j_term j) unit × wf_term (j_typ j) × option_default wf_univ (j_univ j) unit.
+  Definition lift_wfu_term wf_term wf_univ (j : judgment) := option_default wf_term (j_term j) (unit : Type) × wf_term (j_typ j) × option_default wf_univ (j_univ j) (unit : Type).
 
   Definition lift_wfb_term wfb_term (j : judgment) := option_default wfb_term (j_term j) true && wfb_term (j_typ j).
   Notation lift_wfb_term1 wfb_term := (fun (Γ : context) => lift_wfb_term (wfb_term Γ)).
@@ -347,7 +347,9 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Definition lift_sorting checking sorting : judgment -> Type :=
     fun j => option_default (fun tm => checking tm (j_typ j)) (j_term j) (unit : Type) ×
-                                ∑ s, sorting (j_typ j) s × option_default (fun u => (u = s : Type)) (j_univ j) unit.
+                                ∑ s, sorting (j_typ j) s ×
+                                  option_default (fun u => u = s) (j_univ j) True /\
+                                  isSortRelOpt s (j_rel j).
 
   Notation lift_sorting1 checking sorting := (fun Γ => lift_sorting (checking Γ) (sorting Γ)).
   Notation lift_sorting2 checking sorting := (fun Σ Γ => lift_sorting (checking Σ Γ) (sorting Σ Γ)).
@@ -365,22 +367,22 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
 
   Definition lift_typing_conj (P Q : context -> _) := lift_typing1 (Prop_local_conj P Q).
 
-  Lemma lift_wf_term_it_impl {P Q} {tm tm' : option term} {t t' : term} {u u'} :
-    forall tu: lift_wf_term P (Judge tm t u),
+  Lemma lift_wf_term_it_impl {P Q} {tm tm' : option term} {t t' : term} {u u' r r'} :
+    forall tu: lift_wf_term P (Judge tm t u r),
     match tm', tm with None, _ => unit | Some tm', Some tm => P tm -> Q tm' | _, _ => False end ->
     (P t -> Q t') ->
-    lift_wf_term Q (Judge tm' t' u').
+    lift_wf_term Q (Judge tm' t' u' r').
   Proof.
     intros (Htm & Hs) HPQc HPQs.
     split; auto.
     destruct tm, tm' => //=. now apply HPQc.
   Qed.
 
-  Lemma lift_wf_term_f_impl P Q tm t u u' :
+  Lemma lift_wf_term_f_impl P Q tm t u u' r r' :
     forall f,
-    lift_wf_term P (Judge tm t u) ->
+    lift_wf_term P (Judge tm t u r) ->
     (forall t, P t -> Q (f t)) ->
-    lift_wf_term Q (Judge (option_map f tm) (f t) u').
+    lift_wf_term Q (Judge (option_map f tm) (f t) u' r').
   Proof.
     unfold lift_wf_term; cbn.
     intros f (Hb & Ht) HPQ.
@@ -399,12 +401,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     destruct j_term; cbn in *; auto.
   Defined.
 
-  Lemma lift_wfbu_term_f_impl (P Q : term -> bool) tm t u :
+  Lemma lift_wfbu_term_f_impl (P Q : term -> bool) tm t u r :
     forall f fu,
-    lift_wfbu_term P (P ∘ tSort) (Judge tm t u) ->
+    lift_wfbu_term P (P ∘ tSort) (Judge tm t u r) ->
     (forall u, f (tSort u) = tSort (fu u)) ->
     (forall t, P t -> Q (f t)) ->
-    lift_wfbu_term Q (Q ∘ tSort) (Judge (option_map f tm) (f t) (option_map fu u)).
+    lift_wfbu_term Q (Q ∘ tSort) (Judge (option_map f tm) (f t) (option_map fu u) r).
   Proof.
     unfold lift_wfbu_term; cbn.
     intros. rtoProp.
@@ -413,58 +415,85 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     destruct u; rewrite //= -H0 //. auto.
   Defined.
 
-  Lemma unlift_TermTyp {Pc Ps tm ty u} :
-    lift_sorting Pc Ps (Judge (Some tm) ty u) ->
+  Lemma lift_wf_wfb_term (p : _ -> bool) j :
+    reflectT (lift_wf_term p j) (lift_wfb_term p j).
+  Proof.
+    rewrite /lift_wf_term /lift_wfb_term.
+    set (HP := @reflectT_pred _ p).
+    destruct (HP (j_typ j)) => //;
+    destruct (reflect_option_default HP (j_term j)) => /= //; now constructor.
+  Qed.
+
+  Lemma lift_wfu_wfbu_term (p : _ -> bool) (pu : _ -> bool) j :
+    reflectT (lift_wfu_term p pu j) (lift_wfbu_term p pu j).
+  Proof.
+    set (HP := @reflectT_pred _ p); set (HPu := @reflectT_pred _ pu).
+    rewrite /lift_wfu_term /lift_wfbu_term.
+    destruct (HP (j_typ j)) => //;
+    destruct (reflect_option_default HP (j_term j)) => /= //;
+    destruct (reflect_option_default HPu (j_univ j)) => /= //; now constructor.
+  Qed.
+
+  Lemma unlift_TermTyp {Pc Ps tm ty u r} :
+    lift_sorting Pc Ps (Judge (Some tm) ty u r) ->
     Pc tm ty.
   Proof.
     apply fst.
   Defined.
 
-  Definition unlift_TypUniv {Pc Ps tm ty u} :
-    lift_sorting Pc Ps (Judge tm ty (Some u)) ->
+  Definition unlift_TypUniv {Pc Ps tm ty u r} :
+    lift_sorting Pc Ps (Judge tm ty (Some u) r) ->
     Ps ty u
-    := fun H => eq_rect_r _ H.2.π2.1 H.2.π2.2.
+    := fun H => eq_rect_r _ H.2.π2.1 H.2.π2.2.p1.
 
-  Definition lift_sorting_extract {c s tm ty u} (w : lift_sorting c s (Judge tm ty u)) :
-    lift_sorting c s (Judge tm ty (Some w.2.π1)) :=
-    (w.1, existT _ w.2.π1 (w.2.π2.1, eq_refl)).
+  Definition lift_sorting_extract {c s tm ty r} (w : lift_sorting c s (Judge tm ty None r)) :
+    lift_sorting c s (Judge tm ty (Some w.2.π1) r)
+    := (w.1, (w.2.π1; (w.2.π2.1, (conj eq_refl w.2.π2.2.p2)))).
 
-  Lemma lift_sorting_forget_univ {Pc Ps tm ty u} :
-    lift_sorting Pc Ps (Judge tm ty u) ->
-    lift_sorting Pc Ps (TermoptTyp tm ty).
+  Lemma lift_sorting_forget_univ {Pc Ps tm ty u r} :
+    lift_sorting Pc Ps (Judge tm ty u r) ->
+    lift_sorting Pc Ps (Judge tm ty None r).
   Proof.
-    intros (? & ? & ? & ?).
+    intros (? & ? & ? & ? & ?).
     repeat (eexists; tea).
   Qed.
 
-  Lemma lift_sorting_forget_body {Pc Ps tm ty u} :
-    lift_sorting Pc Ps (Judge tm ty u) ->
-    lift_sorting Pc Ps (Judge None ty u).
+  Lemma lift_sorting_forget_body {Pc Ps tm ty u r} :
+    lift_sorting Pc Ps (Judge tm ty u r) ->
+    lift_sorting Pc Ps (Judge None ty u r).
   Proof.
-    intros (? & ? & ? & ?).
+    intros (? & ? & ? & ? & ?).
     repeat (eexists; tea).
   Qed.
 
-  Lemma lift_sorting_ex_it_impl_gen {Pc Qc Ps Qs} {tm tm' : option term} {t t' : term} :
-    forall tu: lift_sorting Pc Ps (TermoptTyp tm t),
+  Lemma lift_sorting_forget_rel {Pc Ps tm ty u r} :
+    lift_sorting Pc Ps (Judge tm ty u r) ->
+    lift_sorting Pc Ps (Judge tm ty u None).
+  Proof.
+    intros (? & ? & ? & ? & ?).
+    repeat (eexists; tea).
+  Qed.
+
+  Lemma lift_sorting_ex_it_impl_gen {Pc Qc Ps Qs} {tm tm' : option term} {t t' : term} {r r' : option relevance} :
+    forall tu: lift_sorting Pc Ps (Judge tm t None r),
     let s := tu.2.π1 in
     match tm', tm with None, _ => unit | Some tm', Some tm => Pc tm t -> Qc tm' t' | _, _ => False end ->
-    (Ps t s -> ∑ s', Qs t' s') ->
-    lift_sorting Qc Qs (TermoptTyp tm' t').
+    (Ps t s -> isSortRelOpt s r -> ∑ s', Qs t' s' × isSortRelOpt s' r') ->
+    lift_sorting Qc Qs (Judge tm' t' None r').
   Proof.
-    intros (? & ? & Hs & e) s HPQc HPQs.
+    intros (? & ? & Hs & e & er) s HPQc HPQs.
     split.
     - destruct tm, tm' => //=. now apply HPQc.
-    - specialize (HPQs Hs) as (s' & H).
-      eexists. split; eassumption.
+    - specialize (HPQs Hs er) as (s' & H & He).
+      eexists. repeat split; eassumption.
   Qed.
 
-  Lemma lift_sorting_it_impl_gen {Pc Qc Ps Qs} {tm tm' : option term} {t t' : term} {u} :
-    forall tu: lift_sorting Pc Ps (Judge tm t u),
+  Lemma lift_sorting_it_impl_gen {Pc Qc Ps Qs} {tm tm' : option term} {t t' : term} {u r} :
+    forall tu: lift_sorting Pc Ps (Judge tm t u r),
     let s := tu.2.π1 in
     match tm', tm with None, _ => unit | Some tm', Some tm => Pc tm t -> Qc tm' t' | _, _ => False end ->
     (Ps t s -> Qs t' s) ->
-    lift_sorting Qc Qs (Judge tm' t' u).
+    lift_sorting Qc Qs (Judge tm' t' u r).
   Proof.
     intros (? & ? & Hs & e) s HPQc HPQs.
     split.
@@ -473,19 +502,23 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
       destruct u => //.
   Qed.
 
-  Lemma lift_sorting_fu_it_impl {Pc Qc Ps Qs} {tm : option term} {t : term} {u} :
-    forall f fu, forall tu: lift_sorting Pc Ps (Judge tm t u),
+  Lemma lift_sorting_fu_it_impl {Pc Qc Ps Qs} {tm : option term} {t : term} {u r} :
+    forall f fu, forall tu: lift_sorting Pc Ps (Judge tm t u r),
     let s := tu.2.π1 in
+    option_default (fun rel => isSortRel s rel -> isSortRel (fu s) rel) r True ->
     option_default (fun tm => Pc tm t -> Qc (f tm) (f t)) tm unit ->
     (Ps t s -> Qs (f t) (fu s)) ->
-    lift_sorting Qc Qs (Judge (option_map f tm) (f t) (option_map fu u)).
+    lift_sorting Qc Qs (Judge (option_map f tm) (f t) (option_map fu u) r).
   Proof.
-    intros ?? (? & ? & Hs & e) s HPQc HPQs.
+    intros ?? (? & ? & Hs & e & er) s Hr HPQc HPQs.
     split.
     - destruct tm => //=. now apply HPQc.
     - eexists. split; [now apply HPQs|].
-      destruct u => //.
-      cbn. f_equal => //.
+      split.
+      + destruct u => //.
+        cbn. f_equal => //.
+      + destruct r => //.
+        now apply Hr.
   Qed.
 
   Lemma lift_sorting_f_it_impl {Pc Qc Ps Qs} {j : judgment} :
@@ -496,9 +529,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     lift_sorting Qc Qs (judgment_map f j).
   Proof.
     intro f.
-    replace (judgment_map f j) with (Judge (option_map f (j_term j)) (f (j_typ j)) (option_map id (j_univ j))).
+    replace (judgment_map f j) with (Judge (option_map f (j_term j)) (f (j_typ j)) (option_map id (j_univ j)) (j_rel j)).
     2: unfold judgment_map; destruct j_univ => //.
-    apply lift_sorting_fu_it_impl with (fu := id).
+    intro tu.
+    apply lift_sorting_fu_it_impl with (fu := id) (tu := tu).
+    destruct tu as (? & s & ?); cbn; clear.
+    destruct j_rel => //.
   Qed.
 
   Lemma lift_sorting_it_impl {Pc Qc Ps Qs} {j} :
@@ -513,26 +549,29 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     destruct j, j_term => //.
   Qed.
 
-  Lemma lift_sorting_fu_impl {Pc Qc Ps Qs tm t u} :
+  Lemma lift_sorting_fu_impl {Pc Qc Ps Qs tm t u r} :
     forall f fu,
-    lift_sorting Pc Ps (Judge tm t u) ->
+    lift_sorting Pc Ps (Judge tm t u r) ->
+    (forall r s, isSortRelOpt s r -> isSortRelOpt (fu s) r) ->
     (forall t T, Pc t T -> Qc (f t) (f T)) ->
     (forall t u, Ps t u -> Qs (f t) (fu u)) ->
-    lift_sorting Qc Qs (Judge (option_map f tm) (f t) (option_map fu u)).
+    lift_sorting Qc Qs (Judge (option_map f tm) (f t) (option_map fu u) r).
   Proof.
-    intros ?? tu ??.
+    intros ?? tu Hr ??.
     apply lift_sorting_fu_it_impl with (tu := tu); auto.
+    1: destruct r => //=; apply Hr with (r := Some _).
     destruct tm => //=. auto.
   Qed.
 
-  Lemma lift_typing_fu_impl {P Q tm t u} :
+  Lemma lift_typing_fu_impl {P Q tm t u r} :
     forall f fu,
-    lift_typing0 P (Judge tm t u) ->
+    lift_typing0 P (Judge tm t u r) ->
     (forall t T, P t T -> Q (f t) (f T)) ->
     (forall u, f (tSort u) = tSort (fu u)) ->
-    lift_typing0 Q (Judge (option_map f tm) (f t) (option_map fu u)).
+    (forall r s, isSortRelOpt s r -> isSortRelOpt (fu s) r) ->
+    lift_typing0 Q (Judge (option_map f tm) (f t) (option_map fu u) r).
   Proof.
-    intros ?? HT HPQ Hf.
+    intros ?? HT HPQ Hf Hr.
     apply lift_sorting_fu_impl with (1 := HT); tas.
     intros; rewrite -Hf; now apply HPQ.
   Qed.
@@ -570,10 +609,11 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     apply lift_typing_f_impl with (1 := HT) => //.
   Qed.
 
-  Lemma lift_typing_mapu {P} f fu {tm ty u} :
-    lift_typing0 (fun t T => P (f t) (f T)) (Judge tm ty u) ->
+  Lemma lift_typing_mapu {P} f fu {tm ty u r} :
+    lift_typing0 (fun t T => P (f t) (f T)) (Judge tm ty u r) ->
     (forall u, f (tSort u) = tSort (fu u)) ->
-    lift_typing0 P (Judge (option_map f tm) (f ty) (option_map fu u)).
+    (forall r s, isSortRelOpt s r -> isSortRelOpt (fu s) r) ->
+    lift_typing0 P (Judge (option_map f tm) (f ty) (option_map fu u) r).
   Proof.
     intros HT.
     eapply lift_typing_fu_impl with (1 := HT) => //.
@@ -598,6 +638,30 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     intros HT HPQ.
     apply lift_sorting_impl with (1 := HT); tas.
     intros; now apply HPQ.
+  Qed.
+
+  Lemma lift_typing_subject {P Q j} :
+    lift_typing0 P j ->
+    (forall t T, P t T -> Q t) ->
+    lift_wf_term Q j.
+  Proof.
+    intros (? & ? & ? & _) HPQ.
+    split; eauto.
+    destruct j_term => //=.
+    eauto.
+  Qed.
+
+  Lemma lift_typing_subjtyp {P Q Q' j} :
+    lift_typing0 P j ->
+    (forall t T, P t T -> Q t × Q T) ->
+    (forall u, Q (tSort u) -> Q' u) ->
+    lift_wfu_term Q Q' j.
+  Proof.
+    intros (Htm & s & Hty & e & er) HPQ HQQ'.
+    repeat split.
+    - destruct j_term => //=. eapply fst, HPQ, Htm.
+    - eapply fst, HPQ, Hty.
+    - destruct j_univ => //=. rewrite e. eapply HQQ', snd, HPQ, Hty.
   Qed.
 
   Section TypeLocal.
@@ -625,7 +689,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
   Definition localenv_cons {typing Γ na bo t} :
-    All_local_env typing Γ -> typing Γ (TermoptTyp bo t) -> All_local_env typing (Γ ,, mkdecl na bo t)
+    All_local_env typing Γ -> typing Γ (TermoptTypRel bo t na.(binder_relevance)) -> All_local_env typing (Γ ,, mkdecl na bo t)
     := match bo with None => localenv_cons_abs | Some b => localenv_cons_def end.
 
   Definition All_local_env_snoc {P Γ decl} : All_local_env P Γ -> on_local_decl P Γ decl -> All_local_env P (Γ ,, decl) :=
@@ -646,6 +710,16 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E).
     move/All_local_env_tip => [] ??.
     now apply X0.
   Defined.
+
+  Lemma All_local_env_All_fold P Γ :
+    All_local_env P Γ <~>
+    All_fold (fun Γ decl => P Γ (j_decl decl)) Γ.
+  Proof using Type.
+    split.
+    - induction 1 using All_local_env_ind1; constructor; auto.
+    - induction 1; [constructor|].
+      destruct d as [na [b|] ty]; cbn in p; constructor; auto.
+  Qed.
 
   Lemma All_local_env_map (P : context -> judgment -> Type) f Γ :
     All_local_env (fun Γ j => P (map (map_decl f) Γ) (judgment_map f j)) Γ ->
@@ -1182,7 +1256,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       match Δ with
       | [] => wf_sort Σ u
       | {| decl_name := na; decl_body := None; decl_type := t |} :: Δ =>
-          type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TypUniv t u (* na.(binder_relevance) *))
+          type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (TypUnivRel t u na.(binder_relevance))
       | {| decl_body := Some _; |} as d :: Δ =>
           type_local_ctx Σ Γ Δ u × P Σ (Γ ,,, Δ) (j_decl d)
       end.
@@ -1191,7 +1265,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
       match Δ, us with
       | [], [] => unit
       | {| decl_name := na; decl_body := None;   decl_type := t |} :: Δ, u :: us =>
-        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (TypUniv t u (* na.(binder_relevance) *))
+        sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (TypUnivRel t u na.(binder_relevance))
       | {| decl_body := Some _ |} as d :: Δ, us =>
         sorts_local_ctx Σ Γ Δ us × P Σ (Γ ,,, Δ) (j_decl d)
       | _, _ => False
@@ -1200,6 +1274,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body).
 
     Definition on_type Σ Γ T := P Σ Γ (Typ T).
+    Definition on_type_rel Σ Γ T r := P Σ Γ (TypRel T r).
 
     Open Scope type_scope.
 
@@ -1441,7 +1516,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)
 
-      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl);
+      on_ctype : on_type_rel Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl) idecl.(ind_relevance);
       on_cargs :
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
                       cdecl.(cstr_args) cunivs;
@@ -1578,7 +1653,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
                                 (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort)));
 
         (** It must be well-typed in the empty context. *)
-        onArity : on_type Σ [] idecl.(ind_type);
+        onArity : on_type_rel Σ [] idecl.(ind_type) rel_of_Type;
 
         (** The sorts of the arguments contexts of each constructor *)
         ind_cunivs : list constructor_univs;
@@ -1602,6 +1677,8 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           idecl.(ind_indices) ind_cunivs idecl.(ind_sort);
+
+        ind_relevance_compat : isSortRel idecl.(ind_sort) idecl.(ind_relevance);
 
         onIndices :
           (* The inductive type respect the variance annotation on polymorphic universes, if any. *)
@@ -1643,7 +1720,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     (** *** Typing of constant declarations *)
 
     Definition on_constant_decl Σ d :=
-      P Σ [] (TermoptTyp d.(cst_body) d.(cst_type)).
+      P Σ [] (TermoptTypRel d.(cst_body) d.(cst_type) d.(cst_relevance)).
 
     Definition on_global_decl Σ kn decl :=
       match decl with
@@ -1749,6 +1826,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
   Arguments onConstructors {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments onProjections {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments ind_sorts {_ Pcmp P Σ mind mdecl i idecl}.
+  Arguments ind_relevance_compat {_ Pcmp P Σ mind mdecl i idecl}.
   Arguments onIndices {_ Pcmp P Σ mind mdecl i idecl}.
 
   Arguments onInductives {_ Pcmp P Σ mind mdecl}.
@@ -2054,6 +2132,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
           do 2 destruct indices_matter => //=.
           2: now rewrite ?andb_false_r //= in Xcf.
           intro. eapply type_local_ctx_impl; eauto.
+      + apply (ind_relevance_compat X).
       + generalize (X.(onIndices)). destruct ind_variance => //.
         apply ind_respects_variance_impl.
         destruct variance_universes as [[[]]|] => //=.
@@ -2180,8 +2259,17 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T) (TU : TermUtils T E)
 
   Import T E L TU ET CT GM CS Ty.
 
+  Definition isTypeRel `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) (rel : relevance) :=
+    on_type_rel (lift_typing typing) Σ Γ t rel.
+
   Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
     on_type (lift_typing typing) Σ Γ t.
+
+  Lemma isTypeRel_isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) (r : relevance) : isTypeRel Σ Γ t r -> isType Σ Γ t.
+  Proof. apply lift_sorting_forget_rel. Defined.
+  #[export] Hint Resolve isTypeRel_isType : pcuic.
+
+  Coercion isTypeRel_isType : isTypeRel >-> isType.
 
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)
 

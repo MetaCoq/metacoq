@@ -218,10 +218,10 @@ Proof using Type.
          rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn subst_mkApps //. constructor 1. reflexivity.
          eapply isType_tLetIn_red in i0. 2:pcuic.
          rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn subst_mkApps in i0.
-         now eapply isType_open.
+         now eapply PCUICClosedTyp.isType_is_open_term.
       -- eapply cumul_Prod_inv in w as []. econstructor.
          ++ eapply type_ws_cumul_pb. 3: eapply PCUICContextConversion.ws_cumul_pb_eq_le; symmetry. all:eauto.
-            eapply isType_tProd in i0. eapply i0.
+            eapply isType_tProd in i0. eapply isTypeRel_isType, i0.
          ++ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. autorewrite with subst.
             cbn. eapply X. len.
             eapply typing_spine_strengthen. eauto.
@@ -233,10 +233,10 @@ Proof using Type.
             replace (it_mkProd_or_LetIn (subst_context [hd] 0 Γ0)
             (mkApps (tInd i u) (map (subst [hd] (#|Γ0| + 0)) pars))) with ((PCUICAst.subst10 hd (it_mkProd_or_LetIn Γ0 (mkApps (tInd i u) pars)))).
             2:{ rewrite /subst1 PCUICLiftSubst.subst_it_mkProd_or_LetIn. now autorewrite with subst. }
-            eapply isType_subst. eapply PCUICSubstitution.subslet_ass_tip. eauto.
+            eapply PCUICSubstitution.isType_subst. eapply PCUICSubstitution.subslet_ass_tip. eauto.
             eapply isType_tProd in i0 as [_ tprod].
             eapply isType_context_conversion; tea. constructor. eapply ws_cumul_ctx_pb_refl. now eapply typing_wf_local, PCUICClosedTyp.wf_local_closed_context in t.
-            constructor; tea. constructor. pcuic. eapply validity in t. now eauto.
+            constructor; tea. constructor. pcuic. now eapply isType_tProd in i1 as [].
 Qed.
 
 Lemma leb_spect : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).

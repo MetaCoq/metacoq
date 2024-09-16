@@ -211,7 +211,7 @@ Section WfEnv.
   Qed.
 
   Lemma isType_tProd {Γ} {na A B} :
-    isType Σ Γ (tProd na A B) <~> (isType Σ Γ A × isType Σ (Γ,, vass na A) B).
+    isType Σ Γ (tProd na A B) <~> (isTypeRel Σ Γ A na.(binder_relevance) × isType Σ (Γ,, vass na A) B).
   Proof.
     split; intro HH.
     - destruct HH as (_ & s & H & _).
@@ -224,27 +224,6 @@ Section WfEnv.
       eapply has_sort_isType.
       econstructor; eassumption.
   Defined.
-
-  Lemma isType_subst {Γ Δ A} s :
-    subslet Σ Γ s Δ ->
-    isType Σ (Γ ,,, Δ) A ->
-    isType Σ Γ (subst0 s A).
-  Proof using wfΣ.
-    intros sub HT.
-    apply lift_typing_f_impl with (1 := HT) => // ?? Hs.
-    have wf := typing_wf_local Hs.
-    now eapply (substitution (Δ := [])).
-  Qed.
-
-  Lemma isType_subst_gen {Γ Δ Δ'} {A} s :
-    subslet Σ Γ s Δ ->
-    isType Σ (Γ ,,, Δ ,,, Δ') A ->
-    isType Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
-  Proof using wfΣ.
-    intros sub HT.
-    apply lift_typing_f_impl with (1 := HT) => // ?? Hs.
-    now eapply substitution.
-  Qed.
 
   Lemma type_ws_cumul_pb {pb Γ t} T {U} :
     Σ ;;; Γ |- t : T ->
@@ -287,7 +266,7 @@ Section WfEnv.
 
   Lemma wf_local_ass {Γ na A} :
     wf_local Σ Γ ->
-    isType Σ Γ A ->
+    isTypeRel Σ Γ A na.(binder_relevance) ->
     wf_local Σ (Γ ,, vass na A).
   Proof using Type.
     constructor; eauto with pcuic.
@@ -295,7 +274,7 @@ Section WfEnv.
 
   Lemma wf_local_def {Γ na d ty} :
     wf_local Σ Γ ->
-    isType Σ Γ ty ->
+    isTypeRel Σ Γ ty na.(binder_relevance) ->
     Σ ;;; Γ |- d : ty ->
     wf_local Σ (Γ ,, vdef na d ty).
   Proof using Type.
@@ -312,7 +291,7 @@ Section WfEnv.
     isType Σ Γ (B {0 := t}).
   Proof using wfΣ.
     move/isType_tProd => [hA hB] ht.
-    eapply (isType_subst (Δ:= [vass na A])); eauto with pcuic.
+    eapply (isType_subst (Δ := [vass na A])); eauto with pcuic.
   Qed.
 
   Hint Resolve isType_wf_local : pcuic.
@@ -392,7 +371,7 @@ Section WfEnv.
   Qed.
 
   Lemma type_mkProd_or_LetIn {Γ} d {u t s} :
-    Σ ;;; Γ |- decl_type d : tSort u ->
+    lift_typing typing Σ Γ (j_decl_s d (Some u)) ->
     Σ ;;; Γ ,, d |- t : tSort s ->
     match decl_body d return Type with
     | Some b => Σ ;;; Γ |- mkProd_or_LetIn d t : tSort s
@@ -408,7 +387,6 @@ Section WfEnv.
     - have wf := typing_wf_local Ht.
       depelim wf; clear l.
       eapply type_Prod; eauto.
-      pcuic.
   Qed.
 
   Lemma type_it_mkProd_or_LetIn {Γ Γ' u t s} :
@@ -428,13 +406,13 @@ Section WfEnv.
       eapply type_Cumul.
       eapply IHΓ'; auto.
       destruct a as [na [b|] ty]; intuition auto.
-      destruct a as [na [b|] ty]; cbn; destruct equ as (? & (Hb & u' & Ht' & equ)); cbn in Hb, Ht', equ; try subst u'.
+      destruct a as [na [b|] ty]; cbn; destruct equ as (? & Hdecl).
       { apply typing_wf_local in Ht as XX. inversion XX; subst.
-        eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); auto.
-        + simpl. exact X0.2.π2.1.
-        + eapply type_Cumul; eauto.
-          econstructor; eauto with pcuic.
-          eapply cumul_Sort. eapply leq_sort_product. }
+        pose proof (lift_sorting_extract Hdecl).
+        eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); eauto.
+        eapply type_Cumul; eauto.
+        econstructor; eauto with pcuic.
+        eapply cumul_Sort. eapply leq_sort_product. }
       eapply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
       econstructor; eauto with pcuic.
       eapply typing_wf_local in Ht.
@@ -467,11 +445,10 @@ Section WfEnv.
     induction Γ'; simpl; auto; move=> Γ us s t equ Ht.
     - destruct us => //.
     - destruct a as [na [b|] ty]; intuition auto.
-      * destruct b0 as (_  & s' & Hs & _).
-        eapply IHΓ'; eauto.
-        eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); auto.
-        simpl. exact Hs.
-      * destruct us => //. destruct equ as (? & _ & s' & Hty & ->).
+      * eapply IHΓ'; eauto.
+        pose proof (lift_sorting_extract b0).
+        eapply (type_mkProd_or_LetIn {| decl_body := Some b |}); eauto.
+      * destruct us => //. destruct equ.
         simpl.
         eapply IHΓ'; eauto.
         apply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.

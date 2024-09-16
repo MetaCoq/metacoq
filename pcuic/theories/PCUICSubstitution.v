@@ -150,21 +150,6 @@ Proof.
   rewrite commut_lift_subst_rec. 1: lia. f_equal; lia.
 Qed.
 
-Lemma All_local_env_subst {cf:checker_flags} (P Q : context -> judgment -> Type) c n k :
-  All_local_env Q c ->
-  (forall Γ j,
-      Q Γ j ->
-      P (subst_context n k Γ) (judgment_map (subst n (#|Γ| + k)) j)
-  ) ->
-  All_local_env P (subst_context n k c).
-Proof.
-  intros Hq Hf.
-  induction Hq in |- *; try econstructor; eauto;
-    simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  - simpl. eapply (Hf _ (Typ _)). eauto.
-  - simpl. eapply (Hf _ (TermTyp _ _)). eauto.
-Qed.
-
 Lemma subst_length {cf:checker_flags} Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
 Proof.
   induction 1; simpl; lia.
@@ -579,19 +564,13 @@ Proof.
   rewrite rev_map_app.
   simpl. apply Alli_app in Ha as [Hl Hx].
   inv Hx. clear X0.
-  apply onArity in X as (_ & s & Hs & _).
+  apply onArity in X as (_ & s & Hs & _ & Her).
   specialize (IHl Hl).
   econstructor; eauto.
   fold (arities_context l) in *.
-  unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
-  1: now rewrite app_context_nil_l.
-  repeat (eexists; tea).
-  simpl in X.
-  eapply (env_prop_typing typecheck_closed) in Hs; eauto.
-  rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
-  simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
-  rewrite -> Hs, app_context_nil_l in X.
-  apply X.
+  cbn in Her.
+  repeat (eexists; cbn; tea).
+  now eapply weaken_ctx in Hs.
 Qed.
 
 Lemma wf_arities_context {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl} :
@@ -1803,14 +1782,54 @@ Proof.
   now eapply typing_wf_local in Ht.
 Qed.
 
+Corollary lift_typing_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} j :
+  subslet Σ Γ s Γ' ->
+  lift_typing typing Σ (Γ ,,, Γ' ,,, Δ) j ->
+  lift_typing typing Σ (Γ ,,, subst_context s 0 Δ) (judgment_map (subst s #|Δ|) j).
+Proof.
+  intros Hs HT.
+  apply lift_typing_f_impl with (1 := HT) => // ?? Ht.
+  eapply substitution in Ht; tea.
+Qed.
+
+Corollary lift_typing_subst {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s} j :
+  subslet Σ Γ s Γ' ->
+  lift_typing typing Σ (Γ ,,, Γ') j ->
+  lift_typing typing Σ Γ (judgment_map (subst0 s) j).
+Proof.
+  now apply @lift_typing_substitution with (Δ := []).
+Qed.
+
 Corollary isType_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ T} :
   subslet Σ Γ s Γ' ->
   isType Σ (Γ ,,, Γ' ,,, Δ) T ->
   isType Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T).
 Proof.
-  intros Hs HT.
-  apply lift_typing_f_impl with (1 := HT) => // ?? Ht.
-  eapply substitution in Ht; tea.
+  apply lift_typing_substitution.
+Qed.
+
+Corollary isType_subst {cf} {Σ} {wfΣ : wf Σ} {Γ Δ s T} :
+  subslet Σ Γ s Δ ->
+  isType Σ (Γ ,,, Δ) T ->
+  isType Σ Γ (subst0 s T).
+Proof.
+  apply lift_typing_subst.
+Qed.
+
+Corollary isTypeRel_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ T r} :
+  subslet Σ Γ s Γ' ->
+  isTypeRel Σ (Γ ,,, Γ' ,,, Δ) T r ->
+  isTypeRel Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T) r.
+Proof.
+  apply lift_typing_substitution.
+Qed.
+
+Corollary isTypeRel_subst {cf} {Σ} {wfΣ : wf Σ} {Γ Δ s T r} :
+  subslet Σ Γ s Δ ->
+  isTypeRel Σ (Γ ,,, Δ) T r ->
+  isTypeRel Σ Γ (subst0 s T) r.
+Proof.
+  apply lift_typing_subst.
 Qed.
 
 Corollary substitution_wf_local {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :

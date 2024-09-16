@@ -213,7 +213,7 @@ Proof.
   eapply (substitution (Δ := [])) in a0'; eauto.
   2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
   rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
-  eapply a0'. now eapply nth_error_all in a; tea.
+  eapply a0'. now eapply nth_error_all, isTypeRel_isType in a; tea.
 Qed.
 
 (** Assumption contexts: constructor arguments/case branches contexts contain only assumptions, no local definitions *)

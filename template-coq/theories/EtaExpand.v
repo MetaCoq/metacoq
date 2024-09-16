@@ -1179,7 +1179,7 @@ Proof.
     rewrite nth_error_app1. 2:now rewrite nth_error_repeat. rewrite repeat_length. lia.
   - cbn. econstructor; eauto.
     * unfold map_branches. solve_all.
-      clear -hrepr X1 H8.
+      clear -hrepr X1 H9.
       set (Γ'' := map _ Γ'). cbn.
       enough (All (expanded Σ0 Γ'') (map (eta_expand Σg Γ') (pparams p ++ indices))).
       now rewrite map_app in X; eapply All_app in X as [].
@@ -1201,7 +1201,7 @@ Proof.
         unfold inst_case_context. unfold subst_context.
         unfold subst_instance, subst_instance_context, map_context.
         rewrite fold_context_k_length map_length. unfold aname. lia.
-      } revert H9. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p)
+      } revert H10. generalize ((case_branch_context_gen (ci_ind ci) mdecl (pparams p)
       (puinst p) (bcontext y) x)). clear -hrepr.
       induction #|bcontext y|; intros []; cbn; intros; try congruence; econstructor; eauto.
     - cbn. rewrite nth_error_map H0. cbn. unfold eta_fixpoint. unfold fst_ctx in *. cbn in *.

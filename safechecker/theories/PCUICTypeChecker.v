@@ -392,23 +392,6 @@ Section Typecheck.
       Unshelve. eauto.
     Qed.
 
-    Equations infer_isType Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥wf_local Σ Γ ∥) T : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isType Σ Γ T ∥) :=
-      infer_isType Γ HΓ T :=
-        infer_type Γ HΓ T ;;
-        ret _.
-    Next Obligation.
-      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-      now eapply infering_sort_isType.
-    Qed.
-    Next Obligation.
-      destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-      apply absurd.
-      eapply isType_infering_sort in H as [u ?].
-      exists u. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-      Unshelve. eauto.
-    Qed.
-
     Equations bdcheck Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥wf_local Σ Γ ∥) t A (hA : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isType Σ Γ A ∥)
       : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- t ◃ A ∥) :=
       bdcheck Γ HΓ t A hA :=
@@ -459,63 +442,160 @@ Section Typecheck.
       eapply type_reduction; eauto. exact r.
     Qed. *)
 
+    Local Notation check_eq_true b e :=
+      (if b as b' return (typing_result_comp (is_true b')) then ret eq_refl else raise e).
+
+    Equations check_eq {A : Type} {RE : ReflectEq A} (a b : A) (e : type_error) : typing_result_comp (a = b) :=
+      check_eq a b e :=
+        check_eq_true (a == b) e ;;
+        ret _.
+    Next Obligation.
+      now eapply eqb_eq.
+    Qed.
+    Next Obligation.
+      apply absurd.
+      apply eqb_refl.
+    Qed.
+
+    #[global] Transparent relevance_of_family. (* We need to compute it really now *)
+
+    Equations infer_judgment0 Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) tm ty s (Hs : forall Σ (wfΣ : abstract_env_ext_rel X Σ), option_default (fun s => ∥ wf_sort Σ s ∥) s True) rel
+    : typing_result_comp (∑ s', option_default (fun s => s = s') s True /\ forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ lift_typing typing Σ Γ (Judge tm ty (Some s') rel) ∥) :=
+      infer_judgment0 Γ HΓ tm ty s Hs rel :=
+        s <-
+        match s return (forall Σ _, option_default _ s True) -> typing_result_comp (∑ s', option_default (fun s => s = s') s True /\ forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ |- ty : tSort s' ∥)
+        with None => fun Hs => infer_type Γ HΓ ty ;; ret _ | Some s => fun Hs => bdcheck Γ HΓ ty (tSort s) _  ;; ret _ end Hs ;;
+        match rel return typing_result_comp (option_default (fun r => isSortRel s.π1 r) rel True) with None => ret I | Some rel =>
+          check_eq (relevance_of_sort s.π1) rel (Msg "Wrong relevance")
+        end ;;
+        match tm return typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ option_default (fun tm => Σ ;;; Γ |- tm : ty) tm unit ∥)
+        with None => ret _ | Some t => bdcheck Γ HΓ t ty _  ;; ret _ end ;;
+        ret _.
+    Next Obligation.
+      specialize_Σ wfΣ. sq.
+      now eapply isType_Sort.
+    Qed.
+    Next Obligation.
+      exists s. split; auto. intros.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      eapply checking_typing; tea.
+      now eapply isType_Sort.
+    Defined.
+    Next Obligation.
+      eapply absurd. intros.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      now eapply typing_checking.
+    Qed.
+    Next Obligation.
+      exists s0. split; auto. intros.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      now eapply infering_sort_typing.
+    Defined.
+    Next Obligation.
+      destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      apply absurd.
+      eapply typing_infering_sort in H0 as (s' & X1 & _).
+      exists s'. intros. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    Qed.
+    Next Obligation.
+      specialize_Σ wfΣ. sq.
+      now eapply has_sort_isType.
+    Qed.
+    Next Obligation.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      eapply checking_typing; tea.
+      now eapply has_sort_isType.
+    Qed.
+    Next Obligation.
+      eapply absurd. intros.
+      pose (hΣ _ wfΣ).
+      specialize_Σ wfΣ. sq.
+      now apply typing_checking.
+    Qed.
+    Next Obligation.
+      exists s. split; tas. intros.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      repeat (eexists; tea).
+    Defined.
+    Next Obligation.
+      eapply absurd. intros.
+      pose (hΣ _ wfΣ).
+      specialize_Σ wfΣ. sq.
+      now apply H0.
+    Qed.
+    Next Obligation.
+      destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      eapply absurd. intros.
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      destruct rel as [rel|] => //=.
+      apply lift_sorting_forget_body, lift_sorting_forget_univ in H0.
+      eapply isTypeRel_unique; tea.
+      now eapply has_sort_isTypeRel.
+    Qed.
+    Next Obligation.
+      destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      apply absurd.
+      destruct H0 as (_ & s' & Hs0 & e' & _). cbn in Hs0, e'. subst X0.
+      exists s'. split; tas. intros. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    Qed.
+
+    Equations infer_judgment Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) tm ty rel
+    : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ lift_typing typing Σ Γ (Judge tm ty None rel) ∥) :=
+    infer_judgment Γ HΓ tm ty rel :=
+      H <- infer_judgment0 Γ HΓ tm ty None _ rel ;;
+      ret _.
+    Next Obligation.
+      specialize_Σ wfΣ. sq.
+      now eapply lift_sorting_forget_univ.
+    Qed.
+    Next Obligation.
+      destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
+      pose proof (lift_sorting_extract H).
+      apply absurd.
+      eexists; split; auto.
+      intros.
+      unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    Qed.
+
+
+    Definition check_decl Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) decl
+    : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ lift_typing typing Σ Γ (j_decl decl) ∥) :=
+      infer_judgment Γ HΓ _ _ _.
+
+    Definition infer_isType Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) T : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isType Σ Γ T ∥) :=
+      infer_judgment Γ HΓ _ _ _.
+
+    Definition infer_isTypeRel Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) T rel
+      : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ isTypeRel Σ Γ T rel ∥) :=
+      infer_judgment Γ HΓ _ _ _.
+
     Lemma sq_wfl_nil Σ : ∥ wf_local Σ [] ∥.
     Proof using Type.
      repeat constructor.
     Qed.
 
-    Equations check_context Γ : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
-    :=
+    Equations check_context Γ : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) :=
       check_context [] := ret _ ;
-      check_context ({| decl_body := None; decl_type := A |} :: Γ) :=
+      check_context (decl :: Γ) :=
         HΓ <- check_context Γ ;;
-        infer_type Γ HΓ A ;;
-        ret _ ;
-       check_context ({| decl_body := Some t; decl_type := A |} :: Γ) :=
-        HΓ <- check_context Γ ;;
-        infer_isType Γ HΓ A ;;
-        bdcheck Γ HΓ t A _  ;;
+        Hd <- check_decl Γ HΓ decl ;;
         ret _.
     Next Obligation.
-      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-      econstructor ; tea.
-      destruct s as (_ & s).
-      split; cbn; tas.
-      now eapply checking_typing.
+      specialize_Σ wfΣ. sq.
+      now apply All_local_env_snoc.
     Qed.
     Next Obligation.
-    eapply absurd. intros.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-    inversion H ; subst.
-    apply unlift_TermTyp in X1.
-    now eapply typing_checking.
+      eapply absurd. intros.
+      specialize_Σ wfΣ. sq.
+      now apply All_local_env_tip in H as [_ H].
     Qed.
     Next Obligation.
-    eapply absurd. intros.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-    inversion H ; subst.
-    destruct X1 as (_ & ?); split; cbn; auto.
-    Qed.
-    Next Obligation.
-      eapply absurd. intros. specialize_Σ wfΣ.  sq.
-      now inversion H.
-    Qed.
-    Next Obligation.
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq. econstructor; tas.
-    eapply has_sort_isType.
-    now eapply infering_sort_typing.
-    Qed.
-    Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq. eapply absurd.
-      inversion H ; subst.
-      eapply isType_infering_sort in X1 as [] ; tea.
-      eexists. intros.  erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-      Unshelve. eauto.
-    Qed.
-    Next Obligation.
-      eapply absurd. intros. specialize_Σ wfΣ. sq.
-      now inversion H.
+      eapply absurd. intros.
+      specialize_Σ wfΣ. sq.
+      now apply All_local_env_tip in H as [H _].
     Qed.
 
     Lemma sq_wf_local_app {Γ Δ} : forall Σ (wfΣ : abstract_env_ext_rel X Σ),
@@ -529,51 +609,26 @@ Section Typecheck.
 
       check_context_rel Γ wfΓ [] := ret _ ;
 
-      check_context_rel Γ wfΓ ({| decl_body := None; decl_type := A |} :: Δ) :=
+      check_context_rel Γ wfΓ (decl :: Δ) :=
         wfΔ <- check_context_rel Γ wfΓ Δ ;;
-        infer_isType (Γ ,,, Δ) (fun Σ wfΣ => sq_wf_local_app Σ wfΣ (wfΓ Σ wfΣ) (wfΔ Σ wfΣ)) A ;;
-        ret _ ;
-
-      check_context_rel Γ wfΓ ({| decl_body := Some t; decl_type := A |} :: Δ) :=
-        wfΔ <- check_context_rel Γ wfΓ Δ ;;
-        wfA <- infer_isType (Γ ,,, Δ) (fun Σ wfΣ => sq_wf_local_app Σ wfΣ (wfΓ Σ wfΣ) (wfΔ Σ wfΣ)) A ;;
-        bdcheck (Γ ,,, Δ) (fun Σ wfΣ => sq_wf_local_app Σ wfΣ (wfΓ Σ wfΣ) (wfΔ Σ wfΣ)) t A wfA ;;
+        wfdecl <- check_decl (Γ ,,, Δ) (fun Σ wfΣ => sq_wf_local_app Σ wfΣ (wfΓ Σ wfΣ) (wfΔ Σ wfΣ)) decl ;;
         ret _.
     Next Obligation.
       sq. now constructor.
     Qed.
     Next Obligation.
-      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq. constructor ; auto.
-      destruct wfA as (_ & ?); split; cbn; tas.
-      eapply checking_typing ; pcuic.
-    Qed.
-    Next Obligation.
-      apply absurd. intros.
-      pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
-      inversion H ; subst ; cbn in *.
-      apply unlift_TermTyp in X1.
-      now eapply typing_checking.
-    Qed.
-    Next Obligation.
-      apply absurd. intros. specialize_Σ wfΣ. sq.
-      inversion H ; subst ; cbn in *.
-      destruct X1. split; cbn; auto.
-    Qed.
-    Next Obligation.
-      apply absurd. intros. specialize_Σ wfΣ. sq.
-      now inversion H.
-    Qed.
-    Next Obligation.
       specialize_Σ wfΣ. sq.
-      now constructor.
+      now apply All_local_rel_snoc.
     Qed.
     Next Obligation.
-      apply absurd. intros. specialize_Σ wfΣ. sq.
-      now inversion H.
+      eapply absurd. intros.
+      specialize_Σ wfΣ. sq.
+      now apply All_local_rel_tip in H as [_ H].
     Qed.
     Next Obligation.
-      apply absurd. intros ;specialize_Σ wfΣ. sq.
-      now inversion H.
+      eapply absurd. intros.
+      specialize_Σ wfΣ. sq.
+      now apply All_local_rel_tip in H as [H _].
     Qed.
 
     Equations check_ws_cumul_pb_decl (le : conv_pb) Γ d d'
@@ -850,6 +905,7 @@ Section Typecheck.
     Qed.
     Next Obligation.
       specialize_Σ wfΣ; sq. eapply All_local_env_app_inv in wfΔ as [wt _].
+      eapply isTypeRel_isType.
       now depelim wt.
     Qed.
     Next Obligation.
@@ -861,6 +917,7 @@ Section Typecheck.
       rewrite subst_empty.
       apply checking_typing ; auto.
       apply All_local_rel_app_inv in wfΔ as [wt _].
+      eapply isTypeRel_isType.
       now depelim wt.
     Qed.
     Next Obligation.
@@ -871,6 +928,7 @@ Section Typecheck.
       constructor ; tea.
       apply checking_typing ; auto.
       eapply All_local_env_app_l in wfΔ.
+      eapply isTypeRel_isType.
       now inversion wfΔ ; subst.
     Qed.
     Next Obligation.
@@ -1232,21 +1290,19 @@ Section Typecheck.
      (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥).
 
   Equations check_mfix_types (mfix : mfixpoint term)
-  : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥) :=
+  : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (on_def_type (lift_typing1 (typing Σ)) Γ) mfix ∥) :=
     check_mfix_types [] := Checked_comp (fun Σ wfΣ => sq All_nil) ;
     (* (* probably not tail recursive but needed so that next line terminates *)
       check_mfix_types mfix ;;
       infer_type infer Γ wfΓ (dtype def) ;;
       ret _. *)
     check_mfix_types (def :: mfix) :=
-      s <- infer_type infer Γ wfΓ (dtype def) ;;
+      s <- infer_isTypeRel infer Γ wfΓ (dtype def) (dname def).(binder_relevance);;
       check_mfix_types mfix ;;
       ret _.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
     constructor ; tea.
-    eapply has_sort_isType.
-    now apply infering_sort_typing.
   Qed.
   Next Obligation.
     apply absurd. intros; specialize_Σ wfΣ; sq.
@@ -1257,19 +1313,15 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ]; specialize_Σ wfΣ. sq.
     depelim H.
     apply absurd.
-    apply isType_infering_sort in i as [u ?]; tea.
-    exists u. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    Unshelve. eauto.
+    intros. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
 
   Equations check_mfix_bodies
     (mfix : mfixpoint term)
-    (wf_types : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥)
+    (wf_types : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (on_def_type (lift_typing1 (typing Σ)) Γ) mfix ∥)
     (Δ : context)
     (wfΔ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ (Γ,,,Δ) ∥)
-    : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (fun d =>
-        Σ ;;; Γ ,,, Δ |-
-          dbody d ◃ (lift0 #|Δ|) (dtype d)) mfix∥) :=
+    : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ All (on_def_body (lift_typing1 (typing Σ)) Δ Γ) mfix ∥) :=
 
     check_mfix_bodies [] _ _ _ := Checked_comp (fun _ _ => sq All_nil) ;
 
@@ -1283,15 +1335,26 @@ Section Typecheck.
     apply isType_lift ; eauto.
     - len.
     - rewrite skipn_all_app.
+      eapply isTypeRel_isType.
       now depelim wf_types.
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
     now depelim wf_types.
-    Qed.
+  Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
     constructor ; tea.
+    depelim wf_types.
+    assert (o' : isTypeRel Σ (Γ,,, Δ) (lift0 #|Δ| (dtype def)) (dname def).(binder_relevance)).
+    - eapply isTypeRel_lift; eauto.
+      1: now len.
+      rewrite skipn_all_app.
+      assumption.
+    - apply isTypeRel_isType in o' as o''.
+      apply snd in o'.
+      split; cbn; tas.
+      eapply checking_typing; eauto.
   Qed.
   Next Obligation.
     apply absurd. intros. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
@@ -1299,7 +1362,10 @@ Section Typecheck.
   Qed.
   Next Obligation.
     apply absurd. intros. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
-    now depelim H.
+    depelim H.
+    apply lift_typing_lift_sorting in o; eauto.
+    apply fst in o. cbn in o.
+    apply o.
   Qed.
 
   End check_mfix.
@@ -1455,16 +1521,17 @@ Section Typecheck.
 
   infer Γ HΓ (tProd na A B) :=
     s1 <- infer_type infer Γ HΓ A ;;
+    check_eq_true (relevance_of_sort s1.π1 == na.(binder_relevance)) (Msg "Wrong relevance") ;;
     s2 <- infer_type infer (Γ,,vass na A) _ B ;;
     Checked_comp (tSort (Sort.sort_of_product s1.π1 s2.π1);_) ;
 
   infer Γ HΓ (tLambda na A t) :=
-    infer_type infer Γ HΓ A ;;
+    infer_isTypeRel infer Γ HΓ A na.(binder_relevance) ;;
     B <- infer (Γ ,, vass na A) _ t ;;
     ret (tProd na A B.π1; _);
 
   infer Γ HΓ (tLetIn n b b_ty b') :=
-    infer_type infer Γ HΓ b_ty ;;
+    infer_isTypeRel infer Γ HΓ b_ty n.(binder_relevance) ;;
     bdcheck infer Γ HΓ b b_ty _ ;;
     b'_ty <- infer (Γ ,, vdef n b b_ty) _ b' ;;
     ret (tLetIn n b b_ty b'_ty.π1; _) ;
@@ -1515,8 +1582,6 @@ Section Typecheck.
           (Msg "Case on coinductives disallowed") ;;
     check_eq_true (eqb (ind_npars mdecl) ci.(ci_npar))
                   (Msg "not the right number of parameters") ;;
-    (* check_eq_true (eqb (ind_relevance idecl) ci.(ci_relevance))
-                  (Msg "invalid relevance annotation on case") ;; *)
     (* let '(params, indices) := chop ci.(ci_npar) args in *)
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
@@ -1531,6 +1596,7 @@ Section Typecheck.
     let wfp : ∥ wf_predicate mdecl idecl p ∥ := _ in
     ps <- infer_type infer (Γ ,,, pctx) _ p.(preturn) ;;
     check_is_allowed_elimination ps.π1 _ (ind_kelim idecl);;
+    check_eq_true (relevance_of_sort ps.π1 == ci.(ci_relevance)) (Msg "Wrong relevance") ;;
     let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
     check_brs <- check_branches infer Γ HΓ ps.π1 ci mdecl idecl p indices isdecl isty
       _ _ _ 0 idecl.(ind_ctors) brs _ ;;
@@ -1616,11 +1682,13 @@ Section Typecheck.
     (* intros Γ HΓ t na A B Heq_t [s ?];  *)
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ.
     sq; econstructor ; tea.
-    now eapply infering_sort_isType.
+    apply eqb_eq in i as <-.
+    now eapply infering_sort_isTypeRel.
   Qed.
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s1 ?] [s2 ?]; *)
     cbn. specialize_Σ wfΣ. sq. econstructor; try eassumption.
+    apply eqb_eq in i as <-.
     repeat (eexists; tea).
   Qed.
   Next Obligation.
@@ -1628,6 +1696,16 @@ Section Typecheck.
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
     eexists. intros. sq. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. all: eauto.
+  Qed.
+  Next Obligation.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose (hΣ _ wfΣ). specialize_Σ wfΣ; sq.
+    inversion X1; subst. apply absurd.
+    case: eqb_spec => i //; exfalso; apply i; clear i.
+    apply lift_sorting_forget_univ in X3.
+    apply lift_sorting_lift_typing in X3; tas.
+    eapply isTypeRel_unique; tea.
+    now eapply infering_sort_isTypeRel.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1640,13 +1718,12 @@ Section Typecheck.
     (* intros Γ HΓ t0 na A t Heq_t [s ?]; *)
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ.
     sq; econstructor; tea.
-    now eapply infering_sort_isType.
   Qed.
   Next Obligation.
     (* intros Γ HΓ t0 na A t Heq_t [s ?] [B ?]; *)
       cbn; pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ.
       sq; econstructor; tas.
-      repeat (eexists; tea).
+      apply lift_typing_lift_sorting; eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1656,28 +1733,31 @@ Section Typecheck.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof (heΣ _ wfΣ) as [heΣ].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    destruct X2 as (_ & u & Hu & _).
-    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    apply lift_sorting_lift_typing; eauto.
   Qed.
   (* tLetIn *)
   Next Obligation.
-    pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ.
-    sq. eapply has_sort_isType.
-    eapply infering_sort_typing ; eauto.
+    specialize_Σ wfΣ.
+    sq.
+    now eapply isTypeRel_isType.
   Qed.
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0; *)
     pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq.
     econstructor ; tea.
-    repeat (eexists; tea); cbn.
-    1: apply checking_typing ; eauto.
-    1: eapply has_sort_isType.
-    all: now eapply infering_sort_typing.
+    apply isTypeRel_isType in s as s'.
+    destruct s as [_ s].
+    split; tas; cbn.
+    apply checking_typing ; eauto.
   Qed.
   Next Obligation.
+    pose proof (heΣ _ wfΣ) as [heΣ].
     cbn; specialize_Σ wfΣ; sq; econstructor; tas.
-    repeat (eexists; tea).
+    eapply lift_typing_lift_sorting in s as [_ s]; auto.
+    split; tas.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -1688,14 +1768,16 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    destruct X3 as (Ht & u & Hu & _).
-    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    destruct X2 as (X2 & _); cbn in X2.
+    intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    pose proof (heΣ _ wfΣ) as [heΣ].
     specialize_Σ wfΣ; sq. inversion X1; subst. apply absurd.
-    destruct X2 as (Ht & u & Hu & _).
-    eexists. intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
+    apply lift_sorting_lift_typing in X2; auto.
+    apply lift_sorting_forget_body in X2.
+    intros. sq. unshelve erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
   Qed.
   (* tApp *)
   Next Obligation.
@@ -1710,10 +1792,8 @@ Section Typecheck.
     specialize_Σ wfΣ ; sq.
     eapply infering_typing, type_reduction_closed, validity in X3.
     2-4: eauto.
-    destruct X3 as (_ & s & HH & _).
-    eapply inversion_Prod in HH ; auto.
-    destruct HH as [s1 [_ [HH _]]].
-    eapply lift_sorting_forget_univ. eassumption.
+    apply isType_tProd in X3 as (X3 & _).
+    now apply lift_sorting_forget_rel in X3.
   Qed.
   Next Obligation.
     cbn in *; specialize_Σ wfΣ ; sq.
@@ -2028,6 +2108,12 @@ Section Typecheck.
 
   Next Obligation.
     intros. cbn in *.
+    destruct ps ; cbn in *.
+    cbn in *. specialize_Σ wfΣ ; now sq.
+  Qed.
+
+  Next Obligation.
+    intros. cbn in *.
     assumption.
   Qed.
 
@@ -2065,6 +2151,7 @@ Section Typecheck.
     - econstructor ; tea.
       now apply closed_red_red.
     - now eapply wf_local_rel_wf_local_bd, All_local_env_app_inv, wf_case_predicate_context.
+    - now eapply eqb_eq.
     - eapply ctx_inst_typing_bd ; eauto.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
@@ -2120,6 +2207,30 @@ Section Typecheck.
     cbn.
     subst.
     intuition.
+  Qed.
+
+  Next Obligation.
+    intros; clearbody isty wfp.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args s']]].
+    destruct d as [mdecl [idecl isdecl]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    destruct ps as [ps ?].
+    cbn in *. apply absurd.
+    case: eqb_spec => _i //; exfalso; apply _i; clear _i.
+    pose proof (heΣ _ wfΣ) as [heΣ].
+    pose proof (hΣ _ wfΣ) as [hΣ].
+    cbn in *. specialize_Σ wfΣ. sq.
+    edestruct X0 as [? [ty]]; eauto.
+    inversion ty ; subst.
+    rewrite -H8. do 2 f_equal.
+    eapply infering_sort_sort. 4: tea. all: eauto.
+    { apply All_local_env_app, wf_local_bd_rel_typing; eauto. }
+    relativize predctx0; tea.
+    unfold pctx, predctx0.
+    unshelve eapply declared_inductive_to_gen in isdecl, H3; eauto.
+    now eapply declared_inductive_inj in isdecl as []; tea.
   Qed.
 
   Next Obligation.
@@ -2565,20 +2676,13 @@ Section Typecheck.
     unfold abstract_env_fixguard in guarded.
     erewrite <- abstract_env_guard_correct in guarded; eauto.
     constructor; auto.
-    eapply All_impl ; tea; cbn.
-    intros.
-    eapply lift_sorting_ex_it_impl_gen with X0 => //= H.
-    eapply typing_infering_sort in H as (? & ? & _). now eexists.
-    apply All_mix with (2 := wf_types) in wf_bodies.
-    apply All_mfix_wf in wf_types; eauto.
-    eapply All_impl with (1 := wf_bodies) ; cbn.
-    intros d (X0 & (_ & s & X1 & _)).
-    assert (Σ ;;; Γ ,,, fix_context mfix |- lift0 #|fix_context mfix| (dtype d) : lift0 #|fix_context mfix| (tSort s)).
-    { apply weakening with (Γ' := fix_context mfix); eauto. }
-    eapply checking_typing in X0 as X0'; eauto. 2: now eapply has_sort_isType.
-    eapply typing_infering_sort in X2 as (? & ? & _).
-    repeat (eexists; tea).
-    erewrite abstract_wf_fixpoint in wffix; eauto.
+    - eapply All_impl with (1 := wf_types); cbn.
+      intros.
+      apply lift_typing_lift_sorting; eauto.
+    - eapply All_impl with (1 := wf_bodies); cbn.
+      intros.
+      apply lift_typing_lift_sorting; eauto.
+    - erewrite abstract_wf_fixpoint in wffix; eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2598,16 +2702,17 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1.
-    apply All_impl with (1 := X3) => d [] //.
+    apply All_impl with (1 := X3) => d Hj.
+    eapply lift_sorting_lift_typing; eauto.
+    eapply All_mfix_wf; eauto.
   Qed.
   Next Obligation.
     apply absurd; intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    inversion X1 ; subst.
-    eapply All_impl with (1 := X2).
-    intros d (_ & ? & ? & _).
-    now eapply infering_sort_isType.
+    inversion X1.
+    apply All_impl with (1 := X2) => d Hj.
+    eapply lift_sorting_lift_typing; eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2627,20 +2732,13 @@ Section Typecheck.
     unfold abstract_env_cofixguard in guarded.
     erewrite <- abstract_env_guard_correct in guarded; eauto.
     constructor; auto.
-    eapply All_impl ; tea; cbn.
-    intros.
-    eapply lift_sorting_ex_it_impl_gen with X0 => //= H.
-    eapply typing_infering_sort in H as (? & ? & _). now eexists.
-    apply All_mix with (2 := wf_types) in wf_bodies.
-    apply All_mfix_wf in wf_types; eauto.
-    eapply All_impl with (1 := wf_bodies) ; cbn.
-    intros d (X0 & (_ & s & X1 & _)).
-    assert (Σ ;;; Γ ,,, fix_context mfix |- lift0 #|fix_context mfix| (dtype d) : lift0 #|fix_context mfix| (tSort s)).
-    { apply weakening with (Γ' := fix_context mfix); eauto. }
-    eapply checking_typing in X0 as X0'; eauto. 2: now eapply has_sort_isType.
-    eapply typing_infering_sort in X2 as (? & ? & _).
-    repeat (eexists; tea).
-    erewrite abstract_wf_cofixpoint in wfcofix; eauto.
+    - eapply All_impl with (1 := wf_types); cbn.
+      intros.
+      apply lift_typing_lift_sorting; eauto.
+    - eapply All_impl with (1 := wf_bodies); cbn.
+      intros.
+      apply lift_typing_lift_sorting; eauto.
+    - erewrite abstract_wf_cofixpoint in wfcofix; eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2660,16 +2758,17 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
     inversion X1.
-    apply All_impl with (1 := X3) => d [] //.
+    apply All_impl with (1 := X3) => d Hj.
+    eapply lift_sorting_lift_typing; eauto.
+    eapply All_mfix_wf; eauto.
   Qed.
   Next Obligation.
     apply absurd; intros.
     pose proof (heΣ _ wfΣ) as [heΣ].
     cbn in *. specialize_Σ wfΣ ; sq.
-    inversion X1 ; subst.
-    eapply All_impl with (1 := X2).
-    intros d (_ & ? & ? & _).
-    now eapply infering_sort_isType.
+    inversion X1.
+    apply All_impl with (1 := X2) => d Hj.
+    eapply lift_sorting_lift_typing; eauto.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2736,6 +2835,7 @@ Section Typecheck.
   Qed.
 
   Definition check_isType := infer_isType infer.
+  Definition check_isTypeRel := infer_isTypeRel infer.
 
   Equations check Γ (HΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) t A
     : typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ;;; Γ |- t : A ∥) :=

@@ -387,10 +387,6 @@ Definition default_sort_family (s : sort) : allowed_eliminations :=
   | _ => IntoAny
   end.
 
-Definition default_relevance (s : sort) : relevance :=
-  if Sort.is_sprop s then Irrelevant
-  else Relevant.
-
 (** Convenience functions for building constructors and inductive declarations *)
 
 (** The [indrel] argument represents the de Bruijn associated to the inductive in the mutual block.
@@ -421,7 +417,7 @@ Definition make_inductive_body (id : ident) (params : context) (indices : contex
      ind_kelim := default_sort_family s;
      ind_ctors := ind_ctors;
      ind_projs := [];
-     ind_relevance := default_relevance s |}.
+     ind_relevance := relevance_of_sort s |}.
 
 Ltac change_Sk :=
   repeat match goal with

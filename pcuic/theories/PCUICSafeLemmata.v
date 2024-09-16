@@ -346,7 +346,7 @@ Section Lemmata.
       destruct mfix as ((?&[])&?); simpl in *.
       + eapply All_app in a as (_&a).
         depelim a.
-        eauto using isType_welltyped.
+        eauto using isTypeRel_welltyped.
       + eapply All_app in a0 as (_&a0).
         depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
@@ -358,7 +358,7 @@ Section Lemmata.
       destruct mfix as ((?&[])&?); simpl in *.
       + eapply All_app in a as (_&a).
         depelim a.
-        eauto using isType_welltyped.
+        eauto using isTypeRel_welltyped.
       + eapply All_app in a0 as (_&a0).
         depelim a0. destruct o as (t0 & _); cbn in t0.
         rewrite fix_context_fix_context_alt in t0.
@@ -443,9 +443,9 @@ Section Lemmata.
       eapply closed_context_conversion; tea.
       now symmetry.
     - apply unlift_TypUniv in l. now econstructor.
-    - now eapply isType_welltyped.
+    - now eapply isTypeRel_welltyped.
     - apply unlift_TermTyp in l. now econstructor.
-    - apply lift_sorting_forget_body in l. now eapply isType_welltyped.
+    - apply lift_sorting_forget_body in l. now eapply isTypeRel_welltyped.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.
       depelim p0. now eexists.
     - eapply inversion_Prim in typ as (?&?&[]); eauto.

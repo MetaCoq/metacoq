@@ -1521,7 +1521,7 @@ Proof.
   destruct tm as [tm|], tm' as [tm'|] => //; destruct Hdecl as (<- & h). 1: destruct h as [[h <-] | [h <-]].
   all: apply lift_sorting_it_impl_gen with tu => //= [] [] HT IHT; eauto.
   eapply type_ws_cumul_pb; tea.
-  { eapply lift_sorting_forget_univ, lift_sorting_it_impl_gen with tu => // Ht. now apply Ht. }
+  { eapply lift_sorting_forget_rel, lift_sorting_forget_univ, lift_sorting_it_impl_gen with tu => // Ht. now apply Ht. }
   eapply (red_ws_cumul_pb (pb:=Cumul)).
   now eapply closed_red1_red.
 Qed.
@@ -1626,7 +1626,7 @@ Proof.
 
   - (* LetIn value *)
     assert (X1' : lift_typing typing Σ Γ (j_vdef na r b_ty)).
-    { unshelve eapply lift_judgment_SR with (1 := X1); tea. firstorder. }
+    { unshelve eapply lift_judgment_SR with (1 := X1); tea. split => //. right; now split. }
     eapply type_Cumul_alt.
     econstructor; eauto.
     unshelve eapply (closed_context_conversion _ typeb'). pcuic.
@@ -1639,7 +1639,7 @@ Proof.
 
   - (* LetIn type annotation *)
     assert (X1' : lift_typing typing Σ Γ (j_vdef na b r)).
-    { unshelve eapply lift_judgment_SR with (1 := X1); tea. firstorder. }
+    { unshelve eapply lift_judgment_SR with (1 := X1); tea. split => //. left; now split. }
     eapply type_Cumul_alt.
     econstructor; eauto.
     unshelve eapply (closed_context_conversion _ typeb'). pcuic.
@@ -1763,7 +1763,7 @@ Proof.
     set (ibrctx := (case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl)) in *.
     set (brctx := (inst_case_context (pparams p) (puinst p) (bcontext br))).
     assert (wfbr : wf_branch cdecl br).
-    { eapply Forall2_All2, All2_nth_error in H4; tea.
+    { eapply Forall2_All2, All2_nth_error in H5; tea.
       eapply declc. }
     assert(eqctx : eq_context_upto_names ibrctx brctx).
     { rewrite /brctx /ibrctx.
@@ -2343,8 +2343,8 @@ Proof.
     eapply type_ws_cumul_pb; tea.
     * eapply type_Case; eauto. constructor; eauto. constructor; eauto.
       epose proof (wf_case_branches_types' (p:=set_preturn p preturn') ps _ brs isdecl (validity typec) H0
-        (forall_u _ X3) H4 X1).
-      eapply All2i_All2_mix_left in X8. 2:exact (Forall2_All2 _ _ H4). clear H4.
+        (forall_u _ X3) H5 X1).
+      eapply All2i_All2_mix_left in X8. 2:exact (Forall2_All2 _ _ H5). clear H5.
       eapply (All2i_All2i_mix X4) in X8. clear X4.
       eapply (All2i_impl X8); intuition auto; clear X8.
       rewrite !case_branch_type_fst in a3 a4 *.
@@ -2365,7 +2365,7 @@ Proof.
       now apply ws_cumul_ctx_pb_refl, wf_local_closed_context.
     * eapply ws_cumul_pb_eq_le, ws_cumul_pb_mkApps; tea.
       2:{ eapply ws_cumul_pb_terms_refl => //.
-          eapply isType_open in X0.
+          eapply isType_is_open_term in X0.
           rewrite on_free_vars_mkApps in X0.
           now move/andP: X0=> []. }
       eapply ws_cumul_pb_it_mkLambda_or_LetIn; tea.
@@ -2395,12 +2395,12 @@ Proof.
         apply All2_tip. eapply (cumulAlgo_cumulSpec _ (pb:=Conv)).
         symmetry. now eapply closed_red1_ws_cumul_pb.
       + now apply wf_local_closed_context.
-      + eapply isType_open in X0.
+      + eapply isType_is_open_term in X0.
         rewrite on_free_vars_mkApps in X0.
         move/andP: X0=> []. generalize (closed_red1_open_right Hu).
         rewrite !forallb_app /= => clc' clptm /and3P[] -> /=.
         now rewrite clc'.
-      + eapply isType_open in X0. rewrite on_free_vars_mkApps in X0.
+      + eapply isType_is_open_term in X0. rewrite on_free_vars_mkApps in X0.
         now move/andP: X0 => [].
 
   - (* Case congruence on branches *)
@@ -2411,14 +2411,14 @@ Proof.
     clear X5; rename Hctxi into X5.
     eapply type_Case; eauto. econstructor; eauto.
     econstructor; eauto.
-    * eapply Forall2_All2 in H4.
-      move: (All2_sym _ _ _ H4) => wfb.
+    * eapply Forall2_All2 in H5.
+      move: (All2_sym _ _ _ H5) => wfb.
       red. eapply All2_Forall2.
       apply All2_sym.
       eapply (OnOne2_All2_All2 X3 wfb); auto.
       intros [] []; simpl. intros.
-      destruct X0 as [_ eq]. subst bcontext0. exact H5.
-    * apply Forall2_All2 in H4. eapply All2i_All2_mix_left in X8; tea.
+      destruct X0 as [_ eq]. subst bcontext0. exact H4.
+    * apply Forall2_All2 in H5. eapply All2i_All2_mix_left in X8; tea.
       eapply (OnOne2_All2i_All2i X3 X8).
       intros n [] []; simpl. intros. intuition auto.
       intros n [ctx b] [ctx' b'] cdecl; cbn.
@@ -2518,7 +2518,7 @@ Proof.
         eapply (declared_inductive_closed_params_inst isdecl).
         move/isType_subst_extended_subst.
         move/(isType_weaken wfΓ); rewrite app_context_assoc.
-        move/(isType_subst_gen _ sppars).
+        move/(isType_substitution sppars).
         rewrite -skipn_subst_instance - !skipn_subst_context.
         rewrite -(subst_context_smash_context _ _ []).
         rewrite subst_instance_smash /=.
@@ -2527,7 +2527,7 @@ Proof.
         assert (context_assumptions (cstr_args cdecl) -
             (context_assumptions (cstr_args cdecl) - p.(proj_arg)) = p.(proj_arg)) by lia.
         rewrite H.
-        move/isType_open. len.
+        move/isType_is_open_term. len.
         rewrite !skipn_length; len. rewrite H //.
         rewrite subst_instance_subst // /indsubst.
         rewrite subst_instance_inds.
@@ -2796,7 +2796,7 @@ Proof.
       rewrite !subst_instance_app_ctx -app_context_assoc.
       intro foo. pose (fun x y z => isType_subst_arities isdecl cu (foo x y z)).
       move:i. clear foo.
-      intro foo. pose (fun x y z => isType_open (foo x y z)).
+      intro foo. pose (fun x y z => isType_is_open_term _ _ (foo x y z)).
       move:i. clear foo. len.
       rewrite skipn_length; len.
       assert (context_assumptions (cstr_args cdecl) -
@@ -2823,10 +2823,10 @@ Proof.
       now apply closed_red1_red.
     * rewrite on_free_vars_ctx_app andb_true_r on_free_vars_ctx_app H /=.
       cbn. rewrite shiftnP_add /=.
-      move/validity/isType_open: typec => -> //.
+      move/validity/isType_is_open_term: typec => -> //.
     * rewrite on_free_vars_ctx_app andb_true_r on_free_vars_ctx_app H /=.
       cbn. rewrite shiftnP_add /=.
-      move/validity/isType_open: typec => -> //.
+      move/validity/isType_is_open_term: typec => -> //.
     * have := (declared_projection_type_and_eq wf isdecl).
       move=> [[hctors isTy] Hdecl].
       move/validity/(isType_mkApps_Ind_proj_inv _ isdecl): typec => [sppars hpars hargs cu].
@@ -2837,7 +2837,7 @@ Proof.
       rewrite [_@[u]](subst_instance_app_ctx _ _ [_]).
       rewrite app_context_assoc subst_instance_smash.
       move/(isType_substitution sppars) => /=. len.
-      move/isType_open => /=. now cbn.
+      move/isType_is_open_term => /=. now cbn.
 
   - (* Fix congruence *)
     apply mkApps_Fix_spec in H5. simpl in H5. subst args.
@@ -2869,7 +2869,7 @@ Proof.
     { apply (OnOne2_All_All X4 X1).
       * intros d HT.
         apply lift_typing_impl with (1 := HT); now intros ?? [Hty _].
-      * intros d d' [[red _] eq] HT'.
+      * intros d d' [[red _] eq] HT'. noconf eq. rewrite /on_def_type -H3.
         apply lift_sorting_it_impl_gen with HT' => //; now intros [_ IH]. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -2889,9 +2889,9 @@ Proof.
       + move=> [na ty b rarg] [na' ty' b' rarg'] [[[red Hred] eq] HT] HB.
         rewrite /= in red, Hred, eq, HB, HT.
         noconf eq.
-        destruct HB as ((Hb & IHb) & s & (Ht & IHt) & e); cbn in *.
+        destruct HB as ((Hb & IHb) & s & (Ht & IHt) & e & er); cbn in *.
         eassert (Σ ;;; Γ ,,, _ |- lift0 _ ty' : tSort s).
-        2: repeat (eexists; cbn).
+        2: repeat (eexists; cbn). 4: eassumption.
         2,3: eapply context_conversion; eauto.
         all: rewrite -fixl.
         { eapply IHt. eapply @weakening_closed_red1 with (Γ' := []); eauto. now eapply wf_local_closed_context. }
@@ -2908,7 +2908,7 @@ Proof.
     * eapply wf_fixpoint_red1_type; eauto.
       eapply OnOne2_impl; tea; cbn; intuition auto.
       apply a2. apply a2.
-    * eapply All_nth_error in X0; eauto.
+    * eapply isTypeRel_isType. eapply All_nth_error in X0; eauto.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[[red Hred] eq]] => //.
       reflexivity. eapply PCUICCumulativity.red_conv.
       apply red1_red, red.
@@ -2927,7 +2927,7 @@ Proof.
       * intros d HT.
         apply lift_typing_impl with (1 := HT); now intros ?? [Hty _].
       * intros d d' [[red _] eq] HT'.
-        noconf eq. unfold on_def_type in HT' |- *. rewrite -H4.
+        noconf eq. unfold on_def_type in HT' |- *. rewrite -H3 -H4.
         apply lift_typing_impl with (1 := HT'); now intros ?? []. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -2950,7 +2950,7 @@ Proof.
     * eapply wf_fixpoint_red1_body; eauto.
       eapply OnOne2_impl; tea; cbn; intuition auto.
       apply a2. apply a2.
-    * eapply All_nth_error in X0; eauto.
+    * eapply isTypeRel_isType. eapply All_nth_error in X0; eauto.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[_ eq]].
       reflexivity. noconf eq. rewrite H4; reflexivity.
 
@@ -2979,7 +2979,7 @@ Proof.
       { apply (OnOne2_All_All X4 X1).
       * intros d HT.
         apply lift_typing_impl with (1 := HT); now intros ?? [Hty _].
-      * intros d d' [[red _] eq] HT'.
+      * intros d d' [[red _] eq] HT'. noconf eq. rewrite /on_def_type -H3.
         apply lift_sorting_it_impl_gen with HT' => //. now intros [_ IH]. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -2999,9 +2999,9 @@ Proof.
       + move=> [na ty b rarg] [na' ty' b' rarg'] [[[red Hred] eq] HT] HB.
         rewrite /= in red, Hred, eq, HB, HT.
         noconf eq.
-        destruct HB as ((Hb & IHb) & s & (Ht & IHt) & e); cbn in *.
+        destruct HB as ((Hb & IHb) & s & (Ht & IHt) & e & er); cbn in *.
         eassert (Σ ;;; Γ ,,, _ |- lift0 _ ty' : tSort s).
-        2: repeat (eexists; cbn).
+        2: repeat (eexists; cbn). 4: eassumption.
         2,3: eapply context_conversion; eauto.
         all: rewrite -fixl.
         { eapply IHt. eapply @weakening_closed_red1 with (Γ' := []); eauto. now eapply wf_local_closed_context. }
@@ -3018,7 +3018,7 @@ Proof.
     * eapply (wf_cofixpoint_red1_type _ Γ); eauto.
       eapply OnOne2_impl; tea; cbn; intuition auto;
       now eapply closed_red1_red.
-    * eapply All_nth_error in X0; eauto.
+    * eapply isTypeRel_isType. eapply All_nth_error in X0; eauto.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[[red Hred] eq]] => //.
       reflexivity. eapply PCUICCumulativity.red_conv.
       apply red1_red, red.
@@ -3037,7 +3037,7 @@ Proof.
       * intros d HT.
         apply lift_typing_impl with (1 := HT); now intros ?? [Hty _].
       * intros d d' [[red _] eq] HT'.
-        noconf eq. unfold on_def_type in HT' |- *. rewrite -H4.
+        noconf eq. unfold on_def_type in HT' |- *. rewrite -H3 -H4.
         apply lift_typing_impl with (1 := HT'); now intros ?? []. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -3060,7 +3060,7 @@ Proof.
     * eapply wf_cofixpoint_red1_body; eauto.
       eapply OnOne2_impl; tea; cbn; intuition auto.
       apply a2. apply a2.
-    * eapply All_nth_error in X0; eauto.
+    * eapply isTypeRel_isType. eapply All_nth_error in X0; eauto.
     * apply conv_cumul, conv_sym. destruct disj as [<-|[_ eq]].
       reflexivity. noconf eq. rewrite H4; reflexivity.
 

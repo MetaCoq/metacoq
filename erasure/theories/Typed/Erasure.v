@@ -107,7 +107,7 @@ Proof.
   intros [(_ & s & typ & _)].
   sq.
   apply inversion_Prod in typ as (s' & ? & ? & ? & ?); [|now eauto].
-  now eapply lift_sorting_forget_univ.
+  now eapply lift_sorting_forget_univ, lift_sorting_forget_rel.
 Qed.
 
 Hint Resolve isType_prod_dom : erase.
@@ -1097,7 +1097,8 @@ Proof.
     sq.
     destruct r as [?? r].
     eapply subject_reduction in r; eauto.
-    apply inversion_Lambda in r as (?&?&?&?); auto.
+    apply inversion_Lambda in r as (?&h1&?&?); auto.
+    eapply isTypeRel_isType in h1; auto.
   - clear inf.
     destruct (typ _ wfΣ) as [typ0].
     reduce_term_sound.
@@ -1168,10 +1169,8 @@ Proof.
     subst.
     assert (∥ wf Σ0 ∥) by now apply HΣ.
     unfold on_constant_decl in wt.
-    destruct (PCUICEnvironment.cst_body cst); cbn in *.
-    + sq;eapply validity;eauto. now eapply unlift_TermTyp.
-    + destruct wt.
-      eexists; eassumption.
+    sq.
+    now apply lift_sorting_forget_body, lift_sorting_forget_rel in wt.
   - assert (rΣ = Σ).
     { eapply abstract_env_ext_irr;eauto. }
     easy.
@@ -1180,10 +1179,8 @@ Proof.
     subst.
     assert (∥ wf Σ ∥) by now apply HΣ.
     unfold on_constant_decl in wt.
-    destruct (PCUICEnvironment.cst_body cst).
-    + sq.
-      now eapply unlift_TermTyp, validity in wt.
-    + assumption.
+    sq.
+    now apply lift_sorting_forget_body, lift_sorting_forget_rel in wt.
 Qed.
 
 Import P.
@@ -1213,7 +1210,7 @@ Qed.
 
 Definition ind_aname (oib : PCUICEnvironment.one_inductive_body) :=
   {| binder_name := nNamed (PCUICEnvironment.ind_name oib);
-     binder_relevance := PCUICEnvironment.ind_relevance oib |}.
+     binder_relevance := rel_of_Type |}.
 
 Definition arities_contexts
          (mind : kername)
@@ -1343,6 +1340,7 @@ Proof.
   all: intros;assert (rΣ = Σ) by (eapply abstract_env_ext_irr;eauto);subst.
   - abstract (
       destruct wt as [wt];sq;
+      eapply isTypeRel_isType;
       exact (onArity wt.π2)).
   - abstract (
       destruct p;

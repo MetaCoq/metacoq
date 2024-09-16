@@ -51,18 +51,6 @@ Section Validity.
     now eapply inversion_Sort in Hu as [? [? ?]].
   Qed.
 
-  Lemma isType_subst_instance_decl {Σ Γ T c decl u} :
-    wf Σ.1 ->
-    lookup_env Σ.1 c = Some decl ->
-    isType (Σ.1, universes_decl_of_decl decl) Γ T ->
-    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-    isType Σ (subst_instance u Γ) (subst_instance u T).
-  Proof using Type.
-    destruct Σ as [Σ φ]. intros X X0 Hty X1.
-    eapply lift_typing_fu_impl with (1 := Hty) => // ?? Hs.
-    eapply typing_subst_instance_decl; eauto.
-  Qed.
-
   Lemma isWfArity_subst_instance_decl {Σ Γ T c decl u} :
     wf Σ.1 ->
     lookup_env Σ.1 c = Some decl ->
@@ -204,7 +192,7 @@ Section Validity.
     - (* Lambda *)
       eapply lift_sorting_ex_it_impl_gen with X3 => // Hs.
       pose proof (lift_sorting_extract X0).
-      eexists; constructor; eauto.
+      eexists; split; constructor; eauto.
 
     - (* Let *)
       apply lift_sorting_it_impl_gen with X3 => // Hs.
@@ -228,25 +216,27 @@ Section Validity.
 
     - (* Constant *)
       eapply declared_constant_inv in wf as Hc; eauto.
-      destruct Hc as (_ & s & Hs & _); simpl in Hs.
+      apply lift_sorting_forget_body, lift_sorting_forget_rel in Hc.
       eapply isType_weakening; eauto.
       unshelve eapply declared_constant_to_gen in H; eauto.
-      eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
-      now eapply has_sort_isType.
+      eapply isType_subst_instance_decl with (Γ:=[]); eauto. simpl.
       exact weaken_env_prop_typing.
 
      - (* Inductive type *)
       destruct (on_declared_inductive isdecl); pcuic.
       destruct isdecl.
-      apply onArity in o0.
+      apply onArity, isTypeRel_isType in o0.
       eapply isType_weakening; eauto.
       unshelve eapply declared_minductive_to_gen in H; eauto.
-      eapply (isType_subst_instance_decl (Γ:=[])); eauto.
+      eapply isType_subst_instance_decl with (Γ:=[]); eauto.
 
     - (* Constructor type *)
       destruct (on_declared_constructor isdecl) as [[oni oib] [cs [declc onc]]].
       unfold type_of_constructor.
-      eapply lift_typing_fu_impl with (f := fun t => _ (_ t)) (1 := on_ctype onc) => //= ?? Hs.
+      pose proof (on_ctype onc) as Hc.
+      apply isTypeRel_isType in Hc.
+      eapply lift_typing_fu_impl with (f := fun t => _ (_ t)) (1 := Hc) => //= ?? Hs.
+      2: now eapply relevance_subst_opt.
       eapply instantiate_minductive in Hs; eauto.
       2:(destruct isdecl as [[] ?]; eauto).
       simpl in Hs.
@@ -311,6 +301,7 @@ Section Validity.
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
       eapply lift_typing_fu_impl with (f := fun t => _ (_ t)) (1 := isdecl') => // ?? Hs.
+      2: now eapply relevance_subst_opt.
       unshelve epose proof (isdecl_ := declared_projection_to_gen isdecl); eauto.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl_.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
@@ -333,9 +324,11 @@ Section Validity.
       assumption.
 
     - (* Fix *)
+      eapply isTypeRel_isType.
       eapply nth_error_all in X0; eauto.
 
     - (* CoFix *)
+      eapply isTypeRel_isType.
       eapply nth_error_all in X0; eauto.
 
     - (* Primitive *)
@@ -345,11 +338,14 @@ Section Validity.
       set (s := sType (Universe.make' (array_level a))).
       destruct H1 as [hty' hbod huniv].
       eapply has_sort_isType with s.
-      eapply (type_App _ _ _ _ _ (tSort s)); tea; cycle 1.
+      eapply (type_App _ _ _ _ (tSort s) (tSort s)); tea; cycle 1.
       + eapply (type_Const _ _ _ [array_level a]) in H0; tea. rewrite hty' in H0. cbn in H0. exact H0.
         red. rewrite huniv. simpl. rtoProp; intuition eauto. eapply LevelSet.mem_spec. eapply (wfl (array_level a, 0)). cbn. lsets.
         cbn. red. destruct check_univs => //. red. red. intros v H c. csets.
-      + econstructor. 2: econstructor; eauto. repeat (eexists; tea). econstructor; eauto.
+      + econstructor. 2: econstructor; eauto. 2: constructor; tas.
+        all: repeat (eexists; tea; cbn).
+        1,3: econstructor; eauto.
+        all: apply relevance_super.
 
     - (* Conv *)
       now eapply has_sort_isType with (s := s).

@@ -74,14 +74,7 @@ cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
 
 PLUGIN_PROJECT_BLACKLIST := \
-	carryType \
-	coreTactics \
-	depElim \
-	floatClass \
-	init \
 	mCUint63 \
-	noConfusion \
-	wf \
 	#
 
 space := $(subst ,, )

@@ -2,7 +2,7 @@ From Coq.Numbers Require Import BinNums DecimalFacts HexadecimalFacts
      Cyclic.Int63.PrimInt63 Cyclic.Int63.Uint63
      Cyclic.Abstract.CyclicAxioms
      Cyclic.Abstract.DoubleType
-     Cyclic.Abstract.CarryType
+     Cyclic.Int63.CarryType
 .
 From Coq Require Import ZArith.
 From MetaCoq.Quotation.ToTemplate Require Import Stdlib.Init.

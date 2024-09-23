@@ -43,15 +43,15 @@ Register Stdlib.Init.Specif.sigT as metacoq.sigma.type.
 Register Stdlib.Init.Specif.existT as metacoq.sigma.intro.
 Register MetaCoq.Template.TemplateMonad.Common.existT_typed_term as metacoq.sigma.typed_term.
 
-Register Stdlib.Numbers.BinNums.positive as metacoq.pos.type.
-Register Stdlib.Numbers.BinNums.xI as metacoq.pos.xI.
-Register Stdlib.Numbers.BinNums.xO as metacoq.pos.xO.
-Register Stdlib.Numbers.BinNums.xH as metacoq.pos.xH.
+Register BinNums.positive as metacoq.pos.type.
+Register BinNums.xI as metacoq.pos.xI.
+Register BinNums.xO as metacoq.pos.xO.
+Register BinNums.xH as metacoq.pos.xH.
 
-Register Stdlib.Numbers.BinNums.Z as metacoq.Z.type.
-Register Stdlib.Numbers.BinNums.Zpos as metacoq.Z.pos.
-Register Stdlib.Numbers.BinNums.Zneg as metacoq.Z.neg.
-Register Stdlib.Numbers.BinNums.Z0 as metacoq.Z.zero.
+Register BinNums.Z as metacoq.Z.type.
+Register BinNums.Zpos as metacoq.Z.pos.
+Register BinNums.Zneg as metacoq.Z.neg.
+Register BinNums.Z0 as metacoq.Z.zero.
 
 (* Ast *)
 Register MetaCoq.Common.BasicAst.relevance as metacoq.ast.relevance.

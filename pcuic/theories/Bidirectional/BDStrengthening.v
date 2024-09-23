@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
-Require Import Coq.Program.Equality.
+From Coq.Program Require Import Equality.
 
 Ltac case_inequalities :=
   match goal with

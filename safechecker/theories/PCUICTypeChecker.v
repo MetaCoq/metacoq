@@ -25,7 +25,7 @@ From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICSafeReduce PCUICEr
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
-Require Import Stdlib.Program.Program.
+From Stdlib Require Import Program.
 
 Local Set Keyed Unification.
 Set Equations Transparent.

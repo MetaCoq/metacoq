@@ -301,12 +301,12 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool
   let mind = reduce_all env evm mind in
   let evm' = Evd.from_env env in
   let evm', ctx, mind = unquote_mutual_inductive_entry env evm' mind in
-  let () = Global.push_context_set ~strict:true ctx in
+  let () = Global.push_context_set ctx in
   let evm, mind =
     if infer_univs then
       let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
       debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set UnivNames.pr_level_with_global_universes ctx));
-      Global.push_context_set ~strict:true ctx;
+      Global.push_context_set ctx;
       Evd.merge_context_set Evd.UnivRigid evm ctx, mind
     else evm, mind
   in

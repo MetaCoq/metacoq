@@ -149,6 +149,14 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "equations"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-utils'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-utils"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-common'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-common"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-template-coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-template-coq"
@@ -161,9 +169,25 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-safechecker"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-erasure'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-erasure"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-quotation'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-quotation"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-safechecker-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-safechecker-plugin"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-erasure-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-erasure-plugin"
     - if: steps.stepCheck.outputs.status == 'built'
       name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
@@ -182,4 +206,4 @@ name: Nix CI for bundle coq-8.19
     - reopened
   push:
     branches:
-    - master
+    - coq-8.19

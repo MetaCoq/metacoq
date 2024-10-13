@@ -40,6 +40,8 @@
     coqPackages.coq.override.version = "8.19";
     coqPackages.equations.override.version = "1.3+8.19";
 
+    coqPackages.metacoq.main-job = true;
+    # coqPackages.metacoq-utils.main-job = true;
 
     push-branches = ["coq-8.19"];
 

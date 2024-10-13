@@ -45,6 +45,8 @@
 
     push-branches = ["coq-8.19"];
 
+    # Reverse dependencies
+    coqPackages.ElmExtraction.override.version = "master";
   };
 
   ## Cachix caches to use in CI

@@ -48,6 +48,8 @@ Next Obligation. eapply fake_abstract_guard_impl_properties. Qed.
 Definition infer_and_print_template_program_with_guard {cf} {nor} :=
   @SafeTemplateChecker.infer_and_print_template_program cf nor fake_abstract_guard_impl.
 
+From Stdlib.Program Require Import Wf.
+Extraction Library Wf.
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
          infer_and_print_template_program_with_guard
          (* The following directives ensure separate extraction does not produce name clashes *)

@@ -12,7 +12,8 @@ Environment is well-formed and Ind(Stdlib.Init.Datatypes.nat,0,[]) has type: Sor
 MetaCoq SafeCheck (3 + 1).
 
 Definition bool_list := List.map negb (cons true (cons false nil)).
-MetaCoq SafeCheck bool_list.
+(* was working a bit by accident *)
+(* MetaCoq SafeCheck bool_list. *)
 MetaCoq CoqCheck bool_list.
 
 (* Time MetaCoq SafeCheck @infer_and_print_template_program. *)

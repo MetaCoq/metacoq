@@ -232,7 +232,7 @@ struct
   let unquote_universe_level evm l = evm, unquote_level l
 
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * UVars.Instance.t
-  = (evm,  UVars.Instance.of_array ([||], Array.of_list (List0.map unquote_level l)))
+  = (evm,  UVars.Instance.of_array ([||], Array.of_list (List.map unquote_level l)))
 
 
   let unquote_global_reference (trm : Kernames.global_reference) : GlobRef.t =

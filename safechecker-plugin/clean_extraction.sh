@@ -32,6 +32,9 @@ then
     # Remove extracted modules already linked in the template_coq plugin.
     echo "Removing:" $files
     rm -f $files
+
+    # confusion between Init.Wf and Program.Wf
+    sed -i.bak src/pCUICSafeChecker.ml -e 's/open Wf/open Wf0/'
 else
     echo "Extraction up-to date"
 fi

@@ -1,0 +1,37 @@
+## This file allows joining the different accounts of a same person.
+## Cf for instance: git shortlog -nse. More details via: man git shortlog
+
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (@ VM in vaio) <abhishek.anand.iitg@gmail.com>
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (@brixpro-home) <abhishek.anand.iitg@gmail.com>
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (Kevix laptop) <abhishek.anand.iitg@gmail.com>
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (on Manjaro on brixpro) <abhishek.anand.iitg@gmail.com>
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (on lenovo laptop) <abhishek.anand.iitg@gmail.com>
+Abhishek Anand <abhishek.anand.iitg@gmail.com>        Abhishek Anand (optiplex7010@home) <abhishek.anand.iitg@gmail.com>
+Gregory Malecha <gmalecha@eecs.harvard.edu>           Gregory Malecha <gmalecha@cs.harvard.edu>
+Gregory Malecha <gmalecha@eecs.harvard.edu>           Gregory Malecha <gmalecha@gmail.com>
+Jakob Botsch Nielsen <jakob.botsch.nielsen@gmail.com> Jakob Botsch Nielsen <Jakob.botsch.nielsen@gmail.com>
+Jason Gross <jgross@mit.edu>                          Jason Gross <jasongross9@gmail.com>
+Kenji Maillard <kenji.maillard@inria.fr>              Kenji Maillard <kenji@maillard.blue>
+Li-yao Xia <lysxia@gmail.com>                         Lysxia <lysxia@gmail.com>
+Matthieu Sozeau <mattam@mattam.org>                   Matthieu Sozeau <matthieu.sozeau@inria.fr>
+Maxime Dénès <mail@maximedenes.fr>                    Maxime Dénès <maxime.denes@inria.fr>
+Meven Lennon-Bertrand <meven.bertrand@univ-nantes.fr> Meven <meven.bertrand@univ-nantes.fr>
+Meven Lennon-Bertrand <meven.bertrand@univ-nantes.fr> Meven <mgapb2@cam.ac.uk>
+Meven Lennon-Bertrand <meven.bertrand@univ-nantes.fr> Meven Lennon-Bertrand <58942857+MevenBertrand@users.noreply.github.com>
+Nada Amin <namin@seas.harvard.edu>                    Nada Amin <namin@alum.mit.edu>
+Nicolas Tabareau <nicolas.tabareau@inria.fr>          nicolas tabareau <nicolas.tabareau@gmail.com>
+Nicolas Tabareau <nicolas.tabareau@inria.fr>          nicolas tabareau <nicolas.tabareau@inria.fr>
+Nicolas Tabareau <nicolas.tabareau@inria.fr>          nicolas.tabareau <nicolas.tabareau@inria.fr>
+Pierre Roux <pierre@roux01.fr>                        Pierre Roux <pierre.roux@onera.fr>
+Simon Boulier <simon.boulier@ens-rennes.fr>           SimonBoulier <SimonBoulier@users.noreply.github.com>
+Simon Boulier <simon.boulier@ens-rennes.fr>           SimonBoulier <simon.boulier@ens-rennes.fr>
+Théo Winterhalter <theo.winterhalter@inria.fr>        Théo Winterhalter <isheeft@gmail.com>
+Théo Winterhalter <theo.winterhalter@inria.fr>        Théo Winterhalter <theo.winterhalter@gmail.com>
+Théo Winterhalter <theo.winterhalter@inria.fr>        Théo Winterhalter <theo.winterhalter@inria.fr>
+Vadim Zaliva <lord@digamma.ai>                        Vadim Zaliva <lord@crocodile.org>
+Yann Leray <yann.leray@inria.fr>                      Yann Leray <yannl35133@gmail.com>
+Yann Leray <yann.leray@inria.fr>                      yannl35133 <40719961+yannl35133@users.noreply.github.com>
+Yannick Forster <yannick@yforster.de>                 Yannick Forster <forster@cs.uni-saarland.de>
+Yannick Forster <yannick@yforster.de>                 Yannick Forster <forster@ps.uni-saarland.de>
+Yannick Forster <yannick@yforster.de>                 Yannick Forster <yannick.forster@inria.fr>
+Yannick Forster <yannick@yforster.de>                 Yannick Forster <yannick@yforster.de>

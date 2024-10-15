@@ -47,6 +47,7 @@
 
     # Reverse dependencies
     coqPackages.ElmExtraction.override.version = "master";
+    coqPackages.RustExtraction.override.version = "master";
   };
 
   ## Cachix caches to use in CI

@@ -32,11 +32,12 @@ jobs:
       uses: cachix/install-nix-action@v30
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
-    - name: Cachix setup coq
+    - name: Cachix setup metacoq
       uses: cachix/cachix-action@v15
       with:
-        extraPullNames: coq-community
-        name: coq
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
     - id: stepCheck
       name: Checking presence of CI target ElmExtraction
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
@@ -88,11 +89,12 @@ jobs:
       uses: cachix/install-nix-action@v30
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
-    - name: Cachix setup coq
+    - name: Cachix setup metacoq
       uses: cachix/cachix-action@v15
       with:
-        extraPullNames: coq-community
-        name: coq
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
     - id: stepCheck
       name: Checking presence of CI target RustExtraction
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
@@ -142,11 +144,12 @@ jobs:
       uses: cachix/install-nix-action@v30
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
-    - name: Cachix setup coq
+    - name: Cachix setup metacoq
       uses: cachix/cachix-action@v15
       with:
-        extraPullNames: coq-community
-        name: coq
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
     - id: stepCheck
       name: Checking presence of CI target coq
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
@@ -189,11 +192,12 @@ jobs:
       uses: cachix/install-nix-action@v30
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
-    - name: Cachix setup coq
+    - name: Cachix setup metacoq
       uses: cachix/cachix-action@v15
       with:
-        extraPullNames: coq-community
-        name: coq
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
     - id: stepCheck
       name: Checking presence of CI target equations
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
@@ -241,11 +245,12 @@ jobs:
       uses: cachix/install-nix-action@v30
       with:
         nix_path: nixpkgs=channel:nixpkgs-unstable
-    - name: Cachix setup coq
+    - name: Cachix setup metacoq
       uses: cachix/cachix-action@v15
       with:
-        extraPullNames: coq-community
-        name: coq
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
     - id: stepCheck
       name: Checking presence of CI target metacoq
       run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\

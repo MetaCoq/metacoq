@@ -6,23 +6,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Determine which commit to initially checkout
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha\
-        \ }}\" >> $GITHUB_ENV\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.target_commit }}
     - name: Determine which commit to test
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{\
-        \ github.event.repository.html_url }} refs/pull/${{ github.event.number }}/merge\
-        \ | cut -f1)\n  mergeable=$(git merge --no-commit --no-ff ${{ github.event.pull_request.base.sha\
-        \ }} > /dev/null 2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n\
-        \  if [ -z \"$merge_commit\" -o \"x$mergeable\" != \"x0\" ]; then\n    echo\
-        \ \"tested_commit=${{ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n\
-        \  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
@@ -40,10 +40,10 @@ jobs:
         name: metacoq
     - id: stepCheck
       name: Checking presence of CI target ElmExtraction
-      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"coq-8.19\" --argstr job \"ElmExtraction\" \\\n   --dry-run 2>&1\
-        \ > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"\
-        built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"ElmExtraction\" \\\n   --dry-run 2>&1 >
+        /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
@@ -63,23 +63,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Determine which commit to initially checkout
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha\
-        \ }}\" >> $GITHUB_ENV\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.target_commit }}
     - name: Determine which commit to test
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{\
-        \ github.event.repository.html_url }} refs/pull/${{ github.event.number }}/merge\
-        \ | cut -f1)\n  mergeable=$(git merge --no-commit --no-ff ${{ github.event.pull_request.base.sha\
-        \ }} > /dev/null 2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n\
-        \  if [ -z \"$merge_commit\" -o \"x$mergeable\" != \"x0\" ]; then\n    echo\
-        \ \"tested_commit=${{ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n\
-        \  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
@@ -97,10 +97,10 @@ jobs:
         name: metacoq
     - id: stepCheck
       name: Checking presence of CI target RustExtraction
-      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"coq-8.19\" --argstr job \"RustExtraction\" \\\n   --dry-run 2>&1\
-        \ > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"\
-        built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"RustExtraction\" \\\n   --dry-run 2>&1
+        > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
@@ -118,23 +118,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Determine which commit to initially checkout
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha\
-        \ }}\" >> $GITHUB_ENV\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.target_commit }}
     - name: Determine which commit to test
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{\
-        \ github.event.repository.html_url }} refs/pull/${{ github.event.number }}/merge\
-        \ | cut -f1)\n  mergeable=$(git merge --no-commit --no-ff ${{ github.event.pull_request.base.sha\
-        \ }} > /dev/null 2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n\
-        \  if [ -z \"$merge_commit\" -o \"x$mergeable\" != \"x0\" ]; then\n    echo\
-        \ \"tested_commit=${{ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n\
-        \  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
@@ -152,8 +152,8 @@ jobs:
         name: metacoq
     - id: stepCheck
       name: Checking presence of CI target coq
-      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"coq-8.19\" --argstr job \"coq\" \\\n   --dry-run 2>&1 > /dev/null)\n\
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"coq\" \\\n   --dry-run 2>&1 > /dev/null)\n
         echo $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\" | sed \"\
         s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
@@ -166,23 +166,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Determine which commit to initially checkout
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha\
-        \ }}\" >> $GITHUB_ENV\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.target_commit }}
     - name: Determine which commit to test
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{\
-        \ github.event.repository.html_url }} refs/pull/${{ github.event.number }}/merge\
-        \ | cut -f1)\n  mergeable=$(git merge --no-commit --no-ff ${{ github.event.pull_request.base.sha\
-        \ }} > /dev/null 2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n\
-        \  if [ -z \"$merge_commit\" -o \"x$mergeable\" != \"x0\" ]; then\n    echo\
-        \ \"tested_commit=${{ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n\
-        \  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
@@ -200,8 +200,8 @@ jobs:
         name: metacoq
     - id: stepCheck
       name: Checking presence of CI target equations
-      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"coq-8.19\" --argstr job \"equations\" \\\n   --dry-run 2>&1 > /dev/null)\n\
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"equations\" \\\n   --dry-run 2>&1 > /dev/null)\n
         echo $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\" | sed \"\
         s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
@@ -216,26 +216,30 @@ jobs:
     needs:
     - coq
     - equations
+    - metacoq-safechecker-plugin
+    - metacoq-erasure-plugin
+    - metacoq-translations
+    - metacoq-quotation
     runs-on: ubuntu-latest
     steps:
     - name: Determine which commit to initially checkout
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha\
-        \ }}\" >> $GITHUB_ENV\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ env.target_commit }}
     - name: Determine which commit to test
-      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{\
-        \ github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{\
-        \ github.event.repository.html_url }} refs/pull/${{ github.event.number }}/merge\
-        \ | cut -f1)\n  mergeable=$(git merge --no-commit --no-ff ${{ github.event.pull_request.base.sha\
-        \ }} > /dev/null 2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n\
-        \  if [ -z \"$merge_commit\" -o \"x$mergeable\" != \"x0\" ]; then\n    echo\
-        \ \"tested_commit=${{ github.event.pull_request.head.sha }}\" >> $GITHUB_ENV\n\
-        \  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n  fi\nfi\n"
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
     - name: Git checkout
       uses: actions/checkout@v4
       with:
@@ -253,10 +257,84 @@ jobs:
         name: metacoq
     - id: stepCheck
       name: Checking presence of CI target metacoq
-      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr\
-        \ bundle \"coq-8.19\" --argstr job \"metacoq\" \\\n   --dry-run 2>&1 > /dev/null)\n\
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq\" \\\n   --dry-run 2>&1 > /dev/null)\n
         echo $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\" | sed \"\
         s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-safechecker-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-safechecker-plugin"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-erasure-plugin'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-erasure-plugin"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-translations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-translations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-quotation'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-quotation"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq"
+  metacoq-common:
+    needs:
+    - coq
+    - equations
+    - metacoq-utils
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-common
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-common\" \\\n   --dry-run 2>&1
+        > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
@@ -270,17 +348,64 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-utils"
     - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-common'
+      name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-common"
+  metacoq-erasure:
+    needs:
+    - coq
+    - equations
+    - metacoq-safechecker
+    - metacoq-template-pcuic
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-erasure
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-erasure\" \\\n   --dry-run 2>&1
+        > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
     - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-template-coq'
+      name: 'Building/fetching previous CI target: coq'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
-        --argstr job "metacoq-template-coq"
+        --argstr job "coq"
     - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-pcuic'
+      name: 'Building/fetching previous CI target: equations'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
-        --argstr job "metacoq-pcuic"
+        --argstr job "equations"
     - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-safechecker'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
@@ -290,27 +415,589 @@ jobs:
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-template-pcuic"
     - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-erasure"
+  metacoq-erasure-plugin:
+    needs:
+    - coq
+    - equations
+    - metacoq-template-pcuic
+    - metacoq-erasure
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-erasure-plugin
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-erasure-plugin\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
       name: 'Building/fetching previous CI target: metacoq-erasure'
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-erasure"
     - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-quotation'
-      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
-        --argstr job "metacoq-quotation"
-    - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-safechecker-plugin'
-      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
-        --argstr job "metacoq-safechecker-plugin"
-    - if: steps.stepCheck.outputs.status == 'built'
-      name: 'Building/fetching previous CI target: metacoq-erasure-plugin'
+      name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
         --argstr job "metacoq-erasure-plugin"
+  metacoq-pcuic:
+    needs:
+    - coq
+    - equations
+    - metacoq-common
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-pcuic
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-pcuic\" \\\n   --dry-run 2>&1 >
+        /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-common'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-common"
     - if: steps.stepCheck.outputs.status == 'built'
       name: Building/fetching current CI target
       run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
-        --argstr job "metacoq"
+        --argstr job "metacoq-pcuic"
+  metacoq-quotation:
+    needs:
+    - coq
+    - equations
+    - metacoq-template-coq
+    - metacoq-pcuic
+    - metacoq-template-pcuic
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-quotation
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-quotation\" \\\n   --dry-run 2>&1
+        > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-quotation"
+  metacoq-safechecker:
+    needs:
+    - coq
+    - equations
+    - metacoq-pcuic
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-safechecker
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-safechecker\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-safechecker"
+  metacoq-safechecker-plugin:
+    needs:
+    - coq
+    - equations
+    - metacoq-template-pcuic
+    - metacoq-safechecker
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-safechecker-plugin
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-safechecker-plugin\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-safechecker'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-safechecker"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-safechecker-plugin"
+  metacoq-template-coq:
+    needs:
+    - coq
+    - equations
+    - metacoq-common
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-template-coq
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-template-coq\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-common'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-common"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-coq"
+  metacoq-template-pcuic:
+    needs:
+    - coq
+    - equations
+    - metacoq-template-coq
+    - metacoq-pcuic
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-template-pcuic
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-template-pcuic\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-pcuic'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-pcuic"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-pcuic"
+  metacoq-translations:
+    needs:
+    - coq
+    - equations
+    - metacoq-template-coq
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-translations
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-translations\" \\\n   --dry-run
+        2>&1 > /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep
+        \"built:\" | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: metacoq-template-coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-template-coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-translations"
+  metacoq-utils:
+    needs:
+    - coq
+    - equations
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine which commit to initially checkout
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"target_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  echo \"target_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.target_commit }}
+    - name: Determine which commit to test
+      run: "if [ ${{ github.event_name }} = \"push\" ]; then\n  echo \"tested_commit=${{
+        github.sha }}\" >> $GITHUB_ENV\nelse\n  merge_commit=$(git ls-remote ${{ github.event.repository.html_url
+        }} refs/pull/${{ github.event.number }}/merge | cut -f1)\n  mergeable=$(git
+        merge --no-commit --no-ff ${{ github.event.pull_request.base.sha }} > /dev/null
+        2>&1; echo $?; git merge --abort > /dev/null 2>&1 || true)\n  if [ -z \"$merge_commit\"\
+        \ -o \"x$mergeable\" != \"x0\" ]; then\n    echo \"tested_commit=${{ github.event.pull_request.head.sha
+        }}\" >> $GITHUB_ENV\n  else\n    echo \"tested_commit=$merge_commit\" >> $GITHUB_ENV\n\
+        \  fi\nfi\n"
+    - name: Git checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ env.tested_commit }}
+    - name: Cachix install
+      uses: cachix/install-nix-action@v30
+      with:
+        nix_path: nixpkgs=channel:nixpkgs-unstable
+    - name: Cachix setup metacoq
+      uses: cachix/cachix-action@v15
+      with:
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        extraPullNames: coq, coq-community
+        name: metacoq
+    - id: stepCheck
+      name: Checking presence of CI target metacoq-utils
+      run: "nb_dry_run=$(NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link \\\n   --argstr
+        bundle \"coq-8.19\" --argstr job \"metacoq-utils\" \\\n   --dry-run 2>&1 >
+        /dev/null)\necho $nb_dry_run\necho status=$(echo $nb_dry_run | grep \"built:\"\
+        \ | sed \"s/.*/built/\") >> $GITHUB_OUTPUT\n"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: coq'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "coq"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: 'Building/fetching previous CI target: equations'
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "equations"
+    - if: steps.stepCheck.outputs.status == 'built'
+      name: Building/fetching current CI target
+      run: NIXPKGS_ALLOW_UNFREE=1 nix-build --no-out-link --argstr bundle "coq-8.19"
+        --argstr job "metacoq-utils"
 name: Nix CI for bundle coq-8.19
-'on':
+on:
   pull_request:
     paths:
     - .github/workflows/nix-action-coq-8.19.yml

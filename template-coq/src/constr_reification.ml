@@ -67,8 +67,8 @@ struct
   let template s = resolve ("metacoq.template." ^ s)
   let template_ref s = resolve_ref ("metacoq.template." ^ s)
 
-  let tString = resolve "metacoq.string.cons"
-  let tEmptyString = resolve "metacoq.string.nil"
+  let tBsString = resolve "metacoq.string.cons"
+  let tBsEmptyString = resolve "metacoq.string.nil"
   let tO = resolve "metacoq.nat.zero"
   let tS = resolve "metacoq.nat.succ"
   let tnat = resolve "metacoq.nat.type"
@@ -151,12 +151,12 @@ struct
   let tmk_branch = ast "mk_branch"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat,tArray) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat,tString,tArray) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
      ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat",
-     ast "tArray")
+     ast "tString", ast "tArray")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"

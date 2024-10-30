@@ -178,6 +178,7 @@ Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
 Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
 Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat.
+Register MetaCoq.Template.Ast.tString as metacoq.ast.tString.
 Register MetaCoq.Template.Ast.tArray as metacoq.ast.tArray.
 
 (* Local and global declarations *)

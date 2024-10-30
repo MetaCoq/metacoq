@@ -156,10 +156,10 @@ struct
     let rec go from acc =
       if from < 0 then acc
       else
-        let term = constr_mkApp (tString, [| quote_char (String.get s from) ; acc |]) in
+        let term = constr_mkApp (tBsString, [| quote_char (String.get s from) ; acc |]) in
         go (from - 1) term
     in
-    go (len - 1) (Lazy.force tEmptyString)
+    go (len - 1) (Lazy.force tBsEmptyString)
 
   let quote_string s =
     try Hashtbl.find string_hash s

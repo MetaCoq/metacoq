@@ -93,9 +93,9 @@ struct
   let unquote_string trm =
     let rec go n trm =
       let (h,args) = app_full trm [] in
-      if constr_equall h tEmptyString then
+      if constr_equall h tBsEmptyString then
         Bytes.create n
-      else if constr_equall h tString then
+      else if constr_equall h tBsString then
         match args with
           c :: s :: [] ->
           let res = go (n + 1) s in

@@ -358,6 +358,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let empty_mono_univ_entry = UState.Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders in
       Declare.declare_variable ~typing_flags:None ~name ~kind (SectionLocalAssum { typ; impl=Glob_term.Explicit; univs=empty_mono_univ_entry });
       let env = Global.env () in
+      let evm = Evd.update_sigma_univs (Environ.universes env) evm in
       k ~st env evm (Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
@@ -369,10 +370,10 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let cinfo = Declare.CInfo.make ~name () ~typ:(Some (EConstr.of_constr typ)) in
       let info = Declare.Info.make ~poly ~kind:(Decls.IsDefinition Decls.Definition) () in
       let n = Declare.declare_definition ~cinfo ~info ~opaque ~body:(EConstr.of_constr body) evm in
-      let env = Global.env () in
       (* Careful, universes in evm were modified for the declaration of def *)
-      let evm = Evd.from_env env in
-      let evm, c = Evd.fresh_global (Global.env ()) evm n in
+      let env = Global.env () in
+      let evm = Evd.update_sigma_univs (Environ.universes env) evm in
+      let evm, c = Evd.fresh_global env evm n in
       k ~st env evm (EConstr.to_constr evm c)
   | TmDefinitionTerm (opaque, name, typ, body) ->
     if intactic
@@ -409,6 +410,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let param = Declare.ParameterEntry entry in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
       let env = Global.env () in
+      let evm = Evd.update_sigma_univs (Environ.universes env) evm in
       k ~st env evm (Constr.mkConstU (n, UVars.Instance.empty))
   | TmAxiomTerm (name,typ) ->
     if intactic
@@ -534,6 +536,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let infer_univs = unquote_bool (reduce_all env evm b) in
     let evm = declare_inductive env evm infer_univs mind in
     let env = Global.env () in
+    let evm = Evd.update_sigma_univs (Environ.universes env) evm in  
     k ~st env evm (Lazy.force unit_tt)
   | TmUnquote t ->
     begin

@@ -3,7 +3,6 @@ open BinNums
 open BinPos
 open Bool
 open Datatypes
-open Zbool
 open Zpower
 
 type spec_float =
@@ -39,7 +38,7 @@ let coq_Zdigits2 n = match n with
 (** val canonical_mantissa : coq_Z -> coq_Z -> positive -> coq_Z -> bool **)
 
 let canonical_mantissa prec emax m e =
-  coq_Zeq_bool (fexp prec emax (Z.add (Zpos (digits2_pos m)) e)) e
+  Z.eqb (fexp prec emax (Z.add (Zpos (digits2_pos m)) e)) e
 
 (** val bounded : coq_Z -> coq_Z -> positive -> coq_Z -> bool **)
 
@@ -341,7 +340,8 @@ let coq_SFadd prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.add (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val coq_SFsub :
     coq_Z -> coq_Z -> spec_float -> spec_float -> spec_float **)
@@ -369,19 +369,20 @@ let coq_SFsub prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.sub (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val new_location_even : coq_Z -> coq_Z -> location **)
 
 let new_location_even nb_steps k =
-  if coq_Zeq_bool k Z0
+  if Z.eqb k Z0
   then Coq_loc_Exact
   else Coq_loc_Inexact (Z.compare (Z.mul (Zpos (Coq_xO Coq_xH)) k) nb_steps)
 
 (** val new_location_odd : coq_Z -> coq_Z -> location **)
 
 let new_location_odd nb_steps k =
-  if coq_Zeq_bool k Z0
+  if Z.eqb k Z0
   then Coq_loc_Exact
   else Coq_loc_Inexact
          (match Z.compare
@@ -456,7 +457,7 @@ let coq_SFsqrt_core_binary prec emax m e =
            | Zneg _ -> Z0 in
   let (q, r) = Z.sqrtrem m' in
   let l =
-    if coq_Zeq_bool r Z0
+    if Z.eqb r Z0
     then Coq_loc_Exact
     else Coq_loc_Inexact (if Z.leb r q then Lt else Gt)
   in

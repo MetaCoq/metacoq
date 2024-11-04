@@ -538,17 +538,21 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmUnquote t ->
     begin
        try
-         debug Pp.(fun () -> str"Unquoting:" ++ Printer.pr_constr_env env evm t);
-         let t = reduce_all env evm t in
-         let evm, t' = denote_term env evm t in
-         let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
+         (*debug Pp.(fun () -> str"Unquoting:" ++ Printer.pr_constr_env env evm t);*)
+         let evm, t' = denote_term env evm (reduce_all env evm t) in
+         (* Typecheck. *)
+         let evm, typ = Typing.type_of env evm (EConstr.of_constr t') in
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
+         (* Solve evars. *)
+         let evm = Typeclasses.resolve_typeclasses env evm in
+         let t' = Evarutil.nf_evars_universes evm t' in
+         (* Package the unquoted term with its type. *)
          let make_typed_term typ term evm =
            match Lazy.force texistT_typed_term with
            | GlobRef.ConstructRef ctor ->
               let (evm,c) = Evd.fresh_global (Global.env ()) evm (Lazy.force texistT_typed_term) in
               let term = Constr.mkApp
-               (EConstr.to_constr evm c, [|EConstr.to_constr evm typ; t'|]) in
+               (EConstr.to_constr evm c, [|EConstr.to_constr ~abort_on_undefined_evars:false evm typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
                (env, evm, term)
            | _ -> CErrors.anomaly (str "texistT_typed_term does not refer to a constructor")
@@ -559,8 +563,11 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       end
   | TmUnquoteTyped (typ, t) ->
        let evm, t' = denote_term env evm (reduce_all env evm t) in
-       (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
+       (* Typecheck. *)
        let evm = Typing.check env evm (EConstr.of_constr t') (EConstr.of_constr typ) in
+       (* Solve evars. *)
+       let evm = Typeclasses.resolve_typeclasses env evm in 
+       let t' = Evarutil.nf_evars_universes evm t' in
        k ~st env evm t'
   | TmFreshName name ->
     let name = reduce_all env evm name in

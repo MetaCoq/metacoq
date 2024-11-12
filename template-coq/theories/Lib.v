@@ -1,23 +1,30 @@
 From MetaCoq.Template Require Export All Checker Reduction.
 From MetaCoq.Utils Require Import monad_utils.
 Import MCMonadNotation.
+Open Scope list.
+
+Local Set Universe Polymorphism.
 
 (** * Commands. *)
 
+(** Quote a term. *)
 Notation "'$quote' x" :=
   ltac:((let p y := exact y in quote_term x p))
   (at level 0, only parsing).
 
+(** Run a template program. *)
 Notation "'$run' f" :=
   ltac:(
     let p y := exact y in
     run_template_program f p
   ) (at level 0, only parsing).
 
+(** Quote and term and its environment. *)
 Notation "'$quote_rec' x" :=
   ($run (tmQuoteRec x))
   (at level 0, only parsing).
 
+(** Unquote a term (using [tmUnquote]). *)
 Notation "'$unquote' x" :=
   ltac:(
     let p y :=
@@ -28,66 +35,64 @@ Notation "'$unquote' x" :=
     run_template_program (tmUnquote x) p
   ) (at level 0, only parsing).
 
+(** Unquote a term (using [tmUnquoteTyped]). *)
 Notation "'$unquote' x : T" :=
   ($run (tmUnquoteTyped T x))
   (at level 0, T at level 100, x at next level, only parsing).
 
-Definition unfold_toplevel {A} (x : A) :=
+(** [unfold_toplevel x] replaces the constant [x] by its definition.
+    Fails if [x] is not a constant. *)
+Definition unfold_toplevel {A} (x : A) : TemplateMonad A :=
   tmBind (tmQuote x) (fun y =>
     match y with
     | tConst na _ => tmEval (unfold na) x
-    | _y => tmReturn x
-    end
-  ).
+    | _ => tmFail "unfold_toplevel: not a constant"%bs
+    end).
 
-Notation "'$Quote' x" :=
-  ($run (tmBind (unfold_toplevel x) (tmQuote)))
+(** Quote the _definition_ of a constant. *)
+Notation "'$quote_def' x" :=
+  ($run (tmQuote =<< unfold_toplevel x))
   (at level 0, only parsing).
 
-Definition get_kername t : kername :=
+(** [get_kername t] returns the kernel name of [t]. 
+    Fails if [t] is not of the form [tConst _ _]. *)
+Definition get_kername (t : term) : TemplateMonad kername :=
   match t with
-  | tConst c u => c
-  | _ => (MPfile nil, String.EmptyString)
+  | tConst c u => ret c
+  | _ => tmFail "get_kername: not a constant"%bs
   end.
 
+(** Get the kernel name of a constant. *)
 Notation "'$name' x" :=
-  (get_kername ($quote x))
+  ($run (get_kername ($quote x)))
   (at level 0, only parsing).
 
-(* Definition unfold_toplevel_rec {A} (x : A) :=
-  tmBind (tmQuoteRec x) (fun '(env,y) =>
-    match y with
-    | tConst na _ => x <- tmEval (unfold na) x ;; tmReturn (env, x)
-    | _y => tmReturn (env, x)
-    end
-  ).
-
-Notation "'$Quote_rec' x" :=
-  ($run (tmBind (unfold_toplevel_rec x) (tmQuoteRec)))
-  (at level 0, only parsing). *)
-
-Notation "'$Quote_rec' x" :=
-  ($quote_rec ltac:(let x := eval unfold x in x in exact x))
+(** Recursively quote the _definition_ of a constant. *)
+Notation "'$quote_def_rec' x" :=
+  ($run (tmQuoteRec =<< unfold_toplevel x))
   (at level 0, only parsing).
 
+(** [term_eqb t1 t2] checks if [t1] and [t2] are equal modulo alpha equivalence. *)
 Definition term_eqb (t1 t2 : term) :=
   @eq_term config.default_checker_flags init_graph t1 t2.
 
 Notation "t == u" := (term_eqb t u) (at level 70).
 
-Open Scope bs.
-Open Scope bool.
-Open Scope list.
-
+(** Short-form notation for [tLambda]. *)
 Notation tLam x A b :=
   (tLambda {| binder_name := nNamed x; binder_relevance := Relevant |} A b).
 
+(** Short-form notation for [tProd]. *)
+Notation tPro x A b :=
+  (tProd {| binder_name := nNamed x; binder_relevance := Relevant |} A b).
+
+(** Short-form notation for [tLetIn]. *)
 Notation tLet x A t b :=
   (tLetIn {| binder_name := nNamed x; binder_relevance := Relevant |} t A b).
 
-Notation "'__'" := (hole) (no associativity, at level 0).
+(*Notation "'__'" := (hole) (no associativity, at level 0).*)
 
-(** * Monadic notations *)
+(** * Monadic notations. *)
 
 (** These notations replace the default ones from Utils.monad_utils
     by equivalent ones which are specialized to the TemplateMonad.
@@ -126,6 +131,40 @@ Notation "e1 ;; e2" :=
   (at level 100, right associativity) : tm_scope.
 
 End TemplateMonadNotations.
+
+(** * Packed inductives and constructors. *)
+
+(** In MetaCoq the information related to an inductive type is spread accross
+    three different datatypes : [inductive], [one_inductive_body] and [mutual_inductive_body].
+    One often needs access to all three : [packed_inductive] packages them in a single datatype. *)
+Record packed_inductive := 
+  { pi_ind : inductive
+  ; pi_body : one_inductive_body 
+  ; pi_mbody : mutual_inductive_body }.
+
+(** Same as [packed_inductive] but for constructors. *)
+Record packed_constructor :=
+  { (** The inductive this constructor belongs to. *)
+    pc_pi : packed_inductive 
+  ; (** The index of this constructor. *)
+    pc_idx : nat 
+  ; (** The body of this constructor. *)
+    pc_body : constructor_body }.
+
+(** [pi_ctors pi] returns the list of [packed_constructors] of the 
+    packed inductive [pi]. *)
+Definition pi_ctors (pi : packed_inductive) : list packed_constructor :=
+  mapi (fun i ctor => {| pc_pi := pi ; pc_idx := i ; pc_body := ctor |}) pi.(pi_body).(ind_ctors).
+
+(** [pi_block pi] returns the list of packed inductives in the same block
+    as [pi], including [pi] itself, ordered from first to last. *)
+Definition pi_block (pi : packed_inductive) : list packed_inductive :=
+  mapi
+    (fun i body =>
+      {| pi_ind := {| inductive_mind := pi.(pi_ind).(inductive_mind) ; inductive_ind := i |}
+      ;  pi_body := body
+      ;  pi_mbody := pi.(pi_mbody) |})
+    pi.(pi_mbody).(ind_bodies).
 
 (** * Traversal functions. *)
 
@@ -184,6 +223,7 @@ Definition fold_branch_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (b
   let a_body := lift_names b.(bcontext) a in
   f a_body acc b.(bbody).
 
+(** Fold version of [map_term_with_binders]. *)
 Definition fold_term_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (t : term) : Acc :=
   match t with
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ 
@@ -218,10 +258,7 @@ Definition fold_term_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (t :
 
 End TraverseWithBinders.
 
-(** * Monadic traversal functions. *)
-
 Section TraverseWithBindersM.
-#[local] Set Universe Polymorphism.
 Context {M : Type -> Type} `{Monad M} {Acc : Type} {A : Type} {a : A} {liftM : aname -> A -> M A}. 
 
 Definition lift_namesM (names : list aname) (a : A) : M A :=
@@ -376,4 +413,3 @@ Definition fold_term {Acc} (f : Acc -> term -> Acc) (acc : Acc) (t : term) : Acc
 (** Monadic variant of [fold_term]. *)
 Definition fold_termM {M} `{Monad M} {Acc} (f : Acc -> term -> M Acc) (acc : Acc) (t : term) : M Acc :=
   @fold_term_with_bindersM M _ Acc unit tt (fun _ _ => ret tt) (fun _ => f) acc t.
-  

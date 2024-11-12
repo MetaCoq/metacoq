@@ -165,12 +165,9 @@ Proof.
   induction Δ; simpl in *; intuition auto.
   { destruct Σ as [Σ univs]. eapply (wf_sort_subst_instance (Σ, ind_universes mdecl)); eauto. }
   destruct a as [na [b|] ty]; simpl; destruct X as (Hwfctx & Hj); split; eauto.
-  - eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs.
-    eapply instantiate_minductive in Hs; eauto.
-    now rewrite subst_instance_app in Hs.
-  - eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs.
-    eapply instantiate_minductive in Hs; eauto.
-    now rewrite subst_instance_app in Hs.
+  all: eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs; auto using relevance_subst_opt.
+  all: eapply instantiate_minductive in Hs; eauto.
+  all: now rewrite subst_instance_app in Hs.
 Qed.
 
 Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
@@ -187,7 +184,7 @@ Proof.
   destruct a as [na [b|] ty]; simpl.
   2: destruct s => //=.
   all: destruct X as (Hwfctx & Hj); split; eauto.
-  all: eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs.
+  all: eapply lift_typing_fu_impl with (1 := Hj) => //= ?? Hs; auto using relevance_subst_opt.
   all: eapply instantiate_minductive in Hs; eauto.
   all: now rewrite subst_instance_app in Hs.
 Qed.
@@ -351,7 +348,9 @@ Section WfEnv.
       + constructor; auto.
       + eapply All_local_env_impl; eauto. simpl; intros.
         now rewrite app_context_assoc.
-    - apply IHΓ; auto. eapply All_local_env_subst; eauto. simpl; intros.
+    - apply IHΓ; auto.
+      apply All_local_env_fold, All_local_env_impl with (1 := wfΔ).
+      intros Γ' j X.
       apply lift_typing_f_impl with (1 := X) => // ?? HT.
       rewrite Nat.add_0_r.
       eapply (substitution (Γ':=[vdef na b t]) (s := [b])) in HT; eauto.

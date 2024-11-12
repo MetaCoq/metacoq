@@ -1373,6 +1373,7 @@ Corollary R_Acc_aux :
     apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
     apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
     eapply All_nth_error in a; eauto.
+    apply isTypeRel_isType in a.
     eapply wf_fixpoint_spine in i; eauto.
     2: { eapply PCUICSpine.typing_spine_strengthen; eauto. }
     unfold unfold_fix in uf.

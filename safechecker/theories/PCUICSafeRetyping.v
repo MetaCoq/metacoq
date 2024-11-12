@@ -402,13 +402,23 @@ Qed.
     sq.
     constructor ; tea.
     inversion X0.
-    now eapply isTypebd_isType in X1.
+    apply lift_sorting_forget_univ in X1.
+    now eapply lift_sorting_lift_typing in X1.
   Defined.
   Next Obligation.
     cbn ; intros. destruct s1, s2.
-    cbn. specialize_Σ wfΣ. sq.
+    cbn. specialize_Σ wfΣ.
+    pose (hΣ _ wfΣ).
+    specialize (wfΓ' _ wfΣ) as wfΓ''.
+    sq.
     constructor; eauto.
-    repeat (eexists; tea).
+    inversion wfΓ''; subst.
+    apply lift_typing_lift_sorting in X1; tas.
+    pose proof (lift_sorting_extract X1).
+    assert (X1.2.π1 = x) as <-; tas.
+    clear X2.
+    destruct X1 as (? & x' & X1 & ?); cbn.
+    eapply infering_sort_sort; tea.
   Defined.
 
   Next Obligation.
@@ -621,7 +631,7 @@ Qed.
       1: now eapply red_terms_ws_cumul_pb_terms.
       eapply PCUICConvCumInversion.alt_into_ws_cumul_pb_terms ; tea.
       * fvs.
-      * eapply infering_ind_typing, validity, isType_open in X1 ; auto.
+      * eapply infering_ind_typing, validity, isType_is_open_term in X1 ; auto.
         rewrite on_free_vars_mkApps in X1.
         move: X1 => /andP [] _ /forallb_All ?.
         now eapply All_forallb, All_firstn.

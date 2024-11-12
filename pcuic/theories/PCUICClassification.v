@@ -234,7 +234,7 @@ Section Spines.
     intros sp.
     have ty := (typing_spine_isType_dom sp).
     have r := (red_it_mkProd_or_LetIn_smash Γ Δ T).
-    specialize (r (wf_local_closed_context (isType_wf_local ty)) (isType_open ty)).
+    specialize (r (wf_local_closed_context (isType_wf_local ty)) (isType_is_open_term ty)).
     eapply typing_spine_strengthen; tea.
     eapply isType_red; tea. eapply r.
     eapply ws_cumul_pb_eq_le; symmetry.
@@ -301,6 +301,7 @@ Qed.
         now rewrite -(expand_lets_subst_comm _ _ _).
         eapply isType_apply in i; tea.
         eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
+        eapply isTypeRel_isType.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -330,6 +331,7 @@ Qed.
         now len.
         eapply isType_apply in i; tea.
         eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
+        eapply isTypeRel_isType.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -649,6 +651,7 @@ Section classification.
     eapply inversion_CoFix in Hcof as (? & ? & ? & ? & ? & ? & ?); auto.
     eapply nth_error_all in a; eauto.
     simpl in a.
+    apply isTypeRel_isType in a.
     eapply typing_spine_strengthen in sp; eauto.
     eapply wf_cofixpoint_spine in sp as (Γ' & concl & da & ?); eauto.
     eapply decompose_prod_assum_it_mkProd_or_LetIn in da.
@@ -705,7 +708,7 @@ Section classification.
     eapply typing_spine_isType_dom in t0 as (_ & s & Hs & _).
     eexists; split; [sq|]. now eapply wt_closed_red_refl.
     now do 2 eapply isArity_it_mkProd_or_LetIn.
-    now eapply (declared_inductive_valid_type decl).
+    now eapply isTypeRel_isType, (declared_inductive_valid_type decl).
   Qed.
 
   Lemma invert_fix_ind Γ mfix i args ind u args' :
@@ -718,8 +721,8 @@ Section classification.
     intros no_arg typ.
     eapply inversion_mkApps in typ as (?&?&?); eauto.
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
+    eapply nth_error_all in a; eauto. apply isTypeRel_isType in a.
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-    eapply nth_error_all in a; eauto. simpl in a.
     unfold unfold_fix in no_arg.
     rewrite e in no_arg.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
@@ -727,7 +730,6 @@ Section classification.
     eapply ws_cumul_pb_Prod_l_inv in cum as (? & ? & ? & []).
     eapply invert_red_mkApps_tInd in c as [? [eq _]]; auto.
     solve_discr.
-    now eapply nth_error_all in a; tea.
   Qed.
 
 
@@ -764,8 +766,8 @@ Section classification.
     - eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - eapply inversion_mkApps in typed as (? & ? & ?); eauto.
       eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
+      eapply nth_error_all in a; eauto. apply isTypeRel_isType in a.
       eapply typing_spine_strengthen in t0; eauto.
-      eapply nth_error_all in a; eauto. simpl in a.
       rewrite /unfold_fix in e. rewrite e1 in e. noconf e.
       eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
       rewrite e0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
@@ -777,7 +779,6 @@ Section classification.
       rewrite nth_error_map e0 in axfree.
       cbn in axfree.
       eauto.
-      now eapply nth_error_all in a; tea.
     - eapply inversion_Case in typed as (? & ? & ? & ? & [] & ?); tas; eauto.
     - eapply inversion_Proj in typed as (? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
   Qed.
@@ -868,7 +869,7 @@ Section classification.
     intros typed unf.
     eapply inversion_mkApps in typed as (? & ? & ?); eauto.
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
-    eapply nth_error_all in a; eauto. simpl in a.
+    eapply nth_error_all in a; eauto. apply isTypeRel_isType in a.
     eapply typing_spine_strengthen in t0; eauto.
     rewrite /unfold_fix in unf. rewrite e in unf.
     noconf unf.
@@ -940,6 +941,7 @@ Section classification.
       rewrite /subst1 in t2. eapply t2.
       eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
       eapply subject_reduction in IHHe2; eauto.
+      now eapply isTypeRel_isType.
       eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 

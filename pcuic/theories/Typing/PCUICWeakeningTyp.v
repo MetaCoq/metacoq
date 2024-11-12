@@ -165,10 +165,29 @@ Proof.
   eapply weakening_gen => //.
 Qed.
 
+Lemma lift_typing_weakening {cf : checker_flags} Σ Γ Γ' j :
+  wf Σ.1 -> wf_local Σ (Γ ,,, Γ') ->
+  lift_typing typing Σ Γ j ->
+  lift_typing typing Σ (Γ ,,, Γ') (judgment_map (lift0 #|Γ'|) j).
+Proof.
+  intros wfΣ wfΓ Hj.
+  apply lift_typing_f_impl with (1 := Hj) => // t T.
+  now apply weakening.
+Qed.
+
+Lemma lift_typing_weaken_ctx {cf : checker_flags} Σ Γ Δ j :
+  wf Σ.1 -> wf_local Σ Δ ->
+  lift_typing typing Σ Γ j ->
+  lift_typing typing Σ (Δ ,,, Γ) j.
+Proof.
+  intros wfΣ wfΔ Hj.
+  apply lift_typing_impl with (1 := Hj) => t T.
+  now apply weaken_ctx.
+Qed.
 
 Corollary All_mfix_wf {cf:checker_flags} Σ Γ mfix :
   wf Σ.1 -> wf_local Σ Γ ->
-  All (fun d : def term => isType Σ Γ (dtype d)) mfix ->
+  All (fun d : def term => isTypeRel Σ Γ (dtype d) (dname d).(binder_relevance)) mfix ->
   wf_local Σ (Γ ,,, fix_context mfix).
 Proof.
   move=> wfΣ wf a; move: wf.
@@ -179,21 +198,43 @@ Proof.
   intros Δ wfΔ.
   eapply All_local_env_app; auto.
   induction a in Δ, wfΔ |- *; simpl; auto.
-  + constructor.
-  + simpl.
-    eapply All_local_env_app; auto.
-    * constructor. 1: constructor.
-      apply lift_typing_f_impl with (1 := p) => // ?? Hs.
-      eapply (weakening Σ Γ Δ); auto.
-    * specialize (IHa (Δ ,,, [vass (dname x) (lift0 #|Δ| (dtype x))])).
-      rewrite app_length in IHa. simpl in IHa.
-      forward IHa.
-      ** simpl; constructor; auto.
-         apply lift_typing_f_impl with (1 := p) => // ?? Hs.
-         eapply (weakening Σ Γ Δ); auto.
-      ** eapply All_local_env_impl; eauto.
-        simpl; intros.
-        rewrite app_context_assoc. apply X.
+  1: now constructor.
+  simpl.
+  eapply All_local_env_app; auto.
+  * constructor. 1: constructor.
+    now eapply lift_typing_weakening in p.
+  * specialize (IHa (Δ ,,, [vass (dname x) (lift0 #|Δ| (dtype x))])).
+    rewrite app_length in IHa. simpl in IHa.
+    forward IHa.
+    + simpl; constructor; auto.
+      now eapply lift_typing_weakening in p.
+    + eapply All_local_env_impl; eauto.
+      simpl; intros.
+      rewrite app_context_assoc. apply X.
+Qed.
+
+Lemma lift_typing_weakening_skipn {cf:checker_flags} {Σ : global_env_ext} {n Γ j}
+  (isdecl : n <= #|Γ|) :
+  wf Σ -> wf_local Σ Γ ->
+  lift_typing typing Σ (skipn n Γ) j ->
+  lift_typing typing Σ Γ (judgment_map (lift0 n) j).
+Proof.
+  intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
+  assert (n = #|firstn n Γ|).
+  { rewrite firstn_length_le; auto with arith. }
+  rewrite {3}H.
+  now eapply lift_typing_weakening in wfty.
+Qed.
+
+Lemma All_local_env_nth_error_weaken {cf:checker_flags} {Σ : global_env_ext} {Γ n decl} :
+  wf Σ -> wf_local Σ Γ ->
+  nth_error Γ n = Some decl ->
+  lift_typing typing Σ Γ (j_decl (map_decl (lift0 (S n)) decl)).
+Proof using Type.
+  intros hΣ hΓ e.
+  eapply All_local_env_nth_error in e as hj; tea.
+  apply nth_error_Some_length in e.
+  now apply lift_typing_weakening_skipn in hj.
 Qed.
 
 Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty}
@@ -202,11 +243,14 @@ Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty}
   isType Σ (skipn n Γ) ty ->
   isType Σ Γ (lift0 n ty).
 Proof.
-  intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
-  assert (n = #|firstn n Γ|).
-  { rewrite firstn_length_le; auto with arith. }
-  apply lift_typing_f_impl with (1 := wfty) => // ?? Hs.
-  rewrite {3 4}H.
-  eapply (weakening_typing (Γ := skipn n Γ) (Γ' := []) (Γ'' := firstn n Γ));
-    eauto with wf.
+  now apply @lift_typing_weakening_skipn with (j := Typ _).
+Qed.
+
+Lemma isTypeRel_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty r}
+  (isdecl : n <= #|Γ|):
+  wf Σ -> wf_local Σ Γ ->
+  isTypeRel Σ (skipn n Γ) ty r ->
+  isTypeRel Σ Γ (lift0 n ty) r.
+Proof.
+  now apply @lift_typing_weakening_skipn with (j := TypRel _ _).
 Qed.

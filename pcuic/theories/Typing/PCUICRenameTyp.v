@@ -624,7 +624,7 @@ Proof.
   induction X using All_local_rel_ind1.
   1: now apply a.
   rewrite rename_context_snoc /=. apply All_local_env_snoc; auto.
-  eapply lift_typing_map with (j := TermoptTyp _ _) => //.
+  eapply lift_typing_map with (j := j_decl _) => //.
   eapply X.
   split; auto.
   eapply urenaming_ext.
@@ -822,8 +822,7 @@ Proof.
 
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB P Δ f hf.
     assert (lift_typing0 (typing Σ Δ) (j_vass_s na (rename f A) s1)).
-    + eapply lift_typing_map with (j := TypUniv _ _) => //.
-      eapply ihA; eauto.
+    + eapply ihA; eauto.
     + rewrite /=. econstructor; tas.
       eapply ihB; eauto.
       simpl.
@@ -834,8 +833,7 @@ Proof.
       * eapply lift_sorting_forget_univ, X0.
   - intros Σ wfΣ Γ wfΓ na A t B X hA ihA ht iht P Δ f hf.
     assert (lift_typing0 (typing Σ Δ) (j_vass na (rename f A))).
-    + eapply lift_typing_map with (j := Typ _) => //.
-      eapply ihA; eauto.
+    + eapply ihA; eauto.
     + simpl. econstructor; tas.
       eapply iht; eauto; simpl.
       eapply renaming_extP. { now rewrite -(shiftnP_add 1). }
@@ -882,7 +880,7 @@ Proof.
     + rewrite rename_closed. 2: reflexivity.
       eapply declared_constructor_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
-    intros IHΔ ci_npar eqpctx predctx wfp cup wfpctx Hpret IHpret IHpredctx isallowed.
+    intros IHΔ ci_npar eqpctx predctx wfp cup wfpctx Hpret IHpret IHpredctx isallowed Her.
     intros IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
     simpl.
     rewrite rename_mkApps.
@@ -1000,12 +998,12 @@ Proof.
       * destruct hf; eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
+        intros x t. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
         unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
-        1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
+        1: eapply t; eauto.
         2: len; now sigma.
         rewrite rename_fix_context.
         split; auto.
@@ -1026,12 +1024,12 @@ Proof.
       * destruct hf; eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply All_map, (All_impl ihmfixt).
-        intros x t. eapply lift_typing_map with (j := TermoptTyp None _) => //. eapply t. eauto.
+        intros x t. eapply t. eauto.
       * apply All_map, (All_impl ihmfixb).
         unfold on_def_body. rewrite fix_context_length map_length {2}/map_def /=.
         intros x t.
         relativize (lift0 _ _).
-        1: eapply lift_typing_map with (j := TermoptTyp (Some _) _) => //; eapply t; eauto.
+        1: eapply t; eauto.
         2: len; now sigma.
         rewrite rename_fix_context.
         split; auto.

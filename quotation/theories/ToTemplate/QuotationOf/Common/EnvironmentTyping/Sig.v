@@ -108,6 +108,7 @@ Module Type QuoteGlobalMapsSig (Import T: Term) (Import E: EnvironmentSig T) (Im
   #[export] Declare Instance quote_sorts_local_ctx {P} {qP : quotation_of P} {quoteP : forall Σ Γ j, ground_quotable (P Σ Γ j)} {Σ Γ Δ us} : ground_quotable (@sorts_local_ctx P Σ Γ Δ us).
 
   #[export] Declare Instance quote_on_type {P} {quoteP : forall Σ Γ j, ground_quotable (P Σ Γ j)} {Σ Γ T} : ground_quotable (@on_type P Σ Γ T).
+  #[export] Declare Instance quote_on_type_rel {P} {quoteP : forall Σ Γ j, ground_quotable (P Σ Γ j)} {Σ Γ T r} : ground_quotable (@on_type_rel P Σ Γ T r).
 
   #[export] Declare Instance quote_on_udecl {univs udecl} : ground_quotable (@on_udecl univs udecl).
   #[export] Declare Instance quote_satisfiable_udecl {univs ϕ} : ground_quotable (@satisfiable_udecl univs ϕ).

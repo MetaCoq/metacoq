@@ -195,11 +195,6 @@ Arguments wt_cumul_pb_eq {cf pb Σ Γ T U}.
 Section EqualityLemmas.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Lemma isType_open {Γ T} : isType Σ Γ T -> on_free_vars (shiftnP #|Γ| xpred0) T.
-  Proof using wfΣ.
-    move/isType_closedPT. now rewrite closedP_shiftnP.
-  Qed.
-
   Lemma into_ws_cumul_pb {pb} {Γ : context} {T U} :
     Σ;;; Γ |- T <=[pb] U ->
     is_closed_context Γ -> is_open_term Γ T ->
@@ -216,7 +211,7 @@ Section EqualityLemmas.
   Proof using wfΣ.
     intros H.
     pose proof (isType_wf_local H).
-    eapply (ws_cumul_pb_refl' (exist Γ (wf_local_closed_context X)) (exist T (isType_open H))).
+    eapply (ws_cumul_pb_refl' (exist Γ (wf_local_closed_context X)) (exist T (isType_is_open_term H))).
   Qed.
 
   (** From well-typed to simply well-scoped equality. *)
@@ -226,7 +221,7 @@ Section EqualityLemmas.
   Proof using wfΣ.
     move=> [] dom codom equiv; cbn.
     generalize (wf_local_closed_context (isType_wf_local dom)).
-    generalize (isType_open dom) (isType_open codom). clear -wfΣ equiv.
+    generalize (isType_is_open_term dom) (isType_is_open_term codom). clear -wfΣ equiv.
     intros. apply into_ws_cumul_pb => //.
   Qed.
 
@@ -441,14 +436,15 @@ Qed.
 
 Inductive wt_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) (Σ : global_env_ext) (Γ Γ' : context) : context_decl -> context_decl -> Type :=
 | wt_cumul_pb_vass {na na' : binder_annot name} {T T' : term} :
-    isType Σ Γ T -> isType Σ Γ' T' ->
-    conv_cum pb Σ Γ T T' ->
+    lift_typing typing Σ Γ (j_vass na T) ->
+    lift_typing typing Σ Γ' (j_vass na' T') ->
     eq_binder_annot na na' ->
+    conv_cum pb Σ Γ T T' ->
     wt_cumul_pb_decls pb Σ Γ Γ' (vass na T) (vass na' T')
 | wt_cumul_pb_vdef {na na' : binder_annot name} {b b' T T'} :
+    lift_typing typing Σ Γ (j_vdef na b T) ->
+    lift_typing typing Σ Γ' (j_vdef na' b' T') ->
     eq_binder_annot na na' ->
-    isType Σ Γ T -> isType Σ Γ' T' ->
-    Σ ;;; Γ |- b : T -> Σ ;;; Γ' |- b' : T' ->
     Σ ;;; Γ |- b = b' ->
     conv_cum pb Σ Γ T T' ->
     wt_cumul_pb_decls pb Σ Γ Γ' (vdef na b T) (vdef na' b' T').
@@ -498,23 +494,11 @@ Notation wt_conv_context Σ := (wt_cumul_ctx_pb Conv Σ).
 Section WtContextConversion.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Definition wt_decl Γ d :=
-    match d with
-    | {| decl_body := None; decl_type := ty |} => isType Σ Γ ty
-    | {| decl_body := Some b; decl_type := ty |} => isType Σ Γ ty × Σ ;;; Γ |- b : ty
-    end.
-
   Lemma wf_local_All_fold Γ :
     wf_local Σ Γ <~>
-    All_fold wt_decl Γ.
+    All_fold (fun Γ decl => lift_typing typing Σ Γ (j_decl decl)) Γ.
   Proof using Type.
-    split.
-    - induction 1; constructor; auto.
-      destruct t0 as (Hb & Ht). cbn in *.
-      split; tas. split; cbn; auto.
-    - induction 1; [constructor|].
-      destruct d as [na [b|] ty]; cbn in p; constructor; auto.
-      destruct p; split; tas. apply i.
+    apply All_local_env_All_fold.
   Qed.
 
   Lemma wt_cumul_ctx_pb_forget {pb} {Γ Γ' : context} :
@@ -522,14 +506,14 @@ Section WtContextConversion.
     [× wf_local Σ Γ, wf_local Σ Γ' & cumul_pb_context cumulAlgo_gen pb Σ Γ Γ'].
   Proof using Type.
     move=> wteq.
-    eapply (All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d')) in wteq.
+    eapply (All2_fold_impl (Q:=fun Γ Γ' d d' => lift_typing typing Σ Γ (j_decl d) × lift_typing typing Σ Γ' (j_decl d') × cumul_pb_decls cumulAlgo_gen pb Σ Γ Γ' d d')) in wteq.
     2:{ intros ???? []; intuition (cbn; try constructor; auto). }
-    eapply All2_fold_All_fold_mix_inv in wteq as [wteq [wfΓ wfΓ']].
+    eapply All2_fold_All_fold_mix_inv in wteq as (wteq & wfΓ & wfΓ').
     eapply wf_local_All_fold in wfΓ. eapply wf_local_All_fold in wfΓ'.
     split; auto.
   Qed.
 
-  Lemma into_wt_cumul_ctx_pb {pb} {Γ Γ' : context} {T U : term} :
+  Lemma into_wt_cumul_ctx_pb {pb} {Γ Γ' : context} :
     wf_local Σ Γ -> wf_local Σ Γ' ->
     cumul_pb_context cumulAlgo_gen pb Σ Γ Γ' ->
     wt_cumul_ctx_pb pb Σ Γ Γ'.
@@ -544,30 +528,25 @@ Section WtContextConversion.
     destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
   Qed.
 
-  Lemma wt_ws_ws_cumul_ctx_pb {pb} {Γ Γ' : context} {T U : term} :
+  Lemma wt_ws_ws_cumul_ctx_pb {pb} {Γ Γ' : context} :
     wt_cumul_ctx_pb pb Σ Γ Γ' ->
     ws_cumul_ctx_pb pb Σ Γ Γ'.
   Proof using wfΣ.
-    intros a; eapply All2_fold_impl_ind; tea.
+    intros a; eapply All2_fold_impl_ind; tea. clear Γ Γ' a.
     intros ???? wt ws eq;
-    pose proof (All2_fold_length wt).
     destruct eq.
-    - pose proof (isType_wf_local i).
-      eapply wf_local_closed_context in X.
-      eapply isType_open in i. apply isType_open in i0.
+    - apply lift_typing_wf_local in l as wfΓ.
+      apply wf_local_closed_context in wfΓ.
+      apply lift_typing_is_open_term in l as [_ clT], l0 as [_ clT'].
       eapply into_ws_cumul_decls with Δ; eauto with fvs.
       constructor; auto.
       rewrite (All2_fold_length ws) //.
-    - pose proof (isType_wf_local i).
-      eapply wf_local_closed_context in X.
-      eapply isType_open in i. apply isType_open in i0.
-      eapply PCUICClosedTyp.subject_closed in t.
-      eapply PCUICClosedTyp.subject_closed in t0.
-      eapply (@closedn_on_free_vars xpred0) in t.
-      eapply (@closedn_on_free_vars xpred0) in t0.
+    - apply lift_typing_wf_local in l as wfΓ.
+      apply wf_local_closed_context in wfΓ.
+      apply lift_typing_is_open_term in l as [clb clT], l0 as [clb' clT'].
       eapply into_ws_cumul_decls with Δ; eauto with fvs.
-      destruct pb; constructor; auto.
-      rewrite (All2_fold_length ws) //; eauto with fvs.
+      constructor; auto.
+      rewrite (All2_fold_length ws); eauto with fvs.
   Qed.
 
   Lemma ws_cumul_ctx_pb_inv {pb} {Γ Γ' : context} :

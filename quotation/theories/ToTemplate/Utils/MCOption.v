@@ -20,6 +20,7 @@ Proof.
 Defined.
 
 #[export] Polymorphic Instance quote_option_default {A P o b} {quoteP : forall x, o = Some x -> ground_quotable (P x)} {quoteP' : o = None -> ground_quotable b} : ground_quotable (@option_default A Type P o b) := ltac:(destruct o; cbv [option_default]; exact _).
+#[export] Polymorphic Instance quote_option_defaultP {A o} {P : A -> Prop} {b : Prop} {quoteP : forall x, o = Some x -> ground_quotable (P x)} {quoteP' : o = None -> ground_quotable b} : ground_quotable (@option_default A Prop P o b) := ltac:(destruct o; cbv [option_default]; exact _).
 
 #[export] Instance quote_on_Some {A P o} {quoteP : forall x, o = Some x -> ground_quotable (P x:Prop)} : ground_quotable (@on_Some A P o) := ltac:(destruct o; cbv [on_Some]; exact _).
 #[export] Typeclasses Opaque on_Some.

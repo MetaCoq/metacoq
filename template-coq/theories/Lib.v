@@ -72,6 +72,8 @@ Notation "'$quote_def_rec' x" :=
   ($run (tmQuoteRec =<< unfold_toplevel x))
   (at level 0, only parsing).
 
+(** * Useful shortcuts. *)
+
 (** [term_eqb t1 t2] checks if [t1] and [t2] are equal modulo alpha equivalence. *)
 Definition term_eqb (t1 t2 : term) :=
   @eq_term config.default_checker_flags init_graph t1 t2.

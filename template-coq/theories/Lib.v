@@ -2,7 +2,7 @@ From MetaCoq.Common Require Import uGraph.
 From MetaCoq.Template Require Import Ast TemplateMonad Loader Checker.
 From MetaCoq.Utils Require Import utils.
 
-Local Set Universe Polymorphism.
+#[local] Set Universe Polymorphism.
 
 (** * Commands. *)
 
@@ -53,7 +53,7 @@ Notation "'$quote_def' x" :=
   ($run (tmBind (unfold_toplevel x) tmQuote))
   (at level 0, only parsing).
 
-(** [get_kername t] returns the kernel name of [t]. 
+(** [get_kername t] returns the kernel name of [t].
     Fails if [t] is not of the form [tConst _ _]. *)
 Definition get_kername (t : term) : TemplateMonad kername :=
   match t with
@@ -138,21 +138,21 @@ End TemplateMonadNotations.
 (** In MetaCoq.Template the information related to an inductive type is spread accross
     three different datatypes : [inductive], [one_inductive_body] and [mutual_inductive_body].
     One often needs access to all three : [packed_inductive] packages them in a single datatype. *)
-Record packed_inductive := 
+Record packed_inductive :=
   { pi_ind : inductive
-  ; pi_body : one_inductive_body 
+  ; pi_body : one_inductive_body
   ; pi_mbody : mutual_inductive_body }.
 
 (** Same as [packed_inductive] but for constructors. *)
 Record packed_constructor :=
   { (** The inductive this constructor belongs to. *)
-    pc_pi : packed_inductive 
+    pc_pi : packed_inductive
   ; (** The index of this constructor. *)
-    pc_idx : nat 
+    pc_idx : nat
   ; (** The body of this constructor. *)
     pc_body : constructor_body }.
 
-(** [pi_ctors pi] returns the list of [packed_constructors] of the 
+(** [pi_ctors pi] returns the list of [packed_constructors] of the
     packed inductive [pi]. *)
 Definition pi_ctors (pi : packed_inductive) : list packed_constructor :=
   mapi (fun i ctor => {| pc_pi := pi ; pc_idx := i ; pc_body := ctor |}) pi.(pi_body).(ind_ctors).

@@ -341,7 +341,8 @@ let coq_SFadd prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.add (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val coq_SFsub :
     coq_Z -> coq_Z -> spec_float -> spec_float -> spec_float **)
@@ -369,7 +370,8 @@ let coq_SFsub prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.sub (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val new_location_even : coq_Z -> coq_Z -> location **)
 

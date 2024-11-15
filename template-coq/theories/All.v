@@ -17,4 +17,4 @@ From MetaCoq.Template Require Export
      Typing        (* Typing judgment *)
      TemplateMonad (* The TemplateMonad *)
      Loader        (* The plugin *)
-     Lib           (* Meta-programming facilities *).
+     (*Lib*)           (* Meta-programming facilities *).

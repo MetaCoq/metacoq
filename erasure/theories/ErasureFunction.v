@@ -800,8 +800,8 @@ Section fix_sigma.
       pose proof (abstract_env_ext_wf _ wfΣ') as [wf].
       sq.
       eapply subject_reduction_closed in HT; tea.
-      eapply inversion_Prod in HT as [? [? [? [t0 ?]]]].
-      now eapply typing_wf_local in t0. pcuic. pcuic.
+      eapply inversion_Prod in HT as [? [? [? [t0' ?]]]].
+      now eapply typing_wf_local in t0'. pcuic. pcuic.
     - clear rprod is_arity rsort a0.
       intros Σ' wfΣ'; specialize (H Σ' wfΣ').
       repeat specialize_Σ wfΣ'.

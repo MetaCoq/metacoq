@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
-Require Import ssreflect ssrfun ssrbool.
+From Coq Require Import ssreflect ssrfun ssrbool.
 From MetaCoq.Utils Require Import utils MCPred.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
@@ -649,7 +649,7 @@ Qed.
 Definition on_free_vars_ctx_k P n ctx :=
   alli (fun k => (on_free_vars_decl (shiftnP k P))) n (List.rev ctx).
 
-Definition predA {A} (p q : pred A) : simpl_pred A :=
+Definition predA {A} (p q : ssrbool.pred A) : simpl_pred A :=
   [pred i | p i ==> q i].
 
 Definition eq_simpl_pred {A} (x y : simpl_pred A) :=
@@ -699,7 +699,7 @@ Proof.
   now move=> f g; rewrite /eq_simpl_pred => Hfg.
 Qed.
 
-Lemma orPL (p q : pred nat) : (predA p (predU p q)) =1 predT.
+Lemma orPL (p q : ssrbool.pred nat) : (predA p (predU p q)) =1 predT.
 Proof.
   intros i. rewrite /predA /predU /=.
   rewrite (ssrbool.implybE (p i)).

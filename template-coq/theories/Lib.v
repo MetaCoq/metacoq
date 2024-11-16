@@ -91,7 +91,7 @@ Notation tPro x A b :=
 Notation tLet x A t b :=
   (tLetIn {| binder_name := nNamed x; binder_relevance := Relevant |} t A b).
 
-(*Notation "'__'" := (hole) (no associativity, at level 0).*)
+Notation "'__'" := (hole) (no associativity, at level 0).
 
 (** * Monadic notations. *)
 

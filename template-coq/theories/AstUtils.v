@@ -7,6 +7,8 @@ From MetaCoq.Template Require Import Ast.
 Require Import ssreflect ssrbool.
 Require Import ZArith.
 
+#[local] Set Universe Polymorphism.
+
 (** Raw term printing *)
 
 Module string_of_term_tree.

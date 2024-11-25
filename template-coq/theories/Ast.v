@@ -538,7 +538,7 @@ Notation closed t := (closedn 0 t).
 
 Fixpoint noccur_between k n (t : term) : bool :=
   match t with
-  | tRel i => Nat.ltb i k && Nat.leb (k + n) i
+  | tRel i => Nat.ltb i k || Nat.leb (k + n) i
   | tEvar ev args => List.forallb (noccur_between k n) args
   | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
   | tApp u v => noccur_between k n u && List.forallb (noccur_between k n) v

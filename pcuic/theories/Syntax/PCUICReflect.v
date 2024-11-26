@@ -20,31 +20,31 @@ Local Ltac finish :=
 
 Local Ltac fcase c :=
   let e := fresh "e" in
-  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
+  case c ; intro e ; [ try (left ; subst; reflexivity) | finish ].
 
 Local Ltac term_dec_tac term_dec :=
-  repeat match goal with
-         | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : sort, u' : sort |- _ => fcase (eq_dec u u')
-         | x : Instance.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | x : list Level.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | x : list aname, y : list aname |- _ => fcase (eq_dec x y)
-         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
-         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (eq_dec i i')
-         | n : name, n' : name |- _ => fcase (eq_dec n n')
-         | n : aname, n' : aname |- _ => fcase (eq_dec n n')
-         | i : prim_val, j : prim_val |- _ => fcase (eq_dec i j)
-         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
-         | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (eq_dec x y)
-         | x : case_info, y : case_info |- _ =>
-           fcase (eq_dec x y)
-         | x : projection, y : projection |- _ => fcase (eq_dec x y)
-         end.
+  match goal with
+  | t : term, u : term |- _ => fcase (term_dec t u)
+  | u : sort, u' : sort |- _ => fcase (eq_dec u u')
+  | x : Instance.t, y : Instance.t |- _ =>
+      fcase (eq_dec x y)
+  | x : list Level.t, y : Instance.t |- _ =>
+      fcase (eq_dec x y)
+  | x : list aname, y : list aname |- _ => fcase (eq_dec x y)
+  | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
+  | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+  | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+  | i : string, i' : kername |- _ => fcase (eq_dec i i')
+  | n : name, n' : name |- _ => fcase (eq_dec n n')
+  | n : aname, n' : aname |- _ => fcase (eq_dec n n')
+  | i : prim_val, j : prim_val |- _ => fcase (eq_dec i j)
+  | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
+  | x : inductive * nat, y : inductive * nat |- _ =>
+      fcase (eq_dec x y)
+  | x : case_info, y : case_info |- _ =>
+      fcase (eq_dec x y)
+  | x : projection, y : projection |- _ => fcase (eq_dec x y)
+  end.
 
 Derive NoConfusion NoConfusionHom for term.
 

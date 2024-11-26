@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import Ast.
 From MetaCoq.Utils Require Import utils.
 From PPrint Require Export All.
 
-Open Scope pstring.
+Local Open Scope pstring.
 
 (** * Pretty-printing configuration. *)
 

@@ -26,33 +26,6 @@ end = struct
     | None ->
       match declare_int_option_and_ref ~key ~value:0 () with { get } -> get
 
-  let set_template_monad_verbose =
-    let open Goptions in
-    match get_option_value key with
-    | Some get ->
-      let set = fun i ->
-        set_option_value ~stage:Interp (fun _ v -> v) key i
-      in set
-    | None -> assert false
-
-  let set_template_monad_debug d =
-    set_template_monad_verbose (if d then 1 else 0)
-  let get_template_monad_debug () =
-    if get_template_monad_verbose () > 0 then true else false
-
-  let _ =
-    let open Goptions in
-    let key = ["MetaCoq"; "Template"; "Monad"; "Debug"] in
-    match get_option_value key with
-    | Some get -> ()
-    | None ->
-      declare_bool_option
-        { optdepr  = None;
-          optstage = Interp;
-          optkey   = key;
-          optread  = get_template_monad_debug;
-          optwrite = set_template_monad_debug; }
-
   let ppdebug lvl pp =
     if get_template_monad_verbose () > lvl then Feedback.msg_debug (pp ())
 end

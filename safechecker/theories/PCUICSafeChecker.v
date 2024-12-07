@@ -106,7 +106,7 @@ Definition gcs_equal x y : Prop :=
 
 
 (** It otherwise tries [auto with *], very bad idea. *)
-Ltac Stdlib.Program.Tactics.program_solve_wf ::=
+Ltac Corelib.Program.Tactics.program_solve_wf ::=
   match goal with
   | |- @Wf.well_founded _ _ => auto with subterm wf
   | |- ?T => match type of T with

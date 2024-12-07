@@ -3,4 +3,4 @@ From MetaCoq.Template Require Import All.
 Import MCMonadNotation.
 
 MetaCoq Test Quote negb.
-MetaCoq Run (tmBind (tmEval (unfold (MPfile ["Datatypes"; "Init"; "Stdlib"], "negb")) negb) tmPrint).
+MetaCoq Run (tmBind (tmEval (unfold (MPfile ["Datatypes"; "Init"; "Corelib"], "negb")) negb) tmPrint).

@@ -25,7 +25,7 @@ From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICSafeReduce PCUICEr
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
-Require Import Stdlib.Program.Program.
+From Stdlib Require Import Program.
 
 Local Set Keyed Unification.
 Set Equations Transparent.
@@ -125,7 +125,7 @@ Proof.
 Qed.
 
 (** It otherwise tries [auto with *], very bad idea. *)
-Ltac Stdlib.Program.Tactics.program_solve_wf ::=
+Ltac Corelib.Program.Tactics.program_solve_wf ::=
   match goal with
   | |- @Wf.well_founded _ _ => auto with subterm wf
   | |- ?T => match type of T with

@@ -2,8 +2,8 @@
 +++ gen-src/specFloat.ml	2020-12-04 21:48:33.000000000 +0100
 @@ -4,6 +4,7 @@
  open Datatypes
- open Zbool
- open Zpower
+ open IntDef
+ open PosDef
 +open Float64
  
  type spec_float =

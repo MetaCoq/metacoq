@@ -1,10 +1,7 @@
-open BinInt
 open BinNums
-open BinPos
-open Bool
 open Datatypes
-open Zbool
-open Zpower
+open IntDef
+open PosDef
 
 type spec_float =
 | S754_zero of bool
@@ -39,7 +36,7 @@ let coq_Zdigits2 n = match n with
 (** val canonical_mantissa : coq_Z -> coq_Z -> positive -> coq_Z -> bool **)
 
 let canonical_mantissa prec emax m e =
-  coq_Zeq_bool (fexp prec emax (Z.add (Zpos (digits2_pos m)) e)) e
+  Z.eqb (fexp prec emax (Z.add (Zpos (digits2_pos m)) e)) e
 
 (** val bounded : coq_Z -> coq_Z -> positive -> coq_Z -> bool **)
 
@@ -174,7 +171,7 @@ let binary_round_aux prec emax sx mx ex lx =
 
 let shl_align mx ex ex' =
   match Z.sub ex' ex with
-  | Zneg d -> ((shift_pos d mx), ex')
+  | Zneg d -> ((Pos.iter (fun x -> Coq_xO x) mx d), ex')
   | _ -> (mx, ex)
 
 (** val binary_round :
@@ -283,8 +280,8 @@ let coq_SFclassify prec = function
 | S754_nan -> NaN
 | S754_finite (s, m, _) ->
   if s
-  then if Pos.eqb (digits2_pos m) (Z.to_pos prec) then NNormal else NSubn
-  else if Pos.eqb (digits2_pos m) (Z.to_pos prec) then PNormal else PSubn
+  then if Z.eqb (Zpos (digits2_pos m)) prec then NNormal else NSubn
+  else if Z.eqb (Zpos (digits2_pos m)) prec then PNormal else PSubn
 
 (** val coq_SFmul :
     coq_Z -> coq_Z -> spec_float -> spec_float -> spec_float **)
@@ -323,12 +320,16 @@ let coq_SFadd prec emax x y =
   match x with
   | S754_zero sx ->
     (match y with
-     | S754_zero sy -> if eqb sx sy then x else S754_zero false
+     | S754_zero sy ->
+       if sx
+       then if sy then x else S754_zero false
+       else if sy then S754_zero false else x
      | S754_nan -> S754_nan
      | _ -> y)
   | S754_infinity sx ->
     (match y with
-     | S754_infinity sy -> if eqb sx sy then x else S754_nan
+     | S754_infinity sy ->
+       if sx then if sy then x else S754_nan else if sy then S754_nan else x
      | S754_nan -> S754_nan
      | _ -> x)
   | S754_nan -> S754_nan
@@ -341,7 +342,8 @@ let coq_SFadd prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.add (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val coq_SFsub :
     coq_Z -> coq_Z -> spec_float -> spec_float -> spec_float **)
@@ -350,13 +352,17 @@ let coq_SFsub prec emax x y =
   match x with
   | S754_zero sx ->
     (match y with
-     | S754_zero sy -> if eqb sx (negb sy) then x else S754_zero false
+     | S754_zero sy ->
+       if sx
+       then if sy then S754_zero false else x
+       else if sy then x else S754_zero false
      | S754_infinity sy -> S754_infinity (negb sy)
      | S754_nan -> S754_nan
      | S754_finite (sy, my, ey) -> S754_finite ((negb sy), my, ey))
   | S754_infinity sx ->
     (match y with
-     | S754_infinity sy -> if eqb sx (negb sy) then x else S754_nan
+     | S754_infinity sy ->
+       if sx then if sy then S754_nan else x else if sy then x else S754_nan
      | S754_nan -> S754_nan
      | _ -> x)
   | S754_nan -> S754_nan
@@ -369,19 +375,20 @@ let coq_SFsub prec emax x y =
        let ez = Z.min ex ey in
        binary_normalize prec emax
          (Z.sub (cond_Zopp sx (Zpos (fst (shl_align mx ex ez))))
-           (cond_Zopp sy (Zpos (fst (shl_align my ey ez))))) ez false)
+           (cond_Zopp sy (Zpos (fst (shl_align my ey ez)))))
+         ez false)
 
 (** val new_location_even : coq_Z -> coq_Z -> location **)
 
 let new_location_even nb_steps k =
-  if coq_Zeq_bool k Z0
+  if Z.eqb k Z0
   then Coq_loc_Exact
   else Coq_loc_Inexact (Z.compare (Z.mul (Zpos (Coq_xO Coq_xH)) k) nb_steps)
 
 (** val new_location_odd : coq_Z -> coq_Z -> location **)
 
 let new_location_odd nb_steps k =
-  if coq_Zeq_bool k Z0
+  if Z.eqb k Z0
   then Coq_loc_Exact
   else Coq_loc_Inexact
          (match Z.compare
@@ -456,7 +463,7 @@ let coq_SFsqrt_core_binary prec emax m e =
            | Zneg _ -> Z0 in
   let (q, r) = Z.sqrtrem m' in
   let l =
-    if coq_Zeq_bool r Z0
+    if Z.eqb r Z0
     then Coq_loc_Exact
     else Coq_loc_Inexact (if Z.leb r q then Lt else Gt)
   in
@@ -491,11 +498,11 @@ let coq_SFldexp prec emax f e =
 
 let coq_SFfrexp prec emax f = match f with
 | S754_finite (sx, mx, ex) ->
-  if Pos.leb (Z.to_pos prec) (digits2_pos mx)
+  if Z.leb prec (Zpos (digits2_pos mx))
   then ((S754_finite (sx, mx, (Z.opp prec))), (Z.add ex prec))
   else let d = Z.sub prec (Zpos (digits2_pos mx)) in
-       ((S754_finite (sx, (shift_pos (Z.to_pos d) mx), (Z.opp prec))),
-       (Z.sub (Z.add ex prec) d))
+       ((S754_finite (sx, (Pos.iter (fun x -> Coq_xO x) mx (Z.to_pos d)),
+       (Z.opp prec))), (Z.sub (Z.add ex prec) d))
 | _ -> (f, (Z.sub (Z.mul (Zneg (Coq_xO Coq_xH)) emax) prec))
 
 (** val coq_SFone : coq_Z -> coq_Z -> spec_float **)
@@ -514,7 +521,8 @@ let coq_SFulp prec emax x =
 let coq_SFpred_pos prec emax x = match x with
 | S754_finite (_, mx, _) ->
   let d =
-    if Pos.eqb (Coq_xO mx) (shift_pos (Z.to_pos prec) Coq_xH)
+    if Pos.eqb (Coq_xO mx)
+         (Pos.iter (fun x0 -> Coq_xO x0) Coq_xH (Z.to_pos prec))
     then coq_SFldexp prec emax (coq_SFone prec emax)
            (fexp prec emax
              (Z.sub (snd (coq_SFfrexp prec emax x)) (Zpos Coq_xH)))
@@ -526,7 +534,8 @@ let coq_SFpred_pos prec emax x = match x with
 (** val coq_SFmax_float : coq_Z -> coq_Z -> spec_float **)
 
 let coq_SFmax_float prec emax =
-  S754_finite (false, (Pos.sub (shift_pos (Z.to_pos prec) Coq_xH) Coq_xH),
+  S754_finite (false,
+    (Pos.sub (Pos.iter (fun x -> Coq_xO x) Coq_xH (Z.to_pos prec)) Coq_xH),
     (Z.sub emax prec))
 
 (** val coq_SFsucc : coq_Z -> coq_Z -> spec_float -> spec_float **)

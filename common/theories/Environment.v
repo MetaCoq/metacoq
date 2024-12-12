@@ -218,7 +218,9 @@ Module Environment (T : Term).
        decl_body := decl_body x;
        decl_type := decl_type x |}.
 
-  Fixpoint context_assumptions (Γ : context) :=
+  (** Count the number of assumptions in a context (i.e. declarations that do not 
+      contain a body). *)
+  Fixpoint context_assumptions (Γ : context) : nat :=
     match Γ with
     | [] => 0
     | d :: Γ =>
@@ -313,23 +315,33 @@ Module Environment (T : Term).
 
   (** *** Environments *)
 
+  (** Data associated to a single inductive constructor. *)
   Record constructor_body := {
+    (** Constructor name, without the module path. *)
     cstr_name : ident;
-    (* The arguments and indices are typeable under the context of
-      arities of the mutual inductive + parameters *)
+    (** Arguments of the constructor, which can depend on the inductives in the same block
+        and the parameters of the inductive. *)
     cstr_args : context;
+    (** Indices of the constructor, which can depend on the inductives in the same block,
+        the parameters of the inductive and the constructor arguments. *)
     cstr_indices : list term;
+    (** Full type of the constructor, which can depend on the inductives in the same block. 
+        This should be equal to `forall mind_params cstr_args, I mind_params cstr_indices` *)
     cstr_type : term;
-    (* Closed type: on well-formed constructors: forall params, cstr_args, I params cstr_indices *)
-    cstr_arity : nat; (* arity, w/o lets, w/o parameters *)
+    (** Number of arguments of the constructor, _without_ let-in arguments and _without_ parameters.
+        This should be equal to `context_assumptions cstr_args`. *)
+    cstr_arity : nat;
   }.
 
+  (** Data associated to a primitive projection. *)
   Record projection_body := {
+    (** Projection name, without the module path. *)
     proj_name : ident;
-    (* The arguments and indices are typeable under the context of
-      arities of the mutual inductive + parameters *)
+    (** Relevance of the projection. *)
     proj_relevance : relevance;
-    proj_type : term; (* Type under context of params and inductive object *)
+    (** Type of the projection, wich can depend on the parameters of the inductive 
+        and on the object we are projecting from. *)
+    proj_type : term;
   }.
 
   Definition map_constructor_body npars arities f c :=
@@ -341,23 +353,32 @@ Module Environment (T : Term).
        cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 
-  (* Here npars should be the [context_assumptions] of the parameters context. *)
+  (** Here npars should be the [context_assumptions] of the parameters context. *)
   Definition map_projection_body npars f c :=
     {| proj_name := c.(proj_name);
        proj_relevance := c.(proj_relevance);
        proj_type := f (S npars) c.(proj_type)
     |}.
 
-  (** See [one_inductive_body] from [declarations.ml]. *)
+  (** Data associated to a single inductive in a mutual inductive block. *)
   Record one_inductive_body := {
-    ind_name : ident;
-    ind_indices : context; (* Indices of the inductive types, under params *)
-    ind_sort : Sort.t; (* Sort of the inductive. *)
-    ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
-    ind_kelim : allowed_eliminations; (* Allowed eliminations *)
+    (** Name of the inductive, without the module path. *)
+    ind_name : ident; 
+    (** Indices of the inductive type, which can depend on the parameters of the inductive. *)
+    ind_indices : context;
+    (** Sort of the inductive. *) 
+    ind_sort : Sort.t; 
+    (** Full type of the inductive. This should be equal to
+        `forall mind_params ind_indices, tSort ind_sort` *)
+    ind_type : term; 
+    (** Allowed eliminations for this inductive. *)
+    ind_kelim : allowed_eliminations; 
+    (** Constructors of this inductive. Order is important. *)
     ind_ctors : list constructor_body;
-    ind_projs : list projection_body; (* names and types of projections, if any. *)
-    ind_relevance : relevance (* relevance of the inductive definition *) }.
+    (** Names and types of primitive projections, if any. *)
+    ind_projs : list projection_body; 
+    (** Relevance of the inductive definition. *)
+    ind_relevance : relevance }.
 
   Definition map_one_inductive_body npars arities f m :=
     match m with
@@ -369,20 +390,33 @@ Module Environment (T : Term).
                   (map (map_projection_body npars f) ind_projs) ind_relevance
     end.
 
-  (** See [mutual_inductive_body] from [declarations.ml]. *)
+  (** Data associated to a block of mutually inductive types. *)
   Record mutual_inductive_body := {
+    (** Whether the mutual inductive is inductive, coinductive or non-recursive. *)
     ind_finite : recursivity_kind;
+    (** Number of parameters (including non-uniform ones), _without_ counting let-in parameters.
+        This should be equal to `context_assumptions ind_params`. *)
     ind_npars : nat;
+    (** Context of parameters (including non-uniform ones), _with_ let-in parameters. *)
     ind_params : context;
+    (** Components of the mutual inductive block. Order is important. *)
     ind_bodies : list one_inductive_body ;
+    (** Whether the mutual inductive is universe monomorphic or universe polymorphic,
+        and information about the local universes if polymorphic. *)
     ind_universes : universes_decl;
+    (** Variance information. [None] when non-cumulative. *)
     ind_variance : option (list Universes.Variance.t) }.
 
-  (** See [constant_body] from [declarations.ml] *)
+  (** Data associated to a constant (definition, lemma, axiom). *)
   Record constant_body := {
+    (** Type of this constant. *)
     cst_type : term;
+    (** Body of this constant. For axioms this is [None]. *)
     cst_body : option term;
+    (** Whether the constant is universe monomorphic or polymorphic, and if polymorphic
+        information about its local universes. *)
     cst_universes : universes_decl;
+    (** Relevance of this constant. *)
     cst_relevance : relevance }.
 
   Definition map_constant_body f decl :=
@@ -399,6 +433,7 @@ Module Environment (T : Term).
     option_map f (cst_body decl) = cst_body (map_constant_body f decl).
   Proof. destruct decl; reflexivity. Qed.
 
+  (** A global declaration is a definition, lemma, axiom or mutual inductive. *)
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
   | InductiveDecl : mutual_inductive_body -> global_decl.

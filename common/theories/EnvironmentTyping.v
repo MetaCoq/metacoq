@@ -1261,7 +1261,7 @@ Module GlobalMaps (T: Term) (E: EnvironmentSig T) (TU : TermUtils T E) (ET: EnvT
     *)
 
     (** A constructor argument type [t] is positive w.r.t. an inductive block [mdecl]
-      when it's zeta-normal form is of the shape Π Δ. concl and:
+        when it's zeta-normal form is of the shape Π Δ. concl and:
         - [t] does not refer to any inductive in the block.
           In that case [t] must be a closed type under the context of parameters and
           previous arguments.

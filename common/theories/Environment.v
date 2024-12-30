@@ -320,13 +320,15 @@ Module Environment (T : Term).
     (** Constructor name, without the module path. *)
     cstr_name : ident;
     (** Arguments of the constructor, which can depend on the inductives in the same block
-        and the parameters of the inductive. *)
+        and the parameters of the inductive : `ind_bodies ,,, ind_params |- cstr_args`. *)
     cstr_args : context;
     (** Indices of the constructor, which can depend on the inductives in the same block,
-        the parameters of the inductive and the constructor arguments. *)
+        the parameters of the inductive and the constructor arguments :
+        `ind_bodies ,,, ind_params ,,, cstr_args |- cstr_indices`. *)
     cstr_indices : list term;
-    (** Full type of the constructor, which can depend on the inductives in the same block. 
-        This should be equal to `forall mind_params cstr_args, I mind_params cstr_indices` *)
+    (** Full type of the constructor, which can depend on the inductives in the same block :
+        `ind_bodies |- cstr_type`. This should be equal to 
+        `forall ind_params cstr_args, I ind_params cstr_indices` *)
     cstr_type : term;
     (** Number of arguments of the constructor, _without_ let-in arguments and _without_ parameters.
         This should be equal to `context_assumptions cstr_args`. *)
@@ -340,7 +342,7 @@ Module Environment (T : Term).
     (** Relevance of the projection. *)
     proj_relevance : relevance;
     (** Type of the projection, wich can depend on the parameters of the inductive 
-        and on the object we are projecting from. *)
+        and on the object we are projecting from : `ind_params ,,, x |- proj_type`. *)
     proj_type : term;
   }.
 
@@ -353,7 +355,7 @@ Module Environment (T : Term).
        cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 
-  (** Here npars should be the [context_assumptions] of the parameters context. *)
+  (** Here npars should be the `context_assumptions` of the parameters context. *)
   Definition map_projection_body npars f c :=
     {| proj_name := c.(proj_name);
        proj_relevance := c.(proj_relevance);
@@ -364,20 +366,21 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     (** Name of the inductive, without the module path. *)
     ind_name : ident; 
-    (** Indices of the inductive type, which can depend on the parameters of the inductive. *)
+    (** Indices of the inductive, which can depend on the parameters :
+        `ind_params |- ind_indices`. *)
     ind_indices : context;
     (** Sort of the inductive. *) 
     ind_sort : Sort.t; 
     (** Full type of the inductive. This should be equal to
-        `forall mind_params ind_indices, tSort ind_sort` *)
+        `forall ind_params ind_indices, tSort ind_sort` *)
     ind_type : term; 
-    (** Allowed eliminations for this inductive. *)
+    (** Allowed eliminations for the inductive. *)
     ind_kelim : allowed_eliminations; 
-    (** Constructors of this inductive. Order is important. *)
+    (** Constructors of the inductive. Order is important. *)
     ind_ctors : list constructor_body;
     (** Names and types of primitive projections, if any. *)
     ind_projs : list projection_body; 
-    (** Relevance of the inductive definition. *)
+    (** Relevance of the inductive. *)
     ind_relevance : relevance }.
 
   Definition map_one_inductive_body npars arities f m :=
@@ -392,7 +395,7 @@ Module Environment (T : Term).
 
   (** Data associated to a block of mutually inductive types. *)
   Record mutual_inductive_body := {
-    (** Whether the mutual inductive is inductive, coinductive or non-recursive. *)
+    (** Whether the block is inductive, coinductive or non-recursive (Records). *)
     ind_finite : recursivity_kind;
     (** Number of parameters (including non-uniform ones), _without_ counting let-in parameters.
         This should be equal to `context_assumptions ind_params`. *)
@@ -404,19 +407,19 @@ Module Environment (T : Term).
     (** Whether the mutual inductive is universe monomorphic or universe polymorphic,
         and information about the local universes if polymorphic. *)
     ind_universes : universes_decl;
-    (** Variance information. [None] when non-cumulative. *)
+    (** Variance information. `None` when non-cumulative. *)
     ind_variance : option (list Universes.Variance.t) }.
 
-  (** Data associated to a constant (definition, lemma, axiom). *)
+  (** Data associated to a constant (definition, lemma or axiom). *)
   Record constant_body := {
-    (** Type of this constant. *)
+    (** Type of the constant. *)
     cst_type : term;
-    (** Body of this constant. For axioms this is [None]. *)
+    (** Body of the constant. For axioms this is [None]. *)
     cst_body : option term;
     (** Whether the constant is universe monomorphic or polymorphic, and if polymorphic
         information about its local universes. *)
     cst_universes : universes_decl;
-    (** Relevance of this constant. *)
+    (** Proof relevance of this constant. *)
     cst_relevance : relevance }.
 
   Definition map_constant_body f decl :=

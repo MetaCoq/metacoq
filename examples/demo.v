@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Template Require Import All.
+From Coq Require Init.
 
 Import MCMonadNotation.
 
@@ -19,7 +20,7 @@ MetaCoq Test Quote (let x := 2 in
               | S n => n
             end).
 
-MetaCoq Test Unquote (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Stdlib"], "nat") 0) 0 []).
+MetaCoq Test Unquote (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Corelib"], "nat") 0) 0 []).
 
 (** Build a definition **)
 Definition d : Ast.term.
@@ -71,7 +72,9 @@ MetaCoq Quote Definition eo_syntax := Eval compute in even.
 MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
-MetaCoq Unquote Definition zero_from_syntax := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
+Check Coq.Init.Datatypes.nat.
+MetaCoq Unquote Definition zero_from_syntax := 
+  (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Corelib"], "nat") 0) 0 []).
 Set Printing All.
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
 
@@ -84,7 +87,7 @@ MetaCoq Unquote Definition add_from_syntax := add_syntax.
 MetaCoq Unquote Definition eo_from_syntax := eo_syntax.
 Print eo_from_syntax.
 
-Local Notation Nat_module := (MPfile ["Datatypes"; "Init"; "Coq"], "nat").
+Local Notation Nat_module := (MPfile ["Datatypes"; "Init"; "Corelib"], "nat").
 
 
 
@@ -223,7 +226,7 @@ Definition printInductive (q : qualid): TemplateMonad unit :=
   | _ => tmFail ("[" ^ q ^ "] is not an inductive")
   end.
 
-MetaCoq Run (printInductive "Coq.Init.Datatypes.nat").
+MetaCoq Run (printInductive "Init.Datatypes.nat").
 MetaCoq Run (printInductive "nat").
 
 CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
@@ -301,8 +304,8 @@ Definition printConstant' (name  : qualid): TemplateMonad unit :=
   | _ => tmFail ("[" ^ name ^ "] is not a constant")
   end.
 
-Fail MetaCoq Run (printInductive "Coq.Arith.PeanoNat.Nat.add").
-MetaCoq Run (printConstant' "Coq.Arith.PeanoNat.Nat.add").
+Fail MetaCoq Run (printInductive "Stdlib.Arith.PeanoNat.Nat.add").
+MetaCoq Run (printConstant' "Stdlib.Arith.PeanoNat.Nat.add").
 
 
 Fail MetaCoq Run (tmUnquoteTyped (nat -> nat) add_syntax >>= tmPrint).
@@ -411,6 +414,6 @@ Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
 
 MetaCoq Run (kername_of_qualid "add" >>= tmPrint).
 MetaCoq Run (kername_of_qualid "BinNat.N.add" >>= tmPrint).
-MetaCoq Run (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
+MetaCoq Run (kername_of_qualid "Stdlib.NArith.BinNatDef.N.add" >>= tmPrint).
 MetaCoq Run (kername_of_qualid "N.add" >>= tmPrint).
 Fail MetaCoq Run (kername_of_qualid "qlskf" >>= tmPrint).

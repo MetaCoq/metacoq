@@ -7,7 +7,7 @@ From MetaCoq.TemplatePCUIC Require Import TemplateMonadToPCUIC.
 Notation eval_pcuic_quotation := eval_pcuic_quotation (only parsing).
 #[export] Existing Instance default_eval_pcuic_quotation.
 
-#[export] Set Warnings "-notation-overridden".
+Set Warnings "-notation-overridden".
 (* Work around COQBUG(https://github.com/coq/coq/issues/16715) *)
 Notation "<% x %>" := (match @monad_trans return _ with monad_trans => ltac:(let monad_trans := constr:(monad_trans _) in let p y := exact y in let p y := run_template_program (monad_trans y) p in quote_term x p) end)
   (only parsing).
@@ -16,4 +16,3 @@ Notation "<% x %>" := (match @monad_trans return _ with monad_trans => ltac:(let
 (* Use [return _] to avoid running the program twice on failure *)
 Notation "<# x #>" := (match @PCUICTemplateMonad.Core.tmQuoteRec return _ with tmQuoteRec => ltac:(let qx := constr:(tmQuoteRec _ _ x) in let p y := exact y in run_template_program qx p) end)
   (only parsing).
-#[export] Set Warnings "+notation-overridden".

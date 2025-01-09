@@ -1,3 +1,4 @@
+Set Warnings "-notation-overridden".
 From MetaCoq.Utils Require Export bytestring.
 From MetaCoq.Utils Require Import utils MCList.
 From MetaCoq.Common Require Import MonadBasicAst.
@@ -8,6 +9,8 @@ Require Import Equations.Prop.Classes.
 Require Import Stdlib.Lists.List.
 Export TemplateMonad.Common (export, local, global).
 Import ListNotations.
+
+Set Warnings "+notation-overridden".
 
 Local Set Primitive Projections.
 Local Unset Universe Minimization ToSet.

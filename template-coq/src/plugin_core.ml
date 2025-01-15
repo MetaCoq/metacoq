@@ -185,6 +185,7 @@ let quote_module ~(include_functor : bool) ~(include_submodule : bool) ~(include
   let mp = Nametab.locate_module qualid in
   let mb = Global.lookup_module mp in
   let open Declarations in
+  let open Mod_declarations in
   let rec aux mb mp =
     let rec aux' mt mp =
       match mt with
@@ -196,12 +197,12 @@ let quote_module ~(include_functor : bool) ~(include_submodule : bool) ~(include
           | SFBconst _ -> [GlobRef.ConstRef (Constant.make2 mp label)]
           | SFBmind _ -> [GlobRef.IndRef (MutInd.make2 mp label, 0)]
           | SFBrules _ -> failwith "Rewrite rules are not supported by TemplateCoq"
-          | SFBmodule mb -> if include_submodule then aux mb.mod_type mb.mod_mp else []
-          | SFBmodtype mtb -> if include_submodtype then aux mtb.mod_type mtb.mod_mp else []
+          | SFBmodule mb -> if include_submodule then aux (mod_type mb) (mod_mp mb) else []
+          | SFBmodtype mtb -> if include_submodtype then aux (mod_type mtb) (mod_mp mtb) else []
         in
         CList.map_append get_ref body
     in aux' mb mp
-  in aux mb.mod_type mb.mod_mp
+  in aux (mod_type mb) (mod_mp mb)
 
 let tmQuoteModule (qualid : qualid) : global_reference list tm =
   fun ~st env evd success _fail ->

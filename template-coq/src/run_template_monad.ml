@@ -282,7 +282,7 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
        let priv = unquote_map_option unquote_bool priv in
        let ctx, univs = match univs with
        | UState.Monomorphic_entry ctx ->
-          if template then Univ.ContextSet.empty, Entries.Template_ind_entry ctx
+          if template then Univ.ContextSet.empty, Entries.Template_ind_entry { univs = ctx; pseudo_sort_poly = TemplateUnivOnly }
           else ctx, Entries.Monomorphic_ind_entry
        | UState.Polymorphic_entry uctx -> Univ.ContextSet.empty, Entries.Polymorphic_ind_entry uctx
        in

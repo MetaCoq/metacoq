@@ -283,10 +283,10 @@ module RetypeMindEntry =
     let ctx, mind =
       match mind.mind_entry_universes with
       | Entries.Monomorphic_ind_entry ->
-        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_ind_entry }
-      | Entries.Template_ind_entry ctx ->
-        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Template_ind_entry ctx }
-      | Entries.Polymorphic_ind_entry uctx ->
+        Evd.universe_context_set evm, mind
+      | Entries.Template_ind_entry _ ->
+        Evd.universe_context_set evm, mind
+      | Entries.Polymorphic_ind_entry _ ->
         let uctx' = Evd.to_universe_context evm in
         Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_ind_entry uctx' }
     in ctx, mind

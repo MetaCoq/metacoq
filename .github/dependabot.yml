@@ -19,6 +19,14 @@ updates:
       - "dependencies"
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "coq-8.20"
+    schedule:
+      # Check for updates to GitHub Actions every weekday
+      interval: "daily"
+    labels:
+      - "dependencies"
+  - package-ecosystem: "github-actions"
+    directory: "/"
     target-branch: "coq-8.19"
     schedule:
       # Check for updates to GitHub Actions every weekday

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool Morphisms.
+From Stdlib Require Import ssreflect ssrbool Morphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Export Primitive Universes BasicAst Environment Reflect.
 From MetaCoq.Common Require EnvironmentTyping.

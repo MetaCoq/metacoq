@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
+From Stdlib Require Import Strings.String.
+From Stdlib Require Import Lists.List.
 From MetaCoq.Common Require Import
      BasicAst.
 From MetaCoq.Template Require Import

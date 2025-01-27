@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Utf8 Program.
+From Stdlib Require Import Utf8 Program.
 From MetaCoq.Common Require Import config BasicAst.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
@@ -7,11 +7,11 @@ From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils ELiftSubst ECSubst
   EWellformed EWcbvEval.
 From MetaCoq.Utils Require Import bytestring MCString.
 From MetaCoq.Erasure Require Import EWcbvEvalCstrsAsBlocksFixLambdaInd.
-From Coq Require Import BinaryString.
+From Stdlib Require Import BinaryString.
 Import String.
 
 From Equations Require Import Equations.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 Set Default Proof Using "Type*".
 
@@ -836,7 +836,7 @@ Proof.
   all: firstorder congruence.
 Qed.
 
-Require Import DecimalNat.
+From Stdlib Require Import DecimalNat.
 
 Lemma string_of_nat_empty n :
   string_of_nat n <> "".
@@ -858,7 +858,7 @@ Proof.
   all: inversion Heq; eauto.
 Qed.
 
-Require Import DecimalNat.
+From Stdlib Require Import DecimalNat.
 
 Lemma string_of_nat_inj n1 n2 :
   string_of_nat n1 = string_of_nat n2 -> n1 = n2.

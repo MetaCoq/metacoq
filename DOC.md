@@ -28,7 +28,7 @@ inserts some JMeq and UIP axioms silently, whereas we try to keep the developmen
 You can use `Equations` to do some dependent induction (`dependent induction`,
 `dependent destruction`, `depelim`). You may need to add:
 ```
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 ```
 
 ## ident vs. qualid. vs kername

@@ -1,4 +1,4 @@
-From Coq.Floats Require Import FloatClass Floats PrimFloat SpecFloat.
+From Stdlib.Floats Require Import FloatClass Floats PrimFloat SpecFloat.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Init Stdlib.Numbers.
 

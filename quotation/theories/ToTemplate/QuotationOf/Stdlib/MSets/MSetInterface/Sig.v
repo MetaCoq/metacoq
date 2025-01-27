@@ -1,4 +1,4 @@
-From Coq.MSets Require Import MSetInterface.
+From Stdlib.MSets Require Import MSetInterface.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 
 Module Type QuotationOfWSetsOn (E : DecidableType) (Import W : WSetsOn E).

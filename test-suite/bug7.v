@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.Loader.
+From MetaCoq Require Import Template.Loader.
 
 Axiom a_nat : nat.
 

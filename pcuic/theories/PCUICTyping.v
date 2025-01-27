@@ -11,8 +11,8 @@ Import MCMonadNotation.
 (* TODO: remove this export *)
 From MetaCoq.Utils Require Export LibHypsNaming.
 
-Require Import ssreflect ssrbool.
-Require Import Equations.Type.Relation.
+From Stdlib Require Import ssreflect ssrbool.
+From Equations.Type Require Import Relation.
 From Equations Require Import Equations.
 Set Equations With UIP.
 

@@ -9,12 +9,12 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.plugin: _PluginProject
-	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
+	rocq makefile -f _PluginProject -o Makefile.plugin $(DEPS)
 # Avoid conflicting dependency file creation for the template plugin
 	sed -e s/coqdeps/coqdeps.plugin/g Makefile.plugin > Makefile.plugin.tmp && mv -f Makefile.plugin.tmp Makefile.plugin
 
 Makefile.erasureplugin: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.erasureplugin $(DEPS)
+	rocq makefile -f _CoqProject -o Makefile.erasureplugin $(DEPS)
 
 theory: Makefile.erasureplugin
 	$(MAKE) -f Makefile.erasureplugin

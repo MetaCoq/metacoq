@@ -1,4 +1,4 @@
-From Coq Require Import Program.
+From Stdlib Require Import Program.
 From MetaCoq.Erasure.Typed Require Import Utils.
 From MetaCoq.Erasure.Typed Require Import ExAst.
 From Equations Require Import Equations.

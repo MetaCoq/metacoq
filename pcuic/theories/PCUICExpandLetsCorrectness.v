@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
+From Stdlib Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Set Warnings "-notation-overridden".
@@ -1089,7 +1089,7 @@ Proof.
   rewrite (trans_cstr_branch_context p i) //.
 Qed.
 
-Require Import PCUICContexts.
+From MetaCoq.PCUIC Require Import PCUICContexts.
 
 Lemma eq_names_smash_context Γ :
   All2 (fun x y => decl_name x = decl_name y) (smash_context [] (trans_local Γ)) (smash_context [] Γ).
@@ -1201,7 +1201,7 @@ Proof.
   now rewrite (declared_minductive_ind_npars declc).
 Qed.
 
-Require Import PCUICSpine.
+From MetaCoq.PCUIC Require Import PCUICSpine.
 
 Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) =
   reln (map trans l) p (trans_local Γ).
@@ -1298,7 +1298,7 @@ Proof.
   destruct y as [na' [b|] ty]; cbn; auto.
 Qed.
 
-Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 #[global] Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.
   intros f g Hfg ? ? -> ? ? ->.
@@ -1739,7 +1739,7 @@ Proof.
   eapply is_open_term_lift. 2-3:now len. apply ont.
 Qed.
 
-Require Import PCUICSubstitution.
+From MetaCoq.PCUIC Require Import PCUICSubstitution.
 
 Lemma untyped_subslet_lift (Γ Δ : context) s Δ' :
   untyped_subslet Γ s Δ' ->
@@ -5569,7 +5569,7 @@ Proof.
     destruct (decl_body c); lia.
 Qed.
 
-Require Import PCUICLiftSubst PCUICContexts PCUICOnFreeVars.
+From MetaCoq.PCUIC Require Import PCUICLiftSubst PCUICContexts PCUICOnFreeVars.
 
 Lemma expand_lets_tFix Γ mfix idx k :
   expand_lets_k Γ k (tFix mfix idx) = tFix (List.map (map_def (expand_lets_k Γ k) (expand_lets_k Γ (#|mfix| + k))) mfix) idx.

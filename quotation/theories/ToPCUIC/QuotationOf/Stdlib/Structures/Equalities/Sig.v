@@ -1,4 +1,4 @@
-From Coq.Structures Require Import Equalities.
+From Stdlib.Structures Require Import Equalities.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 
 Module Type QuotationOfTyp (Import T : Typ).

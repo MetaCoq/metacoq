@@ -5,7 +5,7 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.coq: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
+	rocq makefile -f _CoqProject -o Makefile.coq
 
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq

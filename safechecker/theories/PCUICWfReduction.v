@@ -13,7 +13,7 @@ From MetaCoq.SafeChecker Require Import PCUICWfEnv.
 
 
 From Equations Require Import Equations.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 Local Set Keyed Unification.
 Set Equations Transparent.

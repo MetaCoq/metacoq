@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Stdlib Require Import Lists.List.
 From MetaCoq.Utils Require Import bytestring.
 From MetaCoq.Common Require Import BasicAst.
 From MetaCoq.Template Require Import Ast Loader TemplateMonad.Extractable.
@@ -58,7 +58,7 @@ Definition tmResolve (nm : String.t) : TM (option kername) :=
 
 (* ^^ Everything above here is generic *)
 
-Require Import MetaCoq.ExtractedPluginDemo.Lens.
+From MetaCoq Require Import ExtractedPluginDemo.Lens.
 
 Set Primitive Projections.
 Set Universe Polymorphism.
@@ -80,8 +80,8 @@ Definition prepend (ls : String.t) (i : ident) : ident :=
 
 Definition cBuild_Lens := <% Build_Lens %>.
 
-Require Import Coq.Lists.List.
-Require Import Coq.Bool.Bool.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Bool.Bool.
 
 
 (* check to see if Var 0 is referenced in any of the terms *)

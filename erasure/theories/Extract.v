@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssrbool.
+From Stdlib Require Import Program ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Primitive.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTyping

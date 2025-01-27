@@ -1,4 +1,4 @@
-From Coq Require Import Arith ZArith Lia.
+From Stdlib Require Import Arith ZArith Lia.
 
 Inductive BoolSpecSet (P Q : Prop) : bool -> Set :=
     BoolSpecT : P -> BoolSpecSet P Q true | BoolSpecF : Q -> BoolSpecSet P Q false.
@@ -61,7 +61,7 @@ Qed.
 
 (* Missing rewriting theory on natural number orders *)
 
-Require Import Morphisms Morphisms_Prop.
+From Stdlib Require Import Morphisms Morphisms_Prop.
 #[export] Instance proper_S_lt : Morphisms.Proper (lt ==> lt)%signature S.
 Proof. red. intros x y h. lia. Qed.
 #[export] Instance proper_add_lt_r : Morphisms.Proper (eq ==> lt ==> lt)%signature Nat.add.

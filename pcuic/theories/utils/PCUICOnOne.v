@@ -3,8 +3,8 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst.
 
-Require Import ssreflect.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
 From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 Set Equations Transparent.

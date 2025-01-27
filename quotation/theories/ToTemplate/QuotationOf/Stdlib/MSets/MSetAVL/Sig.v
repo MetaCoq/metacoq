@@ -1,5 +1,5 @@
-From Coq.Structures Require Import Orders.
-From Coq.MSets Require Import MSetAVL.
+From Stdlib.Structures Require Import Orders.
+From Stdlib.MSets Require Import MSetAVL.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 

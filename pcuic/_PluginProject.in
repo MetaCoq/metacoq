@@ -13,7 +13,7 @@ src/signature.ml
 src/init.mli
 src/init.ml
 
-# From Coq
+# From Stdlib
 # src/cRelationClasses.mli
 # src/cRelationClasses.ml
 # src/relation.mli

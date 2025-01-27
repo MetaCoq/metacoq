@@ -1,13 +1,13 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms.
-Require Import ssreflect ssrfun ssrbool.
+From Stdlib Require Import Morphisms.
+From Stdlib Require Import ssreflect ssrfun ssrbool.
 From MetaCoq.Utils Require Import utils MCPred.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst
   PCUICEquality PCUICSigmaCalculus PCUICClosed.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
 

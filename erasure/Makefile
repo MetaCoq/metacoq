@@ -5,7 +5,7 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.erasure: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.erasure $(DEPS)
+	rocq makefile -f _CoqProject -o Makefile.erasure $(DEPS)
 
 theory: Makefile.erasure
 	$(MAKE) -f Makefile.erasure

@@ -5,7 +5,7 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.safechecker: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.safechecker $(DEPS)
+	rocq makefile -f _CoqProject -o Makefile.safechecker $(DEPS)
 
 theory: Makefile.safechecker
 	$(MAKE) -f Makefile.safechecker

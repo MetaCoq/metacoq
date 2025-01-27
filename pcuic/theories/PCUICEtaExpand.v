@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.

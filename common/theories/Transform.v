@@ -3,7 +3,7 @@
 (** Generic transofmations from one language to another,
     preserving an evaluation relation up-to some observational equality. *)
 
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 Import bytestring.

@@ -5,7 +5,7 @@ _CoqProject: _CoqProject.in metacoq-config
 	cat _CoqProject.in >> _CoqProject
 
 Makefile.quotation: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.quotation $(DEPS)
+	rocq makefile -f _CoqProject -o Makefile.quotation $(DEPS)
 
 theory: Makefile.quotation
 	$(MAKE) -f Makefile.quotation

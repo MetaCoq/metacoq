@@ -4,10 +4,10 @@
     we terms are equal to the originals. Since eta-conversion is part of the
     Coq's conversion, the proof is essentially [eq_refl].
     All dependencies are also expanded.*)
-From Coq Require Import List.
-From Coq Require Import PeanoNat.
-From Coq Require Import Bool.
-From Coq Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import PeanoNat.
+From Stdlib Require Import Bool.
+From Stdlib Require Import String.
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Template Require Import All.
 From MetaCoq.Erasure.Typed Require Import Erasure.

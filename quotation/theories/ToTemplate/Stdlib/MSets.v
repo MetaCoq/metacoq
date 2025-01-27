@@ -1,4 +1,4 @@
-From Coq Require Import MSetInterface MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
+From Stdlib Require Import MSetInterface MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 From MetaCoq.Quotation.ToTemplate Require Import (hints) Stdlib.Numbers Stdlib.Init Stdlib.Lists.

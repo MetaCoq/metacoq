@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CMorphisms.
+From Stdlib Require Import CMorphisms.
 From MetaCoq.Utils Require Import LibHypsNaming utils.
 From MetaCoq.Common Require Import config Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICReflect.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.

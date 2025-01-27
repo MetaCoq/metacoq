@@ -1,4 +1,4 @@
-From Coq Require Import List.
+From Stdlib Require Import List.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Kernames.
 From MetaCoq.Common Require Import BasicAst.

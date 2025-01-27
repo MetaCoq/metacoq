@@ -1,5 +1,5 @@
-From Coq Require Import List.
-From Coq Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import String.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import ResultMonad.
 From MetaCoq.Erasure.Typed Require Import Utils.

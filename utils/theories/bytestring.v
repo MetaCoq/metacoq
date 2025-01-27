@@ -6,10 +6,10 @@
  * see repository root for details.
  *)
 
-Require Coq.Strings.String ssrbool.
-Require Import ssreflect.
-Require Import Coq.NArith.NArith.
-From Coq Require Import Lia.
+From Stdlib Require Strings.String ssrbool.
+From Stdlib Require Import ssreflect.
+From Stdlib Require Import NArith.NArith.
+From Stdlib Require Import Lia.
 From Equations Require Import Equations.
 Set Primitive Projections.
 Set Default Proof Using "Type".
@@ -196,7 +196,7 @@ Notation "x ++ y" := (String.append x y) : bs_scope.
 Import String.
 
 (** comparison *)
-From Coq Require Import Orders OrderedType OrdersAlt.
+From Stdlib Require Import Orders OrderedType OrdersAlt.
 
 Lemma to_N_inj : forall x y, Byte.to_N x = Byte.to_N y <-> x = y.
 Proof.

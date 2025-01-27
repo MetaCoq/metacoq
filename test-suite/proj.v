@@ -38,7 +38,7 @@ MetaCoq Test Quote ((pair' _ _ true 4).(snd')).
 
 MetaCoq Test Quote prod'.
 
-Require Import List String.
+From Stdlib Require Import List String.
 Import ListNotations.
 
 

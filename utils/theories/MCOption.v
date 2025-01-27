@@ -1,4 +1,4 @@
-From Coq Require Import List ssreflect ssrbool Arith Morphisms Relation_Definitions.
+From Stdlib Require Import List ssreflect ssrbool Arith Morphisms Relation_Definitions.
 
 From MetaCoq.Utils Require Import MCPrelude MCList MCProd MCReflect ReflectEq.
 

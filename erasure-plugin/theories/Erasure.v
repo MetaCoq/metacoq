@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Transform config.
 From MetaCoq.Template Require Import EtaExpand TemplateProgram.

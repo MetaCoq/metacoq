@@ -1,9 +1,9 @@
-Require Import Coq.Lists.List.
+From Stdlib Require Import Lists.List.
 From MetaCoq.Quotation.ToTemplate Require Export Init.
 From MetaCoq.Utils Require Export bytestring. (* for display of quoted objects *)
 From MetaCoq.Utils Require Export ReflectEq.
 From MetaCoq.Utils Require Import All_Forall.
-Require Import Equations.Prop.Classes.
+From Equations.Prop Require Import Classes.
 Import ListNotations.
 
 Export Quotation.ToTemplate.Init.Instances.

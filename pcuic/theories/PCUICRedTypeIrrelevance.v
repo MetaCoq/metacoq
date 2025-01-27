@@ -1,11 +1,11 @@
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst
   PCUICReduction PCUICContextReduction.
 
-From Coq Require Import CRelationClasses.
+From Stdlib Require Import CRelationClasses.
 
 (** Types and names of variables are irrelevant during reduction.
     More precisely, we only need to preserve bodies of let declarations

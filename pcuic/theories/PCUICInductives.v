@@ -14,9 +14,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICConversion PCUICGlobalEnv PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICWfUniverses PCUICSpine.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 
 Local Set SimplIsCbn.
 

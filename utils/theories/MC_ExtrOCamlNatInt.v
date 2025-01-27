@@ -12,8 +12,8 @@
 
 Require Coq.extraction.Extraction.
 
-Require Import Arith Even Div2 EqNat Euclid.
-Require Import ExtrOcamlBasic.
+From Stdlib Require Import Arith Even Div2 EqNat Euclid.
+From Stdlib Require Import ExtrOcamlBasic.
 
 (** Disclaimer: trying to obtain efficient certified programs
     by extracting [nat] into [int] is definitively *not* a good idea:

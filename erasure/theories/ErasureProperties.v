@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.Erasure Require Import EPrimitive ELiftSubst EGlobalEnv EWcbvEval Extract Prelim
@@ -22,7 +22,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICInductives.
 From MetaCoq.PCUIC Require Import PCUICTactics.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 
 Local Set Keyed Unification.
 

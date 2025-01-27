@@ -3,7 +3,7 @@ From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Kernames.
 From MetaCoq.Erasure Require Import EPrimitive EAst.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 Global Hint Resolve app_tip_nil : core.
 

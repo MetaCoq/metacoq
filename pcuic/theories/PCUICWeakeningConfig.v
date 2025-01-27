@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq.ssr Require Import ssreflect ssrbool.
+From Stdlib.ssr Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
 From Equations Require Import Equations.
 From MetaCoq.Utils Require Import LibHypsNaming.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Set Default Goal Selector "!".
 

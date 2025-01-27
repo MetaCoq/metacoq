@@ -1,4 +1,4 @@
-From Coq Require Import Program ssreflect ssrbool List.
+From Stdlib Require Import Program ssreflect ssrbool List.
 From MetaCoq.Utils Require Import utils MCRelations.
 From MetaCoq.Common Require Import config Kernames.
 

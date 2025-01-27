@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import Ast AstUtils WfAst Induction LiftSubst
      UnivSubst TermEquality Typing.
 
 From Equations Require Import Equations.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Lemma red1_tApp_mkApps_l Σ Γ M1 N1 M2 :
 red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (mkApps N1 M2).

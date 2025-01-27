@@ -1,5 +1,5 @@
-Require Import List Arith.
-Require Import MetaCoq.Template.All.
+From Stdlib Require Import List Arith.
+From MetaCoq Require Import Template.All.
 Import ListNotations MCMonadNotation.
 
 

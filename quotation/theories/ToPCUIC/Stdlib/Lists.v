@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Lists.ListDec.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import Lists.ListDec.
 From MetaCoq.Utils Require Import ReflectEq.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 From MetaCoq.Quotation.ToPCUIC Require Import (hints) Stdlib.Init.

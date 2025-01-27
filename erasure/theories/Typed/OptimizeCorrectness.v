@@ -4,11 +4,11 @@ From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure.Typed Require Import Optimize.
 From MetaCoq.Erasure.Typed Require Import Transform.
 From MetaCoq.Erasure.Typed Require Import WcbvEvalAux.
-From Coq Require Import Btauto.
-From Coq Require Import btauto.Algebra.
-From Coq Require Import List.
-From Coq Require Import ssreflect ssrbool.
-From Coq Require Import PeanoNat.
+From Stdlib Require Import Btauto.
+From Stdlib Require Import btauto.Algebra.
+From Stdlib Require Import List.
+From Stdlib Require Import ssreflect ssrbool.
+From Stdlib Require Import PeanoNat.
 From Equations Require Import Equations.
 From MetaCoq.Erasure Require Import EPrimitive EAstUtils.
 From MetaCoq.Erasure Require Import ECSubst.
@@ -2204,7 +2204,7 @@ Proof.
       cbn.
       now propify.
 Qed.
-(* From Coq Require Import ssreflect.
+(* From Stdlib Require Import ssreflect.
 Lemma wellformed_dearg_single' (efl := all_env_flags) Σ k t args mask :
   wellformed (trans_env (dearg_env Σ)) k t ->
   Forall (wellformed (trans_env (dearg_env Σ)) k) args ->
@@ -5125,7 +5125,7 @@ Proof.
 Qed.
 
 Import MCMonadNotation ResultMonad.
-From Coq Require Import String.
+From Stdlib Require Import String.
 Definition compute_masks overridden_masks (do_trim_const_masks do_trim_ctor_masks : bool) Σ : result dearg_set bytestring.string :=
   let (const_masks, ind_masks) := Utils.timed "Dearg analysis" (fun _ => analyze_env overridden_masks Σ) in
   let const_masks := (if do_trim_const_masks then trim_const_masks else id) const_masks in

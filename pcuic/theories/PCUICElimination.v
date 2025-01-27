@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Universes.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICOnFreeVars PCUICE
 
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 

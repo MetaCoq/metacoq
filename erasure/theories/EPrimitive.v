@@ -4,8 +4,8 @@ From MetaCoq.Common Require Import Universes Primitive Reflect
      Environment EnvironmentTyping.
 (* From MetaCoq.Erasure Require Import BasicAst. *)
 From Equations Require Import Equations.
-From Coq Require Import ssreflect Utf8.
-From Coq Require Import Uint63 SpecFloat.
+From Stdlib Require Import ssreflect Utf8.
+From Stdlib Require Import Uint63 SpecFloat.
 
 Set Universe Polymorphism.
 

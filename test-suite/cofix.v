@@ -1,5 +1,5 @@
-Require Import MetaCoq.Template.Loader.
-Require Import Streams.
+From MetaCoq Require Import Template.Loader.
+From Stdlib Require Import Streams.
 
 CoFixpoint ones := Cons 1 ones.
 

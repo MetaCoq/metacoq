@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.

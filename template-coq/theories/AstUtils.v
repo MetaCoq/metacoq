@@ -1,11 +1,11 @@
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat.
+From Stdlib Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import BasicAst Primitive Environment.
 From MetaCoq.Template Require Import Ast.
-Require Import ssreflect ssrbool.
-Require Import ZArith.
+From Stdlib Require Import ssreflect ssrbool.
+From Stdlib Require Import ZArith.
 
 #[local] Set Universe Polymorphism.
 
@@ -477,17 +477,17 @@ Definition lift_names : list aname -> A -> A :=
 
 Definition map_predicate_with_binders (f : A -> term -> term) (p : predicate term) : predicate term :=
   let a_return := lift_names p.(pcontext) a in
-  {| puinst := p.(puinst) 
-  ;  pparams := List.map (f a) p.(pparams) 
+  {| puinst := p.(puinst)
+  ;  pparams := List.map (f a) p.(pparams)
   ;  pcontext := p.(pcontext)
   ;  preturn := f a_return p.(preturn) |}.
 
-Definition map_branch_with_binders (f : A -> term -> term) (b : branch term) : branch term := 
+Definition map_branch_with_binders (f : A -> term -> term) (b : branch term) : branch term :=
   let a_body := lift_names b.(bcontext) a in
   {| bcontext := b.(bcontext) ; bbody := f a_body b.(bbody) |}.
 
 (** [map_term_with_binders a lift f t] maps [f] on the immediate subterms of [t].
-    It carries an extra data [a] (typically a lift index) which is processed by [lift] 
+    It carries an extra data [a] (typically a lift index) which is processed by [lift]
     (which typically add 1 to [a]) at each binder traversal.
     It is not recursive and the order in which subterms are processed is not specified. *)
 Definition map_term_with_binders (f : A -> term -> term) (t : term) : term :=
@@ -500,17 +500,17 @@ Definition map_term_with_binders (f : A -> term -> term) (t : term) : term :=
   | tLetIn name def ty body => tLetIn name (f a def) (f a ty) (f (lift name a) body)
   | tApp func args => tApp (f a func) (List.map (f a) args)
   | tProj proj t => tProj proj (f a t)
-  (* For [tFix] and [tCoFix] we have to take care to lift [a] 
+  (* For [tFix] and [tCoFix] we have to take care to lift [a]
      only when processing the body of the (co)fixpoint. *)
-  | tFix defs i => 
+  | tFix defs i =>
     let a_body := lift_names (List.map dname defs) a in
     let on_def := map_def (f a) (f a_body) in
     tFix (List.map on_def defs) i
-  | tCoFix defs i => 
+  | tCoFix defs i =>
     let a_body := lift_names (List.map dname defs) a in
     let on_def := map_def (f a) (f a_body) in
     tCoFix (List.map on_def defs) i
-  | tCase ci pred x branches => 
+  | tCase ci pred x branches =>
     tCase ci (map_predicate_with_binders f pred) (f a x) (List.map (map_branch_with_binders f) branches)
   | tArray l t def ty => tArray l (List.map (f a) t) (f a def) (f a ty)
   end.
@@ -520,41 +520,41 @@ Definition fold_predicate_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc)
   let acc := List.fold_left (f a) p.(pparams) acc in
   f a_return acc p.(preturn).
 
-Definition fold_branch_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (b : branch term) : Acc := 
+Definition fold_branch_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (b : branch term) : Acc :=
   let a_body := lift_names b.(bcontext) a in
   f a_body acc b.(bbody).
 
 (** Fold version of [map_term_with_binders]. *)
 Definition fold_term_with_binders (f : A -> Acc -> term -> Acc) (acc : Acc) (t : term) : Acc :=
   match t with
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ 
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _
   | tConstruct _ _ _ | tInt _ | tFloat _ | tString _ => acc
   | tEvar n ts => List.fold_left (f a) ts acc
   | tCast b k t => let acc := f a acc b in f a acc t
   | tProd name ty body => let acc := f a acc ty in f (lift name a) acc body
   | tLambda name ty body => let acc := f a acc ty in f (lift name a) acc body
-  | tLetIn name def ty body => 
-    let acc := f a acc def in 
-    let acc := f a acc ty in 
-    f (lift name a) acc body 
+  | tLetIn name def ty body =>
+    let acc := f a acc def in
+    let acc := f a acc ty in
+    f (lift name a) acc body
   | tApp func args => List.fold_left (f a) (func :: args) acc
   | tProj proj t => f a acc t
-  | tFix defs i => 
+  | tFix defs i =>
     let a_body := lift_names (List.map dname defs) a in
-    let acc := List.fold_left (f a) (List.map dtype defs) acc in 
+    let acc := List.fold_left (f a) (List.map dtype defs) acc in
     List.fold_left (f a_body) (List.map dbody defs) acc
-  | tCoFix defs i => 
+  | tCoFix defs i =>
     let a_body := lift_names (List.map dname defs) a in
-    let acc := List.fold_left (f a) (List.map dtype defs) acc in 
+    let acc := List.fold_left (f a) (List.map dtype defs) acc in
     List.fold_left (f a_body) (List.map dbody defs) acc
-  | tCase ci pred x branches => 
+  | tCase ci pred x branches =>
     let acc := fold_predicate_with_binders f acc pred in
     let acc := f a acc x in
     List.fold_left (fold_branch_with_binders f) branches acc
-  | tArray l t def ty => 
-    let acc := List.fold_left (f a) t acc in 
-    let acc := f a acc def in 
-    f a acc ty 
+  | tArray l t def ty =>
+    let acc := List.fold_left (f a) t acc in
+    let acc := f a acc def in
+    f a acc ty
   end.
 
 End TraverseWithBinders.
@@ -562,15 +562,15 @@ End TraverseWithBinders.
 Section TraverseWithBindersM.
 Import MCMonadNotation.
 
-Context {M : Type -> Type} `{Monad M} {Acc : Type} {A : Type} {a : A} {liftM : aname -> A -> M A}. 
+Context {M : Type -> Type} `{Monad M} {Acc : Type} {A : Type} {a : A} {liftM : aname -> A -> M A}.
 
 Definition lift_namesM (names : list aname) (a : A) : M A :=
   let fix loop names a :=
-    match names with 
+    match names with
     | [] => ret a
     | n :: names => loop names =<< liftM n a
     end
-  in 
+  in
   loop (List.rev names) a.
 
 Definition map_defM {A B} (tyf bodyf : A -> M B) (d : def A) : M (def B) :=
@@ -584,7 +584,7 @@ Definition map_predicate_with_bindersM (f : A -> term -> M term) (p : predicate 
   mlet preturn <- f a_return p.(preturn) ;;
   ret (mk_predicate p.(puinst) pparams p.(pcontext) preturn).
 
-Definition map_branch_with_bindersM (f : A -> term -> M term) (b : branch term) : M (branch term) := 
+Definition map_branch_with_bindersM (f : A -> term -> M term) (b : branch term) : M (branch term) :=
   mlet a_body <- lift_namesM b.(bcontext) a ;;
   mlet bbody <- f a_body b.(bbody) ;;
   ret (mk_branch b.(bcontext) bbody).
@@ -592,56 +592,56 @@ Definition map_branch_with_bindersM (f : A -> term -> M term) (b : branch term) 
 (** Monadic variant of [map_term_with_binders]. *)
 Definition map_term_with_bindersM (f : A -> term -> M term) (t : term) : M term :=
   match t with
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ 
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _
   | tConstruct _ _ _ | tInt _ | tFloat _ | tString _ => ret t
-  | tEvar n ts => 
-    mlet ts <- monad_map (f a) ts ;; 
+  | tEvar n ts =>
+    mlet ts <- monad_map (f a) ts ;;
     ret (tEvar n ts)
-  | tCast b k t => 
+  | tCast b k t =>
     mlet b <- f a b ;;
     mlet t <- f a t ;;
     ret (tCast b k t)
-  | tProd name ty body => 
+  | tProd name ty body =>
     mlet ty <- f a ty ;;
     mlet a_body <- liftM name a ;;
     mlet body <- f a_body body ;;
     ret (tProd name ty body)
-  | tLambda name ty body => 
+  | tLambda name ty body =>
     mlet ty <- f a ty ;;
     mlet a_body <- liftM name a ;;
     mlet body <- f a_body body ;;
     ret (tLambda name ty body)
-  | tLetIn name def ty body => 
+  | tLetIn name def ty body =>
     mlet def <- f a def ;;
     mlet ty <- f a ty ;;
     mlet a_body <- liftM name a ;;
     mlet body <- f a_body body ;;
     ret (tLetIn name def ty body)
-  | tApp func args => 
+  | tApp func args =>
     mlet func <- f a func ;;
     mlet args <- monad_map (f a) args ;;
     ret (tApp func args)
-  | tProj proj t => 
+  | tProj proj t =>
     mlet t <- f a t ;;
     ret (tProj proj t)
-  (* For [tFix] and [tCoFix] we have to take care to lift [a] 
+  (* For [tFix] and [tCoFix] we have to take care to lift [a]
      only when processing the body of the (co)fixpoint. *)
-  | tFix defs i => 
+  | tFix defs i =>
     mlet a_body <- lift_namesM (List.map dname defs) a ;;
     let on_def := map_defM (f a) (f a_body) in
     mlet defs <- monad_map on_def defs ;;
     ret (tFix defs i)
-  | tCoFix defs i => 
+  | tCoFix defs i =>
     mlet a_body <- lift_namesM (List.map dname defs) a ;;
     let on_def := map_defM (f a) (f a_body) in
     mlet defs <- monad_map on_def defs ;;
     ret (tCoFix defs i)
-  | tCase ci pred x branches => 
+  | tCase ci pred x branches =>
     mlet pred <- map_predicate_with_bindersM f pred ;;
     mlet x <- f a x ;;
     mlet branches <- monad_map (map_branch_with_bindersM f) branches ;;
     ret (tCase ci pred x branches)
-  | tArray l t def ty => 
+  | tArray l t def ty =>
     mlet t <- monad_map (f a) t ;;
     mlet def <- f a def ;;
     mlet ty <- f a ty ;;
@@ -653,48 +653,48 @@ Definition fold_predicate_with_bindersM (f : A -> Acc -> term -> M Acc) (acc : A
   mlet acc <- monad_fold_left (f a) p.(pparams) acc ;;
   f a_return acc p.(preturn).
 
-Definition fold_branch_with_bindersM (f : A -> Acc -> term -> M Acc) (acc : Acc) (b : branch term) : M Acc := 
+Definition fold_branch_with_bindersM (f : A -> Acc -> term -> M Acc) (acc : Acc) (b : branch term) : M Acc :=
   mlet a_body <- lift_namesM b.(bcontext) a ;;
   f a_body acc b.(bbody).
-  
+
 (** Monadic variant of [fold_term_with_binders]. *)
 Definition fold_term_with_bindersM (f : A -> Acc -> term -> M Acc) (acc : Acc) (t : term) : M Acc :=
   match t with
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ 
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _
   | tConstruct _ _ _ | tInt _ | tFloat _ | tString _ => ret acc
   | tEvar n ts => monad_fold_left (f a) ts acc
   | tCast b k t => mlet acc <- f a acc b ;; f a acc t
-  | tProd name ty body => 
+  | tProd name ty body =>
     mlet a_body <- liftM name a ;;
-    mlet acc <- f a acc ty ;; 
+    mlet acc <- f a acc ty ;;
     f a_body acc body
-  | tLambda name ty body => 
+  | tLambda name ty body =>
     mlet a_body <- liftM name a ;;
-    mlet acc <- f a acc ty ;; 
+    mlet acc <- f a acc ty ;;
     f a_body acc body
-  | tLetIn name def ty body => 
+  | tLetIn name def ty body =>
     mlet a_body <- liftM name a ;;
     mlet def <- f a acc def ;;
-    mlet acc <- f a acc ty ;; 
+    mlet acc <- f a acc ty ;;
     f a_body acc body
   | tApp func args => monad_fold_left (f a) (func :: args) acc
   | tProj proj t => f a acc t
-  | tFix defs i => 
+  | tFix defs i =>
     mlet a_body <- lift_namesM (List.map dname defs) a ;;
     mlet acc <- monad_fold_left (f a) (List.map dtype defs) acc ;;
     monad_fold_left (f a_body) (List.map dbody defs) acc
-  | tCoFix defs i => 
+  | tCoFix defs i =>
     mlet a_body <- lift_namesM (List.map dname defs) a ;;
     mlet acc <- monad_fold_left (f a) (List.map dtype defs) acc ;;
     monad_fold_left (f a_body) (List.map dbody defs) acc
-  | tCase ci pred x branches => 
+  | tCase ci pred x branches =>
     mlet acc <- fold_predicate_with_bindersM f acc pred ;;
     mlet acc <- f a acc x ;;
     monad_fold_left (fold_branch_with_bindersM f) branches acc
-  | tArray l t def ty => 
+  | tArray l t def ty =>
     mlet acc <- monad_fold_left (f a) t acc ;;
-    mlet acc <- f a acc def ;; 
-    f a acc ty 
+    mlet acc <- f a acc def ;;
+    f a acc ty
   end.
 
 End TraverseWithBindersM.
@@ -703,7 +703,7 @@ End TraverseWithBindersM.
 (** [map_term f t] maps [f] on the immediate subterms of [t].
     It is not recursive and the order in which subterms are processed is not specified. *)
 Definition map_term (f : term -> term) (t : term) : term :=
-  @map_term_with_binders unit tt (fun _ _ => tt) (fun _ => f) t.   
+  @map_term_with_binders unit tt (fun _ _ => tt) (fun _ => f) t.
 
 (** Monadic variant of [map_term]. *)
 Definition map_termM {M} `{Monad M} (f : term -> M term) (t : term) : M term :=

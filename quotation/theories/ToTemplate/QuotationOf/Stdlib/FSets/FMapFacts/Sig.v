@@ -1,5 +1,5 @@
-From Coq.FSets Require Import FMapFacts.
-From Coq.Structures Require Import Orders.
+From Stdlib.FSets Require Import FMapFacts.
+From Stdlib.Structures Require Import Orders.
 From MetaCoq.Utils Require Import MCFSets.
 From MetaCoq.Quotation.ToTemplate Require Import Init.
 

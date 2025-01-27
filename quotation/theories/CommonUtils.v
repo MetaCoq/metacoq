@@ -1,8 +1,8 @@
 From MetaCoq.Utils Require Import utils monad_utils MCList.
 From MetaCoq.Common Require Import Kernames MonadBasicAst.
 From MetaCoq.Template Require MonadAst TemplateMonad Ast Loader.
-Require Import Equations.Prop.Classes.
-Require Import Coq.Lists.List.
+From Equations.Prop Require Import Classes.
+From Stdlib Require Import Lists.List.
 Import ListNotations.
 
 Local Unset Universe Minimization ToSet.

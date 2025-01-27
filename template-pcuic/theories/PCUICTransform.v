@@ -1,5 +1,5 @@
 (** * Definition of programs in template-coq, well-typed terms and provided transformations **)
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Transform.
 From MetaCoq.Template Require TemplateProgram.

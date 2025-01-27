@@ -1,10 +1,10 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool Utf8.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect ssrbool Utf8.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
-From Coq Require Import Bool String List Program.
+From Stdlib Require Import Bool String List Program.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICTyping PCUICValidity PCUICSN

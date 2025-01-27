@@ -1,4 +1,4 @@
-From Coq Require Import List.
+From Stdlib Require Import List.
 From MetaCoq.Erasure.Typed Require Import ClosedAux.
 From MetaCoq.Erasure.Typed Require Import ExAst.
 From MetaCoq.Erasure.Typed Require Import Transform.
@@ -760,7 +760,7 @@ Import MCMonadNotation.
 Definition throwIf (b : bool) (err : string) : (fun x => result x string) unit :=
   if b then Err err else Ok tt.
 
-From Coq Require Import String.
+From Stdlib Require Import String.
 
 Definition dearg_transform
            (overridden_masks : kername -> option bitmask)

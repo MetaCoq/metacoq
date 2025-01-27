@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst.
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Definition def_size (size : term -> nat) (x : def term)
   := size (dtype x) + size (dbody x).

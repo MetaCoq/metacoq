@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool List.
+From Stdlib Require Import ssreflect ssrbool List.
 From Equations Require Import Equations.
 Import ListNotations.
 

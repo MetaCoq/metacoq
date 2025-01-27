@@ -2,7 +2,7 @@
 
 (* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
 
-From Coq Require Import Utf8 Program btauto.Algebra.
+From Stdlib Require Import Utf8 Program btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Kernames EnvMap BasicAst.
 From MetaCoq.Erasure Require Import EPrimitive EAst EAstUtils EInduction EGlobalEnv EExtends EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
@@ -14,7 +14,7 @@ Import MCMonadNotation.
 From Equations Require Import Equations.
 Set Equations Transparent.
 Local Set Keyed Unification.
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 (** We assume [Prop </= Type] and universes are checked correctly in the following. *)
 Local Existing Instance extraction_checker_flags.

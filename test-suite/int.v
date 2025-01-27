@@ -1,5 +1,5 @@
-Require Import MetaCoq.Template.Loader.
-Require Import Uint63.
+From MetaCoq Require Import Template.Loader.
+From Stdlib Require Import Uint63.
 
 Definition n : Uint63.int := 42.
 Import List.ListNotations.

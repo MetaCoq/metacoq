@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect CRelationClasses.
+From Stdlib Require Import ssreflect CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICOnFreeVars
@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICOnF
      PCUICCases PCUICCumulativity PCUICTyping PCUICReduction PCUICWeakeningEnv PCUICWeakeningEnvTyp
      PCUICClosed PCUICPosition PCUICGuardCondition PCUICUnivSubstitutionConv.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 (** * Universe Substitution lemmas for typing derivations. *)

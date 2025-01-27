@@ -1,4 +1,4 @@
-From Coq.MSets Require Import MSetFacts.
+From Stdlib.MSets Require Import MSetFacts.
 From MetaCoq.Utils Require Import MCMSets.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 

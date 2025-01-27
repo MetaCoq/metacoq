@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
+From Stdlib Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Reflect Environment EnvironmentReflect.
 From MetaCoq.Template Require Import AstUtils Ast Induction.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 Local Infix "==?" := eqb (at level 20).

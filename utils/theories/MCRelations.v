@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
-Require Import CRelationClasses.
+From Stdlib Require Import ssreflect.
+From Equations.Type Require Import Relation Relation_Properties.
+From Stdlib Require Import CRelationClasses.
 Require RelationClasses.
 
 #[global] Hint Mode Reflexive ! ! : typeclass_instances.

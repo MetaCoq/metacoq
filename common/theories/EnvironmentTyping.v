@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
-From Coq Require CMorphisms CRelationClasses.
+From Stdlib Require Import ssreflect ssrbool.
+From Stdlib Require CMorphisms CRelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config BasicAst Universes Environment Primitive.
 From Equations Require Import Equations.

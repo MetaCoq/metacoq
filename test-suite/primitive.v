@@ -1,6 +1,6 @@
-From Coq Require Import String.
+From Stdlib Require Import String.
 From MetaCoq.Template Require Import monad_utils All.
-From Coq.Numbers.Cyclic Require Import PrimInt63 Sint63.
+From Stdlib.Numbers.Cyclic Require Import PrimInt63 Sint63.
 
 Local Open Scope string_scope.
 Local Open Scope sint63_scope.
@@ -24,7 +24,7 @@ MetaCoq Run (eval_hnf bigint >>=
             tmLemma "foo'" (bigint + 1 = unq)%int63 >>=
             fun x => tmPrint x)).
 
-From Coq Require Import PrimFloat.
+From Stdlib Require Import PrimFloat.
 
 Definition f := (- (of_uint63 bigint / 3))%float.
 Eval lazy in f.

@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICGuardCondition PCUICClosedTyp.
 
-From Coq Require Import CRelationClasses ssreflect ssrbool.
+From Stdlib Require Import CRelationClasses ssreflect ssrbool.
 From Equations Require Import Equations.
 
 Arguments red_ctx : clear implicits.

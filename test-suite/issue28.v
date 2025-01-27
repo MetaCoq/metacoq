@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.All MetaCoq.Utils.bytestring MetaCoq.Template.Pretty.
+From MetaCoq Require Import Template.All MetaCoq.Utils.bytestring MetaCoq.Template.Pretty.
 Require Export List.
 Open Scope bs_scope.
 Import ListNotations.

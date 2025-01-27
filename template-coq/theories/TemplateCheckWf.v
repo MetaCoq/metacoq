@@ -1,4 +1,4 @@
-From Coq Require Import List.
+From Stdlib Require Import List.
 From MetaCoq.Common Require Import config Transform.
 From MetaCoq.Template Require Import TemplateProgram Pretty EtaExpand All Loader.
 Import ListNotations.
@@ -50,7 +50,7 @@ Fixpoint wfterm (t : term) : bool :=
   | _ => true
   end.
 
-From Coq Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 
 Definition wf_global_decl d :=
   match d with

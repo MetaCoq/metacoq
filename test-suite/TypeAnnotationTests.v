@@ -1,5 +1,5 @@
-From Coq Require Import List.
-From Coq Require Import String.
+From Stdlib Require Import List.
+From Stdlib Require Import String.
 From MetaCoq.TypedExtraction Require Import Utils.
 From MetaCoq.TypedExtraction Require Import Annotations.
 From MetaCoq.TypedExtraction Require Import ExAst.

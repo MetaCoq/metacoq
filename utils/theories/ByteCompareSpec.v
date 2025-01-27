@@ -1,4 +1,4 @@
-From Coq Require Import Strings.Byte NArith Eqdep_dec.
+From Stdlib Require Import Strings.Byte NArith Eqdep_dec.
 From MetaCoq.Utils Require Import ReflectEq ByteCompare.
 From Equations Require Import Equations.
 
@@ -40,7 +40,7 @@ Proof.
   - constructor. now rewrite <- eq.
 Qed.
 
-Require Import MCCompare.
+From MetaCoq Require Import MCCompare.
 
 Definition lt x y := compare x y = Lt.
 
@@ -76,7 +76,7 @@ Proof.
   - constructor. red. now rewrite compare_opp, comp.
 Qed.
 
-From Coq Require Import Lia.
+From Stdlib Require Import Lia.
 
 Lemma lt_trans x y z : lt x y -> lt y z -> lt x z.
 Proof.

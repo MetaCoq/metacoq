@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses.
+From Stdlib Require Import CRelationClasses.
 From MetaCoq.Common Require Import config.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
      PCUICClosedTyp PCUICEtaExpand. (* Due to reliance on wf Σ instead of closed_env Σ *)
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
 (** * Weak-head call-by-value evaluation strategy.

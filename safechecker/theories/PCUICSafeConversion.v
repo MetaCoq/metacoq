@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ProofIrrelevance ssreflect ssrbool.
+From Stdlib Require Import ProofIrrelevance ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICClosed PCUICClosedTyp PCUICConvCumInversion .
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICEqualityDec.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Local Set Keyed Unification.

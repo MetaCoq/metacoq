@@ -4,7 +4,7 @@
 (** If you don't want to have the following scopes opened you should *)
 (** not import this file or close them. *)
 
-From Coq Require Export Bool ZArith Arith Lia List.
+From Stdlib Require Export Bool ZArith Arith Lia List.
 
 From MetaCoq.Utils Require Export MCUtils monad_utils.
 

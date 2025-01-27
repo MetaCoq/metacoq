@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import BasicAst Reflect.
 From MetaCoq.Erasure Require Import EPrimitive EAst EInduction.

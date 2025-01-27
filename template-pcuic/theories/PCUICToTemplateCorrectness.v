@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
+From Stdlib Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
@@ -24,7 +24,7 @@ Import MCMonadNotation.
 Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
 Set Default Proof Using "Type*".
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 (** Translation from PCUIC back to template-coq terms.
@@ -1098,7 +1098,7 @@ Proof.
   destruct y as [na' [b|] ty]; cbn; auto.
 Qed.
 
-Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 #[global]
 Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.

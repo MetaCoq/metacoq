@@ -1,4 +1,4 @@
-From Coq Require Import PArith NArith ZArith Lia.
+From Stdlib Require Import PArith NArith ZArith Lia.
 From MetaCoq.Utils Require Import MCList MCOption MCUtils.
 From MetaCoq.Common Require Import uGraph.
 From MetaCoq.Common Require Import Universes.

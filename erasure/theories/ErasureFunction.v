@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
 Set Equations Transparent.
 From MetaCoq.Utils Require Import utils.
@@ -359,7 +359,7 @@ Proof.
     intuition auto.
 Qed.
 
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 
 #[export] Instance global_deps_proper : Proper (eq ==> KernameSet.Equal ==> KernameSet.Equal) global_deps.
 Proof.
@@ -1468,7 +1468,7 @@ Proof.
   eapply erase_irrel_global_env; tea.
 Qed.
 
-Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 Global Instance proper_pair_levels_gcs : Proper ((=_lset) ==> GoodConstraintSet.Equal ==> (=_gcs)) (@pair LevelSet.t GoodConstraintSet.t).
 Proof.
   intros l l' eq gcs gcs' eq'.

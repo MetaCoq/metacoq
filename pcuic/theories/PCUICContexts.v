@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Utils Require Import utils.
-From Coq Require Import CRelationClasses ProofIrrelevance.
+From Stdlib Require Import CRelationClasses ProofIrrelevance.
 From MetaCoq.Common Require Import config Universes BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
@@ -10,9 +10,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICWeakeningTyp PCUICWeakeningConv PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation_Properties.
-Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
+From Equations.Type Require Import Relation_Properties.
+From Stdlib Require Import ssreflect ssrbool.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 

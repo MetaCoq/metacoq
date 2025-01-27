@@ -1,13 +1,13 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Utf8 ssreflect ssrbool.
+From Stdlib Require Import Utf8 ssreflect ssrbool.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICSigmaCalculus.
 
-Require Import Equations.Type.Relation_Properties.
-Require Import Equations.Prop.DepElim.
+From Equations.Type Require Import Relation_Properties.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Local Set SimplIsCbn.

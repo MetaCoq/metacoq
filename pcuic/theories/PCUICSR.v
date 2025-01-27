@@ -13,10 +13,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICUtils
      PCUICWellScopedCumulativity PCUICGuardCondition
      PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion PCUICSigmaCalculus.
 
-Require Import ssreflect ssrbool Utf8.
+From Stdlib Require Import ssreflect ssrbool Utf8.
 From Equations Require Import Equations.
 From Equations.Type Require Import Relation Relation_Properties.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 Local Set SimplIsCbn.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
@@ -245,7 +245,7 @@ Proof.
   intros; now eapply conv_context_rel_reln.
 Qed.
 
-Require Import PCUICOnFreeVars.
+From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
 
 Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} Γ Δ Δ' :
   eq_context_upto_names Δ Δ' ->

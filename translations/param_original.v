@@ -257,7 +257,7 @@ Module Vectors.
   MetaCoq Run (Translate nat_TC "t").
 End Vectors.
 
-Require Import Even.
+From Stdlib Require Import Even.
 MetaCoq Run (Translate nat_TC "even").
 
 Definition rev_type := forall A, list A -> list A.
@@ -267,7 +267,7 @@ MetaCoq Run (TC <- Translate emptyTC "list" ;;
 
 
 
-Require Import MiniHoTT.
+From Stdlib Require Import MiniHoTT.
 Module Axioms.
 
   Definition UIP := forall A (x y : A) (p q : x = y), p = q.

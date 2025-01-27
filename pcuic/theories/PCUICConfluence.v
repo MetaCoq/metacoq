@@ -17,12 +17,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics
   so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped
   confluence holds. *)
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
-Require Import CRelationClasses CMorphisms.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Stdlib Require Import CRelationClasses CMorphisms.
+From Equations.Prop Require Import DepElim.
+From Equations.Type Require Import Relation Relation_Properties.
 
 Local Ltac intuition_solver ::= auto with *.
 

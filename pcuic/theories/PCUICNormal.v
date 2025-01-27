@@ -1,14 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Stdlib Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Utils Require Import utils monad_utils.
-From MetaCoq.Common
-Require Import config Universes BasicAst.
+From MetaCoq.Common Require Import config Universes BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases
      PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnvConv
      PCUICWeakeningEnvTyp PCUICReduction PCUICClosedTyp
      PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICEtaExpand.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 
 (* Require Import Equations.Type.DepElim. *)
@@ -1172,7 +1171,7 @@ Ltac inv_on_free_vars :=
     rewrite -> test_context_k_closed_on_free_vars_ctx in H
   end.
 
-Require Import PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICSR PCUICConversion PCUICSubstitution.
+From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICSR PCUICConversion PCUICSubstitution.
 
 Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ :
   All2 (red Σ Γ) s s' ->

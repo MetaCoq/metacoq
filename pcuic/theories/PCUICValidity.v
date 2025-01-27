@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst
@@ -13,8 +13,8 @@ From MetaCoq.PCUIC Require Import PCUICAst
      PCUICWellScopedCumulativity PCUICContexts PCUICWfUniverses.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect ssrbool.
+From Equations.Prop Require Import DepElim.
+From Stdlib Require Import ssreflect ssrbool.
 
 Derive Signature for typing.
 

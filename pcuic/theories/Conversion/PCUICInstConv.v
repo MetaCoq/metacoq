@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICTactics PCUICAstUtils PCUICCases PCUICInduction
@@ -10,9 +10,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICTactics PCUICAstUtils
   PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars PCUICOnFreeVarsConv.
 
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 Set Keyed Unification.
 Set Default Goal Selector "!".

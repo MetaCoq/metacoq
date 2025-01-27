@@ -1,5 +1,5 @@
-Require Import String List.
-Require Import MetaCoq.Template.All.
+From Stdlib Require Import String List.
+From MetaCoq Require Import Template.All.
 Import ListNotations MCMonadNotation.
 
 Open Scope bs.

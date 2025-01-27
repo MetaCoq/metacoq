@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Morphisms.
+From Stdlib Require Import Morphisms.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases PCUICInduction
@@ -8,9 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICOnFreeVarsConv PCUICGuardCondition PCUICTyping
   PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp PCUICRenameConv.
 
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 
 (** * Type preservation for σ-calculus operations *)

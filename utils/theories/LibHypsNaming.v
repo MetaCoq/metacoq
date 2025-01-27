@@ -14,7 +14,7 @@
 
 (* Comment this and the Z-dependent lines below if you don't want
    ZArith to be loaded *)
-Require Import ZArith.
+From Stdlib Require Import ZArith.
 
 (** ** The custom renaming tactic
   This tactic should be redefined along a coq development, it should
@@ -70,12 +70,12 @@ Ltac fallback_rename_hyp h th :=
     | false = Nat.eqb _ _ => fresh "beqnat_false"
     | Nat.eqb _ _ = false => fresh "beqnat_false"
     | Nat.eqb _ _ = _ => fresh "beqnat"
-    | Zeq_bool _ _ = true => fresh "eq_Z_true"
-    | Zeq_bool _ _ = false => fresh "eq_Z_false"
-    | true = Zeq_bool _ _ => fresh "eq_Z_true"
-    | false = Zeq_bool _ _ => fresh "eq_Z_false"
-    | Zeq_bool _ _ = _ => fresh "eq_Z"
-    | _ = Zeq_bool _ _ => fresh "eq_Z"
+    | Z.eqb _ _ = true => fresh "eq_Z_true"
+    | Z.eqb _ _ = false => fresh "eq_Z_false"
+    | true = Z.eqb _ _ => fresh "eq_Z_true"
+    | false = Z.eqb _ _ => fresh "eq_Z_false"
+    | Z.eqb _ _ = _ => fresh "eq_Z"
+    | _ = Z.eqb _ _ => fresh "eq_Z"
     | ?f = _ => fresh "eq_" f
     | ?f _ = _ => fresh "eq_" f
     | ?f _ _ = _ => fresh "eq_" f

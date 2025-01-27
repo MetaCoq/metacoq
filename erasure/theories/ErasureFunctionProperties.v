@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program ssreflect ssrbool.
+From Stdlib Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
 Set Equations Transparent.
 From MetaCoq.Utils Require Import utils.

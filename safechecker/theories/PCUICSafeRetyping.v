@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool Utf8.
-Require Import Equations.Prop.DepElim.
+From Stdlib Require Import ssreflect ssrbool Utf8.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
-From Coq Require Import Bool String List Program.
+From Stdlib Require Import Bool String List Program.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
@@ -40,7 +40,7 @@ Set Equations Transparent.
 Add Search Blacklist "_graph_mut".
 Add Search Blacklist "obligation".
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 
 Lemma into_ws_cumul_pb_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} :
   All2 (convAlgo Σ Γ) l l' ->

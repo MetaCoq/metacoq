@@ -3,7 +3,7 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import uGraph Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
@@ -173,7 +173,7 @@ Proof.
   induction l in f, l' |- *; simpl; auto; rewrite IHl ?app_nil_r; auto.
 Qed.
 
-Require Import ssrbool.
+From Stdlib Require Import ssrbool.
 
 Lemma decompose_app_mkApps f l :
   ~~ isApp f -> decompose_app (mkApps f l) = (f, l).

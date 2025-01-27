@@ -6,7 +6,7 @@
     All dependencies are also expanded.*)
 
 
-From Coq Require Import List PeanoNat Bool Lia.
+From Stdlib Require Import List PeanoNat Bool Lia.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Export
      uGraph        (* The graph of universes *)
@@ -1253,7 +1253,7 @@ Qed.
 
 Arguments tVar _%_bs.
 
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 Open Scope bs_scope.
 
 Fixpoint lookup_global_env (Σ : global_declarations) (kn : kername) {struct Σ} : option (global_decl × global_declarations)  :=

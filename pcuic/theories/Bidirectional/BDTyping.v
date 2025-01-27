@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Arith Lia.
-From Coq Require String.
+From Stdlib Require Import Bool List Arith Lia.
+From Stdlib Require String.
 From MetaCoq.Utils Require Import utils monad_utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -9,10 +9,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.
 
 From MetaCoq.Utils Require Export LibHypsNaming.
-Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 Set Asymmetric Patterns.
-Require Import Equations.Type.Relation.
-Require Import Equations.Prop.DepElim.
+From Equations.Type Require Import Relation.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext) (Γ : context).

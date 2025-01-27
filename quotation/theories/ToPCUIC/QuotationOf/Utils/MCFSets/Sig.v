@@ -1,5 +1,5 @@
-From Coq.Structures Require Import Orders OrdersAlt.
-From Coq.FSets Require Import FMapInterface.
+From Stdlib.Structures Require Import Orders OrdersAlt.
+From Stdlib.FSets Require Import FMapInterface.
 From MetaCoq.Utils Require Import MCFSets.
 From MetaCoq.Quotation.ToPCUIC Require Import Init.
 

@@ -3,7 +3,7 @@ From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 From MetaCoq.Template Require Import Ast AstUtils Induction UnivSubst.
 From Equations Require Import Equations.
-Require Import ssreflect ssrbool.
+From Stdlib Require Import ssreflect ssrbool.
 
 (** * Well-formedness of terms and types in typing derivations
 
@@ -225,7 +225,7 @@ Proof.
     intros; try cbn; econstructor; simpl; eauto; try solve [solve_all].
     destruct l; cbn in *. auto. discriminate. now rewrite length_map.
 Qed.
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 Import Nat.
 
 Lemma wf_subst Σ ts k u : All (wf Σ) ts -> wf Σ u -> wf Σ (subst ts k u).

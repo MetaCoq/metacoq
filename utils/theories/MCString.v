@@ -1,4 +1,4 @@
-From Coq Require Import ssreflect ssrbool Decimal DecimalString ZArith.
+From Stdlib Require Import ssreflect ssrbool Decimal DecimalString ZArith.
 From MetaCoq.Utils Require Import MCCompare bytestring ReflectEq.
 
 Local Open Scope bs.

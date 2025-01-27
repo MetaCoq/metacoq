@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect ssrbool OrderedTypeAlt MSetAVL MSetFacts MSetProperties MSetDecide Morphisms.
+From Stdlib Require Import ssreflect ssrbool OrderedTypeAlt MSetAVL MSetFacts MSetProperties MSetDecide Morphisms.
 From MetaCoq.Utils Require Import utils wGraph.
 From MetaCoq.Common Require Import config Universes.
 From Equations.Prop Require Import DepElim.
@@ -3079,7 +3079,7 @@ Proof.
 Qed.
 
 
-Require Import SetoidTactics.
+From Stdlib Require Import SetoidTactics.
 
 #[global] Instance is_graph_of_uctx_proper {cf : checker_flags} G : Proper ((=_cs) ==> iff) (is_graph_of_uctx G).
 Proof.

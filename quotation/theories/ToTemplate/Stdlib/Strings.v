@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String Coq.Strings.Ascii.
+From Stdlib Require Import Strings.String Strings.Ascii.
 From MetaCoq.Quotation.ToTemplate Require Import Stdlib.Init.
 
 #[export] Instance quote_ascii : ground_quotable Ascii.ascii := (ltac:(induction 1; exact _)).

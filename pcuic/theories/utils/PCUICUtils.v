@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import RelationClasses.
+From Stdlib Require Import RelationClasses.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config.
 

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ProofIrrelevance ssreflect ssrbool btauto.Algebra.
+From Stdlib Require Import ProofIrrelevance ssreflect ssrbool btauto.Algebra.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import config uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTactics
@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive PCUICTac
      PCUICCumulativity PCUICEquality PCUICWfUniverses
      PCUICInduction.
 
-Require Import Equations.Prop.DepElim.
+From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Local Set Keyed Unification.

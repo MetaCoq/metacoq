@@ -3,8 +3,8 @@ From Equations Require Import Equations.
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Export Environment EnvironmentTyping Universes BasicAst.
 (* For primitive integers and floats  *)
-From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat PArray PrimString.
-From Coq Require Import ssreflect Morphisms.
+From Stdlib Require Uint63 Floats.PrimFloat Floats.SpecFloat PArray PrimString.
+From Stdlib Require Import ssreflect Morphisms.
 
 (** * AST of Coq kernel terms and kernel data structures
 

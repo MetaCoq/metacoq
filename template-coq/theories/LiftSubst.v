@@ -2,7 +2,7 @@
 From MetaCoq.Utils Require Import utils.
 From MetaCoq.Common Require Import Environment.
 From MetaCoq.Template Require Import Ast AstUtils Induction WfAst.
-From Coq Require Import ssreflect.
+From Stdlib Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Lifting and substitution for the AST
@@ -52,7 +52,7 @@ Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 Import Nat.
 
 Lemma lift_rel_ge :

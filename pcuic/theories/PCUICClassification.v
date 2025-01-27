@@ -17,9 +17,9 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactic
 
 Local Existing Instance config.extraction_checker_flags.
 
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect ssrbool.
-Require Import Equations.Type.Relation_Properties.
+From Equations.Prop Require Import DepElim.
+From Stdlib Require Import ssreflect ssrbool.
+From Equations.Type Require Import Relation_Properties.
 
 Set Default Proof Using "Type*".
 

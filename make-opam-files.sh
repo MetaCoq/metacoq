@@ -1,17 +1,17 @@
 #/usr/bin/env bash
 
-if (($# < 3))
+if (($# < 4))
 then
-    echo "Usage: make-opam-files.sh ../opam/released/packages <version> <package-url>"
+    echo "Usage: make-opam-files.sh ../opam/released/packages <version> <tag> <package-url>"
     exit 0
 fi
 
-archive=`basename $3`
-tag=${archive/.tar.gz/}
+archive=`basename $4`
+tag=$3
 
 echo "Target directory: " $1
 echo "Target version: " $2
-echo "Releases package: " $3
+echo "Releases package: " $4
 echo "Archive:" $archive
 echo "Tag:" $tag
 
@@ -21,7 +21,7 @@ then
     rm $archive
 fi
 
-wget $3
+wget $4
 
 hash=`shasum -a 512 $archive | cut -f 1 -d " "`
 

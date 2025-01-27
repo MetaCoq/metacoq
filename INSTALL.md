@@ -66,10 +66,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.18 origin/coq-8.18
+    # git checkout -b coq-8.20 origin/coq-8.20
     # git status
 
-This checks that you are indeed on the `coq-8.18` branch.
+This checks that you are indeed on the `coq-8.20` branch.
 
 ### Setting up an `opam` switch
 
@@ -78,10 +78,10 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.18 --packages="ocaml-variants.4.14.0+options,ocaml-option-flambda"
+    # opam switch create coq.8.20 --packages="ocaml-variants.4.14.0+options,ocaml-option-flambda"
     # eval $(opam env)
 
-This creates the `coq.8.18` switch which initially contains only the
+This creates the `coq.8.20` switch which initially contains only the
 basic `OCaml` `4.13.1` compiler with the `flambda` option enabled,
 and puts you in the right environment (check with `ocamlc -v`).
 

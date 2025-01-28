@@ -406,8 +406,8 @@ Qed.
 (* clauses.v *)
 Unset Implicit Arguments.
 
-From Stdlib Require Import ZArith List Recdef Stdlib.MSets.MSetInterface Stdlib.Sorting.Mergesort
-               Permutation Stdlib.MSets.MSetAVL Stdlib.MSets.MSetRBT.
+From Stdlib Require Import ZArith List Recdef MSets.MSetInterface Sorting.Mergesort
+               Permutation MSets.MSetAVL MSets.MSetRBT.
 
 (** The clause datatype and related definitions and lemmas *)
 

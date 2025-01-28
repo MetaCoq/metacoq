@@ -11,3 +11,5 @@ ifeq '$(METACOQ_CONFIG)' 'local'
   endif
   export OCAMLPATH
 endif
+
+COQEXTRAFLAGS=-quiet

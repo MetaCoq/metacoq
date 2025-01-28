@@ -5,7 +5,7 @@ all: printconf template-coq pcuic safechecker erasure erasure-plugin safechecker
 
 ifeq '$(METACOQ_CONFIG)' 'local'
   ifeq ($(shell which cygpath 2>/dev/null),)
-  OCAMLPATH := $(shell pwd)/template-coq/:$(OCAMLPATH)
+  OCAMLPATH := $(shell pwd)/template-coq/:$(shell pwd)/safechecker-plugin/src:$(shell pwd)/erasure-plugin/src:$(OCAMLPATH)
   else
   OCAMLPATH := $(shell cygpath -m `pwd`)/template-coq/;$(OCAMLPATH)
   endif
